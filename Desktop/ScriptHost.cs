@@ -4,6 +4,7 @@ using System.Runtime.Loader;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
@@ -45,6 +46,12 @@ public static class ScriptHost
         // With an encoding: the debug information (an error's line) needs one.
         SyntaxTree Tree(string text, string path) => CSharpSyntaxTree.ParseText(Microsoft.CodeAnalysis.Text.SourceText.From(text, Encoding.UTF8), parse, path);
         var user = Tree(code, "script");
+        // Every loop of the script's own stops when asked (Stop, the 2-minute limit). A script with syntax mistakes is
+        // left as it is: it does not compile anyway, and its mistakes are reported as written.
+        if (!user.GetDiagnostics().Any(d => d.Severity == DiagnosticSeverity.Error))
+        {
+            user = Tree(new LoopChecks().Visit(user.GetRoot()).ToFullString(), "script");
+        }
         var compilation = CSharpCompilation.Create("Script" + Guid.NewGuid().ToString("N")[..8],
             [Tree(Api.Value, "api"), Tree(Usings, "usings"), user],
             Basic.Reference.Assemblies.Net100.References.All,
@@ -58,6 +65,64 @@ public static class ScriptHost
             return span.Path == "script" ? $"line {span.StartLinePosition.Line + 1}: {d.GetMessage()}" : d.GetMessage();
         }).Distinct().Take(20).ToList();
         return (result.Success ? ms.ToArray() : null, result.Success ? pdb.ToArray() : null, errors);
+    }
+
+    /// <summary>
+    /// Puts a call to the API's Check at the start of every loop's body and before every goto in a script, so that
+    /// Stop and the 2-minute limit end a script whose own loops call nothing that checks. What it adds holds no line
+    /// break: the script keeps its line numbers (for the line an error happens on).
+    /// </summary>
+    private sealed class LoopChecks : CSharpSyntaxRewriter
+    {
+        /// <summary>The call added, parsed once.</summary>
+        private static readonly StatementSyntax Check = SyntaxFactory.ParseStatement("global::__Host.Check();");
+
+        /// <summary>The statement with the Check before it, both in a block of their own.</summary>
+        private static BlockSyntax Checked(StatementSyntax statement) =>
+            SyntaxFactory.Block(SyntaxFactory.Token(default, SyntaxKind.OpenBraceToken, default), [Check, statement], SyntaxFactory.Token(default, SyntaxKind.CloseBraceToken, default));
+
+        /// <inheritdoc/>
+        public override SyntaxNode? VisitWhileStatement(WhileStatementSyntax node)
+        {
+            var n = (WhileStatementSyntax)base.VisitWhileStatement(node)!;
+            return n.WithStatement(Checked(n.Statement));
+        }
+
+        /// <inheritdoc/>
+        public override SyntaxNode? VisitDoStatement(DoStatementSyntax node)
+        {
+            var n = (DoStatementSyntax)base.VisitDoStatement(node)!;
+            return n.WithStatement(Checked(n.Statement));
+        }
+
+        /// <inheritdoc/>
+        public override SyntaxNode? VisitForStatement(ForStatementSyntax node)
+        {
+            var n = (ForStatementSyntax)base.VisitForStatement(node)!;
+            return n.WithStatement(Checked(n.Statement));
+        }
+
+        /// <inheritdoc/>
+        public override SyntaxNode? VisitForEachStatement(ForEachStatementSyntax node)
+        {
+            var n = (ForEachStatementSyntax)base.VisitForEachStatement(node)!;
+            return n.WithStatement(Checked(n.Statement));
+        }
+
+        /// <inheritdoc/>
+        public override SyntaxNode? VisitForEachVariableStatement(ForEachVariableStatementSyntax node)
+        {
+            var n = (ForEachVariableStatementSyntax)base.VisitForEachVariableStatement(node)!;
+            return n.WithStatement(Checked(n.Statement));
+        }
+
+        /// <inheritdoc/>
+        public override SyntaxNode? VisitGotoStatement(GotoStatementSyntax node)
+        {
+            var n = (GotoStatementSyntax)base.VisitGotoStatement(node)!;
+            // Its leading trivia (comments, indentation) stays in front of the block.
+            return Checked(n.WithoutLeadingTrivia()).WithLeadingTrivia(n.GetLeadingTrivia());
+        }
     }
 
     /// <summary>

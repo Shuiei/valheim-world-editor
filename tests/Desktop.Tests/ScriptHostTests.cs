@@ -179,6 +179,35 @@ public class ScriptHostTests
         Assert.Equal(30, At(s, 10, 10), 3);
     }
 
+    // A loop of the script's own that calls nothing of the API's is still ended by Stop and the 2-minute limit.
+    [Theory]
+    [InlineData("while (true) { }")]
+    [InlineData("int n = 0;\nfor (;;) n++;")]
+    [InlineData("do { } while (true);")]
+    [InlineData("foreach (int i in Enumerable.Repeat(0, int.MaxValue)) { }")]
+    [InlineData("again: goto again;")]
+    [InlineData("static IEnumerable<int> Forever() { while (true) yield return 0; }\nforeach (int i in Forever()) { }")]
+    public async Task AScriptsOwnEndlessLoopIsStopped(string code)
+    {
+        var s = TestScenes.Flat(1);
+        using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+        var run = Task.Run(() => Run(s, code, cancel.Token), TestContext.Current.CancellationToken);
+        Assert.Same(run, await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken)));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
+    }
+
+    // The checks put into loops hold no line break: an error after a loop still says the script's own line.
+    [Fact]
+    public void LoopsKeepTheScriptsLineNumbers()
+    {
+        var s = TestScenes.Flat(1);
+        var ex = Assert.Throws<ArgumentException>(() => Run(s, "for (int i = 0; i < 2; i++)\n    Print(i);\nwhile (false)\n{\n}\nObjects.Place(\"NoSuchThing\", 10, 10);\n"));
+        Assert.Equal("line 6: ", ScriptHost.Where(ex));
+        var (image, _, errors) = ScriptHost.Compile("for (int i = 0; i < 2; i++)\n{\n}\nGround.Raise(1, 2);\n");
+        Assert.Null(image);
+        Assert.StartsWith("line 4: ", Assert.Single(errors));
+    }
+
     /// <summary>A wooden wall standing at (20, 31, 20), its front north, as thing 0 of a flat 1-zone area.</summary>
     private static EditSession Wall() =>
         TestScenes.Flat(1, new WorldScene.Thing(7, StableHash.Of("woodwall"), new Vector3(20, 31, 20), Vector3.Zero, 0, true));
