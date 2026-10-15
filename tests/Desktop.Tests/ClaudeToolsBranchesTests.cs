@@ -146,7 +146,8 @@ public class ClaudeToolsBranchesTests
 
         Assert.Contains("Now pending:", await r.T.AddBlueprint("Store"));
 
-        var gate = Assert.Single(ClaudeRun.J(await ClaudeTools.PieceInfo(["wood_gate"])).EnumerateArray());
+        // A piece the game asks no station for (the wooden gate, once the example, now has its real cost in the fixtures).
+        var gate = Assert.Single(ClaudeRun.J(await ClaudeTools.PieceInfo(["Cart"])).EnumerateArray());
         Assert.Equal(System.Text.Json.JsonValueKind.Null, gate.GetProperty("station").ValueKind);
     }
 }
