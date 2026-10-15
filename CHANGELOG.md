@@ -12,7 +12,7 @@ the plugin is unchanged in versions without that part.
   start page stayed on its progress bar, the kinds before it used the new data and those after it the old, and no
   failure was logged. When the game's files were already read, a failure to get its data still showed "ready". The
   editor now logs what failed, counts none of the data as had (it is taken again next time), and the start page says
-  some of the game's data could not be read.
+  some of the game's data could not be read; "ready" is said only once the game data is in use.
 
 ## v1.45.38 — unreleased
 

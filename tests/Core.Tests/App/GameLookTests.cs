@@ -158,10 +158,11 @@ public sealed class GameLookTests : IDisposable
         var bundles = GameLook.Bundles;
         Assert.NotNull(bundles);
         Assert.Equal("failed", await Settled());
-        // Checked again (the game's files now read, even if they hold no model): the same reader, ready at once.
+        // Checked again (the game's files now read, even if they hold no model): the same reader, ready once its
+        // game data is checked (from the caches), without reading the files again.
         GameLook.Check(settings);
         Assert.Same(bundles, GameLook.Bundles);
-        Assert.Equal("ready", GameLook.State);
+        Assert.Equal("ready", await Settled());
         Assert.Null(GameLook.Message);
         Assert.Equal(1, GameLook.Now().Progress);
     }
@@ -174,14 +175,10 @@ public sealed class GameLookTests : IDisposable
         Assert.Equal("failed", await Settled());
         try
         {
-            // Its files read, so ready at once; its game data neither in use, cached nor readable (no game code).
+            // Its files read, so not read again; its game data neither in use, cached nor readable (no game code).
             GameData.Forget();
             GameLook.Check(settings);
-            for (int i = 0; i < 300 && GameLook.State == "ready"; i++)
-            {
-                await Task.Delay(100, TestContext.Current.CancellationToken);
-            }
-            Assert.Equal("failed", GameLook.State);
+            Assert.Equal("failed", await Settled());
             Assert.Contains("game's data", GameLook.Message);
         }
         finally

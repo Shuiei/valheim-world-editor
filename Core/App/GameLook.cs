@@ -60,7 +60,8 @@ public static class GameLook
     public static bool SearchOutsideHome { get; set; } = true;
 
     /// <summary>
-    /// "ready", "missing" (Valheim not found), "running" (indexing its bundles), "failed".
+    /// "ready", "missing" (Valheim not found), "running" (indexing its bundles, or at start
+    /// checking the game data kept), "failed".
     /// </summary>
     public static string State { get; private set; } = "missing";
 
@@ -142,18 +143,28 @@ public static class GameLook
             }
             if (game.Indexed)
             {
-                Set("ready", null);
-                // The rest of the game data too, ready before a world is opened (from the caches: at once).
+                // Running without reading: the rest of the game data checked too (from the caches: at once), so
+                // "ready" is said only once it is in use.
+                Set("running", null);
                 Task.Run(() =>
                 {
-                    if (!GameData.Ensure(game))
+                    string state;
+                    string? message;
+                    try
                     {
-                        lock (Lock)
+                        (state, message) = GameData.Ensure(game) ? ("ready", null) : ("failed", DataUnread);
+                    }
+                    catch (Exception e)
+                    {
+                        // Whatever fails, the state leaves "running".
+                        Console.WriteLine($"game look: {e}");
+                        (state, message) = ("failed", "The game's data could not be read: " + e.Message);
+                    }
+                    lock (Lock)
+                    {
+                        if (ReferenceEquals(_bundles, game))
                         {
-                            if (ReferenceEquals(_bundles, game))
-                            {
-                                Set("failed", DataUnread);
-                            }
+                            Set(state, message);
                         }
                     }
                 });
