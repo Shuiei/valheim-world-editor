@@ -106,6 +106,7 @@ public class MainWindowWorldPagesTests
         r.W.ShowMap();
         await load;
         Assert.Equal("That area was not opened: the map or another area was asked for while it loaded.", r.Said);
+        Assert.Equal("That area was not opened: the map or another area was asked for while it loaded.", Assert.Single(r.Told));
         Assert.True(r.W.MapShown);
         Assert.Same(scene, r.W.View.Scene);
         Assert.Null(r.W.Session);
@@ -149,6 +150,8 @@ public class MainWindowWorldPagesTests
         await failing;
         Assert.Null(r.W.World);
         Assert.Null(r.W.Session);
+        // Said only in the status bar: no dialog about a world no longer open.
+        Assert.Empty(r.Told);
     }
 
     // The map closes the area: a script still running in it changes nothing, and its history stays with the world.

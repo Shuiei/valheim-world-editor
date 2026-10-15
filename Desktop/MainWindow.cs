@@ -510,7 +510,7 @@ public sealed partial class MainWindow : Window
                 {
                     world.Area = Session;
                 }
-                MessageText.Text = "That area was not opened: the map or another area was asked for while it loaded.";
+                Report("That area was not opened: the map or another area was asked for while it loaded.");
                 return false;
             }
             // Shown: the world's area, even if a load dropped meanwhile had reset it.
@@ -535,7 +535,7 @@ public sealed partial class MainWindow : Window
         {
             Unleave(left, navigation);
             failed = context + "Could not open that area: " + ex.Message;
-            Say(failed);
+            Report(failed);
         }
         finally
         {
@@ -549,6 +549,19 @@ public sealed partial class MainWindow : Window
             await Tell(failed);
         }
         return false;
+
+        // The world left meanwhile: only the status bar, no dialog about a world no longer open.
+        void Report(string text)
+        {
+            if (World == world)
+            {
+                Say(text);
+            }
+            else
+            {
+                MessageText.Text = text;
+            }
+        }
     }
 
     /// <summary>
