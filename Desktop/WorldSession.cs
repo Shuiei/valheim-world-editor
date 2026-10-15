@@ -395,6 +395,12 @@ public sealed class WorldSession : IDisposable
     private readonly SemaphoreSlim _applying = new(1, 1);
 
     /// <summary>
+    /// Counts each Apply live's start and end: a read of the game taken before or during an apply (<c>FetchGame</c>
+    /// notes the count) has not got what it sent, and <c>MergeGame</c> drops it.
+    /// </summary>
+    private int _applies;
+
+    /// <summary>
     /// When the world is left: the save it was opened from goes (offline, once saved again) and the live connection closes.
     /// </summary>
     public void Dispose()
@@ -417,6 +423,7 @@ public sealed class WorldSession : IDisposable
     public async Task<Outcome> ApplyLive(Func<IReadOnlyList<(int X, int Z)>, Task<bool>>? confirm = null)
     {
         await _applying.WaitAsync();
+        Interlocked.Increment(ref _applies);
         try
         {
             if (confirm != null && Edits.PendingOverGame() is { Count: > 0 } over && !await confirm(over))
@@ -427,6 +434,7 @@ public sealed class WorldSession : IDisposable
         }
         finally
         {
+            Interlocked.Increment(ref _applies);
             _applying.Release();
         }
     }
@@ -514,7 +522,8 @@ public sealed class WorldSession : IDisposable
     /// <param name="Digests">Every zone asked about, with its digest now.</param>
     /// <param name="Changed">The zones whose digest changed.</param>
     /// <param name="Objects">The changed zones' objects, as the game sends them (owner, id, data).</param>
-    public sealed record Fetched(WorldSave World, Dictionary<(int X, int Z), ulong> Digests, List<(int X, int Z)> Changed, List<(long User, uint Id, byte[] Bytes)> Objects);
+    /// <param name="Applies">Apply live's count when the read began (dropped if an apply began or ended since).</param>
+    public sealed record Fetched(WorldSave World, Dictionary<(int X, int Z), ulong> Digests, List<(int X, int Z)> Changed, List<(long User, uint Id, byte[] Bytes)> Objects, int Applies);
 
     /// <summary>What a merge of the game's changes did.</summary>
     /// <param name="Merged">The objects added, updated and vanished in the world.</param>
@@ -538,23 +547,26 @@ public sealed class WorldSession : IDisposable
             return null;
         }
         var world = World;
+        int applies = Volatile.Read(ref _applies);
         var now = await live.Watch(zones);
         var changed = now.Where(kv => !_digests.TryGetValue(kv.Key, out ulong d) || d != kv.Value).Select(kv => kv.Key).ToList();
         if (changed.Count == 0)
         {
             return null;
         }
-        return new Fetched(world, now, changed, await live.ZoneObjects(changed));
+        return new Fetched(world, now, changed, await live.ZoneObjects(changed), applies);
     }
 
     /// <summary>
     /// What was read, merged into the world (on the window's thread, at once: nothing else changes the
     /// world meanwhile). Null: not now (an apply is under way, or the world's lists are being read): merge
-    /// it again later. Read for a world read again since: dropped (empty).
+    /// it again later. Read for a world read again since, or before or during an Apply live: dropped (empty).
+    /// A read older than an apply lacks what it sent (the new objects would count as removed by players);
+    /// its zones' digests are not kept, so they are read again.
     /// </summary>
     public Followed? MergeGame(Fetched f)
     {
-        if (f.World != World)
+        if (f.World != World || f.Applies != Volatile.Read(ref _applies))
         {
             return new Followed(new WorldSave.Merged([], [], [], []), [], [], []);
         }

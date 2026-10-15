@@ -208,6 +208,30 @@ public class LiveFollowTests
         Assert.Equal((0, 0, 0, 0), world.Pending);
     }
 
+    // A read of the game taken before an Apply live and merged after it lacks what the apply sent: it is
+    // dropped, so the editor's new objects are not taken as removed by players; the zone is read again.
+    [Fact]
+    public async Task AReadTakenBeforeAnApplyIsDropped()
+    {
+        var (game, world, s) = await Open();
+        using var _ = game;
+        var w = world.World;
+        var tree = s.Scene.Things[Tree(s)];
+        game.Zones[(0, 0)] = (1, AsRead(w, (0, 0)));
+        var stale = (await world.FetchGame([(0, 0)]))!;
+        var placed = s.Commit("Place", null, [], [(new NewObject(0, tree.Prefab, tree.Position + new Vector3(2, 0, 2), Vector3.Zero, 0f), false)]);
+        Assert.True((await world.ApplyLive()).Done);
+        var f = world.MergeGame(stale)!;
+        Assert.False(f.Any);
+        s.TakeGameChanges(f);
+        Assert.False(s.Scene.Things[placed[0]].Gone);
+        Assert.Equal((0, 0, 0, 0), world.Pending);
+        // Not marked as merged: the zone is read again.
+        int reads = game.ZoneReads;
+        await world.FetchGame([(0, 0)]);
+        Assert.Equal(reads + 1, game.ZoneReads);
+    }
+
     /// <summary>
     /// The game's ground for zone 0, 0: its terrain object's bytes with this data.
     /// </summary>
