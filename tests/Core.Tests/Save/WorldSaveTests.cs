@@ -76,6 +76,23 @@ public class WorldSaveTests
     }
 
     [Fact]
+    public void ADamagedTerrainObjectIsReadAsAnOrdinaryObject()
+    {
+        using var w = new TempWorld();
+        WorldSave world = w.Load();
+        ZdoLocation source = world.TerrainZones[0].Source!;
+        string path = Path.Combine(w.Dir, source.File.FileName);
+        byte[] bytes = File.ReadAllBytes(path);
+        // The first byte of the gzip data, after the value's length.
+        bytes[(int)source.DataStart + 4] ^= 0xFF;
+        File.WriteAllBytes(path, bytes);
+        var damaged = WorldSave.Load(w.Dir);
+        Assert.Empty(damaged.TerrainZones);
+        Assert.Equal(world.ObjectCount, damaged.ObjectCount);
+        Assert.Contains(damaged.ObjectRefs, o => o.Start == source.Start && o.File.FileName == source.File.FileName && !o.IsTerrain);
+    }
+
+    [Fact]
     public void ZonesThatAreNotGeneratedAreSkipped()
     {
         using var w = new TempWorld();

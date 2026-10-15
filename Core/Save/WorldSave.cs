@@ -894,7 +894,18 @@ public sealed class WorldSave
                 byte[] value = pkg.ReadByteArray();
                 if (key == TCDataKey)
                 {
-                    var zone = TerrainZone.Decode(position, prefab, value);
+                    TerrainZone zone;
+                    try
+                    {
+                        zone = TerrainZone.Decode(position, prefab, value);
+                    }
+                    catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException)
+                    {
+                        // Damaged ground data: the game loses only this zone's ground edits. Here the object stays an
+                        // ordinary one, kept byte for byte, and the rest of the world reads on.
+                        Console.WriteLine($"Damaged ground data in the terrain object at {position}, kept as it is: {ex.Message}");
+                        continue;
+                    }
                     zone.Source = new ZdoLocation(file, start, -1, valueStart, pkg.Position, flags);
                     TerrainZones.Add(zone);
                 }
