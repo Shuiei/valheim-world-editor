@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.33 — unreleased
+
+### Fixed
+- **A dungeon Claude generated could land in the wrong place, or go live.** Claude's generate_dungeon checked that an
+  area was open and that Auto was off only before generating, which takes a moment. Opening another area or the
+  Workshop meanwhile put the dungeon there, closing the area crashed the tool, and turning Auto on sent the dungeon
+  straight to the game. It is now checked again before placing: nothing is placed and Claude is told why.
+- **A dungeon added to the Workshop's plot could land on another plot.** Generate dungeon (from the Dungeon panel or
+  Claude) writes its blueprint first; a plot opened meanwhile got the dungeon. It is now added only to the plot it
+  was made for; otherwise nothing is placed and the status bar says so (the blueprint stays in the Library).
+
 ## v1.45.32 — unreleased
 
 ### Fixed
