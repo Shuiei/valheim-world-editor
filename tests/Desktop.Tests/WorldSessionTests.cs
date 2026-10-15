@@ -1,10 +1,13 @@
+using TerrainEditor.Editing;
 using TerrainEditor.Save;
+using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// Worlds opened in the app (WorldSession): a world just made from a seed (WorldCreator) opens with its objects.
+/// Worlds opened in the app (WorldSession): a world just made from a seed (WorldCreator) opens with its objects, and
+/// live zone resets the game did are not sent again when the world cannot be read back.
 /// </summary>
 [Collection("World files")]
 public sealed class WorldSessionTests : IDisposable
@@ -41,5 +44,24 @@ public sealed class WorldSessionTests : IDisposable
         var scene = WorldScene.Load(world, 0, 0, 1);
         Assert.NotEmpty(scene.Things);
         Assert.Equal("Open", world.World.Name);
+    }
+
+    [Fact]
+    public async Task ZoneResetsAreNotSentAgainWhenTheWorldCannotBeReadBack()
+    {
+        using var game = new FakeGame();
+        using var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        world.Edits.SetReset(new ZoneReset(5, 5, true, false), true);
+        // The game resets the zone, then reading the world back fails (a timeout, a dropped tunnel).
+        game.Fail["/snapshot"] = 500;
+        var o = await world.ApplyLive();
+        Assert.True(o.Done, o.Message);
+        Assert.False(o.Reloaded);
+        Assert.Contains("1 zone(s) reset", o.Message);
+        Assert.Contains("could not be read again", o.Message);
+        Assert.Equal(0, world.Edits.ResetCount);
+        // The next apply has nothing to reset: the players' building there since stays.
+        await world.ApplyLive();
+        Assert.Single(game.Resets);
     }
 }

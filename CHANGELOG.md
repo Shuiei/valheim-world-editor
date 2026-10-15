@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.2 — unreleased
+
+### Fixed
+- **Live zone resets were sent again after the world failed to load back.** When **Apply live** reset zones in the
+  game but reading the world back from it then failed (a timeout, a dropped tunnel), the apply was reported as failed
+  and the resets stayed pending, so the next apply reset the same zones again and wiped whatever players had built
+  there since. The resets are now taken off as soon as the game has done them, and a failed read-back is reported as
+  applied, with the world not read again.
+
 ## v1.45.1 — unreleased
 
 ### Fixed

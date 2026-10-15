@@ -461,8 +461,20 @@ public sealed class WorldSession : IDisposable
             {
                 var resets = Edits.Resets;
                 await live.ResetZones(resets);
+                // Done in the game: not pending any more, even if reading the world below fails (sent again, they
+                // would wipe what players built there since).
+                Edits.MarkResetsApplied(resets);
                 done.Add($"{resets.Count} zone(s) reset");
-                World = await live.LoadWorld();
+                try
+                {
+                    World = await live.LoadWorld();
+                }
+                catch (Exception ex) when (GameFailed(ex))
+                {
+                    MarkHistoryApplied();
+                    KeepHistory();
+                    return new Outcome(true, $"Applied to the running game: {string.Join("; ", done)}; but the world could not be read again from the game ({ex.Message}): open it again to see the reset zones.", false) { Lifted = plan != null };
+                }
                 Edits.ResetFrom(World);
                 UseModifiers(new TerrainModifiers(World));
                 LiveSync.Reset();
@@ -479,11 +491,15 @@ public sealed class WorldSession : IDisposable
             return new Outcome(done.Count > 0, done.Count > 0 ? $"Applied to the running game: {string.Join("; ", done)}." : "Nothing to apply.", reloaded) { Lifted = plan != null };
         }
         // The game answering with an error (InvalidOperationException from the bridge) is reported too.
-        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or InvalidDataException or InvalidOperationException or System.Text.Json.JsonException)
+        catch (Exception ex) when (GameFailed(ex))
         {
             return new Outcome(false, "Could not apply live: " + ex.Message, false) { Lifted = plan != null };
         }
     }
+
+    /// <summary>The game unreachable or answering with an error (InvalidOperationException from the bridge).</summary>
+    private static bool GameFailed(Exception ex) =>
+        ex is HttpRequestException or IOException or TaskCanceledException or InvalidDataException or InvalidOperationException or System.Text.Json.JsonException;
 
     // ---- Live: following the game. The zones shown are asked about every few seconds (one number each,
     // cheap); those that changed are read again (FetchGame, on the network) and merged in (MergeGame, at
