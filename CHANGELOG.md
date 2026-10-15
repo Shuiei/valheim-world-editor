@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.21 — unreleased
+
+### Fixed
+- **Saving could stop with an error instead of saying why it could not save.** Before writing, a save copies an
+  existing terrain object for new ground and the objects new ones are made from. When that failed (the first
+  terrain object in a layout the editor does not copy, a world file that could not be read, an object that did not
+  read), the error escaped the save and showed as an unexpected error. These now come back as a save that did not
+  happen, with the reason, and nothing written; new ground also copies the first terrain object it can use, not
+  just the first one.
+
 ## v1.45.20 — unreleased
 
 ### Fixed

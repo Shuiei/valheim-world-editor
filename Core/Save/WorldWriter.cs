@@ -107,7 +107,9 @@ public static class WorldWriter
         // A zone can hold two terrain objects with data (the game makes them now and then): each gets
         // the zone's ground, so whichever one the game uses has it.
         Dictionary<(int, int), List<TerrainZone>> existing = world.TerrainZones.Where(z => z.Source != null).GroupBy(z => (z.ZoneX, z.ZoneZ)).ToDictionary(g => g.Key, g => g.ToList());
-        TerrainZone? template = world.TerrainZones.FirstOrDefault(z => z.Source != null);
+        // New ground copies a terrain object whose position is in the short format (the layout the copy patches).
+        bool anyTerrain = world.TerrainZones.Any(z => z.Source != null);
+        TerrainZone? template = world.TerrainZones.FirstOrDefault(z => z.Source != null && (z.Source.Flags & ShortPosition) != 0);
         Dictionary<ChunkFile, HashSet<long>> removals = [];
         void Remove(ObjectRef o) => (removals.TryGetValue(o.File, out var set) ? set : removals[o.File] = []).Add(o.Start);
         foreach (int id in deleted)
@@ -132,60 +134,70 @@ public static class WorldWriter
         Dictionary<ChunkFile, Dictionary<long, (ZdoLocation Loc, byte[] Data)>> patches = [];     // object start -> new TCData
         HashSet<(int, int)> notSaved = [];
         Dictionary<ChunkFile, List<byte[]>> additions = [];
-        int written = 0, created = 0;
-        foreach (ZoneEdit edit in changed)
+        int written = 0, created = 0, addedCount = 0;
+        // Reading the template and the models can fail (a chunk file gone, data that does not parse): nothing is
+        // written yet, and the caller gets a result, not an exception.
+        try
         {
-            byte[] data = EncodeTerrain(edit);
-            if (existing.TryGetValue((edit.ZoneX, edit.ZoneZ), out List<TerrainZone>? zones))
+            foreach (ZoneEdit edit in changed)
             {
-                foreach (TerrainZone zone in zones)
+                byte[] data = EncodeTerrain(edit);
+                if (existing.TryGetValue((edit.ZoneX, edit.ZoneZ), out List<TerrainZone>? zones))
                 {
-                    (patches.TryGetValue(zone.Source!.File, out var p) ? p : patches[zone.Source.File] = [])[zone.Source.Start] = (zone.Source, data);
+                    foreach (TerrainZone zone in zones)
+                    {
+                        (patches.TryGetValue(zone.Source!.File, out var p) ? p : patches[zone.Source.File] = [])[zone.Source.Start] = (zone.Source, data);
+                    }
+                    written++;
+                    continue;
                 }
-                written++;
-                continue;
+                if (edit.HeightCount + edit.PaintCount == 0)
+                {
+                    notSaved.Add((edit.ZoneX, edit.ZoneZ));
+                    continue;
+                }
+                ChunkFile? target = ChunkMath.Find(world.Chunks, edit.ZoneX, edit.ZoneZ);
+                if (target == null)
+                {
+                    skipped.Add(ChunkMath.InWorld(edit.ZoneX, edit.ZoneZ) ? $"zone {edit.ZoneX}, {edit.ZoneZ}: not generated yet (no world data there; visit it in game first)" : $"zone {edit.ZoneX}, {edit.ZoneZ}: outside the world");
+                    notSaved.Add((edit.ZoneX, edit.ZoneZ));
+                    continue;
+                }
+                if (template == null)
+                {
+                    skipped.Add(anyTerrain
+                        ? $"zone {edit.ZoneX}, {edit.ZoneZ}: the world's terrain objects are in an unexpected layout (position not in the short format), so none can be copied"
+                        : $"zone {edit.ZoneX}, {edit.ZoneZ}: the world has no terrain object to copy yet (edit the ground once in game first)");
+                    notSaved.Add((edit.ZoneX, edit.ZoneZ));
+                    continue;
+                }
+                (additions.TryGetValue(target, out var a) ? a : additions[target] = []).Add(NewTerrainObject(world, template, edit, data));
+                created++;
             }
-            if (edit.HeightCount + edit.PaintCount == 0)
+            // New objects: a copy of the first object of the same prefab, in the chunk file of their zone.
+            Func<ObjectRef, byte[]> source = world.SourceReader();
+            foreach (NewObject n in added)
             {
-                notSaved.Add((edit.ZoneX, edit.ZoneZ));
-                continue;
+                int zx = (int)MathF.Floor((n.Position.X + 32f) / 64f), zz = (int)MathF.Floor((n.Position.Z + 32f) / 64f);
+                ChunkFile? target = ChunkMath.Find(world.Chunks, zx, zz);
+                if (target == null)
+                {
+                    skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: zone {zx}, {zz} {(ChunkMath.InWorld(zx, zz) ? "is not generated yet" : "is outside the world")}");
+                    continue;
+                }
+                byte[]? bytes = world.NewObjectBytes(n, source);
+                if (bytes == null)
+                {
+                    skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: unknown kind of object");
+                    continue;
+                }
+                (additions.TryGetValue(target, out var list) ? list : additions[target] = []).Add(bytes);
+                addedCount++;
             }
-            ChunkFile? target = ChunkMath.Find(world.Chunks, edit.ZoneX, edit.ZoneZ);
-            if (target == null)
-            {
-                skipped.Add(ChunkMath.InWorld(edit.ZoneX, edit.ZoneZ) ? $"zone {edit.ZoneX}, {edit.ZoneZ}: not generated yet (no world data there; visit it in game first)" : $"zone {edit.ZoneX}, {edit.ZoneZ}: outside the world");
-                notSaved.Add((edit.ZoneX, edit.ZoneZ));
-                continue;
-            }
-            if (template == null)
-            {
-                skipped.Add($"zone {edit.ZoneX}, {edit.ZoneZ}: the world has no terrain object to copy yet (edit the ground once in game first)");
-                notSaved.Add((edit.ZoneX, edit.ZoneZ));
-                continue;
-            }
-            (additions.TryGetValue(target, out var a) ? a : additions[target] = []).Add(NewTerrainObject(world, template, edit, data));
-            created++;
         }
-        // New objects: a copy of the first object of the same prefab, in the chunk file of their zone.
-        Func<ObjectRef, byte[]> source = world.SourceReader();
-        int addedCount = 0;
-        foreach (NewObject n in added)
+        catch (Exception ex)
         {
-            int zx = (int)MathF.Floor((n.Position.X + 32f) / 64f), zz = (int)MathF.Floor((n.Position.Z + 32f) / 64f);
-            ChunkFile? target = ChunkMath.Find(world.Chunks, zx, zz);
-            if (target == null)
-            {
-                skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: zone {zx}, {zz} {(ChunkMath.InWorld(zx, zz) ? "is not generated yet" : "is outside the world")}");
-                continue;
-            }
-            byte[]? bytes = world.NewObjectBytes(n, source);
-            if (bytes == null)
-            {
-                skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: unknown kind of object");
-                continue;
-            }
-            (additions.TryGetValue(target, out var list) ? list : additions[target] = []).Add(bytes);
-            addedCount++;
+            return new Result(false, "Saving failed (" + ex.Message + "). Nothing changed.", null, 0, 0, skipped);
         }
         if (written + created + removed + addedCount + resets.Count == 0)
         {
@@ -310,12 +322,15 @@ public static class WorldWriter
         return compressed.ToArray();
     }
 
+    /// <summary>The ZDO flag of a position saved as two shorts (the zone), which new terrain objects are copied from.</summary>
+    private const ushort ShortPosition = 0x2000;
+
     /// <summary>A new terrain object: the template object's bytes with this zone's position and data.</summary>
     /// <exception cref="InvalidOperationException">The template's position is not in the short format.</exception>
     private static byte[] NewTerrainObject(WorldSave world, TerrainZone template, ZoneEdit edit, byte[] data)
     {
         ZdoLocation src = template.Source!;
-        if ((src.Flags & 0x2000) == 0)
+        if ((src.Flags & ShortPosition) == 0)
         {
             throw new InvalidOperationException("Unexpected terrain object layout (position is not in the short format).");
         }
