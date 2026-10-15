@@ -6,9 +6,9 @@ from. The editor shows the language chosen under **Settings › Language**, by d
 computer's when there is a catalogue of it; a text a catalogue does not have yet shows in
 English. A new language is taken when the editor starts again.
 
-Not every window takes its texts from the catalogue yet: the hover tips and Settings do, the rest
-moves over window by window. A catalogue made now keeps working as more texts are added: the new
-ones show in English until translated.
+Not every text comes from the catalogue yet: every hover tip does (but the Inspector's), and
+Settings; the rest moves over window by window. A catalogue made now keeps working as more texts
+are added: the new ones show in English until translated.
 
 ## Making a catalogue
 
@@ -39,6 +39,7 @@ only from `en.json`; `LangTests` checks them).
 - Write the key in full in the code, even when it is passed along: `LangTests` checks that every
   key asked for is in `en.json` and every key of `en.json` is asked for somewhere.
 - Texts for Claude (the MCP tools' descriptions and answers), the log, command-line output and
-  file formats stay in English and outside the catalogue.
+  file formats stay in English and outside the catalogue. A text shown to the user that Claude is
+  also given (a piece's cost) asks for English with `Lang.En` on Claude's side.
 - Windows are built once, in the language taken at start (`Lang.Use` in `Program.Main`); nothing
   has to listen for a change of language.

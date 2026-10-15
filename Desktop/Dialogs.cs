@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -28,7 +29,7 @@ public static class Dialogs
         };
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
         var ok = new Button { Content = yes, IsDefault = true };
-        ToolTip.SetTip(ok, $"{yes} (Enter).");
+        ToolTip.SetTip(ok, Lang.T("dialog.okEnter", yes));
         ok.Click += (_, _) => { result = true; dialog.Close(); };
         buttons.Children.Add(ok);
         if (no != null)
@@ -69,7 +70,7 @@ public static class Dialogs
         };
         var box = new TextBox { Text = initial }.Tip("dialog.text");
         var ok = new Button { Content = "OK", IsDefault = true };
-        ToolTip.SetTip(ok, "Use this answer (Enter).");
+        ToolTip.SetTip(ok, Lang.T("dialog.useAnswer"));
         ok.Click += (_, _) => { result = box.Text; dialog.Close(); };
         var cancel = new Button { Content = "Cancel", IsCancel = true }.Tip("dialog.cancel");
         cancel.Click += (_, _) => dialog.Close();
@@ -109,7 +110,7 @@ public static class Dialogs
         var tags = new TextBox { Text = string.Join(", ", start.Tags), PlaceholderText = "house, viking, stone" }.Tip("dialog.blueprintTags");
         var dungeon = new CheckBox { Content = "A dungeon: pasted into a world, it goes 5000 m up behind an entrance on the ground", IsChecked = start.Dungeon, FontSize = 12 }.Tip("dialog.blueprintDungeon");
         var ok = new Button { Content = "Save", IsDefault = true };
-        ToolTip.SetTip(ok, "Keep these details (Enter).");
+        ToolTip.SetTip(ok, Lang.T("dialog.keepDetails"));
         ok.Click += (_, _) =>
         {
             result = new TerrainEditor.App.Homestead.Details(name.Text ?? "", (description.Text ?? "").Replace('\n', ' ').Replace('\r', ' '), TerrainEditor.App.Homestead.Details.ParseTags(tags.Text))

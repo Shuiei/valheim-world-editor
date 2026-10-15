@@ -427,7 +427,7 @@ public sealed class AreaPanel
         // The action's own explanation, on the list and on its button.
         string what = Tips.Of($"areaAct.{act}");
         ToolTip.SetTip(ActionBox, $"{Tips.Of("area.action")} {what}");
-        ToolTip.SetTip(ApplyButton, $"{what} (Enter). Ctrl+Z undoes it.");
+        ToolTip.SetTip(ApplyButton, Lang.T("area.applyTip", what));
         ApplyButton.Content = act switch
         {
             Act.Remove => "Remove the objects (Enter)",

@@ -49,6 +49,12 @@ public static partial class Lang
     public static string T(string key, params object?[] values) => string.Format(CultureInfo.InvariantCulture, T(key), values);
 
     /// <summary>
+    /// The English text of <paramref name="key"/>, with the values put in its places, whatever the language in use: for
+    /// what is not shown to the user (Claude's answers).
+    /// </summary>
+    public static string En(string key, params object?[] values) => string.Format(CultureInfo.InvariantCulture, English[key], values);
+
+    /// <summary>
     /// Takes the language <paramref name="code"/> from now on (texts already shown stay as they are: the app takes it
     /// when it starts); the computer's language when null or empty; English when there is no such catalogue.
     /// </summary>

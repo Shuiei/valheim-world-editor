@@ -7,9 +7,10 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// The app's texts by language (Lang): the English catalogue carried inside, a text with values put in, a language
-/// taken from the user's lang folder over English (its broken texts left out), the computer's language picked, and the
-/// catalogues checked against the code: every key the code asks for is in English, every English text is asked for,
-/// every translation matches the English. It changes the language in use, so it runs alone.
+/// taken from the user's lang folder over English (its broken texts left out), Claude's texts kept in English, the
+/// computer's language picked, and the catalogues checked against the code: every key the code asks for is in English,
+/// every English text is asked for, every translation matches the English. It changes the language in use, so it runs
+/// alone.
 /// </summary>
 [Collection("DataDir")]
 public sealed partial class LangTests : IDisposable
@@ -64,6 +65,19 @@ public sealed partial class LangTests : IDisposable
         Assert.Throws<KeyNotFoundException>(() => Lang.T("no.such.text"));
         Assert.Contains(new Lang.Language("fr", "Français"), Lang.Available());
         Assert.Equal(Lang.Source, Lang.Available()[0].Code);
+    }
+
+    [Fact]
+    public void WhatClaudeIsToldStaysInEnglish()
+    {
+        Write("fr", new() { [Lang.NameKey] = "Français", ["cost.free"] = "Gratuit", ["cost.needs"] = "{0} (il faut {1})" });
+        Lang.Use("fr");
+        Assert.Equal("Free", Lang.En("cost.free"));
+        Assert.Equal("Gratuit", TerrainEditor.Terrain.PieceCost.Of(Array.Empty<string>()).Describe());
+        Assert.Equal("Free", TerrainEditor.Terrain.PieceCost.Of(Array.Empty<string>()).Describe(english: true));
+        var cost = new TerrainEditor.Terrain.PieceCost.Total([("Wood", "Wood", 6)], ["Workbench"], []);
+        Assert.Equal("Wood 6 (il faut Workbench)", cost.Describe());
+        Assert.Equal("Wood 6 (needs Workbench)", cost.Describe(english: true));
     }
 
     [Fact]

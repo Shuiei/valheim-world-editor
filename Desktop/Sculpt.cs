@@ -1,3 +1,5 @@
+using TerrainEditor.App;
+
 namespace TerrainEditor.Desktop;
 
 /// <summary>
@@ -114,33 +116,33 @@ public sealed class Brush
     /// <summary>The tool's name on its button.</summary>
     public static string Label(BrushTool t) => t switch
     {
-        BrushTool.Raise => "Raise",
-        BrushTool.Lower => "Lower",
-        BrushTool.Flatten => "Flatten",
-        BrushTool.Smooth => "Smooth",
-        BrushTool.Natural => "Naturalize",
-        BrushTool.Erode => "Erode",
-        BrushTool.Restore => "Restore",
-        BrushTool.PaintDirt => "Dirt",
-        BrushTool.PaintCultivated => "Cultivate",
-        BrushTool.PaintPaved => "Paved",
-        _ => "Clear paint",
+        BrushTool.Raise => Lang.T("brush.label.raise"),
+        BrushTool.Lower => Lang.T("brush.label.lower"),
+        BrushTool.Flatten => Lang.T("brush.label.flatten"),
+        BrushTool.Smooth => Lang.T("brush.label.smooth"),
+        BrushTool.Natural => Lang.T("brush.label.natural"),
+        BrushTool.Erode => Lang.T("brush.label.erode"),
+        BrushTool.Restore => Lang.T("brush.label.restore"),
+        BrushTool.PaintDirt => Lang.T("brush.label.dirt"),
+        BrushTool.PaintCultivated => Lang.T("brush.label.cultivated"),
+        BrushTool.PaintPaved => Lang.T("brush.label.paved"),
+        _ => Lang.T("brush.label.clear"),
     };
 
     /// <summary>What the tool does, in a line.</summary>
     public static string Help(BrushTool t) => t switch
     {
-        BrushTool.Raise => "Lift the ground under the brush.",
-        BrushTool.Lower => "Dig the ground down under the brush.",
-        BrushTool.Flatten => "Level the ground to one height.",
-        BrushTool.Smooth => "Even out bumps and sharp edges.",
-        BrushTool.Natural => "Turn flat, tool-made ground into natural-looking bumps.",
-        BrushTool.Erode => "Weather the ground: steep slopes slide down to rest (Thermal), or rain cuts gullies and fills hollows (Water).",
-        BrushTool.Restore => "Bring the ground back to how the world generated it.",
-        BrushTool.PaintDirt => "Paint bare dirt, like a path.",
-        BrushTool.PaintCultivated => "Paint cultivated soil for planting.",
-        BrushTool.PaintPaved => "Paint paved stone ground.",
-        _ => "Remove paint: back to the biome's own ground.",
+        BrushTool.Raise => Lang.T("brush.help.raise"),
+        BrushTool.Lower => Lang.T("brush.help.lower"),
+        BrushTool.Flatten => Lang.T("brush.help.flatten"),
+        BrushTool.Smooth => Lang.T("brush.help.smooth"),
+        BrushTool.Natural => Lang.T("brush.help.natural"),
+        BrushTool.Erode => Lang.T("brush.help.erode"),
+        BrushTool.Restore => Lang.T("brush.help.restore"),
+        BrushTool.PaintDirt => Lang.T("brush.help.dirt"),
+        BrushTool.PaintCultivated => Lang.T("brush.help.cultivated"),
+        BrushTool.PaintPaved => Lang.T("brush.help.paved"),
+        _ => Lang.T("brush.help.clear"),
     };
 
     /// <summary>
