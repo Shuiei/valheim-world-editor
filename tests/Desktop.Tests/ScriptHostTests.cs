@@ -216,6 +216,57 @@ public class ScriptHostTests
     [InlineData("int n = 0;\nagain: n++;\n#if true\nif (n < 3) goto again;\n#endif\nPrint(n);\n")]
     public void LoopsNextToDirectivesStillCompile(string code) => Assert.Empty(ScriptHost.Compile(code).Errors);
 
+    // A step that cannot move along the area would give the same point for ever: it is refused.
+    [Theory]
+    [InlineData("0")]
+    [InlineData("-1")]
+    [InlineData("1e-7f")]
+    [InlineData("float.NaN")]
+    public void APointsStepThatCannotMoveIsRefused(string step)
+    {
+        var s = TestScenes.Flat(1);
+        var ex = Assert.Throws<ArgumentException>(() => Run(s, $"Print(Area.Points({step}).Count());"));
+        Assert.Contains("give one above 0", ex.Message);
+    }
+
+    // Counted steps give the points a step that adds up exactly always gave.
+    [Fact]
+    public void PointsAreCountedInSteps()
+    {
+        var s = TestScenes.Flat(1);
+        Assert.Equal("16", Run(s, "Print(Area.Points(16).Count());").Output.ToString().Trim());
+        Assert.Equal("15876", Run(s, "Print(Area.Points(0.5f).Count());").Output.ToString().Trim());
+    }
+
+    // A shape or mountain far larger than the area ends, having changed only the area (a float counter past 2^24 m
+    // stopped growing and never ended).
+    [Theory]
+    [InlineData("Ground.Shape(0, 0, 1e9f, (dx, dz) => 1);")]
+    [InlineData("Ground.Mountain(0, 0, height: 10, radius: 1e9f);")]
+    public async Task AHugeShapeEnds(string code)
+    {
+        var s = TestScenes.Flat(1);
+        var run = Task.Run(() => Run(s, code), TestContext.Current.CancellationToken);
+        Assert.Same(run, await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken)));
+        Assert.NotEmpty((await run).Heights);
+    }
+
+    // The whole-metre offsets within reach that can land in a span: short however large the reach, none when there is
+    // nothing to count.
+    [Fact]
+    public void OffsetsAreCountedOnlyWhereTheyCanLand()
+    {
+        Assert.Equal((-4, 3), ScriptHost.Offsets(0, 3.5f, -100, 100));
+        Assert.Equal((-11, 10), ScriptHost.Offsets(0.5f, 1e9f, -10, 10));
+        Assert.Equal((-11, 10), ScriptHost.Offsets(0.5f, float.PositiveInfinity, -10, 10));
+        Assert.Equal((-5, 2), ScriptHost.Offsets(0, 5, -100, 2));
+        foreach (var (c, reach) in new[] { (0f, -1f), (0f, float.NaN), (float.NaN, 5f), (1e9f, 5f), (-1e30f, 1e31f) })
+        {
+            var (from, to) = ScriptHost.Offsets(c, reach, -10, 10);
+            Assert.True(from > to, $"{c}, {reach}: {from}..{to}");
+        }
+    }
+
     /// <summary>A wooden wall standing at (20, 31, 20), its front north, as thing 0 of a flat 1-zone area.</summary>
     private static EditSession Wall() =>
         TestScenes.Flat(1, new WorldScene.Thing(7, StableHash.Of("woodwall"), new Vector3(20, 31, 20), Vector3.Zero, 0, true));

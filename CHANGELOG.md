@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.8 — unreleased
+
+### Fixed
+- **Some script calls never ended, even with Stop.** `Area.Points(0)`, a negative step, or one too small to move
+  along the area (`Area.Points(0.0001f)` far from the world's middle) gave the same point for ever, and Stop only
+  acted at the start of a row, so a query such as `Area.Points(0).Count()` could not be stopped. `Ground.Shape`
+  and `Ground.Mountain` with a radius beyond about 16,000 km counted with a float that stopped growing, so they
+  never ended either. Such a step is now an error, the rows and points are counted with whole numbers, only the
+  part of a shape within the area is gone through, and Stop acts at every point of `Area.Points()`.
+
 ## v1.45.7 — unreleased
 
 ### Fixed

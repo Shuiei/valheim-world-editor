@@ -297,10 +297,13 @@ public static class ScriptHost
                 };
                 var shape = Mountain.Shape(spec);
                 float reach = spec.Reach;
-                for (float dz = -MathF.Ceiling(reach); dz <= reach; dz++)
+                // Counted, and only where the area is: a float counter stops growing past 2^24 m.
+                var (fromZ, toZ) = Offsets(z, reach, snap.Oz - 1, snap.Oz + snap.H);
+                var (fromX, toX) = Offsets(x, reach, snap.Ox - 1, snap.Ox + snap.W);
+                for (int dz = fromZ; dz <= toZ; dz++)
                 {
                     cancel.ThrowIfCancellationRequested();
-                    for (float dx = -MathF.Ceiling(reach); dx <= reach; dx++)
+                    for (int dx = fromX; dx <= toX; dx++)
                     {
                         float v = shape(dx, dz);
                         if (v != 0 && Point(x + dx, z + dz) is int p and >= 0)
@@ -351,6 +354,7 @@ public static class ScriptHost
                 }
             }));
             Fill("Check", new Action(cancel.ThrowIfCancellationRequested));
+            Fill("Offsets", new Func<float, float, float, float, (int, int)>(Offsets));
             Fill("MinX", snap.Ox);
             Fill("MinZ", snap.Oz);
             Fill("MaxX", snap.Ox + snap.W - 1);
@@ -384,6 +388,25 @@ public static class ScriptHost
         {
             alc.Unload();
         }
+    }
+
+    /// <summary>
+    /// The whole-metre offsets from c, within reach of it, that can land within min..max: a short range of integers to
+    /// count, however large reach is. Empty (From above To) when reach is not a size or c is too far off (beyond
+    /// 2^24 m) for whole metres to count.
+    /// </summary>
+    /// <param name="c">The middle, on one axis.</param>
+    /// <param name="reach">How far from it to go.</param>
+    /// <param name="min">The lowest place that counts.</param>
+    /// <param name="max">The highest place that counts.</param>
+    internal static (int From, int To) Offsets(float c, float reach, float min, float max)
+    {
+        if (!(reach >= 0) || !float.IsFinite(c))
+        {
+            return (0, -1);
+        }
+        double from = Math.Max(-Math.Ceiling(reach), Math.Floor(min - (double)c)), to = Math.Min(Math.Floor(reach), Math.Ceiling(max - (double)c));
+        return from <= to && from >= -(1 << 24) && to <= 1 << 24 ? ((int)from, (int)to) : (0, -1);
     }
 
     /// <summary>
