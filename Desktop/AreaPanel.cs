@@ -949,9 +949,11 @@ public sealed class AreaPanel
         if (BackupObjectsBox.IsChecked == true)
         {
             float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
-            // Runestones are left as they are on both sides (a location proxy cannot be copied back).
+            // Runestones are left as they are on both sides (a location proxy cannot be copied back). Both sides are
+            // picked alike (where the Mask lets through too): an unchanged object picked on one side only would be
+            // brought back on top of itself.
             var wanted = WorldScene.ReadThings(bw, s.X0, s.Z0, s.ZonesX, s.ZonesZ, new HashSet<int>())
-                .Where(o => !o.Runestone && AreaTool.Inside(poly, o.Position.X - ox, o.Position.Z - oz) && Area.Kinds.Contains(KindOf(o))).ToList();
+                .Where(o => !o.Runestone && AreaTool.Inside(poly, o.Position.X - ox, o.Position.Z - oz) && Area.Kinds.Contains(KindOf(o)) && MaskAt(o.Position.X - ox, o.Position.Z - oz)).ToList();
             var current = ThingsInside(poly, chosenKindsOnly: true, includeHidden: true).Where(i => !s.Things[i].Runestone).ToList();
             // Unchanged since the backup (same kind, place and facing): kept as they are.
             static bool Same(WorldScene.Thing r, WorldScene.Thing o) => r.Prefab == o.Prefab && MathF.Abs(r.Position.X - o.Position.X) < 0.01f
