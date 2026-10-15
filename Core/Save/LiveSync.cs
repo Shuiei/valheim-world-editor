@@ -35,7 +35,8 @@ public readonly record struct LiveMove(LiveTarget From, Vector3 Position, Vector
 public sealed class LiveSync
 {
     /// <summary>
-    /// Guards the two collections below; Apply records the game's answer after an await, possibly on another thread.
+    /// Guards the collections below and the unanswered call; Apply records the game's answer after an await, possibly on
+    /// another thread.
     /// </summary>
     private readonly Lock _lock = new();
 
@@ -59,6 +60,7 @@ public sealed class LiveSync
             _destroyed.Clear();
             _liveIds.Clear();
             _movedTo.Clear();
+            _unanswered = null;
         }
     }
 
@@ -135,25 +137,92 @@ public sealed class LiveSync
     /// (nothing when the call fails, so it is sent again next time). New objects of kinds the editor cannot write are
     /// skipped. With a bridge that moves objects (1.40.0 on), an object moved in the editor (a saved object deleted, with
     /// one copy of it elsewhere that differs only by where it stands and how it is turned: a move, or a cut then pasted)
-    /// moves in the game under its own ZDOID, so what mods know of it holds; moved back the same way on undo.
+    /// moves in the game under its own ZDOID, so what mods know of it holds; moved back the same way on undo. With a
+    /// bridge that does a call once (1.45.3 on), a call whose answer was lost (the connection dropped or timed out after
+    /// the game did it) is sent again first under the same id, and the game answers with what it did instead of doing it
+    /// twice; the changes since follow in a call of their own.
     /// </summary>
     /// <returns>A one-line summary for the user, or "" when there was nothing to send.</returns>
     public async Task<string> Apply(WorldSave world, EditStore edits, LiveBridge live)
     {
-        bool canMove = await live.CanMove();
-        List<LiveTarget> destroy = [];
-        List<byte[]> create = [];
-        List<int> createFor = [];
-        // What each creation is and where (for its LiveTarget once the game gives its ZDOID).
-        List<(int Prefab, Vector3 Position)> createWhat = [];
-        List<string> skipped = [];
-        // What the game has once it accepts the call (nothing is recorded before: a refused call is sent
-        // again next time).
-        List<int> destroyIds = [], restoreIds = [], dropNew = [];
-        List<LiveMove> moves = [];
-        // Each move's snapshot object, the id whose game object moves (that object, or a new object it was moved to)
-        // and the id it stands for once moved.
-        List<(int Source, int From, int To)> moveFor = [];
+        List<string> said = [];
+        Call? unanswered;
+        lock (_lock)
+        {
+            unanswered = _unanswered;
+        }
+        if (unanswered != null)
+        {
+            said.Add(await Send(world, live, unanswered));
+        }
+        Call call = Plan(world, edits, await live.CanMove());
+        if (!call.Empty)
+        {
+            call.Id = await live.CanCallOnce() ? Guid.NewGuid().ToString("N") : null;
+            said.Add(await Send(world, live, call));
+        }
+        return string.Join("; ", said);
+    }
+
+    /// <summary>
+    /// One call to the game's objects: what it sends, and what the game has once it accepts it (recorded only then:
+    /// a refused call is sent again next time).
+    /// </summary>
+    private sealed class Call
+    {
+        /// <summary>The call's id, for a plugin that does a call once (<see cref="LiveBridge.CanCallOnce"/>); null: none.</summary>
+        public string? Id { get; set; }
+
+        /// <summary>The game objects to destroy.</summary>
+        public List<LiveTarget> Destroy { get; } = [];
+
+        /// <summary>The objects to make, in the save format.</summary>
+        public List<byte[]> Create { get; } = [];
+
+        /// <summary>The id each creation is for: a new object, or a saved one brought back.</summary>
+        public List<int> CreateFor { get; } = [];
+
+        /// <summary>What each creation is and where (for its LiveTarget once the game gives its ZDOID).</summary>
+        public List<(int Prefab, Vector3 Position)> CreateWhat { get; } = [];
+
+        /// <summary>New objects of kinds the editor cannot write, left out.</summary>
+        public List<string> Skipped { get; } = [];
+
+        /// <summary>Saved objects the call destroys.</summary>
+        public List<int> DestroyIds { get; } = [];
+
+        /// <summary>Saved objects the call makes again (deletions undone).</summary>
+        public List<int> RestoreIds { get; } = [];
+
+        /// <summary>New objects the call destroys again.</summary>
+        public List<int> DropNew { get; } = [];
+
+        /// <summary>The objects to move.</summary>
+        public List<LiveMove> Moves { get; } = [];
+
+        /// <summary>
+        /// Each move's snapshot object, the id whose game object moves (that object, or a new object it was moved to)
+        /// and the id it stands for once moved.
+        /// </summary>
+        public List<(int Source, int From, int To)> MoveFor { get; } = [];
+
+        /// <summary>Whether there is nothing to send.</summary>
+        public bool Empty => Destroy.Count + Create.Count + Moves.Count == 0;
+    }
+
+    /// <summary>
+    /// The last call left without an answer (the connection dropped or timed out): the game may have done it. Sent
+    /// again first, under its id; null when every call was answered.
+    /// </summary>
+    private Call? _unanswered;
+
+    /// <summary>The call that brings the game to the editor's objects, from what was applied so far.</summary>
+    /// <param name="world">The world the ids are of.</param>
+    /// <param name="edits">The editor's deletions and new objects.</param>
+    /// <param name="canMove">Whether the plugin moves objects (else a move is a destroy and a creation).</param>
+    private Call Plan(WorldSave world, EditStore edits, bool canMove)
+    {
+        Call call = new();
         lock (_lock)
         {
             HashSet<int> deleted = edits.Deleted;
@@ -171,8 +240,8 @@ public sealed class LiveSync
             HashSet<int> moved = [];
             if (canMove)
             {
-                FindMoves(world, deleted, added, LiveId, moves, moveFor);
-                foreach (var (source, from, to) in moveFor)
+                FindMoves(world, deleted, added, LiveId, call.Moves, call.MoveFor);
+                foreach (var (source, from, to) in call.MoveFor)
                 {
                     moved.Add(source);
                     moved.Add(from);
@@ -181,17 +250,17 @@ public sealed class LiveSync
             }
             foreach (int id in deleted.Where(id => id >= 0 && id < world.ObjectRefs.Count && !_destroyed.Contains(id) && !moved.Contains(id)))
             {
-                destroy.Add(LiveId(id));
-                destroyIds.Add(id);
+                call.Destroy.Add(LiveId(id));
+                call.DestroyIds.Add(id);
             }
             // Undone deletions: the object comes back as a copy of its snapshot bytes.
             foreach (int id in _destroyed.Where(id => !deleted.Contains(id) && !moved.Contains(id)).ToList())
             {
                 ObjectRef o = world.ObjectRefs[id];
-                create.Add(world.ObjectBytes(id));
-                createFor.Add(id);
-                createWhat.Add((o.Prefab, o.Position));
-                restoreIds.Add(id);
+                call.Create.Add(world.ObjectBytes(id));
+                call.CreateFor.Add(id);
+                call.CreateWhat.Add((o.Prefab, o.Position));
+                call.RestoreIds.Add(id);
             }
             // New objects not in the game yet, and ones that were removed again (undo, delete).
             foreach (NewObject n in added.Values.Where(n => !_liveIds.ContainsKey(n.Id) && !moved.Contains(n.Id)))
@@ -199,24 +268,63 @@ public sealed class LiveSync
                 byte[]? bytes = world.NewObjectBytes(n, m => world.LiveSource(m.File));
                 if (bytes == null)
                 {
-                    skipped.Add($"unknown kind of object at {n.Position.X:F0}, {n.Position.Z:F0}");
+                    call.Skipped.Add($"unknown kind of object at {n.Position.X:F0}, {n.Position.Z:F0}");
                     continue;
                 }
-                create.Add(bytes);
-                createFor.Add(n.Id);
-                createWhat.Add((n.Prefab, n.Position));
+                call.Create.Add(bytes);
+                call.CreateFor.Add(n.Id);
+                call.CreateWhat.Add((n.Prefab, n.Position));
             }
             foreach (int id in _liveIds.Keys.Where(id => id < 0 && !added.ContainsKey(id) && !moved.Contains(id)).ToList())
             {
-                destroy.Add(_liveIds[id]);
-                dropNew.Add(id);
+                call.Destroy.Add(_liveIds[id]);
+                call.DropNew.Add(id);
             }
         }
-        if (destroy.Count + create.Count + moves.Count == 0)
+        return call;
+    }
+
+    /// <summary>
+    /// Sends a call and records what the game did. A call with an id left without an answer is kept, to be sent again
+    /// first next time; one the plugin answered with an error was not done, and is planned again.
+    /// </summary>
+    /// <returns>A one-line summary for the user.</returns>
+    private async Task<string> Send(WorldSave world, LiveBridge live, Call call)
+    {
+        string reply;
+        try
         {
-            return "";
+            reply = await live.ApplyObjects(call.Destroy, call.Create, call.Moves, call.Id);
         }
-        string reply = await live.ApplyObjects(destroy, create, moves);
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or IOException)
+        {
+            lock (_lock)
+            {
+                _unanswered = call.Id != null ? call : null;
+            }
+            throw;
+        }
+        catch (InvalidOperationException)
+        {
+            lock (_lock)
+            {
+                _unanswered = null;
+            }
+            throw;
+        }
+        lock (_lock)
+        {
+            _unanswered = null;
+        }
+        return Record(world, call, reply);
+    }
+
+    /// <summary>What the game did with a call, from its answer: recorded, and told in one line for the user.</summary>
+    /// <param name="world">The world the ids are of.</param>
+    /// <param name="call">The call answered.</param>
+    /// <param name="reply">The plugin's JSON answer.</param>
+    private string Record(WorldSave world, Call call, string reply)
+    {
         using var doc = JsonDocument.Parse(reply);
         var ids = doc.RootElement.GetProperty("created").EnumerateArray().Select(e => e.GetString()!.Split(':')).ToList();
         var moveReplies = doc.RootElement.TryGetProperty("moves", out var mv)
@@ -226,18 +334,18 @@ public sealed class LiveSync
         List<(int Id, (long User, uint Id) Zdo)> movedBack = [];
         lock (_lock)
         {
-            foreach (int id in destroyIds)
+            foreach (int id in call.DestroyIds)
             {
                 _destroyed.Add(id);
                 _liveIds.Remove(id);
             }
-            foreach (int id in restoreIds)
+            foreach (int id in call.RestoreIds)
             {
                 _destroyed.Remove(id);
                 // Made again on its own: a copy it was moved to is a copy of its own from now on.
                 _movedTo.Remove(id);
             }
-            foreach (int id in dropNew)
+            foreach (int id in call.DropNew)
             {
                 _liveIds.Remove(id);
                 foreach (int source in _movedTo.Where(m => m.Value == id).Select(m => m.Key).ToList())
@@ -245,15 +353,15 @@ public sealed class LiveSync
                     _movedTo.Remove(source);
                 }
             }
-            for (int i = 0; i < ids.Count && i < createFor.Count; i++)
+            for (int i = 0; i < ids.Count && i < call.CreateFor.Count; i++)
             {
-                _liveIds[createFor[i]] = new LiveTarget(long.Parse(ids[i][0], CultureInfo.InvariantCulture), uint.Parse(ids[i][1], CultureInfo.InvariantCulture), createWhat[i].Prefab, createWhat[i].Position);
+                _liveIds[call.CreateFor[i]] = new LiveTarget(long.Parse(ids[i][0], CultureInfo.InvariantCulture), uint.Parse(ids[i][1], CultureInfo.InvariantCulture), call.CreateWhat[i].Prefab, call.CreateWhat[i].Position);
             }
-            for (int i = 0; i < moveReplies.Count && i < moveFor.Count; i++)
+            for (int i = 0; i < moveReplies.Count && i < call.MoveFor.Count; i++)
             {
-                var (source, from, to) = moveFor[i];
+                var (source, from, to) = call.MoveFor[i];
                 var zdo = (long.Parse(moveReplies[i].Id[0], CultureInfo.InvariantCulture), uint.Parse(moveReplies[i].Id[1], CultureInfo.InvariantCulture));
-                var target = new LiveTarget(zdo.Item1, zdo.Item2, world.ObjectRefs[source].Prefab, moves[i].Position);
+                var target = new LiveTarget(zdo.Item1, zdo.Item2, world.ObjectRefs[source].Prefab, call.Moves[i].Position);
                 _liveIds.Remove(from);
                 if (to == source)
                 {
@@ -272,11 +380,11 @@ public sealed class LiveSync
         }
         // Objects of the world made again in the game (an applied delete undone): followed under their new
         // ZDOID from now on (WorldSave.MergeLive), as the world's own.
-        for (int i = 0; i < ids.Count && i < createFor.Count; i++)
+        for (int i = 0; i < ids.Count && i < call.CreateFor.Count; i++)
         {
-            if (createFor[i] >= 0)
+            if (call.CreateFor[i] >= 0)
             {
-                world.SetLiveId(createFor[i], (long.Parse(ids[i][0], CultureInfo.InvariantCulture), uint.Parse(ids[i][1], CultureInfo.InvariantCulture)));
+                world.SetLiveId(call.CreateFor[i], (long.Parse(ids[i][0], CultureInfo.InvariantCulture), uint.Parse(ids[i][1], CultureInfo.InvariantCulture)));
             }
         }
         foreach (var (id, zdo) in movedBack)
@@ -305,9 +413,9 @@ public sealed class LiveSync
         {
             msg += $", {missing} were already gone";
         }
-        if (skipped.Count > 0)
+        if (call.Skipped.Count > 0)
         {
-            msg += $", {skipped.Count} skipped ({skipped[0]})";
+            msg += $", {call.Skipped.Count} skipped ({call.Skipped[0]})";
         }
         return msg;
     }

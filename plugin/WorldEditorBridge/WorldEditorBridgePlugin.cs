@@ -24,13 +24,14 @@ namespace WorldEditorBridge;
 ///   GET /snapshot   the whole persistent world: world info, ZoneSystem data (generated zones, locations)
 ///                   and every persistent object in the save file's chunk format, gzip-compressed
 ///   GET /players    connected players and their positions (JSON)
-///   GET /status     plugin and world info, and the features this plugin has ("move"), as JSON
+///   GET /status     plugin and world info, and the features this plugin has ("move", "once"), as JSON
 ///   POST /terrain   new terrain data for zones: int count, then per zone int x, int z, int length + TCData
 ///                   (TerrainComp.Save format); every player's game reloads those zones' ground
 ///   POST /objects   int n + n x (long user, uint id) objects to destroy, then int m + m x (int length +
 ///                   object in save format) objects to create, then each destroyed object's prefab and place,
 ///                   then int k + k x (long user, uint id, int prefab, place, new place, turn, int length + object
-///                   in save format) objects to move; answers with the new and moved objects' ids
+///                   in save format) objects to move; answers with the new and moved objects' ids. A call sent
+///                   again under the same X-Call-Id header is answered again, not done twice
 ///   POST /zones/reset  int n + n x (int x, int z, bool keep buildings, bool reset ground): the zones'
 ///                   objects are removed and the zones are generated again (at once where players are)
 ///   POST /watch     int n + n x (int x, int z): one change number per zone (JSON)
@@ -356,7 +357,8 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
                         break;
                     }
                     byte[] body = ReadAll(ctx.Request.InputStream);
-                    Reply(res, 200, "application/json", OnMainThread(() => Applied(ApplyObjects(body))));
+                    string call = ctx.Request.Headers["X-Call-Id"];
+                    Reply(res, 200, "application/json", OnMainThread(() => ApplyObjectsOnce(call, body)));
                     break;
                 }
                 case "/models":
@@ -612,6 +614,46 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
         }
         return (Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroyed + refound},\"refound\":{refound},\"missing\":{missing},\"created\":[{ids}],\"moves\":[{movesJson}]}}"),
             new AppliedChanges(made, gone, [], [], moved));
+    }
+
+    /// <summary>How many /objects answers are kept by their call id (<see cref="ApplyObjectsOnce"/>).</summary>
+    private const int CallsKept = 16;
+
+    /// <summary>The last /objects answers by their call id, oldest first; only read and changed on the main thread.</summary>
+    private readonly List<(string Id, byte[] Answer)> _calls = [];
+
+    /// <summary>
+    /// POST /objects, done once per call id (the X-Call-Id header, from editors 1.45.3 on): a call sent again because
+    /// its answer was lost on the way (a dropped tunnel, the editor giving up waiting) is answered with what was done
+    /// the first time instead of being done twice, which would make every new object twice. A call without an id is
+    /// done each time, as before.
+    /// </summary>
+    /// <param name="call">The call's id; null when the editor sent none.</param>
+    /// <param name="body">The call's body (<see cref="ApplyObjects"/>).</param>
+    /// <returns>The JSON answer.</returns>
+    private byte[] ApplyObjectsOnce(string call, byte[] body)
+    {
+        if (call != null)
+        {
+            foreach (var (id, answer) in _calls)
+            {
+                if (id == call)
+                {
+                    Logger.LogInfo("WorldEditorBridge: objects call sent again (its answer was lost): answered with what was done, not done twice");
+                    return answer;
+                }
+            }
+        }
+        byte[] json = Applied(ApplyObjects(body));
+        if (call != null)
+        {
+            if (_calls.Count == CallsKept)
+            {
+                _calls.RemoveAt(0);
+            }
+            _calls.Add((call, json));
+        }
+        return json;
     }
 
     /// <summary>
@@ -1051,13 +1093,14 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
 
     /// <summary>
     /// GET /status: plugin version, world and seed names, object and player counts, the network time and the features
-    /// this plugin has (editors look for "move" before sending moves to /objects), as JSON.
+    /// this plugin has (editors look for "move" before sending moves to /objects, and "once" before sending call ids), as
+    /// JSON.
     /// </summary>
     private byte[] Status()
     {
         World w = ZNet.World;
         var dict = (Dictionary<ZDOID, ZDO>)ObjectsById.GetValue(ZDOMan.instance);
-        string json = $"{{\"plugin\":{Json(Version)},\"world\":{Json(w?.m_name ?? "")},\"seedName\":{Json(w?.m_seedName ?? "")},\"objects\":{dict.Count},\"players\":{ZNet.instance.GetPlayerList().Count},\"netTime\":{ZNet.instance.GetTimeSeconds().ToString("R", CultureInfo.InvariantCulture)},\"features\":[\"move\"]}}";
+        string json = $"{{\"plugin\":{Json(Version)},\"world\":{Json(w?.m_name ?? "")},\"seedName\":{Json(w?.m_seedName ?? "")},\"objects\":{dict.Count},\"players\":{ZNet.instance.GetPlayerList().Count},\"netTime\":{ZNet.instance.GetTimeSeconds().ToString("R", CultureInfo.InvariantCulture)},\"features\":[\"move\",\"once\"]}}";
         return Encoding.UTF8.GetBytes(json);
     }
 

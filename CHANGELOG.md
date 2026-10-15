@@ -4,6 +4,21 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.3 — unreleased
+
+### Fixed
+- **Applying live again after a lost answer could make every new object twice.** When the game placed the objects but
+  its answer never came back (the SSH tunnel dropped, the connection was reset, or a big apply ran past the editor's
+  3-minute wait), the editor recorded nothing and the next **Apply live** sent the same objects again, doubling them in
+  the world. Each objects call now goes with an id; a call left without an answer is sent again first under it, and the
+  plugin answers with what it did the first time instead of doing it again. The changes made since follow in a call of
+  their own. Needs the plugin from this version; with an older one the editor sends as before.
+
+### WorldEditorBridge
+- `/objects` takes an `X-Call-Id` header: a call already done under that id (one of the last 16) is answered again
+  with what was done, not done twice. `/status` lists `"once"` among its features; editors only send ids to a plugin
+  that lists it.
+
 ## v1.45.2 — unreleased
 
 ### Fixed
