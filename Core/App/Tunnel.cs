@@ -139,6 +139,8 @@ public static class Tunnel
             return Fail("Enter the server as user@address (the account you log in to the server with).");
         }
         var methods = new List<AuthenticationMethod>();
+        // The key files read, closed once connecting is over.
+        var keys = new List<PrivateKeyFile>();
         try
         {
             if (!string.IsNullOrWhiteSpace(r.KeyPath))
@@ -148,7 +150,8 @@ public static class Tunnel
                 {
                     key = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + key[1..];
                 }
-                methods.Add(new PrivateKeyAuthenticationMethod(user, string.IsNullOrEmpty(r.Passphrase) ? new PrivateKeyFile(key) : new PrivateKeyFile(key, r.Passphrase)));
+                keys.Add(string.IsNullOrEmpty(r.Passphrase) ? new PrivateKeyFile(key) : new PrivateKeyFile(key, r.Passphrase));
+                methods.Add(new PrivateKeyAuthenticationMethod(user, keys[^1]));
             }
             else
             {
@@ -162,16 +165,17 @@ public static class Tunnel
                         // access) is skipped: the password is still tried.
                         try
                         {
-                            methods.Add(new PrivateKeyAuthenticationMethod(user, new PrivateKeyFile(k)));
+                            keys.Add(new PrivateKeyFile(k));
+                            methods.Add(new PrivateKeyAuthenticationMethod(user, keys[^1]));
                         }
-                        catch (Exception ex) when (ex is SshException or IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+                        catch (Exception ex) when (KeyUnreadable(ex))
                         {
                         }
                     }
                 }
             }
         }
-        catch (Exception ex) when (ex is SshException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (KeyUnreadable(ex))
         {
             return Fail("The key file could not be read: " + ex.Message);
         }
@@ -225,6 +229,13 @@ public static class Tunnel
                 SshOperationTimeoutException or System.Net.Sockets.SocketException => $"No answer from {host}:{port}. Check the address and that SSH is enabled on the server.",
                 _ => "Could not connect: " + ex.Message,
             });
+        }
+        finally
+        {
+            foreach (var k in keys)
+            {
+                k.Dispose();
+            }
         }
         // The token is always the user's to give (typed, or saved with the server): never looked up on the server.
         string? gameFolder = string.IsNullOrWhiteSpace(r.GameFolder) ? saved?.GameFolder : r.GameFolder.Trim().TrimEnd('/');
@@ -312,6 +323,13 @@ public static class Tunnel
             _ => null,
         };
     }
+
+    /// <summary>
+    /// Whether reading a key file failed because of the file: missing, no access, a wrong passphrase, or a format
+    /// SSH.NET does not read (it reports those in many ways, such as an unsupported DSA key or a key cut short).
+    /// </summary>
+    private static bool KeyUnreadable(Exception ex) => ex is SshException or IOException or UnauthorizedAccessException or InvalidOperationException
+        or ArgumentException or NotSupportedException or FormatException or System.Formats.Asn1.AsnContentException or CryptographicException;
 
     /// <summary>A path quoted for the server's shell (single quotes).</summary>
     private static string Quote(string path) => "'" + path.Replace("'", "'\\''") + "'";

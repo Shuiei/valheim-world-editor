@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.26 — unreleased
+
+### Fixed
+- **Choosing an SSH key in a format the editor cannot read could crash it.** Connecting with a key file that the SSH
+  library refuses in some ways (an old DSA key, a damaged or cut-short key) stopped the editor with an unexpected
+  error instead of saying "The key file could not be read", and such a key in your .ssh folder did the same instead
+  of being skipped. Every way a key file can be refused now gives that message (or skips it), and the key files
+  read are closed once connecting is over.
+
 ## v1.45.25 — unreleased
 
 ### Fixed
