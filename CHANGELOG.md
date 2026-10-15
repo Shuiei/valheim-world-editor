@@ -11,7 +11,7 @@ the plugin is unchanged in versions without that part.
   again) and Reload close the area and open it again. When opening it again failed, the editor stayed on the old
   area with no area open behind it, so tools, Save and Undo did nothing, and the status bar said "Discarded: the
   world was read again." over the error. The map now opens instead, and a dialog says the area could not be opened
-  again and why; the old area is no longer the world's, so its history is not kept over the world read again.
+  again and why; the old area is no longer the world's, so its history is not kept after the world is read.
 
 ## v1.45.30 — unreleased
 
