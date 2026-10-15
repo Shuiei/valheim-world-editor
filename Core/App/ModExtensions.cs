@@ -65,9 +65,13 @@ public static class ModExtensions
 
     /// <summary>The extensions in use and what is known of the offered ones, swapped in whole.</summary>
     /// <param name="Offered">Every offered extension.</param>
-    /// <param name="Running">The loaded ones whose hooks are in use, by DLL path.</param>
+    /// <param name="Running">The loaded ones whose hooks are in use, by DLL path (one file at two paths: the same one at
+    /// both).</param>
     private sealed record State(IReadOnlyList<Extension> Offered, IReadOnlyDictionary<string, Loaded> Running)
     {
+        /// <summary>Each loaded extension in use once, however many paths it runs from: whose hooks are called.</summary>
+        public IReadOnlyList<Loaded> Hooks { get; } = [.. Running.Values.Distinct()];
+
         /// <summary>Every data key a running rewriter handles.</summary>
         public HashSet<int> RewrittenKeys { get; } = [.. Running.Values.SelectMany(l => l.Rewriters).SelectMany(r => r.Keys)];
     }
@@ -241,9 +245,10 @@ public static class ModExtensions
             l.Fault = why;
             Console.WriteLine($"extension {l.Mod}: turned off ({why}).");
             var s = _state;
-            string? dll = s.Running.FirstOrDefault(r => r.Value == l).Key;
+            // Every path it runs from (the same file offered twice).
+            var dlls = s.Running.Where(r => r.Value == l).Select(r => r.Key).ToHashSet(StringComparer.Ordinal);
             _state = new State(
-                [.. s.Offered.Select(o => o.Dll == dll ? o with { State = Status.Failed, Error = why } : o)],
+                [.. s.Offered.Select(o => dlls.Contains(o.Dll) ? o with { State = Status.Failed, Error = why } : o)],
                 s.Running.Where(r => r.Value != l).ToDictionary(r => r.Key, r => r.Value, StringComparer.Ordinal));
             _generation++;
         }
@@ -257,7 +262,7 @@ public static class ModExtensions
     /// <param name="value">The value.</param>
     public static string? Decode(int key, IObjectView obj, byte[] value)
     {
-        foreach (var l in _state.Running.Values)
+        foreach (var l in _state.Hooks)
         {
             if (l.Decoders.TryGetValue(key, out var d) && Guard(l, () => d.Describe(obj, value), null) is { } text)
             {
@@ -268,10 +273,10 @@ public static class ModExtensions
     }
 
     /// <summary>Whether a running extension draws shapes at all.</summary>
-    public static bool AnyShapes => _state.Running.Values.Any(l => l.Shapes.Count > 0);
+    public static bool AnyShapes => _state.Hooks.Any(l => l.Shapes.Count > 0);
 
     /// <summary>Whether a running extension draws shapes for a prefab.</summary>
-    public static bool HasShapes(int prefab) => _state.Running.Values.Any(l => l.Shapes.ContainsKey(prefab));
+    public static bool HasShapes(int prefab) => _state.Hooks.Any(l => l.Shapes.ContainsKey(prefab));
 
     /// <summary>The shapes running extensions draw for an object of a prefab (none when none does).</summary>
     /// <param name="prefab">The prefab's hash.</param>
@@ -280,7 +285,7 @@ public static class ModExtensions
     public static List<Shape> ShapesOf(int prefab, IObjectView obj, IWorldView world)
     {
         var shapes = new List<Shape>();
-        foreach (var l in _state.Running.Values)
+        foreach (var l in _state.Hooks)
         {
             foreach (var p in l.Shapes.GetValueOrDefault(prefab) ?? [])
             {
@@ -291,10 +296,10 @@ public static class ModExtensions
     }
 
     /// <summary>Whether a running extension cuts the ground at all.</summary>
-    public static bool AnyCuts => _state.Running.Values.Any(l => l.Cutters.Count > 0);
+    public static bool AnyCuts => _state.Hooks.Any(l => l.Cutters.Count > 0);
 
     /// <summary>Whether a running extension cuts the ground for a prefab.</summary>
-    public static bool HasCuts(int prefab) => _state.Running.Values.Any(l => l.Cutters.ContainsKey(prefab));
+    public static bool HasCuts(int prefab) => _state.Hooks.Any(l => l.Cutters.ContainsKey(prefab));
 
     /// <summary>Where running extensions leave the ground undrawn for an object of a prefab (none when none does).</summary>
     /// <param name="prefab">The prefab's hash.</param>
@@ -303,7 +308,7 @@ public static class ModExtensions
     public static List<GroundCut> CutsOf(int prefab, IObjectView obj, IWorldView world)
     {
         var cuts = new List<GroundCut>();
-        foreach (var l in _state.Running.Values)
+        foreach (var l in _state.Hooks)
         {
             foreach (var c in l.Cutters.GetValueOrDefault(prefab) ?? [])
             {
@@ -331,7 +336,7 @@ public static class ModExtensions
     {
         LiveDisconnected();
         _live = live;
-        foreach (var l in _state.Running.Values)
+        foreach (var l in _state.Hooks)
         {
             foreach (var listener in l.LiveListeners.ToList())
             {
@@ -352,7 +357,7 @@ public static class ModExtensions
             return;
         }
         _live = null;
-        foreach (var l in _state.Running.Values)
+        foreach (var l in _state.Hooks)
         {
             foreach (var listener in l.LiveListeners.ToList())
             {
@@ -405,7 +410,7 @@ public static class ModExtensions
     /// <param name="ids">The copy's new ids for the originals'.</param>
     public static void Rewrite(CopyView copy, IIdMap ids)
     {
-        foreach (var l in _state.Running.Values)
+        foreach (var l in _state.Hooks)
         {
             foreach (var (rewriter, keys) in l.Rewriters)
             {

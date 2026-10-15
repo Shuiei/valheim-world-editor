@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.40 — unreleased
+
+### Fixed
+- **A mod extension offered by two mods ran everything twice.** When two mods ship the same extension DLL and both
+  are allowed, the file is loaded once but was put in use once per mod: its shapes and ground cuts were drawn
+  twice, its inspector text and pasted-copy rewrites ran twice (the second rewrite working on already rewritten
+  data), and a hook that failed turned off only one of the two in Settings. Each loaded extension's hooks now run
+  once, and a failure shows on every mod offering it.
+
 ## v1.45.39 — unreleased
 
 ### Fixed
