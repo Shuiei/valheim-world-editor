@@ -14,7 +14,10 @@ namespace TerrainEditor.Save;
 /// <item><description>
 /// a new save number (the highest there + 1): _main.&lt;n&gt;.chunks (updated index), .db2 and .fwl2
 /// </description></item>
-/// <item><description>_main.&lt;n&gt;.ok is written last: the game only trusts a save that has it</description></item>
+/// <item><description>
+/// _main.&lt;n&gt;.ok is written last: the game only trusts a save that has it; each file is flushed to disk, and the
+/// folder's names before and after the marker (DirectorySync, Linux and macOS)
+/// </description></item>
 /// <item><description>
 /// the save is read back and compared with the edits; on any mismatch (or failure) the new files are removed and the
 /// world is as it was: nothing of the old save is touched before this
@@ -227,11 +230,14 @@ public static class WorldWriter
             }
             else
             {
-                File.Copy(Path.Combine(dir, $"_main.{world.SaveNumber}.db2"), main + ".db2", overwrite: true);
+                CopyDurable(Path.Combine(dir, $"_main.{world.SaveNumber}.db2"), main + ".db2");
             }
-            File.Copy(Path.Combine(dir, $"_main.{world.SaveNumber}.fwl2"), main + ".fwl2", overwrite: true);
-            // 4. Commit marker, written last like the game does.
+            CopyDurable(Path.Combine(dir, $"_main.{world.SaveNumber}.fwl2"), main + ".fwl2");
+            // The new files' names on disk too (Linux, macOS), before the marker that vouches for them.
+            DirectorySync.Flush(dir);
+            // 4. Commit marker, written last like the game does; its name on disk before anything old goes.
             WriteAllBytesDurable(main + ".ok", BitConverter.GetBytes(SaveFileVersion));
+            DirectorySync.Flush(dir);
             // 5. Read back and compare with what was meant to be written (nothing old removed yet).
             string? problem = Verify(dir, world, [.. changed.Where(e => !notSaved.Contains((e.ZoneX, e.ZoneZ)))], created + addedCount, removed, groundReset, resets);
             if (problem != null)
@@ -401,6 +407,18 @@ public static class WorldWriter
         using FileStream fs = new(path, FileMode.Create, FileAccess.Write);
         fs.Write(bytes);
         fs.Flush(flushToDisk: true);
+    }
+
+    /// <summary>
+    /// Copies a file (over one there) and flushes the copy to disk before returning: the commit marker written after
+    /// it must not be on disk before the files it vouches for.
+    /// </summary>
+    private static void CopyDurable(string source, string target)
+    {
+        using FileStream from = new(source, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using FileStream to = new(target, FileMode.Create, FileAccess.Write);
+        from.CopyTo(to);
+        to.Flush(flushToDisk: true);
     }
 
     /// <summary>The file extensions of one save number's _main files.</summary>

@@ -325,7 +325,9 @@ either breaks it, the user's own scripts and the docs.
 **Save safety** (`Core/Save/WorldWriter.cs`, header comment):
 
 - A save is always a new save number. Changed chunk files are written under a new version, then the
-  index, `.db2` and `.fwl2`, and the `.ok` marker last, as the game does.
+  index, `.db2` and `.fwl2`, and the `.ok` marker last, as the game does. Each file is flushed to disk,
+  and so are the folder's names (`Core/Save/DirectorySync.cs`, Linux and macOS) before the marker and
+  after it, before anything old goes.
 - The new save is read back and compared with what was meant (`WorldWriter.Verify`): one object lost
   or gained, a zone not asked for changed, and the new files are removed. Nothing of the old save is
   touched before the read-back passes.
