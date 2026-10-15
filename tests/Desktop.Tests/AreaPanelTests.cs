@@ -215,6 +215,26 @@ public class AreaPanelTests
     }
 
     [AvaloniaFact]
+    public void ReplacingAShipsRootTakesItsPartsAwayAndAPartGoesAlone()
+    {
+        using var r = new Run();
+        var ship = TestScenes.AddShip(r.S, 0, 0);
+        int beech = StableHash.Of("Beech1");
+        r.P.Replace(r.S, [ship[0]], beech);
+        Assert.StartsWith("Replaced 1 object(s) with ", r.Said);
+        Assert.EndsWith(". Their 4 linked part(s) went with them.", r.Said);
+        Assert.All(ship, i => Assert.True(r.S.Scene.Things[i].Gone));
+        Assert.Equal(beech, r.S.Scene.Things[^1].Prefab);
+        Assert.Equal(1, r.S.Scene.Things.Count(t => !t.Gone && t.Prefab == beech));
+        // One undo step brings the whole ship back; a part replaced alone leaves the rest of the ship.
+        r.S.Undo();
+        Assert.All(ship, i => Assert.False(r.S.Scene.Things[i].Gone));
+        r.P.Replace(r.S, [ship[1]], beech);
+        Assert.DoesNotContain("linked part", r.Said);
+        Assert.Equal([ship[1]], ship.Where(i => r.S.Scene.Things[i].Gone));
+    }
+
+    [AvaloniaFact]
     public void TheWithListIsWorkedOutAgainForAnotherWorld()
     {
         var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
