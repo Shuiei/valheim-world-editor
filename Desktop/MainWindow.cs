@@ -496,6 +496,8 @@ public sealed partial class MainWindow : Window
                 MessageText.Text = "That area was not opened: the map or another area was asked for while it loaded.";
                 return;
             }
+            // Shown: the world's area, even if a load dropped meanwhile had reset it.
+            world.Area = scene.Session;
             // Found by the map's search: selected, the camera on it (items and texts: in the inspector).
             if (MapPage?.Target is var (id, inspect) && spot != null && MapPage.Spot == spot)
             {

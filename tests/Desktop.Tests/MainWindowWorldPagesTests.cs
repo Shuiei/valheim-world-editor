@@ -106,6 +106,22 @@ public class MainWindowWorldPagesTests
         Assert.Null(r.W.World!.Area);
     }
 
+    // Two areas asked for at once: the first is dropped, the second shown is the world's area whichever loaded last.
+    [AvaloniaFact]
+    public async Task OfTwoAreasAskedForAtOnceTheSecondIsShownAndIsTheWorldsArea()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        var scene = r.W.View.Scene!;
+        var first = r.W.EditBlock(scene.X0, scene.Z0, scene.ZonesX, scene.ZonesZ);
+        var second = r.W.EditBlock(scene.X0, scene.Z0, scene.ZonesX, scene.ZonesZ);
+        await Task.WhenAll(first, second);
+        Assert.NotNull(r.W.Session);
+        Assert.NotSame(scene, r.W.View.Scene);
+        Assert.Same(r.W.View.Scene, r.W.Session.Scene);
+        Assert.Same(r.W.Session, r.W.World!.Area);
+    }
+
     // The map closes the area: a script still running in it changes nothing, and its history stays with the world.
     [AvaloniaFact]
     public async Task TheMapClosesTheAreaSoAScriptStillRunningChangesNothing()
