@@ -1534,9 +1534,19 @@ public sealed partial class MainWindow : Window
         }
         var shape = Mountain.Shape(m);
         float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f, wx = ox + gx, wz = oz + gz;
+        // The spots are judged on the area as it is now: what grows is only put in if it is still the same.
+        int generation = s.Generation;
         // On the slopes it raised by more than a metre (not around its foot, where the old ones stand).
         var spots = await Growth.Spots(s, wx - m.Reach, wz - m.Reach, wx + m.Reach, wz + m.Reach, o => shape(o.X - wx, o.Z - wz) > 1,
             NameOfPrefab, t => MessageText.Text = placed + " " + t, maxZones: 49);
+        if (Session != s || s.Generation != generation)
+        {
+            // Another area opened (Follow grew it), or the ground changed (an undo, a stroke, another mountain): the
+            // trees would go to an area no longer shown, or float or be buried.
+            MessageText.Text = placed + " Nothing grew on it: the area changed while its trees were worked out.";
+            UpdateSaveBar();
+            return;
+        }
         if (spots is { Count: > 0 })
         {
             Growth.Commit(s, $"Mountain: grew {spots.Count} object(s)", spots);

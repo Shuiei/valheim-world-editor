@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.29 — unreleased
+
+### Fixed
+- **Trees grown on a mountain could float, be buried or be lost.** After placing a mountain with Grow on, the editor
+  works out the biome's trees and rocks for a moment before putting them in. Anything done meanwhile was not noticed:
+  after an undo or another stroke the trees went in for ground that was no longer there, and when Follow grew the
+  area they went into the old area and were lost, though the message said they grew. When the area changed
+  meanwhile, nothing grows now and the message says why.
+
 ## v1.45.28 — unreleased
 
 ### Fixed

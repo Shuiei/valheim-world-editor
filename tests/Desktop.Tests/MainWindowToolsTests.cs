@@ -1,4 +1,5 @@
 using System.Numerics;
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
@@ -125,6 +126,42 @@ public class MainWindowToolsTests
             Assert.Contains("Grew ", w.MessageText.Text);
             // The mountain, then what grew on it: two undo steps.
             Assert.Equal(steps + 2, s.UndoList.Count);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task AMountainUndoneWhileItsTreesAreWorkedOutGrowsNothing()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+            w.Show();
+            await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
+            await w.EditArea(0, 0, 3);
+            var s = w.Session!;
+            w.MountainPanel.RadiusSlider.Value = 25;
+            w.MountainPanel.GrowBox.IsChecked = true;
+            int steps = s.UndoList.Count;
+            // Ctrl+Z while the game's trees are worked out (as soon as it says so, whenever the work ends): they would
+            // grow in the air where the mountain was.
+            bool undone = false;
+            w.MessageText.PropertyChanged += (_, e) =>
+            {
+                if (e.Property == TextBlock.TextProperty && !undone && w.MessageText.Text?.EndsWith("Working out what the game grows here…", StringComparison.Ordinal) == true)
+                {
+                    undone = true;
+                    s.Undo();
+                }
+            };
+            await w.PutMountain((s.Ground.W - 1) / 2f, (s.Ground.H - 1) / 2f);
+            Assert.True(undone);
+            Assert.EndsWith("Nothing grew on it: the area changed while its trees were worked out.", w.MessageText.Text);
+            Assert.Equal(steps, s.UndoList.Count);
         }
         finally
         {
