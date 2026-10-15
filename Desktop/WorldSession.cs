@@ -566,14 +566,29 @@ public sealed class WorldSession : IDisposable
     /// </summary>
     public Followed? MergeGame(Fetched f)
     {
-        if (f.World != World || f.Applies != Volatile.Read(ref _applies))
+        if (f.World != World)
         {
             return new Followed(new WorldSave.Merged([], [], [], []), [], [], []);
         }
-        if (_applying.CurrentCount == 0)
+        // Held while merging: an apply (perhaps on another thread: Claude, a script) can neither begin nor end
+        // between the check of the count and the merge.
+        if (!_applying.Wait(0))
         {
             return null;
         }
+        try
+        {
+            return f.Applies != Volatile.Read(ref _applies) ? new Followed(new WorldSave.Merged([], [], [], []), [], [], []) : Merge(f);
+        }
+        finally
+        {
+            _applying.Release();
+        }
+    }
+
+    /// <summary><see cref="MergeGame"/> for a read taken with no Apply live begun or ended since, under the apply lock.</summary>
+    private Followed? Merge(Fetched f)
+    {
         var deleted = Edits.Deleted;
         // Kept as the editor has them: its applied deletions (undo brings them back).
         var merged = World.MergeLive(f.Changed, f.Objects, LiveSync.IsDestroyed, LiveSync.IsOurs);
