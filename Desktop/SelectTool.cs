@@ -41,11 +41,12 @@ public sealed class SelectTool
     private EditSession? Session => _view.Scene?.Session;
 
     // ---- Where things are: world coordinates (x east, z north), heights in metres.
-    /// <summary>The ground's height at a world point, as drawn.</summary>
-    private float GroundAt(float wx, float wz)
+    /// <summary>The ground's height at a world point, as drawn; null outside the area, where there is no ground.</summary>
+    private float? GroundAt(float wx, float wz)
     {
         var s = Scene!;
-        return Picking.HeightAt(s, wx - s.Cx, -(wz - s.Cz));
+        float x = wx - s.Cx, z = -(wz - s.Cz);
+        return Picking.Inside(s, x, z) ? Picking.HeightAt(s, x, z) : null;
     }
 
     /// <summary>A building piece: read as one, or a prefab the piece catalogue knows (added pieces).</summary>
@@ -148,7 +149,7 @@ public sealed class SelectTool
             {
                 Index = i,
                 Thing = t,
-                Lift = t.Position.Y - GroundAt(t.Position.X, t.Position.Z),
+                Lift = GroundAt(t.Position.X, t.Position.Z) is float g ? t.Position.Y - g : 0,
                 Bottom = snaps is { Length: > 0 } ? snaps.Min(p => p[1]) : 0,
                 Piece = IsPiece(t),
                 Linked = parts.Contains(i),
@@ -168,7 +169,8 @@ public sealed class SelectTool
     /// <summary>
     /// Where an item ends up: turned around the selection's middle (clockwise from above, like Unity's
     /// yaw), moved, and on the ground there (or as high above it as before). Pieces on the ground move
-    /// as one block (see GroundBlock).
+    /// as one block (see GroundBlock), those past the area's edge too, so a building across it keeps its shape. Anything
+    /// else past the edge, where there is no ground, keeps its own height.
     /// </summary>
     /// <param name="m">The move.</param>
     /// <param name="it">The item.</param>
@@ -187,12 +189,17 @@ public sealed class SelectTool
         {
             return new Vector3(x, it.Thing.Position.Y + (block ? m.Block : 0) + m.Dy + sy, z);
         }
-        return new Vector3(x, GroundAt(x, z) + (m.Dropped || !OnGround ? it.Lift : -it.Bottom) + m.Dy + sy, z);
+        if (GroundAt(x, z) is not float ground)
+        {
+            return new Vector3(x, it.Thing.Position.Y + m.Dy + sy, z);
+        }
+        return new Vector3(x, ground + (m.Dropped || !OnGround ? it.Lift : -it.Bottom) + m.Dy + sy, z);
     }
 
     /// <summary>
     /// On the ground, the selected building pieces keep their shape: the whole block goes up or down
-    /// until its bottom layer sits on the ground (sinking into a slope rather than floating).
+    /// until its bottom layer sits on the ground (sinking into a slope rather than floating). Pieces past the area's
+    /// edge have no ground to sit on: the others decide, or none, and the block keeps its height.
     /// </summary>
     private void GroundBlock(Move m)
     {
@@ -206,7 +213,10 @@ public sealed class SelectTool
         foreach (var it in pieces.Where(it => it.Thing.Position.Y + it.Bottom <= low + 0.3f))
         {
             var p = Target(m, it, block: false, shift: false);
-            need = MathF.Min(need, GroundAt(p.X, p.Z) - (it.Thing.Position.Y + it.Bottom));
+            if (GroundAt(p.X, p.Z) is float ground)
+            {
+                need = MathF.Min(need, ground - (it.Thing.Position.Y + it.Bottom));
+            }
         }
         if (float.IsFinite(need))
         {
@@ -415,7 +425,8 @@ public sealed class SelectTool
                 (lo, hi) = (new Vector3(p.X - s.Cx - 0.1f, p.Y, -(p.Z - s.Cz) - 0.1f), new Vector3(p.X - s.Cx + 0.1f, p.Y + 0.2f, -(p.Z - s.Cz) + 0.1f));
             }
             float cx = (lo.X + hi.X) / 2, cz = (lo.Z + hi.Z) / 2, hx = (hi.X - lo.X) * 0.35f, hz = (hi.Z - lo.Z) * 0.35f;
-            float ground = GroundAt(p.X, p.Z), best = float.NegativeInfinity;
+            // Past the area's edge there is no ground: only objects below, else it stays as high as it is.
+            float ground = GroundAt(p.X, p.Z) ?? p.Y, best = float.NegativeInfinity;
             // The highest top of another drawn object under the middle or four points of the footprint.
             foreach (var (ox, oz) in new[] { (0f, 0f), (-hx, -hz), (hx, -hz), (-hx, hz), (hx, hz) })
             {
