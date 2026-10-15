@@ -101,8 +101,8 @@ What it is like:
 - **Rooms stand in wings.** A side room often grows off the last one placed, and what it is leans to
   what that one is: a kitchen by the feast hall, cells and a torture chamber by the guard room, an
   ossuary and a tomb by the burial chamber, a forge by the workshop and the store. The grand rooms are
-  lit closest, the rooms of the dead and the cells dimmest; a level down holds a fifth more loot and
-  foes than the one above; and a corridor's niche now and then hides a foe.
+  lit closest, the rooms of the dead and the cells dimmest; each level down holds a fifth of the top
+  level's loot and foes more (the bottom of sixteen levels four times the top); and a corridor's niche now and then hides a foe.
 - **Some rooms are nearly bare**, one piece and a light in the dark: a pacing beat between the full
   rooms. Clutter never puts the same thing twice running, and some rooms are tidier than others.
 - **Dead ends.** A corridor or two lead nowhere but a cache at the far end: the biome's chest, loot

@@ -554,8 +554,9 @@ internal sealed partial class DungeonDresser
     private Random Local(Frame f, int salt) => new(unchecked(_s.Seed * 7919 + f.S.Id * 104729 + salt));
 
     /// <summary>
-    /// How much more a room holds for its depth: a fifth more foes and loot a level down, as dungeons grow richer and
-    /// more dangerous the deeper they go.
+    /// How much more a room holds for its depth: a fifth of the top level's foes and loot more for each level down
+    /// (linear, not compounding: over sixteen levels the bottom holds four times the top, not fifteen), as dungeons
+    /// grow richer and more dangerous the deeper they go.
     /// </summary>
     private static float Depth(Frame f) => 1 + 0.2f * f.S.Level;
 
