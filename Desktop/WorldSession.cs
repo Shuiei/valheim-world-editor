@@ -383,10 +383,10 @@ public sealed class WorldSession : IDisposable
             }
             throw;
         }
-        // Not saved: the No limit ground stays as it was (the area and its history too).
-        if (!result.Saved && lift != null)
+        // Not saved: the No limit ground stays as it was (the area and its history too), unless the edits changed
+        // meanwhile: then it stays as discs, and the area is read again.
+        if (!result.Saved && lift != null && Unlift(lift))
         {
-            Unlift(lift);
             lift = null;
         }
         if (result.Saved && reread)
@@ -495,7 +495,7 @@ public sealed class WorldSession : IDisposable
         {
             done.Add($"No limit ground: {plan.Describe()}");
         }
-        // Until the ground went in, a failure has sent nothing: the No limit ground is put back as it was.
+        // Until the ground may have reached the game, a failure has sent nothing: the No limit ground is put back as it was.
         bool sent = false;
         try
         {
@@ -503,7 +503,17 @@ public sealed class WorldSession : IDisposable
             var zones = Edits.All().Where(e => e.Changed).Select(e => e.Clone()).ToList();
             if (zones.Count > 0)
             {
-                await live.ApplyTerrain(zones.Select(e => (e.ZoneX, e.ZoneZ, WorldWriter.EncodeTerrain(e))).ToList());
+                try
+                {
+                    await live.ApplyTerrain(zones.Select(e => (e.ZoneX, e.ZoneZ, WorldWriter.EncodeTerrain(e))).ToList());
+                }
+                catch (Exception ex) when (!NothingSent(ex))
+                {
+                    // No answer, or one after the game may have taken the ground: the discs stay (the area is read
+                    // again), and the next Apply live sends the ground again, which only sets each zone's ground anew.
+                    sent = true;
+                    throw;
+                }
                 sent = true;
                 Edits.MarkApplied(zones);
                 done.Add($"{zones.Count} zone(s) of ground");
@@ -553,6 +563,15 @@ public sealed class WorldSession : IDisposable
             return new Outcome(false, "Could not apply live: " + ex.Message, false) { Lifted = lifted };
         }
     }
+
+    /// <summary>
+    /// A failure of the ground call that shows the game took none of it: no connection could be made, or the plugin
+    /// turned it down before reading it (4xx or 503). A 500, or an answer broken off or too late, may come after the
+    /// game took the ground.
+    /// </summary>
+    private static bool NothingSent(Exception ex) =>
+        ex is HttpRequestException { HttpRequestError: HttpRequestError.ConnectionError or HttpRequestError.NameResolutionError }
+            or BridgeAnswerException { Status: (>= 400 and < 500) or 503 };
 
     /// <summary>The game unreachable or answering with an error (InvalidOperationException from the bridge).</summary>
     private static bool GameFailed(Exception ex) =>
