@@ -106,18 +106,26 @@ public static class Tunnel
     {
         // Continues off the caller's (UI) thread: reading the plugin's settings on the server blocks.
         await Starting.WaitAsync().ConfigureAwait(false);
+        // The key files read, closed once the start is over, however it ends.
+        var keys = new List<PrivateKeyFile>();
         try
         {
-            return await StartOnce(r).ConfigureAwait(false);
+            return await StartOnce(r, keys).ConfigureAwait(false);
         }
         finally
         {
             Starting.Release();
+            foreach (var k in keys)
+            {
+                k.Dispose();
+            }
         }
     }
 
     /// <inheritdoc cref="Start"/>
-    private static async Task<Result> StartOnce(Request r)
+    /// <param name="r">What the player entered.</param>
+    /// <param name="keys">Where the key files read are kept, for the caller to close.</param>
+    private static async Task<Result> StartOnce(Request r, List<PrivateKeyFile> keys)
     {
         Close();
         int closes;
@@ -139,8 +147,6 @@ public static class Tunnel
             return Fail("Enter the server as user@address (the account you log in to the server with).");
         }
         var methods = new List<AuthenticationMethod>();
-        // The key files read, closed once connecting is over.
-        var keys = new List<PrivateKeyFile>();
         try
         {
             if (!string.IsNullOrWhiteSpace(r.KeyPath))
@@ -162,7 +168,7 @@ public static class Tunnel
                     if (File.Exists(k))
                     {
                         // One that cannot be used (a passphrase, a format SSH.NET does not read, no
-                        // access) is skipped: the password is still tried.
+                        // access) is skipped, and logged: the password is still tried.
                         try
                         {
                             keys.Add(new PrivateKeyFile(k));
@@ -170,6 +176,7 @@ public static class Tunnel
                         }
                         catch (Exception ex) when (KeyUnreadable(ex))
                         {
+                            Console.WriteLine($"tunnel: {k} skipped, it could not be read ({ex.GetType().Name}: {ex.Message}).");
                         }
                     }
                 }
@@ -229,13 +236,6 @@ public static class Tunnel
                 SshOperationTimeoutException or System.Net.Sockets.SocketException => $"No answer from {host}:{port}. Check the address and that SSH is enabled on the server.",
                 _ => "Could not connect: " + ex.Message,
             });
-        }
-        finally
-        {
-            foreach (var k in keys)
-            {
-                k.Dispose();
-            }
         }
         // The token is always the user's to give (typed, or saved with the server): never looked up on the server.
         string? gameFolder = string.IsNullOrWhiteSpace(r.GameFolder) ? saved?.GameFolder : r.GameFolder.Trim().TrimEnd('/');
