@@ -158,7 +158,8 @@ public class ScriptHostTests
         {
             var tree = new WorldScene.Thing(5, StableHash.Of("Beech1"), new Vector3(10, 30, 10), Vector3.Zero, 0, false);
             var bush = new WorldScene.Thing(6, StableHash.Of("RaspberryBush"), new Vector3(20, 30, 10), Vector3.Zero, 0, false);
-            var s = TestScenes.Flat(3, tree, bush);
+            var rock = new WorldScene.Thing(7, StableHash.Of("rock4_forest"), new Vector3(30, 30, 10), new Vector3(15, 30, 0), 0, false);
+            var s = TestScenes.Flat(3, tree, bush, rock);
             // Dry land, as most of a world is (the flat test ground is at sea level).
             Array.Fill(s.Ground.Base, 45f);
             Array.Fill(s.Scene.Heights, 45f);

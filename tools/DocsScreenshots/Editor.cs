@@ -49,8 +49,10 @@ public sealed class Editor : IDisposable
     /// <param name="homestead">A Homestead.dll to copy into the stand-in game's BepInEx plugins.</param>
     /// <param name="recent">Worlds listed as opened before on the start page, the first a few hours ago, then a day
     /// apart.</param>
+    /// <param name="extra">More command-line arguments for the app (<c>--live</c> and <c>--token</c>).</param>
     public Editor(string? app = null, int width = 1440, int height = 900, string? gameWorld = null,
-        IReadOnlyList<string>? worlds = null, string? homestead = null, IReadOnlyList<string>? recent = null)
+        IReadOnlyList<string>? worlds = null, string? homestead = null, IReadOnlyList<string>? recent = null,
+        IReadOnlyList<string>? extra = null)
     {
         _home = Directory.CreateTempSubdirectory("vwe-docs-home-").FullName;
         _width = width;
@@ -141,7 +143,7 @@ public sealed class Editor : IDisposable
         {
             start.ArgumentList.Add(app);
         }
-        foreach (string a in new[] { "--driver", "--window", $"{width}x{height}" })
+        foreach (string a in new[] { "--driver", "--window", $"{width}x{height}" }.Concat(extra ?? []))
         {
             start.ArgumentList.Add(a);
         }
@@ -228,6 +230,95 @@ public sealed class Editor : IDisposable
             }
         }
         return state;
+    }
+
+    /// <summary>
+    /// Closes the 3D editor's locations note (bottom left, shown when locations lie near the area): its close button
+    /// is only an icon, which the driver's click cannot name, so it is clicked on the display with xdotool. The pointer
+    /// is then moved off the window, where it cannot touch the scene. Does nothing without xdotool.
+    /// </summary>
+    public void CloseLocationNote()
+    {
+        Send("wait 300");
+        string? window = Xdotool("search", "--onlyvisible", "--pid", _p.Id.ToString(System.Globalization.CultureInfo.InvariantCulture))?
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+        if (window == null)
+        {
+            return;
+        }
+        // The note is 420 pixels wide at most (its text always wraps to three lines), 10 from the left and 58 from
+        // the bottom; its close button is at its right end, halfway up.
+        string height = Xdotool("getwindowgeometry", "--shell", window)?.Split('\n').FirstOrDefault(l => l.StartsWith("HEIGHT=", StringComparison.Ordinal))?[7..] ?? "900";
+        int y = int.Parse(height, System.Globalization.CultureInfo.InvariantCulture) - 89;
+        Xdotool("mousemove", "--window", window, "408", y.ToString(System.Globalization.CultureInfo.InvariantCulture), "click", "1");
+        Xdotool("mousemove", "1915", "1075");
+        Send("wait 200");
+    }
+
+    /// <summary>
+    /// Turns the mouse wheel over a point of the window (pixels from its top left), to scroll a panel the driver cannot
+    /// scroll; the pointer is then moved off the window. Does nothing without xdotool.
+    /// </summary>
+    /// <param name="x">Pixels from the window's left.</param>
+    /// <param name="y">Pixels from the window's top.</param>
+    /// <param name="notches">Wheel notches: down when positive, up when negative.</param>
+    public void Scroll(int x, int y, int notches)
+    {
+        string? window = Xdotool("search", "--onlyvisible", "--pid", _p.Id.ToString(System.Globalization.CultureInfo.InvariantCulture))?
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+        if (window == null)
+        {
+            return;
+        }
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        Xdotool("mousemove", "--window", window, x.ToString(inv), y.ToString(inv));
+        Xdotool("click", "--repeat", Math.Abs(notches).ToString(inv), "--delay", "40", notches > 0 ? "5" : "4");
+        Xdotool("mousemove", "1915", "1075");
+        Send("wait 300");
+    }
+
+    /// <summary>
+    /// Moves the pointer onto a point of the window (pixels from its top left), so what it hovered (a room, a piece)
+    /// is no longer marked. Does nothing without xdotool.
+    /// </summary>
+    /// <param name="x">Pixels from the window's left.</param>
+    /// <param name="y">Pixels from the window's top.</param>
+    public void Point(int x, int y)
+    {
+        string? window = Xdotool("search", "--onlyvisible", "--pid", _p.Id.ToString(System.Globalization.CultureInfo.InvariantCulture))?
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+        if (window == null)
+        {
+            return;
+        }
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        Xdotool("mousemove", "--window", window, x.ToString(inv), y.ToString(inv));
+        Send("wait 300");
+    }
+
+    /// <summary>Runs xdotool with these arguments; its output, or null when it is missing or fails.</summary>
+    private static string? Xdotool(params string[] args)
+    {
+        try
+        {
+            var start = new ProcessStartInfo("xdotool") { RedirectStandardOutput = true, UseShellExecute = false };
+            foreach (string a in args)
+            {
+                start.ArgumentList.Add(a);
+            }
+            using var p = Process.Start(start);
+            if (p == null)
+            {
+                return null;
+            }
+            string output = p.StandardOutput.ReadToEnd();
+            p.WaitForExit();
+            return p.ExitCode == 0 ? output.Trim() : null;
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            return null;
+        }
     }
 
     /// <summary>
