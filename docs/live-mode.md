@@ -183,6 +183,25 @@ builds out of its objects while the game runs (a ship from its pieces) is put to
 once; and its editor extension can ask that plugin for what only the running game knows. The
 editor's log (Settings → Open log) names the mods registered when a game is opened.
 
+## Moving things
+
+An object you move (the Select tool's move or turn, or a **Cut** then pasted) moves in the game as
+the same object, under its own id, when nothing about it changed but its place and turn. A mod that
+keeps track of objects while the game runs (a chest's label sign, a warehouse's chests, a ward)
+then still knows it, instead of seeing an object gone and a new one made, and the chest keeps what
+is in it as the game has it. Undo moves it back the same way.
+
+A player's game puts a standing object (a wall, a chest, a sign) where it is once, as it comes
+into range, and does not move it afterwards. So an object is moved this way only when no player
+has both its old and its new place loaded (about 160 m around each player, more for the large
+objects seen from afar). Otherwise, as before, it is made again at its new place and taken away
+where it was, and the message after **Apply live** says how many: those are new objects to the
+other mods. Move a build while nobody is near it to keep everything about it.
+
+Objects that change on the way (a copy whose data you edited, the parts of a mod's linked group
+such as a ship, creatures) are always made again. A plugin older than 1.40.0 makes every moved
+object again.
+
 ## Undo after applying
 
 Applied changes can still be undone: undo (or Remove in History) and apply again. A deleted object
@@ -195,9 +214,11 @@ The server's (or game's) `BepInEx/LogOutput.log` says what each apply did, for w
 show for every player:
 
 - `WorldEditorBridge: destroyed N object(s) (M found again at their place under a new id, K already
-  gone), created C; A -> B object(s) known, P peer(s)` — one line per apply of objects: how many
-  objects the game knew before and after it (the destroyed ones go on the game's next update, so B
-  still counts them) and how many players are connected.
+  gone), created C, moved I in place and F by making it again (a player had both places loaded, or it
+  was gone); A -> B object(s) known, P peer(s)` — one line per apply of objects: how many objects the
+  game knew before and after it (the destroyed ones go on the game's next update, so B still counts
+  them) and how many players are connected. The moves part is there when the apply moved objects
+  ([Moving things](#moving-things)).
 - `WorldEditorBridge: 1 s after the apply: S of N destroyed object(s) still exist, R other object(s)
   of their prefab within 10 cm of their place (made again, or there all along); B object(s), P
   peer(s)` — a second later. A destroyed object the game still has means something on the server

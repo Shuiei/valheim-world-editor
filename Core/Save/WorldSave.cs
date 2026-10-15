@@ -483,7 +483,9 @@ public sealed class WorldSave
             var fresh = new List<(long User, uint Id, byte[] Bytes, int Replace)>();
             foreach (var (user, zid, bytes) in objects)
             {
-                if (_byLiveId!.TryGetValue((user, zid), out int id))
+                // A kept object whose game object is the editor's now (moved under its own ZDOID to stand for one of
+                // the editor's new objects) is not read back in under its own id.
+                if (_byLiveId!.TryGetValue((user, zid), out int id) && !(keep(id) && ours((user, zid))))
                 {
                     seen.Add(id);
                     if (!ObjectBytes(id).AsSpan().SequenceEqual(bytes))

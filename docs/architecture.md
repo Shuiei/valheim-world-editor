@@ -248,17 +248,17 @@ token in the `X-Bridge-Token` header. For a dedicated server the editor opens it
 |---|---|
 | Plugin, `plugin/WorldEditorBridge/WorldEditorBridgePlugin.cs` (and `.Catalogue.cs`, `.Models.cs`) | Listening, the token, refusing when the game does not host the world (409) or has no world (503). Every request is queued and run on Unity's main thread (`OnMainThread`, a few per frame in `Update`); a job the caller gave up on never runs later. Creating and destroying ZDOs, terrain, zone resets, in the game. |
 | Editor, `Core/Save/LiveBridge.cs` | The HTTP client: one method per endpoint. |
-| Editor, `Core/Save/LiveSync.cs` | What the game already has: which world objects are destroyed there, and the live ZDOID of each object the editor created. Each apply sends only the difference, so undo after apply works (a deleted object comes back from its snapshot bytes; a placed one is destroyed). |
+| Editor, `Core/Save/LiveSync.cs` | What the game already has: which world objects are destroyed there, the live ZDOID of each object the editor created, and which world objects' own game objects were moved to stand for one of the editor's (`_movedTo`). Each apply sends only the difference, so undo after apply works (a deleted object comes back from its snapshot bytes; a placed one is destroyed; a moved one moves back). A world object deleted with one copy of it that differs only by place and turn (`SameButPlace`: a move, or a cut pasted) is sent as a move, to a plugin whose status lists `move`. |
 | Editor, `Desktop/WorldSession.cs` | `ApplyLive` (one at a time: ground, then objects, then resets, after which the world is read again), and following the game (`FetchGame` off the window's thread, `MergeGame` on it). |
 
 The endpoints (the plugin's header comment lists them with their byte layouts):
 
 | Endpoint | What |
 |---|---|
-| `GET /status`, `GET /players` | JSON: plugin version and world; players and their positions. |
+| `GET /status`, `GET /players` | JSON: plugin version, world and features (`move`: `/objects` takes moves); players and their positions. |
 | `GET /snapshot` | The whole persistent world, gzip: `VWEB`, a snapshot version, world info, zone data, every object in the chunk files' format. `WorldSave.LoadLive` refuses another version. |
 | `POST /terrain` | Zones' new `TCData` (`WorldWriter.EncodeTerrain`, the game's `TerrainComp.Save` format). |
-| `POST /objects` | Objects to destroy (ZDOID) and to create (save bytes); answers the new ZDOIDs, and how many were refound at their place after another mod made them again. |
+| `POST /objects` | Objects to destroy (ZDOID) and to create (save bytes), then the destroyed ones' prefab and place, then objects to move (ZDOID, prefab, place, new place and turn, and the object at its new place as save bytes); answers the new ZDOIDs, how many were refound at their place after another mod made them again, and each move's ZDOID and whether it moved in place (it is made again from its bytes where a player has both places loaded: a game does not move a standing object it shows). |
 | `POST /zones/reset` | Zones to generate again. |
 | `POST /watch`, `POST /zone` | One digest per zone; the objects of the zones whose digest changed (the editor asks every 2 s). |
 | `POST /models` | Prefab names, one per line: JSON, what the game draws of each (each renderer's mesh name and vertex count, submesh, material name, matrix in the root's frame, the root's scale; LOD 0, active, not the worn and broken looks). `WorldSession.OpenLive` asks it for the mod prefabs; `ModCatalogue.TakeModels` keeps them. On a dedicated server (no graphics) the game has no textures or colours to report, so only names. |

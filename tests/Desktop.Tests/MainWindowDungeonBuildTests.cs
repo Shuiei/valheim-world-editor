@@ -81,7 +81,7 @@ public class MainWindowDungeonBuildTests
             w.PlaceGenerated(settings, r);
             Assert.StartsWith($"Generated {r.Name}:", w.MessageText.Text);
             Assert.Contains("1 could not be made in this world.", w.MessageText.Text);
-            Assert.DoesNotContain(scene.Things.Skip(things), t => t.Prefab == TerrainEditor.Save.StableHash.Of("no_such_piece_xyz"));
+            Assert.DoesNotContain(scene.Things.Skip(things), t => t.Prefab == Save.StableHash.Of("no_such_piece_xyz"));
         }
         finally
         {

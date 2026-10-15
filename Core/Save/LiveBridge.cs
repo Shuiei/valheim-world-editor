@@ -154,12 +154,42 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     }
 
     /// <summary>
+    /// Whether the plugin moves objects in place (<see cref="ApplyObjects"/>'s moves; 1.40.0 on, which lists "move"
+    /// among the features in its status). Asked once; a check that fails says no, and is asked again next time.
+    /// </summary>
+    public async Task<bool> CanMove()
+    {
+        if (_features == null)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(await Status());
+                _features = doc.RootElement.TryGetProperty("features", out var f) && f.ValueKind == JsonValueKind.Array
+                    ? [.. f.EnumerateArray().Select(e => e.GetString() ?? "")]
+                    : [];
+            }
+            catch (Exception e) when (e is HttpRequestException or InvalidOperationException or JsonException or TaskCanceledException)
+            {
+                return false;
+            }
+        }
+        return _features.Contains("move");
+    }
+
+    /// <summary>The features the plugin's status lists, once asked.</summary>
+    private HashSet<string>? _features;
+
+    /// <summary>
     /// Objects to destroy (live ZDOIDs) and to create (save-format bytes); returns the plugin's JSON. After them, each
     /// destroyed object's prefab and position: another mod may have made the object again under a new ZDOID
     /// (ServersideQoL does, for build pieces, plants, fires and more), and the plugin finds it by those. Plugins from
-    /// before 1.15.4 stop reading before them.
+    /// before 1.15.4 stop reading before them. Then the moves, only for a plugin that can (<see cref="CanMove"/>):
+    /// one that cannot would leave them out.
     /// </summary>
-    public async Task<string> ApplyObjects(IReadOnlyList<LiveTarget> destroy, IReadOnlyList<byte[]> create)
+    /// <param name="destroy">The objects to destroy.</param>
+    /// <param name="create">The objects to make, in the save format.</param>
+    /// <param name="moves">The objects to move (none: the call older plugins take).</param>
+    public async Task<string> ApplyObjects(IReadOnlyList<LiveTarget> destroy, IReadOnlyList<byte[]> create, IReadOnlyList<LiveMove>? moves = null)
     {
         using MemoryStream ms = new();
         using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
@@ -183,6 +213,27 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
                 w.Write(t.Position.Y);
                 w.Write(t.Position.Z);
             }
+            if (moves is { Count: > 0 })
+            {
+                w.Write(moves.Count);
+                foreach (LiveMove m in moves)
+                {
+                    w.Write(m.From.User);
+                    w.Write(m.From.Id);
+                    w.Write(m.From.Prefab);
+                    Write(w, m.From.Position);
+                    Write(w, m.Position);
+                    Write(w, m.Rotation);
+                    w.Write(m.Fallback.Length);
+                    w.Write(m.Fallback);
+                }
+            }
+        }
+        static void Write(BinaryWriter w, System.Numerics.Vector3 v)
+        {
+            w.Write(v.X);
+            w.Write(v.Y);
+            w.Write(v.Z);
         }
         using HttpRequestMessage req = new(HttpMethod.Post, "objects") { Content = new ByteArrayContent(ms.ToArray()) };
         req.Headers.Add("X-Bridge-Token", token);
