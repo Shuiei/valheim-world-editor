@@ -13,7 +13,8 @@ namespace TerrainEditor.Desktop;
 /// Claude's tools for the editor's own controls: every switch, dropdown, slider, number and text box and button of the
 /// window (the View panel's switches, the Workshop's Cut and Support check, every tool panel's settings…), listed with
 /// their values and set as the user would, so the window's own handlers run. Controls that save, apply live, discard,
-/// reload, write or delete the user's files, or connect to the live game, are never set.
+/// reload, write or delete the user's files, or connect to the live game, are never set; while the world is live with
+/// Auto on, only the View panel's are.
 /// </summary>
 public sealed partial class ClaudeTools
 {
@@ -57,6 +58,12 @@ public sealed partial class ClaudeTools
         if (Tips.KeyOf(c.Control) == null && c.Kind == "button" && BlockedLabel().IsMatch(c.Label))
         {
             return "it saves, discards or writes or deletes the user's files: the user's to do";
+        }
+        // Like every other editing tool (CannotEdit): a tool's Apply, an Area action or a script run would go to the
+        // game at once. Only the View panel's controls, which change nothing in the world, stay.
+        if (LiveWithAuto && !(Tips.KeyOf(c.Control) is string view && view.StartsWith("view.", StringComparison.Ordinal)))
+        {
+            return "the open world is live with Auto on, so what it changes would go to the game at once; only the View panel's controls can be used. Ask the user to turn Auto off";
         }
         return null;
     }
@@ -258,7 +265,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>set_control: a control set as the user would.</summary>
     [McpServerTool(Name = "set_control", Title = "Set one of the editor's controls")]
-    [Description("Sets one of the editor's controls (list_controls gives their ids) as the user would, so the editor does what the control does: a switch or toggle true or false (e.g. a View switch, see-through, Support check), a dropdown's option (its text, or its number from 0), a slider's or a number box's value (e.g. workshop.cut 12), a text box's text (enter: true also presses Enter, for search boxes), a button: click (a tool of the rail, a panel's action, Apply of a tool…). Answers with the control's value after and the editor's message. Saving, applying live, discarding, reloading, writing or deleting the user's files and connecting to the live game are refused.")]
+    [Description("Sets one of the editor's controls (list_controls gives their ids) as the user would, so the editor does what the control does: a switch or toggle true or false (e.g. a View switch, see-through, Support check), a dropdown's option (its text, or its number from 0), a slider's or a number box's value (e.g. workshop.cut 12), a text box's text (enter: true also presses Enter, for search boxes), a button: click (a tool of the rail, a panel's action, Apply of a tool…). Answers with the control's value after and the editor's message. Saving, applying live, discarding, reloading, writing or deleting the user's files and connecting to the live game are refused; while the world is live with Auto on, every control but the View panel's is.")]
     public Task<string> SetControl(
         [Description("The control's id (list_controls).")] string id,
         [Description("The value: true/false, an option, a number, a text, or click.")] string value,

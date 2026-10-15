@@ -551,12 +551,15 @@ public sealed partial class ClaudeTools
         {
             return "No area is open: open_area (a world) or open_workshop first.";
         }
-        if (_w.World is { IsLive: true } && _w.Settings.AutoApply)
+        if (LiveWithAuto)
         {
             return "The open world is live with Auto on: every change would go to the game at once. Ask the user to turn Auto off; Claude's changes then wait for Apply live.";
         }
         return null;
     }
+
+    /// <summary>Whether the open world is live with Auto on: every change would go to the game at once.</summary>
+    private bool LiveWithAuto => _w.World is { IsLive: true } && _w.Settings.AutoApply;
 
     /// <summary>run_script: runs a C# script as the Script tool does, as one pending step (or only says what it would change).</summary>
     [McpServerTool(Name = "run_script", Title = "Run a script on the area")]

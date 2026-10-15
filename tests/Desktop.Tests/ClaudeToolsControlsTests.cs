@@ -6,8 +6,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// Claude's tools for the editor's own controls (ClaudeTools.Controls): the Workshop's Cut slider and Support check
-/// found and set, blocked controls refused; and the helpers they use (KindOf, LabelOf, ControlsOf, ValueOf, Set,
-/// Blocked).
+/// found and set, blocked controls refused, only the View panel's while live with Auto on; and the helpers they use
+/// (KindOf, LabelOf, ControlsOf, ValueOf, Set, Blocked).
 /// </summary>
 [Collection("World files")]
 public class ClaudeToolsControlsTests
@@ -116,5 +116,23 @@ public class ClaudeToolsControlsTests
         await r.T.SetControl("workshop.support", "false");
         Assert.False(r.W.SupportBox.IsChecked);
         Assert.StartsWith("No control nothing.here now", await r.T.SetControl("nothing.here", "1"));
+    }
+
+    // Live with Auto on, what a control does would go to the game at once: a script's Run is refused, as every other
+    // editing tool is; the View panel's switches still work.
+    [AvaloniaFact]
+    public async Task LiveWithAutoOnOnlyTheViewsControlsAreSet()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenLive();
+        r.W.Settings.AutoApply = true;
+        Assert.Contains("live with Auto on", await r.T.SetControl("script.code", "Ground.Raise(0, 0, 3);"));
+        Assert.Contains("live with Auto on", await r.T.SetControl("script.run", "click"));
+        Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+        var water = ClaudeRun.J(await r.T.SetControl("view.water", "false"));
+        Assert.False(water.GetProperty("value").GetBoolean());
+        // Auto off: the script's controls are Claude's again.
+        r.W.Settings.AutoApply = false;
+        Assert.Equal("script.code", ClaudeRun.J(await r.T.SetControl("script.code", "Ground.Raise(0, 0, 3);")).GetProperty("id").GetString());
     }
 }
