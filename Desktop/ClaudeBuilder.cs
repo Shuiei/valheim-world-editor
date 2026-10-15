@@ -16,6 +16,22 @@ public static class ClaudeBuilder
     /// goes in the 2 m of wall nearest it.</param>
     public sealed record Door(string Side, float At);
 
+    /// <summary>The most pieces one layout puts down: a larger one is refused (built in parts instead).</summary>
+    public const int MaxPieces = 5000;
+
+    /// <summary>Throws <see cref="ArgumentException"/> when a layout would be more than <see cref="MaxPieces"/> pieces.</summary>
+    /// <param name="count">How many pieces it would be.</param>
+    private static void Limit(double count)
+    {
+        if (!(count <= MaxPieces))
+        {
+            throw new ArgumentException($"That would be {count:0} pieces, more than {MaxPieces} in one go: build it in parts.");
+        }
+    }
+
+    /// <summary>How many 2 m pieces <see cref="Across"/> puts across a span (at least one).</summary>
+    private static float Count(float from, float to) => MathF.Max(1, MathF.Ceiling(MathF.Abs(to - from) / 2 - 0.01f));
+
     /// <summary>A piece's bounds and snap points; throws <see cref="ArgumentException"/> for a prefab that is not a piece.</summary>
     private static PieceCatalog.Info Info(string prefab) =>
         PieceCatalog.Get(StableHash.Of(prefab)) ?? throw new ArgumentException($"{prefab} is not a piece the editor knows.");
@@ -26,8 +42,8 @@ public static class ClaudeBuilder
     /// </summary>
     private static List<float> Across(float from, float to)
     {
-        float len = MathF.Abs(to - from), mid = (from + to) / 2;
-        int n = Math.Max(1, (int)MathF.Ceiling(len / 2 - 0.01f));
+        float mid = (from + to) / 2;
+        int n = (int)Count(from, to);
         return [.. Enumerable.Range(0, n).Select(i => mid - n + 1 + 2 * i)];
     }
 
@@ -42,6 +58,7 @@ public static class ClaudeBuilder
     /// <param name="z1">The opposite corner, z.</param>
     /// <param name="top">The height of the floor's top, in metres.</param>
     /// <param name="material">"wood" or "stone" (any case); anything else throws <see cref="ArgumentException"/>.</param>
+    /// <exception cref="ArgumentException">Also when it would be more than <see cref="MaxPieces"/> tiles.</exception>
     public static List<ClaudeTools.PieceSpec> Floor(float x0, float z0, float x1, float z1, float top, string material)
     {
         string prefab = material.ToLowerInvariant() switch
@@ -50,6 +67,7 @@ public static class ClaudeBuilder
             "wood" => "wood_floor",
             _ => throw new ArgumentException("A floor is wood or stone."),
         };
+        Limit((double)Count(x0, x1) * Count(z0, z1));
         float y = top - Info(prefab).MaxY;
         return [.. (from x in Across(x0, x1) from z in Across(z0, z1) select P(prefab, x, y, z, 0))];
     }
@@ -66,6 +84,7 @@ public static class ClaudeBuilder
     /// <param name="height">How tall, in metres (rounded to whole rows, at least one).</param>
     /// <param name="material">"wood" or "stone" (any case); anything else throws <see cref="ArgumentException"/>.</param>
     /// <param name="doors">The doors; a side that is not north, south, east or west throws.</param>
+    /// <exception cref="ArgumentException">Also when it would be more than <see cref="MaxPieces"/> pieces.</exception>
     public static List<ClaudeTools.PieceSpec> Walls(float x0, float z0, float x1, float z1, float bottom, float height, string material, IReadOnlyList<Door> doors)
     {
         (float lx, float hx, float lz, float hz) = (MathF.Min(x0, x1), MathF.Max(x0, x1), MathF.Min(z0, z1), MathF.Max(z0, z1));
@@ -75,7 +94,9 @@ public static class ClaudeBuilder
             "wood" => ("woodwall", 2f),
             _ => throw new ArgumentException("Walls are wood or stone."),
         };
-        int rows = Math.Max(1, (int)MathF.Round(height / row));
+        float rowsWanted = MathF.Max(1, MathF.Round(height / row));
+        Limit((double)rowsWanted * 2 * (Count(lx, hx) + Count(lz, hz)));
+        int rows = (int)rowsWanted;
         var info = Info(prefab);
         var door = Info("wood_door");
         var list = new List<ClaudeTools.PieceSpec>();
@@ -132,6 +153,7 @@ public static class ClaudeBuilder
     /// <param name="angle">26 or 45; anything else throws <see cref="ArgumentException"/>.</param>
     /// <param name="material">Thatch or shingle (any case); anything else throws.</param>
     /// <param name="gables">Also close the two ends.</param>
+    /// <exception cref="ArgumentException">Also when it would be more than <see cref="MaxPieces"/> pieces.</exception>
     public static List<ClaudeTools.PieceSpec> Roof(float x0, float z0, float x1, float z1, float eave, int angle, string material, bool gables)
     {
         (float lx, float hx, float lz, float hz) = (MathF.Min(x0, x1), MathF.Max(x0, x1), MathF.Min(z0, z1), MathF.Max(z0, z1));
@@ -152,7 +174,10 @@ public static class ClaudeBuilder
         float cx = (lx + hx) / 2, cz = (lz + hz) / 2;
         float depth = (alongX ? hz - lz : hx - lx) / 2, length = alongX ? hx - lx : hz - lz;
         // Rows each side: from the ridge's edge (1 m out) to at or past the wall line.
-        int n = Math.Max(1, (int)MathF.Ceiling((depth - 1) / run - 0.01f));
+        float rows = MathF.Max(1, MathF.Ceiling((depth - 1) / run - 0.01f));
+        // The slopes and ridge first (the gables are fewer: the ridge runs along the longer side), all of it at the end.
+        Limit((double)Count(alongX ? lx : lz, alongX ? hx : hz) * (2 * rows + 1));
+        int n = (int)rows;
         float overhang = 1 + n * run - depth;
         float eaveEdge = eave - pitch * overhang, top = eaveEdge + n * rise;
         // World point from (along the ridge, across it).
@@ -220,6 +245,7 @@ public static class ClaudeBuilder
                 }
             }
         }
+        Limit(list.Count);
         return list;
     }
 }

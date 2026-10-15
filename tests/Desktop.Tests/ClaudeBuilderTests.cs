@@ -4,7 +4,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// ClaudeBuilder's layouts in stone and shingle: a stone floor, stone walls in 1 m rows with a door taking two of
-/// them, a 26 degree shingle roof whose ridge runs along z, and the materials and angles it does not know.
+/// them, a 26 degree shingle roof whose ridge runs along z, the materials and angles it does not know, and layouts of
+/// more than MaxPieces refused before they are laid out.
 /// </summary>
 public class ClaudeBuilderTests
 {
@@ -51,5 +52,16 @@ public class ClaudeBuilderTests
         Assert.Equal(15, ClaudeBuilder.Roof(-3, -5, 3, 5, 38, 26, "shingle", gables: false).Count);
         Assert.Equal("A roof is thatch or shingle.", Assert.Throws<ArgumentException>(() => ClaudeBuilder.Roof(-3, -5, 3, 5, 38, 26, "tin", true)).Message);
         Assert.Equal("A roof is 26 or 45 degrees.", Assert.Throws<ArgumentException>(() => ClaudeBuilder.Roof(-3, -5, 3, 5, 38, 60, "thatch", true)).Message);
+    }
+
+    // More than 5000 pieces is refused before any is laid out: a huge floor, walls ten thousand rows high, a huge roof.
+    [Fact]
+    public void LayoutsOfMoreThanMaxPiecesAreRefused()
+    {
+        Assert.Equal(ClaudeBuilder.MaxPieces, ClaudeBuilder.Floor(0, 0, 200, 100, 35, "wood").Count);
+        Assert.Contains("more than 5000", Assert.Throws<ArgumentException>(() => ClaudeBuilder.Floor(0, 0, 202, 100, 35, "wood")).Message);
+        Assert.Contains("more than 5000", Assert.Throws<ArgumentException>(() => ClaudeBuilder.Floor(0, 0, 5000, 5000, 35, "wood")).Message);
+        Assert.Contains("more than 5000", Assert.Throws<ArgumentException>(() => ClaudeBuilder.Walls(0, 0, 4, 4, 34, 1e9f, "stone", [])).Message);
+        Assert.Contains("more than 5000", Assert.Throws<ArgumentException>(() => ClaudeBuilder.Roof(0, 0, 3e7f, 2e7f, 40, 45, "thatch", true)).Message);
     }
 }

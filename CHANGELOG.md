@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.6 — unreleased
+
+### Fixed
+- **Claude's build_floor, build_walls and build_roof could freeze the editor.** They took any rectangle: one
+  thousands of metres across read the ground at every metre under it and laid out millions of pieces on the
+  window's thread, freezing the editor for minutes, and one far enough out (beyond about 16,000 km) never finished.
+  The rectangle must now be within the open area, and a layout of more than 5000 pieces (walls thousands of rows
+  high among them) is refused before it is laid out, with a message to build it in parts.
+
 ## v1.45.5 — unreleased
 
 ### Fixed
