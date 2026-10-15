@@ -348,7 +348,8 @@ every player:
 - **Zone resets** need WorldEditorBridge 0.10.0 or newer on the server. The game generates a reset zone again at
   once when a player is near it, otherwise the next time someone comes. A reset cannot be undone once applied.
 - Versions: following the game needs the plugin 1.17.0 or newer, mods' objects 1.26.0, their models 1.27.0,
-  mods' own plugins 1.35.0, and moves under the same id 1.40.0.
+  mods' own plugins 1.35.0, moves under the same id 1.40.0, and an apply whose answer was lost (a dropped tunnel)
+  not making objects twice when applied again 1.45.3.
 - Objects placed live are created by the server; players see them like objects someone just built or planted.
 - Big changes (thousands of objects at once) are applied in one go and can make the server hitch for a moment.
   Reading the whole world when you connect takes a while on a big world (up to a few minutes).

@@ -7,7 +7,8 @@ using Xunit;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// LiveSync's moves: a saved object moved in the editor moves in the game under its own ZDOID (FakeBridge).
+/// LiveSync's moves: a saved object moved in the editor moves in the game under its own ZDOID (FakeBridge); and a call
+/// whose answer was lost is sent again under its id, not done twice.
 /// </summary>
 [Collection("Timed answers")]
 public class LiveSyncTests
@@ -173,5 +174,45 @@ public class LiveSyncTests
         Assert.DoesNotContain(t.Tree.Id, merged.Updated);
         Assert.Empty(merged.Added);
         Assert.Equal(t.Tree.Position, t.World.ObjectRefs[t.Tree.Id].Position);
+    }
+
+    // The game does the call but its answer is lost (a dropped tunnel): the next apply sends it again under its id, and
+    // the plugin answers with what it did instead of making the objects twice.
+    [Fact]
+    public async Task ACallWhoseAnswerWasLostIsNotDoneTwice()
+    {
+        using var t = new Live(canMove: false);
+        t.Bridge.Features.Add("once");
+        t.MoveTree(-1, new Vector3(4, 0, 2));
+        t.Bridge.LoseNextAnswer = true;
+        await Assert.ThrowsAnyAsync<Exception>(() => t.Sync.Apply(t.World, t.Edits, t.Game));
+        Assert.Equal((1, 1), t.Bridge.ObjectCalls.Single());
+        Assert.False(t.Sync.IsLive(-1));
+
+        string said = await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.Equal("1 object(s) removed, 1 created", said);
+        Assert.Single(t.Bridge.ObjectCalls);
+        Assert.True(t.Sync.IsLive(-1));
+        Assert.True(t.Sync.IsDestroyed(t.Tree.Id));
+        Assert.Equal((0, 0), t.Sync.Pending(t.Edits));
+        Assert.Equal("", await t.Sync.Apply(t.World, t.Edits, t.Game));
+        Assert.Single(t.Bridge.ObjectCalls);
+    }
+
+    // The game started again after a call whose answer was lost: the new run does not know whether the last one did it,
+    // so the apply fails without sending anything until the world is read again.
+    [Fact]
+    public async Task ACallWhoseAnswerWasLostIsNotSentToTheGameStartedAgain()
+    {
+        using var t = new Live(canMove: false);
+        t.Bridge.Features.Add("once");
+        t.MoveTree(-1, new Vector3(4, 0, 2));
+        t.Bridge.LoseNextAnswer = true;
+        await Assert.ThrowsAnyAsync<Exception>(() => t.Sync.Apply(t.World, t.Edits, t.Game));
+        t.Bridge.Run = "run2";
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => t.Sync.Apply(t.World, t.Edits, t.Game));
+        Assert.Single(t.Bridge.ObjectCalls);
+        Assert.False(t.Sync.IsLive(-1));
     }
 }

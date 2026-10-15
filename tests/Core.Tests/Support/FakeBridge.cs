@@ -45,6 +45,15 @@ public sealed class FakeBridge : IDisposable
     /// </summary>
     public List<int> Connections { get; } = [];
 
+    /// <summary>This run of the plugin, as its status tells; a new one stands for the game started again.</summary>
+    public string Run { get; set; } = "run1";
+
+    /// <summary>The next objects call is done, but its answer is cut off on the way (as a dropped tunnel would).</summary>
+    public bool LoseNextAnswer { get; set; }
+
+    /// <summary>The objects calls' answers by their call id: one sent again is answered with them, not done twice.</summary>
+    private readonly Dictionary<string, string> _answers = [];
+
     private uint _next = 1000;
 
     public FakeBridge()
@@ -73,7 +82,12 @@ public sealed class FakeBridge : IDisposable
             int status = ctx.Request.Headers["X-Bridge-Token"] == Token ? Status : 401;
             if (status == 200 && ctx.Request.Url!.AbsolutePath == "/status")
             {
-                body = "{\"plugin\":\"0.3.0\",\"world\":\"CITest\",\"players\":0,\"features\":[" + string.Join(",", Features.Select(f => $"\"{f}\"")) + "]}";
+                body = "{\"plugin\":\"0.3.0\",\"world\":\"CITest\",\"players\":0,\"features\":[" + string.Join(",", Features.Select(f => $"\"{f}\"")) + "],\"run\":\"" + Run + "\"}";
+            }
+            else if (status == 200 && ctx.Request.Url!.AbsolutePath == "/objects" && ctx.Request.Headers["X-Call-Id"] is { } done && _answers.TryGetValue(done, out string? again))
+            {
+                await ctx.Request.InputStream.CopyToAsync(Stream.Null);
+                body = again;
             }
             else if (status == 200 && ctx.Request.Url!.AbsolutePath == "/objects")
             {
@@ -120,6 +134,20 @@ public sealed class FakeBridge : IDisposable
                     ObjectCalls.Add((destroy, create));
                 }
                 body = $"{{\"destroyed\":{destroy},\"missing\":0,\"refound\":{Refound},\"created\":[{string.Join(",", ids.Select(i => $"\"{i}\""))}],\"moves\":[{string.Join(",", moved)}]}}";
+                if (ctx.Request.Headers["X-Call-Id"] is { } call)
+                {
+                    _answers[call] = body;
+                }
+                if (LoseNextAnswer)
+                {
+                    // Done, but only half the answer gets through before the connection breaks.
+                    LoseNextAnswer = false;
+                    byte[] half = Encoding.UTF8.GetBytes(body);
+                    ctx.Response.ContentLength64 = half.Length;
+                    await ctx.Response.OutputStream.WriteAsync(half.AsMemory(0, half.Length / 2));
+                    ctx.Response.Abort();
+                    continue;
+                }
             }
             else if (status == 200 && ctx.Request.Url!.AbsolutePath == "/zones/reset")
             {
