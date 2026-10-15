@@ -370,9 +370,13 @@ public class DungeonGenTests
         var floors = rich.Items.Where(i => i.Prefab == "wood_floor").ToList();
         foreach (var chest in rich.Items.Where(i => i.Prefab.StartsWith("TreasureChest_", StringComparison.Ordinal)))
         {
-            if (floors.Any(f => MathF.Abs(f.Position.X - chest.Position.X) < 1 && MathF.Abs(f.Position.Z - chest.Position.Z) < 1 && MathF.Abs(f.Position.Y - chest.Position.Y) < 0.5f))
+            // The boards under it (the highest at or below it, not a loft's deck overhead): one standing too high is
+            // checked too.
+            var under = floors.Where(f => MathF.Abs(f.Position.X - chest.Position.X) < 1 && MathF.Abs(f.Position.Z - chest.Position.Z) < 1 && f.Position.Y <= chest.Position.Y + 0.01f)
+                .MaxBy(f => f.Position.Y);
+            if (under != null)
             {
-                Assert.InRange(chest.Position.Y - floors[0].Position.Y, -0.01f, 0.06f);
+                Assert.InRange(chest.Position.Y - under.Position.Y, -0.01f, 0.06f);
             }
         }
     }
