@@ -45,6 +45,35 @@ public sealed partial class ClaudeTools
     /// <summary>On the window's thread, as a click would be.</summary>
     private static Task<T> OnUi<T>(Func<T> f) => Dispatcher.UIThread.InvokeAsync(f).GetTask();
 
+    /// <summary>
+    /// The camera tool running now (done when none is): one at a time moves the camera or takes a picture, since
+    /// Claude's calls run side by side, and a picture awaited after the camera was set would otherwise come from
+    /// another call's camera. Used on the window's thread only.
+    /// </summary>
+    private Task _camera = Task.CompletedTask;
+
+    /// <summary>On the window's thread, the camera this call's alone until it ends (<see cref="_camera"/>).</summary>
+    private Task<T> WithCamera<T>(Func<Task<T>> f) => OnUi(async () =>
+    {
+        while (!_camera.IsCompleted)
+        {
+            await _camera;
+        }
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _camera = done.Task;
+        try
+        {
+            return await f();
+        }
+        finally
+        {
+            done.SetResult();
+        }
+    });
+
+    /// <summary>On the window's thread, the camera this call's alone until it ends (<see cref="_camera"/>).</summary>
+    private Task<T> WithCamera<T>(Func<T> f) => WithCamera(() => Task.FromResult(f()));
+
     /// <summary>editor_state: the page shown, the world, the area's bounds, what is pending (see <see cref="StateOf"/>).</summary>
     [McpServerTool(Name = "editor_state", ReadOnly = true, Title = "What the editor shows")]
     [Description("What the editor shows now: the start page, a world's map, an area of a world in 3D, or the Workshop (a blank plot to build a blueprint on); the world, the area's bounds in world coordinates, the changes not saved yet, and the editor's last message. Call it first.")]
@@ -175,7 +204,7 @@ public sealed partial class ClaudeTools
     [Description("Selects objects in the editor (by id), so the user sees which ones are meant, and points the camera at them. Changes nothing in the world.")]
     public Task<string> SelectObjects(
         [Description("Their ids (list_objects).")] int[] ids,
-        [Description("Point the camera at them (default: true).")] bool focus = true) => OnUi(() =>
+        [Description("Point the camera at them (default: true).")] bool focus = true) => WithCamera(() =>
     {
         if (_w.Session?.Scene is not { } scene)
         {
@@ -243,7 +272,7 @@ public sealed partial class ClaudeTools
         string path = Path.Combine(Path.GetTempPath(), $"vwe-claude-{Guid.NewGuid():N}.png");
         try
         {
-            string? problem = await OnUi(async () =>
+            string? problem = await WithCamera(async () =>
             {
                 if (_w.MapShown)
                 {
@@ -285,7 +314,7 @@ public sealed partial class ClaudeTools
                 string path = Path.Combine(Path.GetTempPath(), $"vwe-claude-{Guid.NewGuid():N}.png");
                 try
                 {
-                    string? problem = await OnUi(async () =>
+                    string? problem = await WithCamera(async () =>
                     {
                         if (_w.Session?.Scene is not { } scene || _w.MapShown)
                         {
@@ -1368,7 +1397,7 @@ public sealed partial class ClaudeTools
             return why;
         }
         var result = await Task.Run(() => Editing.DungeonGen.Make(settings));
-        return await OnUi(async () =>
+        return await WithCamera(async () =>
         {
             // The map shown or another area opened while it was made: it goes nowhere.
             if (_w.Session != opened || opened == null)

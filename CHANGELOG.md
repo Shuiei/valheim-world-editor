@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.34 — unreleased
+
+### Fixed
+- **Claude's screenshots could show the wrong view.** Claude can ask for several screenshots at once. Each set the
+  camera and then waited for its picture, so another call could move the camera in between: pictures came from the
+  other call's camera, and four views could be labelled with the wrong sides. Tools that set the camera or take a
+  picture now take turns.
+
 ## v1.45.33 — unreleased
 
 ### Fixed
