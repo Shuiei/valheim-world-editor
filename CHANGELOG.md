@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.4 — unreleased
+
+### Fixed
+- **Claude could change a live world with Auto on through the editor's controls.** Every Claude tool that changes
+  the world is refused while the world is live with **Auto** on, so its changes wait for the user, but `set_control`
+  was not: pressing a tool's **Apply**, an Area action or a script's **Run** through it changed the world, and Auto
+  sent the change to the game at once. While the world is live with Auto on, `set_control` now only sets the View
+  panel's controls, and `list_controls` says why the others are blocked.
+
 ## v1.45.3 — unreleased
 
 ### Fixed
