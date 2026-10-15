@@ -277,6 +277,25 @@ public sealed class Editor : IDisposable
         Send("wait 300");
     }
 
+    /// <summary>
+    /// Moves the pointer onto a point of the window (pixels from its top left), so what it hovered (a room, a piece)
+    /// is no longer marked. Does nothing without xdotool.
+    /// </summary>
+    /// <param name="x">Pixels from the window's left.</param>
+    /// <param name="y">Pixels from the window's top.</param>
+    public void Point(int x, int y)
+    {
+        string? window = Xdotool("search", "--onlyvisible", "--pid", _p.Id.ToString(System.Globalization.CultureInfo.InvariantCulture))?
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+        if (window == null)
+        {
+            return;
+        }
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        Xdotool("mousemove", "--window", window, x.ToString(inv), y.ToString(inv));
+        Send("wait 300");
+    }
+
     /// <summary>Runs xdotool with these arguments; its output, or null when it is missing or fails.</summary>
     private static string? Xdotool(params string[] args)
     {

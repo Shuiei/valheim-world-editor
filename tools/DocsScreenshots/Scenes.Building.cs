@@ -112,8 +112,14 @@ public sealed partial class Scenes
         e.Send("click Go to the dungeon");
         e.Send("wait 3000");
         e.Scroll(250, 600, 30);
+        // Go inside frames the dungeon's rooms (wherever its layout put them) and cuts their roofs at 4 m.
+        e.Send("click Go inside");
+        e.Send("wait 1500");
         e.Send("set Cut 4 m above the floor|2");
-        e.Send($"camera {Cx - 12} {Cz} 200 62 80 5002");
+        // Closer, with the wheel over the rooms in the middle of the view (Go inside frames them from afar).
+        e.Scroll(730, 470, -4);
+        // Off the rooms (onto the sky), so none is marked as hovered.
+        e.Point(1300, 150);
         e.Send("wait 1500");
         e.Shot(Out("dungeon-rooms.jpg"));
     }

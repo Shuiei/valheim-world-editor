@@ -1,7 +1,7 @@
 # Dungeons
 
 ![A Burial Chambers dungeon of the game's own rooms, cut open, with the Dungeon panel's room editing](images/dungeon-rooms.jpg)
-*A dungeon of the game's own rooms (Burial Chambers, 23 rooms), 5000 m up and cut 2 m above the floor. Orange and
+*A dungeon of the game's own rooms (Burial Chambers, 18 rooms), 5000 m up and cut 2 m above the floor. Orange and
 blue squares mark where rooms meet (a door, or a doorway the game may fill); the panel lists the area's dungeon, the
 cut, the rooms to add, and **Turn (R)**, **Delete room (Del)** and **Close open ends**.*
 
