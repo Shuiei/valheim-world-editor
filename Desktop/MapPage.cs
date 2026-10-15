@@ -182,9 +182,14 @@ public sealed class MapPage : IDisposable
     /// </summary>
     private string _searchWhat = "kinds";
     /// <summary>
-    /// Searches started so far: only the latest one's results are shown.
+    /// Searches started so far, and worlds shown (each makes a running search's results unwanted): only the latest
+    /// search's results are shown, and only while the world it searched is.
     /// </summary>
     private int _searches;
+    /// <summary>
+    /// True while the latest search runs (its "Searching…" shown).
+    /// </summary>
+    private bool _searching;
 
     // Zone filter.
     /// <summary>
@@ -488,6 +493,13 @@ public sealed class MapPage : IDisposable
     {
         bool same = _session == session;
         _session = session;
+        // A search still running searched the world as it was: dropped when it ends.
+        _searches++;
+        if (_searching)
+        {
+            _searching = false;
+            SearchInfo.Text = "The world changed during the search: search again.";
+        }
         if (!same)
         {
             Map.Show(session);
@@ -661,6 +673,12 @@ public sealed class MapPage : IDisposable
 
     // ---- Search: every object of the world by kind, items in containers, or texts.
     /// <summary>
+    /// Runs a search (world, text, what) off the window's thread. Tests hold it to start or show something meanwhile.
+    /// </summary>
+    internal Func<WorldSession, string, string, Task<WorldSearch.Result>> RunSearch { get; set; } =
+        (s, q, what) => Task.Run(() => WorldSearch.Search(s.World, s.Edits, q, what));
+
+    /// <summary>
     /// Searches the world for the search box's text and pins what is found; an empty box clears the results.
     /// </summary>
     internal async Task Search()
@@ -673,6 +691,7 @@ public sealed class MapPage : IDisposable
         string what = SearchWhat.SelectedIndex switch { 1 => "items", 2 => "texts", _ => "kinds" };
         // A search still running is dropped when it ends: this one (or the cleared box) is newer.
         int search = ++_searches;
+        _searching = q.Length > 0;
         if (q.Length == 0)
         {
             _hits = [];
@@ -686,21 +705,24 @@ public sealed class MapPage : IDisposable
         WorldSearch.Result res;
         try
         {
-            res = await Task.Run(() => WorldSearch.Search(s.World, s.Edits, q, what));
+            res = await RunSearch(s, q, what);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             if (search == _searches && _session == s)
             {
+                _searching = false;
                 SearchInfo.Text = "Search failed: " + ex.Message;
             }
             return;
         }
-        // Another search started meanwhile, or another world is shown: these results are not wanted.
+        // Another search started meanwhile, or a world (another, or this one read again) is shown: these results are
+        // not wanted.
         if (search != _searches || _session != s)
         {
             return;
         }
+        _searching = false;
         _searchWhat = what;
         _hits = res.Hits;
         Map.Pins = [.. _hits.Select(h => new Vector2(h.X, h.Z))];

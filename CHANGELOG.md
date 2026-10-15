@@ -10,7 +10,9 @@ the plugin is unchanged in versions without that part.
 - **The map could pin the results of an older search.** A search started while another was still running (a slow
   item search, then a switch to objects) could end first, and the older one's results then replaced it: the wrong
   hits were pinned, and picking one opened it the wrong way. A search still running when another world was shown
-  pinned the old world's hits on the new map. Only the latest search on the world shown is pinned now.
+  pinned the old world's hits on the new map, and the same happened when the world was read again (Discard, Reload)
+  or saved during the search. Only the latest search on the world as shown is pinned now; one dropped because the
+  world changed says to search again.
 
 ## v1.45.34 — unreleased
 

@@ -9,8 +9,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The map page's search and zone filter on the test world: a box emptied to nothing, items in a chest counted in all,
-/// a search with more hits than are pinned, an older search ending last, and a distance box emptied; then a live
-/// world's pending line and question.
+/// a search with more hits than are pinned, an older search ending last, a search of the world before it was shown
+/// again, and a distance box emptied; then a live world's pending line and question.
 /// </summary>
 [Collection("World files")]
 public class MapPageSearchTests
@@ -75,7 +75,7 @@ public class MapPageSearchTests
         }
     }
 
-    // A search started while another runs: only the newer one's results are pinned, whichever ends last.
+    // A search started while another runs: only the newer one's results are pinned, the older ending last.
     [AvaloniaFact]
     public async Task AnOlderSearchEndingLastIsDropped()
     {
@@ -83,6 +83,17 @@ public class MapPageSearchTests
         try
         {
             var m = w.MapPage!;
+            // The items search is held until the newer one is shown.
+            var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var search = m.RunSearch;
+            m.RunSearch = async (s, q, what) =>
+            {
+                if (what == "items")
+                {
+                    await held.Task;
+                }
+                return await search(s, q, what);
+            };
             // The box emptied while the kind changes, so the change searches nothing by itself.
             m.SearchBox.Text = null;
             m.SearchWhat.SelectedIndex = 1;
@@ -92,14 +103,50 @@ public class MapPageSearchTests
             m.SearchWhat.SelectedIndex = 0;
             m.SearchBox.Text = "e";
             await m.Search();
+            Assert.False(older.IsCompleted);
             string info = m.SearchInfo.Text!;
             var many = WorldSearch.Search(w.World!.World, w.World.Edits, "e", "kinds");
+            held.SetResult();
             await older;
             Assert.Equal(many.Hits.Count, m.Map.Pins.Count);
             Assert.Equal(info, m.SearchInfo.Text);
             // Its hits are kinds: picking one goes there, to select it (not to the inspector).
             m.ShowHit(0);
             Assert.False(m.Target!.Value.Inspect);
+        }
+        finally
+        {
+            w.CloseWithoutAsking();
+            Done(dir);
+        }
+    }
+
+    // The world shown again (read again, saved) while a search runs: its results, of the world as it was, are dropped
+    // and it says to search again.
+    [AvaloniaFact]
+    public async Task ASearchOfTheWorldBeforeItWasShownAgainIsDropped()
+    {
+        var (w, dir) = await Open();
+        try
+        {
+            var m = w.MapPage!;
+            var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var search = m.RunSearch;
+            m.RunSearch = async (s, q, what) =>
+            {
+                await held.Task;
+                return await search(s, q, what);
+            };
+            m.SearchBox.Text = null;
+            m.SearchWhat.SelectedIndex = 0;
+            m.SearchBox.Text = "e";
+            var running = m.Search();
+            Assert.Equal("Searching…", m.SearchInfo.Text);
+            m.Show(w.World!);
+            held.SetResult();
+            await running;
+            Assert.Empty(m.Map.Pins);
+            Assert.Equal("The world changed during the search: search again.", m.SearchInfo.Text);
         }
         finally
         {
