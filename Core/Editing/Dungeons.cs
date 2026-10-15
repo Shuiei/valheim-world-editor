@@ -628,11 +628,12 @@ public static class Dungeons
             int count = 0;
             try
             {
-                byte[]? data = ZdoData.Parse(world.ObjectBytes(id)).GetBytes(RoomDataKey);
+                byte[]? data = ZdoData.Parse(world.ObjectBytes(id), world.ObjectRefs[id].File.WorldVersion).GetBytes(RoomDataKey);
                 count = data == null ? 0 : BitConverter.ToInt32(data, 0);
             }
-            catch (Exception e) when (e is InvalidDataException or ArgumentException or EndOfStreamException)
+            catch (Exception e) when (e is InvalidDataException or IOException or ArgumentException or FormatException or OverflowException)
             {
+                // Damaged or unreadable: found with no rooms, and the others still listed.
             }
             found.Add(new Found(id, kind, position, count));
         }
