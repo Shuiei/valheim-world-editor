@@ -89,6 +89,24 @@ public sealed class ModExtensionsTests : IDisposable
     }
 
     [Fact]
+    public void OneFileOfferedByTwoModsRunsItsHooksOnce()
+    {
+        Mod("ExampleVehicles", "ExampleVehicles.WorldEditor.dll", Sample);
+        Mod("ExampleVehiclesCopy", "ExampleVehicles.WorldEditor.dll", Sample);
+        Refresh();
+        foreach (var x in ModExtensions.Offered)
+        {
+            ModExtensions.Allow(Settings, x, true);
+        }
+
+        Assert.Equal(2, Refresh());
+
+        Assert.All(ModExtensions.Offered, x => Assert.Equal(ModExtensions.Status.Running, x.State));
+        var view = new ObjectView("", default, default, new TerrainEditor.Save.ZdoData());
+        Assert.Single(ModExtensions.CutsOf(TerrainEditor.Save.StableHash.Of("example_pit"), view, ModExtensions.NoWorld));
+    }
+
+    [Fact]
     public void ADllThatIsNoExtensionDoesNotRunAndSaysWhy()
     {
         // A .NET assembly not marked as an extension (the SDK itself), and a file that is no assembly.
@@ -193,5 +211,18 @@ public sealed class ModExtensionsTests : IDisposable
         ModExtensions.LiveDisconnected();
         Assert.Equal(["connected ExampleVehicles", "disconnected", "connected ExampleVehicles", "disconnected"], w.Told);
         Assert.Null(w.Registry.Host.Live);
+    }
+
+    // One file offered by two mods (one extension at two paths): its listeners are told once of each change.
+    [Fact]
+    public void AnExtensionAtTwoPathsIsToldOfTheGameOnce()
+    {
+        var w = new Watching();
+        ModExtensions.UseForTests(("Watcher", w), ("WatcherCopy", w));
+        Assert.Equal(2, ModExtensions.Offered.Count);
+
+        ModExtensions.LiveConnected(new FakeLive());
+        ModExtensions.LiveDisconnected();
+        Assert.Equal(["connected ExampleVehicles", "disconnected"], w.Told);
     }
 }
