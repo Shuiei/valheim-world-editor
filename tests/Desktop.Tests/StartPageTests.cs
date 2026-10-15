@@ -131,6 +131,31 @@ public class StartPageTests
     }
 
     [AvaloniaFact]
+    public async Task AClickWhileConnectingStartsNoSecondConnection()
+    {
+        using var game = new FakeGame();
+        using var r = new Run();
+        var open = new TaskCompletionSource<Tunnel.Result>();
+        r.P.StartTunnel = t =>
+        {
+            r.Tunnels.Add(t);
+            return open.Task;
+        };
+        r.P.SHost.Text = "my.server.example";
+        r.P.SToken.Text = game.Token;
+        var first = r.P.ConnectNew();
+        // Clicked again while the tunnel is still being made: nothing more happens.
+        await r.P.ConnectNew();
+        open.SetResult(new Tunnel.Result(game.Port, game.Token, null, null));
+        await first;
+        Assert.Single(r.Tunnels);
+        Assert.Equal(["Loading the world from the server…"], r.Opened);
+        // Done: connecting works again.
+        await r.P.ConnectNew();
+        Assert.Equal(2, r.Tunnels.Count);
+    }
+
+    [AvaloniaFact]
     public async Task ASavedServerConnectsWithWhatWasSavedAndCanBeForgotten()
     {
         using var game = new FakeGame();

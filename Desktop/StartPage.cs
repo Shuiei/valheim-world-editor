@@ -114,6 +114,12 @@ public sealed class StartPage
     /// <summary>Why the game could not be checked (the folders or the plugin), until a check works again.</summary>
     private readonly TextBlock _gameError = Err();
 
+    /// <summary>
+    /// Whether a connection is being made (Connect, ConnectUrl): another click meanwhile does nothing, so no second
+    /// tunnel or world is opened.
+    /// </summary>
+    private bool _connecting;
+
     /// <summary>Shorthands for the app's line and muted text brushes.</summary>
     private static readonly IBrush Line = Ui.Line, Muted = Ui.Muted;
 
@@ -1024,6 +1030,24 @@ public sealed class StartPage
     /// <param name="what">What to say while connecting.</param>
     private async Task Connect(Tunnel.Request t, TextBlock error, string what)
     {
+        if (_connecting)
+        {
+            return;
+        }
+        _connecting = true;
+        try
+        {
+            await ConnectOnce(t, error, what);
+        }
+        finally
+        {
+            _connecting = false;
+        }
+    }
+
+    /// <inheritdoc cref="Connect"/>
+    private async Task ConnectOnce(Tunnel.Request t, TextBlock error, string what)
+    {
         error.Text = what;
         var tr = await StartTunnel(t);
         if (tr.Error != null)
@@ -1050,6 +1074,24 @@ public sealed class StartPage
 
     /// <summary>I made my own tunnel: connects to the bridge address typed (http:// added when missing).</summary>
     internal async Task ConnectUrl()
+    {
+        if (_connecting)
+        {
+            return;
+        }
+        _connecting = true;
+        try
+        {
+            await ConnectUrlOnce();
+        }
+        finally
+        {
+            _connecting = false;
+        }
+    }
+
+    /// <inheritdoc cref="ConnectUrl"/>
+    private async Task ConnectUrlOnce()
     {
         string url = LiveUrl.Text?.Trim() ?? "";
         if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))

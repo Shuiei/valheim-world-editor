@@ -41,6 +41,9 @@ public static class Tunnel
     /// <summary>Its local port forward to the plugin.</summary>
     private static ForwardedPortLocal? _forward;
 
+    /// <summary>Held while a tunnel is being made: one at a time, so none is left open unseen.</summary>
+    private static readonly SemaphoreSlim _starting = new(1, 1);
+
     /// <summary>Whether a tunnel is connected.</summary>
     public static bool Open => _client?.IsConnected == true;
 
@@ -72,6 +75,20 @@ public static class Tunnel
     /// come back in <see cref="Result.Error"/>.
     /// </summary>
     public static async Task<Result> Start(Request r)
+    {
+        await _starting.WaitAsync();
+        try
+        {
+            return await StartOnce(r);
+        }
+        finally
+        {
+            _starting.Release();
+        }
+    }
+
+    /// <inheritdoc cref="Start"/>
+    private static async Task<Result> StartOnce(Request r)
     {
         Close();
         string host = r.Host.Trim();
