@@ -43,6 +43,12 @@ public sealed class AppSettings
     public string? LiveUrl { get; set; }
 
     /// <summary>
+    /// The language the app shows (Settings): a catalogue's code ("en", "fr"…, see <c>Lang</c>); null: the computer's
+    /// language when there is a catalogue of it, else English. Taken when the app starts.
+    /// </summary>
+    public string? Language { get; set; }
+
+    /// <summary>
     /// Which start-page choice was used last ("game", "server", "offline").
     /// </summary>
     public string? LastMode { get; set; }

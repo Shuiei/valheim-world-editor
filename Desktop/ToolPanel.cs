@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -245,7 +246,7 @@ public sealed class ToolPanel
         {
             var (icon, swatch) = Look(t);
             var b = Make(RailLabel(t), key, icon, swatch);
-            ToolTip.SetTip(b, $"{Brush.Label(t)} ({key}): {Brush.Help(t)}");
+            ToolTip.SetTip(b, Lang.T("rail.brushTip", Brush.Label(t), key, Brush.Help(t)));
             b.Click += (_, _) => Choose(t);
             _buttons[t] = b;
         }
@@ -258,13 +259,13 @@ public sealed class ToolPanel
         }
         Cap("Edit");
         _areaButton = Make("Area", "B", "area");
-        ToolTip.SetTip(_areaButton, "Area (B): select a box or polygon, then change the ground, remove, select or replace objects, or reset its zones.");
+        ToolTip.SetTip(_areaButton, Lang.T("rail.tip.area"));
         _areaButton.Click += (_, _) => ChooseMode(ToolMode.Area);
         _pathButton = Make("Path", "P", "path");
-        ToolTip.SetTip(_pathButton, "Path (P): draw a line, then flatten, ramp, raise, lower, smooth, dig a river or paint along it.");
+        ToolTip.SetTip(_pathButton, Lang.T("rail.tip.path"));
         _pathButton.Click += (_, _) => ChooseMode(ToolMode.Path);
         _placeButton = Make("Place", "T", "place");
-        ToolTip.SetTip(_placeButton, "Place (T): paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones.");
+        ToolTip.SetTip(_placeButton, Lang.T("rail.tip.place"));
         _placeButton.Click += (_, _) => ChooseMode(ToolMode.Place);
         Cap("Paint");
         foreach (var (t, key) in Keys.Where(k => IsPaint(k.Tool)))
@@ -273,13 +274,13 @@ public sealed class ToolPanel
         }
         Cap("Create");
         _shapeButton = Make("Shape", "G", "shape");
-        ToolTip.SetTip(_shapeButton, "Shape (G): click to put a mound, cone, mesa, crater, moat or bowl into the ground, or any shape you write as a formula.");
+        ToolTip.SetTip(_shapeButton, Lang.T("rail.tip.shape"));
         _shapeButton.Click += (_, _) => ChooseMode(ToolMode.Shape);
         _mountainButton = Make("Mountain", "", "mountain");
-        ToolTip.SetTip(_mountainButton, "Mountain: click to raise a mountain, ridge, mesa, volcano or hills, past the game's ±8 m. Presets and Randomize make each one different.");
+        ToolTip.SetTip(_mountainButton, Lang.T("rail.tip.mountain"));
         _mountainButton.Click += (_, _) => ChooseMode(ToolMode.Mountain);
         _caveButton = Make("Cave", "", "cave");
-        ToolTip.SetTip(_caveButton, "Cave: draw its line, then Apply digs a trench along it and roofs it over with the game's boulders. Presets and Randomize make each one different.");
+        ToolTip.SetTip(_caveButton, Lang.T("rail.tip.cave"));
         _caveButton.Click += (_, _) =>
         {
             ChooseMode(ToolMode.Path);
@@ -289,20 +290,20 @@ public sealed class ToolPanel
         _dungeonButton.Tip("tools.dungeon");
         _dungeonButton.Click += (_, _) => ChooseMode(ToolMode.Dungeon);
         _scriptButton = Make("Script", "", "script");
-        ToolTip.SetTip(_scriptButton, "Script: write C# that shapes the ground, paints it and places or removes objects over the open area: anything the tools do, and more. Examples to start from.");
+        ToolTip.SetTip(_scriptButton, Lang.T("rail.tip.script"));
         _scriptButton.Click += (_, _) => ChooseMode(ToolMode.Script);
         BlueprintsButton = Make("Blueprints", "", "paste");
         BlueprintsButton.Tip("tools.blueprints");
         BlueprintsButton.Click += (_, _) => ChooseMode(ToolMode.Blueprints);
         Cap("Tools");
         SelectButton = Make("Select", "E", "select");
-        ToolTip.SetTip(SelectButton, "Select (E): click objects, or drag on the ground around them; then move, turn, lift or delete them.");
+        ToolTip.SetTip(SelectButton, Lang.T("rail.tip.select"));
         SelectButton.Click += (_, _) => ChooseSelect();
         _measureButton = Make("Measure", "M", "measure");
-        ToolTip.SetTip(_measureButton, "Measure (M): click two points to see the distance, height difference and slope.");
+        ToolTip.SetTip(_measureButton, Lang.T("rail.tip.measure"));
         _measureButton.Click += (_, _) => ChooseMode(ToolMode.Measure);
         _viewButton = Make("View", "Esc", "move");
-        ToolTip.SetTip(_viewButton, "View (Esc or H): look around, slide the view with the left button, and click objects to pick them.");
+        ToolTip.SetTip(_viewButton, Lang.T("rail.tip.view"));
         _viewButton.Click += (_, _) => Choose(null);
         // On a short window the rail scrolls with the wheel; no bar (it would squeeze the buttons).
         Rail = Ui.Card(new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Hidden, Content = new StackPanel { Width = 56, Children = { rail } } });
@@ -435,8 +436,7 @@ public sealed class ToolPanel
         }
         var label = ((_placeButton.Content as Grid)!.Children[0] as StackPanel)!.Children[1] as TextBlock;
         label!.Text = on ? "Build" : "Place";
-        ToolTip.SetTip(_placeButton, on ? "Build (T): pick a building piece, then click to put it down. It snaps to the pieces already there."
-            : "Place (T): paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones.");
+        ToolTip.SetTip(_placeButton, Lang.T(on ? "rail.tip.build" : "rail.tip.place"));
         if (on && (Tool != null || Mode is not (ToolMode.View or ToolMode.Place or ToolMode.Select)))
         {
             Choose(null);
@@ -472,7 +472,7 @@ public sealed class ToolPanel
         if (t is BrushTool tool)
         {
             _title.Text = Brush.Label(tool);
-            _help.Text = Brush.Help(tool) + " Hold the left button and move; Ctrl+Z undoes.";
+            _help.Text = Lang.T("brush.helpHold", Brush.Help(tool));
             _flattenRows.IsVisible = tool == BrushTool.Flatten;
             _naturalRows.IsVisible = tool == BrushTool.Natural;
             _erodeRows.IsVisible = tool == BrushTool.Erode;

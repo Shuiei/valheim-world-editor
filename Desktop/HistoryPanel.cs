@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -177,17 +178,17 @@ public sealed class HistoryPanel
         }
         if (undone)
         {
-            Act("Redo to here", "Redo up to this change", () => [.. s.RedoList.SkipWhile(r => r != c)], () => s.ForwardTo(c));
+            Act("Redo to here", Lang.T("history.tip.redoTo"), () => [.. s.RedoList.SkipWhile(r => r != c)], () => s.ForwardTo(c));
         }
         else
         {
             if (!current)
             {
-                Act("Back to here", "Undo every change after this one", () => [.. s.UndoList.SkipWhile(u => u != c).Skip(1)], () => s.BackTo(c));
+                Act("Back to here", Lang.T("history.tip.backTo"), () => [.. s.UndoList.SkipWhile(u => u != c).Skip(1)], () => s.BackTo(c));
             }
             if (!c.Removed && c.RevertOf == null)
             {
-                Act("Remove", "Take out only this change", () => [c], () => Message?.Invoke(s.RemoveChange(c)));
+                Act("Remove", Lang.T("history.tip.remove"), () => [c], () => Message?.Invoke(s.RemoveChange(c)));
             }
         }
         // Steps from an earlier session of the editor show their day too.

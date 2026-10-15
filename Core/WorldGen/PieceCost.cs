@@ -1,4 +1,5 @@
 using System.Text.Json;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Terrain;
 
@@ -74,14 +75,16 @@ public static class PieceCost
         /// there are no materials, or "Cost unknown" when only pieces without a recipe.
         /// </summary>
         /// <param name="most">How many materials to list.</param>
-        public string Describe(int most = 4)
+        /// <param name="english">In English whatever the language in use (for Claude).</param>
+        public string Describe(int most = 4, bool english = false)
         {
+            Func<string, object?[], string> say = english ? Lang.En : Lang.T;
             if (Materials.Count == 0)
             {
-                return Unknown.Count > 0 ? "Cost unknown (pieces from mods?)" : "Free";
+                return say(Unknown.Count > 0 ? "cost.unknown" : "cost.free", []);
             }
             string text = string.Join(" · ", Materials.Take(most).Select(m => $"{m.Name} {m.Amount}")) + (Materials.Count > most ? " · …" : "");
-            return Stations.Count > 0 ? $"{text} (needs {string.Join(", ", Stations)})" : text;
+            return Stations.Count > 0 ? say("cost.needs", [text, string.Join(", ", Stations)]) : text;
         }
     }
 

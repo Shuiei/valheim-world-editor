@@ -871,7 +871,7 @@ public sealed class NewWorldPage : IDisposable
         if (show != null)
         {
             item.Cursor = new Cursor(StandardCursorType.Hand);
-            ToolTip.SetTip(item, "Show it on the map");
+            ToolTip.SetTip(item, Lang.T("newWorld.showOnMap"));
             item.PointerEntered += (_, _) => item.Background = Ui.Panel2;
             item.PointerExited += (_, _) => item.Background = Brushes.Transparent;
             item.PointerPressed += (_, _) => show();
@@ -939,11 +939,11 @@ public sealed class NewWorldPage : IDisposable
         {
             var c = Mark(m.Kind, m.Name);
             float d = MathF.Sqrt((m.X - x) * (m.X - x) + (m.Z - z) * (m.Z - z));
-            string what = m.Kind == "boss" ? $"{m.Name}'s altar" : m.Name;
-            string tip = m.Kind == "start" ? $"The start: {m.X:0}, {m.Z:0}" : $"{what}: {m.X:0}, {m.Z:0}, {Km(d)} from the start";
+            string what = m.Kind == "boss" ? Lang.T("newWorld.altar", m.Name) : m.Name;
+            string tip = m.Kind == "start" ? Lang.T("newWorld.startAt", m.X, m.Z) : Lang.T("newWorld.markAt", what, m.X, m.Z, Km(d));
             if (m.OneOf)
             {
-                tip += $"\nOne of {marks.Count(o => o.Name == m.Name)} spots: the first one players come near becomes the camp, the others vanish.";
+                tip += "\n" + Lang.T("newWorld.oneOf", marks.Count(o => o.Name == m.Name));
             }
             ToolTip.SetTip(c, tip);
             Marks.Children.Add(c);
@@ -973,7 +973,7 @@ public sealed class NewWorldPage : IDisposable
     /// <summary>
     /// A distance for people: hundreds of metres under 1 km, else km to one decimal; "none" for infinity.
     /// </summary>
-    internal static string Km(float m) => float.IsPositiveInfinity(m) ? "none" : m < 1000 ? $"{m / 100:0}00 m" : $"{m / 1000:0.0} km";
+    internal static string Km(float m) => float.IsPositiveInfinity(m) ? Lang.T("newWorld.none") : m < 1000 ? $"{m / 100:0}00 m" : $"{m / 1000:0.0} km";
 
     /// <summary>
     /// A seed's stats as text, for a search result's tooltip.
@@ -982,19 +982,19 @@ public sealed class NewWorldPage : IDisposable
     {
         var lines = new List<string>
         {
-            $"Land: {s.Land * 100:0} % of the world · the start's landmass: {s.StartContinent * 100:0} % of the land (largest: {s.MainContinent * 100:0} %) · land around the start: {s.LandNearStart * 100:0} %",
-            "Biomes: " + string.Join(", ", SeedPreview.Biomes.Where(b => s.Shares[b] > 0.005f).Select(b => $"{Name(b)} {s.Shares[b] * 100:0} %")),
-            "Nearest to the start: " + string.Join(", ", SeedPreview.Biomes.Skip(1).Where(b => b is not (Heightmap.Biome.AshLands or Heightmap.Biome.DeepNorth))
-                .Select(b => $"{Name(b)} {Km(s.Distance[b])}{(s.SameLand[b] || float.IsPositiveInfinity(s.Distance[b]) ? "" : " (by sea)")}")),
+            Lang.T("newWorld.statsLand", s.Land * 100, s.StartContinent * 100, s.MainContinent * 100, s.LandNearStart * 100),
+            Lang.T("newWorld.statsBiomes", string.Join(", ", SeedPreview.Biomes.Where(b => s.Shares[b] > 0.005f).Select(b => $"{Name(b)} {s.Shares[b] * 100:0} %"))),
+            Lang.T("newWorld.statsNearest", string.Join(", ", SeedPreview.Biomes.Skip(1).Where(b => b is not (Heightmap.Biome.AshLands or Heightmap.Biome.DeepNorth))
+                .Select(b => s.SameLand[b] || float.IsPositiveInfinity(s.Distance[b]) ? $"{Name(b)} {Km(s.Distance[b])}" : Lang.T("newWorld.bySea", Name(b), Km(s.Distance[b]))))),
             s.TempleStart
-                ? $"The start (red dot): {s.Start.X:0}, {s.Start.Z:0}, where the game will put its start temple."
-                : $"The start (red dot) is likely near {s.Start.X:0}, {s.Start.Z:0}: the game puts it in Meadows close to the middle.",
+                ? Lang.T("newWorld.statsTemple", s.Start.X, s.Start.Z)
+                : Lang.T("newWorld.statsStartNear", s.Start.X, s.Start.Z),
         };
         if (s.Nearest is { } n)
         {
             string Of(string name) => Km(n.TryGetValue(name, out float d) ? d : float.PositiveInfinity);
-            lines.Add($"Traders (the nearest of their spots): Haldor {Of("Haldor")}, the Bog Witch {Of("The Bog Witch")}, Hildir {Of("Hildir")}. Each has several spots: the first one players come near becomes the trader's camp, the others vanish.");
-            lines.Add("Bosses (the nearest altar): " + string.Join(", ", SeedPreview.Landmarks.Where(l => l.Kind == "boss").Select(l => $"{l.Name} {Of(l.Name)}")));
+            lines.Add(Lang.T("newWorld.statsTraders", Of("Haldor"), Of("The Bog Witch"), Of("Hildir")));
+            lines.Add(Lang.T("newWorld.statsBosses", string.Join(", ", SeedPreview.Landmarks.Where(l => l.Kind == "boss").Select(l => $"{l.Name} {Of(l.Name)}"))));
         }
         return string.Join("\n", lines);
     }

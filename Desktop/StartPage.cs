@@ -621,7 +621,7 @@ public sealed class StartPage
         foreach (var b in Blueprints().Take(4))
         {
             string path = b.Path;
-            dated.Add((b.Saved, Tile(b.Picture, "shape", Color.FromRgb(58, 48, 36), b.Name, $"Blueprint · {b.Pieces} pieces", "Open it in the Workshop", () => WorkshopRequested?.Invoke(path))));
+            dated.Add((b.Saved, Tile(b.Picture, "shape", Color.FromRgb(58, 48, 36), b.Name, $"Blueprint · {b.Pieces} pieces", Lang.T("start.tip.openWorkshop"), () => WorkshopRequested?.Invoke(path))));
         }
         foreach (var (_, tile) in dated.OrderByDescending(d => d.When).Take(8))
         {
@@ -647,7 +647,7 @@ public sealed class StartPage
         foreach (var b in Blueprints())
         {
             string path = b.Path;
-            BlueprintTiles.Children.Add(Tile(b.Picture, "shape", Color.FromRgb(58, 48, 36), b.Name, $"{b.Pieces} pieces · {Ago(b.Saved)}", "Open it in the Workshop", () => WorkshopRequested?.Invoke(path)));
+            BlueprintTiles.Children.Add(Tile(b.Picture, "shape", Color.FromRgb(58, 48, 36), b.Name, $"{b.Pieces} pieces · {Ago(b.Saved)}", Lang.T("start.tip.openWorkshop"), () => WorkshopRequested?.Invoke(path)));
         }
         if (BlueprintTiles.Children.Count == 0)
         {

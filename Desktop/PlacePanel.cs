@@ -433,8 +433,8 @@ public sealed class PlacePanel
         CellSlider = Slide(1, PlaceTool.MaxCell, 0.5, t.Cell, ceV, v => $"{v:0.#} m", v => { t.Cell = v; t.Notify(); });
         CellSlider.Tip("place.cell");
         var shapes = new UniformGrid { Rows = 1, ColumnSpacing = 4 };
-        foreach (var (ls, label, tip) in new[] { (PlaceTool.LineShapes.Points, "Points", "Click points along the way, or hold and drag to draw freely"),
-            (PlaceTool.LineShapes.Circle, "Circle", "Press at the centre and drag out to the size you want"), (PlaceTool.LineShapes.Rect, "Rectangle", "Press at one corner and drag to the opposite corner") })
+        foreach (var (ls, label, tip) in new[] { (PlaceTool.LineShapes.Points, "Points", Lang.T("place.tip.points")),
+            (PlaceTool.LineShapes.Circle, "Circle", Lang.T("place.tip.circle")), (PlaceTool.LineShapes.Rect, "Rectangle", Lang.T("place.tip.rect")) })
         {
             var b = new Button { Content = label, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
             ToolTip.SetTip(b, tip);
@@ -771,7 +771,7 @@ public sealed class PlacePanel
                     };
                     bool fav = Memory.Favourites.Contains(n);
                     var star = new Button { Content = fav ? "★" : "☆", FontSize = 12, Padding = new Thickness(4, 0), Background = Brushes.Transparent };
-                    ToolTip.SetTip(star, fav ? "Remove from favourites" : "Add to favourites");
+                    ToolTip.SetTip(star, Lang.T(fav ? "place.favRemove" : "place.favAdd"));
                     star.Click += (_, _) => { Memory.ToggleFavourite(n); FillList(); RenderChips(); };
                     var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { box, Col(star, 1) } };
                     // Spawn points and nests: what they spawn, under their name.
@@ -853,7 +853,7 @@ public sealed class PlacePanel
                 // The slider is the kind's share in %, the equal share in its middle (it ends at twice that, each of the
                 // others keeping at least 1%); a share past its end shows at the end, the real one in the text.
                 w = new Slider { Minimum = 1, Maximum = MaxShare(names.Count), TickFrequency = 1, IsSnapToTickEnabled = true, Value = Math.Round(T.WeightOf(n) / total * 100), VerticalAlignment = VerticalAlignment.Center };
-                ToolTip.SetTip(w, $"Share of {n}: {Tips.Of("place.weight")}");
+                ToolTip.SetTip(w, Lang.T("place.shareOf", n, Tips.Of("place.weight")));
                 // Rows stay (rebuilding them would drop the slider being dragged); the others follow.
                 w.ValueChanged += (_, e) =>
                 {

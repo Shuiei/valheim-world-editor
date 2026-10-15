@@ -17,6 +17,10 @@
     <InternalsVisibleTo Include="Fuzz" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The app's texts, a catalogue per language (App/Lang.cs). -->
+    <EmbeddedResource Include="Lang/*.json" LogicalName="TerrainEditor.Lang.%(Filename).json" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- The API mods' editor extensions are built against (App/ModExtensions.cs). -->
     <ProjectReference Include="../Sdk/ValheimWorldEditor.Sdk.csproj" />
   </ItemGroup>
