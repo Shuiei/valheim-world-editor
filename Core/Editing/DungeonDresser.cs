@@ -553,6 +553,24 @@ internal sealed partial class DungeonDresser
     /// </summary>
     private Random Local(Frame f, int salt) => new(unchecked(_s.Seed * 7919 + f.S.Id * 104729 + salt));
 
+    /// <summary>
+    /// How much more a room holds for its depth: a fifth of the top level's foes and loot more for each level down
+    /// (linear, not compounding: over sixteen levels the bottom holds four times the top, not fifteen), as dungeons
+    /// grow richer and more dangerous the deeper they go.
+    /// </summary>
+    private static float Depth(Frame f) => 1 + 0.2f * f.S.Level;
+
+    /// <summary>
+    /// How a room's purpose lights it: the grand rooms (the entrance, the throne room, the treasury, the feast hall, a
+    /// chapel) closer lit, the rooms of the dead and the cells dimmer (and in the dark, Light 0, never lit at all).
+    /// </summary>
+    private static float LightOf(Room room) => room switch
+    {
+        Room.Entrance or Room.Throne or Room.Treasury or Room.Feast or Room.Chapel or Room.Boss => 0.75f,
+        Room.Ossuary or Room.Tomb or Room.Burial or Room.Cells or Room.Torture or Room.Den or Room.Secret or Room.Store => 1.5f,
+        _ => 1,
+    };
+
     /// <summary>The biome's standing torch; a castle torch is now and then unlit in a decayed dungeon (by rnd's chance).</summary>
     private string TorchOf(Random rnd) => _decay > 0 && _b.Torch.StartsWith("CastleKit_groundtorch", StringComparison.Ordinal) && rnd.NextDouble() < _decay * 0.5 ? "CastleKit_groundtorch_unlit" : _b.Torch;
 
@@ -572,11 +590,11 @@ internal sealed partial class DungeonDresser
     private void PlaceLights(Frame f, bool important)
     {
         var rnd = Local(f, 1);
-        if (_s.Light <= 0 && !important && rnd.NextDouble() >= 0.3)
+        if (_s.Light <= 0 && !important && (LightOf(f.S.Room) > 1 || rnd.NextDouble() >= 0.3))
         {
             return;
         }
-        float step = _s.Light >= 2 ? 5 : _s.Light == 1 ? 8 : 12;
+        float step = (_s.Light >= 2 ? 5 : _s.Light == 1 ? 8 : 12) * LightOf(f.S.Room);
         // How the room is lit: standing torches along the walls, sconces on them, or a brazier or two in the corners.
         switch (rnd.Next(5))
         {
@@ -746,7 +764,7 @@ internal sealed partial class DungeonDresser
     /// <summary>Foes about the room, perArea for every 75 square metres times the settings' Monsters; from pool, else the dungeon's.</summary>
     private void Foes(Frame f, float perArea, Foe[]? pool = null, int level = 1)
     {
-        int n = Count(f.Area * perArea / 75f * _s.Monsters);
+        int n = Count(f.Area * perArea / 75f * _s.Monsters * Depth(f));
         pool ??= _foes;
         for (int i = 0; i < n && pool.Length > 0; i++)
         {
@@ -822,7 +840,7 @@ internal sealed partial class DungeonDresser
     /// <summary>About n of the biome's pickable loot lying about, more with the settings' Loot.</summary>
     private void Pickables(Frame f, float n)
     {
-        for (int i = 0; i < Count(n * (0.5f + 0.5f * _s.Loot)); i++)
+        for (int i = 0; i < Count(n * (0.5f + 0.5f * _s.Loot) * Depth(f)); i++)
         {
             if (Spot(f, 0.5f) is var (u, v))
             {
@@ -1026,6 +1044,12 @@ internal sealed partial class DungeonDresser
     {
         foreach (var (u, v, yaw, width) in f.Nooks())
         {
+            // A corridor's niche hides a foe now and then: the ambush from the blind spot.
+            if (f.S.Corridor && _s.Monsters > 0 && _foes.Length > 0 && Chance(0.25))
+            {
+                Spawn(f, One(_foes), u, v, yaw, force: true);
+                continue;
+            }
             if (Chance(0.2))
             {
                 Brazier(f, u, v);
@@ -2390,7 +2414,7 @@ internal sealed partial class DungeonDresser
     /// <summary>The treasury: treasure piles and stacks, metal bars, chests, braziers in the corners.</summary>
     private void Treasury(Frame f)
     {
-        float loot = Math.Max(0.5f, _s.Loot);
+        float loot = Math.Max(0.5f, _s.Loot) * Depth(f);
         for (int i = 0; i < Count(1 + loot); i++)
         {
             PutNear(f, "treasure_pile", R(-1.5f, 1.5f), R(-0.5f, 1.5f), R(0, 360), 1.2f, 1.5f);

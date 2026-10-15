@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.43.0 — unreleased
+
+### Changed
+- **Generated dungeons read more like buildings.** Side rooms grow in wings of their kin (a kitchen by the feast
+  hall, cells by the guard room, an ossuary by the burial chamber, a forge by the workshop); a room's purpose sets
+  its light (grand rooms closest lit, the dead's and the cells dimmest); each level down holds a fifth of the top level's loot and
+  foes more; a corridor's niche now and then hides a foe; dvergr open doorways carry the dvergr arch.
+
 ## v1.42.0 — unreleased
 
 ### Changed

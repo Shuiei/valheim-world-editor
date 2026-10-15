@@ -50,7 +50,7 @@ public static class DungeonKit
         new("Grausten", [new("Piece_grausten_wall_4x2", 4, 2, 0), new("Piece_grausten_wall_2x2", 2, 2, 0), new("Piece_grausten_wall_1x2", 1, 2, 0)], 0.4f,
             [new("Ashlands_Pillar4", 4, 0)], null, "Piece_grausten_wall_arch", null, 0, null, 0, "Piece_grausten_window_4x2"),
         new("Dvergr", [new("piece_dvergr_metal_wall_2x2", 2, 2, 1), new("iron_wall_1x1", 1, 1, 0.09f)], 0.1f,
-            [new("dvergrprops_wood_pole", 4, 2)], new("piece_dvergr_pole", 2, 2), null, "dvergrprops_wood_floor", 0.13f, "dvergrtown_wood_beam", 0.46f),
+            [new("dvergrprops_wood_pole", 4, 2)], new("piece_dvergr_pole", 2, 2), "dvergrtown_arch", "dvergrprops_wood_floor", 0.13f, "dvergrtown_wood_beam", 0.46f),
         new("Goblin", [new("goblin_woodwall_2m", 2, 2, 0), new("goblin_woodwall_1m", 1, 2, 0)], 0.34f,
             [new("goblin_pole", 4.95f, 0.49f)], new("goblin_pole_small", 4.95f, 0.49f), null, null, 0, null, 0),
     ];
