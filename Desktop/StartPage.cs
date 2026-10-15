@@ -949,7 +949,10 @@ public sealed class StartPage
             {
                 ServerForm.IsExpanded = true;
                 (SHost.Text, SPort.Value, SUser.Text, SKey.Text, SFolder.Text, SName.Text) = (server.Host, server.SshPort, server.User, server.KeyFile, server.GameFolder, server.Name);
-                ServerError.Text = "Change what you need, enter the token and the password (unless saved or using a key), then Connect: the saved server is updated.";
+                // All of the form is this server's: what was typed for another one (its password, token) is never
+                // sent here, and a saved password stays saved.
+                (SPass.Text, SToken.Text, SPhrase.Text, SBridge.Value, SSave.IsChecked) = (server.Password, server.Token, null, null, server.Password != null);
+                ServerError.Text = "Change what you need, enter the token and the password if they are not filled in (none with a key), then Connect: the saved server is updated.";
             };
             var forget = new Button { Content = "forget", Foreground = Muted }.Classed("ghost").Tip("start.savedForget");
             forget.Click += async (_, _) =>
@@ -1005,7 +1008,7 @@ public sealed class StartPage
             ServerError.Text = "Enter the plugin's token: the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server (written the first time the server starts with the plugin).";
             return;
         }
-        await Connect(new Tunnel.Request(SHost.Text.Trim(), (int)(SPort.Value ?? 22), SUser.Text?.Trim() ?? "", NullIfEmpty(SPass.Text), NullIfEmpty(SKey.Text), NullIfEmpty(SPhrase.Text), SToken.Text.Trim(),
+        await Connect(new Tunnel.Request(SHost.Text.Trim(), (int)(SPort.Value ?? 22), SUser.Text?.Trim() ?? "", string.IsNullOrWhiteSpace(SPass.Text) ? null : SPass.Text, NullIfEmpty(SKey.Text), NullIfEmpty(SPhrase.Text), SToken.Text.Trim(),
             SBridge.Value is decimal b ? (int)b : null, SSave.IsChecked == true, NullIfEmpty(SName.Text), NullIfEmpty(SFolder.Text)), ServerError, $"Connecting to {SHost.Text.Trim()}…");
     }
 

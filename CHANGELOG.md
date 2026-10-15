@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.13 — unreleased
+
+### Fixed
+- **Editing a saved server could send another server's password and token to it.** **edit** filled the address,
+  user, key, folder and name, but left the password, token, key passphrase, plugin port and **Save password** as
+  they were: a password and token typed for one server were sent to the edited one on Connect, and a saved password
+  was dropped from the file because **Save password** stayed unticked. **edit** now fills the whole form from the
+  saved server: its own saved password and token (empty when not saved), no passphrase or port, and **Save
+  password** ticked when its password was saved. The password is sent as typed or saved, spaces at its ends
+  included.
+
 ## v1.45.12 — unreleased
 
 ### Changed
