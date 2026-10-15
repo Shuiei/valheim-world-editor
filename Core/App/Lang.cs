@@ -61,16 +61,17 @@ public static partial class Lang
     /// <returns>The language taken.</returns>
     public static string Use(string? code)
     {
-        code = string.IsNullOrEmpty(code) ? Pick(SystemLanguages(), Available().Select(l => l.Code)) : code;
-        if (code is null or Source || Load(code) is not { } texts)
+        string chosen = (string.IsNullOrEmpty(code) ? Pick(SystemLanguages(), Available().Select(l => l.Code)) : code) ?? Source;
+        IReadOnlyDictionary<string, string>? texts = chosen == Source ? null : Load(chosen);
+        if (texts == null)
         {
-            // The source, with the user's corrections to it if any.
-            texts = Merge(English, UserFile(Source));
-            code = Source;
+            // The source, with the user's corrections to it if any (checked like a translation).
+            chosen = Source;
+            texts = Load(Source) ?? English;
         }
         _texts = texts;
-        Current = code;
-        return code;
+        Current = chosen;
+        return chosen;
     }
 
     /// <summary>A language there is a catalogue of.</summary>
@@ -82,10 +83,10 @@ public static partial class Lang
     public static IReadOnlyList<Language> Available()
     {
         var codes = new SortedSet<string>(StringComparer.OrdinalIgnoreCase) { Source };
-        const string prefix = "TerrainEditor.Lang.";
-        foreach (string r in typeof(Lang).Assembly.GetManifestResourceNames().Where(r => r.StartsWith(prefix, StringComparison.Ordinal) && r.EndsWith(".json", StringComparison.Ordinal)))
+        const string Prefix = "TerrainEditor.Lang.";
+        foreach (string r in typeof(Lang).Assembly.GetManifestResourceNames().Where(r => r.StartsWith(Prefix, StringComparison.Ordinal) && r.EndsWith(".json", StringComparison.Ordinal)))
         {
-            codes.Add(r[prefix.Length..^".json".Length]);
+            codes.Add(r[Prefix.Length..^".json".Length]);
         }
         if (Directory.Exists(Folder))
         {
@@ -100,7 +101,8 @@ public static partial class Lang
 
     /// <summary>
     /// The catalogue of <paramref name="code"/>: the carried one with the user's file over it, its texts checked against
-    /// the English (those of no English key, or with other places for values, are left out); null when there is none.
+    /// the English (those of no English key, or that do not take the English one's values, are left out); null when
+    /// there is none.
     /// </summary>
     internal static Dictionary<string, string>? Load(string code)
     {
@@ -113,12 +115,40 @@ public static partial class Lang
         var texts = Merge(carried ?? [], user);
         foreach (string key in texts.Keys.ToList())
         {
-            if (!English.TryGetValue(key, out string? en) || !SamePlaces(en, texts[key]))
+            if (!English.TryGetValue(key, out string? en) || !Fits(en, texts[key]))
             {
                 texts.Remove(key);
             }
         }
         return texts;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="text"/> can stand for the English <paramref name="en"/>: the same places for values, and,
+    /// when the English takes values, a text they can be put in (no stray brace or broken place such as "{path}").
+    /// </summary>
+    internal static bool Fits(string en, string text)
+    {
+        if (!SamePlaces(en, text))
+        {
+            return false;
+        }
+        var places = Places().Matches(en);
+        if (places.Count == 0)
+        {
+            // Shown as it is: never formatted.
+            return true;
+        }
+        int values = places.Max(m => int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)) + 1;
+        try
+        {
+            _ = string.Format(CultureInfo.InvariantCulture, text, new object?[values]);
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
     }
 
     /// <summary>Whether two texts have the same places for values (each {n} as often, whatever its format).</summary>

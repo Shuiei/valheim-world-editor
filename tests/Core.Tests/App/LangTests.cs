@@ -100,6 +100,21 @@ public sealed partial class LangTests : IDisposable
     }
 
     [Fact]
+    public void ATextTheValuesCannotGoInIsLeftOutEnglishCorrectionsToo()
+    {
+        Write("fr", new() { [Lang.NameKey] = "Français", ["settings.worldNotFound"] = "Introuvable {0} dans {chemin}" });
+        Lang.Use("fr");
+        Assert.Equal("World folder not found: /x", Lang.T("settings.worldNotFound", "/x"));
+        Write(Lang.Source, new() { ["settings.worldNotFound"] = "Missing {0} {", ["common.cancel"] = "Stop {" });
+        Lang.Use(Lang.Source);
+        Assert.Equal("World folder not found: /x", Lang.T("settings.worldNotFound", "/x"));
+        // A text never formatted may hold braces.
+        Assert.Equal("Stop {", Lang.T("common.cancel"));
+        Assert.True(Lang.Fits("{0} of {1:0.0} m", "{1:0.##} m sur {0}"));
+        Assert.False(Lang.Fits("{0} m", "{0} m {"));
+    }
+
+    [Fact]
     public void TheComputersLanguageIsPickedFromItsLocales()
     {
         Assert.Equal(["fr-FR", "de", "en-GB"], Lang.FromLocales("fr_FR.UTF-8:de:en_GB@euro"));

@@ -93,9 +93,9 @@ public static class Dialogs
     /// <param name="owner">The window it is modal to.</param>
     /// <param name="start">The details to start from.</param>
     /// <param name="cost">What it costs, in words.</param>
-    public static async Task<TerrainEditor.App.Homestead.Details?> AskBlueprint(Window owner, TerrainEditor.App.Homestead.Details start, string cost)
+    public static async Task<Homestead.Details?> AskBlueprint(Window owner, Homestead.Details start, string cost)
     {
-        TerrainEditor.App.Homestead.Details? result = null;
+        Homestead.Details? result = null;
         var dialog = new Window
         {
             Title = "Blueprint",
@@ -113,7 +113,7 @@ public static class Dialogs
         ToolTip.SetTip(ok, Lang.T("dialog.keepDetails"));
         ok.Click += (_, _) =>
         {
-            result = new TerrainEditor.App.Homestead.Details(name.Text ?? "", (description.Text ?? "").Replace('\n', ' ').Replace('\r', ' '), TerrainEditor.App.Homestead.Details.ParseTags(tags.Text))
+            result = new Homestead.Details(name.Text ?? "", (description.Text ?? "").Replace('\n', ' ').Replace('\r', ' '), Homestead.Details.ParseTags(tags.Text))
                 .WithDungeon(dungeon.IsChecked == true);
             dialog.Close();
         };
