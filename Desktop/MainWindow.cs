@@ -474,11 +474,12 @@ public sealed partial class MainWindow : Window
     /// <param name="zonesX">Zones west to east.</param>
     /// <param name="zonesZ">Zones south to north.</param>
     /// <param name="spot">The map's chosen zone the area was opened around, if it was.</param>
-    internal async Task EditBlock(int x0, int z0, int zonesX, int zonesZ, (int X, int Z)? spot = null)
+    /// <returns>Whether the block was opened (no: the failure is said in the status bar).</returns>
+    internal async Task<bool> EditBlock(int x0, int z0, int zonesX, int zonesZ, (int X, int Z)? spot = null)
     {
         if (World is not { } world)
         {
-            return;
+            return false;
         }
         long navigation = ++_navigation;
         View.SelectTool.Commit();
@@ -513,11 +514,13 @@ public sealed partial class MainWindow : Window
                     }
                 }
             }
+            return true;
         }
         catch (Exception ex)
         {
             Unleave(left, navigation);
             MessageText.Text = "Could not open that area: " + ex.Message;
+            return false;
         }
         finally
         {

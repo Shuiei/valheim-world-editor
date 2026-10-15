@@ -7,8 +7,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The 3D editor and the world behind it: the history kept from an earlier session said when the area opens (and asked
-/// about before undoing it when the game saved the world since), and Discard that must read the world again from files
-/// that are gone.
+/// about before undoing it when the game saved the world since), Discard that must read the world again from files
+/// that are gone, and an area that does not open again after the world was read again.
 /// </summary>
 [Collection("World files")]
 public class MainWindowEditorWorldTests
@@ -126,5 +126,33 @@ public class MainWindowEditorWorldTests
         Assert.StartsWith("Could not read the world again: ", r.Said);
         Assert.False(r.W.IsBusy);
         Assert.NotNull(r.W.Session);
+    }
+
+    // The world read again, but its area does not open again: the map, and the failure in a dialog (not the editor
+    // left with no area, or a message that it worked).
+    [AvaloniaFact]
+    public async Task AnAreaThatDoesNotOpenAgainAfterAReadGoesToTheMapAndSaysWhy()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        var bad = new WorldScene
+        {
+            World = r.W.World!.World,
+            Name = "test",
+            ZonesX = -1,
+            ZonesZ = -1,
+            Heights = [],
+            Biomes = [],
+            Things = [],
+            BiomeColor = [],
+            Mask = [],
+            OceanDepth = [],
+            Limit = [],
+        };
+        Assert.False(await r.W.ReopenArea(bad));
+        Assert.True(r.W.MapShown);
+        Assert.Null(r.W.Session);
+        Assert.False(r.W.IsBusy);
+        Assert.StartsWith("The world was read again, but the area could not be opened again. Could not open that area: ", Assert.Single(r.Told));
     }
 }
