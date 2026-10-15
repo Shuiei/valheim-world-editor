@@ -87,6 +87,8 @@ public class MainWindowWorldPagesTests
         Assert.NotNull(r.W.World.History);
         var outcome = await run;
         Assert.False(outcome.Changed);
+        // It compiled and ran, and only then found its area closed.
+        Assert.Equal("Another area was opened while the script ran: nothing changed.", outcome.Message);
         Assert.Empty(s.UndoList);
         Assert.Equal((0, 0, 0, 0), r.W.World.Pending);
     }
