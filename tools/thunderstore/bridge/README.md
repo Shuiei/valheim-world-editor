@@ -44,11 +44,26 @@ and everyone online sees it appear, as if a very fast Viking had done it by hand
   bosses' altars, the traders and the dungeons, exactly where the game will put them. Let the editor
   search seeds for what you want near the start, then make the world (a normal one: this mod is not
   needed to play it).
+- **Grow it back, or swap it.** Regrow nature puts back the trees, rocks and bushes the game grows
+  there, by the game's own rules, where a wood was cleared or the ground reshaped. Replace turns
+  every object of one kind in an area into another: the beeches into oaks, the wood walls into
+  stone.
+- **Shape the land in another tool.** Export the ground as a heightmap, work on it in GIMP, Krita,
+  Gaea or World Machine, and bring it back.
+- **Do it by rule with a script.** A few lines of C# shape, paint and fill the area at once: a
+  mountain range, boulders where the noise says, a forest only on gentle slopes, terraces. Start
+  from the examples; the whole script is one undo step.
 - **Tidy up.** Plant a forest, clear the rocks off a field, remove every tree in an area, find the
   chest that holds the last of your black metal.
 
 Every change can be undone, even after it is applied, and the history is still there the next time
 you open the world.
+
+![A generated dungeon opened on the Workshop's plot, cut open to show its rooms](https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/images/workshop-dungeon.jpg)
+
+![A volcano raised past the game's ±8 m limit](https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/images/mountain-volcano.jpg)
+
+![A level road cut through the mounds and paved along its middle](https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/images/path-road.jpg)
 
 ![A seed's world before it exists, with the start, the bosses' altars and the traders](https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/images/new-world.jpg)
 
@@ -61,6 +76,8 @@ you open the world.
    in the editor as they do it.
 3. You edit. Nothing reaches the game until you press **Apply live** (or turn on **Auto**). Then
    the game gets the changed ground and objects, players see them, and the game saves them as usual.
+
+![After Apply live: the hut is in the game at once](https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/images/live-applied.jpg)
 
 The area you edit can be up to 17 × 17 zones (over a kilometre across), and it grows by itself as
 you look towards its edge.
