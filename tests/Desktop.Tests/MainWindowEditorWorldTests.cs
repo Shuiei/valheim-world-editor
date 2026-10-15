@@ -1,4 +1,6 @@
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -44,6 +46,30 @@ public class MainWindowEditorWorldTests
         await r.W.Redo();
         Assert.Equal(2, r.Asked.Count);
         Assert.Single(s.UndoList);
+    }
+
+    [AvaloniaFact]
+    public async Task WhileSavingTheKeysAndFollowWait()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        r.Raise();
+        int asked = 0;
+        r.W.ConfirmSave = _ =>
+        {
+            asked++;
+            return Task.FromResult(true);
+        };
+        var saving = r.W.Save();
+        // The save is being written: the veil is up, Ctrl+S does not ask again, and the area does not move.
+        Assert.True(r.W.IsBusy);
+        r.W.KeyPress(Key.S, RawInputModifiers.Control, PhysicalKey.S, "s");
+        Assert.Equal(1, asked);
+        Assert.Equal("the world is being saved or read", r.W.MoveBlocker());
+        await saving;
+        Assert.False(r.W.IsBusy);
+        Assert.Null(r.W.MoveBlocker());
+        Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
     }
 
     [AvaloniaFact]
