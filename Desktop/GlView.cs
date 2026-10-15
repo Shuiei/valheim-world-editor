@@ -2623,7 +2623,7 @@ public sealed class GlView : OpenGlControlBase
                 _dragFrom = null;
                 _placeDown = true;
                 var m = e.KeyModifiers;
-                Place.Down(p.Position, _surfaceSize, m.HasFlag(KeyModifiers.Shift), m.HasFlag(KeyModifiers.Control), m.HasFlag(KeyModifiers.Alt), e.ClickCount);
+                Place.Down(p.Position, _surfaceSize, m.HasFlag(KeyModifiers.Shift), Ctrl(m), m.HasFlag(KeyModifiers.Alt), e.ClickCount);
                 Wake();
                 return;
             }
@@ -2650,7 +2650,7 @@ public sealed class GlView : OpenGlControlBase
                 _dragFrom = null;
                 _pathDown = true;
                 var mods = e.KeyModifiers;
-                Path.Down(GridAt(p.Position, _surfaceSize), p.Position, g => ScreenOfGrid(g), mods.HasFlag(KeyModifiers.Control), mods.HasFlag(KeyModifiers.Alt),
+                Path.Down(GridAt(p.Position, _surfaceSize), p.Position, g => ScreenOfGrid(g), Ctrl(mods), mods.HasFlag(KeyModifiers.Alt),
                     mods.HasFlag(KeyModifiers.Shift), GridHeight);
                 Wake();
                 return;
@@ -2692,8 +2692,8 @@ public sealed class GlView : OpenGlControlBase
                 _selectDown = true;
                 // Ctrl + click (or Shift, Ctrl + zone): added to what is selected; Shift + click: the row
                 // from the last object clicked.
-                SelectTool.Range = e.KeyModifiers.HasFlag(KeyModifiers.Shift) && !e.KeyModifiers.HasFlag(KeyModifiers.Control);
-                SelectTool.Down(p.Position, _surfaceSize, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.KeyModifiers.HasFlag(KeyModifiers.Control), e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.ClickCount);
+                SelectTool.Range = e.KeyModifiers.HasFlag(KeyModifiers.Shift) && !Ctrl(e.KeyModifiers);
+                SelectTool.Down(p.Position, _surfaceSize, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || Ctrl(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.ClickCount);
                 if (e.ClickCount == 2)
                 {
                     // A double click on an object: its inspector (a chest's contents, a sign's text...).
@@ -2765,7 +2765,7 @@ public sealed class GlView : OpenGlControlBase
             if (_selectDown)
             {
                 _selectDown = false;
-                SelectTool.Up(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.KeyModifiers.HasFlag(KeyModifiers.Control));
+                SelectTool.Up(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || Ctrl(e.KeyModifiers));
             }
             else if (_brushDown)
             {
@@ -2775,8 +2775,8 @@ public sealed class GlView : OpenGlControlBase
             }
             else if (Mode == ToolMode.View && !Panning && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
             {
-                Pick(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.KeyModifiers.HasFlag(KeyModifiers.Control),
-                    e.KeyModifiers.HasFlag(KeyModifiers.Shift) && !e.KeyModifiers.HasFlag(KeyModifiers.Control));
+                Pick(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || Ctrl(e.KeyModifiers),
+                    e.KeyModifiers.HasFlag(KeyModifiers.Shift) && !Ctrl(e.KeyModifiers));
             }
             _pressAt = null;
             _dragFrom = null;
@@ -2806,7 +2806,7 @@ public sealed class GlView : OpenGlControlBase
             }
             if (_selectDown)
             {
-                SelectTool.Moved(_pointer.Value, _surfaceSize, e.KeyModifiers.HasFlag(KeyModifiers.Control));
+                SelectTool.Moved(_pointer.Value, _surfaceSize, Ctrl(e.KeyModifiers));
             }
             else if (SelectMode && Tool == null)
             {
@@ -2834,7 +2834,7 @@ public sealed class GlView : OpenGlControlBase
         {
             // Ctrl or Alt + wheel: one step per notch. Smooth-scrolling wheels and touchpads send parts of a
             // notch (and some systems send Shift's as sideways): added up until a whole one.
-            bool ctrlW = e.KeyModifiers.HasFlag(KeyModifiers.Control), altW = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
+            bool ctrlW = Ctrl(e.KeyModifiers), altW = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
             // Ctrl: building lifts the piece; Alt: the tools that turn things turn them. Else the view zooms.
             bool wants = ctrlW ? (Mode == ToolMode.Place && Place?.Tool.Building == true || Mode == ToolMode.Paste) && CtrlWheel != null
                 : altW && AltWheel != null && Mode is ToolMode.Place or ToolMode.Paste or ToolMode.Select;
@@ -3141,6 +3141,12 @@ public sealed class GlView : OpenGlControlBase
 
     /// <summary>Where the camera was at the last frame, in view space.</summary>
     private Vector3 _lastEye;
+    /// <summary>
+    /// Whether Ctrl is held for a pointer action (add to the selection, remove a point…), or Cmd, the Mac's Ctrl (where
+    /// Ctrl + click is a right-click); as for the keyboard shortcuts.
+    /// </summary>
+    private static bool Ctrl(KeyModifiers m) => m.HasFlag(KeyModifiers.Control) || m.HasFlag(KeyModifiers.Meta);
+
     /// <summary>
     /// The orbit camera on world point (x, z) at the ground, turned yaw° around it, looking down pitch°
     /// (the documentation's pictures, through the driver).

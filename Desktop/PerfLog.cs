@@ -66,7 +66,7 @@ public sealed class PerfLog
             if (about != _header)
             {
                 _header = about;
-                _lines.Add($"# {DateTime.Now:yyyy-MM-dd HH:mm:ss}  v{BuildInfo.Version}  native ({(OperatingSystem.IsWindows() ? "Windows" : "Linux")})  {about}");
+                _lines.Add($"# {DateTime.Now:yyyy-MM-dd HH:mm:ss}  v{BuildInfo.Version}  native ({(OperatingSystem.IsWindows() ? "Windows" : OperatingSystem.IsMacOS() ? "macOS" : "Linux")})  {about}");
             }
             double span = now - _t0;
             _lines.Add($"{DateTime.Now:HH:mm:ss.fff}  {(_moved ? "moving" : "still ")}  {Math.Round(_frames / (span / 1000)),3} fps  {_frames,2} frames  {_work / _frames,5:0.0} ms work  longest gap {Math.Round(_gap)} ms");

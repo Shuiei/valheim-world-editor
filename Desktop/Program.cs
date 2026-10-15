@@ -76,6 +76,8 @@ public static class Program
             // SVGA3D), where its own drawing is faster without it; the 3D view and the map need
             // OpenGL, so they were blank in virtual machines and without GPU drivers.
             .With(new X11PlatformOptions { GlxRendererBlacklist = [] })
+            // macOS: OpenGL (4.1, core), which the 3D view and the map draw with; Metal would leave them blank.
+            .With(new AvaloniaNativePlatformOptions { RenderingMode = [AvaloniaNativeRenderingMode.OpenGl, AvaloniaNativeRenderingMode.Software] })
             .StartWithClassicDesktopLifetime(args);
     }
 
