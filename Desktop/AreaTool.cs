@@ -456,7 +456,10 @@ public sealed class AreaTool
         return a.Cells.Average(c => g.HeightOf(c.G));
     }
 
-    /// <summary>The zones under the selection (world zone coordinates); a point just outside the outline does not count.</summary>
+    /// <summary>
+    /// The zones under the selection (world zone coordinates): those with a grid point inside the outline, whatever
+    /// the soft edge; a point just outside the outline does not count.
+    /// </summary>
     public List<(int X, int Z)> ZonesUnder(Ground g)
     {
         var set = new SortedSet<(int, int)>();
@@ -464,14 +467,15 @@ public sealed class AreaTool
         {
             return [];
         }
-        foreach (var (p, w) in a.Cells)
+        for (int gz = a.Z0; gz <= a.Z1; gz++)
         {
-            if (w < 0.5f)
+            for (int gx = a.X0; gx <= a.X1; gx++)
             {
-                continue;
+                if (Inside(a.Poly, gx, gz))
+                {
+                    set.Add((g.X0 + Math.Min(g.ZonesX - 1, gx / 64), g.Z0 + Math.Min(g.ZonesZ - 1, gz / 64)));
+                }
             }
-            int zx = Math.Min(g.ZonesX - 1, p % g.W / 64), zz = Math.Min(g.ZonesZ - 1, p / g.W / 64);
-            set.Add((g.X0 + zx, g.Z0 + zz));
         }
         return [.. set];
     }
