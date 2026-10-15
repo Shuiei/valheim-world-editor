@@ -212,4 +212,17 @@ public sealed class ModExtensionsTests : IDisposable
         Assert.Equal(["connected ExampleVehicles", "disconnected", "connected ExampleVehicles", "disconnected"], w.Told);
         Assert.Null(w.Registry.Host.Live);
     }
+
+    // One file offered by two mods (one extension at two paths): its listeners are told once of each change.
+    [Fact]
+    public void AnExtensionAtTwoPathsIsToldOfTheGameOnce()
+    {
+        var w = new Watching();
+        ModExtensions.UseForTests(("Watcher", w), ("WatcherCopy", w));
+        Assert.Equal(2, ModExtensions.Offered.Count);
+
+        ModExtensions.LiveConnected(new FakeLive());
+        ModExtensions.LiveDisconnected();
+        Assert.Equal(["connected ExampleVehicles", "disconnected"], w.Told);
+    }
 }
