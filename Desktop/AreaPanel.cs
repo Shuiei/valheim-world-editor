@@ -528,6 +528,8 @@ public sealed class AreaPanel
     {
         var poly = Area.Polygon();
         RefreshVolume();
+        // Before the selection's lists: the "with" list follows the world, selection or not.
+        FillCreatable();
         if (poly == null)
         {
             Info.Text = Area.Box ? "Drag on the ground to select a box." : "Click points around the area; double-click or Enter closes it. Backspace removes a point, Esc clears.";
@@ -550,7 +552,6 @@ public sealed class AreaPanel
         var names = inside.GroupBy(i => NameOf(s.Things[i].Prefab)).OrderByDescending(x => x.Count()).Select(x => $"{x.Key} ({x.Count()})").ToList();
         FromBox.ItemsSource = names;
         FromBox.SelectedIndex = FromBox.SelectedItem is string keep && names.Contains(keep) ? names.IndexOf(keep) : names.Count > 0 ? 0 : -1;
-        FillCreatable();
         _view.LassoChanged();
     }
 
