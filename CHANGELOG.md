@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.9 — unreleased
+
+### Fixed
+- **A brush stroke made while Apply live was answering could lose ground or undo wrongly.** With **Auto** on, a
+  stroke starts an apply when it ends; a new stroke begun before the game answered had its ground so far
+  overwritten when the answer came, and the history kept only the rest of it. When that apply also read the area
+  again (zone resets, No limit ground), the history was cleared in the middle of the stroke and its undo wrote old
+  ground back. The ground now takes the applied edits when the stroke ends, and a stroke under an apply that
+  reads the area again is dropped, with a message to draw it again.
+
 ## v1.45.8 — unreleased
 
 ### Fixed
