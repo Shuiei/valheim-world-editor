@@ -11,6 +11,8 @@ the plugin is unchanged in versions without that part.
   server, its Home tile, or a bridge address) takes a few seconds, and nothing stopped a second click meanwhile: both
   opened an SSH tunnel and a world, the first tunnel stayed open unseen until the editor closed, and a failed attempt
   could close the other one's tunnel. A click while connecting now does nothing, and tunnels are made one at a time.
+  Quitting or going back to Home while a connection is being made now shuts that tunnel as soon as it connects,
+  instead of leaving it open until the editor exits.
 
 ## v1.45.24 — unreleased
 
