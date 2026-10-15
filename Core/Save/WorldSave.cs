@@ -478,7 +478,7 @@ public sealed class WorldSave
     /// in. Null when the world's lists are being read elsewhere right now: try again later.
     /// </summary>
     /// <param name="zones">The zones the objects were read from; objects of them the game lacks vanish.</param>
-    /// <param name="objects">Every object the game has in those zones.</param>
+    /// <param name="objects">Every object the game has in those zones (a ZDOID listed twice counts once, its last bytes).</param>
     /// <param name="keep">
     /// Objects not to vanish though the game lacks them (the editor's own applied deletions: undo brings them back).
     /// </param>
@@ -496,8 +496,20 @@ public sealed class WorldSave
             var result = new Merged([], [], [], []);
             var seen = new HashSet<int>();
             var fresh = new List<(long User, uint Id, byte[] Bytes, int Replace)>();
-            foreach (var (user, zid, bytes) in objects)
+            // Each ZDOID once: should the game list one twice, its last bytes stand (else it would be read twice, or
+            // get two ids of which one never vanishes).
+            var last = new Dictionary<(long User, uint Id), int>();
+            for (int i = 0; i < objects.Count; i++)
             {
+                last[(objects[i].User, objects[i].Id)] = i;
+            }
+            for (int i = 0; i < objects.Count; i++)
+            {
+                var (user, zid, bytes) = objects[i];
+                if (last[(user, zid)] != i)
+                {
+                    continue;
+                }
                 // A kept object whose game object is the editor's now (moved under its own ZDOID to stand for one of
                 // the editor's new objects) is not read back in under its own id.
                 if (_byLiveId!.TryGetValue((user, zid), out int id) && !(keep(id) && ours((user, zid))))

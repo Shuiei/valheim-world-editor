@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.22 — unreleased
+
+### Fixed
+- **Live, an object the game listed twice could be counted twice or leave a ghost copy behind.** When the game's list
+  of a zone's objects held the same object twice, the editor read it twice: an object it knew went into its lists
+  twice and its builder's piece count went up by two, and an object new to it got two entries, one of which never
+  went away when the object was removed in the game. Each object is now taken once, with its last data.
+
 ## v1.45.21 — unreleased
 
 ### Fixed
