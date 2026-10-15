@@ -124,6 +124,23 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     /// </summary>
     private bool[] _ruinJoined = [];
     /// <summary>
+    /// Draw the world's portals (violet discs) and the links between portals of one tag, with their tags when zoomed
+    /// in (off at first: it shows where every portal is).
+    /// </summary>
+    public bool ShowPortals { get; set; }
+    /// <summary>
+    /// The world's portals and their links (PortalMap.Find), read with the pieces; null until read.
+    /// </summary>
+    public PortalMap.Result? Portals => _portals;
+    /// <summary>
+    /// <see cref="Portals"/>' store, set on the UI thread once read.
+    /// </summary>
+    private volatile PortalMap.Result? _portals;
+    /// <summary>
+    /// Raised on the UI thread when the portals have been read (with <c>PiecesRead</c>).
+    /// </summary>
+    public event Action? PortalsRead;
+    /// <summary>
     /// Player-built and ruin piece indices, lowest top first, so roofs are drawn over what is under them.
     /// </summary>
     private (bool Ruin, int Index)[] _pieceOrder = [];
@@ -278,6 +295,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         {
             float[] data = PieceCatalog.Encode(world, deleted);
             var (ruins, joined) = PieceCatalog.EncodeRuins(world, deleted);
+            var portals = PortalMap.Find(world, s.Edits);
             const int S = PieceCatalog.Stride;
             // Lower pieces first so roofs end up on top, like looking down from above.
             (bool Ruin, int Index)[] order = [.. Enumerable.Range(0, data.Length / S).Select(i => (Ruin: false, Index: i))
@@ -294,7 +312,9 @@ public sealed class MapView : OpenGlControlBase, IDisposable
                 _ruinJoined = joined;
                 _pieces = data;
                 _buildingsKey = default;
+                _portals = portals;
                 PiecesRead?.Invoke();
+                PortalsRead?.Invoke();
                 RequestNextFrameRendering();
             });
         });
@@ -659,6 +679,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         DrawLines(w, h, mpp);
         _gl.Enable(EnableCap.Blend);
         _gl.UseProgram(_fillProg);
+        DrawPortals();
         DrawPins();
         _gl.Disable(EnableCap.Blend);
         _gl.BindVertexArray(0);
@@ -934,6 +955,46 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         foreach (var (x, z) in marked)
         {
             Zone(x, z, new Vector4(1, 70 / 255f, 50 / 255f, 0.45f));
+        }
+        Fill([.. data], PrimitiveType.Triangles);
+    }
+
+    /// <summary>
+    /// The portals (violet discs, hollow when alone) and the links between the paired ones (violet lines), when
+    /// <c>ShowPortals</c> is on.
+    /// </summary>
+    private void DrawPortals()
+    {
+        if (!ShowPortals || Portals is not { } portals)
+        {
+            return;
+        }
+        float m = MetersPerPixel;
+        var data = new List<float>();
+        var violet = new Vector4(190 / 255f, 120 / 255f, 1, 1);
+        var dark = new Vector4(40 / 255f, 15 / 255f, 70 / 255f, 0.9f);
+        foreach (var (a, b) in portals.Links)
+        {
+            Vector2 p = new(portals.Portals[a].X, portals.Portals[a].Z), q = new(portals.Portals[b].X, portals.Portals[b].Z);
+            Vector2 d = q - p;
+            if (d.LengthSquared() < 1e-6f)
+            {
+                continue;
+            }
+            // A line 2 pixels wide, as a quad: the direction turned a right angle, half the width long.
+            Vector2 n = Vector2.Normalize(new(-d.Y, d.X)) * m;
+            Quad(data, p + n, q + n, q - n, p - n, new Vector4(violet.X, violet.Y, violet.Z, 0.85f));
+        }
+        for (int i = 0; i < portals.Portals.Count; i++)
+        {
+            var o = portals.Portals[i];
+            Disc(data, o.X, o.Z, 7 * m, dark, 12);
+            Disc(data, o.X, o.Z, 5.5f * m, violet, 12);
+            if (!portals.IsLinked(i))
+            {
+                // Alone: a hollow disc.
+                Disc(data, o.X, o.Z, 3 * m, dark, 12);
+            }
         }
         Fill([.. data], PrimitiveType.Triangles);
     }
