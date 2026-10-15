@@ -12,7 +12,7 @@ the plugin is unchanged in versions without that part.
   first world's counts were kept for the new one, so its matches, the number in the question and later
   **Show matching** came from the wrong world. And a **Mark for reset…** question answered after switching marked
   the zones in the world left behind. Counts read before the world was shown again (another world, or the same one
-  after a save or a discard) are dropped, and the marking is dropped when the world changed while asking.
+  after a save or a discard) are dropped, and so is the marking when the world was shown again while asking.
 
 ## v1.45.9 — unreleased
 

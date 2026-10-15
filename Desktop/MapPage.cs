@@ -240,6 +240,10 @@ public sealed class MapPage : IDisposable
     /// </summary>
     private int _statsGeneration;
     /// <summary>
+    /// How many zone count reads are going on (the "Reading every zone…" status is theirs).
+    /// </summary>
+    private int _reading;
+    /// <summary>
     /// Whether matches are shown, so changing the filter shows them again at once.
     /// </summary>
     private bool _filtered;
@@ -746,9 +750,23 @@ public sealed class MapPage : IDisposable
         {
             int generation = _statsGeneration;
             ZoneInfo.Text = "Reading every zone…";
-            int[] stats = await Task.Run(() => ZoneStats.Compute(s.World, s.Edits, (x, z) => (int)s.Terrain.BiomeAt(x * 64f, z * 64f)));
+            _reading++;
+            int[] stats;
+            try
+            {
+                stats = await Task.Run(() => ZoneStats.Compute(s.World, s.Edits, (x, z) => (int)s.Terrain.BiomeAt(x * 64f, z * 64f)));
+            }
+            finally
+            {
+                _reading--;
+            }
             if (_session != s || _statsGeneration != generation)
             {
+                // The status said this read was going on: cleared, unless another read is, or has shown its counts.
+                if (_reading == 0 && _stats == null)
+                {
+                    ZoneInfo.Text = "";
+                }
                 return null;
             }
             _stats = stats;
@@ -812,14 +830,16 @@ public sealed class MapPage : IDisposable
             return;
         }
         bool live = s.IsLive, ground = GroundBox.IsChecked == true;
+        int generation = _statsGeneration;
         if (!await Confirm($"Mark {Matches.Count:N0} zone(s) for reset?\n\n• Their trees, rocks, ore, ruins and dungeon entrances are removed{(ground ? ", and their ground edits undone" : "")}; players' tombstones stay.\n"
             + $"• Valheim generates them again the next time a player comes near{(live ? " (at once where players are, once applied)" : "")}.\n"
             + $"• {(live ? "Apply live" : "Save to world")} does it; until then it can be cancelled with Unmark all."))
         {
             return;
         }
-        // Another world shown while asking: the matches were this one's, and are gone.
-        if (_session != s)
+        // A world shown while asking (another one, or this one saved, discarded or read again): the matches were
+        // worked out before, and are gone.
+        if (_session != s || _statsGeneration != generation)
         {
             return;
         }

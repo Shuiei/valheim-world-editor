@@ -225,10 +225,11 @@ public class MapPageTests
         }
     }
 
-    // Zone counts still being read when the same world is shown again (after a save or a discard) are from before: dropped,
-    // and read again when next asked.
+    // Zone counts still being read when the same world is shown again (after a save or a discard) are from before: dropped
+    // (with their "Reading" status), and read again when next asked; a question answered once it is shown again marks
+    // nothing.
     [AvaloniaFact]
-    public async Task ZoneCountsReadBeforeTheWorldIsShownAgainAreDropped()
+    public async Task ZoneCountsAndMarksFromBeforeTheWorldIsShownAgainAreDropped()
     {
         using var r = new Run();
         await r.Open();
@@ -240,10 +241,18 @@ public class MapPageTests
         r.M.Show(r.W.World!);
         await showing;
         Assert.Empty(r.M.Matches);
+        Assert.Equal("", r.M.ZoneInfo.Text);
         var again = r.M.ShowMatching();
         Assert.Equal("Reading every zone…", r.M.ZoneInfo.Text);
         await again;
         Assert.NotEmpty(r.M.Matches);
+        r.M.Confirm = _ =>
+        {
+            r.M.Show(r.W.World!);
+            return Task.FromResult(true);
+        };
+        await r.M.MarkMatching();
+        Assert.Equal(0, r.W.World!.Pending.Resets);
     }
 
     [AvaloniaFact]
