@@ -342,6 +342,52 @@ public class AreaPanelTests
     }
 
     [AvaloniaFact]
+    public async Task AnApplyWhileOneRunsDoesNothing()
+    {
+        using var r = new Run();
+        var answer = new TaskCompletionSource<bool>();
+        int asked = 0;
+        r.P.Confirm = _ =>
+        {
+            asked++;
+            return answer.Task;
+        };
+        r.P.Choose(AreaPanel.Act.Reset);
+        r.P.ResetGroundBox.IsChecked = false;
+        var first = r.P.Apply();
+        Assert.False(r.P.ApplyButton.IsEnabled);
+        // Enter again while the question is open: not asked twice, not marked twice.
+        await r.P.Apply();
+        Assert.Equal(1, asked);
+        answer.SetResult(true);
+        await first;
+        Assert.Single(r.S.Resets);
+        Assert.True(r.P.ApplyButton.IsEnabled);
+    }
+
+    [AvaloniaFact]
+    public async Task AnAreaOpenedWhileApplyWaitsGetsNothing()
+    {
+        using var r = new Run();
+        EditSession? other = null;
+        r.P.Confirm = _ =>
+        {
+            // Another area opened while the question is open.
+            var scene = WorldScene.Load(r.Dir, 0, 0, 1);
+            r.W.View.Show(scene, null);
+            r.W.Edit(scene.Session!);
+            other = scene.Session;
+            return Task.FromResult(true);
+        };
+        r.P.Choose(AreaPanel.Act.Reset);
+        r.P.ResetGroundBox.IsChecked = false;
+        await r.P.Apply();
+        Assert.Empty(r.S.Resets);
+        Assert.Empty(other!.Resets);
+        Assert.Equal("The area changed while this was running: nothing was applied.", r.Said);
+    }
+
+    [AvaloniaFact]
     public async Task RegrowNeedsTheGeneratorAndASmallEnoughArea()
     {
         // An area with no world generator behind it.
