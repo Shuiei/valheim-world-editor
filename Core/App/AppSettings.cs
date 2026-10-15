@@ -197,7 +197,8 @@ public sealed class AppSettings
         {
             try
             {
-                SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, Indented));
+                // Only the user can read it, from the start: it holds Claude's token.
+                SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, Indented), UnixFileMode.UserRead | UnixFileMode.UserWrite);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
