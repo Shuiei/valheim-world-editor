@@ -386,6 +386,7 @@
   "tip.map.reload": "Load the world again from the running game.",
   "tip.map.buildings": "Draw the footprint of every player-built piece on the map, with the pieces of a ruin built onto (a patched tower).",
   "tip.map.ruins": "Draw the pieces of the world's ruins too, fainter (spoiler).",
+  "tip.map.portals": "Draw every portal of the world (violet; hollow when it has no partner) and a line between the two portals of each tag, with the tags when zoomed in (spoiler).",
   "tip.map.grid": "Lines between the 64 m zones.",
   "tip.map.edited": "Outline the zones with changes waiting to be saved or applied, and the zones marked for reset.",
   "tip.map.paint": "When zoomed in close, show the painted ground (dirt, paved, cultivated) as the game does.",

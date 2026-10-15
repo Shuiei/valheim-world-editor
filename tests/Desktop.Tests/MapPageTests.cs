@@ -1,4 +1,5 @@
 using Avalonia.Headless.XUnit;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
@@ -9,7 +10,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The map page's edges on the test world: nothing happens without a world, the players' line when the game errors or
 /// sends garbage, the biomes' names, the cursor's line when the mouse is over the map, an empty search and one that
-/// fails, the zone filter's messages and questions, and Show ruins.
+/// fails, the zone filter's messages and questions, Show ruins and Show portals.
 /// </summary>
 [Collection("World files")]
 public class MapPageTests
@@ -64,6 +65,33 @@ public class MapPageTests
         Assert.True(m.Map.ShowRuins);
         m.RuinsBox.IsChecked = false;
         Assert.False(m.Map.ShowRuins);
+    }
+
+    // Show portals: off at first; it switches the map's portals on and off, and its text counts them once read.
+    [AvaloniaFact]
+    public async Task ShowPortalsSwitchesTheMapsPortalsAndCountsThem()
+    {
+        var m = new MapPage();
+        Assert.False(m.PortalsBox.IsChecked);
+        Assert.False(m.Map.ShowPortals);
+        Assert.Equal("Show portals and their links", m.PortalsBox.Content);
+        m.PortalsBox.IsChecked = true;
+        Assert.True(m.Map.ShowPortals);
+        m.PortalsBox.IsChecked = false;
+        Assert.False(m.Map.ShowPortals);
+        Assert.Equal("Show portals and their links (none)", MapPage.PortalsLabel(new PortalMap.Result([], [])));
+        var two = new PortalMap.Result([new(1, "portal_wood", 0, 0, 0, "a", null), new(2, "portal_wood", 1, 0, 0, "a", null), new(3, "portal_wood", 2, 0, 0, "b", null)], [(0, 1)]);
+        Assert.Equal("Show portals and their links (3: 1 linked pair, 1 alone)", MapPage.PortalsLabel(two));
+
+        using var r = new Run();
+        await r.Open();
+        for (int i = 0; i < 100 && r.M.Map.Portals == null; i++)
+        {
+            await Task.Delay(50);
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        }
+        Assert.NotNull(r.M.Map.Portals);
+        Assert.Equal(MapPage.PortalsLabel(r.M.Map.Portals), r.M.PortalsBox.Content);
     }
 
     [AvaloniaFact]

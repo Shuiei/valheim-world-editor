@@ -92,6 +92,10 @@ public sealed class MapPage : IDisposable
     /// </summary>
     internal CheckBox RuinsBox { get; } = new() { Content = "Show ruins (spoilers)", IsChecked = false, FontSize = 12 };
     /// <summary>
+    /// Show the world's portals and the links between them; its text gets their counts once read.
+    /// </summary>
+    internal CheckBox PortalsBox { get; } = new() { Content = "Show portals and their links", IsChecked = false, FontSize = 12 };
+    /// <summary>
     /// Show the zone grid.
     /// </summary>
     internal CheckBox GridBox { get; } = new() { Content = "Zone grid", FontSize = 12 };
@@ -295,6 +299,8 @@ public sealed class MapPage : IDisposable
         BuildingsBox.IsCheckedChanged += (_, _) => { Map.ShowBuildings = BuildingsBox.IsChecked == true; Map.RequestNextFrameRendering(); };
         RuinsBox.Tip("map.ruins");
         RuinsBox.IsCheckedChanged += (_, _) => { Map.ShowRuins = RuinsBox.IsChecked == true; Map.RequestNextFrameRendering(); };
+        PortalsBox.Tip("map.portals");
+        PortalsBox.IsCheckedChanged += (_, _) => { Map.ShowPortals = PortalsBox.IsChecked == true; PlaceLabels(); Map.RequestNextFrameRendering(); };
         GridBox.IsCheckedChanged += (_, _) => { Map.ShowGrid = GridBox.IsChecked == true; Map.RequestNextFrameRendering(); };
         EditedBox.IsCheckedChanged += (_, _) => { Map.ShowEdited = EditedBox.IsChecked == true; Map.RequestNextFrameRendering(); };
         PaintBox.IsCheckedChanged += (_, _) => { Map.ShowPaint = PaintBox.IsChecked == true; Map.RequestNextFrameRendering(); };
@@ -306,6 +312,7 @@ public sealed class MapPage : IDisposable
         Map.Hovered += Hover;
         Map.Status += t => _status.Text = t;
         Map.PiecesRead += () => BuildingsBox.Content = $"Show buildings ({Map.PieceCount:N0} player-built pieces)";
+        Map.PortalsRead += () => { PortalsBox.Content = PortalsLabel(Map.Portals); PlaceLabels(); };
         Map.ViewChanged += PlaceLabels;
         Map.SizeChanged += (_, _) => PlaceLabels();
         _liveBox = new StackPanel { Spacing = 6, IsVisible = false, Children = { LiveText, ReloadButton } };
@@ -401,7 +408,7 @@ public sealed class MapPage : IDisposable
                         _liveBox,
                         _changesBox,
                         H2("Map"),
-                        new StackPanel { Children = { BuildingsBox, RuinsBox, EditedBox, PaintBox, GridBox, CloudsBox } },
+                        new StackPanel { Children = { BuildingsBox, RuinsBox, PortalsBox, EditedBox, PaintBox, GridBox, CloudsBox } },
                         _pickBox,
                         new TextBlock { Text = "Click the map to pick a spot, drag to move, wheel to zoom.", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                         search,
@@ -587,14 +594,49 @@ public sealed class MapPage : IDisposable
     private void PlaceLabels()
     {
         _labels.Children.Clear();
-        foreach (var (name, x, z) in Map.Players)
+        void Label(string text, float x, float z, IBrush colour, FontStyle style = FontStyle.Normal)
         {
             var at = Map.ScreenOf(x, z);
-            var t = new TextBlock { Text = name, FontSize = 12, Foreground = Brushes.White, FontWeight = FontWeight.SemiBold, Effect = new DropShadowEffect { BlurRadius = 3, OffsetX = 0, OffsetY = 0, Color = Colors.Black, Opacity = 1 } };
+            var t = new TextBlock { Text = text, FontSize = 12, Foreground = colour, FontStyle = style, FontWeight = FontWeight.SemiBold, Effect = new DropShadowEffect { BlurRadius = 3, OffsetX = 0, OffsetY = 0, Color = Colors.Black, Opacity = 1 } };
             Canvas.SetLeft(t, at.X + 10);
             Canvas.SetTop(t, at.Y - 8);
             _labels.Children.Add(t);
         }
+        // The portals' tags, from 8 m a pixel in (further out they would pile up).
+        if (Map.ShowPortals && Map.Portals is { } portals && Map.MetersPerPixel <= PortalTagZoom)
+        {
+            foreach (var p in portals.Portals)
+            {
+                Label(p.Tag.Length > 0 ? p.Tag : "no tag", p.X, p.Z, PortalTag, p.Tag.Length > 0 ? FontStyle.Normal : FontStyle.Italic);
+            }
+        }
+        foreach (var (name, x, z) in Map.Players)
+        {
+            Label(name, x, z, Brushes.White);
+        }
+    }
+
+    /// <summary>
+    /// The portals' tags are written from this many metres a pixel in.
+    /// </summary>
+    internal const float PortalTagZoom = 8f;
+
+    /// <summary>
+    /// The portal tags' colour (the map's violet).
+    /// </summary>
+    private static readonly IBrush PortalTag = new SolidColorBrush(Color.FromRgb(214, 180, 255));
+
+    /// <summary>
+    /// The portals switch's text with their counts: how many there are, how many pairs are linked and how many are alone.
+    /// </summary>
+    internal static string PortalsLabel(PortalMap.Result? portals)
+    {
+        if (portals == null)
+        {
+            return "Show portals and their links";
+        }
+        int n = portals.Portals.Count, linked = portals.Links.Count * 2;
+        return n == 0 ? "Show portals and their links (none)" : $"Show portals and their links ({n}: {portals.Links.Count} linked pair{(portals.Links.Count == 1 ? "" : "s")}, {n - linked} alone)";
     }
 
     /// <summary>
