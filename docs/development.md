@@ -54,17 +54,38 @@ The app reads one command per line on its input and answers each with one line, 
 `tools/DocsScreenshots/Editor.cs` wraps it for the documentation's pictures: it starts the app with
 a stand-in home folder (none of this computer's characters, worlds or servers show; driven, the app
 looks for Steam only in that home, so for the game's look its settings name this computer's Valheim), sends commands and saves `shot`s as JPEG, the status bar's message cleared first.
-`tools/DocsScreenshots/Scenes.cs` holds one scene per picture: each opens a fresh editor and builds
-only what its picture shows, in worlds made from seeds and never saved:
+The scenes are in `tools/DocsScreenshots/Scenes*.cs`, split by documentation page (ground tools,
+objects, building and dungeons, the pages around the 3D editor): each scene opens a fresh editor,
+builds only what its pictures show (often a tool's settings side by side) and takes them, in worlds
+made from seeds and never saved:
 
 ```sh
-WorldCheck create <dir>/Docs Docs yjRO99yNTI 16 --flat     # the bare zone the tools are shown on
+WorldCheck create <dir>/Docs Docs yjRO99yNTI 16 --flat     # the bare zone the tools are shown on (zone -10, -5)
 WorldCheck create <dir>/Fjordheim Fjordheim Fjord2026 3     # a second world for the start page
 dotnet run --project tools/DocsScreenshots -- <dir> [scene ...]  # all scenes, or only those named
 ```
 
-The pictures go to `docs/images` (or `$DOCS_OUT`). The red on ground at the ±8 m limit is switched
-off in every scene (it would hide the edits).
+The pictures go to `docs/images` (or `$DOCS_OUT`). `$DOCS_APP` names a released `ValheimWorldEditor`
+to drive instead of the Debug build (the pictures of a release are taken with the release; put it in a
+neutral folder such as `/tmp/ValheimWorldEditor`, since Settings shows its path). The red on ground
+at the ±8 m limit is switched off in every scene (it would hide the edits).
+
+A few things the driver cannot reach are done on the display with `xdotool` (Linux, X11): closing
+the note on the locations near the area (an icon-only button) and scrolling a panel (the dungeon
+generator's plan, Settings, the found seeds). Without `xdotool` those pictures keep the note or show
+the panel's top. Run it on a virtual display, never your own:
+
+```sh
+Xvfb :88 -screen 0 1920x1080x24 -nolisten tcp &
+DISPLAY=:88 vglrun -d egl dotnet run --project tools/DocsScreenshots -- <dir>   # VirtualGL: the GPU instead of llvmpipe
+```
+
+(If VirtualGL stops with "undefined symbol: eglGetProcAddress", name the system's libraries:
+`VGL_EGLLIB=/usr/lib64/libEGL.so.1 VGL_GLLIB=/usr/lib64/libGL.so.1`.)
+
+Keep a picture clear: nothing in front of its subject (the tool panel stays on the left, so frame
+the subject right of it), neither too close nor too far. At the usual yaw of 200° east is left on the
+picture and north is near the camera.
 
 ## Building
 

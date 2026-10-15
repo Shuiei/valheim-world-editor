@@ -12,6 +12,9 @@ using TerrainEditor.DocsScreenshots;
 // Pictures go to docs/images (or $DOCS_OUT). With scene names, only those scenes run.
 // $HOMESTEAD_DLL (Homestead.dll from its Thunderstore package) puts Homestead in the stand-in game's
 // BepInEx, so the start page and the Blueprints panel show it installed.
+// $DOCS_APP (a released ValheimWorldEditor program) is driven instead of the Debug build in Desktop/bin.
+// $DOCS_LIVE ("<bridge address> <token>", a local server running the Docs world with the plugin) is
+// what the live scene connects to; without it the live scene is skipped.
 if (args.Length < 1)
 {
     Console.Error.WriteLine("usage: DocsScreenshots <dir> [scene ...]");
@@ -23,13 +26,21 @@ var scenes = new Scenes(dir, output);
 string[] names = args.Length > 1 ? args[1..] : [.. scenes.All.Select(s => s.Name)];
 Directory.CreateDirectory(output);
 string? homestead = Environment.GetEnvironmentVariable("HOMESTEAD_DLL") is { Length: > 0 } h ? h : null;
+string? app = Environment.GetEnvironmentVariable("DOCS_APP") is { Length: > 0 } a ? a : null;
+string[]? live = Environment.GetEnvironmentVariable("DOCS_LIVE") is { Length: > 0 } l ? l.Split(' ', StringSplitOptions.RemoveEmptyEntries) : null;
 foreach (string name in names)
 {
     var started = Stopwatch.StartNew();
+    if (name == "live" && live is not { Length: 2 })
+    {
+        Console.WriteLine("live: skipped ($DOCS_LIVE must be \"<bridge address> <token>\")");
+        continue;
+    }
     // Each scene in a fresh editor: nothing carries over, nothing is saved.
     bool start = name == "start";
-    using (var e = new Editor(gameWorld: start ? "Docs" : null, worlds: start ? [$"{dir}/Docs", $"{dir}/Fjordheim"] : null,
-        homestead: homestead, recent: start ? [$"{dir}/Fjordheim", $"{dir}/Docs"] : null))
+    using (var e = new Editor(app, gameWorld: start ? "Docs" : null, worlds: start ? [$"{dir}/Docs", $"{dir}/Fjordheim"] : null,
+        homestead: homestead, recent: start ? [$"{dir}/Fjordheim", $"{dir}/Docs"] : null,
+        extra: name == "live" ? ["--live", live![0], "--token", live[1]] : null))
     {
         try
         {
