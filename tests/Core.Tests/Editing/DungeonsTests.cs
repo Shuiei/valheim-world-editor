@@ -260,6 +260,29 @@ public class DungeonsTests
     }
 
     [Fact]
+    public void ADungeonIsReadInItsFilesWorldVersion()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        // Objects read from now on are of version 39: each carries its sector after its flags.
+        int loaded = world.Chunks[0].WorldVersion;
+        world.Chunks[0].WorldVersion = 39;
+        var at = new Vector3(640, 30, 640);
+        List<Dungeons.Placed> rooms =
+        [
+            new(StableHash.Of("cave_new_entrance02"), at + new Vector3(0, 5000, 0), Quaternion.Identity),
+            new(StableHash.Of("cave_new_endcap02"), at + new Vector3(0, 5000, 8), Quaternion.Identity),
+        ];
+        byte[] current = MadeObjects.Dungeon("DG_Cave", at, rooms);
+        world.MergeLive([(10, 10)], [(4242, 1, [.. current[..2], 0, 0, 0, 0, .. current[2..]])], _ => false, _ => false);
+        // Back to the loaded version, so only the object's own file says 39.
+        world.Chunks[0].WorldVersion = loaded;
+        var found = Assert.Single(Dungeons.In(world));
+        Assert.NotEqual(39, loaded);
+        Assert.Equal(39, world.ObjectRefs[found.Id].File.WorldVersion);
+        Assert.Equal(2, found.Rooms);
+    }
+
+    [Fact]
     public void ARoomOfNoKnownPrefabCountsAsInside()
     {
         var cave = Dungeons.KindOf(StableHash.Of("DG_Cave"))!;
