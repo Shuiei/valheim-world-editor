@@ -110,7 +110,7 @@ The open area.
 |---|---|
 | `Area.MinX`, `Area.MinZ`, `Area.MaxX`, `Area.MaxZ` | Its corners (world metres). A 3 × 3 area is 192 m across. |
 | `Area.CenterX`, `Area.CenterZ` | Its middle. |
-| `Area.Points()` | Every ground point the script can change (the outer row left out), as `(x, z)`, row by row from the south: `foreach (var (x, z) in Area.Points()) { ... }`. `Area.Points(step: 4)` takes every 4th metre, for scattering things. |
+| `Area.Points()` | Every ground point the script can change (the outer row left out), as `(x, z)`, row by row from the south: `foreach (var (x, z) in Area.Points()) { ... }`. `Area.Points(step: 4)` takes every 4th metre, for scattering things; a step of 0 or less, or one too small to move along the area, stops the script with an error. |
 | `Area.Inside(x, z)` | Whether a point is inside the area (not on its edge). |
 | `Area.Water` | Sea level (30 m). |
 | `Area.WorldSeed`, `Area.World` | The world's seed (a number) and its name. |
@@ -312,8 +312,8 @@ A loop over a whole 17 × 17 area is about 1.2 million points: a few seconds of 
 `Area.Points(step: 4)` when every point is not needed.
 
 **Stop**, and the 2-minute limit, end a script at the next turn of any of its own loops (`for`,
-`foreach`, `while`, `do`, `goto`), and the next time it starts a new row of `Ground.Shape` or
-`Ground.Mountain`. Nothing it did is kept. A single call that takes long by itself, without a loop
+`foreach`, `while`, `do`, `goto`), at the next point of `Area.Points()`, and the next time it starts a
+new row of `Ground.Shape` or `Ground.Mountain`. Nothing it did is kept. A single call that takes long by itself, without a loop
 of yours around it (a LINQ query over hundreds of millions of items, `Thread.Sleep`...), cannot be
 stopped in the middle: the editor waits for it to finish.
 
