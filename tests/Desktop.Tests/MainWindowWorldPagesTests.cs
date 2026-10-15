@@ -8,9 +8,9 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The window's world pages and the map's actions: what does nothing without a world or an area, the file pickers with
-/// nobody to choose, an area that cannot be loaded, Discard, Leave, Reload and Save from the map (offline and live, and
-/// a game that stops answering), quitting over changes not applied, and errors said once in a dialog away from the 3D
-/// editor.
+/// nobody to choose, an area that cannot be loaded, the map closing the area, Discard, Leave, Reload and Save from the
+/// map (offline and live, and a game that stops answering), quitting over changes not applied, and errors said once in a
+/// dialog away from the 3D editor.
 /// </summary>
 [Collection("World files")]
 public class MainWindowWorldPagesTests
@@ -63,10 +63,32 @@ public class MainWindowWorldPagesTests
         var scene = r.W.View.Scene;
         await r.W.ResizeArea(1);
         Assert.Same(scene, r.W.View.Scene);
+        var s = r.W.Session;
         await r.W.EditBlock(0, 0, -1, -1);
         Assert.StartsWith("Could not open that area: ", r.Said);
         Assert.False(r.W.IsBusy);
         Assert.Same(scene, r.W.View.Scene);
+        // The area shown stays open: its edits and history go on in it.
+        Assert.Same(s, r.W.Session);
+        Assert.Same(s, r.W.World!.Area);
+    }
+
+    // The map closes the area: a script still running in it changes nothing, and its history stays with the world.
+    [AvaloniaFact]
+    public async Task TheMapClosesTheAreaSoAScriptStillRunningChangesNothing()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        var s = r.W.Session!;
+        var run = r.W.RunScriptCode("Ground.Raise(32, 32, 1);", "Script: late");
+        r.W.ShowMap();
+        Assert.Null(r.W.Session);
+        Assert.Null(r.W.World!.Area);
+        Assert.NotNull(r.W.World.History);
+        var outcome = await run;
+        Assert.False(outcome.Changed);
+        Assert.Empty(s.UndoList);
+        Assert.Equal((0, 0, 0, 0), r.W.World.Pending);
     }
 
     [AvaloniaFact]

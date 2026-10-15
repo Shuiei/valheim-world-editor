@@ -53,7 +53,7 @@ public class ClaudeToolsBranchesTests
 
         r.W.ShowMap();
         Assert.True(r.W.MapShown);
-        Assert.NotNull(r.W.Session);
+        Assert.Null(r.W.Session);
         var refused = await r.T.Screenshot(views: 4);
         Assert.True(refused.IsError);
         Assert.StartsWith("Four views need", Assert.IsType<TextContentBlock>(Assert.Single(refused.Content)).Text);

@@ -418,14 +418,32 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Leaving an area: its history stays with the world, for the next area opened.
+    /// Leaving an area: its history stays with the world, for the next area opened, and the area is closed, so work
+    /// awaited in it (a script, Grow) finds it gone and changes nothing.
     /// </summary>
-    private void KeepHistory()
+    /// <returns>The area left, or null when none was open in the 3D editor.</returns>
+    private EditSession? KeepHistory()
     {
         if (Session is { Scene.Owner: { } owner } s && _pages.Content == _editorPage)
         {
             owner.History = s.Export();
             owner.Area = null;
+            Session = null;
+            return s;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Another area could not be opened: the one left (still shown) is open again, its history its own.
+    /// </summary>
+    /// <param name="left">What <see cref="KeepHistory"/> returned.</param>
+    private void Unleave(EditSession? left)
+    {
+        if (left is { Scene.Owner: { } owner } && Session == null && View.Scene == left.Scene)
+        {
+            owner.Area = left;
+            Session = left;
         }
     }
 
@@ -453,7 +471,7 @@ public sealed partial class MainWindow : Window
             return;
         }
         View.SelectTool.Commit();
-        KeepHistory();
+        var left = KeepHistory();
         Busy($"Loading {zonesX} × {zonesZ} zones…");
         try
         {
@@ -476,6 +494,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            Unleave(left);
             MessageText.Text = "Could not open that area: " + ex.Message;
         }
         finally
