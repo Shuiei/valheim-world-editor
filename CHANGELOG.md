@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.49 — unreleased
+
+### Fixed
+- **"Move there" moved the selection a little on every axis, even the ones left alone.** The X, Y, Z and Turn boxes
+  show where the selection is rounded to a centimetre and a tenth of a degree, and Move there took all four as the
+  place to reach, so changing only Y (or nothing) replaced every selected object by a copy shifted by up to 5 mm and
+  turned by up to 0.05° about the middle: a new undo step, new ids, and a destroy and create on a live server. Move
+  there now moves only along the axes whose box was changed, by the difference from the exact place; with nothing
+  changed it does nothing.
+
 ## v1.45.48 — unreleased
 
 ### Fixed
