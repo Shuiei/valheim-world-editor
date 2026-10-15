@@ -949,7 +949,10 @@ public sealed class StartPage
             {
                 ServerForm.IsExpanded = true;
                 (SHost.Text, SPort.Value, SUser.Text, SKey.Text, SFolder.Text, SName.Text) = (server.Host, server.SshPort, server.User, server.KeyFile, server.GameFolder, server.Name);
-                ServerError.Text = "Change what you need, enter the token and the password (unless saved or using a key), then Connect: the saved server is updated.";
+                // All of the form is this server's: what was typed for another one (its password, token) is never
+                // sent here, and a saved password stays saved.
+                (SPass.Text, SToken.Text, SPhrase.Text, SBridge.Value, SSave.IsChecked) = (server.Password, server.Token, null, null, server.Password != null);
+                ServerError.Text = "Change what you need, enter the token and the password if they are not filled in (none with a key), then Connect: the saved server is updated.";
             };
             var forget = new Button { Content = "forget", Foreground = Muted }.Classed("ghost").Tip("start.savedForget");
             forget.Click += async (_, _) =>
