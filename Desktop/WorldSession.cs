@@ -105,17 +105,15 @@ public sealed class WorldSession : IDisposable
     /// Saved or applied from the map (no area open): the kept steps are in the world now, as an open
     /// area's are once it saves (EditSession), so a later Discard does not undo them.
     /// </summary>
-    private void MarkHistoryApplied()
+    /// <param name="sent">After a partial Apply live, whether the game has all a step did (null: every step).</param>
+    private void MarkHistoryApplied(Func<EditSession.Change, bool>? sent = null)
     {
         if (Area == null && History != null)
         {
             // Applied is part of a step's hash: the ids and frames are keyed again once it is set.
             var ids = History.Ids.ToList();
             var frames = History.Frames?.ToList();
-            foreach (var c in History.Undo)
-            {
-                c.Applied = true;
-            }
+            EditSession.MarkSent(History.Undo, sent ?? (static _ => true));
             History = History with { Ids = ids.ToDictionary(p => p.Key, p => p.Value), Frames = frames?.ToDictionary(p => p.Key, p => p.Value) };
         }
     }
@@ -299,6 +297,36 @@ public sealed class WorldSession : IDisposable
         public bool Lifted { get; init; }
         /// <summary>Live: not applied, the answer to "apply over the game's changes?" was no.</summary>
         public bool Declined { get; init; }
+        /// <summary>
+        /// Live: the parts that did not go in after others did (Done, with the error in the message); the history
+        /// marks as applied only the steps the game has all of.
+        /// </summary>
+        public LiveParts Unsent { get; init; }
+
+        /// <summary>Live, with <see cref="LiveParts.Resets"/> in <see cref="Unsent"/>: the zones whose reset did not go in.</summary>
+        public IReadOnlySet<(int X, int Z)> UnsentResets { get; init; } = new HashSet<(int X, int Z)>();
+
+        /// <summary>
+        /// Whether the game has all a step did: nothing of it is in the parts that did not go in (a step's reset of a
+        /// zone not waiting any more, unmarked since, is not). With the objects not sent after No limit ground became
+        /// ground discs, no step has all it did: the discs are not in the game, and no step says which made them.
+        /// </summary>
+        public bool Sent(EditSession.Change c) =>
+            !(Lifted && Unsent.HasFlag(LiveParts.Objects))
+            && (!Unsent.HasFlag(LiveParts.Objects) || c.Things.Length == 0)
+            && !c.Resets.Any(r => UnsentResets.Contains((r.Reset.X, r.Reset.Z)));
+    }
+
+    /// <summary>The parts of an Apply live sent after the ground.</summary>
+    [Flags]
+    public enum LiveParts
+    {
+        /// <summary>None of them.</summary>
+        None = 0,
+        /// <summary>The objects made, removed or changed.</summary>
+        Objects = 1,
+        /// <summary>The zone resets.</summary>
+        Resets = 2,
     }
 
     /// <summary>No limit ground turned into ground discs (<see cref="LiftToDiscs"/>), with what to put back if nothing goes out.</summary>
@@ -495,8 +523,9 @@ public sealed class WorldSession : IDisposable
         {
             done.Add($"No limit ground: {plan.Describe()}");
         }
-        // Until the ground may have reached the game, a failure has sent nothing: the No limit ground is put back as it was.
-        bool sent = false;
+        // Until the ground or objects went in (sent), or the ground may have (unsure), a failure has sent nothing: the
+        // No limit ground is put back as it was.
+        bool sent = false, unsure = false, objectsDone = false;
         try
         {
             // Copies as sent: edits made while the game answers are not marked as applied.
@@ -511,7 +540,7 @@ public sealed class WorldSession : IDisposable
                 {
                     // No answer, or one after the game may have taken the ground: the discs stay (the area is read
                     // again), and the next Apply live sends the ground again, which only sets each zone's ground anew.
-                    sent = true;
+                    unsure = true;
                     throw;
                 }
                 sent = true;
@@ -519,8 +548,10 @@ public sealed class WorldSession : IDisposable
                 done.Add($"{zones.Count} zone(s) of ground");
             }
             string objects = await LiveSync.Apply(World, Edits, live);
+            objectsDone = true;
             if (objects != "")
             {
+                sent = true;
                 done.Add(objects);
             }
             if (Edits.ResetCount > 0)
@@ -559,7 +590,22 @@ public sealed class WorldSession : IDisposable
         // The game answering with an error (InvalidOperationException from the bridge) is reported too.
         catch (Exception ex) when (GameFailed(ex))
         {
-            bool lifted = lift != null && (sent || !Unlift(lift));
+            if (sent)
+            {
+                // Some parts went in: said, and the steps the game has all of are applied.
+                var resets = Edits.Resets.Select(r => (r.X, r.Z)).ToHashSet();
+                var partly = new Outcome(true, $"Applied to the running game: {string.Join("; ", done)}; but then it failed ({ex.Message}): Apply live again for the rest.", false)
+                {
+                    Lifted = lift != null,
+                    // Resets only while some are still to send: a reset unmarked since leaves none, though steps keep it.
+                    Unsent = (objectsDone ? LiveParts.None : LiveParts.Objects) | (resets.Count > 0 ? LiveParts.Resets : LiveParts.None),
+                    UnsentResets = resets,
+                };
+                MarkHistoryApplied(partly.Sent);
+                KeepHistory();
+                return partly;
+            }
+            bool lifted = lift != null && (unsure || !Unlift(lift));
             return new Outcome(false, "Could not apply live: " + ex.Message, false) { Lifted = lifted };
         }
     }

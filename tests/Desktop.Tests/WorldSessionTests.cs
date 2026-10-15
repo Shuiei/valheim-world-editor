@@ -65,6 +65,58 @@ public sealed class WorldSessionTests : IDisposable
         Assert.Single(game.Resets);
     }
 
+    // The ground goes in, then the game refuses the objects: applied, said with the error, and only the steps the
+    // game has all of are applied.
+    [Fact]
+    public async Task APartialApplyLiveSaysWhatWentIn()
+    {
+        using var game = new FakeGame();
+        using var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.Shape(10, 10, Formula.Compile("2", []), 3, 0, "raise");
+        s.Delete([s.Scene.Things.FindIndex(t => t.Id >= 0 && !t.Gone)]);
+        game.Fail["/objects"] = 500;
+        var o = await s.ApplyLive();
+        Assert.True(o.Done, o.Message);
+        Assert.Equal(WorldSession.LiveParts.Objects, o.Unsent);
+        Assert.Contains("zone(s) of ground", o.Message);
+        Assert.Contains("but then it failed", o.Message);
+        Assert.Equal(0, world.Edits.ChangedZoneCount);
+        Assert.Equal([true, false], s.UndoList.Select(c => c.Applied));
+    }
+
+    // A zone reset marked and then unmarked has nothing left to send, while another zone's reset still waits: after a
+    // partial Apply live the first zone's steps are applied, and so is the ground after them that went in.
+    [Fact]
+    public async Task AResetUnmarkedSinceIsNotCountedAsUnsent()
+    {
+        using var game = new FakeGame();
+        using var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.MarkResets([(0, 0)], false, false, "Reset");
+        s.UnmarkResets([(0, 0)], "Keep");
+        s.Shape(10, 10, Formula.Compile("2", []), 3, 0, "raise");
+        s.MarkResets([(1, 0)], false, false, "Reset");
+        s.Delete([s.Scene.Things.FindIndex(t => t.Id >= 0 && !t.Gone)]);
+        game.Fail["/objects"] = 500;
+        var o = await s.ApplyLive();
+        Assert.True(o.Done, o.Message);
+        Assert.Equal(WorldSession.LiveParts.Objects | WorldSession.LiveParts.Resets, o.Unsent);
+        Assert.Equal([(1, 0)], o.UnsentResets);
+        Assert.Equal([true, true, true, false, false], s.UndoList.Select(c => c.Applied));
+    }
+
+    // Ground discs made from No limit ground go with the objects: while they are not in the game, no step counts as
+    // sent (none says which made them), even one that only changed the ground.
+    [Fact]
+    public void WithTheGroundDiscsUnsentNoStepIsSent()
+    {
+        var ground = new EditSession.Change("raise", [], new Ground.State([], [], [], [], [], []), new Ground.State([], [], [], [], [], []), [(0, 0)]);
+        Assert.True(new WorldSession.Outcome(true, "", false) { Unsent = WorldSession.LiveParts.Objects }.Sent(ground));
+        Assert.False(new WorldSession.Outcome(true, "", false) { Unsent = WorldSession.LiveParts.Objects, Lifted = true }.Sent(ground));
+        Assert.True(new WorldSession.Outcome(true, "", false) { Unsent = WorldSession.LiveParts.Resets, Lifted = true }.Sent(ground));
+    }
+
     [Fact]
     public async Task NoLimitGroundStaysAsItWasWhenNothingWasApplied()
     {

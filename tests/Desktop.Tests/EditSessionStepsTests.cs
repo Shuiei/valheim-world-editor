@@ -7,8 +7,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// An edit session's smaller rules: deleting what is already gone makes no step, a shape whose formula fails at some
 /// points counts them and leaves them, the changed rectangle is given once, the game's changes wait for a stroke
-/// to end, things moved, turned and sized in one step, the copy that stands for a moved thing, and zones marked for
-/// reset, unmarked and marked again with other options.
+/// to end, things moved, turned and sized in one step, the copy that stands for a moved thing, zones marked for
+/// reset, unmarked and marked again with other options, and steps marked applied up to the first the game lacks.
 /// </summary>
 public class EditSessionStepsTests
 {
@@ -150,5 +150,23 @@ public class EditSessionStepsTests
         s.MarkResets([(0, 0)], keepBuildings: true, ground: false, "Keep");
         Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^2]));
         Assert.Equal(later, Assert.Single(s.Resets));
+    }
+
+    // After a partial Apply live, steps are applied oldest first while the game has all they did; one it lacks stops
+    // it (Discard undoes from the end), and a step applied before does not.
+    [Fact]
+    public void StepsAreAppliedUpToTheFirstTheGameLacks()
+    {
+        var s = TestScenes.Flat(1, Rock(), Rock() with { Id = 4 });
+        var two = Formula.Compile("2", []);
+        s.Delete([0]);
+        s.Shape(32, 32, two, 3, 0, "raise");
+        s.Delete([1]);
+        s.Shape(20, 20, two, 3, 0, "raise");
+        var steps = s.UndoList;
+        Assert.Equal(4, steps.Count);
+        steps[0].Applied = true;
+        EditSession.MarkSent(steps, c => c.Things.Length == 0);
+        Assert.Equal([true, true, false, false], steps.Select(c => c.Applied));
     }
 }
