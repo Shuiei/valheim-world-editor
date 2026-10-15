@@ -790,7 +790,7 @@ public sealed partial class MainWindow : Window
     /// </summary>
     internal Func<string, string, string, string, Task<bool>> Ask { get; set; }
     /// <summary>
-    /// Tells the user something in a dialog (tests replace it).
+    /// Tells the user something in a dialog titled with the app's name, as the map's are (tests replace it).
     /// </summary>
     internal Func<string, Task> Tell { get; set; }
     /// <summary>
@@ -2611,7 +2611,7 @@ public sealed partial class MainWindow : Window
         HelpCard = Help(record);
         ConfirmSave = text => Dialogs.Ask(this, "Save into the world", text, "Save");
         Ask = (title, text, yes, no) => Dialogs.Ask(this, title, text, yes, no);
-        Tell = text => Dialogs.Tell(this, "Save", text);
+        Tell = text => Dialogs.Tell(this, "Valheim World Editor", text);
         var tools = new StackPanel
         {
             Orientation = Orientation.Horizontal,
