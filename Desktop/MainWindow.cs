@@ -304,7 +304,16 @@ public sealed partial class MainWindow : Window
         NewWorld?.Dispose();
         NewWorld = null;
         await OpenWorld(() => Task.Run(() => WorldSession.Open(folder)), $"Opening {name}…");
-        MessageText.Text = $"Made {name} (seed {seed}). The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it: play it before reshaping an area here.";
+        string made = $"Made {name} (seed {seed}). The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it: play it before reshaping an area here.";
+        // Opened: on its map, where the status bar is not shown.
+        if (World != null)
+        {
+            Say(made);
+        }
+        else
+        {
+            MessageText.Text = made;
+        }
         return null;
     }
 
@@ -526,7 +535,7 @@ public sealed partial class MainWindow : Window
         {
             Unleave(left, navigation);
             failed = context + "Could not open that area: " + ex.Message;
-            MessageText.Text = failed;
+            Say(failed);
         }
         finally
         {
@@ -669,7 +678,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageText.Text = "Could not read the world again: " + ex.Message;
+            Say("Could not read the world again: " + ex.Message);
         }
         finally
         {
@@ -694,7 +703,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
         {
-            MessageText.Text = "Could not reach the game: " + ex.Message;
+            Say("Could not reach the game: " + ex.Message);
         }
         Busy(null);
         MapPage?.Show(w);
@@ -718,6 +727,20 @@ public sealed partial class MainWindow : Window
         Tunnel.Close();
         ShowStart();
     }
+    /// <summary>
+    /// Says something in the status bar and, away from the 3D editor (its status bar not shown), in a dialog too, not
+    /// waited for.
+    /// </summary>
+    /// <param name="text">What to say.</param>
+    private void Say(string text)
+    {
+        MessageText.Text = text;
+        if (_pages.Content != _editorPage)
+        {
+            _ = Tell(text);
+        }
+    }
+
     /// <summary>
     /// An error no part of the window caught (App): said in the status bar, so the editor stays open with the changes
     /// not saved yet.
