@@ -95,6 +95,12 @@ public sealed class HistoryPanel
         {
             return;
         }
+        // RemoveChange does nothing during a brush stroke (the card can be opened with L while the brush is down).
+        if (s.Stroking)
+        {
+            Message?.Invoke("Nothing taken back: finish the brush stroke first.");
+            return;
+        }
         foreach (var c in steps)
         {
             s.RemoveChange(c);

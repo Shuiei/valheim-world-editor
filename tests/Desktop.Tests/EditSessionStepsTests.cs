@@ -161,6 +161,20 @@ public class EditSessionStepsTests
         Assert.Equal(1, s.Scene.Things.Count(t => !t.Gone));
     }
 
+    // A copy that went in the game (live follow-up, no history step) does not stand in the way: removing the move
+    // brings the original back and the copy stays gone, as before.
+    [Fact]
+    public void RemovingAMoveWhoseCopyVanishedInTheGameIsAllowed()
+    {
+        var s = TestScenes.Flat(1, Rock());
+        int copy = s.Move([(0, new Vector3(4, 30, 0), Vector3.Zero)], "Claude: moved")[0];
+        Assert.True(s.TakeGameChanges(new WorldSession.Followed(new WorldSave.Merged([], [], [], []), [s.Scene.Things[copy].Id], [], [])));
+        Assert.True(s.Scene.Things[copy].Gone);
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^1]));
+        Assert.False(s.Scene.Things[0].Gone);
+        Assert.True(s.Scene.Things[copy].Gone);
+    }
+
     // Removing an older reset step while a later step marked the zone again keeps the later marking.
     [Fact]
     public void RemovingAnOlderMarkingKeepsALaterOne()
