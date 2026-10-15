@@ -1375,6 +1375,11 @@ public sealed partial class ClaudeTools
             {
                 return "The area was closed (or another opened) while the dungeon was made: nothing was placed.";
             }
+            // Or Auto turned on meanwhile: what forbade editing before the dungeon was made forbids placing it.
+            if (CannotEdit() is string problem)
+            {
+                return problem;
+            }
             if (_w.InWorkshop)
             {
                 await _w.GeneratedOntoPlot(settings, result, add: true);
