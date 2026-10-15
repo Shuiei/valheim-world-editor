@@ -73,6 +73,22 @@ public class MainWindowWorldPagesTests
         Assert.Same(s, r.W.World!.Area);
     }
 
+    // The map shown while another area loads: that load failing does not open the area left again behind the map.
+    [AvaloniaFact]
+    public async Task AnAreaThatFailsToLoadAfterTheMapWasShownLeavesTheAreaClosed()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        var load = r.W.EditBlock(0, 0, -1, -1);
+        r.W.ShowMap();
+        await load;
+        Assert.StartsWith("Could not open that area: ", r.Said);
+        Assert.True(r.W.MapShown);
+        Assert.Null(r.W.Session);
+        Assert.Null(r.W.World!.Area);
+        Assert.NotNull(r.W.World.History);
+    }
+
     // The map closes the area: a script still running in it changes nothing, and its history stays with the world.
     [AvaloniaFact]
     public async Task TheMapClosesTheAreaSoAScriptStillRunningChangesNothing()
@@ -88,7 +104,7 @@ public class MainWindowWorldPagesTests
         var outcome = await run;
         Assert.False(outcome.Changed);
         // It compiled and ran, and only then found its area closed.
-        Assert.Equal("Another area was opened while the script ran: nothing changed.", outcome.Message);
+        Assert.Equal("The area was closed while the script ran: nothing changed.", outcome.Message);
         Assert.Empty(s.UndoList);
         Assert.Equal((0, 0, 0, 0), r.W.World.Pending);
     }

@@ -389,6 +389,7 @@ public sealed partial class MainWindow : Window
             ShowStart();
             return;
         }
+        _navigation++;
         View.SelectTool.Commit();
         KeepHistory();
         _playersTimer.Stop();
@@ -435,12 +436,20 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Another area could not be opened: the one left (still shown) is open again, its history its own.
+    /// Counts the map shown and the areas asked for: an area load that failed after another was asked for, or after the
+    /// map was shown, leaves the area it left closed.
+    /// </summary>
+    private long _navigation;
+
+    /// <summary>
+    /// Another area could not be opened: the one left (still shown) is open again, its history its own, unless the map
+    /// or another area was asked for meanwhile.
     /// </summary>
     /// <param name="left">What <see cref="KeepHistory"/> returned.</param>
-    private void Unleave(EditSession? left)
+    /// <param name="navigation">The <see cref="_navigation"/> count of the failed load.</param>
+    private void Unleave(EditSession? left, long navigation)
     {
-        if (left is { Scene.Owner: { } owner } && Session == null && View.Scene == left.Scene)
+        if (left is { Scene.Owner: { } owner } && navigation == _navigation && Session == null && View.Scene == left.Scene)
         {
             owner.Area = left;
             Session = left;
@@ -470,6 +479,7 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+        long navigation = ++_navigation;
         View.SelectTool.Commit();
         var left = KeepHistory();
         Busy($"Loading {zonesX} × {zonesZ} zones…");
@@ -494,7 +504,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            Unleave(left);
+            Unleave(left, navigation);
             MessageText.Text = "Could not open that area: " + ex.Message;
         }
         finally
@@ -1462,7 +1472,10 @@ public sealed partial class MainWindow : Window
             var ch = await Task.Run(() => ScriptHost.Run(image, pdb, snap, cancel.Token), cancel.Token);
             if (Session != s)
             {
-                return new(false, ch.Output + "Another area was opened while the script ran: nothing changed.", "Another area was opened while the script ran: nothing changed.");
+                string gone = Session == null
+                    ? "The area was closed while the script ran: nothing changed."
+                    : "Another area was opened while the script ran: nothing changed.";
+                return new(false, ch.Output + gone, gone);
             }
             // Its heights and object numbers are those of the area when it started: changed since (a
             // stroke, an undo, a save that read the world again), they would undo that or hit other objects.

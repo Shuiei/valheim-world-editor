@@ -10,8 +10,9 @@ the plugin is unchanged in versions without that part.
 - **A change finished after going to the map could not be undone.** Going to the map handed the area's history to
   the world but left the area open behind it, so a script, a Claude change or Grow still running finished in it: the
   change went into the world but its undo step stayed in the closed area, and the history found on reopening lacked
-  it. Going to the map (or opening another area) now closes the area, so such work changes nothing and says so; an
-  area that fails to open leaves the one shown open as before.
+  it. Going to the map (or opening another area) now closes the area, so such work changes nothing and says so (a
+  script: "The area was closed while the script ran"); an area that fails to open leaves the one shown open as
+  before, unless the map or another area was asked for while it loaded.
 
 ## v1.45.29 — unreleased
 
