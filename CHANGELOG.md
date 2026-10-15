@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.44.0 — 2026-10-15
+
+### Added
+- **A Mac build (experimental), for Apple silicon** (macOS 12 or later): `ValheimWorldEditor-<version>-macos-arm64-experimental.zip`
+  on the releases page, ValheimWorldEditor.app signed ad hoc (macOS asks once: **Open Anyway** in Privacy & Security;
+  its README says how). Not tried on a Mac yet. The editor finds Valheim inside `valheim.app` in Steam's libraries
+  (`~/Library/Application Support/Steam`), the worlds in `~/Library/Application Support/IronGate/Valheim`, the game's
+  log in `~/Library/Logs/IronGate/Valheim` and r2modman's profiles; **Cmd** works as **Ctrl** for clicks in the 3D view
+  and Script's Ctrl+Enter, as it already did for the shortcuts. Intel Macs are not supported yet.
+
 ## v1.43.0 — 2026-10-14
 
 ### Changed

@@ -1008,11 +1008,6 @@ public static partial class GameCatalogues
     }
 
     /// <summary>
-    /// The game's data folder, as spelled on Windows and Linux.
-    /// </summary>
-    private static readonly string[] DataFolders = ["valheim_Data", "Valheim_Data"];
-
-    /// <summary>
     /// What a data name looks like: a letter or "_" first, then letters, digits, "_" or spaces, 40 characters at most.
     /// </summary>
     private static readonly System.Text.RegularExpressions.Regex KeyName = new(@"\A[A-Za-z_][A-Za-z0-9_ ]{0,39}\z");
@@ -1031,8 +1026,8 @@ public static partial class GameCatalogues
     /// </summary>
     private static Dict ZdoKeyNames(string valheim)
     {
-        string dll = DataFolders.Select(d => Path.Combine(valheim, d, "Managed", "assembly_valheim.dll")).FirstOrDefault(File.Exists)
-            ?? throw new FileNotFoundException("assembly_valheim.dll is not in the game's folder");
+        string dll = GameLook.DataDir(valheim) is string data && Path.Combine(data, "Managed", "assembly_valheim.dll") is var path && File.Exists(path)
+            ? path : throw new FileNotFoundException("assembly_valheim.dll is not in the game's folder");
         var names = KeyNamesIn(dll);
         // Built at run time by the game.
         for (int i = 0; i < 64; i++)

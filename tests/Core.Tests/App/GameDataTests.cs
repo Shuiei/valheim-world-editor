@@ -57,18 +57,20 @@ public sealed class GameDataTests : IDisposable
 
     /// <summary>
     /// A pretend game folder in the home: its (empty) bundles folder, and with code, a .NET assembly where the game's
-    /// code is (its strings are what the zdo-keys kind reads).
+    /// code is (its strings are what the zdo-keys kind reads). With mac, laid out as on a Mac: its data folder inside
+    /// valheim.app.
     /// </summary>
-    private (string Valheim, GameBundles Bundles) Game(string name, bool code)
+    private (string Valheim, GameBundles Bundles) Game(string name, bool code, bool mac = false)
     {
         string valheim = Path.Combine(_home, name);
-        string bundles = Path.Combine(valheim, "valheim_Data", "StreamingAssets", "SoftRef", "Bundles");
+        string data = mac ? Path.Combine(valheim, "valheim.app", "Contents", "Resources", "Data") : Path.Combine(valheim, "valheim_Data");
+        string bundles = Path.Combine(data, "StreamingAssets", "SoftRef", "Bundles");
         Directory.CreateDirectory(bundles);
         // Named after the game: the caches' stamp tells games apart by their files.
         File.WriteAllText(Path.Combine(bundles, name + "_bundle"), "not read");
         if (code)
         {
-            string managed = Path.Combine(valheim, "valheim_Data", "Managed");
+            string managed = Path.Combine(data, "Managed");
             Directory.CreateDirectory(managed);
             File.Copy(typeof(GameData).Assembly.Location, Path.Combine(managed, "assembly_valheim.dll"));
         }
@@ -129,6 +131,19 @@ public sealed class GameDataTests : IDisposable
         File.Delete(file);
         Directory.CreateDirectory(file);
         Assert.Null(GameData.Load(bundles, cache: true));
+    }
+
+    [Fact]
+    public void AMacGamesCodeIsReadFromItsAppBundle()
+    {
+        var (valheim, bundles) = Game("Valheim", code: true, mac: true);
+        Caches(valheim, bundles, "zdo-keys");
+        // Its game folder found from the bundles inside valheim.app, and the game's code in the bundle's Managed.
+        Assert.Contains("assembly_valheim.dll", GameData.Stamp(valheim, bundles.Folder));
+        string keys = GameData.Load(bundles, cache: true)!["zdo-keys"];
+        Assert.Equal(GameCatalogues.ZdoKeysJson(valheim), keys);
+        using var doc = JsonDocument.Parse(keys);
+        Assert.True(doc.RootElement.EnumerateObject().Any());
     }
 
     [Fact]

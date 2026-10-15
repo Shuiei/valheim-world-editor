@@ -218,29 +218,25 @@ public static class GameData
     }
 
     /// <summary>
-    /// Valheim's folder from its bundles folder (&lt;Valheim&gt;/valheim_Data/StreamingAssets/SoftRef/Bundles).
+    /// Valheim's folder from its bundles folder (&lt;data folder&gt;/StreamingAssets/SoftRef/Bundles, the data folder
+    /// being valheim_Data, or valheim.app/Contents/Resources/Data on a Mac).
     /// </summary>
     private static string ValheimOf(string bundles)
     {
         string? d = Path.TrimEndingDirectorySeparator(bundles);
-        for (int i = 0; i < 4 && d != null; i++)
+        for (int i = 0; i < 3 && d != null; i++)
         {
             d = Path.GetDirectoryName(d);
         }
-        return d ?? bundles;
+        return d == null ? bundles : GameLook.GameOfData(d);
     }
-
-    /// <summary>
-    /// The game's data folder, as spelled on Windows and Linux.
-    /// </summary>
-    private static readonly string[] DataFolders = ["valheim_Data", "Valheim_Data"];
 
     /// <summary>
     /// The game's files a kind is read from, by name, size and time: what makes a cache out of date.
     /// </summary>
     internal static string Stamp(string valheim, string bundles) =>
         CacheVersion + " " + JsonSerializer.Serialize(Directory.GetFiles(bundles).Order(StringComparer.Ordinal)
-            .Concat(DataFolders.Select(d => Path.Combine(valheim, d, "Managed", "assembly_valheim.dll")).Where(File.Exists))
+            .Concat(new[] { GameLook.DataDir(valheim) }.OfType<string>().Select(d => Path.Combine(d, "Managed", "assembly_valheim.dll")).Where(File.Exists))
             .Select(f => new FileInfo(f)).Select(f => $"{f.Name}:{f.Length}:{f.LastWriteTimeUtc.Ticks}"));
 
     /// <summary>

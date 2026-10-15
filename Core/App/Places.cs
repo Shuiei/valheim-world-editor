@@ -50,6 +50,12 @@ public static class Places
             yield return Path.Combine(home, "AppData", "LocalLow", "IronGate", "Valheim", "worlds_local");
             yield return Path.Combine(home, "AppData", "LocalLow", "IronGate", "Valheim", "worlds");
         }
+        else if (OperatingSystem.IsMacOS())
+        {
+            // Unity's data folder on a Mac.
+            yield return Path.Combine(home, "Library", "Application Support", "IronGate", "Valheim", "worlds_local");
+            yield return Path.Combine(home, "Library", "Application Support", "IronGate", "Valheim", "worlds");
+        }
         else
         {
             yield return Path.Combine(home, ".config", "unity3d", "IronGate", "Valheim", "worlds_local");

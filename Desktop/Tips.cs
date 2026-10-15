@@ -353,14 +353,14 @@ public static class Tips
         ["start.savedToken"] = "The plugin's token for this server.",
         ["start.savedPassword"] = "The password for this server.",
         ["start.savedPassphrase"] = "The passphrase of this server's key file, if it has one (never saved).",
-        ["look.path"] = "The folder Steam installed Valheim into (the one with valheim_Data).",
+        ["look.path"] = "The folder Steam installed Valheim into (the one with valheim_Data, or valheim.app on a Mac).",
         ["look.browse"] = "Choose the Valheim folder.",
         ["look.use"] = "Copy the game's look from this folder.",
         ["look.retry"] = "Try to copy the game's look again.",
         ["look.log"] = "Opens the editor's log (ValheimWorldEditor.log), with what the copy said before it stopped. Attach it to a bug report on GitHub.",
 
         // ---- Settings
-        ["settings.valheim"] = "The Valheim game folder (with valheim_Data). Empty: found in the Steam libraries.",
+        ["settings.valheim"] = "The Valheim game folder (with valheim_Data, or valheim.app on a Mac). Empty: found in the Steam libraries.",
         ["settings.browse"] = "Choose the folder.",
         ["settings.auto"] = "Find Valheim in the Steam libraries by itself.",
         ["settings.folder"] = "A folder to look in.",

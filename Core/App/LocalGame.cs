@@ -87,6 +87,10 @@ public static class LocalGame
             (Path.Combine(appData, "r2modmanPlus-local", "Valheim", "profiles"), "r2modman"),
             (Path.Combine(appData, "Thunderstore Mod Manager", "DataFolder", "Valheim", "profiles"), "Thunderstore Mod Manager"),
         };
+        if (OperatingSystem.IsMacOS())
+        {
+            managers.Add((Path.Combine(home, "Library", "Application Support", "r2modmanPlus-local", "Valheim", "profiles"), "r2modman"));
+        }
         if (!OperatingSystem.IsWindows())
         {
             managers.Add((Path.Combine(home, ".config", "r2modmanPlus-local", "Valheim", "profiles"), "r2modman"));

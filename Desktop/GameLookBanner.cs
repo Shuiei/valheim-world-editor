@@ -96,7 +96,7 @@ public sealed class GameLookBanner
     /// <summary>
     /// How to find the game folder (SetupSteps), when Valheim was not found.
     /// </summary>
-    internal TextBlock Steps { get; } = new() { Text = SetupSteps(OperatingSystem.IsWindows()), TextWrapping = TextWrapping.Wrap, FontSize = 12.5, LineHeight = 19 };
+    internal TextBlock Steps { get; } = new() { Text = SetupSteps(OperatingSystem.IsWindows(), OperatingSystem.IsMacOS()), TextWrapping = TextWrapping.Wrap, FontSize = 12.5, LineHeight = 19 };
     /// <summary>
     /// PathBox with Browse and Use.
     /// </summary>
@@ -143,16 +143,20 @@ public sealed class GameLookBanner
     }
 
     /// <summary>
-    /// How to find the game folder, for Windows or for Linux (numbered lines).
+    /// How to find the game folder, for Windows, a Mac or Linux (numbered lines).
     /// </summary>
-    internal static string SetupSteps(bool windows) => string.Join("\n", new[]
+    internal static string SetupSteps(bool windows, bool mac = false) => string.Join("\n", new[]
     {
         "1. Install Valheim with Steam on this computer (owning it is enough: the editor needs its files, not the game running).",
-        "2. In Steam, right-click Valheim in your Library, then Manage › Browse local files. The folder that opens is the one to choose: it holds valheim_Data.",
+        mac
+            ? "2. In Steam, right-click Valheim in your Library, then Manage › Browse local files. The folder that opens is the one to choose: it holds valheim.app."
+            : "2. In Steam, right-click Valheim in your Library, then Manage › Browse local files. The folder that opens is the one to choose: it holds valheim_Data.",
         windows
             ? "3. Usually: C:\\Program Files (x86)\\Steam\\steamapps\\common\\Valheim, or <your Steam library>\\steamapps\\common\\Valheim on another drive."
+            : mac
+            ? "3. Usually: ~/Library/Application Support/Steam/steamapps/common/Valheim, or <your Steam library>/steamapps/common/Valheim."
             : "3. Usually: ~/.local/share/Steam/steamapps/common/Valheim (Flatpak Steam: ~/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/Valheim), or <your Steam library>/steamapps/common/Valheim.",
-        "4. Paste it below or use Browse…, then Use. A folder near it works too (steamapps, common, valheim_Data).",
+        "4. Paste it below or use Browse…, then Use. A folder near it works too (steamapps, common, valheim_Data or valheim.app).",
     });
 
     /// <summary>
@@ -163,7 +167,7 @@ public sealed class GameLookBanner
     {
         if (string.IsNullOrWhiteSpace(folder))
         {
-            Error.Text = "Choose the folder Steam installed Valheim into (the one with valheim_Data).";
+            Error.Text = "Choose the folder Steam installed Valheim into (the one with valheim_Data, or valheim.app on a Mac).";
             Error.IsVisible = true;
             return;
         }
