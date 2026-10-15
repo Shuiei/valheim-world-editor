@@ -215,11 +215,27 @@ public static partial class Lang
         }
     }
 
-    /// <summary>A catalogue's file: one JSON object of texts by key (a value that is not a string is skipped).</summary>
+    /// <summary>
+    /// A catalogue's file: one JSON object of texts by key (a value that is not a string is skipped; of a key given
+    /// twice the last text counts).
+    /// </summary>
+    /// <exception cref="JsonException">The file is not JSON, or its root is not an object.</exception>
     internal static Dictionary<string, string> Parse(Stream json)
     {
         using var doc = JsonDocument.Parse(json, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
-        return doc.RootElement.EnumerateObject().Where(p => p.Value.ValueKind == JsonValueKind.String).ToDictionary(p => p.Name, p => p.Value.GetString()!);
+        if (doc.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            throw new JsonException($"a language file is one object of texts by key, not {doc.RootElement.ValueKind}");
+        }
+        var texts = new Dictionary<string, string>();
+        foreach (var p in doc.RootElement.EnumerateObject())
+        {
+            if (p.Value.ValueKind == JsonValueKind.String)
+            {
+                texts[p.Name] = p.Value.GetString()!;
+            }
+        }
+        return texts;
     }
 
     /// <summary><paramref name="over"/>'s texts over a copy of <paramref name="under"/>'s.</summary>

@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.43 — unreleased
+
+### Fixed
+- **A hand-made language file could stop the editor from starting.** A file in the data folder's `lang` folder whose
+  root is not an object (`[]`), or that gives a key twice, threw while the languages were being read at start-up,
+  before the window existed, even for a language that was never chosen. A key given twice now takes the last text,
+  and a file that is not one object of texts is logged and skipped like one that is not JSON.
+
 ## v1.45.42 — unreleased
 
 ### Fixed

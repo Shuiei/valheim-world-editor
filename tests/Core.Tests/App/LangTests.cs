@@ -104,6 +104,21 @@ public sealed partial class LangTests : IDisposable
         Assert.Contains(new Lang.Language("de", "de"), Lang.Available());
     }
 
+    // A hand-made file whose root is not an object, or that gives a key twice, must not throw out of Use (which
+    // Program calls before the window exists), not even for a language the user never chose, since Available()
+    // reads every file in the folder.
+    [Fact]
+    public void AFileThatIsNotOneObjectOrRepeatsAKeyDoesNotCrashTheStart()
+    {
+        File.WriteAllText(Path.Combine(_folder, "it.json"), "[]");
+        File.WriteAllText(Path.Combine(_folder, "fr.json"), """{ "lang.name": "Français", "common.cancel": "Annuler", "common.cancel": "Abandonner" }""");
+        Assert.Equal(Lang.Source, Lang.Use("it"));
+        Assert.Contains(new Lang.Language("it", "it"), Lang.Available());
+        Assert.Equal("fr", Lang.Use("fr"));
+        Assert.Equal("Abandonner", Lang.T("common.cancel"));
+        Assert.Throws<JsonException>(() => Lang.Parse(new MemoryStream("\"text\""u8.ToArray())));
+    }
+
     [Fact]
     public void TheUsersEnglishFileCorrectsTheCarriedOne()
     {
