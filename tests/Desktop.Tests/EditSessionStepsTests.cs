@@ -8,7 +8,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// An edit session's smaller rules: deleting what is already gone makes no step, a shape whose formula fails at some
 /// points counts them and leaves them, the changed rectangle is given once, the game's changes wait for a stroke
 /// to end, things moved, turned and sized in one step, the copy that stands for a moved thing, and zones marked for
-/// reset and unmarked.
+/// reset, unmarked and marked again with other options.
 /// </summary>
 public class EditSessionStepsTests
 {
@@ -116,5 +116,39 @@ public class EditSessionStepsTests
         Assert.Equal(1, s.UnmarkResets([(0, 0), (0, 0), (1, 0)], "Unmark"));
         Assert.Equal((1, 1), (s.Resets.Single().X, s.Resets.Single().Z));
         Assert.Equal("Unmark", s.UndoLabel);
+    }
+
+    // Marking a marked zone again with other options: undo, redo and removing the step each bring back the options
+    // of their side, not the newest ones.
+    [Fact]
+    public void MarkingAgainWithOtherOptionsIsUndoneToTheOldOptions()
+    {
+        var s = TestScenes.Flat(2);
+        var kept = new Editing.ZoneReset(0, 0, KeepBuildings: true, Ground: false);
+        var wiped = new Editing.ZoneReset(0, 0, KeepBuildings: false, Ground: false);
+        s.MarkResets([(0, 0)], keepBuildings: true, ground: false, "Keep");
+        s.MarkResets([(0, 0)], keepBuildings: false, ground: false, "Wipe");
+        Assert.Equal(wiped, Assert.Single(s.Resets));
+        Assert.Equal("1 zone reset", s.UndoList[^1].Describe());
+        Assert.True(s.Undo());
+        Assert.Equal(kept, Assert.Single(s.Resets));
+        Assert.True(s.Redo());
+        Assert.Equal(wiped, Assert.Single(s.Resets));
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^1]));
+        Assert.Equal(kept, Assert.Single(s.Resets));
+        Assert.True(s.Undo());
+        Assert.Equal(wiped, Assert.Single(s.Resets));
+    }
+
+    // Removing an older reset step while a later step marked the zone again keeps the later marking.
+    [Fact]
+    public void RemovingAnOlderMarkingKeepsALaterOne()
+    {
+        var s = TestScenes.Flat(2);
+        var later = new Editing.ZoneReset(0, 0, KeepBuildings: true, Ground: false);
+        s.MarkResets([(0, 0)], keepBuildings: false, ground: false, "Wipe");
+        s.MarkResets([(0, 0)], keepBuildings: true, ground: false, "Keep");
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^2]));
+        Assert.Equal(later, Assert.Single(s.Resets));
     }
 }

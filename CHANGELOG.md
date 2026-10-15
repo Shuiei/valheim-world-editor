@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.1 — unreleased
+
+### Fixed
+- **Undoing a second Reset zones on the same zones kept the new options.** A zone already marked for reset and marked
+  again with other options (say, without **Keep buildings**) stayed marked with the new options after Ctrl+Z, a redo
+  or removing the step in History, so the next save could wipe the buildings the first marking kept. The step only
+  remembered whether the zone was marked before, not how. It now takes the old marking off and puts the new one on,
+  and undo, redo and removal set each side's options back; the history file keeps both.
+
 ## v1.45.0 — unreleased
 
 ### Added
