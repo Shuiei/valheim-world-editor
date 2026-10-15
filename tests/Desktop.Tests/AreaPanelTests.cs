@@ -211,6 +211,43 @@ public class AreaPanelTests
     }
 
     [AvaloniaFact]
+    public void TheWithListIsWorkedOutAgainForAnotherWorld()
+    {
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        w.Show();
+        // Two worlds, each with a kind of its own to copy (named here: the game's catalogue does not place them).
+        int first = StableHash.Of("mod_first"), second = StableHash.Of("mod_second");
+        var p = new AreaPanel(w.View, () => w.Session, h => h == first ? "mod_first" : h == second ? "mod_second" : Terrain.PrefabCatalog.DisplayName(h));
+        var a = TestScenes.Flat(1, new WorldScene.Thing(first, first, new Vector3(10, 30, 10), Vector3.Zero, 0, true));
+        a.Scene.World.Templates[first] = 0;
+        var b = TestScenes.Flat(1, new WorldScene.Thing(second, second, new Vector3(10, 30, 10), Vector3.Zero, 0, true));
+        b.Scene.World.Templates[second] = 0;
+        w.View.Show(a.Scene, null);
+        w.Edit(a);
+        p.UsePicked(first);
+        var with = ((IEnumerable<object>)p.ToBox.ItemsSource!).Cast<string>().ToList();
+        Assert.Contains("mod_first", with);
+        Assert.DoesNotContain("mod_second", with);
+        Assert.Equal("mod_first", p.ToBox.SelectedItem);
+        // A kind both worlds have stays chosen in the other world; the first world's own kind is not offered there.
+        int shared = a.Scene.World.Creatable.First(h => h != first);
+        p.UsePicked(shared);
+        w.View.Show(b.Scene, null);
+        w.Edit(b);
+        p.Refresh();
+        with = [.. ((IEnumerable<object>)p.ToBox.ItemsSource!).Cast<string>()];
+        Assert.DoesNotContain("mod_first", with);
+        Assert.Contains("mod_second", with);
+        Assert.Equal(Terrain.PrefabCatalog.DisplayName(shared), p.ToBox.SelectedItem);
+        p.UsePicked(second);
+        Assert.Equal("mod_second", p.ToBox.SelectedItem);
+        w.View.Show(a.Scene, null);
+        w.Edit(a);
+        p.Refresh();
+        Assert.Equal(-1, p.ToBox.SelectedIndex);
+    }
+
+    [AvaloniaFact]
     public void TheAverageButtonPutsTheMeanHeightInTheBox()
     {
         using var r = new Run();
