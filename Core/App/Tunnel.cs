@@ -106,18 +106,26 @@ public static class Tunnel
     {
         // Continues off the caller's (UI) thread: reading the plugin's settings on the server blocks.
         await Starting.WaitAsync().ConfigureAwait(false);
+        // The key files read, closed once the start is over, however it ends.
+        var keys = new List<PrivateKeyFile>();
         try
         {
-            return await StartOnce(r).ConfigureAwait(false);
+            return await StartOnce(r, keys).ConfigureAwait(false);
         }
         finally
         {
             Starting.Release();
+            foreach (var k in keys)
+            {
+                k.Dispose();
+            }
         }
     }
 
     /// <inheritdoc cref="Start"/>
-    private static async Task<Result> StartOnce(Request r)
+    /// <param name="r">What the player entered.</param>
+    /// <param name="keys">Where the key files read are kept, for the caller to close.</param>
+    private static async Task<Result> StartOnce(Request r, List<PrivateKeyFile> keys)
     {
         Close();
         int closes;
@@ -148,7 +156,8 @@ public static class Tunnel
                 {
                     key = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + key[1..];
                 }
-                methods.Add(new PrivateKeyAuthenticationMethod(user, string.IsNullOrEmpty(r.Passphrase) ? new PrivateKeyFile(key) : new PrivateKeyFile(key, r.Passphrase)));
+                keys.Add(string.IsNullOrEmpty(r.Passphrase) ? new PrivateKeyFile(key) : new PrivateKeyFile(key, r.Passphrase));
+                methods.Add(new PrivateKeyAuthenticationMethod(user, keys[^1]));
             }
             else
             {
@@ -159,19 +168,21 @@ public static class Tunnel
                     if (File.Exists(k))
                     {
                         // One that cannot be used (a passphrase, a format SSH.NET does not read, no
-                        // access) is skipped: the password is still tried.
+                        // access) is skipped, and logged: the password is still tried.
                         try
                         {
-                            methods.Add(new PrivateKeyAuthenticationMethod(user, new PrivateKeyFile(k)));
+                            keys.Add(new PrivateKeyFile(k));
+                            methods.Add(new PrivateKeyAuthenticationMethod(user, keys[^1]));
                         }
-                        catch (Exception ex) when (ex is SshException or IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+                        catch (Exception ex) when (KeyUnreadable(ex))
                         {
+                            Console.WriteLine($"tunnel: {Path.GetFileName(k)} skipped, it could not be read ({ex.GetType().Name}).");
                         }
                     }
                 }
             }
         }
-        catch (Exception ex) when (ex is SshException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (KeyUnreadable(ex))
         {
             return Fail("The key file could not be read: " + ex.Message);
         }
@@ -312,6 +323,13 @@ public static class Tunnel
             _ => null,
         };
     }
+
+    /// <summary>
+    /// Whether reading a key file failed because of the file: missing, no access, a wrong passphrase, or a format
+    /// SSH.NET does not read (it reports those in many ways, such as an unsupported DSA key or a key cut short).
+    /// </summary>
+    private static bool KeyUnreadable(Exception ex) => ex is SshException or IOException or UnauthorizedAccessException or InvalidOperationException
+        or ArgumentException or NotSupportedException or FormatException or System.Formats.Asn1.AsnContentException or CryptographicException;
 
     /// <summary>A path quoted for the server's shell (single quotes).</summary>
     private static string Quote(string path) => "'" + path.Replace("'", "'\\''") + "'";
