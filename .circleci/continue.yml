@@ -321,7 +321,13 @@ jobs:
       - checkout
       - run:
           name: Tools for packaging
-          command: apt-get update -qq && apt-get install -y -qq zip > /dev/null
+          command: |
+            apt-get update -qq && apt-get install -y -qq zip > /dev/null
+            # rcodesign signs the Mac app (ad hoc) on Linux; pinned and checked against its release's checksum.
+            v=0.29.0; f=apple-codesign-$v-x86_64-unknown-linux-musl
+            curl -fsSL -o /tmp/$f.tar.gz "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F$v/$f.tar.gz"
+            echo "dbe85cedd8ee4217b64e9a0e4c2aef92ab8bcaaa41f20bde99781ff02e600002  /tmp/$f.tar.gz" | sha256sum -c -
+            tar -C /tmp -xzf /tmp/$f.tar.gz && install /tmp/$f/rcodesign /usr/local/bin/rcodesign
       - run:
           name: Build the release packages
           command: tools/release.sh /tmp/dist
@@ -449,6 +455,7 @@ jobs:
             GH_TOKEN=$GITHUB_TOKEN gh release create "v$version" --repo "$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" \
               --target "$CIRCLE_SHA1" --title "v$version" --notes-file /tmp/dist/notes.md \
               /tmp/dist/ValheimWorldEditor-v$version-win-x64.zip /tmp/dist/ValheimWorldEditor-v$version-linux-x64.tar.gz \
+              /tmp/dist/ValheimWorldEditor-v$version-macos-arm64-experimental.zip \
               /tmp/dist/WorldEditorBridge-$version.zip /tmp/dist/ValheimWorldEditor.Sdk-$version.zip
       - store_artifacts:
           path: /tmp/dist/notes.md

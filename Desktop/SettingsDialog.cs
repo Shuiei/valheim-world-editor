@@ -42,7 +42,7 @@ public static class SettingsDialog
             game = GameLook.GameFolder(game) ?? game;
             if (GameLook.BundlesDir(game) == null)
             {
-                problems.Add("The Valheim folder must be the game's folder, the one with valheim_Data (in Steam: right-click Valheim, Manage › Browse local files).");
+                problems.Add("The Valheim folder must be the game's folder, the one with valheim_Data, or valheim.app on a Mac (in Steam: right-click Valheim, Manage › Browse local files).");
             }
         }
         List<string> Clean(IEnumerable<string> list, string what) => [.. list.Select(p => p.Trim()).Where(p => p.Length > 0).Select(Expand).Distinct().Where(p => { if (Directory.Exists(p)) { return true; } problems.Add($"{what} not found: {p}"); return false; })];
@@ -250,7 +250,7 @@ public static class SettingsDialog
                     H2("Valheim game folder"),
                     Hint(detected),
                     new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 4, Children = { valheim, Col(browse, 1), Col(auto, 2) } },
-                    Hint("The folder with valheim_Data. Used for the game's look, and to find BepInEx for \"My game\"."),
+                    Hint("The folder with valheim_Data (valheim.app on a Mac). Used for the game's look, and to find BepInEx for \"My game\"."),
                     H2("BepInEx folders"),
                     bep,
                     Hint("Where else to look for the plugin for \"My game\": a BepInEx folder, a mod manager profile, or a folder of profiles. The Valheim folder and the default r2modman / Thunderstore Mod Manager profiles are always searched."),

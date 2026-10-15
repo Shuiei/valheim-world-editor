@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The Mac app's description (ValheimWorldEditor.app/Contents/Info.plist), made by tools/release.sh:
+     @NUMBER@ is the version (1.2.3). The program is Contents/MacOS/ValheimWorldEditor (the .NET apphost),
+     the icon Contents/Resources/icon.icns. macOS 12 is the oldest the .NET runtime runs on. -->
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleDisplayName</key>
+  <string>Valheim World Editor</string>
+  <key>CFBundleExecutable</key>
+  <string>ValheimWorldEditor</string>
+  <key>CFBundleIconFile</key>
+  <string>icon.icns</string>
+  <key>CFBundleIdentifier</key>
+  <string>io.github.shuiei.valheimworldeditor</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>Valheim World Editor</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>@NUMBER@</string>
+  <key>CFBundleVersion</key>
+  <string>@NUMBER@</string>
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.developer-tools</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>12.0</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>NSHumanReadableCopyright</key>
+  <string>Copyright (c) 2026 Thibault Bene</string>
+</dict>
+</plist>

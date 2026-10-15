@@ -72,7 +72,7 @@ public sealed class ScriptPanel
         // On the way down (tunnel), before the text box takes Enter for a new line.
         CodeBox.AddHandler(Avalonia.Input.InputElement.KeyDownEvent, (_, e) =>
         {
-            if (e.Key == Avalonia.Input.Key.Enter && e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Control))
+            if (e.Key == Avalonia.Input.Key.Enter && (e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Control) || e.KeyModifiers.HasFlag(Avalonia.Input.KeyModifiers.Meta)))
             {
                 e.Handled = true;
                 RunAsked?.Invoke();

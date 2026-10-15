@@ -14,7 +14,8 @@ game as you work.
 ![The 3D editor showing a base, with the tool rail, tool panel and View panel](docs/images/overview.jpg)
 
 **[Download the latest release](https://github.com/Shuiei/valheim-world-editor/releases/latest)**
-for Windows or Linux. Unpack it and start it. You don't need to install anything else.
+for Windows or Linux, or macOS on Apple silicon (experimental). Unpack it and start it. You don't need to install
+anything else.
 
 ## What you can do
 
@@ -100,13 +101,14 @@ editor's settings and log.
 
 ![The Workshop, under Create on the start page](docs/images/start-workshop.jpg)
 
-One program runs on Windows and Linux, and everything happens on your computer. Nothing is sent
-anywhere else.
+One program runs on Windows, Linux and macOS (experimental), and everything happens on your computer. Nothing is
+sent anywhere else.
 
 ## Quick start
 
-1. Download `ValheimWorldEditor-<version>-win-x64.zip` (Windows) or `-linux-x64.tar.gz` (Linux) from
-   the [releases page](https://github.com/Shuiei/valheim-world-editor/releases/latest).
+1. Download `ValheimWorldEditor-<version>-win-x64.zip` (Windows), `-linux-x64.tar.gz` (Linux) or
+   `-macos-arm64-experimental.zip` (a Mac with Apple silicon) from the
+   [releases page](https://github.com/Shuiei/valheim-world-editor/releases/latest).
 2. Unpack it anywhere and double-click **ValheimWorldEditor**.
 3. Pick a way to edit in the start page's side menu. To try it safely, open **A saved world** with
    the game closed, or **The Workshop**. Next time, **Home** lists what you opened.
@@ -117,7 +119,8 @@ The sections below cover each step in more detail.
 
 ### What you need
 
-- **Windows 10/11 or Linux**, 64-bit.
+- **Windows 10/11 or Linux**, 64-bit; or **macOS 12 or later on Apple silicon** (M1 and later), experimental:
+  the Mac build has not been tried on a Mac yet ([below](#macos-experimental)).
 - **Valheim** installed through Steam on the same computer. The editor finds it by itself and reads
   what it needs straight from the game's files (nothing is copied): the textures and models, and how
   the game's locations shape the ground. Without it no world or Workshop opens: the start page asks
@@ -133,8 +136,9 @@ Windows through Direct3D, like games, or the driver's own OpenGL when chosen in 
 
 ### Install and start
 
-1. Download `ValheimWorldEditor-<version>-win-x64.zip` (Windows) or
-   `ValheimWorldEditor-<version>-linux-x64.tar.gz` (Linux) from the
+1. Download `ValheimWorldEditor-<version>-win-x64.zip` (Windows),
+   `ValheimWorldEditor-<version>-linux-x64.tar.gz` (Linux) or
+   `ValheimWorldEditor-<version>-macos-arm64-experimental.zip` (macOS, see [below](#macos-experimental)) from the
    [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page.
 2. Unpack it anywhere (Desktop, Documents…). It holds the editor and its `README.txt`. For live
    editing, the WorldEditorBridge plugin is a separate download: `WorldEditorBridge-<version>.zip`
@@ -149,15 +153,35 @@ the ground straight from your Valheim install: nothing is copied, so it always m
 the game. The first time, and after a Valheim update, it reads the game's files for a few seconds (a
 card on the start page says so). If Valheim is not found, the card explains how to
 find its folder and asks for it: in Steam, right-click Valheim, then **Manage › Browse local files**;
-the folder that opens (the one with `valheim_Data`) is the one to choose. Usual places:
+the folder that opens (the one with `valheim_Data`, or `valheim.app` on a Mac) is the one to choose. Usual places:
 
 - Linux: `~/.local/share/Steam/steamapps/common/Valheim` (Flatpak Steam:
   `~/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/Valheim`)
 - Windows: `C:\Program Files (x86)\Steam\steamapps\common\Valheim`
+- macOS: `~/Library/Application Support/Steam/steamapps/common/Valheim`
 - Another Steam library: `<library>/steamapps/common/Valheim`
 
-A folder near it works too (`steamapps`, `common`, `valheim_Data`): the editor finds the game folder
+A folder near it works too (`steamapps`, `common`, `valheim_Data`, `valheim.app`): the editor finds the game folder
 from it. The folder can be changed later in **Settings**.
+
+### macOS (experimental)
+
+The Mac build is for Apple silicon (M1 and later), macOS 12 or later; Intel Macs are not supported yet. It has not
+been tried on a Mac yet: if something does not work, [open an issue](https://github.com/Shuiei/valheim-world-editor/issues)
+with the editor's log (**Open log** on the start page).
+
+1. Unzip `ValheimWorldEditor-<version>-macos-arm64-experimental.zip` and move **ValheimWorldEditor.app** where you
+   like (Applications, for example).
+2. The first time, macOS refuses to open it: the editor is signed, but not with an Apple Developer certificate, so
+   macOS cannot check who made it. Double-click it once and close the message, then in **System Settings › Privacy
+   & Security** click **Open Anyway** next to ValheimWorldEditor. Or, in Terminal:
+   `xattr -dr com.apple.quarantine /Applications/ValheimWorldEditor.app`. After that it opens with a double-click.
+3. **Cmd** works wherever the documentation says **Ctrl** (`Cmd+Z` undoes, Cmd + click adds to a selection).
+
+The editor finds Valheim in Steam's libraries (inside `valheim.app`), the worlds in
+`~/Library/Application Support/IronGate/Valheim/worlds_local`, and r2modman's profiles. Its own settings and log are
+in `~/Library/Application Support/ValheimWorldEditor`. The game's terrain is drawn with the game's own shader when
+the Mac game ships one the editor can read; otherwise in plain colours (the rest of the game's look is the same).
 
 ### My game (live)
 
@@ -259,7 +283,7 @@ with the server; **edit** next to a saved server changes it. (The token is still
 
 Settings, saved servers (`servers.cfg`), what the editor remembers between runs, blueprints, the
 index of the game's files (`game-index.json`) and a log (`ValheimWorldEditor.log`, a new one each run) are in `~/.local/share/ValheimWorldEditor`
-(Linux) or `%LOCALAPPDATA%\ValheimWorldEditor` (Windows). The bottom of the start page's menu shows
+(Linux), `%LOCALAPPDATA%\ValheimWorldEditor` (Windows) or `~/Library/Application Support/ValheimWorldEditor` (macOS). The bottom of the start page's menu shows
 the folder.
 
 ## Documentation
@@ -361,7 +385,8 @@ dotnet publish Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64
 ```
 
 Use `-r win-x64` for Windows. `tools/release.sh <folder>` builds the complete release packages
-(the program and its README); `tools/thunderstore.sh <folder>` the
+(the program and its README; the Mac app signed ad hoc with [rcodesign](https://github.com/indygreg/apple-platform-rs),
+which `NO_MACOS=1` leaves out); `tools/thunderstore.sh <folder>` the
 plugin's (`WorldEditorBridge-<version>.zip`). The tests, which CircleCI runs
 on every push (the app's visual tests need a display, which CI gives them; without one they skip, or
 leave them out with `--filter-not-trait Category=Visual`):
