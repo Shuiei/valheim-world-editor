@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.19 — unreleased
+
+### Fixed
+- **An Apply live that failed partway said nothing had been applied.** The ground goes to the game first, then the
+  objects, then zone resets. When a later part failed, the editor only said "Could not apply live", although the
+  ground was in the game: the steps that had gone in stayed unapplied in the history, so Discard would undo them in
+  the editor while the game kept them. It now says what went in and what failed, and marks as applied the steps the
+  game has all of, up to the first one it lacks; Apply live again sends the rest.
+
 ## v1.45.18 — unreleased
 
 ### Fixed

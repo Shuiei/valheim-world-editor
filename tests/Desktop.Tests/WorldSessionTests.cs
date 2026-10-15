@@ -65,6 +65,26 @@ public sealed class WorldSessionTests : IDisposable
         Assert.Single(game.Resets);
     }
 
+    // The ground goes in, then the game refuses the objects: applied, said with the error, and only the steps the
+    // game has all of are applied.
+    [Fact]
+    public async Task APartialApplyLiveSaysWhatWentIn()
+    {
+        using var game = new FakeGame();
+        using var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.Shape(10, 10, Formula.Compile("2", []), 3, 0, "raise");
+        s.Delete([s.Scene.Things.FindIndex(t => t.Id >= 0 && !t.Gone)]);
+        game.Fail["/objects"] = 500;
+        var o = await s.ApplyLive();
+        Assert.True(o.Done, o.Message);
+        Assert.Equal(WorldSession.LiveParts.Objects | WorldSession.LiveParts.Resets, o.Unsent);
+        Assert.Contains("zone(s) of ground", o.Message);
+        Assert.Contains("but then it failed", o.Message);
+        Assert.Equal(0, world.Edits.ChangedZoneCount);
+        Assert.Equal([true, false], s.UndoList.Select(c => c.Applied));
+    }
+
     [Fact]
     public async Task NoLimitGroundStaysAsItWasWhenNothingWasApplied()
     {

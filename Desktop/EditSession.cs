@@ -1360,10 +1360,37 @@ public sealed class EditSession
     /// one set, so a save or an apply from any area takes the steps of every area with it (and Discard must not undo
     /// them where they were made). Under the lock.
     /// </summary>
-    private void MarkApplied(IEnumerable<Change> steps)
+    /// <param name="steps">This area's steps.</param>
+    /// <param name="sent">After a partial Apply live, whether the game has all a step did (null: every step).</param>
+    private void MarkApplied(IEnumerable<Change> steps, Func<Change, bool>? sent = null)
     {
-        foreach (var c in steps.Concat(_shelvedUndo.Select(s => s.Change)))
+        var all = steps.Concat(_shelvedUndo.Select(s => s.Change));
+        if (sent == null)
         {
+            foreach (var c in all)
+            {
+                c.Applied = true;
+            }
+            return;
+        }
+        // Partly sent: in the order the steps were made, this area's and the kept-aside ones together.
+        MarkSent([.. all.OrderBy(OrderOf)], sent);
+    }
+
+    /// <summary>
+    /// Marks steps as applied, oldest first, while the game has all they did; the first one it lacks (objects or
+    /// zone resets that did not go in) stops it, so no step after it is applied either (Discard undoes from the end).
+    /// </summary>
+    /// <param name="steps">The steps, oldest first.</param>
+    /// <param name="sent">Whether the game has all a step did.</param>
+    internal static void MarkSent(IEnumerable<Change> steps, Func<Change, bool> sent)
+    {
+        foreach (var c in steps)
+        {
+            if (!c.Applied && !sent(c))
+            {
+                break;
+            }
             c.Applied = true;
         }
     }
@@ -1412,7 +1439,7 @@ public sealed class EditSession
                 }
                 if (o.Done)
                 {
-                    MarkApplied(before);
+                    MarkApplied(before, o.Unsent == WorldSession.LiveParts.None ? null : o.Sent);
                 }
             }
         }
