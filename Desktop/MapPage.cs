@@ -727,7 +727,8 @@ public sealed class MapPage : IDisposable
     }
 
     /// <summary>
-    /// Every zone's counts, read once (in the background) until the world changes; null when no world is shown.
+    /// Every zone's counts, read once (in the background) until the world changes; null when no world is shown, or when
+    /// another world was shown while they were read (they are that world's: dropped).
     /// </summary>
     private async Task<int[]?> Stats()
     {
@@ -738,7 +739,12 @@ public sealed class MapPage : IDisposable
         if (_stats == null)
         {
             ZoneInfo.Text = "Reading every zone…";
-            _stats = await Task.Run(() => ZoneStats.Compute(s.World, s.Edits, (x, z) => (int)s.Terrain.BiomeAt(x * 64f, z * 64f)));
+            int[] stats = await Task.Run(() => ZoneStats.Compute(s.World, s.Edits, (x, z) => (int)s.Terrain.BiomeAt(x * 64f, z * 64f)));
+            if (_session != s)
+            {
+                return null;
+            }
+            _stats = stats;
         }
         return _stats;
     }
@@ -802,6 +808,11 @@ public sealed class MapPage : IDisposable
         if (!await Confirm($"Mark {Matches.Count:N0} zone(s) for reset?\n\n• Their trees, rocks, ore, ruins and dungeon entrances are removed{(ground ? ", and their ground edits undone" : "")}; players' tombstones stay.\n"
             + $"• Valheim generates them again the next time a player comes near{(live ? " (at once where players are, once applied)" : "")}.\n"
             + $"• {(live ? "Apply live" : "Save to world")} does it; until then it can be cancelled with Unmark all."))
+        {
+            return;
+        }
+        // Another world shown while asking: the matches were this one's, and are gone.
+        if (_session != s)
         {
             return;
         }

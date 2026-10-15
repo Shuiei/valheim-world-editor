@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.10 — unreleased
+
+### Fixed
+- **The map's zone filter could judge one world's zones on another world's counts.** The counts behind **Show
+  matching** and **Mark for reset…** are read in the background; when another world was opened meanwhile, the
+  first world's counts were kept for the new one, so its matches, the number in the question and later
+  **Show matching** came from the wrong world. And a **Mark for reset…** question answered after switching marked
+  the zones in the world left behind. Counts read for a world no longer shown are dropped, and the marking is
+  dropped when the world changed while asking.
+
 ## v1.45.9 — unreleased
 
 ### Fixed
