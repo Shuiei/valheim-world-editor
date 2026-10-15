@@ -11,7 +11,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The Settings window: what it shows from the settings, Browse (the folder picker), Automatic, adding and taking out
 /// folders, a wrong choice explained without closing, Save keeping the choices, Cancel keeping nothing, "~" in a path,
-/// and what draws on Windows. It saves to the tests' settings file, so it runs alone.
+/// what draws on Windows, and the language. It saves to the tests' settings file, so it runs alone.
 /// </summary>
 [Collection("DataDir")]
 public class SettingsDialogTests
@@ -182,6 +182,42 @@ public class SettingsDialogTests
         finally
         {
             SettingsDialog.OnWindows = was;
+        }
+    }
+
+    // Language: the computer's at first, then English and the catalogues there are (one dropped in the lang folder
+    // listed by its own name); the one chosen saved by its code, and shown chosen again.
+    [AvaloniaFact]
+    public async Task TheLanguageIsChosenAmongTheCatalogues()
+    {
+        using var t = new Temp();
+        string? was = Lang.FolderOverride;
+        Lang.FolderOverride = t.Dir("lang");
+        try
+        {
+            File.WriteAllText(Path.Combine(Lang.Folder, "xx.json"), """{ "lang.name": "Testish" }""");
+            static ComboBox Language(Window d) => d.GetLogicalDescendants().OfType<ComboBox>().Single(c => c.Name == "Language");
+            var owner = Owner();
+            var settings = new AppSettings();
+            var shown = SettingsDialog.Show(owner, settings);
+            var d = TestWindows.Shown(owner);
+            Assert.Equal(["The computer's language", "English", "Testish"], Language(d).Items.Cast<string>());
+            Assert.Equal(0, Language(d).SelectedIndex);
+            Language(d).SelectedIndex = 2;
+            Click(Buttons(d, "Save").Single());
+            Assert.True(await shown);
+            Assert.Equal("xx", AppSettings.Load().Language);
+            shown = SettingsDialog.Show(owner, settings);
+            d = TestWindows.Shown(owner);
+            Assert.Equal(2, Language(d).SelectedIndex);
+            Language(d).SelectedIndex = 0;
+            Click(Buttons(d, "Save").Single());
+            Assert.True(await shown);
+            Assert.Null(AppSettings.Load().Language);
+        }
+        finally
+        {
+            Lang.FolderOverride = was;
         }
     }
 

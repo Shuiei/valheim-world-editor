@@ -67,8 +67,11 @@ public static class Program
         {
             System.Diagnostics.Trace.Listeners.Add(new System.Diagnostics.ConsoleTraceListener());
         }
+        var settings = TerrainEditor.App.AppSettings.Load();
+        // The language the windows are built in (Settings; the computer's by default).
+        Options.Say($"language: {TerrainEditor.App.Lang.Use(settings.Language)}");
         AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace(Avalonia.Logging.LogEventLevel.Warning)
-            .With(new Win32PlatformOptions { RenderingMode = WindowsRendering(TerrainEditor.App.AppSettings.Load().DriverOpenGl) })
+            .With(new Win32PlatformOptions { RenderingMode = WindowsRendering(settings.DriverOpenGl) })
             // Linux: Avalonia turns OpenGL off for software renderers (Mesa's llvmpipe, VMware's
             // SVGA3D), where its own drawing is faster without it; the 3D view and the map need
             // OpenGL, so they were blank in virtual machines and without GPU drivers.

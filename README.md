@@ -245,6 +245,8 @@ and extra libraries), BepInEx in the Valheim folder and in the default r2modman 
 Manager profiles, and worlds in Valheim's own world folders (Proton's too). When yours are
 elsewhere, set them in **Settings** on the start page:
 
+- **Language**: the editor's language, by default the computer's when the editor has it (else
+  English). Taken when the editor starts again. To translate it: [docs/translating.md](docs/translating.md).
 - **Valheim game folder**: the folder with `valheim_Data` (a copy outside Steam, a second install…).
   **Automatic** goes back to searching the Steam libraries.
 - **BepInEx folders**: a `BepInEx` folder, a mod manager profile, or a folder of profiles (a mod
@@ -290,6 +292,7 @@ the folder.
 | [Live mode](docs/live-mode.md) | Editing your game or a dedicated server while it runs: connecting, Apply live and Auto, following the game, moving things, undo after applying, modded games |
 | [Script](docs/scripting.md) | C# scripts that shape, paint and populate an area: the examples, how they run, everything they can use, recipes |
 | [Claude](docs/claude.md) | Letting Claude shape the world or build in the Workshop from a prompt (MCP): turning it on, what it can do, safety |
+| [Translating](docs/translating.md) | The language catalogues, making or correcting one, adding texts in the code |
 | [For mod authors](docs/modding.md) | What the editor learns from building mods by itself, the optional `worldeditor.json`, linked objects, extensions (the SDK), live mode hooks |
 | [Development](docs/development.md) | Project layout, the driver and the documentation's pictures, building, tests |
 

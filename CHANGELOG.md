@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.0 — unreleased
+
+### Added
+- **The editor can be translated.** Its texts move into language catalogues (`Core/Lang/en.json`, English); a
+  catalogue dropped in the data folder's `lang` folder (`fr.json`, `pt-BR.json`…) translates the editor, English
+  showing where it has no text yet. **Settings › Language** chooses the language, by default the computer's when
+  there is a catalogue of it. The hover tips and Settings come from the catalogue so far; the other windows follow.
+  How to translate: [docs/translating.md](docs/translating.md).
+
 ## v1.43.0 — 2026-10-14
 
 ### Changed
