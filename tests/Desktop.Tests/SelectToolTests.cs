@@ -237,8 +237,13 @@ public class SelectToolTests
             w.View.SelectTool.PlaceAt(by, 0, 0, 0, by: true);
             var moved = s.Scene.Things.Skip(2).ToList();
             Assert.Equal(2, moved.Count);
-            Assert.Contains(moved, t => t.Position.X is > 96 or < -32);
-            Assert.All(moved, t => Assert.Equal(30, t.Position.Y, 3));
+            var tree = moved.Single(t => t.Prefab == Beech);
+            var wall = moved.Single(t => t.Prefab == Wall);
+            var (outside, inside) = by > 0 ? (wall, tree) : (tree, wall);
+            Assert.True(outside.Position.X is > 96 or < -32);
+            Assert.Equal(30, outside.Position.Y, 3);
+            // Inside, on the ground: the tree at its foot, the wall with its bottom (0.5 m below its middle) on it.
+            Assert.Equal(inside == tree ? 30 : 30.5f, inside.Position.Y, 3);
             w.CloseWithoutAsking();
         }
     }
