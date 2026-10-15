@@ -583,17 +583,23 @@ public sealed class MapPage : IDisposable
     }
 
     /// <summary>
-    /// Live: asks the game for the players online and puts them on the map.
+    /// Live: asks the game for the players online and puts them on the map. One question at a time per world (a game
+    /// slow to answer gets no pile of them), and an answer for a world no longer shown is dropped.
     /// </summary>
-    private async Task PollPlayers()
+    internal async Task PollPlayers()
     {
-        if (_session?.Live is not { } live)
+        if (_session is not { Live: { } live } s || !_polling.Add(s))
         {
             return;
         }
         try
         {
-            var json = System.Text.Json.Nodes.JsonNode.Parse(await live.Players())?.AsArray();
+            string answer = await live.Players();
+            if (_session != s)
+            {
+                return;
+            }
+            var json = System.Text.Json.Nodes.JsonNode.Parse(answer)?.AsArray();
             var players = json?.Where(p => p?["name"] != null).Select(p => ((string)p!["name"]!, (float)(p["x"] ?? 0), (float)(p["z"] ?? 0))).ToList() ?? [];
             LiveText.Text = $"Live world · {players.Count} player(s) online{(players.Count > 0 ? ": " + string.Join(", ", players.Select(p => p.Item1)) : "")}";
             Map.Players = players;
@@ -602,9 +608,22 @@ public sealed class MapPage : IDisposable
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException or FormatException)
         {
-            LiveText.Text = "Live world · the game does not answer right now.";
+            if (_session == s)
+            {
+                LiveText.Text = "Live world · the game does not answer right now.";
+            }
+        }
+        finally
+        {
+            _polling.Remove(s);
         }
     }
+
+    /// <summary>
+    /// The worlds whose players are being asked for now (a question waits for each one's answer): a world shown again
+    /// before its game answered is not asked a second time.
+    /// </summary>
+    private readonly HashSet<WorldSession> _polling = [];
 
     /// <summary>
     /// The players' names next to their dots.

@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.36 — unreleased
+
+### Fixed
+- **A live world's map could show another world's players.** The map asks the game for its players every 5 seconds,
+  without waiting for the last answer: a game that hung got a new question every 5 seconds (each waiting up to
+  3 minutes), and the answers changed the players' line in whatever order they came. An answer that came after
+  another world was shown put the old world's players on the new map. The map now asks a world's game again only once it
+  has answered (also when that world is shown again meanwhile), and drops an answer for a world no longer shown.
+
 ## v1.45.35 — unreleased
 
 ### Fixed
