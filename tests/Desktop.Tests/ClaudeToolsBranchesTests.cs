@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text.Json.Nodes;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using ModelContextProtocol.Protocol;
 using SkiaSharp;
 using TerrainEditor.App;
@@ -82,6 +83,20 @@ public class ClaudeToolsBranchesTests
         string made = await r.T.GenerateDungeon(size: 1, levels: 1, seed: 5);
         Assert.Contains("Now pending:", made);
         Assert.True(r.W.World!.Pending.Added > 0, made);
+    }
+
+    // The map shown while the dungeon is made: it is placed nowhere.
+    [AvaloniaFact]
+    public async Task ADungeonMadeWhileTheMapWasShownGoesNowhere()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        var made = r.T.GenerateDungeon(size: 1, levels: 1, seed: 5, x: 5, z: 5);
+        // Lets the tool's first step (its check of the open area) run before the map is shown.
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+        r.W.ShowMap();
+        Assert.Equal("The area was closed (or another opened) while the dungeon was made: nothing was placed.", await made);
+        Assert.Equal(0, r.W.World!.Pending.Added);
     }
 
     // A world with changes not saved: the Workshop is not opened over it.
