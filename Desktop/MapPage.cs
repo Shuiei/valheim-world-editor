@@ -236,6 +236,14 @@ public sealed class MapPage : IDisposable
     /// </summary>
     private int[]? _stats;
     /// <summary>
+    /// Counts each time the zone counts are thrown away (Show): counts read before that are not kept.
+    /// </summary>
+    private int _statsGeneration;
+    /// <summary>
+    /// How many zone count reads are going on (the "Reading every zone…" status is theirs).
+    /// </summary>
+    private int _reading;
+    /// <summary>
     /// Whether matches are shown, so changing the filter shows them again at once.
     /// </summary>
     private bool _filtered;
@@ -508,6 +516,7 @@ public sealed class MapPage : IDisposable
         }
         // Saved, discarded, reloaded or edited since: the zone counts are read again when next asked.
         _stats = null;
+        _statsGeneration++;
         var w = session.World;
         Meta.Text = session.IsLive
             ? $"{w.Name} · live ({session.Label}) · seed {w.SeedName} · {w.ObjectCount:N0} objects"
@@ -727,7 +736,9 @@ public sealed class MapPage : IDisposable
     }
 
     /// <summary>
-    /// Every zone's counts, read once (in the background) until the world changes; null when no world is shown.
+    /// Every zone's counts, read once (in the background) until the world changes; null when no world is shown, or when
+    /// a world was shown again while they were read (another world, or the same one saved or discarded: they are from
+    /// before, dropped).
     /// </summary>
     private async Task<int[]?> Stats()
     {
@@ -737,8 +748,28 @@ public sealed class MapPage : IDisposable
         }
         if (_stats == null)
         {
+            int generation = _statsGeneration;
             ZoneInfo.Text = "Reading every zone…";
-            _stats = await Task.Run(() => ZoneStats.Compute(s.World, s.Edits, (x, z) => (int)s.Terrain.BiomeAt(x * 64f, z * 64f)));
+            _reading++;
+            int[] stats;
+            try
+            {
+                stats = await Task.Run(() => ZoneStats.Compute(s.World, s.Edits, (x, z) => (int)s.Terrain.BiomeAt(x * 64f, z * 64f)));
+            }
+            finally
+            {
+                _reading--;
+            }
+            if (_session != s || _statsGeneration != generation)
+            {
+                // The status said this read was going on: cleared, unless another read is, or has shown its counts.
+                if (_reading == 0 && _stats == null)
+                {
+                    ZoneInfo.Text = "";
+                }
+                return null;
+            }
+            _stats = stats;
         }
         return _stats;
     }
@@ -799,9 +830,16 @@ public sealed class MapPage : IDisposable
             return;
         }
         bool live = s.IsLive, ground = GroundBox.IsChecked == true;
+        int generation = _statsGeneration;
         if (!await Confirm($"Mark {Matches.Count:N0} zone(s) for reset?\n\n• Their trees, rocks, ore, ruins and dungeon entrances are removed{(ground ? ", and their ground edits undone" : "")}; players' tombstones stay.\n"
             + $"• Valheim generates them again the next time a player comes near{(live ? " (at once where players are, once applied)" : "")}.\n"
             + $"• {(live ? "Apply live" : "Save to world")} does it; until then it can be cancelled with Unmark all."))
+        {
+            return;
+        }
+        // A world shown while asking (another one, or this one saved, discarded or read again): the matches were
+        // worked out before, and are gone.
+        if (_session != s || _statsGeneration != generation)
         {
             return;
         }

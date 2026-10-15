@@ -9,7 +9,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The map page's edges on the test world: nothing happens without a world, the players' line when the game errors or
 /// sends garbage, the biomes' names, the cursor's line when the mouse is over the map, an empty search and one that
-/// fails, the zone filter's messages and questions, and Show ruins.
+/// fails, the zone filter's messages and questions (kept with their world when another is shown), and Show ruins.
 /// </summary>
 [Collection("World files")]
 public class MapPageTests
@@ -183,6 +183,76 @@ public class MapPageTests
         Assert.NotEmpty(r.M.Matches);
         r.M.RMaxBox.Text = "0";
         Assert.All(r.M.Matches, z => Assert.Equal((0, 0), z));
+    }
+
+    // Zone counts still being read when another world is shown are the first world's: dropped, not matched against the
+    // second; a question answered once another world is shown marks nothing in either.
+    [AvaloniaFact]
+    public async Task ZoneCountsAndMarksStayWithTheirWorld()
+    {
+        using var r = new Run();
+        await r.Open();
+        var first = r.W.World!;
+        string otherDir = Fixtures.CopyFixture();
+        try
+        {
+            var other = WorldSession.Open(otherDir);
+            r.M.NoBuildBox.IsChecked = false;
+            r.M.OnlyGenBox.IsChecked = false;
+            r.M.NoEditBox.IsChecked = false;
+            // Shown before the counts come back (they come back on this thread, after it).
+            var showing = r.M.ShowMatching();
+            r.M.Show(other);
+            await showing;
+            Assert.Empty(r.M.Matches);
+            // The second world's own counts are read when asked.
+            await r.M.ShowMatching();
+            Assert.NotEmpty(r.M.Matches);
+            // Back to the first, which switches to the second while asking.
+            r.M.Show(first);
+            r.M.Confirm = _ =>
+            {
+                r.M.Show(other);
+                return Task.FromResult(true);
+            };
+            await r.M.MarkMatching();
+            Assert.Equal(0, first.Pending.Resets);
+            Assert.Equal(0, other.Pending.Resets);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(otherDir)!, recursive: true);
+        }
+    }
+
+    // Zone counts still being read when the same world is shown again (after a save or a discard) are from before: dropped
+    // (with their "Reading" status), and read again when next asked; a question answered once it is shown again marks
+    // nothing.
+    [AvaloniaFact]
+    public async Task ZoneCountsAndMarksFromBeforeTheWorldIsShownAgainAreDropped()
+    {
+        using var r = new Run();
+        await r.Open();
+        r.M.NoBuildBox.IsChecked = false;
+        r.M.OnlyGenBox.IsChecked = false;
+        r.M.NoEditBox.IsChecked = false;
+        // Shown again before the counts come back (they come back on this thread, after it).
+        var showing = r.M.ShowMatching();
+        r.M.Show(r.W.World!);
+        await showing;
+        Assert.Empty(r.M.Matches);
+        Assert.Equal("", r.M.ZoneInfo.Text);
+        var again = r.M.ShowMatching();
+        Assert.Equal("Reading every zone…", r.M.ZoneInfo.Text);
+        await again;
+        Assert.NotEmpty(r.M.Matches);
+        r.M.Confirm = _ =>
+        {
+            r.M.Show(r.W.World!);
+            return Task.FromResult(true);
+        };
+        await r.M.MarkMatching();
+        Assert.Equal(0, r.W.World!.Pending.Resets);
     }
 
     [AvaloniaFact]
