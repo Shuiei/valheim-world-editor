@@ -120,10 +120,22 @@ public static class GameData
             {
                 return false;
             }
-            ModCatalogue.Load();
-            foreach (var kind in Kinds)
+            try
             {
-                Use(kind, read[kind.Name]);
+                ModCatalogue.Load();
+                foreach (var kind in Kinds)
+                {
+                    Use(kind, read[kind.Name]);
+                }
+            }
+            catch (Exception e)
+            {
+                // A kind the editor cannot take (the game changed what it holds): those before it are in use already,
+                // so none counts as had, and the next Ensure takes them all again.
+                Console.WriteLine($"The game's data could not be used ({e.GetType().Name}: {e.Message}).");
+                _from = null;
+                _generation++;
+                return false;
             }
             _from = bundles.Folder;
             _generation++;

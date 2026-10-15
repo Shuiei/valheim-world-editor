@@ -200,6 +200,23 @@ public sealed class GameDataTests : IDisposable
     }
 
     [Fact]
+    public void AKindTheEditorCannotTakeLeavesNoneHad()
+    {
+        var (valheim, bundles) = Game("Valheim", code: false);
+        Caches(valheim, bundles);
+        string stamp = GameData.Stamp(valheim, bundles.Folder);
+        string file = GameData.CacheFile("zdo-keys");
+        // Its keys are hashes as text: one that is not throws as it is taken, after the kinds before it.
+        File.WriteAllText(file, "zdo-keys " + stamp + "\n{\"not a hash\": \"x\"}");
+        GameData.Forget();
+        Assert.False(GameData.Ensure(bundles));
+        // Not counted as had: asked again, it is tried again.
+        Assert.False(GameData.Ensure(bundles));
+        File.WriteAllText(file, "zdo-keys " + stamp + "\n" + Copy("zdo-keys"));
+        Assert.True(GameData.Ensure(bundles));
+    }
+
+    [Fact]
     public void ExportNeedsTheCopiesFolderTheGameAndEveryCopy()
     {
         Assert.Equal(2, GameData.Export(null));

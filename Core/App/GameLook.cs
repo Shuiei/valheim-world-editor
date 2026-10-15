@@ -60,7 +60,8 @@ public static class GameLook
     public static bool SearchOutsideHome { get; set; } = true;
 
     /// <summary>
-    /// "ready", "missing" (Valheim not found), "running" (indexing its bundles), "failed".
+    /// "ready", "missing" (Valheim not found), "running" (indexing its bundles, or at start
+    /// checking the game data kept), "failed".
     /// </summary>
     public static string State { get; private set; } = "missing";
 
@@ -142,9 +143,31 @@ public static class GameLook
             }
             if (game.Indexed)
             {
-                Set("ready", null);
-                // The rest of the game data too, ready before a world is opened (from the caches: at once).
-                Task.Run(() => GameData.Ensure(game));
+                // Running without reading: the rest of the game data checked too (from the caches: at once), so
+                // "ready" is said only once it is in use.
+                Set("running", null);
+                Task.Run(() =>
+                {
+                    string state;
+                    string? message;
+                    try
+                    {
+                        (state, message) = GameData.Ensure(game) ? ("ready", null) : ("failed", DataUnread);
+                    }
+                    catch (Exception e)
+                    {
+                        // Whatever fails, the state leaves "running".
+                        Console.WriteLine($"game look: {e}");
+                        (state, message) = ("failed", "The game's data could not be read: " + e.Message);
+                    }
+                    lock (Lock)
+                    {
+                        if (ReferenceEquals(_bundles, game))
+                        {
+                            Set(state, message);
+                        }
+                    }
+                });
                 return;
             }
             Set("running", "Reading the game's files (a few seconds, only after a game update).");
@@ -159,11 +182,12 @@ public static class GameLook
                 game.EnsureIndexed((done, count) => Report(0.1 * done / Math.Max(1, count), $"Indexing the game's bundles: {done} of {count}"));
                 int n = game.Index.Count;
                 (state, message) = n == 0 ? ("failed", "No models were found in the game's files.")
-                    : !GameData.Ensure(game, (p, step) => Report(0.1 + (0.9 * p), step)) ? ("failed", "Some of the game's data could not be read (see the log).")
+                    : !GameData.Ensure(game, (p, step) => Report(0.1 + (0.9 * p), step)) ? ("failed", DataUnread)
                     : ("ready", "The game's look is ready.");
             }
-            catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or NotSupportedException or NotImplementedException)
+            catch (Exception e)
             {
+                // Whatever fails, the state leaves "running": the start page would wait for ever.
                 Console.WriteLine($"game look: {e}");
                 (state, message) = ("failed", "The game's files could not be read: " + e.Message);
             }
@@ -176,6 +200,11 @@ public static class GameLook
             }
         });
     }
+
+    /// <summary>
+    /// The message when the game data (GameData.Ensure) cannot be had.
+    /// </summary>
+    private const string DataUnread = "Some of the game's data could not be read (see the log).";
 
     /// <summary>
     /// Use this Valheim folder: kept in the settings, then read. The problem, or null.
