@@ -2,7 +2,7 @@
 
 **Edit your Valheim world while it runs.** WorldEditorBridge connects
 [Valheim World Editor](https://github.com/Shuiei/valheim-world-editor), a 3D world editor for
-Windows and Linux, to your game or dedicated server. Shape the land, build, place or remove anything,
+Windows, Linux and Mac (Apple silicon, experimental), to your game or dedicated server. Shape the land, build, place or remove anything,
 and everyone online sees it appear, as if a very fast Viking had done it by hand.
 
 ![The editor, showing a base on a server](https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/images/overview.jpg)
@@ -22,12 +22,19 @@ and everyone online sees it appear, as if a very fast Viking had done it by hand
 - **Make landmarks.** Raise a mountain, a volcano or a cliff past the game's ±8 m limit, carve a
   canyon or dig a cave roofed with boulders. Players see them with no mod at all.
 - **Make dungeons.** Generate a whole dungeon from a style and a seed (crypt, fortress, Dvergr
-  hold, goblin warren…), stocked with its creatures and loot, or add rooms to the game's own
-  dungeons (Frost Caves, crypts, infested mines…) and remove them. The game builds them, no mod
-  needed for players.
+  hold, goblin warren…), up to 16 levels deep, with rooms furnished and lit for what they are and
+  stocked with creatures and loot. It goes in behind the game's own entrance of its kind. Or add
+  rooms to the game's own dungeons (Frost Caves, crypts, infested mines…) and remove them. The game
+  builds them, no mod needed for players.
 - **Bring in a building.** Design it in the editor's Workshop (or use a
   [Homestead](https://thunderstore.io/c/valheim/p/sighsorry/Homestead/) blueprint) and paste it into
-  the world: the hill in its way is dug out, trees and rocks there are cleared.
+  the world: the hill in its way is dug out, trees and rocks there are cleared. The blueprint
+  library shows each one's picture and what it costs to build.
+- **Rearrange a base.** Select a whole building and move or turn it, or cut it and paste it
+  somewhere else. In a running game a moved object stays the same object: a chest keeps what is in
+  it, and mods that keep track of it still know it.
+- **Bring the camps back.** Put the game's spawn points and creature nests where you want them, each
+  showing what it spawns, and players meet the creatures there.
 - **Ask Claude to build it.** Let Claude (Claude Code or Claude Desktop) work in the editor from a
   prompt: shape the ground, lay roads, plant forests, build houses and dungeons. You watch it happen,
   and nothing changes in the game until you apply it.
@@ -55,8 +62,20 @@ you open the world.
 3. You edit. Nothing reaches the game until you press **Apply live** (or turn on **Auto**). Then
    the game gets the changed ground and objects, players see them, and the game saves them as usual.
 
+The area you edit can be up to 17 × 17 zones (over a kilometre across), and it grows by itself as
+you look towards its edge.
+
 A dedicated server is reached through an encrypted SSH connection the editor opens by itself: the
 mod is never exposed to the internet, and you have nothing else to set up.
+
+## Modded games
+
+Open a modded game live and the editor asks it for the pieces and objects its mods add. They get
+their names, are drawn with the mods' own models and textures, and can be placed, or built from the
+Workshop's **Mods** tab with their cost. What the editor learned is kept, so the same world opened
+offline afterwards shows them too. Mod authors can teach the editor more about their mod, up to
+hooks for their own plugin in live mode: see
+[For mod authors](https://github.com/Shuiei/valheim-world-editor/blob/main/docs/modding.md).
 
 ## Install
 
