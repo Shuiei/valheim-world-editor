@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.28 — unreleased
+
+### Fixed
+- **Keys still worked while a world was being saved from the 3D editor.** Saving only greyed out the Save button: Ctrl+S
+  asked to save again and could start a second write, and Ctrl+Z, Follow or the save bar froze the editor until the
+  save ended. Saving now shows the same "Saving…" veil as the map, the editor's keys wait while it is up, and Follow
+  waits too.
+
 ## v1.45.27 — unreleased
 
 ### Fixed

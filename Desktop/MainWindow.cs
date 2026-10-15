@@ -859,7 +859,8 @@ public sealed partial class MainWindow : Window
     internal async Task Save()
     {
         var s = Session;
-        if (s == null)
+        // Not while saving (or reading the world): the veil is up.
+        if (s == null || IsBusy)
         {
             return;
         }
@@ -890,6 +891,8 @@ public sealed partial class MainWindow : Window
         }
         SaveButton.IsEnabled = false;
         MessageText.Text = "Saving…";
+        // The veil keeps the keys (Ctrl+S, Ctrl+Z), the mouse and Follow off the area while it is written.
+        Busy("Saving…");
         try
         {
             var res = await Task.Run(s.Save);
@@ -906,7 +909,13 @@ public sealed partial class MainWindow : Window
         {
             MessageText.Text = "Could not save: " + ex.Message;
         }
-        // Saved objects lose their green marks.
+        finally
+        {
+            // Down only once the result has been read: until then Follow and the keys still wait.
+            Busy(null);
+        }
+        // Saved objects lose their green marks; after a failure the marks and the save bar show what is still unsaved
+        // (and the Save button comes back).
         View.RefreshNewMarkers();
         UpdateSaveBar();
     }
@@ -1910,8 +1919,9 @@ public sealed partial class MainWindow : Window
     private void OnKey(object? sender, Avalonia.Input.KeyEventArgs e)
     {
         // Typing in a box: its keys are its own. The keys below are the 3D editor's: on the start page or
-        // the map they would act on the area left open behind it (an undo pushed live, unseen).
-        if (e.Source is TextBox || _pages.Content != _editorPage)
+        // the map they would act on the area left open behind it (an undo pushed live, unseen); under the busy veil
+        // (saving, reading the world again) they would wait on it or do it twice.
+        if (e.Source is TextBox || _pages.Content != _editorPage || IsBusy)
         {
             return;
         }

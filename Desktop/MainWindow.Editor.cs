@@ -286,6 +286,11 @@ public sealed partial class MainWindow
     /// <summary>What stops the area from moving now (Follow waits): something unfinished would be lost.</summary>
     internal string? MoveBlocker()
     {
+        // First: while saving, the session's other checks would wait for the save to end.
+        if (IsBusy)
+        {
+            return "the world is being saved or read";
+        }
         if (View.Selected.Count > 0)
         {
             return "objects are selected (Esc clears)";
