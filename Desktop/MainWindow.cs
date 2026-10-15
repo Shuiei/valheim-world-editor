@@ -496,7 +496,7 @@ public sealed partial class MainWindow : Window
                     world.Area = Session;
                 }
                 MessageText.Text = "That area was not opened: the map or another area was asked for while it loaded.";
-                return;
+                return false;
             }
             // Shown: the world's area, even if a load dropped meanwhile had reset it.
             world.Area = scene.Session;

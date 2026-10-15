@@ -473,12 +473,19 @@ public sealed partial class MainWindow
     /// <returns>Whether the area was opened again.</returns>
     internal async Task<bool> ReopenArea(WorldScene old)
     {
+        // The old area shows the world as it was: closed, and not the world's area (its history would be kept).
         Session = null;
+        if (old.Owner is { } w && w.Area == old.Session)
+        {
+            w.Area = null;
+        }
+        long navigation = _navigation;
         if (await OpenBlockKeepingView(old.X0, old.Z0, old.ZonesX, old.ZonesZ))
         {
             return true;
         }
-        if (Session == null)
+        // Not when the map or another area was asked for while it loaded: that one stands.
+        if (Session == null && _navigation == navigation + 1)
         {
             string why = MessageText.Text ?? "";
             ShowMap();

@@ -155,4 +155,35 @@ public class MainWindowEditorWorldTests
         Assert.False(r.W.IsBusy);
         Assert.StartsWith("The world was read again, but the area could not be opened again. Could not open that area: ", Assert.Single(r.Told));
     }
+
+    // The old area still the world's (a live Reload keeps it): it is no longer, so its history is not kept over the
+    // world read again.
+    [AvaloniaFact]
+    public async Task AnAreaThatDoesNotOpenAgainIsNoLongerTheWorldsArea()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        var world = r.W.World!;
+        var bad = new WorldScene
+        {
+            World = world.World,
+            Owner = world,
+            Session = r.W.Session,
+            Name = "test",
+            ZonesX = -1,
+            ZonesZ = -1,
+            Heights = [],
+            Biomes = [],
+            Things = [],
+            BiomeColor = [],
+            Mask = [],
+            OceanDepth = [],
+            Limit = [],
+        };
+        Assert.Same(bad.Session, world.Area);
+        Assert.False(await r.W.ReopenArea(bad));
+        Assert.True(r.W.MapShown);
+        Assert.Null(r.W.Session);
+        Assert.Null(world.Area);
+    }
 }
