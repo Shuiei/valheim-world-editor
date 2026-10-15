@@ -169,7 +169,8 @@ public sealed class SelectTool
     /// <summary>
     /// Where an item ends up: turned around the selection's middle (clockwise from above, like Unity's
     /// yaw), moved, and on the ground there (or as high above it as before). Pieces on the ground move
-    /// as one block (see GroundBlock). Past the area's edge, where there is no ground, it keeps its own height.
+    /// as one block (see GroundBlock), those past the area's edge too, so a building across it keeps its shape. Anything
+    /// else past the edge, where there is no ground, keeps its own height.
     /// </summary>
     /// <param name="m">The move.</param>
     /// <param name="it">The item.</param>
