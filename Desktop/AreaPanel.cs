@@ -80,6 +80,12 @@ public sealed class AreaPanel
     public AreaTool Area { get; }
     private readonly GlView _view;
     private readonly Func<EditSession?> _session;
+
+    /// <summary>
+    /// Whether an Apply is running: it can wait on a question, the generator or a backup being read, and a second one
+    /// meanwhile would do the same again.
+    /// </summary>
+    private bool _applying;
     private readonly Func<int, string?> _nameOf;
     /// <summary>Asks a yes/no question (the window's dialog); resetting zones goes on only on true.</summary>
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
@@ -570,8 +576,43 @@ public sealed class AreaPanel
         _ => null,
     };
 
-    /// <summary>The action (Apply, Enter).</summary>
+    /// <summary>The action (Apply, Enter). While one runs, another does nothing (Apply greyed out).</summary>
     public async Task Apply()
+    {
+        if (_applying)
+        {
+            return;
+        }
+        _applying = true;
+        ApplyButton.IsEnabled = false;
+        try
+        {
+            await ApplyOnce();
+        }
+        finally
+        {
+            _applying = false;
+            ApplyButton.IsEnabled = true;
+        }
+    }
+
+    /// <summary>
+    /// Whether the session is still the one open after a wait; when it is not (another area opened, the world
+    /// closed), says that nothing was applied.
+    /// </summary>
+    /// <param name="session">The session the action started on.</param>
+    private bool StillOpen(EditSession session)
+    {
+        if (ReferenceEquals(_session(), session))
+        {
+            return true;
+        }
+        Message?.Invoke("The area changed while this was running: nothing was applied.");
+        return false;
+    }
+
+    /// <inheritdoc cref="Apply"/>
+    private async Task ApplyOnce()
     {
         if (_session() is not { } session)
         {
@@ -808,7 +849,7 @@ public sealed class AreaPanel
         var maskAt = new Lazy<Func<float, float, bool>>(MaskTest);
         var adds = await Growth.Spots(session, poly.Min(p => p.X) + ox, poly.Min(p => p.Y) + oz, poly.Max(p => p.X) + ox, poly.Max(p => p.Y) + oz,
             o => AreaTool.Inside(poly, o.X - ox, o.Z - oz) && Area.Kinds.Contains(ObjectKinds.Of(o.Name, false)) && maskAt.Value(o.X - ox, o.Z - oz), _nameOf, m => Message?.Invoke(m));
-        if (adds == null)
+        if (adds == null || !StillOpen(session))
         {
             return;
         }
@@ -896,6 +937,10 @@ public sealed class AreaPanel
         if (await OpenBackup(path, s.World) is not var (bw, be))
         {
             Message?.Invoke(BackupInfo.Text ?? "");
+            return;
+        }
+        if (!StillOpen(session))
+        {
             return;
         }
         int groundPoints = 0;
@@ -1017,7 +1062,8 @@ public sealed class AreaPanel
         bool keep = KeepBuildingsBox.IsChecked == true, ground = ResetGroundBox.IsChecked == true;
         if (!await Confirm($"Reset {zones.Count} zone(s) ({string.Join(" · ", zones.Select(z => $"{z.X}, {z.Z}"))}) when you save?\n\n"
             + $"• Every tree, rock, ruin and dungeon entrance in them is removed{(keep ? " (your buildings stay)" : ", your buildings too")}.\n"
-            + (ground ? "• Their ground edits are undone.\n" : "") + "• Valheim generates the zones again the next time a player goes there."))
+            + (ground ? "• Their ground edits are undone.\n" : "") + "• Valheim generates the zones again the next time a player goes there.")
+            || !StillOpen(session))
         {
             return;
         }

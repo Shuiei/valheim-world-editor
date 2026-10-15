@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.27 — unreleased
+
+### Fixed
+- **Pressing Enter again during an Area action could do it twice.** Reset zones (while its question was open),
+  Regrow nature (while the game's vegetation was worked out) and Restore from a backup (while the backup was read)
+  wait before they change anything, and another Enter or click meanwhile started the same action again: regrown
+  trees or restored objects were added twice. When another area was opened meanwhile, the change still went to the
+  old one. Apply is now greyed out while an action runs, and an action whose area changed meanwhile applies nothing
+  and says so.
+
 ## v1.45.26 — unreleased
 
 ### Fixed
