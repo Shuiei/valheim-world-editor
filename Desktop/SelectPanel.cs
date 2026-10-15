@@ -358,11 +358,26 @@ public sealed class SelectPanel
         if (_by)
         {
             _tool.PlaceAt(V(XBox), V(YBox), V(ZBox), V(TurnBox), by: true);
+            SetBy(false);
+            return;
         }
-        else if (_shown is { } at)
+        if (_shown is not { } was)
         {
-            static float By(NumericUpDown b, float from, int digits) => b.Value == (decimal)MathF.Round(from, digits) ? 0 : V(b) - from;
-            _tool.PlaceAt(By(XBox, at.X, 2), By(YBox, at.Y, 2), By(ZBox, at.Z, 2), By(TurnBox, at.Turn, 1), by: true);
+            return;
+        }
+        // Which boxes were changed, and to what, taken before a move in progress (a turn or lift from the keys, not
+        // committed yet) is committed: the boxes were filled before it, and the place to move from is after it.
+        static bool Changed(NumericUpDown b, float from, int digits) => b.Value != (decimal)MathF.Round(from, digits);
+        var (x, y, z, turn) = (V(XBox), V(YBox), V(ZBox), V(TurnBox));
+        var (cx, cy, cz, ct) = (Changed(XBox, was.X, 2), Changed(YBox, was.Y, 2), Changed(ZBox, was.Z, 2), Changed(TurnBox, was.Turn, 1));
+        if (_tool.Moving)
+        {
+            _tool.Commit();
+            Refresh();
+        }
+        if (_shown is { } at)
+        {
+            _tool.PlaceAt(cx ? x - at.X : 0, cy ? y - at.Y : 0, cz ? z - at.Z : 0, ct ? turn - at.Turn : 0, by: true);
         }
         SetBy(false);
     }

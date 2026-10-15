@@ -68,6 +68,17 @@ public sealed class SelectPanelTests : IDisposable
         Assert.Equal(25.5f, moved.Position.X, 4);
         Assert.Equal(32, moved.Position.Y, 4);
         Assert.Equal(40.006f, moved.Position.Z, 4);
+        // A lift from the keys not committed yet when Y is typed: the typed height is reached, not the lift plus the
+        // difference from the height shown before it.
+        w.View.SelectTool.Lift(1);
+        Assert.True(w.View.SelectTool.Moving);
+        p.YBox.Value = 40;
+        p.ApplyButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Assert.False(w.View.SelectTool.Moving);
+        moved = s.Scene.Things[^1];
+        Assert.Equal(25.5f, moved.Position.X, 4);
+        Assert.Equal(40, moved.Position.Y, 4);
+        Assert.Equal(40.006f, moved.Position.Z, 4);
         w.CloseWithoutAsking();
     }
 
