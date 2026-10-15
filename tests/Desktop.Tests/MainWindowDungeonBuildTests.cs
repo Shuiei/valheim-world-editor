@@ -10,7 +10,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The window's Build here (on and off from the window, Ctrl + wheel lifting the piece, ended by another tool or another
 /// area), a generated dungeon with pieces this world cannot make, and the Workshop's generated dungeon opened on the plot
-/// or not written when its folder cannot be made.
+/// (not added to a plot opened while it was written) or not written when its folder cannot be made.
 /// </summary>
 [Collection("World files")]
 public class MainWindowDungeonBuildTests
@@ -99,6 +99,37 @@ public class MainWindowDungeonBuildTests
         Assert.True(r.W.InWorkshop);
         Assert.True(File.Exists(Path.Combine(r.Homestead, Homestead.FileName("Plot crypt"))));
         Assert.Contains(r.W.View.Scene!.Things, t => !t.Gone);
+    }
+
+    // Another plot opened while the dungeon's blueprint is written: the dungeon is not added to it.
+    [AvaloniaFact]
+    public async Task AGeneratedDungeonIsNotAddedToAPlotOpenedWhileItWasWritten()
+    {
+        using var r = new BlueprintsPanelRun();
+        await r.W.OpenWorkshop(null);
+        var plot = r.W.Session!;
+        int steps = plot.UndoList.Count;
+        // The blueprint's file is written, then held until another plot is shown.
+        var written = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        r.W.WriteBlueprintFile = async (path, text) =>
+        {
+            await File.WriteAllTextAsync(path, text);
+            written.SetResult();
+            await held.Task;
+        };
+        var settings = new DungeonGen.Settings(Size: 1, Levels: 1, Seed: 9, Name: "Moved crypt");
+        var adding = r.W.GeneratedOntoPlot(settings, DungeonGen.Make(settings), add: true);
+        await written.Task;
+        var other = TestScenes.Flat();
+        r.W.View.Show(other.Scene, null);
+        r.W.Edit(other);
+        held.SetResult();
+        await adding;
+        Assert.Equal("The Workshop changed while the dungeon was written: nothing placed. Its blueprint is in the Library.", r.W.MessageText.Text);
+        Assert.Empty(other.UndoList);
+        Assert.Equal(steps, plot.UndoList.Count);
+        Assert.True(File.Exists(Path.Combine(r.Homestead, Homestead.FileName("Moved crypt"))));
     }
 
     [AvaloniaFact]

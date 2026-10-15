@@ -38,6 +38,10 @@ public sealed class FakeGame : IDisposable
 
     /// <summary>The mods' routes (POST /mods/id/name): the answer to a body, by mod id and route name.</summary>
     public Dictionary<(string Mod, string Name), Func<byte[], byte[]>> Routes { get; } = [];
+    // Set: a players question waits for it before the game answers. PlayerReads counts the questions.
+    public TaskCompletionSource? HoldPlayers { get; set; }
+    private int _playerReads;
+    public int PlayerReads => _playerReads;
     // Set: ground sent to the game waits for it before the game answers (TerrainArrived says it came).
     public TaskCompletionSource? HoldTerrain { get; set; }
     public TaskCompletionSource TerrainArrived { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -122,6 +126,11 @@ public sealed class FakeGame : IDisposable
             }
             else if (path == "/players")
             {
+                Interlocked.Increment(ref _playerReads);
+                if (HoldPlayers is { } hold)
+                {
+                    await hold.Task;
+                }
                 body = Encoding.UTF8.GetBytes(Players);
             }
             else if (path == "/terrain")

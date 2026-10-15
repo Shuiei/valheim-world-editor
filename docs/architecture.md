@@ -248,17 +248,18 @@ token in the `X-Bridge-Token` header. For a dedicated server the editor opens it
 |---|---|
 | Plugin, `plugin/WorldEditorBridge/WorldEditorBridgePlugin.cs` (and `.Catalogue.cs`, `.Models.cs`) | Listening, the token, refusing when the game does not host the world (409) or has no world (503). Every request is queued and run on Unity's main thread (`OnMainThread`, a few per frame in `Update`); a job the caller gave up on never runs later. Creating and destroying ZDOs, terrain, zone resets, in the game. |
 | Editor, `Core/Save/LiveBridge.cs` | The HTTP client: one method per endpoint. |
-| Editor, `Core/Save/LiveSync.cs` | What the game already has: which world objects are destroyed there, the live ZDOID of each object the editor created, and which world objects' own game objects were moved to stand for one of the editor's (`_movedTo`). Each apply sends only the difference, so undo after apply works (a deleted object comes back from its snapshot bytes; a placed one is destroyed; a moved one moves back). A world object deleted with one copy of it that differs only by place and turn (`SameButPlace`: a move, or a cut pasted) is sent as a move, to a plugin whose status lists `move`. |
+| Editor, `Core/Save/BridgeAnswerException.cs` | An error status from the bridge (`ApplyTerrain`), with the status: Apply live puts No limit ground back only when the plugin turned the ground down before reading it (4xx, 503) or no connection was made. |
+| Editor, `Core/Save/LiveSync.cs` | What the game already has: which world objects are destroyed there, the live ZDOID of each object the editor created, and which world objects' own game objects were moved to stand for one of the editor's (`_movedTo`). Each apply sends only the difference, so undo after apply works (a deleted object comes back from its snapshot bytes; a placed one is destroyed; a moved one moves back). A world object deleted with one copy of it that differs only by place and turn (`SameButPlace`: a move, or a cut pasted) is sent as a move, to a plugin whose status lists `move`. To a plugin whose status lists `once`, each call goes with an id; a call left without an answer (`_unanswered`) is sent again first under it, so the plugin answers with what it did rather than making the objects twice; not to a game started since (another `run` in its status), which no longer knows: that apply fails until the world is reloaded. |
 | Editor, `Desktop/WorldSession.cs` | `ApplyLive` (one at a time: ground, then objects, then resets, after which the world is read again), and following the game (`FetchGame` off the window's thread, `MergeGame` on it). |
 
 The endpoints (the plugin's header comment lists them with their byte layouts):
 
 | Endpoint | What |
 |---|---|
-| `GET /status`, `GET /players` | JSON: plugin version, world and features (`move`: `/objects` takes moves); players and their positions. |
+| `GET /status`, `GET /players` | JSON: plugin version, world and features (`move`: `/objects` takes moves; `once`: `/objects` does a call once per `X-Call-Id`) and `run`, a new id each time the game starts; players and their positions. |
 | `GET /snapshot` | The whole persistent world, gzip: `VWEB`, a snapshot version, world info, zone data, every object in the chunk files' format. `WorldSave.LoadLive` refuses another version. |
 | `POST /terrain` | Zones' new `TCData` (`WorldWriter.EncodeTerrain`, the game's `TerrainComp.Save` format). |
-| `POST /objects` | Objects to destroy (ZDOID) and to create (save bytes), then the destroyed ones' prefab and place, then objects to move (ZDOID, prefab, place, new place and turn, and the object at its new place as save bytes); answers the new ZDOIDs, how many were refound at their place after another mod made them again, and each move's ZDOID and whether it moved in place (it is made again from its bytes where a player has both places loaded: a game does not move a standing object it shows). |
+| `POST /objects` | Objects to destroy (ZDOID) and to create (save bytes), then the destroyed ones' prefab and place, then objects to move (ZDOID, prefab, place, new place and turn, and the object at its new place as save bytes); answers the new ZDOIDs, how many were refound at their place after another mod made them again, and each move's ZDOID and whether it moved in place (it is made again from its bytes where a player has both places loaded: a game does not move a standing object it shows). A call with an `X-Call-Id` header already done (its answer lost) is answered again from the last 16 kept, not done twice. |
 | `POST /zones/reset` | Zones to generate again. |
 | `POST /watch`, `POST /zone` | One digest per zone; the objects of the zones whose digest changed (the editor asks every 2 s). |
 | `POST /models` | Prefab names, one per line: JSON, what the game draws of each (each renderer's mesh name and vertex count, submesh, material name, matrix in the root's frame, the root's scale; LOD 0, active, not the worn and broken looks). `WorldSession.OpenLive` asks it for the mod prefabs; `ModCatalogue.TakeModels` keeps them. On a dedicated server (no graphics) the game has no textures or colours to report, so only names. |
@@ -324,7 +325,9 @@ either breaks it, the user's own scripts and the docs.
 **Save safety** (`Core/Save/WorldWriter.cs`, header comment):
 
 - A save is always a new save number. Changed chunk files are written under a new version, then the
-  index, `.db2` and `.fwl2`, and the `.ok` marker last, as the game does.
+  index, `.db2` and `.fwl2`, and the `.ok` marker last, as the game does. Each file is flushed to disk,
+  and so are the folder's names (`Core/Save/DirectorySync.cs`, Linux and macOS) before the marker and
+  after it, before anything old goes.
 - The new save is read back and compared with what was meant (`WorldWriter.Verify`): one object lost
   or gained, a zone not asked for changed, and the new files are removed. Nothing of the old save is
   touched before the read-back passes.

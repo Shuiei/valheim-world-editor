@@ -5,8 +5,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// Claude's changes to a world's area (ClaudeTools): what the ready tasks refuse, taking away and redoing, what an
-/// object can be given to hold (and what it refuses), a dungeon above a point of the area, and a live world's changes
-/// that wait to be applied.
+/// object can be given to hold (and what it refuses), a dungeon above a point of the area (and none when the area
+/// changed while it was generated), and a live world's changes that wait to be applied.
 /// </summary>
 [Collection("World files")]
 public class ClaudeToolsChangingTests
@@ -104,6 +104,27 @@ public class ClaudeToolsChangingTests
         string made = await r.T.GenerateDungeon(biome: "Meadows", size: 9, levels: 0, monsters: 5, loot: -1, light: 7, decor: -2, seed: 3, name: "Test hold", x: 5, z: 5);
         Assert.Contains("Now pending:", made);
         Assert.True(r.W.World.Pending.Added > 0, made);
+    }
+
+    // Another area opened while the dungeon is generated: it is not put in that one.
+    [AvaloniaFact]
+    public async Task ADungeonGeneratedWhileAnotherAreaOpensIsNotPlaced()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        var made = r.T.GenerateDungeon(size: 1, levels: 1, seed: 5);
+        // Another area opens, queued after the check before generating and before the dungeon is placed.
+        var other = TestScenes.Flat();
+        var switched = Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            r.W.View.Show(other.Scene, null);
+            r.W.Edit(other);
+        });
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        await switched;
+        Assert.Equal("The area was closed (or another opened) while the dungeon was made: nothing was placed.", await made);
+        Assert.Empty(other.UndoList);
+        Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
     }
 
     // Live with Auto off, Claude's change waits for Apply live: another world is not opened over it.

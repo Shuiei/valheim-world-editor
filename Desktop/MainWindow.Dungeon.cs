@@ -21,6 +21,11 @@ public partial class MainWindow
     internal bool BuildingInDungeon => _dungeonKept != null;
 
     /// <summary>
+    /// Writes a generated dungeon's blueprint file (path, text). Tests hold it to change the window meanwhile.
+    /// </summary>
+    internal Func<string, string, Task> WriteBlueprintFile { get; set; } = (path, text) => File.WriteAllTextAsync(path, text);
+
+    /// <summary>
     /// Turns Build here on (the Place tool's settings are kept aside, the Workshop's Build starts and the Place
     /// tool cuts at the view's cut height) or off (the Place tool gets its settings back).
     /// </summary>
@@ -236,8 +241,8 @@ public partial class MainWindow
         }
         var near = world.Locations.Where(l => MathF.Abs(l.Position.X - at.X) < 600 && MathF.Abs(l.Position.Z - at.Z) < 600);
         var taken = DungeonGen.Taken(high, near);
-        var files = new Dictionary<ChunkFile, byte[]>();
-        byte[]? Blank(NewObject n) => world.NewObjectBytes(n, m => world.LiveBytes ?? (files.TryGetValue(m.File, out byte[]? f) ? f : files[m.File] = File.ReadAllBytes(Path.Combine(world.Directory, m.File.FileName))));
+        Func<ObjectRef, byte[]> source = world.SourceReader();
+        byte[]? Blank(NewObject n) => world.NewObjectBytes(n, source);
         bool Known(int prefab) => world.ModelFor(prefab, null) != null || Terrain.PrefabCatalog.Details(prefab) != null;
         var adds = new List<(NewObject, bool)>();
         // The entrance of its kind, when the game's files describe one with a door out; its front toward the camera.
@@ -394,10 +399,14 @@ public partial class MainWindow
 
     /// <summary>
     /// The Workshop's Generate dungeon: the dungeon made onto the plot, alone (asking first when what is
-    /// there is not saved) or added to it in its middle. Its blueprint stays in the Library.
+    /// there is not saved) or added to it in its middle (not when the plot changed while its blueprint was
+    /// written: said). Its blueprint stays in the Library.
     /// </summary>
     internal async Task GeneratedOntoPlot(DungeonGen.Settings settings, DungeonGen.Result r, bool add)
     {
+        // The plot it is added to: another one opened (or the Workshop left) while the blueprint was written does not
+        // get it.
+        var plot = Session;
         if (await WriteGeneratedBlueprint(settings, r) is not string path)
         {
             return;
@@ -405,6 +414,11 @@ public partial class MainWindow
         BuildPanel.RenderLibrary();
         if (add)
         {
+            if (!InWorkshop || Session != plot)
+            {
+                MessageText.Text = "The Workshop changed while the dungeon was written: nothing placed. Its blueprint is in the Library.";
+                return;
+            }
             AddToWorkshop(path, null);
         }
         else
@@ -453,7 +467,7 @@ public partial class MainWindow
             {
                 path = Path.Combine(folder, Homestead.FileName($"{r.Name} ({n})"));
             }
-            await File.WriteAllTextAsync(path, Homestead.Write(new System.Text.Json.Nodes.JsonObject { ["objects"] = objects }, r.Name, "Valheim World Editor", null, DateTime.Now,
+            await WriteBlueprintFile(path, Homestead.Write(new System.Text.Json.Nodes.JsonObject { ["objects"] = objects }, r.Name, "Valheim World Editor", null, DateTime.Now,
                 $"A generated dungeon (seed {settings.Seed}): {string.Join(" ", r.Notes).TrimEnd('.')}. The portal marks where players arrive: the entrance's door out opens there.", DungeonTags));
             return path;
         }

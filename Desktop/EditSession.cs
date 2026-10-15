@@ -109,9 +109,10 @@ public sealed class EditSession
                 parts.Add($"{removed} removed");
             }
 
-            if (Resets.Length > 0)
+            int resets = Resets.Select(r => (r.Reset.X, r.Reset.Z)).Distinct().Count();
+            if (resets > 0)
             {
-                parts.Add($"{Resets.Length} zone reset");
+                parts.Add($"{resets} zone reset");
             }
 
             return string.Join(" · ", parts);
@@ -188,8 +189,16 @@ public sealed class EditSession
             }
             int[] pts = c.Points;
             var things = c.Things.Select(t => (t.Index, Scene.Things[t.Index].Gone, t.Before)).Where(t => t.Gone != t.Before).ToArray();
-            var marked = Edits.Resets.Select(r => (r.X, r.Z)).ToHashSet();
-            var resets = c.Resets.Select(r => (r.Reset, marked.Contains((r.Reset.X, r.Reset.Z)), r.Before)).ToArray();
+            // A zone goes back only while it is still marked as the step left it (as paint): a later step's marking stays.
+            var marked = Edits.Resets.ToDictionary(r => (r.X, r.Z));
+            var resets = c.Resets.GroupBy(r => (r.Reset.X, r.Reset.Z))
+                .SelectMany(z =>
+                {
+                    ZoneReset? now = marked.GetValueOrDefault(z.Key);
+                    ZoneReset? left = z.Where(r => r.After).Select(r => r.Reset).FirstOrDefault();
+                    return ResetEntries(now, now == left ? z.Where(r => r.Before).Select(r => r.Reset).FirstOrDefault() : now);
+                })
+                .ToArray();
             removal = new Change($"Removed: {c.Label}", pts, Pick(start, pts), Pick(g.Snapshot(), pts), c.Zones) { Things = things, Resets = resets, RevertOf = c };
             if (pts.Length > 0)
             {
@@ -197,10 +206,7 @@ public sealed class EditSession
             }
             Send(c.Zones);
             SetGone(things.Select(t => (t.Index, t.Before)));
-            foreach (var (r, _, on) in resets)
-            {
-                Edits.SetReset(r, on);
-            }
+            SetResets(resets, after: true);
             c.Removed = true;
         }
         AddChange(removal);
@@ -263,6 +269,15 @@ public sealed class EditSession
     /// The brush stroke going on; null between strokes (during one, undo and redo do nothing and saving throws).
     /// </summary>
     private Stroke? _stroke;
+    /// <summary>
+    /// An Apply live came back during the stroke: the ground takes the edits again when the stroke ends (taken during
+    /// it, they would wipe what the stroke did so far).
+    /// </summary>
+    private bool _takeEditsAfterStroke;
+    /// <summary>
+    /// The stroke going on was dropped: an Apply live read the area again during it. EndStroke says so.
+    /// </summary>
+    private bool _strokeDropped;
     /// <summary>
     /// The grid rectangle changed since the view last took it (to send to the graphics card).
     /// </summary>
@@ -368,6 +383,7 @@ public sealed class EditSession
         lock (_lock)
         {
             _stroke = new Stroke { Tool = tool, Start = Ground.Snapshot() };
+            _strokeDropped = false;
             // Judged as the ground was when the stroke started.
             _strokeMask = Mask.For(Ground, Scene.Biomes, frozen: true);
             // Flatten: level to the ground under the first click.
@@ -411,6 +427,11 @@ public sealed class EditSession
             _stroke = null;
             if (s == null)
             {
+                if (_strokeDropped)
+                {
+                    _strokeDropped = false;
+                    return "The stroke was dropped: Apply live read the area again from the game while it went on. Draw it again.";
+                }
                 return "";
             }
             if (s.Touched.Count > 0)
@@ -418,6 +439,12 @@ public sealed class EditSession
                 var zones = Ground.ZonesOf(s.Touched);
                 Record(Brush.Label(s.Tool), s.Start, s.Touched, zones);
                 Send(zones);
+            }
+            // After the stroke went into the edit store, as the Apply live that came back during it would have done.
+            if (_takeEditsAfterStroke)
+            {
+                _takeEditsAfterStroke = false;
+                Ground.TakeEdits(Edits);
             }
             message = s.Clamped ? "Reached the game limit: ground can only move 8 m from its original height (red points)."
                 : s.Touched.Count == 0 && _strokeMask != null ? "Nothing changed: the Mask leaves out all the ground under the brush (check its height, slope, biome and paint settings)." : "";
@@ -747,10 +774,7 @@ public sealed class EditSession
             }
             Send(c.Zones);
             SetGone(c.Things.Select(t => (t.Index, after ? t.After : t.Before)));
-            foreach (var (r, b, a) in c.Resets)
-            {
-                Edits.SetReset(r, after ? a : b);
-            }
+            SetResets(c.Resets, after);
             c.RevertOf?.Removed = after;
         }
         if (c.Things.Length > 0)
@@ -1129,10 +1153,7 @@ public sealed class EditSession
             Edits.AddObjects(added);
         }
         SetGone(changes.Where(c => c.Item3).Select(c => (c.Item1, true)));
-        foreach (var (r, _, on) in resets ?? [])
-        {
-            Edits.SetReset(r, on);
-        }
+        SetResets(resets ?? [], after: true);
         if (points.Length == 0 && changes.Count == 0 && (resets?.Length ?? 0) == 0)
         {
             return indices;
@@ -1166,8 +1187,8 @@ public sealed class EditSession
     /// <param name="label">The history's name for the step.</param>
     public void MarkResets(IReadOnlyCollection<(int X, int Z)> zones, bool keepBuildings, bool ground, string label)
     {
-        var marked = Resets.Select(r => (r.X, r.Z)).ToHashSet();
-        var resets = zones.Select(z => (new ZoneReset(z.X, z.Z, keepBuildings, ground), marked.Contains(z), true)).ToArray();
+        var marked = Resets.ToDictionary(r => (r.X, r.Z));
+        var resets = zones.SelectMany(z => ResetEntries(marked.GetValueOrDefault(z), new ZoneReset(z.X, z.Z, keepBuildings, ground))).ToArray();
         Func<Ground, (List<int>, (int, int, int, int))>? clearGround = !ground ? null : g =>
         {
             var touched = new List<int>();
@@ -1191,6 +1212,57 @@ public sealed class EditSession
             return (touched, (0, 0, g.W - 1, g.H - 1));
         };
         Commit(label, clearGround, [], [], resets);
+    }
+
+    /// <summary>
+    /// A step's reset entries for one zone going from one marking to another (null: not marked). A zone marked with
+    /// other options gets two: the old marking taken off and the new one put on, so undo and redo bring back each
+    /// side's options (SetResets takes marks off first).
+    /// </summary>
+    /// <param name="before">The zone's marking before the step.</param>
+    /// <param name="after">Its marking after the step.</param>
+    private static IEnumerable<(ZoneReset Reset, bool Before, bool After)> ResetEntries(ZoneReset? before, ZoneReset? after)
+    {
+        if (before == after)
+        {
+            if (before != null)
+            {
+                yield return (before, true, true);
+            }
+            yield break;
+        }
+        if (before != null)
+        {
+            yield return (before, true, false);
+        }
+        if (after != null)
+        {
+            yield return (after, false, true);
+        }
+    }
+
+    /// <summary>
+    /// Marks and unmarks zones for reset as one side of a step's entries says: every mark is taken off before any is
+    /// put on, so a zone whose options the step changed ends with that side's options.
+    /// </summary>
+    /// <param name="resets">The step's entries.</param>
+    /// <param name="after">The side to set: after the step (do, redo) or before it (undo).</param>
+    private void SetResets(IReadOnlyCollection<(ZoneReset Reset, bool Before, bool After)> resets, bool after)
+    {
+        foreach (var (r, b, a) in resets)
+        {
+            if (!(after ? a : b))
+            {
+                Edits.SetReset(r, false);
+            }
+        }
+        foreach (var (r, b, a) in resets)
+        {
+            if (after ? a : b)
+            {
+                Edits.SetReset(r, true);
+            }
+        }
     }
 
     /// <summary>Unmarks those of these zones that are marked for reset, as one undo step.</summary>
@@ -1262,7 +1334,7 @@ public sealed class EditSession
             var o = owner.Save();
             result = o.Saved!;
             // Read again only when the world was (zone resets) or No limit ground became ground discs
-            // (also when the save then failed): the ground under the area is not the same any more.
+            // (a failed save puts it back): the ground under the area is not the same any more.
             // Otherwise, as after Apply live, the area and its history stay; the steps are saved.
             reread = o.Reloaded || o.Lifted;
             if (reread)
@@ -1288,10 +1360,37 @@ public sealed class EditSession
     /// one set, so a save or an apply from any area takes the steps of every area with it (and Discard must not undo
     /// them where they were made). Under the lock.
     /// </summary>
-    private void MarkApplied(IEnumerable<Change> steps)
+    /// <param name="steps">This area's steps.</param>
+    /// <param name="sent">After a partial Apply live, whether the game has all a step did (null: every step).</param>
+    private void MarkApplied(IEnumerable<Change> steps, Func<Change, bool>? sent = null)
     {
-        foreach (var c in steps.Concat(_shelvedUndo.Select(s => s.Change)))
+        var all = steps.Concat(_shelvedUndo.Select(s => s.Change));
+        if (sent == null)
         {
+            foreach (var c in all)
+            {
+                c.Applied = true;
+            }
+            return;
+        }
+        // Partly sent: in the order the steps were made, this area's and the kept-aside ones together.
+        MarkSent([.. all.OrderBy(OrderOf)], sent);
+    }
+
+    /// <summary>
+    /// Marks steps as applied, oldest first, while the game has all they did; the first one it lacks (objects or
+    /// zone resets that did not go in) stops it, so no step after it is applied either (Discard undoes from the end).
+    /// </summary>
+    /// <param name="steps">The steps, oldest first.</param>
+    /// <param name="sent">Whether the game has all a step did.</param>
+    internal static void MarkSent(IEnumerable<Change> steps, Func<Change, bool> sent)
+    {
+        foreach (var c in steps)
+        {
+            if (!c.Applied && !sent(c))
+            {
+                break;
+            }
             c.Applied = true;
         }
     }
@@ -1316,14 +1415,31 @@ public sealed class EditSession
         {
             if (o.Reloaded || o.Lifted)
             {
+                // A stroke begun while the game answered was made on the ground as it was before: it is dropped (the
+                // area read again has none of it, and its undo would write the old ground back).
+                if (_stroke != null)
+                {
+                    _stroke = null;
+                    _strokeMask = null;
+                    _strokeDropped = true;
+                }
+                _takeEditsAfterStroke = false;
                 Reread(owner.World);
             }
             else
             {
-                Ground.TakeEdits(Edits);
+                // During a stroke, the ground taken from the edits now would lose what the stroke did so far.
+                if (_stroke != null)
+                {
+                    _takeEditsAfterStroke = true;
+                }
+                else
+                {
+                    Ground.TakeEdits(Edits);
+                }
                 if (o.Done)
                 {
-                    MarkApplied(before);
+                    MarkApplied(before, o.Unsent == WorldSession.LiveParts.None ? null : o.Sent);
                 }
             }
         }

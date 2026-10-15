@@ -21,7 +21,7 @@ public class WorldSessionFollowTests
             Assert.Null(await w.FetchGame([(0, 0)]));
             Assert.Null(await w.FetchGame([]));
             // A read of another world (the world was read again since): dropped, nothing merged.
-            var other = new WorldSession.Fetched(new WorldSave { Directory = "elsewhere", SaveNumber = 1 }, [], [(0, 0)], []);
+            var other = new WorldSession.Fetched(new WorldSave { Directory = "elsewhere", SaveNumber = 1 }, [], [(0, 0)], [], 0);
             var followed = w.MergeGame(other)!;
             Assert.Empty(followed.Ours);
             Assert.Empty(followed.Ground);

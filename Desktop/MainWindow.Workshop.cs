@@ -283,6 +283,8 @@ public partial class MainWindow
         // Left only once the blueprint could be read.
         if (World is { } open)
         {
+            // An area still loading in it is not opened, nor the one left open again.
+            _navigation++;
             open.Dispose();
             World = null;
             Session = null;

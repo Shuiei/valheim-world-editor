@@ -131,6 +131,11 @@ public class ClaudeToolsTests
         Assert.Equal(58, support.GetProperty("pieces").GetInt32());
         Assert.Equal(0, support.GetProperty("wouldFall").GetInt32());
         Assert.Contains("build the walls first", await r.T.BuildRoof(20, 20, 26, 26));
+        // A rectangle going outside the plot (or not a number) is refused before any ground is read under it.
+        Assert.StartsWith("Nothing built: the rectangle", await r.T.BuildFloor(0, 0, 5000, 4));
+        Assert.StartsWith("Nothing built: the rectangle", await r.T.BuildWalls(-1.7e7f, 0, 1.7e7f, 4));
+        Assert.StartsWith("Nothing built: the rectangle", await r.T.BuildRoof(0, 0, float.NaN, 4));
+        Assert.Equal(58, J(await r.T.SupportCheck()).GetProperty("pieces").GetInt32());
     }
 
     // The ready tasks: one pending step each, as asked; a dry run changes nothing; what does not fit is

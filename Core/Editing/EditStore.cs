@@ -386,6 +386,25 @@ public sealed class EditStore
     }
 
     /// <summary>
+    /// Live: the zone resets as they were sent to the game (a copy taken when sending), done there and no longer
+    /// pending. A zone marked again with other options while they were on the way stays marked, to be sent next.
+    /// </summary>
+    public void MarkResetsApplied(IEnumerable<ZoneReset> sent)
+    {
+        lock (_lock)
+        {
+            foreach (ZoneReset reset in sent)
+            {
+                if (_resets.TryGetValue((reset.X, reset.Z), out ZoneReset? now) && now == reset)
+                {
+                    _resets.Remove((reset.X, reset.Z));
+                }
+            }
+            Version++;
+        }
+    }
+
+    /// <summary>
     /// Marks saved objects to be left out of the save, or not. An added object (negative id) is moved to the
     /// trash instead, or back from it.
     /// </summary>
@@ -508,6 +527,51 @@ public sealed class EditStore
             incoming.ExistsInWorld = exists && old!.ExistsInWorld;
             incoming.Changed = !_baseline.TryGetValue((incoming.ZoneX, incoming.ZoneZ), out ZoneEdit? baseline) ? !incoming.IsEmpty : !incoming.SameGround(baseline);
             _zones[(incoming.ZoneX, incoming.ZoneZ)] = incoming;
+            Version++;
+        }
+    }
+
+    /// <summary>The working zones and the object lists as they were at <see cref="Mark"/>, for <see cref="Restore"/>.</summary>
+    /// <param name="Zones">Copies of the working zones.</param>
+    /// <param name="Deleted">The saved objects left out.</param>
+    /// <param name="Added">The objects added.</param>
+    /// <param name="Trash">The objects added and deleted again.</param>
+    public sealed record Checkpoint(Dictionary<(int, int), ZoneEdit> Zones, HashSet<int> Deleted, Dictionary<int, NewObject> Added, Dictionary<int, NewObject> Trash);
+
+    /// <summary>
+    /// The working zones and the object lists as they are now, to put back with <see cref="Restore"/> (zone resets,
+    /// baselines and the game's ground are not in it).
+    /// </summary>
+    public Checkpoint Mark()
+    {
+        lock (_lock)
+        {
+            return new Checkpoint(_zones.ToDictionary(kv => kv.Key, kv => kv.Value.Clone()), [.. _deleted], new(_added), new(_addedTrash));
+        }
+    }
+
+    /// <summary>Puts the working zones and the object lists back as they were at <see cref="Mark"/>.</summary>
+    public void Restore(Checkpoint mark)
+    {
+        lock (_lock)
+        {
+            _zones.Clear();
+            foreach (var (key, zone) in mark.Zones)
+            {
+                _zones[key] = zone.Clone();
+            }
+            _deleted.Clear();
+            _deleted.UnionWith(mark.Deleted);
+            _added.Clear();
+            foreach (var (id, o) in mark.Added)
+            {
+                _added[id] = o;
+            }
+            _addedTrash.Clear();
+            foreach (var (id, o) in mark.Trash)
+            {
+                _addedTrash[id] = o;
+            }
             Version++;
         }
     }

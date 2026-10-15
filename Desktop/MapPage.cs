@@ -178,9 +178,18 @@ public sealed class MapPage : IDisposable
     /// </summary>
     private List<WorldSearch.Hit> _hits = [];
     /// <summary>
-    /// What the last search looked for: "kinds", "items" or "texts".
+    /// What the pinned results were searched for: "kinds", "items" or "texts".
     /// </summary>
     private string _searchWhat = "kinds";
+    /// <summary>
+    /// Searches started so far, and worlds shown (each makes a running search's results unwanted): only the latest
+    /// search's results are shown, and only while the world it searched is.
+    /// </summary>
+    private int _searches;
+    /// <summary>
+    /// True while the latest search runs (its "Searching…" shown).
+    /// </summary>
+    private bool _searching;
 
     // Zone filter.
     /// <summary>
@@ -235,6 +244,14 @@ public sealed class MapPage : IDisposable
     /// Every zone's counts (<c>ZoneStats.Compute</c>), read when first needed; null after the world changes.
     /// </summary>
     private int[]? _stats;
+    /// <summary>
+    /// Counts each time the zone counts are thrown away (Show): counts read before that are not kept.
+    /// </summary>
+    private int _statsGeneration;
+    /// <summary>
+    /// How many zone count reads are going on (the "Reading every zone…" status is theirs).
+    /// </summary>
+    private int _reading;
     /// <summary>
     /// Whether matches are shown, so changing the filter shows them again at once.
     /// </summary>
@@ -476,6 +493,13 @@ public sealed class MapPage : IDisposable
     {
         bool same = _session == session;
         _session = session;
+        // A search still running searched the world as it was: dropped when it ends.
+        _searches++;
+        if (_searching)
+        {
+            _searching = false;
+            SearchInfo.Text = "The world changed during the search: search again.";
+        }
         if (!same)
         {
             Map.Show(session);
@@ -508,6 +532,7 @@ public sealed class MapPage : IDisposable
         }
         // Saved, discarded, reloaded or edited since: the zone counts are read again when next asked.
         _stats = null;
+        _statsGeneration++;
         var w = session.World;
         Meta.Text = session.IsLive
             ? $"{w.Name} · live ({session.Label}) · seed {w.SeedName} · {w.ObjectCount:N0} objects"
@@ -558,17 +583,23 @@ public sealed class MapPage : IDisposable
     }
 
     /// <summary>
-    /// Live: asks the game for the players online and puts them on the map.
+    /// Live: asks the game for the players online and puts them on the map. One question at a time per world (a game
+    /// slow to answer gets no pile of them), and an answer for a world no longer shown is dropped.
     /// </summary>
-    private async Task PollPlayers()
+    internal async Task PollPlayers()
     {
-        if (_session?.Live is not { } live)
+        if (_session is not { Live: { } live } s || !_polling.Add(s))
         {
             return;
         }
         try
         {
-            var json = System.Text.Json.Nodes.JsonNode.Parse(await live.Players())?.AsArray();
+            string answer = await live.Players();
+            if (_session != s)
+            {
+                return;
+            }
+            var json = System.Text.Json.Nodes.JsonNode.Parse(answer)?.AsArray();
             var players = json?.Where(p => p?["name"] != null).Select(p => ((string)p!["name"]!, (float)(p["x"] ?? 0), (float)(p["z"] ?? 0))).ToList() ?? [];
             LiveText.Text = $"Live world · {players.Count} player(s) online{(players.Count > 0 ? ": " + string.Join(", ", players.Select(p => p.Item1)) : "")}";
             Map.Players = players;
@@ -577,9 +608,22 @@ public sealed class MapPage : IDisposable
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException or FormatException)
         {
-            LiveText.Text = "Live world · the game does not answer right now.";
+            if (_session == s)
+            {
+                LiveText.Text = "Live world · the game does not answer right now.";
+            }
+        }
+        finally
+        {
+            _polling.Remove(s);
         }
     }
+
+    /// <summary>
+    /// The worlds whose players are being asked for now (a question waits for each one's answer): a world shown again
+    /// before its game answered is not asked a second time.
+    /// </summary>
+    private readonly HashSet<WorldSession> _polling = [];
 
     /// <summary>
     /// The players' names next to their dots.
@@ -648,6 +692,12 @@ public sealed class MapPage : IDisposable
 
     // ---- Search: every object of the world by kind, items in containers, or texts.
     /// <summary>
+    /// Runs a search (world, text, what) off the window's thread. Tests hold it to start or show something meanwhile.
+    /// </summary>
+    internal Func<WorldSession, string, string, Task<WorldSearch.Result>> RunSearch { get; set; } =
+        (s, q, what) => Task.Run(() => WorldSearch.Search(s.World, s.Edits, q, what));
+
+    /// <summary>
     /// Searches the world for the search box's text and pins what is found; an empty box clears the results.
     /// </summary>
     internal async Task Search()
@@ -657,7 +707,10 @@ public sealed class MapPage : IDisposable
             return;
         }
         string q = SearchBox.Text?.Trim() ?? "";
-        _searchWhat = SearchWhat.SelectedIndex switch { 1 => "items", 2 => "texts", _ => "kinds" };
+        string what = SearchWhat.SelectedIndex switch { 1 => "items", 2 => "texts", _ => "kinds" };
+        // A search still running is dropped when it ends: this one (or the cleared box) is newer.
+        int search = ++_searches;
+        _searching = q.Length > 0;
         if (q.Length == 0)
         {
             _hits = [];
@@ -668,17 +721,28 @@ public sealed class MapPage : IDisposable
             return;
         }
         SearchInfo.Text = "Searching…";
-        string what = _searchWhat;
         WorldSearch.Result res;
         try
         {
-            res = await Task.Run(() => WorldSearch.Search(s.World, s.Edits, q, what));
+            res = await RunSearch(s, q, what);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            SearchInfo.Text = "Search failed: " + ex.Message;
+            if (search == _searches && _session == s)
+            {
+                _searching = false;
+                SearchInfo.Text = "Search failed: " + ex.Message;
+            }
             return;
         }
+        // Another search started meanwhile, or a world (another, or this one read again) is shown: these results are
+        // not wanted.
+        if (search != _searches || _session != s)
+        {
+            return;
+        }
+        _searching = false;
+        _searchWhat = what;
         _hits = res.Hits;
         Map.Pins = [.. _hits.Select(h => new Vector2(h.X, h.Z))];
         Map.PinChosen = -1;
@@ -727,7 +791,9 @@ public sealed class MapPage : IDisposable
     }
 
     /// <summary>
-    /// Every zone's counts, read once (in the background) until the world changes; null when no world is shown.
+    /// Every zone's counts, read once (in the background) until the world changes; null when no world is shown, or when
+    /// a world was shown again while they were read (another world, or the same one saved or discarded: they are from
+    /// before, dropped).
     /// </summary>
     private async Task<int[]?> Stats()
     {
@@ -737,8 +803,28 @@ public sealed class MapPage : IDisposable
         }
         if (_stats == null)
         {
+            int generation = _statsGeneration;
             ZoneInfo.Text = "Reading every zone…";
-            _stats = await Task.Run(() => ZoneStats.Compute(s.World, s.Edits, (x, z) => (int)s.Terrain.BiomeAt(x * 64f, z * 64f)));
+            _reading++;
+            int[] stats;
+            try
+            {
+                stats = await Task.Run(() => ZoneStats.Compute(s.World, s.Edits, (x, z) => (int)s.Terrain.BiomeAt(x * 64f, z * 64f)));
+            }
+            finally
+            {
+                _reading--;
+            }
+            if (_session != s || _statsGeneration != generation)
+            {
+                // The status said this read was going on: cleared, unless another read is, or has shown its counts.
+                if (_reading == 0 && _stats == null)
+                {
+                    ZoneInfo.Text = "";
+                }
+                return null;
+            }
+            _stats = stats;
         }
         return _stats;
     }
@@ -799,9 +885,16 @@ public sealed class MapPage : IDisposable
             return;
         }
         bool live = s.IsLive, ground = GroundBox.IsChecked == true;
+        int generation = _statsGeneration;
         if (!await Confirm($"Mark {Matches.Count:N0} zone(s) for reset?\n\n• Their trees, rocks, ore, ruins and dungeon entrances are removed{(ground ? ", and their ground edits undone" : "")}; players' tombstones stay.\n"
             + $"• Valheim generates them again the next time a player comes near{(live ? " (at once where players are, once applied)" : "")}.\n"
             + $"• {(live ? "Apply live" : "Save to world")} does it; until then it can be cancelled with Unmark all."))
+        {
+            return;
+        }
+        // A world shown while asking (another one, or this one saved, discarded or read again): the matches were
+        // worked out before, and are gone.
+        if (_session != s || _statsGeneration != generation)
         {
             return;
         }

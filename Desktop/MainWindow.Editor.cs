@@ -232,14 +232,21 @@ public sealed partial class MainWindow
     /// <summary>
     /// Opens the block of zones from (x0, z0); when it did open, the camera stays where it was in the world.
     /// </summary>
-    private async Task OpenBlockKeepingView(int x0, int z0, int zonesX, int zonesZ)
+    /// <param name="x0">The south-west zone, east.</param>
+    /// <param name="z0">The south-west zone, north.</param>
+    /// <param name="zonesX">Zones west to east.</param>
+    /// <param name="zonesZ">Zones south to north.</param>
+    /// <param name="context">Said before the failure, when it cannot be opened (see <see cref="EditBlock"/>).</param>
+    /// <returns>Whether the block was opened.</returns>
+    private async Task<bool> OpenBlockKeepingView(int x0, int z0, int zonesX, int zonesZ, string? context = null)
     {
         var cam = View.WorldCamera;
-        await EditBlock(x0, z0, zonesX, zonesZ);
+        bool opened = await EditBlock(x0, z0, zonesX, zonesZ, context: context);
         if (View.Scene is { } ns && (ns.X0, ns.Z0, ns.ZonesX, ns.ZonesZ) == (x0, z0, zonesX, zonesZ) && cam != null)
         {
             View.WorldCamera = cam;
         }
+        return opened;
     }
 
     /// <summary>
@@ -286,6 +293,11 @@ public sealed partial class MainWindow
     /// <summary>What stops the area from moving now (Follow waits): something unfinished would be lost.</summary>
     internal string? MoveBlocker()
     {
+        // First: while saving, the session's other checks would wait for the save to end.
+        if (IsBusy)
+        {
+            return "the world is being saved or read";
+        }
         if (View.Selected.Count > 0)
         {
             return "objects are selected (Esc clears)";
@@ -424,8 +436,10 @@ public sealed partial class MainWindow
             return;
         }
         Busy(null);
-        await ReopenArea(s.Scene);
-        MessageText.Text = "Discarded: the world was read again.";
+        if (await ReopenArea(s.Scene))
+        {
+            MessageText.Text = "Discarded: the world was read again.";
+        }
     }
 
     /// <summary>Live: the world loaded again from the game (asks first when something waits).</summary>
@@ -451,15 +465,26 @@ public sealed partial class MainWindow
             return;
         }
         Busy(null);
-        await ReopenArea(s.Scene);
-        MessageText.Text = "The world was loaded again from the game.";
+        if (await ReopenArea(s.Scene))
+        {
+            MessageText.Text = "The world was loaded again from the game.";
+        }
     }
 
-    /// <summary>The same area again (the world was read again), the view where it was.</summary>
-    private async Task ReopenArea(WorldScene old)
+    /// <summary>
+    /// The same area again (the world was read again), the view where it was. When it cannot be opened (nor another
+    /// area asked for meanwhile), the map (the old area shows the world as it was before), and the failure in a dialog.
+    /// </summary>
+    /// <returns>Whether the area was opened again.</returns>
+    internal async Task<bool> ReopenArea(WorldScene old)
     {
+        // The old area shows the world as it was: closed, and not the world's area (its history would be kept).
         Session = null;
-        await OpenBlockKeepingView(old.X0, old.Z0, old.ZonesX, old.ZonesZ);
+        if (old.Owner is { } w && w.Area == old.Session)
+        {
+            w.Area = null;
+        }
+        return await OpenBlockKeepingView(old.X0, old.Z0, old.ZonesX, old.ZonesZ, "The world was read again, but the area could not be opened again. ");
     }
 
     // ---- Live: Apply (the button, and every change when Auto is on). Calls while one runs are merged.

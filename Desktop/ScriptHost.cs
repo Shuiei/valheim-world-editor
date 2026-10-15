@@ -4,6 +4,7 @@ using System.Runtime.Loader;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
@@ -45,6 +46,12 @@ public static class ScriptHost
         // With an encoding: the debug information (an error's line) needs one.
         SyntaxTree Tree(string text, string path) => CSharpSyntaxTree.ParseText(Microsoft.CodeAnalysis.Text.SourceText.From(text, Encoding.UTF8), parse, path);
         var user = Tree(code, "script");
+        // Every loop of the script's own stops when asked (Stop, the 2-minute limit). A script with syntax mistakes is
+        // left as it is: it does not compile anyway, and its mistakes are reported as written.
+        if (!user.GetDiagnostics().Any(d => d.Severity == DiagnosticSeverity.Error))
+        {
+            user = Tree(new LoopChecks().Visit(user.GetRoot()).ToFullString(), "script");
+        }
         var compilation = CSharpCompilation.Create("Script" + Guid.NewGuid().ToString("N")[..8],
             [Tree(Api.Value, "api"), Tree(Usings, "usings"), user],
             Basic.Reference.Assemblies.Net100.References.All,
@@ -58,6 +65,67 @@ public static class ScriptHost
             return span.Path == "script" ? $"line {span.StartLinePosition.Line + 1}: {d.GetMessage()}" : d.GetMessage();
         }).Distinct().Take(20).ToList();
         return (result.Success ? ms.ToArray() : null, result.Success ? pdb.ToArray() : null, errors);
+    }
+
+    /// <summary>
+    /// Puts a call to the API's Check at the start of every loop's body and before every goto in a script, so that
+    /// Stop and the 2-minute limit end a script whose own loops call nothing that checks. What it adds holds no line
+    /// break: the script keeps its line numbers (for the line an error happens on).
+    /// </summary>
+    private sealed class LoopChecks : CSharpSyntaxRewriter
+    {
+        /// <summary>The call added, parsed once.</summary>
+        private static readonly StatementSyntax Check = SyntaxFactory.ParseStatement("global::__Host.Check();");
+
+        /// <summary>
+        /// The statement with the Check before it, both in a block of their own. The statement's trivia (comments,
+        /// line breaks, #if and other directives) goes around the block, not into it: a directive stays at the start
+        /// of its own line.
+        /// </summary>
+        private static BlockSyntax Checked(StatementSyntax statement) =>
+            SyntaxFactory.Block(SyntaxFactory.Token(default, SyntaxKind.OpenBraceToken, default), [Check, statement.WithoutTrivia()], SyntaxFactory.Token(default, SyntaxKind.CloseBraceToken, default))
+                .WithLeadingTrivia(statement.GetLeadingTrivia()).WithTrailingTrivia(statement.GetTrailingTrivia());
+
+        /// <inheritdoc/>
+        public override SyntaxNode? VisitWhileStatement(WhileStatementSyntax node)
+        {
+            var n = (WhileStatementSyntax)base.VisitWhileStatement(node)!;
+            return n.WithStatement(Checked(n.Statement));
+        }
+
+        /// <inheritdoc/>
+        public override SyntaxNode? VisitDoStatement(DoStatementSyntax node)
+        {
+            var n = (DoStatementSyntax)base.VisitDoStatement(node)!;
+            return n.WithStatement(Checked(n.Statement));
+        }
+
+        /// <inheritdoc/>
+        public override SyntaxNode? VisitForStatement(ForStatementSyntax node)
+        {
+            var n = (ForStatementSyntax)base.VisitForStatement(node)!;
+            return n.WithStatement(Checked(n.Statement));
+        }
+
+        /// <inheritdoc/>
+        public override SyntaxNode? VisitForEachStatement(ForEachStatementSyntax node)
+        {
+            var n = (ForEachStatementSyntax)base.VisitForEachStatement(node)!;
+            return n.WithStatement(Checked(n.Statement));
+        }
+
+        /// <inheritdoc/>
+        public override SyntaxNode? VisitForEachVariableStatement(ForEachVariableStatementSyntax node)
+        {
+            var n = (ForEachVariableStatementSyntax)base.VisitForEachVariableStatement(node)!;
+            return n.WithStatement(Checked(n.Statement));
+        }
+
+        /// <inheritdoc/>
+        public override SyntaxNode? VisitGotoStatement(GotoStatementSyntax node)
+        {
+            return Checked((GotoStatementSyntax)base.VisitGotoStatement(node)!);
+        }
     }
 
     /// <summary>
@@ -229,10 +297,13 @@ public static class ScriptHost
                 };
                 var shape = Mountain.Shape(spec);
                 float reach = spec.Reach;
-                for (float dz = -MathF.Ceiling(reach); dz <= reach; dz++)
+                // Counted, and only where the area is: a float counter stops growing past 2^24 m.
+                var (fromZ, toZ) = Offsets(z, reach, snap.Oz - 1, snap.Oz + snap.H);
+                var (fromX, toX) = Offsets(x, reach, snap.Ox - 1, snap.Ox + snap.W);
+                for (int dz = fromZ; dz <= toZ; dz++)
                 {
                     cancel.ThrowIfCancellationRequested();
-                    for (float dx = -MathF.Ceiling(reach); dx <= reach; dx++)
+                    for (int dx = fromX; dx <= toX; dx++)
                     {
                         float v = shape(dx, dz);
                         if (v != 0 && Point(x + dx, z + dz) is int p and >= 0)
@@ -283,6 +354,7 @@ public static class ScriptHost
                 }
             }));
             Fill("Check", new Action(cancel.ThrowIfCancellationRequested));
+            Fill("Offsets", new Func<float, float, float, float, (int, int)>(Offsets));
             Fill("MinX", snap.Ox);
             Fill("MinZ", snap.Oz);
             Fill("MaxX", snap.Ox + snap.W - 1);
@@ -316,6 +388,27 @@ public static class ScriptHost
         {
             alc.Unload();
         }
+    }
+
+    /// <summary>
+    /// The whole-metre offsets from c, within reach of it, that can land within min..max: a short range of integers to
+    /// count, however large reach is, and never beyond 2^24 m (where whole metres stop counting). Empty (From above
+    /// To) when reach is not a size or none of them lands within min..max.
+    /// </summary>
+    /// <param name="c">The middle, on one axis.</param>
+    /// <param name="reach">How far from it to go.</param>
+    /// <param name="min">The lowest place that counts.</param>
+    /// <param name="max">The highest place that counts.</param>
+    internal static (int From, int To) Offsets(float c, float reach, float min, float max)
+    {
+        if (!(reach >= 0) || !float.IsFinite(c))
+        {
+            return (0, -1);
+        }
+        // Offsets past 2^24 m are left out: those that can still be counted are kept.
+        double from = Math.Max(Math.Max(-Math.Ceiling(reach), Math.Floor(min - (double)c)), -(1 << 24));
+        double to = Math.Min(Math.Min(Math.Floor(reach), Math.Ceiling(max - (double)c)), 1 << 24);
+        return from <= to ? ((int)from, (int)to) : (0, -1);
     }
 
     /// <summary>

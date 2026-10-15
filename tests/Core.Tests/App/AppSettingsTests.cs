@@ -123,6 +123,31 @@ public class AppSettingsTests : IDisposable
         Assert.True(Directory.Exists(path));
     }
 
+    // The settings hold Claude's token: only the user can read them, even over a file others could read.
+    [Fact]
+    public void OnlyTheUserCanReadTheSettings()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+        string path = Path.Combine(_data, "settings.json");
+        string? old = AppSettings.PathOverride;
+        AppSettings.PathOverride = path;
+        try
+        {
+            File.WriteAllText(path, "{}");
+            File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+            new AppSettings { ClaudeToken = "secret" }.Save();
+            Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(path));
+            Assert.Equal("secret", AppSettings.Load().ClaudeToken);
+        }
+        finally
+        {
+            AppSettings.PathOverride = old;
+        }
+    }
+
     [Fact]
     public void RememberingTheSameServerUpdatesIt()
     {

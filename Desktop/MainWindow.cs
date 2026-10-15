@@ -304,7 +304,16 @@ public sealed partial class MainWindow : Window
         NewWorld?.Dispose();
         NewWorld = null;
         await OpenWorld(() => Task.Run(() => WorldSession.Open(folder)), $"Opening {name}…");
-        MessageText.Text = $"Made {name} (seed {seed}). The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it: play it before reshaping an area here.";
+        string made = $"Made {name} (seed {seed}). The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it: play it before reshaping an area here.";
+        // Opened: on its map, where the status bar is not shown.
+        if (World != null)
+        {
+            Say(made);
+        }
+        else
+        {
+            MessageText.Text = made;
+        }
         return null;
     }
 
@@ -389,6 +398,7 @@ public sealed partial class MainWindow : Window
             ShowStart();
             return;
         }
+        _navigation++;
         View.SelectTool.Commit();
         KeepHistory();
         _playersTimer.Stop();
@@ -418,14 +428,41 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Leaving an area: its history stays with the world, for the next area opened.
+    /// Leaving an area: its history stays with the world, for the next area opened, and the area is closed, so work
+    /// awaited in it (a script, Grow) finds it gone and changes nothing.
     /// </summary>
-    private void KeepHistory()
+    /// <returns>The area left, or null when none was open in the 3D editor.</returns>
+    private EditSession? KeepHistory()
     {
         if (Session is { Scene.Owner: { } owner } s && _pages.Content == _editorPage)
         {
             owner.History = s.Export();
             owner.Area = null;
+            Session = null;
+            return s;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Counts the map shown, the areas asked for and the world left: an area load that finished after one of those is
+    /// not shown, and one that failed leaves the area it left closed.
+    /// </summary>
+    private long _navigation;
+
+    /// <summary>
+    /// Another area could not be opened: the one left (still shown) is open again, its history its own, unless the map
+    /// or another area was asked for meanwhile.
+    /// </summary>
+    /// <param name="left">What <see cref="KeepHistory"/> returned.</param>
+    /// <param name="navigation">The <see cref="_navigation"/> count of the failed load.</param>
+    private void Unleave(EditSession? left, long navigation)
+    {
+        if (left is { Scene.Owner: { } owner } && navigation == _navigation && World == owner && _pages.Content == _editorPage
+            && Session == null && View.Scene == left.Scene)
+        {
+            owner.Area = left;
+            Session = left;
         }
     }
 
@@ -446,19 +483,38 @@ public sealed partial class MainWindow : Window
     /// <param name="zonesX">Zones west to east.</param>
     /// <param name="zonesZ">Zones south to north.</param>
     /// <param name="spot">The map's chosen zone the area was opened around, if it was.</param>
-    internal async Task EditBlock(int x0, int z0, int zonesX, int zonesZ, (int X, int Z)? spot = null)
+    /// <param name="context">Said before the failure, when it cannot be opened.</param>
+    /// <returns>
+    /// Whether the block was opened (no: the failure is said in the status bar; when this was the last area asked for
+    /// and the 3D editor is left with no area open, the map is shown and the failure in a dialog).
+    /// </returns>
+    internal async Task<bool> EditBlock(int x0, int z0, int zonesX, int zonesZ, (int X, int Z)? spot = null, string? context = null)
     {
         if (World is not { } world)
         {
-            return;
+            return false;
         }
+        long navigation = ++_navigation;
         View.SelectTool.Commit();
-        KeepHistory();
+        var left = KeepHistory();
         Busy($"Loading {zonesX} × {zonesZ} zones…");
+        string failed;
         try
         {
+            await BeforeLoad();
             var scene = await Task.Run(() => WorldScene.LoadBlock(world, x0, z0, zonesX, zonesZ));
-            await ShowEditor(scene);
+            if (!await ShowEditor(scene, () => navigation == _navigation))
+            {
+                // The map or another area was asked for while it loaded: it is not shown, nor the world's area.
+                if (world.Area == scene.Session)
+                {
+                    world.Area = Session;
+                }
+                Report("That area was not opened: the map or another area was asked for while it loaded.");
+                return false;
+            }
+            // Shown: the world's area, even if a load dropped meanwhile had reset it.
+            world.Area = scene.Session;
             // Found by the map's search: selected, the camera on it (items and texts: in the inspector).
             if (MapPage?.Target is var (id, inspect) && spot != null && MapPage.Spot == spot)
             {
@@ -473,22 +529,54 @@ public sealed partial class MainWindow : Window
                     }
                 }
             }
+            return true;
         }
         catch (Exception ex)
         {
-            MessageText.Text = "Could not open that area: " + ex.Message;
+            Unleave(left, navigation);
+            failed = context + "Could not open that area: " + ex.Message;
+            Report(failed);
         }
         finally
         {
             Busy(null);
         }
+        // The last area asked for failed with none open behind the 3D editor (closed for this one, or for another that
+        // failed too): the map, not tools that silently do nothing, and why in a dialog (the map has no status bar).
+        if (navigation == _navigation && Session == null && _pages.Content == _editorPage)
+        {
+            ShowMap();
+            await Tell(failed);
+        }
+        return false;
+
+        // The world left meanwhile: only the status bar, no dialog about a world no longer open.
+        void Report(string text)
+        {
+            if (World == world)
+            {
+                Say(text);
+            }
+            else
+            {
+                MessageText.Text = text;
+            }
+        }
     }
+
+    /// <summary>
+    /// Awaited before an area's zones are read (tests hold loads there to order them).
+    /// </summary>
+    internal Func<Task> BeforeLoad { get; set; } = () => Task.CompletedTask;
 
     /// <summary>
     /// Shows a loaded area (or the Workshop's plot) in the 3D editor, the game's models opened first if they are not
     /// yet.
     /// </summary>
-    internal async Task ShowEditor(WorldScene scene)
+    /// <param name="scene">The area or plot.</param>
+    /// <param name="stillWanted">Asked once the models are open: false, nothing is shown.</param>
+    /// <returns>Whether it was shown.</returns>
+    internal async Task<bool> ShowEditor(WorldScene scene, Func<bool>? stillWanted = null)
     {
         if (_models == null && _modelsLoading != null)
         {
@@ -496,6 +584,10 @@ public sealed partial class MainWindow : Window
             _modelsLoading = null;
         }
         _models ??= await Task.Run(ModelStore.Open);
+        if (stillWanted?.Invoke() == false)
+        {
+            return false;
+        }
         ResetWorkshop();
         // Lines and shapes drawn in the last area are left behind.
         View.Path.Clear();
@@ -515,6 +607,7 @@ public sealed partial class MainWindow : Window
         Title = $"{scene.Name} · Valheim World Editor {BuildInfo.Version}";
         _pages.Content = _editorPage;
         EditorOpened(scene);
+        return true;
     }
 
     /// <summary>
@@ -598,7 +691,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageText.Text = "Could not read the world again: " + ex.Message;
+            Say("Could not read the world again: " + ex.Message);
         }
         finally
         {
@@ -623,7 +716,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
         {
-            MessageText.Text = "Could not reach the game: " + ex.Message;
+            Say("Could not reach the game: " + ex.Message);
         }
         Busy(null);
         MapPage?.Show(w);
@@ -639,12 +732,28 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+        // An area still loading in it is not opened, nor the one left open again.
+        _navigation++;
         World?.Dispose();
         World = null;
         Session = null;
         Tunnel.Close();
         ShowStart();
     }
+    /// <summary>
+    /// Says something in the status bar and, away from the 3D editor (its status bar not shown), in a dialog too, not
+    /// waited for.
+    /// </summary>
+    /// <param name="text">What to say.</param>
+    private void Say(string text)
+    {
+        MessageText.Text = text;
+        if (_pages.Content != _editorPage)
+        {
+            _ = Tell(text);
+        }
+    }
+
     /// <summary>
     /// An error no part of the window caught (App): said in the status bar, so the editor stays open with the changes
     /// not saved yet.
@@ -694,7 +803,7 @@ public sealed partial class MainWindow : Window
     /// </summary>
     internal Func<string, string, string, string, Task<bool>> Ask { get; set; }
     /// <summary>
-    /// Tells the user something in a dialog (tests replace it).
+    /// Tells the user something in a dialog titled with the app's name, as the map's are (tests replace it).
     /// </summary>
     internal Func<string, Task> Tell { get; set; }
     /// <summary>
@@ -859,7 +968,8 @@ public sealed partial class MainWindow : Window
     internal async Task Save()
     {
         var s = Session;
-        if (s == null)
+        // Not while saving (or reading the world): the veil is up.
+        if (s == null || IsBusy)
         {
             return;
         }
@@ -890,6 +1000,8 @@ public sealed partial class MainWindow : Window
         }
         SaveButton.IsEnabled = false;
         MessageText.Text = "Saving…";
+        // The veil keeps the keys (Ctrl+S, Ctrl+Z), the mouse and Follow off the area while it is written.
+        Busy("Saving…");
         try
         {
             var res = await Task.Run(s.Save);
@@ -906,7 +1018,13 @@ public sealed partial class MainWindow : Window
         {
             MessageText.Text = "Could not save: " + ex.Message;
         }
-        // Saved objects lose their green marks.
+        finally
+        {
+            // Down only once the result has been read: until then Follow and the keys still wait.
+            Busy(null);
+        }
+        // Saved objects lose their green marks; after a failure the marks and the save bar show what is still unsaved
+        // (and the Save button comes back).
         View.RefreshNewMarkers();
         UpdateSaveBar();
     }
@@ -1434,7 +1552,10 @@ public sealed partial class MainWindow : Window
             var ch = await Task.Run(() => ScriptHost.Run(image, pdb, snap, cancel.Token), cancel.Token);
             if (Session != s)
             {
-                return new(false, ch.Output + "Another area was opened while the script ran: nothing changed.", "Another area was opened while the script ran: nothing changed.");
+                string gone = Session == null
+                    ? "The area was closed while the script ran: nothing changed."
+                    : "Another area was opened while the script ran: nothing changed.";
+                return new(false, ch.Output + gone, gone);
             }
             // Its heights and object numbers are those of the area when it started: changed since (a
             // stroke, an undo, a save that read the world again), they would undo that or hit other objects.
@@ -1525,9 +1646,19 @@ public sealed partial class MainWindow : Window
         }
         var shape = Mountain.Shape(m);
         float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f, wx = ox + gx, wz = oz + gz;
+        // The spots are judged on the area as it is now: what grows is only put in if it is still the same.
+        int generation = s.Generation;
         // On the slopes it raised by more than a metre (not around its foot, where the old ones stand).
         var spots = await Growth.Spots(s, wx - m.Reach, wz - m.Reach, wx + m.Reach, wz + m.Reach, o => shape(o.X - wx, o.Z - wz) > 1,
             NameOfPrefab, t => MessageText.Text = placed + " " + t, maxZones: 49);
+        if (Session != s || s.Generation != generation)
+        {
+            // Another area opened (Follow grew it), or the ground changed (an undo, a stroke, another mountain): the
+            // trees would go to an area no longer shown, or float or be buried.
+            MessageText.Text = placed + " Nothing grew on it: the area changed while its trees were worked out.";
+            UpdateSaveBar();
+            return;
+        }
         if (spots is { Count: > 0 })
         {
             Growth.Commit(s, $"Mountain: grew {spots.Count} object(s)", spots);
@@ -1910,8 +2041,9 @@ public sealed partial class MainWindow : Window
     private void OnKey(object? sender, Avalonia.Input.KeyEventArgs e)
     {
         // Typing in a box: its keys are its own. The keys below are the 3D editor's: on the start page or
-        // the map they would act on the area left open behind it (an undo pushed live, unseen).
-        if (e.Source is TextBox || _pages.Content != _editorPage)
+        // the map they would act on the area left open behind it (an undo pushed live, unseen); under the busy veil
+        // (saving, reading the world again) they would wait on it or do it twice.
+        if (e.Source is TextBox || _pages.Content != _editorPage || IsBusy)
         {
             return;
         }
@@ -2492,7 +2624,7 @@ public sealed partial class MainWindow : Window
         HelpCard = Help(record);
         ConfirmSave = text => Dialogs.Ask(this, "Save into the world", text, "Save");
         Ask = (title, text, yes, no) => Dialogs.Ask(this, title, text, yes, no);
-        Tell = text => Dialogs.Tell(this, "Save", text);
+        Tell = text => Dialogs.Tell(this, "Valheim World Editor", text);
         var tools = new StackPanel
         {
             Orientation = Orientation.Horizontal,

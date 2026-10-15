@@ -29,6 +29,9 @@ public static partial class Lang
     /// <summary>The texts of the language in use, by key; English where they have none.</summary>
     private static IReadOnlyDictionary<string, string> _texts = English;
 
+    /// <summary>The texts of the language in use back to their English (EnglishOf), made when first asked; null until then.</summary>
+    private static Dictionary<string, string>? _back;
+
     /// <summary>The data folder's catalogues (null: <c>AppSettings.DataDir</c>'s lang folder; tests set another).</summary>
     internal static string? FolderOverride { get; set; }
 
@@ -55,6 +58,31 @@ public static partial class Lang
     public static string En(string key, params object?[] values) => string.Format(CultureInfo.InvariantCulture, English[key], values);
 
     /// <summary>
+    /// The English of a text shown in the language in use: what does not depend on the language (Claude's ids for the
+    /// window's controls, which of them it may not use) is worked out from it. A text no catalogue text is, such as one
+    /// made in code, is returned as it is.
+    /// </summary>
+    /// <param name="shown">A text as the window shows it.</param>
+    /// <returns>Its English text, else <paramref name="shown"/>.</returns>
+    public static string EnglishOf(string shown)
+    {
+        var back = _back;
+        if (back == null)
+        {
+            back = [];
+            foreach (var (key, text) in _texts)
+            {
+                if (English.TryGetValue(key, out string? en))
+                {
+                    back.TryAdd(text, en);
+                }
+            }
+            _back = back;
+        }
+        return back.TryGetValue(shown, out string? english) ? english : shown;
+    }
+
+    /// <summary>
     /// Takes the language <paramref name="code"/> from now on (texts already shown stay as they are: the app takes it
     /// when it starts); the computer's language when null or empty; English when there is no such catalogue.
     /// </summary>
@@ -70,6 +98,7 @@ public static partial class Lang
             texts = Load(Source) ?? English;
         }
         _texts = texts;
+        _back = null;
         Current = chosen;
         return chosen;
     }

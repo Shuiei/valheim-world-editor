@@ -22,6 +22,7 @@ public static class __Host
 	public static Func<float, float, int, float> Noise = null!;
 	public static Action<string> Print = null!;
 	public static Action Check = null!;
+	public static Func<float, float, float, float, (int From, int To)> Offsets = null!;
 	public static bool NoLimit = true;
 	public static float MinX, MinZ, MaxX, MaxZ, Water;
 	public static int Seed;
@@ -44,12 +45,19 @@ public static class Area
 	// Every ground point of the area (one per metre), as (x, z), for loops over the whole area.
 	public static IEnumerable<(float X, float Z)> Points(float step = 1)
 	{
-		for (float z = MinZ + 1; z < MaxZ; z += step)
+		// A step too small to move a coordinate of the area would give the same point for ever.
+		if (!float.IsFinite(step) || step <= 0 || MinX + step == MinX || MaxX + step == MaxX || MinZ + step == MinZ || MaxZ + step == MaxZ)
 		{
-			__Host.Check();
-			for (float x = MinX + 1; x < MaxX; x += step)
+			throw new ArgumentException($"a step of {step}: give one above 0 (1: every metre, 4: every 4 metres)");
+		}
+		// Counted rows and points: a float added up can stop growing.
+		for (int j = 0; MinZ + 1 + j * step < MaxZ; j++)
+		{
+			float z = MinZ + 1 + j * step;
+			for (int i = 0; MinX + 1 + i * step < MaxX; i++)
 			{
-				yield return (x, z);
+				__Host.Check();
+				yield return (MinX + 1 + i * step, z);
 			}
 		}
 	}
@@ -85,12 +93,14 @@ public static class Ground
 	// Adds metres(dx, dz) to the ground within radius of (x, z) (dx, dz: metres from the middle).
 	public static void Shape(float x, float z, float radius, Func<float, float, float> metres)
 	{
-		for (float dz = -MathF.Ceiling(radius); dz <= radius; dz++)
+		var (fromZ, toZ) = __Host.Offsets(z, radius, Area.MinZ, Area.MaxZ);
+		var (fromX, toX) = __Host.Offsets(x, radius, Area.MinX, Area.MaxX);
+		for (int dz = fromZ; dz <= toZ; dz++)
 		{
 			__Host.Check();
-			for (float dx = -MathF.Ceiling(radius); dx <= radius; dx++)
+			for (int dx = fromX; dx <= toX; dx++)
 			{
-				if (dx * dx + dz * dz <= radius * radius && Area.Inside(x + dx, z + dz))
+				if ((float)dx * dx + (float)dz * dz <= radius * radius && Area.Inside(x + dx, z + dz))
 				{
 					float m = metres(dx, dz);
 					if (m != 0)

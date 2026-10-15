@@ -6,8 +6,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// Claude's tools for the editor's own controls (ClaudeTools.Controls): the Workshop's Cut slider and Support check
-/// found and set, blocked controls refused; and the helpers they use (KindOf, LabelOf, ControlsOf, ValueOf, Set,
-/// Blocked).
+/// found and set, blocked controls refused, only the View panel's while live with Auto on; and the helpers they use
+/// (KindOf, LabelOf, ControlsOf, ValueOf, Set, Blocked).
 /// </summary>
 [Collection("World files")]
 public class ClaudeToolsControlsTests
@@ -97,6 +97,11 @@ public class ClaudeToolsControlsTests
         Assert.NotNull(t.Blocked(C("forget", new Button { Content = "forget" }.Tip("start.savedForget"))));
         Assert.NotNull(t.Blocked(C("plot", new Button { Content = "Open" }.Tip("dungeon.gen.openOnPlot"))));
         Assert.NotNull(t.Blocked(C("~delete", new Button { Content = "Delete" })));
+        // The Blueprints rows' buttons that write or delete files and Select's Delete, by their key whatever their
+        // label's language.
+        string[] writing = ["select.delete", "blueprints.details", "blueprints.vbuild", "blueprints.vbuildOld", "blueprints.toHomestead", "blueprints.delete", "blueprints.deleteOld"];
+        Assert.All(writing, k => Assert.NotNull(t.Blocked(C(k, new Button { Content = "Supprimer" }.Tip(k)))));
+        Assert.Null(t.Blocked(C("blueprints.paste", new Button { Content = "Coller" }.Tip("blueprints.paste"))));
         Assert.Null(t.Blocked(C("~go", button)));
         Assert.StartsWith("save is not Claude's to use", t.Set(C("save", w.SaveButton), "click", false));
         w.CloseWithoutAsking();
@@ -116,5 +121,23 @@ public class ClaudeToolsControlsTests
         await r.T.SetControl("workshop.support", "false");
         Assert.False(r.W.SupportBox.IsChecked);
         Assert.StartsWith("No control nothing.here now", await r.T.SetControl("nothing.here", "1"));
+    }
+
+    // Live with Auto on, what a control does would go to the game at once: a script's Run is refused, as every other
+    // editing tool is; the View panel's switches still work.
+    [AvaloniaFact]
+    public async Task LiveWithAutoOnOnlyTheViewsControlsAreSet()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenLive();
+        r.W.Settings.AutoApply = true;
+        Assert.Contains("live with Auto on", await r.T.SetControl("script.code", "Ground.Raise(0, 0, 3);"));
+        Assert.Contains("live with Auto on", await r.T.SetControl("script.run", "click"));
+        Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+        var water = ClaudeRun.J(await r.T.SetControl("view.water", "false"));
+        Assert.False(water.GetProperty("value").GetBoolean());
+        // Auto off: the script's controls are Claude's again.
+        r.W.Settings.AutoApply = false;
+        Assert.Equal("script.code", ClaudeRun.J(await r.T.SetControl("script.code", "Ground.Raise(0, 0, 3);")).GetProperty("id").GetString());
     }
 }

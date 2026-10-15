@@ -80,6 +80,12 @@ public sealed class AreaPanel
     public AreaTool Area { get; }
     private readonly GlView _view;
     private readonly Func<EditSession?> _session;
+
+    /// <summary>
+    /// Whether an Apply is running: it can wait on a question, the generator or a backup being read, and a second one
+    /// meanwhile would do the same again.
+    /// </summary>
+    private bool _applying;
     private readonly Func<int, string?> _nameOf;
     /// <summary>Asks a yes/no question (the window's dialog); resetting zones goes on only on true.</summary>
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
@@ -451,7 +457,8 @@ public sealed class AreaPanel
     /// <param name="poly">The selection, in metres from the scene's corner.</param>
     /// <param name="chosenKindsOnly">Only the kinds toggled on, and only where the Mask lets the ground through.</param>
     /// <param name="includeHidden">Also kinds switched off in View (a backup restore compares with everything there).</param>
-    internal List<int> ThingsInside(List<Vector2> poly, bool chosenKindsOnly, bool includeHidden = false)
+    /// <param name="maskAt">The Mask test to use (one the caller already took), or null to take it here.</param>
+    internal List<int> ThingsInside(List<Vector2> poly, bool chosenKindsOnly, bool includeHidden = false, Func<float, float, bool>? maskAt = null)
     {
         var out_ = new List<int>();
         if (_view.Scene is not { } s)
@@ -459,6 +466,8 @@ public sealed class AreaPanel
             return out_;
         }
         float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        // Taken once: each Mask snapshot copies the whole ground.
+        maskAt ??= chosenKindsOnly ? MaskTest() : null;
         lock (s.Things)
         {
             for (int i = 0; i < s.Things.Count; i++)
@@ -469,7 +478,7 @@ public sealed class AreaPanel
                     continue;
                 }
                 var k = KindOf(t);
-                if ((includeHidden || t.Id < 0 || _view.IsShown(k)) && (!chosenKindsOnly || Area.Kinds.Contains(k) && MaskAt(t.Position.X - ox, t.Position.Z - oz)))
+                if ((includeHidden || t.Id < 0 || _view.IsShown(k)) && (!chosenKindsOnly || Area.Kinds.Contains(k) && maskAt!(t.Position.X - ox, t.Position.Z - oz)))
                 {
                     out_.Add(i);
                 }
@@ -478,15 +487,23 @@ public sealed class AreaPanel
         return out_;
     }
 
-    /// <summary>Whether the Mask lets the ground at a grid point through (the object actions pick only there).</summary>
-    private bool MaskAt(float gx, float gz)
+    /// <summary>
+    /// Whether the Mask lets the ground at a grid point through (the object actions pick only there). The Mask is
+    /// taken now, once: each snapshot copies the whole ground, so take one per action, not one per object.
+    /// </summary>
+    /// <returns>A test by grid point (metres from the scene's corner); always true when the Mask is off.</returns>
+    private Func<float, float, bool> MaskTest()
     {
         if (_session() is not { } s || s.MaskNow() is not { } m)
         {
-            return true;
+            return static (_, _) => true;
         }
-        int x = Math.Clamp((int)MathF.Round(gx), 0, s.Ground.W - 1), z = Math.Clamp((int)MathF.Round(gz), 0, s.Ground.H - 1);
-        return m(z * s.Ground.W + x) > 0;
+        int w = s.Ground.W, h = s.Ground.H;
+        return (gx, gz) =>
+        {
+            int x = Math.Clamp((int)MathF.Round(gx), 0, w - 1), z = Math.Clamp((int)MathF.Round(gz), 0, h - 1);
+            return m(z * w + x) > 0;
+        };
     }
 
     /// <summary>A thing's object kind.</summary>
@@ -559,8 +576,43 @@ public sealed class AreaPanel
         _ => null,
     };
 
-    /// <summary>The action (Apply, Enter).</summary>
+    /// <summary>The action (Apply, Enter). While one runs, another does nothing (Apply greyed out).</summary>
     public async Task Apply()
+    {
+        if (_applying)
+        {
+            return;
+        }
+        _applying = true;
+        ApplyButton.IsEnabled = false;
+        try
+        {
+            await ApplyOnce();
+        }
+        finally
+        {
+            _applying = false;
+            ApplyButton.IsEnabled = true;
+        }
+    }
+
+    /// <summary>
+    /// Whether the session is still the one open after a wait; when it is not (another area opened, the world
+    /// closed), says that nothing was applied.
+    /// </summary>
+    /// <param name="session">The session the action started on.</param>
+    private bool StillOpen(EditSession session)
+    {
+        if (ReferenceEquals(_session(), session))
+        {
+            return true;
+        }
+        Message?.Invoke("The area changed while this was running: nothing was applied.");
+        return false;
+    }
+
+    /// <inheritdoc cref="Apply"/>
+    private async Task ApplyOnce()
     {
         if (_session() is not { } session)
         {
@@ -793,9 +845,11 @@ public sealed class AreaPanel
     {
         var s = session.Scene;
         float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        // Taken once, when the spots are first judged (after the generator ran), not once per spot.
+        var maskAt = new Lazy<Func<float, float, bool>>(MaskTest);
         var adds = await Growth.Spots(session, poly.Min(p => p.X) + ox, poly.Min(p => p.Y) + oz, poly.Max(p => p.X) + ox, poly.Max(p => p.Y) + oz,
-            o => AreaTool.Inside(poly, o.X - ox, o.Z - oz) && Area.Kinds.Contains(ObjectKinds.Of(o.Name, false)) && MaskAt(o.X - ox, o.Z - oz), _nameOf, m => Message?.Invoke(m));
-        if (adds == null)
+            o => AreaTool.Inside(poly, o.X - ox, o.Z - oz) && Area.Kinds.Contains(ObjectKinds.Of(o.Name, false)) && maskAt.Value(o.X - ox, o.Z - oz), _nameOf, m => Message?.Invoke(m));
+        if (adds == null || !StillOpen(session))
         {
             return;
         }
@@ -885,6 +939,10 @@ public sealed class AreaPanel
             Message?.Invoke(BackupInfo.Text ?? "");
             return;
         }
+        if (!StillOpen(session))
+        {
+            return;
+        }
         int groundPoints = 0;
         Func<Ground, (List<int>, (int, int, int, int))>? ground = BackupGroundBox.IsChecked != true ? null : g =>
         {
@@ -949,10 +1007,13 @@ public sealed class AreaPanel
         if (BackupObjectsBox.IsChecked == true)
         {
             float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
-            // Runestones are left as they are on both sides (a location proxy cannot be copied back).
+            // Runestones are left as they are on both sides (a location proxy cannot be copied back). Both sides are
+            // picked alike (where the Mask lets through too): an unchanged object picked on one side only would be
+            // brought back on top of itself.
+            var maskAt = MaskTest();
             var wanted = WorldScene.ReadThings(bw, s.X0, s.Z0, s.ZonesX, s.ZonesZ, new HashSet<int>())
-                .Where(o => !o.Runestone && AreaTool.Inside(poly, o.Position.X - ox, o.Position.Z - oz) && Area.Kinds.Contains(KindOf(o))).ToList();
-            var current = ThingsInside(poly, chosenKindsOnly: true, includeHidden: true).Where(i => !s.Things[i].Runestone).ToList();
+                .Where(o => !o.Runestone && AreaTool.Inside(poly, o.Position.X - ox, o.Position.Z - oz) && Area.Kinds.Contains(KindOf(o)) && maskAt(o.Position.X - ox, o.Position.Z - oz)).ToList();
+            var current = ThingsInside(poly, chosenKindsOnly: true, includeHidden: true, maskAt).Where(i => !s.Things[i].Runestone).ToList();
             // Unchanged since the backup (same kind, place and facing): kept as they are.
             static bool Same(WorldScene.Thing r, WorldScene.Thing o) => r.Prefab == o.Prefab && MathF.Abs(r.Position.X - o.Position.X) < 0.01f
                 && MathF.Abs(r.Position.Y - o.Position.Y) < 0.01f && MathF.Abs(r.Position.Z - o.Position.Z) < 0.01f
@@ -1001,7 +1062,8 @@ public sealed class AreaPanel
         bool keep = KeepBuildingsBox.IsChecked == true, ground = ResetGroundBox.IsChecked == true;
         if (!await Confirm($"Reset {zones.Count} zone(s) ({string.Join(" · ", zones.Select(z => $"{z.X}, {z.Z}"))}) when you save?\n\n"
             + $"• Every tree, rock, ruin and dungeon entrance in them is removed{(keep ? " (your buildings stay)" : ", your buildings too")}.\n"
-            + (ground ? "• Their ground edits are undone.\n" : "") + "• Valheim generates the zones again the next time a player goes there."))
+            + (ground ? "• Their ground edits are undone.\n" : "") + "• Valheim generates the zones again the next time a player goes there.")
+            || !StillOpen(session))
         {
             return;
         }

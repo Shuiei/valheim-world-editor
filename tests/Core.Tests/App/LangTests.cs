@@ -7,10 +7,10 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// The app's texts by language (Lang): the English catalogue carried inside, a text with values put in, a language
-/// taken from the user's lang folder over English (its broken texts left out), Claude's texts kept in English, the
-/// computer's language picked, and the catalogues checked against the code: every key the code asks for is in English,
-/// every English text is asked for, every translation matches the English. It changes the language in use, so it runs
-/// alone.
+/// taken from the user's lang folder over English (its broken texts left out), Claude's texts kept in English, a shown
+/// text's English found, the computer's language picked, and the catalogues checked against the code: every key the
+/// code asks for is in English, every English text is asked for, every translation matches the English. It changes the
+/// language in use, so it runs alone.
 /// </summary>
 [Collection("DataDir")]
 public sealed partial class LangTests : IDisposable
@@ -78,6 +78,20 @@ public sealed partial class LangTests : IDisposable
         var cost = new TerrainEditor.Terrain.PieceCost.Total([("Wood", "Wood", 6)], ["Workbench"], []);
         Assert.Equal("Wood 6 (il faut Workbench)", cost.Describe());
         Assert.Equal("Wood 6 (needs Workbench)", cost.Describe(english: true));
+    }
+
+    // EnglishOf: a text shown in the language in use back to its English; one no catalogue has stays as it is, and
+    // a language taken again is looked up afresh.
+    [Fact]
+    public void AShownTextsEnglishIsFound()
+    {
+        Write("fr", new() { [Lang.NameKey] = "Français", ["common.cancel"] = "Annuler" });
+        Lang.Use("fr");
+        Assert.Equal("Cancel", Lang.EnglishOf("Annuler"));
+        Assert.Equal("Made in code", Lang.EnglishOf("Made in code"));
+        Lang.Use(Lang.Source);
+        Assert.Equal("Annuler", Lang.EnglishOf("Annuler"));
+        Assert.Equal("Cancel", Lang.EnglishOf("Cancel"));
     }
 
     [Fact]

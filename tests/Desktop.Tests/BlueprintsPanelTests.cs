@@ -10,7 +10,7 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The Blueprints panel through its list: Homestead's blueprints (its folder: a temporary one here) and the editor's
-/// older ones, empty, searched, each row's buttons (Paste, Edit, .vbuild, Delete; To Homestead for older ones),
+/// older ones, empty, searched, each row's buttons (Paste, Edit, .vbuild, Delete; To Homestead for older ones) and their tip keys,
 /// thumbnails that are not pictures, Import file…, what it says for files that are missing, empty or not blueprints, a
 /// name already taken, kinds a world cannot make, and whether Homestead is installed (a warning when not). Never the
 /// user's own folders.
@@ -121,6 +121,22 @@ public class BlueprintsPanelTests
         Assert.Empty(r.Listed);
         Assert.Empty(Directory.GetFiles(r.Homestead));
         Assert.Contains("No blueprints yet", Texts(r.B.List));
+    }
+
+    // Each row's buttons carry their tip key, which Claude knows them by whatever the language they are shown in.
+    [AvaloniaFact]
+    public void EachRowsButtonsHaveTipKeys()
+    {
+        using var r = new BlueprintsPanelRun();
+        r.Keep("Gate", "woodwall", "wood_floor");
+        r.B.Store.Save("Old", "OtherWorld", null, CopyFormat.ToJson(BlueprintsPanelRun.Clip("Old", "woodwall")));
+        r.B.Toggle(true);
+        var keys = r.B.List.GetLogicalDescendants().OfType<Button>().Select(b => $"{b.Content} {Tips.KeyOf(b)}").ToList();
+        Assert.Equal(
+        [
+            "Paste blueprints.paste", "Edit blueprints.edit", "Details blueprints.details", ".vbuild blueprints.vbuild", "Delete blueprints.delete",
+            "Paste blueprints.paste", "To Homestead blueprints.toHomestead", ".vbuild blueprints.vbuildOld", "Delete blueprints.deleteOld",
+        ], keys);
     }
 
     // Edit asks for the blueprint's file (the window opens it in the Workshop). Alone in its test: the
