@@ -109,9 +109,10 @@ public sealed class EditSession
                 parts.Add($"{removed} removed");
             }
 
-            if (Resets.Length > 0)
+            int resets = Resets.Select(r => (r.Reset.X, r.Reset.Z)).Distinct().Count();
+            if (resets > 0)
             {
-                parts.Add($"{Resets.Length} zone reset");
+                parts.Add($"{resets} zone reset");
             }
 
             return string.Join(" · ", parts);
@@ -188,8 +189,10 @@ public sealed class EditSession
             }
             int[] pts = c.Points;
             var things = c.Things.Select(t => (t.Index, Scene.Things[t.Index].Gone, t.Before)).Where(t => t.Gone != t.Before).ToArray();
-            var marked = Edits.Resets.Select(r => (r.X, r.Z)).ToHashSet();
-            var resets = c.Resets.Select(r => (r.Reset, marked.Contains((r.Reset.X, r.Reset.Z)), r.Before)).ToArray();
+            var marked = Edits.Resets.ToDictionary(r => (r.X, r.Z));
+            var resets = c.Resets.GroupBy(r => (r.Reset.X, r.Reset.Z))
+                .SelectMany(z => ResetEntries(marked.GetValueOrDefault(z.Key), z.Where(r => r.Before).Select(r => r.Reset).FirstOrDefault()))
+                .ToArray();
             removal = new Change($"Removed: {c.Label}", pts, Pick(start, pts), Pick(g.Snapshot(), pts), c.Zones) { Things = things, Resets = resets, RevertOf = c };
             if (pts.Length > 0)
             {
@@ -197,10 +200,7 @@ public sealed class EditSession
             }
             Send(c.Zones);
             SetGone(things.Select(t => (t.Index, t.Before)));
-            foreach (var (r, _, on) in resets)
-            {
-                Edits.SetReset(r, on);
-            }
+            SetResets(resets, after: true);
             c.Removed = true;
         }
         AddChange(removal);
@@ -747,10 +747,7 @@ public sealed class EditSession
             }
             Send(c.Zones);
             SetGone(c.Things.Select(t => (t.Index, after ? t.After : t.Before)));
-            foreach (var (r, b, a) in c.Resets)
-            {
-                Edits.SetReset(r, after ? a : b);
-            }
+            SetResets(c.Resets, after);
             c.RevertOf?.Removed = after;
         }
         if (c.Things.Length > 0)
@@ -1129,10 +1126,7 @@ public sealed class EditSession
             Edits.AddObjects(added);
         }
         SetGone(changes.Where(c => c.Item3).Select(c => (c.Item1, true)));
-        foreach (var (r, _, on) in resets ?? [])
-        {
-            Edits.SetReset(r, on);
-        }
+        SetResets(resets ?? [], after: true);
         if (points.Length == 0 && changes.Count == 0 && (resets?.Length ?? 0) == 0)
         {
             return indices;
@@ -1166,8 +1160,8 @@ public sealed class EditSession
     /// <param name="label">The history's name for the step.</param>
     public void MarkResets(IReadOnlyCollection<(int X, int Z)> zones, bool keepBuildings, bool ground, string label)
     {
-        var marked = Resets.Select(r => (r.X, r.Z)).ToHashSet();
-        var resets = zones.Select(z => (new ZoneReset(z.X, z.Z, keepBuildings, ground), marked.Contains(z), true)).ToArray();
+        var marked = Resets.ToDictionary(r => (r.X, r.Z));
+        var resets = zones.SelectMany(z => ResetEntries(marked.GetValueOrDefault(z), new ZoneReset(z.X, z.Z, keepBuildings, ground))).ToArray();
         Func<Ground, (List<int>, (int, int, int, int))>? clearGround = !ground ? null : g =>
         {
             var touched = new List<int>();
@@ -1191,6 +1185,57 @@ public sealed class EditSession
             return (touched, (0, 0, g.W - 1, g.H - 1));
         };
         Commit(label, clearGround, [], [], resets);
+    }
+
+    /// <summary>
+    /// A step's reset entries for one zone going from one marking to another (null: not marked). A zone marked with
+    /// other options gets two: the old marking taken off and the new one put on, so undo and redo bring back each
+    /// side's options (SetResets takes marks off first).
+    /// </summary>
+    /// <param name="before">The zone's marking before the step.</param>
+    /// <param name="after">Its marking after the step.</param>
+    private static IEnumerable<(ZoneReset Reset, bool Before, bool After)> ResetEntries(ZoneReset? before, ZoneReset? after)
+    {
+        if (before == after)
+        {
+            if (before != null)
+            {
+                yield return (before, true, true);
+            }
+            yield break;
+        }
+        if (before != null)
+        {
+            yield return (before, true, false);
+        }
+        if (after != null)
+        {
+            yield return (after, false, true);
+        }
+    }
+
+    /// <summary>
+    /// Marks and unmarks zones for reset as one side of a step's entries says: every mark is taken off before any is
+    /// put on, so a zone whose options the step changed ends with that side's options.
+    /// </summary>
+    /// <param name="resets">The step's entries.</param>
+    /// <param name="after">The side to set: after the step (do, redo) or before it (undo).</param>
+    private void SetResets(IReadOnlyCollection<(ZoneReset Reset, bool Before, bool After)> resets, bool after)
+    {
+        foreach (var (r, b, a) in resets)
+        {
+            if (!(after ? a : b))
+            {
+                Edits.SetReset(r, false);
+            }
+        }
+        foreach (var (r, b, a) in resets)
+        {
+            if (after ? a : b)
+            {
+                Edits.SetReset(r, true);
+            }
+        }
     }
 
     /// <summary>Unmarks those of these zones that are marked for reset, as one undo step.</summary>
