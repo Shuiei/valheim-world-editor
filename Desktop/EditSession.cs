@@ -270,6 +270,15 @@ public sealed class EditSession
     /// </summary>
     private Stroke? _stroke;
     /// <summary>
+    /// An Apply live came back during the stroke: the ground takes the edits again when the stroke ends (taken during
+    /// it, they would wipe what the stroke did so far).
+    /// </summary>
+    private bool _takeEditsAfterStroke;
+    /// <summary>
+    /// The stroke going on was dropped: an Apply live read the area again during it. EndStroke says so.
+    /// </summary>
+    private bool _strokeDropped;
+    /// <summary>
     /// The grid rectangle changed since the view last took it (to send to the graphics card).
     /// </summary>
     private (int X0, int Z0, int X1, int Z1)? _dirty;
@@ -374,6 +383,7 @@ public sealed class EditSession
         lock (_lock)
         {
             _stroke = new Stroke { Tool = tool, Start = Ground.Snapshot() };
+            _strokeDropped = false;
             // Judged as the ground was when the stroke started.
             _strokeMask = Mask.For(Ground, Scene.Biomes, frozen: true);
             // Flatten: level to the ground under the first click.
@@ -417,6 +427,11 @@ public sealed class EditSession
             _stroke = null;
             if (s == null)
             {
+                if (_strokeDropped)
+                {
+                    _strokeDropped = false;
+                    return "The stroke was dropped: Apply live read the area again from the game while it went on. Draw it again.";
+                }
                 return "";
             }
             if (s.Touched.Count > 0)
@@ -424,6 +439,12 @@ public sealed class EditSession
                 var zones = Ground.ZonesOf(s.Touched);
                 Record(Brush.Label(s.Tool), s.Start, s.Touched, zones);
                 Send(zones);
+            }
+            // After the stroke went into the edit store, as the Apply live that came back during it would have done.
+            if (_takeEditsAfterStroke)
+            {
+                _takeEditsAfterStroke = false;
+                Ground.TakeEdits(Edits);
             }
             message = s.Clamped ? "Reached the game limit: ground can only move 8 m from its original height (red points)."
                 : s.Touched.Count == 0 && _strokeMask != null ? "Nothing changed: the Mask leaves out all the ground under the brush (check its height, slope, biome and paint settings)." : "";
@@ -1367,11 +1388,28 @@ public sealed class EditSession
         {
             if (o.Reloaded || o.Lifted)
             {
+                // A stroke begun while the game answered was made on the ground as it was before: it is dropped (the
+                // area read again has none of it, and its undo would write the old ground back).
+                if (_stroke != null)
+                {
+                    _stroke = null;
+                    _strokeMask = null;
+                    _strokeDropped = true;
+                }
+                _takeEditsAfterStroke = false;
                 Reread(owner.World);
             }
             else
             {
-                Ground.TakeEdits(Edits);
+                // During a stroke, the ground taken from the edits now would lose what the stroke did so far.
+                if (_stroke != null)
+                {
+                    _takeEditsAfterStroke = true;
+                }
+                else
+                {
+                    Ground.TakeEdits(Edits);
+                }
                 if (o.Done)
                 {
                     MarkApplied(before);
