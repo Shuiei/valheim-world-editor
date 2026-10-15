@@ -4,6 +4,51 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.42.0 — unreleased
+
+### Changed
+- **Generated dungeons vary far more.** Rooms were all boxes entered in the middle of a wall, each kind furnished one
+  way, torches along every wall. Now:
+  - **Room shapes**: crossings, shrines, tombs and arenas with their corners notched (an octagon's feel), chapels,
+    halls and throne rooms ending in an apse, store rooms, quarters, barracks and the like with a corner cut away or
+    a neck at the door. Walls, beams, the plan's map and the furnishing follow the shape; twins mirror it.
+  - **Bent corridors**: a corridor may run ahead, turn, and enter its room from the side (often in catacombs,
+    warrens, holds and ruins; seldom in a temple). Some rooms are entered on their long side.
+  - **Two to four furnishings per kind of room**, picked by the seed: a mead hall, a hall of the dead, a bare hall of
+    fallen pillars; a chapel's raised altar in a ring of braziers or a nave of rugs and candles; a tomb on a dais;
+    bedrolls round a fire; stock stacked in a corner with a cart; shelves in aisles; a scriptorium; a war room; the
+    boss enthroned over heaps of skulls; a drill room; a dolmen shrine; and more. New props: cobwebs in the corners,
+    chains and hooks from the roofs, bedrolls, weapon stands, training dummies, an archery target, dolmens, candles
+    (where monsters do not come back), a cart, a bath, a round table.
+  - **Lighting styles** per room: standing torches, wall sconces, or braziers in the corners; corridors likewise.
+  - **Floors**: in a stone or grausten dungeon, grand rooms get black marble tiles and lived-in rooms wooden boards,
+    half the time (Furniture at Furnished or Rich). Stone pieces stand on the marble through them, as the game's
+    support asks.
+  - **Built up inside**: in stone and grausten dungeons a great hall, throne room or chapel may carry a loft over
+    the way in (a deck on posts 4 m up, a rail, stairs up one side, braziers and a sentinel on it); arenas and
+    shrines may be sunk a metre below ledges round the walls; a burial chamber may hold a vault, an inner chamber
+    with the sarcophagus inside. Alcoves off rooms and niches off corridors are furnished (a sarcophagus across, a
+    statue between candles, a bed in its bay, a shelf and crates; a single piece in a niche).
+  - **Clusters**: beside its main feature a room gets one or two groups of things that belong together in its
+    corners: a camp, a meal, a scribe's desk, stores, an armoury, an altar, bones, a workbench.
+  - **Hero pieces**: big rooms may get one piece that stands once in the whole dungeon: a dolmen, a fallen giant's
+    statue in parts, a grave slab, a giant's skull or ribs, an altar of crystal, a cart.
+  - **Corridor kinds**: a gate midway under a band of wall, a half collapse, bones along both walls, a runner, vines,
+    sharpened stakes. **Dead ends**: corridors that lead nowhere but a cache (the biome's chest, loot, sometimes a
+    guard). Catacombs and prisons keep some corridors dark between lit rooms.
+  - **Pacing**: a few rooms stand nearly bare (one piece, a light); clutter never repeats the same thing twice
+    running, and rooms differ in how tidy they are.
+  - **The whole of the game's prefabs**, measured through the editor's models (a `bounds` driver command): each
+    biome's own growths (vines, roots, surtling cores; guck sacks, tar, muddy scrap piles; icicles, ice shards,
+    snowdrifts, crystals, hung deer; seeker creep, eggs, royal jelly, black cores; charred skulls, wall spikes,
+    gems in the walls; frost cores, frozen dead), its own lights, several kinds of chest, the real crafting
+    stations in kitchens, forges and workshops, measured hero pieces (standing and memorial stones, a wisp
+    fountain, an eternal pyre, a sled, a crane), biome corridor kinds (mud, barricade, creep,
+    icicles, spikes, roots, traps), windows in Ashlands walls, Ashlands and mountain gates. Props that stood at
+    the wrong height (the fallen statue's parts floated metres up) now stand by their measured feet.
+  - Lights and decay draw from random streams of their own, so turning Light or Ruin changes nothing else about a
+    dungeon. The tests' copies of the game's data gain the new props.
+
 ## v1.41.0 — unreleased
 
 ### Added

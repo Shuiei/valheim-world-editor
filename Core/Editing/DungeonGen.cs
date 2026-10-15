@@ -81,7 +81,17 @@ public static class DungeonGen
     /// <param name="Corridor">A corridor rather than a room.</param>
     /// <param name="Main">On the main way through.</param>
     /// <param name="Key">The room whose chest holds the boss gate's key.</param>
-    public sealed record PlanRoom(string Name, int Level, float Y, float X0, float Z0, float X1, float Z1, bool Corridor, bool Main, bool Key);
+    /// <param name="Parts">
+    /// The rectangles (metres) its floor is made of when it is not its whole box (a corner cut away, notched corners,
+    /// an apse); null for a whole box.
+    /// </param>
+    /// <param name="Nooks">Its recesses (metres): the alcoves off a room, the niches off a corridor; among its parts too.</param>
+    public sealed record PlanRoom(string Name, int Level, float Y, float X0, float Z0, float X1, float Z1, bool Corridor, bool Main, bool Key,
+        IReadOnlyList<(float X0, float Z0, float X1, float Z1)>? Parts = null, IReadOnlyList<(float X0, float Z0, float X1, float Z1)>? Nooks = null)
+    {
+        /// <summary>Its floor as rectangles: its parts, or its whole box.</summary>
+        public IReadOnlyList<(float X0, float Z0, float X1, float Z1)> Floor => Parts ?? [(X0, Z0, X1, Z1)];
+    }
 
     /// <summary>A way between two rooms of the map: a doorway, or Kind "Stairs".</summary>
     /// <param name="Level">The level it is on (for stairs, the foot's).</param>
@@ -338,6 +348,65 @@ public static class DungeonGen
         return new Result(items, arrival, kind, rooms, notes, name, Dungeon: dungeon);
     }
 
+    /// <summary>
+    /// A floor of its own for some rooms: in a stone or grausten dungeon, the grand rooms (halls, throne room, chapels,
+    /// the arena, the treasury, the entrance) get black marble tiles half the time, and quarters, barracks, dens and
+    /// studies wooden boards (with Decor 1 or more; the shell lays them).
+    /// </summary>
+    private static void Floors(DungeonPlan plan, Material mat, Settings s, Random rnd)
+    {
+        if (s.Decor < 1 || mat.Name is not ("Stone" or "Grausten"))
+        {
+            return;
+        }
+        foreach (var sp in plan.Spaces.Where(sp => sp.IsRoom))
+        {
+            bool grand = sp.Room is Room.Hall or Room.Throne or Room.Chapel or Room.Boss or Room.Treasury or Room.Entrance;
+            bool lived = sp.Room is Room.Quarters or Room.Barracks or Room.Den or Room.Library;
+            if (grand && rnd.NextDouble() < 0.5)
+            {
+                (sp.Floor, sp.FloorTop) = ("blackmarble_tile_floor_2x2", 0.19f);
+            }
+            else if (lived && rnd.NextDouble() < 0.5)
+            {
+                (sp.Floor, sp.FloorTop) = ("wood_floor", 0.1f);
+            }
+        }
+    }
+
+    /// <summary>
+    /// A shaped room's floor as rectangles (metres): each row of its tiles in runs, rows with the same runs
+    /// merged into one rectangle (an L is two, a cross three).
+    /// </summary>
+    private static List<(float X0, float Z0, float X1, float Z1)> Runs(DungeonPlan.Space sp)
+    {
+        var parts = new List<(float X0, float Z0, float X1, float Z1)>();
+        foreach (var row in sp.Tiles.GroupBy(t => t.J).OrderBy(g => g.Key))
+        {
+            var xs = row.Select(t => t.I).Order().ToList();
+            for (int a = 0; a < xs.Count;)
+            {
+                int b = a;
+                while (b + 1 < xs.Count && xs[b + 1] == xs[b] + 1)
+                {
+                    b++;
+                }
+                float x0 = 2 * xs[a], x1 = 2 * xs[b] + 2, z0 = 2 * row.Key;
+                int same = parts.FindIndex(p => p.X0 == x0 && p.X1 == x1 && p.Z1 == z0);
+                if (same >= 0)
+                {
+                    parts[same] = (x0, parts[same].Z0, x1, z0 + 2);
+                }
+                else
+                {
+                    parts.Add((x0, z0, x1, z0 + 2));
+                }
+                a = b + 1;
+            }
+        }
+        return parts;
+    }
+
     /// <summary>A dungeon kind's name as shown, without the DG_ prefix.</summary>
     public static string Describe(Dungeons.Kind k) => k.Name.Replace("DG_", "", StringComparison.Ordinal);
 
@@ -351,13 +420,15 @@ public static class DungeonGen
         var mat = MaterialOf(s.Walls ?? biome.Material);
         string name = string.IsNullOrWhiteSpace(s.Name) ? NameFor(s.Seed, style.Name) : s.Name!;
         var plan = DungeonPlanner.Make(s, style, rnd);
+        Floors(plan, mat, s, rnd);
         var o = new DungeonOut();
         DungeonShell.Build(plan, mat, o, s);
         DungeonDresser.Dress(plan, mat, biome, style, s, rnd, o, name);
         var e = plan.Entrance;
         var arrival = new Vector3(e.CenterX, 0.05f, 2 * e.Z0 + 1.7f);
         var map = plan.Spaces.Select(sp => new PlanRoom(sp.Name, sp.Level, DungeonPlan.FloorY(sp.Level), 2 * sp.X0, 2 * sp.Z0, 2 * (sp.X0 + sp.W), 2 * (sp.Z0 + sp.H),
-            sp.Corridor, sp.Main, sp.KeyChest)).ToList();
+            sp.Corridor, sp.Main, sp.KeyChest, sp.Shape == DungeonPlan.Shape.Rect ? null : Runs(sp),
+            sp.Recesses.Count == 0 ? null : sp.Recesses.Select(n => (2f * n.Tiles.Min(t => t.I), 2f * n.Tiles.Min(t => t.J), 2f * (n.Tiles.Max(t => t.I) + 1), 2f * (n.Tiles.Max(t => t.J) + 1))).ToList())).ToList();
         var index = plan.Spaces.Select((sp, i) => (sp, i)).ToDictionary(p => p.sp, p => p.i);
         var doors = plan.Doors.Select(d => new PlanDoor(d.A.Level, d.Center.X, d.Center.Z, d.Kind.ToString(), index[d.A], index[d.B])).ToList();
         foreach (var foot in plan.Spaces.Where(sp => sp.Room == Room.StairBottom && sp.Parent != null))

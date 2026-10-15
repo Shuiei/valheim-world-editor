@@ -48,15 +48,72 @@ arena in red, treasure in gold, the room with the key in green, doorways as dots
 What it is like:
 
 - **The layout reads like a building.** Rooms open in the middle of their walls and line up along
-  axes, with corridors running straight between them. Side rooms often come in pairs on either side
-  of a hall.
-- **Every room is furnished for its purpose.**
-  - Halls have columns, a runner rug and a throne or an altar at the far end.
-  - Chapels have pews facing an altar between two statues.
-  - Burial chambers have rows of sarcophagi; ossuaries have bones along every wall.
-  - Feast halls have long tables with food, benches and a hearth.
+  axes, with corridors between them; side rooms often come in pairs on either side of a hall. Some
+  corridors bend on the way (often in catacombs, warrens and holds), and some rooms are entered on
+  their long side.
+- **Rooms take shapes.** Besides plain boxes there are crossings and shrines with their corners
+  notched, chapels, halls and throne rooms that narrow into an apse, store rooms and quarters that
+  lose a corner or neck in at the door, and arenas notched into an octagon. The walls, the beams
+  and the furniture follow the shape.
+- **Every room is furnished for its purpose, and not always the same way.** Each kind of room has
+  two to four furnishings, picked by the seed:
+  - Halls: colonnades with an altar at the far end; a mead hall round a fire with trestle tables;
+    a hall of the dead with a sarcophagus on a dais between statues; or a bare, echoing hall of
+    fallen pillars.
+  - Chapels: pews facing an altar between two statues; a raised altar in a ring of braziers; or a
+    nave of rugs and candles under long hangings.
+  - Burial chambers: rows of sarcophagi; one tomb on a dais among skulls and candles; or sarcophagi
+    set at odd angles among the bones. Ossuaries: bones along the walls, a heap in the middle, or
+    stacks in rows. Galleries: niches, standing sarcophagi, statues, or bare and cobwebbed.
+  - Barracks: beds along the walls with a table; bedrolls round a fire with a weapon stand; or
+    bunks with chests at their feet. Store rooms: stock along the walls, stacked in a corner with a
+    cart, or shelves in rows. Studies: shelves round a table, in aisles, or a scriptorium of desks.
+  - Feast halls: long tables down the middle, or the high table on a dais before a fire. Throne
+    rooms: colonnades, a war room with a long table, or fallen columns round the dais.
+  - Arenas: a ring of columns round the boss; the boss enthroned on a dais over heaps of skulls; a
+    crypt of columns and sarcophagi under chains; or a pit, the floor sunk a metre below ledges
+    round the walls. Shrines can be sunk the same way, the idol down in a ring of candles.
   - Cell blocks have barred cells on each side of an aisle.
-  - The arena has a ring of columns and a great rug, with the boss in the middle.
+- **Rooms are built up inside, not just furnished.** In a stone or grausten dungeon a great hall,
+  throne room or chapel may carry a loft over the way in: a deck 4 m up on posts, with a rail and
+  stairs up one side, braziers and a sentinel on it. A burial chamber may hold a vault, an inner
+  chamber of walls against the far wall with the sarcophagus inside and candles at its opening.
+  Alcoves off a room hold a sarcophagus across, a statue between candles, a bed in its bay or a
+  shelf and crates; niches off a corridor a single statue, a stand or a barrel.
+- **Things come in groups that belong together.** Beside its main feature, a room has one or two
+  clusters in its corners that suit it: a camp (bedroll, fire, firewood), a meal (table, seats,
+  food), a scribe's desk (table, chair, candles, chest), stores (crates stacked, barrels), an
+  armoury (weapon and armour stands), an altar (statue, candles, offerings), bones, a workbench.
+- **One piece a room is remembered by.** Big rooms may get a hero piece that stands once in the
+  whole dungeon: a dolmen, a fallen giant's statue in parts, a grave slab, a giant's skull or ribs
+  in a warren, an altar of crystal in a hold, a cart in a keep.
+- **Each biome's own things, from the whole of the game.** What the game's dungeons are full of grows
+  here too: vines, roots and surtling cores on stands in the woods' crypts; guck sacks, roots, tar and
+  muddy scrap piles in the swamp's; icicles, ice shards, snowdrifts, crystals, meat and hung deer in the
+  mountains'; seeker creep on the walls, hanging eggs, royal jelly and black cores in the mines; charred
+  skulls, wall spikes, debris and gems set into the walls in the Ashlands; drifts, frost cores on the walls
+  and frozen dead in the north. Rooms are lit by the biome's own lights (its torches, lanterns, snow and
+  lava lanterns), its chests come in its several kinds, its smiths and cooks have the game's real stations
+  (ovens, cauldrons, fermenters, smelters, the black forge, the eitr refinery, the frost foundry), and the
+  pieces a room is remembered by are measured to fit: standing stones, memorial stones, a wisp fountain,
+  an eternal pyre, a sled, a crane in a tall hold, the fallen giant's statue in parts. Ashlands
+  ruins have windows in their upper walls; Ashlands gates and mountain gates are their own.
+- **Some rooms are nearly bare**, one piece and a light in the dark: a pacing beat between the full
+  rooms. Clutter never puts the same thing twice running, and some rooms are tidier than others.
+- **Dead ends.** A corridor or two lead nowhere but a cache at the far end: the biome's chest, loot
+  lying about, sometimes a guard. In catacombs and prisons some corridors stay dark between lit rooms.
+- **Corridors are not all the same corridor.** A long one may be closed midway by a gate under a
+  band of wall (an iron gate in a crypt, a door in a keep, a sliding door in a hold), half
+  collapsed (rubble, broken wall, a fallen pillar, the way open along one side), lined with bones
+  along both walls (catacombs), carpeted with a runner (keeps, temples, holds), hung with vines
+  (crypts, ruins) or edged with sharpened stakes (warrens). The biome adds its own: a muddy scrap pile to
+  dig through in the swamp, a stake-wall barricade or seeker creep in the mines, icicles in the cold,
+  spikes in the Ashlands, roots in the woods, a troll trap or a fuling trap in a keep or a warren.
+- **Rooms are lit differently**: standing torches along the walls, sconces on them, or a brazier
+  or two in the corners; the dark leaves most rooms unlit.
+- **Floors and ceilings vary.** In a stone or grausten dungeon the grand rooms get black marble tiles and the
+  lived-in ones wooden boards, half the time. Raised stone daises with steps, pilasters along the
+  walls, chains and hooks hanging from the roofs, cobwebs in the corners.
 - **Doors close every room.** Monsters do not open doors, so each room's monsters wait behind its
   door, and the stairs between levels have doors too.
 - **Some rooms rise through two levels**: great halls, chapels and the arena.

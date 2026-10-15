@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.Save;
 using static TerrainEditor.Editing.DungeonKit;
 
 namespace TerrainEditor.Editing;
@@ -56,17 +57,19 @@ internal static class DungeonShell
             Walls(plan, l, f, mat, o);
             foreach (var d in plan.Doors.Where(d => d.A.Level == l.Index))
             {
-                Doorway(d, f, mat, o);
+                Doorway(d, f, mat, o, BiomeOf(s.Biome).Name);
             }
-            if (mat.Floor != null && s.Decor >= 1)
+            if (s.Decor >= 1)
             {
+                // The floor finish: a room's own, else the material's.
                 foreach (var (t, sp) in l.Owner)
                 {
-                    if (sp.Room is Room.StairTop or Room.StairBottom || l.Holes.Contains(DungeonPlan.CellOf(t)))
+                    string? finish = sp.Floor ?? mat.Floor;
+                    if (finish == null || sp.Room is Room.StairTop or Room.StairBottom || l.Holes.Contains(DungeonPlan.CellOf(t)))
                     {
                         continue;
                     }
-                    o.Add(mat.Floor, new Vector3(2 * t.Item1 + 1, f, 2 * t.Item2 + 1), 0);
+                    o.Add(finish, new Vector3(2 * t.Item1 + 1, f, 2 * t.Item2 + 1), 0);
                 }
             }
             if (mat.Beam != null)
@@ -227,13 +230,15 @@ internal static class DungeonShell
         var low = fits.Where(p => p.H <= y1 - y0 + Eps).ToList();
         var part = low.Count > 0 ? low.OrderByDescending(p => p.H).ThenByDescending(p => p.W).First() : fits.OrderBy(p => p.H).ThenByDescending(p => p.W).First();
         float tc = t0 + part.W / 2, y = y0 + part.Bottom;
-        o.Add(part.Prefab, alongZ ? new Vector3(line, y, tc) : new Vector3(tc, y, line), alongZ ? 90 : 0);
+        // A window now and then in a material that has one, on the upper row (never the lowest), by the spot's hash.
+        string prefab = mat.Window is { } window && part.W >= 4 && y0 >= 1.9f && (StableHash.Of($"{line:0.#}|{tc:0.#}|{y0:0.#}") & 0xFF) < 46 ? window : part.Prefab;
+        o.Add(prefab, alongZ ? new Vector3(line, y, tc) : new Vector3(tc, y, line), alongZ ? 90 : 0);
         Fill(mat, o, alongZ, line, t0 + part.W, t1, y0, y0 + Math.Min(part.H, y1 - y0));
         Fill(mat, o, alongZ, line, t0, t1, y0 + part.H, y1);
     }
 
     /// <summary>A doorway: 4 m of wall with its opening and what closes it.</summary>
-    private static void Doorway(DungeonPlan.Doorway d, float f, Material mat, DungeonOut o)
+    private static void Doorway(DungeonPlan.Doorway d, float f, Material mat, DungeonOut o, string biome)
     {
         var (cx, cz) = d.Center;
         bool alongZ = d.Dir.X != 0;
@@ -261,9 +266,11 @@ internal static class DungeonShell
                 }
                 break;
             case Door.Grand:
+                // Over the gates (wood) a timber tympanum, not stone: stone on wood holds no better than wood's
+                // best, which is stone's least, and the wall over a gate into a tall room would fall.
                 o.Add("darkwood_gate", At(c - 1, f), yaw);
                 o.Add("darkwood_gate", At(c + 1, f), yaw + 180);
-                Fill(mat, o, alongZ, line, c - 2, c + 2, f + 4, h);
+                Fill(mat.Name is "Wood" or "Stave" or "Dvergr" or "Goblin" ? mat : MaterialOf("Wood"), o, alongZ, line, c - 2, c + 2, f + 4, h);
                 break;
             case Door.Wood:
                 Frame(3);
@@ -271,7 +278,7 @@ internal static class DungeonShell
                 break;
             case Door.Gate:
                 Frame(3);
-                o.Add("dungeon_sunkencrypt_irongate", At(c, f), yaw);
+                o.Add(biome == "Ashlands" ? "Morkborg_gate" : biome == "Mountain" ? "wood_gate" : "dungeon_sunkencrypt_irongate", At(c, f + (biome == "Mountain" ? 1.03f : 0)), yaw);
                 break;
             case Door.Key:
                 Frame(3);
@@ -300,19 +307,23 @@ internal static class DungeonShell
         }
     }
 
-    /// <summary>Beams under the roof across a room, every 4 m.</summary>
+    /// <summary>Beams under the roof across a room, every 4 m, over the room's own tiles only (not what its shape cuts away).</summary>
     private static void Beams(DungeonPlan.Space sp, float f, Material mat, DungeonOut o)
     {
         float top = f + DungeonPlan.HeightOf(sp) - mat.BeamTop;
         bool acrossX = sp.W <= sp.H; // beams span the narrower way
         float x0 = 2 * sp.X0, x1 = 2 * (sp.X0 + sp.W), z0 = 2 * sp.Z0, z1 = 2 * (sp.Z0 + sp.H);
+        bool Over(float x, float z) => sp.Has(((int)MathF.Floor(x / 2), (int)MathF.Floor(z / 2)));
         if (acrossX)
         {
             for (float z = z0 + 4; z < z1 - 1; z += 4)
             {
                 for (float x = x0 + 2; x < x1 - 1; x += 4)
                 {
-                    o.Add(mat.Beam!, new Vector3(x, top, z), 0);
+                    if (Over(x - 1.5f, z - 0.5f) && Over(x + 1.5f, z - 0.5f) && Over(x - 1.5f, z + 0.5f) && Over(x + 1.5f, z + 0.5f))
+                    {
+                        o.Add(mat.Beam!, new Vector3(x, top, z), 0);
+                    }
                 }
             }
         }
@@ -322,7 +333,10 @@ internal static class DungeonShell
             {
                 for (float z = z0 + 2; z < z1 - 1; z += 4)
                 {
-                    o.Add(mat.Beam!, new Vector3(x, top, z), 90);
+                    if (Over(x - 0.5f, z - 1.5f) && Over(x - 0.5f, z + 1.5f) && Over(x + 0.5f, z - 1.5f) && Over(x + 0.5f, z + 1.5f))
+                    {
+                        o.Add(mat.Beam!, new Vector3(x, top, z), 90);
+                    }
                 }
             }
         }

@@ -336,6 +336,33 @@ public static class Driver
                 await w.OpenWorkshop(a.Length > 1 ? a[1] : null);
                 return JsonSerializer.Serialize(new { opened = sw.ElapsedMilliseconds, objects = w.View.Scene?.Things.Count(t => !t.Gone) ?? 0 });
             }
+            case "bounds":
+            {
+                // bounds <prefab>...: each prefab's model box in its own frame (its parts' meshes, the root's scale),
+                // for placing things by their feet and size; null for a prefab without a model.
+                var models = w.View.Models ?? throw new InvalidOperationException("no models: open an area or the Workshop first");
+                var boxes = new Dictionary<string, float[]?>();
+                foreach (string name in a.Skip(1).SelectMany(x => x.Split(' ', StringSplitOptions.RemoveEmptyEntries)))
+                {
+                    var model = models.LoadModel(name);
+                    var lo = new System.Numerics.Vector3(float.MaxValue);
+                    var hi = new System.Numerics.Vector3(float.MinValue);
+                    bool any = false;
+                    foreach (var part in model?.Parts ?? [])
+                    {
+                        if (models.LoadMesh(part.Mesh) is { } md)
+                        {
+                            var (bmin, bmax) = Picking.Transform(md.Bounds.Min, md.Bounds.Max, part.Matrix);
+                            lo = System.Numerics.Vector3.Min(lo, bmin);
+                            hi = System.Numerics.Vector3.Max(hi, bmax);
+                            any = true;
+                        }
+                    }
+                    var sc = model?.RootScale ?? System.Numerics.Vector3.One;
+                    boxes[name] = any ? [lo.X * sc.X, lo.Y * sc.Y, lo.Z * sc.Z, hi.X * sc.X, hi.Y * sc.Y, hi.Z * sc.Z] : null;
+                }
+                return JsonSerializer.Serialize(boxes);
+            }
             case "state":
             case "quit":
                 return State(w);
