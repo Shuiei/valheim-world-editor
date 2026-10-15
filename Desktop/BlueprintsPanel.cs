@@ -213,7 +213,7 @@ public sealed class BlueprintsPanel
     /// <param name="picture">The picture, null: none.</param>
     /// <param name="name">The blueprint's name.</param>
     /// <param name="meta">What it holds, where from.</param>
-    /// <param name="buttons">Adds the row's buttons through the function it is given (text, tip, click).</param>
+    /// <param name="buttons">Adds the row's buttons through the function it is given (text, tip key, click).</param>
     /// <param name="cost">What it costs to build, shown under the meta line (null: not shown).</param>
     /// <param name="description">Shown in up to three lines (null or blank: not shown).</param>
     /// <param name="tags">Shown as chips (null or none: not shown).</param>
@@ -222,8 +222,8 @@ public sealed class BlueprintsPanel
         var acts = new WrapPanel { ItemSpacing = 4, LineSpacing = 4 };
         Button Act(string text, string tip, Action a)
         {
-            var btn = new Button { Content = text, FontSize = 11, Padding = new Thickness(6, 1) };
-            ToolTip.SetTip(btn, tip);
+            // By its tip key, which Claude knows it by (and is kept from the ones that write or delete files).
+            var btn = new Button { Content = text, FontSize = 11, Padding = new Thickness(6, 1) }.Tip(tip);
             btn.Click += (_, _) => a();
             acts.Children.Add(btn);
             return btn;
@@ -299,11 +299,11 @@ public sealed class BlueprintsPanel
             var cost = Terrain.PieceCost.Of(e.Kinds);
             List.Children.Add(Row(PictureFile(e.Picture), e.Name, meta, act =>
             {
-                act("Paste", Lang.T("blueprints.tip.paste"), () => Paste(id));
-                act("Edit", Lang.T("blueprints.tip.edit"), () => EditAsked?.Invoke(e.Path));
-                act("Details", Lang.T("blueprints.tip.details"), async () => await EditDetails(e));
-                act(".vbuild", Lang.T("blueprints.tip.vbuild"), () => Export(id, "vbuild"));
-                act("Delete", Lang.T("blueprints.tip.delete"), async () => await Delete(id, e.Name));
+                act("Paste", "blueprints.paste", () => Paste(id));
+                act("Edit", "blueprints.edit", () => EditAsked?.Invoke(e.Path));
+                act("Details", "blueprints.details", async () => await EditDetails(e));
+                act(".vbuild", "blueprints.vbuild", () => Export(id, "vbuild"));
+                act("Delete", "blueprints.delete", async () => await Delete(id, e.Name));
             }, "Cost: " + cost.Describe(), e.Description, e.Tags));
         }
         if (older.Count > 0)
@@ -315,10 +315,10 @@ public sealed class BlueprintsPanel
             string meta = $"{b.W} × {b.H} m · {b.Objects} object(s){(b.Ground ? " · ground" : "")}{(b.World != null ? $" · from {b.World}" : "")}{(b.Source != null ? $" · {b.Source}" : "")}";
             List.Children.Add(Row(Picture(b.Thumb), b.Name, meta, act =>
             {
-                act("Paste", Lang.T("blueprints.tip.paste"), () => Paste(b.Id));
-                act("To Homestead", Lang.T("blueprints.tip.toHomestead"), () => ToHomestead(b.Id));
-                act(".vbuild", Lang.T("blueprints.tip.vbuildOld"), () => Export(b.Id, "vbuild"));
-                act("Delete", Lang.T("blueprints.tip.deleteOld"), async () => await Delete(b.Id, b.Name));
+                act("Paste", "blueprints.paste", () => Paste(b.Id));
+                act("To Homestead", "blueprints.toHomestead", () => ToHomestead(b.Id));
+                act(".vbuild", "blueprints.vbuildOld", () => Export(b.Id, "vbuild"));
+                act("Delete", "blueprints.deleteOld", async () => await Delete(b.Id, b.Name));
             }));
         }
     }

@@ -6,6 +6,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using ModelContextProtocol.Server;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -21,7 +22,7 @@ public sealed partial class ClaudeTools
     // ---- The window's controls.
 
     /// <summary>A control as Claude sees it.</summary>
-    /// <param name="Id">How Claude names it: its tip key (view.gameLook, workshop.cut…), else ~ and its label; #2… when shared.</param>
+    /// <param name="Id">How Claude names it: its tip key (view.gameLook, workshop.cut…), else ~ and its English label; #2… when shared.</param>
     /// <param name="Kind">switch, toggle, radio, dropdown, slider, number, text or button.</param>
     /// <param name="Label">Its words: its content, placeholder, or the label beside it.</param>
     /// <param name="Control">The control.</param>
@@ -37,10 +38,15 @@ public sealed partial class ClaudeTools
         "start.game", "start.server", "start.editLive", "start.home",
         "start.connect", "start.connectUrl", "start.savedConnect", "start.savedForget",
         "dungeon.gen.openOnPlot", "dungeon.gen.addToPlot", "dungeon.gen.workshop",
-        "select.forget", "brush.forgetStamp", "area.export",
+        "select.delete", "select.forget", "brush.forgetStamp", "area.export",
+        "blueprints.details", "blueprints.vbuild", "blueprints.vbuildOld", "blueprints.toHomestead",
+        "blueprints.delete", "blueprints.deleteOld",
     ];
 
-    /// <summary>Labels of controls without a tip key that Claude never sets (the same kinds of actions).</summary>
+    /// <summary>
+    /// English labels of controls without a tip key that Claude never sets (the same kinds of actions); a label in
+    /// another language is matched by its English (Lang.EnglishOf).
+    /// </summary>
     [GeneratedRegex(@"^(save|apply live|discard|reload|delete|details|to homestead|\.vbuild|import|get homestead|forget)", RegexOptions.IgnoreCase)]
     private static partial Regex BlockedLabel();
 
@@ -55,7 +61,7 @@ public sealed partial class ClaudeTools
         {
             return "it saves, applies, discards, reloads, writes the user's files or connects to the live game: the user's to do";
         }
-        if (Tips.KeyOf(c.Control) == null && c.Kind == "button" && BlockedLabel().IsMatch(c.Label))
+        if (Tips.KeyOf(c.Control) == null && c.Kind == "button" && BlockedLabel().IsMatch(Lang.EnglishOf(c.Label)))
         {
             return "it saves, discards or writes or deletes the user's files: the user's to do";
         }
@@ -127,7 +133,9 @@ public sealed partial class ClaudeTools
                 continue;
             }
             string label = LabelOf(c);
-            string id = Tips.KeyOf(c) ?? "~" + (label.Length > 0 ? Regex.Replace(label.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-') : kind);
+            // From the English label: the same id whatever the language (and not lost to the letters a-z keeps).
+            string english = Lang.EnglishOf(label);
+            string id = Tips.KeyOf(c) ?? "~" + (english.Length > 0 ? Regex.Replace(english.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-') : kind);
             int k = seen[id] = seen.GetValueOrDefault(id) + 1;
             list.Add(new Ctl(k == 1 ? id : $"{id}#{k}", kind, label, c));
         }

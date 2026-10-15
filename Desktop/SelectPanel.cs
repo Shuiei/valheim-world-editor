@@ -115,7 +115,8 @@ public sealed class SelectPanel
     public SelectPanel(SelectTool tool)
     {
         _tool = tool;
-        DeleteButton = Act("Delete", Tips.Of("select.delete"));
+        // Keyed: Claude is kept from it by its key, whatever its label reads as in the language in use.
+        DeleteButton = Act("Delete", Tips.Of("select.delete")).Tip("select.delete");
         BuildingButton = Act("Whole building", Tips.Of("select.building"));
         SameButton = Act("Same kind", Tips.Of("select.same"));
         InvertButton = Act("Invert", Tips.Of("select.invert"));
