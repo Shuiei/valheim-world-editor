@@ -11,10 +11,10 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The less trodden ways through Claude's tools (ClaudeTools): four views of a point given and over the map, roads
-/// painted dirt on the ground's own heights, a dungeon over the view's middle, the Workshop refused over an unsaved
-/// world, stands given items and armour, a chest given what is no item, a creature's stars, a blueprint's chest
-/// filled on the plot, and a piece with no recipe.
+/// The less trodden ways through Claude's tools (ClaudeTools): four views of a point given and over the map,
+/// screenshots asked at once from the cameras they set, roads painted dirt on the ground's own heights, a dungeon over the view's middle, the
+/// Workshop refused over an unsaved world, stands given items and armour, a chest given what is no item, a creature's
+/// stars, a blueprint's chest filled on the plot, and a piece with no recipe.
 /// </summary>
 [Collection("World files")]
 public class ClaudeToolsBranchesTests
@@ -60,6 +60,34 @@ public class ClaudeToolsBranchesTests
         Assert.StartsWith("Four views need", Assert.IsType<TextContentBlock>(Assert.Single(refused.Content)).Text);
         var state = ClaudeRun.J(await r.T.EditorState());
         Assert.Equal("map", state.GetProperty("page").GetString());
+    }
+
+    // Three screenshots asked at once (one of four views) take turns with the camera: one picture is taken at a time,
+    // each from the camera its call set, still so when the picture ends (they ran side by side, each picture from the
+    // other's camera).
+    [AvaloniaFact]
+    public async Task ScreenshotsAskedAtOnceTakeTurnsWithTheCamera()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        int taking = 0, most = 0;
+        var cameras = new List<(int Yaw, float X, float Z)>();
+        r.T.ViewPicture = async path =>
+        {
+            most = Math.Max(most, ++taking);
+            await Task.Delay(30);
+            taking--;
+            var (yaw, _, _, target) = r.W.View.Camera;
+            cameras.Add(((int)MathF.Round(yaw * 180f / MathF.PI), target.X, target.Z));
+            await Png(path, 64, 48);
+        };
+        var shots = await Task.WhenAll(r.T.Screenshot(x: 0, z: 0, yaw: 10), r.T.Screenshot(x: 5, z: 5, yaw: 200), r.T.Screenshot(views: 4));
+        Assert.All(shots, s => Assert.NotEqual(true, s.IsError));
+        Assert.Equal(1, most);
+        // The view's camera holds the target relative to the area's middle, z flipped.
+        var scene = r.W.Session!.Scene;
+        (int, float, float)[] expected = [(0, 0f, 0f), (10, -scene.Cx, scene.Cz), (90, 0f, 0f), (200, 5 - scene.Cx, scene.Cz - 5), (225, 0f, 0f), (315, 0f, 0f)];
+        Assert.Equal(expected, cameras.OrderBy(c => c.Yaw).ToArray());
     }
 
     // A road painted dirt on the ground's heights (none given, or not one per point): one pending step each.
