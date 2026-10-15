@@ -394,10 +394,14 @@ public partial class MainWindow
 
     /// <summary>
     /// The Workshop's Generate dungeon: the dungeon made onto the plot, alone (asking first when what is
-    /// there is not saved) or added to it in its middle. Its blueprint stays in the Library.
+    /// there is not saved) or added to it in its middle (not when the plot changed while its blueprint was
+    /// written: said). Its blueprint stays in the Library.
     /// </summary>
     internal async Task GeneratedOntoPlot(DungeonGen.Settings settings, DungeonGen.Result r, bool add)
     {
+        // The plot it is added to: another one opened (or the Workshop left) while the blueprint was written does not
+        // get it.
+        var plot = Session;
         if (await WriteGeneratedBlueprint(settings, r) is not string path)
         {
             return;
@@ -405,6 +409,11 @@ public partial class MainWindow
         BuildPanel.RenderLibrary();
         if (add)
         {
+            if (!InWorkshop || Session != plot)
+            {
+                MessageText.Text = "The Workshop changed while the dungeon was written: nothing placed. Its blueprint is in the Library.";
+                return;
+            }
             AddToWorkshop(path, null);
         }
         else

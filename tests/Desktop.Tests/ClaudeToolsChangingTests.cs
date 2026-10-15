@@ -113,11 +113,15 @@ public class ClaudeToolsChangingTests
         using var r = new ClaudeRun();
         await r.OpenArea();
         var made = r.T.GenerateDungeon(size: 1, levels: 1, seed: 5);
-        // The check before generating runs; then another area opens.
-        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        // Another area opens, queued after the check before generating and before the dungeon is placed.
         var other = TestScenes.Flat();
-        r.W.View.Show(other.Scene, null);
-        r.W.Edit(other);
+        var switched = Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            r.W.View.Show(other.Scene, null);
+            r.W.Edit(other);
+        });
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        await switched;
         Assert.Equal("The area was closed (or another opened) while the dungeon was made: nothing was placed.", await made);
         Assert.Empty(other.UndoList);
         Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
