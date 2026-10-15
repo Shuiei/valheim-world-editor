@@ -227,9 +227,9 @@ public static class WorldWriter
             }
             else
             {
-                File.Copy(Path.Combine(dir, $"_main.{world.SaveNumber}.db2"), main + ".db2", overwrite: true);
+                CopyDurable(Path.Combine(dir, $"_main.{world.SaveNumber}.db2"), main + ".db2");
             }
-            File.Copy(Path.Combine(dir, $"_main.{world.SaveNumber}.fwl2"), main + ".fwl2", overwrite: true);
+            CopyDurable(Path.Combine(dir, $"_main.{world.SaveNumber}.fwl2"), main + ".fwl2");
             // 4. Commit marker, written last like the game does.
             WriteAllBytesDurable(main + ".ok", BitConverter.GetBytes(SaveFileVersion));
             // 5. Read back and compare with what was meant to be written (nothing old removed yet).
@@ -401,6 +401,18 @@ public static class WorldWriter
         using FileStream fs = new(path, FileMode.Create, FileAccess.Write);
         fs.Write(bytes);
         fs.Flush(flushToDisk: true);
+    }
+
+    /// <summary>
+    /// Copies a file (over one there) and flushes the copy to disk before returning: the commit marker written after
+    /// it must not be on disk before the files it vouches for.
+    /// </summary>
+    private static void CopyDurable(string source, string target)
+    {
+        using FileStream from = new(source, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using FileStream to = new(target, FileMode.Create, FileAccess.Write);
+        from.CopyTo(to);
+        to.Flush(flushToDisk: true);
     }
 
     /// <summary>The file extensions of one save number's _main files.</summary>
