@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.23 — unreleased
+
+### Fixed
+- **One damaged ground record made the whole world fail to open.** Each zone's ground edits are saved as packed data
+  on one object. When that data was damaged or cut short, opening the world stopped with an error, although the game
+  only loses that zone's ground edits. The damaged object is now read as an ordinary object and kept as it is, a line
+  in the log says where it is, and the rest of the world opens. Damaged data claiming more ground points than a zone
+  can have is caught the same way, before the editor sets aside memory for them.
+
 ## v1.45.22 — unreleased
 
 ### Fixed
