@@ -588,11 +588,10 @@ public sealed class MapPage : IDisposable
     /// </summary>
     internal async Task PollPlayers()
     {
-        if (_session is not { Live: { } live } s || _polling == s)
+        if (_session is not { Live: { } live } s || !_polling.Add(s))
         {
             return;
         }
-        _polling = s;
         try
         {
             string answer = await live.Players();
@@ -616,17 +615,15 @@ public sealed class MapPage : IDisposable
         }
         finally
         {
-            if (_polling == s)
-            {
-                _polling = null;
-            }
+            _polling.Remove(s);
         }
     }
 
     /// <summary>
-    /// The world whose players are being asked for now, or null when no question waits for an answer.
+    /// The worlds whose players are being asked for now (a question waits for each one's answer): a world shown again
+    /// before its game answered is not asked a second time.
     /// </summary>
-    private WorldSession? _polling;
+    private readonly HashSet<WorldSession> _polling = [];
 
     /// <summary>
     /// The players' names next to their dots.
