@@ -42,7 +42,7 @@ public static class Tunnel
     private static ForwardedPortLocal? _forward;
 
     /// <summary>Held while a tunnel is being made: one at a time, so none is left open unseen.</summary>
-    private static readonly SemaphoreSlim _starting = new(1, 1);
+    private static readonly SemaphoreSlim Starting = new(1, 1);
 
     /// <summary>Whether a tunnel is connected.</summary>
     public static bool Open => _client?.IsConnected == true;
@@ -76,14 +76,14 @@ public static class Tunnel
     /// </summary>
     public static async Task<Result> Start(Request r)
     {
-        await _starting.WaitAsync();
+        await Starting.WaitAsync();
         try
         {
             return await StartOnce(r);
         }
         finally
         {
-            _starting.Release();
+            Starting.Release();
         }
     }
 
