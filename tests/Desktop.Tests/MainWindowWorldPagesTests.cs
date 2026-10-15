@@ -114,9 +114,10 @@ public class MainWindowWorldPagesTests
         await r.Open();
         var scene = r.W.View.Scene!;
         var first = r.W.EditBlock(scene.X0, scene.Z0, scene.ZonesX, scene.ZonesZ);
-        var second = r.W.EditBlock(scene.X0, scene.Z0, scene.ZonesX, scene.ZonesZ);
+        var second = r.W.EditBlock(4, 0, 1, 1);
         await Task.WhenAll(first, second);
         Assert.NotNull(r.W.Session);
+        Assert.Equal((4, 0), (r.W.View.Scene!.X0, r.W.View.Scene.Z0));
         Assert.NotSame(scene, r.W.View.Scene);
         Assert.Same(r.W.View.Scene, r.W.Session.Scene);
         Assert.Same(r.W.Session, r.W.World!.Area);
