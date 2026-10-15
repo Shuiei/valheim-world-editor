@@ -38,6 +38,14 @@ the plugin is unchanged in versions without that part.
     guard). Catacombs and prisons keep some corridors dark between lit rooms.
   - **Pacing**: a few rooms stand nearly bare (one piece, a light); clutter never repeats the same thing twice
     running, and rooms differ in how tidy they are.
+  - **The whole of the game's prefabs**, measured through the editor's models (a `bounds` driver command): each
+    biome's own growths (vines, roots, surtling cores; guck sacks, tar, muddy scrap piles; icicles, ice shards,
+    snowdrifts, crystals, hung deer; seeker creep, eggs, royal jelly, black cores; charred skulls, wall spikes,
+    gems in the walls; frost cores, frozen dead), its own lights, several kinds of chest, the real crafting
+    stations in kitchens, forges and workshops, measured hero pieces (standing and memorial stones, a wisp
+    fountain, an eternal pyre, a sled, a crane), biome corridor kinds (mud, barricade, creep,
+    icicles, spikes, roots, traps), windows in Ashlands walls, Ashlands and mountain gates. Props that stood at
+    the wrong height (the fallen statue's parts floated metres up) now stand by their measured feet.
   - Lights and decay draw from random streams of their own, so turning Light or Ruin changes nothing else about a
     dungeon. The tests' copies of the game's data gain the new props.
 

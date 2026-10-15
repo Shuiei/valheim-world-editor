@@ -591,10 +591,11 @@ internal sealed partial class DungeonDresser
                 }
                 break;
             default:
+                string lamp = Lamp(rnd);
                 foreach (var s in f.WallSpots(step, 2.5f))
                 {
                     var (u, v) = In(s, 0.7f);
-                    Put(f, TorchOf(rnd), u, v, s.Yaw, 0.4f, take: false);
+                    Put(f, lamp, u, v, s.Yaw, 0.4f, take: false);
                 }
                 break;
         }
@@ -689,7 +690,7 @@ internal sealed partial class DungeonDresser
         var rnd = Local(f, 2);
         float Rr(float a, float b) => a + (float)rnd.NextDouble() * (b - a);
         int Cc(float n) => n <= 0 ? 0 : (int)MathF.Floor(n) + (rnd.NextDouble() < n - MathF.Floor(n) ? 1 : 0);
-        string[] rubbles = ["Morkhalla_Rubble2", "Morkhalla_Rubble1", "Morkhalla_Rubble3", "Morkhalla_Stonepile"];
+        string[] rubbles = ["Morkhalla_Rubble2", "Morkhalla_Rubble1", "Morkhalla_Rubble3", "Morkhalla_Rubble1"];
         string[] debrisKinds = ["stone_wall_2x1_ruin", "stone_wall_1x1_ruin", "piece_pot1_cracked", "piece_pot3_cracked"];
         int rubble = Cc(f.Area / 90 * _decay * 2);
         var corners = f.Corners().Where(c => c.Convex).OrderBy(_ => rnd.Next()).ToList();
@@ -772,7 +773,7 @@ internal sealed partial class DungeonDresser
     {
         if (force || _s.Loot > 0)
         {
-            Put(f, _b.Chest, u, v, yaw, 0.8f);
+            Put(f, One(BiomeChests), u, v, yaw, 0.8f);
         }
     }
 
@@ -905,15 +906,18 @@ internal sealed partial class DungeonDresser
             var decay = Local(f, 2);
             if (_decay > 0.3f && decay.NextDouble() < _decay * 0.3 && Spot(f, 0.8f, rnd: decay) is var (ru, rv))
             {
-                string[] heaps = ["Morkhalla_Rubble2", "Morkhalla_Rubble3", "Morkhalla_Stonepile"];
+                string[] heaps = ["Morkhalla_Rubble2", "Morkhalla_Rubble3", "Morkhalla_Rubble1"];
                 Put(f, heaps[decay.Next(heaps.Length)], ru, rv, (float)decay.NextDouble() * 360, 0.9f, take: false);
             }
+            Growths(f);
             return;
         }
         if (_lights > 0)
         {
             PlaceLights(f, _lights == 2);
         }
+        // Growths before the decay: neither keeps a spot, and the growths must not move with the Decay setting.
+        Growths(f);
         if (_decayed)
         {
             PlaceDecay(f);
@@ -1116,6 +1120,7 @@ internal sealed partial class DungeonDresser
         }
         float step = _s.Light >= 2 ? 6 : _s.Light == 1 ? 9 : 16;
         bool sconces = _mat.Name is "Stone" or "Marble" or "Grausten" && light.NextDouble() < 0.4;
+        string lamp = Lamp(light);
         int k = light.Next(2);
         foreach (var sp in f.WallSpots(step / 2, 2.5f).Where(sp => sp.Yaw is 90 or -90))
         {
@@ -1131,7 +1136,7 @@ internal sealed partial class DungeonDresser
             else
             {
                 var (tu, tv) = In(sp, 0.5f);
-                Put(f, TorchOf(light), tu, tv, sp.Yaw, 0.35f, take: false);
+                Put(f, lamp, tu, tv, sp.Yaw, 0.35f, take: false);
             }
         }
     }
@@ -1729,9 +1734,32 @@ internal sealed partial class DungeonDresser
                     }
                 }
                 break;
+            case 1 when _b.Name == "Mistlands":
+                // A wisp fountain in the middle, black cores and candles round it.
+                Put(f, "piece_wisplure", 0, 0, 0, 1.4f, force: true);
+                Cores(f, 2);
+                Brazier(f, -(f.HalfA - 1.1f), -(f.HalfD - 1.1f));
+                Brazier(f, f.HalfA - 1.1f, -(f.HalfD - 1.1f));
+                break;
+            case 1 when _b.Name is "Deep North" or "Mountain":
+                // A memorial stone on a plinth, snow lanterns before it.
+                Plinth(f, 0, 0.5f, 2, 2);
+                _o.Add(One("MemorialStone_Medium", "MemorialStone_Large"), f.W(0, 0.5f, f.F + 1 + Lift * 2 + DungeonProps.Foot("MemorialStone_Medium")), f.Yaw(180));
+                Steps(f, 0, -1.5f, 0, 2);
+                Put(f, "piece_snowlantern", -1.6f, -1.6f, 0, 0.3f);
+                Put(f, "piece_snowlantern", 1.6f, -1.6f, 0, 0.3f);
+                Pilasters(f, 4);
+                break;
+            case 1 when f.HalfA >= 3.4f:
+                // A standing stone: a wide one lying across the middle, or a high one where the roof allows.
+                Put(f, f.S.Tall ? One("highstone", "highstone_2") : One("widestone", "widestone_2"), 0, 0, R(0, 360), 2.2f, force: true);
+                Brazier(f, -(f.HalfA - 1.1f), -(f.HalfD - 1.1f));
+                Brazier(f, f.HalfA - 1.1f, -(f.HalfD - 1.1f));
+                Pilasters(f, 4);
+                break;
             case 1:
                 Plinth(f, 0, 0, 4, 4);
-                _o.Add(One("RockDolmen_1", "RockDolmen_2", "RockDolmen_3"), f.W(0, 0, f.F + 1 + Lift * 2), f.Yaw(R(0, 360)));
+                _o.Add(One("RockDolmen_1", "RockDolmen_2", "RockDolmen_3"), f.W(0, 0, f.F + 1 + Lift * 2 + DungeonProps.Foot("RockDolmen_1")), f.Yaw(R(0, 360)));
                 Steps(f, 0, -3, 0, 2);
                 Brazier(f, -(f.HalfA - 1.1f), -(f.HalfD - 1.1f));
                 Brazier(f, f.HalfA - 1.1f, -(f.HalfD - 1.1f));
@@ -1871,6 +1899,7 @@ internal sealed partial class DungeonDresser
         }
         Hangings(f, 4, "piece_banner01", "piece_banner02", "piece_banner05", "piece_banner06", "piece_banner09", "piece_banner10");
         Trophies(f, 2);
+        WallGems(f, 2);
         Clusters(f, 1, "armoury");
         Lights(important: true);
         Elite(f, -1.8f, f.HalfD - 6.5f, 180);
@@ -2064,6 +2093,27 @@ internal sealed partial class DungeonDresser
     /// <summary>A kitchen: hearth and cauldron, preparation and butcher's tables, stores by the walls.</summary>
     private void Kitchen(Frame f)
     {
+        if (Chance(0.5))
+        {
+            // The cook's own stations: a cauldron over its fire, an oven, the fermenter and the mead cauldron, a bucket.
+            Put(f, "piece_oven", 0, f.HalfD - 1.1f, 180, 1.6f);
+            Put(f, "piece_cauldron", -(f.HalfA - 1.3f), f.HalfD - 1.3f, 135, 0.9f);
+            Put(f, "piece_preptable", f.HalfA - 0.5f, 0, -90, 1.3f);
+            Put(f, "fermenter", -(f.HalfA - 1.1f), -1, 90, 1.0f);
+            Put(f, "piece_MeadCauldron", -(f.HalfA - 0.8f), -2.8f, 90, 0.6f);
+            Put(f, "bucket", f.HalfA - 0.6f, -2.4f, R(0, 360), 0.4f);
+            Put(f, "coal_pile", 1.2f, f.HalfD - 2.8f, R(0, 360), 0.9f);
+            foreach (var s in f.WallSpots(1.4f, 2.6f).OrderBy(_ => _rnd.Next()).Take(3))
+            {
+                var (su, sv) = In(s, 0.6f);
+                Put(f, One("barrell", "piece_chest_barrel", "prop_wood_stack", "CastleKit_braided_box01"), su, sv, R(0, 360), 0.6f);
+            }
+            Lights();
+            Foes(f, 0.5f);
+            Clutter(f, 0.01f);
+            Decay();
+            return;
+        }
         Put(f, "prop_hearth", 0, f.HalfD - 1.6f, 180, 1.6f);
         Put(f, "prop_piece_cauldron", 0, f.HalfD - 3.4f, 0, 0.6f);
         Put(f, "prop_preptable", -(f.HalfA - 0.5f), 0, 90, 1.3f);
@@ -2144,6 +2194,27 @@ internal sealed partial class DungeonDresser
     /// <summary>A forge: forge and workbench pieces, wood, and metal bars when there is loot.</summary>
     private void Forge(Frame f)
     {
+        if (Chance(0.5))
+        {
+            // The smith's own: the forge with its bellows, a smelter or the biome's furnace, coal and ore, bars.
+            string furnace = _b.Name switch { "Ashlands" => "blackforge", "Mistlands" => "eitrrefinery", "Deep North" => "piece_FrostFoundry", _ => "smelter" };
+            Put(f, "forge", 0, f.HalfD - 1.2f, 180, 1.2f);
+            Put(f, "prop_forge_ext2", -1.4f, f.HalfD - 1.1f, 180, 0.5f);
+            Put(f, furnace, -(f.HalfA - 1.8f), -(f.HalfD - 1.8f), 45, 1.8f);
+            Put(f, "piece_stonecutter", f.HalfA - 1.0f, 0.4f, -90, 1.0f);
+            Put(f, "coal_pile", f.HalfA - 1.2f, -(f.HalfD - 1.2f), R(0, 360), 0.9f);
+            Put(f, One("stone_pile", "coal_pile", "prop_wood_stack"), -(f.HalfA - 1.0f), 1.6f, R(0, 360), 0.9f);
+            if (_s.Loot > 0)
+            {
+                Put(f, _b.Bars, 1.6f, f.HalfD - 2.8f, R(-10, 10), 0.5f);
+            }
+            Put(f, "bucket", 1.2f, -0.4f, R(0, 360), 0.4f);
+            Lights();
+            Foes(f, 0.5f);
+            Clutter(f, 0.01f);
+            Decay();
+            return;
+        }
         Put(f, "prop_forge_ext2", 0, 0.6f, 0, 0.6f);
         Put(f, "prop_forge_ext5", 1.4f, 0.6f, 0, 0.6f);
         Brazier(f, -1.4f, 0.6f);
@@ -2337,6 +2408,8 @@ internal sealed partial class DungeonDresser
             var (u, v) = In(s, 0.6f);
             Chest(f, u, v, s.Yaw, force: true);
         }
+        Cores(f, Count(1 + loot));
+        WallGems(f, Count(1 + loot));
         foreach (var (u, v, yaw, convex) in f.Corners().Where(c => c.Convex))
         {
             var (bu, bv) = In((u, v, yaw), 1f);
@@ -2558,7 +2631,10 @@ internal sealed partial class DungeonDresser
             }
             Brazier(f, -2, f.HalfD - 3);
             Brazier(f, 2, f.HalfD - 3);
-            PutHero(f, 0, f.HalfD - 3.4f, 180, 1.6f);
+            if (!PutHero(f, 0, f.HalfD - 3.4f, 180, 1.6f))
+            {
+                Put(f, "Goblin_Gem", 0, f.HalfD - 3.4f, 180, 1.2f);
+            }
             Clutter(f, 0.03f, "Skull1", "LargeBone", "lox_ribs");
         }
         foreach (var s in f.WallSpots(3, 3).OrderBy(_ => _rnd.Next()).Take(3))
@@ -2600,6 +2676,22 @@ internal sealed partial class DungeonDresser
     /// <summary>A workshop: work tables with stools and a lantern, workbench pieces, shelves.</summary>
     private void Workshop(Frame f)
     {
+        if (Chance(0.5))
+        {
+            // The crafter's own stations: a workbench with its tools, the artisan's table, a spinning wheel, a mage's table in the mists.
+            Put(f, "piece_workbench", 0, f.HalfD - 0.8f, 180, 1.3f);
+            Put(f, "prop_piece_workbench_ext1", -2.0f, f.HalfD - 0.5f, 180, 0.6f);
+            Put(f, "prop_piece_workbench_ext3", 2.0f, f.HalfD - 0.5f, 180, 0.6f);
+            Put(f, _b.Name == "Mistlands" ? "piece_magetable" : "piece_artisanstation", -(f.HalfA - 1.4f), -0.4f, 90, 1.4f);
+            Put(f, "piece_spinningwheel", f.HalfA - 1.2f, -0.6f, -90, 1.1f);
+            Put(f, "UpgradeStation", 0, -(f.HalfD - 1.0f), 0, 0.8f);
+            Clutter(f, 0.02f, "dvergrprops_crate", "barrell", "prop_wood_stack", "piece_chest_barrel");
+            Clusters(f, 1, "stores");
+            Lights();
+            Foes(f, 0.6f);
+            Decay();
+            return;
+        }
         Put(f, "dvergrprops_table", -1.4f, 0, 90, 1.1f);
         Put(f, "dvergrprops_table", 1.4f, 0, 90, 1.1f);
         Put(f, "dvergrprops_stool", -1.4f, -1.2f, 0, 0.3f);

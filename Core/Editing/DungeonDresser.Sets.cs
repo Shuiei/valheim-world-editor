@@ -217,7 +217,7 @@ internal sealed partial class DungeonDresser
         "Dvergr" => ("dvergrprops_table", "dvergrprops_stool", "dvergrprops_table"),
         "Grausten" => ("Morkhalla_Table", "Morkhalla_Stool", "Morkhalla_Bench"),
         "Marble" => ("piece_table_oak", "piece_chair03", "piece_blackmarble_bench"),
-        "Stave" => ("piece_table_oak", "piece_chair02", "prop_piece_bench_runed"),
+        "Stave" => ("piece_table_runed", "piece_chair_runed", "piece_bench_runed"),
         _ => ("piece_table", "piece_chair", "piece_bench01"),
     };
 
@@ -363,15 +363,18 @@ internal sealed partial class DungeonDresser
     /// </summary>
     private string? Hero()
     {
+        // Each measured through the editor's models: nothing here is wider than 7 m or taller than a low room,
+        // save the few marked for tall rooms.
+        bool tall = _tallHero;
         string[] pool = _style.Name switch
         {
-            "Crypt" or "Catacombs" => ["RockDolmen_1", "RockDolmen_2", "Morkhalla_StatuePieceFace", "GraveStone_Broken_World", "Morkhalla_StatuePieceTorso", "Morkhalla_coal_pile_memorial"],
-            "Ruins" => ["Morkhalla_StatuePieceFace", "Morkhalla_StatuePieceTorso", "Morkhalla_StatuePieceHorn", "Morkhalla_StatuePieceArmL", "RockDolmen_3"],
-            "Temple" => ["blackmarble_altar_crystal", "Morkhalla_StatuePieceFace", "RockDolmen_1", "Morkhalla_StatueSword"],
-            "Fortress" or "Prison" => ["Cart", "Morkhalla_StatueSword", "Morkhalla_StatuePieceSword", "Morkhalla_Trainingdummy2", "Morkhalla_StatuePieceHorn"],
-            "Goblin warren" => ["giant_skull", "giant_ribs", "giant_helmet1", "giant_sword1", "giant_helmet2"],
-            "Dvergr hold" => ["blackmarble_altar_crystal", "Pickable_BlackCoreStand", "CargoCrate", "Morkhalla_StatuePieceFace"],
-            _ => ["RockDolmen_1", "Morkhalla_StatuePieceFace"],
+            "Crypt" or "Catacombs" => ["RockDolmen_1", "RockDolmen_2", "Morkhalla_StatuePieceFace", "GraveStone_Broken_World", "Morkhalla_StatuePieceTorso", "Morkhalla_coal_pile_memorial", "MemorialStone_Large", "stonechest", .. tall ? new[] { "highstone", "MemorialStone_Large" } : []],
+            "Ruins" => ["Morkhalla_StatuePieceFace", "Morkhalla_StatuePieceTorso", "Morkhalla_StatuePieceFeet", "Morkhalla_StatuePieceArmL", "RockDolmen_3", "Ashlands_Pillar4_tip_broken1", "Ashlands_Ruins_twist_PillarBase", "Morkhalla_Rubble4", .. tall ? new[] { "Ashlands_Boss_Pillar" } : []],
+            "Temple" => ["blackmarble_altar_crystal", "Morkhalla_StatuePieceFace", "RockDolmen_1", "Morkhalla_StatueSword", "piece_EternalPyre", "MemorialStone_Large", "widestone", .. tall ? new[] { "highstone" } : []],
+            "Fortress" or "Prison" => ["Cart", "Morkhalla_StatueSword", "Morkhalla_StatuePieceSword", "Morkhalla_Trainingdummy2", "Sled", .. tall ? new[] { "piece_Charred_Balista" } : []],
+            "Goblin warren" => ["Goblin_Gem", "piece_asksvinskeleton", "lox_ribs", "elaking_trashpile"],
+            "Dvergr hold" => ["blackmarble_altar_crystal", "Pickable_BlackCoreStand", "blackmarble_head_big01", "blackmarble_head_big02", "piece_wisplure", "eitrrefinery", .. tall ? new[] { "dvergrtown_wood_crane" } : []],
+            _ => ["RockDolmen_1", "Morkhalla_StatuePieceFace", "MemorialStone_Medium"],
         };
         var left = pool.Where(p => !_heroes.Contains(p)).ToList();
         if (left.Count == 0)
@@ -386,12 +389,16 @@ internal sealed partial class DungeonDresser
     /// <summary>A hero piece at (u, v), turned yaw, keeping r metres; false when none is left or the spot is taken.</summary>
     private bool PutHero(Frame f, float u, float v, float yaw, float r = 2.2f)
     {
+        _tallHero = f.S.Tall;
         if (!f.Free(u, v, r) || Hero() is not { } hero)
         {
             return false;
         }
         return Put(f, hero, u, v, yaw, r, force: true);
     }
+
+    /// <summary>Whether the room a hero piece is being chosen for is tall (the tallest pieces only there).</summary>
+    private bool _tallHero;
 
     // ---- Bare rooms and dead ends.
     /// <summary>
@@ -447,6 +454,10 @@ internal sealed partial class DungeonDresser
         Put(f, _b.Chest, 0, v, 180, 0.8f, force: true);
         Put(f, _s.Respawn ? "skull_pile" : "Candle_resin", -1.0f, v + 0.1f, R(0, 360), 0.3f, force: true);
         Put(f, _b.Brazier, 1.1f, v - 0.3f, 0, 0.6f, force: true);
+        if (Chance(0.5))
+        {
+            Cores(f, 1);
+        }
         Pickables(f, 1.2f);
         if (Chance(0.5))
         {
@@ -459,7 +470,9 @@ internal sealed partial class DungeonDresser
     /// What makes this corridor its own: a gate midway (a wall across with a door of the style's), a collapse (rubble
     /// and broken wall narrowing the way, a fallen pillar), bones along both walls (catacombs), a runner down the
     /// middle (a keep, a temple), vines on the walls (a crypt, ruins), or nothing but the torches. A long straight
-    /// corridor only, never the bent ones.
+    /// corridor only, never the bent ones. Then the biome's own: a muddy scrap pile to dig through in the swamp, a stake
+    /// wall barricade or seeker creep in the mines, icicles and ice in the cold, spikes in the Ashlands, roots in the
+    /// woods, a trap in a keep or a warren.
     /// </summary>
     private void CorridorKind(Frame f)
     {
@@ -489,6 +502,32 @@ internal sealed partial class DungeonDresser
         if (_style.Name is "Goblin warren")
         {
             kinds.Add(("stakes", 1));
+        }
+        // The biome's own: mud in the swamp's crypts, a barricade or creep in the mines, icicles in the cold,
+        // spikes in the Ashlands, roots in the woods, a trap in a keep or a warren.
+        switch (_b.Name)
+        {
+            case "Swamp":
+                kinds.Add(("mud", 1.5f));
+                kinds.Add(("roots", 1));
+                break;
+            case "Mistlands":
+                kinds.Add(("barricade", 1.2f));
+                kinds.Add(("creep", 1.2f));
+                break;
+            case "Mountain" or "Deep North":
+                kinds.Add(("icicles", 1.5f));
+                break;
+            case "Ashlands":
+                kinds.Add(("spikes", 1));
+                break;
+            case "Meadows" or "Black Forest":
+                kinds.Add(("roots", 1));
+                break;
+        }
+        if (_style.Name is "Fortress" or "Prison" or "Goblin warren" && f.HalfD >= 4)
+        {
+            kinds.Add(("trap", 0.8f));
         }
         float total = kinds.Sum(k => k.Weight), pick = R(0, total);
         string kind = kinds.First(k => (pick -= k.Weight) <= 0).Kind;
@@ -524,6 +563,54 @@ internal sealed partial class DungeonDresser
                     var (vu, vv) = In(sp, 0.1f);
                     _o.Add("vines", f.W(vu, vv, f.Top + 2.3f + R(-0.3f, 0.5f)), f.Yaw(sp.Yaw + 180));
                 }
+                break;
+            case "mud":
+                // A muddy scrap pile across the way, to be dug through, as in the sunken crypts.
+                Put(f, "mudpile", 0, R(-1, 1), R(0, 360), 1.4f, force: true);
+                Put(f, One("Pickable_Tar", "skull_pile", "LargeBone"), R(-0.8f, 0.8f), R(2.2f, 3.2f), R(0, 360), 0.3f);
+                break;
+            case "barricade":
+                // The miners' stake wall across the way, to be hacked through.
+                Put(f, "dvergrtown_wood_stakewall", 0, R(-1, 1), 90, 1.4f, force: true);
+                break;
+            case "creep":
+                foreach (var sp in f.WallSpots(2.4f, 2.2f).Where(sp => sp.Yaw is 90 or -90).Where(_ => Chance(0.6)))
+                {
+                    var (cu, cv) = In(sp, 0.15f);
+                    _o.Add("CreepProp_wall01", f.W(cu, cv, f.Top + 1.6f), f.Yaw(sp.Yaw));
+                }
+                if (Spot(f, 0.4f, 1.2f) is var (eu, ev))
+                {
+                    _o.Add(One("CreepProp_egg_hanging01", "CreepProp_egg_hanging02"), f.W(eu, ev, f.Top + f.H - 2.8f), f.Yaw(R(0, 360)));
+                }
+                Put(f, "SeekerEgg", R(-0.8f, 0.8f), R(-f.HalfD + 2, f.HalfD - 2), R(0, 360), 0.3f);
+                break;
+            case "icicles":
+                for (float v = -f.HalfD + 2; v <= f.HalfD - 2; v += R(1.5f, 3f))
+                {
+                    _o.Add("caverock_ice_stalagtite", f.W(R(-1, 1), v, f.Top + f.H - 3.4f), f.Yaw(R(0, 360)));
+                }
+                foreach (int side in new[] { -1, 1 })
+                {
+                    Put(f, "BlackIceShard_01", side * (f.HalfA - 0.5f), R(-f.HalfD + 2, f.HalfD - 2), R(0, 360), 0.3f);
+                }
+                break;
+            case "spikes":
+                foreach (var sp in f.WallSpots(4, 2.6f).Where(sp => sp.Yaw is 90 or -90))
+                {
+                    var (su2, sv2) = In(sp, 0.2f);
+                    _o.Add("Ashlands_Fortress_Wall_Spikes", f.W(su2, sv2, f.Top + 1.9f), f.Yaw(sp.Yaw + 90));
+                }
+                break;
+            case "roots":
+                foreach (var sp in f.WallSpots(2.2f, 2.4f).Where(sp => sp.Yaw is 90 or -90).Where(_ => Chance(0.6)))
+                {
+                    var (ru2, rv2) = In(sp, 0.7f);
+                    Put(f, One("root11", "root12", "root07"), ru2, rv2, R(0, 360), 0.6f, force: true);
+                }
+                break;
+            case "trap":
+                Put(f, _style.Name == "Goblin warren" ? "fuling_trap" : "piece_trap_troll", 0, R(-1.5f, 1.5f), 90, 0.9f, force: true);
                 break;
             case "stakes":
                 foreach (int side in new[] { -1, 1 })
@@ -585,7 +672,7 @@ internal sealed partial class DungeonDresser
             return;
         }
         float u = side * (f.HalfA - 1.1f);
-        Put(f, Pick("Morkhalla_Rubble2", "Morkhalla_Rubble3", "Morkhalla_Stonepile"), u, v, Rr(0, 360), 1.0f, force: true);
+        Put(f, Pick("Morkhalla_Rubble2", "Morkhalla_Rubble3", "Morkhalla_Rubble1"), u, v, Rr(0, 360), 1.0f, force: true);
         Put(f, Pick("stone_wall_2x1_ruin", "stone_wall_1x1_ruin"), u + side * 0.3f, v + 1.4f, Rr(-20, 20) + (side < 0 ? 90 : -90), 0.6f);
         Put(f, "Morkhalla_Rubble1", u - side * 0.6f, v - 1.5f, Rr(0, 360), 0.6f);
         if (_mat.Column[0].Prefab == "stone_pillar" && rnd.NextDouble() < 0.6)

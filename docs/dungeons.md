@@ -87,6 +87,17 @@ What it is like:
 - **One piece a room is remembered by.** Big rooms may get a hero piece that stands once in the
   whole dungeon: a dolmen, a fallen giant's statue in parts, a grave slab, a giant's skull or ribs
   in a warren, an altar of crystal in a hold, a cart in a keep.
+- **Each biome's own things, from the whole of the game.** What the game's dungeons are full of grows
+  here too: vines, roots and surtling cores on stands in the woods' crypts; guck sacks, roots, tar and
+  muddy scrap piles in the swamp's; icicles, ice shards, snowdrifts, crystals, meat and hung deer in the
+  mountains'; seeker creep on the walls, hanging eggs, royal jelly and black cores in the mines; charred
+  skulls, wall spikes, debris and gems set into the walls in the Ashlands; drifts, frost cores on the walls
+  and frozen dead in the north. Rooms are lit by the biome's own lights (its torches, lanterns, snow and
+  lava lanterns), its chests come in its several kinds, its smiths and cooks have the game's real stations
+  (ovens, cauldrons, fermenters, smelters, the black forge, the eitr refinery, the frost foundry), and the
+  pieces a room is remembered by are measured to fit: standing stones, memorial stones, a wisp fountain,
+  an eternal pyre, a sled, a crane in a tall hold, the fallen giant's statue in parts. Ashlands
+  ruins have windows in their upper walls; Ashlands gates and mountain gates are their own.
 - **Some rooms are nearly bare**, one piece and a light in the dark: a pacing beat between the full
   rooms. Clutter never puts the same thing twice running, and some rooms are tidier than others.
 - **Dead ends.** A corridor or two lead nowhere but a cache at the far end: the biome's chest, loot
@@ -95,7 +106,9 @@ What it is like:
   band of wall (an iron gate in a crypt, a door in a keep, a sliding door in a hold), half
   collapsed (rubble, broken wall, a fallen pillar, the way open along one side), lined with bones
   along both walls (catacombs), carpeted with a runner (keeps, temples, holds), hung with vines
-  (crypts, ruins) or edged with sharpened stakes (warrens).
+  (crypts, ruins) or edged with sharpened stakes (warrens). The biome adds its own: a muddy scrap pile to
+  dig through in the swamp, a stake-wall barricade or seeker creep in the mines, icicles in the cold,
+  spikes in the Ashlands, roots in the woods, a troll trap or a fuling trap in a keep or a warren.
 - **Rooms are lit differently**: standing torches along the walls, sconces on them, or a brazier
   or two in the corners; the dark leaves most rooms unlit.
 - **Floors and ceilings vary.** In a stone or grausten dungeon the grand rooms get black marble tiles and the

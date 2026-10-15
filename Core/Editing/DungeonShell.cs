@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.Save;
 using static TerrainEditor.Editing.DungeonKit;
 
 namespace TerrainEditor.Editing;
@@ -56,7 +57,7 @@ internal static class DungeonShell
             Walls(plan, l, f, mat, o);
             foreach (var d in plan.Doors.Where(d => d.A.Level == l.Index))
             {
-                Doorway(d, f, mat, o);
+                Doorway(d, f, mat, o, BiomeOf(s.Biome).Name);
             }
             if (s.Decor >= 1)
             {
@@ -229,13 +230,15 @@ internal static class DungeonShell
         var low = fits.Where(p => p.H <= y1 - y0 + Eps).ToList();
         var part = low.Count > 0 ? low.OrderByDescending(p => p.H).ThenByDescending(p => p.W).First() : fits.OrderBy(p => p.H).ThenByDescending(p => p.W).First();
         float tc = t0 + part.W / 2, y = y0 + part.Bottom;
-        o.Add(part.Prefab, alongZ ? new Vector3(line, y, tc) : new Vector3(tc, y, line), alongZ ? 90 : 0);
+        // A window now and then in a material that has one, on the upper row (never the lowest), by the spot's hash.
+        string prefab = mat.Window is { } window && part.W >= 4 && y0 >= 1.9f && (StableHash.Of($"{line:0.#}|{tc:0.#}|{y0:0.#}") & 0xFF) < 46 ? window : part.Prefab;
+        o.Add(prefab, alongZ ? new Vector3(line, y, tc) : new Vector3(tc, y, line), alongZ ? 90 : 0);
         Fill(mat, o, alongZ, line, t0 + part.W, t1, y0, y0 + Math.Min(part.H, y1 - y0));
         Fill(mat, o, alongZ, line, t0, t1, y0 + part.H, y1);
     }
 
     /// <summary>A doorway: 4 m of wall with its opening and what closes it.</summary>
-    private static void Doorway(DungeonPlan.Doorway d, float f, Material mat, DungeonOut o)
+    private static void Doorway(DungeonPlan.Doorway d, float f, Material mat, DungeonOut o, string biome)
     {
         var (cx, cz) = d.Center;
         bool alongZ = d.Dir.X != 0;
@@ -275,7 +278,7 @@ internal static class DungeonShell
                 break;
             case Door.Gate:
                 Frame(3);
-                o.Add("dungeon_sunkencrypt_irongate", At(c, f), yaw);
+                o.Add(biome == "Ashlands" ? "Morkborg_gate" : biome == "Mountain" ? "wood_gate" : "dungeon_sunkencrypt_irongate", At(c, f + (biome == "Mountain" ? 1.03f : 0)), yaw);
                 break;
             case Door.Key:
                 Frame(3);

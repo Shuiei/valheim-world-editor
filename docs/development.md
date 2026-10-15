@@ -48,6 +48,7 @@ The app reads one command per line on its input and answers each with one line, 
 | `stroke`, `mapview`, `search`, `hit`, `zones`, `look` | A brush stroke, the map's place, its search (and a result picked) and zone filter, the View look switches. |
 | `set <label>\|<value>`, `type <hint>\|<text>`, `panel`, `message [text]` | A slider, box or list beside a label; a text box by its placeholder; the right-hand panel shown; the status bar's message (none: cleared). |
 | `picture <file.png>` / `shot <file.png>` | The view shown (3D or map) once it is drawn / the whole window, panels and view, as Avalonia's compositor draws it (never a capture of the screen). |
+| `bounds <prefab>...` | Each prefab's model box in its own frame (its parts' meshes, the root's scale): the feet and sizes the dungeon generator places props by. Needs an area or the Workshop open. |
 | `bench <seconds>` / `state` / `quit` | Frame rates while the camera turns / the state / quit without asking. |
 
 `tools/DocsScreenshots/Editor.cs` wraps it for the documentation's pictures: it starts the app with
