@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.12 — unreleased
+
+### Changed
+- **The Area tool's object actions no longer stall on a big area with the Mask on.** Remove, Select, Restore from
+  backup and Regrow nature took a fresh snapshot of the Mask for every object judged, and each snapshot copies the
+  whole ground's heights (and paint, with a paint rule): on a 17 x 17 area with thousands of objects that was
+  thousands of copies of several megabytes, while the scene's objects were locked. The Mask is now taken once per
+  action; what is picked is unchanged.
+
 ## v1.45.11 — unreleased
 
 ### Fixed
