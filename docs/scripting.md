@@ -311,11 +311,11 @@ The output box says what happened; the status bar says it in short.
 A loop over a whole 17 × 17 area is about 1.2 million points: a few seconds of work. Use
 `Area.Points(step: 4)` when every point is not needed.
 
-**Stop**, and the 2-minute limit, end a script the next time it starts a new row of
-`Area.Points()`, `Ground.Shape` or `Ground.Mountain`. Nothing it did is kept. A loop of your own
-that uses none of these (a `while` or `for` loop with only `Ground.Set` and `Ground.Height` in it)
-cannot be stopped there: the editor waits for it to finish. Avoid endless loops: a loop over
-`Area.Points()` is stopped at its next row, so only once the row it is on has finished.
+**Stop**, and the 2-minute limit, end a script at the next turn of any of its own loops (`for`,
+`foreach`, `while`, `do`, `goto`), and the next time it starts a new row of `Ground.Shape` or
+`Ground.Mountain`. Nothing it did is kept. A single call that takes long by itself, without a loop
+of yours around it (a LINQ query over hundreds of millions of items, `Thread.Sleep`...), cannot be
+stopped in the middle: the editor waits for it to finish.
 
 ## Good to know
 

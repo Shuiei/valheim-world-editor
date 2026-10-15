@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.7 — unreleased
+
+### Fixed
+- **A script with an endless loop of its own could not be stopped.** **Stop** and the 2-minute limit only ended a
+  script when it next called `Area.Points()`, `Ground.Shape` or `Ground.Mountain`: one stuck in a `while (true)` or
+  a long `for` loop of plain arithmetic, `Ground.Set` and `Ground.Height` ran on, kept one core busy, and every
+  later **Run** and Claude's `run_script` answered "A script is already running" until the editor was restarted.
+  Every loop of a script's own (`for`, `foreach`, `while`, `do`, `goto`) now checks for Stop at each turn; the
+  script's line numbers in error messages are unchanged.
+
 ## v1.45.6 — unreleased
 
 ### Fixed
