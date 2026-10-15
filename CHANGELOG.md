@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.37 — unreleased
+
+### Fixed
+- **A world map that failed to build said "Building the world map…" for ever.** The map is worked out in the
+  background when a world opens. If that failed (a damaged world file, for example), the error was lost: the map
+  stayed blank, its status kept saying it was building, and nothing went to the log. The map now says it could not
+  be built and why, and the log has the details.
+
 ## v1.45.36 — unreleased
 
 ### Fixed

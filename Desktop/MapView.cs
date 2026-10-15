@@ -190,6 +190,11 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     }
 
     /// <summary>
+    /// Builds the whole-world overview of a world's map data, on the build's thread (tests give one that fails).
+    /// </summary>
+    internal Func<MapData, MapData.Layers> BuildGlobal { get; set; } = static data => data.Global;
+
+    /// <summary>
     /// Shows a world (its map data is worked out in the background: a few seconds).
     /// </summary>
     public void Show(WorldSession session)
@@ -213,10 +218,23 @@ public sealed class MapView : OpenGlControlBase, IDisposable
             MapData.Layers g;
             try
             {
-                g = data.Global;
+                g = BuildGlobal(data);
             }
             catch (OperationCanceledException)
             {
+                return;
+            }
+            catch (Exception ex)
+            {
+                // Said and logged, not lost in a task nobody waits for (the map left blank, still "Building…").
+                Console.WriteLine($"World map: could not build it: {ex}");
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (_data == data)
+                    {
+                        Status?.Invoke($"Could not build the world map: {ex.Message}");
+                    }
+                });
                 return;
             }
             // Kept on the UI thread, where Show and Dispose change _data: only if this world is still the one shown.
