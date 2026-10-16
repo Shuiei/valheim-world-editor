@@ -1173,7 +1173,7 @@ public sealed class NewWorldPage : IDisposable
     {
         if (!WorldCreator.IsWorldName(name))
         {
-            return "Give the world a name that can be a file name on every system (no / \\ : * ? \" < > |, not a device name such as CON or COM1, not ending with a dot).";
+            return "Give the world a name that can be a file name on every system (no / \\ : * ? \" < > | or control characters, not a device name such as CON or COM1, not ending with a dot).";
         }
         if (seed.Length is 0 or > 10)
         {
