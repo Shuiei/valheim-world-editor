@@ -27,6 +27,8 @@ internal sealed partial class DungeonDresser
     private readonly DungeonOut _o;
     /// <summary>How ruined (0 kept to 1): the settings' Decay, else the style's.</summary>
     private readonly float _decay;
+    /// <summary>Where the corridor being dressed has its pilasters' bands of wall (v), for a gate to keep off them.</summary>
+    private readonly List<float> _bands = [];
     /// <summary>The foes to use: those picked in the settings, else the biome's.</summary>
     private readonly Foe[] _foes;
     /// <summary>The elite guards: the chosen foes when the settings name some, else the biome's elites.</summary>
@@ -1156,6 +1158,7 @@ internal sealed partial class DungeonDresser
             Cache(f);
         }
         // Pilasters every 8 m along a long straight corridor, a beam of wall between them like an arch.
+        _bands.Clear();
         if (f.S.Shape == DungeonPlan.Shape.Rect && f.HalfD >= 6 && Chance(0.45))
         {
             for (float v = -f.HalfD + 4; v <= f.HalfD - 4; v += 8)
@@ -1167,6 +1170,7 @@ internal sealed partial class DungeonDresser
                 Column(f, -(f.HalfA - 0.45f), v);
                 Column(f, f.HalfA - 0.45f, v);
                 InnerWall(f, -f.HalfA, v, f.HalfA, v, 3, f.H);
+                _bands.Add(v);
             }
         }
         CorridorKind(f);

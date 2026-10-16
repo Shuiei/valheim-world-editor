@@ -179,6 +179,8 @@ the plugin is unchanged in versions without that part.
   rooms to join (a game update may have changed its dungeons).
 - **A throne room's war table could lie across the dais' steps or a doorway.** The long table was placed down the
   middle with no check; it now stands only where every spot along it is free.
+- **A corridor gate could stand on a pilaster's band of wall.** The gate was put anywhere within a metre of the
+  corridor's middle without looking at the pilasters placed every 8 m; it now keeps off their bands.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

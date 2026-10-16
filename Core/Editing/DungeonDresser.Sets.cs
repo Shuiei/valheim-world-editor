@@ -630,7 +630,8 @@ internal sealed partial class DungeonDresser
     private void CorridorGate(Frame f)
     {
         float v = R(-1, 1);
-        if (f.NearDoor(-f.HalfA, v, 3) || f.NearDoor(f.HalfA, v, 3))
+        // Not by a doorway, nor on a pilaster's band of wall (the door against its columns, the wall doubled).
+        if (f.NearDoor(-f.HalfA, v, 3) || f.NearDoor(f.HalfA, v, 3) || _bands.Any(b => MathF.Abs(b - v) < _mat.Thick + 0.5f))
         {
             return;
         }
