@@ -86,6 +86,29 @@ public class LiveSyncTests
         Assert.False(t.Sync.IsLive(-1));
     }
 
+    // IsOurs follows the game objects the editor has: moved there, moved on (counted once), forgotten, and reset.
+    [Fact]
+    public async Task IsOursFollowsTheGameObjectsTheEditorHas()
+    {
+        using var t = new Live();
+        Assert.False(t.Sync.IsOurs(t.TreeZdo));
+        t.MoveTree(-1, new Vector3(4, 0, 2));
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.True(t.Sync.IsOurs(t.TreeZdo));
+        t.MoveTree(-2, new Vector3(9, 0, -3), from: -1);
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.True(t.Sync.IsOurs(t.TreeZdo));
+        t.Sync.Forget(-2);
+        Assert.False(t.Sync.IsOurs(t.TreeZdo));
+
+        using var u = new Live();
+        u.MoveTree(-1, new Vector3(4, 0, 2));
+        await u.Sync.Apply(u.World, u.Edits, u.Game);
+        Assert.True(u.Sync.IsOurs(u.TreeZdo));
+        u.Sync.Reset();
+        Assert.False(u.Sync.IsOurs(u.TreeZdo));
+    }
+
     // Moved on from where it was moved to: the same game object moves again.
     [Fact]
     public async Task AnObjectMovedAgainMovesTheSameGameObject()

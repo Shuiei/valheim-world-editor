@@ -47,6 +47,39 @@ public sealed class LiveSync
     private readonly Dictionary<int, LiveTarget> _liveIds = [];
 
     /// <summary>
+    /// The ZDOIDs in <see cref="_liveIds"/>, each with how many ids stand for it, so <see cref="IsOurs"/> needs no scan.
+    /// Changed only with <see cref="SetLive"/>, <see cref="DropLive"/> and <see cref="Reset"/>.
+    /// </summary>
+    private readonly Dictionary<(long User, uint Id), int> _ours = [];
+
+    /// <summary>Sets an id's object in the game, keeping <see cref="_ours"/> in step. Under the lock.</summary>
+    private void SetLive(int id, LiveTarget target)
+    {
+        DropLive(id);
+        _liveIds[id] = target;
+        var zdo = (target.User, target.Id);
+        _ours[zdo] = _ours.GetValueOrDefault(zdo) + 1;
+    }
+
+    /// <summary>Forgets an id's object in the game, keeping <see cref="_ours"/> in step. Under the lock.</summary>
+    private void DropLive(int id)
+    {
+        if (!_liveIds.Remove(id, out LiveTarget target))
+        {
+            return;
+        }
+        var zdo = (target.User, target.Id);
+        if (_ours[zdo] == 1)
+        {
+            _ours.Remove(zdo);
+        }
+        else
+        {
+            _ours[zdo]--;
+        }
+    }
+
+    /// <summary>
     /// Snapshot objects (in <see cref="_destroyed"/>) whose game object now stands for one of the editor's new objects,
     /// moved there: snapshot id to new object id (its ZDO in <see cref="_liveIds"/>). Moved back, or on, from there.
     /// </summary>
@@ -59,6 +92,7 @@ public sealed class LiveSync
         {
             _destroyed.Clear();
             _liveIds.Clear();
+            _ours.Clear();
             _movedTo.Clear();
             _unanswered = null;
         }
@@ -90,7 +124,7 @@ public sealed class LiveSync
     {
         lock (_lock)
         {
-            _liveIds.Remove(id);
+            DropLive(id);
             foreach (int source in _movedTo.Where(m => m.Value == id).Select(m => m.Key).ToList())
             {
                 _movedTo.Remove(source);
@@ -112,7 +146,7 @@ public sealed class LiveSync
     {
         lock (_lock)
         {
-            return _liveIds.Values.Any(t => t.User == zdo.User && t.Id == zdo.Id);
+            return _ours.ContainsKey(zdo);
         }
     }
 
@@ -351,7 +385,7 @@ public sealed class LiveSync
             foreach (int id in call.DestroyIds)
             {
                 _destroyed.Add(id);
-                _liveIds.Remove(id);
+                DropLive(id);
             }
             foreach (int id in call.RestoreIds)
             {
@@ -361,7 +395,7 @@ public sealed class LiveSync
             }
             foreach (int id in call.DropNew)
             {
-                _liveIds.Remove(id);
+                DropLive(id);
                 foreach (int source in _movedTo.Where(m => m.Value == id).Select(m => m.Key).ToList())
                 {
                     _movedTo.Remove(source);
@@ -369,26 +403,26 @@ public sealed class LiveSync
             }
             for (int i = 0; i < ids.Count && i < call.CreateFor.Count; i++)
             {
-                _liveIds[call.CreateFor[i]] = new LiveTarget(long.Parse(ids[i][0], CultureInfo.InvariantCulture), uint.Parse(ids[i][1], CultureInfo.InvariantCulture), call.CreateWhat[i].Prefab, call.CreateWhat[i].Position);
+                SetLive(call.CreateFor[i], new LiveTarget(long.Parse(ids[i][0], CultureInfo.InvariantCulture), uint.Parse(ids[i][1], CultureInfo.InvariantCulture), call.CreateWhat[i].Prefab, call.CreateWhat[i].Position));
             }
             for (int i = 0; i < moveReplies.Count && i < call.MoveFor.Count; i++)
             {
                 var (source, from, to) = call.MoveFor[i];
                 var zdo = (long.Parse(moveReplies[i].Id[0], CultureInfo.InvariantCulture), uint.Parse(moveReplies[i].Id[1], CultureInfo.InvariantCulture));
                 var target = new LiveTarget(zdo.Item1, zdo.Item2, world.ObjectRefs[source].Prefab, call.Moves[i].Position);
-                _liveIds.Remove(from);
+                DropLive(from);
                 if (to == source)
                 {
                     _destroyed.Remove(source);
                     _movedTo.Remove(source);
-                    _liveIds[source] = target;
+                    SetLive(source, target);
                     movedBack.Add((source, zdo));
                 }
                 else
                 {
                     _destroyed.Add(source);
                     _movedTo[source] = to;
-                    _liveIds[to] = target;
+                    SetLive(to, target);
                 }
             }
         }
