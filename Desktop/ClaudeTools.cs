@@ -45,6 +45,35 @@ public sealed partial class ClaudeTools
     /// <summary>On the window's thread, as a click would be.</summary>
     private static Task<T> OnUi<T>(Func<T> f) => Dispatcher.UIThread.InvokeAsync(f).GetTask();
 
+    /// <summary>
+    /// The camera tool running now (done when none is): one at a time moves the camera or takes a picture, since
+    /// Claude's calls run side by side, and a picture awaited after the camera was set would otherwise come from
+    /// another call's camera. Used on the window's thread only.
+    /// </summary>
+    private Task _camera = Task.CompletedTask;
+
+    /// <summary>On the window's thread, the camera this call's alone until it ends (<see cref="_camera"/>).</summary>
+    private Task<T> WithCamera<T>(Func<Task<T>> f) => OnUi(async () =>
+    {
+        while (!_camera.IsCompleted)
+        {
+            await _camera;
+        }
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _camera = done.Task;
+        try
+        {
+            return await f();
+        }
+        finally
+        {
+            done.SetResult();
+        }
+    });
+
+    /// <summary>On the window's thread, the camera this call's alone until it ends (<see cref="_camera"/>).</summary>
+    private Task<T> WithCamera<T>(Func<T> f) => WithCamera(() => Task.FromResult(f()));
+
     /// <summary>editor_state: the page shown, the world, the area's bounds, what is pending (see <see cref="StateOf"/>).</summary>
     [McpServerTool(Name = "editor_state", ReadOnly = true, Title = "What the editor shows")]
     [Description("What the editor shows now: the start page, a world's map, an area of a world in 3D, or the Workshop (a blank plot to build a blueprint on); the world, the area's bounds in world coordinates, the changes not saved yet, and the editor's last message. Call it first.")]
@@ -175,7 +204,7 @@ public sealed partial class ClaudeTools
     [Description("Selects objects in the editor (by id), so the user sees which ones are meant, and points the camera at them. Changes nothing in the world.")]
     public Task<string> SelectObjects(
         [Description("Their ids (list_objects).")] int[] ids,
-        [Description("Point the camera at them (default: true).")] bool focus = true) => OnUi(() =>
+        [Description("Point the camera at them (default: true).")] bool focus = true) => WithCamera(() =>
     {
         if (_w.Session?.Scene is not { } scene)
         {
@@ -243,7 +272,7 @@ public sealed partial class ClaudeTools
         string path = Path.Combine(Path.GetTempPath(), $"vwe-claude-{Guid.NewGuid():N}.png");
         try
         {
-            string? problem = await OnUi(async () =>
+            string? problem = await WithCamera(async () =>
             {
                 if (_w.MapShown)
                 {
@@ -285,7 +314,7 @@ public sealed partial class ClaudeTools
                 string path = Path.Combine(Path.GetTempPath(), $"vwe-claude-{Guid.NewGuid():N}.png");
                 try
                 {
-                    string? problem = await OnUi(async () =>
+                    string? problem = await WithCamera(async () =>
                     {
                         if (_w.Session?.Scene is not { } scene || _w.MapShown)
                         {
@@ -492,7 +521,7 @@ public sealed partial class ClaudeTools
         var pieces = Terrain.PieceCatalog.Names
             .Select(n => (n, p: Terrain.PieceCatalog.Get(Save.StableHash.Of(n))))
             .Where(x => x.p is { Tool: not null } && (Match(x.n) || Match(Terrain.PieceCost.PieceName(x.n))))
-            .Select(x => (object)new { prefab = x.n, name = Terrain.PieceCost.PieceName(x.n), tool = x.p!.Tool, size = SizeOf(x.p!), cost = Terrain.PieceCost.Of([x.n]).Describe(4) });
+            .Select(x => (object)new { prefab = x.n, name = Terrain.PieceCost.PieceName(x.n), tool = x.p!.Tool, size = SizeOf(x.p!), cost = Terrain.PieceCost.Of([x.n]).Describe(4, english: true) });
         var others = piecesOnly ? [] : Terrain.PrefabCatalog.Placeable
             .Where(i => Terrain.PieceCatalog.Get(Save.StableHash.Of(i.Name)) == null && (Match(i.Name) || Terrain.PrefabCatalog.SpawnOf(i.Name) is { } sp && Match(string.Join(" ", sp.Creatures))))
             .Select(i => Terrain.PrefabCatalog.SpawnOf(i.Name) is { } sp
@@ -524,7 +553,7 @@ public sealed partial class ClaudeTools
             size = SizeOf(p),
             bounds = new { minX = p.MinX, maxX = p.MaxX, minY = p.MinY, maxY = p.MaxY, minZ = p.MinZ, maxZ = p.MaxZ },
             snaps = p.Snaps,
-            cost = Terrain.PieceCost.Of([n]).Describe(8),
+            cost = Terrain.PieceCost.Of([n]).Describe(8, english: true),
             station = cost?.Station,
         };
     })));
@@ -551,12 +580,15 @@ public sealed partial class ClaudeTools
         {
             return "No area is open: open_area (a world) or open_workshop first.";
         }
-        if (_w.World is { IsLive: true } && _w.Settings.AutoApply)
+        if (LiveWithAuto)
         {
             return "The open world is live with Auto on: every change would go to the game at once. Ask the user to turn Auto off; Claude's changes then wait for Apply live.";
         }
         return null;
     }
+
+    /// <summary>Whether the open world is live with Auto on: every change would go to the game at once.</summary>
+    private bool LiveWithAuto => _w.World is { IsLive: true } && _w.Settings.AutoApply;
 
     /// <summary>run_script: runs a C# script as the Script tool does, as one pending step (or only says what it would change).</summary>
     [McpServerTool(Name = "run_script", Title = "Run a script on the area")]
@@ -892,12 +924,17 @@ public sealed partial class ClaudeTools
     /// <summary>The highest ground under a rectangle (every metre); edgesOnly: only within a metre of its edges.</summary>
     private static float HighestGround(WorldScene scene, float x0, float z0, float x1, float z1, bool edgesOnly = false)
     {
+        (float lx, float hx, float lz, float hz) = (MathF.Min(x0, x1), MathF.Max(x0, x1), MathF.Min(z0, z1), MathF.Max(z0, z1));
+        // Whole-metre steps counted in integers: adding 1 to a float that large would not move it on.
+        int nx = (int)MathF.Floor(hx - lx), nz = (int)MathF.Floor(hz - lz);
         float best = float.MinValue;
-        for (float x = MathF.Min(x0, x1); x <= MathF.Max(x0, x1); x += 1)
+        for (int i = 0; i <= nx; i++)
         {
-            for (float z = MathF.Min(z0, z1); z <= MathF.Max(z0, z1); z += 1)
+            float x = lx + i;
+            for (int j = 0; j <= nz; j++)
             {
-                bool edge = x - MathF.Min(x0, x1) < 1 || MathF.Max(x0, x1) - x < 1 || z - MathF.Min(z0, z1) < 1 || MathF.Max(z0, z1) - z < 1;
+                float z = lz + j;
+                bool edge = i < 1 || hx - x < 1 || j < 1 || hz - z < 1;
                 if (!edgesOnly || edge)
                 {
                     best = MathF.Max(best, GroundAt(scene, x, z));
@@ -935,12 +972,27 @@ public sealed partial class ClaudeTools
         return best;
     }
 
-    /// <summary>Puts down a layout worked out from the open scene; a layout's <see cref="ArgumentException"/> is the answer.</summary>
-    private Task<string> Build(Func<WorldScene, List<PieceSpec>> layout, string label) => OnUi(() =>
+    /// <summary>
+    /// Puts down a layout worked out from the open scene over a rectangle; refused when the rectangle goes outside the
+    /// area, and a layout's <see cref="ArgumentException"/> (too many pieces among them) is the answer.
+    /// </summary>
+    /// <param name="x0">One corner, x.</param>
+    /// <param name="z0">One corner, z.</param>
+    /// <param name="x1">The opposite corner, x.</param>
+    /// <param name="z1">The opposite corner, z.</param>
+    /// <param name="layout">The pieces, from the open scene.</param>
+    /// <param name="label">A few words for the history.</param>
+    private Task<string> Build(float x0, float z0, float x1, float z1, Func<WorldScene, List<PieceSpec>> layout, string label) => OnUi(() =>
     {
         if (CannotEdit() is string why)
         {
             return why;
+        }
+        var (minX, minZ, maxX, maxZ) = Bounds(_w.Session!.Scene);
+        // Written so that a coordinate that is not a number is outside too.
+        if (!(MathF.Min(x0, x1) >= minX && MathF.Max(x0, x1) <= maxX && MathF.Min(z0, z1) >= minZ && MathF.Max(z0, z1) <= maxZ))
+        {
+            return $"Nothing built: the rectangle (x {x0} to {x1}, z {z0} to {z1}) goes outside the area (x {minX} to {maxX}, z {minZ} to {maxZ}). Open a larger area (open_area) or build within it.";
         }
         try
         {
@@ -954,20 +1006,25 @@ public sealed partial class ClaudeTools
 
     /// <summary>build_floor: <see cref="ClaudeBuilder.Floor"/>, its top on the highest ground under it by default.</summary>
     [McpServerTool(Name = "build_floor", Title = "Build a floor")]
-    [Description("Lays a floor of 2 x 2 m tiles (wood or stone) over a rectangle, its top at y (default: the highest ground under it, so that it rests on the ground). One pending step. Sizes that are not multiples of 2 m overhang a little.")]
+    [Description("Lays a floor of 2 x 2 m tiles (wood or stone) over a rectangle, its top at y (default: the highest ground under it, so that it rests on the ground). One pending step; the rectangle must be within the open area, and at most 5000 pieces are laid at once. Sizes that are not multiples of 2 m overhang a little.")]
     public Task<string> BuildFloor(
         [Description("West edge (x).")] float x0, [Description("South edge (z).")] float z0,
         [Description("East edge (x).")] float x1, [Description("North edge (z).")] float z1,
         [Description("wood or stone.")] string material = "wood",
         [Description("Height of its top (optional).")] float? y = null) =>
-        Build(scene => ClaudeBuilder.Floor(x0, z0, x1, z1, y ?? HighestGround(scene, x0, z0, x1, z1), material), $"floor of {material}");
+        Build(x0, z0, x1, z1, scene =>
+        {
+            // Too many tiles is refused before the ground under them is read.
+            ClaudeBuilder.CheckFloor(x0, z0, x1, z1);
+            return ClaudeBuilder.Floor(x0, z0, x1, z1, y ?? HighestGround(scene, x0, z0, x1, z1), material);
+        }, $"floor of {material}");
 
     /// <summary>
     /// build_walls: <see cref="ClaudeBuilder.Walls"/>, from the top of a floor in the rectangle by default, else the
     /// highest ground on its edges.
     /// </summary>
     [McpServerTool(Name = "build_walls", Title = "Build walls")]
-    [Description("Builds walls on the four edges of a rectangle (the walls' middle lines on its edges), from the bottom up to a height: wood (2 m rows) or stone (1 m rows); doors are 2 m wood doors in the walls at the given points. Bottom: the top of a floor already in the rectangle, else the highest ground on its edges. One pending step. Use the floor's own rectangle so that they meet.")]
+    [Description("Builds walls on the four edges of a rectangle (the walls' middle lines on its edges), from the bottom up to a height: wood (2 m rows) or stone (1 m rows); doors are 2 m wood doors in the walls at the given points. Bottom: the top of a floor already in the rectangle, else the highest ground on its edges. One pending step; the rectangle must be within the open area, and at most 5000 pieces are laid at once. Use the floor's own rectangle so that they meet.")]
     public Task<string> BuildWalls(
         [Description("West edge (x).")] float x0, [Description("South edge (z).")] float z0,
         [Description("East edge (x).")] float x1, [Description("North edge (z).")] float z1,
@@ -975,12 +1032,17 @@ public sealed partial class ClaudeTools
         [Description("wood or stone.")] string material = "wood",
         [Description("Doors (optional).")] DoorSpec[]? doors = null,
         [Description("Height of the walls' bottom (optional).")] float? y = null) =>
-        Build(scene => ClaudeBuilder.Walls(x0, z0, x1, z1, y ?? HighestPieceTop(scene, x0, z0, x1, z1, "floor") ?? HighestGround(scene, x0, z0, x1, z1, edgesOnly: true),
-            height, material, [.. (doors ?? []).Select(d => new ClaudeBuilder.Door(d.Side, d.At))]), $"walls of {material}");
+        Build(x0, z0, x1, z1, scene =>
+        {
+            // Too many pieces is refused before the ground under them is read.
+            ClaudeBuilder.CheckWalls(x0, z0, x1, z1, height, material);
+            return ClaudeBuilder.Walls(x0, z0, x1, z1, y ?? HighestPieceTop(scene, x0, z0, x1, z1, "floor") ?? HighestGround(scene, x0, z0, x1, z1, edgesOnly: true),
+                height, material, [.. (doors ?? []).Select(d => new ClaudeBuilder.Door(d.Side, d.At))]);
+        }, $"walls of {material}");
 
     /// <summary>build_roof: <see cref="ClaudeBuilder.Roof"/>, its eave at the top of the pieces in the rectangle by default.</summary>
     [McpServerTool(Name = "build_roof", Title = "Build a roof")]
-    [Description("Builds a gable roof over a rectangle (the walls' lines), its ridge along the longer side: thatch or shingle, 26 or 45 degrees, its underside meeting the wall lines at the eave height (default: the top of the building pieces in the rectangle, i.e. the walls), overhanging up to 2 m; the two gable ends closed with sloped walls (gables: true). One pending step. Check it with support_check and screenshot (views: 4).")]
+    [Description("Builds a gable roof over a rectangle (the walls' lines), its ridge along the longer side: thatch or shingle, 26 or 45 degrees, its underside meeting the wall lines at the eave height (default: the top of the building pieces in the rectangle, i.e. the walls), overhanging up to 2 m; the two gable ends closed with sloped walls (gables: true). One pending step; the rectangle must be within the open area, and at most 5000 pieces are laid at once. Check it with support_check and screenshot (views: 4).")]
     public Task<string> BuildRoof(
         [Description("West edge (x).")] float x0, [Description("South edge (z).")] float z0,
         [Description("East edge (x).")] float x1, [Description("North edge (z).")] float z1,
@@ -988,7 +1050,7 @@ public sealed partial class ClaudeTools
         [Description("thatch or shingle.")] string material = "thatch",
         [Description("Close the gable ends with sloped walls (default true).")] bool gables = true,
         [Description("Height of the walls' tops (optional).")] float? eave = null) =>
-        Build(scene => ClaudeBuilder.Roof(x0, z0, x1, z1,
+        Build(x0, z0, x1, z1, scene => ClaudeBuilder.Roof(x0, z0, x1, z1,
             eave ?? HighestPieceTop(scene, x0, z0, x1, z1) ?? throw new ArgumentException("No walls under the roof: build the walls first, or give eave."),
             angle, material, gables), $"{material} roof");
 
@@ -1240,7 +1302,7 @@ public sealed partial class ClaudeTools
         string[] words = (query ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
         return ToJson(TerrainEditor.App.Homestead.List(_w.Blueprints.Status.Folder)
             .Where(e => words.All(w => e.Name.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Description.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase))))
-            .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Terrain.PieceCost.Of(e.Kinds).Describe(4), description = e.Description, tags = e.Tags }));
+            .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Terrain.PieceCost.Of(e.Kinds).Describe(4, english: true), description = e.Description, tags = e.Tags }));
     });
 
     /// <summary>
@@ -1308,16 +1370,16 @@ public sealed partial class ClaudeTools
 
     /// <summary>
     /// generate_dungeon: a dungeon from the Dungeon panel's settings (clamped to their ranges), onto the Workshop's plot
-    /// or 5000 m above a point of the open world with a portal pair.
+    /// or 5000 m above a point of the open world, behind the entrance of its kind there (a portal pair when it has none).
     /// </summary>
     [McpServerTool(Name = "generate_dungeon", Title = "Generate a dungeon")]
-    [Description("Generates a dungeon, as the Dungeon panel does, and puts it on the Workshop's plot (with what is there) or, in a world, 5000 m above the point x, z (where the game keeps its dungeons) with a linked portal pair on the ground there. One step of the history (pending).")]
+    [Description("Generates a dungeon, as the Dungeon panel does, and puts it on the Workshop's plot (with what is there) or, in a world, 5000 m above the point x, z (where the game keeps its dungeons), behind the entrance of its kind on the ground there (its biome's dungeon location: a burial chamber's mound, a Frost Cave's mouth; a linked portal pair when the biome has none). The view stays at the entrance. One step of the history (pending).")]
     public async Task<string> GenerateDungeon(
         [Description("Its biome: Meadows, Black Forest, Swamp, Mountain, Plains, Mistlands, Ashlands, Deep North.")] string biome = "Black Forest",
         [Description("Its style (optional: the biome's): Crypt, Catacombs, Temple, Fortress, Prison, Dvergr hold, Goblin warren, Ruins.")] string? style = null,
         [Description("Its wall material (optional: the biome's).")] string? walls = null,
         [Description("Rooms per level: 1 small to 4 huge.")] int size = 2,
-        [Description("Levels, 1 to 4.")] int levels = 2,
+        [Description("Levels, 1 to 16.")] int levels = 2,
         [Description("Monsters: 0 none to 3 (1 usual).")] float monsters = 1,
         [Description("Chests and treasure: 0 none to 2 (1 usual).")] float loot = 1,
         [Description("Light: 0 dark, 1 dim, 2 bright.")] int light = 1,
@@ -1327,15 +1389,26 @@ public sealed partial class ClaudeTools
         [Description("In a world: x of the point of the open area it goes above (optional: the view's middle).")] float? x = null,
         [Description("In a world: z of that point.")] float? z = null)
     {
-        var settings = new Editing.DungeonGen.Settings(Biome: biome, Style: style, Walls: walls, Size: Math.Clamp(size, 1, 4), Levels: Math.Clamp(levels, 1, 4),
+        var settings = new Editing.DungeonGen.Settings(Biome: biome, Style: style, Walls: walls, Size: Math.Clamp(size, 1, 4), Levels: Math.Clamp(levels, 1, Editing.DungeonGen.MaxLevels),
             Monsters: Math.Clamp(monsters, 0, 3), Loot: Math.Clamp(loot, 0, 2), Light: Math.Clamp(light, 0, 2), Decor: Math.Clamp(decor, 0, 2), Seed: seed, Name: name);
-        if (await OnUi(CannotEdit) is string why)
+        var (why, opened) = await OnUi(() => (CannotEdit(), _w.Session));
+        if (why != null)
         {
             return why;
         }
         var result = await Task.Run(() => Editing.DungeonGen.Make(settings));
-        return await OnUi(async () =>
+        return await WithCamera(async () =>
         {
+            // The map shown or another area opened while it was made: it goes nowhere.
+            if (_w.Session != opened || opened == null)
+            {
+                return "The area was closed (or another opened) while the dungeon was made: nothing was placed.";
+            }
+            // Or Auto turned on meanwhile: what forbade editing before the dungeon was made forbids placing it.
+            if (CannotEdit() is string problem)
+            {
+                return problem;
+            }
             if (_w.InWorkshop)
             {
                 await _w.GeneratedOntoPlot(settings, result, add: true);
@@ -1345,7 +1418,7 @@ public sealed partial class ClaudeTools
                 if (x is float px && z is float pz)
                 {
                     // Above a point of the open area (its ground is the area's).
-                    var sc = _w.Session!.Scene;
+                    var sc = opened.Scene;
                     float minX = sc.X0 * 64f - 32f, minZ = sc.Z0 * 64f - 32f;
                     if (px < minX || pz < minZ || px > minX + sc.ZonesX * 64f || pz > minZ + sc.ZonesZ * 64f)
                     {

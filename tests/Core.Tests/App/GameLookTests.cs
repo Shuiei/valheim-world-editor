@@ -73,6 +73,34 @@ public sealed class GameLookTests : IDisposable
     }
 
     [Fact]
+    public void AMacGameIsFoundByItsAppBundle()
+    {
+        // As Steam installs it on a Mac: the game's data inside valheim.app, next to BepInEx.
+        string valheim = Path.Combine(_home, "Library", "Application Support", "Steam", "steamapps", "common", "Valheim");
+        string app = Path.Combine(valheim, "valheim.app");
+        string data = Path.Combine(app, "Contents", "Resources", "Data");
+        Directory.CreateDirectory(Path.Combine(data, "StreamingAssets", "SoftRef", "Bundles"));
+        Directory.CreateDirectory(Path.Combine(valheim, "BepInEx"));
+        Assert.Equal(data, GameLook.DataDir(valheim));
+        Assert.Equal(Path.Combine(data, "StreamingAssets", "SoftRef", "Bundles"), GameLook.BundlesDir(valheim));
+        Assert.Equal(valheim, GameLook.GameOfData(data));
+        Assert.Equal(valheim, GameLook.FindValheim(valheim));
+        // Chosen at the bundle or inside it (the Mac's folder picker can open it): the folder holding it.
+        foreach (string chosen in new[] { valheim, app, Path.Combine(app, "Contents"), data })
+        {
+            Assert.Equal(valheim, GameLook.GameFolder(chosen));
+        }
+        // An app without the game's bundles is not the game.
+        string other = Path.Combine(_home, "Other");
+        Directory.CreateDirectory(Path.Combine(other, "Other.app", "Contents", "Resources", "Data"));
+        Assert.Null(GameLook.DataDir(other));
+        Assert.Null(GameLook.GameFolder(Path.Combine(other, "Other.app")));
+        // On Windows and Linux the data folder's game is the folder above it.
+        string linux = FakeValheim(Path.Combine(_home, "Valheim"));
+        Assert.Equal(linux, GameLook.GameOfData(Path.Combine(linux, "valheim_Data")));
+    }
+
+    [Fact]
     public void TheGameIsFoundInASteamLibraryListedBySteam()
     {
         Assert.Null(GameLook.FindValheim(null));
@@ -130,12 +158,33 @@ public sealed class GameLookTests : IDisposable
         var bundles = GameLook.Bundles;
         Assert.NotNull(bundles);
         Assert.Equal("failed", await Settled());
-        // Checked again (the game's files now read, even if they hold no model): the same reader, ready at once.
+        // Checked again (the game's files now read, even if they hold no model): the same reader, ready once its
+        // game data is checked (from the caches), without reading the files again.
         GameLook.Check(settings);
         Assert.Same(bundles, GameLook.Bundles);
-        Assert.Equal("ready", GameLook.State);
+        Assert.Equal("ready", await Settled());
         Assert.Null(GameLook.Message);
         Assert.Equal(1, GameLook.Now().Progress);
+    }
+
+    [Fact]
+    public async Task AReadGameWhoseDataCannotBeHadEndsFailed()
+    {
+        var settings = new AppSettings { ValheimPath = FakeValheim(Path.Combine(_home, "Valheim")) };
+        GameLook.Check(settings);
+        Assert.Equal("failed", await Settled());
+        try
+        {
+            // Its files read, so not read again; its game data neither in use, cached nor readable (no game code).
+            GameData.Forget();
+            GameLook.Check(settings);
+            Assert.Equal("failed", await Settled());
+            Assert.Contains("game's data", GameLook.Message);
+        }
+        finally
+        {
+            GameData.UseCopies(Fixtures.Root);
+        }
     }
 
     [Fact]

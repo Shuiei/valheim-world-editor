@@ -255,6 +255,24 @@ public static class Dungeons
     }
 
     /// <summary>
+    /// Places a dungeon's first room the game's way (DungeonGenerator.PlaceStartRoom): its way in (the entrance
+    /// opening, else its first opening, else its own origin) at the dungeon object, facing the way the object does.
+    /// </summary>
+    /// <param name="room">The first room.</param>
+    /// <param name="position">The dungeon object's place.</param>
+    /// <param name="rotation">The dungeon object's turn.</param>
+    public static Placed PlaceStart(Room room, Vector3 position, Quaternion rotation)
+    {
+        var way = room.Openings.FirstOrDefault(o => o.Entrance) ?? room.Openings.FirstOrDefault();
+        if (way == null)
+        {
+            return new Placed(room.Hash, position, Quaternion.Normalize(rotation));
+        }
+        Quaternion rot = rotation * Quaternion.Inverse(way.Rotation);
+        return new Placed(room.Hash, position - Vector3.Transform(way.Position, rot), Quaternion.Normalize(rot));
+    }
+
+    /// <summary>
     /// The openings a room can join an open one of this type with: those of the same type (an end cap's
     /// only opening too), never the entrance's way in.
     /// </summary>
@@ -610,11 +628,13 @@ public static class Dungeons
             int count = 0;
             try
             {
-                byte[]? data = ZdoData.Parse(world.ObjectBytes(id)).GetBytes(RoomDataKey);
+                byte[]? data = ZdoData.Parse(world.ObjectBytes(id), world.ObjectRefs[id].File.WorldVersion).GetBytes(RoomDataKey);
                 count = data == null ? 0 : BitConverter.ToInt32(data, 0);
             }
-            catch (Exception e) when (e is InvalidDataException or ArgumentException or EndOfStreamException)
+            catch (Exception e) when (e is InvalidDataException or IOException or ArgumentException or FormatException or OverflowException)
             {
+                // Damaged or unreadable: found with no rooms, said in the log, and the others still listed.
+                Console.WriteLine($"Dungeon object {id} ({kind}) at {position} (world version {world.ObjectRefs[id].File.WorldVersion}): room list not read ({e.GetType().Name}: {e.Message}); listed with no rooms.");
             }
             found.Add(new Found(id, kind, position, count));
         }

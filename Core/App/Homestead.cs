@@ -111,6 +111,20 @@ public static class Homestead
     public sealed record Details(string Name, string Description, List<string> Tags)
     {
         /// <summary>
+        /// The tag that makes a blueprint a dungeon: pasted into a world, it goes 5000 m up behind an entrance on the
+        /// ground, as a generated dungeon does (the Workshop's Dungeon switch sets it).
+        /// </summary>
+        public const string DungeonTag = "dungeon";
+
+        /// <summary>Whether the blueprint is a dungeon (it carries <see cref="DungeonTag"/>, in any case).</summary>
+        public bool Dungeon => Tags.Any(t => t.Equals(DungeonTag, StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>These details with the dungeon tag set or taken away.</summary>
+        public Details WithDungeon(bool yes) => yes
+            ? Dungeon ? this : this with { Tags = [.. Tags, DungeonTag] }
+            : this with { Tags = [.. Tags.Where(t => !t.Equals(DungeonTag, StringComparison.OrdinalIgnoreCase))] };
+
+        /// <summary>
         /// "house, Viking,stone ,house" → house, Viking, stone. Split on commas or semicolons, duplicates
         /// dropped ignoring case, 12 at most.
         /// </summary>

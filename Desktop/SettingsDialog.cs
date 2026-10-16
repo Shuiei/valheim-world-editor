@@ -42,12 +42,12 @@ public static class SettingsDialog
             game = GameLook.GameFolder(game) ?? game;
             if (GameLook.BundlesDir(game) == null)
             {
-                problems.Add("The Valheim folder must be the game's folder, the one with valheim_Data (in Steam: right-click Valheim, Manage › Browse local files).");
+                problems.Add(Lang.T("settings.notValheim"));
             }
         }
-        List<string> Clean(IEnumerable<string> list, string what) => [.. list.Select(p => p.Trim()).Where(p => p.Length > 0).Select(Expand).Distinct().Where(p => { if (Directory.Exists(p)) { return true; } problems.Add($"{what} not found: {p}"); return false; })];
-        var bep = Clean(bepInEx, "BepInEx folder");
-        var wl = Clean(worlds, "World folder");
+        List<string> Clean(IEnumerable<string> list, string notFound) => [.. list.Select(p => p.Trim()).Where(p => p.Length > 0).Select(Expand).Distinct().Where(p => { if (Directory.Exists(p)) { return true; } problems.Add(Lang.T(notFound, p)); return false; })];
+        var bep = Clean(bepInEx, "settings.bepInExNotFound");
+        var wl = Clean(worlds, "settings.worldNotFound");
         if (problems.Count > 0)
         {
             return string.Join(" ", problems);
@@ -81,7 +81,7 @@ public static class SettingsDialog
         bool saved = false;
         var dialog = new Window
         {
-            Title = "Settings: folders on this computer",
+            Title = Lang.T("settings.title"),
             Width = 720,
             // As tall as what it holds (it scrolls past that).
             SizeToContent = SizeToContent.Height,
@@ -101,10 +101,10 @@ public static class SettingsDialog
             var picked = await dialog.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions { Title = title });
             return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
         }
-        var valheim = new TextBox { Text = settings.ValheimPath, PlaceholderText = "automatic (Steam libraries)" }.Tip("settings.valheim");
-        var browse = new Button { Content = "Browse…" }.Tip("settings.browse");
-        browse.Click += async (_, _) => { if (await Pick("The Valheim game folder (with valheim_Data)") is string p) { valheim.Text = p; } };
-        var auto = new Button { Content = "Automatic" }.Tip("settings.auto");
+        var valheim = new TextBox { Text = settings.ValheimPath, PlaceholderText = Lang.T("settings.valheimAuto") }.Tip("settings.valheim");
+        var browse = new Button { Content = Lang.T("common.browse") }.Tip("settings.browse");
+        browse.Click += async (_, _) => { if (await Pick(Lang.T("settings.pickValheim")) is string p) { valheim.Text = p; } };
+        var auto = new Button { Content = Lang.T("settings.automatic") }.Tip("settings.auto");
         auto.Click += (_, _) => valheim.Text = "";
         StackPanel List(List<string> initial, string pickTitle, out Func<IEnumerable<string>> read)
         {
@@ -115,7 +115,7 @@ public static class SettingsDialog
                 var box = new TextBox { Text = text }.Tip("settings.folder");
                 var x = new Button { Content = "✕" }.Tip("settings.remove");
                 var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 4 };
-                var br = new Button { Content = "Browse…" }.Tip("settings.browse");
+                var br = new Button { Content = Lang.T("common.browse") }.Tip("settings.browse");
                 br.Click += async (_, _) => { if (await Pick(pickTitle) is string p) { box.Text = p; } };
                 Grid.SetColumn(br, 1);
                 Grid.SetColumn(x, 2);
@@ -130,35 +130,35 @@ public static class SettingsDialog
             {
                 Add(f);
             }
-            var add = new Button { Content = "Add a folder" }.Tip("settings.add");
+            var add = new Button { Content = Lang.T("settings.addFolder") }.Tip("settings.add");
             add.Click += (_, _) => Add("");
             read = () => boxes.Select(b => b.Text ?? "");
             return new StackPanel { Spacing = 4, Children = { rows, add } };
         }
-        var bep = List(settings.BepInExFolders, "A BepInEx folder or a mod manager profile", out var readBep);
-        var worlds = List(settings.WorldFolders, "A world folder or a folder of worlds", out var readWorlds);
+        var bep = List(settings.BepInExFolders, Lang.T("settings.pickBepInEx"), out var readBep);
+        var worlds = List(settings.WorldFolders, Lang.T("settings.pickWorlds"), out var readWorlds);
         // Claude's connection.
-        var claude = new CheckBox { Content = "Allow Claude to connect", IsChecked = settings.ClaudeConnect }.Classed("switch").Tip("settings.claude");
+        var claude = new CheckBox { Content = Lang.T("settings.claudeAllow"), IsChecked = settings.ClaudeConnect }.Classed("switch").Tip("settings.claude");
         var port = new TextBox { Name = "ClaudePort", Text = settings.ClaudePort.ToString(System.Globalization.CultureInfo.InvariantCulture), Width = 90 }.Tip("settings.claudePort");
         string token = string.IsNullOrEmpty(settings.ClaudeToken) ? ClaudeServer.NewToken() : settings.ClaudeToken;
         var command = new TextBox { Name = "ClaudeCommand", IsReadOnly = true, TextWrapping = TextWrapping.Wrap, FontSize = 12, FontFamily = new FontFamily("monospace") }.Tip("settings.claudeCommand");
         void ShowCommand() => command.Text = ClaudeServer.ClaudeCodeCommand(int.TryParse(port.Text, out int p) ? p : settings.ClaudePort, token);
         ShowCommand();
         port.TextChanged += (_, _) => ShowCommand();
-        var copy = new Button { Content = "Copy" }.Tip("settings.claudeCopy");
+        var copy = new Button { Content = Lang.T("common.copy") }.Tip("settings.claudeCopy");
         copy.Click += async (_, _) => { if (TopLevel.GetTopLevel(dialog)?.Clipboard is { } cb) { await Avalonia.Input.Platform.ClipboardExtensions.SetTextAsync(cb, command.Text ?? ""); } };
-        var renew = new Button { Content = "New token" }.Tip("settings.claudeToken");
+        var renew = new Button { Content = Lang.T("settings.newToken") }.Tip("settings.claudeToken");
         renew.Click += (_, _) => { token = ClaudeServer.NewToken(); ShowCommand(); };
         var claudeDetails = new StackPanel { Spacing = 6, IsVisible = claude.IsChecked == true };
         claude.IsCheckedChanged += (_, _) => claudeDetails.IsVisible = claude.IsChecked == true;
-        claudeDetails.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { new TextBlock { Text = "Port", VerticalAlignment = VerticalAlignment.Center }, port, renew } });
-        claudeDetails.Children.Add(Hint("To connect Claude Code, run this once in a terminal (other MCP clients: the address, with the header):"));
+        claudeDetails.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { new TextBlock { Text = Lang.T("settings.port"), VerticalAlignment = VerticalAlignment.Center }, port, renew } });
+        claudeDetails.Children.Add(Hint(Lang.T("settings.claudeCodeHint")));
         claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { command, Col(copy, 1) } });
         // Claude Desktop starts a program: this one, relaying to the running editor (ClaudeRelay).
         var desktop = new TextBox { Name = "ClaudeDesktop", IsReadOnly = true, TextWrapping = TextWrapping.Wrap, FontSize = 12, FontFamily = new FontFamily("monospace"), Text = ClaudeServer.DesktopConfig(Environment.ProcessPath ?? "ValheimWorldEditor") }.Tip("settings.claudeDesktop");
-        var copyDesktop = new Button { Content = "Copy" }.Tip("settings.claudeCopy");
+        var copyDesktop = new Button { Content = Lang.T("common.copy") }.Tip("settings.claudeCopy");
         copyDesktop.Click += async (_, _) => { if (TopLevel.GetTopLevel(dialog)?.Clipboard is { } cb) { await Avalonia.Input.Platform.ClipboardExtensions.SetTextAsync(cb, desktop.Text ?? ""); } };
-        claudeDetails.Children.Add(Hint("Claude Desktop: add this to its configuration (Settings > Developer > Edit Config, claude_desktop_config.json), then restart it. The editor must be running:"));
+        claudeDetails.Children.Add(Hint(Lang.T("settings.claudeDesktopHint")));
         claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { desktop, Col(copyDesktop, 1) } });
         if (ClaudeServer.Status is string status)
         {
@@ -177,9 +177,9 @@ public static class SettingsDialog
             extensions.Children.Add(box);
             string? state = x.State switch
             {
-                ModExtensions.Status.Running => "Running.",
-                ModExtensions.Status.Failed => $"Not running: {x.Error}.",
-                _ => x.Error != null ? $"Off: {x.Error}." : null,
+                ModExtensions.Status.Running => Lang.T("settings.extensionRunning"),
+                ModExtensions.Status.Failed => Lang.T("settings.extensionFailed", x.Error),
+                _ => x.Error != null ? Lang.T("settings.extensionOff", x.Error) : null,
             };
             if (state != null)
             {
@@ -188,33 +188,42 @@ public static class SettingsDialog
         }
         if (extensionBoxes.Count == 0)
         {
-            extensions.Children.Add(Hint("No mod in the folders above offers one."));
+            extensions.Children.Add(Hint(Lang.T("settings.noExtension")));
         }
+        // The language: taken at the next start (the windows are built in it).
+        var languages = Lang.Available();
+        var language = new ComboBox
+        {
+            Name = "Language",
+            MinWidth = 220,
+            ItemsSource = languages.Select(l => l.Name).Prepend(Lang.T("settings.languageSystem")).ToList(),
+            SelectedIndex = settings.Language is string chosen && languages.ToList().FindIndex(l => l.Code == chosen) is int i and >= 0 ? i + 1 : 0,
+        }.Tip("settings.language");
         // What draws (Windows): taken at the next start.
-        var driverGl = new CheckBox { Content = "Draw with the graphics driver's OpenGL", IsChecked = settings.DriverOpenGl }.Classed("switch").Tip("settings.driverGl");
+        var driverGl = new CheckBox { Content = Lang.T("settings.driverGl"), IsChecked = settings.DriverOpenGl }.Classed("switch").Tip("settings.driverGl");
         var drawing = new StackPanel
         {
             Spacing = 6,
             IsVisible = OnWindows,
             Children =
             {
-                H2("Drawing"),
+                H2(Lang.T("settings.drawing")),
                 driverGl,
-                Hint("Off (the default): the editor draws through Direct3D, like games do. On: through the graphics driver's OpenGL, as earlier versions did; try it if the 3D view or the map draws wrongly or slowly. Taken when the editor starts again."),
+                Hint(Lang.T("settings.drawingHint")),
             },
         };
         var error = new TextBlock { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap };
-        var save = new Button { Content = "Save", IsDefault = true }.Tip("settings.save");
+        var save = new Button { Content = Lang.T("common.save"), IsDefault = true }.Tip("settings.save");
         save.Click += (_, _) =>
         {
             if (!int.TryParse(port.Text, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int claudePort) || claudePort is < 1024 or > 65535)
             {
-                error.Text = "The port for Claude must be a number from 1024 to 65535.";
+                error.Text = Lang.T("settings.badPort");
                 return;
             }
             // Set before Apply, which saves them with the folders; taken back when the folders are refused, so a
             // Cancel after that keeps nothing.
-            var before = (settings.ClaudeConnect, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl);
+            var before = (settings.ClaudeConnect, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl, settings.Language);
             var allowedBefore = new Dictionary<string, string>(settings.Extensions);
             foreach (var (box, x) in extensionBoxes)
             {
@@ -224,9 +233,10 @@ public static class SettingsDialog
             settings.ClaudePort = claudePort;
             settings.ClaudeToken = token;
             settings.DriverOpenGl = driverGl.IsChecked == true;
+            settings.Language = language.SelectedIndex > 0 ? languages[language.SelectedIndex - 1].Code : null;
             if (Apply(settings, valheim.Text, readBep(), readWorlds()) is string problem)
             {
-                (settings.ClaudeConnect, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl) = before;
+                (settings.ClaudeConnect, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl, settings.Language) = before;
                 settings.Extensions = allowedBefore;
                 error.Text = problem;
                 return;
@@ -236,9 +246,9 @@ public static class SettingsDialog
             saved = true;
             dialog.Close();
         };
-        var cancel = new Button { Content = "Cancel", IsCancel = true }.Tip("dialog.cancel");
+        var cancel = new Button { Content = Lang.T("common.cancel"), IsCancel = true }.Tip("dialog.cancel");
         cancel.Click += (_, _) => dialog.Close();
-        string detected = GameLook.FindValheim(null) is string d ? $"Found automatically: {Ui.Tilde(d)}" : "Not found automatically: choose the folder.";
+        string detected = GameLook.FindValheim(null) is string d ? Lang.T("settings.valheimFound", Ui.Tilde(d)) : Lang.T("settings.valheimNotFound");
         dialog.Content = new ScrollViewer
         {
             Content = new StackPanel
@@ -247,22 +257,25 @@ public static class SettingsDialog
                 Spacing = 6,
                 Children =
                 {
-                    H2("Valheim game folder"),
+                    H2(Lang.T("settings.language")),
+                    language,
+                    Hint(Lang.T("settings.languageHint", Ui.Tilde(Lang.Folder))),
+                    H2(Lang.T("settings.valheimFolder")),
                     Hint(detected),
                     new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 4, Children = { valheim, Col(browse, 1), Col(auto, 2) } },
-                    Hint("The folder with valheim_Data. Used for the game's look, and to find BepInEx for \"My game\"."),
-                    H2("BepInEx folders"),
+                    Hint(Lang.T("settings.valheimHint")),
+                    H2(Lang.T("settings.bepInExFolders")),
                     bep,
-                    Hint("Where else to look for the plugin for \"My game\": a BepInEx folder, a mod manager profile, or a folder of profiles. The Valheim folder and the default r2modman / Thunderstore Mod Manager profiles are always searched."),
-                    H2("World folders"),
+                    Hint(Lang.T("settings.bepInExHint")),
+                    H2(Lang.T("settings.worldFolders")),
                     worlds,
-                    Hint($"Always listed under \"A saved world\": a world folder, or a folder of worlds (a server's <savedir>/worlds_local, a backup folder…). Valheim's usual folders are always searched: {string.Join(", ", Places.WorldRoots().Where(Directory.Exists).Select(Ui.Tilde))}"),
-                    H2("Claude"),
+                    Hint(Lang.T("settings.worldsHint", string.Join(", ", Places.WorldRoots().Where(Directory.Exists).Select(Ui.Tilde)))),
+                    H2(Lang.T("settings.claude")),
                     claude,
-                    Hint("Lets Claude (Claude Code, Claude Desktop) look at the world or the Workshop open in the editor and change it from a prompt: shape the ground, place objects, build. Only from this computer, with the token below. What it changes stays pending, like your own changes: you save, apply live or save the blueprint."),
+                    Hint(Lang.T("settings.claudeHint")),
                     claudeDetails,
-                    H2("Mod extensions"),
-                    Hint("Mods can offer an extension that teaches the editor more of them (how to draw their pieces, read their data, copy them). It is the mod's own code, run inside the editor with your rights: turn on only those of mods you trust. A file that changes (a mod update) is turned off until you turn it on again."),
+                    H2(Lang.T("settings.extensions")),
+                    Hint(Lang.T("settings.extensionsHint")),
                     extensions,
                     drawing,
                     error,

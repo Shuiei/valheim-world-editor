@@ -120,10 +120,22 @@ public static class GameData
             {
                 return false;
             }
-            ModCatalogue.Load();
-            foreach (var kind in Kinds)
+            try
             {
-                Use(kind, read[kind.Name]);
+                ModCatalogue.Load();
+                foreach (var kind in Kinds)
+                {
+                    Use(kind, read[kind.Name]);
+                }
+            }
+            catch (Exception e)
+            {
+                // A kind the editor cannot take (the game changed what it holds): those before it are in use already,
+                // so none counts as had, and the next Ensure takes them all again.
+                Console.WriteLine($"The game's data could not be used ({e.GetType().Name}: {e.Message}).");
+                _from = null;
+                _generation++;
+                return false;
             }
             _from = bundles.Folder;
             _generation++;
@@ -218,29 +230,25 @@ public static class GameData
     }
 
     /// <summary>
-    /// Valheim's folder from its bundles folder (&lt;Valheim&gt;/valheim_Data/StreamingAssets/SoftRef/Bundles).
+    /// Valheim's folder from its bundles folder (&lt;data folder&gt;/StreamingAssets/SoftRef/Bundles, the data folder
+    /// being valheim_Data, or valheim.app/Contents/Resources/Data on a Mac).
     /// </summary>
     private static string ValheimOf(string bundles)
     {
         string? d = Path.TrimEndingDirectorySeparator(bundles);
-        for (int i = 0; i < 4 && d != null; i++)
+        for (int i = 0; i < 3 && d != null; i++)
         {
             d = Path.GetDirectoryName(d);
         }
-        return d ?? bundles;
+        return d == null ? bundles : GameLook.GameOfData(d);
     }
-
-    /// <summary>
-    /// The game's data folder, as spelled on Windows and Linux.
-    /// </summary>
-    private static readonly string[] DataFolders = ["valheim_Data", "Valheim_Data"];
 
     /// <summary>
     /// The game's files a kind is read from, by name, size and time: what makes a cache out of date.
     /// </summary>
     internal static string Stamp(string valheim, string bundles) =>
         CacheVersion + " " + JsonSerializer.Serialize(Directory.GetFiles(bundles).Order(StringComparer.Ordinal)
-            .Concat(DataFolders.Select(d => Path.Combine(valheim, d, "Managed", "assembly_valheim.dll")).Where(File.Exists))
+            .Concat(new[] { GameLook.DataDir(valheim) }.OfType<string>().Select(d => Path.Combine(d, "Managed", "assembly_valheim.dll")).Where(File.Exists))
             .Select(f => new FileInfo(f)).Select(f => $"{f.Name}:{f.Length}:{f.LastWriteTimeUtc.Ticks}"));
 
     /// <summary>
@@ -304,16 +312,11 @@ public static class GameData
                 Console.WriteLine($"Game data {what}: read from the game's bundles in {watch.ElapsedMilliseconds} ms.");
                 read.AddRange(pass);
             }
-            // Kept: written whole or not at all (a crash half way leaves the old file, or none).
             if (cache)
             {
                 foreach (string name in read)
                 {
-                    what = name;
-                    string file = CacheFile(name);
-                    Directory.CreateDirectory(Path.GetDirectoryName(file)!);
-                    File.WriteAllText(file + ".part", name + " " + stamp + "\n" + json[name]);
-                    File.Move(file + ".part", file, overwrite: true);
+                    KeepCache(CacheFile(name), name + " " + stamp + "\n" + json[name]);
                 }
             }
             return json;
@@ -323,6 +326,36 @@ public static class GameData
             // Anything in the game's files can fail the reading: no world opens then.
             Console.WriteLine($"The game's {what} could not be read ({e.GetType().Name}: {e.Message}).");
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Keeps a cache, written whole or not at all (a crash half way leaves the old file, or none). One that cannot be
+    /// written (a full disk, a read-only folder, another editor writing it too) is only logged: what was read is used
+    /// all the same, and read again next time.
+    /// </summary>
+    /// <returns>False when it could not be written.</returns>
+    internal static bool KeepCache(string file, string text)
+    {
+        string part = file + ".part";
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+            File.WriteAllText(part, text);
+            File.Move(part, file, overwrite: true);
+            return true;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"{Path.GetFileName(file)} could not be kept ({e.GetType().Name}: {e.Message}); it is read again next time.");
+            try
+            {
+                File.Delete(part);
+            }
+            catch (Exception d) when (d is IOException or UnauthorizedAccessException)
+            {
+            }
+            return false;
         }
     }
 

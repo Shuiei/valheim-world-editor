@@ -41,29 +41,60 @@ public static class Tunnel
     /// <summary>Its local port forward to the plugin.</summary>
     private static ForwardedPortLocal? _forward;
 
+    /// <summary>Held while a tunnel is being made: one at a time, so none is left open unseen.</summary>
+    private static readonly SemaphoreSlim Starting = new(1, 1);
+
+    /// <summary>Guards <see cref="_client"/>, <see cref="_forward"/> and <see cref="_closes"/> between Close and a start.</summary>
+    private static readonly Lock Sync = new();
+
+    /// <summary>
+    /// How many times <see cref="Close"/> was called: a tunnel whose start saw a Close meanwhile is shut, not kept, so a
+    /// Close never leaves a tunnel that was still being made open behind it.
+    /// </summary>
+    private static int _closes;
+
     /// <summary>Whether a tunnel is connected.</summary>
     public static bool Open => _client?.IsConnected == true;
 
-    /// <summary>Stops the forward and disconnects, ignoring errors.</summary>
+    /// <summary>
+    /// Stops the forward and disconnects; failing to do either is logged, and the tunnel is dropped anyway. A tunnel
+    /// still being made is shut as soon as it connects (without waiting for it here).
+    /// </summary>
     public static void Close()
+    {
+        SshClient? client;
+        ForwardedPortLocal? forward;
+        lock (Sync)
+        {
+            _closes++;
+            client = _client;
+            forward = _forward;
+            _client = null;
+            _forward = null;
+        }
+        Shut(client, forward);
+    }
+
+    /// <summary>Stops a forward and disconnects its client, logging what fails; both are dropped either way.</summary>
+    private static void Shut(SshClient? client, ForwardedPortLocal? forward)
     {
         try
         {
-            _forward?.Stop();
+            forward?.Stop();
         }
-        catch
+        catch (Exception e)
         {
+            Console.WriteLine($"tunnel: the port forward could not be stopped ({e.Message}).");
         }
         try
         {
-            _client?.Disconnect();
+            client?.Disconnect();
         }
-        catch
+        catch (Exception e)
         {
+            Console.WriteLine($"tunnel: the SSH connection could not be closed cleanly ({e.Message}).");
         }
-        _client?.Dispose();
-        _client = null;
-        _forward = null;
+        client?.Dispose();
     }
 
     /// <summary>
@@ -73,7 +104,35 @@ public static class Tunnel
     /// </summary>
     public static async Task<Result> Start(Request r)
     {
+        // Continues off the caller's (UI) thread: reading the plugin's settings on the server blocks.
+        await Starting.WaitAsync().ConfigureAwait(false);
+        // The key files read, closed once the start is over, however it ends.
+        var keys = new List<PrivateKeyFile>();
+        try
+        {
+            return await StartOnce(r, keys).ConfigureAwait(false);
+        }
+        finally
+        {
+            Starting.Release();
+            foreach (var k in keys)
+            {
+                k.Dispose();
+            }
+        }
+    }
+
+    /// <inheritdoc cref="Start"/>
+    /// <param name="r">What the player entered.</param>
+    /// <param name="keys">Where the key files read are kept, for the caller to close.</param>
+    private static async Task<Result> StartOnce(Request r, List<PrivateKeyFile> keys)
+    {
         Close();
+        int closes;
+        lock (Sync)
+        {
+            closes = _closes;
+        }
         string host = r.Host.Trim();
         string user = r.User.Trim();
         // "user@host" in one field.
@@ -97,7 +156,8 @@ public static class Tunnel
                 {
                     key = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + key[1..];
                 }
-                methods.Add(new PrivateKeyAuthenticationMethod(user, string.IsNullOrEmpty(r.Passphrase) ? new PrivateKeyFile(key) : new PrivateKeyFile(key, r.Passphrase)));
+                keys.Add(string.IsNullOrEmpty(r.Passphrase) ? new PrivateKeyFile(key) : new PrivateKeyFile(key, r.Passphrase));
+                methods.Add(new PrivateKeyAuthenticationMethod(user, keys[^1]));
             }
             else
             {
@@ -108,19 +168,21 @@ public static class Tunnel
                     if (File.Exists(k))
                     {
                         // One that cannot be used (a passphrase, a format SSH.NET does not read, no
-                        // access) is skipped: the password is still tried.
+                        // access) is skipped, and logged: the password is still tried.
                         try
                         {
-                            methods.Add(new PrivateKeyAuthenticationMethod(user, new PrivateKeyFile(k)));
+                            keys.Add(new PrivateKeyFile(k));
+                            methods.Add(new PrivateKeyAuthenticationMethod(user, keys[^1]));
                         }
-                        catch (Exception ex) when (ex is SshException or IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+                        catch (Exception ex) when (KeyUnreadable(ex))
                         {
+                            Console.WriteLine($"tunnel: {Path.GetFileName(k)} skipped, it could not be read ({ex.GetType().Name}).");
                         }
                     }
                 }
             }
         }
-        catch (Exception ex) when (ex is SshException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (KeyUnreadable(ex))
         {
             return Fail("The key file could not be read: " + ex.Message);
         }
@@ -159,7 +221,7 @@ public static class Tunnel
         };
         try
         {
-            await Task.Run(client.Connect);
+            await Task.Run(client.Connect).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -199,9 +261,23 @@ public static class Tunnel
         int local = Places.FreePort(15182);
         var forward = new ForwardedPortLocal("127.0.0.1", (uint)local, "127.0.0.1", (uint)bridgePort);
         client.AddForwardedPort(forward);
-        forward.Start();
-        _client = client;
-        _forward = forward;
+        bool closed;
+        lock (Sync)
+        {
+            // Closed while connecting (the editor quit, or went back to Home): this tunnel is no longer wanted.
+            closed = _closes != closes;
+            if (!closed)
+            {
+                forward.Start();
+                _client = client;
+                _forward = forward;
+            }
+        }
+        if (closed)
+        {
+            Shut(client, null);
+            return Fail("The connection was closed while it was being made.");
+        }
         // What to remember for next time (the password only when asked to), saved once the plugin answers.
         var remember = new ServerConfig.Server
         {
@@ -247,6 +323,13 @@ public static class Tunnel
             _ => null,
         };
     }
+
+    /// <summary>
+    /// Whether reading a key file failed because of the file: missing, no access, a wrong passphrase, or a format
+    /// SSH.NET does not read (it reports those in many ways, such as an unsupported DSA key or a key cut short).
+    /// </summary>
+    private static bool KeyUnreadable(Exception ex) => ex is SshException or IOException or UnauthorizedAccessException or InvalidOperationException
+        or ArgumentException or NotSupportedException or FormatException or System.Formats.Asn1.AsnContentException or CryptographicException;
 
     /// <summary>A path quoted for the server's shell (single quotes).</summary>
     private static string Quote(string path) => "'" + path.Replace("'", "'\\''") + "'";

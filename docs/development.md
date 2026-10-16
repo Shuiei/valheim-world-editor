@@ -48,22 +48,44 @@ The app reads one command per line on its input and answers each with one line, 
 | `stroke`, `mapview`, `search`, `hit`, `zones`, `look` | A brush stroke, the map's place, its search (and a result picked) and zone filter, the View look switches. |
 | `set <label>\|<value>`, `type <hint>\|<text>`, `panel`, `message [text]` | A slider, box or list beside a label; a text box by its placeholder; the right-hand panel shown; the status bar's message (none: cleared). |
 | `picture <file.png>` / `shot <file.png>` | The view shown (3D or map) once it is drawn / the whole window, panels and view, as Avalonia's compositor draws it (never a capture of the screen). |
+| `bounds <prefab>...` | Each prefab's model box in its own frame (its parts' meshes, the root's scale): the feet and sizes the dungeon generator places props by. Needs an area or the Workshop open. |
 | `bench <seconds>` / `state` / `quit` | Frame rates while the camera turns / the state / quit without asking. |
 
 `tools/DocsScreenshots/Editor.cs` wraps it for the documentation's pictures: it starts the app with
 a stand-in home folder (none of this computer's characters, worlds or servers show; driven, the app
 looks for Steam only in that home, so for the game's look its settings name this computer's Valheim), sends commands and saves `shot`s as JPEG, the status bar's message cleared first.
-`tools/DocsScreenshots/Scenes.cs` holds one scene per picture: each opens a fresh editor and builds
-only what its picture shows, in worlds made from seeds and never saved:
+The scenes are in `tools/DocsScreenshots/Scenes*.cs`, split by documentation page (ground tools,
+objects, building and dungeons, the pages around the 3D editor): each scene opens a fresh editor,
+builds only what its pictures show (often a tool's settings side by side) and takes them, in worlds
+made from seeds and never saved:
 
 ```sh
-WorldCheck create <dir>/Docs Docs yjRO99yNTI 16 --flat     # the bare zone the tools are shown on
+WorldCheck create <dir>/Docs Docs yjRO99yNTI 16 --flat     # the bare zone the tools are shown on (zone -10, -5)
 WorldCheck create <dir>/Fjordheim Fjordheim Fjord2026 3     # a second world for the start page
 dotnet run --project tools/DocsScreenshots -- <dir> [scene ...]  # all scenes, or only those named
 ```
 
-The pictures go to `docs/images` (or `$DOCS_OUT`). The red on ground at the ±8 m limit is switched
-off in every scene (it would hide the edits).
+The pictures go to `docs/images` (or `$DOCS_OUT`). `$DOCS_APP` names a released `ValheimWorldEditor`
+to drive instead of the Debug build (the pictures of a release are taken with the release; put it in a
+neutral folder such as `/tmp/ValheimWorldEditor`, since Settings shows its path). The red on ground
+at the ±8 m limit is switched off in every scene (it would hide the edits).
+
+A few things the driver cannot reach are done on the display with `xdotool` (Linux, X11): closing
+the note on the locations near the area (an icon-only button) and scrolling a panel (the dungeon
+generator's plan, Settings, the found seeds). Without `xdotool` those pictures keep the note or show
+the panel's top. Run it on a virtual display, never your own:
+
+```sh
+Xvfb :88 -screen 0 1920x1080x24 -nolisten tcp &
+DISPLAY=:88 vglrun -d egl dotnet run --project tools/DocsScreenshots -- <dir>   # VirtualGL: the GPU instead of llvmpipe
+```
+
+(If VirtualGL stops with "undefined symbol: eglGetProcAddress", name the system's libraries:
+`VGL_EGLLIB=/usr/lib64/libEGL.so.1 VGL_GLLIB=/usr/lib64/libGL.so.1`.)
+
+Keep a picture clear: nothing in front of its subject (the tool panel stays on the left, so frame
+the subject right of it), neither too close nor too far. At the usual yaw of 200° east is left on the
+picture and north is near the camera.
 
 ## Building
 
@@ -118,8 +140,12 @@ CircleCI makes the release once you approve it (`.circleci/config.yml`, `.circle
    of `— unreleased`). Optionally, write the GitHub release's notes in `docs/releases/v<version>.md`;
    without it the notes are the CHANGELOG's sections since the last release.
 2. Merge it. On main, a dated heading for `VERSION` with no `v<version>` tag yet makes the pipeline
-   a release one: the usual jobs, then **hold-release** waits.
-3. In CircleCI, open that pipeline's workflow (`release`) and approve **hold-release**. Then:
+   a release one: **hold-release** waits at once, before anything runs. The tests are not run again:
+   they ran on the pull request, on the same tree (main's ruleset keeps a pull request up to date
+   with main before it merges).
+3. In CircleCI, open that pipeline's workflow (`release`) and approve **hold-release**. Then
+   **packages** builds the editor packages and **windows-smoke** tries the Windows one, as on every
+   push to main, and:
    - **github-release** signs the Windows program (`tools/sign-windows.sh`: Authenticode, with the
      maintainer's Certum code-signing certificate through SimplySign's cloud, timestamped by Certum),
      builds the plugin's zip (against a Valheim dedicated server downloaded with SteamCMD and the
@@ -315,13 +341,16 @@ The **test world** is `tests/fixtures/CITest`: a brand-new world made by a dedic
 filled live through the editor (ground edits, trees, rocks, bushes, pickables, a crop, floors, walls,
 chests). `tests/fixtures/CITest.snapshot` is the same world as the plugin sends it.
 
-CircleCI (`.circleci/continue.yml`) runs on every push and pull request:
+CircleCI (`.circleci/continue.yml`) runs on every push and pull request (`packages` and
+`windows-smoke` on main only: they are slow, and the packaging they check seldom changes):
 
 | Job | What it checks |
 |---|---|
+| `code-analysis` | `Desktop` (with `Core` and `Sdk`) and `WorldEditorBridge.Api` build with every analyzer warning an error, and the repository's XML files are well formed. |
+| `formatting` | `tools/format-check.sh`: the five projects are formatted as `.editorconfig` says (`dotnet format whitespace` and `style`), on two containers. A pull request checks only the projects with a changed file (all of them when `.editorconfig`, `Directory.Build.props` or `global.json` changed); main checks all of them. |
 | `core-tests` | `tests/Core.Tests`, with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers (the world generator's tests run several times slower under coverage). |
 | `app-tests` | `tests/Desktop.Tests` on six containers, the visual tests included: they draw on a virtual screen (Xvfb, Mesa's software OpenGL), so CI checks the shapes they draw but not the game's look (CI has no Valheim: its editor draws plain colours). Both test jobs run through CircleCI's testsuite CLI ([Smarter Testing](https://circleci.com/docs/guides/test/getting-started-with-smarter-testing/): the suites in `.circleci/test-suites.yml`, each class a test atom, run in batches by `.circleci/run-tests.sh` as `--filter-class`es): the containers take classes from one shared queue as they finish, longest first (dynamic test splitting, a paid option), and **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. A test stuck 5 minutes is dumped and stopped (`tests/testconfig.json`); a crashed or stopped test process shows as one failed test of its class. Test impact analysis (running only the tests a change touches) is not on: it needs each test's coverage in LCOV or Go's format, which .NET's coverage does not write. |
-| `packages` | Both release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
+| `packages` | On main only: the release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
 
 Not covered by CI: the game's look in the visual tests, building the plugin and reading the game's data
 (both need Valheim's own files: the tests use their copies in `tests/fixtures`), and live mode

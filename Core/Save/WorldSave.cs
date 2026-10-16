@@ -134,6 +134,20 @@ public sealed class WorldSave
 
     /// <summary>First object of each prefab: the template new objects of that prefab are copied from.</summary>
     public Dictionary<int, int> Templates { get; } = [];
+    /// <summary>
+    /// Counts each prefab added to <see cref="Templates"/> (a live merge brings new kinds), for lists worked out from
+    /// them to be worked out again.
+    /// </summary>
+    public int TemplatesGeneration { get; private set; }
+
+    /// <summary>Makes an object the template of its prefab when it has none yet.</summary>
+    private void RememberTemplate(int prefab, int id)
+    {
+        if (Templates.TryAdd(prefab, id))
+        {
+            TemplatesGeneration++;
+        }
+    }
 
     /// <summary>
     /// The object a new one is built from: its source object when given (and of the same prefab), else the prefab's
@@ -224,6 +238,21 @@ public sealed class WorldSave
         }
         // Also what is not offered for placing (creatures: generated dungeons put some down).
         return Terrain.PrefabCatalog.Details(n.Prefab) is { } info ? ZdoBuilder.Blank(n.Prefab, info.Flags, n.Position, n.Rotation, n.Scale) : null;
+    }
+
+    /// <summary>
+    /// A reader of the bytes an object's offsets point into, for <see cref="NewObjectBytes"/>: live, its own
+    /// (<see cref="LiveSource"/>: the snapshot, or the bytes of a read since); else its whole chunk file, read once per
+    /// reader.
+    /// </summary>
+    public Func<ObjectRef, byte[]> SourceReader()
+    {
+        if (LiveBytes != null)
+        {
+            return o => LiveSource(o.File);
+        }
+        Dictionary<ChunkFile, byte[]> files = [];
+        return o => files.TryGetValue(o.File, out byte[]? f) ? f : files[o.File] = File.ReadAllBytes(Path.Combine(Directory, o.File.FileName));
     }
 
     /// <summary>
@@ -463,7 +492,7 @@ public sealed class WorldSave
     /// in. Null when the world's lists are being read elsewhere right now: try again later.
     /// </summary>
     /// <param name="zones">The zones the objects were read from; objects of them the game lacks vanish.</param>
-    /// <param name="objects">Every object the game has in those zones.</param>
+    /// <param name="objects">Every object the game has in those zones (a ZDOID listed twice counts once, its last bytes).</param>
     /// <param name="keep">
     /// Objects not to vanish though the game lacks them (the editor's own applied deletions: undo brings them back).
     /// </param>
@@ -481,9 +510,23 @@ public sealed class WorldSave
             var result = new Merged([], [], [], []);
             var seen = new HashSet<int>();
             var fresh = new List<(long User, uint Id, byte[] Bytes, int Replace)>();
-            foreach (var (user, zid, bytes) in objects)
+            // Each ZDOID once: should the game list one twice, its last bytes stand (else it would be read twice, or
+            // get two ids of which one never vanishes).
+            var last = new Dictionary<(long User, uint Id), int>();
+            for (int i = 0; i < objects.Count; i++)
             {
-                if (_byLiveId!.TryGetValue((user, zid), out int id))
+                last[(objects[i].User, objects[i].Id)] = i;
+            }
+            for (int i = 0; i < objects.Count; i++)
+            {
+                var (user, zid, bytes) = objects[i];
+                if (last[(user, zid)] != i)
+                {
+                    continue;
+                }
+                // A kept object whose game object is the editor's now (moved under its own ZDOID to stand for one of
+                // the editor's new objects) is not read back in under its own id.
+                if (_byLiveId!.TryGetValue((user, zid), out int id) && !(keep(id) && ours((user, zid))))
                 {
                     seen.Add(id);
                     if (!ObjectBytes(id).AsSpan().SequenceEqual(bytes))
@@ -734,7 +777,7 @@ public sealed class WorldSave
         if ((flags & 0xFF) == 0)
         {
             objRef.End = pkg.Position;
-            Templates.TryAdd(prefab, id);
+            RememberTemplate(prefab, id);
             file.Objects.Add((start, pkg.Position));
             if (shown)
             {
@@ -865,7 +908,18 @@ public sealed class WorldSave
                 byte[] value = pkg.ReadByteArray();
                 if (key == TCDataKey)
                 {
-                    var zone = TerrainZone.Decode(position, prefab, value);
+                    TerrainZone zone;
+                    try
+                    {
+                        zone = TerrainZone.Decode(position, prefab, value);
+                    }
+                    catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException)
+                    {
+                        // Damaged ground data: the game loses only this zone's ground edits. Here the object stays an
+                        // ordinary one, kept byte for byte, and the rest of the world reads on.
+                        Console.WriteLine($"Damaged ground data in the terrain object at {position}, kept as it is: {ex.Message}");
+                        continue;
+                    }
                     zone.Source = new ZdoLocation(file, start, -1, valueStart, pkg.Position, flags);
                     TerrainZones.Add(zone);
                 }
@@ -888,7 +942,7 @@ public sealed class WorldSave
         objRef.IsTerrain = terrain;
         if (!terrain)
         {
-            Templates.TryAdd(prefab, id);
+            RememberTemplate(prefab, id);
         }
         if (creator != 0)
         {
@@ -1019,6 +1073,10 @@ public sealed class TerrainZone
     // The largest terrain data read, unpacked: a zone's is about 110 KB (65 x 65 heights and paints).
     private const int MaxData = 16 << 20;
 
+    // The most height or paint points taken: the game's grid is 65 x 65, so damaged data that claims more is refused
+    // before its arrays are made (16 MB of data could otherwise ask for some 270 MB).
+    private const int MaxPoints = 257 * 257;
+
     /// <summary>Mirrors TerrainComp.Load.</summary>
     /// <param name="center">The terrain compiler object's position.</param>
     /// <param name="prefab">Its prefab hash.</param>
@@ -1030,7 +1088,7 @@ public sealed class TerrainZone
         int operations = pkg.ReadInt();
         pkg.ReadVector3();
         pkg.ReadSingle();
-        int heights = pkg.ReadCount(1);
+        int heights = Points(pkg.ReadCount(1), "height");
         bool[] modified = new bool[heights];
         float[] level = new float[heights];
         float[] smooth = new float[heights];
@@ -1043,7 +1101,7 @@ public sealed class TerrainZone
                 smooth[i] = pkg.ReadSingle();
             }
         }
-        int paints = pkg.ReadCount(1);
+        int paints = Points(pkg.ReadCount(1), "paint");
         bool[] painted = new bool[paints];
         var paint = new Vector4[paints];
         for (int i = 0; i < paints; i++)
@@ -1066,4 +1124,8 @@ public sealed class TerrainZone
             Paint = paint
         };
     }
+
+    /// <summary>A grid's point count, checked against <see cref="MaxPoints"/>.</summary>
+    /// <exception cref="InvalidDataException">The count is larger than any terrain grid.</exception>
+    private static int Points(int count, string grid) => count <= MaxPoints ? count : throw new InvalidDataException($"{count} {grid} points in a terrain object (at most {MaxPoints})");
 }

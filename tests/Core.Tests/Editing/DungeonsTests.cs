@@ -260,11 +260,51 @@ public class DungeonsTests
     }
 
     [Fact]
+    public void ADungeonIsReadInItsFilesWorldVersion()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        // Objects read from now on are of version 39: each carries its sector after its flags.
+        int loaded = world.Chunks[0].WorldVersion;
+        world.Chunks[0].WorldVersion = 39;
+        var at = new Vector3(640, 30, 640);
+        List<Dungeons.Placed> rooms =
+        [
+            new(StableHash.Of("cave_new_entrance02"), at + new Vector3(0, 5000, 0), Quaternion.Identity),
+            new(StableHash.Of("cave_new_endcap02"), at + new Vector3(0, 5000, 8), Quaternion.Identity),
+        ];
+        byte[] current = MadeObjects.Dungeon("DG_Cave", at, rooms);
+        world.MergeLive([(10, 10)], [(4242, 1, [.. current[..2], 0, 0, 0, 0, .. current[2..]])], _ => false, _ => false);
+        // Back to the loaded version, so only the object's own file says 39.
+        world.Chunks[0].WorldVersion = loaded;
+        var found = Assert.Single(Dungeons.In(world));
+        Assert.NotEqual(39, loaded);
+        Assert.Equal(39, world.ObjectRefs[found.Id].File.WorldVersion);
+        Assert.Equal(2, found.Rooms);
+    }
+
+    [Fact]
     public void ARoomOfNoKnownPrefabCountsAsInside()
     {
         var cave = Dungeons.KindOf(StableHash.Of("DG_Cave"))!;
         var unknown = new Dungeons.Placed(StableHash.Of("no_such_room"), CaveAt + new Vector3(9999, 0, 9999), Quaternion.Identity);
         Assert.Null(unknown.Room);
         Assert.True(Dungeons.Inside(cave, CaveAt, unknown));
+    }
+
+    [Fact]
+    public void TheFirstRoomIsPlacedWhereTheGamePlacesIt()
+    {
+        // The game puts the entrance room's way in at the dungeon object, facing its way (PlaceStartRoom): the real
+        // cave's first room, placed again from its dungeon object.
+        var real = Cave()[0];
+        var start = Dungeons.PlaceStart(real.Room!, CaveAt, Quaternion.Identity);
+        Assert.Equal(real.Hash, start.Hash);
+        Assert.True(Vector3.Distance(real.Position, start.Position) < 0.01f, start.Position.ToString());
+        Assert.True(Same(real.Rotation, start.Rotation));
+        // Turned: the way in turns with it. A room without openings stands at the object itself.
+        var turned = Dungeons.PlaceStart(real.Room!, CaveAt, Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2));
+        Assert.True(Vector3.Distance(CaveAt, turned.At(real.Room!.Openings.First(o => o.Entrance)).Position) < 0.01f);
+        var bare = new Dungeons.Room("bare", 1, 1, new Vector3(4, 4, 4), false, false, false, 0, 1f, false, true, [], [], [], [], []);
+        Assert.Equal(CaveAt, Dungeons.PlaceStart(bare, CaveAt, Quaternion.Identity).Position);
     }
 }

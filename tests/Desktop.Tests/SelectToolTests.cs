@@ -224,4 +224,27 @@ public class SelectToolTests
             Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
         }
     }
+
+    // Put on the ground, an object moved past the area's edge (no ground there) keeps its height, and the others are
+    // not thrown off by it: neither a wall sinking 1000 m with the tree inside, nor the wall flying up with the tree out.
+    [AvaloniaFact]
+    public void AMovePastTheAreasEdgeKeepsTheHeight()
+    {
+        foreach (float by in new[] { 70f, -60f })
+        {
+            var (w, s) = Window();
+            w.View.Select([0, 1]);
+            w.View.SelectTool.PlaceAt(by, 0, 0, 0, by: true);
+            var moved = s.Scene.Things.Skip(2).ToList();
+            Assert.Equal(2, moved.Count);
+            var tree = moved.Single(t => t.Prefab == Beech);
+            var wall = moved.Single(t => t.Prefab == Wall);
+            var (outside, inside) = by > 0 ? (wall, tree) : (tree, wall);
+            Assert.True(outside.Position.X is > 96 or < -32);
+            Assert.Equal(30, outside.Position.Y, 3);
+            // Inside, on the ground: the tree at its foot, the wall with its bottom (0.5 m below its middle) on it.
+            Assert.Equal(inside == tree ? 30 : 30.5f, inside.Position.Y, 3);
+            w.CloseWithoutAsking();
+        }
+    }
 }

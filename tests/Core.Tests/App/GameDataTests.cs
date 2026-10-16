@@ -57,18 +57,20 @@ public sealed class GameDataTests : IDisposable
 
     /// <summary>
     /// A pretend game folder in the home: its (empty) bundles folder, and with code, a .NET assembly where the game's
-    /// code is (its strings are what the zdo-keys kind reads).
+    /// code is (its strings are what the zdo-keys kind reads). With mac, laid out as on a Mac: its data folder inside
+    /// valheim.app.
     /// </summary>
-    private (string Valheim, GameBundles Bundles) Game(string name, bool code)
+    private (string Valheim, GameBundles Bundles) Game(string name, bool code, bool mac = false)
     {
         string valheim = Path.Combine(_home, name);
-        string bundles = Path.Combine(valheim, "valheim_Data", "StreamingAssets", "SoftRef", "Bundles");
+        string data = mac ? Path.Combine(valheim, "valheim.app", "Contents", "Resources", "Data") : Path.Combine(valheim, "valheim_Data");
+        string bundles = Path.Combine(data, "StreamingAssets", "SoftRef", "Bundles");
         Directory.CreateDirectory(bundles);
         // Named after the game: the caches' stamp tells games apart by their files.
         File.WriteAllText(Path.Combine(bundles, name + "_bundle"), "not read");
         if (code)
         {
-            string managed = Path.Combine(valheim, "valheim_Data", "Managed");
+            string managed = Path.Combine(data, "Managed");
             Directory.CreateDirectory(managed);
             File.Copy(typeof(GameData).Assembly.Location, Path.Combine(managed, "assembly_valheim.dll"));
         }
@@ -125,10 +127,37 @@ public sealed class GameDataTests : IDisposable
         string stamp = GameData.Stamp(valheim, bundles.Folder);
         Assert.Equal("zdo-keys " + stamp + "\n" + keys, File.ReadAllText(file));
         Assert.Equal(keys, GameData.Load(bundles, cache: true)!["zdo-keys"]);
-        // A cache that cannot be written (a folder in its place): nothing is had.
+        // A cache that cannot be written (a folder in its place): what was read is had all the same.
         File.Delete(file);
         Directory.CreateDirectory(file);
-        Assert.Null(GameData.Load(bundles, cache: true));
+        Assert.Equal(keys, GameData.Load(bundles, cache: true)?["zdo-keys"]);
+    }
+
+    [Fact]
+    public void ACacheThatCannotBeWrittenIsOnlyLogged()
+    {
+        string file = GameData.CacheFile("prefabs");
+        Assert.True(GameData.KeepCache(file, "kept"));
+        Assert.Equal("kept", File.ReadAllText(file));
+        // A folder in its place: not kept, nothing thrown, and no half-written file left.
+        File.Delete(file);
+        Directory.CreateDirectory(file);
+        Assert.False(GameData.KeepCache(file, "lost"));
+        Assert.True(Directory.Exists(file));
+        Assert.False(File.Exists(file + ".part"));
+    }
+
+    [Fact]
+    public void AMacGamesCodeIsReadFromItsAppBundle()
+    {
+        var (valheim, bundles) = Game("Valheim", code: true, mac: true);
+        Caches(valheim, bundles, "zdo-keys");
+        // Its game folder found from the bundles inside valheim.app, and the game's code in the bundle's Managed.
+        Assert.Contains("assembly_valheim.dll", GameData.Stamp(valheim, bundles.Folder));
+        string keys = GameData.Load(bundles, cache: true)!["zdo-keys"];
+        Assert.Equal(GameCatalogues.ZdoKeysJson(valheim), keys);
+        using var doc = JsonDocument.Parse(keys);
+        Assert.True(doc.RootElement.EnumerateObject().Any());
     }
 
     [Fact]
@@ -168,6 +197,23 @@ public sealed class GameDataTests : IDisposable
         {
             GameData.UseCopies(Fixtures.Root);
         }
+    }
+
+    [Fact]
+    public void AKindTheEditorCannotTakeLeavesNoneHad()
+    {
+        var (valheim, bundles) = Game("Valheim", code: false);
+        Caches(valheim, bundles);
+        string stamp = GameData.Stamp(valheim, bundles.Folder);
+        string file = GameData.CacheFile("zdo-keys");
+        // Its keys are hashes as text: one that is not throws as it is taken, after the kinds before it.
+        File.WriteAllText(file, "zdo-keys " + stamp + "\n{\"not a hash\": \"x\"}");
+        GameData.Forget();
+        Assert.False(GameData.Ensure(bundles));
+        // Not counted as had: asked again, it is tried again.
+        Assert.False(GameData.Ensure(bundles));
+        File.WriteAllText(file, "zdo-keys " + stamp + "\n" + Copy("zdo-keys"));
+        Assert.True(GameData.Ensure(bundles));
     }
 
     [Fact]

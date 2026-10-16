@@ -7,8 +7,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// An edit session's smaller rules: deleting what is already gone makes no step, a shape whose formula fails at some
 /// points counts them and leaves them, the changed rectangle is given once, the game's changes wait for a stroke
-/// to end, things moved, turned and sized in one step, the copy that stands for a moved thing, and zones marked for
-/// reset and unmarked.
+/// to end, things moved, turned and sized in one step, the copy that stands for a moved thing, zones marked for
+/// reset, unmarked and marked again with other options, and steps marked applied up to the first the game lacks.
 /// </summary>
 public class EditSessionStepsTests
 {
@@ -116,5 +116,92 @@ public class EditSessionStepsTests
         Assert.Equal(1, s.UnmarkResets([(0, 0), (0, 0), (1, 0)], "Unmark"));
         Assert.Equal((1, 1), (s.Resets.Single().X, s.Resets.Single().Z));
         Assert.Equal("Unmark", s.UndoLabel);
+    }
+
+    // Marking a marked zone again with other options: undo, redo and removing the step each bring back the options
+    // of their side, not the newest ones.
+    [Fact]
+    public void MarkingAgainWithOtherOptionsIsUndoneToTheOldOptions()
+    {
+        var s = TestScenes.Flat(2);
+        var kept = new Editing.ZoneReset(0, 0, KeepBuildings: true, Ground: false);
+        var wiped = new Editing.ZoneReset(0, 0, KeepBuildings: false, Ground: false);
+        s.MarkResets([(0, 0)], keepBuildings: true, ground: false, "Keep");
+        s.MarkResets([(0, 0)], keepBuildings: false, ground: false, "Wipe");
+        Assert.Equal(wiped, Assert.Single(s.Resets));
+        Assert.Equal("1 zone reset", s.UndoList[^1].Describe());
+        Assert.True(s.Undo());
+        Assert.Equal(kept, Assert.Single(s.Resets));
+        Assert.True(s.Redo());
+        Assert.Equal(wiped, Assert.Single(s.Resets));
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^1]));
+        Assert.Equal(kept, Assert.Single(s.Resets));
+        Assert.True(s.Undo());
+        Assert.Equal(wiped, Assert.Single(s.Resets));
+    }
+
+    // A move replaces its object by a copy. Removing the move while a later step moved the copy again would bring the
+    // original back beside the later copy (two rocks): it is refused, and neither rock changes.
+    [Fact]
+    public void RemovingAMoveWhoseCopyMovedAgainIsRefused()
+    {
+        var s = TestScenes.Flat(1, Rock());
+        int first = s.Move([(0, new Vector3(4, 30, 0), Vector3.Zero)], "Claude: moved")[0];
+        int second = s.Move([(first, new Vector3(8, 30, 0), Vector3.Zero)])[0];
+        Assert.StartsWith("That change cannot be removed:", s.RemoveChange(s.UndoList[^2]));
+        Assert.False(s.UndoList[^2].Removed);
+        Assert.True(s.Scene.Things[0].Gone);
+        Assert.True(s.Scene.Things[first].Gone);
+        Assert.False(s.Scene.Things[second].Gone);
+        Assert.Equal(1, s.Scene.Things.Count(t => !t.Gone));
+        // Taking the later move out first makes the first one removable.
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^1]));
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^3]));
+        Assert.False(s.Scene.Things[0].Gone);
+        Assert.Equal(1, s.Scene.Things.Count(t => !t.Gone));
+    }
+
+    // A copy that went in the game (live follow-up, no history step) does not stand in the way: removing the move
+    // brings the original back and the copy stays gone, as before.
+    [Fact]
+    public void RemovingAMoveWhoseCopyVanishedInTheGameIsAllowed()
+    {
+        var s = TestScenes.Flat(1, Rock());
+        int copy = s.Move([(0, new Vector3(4, 30, 0), Vector3.Zero)], "Claude: moved")[0];
+        Assert.True(s.TakeGameChanges(new WorldSession.Followed(new WorldSave.Merged([], [], [], []), [s.Scene.Things[copy].Id], [], [])));
+        Assert.True(s.Scene.Things[copy].Gone);
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^1]));
+        Assert.False(s.Scene.Things[0].Gone);
+        Assert.True(s.Scene.Things[copy].Gone);
+    }
+
+    // Removing an older reset step while a later step marked the zone again keeps the later marking.
+    [Fact]
+    public void RemovingAnOlderMarkingKeepsALaterOne()
+    {
+        var s = TestScenes.Flat(2);
+        var later = new Editing.ZoneReset(0, 0, KeepBuildings: true, Ground: false);
+        s.MarkResets([(0, 0)], keepBuildings: false, ground: false, "Wipe");
+        s.MarkResets([(0, 0)], keepBuildings: true, ground: false, "Keep");
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^2]));
+        Assert.Equal(later, Assert.Single(s.Resets));
+    }
+
+    // After a partial Apply live, steps are applied oldest first while the game has all they did; one it lacks stops
+    // it (Discard undoes from the end), and a step applied before does not.
+    [Fact]
+    public void StepsAreAppliedUpToTheFirstTheGameLacks()
+    {
+        var s = TestScenes.Flat(1, Rock(), Rock() with { Id = 4 });
+        var two = Formula.Compile("2", []);
+        s.Delete([0]);
+        s.Shape(32, 32, two, 3, 0, "raise");
+        s.Delete([1]);
+        s.Shape(20, 20, two, 3, 0, "raise");
+        var steps = s.UndoList;
+        Assert.Equal(4, steps.Count);
+        steps[0].Applied = true;
+        EditSession.MarkSent(steps, c => c.Things.Length == 0);
+        Assert.Equal([true, true, false, false], steps.Select(c => c.Applied));
     }
 }

@@ -6,6 +6,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using ModelContextProtocol.Server;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -13,14 +14,15 @@ namespace TerrainEditor.Desktop;
 /// Claude's tools for the editor's own controls: every switch, dropdown, slider, number and text box and button of the
 /// window (the View panel's switches, the Workshop's Cut and Support check, every tool panel's settings…), listed with
 /// their values and set as the user would, so the window's own handlers run. Controls that save, apply live, discard,
-/// reload, write or delete the user's files, or connect to the live game, are never set.
+/// reload, write or delete the user's files, or connect to the live game, are never set; while the world is live with
+/// Auto on, only the View panel's are.
 /// </summary>
 public sealed partial class ClaudeTools
 {
     // ---- The window's controls.
 
     /// <summary>A control as Claude sees it.</summary>
-    /// <param name="Id">How Claude names it: its tip key (view.gameLook, workshop.cut…), else ~ and its label; #2… when shared.</param>
+    /// <param name="Id">How Claude names it: its tip key (view.gameLook, workshop.cut…), else ~ and its English label; #2… when shared.</param>
     /// <param name="Kind">switch, toggle, radio, dropdown, slider, number, text or button.</param>
     /// <param name="Label">Its words: its content, placeholder, or the label beside it.</param>
     /// <param name="Control">The control.</param>
@@ -36,10 +38,15 @@ public sealed partial class ClaudeTools
         "start.game", "start.server", "start.editLive", "start.home",
         "start.connect", "start.connectUrl", "start.savedConnect", "start.savedForget",
         "dungeon.gen.openOnPlot", "dungeon.gen.addToPlot", "dungeon.gen.workshop",
-        "select.forget", "brush.forgetStamp", "area.export",
+        "select.delete", "select.forget", "brush.forgetStamp", "area.export",
+        "blueprints.details", "blueprints.vbuild", "blueprints.vbuildOld", "blueprints.toHomestead",
+        "blueprints.delete", "blueprints.deleteOld",
     ];
 
-    /// <summary>Labels of controls without a tip key that Claude never sets (the same kinds of actions).</summary>
+    /// <summary>
+    /// English labels of controls without a tip key that Claude never sets (the same kinds of actions); a label in
+    /// another language is matched by its English (Lang.EnglishOf).
+    /// </summary>
     [GeneratedRegex(@"^(save|apply live|discard|reload|delete|details|to homestead|\.vbuild|import|get homestead|forget)", RegexOptions.IgnoreCase)]
     private static partial Regex BlockedLabel();
 
@@ -54,9 +61,15 @@ public sealed partial class ClaudeTools
         {
             return "it saves, applies, discards, reloads, writes the user's files or connects to the live game: the user's to do";
         }
-        if (Tips.KeyOf(c.Control) == null && c.Kind == "button" && BlockedLabel().IsMatch(c.Label))
+        if (Tips.KeyOf(c.Control) == null && c.Kind == "button" && BlockedLabel().IsMatch(Lang.EnglishOf(c.Label)))
         {
             return "it saves, discards or writes or deletes the user's files: the user's to do";
+        }
+        // Like every other editing tool (CannotEdit): a tool's Apply, an Area action or a script run would go to the
+        // game at once. Only the View panel's controls, which change nothing in the world, stay.
+        if (LiveWithAuto && !(Tips.KeyOf(c.Control) is string view && view.StartsWith("view.", StringComparison.Ordinal)))
+        {
+            return "the open world is live with Auto on, so what it changes would go to the game at once; only the View panel's controls can be used. Ask the user to turn Auto off";
         }
         return null;
     }
@@ -120,7 +133,9 @@ public sealed partial class ClaudeTools
                 continue;
             }
             string label = LabelOf(c);
-            string id = Tips.KeyOf(c) ?? "~" + (label.Length > 0 ? Regex.Replace(label.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-') : kind);
+            // From the English label: the same id whatever the language (and not lost to the letters a-z keeps).
+            string english = Lang.EnglishOf(label);
+            string id = Tips.KeyOf(c) ?? "~" + (english.Length > 0 ? Regex.Replace(english.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-') : kind);
             int k = seen[id] = seen.GetValueOrDefault(id) + 1;
             list.Add(new Ctl(k == 1 ? id : $"{id}#{k}", kind, label, c));
         }
@@ -258,7 +273,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>set_control: a control set as the user would.</summary>
     [McpServerTool(Name = "set_control", Title = "Set one of the editor's controls")]
-    [Description("Sets one of the editor's controls (list_controls gives their ids) as the user would, so the editor does what the control does: a switch or toggle true or false (e.g. a View switch, see-through, Support check), a dropdown's option (its text, or its number from 0), a slider's or a number box's value (e.g. workshop.cut 12), a text box's text (enter: true also presses Enter, for search boxes), a button: click (a tool of the rail, a panel's action, Apply of a tool…). Answers with the control's value after and the editor's message. Saving, applying live, discarding, reloading, writing or deleting the user's files and connecting to the live game are refused.")]
+    [Description("Sets one of the editor's controls (list_controls gives their ids) as the user would, so the editor does what the control does: a switch or toggle true or false (e.g. a View switch, see-through, Support check), a dropdown's option (its text, or its number from 0), a slider's or a number box's value (e.g. workshop.cut 12), a text box's text (enter: true also presses Enter, for search boxes), a button: click (a tool of the rail, a panel's action, Apply of a tool…). Answers with the control's value after and the editor's message. Saving, applying live, discarding, reloading, writing or deleting the user's files and connecting to the live game are refused; while the world is live with Auto on, every control but the View panel's is.")]
     public Task<string> SetControl(
         [Description("The control's id (list_controls).")] string id,
         [Description("The value: true/false, an option, a number, a text, or click.")] string value,

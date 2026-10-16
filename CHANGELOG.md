@@ -4,7 +4,621 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.36.0 — unreleased
+## v1.45.48 — unreleased
+
+### Fixed
+- **Replacing a ship or another linked group's root left its parts behind.** Replace (the Area tool's, and the
+  Select tool's "Replace the selection") removed only the objects given, unlike Remove, so replacing a vehicle's
+  root left its parts in the save with nothing to hang on. Replace now takes a root's parts away with it, in the
+  same undo step, and says how many went; a part replaced on its own still goes alone.
+
+## v1.45.47 — unreleased
+
+### Fixed
+- **A heightmap read but not yet put could land in another area.** The picture read by Import was fitted to the
+  selection and the area open at the time, as grid points of that ground, but it survived a change of selection or
+  the opening of another area, so "Put it into the ground" then wrote it into the wrong points of another ground.
+  The picture is now dropped when the selection changes, and refused (with a message) when another area is open.
+
+## v1.45.46 — unreleased
+
+### Fixed
+- **Replace's "with" list kept the first world's kinds after another world was opened.** The Area tool worked the
+  list out once per window, but the kinds a world can make include its own objects (its templates), so after opening
+  another world the list still offered the first world's modded kinds, which the other world cannot copy, and lacked
+  its own. The list is now worked out again for another world or when the game's data or the mods change, keeping
+  the chosen kind when the new world offers it too.
+
+## v1.45.45 — unreleased
+
+### Fixed
+- **Reset zones could say "Select an area first" or miss zones, depending on the Soft slider.** The zones under the
+  selection were taken from the soft-edge weights, keeping only points weighing at least one half: with Soft at 20 m
+  and a 15 m wide selection no point weighed that much, so Reset found no zone, and a zone covered only by the outer
+  half of the soft edge was left out. The zones are now those with a grid point inside the outline, whatever Soft is.
+
+## v1.45.44 — unreleased
+
+### Fixed
+- **Removing a move from the history could leave two copies of the object.** A move replaces its object by a copy.
+  Removing that move from the history (Remove, or "Take back Claude's changes") after a later step had moved the
+  copy again brought the original back while the later copy stayed; removing a Place whose object was moved since
+  left the moved copy. A change whose added objects a later step moved or deleted is now refused with a message
+  ("undo back to it instead"), and "Take back Claude's changes" says how many were left for that reason.
+
+## v1.45.43 — unreleased
+
+### Fixed
+- **A hand-made language file could stop the editor from starting.** A file in the data folder's `lang` folder whose
+  root is not an object (`[]`), or that gives a key twice, threw while the languages were being read at start-up,
+  before the window existed, even for a language that was never chosen. A key given twice now takes the last text,
+  and a file that is not one object of texts is logged and skipped like one that is not JSON.
+
+## v1.45.42 — unreleased
+
+### Fixed
+- **A translation of "Free" or "Cost unknown" with a brace in it broke the Build panel.** A text without places for
+  values is taken from a language file as it is, braces and all, since it is never formatted; but the cost line asked
+  for it with an empty list of values and formatted it anyway, which threw and broke the Build panel, the blueprint
+  list and Claude's piece search. A text asked for with no values is now shown as it is.
+
+## v1.45.41 — unreleased
+
+### Fixed
+- **Mirrored pastes tilted pieces the wrong way.** Pasting with Mirror on reversed the pitch of every object as
+  well as its yaw and roll, so a beam sloping nose-down came out nose-up and tilted trees leaned the other way.
+  Mirroring east to west now keeps the pitch; the same went for mirrored dungeon pastes and the paste ghost.
+
+## v1.45.40 — unreleased
+
+### Fixed
+- **A mod extension offered by two mods ran everything twice.** When two mods ship the same extension DLL and both
+  are allowed, the file is loaded once but was put in use once per mod: its shapes and ground cuts were drawn
+  twice, its inspector text and pasted-copy rewrites ran twice (the second rewrite working on already rewritten
+  data), and a hook that failed turned off only one of the two in Settings. Each loaded extension's hooks now run
+  once, and a failure shows on every mod offering it.
+
+## v1.45.39 — unreleased
+
+### Fixed
+- **The start page could say "Reading the game's files" for ever, or "ready" when it was not.** When the editor
+  could not take one kind of the game's data (after a game update changed it), the error escaped the reading: the
+  start page stayed on its progress bar, the kinds before it used the new data and those after it the old, and no
+  failure was logged. When the game's files were already read, a failure to get its data still showed "ready". The
+  editor now logs what failed, counts none of the data as had (it is taken again next time), and the start page says
+  some of the game's data could not be read; "ready" is said only once the game data is in use.
+
+## v1.45.38 — unreleased
+
+### Fixed
+- **A cache that could not be written stopped every world from opening.** At its start the editor reads what it needs
+  from the game and keeps it in its data folder for the next start. When keeping it failed (a full disk, a read-only
+  data folder, two editors writing at once), the data it had just read was thrown away too: no world opened, the log
+  said the game could not be read, and each try read the whole game again. On the New world page the bosses and
+  traders were lost the same way. A cache that cannot be written is now only logged, and the data read is used.
+
+## v1.45.37 — unreleased
+
+### Fixed
+- **A world map that failed to build said "Building the world map…" for ever.** The map is worked out in the
+  background when a world opens. If that failed (a damaged world file, for example), the error was lost: the map
+  stayed blank, its status kept saying it was building, and nothing went to the log. The map now says it could not
+  be built and why, and the log has the details.
+
+## v1.45.36 — unreleased
+
+### Fixed
+- **A live world's map could show another world's players.** The map asks the game for its players every 5 seconds,
+  without waiting for the last answer: a game that hung got a new question every 5 seconds (each waiting up to
+  3 minutes), and the answers changed the players' line in whatever order they came. An answer that came after
+  another world was shown put the old world's players on the new map. The map now asks a world's game again only once it
+  has answered (also when that world is shown again meanwhile), and drops an answer for a world no longer shown.
+
+## v1.45.35 — unreleased
+
+### Fixed
+- **The map could pin the results of an older search.** A search started while another was still running (a slow
+  item search, then a switch to objects) could end first, and the older one's results then replaced it: the wrong
+  hits were pinned, and picking one opened it the wrong way. A search still running when another world was shown
+  pinned the old world's hits on the new map, and the same happened when the world was read again (Discard, Reload)
+  or saved during the search. Only the latest search on the world as shown is pinned now; one dropped because the
+  world changed says to search again.
+
+## v1.45.34 — unreleased
+
+### Fixed
+- **Claude's screenshots could show the wrong view.** Claude can ask for several screenshots at once. Each set the
+  camera and then waited for its picture, so another call could move the camera in between: pictures came from the
+  other call's camera, and four views could be labelled with the wrong sides. Tools that set the camera or take a
+  picture now take turns.
+
+## v1.45.33 — unreleased
+
+### Fixed
+- **A dungeon Claude generated could land in the wrong place, or go live.** Claude's generate_dungeon checked that an
+  area was open and that Auto was off only before generating, which takes a moment. Opening another area or the
+  Workshop meanwhile put the dungeon there, closing the area crashed the tool, and turning Auto on sent the dungeon
+  straight to the game. It is now checked again before placing: nothing is placed and Claude is told why.
+- **A dungeon added to the Workshop's plot could land on another plot.** Generate dungeon (from the Dungeon panel or
+  Claude) writes its blueprint first; a plot opened meanwhile got the dungeon. It is now added only to the plot it
+  was made for; otherwise nothing is placed and the status bar says so (the blueprint stays in the Library).
+
+## v1.45.32 — unreleased
+
+### Fixed
+- **Errors on the map went unseen.** Opening an area that failed to load (or was dropped because the map was shown
+  while it loaded), or a Discard or Reload from the map that failed, said why only in the 3D editor's status bar,
+  which the map does not show: the "Loading…" veil flashed and nothing else happened, and the message turned up
+  later, out of context, when an area was opened. The advice after making a new world did the same. On the map these
+  now show in a dialog too (not for a world left meanwhile). The window's message dialogs are titled "Valheim World
+  Editor", as the map's are, instead of "Save" whatever they said.
+
+## v1.45.31 — unreleased
+
+### Fixed
+- **After a failed Discard or Reload in the 3D editor, every tool silently did nothing.** Discard (reading the world
+  again) and Reload close the area and open it again. When opening it again failed, the editor stayed on the old
+  area with no area open behind it, so tools, Save and Undo did nothing, and the status bar said "Discarded: the
+  world was read again." over the error. The map now opens instead, and a dialog says the area could not be opened
+  again and why (also when another area asked for meanwhile, by an arrow move, fails too); the old area is no longer
+  the world's, so its history is not kept after the world is read.
+
+## v1.45.30 — unreleased
+
+### Fixed
+- **A change finished after going to the map could not be undone.** Going to the map handed the area's history to
+  the world but left the area open behind it, so a script, a Claude change or Grow still running finished in it: the
+  change went into the world but its undo step stayed in the closed area, and the history found on reopening lacked
+  it. Going to the map (or opening another area) now closes the area, so such work changes nothing and says so (a
+  script: "The area was closed while the script ran"); an area that fails to open leaves the one shown open as
+  before, unless the map or another area was asked for (or the world left) while it loaded; an area that finishes
+  loading after that is not shown over them.
+
+## v1.45.29 — unreleased
+
+### Fixed
+- **Trees grown on a mountain could float, be buried or be lost.** After placing a mountain with Grow on, the editor
+  works out the biome's trees and rocks for a moment before putting them in. Anything done meanwhile was not noticed:
+  after an undo or another stroke the trees went in for ground that was no longer there, and when Follow grew the
+  area they went into the old area and were lost, though the message said they grew. When the area changed
+  meanwhile, nothing grows now and the message says why.
+
+## v1.45.28 — unreleased
+
+### Fixed
+- **Keys still worked while a world was being saved from the 3D editor.** Saving only greyed out the Save button: Ctrl+S
+  asked to save again and could start a second write, and Ctrl+Z, Follow or the save bar froze the editor until the
+  save ended. Saving now shows the same "Saving…" veil as the map, the editor's keys wait while it is up, and Follow
+  waits too.
+
+## v1.45.27 — unreleased
+
+### Fixed
+- **Pressing Enter again during an Area action could do it twice.** Reset zones (while its question was open),
+  Regrow nature (while the game's vegetation was worked out) and Restore from a backup (while the backup was read)
+  wait before they change anything, and another Enter or click meanwhile started the same action again: regrown
+  trees or restored objects were added twice. When another area was opened meanwhile, the change still went to the
+  old one. Apply is now greyed out while an action runs, and an action whose area changed meanwhile applies nothing
+  and says so.
+
+## v1.45.26 — unreleased
+
+### Fixed
+- **Choosing an SSH key in a format the editor cannot read could crash it.** Connecting with a key file that the SSH
+  library refuses in some ways (an old DSA key, a damaged or cut-short key) stopped the editor with an unexpected
+  error instead of saying "The key file could not be read", and such a key in your .ssh folder did the same instead
+  of being skipped. Every way a key file can be refused now gives that message (or skips it), and the key files
+  read are closed once connecting is over.
+
+## v1.45.25 — unreleased
+
+### Fixed
+- **Clicking Connect twice could open two connections to the server.** Connecting to a server (the form, a saved
+  server, its Home tile, or a bridge address) takes a few seconds, and nothing stopped a second click meanwhile: both
+  opened an SSH tunnel and a world, the first tunnel stayed open unseen until the editor closed, and a failed attempt
+  could close the other one's tunnel. A click while connecting now does nothing, and tunnels are made one at a time.
+  Quitting or going back to Home while a connection is being made now shuts that tunnel as soon as it connects,
+  instead of leaving it open until the editor exits.
+
+## v1.45.24 — unreleased
+
+### Fixed
+- **The dungeon list could fail on one damaged dungeon, and gave wrong room counts in older worlds.** Listing a
+  world's dungeons read each dungeon's room list. A dungeon whose data could not be read in some ways (a bad text
+  length, a world file that could not be read) stopped the whole list, and every dungeon was read in the newest
+  save layout, so in worlds saved before chunk files their room counts were wrong. Each dungeon is now read in its
+  own world version, and one that cannot be read is listed with no rooms, with a line in the log saying which and why.
+
+## v1.45.23 — unreleased
+
+### Fixed
+- **One damaged ground record made the whole world fail to open.** Each zone's ground edits are saved as packed data
+  on one object. When that data was damaged or cut short, opening the world stopped with an error, although the game
+  only loses that zone's ground edits. The damaged object is now read as an ordinary object and kept as it is, a line
+  in the log says where it is, and the rest of the world opens. Damaged data claiming more ground points than a zone
+  can have is caught the same way, before the editor sets aside memory for them.
+
+## v1.45.22 — unreleased
+
+### Fixed
+- **Live, an object the game listed twice could be counted twice or leave a ghost copy behind.** When the game's list
+  of a zone's objects held the same object twice, the editor read it twice: an object it knew went into its lists
+  twice and its builder's piece count went up by two, and an object new to it got two entries, one of which never
+  went away when the object was removed in the game. Each object is now taken once, with its last data.
+
+## v1.45.21 — unreleased
+
+### Fixed
+- **Saving could stop with an error instead of saying why it could not save.** Before writing, a save copies an
+  existing terrain object for new ground and the objects new ones are made from. When that failed (the first
+  terrain object in a layout the editor does not copy, a world file that could not be read, an object that did not
+  read), the error escaped the save and showed as an unexpected error. These now come back as a save that did not
+  happen, with the reason, and nothing written; new ground also copies the first terrain object it can use, not
+  just the first one.
+
+## v1.45.20 — unreleased
+
+### Fixed
+- **A power cut just after saving could leave a broken save that the game trusts.** Saving copies the world's data
+  and metadata files (.db2 and .fwl2) to the new save number, then writes the marker that tells the game the save
+  is complete, flushed to disk, and removes the previous save. The two copies were not flushed, so after a power
+  cut the marker could be on disk next to an empty or cut-short .db2 or .fwl2, with the previous save already gone.
+  The copies are now flushed to disk before the marker is written, as the other files of the save already were.
+  On Linux and macOS the save folder is flushed too (a file's name is only safe on disk once its folder is; on
+  macOS through the drive's cache, as .NET already flushes the files there), before the marker and again before the
+  previous save is removed.
+
+## v1.45.19 — unreleased
+
+### Fixed
+- **An Apply live that failed partway said nothing had been applied.** The ground goes to the game first, then the
+  objects, then zone resets. When a later part failed, the editor only said "Could not apply live", although the
+  ground was in the game: the steps that had gone in stayed unapplied in the history, so Discard would undo them in
+  the editor while the game kept them. It now says what went in and what failed, and marks as applied the steps the
+  game has all of, up to the first one it lacks; Apply live again sends the rest.
+
+## v1.45.18 — unreleased
+
+### Fixed
+- **A save or Apply live that failed still turned No limit ground into ground discs and cleared the undo history.**
+  Saving or applying first turns ground past the game's ±8 m into ground discs and ordinary changes. When the save
+  then failed (a full disk) or the game refused the ground, that was kept: the area was read again, its undo history
+  went, and the No limit ground was now discs that nothing had written. When nothing was written or sent, the No
+  limit ground is now put back as it was, and the area and its history stay. When the game may have taken the
+  ground (no answer, or it failed partway), the discs stay and the area is read again, as before.
+
+## v1.45.17 — unreleased
+
+### Fixed
+- **Objects you had just applied live could vanish from the editor as if players had removed them.** The editor
+  reads what changed in the game every few seconds. A read that started before an Apply live, and came back once it
+  was done, did not have the objects the apply had just made, so they counted as removed in the game: the editor
+  dropped them while they stayed in the game, and undo could no longer reach them. Such a read, or one taken while
+  an Apply live was under way, is now dropped and the zone read again.
+
+## v1.45.16 — unreleased
+
+### Fixed
+- **A dungeon placed on a live world could be built from the wrong object's data.** On a live world, objects the
+  game sent since the snapshot (read when you follow the game) keep their data in their own read, not in the
+  snapshot. Placing a dungeon copied its objects from the snapshot whatever their model was, so a model read since
+  gave the dungeon another object's bytes, or failed. It now copies each model from where its data is, as saving,
+  Apply live, search and the inspector already did; they now share one reader.
+
+## v1.45.15 — unreleased
+
+### Fixed
+- **Other users of the computer could read Claude's token.** The settings file, which keeps the token Claude
+  connects with when **Allow Claude to connect** is on, was written with the default permissions: on Linux and macOS,
+  with a home folder others can enter, they could read the token and use the editor's Claude tools. It is now
+  written so only you can read it, as the saved servers file already was.
+
+## v1.45.14 — unreleased
+
+### Fixed
+- **In another language, Claude could use the Blueprints buttons that write or delete files.** Claude is kept from
+  the window's buttons that save, write or delete the user's files. The Blueprints rows' buttons (**Details**,
+  **.vbuild**, **To Homestead**, **Delete**) had no tip key, so they were recognised by their English label only:
+  shown in another language, they were no longer blocked. And Claude's ids for controls without a tip key were made
+  from the label as shown, so they changed with the language, and letters outside a–z were dropped. These buttons
+  now have tip keys and are blocked by key, and the other ids and label checks use the label's English text. The
+  Select tool's **Delete** is blocked by its key too, so a translated text that reads "Delete" cannot unblock it.
+
+## v1.45.13 — unreleased
+
+### Fixed
+- **Editing a saved server could send another server's password and token to it.** **edit** filled the address,
+  user, key, folder and name, but left the password, token, key passphrase, plugin port and **Save password** as
+  they were: a password and token typed for one server were sent to the edited one on Connect, and a saved password
+  was dropped from the file because **Save password** stayed unticked. **edit** now fills the whole form from the
+  saved server: its own saved password and token (empty when not saved), no passphrase or port, and **Save
+  password** ticked when its password was saved. The password is sent as typed or saved, spaces at its ends
+  included.
+
+## v1.45.12 — unreleased
+
+### Changed
+- **The Area tool's object actions no longer stall on a big area with the Mask on.** Remove, Select, Restore from
+  backup and Regrow nature took a fresh snapshot of the Mask for every object judged, and each snapshot copies the
+  whole ground's heights (and paint, with a paint rule): on a 17 x 17 area with thousands of objects that was
+  thousands of copies of several megabytes, while the scene's objects were locked. The Mask is now taken once per
+  action; what is picked is unchanged.
+
+## v1.45.11 — unreleased
+
+### Fixed
+- **Restore from backup with the Mask on doubled objects.** The objects in the backup were picked by the selection
+  and the kinds chosen only, those in the area also by the Mask: an unchanged tree or rock where the Mask lets
+  nothing through was found in the backup but not in the area, so it was brought back on top of itself. Both
+  sides are now picked alike, so objects where the Mask lets nothing through are left as they are.
+
+## v1.45.10 — unreleased
+
+### Fixed
+- **The map's zone filter could judge one world's zones on another world's counts.** The counts behind **Show
+  matching** and **Mark for reset…** are read in the background; when another world was opened meanwhile, the
+  first world's counts were kept for the new one, so its matches, the number in the question and later
+  **Show matching** came from the wrong world. And a **Mark for reset…** question answered after switching marked
+  the zones in the world left behind. Counts read before the world was shown again (another world, or the same one
+  after a save or a discard) are dropped, and so is the marking when the world was shown again while asking.
+
+## v1.45.9 — unreleased
+
+### Fixed
+- **A brush stroke made while Apply live was answering could lose ground or undo wrongly.** With **Auto** on, a
+  stroke starts an apply when it ends; a new stroke begun before the game answered had its ground so far
+  overwritten when the answer came, and the history kept only the rest of it. When that apply also read the area
+  again (zone resets, No limit ground), the history was cleared in the middle of the stroke and its undo wrote old
+  ground back. The ground now takes the applied edits when the stroke ends, and a stroke under an apply that
+  reads the area again is dropped, with a message to draw it again.
+
+## v1.45.8 — unreleased
+
+### Fixed
+- **Some script calls never ended, even with Stop.** `Area.Points(0)`, a negative step, or one too small to move
+  along the area (`Area.Points(0.0001f)` far from the world's middle) gave the same point for ever, and Stop only
+  acted at the start of a row, so a query such as `Area.Points(0).Count()` could not be stopped. `Ground.Shape`
+  and `Ground.Mountain` with a radius beyond about 16,000 km counted with a float that stopped growing, so they
+  never ended either. Such a step is now an error, the rows and points are counted with whole numbers, only the
+  part of a shape within the area is gone through, and Stop acts at every point of `Area.Points()`.
+
+## v1.45.7 — unreleased
+
+### Fixed
+- **A script with an endless loop of its own could not be stopped.** **Stop** and the 2-minute limit only ended a
+  script when it next called `Area.Points()`, `Ground.Shape` or `Ground.Mountain`: one stuck in a `while (true)` or
+  a long `for` loop of plain arithmetic, `Ground.Set` and `Ground.Height` ran on, kept one core busy, and every
+  later **Run** and Claude's `run_script` answered "A script is already running" until the editor was restarted.
+  Every loop of a script's own (`for`, `foreach`, `while`, `do`, `goto`) now checks for Stop at each turn; the
+  script's line numbers in error messages are unchanged.
+
+## v1.45.6 — unreleased
+
+### Fixed
+- **Claude's build_floor, build_walls and build_roof could freeze the editor.** They took any rectangle: one
+  thousands of metres across read the ground at every metre under it and laid out millions of pieces on the
+  window's thread, freezing the editor for minutes, and one far enough out (beyond about 16,000 km) never finished.
+  The rectangle must now be within the open area, and a layout of more than 5000 pieces (walls thousands of rows
+  high among them) is refused before it is laid out, and before the ground under it is read, with a message to
+  build it in parts.
+
+## v1.45.5 — unreleased
+
+### Fixed
+- **Moving objects past the area's edge sank them about 1000 m, or threw others up.** With **Put on ground** on, the
+  Select tool's move (dragging, **Move there**, **Move by**) took the ground past the edge of the open area, where
+  the editor has none, as 1000 m below sea level: a moved object or block of building pieces went there, or the
+  rest of the selection was lifted by as much to make up for it, and the save wrote those heights. Past the edge an
+  object now keeps its own height, and only the ground inside the area places the rest.
+
+## v1.45.4 — unreleased
+
+### Fixed
+- **Claude could change a live world with Auto on through the editor's controls.** Every Claude tool that changes
+  the world is refused while the world is live with **Auto** on, so its changes wait for the user, but `set_control`
+  was not: pressing a tool's **Apply**, an Area action or a script's **Run** through it changed the world, and Auto
+  sent the change to the game at once. While the world is live with Auto on, `set_control` now only sets the View
+  panel's controls, and `list_controls` says why the others are blocked.
+
+## v1.45.3 — unreleased
+
+### Fixed
+- **Applying live again after a lost answer could make every new object twice.** When the game placed the objects but
+  its answer never came back (the SSH tunnel dropped, the connection was reset, or a big apply ran past the editor's
+  3-minute wait), the editor recorded nothing and the next **Apply live** sent the same objects again, doubling them in
+  the world. Each objects call now goes with an id; a call left without an answer is sent again first under it, and the
+  plugin answers with what it did the first time instead of doing it again. The changes made since follow in a call of
+  their own. Needs the plugin from this version; with an older one the editor sends as before.
+
+### WorldEditorBridge
+- `/objects` takes an `X-Call-Id` header: a call already done under that id (one of the last 16) is answered again
+  with what was done, not done twice. `/status` lists `"once"` among its features; editors only send ids to a plugin
+  that lists it. `/status` also gives `"run"`, a new id each time the game starts: a call whose answer was lost is not
+  sent again to a game started since (it no longer knows what it did); the apply fails until the world is reloaded.
+
+## v1.45.2 — unreleased
+
+### Fixed
+- **Live zone resets were sent again after the world failed to load back.** When **Apply live** reset zones in the
+  game but reading the world back from it then failed (a timeout, a dropped tunnel), the apply was reported as failed
+  and the resets stayed pending, so the next apply reset the same zones again and wiped whatever players had built
+  there since. The resets are now taken off as soon as the game has done them, and a failed read-back is reported as
+  applied, with the world not read again.
+
+## v1.45.1 — unreleased
+
+### Fixed
+- **Undoing a second Reset zones on the same zones kept the new options.** A zone already marked for reset and marked
+  again with other options (say, without **Keep buildings**) stayed marked with the new options after Ctrl+Z, a redo
+  or removing the step in History, so the next save could wipe the buildings the first marking kept. The step only
+  remembered whether the zone was marked before, not how. It now takes the old marking off and puts the new one on,
+  and undo, redo and removal set each side's options back; the history file keeps both.
+
+## v1.45.0 — unreleased
+
+### Added
+- **The editor can be translated.** Its texts move into language catalogues (`Core/Lang/en.json`, English); a
+  catalogue dropped in the data folder's `lang` folder (`fr.json`, `pt-BR.json`…) translates the editor, English
+  showing where it has no text yet. **Settings › Language** chooses the language, by default the computer's when
+  there is a catalogue of it. Every hover tip (but the Inspector's) and Settings come from the catalogue so far; the other texts follow.
+  How to translate: [docs/translating.md](docs/translating.md).
+
+## v1.44.0 — 2026-10-15
+
+### Added
+- **A Mac build (experimental), for Apple silicon** (macOS 12 or later): `ValheimWorldEditor-<version>-macos-arm64-experimental.zip`
+  on the releases page, ValheimWorldEditor.app signed ad hoc (macOS asks once: **Open Anyway** in Privacy & Security;
+  its README says how). Not tried on a Mac yet. The editor finds Valheim inside `valheim.app` in Steam's libraries
+  (`~/Library/Application Support/Steam`), the worlds in `~/Library/Application Support/IronGate/Valheim`, the game's
+  log in `~/Library/Logs/IronGate/Valheim` and r2modman's profiles; **Cmd** works as **Ctrl** for clicks in the 3D view
+  and Script's Ctrl+Enter, as it already did for the shortcuts. Intel Macs are not supported yet.
+
+## v1.43.0 — 2026-10-14
+
+### Changed
+- **Generated dungeons read more like buildings.** Side rooms grow in wings of their kin (a kitchen by the feast
+  hall, cells by the guard room, an ossuary by the burial chamber, a forge by the workshop); a room's purpose sets
+  its light (grand rooms closest lit, the dead's and the cells dimmest); each level down holds a fifth more of the top level's loot
+  and foes; a corridor's niche now and then hides a foe; dvergr open doorways carry the dvergr arch.
+
+## v1.42.0 — 2026-10-14
+
+### Changed
+- **Generated dungeons vary far more.** Rooms were all boxes entered in the middle of a wall, each kind furnished one
+  way, torches along every wall. Now:
+  - **Room shapes**: crossings, shrines, tombs and arenas with their corners notched (an octagon's feel), chapels,
+    halls and throne rooms ending in an apse, store rooms, quarters, barracks and the like with a corner cut away or
+    a neck at the door. Walls, beams, the plan's map and the furnishing follow the shape; twins mirror it.
+  - **Bent corridors**: a corridor may run ahead, turn, and enter its room from the side (often in catacombs,
+    warrens, holds and ruins; seldom in a temple). Some rooms are entered on their long side.
+  - **Two to four furnishings per kind of room**, picked by the seed: a mead hall, a hall of the dead, a bare hall of
+    fallen pillars; a chapel's raised altar in a ring of braziers or a nave of rugs and candles; a tomb on a dais;
+    bedrolls round a fire; stock stacked in a corner with a cart; shelves in aisles; a scriptorium; a war room; the
+    boss enthroned over heaps of skulls; a drill room; a dolmen shrine; and more. New props: cobwebs in the corners,
+    chains and hooks from the roofs, bedrolls, weapon stands, training dummies, an archery target, dolmens, candles
+    (where monsters do not come back), a cart, a bath, a round table.
+  - **Lighting styles** per room: standing torches, wall sconces, or braziers in the corners; corridors likewise.
+  - **Floors**: in a stone or grausten dungeon, grand rooms get black marble tiles and lived-in rooms wooden boards,
+    half the time (Furniture at Furnished or Rich). Stone pieces stand on the marble through them, as the game's
+    support asks.
+  - **Built up inside**: in stone and grausten dungeons a great hall, throne room or chapel may carry a loft over
+    the way in (a deck on posts 4 m up, a rail, stairs up one side, braziers and a sentinel on it); arenas and
+    shrines may be sunk a metre below ledges round the walls; a burial chamber may hold a vault, an inner chamber
+    with the sarcophagus inside. Alcoves off rooms and niches off corridors are furnished (a sarcophagus across, a
+    statue between candles, a bed in its bay, a shelf and crates; a single piece in a niche).
+  - **Clusters**: beside its main feature a room gets one or two groups of things that belong together in its
+    corners: a camp, a meal, a scribe's desk, stores, an armoury, an altar, bones, a workbench.
+  - **Hero pieces**: big rooms may get one piece that stands once in the whole dungeon: a dolmen, a fallen giant's
+    statue in parts, a grave slab, a giant's skull or ribs, an altar of crystal, a cart.
+  - **Corridor kinds**: a gate midway under a band of wall, a half collapse, bones along both walls, a runner, vines,
+    sharpened stakes. **Dead ends**: corridors that lead nowhere but a cache (the biome's chest, loot, sometimes a
+    guard). Catacombs and prisons keep some corridors dark between lit rooms.
+  - **Pacing**: a few rooms stand nearly bare (one piece, a light); clutter never repeats the same thing twice
+    running, and rooms differ in how tidy they are.
+  - **The whole of the game's prefabs**, measured through the editor's models (a `bounds` driver command): each
+    biome's own growths (vines, roots, surtling cores; guck sacks, tar, muddy scrap piles; icicles, ice shards,
+    snowdrifts, crystals, hung deer; seeker creep, eggs, royal jelly, black cores; charred skulls, wall spikes,
+    gems in the walls; frost cores, frozen dead), its own lights, several kinds of chest, the real crafting
+    stations in kitchens, forges and workshops, measured hero pieces (standing and memorial stones, a wisp
+    fountain, an eternal pyre, a sled, a crane), biome corridor kinds (mud, barricade, creep,
+    icicles, spikes, roots, traps), windows in Ashlands walls, Ashlands and mountain gates. Props that stood at
+    the wrong height (the fallen statue's parts floated metres up) now stand by their measured feet.
+  - Lights and decay draw from random streams of their own, so turning Light or Ruin changes nothing else about a
+    dungeon. The tests' copies of the game's data gain the new props.
+
+## v1.41.0 — 2026-10-14
+
+### Added
+- **A placed dungeon gets the entrance of its kind on the ground.** **Place in the world** now puts the game's own
+  dungeon entrance for the biome (a burial chamber's mound, a sunken crypt's door, a Frost Cave's mouth, an infested
+  mine's, a Morgen hole) on the ground at the middle of the view, facing you, and the dungeon 5000 m above it, laid out
+  where the game lays that entrance's own (a Frost Cave's at the middle of the zone, as the game does). Its door leads
+  up and the door up there leads back out, as in the game's dungeons. Where the biome has no dungeon of its own (the
+  Plains), the portal pair stays. One dungeon fits over a zone: with one there already, nothing is placed and the
+  editor says so.
+- **Go to the dungeon and Go to the entrance.** The view no longer jumps 5000 m up when a dungeon is placed: it stays
+  at the entrance, and two buttons under Place in the world take it up into the dungeon and back down. The Dungeon
+  panel's **Go to entrance** does the same for any dungeon of the area, next to Go inside.
+- **Up to 16 levels.** Levels went up to 4; the stairs go down as far as 16 now.
+- **Dungeon blueprints.** A blueprint can be a dungeon: switch **A dungeon** on when saving it in the Workshop (or in
+  the Blueprints tab's Details; it is the tag `dungeon`). Pasted into a world from the Blueprints tab, it goes 5000 m up
+  behind the entrance of the biome's dungeon where you click, as a generated dungeon does. A portal in the building
+  marks where players arrive and the way they face (the entrance's door out opens there); generated dungeons opened
+  in the Workshop carry that portal and the tag already.
+- **Claude's `generate_dungeon`** places the entrance the same way, and takes up to 16 levels.
+
+### Changed
+- The game-data scan reads each location's teleport doors and interior anchor (the tests' copy of `dungeon-rooms.json`
+  is made again, and keeps the Frost Cave's entrance too).
+
+## v1.40.0 — 2026-10-14
+
+### Added
+- **Moved objects stay the same objects in live mode.** An object moved or turned in the editor (the Select tool's
+  move, or a Cut then pasted) moves in the running game under its own id when nothing else about it changed, instead
+  of being taken away and made again. Mods that keep track of objects while the game runs keep knowing it: a chest's
+  label sign from a sign mod is no longer doubled after a live move, and a chest keeps what is in it as the game has
+  it. Undo after applying moves it back. When a player has both its old and new place loaded (a player's game would
+  not show a standing object moving), it is made again as before, and the message after Apply live says how many.
+  Docs: [Moving things](docs/live-mode.md#moving-things).
+
+### WorldEditorBridge
+- `/objects` takes objects to move: each moves under its own ZDOID (sent to every player at once), or is made again
+  at its new place where a player has both places loaded. `/status` lists `"features":["move"]`; editors only send
+  moves to a plugin that lists it. Mods' listeners get the moves in `AppliedChanges.Moved` (`AppliedMove`: where the
+  object stood and stands now); the old `AppliedChanges` constructor stays.
+
+## v1.38.0 — 2026-10-14
+
+### Added
+- **Cut and paste.** **Cut (Ctrl+X)**, beside Copy in the Area tool's **Copy and paste** action and on the Select
+  tool's selection, makes the same copy as Ctrl+C and then takes the objects copied out of the world, as one undo
+  step, so a paste moves a build instead of doubling it. The ground where it stood stays as it is. Docs:
+  [Copy and paste](docs/area.md#copy-and-paste), [Select](docs/select.md).
+
+## v1.37.4 — 2026-10-14
+
+### Fixed
+- **Spikes and an orange wedge in the 3D view after a visit to the map.** Opening the map and coming back to the 3D
+  view throws its OpenGL context away and makes a new one; the spawn-point and nest markers, the Dungeon tool's marks
+  and the Mountain tool's preview kept their old buffer names, which in the new context named other things, so the markers
+  were drawn into them each frame: models torn into spikes (gone while their kind was hidden, back when shown), and an
+  orange wedge across the view. Those names are now forgotten with the rest.
+
+## v1.37.3 — 2026-10-14
+
+### Changed
+- **A click finds an object by its drawn shape.** A click found the nearest box round an object, so a chest, a stone
+  or any object under a tree's branches could not be clicked: the box round the tree's whole crown was in the way. The
+  boxes now only say which objects to try; the triangles of their models decide, so what you see under the pointer is
+  what you get. Leaves, bushes and other cut-out foliage count only where nothing solid is behind them along the
+  click. An object whose model is not in yet is still its stand-in box.
+- **A standing tree is outlined by its trunk.** The selection outline (and the one under the pointer) of a standing
+  tree is a column round its trunk, the full height of the tree, instead of the box round its whole crown. Logs and
+  stumps keep their box.
+
+## v1.37.2 — 2026-10-14
+
+### Changed
+- **A large selection is marked by one box.** Past 500 selected objects the 3D view draws one orange box round
+  them all instead of one round each: a whole stacked structure selected at once (tens of thousands of pieces)
+  was a solid orange blob that hid it. Up to 500 the boxes are drawn as before.
+
+## v1.37.1 — 2026-10-14
+
+### Changed
+- **The green dot on each unsaved object is much smaller.** It was about 1% of the view's height across (11 pixels at
+  1080p, 21 at 4K) and covered small objects; it is now 5 pixels at 1080p, 9 at 4K, with a soft edge so it stays round.
+
+## v1.37.0 — 2026-10-14
+
+### Added
+- **No limit under the Area tool's Flatten, Raise and Lower.** The **No limit: past the game's ±8 m** switch now shows
+  with those three actions too, the same switch as the one at the bottom of the brush options (one follows the
+  other), so an area can be flattened, raised or lowered past the limit without leaving the panel. The cut and fill
+  line counts all of it then, with nothing "out of reach".
+
+## v1.36.0 — 2026-10-14
 
 ### Added
 - **The Windows program is signed.** `ValheimWorldEditor.exe` in the Windows package carries an Authenticode
@@ -13,7 +627,7 @@ the plugin is unchanged in versions without that part.
   "Windows protected your PC" prompt, which goes away as SmartScreen gets to know the signature. How it is
   made and checked: [Releasing](docs/development.md#releasing), [SECURITY.md](SECURITY.md#checking-a-download).
 
-## v1.35.4 — unreleased
+## v1.35.4 — 2026-10-14
 
 ### Fixed
 - **Live mode could lose a request with "Connection reset by peer".** The game's web server closes a connection it
@@ -21,7 +635,7 @@ the plugin is unchanged in versions without that part.
   reset: a look at the game or an apply failed, and one of the live tests now and then. The editor now opens a new
   connection after 10 seconds unused, before the game closes the old one.
 
-## v1.35.3 — unreleased
+## v1.35.3 — 2026-10-14
 
 ### WorldEditorBridge
 - The plugin's log says more of each apply, for when a change does not show for every player: the apply line adds
@@ -29,7 +643,7 @@ the plugin is unchanged in versions without that part.
   says how many of the destroyed objects the game still has and how many other objects of their prefab stand within
   10 cm of their place (made again, or there all along). See [What the plugin logs](docs/live-mode.md#what-the-plugin-logs).
 
-## v1.35.2 — unreleased
+## v1.35.2 — 2026-10-14
 
 ### Fixed
 - **Opening another area erased the history made before it.** The steps that did not fit the new area (all of them,
@@ -38,7 +652,7 @@ the plugin is unchanged in versions without that part.
   is opened again; only a step partly in the new area still stops the older ones from being undone there. The
   History panel says how many steps are kept aside, and the history file keeps them too.
 
-## v1.35.1 — unreleased
+## v1.35.1 — 2026-10-14
 
 ### Fixed
 - **Worlds made with generated zones had no locations and no creatures in them.** `WorldCheck create <radius>` (the
@@ -50,7 +664,7 @@ the plugin is unchanged in versions without that part.
   generated zone has its zone control. A zone with a dungeon's entrance (an interior the game lays out) is left to
   the game. Worlds the editor's **New world** page makes are not affected: they leave every zone to the game.
 
-## v1.35.0 — unreleased
+## v1.35.0 — 2026-10-14
 
 ### Added
 - **Live mode for mods' own plugins (the bridge API)**: a mod's BepInEx plugin can register with the WorldEditorBridge
@@ -65,7 +679,7 @@ the plugin is unchanged in versions without that part.
   one of a mod's routes. Every apply (`/objects`, `/terrain`, `/zones/reset`) tells the registered listeners what
   changed. Older editors see no difference.
 
-## v1.34.0 — unreleased
+## v1.34.0 — 2026-10-14
 
 ### Added
 - **Ground cuts for mod extensions**: an extension can leave the ground undrawn inside outlines it gives for its
@@ -73,7 +687,7 @@ the plugin is unchanged in versions without that part.
   click goes through the hole to what is in it. The SDK's sample mod's pits show how. See
   [Extensions](docs/modding.md#extensions).
 
-## v1.33.0 — unreleased
+## v1.33.0 — 2026-10-14
 
 ### Added
 - **Editor extensions for mods (the SDK)**: a mod can ship a small DLL, built against the editor's SDK
@@ -84,7 +698,7 @@ the plugin is unchanged in versions without that part.
   A sample extension of a made-up mod shows every hook. See
   [Extensions](docs/modding.md#extensions).
 
-## v1.32.0 — unreleased
+## v1.32.0 — 2026-10-14
 
 ### Added
 - **Unity's cylinder, sphere and capsule**: mods' pieces built from them (as from Unity's cube, quad and plane
@@ -102,7 +716,7 @@ the plugin is unchanged in versions without that part.
 - Mods' sounds and effects (prefabs the game draws nothing of) are no longer offered in Place; those already in a
   world still show.
 
-## v1.31.0 — unreleased
+## v1.31.0 — 2026-10-14
 
 ### Added
 - **Linked objects**: objects a mod builds out of others (a ship and the pieces built on it) are drawn where the mod
@@ -113,7 +727,7 @@ the plugin is unchanged in versions without that part.
   [Linked objects](docs/select.md#linked-objects-ships-and-other-mods-groups) and
   [for mod authors](docs/modding.md#linked-objects).
 
-## v1.30.0 — unreleased
+## v1.30.0 — 2026-10-14
 
 ### Added
 - **worldeditor.json for mod authors**: a mod can ship an optional `worldeditor.json` telling the
@@ -122,7 +736,7 @@ the plugin is unchanged in versions without that part.
   and groups for its pieces in the Mods tab. See [For mod authors](docs/modding.md) and the
   [schema](docs/worldeditor.schema.json).
 
-## v1.29.0 — unreleased
+## v1.29.0 — 2026-10-14
 
 ### Added
 - **Mods' data by name in the inspector**: the values mods keep on objects (ValheimRAFT's
@@ -131,14 +745,14 @@ the plugin is unchanged in versions without that part.
   your Valheim folder and mod manager profiles (never run), and kept until a mod changes. The
   game's own name still comes first when both have one.
 
-## v1.28.0 — unreleased
+## v1.28.0 — 2026-10-14
 
 ### Added
 - **Crunched textures read**: textures mods keep crunched (Unity's DXT1 and DXT5 Crunched formats)
   are now read, so pieces that showed untextured, like OdinsKingdom's stone walls, are drawn with
   their textures.
 
-## v1.27.0 — unreleased
+## v1.27.0 — 2026-10-14
 
 ### Added
 - **Modded pieces drawn as in game**: a mod's pieces and objects learned from a live game are drawn
@@ -162,7 +776,7 @@ the plugin is unchanged in versions without that part.
   plugin inside it that added the prefab (ValheimRAFT's pieces were listed under "Inventory Patch
   Detector").
 
-## v1.26.0 — unreleased
+## v1.26.0 — 2026-10-14
 
 ### Added
 - **Modded games' objects**: opening a live world now asks the game for the objects its mods add
@@ -177,7 +791,7 @@ the plugin is unchanged in versions without that part.
 - New `GET /catalogue`: every saved kind of object the game knows, mods' ones included, with which
   mod adds it (asked of Jötunn when it is installed).
 
-## v1.25.3 — unreleased
+## v1.25.3 — 2026-10-14
 
 ### Fixed
 - **The Cut sliders start at their right end, with no cut**: the Workshop's and the Dungeon tool's

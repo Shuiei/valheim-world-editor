@@ -1,55 +1,92 @@
 # For mod authors
 
-The editor works with building mods without anything from their authors. Connected to a game
-(live mode), it learns every object the game's mods add: their names, costs, build tools and how
-the game draws them; it reads their models and textures from the mods' own files on the player's
-computer, and the names of the data mods keep on objects from the mods' code (read, never run). See
-[Modded games](live-mode.md#modded-games).
+The editor works with building mods without anything from their authors: connected to a modded
+game, it learns the mods' objects, draws them with their own models and names the data they keep.
+This page is for mod authors who want more: an optional `worldeditor.json` file for what the editor
+cannot guess, **linked objects** for mods that build one thing out of many objects, **editor
+extensions** (a small DLL built against the editor's SDK) for what a file cannot say, and **bridge
+hooks** for a mod's own plugin to take part in live mode.
 
-A few things it cannot guess. A mod can tell them in a `worldeditor.json` file shipped with it,
-anywhere in its folder under `BepInEx/plugins` (next to its DLL is fine): the editor reads every
-such file in the player's Valheim folder and mod manager profiles each time a world or the Workshop
-opens. The file is optional and only adds to what the editor learns by itself.
+Everything here is optional, and each step adds to the one before. The editor ships nothing for any
+mod: supporting a mod in the editor is its author's to do, with these. The examples on this page
+are those of a made-up mod, "Example Vehicles", whose full sample comes with the SDK (see
+[The Example Vehicles sample](#the-example-vehicles-sample)).
+
+## What the editor learns by itself
+
+| What | How the editor learns it |
+|---|---|
+| The mods' objects: names, building pieces, costs, crafting stations, the tool that builds each | Connected to a game (live mode, WorldEditorBridge 1.26.0 or newer), the editor asks the game for every object it knows and keeps those that are not Valheim's own. They are kept in `mod-catalogue.json` in the editor's data folder, so a modded server's world opened later from its files, offline, shows them too. A mod's newer report of a piece replaces the older one; a mod never changes one of Valheim's own objects. |
+| How they look | The game tells what it draws of each mod object (WorldEditorBridge 1.27.0 or newer); the editor finds those meshes, materials and textures in the mods' own files on the player's computer (their asset bundles, copied out of the DLLs once into `mod-bundles` in the data folder). Meshes a mod builds in code while the game runs cannot be found: those objects show untextured, unless an [extension](#extensions) draws them. |
+| The names of the data mods keep on objects | The game saves only a hash of each data key. The editor finds the names among the text written in the mods' DLLs (read as bytes, never run) in the plugins folders it knows, and keeps them in `mod-zdo-keys.json` until a DLL changes. A key whose name is put together while the game runs (`"Corner" + i`) cannot be found this way: the inspector shows it as `#` and its hash. |
+| Which mod an object comes from | The inspector says so (with Jötunn installed, which knows; else "From a mod"). The Workshop's Build panel lists the mods' pieces on its **Mods** tab, one mod at a time. |
+
+See [Modded games](live-mode.md#modded-games) for the player's side.
+
+## worldeditor.json
+
+A few things the editor cannot guess. A mod can tell them in a `worldeditor.json` file shipped with
+it, anywhere in its folder under `BepInEx/plugins` (next to its DLL is fine). This is Example
+Vehicles' file:
 
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/worldeditor.schema.json",
   "version": 1,
+  "extension": "ExampleVehicles.WorldEditor.dll",
   "data": {
-    "MyMod_Vehicle": { "label": "Parent vehicle", "readOnly": true, "help": "The vehicle this piece is part of." },
-    "MyMod_Offset": { "label": "Place on the vehicle", "readOnly": true }
+    "ExampleVehicles_Vehicle": { "label": "Vehicle", "readOnly": true, "help": "The vehicle this part is built on." },
+    "ExampleVehicles_Offset": { "label": "Place on the vehicle", "readOnly": true },
+    "ExampleVehicles_Packed": { "label": "Linked objects", "help": "The objects this one is tied to." }
   },
   "prefabs": {
-    "MyMod_BoundaryMarker": { "hidden": true },
-    "MyMod_hull_rib_wood": { "group": "Hulls" },
-    "MyMod_Mast": { "group": "Masts and sails" }
+    "example_boundary": { "hidden": true },
+    "example_hull": { "group": "Hulls" },
+    "example_sail": { "group": "Sails and cables" },
+    "example_post": { "group": "Sails and cables" },
+    "example_pit": { "group": "Digging" }
   }
 }
 ```
 
 | Key | What the editor does with it |
 |---|---|
-| `version` | The format's version: `1`. A file of a later version, or without one, is skipped. |
-| `data` | By data key, as your code names it (the name whose hash the game saves): `label`, how the inspector names the value (else its key); `readOnly`, the inspector shows it but does not let it be changed (values the mod sets itself and that would break if edited); `help`, what it is, shown when pointing at the value. |
-| `prefabs` | By prefab name: `hidden`, not offered in Place or the Workshop's Build panel (your tools, effects, helpers; objects of it already in a world still show); `group`, the heading the piece is listed under in the Build panel's **Mods** tab (else its crafting station). |
-| `links` | How your objects link into one (below). |
-| `extension` | Your editor extension's DLL, relative to the file's folder and inside it (see [Extensions](#extensions)). |
+| `version` | The format's version: `1`. A file of a later version, or without one, is skipped whole. |
+| `data` | By data key, as your code names it (the name whose hash the game saves): `label`, how the [inspector](select.md#inspecting-and-changing-an-objects-data) names the value (else its key; the editor's own names for the game's keys come first); `readOnly`, the inspector shows the value but does not let it be changed (values your mod sets itself and that would break if edited); `help`, what it is, shown when pointing at the value. |
+| `prefabs` | By prefab name: `hidden`, not offered in the [Place](place.md) list or the Workshop's Build panel (your tools, effects, helpers; objects of it already in a world still show); `group`, the heading your piece is listed under in the Build panel's **Mods** tab, after the mod's name ("*mod name* · Hulls"). Without a group, a piece is listed under its crafting station, else under "No station needed". `group` counts only for the mods' own pieces. |
+| `links` | How your objects link into one: see [Linked objects](#linked-objects). |
+| `extension` | Your editor extension's DLL, relative to the file's folder and inside it: see [Extensions](#extensions). |
 
-Texts are at most 200 characters. Comments and trailing commas are allowed. An entry not in this
-form is left out; the rest of the file still counts. When two files say something of the same name,
-the newest file wins.
+### How the editor reads it
 
-The [schema](worldeditor.schema.json) lets code editors check the file and complete its keys (the
-`$schema` line above).
+- **Where.** In every `plugins` folder the editor knows: the Valheim folder's `BepInEx`, the mod
+  manager profile the editor itself was installed in, the folders added in **Settings → BepInEx
+  folders**, and every r2modman and Thunderstore Mod Manager profile. Every file named
+  `worldeditor.json` there counts, at any depth.
+- **When.** Each time a world or the Workshop opens, and when **Settings** opens. A file changed
+  while a world is open counts the next time.
+- **Which mod.** A file belongs to the mod whose folder lies right under `plugins` (the
+  `ExampleVehicles` of `plugins/ExampleVehicles/worldeditor.json`). Settings names extensions by it.
+- **Two files, one name.** Files are read oldest first (by the time they were last changed): when
+  two say something of the same data key, prefab or link `id`, the newest file wins.
+- **Forgiving.** Comments and trailing commas are allowed. Texts are 1 to 200 characters; lists
+  hold at most 32 names; a file is at most 1 MB. An entry not in this form is left out and the rest
+  of the file still counts. A file that is not JSON, or not of a version the editor reads, is
+  skipped; the editor's log says so ("mod manifest …: not a worldeditor.json this editor reads,
+  skipped.").
+
+The [schema](worldeditor.schema.json) describes the file: with the `$schema` line above, code
+editors check the file and complete its keys as you type.
 
 ## Linked objects
 
 If your mod builds objects out of others (a ship and the pieces built on it, a cart and its load),
 the game saves each piece apart, and the editor sees loose pieces, piled where the game saved them.
 Tell it how they link and it draws them as your mod builds them, and moves, copies and deletes each
-group whole (see [Linked objects](select.md#linked-objects-ships-and-other-mods-groups)). It works for
-mods that link the common way: the root (and any part others hang on) holds an int id of its own;
-each part keeps, in its data, the id of what it hangs on and its offset and turn in that one's frame.
+group whole (see [Linked objects](select.md#linked-objects-ships-and-other-mods-groups) for what
+the player sees). It works for mods that link the common way: the root (and any part others hang
+on) holds an int id of its own; each part keeps, in its data, the id of what it hangs on and its
+offset and turn in that one's frame.
 
 ```json
 {
@@ -57,14 +94,14 @@ each part keeps, in its data, the id of what it hangs on and its offset and turn
   "links": [
     {
       "name": "vehicle",
-      "id": "MyMod_Id",
-      "parents": ["MyMod_Mount", "MyMod_Vehicle"],
-      "offset": "MyMod_Offset",
-      "rotation": "MyMod_Turn",
-      "rotationQuaternion": "MyMod_TurnQuaternion",
+      "id": "ExampleVehicles_Id",
+      "parents": ["ExampleVehicles_Mount", "ExampleVehicles_Vehicle"],
+      "offset": "ExampleVehicles_Offset",
+      "rotation": "ExampleVehicles_Turn",
+      "rotationQuaternion": "ExampleVehicles_TurnQ",
       "storedAt": "root",
-      "references": ["MyMod_SailMast", "MyMod_SwitchTarget"],
-      "dropOnCopy": ["MyMod_PackedRopes", "MyMod_Aboard"]
+      "references": ["ExampleVehicles_Target", "ExampleVehicles_Drives"],
+      "dropOnCopy": ["ExampleVehicles_Packed", "ExampleVehicles_Aboard"]
     }
   ]
 }
@@ -73,127 +110,237 @@ each part keeps, in its data, the id of what it hangs on and its offset and turn
 | Key | |
 |---|---|
 | `id` | Int data key of an object's own id, which its parts name. Required. |
-| `parents` | Int data keys naming what a part hangs on, the first one set winning (a piece on a swivel names the swivel before the vehicle). At least one. |
+| `parents` | Int data keys naming what a part hangs on, the first one set winning (a piece on a swivel names the swivel before the vehicle). At least one. Required. |
 | `offset` | Vec3 data key of a part's place in the frame of what it hangs on, in metres. Required. |
 | `rotation` | Vec3 data key of its turn in that frame, as Unity Euler angles in degrees. |
-| `rotationQuaternion` | Quaternion data key of that turn, used when `rotation` is not stored. |
+| `rotationQuaternion` | Quaternion data key of that turn, used when `rotation` is not stored. With neither, a part is not turned in its parent's frame. |
 | `storedAt` | Where the game saves a part: `root` (at its group's root; your mod builds it from its offset when the group loads; the default) or `own` (where it stands). The editor saves moved parts the same way. |
-| `references` | Other int data keys naming an object's id (a sail's mast, a switch's target): a pasted copy's follow the copy's new ids, and are taken away when what they name was not copied. |
-| `dropOnCopy` | Data keys a pasted copy leaves out: ids packed in a way the editor cannot rewrite (a byte array), ties that must not carry over. |
+| `references` | Other int data keys naming an object's id (a sail's mast, a switch's target): in a pasted copy they follow the copy's new ids, and are taken away when what they name was not copied. |
+| `dropOnCopy` | Data keys a pasted copy leaves out: ids packed in a way the editor cannot rewrite (a byte array), ties that must not carry over (what was aboard). |
 | `name` | What one group is called in the editor's messages ("a whole vehicle"). Default: `group`. |
 
-Every pasted group gets new ids that no object in the world holds, so the game never takes two
-copies for one. Data keys are named as your code names them, as in `data`. An object takes the
-first rule whose `id` or `parents` it holds; a rule is known by its `id`: a newer file's rule of
-the same `id` replaces an older one's, in its place.
+### How the editor uses the links
+
+- **Drawing.** A part is drawn at its offset in its parent's frame, the parent where its own parent
+  puts it, and so on up to the root, which stands where it is saved: a ship's pieces turn and lean
+  with the hull. A part whose parent (or any parent up its chain) is not in the world, or whose
+  chain loops or is more than 16 deep (damaged data), stays where it is saved.
+- **Which rule.** An object takes the first rule whose `id` or `parents` keys it holds. Prefab
+  names do not matter: only the data. A newer file's rule with the same `id` replaces an older
+  one's, in its place in the order.
+- **Moving and deleting.** Selecting any part and moving, turning or deleting takes the whole
+  group. A moved group keeps its height and does not snap; its parts are saved as `storedAt` says.
+- **Copying.** A copy takes the whole group. Each paste (and each of its repeats) gets new ids that
+  no object in the world holds, even deleted ones, so the game never takes two copies for one; every
+  parent and `references` value follows. A part copied without its parent is pasted as an ordinary
+  object (its links taken away), where it was pasted. A mirrored paste mirrors the parts' offsets and
+  turns too. Values in `dropOnCopy` go, unless an extension's copy rewriter handles them.
+- Data keys are named as your code names them, as in `data`.
 
 ## Extensions
 
 What a file cannot say, code can. A mod can ship an **editor extension**: a small DLL, built
-against the editor's SDK, that the editor loads to read and draw the mod's objects. It does not
-run in the game, and it never sees the game's or Unity's code: only the objects' data, as the
-editor has it.
+against the editor's SDK, that the editor loads to read and draw the mod's objects. It does not run
+in the game, and it never sees the game's or Unity's code: only the objects' data, as the editor has
+it. It can:
 
-- **Get the SDK** from a [release](https://github.com/Shuiei/valheim-world-editor/releases):
-  `ValheimWorldEditor.Sdk-<version>.zip` holds `ValheimWorldEditor.Sdk.dll` (netstandard2.0, with
-  its documentation file), and a whole sample to start from: the extension of a made-up mod,
-  "Example Vehicles" (`samples/ExampleVehicles.WorldEditor`, with its `worldeditor.json`; it
-  builds as it is), showing every hook: packed ids read and rewritten, sails drawn from their
-  corners, cables drawn from post to post, the ground cut round its pits.
-- **Build a netstandard2.0 class library** referencing `ValheimWorldEditor.Sdk.dll` (not copied
-  to your output: the editor gives its own) and nothing else but the framework: an extension is
-  one DLL, the editor loads no other from your folder. Mark the assembly and give it an entry:
+- show a byte-array value in words in the inspector;
+- rewrite ids your mod packs in its own form in pasted copies;
+- draw what your mod builds in code while the game runs (a sail from its corners, a cable from post
+  to post);
+- leave the ground undrawn where your mod digs (the mouth of a tunnel, a pit);
+- in live mode, ask your mod's own plugin in the game for what only the game knows (see
+  [Live mode](#live-mode)).
 
-```csharp
-[assembly: WorldEditorExtension(typeof(MyMod.EditorExtension))]
+### Making one
 
-public sealed class EditorExtension : IWorldEditorExtension
-{
-    public void Register(IExtensionRegistry registry)
-    {
-        registry.AddDecoder("MyMod_Packed", new PackedReader());          // inspector
-        registry.AddCopyRewriter(new PackedIds(), "MyMod_Packed");      // paste
-        registry.AddShapes(new BannerCloth(), "MyMod_Banner");          // 3D view
-        registry.AddGroundCuts(new Cellars(), "MyMod_Hatch");           // the ground
-    }
-}
-```
+1. **Get the SDK** from a [release](https://github.com/Shuiei/valheim-world-editor/releases):
+   `ValheimWorldEditor.Sdk-<version>.zip` holds `ValheimWorldEditor.Sdk.dll` (netstandard2.0, what an
+   extension builds against) and `WorldEditorBridge.Api.dll` (what a mod's plugin builds against for
+   [live mode](#live-mode)), each with its documentation file for code editors, this page as
+   `README.md`, and the whole Example Vehicles sample in `samples/` (it builds as it is).
+2. **Build a netstandard2.0 class library** referencing `ValheimWorldEditor.Sdk.dll` without copying
+   it to your output (`Private="false"`): the editor gives its own. Use nothing else but the
+   framework (the sample's project also references the `System.Numerics.Vectors` package, for
+   `Vector3` and `Quaternion`). An extension is **one DLL**: the editor loads no other file from your
+   folder, so a helper library next to it is never found.
+3. **Mark the assembly** and give it an entry: a public class with a constructor without
+   parameters, implementing `IWorldEditorExtension`. The editor makes it once and calls `Register`
+   once, before any hook is used. This is the sample's:
 
-- **Ship it** with your mod and name it in your `worldeditor.json`:
-  `"extension": "MyMod.WorldEditor.dll"`.
+   ```csharp
+   [assembly: WorldEditorExtension(typeof(ExampleVehicles.WorldEditor.Extension))]
+
+   public sealed class Extension : IWorldEditorExtension
+   {
+       public void Register(IExtensionRegistry registry)
+       {
+           var packed = new PackedIds();
+           registry.AddDecoder(Keys.Packed, packed);           // inspector
+           registry.AddCopyRewriter(packed, Keys.Packed);      // paste
+           registry.AddShapes(new Sails(), Keys.Sail);         // 3D view
+           registry.AddShapes(new Cables(), Keys.Post);
+           registry.AddGroundCuts(new Pits(), Keys.Pit);       // the ground
+           registry.AddLiveListener(new LiveLink(registry));   // live mode
+           registry.Log($"ready (editor {registry.EditorVersion}, API {registry.ApiVersion})");
+       }
+   }
+   ```
+
+4. **Ship it** with your mod, inside its folder, and name it in your `worldeditor.json`:
+   `"extension": "ExampleVehicles.WorldEditor.dll"`. A path that leaves the file's folder, or a file
+   that does not end in `.dll`, is not offered.
+
+### Turning it on: Settings → Mod extensions
+
+An extension is code that runs in the editor with the player's rights, so **the player decides**.
+The editor finds the extensions offered by the mods in its plugins folders and lists them in
+**Settings**, under **Mod extensions**: a switch per extension, named after the mod's folder and the
+file ("ExampleVehicles · ExampleVehicles.WorldEditor.dll"). Pointing at it shows the file's path and
+its SHA-256. Under each switch the editor says what became of it: "Running.", "Not running: …" with
+the reason, or "Off: the file cannot be read.". When no mod offers one: "No mod in the folders above
+offers one."
+
+- **Off by default.** An extension runs only once the player turns it on and presses **Save**; it
+  runs from then on, and those turned off stop.
+- **That file only.** The editor remembers the file's SHA-256. A changed DLL (a mod update) is other
+  code: it is off until the player turns it on again. The bytes checked are the bytes loaded.
+- **Why it is not running.** "it is not marked as an extension ([assembly: WorldEditorExtension])",
+  "it needs a newer editor (API …; this one has …)", "its entry … is not an IWorldEditorExtension",
+  or the exception `Register` threw.
+
+### Hooks
 
 | Hook | What the editor does with it |
 |---|---|
-| `AddDecoder(key, IDataDecoder)` | The inspector shows a byte-array value in your words, under the value (instead of only its size). |
-| `AddCopyRewriter(ICopyRewriter, keys)` | Each object of a pasted copy holding one of the keys is handed to you after the editor's own linking (`links`), with the copy's new ids for the originals' (`IIdMap`): rewrite ids you keep in your own form. The keys are yours: `dropOnCopy` no longer takes them out. |
-| `AddGroundCuts(IGroundCutter, prefabs)` | The ground is not drawn inside the outlines you give for objects of the prefabs (`GroundCut`: points on the ground in the object's frame, or in the world's), as over the mouth of a tunnel or a pit your mod digs while the game runs; a click goes through the hole. The editor's ground is a height map, so the hole shows what you draw below it (shapes) and the height map's underside. |
-| `AddShapes(IShapeProvider, prefabs)` | Objects of the prefabs are drawn with your shapes too: triangles in the object's frame (or in the world's: `WorldSpace`), one colour each (alpha below 1: see-through), for what your mod builds while the game runs (a sail from its corners, a cloth). The `IWorldView` given finds another object by an id it holds (`TryFind`, for ids under a `links` rule's `id` key), for a rope or a cable reaching it. |
+| `AddDecoder(key, IDataDecoder)` | The inspector shows a byte-array value in your words, under the value (instead of only its size). `Describe` returns a few short lines, or `null` when the bytes are not in a form it reads. When two extensions read one key, the first that gives text wins. |
+| `AddCopyRewriter(ICopyRewriter, keys)` | Each object of a pasted copy holding one of the keys is handed to you (`ICopy`), after the editor's own linking (`links`), with the copy's new ids for the originals' (`IIdMap.TryGetNew`; false when the object holding the old id was not copied). Change its values in place (`SetInt`, `SetBytes`…; `null` takes a value away). The keys are yours: `dropOnCopy` no longer takes them out. |
+| `AddShapes(IShapeProvider, prefabs)` | Objects of the prefabs are drawn with your shapes too: `Shape`s, triangles in the object's frame (metres; x right, y up, z forward; the object's place, turn and size applied) or in the world's (`WorldSpace = true`), one colour each (red, green, blue, alpha from 0 to 1; alpha below 1: see-through), wound clockwise seen from the front as in Unity, or seen from both sides (`BothSides = true`, for a sail or a cloth). They are drawn with the object's kind (hidden when the View panel hides it). A shape with a triangle naming a corner it lacks, or a corner that is not a number, is not drawn. |
+| `AddGroundCuts(IGroundCutter, prefabs)` | The ground is not drawn inside the outlines (`GroundCut`) you give for objects of the prefabs: points on the ground (x, z) in the object's frame, or in the world's (`WorldSpace = true`); at least three, in any direction round (a self-crossing outline cuts by the even-odd rule). A click there goes through the hole. The editor's ground is a height map with a point every metre: the cut leaves out the ground between the points inside the outline, so its edge follows that 1 m grid, and what shows through is what you draw below (shapes) and the underside of the ground. |
+| `AddLiveListener(ILiveListener)` | Told when the editor connects to a game (`OnConnected`, with the game) and when that ends (`OnDisconnected`: the world was closed, or another opened). See [Live mode](#live-mode). |
+| `Host` | The editor, outside the hooks: `Host.Live`, the game connected (null when there is none: a saved world, the Workshop), and `Host.Redraw()`, for your shapes and cuts to be made again at the next frame (after the game told you something new). |
+| `Log(message)` | Writes a line, named after your mod ("extension ExampleVehicles: …"), to the editor's log, `ValheimWorldEditor.log` in its data folder (**Open log** on the start page; started over at each run). |
 
-Objects come as `IObjectView`: the prefab's name, the place, turn (Euler angles and a quaternion)
-and size as drawn, and every value of its data by key (`TryGetInt`, `TryGetVector3`,
-`TryGetBytes`…). Keys and prefabs are named as your code names them.
+Shape and cut hooks get the world around the object too (`IWorldView`): `TryFind(idKey, id, out
+obj)` finds another object by an id it holds, for a rope or a cable reaching it. Only ids under a
+key that a `links` rule names as its `id` are found (the editor indexes those).
 
-Rules:
+Objects come as `IObjectView`: the prefab's name ("" when the editor does not know it), the place,
+turn (Unity Euler angles in degrees, and `Orientation`, a quaternion) and size as drawn (for a linked
+part, where your mod builds it, not where the game saves it), and every value of its data by key:
+`TryGetInt`, `TryGetLong`, `TryGetFloat`, `TryGetVector3`, `TryGetQuaternion`, `TryGetString`,
+`TryGetBytes`. Keys and prefabs are named as your code names them; the editor hashes them as the
+game does.
 
-- **The player decides.** An extension is code running in the editor with the player's rights, so
-  it runs only once the player turns it on in **Settings → Mod extensions**, and only that file: a
-  changed DLL (an update) is off until turned on again.
-- **Hooks are called from several threads at once** and often (every redraw of the shapes and
-  cuts, every pasted object): keep no state between calls, and be quick. A hook that throws turns the extension
-  off until the editor starts again (Settings says why); the editor goes on without it.
-- **Versions.** `SdkInfo.ApiVersion` is the API's version; an editor runs extensions built against
-  its version or an earlier one. New hooks come as additions; the version changes only when the API
-  breaks.
-- The editor ships no extension, and no manifest, for any mod: supporting a mod in the editor is
-  its author's to do, with these. The sample is a made-up mod's.
+### Rules
+
+- **Be quick, keep no state.** Hooks are called from several threads at once and often (every
+  redraw of the shapes and cuts, every pasted object): keep no state between calls (or lock it),
+  and return fast.
+- **Never throw.** A hook that throws turns the extension off until the editor starts again
+  (Settings says why, and the log); the editor goes on without it. In code that goes on after a
+  hook returns (an `async` call to the game), catch everything yourself, as the sample's `LiveLink`
+  does.
+- **Versions.** `SdkInfo.ApiVersion` is the API's version (now 1), and the attribute records the one
+  you built against. An editor runs extensions built against its version or an earlier one. New
+  hooks come as additions; the version changes only when the API breaks.
 
 ## Live mode
 
-Connected to a running game (live mode), the editor applies its changes through the WorldEditorBridge
-plugin, which destroys and makes objects in the game. A mod that builds things out of its objects
-while the game runs (a vehicle from its parts, a tunnel from what was dug) only sees them on the
-next load, unless its own plugin takes part. The bridge offers mods' plugins two things, through
-`WorldEditorBridge.Api.dll` (shipped with the bridge, in its `plugins` folder, and in the SDK's zip;
-no game or Unity type in it, so a game update cannot break it):
+Connected to a running game (live mode), the editor applies its changes through the
+WorldEditorBridge plugin, which destroys, makes and moves objects in the game. A mod that builds
+things out of its objects while the game runs (a vehicle from its parts, a tunnel from what was dug)
+only sees the editor's changes at the next load, unless its own plugin takes part. The bridge offers
+mods' plugins two things, through `WorldEditorBridge.Api.dll`: it is shipped with the bridge, in its
+`plugins` folder, and in the SDK's zip, and holds no game or Unity type, so a game update cannot
+break it.
+
+### Your plugin's side
+
+Register from your plugin's `Awake`, with a soft dependency on the bridge, and keep the code that
+touches the API in a class of its own: your plugin then loads without the bridge too. From the
+sample's `samples/ExampleVehicles.Bridge`:
 
 ```csharp
-[BepInPlugin("MyMod", "My Mod", "1.0.0")]
+[BepInPlugin(PluginId, "ExampleVehicles", "1.0.0")]
 [BepInDependency(BridgeApi.BridgeGuid, BepInDependency.DependencyFlags.SoftDependency)]
-public sealed class MyModPlugin : BaseUnityPlugin
+public sealed class ExampleVehiclesBridgePlugin : BaseUnityPlugin
 {
+    public const string PluginId = "ExampleVehicles";
+
     private void Awake()
     {
         if (Chainloader.PluginInfos.ContainsKey(BridgeApi.BridgeGuid))
         {
-            BridgeLink.Register();   // a class of its own: this plugin loads without the bridge
+            BridgeLink.Register(Logger);   // a class of its own: this plugin loads without the bridge
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (Chainloader.PluginInfos.ContainsKey(BridgeApi.BridgeGuid))
+        {
+            BridgeLink.Unregister();       // BridgeApi.Remove(PluginId)
         }
     }
 }
 
 internal static class BridgeLink
 {
-    public static void Register()
+    public static void Register(BepInEx.Logging.ManualLogSource log)
     {
-        BridgeApi.AddListener("MyMod", new Listener());   // told what the editor applied
-        BridgeApi.AddRoutes("MyMod", new Routes());       // answers the editor's calls
+        BridgeApi.AddRoutes(ExampleVehiclesBridgePlugin.PluginId, new Routes());          // answers the editor's calls
+        BridgeApi.AddListener(ExampleVehiclesBridgePlugin.PluginId, new Listener(log));   // told what the editor applied
     }
+
+    public static void Unregister() => BridgeApi.Remove(ExampleVehiclesBridgePlugin.PluginId);
+    // Routes and Listener: see the sample.
 }
 ```
 
 | Hook | What the bridge does with it |
 |---|---|
-| `AddListener(modId, IBridgeListener)` | `OnApplied(AppliedChanges)` is called on the game's main thread right after each of the editor's applies: the objects made and destroyed (ZDOID, prefab, position), the zones whose ground was rewritten, the zones reset. Put your things together again here. An exception is logged and changes nothing of what the editor did. |
-| `AddRoutes(modId, IBridgeRoutes)` | `Handle(name, body)` answers `POST /mods/<modId>/<name>` on the main thread, in whatever bytes you and your editor extension agree on; `null` is 404, an exception 500 with its message. The editor waits 30 seconds at most. |
+| `AddListener(modId, IBridgeListener)` | `OnApplied(AppliedChanges)` is called on the game's main thread right after each of the editor's applies, with what it changed: `Created` and `Destroyed`, the objects made and destroyed (each its ZDOID's `User` and `Id`, its prefab's hash and its position); `Moved`, the objects moved under their own ZDOID (bridge 1.40.0 or newer: `From` where each stood, `To` where it stands now; an object whose old and new places a player has both loaded is made again instead, and is in `Created` and `Destroyed`); `TerrainZones`, the zones whose ground was rewritten; `ResetZones`, the zones emptied to be generated again. Put your things together again here. An exception is logged in the game's log and changes nothing of what the editor did. |
+| `AddRoutes(modId, IBridgeRoutes)` | `Handle(name, body)` answers `POST /mods/<modId>/<name>` on the game's main thread, in whatever bytes you and your editor extension agree on; `null` answers 404 ("the mod has no route of that name"), an exception 500 with its message. The bridge waits at most 30 seconds for the main thread: be quick, or answer "started" and let the extension ask again. A call's body is at most 16 MB. |
+| `Remove(modId)` | Takes your routes and listener away (a plugin shutting down). |
 
-The mod id is yours (your plugin's id is a good one): letters, digits, dots, dashes and underscores.
-`BridgeApi.Version` is the API's version; a bridge runs plugins built against its version or an
-earlier one, and additions keep it.
+Registering again under the same id replaces what was registered before. The mod id is yours (your
+plugin's id is a good one): 1 to 100 letters, digits, dots, dashes and underscores; another id
+throws. `BridgeApi.Version` is the API's version (now 1); a bridge runs plugins built against its
+version or an earlier one, and additions keep it. `GET /mods` on the bridge lists the API version
+and the ids registered.
 
-**On the editor's side**, your extension gets the game through `registry.Host.Live` (`ILiveGame`:
-the mods registered with the bridge, and `CallAsync(modId, name, body)` to your routes), null when
-the editor is not connected; `registry.AddLiveListener` tells it when a game is connected and when
-that ends. Ask the game for what only it knows (what your mod built in code), keep it, and call
-`registry.Host.Redraw()` for your shapes and cuts to be made again. The sample's
-`samples/ExampleVehicles.Bridge` (the plugin) and `LiveLink` in `samples/ExampleVehicles.WorldEditor`
-(the extension) show both halves; the plugin builds against the game's DLLs like any BepInEx plugin.
+### Your extension's side
 
+Your extension gets the game through `ILiveGame`: from `registry.Host.Live` at any time (null when
+the editor is not connected), or in your live listener's `OnConnected`.
+
+- `Mods`: the ids registered with the bridge, as the bridge reported them when the world was opened
+  (a plugin that registers later is seen at the next connection).
+- `CallAsync(modId, name, body)`: calls your route and gives back its answer's bytes. It throws when
+  the mod or the route is not registered, when the route failed (with the game's message), or when
+  the game cannot be reached.
+
+Ask the game for what only it knows (what your mod built in code), keep it, and call
+`registry.Host.Redraw()` for your shapes and cuts to be made again. The sample's `LiveLink` calls the
+plugin's `ping` route when the editor connects and logs the answer; its plugin also answers
+`players` (how many players are in the game).
+
+When a world opens live, the editor's log names the mods registered ("bridge mods: …").
+
+## The Example Vehicles sample
+
+The SDK's zip (and the editor's repository) holds the source of a made-up mod's two halves, to copy
+from. Example Vehicles builds vehicles out of a hull and the parts built on it.
+
+| File | What it shows |
+|---|---|
+| `samples/ExampleVehicles.WorldEditor/worldeditor.json` | The mod's file: labels, a hidden helper, groups, the `vehicle` link rule, the extension. |
+| `samples/ExampleVehicles.WorldEditor/Extension.cs` | The entry, registering one hook of each kind. |
+| `samples/ExampleVehicles.WorldEditor/Keys.cs` | The mod's data keys and prefabs, as its code names them. |
+| `samples/ExampleVehicles.WorldEditor/PackedIds.cs` | A decoder and copy rewriter for a list of ids packed in a byte array (a version byte, then four bytes per id): shown in the inspector ("Linked to 3 object(s): …"), and in a pasted copy made to name the copy's objects (ids of objects not copied go). |
+| `samples/ExampleVehicles.WorldEditor/Sails.cs` | Shapes: a sail's cloth drawn between three or four corners kept in its data, in its colour, seen from both sides. |
+| `samples/ExampleVehicles.WorldEditor/Cables.cs` | Shapes in world space: a cable from the top of one post to the top of the post it names, found with `TryFind`. |
+| `samples/ExampleVehicles.WorldEditor/Pits.cs` | A ground cut: a round hole as wide as the pit's radius (1.5 m when it keeps none). |
+| `samples/ExampleVehicles.WorldEditor/LiveLink.cs` | The extension's side of live mode: checks that the plugin registered, calls its `ping` route, logs the answer, and catches everything. |
+| `samples/ExampleVehicles.Bridge/ExampleVehiclesBridgePlugin.cs` | The mod's BepInEx plugin taking part in live mode: soft dependency, registration in a class of its own, routes `ping` and `players`, a listener that logs what the editor applied. It builds against the game's and BepInEx's DLLs like any plugin (`-p:ValheimDir=…`, a Valheim dedicated server's folder). |

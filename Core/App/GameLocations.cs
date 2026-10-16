@@ -26,13 +26,20 @@ public static class GameLocations
     private static readonly (int Locations, int Vegetation)[] BuiltInOrder = [(3, 0), (2, 0), (27, 25), (4, 0), (25, 33), (25, 35)];
 
     /// <summary>
-    /// The lists' order from the game's own log (Player.log, or Player-prev.log, beside its saves: the
-    /// newest that has it), else the built-in one; and where it came from (for the log).
+    /// The lists' order from the game's own log (Player.log, or Player-prev.log, beside its saves, or in
+    /// ~/Library/Logs/IronGate/Valheim on a Mac: the newest that has it), else the built-in one; and where it came
+    /// from (for the log).
     /// </summary>
     internal static ((int Locations, int Vegetation)[] Order, string From) ListOrder()
     {
-        var logs = Places.WorldRoots().Select(Path.GetDirectoryName).Where(d => d != null).Distinct()
-            .SelectMany(d => new[] { Path.Combine(d!, "Player.log"), Path.Combine(d!, "Player-prev.log") })
+        var folders = Places.WorldRoots().Select(Path.GetDirectoryName).OfType<string>().ToList();
+        if (OperatingSystem.IsMacOS())
+        {
+            // Unity writes the log apart from the saves on a Mac.
+            folders.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Logs", "IronGate", "Valheim"));
+        }
+        var logs = folders.Distinct()
+            .SelectMany(d => new[] { Path.Combine(d, "Player.log"), Path.Combine(d, "Player-prev.log") })
             .Where(File.Exists)
             .OrderByDescending(File.GetLastWriteTimeUtc);
         foreach (string log in logs)
@@ -177,11 +184,7 @@ public static class GameLocations
             }
             if (rules != null && cacheFile != null)
             {
-                // Written whole or not at all (a crash half way leaves the old file, or none).
-                Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)!);
-                string part = cacheFile + ".part";
-                File.WriteAllText(part, stamp + "\n" + rules.ToJson());
-                File.Move(part, cacheFile, overwrite: true);
+                GameData.KeepCache(cacheFile, stamp + "\n" + rules.ToJson());
             }
             return rules;
         }

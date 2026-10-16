@@ -6,8 +6,8 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// The world writer's remaining edges: a world with no terrain object to copy for new ground, a chunk file name already
-/// taken, a terrain template in an unexpected layout, and a value that cannot read back the same (the read-back check
-/// restores the backup).
+/// taken, terrain templates in an unexpected layout, a template that cannot be read, and a value that cannot read back
+/// the same (the read-back check restores the backup).
 /// </summary>
 public class WorldWriterTests
 {
@@ -96,16 +96,57 @@ public class WorldWriterTests
     }
 
     [Fact]
-    public void ATerrainTemplateInAnUnexpectedLayoutIsRefusedBeforeWriting()
+    public void TerrainTemplatesInAnUnexpectedLayoutAreRefusedBeforeWriting()
     {
         using var w = new TempWorld();
         var world = w.Load();
         var (x, z) = FreshZone(world);
-        var t = world.TerrainZones[0];
-        t.Source = t.Source! with { Flags = (ushort)(t.Source.Flags & ~0x2000) };
+        foreach (var t in world.TerrainZones.Where(t => t.Source != null))
+        {
+            t.Source = t.Source! with { Flags = (ushort)(t.Source.Flags & ~0x2000) };
+        }
         var before = Files(w.Dir);
-        var ex = Assert.Throws<InvalidOperationException>(() => WorldWriter.Save(world, [Raised(x, z, 1, 100)]));
-        Assert.Contains("Unexpected terrain object layout", ex.Message);
+        var r = WorldWriter.Save(world, [Raised(x, z, 1, 100)]);
+        Assert.False(r.Saved);
+        Assert.Contains(r.Skipped, s => s.Contains("unexpected layout"));
+        AssertSame(before, w.Dir);
+    }
+
+    // A terrain object in another layout ahead of a usable one: the usable one is copied. The fixture has one terrain
+    // object, so a byte copy of it is saved first; then the first of the two is marked as in another layout.
+    [Fact]
+    public void NewGroundCopiesATerrainObjectInTheShortLayout()
+    {
+        using var w = new TempWorld();
+        var world = w.Load();
+        var t = world.TerrainZones[0];
+        int id = world.ObjectRefs.FindIndex(o => o.IsTerrain && o.File == t.Source!.File && o.Start == t.Source.Start);
+        Assert.True(id >= 0);
+        var copy = new NewObject(-1, t.Prefab, t.Center, System.Numerics.Vector3.Zero, 0f, Raw: world.ObjectBytes(id));
+        var first = WorldWriter.Save(world, [], added: [copy]);
+        Assert.True(first.Saved, first.Message);
+        world = w.Load();
+        Assert.Equal(2, world.TerrainZones.Count(q => q.Source != null));
+        var (x, z) = FreshZone(world);
+        var other = world.TerrainZones.First(q => q.Source != null);
+        other.Source = other.Source! with { Flags = (ushort)(other.Source.Flags & ~0x2000) };
+        var r = WorldWriter.Save(world, [Raised(x, z, 1.5f, 100)]);
+        Assert.True(r.Saved, r.Message);
+        Assert.Equal(1.5f, WorldSave.Load(w.Dir).TerrainZones.Single(q => q.ZoneX == x && q.ZoneZ == z).LevelDelta[100], 4);
+    }
+
+    // The template's chunk file cannot be read (gone since the world was read): a result saying so, nothing written.
+    [Fact]
+    public void ATemplateThatCannotBeReadIsAResult()
+    {
+        using var w = new TempWorld();
+        var world = w.Load();
+        var (x, z) = FreshZone(world);
+        File.Delete(Path.Combine(w.Dir, world.TerrainZones.First(t => t.Source != null).Source!.File.FileName));
+        var before = Files(w.Dir);
+        var r = WorldWriter.Save(world, [Raised(x, z, 1, 100)]);
+        Assert.False(r.Saved);
+        Assert.StartsWith("Saving failed", r.Message);
         AssertSame(before, w.Dir);
     }
 

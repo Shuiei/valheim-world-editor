@@ -60,7 +60,8 @@ public static class GameLook
     public static bool SearchOutsideHome { get; set; } = true;
 
     /// <summary>
-    /// "ready", "missing" (Valheim not found), "running" (indexing its bundles), "failed".
+    /// "ready", "missing" (Valheim not found), "running" (indexing its bundles, or at start
+    /// checking the game data kept), "failed".
     /// </summary>
     public static string State { get; private set; } = "missing";
 
@@ -142,9 +143,31 @@ public static class GameLook
             }
             if (game.Indexed)
             {
-                Set("ready", null);
-                // The rest of the game data too, ready before a world is opened (from the caches: at once).
-                Task.Run(() => GameData.Ensure(game));
+                // Running without reading: the rest of the game data checked too (from the caches: at once), so
+                // "ready" is said only once it is in use.
+                Set("running", null);
+                Task.Run(() =>
+                {
+                    string state;
+                    string? message;
+                    try
+                    {
+                        (state, message) = GameData.Ensure(game) ? ("ready", null) : ("failed", DataUnread);
+                    }
+                    catch (Exception e)
+                    {
+                        // Whatever fails, the state leaves "running".
+                        Console.WriteLine($"game look: {e}");
+                        (state, message) = ("failed", "The game's data could not be read: " + e.Message);
+                    }
+                    lock (Lock)
+                    {
+                        if (ReferenceEquals(_bundles, game))
+                        {
+                            Set(state, message);
+                        }
+                    }
+                });
                 return;
             }
             Set("running", "Reading the game's files (a few seconds, only after a game update).");
@@ -159,11 +182,12 @@ public static class GameLook
                 game.EnsureIndexed((done, count) => Report(0.1 * done / Math.Max(1, count), $"Indexing the game's bundles: {done} of {count}"));
                 int n = game.Index.Count;
                 (state, message) = n == 0 ? ("failed", "No models were found in the game's files.")
-                    : !GameData.Ensure(game, (p, step) => Report(0.1 + (0.9 * p), step)) ? ("failed", "Some of the game's data could not be read (see the log).")
+                    : !GameData.Ensure(game, (p, step) => Report(0.1 + (0.9 * p), step)) ? ("failed", DataUnread)
                     : ("ready", "The game's look is ready.");
             }
-            catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or NotSupportedException or NotImplementedException)
+            catch (Exception e)
             {
+                // Whatever fails, the state leaves "running": the start page would wait for ever.
                 Console.WriteLine($"game look: {e}");
                 (state, message) = ("failed", "The game's files could not be read: " + e.Message);
             }
@@ -178,6 +202,11 @@ public static class GameLook
     }
 
     /// <summary>
+    /// The message when the game data (GameData.Ensure) cannot be had.
+    /// </summary>
+    private const string DataUnread = "Some of the game's data could not be read (see the log).";
+
+    /// <summary>
     /// Use this Valheim folder: kept in the settings, then read. The problem, or null.
     /// </summary>
     public static string? Start(string valheim, AppSettings settings)
@@ -185,7 +214,7 @@ public static class GameLook
         valheim = valheim.Trim().Trim('"');
         if (GameFolder(valheim) is not string game)
         {
-            return "That folder is not Valheim's game folder: it has no valheim_Data, and Valheim is not inside it. In Steam, right-click Valheim, then Manage › Browse local files: choose the folder that opens.";
+            return "That folder is not Valheim's game folder: it has no valheim_Data (on a Mac: no valheim.app), and Valheim is not inside it. In Steam, right-click Valheim, then Manage › Browse local files: choose the folder that opens.";
         }
         valheim = game;
         settings.ValheimPath = valheim;
@@ -234,25 +263,67 @@ public static class GameLook
     // ---- Finding things.
 
     /// <summary>
-    /// The bundles folder of a Valheim game folder (valheim_Data/StreamingAssets/SoftRef/Bundles, either spelling), or
-    /// null.
+    /// The data folder of a Valheim game folder, the one holding StreamingAssets and Managed: valheim_Data (either
+    /// spelling) on Windows and Linux; on a Mac, the app bundle's Contents/Resources/Data (valheim.app in the folder
+    /// Steam installed the game into). Null when the folder holds neither, with the game's bundles in it.
     /// </summary>
-    public static string? BundlesDir(string valheim)
+    public static string? DataDir(string valheim)
     {
         foreach (string sub in new[] { "valheim_Data", "Valheim_Data" })
         {
-            string d = Path.Combine(valheim, sub, "StreamingAssets", "SoftRef", "Bundles");
-            if (Directory.Exists(d))
+            string d = Path.Combine(valheim, sub);
+            if (Directory.Exists(BundlesIn(d)))
             {
                 return d;
             }
+        }
+        try
+        {
+            foreach (string app in Directory.EnumerateDirectories(valheim, "*.app").Order(StringComparer.Ordinal))
+            {
+                string d = Path.Combine(app, "Contents", "Resources", "Data");
+                if (Directory.Exists(BundlesIn(d)))
+                {
+                    return d;
+                }
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
+        {
         }
         return null;
     }
 
     /// <summary>
-    /// The game folder from a folder chosen near it: the game folder itself, its valheim_Data, or a
-    /// folder above it in a Steam library (Steam, steamapps, common). Null when none of these.
+    /// The bundles folder of a Valheim game folder (StreamingAssets/SoftRef/Bundles in its data folder, see
+    /// <see cref="DataDir"/>), or null.
+    /// </summary>
+    public static string? BundlesDir(string valheim) => DataDir(valheim) is string d ? BundlesIn(d) : null;
+
+    /// <summary>The bundles folder inside a game's data folder.</summary>
+    private static string BundlesIn(string dataDir) => Path.Combine(dataDir, "StreamingAssets", "SoftRef", "Bundles");
+
+    /// <summary>
+    /// The game folder a data folder (see <see cref="DataDir"/>) belongs to: the folder above valheim_Data, or the
+    /// folder holding the app bundle on a Mac.
+    /// </summary>
+    public static string GameOfData(string dataDir)
+    {
+        string d = Path.TrimEndingDirectorySeparator(dataDir);
+        string? resources = Path.GetDirectoryName(d), contents = resources == null ? null : Path.GetDirectoryName(resources);
+        string? app = contents == null ? null : Path.GetDirectoryName(contents);
+        if (app != null && app.EndsWith(".app", StringComparison.OrdinalIgnoreCase) && Path.GetFileName(contents) == "Contents"
+            && Path.GetFileName(resources) == "Resources" && Path.GetDirectoryName(app) is string folder)
+        {
+            return folder;
+        }
+        return Path.GetDirectoryName(d) ?? d;
+    }
+
+    /// <summary>
+    /// The game folder from a folder chosen near it: the game folder itself, its valheim_Data, on a Mac the app
+    /// bundle or a folder inside it, or a folder above it in a Steam library (Steam, steamapps, common). Null when
+    /// none of these.
     /// </summary>
     public static string? GameFolder(string chosen)
     {
@@ -266,6 +337,15 @@ public static class GameLook
             if (parent != null && Path.GetFileName(full).Equals("valheim_Data", StringComparison.OrdinalIgnoreCase))
             {
                 tries.Add(parent);
+            }
+            // On a Mac: valheim.app, or a folder inside it (the folder picker can open the bundle).
+            for (string? d = full; d != null; d = Path.GetDirectoryName(d))
+            {
+                if (d.EndsWith(".app", StringComparison.OrdinalIgnoreCase) && Path.GetDirectoryName(d) is string holder)
+                {
+                    tries.Add(holder);
+                    break;
+                }
             }
             tries.Add(Path.Combine(full, "Valheim"));
             tries.Add(Path.Combine(full, "common", "Valheim"));
@@ -328,6 +408,10 @@ public static class GameLook
                 roots.Add(@"C:\Program Files (x86)\Steam");
                 roots.Add(@"C:\Program Files\Steam");
             }
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            roots.Add(Path.Combine(home, "Library", "Application Support", "Steam"));
         }
         else
         {

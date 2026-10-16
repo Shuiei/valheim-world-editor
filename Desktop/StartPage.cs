@@ -114,6 +114,12 @@ public sealed class StartPage
     /// <summary>Why the game could not be checked (the folders or the plugin), until a check works again.</summary>
     private readonly TextBlock _gameError = Err();
 
+    /// <summary>
+    /// Whether a connection is being made (Connect, ConnectUrl): another click meanwhile does nothing, so no second
+    /// tunnel or world is opened.
+    /// </summary>
+    private bool _connecting;
+
     /// <summary>Shorthands for the app's line and muted text brushes.</summary>
     private static readonly IBrush Line = Ui.Line, Muted = Ui.Muted;
 
@@ -621,7 +627,7 @@ public sealed class StartPage
         foreach (var b in Blueprints().Take(4))
         {
             string path = b.Path;
-            dated.Add((b.Saved, Tile(b.Picture, "shape", Color.FromRgb(58, 48, 36), b.Name, $"Blueprint · {b.Pieces} pieces", "Open it in the Workshop", () => WorkshopRequested?.Invoke(path))));
+            dated.Add((b.Saved, Tile(b.Picture, "shape", Color.FromRgb(58, 48, 36), b.Name, $"Blueprint · {b.Pieces} pieces", Lang.T("start.tip.openWorkshop"), () => WorkshopRequested?.Invoke(path))));
         }
         foreach (var (_, tile) in dated.OrderByDescending(d => d.When).Take(8))
         {
@@ -647,7 +653,7 @@ public sealed class StartPage
         foreach (var b in Blueprints())
         {
             string path = b.Path;
-            BlueprintTiles.Children.Add(Tile(b.Picture, "shape", Color.FromRgb(58, 48, 36), b.Name, $"{b.Pieces} pieces · {Ago(b.Saved)}", "Open it in the Workshop", () => WorkshopRequested?.Invoke(path)));
+            BlueprintTiles.Children.Add(Tile(b.Picture, "shape", Color.FromRgb(58, 48, 36), b.Name, $"{b.Pieces} pieces · {Ago(b.Saved)}", Lang.T("start.tip.openWorkshop"), () => WorkshopRequested?.Invoke(path)));
         }
         if (BlueprintTiles.Children.Count == 0)
         {
@@ -949,7 +955,10 @@ public sealed class StartPage
             {
                 ServerForm.IsExpanded = true;
                 (SHost.Text, SPort.Value, SUser.Text, SKey.Text, SFolder.Text, SName.Text) = (server.Host, server.SshPort, server.User, server.KeyFile, server.GameFolder, server.Name);
-                ServerError.Text = "Change what you need, enter the token and the password (unless saved or using a key), then Connect: the saved server is updated.";
+                // All of the form is this server's: what was typed for another one (its password, token) is never
+                // sent here, and a saved password stays saved.
+                (SPass.Text, SToken.Text, SPhrase.Text, SBridge.Value, SSave.IsChecked) = (server.Password, server.Token, null, null, server.Password != null);
+                ServerError.Text = "Change what you need, enter the token and the password if they are not filled in (none with a key), then Connect: the saved server is updated.";
             };
             var forget = new Button { Content = "forget", Foreground = Muted }.Classed("ghost").Tip("start.savedForget");
             forget.Click += async (_, _) =>
@@ -1005,7 +1014,7 @@ public sealed class StartPage
             ServerError.Text = "Enter the plugin's token: the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server (written the first time the server starts with the plugin).";
             return;
         }
-        await Connect(new Tunnel.Request(SHost.Text.Trim(), (int)(SPort.Value ?? 22), SUser.Text?.Trim() ?? "", NullIfEmpty(SPass.Text), NullIfEmpty(SKey.Text), NullIfEmpty(SPhrase.Text), SToken.Text.Trim(),
+        await Connect(new Tunnel.Request(SHost.Text.Trim(), (int)(SPort.Value ?? 22), SUser.Text?.Trim() ?? "", string.IsNullOrWhiteSpace(SPass.Text) ? null : SPass.Text, NullIfEmpty(SKey.Text), NullIfEmpty(SPhrase.Text), SToken.Text.Trim(),
             SBridge.Value is decimal b ? (int)b : null, SSave.IsChecked == true, NullIfEmpty(SName.Text), NullIfEmpty(SFolder.Text)), ServerError, $"Connecting to {SHost.Text.Trim()}…");
     }
 
@@ -1020,6 +1029,24 @@ public sealed class StartPage
     /// <param name="error">The line for progress and errors.</param>
     /// <param name="what">What to say while connecting.</param>
     private async Task Connect(Tunnel.Request t, TextBlock error, string what)
+    {
+        if (_connecting)
+        {
+            return;
+        }
+        _connecting = true;
+        try
+        {
+            await ConnectOnce(t, error, what);
+        }
+        finally
+        {
+            _connecting = false;
+        }
+    }
+
+    /// <inheritdoc cref="Connect"/>
+    private async Task ConnectOnce(Tunnel.Request t, TextBlock error, string what)
     {
         error.Text = what;
         var tr = await StartTunnel(t);
@@ -1047,6 +1074,24 @@ public sealed class StartPage
 
     /// <summary>I made my own tunnel: connects to the bridge address typed (http:// added when missing).</summary>
     internal async Task ConnectUrl()
+    {
+        if (_connecting)
+        {
+            return;
+        }
+        _connecting = true;
+        try
+        {
+            await ConnectUrlOnce();
+        }
+        finally
+        {
+            _connecting = false;
+        }
+    }
+
+    /// <inheritdoc cref="ConnectUrl"/>
+    private async Task ConnectUrlOnce()
     {
         string url = LiveUrl.Text?.Trim() ?? "";
         if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))

@@ -8,7 +8,9 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// The game's location prefabs as the dungeon scan describes them (tests/fixtures/dungeon-rooms.json: the start temple
 /// and a crypt's entrance), and what the game makes of one when it spawns it.
+/// One test takes the catalogue away for a moment: in the "World files" collection, so nothing reads it meanwhile.
 /// </summary>
+[Collection("World files")]
 public class LocationPrefabsTests
 {
     [Fact]
@@ -76,5 +78,31 @@ public class LocationPrefabsTests
         {
             LocationPrefabs.Use(json);
         }
+    }
+
+    [Fact]
+    public void ADungeonsEntranceHasItsDoorsAndMayMoveItsInteriorToTheZonesMiddle()
+    {
+        // A burial chamber: its door at the ground faces -z (a player leaving stands south of it), its door out stands
+        // 5000 m up; its interior stays with it.
+        var crypt = LocationPrefabs.Get("Crypt2")!;
+        Assert.False(crypt.CustomInterior);
+        Assert.Null(crypt.InteriorAt);
+        Assert.Equal(2, crypt.Doors.Count);
+        Assert.NotNull(crypt.Entrance);
+        Assert.NotNull(crypt.Exit);
+        Assert.True(crypt.Entrance.Position.Y < 10 && crypt.Exit.Position.Y > 4999);
+        Assert.True(Vector3.Distance(-Vector3.UnitZ, Vector3.Transform(Vector3.UnitZ, crypt.Entrance.Rotation)) < 0.001f);
+        // A Frost Cave: the game moves its interior (anchored 5000 m up) to the zone's middle.
+        var cave = LocationPrefabs.Get("MountainCave02")!;
+        Assert.True(cave.CustomInterior);
+        Assert.NotNull(cave.InteriorAt);
+        Assert.Equal(5000f, cave.InteriorAt.Position.Y);
+        Assert.NotNull(cave.Exit);
+        // The start temple has no doors; a prefab the copy describes without them has none either.
+        Assert.Empty(LocationPrefabs.Get("StartTemple")!.Doors);
+        var bare = new LocationPrefabs.Prefab("Bare", 1, false, false, false, [], [], [], []);
+        Assert.Empty(bare.Doors);
+        Assert.Null(bare.Exit);
     }
 }

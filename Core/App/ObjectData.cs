@@ -32,8 +32,7 @@ public static class ObjectData
         {
             return null;
         }
-        Dictionary<ChunkFile, byte[]> files = [];
-        return w.NewObjectBytes(n, m => w.IsLive ? w.LiveSource(m.File) : (files.TryGetValue(m.File, out byte[]? f) ? f : files[m.File] = File.ReadAllBytes(Path.Combine(w.Directory, m.File.FileName))));
+        return w.NewObjectBytes(n, w.SourceReader());
     }
 
     /// <summary>The keys of an object's own scale, which a copy takes from its own size instead.</summary>

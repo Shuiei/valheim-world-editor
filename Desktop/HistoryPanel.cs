@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -94,11 +95,20 @@ public sealed class HistoryPanel
         {
             return;
         }
+        // RemoveChange does nothing during a brush stroke (the card can be opened with L while the brush is down).
+        if (s.Stroking)
+        {
+            Message?.Invoke("Nothing taken back: finish the brush stroke first.");
+            return;
+        }
         foreach (var c in steps)
         {
             s.RemoveChange(c);
         }
-        Message?.Invoke($"Took back {steps.Count} change(s) Claude made; yours are kept.");
+        // A step refused (RemoveChange: a later step of yours moved or deleted what it added) is not marked Removed.
+        int kept = steps.Count(c => !c.Removed);
+        Message?.Invoke($"Took back {steps.Count - kept} change(s) Claude made; yours are kept."
+            + (kept > 0 ? $" {kept} could not be taken back: a later step moved or deleted what they added (undo instead)." : ""));
         Refresh();
     }
 
@@ -177,17 +187,17 @@ public sealed class HistoryPanel
         }
         if (undone)
         {
-            Act("Redo to here", "Redo up to this change", () => [.. s.RedoList.SkipWhile(r => r != c)], () => s.ForwardTo(c));
+            Act("Redo to here", Lang.T("history.tip.redoTo"), () => [.. s.RedoList.SkipWhile(r => r != c)], () => s.ForwardTo(c));
         }
         else
         {
             if (!current)
             {
-                Act("Back to here", "Undo every change after this one", () => [.. s.UndoList.SkipWhile(u => u != c).Skip(1)], () => s.BackTo(c));
+                Act("Back to here", Lang.T("history.tip.backTo"), () => [.. s.UndoList.SkipWhile(u => u != c).Skip(1)], () => s.BackTo(c));
             }
             if (!c.Removed && c.RevertOf == null)
             {
-                Act("Remove", "Take out only this change", () => [c], () => Message?.Invoke(s.RemoveChange(c)));
+                Act("Remove", Lang.T("history.tip.remove"), () => [c], () => Message?.Invoke(s.RemoveChange(c)));
             }
         }
         // Steps from an earlier session of the editor show their day too.

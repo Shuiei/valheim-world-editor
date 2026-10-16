@@ -80,6 +80,12 @@ public sealed class AreaPanel
     public AreaTool Area { get; }
     private readonly GlView _view;
     private readonly Func<EditSession?> _session;
+
+    /// <summary>
+    /// Whether an Apply is running: it can wait on a question, the generator or a backup being read, and a second one
+    /// meanwhile would do the same again.
+    /// </summary>
+    private bool _applying;
     private readonly Func<int, string?> _nameOf;
     /// <summary>Asks a yes/no question (the window's dialog); resetting zones goes on only on true.</summary>
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
@@ -108,6 +114,13 @@ public sealed class AreaPanel
     internal NumericUpDown AmountBox { get; } = new() { Value = 2, Increment = 0.1m, FormatString = "0.0#", FontSize = 12 };
     /// <summary>Paint: which paint (one of <c>Paints</c>).</summary>
     internal ComboBox PaintBox { get; } = new() { ItemsSource = Paints.Select(p => p.Label).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+    /// <summary>
+    /// Flatten, Raise and Lower: No limit, the ground goes past the game's ±8 m (the brush options' switch, the
+    /// same one shown here; the window keeps the two together).
+    /// </summary>
+    internal CheckBox NoLimitBox { get; } = new() { Content = "No limit: past the game's ±8 m", FontSize = 12 };
+    /// <summary>No limit was switched here (on: true).</summary>
+    public event Action<bool>? NoLimitChanged;
     /// <summary>Flatten, Raise and Lower: the cut and fill the action would move.</summary>
     internal TextBlock VolumeText { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
     /// <summary>One toggle per object kind: the kinds the object actions (and a backup restore) work on.</summary>
@@ -133,8 +146,13 @@ public sealed class AreaPanel
     internal Button ApplyButton { get; } = new Button { FontSize = 12 }.Classed("primary");
     /// <summary>The rows shown only for some actions, with those actions.</summary>
     private readonly Dictionary<Control, Act[]> _rows = [];
-    /// <summary>The prefab hashes behind <see cref="ToBox"/>'s entries, in its order (filled once).</summary>
+    /// <summary>The prefab hashes behind <see cref="ToBox"/>'s entries, in its order.</summary>
     private List<int> _creatable = [];
+    /// <summary>
+    /// The world and its templates, the game's data, the manifests and the mods' catalogue <c>_creatable</c> was
+    /// worked out from.
+    /// </summary>
+    private (WorldSave? World, int Templates, int Data, int Manifests, int Catalogue) _creatableFrom;
 
     /// <summary>The action chosen on the list.</summary>
     public Act Current => Actions[Math.Max(0, ActionBox.SelectedIndex)].Act;
@@ -166,6 +184,8 @@ public sealed class AreaPanel
     // Copy and paste: the window copies, pastes and keeps blueprints.
     /// <summary>Asks the window to copy the selection.</summary>
     internal Button CopyButton { get; } = new() { Content = "Copy (Ctrl+C)", FontSize = 12 };
+    /// <summary>Asks the window to cut: copy, then remove the originals.</summary>
+    internal Button CutButton { get; } = new() { Content = "Cut (Ctrl+X)", FontSize = 12 };
     /// <summary>Asks the window to paste.</summary>
     internal Button PasteButton { get; } = new() { Content = "Paste (Ctrl+V)", FontSize = 12 };
     /// <summary>Asks the window to save the selection as a blueprint.</summary>
@@ -174,8 +194,8 @@ public sealed class AreaPanel
     internal Button LibraryButton { get; } = new() { Content = "Blueprints…", FontSize = 12 };
     /// <summary>What copying takes.</summary>
     internal TextBlock ClipInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
-    /// <summary>The Copy and paste buttons, handled by the window.</summary>
-    public event Action? CopyAsked, PasteAsked, SaveBlueprintAsked, LibraryAsked;
+    /// <summary>The Copy, Cut and paste buttons, handled by the window.</summary>
+    public event Action? CopyAsked, CutAsked, PasteAsked, SaveBlueprintAsked, LibraryAsked;
 
     // Heightmap: export the area, or import a picture into the selection (or the whole area).
     /// <summary>Writes the area's heightmap (see <see cref="ExportHeightmap"/>).</summary>
@@ -197,10 +217,12 @@ public sealed class AreaPanel
     /// <summary>Asks for a picture to import (the window's file picker).</summary>
     internal Func<Task<string?>> PickPicture { get; set; } = () => Task.FromResult<string?>(null);
     /// <summary>
-    /// The picture read: its values (0 to 1, row by row), the box of the ground it is fitted to (grid points),
-    /// and the ground points it goes into with their weights.
+    /// The picture read: its values (0 to 1, row by row), the ground it is fitted to and the box of it (grid points),
+    /// the ground points it goes into with their weights, and the selection it was fitted to (null: the whole
+    /// area). Dropped when the selection becomes another, and refused for another ground: its points are that
+    /// ground's.
     /// </summary>
-    private (float[] Values, int X0, int Z0, int W, int H, List<(int G, float W)> Cells)? _picture;
+    private (float[] Values, Ground Ground, int X0, int Z0, int W, int H, List<(int G, float W)> Cells, List<Vector2>? Fit)? _picture;
 
     /// <summary>Builds the panel.</summary>
     /// <param name="view">The view: its selection, scene and shown kinds.</param>
@@ -264,6 +286,7 @@ public sealed class AreaPanel
         BackupGroundBox.Tip("area.backupGround");
         BackupObjectsBox.Tip("area.backupObjects");
         CopyButton.Tip("area.copy");
+        CutButton.Tip("area.cut");
         PasteButton.Tip("area.paste");
         SaveBlueprintButton.Tip("area.saveBlueprint");
         LibraryButton.Tip("area.library");
@@ -292,6 +315,7 @@ public sealed class AreaPanel
         }
         ApplyButton.Click += async (_, _) => await Apply();
         CopyButton.Click += (_, _) => CopyAsked?.Invoke();
+        CutButton.Click += (_, _) => CutAsked?.Invoke();
         PasteButton.Click += (_, _) => PasteAsked?.Invoke();
         SaveBlueprintButton.Click += (_, _) => SaveBlueprintAsked?.Invoke();
         LibraryButton.Click += (_, _) => LibraryAsked?.Invoke();
@@ -306,6 +330,9 @@ public sealed class AreaPanel
         ToPickButton.Tip("area.pick");
         ToPickButton.Click += (_, _) => PickKindAsked?.Invoke("Replace", UsePicked);
         Area.Changed += Refresh;
+        Area.Changed += DropPicture;
+        NoLimitBox.Tip("brush.noLimit");
+        NoLimitBox.IsCheckedChanged += (_, _) => NoLimitChanged?.Invoke(NoLimitBox.IsChecked == true);
 
         Control Row(string label, Control input, Control? after = null)
         {
@@ -351,6 +378,7 @@ public sealed class AreaPanel
                     For(Row("Height", HeightBox, AverageButton), Act.Flatten),
                     For(Row("Amount", AmountBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }), Act.Raise, Act.Lower),
                     For(Row("Paint", PaintBox), Act.Paint),
+                    For(NoLimitBox, Act.Flatten, Act.Raise, Act.Lower),
                     For(VolumeText, Act.Flatten, Act.Raise, Act.Lower),
                     For(Help("Evens out bumps inside the selection."), Act.Smooth),
                     For(Help("Natural-looking bumps, with the Bumps and Size of the Naturalize brush."), Act.Natural),
@@ -360,7 +388,7 @@ public sealed class AreaPanel
                     For(Row("Replace", FromBox), Act.Replace),
                     For(Row("with", ToBox, ToPickButton), Act.Replace),
                     For(Help("Puts back what the game grows here: its own trees, rocks, bushes and pickables for the biome, by its vegetation rules, for the kinds chosen above."), Act.Regrow),
-                    For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { CopyButton, PasteButton } }, Act.Copy),
+                    For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { CopyButton, CutButton, PasteButton } }, Act.Copy),
                     For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SaveBlueprintButton, LibraryButton } }, Act.Copy),
                     For(ClipInfo, Act.Copy),
                     For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { ExportButton, ImportButton } }, Act.Heightmap),
@@ -413,7 +441,7 @@ public sealed class AreaPanel
         // The action's own explanation, on the list and on its button.
         string what = Tips.Of($"areaAct.{act}");
         ToolTip.SetTip(ActionBox, $"{Tips.Of("area.action")} {what}");
-        ToolTip.SetTip(ApplyButton, $"{what} (Enter). Ctrl+Z undoes it.");
+        ToolTip.SetTip(ApplyButton, Lang.T("area.applyTip", what));
         ApplyButton.Content = act switch
         {
             Act.Remove => "Remove the objects (Enter)",
@@ -437,7 +465,8 @@ public sealed class AreaPanel
     /// <param name="poly">The selection, in metres from the scene's corner.</param>
     /// <param name="chosenKindsOnly">Only the kinds toggled on, and only where the Mask lets the ground through.</param>
     /// <param name="includeHidden">Also kinds switched off in View (a backup restore compares with everything there).</param>
-    internal List<int> ThingsInside(List<Vector2> poly, bool chosenKindsOnly, bool includeHidden = false)
+    /// <param name="maskAt">The Mask test to use (one the caller already took), or null to take it here.</param>
+    internal List<int> ThingsInside(List<Vector2> poly, bool chosenKindsOnly, bool includeHidden = false, Func<float, float, bool>? maskAt = null)
     {
         var out_ = new List<int>();
         if (_view.Scene is not { } s)
@@ -445,6 +474,8 @@ public sealed class AreaPanel
             return out_;
         }
         float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        // Taken once: each Mask snapshot copies the whole ground.
+        maskAt ??= chosenKindsOnly ? MaskTest() : null;
         lock (s.Things)
         {
             for (int i = 0; i < s.Things.Count; i++)
@@ -455,7 +486,7 @@ public sealed class AreaPanel
                     continue;
                 }
                 var k = KindOf(t);
-                if ((includeHidden || t.Id < 0 || _view.IsShown(k)) && (!chosenKindsOnly || Area.Kinds.Contains(k) && MaskAt(t.Position.X - ox, t.Position.Z - oz)))
+                if ((includeHidden || t.Id < 0 || _view.IsShown(k)) && (!chosenKindsOnly || Area.Kinds.Contains(k) && maskAt!(t.Position.X - ox, t.Position.Z - oz)))
                 {
                     out_.Add(i);
                 }
@@ -464,15 +495,23 @@ public sealed class AreaPanel
         return out_;
     }
 
-    /// <summary>Whether the Mask lets the ground at a grid point through (the object actions pick only there).</summary>
-    private bool MaskAt(float gx, float gz)
+    /// <summary>
+    /// Whether the Mask lets the ground at a grid point through (the object actions pick only there). The Mask is
+    /// taken now, once: each snapshot copies the whole ground, so take one per action, not one per object.
+    /// </summary>
+    /// <returns>A test by grid point (metres from the scene's corner); always true when the Mask is off.</returns>
+    private Func<float, float, bool> MaskTest()
     {
         if (_session() is not { } s || s.MaskNow() is not { } m)
         {
-            return true;
+            return static (_, _) => true;
         }
-        int x = Math.Clamp((int)MathF.Round(gx), 0, s.Ground.W - 1), z = Math.Clamp((int)MathF.Round(gz), 0, s.Ground.H - 1);
-        return m(z * s.Ground.W + x) > 0;
+        int w = s.Ground.W, h = s.Ground.H;
+        return (gx, gz) =>
+        {
+            int x = Math.Clamp((int)MathF.Round(gx), 0, w - 1), z = Math.Clamp((int)MathF.Round(gz), 0, h - 1);
+            return m(z * w + x) > 0;
+        };
     }
 
     /// <summary>A thing's object kind.</summary>
@@ -495,6 +534,8 @@ public sealed class AreaPanel
     {
         var poly = Area.Polygon();
         RefreshVolume();
+        // Before the selection's lists: the "with" list follows the world, selection or not.
+        FillCreatable();
         if (poly == null)
         {
             Info.Text = Area.Box ? "Drag on the ground to select a box." : "Click points around the area; double-click or Enter closes it. Backspace removes a point, Esc clears.";
@@ -517,17 +558,30 @@ public sealed class AreaPanel
         var names = inside.GroupBy(i => NameOf(s.Things[i].Prefab)).OrderByDescending(x => x.Count()).Select(x => $"{x.Key} ({x.Count()})").ToList();
         FromBox.ItemsSource = names;
         FromBox.SelectedIndex = FromBox.SelectedItem is string keep && names.Contains(keep) ? names.IndexOf(keep) : names.Count > 0 ? 0 : -1;
-        FillCreatable();
         _view.LassoChanged();
     }
 
-    /// <summary>The kinds the world can make, for the "with" list (once: they are the game's).</summary>
+    /// <summary>
+    /// The kinds the world can make, for the "with" list: worked out again for another world (its templates are its
+    /// own), when a live merge brings it new kinds, or when the game's data, the mods' manifests or their catalogue
+    /// change, keeping the chosen kind when it is still offered.
+    /// </summary>
     private void FillCreatable()
     {
-        if (_creatable.Count == 0 && _view.Scene?.World is { } w)
+        if (_view.Scene?.World is { } w && _creatableFrom != (w, w.TemplatesGeneration, GameData.Generation, ModManifests.Generation, ModCatalogue.Generation))
         {
+            _creatableFrom = (w, w.TemplatesGeneration, GameData.Generation, ModManifests.Generation, ModCatalogue.Generation);
+            int chosen = ToBox.SelectedIndex >= 0 && ToBox.SelectedIndex < _creatable.Count ? _creatable[ToBox.SelectedIndex] : 0;
             _creatable = [.. w.Creatable.Where(p => _nameOf(p) != null).OrderBy(p => _nameOf(p), StringComparer.OrdinalIgnoreCase)];
             ToBox.ItemsSource = _creatable.Select(p => _nameOf(p)!).ToList();
+            ToBox.SelectedIndex = _creatable.IndexOf(chosen);
+        }
+        else if (_view.Scene?.World == null && _creatableFrom.World != null)
+        {
+            // No world open: the last one is not kept alive by the list.
+            _creatableFrom = default;
+            _creatable = [];
+            ToBox.ItemsSource = Array.Empty<string>();
         }
     }
 
@@ -545,8 +599,43 @@ public sealed class AreaPanel
         _ => null,
     };
 
-    /// <summary>The action (Apply, Enter).</summary>
+    /// <summary>The action (Apply, Enter). While one runs, another does nothing (Apply greyed out).</summary>
     public async Task Apply()
+    {
+        if (_applying)
+        {
+            return;
+        }
+        _applying = true;
+        ApplyButton.IsEnabled = false;
+        try
+        {
+            await ApplyOnce();
+        }
+        finally
+        {
+            _applying = false;
+            ApplyButton.IsEnabled = true;
+        }
+    }
+
+    /// <summary>
+    /// Whether the session is still the one open after a wait; when it is not (another area opened, the world
+    /// closed), says that nothing was applied.
+    /// </summary>
+    /// <param name="session">The session the action started on.</param>
+    private bool StillOpen(EditSession session)
+    {
+        if (ReferenceEquals(_session(), session))
+        {
+            return true;
+        }
+        Message?.Invoke("The area changed while this was running: nothing was applied.");
+        return false;
+    }
+
+    /// <inheritdoc cref="Apply"/>
+    private async Task ApplyOnce()
     {
         if (_session() is not { } session)
         {
@@ -629,7 +718,10 @@ public sealed class AreaPanel
         Message?.Invoke($"Replace with {NameOf(prefab)}.");
     }
 
-    /// <summary>Replaces things with objects of another kind, where they are and turned as they are.</summary>
+    /// <summary>
+    /// Replaces things with objects of another kind, where they are and turned as they are. A linked group's root
+    /// takes its parts away with it (ObjectLinks: a ship), as Remove does: they would have nothing to hang on.
+    /// </summary>
     /// <param name="session">The session the change is committed to (one undo step).</param>
     /// <param name="things">The things, as indices into the scene's things.</param>
     /// <param name="prefab">The prefab hash of the new kind.</param>
@@ -638,8 +730,11 @@ public sealed class AreaPanel
         var s = session.Scene;
         bool piece = PieceCatalog.Get(prefab)?.Tool != null;
         var adds = things.Select(i => s.Things[i]).Select(t => (new NewObject(0, prefab, t.Position, t.Rotation, 0), piece)).ToList();
-        session.Commit($"Replaced {things.Count} with {NameOf(prefab)}", null, things, adds);
-        Message?.Invoke($"Replaced {things.Count} object(s) with {NameOf(prefab)}.");
+        var (removed, linked, groups, _) = session.WithLinked(things, anyPart: false);
+        // The groups' parts, roots left out (a part among the things given counts: it goes as a part).
+        int parts = linked.Count - groups;
+        session.Commit($"Replaced {things.Count} with {NameOf(prefab)}", null, removed, adds);
+        Message?.Invoke($"Replaced {things.Count} object(s) with {NameOf(prefab)}.{(parts > 0 ? $" Their {parts} linked part(s) went with them." : "")}");
     }
 
     // ---- Heightmaps: the area's ground as a 16-bit picture (with its lowest and highest heights), and a
@@ -710,7 +805,7 @@ public sealed class AreaPanel
             Message?.Invoke($"That picture cannot be used: {ex.Message}");
             return;
         }
-        _picture = (pic.Values, x0, z0, w, h, cells);
+        _picture = (pic.Values, g, x0, z0, w, h, cells, Area.Polygon());
         // The heights written in the picture by the editor, else the range of the ground it covers now.
         float lo = cells.Count > 0 ? cells.Min(c => g.HeightOf(c.G)) : 0, hi = cells.Count > 0 ? cells.Max(c => g.HeightOf(c.G)) : 0;
         LowestBox.Value = (decimal)(pic.Min is float mn ? MathF.Round(mn, 3) : MathF.Round(lo, 1));
@@ -729,6 +824,14 @@ public sealed class AreaPanel
         {
             return;
         }
+        if (p.Ground != session.Ground)
+        {
+            // Fitted to another area's ground: its points would land anywhere in this one.
+            _picture = null;
+            _pictureBox.IsVisible = false;
+            Message?.Invoke("The picture was fitted to another area: import it again.");
+            return;
+        }
         float lo = Value(LowestBox), hi = Value(HighestBox);
         int clamped = 0;
         var touched = session.EditGround("Heightmap import", g =>
@@ -741,6 +844,26 @@ public sealed class AreaPanel
         _pictureBox.IsVisible = false;
         Message?.Invoke(clamped > 0 ? $"Imported, but {clamped} point(s) could not reach their height: the game keeps the ground within ±8 m of the original (red points)."
             : $"Imported the heightmap into {touched.Count} point(s). Ctrl+Z undoes it.");
+    }
+
+    /// <summary>
+    /// The selection changed: a picture read was fitted to the old one, so it is dropped, unless the outline is still
+    /// the same (a polygon closed with Enter, a box redrawn where it is).
+    /// </summary>
+    private void DropPicture()
+    {
+        if (_picture is not { } p)
+        {
+            return;
+        }
+        var now = Area.Polygon();
+        if (p.Fit == null ? now == null : now != null && p.Fit.SequenceEqual(now))
+        {
+            return;
+        }
+        _picture = null;
+        _pictureBox.IsVisible = false;
+        Message?.Invoke("The picture read was dropped: the selection changed. Import it again.");
     }
 
     /// <summary>
@@ -779,9 +902,11 @@ public sealed class AreaPanel
     {
         var s = session.Scene;
         float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        // Taken once, when the spots are first judged (after the generator ran), not once per spot.
+        var maskAt = new Lazy<Func<float, float, bool>>(MaskTest);
         var adds = await Growth.Spots(session, poly.Min(p => p.X) + ox, poly.Min(p => p.Y) + oz, poly.Max(p => p.X) + ox, poly.Max(p => p.Y) + oz,
-            o => AreaTool.Inside(poly, o.X - ox, o.Z - oz) && Area.Kinds.Contains(ObjectKinds.Of(o.Name, false)) && MaskAt(o.X - ox, o.Z - oz), _nameOf, m => Message?.Invoke(m));
-        if (adds == null)
+            o => AreaTool.Inside(poly, o.X - ox, o.Z - oz) && Area.Kinds.Contains(ObjectKinds.Of(o.Name, false)) && maskAt.Value(o.X - ox, o.Z - oz), _nameOf, m => Message?.Invoke(m));
+        if (adds == null || !StillOpen(session))
         {
             return;
         }
@@ -871,6 +996,10 @@ public sealed class AreaPanel
             Message?.Invoke(BackupInfo.Text ?? "");
             return;
         }
+        if (!StillOpen(session))
+        {
+            return;
+        }
         int groundPoints = 0;
         Func<Ground, (List<int>, (int, int, int, int))>? ground = BackupGroundBox.IsChecked != true ? null : g =>
         {
@@ -935,10 +1064,13 @@ public sealed class AreaPanel
         if (BackupObjectsBox.IsChecked == true)
         {
             float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
-            // Runestones are left as they are on both sides (a location proxy cannot be copied back).
+            // Runestones are left as they are on both sides (a location proxy cannot be copied back). Both sides are
+            // picked alike (where the Mask lets through too): an unchanged object picked on one side only would be
+            // brought back on top of itself.
+            var maskAt = MaskTest();
             var wanted = WorldScene.ReadThings(bw, s.X0, s.Z0, s.ZonesX, s.ZonesZ, new HashSet<int>())
-                .Where(o => !o.Runestone && AreaTool.Inside(poly, o.Position.X - ox, o.Position.Z - oz) && Area.Kinds.Contains(KindOf(o))).ToList();
-            var current = ThingsInside(poly, chosenKindsOnly: true, includeHidden: true).Where(i => !s.Things[i].Runestone).ToList();
+                .Where(o => !o.Runestone && AreaTool.Inside(poly, o.Position.X - ox, o.Position.Z - oz) && Area.Kinds.Contains(KindOf(o)) && maskAt(o.Position.X - ox, o.Position.Z - oz)).ToList();
+            var current = ThingsInside(poly, chosenKindsOnly: true, includeHidden: true, maskAt).Where(i => !s.Things[i].Runestone).ToList();
             // Unchanged since the backup (same kind, place and facing): kept as they are.
             static bool Same(WorldScene.Thing r, WorldScene.Thing o) => r.Prefab == o.Prefab && MathF.Abs(r.Position.X - o.Position.X) < 0.01f
                 && MathF.Abs(r.Position.Y - o.Position.Y) < 0.01f && MathF.Abs(r.Position.Z - o.Position.Z) < 0.01f
@@ -987,7 +1119,8 @@ public sealed class AreaPanel
         bool keep = KeepBuildingsBox.IsChecked == true, ground = ResetGroundBox.IsChecked == true;
         if (!await Confirm($"Reset {zones.Count} zone(s) ({string.Join(" · ", zones.Select(z => $"{z.X}, {z.Z}"))}) when you save?\n\n"
             + $"• Every tree, rock, ruin and dungeon entrance in them is removed{(keep ? " (your buildings stay)" : ", your buildings too")}.\n"
-            + (ground ? "• Their ground edits are undone.\n" : "") + "• Valheim generates the zones again the next time a player goes there."))
+            + (ground ? "• Their ground edits are undone.\n" : "") + "• Valheim generates the zones again the next time a player goes there.")
+            || !StillOpen(session))
         {
             return;
         }

@@ -120,6 +120,22 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
     }
 
     [Fact]
+    public async Task ACloseWhileConnectingLeavesNoTunnelOpen()
+    {
+        _ssh.Need();
+        // Start waits on the SSH handshake; the editor quits meanwhile.
+        var start = Tunnel.Start(Req(bridge: BridgePort));
+        Tunnel.Close();
+        var r = await start;
+        Assert.Equal("The connection was closed while it was being made.", r.Error);
+        Assert.Equal(0, r.LocalPort);
+        Assert.False(Tunnel.Open);
+        // A later connection is kept.
+        Assert.Null((await Tunnel.Start(Req(bridge: BridgePort))).Error);
+        Assert.True(Tunnel.Open);
+    }
+
+    [Fact]
     public async Task AKeyTheServerDoesNotKnowOrAPasswordItDoesNotTakeIsRefused()
     {
         _ssh.Need();
@@ -129,6 +145,31 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         // This server takes keys only.
         r = await Tunnel.Start(Req(key: "", password: "pw"));
         Assert.Equal("The server refused the login: check the user name and the password or key.", r.Error);
+    }
+
+    [Fact]
+    public async Task AKeyInAFormatSshNetRefusesIsSaidAndSkippedInTheHome()
+    {
+        // Each refused in its own way: DSA (not supported), PKCS#8 with no key in it, an OpenSSH key cut short.
+        string[] refused =
+        [
+            "-----BEGIN DSA PRIVATE KEY-----\nAAAA\n-----END DSA PRIVATE KEY-----\n",
+            "-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n",
+            "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n-----END OPENSSH PRIVATE KEY-----\n",
+            "-----BEGIN RSA PRIVATE KEY-----\nAAAA\n-----END RSA PRIVATE KEY-----\n",
+        ];
+        string key = Path.Combine(_dir, "key");
+        string home = Path.Combine(_dir, "empty-home", ".ssh");
+        Directory.CreateDirectory(home);
+        foreach (string text in refused)
+        {
+            File.WriteAllText(key, text);
+            Assert.StartsWith("The key file could not be read", (await Tunnel.Start(Req(key: key))).Error);
+            // One of the usual keys: skipped, so only a password is missing.
+            File.WriteAllText(Path.Combine(home, "id_ecdsa"), text);
+            Assert.StartsWith("Enter the password, or choose your SSH key file", (await Tunnel.Start(Req(key: ""))).Error);
+        }
+        Assert.False(Tunnel.Open);
     }
 
     [Fact]

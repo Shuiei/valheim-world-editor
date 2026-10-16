@@ -157,6 +157,23 @@ public class GlViewPointerTests
     }
 
     [AvaloniaFact]
+    public void AClickInABoxWithoutAModelPicksTheNearestBox()
+    {
+        // Without models (the test has none) a thing is its box: a beech's crown box at world 32, 30, 32 (view 0, 30, 0),
+        // 12 m across and 16 m tall, over a wall piece 3 m east of its trunk. The crown's box is entered first.
+        var s = TestScenes.Flat(2,
+            new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(32, 30, 32), Vector3.Zero, 0, false),
+            new WorldScene.Thing(2, StableHash.Of("wood_wall_half"), new Vector3(35, 30, 32), Vector3.Zero, 0, true));
+        var b = new Bare(s);
+        b.V.SetBoxes([(0, new Vector3(-6, 30, -6), new Vector3(6, 46, 6)), (1, new Vector3(2.5f, 30, -0.5f), new Vector3(3.5f, 31, 0.5f))]);
+        Assert.Equal(ObjectKind.Trees, b.V.KindOf(0));
+        b.Click(b.At(3, 30.9f, 0));
+        Assert.Equal([0], b.V.Selected);
+        b.Click(b.At(20, 30, 20));
+        Assert.Empty(b.V.Selected);
+    }
+
+    [AvaloniaFact]
     public void PasteAndShapeClicksGoToWhoeverListens()
     {
         var b = new Bare(TestScenes.Flat(2));

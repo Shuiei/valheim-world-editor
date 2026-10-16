@@ -125,7 +125,7 @@ public class AreaToolWorldTests
             int tree = s.Scene.Things.FindIndex(t => !t.Piece);
             var gone = s.Scene.Things[tree];
             // A backup of how it was (the game's), then the world changed and saved.
-            WorldEditor.Tests.TempWorld.CopyDir(dir, dir.TrimEnd(Path.DirectorySeparatorChar) + "_backup_auto-20261001100000");
+            TempWorld.CopyDir(dir, dir.TrimEnd(Path.DirectorySeparatorChar) + "_backup_auto-20261001100000");
             s.Shape(32, 32, Formula.Compile("3", []), 4, 0, "x");
             s.Delete([tree]);
             Assert.True(s.Save().Saved);

@@ -31,8 +31,11 @@ public static partial class GameCatalogues
     /// The first room of a name is kept, the last dungeon (as the bundles come, in name order).
     /// A location prefab (a root with a Location script: the start temple, an altar, ruins, a camp...) is read
     /// like a room, for the zones a new world generates itself (WorldCreator): contents, spawns, picks and
-    /// nodes, with the Location's clearArea, randomDamage (m_applyRandomDamage) and interior (m_hasInterior:
-    /// a dungeon's entrance). The first of a name is kept.
+    /// nodes, with the Location's clearArea, randomDamage (m_applyRandomDamage), interior (m_hasInterior:
+    /// a dungeon's entrance) and customInterior (m_useCustomInteriorTransform: the game moves its interior to
+    /// the zone's middle), its teleports (the Teleport doors into and out of its interior: [x, y, z, qx, qy,
+    /// qz, qw] in the prefab's frame) and interiorAt (where its interior transform stands in the prefab, or
+    /// null). The first of a name is kept.
     /// </summary>
     private sealed class DungeonScan : IStartScan
     {
@@ -69,6 +72,7 @@ public static partial class GameCatalogues
             : f.Contains("m_objects") && f.Contains("m_dungeonRequireTheme") && !f.Contains("m_chanceToSpawn") ? "pick"
             : f.Contains("m_algorithm") && f.Contains("m_themes") && f.Contains("m_maxRooms") ? "generator"
             : f.Contains("m_exteriorRadius") && f.Contains("m_clearArea") ? "location"
+            : f.Contains("m_targetPoint") && f.Contains("m_enterText") ? "teleport"
             : null;
 
         /// <summary>
@@ -641,9 +645,16 @@ public static partial class GameCatalogues
             /// </summary>
             private readonly Dictionary<long, long> _node = [];
             /// <summary>
-            /// The JSON lists: each node's parent node, the openings, contents, spawns and picks.
+            /// The JSON lists: each node's parent node, the openings, contents, spawns and picks, and (a location's)
+            /// teleport doors.
             /// </summary>
-            private readonly List<object?> _nodes = [], _openings = [], _contents = [], _spawns = [], _picks = [];
+            private readonly List<object?> _nodes = [], _openings = [], _contents = [], _spawns = [], _picks = [], _teleports = [];
+            /// <summary>
+            /// A location's interior transform (Location.m_interiorTransform, by path id; 0: none), and where it is in the
+            /// prefab once met.
+            /// </summary>
+            private long _interiorTr;
+            private List<object?>? _interior;
 
             /// <summary>
             /// A reader for the room whose root is <c>root</c>.
@@ -687,17 +698,23 @@ public static partial class GameCatalogues
             /// </summary>
             public Dict ReadLocation(AssetTypeValueField location)
             {
+                _interiorTr = Has(location, "m_interiorTransform") ? location["m_interiorTransform.m_PathID"].AsLong : 0;
                 var info = new Dict
                 {
                     ["clearArea"] = Int(Get(location, "m_clearArea", 0L)),
                     ["randomDamage"] = Int(Get(location, "m_applyRandomDamage", 0L)),
                     ["interior"] = Int(Get(location, "m_hasInterior", 0L)),
+                    ["customInterior"] = Int(Get(location, "m_useCustomInteriorTransform", 0L)),
                     ["contents"] = _contents,
                     ["spawns"] = _spawns,
                     ["picks"] = _picks,
                     ["nodes"] = _nodes,
+                    ["teleports"] = _teleports,
                 };
                 Walk(_root, default, Quat.Root, true);
+                // Where the interior transform stands in the prefab (the game moves it to the zone's middle when the
+                // location asks: SpawnLocation's custom interior transform), null when the location has none.
+                info["interiorAt"] = _interior;
                 return info;
             }
 
@@ -765,6 +782,10 @@ public static partial class GameCatalogues
                     rot = rot.Mul(t.Rot);
                 }
                 List<object?> Place() => root ? [.. Origin(), .. rot.Rounded(4)] : [R(pos.X, 4), R(pos.Y, 4), R(pos.Z, 4), .. rot.Rounded(4)];
+                if (!root && g.Tr == _interiorTr)
+                {
+                    _interior = Place();
+                }
                 foreach (var (k, pid) in g.Behaviours)
                 {
                     if (root && k != "connection")
@@ -796,6 +817,11 @@ public static partial class GameCatalogues
                     {
                         case "connection":
                             _openings.Add(new List<object?> { Py(b["m_type"]), Int(Py(b["m_entrance"])), Int(Py(b["m_allowDoor"])), Int(Get(b, "m_doorOnlyIfOtherAlsoAllowsDoor", 0L)) }.Concat(Place()).ToList());
+                            break;
+                        case "teleport":
+                            // A location's door into its interior, or out of it (5000 m up in the prefab): where it stands
+                            // and which way it faces, in the prefab's frame.
+                            _teleports.Add(Place());
                             break;
                         case "spawn":
                             AddSpawn(gid, (n, fallback) => n == "m_OffObject" ? b["m_OffObject.m_PathID"].AsLong : Get(b, n, fallback));

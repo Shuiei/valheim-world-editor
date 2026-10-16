@@ -86,6 +86,56 @@ public class AreaToolTests
         Assert.Equal(new[] { (0, 0), (1, 0), (0, 1), (1, 1) }.OrderBy(z => z), a.ZonesUnder(s.Ground).OrderBy(z => z));
     }
 
+    // The zones under a selection do not depend on the Soft slider: a selection narrower than the soft edge (every
+    // point's weight well under one half) still names its zones, and one that crosses a zone border names both sides.
+    [Fact]
+    public void ZonesUnderDoNotDependOnTheSoftEdge()
+    {
+        var s = TestScenes.Flat(2);
+        Assert.Equal([(0, 0)], Box(40, 40, 55, 55, soft: 20).ZonesUnder(s.Ground));
+        Assert.Equal(new[] { (0, 0), (1, 0), (0, 1), (1, 1) }.OrderBy(z => z), Box(56, 56, 72, 72, soft: 20).ZonesUnder(s.Ground).OrderBy(z => z));
+        Assert.Equal([(0, 0)], Box(40, 40, 55, 55).ZonesUnder(s.Ground));
+        // A grid point on the zones' shared edge belongs to both.
+        Assert.Equal(new[] { (0, 0), (1, 0) }.OrderBy(z => z), Box(63.5f, 10.5f, 64.5f, 11.5f, soft: 20).ZonesUnder(s.Ground).OrderBy(z => z));
+    }
+
+    [Fact]
+    public void VolumeCountsEverythingWithNoLimit()
+    {
+        var s = TestScenes.Flat(2);
+        var a = Box(40, 40, 80, 80);
+        static string Fill(string text) => System.Text.RegularExpressions.Regex.Match(text, @"fill [\d.k]+ m³").Value;
+        // 30 m up on 30 m ground: the limit reaches 8 m of it, No limit all of it.
+        string flatten = a.Volume(s.Ground, AreaTool.GroundAction.Flatten, 60, 0), raise = a.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 30);
+        Assert.Contains("out of reach: ±8 m limit", flatten);
+        s.Ground.NoLimit = true;
+        string flattenAll = a.Volume(s.Ground, AreaTool.GroundAction.Flatten, 60, 0), raiseAll = a.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 30);
+        Assert.DoesNotContain("out of reach", flattenAll);
+        Assert.NotEqual(Fill(raise), Fill(raiseAll));
+        Assert.Equal(Fill(flattenAll), Fill(raiseAll));
+        Assert.Equal(Fill(raiseAll).Replace("fill", "dig"), System.Text.RegularExpressions.Regex.Match(a.Volume(s.Ground, AreaTool.GroundAction.Lower, 0, 30), @"dig [\d.k]+ m³").Value);
+        // Smoothing kept by the game's limit takes from the reach on its side: a point smoothed 1 m up gets down
+        // to 7 m below the generated ground, not 8, as SetHeight has it.
+        s.Ground.NoLimit = false;
+        int q = 60 * s.Ground.W + 60;
+        s.Ground.Mod[q] = 1;
+        s.Ground.Smooth[q] = 1;
+        var one = Box(59.5f, 59.5f, 60.5f, 60.5f);
+        Assert.True(s.Ground.SetHeight(q, 20));
+        Assert.Equal(23, s.Ground.HeightOf(q), 3);
+        s.Ground.Level[q] = 0;
+        Assert.Contains("dig 8 m³", one.Volume(s.Ground, AreaTool.GroundAction.Lower, 0, 30));
+        s.Ground.Mod[q] = 0;
+        s.Ground.Smooth[q] = 0;
+        s.Ground.NoLimit = true;
+        // The lift stops at ±400 m of the generated ground: 500 m up is 100 m out of reach. Checked on the one
+        // point (weight 1): the box's outline runs through its edge points, which get half the amount, so
+        // 500 m lifts them more than 400 m does.
+        Assert.Contains("out of reach: ±400 m lift limit", a.Volume(s.Ground, AreaTool.GroundAction.Flatten, 530, 0));
+        Assert.Contains("fill 400 m³", one.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 400));
+        Assert.Contains("fill 400 m³", one.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 500));
+    }
+
     // Restore over No limit ground (a mountain, held as lift past the ±8 m limit) brings it back down
     // too (it changed nothing to be seen).
     [Fact]

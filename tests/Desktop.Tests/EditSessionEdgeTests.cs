@@ -8,7 +8,7 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// Edge cases of the edit session and the brushes: the history's length limit, calls outside a stroke, saving during a
-/// stroke or from an area opened on its own, taking out a change that marked zones for reset; every falloff's profile,
+/// stroke or from an area opened on its own, an Apply live coming back during a stroke, taking out a change that marked zones for reset; every falloff's profile,
 /// the ragged and turned brushes and their outlines, and erosion by rain.
 /// </summary>
 [Collection("World files")]
@@ -97,6 +97,71 @@ public class EditSessionEdgeTests
         Assert.True(o.Reloaded, o.Message);
         Assert.True(reset);
         Assert.Empty(s.UndoList);
+    }
+
+    /// <summary>
+    /// A live area with a raise at (32, 32), its Apply live held by the game until the stroke given has begun at
+    /// (40, 40) and taken a step; then the game answers.
+    /// </summary>
+    /// <returns>The session, the stroke's point and its height before the stroke, and the Apply's outcome.</returns>
+    private static async Task<(EditSession S, int P, float Before, WorldSession.Outcome O)> ApplyDuringAStroke(FakeGame game, bool reset)
+    {
+        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.Shape(32, 32, Two, 3, 0, "raise");
+        if (reset)
+        {
+            world.Edits.SetReset(new ZoneReset(5, 5, true, false), true);
+        }
+        int p = 40 * s.Ground.W + 40;
+        float before = s.Ground.HeightOf(p);
+        game.HoldTerrain = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var applying = s.ApplyLive();
+        if (await Task.WhenAny(game.TerrainArrived.Task, applying) == applying)
+        {
+            Assert.Fail("The Apply ended before the ground reached the game: " + (await applying).Message);
+        }
+        // Small: far from the game's limit, and clear of the raise.
+        s.Brush.Radius = 3;
+        s.Brush.Strength = 0.5f;
+        s.BeginStroke(BrushTool.Raise, 40, 40);
+        Assert.True(s.StrokeStep(40, 40, 0.1f));
+        Assert.NotEqual(before, s.Ground.HeightOf(p));
+        game.HoldTerrain.SetResult();
+        var o = await applying;
+        Assert.True(o.Done, o.Message);
+        return (s, p, before, o);
+    }
+
+    // Live: an Apply that comes back during a stroke leaves the stroke's ground alone; the stroke is one whole undo step.
+    [Fact]
+    public async Task AnApplyLiveEndingDuringAStrokeKeepsIt()
+    {
+        using var game = new FakeGame();
+        var (s, p, before, _) = await ApplyDuringAStroke(game, false);
+        float raised = s.Ground.HeightOf(p);
+        Assert.NotEqual(before, raised);
+        Assert.True(s.StrokeStep(40, 40, 0.1f));
+        Assert.Equal("", s.EndStroke());
+        Assert.True(s.Ground.HeightOf(p) > raised);
+        Assert.Equal(2, s.UndoList.Count);
+        Assert.True(s.Undo());
+        Assert.Equal(before, s.Ground.HeightOf(p), 3);
+    }
+
+    // Live: an Apply that reads the area again (zone resets) during a stroke drops the stroke, and says so when it ends.
+    [Fact]
+    public async Task AnApplyLiveReadingTheAreaAgainDropsAStroke()
+    {
+        using var game = new FakeGame();
+        var (s, p, before, o) = await ApplyDuringAStroke(game, true);
+        Assert.True(o.Reloaded, o.Message);
+        Assert.False(s.Stroking);
+        Assert.Equal(before, s.Ground.HeightOf(p), 3);
+        Assert.False(s.StrokeStep(40, 40, 0.1f));
+        Assert.Contains("stroke was dropped", s.EndStroke());
+        Assert.Empty(s.UndoList);
+        Assert.Equal("", s.EndStroke());
     }
 
     [Fact]

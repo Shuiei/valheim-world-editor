@@ -116,6 +116,43 @@ public class MainWindowKeysTests
     }
 
     [AvaloniaFact]
+    public void CtrlXCutsTheSelectionToTheClipboardAndCtrlZBringsItBack()
+    {
+        var stone = new WorldScene.Thing(4, StableHash.Of("Runestone_Meadows"), new Vector3(0, 30, 0), Vector3.Zero, 1, false);
+        var beech = new WorldScene.Thing(5, StableHash.Of("Beech1"), new Vector3(10, 30, 10), Vector3.Zero, 1, false);
+        var (w, s) = Open(stone, beech);
+        w.Tools.ChooseSelect();
+        w.View.Select([1]);
+        Press(w, Key.X, PhysicalKey.X, "x", RawInputModifiers.Control);
+        Assert.True(s.Scene.Things[1].Gone);
+        Assert.False(s.Scene.Things[0].Gone);
+        Assert.Empty(w.View.Selected);
+        Assert.Equal([1], w.View.Paste.Clip!.Taken);
+        Assert.Equal(StableHash.Of("Beech1"), w.View.Paste.Clip.Objects.Single().Prefab);
+        Assert.StartsWith("Cut 1 object(s): gone from here", w.MessageText.Text);
+        Assert.True(s.CanUndo);
+        Press(w, Key.Z, PhysicalKey.Z, "z", RawInputModifiers.Control);
+        Assert.False(s.Scene.Things[1].Gone);
+        // The copy stays on the clipboard, to be pasted after the undo too.
+        Assert.Single(w.View.Paste.Clip.Objects);
+    }
+
+    [AvaloniaFact]
+    public void CtrlXOnAnEmptyAreaCopiesTheGroundAndCutsNothing()
+    {
+        var (w, s) = Open();
+        w.Tools.ChooseMode(ToolMode.Area);
+        w.View.Area.Points.Add(new Vector2(32, 32));
+        w.View.Area.Points.Add(new Vector2(48, 48));
+        Press(w, Key.X, PhysicalKey.X, "x", RawInputModifiers.Control);
+        Assert.Empty(w.View.Paste.Clip!.Objects);
+        Assert.Empty(w.View.Paste.Clip.Taken);
+        Assert.Contains("no objects to cut here", w.MessageText.Text);
+        // Nothing was taken away, so there is nothing to undo.
+        Assert.False(s.CanUndo);
+    }
+
+    [AvaloniaFact]
     public void ARunestoneIsNotInspectedNorAreTwoObjects()
     {
         var stone = new WorldScene.Thing(4, StableHash.Of("Runestone_Meadows"), new Vector3(0, 30, 0), Vector3.Zero, 1, false);

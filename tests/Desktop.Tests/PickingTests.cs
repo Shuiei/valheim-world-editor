@@ -104,4 +104,34 @@ public class PickingTests
         float x = -0.4f + past.Value * 10 / MathF.Sqrt(101);
         Assert.InRange(x, 0.5f, 0.7f);
     }
+
+    [Fact]
+    public void TrianglesAreHitFromBothSidesAndMissedBesideThem()
+    {
+        Vector3 a = new(0, 0, 0), b = new(2, 0, 0), c = new(0, 2, 0);
+        Assert.Equal(5, Picking.HitTriangle(new Vector3(0.5f, 0.5f, 5), -Vector3.UnitZ, a, b, c)!.Value, 4);
+        Assert.Equal(5, Picking.HitTriangle(new Vector3(0.5f, 0.5f, -5), Vector3.UnitZ, a, b, c)!.Value, 4);
+        Assert.Null(Picking.HitTriangle(new Vector3(1.5f, 1.5f, 5), -Vector3.UnitZ, a, b, c));
+        // Behind the ray's start, or along its plane: no hit.
+        Assert.Null(Picking.HitTriangle(new Vector3(0.5f, 0.5f, 5), Vector3.UnitZ, a, b, c));
+        Assert.Null(Picking.HitTriangle(new Vector3(-1, 0.5f, 0), Vector3.UnitX, a, b, c));
+    }
+
+    [Fact]
+    public void AMeshIsHitWhereItsPlacedTrianglesAre()
+    {
+        // A unit square in the x, y plane (two triangles), placed twice as big and 10 m up the ray's z.
+        float[] positions = [0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0];
+        uint[] tris = [0, 1, 2, 0, 2, 3];
+        var bounds = (Vector3.Zero, new Vector3(1, 1, 0));
+        var m = Matrix4x4.CreateScale(2) * Matrix4x4.CreateTranslation(0, 0, -10);
+        var o = new Vector3(1.5f, 1.5f, 5);
+        // Inside the doubled square: 15 m along the ray, in the ray's frame; beside it (over 2): nothing.
+        Assert.Equal(15, Picking.HitMesh(o, -Vector3.UnitZ, positions, tris, bounds, m)!.Value, 3);
+        Assert.Null(Picking.HitMesh(new Vector3(2.5f, 0.5f, 5), -Vector3.UnitZ, positions, tris, bounds, m));
+        // Through the square's box but between no triangles: a box alone is not a hit.
+        uint[] oneCorner = [0, 1, 3];
+        Assert.Null(Picking.HitMesh(new Vector3(1.9f, 1.9f, 5), -Vector3.UnitZ, positions, oneCorner, bounds, m));
+        Assert.NotNull(Picking.HitMesh(new Vector3(0.1f, 0.1f, 5), -Vector3.UnitZ, positions, oneCorner, bounds, m));
+    }
 }

@@ -32,8 +32,9 @@ public static class DungeonKit
     /// <param name="FloorTop">How far the finish's top is above the marble (metres).</param>
     /// <param name="Beam">Under the ceiling, 4 m.</param>
     /// <param name="BeamTop">How far the beam's position is below the ceiling (metres).</param>
+    /// <param name="Window">A 4 × 2 wall piece with a window in it, for a few of the upper wall pieces (none: no windows).</param>
     public sealed record Material(string Name, Part[] Walls, float Thick, Column[] Column, Column? Post, string? Arch, string? Floor, float FloorTop,
-        string? Beam, float BeamTop);
+        string? Beam, float BeamTop, string? Window = null);
 
     /// <summary>The wall materials; the first (Stone) is the fallback.</summary>
     public static readonly Material[] Materials =
@@ -47,9 +48,9 @@ public static class DungeonKit
         new("Stave", [new("stave_wall_2x2", 2, 2, 1), new("wood_wall_half", 2, 1, 0.5f), new("wood_wall_quarter", 1, 1, 0)], 0.7f,
             [new("stave_pole_4m", 4.09f, 1.02f)], new("stave_pole_4m", 4.09f, 1.02f), null, "wood_floor", 0.1f, "stave_beam_4m", 0.36f),
         new("Grausten", [new("Piece_grausten_wall_4x2", 4, 2, 0), new("Piece_grausten_wall_2x2", 2, 2, 0), new("Piece_grausten_wall_1x2", 1, 2, 0)], 0.4f,
-            [new("Ashlands_Pillar4", 4, 0)], null, "Piece_grausten_wall_arch", null, 0, null, 0),
+            [new("Ashlands_Pillar4", 4, 0)], null, "Piece_grausten_wall_arch", null, 0, null, 0, "Piece_grausten_window_4x2"),
         new("Dvergr", [new("piece_dvergr_metal_wall_2x2", 2, 2, 1), new("iron_wall_1x1", 1, 1, 0.09f)], 0.1f,
-            [new("dvergrprops_wood_pole", 4, 2)], new("piece_dvergr_pole", 2, 2), null, "dvergrprops_wood_floor", 0.13f, "dvergrtown_wood_beam", 0.46f),
+            [new("dvergrprops_wood_pole", 4, 2)], new("piece_dvergr_pole", 2, 2), "dvergrtown_arch", "dvergrprops_wood_floor", 0.13f, "dvergrtown_wood_beam", 0.46f),
         new("Goblin", [new("goblin_woodwall_2m", 2, 2, 0), new("goblin_woodwall_1m", 1, 2, 0)], 0.34f,
             [new("goblin_pole", 4.95f, 0.49f)], new("goblin_pole_small", 4.95f, 0.49f), null, null, 0, null, 0),
     ];

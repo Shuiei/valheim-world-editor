@@ -152,10 +152,10 @@ public sealed class BuildPanel
             var b = new Button { Content = name, FontSize = 11, Padding = new Thickness(7, 2), Tag = cat };
             ToolTip.SetTip(b, cat switch
             {
-                Plants => "The cultivator's pieces: crops, saplings and flowers.",
-                Feasts => "The serving tray's pieces: feasts.",
-                Mods => "The pieces the game's mods add, whatever their tool (learned from a live game).",
-                _ => $"The pieces of the hammer's {name} tab.",
+                Plants => Lang.T("build.tab.plants"),
+                Feasts => Lang.T("build.tab.feasts"),
+                Mods => Lang.T("build.tab.mods"),
+                _ => Lang.T("build.tab.hammer", name),
             });
             b.Click += (_, _) => { _tab = cat; Search.Text = ""; Render(); };
             _tabs.Children.Add(b);
@@ -401,7 +401,7 @@ public sealed class BuildPanel
                 },
             },
         };
-        ToolTip.SetTip(row, "Drag onto the plot to add it there.");
+        ToolTip.SetTip(row, Lang.T("build.dragTip"));
         // Dragged a few pixels: a drag and drop carrying the blueprint's file.
         PointerPressedEventArgs? pressed = null;
         row.PointerPressed += (_, ev) =>
@@ -500,7 +500,7 @@ public sealed class BuildPanel
         {
             var b = new Button { Content = $"{mod} ({count})", FontSize = 11, Padding = new Thickness(7, 2), Tag = mod };
             b.Classes.Set("on", mod == _mod);
-            ToolTip.SetTip(b, $"The pieces {mod} adds.");
+            ToolTip.SetTip(b, Lang.T("build.modTip", mod));
             b.Click += (_, _) => { _mod = mod; Render(); };
             _modRow.Children.Add(b);
         }

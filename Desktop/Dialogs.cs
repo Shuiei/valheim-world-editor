@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -28,7 +29,7 @@ public static class Dialogs
         };
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
         var ok = new Button { Content = yes, IsDefault = true };
-        ToolTip.SetTip(ok, $"{yes} (Enter).");
+        ToolTip.SetTip(ok, Lang.T("dialog.okEnter", yes));
         ok.Click += (_, _) => { result = true; dialog.Close(); };
         buttons.Children.Add(ok);
         if (no != null)
@@ -69,7 +70,7 @@ public static class Dialogs
         };
         var box = new TextBox { Text = initial }.Tip("dialog.text");
         var ok = new Button { Content = "OK", IsDefault = true };
-        ToolTip.SetTip(ok, "Use this answer (Enter).");
+        ToolTip.SetTip(ok, Lang.T("dialog.useAnswer"));
         ok.Click += (_, _) => { result = box.Text; dialog.Close(); };
         var cancel = new Button { Content = "Cancel", IsCancel = true }.Tip("dialog.cancel");
         cancel.Click += (_, _) => dialog.Close();
@@ -92,9 +93,9 @@ public static class Dialogs
     /// <param name="owner">The window it is modal to.</param>
     /// <param name="start">The details to start from.</param>
     /// <param name="cost">What it costs, in words.</param>
-    public static async Task<TerrainEditor.App.Homestead.Details?> AskBlueprint(Window owner, TerrainEditor.App.Homestead.Details start, string cost)
+    public static async Task<Homestead.Details?> AskBlueprint(Window owner, Homestead.Details start, string cost)
     {
-        TerrainEditor.App.Homestead.Details? result = null;
+        Homestead.Details? result = null;
         var dialog = new Window
         {
             Title = "Blueprint",
@@ -107,11 +108,13 @@ public static class Dialogs
         var name = new TextBox { Text = start.Name }.Tip("dialog.blueprintName");
         var description = new TextBox { Text = start.Description, AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, MinHeight = 54, PlaceholderText = "What it is, how to build it…" }.Tip("dialog.blueprintDescription");
         var tags = new TextBox { Text = string.Join(", ", start.Tags), PlaceholderText = "house, viking, stone" }.Tip("dialog.blueprintTags");
+        var dungeon = new CheckBox { Content = "A dungeon: pasted into a world, it goes 5000 m up behind an entrance on the ground", IsChecked = start.Dungeon, FontSize = 12 }.Tip("dialog.blueprintDungeon");
         var ok = new Button { Content = "Save", IsDefault = true };
-        ToolTip.SetTip(ok, "Keep these details (Enter).");
+        ToolTip.SetTip(ok, Lang.T("dialog.keepDetails"));
         ok.Click += (_, _) =>
         {
-            result = new TerrainEditor.App.Homestead.Details(name.Text ?? "", (description.Text ?? "").Replace('\n', ' ').Replace('\r', ' '), TerrainEditor.App.Homestead.Details.ParseTags(tags.Text));
+            result = new Homestead.Details(name.Text ?? "", (description.Text ?? "").Replace('\n', ' ').Replace('\r', ' '), Homestead.Details.ParseTags(tags.Text))
+                .WithDungeon(dungeon.IsChecked == true);
             dialog.Close();
         };
         var cancel = new Button { Content = "Cancel", IsCancel = true }.Tip("dialog.cancel");
@@ -126,6 +129,7 @@ public static class Dialogs
                 Label("Name"), name,
                 Label("Description"), description,
                 Label("Tags (separated by commas)"), tags,
+                dungeon,
                 new TextBlock { Text = "Cost in game: " + cost, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) },
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0), Children = { ok, cancel } },
             },

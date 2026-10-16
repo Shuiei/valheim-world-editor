@@ -11,7 +11,7 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The start page: connecting to a dedicated server through the form and from a saved server (the SSH tunnel replaced
-/// by one that leads to a stand-in game), each way it can fail, forgetting a server, the saved worlds as cards, a world
+/// by one that leads to a stand-in game), each way it can fail, editing and forgetting a server, the saved worlds as cards, a world
 /// folder typed with ~, and "My game" when the plugin's settings cannot be read. Saved servers and settings go to the
 /// tests' own files; it runs alone.
 /// </summary>
@@ -131,6 +131,31 @@ public class StartPageTests
     }
 
     [AvaloniaFact]
+    public async Task AClickWhileConnectingStartsNoSecondConnection()
+    {
+        using var game = new FakeGame();
+        using var r = new Run();
+        var open = new TaskCompletionSource<Tunnel.Result>();
+        r.P.StartTunnel = t =>
+        {
+            r.Tunnels.Add(t);
+            return open.Task;
+        };
+        r.P.SHost.Text = "my.server.example";
+        r.P.SToken.Text = game.Token;
+        var first = r.P.ConnectNew();
+        // Clicked again while the tunnel is still being made: nothing more happens.
+        await r.P.ConnectNew();
+        open.SetResult(new Tunnel.Result(game.Port, game.Token, null, null));
+        await first;
+        Assert.Single(r.Tunnels);
+        Assert.Equal(["Loading the world from the server…"], r.Opened);
+        // Done: connecting works again.
+        await r.P.ConnectNew();
+        Assert.Equal(2, r.Tunnels.Count);
+    }
+
+    [AvaloniaFact]
     public async Task ASavedServerConnectsWithWhatWasSavedAndCanBeForgotten()
     {
         using var game = new FakeGame();
@@ -165,6 +190,31 @@ public class StartPageTests
         r.P.Confirm = _ => Task.FromResult(true);
         Click(forgets[0]);
         await TestWindows.Until(() => ServerConfig.Load().Count == 1);
+    }
+
+    [AvaloniaFact]
+    public async Task EditingASavedServerFillsTheFormWithItsOwnSecretsOnly()
+    {
+        using var game = new FakeGame();
+        using var r = new Run();
+        ServerConfig.Remember(new ServerConfig.Server { Name = "Valhalla", Host = "203.0.113.10", User = "valheim", Password = " pw ", Token = game.Token });
+        ServerConfig.Remember(new ServerConfig.Server { Name = "Bare", Host = "203.0.113.11", User = "admin" });
+        r.Tunnel(game.Port, game.Token);
+        // Another server's secrets typed in the form before.
+        (r.P.SPass.Text, r.P.SToken.Text, r.P.SPhrase.Text, r.P.SBridge.Value, r.P.SSave.IsChecked) = ("other", "other token", "other phrase", 5190, false);
+        r.P.FillServers();
+        // Newest first: the bare server, then Valhalla.
+        var edits = r.P.SavedServers.GetLogicalDescendants().OfType<Button>().Where(b => b.Content as string == "edit").ToList();
+        Click(edits[1]);
+        await r.P.ConnectNew();
+        var t = Assert.Single(r.Tunnels);
+        // The saved password is sent as it is saved, spaces at its ends included.
+        Assert.Equal(("203.0.113.10", " pw ", game.Token, null, null, true), (t.Host, t.Password, t.Token, t.Passphrase, t.BridgePort, t.SavePassword));
+        // A server with nothing saved leaves them empty to type, the password not to be saved.
+        (r.P.SPass.Text, r.P.SToken.Text) = ("other", "other token");
+        Click(edits[0]);
+        Assert.True(string.IsNullOrEmpty(r.P.SPass.Text) && string.IsNullOrEmpty(r.P.SToken.Text));
+        Assert.False(r.P.SSave.IsChecked);
     }
 
     [AvaloniaFact]

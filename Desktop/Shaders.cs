@@ -118,15 +118,21 @@ public static class Shaders
 		void main() { gl_Position = uViewProj * vec4(aPos, 1.0); gl_PointSize = uSize; }
 		""";
 
-    /// <summary>The markers' fragment shader: a round dot of one colour.</summary>
+    /// <summary>
+    /// The markers' fragment shader: a round dot of one colour, its edge faded over about a pixel so a
+    /// small dot stays round rather than jagged.
+    /// </summary>
     public const string MarkFs = """
 		uniform vec4 uColor;
 		out vec4 frag;
 		void main()
 		{
 			vec2 d = gl_PointCoord * 2.0 - 1.0;
-			if (dot(d, d) > 1.0) discard;
-			frag = uColor;
+			float r = length(d);
+			float w = fwidth(r);
+			float a = 1.0 - smoothstep(1.0 - w, 1.0, r);
+			if (a <= 0.0) discard;
+			frag = vec4(uColor.rgb, uColor.a * a);
 		}
 		""";
 

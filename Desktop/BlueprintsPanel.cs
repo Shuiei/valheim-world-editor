@@ -213,7 +213,7 @@ public sealed class BlueprintsPanel
     /// <param name="picture">The picture, null: none.</param>
     /// <param name="name">The blueprint's name.</param>
     /// <param name="meta">What it holds, where from.</param>
-    /// <param name="buttons">Adds the row's buttons through the function it is given (text, tip, click).</param>
+    /// <param name="buttons">Adds the row's buttons through the function it is given (text, tip key, click).</param>
     /// <param name="cost">What it costs to build, shown under the meta line (null: not shown).</param>
     /// <param name="description">Shown in up to three lines (null or blank: not shown).</param>
     /// <param name="tags">Shown as chips (null or none: not shown).</param>
@@ -222,8 +222,8 @@ public sealed class BlueprintsPanel
         var acts = new WrapPanel { ItemSpacing = 4, LineSpacing = 4 };
         Button Act(string text, string tip, Action a)
         {
-            var btn = new Button { Content = text, FontSize = 11, Padding = new Thickness(6, 1) };
-            ToolTip.SetTip(btn, tip);
+            // By its tip key, which Claude knows it by (and is kept from the ones that write or delete files).
+            var btn = new Button { Content = text, FontSize = 11, Padding = new Thickness(6, 1) }.Tip(tip);
             btn.Click += (_, _) => a();
             acts.Children.Add(btn);
             return btn;
@@ -299,11 +299,11 @@ public sealed class BlueprintsPanel
             var cost = Terrain.PieceCost.Of(e.Kinds);
             List.Children.Add(Row(PictureFile(e.Picture), e.Name, meta, act =>
             {
-                act("Paste", "Put this blueprint on the clipboard and start pasting it", () => Paste(id));
-                act("Edit", "Open it in the Workshop, a blank plot, to change it", () => EditAsked?.Invoke(e.Path));
-                act("Details", "Change its name, description and tags", async () => await EditDetails(e));
-                act(".vbuild", "Write it as a .vbuild file (BuildShare and older tools)", () => Export(id, "vbuild"));
-                act("Delete", "Delete this blueprint (its file and picture): Homestead loses it too", async () => await Delete(id, e.Name));
+                act("Paste", "blueprints.paste", () => Paste(id));
+                act("Edit", "blueprints.edit", () => EditAsked?.Invoke(e.Path));
+                act("Details", "blueprints.details", async () => await EditDetails(e));
+                act(".vbuild", "blueprints.vbuild", () => Export(id, "vbuild"));
+                act("Delete", "blueprints.delete", async () => await Delete(id, e.Name));
             }, "Cost: " + cost.Describe(), e.Description, e.Tags));
         }
         if (older.Count > 0)
@@ -315,16 +315,16 @@ public sealed class BlueprintsPanel
             string meta = $"{b.W} × {b.H} m · {b.Objects} object(s){(b.Ground ? " · ground" : "")}{(b.World != null ? $" · from {b.World}" : "")}{(b.Source != null ? $" · {b.Source}" : "")}";
             List.Children.Add(Row(Picture(b.Thumb), b.Name, meta, act =>
             {
-                act("Paste", "Put this blueprint on the clipboard and start pasting it", () => Paste(b.Id));
-                act("To Homestead", "Save it as a Homestead blueprint (objects only), to build it in game", () => ToHomestead(b.Id));
-                act(".vbuild", "Write it as a .vbuild file", () => Export(b.Id, "vbuild"));
-                act("Delete", "Delete this blueprint file", async () => await Delete(b.Id, b.Name));
+                act("Paste", "blueprints.paste", () => Paste(b.Id));
+                act("To Homestead", "blueprints.toHomestead", () => ToHomestead(b.Id));
+                act(".vbuild", "blueprints.vbuildOld", () => Export(b.Id, "vbuild"));
+                act("Delete", "blueprints.deleteOld", async () => await Delete(b.Id, b.Name));
             }));
         }
     }
 
     /// <summary>A blueprint as a copy (the clipboard format), its name and the world it came from, or null.</summary>
-    private (JsonObject Clip, string Name, string? World)? Load(string id)
+    private (JsonObject Clip, string Name, string? World, bool Dungeon)? Load(string id)
     {
         if (id.StartsWith(HomesteadId, StringComparison.Ordinal))
         {
@@ -333,16 +333,18 @@ public sealed class BlueprintsPanel
             {
                 return null;
             }
-            var parsed = BlueprintFormats.Parse(path, File.ReadAllText(path));
+            string text = File.ReadAllText(path);
+            var parsed = BlueprintFormats.Parse(path, text);
             var world = _scene()?.World;
             var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out _);
-            return (clip, parsed.Name, null);
+            // A dungeon by its tags: pasted, it goes up behind an entrance.
+            return (clip, parsed.Name, null, new Homestead.Details(parsed.Name, "", Homestead.Details.ParseTags(TagsOf(text))).Dungeon);
         }
         if (Store.Read(id) is not string json || JsonNode.Parse(json) is not JsonObject doc || doc["clip"] is not JsonObject c)
         {
             return null;
         }
-        return (c, (string?)doc["name"] ?? id, (string?)doc["world"]);
+        return (c, (string?)doc["name"] ?? id, (string?)doc["world"], false);
     }
 
     /// <summary>Writes a Homestead blueprint and its picture (named after the blueprint, replacing one of that name).</summary>
@@ -508,7 +510,7 @@ public sealed class BlueprintsPanel
     /// </summary>
     public void Paste(string id)
     {
-        if (Load(id) is not var (clip, name, from))
+        if (Load(id) is not var (clip, name, from, dungeon))
         {
             Message?.Invoke("That blueprint could not be read.");
             Refresh();
@@ -516,20 +518,22 @@ public sealed class BlueprintsPanel
         }
         var world = _scene()?.World;
         var data = CopyFormat.FromJson(clip, name, keepSources: world != null && from == world.Name);
+        data.Dungeon = dungeon;
         var missing = data.Objects.Where(o => world != null && !world.CanCreate(o.Prefab)).Select(o => o.Name).Distinct().ToList();
         data.Objects.RemoveAll(o => missing.Contains(o.Name));
         _paste.Clip = data;
         _paste.Notify();
         Card.IsVisible = false;
         Pasting?.Invoke();
-        Message?.Invoke($"“{name}” is on the clipboard: click to place it.{(missing.Count > 0 ? $" {missing.Count} kind(s) are unknown here and are left out: {string.Join(", ", missing.Take(5))}{(missing.Count > 5 ? "…" : "")}." : "")}");
+        string how = dungeon ? "click where its entrance goes: a dungeon, it goes 5000 m above, behind the entrance of the biome there." : "click to place it.";
+        Message?.Invoke($"“{name}” is on the clipboard: {how}{(missing.Count > 0 ? $" {missing.Count} kind(s) are unknown here and are left out: {string.Join(", ", missing.Take(5))}{(missing.Count > 5 ? "…" : "")}." : "")}");
     }
 
     /// <summary>An older editor blueprint as a Homestead blueprint (objects only).</summary>
     /// <returns>The name it was saved under (numbered when taken), null when not saved.</returns>
     public string? ToHomestead(string id)
     {
-        if (Load(id) is not var (clip, name, world))
+        if (Load(id) is not var (clip, name, world, _))
         {
             Message?.Invoke("That blueprint could not be read.");
             return null;
@@ -580,7 +584,7 @@ public sealed class BlueprintsPanel
     /// <returns>The file written, null when not.</returns>
     public string? Export(string id, string format)
     {
-        if (Load(id) is not var (clip, name, _))
+        if (Load(id) is not var (clip, name, _, _))
         {
             Message?.Invoke("Could not export that blueprint.");
             return null;

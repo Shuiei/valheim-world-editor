@@ -124,4 +124,17 @@ public class HomesteadTests : IDisposable
         Assert.DoesNotContain("#Tags:", Homestead.WithDetails(text, new Homestead.Details("Hut", "", [])));
         Assert.Equal(new[] { "house", "Viking", "stone" }, Homestead.Details.ParseTags("house, Viking,stone ,HOUSE;; "));
     }
+
+    [Fact]
+    public void TheDungeonTagIsReadInAnyCaseSetOnceAndTakenAway()
+    {
+        var hut = new Homestead.Details("Hut", "", ["house"]);
+        Assert.False(hut.Dungeon);
+        var crypt = hut.WithDungeon(true);
+        Assert.True(crypt.Dungeon);
+        Assert.Equal(["house", "dungeon"], crypt.Tags);
+        Assert.Same(crypt, crypt.WithDungeon(true));
+        Assert.True(new Homestead.Details("Crypt", "", ["DUNGEON"]).Dungeon);
+        Assert.Equal(["house"], new Homestead.Details("Crypt", "", ["Dungeon", "house"]).WithDungeon(false).Tags);
+    }
 }

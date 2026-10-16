@@ -105,17 +105,15 @@ public sealed class WorldSession : IDisposable
     /// Saved or applied from the map (no area open): the kept steps are in the world now, as an open
     /// area's are once it saves (EditSession), so a later Discard does not undo them.
     /// </summary>
-    private void MarkHistoryApplied()
+    /// <param name="sent">After a partial Apply live, whether the game has all a step did (null: every step).</param>
+    private void MarkHistoryApplied(Func<EditSession.Change, bool>? sent = null)
     {
         if (Area == null && History != null)
         {
             // Applied is part of a step's hash: the ids and frames are keyed again once it is set.
             var ids = History.Ids.ToList();
             var frames = History.Frames?.ToList();
-            foreach (var c in History.Undo)
-            {
-                c.Applied = true;
-            }
+            EditSession.MarkSent(History.Undo, sent ?? (static _ => true));
             History = History with { Ids = ids.ToDictionary(p => p.Key, p => p.Value), Frames = frames?.ToDictionary(p => p.Key, p => p.Value) };
         }
     }
@@ -299,21 +297,77 @@ public sealed class WorldSession : IDisposable
         public bool Lifted { get; init; }
         /// <summary>Live: not applied, the answer to "apply over the game's changes?" was no.</summary>
         public bool Declined { get; init; }
+        /// <summary>
+        /// Live: the parts that did not go in after others did (Done, with the error in the message); the history
+        /// marks as applied only the steps the game has all of.
+        /// </summary>
+        public LiveParts Unsent { get; init; }
+
+        /// <summary>Live, with <see cref="LiveParts.Resets"/> in <see cref="Unsent"/>: the zones whose reset did not go in.</summary>
+        public IReadOnlySet<(int X, int Z)> UnsentResets { get; init; } = new HashSet<(int X, int Z)>();
+
+        /// <summary>
+        /// Whether the game has all a step did: nothing of it is in the parts that did not go in (a step's reset of a
+        /// zone not waiting any more, unmarked since, is not). With the objects not sent after No limit ground became
+        /// ground discs, no step has all it did: the discs are not in the game, and no step says which made them.
+        /// </summary>
+        public bool Sent(EditSession.Change c) =>
+            !(Lifted && Unsent.HasFlag(LiveParts.Objects))
+            && (!Unsent.HasFlag(LiveParts.Objects) || c.Things.Length == 0)
+            && !c.Resets.Any(r => UnsentResets.Contains((r.Reset.X, r.Reset.Z)));
     }
+
+    /// <summary>The parts of an Apply live sent after the ground.</summary>
+    [Flags]
+    public enum LiveParts
+    {
+        /// <summary>None of them.</summary>
+        None = 0,
+        /// <summary>The objects made, removed or changed.</summary>
+        Objects = 1,
+        /// <summary>The zone resets.</summary>
+        Resets = 2,
+    }
+
+    /// <summary>No limit ground turned into ground discs (<see cref="LiftToDiscs"/>), with what to put back if nothing goes out.</summary>
+    /// <param name="Plan">The discs and edits made.</param>
+    /// <param name="Before">The edits as they were.</param>
+    /// <param name="Modifiers">The flattening modifiers as they were.</param>
+    /// <param name="Version">The edits' version just after: changed since, they are not put back.</param>
+    private sealed record Lifting(Uplift.Plan Plan, EditStore.Checkpoint Before, TerrainModifiers Modifiers, int Version);
 
     /// <summary>
     /// No limit ground waiting (lifts): turned into ground discs and ordinary edits (Uplift), the ground
     /// worked out again with them. Null when there was none.
     /// </summary>
-    public Uplift.Plan? LiftToDiscs()
+    private Lifting? LiftToDiscs()
     {
         var plan = Uplift.Make(World, Terrain, Edits, NextId);
-        if (plan != null)
+        if (plan == null)
         {
-            Uplift.Apply(plan, Edits);
-            UseModifiers(new TerrainModifiers(Uplift.PlacedNow(World, Edits)));
+            return null;
         }
-        return plan;
+        var before = Edits.Mark();
+        var modifiers = Modifiers;
+        Uplift.Apply(plan, Edits);
+        UseModifiers(new TerrainModifiers(Uplift.PlacedNow(World, Edits)));
+        return new Lifting(plan, before, modifiers, Edits.Version);
+    }
+
+    /// <summary>
+    /// A save or apply that wrote or sent nothing: the No limit ground it turned into discs is put back as it was,
+    /// unless the edits changed since (a stroke drawn while the game answered).
+    /// </summary>
+    /// <returns>Put back.</returns>
+    private bool Unlift(Lifting lift)
+    {
+        if (Edits.Version != lift.Version)
+        {
+            return false;
+        }
+        Edits.Restore(lift.Before);
+        UseModifiers(lift.Modifiers);
+        return true;
     }
 
     /// <summary>Switches the session and its generator to new flattening modifiers.</summary>
@@ -339,12 +393,30 @@ public sealed class WorldSession : IDisposable
         {
             return new Outcome(false, newer, false, new WorldWriter.Result(false, newer, null, 0, 0, []));
         }
-        var plan = LiftToDiscs();
+        var lift = LiftToDiscs();
         var zones = Edits.All().Where(e => e.Changed).Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
         zones.UnionWith(_savedZones);
         var changed = Edits.All().Where(e => zones.Contains((e.ZoneX, e.ZoneZ))).ToList();
-        bool reread = plan != null || Edits.ResetCount > 0;
-        var result = WorldWriter.Save(World, changed, Edits.Deleted, Edits.Added, Edits.Resets, new WorldWriter.Options(KeepBase: !reread, Drop: _lastSave, Latest: known));
+        bool reread = lift != null || Edits.ResetCount > 0;
+        WorldWriter.Result result;
+        try
+        {
+            result = WorldWriter.Save(World, changed, Edits.Deleted, Edits.Added, Edits.Resets, new WorldWriter.Options(KeepBase: !reread, Drop: _lastSave, Latest: known));
+        }
+        catch
+        {
+            if (lift != null)
+            {
+                Unlift(lift);
+            }
+            throw;
+        }
+        // Not saved: the No limit ground stays as it was (the area and its history too), unless the edits changed
+        // meanwhile: then it stays as discs, and the area is read again.
+        if (!result.Saved && lift != null && Unlift(lift))
+        {
+            lift = null;
+        }
         if (result.Saved && reread)
         {
             World = WorldSave.Load(World.Directory);
@@ -366,8 +438,8 @@ public sealed class WorldSession : IDisposable
             MarkHistoryApplied();
             KeepHistory();
         }
-        string message = plan != null ? $"{result.Message} No limit ground: {plan.Describe()}." : result.Message;
-        return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message }) { Lifted = plan != null };
+        string message = lift != null ? $"{result.Message} No limit ground: {lift.Plan.Describe()}." : result.Message;
+        return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message }) { Lifted = lift != null };
     }
 
     /// <summary>Leaving an offline world it saved: the save it was opened from goes (only the latest stays).</summary>
@@ -395,6 +467,12 @@ public sealed class WorldSession : IDisposable
     private readonly SemaphoreSlim _applying = new(1, 1);
 
     /// <summary>
+    /// Counts each Apply live's start and end: a read of the game taken before or during an apply (<c>FetchGame</c>
+    /// notes the count) has not got what it sent, and <c>MergeGame</c> drops it.
+    /// </summary>
+    private int _applies;
+
+    /// <summary>
     /// When the world is left: the save it was opened from goes (offline, once saved again) and the live connection closes.
     /// </summary>
     public void Dispose()
@@ -417,6 +495,7 @@ public sealed class WorldSession : IDisposable
     public async Task<Outcome> ApplyLive(Func<IReadOnlyList<(int X, int Z)>, Task<bool>>? confirm = null)
     {
         await _applying.WaitAsync();
+        Interlocked.Increment(ref _applies);
         try
         {
             if (confirm != null && Edits.PendingOverGame() is { Count: > 0 } over && !await confirm(over))
@@ -427,6 +506,7 @@ public sealed class WorldSession : IDisposable
         }
         finally
         {
+            Interlocked.Increment(ref _applies);
             _applying.Release();
         }
     }
@@ -437,32 +517,61 @@ public sealed class WorldSession : IDisposable
         var live = Live!;
         var done = new List<string>();
         bool reloaded = false;
-        var plan = LiftToDiscs();
+        var lift = LiftToDiscs();
+        var plan = lift?.Plan;
         if (plan != null)
         {
             done.Add($"No limit ground: {plan.Describe()}");
         }
+        // Until the ground or objects went in (sent), or the ground may have (unsure), a failure has sent nothing: the
+        // No limit ground is put back as it was.
+        bool sent = false, unsure = false, objectsDone = false;
         try
         {
             // Copies as sent: edits made while the game answers are not marked as applied.
             var zones = Edits.All().Where(e => e.Changed).Select(e => e.Clone()).ToList();
             if (zones.Count > 0)
             {
-                await live.ApplyTerrain(zones.Select(e => (e.ZoneX, e.ZoneZ, WorldWriter.EncodeTerrain(e))).ToList());
+                try
+                {
+                    await live.ApplyTerrain(zones.Select(e => (e.ZoneX, e.ZoneZ, WorldWriter.EncodeTerrain(e))).ToList());
+                }
+                catch (Exception ex) when (!NothingSent(ex))
+                {
+                    // No answer, or one after the game may have taken the ground: the discs stay (the area is read
+                    // again), and the next Apply live sends the ground again, which only sets each zone's ground anew.
+                    unsure = true;
+                    throw;
+                }
+                sent = true;
                 Edits.MarkApplied(zones);
                 done.Add($"{zones.Count} zone(s) of ground");
             }
             string objects = await LiveSync.Apply(World, Edits, live);
+            objectsDone = true;
             if (objects != "")
             {
+                sent = true;
                 done.Add(objects);
             }
             if (Edits.ResetCount > 0)
             {
                 var resets = Edits.Resets;
                 await live.ResetZones(resets);
+                // Done in the game: not pending any more, even if reading the world below fails (sent again, they
+                // would wipe what players built there since).
+                Edits.MarkResetsApplied(resets);
                 done.Add($"{resets.Count} zone(s) reset");
-                World = await live.LoadWorld();
+                try
+                {
+                    World = await live.LoadWorld();
+                }
+                catch (Exception ex) when (GameFailed(ex))
+                {
+                    MarkHistoryApplied();
+                    KeepHistory();
+                    return new Outcome(true, $"Applied to the running game: {string.Join("; ", done)}; but the world could not be read again from the game ({ex.Message}): open it again to see the reset zones.", false) { Lifted = plan != null };
+                }
                 Edits.ResetFrom(World);
                 UseModifiers(new TerrainModifiers(World));
                 LiveSync.Reset();
@@ -479,11 +588,40 @@ public sealed class WorldSession : IDisposable
             return new Outcome(done.Count > 0, done.Count > 0 ? $"Applied to the running game: {string.Join("; ", done)}." : "Nothing to apply.", reloaded) { Lifted = plan != null };
         }
         // The game answering with an error (InvalidOperationException from the bridge) is reported too.
-        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or InvalidDataException or InvalidOperationException or System.Text.Json.JsonException)
+        catch (Exception ex) when (GameFailed(ex))
         {
-            return new Outcome(false, "Could not apply live: " + ex.Message, false) { Lifted = plan != null };
+            if (sent)
+            {
+                // Some parts went in: said, and the steps the game has all of are applied.
+                var resets = Edits.Resets.Select(r => (r.X, r.Z)).ToHashSet();
+                var partly = new Outcome(true, $"Applied to the running game: {string.Join("; ", done)}; but then it failed ({ex.Message}): Apply live again for the rest.", false)
+                {
+                    Lifted = lift != null,
+                    // Resets only while some are still to send: a reset unmarked since leaves none, though steps keep it.
+                    Unsent = (objectsDone ? LiveParts.None : LiveParts.Objects) | (resets.Count > 0 ? LiveParts.Resets : LiveParts.None),
+                    UnsentResets = resets,
+                };
+                MarkHistoryApplied(partly.Sent);
+                KeepHistory();
+                return partly;
+            }
+            bool lifted = lift != null && (unsure || !Unlift(lift));
+            return new Outcome(false, "Could not apply live: " + ex.Message, false) { Lifted = lifted };
         }
     }
+
+    /// <summary>
+    /// A failure of the ground call that shows the game took none of it: no connection could be made, or the plugin
+    /// turned it down before reading it (4xx or 503). A 500, or an answer broken off or too late, may come after the
+    /// game took the ground.
+    /// </summary>
+    private static bool NothingSent(Exception ex) =>
+        ex is HttpRequestException { HttpRequestError: HttpRequestError.ConnectionError or HttpRequestError.NameResolutionError }
+            or BridgeAnswerException { Status: (>= 400 and < 500) or 503 };
+
+    /// <summary>The game unreachable or answering with an error (InvalidOperationException from the bridge).</summary>
+    private static bool GameFailed(Exception ex) =>
+        ex is HttpRequestException or IOException or TaskCanceledException or InvalidDataException or InvalidOperationException or System.Text.Json.JsonException;
 
     // ---- Live: following the game. The zones shown are asked about every few seconds (one number each,
     // cheap); those that changed are read again (FetchGame, on the network) and merged in (MergeGame, at
@@ -498,7 +636,8 @@ public sealed class WorldSession : IDisposable
     /// <param name="Digests">Every zone asked about, with its digest now.</param>
     /// <param name="Changed">The zones whose digest changed.</param>
     /// <param name="Objects">The changed zones' objects, as the game sends them (owner, id, data).</param>
-    public sealed record Fetched(WorldSave World, Dictionary<(int X, int Z), ulong> Digests, List<(int X, int Z)> Changed, List<(long User, uint Id, byte[] Bytes)> Objects);
+    /// <param name="Applies">Apply live's count when the read began (dropped if an apply began or ended since).</param>
+    public sealed record Fetched(WorldSave World, Dictionary<(int X, int Z), ulong> Digests, List<(int X, int Z)> Changed, List<(long User, uint Id, byte[] Bytes)> Objects, int Applies);
 
     /// <summary>What a merge of the game's changes did.</summary>
     /// <param name="Merged">The objects added, updated and vanished in the world.</param>
@@ -522,19 +661,22 @@ public sealed class WorldSession : IDisposable
             return null;
         }
         var world = World;
+        int applies = Volatile.Read(ref _applies);
         var now = await live.Watch(zones);
         var changed = now.Where(kv => !_digests.TryGetValue(kv.Key, out ulong d) || d != kv.Value).Select(kv => kv.Key).ToList();
         if (changed.Count == 0)
         {
             return null;
         }
-        return new Fetched(world, now, changed, await live.ZoneObjects(changed));
+        return new Fetched(world, now, changed, await live.ZoneObjects(changed), applies);
     }
 
     /// <summary>
     /// What was read, merged into the world (on the window's thread, at once: nothing else changes the
     /// world meanwhile). Null: not now (an apply is under way, or the world's lists are being read): merge
-    /// it again later. Read for a world read again since: dropped (empty).
+    /// it again later. Read for a world read again since, or before or during an Apply live: dropped (empty).
+    /// A read older than an apply lacks what it sent (the new objects would count as removed by players);
+    /// its zones' digests are not kept, so they are read again.
     /// </summary>
     public Followed? MergeGame(Fetched f)
     {
@@ -542,10 +684,25 @@ public sealed class WorldSession : IDisposable
         {
             return new Followed(new WorldSave.Merged([], [], [], []), [], [], []);
         }
-        if (_applying.CurrentCount == 0)
+        // Held while merging: an apply (perhaps on another thread: Claude, a script) can neither begin nor end
+        // between the check of the count and the merge.
+        if (!_applying.Wait(0))
         {
             return null;
         }
+        try
+        {
+            return f.Applies != Volatile.Read(ref _applies) ? new Followed(new WorldSave.Merged([], [], [], []), [], [], []) : Merge(f);
+        }
+        finally
+        {
+            _applying.Release();
+        }
+    }
+
+    /// <summary><see cref="MergeGame"/> for a read taken with no Apply live begun or ended since, under the apply lock.</summary>
+    private Followed? Merge(Fetched f)
+    {
         var deleted = Edits.Deleted;
         // Kept as the editor has them: its applied deletions (undo brings them back).
         var merged = World.MergeLive(f.Changed, f.Objects, LiveSync.IsDestroyed, LiveSync.IsOurs);

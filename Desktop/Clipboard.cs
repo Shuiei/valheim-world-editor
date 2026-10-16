@@ -29,6 +29,16 @@ public sealed class CopyData
     public required List<Vector2> Poly { get; init; }
     /// <summary>The blueprint's name, when it came from or went to one.</summary>
     public string? Name { get; set; }
+    /// <summary>
+    /// A dungeon blueprint (tagged so): pasted into a world, its pieces go 5000 m up behind an entrance on the ground
+    /// where the click is, as a generated dungeon does (MainWindow.PasteDungeon), not onto the ground.
+    /// </summary>
+    public bool Dungeon { get; set; }
+    /// <summary>
+    /// The scene indices of the objects the copy was made from (the same order as <see cref="Objects"/>), for a cut
+    /// to remove right after. Only meant in the scene it came from; not saved with the copy.
+    /// </summary>
+    public IReadOnlyList<int> Taken { get; init; } = [];
 
     /// <summary>An object of a copy.</summary>
     /// <param name="Prefab">Its prefab hash.</param>
@@ -61,6 +71,7 @@ public sealed class CopyData
         Objects = [.. Objects.Select(o => o.Data == null ? o : o with { Data = [.. o.Data.Where(f => f.Key != ObjectField.CreatorKey || f == ObjectField.NoBuilder)] })],
         Poly = Poly,
         Name = Name,
+        Dungeon = Dungeon,
     };
 
     /// <summary>
@@ -165,9 +176,10 @@ public sealed class CopyData
             }
         }
         float cx = (a.X0 + a.X1) / 2f, cz = (a.Z0 + a.Z1) / 2f;
-        var objs = objects.Select(i => s.Things[i]).Where(t => s.World == null || s.World.CanCreate(t.Prefab)).Select(t => new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(),
+        var taken = objects.Where(i => s.World == null || s.World.CanCreate(s.Things[i].Prefab)).ToList();
+        var objs = taken.Select(i => s.Things[i]).Select(t => new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(),
             t.Position.X - ox - cx, t.Position.Z - oz - cz, t.Position.Y - reference, t.Rotation, t.Scale, SourceOf(s, t), Data: DataOf(s, t))).ToList();
-        return new CopyData { W = w, H = h, Rel = rel, Wt = wt, Pnt = pnt, Objects = objs, Poly = [.. a.Poly.Select(p => p - new Vector2(cx, cz))] };
+        return new CopyData { W = w, H = h, Rel = rel, Wt = wt, Pnt = pnt, Objects = objs, Poly = [.. a.Poly.Select(p => p - new Vector2(cx, cz))], Taken = taken };
     }
 
     /// <summary>
@@ -223,6 +235,7 @@ public sealed class CopyData
             Pnt = [.. Enumerable.Repeat(-1f, w * h * 4)],
             Objects = objs,
             Poly = [new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)],
+            Taken = shown,
         };
     }
 
@@ -305,6 +318,12 @@ public sealed class PasteTool
         float t = Turn * MathF.PI / 180, c = MathF.Cos(t), s = MathF.Sin(t);
         return new Vector2(d.X * c - d.Y * s, d.X * s + d.Y * c);
     }
+
+    /// <summary>
+    /// A copied object's Euler angles (degrees) where it lands: mirrored east to west, which keeps the pitch
+    /// (X) and reverses the yaw and the roll, then turned.
+    /// </summary>
+    public Vector3 Rotated(Vector3 r) => new(r.X, (Mirror ? -r.Y : r.Y) - Turn, Mirror ? -r.Z : r.Z);
 
     /// <summary>Offset where it lands → source offset: the inverse of <see cref="Xf"/>.</summary>
     public Vector2 Inv(Vector2 d)
@@ -398,8 +417,7 @@ public sealed class PasteTool
             {
                 var p = ca + Xf(new Vector2(o.Dx, o.Dz));
                 float y = o.Follow ? heightAt(p) + o.Dy + up : anchor + o.Dy;
-                var r = o.Rotation;
-                list.Add((o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), new Vector3(Mirror ? -r.X : r.X, (Mirror ? -r.Y : r.Y) - Turn, Mirror ? -r.Z : r.Z), o.Scale));
+                list.Add((o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), Rotated(o.Rotation), o.Scale));
             }
         }
         return list;
@@ -530,9 +548,7 @@ public sealed class PasteTool
                     var p = ca + Xf(new Vector2(o.Dx, o.Dz));
                     // Objects copied with the Select tool keep their height above the ground where they land.
                     float y = o.Follow ? g.HeightOf(Index(g, p)) + o.Dy + lift : anchor + o.Dy;
-                    var r = o.Rotation;
-                    var rot = new Vector3(Mirror ? -r.X : r.X, (Mirror ? -r.Y : r.Y) - Turn, Mirror ? -r.Z : r.Z);
-                    add.Add((new NewObject(0, o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), rot, o.Scale, o.SourceId, true, Data: o.Data), PieceCatalog.Get(o.Prefab)?.Tool != null));
+                    add.Add((new NewObject(0, o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), Rotated(o.Rotation), o.Scale, o.SourceId, true, Data: o.Data), PieceCatalog.Get(o.Prefab)?.Tool != null));
                 }
             }
         }
