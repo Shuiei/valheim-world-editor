@@ -77,8 +77,42 @@ public static class GameLocations
             .OrderByDescending(File.GetLastWriteTimeUtc)];
     }
 
-    /// <summary>The game's logs and when each was last written: changes when the game ran since.</summary>
-    private static string LogsStamp() => string.Join("|", Logs().Select(l => $"{l}:{File.GetLastWriteTimeUtc(l).Ticks}"));
+    /// <summary>The game's logs, their sizes and when each was last written: changes when the game ran since.</summary>
+    private static string LogsStamp() => string.Join("|", Logs().Select(l => $"{l}:{new FileInfo(l).Length}:{File.GetLastWriteTimeUtc(l).Ticks}"));
+
+    /// <summary>The lists' order as text ("3/0,2/0,…"), as the cache keeps it.</summary>
+    private static string OrderText((int Locations, int Vegetation)[] order) => string.Join(",", order.Select(o => $"{o.Locations}/{o.Vegetation}"));
+
+    /// <summary>
+    /// The cache file's first line: the game's logs as they were when the lists' order was taken from them
+    /// (<see cref="LogsStamp"/>), and that order.
+    /// </summary>
+    internal static string OrderLine(string logs, (int Locations, int Vegetation)[] order) => $"{logs}\t{OrderText(order)}";
+
+    /// <summary>
+    /// The lists' order a cache file's first line keeps, when the game's logs are still as they were then (they need
+    /// not be read again: tens of MB with mods); else null.
+    /// </summary>
+    internal static (int Locations, int Vegetation)[]? KeptOrder(string? line, string logs)
+    {
+        int tab = line?.LastIndexOf('\t') ?? -1;
+        if (line == null || tab < 0 || line[..tab] != logs)
+        {
+            return null;
+        }
+        var order = new List<(int, int)>();
+        foreach (string pair in line[(tab + 1)..].Split(',', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string[] n = pair.Split('/');
+            if (n.Length != 2 || !int.TryParse(n[0], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int l)
+                || !int.TryParse(n[1], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int v))
+            {
+                return null;
+            }
+            order.Add((l, v));
+        }
+        return order.Count > 0 ? [.. order] : null;
+    }
 
     /// <summary>
     /// A log line of a list being added: its location and vegetation counts.
@@ -188,10 +222,18 @@ public static class GameLocations
             {
                 return null;
             }
-            var (order, from) = ListOrder();
-            string stamp = CacheVersion + " " + string.Join(",", order.Select(o => $"{o.Locations}/{o.Vegetation}")) + " " + JsonSerializer.Serialize(scanned.Select(b => new FileInfo(bundles.PathOf(b)!)).Select(f => $"{f.Name}:{f.Length}:{f.LastWriteTimeUtc.Ticks}"));
-            if (cacheFile != null && Cached(cacheFile, stamp) is { } cached)
+            // The logs are read only when they changed since the cache was made (the order they gave is kept with it).
+            string logs = LogsStamp();
+            string[]? kept = cacheFile != null ? CacheLines(cacheFile) : null;
+            var (order, from) = KeptOrder(kept?[0], logs) is { } known ? (known, "the game's log, unchanged since it was last read") : ListOrder();
+            string stamp = CacheVersion + " " + OrderText(order) + " " + JsonSerializer.Serialize(scanned.Select(b => new FileInfo(bundles.PathOf(b)!)).Select(f => $"{f.Name}:{f.Length}:{f.LastWriteTimeUtc.Ticks}"));
+            if (kept is { } k && k[1] == stamp && Rules(k[2]) is { } cached)
             {
+                if (k[0] != OrderLine(logs, order))
+                {
+                    // The game ran since, giving the same order: the logs as they are now are kept with it.
+                    GameData.KeepCache(cacheFile!, OrderLine(logs, order) + "\n" + stamp + "\n" + k[2]);
+                }
                 Console.WriteLine($"Location rules: {cached.locations.Count} kinds, from the cache.");
                 return cached;
             }
@@ -203,7 +245,7 @@ public static class GameLocations
             }
             if (rules != null && cacheFile != null)
             {
-                GameData.KeepCache(cacheFile, stamp + "\n" + rules.ToJson());
+                GameData.KeepCache(cacheFile, OrderLine(logs, order) + "\n" + stamp + "\n" + rules.ToJson());
             }
             return rules;
         }
@@ -227,9 +269,10 @@ public static class GameLocations
     private static List<string> MainSceneBundles(GameBundles bundles, Manifest manifest) => [.. manifest.SceneBundles("main").Where(bundles.HasBundle)];
 
     /// <summary>
-    /// The cached rules when they are for this game and editor and can be read; else null (read again).
+    /// The cache file's three parts: the logs and order line (<see cref="OrderLine"/>), the stamp of what the rules
+    /// were read from, and the rules; null when there is no such file or it cannot be read (read again).
     /// </summary>
-    private static SeedLocations.RuleSet? Cached(string file, string stamp)
+    private static string[]? CacheLines(string file)
     {
         try
         {
@@ -237,10 +280,23 @@ public static class GameLocations
             {
                 return null;
             }
-            string[] cached = File.ReadAllText(file).Split('\n', 2);
-            return cached.Length == 2 && cached[0] == stamp ? SeedLocations.RuleSet.FromJson(cached[1]) : null;
+            string[] parts = File.ReadAllText(file).Split('\n', 3);
+            return parts.Length == 3 ? parts : null;
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Cached rules from their JSON; null when it cannot be read (read again).</summary>
+    private static SeedLocations.RuleSet? Rules(string json)
+    {
+        try
+        {
+            return SeedLocations.RuleSet.FromJson(json);
+        }
+        catch (JsonException)
         {
             return null;
         }
