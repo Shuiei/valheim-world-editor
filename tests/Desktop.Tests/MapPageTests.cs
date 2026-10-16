@@ -1,3 +1,5 @@
+using System.Numerics;
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
@@ -106,6 +108,29 @@ public class MapPageTests
             Avalonia.Threading.Dispatcher.UIThread.RunJobs();
         }
         Assert.NotNull(r.M.Map.Portals);
+    }
+
+    // Show portals: a portal's tag is written over the map from PortalTagZoom metres a pixel in, not further out.
+    [AvaloniaFact]
+    public async Task PortalTagsAreWrittenOnlyZoomedIn()
+    {
+        using var r = new Run();
+        await r.Open();
+        var zdo = new ZdoData { Prefab = StableHash.Of("portal_wood"), Position = new Vector3(123, 30, 456) };
+        zdo.Set("strings", StableHash.Of("tag"), "home");
+        r.W.World!.Edits.AddObjects([new NewObject(-1, zdo.Prefab, zdo.Position, Vector3.Zero, 0f, null, false, zdo.Serialize())]);
+        r.M.Map.Refresh();
+        for (int i = 0; i < 100 && r.M.Map.Portals?.Portals.Any(p => p.Id == -1) != true; i++)
+        {
+            await Task.Delay(50);
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        }
+        Assert.Contains(r.M.Map.Portals!.Portals, p => p.Id == -1);
+        r.M.PortalsBox.IsChecked = true;
+        r.M.Map.LookAt(123, 456, MapPage.PortalTagZoom);
+        Assert.Contains(r.M.Labels.Children.OfType<TextBlock>(), t => t.Text == "home");
+        r.M.Map.LookAt(123, 456, MapPage.PortalTagZoom * 2);
+        Assert.DoesNotContain(r.M.Labels.Children.OfType<TextBlock>(), t => t.Text == "home");
     }
 
     [AvaloniaFact]

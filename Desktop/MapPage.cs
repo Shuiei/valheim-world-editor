@@ -152,9 +152,9 @@ public sealed class MapPage : IDisposable
     /// </summary>
     private readonly DispatcherTimer _players = new() { Interval = TimeSpan.FromSeconds(5) };
     /// <summary>
-    /// The players' name labels over the map.
+    /// The labels over the map: the players' names and, zoomed in, the portals' tags.
     /// </summary>
-    private readonly Canvas _labels = new() { IsHitTestVisible = false };
+    internal Canvas Labels { get; } = new() { IsHitTestVisible = false };
 
     // Search.
     /// <summary>
@@ -436,7 +436,7 @@ public sealed class MapPage : IDisposable
         Map.Status += t => status.IsVisible = !string.IsNullOrEmpty(t);
         cursor.IsVisible = false;
         Cursor.PropertyChanged += (_, e) => { if (e.Property == TextBlock.TextProperty) { cursor.IsVisible = !string.IsNullOrEmpty(Cursor.Text); } };
-        View = new Grid { Background = new SolidColorBrush(Color.FromRgb(20, 23, 28)), Children = { Map, surface, _labels, side, cursor, status } };
+        View = new Grid { Background = new SolidColorBrush(Color.FromRgb(20, 23, 28)), Children = { Map, surface, Labels, side, cursor, status } };
         _players.Tick += async (_, _) => await PollPlayers();
     }
 
@@ -595,14 +595,14 @@ public sealed class MapPage : IDisposable
     /// </summary>
     private void PlaceLabels()
     {
-        _labels.Children.Clear();
+        Labels.Children.Clear();
         void Label(string text, float x, float z, IBrush colour, FontStyle style = FontStyle.Normal)
         {
             var at = Map.ScreenOf(x, z);
             var t = new TextBlock { Text = text, FontSize = 12, Foreground = colour, FontStyle = style, FontWeight = FontWeight.SemiBold, Effect = new DropShadowEffect { BlurRadius = 3, OffsetX = 0, OffsetY = 0, Color = Colors.Black, Opacity = 1 } };
             Canvas.SetLeft(t, at.X + 10);
             Canvas.SetTop(t, at.Y - 8);
-            _labels.Children.Add(t);
+            Labels.Children.Add(t);
         }
         // The portals' tags, from 8 m a pixel in (further out they would pile up).
         if (Map.ShowPortals && Map.Portals is { } portals && Map.MetersPerPixel <= PortalTagZoom)
