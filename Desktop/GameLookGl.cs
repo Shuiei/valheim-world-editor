@@ -590,7 +590,7 @@ public sealed class GameLookGl
                 idx.AddRange([a, b, a + 1, b, b + 1, a + 1]);
             }
         }
-        _skyVao = Mesh([.. v], [.. idx]);
+        _skyVao = _own.PositionMesh([.. v], [.. idx]).Vao;
         _skyCount = (uint)idx.Count;
     }
 
@@ -600,34 +600,7 @@ public sealed class GameLookGl
     private void BuildWater(WorldScene s)
     {
         float half = 4000, y = s.Water;
-        _waterVao = Mesh([-half, y, -half, half, y, -half, half, y, half, -half, y, half], [0, 2, 1, 0, 3, 2]);
-    }
-
-    /// <summary>
-    /// Sends an indexed triangle mesh with positions only (attribute 0) and returns its vertex array.
-    /// </summary>
-    /// <param name="v">Positions, x, y, z per corner.</param>
-    /// <param name="idx">Three corner indices per triangle.</param>
-    private unsafe uint Mesh(float[] v, uint[] idx)
-    {
-        uint vao = _own.VertexArray();
-        _gl.BindVertexArray(vao);
-        uint vbo = _own.Buffer();
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
-        fixed (float* p = v)
-        {
-            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(v.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
-        uint ebo = _own.Buffer();
-        _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, ebo);
-        fixed (uint* p = idx)
-        {
-            _gl.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(idx.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
-        _gl.EnableVertexAttribArray(0);
-        _gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
-        _gl.BindVertexArray(0);
-        return vao;
+        _waterVao = _own.PositionMesh([-half, y, -half, half, y, -half, half, y, half, -half, y, half], [0, 2, 1, 0, 3, 2]).Vao;
     }
 
     // ---- Drawing. eye: the camera in view space; time: seconds since the start (water, clouds, glints).

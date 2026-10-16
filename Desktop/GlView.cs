@@ -891,23 +891,7 @@ public sealed class GlView : OpenGlControlBase
         float hw = w / 2f + 400, hh = h / 2f + 400, y = s.Water;
         float[] q = [-hw, y, -hh, hw, y, -hh, hw, y, hh, -hw, y, hh];
         uint[] qi = [0, 2, 1, 0, 3, 2];
-        _waterVao = _own.VertexArray();
-        _gl.BindVertexArray(_waterVao);
-        uint wv = _waterVbo = _own.Buffer();
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, wv);
-        fixed (float* p = q)
-        {
-            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(q.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
-        uint we = _waterEbo = _own.Buffer();
-        _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, we);
-        fixed (uint* p = qi)
-        {
-            _gl.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(qi.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
-        _gl.EnableVertexAttribArray(0);
-        _gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
-        _gl.BindVertexArray(0);
+        (_waterVao, _waterVbo, _waterEbo) = _own.PositionMesh(q, qi);
     }
 
     // ---- Objects: read each kind's model on worker threads; the drawing thread uploads them.
@@ -2994,8 +2978,16 @@ public sealed class GlView : OpenGlControlBase
         {
             return;
         }
-        int gx = Math.Clamp((int)MathF.Round(_target.X + (s.W - 1) / 2f), 0, s.W - 1), gz = Math.Clamp((int)MathF.Round(-_target.Z + (s.H - 1) / 2f), 0, s.H - 1);
-        _target.Y = Math.Max(s.Heights[gz * s.W + gx], s.Water);
+        _target.Y = GroundOrWater(s, _target);
+    }
+
+    /// <summary>The ground's height at the grid point nearest a view-space point (held to the area), or the sea's when higher.</summary>
+    /// <param name="s">The area.</param>
+    /// <param name="v">The point, in view space.</param>
+    private static float GroundOrWater(WorldScene s, Vector3 v)
+    {
+        int gx = Math.Clamp((int)MathF.Round(v.X + (s.W - 1) / 2f), 0, s.W - 1), gz = Math.Clamp((int)MathF.Round(-v.Z + (s.H - 1) / 2f), 0, s.H - 1);
+        return Math.Max(s.Heights[gz * s.W + gx], s.Water);
     }
 
     /// <summary>
@@ -3634,8 +3626,7 @@ public sealed class GlView : OpenGlControlBase
         lock (_camLock)
         {
             var t = ToView(s, new Vector3(x, 0, z));
-            int gx = Math.Clamp((int)MathF.Round(t.X + (s.W - 1) / 2f), 0, s.W - 1), gz = Math.Clamp((int)MathF.Round(-t.Z + (s.H - 1) / 2f), 0, s.H - 1);
-            t.Y = height ?? Math.Max(s.Heights[gz * s.W + gx], s.Water);
+            t.Y = height ?? GroundOrWater(s, t);
             _target = t;
             _yaw = yawDegrees * MathF.PI / 180;
             _pitch = Math.Clamp(pitchDegrees * MathF.PI / 180, 0.05f, 1.55f);
