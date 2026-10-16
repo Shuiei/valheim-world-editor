@@ -246,7 +246,8 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         _ssh.Need();
         string game = Path.Combine(_dir, "it's a server");
         Directory.CreateDirectory(Path.Combine(game, "BepInEx", "config"));
-        File.WriteAllText(Path.Combine(game, "BepInEx", "config", config), $"[Bridge]\nToken = never read\n Port = {BridgePort}\n");
+        string file = Path.Combine(game, "BepInEx", "config", Path.GetFileName(config));
+        File.WriteAllText(file, $"[Bridge]\nToken = never read\n Port = {BridgePort}\n");
         var r = await Tunnel.Start(Req(folder: slash ? game + "/ " : game));
         Assert.Null(r.Error);
         Assert.Equal(BridgePort, r.Server!.BridgePort);
@@ -257,11 +258,11 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         r = await Tunnel.Start(Req(folder: game, bridge: 4321));
         Assert.Equal(4321, r.Server!.BridgePort);
         // No settings there: the usual port.
-        File.Delete(Path.Combine(game, "BepInEx", "config", config));
+        File.Delete(file);
         r = await Tunnel.Start(Req(folder: game));
         Assert.Equal(5182, r.Server!.BridgePort);
         // A port no number of 1 to 65535 fits: the usual port too (it threw, leaving the connection open).
-        File.WriteAllText(Path.Combine(game, "BepInEx", "config", config), "Port = 99999999999\n");
+        File.WriteAllText(file, "Port = 99999999999\n");
         r = await Tunnel.Start(Req(folder: game));
         Assert.Equal(5182, r.Server!.BridgePort);
     }

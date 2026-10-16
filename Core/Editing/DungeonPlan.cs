@@ -219,7 +219,9 @@ internal sealed class DungeonPlanner
     private int Even(int min, int max) => min + 2 * _rnd.Next((max - min) / 2 + 1);
 
     /// <summary>One of the items at random, each as likely as its weight.</summary>
+#pragma warning disable S2245 // A plan must come out the same from its seed; nothing here is a secret.
     private T Pick<T>(IReadOnlyList<(T Item, float Weight)> items) => Weighted.Pick(items, i => i.Weight, _rnd.NextDouble()).Item;
+#pragma warning restore S2245
 
     /// <summary>Makes the whole plan into <see cref="_plan"/>.</summary>
     private void Build()

@@ -277,7 +277,9 @@ public static class DungeonGen
                 continue;
             }
             // Weighted as the game weighs its rooms (Room.m_weight).
+#pragma warning disable S2245 // A dungeon must come out the same from its seed; nothing here is a secret.
             var room = Weighted.Pick(fits, r => r.Weight, rnd.NextDouble());
+#pragma warning restore S2245
             var mine = Dungeons.Matching(room, end.Type).ToList();
             var p = Dungeons.Attach(room, mine[rnd.Next(mine.Count)], end.Position, end.Rotation);
             if (Dungeons.Overlaps(rooms, p).Count == 0 && Dungeons.Inside(kind, origin, p))

@@ -38,7 +38,9 @@ public static class GenMath
     /// Where v lies from lo (0) to hi (1), held to 0..1; when lo and hi are the same, a step there (0 below, 1 from it
     /// on) instead of 0 / 0.
     /// </summary>
+#pragma warning disable S1244 // Exactly equal ends only: they alone make 0 / 0; close ends divide as they should.
     private static double Fraction(double lo, double hi, double v) => lo == hi ? (v < lo ? 0.0 : 1.0) : Clamp01((v - lo) / (hi - lo));
+#pragma warning restore S1244
 
     /// <summary>
     /// Where v lies from lo (0) to hi (1), held to 0..1 (a step at lo when lo and hi are the same).
