@@ -159,6 +159,29 @@ public class AppSettingsTests : IDisposable
         }
     }
 
+    // A data folder that cannot be made (a file where it should be): the defaults, not saved, and neither the load nor
+    // the save throws while saying so.
+    [Fact]
+    public void SettingsWhoseFolderCannotBeMadeAreDefaults()
+    {
+        string blocker = Path.Combine(_data, "not-a-folder");
+        File.WriteAllText(blocker, "");
+        string? old = AppSettings.PathOverride;
+        AppSettings.PathOverride = null;
+        AppSettings.DataDirOverride = Path.Combine(blocker, "data");
+        try
+        {
+            var settings = AppSettings.Load();
+            Assert.True(settings.FileUnread);
+            settings.Save();
+        }
+        finally
+        {
+            AppSettings.PathOverride = old;
+            AppSettings.DataDirOverride = null;
+        }
+    }
+
     // No settings file at the start, and one there at the first save (a sync program put the user's back meanwhile):
     // left as it is. Written by the editor itself, it is written again.
     [Fact]
