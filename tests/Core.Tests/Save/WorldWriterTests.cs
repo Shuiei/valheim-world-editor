@@ -116,7 +116,8 @@ public class WorldWriterTests
         AssertSame(before, w.Dir);
     }
 
-    // New ground in several zones copies the template object's own bytes, read once, not its whole chunk file per zone.
+    // New ground in several zones copies the template object's own bytes, read once, not its whole chunk file per zone;
+    // a save without new ground does not read it.
     [Fact]
     public void NewGroundReadsTheTemplateOnce()
     {
@@ -130,6 +131,9 @@ public class WorldWriterTests
         Assert.Equal(1, WorldWriter.TemplateReads - before);
         var saved = WorldSave.Load(w.Dir);
         Assert.All(zones, q => Assert.Equal(1.5f, saved.TerrainZones.Single(t => t.ZoneX == q.X && t.ZoneZ == q.Z).LevelDelta[100], 4));
+        before = WorldWriter.TemplateReads;
+        Assert.True(WorldWriter.Save(saved, [Raised(zones[0].X, zones[0].Z, 2f, 100)]).Saved);
+        Assert.Equal(before, WorldWriter.TemplateReads);
     }
 
     // A terrain object in another layout ahead of a usable one: the usable one is copied. The fixture has one terrain
