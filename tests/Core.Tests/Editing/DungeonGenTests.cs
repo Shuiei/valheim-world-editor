@@ -229,6 +229,23 @@ public class DungeonGenTests
     }
 
     [Fact]
+    public void ChosenFoesAndNoRespawnHoldInEveryRoom()
+    {
+        // The elites were the biome's whatever the foes chosen, a swamp burial chamber's foes sleeping draugr, and an
+        // ossuary's bone pile raised the dead with Respawn off.
+        var others = DungeonKit.Biomes.SelectMany(b => b.Foes.Concat(b.Elites)).SelectMany(f => new[] { f.Spawner, f.Creature })
+            .Concat(["Draugr_sleeping", "Draugr_Ranged_sleeping", "Spawner_DraugrPile", "BonePileSpawner", "BonePileSpawner_swamp"]).ToHashSet();
+        int wolves = 0;
+        for (int seed = 1; seed <= 4; seed++)
+        {
+            var r = DungeonGen.Make(new DungeonGen.Settings(Biome: "Swamp", Style: "Crypt", Size: 3, Levels: 2, Seed: seed, Foes: ["Wolf"], Respawn: false, Boss: ""));
+            Assert.DoesNotContain(r.Items, i => others.Contains(i.Prefab));
+            wolves += r.Items.Count(i => i.Prefab == "Wolf");
+        }
+        Assert.True(wolves > 0);
+    }
+
+    [Fact]
     public void FewerLightsWithoutLightAndLessRubbleWithoutDecay()
     {
         static int Lights(DungeonGen.Result r) => r.Items.Count(i => i.Prefab.Contains("torch", StringComparison.Ordinal) || i.Prefab.Contains("brazier", StringComparison.OrdinalIgnoreCase));

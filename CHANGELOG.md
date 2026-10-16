@@ -170,6 +170,10 @@ the plugin is unchanged in versions without that part.
   biome; the panel now does the same.
 - **A portal at a generated dungeon's arrival stood in the entrance's floor.** The arrival was 5 cm over the slab
   whatever lay on it; it is now 5 cm over the entrance's floor finish (marble tiles, boards).
+- **Chosen foes and Respawn off were not kept in some dungeon rooms.** The elites were always the biome's, a swamp
+  burial chamber's foes were always sleeping draugr, and an ossuary's bone pile kept raising the dead with Respawn
+  off; chosen foes now stand in for the elites and the sleepers, and the bone pile is left out when foes are chosen or
+  nothing respawns.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

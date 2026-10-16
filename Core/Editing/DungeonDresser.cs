@@ -29,6 +29,8 @@ internal sealed partial class DungeonDresser
     private readonly float _decay;
     /// <summary>The foes to use: those picked in the settings, else the biome's.</summary>
     private readonly Foe[] _foes;
+    /// <summary>The elite guards: the chosen foes when the settings name some, else the biome's elites.</summary>
+    private readonly Foe[] _elites;
     /// <summary>The arena's boss: the one picked, the biome's when none is, null when "" is.</summary>
     private readonly Foe? _boss;
     /// <summary>The dungeon's name, for the entrance's sign.</summary>
@@ -50,6 +52,7 @@ internal sealed partial class DungeonDresser
         _name = name;
         _decay = Math.Clamp(s.Decay ?? style.Decay, 0, 1);
         _foes = s.Foes is { Count: > 0 } chosen ? [.. chosen.Select(FoeOf)] : b.Foes;
+        _elites = s.Foes is { Count: > 0 } ? _foes : b.Elites;
         _boss = s.Boss == null ? b.Boss : s.Boss.Length == 0 ? null : FoeOf(s.Boss);
     }
 
@@ -822,12 +825,15 @@ internal sealed partial class DungeonDresser
         }
     }
 
-    /// <summary>One of the biome's elites at (u, v), level 2 when Monsters is 2 or more; none when there are no monsters.</summary>
+    /// <summary>
+    /// One of the elites (the biome's, or the chosen foes) at (u, v), level 2 when Monsters is 2 or more; none when there
+    /// are no monsters.
+    /// </summary>
     private void Elite(Frame f, float u, float v, float yaw)
     {
-        if (_s.Monsters > 0 && _b.Elites.Length > 0)
+        if (_s.Monsters > 0 && _elites.Length > 0)
         {
-            Spawn(f, One(_b.Elites), u, v, yaw, _s.Monsters >= 2 ? 2 : 1);
+            Spawn(f, One(_elites), u, v, yaw, _s.Monsters >= 2 ? 2 : 1);
         }
     }
 
@@ -1627,7 +1633,7 @@ internal sealed partial class DungeonDresser
         Lights();
         Hangings(f, 1);
         // The dead do not rest here.
-        var sleepers = _b.Name == "Swamp" ? new[] { new Foe("Spawner_Draugr", "Draugr_sleeping"), new Foe("Spawner_Draugr_Ranged", "Draugr_Ranged_sleeping") } : null;
+        var sleepers = _b.Name == "Swamp" && _s.Foes is not { Count: > 0 } ? new[] { new Foe("Spawner_Draugr", "Draugr_sleeping"), new Foe("Spawner_Draugr_Ranged", "Draugr_Ranged_sleeping") } : null;
         Foes(f, 1.1f, sleepers);
         Clutter(f, 0.02f);
         Decay();
@@ -1670,9 +1676,10 @@ internal sealed partial class DungeonDresser
                 }
                 break;
         }
-        if (_s.Monsters > 0)
+        if (_s.Monsters > 0 && _s.Respawn && _s.Foes is not { Count: > 0 })
         {
-            // A heap of bones that keeps raising the dead until broken.
+            // A heap of bones that keeps raising the dead until broken (the biome's: none when foes are chosen, nor when
+            // nothing respawns).
             Put(f, _b.Name == "Swamp" ? "Spawner_DraugrPile" : _b.Name is "Black Forest" or "Meadows" ? "BonePileSpawner" : "BonePileSpawner_swamp", 0, R(-1, 1), R(0, 360), 1.3f);
         }
         Clutter(f, 0.04f, "Skull1", "LargeBone", "LargeBone_half01", "Skull1");
@@ -2416,7 +2423,7 @@ internal sealed partial class DungeonDresser
         {
             Put(f, _b.Torch, aisle - 0.4f, v, -90, 0.3f);
         }
-        Foes(f, 0.3f, _b.Elites.Length > 0 ? _b.Elites : null);
+        Foes(f, 0.3f, _elites.Length > 0 ? _elites : null);
     }
 
     /// <summary>A torture chamber: a butcher's table, chains on the walls, bones about.</summary>
