@@ -190,7 +190,7 @@ public static class WorldWriter
             Func<ObjectRef, byte[]> source = world.SourceReader();
             foreach (NewObject n in added)
             {
-                int zx = (int)MathF.Floor((n.Position.X + 32f) / 64f), zz = (int)MathF.Floor((n.Position.Z + 32f) / 64f);
+                var (zx, zz) = ChunkMath.SectorOf(n.Position.X, n.Position.Z);
                 ChunkFile? target = findChunk(zx, zz);
                 if (target == null)
                 {

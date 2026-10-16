@@ -799,7 +799,7 @@ public sealed class WorldSession : IDisposable
     public List<(int X, int Z)> TakeWaitingGround() => Edits.TakeWaitingGround();
 
     /// <summary>The zone a world position is in (zones are 64 m, centred on multiples of 64).</summary>
-    private static (int, int) Zone(System.Numerics.Vector3 p) => ((int)MathF.Floor((p.X + 32f) / 64f), (int)MathF.Floor((p.Z + 32f) / 64f));
+    private static (int, int) Zone(System.Numerics.Vector3 p) => ChunkMath.SectorOf(p.X, p.Z);
 
     /// <summary>Live: the world read again from the game (what players changed since); pending edits are dropped.</summary>
     public async Task Reload()

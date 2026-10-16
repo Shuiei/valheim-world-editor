@@ -40,7 +40,7 @@ public sealed class ObjectRef
     public (long User, uint Id) LiveId { get; set; }
 
     /// <summary>The 64 m zone the object is in.</summary>
-    public (int X, int Z) Zone => ((int)MathF.Floor((Position.X + 32f) / 64f), (int)MathF.Floor((Position.Z + 32f) / 64f));
+    public (int X, int Z) Zone => ChunkMath.SectorOf(Position.X, Position.Z);
 }
 
 /// <summary>
@@ -450,7 +450,7 @@ public sealed class ZoneDb
         for (int i = 0; i < Locations.Count; i++)
         {
             var (hash, pos, placed) = Locations[i];
-            if ((int)MathF.Floor((pos.X + 32f) / 64f) == zx && (int)MathF.Floor((pos.Z + 32f) / 64f) == zz && placed)
+            if (ChunkMath.SectorOf(pos.X, pos.Z) == (zx, zz) && placed)
             {
                 Locations[i] = (hash, pos, false);
             }

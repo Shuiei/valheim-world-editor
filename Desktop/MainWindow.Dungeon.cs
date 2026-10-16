@@ -324,7 +324,8 @@ public partial class MainWindow
             }
             // The entrance: its location proxy (the game makes its door, its stones and its interior from it whenever
             // the zone loads) and the objects it makes, all but its own dungeon object (the dungeon placed is the one).
-            int zoneSeed = LocationPrefabs.ZoneSeed(world.Seed, (int)MathF.Floor((at.X + 32f) / 64f), (int)MathF.Floor((at.Z + 32f) / 64f));
+            var (zoneX, zoneZ) = ChunkMath.SectorOf(at.X, at.Z);
+            int zoneSeed = LocationPrefabs.ZoneSeed(world.Seed, zoneX, zoneZ);
             ushort flags = Terrain.PrefabCatalog.Get(WorldSave.LocationProxyPrefab)?.Flags ?? 0x0B00;
             var euler = BlueprintFormats.ToEuler(turn);
             adds.Add((new NewObject(0, WorldSave.LocationProxyPrefab, at, euler, 0, Fresh: false,

@@ -34,8 +34,8 @@ public static class Growth
             message("Regrow needs the world's generator (not available here).");
             return null;
         }
-        static int Zone(float v) => (int)MathF.Floor((v + 32) / 64);
-        int zx0 = Zone(x0), zx1 = Zone(x1), zz0 = Zone(z0), zz1 = Zone(z1);
+        var (zx0, zz0) = ChunkMath.SectorOf(x0, z0);
+        var (zx1, zz1) = ChunkMath.SectorOf(x1, z1);
         if ((zx1 - zx0 + 1) * (zz1 - zz0 + 1) > maxZones)
         {
             int side = (int)Math.Sqrt(maxZones);

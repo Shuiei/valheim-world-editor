@@ -495,7 +495,7 @@ public static class Dungeons
     /// <summary>The dungeon's seed (DungeonGenerator.GetSeed): the world's seed and the dungeon's zone and place.</summary>
     public static int Seed(int worldSeed, Vector3 dungeonPosition)
     {
-        int zx = (int)MathF.Floor((dungeonPosition.X + 32f) / 64f), zz = (int)MathF.Floor((dungeonPosition.Z + 32f) / 64f);
+        var (zx, zz) = ChunkMath.SectorOf(dungeonPosition.X, dungeonPosition.Z);
         return unchecked(worldSeed + zx * 4271 + zz * -7187 + (int)dungeonPosition.X * -4271 + (int)dungeonPosition.Y * 9187 + (int)dungeonPosition.Z * -2134);
     }
 

@@ -282,7 +282,7 @@ public static class Regrow
     /// <summary>The zone holding a world point, made once per <paramref name="cache"/>.</summary>
     private static Zone ZoneAt(TerrainService terrain, Ground ground, Dictionary<(int, int), Zone> cache, float x, float z)
     {
-        int zx = (int)MathF.Floor((x + 32f) / 64f), zz = (int)MathF.Floor((z + 32f) / 64f);
+        var (zx, zz) = TerrainEditor.Save.ChunkMath.SectorOf(x, z);
         if (cache.TryGetValue((zx, zz), out Zone? zone))
         {
             return zone;

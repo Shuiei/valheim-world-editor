@@ -759,7 +759,7 @@ public sealed partial class MainWindow
                 MessageText.Text = $"Cannot go to {name}, outside the area, now: {why}.";
                 return;
             }
-            int zx = (int)MathF.Floor((p.World.X + 32) / 64), zz = (int)MathF.Floor((p.World.Z + 32) / 64);
+            var (zx, zz) = TerrainEditor.Save.ChunkMath.SectorOf(p.World.X, p.World.Z);
             await EditBlock(zx - s.ZonesX / 2, zz - s.ZonesZ / 2, s.ZonesX, s.ZonesZ);
         }
         View.Focus(p.World);

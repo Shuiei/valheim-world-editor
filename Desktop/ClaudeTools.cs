@@ -115,7 +115,7 @@ public sealed partial class ClaudeTools
         {
             return "Open a world first (open_world).";
         }
-        int zx = (int)MathF.Floor((x + 32) / 64), zz = (int)MathF.Floor((z + 32) / 64);
+        var (zx, zz) = TerrainEditor.Save.ChunkMath.SectorOf(x, z);
         await _w.EditArea(zx, zz, Math.Clamp(size, 1, MainWindow.MaxFollowZones));
         return ToJson(StateOf(_w));
     });

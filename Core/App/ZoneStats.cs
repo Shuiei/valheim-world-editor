@@ -128,7 +128,7 @@ public static class ZoneStats
     }
 
     /// <summary>The zone a position lies in (as ObjectRef.Zone).</summary>
-    private static (int X, int Z) ZoneOf(System.Numerics.Vector3 p) => ((int)MathF.Floor((p.X + 32f) / 64f), (int)MathF.Floor((p.Z + 32f) / 64f));
+    private static (int X, int Z) ZoneOf(System.Numerics.Vector3 p) => ChunkMath.SectorOf(p.X, p.Z);
 
     /// <summary>
     /// Whether an added object will be a player-built piece (have a builder) once saved: a builder given in its data

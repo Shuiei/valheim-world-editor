@@ -63,7 +63,11 @@ public static class DungeonEntrances
         p.Contents.FirstOrDefault(c => Dungeons.KindOf(StableHash.Of(c.Prefab)) != null || c.Prefab.StartsWith("DG_", StringComparison.Ordinal));
 
     /// <summary>The middle of the zone a point is in (ZoneSystem.GetZonePos), at height 0.</summary>
-    public static Vector3 ZoneCentre(Vector3 p) => new(MathF.Floor((p.X + 32f) / 64f) * 64f, 0f, MathF.Floor((p.Z + 32f) / 64f) * 64f);
+    public static Vector3 ZoneCentre(Vector3 p)
+    {
+        var (zx, zz) = ChunkMath.SectorOf(p.X, p.Z);
+        return new(zx * 64f, 0f, zz * 64f);
+    }
 
     /// <summary>
     /// Where the game puts the location's interior transform for an entrance at <paramref name="at"/>, whichever way it
