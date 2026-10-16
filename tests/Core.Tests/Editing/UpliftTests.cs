@@ -308,4 +308,21 @@ public class UpliftTests
         Assert.Equal(plan.Zones.Count, plan.Zones.Select(e => (e.ZoneX, e.ZoneZ)).Distinct().Count());
         Assert.Equal(alone.Max(p => p.Worst), plan.Worst);
     }
+
+    [Theory]
+    [InlineData(0.5f, 0.5f)]
+    [InlineData(-1.5f, 2.5f)]
+    [InlineData(3.2f, -0.7f)]
+    public void AnObjectAndADiscCentredOnItTakeTheSamePoint(float x, float z)
+    {
+        // At rounded halves to even (MathF.Round) and Disc rounded them up: an object at x.5 was taken for another
+        // point than a disc centred on it.
+        var block = new Uplift.Block([.. from zz in Enumerable.Range(-1, 3) from zx in Enumerable.Range(-1, 3) select (zx, zz)]);
+        var at = new Vector3(x, 0, z);
+        var middle = new List<int>();
+
+        block.Disc(at, 0, middle.Add);
+
+        Assert.Equal(block.At(at), Assert.Single(middle));
+    }
 }

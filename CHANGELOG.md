@@ -205,6 +205,9 @@ the plugin is unchanged in versions without that part.
 - **A PNG file with no header was refused as a "0-bit PNG".** Png.Read now says the header (IHDR) is missing; and
   Png.WriteGray16 refuses what cannot make a valid picture (a filter past 4, which its own Read refused, too few
   values, notes PNG cannot hold).
+- **Lifting ground could treat an object at a half metre as standing on another point than a disc centred on it.**
+  Uplift's Block.At rounded halves to even while Block.Disc rounded them up; both now round as the game's
+  Heightmap.WorldToVertex (halves up).
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
