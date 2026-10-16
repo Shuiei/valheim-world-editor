@@ -221,6 +221,15 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
     }
 
     [Fact]
+    public async Task ALineBreakInWhatIsSavedIsRefusedBeforeConnecting()
+    {
+        var r = await Tunnel.Start(Req(token: "tok\nHostKey = SHA256:other"));
+
+        Assert.Equal("The server's details cannot hold line breaks: enter each on one line.", r.Error);
+        Assert.False(Tunnel.Open);
+    }
+
+    [Fact]
     public async Task WithoutATokenTheTunnelIsNotOpened()
     {
         _ssh.Need();

@@ -13,6 +13,10 @@ the plugin is unchanged in versions without that part.
 - **A worldeditor.json lying directly in BepInEx/plugins no longer offers an extension under the name "plugins".**
   Such a file belongs to no mod, yet it could point at any mod's DLL, and the consent row named it "plugins". Its data
   and prefab notes are still read; extensions come only from a mod's own folder.
+- **A line break in a server's details can no longer add lines to servers.cfg.** Values were written as typed, so a
+  token or folder holding "a line break then HostKey = …" became a line of its own and could replace the saved server
+  key. Connecting now refuses details with line breaks, the file never writes one (a name's becomes a space), and
+  ports out of range read as the defaults.
 
 ### Changed
 

@@ -103,12 +103,12 @@ public static class ServerConfig
                 switch (key.ToLowerInvariant())
                 {
                     case "host": cur.Host = value; break;
-                    case "sshport": cur.SshPort = int.TryParse(value, out int sp) ? sp : 22; break;
+                    case "sshport": cur.SshPort = int.TryParse(value, out int sp) && IsPort(sp) ? sp : 22; break;
                     case "user": cur.User = value; break;
                     case "password": cur.Password = opt; break;
                     case "keyfile": cur.KeyFile = opt; break;
                     case "token": cur.Token = opt; break;
-                    case "bridgeport": cur.BridgePort = int.TryParse(value, out int bp) ? bp : 5182; break;
+                    case "bridgeport": cur.BridgePort = int.TryParse(value, out int bp) && IsPort(bp) ? bp : 5182; break;
                     case "hostkey": cur.HostKey = opt; break;
                     case "gamefolder": cur.GameFolder = opt; break;
                 }
@@ -121,6 +121,7 @@ public static class ServerConfig
     /// Adds or updates a server (matched by user, host and SSH port), most recent first. With no name it
     /// keeps the saved one's, else takes the host.
     /// </summary>
+    /// <exception cref="ArgumentException">A value (other than the name) holds a line break.</exception>
     public static void Remember(Server server)
     {
         lock (Lock)
@@ -153,10 +154,19 @@ public static class ServerConfig
         }
     }
 
-    /// <summary>The server's [section] name as written in the file (a ']' in its name would end it early).</summary>
-    public static string SectionName(Server s) => s.Name.Replace("]", ")");
+    /// <summary>
+    /// The server's [section] name as written in the file (a ']' would end it early, a line break start another line).
+    /// </summary>
+    public static string SectionName(Server s) => s.Name.Replace("]", ")").ReplaceLineEndings(" ");
+
+    /// <summary>True when the value fits on one line of the file: a line break would start a line of its own.</summary>
+    public static bool OneLine(string? value) => value == null || value.AsSpan().IndexOfAny('\r', '\n') < 0;
+
+    /// <summary>True for a TCP port number (1 to 65535).</summary>
+    public static bool IsPort(int port) => port is > 0 and <= 65535;
 
     /// <summary>Writes the whole file, readable by this user only.</summary>
+    /// <exception cref="ArgumentException">A value (other than the name) holds a line break.</exception>
     private static void Write(List<Server> list)
     {
         var sb = new StringBuilder();
@@ -164,6 +174,11 @@ public static class ServerConfig
         sb.AppendLine("# Password is only kept when \"Save password\" was ticked (plain text: keep this file private).");
         foreach (Server s in list)
         {
+            // A line break would add a line of its own (another HostKey, say): never written.
+            if (!new[] { s.Host, s.User, s.Password, s.KeyFile, s.Token, s.GameFolder, s.HostKey }.All(OneLine))
+            {
+                throw new ArgumentException($"The saved server {s.Id} has a value with a line break.", nameof(list));
+            }
             sb.AppendLine();
             sb.AppendLine($"[{SectionName(s)}]");
             sb.AppendLine($"Host = {s.Host}");

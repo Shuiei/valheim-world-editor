@@ -146,6 +146,11 @@ public static class Tunnel
         {
             return Fail("Enter the server as user@address (the account you log in to the server with).");
         }
+        // Saved one per line in servers.cfg: a line break would add lines of its own there (another HostKey, say).
+        if (!new[] { host, user, r.Password, r.KeyPath, r.Token, r.Name, r.GameFolder }.All(ServerConfig.OneLine))
+        {
+            return Fail("The server's details cannot hold line breaks: enter each on one line.");
+        }
         var methods = new List<AuthenticationMethod>();
         try
         {
