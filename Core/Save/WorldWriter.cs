@@ -144,6 +144,8 @@ public static class WorldWriter
         int written = 0, created = 0, addedCount = 0;
         // The template terrain object's own bytes, read from its chunk file at the first new ground.
         byte[]? templateBytes = null;
+        // Each base chunk's file looked up once for the new ground and objects.
+        var findChunk = ChunkMath.Finder(world.Chunks);
         // Reading the template and the models can fail (a chunk file gone, data that does not parse): nothing is
         // written yet, and the caller gets a result, not an exception.
         try
@@ -165,7 +167,7 @@ public static class WorldWriter
                     notSaved.Add((edit.ZoneX, edit.ZoneZ));
                     continue;
                 }
-                ChunkFile? target = ChunkMath.Find(world.Chunks, edit.ZoneX, edit.ZoneZ);
+                ChunkFile? target = findChunk(edit.ZoneX, edit.ZoneZ);
                 if (target == null)
                 {
                     skipped.Add(ChunkMath.InWorld(edit.ZoneX, edit.ZoneZ) ? $"zone {edit.ZoneX}, {edit.ZoneZ}: not generated yet (no world data there; visit it in game first)" : $"zone {edit.ZoneX}, {edit.ZoneZ}: outside the world");
@@ -189,7 +191,7 @@ public static class WorldWriter
             foreach (NewObject n in added)
             {
                 int zx = (int)MathF.Floor((n.Position.X + 32f) / 64f), zz = (int)MathF.Floor((n.Position.Z + 32f) / 64f);
-                ChunkFile? target = ChunkMath.Find(world.Chunks, zx, zz);
+                ChunkFile? target = findChunk(zx, zz);
                 if (target == null)
                 {
                     skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: zone {zx}, {zz} {(ChunkMath.InWorld(zx, zz) ? "is not generated yet" : "is outside the world")}");
@@ -577,10 +579,10 @@ public static class WorldWriter
                 }
             }
         }
-        var changed = saved;
+        var changed = saved.Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
         // Every other terrain zone must be untouched.
         // (Two terrain objects in one zone: compared in order, the writer keeps the objects' order.)
-        foreach (var group in before.TerrainZones.Where(t => changed.All(e => e.ZoneX != t.ZoneX || e.ZoneZ != t.ZoneZ) && !groundReset.Contains((t.ZoneX, t.ZoneZ))).GroupBy(t => (t.ZoneX, t.ZoneZ)))
+        foreach (var group in before.TerrainZones.Where(t => !changed.Contains((t.ZoneX, t.ZoneZ)) && !groundReset.Contains((t.ZoneX, t.ZoneZ))).GroupBy(t => (t.ZoneX, t.ZoneZ)))
         {
             var now = afterZones[group.Key].ToList();
             int n = 0;

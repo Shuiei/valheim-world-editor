@@ -29,6 +29,24 @@ public class SaveSmallPartsTests
     }
 
     [Fact]
+    public void TheFinderGivesEachSectorTheChunkFileFindGives()
+    {
+        using var w = new TempWorld();
+        var chunks = w.Load().Chunks;
+        var find = ChunkMath.Finder(chunks);
+        int inFiles = 0;
+        for (int x = -260; x <= 260; x += 3)
+        {
+            for (int z = -260; z <= 260; z += 5)
+            {
+                Assert.Same(ChunkMath.Find(chunks, x, z), find(x, z));
+                inFiles += find(x, z) != null ? 1 : 0;
+            }
+        }
+        Assert.True(inFiles > 0);
+    }
+
+    [Fact]
     public void ItemCountsAreOneOrTwoBytes()
     {
         using (var r = new ValheimReader(new MemoryStream([0x7F])))

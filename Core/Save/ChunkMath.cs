@@ -46,6 +46,23 @@ public static class ChunkMath
         return chunks.FirstOrDefault(f => f.Size < SizeFilters.Length && (ushort)(c & SizeFilters[f.Size]) == f.Chunk && f.Chunk != PortalChunk);
     }
 
+    /// <summary>
+    /// <see cref="Find"/> for many sectors of one index: each base chunk's file is looked up once, then remembered.
+    /// </summary>
+    public static Func<int, int, ChunkFile?> Finder(IReadOnlyList<ChunkFile> chunks)
+    {
+        Dictionary<ushort, ChunkFile?> found = [];
+        return (sectorX, sectorZ) =>
+        {
+            if (!InWorld(sectorX, sectorZ))
+            {
+                return null;
+            }
+            ushort c = BaseChunk(sectorX, sectorZ);
+            return found.TryGetValue(c, out ChunkFile? f) ? f : found[c] = Find(chunks, sectorX, sectorZ);
+        };
+    }
+
     /// <summary>ZoneSystem.ChunkPortal: the special chunk holding portals (never a terrain object's home).</summary>
     public const ushort PortalChunk = 0;
 }
