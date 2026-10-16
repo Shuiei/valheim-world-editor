@@ -43,16 +43,28 @@ public class KeptReadTests
     public async Task CallersAtTheSameTimeWaitForTheSameWork()
     {
         int reads = 0;
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var entered = new ManualResetEventSlim();
         using var go = new ManualResetEventSlim();
         var kept = new KeptRead<object, string>(_ =>
         {
             Interlocked.Increment(ref reads);
-            go.Wait();
+            entered.Set();
+            go.Wait(ct);
             return "read";
         });
         object a = new();
-        var first = Task.Run(() => kept.Of(a));
-        var second = Task.Run(() => kept.Of(a));
+        var first = Task.Run(() => kept.Of(a), ct);
+        entered.Wait(ct);
+        // The second caller comes while the first read is held, and the work is let go only once it is blocked:
+        // waiting for that read (or in a read of its own, which the count catches).
+        Thread? secondThread = null;
+        var second = Task.Factory.StartNew(() =>
+        {
+            Volatile.Write(ref secondThread, Thread.CurrentThread);
+            return kept.Of(a);
+        }, ct, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        Assert.True(SpinWait.SpinUntil(() => Volatile.Read(ref secondThread) is { } t && (t.ThreadState & ThreadState.WaitSleepJoin) != 0, TimeSpan.FromSeconds(10)));
         go.Set();
         Assert.Equal(["read", "read"], await Task.WhenAll(first, second));
         Assert.Equal(1, reads);
