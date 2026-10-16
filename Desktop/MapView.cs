@@ -137,6 +137,10 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     /// </summary>
     private volatile PortalMap.Result? _portals;
     /// <summary>
+    /// Why the portals could not be read (a chunk file missing or locked), or null; set with <see cref="Portals"/>.
+    /// </summary>
+    public string? PortalsError { get; private set; }
+    /// <summary>
     /// Raised on the UI thread when the portals have been read (with <c>PiecesRead</c>).
     /// </summary>
     public event Action? PortalsRead;
@@ -212,6 +216,9 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     public void Show(WorldSession session)
     {
         _session = session;
+        // The last world's portals are not this one's: none until this world's are read.
+        _portals = null;
+        PortalsError = null;
         // The last world's map is no longer wanted: its build stops, and gives its threads back.
         StopBuild();
         var build = _build = new CancellationTokenSource();
@@ -295,7 +302,17 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         {
             float[] data = PieceCatalog.Encode(world, deleted);
             var (ruins, joined) = PieceCatalog.EncodeRuins(world, deleted);
-            var portals = PortalMap.Find(world, s.Edits);
+            // A portal read that fails (a chunk file missing or locked) keeps the pieces read, and says why.
+            PortalMap.Result? portals = null;
+            string? portalsError = null;
+            try
+            {
+                portals = PortalMap.Find(world, s.Edits);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                portalsError = ex.Message;
+            }
             const int S = PieceCatalog.Stride;
             // Lower pieces first so roofs end up on top, like looking down from above.
             (bool Ruin, int Index)[] order = [.. Enumerable.Range(0, data.Length / S).Select(i => (Ruin: false, Index: i))
@@ -313,6 +330,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
                 _pieces = data;
                 _buildingsKey = default;
                 _portals = portals;
+                PortalsError = portalsError;
                 PiecesRead?.Invoke();
                 PortalsRead?.Invoke();
                 RequestNextFrameRendering();

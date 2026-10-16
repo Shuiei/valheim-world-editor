@@ -312,7 +312,7 @@ public sealed class MapPage : IDisposable
         Map.Hovered += Hover;
         Map.Status += t => _status.Text = t;
         Map.PiecesRead += () => BuildingsBox.Content = $"Show buildings ({Map.PieceCount:N0} player-built pieces)";
-        Map.PortalsRead += () => { PortalsBox.Content = PortalsLabel(Map.Portals); PlaceLabels(); };
+        Map.PortalsRead += () => { PortalsBox.Content = PortalsLabel(Map.Portals, Map.PortalsError); PlaceLabels(); };
         Map.ViewChanged += PlaceLabels;
         Map.SizeChanged += (_, _) => PlaceLabels();
         _liveBox = new StackPanel { Spacing = 6, IsVisible = false, Children = { LiveText, ReloadButton } };
@@ -486,6 +486,8 @@ public sealed class MapPage : IDisposable
         if (!same)
         {
             Map.Show(session);
+            // The last world's portal counts go with it (its portals did, in Map.Show).
+            PortalsBox.Content = PortalsLabel(Map.Portals, Map.PortalsError);
             Spot = null;
             Target = null;
             Map.Chosen = null;
@@ -627,10 +629,15 @@ public sealed class MapPage : IDisposable
     private static readonly IBrush PortalTag = new SolidColorBrush(Color.FromRgb(214, 180, 255));
 
     /// <summary>
-    /// The portals switch's text with their counts: how many there are, how many pairs are linked and how many are alone.
+    /// The portals switch's text with their counts: how many there are, how many pairs are linked and how many are alone;
+    /// or why they could not be read.
     /// </summary>
-    internal static string PortalsLabel(PortalMap.Result? portals)
+    internal static string PortalsLabel(PortalMap.Result? portals, string? error = null)
     {
+        if (error != null)
+        {
+            return $"Show portals and their links (not read: {error})";
+        }
         if (portals == null)
         {
             return "Show portals and their links";

@@ -82,6 +82,7 @@ public class MapPageTests
         Assert.Equal("Show portals and their links (none)", MapPage.PortalsLabel(new PortalMap.Result([], [])));
         var two = new PortalMap.Result([new(1, "portal_wood", 0, 0, 0, "a", null), new(2, "portal_wood", 1, 0, 0, "a", null), new(3, "portal_wood", 2, 0, 0, "b", null)], [(0, 1)]);
         Assert.Equal("Show portals and their links (3: 1 linked pair, 1 alone)", MapPage.PortalsLabel(two));
+        Assert.Equal("Show portals and their links (not read: locked)", MapPage.PortalsLabel(null, "locked"));
 
         using var r = new Run();
         await r.Open();
@@ -91,7 +92,20 @@ public class MapPageTests
             Avalonia.Threading.Dispatcher.UIThread.RunJobs();
         }
         Assert.NotNull(r.M.Map.Portals);
+        Assert.Null(r.M.Map.PortalsError);
         Assert.Equal(MapPage.PortalsLabel(r.M.Map.Portals), r.M.PortalsBox.Content);
+
+        // Another world: the last one's portals and their counts go at once, before its own are read.
+        using var other = WorldSession.Open(r.Dir);
+        r.M.Show(other);
+        Assert.Null(r.M.Map.Portals);
+        Assert.Equal("Show portals and their links", r.M.PortalsBox.Content);
+        for (int i = 0; i < 100 && r.M.Map.Portals == null; i++)
+        {
+            await Task.Delay(50);
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        }
+        Assert.NotNull(r.M.Map.Portals);
     }
 
     [AvaloniaFact]
