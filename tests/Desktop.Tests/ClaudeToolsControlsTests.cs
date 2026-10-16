@@ -158,8 +158,8 @@ public class ClaudeToolsControlsTests
     /// <summary>A command that can always run and counts its runs.</summary>
     private sealed class CountingCommand : ICommand
     {
-        /// <summary>Never raised: the command can always run.</summary>
-        public event EventHandler? CanExecuteChanged { add { } remove { } }
+        /// <summary>Not kept, as it is never raised: the command can always run.</summary>
+        event EventHandler? ICommand.CanExecuteChanged { add { } remove { } }
 
         /// <summary>How many times the command ran.</summary>
         public int Runs { get; private set; }
