@@ -114,6 +114,9 @@ the plugin is unchanged in versions without that part.
 - **Two of the game's location lists with the same counts are both read.** Lists were told apart by their location and
   vegetation counts alone, so a second list with the same counts was replaced by the first, its locations lost and the
   first's counted twice. Lists of the same counts are now taken one after the other, in the game's order.
+- **A very large terrain texture array is said to be too large instead of failing with an overflow.** Its size was
+  worked out in 32-bit numbers, so 4096 × 4096 with 32 slices came out negative. It is now worked out in 64 bits, and
+  an array too large for one buffer is refused with a clear message.
 
 ### Changed
 
