@@ -531,7 +531,8 @@ public sealed class WorldSession : IDisposable
         }
         PruneSaves();
         Live?.Dispose();
-        _applying.Dispose();
+        // The apply lock is not disposed: an apply still under way releases it when it ends (its outcome would be
+        // lost to an ObjectDisposedException), and it holds nothing to free (its wait handle is never asked for).
     }
 
     /// <summary>

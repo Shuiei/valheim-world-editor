@@ -57,6 +57,22 @@ public sealed class WorldSessionTests : IDisposable
     }
 
     [Fact]
+    public async Task LeavingDuringAnApplyStillGivesItsOutcome()
+    {
+        using var game = new FakeGame();
+        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.Shape(32, 32, Formula.Compile("2", []), 3, 0, "raise");
+        game.HoldTerrain = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var applying = world.ApplyLive();
+        Assert.NotSame(applying, await Task.WhenAny(game.TerrainArrived.Task, applying));
+        // Left while the game holds the ground: the apply ends with an outcome, not a disposed lock.
+        world.Dispose();
+        game.HoldTerrain.SetResult();
+        Assert.NotNull(await applying);
+    }
+
+    [Fact]
     public async Task ZoneResetsAreNotSentAgainWhenTheWorldCannotBeReadBack()
     {
         using var game = new FakeGame();
