@@ -2366,7 +2366,7 @@ internal sealed partial class DungeonDresser
     {
         float aisle = 2;
         int n = (int)MathF.Floor((2 * f.HalfD) / 4);
-        float v0 = -n * 2f;
+        float v0 = -n * 2f, end = f.HalfD + _mat.Thick / 2;
         for (int i = 0; i < n; i++)
         {
             float a = v0 + 4 * i, b = a + 4;
@@ -2377,8 +2377,10 @@ internal sealed partial class DungeonDresser
                 {
                     InnerWall(f, Math.Min(front, back), a, Math.Max(front, back), a, 0, 4);
                 }
-                InnerWall(f, front, a, front, a + 1, 0, 4);
-                InnerWall(f, front, b - 1, front, b, 0, 4);
+                // The first and last cells' fronts run on to the end walls' middle: the cells take 4 m each, and the
+                // strip the block leaves at each end was open to the aisle.
+                InnerWall(f, front, i == 0 ? -end : a, front, a + 1, 0, 4);
+                InnerWall(f, front, b - 1, front, i == n - 1 ? end : b, 0, 4);
                 InnerWall(f, front, a + 1, front, b - 1, 3, 4);
                 _o.Add("iron_grate", f.W(front, a + 2, f.F + 1), f.Yaw(90));
                 float mid = (front + back) / 2;

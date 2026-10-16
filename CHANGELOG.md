@@ -162,6 +162,9 @@ the plugin is unchanged in versions without that part.
 - **Dungeon columns could rise through the roof into the room above.** A column (and a post) took its last segment
   however far it rose past the top, so wood logs in a tall room reached 13.3 m, 1.3 m into the room two levels up; the
   last segment may now rise into the roof slab, never past it.
+- **Caged foes could walk out of a cell block's end cells.** The cells take 4 m each along the block, and the strip
+  left at each end had no front wall, so the first and last cells were open to the aisle; their fronts now run on to
+  the end walls.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
