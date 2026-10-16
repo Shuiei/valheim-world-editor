@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.3 — unreleased
+
+### Changed
+- Saved objects are read by one reader (`ZdoReader`) instead of three copies of the format: the world loader, the
+  copying of a template object and the full read the inspector uses all go through it. Loading, copies and saves
+  give the same bytes and lists as before, and loading is as fast.
+
 ## v1.47.2 — unreleased
 
 ### Changed
