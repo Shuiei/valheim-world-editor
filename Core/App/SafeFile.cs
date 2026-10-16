@@ -13,7 +13,9 @@ public static class SafeFile
     /// <param name="path">The file to write.</param>
     /// <param name="text">Its new contents.</param>
     /// <param name="mode">The Unix permissions it is created with; ignored on Windows.</param>
-    public static void WriteAllText(string path, string text, UnixFileMode? mode = null)
+    /// <param name="overwrite">Whether a file there already is replaced. When not, it is left as it is and the write
+    /// fails (IOException): the move is what tells, so a file put there meanwhile is never replaced.</param>
+    public static void WriteAllText(string path, string text, UnixFileMode? mode = null, bool overwrite = true)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         string temp = path + ".tmp";
@@ -30,6 +32,14 @@ public static class SafeFile
             writer.Flush();
             stream.Flush(flushToDisk: true);
         }
-        File.Move(temp, path, overwrite: true);
+        try
+        {
+            File.Move(temp, path, overwrite);
+        }
+        catch (IOException)
+        {
+            File.Delete(temp);
+            throw;
+        }
     }
 }

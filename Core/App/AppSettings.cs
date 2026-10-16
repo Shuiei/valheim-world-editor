@@ -161,7 +161,7 @@ public sealed class AppSettings
     public bool FileUnread { get; private init; }
 
     /// <summary>
-    /// Whether there was no settings file when these were loaded: a file there at the next <c>Save</c> was put there
+    /// Whether there was no settings file when these were loaded: a file there when <c>Save</c> writes was put there
     /// by another program since (a sync program putting the user's back), and is left as it is. Cleared once these
     /// are written.
     /// </summary>
@@ -259,16 +259,16 @@ public sealed class AppSettings
                 Console.WriteLine($"Settings: not saved: {FilePath} could not be read when the editor started, and is left as it is.");
                 return;
             }
-            if (_fileMissing && File.Exists(FilePath))
-            {
-                Console.WriteLine($"Settings: not saved: {FilePath} was not there when the editor started and is now (put back by another program?), and is left as it is.");
-                return;
-            }
             try
             {
-                // Only the user can read it, from the start: it holds Claude's token.
-                SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, Indented), UnixFileMode.UserRead | UnixFileMode.UserWrite);
+                // Only the user can read it, from the start: it holds Claude's token. Not over a file that was not
+                // there at the start: the move itself refuses one put there since.
+                SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, Indented), UnixFileMode.UserRead | UnixFileMode.UserWrite, overwrite: !_fileMissing);
                 _fileMissing = false;
+            }
+            catch (IOException) when (_fileMissing && File.Exists(FilePath))
+            {
+                Console.WriteLine($"Settings: not saved: {FilePath} was not there when the editor started and is now (put back by another program?), and is left as it is.");
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
