@@ -213,9 +213,9 @@ public sealed class AppSettings
 
     /// <summary>
     /// The settings file's text, or null when there is none. A read that fails (the file held by a sync or antivirus
-    /// program for a moment) is tried again twice, 100 ms apart, before its exception goes up; a file not there is
-    /// looked for once more (one being put back by such a program), and none the second time is none (no data
-    /// folder: none at once).
+    /// program for a moment: IOException, or access denied while it is) is tried again twice, 100 ms apart, before
+    /// its exception goes up; a file not there is looked for once more (one being put back by such a program), and
+    /// none the second time is none (no data folder: none at once).
     /// </summary>
     private static string? ReadText()
     {
@@ -233,7 +233,7 @@ public sealed class AppSettings
             {
                 return null;
             }
-            catch (IOException) when (attempt < 2)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < 2)
             {
                 Thread.Sleep(100);
             }
