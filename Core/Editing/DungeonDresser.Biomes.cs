@@ -69,12 +69,7 @@ internal sealed partial class DungeonDresser
             return;
         }
         var rnd = Local(f, 6);
-        float total = pool.Sum(g => g.Weight);
-        Growth Pick()
-        {
-            float at = (float)rnd.NextDouble() * total;
-            return pool.First(g => (at -= g.Weight) <= 0);
-        }
+        Growth Pick() => Weighted.Pick(pool, g => g.Weight, rnd.NextDouble());
         int n = (int)MathF.Round(f.Area / 30f * (_s.Decor >= 2 ? 1.6f : 0.8f) + (float)rnd.NextDouble());
         var walls = f.WallSpots(2.2f, 2.6f).OrderBy(_ => rnd.Next()).ToList();
         var corners = f.Corners().Where(c => c.Convex).OrderBy(_ => rnd.Next()).ToList();

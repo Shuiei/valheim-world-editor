@@ -137,6 +137,9 @@ the plugin is unchanged in versions without that part.
 - **Two saves of the same app file at once could fail or keep a half-written one.** SafeFile wrote every file through
   the one name path + ".tmp", so two writers deleted or moved each other's; each write now has a temporary file of its
   own, deleted on any failure.
+- **Dungeon generation could rarely stop with an error on a random pick.** The growths and corridor-feature picks took
+  the first item whose running weight reached the draw, with no fallback when float rounding left a little over; one
+  shared Weighted.Pick (also used by the planner and Rooms mode) falls back to the last item.
 
 ### Changed
 

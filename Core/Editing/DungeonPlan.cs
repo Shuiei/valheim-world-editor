@@ -219,18 +219,7 @@ internal sealed class DungeonPlanner
     private int Even(int min, int max) => min + 2 * _rnd.Next((max - min) / 2 + 1);
 
     /// <summary>One of the items at random, each as likely as its weight.</summary>
-    private T Pick<T>(IReadOnlyList<(T Item, float Weight)> items)
-    {
-        float total = items.Sum(i => i.Weight), roll = (float)_rnd.NextDouble() * total;
-        foreach (var (item, w) in items)
-        {
-            if ((roll -= w) <= 0)
-            {
-                return item;
-            }
-        }
-        return items[^1].Item;
-    }
+    private T Pick<T>(IReadOnlyList<(T Item, float Weight)> items) => Weighted.Pick(items, i => i.Weight, _rnd.NextDouble()).Item;
 
     /// <summary>Makes the whole plan into <see cref="_plan"/>.</summary>
     private void Build()

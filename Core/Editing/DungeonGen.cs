@@ -273,8 +273,7 @@ public static class DungeonGen
                 continue;
             }
             // Weighted as the game weighs its rooms (Room.m_weight).
-            float total = fits.Sum(r => r.Weight), roll = (float)rnd.NextDouble() * total;
-            var room = fits.First(r => (roll -= r.Weight) <= 0 || r == fits[^1]);
+            var room = Weighted.Pick(fits, r => r.Weight, rnd.NextDouble());
             var mine = Dungeons.Matching(room, end.Type).ToList();
             var p = Dungeons.Attach(room, mine[rnd.Next(mine.Count)], end.Position, end.Rotation);
             if (Dungeons.Overlaps(rooms, p).Count == 0 && Dungeons.Inside(kind, origin, p))

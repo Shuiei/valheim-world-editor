@@ -528,8 +528,7 @@ internal sealed partial class DungeonDresser
         {
             kinds.Add(("trap", 0.8f));
         }
-        float total = kinds.Sum(k => k.Weight), pick = R(0, total);
-        string kind = kinds.First(k => (pick -= k.Weight) <= 0).Kind;
+        string kind = Weighted.Pick(kinds, k => k.Weight, _rnd.NextDouble()).Kind;
         switch (kind)
         {
             case "gate":
