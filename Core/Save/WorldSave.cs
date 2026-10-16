@@ -652,9 +652,17 @@ public sealed class WorldSave
             ObjectRef o = ObjectRefs[id];
             Tamed.Remove(id);
             Links.Remove(id);
+            // A builder with no pieces left is no builder (TopBuilder, Builders).
             if (o.Creator != 0 && Creators.TryGetValue(o.Creator, out int n))
             {
-                Creators[o.Creator] = n - 1;
+                if (n > 1)
+                {
+                    Creators[o.Creator] = n - 1;
+                }
+                else
+                {
+                    Creators.Remove(o.Creator);
+                }
             }
             if (o.Prefab == LocationProxyPrefab)
             {

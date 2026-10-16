@@ -437,7 +437,9 @@ public class WorldSaveTests
         var gone = world.MergeLive([(10, 10)], [], _ => false, _ => false)!;
         Assert.Equal(2, gone.Vanished.Count);
         Assert.True(gone.Modifiers);
-        Assert.Equal(0, world.Creators[777]);
+        // A builder with no pieces left is no builder: kept at zero, TopBuilder could still name them.
+        Assert.False(world.Creators.ContainsKey(777));
+        Assert.NotEqual(777, world.TopBuilder);
         Assert.DoesNotContain(world.Pieces, p => p.Prefab == Fixtures.Hash("mod_live_wall"));
         Assert.DoesNotContain(world.Locations, l => l.Location == MadeObjects.MadeUpLocation);
         Assert.DoesNotContain(world.Placed, p => p.Location == MadeObjects.MadeUpLocation);
@@ -465,7 +467,7 @@ public class WorldSaveTests
         // Gone: the one object vanishes and nothing stays behind.
         var gone = world.MergeLive([(10, 10)], [], _ => false, _ => false)!;
         Assert.Equal([id], gone.Vanished);
-        Assert.Equal(0, world.Creators[777]);
+        Assert.False(world.Creators.ContainsKey(777));
     }
 
     // A vehicle's root and part (the example mod's): their links read (the root's

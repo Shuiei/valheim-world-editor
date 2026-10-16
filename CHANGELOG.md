@@ -227,6 +227,8 @@ the plugin is unchanged in versions without that part.
   more; it now counts the objects the deletions removed.
 - **An object changed in the inspector lost the high flag bits it was saved with.** ZdoData kept only the bits 0x0F00
   while ZdoBuilder kept them all; it now keeps the unused bits 0xC000 too and writes them back.
+- **A player whose pieces had all gone from the live game could still be named the world's top builder.** Their count
+  stayed in the list at zero; it is now taken out when it reaches zero.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
