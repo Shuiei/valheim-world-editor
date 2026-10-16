@@ -161,6 +161,11 @@ public sealed class StartPage
     public StartPage(AppSettings settings, string? lastError = null)
     {
         _settings = settings;
+        // The bridge address last connected to (Connect by address), so a tunnel's is not typed again each start.
+        if (!string.IsNullOrWhiteSpace(settings.LiveUrl))
+        {
+            LiveUrl.Text = settings.LiveUrl;
+        }
         LookBanner = new GameLookBanner(settings) { PickFolder = t => PickFolder(t), OpenLog = OpenLog };
         LookBanner.BusyChanged += _ => ShowBusy();
         var settingsButton = new Button { Content = Icons.With("settings", "Settings"), FontSize = 13 }.Classed("ghost");

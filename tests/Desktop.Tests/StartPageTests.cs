@@ -12,7 +12,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The start page: connecting to a dedicated server through the form and from a saved server (the SSH tunnel replaced
 /// by one that leads to a stand-in game), each way it can fail, editing and forgetting a server, the saved worlds as cards, a world
-/// folder typed with ~, and "My game" when the plugin's settings cannot be read. Saved servers and settings go to the
+/// folder typed with ~, the bridge address last connected to, and "My game" when the plugin's settings cannot be read. Saved servers and settings go to the
 /// tests' own files; it runs alone.
 /// </summary>
 [Collection("DataDir")]
@@ -77,6 +77,14 @@ public class StartPageTests
     /// Every text block's text under the control, joined with " | ", for asserting on what it shows.
     /// </summary>
     private static string Texts(Control c) => string.Join(" | ", c.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text));
+
+    [AvaloniaFact]
+    public void TheBridgeAddressLastConnectedToIsFilledIn()
+    {
+        using var r = new Run();
+        Assert.Equal("127.0.0.1:5182", r.P.LiveUrl.Text);
+        Assert.Equal("http://10.0.0.5:15182", new StartPage(new AppSettings { LiveUrl = "http://10.0.0.5:15182" }).LiveUrl.Text);
+    }
 
     [AvaloniaFact]
     public async Task TheServerFormConnectsRemembersTheServerAndOpensIt()
