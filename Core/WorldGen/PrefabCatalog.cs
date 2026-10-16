@@ -56,10 +56,21 @@ public static class PrefabCatalog
         Dictionary<string, (float Radius, bool Cultivated)> Grow, Dictionary<int, SpawnKind> Spawns)
     {
         /// <summary>
-        /// See <see cref="Ranges"/>: made once per catalogue.
+        /// See <see cref="Ranges"/>: made once per catalogue, at first use (Use fills ByHash after making the record);
+        /// of two first uses at once, the first table kept is the one both get.
         /// </summary>
-        public Dictionary<string, (float WardRadius, float BuildRange)> Ranges { get; } =
-            ByHash.Values.Where(p => p.WardRadius > 0 || p.BuildRange > 0).ToDictionary(p => p.Name, p => (p.WardRadius, p.BuildRange));
+        public Dictionary<string, (float WardRadius, float BuildRange)> Ranges
+        {
+            get
+            {
+                if (field is { } made)
+                {
+                    return made;
+                }
+                made = ByHash.Values.Where(p => p.WardRadius > 0 || p.BuildRange > 0).ToDictionary(p => p.Name, p => (p.WardRadius, p.BuildRange));
+                return Interlocked.CompareExchange(ref field, made, null) ?? made;
+            }
+        }
     }
 
     /// <summary>
