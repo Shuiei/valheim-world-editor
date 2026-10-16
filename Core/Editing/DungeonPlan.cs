@@ -1293,7 +1293,7 @@ internal sealed class DungeonPlanner
                 d.Kind = Door.Gate;
                 continue;
             }
-            bool grand = rooms.Any(r => r.Room is Room.Hall or Room.Throne or Room.Feast or Room.Chapel) && rooms.All(r => !r.Corridor || true);
+            bool grand = rooms.Any(r => r.Room is Room.Hall or Room.Throne or Room.Feast or Room.Chapel);
             var kind = Pick(_style.Doors);
             if (grand && _rnd.NextDouble() < 0.35)
             {
