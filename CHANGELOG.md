@@ -71,6 +71,10 @@ the plugin is unchanged in versions without that part.
   block Steam updates), and a bundle that failed midway left the list part-filled for the session, so later references
   found nothing. Open bundles are read as they are, a bad one is skipped (logged), and the list counts as complete
   only once every bundle was gone through.
+- **A shader whose program lengths do not fit together is said to be unreadable instead of failing with an unrelated
+  error.** The per-platform offset and length lists were indexed without checking their sizes, and a part's unpacked
+  length was allocated as written. They are now checked first, a part outside the data or past what LZ4 can unpack to
+  is refused, and the message no longer says "terrain shader" for every shader.
 
 ### Changed
 

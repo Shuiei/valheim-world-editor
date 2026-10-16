@@ -1659,7 +1659,7 @@ public sealed class GameBundles
 
     /// <summary>
     /// A shader's programs, null when the object is not a Shader. Throws InvalidDataException when a blob does not
-    /// unpack.
+    /// unpack, or its parts' offsets and lengths do not fit together or in its data.
     /// </summary>
     public ShaderPrograms? LoadShader(Where at)
     {
@@ -1674,14 +1674,30 @@ public sealed class GameBundles
                 int[] platforms = [.. sh["platforms.Array"].Children.Select(c => (int)c.AsUInt)];
                 byte[] blob = sh["compressedBlob.Array"].AsByteArray;
                 var blobs = new Dictionary<int, byte[]>();
+                var offsets = sh["offsets.Array"].Children;
+                var compressed = sh["compressedLengths.Array"].Children;
+                var decompressed = sh["decompressedLengths.Array"].Children;
+                if (offsets.Count < platforms.Length || compressed.Count < platforms.Length || decompressed.Count < platforms.Length)
+                {
+                    throw new InvalidDataException("a shader names more platforms than it has programs for");
+                }
                 for (int pi = 0; pi < platforms.Length; pi++)
                 {
-                    var offs = Numbers(sh["offsets.Array"].Children[pi]).ToList();
-                    var comp = Numbers(sh["compressedLengths.Array"].Children[pi]).ToList();
-                    var full = Numbers(sh["decompressedLengths.Array"].Children[pi]).ToList();
+                    var offs = Numbers(offsets[pi]).ToList();
+                    var comp = Numbers(compressed[pi]).ToList();
+                    var full = Numbers(decompressed[pi]).ToList();
+                    if (comp.Count != offs.Count || full.Count != offs.Count)
+                    {
+                        throw new InvalidDataException("a shader's program parts do not match their lengths");
+                    }
                     using var ms = new MemoryStream();
                     for (int k = 0; k < offs.Count; k++)
                     {
+                        // LZ4 unpacks to at most 255 times its size (and a bit): a larger length is not made room for.
+                        if ((long)offs[k] + comp[k] > blob.Length || full[k] > (long)comp[k] * 255 + 16)
+                        {
+                            throw new InvalidDataException("a shader's program part lies outside its data");
+                        }
                         byte[] outBuf = new byte[full[k]];
                         int got;
                         try
@@ -1695,7 +1711,7 @@ public sealed class GameBundles
                         }
                         if (got != full[k])
                         {
-                            throw new InvalidDataException("the terrain shader's program could not be unpacked");
+                            throw new InvalidDataException("a shader's program could not be unpacked");
                         }
                         ms.Write(outBuf);
                     }
