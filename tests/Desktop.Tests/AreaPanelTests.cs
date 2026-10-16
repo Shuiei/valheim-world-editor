@@ -621,9 +621,12 @@ public class AreaPanelTests
         using var r = new Run();
         r.P.Choose(AreaPanel.Act.Remove);
         Assert.Equal("", r.P.VolumeText.Text);
-        r.P.Choose(AreaPanel.Act.Flatten);
-        Assert.Contains("Ground inside", r.P.VolumeText.Text, StringComparison.Ordinal);
-        r.P.Choose(AreaPanel.Act.Smooth);
-        Assert.Equal("", r.P.VolumeText.Text);
+        foreach (var act in (AreaPanel.Act[])[AreaPanel.Act.Flatten, AreaPanel.Act.Raise, AreaPanel.Act.Lower])
+        {
+            r.P.Choose(act);
+            Assert.Contains("Ground inside", r.P.VolumeText.Text, StringComparison.Ordinal);
+            r.P.Choose(AreaPanel.Act.Smooth);
+            Assert.Equal("", r.P.VolumeText.Text);
+        }
     }
 }
