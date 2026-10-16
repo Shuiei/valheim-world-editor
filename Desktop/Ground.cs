@@ -240,19 +240,22 @@ public sealed class Ground
     public List<(int X, int Z)> ZonesOf(IEnumerable<int> points)
     {
         var set = new HashSet<(int, int)>();
+        void Add(int zx, int zz)
+        {
+            if (zx >= 0 && zx < ZonesX && zz >= 0 && zz < ZonesZ)
+            {
+                set.Add((zx, zz));
+            }
+        }
         foreach (int g in points)
         {
+            // The zone the point is in, and the one west (south) of it when the point is on their shared edge.
             int gx = g % W, gz = g / W;
-            foreach (int zx in new[] { gx / 64, (int)Math.Floor((gx - 1) / 64.0) })
-            {
-                foreach (int zz in new[] { gz / 64, (int)Math.Floor((gz - 1) / 64.0) })
-                {
-                    if (zx >= 0 && zx < ZonesX && zz >= 0 && zz < ZonesZ)
-                    {
-                        set.Add((zx, zz));
-                    }
-                }
-            }
+            int x1 = gx / 64, x2 = (int)Math.Floor((gx - 1) / 64.0), z1 = gz / 64, z2 = (int)Math.Floor((gz - 1) / 64.0);
+            Add(x1, z1);
+            Add(x1, z2);
+            Add(x2, z1);
+            Add(x2, z2);
         }
         return [.. set.OrderBy(z => z.Item2).ThenBy(z => z.Item1)];
     }
