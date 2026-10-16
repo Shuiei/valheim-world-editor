@@ -2815,7 +2815,10 @@ public sealed class GlView : OpenGlControlBase
             {
                 _selectDown = false;
                 SelectTool.Up(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || Ctrl(e.KeyModifiers));
-                // A look queued by a move just before the press was dropped while the button was down.
+                // A look queued by a move just before the press was dropped while the button was down. The handle
+                // under the pointer is found again first: the drag's moves did not look for it, and over a handle no
+                // object is outlined.
+                SelectTool.Hover(at, surface.Bounds.Size);
                 QueueHoverPick();
             }
             else if (_brushDown)
