@@ -273,10 +273,16 @@ public sealed class EditReplay
         }
         // Added, saved, then deleted or changed (changed: its new version in its place): as a deletion of what the
         // editor's save wrote.
+        // A copy moved from it (the same object but for its place, turn and size; one only, else none is taken for
+        // its move) goes with it too, taking the game's object along when the move is kept.
         foreach (var n in saved.Added.Where(n => !current.Contains(n)).OrderByDescending(n => n.Id))
         {
             var with = Replacing(n.Prefab, n.Position);
-            Settle(n.Id, n.Prefab, n.Position, FindSaved(n.Id), y => WrittenBy(n) is { } was && NewData(y) is { } now ? was.AsSpan().SequenceEqual(now) : null, with, goneSaysNothing: true);
+            var copies = added.Where(a => a.Id != n.Id && !attached.Contains(a) && !InGameSave(a)
+                && a with { Id = n.Id, Position = n.Position, Rotation = n.Rotation, Scale = n.Scale } == n).Take(2).ToList();
+            List<NewObject> moving = copies.Count == 1 ? copies : [];
+            attached.UnionWith(moving);
+            Settle(n.Id, n.Prefab, n.Position, FindSaved(n.Id), y => WrittenBy(n) is { } was && NewData(y) is { } now ? was.AsSpan().SequenceEqual(now) : null, with, goneSaysNothing: true, moving);
         }
         foreach (var n in pending.Where(n => !attached.Contains(n)))
         {
@@ -284,7 +290,7 @@ public sealed class EditReplay
         }
         foreach (var (s, copies) in moves.OrderBy(m => m.Key))
         {
-            var left = copies.Where(n => !InGameSave(n)).ToList();
+            var left = copies.Where(n => !InGameSave(n) && !attached.Contains(n)).ToList();
             if (left.Count == 0)
             {
                 continue;
@@ -333,9 +339,12 @@ public sealed class EditReplay
     /// Its absence from the game's save is no clash: the editor's own save removed it, or wrote it (the game may have
     /// saved from the save it had).
     /// </param>
-    private void Settle(int old, int prefab, Vector3 position, int? newer, Func<int, bool?> same, List<NewObject> with, bool goneSaysNothing)
+    /// <param name="moving">Copies of it moved elsewhere: kept, they take the game's object along (unless they carry data of their own).</param>
+    private void Settle(int old, int prefab, Vector3 position, int? newer, Func<int, bool?> same, List<NewObject> with, bool goneSaysNothing, List<NewObject>? moving = null)
     {
-        List<NewObject> mine = [.. with.Select(Remapped)];
+        List<NewObject> moved = moving ?? [];
+        List<NewObject> mine = [.. with.Select(Remapped), .. moved.Select(m => newer is int g && m.Raw == null ? m with { SourceId = g, Fresh = false } : Remapped(m))];
+        List<NewObject> original = [.. with, .. moved];
         if (newer is int y)
         {
             bool? unchanged = same(y);
@@ -346,12 +355,12 @@ public sealed class EditReplay
             }
             else
             {
-                Clashing(new Item(ReplayClash.Changed, old, y, mine, with), prefab, position, unchanged == null);
+                Clashing(new Item(ReplayClash.Changed, old, y, mine, original), prefab, position, unchanged == null);
             }
         }
-        else if (with.Count > 0 && !goneSaysNothing)
+        else if (original.Count > 0 && !goneSaysNothing)
         {
-            Clashing(new Item(ReplayClash.Removed, old, null, mine, with), prefab, position, false);
+            Clashing(new Item(ReplayClash.Removed, old, null, mine, original), prefab, position, false);
         }
         else
         {
@@ -659,8 +668,9 @@ public sealed class EditReplay
         edits.SetDeleted(deletes, true);
         edits.KeepGone(gone);
         edits.AddObjects(adds);
-        // A zone left to the game's ground is not reset either (a reset there would take that ground away).
-        foreach (var reset in _resets.Where(r => !gameGround.Contains((r.X, r.Z))))
+        // A zone left to the game's ground is not reset to generated ground either (that would take the game's ground
+        // away); a reset of its objects alone stays.
+        foreach (var reset in _resets.Where(r => !r.Ground || !gameGround.Contains((r.X, r.Z))))
         {
             edits.SetReset(reset, true);
         }

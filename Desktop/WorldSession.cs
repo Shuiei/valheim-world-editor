@@ -572,7 +572,7 @@ public sealed class WorldSession : IDisposable
         {
             var f = k.FrameOf(c);
             return k.Ids[c].Any(r.Dropped.Contains) || c.Zones.Any(z => r.GameGround.Contains((z.X + f.X0, z.Z + f.Z0)))
-                || c.Resets.Any(x => r.GameGround.Contains((x.Reset.X, x.Reset.Z)));
+                || c.Resets.Any(x => x.Reset.Ground && r.GameGround.Contains((x.Reset.X, x.Reset.Z)));
         }
         int undoFrom = k.Undo.FindLastIndex(Touches) + 1;
         int redoFrom = k.Redo.FindLastIndex(Touches) + 1;

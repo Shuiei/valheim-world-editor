@@ -276,12 +276,15 @@ public class EditReplayTests
         Assert.Equal((keepMine && !gameRemoved ? 1 : 0, keepMine ? 1 : 0), (r.Deleted, r.Added));
     }
 
-    // An object the editor added and saved, then deleted: when the game, playing on from the editor's save, changed it
-    // (a chest filled), its deletion is a clash too.
+    // An object the editor added and saved, then deleted or moved: when the game, playing on from the editor's save,
+    // changed it (a chest filled), that is a clash too, the move's copy kept or dropped with it (kept, it takes the
+    // game's object along).
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void AnAddedAndSavedObjectTheGameChangedClashesWhenDeleted(bool keepMine)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void AnAddedAndSavedObjectTheGameChangedClashesWhenDeletedOrMoved(bool keepMine, bool moved)
     {
         using var w = new TempWorld();
         var read = w.Load();
@@ -297,12 +300,23 @@ public class EditReplayTests
         filled.Set("ints", StableHash.Of("vwe-game"), "2");
         GameSaves(w.Dir, [], [y], [new NewObject(-5, added.Prefab, added.Position, filled.Rotation, 0f, null, false, filled.Serialize())]);
         edits.SetDeleted([-1], true);
+        if (moved)
+        {
+            edits.AddObjects([added with { Id = -7, Position = added.Position + new Vector3(3, 0, 0) }]);
+        }
 
         var replay = EditReplay.Prepare(read, edits, saved, w.Load());
         Assert.Equal(new EditReplay.Clash(ReplayClash.Changed, added.Prefab, added.Position, false), Assert.Single(replay.Clashes));
         var r = replay.Apply(_ => keepMine, edits, Next)!;
         Assert.Equal(keepMine ? 1 : 0, r.Deleted);
+        Assert.Equal(keepMine && moved ? 1 : 0, r.Added);
         Assert.Equal(!keepMine, r.Dropped.Contains(-1));
+        if (keepMine && moved)
+        {
+            var copy = Assert.Single(edits.Added);
+            Assert.False(copy.Fresh);
+            Assert.NotNull(copy.SourceId);
+        }
     }
 
     // Raised and saved, then undone: when the game played on from the editor's save and changed another point of the
@@ -333,15 +347,18 @@ public class EditReplayTests
         Assert.Equal(-1.5f, zone.Level[300], 4);
     }
 
-    // A zone left to the game's ground is not reset either: the reset would take that ground away.
-    [Fact]
-    public void AZoneResetGoesWithTheGamesGround()
+    // A zone left to the game's ground is not reset to generated ground either (that would take the game's ground
+    // away); a reset of its objects alone stays.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AGroundResetGoesWithTheGamesGround(bool resetGround)
     {
         using var w = new TempWorld();
         var read = w.Load();
         var edits = new EditStore(read);
         Raise(edits, 100, 2.5f);
-        edits.SetReset(new ZoneReset(0, 0, true, true), true);
+        edits.SetReset(new ZoneReset(0, 0, true, resetGround), true);
         var game = new EditStore(w.Load()).Get(0, 0)!;
         game.Modified[300] = true;
         game.Level[300] = -1.5f;
@@ -349,7 +366,7 @@ public class EditReplayTests
 
         var replay = EditReplay.Prepare(read, edits, EditReplay.Saved.None, w.Load());
         Assert.Equal(ReplayClash.Ground, Assert.Single(replay.Clashes).Kind);
-        Assert.Equal(0, replay.Apply(_ => false, edits, Next)!.Resets);
+        Assert.Equal(resetGround ? 0 : 1, replay.Apply(_ => false, edits, Next)!.Resets);
     }
 
     // The edits changed between reading the game's save and bringing them over: nothing is done.
