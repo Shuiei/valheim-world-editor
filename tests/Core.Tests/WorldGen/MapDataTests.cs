@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using ValheimGen;
@@ -202,6 +203,26 @@ public class MapDataTests
         var first = new MapData(terrain, edits).Global;
         var (_, again, againEdits) = Open(w);
         Assert.Same(first, new MapData(again, againEdits).Global);
+    }
+
+    // The world map kept for opening the world again does not hold its memory once no map uses it.
+    [Fact]
+    public void AWorldMapNoLongerUsedCanBeCollected()
+    {
+        using var w = new TempWorld();
+        var map = UsedOnce(w);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        Assert.False(map.IsAlive);
+    }
+
+    /// <summary>A world map built for a world and dropped at once.</summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference UsedOnce(TempWorld w)
+    {
+        var (_, terrain, edits) = Open(w);
+        return new WeakReference(new MapData(terrain, edits).Global);
     }
 
     // Cancelled before it is asked for: thrown, as when it is built, though the world map is kept.
