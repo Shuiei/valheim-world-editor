@@ -1199,9 +1199,7 @@ internal sealed partial class DungeonDresser
         Clutter(f, 0.02f);
         Webs(f, 0.1f + _decay * 0.4f);
         Foes(f, 0.25f);
-        // Its lights and a heap of rubble, last, each from a stream of the corridor's own (see Finish).
-        _lights = 1;
-        _decayed = true;
+        // Its lights and a heap of rubble come last, in Finish, each from a stream of the corridor's own.
     }
 
     /// <summary>
