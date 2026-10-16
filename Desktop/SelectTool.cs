@@ -281,6 +281,7 @@ public sealed class SelectTool
             }
         }
         (float D, Vector3 M, Vector3 O, string Name)? best = null;
+        var around = new List<int>();
         foreach (var it in m.Items.Where(it => !it.Linked))
         {
             var at = Target(m, it, shift: false);
@@ -289,23 +290,25 @@ public sealed class SelectTool
                 // The points around only (the nine cells about it), taken in the list's order: the same nearest
                 // (and, between two as near, the same first) as going through the whole list.
                 var (mx, mz) = SnapCell(mp);
-                (float D, int K)? near = null;
+                around.Clear();
                 for (int dz = -1; dz <= 1; dz++)
                 {
                     for (int dx = -1; dx <= 1; dx++)
                     {
-                        if (!m.OthersAt.TryGetValue((mx + dx, mz + dz), out var ks))
+                        if (m.OthersAt.TryGetValue((mx + dx, mz + dz), out var ks))
                         {
-                            continue;
+                            around.AddRange(ks);
                         }
-                        foreach (int k in ks)
-                        {
-                            float d = Vector3.Distance(m.Others[k].P, mp);
-                            if (d < 0.75f && (near == null || d < near.Value.D || d == near.Value.D && k < near.Value.K))
-                            {
-                                near = (d, k);
-                            }
-                        }
+                    }
+                }
+                around.Sort();
+                (float D, int K)? near = null;
+                foreach (int k in around)
+                {
+                    float d = Vector3.Distance(m.Others[k].P, mp);
+                    if (d < 0.75f && (near == null || d < near.Value.D))
+                    {
+                        near = (d, k);
                     }
                 }
                 if (near is { } n && (best == null || n.D < best.Value.D))
