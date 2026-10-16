@@ -588,12 +588,12 @@ public sealed class HomeFolderTests : IDisposable
     }
 
     [Fact]
-    public void WithoutATunnelThereIsNothingToDiagnoseOrClose()
+    public async Task WithoutATunnelThereIsNothingToDiagnoseOrClose()
     {
         Tunnel.Close();
         Tunnel.Close();
         Assert.False(Tunnel.Open);
-        Assert.Null(Tunnel.Diagnose("/home/valheim/server"));
-        Assert.Null(Tunnel.Diagnose(null));
+        Assert.Null(await Tunnel.Diagnose("/home/valheim/server"));
+        Assert.Null(await Tunnel.Diagnose(null));
     }
 }

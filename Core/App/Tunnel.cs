@@ -244,7 +244,8 @@ public static class Tunnel
         if (gameFolder != null && r.BridgePort == null)
         {
             string cfg = gameFolder + "/BepInEx/config/";
-            string text = Run(client, $"cat {Quote(cfg + LocalGame.ConfigName)} 2>/dev/null || cat {Quote(cfg + LocalGame.OldConfigName)} 2>/dev/null");
+            // Off the caller's thread whatever the connect did: the command waits on the server (15 s at most).
+            string text = await Task.Run(() => Run(client, $"cat {Quote(cfg + LocalGame.ConfigName)} 2>/dev/null || cat {Quote(cfg + LocalGame.OldConfigName)} 2>/dev/null")).ConfigureAwait(false);
             if (System.Text.RegularExpressions.Regex.Match(text, @"^\s*Port\s*=\s*(\d+)", System.Text.RegularExpressions.RegexOptions.Multiline) is { Success: true } pm)
             {
                 folderPort = int.Parse(pm.Groups[1].Value);
@@ -299,9 +300,10 @@ public static class Tunnel
 
     /// <summary>
     /// Why the plugin does not answer, from what the server's Valheim folder holds (while connected). Null
-    /// when not connected, no folder is given or the check did not answer.
+    /// when not connected, no folder is given or the check did not answer. The check runs off the caller's thread: it
+    /// waits on the server (15 s at most).
     /// </summary>
-    public static string? Diagnose(string? gameFolder)
+    public static async Task<string?> Diagnose(string? gameFolder)
     {
         SshClient? client = _client;
         if (client == null || string.IsNullOrWhiteSpace(gameFolder))
@@ -310,9 +312,10 @@ public static class Tunnel
         }
         string f = gameFolder.TrimEnd('/');
         string q = Quote(f);
-        string answer = Run(client, $"if [ ! -d {q} ]; then echo nofolder; elif [ ! -d {q}/BepInEx ]; then echo nobepinex; " +
+        string command = $"if [ ! -d {q} ]; then echo nofolder; elif [ ! -d {q}/BepInEx ]; then echo nobepinex; " +
             $"elif ! find {q}/BepInEx/plugins -name WorldEditorBridge.dll 2>/dev/null | grep -q .; then echo noplugin; " +
-            $"elif [ ! -f {q}/BepInEx/config/{LocalGame.ConfigName} ] && [ ! -f {q}/BepInEx/config/{LocalGame.OldConfigName} ]; then echo nocfg; else echo installed; fi").Trim();
+            $"elif [ ! -f {q}/BepInEx/config/{LocalGame.ConfigName} ] && [ ! -f {q}/BepInEx/config/{LocalGame.OldConfigName} ]; then echo nocfg; else echo installed; fi";
+        string answer = (await Task.Run(() => Run(client, command)).ConfigureAwait(false)).Trim();
         return answer switch
         {
             "nofolder" => $"The folder {f} does not exist on the server: check the server's Valheim folder.",

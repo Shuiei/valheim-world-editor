@@ -257,18 +257,30 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         _ssh.Need();
         Assert.Null((await Tunnel.Start(Req(bridge: BridgePort))).Error);
         string game = Path.Combine(_dir, "valheim");
-        Assert.Null(Tunnel.Diagnose(" "));
-        Assert.Equal($"The folder {game} does not exist on the server: check the server's Valheim folder.", Tunnel.Diagnose(game + "/"));
+        Assert.Null(await Tunnel.Diagnose(" "));
+        Assert.Equal($"The folder {game} does not exist on the server: check the server's Valheim folder.", await Tunnel.Diagnose(game + "/"));
         Directory.CreateDirectory(game);
-        Assert.Equal($"BepInEx is not installed in {game} on the server: install BepInExPack for Valheim there.", Tunnel.Diagnose(game));
+        Assert.Equal($"BepInEx is not installed in {game} on the server: install BepInExPack for Valheim there.", await Tunnel.Diagnose(game));
         Directory.CreateDirectory(Path.Combine(game, "BepInEx", "plugins", "Tie-WorldEditorBridge"));
-        Assert.Equal($"The plugin is not in {game}/BepInEx/plugins on the server: copy WorldEditorBridge.dll there and restart the server.", Tunnel.Diagnose(game));
+        Assert.Equal($"The plugin is not in {game}/BepInEx/plugins on the server: copy WorldEditorBridge.dll there and restart the server.", await Tunnel.Diagnose(game));
         File.WriteAllText(Path.Combine(game, "BepInEx", "plugins", "Tie-WorldEditorBridge", "WorldEditorBridge.dll"), "");
-        Assert.Equal("The plugin is installed but has never run: restart the server with BepInEx.", Tunnel.Diagnose(game));
+        Assert.Equal("The plugin is installed but has never run: restart the server with BepInEx.", await Tunnel.Diagnose(game));
         Directory.CreateDirectory(Path.Combine(game, "BepInEx", "config"));
         File.WriteAllText(Path.Combine(game, "BepInEx", "config", LocalGame.OldConfigName), "");
-        Assert.StartsWith("The plugin is installed but does not answer", Tunnel.Diagnose(game));
+        Assert.StartsWith("The plugin is installed but does not answer", await Tunnel.Diagnose(game));
         File.Move(Path.Combine(game, "BepInEx", "config", LocalGame.OldConfigName), Path.Combine(game, "BepInEx", "config", LocalGame.ConfigName));
-        Assert.StartsWith("The plugin is installed but does not answer", Tunnel.Diagnose(game));
+        Assert.StartsWith("The plugin is installed but does not answer", await Tunnel.Diagnose(game));
+    }
+
+    // The check of the server's folder waits on the server (15 s at most): it runs off the caller's thread, so the
+    // window does not freeze; it held the UI thread for the whole command.
+    [Fact]
+    public async Task TheServerCheckDoesNotHoldTheCallersThread()
+    {
+        _ssh.Need();
+        Assert.Null((await Tunnel.Start(Req(bridge: BridgePort))).Error);
+        var check = Tunnel.Diagnose(Path.Combine(_dir, "valheim"));
+        Assert.False(check.IsCompleted);
+        Assert.StartsWith("The folder ", await check);
     }
 }

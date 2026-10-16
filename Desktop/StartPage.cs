@@ -1059,7 +1059,7 @@ public sealed class StartPage
         string? down = await LiveBridge.Check(url, tr.Token, TimeSpan.FromSeconds(10));
         if (down != null)
         {
-            string? why = down.Contains("refused the token") ? null : Tunnel.Diagnose(t.GameFolder);
+            string? why = down.Contains("refused the token") ? null : await Tunnel.Diagnose(t.GameFolder);
             Tunnel.Close();
             error.Text = down.Contains("refused the token") ? down : why ?? "The tunnel is open, but the plugin does not answer on the server: is the server running with BepInEx and WorldEditorBridge? Set the server's Valheim folder under \"More options\" for a precise check.";
             return;
