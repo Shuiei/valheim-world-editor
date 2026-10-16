@@ -68,14 +68,17 @@ public static class ObjectData
     /// A container's contents from a list of items, each value clamped to what the save holds (stack and
     /// quality 1..65535, slot and world level 0..255).
     /// </summary>
-    /// <exception cref="ArgumentException">An item is not one of the game's.</exception>
+    /// <exception cref="ArgumentException">
+    /// An entry is not an item of the game: unknown, or a prefab that is not an item (a creature, a piece), which the
+    /// game would drop from the container on load.
+    /// </exception>
     public static InventoryData BuildInventory(List<ItemUpload> list)
     {
         InventoryData inv = new();
         foreach (ItemUpload u in list)
         {
             int prefab = u.Prefab ?? StableHash.Of(u.Name ?? "");
-            if (PrefabCatalog.NameOf(prefab) == null)
+            if (PrefabCatalog.ItemKindOf(prefab) == null)
             {
                 throw new ArgumentException($"“{u.Name ?? prefab.ToString(CultureInfo.InvariantCulture)}” is not an item of the game.");
             }

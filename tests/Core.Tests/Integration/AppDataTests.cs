@@ -218,6 +218,9 @@ public class AppDataTests
         var ex = Assert.Throws<ArgumentException>(() => ObjectData.BuildInventory([new ItemUpload("NoSuchItem", null)]));
         Assert.Contains("NoSuchItem", ex.Message);
         Assert.Throws<ArgumentException>(() => ObjectData.BuildInventory([new ItemUpload(null, 12345)]));
+        // A prefab the game knows but that is not an item (a creature, a piece) is refused too: the game drops it.
+        Assert.Contains("Troll", Assert.Throws<ArgumentException>(() => ObjectData.BuildInventory([new ItemUpload("Troll", null)])).Message);
+        Assert.Throws<ArgumentException>(() => ObjectData.BuildInventory([new ItemUpload(null, StableHash.Of("piece_chest"))]));
     }
 
     [Fact]
