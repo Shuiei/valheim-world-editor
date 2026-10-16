@@ -248,10 +248,15 @@ public sealed class ZdoData
     /// the value.
     /// </param>
     /// <exception cref="ArgumentException">An unknown section.</exception>
-    /// <exception cref="FormatException">The value does not parse for that section.</exception>
+    /// <exception cref="FormatException">The value does not parse for that section, or a number in it is not finite.</exception>
     public void Set(string section, int key, string? value)
     {
-        static float F(string s) => float.Parse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture);
+        // A number the game can use: NaN or an infinity (typed, or a number too large) would break the object in it.
+        static float F(string s)
+        {
+            float v = float.Parse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture);
+            return float.IsFinite(v) ? v : throw new FormatException($"{s} is not a finite number");
+        }
         static float[] Fs(string s, int n)
         {
             float[] v = [.. s.Split(NumberSeparators, StringSplitOptions.RemoveEmptyEntries).Select(F)];

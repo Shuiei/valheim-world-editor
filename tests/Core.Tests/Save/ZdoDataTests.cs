@@ -118,6 +118,12 @@ public class ZdoDataTests
         Assert.Equal(Quaternion.Identity, z.QuatList.Single().Value);
         Assert.Throws<ArgumentException>(() => z.Set("colours", k, "1"));
         Assert.Throws<FormatException>(() => z.Set("vec3", k, "1 2"));
+        // Numbers the game cannot use are refused, whole or in a vector.
+        Assert.Throws<FormatException>(() => z.Set("floats", k, "NaN"));
+        Assert.Throws<FormatException>(() => z.Set("floats", k, "-Infinity"));
+        Assert.Throws<FormatException>(() => z.Set("floats", k, "1e40"));
+        Assert.Throws<FormatException>(() => z.Set("vec3", k, "1 Infinity 3"));
+        Assert.False(ZdoData.Valid("floats", "NaN"));
     }
 
     [Fact]
