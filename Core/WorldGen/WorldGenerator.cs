@@ -236,41 +236,6 @@ public sealed partial class WorldGenerator
     }
 
     /// <summary>
-    /// The ground's normal from its heights a metre to each side (radius is not used, as in the game).
-    /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "The game's signature; it ignores radius too.")]
-    public Vector3 GetNormal(Vector2 point, float radius = 1f)
-    {
-        float east = GetHeight(point + Vector2.right), west = GetHeight(point + Vector2.left);
-        float north = GetHeight(point + Vector2.up), south = GetHeight(point + Vector2.down);
-        return new Vector3(2f * (east - west), 4f, 2f * (south - north)).normalized;
-    }
-
-    /// <summary>
-    /// The same at (x, z).
-    /// </summary>
-    public Vector3 GetNormal(float x, float z, float radius = 1f) => GetNormal(new Vector2(x, z), radius);
-
-    /// <summary>
-    /// Normals averaged over growing rings (up to 16), one every metersPerSample of radius. As GetNormal ignores
-    /// its radius, every ring gives the same normal.
-    /// </summary>
-    public Vector3 GetAverageNormal(Vector2 point, float radius, float metersPerSample = 1.5f)
-    {
-        if (radius <= 1.5f)
-        {
-            return GetNormal(point, radius);
-        }
-        int rings = Mathf.Min(Mathf.FloorToInt(radius / metersPerSample), 16);
-        var sum = Vector3.zero;
-        for (int i = 1; i <= rings; i++)
-        {
-            sum += GetNormal(point, radius * i) / rings;
-        }
-        return sum.normalized;
-    }
-
-    /// <summary>
     /// How much of a forest the game would grow here (lower: denser; under 1.15 counts as forest).
     /// </summary>
     public static float GetForestFactor(Vector3 pos) => GenMath.Layers(pos * 0.01f * 0.4f, 3, 1.6f, 0.7f);

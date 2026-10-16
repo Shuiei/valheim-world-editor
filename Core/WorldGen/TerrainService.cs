@@ -67,11 +67,6 @@ public sealed class TerrainService
     }
 
     /// <summary>
-    /// The overview's default size, 1024; it does not follow the constructor's overviewSize.
-    /// </summary>
-    public int OverviewSize { get; } = 1024;
-
-    /// <summary>
     /// A shaded PNG of the whole world, north up, transparent outside the world's edge; rendered on first use.
     /// </summary>
     public byte[] OverviewPng => _overviewPng.Value;
