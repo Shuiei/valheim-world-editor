@@ -842,7 +842,7 @@ public sealed class AreaPanel
 
     /// <summary>
     /// The selection changed: a picture read was fitted to the old one, so it is dropped, unless the outline is still
-    /// the same (a polygon closed with Enter, a redraw of the same box).
+    /// the same (a polygon closed with Enter).
     /// </summary>
     private void DropPicture()
     {

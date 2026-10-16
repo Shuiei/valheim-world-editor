@@ -507,8 +507,8 @@ public class AreaPanelTests
         r.P.PickPicture = () => Task.FromResult<string?>(png);
         Click(r.P.ImportButton);
         await TestWindows.Until(() => r.P.PictureInfo.Text?.Contains("the selection") == true);
-        // The same outline again (the box redrawn where it is, a polygon closed with Enter): the picture stays.
-        r.Select(2, 2, 62, 62);
+        // A change with the same outline (Enter on a polygon that already has its points): the picture stays.
+        r.W.View.Area.Notify();
         Assert.DoesNotContain("dropped", r.Said);
         // The selection changes: the picture was fitted to the old one.
         r.Select(2, 2, 30, 30);
