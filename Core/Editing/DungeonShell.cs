@@ -243,7 +243,7 @@ internal static class DungeonShell
         var part = low.Count > 0 ? low.OrderByDescending(p => p.H).ThenByDescending(p => p.W).First() : fits.OrderBy(p => p.H).ThenByDescending(p => p.W).First();
         float tc = t0 + part.W / 2, y = y0 + part.Bottom;
         // A window now and then in a material that has one, on the upper row (never the lowest), by the spot's hash.
-        string prefab = mat.Window is { } window && part.W >= 4 && y0 >= 1.9f && (StableHash.Of($"{line:0.#}|{tc:0.#}|{y0:0.#}") & 0xFF) < 46 ? window : part.Prefab;
+        string prefab = mat.Window is { } window && part.W >= 4 && y0 >= 1.9f && (StableHash.Of(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{line:0.#}|{tc:0.#}|{y0:0.#}")) & 0xFF) < 46 ? window : part.Prefab;
         o.Add(prefab, alongZ ? new Vector3(line, y, tc) : new Vector3(tc, y, line), alongZ ? 90 : 0);
         Fill(mat, o, alongZ, line, t0 + part.W, t1, y0, y0 + Math.Min(part.H, y1 - y0));
         Fill(mat, o, alongZ, line, t0, t1, y0 + part.H, y1);

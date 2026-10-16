@@ -1,3 +1,4 @@
+using System.Globalization;
 using TerrainEditor.Editing;
 using Xunit;
 
@@ -5,7 +6,7 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// DungeonShell's pillars and posts: segments from the foot up to the top, the last rising into the roof slab, never
-/// past it into the room above.
+/// past it into the room above. Its walls' windows: the same whatever the culture.
 /// </summary>
 public class DungeonShellTests
 {
@@ -24,5 +25,31 @@ public class DungeonShellTests
 
         Assert.Equal(count, o.Items.Count);
         Assert.All(o.Items, i => Assert.True(i.Position.Y + segment / 2 <= top + DungeonShell.RoofSlab + 0.01f));
+    }
+
+    [Fact]
+    public void WindowsAreTheSameWhateverTheCulture()
+    {
+        // Where a wall gets a window is drawn from a hash of its place as text, which a comma-decimal culture wrote
+        // otherwise ("1,5"): the same seed gave other windows.
+        var grausten = DungeonKit.MaterialOf("Grausten");
+        string Walls()
+        {
+            var o = new DungeonOut();
+            DungeonShell.Fill(grausten, o, true, 1.5f, 0.5f, 80.5f, 0, 8);
+            return string.Join(" ", o.Items.Select(i => i.Prefab));
+        }
+        string invariant = Walls();
+        var was = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("fr-FR");
+            Assert.Equal(invariant, Walls());
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = was;
+        }
+        Assert.Contains(grausten.Window!, invariant);
     }
 }

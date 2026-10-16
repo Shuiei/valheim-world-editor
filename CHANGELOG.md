@@ -210,6 +210,8 @@ the plugin is unchanged in versions without that part.
   same seed now makes a slightly different dungeon).
 - A dungeon's throne is drawn once per seat (PickThrone): the ThronePiece property drew again on each read, so its
   turn could be looked up for another throne than the one placed.
+- A dungeon wall's window is drawn from its place written in the invariant culture, so a seed makes the same windows
+  whatever the culture (the app runs invariant; the tests may not).
 
 ## v1.45.108 — unreleased
 
