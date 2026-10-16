@@ -1626,6 +1626,10 @@ public sealed class EditSession
             var missing = k.Ids.Values.SelectMany(v => v).Where(id => !index.ContainsKey(id)).Distinct().ToList();
             var found = missing.Count > 0 ? find(missing) : [];
             float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.ZonesX - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.ZonesZ - 1) * 64f + 32f;
+            // Things found elsewhere in the world get an index past the scene's for now (from first, in the order
+            // they were met); only those a change kept here refers to join the scene's things, at the end.
+            int first = Scene.Things.Count;
+            var pending = new List<WorldScene.Thing>();
             int? Thing(int id)
             {
                 if (index.TryGetValue(id, out int i))
@@ -1634,12 +1638,9 @@ public sealed class EditSession
                 }
                 if (found.TryGetValue(id, out var t) && t.Position.X >= minX && t.Position.X < maxX && t.Position.Z >= minZ && t.Position.Z < maxZ)
                 {
-                    lock (Scene.Things)
-                    {
-                        Scene.Things.Add(t);
-                        index[id] = Scene.Things.Count - 1;
-                    }
-                    return Scene.Things.Count - 1;
+                    pending.Add(t);
+                    index[id] = first + pending.Count - 1;
+                    return index[id];
                 }
                 return null;
             }
@@ -1742,6 +1743,28 @@ public sealed class EditSession
                 _order[n > end && redo[n].Fitted is { } f ? f : k.Redo[n]] = undo.Count + redo.Count - 1 - n;
             }
             _nextOrder = undo.Count + redo.Count;
+            // The things found elsewhere that a step kept here refers to join the scene; those only steps kept aside
+            // refer to stay out (nothing here would show or undo them).
+            var kept = _undo.Concat(_redo).ToList();
+            var joined = new Dictionary<int, int>();
+            lock (Scene.Things)
+            {
+                foreach (int at in kept.SelectMany(c => c.Things).Select(t => t.Index).Where(i => i >= first).Distinct().Order())
+                {
+                    Scene.Things.Add(pending[at - first]);
+                    joined[at] = Scene.Things.Count - 1;
+                }
+            }
+            foreach (var c in kept)
+            {
+                for (int n = 0; n < c.Things.Length; n++)
+                {
+                    if (c.Things[n].Index >= first)
+                    {
+                        c.Things[n].Index = joined[c.Things[n].Index];
+                    }
+                }
+            }
             return _shelvedUndo.Count + _shelvedRedo.Count;
         }
     }

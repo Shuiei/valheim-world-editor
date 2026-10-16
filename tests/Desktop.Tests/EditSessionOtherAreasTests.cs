@@ -225,6 +225,39 @@ public class EditSessionOtherAreasTests
         }
     }
 
+    // A step kept aside does not bring the things it took away into the area: nothing there shows or undoes them.
+    [AvaloniaFact]
+    public void AStepKeptAsideAddsNoThingsToTheArea()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            var owner = WorldScene.Load(dir, 0, 0, 1).Owner!;
+            // A block of zones: one step raising the ground of zone (0, 0) and deleting a thing of another zone.
+            var block = WorldScene.LoadBlock(owner, 0, 0, 4, 4).Session!;
+            var world = block.Scene.World!;
+            int far = block.Scene.Things.FindIndex(t => !t.Gone && t.Id >= 0 && world.ObjectRefs[t.Id].Zone != (0, 0));
+            Assert.True(far >= 0);
+            int id = block.Scene.Things[far].Id;
+            var (zx, zz) = world.ObjectRefs[id].Zone;
+            block.Commit("Both zones", g =>
+            {
+                int p = 32 * g.W + 32;
+                g.SetHeight(p, g.HeightOf(p) + 2);
+                return ([p], (31, 31, 33, 33));
+            }, [far], []);
+            owner.History = block.Export();
+            // The thing's zone alone: the step is partly in, so kept aside, and the thing it deleted stays out.
+            var area = WorldScene.Load(owner, zx, zz, 1).Session!;
+            Assert.Equal(1, area.Shelved);
+            Assert.DoesNotContain(area.Scene.Things, t => t.Id == id);
+        }
+        finally
+        {
+            Done(dir);
+        }
+    }
+
     [AvaloniaFact]
     public void TheHistoryFileKeepsStepsOfSeveralAreasEachWhereItWasMade()
     {
