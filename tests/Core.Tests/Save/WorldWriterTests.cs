@@ -197,12 +197,22 @@ public class WorldWriterTests
         Assert.Equal(1.5f, again.TerrainZones[0].LevelDelta[500], 4);
     }
 
-    [Fact]
-    public void ASaveFormatNewerThanTheEditorKnowsIsRefused()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ASaveFormatNewerThanTheEditorKnowsIsRefused(bool inTheIndex)
     {
+        // In the index, or in one chunk file only (a newer game wrote that one again).
         using var w = new TempWorld("CITest42");
         var world = w.Load();
-        world.SaveVersion = WorldVersion.Latest + 1;
+        if (inTheIndex)
+        {
+            world.SaveVersion = WorldVersion.Latest + 1;
+        }
+        else
+        {
+            world.Chunks[^1].WorldVersion = WorldVersion.Latest + 1;
+        }
         var before = Files(w.Dir);
 
         var r = WorldWriter.Save(world, [Raised(world.TerrainZones[0].ZoneX, world.TerrainZones[0].ZoneZ, 1, 100)]);
