@@ -405,7 +405,8 @@ public class SculptTests
         w.ConfirmSave = q => { asked = q; return Task.FromResult(false); };
         w.Tell = _ => Task.CompletedTask;
         await w.Save();
-        Assert.Contains("1 zone", asked);
+        // Worded as the map's save asks it, not cut out of the status line's text.
+        Assert.Contains("Write 1 zone(s) of ground into the world files?", asked);
         Assert.True(s.Pending.Zones > 0);
     }
 }

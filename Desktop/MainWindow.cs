@@ -1012,7 +1012,7 @@ public sealed partial class MainWindow : Window
             await ApplyNow();
             return;
         }
-        string what = s.PendingText.Replace("Unsaved: ", "");
+        string what = Describe(s.Pending);
         if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {Ui.Tilde(s.Scene.World.Directory)}\n\n"
             + "• Like Apply live: the world stays open with its history; undo a step and save again to take it back. The save it was opened from is kept until you leave the world.\n"
             + "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
