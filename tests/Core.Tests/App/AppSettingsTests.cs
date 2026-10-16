@@ -96,6 +96,34 @@ public class AppSettingsTests : IDisposable
 
     // Settings that cannot be read are kept aside before the defaults are written over them, and a
     // settings file that cannot be written is left alone without an error.
+    // Lists stored as null read as empty, a stored path that is not a valid path does not stop a world opening, and the
+    // same folder written with a separator at the end is one entry (they threw, or were listed twice).
+    [Fact]
+    public void TheRecentListTakesNullsBadPathsAndTheSameFolderWrittenTwoWays()
+    {
+        string path = Path.Combine(_data, "settings.json");
+        string? old = AppSettings.PathOverride;
+        AppSettings.PathOverride = path;
+        try
+        {
+            File.WriteAllText(path, """{ "Recent": null, "WorldFolders": null, "BepInExFolders": [null], "Extensions": null }""");
+            var s = AppSettings.Load();
+            Assert.Empty(s.Recent);
+            Assert.Empty(s.WorldFolders);
+            Assert.Empty(s.BepInExFolders);
+            Assert.Empty(s.Extensions);
+            s.Recent.Add(new AppSettings.RecentWorld("bad\0path", "Bad", DateTime.Now));
+            string world = Path.Combine(_data, "World1");
+            s.AddRecent(world + Path.DirectorySeparatorChar, "World1");
+            s.AddRecent(world, "World1");
+            Assert.Equal([world, "bad\0path"], s.Recent.Select(r => r.Path));
+        }
+        finally
+        {
+            AppSettings.PathOverride = old;
+        }
+    }
+
     [Fact]
     public void BrokenSettingsAreKeptAsideAndAFailedWriteIsQuiet()
     {

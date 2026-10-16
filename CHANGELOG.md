@@ -55,6 +55,10 @@ the plugin is unchanged in versions without that part.
 - **Characters whose names hold letters beyond ASCII are found.** The file name was lowered with Unicode rules but the
   file's bytes only for ASCII letters, so a character such as "Ørjan" never matched its own file. Names are now
   compared as text, ignoring case.
+- **The recent worlds list takes odd stored data and no longer lists a world twice.** A list stored as null, or a
+  stored path that is not a valid path, made opening a world throw; the same folder written with a trailing separator,
+  or with other letter case on Windows, was listed twice. Null lists now read as empty, and entries are compared by
+  full path without the trailing separator (case ignored on Windows).
 
 ### Changed
 
