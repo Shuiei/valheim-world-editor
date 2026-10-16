@@ -477,7 +477,8 @@ public static partial class ScriptHost
     }
 
     /// <summary>
-    /// Throws unless world point (x, z) is within the area (its first to its last grid point, as Area.MinX..MaxX); a
+    /// Throws unless world point (x, z) is within the area: its first to its last grid point (Area.MinX to MaxX, MinZ
+    /// to MaxZ), the edge included, so every point the scripts' Area.Inside takes (the edge left out) is in. A
     /// coordinate that is not a number is not.
     /// </summary>
     /// <param name="snap">The area.</param>

@@ -148,7 +148,8 @@ public static class Objects
 	// yaw: its turn in degrees (0: its front faces north, 90: east); pitch, roll: its tilts in degrees;
 	// scale: its size (0 keeps the prefab's own). snap: a building piece snaps to the snap points of the
 	// pieces there (and of those placed before it) within 0.5 m, as the game's hammer does.
-	// A point outside the area (Area.Inside), a value that is not a number or a size below 0 stops the script.
+	// A point outside the area (Area.MinX to MaxX, MinZ to MaxZ, its edge included: every Area.Inside point is in),
+	// a value that is not a number or a size below 0 stops the script.
 	public static void Place(string prefab, float x, float z, float yaw = 0, float scale = 0, float y = float.NaN, float pitch = 0, float roll = 0, bool snap = false) =>
 		__Host.Place(prefab, x, z, yaw, scale, y, pitch, roll, snap);
 
