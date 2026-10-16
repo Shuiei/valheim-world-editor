@@ -199,9 +199,10 @@ public sealed class WorldScene
         var modifiers = owner.Modifiers;
         var terrain = owner.Terrain;
         int x1 = x0 + zonesX - 1, z1 = z0 + zonesZ - 1;
-        // The zones' generated ground in parallel (the slow part), then the grid with the edits.
+        // The zones' generated ground and paint mask in parallel, one pass each (the slow part), then the grid with the
+        // edits.
         var keys = (from z in Enumerable.Range(z0, zonesZ) from x in Enumerable.Range(x0, zonesX) select (x, z)).ToArray();
-        Parallel.ForEach(keys, k => terrain.BaseZone(k.x, k.z));
+        Parallel.ForEach(keys, k => terrain.Warm(k.x, k.z));
         var (w, h, heights) = HeightGrid.Read(terrain, edits, x0, z0, x1, z1);
         int[] biomes = new int[w * h];
         byte[] biomeCol = new byte[w * h * 4], mask = new byte[w * h * 4];
