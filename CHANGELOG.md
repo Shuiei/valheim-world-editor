@@ -177,6 +177,8 @@ the plugin is unchanged in versions without that part.
 - **A dungeon of the game's rooms failed with a meaningless error when the game's data had none to join.** Without
   DG_Cave, or with no joinable rooms left, MakeRooms hit a null or an empty list; it now says the game's data has no
   rooms to join (a game update may have changed its dungeons).
+- **A throne room's war table could lie across the dais' steps or a doorway.** The long table was placed down the
+  middle with no check; it now stands only where every spot along it is free.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

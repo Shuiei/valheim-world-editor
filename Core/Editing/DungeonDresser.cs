@@ -1933,17 +1933,22 @@ internal sealed partial class DungeonDresser
                 }
                 break;
             case 1:
-                _o.Add("piece_table_oak", f.W(0, -1, f.Top + Lift), f.Yaw(90));
-                for (float dv = -3f; dv <= 3.01f; dv += 1.5f)
+                // The long table, where it has the room: not across the dais' steps or a doorway's floor.
+                float[] along = [-3f, -1.5f, 0f, 1.5f, 3f];
+                if (along.All(dv => f.Free(0, -1 + dv, 0.8f)))
                 {
-                    f.Take(0, -1 + dv, 0.8f);
-                }
-                Put(f, "piece_cartographytable", 0, -1, 0, 0, y: 0.82f, force: true);
-                foreach (int side in new[] { -1, 1 })
-                {
-                    for (float dv = -2.4f; dv <= 2.41f; dv += 1.6f)
+                    _o.Add("piece_table_oak", f.W(0, -1, f.Top + Lift), f.Yaw(90));
+                    foreach (float dv in along)
                     {
-                        Put(f, "piece_chair03", side * 1.4f, -1 + dv, side < 0 ? 90 : -90, 0.4f);
+                        f.Take(0, -1 + dv, 0.8f);
+                    }
+                    Put(f, "piece_cartographytable", 0, -1, 0, 0, y: 0.82f, force: true);
+                    foreach (int side in new[] { -1, 1 })
+                    {
+                        for (float dv = -2.4f; dv <= 2.41f; dv += 1.6f)
+                        {
+                            Put(f, "piece_chair03", side * 1.4f, -1 + dv, side < 0 ? 90 : -90, 0.4f);
+                        }
                     }
                 }
                 foreach (var sp in f.WallSpots(4, 3).Where(x => x.Yaw is 90 or -90).OrderBy(_ => _rnd.Next()).Take(4))
