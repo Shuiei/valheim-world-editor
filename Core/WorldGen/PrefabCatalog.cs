@@ -60,6 +60,9 @@ public static class PrefabCatalog
     /// </summary>
     public static bool IsCreature(int prefab) => _catalogue.Creatures.Contains(prefab);
 
+    /// <summary>The creatures' prefab hashes (see <see cref="IsCreature"/>).</summary>
+    public static IEnumerable<int> Creatures => _catalogue.Creatures;
+
     /// <summary>
     /// Kinds the editor offers to place: saved objects (persistent), not creatures, item drops or ragdolls.
     /// </summary>

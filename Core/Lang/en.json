@@ -153,7 +153,7 @@
   "tip.script.name": "The name to save the script under.",
   "tip.script.save": "Save the script (as <name>.csx in the data folder's scripts folder), to pick it again later.",
   "tip.script.run": "Compile and run the script on the open area (Ctrl+Enter): everything it changes is one undo step.",
-  "tip.script.stop": "Stop the running script: nothing it did is kept. (A loop that never calls the editor cannot be stopped; it ends after 2 minutes.)",
+  "tip.script.stop": "Stop the running script, whatever it is doing: nothing it did is kept. (A script also ends after 2 minutes.)",
   "tip.mountain.preset": "What kind of mountain: a lone peak, a ridge, a mountain range, a mesa (flat top), a volcano or rolling hills. Choosing one rolls a new one (Randomize).",
   "tip.mountain.height": "How high it rises above the ground there (m). Past the game's ±8 m: saving turns it into ground discs.",
   "tip.mountain.radius": "How far it reaches from where you click (m); its outline is ragged, up to 15% further. The circle shows it.",
