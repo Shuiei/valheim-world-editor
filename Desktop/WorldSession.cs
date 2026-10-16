@@ -819,8 +819,10 @@ public sealed class WorldSession : IDisposable
     {
         if (!IsLive)
         {
+            // Read first: a folder that cannot be read leaves the session as it was, its own saves still known.
+            var saved = WorldSave.Load(World.Directory);
             PruneSaves();
-            World = WorldSave.Load(World.Directory);
+            World = saved;
         }
         Edits.ResetFrom(World);
         UseModifiers(new TerrainModifiers(World));

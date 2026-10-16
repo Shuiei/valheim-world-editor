@@ -73,6 +73,23 @@ public sealed class WorldSessionTests : IDisposable
     }
 
     [Fact]
+    public void ADiscardThatCannotReadTheWorldKeepsItsSavesKnown()
+    {
+        WorldCreator.Create(Folder("Discard"), "Discard", Seed, radius: 1);
+        using var world = WorldSession.Open(Folder("Discard"));
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.Shape(10, 10, Formula.Compile("2", []), 3, 0, "raise");
+        Assert.True(world.Save().Done);
+        // The folder gone for a moment: Discard fails, and the session's own save is still its own.
+        Directory.Move(Folder("Discard"), Folder("Away"));
+        Assert.ThrowsAny<IOException>(world.Discard);
+        Directory.Move(Folder("Away"), Folder("Discard"));
+        s.Shape(20, 20, Formula.Compile("2", []), 3, 0, "raise");
+        var o = world.Save();
+        Assert.True(o.Done, o.Message);
+    }
+
+    [Fact]
     public async Task ZoneResetsAreNotSentAgainWhenTheWorldCannotBeReadBack()
     {
         using var game = new FakeGame();
