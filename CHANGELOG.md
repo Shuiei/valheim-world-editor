@@ -102,6 +102,9 @@ the plugin is unchanged in versions without that part.
 - **Steam rewriting its library list no longer fails finding the game.** libraryfolders.vdf was read unguarded, so a
   moment when Steam was writing it (or a file without access) threw out of the game check and the game data export.
   The search now goes on without that list (logged).
+- **A prefab name found in two game bundles is described by the same object in every catalogue.** The prefabs
+  catalogue kept the first object of a name, but the pieces, placing, support and terrain-modifier catalogues kept the
+  last, so they could describe different objects. All now keep the first.
 
 ### Changed
 

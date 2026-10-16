@@ -164,6 +164,30 @@ public class GameCataloguesTests
         Assert.NotNull(b.Read(bFile, bInfo.PathId));
     }
 
+    // A piece's name in two bundles: the first is taken, as the prefabs catalogue takes it (the last was, so "prefabs"
+    // and "pieces" could describe two objects).
+    [Fact]
+    public void ThePieceOfANameInTwoBundlesIsTheFirst()
+    {
+        using var game = new TestGame();
+        var scripts = game.Bundle("m_scripts");
+        foreach (var (bundle, category) in (ReadOnlySpan<(string, int)>)[("a_pieces", 2), ("z_pieces", 1)])
+        {
+            var b = game.Bundle(bundle);
+            b.ScriptsFrom = scripts;
+            b.Prefab("floor", r =>
+            {
+                r.Mono("Piece", new Fields { ["m_category"] = category, ["m_resources"] = new List<Fields>() });
+                r.Box((0, 0, 0), (1, 0.2, 1));
+            });
+        }
+        game.Save();
+
+        var kinds = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["pieces"]);
+
+        Assert.Equal(2, JsonNode.Parse(kinds["pieces"])!["floor"]!["cat"]!.GetValue<int>());
+    }
+
     [Fact]
     public void ObjectsLaidOutOtherwiseAreSaidRatherThanReadWrong()
     {

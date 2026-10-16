@@ -219,7 +219,8 @@ public static partial class GameCatalogues
                 {
                     entry["box"] = new List<object?> { R(Min(pts.Select(q => q.X)), 3), R(Max(pts.Select(q => q.X)), 3), R(Min(pts.Select(q => q.Z)), 3), R(Max(pts.Select(q => q.Z)), 3), R(Min(pts.Select(q => q.Y)), 3), R(Max(pts.Select(q => q.Y)), 3) };
                 }
-                _entries[name] = entry;
+                // The first of a name, as every scan takes it (PrefabScan too): "prefabs" and "pieces" describe one object.
+                _entries.TryAdd(name, entry);
                 _names[new Ref(f.Cab, pid)] = name;
                 if (b.ComponentIds(go).Any(c => c.Type == MonoBehaviourType && game.ScriptClass(b, c.Pid) == "ZNetView"))
                 {
@@ -729,7 +730,8 @@ public static partial class GameCatalogues
                         flags[key] = 1L;
                     }
                 }
-                _entries[go["m_Name"].AsString] = new Dict { ["f"] = flags, ["s"] = snaps, ["c"] = cols };
+                // The first of a name, as every scan takes it.
+                _entries.TryAdd(go["m_Name"].AsString, new Dict { ["f"] = flags, ["s"] = snaps, ["c"] = cols });
             }
         }
 
@@ -885,7 +887,8 @@ public static partial class GameCatalogues
                 {
                     entry["f"] = 1L;
                 }
-                _entries[go["m_Name"].AsString] = entry;
+                // The first of a name, as every scan takes it.
+                _entries.TryAdd(go["m_Name"].AsString, entry);
             }
         }
 
