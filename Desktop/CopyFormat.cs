@@ -53,7 +53,8 @@ public static class CopyFormat
     /// <param name="keepSources">Keep the objects' source ids: they only mean something in the world the copy came from.</param>
     /// <exception cref="FormatException">
     /// The copy's size is not positive, its ground arrays are missing or not as long as its size says (W × H heights and
-    /// weights, four paint values a point), or an object has no name: pasted, it would stop half-way through.
+    /// weights, four paint values a point), an object has no name or a point of its outline is not one: pasted, it would
+    /// stop half-way through.
     /// </exception>
     public static CopyData FromJson(JsonObject o, string? name = null, bool keepSources = true)
     {
@@ -70,9 +71,13 @@ public static class CopyFormat
         {
             throw new FormatException("it has no objects list");
         }
-        if (objects.Any(x => x is not JsonObject ob || ob["name"] is not JsonValue v || !v.TryGetValue<string>(out _)))
+        if (objects.Any(x => x is not JsonObject ob || ob["name"] is not JsonValue v || !v.TryGetValue(out string? n) || string.IsNullOrWhiteSpace(n)))
         {
             throw new FormatException("an object in it has no name");
+        }
+        if (o["poly"] is JsonArray outline && outline.Any(p => p is not JsonObject))
+        {
+            throw new FormatException("a point of its outline is not a point");
         }
         return new()
         {

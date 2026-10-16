@@ -72,7 +72,8 @@ public class CopyFormatTests
     }
 
     // A hand-edited or older blueprint whose ground arrays are not as long as its size says (or missing), whose size
-    // is not a grid, or with a nameless object is refused as it is read: pasted, it stopped half-way through.
+    // is not a grid, with a nameless object or an outline point that is not one is refused as it is read: pasted, it
+    // stopped half-way through.
     [Theory]
     [InlineData("""{"w":2,"h":2,"rel":[0,0,0],"wt":[0,0,0,0],"pnt":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"objects":[]}""", "\"rel\" list holds 3 values, not the 4")]
     [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0,0],"pnt":[0,0,0,0],"objects":[]}""", "\"wt\" list holds 2 values, not the 1")]
@@ -81,6 +82,8 @@ public class CopyFormatTests
     [InlineData("""{"w":0,"h":1,"rel":[],"wt":[],"pnt":[],"objects":[]}""", "size (0 × 1)")]
     [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0],"pnt":[0,0,0,0]}""", "no objects list")]
     [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0],"pnt":[0,0,0,0],"objects":[{"dx":1}]}""", "has no name")]
+    [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0],"pnt":[0,0,0,0],"objects":[{"name":" "}]}""", "has no name")]
+    [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0],"pnt":[0,0,0,0],"objects":[],"poly":[{"gx":0,"gz":0},null]}""", "outline is not a point")]
     public void ACopyThatDoesNotHoldTogetherIsRefused(string text, string why)
     {
         var e = Assert.Throws<FormatException>(() => CopyFormat.FromJson(JsonNode.Parse(text)!.AsObject()));

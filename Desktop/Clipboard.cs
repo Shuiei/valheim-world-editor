@@ -346,7 +346,9 @@ public sealed class PasteTool
             float y0 = c.Objects.Count > 0 ? c.Objects.Min(o => o.Dy) : 0, y1 = c.Objects.Count > 0 ? c.Objects.Max(o => o.Dy) : 0;
             return (Vector2.Zero, (c.Objects.Count > 0 ? MathF.Max(1, y1 - y0 + 1) : 2) + Gap);
         }
-        float x0 = c.Poly.Min(p => p.X), x1 = c.Poly.Max(p => p.X), z0 = c.Poly.Min(p => p.Y), z1 = c.Poly.Max(p => p.Y);
+        // A copy without an outline (a blueprint that has none): its grid's size.
+        float x0 = c.Poly.Count > 0 ? c.Poly.Min(p => p.X) : -(c.W - 1) / 2f, x1 = c.Poly.Count > 0 ? c.Poly.Max(p => p.X) : (c.W - 1) / 2f;
+        float z0 = c.Poly.Count > 0 ? c.Poly.Min(p => p.Y) : -(c.H - 1) / 2f, z1 = c.Poly.Count > 0 ? c.Poly.Max(p => p.Y) : (c.H - 1) / 2f;
         return Direction == Along.Width ? (new Vector2(x1 - x0 + Gap, 0), 0) : (new Vector2(0, z1 - z0 + Gap), 0);
     }
 
