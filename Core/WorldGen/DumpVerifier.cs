@@ -299,6 +299,9 @@ public static class BaseTerrain
     /// </summary>
     public static float[] BuildZone(WorldGenerator gen, int zx, int zz) => BuildZone(gen, zx, zz, null);
 
+    /// <summary>The corners' blend weight at each vertex along a side: the same for rows and columns.</summary>
+    private static readonly float[] Blend = [.. Enumerable.Range(0, Width + 1).Select(i => GenMath.Smooth(0f, 1f, (float)((double)i / Width)))];
+
     /// <summary>
     /// The same, also filling a base paint mask.
     /// </summary>
@@ -322,13 +325,13 @@ public static class BaseTerrain
         for (int k = 0; k < num; k++)
         {
             float wy = (float)((double)vz + k * (double)Scale);
-            float t = GenMath.Smooth(0f, 1f, (float)((double)k / Width));
+            float t = Blend[k];
             for (int l = 0; l < num; l++)
             {
                 float wx = (float)((double)vx + l * (double)Scale);
-                float t2 = GenMath.Smooth(0f, 1f, (float)((double)l / Width));
+                float t2 = Blend[l];
                 float h;
-                Color m;
+                Color m = default;
                 if (b3 == b1 && b2 == b1 && b4 == b1)
                 {
                     h = gen.GetBiomeHeight(b1, wx, wy, out m);
@@ -340,7 +343,10 @@ public static class BaseTerrain
                     float h3 = gen.GetBiomeHeight(b3, wx, wy, out Color m3);
                     float h4 = gen.GetBiomeHeight(b4, wx, wy, out Color m4);
                     h = GenMath.Lerp(GenMath.Lerp(h1, h2, t2), GenMath.Lerp(h3, h4, t2), t);
-                    m = Lerp(Lerp(m1, m2, t2), Lerp(m3, m4, t2), t);
+                    if (mask != null)
+                    {
+                        m = Lerp(Lerp(m1, m2, t2), Lerp(m3, m4, t2), t);
+                    }
                 }
                 heights[k * num + l] = h;
                 if (mask != null)
