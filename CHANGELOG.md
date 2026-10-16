@@ -232,6 +232,9 @@ the plugin is unchanged in versions without that part.
 - **After a ground disc was added or taken away, a zone could keep the ground of the old discs.** A zone still being
   built with the old modifiers was added to the cache UseModifiers had just cleared; the modifiers and the zones built
   with them are now swapped together.
+- **A location rule of no biome, or of a biome flag the map does not know, kept the seed's locations from being laid
+  out.** Drawing a point indexed an empty list (or the list at -1) and threw, which dropped the whole layout; such a
+  try now finds no zone and the next one is made.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

@@ -658,11 +658,21 @@ public static class SeedLocations
         /// </summary>
         /// <param name="biomes">The kind's biomes.</param>
         /// <param name="aboveSea">Only points at or above sea level, when the biome has any.</param>
-        public (float X, float Z) RandomPoint(Heightmap.Biome biomes, bool aboveSea)
+        /// <returns>The point; null when the biome drawn is none the map knows (no biome, an unknown flag) or the map
+        /// has no point of it.</returns>
+        public (float X, float Z)? RandomPoint(Heightmap.Biome biomes, bool aboveSea)
         {
             int b = Index(RandomBiome(biomes));
+            if (b < 0)
+            {
+                return null;
+            }
             List(b);
             int[] list = aboveSea && AboveSea[b].Length > 0 ? AboveSea[b] : All[b];
+            if (list.Length == 0)
+            {
+                return null;
+            }
             int p = list[Rnd.Range(0, list.Length)];
             return (MapToWorld(p & 0xFFFF), MapToWorld(p >> 16));
         }
@@ -715,7 +725,20 @@ public static class SeedLocations
             float reach = rule.minDistance;
             for (int left = rule.prioritized != 0 ? 60000 : 12000; left > 0 && have < rule.quantity; left--)
             {
-                var zone = rule.centerFirst != 0 ? ZoneNearMiddle(reach++) : ZoneOf(map().RandomPoint(biomes, rule.minAltitude >= 0f));
+                (int X, int Y) zone;
+                if (rule.centerFirst != 0)
+                {
+                    zone = ZoneNearMiddle(reach++);
+                }
+                else if (map().RandomPoint(biomes, rule.minAltitude >= 0f) is { } point)
+                {
+                    zone = ZoneOf(point);
+                }
+                else
+                {
+                    // A biome with no point on the map (or none at all): this try finds no zone.
+                    continue;
+                }
                 if (Instances.ContainsKey(zone) || ((Heightmap.BiomeArea)rule.biomeArea & gen.GetBiomeArea(new Vector2s(zone.X * 64, zone.Y * 64))) == 0)
                 {
                     continue;
