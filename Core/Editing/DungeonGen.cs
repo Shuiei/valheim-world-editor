@@ -424,7 +424,8 @@ public static class DungeonGen
         DungeonShell.Build(plan, mat, o, s);
         DungeonDresser.Dress(plan, mat, biome, style, s, rnd, o, name);
         var e = plan.Entrance;
-        var arrival = new Vector3(e.CenterX, 0.05f, 2 * e.Z0 + 1.7f);
+        // On the entrance's floor finish (marble tiles, boards), as what is set on its floor stands.
+        var arrival = new Vector3(e.CenterX, new DungeonDresser.Frame(e, mat, plan.Levels[e.Level]).Top + DungeonDresser.Lift, 2 * e.Z0 + 1.7f);
         var map = plan.Spaces.Select(sp => new PlanRoom(sp.Name, sp.Level, DungeonPlan.FloorY(sp.Level), 2 * sp.X0, 2 * sp.Z0, 2 * (sp.X0 + sp.W), 2 * (sp.Z0 + sp.H),
             sp.Corridor, sp.Main, sp.KeyChest, sp.Shape == DungeonPlan.Shape.Rect ? null : Runs(sp),
             sp.Recesses.Count == 0 ? null : sp.Recesses.Select(n => (2f * n.Tiles.Min(t => t.I), 2f * n.Tiles.Min(t => t.J), 2f * (n.Tiles.Max(t => t.I) + 1), 2f * (n.Tiles.Max(t => t.J) + 1))).ToList())).ToList();

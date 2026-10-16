@@ -520,4 +520,16 @@ public class DungeonGenTests
             / Math.Max(1, rs.Sum(r => r.Map!.Count(m => m.Level == level && !m.Corridor)));
         Assert.True(PerRoom(keeps, 1, i => i.Prefab.StartsWith("Pickable_", StringComparison.Ordinal)) > PerRoom(keeps, 0, i => i.Prefab.StartsWith("Pickable_", StringComparison.Ordinal)), "deeper levels hold more loot");
     }
+
+    [Fact]
+    public void OneArrivesOnTheEntrancesFloorFinish()
+    {
+        // The arrival was 5 cm over the slab whatever lay on it: a portal there stood in the boards or marble tiles.
+        // Wooden walls come with boards 0.1 m thick everywhere.
+        Assert.Equal(0.15f, DungeonGen.Make(new DungeonGen.Settings(Biome: "Black Forest", Walls: "Wood", Seed: 1)).Arrival.Y, 0.001f);
+        // Stone has none, but grand rooms get marble tiles (0.19 m) half the time.
+        float[] heights = [.. Enumerable.Range(1, 8).Select(seed => DungeonGen.Make(new DungeonGen.Settings(Biome: "Black Forest", Size: 1, Seed: seed)).Arrival.Y)];
+        Assert.All(heights, y => Assert.True(MathF.Abs(y - 0.05f) < 0.001f || MathF.Abs(y - 0.24f) < 0.001f, $"arrival at {y}"));
+        Assert.Contains(heights, y => MathF.Abs(y - 0.24f) < 0.001f);
+    }
 }

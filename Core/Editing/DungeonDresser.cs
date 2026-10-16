@@ -15,7 +15,7 @@ internal sealed partial class DungeonDresser
     /// What stands on a floor goes 5 cm up: a piece whose middle of mass is right on a floor's surface
     /// gets no support from it in game.
     /// </summary>
-    private const float Lift = 0.05f;
+    internal const float Lift = 0.05f;
 
     private readonly Material _mat;
     /// <summary>The biome's palette (lights, foes, loot, clutter).</summary>

@@ -168,6 +168,8 @@ the plugin is unchanged in versions without that part.
 - **The game's-rooms dungeon was placed under another name than the panel showed.** The Generate panel's name followed
   the chosen style, which only building-piece dungeons use, while a dungeon of the game's rooms is named after its
   biome; the panel now does the same.
+- **A portal at a generated dungeon's arrival stood in the entrance's floor.** The arrival was 5 cm over the slab
+  whatever lay on it; it is now 5 cm over the entrance's floor finish (marble tiles, boards).
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
