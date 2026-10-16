@@ -72,6 +72,34 @@ public class HistoryFileTests
         return (raw, objects);
     }
 
+    // The history file cannot be put in place (a folder stands at its path): the save is still done, and no
+    // half-written ".new" file is left beside it.
+    [AvaloniaFact]
+    public void AHistoryThatCannotBeWrittenLeavesNoTemporaryFile()
+    {
+        string dir = Fixtures.CopyFixture();
+        string? path = null;
+        try
+        {
+            var scene = WorldScene.Load(dir, 0, 0, 1);
+            var s = scene.Session!;
+            path = HistoryFile.PathOf(HistoryFile.KeyOf(scene.Owner!));
+            Directory.CreateDirectory(Path.Combine(path, "in the way"));
+            s.Shape(32, 32, Formula.Compile("3", []), 4, 0, "Raise");
+            Assert.True(s.Save().Saved);
+            Assert.False(File.Exists(path + ".new"));
+            scene.Owner!.Dispose();
+        }
+        finally
+        {
+            if (path != null && Directory.Exists(path))
+            {
+                Directory.Delete(path, recursive: true);
+            }
+            Done(dir);
+        }
+    }
+
     // A history file damaged after its header (a count out of range, as a file changed by hand can
     // have): the world still opens, without it (it threw, and the world could not be opened).
     [AvaloniaFact]

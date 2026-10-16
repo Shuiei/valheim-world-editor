@@ -311,76 +311,93 @@ public static class HistoryFile
         var (things, index) = Find(s.Objects);
         Directory.CreateDirectory(Folder);
         string temp = s.Path + ".new";
-        using (var file = File.Create(temp))
-        using (var gz = new GZipStream(file, CompressionLevel.Fastest))
-        using (var o = new BinaryWriter(gz, Encoding.UTF8))
+        try
         {
-            o.Write(Magic);
-            o.Write(Version);
-            o.Write(s.Key);
-            o.Write(s.Stamp != null);
-            o.Write(s.Stamp ?? "");
-            o.Write(s.SavedAt);
-            o.Write(things.Count);
-            foreach (var t in things)
+            WriteFile(s, things, index, temp);
+            File.Move(temp, s.Path, overwrite: true);
+        }
+        catch (Exception) when (File.Exists(temp))
+        {
+            // Not left half-written beside the history (the error goes on).
+            File.Delete(temp);
+            throw;
+        }
+    }
+
+    /// <summary>Writes a snapshot to a file (the temporary one Save then moves in place).</summary>
+    /// <param name="s">The snapshot.</param>
+    /// <param name="things">The steps' objects, found (<see cref="Find"/>).</param>
+    /// <param name="index">Each found object's place among <paramref name="things"/>, by id.</param>
+    /// <param name="temp">The file.</param>
+    private static void WriteFile(Snapshot s, List<KeptThing> things, Dictionary<int, int> index, string temp)
+    {
+        using var file = File.Create(temp);
+        using var gz = new GZipStream(file, CompressionLevel.Fastest);
+        using var o = new BinaryWriter(gz, Encoding.UTF8);
+        o.Write(Magic);
+        o.Write(Version);
+        o.Write(s.Key);
+        o.Write(s.Stamp != null);
+        o.Write(s.Stamp ?? "");
+        o.Write(s.SavedAt);
+        o.Write(things.Count);
+        foreach (var t in things)
+        {
+            o.Write(t.Prefab);
+            o.Write(t.Piece);
+            WriteVector(o, t.Position);
+            WriteVector(o, t.Rotation);
+            o.Write(t.Scale);
+            o.Write(t.Bytes?.Length ?? -1);
+            if (t.Bytes != null)
             {
-                o.Write(t.Prefab);
-                o.Write(t.Piece);
-                WriteVector(o, t.Position);
-                WriteVector(o, t.Rotation);
-                o.Write(t.Scale);
-                o.Write(t.Bytes?.Length ?? -1);
-                if (t.Bytes != null)
-                {
-                    o.Write(t.Bytes);
-                }
-            }
-            o.Write(s.UndoCount);
-            o.Write(s.RedoCount);
-            foreach (var c in s.Steps)
-            {
-                o.Write(c.Label);
-                o.Write(c.Ticks);
-                o.Write(c.Removed);
-                o.Write(c.Applied);
-                o.Write(c.RevertOf);
-                // Each step's points and zones are in the frame of the area it was made in.
-                var f = c.Frame;
-                o.Write(c.Points.Length);
-                foreach (int p in c.Points)
-                {
-                    o.Write(p % f.W + f.Ox);
-                    o.Write(p / f.W + f.Oz);
-                }
-                WriteState(o, c.Before);
-                WriteState(o, c.After);
-                o.Write(c.Zones.Length);
-                foreach (var (x, z) in c.Zones)
-                {
-                    o.Write(x + f.X0);
-                    o.Write(z + f.Z0);
-                }
-                var kept = c.Things.Where(t => index.ContainsKey(t.Id)).ToList();
-                o.Write(kept.Count);
-                foreach (var (id, before, after) in kept)
-                {
-                    o.Write(index[id]);
-                    o.Write(before);
-                    o.Write(after);
-                }
-                o.Write(c.Resets.Length);
-                foreach (var (reset, before, after) in c.Resets)
-                {
-                    o.Write(reset.X);
-                    o.Write(reset.Z);
-                    o.Write(reset.KeepBuildings);
-                    o.Write(reset.Ground);
-                    o.Write(before);
-                    o.Write(after);
-                }
+                o.Write(t.Bytes);
             }
         }
-        File.Move(temp, s.Path, overwrite: true);
+        o.Write(s.UndoCount);
+        o.Write(s.RedoCount);
+        foreach (var c in s.Steps)
+        {
+            o.Write(c.Label);
+            o.Write(c.Ticks);
+            o.Write(c.Removed);
+            o.Write(c.Applied);
+            o.Write(c.RevertOf);
+            // Each step's points and zones are in the frame of the area it was made in.
+            var f = c.Frame;
+            o.Write(c.Points.Length);
+            foreach (int p in c.Points)
+            {
+                o.Write(p % f.W + f.Ox);
+                o.Write(p / f.W + f.Oz);
+            }
+            WriteState(o, c.Before);
+            WriteState(o, c.After);
+            o.Write(c.Zones.Length);
+            foreach (var (x, z) in c.Zones)
+            {
+                o.Write(x + f.X0);
+                o.Write(z + f.Z0);
+            }
+            var kept = c.Things.Where(t => index.ContainsKey(t.Id)).ToList();
+            o.Write(kept.Count);
+            foreach (var (id, before, after) in kept)
+            {
+                o.Write(index[id]);
+                o.Write(before);
+                o.Write(after);
+            }
+            o.Write(c.Resets.Length);
+            foreach (var (reset, before, after) in c.Resets)
+            {
+                o.Write(reset.X);
+                o.Write(reset.Z);
+                o.Write(reset.KeepBuildings);
+                o.Write(reset.Ground);
+                o.Write(before);
+                o.Write(after);
+            }
+        }
     }
 
     /// <summary>Writes a vector as three floats.</summary>

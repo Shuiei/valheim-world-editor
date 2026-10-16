@@ -104,9 +104,11 @@ public sealed class WorldSession : IDisposable
                 }
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex)
         {
-            Console.WriteLine($"History: could not keep it on disk: {ex.Message}");
+            // The save itself is done: any failure here is logged (an unexpected one in full), not reported as a
+            // failed save.
+            Console.WriteLine($"History: could not keep it on disk: {(ex is IOException or UnauthorizedAccessException ? ex.Message : ex.ToString())}");
         }
     }
 
