@@ -52,6 +52,9 @@ the plugin is unchanged in versions without that part.
   fails the search.** Only the system's own separator was trimmed, so "C:/x/worlds/World1/" gave an empty name and no
   backups; a folder beside the world without read access threw. Both separators are trimmed now, and an unreadable
   folder has no backups (logged).
+- **Characters whose names hold letters beyond ASCII are found.** The file name was lowered with Unicode rules but the
+  file's bytes only for ASCII letters, so a character such as "Ørjan" never matched its own file. Names are now
+  compared as text, ignoring case.
 
 ### Changed
 

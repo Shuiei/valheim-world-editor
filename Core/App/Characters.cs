@@ -58,47 +58,43 @@ public static class Characters
     /// is it.
     /// </summary>
     /// <param name="b">The .fch file's bytes.</param>
-    /// <param name="fileName">The file name without extension: the character's name, matched ignoring ASCII
-    /// case.</param>
+    /// <param name="fileName">The file name without extension: the character's name, matched ignoring case (as
+    /// the game names the file).</param>
     /// <returns>The character, or null when no name followed by a plausible id and seed is found.</returns>
     public static Character? Read(byte[] b, string fileName)
     {
-        byte[] want = Encoding.UTF8.GetBytes(fileName.ToLowerInvariant());
-        if (want.Length is 0 or > 127)
+        int length = Encoding.UTF8.GetByteCount(fileName);
+        if (length is 0 or > 127)
         {
             return null;
         }
-        for (int i = 1; i + want.Length + 9 <= b.Length; i++)
+        // The name as text, compared ignoring case: lowering the bytes covers only ASCII ("Ørjan" never matched).
+        Span<char> name = stackalloc char[length];
+        for (int i = 1; i + length + 9 <= b.Length; i++)
         {
-            if (b[i - 1] != want.Length || !Matches(b, i, want))
+            if (b[i - 1] != length || !Matches(b.AsSpan(i, length), name, fileName))
             {
                 continue;
             }
-            int j = i + want.Length;
+            int j = i + length;
             long id = BitConverter.ToInt64(b, j);
             int seedLength = b[j + 8];
             if (id == 0 || seedLength > 32 || j + 9 + seedLength > b.Length || !b.AsSpan(j + 9, seedLength).ToArray().All(c => c is >= 32 and < 127))
             {
                 continue;
             }
-            return new Character(Encoding.UTF8.GetString(b, i, want.Length), id);
+            return new Character(Encoding.UTF8.GetString(b, i, length), id);
         }
         return null;
     }
 
-    /// <summary>
-    /// Whether the bytes at <c>at</c> equal <c>lower</c> with ASCII capitals lowered.
-    /// </summary>
-    private static bool Matches(byte[] b, int at, byte[] lower)
+    /// <summary>Whether UTF-8 bytes say <paramref name="wanted"/>, ignoring case.</summary>
+    /// <param name="bytes">The bytes.</param>
+    /// <param name="chars">Room for their characters (as many as bytes).</param>
+    /// <param name="wanted">The name.</param>
+    private static bool Matches(ReadOnlySpan<byte> bytes, Span<char> chars, string wanted)
     {
-        for (int k = 0; k < lower.Length; k++)
-        {
-            byte c = b[at + k];
-            if ((c is >= (byte)'A' and <= (byte)'Z' ? (byte)(c + 32) : c) != lower[k])
-            {
-                return false;
-            }
-        }
-        return true;
+        int n = Encoding.UTF8.GetChars(bytes, chars);
+        return chars[..n].Equals(wanted, StringComparison.OrdinalIgnoreCase);
     }
 }
