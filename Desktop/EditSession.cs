@@ -529,20 +529,13 @@ public sealed class EditSession
     /// <returns>The ground points changed (none: no undo step).</returns>
     public List<int> EditGround(string label, Func<Ground, (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect)> change)
     {
-        List<int> touched;
-        lock (_lock)
+        List<int> touched = [];
+        Commit(label, g =>
         {
-            var start = Ground.Snapshot();
-            (touched, var rect) = change(Ground);
-            if (touched.Count > 0)
-            {
-                Touch(rect);
-                var zones = Ground.ZonesOf(touched);
-                Record(label, start, touched, zones);
-                Send(zones);
-            }
-        }
-        Edited();
+            var made = change(g);
+            touched = made.Touched;
+            return made;
+        }, [], []);
         return touched;
     }
 
@@ -648,12 +641,10 @@ public sealed class EditSession
         // The web editor gives shapes its fractal noise scaled to about -1..1.
         var env = new Formula.Env { Noise = (x, z) => Brush.Noise.Fbm((float)x, (float)z) / 1.6 };
         var mask = MaskNow();
-        int touchedCount, bad = 0;
+        int touchedCount = 0, bad = 0;
         bool clamped = false;
-        lock (_lock)
+        Commit(label, g =>
         {
-            var g = Ground;
-            var start = g.Snapshot();
             var touched = new List<int>();
             int x0 = Math.Max(1, (int)MathF.Floor(cx - r)), x1 = Math.Min(g.W - 2, (int)MathF.Ceiling(cx + r));
             int z0 = Math.Max(1, (int)MathF.Floor(cz - r)), z1 = Math.Min(g.H - 2, (int)MathF.Ceiling(cz + r));
@@ -697,15 +688,8 @@ public sealed class EditSession
                 }
             }
             touchedCount = touched.Count;
-            if (touched.Count > 0)
-            {
-                Touch((x0 - 1, z0 - 1, x1 + 1, z1 + 1));
-                var zones = g.ZonesOf(touched);
-                Record(label, start, touched, zones);
-                Send(zones);
-            }
-        }
-        Edited();
+            return (touched, (x0 - 1, z0 - 1, x1 + 1, z1 + 1));
+        }, [], []);
         return (touchedCount, clamped, bad);
     }
 
@@ -723,16 +707,8 @@ public sealed class EditSession
     /// </summary>
     private void Record(string label, Ground.State start, IEnumerable<int> touched, List<(int X, int Z)> zones)
     {
-        Interlocked.Increment(ref _generation);
         int[] pts = [.. touched.Distinct().Order()];
-        var now = Ground.Snapshot();
-        _undo.Add(new Change(Labelled(label), pts, Pick(start, pts), Pick(now, pts), zones));
-        if (_undo.Count > HistoryLength)
-        {
-            _undo.RemoveAt(0);
-        }
-        _redo.Clear();
-        _shelvedRedo.Clear();
+        AddChange(new Change(label, pts, Pick(start, pts), Pick(Ground.Snapshot(), pts), zones));
     }
 
     /// <summary>
