@@ -254,6 +254,10 @@ the plugin is unchanged in versions without that part.
   were compared with the list given, repeats included; they are now compared with the different ids given.
 - **Shields and banners Claude put in a chest always got the first style.** set_contents took the item's Variant but
   never passed it on to the chest's contents.
+- **Claude's set_dungeon_door answered "Now pending" when no door was put in, and close_dungeon_ends could answer
+  nothing.** A joint whose opening has no door of the dungeon's kind was passed over silently, and both tools took any
+  return as a change; the Dungeon tool now says so, and the tools answer what it said (or "Nothing changed.") when no
+  step was made.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

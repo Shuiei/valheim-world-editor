@@ -574,6 +574,10 @@ public sealed partial class DungeonTool
             s.Commit(label ?? "Dungeon: added a door", null, [], [(new NewObject(0, StableHash.Of(door), j.Position, BlueprintFormats.ToEuler(j.Rotation), 0), false)]);
             Message?.Invoke($"Added a door ({door}). Click it again to take it away.");
         }
+        else
+        {
+            Message?.Invoke("This dungeon has no door for that kind of opening.");
+        }
         Changed?.Invoke();
     }
 
