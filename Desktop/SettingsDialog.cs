@@ -173,9 +173,13 @@ public static class SettingsDialog
         {
             claudeDetails.Children.Add(Hint(status));
         }
-        // The mods' editor extensions: found again now (a mod installed since), each allowed or not.
-        ModManifests.Refresh(settings);
-        ModExtensions.Refresh(settings);
+        // The mods' editor extensions: found again now (a mod installed since), each allowed or not. Away from the
+        // window's thread: every extension file is read and hashed.
+        await Task.Run(() =>
+        {
+            ModManifests.Refresh(settings);
+            ModExtensions.Refresh(settings);
+        });
         var extensionBoxes = new List<(CheckBox Box, ModExtensions.Extension Extension)>();
         var extensions = new StackPanel { Spacing = 4 };
         foreach (var x in ModExtensions.Offered)
