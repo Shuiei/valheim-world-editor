@@ -316,15 +316,18 @@ public sealed class PathTool
             return (touched, (0, 0, 0, 0), false);
         }
         float half = Width / 2, soft = Soft, total = Math.Max(Length(curve), 1e-6f);
-        // Natural paths can be up to 45% wider and have ragged edges, so look a bit further out.
-        float reach = Natural ? half * 1.45f + soft + MathF.Max(soft, 2) * 0.6f * 1.6f : half + soft;
+        // The farthest a changed point can be from the line: the widest a natural path gets, its soft edge (or the
+        // half metre a hard edge shares), and the most its ragged edge reaches out; a metre more against rounding.
+        // The box looked through is as wide, so the ragged edge is never cut straight.
+        float edge = soft > 0 ? soft : 0.5f;
+        float cutoff = (Natural ? MathF.Abs(half) * (1 + 0.45f * Noise.FbmBound) + edge + MathF.Max(soft, 2) * 0.6f * Noise.FbmBound : half + edge) + 1;
         float[] cum = new float[curve.Count];
         for (int i = 1; i < curve.Count; i++)
         {
             cum[i] = cum[i - 1] + Vector2.Distance(curve[i].P, curve[i - 1].P);
         }
-        int x0 = Math.Max(1, (int)MathF.Floor(curve.Min(c => c.P.X) - reach)), x1 = Math.Min(g.W - 2, (int)MathF.Ceiling(curve.Max(c => c.P.X) + reach));
-        int z0 = Math.Max(1, (int)MathF.Floor(curve.Min(c => c.P.Y) - reach)), z1 = Math.Min(g.H - 2, (int)MathF.Ceiling(curve.Max(c => c.P.Y) + reach));
+        int x0 = Math.Max(1, (int)MathF.Floor(curve.Min(c => c.P.X) - cutoff)), x1 = Math.Min(g.W - 2, (int)MathF.Ceiling(curve.Max(c => c.P.X) + cutoff));
+        int z0 = Math.Max(1, (int)MathF.Floor(curve.Min(c => c.P.Y) - cutoff)), z1 = Math.Min(g.H - 2, (int)MathF.Ceiling(curve.Max(c => c.P.Y) + cutoff));
         float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
         float WorldNoise(float gx, float gz, float scale = 1) => b.Noise.Fbm((ox + gx) / (b.NoiseSize * scale), (oz + gz) / (b.NoiseSize * scale));
         // Smoothing reads the heights from before.
@@ -345,10 +348,6 @@ public sealed class PathTool
             Action.PaintClear => Brush.PaintOf(BrushTool.PaintClear),
             _ => null,
         };
-        // The farthest a changed point can be from the line: the widest a natural path gets, its soft edge (or the
-        // half metre a hard edge shares), and the most its ragged edge reaches out; a metre more against rounding.
-        float edge = soft > 0 ? soft : 0.5f;
-        float cutoff = (Natural ? MathF.Abs(half) * (1 + 0.45f * Noise.FbmBound) + edge + MathF.Max(soft, 2) * 0.6f * Noise.FbmBound : half + edge) + 1;
         var near = NearestOnLine(curve, x0, z0, x1, z1, cutoff);
         int nw = x1 - x0 + 1;
         for (int gz = z0; gz <= z1; gz++)
