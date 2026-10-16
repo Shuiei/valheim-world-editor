@@ -65,6 +65,8 @@ public class StampsBranchesTests
             Stamps.PathOverride = Path.Combine(dir, "taken", "stamps.json");
             Stamps.SaveKept([new Stamps.Stamp("pic:half", "Half", half, Loaded: true)]);
             Assert.Empty(Stamps.LoadKept());
+            // Written whole through a temporary file, which never stays behind.
+            Assert.Empty(Directory.GetFiles(Path.Combine(dir, "taken"), "*.tmp"));
         }
         finally
         {
