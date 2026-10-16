@@ -191,36 +191,40 @@ public sealed class WorldSave
     public byte[]? NewObjectBytes(Editing.NewObject n, Func<ObjectRef, byte[]> readSource, long builder)
     {
         byte[]? bytes = BuildBytes(n, readSource);
+        if (bytes == null)
+        {
+            return null;
+        }
+        // Made here rather than moved or copied with its own fields: placed, pasted or built blank.
+        bool made = n.Fresh || n.Raw == null && ModelFor(n.Prefab, n.SourceId) == null;
+        string? tool = made ? Terrain.PieceCatalog.Get(n.Prefab)?.Tool : null;
         // A new piece of a kind players build (placed, pasted or built blank) is the chosen builder's,
         // like one built in the game. Without a builder the game takes it for part of a ruin: a third of
         // the materials back, no base for fires, ignored by raids. Moved and edited objects keep theirs.
-        if (bytes != null && builder != 0 && (n.Fresh || n.Raw == null && ModelFor(n.Prefab, n.SourceId) == null)
-            && Terrain.PieceCatalog.Get(n.Prefab)?.Tool != null)
-        {
-            var z = ZdoData.Parse(bytes);
-            z.Set("longs", CreatorKey, builder.ToString(CultureInfo.InvariantCulture));
-            bytes = z.Serialize();
-        }
+        bool built = builder != 0 && tool != null;
         // Food and drink set out with the serving tray (Feaster) are items made pieces: the game marks
         // them with "piece" (ItemDrop.MakePiece). Without it they would be loose items, falling and
         // despawning away from a base.
-        if (bytes != null && (n.Fresh || n.Raw == null && ModelFor(n.Prefab, n.SourceId) == null)
-            && Terrain.PieceCatalog.Get(n.Prefab)?.Tool == "feaster" && Terrain.PrefabCatalog.ItemKindOf(n.Prefab) != null)
+        bool served = tool == "feaster" && Terrain.PrefabCatalog.ItemKindOf(n.Prefab) != null;
+        if (!built && !served && n.Data is not { Count: > 0 })
         {
-            var z = ZdoData.Parse(bytes);
+            return bytes;
+        }
+        // Parsed and written once for all the fields set.
+        var z = ZdoData.Parse(bytes);
+        if (built)
+        {
+            z.Set("longs", CreatorKey, builder.ToString(CultureInfo.InvariantCulture));
+        }
+        if (served)
+        {
             z.Set("ints", PieceKey, "1");
-            bytes = z.Serialize();
         }
-        if (bytes != null && n.Data is { Count: > 0 } data)
+        foreach (var f in n.Data ?? [])
         {
-            var z = ZdoData.Parse(bytes);
-            foreach (var f in data)
-            {
-                z.Set(f.Section, f.Key, f.Value);
-            }
-            bytes = z.Serialize();
+            z.Set(f.Section, f.Key, f.Value);
         }
-        return bytes;
+        return z.Serialize();
     }
 
     /// <summary>
