@@ -164,7 +164,9 @@ public sealed class GlView : OpenGlControlBase
     public void SetShown(ObjectKind k, bool on)
     {
         _shown[(int)k] = on;
-        RefreshNewMarkers();
+        // Which markers are drawn changes, not which things are spawn points or nests: _spawns is kept.
+        _marksDirty = true;
+        Wake();
     }
     /// <summary>Whether the water is drawn.</summary>
     private volatile bool _showWater = true;

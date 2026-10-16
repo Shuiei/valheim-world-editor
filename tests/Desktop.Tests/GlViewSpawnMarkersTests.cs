@@ -9,7 +9,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The 3D view's spawn point and nest markers: the things are looked through for them only when they change, not at
-/// every frame, and the markers follow what was added or deleted, the kinds worked out again and another area shown.
+/// every frame nor when kinds are shown or hidden, and the markers follow what was added or deleted, the kinds worked
+/// out again and another area shown.
 /// </summary>
 public class GlViewSpawnMarkersTests
 {
@@ -31,6 +32,14 @@ public class GlViewSpawnMarkersTests
         // Frames with nothing changed: the markers come from what was found, the camera's move included.
         v.SetCamera(at + new Vector3(0, 10, 10), at, 1.5f);
         Assert.Single(v.SpawnMarkers(s.Scene));
+        Assert.Single(v.SpawnMarkers(s.Scene));
+        Assert.Equal(finds, v.SpawnFinds);
+        // Kinds shown or hidden: the markers drawn change, the things are not looked through again.
+        v.SetShown(ObjectKind.Trees, false);
+        v.SetShown(ObjectKind.SpawnPoints, false);
+        v.SetShown(ObjectKind.Nests, true);
+        Assert.Empty(v.SpawnMarkers(s.Scene));
+        v.SetShown(ObjectKind.SpawnPoints, true);
         Assert.Single(v.SpawnMarkers(s.Scene));
         Assert.Equal(finds, v.SpawnFinds);
         // Another one placed: found again, once.
