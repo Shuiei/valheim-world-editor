@@ -972,9 +972,19 @@ public sealed class NewWorldPage : IDisposable
     }
 
     /// <summary>
-    /// A distance for people: hundreds of metres under 1 km, else km to one decimal; "none" for infinity.
+    /// A distance for people, to the nearest 100 m: metres under 1 km ("&lt; 100 m" under 50 m), else km to one decimal;
+    /// "none" for infinity.
     /// </summary>
-    internal static string Km(float m) => float.IsPositiveInfinity(m) ? Lang.T("newWorld.none") : m < 1000 ? $"{m / 100:0}00 m" : $"{m / 1000:0.0} km";
+    internal static string Km(float m)
+    {
+        if (float.IsPositiveInfinity(m))
+        {
+            return Lang.T("newWorld.none");
+        }
+        // Rounded to 100 m first, so 950 m and more reads 1.0 km (not "1000 m"), and under 50 m "< 100 m" (not "000 m").
+        float r = MathF.Round(m / 100, MidpointRounding.AwayFromZero) * 100;
+        return r < 100 ? "< 100 m" : r < 1000 ? $"{r:0} m" : $"{r / 1000:0.0} km";
+    }
 
     /// <summary>
     /// A seed's stats as text, for a search result's tooltip.

@@ -471,6 +471,10 @@ public class NewWorldPageTests
         Assert.Equal("none", NewWorldPage.Km(float.PositiveInfinity));
         Assert.Equal("400 m", NewWorldPage.Km(430));
         Assert.Equal("1.2 km", NewWorldPage.Km(1234));
+        // Both ends: under 50 m said so (it read "000 m"), 950 m and more in km (it read "1000 m").
+        Assert.Equal("< 100 m", NewWorldPage.Km(30));
+        Assert.Equal("100 m", NewWorldPage.Km(60));
+        Assert.Equal("1.0 km", NewWorldPage.Km(970));
         Assert.Equal("Black Forest", NewWorldPage.Name(Heightmap.Biome.BlackForest));
         Assert.Equal("Ashlands", NewWorldPage.Name(Heightmap.Biome.AshLands));
         Assert.Equal("Deep North", NewWorldPage.Name(Heightmap.Biome.DeepNorth));
