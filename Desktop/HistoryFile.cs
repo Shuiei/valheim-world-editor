@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
+using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
 
@@ -98,17 +99,36 @@ public static class HistoryFile
 
     /// <summary>
     /// One step as written: its fields at the time it was taken (its flags change later), with its points and zones
-    /// already in world positions' frame and its objects as indices into the written objects.
+    /// already in world positions' frame and its objects by id (those not found are left out when written).
     /// </summary>
     private sealed record KeptStep(string Label, long Ticks, bool Removed, bool Applied, int RevertOf, EditSession.Frame Frame, int[] Points,
-        Ground.State Before, Ground.State After, (int X, int Z)[] Zones, (int Thing, bool Before, bool After)[] Things,
+        Ground.State Before, Ground.State After, (int X, int Z)[] Zones, (int Id, bool Before, bool After)[] Things,
         (ZoneReset Reset, bool Before, bool After)[] Resets);
 
     /// <summary>
-    /// Everything a history file holds, taken from the world and the steps at one time, so it can be written later
-    /// on another thread. No steps: the file is removed instead.
+    /// What finding the steps' objects and reading their data needs, taken with the steps: the world, held so a live
+    /// merge leaves it as it is until they are read (<see cref="WorldSave.Hold"/>), and the edits' objects and the
+    /// builder as they were (the edits go on changing on the window's thread).
     /// </summary>
-    private sealed record Snapshot(string Path, string Key, string? Stamp, long SavedAt, List<KeptThing> Things, List<KeptStep> Steps, int UndoCount, int RedoCount);
+    /// <param name="World">The world, held.</param>
+    /// <param name="Held">The world's hold, let go once the objects are read.</param>
+    /// <param name="Ids">Every object the steps need, once.</param>
+    /// <param name="Deleted">The saved objects deleted then.</param>
+    /// <param name="Added">The objects added then and not deleted again.</param>
+    /// <param name="AddedById">The steps' added objects (deleted again or not) by id.</param>
+    /// <param name="Builder">The builder chosen then.</param>
+    private sealed record Sources(WorldSave World, IDisposable Held, List<int> Ids, HashSet<int> Deleted, List<NewObject> Added,
+        Dictionary<int, NewObject> AddedById, long Builder);
+
+    /// <summary>
+    /// Everything a history file holds, taken from the world and the steps at one time, so it can be written later
+    /// on another thread. No steps: the file is removed instead (and nothing is held).
+    /// </summary>
+    private sealed record Snapshot(string Path, string Key, string? Stamp, long SavedAt, Sources? Objects, List<KeptStep> Steps, int UndoCount, int RedoCount)
+    {
+        /// <summary>Lets the world go (again: only the first time counts).</summary>
+        public void Release() => Objects?.Held.Dispose();
+    }
 
     /// <summary>
     /// Writes the world's undo and redo steps (replacing the file in one move, so a crash leaves the old one);
@@ -116,16 +136,23 @@ public static class HistoryFile
     /// </summary>
     public static void Write(WorldSession w, EditSession.Kept k)
     {
-        var snapshot = Take(w, k);
         Flush();
-        Save(snapshot);
+        var snapshot = Take(w, k);
+        try
+        {
+            Save(snapshot);
+        }
+        finally
+        {
+            snapshot.Release();
+        }
     }
 
     /// <summary>
-    /// <see cref="Write"/> for Apply live, which can come at every edit (Auto apply): the steps and the objects'
-    /// data are taken now, on the caller's thread, and the file is written in the background, one write after the
-    /// other; a write a newer one for the same world has replaced before it started is left out. A failure to write
-    /// is logged, as <see cref="Write"/>'s callers do.
+    /// <see cref="Write"/> for Apply live, which can come at every edit (Auto apply): the steps, the edits' objects and
+    /// the world (held as it is) are taken now, on the caller's thread, and the objects are found, their data read and
+    /// the file written in the background, one write after the other; a write a newer one for the same world has
+    /// replaced before it started is left out. A failure to write is logged, as <see cref="Write"/>'s callers do.
     /// </summary>
     public static void WriteLater(WorldSession w, EditSession.Kept k)
     {
@@ -136,20 +163,24 @@ public static class HistoryFile
             Latest[snapshot.Path] = turn;
             _tail = _tail.ContinueWith(_ =>
             {
-                lock (QueueLock)
-                {
-                    if (Latest[snapshot.Path] != turn)
-                    {
-                        return;
-                    }
-                }
                 try
                 {
+                    lock (QueueLock)
+                    {
+                        if (Latest[snapshot.Path] != turn)
+                        {
+                            return;
+                        }
+                    }
                     Save(snapshot);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     Console.WriteLine($"History: could not keep it on disk: {ex.Message}");
+                }
+                finally
+                {
+                    snapshot.Release();
                 }
             }, CancellationToken.None, TaskContinuationOptions.DenyChildAttach, TaskScheduler.Default);
         }
@@ -187,8 +218,8 @@ public static class HistoryFile
     }
 
     /// <summary>
-    /// Takes what the history file of the world will hold: every object the steps need, once, with its data, and
-    /// each step's fields as they are now.
+    /// Takes what the history file of the world will hold, cheaply: each step's fields as they are now, and what
+    /// finding its objects needs (<see cref="Sources"/>; the world is held from here until they are read).
     /// </summary>
     private static Snapshot Take(WorldSession w, EditSession.Kept k)
     {
@@ -197,41 +228,72 @@ public static class HistoryFile
         var all = k.Undo.Concat(k.Redo).ToList();
         if (all.Count == 0)
         {
-            return new Snapshot(path, key, null, 0, [], [], 0, 0);
-        }
-        // Every object the steps need, once: what it is, where, and its data.
-        var ids = k.Ids.Values.SelectMany(v => v).Distinct().ToList();
-        var found = WorldScene.FindThings(w.World, w.Edits, ids);
-        var index = new Dictionary<int, int>();
-        var things = new List<KeptThing>();
-        foreach (int id in ids)
-        {
-            if (!found.TryGetValue(id, out var t))
-            {
-                continue;
-            }
-            byte[]? bytes = null;
-            try
-            {
-                bytes = ObjectData.Bytes(w.World, w.Edits, id);
-            }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or ArgumentException)
-            {
-                Console.WriteLine($"History: no data kept for object {id}: {ex.Message}");
-            }
-            index[id] = things.Count;
-            things.Add(new KeptThing(t.Prefab, t.Piece, t.Position, t.Rotation, t.Scale, bytes));
+            return new Snapshot(path, key, null, 0, null, [], 0, 0);
         }
         var order = all.Select((c, i) => (c, i)).ToDictionary(p => p.c, p => p.i);
         var steps = new List<KeptStep>(all.Count);
         foreach (var c in all)
         {
             int[] cids = k.Ids[c];
-            (int, bool, bool)[] kept = [.. Enumerable.Range(0, cids.Length).Where(n => index.ContainsKey(cids[n])).Select(n => (index[cids[n]], c.Things[n].Before, c.Things[n].After))];
+            (int, bool, bool)[] things = [.. cids.Select((id, n) => (id, c.Things[n].Before, c.Things[n].After))];
             steps.Add(new KeptStep(c.Label, c.Time.Ticks, c.Removed, c.Applied, c.RevertOf != null && order.TryGetValue(c.RevertOf, out int r) ? r : -1,
-                k.FrameOf(c), c.Points, c.Before, c.After, [.. c.Zones], kept, c.Resets));
+                k.FrameOf(c), c.Points, c.Before, c.After, [.. c.Zones], things, c.Resets));
         }
-        return new Snapshot(path, key, Stamp(w), DateTime.UtcNow.Ticks, things, steps, k.Undo.Count, k.Redo.Count);
+        string? stamp = Stamp(w);
+        long savedAt = DateTime.UtcNow.Ticks;
+        // Every object the steps need, once; the added ones as they are now (an edit replaces them, a reload drops
+        // them).
+        var ids = k.Ids.Values.SelectMany(v => v).Distinct().ToList();
+        var edits = w.Edits;
+        var addedById = new Dictionary<int, NewObject>();
+        foreach (int id in ids.Where(i => i < 0))
+        {
+            if (edits.FindAdded(id) is { } n)
+            {
+                addedById[id] = n;
+            }
+        }
+        var world = w.World;
+        // Last, once nothing can fail: the hold is let go by whoever writes the snapshot.
+        var sources = new Sources(world, world.Hold(), ids, edits.Deleted, edits.Added, addedById, WorldSave.Builder);
+        return new Snapshot(path, key, stamp, savedAt, sources, steps, k.Undo.Count, k.Redo.Count);
+    }
+
+    /// <summary>
+    /// The steps' objects found and their data read, from what was taken (<see cref="Sources"/>), then the world let
+    /// go: each object once, what it is, where and its data, and its place among them by id.
+    /// </summary>
+    private static (List<KeptThing> Things, Dictionary<int, int> Index) Find(Sources o)
+    {
+        try
+        {
+            var found = WorldScene.FindThings(o.World, o.Deleted, o.Added, o.AddedById.GetValueOrDefault, o.Ids);
+            var index = new Dictionary<int, int>();
+            var things = new List<KeptThing>();
+            foreach (int id in o.Ids)
+            {
+                if (!found.TryGetValue(id, out var t))
+                {
+                    continue;
+                }
+                byte[]? bytes = null;
+                try
+                {
+                    bytes = ObjectData.Bytes(o.World, o.AddedById.GetValueOrDefault, id, o.Builder);
+                }
+                catch (Exception ex) when (ex is IOException or InvalidDataException or ArgumentException)
+                {
+                    Console.WriteLine($"History: no data kept for object {id}: {ex.Message}");
+                }
+                index[id] = things.Count;
+                things.Add(new KeptThing(t.Prefab, t.Piece, t.Position, t.Rotation, t.Scale, bytes));
+            }
+            return (things, index);
+        }
+        finally
+        {
+            o.Held.Dispose();
+        }
     }
 
     /// <summary>
@@ -240,11 +302,12 @@ public static class HistoryFile
     /// </summary>
     private static void Save(Snapshot s)
     {
-        if (s.Steps.Count == 0)
+        if (s.Objects == null)
         {
             Remove(s.Path);
             return;
         }
+        var (things, index) = Find(s.Objects);
         Directory.CreateDirectory(Folder);
         string temp = s.Path + ".new";
         using (var file = File.Create(temp))
@@ -257,8 +320,8 @@ public static class HistoryFile
             o.Write(s.Stamp != null);
             o.Write(s.Stamp ?? "");
             o.Write(s.SavedAt);
-            o.Write(s.Things.Count);
-            foreach (var t in s.Things)
+            o.Write(things.Count);
+            foreach (var t in things)
             {
                 o.Write(t.Prefab);
                 o.Write(t.Piece);
@@ -296,10 +359,11 @@ public static class HistoryFile
                     o.Write(x + f.X0);
                     o.Write(z + f.Z0);
                 }
-                o.Write(c.Things.Length);
-                foreach (var (thing, before, after) in c.Things)
+                var kept = c.Things.Where(t => index.ContainsKey(t.Id)).ToList();
+                o.Write(kept.Count);
+                foreach (var (id, before, after) in kept)
                 {
-                    o.Write(thing);
+                    o.Write(index[id]);
                     o.Write(before);
                     o.Write(after);
                 }

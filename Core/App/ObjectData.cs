@@ -21,18 +21,28 @@ public static class ObjectData
     /// The saved bytes of an object of the world (id &gt;= 0) or of one added in this session (id &lt; 0); null
     /// when there is no such object.
     /// </summary>
-    public static byte[]? Bytes(WorldSave w, EditStore edits, int id)
+    public static byte[]? Bytes(WorldSave w, EditStore edits, int id) => Bytes(w, edits.FindAdded, id, WorldSave.Builder);
+
+    /// <summary>
+    /// <see cref="Bytes(WorldSave, EditStore, int)"/> from objects added taken earlier, with the builder taken with
+    /// them: what a reader on another thread writes as the world and edits were then.
+    /// </summary>
+    /// <param name="w">The world.</param>
+    /// <param name="findAdded">An object added in this session by id (null when there is none).</param>
+    /// <param name="id">The object.</param>
+    /// <param name="builder">The builder a new piece of a kind players build is given (0: none).</param>
+    public static byte[]? Bytes(WorldSave w, Func<int, NewObject?> findAdded, int id, long builder)
     {
         if (id >= 0)
         {
             return id < w.ObjectRefs.Count ? w.ObjectBytes(id) : null;
         }
-        NewObject? n = edits.FindAdded(id);
+        NewObject? n = findAdded(id);
         if (n == null)
         {
             return null;
         }
-        return w.NewObjectBytes(n, w.SourceReader());
+        return w.NewObjectBytes(n, w.SourceReader(), builder);
     }
 
     /// <summary>The keys of an object's own scale, which a copy takes from its own size instead.</summary>

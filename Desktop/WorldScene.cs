@@ -295,22 +295,39 @@ public sealed class WorldScene
     {
         lock (world.Sync)
         {
-            return FindThingsIn(world, edits, ids);
+            return FindThingsIn(world, edits.Deleted, edits.Added, edits.FindAdded, ids);
+        }
+    }
+
+    /// <summary>
+    /// <see cref="FindThings(WorldSave, EditStore, IReadOnlyCollection{int})"/> from the edits' objects taken earlier:
+    /// what a reader on another thread finds as the edits were then.
+    /// </summary>
+    /// <param name="world">The world.</param>
+    /// <param name="deleted">The saved objects deleted (<c>EditStore.Deleted</c>).</param>
+    /// <param name="added">The objects added and not deleted again (<c>EditStore.Added</c>).</param>
+    /// <param name="findAdded">An object added by id, deleted again or not (<c>EditStore.FindAdded</c>).</param>
+    /// <param name="ids">The objects to find.</param>
+    public static Dictionary<int, Thing> FindThings(WorldSave world, HashSet<int> deleted, List<NewObject> added, Func<int, NewObject?> findAdded,
+        IReadOnlyCollection<int> ids)
+    {
+        lock (world.Sync)
+        {
+            return FindThingsIn(world, deleted, added, findAdded, ids);
         }
     }
 
     /// <summary><c>FindThings</c>' work, with the world's lock held.</summary>
-    private static Dictionary<int, Thing> FindThingsIn(WorldSave world, EditStore edits, IReadOnlyCollection<int> ids)
+    private static Dictionary<int, Thing> FindThingsIn(WorldSave world, HashSet<int> deleted, List<NewObject> addedNow, Func<int, NewObject?> findAdded,
+        IReadOnlyCollection<int> ids)
     {
         var want = ids.ToHashSet();
-        var deleted = edits.Deleted;
-        var addedNow = edits.Added;
         var added = addedNow.Select(n => n.Id).ToHashSet();
         var links = LinkIndex.Of(world, deleted, addedNow);
         var found = new Dictionary<int, Thing>();
         foreach (int id in want.Where(i => i < 0))
         {
-            if (edits.FindAdded(id) is { } n)
+            if (findAdded(id) is { } n)
             {
                 found[id] = Placed(new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Gone = !added.Contains(id), Tamed = TamedOf(world, n) }, links);
             }

@@ -334,6 +334,36 @@ public class WorldSaveTests
         Assert.NotNull(world.MergeLive([(0, 0)], [], _ => false, _ => false));
     }
 
+    // A hold (the history written in the background after Apply live) keeps merges out until every hold is let go;
+    // letting one go twice counts once.
+    [Fact]
+    public void LiveAMergeWaitsWhileTheWorldIsHeld()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        var first = world.Hold();
+        var second = world.Hold();
+        Assert.Null(world.MergeLive([(0, 0)], [], _ => false, _ => false));
+        first.Dispose();
+        first.Dispose();
+        Assert.Null(world.MergeLive([(0, 0)], [], _ => false, _ => false));
+        second.Dispose();
+        Assert.NotNull(world.MergeLive([(0, 0)], [], _ => false, _ => false));
+    }
+
+    // A new piece made from what was taken earlier gets the builder taken then, not the one chosen now.
+    [Fact]
+    public void ANewPieceTakesTheBuilderGiven()
+    {
+        using var w = new TempWorld();
+        WorldSave world = w.Load();
+        var wall = new NewObject(-1, StableHash.Of("woodwall"), new Vector3(1, 2, 3), Vector3.Zero, 0f);
+        long? Creator(long builder) => world.NewObjectBytes(wall, world.SourceReader(), builder) is { } b
+            ? ZdoData.Parse(b).LongList.Where(i => i.Key == StableHash.Of("creator")).Select(i => (long?)i.Value).SingleOrDefault()
+            : null;
+        Assert.Equal(4242L, Creator(4242));
+        Assert.Equal(99L, Creator(99));
+    }
+
     [Fact]
     public void LiveAPlayersPieceAndAPlacedLocationComeAndGo()
     {
