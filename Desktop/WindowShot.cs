@@ -24,7 +24,10 @@ public static class WindowShot
         }
         using var canvasBitmap = Decode(main);
         using var canvas = new SKCanvas(canvasBitmap);
-        canvas.DrawRect(0, 0, canvasBitmap.Width, canvasBitmap.Height, new SKPaint { Color = new SKColor(0, 0, 0, 140) });
+        using (var dim = new SKPaint { Color = new SKColor(0, 0, 0, 140) })
+        {
+            canvas.DrawRect(0, 0, canvasBitmap.Width, canvasBitmap.Height, dim);
+        }
         foreach (var d in dialogs)
         {
             using var shot = await Snapshot(d);
