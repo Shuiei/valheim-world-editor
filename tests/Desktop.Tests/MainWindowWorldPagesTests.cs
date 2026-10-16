@@ -246,6 +246,12 @@ public class MainWindowWorldPagesTests
         int snapshots = r.Game.Snapshots;
         await r.W.ReloadWorld();
         Assert.True(r.Game.Snapshots > snapshots);
+        // The bridge refusing (an error status) is said the same way, and the busy veil goes.
+        r.Game.Fail["/snapshot"] = 500;
+        await r.W.ReloadWorld();
+        Assert.Equal("Could not reach the game: bridge snapshot: 500 broken", r.Said);
+        Assert.False(r.W.IsBusy);
+        r.Game.Fail.Remove("/snapshot");
         r.StopGame();
         await r.W.ReloadWorld();
         Assert.StartsWith("Could not reach the game: ", r.Said);

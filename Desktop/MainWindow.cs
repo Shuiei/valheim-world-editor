@@ -716,11 +716,15 @@ public sealed partial class MainWindow : Window
         {
             await w.Reload();
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
+        // As ReloadHere: the bridge's answers (a refusal, broken JSON) too.
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException or System.Text.Json.JsonException)
         {
             Say("Could not reach the game: " + ex.Message);
         }
-        Busy(null);
+        finally
+        {
+            Busy(null);
+        }
         MapPage?.Show(w);
     }
 
