@@ -214,6 +214,20 @@ public sealed class Ground
     public float MaskOf(int g, int c) => PMod[g] != 0 ? Paint[g * 4 + c] : BaseMask[g * 4 + c];
 
     /// <summary>
+    /// Marks a point's paint as changed, starting from what it shows: the generated mask when it was not painted yet
+    /// (dirt around a location stays dirt under a light first touch), else the paint it has.
+    /// </summary>
+    /// <param name="g">The ground point index.</param>
+    public void StartPaint(int g)
+    {
+        if (PMod[g] == 0)
+        {
+            Array.Copy(BaseMask, g * 4, Paint, g * 4, 4);
+            PMod[g] = 1;
+        }
+    }
+
+    /// <summary>
     /// The editable arrays, for every point (Snapshot) or only some points (an undo step keeps just the ones it
     /// touched).
     /// </summary>

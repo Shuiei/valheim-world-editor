@@ -145,6 +145,26 @@ public class SculptTests
     }
 
     [Fact]
+    public void AFirstLightTouchStartsFromTheGeneratedMask()
+    {
+        // Generated dirt everywhere (as around a location); a light cultivated touch keeps it nearly all dirt.
+        var g = new Ground(129, 129, 0, 0, 2);
+        Array.Fill(g.Base, 30f);
+        for (int p = 0; p < g.Base.Length; p++)
+        {
+            g.BaseMask[p * 4] = 1;
+            g.BaseMask[p * 4 + 3] = 1;
+        }
+        var b = new Brush { Radius = 6, Strength = 0.05f };
+        var stroke = new Stroke { Tool = BrushTool.PaintCultivated, Start = g.Snapshot() };
+        Sculpt.Apply(g, b, stroke, 64, 64, 1 / 60f);
+        int at = 64 * g.W + 64;
+        Assert.Equal(1, g.PMod[at]);
+        Assert.InRange(g.Paint[at * 4], 0.9f, 1);
+        Assert.InRange(g.Paint[at * 4 + 1], 0.001f, 0.1f);
+    }
+
+    [Fact]
     public void UndoAndRedoPutTheGroundBackAndForth()
     {
         var s = TestScenes.Flat();

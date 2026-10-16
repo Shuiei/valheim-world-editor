@@ -461,12 +461,7 @@ public sealed class PathTool
                         break;
                     }
                     default:
-                        if (g.PMod[p] == 0)
-                        {
-                            g.Paint[p * 4] = g.Paint[p * 4 + 1] = g.Paint[p * 4 + 2] = 0;
-                            g.Paint[p * 4 + 3] = 1;
-                            g.PMod[p] = 1;
-                        }
+                        g.StartPaint(p);
                         for (int c = 0; c < 4; c++)
                         {
                             g.Paint[p * 4 + c] += (colour![c] - g.Paint[p * 4 + c]) * w;

@@ -538,12 +538,7 @@ public sealed class PasteTool
                             }
                             if (c.Pnt[i * 4] >= 0)
                             {
-                                if (g.PMod[p] == 0)
-                                {
-                                    g.Paint[p * 4] = g.Paint[p * 4 + 1] = g.Paint[p * 4 + 2] = 0;
-                                    g.Paint[p * 4 + 3] = 1;
-                                    g.PMod[p] = 1;
-                                }
+                                g.StartPaint(p);
                                 for (int ch = 0; ch < 4; ch++)
                                 {
                                     g.Paint[p * 4 + ch] += (c.Pnt[i * 4 + ch] - g.Paint[p * 4 + ch]) * w;
