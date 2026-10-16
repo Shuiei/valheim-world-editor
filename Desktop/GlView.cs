@@ -340,22 +340,21 @@ public sealed class GlView : OpenGlControlBase
             }
         }
         _look = null;
+        // The last area's session is not followed any more: its late events hold its indices, not this scene's.
+        if (_followed is { } old)
+        {
+            old.Changed -= Wake;
+            old.ThingsChanged -= OnThingsChanged;
+            old.ThingsReset -= RefreshNewMarkers;
+            old.ThingsReset -= OnThingsReset;
+        }
+        _followed = scene.Session;
         if (scene.Session != null)
         {
             scene.Session.Changed += Wake;
             scene.Session.ThingsChanged += OnThingsChanged;
             scene.Session.ThingsReset += RefreshNewMarkers;
-            // Read again after a save: new indices, so the selection goes at once (not at the next frame).
-            scene.Session.ThingsReset += () =>
-            {
-                lock (_selection)
-                {
-                    _selection.Clear();
-                }
-                SelectionDone();
-                _thingsReset = true;
-                Wake();
-            };
+            scene.Session.ThingsReset += OnThingsReset;
         }
         Task.Run(() =>
         {
@@ -372,6 +371,23 @@ public sealed class GlView : OpenGlControlBase
         });
         Wake();
     }
+    /// <summary>The session whose changes are followed (the shown scene's), null when none.</summary>
+    private EditSession? _followed;
+
+    /// <summary>
+    /// The area read again (after a save): new indices, so the selection goes at once (not at the next frame).
+    /// </summary>
+    private void OnThingsReset()
+    {
+        lock (_selection)
+        {
+            _selection.Clear();
+        }
+        SelectionDone();
+        _thingsReset = true;
+        Wake();
+    }
+
     /// <summary>The game look's files as read, null until read (or when Valheim was not found).</summary>
     private volatile GameLookGl.Files? _lookFiles;
     /// <summary>The game look set up for this area, null until set up (at a frame).</summary>
