@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.100 — unreleased
+
+### Changed
+- **Regrowing nature in the Ashlands reads each zone once.** Working out what the game would grow, each zone made its
+  own list of the zones it had read (biomes, paint mask, sea depth at the corners), so a neighbour that the Ashlands'
+  wide groups reach into was read again for every zone next to it: about three times the reading over a 4 × 4 block.
+  The list is now made once for the whole area. The same spots are grown.
+
 ## v1.45.99 — unreleased
 
 ### Changed

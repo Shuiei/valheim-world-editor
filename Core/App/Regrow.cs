@@ -115,6 +115,13 @@ public static class Regrow
     /// <summary>How many vegetation rules are loaded (0 before <see cref="Use"/>).</summary>
     public static int RuleCount => _rules.Count;
 
+    /// <summary>
+    /// Zones read (biomes, paint mask, ocean depths) on this thread so far: a test seam, each zone is read once per
+    /// <see cref="Zones"/> call.
+    /// </summary>
+    [field: ThreadStatic]
+    internal static int ZoneReads { get; private set; }
+
     /// <summary>One object the game would place: prefab, Unity world position, Euler rotation (degrees), scale.</summary>
     /// <param name="Name">The prefab.</param>
     /// <param name="X">World x (metres).</param>
@@ -143,6 +150,8 @@ public static class Regrow
         var (w, h, heights) = HeightGrid.Read(terrain, edits, x0 - 1, z0 - 1, x1 + 1, z1 + 1);
         Ground ground = new(heights, w, h, (x0 - 1) * 64f - 32f, (z0 - 1) * 64f - 32f);
         List<Spot> spots = [];
+        // Each zone's biomes, paint mask and ocean depths, made once for the whole call: groups reach into neighbours.
+        Dictionary<(int, int), Zone> zones = [];
         // Unity's Random has one state per thread: put back what this thread had.
         Rnd.State saved = Rnd.state;
         try
@@ -151,7 +160,7 @@ public static class Regrow
             {
                 for (int zx = x0; zx <= x1; zx++)
                 {
-                    PlaceZone(terrain, ground, seed, zx, zz, spots);
+                    PlaceZone(terrain, ground, zones, seed, zx, zz, spots);
                 }
             }
         }
@@ -273,16 +282,17 @@ public static class Regrow
             Cz = cz,
         };
         cache[(zx, zz)] = zone;
+        ZoneReads++;
         return zone;
     }
 
     /// <summary>
     /// ZoneSystem.PlaceVegetation for one zone: every enabled rule of its biomes, the same draws in the same
-    /// order, adding what passes the checks to <paramref name="spots"/>.
+    /// order, adding what passes the checks to <paramref name="spots"/>. <paramref name="zones"/> holds the zones
+    /// read so far, shared by every zone of one <see cref="Zones"/> call.
     /// </summary>
-    private static void PlaceZone(TerrainService terrain, Ground ground, int seed, int zx, int zz, List<Spot> spots)
+    private static void PlaceZone(TerrainService terrain, Ground ground, Dictionary<(int, int), Zone> zones, int seed, int zx, int zz, List<Spot> spots)
     {
-        Dictionary<(int, int), Zone> zones = [];
         Zone hmap = ZoneAt(terrain, ground, zones, zx * 64f, zz * 64f);
         float cx = zx * 64f, cz = zz * 64f;
         foreach (Rule veg in _rules)
