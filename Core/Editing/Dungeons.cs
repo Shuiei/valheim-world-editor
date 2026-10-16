@@ -128,12 +128,16 @@ public static class Dungeons
     /// </summary>
     public static IEnumerable<Room> RoomsFor(Kind kind) => AllRooms.Where(r => r.Enabled && (r.Theme & kind.Themes) != 0);
 
+    /// <summary>Three numbers of a scan's JSON array from <paramref name="i"/> on, as a point.</summary>
+    internal static Vector3 V(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle());
+
+    /// <summary>Four numbers of a scan's JSON array from <paramref name="i"/> on, as a rotation (x, y, z, w).</summary>
+    internal static Quaternion Q(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle(), a[i + 3].GetSingle());
+
     /// <summary>Reads the scan's JSON ("rooms" and "dungeons", each by prefab name).</summary>
     private static Catalog Load(string json)
     {
         using var doc = JsonDocument.Parse(json);
-        static Vector3 V(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle());
-        static Quaternion Q(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle(), a[i + 3].GetSingle());
         var rooms = new Dictionary<int, Room>();
         foreach (JsonProperty p in doc.RootElement.GetProperty("rooms").EnumerateObject())
         {
@@ -165,8 +169,6 @@ public static class Dungeons
     /// </summary>
     internal static (Content[] Contents, Spawn[] Spawns, Pick[] Picks, int[] Nodes) Parts(JsonElement r)
     {
-        static Vector3 V(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle());
-        static Quaternion Q(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle(), a[i + 3].GetSingle());
         return ([.. r.GetProperty("contents").EnumerateArray().Select(c => new Content(c[0].GetString() ?? "", V(c, 1), Q(c, 4), c[8].GetInt32()))],
             [.. r.GetProperty("spawns").EnumerateArray().Select(x => new Spawn(x[0].GetInt32(), x[1].GetSingle(), x[2].GetInt32(), x[3].GetInt32(), x[4].GetInt32(), x[5].GetInt32()))],
             [.. r.GetProperty("picks").EnumerateArray().Select(x => new Pick(x[0].GetInt32(), x[1].GetInt32(),
