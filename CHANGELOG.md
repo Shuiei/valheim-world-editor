@@ -134,6 +134,9 @@ the plugin is unchanged in versions without that part.
 - **A prefab a game update made the game's own still showed under Mods and as "From a mod".** The kept mod catalogue
   never dropped an entry; Load and Take now leave out the names that are the game's own prefabs, with their pieces,
   costs, mods and models.
+- **Two saves of the same app file at once could fail or keep a half-written one.** SafeFile wrote every file through
+  the one name path + ".tmp", so two writers deleted or moved each other's; each write now has a temporary file of its
+  own, deleted on any failure.
 
 ### Changed
 

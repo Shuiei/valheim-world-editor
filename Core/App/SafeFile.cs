@@ -25,7 +25,9 @@ public static class SafeFile
     public static bool IsDeviceName(string name) => DeviceNames.Contains(name.Split('.')[0], StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Writes the text (UTF-8) through path + ".tmp", flushed to disk before the move; makes the folder if needed.
+    /// Writes the text (UTF-8) through a temporary file of its own next to it (path.&lt;random&gt;.tmp, so two writers of
+    /// the same file never take each other's), flushed to disk before the move; makes the folder if needed. The
+    /// temporary file is deleted when anything fails.
     /// </summary>
     /// <param name="path">The file to write.</param>
     /// <param name="text">Its new contents.</param>
@@ -35,28 +37,27 @@ public static class SafeFile
     public static void WriteAllText(string path, string text, UnixFileMode? mode = null, bool overwrite = true)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        string temp = path + ".tmp";
-        var options = new FileStreamOptions { Mode = FileMode.Create, Access = FileAccess.Write };
+        string temp = $"{path}.{Guid.NewGuid():N}.tmp";
+        var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };
         if (mode is { } m && !OperatingSystem.IsWindows())
         {
             options.UnixCreateMode = m;
         }
-        File.Delete(temp);
-        using (var stream = new FileStream(temp, options))
-        using (var writer = new StreamWriter(stream))
-        {
-            writer.Write(text);
-            writer.Flush();
-            stream.Flush(flushToDisk: true);
-        }
         try
         {
+            using (var stream = new FileStream(temp, options))
+            using (var writer = new StreamWriter(stream))
+            {
+                writer.Write(text);
+                writer.Flush();
+                stream.Flush(flushToDisk: true);
+            }
             File.Move(temp, path, overwrite);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch
         {
-            // Refused (a file put there meanwhile, locked, or read-only on Windows): the temporary copy, which may
-            // hold a saved password, is not left behind.
+            // Not written, or refused (a file put there meanwhile, locked, or read-only on Windows): the temporary
+            // copy, which may hold a saved password, is not left behind; the failure goes on to the caller.
             File.Delete(temp);
             throw;
         }

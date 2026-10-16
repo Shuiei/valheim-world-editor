@@ -110,7 +110,7 @@ public sealed class SavedSelectionsTests : IDisposable
         Assert.Equal("{ not json", File.ReadAllText(path + ".bad"));
         Assert.Equal("x", Assert.Single(SavedSelections.For("A")).Name);
         // Written through a temporary file, none left behind.
-        Assert.False(File.Exists(path + ".tmp"));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(path)!, "*.tmp"));
     }
 
     [Fact]

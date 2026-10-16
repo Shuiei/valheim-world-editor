@@ -69,7 +69,7 @@ public sealed class PlaceMemoryFileTests : IDisposable
         Assert.Equal("{ not json", File.ReadAllText(file + ".bad"));
         Assert.Equal("Oak1", Assert.Single(PlaceMemory.Load().Favourites));
         // Written through a temporary file, none left behind.
-        Assert.False(File.Exists(file + ".tmp"));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(file)!, "*.tmp"));
     }
 
     [Fact]

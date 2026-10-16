@@ -91,7 +91,7 @@ public class AppSettingsTests : IDisposable
     {
         ServerConfig.Remember(new ServerConfig.Server { Name = "S", Host = "my.server.com", User = "valheim", Password = " pass word  " });
         Assert.Equal(" pass word  ", Assert.Single(ServerConfig.Load()).Password);
-        Assert.False(File.Exists(ServerConfig.FilePath + ".tmp"));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(ServerConfig.FilePath)!, "*.tmp"));
     }
 
     // Settings that cannot be read are kept aside before the defaults are written over them, and a
@@ -153,7 +153,7 @@ public class AppSettingsTests : IDisposable
         s.ValheimPath = "/games/Valheim";
         s.Save();
         Assert.Equal("/games/Valheim", AppSettings.Load().ValheimPath);
-        Assert.False(File.Exists(path + ".tmp"));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(path)!, "*.tmp"));
         File.Delete(path);
         Directory.CreateDirectory(path);
         s.Save();
