@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.78 — unreleased
+
+### Fixed
+- **The steps before the plinth of a generated burial chamber, chapel, shrine or tomb rose away from it.** A stone
+  stair climbs toward its back; these rooms turned their front steps the other way from the great hall's, arena's and
+  feast hall's, so the stairs faced the plinth and climbed toward the room. They are now turned like the others.
+
 ## v1.45.77 — unreleased
 
 ### Fixed
