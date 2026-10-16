@@ -121,11 +121,7 @@ public sealed class WorldSession : IDisposable
     {
         if (Area == null && History != null)
         {
-            // Applied is part of a step's hash: the ids and frames are keyed again once it is set.
-            var ids = History.Ids.ToList();
-            var frames = History.Frames?.ToList();
             EditSession.MarkSent(History.Undo, sent ?? (static _ => true));
-            History = History with { Ids = ids.ToDictionary(p => p.Key, p => p.Value), Frames = frames?.ToDictionary(p => p.Key, p => p.Value) };
         }
     }
 

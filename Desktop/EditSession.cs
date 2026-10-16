@@ -88,6 +88,15 @@ public sealed class EditSession
         public bool Earlier { get; init; }
 
         /// <summary>
+        /// Whether it is this very change: a change is itself, not its values, since Removed and Applied are set after
+        /// it is made while it keys the kept history's ids and frames (HistoryFile, Kept).
+        /// </summary>
+        public bool Equals(Change? other) => ReferenceEquals(this, other);
+
+        /// <summary>The change's own hash, which setting Removed or Applied does not move.</summary>
+        public override int GetHashCode() => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
+
+        /// <summary>
         /// A short line of what it did, like the web editor's history: "3 zones · 2 new · 1 removed · 1 zone reset".
         /// </summary>
         public string Describe()

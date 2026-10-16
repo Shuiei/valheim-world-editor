@@ -8,8 +8,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// An edit session's smaller rules: deleting what is already gone makes no step, a shape whose formula fails at some
 /// points counts them and leaves them, the changed rectangle is given once, the game's changes wait for a stroke
 /// to end, things moved, turned and sized in one step, the copy that stands for a moved thing, what a copy starts
-/// from, zones marked for reset, unmarked and marked again with other options, and steps marked applied up to the
-/// first the game lacks.
+/// from, a step keyed by itself, zones marked for reset, unmarked and marked again with other options, and steps
+/// marked applied up to the first the game lacks.
 /// </summary>
 public class EditSessionStepsTests
 {
@@ -163,6 +163,20 @@ public class EditSessionStepsTests
         int copied = s.Commit("Put", null, [], [(new Editing.NewObject(0, StableHash.Of("Rock_4"), new Vector3(20, 30, 20), Vector3.Zero, 0, 3, false), false)])[0];
         int put = s.Commit("Put", null, [], [(new Editing.NewObject(0, StableHash.Of("Rock_4"), new Vector3(25, 30, 20), Vector3.Zero, 0, null, true), false)])[0];
         Assert.Equal<int?>([3, 3, null], [.. new[] { 0, copied, put }.Select(i => s.CopySourceOf(s.Scene.Things[i]).SourceId)]);
+    }
+
+    [Fact]
+    public void AStepKeysByItselfWhateverIsSetOnItLater()
+    {
+        var s = TestScenes.Flat(1);
+        s.Shape(32, 32, _ => 1, 3, 0, "A");
+        var c = s.UndoList[0];
+        var ids = new Dictionary<EditSession.Change, int[]> { [c] = [7] };
+        c.Applied = true;
+        c.Removed = true;
+        Assert.Equal([7], ids[c]);
+        // A copy with the same values is another step.
+        Assert.NotEqual(c, c with { });
     }
 
     [Fact]
