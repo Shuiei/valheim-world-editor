@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.108 — unreleased
+
+### Changed
+- **Saving new ground in many zones no longer reads the same chunk file again for each one.** Ground edited in a
+  zone that had none yet is saved as a copy of an existing ground object, and every such zone read that object's
+  whole chunk file (often several megabytes) to copy a few bytes out of it. The object alone is now read, once per
+  save.
+
 ## v1.45.107 — unreleased
 
 ### Changed

@@ -135,6 +135,8 @@ public static class WorldWriter
         HashSet<(int, int)> notSaved = [];
         Dictionary<ChunkFile, List<byte[]>> additions = [];
         int written = 0, created = 0, addedCount = 0;
+        // The template terrain object's own bytes, read from its chunk file at the first new ground.
+        byte[]? templateBytes = null;
         // Reading the template and the models can fail (a chunk file gone, data that does not parse): nothing is
         // written yet, and the caller gets a result, not an exception.
         try
@@ -171,7 +173,8 @@ public static class WorldWriter
                     notSaved.Add((edit.ZoneX, edit.ZoneZ));
                     continue;
                 }
-                (additions.TryGetValue(target, out var a) ? a : additions[target] = []).Add(NewTerrainObject(world, template, edit, data));
+                templateBytes ??= TemplateBytes(world, template.Source!);
+                (additions.TryGetValue(target, out var a) ? a : additions[target] = []).Add(NewTerrainObject(template.Source!, templateBytes, edit, data));
                 created++;
             }
             // New objects: a copy of the first object of the same prefab, in the chunk file of their zone.
@@ -325,17 +328,39 @@ public static class WorldWriter
     /// <summary>The ZDO flag of a position saved as two shorts (the zone), which new terrain objects are copied from.</summary>
     private const ushort ShortPosition = 0x2000;
 
-    /// <summary>A new terrain object: the template object's bytes with this zone's position and data.</summary>
-    /// <exception cref="InvalidOperationException">The template's position is not in the short format.</exception>
-    private static byte[] NewTerrainObject(WorldSave world, TerrainZone template, ZoneEdit edit, byte[] data)
+    /// <summary>
+    /// Template objects' bytes read from their chunk files on this thread so far: a test seam, a save reads its
+    /// template once however many zones get new ground.
+    /// </summary>
+    [field: ThreadStatic]
+    internal static int TemplateReads { get; private set; }
+
+    /// <summary>The template terrain object's own bytes (Start..End), read from its chunk file alone.</summary>
+    /// <param name="world">The world the template is of.</param>
+    /// <param name="src">Where the template object is.</param>
+    private static byte[] TemplateBytes(WorldSave world, ZdoLocation src)
     {
-        ZdoLocation src = template.Source!;
+        using FileStream fs = File.OpenRead(Path.Combine(world.Directory, src.File.FileName));
+        byte[] own = new byte[src.End - src.Start];
+        fs.Seek(src.Start, SeekOrigin.Begin);
+        fs.ReadExactly(own);
+        TemplateReads++;
+        return own;
+    }
+
+    /// <summary>A new terrain object: the template object's bytes with this zone's position and data.</summary>
+    /// <param name="src">Where the template object is (its offsets, in its chunk file).</param>
+    /// <param name="own">The template object's bytes (<see cref="TemplateBytes"/>).</param>
+    /// <param name="edit">The zone's edit.</param>
+    /// <param name="data">The zone's encoded terrain data.</param>
+    /// <exception cref="InvalidOperationException">The template's position is not in the short format.</exception>
+    private static byte[] NewTerrainObject(ZdoLocation src, byte[] own, ZoneEdit edit, byte[] data)
+    {
         if ((src.Flags & ShortPosition) == 0)
         {
             throw new InvalidOperationException("Unexpected terrain object layout (position is not in the short format).");
         }
-        byte[] file = File.ReadAllBytes(Path.Combine(world.Directory, src.File.FileName));
-        byte[] head = file[(int)src.Start..(int)src.DataStart];
+        byte[] head = own[..(int)(src.DataStart - src.Start)];
         // Bytes 2..5 are the position as two shorts (x, z) of the zone centre.
         BitConverter.GetBytes((short)(edit.ZoneX * 64)).CopyTo(head, 2);
         BitConverter.GetBytes((short)(edit.ZoneZ * 64)).CopyTo(head, 4);
@@ -343,7 +368,7 @@ public static class WorldWriter
         ms.Write(head);
         ms.Write(BitConverter.GetBytes(data.Length));
         ms.Write(data);
-        ms.Write(file, (int)src.DataEnd, (int)(src.End - src.DataEnd));
+        ms.Write(own, (int)(src.DataEnd - src.Start), (int)(src.End - src.DataEnd));
         return ms.ToArray();
     }
 
