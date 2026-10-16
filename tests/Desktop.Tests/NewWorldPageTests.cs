@@ -307,6 +307,8 @@ public class NewWorldPageTests
             Assert.Null(r.P.Shown);
             Assert.False(r.P.Loading.IsVisible);
             Assert.Empty(r.P.Marks.Children);
+            // The last seed's dungeon search stopped with it.
+            Assert.False(r.P.FindingDungeons);
             Assert.Equal("The seed is 1 to 10 characters, as in the game.", Texts(r.P.Info));
         }
     }

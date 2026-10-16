@@ -532,10 +532,14 @@ public sealed class NewWorldPage : IDisposable
         if (seed.Length is 0 or > 10)
         {
             Note("The seed is 1 to 10 characters, as in the game.");
+            // Nothing shown: the last seed's dungeon search stops and its marks go (their controls are off the canvas).
+            StopDungeons();
             SetLoading(null);
             Map.Clear();
             Marks.Children.Clear();
+            _marks.Clear();
             Shown = null;
+            FillDungeons();
             return;
         }
         var cancel = _preview = new CancellationTokenSource();
@@ -687,6 +691,9 @@ public sealed class NewWorldPage : IDisposable
             PlaceDots();
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
+
+    /// <summary>Whether the shown seed's dungeons are being looked for.</summary>
+    internal bool FindingDungeons => _dungeons != null;
 
     /// <summary>
     /// Stops looking for dungeons.
