@@ -404,7 +404,7 @@ public class StartPageTests
         using var r = new Run();
         ServerConfig.Remember(new ServerConfig.Server { Name = "Valhalla", Host = "203.0.113.10", SshPort = 22, User = "valheim", Password = "pw", Token = game.Token });
         r.Tunnel(game.Port, game.Token);
-        r.P.FillHome();
+        await r.P.FillHome();
         var tile = r.P.RecentTiles.Children.OfType<Button>().Single(b => Texts(b).Contains("Valhalla"));
         Assert.Contains("Server · connects in one click", Texts(tile));
         Click(tile);

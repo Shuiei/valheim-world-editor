@@ -65,17 +65,18 @@ public sealed class StartPageBlueprintsTests : IDisposable
     private static Control Top(Control tile) => ((Border)((StackPanel)((Button)tile).Content!).Children[0]).Child!;
 
     [AvaloniaFact]
-    public void TheWorkshopListsTheBlueprintsNewestFirstWithWhenTheyWereSaved()
+    public async Task TheWorkshopListsTheBlueprintsNewestFirstWithWhenTheyWereSaved()
     {
         var p = new StartPage(new AppSettings());
-        // None yet: a hint.
+        // None yet: a hint (listed away from the window's thread).
         p.SetMode("workshop");
+        await TestWindows.Until(() => p.BlueprintTiles.Children.Count > 0);
         Assert.IsType<TextBlock>(Assert.Single(p.BlueprintTiles.Children));
         string hut = Blueprint("Hut", 0, Png);
         Blueprint("Shed", 1, [1, 2, 3]);
         Blueprint("Barn", 5);
         Blueprint("Hall", 40);
-        p.FillBlueprints();
+        await p.FillBlueprints();
         var tiles = p.BlueprintTiles.Children.ToList();
         Assert.Equal(["Hut", "Shed", "Barn", "Hall"], tiles.Select(t => Words(t).Name));
         Assert.Equal("2 pieces · today", Words(tiles[0]).Line);
@@ -93,7 +94,19 @@ public sealed class StartPageBlueprintsTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void HomeMixesRecentWorldsAndBlueprintsByDate()
+    public async Task FillsOverlappingShowTheBlueprintsOnce()
+    {
+        // The blueprints and their pictures are read away from the window's thread: a fill overtaken by a later one
+        // shows nothing, so two at once do not show every tile twice.
+        Blueprint("Hut", 0, Png);
+        Blueprint("Shed", 1);
+        var p = new StartPage(new AppSettings());
+        await Task.WhenAll(p.FillBlueprints(), p.FillBlueprints());
+        Assert.Equal(["Hut", "Shed"], p.BlueprintTiles.Children.Select(t => Words(t).Name));
+    }
+
+    [AvaloniaFact]
+    public async Task HomeMixesRecentWorldsAndBlueprintsByDate()
     {
         // The test world, as a saved world opened two days ago.
         string world = WorldEditor.Tests.Fixtures.CopyFixture();
@@ -115,7 +128,7 @@ public sealed class StartPageBlueprintsTests : IDisposable
             p.OpenRequested += (_, what) => opened.Add(what);
             string? asked = null;
             p.WorkshopRequested += path => asked = path;
-            p.FillHome();
+            await p.FillHome();
             var tiles = p.RecentTiles.Children.ToList();
             Assert.Equal(["Hut", "CITest", "Hall"], tiles.Select(t => Words(t).Name));
             Assert.Equal("Blueprint · 2 pieces", Words(tiles[0]).Line);
