@@ -2446,9 +2446,20 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Builds the View panel.
+    /// Builds the View panel and wires it to the 3D view.
     /// </summary>
     private Border ViewPanel()
+    {
+        var card = BuildViewPanel();
+        WireViewPanel();
+        return card;
+    }
+
+    /// <summary>
+    /// Lays out the View panel: its headings, switches, lists and preset buttons with their tips; the switches'
+    /// starting states are kept as the presets' defaults.
+    /// </summary>
+    private Border BuildViewPanel()
     {
         var list = new StackPanel { Spacing = 2 };
         list.Children.Add(Ui.Heading("View", 0));
@@ -2460,16 +2471,8 @@ public sealed partial class MainWindow : Window
         ContourStepBox.Tip("view.contourStep");
         DefaultsButton.Tip("view.defaults");
         AllButton.Tip("view.all");
-        GameLookBox.IsCheckedChanged += (_, _) => View.GameLookOn = GameLookBox.IsChecked == true;
         SeeThroughBox.Tip("view.seeThrough");
-        SeeThroughBox.IsCheckedChanged += (_, _) => View.SeeThroughBuildings = SeeThroughBox.IsChecked == true;
         ResolutionBox.Tip("view.res3d");
-        ResolutionBox.SelectionChanged += (_, _) =>
-        {
-            View.Resolution3D = (GlView.Resolution)Math.Max(0, ResolutionBox.SelectedIndex);
-            var (w, h) = View.RenderSize();
-            MessageText.Text = $"3D resolution: {ResolutionBox.SelectedItem}, {w}×{h} pixels.";
-        };
         list.Children.Add(GameLookBox);
         list.Children.Add(SeeThroughBox);
         list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = "3D resolution", FontSize = 12 }, ResolutionBox } });
@@ -2478,13 +2481,9 @@ public sealed partial class MainWindow : Window
         {
             var box = new CheckBox { Content = ObjectKinds.Label(k), IsChecked = View.IsShown(k), FontSize = 12 };
             ToolTip.SetTip(box, Tips.Kind(k));
-            box.IsCheckedChanged += (_, _) => View.SetShown(k, box.IsChecked == true);
             _kindBoxes[k] = box;
             list.Children.Add(box);
         }
-        WaterBox.IsCheckedChanged += (_, _) => View.ShowWater = WaterBox.IsChecked == true;
-        UnsavedBox.IsCheckedChanged += (_, _) => View.ShowNewMarkers = UnsavedBox.IsChecked == true;
-        LimitBox.IsCheckedChanged += (_, _) => View.LimitMarks = LimitBox.IsChecked == true;
         list.Children.Add(WaterBox);
         list.Children.Add(Heading("OVERLAYS"));
         foreach (var (layer, label) in new[] { (Overlays.Layer.Borders, "Zone borders"), (Overlays.Layer.Markers, "Location markers"), (Overlays.Layer.Wards, "Ward areas"),
@@ -2492,7 +2491,6 @@ public sealed partial class MainWindow : Window
         {
             var box = new CheckBox { Content = label, IsChecked = View.IsOverlayShown(layer), FontSize = 12, Tag = label };
             ToolTip.SetTip(box, Tips.Overlay(layer));
-            box.IsCheckedChanged += (_, _) => View.SetOverlay(layer, box.IsChecked == true);
             _overlayBoxes[layer] = box;
             list.Children.Add(box);
         }
@@ -2505,37 +2503,14 @@ public sealed partial class MainWindow : Window
         {
             _viewDefaults[box] = box.IsChecked == true;
         }
-        DefaultsButton.Click += (_, _) => ShowPreset(ViewPreset.Defaults);
-        AllButton.Click += (_, _) => ShowPreset(ViewPreset.All);
-        GroundButton.Click += (_, _) => ShowPreset(ViewPreset.Ground);
         GroundButton.Tip("view.ground");
         list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 6, 0, 0), Children = { DefaultsButton, AllButton, GroundButton } });
-        View.OverlaysBuilt += o =>
-        {
-            void Count(Overlays.Layer l, int n) => _overlayBoxes[l].Content = Ui.Counted((string)_overlayBoxes[l].Tag!, n);
-            Count(Overlays.Layer.Markers, o.Locations);
-            Count(Overlays.Layer.Wards, o.Wards);
-            Count(Overlays.Layer.Stations, o.Stations);
-            Count(Overlays.Layer.Flatten, o.Flattened);
-        };
         list.Children.Add(Heading("BUILDING"));
         BuilderBox.Tip("view.builder");
         list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = "Built by", FontSize = 12 }, BuilderBox } });
-        BuilderBox.SelectionChanged += async (_, _) => await BuilderChosen();
         list.Children.Add(Heading("GROUND (game look)"));
-        SlopeBox.IsCheckedChanged += (_, _) => View.SlopeColours = SlopeBox.IsChecked == true;
-        void Contour() => View.ContourStep = ContourBox.IsChecked == true ? float.Parse((string)ContourStepBox.SelectedItem!) : 0;
-        ContourBox.IsCheckedChanged += (_, _) => Contour();
-        ContourStepBox.SelectionChanged += (_, _) => Contour();
         list.Children.Add(SlopeBox);
         list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ContourBox, ContourStepBox, new TextBlock { Text = "m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } });
-        View.KindCounts += counts =>
-        {
-            foreach (var (k, box) in _kindBoxes)
-            {
-                box.Content = Ui.Counted(ObjectKinds.Label(k), counts.GetValueOrDefault(k));
-            }
-        };
         list.Children.Add(PlayersControl());
         // The web editor's switches.
         foreach (var box in Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(list).OfType<CheckBox>())
@@ -2553,6 +2528,60 @@ public sealed partial class MainWindow : Window
             Child = new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, Content = list },
         });
     }
+
+    /// <summary>
+    /// Wires the View panel (built first) to the 3D view: each switch and list sets what is drawn, the presets set
+    /// the switches, and the view's counts go into the switches' labels.
+    /// </summary>
+    private void WireViewPanel()
+    {
+        GameLookBox.IsCheckedChanged += (_, _) => View.GameLookOn = GameLookBox.IsChecked == true;
+        SeeThroughBox.IsCheckedChanged += (_, _) => View.SeeThroughBuildings = SeeThroughBox.IsChecked == true;
+        ResolutionBox.SelectionChanged += (_, _) =>
+        {
+            View.Resolution3D = (GlView.Resolution)Math.Max(0, ResolutionBox.SelectedIndex);
+            var (w, h) = View.RenderSize();
+            MessageText.Text = $"3D resolution: {ResolutionBox.SelectedItem}, {w}×{h} pixels.";
+        };
+        foreach (var (k, box) in _kindBoxes)
+        {
+            box.IsCheckedChanged += (_, _) => View.SetShown(k, box.IsChecked == true);
+        }
+        WaterBox.IsCheckedChanged += (_, _) => View.ShowWater = WaterBox.IsChecked == true;
+        UnsavedBox.IsCheckedChanged += (_, _) => View.ShowNewMarkers = UnsavedBox.IsChecked == true;
+        LimitBox.IsCheckedChanged += (_, _) => View.LimitMarks = LimitBox.IsChecked == true;
+        foreach (var (layer, box) in _overlayBoxes)
+        {
+            box.IsCheckedChanged += (_, _) => View.SetOverlay(layer, box.IsChecked == true);
+        }
+        DefaultsButton.Click += (_, _) => ShowPreset(ViewPreset.Defaults);
+        AllButton.Click += (_, _) => ShowPreset(ViewPreset.All);
+        GroundButton.Click += (_, _) => ShowPreset(ViewPreset.Ground);
+        View.OverlaysBuilt += o =>
+        {
+            void Count(Overlays.Layer l, int n) => _overlayBoxes[l].Content = Ui.Counted((string)_overlayBoxes[l].Tag!, n);
+            Count(Overlays.Layer.Markers, o.Locations);
+            Count(Overlays.Layer.Wards, o.Wards);
+            Count(Overlays.Layer.Stations, o.Stations);
+            Count(Overlays.Layer.Flatten, o.Flattened);
+        };
+        BuilderBox.SelectionChanged += async (_, _) => await BuilderChosen();
+        SlopeBox.IsCheckedChanged += (_, _) => View.SlopeColours = SlopeBox.IsChecked == true;
+        ContourBox.IsCheckedChanged += (_, _) => ShowContours();
+        ContourStepBox.SelectionChanged += (_, _) => ShowContours();
+        View.KindCounts += counts =>
+        {
+            foreach (var (k, box) in _kindBoxes)
+            {
+                box.Content = Ui.Counted(ObjectKinds.Label(k), counts.GetValueOrDefault(k));
+            }
+        };
+    }
+
+    /// <summary>
+    /// Draws height lines at the chosen step, or none when they are off.
+    /// </summary>
+    private void ShowContours() => View.ContourStep = ContourBox.IsChecked == true ? float.Parse((string)ContourStepBox.SelectedItem!) : 0;
 
     /// <summary>
     /// What is remembered between runs (the tests' windows: in memory only, unless a test gives one).
