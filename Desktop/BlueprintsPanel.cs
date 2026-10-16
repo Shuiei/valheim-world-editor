@@ -177,42 +177,6 @@ public sealed class BlueprintsPanel
         Render();
     }
 
-    /// <summary>An older blueprint's thumbnail (a PNG data URL), null when there is none or it cannot be read.</summary>
-    private static Bitmap? Picture(string? dataUrl)
-    {
-        if (dataUrl == null || !dataUrl.StartsWith("data:image/png;base64,", StringComparison.Ordinal))
-        {
-            return null;
-        }
-        try
-        {
-            using var ms = new MemoryStream(Convert.FromBase64String(dataUrl["data:image/png;base64,".Length..]));
-            return new Bitmap(ms);
-        }
-        catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidOperationException)
-        {
-            return null;
-        }
-    }
-
-    /// <summary>A Homestead blueprint's picture file, null when there is none or it cannot be read.</summary>
-    private static Bitmap? PictureFile(string? path)
-    {
-        if (path == null)
-        {
-            return null;
-        }
-        try
-        {
-            using var s = File.OpenRead(path);
-            return new Bitmap(s);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
-        {
-            return null;
-        }
-    }
-
     /// <summary>One row: picture, name, what it holds, its buttons.</summary>
     /// <param name="picture">The picture, null: none.</param>
     /// <param name="name">The blueprint's name.</param>
@@ -301,7 +265,7 @@ public sealed class BlueprintsPanel
             string id = HomesteadId + Path.GetFileName(e.Path);
             string meta = $"{e.Pieces} piece(s){(e.Creator is { Length: > 0 } c ? $" · by {c}" : "")}{(e.World != null ? $" · from {e.World}" : "")}";
             var cost = Terrain.PieceCost.Of(e.Kinds);
-            List.Children.Add(Row(PictureFile(e.Picture), e.Name, meta, act =>
+            List.Children.Add(Row(BlueprintPictures.File(e.Picture), e.Name, meta, act =>
             {
                 act("Paste", "blueprints.paste", () => Paste(id));
                 act("Edit", "blueprints.edit", () => EditAsked?.Invoke(e.Path));
@@ -317,7 +281,7 @@ public sealed class BlueprintsPanel
         foreach (var b in older)
         {
             string meta = $"{b.W} × {b.H} m · {b.Objects} object(s){(b.Ground ? " · ground" : "")}{(b.World != null ? $" · from {b.World}" : "")}{(b.Source != null ? $" · {b.Source}" : "")}";
-            List.Children.Add(Row(Picture(b.Thumb), b.Name, meta, act =>
+            List.Children.Add(Row(BlueprintPictures.Url(b.Thumb), b.Name, meta, act =>
             {
                 act("Paste", "blueprints.paste", () => Paste(b.Id));
                 act("To Homestead", "blueprints.toHomestead", () => ToHomestead(b.Id));

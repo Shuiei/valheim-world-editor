@@ -187,7 +187,7 @@ public sealed class BuildPanel
         GenerateButton.Click += (_, _) => ShowDungeon();
         BackToLibrary.Tip("build.backToLibrary");
         BackToLibrary.Click += (_, _) => ShowLibrary(true);
-        LibrarySearch.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { RenderLibrary(); } };
+        LibrarySearch.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { RenderLibrary(again: false); } };
         _library = new StackPanel
         {
             Spacing = 6,
@@ -322,11 +322,20 @@ public sealed class BuildPanel
         LibraryTab.Classes.Set("on", true);
     }
 
+    /// <summary>The blueprints last read from the folder, and that folder: searched through again as the search changes.</summary>
+    private (string Folder, List<Homestead.Entry> Entries)? _libraryRead;
+
     /// <summary>Lists the blueprints in the folder that match the search.</summary>
-    internal void RenderLibrary()
+    /// <param name="again">Reads the folder again; false (the search changed): the blueprints read last are searched.</param>
+    internal void RenderLibrary(bool again = true)
     {
         LibraryList.Children.Clear();
-        var all = Homestead.List(Folder());
+        string folder = Folder();
+        if (again || _libraryRead is not { } read || read.Folder != folder)
+        {
+            _libraryRead = read = (folder, Homestead.List(folder));
+        }
+        var all = read.Entries;
         string q = LibrarySearch.Text?.Trim() ?? "";
         var list = all.Where(e => q.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(w => e.Name.Contains(w, StringComparison.OrdinalIgnoreCase)
             || e.Description.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase)))).ToList();
@@ -353,18 +362,7 @@ public sealed class BuildPanel
     /// </summary>
     private Border LibraryRow(Homestead.Entry e)
     {
-        Bitmap? pic = null;
-        if (e.Picture != null)
-        {
-            try
-            {
-                using var f = File.OpenRead(e.Picture);
-                pic = new Bitmap(f);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
-            {
-            }
-        }
+        Bitmap? pic = BlueprintPictures.File(e.Picture);
         var open = new Button { Content = "Open", FontSize = 11, Padding = new Thickness(6, 1) }.Tip("build.open");
         var add = new Button { Content = "Add", FontSize = 11, Padding = new Thickness(6, 1) }.Tip("build.add");
         open.Click += (_, _) => OpenAsked?.Invoke(e.Path);
@@ -596,6 +594,9 @@ public sealed class BuildPanel
     /// </summary>
     private readonly Dictionary<(string, DateTime), Bitmap?> _blueprintPictures = [];
 
+    /// <summary>Pictures being drawn, with the images waiting for each: a blueprint shown again meanwhile is not drawn twice.</summary>
+    private readonly Dictionary<(string, DateTime), List<Image>> _blueprintDrawing = [];
+
     /// <summary>
     /// A blueprint without its picture (made elsewhere): one drawn from its pieces, kept in memory only
     /// (its folder is left as it is), away from the window's thread.
@@ -608,6 +609,12 @@ public sealed class BuildPanel
             image.Source = known;
             return;
         }
+        if (_blueprintDrawing.TryGetValue(key, out var waiting))
+        {
+            waiting.Add(image);
+            return;
+        }
+        _blueprintDrawing[key] = [image];
         var models = Models();
         Task.Run(() =>
         {
@@ -629,7 +636,13 @@ public sealed class BuildPanel
                 b = new Bitmap(ms);
             }
             _blueprintPictures[key] = b;
-            image.Source = b;
+            if (_blueprintDrawing.Remove(key, out var images))
+            {
+                foreach (var shown in images)
+                {
+                    shown.Source = b;
+                }
+            }
         }), TaskScheduler.Default);
     }
 
