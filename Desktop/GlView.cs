@@ -2767,7 +2767,8 @@ public sealed class GlView : OpenGlControlBase
             {
                 _yaw += 0.01f;
             }
-            if (now - bench.From > bench.Seconds * 1000)
+            // Two frames at least, apart in time: the gaps between frames and the rate need them.
+            if (bench.Frames.Count >= 2 && now > bench.From && now - bench.From > bench.Seconds * 1000)
             {
                 _bench = null;
                 var gaps = bench.Frames.Zip(bench.Frames.Skip(1), (a, b) => b - a).OrderBy(g => g).ToList();
@@ -2794,8 +2795,13 @@ public sealed class GlView : OpenGlControlBase
     private volatile Bench? _bench;
 
     /// <summary>The camera turns on its own for this many seconds; the frame rates come back.</summary>
+    /// <exception cref="ArgumentOutOfRangeException">The seconds are negative or not a number.</exception>
     internal Task<string> Benchmark(double seconds)
     {
+        if (!double.IsFinite(seconds) || seconds < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "the seconds must be 0 or more");
+        }
         var b = new Bench { Seconds = seconds };
         _bench = b;
         Wake();
