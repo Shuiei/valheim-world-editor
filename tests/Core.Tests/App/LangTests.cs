@@ -161,6 +161,7 @@ public sealed partial class LangTests : IDisposable
         Assert.Equal(["fr-FR", "de", "en-GB"], Lang.FromLocales("fr_FR.UTF-8:de:en_GB@euro"));
         Assert.Empty(Lang.FromLocales("C"));
         Assert.Empty(Lang.FromLocales(null));
+        Assert.Equal(["en-GB", "fr-FR"], Lang.FromMultiString("en-GB\0fr-FR\0\0"));
         string[] have = ["en", "fr", "pt-PT"];
         Assert.Equal("fr", Lang.Pick(["fr-CA"], have));
         Assert.Equal("pt-PT", Lang.Pick(["pt-BR"], have));

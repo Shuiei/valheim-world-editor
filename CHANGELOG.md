@@ -26,6 +26,10 @@ the plugin is unchanged in versions without that part.
 - **A damaged history file no longer makes opening a world take gigabytes of memory.** Each count in the file made
   room for that many entries before any was read, so a count of 200 million allocated gigabytes before the file ran
   out. Entries are now kept as they are read, and a negative count is refused.
+- **The editor's language now follows the system's display language on Windows and macOS.** Windows read the regional
+  format's locale, so English Windows with French formats would start in French once a French catalogue exists; macOS
+  read only LANG, which apps opened from Finder lack, so they always started in English. Windows now reads the user's
+  display languages and macOS the preferred languages.
 
 ### Changed
 
