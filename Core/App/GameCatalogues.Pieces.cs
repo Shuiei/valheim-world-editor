@@ -1057,8 +1057,9 @@ public static partial class GameCatalogues
 
         /// <summary>
         /// Rows of comma-separated text as Python's csv module reads them (quoted fields may hold commas,
-        /// line breaks and doubled quotes; a quote inside an unquoted field is kept as it is). Throws
-        /// InvalidDataException for a line break in an unquoted field, as Python's csv does.
+        /// line breaks and doubled quotes; a quote inside an unquoted field is kept as it is). A lone carriage return
+        /// followed by more text on the line ends the row, as a line break does (Python's csv refuses it, and one odd
+        /// line of a localisation table then stopped every world opening).
         /// </summary>
         public static IEnumerable<List<string>> Csv(string text)
         {
@@ -1068,8 +1069,17 @@ public static partial class GameCatalogues
             bool rowStarted = false;
             foreach (string line in Lines(text))
             {
-                foreach (char c in line)
+                for (int k = 0; k < line.Length; k++)
                 {
+                    char c = line[k];
+                    if (state == 4 && c is not '\n' and not '\r')
+                    {
+                        // Text after a lone carriage return: the next row, this character its first.
+                        yield return row;
+                        row = [];
+                        state = 0;
+                        rowStarted = false;
+                    }
                     switch (state)
                     {
                         case 0 when !rowStarted && (c == '\n' || c == '\r'):
@@ -1149,10 +1159,6 @@ public static partial class GameCatalogues
                             }
                             break;
                         case 4:
-                            if (c is not '\n' and not '\r')
-                            {
-                                throw new InvalidDataException("new-line character seen in unquoted field");
-                            }
                             break;
                     }
                 }

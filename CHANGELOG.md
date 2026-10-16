@@ -96,6 +96,9 @@ the plugin is unchanged in versions without that part.
 - **A copy with numbers stored as text can be saved as a Homestead blueprint.** Each position and turn was read back
   through its JSON text, so a number written as a string ("1.5") threw. Numbers are now read in place, strings holding
   numbers too.
+- **One odd line in the game's localisation table no longer stops every world opening.** A carriage return followed by
+  more text in an unquoted field was refused, as Python's csv does, which failed the build-cost table and with it the
+  whole game data pass. It now ends the row, as a line break does.
 
 ### Changed
 

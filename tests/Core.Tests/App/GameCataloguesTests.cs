@@ -285,13 +285,16 @@ public class GameCataloguesTests
         Assert.Contains("\"st\":\"Bench\"", cost);
     }
 
+    // A carriage return inside an unquoted field ends the row, as a line break does: Python's csv refuses it, and the
+    // whole game data pass failed, so no world opened.
     [Fact]
-    public void ALineBreakInAnUnquotedTextIsSaid()
+    public void ALoneCarriageReturnInAnUnquotedTextEndsItsRow()
     {
-        // As Python's csv reads them: a carriage return inside an unquoted field.
         using var game = CatalogueGame.Make();
-        game.Resources([("localization_english", "item_wood,Ti\rmber\n")]);
+        game.Resources([("localization_english", "item_wood,Ti\rpiece_workbench,Bench\n")]);
         game.Save();
-        Assert.Throws<InvalidDataException>(() => GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["piece-cost"]));
+        string cost = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["piece-cost"])["piece-cost"];
+        Assert.Contains("\"Wood\":\"Ti\"", cost);
+        Assert.Contains("\"st\":\"Bench\"", cost);
     }
 }
