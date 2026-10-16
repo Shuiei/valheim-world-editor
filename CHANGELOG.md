@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.95 — unreleased
+
+### Changed
+- **Editing with the map zoomed in no longer piles up memory.** The map kept up to seven close-ups (about 59 MB each
+  at the largest), and every edit made the next one new while the old ones stayed until the seventh: up to about
+  400 MB for pictures never shown again. It now keeps the last two close-ups of the current edits only.
+
 ## v1.45.94 — unreleased
 
 ### Changed

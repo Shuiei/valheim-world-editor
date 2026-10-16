@@ -55,9 +55,21 @@ public sealed class MapData
     private readonly CancellationToken _cancel;
 
     /// <summary>
-    /// Detail windows by position, size and edit version; dropped all at once past a handful.
+    /// How many detail windows are kept: the one shown and the one before it (panning back). A 2048-texel window is
+    /// about 59 MB.
     /// </summary>
-    private readonly ConcurrentDictionary<string, Layers> _details = new();
+    private const int KeptDetails = 2;
+
+    /// <summary>
+    /// The last detail windows built, oldest first, all of the newest edit version; guarded by
+    /// <see cref="_detailsLock"/>.
+    /// </summary>
+    private readonly List<((int X0, int Z0, int Size, int EditVersion) Key, Layers Layers)> _details = [];
+
+    /// <summary>
+    /// Guards <see cref="_details"/>.
+    /// </summary>
+    private readonly Lock _detailsLock = new();
 
     /// <summary>
     /// Map data for the world whose generator <paramref name="terrain"/> uses; <paramref name="cancel"/> stops
@@ -205,12 +217,30 @@ public sealed class MapData
     /// one.</param>
     public Layers Detail(int x0, int z0, int size, int editVersion)
     {
-        string key = $"{x0},{z0},{size},{editVersion}";
-        if (_details.Count > 6)
+        var key = (x0, z0, size, editVersion);
+        lock (_detailsLock)
         {
-            _details.Clear();
+            int i = _details.FindIndex(d => d.Key == key);
+            if (i >= 0)
+            {
+                var hit = _details[i];
+                _details.RemoveAt(i);
+                _details.Add(hit);
+                return hit.Layers;
+            }
         }
-        return _details.GetOrAdd(key, _ => BuildDetail(x0, z0, size));
+        Layers layers = BuildDetail(x0, z0, size);
+        lock (_detailsLock)
+        {
+            // The edits' version only goes up: a window of another one is never asked for again.
+            _details.RemoveAll(d => d.Key.EditVersion != editVersion || d.Key == key);
+            _details.Add((key, layers));
+            if (_details.Count > KeptDetails)
+            {
+                _details.RemoveAt(0);
+            }
+        }
+        return layers;
     }
 
     /// <summary>
