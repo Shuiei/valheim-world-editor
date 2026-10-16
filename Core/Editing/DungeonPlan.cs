@@ -130,6 +130,8 @@ internal sealed class DungeonPlan
         public readonly HashSet<(int, int)> Holes = [];
         /// <summary>Cells with no roof: under a stairwell.</summary>
         public readonly HashSet<(int, int)> Open = [];
+        /// <summary>Cells a tall room rises through: nothing on the level above may stand in them.</summary>
+        public readonly HashSet<(int, int)> TallCells = [];
         /// <summary>The level's rooms and corridors, in the order made.</summary>
         public readonly List<Space> Spaces = [];
     }
@@ -528,8 +530,18 @@ internal sealed class DungeonPlanner
         return true;
     }
 
-    /// <summary>Whether a tile is not taken on the level and lies within the reach of the origin (more room ahead than behind).</summary>
-    private bool Free(DungeonPlan.Level l, (int I, int J) t) => !l.Owner.ContainsKey(t) && Math.Abs(t.I) <= _extent && t.J >= -_extent && t.J <= 2 * _extent;
+    /// <summary>
+    /// Whether a tile is not taken on the level, lies within the reach of the origin (more room ahead than behind) and
+    /// is not over a tall room of the level below, which rises through this one.
+    /// </summary>
+    private bool Free(DungeonPlan.Level l, (int I, int J) t) => !l.Owner.ContainsKey(t) && Math.Abs(t.I) <= _extent && t.J >= -_extent && t.J <= 2 * _extent && !OverTall(l, t);
+
+    /// <summary>
+    /// Whether a tile of the level lies in a cell a tall room of the level below rises through. The levels are laid out
+    /// from the first down, so a tall room finds the level above it complete, but the hidden caches come last, on any
+    /// level: one over a tall room would floor its upper half.
+    /// </summary>
+    private bool OverTall(DungeonPlan.Level l, (int I, int J) t) => l.Index + 1 < _plan.Levels.Count && _plan.Levels[l.Index + 1].TallCells.Contains(DungeonPlan.CellOf(t));
 
     /// <summary>What a placement would make: the room's tiles, the corridor's, where they meet.</summary>
     /// <param name="Box">The room's box (tiles).</param>
@@ -809,6 +821,13 @@ internal sealed class DungeonPlanner
         n.Shape = best.Shape;
         n.Parent = parent;
         n.Tall = best.Tall;
+        if (n.Tall)
+        {
+            foreach (var t in n.Tiles)
+            {
+                l.TallCells.Add(DungeonPlan.CellOf(t));
+            }
+        }
         Join(l, parent, n, best, door);
         if (!n.Tall && room is Room.Gallery or Room.Burial or Room.Ossuary or Room.Chapel or Room.Hall or Room.Tomb or Room.Throne or Room.Armory or Room.Library && _rnd.NextDouble() < 0.4)
         {

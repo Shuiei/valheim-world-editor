@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.74 — unreleased
+
+### Fixed
+- **A generated dungeon's hidden cache could sit in the upper half of a tall room on the level below.** Tall rooms (a
+  great hall, chapel, throne room, arena) rise through the level above, which is laid out before them, but the hidden
+  caches are added last, to any level: one over a tall room floored its upper 4 m. No room or corridor is placed over
+  a tall room any more.
+
 ## v1.45.73 — unreleased
 
 ### Fixed
