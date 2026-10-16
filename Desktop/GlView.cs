@@ -2775,6 +2775,7 @@ public sealed class GlView : OpenGlControlBase
     /// <summary>Counts a frame for the frame rate and the log, and makes a report twice a second.</summary>
     private void Measure(long now, double work, bool camMoved, int pw, int ph)
     {
+        Interlocked.Exchange(ref _lastFrameAt, now);
         _frames.Add((now, work));
         while (_frames.Count > 0 && now - _frames[0].At > 1000)
         {
@@ -5138,6 +5139,21 @@ public sealed class GlView : OpenGlControlBase
 
     /// <summary>The test driver's pictures: the next frame once the area and its models are in.</summary>
     private volatile GlPicture.Request? _picture;
+
+    /// <summary>When the last frame was drawn to its end, on the view's clock (-1: none yet).</summary>
+    private long _lastFrameAt = -1;
+
+    /// <summary>
+    /// What a picture the test driver asked for waits on, in words (for its error when it times out): the frames, the
+    /// area, the ground and the models.
+    /// </summary>
+    internal string PictureWaiting()
+    {
+        long last = Interlocked.Read(ref _lastFrameAt);
+        string frames = last < 0 ? "no frame drawn yet" : $"the last frame ended {_clock.ElapsedMilliseconds - last} ms ago";
+        return $"{frames}; {(Scene == null ? "no area" : "an area")} shown, its ground {(_terrainVao != 0 ? "on" : "not on")} the graphics card, "
+            + $"{Volatile.Read(ref _pending)} model(s) being read, {_ready.Count} read and not uploaded, {(_loadedAt < 0 ? "not all in yet" : "all in")}";
+    }
 
     /// <summary>Saves a picture of the view to <paramref name="path"/> once the area and its models are in.</summary>
     internal Task Picture(string path)

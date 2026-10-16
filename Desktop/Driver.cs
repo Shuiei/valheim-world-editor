@@ -197,7 +197,15 @@ public static class Driver
                 await w.MapPage.ShowMatching();
                 return State(w);
             case "picture":
-                await (w.MapShown ? w.MapPage!.Map.Picture(a[1]) : w.View.Picture(a[1])).WaitAsync(PictureWait);
+                try
+                {
+                    await (w.MapShown ? w.MapPage!.Map.Picture(a[1]) : w.View.Picture(a[1])).WaitAsync(PictureWait);
+                }
+                catch (TimeoutException) when (!w.MapShown)
+                {
+                    // Says what the 3D view still waits on.
+                    throw new TimeoutException($"No picture after {PictureWait.TotalSeconds:0} s: {w.View.PictureWaiting()}.");
+                }
                 return State(w);
             case "shot":
             {
