@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.56 — unreleased
+
+### Fixed
+- **Claude's set_control "click" on a switch, toggle or radio button changed nothing.** The click only raised the
+  Click event, which skips what a real press does first: the toggle itself (and a button's Command). So the switch kept
+  its value, its handlers ran against the old one and Claude was told it worked. A click now presses the control as a
+  pointer does: the toggle changes, then its handlers and Command run.
+
 ## v1.45.55 — unreleased
 
 ### Fixed

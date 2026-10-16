@@ -60,8 +60,8 @@ public class ClaudeToolsControlsTests
         Assert.Equal([true, null, null, "Sharp", 7.0], list.Select(c => ClaudeTools.ValueOf(c.Control)));
     }
 
-    // Set: a switch on and off, a dropdown by text or number, a slider clamped, a text, a button clicked; wrong
-    // values are said. Blocked: the window's Save and Discard, blocked keys, and blocked labels of untipped buttons.
+    // Set: a switch on and off, a dropdown by text or number, a slider clamped, a text, a button clicked, a switch
+    // clicked; wrong values are said. Blocked: the window's Save and Discard, blocked keys, and blocked labels of untipped buttons.
     [AvaloniaFact]
     public void ControlsAreSetAndBlockedOnesRefused()
     {
@@ -90,6 +90,16 @@ public class ClaudeToolsControlsTests
         Assert.Null(t.Set(C("e", button), "click", false));
         Assert.Equal(1, clicks);
         Assert.Equal("e is a button: give click.", t.Set(C("e", button), "true", false));
+        // A click on a switch changes it before its handlers run, as a pointer's does.
+        var toggle = new CheckBox();
+        bool? seen = null;
+        toggle.Click += (_, _) => seen = toggle.IsChecked;
+        int changes = 0;
+        toggle.IsCheckedChanged += (_, _) => changes++;
+        Assert.Null(t.Set(C("f", toggle), "click", false));
+        Assert.True(toggle.IsChecked);
+        Assert.True(seen);
+        Assert.Equal(1, changes);
 
         Assert.NotNull(t.Blocked(C("save", w.SaveButton)));
         Assert.NotNull(t.Blocked(C("auto", new CheckBox().Tip("top.auto"))));

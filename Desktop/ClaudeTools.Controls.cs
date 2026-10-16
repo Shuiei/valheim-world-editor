@@ -1,9 +1,9 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
-using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using ModelContextProtocol.Server;
 using TerrainEditor.App;
@@ -192,6 +192,13 @@ public sealed partial class ClaudeTools
     });
 
     /// <summary>
+    /// Presses a button as a pointer would, through its automation peer: a toggle changes first (so its handlers see
+    /// the new value), then its Click handlers and its Command run. Raising the Click event alone would skip the
+    /// toggle and the Command.
+    /// </summary>
+    private static void Press(Button b) => new ButtonAutomationPeer(b).Invoke();
+
+    /// <summary>
     /// Sets a control as the user would (on the window's thread, so its handlers run): a switch on or off, a dropdown's
     /// option, a slider's or number's value, a text, a button pressed. Null when done, else why not.
     /// </summary>
@@ -210,7 +217,7 @@ public sealed partial class ClaudeTools
         switch (c.Control)
         {
             case ToggleButton t when value.Trim().Equals("click", StringComparison.OrdinalIgnoreCase):
-                t.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Press(t);
                 return null;
             case ToggleButton t:
                 if (Bool(value) is not bool on)
@@ -224,7 +231,7 @@ public sealed partial class ClaudeTools
                 {
                     return $"{c.Id} is a button: give click.";
                 }
-                b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Press(b);
                 return null;
             case ComboBox box:
             {
