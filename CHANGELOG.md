@@ -238,6 +238,9 @@ the plugin is unchanged in versions without that part.
 - **A heightmap picture imported into a selection sat about a metre off its outline, and its size was given one point
   too wide on each side.** It was fitted to the box the selection's weights are worked out in, padded by a point all
   round; it is now fitted to the selection's own grid box (AreaTool.GridBox).
+- **A selection whose outline crossed itself showed the wrong area (a figure eight about 0 m²), and Place scattered
+  too few or too many objects in it.** The area came from the shoelace formula, where crossed parts cancel; it is now
+  the area the selection picks (each part counted the even-odd way, as Inside does).
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

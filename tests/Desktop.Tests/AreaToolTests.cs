@@ -51,6 +51,27 @@ public class AreaToolTests
     }
 
     [Fact]
+    public void ACrossedOutlinesAreaIsWhatTheSelectionPicks()
+    {
+        // The shoelace formula let crossed parts cancel: a figure eight read 0 m² with both loops selected.
+        List<Vector2> eight = [new(0, 0), new(10, 10), new(10, 0), new(0, 10)];
+        Assert.Equal(50, AreaTool.Area(eight), 3);
+        // A crossed star: its middle is not selected, nor counted.
+        List<Vector2> star = [.. Enumerable.Range(0, 5).Select(i => i * 2 % 5 * MathF.Tau / 5).Select(t => new Vector2(20 + 10 * MathF.Cos(t), 20 + 10 * MathF.Sin(t)))];
+        int picked = 0;
+        for (int i = 0; i < 600; i++)
+        {
+            for (int j = 0; j < 600; j++)
+            {
+                picked += AreaTool.Inside(star, 5 + (j + 0.5f) * 0.05f, 5 + (i + 0.5f) * 0.05f) ? 1 : 0;
+            }
+        }
+        Assert.Equal(picked * 0.0025f, AreaTool.Area(star), 1f);
+        // The shoelace formula gave about 147 (the middle counted twice); the five points are about 77.7.
+        Assert.InRange(AreaTool.Area(star), 76f, 79f);
+    }
+
+    [Fact]
     public void TheSoftEdgeFadesInwards()
     {
         var a = Box(10, 10, 30, 30, soft: 4);
