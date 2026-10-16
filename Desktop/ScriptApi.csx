@@ -136,7 +136,8 @@ public static class Objects
 	public static IReadOnlyList<Obj> All => _all ??= __Host.Objects()
 		.Select(o => new Obj(o.Id, o.Prefab, o.X, o.Y, o.Z, o.Kind, o.Building) { Yaw = o.Yaw, Pitch = o.Pitch, Roll = o.Roll, Scale = o.Scale }).ToList();
 
-	// Kinds: Buildings, Ruins, Trees, Rocks, Ore, Bushes, Pickables, Animals, Runestones, Other.
+	// Kinds: Buildings, Ruins, Furniture, Trees, Rocks, Ore, Bushes, Pickables, Remains, Animals, Creatures,
+	// SpawnPoints, Nests, Runestones, Dungeons, Effects, Other.
 	public static IEnumerable<Obj> OfKind(string kind) => All.Where(o => string.Equals(o.Kind, kind, StringComparison.OrdinalIgnoreCase));
 
 	public static IEnumerable<Obj> Near(float x, float z, float radius) => All.Where(o => (o.X - x) * (o.X - x) + (o.Z - z) * (o.Z - z) <= radius * radius);
