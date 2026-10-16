@@ -622,6 +622,7 @@ public sealed class GlView : OpenGlControlBase
         _playersVao = _playersVbo = 0;
         _lowFbo = _lowColor = _lowDepth = 0;
         _lowW = _lowH = 0;
+        _lowFailed = null;
         _batches.Clear();
         // The extensions' shapes went with the context: made again for the next one.
         _shapeBatches.Clear();
@@ -2461,13 +2462,11 @@ public sealed class GlView : OpenGlControlBase
         int pw = Math.Max(1, (int)(Bounds.Width * scaling)), ph = Math.Max(1, (int)(Bounds.Height * scaling));
         // Fewer pixels than the screen's (3D resolution): drawn into a smaller picture, then stretched.
         var (rw, rh) = RenderSize();
-        bool low = rw < pw || rh < ph;
-        if (low)
+        bool low = (rw < pw || rh < ph) && LowResolution(rw, rh);
+        if (!low)
         {
-            LowResolution(rw, rh);
-        }
-        else
-        {
+            // Back to the screen's resolution (or the smaller picture could not be made): its picture goes.
+            DropLowResolution();
             rw = pw;
             rh = ph;
         }
@@ -2671,19 +2670,24 @@ public sealed class GlView : OpenGlControlBase
     /// <summary>The smaller picture's size in pixels.</summary>
     private int _lowW, _lowH;
 
-    /// <summary>The smaller picture, made again when <paramref name="w"/> × <paramref name="h"/> is not its size.</summary>
-    private void LowResolution(int w, int h)
+    /// <summary>A size the smaller picture could not be made at (incomplete), not tried again; null when none.</summary>
+    private (int W, int H)? _lowFailed;
+
+    /// <summary>
+    /// The smaller picture, made again when <paramref name="w"/> × <paramref name="h"/> is not its size.
+    /// </summary>
+    /// <returns>False when the graphics card does not take it (incomplete; logged once a size): draw at full size.</returns>
+    private bool LowResolution(int w, int h)
     {
         if (_lowFbo != 0 && w == _lowW && h == _lowH)
         {
-            return;
+            return true;
         }
-        if (_lowFbo != 0)
+        if (_lowFailed == (w, h))
         {
-            _own.DeleteFramebuffer(_lowFbo);
-            _own.DeleteRenderbuffer(_lowColor);
-            _own.DeleteRenderbuffer(_lowDepth);
+            return false;
         }
+        DropLowResolution();
         (_lowW, _lowH) = (w, h);
         _lowFbo = _own.Framebuffer();
         _lowColor = _own.Renderbuffer();
@@ -2696,6 +2700,29 @@ public sealed class GlView : OpenGlControlBase
         _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _lowFbo);
         _gl.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, RenderbufferTarget.Renderbuffer, _lowColor);
         _gl.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, _lowDepth);
+        var status = _gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
+        if (status != GLEnum.FramebufferComplete)
+        {
+            Console.Error.WriteLine($"The {w}×{h} picture for a lower 3D resolution is incomplete ({status}): drawn at full resolution.");
+            DropLowResolution();
+            _lowFailed = (w, h);
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>Deletes the smaller picture, if there is one.</summary>
+    private void DropLowResolution()
+    {
+        if (_lowFbo == 0)
+        {
+            return;
+        }
+        _own.DeleteFramebuffer(_lowFbo);
+        _own.DeleteRenderbuffer(_lowColor);
+        _own.DeleteRenderbuffer(_lowDepth);
+        _lowFbo = _lowColor = _lowDepth = 0;
+        _lowW = _lowH = 0;
     }
 
     /// <summary>Counts a frame for the frame rate and the log, and makes a report twice a second.</summary>
