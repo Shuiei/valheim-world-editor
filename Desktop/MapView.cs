@@ -288,9 +288,12 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         RequestNextFrameRendering();
     }
 
+    /// <summary>Counts the pieces' reads started: only the latest one's result is shown.</summary>
+    private long _piecesTurn;
+
     /// <summary>
     /// Reads the world's player-built pieces in the background (deleted ones left out); dropped if another world is
-    /// shown meanwhile.
+    /// shown or another read started meanwhile; a failure is logged.
     /// </summary>
     private void ReadPieces()
     {
@@ -301,18 +304,33 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         }
         var world = s.World;
         var deleted = s.Edits.Deleted;
+        // Two reads can run at once (a refresh while one runs): only the latest is shown, else an older one finishing
+        // last would bring back pieces deleted since.
+        long turn = ++_piecesTurn;
         Task.Run(() =>
         {
-            float[] data = PieceCatalog.Encode(world, deleted);
-            var (ruins, joined) = PieceCatalog.EncodeRuins(world, deleted);
-            const int S = PieceCatalog.Stride;
-            // Lower pieces first so roofs end up on top, like looking down from above.
-            (bool Ruin, int Index)[] order = [.. Enumerable.Range(0, data.Length / S).Select(i => (Ruin: false, Index: i))
-                .Concat(Enumerable.Range(0, ruins.Length / S).Select(i => (Ruin: true, Index: i)))
-                .OrderBy(e => (e.Ruin ? ruins : data)[e.Index * S + 8])];
+            float[] data, ruins;
+            bool[] joined;
+            (bool Ruin, int Index)[] order;
+            try
+            {
+                data = PieceCatalog.Encode(world, deleted);
+                (ruins, joined) = PieceCatalog.EncodeRuins(world, deleted);
+                const int S = PieceCatalog.Stride;
+                // Lower pieces first so roofs end up on top, like looking down from above.
+                order = [.. Enumerable.Range(0, data.Length / S).Select(i => (Ruin: false, Index: i))
+                    .Concat(Enumerable.Range(0, ruins.Length / S).Select(i => (Ruin: true, Index: i)))
+                    .OrderBy(e => (e.Ruin ? ruins : data)[e.Index * S + 8])];
+            }
+            catch (Exception ex)
+            {
+                // Logged: the map shows the buildings it had (none on a first read).
+                Console.Error.WriteLine($"The map's buildings could not be read: {ex}");
+                return;
+            }
             Dispatcher.UIThread.Post(() =>
             {
-                if (_session != s)
+                if (_session != s || _piecesTurn != turn)
                 {
                     return;
                 }
