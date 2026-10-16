@@ -733,19 +733,20 @@ public sealed class StartPage
         return days <= 0 ? "today" : days == 1 ? "yesterday" : days < 14 ? $"{days} days ago" : when.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    /// <summary>A card per world found on this computer (worlds that cannot be opened greyed out, with why).</summary>
-    internal void FillWorlds()
-    {
-        _worldsLook++;
-        ShowWorlds(FindWorlds(_settings));
-    }
+    /// <summary>
+    /// A card per world found on this computer (worlds that cannot be opened greyed out, with why), looked for away
+    /// from the window's thread (<see cref="WorldsCheck"/>): a slow or broken folder neither freezes the page nor
+    /// leaves it half set.
+    /// </summary>
+    internal void FillWorlds() => WorldsCheck = CheckWorlds(always: true);
 
     /// <summary>
     /// Looks for the worlds again away from the window's thread (a slow drive does not freeze it) and shows
     /// them when they changed: a world folder added or removed, or a world saved again. A look that a later
     /// one (Refresh, or the page shown again) overtook shows nothing: its worlds are older.
     /// </summary>
-    internal async Task CheckWorlds()
+    /// <param name="always">Shows them even when they did not change, or another page shows (the list filled).</param>
+    internal async Task CheckWorlds(bool always = false)
     {
         int look = ++_worldsLook;
         List<Worlds.Info> worlds;
@@ -757,7 +758,7 @@ public sealed class StartPage
         {
             return; // A folder changing while it is read (or the settings while they are walked): the next look sees it.
         }
-        if (look == _worldsLook && Mode == "offline" && WorldsKey(worlds) != _worldsKey)
+        if (look == _worldsLook && (always || Mode == "offline" && WorldsKey(worlds) != _worldsKey))
         {
             ShowWorlds(worlds);
         }

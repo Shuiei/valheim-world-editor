@@ -218,11 +218,12 @@ public class StartPageTests
     }
 
     [AvaloniaFact]
-    public void SavedWorldsAreCardsAndNoneIsSaid()
+    public async Task SavedWorldsAreCardsAndNoneIsSaid()
     {
         using var r = new Run();
         r.P.FindWorlds = _ => [];
         r.P.FillWorlds();
+        await r.P.WorldsCheck!;
         Assert.Contains("No worlds found on this computer", Texts(r.P.WorldCards));
         string dir = Fixtures.CopyFixture();
         try
@@ -233,6 +234,7 @@ public class StartPageTests
                 new Worlds.Info("Broken", "/nowhere", DateTime.Now, 0, "elsewhere", false, "No save files in it."),
             ];
             r.P.FillWorlds();
+            await r.P.WorldsCheck!;
             var cards = r.P.WorldCards.Children.OfType<Button>().ToList();
             Assert.Equal(2, cards.Count);
             Assert.False(cards[1].IsEnabled);
@@ -255,6 +257,7 @@ public class StartPageTests
         List<Worlds.Info> found = [];
         r.P.FindWorlds = _ => found;
         r.P.SetMode("offline");
+        await r.P.WorldsCheck!;
         Assert.Contains("No worlds found on this computer", Texts(r.P.WorldCards));
         // A world folder added while the page is open shows after Refresh, and goes once removed.
         found = [new Worlds.Info("Added", "/somewhere", DateTime.Now, 1, "a test folder", true, null)];
@@ -293,6 +296,7 @@ public class StartPageTests
         Assert.True(started.Wait(TimeSpan.FromSeconds(10)));
         slow = false;
         r.P.SetMode("offline");
+        await r.P.WorldsCheck!;
         Assert.Contains("Newer", Texts(r.P.WorldCards));
         // The slow look ends: its older worlds do not replace the newer list.
         release.Set();
@@ -302,12 +306,24 @@ public class StartPageTests
     }
 
     [AvaloniaFact]
+    public async Task AFolderThatCannotBeReadLeavesThePageWhole()
+    {
+        using var r = new Run();
+        r.P.FindWorlds = _ => throw new IOException("a drive that went away");
+        r.P.SetMode("offline");
+        await r.P.WorldsCheck!;
+        Assert.Equal("offline", r.P.Mode);
+        Assert.True(r.P.OfflinePanel.IsVisible);
+    }
+
+    [AvaloniaFact]
     public async Task AWorldAddedOrRemovedShowsByItself()
     {
         using var r = new Run();
         List<Worlds.Info> found = [new Worlds.Info("First", "/first", DateTime.Now, 1, "a test folder", true, null)];
         r.P.FindWorlds = _ => found;
         r.P.SetMode("offline");
+        await r.P.WorldsCheck!;
         var first = Assert.Single(r.P.WorldCards.Children.OfType<Button>());
         // Nothing changed: the cards stay as they are (no redraw under the mouse).
         await r.P.CheckWorlds();
