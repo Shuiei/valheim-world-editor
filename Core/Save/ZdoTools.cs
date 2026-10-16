@@ -61,9 +61,6 @@ public static class ZdoBuilder
     /// <summary>Float data key of a uniform scale.</summary>
     private static readonly int ScaleScalarKey = StableHash.Of("scaleScalar");
 
-    /// <summary>Long data key of the player id that built a piece.</summary>
-    private static readonly int CreatorKey = StableHash.Of("creator");
-
     /// <summary>A copy of the template object at a new place, in the world version 41 format.</summary>
     /// <param name="source">The chunk file bytes the template lives in.</param>
     /// <param name="template">The object to copy.</param>
@@ -91,7 +88,7 @@ public static class ZdoBuilder
             sections.RemoveAll(s => s.Flag == Connections);
             foreach (Section s in sections)
             {
-                s.Items.RemoveAll(i => !(s.Flag == Longs && i.Key == CreatorKey) && !(s.Flag == Vec3 && i.Key == ScaleKey) && !(s.Flag == Floats && i.Key == ScaleScalarKey));
+                s.Items.RemoveAll(i => !(s.Flag == Longs && i.Key == Editing.ObjectField.CreatorKey) && !(s.Flag == Vec3 && i.Key == ScaleKey) && !(s.Flag == Floats && i.Key == ScaleScalarKey));
             }
         }
         if (scale > 0f)

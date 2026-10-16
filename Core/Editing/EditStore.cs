@@ -770,7 +770,7 @@ public sealed record NewObject(int Id, int Prefab, System.Numerics.Vector3 Posit
 /// <param name="Value">As ZdoData.Set takes it (text; base64 for bytes), null to remove it.</param>
 public sealed record ObjectField(string Section, int Key, string? Value)
 {
-    /// <summary>The key of an object's builder ("creator").</summary>
+    /// <summary>The data key ("creator") of an object's builder, a player id: the one constant for it.</summary>
     public static readonly int CreatorKey = StableHash.Of("creator");
 
     /// <summary>No builder: the game takes the object for part of a ruin (generated dungeons).</summary>

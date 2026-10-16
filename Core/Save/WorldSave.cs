@@ -26,9 +26,6 @@ public sealed class WorldSave
     /// <summary>Long data key of a terrain modifier's creation time.</summary>
     private static readonly int TimeCreatedKey = StableHash.Of("terrainModifierTimeCreated");
 
-    /// <summary>Long data key of the player id that built a piece.</summary>
-    private static readonly int CreatorKey = StableHash.Of("creator");
-
     /// <summary>
     /// Player ids and the names stored with them: bed and tombstone owners, ward builders, players (live: the players
     /// that are online).
@@ -214,7 +211,7 @@ public sealed class WorldSave
         var z = ZdoData.Parse(bytes);
         if (built)
         {
-            z.Set("longs", CreatorKey, builder.ToString(CultureInfo.InvariantCulture));
+            z.Set("longs", Editing.ObjectField.CreatorKey, builder.ToString(CultureInfo.InvariantCulture));
         }
         if (served)
         {
@@ -955,7 +952,7 @@ public sealed class WorldSave
                 {
                     timeCreated = value;
                 }
-                else if (key == CreatorKey)
+                else if (key == Editing.ObjectField.CreatorKey)
                 {
                     creator = value;
                 }
