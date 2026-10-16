@@ -130,16 +130,34 @@ public class MapDataTests
     }
 
     [Fact]
-    public void ACloseUpOfOlderEditsDoesNotDropNewerOnes()
+    public async Task ACloseUpOfOlderEditsDoesNotDropNewerOnes()
     {
         using var w = new TempWorld();
         var (_, terrain, edits) = Open(w);
         var map = new MapData(terrain, edits);
+        using var reached = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        int builds = 0;
+        // The first build (older edits) waits after its cache lookup until the newer one has been built and kept.
+        map.BeforeDetailBuild = () =>
+        {
+            if (Interlocked.Increment(ref builds) == 1)
+            {
+                reached.Set();
+                if (!release.Wait(TimeSpan.FromSeconds(30)))
+                {
+                    throw new TimeoutException("The older build was never released.");
+                }
+            }
+        };
+        var olderBuild = Task.Run(() => map.Detail(352, 288, 64, 1), TestContext.Current.CancellationToken);
+        Assert.True(reached.Wait(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
         var newer = map.Detail(288, 288, 64, 2);
-        // A build for older edits (one that ended late) is given but not kept.
-        var older = map.Detail(352, 288, 64, 1);
-        Assert.NotSame(older, map.Detail(352, 288, 64, 1));
+        release.Set();
+        var older = await olderBuild;
+        // The older build ended last: it is given but not kept, and the newer window stays.
         Assert.Same(newer, map.Detail(288, 288, 64, 2));
+        Assert.NotSame(older, map.Detail(352, 288, 64, 1));
     }
 
     [Fact]

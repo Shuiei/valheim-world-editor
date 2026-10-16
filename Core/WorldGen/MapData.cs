@@ -72,6 +72,11 @@ public sealed class MapData
     private readonly Lock _detailsLock = new();
 
     /// <summary>
+    /// Runs when a detail window is not cached, before it is built; tests pause a build there.
+    /// </summary>
+    internal Action BeforeDetailBuild { get; set; } = () => { };
+
+    /// <summary>
     /// Map data for the world whose generator <paramref name="terrain"/> uses; <paramref name="cancel"/> stops
     /// the overview's build (<see cref="Global"/> then throws <see cref="OperationCanceledException"/>).
     /// </summary>
@@ -229,6 +234,7 @@ public sealed class MapData
                 return hit.Layers;
             }
         }
+        BeforeDetailBuild();
         Layers layers = BuildDetail(x0, z0, size);
         lock (_detailsLock)
         {
