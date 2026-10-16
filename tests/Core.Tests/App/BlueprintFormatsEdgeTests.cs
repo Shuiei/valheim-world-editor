@@ -93,6 +93,16 @@ public class BlueprintFormatsEdgeTests
     }
 
     [Fact]
+    public void PointMarksAMetreApartAreBothOnTheGrid()
+    {
+        // Two zero-radius marks at x 0 and 1: the grid's two columns are at those, not half a metre off either side.
+        var bp = BlueprintFormats.Parse("points.blueprint", string.Join("\n", "#Terrain", "circle;0;2;0;0;0;0;dirt", "circle;1;2;0;0;0;0;dirt"));
+        var clip = BlueprintFormats.ToClip(bp, _ => true, out _);
+        Assert.Equal((2, 1), ((int)clip["w"]!, (int)clip["h"]!));
+        Assert.Equal([0, 0], ((JsonArray)clip["rel"]!).Select(v => (int)v!));
+    }
+
+    [Fact]
     public void TerrainMarksTooFarApartAreRefused()
     {
         var bp = BlueprintFormats.Parse("wide.blueprint", string.Join("\n", "#Terrain", "circle;0;0;0;1;0;0;dirt", "circle;2000;0;0;1;0;0;dirt"));

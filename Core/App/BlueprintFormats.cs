@@ -347,14 +347,15 @@ public static class BlueprintFormats
         int[] rel = [-32768], wt = [0], pnt = [-255, -255, -255, -255];
         if (bp.Terrain.Count > 0)
         {
-            // Only the ground the terrain entries reach is gridded, however far the pieces go.
-            float halfW = (tx1 - tx0) / 2f, halfH = (tz1 - tz0) / 2f;
-            if (halfW * 2 > MaxGround || halfH * 2 > MaxGround)
+            // Only the ground the terrain entries reach is gridded, however far the pieces go. A whole span starts
+            // the grid on the marks' first edge, so marks a whole number of metres apart fall on its points.
+            float spanW = tx1 - tx0, spanH = tz1 - tz0;
+            if (spanW > MaxGround || spanH > MaxGround)
             {
-                throw new InvalidDataException($"its ground marks span {halfW * 2:F0} m by {halfH * 2:F0} m, more than the editor's {MaxGround} m");
+                throw new InvalidDataException($"its ground marks span {spanW:F0} m by {spanH:F0} m, more than the editor's {MaxGround} m");
             }
-            w = 2 * (int)MathF.Ceiling(halfW) + 1;
-            h = 2 * (int)MathF.Ceiling(halfH) + 1;
+            w = (int)MathF.Ceiling(spanW) + 1;
+            h = (int)MathF.Ceiling(spanH) + 1;
             rel = [.. Enumerable.Repeat(-32768, w * h)];
             wt = new int[w * h];
             pnt = [.. Enumerable.Repeat(-255, w * h * 4)];
