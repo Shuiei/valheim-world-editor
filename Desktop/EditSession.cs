@@ -734,8 +734,8 @@ public sealed class EditSession
     }
 
     /// <summary>
-    /// The editor's Discard: undoes those steps, newest first, and drops what could be redone; the rest of the history
-    /// stays.
+    /// The editor's Discard: undoes those steps, newest first, and drops what could be redone, here and in other areas
+    /// (kept aside); the rest of the history stays.
     /// </summary>
     /// <returns>How many were undone (none during a stroke).</returns>
     public int UndoUnapplied()
@@ -761,6 +761,7 @@ public sealed class EditSession
             if (_stroke == null)
             {
                 _redo.Clear();
+                _shelvedRedo.Clear();
             }
         }
         Changed?.Invoke();

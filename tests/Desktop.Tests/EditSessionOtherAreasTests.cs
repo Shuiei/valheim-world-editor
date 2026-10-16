@@ -134,6 +134,38 @@ public class EditSessionOtherAreasTests
     }
 
     [AvaloniaFact]
+    public void DiscardDropsTheRedoKeptAsideFromAnotherAreaToo()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            var first = WorldScene.Load(dir, 0, 0, 1);
+            var owner = first.Owner!;
+            Raise(first.Session!, "Raise here");
+            owner.History = first.Session!.Export();
+            var b = WorldScene.Load(owner, 3, 3, 1).Session!;
+            Raise(b, "Raise there");
+            // Back in the first area, its step undone; then in the other area it is kept aside as a redo.
+            owner.History = b.Export();
+            var a = WorldScene.Load(owner, 0, 0, 1).Session!;
+            Assert.True(a.Undo());
+            owner.History = a.Export();
+            var there = WorldScene.Load(owner, 3, 3, 1).Session!;
+            Assert.Equal(1, there.Shelved);
+            // Discard there undoes its own step and drops every redo, the one kept aside too.
+            Assert.Equal(1, there.UndoUnapplied());
+            Assert.Equal(0, there.Shelved);
+            owner.History = there.Export();
+            var again = WorldScene.Load(owner, 0, 0, 1).Session!;
+            Assert.Empty(again.RedoList);
+        }
+        finally
+        {
+            Done(dir);
+        }
+    }
+
+    [AvaloniaFact]
     public void SavingFromAnotherAreaMarksTheStepsKeptAsideAsSaved()
     {
         string dir = Fixtures.CopyFixture();
