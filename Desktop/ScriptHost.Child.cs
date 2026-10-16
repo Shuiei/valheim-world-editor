@@ -83,7 +83,10 @@ public static partial class ScriptHost
         {
             start.ArgumentList.Add(a);
         }
-        using var p = Process.Start(start) ?? throw new ScriptException("", "Crash", $"the script's process ({file}) did not start");
+        // Not a command injection (the scanners' rule is wrong here): the program is this editor or the dotnet running
+        // it, and the arguments are its assembly's path and a fixed switch, passed one by one with no shell. No user or
+        // script text is on the command line: the script goes through the input pipe.
+        using var p = Process.Start(start) ?? throw new ScriptException("", "Crash", $"the script's process ({file}) did not start"); // nosemgrep
         // Its error output (a crash's report), read as it comes: a full pipe would block it.
         var errors = new StringBuilder();
         p.ErrorDataReceived += (_, e) =>
