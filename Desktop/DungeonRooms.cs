@@ -43,7 +43,7 @@ public static class DungeonRooms
 
     /// <summary>
     /// For drawing (each frame): what was read last, without waiting; after an edit they are read again on
-    /// a worker (chunk files, each dungeon's data), and ready is called when they are.
+    /// a worker (chunk files, each dungeon's data), and ready is called when they are (or the read failed: logged).
     /// </summary>
     public static IReadOnlyList<Dungeon> Shown(WorldScene s, Action ready)
     {
@@ -60,6 +60,13 @@ public static class DungeonRooms
                 try
                 {
                     Of(s);
+                }
+                catch (Exception e)
+                {
+                    // Logged, and what was shown kept for this state: a read failing the same way is not started again
+                    // on every frame.
+                    Console.Error.WriteLine($"The dungeons' rooms could not be read: {e}");
+                    Caches.AddOrUpdate(s, new Cache(now, c?.Dungeons ?? []));
                 }
                 finally
                 {
