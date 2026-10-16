@@ -191,6 +191,9 @@ public static partial class ScriptHost
         })
         { IsBackground = true, Name = "script stop" };
         watcher.Start();
+        // Only the answer goes on the output: a script's own Console output goes to the error output (shown with a
+        // crash), not in front of the answer.
+        Console.SetOut(Console.Error);
         using var w = new BinaryWriter(new BufferedStream(output), Encoding.UTF8);
         try
         {

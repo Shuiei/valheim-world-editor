@@ -113,11 +113,13 @@ public class ScriptHostChildTests
         Assert.Throws<ScriptHost.ScriptException>(() => ScriptHost.ReadAnswer(new MemoryStream([9]), 0, ""));
     }
 
-    // A script's prints, ground changes and new pieces (snapped by the editor) come back through its process.
+    // A script's prints, ground changes and new pieces (snapped by the editor) come back through its process; what
+    // it writes on the console does not get in the way.
     [Fact]
     public async Task AScriptPrintsAndChangesTheAreaThroughItsProcess()
     {
         var (image, pdb) = Compiled("""
+            Console.WriteLine("noise");
             Print("hello");
             Ground.Raise(10, 10, 2);
             Objects.Place("woodwall", 0, 0, snap: true);
