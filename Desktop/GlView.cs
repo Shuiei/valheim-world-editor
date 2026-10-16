@@ -2865,6 +2865,59 @@ public sealed class GlView : OpenGlControlBase
     }
 
     /// <summary>
+    /// The button let go (or the pointer lost): ends what the press started (a path, area, place, select drag or a
+    /// brush stroke) and the view's sliding; a click (not a drag) in the View tool picks the object under the pointer.
+    /// Nothing when nothing is held.
+    /// </summary>
+    /// <param name="at">Where the pointer is, on the surface.</param>
+    /// <param name="size">The surface's size.</param>
+    /// <param name="mods">The keys held.</param>
+    /// <param name="click">Whether it is a real release, which may pick (not a lost pointer).</param>
+    private void Up(Point at, Size size, KeyModifiers mods, bool click)
+    {
+        if (_pathDown)
+        {
+            _pathDown = false;
+            Path.Up();
+        }
+        if (_areaDown)
+        {
+            _areaDown = false;
+            Area.Up();
+        }
+        if (_placeDown)
+        {
+            _placeDown = false;
+            Place?.Up(at, size);
+        }
+        if (_selectDown)
+        {
+            _selectDown = false;
+            SelectTool.Up(at, size, mods.HasFlag(KeyModifiers.Shift) || Ctrl(mods));
+            // A look queued by a move just before the press was dropped while the button was down. The handle
+            // under the pointer is found again first: the drag's moves did not look for it, and over a handle no
+            // object is outlined.
+            SelectTool.Hover(at, size);
+            QueueHoverPick();
+        }
+        else if (_brushDown)
+        {
+            _brushDown = false;
+            string message = Scene?.Session?.EndStroke() ?? "";
+            StrokeEnded?.Invoke(message);
+        }
+        else if (click && Mode == ToolMode.View && !Panning && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
+        {
+            Pick(at, size, mods.HasFlag(KeyModifiers.Shift) || Ctrl(mods), mods.HasFlag(KeyModifiers.Shift) && !Ctrl(mods));
+        }
+        _pressAt = null;
+        _dragFrom = null;
+        _pickSwallow = false;
+        Panning = false;
+        Wake();
+    }
+
+    /// <summary>
     /// Mouse and keys. The OpenGL picture is not something Avalonia can hit-test (pointer events go
     /// through it), so a transparent surface laid over the view takes them and hands them here; keys
     /// come from the window, whatever has the focus.
@@ -2882,7 +2935,7 @@ public sealed class GlView : OpenGlControlBase
             _pressAt = p.Position;
             _dragFrom = p.Position;
             _dragButton = p.Properties.PointerUpdateKind;
-            _pointer = p.Position;
+            _pointer = _heldAt = p.Position;
             _surfaceSize = surface.Bounds.Size;
             e.Pointer.Capture(surface);
             // The eyedropper waits: this click is its, not the tool's (nor is the release).
@@ -3035,53 +3088,16 @@ public sealed class GlView : OpenGlControlBase
                 e.Pointer.Capture(null);
                 return;
             }
-            // A left click (not a drag) picks the object under the pointer.
-            var at = e.GetPosition(surface);
-            if (_pathDown)
-            {
-                _pathDown = false;
-                Path.Up();
-            }
-            if (_areaDown)
-            {
-                _areaDown = false;
-                Area.Up();
-            }
-            if (_placeDown)
-            {
-                _placeDown = false;
-                Place?.Up(at, surface.Bounds.Size);
-            }
-            if (_selectDown)
-            {
-                _selectDown = false;
-                SelectTool.Up(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || Ctrl(e.KeyModifiers));
-                // A look queued by a move just before the press was dropped while the button was down. The handle
-                // under the pointer is found again first: the drag's moves did not look for it, and over a handle no
-                // object is outlined.
-                SelectTool.Hover(at, surface.Bounds.Size);
-                QueueHoverPick();
-            }
-            else if (_brushDown)
-            {
-                _brushDown = false;
-                string message = Scene?.Session?.EndStroke() ?? "";
-                StrokeEnded?.Invoke(message);
-            }
-            else if (Mode == ToolMode.View && !Panning && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
-            {
-                Pick(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || Ctrl(e.KeyModifiers),
-                    e.KeyModifiers.HasFlag(KeyModifiers.Shift) && !Ctrl(e.KeyModifiers));
-            }
-            _pressAt = null;
-            _dragFrom = null;
-            Panning = false;
+            Up(e.GetPosition(surface), surface.Bounds.Size, e.KeyModifiers, click: true);
             e.Pointer.Capture(null);
-            Wake();
         };
+        // The pointer taken away mid-drag (the system's capture ended: a dialog, another window): what was held ends
+        // where the pointer last was, as a release there (no click), so no stroke or drag keeps going until the next
+        // click.
+        surface.PointerCaptureLost += (_, _) => Up(_heldAt, surface.Bounds.Size, KeyModifiers.None, click: false);
         surface.PointerMoved += (_, e) =>
         {
-            _pointer = e.GetPosition(surface);
+            _pointer = _heldAt = e.GetPosition(surface);
             _surfaceSize = surface.Bounds.Size;
             if (_pathDown)
             {
@@ -3703,6 +3719,12 @@ public sealed class GlView : OpenGlControlBase
     public event Action<string>? StrokeEnded;
     /// <summary>Where the pointer is over the view, null when it is outside.</summary>
     private Point? _pointer;
+
+    /// <summary>
+    /// Where the pointer was last seen over the surface (kept when it leaves): where a drag ends when the pointer is
+    /// taken away.
+    /// </summary>
+    private Point _heldAt;
     /// <summary>The size of the surface taking the mouse, in its own units.</summary>
     private Size _surfaceSize;
     /// <summary>A brush stroke is on (the left button held).</summary>
