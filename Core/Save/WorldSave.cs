@@ -944,6 +944,9 @@ public sealed class WorldSave
                     zone.Source = new ZdoLocation(file, start, -1, zdo.ValueStart, pkg.Position, flags);
                     TerrainZones.Add(zone);
                     break;
+                default:
+                    // The connection and byte arrays other than ground data: read past, nothing the loader lists.
+                    break;
             }
         }
         long end = pkg.Position;

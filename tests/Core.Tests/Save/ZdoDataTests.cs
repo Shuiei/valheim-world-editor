@@ -127,6 +127,31 @@ public class ZdoDataTests
     }
 
     [Fact]
+    public void AnObjectIsReadFromItsPartOfALargerBuffer()
+    {
+        var z = new ZdoData { Prefab = 77, Position = new Vector3(1, 2, 3) };
+        z.IntList.Add((5, 42));
+        byte[] own = z.Serialize();
+        // Bytes around it that would read as more values if the read went past its end.
+        byte[] buffer = [0x10, 0x01, .. own, 0x01, 0x05, 0x00, 0x00, 0x00];
+        var read = ZdoData.Parse(buffer, 2, own.Length, 41);
+        Assert.Equal(new Vector3(1, 2, 3), read.Position);
+        Assert.Equal((5, 42), Assert.Single(read.IntList));
+        Assert.Equal(own, read.Serialize());
+    }
+
+    [Fact]
+    public void AVectorIsReplacedByItsKeyOrAdded()
+    {
+        var z = new ZdoData();
+        z.Vec3List.Add((1, Vector3.One));
+        z.Vec3List.Add((2, Vector3.One));
+        z.SetVec3(2, new Vector3(4, 5, 6));
+        z.SetVec3(3, Vector3.UnitY);
+        Assert.Equal([(1, Vector3.One), (2, new Vector3(4, 5, 6)), (3, Vector3.UnitY)], z.Vec3List);
+    }
+
+    [Fact]
     public void AnObjectOfAnOldSaveIsRead()
     {
         // Before chunked saves (version 40): a sector before the position, and a full rotation.
