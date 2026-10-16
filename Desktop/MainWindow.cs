@@ -643,10 +643,7 @@ public sealed partial class MainWindow : Window
         else
         {
             string what = Describe(w.Pending);
-            if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {Ui.Tilde(w.World.Directory)}\n\n"
-                + "• Like Apply live: the world stays open with its history; undo a step and save again to take it back. The save it was opened from is kept until you leave the world.\n"
-                + "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
-                + "• Test on a copy first: open it as a local world, or upload it to a test server."))
+            if (!await ConfirmSave(SaveConfirmText(what, w.World.Directory)))
             {
                 return;
             }
@@ -806,6 +803,16 @@ public sealed partial class MainWindow : Window
     /// Asks before writing into the world (replaced by tests).
     /// </summary>
     internal Func<string, Task<bool>> ConfirmSave { get; set; }
+    /// <summary>
+    /// The question asked before saving into the world files, with what to keep in mind.
+    /// </summary>
+    /// <param name="what">What would be written, in words.</param>
+    /// <param name="directory">The world's folder.</param>
+    private static string SaveConfirmText(string what, string directory) =>
+        $"Write {what} into the world files?\n\nWorld folder: {Ui.Tilde(directory)}\n\n"
+        + "• Like Apply live: the world stays open with its history; undo a step and save again to take it back. The save it was opened from is kept until you leave the world.\n"
+        + "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
+        + "• Test on a copy first: open it as a local world, or upload it to a test server.";
     /// <summary>
     /// A yes / no question (title, text, yes, no): Discard, Leave, Quit with unsaved changes. Tests answer it.
     /// </summary>
@@ -1013,10 +1020,7 @@ public sealed partial class MainWindow : Window
             return;
         }
         string what = Describe(s.Pending);
-        if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {Ui.Tilde(s.Scene.World.Directory)}\n\n"
-            + "• Like Apply live: the world stays open with its history; undo a step and save again to take it back. The save it was opened from is kept until you leave the world.\n"
-            + "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
-            + "• Test on a copy first: open it as a local world, or upload it to a test server."))
+        if (!await ConfirmSave(SaveConfirmText(what, s.Scene.World.Directory)))
         {
             return;
         }
