@@ -55,8 +55,9 @@ public sealed partial class ClaudeTools
         {
             return "Dungeons are listed in a world's area: open_area first.";
         }
+        int reads = scene.Reads;
         var tool = new DungeonTool { Scene = scene };
-        return ToJson(tool.All.Select(d =>
+        var dungeons = tool.All.Select(d =>
         {
             tool.Open(d);
             return new
@@ -70,7 +71,13 @@ public sealed partial class ClaudeTools
                 openEnds = d.Problem == null ? tool.FreeEnds.Count : 0,
                 problem = d.Problem,
             };
-        }).ToList());
+        }).ToList();
+        // A dungeon's id is its object's, one of the area's ids like list_objects gives (get_object, select_objects).
+        if (dungeons.Count > 0)
+        {
+            GaveIds(scene, reads);
+        }
+        return ToJson(dungeons);
     });
 
     /// <summary>dungeon_rooms: a dungeon's rooms, free openings, door joints and the rooms it can take.</summary>
