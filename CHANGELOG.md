@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.80 — unreleased
+
+### Fixed
+- **Rooms of a generated dungeon with alcoves had their furnishings off to one side.** An alcove grew the room's box by
+  a tile on one side, and the dressing took that box for the room: its middle moved 1 m toward the alcove and its half
+  width grew 1 m, so a hall's colonnades, braziers and other paired pieces stood off the room's middle, one of each
+  pair against or in the wall, or missing. A side room's twin was mirrored across the grown box too, 2 m off. Both now
+  use the room's own walls, and an alcove is extra floor beyond them.
+
 ## v1.45.79 — unreleased
 
 ### Fixed

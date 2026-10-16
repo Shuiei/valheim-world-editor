@@ -133,4 +133,40 @@ public class DungeonDresserTests
         }
         Assert.True(signs > 0, "no warning by a locked gate");
     }
+
+    [Fact]
+    public void ARoomsFrameIsItsOwnBoxItsRecessesExtraFloor()
+    {
+        // A recess grew the room's box by a tile on one side, and the dressing took that box for the room: its middle
+        // 1 m toward the recess and its half width 1 m more, so every symmetric placement (a hall's colonnades, its
+        // braziers) was off on one side. The frame is the room's own box; the recesses are floor beyond it.
+        var mat = DungeonKit.MaterialOf(DungeonKit.BiomeOf("Black Forest").Material);
+        int rooms = 0;
+        for (int seed = 1; seed <= 3; seed++)
+        {
+            var style = DungeonKit.StyleOf("Crypt");
+            var plan = DungeonPlanner.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: style.Name, Size: 3, Levels: 2, Seed: seed), style, new Random(seed));
+            foreach (var s in plan.Spaces.Where(s => s.IsRoom && s.Recesses.Count > 0))
+            {
+                rooms++;
+                var inRecess = s.Recesses.SelectMany(r => r.Tiles).ToHashSet();
+                var own = s.Tiles.Where(t => !inRecess.Contains(t)).ToList();
+                int i0 = own.Min(t => t.I), i1 = own.Max(t => t.I), j0 = own.Min(t => t.J), j1 = own.Max(t => t.J);
+                int across = s.Dir.X != 0 ? j1 - j0 + 1 : i1 - i0 + 1, deep = s.Dir.X != 0 ? i1 - i0 + 1 : j1 - j0 + 1;
+                var f = new DungeonDresser.Frame(s, mat, plan.Levels[s.Level]);
+                string where = $"seed {seed}: the {s.Name}";
+                Assert.Equal(i0 + i1 + 1f, f.Cx);
+                Assert.Equal(j0 + j1 + 1f, f.Cz);
+                Assert.Equal(across - mat.Thick / 2, f.HalfA, 0.001f);
+                Assert.Equal(deep - mat.Thick / 2, f.HalfD, 0.001f);
+                // Each recess tile is floor of the frame.
+                foreach (var (i, j) in inRecess)
+                {
+                    var (u, v) = f.Local(2 * i + 1, 2 * j + 1);
+                    Assert.True(f.Inside(u, v), $"{where}: its recess at ({i}, {j}) is not floor");
+                }
+            }
+        }
+        Assert.True(rooms > 0, "no room with recesses");
+    }
 }
