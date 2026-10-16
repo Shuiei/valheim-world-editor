@@ -170,11 +170,16 @@ public sealed class ModBundlesTests : IDisposable
         Assert.NotSame(first, again);
         Assert.True(File.Exists(marker));
         Assert.True(File.Exists(Path.Combine(AppSettings.UserDataDir, "mod-bundles.json")));
-        // A mod changed: copied again, the folder emptied first.
+        // A mod changed while a reader holds its copy open: copied again, the folder emptied first, and the new
+        // copy's models read.
+        Assert.Equal(3, again.VertexCountOf(Assert.Single(again.Named(AssetClassID.Mesh, "fine_plank"))));
+        TestDll.Write(dll, [("FineMod.finebundle", Bundle("finebundle", "new_plank"))]);
         File.SetLastWriteTimeUtc(dll, DateTime.UtcNow.AddDays(-1));
-        Assert.NotNull(ModBundles.Reader(settings));
+        var changed = ModBundles.Reader(settings)!;
         Assert.False(File.Exists(marker));
         Assert.True(File.Exists(Path.Combine(ModBundles.Folder, "FineMod.FineMod.finebundle")));
+        Assert.Equal(3, changed.VertexCountOf(Assert.Single(changed.Named(AssetClassID.Mesh, "new_plank"))));
+        Assert.Empty(changed.Named(AssetClassID.Mesh, "fine_plank"));
     }
 
     [Fact]
