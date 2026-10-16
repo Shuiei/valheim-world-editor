@@ -59,6 +59,20 @@ public class ScriptHostTests
     }
 
     [Fact]
+    public void ANonNumberIsNoPoint()
+    {
+        var ch = Run(TestScenes.Flat(2), """
+			Ground.Set(float.NaN, 10, 40);
+			Ground.Set(10, float.PositiveInfinity, 40);
+			Ground.Paint(float.NaN, float.NaN, "dirt");
+			Print(Ground.Biome(float.NaN, 10));
+			""");
+        Assert.Empty(ch.Heights);
+        Assert.Empty(ch.Paint);
+        Assert.Equal("None", ch.Output.ToString().Trim());
+    }
+
+    [Fact]
     public void AScriptsChangesAreOneUndoStepAndGoPastTheLimit()
     {
         var s = TestScenes.Flat(2);

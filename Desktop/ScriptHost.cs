@@ -262,6 +262,11 @@ public static partial class ScriptHost
         var noises = new Dictionary<int, Noise>();
         int Point(float x, float z)
         {
+            // Not a point at all (NaN, infinity): would turn into grid column or row 0.
+            if (!float.IsFinite(x) || !float.IsFinite(z))
+            {
+                return -1;
+            }
             int gx = (int)MathF.Round(x - snap.Ox), gz = (int)MathF.Round(z - snap.Oz);
             return gx < 0 || gz < 0 || gx >= snap.W || gz >= snap.H ? -1 : gz * snap.W + gx;
         }
