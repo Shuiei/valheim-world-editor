@@ -100,9 +100,9 @@ public static class WorldWriter
         {
             return new Result(false, newer, null, 0, 0, skipped);
         }
-        if (world.Chunks.Any(c => c.WorldVersion != SaveFileVersion))
+        if (world.Chunks.FirstOrDefault(c => c.WorldVersion != SaveFileVersion) is { } other)
         {
-            return new Result(false, $"This world uses save format {world.Chunks.First().WorldVersion}; the writer only supports {SaveFileVersion}.", null, 0, 0, skipped);
+            return new Result(false, $"This world uses save format {other.WorldVersion}; the writer only supports {SaveFileVersion}.", null, 0, 0, skipped);
         }
         // New ground copies a terrain object whose position is in the short format (the layout the copy patches).
         bool anyTerrain = world.TerrainZones.Any(z => z.Source != null);

@@ -217,6 +217,8 @@ the plugin is unchanged in versions without that part.
 - **Saving a zone's ground with all its terrain objects deleted was refused.** The deleted objects were patched (the
   deletion winning) while the zone counted as written, so the read-back check found it missing; deleted terrain
   objects are now left out of those to patch, and the zone gets a new one.
+- **Refusing a world in an older save format named the wrong format.** The message gave the first chunk file's format
+  ("uses save format 41; the writer only supports 41"); it now names the first one that differs.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

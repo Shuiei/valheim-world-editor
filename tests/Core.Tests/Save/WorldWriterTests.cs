@@ -117,6 +117,21 @@ public class WorldWriterTests
     }
 
     [Fact]
+    public void AnOlderSaveFormatIsNamedFromTheChunkThatHasIt()
+    {
+        // It named the first chunk file's format: "uses save format 41; the writer only supports 41".
+        using var w = new TempWorld();
+        var world = w.Load();
+        Assert.True(world.Chunks.Count > 1);
+        world.Chunks[^1].WorldVersion = 39;
+
+        var r = WorldWriter.Save(world, [Raised(world.TerrainZones[0].ZoneX, world.TerrainZones[0].ZoneZ, 1, 100)]);
+
+        Assert.False(r.Saved);
+        Assert.StartsWith("This world uses save format 39;", r.Message);
+    }
+
+    [Fact]
     public void TerrainTemplatesInAnUnexpectedLayoutAreRefusedBeforeWriting()
     {
         using var w = new TempWorld();
