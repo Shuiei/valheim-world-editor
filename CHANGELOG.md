@@ -83,6 +83,9 @@ the plugin is unchanged in versions without that part.
 - **A mod folder that cannot be read no longer stops the start page checking your game.** The search for the plugin
   under BepInEx/plugins threw at the first subfolder without access, so the game could not be checked at all. Such
   folders are now passed over.
+- **A heightmap picture with odd heights written in it no longer breaks its import.** Lowest and highest heights such
+  as NaN, Infinity or 1e39 were taken as written, so the Area panel threw and Claude's import used them; a highest not
+  above the lowest was taken too. Such heights are now left out, and the ground's own heights used instead.
 
 ### Changed
 

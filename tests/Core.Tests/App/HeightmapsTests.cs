@@ -33,6 +33,24 @@ public class HeightmapsTests
         }
     }
 
+    // Heights written in a picture by hand: not a finite number, or the highest not above the lowest, are left out (an
+    // infinite one made the Area panel throw).
+    [Theory]
+    [InlineData("NaN", "10", null, 10f)]
+    [InlineData("-5", "Infinity", -5f, null)]
+    [InlineData("1e39", "10", null, 10f)]
+    [InlineData("10", "-5", null, null)]
+    [InlineData("10", "10", null, null)]
+    [InlineData("-5", "10", -5f, 10f)]
+    public void OnlyUsableHeightsAreReadFromAPicture(string min, string max, float? lowest, float? highest)
+    {
+        byte[] png = Png.WriteGray16(1, 1, [0], new Dictionary<string, string> { [Heightmaps.MinKey] = min, [Heightmaps.MaxKey] = max });
+
+        var pic = Heightmaps.Read(png, 1, 1);
+
+        Assert.Equal((lowest, highest), (pic.Min, pic.Max));
+    }
+
     [Fact]
     public void SomethingElseIsRefused()
     {
