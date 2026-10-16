@@ -38,6 +38,11 @@ public class ClaudeToolsWorkshopTests
         Assert.EndsWith("Now pending: 4 building piece(s) on the plot, not saved as a blueprint.", added);
         Assert.Equal("Claude: added Tower", r.W.Session!.UndoLabel);
         Assert.Equal(4, ClaudeRun.J(await r.T.EditorState()).GetProperty("area").GetProperty("objects").GetInt32());
+        // A blueprint whose file is not named after its #Name: (a numbered copy, a downloaded one): found by the name
+        // list_blueprints gives, whatever the case.
+        File.Move(Path.Combine(r.Homestead, TerrainEditor.App.Homestead.FileName("Tower")), Path.Combine(r.Homestead, "Tower (2).blueprint"));
+        Assert.Equal("Tower", ClaudeRun.J(await r.T.ListBlueprints("defence"))[0].GetProperty("name").GetString());
+        Assert.EndsWith("Now pending: 6 building piece(s) on the plot, not saved as a blueprint.", await r.T.AddBlueprint("tower", -20, 0));
     }
 
     // On the plot: an empty one stands; a chest filled and a sign written keep their values on the piece; pieces

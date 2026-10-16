@@ -1266,8 +1266,8 @@ public sealed partial class ClaudeTools
         string? path = null;
         if (!string.IsNullOrWhiteSpace(blueprint))
         {
-            path = Path.Combine(_w.Blueprints.Status.Folder, TerrainEditor.App.Homestead.FileName(blueprint));
-            if (!File.Exists(path))
+            path = BlueprintPath(blueprint);
+            if (path == null)
             {
                 return $"No blueprint \"{blueprint}\" in the library (list_blueprints).";
             }
@@ -1275,6 +1275,23 @@ public sealed partial class ClaudeTools
         await _w.OpenWorkshop(path);
         return ToJson(StateOf(_w));
     });
+
+    /// <summary>
+    /// The library file of a blueprint named as list_blueprints names it (its #Name: header, or its file's name when
+    /// it has none), whatever its file is called: the game's own files, downloaded ones and numbered copies are not
+    /// named after their header. A file named after the name is taken when no entry has it. Null for none.
+    /// </summary>
+    private string? BlueprintPath(string name)
+    {
+        string folder = _w.Blueprints.Status.Folder;
+        var entry = TerrainEditor.App.Homestead.List(folder).FirstOrDefault(e => e.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (entry != null)
+        {
+            return entry.Path;
+        }
+        string path = Path.Combine(folder, TerrainEditor.App.Homestead.FileName(name));
+        return File.Exists(path) ? path : null;
+    }
 
     /// <summary>save_blueprint: the Workshop's building saved as a blueprint of the library (MainWindow.SaveWorkshopAs).</summary>
     [McpServerTool(Name = "save_blueprint", Title = "Save the Workshop's building as a blueprint")]
@@ -1322,8 +1339,7 @@ public sealed partial class ClaudeTools
         {
             return why;
         }
-        string path = Path.Combine(_w.Blueprints.Status.Folder, TerrainEditor.App.Homestead.FileName(blueprint));
-        if (!File.Exists(path))
+        if (BlueprintPath(blueprint) is not string path)
         {
             return $"No blueprint \"{blueprint}\" in the library (list_blueprints).";
         }
