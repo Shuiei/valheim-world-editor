@@ -488,7 +488,6 @@ internal sealed class DungeonPlanner
     private DungeonPlan.Space AnyParent(DungeonPlan.Level l, bool main) =>
         l.Spaces.Where(s => CanParent(s) && (!main || s.Main)).OrderBy(_ => _rnd.Next()).FirstOrDefault() ?? l.Spaces[0];
 
-    /// <summary>A space to put a side room off, weighted towards crossings and long halls; null when none can lead on.</summary>
     /// <summary>The kinds of room that belong beside a kind: what a wing is made of.</summary>
     public static Room[] Kin(Room room) => room switch
     {
@@ -515,6 +514,7 @@ internal sealed class DungeonPlanner
         _ => [],
     };
 
+    /// <summary>A space to put a side room off, weighted towards crossings and long halls; null when none can lead on.</summary>
     private DungeonPlan.Space? SideParent(DungeonPlan.Level l)
     {
         var options = l.Spaces.Where(s => CanParent(s) && s.Room != Room.Antechamber)
@@ -562,7 +562,7 @@ internal sealed class DungeonPlanner
             int mid = s.Across / 2;
             return Math.Min(Across(t1), Across(t2)) == mid - 1;
         }
-        // Not in a corner, not on another doorway's tiles or right next to them.
+        // Not on another doorway's tiles or right next to them (a corner is allowed: the doorway may open flush with it).
         foreach (var d in s.Doors)
         {
             var mine = d.A == s ? [d.T1, d.T2] : new[] { Add(d.T1, d.Dir), Add(d.T2, d.Dir) };
@@ -1178,7 +1178,7 @@ internal sealed class DungeonPlanner
                                 if (d >= 3 && path.All(t => Free(l, t)) && SlotAllowed(b, n1, n2, (-dir.X, -dir.Z)))
                                 {
                                     var (aa, bb, tt1, tt2, dd, ll, pp) = (a, b, t1, t2, dir, len, path);
-                                    void Join()
+                                    void MakeLoop()
                                     {
                                         if (ll == 0)
                                         {
@@ -1191,7 +1191,7 @@ internal sealed class DungeonPlanner
                                             Connect(c, bb, Add(tt1, dd, ll), Add(tt2, dd, ll), dd, loop: true);
                                         }
                                     }
-                                    options.Add((d - len * 0.3f + (float)_rnd.NextDouble(), Join));
+                                    options.Add((d - len * 0.3f + (float)_rnd.NextDouble(), MakeLoop));
                                 }
                                 break;
                             }
