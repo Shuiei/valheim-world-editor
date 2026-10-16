@@ -34,6 +34,8 @@ the plugin is unchanged in versions without that part.
   asked once per connection, and a check that failed (a slow answer, say) counted as "cannot move": the moved chest
   was destroyed and made again under a new id, and ContainerSigns doubled its signs. It is now asked at each Apply
   live, a check that fails stops the apply, and a plugin changed since (the game started again) is seen.
+- **Editing a chest no longer wears the items in it.** Durability is kept in hundredths and was cut down when written,
+  so about one value in five came back a hundredth lower after each save of the chest. It is now rounded.
 
 ### Changed
 
