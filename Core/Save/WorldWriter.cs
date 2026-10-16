@@ -53,6 +53,8 @@ public static class WorldWriter
         public IReadOnlyList<string> Files { get; init; } = [];
         /// <summary>The save number written (-1: none).</summary>
         public int Number { get; init; } = -1;
+        /// <summary>The new save as it was read back to check it (null when nothing was saved): no need to read it again.</summary>
+        public WorldSave? Read { get; init; }
     }
 
     /// <summary>How a save treats the files around it.</summary>
@@ -215,6 +217,7 @@ public static class WorldWriter
         string dir = world.Directory;
         int newNumber = Math.Max(world.SaveNumber, LatestNumber(dir)) + 1;
         List<string> newFiles = [];
+        WorldSave? read = null;
         Dictionary<ChunkFile, (uint Version, int Count)> updated = [];
         try
         {
@@ -259,7 +262,8 @@ public static class WorldWriter
             WriteAllBytesDurable(main + ".ok", BitConverter.GetBytes(SaveFileVersion));
             DirectorySync.Flush(dir);
             // 5. Read back and compare with what was meant to be written (nothing old removed yet).
-            string? problem = Verify(dir, world, [.. changed.Where(e => !notSaved.Contains((e.ZoneX, e.ZoneZ)))], created + addedCount, removed, groundReset, resets);
+            read = WorldSave.Load(dir);
+            string? problem = Check(read, world, [.. changed.Where(e => !notSaved.Contains((e.ZoneX, e.ZoneZ)))], created + addedCount, removed, groundReset, resets);
             if (problem != null)
             {
                 RemoveAll(newFiles);
@@ -284,7 +288,7 @@ public static class WorldWriter
         }
         RemoveAll(old);
         string what = string.Join(", ", new[] { written + created > 0 ? $"{written + created} zone(s)" : null, deletedCount > 0 ? $"{deletedCount} deleted object(s)" : null, addedCount > 0 ? $"{addedCount} new object(s)" : null, resets.Count > 0 ? $"{resets.Count} reset zone(s) ({removed - deletedCount} objects cleared)" : null }.Where(x => x != null));
-        return new Result(true, $"Saved {what} to save #{newNumber}.", null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles, Number = newNumber };
+        return new Result(true, $"Saved {what} to save #{newNumber}.", null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles, Number = newNumber, Read = read };
     }
 
     /// <summary>Mirrors TerrainComp.Save: a GZip-compressed ZPackage.</summary>
@@ -509,7 +513,15 @@ public static class WorldWriter
         {
             return;
         }
-        var now = WorldSave.Load(dir);
+        Prune(WorldSave.Load(dir));
+    }
+
+    /// <summary>
+    /// <see cref="Prune(string)"/> for a world just read from its folder's latest save: its chunk list is what stays.
+    /// </summary>
+    public static void Prune(WorldSave now)
+    {
+        string dir = now.Directory;
         int latest = now.SaveNumber;
         var keep = now.Chunks.Select(c => c.FileName).ToHashSet();
         var old = Directory.GetFiles(dir, "_main.*").Where(f => Path.GetFileName(f).Split('.') is [_, var n, _]
@@ -526,9 +538,12 @@ public static class WorldWriter
     /// the saved zones' ground, and every other zone's ground untouched.
     /// </summary>
     /// <returns>What is wrong, or null when the save is right.</returns>
-    internal static string? Verify(string dir, WorldSave before, IReadOnlyList<ZoneEdit> saved, int created, int removed, HashSet<(int, int)> groundReset, IReadOnlyList<ZoneReset> resets)
+    internal static string? Verify(string dir, WorldSave before, IReadOnlyList<ZoneEdit> saved, int created, int removed, HashSet<(int, int)> groundReset, IReadOnlyList<ZoneReset> resets) =>
+        Check(WorldSave.Load(dir), before, saved, created, removed, groundReset, resets);
+
+    /// <summary><see cref="Verify"/> on the new save already read back (<paramref name="after"/>).</summary>
+    private static string? Check(WorldSave after, WorldSave before, IReadOnlyList<ZoneEdit> saved, int created, int removed, HashSet<(int, int)> groundReset, IReadOnlyList<ZoneReset> resets)
     {
-        var after = WorldSave.Load(dir);
         foreach (ZoneReset r in resets)
         {
             if (after.Zones == null || after.Zones.Generated.Contains(((short)r.X, (short)r.Z)))

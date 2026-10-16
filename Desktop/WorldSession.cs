@@ -447,7 +447,8 @@ public sealed class WorldSession : IDisposable
             // twice). Not read back, the session starts over from the world as it was and says to open it again.
             try
             {
-                World = WorldSave.Load(World.Directory);
+                // The save as read back to check it: not read a third time.
+                World = result.Read ?? WorldSave.Load(World.Directory);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
             {
@@ -457,7 +458,7 @@ public sealed class WorldSession : IDisposable
             {
                 try
                 {
-                    WorldWriter.Prune(World.Directory);
+                    WorldWriter.Prune(World);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
                 {

@@ -225,6 +225,8 @@ public class WorldWriterEdgeTests
             // The base and this save only.
             Assert.Equal(new[] { b, b + 1 + n }, saves);
             var again = WorldSave.Load(w.Dir);
+            // The save as read back to check it comes with the result.
+            Assert.Equal((r.Number, again.ObjectCount, again.Chunks.Count), (r.Read!.SaveNumber, r.Read.ObjectCount, r.Read.Chunks.Count));
             // Made from the base: only this save's raise, not the earlier ones.
             var zone = again.TerrainZones.Single(q => q.ZoneX == t.ZoneX && q.ZoneZ == t.ZoneZ);
             Assert.Equal(n + 1f, zone.LevelDelta[500 + n], 4);
