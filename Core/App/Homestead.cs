@@ -154,6 +154,14 @@ public static class Homestead
         public Dictionary<string, int> Kinds { get; init; } = [];
         /// <summary>Its name, description and tags, as the player edits them.</summary>
         public Details Details => new(Name, Description, Tags);
+
+        /// <summary>
+        /// Whether every word of a search (split on spaces) is somewhere in its name, creator, description or tags,
+        /// ignoring case; an empty search matches every blueprint. The one filter of every blueprint list.
+        /// </summary>
+        public bool Matches(string? query) => (query ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).All(w =>
+            Name.Contains(w, StringComparison.OrdinalIgnoreCase) || (Creator ?? "").Contains(w, StringComparison.OrdinalIgnoreCase)
+            || Description.Contains(w, StringComparison.OrdinalIgnoreCase) || Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase)));
     }
 
     /// <summary>The readable blueprints of a folder, by name (empty when the folder does not exist).</summary>

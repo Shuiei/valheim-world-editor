@@ -337,8 +337,7 @@ public sealed class BuildPanel
         }
         var all = read.Entries;
         string q = LibrarySearch.Text?.Trim() ?? "";
-        var list = all.Where(e => q.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(w => e.Name.Contains(w, StringComparison.OrdinalIgnoreCase)
-            || e.Description.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase)))).ToList();
+        var list = all.Where(e => e.Matches(q)).ToList();
         if (list.Count == 0)
         {
             LibraryList.Children.Add(new TextBlock

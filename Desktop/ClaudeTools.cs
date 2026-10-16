@@ -1467,14 +1467,13 @@ public sealed partial class ClaudeTools
         return _w.SaveWorkshopAs(details, overwrite, evenIfFalling) is string problem ? problem : _w.MessageText.Text + " " + ToJson(StateOf(_w));
     });
 
-    /// <summary>list_blueprints: Homestead's library, filtered by words of the name, description or tags.</summary>
+    /// <summary>list_blueprints: Homestead's library, filtered by words of the name, creator, description or tags.</summary>
     [McpServerTool(Name = "list_blueprints", ReadOnly = true, Title = "The blueprint library")]
     [Description("The user's blueprints (Homestead's library): name, pieces, cost, description, tags. Open one in the Workshop (open_workshop) or add it to the plot (add_blueprint).")]
-    public Task<string> ListBlueprints([Description("Words to find in the name, description or tags (optional).")] string? query = null) => OnUi(() =>
+    public Task<string> ListBlueprints([Description("Words to find in the name, creator, description or tags (optional).")] string? query = null) => OnUi(() =>
     {
-        string[] words = (query ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
         return ToJson(TerrainEditor.App.Homestead.List(_w.Blueprints.LookAgain().Folder)
-            .Where(e => words.All(w => e.Name.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Description.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase))))
+            .Where(e => e.Matches(query))
             .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Terrain.PieceCost.Of(e.Kinds).Describe(4, english: true), description = e.Description, tags = e.Tags }));
     });
 

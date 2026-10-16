@@ -243,11 +243,7 @@ public sealed class BlueprintsPanel
         List.Children.Clear();
         string q = Search.Text?.Trim() ?? "";
         bool Match(string name) => q == "" || name.Contains(q, StringComparison.OrdinalIgnoreCase);
-        // Every word somewhere in the name, creator, description or tags.
-        bool Matches(Homestead.Entry e) => q.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(w =>
-            e.Name.Contains(w, StringComparison.OrdinalIgnoreCase) || (e.Creator ?? "").Contains(w, StringComparison.OrdinalIgnoreCase)
-            || e.Description.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase)));
-        var homestead = _homestead.Where(Matches).ToList();
+        var homestead = _homestead.Where(e => e.Matches(q)).ToList();
         var older = _older.Where(b => Match(b.Name)).ToList();
         if (homestead.Count + older.Count == 0)
         {

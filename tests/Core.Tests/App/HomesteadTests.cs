@@ -204,4 +204,17 @@ public class HomesteadTests : IDisposable
         Assert.Equal("Say \"hi\"", Homestead.Read("x.blueprint", quoted).Description);
         Assert.Equal("Say \"hi\"", BlueprintFormats.Parse("x.blueprint", string.Join('\n', quoted)).Description);
     }
+
+    [Fact]
+    public void ASearchFindsEveryWordInNameCreatorDescriptionOrTags()
+    {
+        // The Blueprints panel, the Workshop's library and Claude's list each filtered their own way (only one
+        // looked at the creator).
+        var e = new Homestead.Entry("hut.blueprint", "Small hut", "Astrid", null, 3, null, default) { Description = "By the lake", Tags = ["viking", "wood"] };
+        Assert.True(e.Matches(null));
+        Assert.True(e.Matches("  "));
+        Assert.True(e.Matches("HUT astrid"));
+        Assert.True(e.Matches("lake Vik"));
+        Assert.False(e.Matches("hut stone"));
+    }
 }
