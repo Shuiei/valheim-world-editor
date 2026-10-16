@@ -287,7 +287,8 @@ public sealed class DungeonGenPanel
         _lootText.Text = $"Loot: {(s.Loot == 0 ? "none" : $"× {s.Loot:0.##}")}";
         _decayText.Text = $"Ruin: {s.Decay * 100:0} %";
         _loopsText.Text = $"Ways round: {(s.Loops == 0 ? "none (a tree)" : $"× {s.Loops:0.##}")}";
-        Name.PlaceholderText = DungeonGen.NameFor(s.Seed, s.Style, s.Biome);
+        // The game's rooms are named after the biome alone (the style, hidden then, is the pieces' own).
+        Name.PlaceholderText = DungeonGen.NameFor(s.Seed, pieces ? s.Style : null, s.Biome);
         Place.IsEnabled = OpenOnPlot.IsEnabled = AddToPlot.IsEnabled = false;
         // A dungeon still being made for the settings before is not shown when it is done: it would come
         // back as the one to place, made for other settings.

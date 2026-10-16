@@ -165,6 +165,9 @@ the plugin is unchanged in versions without that part.
 - **Caged foes could walk out of a cell block's end cells.** The cells take 4 m each along the block, and the strip
   left at each end had no front wall, so the first and last cells were open to the aisle; their fronts now run on to
   the end walls.
+- **The game's-rooms dungeon was placed under another name than the panel showed.** The Generate panel's name followed
+  the chosen style, which only building-piece dungeons use, while a dungeon of the game's rooms is named after its
+  biome; the panel now does the same.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
