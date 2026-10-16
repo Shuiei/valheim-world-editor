@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.105 — unreleased
+
+### Changed
+- **Apply live after a big clear no longer reads every removed object first.** Looking for objects that only moved,
+  each Apply live read and decoded the saved data of every object deleted in the editor, then threw it away for any
+  that had no copy to move to: clearing 20,000 trees meant 20,000 reads and decodes for nothing, holding up the
+  live view meanwhile. An object's data is now read only when it may move: moved back, or copied somewhere.
+
 ## v1.45.104 — unreleased
 
 ### Changed
