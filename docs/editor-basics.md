@@ -202,8 +202,10 @@ your changes over** onto the game's save:
 2. Where the game changed the same thing, it asks once per kind, **Keep mine** or **Keep the game's**, listing the
    first few (name and place, or zone):
    - **zones whose ground you both changed**: keeping yours puts your changed points and paint over the game's,
-     and the game's ground stays everywhere else in those zones;
-   - **objects the game changed** (a chest's contents, a sign, a growing plant) that you deleted, moved or edited:
+     and the game's ground stays everywhere else in those zones; keeping the game's also drops a zone reset you
+     marked there;
+   - **objects the game changed** (a chest's contents, a sign, a growing plant) that you deleted, moved or edited
+     (an object you added and saved counts too):
      keeping yours deletes, moves or edits them (a moved one takes the game's data along, an edited one keeps
      yours);
    - **objects the game removed** that you moved or edited (taken or destroyed by players, or moved away, like a

@@ -518,6 +518,11 @@ public sealed class WorldSession : IDisposable
     /// <param name="keepMine">Per kind of clash: true keeps the editor's change, false the game's version.</param>
     public Outcome Replay(EditReplay plan, Func<ReplayClash, bool> keepMine)
     {
+        // The game saved again since its save was read: that save is not the latest any more.
+        if (WorldSave.CommittedSave(World.Directory) != plan.Newer.SaveNumber)
+        {
+            return new Outcome(false, Lang.T("replay.savedAgain"), false);
+        }
         var kept = Area?.Export() ?? History;
         var r = plan.Apply(keepMine, Edits, NextId);
         if (r == null)
@@ -566,7 +571,8 @@ public sealed class WorldSession : IDisposable
         bool Touches(EditSession.Change c)
         {
             var f = k.FrameOf(c);
-            return k.Ids[c].Any(r.Dropped.Contains) || c.Zones.Any(z => r.GameGround.Contains((z.X + f.X0, z.Z + f.Z0)));
+            return k.Ids[c].Any(r.Dropped.Contains) || c.Zones.Any(z => r.GameGround.Contains((z.X + f.X0, z.Z + f.Z0)))
+                || c.Resets.Any(x => r.GameGround.Contains((x.Reset.X, x.Reset.Z)));
         }
         int undoFrom = k.Undo.FindLastIndex(Touches) + 1;
         int redoFrom = k.Redo.FindLastIndex(Touches) + 1;

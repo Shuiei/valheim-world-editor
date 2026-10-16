@@ -248,4 +248,123 @@ public class EditReplayTests
         var r = replay.Apply(_ => throw new InvalidOperationException("nothing clashes"), edits, Next)!;
         Assert.Equal(fromEditorsSave ? (0, 0) : (1, 1), (r.Deleted, r.Added));
     }
+
+    // An object edited where it stands (the inspector: deleted, a copy with the new data in its place) is settled with
+    // its original: kept or dropped together when the game changed or removed the original.
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void AnObjectEditedInPlaceGoesWithItsOriginalsClash(bool gameRemoved, bool keepMine)
+    {
+        using var w = new TempWorld();
+        var read = w.Load();
+        var edits = new EditStore(read);
+        var (id, prefab, position, rotation, _) = Near(read)[0];
+        var edited = ZdoData.Parse(read.ObjectBytes(id));
+        edited.Set("ints", StableHash.Of("vwe-mine"), "1");
+        edits.SetDeleted([id], true);
+        edits.AddObjects([new NewObject(-1, prefab, position, rotation, 0f, null, false, edited.Serialize())]);
+        var game = ZdoData.Parse(read.ObjectBytes(id));
+        game.Set("ints", StableHash.Of("vwe-game"), "2");
+        GameSaves(w.Dir, [], [id], gameRemoved ? null : [new NewObject(-5, prefab, position, rotation, 0f, null, false, game.Serialize())]);
+
+        var replay = EditReplay.Prepare(read, edits, EditReplay.Saved.None, w.Load());
+        Assert.Equal(gameRemoved ? ReplayClash.Removed : ReplayClash.Changed, Assert.Single(replay.Clashes).Kind);
+        var r = replay.Apply(_ => keepMine, edits, Next)!;
+        Assert.Equal((keepMine && !gameRemoved ? 1 : 0, keepMine ? 1 : 0), (r.Deleted, r.Added));
+    }
+
+    // An object the editor added and saved, then deleted: when the game, playing on from the editor's save, changed it
+    // (a chest filled), its deletion is a clash too.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AnAddedAndSavedObjectTheGameChangedClashesWhenDeleted(bool keepMine)
+    {
+        using var w = new TempWorld();
+        var read = w.Load();
+        var edits = new EditStore(read);
+        var (model, prefab, position, _, _) = Near(read)[1];
+        var added = new NewObject(-1, prefab, position + new Vector3(0, 0, 4), Vector3.Zero, 0f, model);
+        edits.AddObjects([added]);
+        Assert.True(WorldWriter.Save(read, [], [], edits.Added, options: new WorldWriter.Options(KeepBase: true, Latest: read.SaveNumber)).Saved);
+        var saved = new EditReplay.Saved(new HashSet<(int X, int Z)>(), edits.Deleted, edits.Added.ToHashSet());
+        var editors = w.Load();
+        int y = editors.ObjectRefs.FindIndex(o => o.Prefab == added.Prefab && Vector3.Distance(o.Position, added.Position) < 0.01f);
+        var filled = ZdoData.Parse(editors.ObjectBytes(y));
+        filled.Set("ints", StableHash.Of("vwe-game"), "2");
+        GameSaves(w.Dir, [], [y], [new NewObject(-5, added.Prefab, added.Position, filled.Rotation, 0f, null, false, filled.Serialize())]);
+        edits.SetDeleted([-1], true);
+
+        var replay = EditReplay.Prepare(read, edits, saved, w.Load());
+        Assert.Equal(new EditReplay.Clash(ReplayClash.Changed, added.Prefab, added.Position, false), Assert.Single(replay.Clashes));
+        var r = replay.Apply(_ => keepMine, edits, Next)!;
+        Assert.Equal(keepMine ? 1 : 0, r.Deleted);
+        Assert.Equal(!keepMine, r.Dropped.Contains(-1));
+    }
+
+    // Raised and saved, then undone: when the game played on from the editor's save and changed another point of the
+    // zone, keeping the editor's ground keeps the undo too.
+    [Fact]
+    public void AnUndoAfterTheEditorsSaveIsKeptInAZoneBothChanged()
+    {
+        using var w = new TempWorld();
+        var read = w.Load();
+        var edits = new EditStore(read);
+        var before = edits.Get(0, 0)!;
+        Raise(edits, 100, 2.5f);
+        Assert.True(WorldWriter.Save(read, edits.Copies(e => e.Changed), options: new WorldWriter.Options(KeepBase: true, Latest: read.SaveNumber)).Saved);
+        edits.MarkApplied([(0, 0)]);
+        var saved = new EditReplay.Saved(new HashSet<(int X, int Z)> { (0, 0) }, edits.Deleted, edits.Added.ToHashSet());
+        edits.Put(before.Clone());
+        var game = new EditStore(w.Load()).Get(0, 0)!;
+        game.Modified[300] = true;
+        game.Level[300] = -1.5f;
+        GameSaves(w.Dir, [game], []);
+
+        var replay = EditReplay.Prepare(read, edits, saved, w.Load());
+        Assert.Equal(ReplayClash.Ground, Assert.Single(replay.Clashes).Kind);
+        replay.Apply(_ => true, edits, Next);
+        var zone = edits.Get(0, 0)!;
+        Assert.Equal(before.Modified[100], zone.Modified[100]);
+        Assert.Equal(before.Level[100], zone.Level[100], 4);
+        Assert.Equal(-1.5f, zone.Level[300], 4);
+    }
+
+    // A zone left to the game's ground is not reset either: the reset would take that ground away.
+    [Fact]
+    public void AZoneResetGoesWithTheGamesGround()
+    {
+        using var w = new TempWorld();
+        var read = w.Load();
+        var edits = new EditStore(read);
+        Raise(edits, 100, 2.5f);
+        edits.SetReset(new ZoneReset(0, 0, true, true), true);
+        var game = new EditStore(w.Load()).Get(0, 0)!;
+        game.Modified[300] = true;
+        game.Level[300] = -1.5f;
+        GameSaves(w.Dir, [game], []);
+
+        var replay = EditReplay.Prepare(read, edits, EditReplay.Saved.None, w.Load());
+        Assert.Equal(ReplayClash.Ground, Assert.Single(replay.Clashes).Kind);
+        Assert.Equal(0, replay.Apply(_ => false, edits, Next)!.Resets);
+    }
+
+    // The edits changed between reading the game's save and bringing them over: nothing is done.
+    [Fact]
+    public void EditsChangedSinceTheGamesSaveWasReadAreNotBroughtOver()
+    {
+        using var w = new TempWorld();
+        var read = w.Load();
+        var edits = new EditStore(read);
+        var near = Near(read);
+        edits.SetDeleted([near[0].Id], true);
+        GameSaves(w.Dir, [], [near[2].Id]);
+        var replay = EditReplay.Prepare(read, edits, EditReplay.Saved.None, w.Load());
+        edits.SetDeleted([near[1].Id], true);
+        Assert.Null(replay.Apply(_ => true, edits, Next));
+        Assert.Equal(2, edits.DeletedCount);
+    }
 }

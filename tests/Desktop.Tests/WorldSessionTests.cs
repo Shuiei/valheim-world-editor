@@ -174,6 +174,29 @@ public sealed class WorldSessionTests : IDisposable
         Assert.Equal(game + 1, WorldSave.Load(w.Dir).SaveNumber);
     }
 
+    // The game removed an object the editor moved: left to the game, the move's step cannot be undone any more, and
+    // neither can the steps before it.
+    [Fact]
+    public void StepsTouchingWhatIsLeftToTheGameAreDropped()
+    {
+        using var w = new TempWorld();
+        using var world = WorldSession.Open(w.Dir);
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.Shape(32, 32, Formula.Compile("2", []), 3, 0, "raise");
+        int index = s.Scene.Things.FindIndex(t => t.Id >= 0 && !t.Gone);
+        var thing = s.Scene.Things[index];
+        s.Move([(index, thing.Position + new System.Numerics.Vector3(3, 0, 3), thing.Rotation)]);
+        Assert.True(WorldWriter.Save(WorldSave.Load(w.Dir), [], [thing.Id], options: new WorldWriter.Options(KeepBase: true)).Saved);
+
+        var plan = world.PrepareReplay()!;
+        Assert.Equal(Editing.ReplayClash.Removed, Assert.Single(plan.Clashes).Kind);
+        var o = world.Replay(plan, _ => false);
+        Assert.True(o.Done, o.Message);
+        Assert.Contains("History: 0 step(s) kept, 2 dropped", o.Message);
+        Assert.Null(world.History);
+        Assert.Equal((1, 0, 0, 0), world.Pending);
+    }
+
     // A zone reset marked and then unmarked has nothing left to send, while another zone's reset still waits: after a
     // partial Apply live the first zone's steps are applied, and so is the ground after them that went in.
     [Fact]

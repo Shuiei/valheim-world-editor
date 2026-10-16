@@ -146,6 +146,7 @@
   "replay.unread": "{0} object(s) could not be read again as the editor read them (the game removed that save): they were taken as maybe changed, or come back without their data.",
   "replay.history": "History: {0} step(s) kept; you are asked before undoing them.",
   "replay.historyDropped": "History: {0} step(s) kept, {1} dropped (they touch what the game's version stays for, or come before such a step).",
+  "replay.savedAgain": "Not brought over: the game saved this world again while its save was read. Save again.",
   "replay.stale": "Not brought over: your changes changed while the game's save was read. Save again.",
   "start.tip.openWorkshop": "Open it in the Workshop",
   "start.page.home": "Pick up where you left off",

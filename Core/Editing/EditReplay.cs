@@ -71,9 +71,13 @@ public sealed class EditReplay
 
     /// <summary>An object change of the editor's that clashes with the game's: kept or dropped as the user chooses.</summary>
     /// <param name="Kind">Its kind.</param>
-    /// <param name="Old">The object as the editor read it (its id there).</param>
+    /// <param name="Old">
+    /// The object as the editor knew it: its id in the save read, or the own (negative) id of one the editor's save wrote.
+    /// </param>
     /// <param name="Newer">The object in the game's save (null: the game has it no more).</param>
-    /// <param name="Mine">The objects added when the editor's change is kept (a move's copy at its new place).</param>
+    /// <param name="Mine">
+    /// The objects added when the editor's change is kept (a move's copy at its new place, an edited copy in its place).
+    /// </param>
     /// <param name="Original">The editor's objects as they were (kept as gone objects when the game's version stays).</param>
     private sealed record Item(ReplayClash Kind, int Old, int? Newer, List<NewObject> Mine, List<NewObject> Original);
 
@@ -98,13 +102,6 @@ public sealed class EditReplay
     /// <summary>The added objects as of the editor's last save, by id.</summary>
     private readonly Dictionary<int, NewObject> _savedAdds = [];
 
-    /// <summary>
-    /// Objects of the save read that the editor deleted where its save wrote another of their kind (a piece claimed,
-    /// an object turned in place), whose place in the game's save went to the original: that other object, by the
-    /// original's id.
-    /// </summary>
-    private readonly Dictionary<int, NewObject> _contested = [];
-
     /// <summary>Reads the chunk files of the save read, each once.</summary>
     private readonly Func<ObjectRef, byte[]> _oldSource;
 
@@ -120,8 +117,8 @@ public sealed class EditReplay
     /// <summary>The zones taken as they are (no clash).</summary>
     private readonly List<ZoneEdit> _zones = [];
 
-    /// <summary>The zones both changed: the editor's, as read, as the game has it.</summary>
-    private readonly List<(ZoneEdit Mine, ZoneEdit Read, ZoneEdit Game)> _zoneClashes = [];
+    /// <summary>The zones both changed: the editor's, as read, as the editor's save wrote it (else as read), as the game has it.</summary>
+    private readonly List<(ZoneEdit Mine, ZoneEdit Read, ZoneEdit Last, ZoneEdit Game)> _zoneClashes = [];
 
     /// <summary>Objects of the game's save to delete whatever is chosen.</summary>
     private readonly List<int> _deletes = [];
@@ -203,7 +200,7 @@ public sealed class EditReplay
             }
             else
             {
-                _zoneClashes.Add((mine, was, now));
+                _zoneClashes.Add((mine, was, last, now));
                 _clashes.Add(new Clash(ReplayClash.Ground, 0, new Vector3(key.ZoneX * 64f, 0f, key.ZoneZ * 64f), false));
             }
         }
@@ -235,27 +232,36 @@ public sealed class EditReplay
     {
         var moves = added.Where(n => !n.Fresh && n.SourceId is int s && s >= 0 && deleted.Contains(s))
             .GroupBy(n => n.SourceId!.Value).ToDictionary(g => g.Key, g => g.ToList());
+        var moved = moves.Values.SelectMany(m => m).ToHashSet();
         var current = added.ToHashSet();
         Contest(deleted, saved);
-        // Added, saved, and put where a deleted object of its kind was, then left to the original: added with the
-        // original's clash (kept with the editor's change, dropped with the game's), not on its own.
+        // Objects added in place of one of the save read, or of one the editor's save wrote (an edited or claimed copy
+        // where the original stood): settled with that one, not on their own.
         var attached = new HashSet<NewObject>();
-        // Deleted: gone from the game's save too (the game removed it, or the editor's save did), nothing to do.
+        var pending = added.Where(n => !moved.Contains(n) && !InGameSave(n)).ToList();
+        var inPlace = new Dictionary<(int, long, long, long), Queue<NewObject>>();
+        foreach (var n in pending.Where(n => n.SourceId == null).OrderByDescending(n => n.Id))
+        {
+            var key = ObjectPlaces.Key(n.Prefab, n.Position);
+            if (!inPlace.TryGetValue(key, out var q))
+            {
+                inPlace[key] = q = new Queue<NewObject>();
+            }
+            q.Enqueue(n);
+        }
+        List<NewObject> Replacing(int prefab, Vector3 position)
+        {
+            List<NewObject> with = inPlace.TryGetValue(ObjectPlaces.Key(prefab, position), out var q) && q.Count > 0 ? [q.Dequeue()] : [];
+            attached.UnionWith(with);
+            return with;
+        }
+        // Deleted (an object put in its place with it): gone from the game's save too (the game removed it, or the
+        // editor's save did), nothing to delete.
         foreach (int s in deleted.Where(s => !moves.ContainsKey(s)).Order())
         {
-            if (Find(s) is int y)
-            {
-                if (SameData(s, y) is true)
-                {
-                    _deletes.Add(y);
-                }
-                else
-                {
-                    List<NewObject> with = _contested.TryGetValue(s, out var n) && current.Contains(n) && !InGameSave(n) ? [n] : [];
-                    attached.UnionWith(with);
-                    Clashing(new Item(ReplayClash.Changed, s, y, [.. with.Select(Remapped)], with));
-                }
-            }
+            var o = _old.ObjectRefs[s];
+            var with = Replacing(o.Prefab, o.Position);
+            Settle(s, o.Prefab, o.Position, Find(s), y => SameData(s, y), with, goneSaysNothing: saved.Deleted.Contains(s));
         }
         // Deleted, saved, then undone: back, unless the game's save has it (made from the save the game had).
         foreach (int s in saved.Deleted.Where(s => !deleted.Contains(s)).Order())
@@ -265,29 +271,27 @@ public sealed class EditReplay
                 _comeBack.Add(s);
             }
         }
-        // Added, saved, then deleted or changed: gone from the game's save too.
-        foreach (var n in saved.Added.Where(n => !current.Contains(n)))
+        // Added, saved, then deleted or changed (changed: its new version in its place): as a deletion of what the
+        // editor's save wrote.
+        foreach (var n in saved.Added.Where(n => !current.Contains(n)).OrderByDescending(n => n.Id))
         {
-            if (FindSaved(n.Id) is int y)
-            {
-                _deletes.Add(y);
-            }
+            var with = Replacing(n.Prefab, n.Position);
+            Settle(n.Id, n.Prefab, n.Position, FindSaved(n.Id), y => WrittenBy(n) is { } was && NewData(y) is { } now ? was.AsSpan().SequenceEqual(now) : null, with, goneSaysNothing: true);
         }
-        var moved = moves.Values.SelectMany(m => m).ToHashSet();
-        foreach (var n in added.Where(n => !moved.Contains(n) && !attached.Contains(n) && !InGameSave(n)))
+        foreach (var n in pending.Where(n => !attached.Contains(n)))
         {
             _adds.Add(Remapped(n));
         }
         foreach (var (s, copies) in moves.OrderBy(m => m.Key))
         {
-            var pending = copies.Where(n => !InGameSave(n)).ToList();
-            if (pending.Count == 0)
+            var left = copies.Where(n => !InGameSave(n)).ToList();
+            if (left.Count == 0)
             {
                 continue;
             }
             if (Find(s) is int y)
             {
-                List<NewObject> mine = [.. pending.Select(n => n with { SourceId = y })];
+                List<NewObject> mine = [.. left.Select(n => n with { SourceId = y })];
                 if (SameData(s, y) is true)
                 {
                     _adds.AddRange(mine);
@@ -295,12 +299,17 @@ public sealed class EditReplay
                 }
                 else
                 {
-                    Clashing(new Item(ReplayClash.Changed, s, y, mine, pending));
+                    Clashing(new Item(ReplayClash.Changed, s, y, mine, left));
                 }
+            }
+            else if (saved.Deleted.Contains(s))
+            {
+                // Moved, saved, and moved again: the editor's save removed it, not the game.
+                _adds.AddRange(left.Select(n => Restored(n, s)));
             }
             else
             {
-                Clashing(new Item(ReplayClash.Removed, s, null, [.. pending.Select(n => Restored(n, s))], pending));
+                Clashing(new Item(ReplayClash.Removed, s, null, [.. left.Select(n => Restored(n, s))], left));
             }
         }
         _gone.AddRange(gone.Select(Remapped));
@@ -308,6 +317,46 @@ public sealed class EditReplay
         // bring it back).
         var goneIds = gone.Select(n => n.Id).ToHashSet();
         _gone.AddRange(saved.Added.Where(n => !current.Contains(n) && FindSaved(n.Id) == null && !goneIds.Contains(n.Id)).Select(Remapped));
+    }
+
+    /// <summary>
+    /// An object the editor deleted, with what it put in its place: deleted (and replaced) when the game has it as the
+    /// editor knew it; a clash when the game changed it, or removed it while the editor put another in its place.
+    /// </summary>
+    /// <param name="old">The object as the editor knew it (an id of the save read, or an added object's own id).</param>
+    /// <param name="prefab">Its prefab hash.</param>
+    /// <param name="position">Where it stood.</param>
+    /// <param name="newer">The object in the game's save (null: not there).</param>
+    /// <param name="same">Whether the game's object has the data the editor knew (null: cannot tell).</param>
+    /// <param name="with">What the editor put in its place.</param>
+    /// <param name="goneSaysNothing">
+    /// Its absence from the game's save is no clash: the editor's own save removed it, or wrote it (the game may have
+    /// saved from the save it had).
+    /// </param>
+    private void Settle(int old, int prefab, Vector3 position, int? newer, Func<int, bool?> same, List<NewObject> with, bool goneSaysNothing)
+    {
+        List<NewObject> mine = [.. with.Select(Remapped)];
+        if (newer is int y)
+        {
+            bool? unchanged = same(y);
+            if (unchanged is true)
+            {
+                _deletes.Add(y);
+                _adds.AddRange(mine);
+            }
+            else
+            {
+                Clashing(new Item(ReplayClash.Changed, old, y, mine, with), prefab, position, unchanged == null);
+            }
+        }
+        else if (with.Count > 0 && !goneSaysNothing)
+        {
+            Clashing(new Item(ReplayClash.Removed, old, null, mine, with), prefab, position, false);
+        }
+        else
+        {
+            _adds.AddRange(mine);
+        }
     }
 
     /// <summary>
@@ -346,7 +395,6 @@ public sealed class EditReplay
             {
                 _found[s] = y;
                 _found[n.Id] = _places.Take(n.Prefab, n.Position);
-                _contested[s] = n;
             }
         }
     }
@@ -374,12 +422,22 @@ public sealed class EditReplay
         return Written(_newSource(o)[(int)o.Start..(int)o.End], o.File.WorldVersion);
     }
 
-    /// <summary>Notes an object change that clashes.</summary>
+    /// <summary>Notes an object change of an object of the save read that clashes.</summary>
     private void Clashing(Item item)
     {
-        _items.Add(item);
         var o = _old.ObjectRefs[item.Old];
-        _clashes.Add(new Clash(item.Kind, o.Prefab, o.Position, _unread.Contains(item.Old)));
+        Clashing(item, o.Prefab, o.Position, _unread.Contains(item.Old));
+    }
+
+    /// <summary>Notes an object change that clashes.</summary>
+    /// <param name="item">The change.</param>
+    /// <param name="prefab">The object's prefab hash.</param>
+    /// <param name="position">Where it stood.</param>
+    /// <param name="unsure">Whether the game may not have changed it (the data cannot be compared).</param>
+    private void Clashing(Item item, int prefab, Vector3 position, bool unsure)
+    {
+        _items.Add(item);
+        _clashes.Add(new Clash(item.Kind, prefab, position, unsure));
     }
 
     /// <summary>An added object the editor's save wrote, still as written, found in the game's save (made from that one).</summary>
@@ -560,11 +618,11 @@ public sealed class EditReplay
             edits.Put(zone.Clone());
         }
         bool ground = _zoneClashes.Count > 0 && keepMine(ReplayClash.Ground);
-        foreach (var (mine, read, game) in _zoneClashes)
+        foreach (var (mine, read, last, game) in _zoneClashes)
         {
             if (ground)
             {
-                edits.Put(Merged(mine, read, game));
+                edits.Put(Merged(mine, read, last, game));
             }
             else
             {
@@ -601,7 +659,8 @@ public sealed class EditReplay
         edits.SetDeleted(deletes, true);
         edits.KeepGone(gone);
         edits.AddObjects(adds);
-        foreach (var reset in _resets)
+        // A zone left to the game's ground is not reset either (a reset there would take that ground away).
+        foreach (var reset in _resets.Where(r => !gameGround.Contains((r.X, r.Z))))
         {
             edits.SetReset(reset, true);
         }
@@ -609,31 +668,28 @@ public sealed class EditReplay
     }
 
     /// <summary>
-    /// A zone both changed, the editor's kept: the editor's height and paint where it changed them since the save read,
-    /// the game's elsewhere; No limit ground is the editor's alone.
+    /// A zone both changed, the editor's kept: the editor's height and paint where it changed them, the game's
+    /// elsewhere; No limit ground is the editor's alone. A point is the editor's change where it differs from what the
+    /// game's save started from there: the editor's save, where the game still has what that save wrote (an undo since
+    /// that save counts), else the save read.
     /// </summary>
     /// <param name="mine">The editor's zone.</param>
     /// <param name="read">The zone as the editor read it.</param>
+    /// <param name="last">The zone as the editor's save wrote it (as read, when it wrote none).</param>
     /// <param name="game">The zone as the game saved it.</param>
-    private static ZoneEdit Merged(ZoneEdit mine, ZoneEdit read, ZoneEdit game)
+    private static ZoneEdit Merged(ZoneEdit mine, ZoneEdit read, ZoneEdit last, ZoneEdit game)
     {
-        const float Same = 1e-4f;
         var m = game.Clone();
         for (int i = 0; i < EditStore.Cells; i++)
         {
-            if (mine.Modified[i] != read.Modified[i]
-                || mine.Modified[i] && (MathF.Abs(mine.Level[i] - read.Level[i]) > Same || MathF.Abs(mine.Smooth[i] - read.Smooth[i]) > Same))
+            var from = SameHeight(game, last, i) ? last : read;
+            if (!SameHeight(mine, from, i))
             {
                 m.Modified[i] = mine.Modified[i];
                 m.Level[i] = mine.Level[i];
                 m.Smooth[i] = mine.Smooth[i];
             }
-            bool paint = mine.PaintModified[i] != read.PaintModified[i];
-            for (int c = 0; c < 4 && !paint && mine.PaintModified[i]; c++)
-            {
-                paint = MathF.Abs(mine.Paint[i * 4 + c] - read.Paint[i * 4 + c]) > Same;
-            }
-            if (paint)
+            if (!SamePaint(mine, SamePaint(game, last, i) ? last : read, i))
             {
                 m.PaintModified[i] = mine.PaintModified[i];
                 Array.Copy(mine.Paint, i * 4, m.Paint, i * 4, 4);
@@ -641,5 +697,29 @@ public sealed class EditReplay
             m.Lift[i] = mine.Lift[i];
         }
         return m;
+    }
+
+    /// <summary>The largest difference two values of a point can have and be the same (as ZoneEdit.SameGround allows).</summary>
+    private const float Same = 1e-4f;
+
+    /// <summary>Whether two zones have a point's height change alike (whether it is changed, its level and smoothing).</summary>
+    private static bool SameHeight(ZoneEdit a, ZoneEdit b, int i) =>
+        a.Modified[i] == b.Modified[i] && (!a.Modified[i] || MathF.Abs(a.Level[i] - b.Level[i]) <= Same && MathF.Abs(a.Smooth[i] - b.Smooth[i]) <= Same);
+
+    /// <summary>Whether two zones have a point's paint alike (whether it is painted, and its four values).</summary>
+    private static bool SamePaint(ZoneEdit a, ZoneEdit b, int i)
+    {
+        if (a.PaintModified[i] != b.PaintModified[i])
+        {
+            return false;
+        }
+        for (int c = 0; c < 4 && a.PaintModified[i]; c++)
+        {
+            if (MathF.Abs(a.Paint[i * 4 + c] - b.Paint[i * 4 + c]) > Same)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 }
