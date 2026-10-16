@@ -130,6 +130,19 @@ public class MapDataTests
     }
 
     [Fact]
+    public void ACloseUpOfOlderEditsDoesNotDropNewerOnes()
+    {
+        using var w = new TempWorld();
+        var (_, terrain, edits) = Open(w);
+        var map = new MapData(terrain, edits);
+        var newer = map.Detail(288, 288, 64, 2);
+        // A build for older edits (one that ended late) is given but not kept.
+        var older = map.Detail(352, 288, 64, 1);
+        Assert.NotSame(older, map.Detail(352, 288, 64, 1));
+        Assert.Same(newer, map.Detail(288, 288, 64, 2));
+    }
+
+    [Fact]
     public void LayersAreWrittenAsHalfFloatsThenThreeColourLayers()
     {
         var l = new MapData.Layers(2, 1);

@@ -232,6 +232,12 @@ public sealed class MapData
         Layers layers = BuildDetail(x0, z0, size);
         lock (_detailsLock)
         {
+            // A build for older edits that ends after one for newer edits is given but not kept: the newer windows
+            // stay.
+            if (_details.Exists(d => d.Key.EditVersion > editVersion))
+            {
+                return layers;
+            }
             // The edits' version only goes up: a window of another one is never asked for again.
             _details.RemoveAll(d => d.Key.EditVersion != editVersion || d.Key == key);
             _details.Add((key, layers));
