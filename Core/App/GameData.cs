@@ -122,7 +122,7 @@ public static class GameData
             }
             try
             {
-                ModCatalogue.Load();
+                ModCatalogue.Load(PrefabNames(read["prefabs"]));
                 foreach (var kind in Kinds)
                 {
                     Use(kind, read[kind.Name]);
@@ -203,9 +203,7 @@ public static class GameData
             {
                 return 0;
             }
-            using var doc = JsonDocument.Parse(prefabs);
-            var vanilla = doc.RootElement.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
-            var (mods, changed) = ModCatalogue.Take(report, vanilla);
+            var (mods, changed) = ModCatalogue.Take(report, PrefabNames(prefabs));
             if (changed)
             {
                 foreach (var kind in Kinds.Where(k => Own.ContainsKey(k.Name)))
@@ -216,6 +214,13 @@ public static class GameData
             }
             return mods;
         }
+    }
+
+    /// <summary>The prefab names in the game's own prefabs (JSON, by name).</summary>
+    private static HashSet<string> PrefabNames(string prefabs)
+    {
+        using var doc = JsonDocument.Parse(prefabs);
+        return doc.RootElement.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
     }
 
     /// <summary>

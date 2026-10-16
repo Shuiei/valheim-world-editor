@@ -155,15 +155,19 @@ public static class ModCatalogue
     public static bool IsModded(string prefab) => _data.Prefabs.ContainsKey(prefab);
 
     /// <summary>
-    /// The kept catalogue in use (nothing when there is none or it cannot be read).
+    /// The kept catalogue in use (nothing when there is none or it cannot be read), without the prefabs that are the
+    /// game's own now (a game update made them vanilla).
     /// </summary>
-    public static void Load()
+    /// <param name="vanilla">The game's own prefab names (GameData's prefabs).</param>
+    public static void Load(IReadOnlySet<string> vanilla)
     {
         lock (Writing)
         {
             try
             {
-                Use(File.Exists(FilePath) ? Read(File.ReadAllText(FilePath)) : Empty());
+                var kept = File.Exists(FilePath) ? Read(File.ReadAllText(FilePath)) : Empty();
+                DropVanilla(kept, vanilla);
+                Use(kept);
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
             {
@@ -186,7 +190,8 @@ public static class ModCatalogue
 
     /// <summary>
     /// Takes a game's report (GET /catalogue): its prefabs that are not the game's own (<paramref name="vanilla"/>)
-    /// join those known, replacing their older entries, and the whole is kept. Entries not in the editor's format
+    /// join those known, replacing their older entries, those known that are the game's own now are left out, and
+    /// the whole is kept. Entries not in the editor's format
     /// are left out.
     /// </summary>
     /// <param name="report">The bridge's JSON.</param>
@@ -218,6 +223,7 @@ public static class ModCatalogue
                     changed = true;
                 }
             }
+            changed |= DropVanilla(next, vanilla);
             foreach (var (item, name) in got.Items)
             {
                 if (next.Costs.Values.Any(c => Uses(c, item)) && next.Items.GetValueOrDefault(item) != name)
@@ -234,6 +240,25 @@ public static class ModCatalogue
             }
             return (mods, changed);
         }
+    }
+
+    /// <summary>
+    /// Leaves out the prefabs that are the game's own (a game update made a mod's name vanilla), with all that is
+    /// known of them; whether any was there.
+    /// </summary>
+    private static bool DropVanilla(Data d, IReadOnlySet<string> vanilla)
+    {
+        bool dropped = false;
+        foreach (string name in d.Prefabs.Keys.Where(vanilla.Contains).ToList())
+        {
+            d.Prefabs.Remove(name);
+            d.Pieces.Remove(name);
+            d.Costs.Remove(name);
+            d.Mods.Remove(name);
+            d.Models.Remove(name);
+            dropped = true;
+        }
+        return dropped;
     }
 
     /// <summary>

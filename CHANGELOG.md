@@ -131,6 +131,9 @@ the plugin is unchanged in versions without that part.
 - **Mod models taken while a game's catalogue came in could be lost.** ModCatalogue.TakeModels changed what is known
   without the lock Take holds, so one overlapping the other dropped its update; both (and Load, Forget) now take one
   lock, and the mod catalogue, manifests and extensions count their generations with Interlocked.
+- **A prefab a game update made the game's own still showed under Mods and as "From a mod".** The kept mod catalogue
+  never dropped an entry; Load and Take now leave out the names that are the game's own prefabs, with their pieces,
+  costs, mods and models.
 
 ### Changed
 

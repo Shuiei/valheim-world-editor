@@ -92,7 +92,7 @@ public sealed class ModCatalogueTests : IDisposable
         ModCatalogue.Take(Report(), Vanilla);
         ModCatalogue.Forget();
 
-        ModCatalogue.Load();
+        ModCatalogue.Load(Vanilla);
 
         Assert.True(File.Exists(ModCatalogue.FilePath));
         Assert.Equal(2, ModCatalogue.Count);
@@ -100,6 +100,26 @@ public sealed class ModCatalogueTests : IDisposable
         // Only the items the mods' costs take are kept.
         var kept = JsonNode.Parse(File.ReadAllText(ModCatalogue.FilePath))!;
         Assert.Equal(["BFP_Plank"], kept["cost"]!["items"]!.AsObject().Select(kv => kv.Key));
+    }
+
+    [Fact]
+    public void PrefabsThatBecameTheGamesOwnAreNoLongerModded()
+    {
+        ModCatalogue.Take(Report(), Vanilla);
+        HashSet<string> updated = ["wood_fence", "bfp_finewall"];
+
+        // Read back after a game update: left out at once, though the kept file still has it.
+        ModCatalogue.Forget();
+        ModCatalogue.Load(updated);
+        Assert.False(ModCatalogue.IsModded("bfp_finewall"));
+        Assert.Null(ModCatalogue.ModOf("bfp_finewall"));
+
+        // The next report leaves it out of the kept file too.
+        ModCatalogue.Load(Vanilla);
+        Assert.True(ModCatalogue.Take("""{"prefabs":{}}""", updated).Changed);
+        Assert.Equal(["vfx_bfp_hit"], ModCatalogue.Names);
+        ModCatalogue.Load(Vanilla);
+        Assert.False(ModCatalogue.IsModded("bfp_finewall"));
     }
 
     [Fact]
@@ -199,7 +219,7 @@ public sealed class ModCatalogueTests : IDisposable
         ModCatalogue.Take(Report(), Vanilla);
         File.WriteAllText(ModCatalogue.FilePath, "{ broken");
 
-        ModCatalogue.Load();
+        ModCatalogue.Load(Vanilla);
 
         Assert.Equal(0, ModCatalogue.Count);
     }
@@ -259,7 +279,7 @@ public sealed class ModCatalogueTests : IDisposable
         Assert.Equal(before + 1, ModCatalogue.Generation);
         ModCatalogue.TakeModels($$"""{"bfp_finewall":{{ModelJson("1,1,1")}}}""");
         Assert.Equal(before + 2, ModCatalogue.Generation);
-        ModCatalogue.Load();
+        ModCatalogue.Load(Vanilla);
         ModCatalogue.Forget();
         Assert.Equal(before + 4, ModCatalogue.Generation);
     }
@@ -365,7 +385,7 @@ public sealed class ModCatalogueTests : IDisposable
         Assert.Equal(1, ModCatalogue.TakeModels(models));
         Assert.Equal(written, File.GetLastWriteTimeUtc(ModCatalogue.FilePath));
         ModCatalogue.Forget();
-        ModCatalogue.Load();
+        ModCatalogue.Load(Vanilla);
 
         Assert.Equal("wall", ModCatalogue.ModelOf("bfp_finewall")!.Parts[0].Mesh);
     }
