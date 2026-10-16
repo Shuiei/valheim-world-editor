@@ -3,7 +3,8 @@ namespace TerrainEditor.Desktop;
 /// <summary>
 /// Natural-looking detail: seeded gradient noise layered at several scales (fractal noise), the same family of noise
 /// Valheim's own terrain is built from. The web editor's noise2 and fbm (editor.html), with the same seeding, so a seed
-/// gives the same pattern in both.
+/// gives the same pattern in both; this one works in float where the web editor works in double, so the values differ
+/// in their last digits, more so far from the origin.
 /// </summary>
 public sealed class Noise
 {
@@ -19,7 +20,8 @@ public sealed class Noise
     /// <summary>
     /// A noise whose pattern is fixed by <paramref name="seed"/>.
     /// </summary>
-    /// <param name="seed">Any int; the same seed gives the same pattern here and in the web editor.</param>
+    /// <param name="seed">Any int; the same seed gives the same pattern here and (to float precision) in the web
+    /// editor.</param>
     public Noise(int seed)
     {
         Seed = seed;
