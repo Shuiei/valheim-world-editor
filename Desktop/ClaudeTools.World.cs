@@ -30,7 +30,12 @@ public sealed partial class ClaudeTools
         {
             return "what is kinds, items or texts.";
         }
-        var world = await OnUi(() => _w.World);
+        // The open area and how often its world was read, to tell after the search whether its ids still fit.
+        var (world, scene, reads) = await OnUi(() =>
+        {
+            var open = _w.InWorkshop ? null : _w.Session?.Scene;
+            return (_w.World, open, open?.Reads ?? 0);
+        });
         if (world == null)
         {
             return "Open a world first (open_world).";
@@ -52,9 +57,14 @@ public sealed partial class ClaudeTools
             {
                 return "The world changed while it was searched: search again.";
             }
+            // Another area opened, or the world read again after a save (the objects added before it have saved ids
+            // now, and new ones take the added ids again): the hits' ids would be given to other objects.
+            if ((_w.InWorkshop ? null : _w.Session?.Scene) != scene || scene != null && scene.Reads != reads)
+            {
+                return "The open area changed while it was searched (another area, or the world saved): search again.";
+            }
             // The open area's things by world id, to give the hits there their ids.
             var inArea = new Dictionary<int, int>();
-            var scene = _w.InWorkshop ? null : _w.Session?.Scene;
             if (scene != null)
             {
                 lock (scene.Things)
