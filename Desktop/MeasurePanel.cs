@@ -23,6 +23,10 @@ public sealed class MeasurePanel
     /// </summary>
     private readonly Grid _rows = new() { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12, RowSpacing = 3 };
     /// <summary>
+    /// The rows of <see cref="_rows"/> made so far, in order: those past the values shown are hidden.
+    /// </summary>
+    private readonly List<(TextBlock Label, SelectableTextBlock Value)> _rowsMade = [];
+    /// <summary>
     /// The 3D view whose tape the panel shows.
     /// </summary>
     private readonly GlView _view;
@@ -76,21 +80,40 @@ public sealed class MeasurePanel
         float water = _view.Scene?.Water ?? 30;
         var (hint, rows) = _view.Tape.Describe(_view.GroundHeight, water);
         _hint.Text = hint;
-        _rows.Children.Clear();
-        _rows.RowDefinitions.Clear();
         Shown.Clear();
+        int r = 0;
         foreach (var (label, value) in rows)
         {
-            _rows.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            int r = _rows.RowDefinitions.Count - 1;
-            var l = new TextBlock { Text = label, FontSize = 12, Foreground = Ui.Muted };
-            var v = new SelectableTextBlock { Text = value, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Right };
-            Grid.SetRow(l, r);
-            Grid.SetRow(v, r);
-            Grid.SetColumn(v, 1);
-            _rows.Children.Add(l);
-            _rows.Children.Add(v);
+            // The rows are made once and kept: the tape changes at the mouse's pace.
+            if (r == _rows.RowDefinitions.Count)
+            {
+                _rows.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            }
+            if (r == _rowsMade.Count)
+            {
+                var l = new TextBlock { FontSize = 12, Foreground = Ui.Muted };
+                var v = new SelectableTextBlock { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Right };
+                Grid.SetRow(l, r);
+                Grid.SetRow(v, r);
+                Grid.SetColumn(v, 1);
+                _rows.Children.Add(l);
+                _rows.Children.Add(v);
+                _rowsMade.Add((l, v));
+            }
+            var (labelBlock, valueBlock) = _rowsMade[r++];
+            labelBlock.Text = label;
+            valueBlock.Text = value;
+            labelBlock.IsVisible = valueBlock.IsVisible = true;
             Shown[label] = value;
+        }
+        // Rows not needed now are hidden, kept for the next time, and their grid rows go (no spacing left for them).
+        for (int k = r; k < _rowsMade.Count; k++)
+        {
+            _rowsMade[k].Label.IsVisible = _rowsMade[k].Value.IsVisible = false;
+        }
+        while (_rows.RowDefinitions.Count > r)
+        {
+            _rows.RowDefinitions.RemoveAt(_rows.RowDefinitions.Count - 1);
         }
     }
 }

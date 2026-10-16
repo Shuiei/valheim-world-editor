@@ -1,4 +1,5 @@
 using System.Numerics;
+using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -88,6 +89,11 @@ public class MeasureToolTests
         s.Shape(64, 64, Formula.Compile("d < 3 ? 6 : 0", ["d"]), 3, 0, "step");
         Dispatcher.UIThread.RunJobs();
         Assert.Equal("30.0 / 36.0 m", w.MeasurePanel.Shown["Lowest / highest"]);
+        // Shown again (the tape changes at the mouse's pace): the same rows, their text set again.
+        var rows = (Grid)((StackPanel)((Border)w.MeasurePanel.Card).Child!).Children[2];
+        var made = rows.Children.ToList();
+        w.MeasurePanel.Refresh();
+        Assert.Equal(made, rows.Children);
         w.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
         Assert.Null(w.View.Tape.A);
         Assert.Empty(w.MeasurePanel.Shown);
