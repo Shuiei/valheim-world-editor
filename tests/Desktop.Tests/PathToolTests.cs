@@ -195,6 +195,21 @@ public class PathToolTests
     }
 
     [Fact]
+    public void ACaveIsDugAlongTheLineItWasPlannedOn()
+    {
+        var s = TestScenes.Flat(2);
+        var p = Line((20, 64), (60, 64));
+        p.Act = PathTool.Action.Cave;
+        p.Width = 4;
+        var cave = p.PlanCave(s.Ground);
+        // The line grows after the plan: the plan's line is dug, not the new one.
+        p.Points.Add(new Vector2(110, 64));
+        var (touched, _, _) = p.Apply(s.Ground, s.Brush, s.Scene.Water, null, cave);
+        Assert.NotEmpty(touched);
+        Assert.DoesNotContain(touched, i => i % s.Ground.W > 70);
+    }
+
+    [Fact]
     public void ThingsAreInTheTrenchOnlyNearItsDeepPoints()
     {
         List<(Vector2 P, int Seg)> curve = [.. Enumerable.Range(0, 41).Select(i => (new Vector2(10 + i, 20), 0))];

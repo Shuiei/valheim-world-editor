@@ -303,11 +303,12 @@ public sealed class PathTool
     /// <param name="cave">Cave: the cave worked out before the ground changes; worked out here when not given.</param>
     public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, bool Clamped) Apply(Ground g, Brush b, float water, Func<int, float>? mask = null, CavePlan? cave = null)
     {
-        var curve = Curve();
         if (Act == Action.Cave)
         {
             cave ??= PlanCave(g);
         }
+        // A cave follows the line it was planned on: its floors are by that curve's points.
+        var curve = cave?.Curve ?? Curve();
         var touched = new List<int>();
         bool clamped = false;
         if (curve.Count < 2)
