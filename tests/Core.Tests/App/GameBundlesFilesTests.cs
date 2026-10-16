@@ -87,13 +87,25 @@ public class GameBundlesFilesTests
         odd.Assets.Add(UnityClass.AssetBundle, UnityField.Struct("AssetBundle", "Base", UnityField.Text("m_Name"), UnityField.Of("int", "m_Container")),
             new Fields { ["m_Name"] = "b_table", ["m_Container"] = 1 });
         var usual = game.Bundle("c_models");
-        usual.Prefab("Rock", r => r.Mono("ZNetView", new Fields { ["m_persistent"] = true }));
+        var mats = game.Bundle("d_materials");
+        long stone = TestAssets.Material(mats, "stone");
+        long quad = Quad("quad").Add(usual);
+        usual.Prefab("Rock", r =>
+        {
+            r.Mono("ZNetView", new Fields { ["m_persistent"] = true });
+            r.Renderer(Fields.Ref(quad), [usual.RefTo(mats, stone)]);
+        });
         game.Save();
         new UnityFsWriter().Resource("CAB-a_odd.resS", [1, 2, 3, 4]).Save(Path.Combine(game.BundlesDir, "a_odd"));
+        File.WriteAllText(Path.Combine(game.BundlesDir, "readme.txt"), "not a bundle");
+        string cache = Path.Combine(game.Root, "index.json");
 
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = new GameBundles(game.BundlesDir, cache);
         Assert.Equal(["Rock"], bundles.Index.Keys);
         Assert.Equal("c_models", bundles.Index["Rock"].Bundle);
+        // The index read from its kept file: a reference into another bundle is followed over the same files.
+        var again = new GameBundles(game.BundlesDir, cache);
+        Assert.Equal(new GameBundles.Where("d_materials", stone), again.LoadModel("Rock", room: false)!.Parts[0].Material);
     }
 
     [Theory]
