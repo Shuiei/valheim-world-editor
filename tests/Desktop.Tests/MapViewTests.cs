@@ -65,8 +65,14 @@ public class MapViewTests
         Assert.NotSame(chosen, zoomed);
         Assert.Equal(chosen.Length, zoomed.Length);
         // A player online: made again with them.
-        map.Players = [("Ragnar", 0, 0)];
-        Assert.Equal(zoomed.Length + 2 * 12 * 3 * 6, map.PinShapes().Length);
+        List<(string, float, float)> players = [("Ragnar", 0, 0)];
+        map.Players = players;
+        float[] withPlayer = map.PinShapes();
+        Assert.Equal(zoomed.Length + 2 * 12 * 3 * 6, withPlayer.Length);
+        // The list given was copied: changing it afterwards changes nothing shown.
+        players[0] = ("Ragnar", 50, 50);
+        Assert.Equal((0f, 0f), (map.Players[0].X, map.Players[0].Z));
+        Assert.Same(withPlayer, map.PinShapes());
         // New search results (a new list): made again.
         map.Pins = [];
         map.PinChosen = -1;

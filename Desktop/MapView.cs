@@ -136,13 +136,14 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     /// </summary>
     public event Action? PiecesRead;
     /// <summary>
-    /// Live: the players online, by name and world position.
+    /// Live: the players online, by name and world position. Kept as a copy of the list given, so changing that list
+    /// afterwards changes nothing (the pins' shapes are made again only when a new one is given).
     /// </summary>
-    public IReadOnlyList<(string Name, float X, float Z)> Players { get; set; } = [];
+    public IReadOnlyList<(string Name, float X, float Z)> Players { get; set => field = [.. value]; } = [];
     /// <summary>
-    /// Search results, as world points (x east, y north).
+    /// Search results, as world points (x east, y north). Kept as a copy of the list given, like <see cref="Players"/>.
     /// </summary>
-    public IReadOnlyList<Vector2> Pins { get; set; } = [];
+    public IReadOnlyList<Vector2> Pins { get; set => field = [.. value]; } = [];
     /// <summary>
     /// The chosen search result (drawn larger, with a ring), or -1 for none.
     /// </summary>
@@ -987,7 +988,8 @@ public sealed class MapView : OpenGlControlBase, IDisposable
 
     /// <summary>
     /// The shapes of <c>DrawPins</c>, as triangles (x, z then RGBA per corner): made again only when the pins, the
-    /// chosen one, the zoom or the players changed (each is given as a new list), else the last ones as they are.
+    /// chosen one, the zoom or the players changed (the pins and players are copies made when set, so a new one is a
+    /// change), else the last ones as they are.
     /// </summary>
     internal float[] PinShapes()
     {
