@@ -131,6 +131,23 @@ public class PlaceToolTests
     }
 
     [Fact]
+    public void LayersStopAtTheShapesCap()
+    {
+        var (t, _) = Tool();
+        t.Chosen.Clear();
+        t.Chosen.Add(Wall);
+        t.AutoSnap();
+        t.Mode = PlaceTool.Modes.Line;
+        // A zigzag of about 130 walls, 20 high: some 2600 placements.
+        foreach (var (x, z) in new[] { (2, 2), (126, 2), (126, 10), (2, 10), (2, 20) })
+        {
+            t.Points.Add(new Vector2(x, z));
+        }
+        t.Layers = 20;
+        Assert.Equal(PlaceTool.MaxShape, t.Preview(null).Count);
+    }
+
+    [Fact]
     public void ARectangleEndToEndSnapsToWholePieces()
     {
         var (t, _) = Tool();

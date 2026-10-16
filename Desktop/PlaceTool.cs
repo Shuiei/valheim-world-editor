@@ -869,7 +869,8 @@ public sealed class PlaceTool
     /// <param name="s">The scene.</param>
     /// <param name="pts">The run.</param>
     /// <param name="names">The kinds, used in turn.</param>
-    /// <param name="k">Pieces placed so far (picks the next kind; stops at MaxShape).</param>
+    /// <param name="k">Pieces placed so far (picks the next kind; stops at MaxShape, as does outp, layers
+    /// included).</param>
     /// <param name="outp">Where the placements go.</param>
     /// <param name="mask">The mask, or null.</param>
     /// <param name="others">Pieces already there to start from (null: no snapping).</param>
@@ -891,7 +892,7 @@ public sealed class PlaceTool
         }
         int layers = Math.Clamp(Layers, 1, 20);
         float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
-        for (; k < MaxShape; k++)
+        for (; k < MaxShape && outp.Count < MaxShape; k++)
         {
             string name = names[k % names.Count];
             sSeg = seg;
@@ -907,7 +908,7 @@ public sealed class PlaceTool
                 : MathF.Min(MathF.Min(HeightAt(s, st), HeightAt(s, q)), HeightAt(s, (st + q) / 2)) + (Elevation == Elevations.Above ? Elev : 0);
             if (px >= 1 && pz >= 1 && px <= s.W - 2 && pz <= s.H - 2 && (mask == null || mask((int)MathF.Round(pz) * s.W + (int)MathF.Round(px)) > 0))
             {
-                for (int l = 0; l < (e.H > 0.1f ? layers : 1); l++)
+                for (int l = 0; l < (e.H > 0.1f ? layers : 1) && outp.Count < MaxShape; l++)
                 {
                     outp.Add(new Placement(name, new Vector3(ox + px, bottom - e.A.Y + l * e.H, oz + pz), new Vector3(0, (yaw % 360 + 360) % 360, 0), 0, new Vector2(px, pz)));
                 }
