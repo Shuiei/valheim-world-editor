@@ -565,9 +565,13 @@ public sealed class AreaPanel
         }, DispatcherPriority.Background);
     }
 
+    /// <summary>How many times <see cref="Refresh"/> ran: a test seam (a box dragged refreshes once per batch of moves).</summary>
+    internal int Refreshes { get; private set; }
+
     /// <summary>The selection changed: its size, what is inside, the lists and the volumes.</summary>
     public void Refresh()
     {
+        Refreshes++;
         _refreshPosted = false;
         var poly = Area.Polygon();
         RefreshVolume();

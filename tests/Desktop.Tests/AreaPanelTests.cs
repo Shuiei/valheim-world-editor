@@ -602,17 +602,23 @@ public class AreaPanelTests
         using var r = new Run(select: false);
         var a = r.W.View.Area;
         a.Box = true;
+        Dispatcher.UIThread.RunJobs();
+        int before = r.P.Refreshes;
         a.Down(new Vector2(2, 2), 1);
         a.Moved(new Vector2(12, 12));
         a.Moved(new Vector2(22, 22));
-        // Not counted at each move: once the moves waiting are handled.
+        // Not counted at each move: once the moves waiting are handled, once for all of them.
         Assert.DoesNotContain("m² selected", r.P.Info.Text ?? "", StringComparison.Ordinal);
+        Assert.Equal(before, r.P.Refreshes);
         Dispatcher.UIThread.RunJobs();
         Assert.StartsWith("400 m² selected", r.P.Info.Text, StringComparison.Ordinal);
-        // Released: counted at once.
+        Assert.Equal(before + 1, r.P.Refreshes);
+        // Released: counted at once, and the refresh the last move asked for is not run again after it.
         a.Moved(new Vector2(32, 32));
         a.Up();
         Assert.StartsWith("900 m² selected", r.P.Info.Text, StringComparison.Ordinal);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(before + 2, r.P.Refreshes);
     }
 
     [AvaloniaFact]
