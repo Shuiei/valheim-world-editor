@@ -244,6 +244,8 @@ the plugin is unchanged in versions without that part.
 - **A box selection dragged along one axis was kept though it had no area: actions then changed nothing, or edited a
   line at half strength.** A box is now dropped when it is less than a metre across either way, not only when both
   ends are within a metre.
+- **Area Replace replaced nothing when the kind's name held " (" (a mod's).** The kind was cut back out of the list's
+  entry at " ("; the list's own names are now kept beside it.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

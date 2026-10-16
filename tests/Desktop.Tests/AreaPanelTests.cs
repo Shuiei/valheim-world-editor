@@ -215,6 +215,27 @@ public class AreaPanelTests
     }
 
     [AvaloniaFact]
+    public async Task ReplaceFindsAKindWhoseNameHoldsABracket()
+    {
+        // The kind was cut out of the list's entry at " (", so a mod's "Beech1 (mod)" matched nothing: 0 replaced.
+        using var r = new Run();
+        var p = new AreaPanel(r.W.View, () => r.S, k => (TerrainEditor.Terrain.PrefabCatalog.DisplayName(k) ?? k.ToString(CultureInfo.InvariantCulture)) + " (mod)");
+        string said = "";
+        p.Message += m => said = m;
+        p.Choose(AreaPanel.Act.Replace);
+        p.Refresh();
+        var from = ((IEnumerable<object>)p.FromBox.ItemsSource!).Cast<string>().ToList();
+        p.FromBox.SelectedIndex = 0;
+        int cut = from[0].LastIndexOf(" (", StringComparison.Ordinal);
+        string kind = from[0][..cut];
+        int count = int.Parse(from[0][(cut + 2)..^1], CultureInfo.InvariantCulture);
+        var to = ((IEnumerable<object>)p.ToBox.ItemsSource!).Cast<string>().ToList();
+        p.ToBox.SelectedIndex = to.FindIndex(t => t != kind);
+        await p.Apply();
+        Assert.StartsWith($"Replaced {count} object(s) with", said);
+    }
+
+    [AvaloniaFact]
     public void ReplacingAShipsRootTakesItsPartsAwayAndAPartGoesAlone()
     {
         using var r = new Run();

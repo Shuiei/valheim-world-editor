@@ -88,6 +88,9 @@ public sealed class AreaPanel
     /// </summary>
     private bool _applying;
     private readonly Func<int, string?> _nameOf;
+
+    /// <summary>The kinds' names in the Replace list, in its order (its entries add a count to them).</summary>
+    private List<string> _fromNames = [];
     /// <summary>Asks a yes/no question (the window's dialog); resetting zones goes on only on true.</summary>
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
     /// <summary>A line for the status bar.</summary>
@@ -580,6 +583,7 @@ public sealed class AreaPanel
         if (poly == null)
         {
             Info.Text = Area.Box ? "Drag on the ground to select a box." : "Click points around the area; double-click or Enter closes it. Backspace removes a point, Esc clears.";
+            _fromNames = [];
             FromBox.ItemsSource = Array.Empty<string>();
             foreach (var (k, b) in KindButtons)
             {
@@ -596,7 +600,9 @@ public sealed class AreaPanel
         {
             b.Content = $"{ObjectKinds.Label(k)} {(_view.IsShown(k) ? byKind.GetValueOrDefault(k).ToString() : "hidden")}";
         }
-        var names = inside.GroupBy(i => NameOf(s.Things[i].Prefab)).OrderByDescending(x => x.Count()).Select(x => $"{x.Key} ({x.Count()})").ToList();
+        var kinds = inside.GroupBy(i => NameOf(s.Things[i].Prefab)).OrderByDescending(x => x.Count()).ToList();
+        var names = kinds.Select(x => $"{x.Key} ({x.Count()})").ToList();
+        _fromNames = [.. kinds.Select(x => x.Key)];
         FromBox.ItemsSource = names;
         FromBox.SelectedIndex = FromBox.SelectedItem is string keep && names.Contains(keep) ? names.IndexOf(keep) : names.Count > 0 ? 0 : -1;
         _view.LassoChanged();
@@ -721,7 +727,8 @@ public sealed class AreaPanel
             case Act.Replace:
             {
                 var s = _view.Scene!;
-                string? from = (FromBox.SelectedItem as string)?.Split(" (")[0];
+                // By the list's own names: a name holding " (" (a mod's) cannot be cut back out of the entry.
+                string? from = FromBox.SelectedIndex >= 0 && FromBox.SelectedIndex < _fromNames.Count ? _fromNames[FromBox.SelectedIndex] : null;
                 int to = ToBox.SelectedIndex >= 0 && ToBox.SelectedIndex < _creatable.Count ? _creatable[ToBox.SelectedIndex] : 0;
                 if (from == null || to == 0)
                 {
