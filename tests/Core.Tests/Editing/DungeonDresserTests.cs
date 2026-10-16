@@ -173,6 +173,9 @@ public class DungeonDresserTests
                 {
                     var (u, v) = f.Local(2 * i + 1, 2 * j + 1);
                     Assert.True(f.Inside(u, v), $"{where}: its recess at ({i}, {j}) is not floor");
+                    // And within the reach the walls, corners and nooks are walked over.
+                    int a = (int)MathF.Floor((u + f.Across) / 2), b = (int)MathF.Floor((v + f.Deep) / 2);
+                    Assert.True(a >= f.A0 && a <= f.A1 && b >= f.B0 && b <= f.B1, $"{where}: its recess at ({i}, {j}) is beyond its reach");
                 }
             }
         }
