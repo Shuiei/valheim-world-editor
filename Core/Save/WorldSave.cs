@@ -62,6 +62,14 @@ public sealed class WorldSave
     /// <summary>World.m_worldGenVersion (0 for metadata older than version 26).</summary>
     public int WorldGenVersion { get; private set; }
 
+    /// <summary>
+    /// The save format at the head of the index (_main.&lt;n&gt;.chunks): the game's when it last saved the world (0 for a
+    /// live world). Chunk files the game did not write again keep the format they were written in (see
+    /// <see cref="ChunkFile.WorldVersion"/>): a world of format 41 saved by Valheim 1.0.20 has a 42 index and 41 chunk
+    /// files until their objects change.
+    /// </summary>
+    public int SaveVersion { get; internal set; }
+
     /// <summary>How many objects were read (live: grows as new objects come in).</summary>
     public int ObjectCount { get; private set; }
 
@@ -397,7 +405,7 @@ public sealed class WorldSave
         List<(ushort Chunk, byte Size, uint Version, int Count)> chunks = [];
         using (ValheimReader index = new(File.OpenRead(indexPath)))
         {
-            index.ReadUShort();
+            SaveVersion = index.ReadShort();
             index.ReadInt();
             // Each: chunk (2), size (1), version (4), object count (4).
             int count = index.ReadCount(11);

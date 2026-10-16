@@ -1,3 +1,4 @@
+using System.Numerics;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
@@ -6,8 +7,9 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// The world writer's remaining edges: a world with no terrain object to copy for new ground, a chunk file name already
-/// taken, terrain templates in an unexpected layout, a template that cannot be read, and a value that cannot read back
-/// the same (the read-back check restores the backup).
+/// taken, the save formats it keeps (41, 42 and a world the game migrated) and those it refuses, terrain templates in an
+/// unexpected layout, a template that cannot be read, and a value that cannot read back the same (the read-back check
+/// restores the backup).
 /// </summary>
 public class WorldWriterTests
 {
@@ -132,6 +134,82 @@ public class WorldWriterTests
         Assert.True(r.Saved, r.Message);
         Assert.Contains("1 deleted object(s)", r.Message);
         Assert.Contains($"({inZone.Length - 1} objects cleared)", r.Message);
+    }
+
+    /// <summary>
+    /// The save format a file of a save names: a short at the head of chunk files and the index, an int at the head of
+    /// the zone file and the marker, and after the length in the metadata.
+    /// </summary>
+    private static int Format(string path)
+    {
+        byte[] b = File.ReadAllBytes(path);
+        return Path.GetExtension(path) switch
+        {
+            ".chunk" or ".chunks" => BitConverter.ToInt16(b),
+            ".fwl2" => BitConverter.ToInt32(b, 4),
+            _ => BitConverter.ToInt32(b),
+        };
+    }
+
+    [Theory]
+    [InlineData("CITest", 41)]
+    [InlineData("CITest42", 42)]
+    public void AWorldIsSavedInTheFormatItWasReadIn(string fixture, int format)
+    {
+        // The writer took only format 41 (Valheim 1.0.20 saves 42) and wrote 41 into the index and the marker.
+        using var w = new TempWorld(fixture);
+        var world = w.Load();
+        var t = world.TerrainZones[0];
+        var (id, prefab, position, _, _) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
+        var tree = new NewObject(-1, prefab, position + new Vector3(2, 0, 2), Vector3.Zero, 0f);
+
+        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 1.5f, 500)], deleted: [id], added: [tree]);
+
+        Assert.True(r.Saved, r.Message);
+        Assert.All(r.Files, f => Assert.Equal(format, Format(f)));
+        var again = WorldSave.Load(w.Dir);
+        Assert.Equal((format, world.SaveNumber + 1), (again.SaveVersion, again.SaveNumber));
+        Assert.All(again.Chunks, c => Assert.Equal(format, c.WorldVersion));
+        Assert.Equal(1.5f, again.TerrainZones.Single(q => q.ZoneX == t.ZoneX && q.ZoneZ == t.ZoneZ).LevelDelta[500], 4);
+        Assert.DoesNotContain(again.Objects, o => o.Prefab == prefab && Vector3.Distance(o.Position, position) < 0.01f);
+        Assert.Contains(again.Objects, o => o.Prefab == prefab && Vector3.Distance(o.Position, tree.Position) < 0.01f);
+    }
+
+    [Fact]
+    public void EachChunkFileKeepsItsFormatInAWorldTheGameMigrated()
+    {
+        // Valheim 1.0.20 saves a format 41 world with a 42 index and leaves the chunk files it does not write again in
+        // 41: here the test world's ground chunk as the game left it, the rest as it wrote it.
+        using var w = new TempWorld("CITest42");
+        ChunkFile ground = w.Load().TerrainZones[0].Source!.File;
+        File.Copy(Path.Combine(Fixtures.World, "20_20__1_1.chunk"), Path.Combine(w.Dir, ground.FileName), overwrite: true);
+        var world = w.Load();
+        var t = world.TerrainZones[0];
+        Assert.Equal(41, t.Source!.File.WorldVersion);
+
+        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 1.5f, 500)]);
+
+        Assert.True(r.Saved, r.Message);
+        var again = WorldSave.Load(w.Dir);
+        Assert.Equal(42, again.SaveVersion);
+        Assert.Equal(41, again.TerrainZones[0].Source!.File.WorldVersion);
+        Assert.All(again.Chunks.Where(c => c.Chunk != ground.Chunk), c => Assert.Equal(42, c.WorldVersion));
+        Assert.Equal(1.5f, again.TerrainZones[0].LevelDelta[500], 4);
+    }
+
+    [Fact]
+    public void ASaveFormatNewerThanTheEditorKnowsIsRefused()
+    {
+        using var w = new TempWorld("CITest42");
+        var world = w.Load();
+        world.SaveVersion = WorldVersion.Latest + 1;
+        var before = Files(w.Dir);
+
+        var r = WorldWriter.Save(world, [Raised(world.TerrainZones[0].ZoneX, world.TerrainZones[0].ZoneZ, 1, 100)]);
+
+        Assert.False(r.Saved);
+        Assert.Equal("This world uses save format 43; the editor saves only formats 41 to 42.", r.Message);
+        AssertSame(before, w.Dir);
     }
 
     [Fact]

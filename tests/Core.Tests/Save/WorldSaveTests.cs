@@ -20,10 +20,28 @@ public class WorldSaveTests
         Assert.Equal("CITest", world.Name);
         Assert.Equal("GbXfypqU3G", world.SeedName);
         Assert.Equal(2, world.SaveNumber);
+        Assert.Equal(41, world.SaveVersion);
         Assert.Equal(122, world.ObjectCount);
         Assert.Single(world.TerrainZones);
         Assert.True(world.Templates.ContainsKey(Fixtures.Hash("Beech1")));
         Assert.Contains(world.Objects, o => o.Prefab == Fixtures.Hash("piece_chest_wood"));
+    }
+
+    [Fact]
+    public void ReadsTheTestWorldAsTheGameSavesItInFormat42()
+    {
+        // Valheim 1.0.20 saves worlds in format 42: the same objects, ground and names as format 41 come back.
+        WorldSave old = WorldSave.Load(Fixtures.World), world = WorldSave.Load(Fixtures.World42);
+        Assert.Equal((42, 3), (world.SaveVersion, world.SaveNumber));
+        Assert.All(world.Chunks, c => Assert.Equal(42, c.WorldVersion));
+        Assert.Equal((old.Name, old.SeedName, old.Seed, old.WorldGenVersion), (world.Name, world.SeedName, world.Seed, world.WorldGenVersion));
+        Assert.Equal(old.Objects, world.Objects);
+        Assert.Equal(old.Zones!.Generated, world.Zones!.Generated);
+        Assert.Equal(42, world.Zones.FileVersion);
+        var (a, b) = (Assert.Single(old.TerrainZones), Assert.Single(world.TerrainZones));
+        Assert.Equal((a.ZoneX, a.ZoneZ), (b.ZoneX, b.ZoneZ));
+        Assert.Equal(a.LevelDelta, b.LevelDelta);
+        Assert.Equal(a.Paint, b.Paint);
     }
 
     [Fact]

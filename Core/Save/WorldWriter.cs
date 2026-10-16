@@ -31,9 +31,6 @@ namespace TerrainEditor.Save;
 /// </summary>
 public static class WorldWriter
 {
-    /// <summary>The only save format version the writer writes (and accepts to change).</summary>
-    private const int SaveFileVersion = 41;
-
     /// <summary>Prefab hash of a player's tombstone, which zone resets never clear.</summary>
     public static readonly int TombstonePrefab = StableHash.Of("Player_tombstone");
 
@@ -102,9 +99,11 @@ public static class WorldWriter
         {
             return new Result(false, newer, null, 0, 0, skipped);
         }
-        if (world.Chunks.FirstOrDefault(c => c.WorldVersion != SaveFileVersion) is { } other)
+        // Each file keeps the format it was read in, as the game leaves the chunk files it does not write again: the
+        // formats the writer knows lay objects out the same, so objects copied or made here fit either.
+        if (UnwritableFormat(world) is int format)
         {
-            return new Result(false, $"This world uses save format {other.WorldVersion}; the writer only supports {SaveFileVersion}.", null, 0, 0, skipped);
+            return new Result(false, $"This world uses save format {format}; the editor saves only formats {WorldVersion.OldestWritable} to {WorldVersion.Latest}.", null, 0, 0, skipped);
         }
         // New ground copies a terrain object whose position is in the short format (the layout the copy patches).
         bool anyTerrain = world.TerrainZones.Any(z => z.Source != null);
@@ -243,7 +242,7 @@ public static class WorldWriter
             string main = Path.Combine(dir, $"_main.{newNumber}");
             // Each file is listed before it is written: a failure halfway removes it too.
             newFiles.AddRange([main + ".chunks", main + ".db2", main + ".fwl2", main + ".ok"]);
-            WriteIndex(main + ".chunks", [.. world.Chunks.Select(c => updated.TryGetValue(c, out var u) ? (c.Chunk, c.Size, u.Version, u.Count) : (c.Chunk, c.Size, c.Version, c.IndexCount))]);
+            WriteIndex(main + ".chunks", world.SaveVersion, [.. world.Chunks.Select(c => updated.TryGetValue(c, out var u) ? (c.Chunk, c.Size, u.Version, u.Count) : (c.Chunk, c.Size, c.Version, c.IndexCount))]);
             if (resets.Count > 0)
             {
                 var db = ZoneDb.Load(Path.Combine(dir, $"_main.{world.SaveNumber}.db2"));
@@ -261,7 +260,7 @@ public static class WorldWriter
             // The new files' names on disk too (Linux, macOS), before the marker that vouches for them.
             DirectorySync.Flush(dir);
             // 4. Commit marker, written last like the game does; its name on disk before anything old goes.
-            WriteAllBytesDurable(main + ".ok", BitConverter.GetBytes(SaveFileVersion));
+            WriteAllBytesDurable(main + ".ok", BitConverter.GetBytes(world.SaveVersion));
             DirectorySync.Flush(dir);
             // 5. Read back and compare with what was meant to be written (nothing old removed yet).
             read = WorldSave.Load(dir);
@@ -292,6 +291,14 @@ public static class WorldWriter
         string what = string.Join(", ", new[] { written + created > 0 ? $"{written + created} zone(s)" : null, deletedCount > 0 ? $"{deletedCount} deleted object(s)" : null, addedCount > 0 ? $"{addedCount} new object(s)" : null, resets.Count > 0 ? $"{resets.Count} reset zone(s) ({removed - deletedCount} objects cleared)" : null }.Where(x => x != null));
         return new Result(true, $"Saved {what} to save #{newNumber}.", null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles, Number = newNumber, Read = read };
     }
+
+    /// <summary>
+    /// A save format in the world the writer does not know (the index's first, then the chunk files' in order), or null
+    /// when it can save every file.
+    /// </summary>
+    internal static int? UnwritableFormat(WorldSave world) =>
+        !WorldVersion.Writable(world.SaveVersion) ? world.SaveVersion
+        : world.Chunks.FirstOrDefault(c => !WorldVersion.Writable(c.WorldVersion))?.WorldVersion;
 
     /// <summary>Mirrors TerrainComp.Save: a GZip-compressed ZPackage.</summary>
     public static byte[] EncodeTerrain(ZoneEdit e)
@@ -431,13 +438,13 @@ public static class WorldWriter
 
     /// <summary>
     /// A .chunks index (version, total object count, chunk count, then per chunk its id, size, file version and object
-    /// count), flushed to disk before returning: the save's and a new world's.
+    /// count) in the given save format, flushed to disk before returning: the save's and a new world's.
     /// </summary>
-    internal static void WriteIndex(string path, IReadOnlyList<(ushort Chunk, byte Size, uint Version, int Count)> chunks)
+    internal static void WriteIndex(string path, int format, IReadOnlyList<(ushort Chunk, byte Size, uint Version, int Count)> chunks)
     {
         using FileStream fs = new(path, FileMode.Create, FileAccess.Write);
         using BinaryWriter w = new(fs);
-        w.Write((short)SaveFileVersion);
+        w.Write((short)format);
         w.Write(chunks.Sum(c => c.Count));
         w.Write(chunks.Count);
         foreach (var (chunk, size, version, count) in chunks)
@@ -534,8 +541,8 @@ public static class WorldWriter
     }
 
     /// <summary>
-    /// Reads the new save back and checks it against what was meant: reset zones no longer generated, the object count,
-    /// the saved zones' ground, and every other zone's ground untouched.
+    /// Reads the new save back and checks it against what was meant: the save format kept, reset zones no longer
+    /// generated, the object count, the saved zones' ground, and every other zone's ground untouched.
     /// </summary>
     /// <returns>What is wrong, or null when the save is right.</returns>
     internal static string? Verify(string dir, WorldSave before, IReadOnlyList<ZoneEdit> saved, int created, int removed, HashSet<(int, int)> groundReset, IReadOnlyList<ZoneReset> resets) =>
@@ -544,6 +551,10 @@ public static class WorldWriter
     /// <summary><see cref="Verify"/> on the new save already read back (<paramref name="after"/>).</summary>
     private static string? Check(WorldSave after, WorldSave before, IReadOnlyList<ZoneEdit> saved, int created, int removed, HashSet<(int, int)> groundReset, IReadOnlyList<ZoneReset> resets)
     {
+        if (after.SaveVersion != before.SaveVersion)
+        {
+            return $"the index is in save format {after.SaveVersion}, not the world's {before.SaveVersion}";
+        }
         foreach (ZoneReset r in resets)
         {
             if (after.Zones == null || after.Zones.Generated.Contains(((short)r.X, (short)r.Z)))

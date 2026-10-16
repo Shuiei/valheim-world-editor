@@ -200,6 +200,18 @@ public static class WorldVersion
     /// rotation in the small form.
     /// </summary>
     public const int ChunkedSave = 40;
+
+    /// <summary>The oldest save format the writer changes (the Deep North save as the game wrote it until 1.0.17).</summary>
+    public const int OldestWritable = 41;
+
+    /// <summary>
+    /// The save format the game writes since Valheim 1.0.20, and the newest the editor reads and writes. It differs
+    /// from 41 only by the number in each file's head: the objects, the zone list and the metadata are laid out the same.
+    /// </summary>
+    public const int Latest = 42;
+
+    /// <summary>Whether the writer can change a file in this save format.</summary>
+    public static bool Writable(int version) => version is >= OldestWritable and <= Latest;
 }
 
 /// <summary>The game's string hashing, for prefab names and data keys.</summary>

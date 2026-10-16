@@ -50,7 +50,7 @@ public sealed class ObjectRef
 public static class ZdoBuilder
 {
 
-    /// <summary>A copy of the template object at a new place, in the world version 41 format.</summary>
+    /// <summary>A copy of the template object at a new place, in the save format of world versions 41 and 42.</summary>
     /// <param name="source">The chunk file bytes the template lives in.</param>
     /// <param name="template">The object to copy.</param>
     /// <param name="worldVersion">The world version the source was written in.</param>
