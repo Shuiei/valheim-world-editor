@@ -80,12 +80,11 @@ public class GameBundlesFilesTests
     public void AnUnusualBundleIsSkippedAndTheOthersIndexed()
     {
         using var game = new TestGame();
-        // A bundle that starts with a resource file (no assets file to read), and one whose table of contents is laid
-        // out otherwise (m_Container not a list): neither stops the index, and the usual bundle after them is read.
+        // A bundle that starts with a resource file (no assets file to read), and one whose table of contents is cut
+        // short (its name, then nothing): neither stops the index, and the usual bundle after them is read.
         var odd = game.Bundle("b_table");
         odd.WithContents = false;
-        odd.Assets.Add(UnityClass.AssetBundle, UnityField.Struct("AssetBundle", "Base", UnityField.Text("m_Name"), UnityField.Of("int", "m_Container")),
-            new Fields { ["m_Name"] = "b_table", ["m_Container"] = 1 });
+        odd.Assets.AddRaw(UnityClass.AssetBundle, UnityTypes.AssetBundle, [1, 0, 0, 0, (byte)'b']);
         var usual = game.Bundle("c_models");
         var mats = game.Bundle("d_materials");
         long stone = TestAssets.Material(mats, "stone");
