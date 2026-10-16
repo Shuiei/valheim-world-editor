@@ -122,7 +122,13 @@ public static class Uplift
     /// <summary>A zone the save has room for (a chunk file: what WorldWriter needs); the running game takes any.</summary>
     public static bool Generated(WorldSave world, int zx, int zz) => world.IsLive || ChunkMath.Find(world.Chunks, zx, zz) != null;
 
-    /// <summary>The plan for every lift waiting in the edits, or null when there is none.</summary>
+    /// <summary>How many zones beyond a lifted one its discs and their ground can reach: the margin of its block.</summary>
+    private static readonly int ReachZones = (int)MathF.Ceiling((Spacing + DiscRadius + DiscReach + 8f) / 64f);
+
+    /// <summary>
+    /// The plan for every lift waiting in the edits, or null when there is none. Lifts far apart are planned each on
+    /// its own block of zones (<see cref="Clusters"/>), never on one block spanning them all.
+    /// </summary>
     /// <param name="world">The world, for its discs, objects and generated zones.</param>
     /// <param name="terrain">The generated ground the discs are fitted on.</param>
     /// <param name="edits">The edits with the lift; not changed (see <see cref="Apply"/>).</param>
@@ -134,8 +140,45 @@ public static class Uplift
         {
             return null;
         }
+        var plans = Clusters(lifted.Select(e => (e.ZoneX, e.ZoneZ)))
+            .Select(c => c.ToHashSet())
+            .Select(c => MakeBlock(world, terrain, edits, nextId, [.. lifted.Where(e => c.Contains((e.ZoneX, e.ZoneZ)))]))
+            .ToList();
+        return plans.Count == 1 ? plans[0] : new Plan([.. plans.SelectMany(p => p.Zones)], [.. plans.SelectMany(p => p.Delete)], [.. plans.SelectMany(p => p.Add)],
+            plans.Sum(p => p.Discs), plans.Sum(p => p.OldDiscs), plans.Sum(p => p.Cleared), plans.Max(p => p.Worst))
+        { Ungenerated = plans.Sum(p => p.Ungenerated) };
+    }
+
+    /// <summary>
+    /// Lifted zones in groups whose blocks (each zone and <see cref="ReachZones"/> around it) overlap or touch, in
+    /// the order first met: a group's discs and ground never reach another's block, so each is planned alone.
+    /// </summary>
+    /// <param name="zones">The lifted zones.</param>
+    internal static List<List<(int X, int Z)>> Clusters(IEnumerable<(int X, int Z)> zones)
+    {
+        var left = zones.Distinct().ToList();
+        var groups = new List<List<(int X, int Z)>>();
+        while (left.Count > 0)
+        {
+            var group = new List<(int X, int Z)> { left[0] };
+            left.RemoveAt(0);
+            for (int k = 0; k < group.Count; k++)
+            {
+                var (x, z) = group[k];
+                var near = left.Where(o => Math.Abs(o.X - x) <= 2 * ReachZones + 1 && Math.Abs(o.Z - z) <= 2 * ReachZones + 1).ToList();
+                group.AddRange(near);
+                left.RemoveAll(near.Contains);
+            }
+            groups.Add(group);
+        }
+        return groups;
+    }
+
+    /// <summary>The plan for a group of lifted zones, worked on one block: them and the zones the discs reach from them.</summary>
+    private static Plan MakeBlock(WorldSave world, ValheimGen.TerrainService terrain, EditStore edits, Func<int> nextId, List<ZoneEdit> lifted)
+    {
         // The block of zones worked on: the lifted ones and those the discs reach from them.
-        int reachZones = (int)MathF.Ceiling((Spacing + DiscRadius + DiscReach + 8f) / 64f);
+        int reachZones = ReachZones;
         int zx0 = lifted.Min(e => e.ZoneX) - reachZones, zx1 = lifted.Max(e => e.ZoneX) + reachZones;
         int zz0 = lifted.Min(e => e.ZoneZ) - reachZones, zz1 = lifted.Max(e => e.ZoneZ) + reachZones;
         var block = new Block(zx0, zz0, zx1, zz1);

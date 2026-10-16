@@ -216,4 +216,43 @@ public class UpliftTests
         Assert.All(plan.Zones.Where(e => e.ZoneX >= 16), e => Assert.False(e.HasLift));
         Assert.Contains("not generated yet", plan.Describe());
     }
+
+    [Fact]
+    public void LiftsFarApartAreGroupedApart()
+    {
+        // The working block was the box round every lifted zone: lifts at two ends of the world made one grid of
+        // billions of points. Zones whose blocks (a zone round each) overlap or touch go together, the others apart.
+        var groups = Uplift.Clusters([(0, 0), (1, 0), (100, 100), (4, 0), (8, 0), (1, 0)]);
+        Assert.Equal(3, groups.Count);
+        Assert.Equal([(0, 0), (1, 0), (4, 0)], groups[0]);
+        Assert.Equal([(100, 100)], groups[1]);
+        Assert.Equal([(8, 0)], groups[2]);
+        // A chain of near ones is one group.
+        Assert.Single(Uplift.Clusters([(0, 0), (3, 3), (6, 6), (9, 9)]));
+    }
+
+    [Fact]
+    public void TwoLiftsFarApartArePlannedAsEachAlone()
+    {
+        using var w = new TempWorld();
+        var (a, b) = ((X: 40f, Z: 30f), (X: 13 * 64f, Z: 13 * 64f));
+        var both = Open.Of(w.Load());
+        both.Lift(a.X, a.Z, Bell(a.X, a.Z, 20, 40));
+        both.Lift(b.X, b.Z, Bell(b.X, b.Z, 20, 40));
+        var plan = Uplift.Make(both.World, both.Terrain, both.Edits, both.NextId)!;
+        var alone = new List<Uplift.Plan>();
+        foreach (var (x, z) in new[] { a, b })
+        {
+            var o = Open.Of(w.Load());
+            o.Lift(x, z, Bell(x, z, 20, 40));
+            alone.Add(Uplift.Make(o.World, o.Terrain, o.Edits, o.NextId)!);
+        }
+        Assert.All(alone, p => Assert.True(p.Discs > 0, p.Describe()));
+        Assert.Equal(alone.Sum(p => p.Discs), plan.Discs);
+        Assert.Equal(alone.SelectMany(p => p.Add).Select(n => n.Position).Order(Comparer<Vector3>.Create((u, v) => (u.X, u.Z).CompareTo((v.X, v.Z)))),
+            plan.Add.Select(n => n.Position).Order(Comparer<Vector3>.Create((u, v) => (u.X, u.Z).CompareTo((v.X, v.Z)))));
+        Assert.Equal(alone.Sum(p => p.Zones.Count), plan.Zones.Count);
+        Assert.Equal(plan.Zones.Count, plan.Zones.Select(e => (e.ZoneX, e.ZoneZ)).Distinct().Count());
+        Assert.Equal(alone.Max(p => p.Worst), plan.Worst);
+    }
 }
