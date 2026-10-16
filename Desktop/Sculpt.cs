@@ -201,8 +201,12 @@ public sealed class Brush
         return d >= 1 ? 0 : Fade(Falloff, 1 - d);
     }
 
-    /// <summary>How far from the middle a point can be affected (a turned square reaches its corners).</summary>
-    public float Reach => Turnable || Shape == BrushShape.Noise ? Radius * 1.42f : Radius;
+    /// <summary>
+    /// How far from the middle a point can be affected: a turned square reaches its corners; the Noise shape reaches
+    /// 1 / (1 - 0.35 × the noise's lowest), and the noise stays above -0.9 in practice (-0.89 over 8 million samples),
+    /// so 1.5 radii.
+    /// </summary>
+    public float Reach => Shape == BrushShape.Noise ? Radius * 1.5f : Turnable ? Radius * 1.42f : Radius;
 
     /// <summary>The outline drawn on the ground: n points around the brush, as offsets from its middle.</summary>
     public List<(float X, float Z)> Outline(int n)

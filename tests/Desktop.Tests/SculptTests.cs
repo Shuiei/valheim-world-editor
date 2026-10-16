@@ -212,6 +212,26 @@ public class SculptTests
     }
 
     [Fact]
+    public void TheNoiseShapeChangesNothingPastItsReach()
+    {
+        var b = new Brush { Radius = 10, Shape = BrushShape.Noise, Noise = new Noise(7) };
+        for (int c = 0; c < 60; c++)
+        {
+            float cx = c * 37.3f, cz = c * 11.9f;
+            for (int dz = -20; dz <= 20; dz++)
+            {
+                for (int dx = -20; dx <= 20; dx++)
+                {
+                    if (MathF.Sqrt(dx * dx + dz * dz) > b.Reach)
+                    {
+                        Assert.Equal(0, b.Weight(dx, dz, cx + dx, cz + dz));
+                    }
+                }
+            }
+        }
+    }
+
+    [Fact]
     public void TheNoiseIsTheWebEditors()
     {
         // Values from the web editor's reseed(12345) and fbm (editor.html).
