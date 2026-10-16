@@ -278,6 +278,8 @@ the plugin is unchanged in versions without that part.
   as insideUnitCircle (which moved the random state on) or throwing.
 - The world generator's constructor, PlaceRivers and PlaceStreams give the thread's Random state back in a finally, as
   SeedLocations does, so a failure no longer leaves it reseeded.
+- The Claude server's host is disposed when it cannot start (its port taken), instead of being left behind at each
+  failed Apply.
 
 ## v1.45.108 — unreleased
 

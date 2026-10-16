@@ -150,7 +150,16 @@ public sealed class ClaudeServer
             await next();
         });
         app.MapMcp("/mcp");
-        await app.StartAsync();
+        try
+        {
+            await app.StartAsync();
+        }
+        catch
+        {
+            // Not started (the port taken): the host is let go before the failure goes on to the caller.
+            await app.DisposeAsync();
+            throw;
+        }
         return new ClaudeServer(app, port);
     }
 
