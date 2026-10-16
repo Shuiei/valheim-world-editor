@@ -1,3 +1,4 @@
+using System.Numerics;
 using TerrainEditor.Editing;
 using Xunit;
 
@@ -47,17 +48,21 @@ public class DungeonDresserTests
             foreach (var cells in plan.Spaces.Where(sp => sp.Room == DungeonKit.Room.Cells))
             {
                 var (dx, dz) = cells.Dir;
+                // Across (u, to the right of the way in) and deep (v) from the block's middle.
+                (float U, float V) Local(Vector3 p) => ((p.X - cells.CenterX) * dz - (p.Z - cells.CenterZ) * dx, (p.X - cells.CenterX) * dx + (p.Z - cells.CenterZ) * dz);
                 foreach (var it in o.Items.Where(i => elites.Contains(i.Prefab) && MathF.Abs(i.Position.Y - DungeonPlan.FloorY(cells.Level)) < 2))
                 {
-                    // Across (u, to the right of the way in) and deep (v) from the block's middle.
-                    float u = (it.Position.X - cells.CenterX) * dz - (it.Position.Z - cells.CenterZ) * dx;
-                    float v = (it.Position.X - cells.CenterX) * dx + (it.Position.Z - cells.CenterZ) * dz;
+                    var (u, v) = Local(it.Position);
                     if (MathF.Abs(u) < cells.Across && MathF.Abs(v) < cells.Deep - 0.5f)
                     {
                         seen++;
                         Assert.True(MathF.Abs(u) <= 2, $"seed {seed}: {it.Prefab} {u:0.0} m across, inside a cell");
                     }
                 }
+                // The aisle's torches, by the cells' front walls every 8 m, still fit beside the cells kept.
+                int torches = o.Items.Count(i => i.Prefab == biome.Torch && MathF.Abs(i.Position.Y - DungeonPlan.FloorY(cells.Level)) < 2
+                    && Local(i.Position) is var (u, v) && MathF.Abs(MathF.Abs(u) - 1.6f) < 0.05f && MathF.Abs(v) < cells.Deep);
+                Assert.True(torches >= cells.Deep / 4, $"seed {seed}: {torches} torches in a cell block {cells.Deep} m deep");
             }
         }
         Assert.True(seen > 0, "no elite in a cell block's aisle");
