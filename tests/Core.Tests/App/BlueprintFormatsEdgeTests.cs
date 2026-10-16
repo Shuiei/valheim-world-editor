@@ -78,13 +78,18 @@ public class BlueprintFormatsEdgeTests
     [Fact]
     public void TheGroundGridReachesOnlyAsFarAsTheTerrainMarks()
     {
-        // Pieces 100 m apart with one small mark between them: the grid, centred like the copy, spans the mark only.
+        // Pieces 100 m apart with one small mark near one of them: the copy is centred on the mark, its grid spans
+        // the mark only, and the pieces are placed from there, however far they are.
         var bp = BlueprintFormats.Parse("far.blueprint", string.Join("\n",
-            "#Terrain", "circle;50;0;0;1;0;0;dirt", "#Pieces", "wood_wall;0;0;0;0;0;0;0;1;", "wood_wall;0;100;0;0;0;0;0;1;"));
+            "#Terrain", "circle;20;0;0;1;0;0;dirt", "#Pieces", "wood_wall;0;0;0;0;0;0;0;1;", "wood_wall;0;3000;0;0;0;0;0;1;"));
         var clip = BlueprintFormats.ToClip(bp, _ => true, out _);
         Assert.Equal((3, 3), ((int)clip["w"]!, (int)clip["h"]!));
         Assert.Equal(0, (int)((JsonArray)clip["rel"]!)[4]!);
-        Assert.Equal(2, ((JsonArray)clip["objects"]!).Count);
+        var objects = (JsonArray)clip["objects"]!;
+        Assert.Equal([-20f, 2980f], objects.Select(o => (float)o!["dx"]!));
+        // The outline still holds everything.
+        Assert.Equal(-21f, (float)((JsonArray)clip["poly"]!)[0]!["gx"]!);
+        Assert.Equal(2981f, (float)((JsonArray)clip["poly"]!)[1]!["gx"]!);
     }
 
     [Fact]
@@ -106,6 +111,10 @@ public class BlueprintFormatsEdgeTests
         Assert.Equal(3, bp.SkippedLines);
         Assert.Empty(bp.Terrain);
         Assert.Single(bp.Pieces);
+        // A negative radius too: it would turn the mark's extents inside out.
+        bp = BlueprintFormats.Parse("neg.blueprint", string.Join("\n", "#Terrain", "circle;0;0;0;-10000;0;0;dirt"));
+        Assert.Equal(1, bp.SkippedLines);
+        Assert.Empty(bp.Terrain);
     }
 
     [Fact]
