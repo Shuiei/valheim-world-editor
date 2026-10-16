@@ -178,6 +178,6 @@ public sealed class SelectPanelTests : IDisposable
         var messages = new List<string>();
         p.Message += messages.Add;
         await p.Keep();
-        Assert.Equal("Could not keep the selection: the editor's data folder cannot be written.", Assert.Single(messages));
+        Assert.Equal("Could not keep the selection: selections.json in the editor's data folder cannot be read or written.", Assert.Single(messages));
     }
 }

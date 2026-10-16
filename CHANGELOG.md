@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.82 — unreleased
+
+### Fixed
+- **A crash while saving selections could lose every world's saved selections.** selections.json was written in
+  place, so a write cut short left it broken; a broken file then counted as none, and the next Keep or Forget wrote
+  over it. It is now written through a temporary file, a broken one is first copied aside as selections.json.bad, and
+  one that cannot be read (or kept aside) is never written over: Keep and Forget say they could not.
+
 ## v1.45.81 — unreleased
 
 ### Fixed

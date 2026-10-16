@@ -276,7 +276,7 @@ public sealed class SelectPanel
         }
         if (!SavedSelections.Keep(world, name, items))
         {
-            Message?.Invoke("Could not keep the selection: the editor's data folder cannot be written.");
+            Message?.Invoke("Could not keep the selection: selections.json in the editor's data folder cannot be read or written.");
             return;
         }
         FillSaved();
@@ -313,7 +313,7 @@ public sealed class SelectPanel
         }
         if (!SavedSelections.Forget(world, _saved[i].Name))
         {
-            Message?.Invoke("Could not forget the selection: the editor's data folder cannot be written.");
+            Message?.Invoke("Could not forget the selection: selections.json in the editor's data folder cannot be read or written.");
             return;
         }
         SavedBox.SelectedIndex = -1;
