@@ -100,21 +100,10 @@ public static class WorldCreator
     private static readonly char[] ForbiddenInNames = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
     /// <summary>
-    /// The names Windows keeps for devices, which no file may have, with any extension (the superscript digits
-    /// count as digits there too, and the console's input and output have their own).
-    /// </summary>
-    private static readonly string[] DeviceNames =
-    [
-        "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$",
-        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "COM¹", "COM²", "COM³",
-        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9", "LPT¹", "LPT²", "LPT³",
-    ];
-
-    /// <summary>
     /// Whether a world name can be a file name on every system the world may be copied to, the same on each of
     /// them: not empty, none of / \ : * ? " &lt; &gt; | or a control character, not ending with a dot or a space, and
-    /// not one of Windows' device names (CON, NUL, CONIN$, COM1…, COM¹…) with or without an extension. The game names the
-    /// world's files after it.
+    /// not one of Windows' device names (CON, NUL, CONIN$, COM1…, COM¹…) with or without an extension. The game names
+    /// the world's files after it.
     /// </summary>
     /// <param name="name">The name, as typed (not trimmed).</param>
     public static bool IsWorldName(string name)
@@ -123,7 +112,7 @@ public static class WorldCreator
         {
             return false;
         }
-        return !DeviceNames.Contains(name.Split('.')[0], StringComparer.OrdinalIgnoreCase);
+        return !SafeFile.IsDeviceName(name);
     }
 
     /// <summary>Writes a new world into a folder that holds none yet.</summary>

@@ -8,6 +8,23 @@ namespace TerrainEditor.App;
 public static class SafeFile
 {
     /// <summary>
+    /// The names Windows keeps for devices, which no file may have, with any extension (the superscript digits
+    /// count as digits there too, and the console's input and output have their own).
+    /// </summary>
+    private static readonly string[] DeviceNames =
+    [
+        "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "COM¹", "COM²", "COM³",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9", "LPT¹", "LPT²", "LPT³",
+    ];
+
+    /// <summary>
+    /// Whether a file name (with or without an extension) is one of Windows' device names (CON, NUL, CONIN$, COM1…,
+    /// COM¹…), which no file may have there.
+    /// </summary>
+    public static bool IsDeviceName(string name) => DeviceNames.Contains(name.Split('.')[0], StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Writes the text (UTF-8) through path + ".tmp", flushed to disk before the move; makes the folder if needed.
     /// </summary>
     /// <param name="path">The file to write.</param>

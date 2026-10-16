@@ -45,6 +45,9 @@ the plugin is unchanged in versions without that part.
 - **One blueprint file that cannot be read no longer empties the Blueprints list.** A file without read access threw
   out of the listing, so no blueprint was shown. It is now left out (and logged), and the list reads each file's
   summary without building every value of its copy.
+- **Blueprints named after a Windows device (con, nul, com1…) can be saved on Windows.** Their file names were refused
+  there; they now start with "_". A Homestead blueprint name cut at 64 characters no longer ends in a dot, which
+  Windows dropped so the picture beside it no longer matched.
 
 ### Changed
 

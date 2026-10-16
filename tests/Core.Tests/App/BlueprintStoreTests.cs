@@ -68,6 +68,18 @@ public sealed class BlueprintStoreTests : IDisposable
         Assert.Equal("Kept", Assert.Single(store.List()).Name);
     }
 
+    // Names Windows keeps for devices get a "_" (saving "con" failed there), and a cut ending in a dot drops it.
+    [Fact]
+    public void IdsAvoidWindowsDeviceNamesAndATrailingDot()
+    {
+        Assert.Equal("_nul", BlueprintStore.IdFor("nul"));
+        Assert.Equal("_COM1.old", BlueprintStore.IdFor("COM1.old"));
+        Assert.Equal(new string('h', 79), BlueprintStore.IdFor(new string('h', 79) + ".more"));
+        var store = new BlueprintStore(_dir);
+        Assert.Equal("_con", store.Save("con", null, null, Clip(1, ground: false)));
+        Assert.NotNull(store.Read("_con"));
+    }
+
     [Fact]
     public void SameNameReplacesAndDeleteRemoves()
     {

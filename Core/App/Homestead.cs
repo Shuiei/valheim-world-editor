@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.Numerics;
@@ -263,15 +264,24 @@ public static class Homestead
     /// <summary>Characters a blueprint's file name keeps before ".blueprint".</summary>
     private const int FileNameLength = 64;
 
+    /// <summary>The characters a file name cannot hold on Windows or Linux.</summary>
+    private static readonly SearchValues<char> NotInFileNames = SearchValues.Create([.. Path.GetInvalidFileNameChars(), '<', '>', ':', '"', '/', '\\', '|', '?', '*']);
+
     /// <summary>
-    /// A file name for a blueprint name: what Windows and Linux both allow. Forbidden characters become _,
-    /// at most 64 characters before ".blueprint", "blueprint" when nothing is left.
+    /// A file name for a blueprint name: what Windows and Linux both allow. Forbidden characters become _, dots and
+    /// spaces at the ends are dropped (after the cut too: Windows drops a trailing dot itself, and the picture's name
+    /// would no longer match), at most 64 characters before ".blueprint", "blueprint" when nothing is left, and "_"
+    /// before a name Windows keeps for a device (CON, NUL…).
     /// </summary>
     public static string FileName(string name)
     {
-        string f = new([.. name.Trim().Select(c => Path.GetInvalidFileNameChars().Contains(c) || c is '<' or '>' or ':' or '"' or '/' or '\\' or '|' or '?' or '*' ? '_' : c)]);
-        f = f.Trim('.', ' ');
-        return (f.Length == 0 ? "blueprint" : f.Length > FileNameLength ? f[..FileNameLength] : f) + ".blueprint";
+        string f = new string([.. name.Trim().Select(c => NotInFileNames.Contains(c) ? '_' : c)]).Trim('.', ' ');
+        f = (f.Length > FileNameLength ? f[..FileNameLength] : f).TrimEnd('.', ' ');
+        if (f.Length == 0)
+        {
+            f = "blueprint";
+        }
+        return (SafeFile.IsDeviceName(f) ? "_" + f : f) + ".blueprint";
     }
 
     /// <summary>

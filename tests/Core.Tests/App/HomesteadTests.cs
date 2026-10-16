@@ -105,6 +105,17 @@ public class HomesteadTests : IDisposable
         Assert.Equal("a_b.blueprint", Homestead.FileName("a/b"));
     }
 
+    // Names Windows keeps for devices get a "_" (saving "con" failed there), and a cut ending in a dot drops it (Windows
+    // drops it itself, so the picture's name no longer matched).
+    [Fact]
+    public void FileNamesAvoidWindowsDeviceNamesAndATrailingDot()
+    {
+        Assert.Equal("_con.blueprint", Homestead.FileName("con"));
+        Assert.Equal("_LPT1.old.blueprint", Homestead.FileName("LPT1.old"));
+        Assert.Equal("console.blueprint", Homestead.FileName("console"));
+        Assert.Equal(new string('h', 63) + ".blueprint", Homestead.FileName(new string('h', 63) + ".more"));
+    }
+
     // FreeName: the name when free, else numbered from 2; a name at the file-name limit is cut so the number stays
     // in the file name (every numbered name mapped to the same file before, and the search never ended).
     [Fact]
