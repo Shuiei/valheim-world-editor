@@ -509,12 +509,12 @@ public sealed class PlaceTool
 
     /// <summary>
     /// Makes the brush layout: one object at the cursor (One at a time), or random points in the disc at least the
-    /// spacing apart (400 at most).
+    /// spacing apart (one at least, so a click with a small brush places something; 400 at most).
     /// </summary>
     private void MakePattern()
     {
         float r = Brush.Radius;
-        int n = Math.Min(400, (int)MathF.Round(Density / 100 * MathF.PI * r * r));
+        int n = Math.Clamp((int)MathF.Round(Density / 100 * MathF.PI * r * r), 1, 400);
         _pattern = [];
         if (OneAtATime)
         {

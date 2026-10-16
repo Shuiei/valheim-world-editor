@@ -66,6 +66,15 @@ public class PlaceToolTests
     }
 
     [Fact]
+    public void ASmallBrushStillPlacesOne()
+    {
+        var (t, _) = Tool();
+        t.Brush.Radius = 2;
+        t.Density = 3;
+        Assert.Single(t.Preview(new Vector2(64, 64)));
+    }
+
+    [Fact]
     public void SingleIsExactlyAtTheCursorAndStaysAwayFromOthers()
     {
         var (t, _) = Tool(new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(32, 30, 32), Vector3.Zero, 1, false));
