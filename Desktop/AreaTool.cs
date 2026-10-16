@@ -375,10 +375,24 @@ public sealed class AreaTool
             var ((x0, z0, x1, z1), eroded) = Erosion.Area(g, a, b.RestAngle, b.Random, set);
             return (set.ToList(), (x0 - 1, z0 - 1, x1 + 1, z1 + 1), eroded);
         }
-        float[] before = new float[g.W * g.H];
-        for (int i = 0; i < before.Length; i++)
+        int rNat = Math.Max(2, Math.Min(8, (int)MathF.Round(b.NoiseSize / 3)));
+        // The heights before the action, for Smooth and Naturalize's blur only: over the selection's box and the
+        // blur's reach round it (every point a blur reads).
+        int reach = act == GroundAction.Smooth ? 3 : act == GroundAction.Natural ? rNat : -1;
+        int bx0 = Math.Max(0, a.X0 - reach), bz0 = Math.Max(0, a.Z0 - reach), bw = 0;
+        float[] before = [];
+        if (reach >= 0)
         {
-            before[i] = g.HeightOf(i);
+            int bx1 = Math.Min(g.W - 1, a.X1 + reach), bz1 = Math.Min(g.H - 1, a.Z1 + reach);
+            bw = bx1 - bx0 + 1;
+            before = new float[bw * (bz1 - bz0 + 1)];
+            for (int z = bz0; z <= bz1; z++)
+            {
+                for (int x = bx0; x <= bx1; x++)
+                {
+                    before[(z - bz0) * bw + x - bx0] = g.HeightOf(z * g.W + x);
+                }
+            }
         }
         float Blur(int p, int r)
         {
@@ -391,14 +405,13 @@ public sealed class AreaTool
                     int x = gx + dx, z = gz + dz;
                     if (x >= 0 && z >= 0 && x < g.W && z < g.H)
                     {
-                        s += before[z * g.W + x];
+                        s += before[(z - bz0) * bw + x - bx0];
                         n++;
                     }
                 }
             }
             return s / n;
         }
-        int rNat = Math.Max(2, Math.Min(8, (int)MathF.Round(b.NoiseSize / 3)));
         float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
         bool clamped = false;
         foreach (var (p, w) in a.Cells)
