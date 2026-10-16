@@ -333,12 +333,14 @@ public sealed class WorldCreatorTests : IDisposable
     [InlineData("Lpt9", false)]
     [InlineData("COM¹", false)]
     [InlineData("lpt².txt", false)]
+    [InlineData("CONIN$", false)]
+    [InlineData("conout$.db", false)]
     [InlineData("Name.", false)]
     [InlineData("Name ", false)]
     public void AWorldNameIsAFileNameOnEverySystem(string name, bool ok)
     {
         // Windows' rules, whatever the system here: / \ : * ? " < > |, control characters, device names (CON, COM1,
-        // with any extension), a dot or a space at the end.
+        // CONIN$, with any extension), a dot or a space at the end.
         Assert.Equal(ok, WorldCreator.IsWorldName(name));
     }
 
