@@ -743,6 +743,8 @@ public sealed partial class MainWindow : Window
         World?.Dispose();
         World = null;
         Session = null;
+        // A backup read for the Area tool's restore is not kept for the next world.
+        AreaPanel.ForgetBackup();
         Tunnel.Close();
         ShowStart();
     }

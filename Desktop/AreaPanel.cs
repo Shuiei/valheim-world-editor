@@ -182,7 +182,7 @@ public sealed class AreaPanel
     private List<string> _backupPaths = [];
     /// <summary>Asks for another backup folder (the window's folder picker).</summary>
     internal Func<Task<string?>> PickFolder { get; set; } = () => Task.FromResult<string?>(null);
-    /// <summary>The last backup read by <see cref="OpenBackup"/>, kept for the next restore from it.</summary>
+    /// <summary>The last backup read by <see cref="OpenBackup"/>, kept for the next restore from it while its world is shown.</summary>
     private (string Path, WorldSave World, EditStore Edits)? _backup;
 
     // Copy and paste: the window copies, pastes and keeps blueprints.
@@ -576,6 +576,11 @@ public sealed class AreaPanel
     {
         Refreshes++;
         _refreshPosted = false;
+        // The backup read last goes with its world: kept only while a world of its seed is shown.
+        if (_backup is { } kept && (_view.Scene?.World is not { } shown || shown.Seed != kept.World.Seed || shown.SeedName != kept.World.SeedName))
+        {
+            ForgetBackup();
+        }
         var poly = Area.Polygon();
         RefreshVolume();
         // Before the selection's lists: the "with" list follows the world, selection or not.
@@ -1029,6 +1034,9 @@ public sealed class AreaPanel
             return null;
         }
     }
+
+    /// <summary>Lets the backup read last go (its world is left): its world and edits are no longer kept in memory.</summary>
+    internal void ForgetBackup() => _backup = null;
 
     /// <summary>
     /// Puts the ground and the objects of the chosen kinds inside the selection back as they were in a backup (each
