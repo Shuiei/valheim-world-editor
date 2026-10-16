@@ -443,21 +443,47 @@ public sealed partial class ClaudeTools
             {
                 return null;
             }
-            List<(float X, float Z, string Kind)> things;
+            // Only what is needed is taken here (the window's thread): the objects' kinds are worked out after.
+            List<(float X, float Z, int Prefab, bool Piece, bool Tamed)> things;
             lock (scene.Things)
             {
-                things = [.. scene.Things.Where(t => !t.Gone).Select(t => (t.Position.X, t.Position.Z, KindOf(t)))];
+                things = [.. scene.Things.Where(t => !t.Gone).Select(t => (t.Position.X, t.Position.Z, t.Prefab, t.Piece, t.Tamed))];
             }
-            // Paint (dirt, cultivated, paved) per ground point, as the ground has it now.
+            var names = new Dictionary<int, string?>();
+            foreach (int prefab in things.Select(t => t.Prefab))
+            {
+                if (!names.ContainsKey(prefab))
+                {
+                    names[prefab] = _w.NameOfPrefab(prefab);
+                }
+            }
+            // Paint (dirt, cultivated, paved) per ground point, as the ground has it now (Ground.MaskOf).
             var g = _w.Session.Ground;
-            float[]? paint = g.W == scene.W && g.H == scene.H ? [.. Enumerable.Range(0, scene.W * scene.H * 3).Select(k => g.MaskOf(k / 3, k % 3))] : null;
-            return new { scene.W, scene.H, scene.Cx, scene.Cz, scene.Water, Heights = (float[])scene.Heights.Clone(), Paint = paint, Things = things };
+            float[]? paint = null;
+            if (g.W == scene.W && g.H == scene.H)
+            {
+                paint = new float[scene.W * scene.H * 3];
+                for (int p = 0; p < scene.W * scene.H; p++)
+                {
+                    float[] from = g.PMod[p] != 0 ? g.Paint : g.BaseMask;
+                    paint[p * 3] = from[p * 4];
+                    paint[p * 3 + 1] = from[p * 4 + 1];
+                    paint[p * 3 + 2] = from[p * 4 + 2];
+                }
+            }
+            return new { scene.W, scene.H, scene.Cx, scene.Cz, scene.Water, Heights = (float[])scene.Heights.Clone(), Paint = paint, Things = things, Names = names };
         });
         if (data == null)
         {
             return new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = "No area is open." } } };
         }
-        byte[] jpeg = await Task.Run(() => DrawMap(data.W, data.H, data.Cx, data.Cz, data.Water, data.Heights, data.Paint, objects ? data.Things : [], MathF.Max(4, grid)));
+        byte[] jpeg = await Task.Run(() =>
+        {
+            List<(float X, float Z, string Kind)> things = objects
+                ? [.. data.Things.Select(t => (t.X, t.Z, TerrainEditor.App.ObjectKinds.Of(data.Names[t.Prefab], t.Piece, t.Tamed).ToString()))]
+                : [];
+            return DrawMap(data.W, data.H, data.Cx, data.Cz, data.Water, data.Heights, data.Paint, things, MathF.Max(4, grid));
+        });
         float minX = data.Cx - (data.W - 1) / 2f, minZ = data.Cz - (data.H - 1) / 2f;
         return new()
         {
