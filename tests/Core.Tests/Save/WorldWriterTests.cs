@@ -100,6 +100,23 @@ public class WorldWriterTests
     }
 
     [Fact]
+    public void AnEditedZoneWhoseTerrainObjectsAreDeletedGetsANewOne()
+    {
+        // The deleted objects were patched (and left out, removal winning) while the zone counted as written: the
+        // read-back check found the zone missing and refused the save.
+        using var w = new TempWorld();
+        var world = w.Load();
+        var t = world.TerrainZones[0];
+        int[] terrain = [.. Enumerable.Range(0, world.ObjectRefs.Count).Where(i => world.ObjectRefs[i].IsTerrain && world.ObjectRefs[i].Zone == (t.ZoneX, t.ZoneZ))];
+        Assert.NotEmpty(terrain);
+
+        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 1.5f, 500)], deleted: terrain);
+
+        Assert.True(r.Saved, r.Message);
+        Assert.Equal(1.5f, WorldSave.Load(w.Dir).TerrainZones.Single(q => q.ZoneX == t.ZoneX && q.ZoneZ == t.ZoneZ).LevelDelta[500], 4);
+    }
+
+    [Fact]
     public void TerrainTemplatesInAnUnexpectedLayoutAreRefusedBeforeWriting()
     {
         using var w = new TempWorld();

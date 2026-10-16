@@ -104,9 +104,6 @@ public static class WorldWriter
         {
             return new Result(false, $"This world uses save format {world.Chunks.First().WorldVersion}; the writer only supports {SaveFileVersion}.", null, 0, 0, skipped);
         }
-        // A zone can hold two terrain objects with data (the game makes them now and then): each gets
-        // the zone's ground, so whichever one the game uses has it.
-        Dictionary<(int, int), List<TerrainZone>> existing = world.TerrainZones.Where(z => z.Source != null).GroupBy(z => (z.ZoneX, z.ZoneZ)).ToDictionary(g => g.Key, g => g.ToList());
         // New ground copies a terrain object whose position is in the short format (the layout the copy patches).
         bool anyTerrain = world.TerrainZones.Any(z => z.Source != null);
         TerrainZone? template = world.TerrainZones.FirstOrDefault(z => z.Source != null && (z.Source.Flags & ShortPosition) != 0);
@@ -129,6 +126,12 @@ public static class WorldWriter
             }
         }
         int removed = removals.Values.Sum(s => s.Count);
+        // A zone can hold two terrain objects with data (the game makes them now and then): each gets
+        // the zone's ground, so whichever one the game uses has it. Those deleted are not patched (removal wins): a
+        // zone whose terrain objects all go gets a new one.
+        Dictionary<(int, int), List<TerrainZone>> existing = world.TerrainZones
+            .Where(z => z.Source != null && !(removals.TryGetValue(z.Source.File, out var gone) && gone.Contains(z.Source.Start)))
+            .GroupBy(z => (z.ZoneX, z.ZoneZ)).ToDictionary(g => g.Key, g => g.ToList());
 
         // Plan: which chunk files change, and how.
         Dictionary<ChunkFile, Dictionary<long, (ZdoLocation Loc, byte[] Data)>> patches = [];     // object start -> new TCData

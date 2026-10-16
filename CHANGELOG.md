@@ -214,6 +214,9 @@ the plugin is unchanged in versions without that part.
 - **Resetting the ground of a zone that held two terrain objects could refuse the save ("terrain zones were lost").**
   The save check's last count allowed one terrain object lost per reset zone; it now allows the reset zones' own
   terrain objects, however many.
+- **Saving a zone's ground with all its terrain objects deleted was refused.** The deleted objects were patched (the
+  deletion winning) while the zone counted as written, so the read-back check found it missing; deleted terrain
+  objects are now left out of those to patch, and the zone gets a new one.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
