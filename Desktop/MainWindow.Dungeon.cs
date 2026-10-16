@@ -233,6 +233,24 @@ public partial class MainWindow
     /// <param name="d">The dungeon.</param>
     private void PlaceDungeon(WorldScene scene, EditSession session, Vector3 at, DungeonToPlace d)
     {
+        try
+        {
+            LayDungeon(scene, session, at, d);
+        }
+        // The objects' data is read from the world's files (NewObjectBytes): one gone or locked meanwhile places nothing.
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            MessageText.Text = $"{d.Name} was not placed: the world's files could not be read ({ex.Message}).";
+        }
+    }
+
+    /// <summary><see cref="PlaceDungeon"/>'s work; the world's files read failing throws.</summary>
+    /// <param name="scene">The area.</param>
+    /// <param name="session">Its edits.</param>
+    /// <param name="at">The point of the ground the entrance stands on.</param>
+    /// <param name="d">The dungeon.</param>
+    private void LayDungeon(WorldScene scene, EditSession session, Vector3 at, DungeonToPlace d)
+    {
         var world = scene.World;
         var (camYaw, _, _, _) = View.Camera;
         // What is taken high up: dungeons laid out, objects, and over the dungeons' locations near here, the space the
@@ -325,6 +343,11 @@ public partial class MainWindow
         {
             // The game's rooms: a dungeon object holding the list, which the game builds them from.
             var placed = rooms.Select(p => p with { Position = p.Position + origin }).ToList();
+            if (placed.Count == 0)
+            {
+                MessageText.Text = $"{d.Name} has no rooms: nothing placed.";
+                return;
+            }
             var pose = viaEntrance ? dungeonPose!.Value : new DungeonEntrances.Pose(origin, Quaternion.Identity);
             var dg = new NewObject(0, kind.Hash, pose.Position, BlueprintFormats.ToEuler(pose.Rotation), 0);
             if (Blank(dg) is not { } bytes)
