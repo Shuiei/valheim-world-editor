@@ -218,15 +218,22 @@ public class InspectorPanelTests
         Assert.Equal(pending + 1, r.Scene.Session.Pending.Added);
     }
 
+    // Contents in an item format older than the editor reads, and contents whose crafter name has a length prefix that
+    // never ends: both said, neither written back.
     [AvaloniaFact]
     public async Task UnreadableContentsAreSaidAndLeftAlone()
     {
-        using var r = new Run();
-        Assert.True(r.I.Open(r.ChestIndex));
-        r.I.Added.Add(("bytes", "items", Convert.ToBase64String(new byte[] { 255, 255, 255, 255, 1, 2 })));
-        await r.I.Apply();
-        Assert.Contains("The contents cannot be read", Texts(r.I.ItemsBox));
-        Assert.Null(r.I.Changes().Inventory);
+        byte[] older = [255, 255, 255, 255, 1, 2];
+        byte[] badPrefix = [108, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+        foreach (byte[] items in new[] { older, badPrefix })
+        {
+            using var r = new Run();
+            Assert.True(r.I.Open(r.ChestIndex));
+            r.I.Added.Add(("bytes", "items", Convert.ToBase64String(items)));
+            await r.I.Apply();
+            Assert.Contains("The contents cannot be read", Texts(r.I.ItemsBox));
+            Assert.Null(r.I.Changes().Inventory);
+        }
     }
 
     [AvaloniaFact]
