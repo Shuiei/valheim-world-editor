@@ -134,14 +134,15 @@ public class ClaudeToolsControlsTests
         w.View.Show(s.Scene, null);
         w.Edit(s);
         var done = new TaskCompletionSource();
-        int clicks = 0;
+        bool keep = false;
         var button = new Button { Content = "Hill later" };
         button.Click += async (_, _) =>
         {
             await Task.Yield();
             s.Shape(32, 32, _ => 1, 3, 0, "a hill");
             // Marked another way each time, so each click is a step.
-            s.MarkResets([(0, 0)], keepBuildings: ++clicks % 2 == 1, ground: false, "Claude: a reset");
+            keep = !keep;
+            s.MarkResets([(0, 0)], keepBuildings: keep, ground: false, "Claude: a reset");
             done.TrySetResult();
         };
         w.GetLogicalDescendants().OfType<Panel>().First().Children.Add(button);
