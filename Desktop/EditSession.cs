@@ -138,8 +138,15 @@ public sealed class EditSession
         {
             return;
         }
-        while (UndoList.Count > 0 && !ReferenceEquals(UndoList[^1], c) && Undo())
+        // The edit told once for all the steps (one refresh, one auto-apply).
+        bool any = false;
+        while (Last(_undo) is { } last && !ReferenceEquals(last, c) && Step(_undo, _redo, after: false, tell: false))
         {
+            any = true;
+        }
+        if (any)
+        {
+            Edited();
         }
     }
 
@@ -153,8 +160,23 @@ public sealed class EditSession
         {
             return;
         }
-        while (RedoList.Count > 0 && (UndoList.Count == 0 || !ReferenceEquals(UndoList[^1], c)) && Redo())
+        bool any = false;
+        while (!ReferenceEquals(Last(_undo), c) && Step(_redo, _undo, after: true, tell: false))
         {
+            any = true;
+        }
+        if (any)
+        {
+            Edited();
+        }
+    }
+
+    /// <summary>The list's last change (null: none), under the lock.</summary>
+    private Change? Last(List<Change> list)
+    {
+        lock (_lock)
+        {
+            return list.Count > 0 ? list[^1] : null;
         }
     }
 
@@ -793,8 +815,12 @@ public sealed class EditSession
     /// Undo or redo: moves the last change of one list to the other and puts its ground points, things and zone resets
     /// as they were before it (after: false) or after it (after: true).
     /// </summary>
+    /// <param name="from">The list the change is taken from.</param>
+    /// <param name="to">The list it goes to.</param>
+    /// <param name="after">Puts things as they were after it (redo), else before (undo).</param>
+    /// <param name="tell">Raises Changed and EditMade (false: the caller does, once for several steps).</param>
     /// <returns>False during a stroke or when the list is empty.</returns>
-    private bool Step(List<Change> from, List<Change> to, bool after)
+    private bool Step(List<Change> from, List<Change> to, bool after, bool tell = true)
     {
         Interlocked.Increment(ref _generation);
         Change c;
@@ -834,7 +860,10 @@ public sealed class EditSession
         {
             Notify(c.Things.Select(t => t.Index));
         }
-        Edited();
+        if (tell)
+        {
+            Edited();
+        }
         return true;
     }
 

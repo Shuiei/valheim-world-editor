@@ -50,6 +50,30 @@ public class EditSessionStepsTests
     }
 
     [Fact]
+    public void GoingBackOrForwardSeveralStepsTellsOfTheEditOnce()
+    {
+        var s = TestScenes.Flat(1);
+        foreach (string label in new[] { "A", "B", "C", "D" })
+        {
+            s.Shape(32, 32, _ => 1, 3, 0, label);
+        }
+        var a = s.UndoList[0];
+        var d = s.UndoList[^1];
+        int changed = 0, made = 0;
+        s.Changed += () => changed++;
+        s.EditMade += () => made++;
+        s.BackTo(a);
+        Assert.Equal(["A"], s.UndoList.Select(c => c.Label));
+        Assert.Equal((1, 1), (changed, made));
+        s.ForwardTo(d);
+        Assert.Equal(["A", "B", "C", "D"], s.UndoList.Select(c => c.Label));
+        Assert.Equal((2, 2), (changed, made));
+        // Already there: nothing to tell.
+        s.ForwardTo(d);
+        Assert.Equal((2, 2), (changed, made));
+    }
+
+    [Fact]
     public void AFormulaFailingAtSomePointsLeavesThemAsTheyWere()
     {
         var s = TestScenes.Flat(1);
