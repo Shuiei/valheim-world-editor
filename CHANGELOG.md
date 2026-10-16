@@ -246,6 +246,8 @@ the plugin is unchanged in versions without that part.
   ends are within a metre.
 - **Area Replace replaced nothing when the kind's name held " (" (a mod's).** The kind was cut back out of the list's
   entry at " ("; the list's own names are now kept beside it.
+- **A terrain modifier that smooths with a radius of 0 (odd mod data) made a NaN height at its middle.** The share of
+  the middle point was 0 / 0; such a modifier now smooths nothing.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

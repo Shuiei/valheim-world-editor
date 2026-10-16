@@ -268,6 +268,11 @@ public sealed class TerrainModifiers
     /// </summary>
     private static void SmoothTerrain2(int zx, int zz, float[] h, Vector3 worldPos, float radius, float[]? levelOnly, float power, bool player)
     {
+        // No reach, nothing to smooth (the middle point's share would be 0 / 0: a NaN height).
+        if (radius <= 0f)
+        {
+            return;
+        }
         float dx = worldPos.X - zx * 64f, dz = worldPos.Z - zz * 64f;
         int x = (int)MathF.Floor(dx / 1f + 0.5f) + Width / 2;
         int y = (int)MathF.Floor(dz / 1f + 0.5f) + Width / 2;
