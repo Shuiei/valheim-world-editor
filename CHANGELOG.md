@@ -235,6 +235,9 @@ the plugin is unchanged in versions without that part.
 - **A location rule of no biome, or of a biome flag the map does not know, kept the seed's locations from being laid
   out.** Drawing a point indexed an empty list (or the list at -1) and threw, which dropped the whole layout; such a
   try now finds no zone and the next one is made.
+- **A heightmap picture imported into a selection sat about a metre off its outline, and its size was given one point
+  too wide on each side.** It was fitted to the box the selection's weights are worked out in, padded by a point all
+  round; it is now fitted to the selection's own grid box (AreaTool.GridBox).
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

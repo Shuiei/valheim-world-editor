@@ -827,9 +827,10 @@ public sealed class AreaPanel
         List<(int G, float W)> cells;
         int x0, z0, w, h;
         var mask = session.MaskNow();
-        if (Area.WeightsIn(g.W, g.H, mask) is { } a)
+        if (Area.WeightsIn(g.W, g.H, mask) is { } a && Area.GridBox(g.W, g.H) is { } box)
         {
-            (cells, x0, z0, w, h) = (a.Cells, a.X0, a.Z0, a.X1 - a.X0 + 1, a.Z1 - a.Z0 + 1);
+            // Fitted to the selection's own box, not the weights' (one point wider all round).
+            (cells, x0, z0, w, h) = (a.Cells, box.X0, box.Z0, box.X1 - box.X0 + 1, box.Z1 - box.Z0 + 1);
         }
         else
         {

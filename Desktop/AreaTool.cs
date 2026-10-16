@@ -200,6 +200,23 @@ public sealed class AreaTool
     public sealed record Weights(List<Vector2> Poly, int X0, int Z0, int X1, int Z1, List<(int G, float W)> Cells);
 
     /// <summary>
+    /// The selection's own box on the grid: the whole points round its outline, clamped to the block (every point the
+    /// selection weighs is in it).
+    /// </summary>
+    /// <param name="w">The block's width in grid points.</param>
+    /// <param name="h">The block's height in grid points.</param>
+    /// <returns>West, south, east and north grid points; null while there is no selection.</returns>
+    public (int X0, int Z0, int X1, int Z1)? GridBox(int w, int h)
+    {
+        if (Polygon() is not { } poly)
+        {
+            return null;
+        }
+        return (Math.Max(0, (int)MathF.Floor(poly.Min(p => p.X))), Math.Max(0, (int)MathF.Floor(poly.Min(p => p.Y))),
+            Math.Min(w - 1, (int)MathF.Ceiling(poly.Max(p => p.X))), Math.Min(h - 1, (int)MathF.Ceiling(poly.Max(p => p.Y))));
+    }
+
+    /// <summary>
     /// The grid points inside the selection and their weights (the soft edge going inwards).
     /// </summary>
     /// <param name="w">The block's width in grid points.</param>
@@ -208,12 +225,12 @@ public sealed class AreaTool
     /// <returns>The points, or null while there is no selection.</returns>
     public Weights? WeightsIn(int w, int h, Func<int, float>? mask = null)
     {
-        if (Polygon() is not { } poly)
+        if (Polygon() is not { } poly || GridBox(w, h) is not { } box)
         {
             return null;
         }
-        int x0 = Math.Max(0, (int)MathF.Floor(poly.Min(p => p.X)) - 1), x1 = Math.Min(w - 1, (int)MathF.Ceiling(poly.Max(p => p.X)) + 1);
-        int z0 = Math.Max(0, (int)MathF.Floor(poly.Min(p => p.Y)) - 1), z1 = Math.Min(h - 1, (int)MathF.Ceiling(poly.Max(p => p.Y)) + 1);
+        int x0 = Math.Max(0, box.X0 - 1), x1 = Math.Min(w - 1, box.X1 + 1);
+        int z0 = Math.Max(0, box.Z0 - 1), z1 = Math.Min(h - 1, box.Z1 + 1);
         var cells = new List<(int, float)>();
         for (int gz = z0; gz <= z1; gz++)
         {

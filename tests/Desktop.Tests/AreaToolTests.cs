@@ -43,6 +43,14 @@ public class AreaToolTests
     }
 
     [Fact]
+    public void TheGridBoxIsTheWholePointsRoundTheOutlineInTheBlock()
+    {
+        Assert.Equal((10, 10, 20, 21), Box(10.4f, 10, 20, 20.6f).GridBox(129, 129));
+        Assert.Equal((0, 0, 128, 10), Box(-5, -5, 200, 10).GridBox(129, 129));
+        Assert.Null(new AreaTool().GridBox(129, 129));
+    }
+
+    [Fact]
     public void TheSoftEdgeFadesInwards()
     {
         var a = Box(10, 10, 30, 30, soft: 4);
