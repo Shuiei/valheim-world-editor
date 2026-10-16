@@ -283,10 +283,13 @@ internal sealed class DungeonPlanner
             }
             if (last)
             {
+                // The antechamber is kept only with the arena beyond it: one with no arena would be a dead end.
+                var before = Mark(l);
                 var ante = Attach(l, cur, Room.Antechamber, main: true) ?? Attach(l, AnyParent(l, main: true), Room.Antechamber, main: true);
                 var boss = ante == null ? null : Attach(l, ante, Room.Boss, main: true, forward: true) ?? Attach(l, ante, Room.Boss, main: true);
                 if (boss == null)
                 {
+                    Drop(l, before);
                     // Not enough room ahead: anywhere it fits.
                     foreach (var p in l.Spaces.Where(s => s.IsRoom && CanParent(s)).OrderByDescending(s => Dist2(s, _plan.Entrance)).ToList())
                     {
@@ -296,6 +299,7 @@ internal sealed class DungeonPlanner
                         {
                             break;
                         }
+                        Drop(l, before);
                     }
                 }
                 if (boss != null)
@@ -399,6 +403,51 @@ internal sealed class DungeonPlanner
         _plan.Spaces.Add(s);
         _used.Add(room);
         return s;
+    }
+
+    /// <summary>How far the plan had got: what <see cref="Drop"/> takes it back to.</summary>
+    /// <param name="Spaces">The level's spaces then.</param>
+    /// <param name="AllSpaces">The plan's spaces then.</param>
+    /// <param name="Doors">The plan's doorways then.</param>
+    /// <param name="Next">The next space's id then.</param>
+    /// <param name="Used">The kinds of room made by then.</param>
+    private readonly record struct Point(int Spaces, int AllSpaces, int Doors, int Next, Room[] Used);
+
+    /// <summary>Where the plan of a level is now, to take back what is added after it.</summary>
+    private Point Mark(DungeonPlan.Level l) => new(l.Spaces.Count, _plan.Spaces.Count, _plan.Doors.Count, _next, [.. _used]);
+
+    /// <summary>
+    /// Takes back every space and doorway added to the level since <paramref name="at"/>: their tiles are free
+    /// again, the rooms they opened off lose those doorways, and kinds first made since count as unmade.
+    /// </summary>
+    private void Drop(DungeonPlan.Level l, Point at)
+    {
+        if (_plan.Spaces.Count - at.AllSpaces != l.Spaces.Count - at.Spaces)
+        {
+            throw new InvalidOperationException("spaces were added to another level since the mark");
+        }
+        var gone = l.Spaces.GetRange(at.Spaces, l.Spaces.Count - at.Spaces);
+        foreach (var d in _plan.Doors.GetRange(at.Doors, _plan.Doors.Count - at.Doors))
+        {
+            d.A.Doors.Remove(d);
+            d.B.Doors.Remove(d);
+        }
+        _plan.Doors.RemoveRange(at.Doors, _plan.Doors.Count - at.Doors);
+        foreach (var s in gone)
+        {
+            foreach (var t in s.Tiles)
+            {
+                l.Owner.Remove(t);
+            }
+            if (s.Tall)
+            {
+                l.TallCells.ExceptWith(s.Tiles.Select(DungeonPlan.CellOf));
+            }
+        }
+        l.Spaces.RemoveRange(at.Spaces, gone.Count);
+        _plan.Spaces.RemoveRange(at.AllSpaces, gone.Count);
+        _next = at.Next;
+        _used.IntersectWith(at.Used);
     }
 
     /// <summary>Every tile of a box.</summary>
