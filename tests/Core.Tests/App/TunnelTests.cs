@@ -206,16 +206,18 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         Assert.Equal("Saved", r.Server.Name);
         Assert.Equal("/nowhere", r.Server.GameFolder);
         Assert.Equal("hello from the plugin", ReadThrough(r.LocalPort));
-        // Another key than the one remembered: refused, saying both.
+        // Another key than the one remembered: refused, saying both, and naming every entry that pins the old key.
+        ServerConfig.Remember(new ServerConfig.Server { Name = "Other account", Host = "127.0.0.1", SshPort = _ssh.Port, User = "someone-else", HostKey = "SHA256:somethingelse" });
         ServerConfig.Remember(new ServerConfig.Server { Name = "Saved", Host = "127.0.0.1", SshPort = _ssh.Port, User = _ssh.User, HostKey = "SHA256:somethingelse" });
         r = await Tunnel.Start(Req());
         Assert.StartsWith($"The server's identity changed (it was SHA256:somethingelse, now {_ssh.Fingerprint}).", r.Error);
+        Assert.Contains("empty the HostKey line of [Saved], [Other account] in", r.Error);
         Assert.False(Tunnel.Open);
         // Known under another account only: the same server, so still refused (it was trusted afresh).
         ServerConfig.Forget(id);
-        ServerConfig.Remember(new ServerConfig.Server { Name = "Other account", Host = "127.0.0.1", SshPort = _ssh.Port, User = "someone-else", HostKey = "SHA256:somethingelse" });
         r = await Tunnel.Start(Req());
         Assert.StartsWith("The server's identity changed (it was SHA256:somethingelse", r.Error);
+        Assert.Contains("empty the HostKey line of [Other account] in", r.Error);
     }
 
     [Fact]

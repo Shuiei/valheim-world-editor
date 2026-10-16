@@ -153,6 +153,9 @@ public static class ServerConfig
         }
     }
 
+    /// <summary>The server's [section] name as written in the file (a ']' in its name would end it early).</summary>
+    public static string SectionName(Server s) => s.Name.Replace("]", ")");
+
     /// <summary>Writes the whole file, readable by this user only.</summary>
     private static void Write(List<Server> list)
     {
@@ -162,7 +165,7 @@ public static class ServerConfig
         foreach (Server s in list)
         {
             sb.AppendLine();
-            sb.AppendLine($"[{s.Name.Replace("]", ")")}]");
+            sb.AppendLine($"[{SectionName(s)}]");
             sb.AppendLine($"Host = {s.Host}");
             sb.AppendLine($"SshPort = {s.SshPort}");
             sb.AppendLine($"User = {s.User}");

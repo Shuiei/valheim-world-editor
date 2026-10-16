@@ -204,8 +204,8 @@ public static class Tunnel
         // another user is still the same server: a different key there is refused too).
         var savedServers = ServerConfig.Load();
         ServerConfig.Server? saved = savedServers.FirstOrDefault(s => s.Id == id);
-        string? pinned = saved?.HostKey
-            ?? savedServers.FirstOrDefault(s => s.HostKey != null && s.SshPort == port && string.Equals(s.Host, host, StringComparison.OrdinalIgnoreCase))?.HostKey;
+        List<ServerConfig.Server> sameServer = [.. savedServers.Where(s => s.HostKey != null && s.SshPort == port && string.Equals(s.Host, host, StringComparison.OrdinalIgnoreCase))];
+        string? pinned = saved?.HostKey ?? sameServer.FirstOrDefault()?.HostKey;
         string? seen = null, changed = null;
         // Trust on first use: remember the server's key; refuse if it changes later.
         client.HostKeyReceived += (_, e) =>
@@ -228,7 +228,9 @@ public static class Tunnel
             client.Dispose();
             if (changed != null)
             {
-                return Fail($"The server's identity changed (it was {changed}, now {seen}). If you reinstalled the server this is expected: empty its HostKey line in {ServerConfig.FilePath}; otherwise do not connect.");
+                // Every entry for this server that still holds another key would refuse it again: name them all.
+                string entries = string.Join(", ", sameServer.Where(s => s.HostKey != seen).Select(s => $"[{ServerConfig.SectionName(s)}]"));
+                return Fail($"The server's identity changed (it was {changed}, now {seen}). If you reinstalled the server this is expected: empty the HostKey line of {entries} in {ServerConfig.FilePath}; otherwise do not connect.");
             }
             return Fail(ex switch
             {

@@ -7,6 +7,9 @@ the plugin is unchanged in versions without that part.
 ## v1.45.109 — unreleased
 
 ### Fixed
+- **A changed server key now names every saved entry still holding the old key.** The refusal said to empty "its"
+  HostKey line, but another saved account on the same server and port also pins the key, so emptying one line kept the
+  connection refused. The message now lists each saved entry to empty.
 
 ### Changed
 
