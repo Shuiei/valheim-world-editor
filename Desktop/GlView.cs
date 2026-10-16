@@ -991,7 +991,7 @@ public sealed class GlView : OpenGlControlBase
                 {
                     _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 64), p, BufferUsageARB.DynamicDraw);
                 }
-                DrawFrom(b, _ghostVbo, data.Length, u);
+                DrawFrom(b, _ghostVbo, data.Length, null, u);
             }
         }
         _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 0f);
@@ -1002,22 +1002,36 @@ public sealed class GlView : OpenGlControlBase
 
     /// <summary>
     /// Draws a model part's instances from another buffer than its own (its material set up), then points its vertex
-    /// array back at its own instances.
+    /// array back at its own instances. With <paramref name="runs"/>, only the runs whose cell is in view are drawn
+    /// (nothing at all, not even the material, when none is).
     /// </summary>
     /// <param name="b">The model part.</param>
     /// <param name="vbo">The buffer of the instances' matrices.</param>
     /// <param name="count">How many instances it holds.</param>
+    /// <param name="runs">Its instances by area cell (see <see cref="Runs"/>), or null to draw them all.</param>
     /// <param name="u">The object shader's material uniforms.</param>
-    private unsafe void DrawFrom(Batch b, uint vbo, int count, MaterialUniforms u)
+    private unsafe void DrawFrom(Batch b, uint vbo, int count, (int Cell, int Start, int Count)[]? runs, MaterialUniforms u)
     {
-        _gl.BindVertexArray(b.Vao);
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
-        for (uint c = 0; c < 4; c++)
+        if (runs != null && !runs.Any(r => Shows(r.Cell, float.MaxValue)))
         {
-            _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
+            return;
         }
+        _gl.BindVertexArray(b.Vao);
         UseMaterial(b, u);
-        _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)count);
+        if (runs == null)
+        {
+            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
+            for (uint c = 0; c < 4; c++)
+            {
+                _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
+            }
+            _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)count);
+        }
+        else
+        {
+            // However far: these are not left out for being small and far away, only for being out of view.
+            DrawRuns(b, vbo, count, runs, float.MaxValue, out _);
+        }
         // The batch's own instances again.
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
         for (uint c = 0; c < 4; c++)
@@ -1040,8 +1054,13 @@ public sealed class GlView : OpenGlControlBase
         public WorldScene? Scene;
         /// <summary>Each kind in the list: its group then, and whether it was drawn (its model read).</summary>
         public readonly List<(int Prefab, bool Piece, Group Group, bool Drawn)> Kinds = [];
-        /// <summary>One draw per model part of each kind drawn: its batch, the buffer of its instances and how many.</summary>
-        public readonly List<(Batch Batch, uint Vbo, int Count)> Draws = [];
+        /// <summary>
+        /// One draw per model part of each kind drawn: its batch, the buffer of its instances, how many, and their runs by
+        /// area cell (<see cref="Runs"/>, in the list's order).
+        /// </summary>
+        public readonly List<(Batch Batch, uint Vbo, int Count, (int Cell, int Start, int Count)[] Runs)> Draws = [];
+        /// <summary>The cells (<c>_cellsMade</c>) whose boxes were grown by these instances' boxes; -1 for none.</summary>
+        public int Cells = -1;
         /// <summary>The buffers made so far, used again when the instances are made again.</summary>
         public readonly List<uint> Buffers = [];
 
@@ -1050,6 +1069,7 @@ public sealed class GlView : OpenGlControlBase
         {
             Source = null;
             Scene = null;
+            Cells = -1;
             Kinds.Clear();
             Draws.Clear();
             Buffers.Clear();
@@ -1066,9 +1086,9 @@ public sealed class GlView : OpenGlControlBase
 
     /// <summary>
     /// Draws models solid at places that are not things of the scene: opaque parts first, then see-through ones
-    /// (glass) blended over them. Their instances are made again (<c>MakeSolid</c>) only when <paramref name="source"/>
-    /// is another list, the area changed, or one of its kinds' models was read or let go since; kinds whose model is
-    /// not read yet, or that have none, are skipped.
+    /// (glass) blended over them, only in the area's cells in view. Their instances are made again (<c>MakeSolid</c>)
+    /// only when <paramref name="source"/> is another list, the area or its cells changed, or one of its kinds' models
+    /// was read or let go since; kinds whose model is not read yet, or that have none, are skipped.
     /// </summary>
     /// <param name="s">The area.</param>
     /// <param name="source">The list the places come from, the same object until they change.</param>
@@ -1076,7 +1096,8 @@ public sealed class GlView : OpenGlControlBase
     /// <param name="made">The instances made last from this kind of list.</param>
     private void DrawSolid(WorldScene s, object source, Func<IEnumerable<(int Prefab, Vector3 Position, Vector3 Rotation)>> shown, Solid made)
     {
-        bool stale = made.Source != source || made.Scene != s;
+        EnsureCells(s);
+        bool stale = made.Source != source || made.Scene != s || made.Cells != _cellsMade;
         for (int k = 0; k < made.Kinds.Count && !stale; k++)
         {
             var (prefab, piece, group, drawn) = made.Kinds[k];
@@ -1086,6 +1107,8 @@ public sealed class GlView : OpenGlControlBase
         if (stale)
         {
             MakeSolid(s, source, shown(), made);
+            // The cells' boxes grew (or are new): which are in view is seen again, so no part in view is left out.
+            SeeCells(_lastViewProj, _lastEye);
         }
         if (made.Draws.Count == 0)
         {
@@ -1101,11 +1124,11 @@ public sealed class GlView : OpenGlControlBase
                 GlBlend.Over(_gl);
                 _gl.DepthMask(false);
             }
-            foreach (var (b, vbo, count) in made.Draws)
+            foreach (var (b, vbo, count, runs) in made.Draws)
             {
                 if (b.Material.Transparent == glass)
                 {
-                    DrawFrom(b, vbo, count, u);
+                    DrawFrom(b, vbo, count, runs, u);
                 }
             }
         }
@@ -1116,12 +1139,14 @@ public sealed class GlView : OpenGlControlBase
 
     /// <summary>
     /// Makes the instances of <c>DrawSolid</c> again: one buffer of matrices per model part of each kind whose model is
-    /// read, the buffers made before used again.
+    /// read, the buffers made before used again. Each instance's placed model box grows the box of the area cell it
+    /// stands in, so the cell shows whenever any of it is in view.
     /// </summary>
     private unsafe void MakeSolid(WorldScene s, object source, IEnumerable<(int Prefab, Vector3 Position, Vector3 Rotation)> shown, Solid made)
     {
         made.Source = source;
         made.Scene = s;
+        made.Cells = _cellsMade;
         made.Kinds.Clear();
         made.Draws.Clear();
         int used = 0;
@@ -1137,6 +1162,18 @@ public sealed class GlView : OpenGlControlBase
                 continue;
             }
             var placements = byKind.Select(o => Placement(s, new WorldScene.Thing(0, prefab, o.Position, o.Rotation, 0f, piece), g.RootScale)).ToList();
+            (Vector3 Min, Vector3 Max)? box;
+            lock (_groups)
+            {
+                box = g.Box;
+            }
+            int[] cells = new int[placements.Count];
+            for (int i = 0; i < cells.Length; i++)
+            {
+                cells[i] = CellOf(s, placements[i].Translation);
+                Grow(_cellBounds, cells[i], PlacedBox(box, placements[i]));
+            }
+            var runs = Runs(cells);
             var data = new Matrix4x4[placements.Count];
             foreach (var (b, pre) in g.Batches)
             {
@@ -1154,7 +1191,7 @@ public sealed class GlView : OpenGlControlBase
                 {
                     _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 64), p, BufferUsageARB.StaticDraw);
                 }
-                made.Draws.Add((b, vbo, data.Length));
+                made.Draws.Add((b, vbo, data.Length, runs));
             }
         }
     }
@@ -1492,6 +1529,8 @@ public sealed class GlView : OpenGlControlBase
     private WorldScene? _cellScene;
     /// <summary>The cells across and down the area.</summary>
     private int _cellsX, _cellsZ;
+    /// <summary>How many times the cells were made (each time with empty boxes).</summary>
+    private int _cellsMade;
     /// <summary>
     /// Each cell's box in view space: the boxes of every object put in it (grown only, until the area is read
     /// again), so a tall or wide one standing over the cell's edge is still drawn when it shows.
@@ -1510,6 +1549,7 @@ public sealed class GlView : OpenGlControlBase
             return;
         }
         _cellScene = s;
+        _cellsMade++;
         _cellsX = Math.Max(1, (int)MathF.Ceiling(s.W / CellSize));
         _cellsZ = Math.Max(1, (int)MathF.Ceiling(s.H / CellSize));
         _cellBounds = new (Vector3, Vector3)[_cellsX * _cellsZ];
@@ -1531,30 +1571,90 @@ public sealed class GlView : OpenGlControlBase
     /// </summary>
     private void SeeCells(Matrix4x4 vp, Vector3 eye)
     {
-        // The planes of a row-vector projection: the fourth column plus or minus each of the others.
-        Span<Vector4> planes =
-        [
-            new(vp.M14 + vp.M11, vp.M24 + vp.M21, vp.M34 + vp.M31, vp.M44 + vp.M41),
-            new(vp.M14 - vp.M11, vp.M24 - vp.M21, vp.M34 - vp.M31, vp.M44 - vp.M41),
-            new(vp.M14 + vp.M12, vp.M24 + vp.M22, vp.M34 + vp.M32, vp.M44 + vp.M42),
-            new(vp.M14 - vp.M12, vp.M24 - vp.M22, vp.M34 - vp.M32, vp.M44 - vp.M42),
-            new(vp.M14 + vp.M13, vp.M24 + vp.M23, vp.M34 + vp.M33, vp.M44 + vp.M43),
-            new(vp.M14 - vp.M13, vp.M24 - vp.M23, vp.M34 - vp.M33, vp.M44 - vp.M43),
-        ];
+        Span<Vector4> planes = stackalloc Vector4[6];
+        ViewPlanes(vp, planes);
         for (int c = 0; c < _cellBounds.Length; c++)
         {
             var (min, max) = _cellBounds[c];
-            bool seen = min.X <= max.X;
-            for (int k = 0; k < 6 && seen; k++)
-            {
-                var pl = planes[k];
-                // The box's corner farthest along the plane's normal: outside when even it is behind.
-                var far = new Vector3(pl.X >= 0 ? max.X : min.X, pl.Y >= 0 ? max.Y : min.Y, pl.Z >= 0 ? max.Z : min.Z);
-                seen = pl.X * far.X + pl.Y * far.Y + pl.Z * far.Z + pl.W >= 0;
-            }
+            bool seen = InView(planes, min, max);
             _cellSeen[c] = seen;
             _cellDistance[c] = seen ? Vector3.Distance(eye, Vector3.Clamp(eye, min, max)) : float.MaxValue;
         }
+    }
+
+    /// <summary>The six planes of a view and projection (row vectors), each facing into the view.</summary>
+    /// <param name="vp">The view and projection.</param>
+    /// <param name="planes">Where the planes go (six).</param>
+    internal static void ViewPlanes(Matrix4x4 vp, Span<Vector4> planes)
+    {
+        // The fourth column plus or minus each of the others.
+        planes[0] = new(vp.M14 + vp.M11, vp.M24 + vp.M21, vp.M34 + vp.M31, vp.M44 + vp.M41);
+        planes[1] = new(vp.M14 - vp.M11, vp.M24 - vp.M21, vp.M34 - vp.M31, vp.M44 - vp.M41);
+        planes[2] = new(vp.M14 + vp.M12, vp.M24 + vp.M22, vp.M34 + vp.M32, vp.M44 + vp.M42);
+        planes[3] = new(vp.M14 - vp.M12, vp.M24 - vp.M22, vp.M34 - vp.M32, vp.M44 - vp.M42);
+        planes[4] = new(vp.M14 + vp.M13, vp.M24 + vp.M23, vp.M34 + vp.M33, vp.M44 + vp.M43);
+        planes[5] = new(vp.M14 - vp.M13, vp.M24 - vp.M23, vp.M34 - vp.M33, vp.M44 - vp.M43);
+    }
+
+    /// <summary>
+    /// Whether a box may show in a view (<see cref="ViewPlanes"/>): false only when it is wholly behind one of the
+    /// planes, so a box partly in view counts as in it. An empty box (min past max) is never in view.
+    /// </summary>
+    /// <param name="planes">The view's six planes.</param>
+    /// <param name="min">The box's low corner.</param>
+    /// <param name="max">The box's high corner.</param>
+    internal static bool InView(ReadOnlySpan<Vector4> planes, Vector3 min, Vector3 max)
+    {
+        if (min.X > max.X)
+        {
+            return false;
+        }
+        foreach (var pl in planes)
+        {
+            // The box's corner farthest along the plane's normal: outside when even it is behind.
+            var far = new Vector3(pl.X >= 0 ? max.X : min.X, pl.Y >= 0 ? max.Y : min.Y, pl.Z >= 0 ? max.Z : min.Z);
+            if (pl.X * far.X + pl.Y * far.Y + pl.Z * far.Z + pl.W < 0)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The box a model's instance covers: its model's box (<paramref name="box"/>) placed by
+    /// <paramref name="placement"/>, or a metre round where it stands while that box is not known.
+    /// </summary>
+    internal static (Vector3 Min, Vector3 Max) PlacedBox((Vector3 Min, Vector3 Max)? box, Matrix4x4 placement) =>
+        box is { } b ? Picking.Transform(b.Min, b.Max, placement) : (placement.Translation - Vector3.One, placement.Translation + Vector3.One);
+
+    /// <summary>Grows a cell's box to hold <paramref name="box"/> (cells' boxes only grow, until they are made again).</summary>
+    internal static void Grow((Vector3 Min, Vector3 Max)[] cellBounds, int cell, (Vector3 Min, Vector3 Max) box)
+    {
+        var (min, max) = cellBounds[cell];
+        cellBounds[cell] = (Vector3.Min(min, box.Min), Vector3.Max(max, box.Max));
+    }
+
+    /// <summary>
+    /// Instances' runs by cell, in their order: each run the instances one after another in the same cell (one run per
+    /// cell when they are sorted by cell).
+    /// </summary>
+    /// <param name="cells">Each instance's cell, in the order of the instances.</param>
+    internal static (int Cell, int Start, int Count)[] Runs(IReadOnlyList<int> cells)
+    {
+        var runs = new List<(int Cell, int Start, int Count)>();
+        for (int k = 0; k < cells.Count; k++)
+        {
+            if (runs.Count > 0 && runs[^1].Cell == cells[k])
+            {
+                runs[^1] = runs[^1] with { Count = runs[^1].Count + 1 };
+            }
+            else
+            {
+                runs.Add((cells[k], k, 1));
+            }
+        }
+        return [.. runs];
     }
 
     private unsafe void Rebuild(WorldScene s, Group g)
@@ -1572,7 +1672,7 @@ public sealed class GlView : OpenGlControlBase
                     var t = previews.TryGetValue(i, out var p) ? p : s.Things[i];
                     var m = Placement(s, t, g.RootScale);
                     // Without its model's box yet: a metre around it (the stand-in box).
-                    (Vector3 Min, Vector3 Max) bounds = g.Box is { } box ? Picking.Transform(box.Min, box.Max, m) : (m.Translation - Vector3.One, m.Translation + Vector3.One);
+                    var bounds = PlacedBox(g.Box, m);
                     if (g.Box != null)
                     {
                         _bounds[i] = bounds;
@@ -1585,8 +1685,7 @@ public sealed class GlView : OpenGlControlBase
                     if (!t.Gone)
                     {
                         int cell = CellOf(s, m.Translation);
-                        var (cmin, cmax) = _cellBounds[cell];
-                        _cellBounds[cell] = (Vector3.Min(cmin, bounds.Min), Vector3.Max(cmax, bounds.Max));
+                        Grow(_cellBounds, cell, bounds);
                         list.Add((cell, m, support != null && support.TryGetValue(i, out float sv) ? SupportTint(sv) : Vector3.Zero));
                     }
                 }
@@ -1594,18 +1693,7 @@ public sealed class GlView : OpenGlControlBase
         }
         // By cell, so each cell's instances are one run of the buffer.
         list.Sort((a, b) => a.Cell.CompareTo(b.Cell));
-        var cells = new List<(int Cell, int Start, int Count)>();
-        for (int k = 0; k < list.Count; k++)
-        {
-            if (cells.Count > 0 && cells[^1].Cell == list[k].Cell)
-            {
-                cells[^1] = cells[^1] with { Count = cells[^1].Count + 1 };
-            }
-            else
-            {
-                cells.Add((list[k].Cell, k, 1));
-            }
-        }
+        var cells = Runs([.. list.Select(e => e.Cell)]);
         float size = g.Box is { } gb ? Vector3.Distance(gb.Min, gb.Max) * MathF.Max(g.RootScale.X, MathF.Max(g.RootScale.Y, g.RootScale.Z)) : 1;
         var data = new Matrix4x4[list.Count];
         foreach (var (b, pre) in g.Batches)
@@ -1638,74 +1726,100 @@ public sealed class GlView : OpenGlControlBase
     internal const int SmallBatch = 2048;
 
     /// <summary>
-    /// Draws a batch's instances in the cells in view and near enough for its size (its vertex array bound), each
-    /// run of neighbouring cells at once. OpenGL ES 3.0 and OpenGL 4.0 cannot start at an instance, so the
-    /// instance attributes are pointed at the run's first one. Returns how many instances were drawn.
+    /// Draws a batch's instances in the cells in view and near enough for its size (its vertex array bound). Returns
+    /// how many instances were drawn.
     /// </summary>
-    private unsafe int DrawCells(Batch b)
+    private int DrawCells(Batch b)
     {
         if (b.Instances == 0)
         {
             return 0;
         }
-        bool culled = _cellSeen.Length == _cellsX * _cellsZ && _cellScene != null;
-        float reach = MathF.Max(MinCullDistance, b.Size * CullPerMetre);
-        int start = -1, count = 0, drawn = 0;
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
+        int drawn = DrawRuns(b, b.InstanceVbo, b.Instances, b.Cells, MathF.Max(MinCullDistance, b.Size * CullPerMetre), out int calls);
+        _drawCalls += calls;
+        return drawn;
+    }
+
+    /// <summary>
+    /// Whether a cell's instances are drawn this frame: in view and within <paramref name="reach"/> of the eye; always
+    /// when the cells were not seen for this frame's area.
+    /// </summary>
+    private bool Shows(int cell, float reach) =>
+        _cellSeen.Length != _cellsX * _cellsZ || _cellScene == null || cell >= _cellSeen.Length || _cellSeen[cell] && _cellDistance[cell] <= reach;
+
+    /// <summary>
+    /// Draws the runs of a batch's instances (its vertex array bound) whose cell shows (<see cref="Shows"/>), each
+    /// row of neighbouring runs at once, or all of them at once when they are few and any shows. OpenGL ES 3.0 and
+    /// OpenGL 4.0 cannot start at an instance, so the instance attributes are pointed at the row's first one. Returns
+    /// how many instances were drawn.
+    /// </summary>
+    /// <param name="b">The batch.</param>
+    /// <param name="vbo">The buffer of the instances: the batch's own, or another one (pointed at anew).</param>
+    /// <param name="instances">How many instances it holds.</param>
+    /// <param name="runs">The instances' runs by cell (see <see cref="Runs"/>).</param>
+    /// <param name="reach">How far from the eye a cell's instances are drawn.</param>
+    /// <param name="calls">The draw calls made.</param>
+    private unsafe int DrawRuns(Batch b, uint vbo, int instances, (int Cell, int Start, int Count)[] runs, float reach, out int calls)
+    {
+        bool own = vbo == b.InstanceVbo;
+        int pointed = own ? b.PointedAt : -1;
+        int start = -1, count = 0, drawn = 0, made = 0;
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
         void Flush()
         {
             if (count == 0)
             {
                 return;
             }
-            if (b.PointedAt != start)
+            if (pointed != start)
             {
                 for (uint c = 0; c < 4; c++)
                 {
                     _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)((start * 64L) + (c * 16)));
                 }
-                b.PointedAt = start;
+                pointed = start;
             }
             _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)count);
-            _drawCalls++;
+            made++;
             drawn += count;
             count = 0;
         }
-        bool Shows(int cell) => !culled || cell >= _cellSeen.Length || _cellSeen[cell] && _cellDistance[cell] <= reach;
-        if (b.Instances <= SmallBatch || b.Cells.Length == 1)
+        if (instances <= SmallBatch || runs.Length == 1)
         {
-            foreach (var (cell, _, _) in b.Cells)
+            if (runs.Any(r => Shows(r.Cell, reach)))
             {
-                if (Shows(cell))
+                start = 0;
+                count = instances;
+                Flush();
+            }
+        }
+        else
+        {
+            foreach (var (cell, first, n) in runs)
+            {
+                if (!Shows(cell, reach))
                 {
-                    start = 0;
-                    count = b.Instances;
                     Flush();
-                    break;
+                    continue;
+                }
+                if (count > 0 && start + count == first)
+                {
+                    count += n;
+                }
+                else
+                {
+                    Flush();
+                    start = first;
+                    count = n;
                 }
             }
-            return drawn;
+            Flush();
         }
-        foreach (var (cell, first, n) in b.Cells)
+        if (own)
         {
-            bool shows = Shows(cell);
-            if (!shows)
-            {
-                Flush();
-                continue;
-            }
-            if (count > 0 && start + count == first)
-            {
-                count += n;
-            }
-            else
-            {
-                Flush();
-                start = first;
-                count = n;
-            }
+            b.PointedAt = pointed;
         }
-        Flush();
+        calls = made;
         return drawn;
     }
 

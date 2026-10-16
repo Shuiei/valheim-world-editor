@@ -8,8 +8,9 @@ the plugin is unchanged in versions without that part.
 
 ### Changed
 - **Areas with many dungeon rooms or location parts draw faster.** Each frame worked out every room's and location
-  part's place again and sent them all to the graphics card anew. They are now sent once and kept there until the
-  rooms or locations change (or a model they use is read).
+  part's place again and sent them all to the graphics card anew, and drew them all, in view or not. They are now sent
+  once and kept there until the rooms or locations change (or a model they use is read), and only those in the parts
+  of the area in view are drawn, like objects (each part of the area's box holds the whole of the rooms and parts in it).
 
 ## v1.45.90 — unreleased
 
