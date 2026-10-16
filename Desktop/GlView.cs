@@ -535,6 +535,10 @@ public sealed class GlView : OpenGlControlBase
         Dictionary<string, ModelStore.MaterialData> Materials, Dictionary<string, ModelStore.ImageData?> Images);
     /// <summary>Models read, waiting for the drawing thread.</summary>
     private readonly ConcurrentQueue<ReadyModel> _ready = new();
+    /// <summary>Tests (headless, so nothing goes to the graphics card): the models read and waiting, each by its kind's prefab and whether it has a model (else the stand-in box).</summary>
+    internal (int Prefab, bool HasModel)[] ModelsWaiting => [.. _ready.Select(r => (r.Group.Key.Prefab, r.Model != null))];
+    /// <summary>The box standing in for a kind without a model (a metre across, two tall), in its own frame.</summary>
+    private static readonly (Vector3 Min, Vector3 Max) StandInBox = (new Vector3(-0.5f, 0, -0.5f), new Vector3(0.5f, 2, 0.5f));
     /// <summary>Models still being read.</summary>
     private int _pending;
     /// <summary>The stand-in box's vertex and index buffers.</summary>
@@ -1219,6 +1223,9 @@ public sealed class GlView : OpenGlControlBase
         Task.Run(async () =>
         {
             await LoadGate.WaitAsync();
+            var images = new Dictionary<string, ModelStore.ImageData?>();
+            // The textures this loader took to read (released again if not read).
+            var claimed = new List<string>();
             try
             {
                 // Left already (another area opened while it waited): not read at all.
@@ -1230,7 +1237,6 @@ public sealed class GlView : OpenGlControlBase
                 var model = name != null && Models != null && _gameLookOn ? Models.LoadModel(name) : null;
                 var meshes = new Dictionary<string, ModelStore.MeshData>();
                 var mats = new Dictionary<string, ModelStore.MaterialData>();
-                var images = new Dictionary<string, ModelStore.ImageData?>();
                 Vector3 lo = new(float.MaxValue), hi = new(float.MinValue);
                 if (model != null)
                 {
@@ -1264,6 +1270,7 @@ public sealed class GlView : OpenGlControlBase
                                     }
                                     _claimed.Add(mat.Map);
                                 }
+                                claimed.Add(mat.Map);
                                 images[mat.Map] = Models.LoadTexture(mat.Map);
                             }
                         }
@@ -1272,7 +1279,7 @@ public sealed class GlView : OpenGlControlBase
                 if (lo.X > hi.X)
                 {
                     // No model: the stand-in box.
-                    (lo, hi) = (new Vector3(-0.5f, 0, -0.5f), new Vector3(0.5f, 2, 0.5f));
+                    (lo, hi) = StandInBox;
                 }
                 lock (_groups)
                 {
@@ -1284,11 +1291,28 @@ public sealed class GlView : OpenGlControlBase
             }
             catch (Exception ex)
             {
+                // The store turns a mesh, material or texture that cannot be read into none; what still fails (the
+                // memory running out on a texture) is said, and the kind's things get the stand-in box rather than
+                // nothing at all: drawn, picked, and their ghosts shown. The textures read go up with it, as any
+                // model's; those claimed and not read are let go, for another loader to read.
                 Status?.Invoke($"Model of {g.Key.Prefab}: {ex.Message}");
-                if (Current(g))
+                lock (_textures)
                 {
-                    Interlocked.Decrement(ref _pending);
+                    foreach (string file in claimed)
+                    {
+                        if (!images.ContainsKey(file))
+                        {
+                            _claimed.Remove(file);
+                        }
+                    }
                 }
+                lock (_groups)
+                {
+                    g.RootScale = Vector3.One;
+                    g.HasModel = false;
+                    g.Box = StandInBox;
+                }
+                _ready.Enqueue(new ReadyModel(g, null, [], [], images));
             }
             finally
             {

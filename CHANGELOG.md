@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.73 — unreleased
+
+### Fixed
+- **A kind of object whose model failed to load was never drawn at all, and no other model got its textures.** When the
+  reading of a model failed outright (the memory running out on a texture), its things were neither drawn as boxes nor
+  pickable, their ghosts never showed, and the textures it had taken to read stayed taken, so every later model using
+  them came up without them until the models were let go. The failure is said as before, the kind's things get the
+  stand-in box, the textures read go up and the rest are let go for another model to read.
+
 ## v1.45.72 — unreleased
 
 ### Fixed
