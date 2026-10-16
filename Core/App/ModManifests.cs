@@ -150,11 +150,12 @@ public static class ModManifests
         {
             try
             {
-                // The mod: its folder right under plugins (the manifest's own when it lies there).
+                // The mod: its folder right under plugins. A manifest lying in plugins itself belongs to no mod: it
+                // offers no extension (any mod's DLL would be "inside" its folder, under the name "plugins").
                 string folder = file.DirectoryName!;
                 string relative = Path.GetRelativePath(plugins, folder);
-                string mod = relative == "." ? Path.GetFileName(folder) : relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
-                if (file.Length <= MaxFile && Read(File.ReadAllText(file.FullName), notes, (folder, mod)))
+                (string, string)? from = relative == "." ? null : (folder, relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0]);
+                if (file.Length <= MaxFile && Read(File.ReadAllText(file.FullName), notes, from))
                 {
                     read++;
                 }
@@ -187,7 +188,9 @@ public static class ModManifests
     /// </summary>
     /// <param name="json">The manifest's text.</param>
     /// <param name="notes">What is added to.</param>
-    /// <param name="from">The manifest's folder and its mod (null for one given in code, which offers no extension).</param>
+    /// <param name="from">
+    /// The manifest's folder and its mod (null for one given in code or lying in plugins itself, which offers no extension).
+    /// </param>
     /// <exception cref="JsonException">Not JSON.</exception>
     private static bool Read(string json, Notes notes, (string Folder, string Mod)? from)
     {

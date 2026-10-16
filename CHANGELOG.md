@@ -10,6 +10,9 @@ the plugin is unchanged in versions without that part.
 - **A changed server key now names every saved entry still holding the old key.** The refusal said to empty "its"
   HostKey line, but another saved account on the same server and port also pins the key, so emptying one line kept the
   connection refused. The message now lists each saved entry to empty.
+- **A worldeditor.json lying directly in BepInEx/plugins no longer offers an extension under the name "plugins".**
+  Such a file belongs to no mod, yet it could point at any mod's DLL, and the consent row named it "plugins". Its data
+  and prefab notes are still read; extensions come only from a mod's own folder.
 
 ### Changed
 
