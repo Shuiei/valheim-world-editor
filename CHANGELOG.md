@@ -150,6 +150,9 @@ the plugin is unchanged in versions without that part.
   just after the last one's magic, inside its data, and a size of 2 GB or more threw; the search now starts at the end
   of the program decoded, a size past int's range is no program, and one the data left cannot hold is passed over
   (Decode says it ends early).
+- **Mod models read by several threads at once could fail.** ModCatalogue.ModelOf read the kept JSON nodes, which
+  build themselves on first read, from the model loaders' threads and the UI's at once; the models are now read into
+  records once, when taken in.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

@@ -265,6 +265,8 @@ public sealed class ModCatalogueTests : IDisposable
         Assert.Equal(new[] { 1f, 0, 0, 1, 0, 1, 0, 2, 0, 0, 1, 3, 0, 0, 0, 1 }, wall.Matrix);
         Assert.Null(model.Parts[1].Material);
         Assert.Null(ModCatalogue.ModelOf("vfx_bfp_hit"));
+        // Read into records once, when taken: never from the shared JSON by the threads that ask.
+        Assert.Same(model, ModCatalogue.ModelOf("bfp_finewall"));
     }
 
     [Fact]

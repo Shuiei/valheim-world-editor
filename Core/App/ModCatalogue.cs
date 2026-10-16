@@ -33,7 +33,15 @@ public static class ModCatalogue
     /// <param name="Mods">The mod that adds each prefab, when the game knew it (with Jötunn).</param>
     /// <param name="Models">What the game draws of each prefab (GET /models), when it was asked.</param>
     private sealed record Data(Dictionary<string, JsonNode> Prefabs, Dictionary<string, JsonNode> Pieces, Dictionary<string, JsonNode> Costs, Dictionary<string, string> Items, Dictionary<string, string> Mods,
-        Dictionary<string, JsonNode> Models);
+        Dictionary<string, JsonNode> Models)
+    {
+        /// <summary>
+        /// <see cref="Models"/> read into records when put in use (<see cref="Use"/>, under the lock): the JSON nodes
+        /// are read on first use, which two threads must not do at once, and ModelOf runs on the model loaders' threads
+        /// and the UI's.
+        /// </summary>
+        public IReadOnlyDictionary<string, Model> Parsed { get; init; } = new Dictionary<string, Model>();
+    }
 
     /// <summary>Nothing known: before Load, and when the kept file is missing or cannot be read.</summary>
     private static Data Empty() => new([], [], [], [], [], []);
@@ -59,12 +67,11 @@ public static class ModCatalogue
     /// <summary>
     /// What the game draws of a mod prefab, as it reported it; null when it was not asked or the prefab is not a mod's.
     /// </summary>
-    public static Model? ModelOf(string prefab)
+    public static Model? ModelOf(string prefab) => _data.Parsed.GetValueOrDefault(prefab);
+
+    /// <summary>A model's JSON (checked by IsModel) as a record.</summary>
+    private static Model ToModel(JsonObject o)
     {
-        if (_data.Models.GetValueOrDefault(prefab) is not JsonObject o)
-        {
-            return null;
-        }
         static float[] Floats(JsonNode? n) => [.. n!.AsArray().Select(x => (float)x!.GetValue<double>())];
         var parts = o["p"]!.AsArray().Select(p => new ModelPart(
             Plain(p!["mesh"]!.GetValue<string>()), p["v"]!.GetValue<int>(), p["sub"]!.GetValue<int>(),
@@ -138,7 +145,7 @@ public static class ModCatalogue
     /// <summary>Puts what is known in use, counting it in <see cref="Generation"/>.</summary>
     private static void Use(Data next)
     {
-        _data = next;
+        _data = next with { Parsed = next.Models.ToDictionary(kv => kv.Key, kv => ToModel(kv.Value.AsObject()), StringComparer.Ordinal) };
         Interlocked.Increment(ref _generation);
     }
 
