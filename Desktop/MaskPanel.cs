@@ -168,6 +168,11 @@ public sealed class MaskPanel
     private static float? F(NumericUpDown n) => n.Value is decimal d ? (float)d : null;
 
     /// <summary>
+    /// A box's value for a mask limit: null (empty) for no limit.
+    /// </summary>
+    private static decimal? Box(float? v) => v is float f ? (decimal)f : null;
+
+    /// <summary>
     /// A box changed: the mask takes the panel's settings and the warning is updated.
     /// </summary>
     private void Changed()
@@ -188,14 +193,22 @@ public sealed class MaskPanel
     }
 
     /// <summary>
-    /// The mask changed elsewhere (Alt + Shift + click): the boxes follow.
+    /// The mask changed elsewhere (Alt + Shift + click): every box follows, so <c>Changed</c> writes back what the
+    /// mask already holds.
     /// </summary>
     private void Fill()
     {
         _filling = true;
         OnBox.IsChecked = _mask.On;
-        HeightMin.Value = _mask.HeightMin is float a ? (decimal)a : null;
-        HeightMax.Value = _mask.HeightMax is float b ? (decimal)b : null;
+        foreach (var (b, t) in BiomeButtons)
+        {
+            t.IsChecked = _mask.Biomes.Contains(b);
+        }
+        HeightMin.Value = Box(_mask.HeightMin);
+        HeightMax.Value = Box(_mask.HeightMax);
+        SlopeMin.Value = Box(_mask.SlopeMin);
+        SlopeMax.Value = Box(_mask.SlopeMax);
+        PaintBox.SelectedIndex = (int)_mask.Paint;
         _filling = false;
         Changed();
     }
