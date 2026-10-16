@@ -591,8 +591,8 @@ public sealed class StartPage
         PathError.Text = "";
         string full = Path.GetFullPath(path);
         _settings.LastMode = "offline";
+        // Saves the settings, LastMode with them.
         _settings.AddRecent(full, Worlds.WorldName(full));
-        _settings.Save();
         OpenRequested?.Invoke(() => Task.Run(() => WorldSession.Open(full)), "Opening the world…");
     }
 
