@@ -44,9 +44,13 @@ public class GlViewModelsTests
             await Task.Delay(50);
         }
         // Waiting for the drawing thread like any model, with the stand-in box in place of the model; the failure said.
-        var (prefab, hasModel) = Assert.Single(v.ModelsWaiting);
+        var (prefab, hasModel, box) = Assert.Single(v.ModelsWaiting);
         Assert.Equal(StableHash.Of("Beech1"), prefab);
         Assert.False(hasModel);
+        // Its things picked by the stand-in box (a metre across, two tall), as they are drawn.
+        Assert.Equal((new Vector3(-0.5f, 0, -0.5f), new Vector3(0.5f, 2, 0.5f)), box);
+        // The texture it could not read is let go, for another kind's loader to read.
+        Assert.DoesNotContain("bark.png", v.TexturesClaimed);
         Assert.Contains(said, t => t.Contains("no memory left for the texture"));
     }
 }

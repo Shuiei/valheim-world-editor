@@ -535,8 +535,19 @@ public sealed class GlView : OpenGlControlBase
         Dictionary<string, ModelStore.MaterialData> Materials, Dictionary<string, ModelStore.ImageData?> Images);
     /// <summary>Models read, waiting for the drawing thread.</summary>
     private readonly ConcurrentQueue<ReadyModel> _ready = new();
-    /// <summary>Tests (headless, so nothing goes to the graphics card): the models read and waiting, each by its kind's prefab and whether it has a model (else the stand-in box).</summary>
-    internal (int Prefab, bool HasModel)[] ModelsWaiting => [.. _ready.Select(r => (r.Group.Key.Prefab, r.Model != null))];
+    /// <summary>Tests (headless, so nothing goes to the graphics card): the models read and waiting, each by its kind's prefab, whether it has a model (else the stand-in box) and its kind's box.</summary>
+    internal (int Prefab, bool HasModel, (Vector3 Min, Vector3 Max)? Box)[] ModelsWaiting
+    {
+        get
+        {
+            lock (_groups)
+            {
+                return [.. _ready.Select(r => (r.Group.Key.Prefab, r.Model != null, r.Group.Box))];
+            }
+        }
+    }
+    /// <summary>Tests: the textures a loader has taken to read and not yet handed to the graphics card.</summary>
+    internal string[] TexturesClaimed { get { lock (_textures) { return [.. _claimed]; } } }
     /// <summary>The box standing in for a kind without a model (a metre across, two tall), in its own frame.</summary>
     private static readonly (Vector3 Min, Vector3 Max) StandInBox = (new Vector3(-0.5f, 0, -0.5f), new Vector3(0.5f, 2, 0.5f));
     /// <summary>Models still being read.</summary>
