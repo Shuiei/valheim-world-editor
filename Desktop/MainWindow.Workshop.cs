@@ -236,6 +236,35 @@ public partial class MainWindow
     /// <param name="path">The blueprint to open, or null for a blank plot.</param>
     internal async Task OpenWorkshop(string? path)
     {
+        // A second open while one is under way (a double click while the game's files are read) would ask and show
+        // the plot twice.
+        if (_openingWorkshop)
+        {
+            MessageText.Text = "The Workshop is already opening.";
+            return;
+        }
+        _openingWorkshop = true;
+        try
+        {
+            await OpenWorkshopOnce(path);
+        }
+        finally
+        {
+            _openingWorkshop = false;
+        }
+    }
+
+    /// <summary>
+    /// True while <see cref="OpenWorkshop"/> runs.
+    /// </summary>
+    private bool _openingWorkshop;
+
+    /// <summary>
+    /// <see cref="OpenWorkshop"/>'s work, once no other open is under way.
+    /// </summary>
+    /// <param name="path">The blueprint to open, or null for a blank plot.</param>
+    private async Task OpenWorkshopOnce(string? path)
+    {
         // The game's files are needed here too (its pieces, and how ground discs shape the plot).
         bool ready = await Task.Run(() =>
         {

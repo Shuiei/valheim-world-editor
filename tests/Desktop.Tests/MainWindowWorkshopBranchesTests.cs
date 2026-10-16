@@ -59,7 +59,7 @@ public class MainWindowWorkshopBranchesTests
         Assert.Equal(DragDropEffects.Copy, Over(w, library));
         Dropped(w, library);
         Assert.Equal(1, Workshop.Pieces(w.Session!.Scene));
-        Assert.StartsWith("Added “Tower”: 1 piece(s).", w.MessageText.Text);
+        Assert.StartsWith("Added “Tower”: 1 piece(s).", w.StatusMessage);
     }
 
     [AvaloniaFact]
@@ -87,10 +87,10 @@ public class MainWindowWorkshopBranchesTests
         Assert.Equal(3, Workshop.Pieces(s.Scene));
         // Kinds the game does not know are left out, and said.
         w.AddToWorkshop(BlueprintFiles.Hut(r.Homestead), null);
-        Assert.Contains("1 kind(s) the game does not know were left out (mods?): no_such_piece_xyz.", w.MessageText.Text);
+        Assert.Contains("1 kind(s) the game does not know were left out (mods?): no_such_piece_xyz.", w.StatusMessage);
         // A file that is not there.
         w.AddToWorkshop(Path.Combine(r.Dir, "missing.blueprint"), null);
-        Assert.StartsWith("Could not add that blueprint: ", w.MessageText.Text);
+        Assert.StartsWith("Could not add that blueprint: ", w.StatusMessage);
     }
 
     [AvaloniaFact]
@@ -109,7 +109,7 @@ public class MainWindowWorkshopBranchesTests
         Assert.StartsWith("There is no building piece on the plot yet", Assert.Single(told));
         // A floor would fall: asked, and Keep building keeps it as it is.
         await w.OpenWorkshop(BlueprintFiles.Hut(r.Homestead));
-        Assert.Contains("no_such_piece_xyz", w.MessageText.Text);
+        Assert.Contains("no_such_piece_xyz", w.StatusMessage);
         await w.SaveWorkshop();
         Assert.Equal("Save blueprint", Assert.Single(asked));
         Assert.Single(r.Listed);
@@ -152,7 +152,7 @@ public class MainWindowWorkshopBranchesTests
         // A .vbuild from elsewhere (not in Homestead's folder): every kind known.
         string wall = BlueprintFiles.Vbuild(r.Dir, "Wall", "woodwall", "wood_floor");
         await w.OpenWorkshop(wall);
-        Assert.Equal("Opened “Wall”: 2 piece(s). Change it, then Save blueprint.", w.MessageText.Text);
+        Assert.Equal("Opened “Wall”: 2 piece(s). Change it, then Save blueprint.", w.StatusMessage);
         // Saved: its own name suggested, asked before replacing nothing (the file is not Homestead's).
         string? suggested = null;
         r.B.AskDetails = (d, _) => { suggested = d.Name; return Task.FromResult<Homestead.Details?>(d); };
@@ -196,5 +196,23 @@ public class MainWindowWorkshopBranchesTests
         w.Edit(TestScenes.Flat(2));
         Dispatcher.UIThread.RunJobs();
         Assert.Null(w.LastSupport);
+    }
+
+    [AvaloniaFact]
+    public async Task ASecondOpenWhileOneIsUnderWayIsRefused()
+    {
+        using var r = new BlueprintsPanelRun();
+        var w = r.W;
+        w.Ask = (_, _, _, _) => Task.FromResult(true);
+        var first = w.OpenWorkshop(null);
+        var second = w.OpenWorkshop(null);
+        Assert.True(second.IsCompleted);
+        Assert.Equal("The Workshop is already opening.", w.StatusMessage);
+        await first;
+        Assert.True(w.InWorkshop);
+        // Once done, another open goes ahead.
+        var again = w.OpenWorkshop(null);
+        Assert.NotEqual("The Workshop is already opening.", w.StatusMessage);
+        await again;
     }
 }
