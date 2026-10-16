@@ -153,6 +153,9 @@ the plugin is unchanged in versions without that part.
 - **Mod models read by several threads at once could fail.** ModCatalogue.ModelOf read the kept JSON nodes, which
   build themselves on first read, from the model loaders' threads and the UI's at once; the models are now read into
   records once, when taken in.
+- **A pit arena's four corner columns never stood.** The ledges round the pit kept 1.3 m round each edge tile, so the
+  columns 2 m in from them never found room; the columns are now placed first (away from the doorways), then the
+  ledges.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

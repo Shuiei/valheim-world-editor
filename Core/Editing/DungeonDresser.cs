@@ -2501,12 +2501,16 @@ internal sealed partial class DungeonDresser
         switch (variant)
         {
             case 3:
-                // The pit: ledges round a sunken floor, columns at its corners, the master down in the middle.
-                Ledges(f);
+                // The pit: ledges round a sunken floor, columns at its corners, the master down in the middle. The columns
+                // first: each ledge keeps 1.3 m round its tile, which took the columns' spots beside them.
                 foreach (var (cu, cv) in new[] { (-1, -1), (1, -1), (-1, 1), (1, 1) })
                 {
-                    Pillar(f, cu * (f.Across - 3), cv * (f.Deep - 3));
+                    if (!f.NearDoor(cu * (f.Across - 3), cv * (f.Deep - 3), 2.6f))
+                    {
+                        Pillar(f, cu * (f.Across - 3), cv * (f.Deep - 3));
+                    }
                 }
+                Ledges(f);
                 if (f.S.Tall)
                 {
                     _o.Add("StatueEvil", f.W(0, f.HalfD - 1.1f, f.F + 1 + Lift * 2 + DungeonProps.Foot("StatueEvil")), f.Yaw(180));

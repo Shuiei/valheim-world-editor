@@ -184,4 +184,24 @@ public class DungeonDresserTests
         Assert.True(corridors > 0, "no corridor with recesses");
         Assert.Equal(4, ways.Count);
     }
+
+    [Theory]
+    [InlineData("Fortress", 2)]
+    [InlineData("Temple", 12)]
+    public void APitArenasCornerColumnsStand(string style, int seed)
+    {
+        // The pit's ledges kept 1.3 m round each edge tile, so the columns 2 m in from them never found room: all four
+        // were left out. Arenas where every corner is floor and away from the doorways.
+        var r = DungeonGen.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: style, Size: 2, Levels: 1, Seed: seed));
+        var columns = DungeonKit.MaterialOf(DungeonKit.BiomeOf("Black Forest").Material).Column.Select(c => c.Prefab).ToHashSet();
+        var a = r.Map!.Single(m => m.Name == "Arena");
+        // The ledges round the sunken floor.
+        Assert.True(r.Items.Count(i => i.Prefab == "stone_floor_2x2" && i.Position.X > a.X0 && i.Position.X < a.X1 && i.Position.Z > a.Z0 && i.Position.Z < a.Z1
+            && i.Position.Y > a.Y + 0.3f && i.Position.Y < a.Y + 0.9f) > 30, "no pit");
+
+        foreach (var (x, z) in new[] { (a.X0 + 3, a.Z0 + 3), (a.X1 - 3, a.Z0 + 3), (a.X0 + 3, a.Z1 - 3), (a.X1 - 3, a.Z1 - 3) })
+        {
+            Assert.Contains(r.Items, i => columns.Contains(i.Prefab) && MathF.Abs(i.Position.X - x) < 0.3f && MathF.Abs(i.Position.Z - z) < 0.3f);
+        }
+    }
 }
