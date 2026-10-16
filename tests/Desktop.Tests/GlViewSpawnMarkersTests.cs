@@ -9,7 +9,7 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The 3D view's spawn point and nest markers: the things are looked through for them only when they change, not at
-/// every frame, and the markers follow what was added or deleted.
+/// every frame, and the markers follow what was added or deleted, the kinds worked out again and another area shown.
 /// </summary>
 public class GlViewSpawnMarkersTests
 {
@@ -41,5 +41,28 @@ public class GlViewSpawnMarkersTests
         // Deleted: its marker goes.
         s.Delete(added);
         Assert.Equal([(at, GlView.SpawnColour(false))], v.SpawnMarkers(s.Scene));
+    }
+
+    // What was found is dropped when the things' kinds are worked out again and when another area is shown: the
+    // markers are those of the things as they are now, never of the ones looked through before.
+    [AvaloniaFact]
+    public void TheThingsAreLookedThroughAgainForNewKindsOrAnotherArea()
+    {
+        var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("Spawner_Boar"), new Vector3(30, 30, 30), Vector3.Zero, 0, false));
+        var v = new GlView();
+        v.Show(s.Scene, null);
+        v.SetShown(ObjectKind.SpawnPoints, true);
+        var at = new Vector3(30 - s.Scene.Cx, 32.4f, -(30 - s.Scene.Cz));
+        v.SetCamera(at + new Vector3(0, 20, 20), at, 1.5f);
+        // Before the kinds are worked out, nothing is a spawn point.
+        Assert.Empty(v.SpawnMarkers(s.Scene));
+        v.ReadModels();
+        Assert.Equal([(at, GlView.SpawnColour(false))], v.SpawnMarkers(s.Scene));
+        // Another area, its spawn point elsewhere.
+        var other = TestScenes.Flat(2, new WorldScene.Thing(2, StableHash.Of("Spawner_Boar"), new Vector3(36, 30, 30), Vector3.Zero, 0, false));
+        v.Show(other.Scene, null);
+        Assert.DoesNotContain((at, GlView.SpawnColour(false)), v.SpawnMarkers(other.Scene));
+        v.ReadModels();
+        Assert.Equal([(new Vector3(36 - other.Scene.Cx, 32.4f, -(30 - other.Scene.Cz)), GlView.SpawnColour(false))], v.SpawnMarkers(other.Scene));
     }
 }
