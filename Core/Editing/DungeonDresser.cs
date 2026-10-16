@@ -414,6 +414,23 @@ internal sealed partial class DungeonDresser
     /// <summary>One of the names at random.</summary>
     private string One(params string[] list) => list[_rnd.Next(list.Length)];
 
+    /// <summary>A statue: one of <paramref name="whole"/>, or a broken one in a decayed dungeon.</summary>
+    private string Statue(params string[] whole) => _decay > 0.4f ? One("StatueThor_broken_top", "StatueFreya_broken_left") : One(whole);
+
+    /// <summary>A pair of statues (Freya's and Thor's), broken in a decayed dungeon.</summary>
+    private string[] Statues() => _decay > 0.4f ? ["StatueFreya_broken_left", "StatueThor_broken_top"] : ["StatueFreya", "StatueThor"];
+
+    /// <summary>
+    /// A column lying on the floor at (u, v), its length along <paramref name="yaw"/> (degrees, the room's frame); it
+    /// takes the floor within <paramref name="room"/> metres.
+    /// </summary>
+    private void FallenPillar(Frame f, string prefab, float u, float v, float yaw, float room)
+    {
+        var q = DungeonOut.Yaw(f.Yaw(yaw)) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 2);
+        _o.Add(prefab, f.W(u, v, f.F + 0.55f), q);
+        f.Take(u, v, room);
+    }
+
     /// <summary>One of the names at random, not the one just used when there is a choice (repeated detail is what the eye tires of first).</summary>
     private string Another(string[] list, string last)
     {
@@ -803,9 +820,7 @@ internal sealed partial class DungeonDresser
                 float pu = Rr(-f.HalfA + 2.1f, f.HalfA - 2.1f), pv = Rr(-f.HalfD + 2.1f, f.HalfD - 2.1f);
                 if (f.Free(pu, pv, 1.3f))
                 {
-                    var q = DungeonOut.Yaw(f.Yaw(Rr(0, 360))) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 2);
-                    _o.Add("stone_pillar", f.W(pu, pv, f.F + 0.55f), q);
-                    f.Take(pu, pv, 1.3f);
+                    FallenPillar(f, "stone_pillar", pu, pv, Rr(0, 360), 1.3f);
                     break;
                 }
             }
@@ -1037,7 +1052,7 @@ internal sealed partial class DungeonDresser
                         Put(f, One("skull_pile", "Skull1", "Candle_resin"), su, sv, R(0, 360), 0.3f);
                         return true;
                     case 1:
-                        if (!Put(f, _decay > 0.4f ? One("StatueThor_broken_top", "StatueFreya_broken_left") : One("StatueEvil", "StatueThor", "StatueFreya"), bu, bv, yaw, 0.7f, force: true))
+                        if (!Put(f, Statue("StatueEvil", "StatueThor", "StatueFreya"), bu, bv, yaw, 0.7f, force: true))
                         {
                             return false;
                         }
@@ -1189,7 +1204,7 @@ internal sealed partial class DungeonDresser
         // A statue in a bay, a few bones, rubble, cobwebs.
         if (Chance(0.25) && Spot(f, 0.8f, 0.6f) is var (su, sv))
         {
-            Put(f, _decay > 0.4f ? One("StatueThor_broken_top", "StatueFreya_broken_left") : One("StatueThor", "StatueFreya", "StatueDeer"), su, sv, R(0, 360), 0.9f);
+            Put(f, Statue("StatueThor", "StatueFreya", "StatueDeer"), su, sv, R(0, 360), 0.9f);
         }
         Clutter(f, 0.02f);
         Webs(f, 0.1f + _decay * 0.4f);
@@ -1355,7 +1370,7 @@ internal sealed partial class DungeonDresser
                 Plinth(f, 0, f.HalfD - 3, 6, 4);
                 Steps(f, 0, f.HalfD - 6, 180, 6);
                 _o.Add("crypt_skeleton_chest", f.W(0, f.HalfD - 3, f.F + 1 + Lift * 2), f.Yaw(90));
-                string[] statues = _decay > 0.4f ? ["StatueFreya_broken_left", "StatueThor_broken_top"] : ["StatueFreya", "StatueThor"];
+                string[] statues = Statues();
                 _o.Add(statues[0], f.W(-2.3f, f.HalfD - 2.4f, f.F + 1 + Lift * 2), f.Yaw(180));
                 _o.Add(statues[1], f.W(2.3f, f.HalfD - 2.4f, f.F + 1 + Lift * 2), f.Yaw(180));
                 for (float v = -f.HalfD + 3; v <= f.HalfD - 8; v += 4)
@@ -1383,9 +1398,7 @@ internal sealed partial class DungeonDresser
                         }
                         else if (Spot(f, 1.3f) is var (pu, pv))
                         {
-                            var q = DungeonOut.Yaw(f.Yaw(R(0, 360))) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 2);
-                            _o.Add(_mat.Column[0].Prefab == "stone_pillar" ? "stone_pillar" : "Morkhalla_Rubble4", f.W(pu, pv, f.F + 0.55f), q);
-                            f.Take(pu, pv, 1.3f);
+                            FallenPillar(f, _mat.Column[0].Prefab == "stone_pillar" ? "stone_pillar" : "Morkhalla_Rubble4", pu, pv, R(0, 360), 1.3f);
                         }
                     }
                 }
@@ -1474,7 +1487,7 @@ internal sealed partial class DungeonDresser
             case 0:
                 if (!(Chance(0.35) && PutHero(f, 0, 0, 180, 1.8f)))
                 {
-                    Put(f, _decay > 0.4f ? One("StatueThor_broken_top", "StatueFreya_broken_left") : One("StatueThor", "StatueFreya", "StatueDeer", "StatueSeed"), 0, 0, 180, 1.4f);
+                    Put(f, Statue("StatueThor", "StatueFreya", "StatueDeer", "StatueSeed"), 0, 0, 180, 1.4f);
                 }
                 break;
             case 1:
@@ -1714,7 +1727,7 @@ internal sealed partial class DungeonDresser
     {
         float far = f.HalfD - 1.6f;
         string altar = One("Ashlands_Altar", "offeraltar_FrozenKing_bossroom");
-        string[] statues = _decay > 0.4f ? ["StatueFreya_broken_left", "StatueThor_broken_top"] : ["StatueFreya", "StatueThor"];
+        string[] statues = Statues();
         string bench = _mat.Name is "Marble" or "Grausten" ? "piece_blackmarble_bench" : _mat.Name == "Stave" ? "prop_piece_bench_runed" : "piece_bench01";
         int variant = _rnd.Next(3);
         switch (variant)
@@ -1902,7 +1915,7 @@ internal sealed partial class DungeonDresser
             Plinth(f, 0, 1, 4, 4);
             _o.Add("crypt_skeleton_chest", f.W(0, 1, f.F + 1 + Lift * 2), f.Yaw(90));
             Steps(f, 0, -2, 180, 2);
-            string[] statues = _decay > 0.4f ? ["StatueFreya_broken_left", "StatueThor_broken_top"] : ["StatueFreya", "StatueThor"];
+            string[] statues = Statues();
             Put(f, statues[0], -(f.HalfA - 1), f.HalfD - 1, 180, 0.6f);
             Put(f, statues[1], f.HalfA - 1, f.HalfD - 1, 180, 0.6f);
             Chains(f, 2);
@@ -1986,9 +1999,7 @@ internal sealed partial class DungeonDresser
                         }
                         else if (_mat.Column[0].Prefab == "stone_pillar")
                         {
-                            var q = DungeonOut.Yaw(f.Yaw(R(60, 120))) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 2);
-                            _o.Add("stone_pillar", f.W(side * (f.HalfA - 3.4f), v, f.F + 0.55f), q);
-                            f.Take(side * (f.HalfA - 3.4f), v, 1.4f);
+                            FallenPillar(f, "stone_pillar", side * (f.HalfA - 3.4f), v, R(60, 120), 1.4f);
                         }
                     }
                 }

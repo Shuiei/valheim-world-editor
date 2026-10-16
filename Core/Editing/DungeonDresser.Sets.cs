@@ -1,4 +1,3 @@
-using System.Numerics;
 using static TerrainEditor.Editing.DungeonKit;
 
 namespace TerrainEditor.Editing;
@@ -679,9 +678,7 @@ internal sealed partial class DungeonDresser
         Put(f, "Morkhalla_Rubble1", u - side * 0.6f, v - 1.5f, Rr(0, 360), 0.6f);
         if (_mat.Column[0].Prefab == "stone_pillar" && rnd.NextDouble() < 0.6)
         {
-            var q = DungeonOut.Yaw(f.Yaw(Rr(60, 120))) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 2);
-            _o.Add("stone_pillar", f.W(side * (f.HalfA - 2.1f), v - 0.4f, f.F + 0.55f), q);
-            f.Take(side * (f.HalfA - 2.1f), v - 0.4f, 1.3f);
+            FallenPillar(f, "stone_pillar", side * (f.HalfA - 2.1f), v - 0.4f, Rr(60, 120), 1.3f);
         }
         for (int i = 0; i < 3; i++)
         {
