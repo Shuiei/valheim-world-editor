@@ -331,6 +331,8 @@ public sealed class WorldCreatorTests : IDisposable
     [InlineData("nul.txt", false)]
     [InlineData("com1", false)]
     [InlineData("Lpt9", false)]
+    [InlineData("COM¹", false)]
+    [InlineData("lpt².txt", false)]
     [InlineData("Name.", false)]
     [InlineData("Name ", false)]
     public void AWorldNameIsAFileNameOnEverySystem(string name, bool ok)
