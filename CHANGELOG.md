@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.63 — unreleased
+
+### Fixed
+- **A settings file held by another program for a moment was written over with the defaults.** When settings.json
+  could not be read at the start (a sync or antivirus program holding it, or no permission), the editor went on
+  with the defaults, and the next thing it remembered (a recent world, a toggle) saved them over the file: the game
+  folder, extra folders, allowed extensions and Claude's token were gone. A read that fails is now tried again, and
+  when it still fails the defaults are used for the session but never saved over the file, which the log says.
+
 ## v1.45.62 — unreleased
 
 ### Fixed

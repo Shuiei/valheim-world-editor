@@ -123,6 +123,42 @@ public class AppSettingsTests : IDisposable
         Assert.True(Directory.Exists(path));
     }
 
+    // A settings file held by another program (a sync or antivirus tool) gives the defaults for the session, and a save
+    // leaves it as it is: what it holds is the user's settings.
+    [Fact]
+    public void SettingsThatCannotBeReadAreNotSavedOver()
+    {
+        string path = Path.Combine(_data, "settings.json");
+        string? old = AppSettings.PathOverride;
+        AppSettings.PathOverride = path;
+        try
+        {
+            File.WriteAllText(path, "{\"ValheimPath\": \"/games/Valheim\"}");
+            AppSettings held;
+            using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                held = AppSettings.Load();
+            }
+            Assert.True(held.FileUnread);
+            Assert.Null(held.ValheimPath);
+            held.ValheimPath = "/elsewhere";
+            held.Save();
+            Assert.Equal("{\"ValheimPath\": \"/games/Valheim\"}", File.ReadAllText(path));
+            // Read: as the file says, and saved as usual.
+            var read = AppSettings.Load();
+            Assert.False(read.FileUnread);
+            Assert.Equal("/games/Valheim", read.ValheimPath);
+            read.ValheimPath = "/elsewhere";
+            read.Save();
+            Assert.Equal("/elsewhere", AppSettings.Load().ValheimPath);
+            Assert.DoesNotContain("FileUnread", File.ReadAllText(path));
+        }
+        finally
+        {
+            AppSettings.PathOverride = old;
+        }
+    }
+
     // The settings hold Claude's token: only the user can read them, even over a file others could read.
     [Fact]
     public void OnlyTheUserCanReadTheSettings()

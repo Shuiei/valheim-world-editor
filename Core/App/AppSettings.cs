@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace TerrainEditor.App;
 
@@ -152,16 +153,39 @@ public sealed class AppSettings
     private static readonly Lock Lock = new();
 
     /// <summary>
-    /// Reads the settings file. A missing or unreadable file gives the defaults; one that is not valid JSON is first
-    /// copied aside as settings.json.bad.
+    /// Whether the settings file was there but could not be read (locked by another program, no permission): these
+    /// are the defaults for now, and <c>Save</c> leaves the file as it is rather than writing them over the user's
+    /// settings.
+    /// </summary>
+    [JsonIgnore]
+    public bool FileUnread { get; private init; }
+
+    /// <summary>
+    /// Reads the settings file. A missing file gives the defaults; one that is not valid JSON is first copied aside as
+    /// settings.json.bad; one that cannot be read gives the defaults with <c>FileUnread</c> set, which are not saved
+    /// over it.
     /// </summary>
     public static AppSettings Load()
     {
         lock (Lock)
         {
+            string? text;
             try
             {
-                return File.Exists(FilePath) ? JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) ?? new AppSettings() : new AppSettings();
+                text = ReadText();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Console.WriteLine($"Settings: {FilePath} could not be read ({ex.Message}); using the defaults for now, and not saving over it.");
+                return new AppSettings { FileUnread = true };
+            }
+            if (text == null)
+            {
+                return new AppSettings();
+            }
+            try
+            {
+                return JsonSerializer.Deserialize<AppSettings>(text) ?? new AppSettings();
             }
             catch (JsonException ex)
             {
@@ -173,12 +197,32 @@ public sealed class AppSettings
                 }
                 catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
                 {
+                    Console.WriteLine($"Settings: {FilePath} could not be kept as {FilePath}.bad: {copy.Message}");
                 }
                 return new AppSettings();
             }
-            catch
+        }
+    }
+
+    /// <summary>
+    /// The settings file's text, or null when there is none. A read that fails (the file held by a sync or antivirus
+    /// program for a moment) is tried again twice, 100 ms apart, before its exception goes up.
+    /// </summary>
+    private static string? ReadText()
+    {
+        for (int attempt = 0; ; attempt++)
+        {
+            try
             {
-                return new AppSettings();
+                return File.ReadAllText(FilePath);
+            }
+            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+            {
+                return null;
+            }
+            catch (IOException) when (attempt < 2)
+            {
+                Thread.Sleep(100);
             }
         }
     }
@@ -189,12 +233,18 @@ public sealed class AppSettings
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
     /// <summary>
-    /// A file that cannot be written (locked, read-only) is left as it was: the settings stay in memory.
+    /// A file that cannot be written (locked, read-only) is left as it was: the settings stay in memory. So is one
+    /// that could not be read when these were loaded (<c>FileUnread</c>): the user's settings are in it.
     /// </summary>
     public void Save()
     {
         lock (Lock)
         {
+            if (FileUnread)
+            {
+                Console.WriteLine($"Settings: not saved: {FilePath} could not be read when the editor started, and is left as it is.");
+                return;
+            }
             try
             {
                 // Only the user can read it, from the start: it holds Claude's token.
