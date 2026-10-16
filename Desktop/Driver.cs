@@ -102,6 +102,16 @@ public static class Driver
         Console.Out.Flush();
     }
 
+    /// <summary>A command's argument split at its first '|' (type, set, check).</summary>
+    /// <param name="a">The command and its argument.</param>
+    /// <param name="usage">How the command is written, for the message.</param>
+    /// <exception cref="InvalidOperationException">There is no argument or it has no '|'.</exception>
+    private static (string Before, string After) Bar(string[] a, string usage)
+    {
+        int bar = a.Length > 1 ? a[1].IndexOf('|') : -1;
+        return bar >= 0 ? (a[1][..bar], a[1][(bar + 1)..]) : throw new InvalidOperationException("usage: " + usage);
+    }
+
     /// <summary>Runs one command; its answer's JSON (usually <see cref="State"/>). Throws for an unknown or failed command.</summary>
     internal static async Task<string> Run(MainWindow w, string cmd)
     {
@@ -218,16 +228,14 @@ public static class Driver
                 return State(w);
             case "type":
             {
-                int bar = a[1].IndexOf('|');
-                string hint = a[1][..bar], text = a[1][(bar + 1)..];
+                var (hint, text) = Bar(a, "type <hint>|<text>");
                 var box = Find<Avalonia.Controls.TextBox>(w, b => (b.PlaceholderText ?? "").Contains(hint, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no text box \"{hint}\"");
                 box.Text = text;
                 return State(w);
             }
             case "set":
             {
-                int bar = a[1].IndexOf('|');
-                string label = a[1][..bar], value = a[1][(bar + 1)..];
+                var (label, value) = Bar(a, "set <label>|<value>");
                 var tb = Find<Avalonia.Controls.TextBlock>(w, t => string.Equals(t.Text?.Trim(), label, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no label \"{label}\"");
                 // The row holding the label: the first control after it.
                 var row = Avalonia.VisualTree.VisualExtensions.GetVisualParent(tb);
@@ -313,10 +321,9 @@ public static class Driver
             case "check":
             {
                 // check <label>|on|off: a check box or switch by its text.
-                int bar = a[1].IndexOf('|');
-                string label = a[1][..bar];
+                var (label, state) = Bar(a, "check <label>|on|off");
                 var box = Find<Avalonia.Controls.CheckBox>(w, b => string.Equals(TextOf(b).Trim(), label, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no check box \"{label}\"");
-                box.IsChecked = a[1][(bar + 1)..] == "on";
+                box.IsChecked = state == "on";
                 return State(w);
             }
             case "choose":

@@ -114,6 +114,23 @@ public class DriverControlsTests
         }
     }
 
+    // type, set and check without the '|' between their two parts give their usage, not a slicing error.
+    [AvaloniaFact]
+    public async Task ACommandWithoutItsBarGivesItsUsage()
+    {
+        var w = Window();
+        try
+        {
+            Assert.Equal("usage: type <hint>|<text>", (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "type Name"))).Message);
+            Assert.Equal("usage: set <label>|<value>", (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "set Delta"))).Message);
+            Assert.Equal("usage: check <label>|on|off", (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "check"))).Message);
+        }
+        finally
+        {
+            w.CloseWithoutAsking();
+        }
+    }
+
     [AvaloniaFact]
     public async Task TheCommandsThatNeedNoWorld()
     {
