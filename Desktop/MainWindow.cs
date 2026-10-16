@@ -2545,7 +2545,7 @@ public sealed partial class MainWindow : Window
         MeasurePanel = new MeasurePanel(View);
         DungeonPanel = new DungeonPanel(View);
         DungeonPanel.BuildAsked += () => BuildInDungeon(true);
-        DungeonPanel.Gen.PlaceAsked += PlaceGenerated;
+        DungeonPanel.Gen.PlaceAsked += (settings, result) => PlaceGenerated(settings, result);
         DungeonPanel.Gen.DungeonAsked += GoToDungeon;
         DungeonPanel.Gen.EntranceAsked += GoToEntrance;
         DungeonPanel.Gen.WorkshopAsked += async s =>

@@ -200,7 +200,12 @@ public partial class MainWindow
     /// A blueprint added to the building on the plot (at a world point x, z; null: the middle), turned by degrees,
     /// as one step named label (null: "Added" and its name). Only in the Workshop.
     /// </summary>
-    internal void AddToWorkshop(string path, Vector2? at, float turn = 0, string? label = null)
+    /// <param name="path">The blueprint file (its name picks the format).</param>
+    /// <param name="at">Where its anchor goes (world x, z); null for the plot's middle.</param>
+    /// <param name="turn">Degrees it is turned round its anchor.</param>
+    /// <param name="label">The history's name for the step; null: "Added" and its name.</param>
+    /// <param name="text">The blueprint's text when it is not a file of the Library; null reads <paramref name="path"/>.</param>
+    internal void AddToWorkshop(string path, Vector2? at, float turn = 0, string? label = null, string? text = null)
     {
         if (!InWorkshop || Session is not { } s)
         {
@@ -208,13 +213,14 @@ public partial class MainWindow
         }
         try
         {
-            var (placed, unknown, _, terrain) = Workshop.Add(s, path, null, at, turn, label: label);
+            var (placed, unknown, _, terrain) = Workshop.Add(s, path, text, at, turn, label: label);
             foreach (var (cell, y) in terrain)
             {
                 _workshopTerrain[cell] = _workshopTerrain.TryGetValue(cell, out float was) ? MathF.Min(was, y) : y;
             }
             RefreshSupport();
-            MessageText.Text = $"Added “{Homestead.Read(path)?.Name ?? Path.GetFileNameWithoutExtension(path)}”: {placed} piece(s).{(unknown.Count > 0 ? $" {unknown.Count} kind(s) the game does not know were left out (mods?): {string.Join(", ", unknown.Take(5))}." : "")} Ctrl+Z takes it back.";
+            string name = (text == null ? Homestead.Read(path) : Homestead.Read(path, text.Split('\n')))?.Name ?? Path.GetFileNameWithoutExtension(path);
+            MessageText.Text = $"Added “{name}”: {placed} piece(s).{(unknown.Count > 0 ? $" {unknown.Count} kind(s) the game does not know were left out (mods?): {string.Join(", ", unknown.Take(5))}." : "")} Ctrl+Z takes it back.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

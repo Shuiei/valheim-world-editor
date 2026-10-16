@@ -124,8 +124,9 @@ public partial class MainWindow
     /// One of the game's dungeons: makes its rooms and what is in them, laid out from its dungeon object at this pose
     /// (null: from the origin, facing +z). Null for a dungeon of pieces alone.
     /// </param>
+    /// <param name="Label">The history's name for the step; null: "Dungeon:", the verb and the name.</param>
     private sealed record DungeonToPlace(string Name, string Verb, string Biome, string PortalTag, List<DungeonPiece> Pieces, Vector3 Landing, float Facing,
-        Func<DungeonEntrances.Pose?, DungeonGen.Result>? Rooms);
+        Func<DungeonEntrances.Pose?, DungeonGen.Result>? Rooms, string? Label = null);
 
     /// <summary>The generator's objects as pieces to place: each with its data and no builder (a ruin, as the game's own dungeons).</summary>
     private static List<DungeonPiece> ToPieces(IEnumerable<DungeonGen.Item> items) => [.. items.Select(it =>
@@ -140,7 +141,10 @@ public partial class MainWindow
     /// dungeon of the game's rooms is made again from where the entrance puts its dungeon object, as the game lays its
     /// own out from there.
     /// </summary>
-    internal void PlaceGenerated(DungeonGen.Settings settings, DungeonGen.Result r)
+    /// <param name="settings">The generator's settings.</param>
+    /// <param name="r">The dungeon made from them.</param>
+    /// <param name="label">The history's name for the step; null: "Dungeon: generated" and its name.</param>
+    internal void PlaceGenerated(DungeonGen.Settings settings, DungeonGen.Result r, string? label = null)
     {
         if (View.Scene is not { Session: { } session } scene)
         {
@@ -151,7 +155,7 @@ public partial class MainWindow
         var at = GroundAt(scene, target.X + scene.Cx, scene.Cz - target.Z);
         var world = scene.World;
         Func<DungeonEntrances.Pose?, DungeonGen.Result>? rooms = r.Rooms == null ? null : pose => pose is { } p ? DungeonGen.Make(settings, world.Seed, p) : r;
-        PlaceDungeon(scene, session, at, new DungeonToPlace(r.Name, "Generated", settings.Biome, $"dg{settings.Seed % 100000}", ToPieces(r.Items), r.Arrival, 0f, rooms));
+        PlaceDungeon(scene, session, at, new DungeonToPlace(r.Name, "Generated", settings.Biome, $"dg{settings.Seed % 100000}", ToPieces(r.Items), r.Arrival, 0f, rooms, label));
     }
 
     /// <summary>
@@ -369,7 +373,7 @@ public partial class MainWindow
                 adds.Add((n with { Raw = z.Serialize(), Fresh = false, Data = portalData }, true));
             }
         }
-        session.Commit($"Dungeon: {d.Verb.ToLowerInvariant()} {d.Name}", null, [], adds);
+        session.Commit(d.Label ?? $"Dungeon: {d.Verb.ToLowerInvariant()} {d.Name}", null, [], adds);
         LastPlaced = new PlacedDungeon(at, arrival, arrival.Y + 3.5f, dungeonAt);
         MessageText.Text = $"{d.Verb} {d.Name}: {adds.Count} objects, 5000 m above here. {way} "
             + (skipped > 0 ? $"{skipped} could not be made in this world. " : "") + "Go to the dungeon (Dungeon panel) takes the view up there, Go to the entrance back. Ctrl+Z takes it back; Save writes it.";
@@ -433,6 +437,39 @@ public partial class MainWindow
     /// </summary>
     private async Task<string?> WriteGeneratedBlueprint(DungeonGen.Settings settings, DungeonGen.Result r)
     {
+        try
+        {
+            // The Library's folder (Homestead's).
+            string folder = Blueprints.Status.Folder;
+            Directory.CreateDirectory(folder);
+            // A blueprint of that name already (one changed in the Workshop, perhaps): kept, this one numbered.
+            string path = Path.Combine(folder, Homestead.FileName(r.Name));
+            for (int n = 2; File.Exists(path); n++)
+            {
+                path = Path.Combine(folder, Homestead.FileName($"{r.Name} ({n})"));
+            }
+            await WriteBlueprintFile(path, GeneratedBlueprint(settings, r));
+            return path;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            MessageText.Text = $"Could not write the dungeon's blueprint: {ex.Message}";
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Claude's generate_dungeon in the Workshop: the dungeon added to what is on the plot, in its middle, as one step
+    /// named <paramref name="label"/>. Its blueprint is not kept: the Library is the user's (Claude never writes it).
+    /// </summary>
+    internal void AddGeneratedToPlot(DungeonGen.Settings settings, DungeonGen.Result r, string label) =>
+        AddToWorkshop(Homestead.FileName(r.Name), null, label: label, text: GeneratedBlueprint(settings, r));
+
+    /// <summary>
+    /// A generated dungeon as a Homestead blueprint's text (what <see cref="WriteGeneratedBlueprint"/> writes).
+    /// </summary>
+    private static string GeneratedBlueprint(DungeonGen.Settings settings, DungeonGen.Result r)
+    {
         var items = r.Items.Append(new DungeonGen.Item("portal_wood", r.Arrival, Quaternion.Identity)).ToList();
         float mx = (items.Min(i => i.Position.X) + items.Max(i => i.Position.X)) / 2, mz = (items.Min(i => i.Position.Z) + items.Max(i => i.Position.Z)) / 2;
         float my = items.Min(i => i.Position.Y);
@@ -455,25 +492,7 @@ public partial class MainWindow
                 ["data"] = BlueprintFormats.DataJson(data),
             });
         }
-        try
-        {
-            // The Library's folder (Homestead's).
-            string folder = Blueprints.Status.Folder;
-            Directory.CreateDirectory(folder);
-            // A blueprint of that name already (one changed in the Workshop, perhaps): kept, this one numbered.
-            string path = Path.Combine(folder, Homestead.FileName(r.Name));
-            for (int n = 2; File.Exists(path); n++)
-            {
-                path = Path.Combine(folder, Homestead.FileName($"{r.Name} ({n})"));
-            }
-            await WriteBlueprintFile(path, Homestead.Write(new System.Text.Json.Nodes.JsonObject { ["objects"] = objects }, r.Name, "Valheim World Editor", null, DateTime.Now,
-                $"A generated dungeon (seed {settings.Seed}): {string.Join(" ", r.Notes).TrimEnd('.')}. The portal marks where players arrive: the entrance's door out opens there.", DungeonTags));
-            return path;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            MessageText.Text = $"Could not write the dungeon's blueprint: {ex.Message}";
-            return null;
-        }
+        return Homestead.Write(new System.Text.Json.Nodes.JsonObject { ["objects"] = objects }, r.Name, "Valheim World Editor", null, DateTime.Now,
+            $"A generated dungeon (seed {settings.Seed}): {string.Join(" ", r.Notes).TrimEnd('.')}. The portal marks where players arrive: the entrance's door out opens there.", DungeonTags);
     }
 }

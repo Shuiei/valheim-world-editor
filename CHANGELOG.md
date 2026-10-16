@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.52 — unreleased
+
+### Fixed
+- **A dungeon Claude generated was not one of Claude's changes, and left a file in the blueprint Library.** Its step
+  was named "Dungeon: generated …" (in a world) or "Added …" (on the Workshop's plot), so Take back Claude's changes
+  kept it, and on the plot its blueprint was written into the user's Library, which Claude is not to write. The step
+  is now "Claude: generated dungeon …", and on the plot the dungeon is added straight from its blueprint's text,
+  with no file written.
+
 ## v1.45.51 — unreleased
 
 ### Fixed
