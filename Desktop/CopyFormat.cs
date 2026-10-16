@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using SkiaSharp;
 using TerrainEditor.App;
@@ -52,9 +53,10 @@ public static class CopyFormat
     /// <param name="name">Its name; null: the one in the JSON.</param>
     /// <param name="keepSources">Keep the objects' source ids: they only mean something in the world the copy came from.</param>
     /// <exception cref="FormatException">
-    /// The copy's size is not positive, its ground arrays are missing or not as long as its size says (W × H heights and
-    /// weights, four paint values a point), an object has no name or a point of its outline is not one: pasted, it would
-    /// stop half-way through.
+    /// The copy's size is not positive or too large (its diagonal squared does not fit the whole numbers pasting
+    /// measures it in), its ground arrays are missing or not as long as its size says (W × H heights and weights, four
+    /// paint values a point), an object has no name or a point of its outline is not one (two finite coordinates):
+    /// pasted, it would stop half-way through.
     /// </exception>
     public static CopyData FromJson(JsonObject o, string? name = null, bool keepSources = true)
     {
@@ -62,6 +64,11 @@ public static class CopyFormat
         if (w <= 0 || h <= 0)
         {
             throw new FormatException($"its size ({w} × {h}) is not a grid");
+        }
+        // Pasting measures the copy's diagonal in whole numbers: a size whose square overflows them is no real copy.
+        if ((long)w * w + (long)h * h > int.MaxValue)
+        {
+            throw new FormatException($"its size ({w} × {h}) is too large to paste");
         }
         long points = (long)w * h;
         var rel = Numbers(o, "rel", points, w, h);
@@ -75,7 +82,7 @@ public static class CopyFormat
         {
             throw new FormatException("an object in it has no name");
         }
-        if (o["poly"] is JsonArray outline && outline.Any(p => p is not JsonObject))
+        if (o["poly"] is JsonArray outline && outline.Any(p => p is not JsonObject pt || !IsCoordinate(pt["gx"]) || !IsCoordinate(pt["gz"])))
         {
             throw new FormatException("a point of its outline is not a point");
         }
@@ -93,6 +100,10 @@ public static class CopyFormat
             Name = name ?? (string?)o["name"],
         };
     }
+
+    /// <summary>Whether a node is a finite number: an outline point's coordinate.</summary>
+    /// <param name="n">The node.</param>
+    private static bool IsCoordinate(JsonNode? n) => n is JsonValue v && v.GetValueKind() == JsonValueKind.Number && float.IsFinite(F(v));
 
     /// <summary>A copy's ground array, checked to hold as many values as its size says.</summary>
     /// <param name="o">The copy's JSON.</param>

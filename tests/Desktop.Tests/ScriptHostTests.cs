@@ -97,6 +97,18 @@ public class ScriptHostTests
         Assert.Equal(38, At(s, 45, 45), 3);
     }
 
+    // Changes that fail part-way (a height for a point outside the area) leave the area's No limit as it was: it
+    // stayed as the script set it, and every later brush went past the game's ±8 m.
+    [Fact]
+    public void FailedChangesLeaveNoLimitAsItWas()
+    {
+        var s = TestScenes.Flat(2);
+        var ch = new ScriptHost.Changes();
+        ch.Heights[-1] = 5;
+        Assert.Throws<IndexOutOfRangeException>(() => ScriptHost.Apply(s, ch, "Script: test"));
+        Assert.False(s.Ground.NoLimit);
+    }
+
     [Fact]
     public void MistakesAndErrorsSayWhichLine()
     {
