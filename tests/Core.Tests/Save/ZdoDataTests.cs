@@ -259,4 +259,17 @@ public class ZdoDataTests
         var scaled = ZdoData.Parse(ZdoBuilder.Build(src, o, o.File.WorldVersion, Vector3.One, Vector3.Zero, 1.25f));
         Assert.Equal(new Vector3(1.25f), Assert.Single(scaled.Vec3List).Value);
     }
+
+    [Fact]
+    public void NumbersAreReadAsSetReadsThem()
+    {
+        // One reader of "x y z" for the save and for extensions' copies (CopyView had its own, without ';').
+        Assert.Equal([1f, 2.5f, -3f], ZdoData.Numbers("1 2.5,-3", 3)!);
+        Assert.Equal([1f, 2f, 3f, 4f], ZdoData.Numbers("1;2;3;4", 4)!);
+        Assert.Null(ZdoData.Numbers("1 2", 3));
+        Assert.Null(ZdoData.Numbers("1 x 3", 3));
+        Assert.Null(ZdoData.Numbers(null, 3));
+        Assert.True(ZdoData.Valid("vec3", "1;2;3"));
+        Assert.False(ZdoData.Valid("vec3", "1 2"));
+    }
 }

@@ -414,18 +414,9 @@ public static class ObjectLinks
     /// <summary>Sets a value of data (null: takes it away), in place of the one it had; nothing for key 0 (none).</summary>
     private static void Put(List<ObjectField> data, string section, int key, string? value)
     {
-        if (key == 0)
+        if (key != 0)
         {
-            return;
-        }
-        int i = data.FindIndex(f => f.Key == key && f.Section == section);
-        if (i >= 0)
-        {
-            data[i] = data[i] with { Value = value };
-        }
-        else if (value != null)
-        {
-            data.Add(new ObjectField(section, key, value));
+            ObjectField.Put(data, section, key, value);
         }
     }
 

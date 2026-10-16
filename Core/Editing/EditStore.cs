@@ -780,6 +780,23 @@ public sealed record ObjectField(string Section, int Key, string? Value)
     public override string ToString() => $"{Section};{Key.ToString(System.Globalization.CultureInfo.InvariantCulture)};"
         + (Value == null ? "-" : Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(Value)));
 
+    /// <summary>
+    /// Sets a value in a list of fields, replacing the one of the same section and key; null takes it away (kept with a
+    /// null value when the list had it, as copies keep a value taken away).
+    /// </summary>
+    public static void Put(List<ObjectField> data, string section, int key, string? value)
+    {
+        int i = data.FindIndex(f => f.Key == key && f.Section == section);
+        if (i >= 0)
+        {
+            data[i] = data[i] with { Value = value };
+        }
+        else if (value != null)
+        {
+            data.Add(new ObjectField(section, key, value));
+        }
+    }
+
     /// <summary>A field from its text form; null when it is malformed or its value does not fit its section.</summary>
     public static ObjectField? Parse(string text)
     {
