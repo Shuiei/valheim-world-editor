@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Xunit;
@@ -60,8 +61,9 @@ public class ClaudeToolsControlsTests
         Assert.Equal([true, null, null, "Sharp", 7.0], list.Select(c => ClaudeTools.ValueOf(c.Control)));
     }
 
-    // Set: a switch on and off, a dropdown by text or number, a slider clamped, a text, a button clicked, a switch
-    // clicked; wrong values are said. Blocked: the window's Save and Discard, blocked keys, and blocked labels of untipped buttons.
+    // Set: a switch on and off, a dropdown by text or number, a slider clamped, a text, a button clicked (its Click and
+    // its Command), a switch clicked; wrong values are said. Blocked: the window's Save and Discard, blocked keys, and
+    // blocked labels of untipped buttons.
     [AvaloniaFact]
     public void ControlsAreSetAndBlockedOnesRefused()
     {
@@ -85,10 +87,12 @@ public class ClaudeToolsControlsTests
         Assert.Null(t.Set(C("d", text), "Beech", true));
         Assert.Equal("Beech", text.Text);
         int clicks = 0;
-        var button = new Button { Content = "Go" };
+        var command = new CountingCommand();
+        var button = new Button { Content = "Go", Command = command };
         button.Click += (_, _) => clicks++;
         Assert.Null(t.Set(C("e", button), "click", false));
         Assert.Equal(1, clicks);
+        Assert.Equal(1, command.Runs);
         Assert.Equal("e is a button: give click.", t.Set(C("e", button), "true", false));
         // A click on a switch changes it before its handlers run, as a pointer's does.
         var toggle = new CheckBox();
@@ -149,5 +153,21 @@ public class ClaudeToolsControlsTests
         // Auto off: the script's controls are Claude's again.
         r.W.Settings.AutoApply = false;
         Assert.Equal("script.code", ClaudeRun.J(await r.T.SetControl("script.code", "Ground.Raise(0, 0, 3);")).GetProperty("id").GetString());
+    }
+
+    /// <summary>A command that can always run and counts its runs.</summary>
+    private sealed class CountingCommand : ICommand
+    {
+        /// <summary>Never raised: the command can always run.</summary>
+        public event EventHandler? CanExecuteChanged { add { } remove { } }
+
+        /// <summary>How many times the command ran.</summary>
+        public int Runs { get; private set; }
+
+        /// <inheritdoc/>
+        public bool CanExecute(object? parameter) => true;
+
+        /// <inheritdoc/>
+        public void Execute(object? parameter) => Runs++;
     }
 }
