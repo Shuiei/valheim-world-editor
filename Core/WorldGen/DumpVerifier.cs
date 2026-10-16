@@ -35,9 +35,15 @@ public static class DumpVerifier
         public double ZoneMaxDiff { get; init; }
 
         /// <summary>
+        /// Lines of a known kind that could not be read (too short, an unknown Random call, a number that does not
+        /// parse); each is also an error.
+        /// </summary>
+        public int Unreadable { get; init; }
+
+        /// <summary>
         /// Whether nothing was wrong.
         /// </summary>
-        public bool AllMatch => RandomWrong + PerlinWrong + HeightsWrong + BiomesWrong + ZonesWrong + WaterWrong == 0;
+        public bool AllMatch => RandomWrong + PerlinWrong + HeightsWrong + BiomesWrong + ZonesWrong + WaterWrong + Unreadable == 0;
     }
 
     /// <summary>
@@ -55,16 +61,40 @@ public static class DumpVerifier
     }
 
     /// <summary>
+    /// The values between a Random call's name and its "|" (the call's arguments and result), by call; -1 for a call
+    /// the verifier does not know.
+    /// </summary>
+    private static int RandomValues(string call) => call switch
+    {
+        "init" or "value" => 1,
+        "circle" => 2,
+        "rangei" or "rangef" => 3,
+        _ => -1,
+    };
+
+    /// <summary>
+    /// The values a line of this kind needs at least, its kind included (0: any line of it can be read).
+    /// </summary>
+    private static int Needed(string kind) => kind switch
+    {
+        "P" => 4,
+        "H" => 5,
+        "Z" => 3 + (BaseTerrain.Width + 1) * (BaseTerrain.Width + 1),
+        _ => 0,
+    };
+
+    /// <summary>
     /// Replays a dump file and compares each line, printing a summary to the console. Lines: "R" Random calls with
     /// the state after, "P" Perlin samples, "W" lake, river and stream counts, "H" point biome and height, "Z" a
-    /// zone's base heights; others are skipped.
+    /// zone's base heights; others are skipped. A line of these kinds that cannot be read (too short, an unknown
+    /// Random call) is counted as unreadable and leaves the random state as it was.
     /// </summary>
     /// <param name="path">The dump file.</param>
     /// <param name="seedName">The world's seed name, for the lines that need a generator.</param>
     public static Result Run(string path, string seedName)
     {
         string[] lines = File.ReadAllLines(path);
-        int rOk = 0, rBad = 0, pOk = 0, pBad = 0, hOk = 0, hBad = 0, bBad = 0, zOk = 0, zBad = 0, wBad = 0;
+        int rOk = 0, rBad = 0, pOk = 0, pBad = 0, hOk = 0, hBad = 0, bBad = 0, zOk = 0, zBad = 0, wBad = 0, unreadable = 0;
         double pMax = 0, hMax = 0, zMax = 0;
         List<string> firstErrors = [];
         void Error(string msg)
@@ -75,9 +105,34 @@ public static class DumpVerifier
             }
         }
         WorldGenerator? gen = null;
-        foreach (string line in lines)
+        for (int n = 0; n < lines.Length; n++)
         {
+            string line = lines[n];
             string[] p = line.Split(' ');
+            int bar = p[0] == "R" ? Array.IndexOf(p, "|") : -1;
+            bool readable = p[0] == "R"
+                ? p.Length > 1 && RandomValues(p[1]) is int values and >= 0 && bar == 2 + values && p.Length == bar + 5
+                : p.Length >= Needed(p[0]);
+            if (!readable)
+            {
+                unreadable++;
+                Error($"Line {n + 1} not read: {line}");
+                continue;
+            }
+            try
+            {
+                Compare(p, line);
+            }
+            catch (Exception e) when (e is FormatException or OverflowException)
+            {
+                unreadable++;
+                Error($"Line {n + 1} not read ({e.Message}): {line}");
+            }
+        }
+
+        // Compares one line of the dump with the offline generator.
+        void Compare(string[] p, string line)
+        {
             switch (p[0])
             {
                 case "R":
@@ -103,7 +158,7 @@ public static class DumpVerifier
                     {
                         got = $"value {BitConverter.SingleToInt32Bits(Rnd.value):x8}";
                     }
-                    else
+                    else // circle
                     {
                         Vector2 v = Rnd.insideUnitCircle;
                         got = $"circle {BitConverter.SingleToInt32Bits(v.x):x8} {BitConverter.SingleToInt32Bits(v.y):x8}";
@@ -201,6 +256,10 @@ public static class DumpVerifier
             }
         }
         Console.WriteLine($"Random:  {rOk} ok, {rBad} wrong");
+        if (unreadable > 0)
+        {
+            Console.WriteLine($"Unreadable lines: {unreadable}");
+        }
         Console.WriteLine($"Perlin:  {pOk} ok, {pBad} wrong (max diff {pMax:G4})");
         Console.WriteLine($"Heights: {hOk} ok, {hBad} wrong (max diff {hMax:G4} m), biome mismatches {bBad}");
         Console.WriteLine($"Zones:   {zOk} exact, {zBad} differ (max diff {zMax:G4} m)");
@@ -208,7 +267,7 @@ public static class DumpVerifier
         {
             Console.WriteLine("  " + e);
         }
-        return new Result(rOk, rBad, pOk, pBad, hOk, hBad, bBad, zOk, zBad, wBad, firstErrors) { HeightMaxDiff = hMax, ZoneMaxDiff = zMax };
+        return new Result(rOk, rBad, pOk, pBad, hOk, hBad, bBad, zOk, zBad, wBad, firstErrors) { HeightMaxDiff = hMax, ZoneMaxDiff = zMax, Unreadable = unreadable };
     }
 
     /// <summary>

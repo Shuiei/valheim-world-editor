@@ -242,6 +242,8 @@ the plugin is unchanged in versions without that part.
 - A copy at scale 1 no longer stores a scale of (1, 1, 1) (and drops the template's scale), as new blank objects do.
 - The world generator's Step and Smooth make a step, not NaN, when their two ends are the same (no caller passes such
   ends today).
+- The world generator's dump check counts unknown Random calls and short lines as unreadable instead of replaying them
+  as insideUnitCircle (which moved the random state on) or throwing.
 
 ## v1.45.108 — unreleased
 
