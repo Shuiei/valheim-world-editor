@@ -109,6 +109,26 @@ public class BlueprintFormatsTests
     }
 
     [Fact]
+    public void APlanBuildExportKeepsWhatObjectsHoldAndItsNameOnOneLine()
+    {
+        // The export dropped the objects' data (a chest's contents, a sign's text) and wrote a name's line break as
+        // header lines of its own; an object without a prefab name became a piece line of none.
+        var sign = new TerrainEditor.Editing.ObjectField("strings", TerrainEditor.Save.StableHash.Of("text"), "Welcome");
+        var clip = new JsonObject
+        {
+            ["objects"] = new JsonArray(
+                new JsonObject { ["name"] = "sign", ["dx"] = 1, ["dy"] = 0, ["dz"] = 0, ["data"] = BlueprintFormats.DataJson([sign]) },
+                new JsonObject { ["name"] = "", ["dx"] = 2 }),
+        };
+        string planbuild = BlueprintFormats.Write(clip, "blueprint", "Hut\n#Creator:someone", _ => 0);
+        Assert.Contains("#Name:Hut #Creator:someone\n", planbuild);
+        Assert.Single(planbuild.Split('\n'), l => l.StartsWith("#Creator:", StringComparison.Ordinal));
+        var again = BlueprintFormats.Parse("x.blueprint", planbuild);
+        var piece = Assert.Single(again.Pieces);
+        Assert.Equal([sign], piece.Data!);
+    }
+
+    [Fact]
     public void WritesPlanBuildAndVBuildThatReadBack()
     {
         var parsed = BlueprintFormats.Parse("hut.blueprint", PlanBuild);

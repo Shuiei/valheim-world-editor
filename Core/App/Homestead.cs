@@ -325,14 +325,8 @@ public static class Homestead
     /// <returns>The .blueprint file's text, pieces ordered by height then x then z.</returns>
     public static string Write(JsonObject clip, string name, string creator, string? world, DateTime saved, string description = "", IReadOnlyCollection<string>? tags = null)
     {
-        var objs = (clip["objects"] as JsonArray ?? []).OfType<JsonObject>().Select(o => (
-            Name: (string?)o["name"] ?? "", X: F(o["dx"]), Y: F(o["dy"]), Z: F(o["dz"]),
-            Rot: BlueprintFormats.FromEuler(new Vector3(F(o["rx"]), F(o["ry"]), F(o["rz"]))), Scale: F(o["scale"]),
-            Data: BlueprintFormats.DataOf(o["data"]) ?? [])).Where(o => o.Name.Length > 0).ToList();
-        // Written as a ruin when every object is (no builder): one line for all, not one each.
-        bool ruin = objs.Count > 0 && objs.All(o => o.Data.Contains(Editing.ObjectField.NoBuilder));
-        var ordered = objs.OrderBy(o => o.Y).ThenBy(o => o.X).ThenBy(o => o.Z).ToList();
-        float radius = objs.Count == 0 ? 0 : MathF.Sqrt(objs.Max(o => o.X * o.X + o.Z * o.Z)) + 1f;
+        var ordered = Pieces(clip);
+        float radius = ordered.Count == 0 ? 0 : MathF.Sqrt(ordered.Max(o => o.X * o.X + o.Z * o.Z)) + 1f;
         StringBuilder sb = new();
         sb.Append("#Name:").Append(Header(name)).Append('\n');
         sb.Append("#Creator:").Append(Header(creator)).Append('\n');
@@ -346,27 +340,63 @@ public static class Homestead
         sb.Append("#HomesteadWorld:").Append(Header(world ?? "")).Append('\n');
         sb.Append("#HomesteadSavedAt:").Append(new DateTimeOffset(saved).ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture)).Append('\n');
         sb.Append("#HomesteadRadius:").Append(S(radius)).Append('\n');
-        // The editor's own: what objects hold (a chest's contents, a sign's text...), by their line below.
-        if (ruin)
-        {
-            sb.Append(BlueprintFormats.RuinHeader).Append('\n');
-        }
-        for (int k = 0; k < ordered.Count; k++)
-        {
-            foreach (var f in ordered[k].Data.Where(f => !(ruin && f == Editing.ObjectField.NoBuilder)))
-            {
-                sb.Append(BlueprintFormats.DataHeader).Append(k.ToString(CultureInfo.InvariantCulture)).Append(';').Append(f.ToString()).Append('\n');
-            }
-        }
+        DataLines(sb, ordered);
         sb.Append("#Pieces\n");
-        foreach (var (prefab, x, y, z, rot, scale, data) in ordered)
+        foreach (var (prefab, x, y, z, rot, scale, _) in ordered)
         {
             float s = scale > 0 ? scale : 1f;
-            sb.Append(string.Join(";", Header(prefab).Replace(";", "", StringComparison.Ordinal), "Building", S(x), S(y), S(z),
+            sb.Append(string.Join(";", PieceName(prefab), "Building", S(x), S(y), S(z),
                 S(rot.X), S(rot.Y), S(rot.Z), S(rot.W), "\"\"", S(s), S(s), S(s))).Append('\n');
         }
         return sb.ToString();
     }
+
+    /// <summary>
+    /// An object of a copy as the blueprint writers take it (Homestead's and PlanBuild's).
+    /// </summary>
+    /// <param name="Name">Its prefab name.</param>
+    /// <param name="X">Metres from the copy's middle along x.</param>
+    /// <param name="Y">Metres from the copy's ground.</param>
+    /// <param name="Z">Metres from the copy's middle along z.</param>
+    /// <param name="Rot">Its rotation.</param>
+    /// <param name="Scale">Its scale; 0 when the copy has none.</param>
+    /// <param name="Data">What it holds (a chest's contents, a sign's text...).</param>
+    internal readonly record struct Piece(string Name, float X, float Y, float Z, Quaternion Rot, float Scale, List<Editing.ObjectField> Data);
+
+    /// <summary>
+    /// A copy's objects for a blueprint file, ordered by height then x then z (a data line's number is its piece's place
+    /// in this order); objects without a prefab name are left out.
+    /// </summary>
+    internal static List<Piece> Pieces(JsonObject clip) =>
+    [
+        .. (clip["objects"] as JsonArray ?? []).OfType<JsonObject>()
+            .Select(o => new Piece((string?)o["name"] ?? "", F(o["dx"]), F(o["dy"]), F(o["dz"]),
+                BlueprintFormats.FromEuler(new Vector3(F(o["rx"]), F(o["ry"]), F(o["rz"]))), F(o["scale"]), BlueprintFormats.DataOf(o["data"]) ?? []))
+            .Where(o => o.Name.Length > 0).OrderBy(o => o.Y).ThenBy(o => o.X).ThenBy(o => o.Z),
+    ];
+
+    /// <summary>
+    /// The editor's own header lines: what the pieces hold, each by its number in <paramref name="pieces"/>, and one line
+    /// for all when every piece is a ruin's (no builder) instead of one each.
+    /// </summary>
+    internal static void DataLines(StringBuilder sb, List<Piece> pieces)
+    {
+        bool ruin = pieces.Count > 0 && pieces.All(o => o.Data.Contains(Editing.ObjectField.NoBuilder));
+        if (ruin)
+        {
+            sb.Append(BlueprintFormats.RuinHeader).Append('\n');
+        }
+        for (int k = 0; k < pieces.Count; k++)
+        {
+            foreach (var f in pieces[k].Data.Where(f => !(ruin && f == Editing.ObjectField.NoBuilder)))
+            {
+                sb.Append(BlueprintFormats.DataHeader).Append(k.ToString(CultureInfo.InvariantCulture)).Append(';').Append(f.ToString()).Append('\n');
+            }
+        }
+    }
+
+    /// <summary>A prefab name as a piece line takes it: one line, without the field separator.</summary>
+    internal static string PieceName(string prefab) => Header(prefab).Replace(";", "", StringComparison.Ordinal);
 
     /// <summary>
     /// A JSON number as a float, 0 when missing; a number written as a string ("1.5") is read too. Read in place, not
@@ -384,5 +414,5 @@ public static class Homestead
     private static string S(float v) => v.ToString("0.###", CultureInfo.InvariantCulture);
 
     /// <summary>A value made one header line: line breaks become spaces, trimmed.</summary>
-    private static string Header(string v) => v.Replace('\r', ' ').Replace('\n', ' ').Trim();
+    internal static string Header(string v) => v.Replace('\r', ' ').Replace('\n', ' ').Trim();
 }
