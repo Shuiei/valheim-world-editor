@@ -662,19 +662,35 @@ public sealed class GlView : OpenGlControlBase
             _gl.GetShader(s, ShaderParameterName.CompileStatus, out int ok);
             if (ok == 0)
             {
-                throw new InvalidOperationException($"{t}: {_gl.GetShaderInfoLog(s)}");
+                // What failed goes with the error (a failing game shader would leak them each time it is tried).
+                string log = _gl.GetShaderInfoLog(s);
+                _gl.DeleteShader(s);
+                throw new InvalidOperationException($"{t}: {log}");
             }
             return s;
         }
+        uint v = Compile(ShaderType.VertexShader, vs), f;
+        try
+        {
+            f = Compile(ShaderType.FragmentShader, fs);
+        }
+        catch (InvalidOperationException)
+        {
+            _gl.DeleteShader(v);
+            throw;
+        }
         uint p = _gl.CreateProgram();
-        uint v = Compile(ShaderType.VertexShader, vs), f = Compile(ShaderType.FragmentShader, fs);
         _gl.AttachShader(p, v);
         _gl.AttachShader(p, f);
         _gl.LinkProgram(p);
         _gl.GetProgram(p, ProgramPropertyARB.LinkStatus, out int linked);
         if (linked == 0)
         {
-            throw new InvalidOperationException(_gl.GetProgramInfoLog(p));
+            string log = _gl.GetProgramInfoLog(p);
+            _gl.DeleteProgram(p);
+            _gl.DeleteShader(v);
+            _gl.DeleteShader(f);
+            throw new InvalidOperationException(log);
         }
         _gl.DeleteShader(v);
         _gl.DeleteShader(f);
