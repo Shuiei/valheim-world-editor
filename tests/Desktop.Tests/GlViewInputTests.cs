@@ -81,6 +81,8 @@ public class GlViewInputTests
     public void TypingInABoxOrAwayFromTheEditorLeavesTheCameraAlone()
     {
         var (w, v) = Open();
+        // The blueprints panel (hidden until its tool is chosen) shown, so its search box is in the window.
+        w.Blueprints.Toggle(true);
         var box = w.Blueprints.Search;
         // A key held when a box takes the focus is let go: its release will be the box's.
         w.KeyPress(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
