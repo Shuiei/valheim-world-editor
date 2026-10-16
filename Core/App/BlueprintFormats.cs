@@ -151,7 +151,7 @@ public static class BlueprintFormats
             line = line.Replace(',', '.');
         }
         string[] p = line.Split(';');
-        var q = Quaternion.Normalize(new Quaternion(F(p[5]), F(p[6]), F(p[7]), F(p[8])));
+        var q = new Quaternion(F(p[5]), F(p[6]), F(p[7]), F(p[8]));
         float scale = p.Length > 12 ? F(p[10]) : 1f;
         return new Piece(PrefabName(p[0]), new Vector3(Coord(p[2]), Coord(p[3]), Coord(p[4])), ToEuler(q), scale);
     }
@@ -166,7 +166,7 @@ public static class BlueprintFormats
             line = line.Replace(',', '.');
         }
         string[] p = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var q = Quaternion.Normalize(new Quaternion(F(p[1]), F(p[2]), F(p[3]), F(p[4])));
+        var q = new Quaternion(F(p[1]), F(p[2]), F(p[3]), F(p[4]));
         return new Piece(PrefabName(p[0]), new Vector3(Coord(p[5]), Coord(p[6]), Coord(p[7])), ToEuler(q), 1f);
     }
 
@@ -228,11 +228,17 @@ public static class BlueprintFormats
     private static string S(float f) => f.ToString("0.#####", CultureInfo.InvariantCulture);
 
     /// <summary>
-    /// Unity's Euler angles (degrees, applied z, then x, then y: R = Ry * Rx * Rz) of a quaternion.
+    /// Unity's Euler angles (degrees, applied z, then x, then y: R = Ry * Rx * Rz) of a quaternion, normalised first. One
+    /// with no length to normalise (all zero, as blank rotation fields read) or none that fits a float is no turn.
     /// </summary>
     public static Vector3 ToEuler(Quaternion q)
     {
-        q = Quaternion.Normalize(q);
+        float length = q.Length();
+        if (!float.IsFinite(length) || length < 1e-6f)
+        {
+            return Vector3.Zero;
+        }
+        q *= 1f / length;
         float m02 = 2f * (q.X * q.Z + q.W * q.Y), m22 = 1f - 2f * (q.X * q.X + q.Y * q.Y);
         float m12 = 2f * (q.Y * q.Z - q.W * q.X), m10 = 2f * (q.X * q.Y + q.W * q.Z), m11 = 1f - 2f * (q.X * q.X + q.Z * q.Z);
         float m00 = 1f - 2f * (q.Y * q.Y + q.Z * q.Z), m20 = 2f * (q.X * q.Z - q.W * q.Y);

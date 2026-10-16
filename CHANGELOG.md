@@ -40,6 +40,8 @@ the plugin is unchanged in versions without that part.
   panel asked to allow an action, Claude could undo the step, or the history drop it; Back to here then undid every
   step, and Remove applied the step's change again to ground that no longer had it. These actions now do nothing for a
   step that is no longer where it was picked.
+- **A blueprint piece with blank or zero rotation fields is placed unturned.** Its rotation read as a quaternion of
+  length zero, which turned into NaN angles in the clipboard and the world. Such a rotation is now no turn.
 
 ### Changed
 

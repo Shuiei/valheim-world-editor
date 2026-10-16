@@ -53,6 +53,16 @@ public class BlueprintFormatsTests
         Assert.Equal(90f, bp.Pieces[0].Euler.Y, 2);
     }
 
+    // Blank or zero rotation fields are no turn (they gave NaN angles), and so is a quaternion too long for a float.
+    [Fact]
+    public void ARotationWithNoLengthIsNoTurn()
+    {
+        var bp = BlueprintFormats.Parse("tower.vbuild", "woodwall 0 0 0 0 1 2 3\nwood_floor 1e30 1e30 0 0 0 0 0\n");
+        Assert.Equal([Vector3.Zero, Vector3.Zero], bp.Pieces.Select(p => p.Euler));
+        bp = BlueprintFormats.Parse("hut.blueprint", "#Pieces\nwoodwall;Building;1;2;3;;;;;;1;1;1\n");
+        Assert.Equal(Vector3.Zero, Assert.Single(bp.Pieces).Euler);
+    }
+
     [Theory]
     [InlineData(0, 90, 0)]
     [InlineData(30, 45, 10)]
