@@ -231,9 +231,10 @@ public static class ModCatalogue
                 }
             }
             changed |= DropVanilla(next, vanilla);
+            HashSet<string> required = Required(next.Costs.Values);
             foreach (var (item, name) in got.Items)
             {
-                if (next.Costs.Values.Any(c => Uses(c, item)) && next.Items.GetValueOrDefault(item) != name)
+                if (required.Contains(item) && next.Items.GetValueOrDefault(item) != name)
                 {
                     next.Items[item] = name;
                     changed = true;
@@ -317,8 +318,9 @@ public static class ModCatalogue
         return true;
     }
 
-    /// <summary>Whether a cost entry takes an item.</summary>
-    private static bool Uses(JsonNode cost, string item) => cost["r"]!.AsArray().Any(r => r![0]!.GetValue<string>() == item);
+    /// <summary>Every item some cost entry takes.</summary>
+    private static HashSet<string> Required(IEnumerable<JsonNode> costs) =>
+        costs.SelectMany(c => c["r"]!.AsArray()).Select(r => r![0]!.GetValue<string>()).ToHashSet(StringComparer.Ordinal);
 
     /// <summary>
     /// A report or the kept file: its entries in the editor's formats (the others left out, as a broken entry
