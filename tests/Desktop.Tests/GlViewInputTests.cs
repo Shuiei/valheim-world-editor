@@ -78,6 +78,8 @@ public class GlViewInputTests
         // A key held when a box takes the focus is let go: its release will be the box's.
         w.KeyPress(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
         Assert.Contains(Key.W, v.KeysHeld);
+        // The blueprints panel (hidden until its tool is chosen) and its search box.
+        w.Blueprints.Toggle(true);
         Assert.True(w.Blueprints.Search.Focus());
         Assert.Empty(v.KeysHeld);
         w.KeyRelease(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
