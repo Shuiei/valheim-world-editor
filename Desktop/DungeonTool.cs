@@ -90,16 +90,18 @@ public sealed partial class DungeonTool
     /// </summary>
     /// <param name="D">The dungeon it was worked out for.</param>
     /// <param name="Version">The edit store's version then.</param>
+    /// <param name="Generation">The session's generation then (it moves when the live game changes things in place).</param>
     /// <param name="Count">How many things the scene had then.</param>
     /// <param name="Free">The free openings.</param>
     /// <param name="Joints">The joints that can take one of the dungeon's doors.</param>
     /// <param name="Doors">The scene's doors of the dungeon's kinds, by their place rounded to 5 cm (see Spot).</param>
     /// <param name="Overlapping">How many pairs of rooms overlap.</param>
-    private sealed record Derived(DungeonRooms.Dungeon D, int Version, int Count, List<Dungeons.OpenEnd> Free, List<Dungeons.Joint> Joints,
+    private sealed record Derived(DungeonRooms.Dungeon D, int Version, int Generation, int Count, List<Dungeons.OpenEnd> Free, List<Dungeons.Joint> Joints,
         Dictionary<(long, long, long), List<int>> Doors, int Overlapping);
 
     /// <summary>
-    /// The last Derived, kept while the dungeon, the edit version and the thing count stay the same.
+    /// The last Derived, kept while the dungeon, the edit version, the session's generation and the thing count stay the
+    /// same.
     /// </summary>
     private Derived? _derived;
 
@@ -109,8 +111,8 @@ public sealed partial class DungeonTool
     private static (long, long, long) Spot(Vector3 p) => ((long)MathF.Round(p.X * 20), (long)MathF.Round(p.Y * 20), (long)MathF.Round(p.Z * 20));
 
     /// <summary>
-    /// The Derived of the open dungeon, worked out again only when it, the edits or the scene's thing count changed;
-    /// null when no scene or dungeon is open.
+    /// The Derived of the open dungeon, worked out again only when it, the edits, the session's generation or the
+    /// scene's thing count changed; null when no scene or dungeon is open.
     /// </summary>
     private Derived? Derive()
     {
@@ -118,8 +120,8 @@ public sealed partial class DungeonTool
         {
             return null;
         }
-        int version = s.Session?.Edits.Version ?? 0, count = s.Things.Count;
-        if (_derived is { } c && ReferenceEquals(c.D, d) && c.Version == version && c.Count == count)
+        int version = s.Session?.Edits.Version ?? 0, generation = s.Session?.Generation ?? 0, count = s.Things.Count;
+        if (_derived is { } c && ReferenceEquals(c.D, d) && c.Version == version && c.Generation == generation && c.Count == count)
         {
             return c;
         }
@@ -138,7 +140,7 @@ public sealed partial class DungeonTool
         }
         int overlapping = d.Rooms.Select((r, i) => Dungeons.Overlaps(d.Rooms, r, i).Count > 0 ? 1 : 0).Sum() / 2;
         var joints = Dungeons.Joints(d.Rooms).Where(j => j.DoorAllowed && Dungeons.DoorsFor(d.Kind, j.Type).Any()).ToList();
-        return _derived = new Derived(d, version, count, Dungeons.Openings(d.Rooms, freeOnly: true), joints, doors, overlapping);
+        return _derived = new Derived(d, version, generation, count, Dungeons.Openings(d.Rooms, freeOnly: true), joints, doors, overlapping);
     }
 
     /// <summary>

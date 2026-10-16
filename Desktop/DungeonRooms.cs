@@ -19,8 +19,8 @@ public static class DungeonRooms
     /// <param name="Problem">Why its rooms could not be read (or are not laid out yet), null when they were.</param>
     public sealed record Dungeon(int Index, WorldScene.Thing Thing, Dungeons.Kind Kind, List<Dungeons.Placed> Rooms, string? Problem);
 
-    /// <summary>The dungeons read for a scene, with the edit version and object count they were read at.</summary>
-    private sealed record Cache(int Version, int Count, IReadOnlyList<Dungeon> Dungeons);
+    /// <summary>The dungeons read for a scene, with the state they were read at (see <see cref="Now"/>).</summary>
+    private sealed record Cache((int Version, int Generation, int Count) At, IReadOnlyList<Dungeon> Dungeons);
 
     /// <summary>What was read last, per scene.</summary>
     private static readonly ConditionalWeakTable<WorldScene, Cache> Caches = [];
@@ -28,12 +28,16 @@ public static class DungeonRooms
     /// <summary>Scenes whose dungeons are being read again for the view.</summary>
     private static readonly ConditionalWeakTable<WorldScene, object> Reading = [];
 
-    /// <summary>The scene's edit version and object count: when either changes, the dungeons are read again.</summary>
-    private static (int Version, int Count) Now(WorldScene s)
+    /// <summary>
+    /// The scene's edit version, its session's generation and its object count: when any changes, the dungeons are read
+    /// again. The generation moves when the live game changes things in place (TakeGameChanges: a dungeon laid out or
+    /// gone in game), which touches neither the edits nor the count.
+    /// </summary>
+    private static (int Version, int Generation, int Count) Now(WorldScene s)
     {
         lock (s.Things)
         {
-            return (s.Session?.Edits.Version ?? 0, s.Things.Count);
+            return (s.Session?.Edits.Version ?? 0, s.Session?.Generation ?? 0, s.Things.Count);
         }
     }
 
@@ -43,9 +47,9 @@ public static class DungeonRooms
     /// </summary>
     public static IReadOnlyList<Dungeon> Shown(WorldScene s, Action ready)
     {
-        var (version, count) = Now(s);
+        var now = Now(s);
         Caches.TryGetValue(s, out var c);
-        if (c is { } k && k.Version == version && k.Count == count)
+        if (c is { } k && k.At == now)
         {
             return k.Dungeons;
         }
@@ -70,8 +74,8 @@ public static class DungeonRooms
     /// <summary>The scene's dungeons as they are now, read when the cache is out of date (on the caller's thread).</summary>
     public static IReadOnlyList<Dungeon> Of(WorldScene s)
     {
-        var (version, count) = Now(s);
-        if (Caches.TryGetValue(s, out var c) && c.Version == version && c.Count == count)
+        var now = Now(s);
+        if (Caches.TryGetValue(s, out var c) && c.At == now)
         {
             return c.Dungeons;
         }
@@ -109,7 +113,7 @@ public static class DungeonRooms
             }
             list.Add(new Dungeon(i, t, kind, rooms, problem));
         }
-        Caches.AddOrUpdate(s, new Cache(version, count, list));
+        Caches.AddOrUpdate(s, new Cache(now, list));
         return list;
     }
 }

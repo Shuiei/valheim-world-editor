@@ -279,6 +279,9 @@ the plugin is unchanged in versions without that part.
   Homestead again.
 - **Opening the Workshop threw when there were no pieces to build with (the game's data missing, or every piece hidden
   by the mods' manifests).** It took the list's first piece without checking; it now chooses none and says so.
+- **Live, a dungeon laid out or gone in the game kept showing as it was until an unrelated edit.** The dungeon caches
+  were keyed on the edit version and the object count, which the game's changes leave alone; they now also follow the
+  session's generation, which those changes move.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
