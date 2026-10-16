@@ -14,7 +14,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The mouse over a 3D view of its own (in a plain window, nobody else listening to it), looking straight down on a
 /// flat area at 30 m: the Dungeon tool's clicks, Alt + click with a brush, Stamp once, a click picking in the View
-/// tool, Paste and Shape clicks with or without a listener, and Ctrl or Alt with the wheel.
+/// tool, the Select tool's look for the object under the pointer, Paste and Shape clicks with or without a listener,
+/// and Ctrl or Alt with the wheel.
 /// </summary>
 public class GlViewPointerTests
 {
@@ -157,17 +158,25 @@ public class GlViewPointerTests
         Assert.Empty(b.V.Selected);
     }
 
+    /// <summary>
+    /// A bare view in the Select tool on a flat 2 × 2 zone area with one building piece at world 37, 30, 37 (view 5,
+    /// 30, -5, its box 1 × 2 × 1).
+    /// </summary>
+    private static Bare PieceInSelect()
+    {
+        var b = new Bare(TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("wood_wall_half"), new Vector3(37, 30, 37), Vector3.Zero, 0, true)));
+        b.V.SetBoxes([(0, new Vector3(4.5f, 30, -5.5f), new Vector3(5.5f, 32, -4.5f))]);
+        b.V.Mode = ToolMode.Select;
+        return b;
+    }
+
     // In the Select tool the object under the pointer is looked for once for a burst of moves (a fast mouse sends many
     // a frame, and each look tries every object's box), once the moves waiting are taken; it was looked for on every
     // move.
     [AvaloniaFact]
     public void TheObjectUnderThePointerIsLookedForOnceForABurstOfMoves()
     {
-        // A building piece at world 37, 30, 37: view 5, 30, -5, its box 1 × 2 × 1.
-        var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("wood_wall_half"), new Vector3(37, 30, 37), Vector3.Zero, 0, true));
-        var b = new Bare(s);
-        b.V.SetBoxes([(0, new Vector3(4.5f, 30, -5.5f), new Vector3(5.5f, 32, -4.5f))]);
-        b.V.Mode = ToolMode.Select;
+        var b = PieceInSelect();
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
         int before = b.V.HoverPicks;
         // Three moves in a row, as the window gets them before it runs anything else (the headless MouseMove runs the
@@ -192,10 +201,7 @@ public class GlViewPointerTests
     [AvaloniaFact]
     public void TheObjectUnderThePointerIsLookedForAgainWhenAClickEnds()
     {
-        var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("wood_wall_half"), new Vector3(37, 30, 37), Vector3.Zero, 0, true));
-        var b = new Bare(s);
-        b.V.SetBoxes([(0, new Vector3(4.5f, 30, -5.5f), new Vector3(5.5f, 32, -4.5f))]);
-        b.V.Mode = ToolMode.Select;
+        var b = PieceInSelect();
         b.W.MouseMove(b.At(-20, 30, 20));
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
         Assert.Null(b.V.HoverObject);
@@ -211,6 +217,22 @@ public class GlViewPointerTests
             new PointerPointProperties(RawInputModifiers.None, PointerUpdateKind.LeftButtonReleased), KeyModifiers.None, MouseButton.Left));
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
         Assert.Equal(0, b.V.HoverObject);
+    }
+
+    // A look queued by a move is dropped when the Select tool is left before it runs: no object is outlined in
+    // another tool.
+    [AvaloniaFact]
+    public void AQueuedLookIsDroppedOnceTheSelectToolIsLeft()
+    {
+        var b = PieceInSelect();
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        int before = b.V.HoverPicks;
+        var mouse = new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true);
+        b.Surface.RaiseEvent(new PointerEventArgs(InputElement.PointerMovedEvent, b.Surface, mouse, b.W, b.At(5, 31.9f, -5), 0, new PointerPointProperties(), KeyModifiers.None));
+        b.V.Mode = ToolMode.View;
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Equal(before, b.V.HoverPicks);
+        Assert.Null(b.V.HoverObject);
     }
 
     [AvaloniaFact]
