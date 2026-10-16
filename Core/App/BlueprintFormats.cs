@@ -153,7 +153,7 @@ public static class BlueprintFormats
         string[] p = line.Split(';');
         var q = Quaternion.Normalize(new Quaternion(F(p[5]), F(p[6]), F(p[7]), F(p[8])));
         float scale = p.Length > 12 ? F(p[10]) : 1f;
-        return new Piece(PrefabName(p[0]), new Vector3(F(p[2]), F(p[3]), F(p[4])), ToEuler(q), scale);
+        return new Piece(PrefabName(p[0]), new Vector3(Coord(p[2]), Coord(p[3]), Coord(p[4])), ToEuler(q), scale);
     }
 
     /// <summary>
@@ -167,7 +167,7 @@ public static class BlueprintFormats
         }
         string[] p = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var q = Quaternion.Normalize(new Quaternion(F(p[1]), F(p[2]), F(p[3]), F(p[4])));
-        return new Piece(PrefabName(p[0]), new Vector3(F(p[5]), F(p[6]), F(p[7])), ToEuler(q), 1f);
+        return new Piece(PrefabName(p[0]), new Vector3(Coord(p[5]), Coord(p[6]), Coord(p[7])), ToEuler(q), 1f);
     }
 
     /// <summary>
@@ -180,7 +180,22 @@ public static class BlueprintFormats
         float radius = F(p[4]);
         return radius < 0
             ? throw new FormatException($"{p[4].Trim()} is not a radius")
-            : new TerrainMod(p[0].ToLowerInvariant(), new Vector3(F(p[1]), F(p[2]), F(p[3])), radius, (int)MathF.Round(F(p[5])), p.Length > 7 ? p[7] : "");
+            : new TerrainMod(p[0].ToLowerInvariant(), new Vector3(Coord(p[1]), Coord(p[2]), Coord(p[3])), radius, (int)MathF.Round(F(p[5])), p.Length > 7 ? p[7] : "");
+    }
+
+    /// <summary>
+    /// How far a position may be from a blueprint's origin: ten times a Valheim world's radius, further than any
+    /// piece can be placed, and far short of where floats lose their precision and sums of them overflow.
+    /// </summary>
+    private const float MaxCoordinate = 100_000f;
+
+    /// <summary>
+    /// A position's coordinate (<c>F</c>), within <c>MaxCoordinate</c> of the origin; a FormatException beyond.
+    /// </summary>
+    private static float Coord(string s)
+    {
+        float v = F(s);
+        return MathF.Abs(v) <= MaxCoordinate ? v : throw new FormatException($"{s.Trim()} is further than any world reaches");
     }
 
     /// <summary>
@@ -306,7 +321,8 @@ public static class BlueprintFormats
         {
             x0 = x1 = z0 = z1 = 0f;
         }
-        float cx = bp.Terrain.Count > 0 ? (tx0 + tx1) / 2f : (x0 + x1) / 2f, cz = bp.Terrain.Count > 0 ? (tz0 + tz1) / 2f : (z0 + z1) / 2f;
+        // Midpoints as halves: a huge radius makes an extent too large to sum, and is refused below.
+        float cx = bp.Terrain.Count > 0 ? tx0 / 2f + tx1 / 2f : x0 / 2f + x1 / 2f, cz = bp.Terrain.Count > 0 ? tz0 / 2f + tz1 / 2f : z0 / 2f + z1 / 2f;
         JsonArray objects = [];
         foreach (Piece p in pieces)
         {

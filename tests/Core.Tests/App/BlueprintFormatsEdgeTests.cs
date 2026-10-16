@@ -104,11 +104,12 @@ public class BlueprintFormatsEdgeTests
     }
 
     [Fact]
-    public void ANumberThatIsNotFiniteMakesALineUnreadable()
+    public void ANumberThatIsNotFiniteOrBeyondAnyWorldMakesALineUnreadable()
     {
         var bp = BlueprintFormats.Parse("nan.blueprint", string.Join("\n",
-            "#Terrain", "circle;NaN;0;0;1;0;0;dirt", "circle;0;0;0;Infinity;0;0;dirt", "#Pieces", "wood_wall;0;-Infinity;0;0;0;0;0;1;", "wood_wall;0;1;0;0;0;0;0;1;"));
-        Assert.Equal(3, bp.SkippedLines);
+            "#Terrain", "circle;NaN;0;0;1;0;0;dirt", "circle;0;0;0;Infinity;0;0;dirt", "circle;0;0;2e38;1;0;0;dirt",
+            "#Pieces", "wood_wall;0;-Infinity;0;0;0;0;0;1;", "wood_wall;0;1e30;0;0;0;0;0;1;", "wood_wall;0;1;0;0;0;0;0;1;"));
+        Assert.Equal(5, bp.SkippedLines);
         Assert.Empty(bp.Terrain);
         Assert.Single(bp.Pieces);
         // A negative radius too: it would turn the mark's extents inside out.
