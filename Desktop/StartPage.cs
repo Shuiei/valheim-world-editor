@@ -510,9 +510,7 @@ public sealed class StartPage
         Control content;
         if (running != null)
         {
-            var edit = new Button { Content = "Edit live", VerticalAlignment = VerticalAlignment.Center }.Classed("primary").Tip("start.editLive");
-            var bridge = running.Bridge;
-            edit.Click += (_, _) => OpenLive(new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token), "my game", "game", "Connecting to your game…");
+            var edit = EditLiveButton(running);
             content = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitions("*,Auto"),
@@ -591,12 +589,21 @@ public sealed class StartPage
     }
 
     // ---- Saved worlds.
+    /// <summary>The Edit live button for the game running with the plugin: opens its world live through the bridge.</summary>
+    /// <param name="running">The running game.</param>
+    private Button EditLiveButton(LocalGame.Running running)
+    {
+        var edit = new Button { Content = "Edit live", VerticalAlignment = VerticalAlignment.Center }.Classed("primary").Tip("start.editLive");
+        var bridge = running.Bridge;
+        edit.Click += (_, _) => OpenLive(new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token), "my game", "game", "Connecting to your game…");
+        return edit;
+    }
+
     /// <summary>Home's card when the game runs with the plugin: its world, and Edit live.</summary>
     private Border RunningCard(LocalGame.Running running, string where)
     {
-        var edit = new Button { Content = "Edit live", VerticalAlignment = VerticalAlignment.Center, FontSize = 13 }.Classed("primary").Tip("start.editLive");
-        var bridge = running.Bridge;
-        edit.Click += (_, _) => OpenLive(new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token), "my game", "game", "Connecting to your game…");
+        var edit = EditLiveButton(running);
+        edit.FontSize = 13;
         return new Border
         {
             Background = new SolidColorBrush(Color.FromRgb(31, 42, 34)),
