@@ -286,6 +286,20 @@ public sealed class WorldSave
         return b;
     }
 
+    /// <summary>
+    /// An object's saved bytes as <see cref="ObjectBytes"/> gives them, live without a copy: a view into the bytes it
+    /// was read from.
+    /// </summary>
+    private ReadOnlySpan<byte> SavedSpan(int id)
+    {
+        if (LiveBytes == null)
+        {
+            return ObjectBytes(id);
+        }
+        ObjectRef o = ObjectRefs[id];
+        return LiveSource(o.File).AsSpan((int)o.Start, (int)(o.End - o.Start));
+    }
+
     /// <summary>Generated zones and location instances from the .db2 file (null if it could not be read).</summary>
     public ZoneDb? Zones { get; private set; }
 
@@ -581,7 +595,7 @@ public sealed class WorldSave
                 if (_byLiveId!.TryGetValue((user, zid), out int id) && !(keep(id) && ours((user, zid))))
                 {
                     seen.Add(id);
-                    if (!ObjectBytes(id).AsSpan().SequenceEqual(bytes))
+                    if (!SavedSpan(id).SequenceEqual(bytes))
                     {
                         fresh.Add((user, zid, bytes, id));
                     }
