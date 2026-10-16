@@ -52,15 +52,15 @@ public static class ClaudeRelay
                 await output.WriteLineAsync(Error(null, -32700, "Not JSON."));
                 continue;
             }
-            // JSON that is not one message (a batch, which MCP no longer has, or a bare value): asking it for an id
-            // or a method would throw and end the relay.
-            if (message is not (null or JsonObject))
+            // JSON that is not one message (a batch, which MCP no longer has, null or another bare value): asking it
+            // for an id or a method would throw and end the relay.
+            if (message is not JsonObject)
             {
                 await output.WriteLineAsync(Error(null, -32600, "Not a JSON-RPC message: one object per line (no batches)."));
                 continue;
             }
-            JsonNode? id = message?["id"]?.DeepClone();
-            string? method = message?["method"] is JsonValue m && m.TryGetValue(out string? name) ? name : null;
+            JsonNode? id = message["id"]?.DeepClone();
+            string? method = message["method"] is JsonValue m && m.TryGetValue(out string? name) ? name : null;
             var s = settings();
             if (!s.ClaudeConnect || string.IsNullOrEmpty(s.ClaudeToken))
             {
