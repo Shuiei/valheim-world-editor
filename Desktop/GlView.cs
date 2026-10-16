@@ -2587,8 +2587,13 @@ public sealed class GlView : OpenGlControlBase
     /// </summary>
     public void Attach(Control surface, Window window)
     {
+        // A click on the view takes the keyboard from a box typed in (its keys are the box's while it has the focus),
+        // so the camera keys work again; not a Tab stop.
+        surface.Focusable = true;
+        KeyboardNavigation.SetIsTabStop(surface, false);
         surface.PointerPressed += (_, e) =>
         {
+            surface.Focus(NavigationMethod.Pointer);
             var p = e.GetCurrentPoint(surface);
             _pressAt = p.Position;
             _dragFrom = p.Position;

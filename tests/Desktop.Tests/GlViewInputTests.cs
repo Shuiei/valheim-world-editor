@@ -111,6 +111,28 @@ public class GlViewInputTests
     }
 
     [AvaloniaFact]
+    public void AClickOnTheViewAfterTypingGivesTheKeysBackToTheCamera()
+    {
+        var (w, v) = Open();
+        w.Blueprints.Toggle(true);
+        var box = w.Blueprints.Search;
+        box.Focus();
+        Assert.True(box.IsFocused);
+        // A point of the view no panel covers.
+        w.UpdateLayout();
+        var at = Enumerable.Range(1, 9).SelectMany(i => Enumerable.Range(1, 9).Select(j => new Point(i * 80, j * 60)))
+            .First(p => InputExtensions.InputHitTest(w, p) == w.Surface);
+        w.MouseDown(at, MouseButton.Left);
+        w.MouseUp(at, MouseButton.Left);
+        Assert.False(box.IsFocused);
+        w.KeyPress(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
+        Assert.Contains(Key.W, v.KeysHeld);
+        w.KeyRelease(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
+        w.KeyPress(Key.F, RawInputModifiers.None, PhysicalKey.F, "f");
+        Assert.Equal(GlView.EyeMode.Walk, v.Eye);
+    }
+
+    [AvaloniaFact]
     public void KeysHeldWhenTheEditorIsHiddenAreLetGo()
     {
         var (w, v) = Open();
