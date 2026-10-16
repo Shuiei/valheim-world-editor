@@ -96,10 +96,18 @@ public static class ZdoBuilder
         }
         if (scale > 0f)
         {
-            // The game stores a non-default scale as a Vector3 "scale" (ZNetView.SetLocalScale).
-            Section vec = sections.FirstOrDefault(s => s.Flag == Vec3) ?? AddSection(sections, Vec3);
-            vec.Set(ScaleKey, Concat(BitConverter.GetBytes(scale), BitConverter.GetBytes(scale), BitConverter.GetBytes(scale)));
+            // The game stores a non-default scale as a Vector3 "scale" (ZNetView.SetLocalScale); scale 1 is no value,
+            // as Blank writes it.
             sections.FirstOrDefault(s => s.Flag == Floats)?.Items.RemoveAll(i => i.Key == ScaleScalarKey);
+            if (MathF.Abs(scale - 1f) > 1e-4f)
+            {
+                Section vec = sections.FirstOrDefault(s => s.Flag == Vec3) ?? AddSection(sections, Vec3);
+                vec.Set(ScaleKey, Concat(BitConverter.GetBytes(scale), BitConverter.GetBytes(scale), BitConverter.GetBytes(scale)));
+            }
+            else
+            {
+                sections.FirstOrDefault(s => s.Flag == Vec3)?.Items.RemoveAll(i => i.Key == ScaleKey);
+            }
         }
         sections.RemoveAll(s => s.Flag != Connections && s.Items.Count == 0);
         flags = (ushort)(flags & 0xFF00);
