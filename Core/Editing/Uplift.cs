@@ -141,13 +141,36 @@ public static class Uplift
         {
             return null;
         }
+        var shared = Gather(world, edits);
         var plans = Clusters(lifted.Select(e => (e.ZoneX, e.ZoneZ)))
             .Select(c => c.ToHashSet())
-            .Select(c => MakeBlock(world, terrain, edits, nextId, [.. lifted.Where(e => c.Contains((e.ZoneX, e.ZoneZ)))]))
+            .Select(c => MakeBlock(world, terrain, edits, nextId, [.. lifted.Where(e => c.Contains((e.ZoneX, e.ZoneZ)))], shared))
             .ToList();
         return plans.Count == 1 ? plans[0] : new Plan([.. plans.SelectMany(p => p.Zones)], [.. plans.SelectMany(p => p.Delete)], [.. plans.SelectMany(p => p.Add)],
             plans.Sum(p => p.Discs), plans.Sum(p => p.OldDiscs), plans.Sum(p => p.Cleared), plans.Max(p => p.Worst))
         { Ungenerated = plans.Sum(p => p.Ungenerated) };
+    }
+
+    /// <summary>
+    /// What every group's plan looks through, gathered once for all of them: the discs as they are now
+    /// (<see cref="CurrentDiscs"/>), the world's placed objects that are not discs, and its natural objects not deleted
+    /// (trees, rocks, ore, bushes, pickables), in the world's order.
+    /// </summary>
+    /// <param name="Discs">The discs as they are now.</param>
+    /// <param name="Placed">The placed objects with modifiers that are not discs.</param>
+    /// <param name="Natural">The natural objects a lift may take away.</param>
+    private sealed record Shared(List<(int Id, Vector3 Position)> Discs, List<PlacedObject> Placed, List<(int Id, Vector3 Position)> Natural);
+
+    /// <summary>Gathers <see cref="Shared"/> from the world and the edits.</summary>
+    /// <param name="world">The world.</param>
+    /// <param name="edits">The edits, for the discs added and the objects deleted.</param>
+    private static Shared Gather(WorldSave world, EditStore edits)
+    {
+        var deleted = edits.Deleted;
+        return new Shared(CurrentDiscs(world, edits), [.. world.Placed.Where(p => !IsDisc(p.Location))],
+            [.. world.Objects.Where(o => !deleted.Contains(o.Id)
+                && ObjectKinds.Of(PrefabCatalog.NameOf(o.Prefab), false) is ObjectKind.Trees or ObjectKind.Rocks or ObjectKind.Ore or ObjectKind.Bushes or ObjectKind.Pickables)
+                .Select(o => (o.Id, o.Position))]);
     }
 
     /// <summary>
@@ -220,7 +243,7 @@ public static class Uplift
     }
 
     /// <summary>The plan for a group of lifted zones, worked on one block: them and the zones the discs reach from them.</summary>
-    private static Plan MakeBlock(WorldSave world, ValheimGen.TerrainService terrain, EditStore edits, Func<int> nextId, List<ZoneEdit> lifted)
+    private static Plan MakeBlock(WorldSave world, ValheimGen.TerrainService terrain, EditStore edits, Func<int> nextId, List<ZoneEdit> lifted, Shared shared)
     {
         // The block of zones worked on: the lifted ones and those the discs reach from them.
         var block = new Block(WorkingZones(lifted.Select(e => (e.ZoneX, e.ZoneZ))));
@@ -266,9 +289,11 @@ public static class Uplift
 
         // Old discs near the lift are worked out again with the new ones.
         bool[] liftMask = Dilate(block, lift, l => l != 0, (int)DiscRadius + Spacing);
-        var current = CurrentDiscs(world, edits);
-        var old = current.Where(d => block.At(d.Position) is int p && liftMask[p]).ToList();
-        var keep = PlacedNow(world, edits, old).Where(p => block.Near(p.Position, 100f)).ToList();
+        var old = shared.Discs.Where(d => block.At(d.Position) is int p && liftMask[p]).ToList();
+        // The placed objects as the game will have them (PlacedNow without the discs replaced), near the block.
+        var replaced = old.Select(d => d.Id).ToHashSet();
+        var keep = shared.Placed.Concat(shared.Discs.Where(d => !replaced.Contains(d.Id)).Select(d => DiscAt(d.Position)))
+            .Where(p => block.Near(p.Position, 100f)).ToList();
 
         var raw = new Dictionary<(int, int), float[]>();
         float[] Ground(List<Vector3> discs)
@@ -467,10 +492,7 @@ public static class Uplift
         }
 
         // Natural objects where the lift moved the ground far.
-        var deleted = edits.Deleted;
-        var clear = world.Objects.Where(o => !deleted.Contains(o.Id) && block.At(o.Position) is int p && MathF.Abs(lift[p]) > ClearHeight
-            && ObjectKinds.Of(PrefabCatalog.NameOf(o.Prefab), false) is ObjectKind.Trees or ObjectKind.Rocks or ObjectKind.Ore or ObjectKind.Bushes or ObjectKind.Pickables)
-            .Select(o => o.Id).ToList();
+        var clear = shared.Natural.Where(o => block.At(o.Position) is int p && MathF.Abs(lift[p]) > ClearHeight).Select(o => o.Id).ToList();
         var add = final.Select(d => new NewObject(nextId(), WorldSave.LocationProxyPrefab, d, Vector3.Zero, 0f, Fresh: false, Raw: DiscBytes(d))).ToList();
         return new Plan(result, [.. old.Select(d => d.Id), .. clear], add, final.Count, old.Count, clear.Count, worst) { Ungenerated = ungenerated.Count };
     }
