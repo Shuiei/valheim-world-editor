@@ -50,17 +50,18 @@ public class ClaudeToolsWorldTests
         Assert.Equal("Open a world first (open_world).", await r.T.ListLocations());
         await r.OpenArea();
         Assert.Equal("what is kinds, items or texts.", await r.T.SearchWorld("Beech1", "colours"));
-        // The world left while it is searched: the hits would be that world's, so they are not given.
+        // The world left while it is searched: the hits would be that world's, so they are not given. The change is
+        // queued on the window's thread right behind the tool's first step (reading the open world), so it comes
+        // before the tool's last, which is queued only once the search is done.
         var searching = r.T.SearchWorld("Beech1");
-        // Lets the tool's first step (reading the open world) run before the world is left.
-        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { }, Avalonia.Threading.DispatcherPriority.Background);
-        await r.W.LeaveWorld();
+        Task? leaving = null;
+        Avalonia.Threading.Dispatcher.UIThread.Post(() => leaving = r.W.LeaveWorld());
         Assert.Equal("The world changed while it was searched: search again.", await searching);
+        await leaving!;
         await r.OpenArea();
         // The world read again (after a save) while it is searched: the hits' ids would be other objects'.
         searching = r.T.SearchWorld("Beech1");
-        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { }, Avalonia.Threading.DispatcherPriority.Background);
-        r.W.Session!.Scene.Reads++;
+        Avalonia.Threading.Dispatcher.UIThread.Post(() => r.W.Session!.Scene.Reads++);
         Assert.Equal("The open area changed while it was searched (another area, or the world saved): search again.", await searching);
         int tree = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "Beech1", X = 7, Z = 7 }]));
         var found = ClaudeRun.J(await r.T.SearchWorld("Beech1", x: 7, z: 7));
