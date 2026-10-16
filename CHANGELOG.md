@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.45 — unreleased
+
+### Fixed
+- **Reset zones could say "Select an area first" or miss zones, depending on the Soft slider.** The zones under the
+  selection were taken from the soft-edge weights, keeping only points weighing at least one half: with Soft at 20 m
+  and a 15 m wide selection no point weighed that much, so Reset found no zone, and a zone covered only by the outer
+  half of the soft edge was left out. The zones are now those with a grid point inside the outline, whatever Soft is.
+
 ## v1.45.44 — unreleased
 
 ### Fixed
