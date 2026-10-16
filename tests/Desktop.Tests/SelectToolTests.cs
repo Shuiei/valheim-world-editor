@@ -174,6 +174,18 @@ public class SelectToolTests
         p.YBox.Value = 2;
         p.ApplyButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
         Assert.Equal(new Vector3(50, 32, 44), Last(s).Position);
+        // By, with all four boxes: each amount goes to its own axis.
+        p.ByButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+        p.XBox.Value = 1;
+        p.YBox.Value = 2;
+        p.ZBox.Value = -3;
+        p.TurnBox.Value = 45;
+        p.ApplyButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+        moved = Last(s);
+        Assert.Equal(51, moved.Position.X, 3);
+        Assert.Equal(34, moved.Position.Y, 3);
+        Assert.Equal(41, moved.Position.Z, 3);
+        Assert.Equal(45, moved.Rotation.Y, 3);
     }
 
     [AvaloniaFact]
