@@ -2036,7 +2036,7 @@ public sealed class GlView : OpenGlControlBase
             Vector3 View(Vector3 v, bool worldSpace)
             {
                 var p = worldSpace ? v : t.Position + Vector3.Transform(v * scale, q);
-                return new Vector3(p.X - s.Cx, p.Y, -(p.Z - s.Cz));
+                return ToView(s, p);
             }
             // Grid coordinates of a point on the ground (x, z in the object's frame, or the world's).
             Vector2 Grid(Vector2 p, bool worldSpace)
@@ -2210,7 +2210,7 @@ public sealed class GlView : OpenGlControlBase
         var q = Quaternion.CreateFromYawPitchRoll(t.Rotation.Y * D, t.Rotation.X * D, t.Rotation.Z * D);
         q = new Quaternion(-q.X, -q.Y, q.Z, q.W);
         var scale = t.Scale > 0 ? new Vector3(t.Scale) : rootScale;
-        var pos = new Vector3(t.Position.X - s.Cx, t.Position.Y, -(t.Position.Z - s.Cz));
+        var pos = ToView(s, t.Position);
         return Matrix4x4.CreateScale(scale) * Matrix4x4.CreateFromQuaternion(q) * Matrix4x4.CreateTranslation(pos);
     }
 
@@ -3430,7 +3430,7 @@ public sealed class GlView : OpenGlControlBase
         {
             return;
         }
-        Vector3 V(Vector3 w) => new(w.X - s.Cx, w.Y, -(w.Z - s.Cz));
+        Vector3 V(Vector3 w) => ToView(s, w);
         // Free openings: a square across each, 2 m wide, 3 m high, standing on its floor point.
         var ends = new List<float>();
         var hovered = new List<float>();
@@ -3569,8 +3569,7 @@ public sealed class GlView : OpenGlControlBase
         {
             return null;
         }
-        float x = g.X - (s.W - 1) / 2f, z = -(g.Y - (s.H - 1) / 2f);
-        var q = Vector4.Transform(new Vector4(x, Picking.HeightAt(s, x, z) + lift, z, 1), _lastViewProj);
+        var q = Vector4.Transform(new Vector4(OnGround(s, g.X, g.Y, lift), 1), _lastViewProj);
         if (q.W <= 0)
         {
             return null;
@@ -3585,7 +3584,7 @@ public sealed class GlView : OpenGlControlBase
     internal float GridHeight(Vector2 g)
     {
         var s = Scene;
-        return s == null ? 0 : Picking.HeightAt(s, g.X - (s.W - 1) / 2f, -(g.Y - (s.H - 1) / 2f));
+        return s == null ? 0 : OnGround(s, g.X, g.Y, 0).Y;
     }
     /// <summary>The left button went down with the Select tool.</summary>
     private bool _selectDown;
@@ -3599,7 +3598,7 @@ public sealed class GlView : OpenGlControlBase
             return null;
         }
         float wx = s.X0 * 64f - 32f + g.X, wz = s.Z0 * 64f - 32f + g.Z;
-        return new Vector3(wx, Picking.HeightAt(s, g.X - (s.W - 1) / 2f, -(g.Z - (s.H - 1) / 2f)), wz);
+        return new Vector3(wx, OnGround(s, g.X, g.Z, 0).Y, wz);
     }
 
     /// <summary>Where the camera was at the last frame, in view space.</summary>
@@ -3623,7 +3622,7 @@ public sealed class GlView : OpenGlControlBase
         }
         lock (_camLock)
         {
-            var t = new Vector3(x - s.Cx, 0, -(z - s.Cz));
+            var t = ToView(s, new Vector3(x, 0, z));
             int gx = Math.Clamp((int)MathF.Round(t.X + (s.W - 1) / 2f), 0, s.W - 1), gz = Math.Clamp((int)MathF.Round(-t.Z + (s.H - 1) / 2f), 0, s.H - 1);
             t.Y = height ?? Math.Max(s.Heights[gz * s.W + gx], s.Water);
             _target = t;
@@ -3643,7 +3642,7 @@ public sealed class GlView : OpenGlControlBase
         }
         lock (_camLock)
         {
-            _target = new Vector3(world.X - s.Cx, world.Y, -(world.Z - s.Cz));
+            _target = ToView(s, world);
             _distance = distance;
         }
         Wake();
@@ -3672,7 +3671,7 @@ public sealed class GlView : OpenGlControlBase
             lock (_camLock)
             {
                 (_yaw, _pitch, _distance) = (yaw, pitch, distance);
-                _target = new Vector3(world.X - s.Cx, world.Y, -(world.Z - s.Cz));
+                _target = ToView(s, world);
             }
             Wake();
         }
@@ -3701,7 +3700,7 @@ public sealed class GlView : OpenGlControlBase
         void Seg(Vector3 p, Vector3 q) => data.AddRange([p.X, p.Y, p.Z, q.X, q.Y, q.Z]);
         foreach (var (_, w) in players)
         {
-            var c = new Vector3(w.X - s.Cx, w.Y, -(w.Z - s.Cz));
+            var c = ToView(s, w);
             for (int i = 0; i < 12; i++)
             {
                 float a0 = i * MathF.Tau / 12, a1 = (i + 1) * MathF.Tau / 12;
@@ -3765,7 +3764,7 @@ public sealed class GlView : OpenGlControlBase
                 {
                     continue;
                 }
-                sum += new Vector3(t.Position.X - s.Cx, t.Position.Y, -(t.Position.Z - s.Cz));
+                sum += ToView(s, t.Position);
                 n++;
             }
         }
@@ -3876,6 +3875,28 @@ public sealed class GlView : OpenGlControlBase
         }
         var p = o + d * t;
         return (p.X + (s.W - 1) / 2f, -p.Z + (s.H - 1) / 2f);
+    }
+
+    /// <summary>A world point (x east, height, z north) in view space: from the area's middle, north as -z.</summary>
+    /// <param name="s">The area.</param>
+    /// <param name="world">The world point.</param>
+    private static Vector3 ToView(WorldScene s, Vector3 world) => new(world.X - s.Cx, world.Y, -(world.Z - s.Cz));
+
+    /// <summary>A grid point of the area (x east, z north) in view space: from the area's middle, north as -z.</summary>
+    /// <param name="s">The area.</param>
+    /// <param name="gx">The grid x.</param>
+    /// <param name="gz">The grid z.</param>
+    private static (float X, float Z) GridToView(WorldScene s, float gx, float gz) => (gx - (s.W - 1) / 2f, -(gz - (s.H - 1) / 2f));
+
+    /// <summary>A grid point of the area in view space, on the ground there and lifted this many metres.</summary>
+    /// <param name="s">The area.</param>
+    /// <param name="gx">The grid x.</param>
+    /// <param name="gz">The grid z.</param>
+    /// <param name="lift">Metres above the ground.</param>
+    private static Vector3 OnGround(WorldScene s, float gx, float gz, float lift)
+    {
+        var (x, z) = GridToView(s, gx, gz);
+        return new Vector3(x, Picking.HeightAt(s, x, z) + lift, z);
     }
 
     /// <summary>The ground's height at a world point.</summary>
@@ -4013,7 +4034,7 @@ public sealed class GlView : OpenGlControlBase
                     var t = s.Things[i];
                     if (t.Id < 0 && !t.Gone && i < _kinds.Length && _shown[(int)_kinds[i]] && !InGame(t.Id))
                     {
-                        list.Add(new Vector3(t.Position.X - s.Cx, t.Position.Y + 0.4f, -(t.Position.Z - s.Cz)));
+                        list.Add(ToView(s, t.Position + new Vector3(0, 0.4f, 0)));
                     }
                 }
             }
@@ -4144,7 +4165,7 @@ public sealed class GlView : OpenGlControlBase
                     {
                         c = colours[t.Prefab] = k == ObjectKind.Nests ? NestColour : SpawnColour(Terrain.PrefabCatalog.SpawnOf(t.Prefab)?.Respawns == true);
                     }
-                    found.Add((k, new Vector3(t.Position.X - s.Cx, t.Position.Y + 2.4f, -(t.Position.Z - s.Cz)), c));
+                    found.Add((k, ToView(s, t.Position + new Vector3(0, 2.4f, 0)), c));
                 }
             }
         }
@@ -4297,11 +4318,7 @@ public sealed class GlView : OpenGlControlBase
             curve = Path.Curve();
             pts = [.. Path.Points];
         }
-        Vector3 V(Vector2 g, float lift)
-        {
-            float x = g.X - (s.W - 1) / 2f, z = -(g.Y - (s.H - 1) / 2f);
-            return new Vector3(x, Picking.HeightAt(s, x, z) + lift, z);
-        }
+        Vector3 V(Vector2 g, float lift) => OnGround(s, g.X, g.Y, lift);
         // Grid points every metre or so along a line (the ground's own spacing), so a ribbon follows it.
         static List<Vector2> Dense(IReadOnlyList<Vector2> line)
         {
@@ -4463,7 +4480,8 @@ public sealed class GlView : OpenGlControlBase
             {
                 continue;
             }
-            float x = o.Position.X - ox - (s.W - 1) / 2f, z = -(o.Position.Z - oz - (s.H - 1) / 2f), y = o.Position.Y;
+            var (x, z) = GridToView(s, o.Position.X - ox, o.Position.Z - oz);
+            float y = o.Position.Y;
             posts.AddRange([x, y, z, x, y + 1.5f, z, x - 0.35f, y + 0.6f, z, x + 0.35f, y + 0.6f, z, x, y + 0.6f, z - 0.35f, x, y + 0.6f, z + 0.35f]);
         }
         DrawLines(ref _placeVao, ref _placeVbo, [.. posts], vp, new Vector4(0.62f, 0.88f, 1, 1));
@@ -4477,13 +4495,13 @@ public sealed class GlView : OpenGlControlBase
             {
                 foreach (var (ox2, oz2) in new[] { outline[i], outline[(i + 1) % outline.Count] })
                 {
-                    float x = h.X + ox2 - (s.W - 1) / 2f, z = -(h.Z + oz2 - (s.H - 1) / 2f);
-                    ring.AddRange([x, Picking.HeightAt(s, x, z) + 0.3f, z]);
+                    var p = OnGround(s, h.X + ox2, h.Z + oz2, 0.3f);
+                    ring.AddRange([p.X, p.Y, p.Z]);
                 }
             }
             DrawLines(ref _placeRingVao, ref _placeRingVbo, [.. ring], vp, new Vector4(0.62f, 0.88f, 1, 1), width: 1.2f);
         }
-        Vector3 V(Vector2 g) { float x = g.X - (s.W - 1) / 2f, z = -(g.Y - (s.H - 1) / 2f); return new Vector3(x, Picking.HeightAt(s, x, z) + 0.3f, z); }
+        Vector3 V(Vector2 g) => OnGround(s, g.X, g.Y, 0.3f);
         var data = new List<float>();
         void Strip(IReadOnlyList<Vector2> pts)
         {
@@ -4541,11 +4559,7 @@ public sealed class GlView : OpenGlControlBase
     /// </summary>
     private void DrawArea(WorldScene s, Matrix4x4 vp)
     {
-        Vector3 V(Vector2 g, float lift)
-        {
-            float x = g.X - (s.W - 1) / 2f, z = -(g.Y - (s.H - 1) / 2f);
-            return new Vector3(x, Picking.HeightAt(s, x, z) + lift, z);
-        }
+        Vector3 V(Vector2 g, float lift) => OnGround(s, g.X, g.Y, lift);
         void Ring(List<float> to, List<Vector2> pts, bool closed, float lift)
         {
             int n = closed ? pts.Count : pts.Count - 1;
@@ -4579,7 +4593,7 @@ public sealed class GlView : OpenGlControlBase
                     continue;
                 }
                 var o = objs[k];
-                float x = o.X - (s.W - 1) / 2f, z = -(o.Z - (s.H - 1) / 2f);
+                var (x, z) = GridToView(s, o.X, o.Z);
                 data.AddRange([x, o.Y, z, x, o.Y + 1.2f, z, x - 0.3f, o.Y + 0.5f, z, x + 0.3f, o.Y + 0.5f, z]);
             }
             // Red where it would be refused: past the open area.
@@ -4681,8 +4695,8 @@ public sealed class GlView : OpenGlControlBase
                         foreach (float t in new[] { k / (float)n, (k + 1) / (float)n })
                         {
                             var p = Vector2.Lerp(a, b, t);
-                            float x = p.X - ox - (s.W - 1) / 2f, z = -(p.Y - oz - (s.H - 1) / 2f);
-                            data.AddRange([x, Picking.HeightAt(s, x, z) + 0.3f, z]);
+                            var v = OnGround(s, p.X - ox, p.Y - oz, 0.3f);
+                            data.AddRange([v.X, v.Y, v.Z]);
                         }
                     }
                 }
@@ -4734,7 +4748,7 @@ public sealed class GlView : OpenGlControlBase
                 data.AddRange([ax, ya + 0.3f, az, bx, yb + 0.3f, bz]);
             }
         }
-        (float, float) At((float X, float Z) o) => (h.X + o.X - (s.W - 1) / 2f, -(h.Z + o.Z - (s.H - 1) / 2f));
+        (float, float) At((float X, float Z) o) => GridToView(s, h.X + o.X, h.Z + o.Z);
         Loop(Tool == null ? [.. Enumerable.Range(0, n).Select(i => (MathF.Cos(i * MathF.Tau / n) * ShapeRadius, MathF.Sin(i * MathF.Tau / n) * ShapeRadius))] : session.Brush.Outline(n));
         if (Tool != null && session.Brush.InnerOutline(n) is { } inner)
         {
@@ -4770,8 +4784,7 @@ public sealed class GlView : OpenGlControlBase
             {
                 float dx = -reach + i * step, dz = -reach + j * step;
                 float add = shape(dx, dz);
-                float x = cx + dx - (s.W - 1) / 2f, z = -(cz + dz - (s.H - 1) / 2f);
-                y[j * (Cells + 1) + i] = Picking.HeightAt(s, x, z) + add + 0.3f;
+                y[j * (Cells + 1) + i] = OnGround(s, cx + dx, cz + dz, 0).Y + add + 0.3f;
                 up[j * (Cells + 1) + i] = add > 0.5f;
             }
         }
@@ -4783,8 +4796,9 @@ public sealed class GlView : OpenGlControlBase
             {
                 return;
             }
-            data.AddRange([cx - reach + i0 * step - (s.W - 1) / 2f, y[a], -(cz - reach + j0 * step - (s.H - 1) / 2f)]);
-            data.AddRange([cx - reach + i1 * step - (s.W - 1) / 2f, y[b], -(cz - reach + j1 * step - (s.H - 1) / 2f)]);
+            var (ax, az) = GridToView(s, cx - reach + i0 * step, cz - reach + j0 * step);
+            var (bx, bz) = GridToView(s, cx - reach + i1 * step, cz - reach + j1 * step);
+            data.AddRange([ax, y[a], az, bx, y[b], bz]);
         }
         for (int j = 0; j <= Cells; j++)
         {
@@ -4835,7 +4849,7 @@ public sealed class GlView : OpenGlControlBase
     private (Vector3 Min, Vector3 Max) OutlineBoxOf(WorldScene s, int i)
     {
         var at = _boundsAt[i];
-        return OutlineBox(_kinds[i], _bounds[i], new Vector3(at.X - s.Cx, at.Y, -(at.Z - s.Cz)));
+        return OutlineBox(_kinds[i], _bounds[i], ToView(s, at));
     }
     /// <summary>Whether a thing's box is known (its model read, and it is not gone).</summary>
     private bool[] _known = [];
