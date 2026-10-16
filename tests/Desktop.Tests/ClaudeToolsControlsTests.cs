@@ -159,7 +159,9 @@ public class ClaudeToolsControlsTests
     private sealed class CountingCommand : ICommand
     {
         /// <summary>Not kept, as it is never raised: the command can always run.</summary>
+#pragma warning disable S3237 // a listener need not be kept for an event that is never raised
         event EventHandler? ICommand.CanExecuteChanged { add { } remove { } }
+#pragma warning restore S3237
 
         /// <summary>How many times the command ran.</summary>
         public int Runs { get; private set; }
