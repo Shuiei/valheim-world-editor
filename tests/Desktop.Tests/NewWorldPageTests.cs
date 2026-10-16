@@ -377,6 +377,22 @@ public class NewWorldPageTests
         Assert.Same(shown, r.P.Shown);
     }
 
+    // Leaving the page while a search reads the location rules: its source was disposed under it, and the search
+    // failed with ObjectDisposedException on a page no longer shown.
+    [AvaloniaFact]
+    public async Task LeavingDuringASearchIsNoFailure()
+    {
+        using var r = new Run();
+        OnUi(() =>
+        {
+            r.P.StartSearch();
+            r.P.Dispose();
+        });
+        await TestWindows.Until(() => r.P.Pending.IsCompleted, SeedWait);
+        Settle();
+        Assert.DoesNotContain("The search failed", Texts(r.P.Found));
+    }
+
     [AvaloniaFact]
     public async Task ASeedWhoseLookWasDroppedCanBeGeneratedAgain()
     {
