@@ -119,8 +119,8 @@ public static class Picking
         {
             return null;
         }
-        // The distances are in the ray's frame (the mesh's frame may be scaled).
-        float best = float.MaxValue;
+        // The distances are in the ray's frame (the mesh's frame may be scaled). Null until a triangle is met.
+        float? best = null;
         for (int i = 0; i + 2 < indices.Length; i += 3)
         {
             if (HitTriangle(lo, ld, At(indices[i]), At(indices[i + 1]), At(indices[i + 2])) is not float t)
@@ -132,9 +132,13 @@ public static class Picking
             {
                 continue;
             }
-            best = MathF.Min(best, Vector3.Distance(o, hit));
+            float distance = Vector3.Distance(o, hit);
+            if (best is not { } b || distance < b)
+            {
+                best = distance;
+            }
         }
-        return best == float.MaxValue ? null : best;
+        return best;
 
         Vector3 At(uint i) => new(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
     }
