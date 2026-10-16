@@ -109,6 +109,28 @@ public class LiveSyncTests
         Assert.False(u.Sync.IsOurs(u.TreeZdo));
     }
 
+    // Without moves, IsOurs follows what the game makes (a new object, then the deleted one made again) and what it
+    // destroys again (the new object on undo, the made-again one on a second delete).
+    [Fact]
+    public async Task IsOursFollowsWhatIsMadeAndDestroyed()
+    {
+        using var t = new Live(canMove: false);
+        t.MoveTree(-1, new Vector3(4, 0, 2));
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        var made = t.Sync.NewObjects().Single().Target;
+        Assert.True(t.Sync.IsOurs((made.User, made.Id)));
+        t.Edits.SetDeleted([-1], true);
+        t.Edits.SetDeleted([t.Tree.Id], false);
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.False(t.Sync.IsOurs((made.User, made.Id)));
+        // The tree made again: the bridge's next id.
+        (long, uint) again = (made.User, made.Id + 1);
+        Assert.True(t.Sync.IsOurs(again));
+        t.Edits.SetDeleted([t.Tree.Id], true);
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.False(t.Sync.IsOurs(again));
+    }
+
     // Moved on from where it was moved to: the same game object moves again.
     [Fact]
     public async Task AnObjectMovedAgainMovesTheSameGameObject()
