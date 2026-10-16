@@ -85,9 +85,9 @@ public static class ObjectData
                 throw new ArgumentException($"“{u.Name ?? prefab.ToString(CultureInfo.InvariantCulture)}” is not an item of the game.");
             }
             // The game keeps a stack's worth: a larger stack is cut to the item's largest (1: the item does not
-            // stack, or the catalogue does not know; left as it is).
+            // stack). The catalogue always knows it: each build of the editor scans the game again.
             int stack = Math.Clamp(u.Stack, 1, 65535);
-            if (kind.MaxStack > 1 && stack > kind.MaxStack)
+            if (stack > kind.MaxStack)
             {
                 notes?.Add($"{u.Name ?? PrefabCatalog.NameOf(prefab) ?? prefab.ToString(CultureInfo.InvariantCulture)}: stack of {stack} cut to {kind.MaxStack} (the item's maximum)");
                 stack = kind.MaxStack;

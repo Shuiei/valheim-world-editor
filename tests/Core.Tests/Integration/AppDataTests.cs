@@ -219,13 +219,13 @@ public class AppDataTests
         ], notes);
         var wood = inv.Items[0];
         Assert.Equal((1, 65535, 255, 0, 255, 123L, "Ragnar"), (wood.Stack, wood.Quality, wood.X, wood.Y, wood.WorldLevel, wood.CrafterId, wood.CrafterName));
-        // A stack above the item's maximum is cut to it and said; one at the maximum is kept; an item whose maximum
-        // is 1 (it does not stack, or the catalogue does not know) keeps its stack as it is.
+        // A stack above the item's maximum is cut to it and said; one at the maximum is kept; an item that does not
+        // stack is cut to one.
         Assert.Equal(50, inv.Items[1].Stack);
         Assert.Equal(0, inv.Items[1].CrafterId);
         Assert.Equal(50, inv.Items[2].Stack);
-        Assert.Equal(3, inv.Items[3].Stack);
-        Assert.Equal(["Stone: stack of 65535 cut to 50 (the item's maximum)"], notes);
+        Assert.Equal(1, inv.Items[3].Stack);
+        Assert.Equal(["Stone: stack of 65535 cut to 50 (the item's maximum)", "CryptKey: stack of 3 cut to 1 (the item's maximum)"], notes);
         var ex = Assert.Throws<ArgumentException>(() => ObjectData.BuildInventory([new ItemUpload("NoSuchItem", null)]));
         Assert.Contains("NoSuchItem", ex.Message);
         Assert.Throws<ArgumentException>(() => ObjectData.BuildInventory([new ItemUpload(null, 12345)]));

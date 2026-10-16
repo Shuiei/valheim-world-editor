@@ -139,8 +139,7 @@ public static class PrefabCatalog
     /// <param name="Durability">For items that wear, their durability when new at quality 1 (0 for items that do
     /// not wear).</param>
     /// <param name="DurabilityPerLevel">What each further quality level adds to it.</param>
-    /// <param name="MaxStack">The largest stack of the item (1 for items that do not stack, and for a catalogue
-    /// scanned before stacks were read).</param>
+    /// <param name="MaxStack">The largest stack of the item (1 for items that do not stack).</param>
     public sealed record ItemKind(int Type, int AttachOverride, int Variants, bool Attach, bool AttachSkin, float Durability = 0, float DurabilityPerLevel = 0, int MaxStack = 1)
     {
         /// <summary>
@@ -271,7 +270,8 @@ public static class PrefabCatalog
     /// <param name="ats">Has an "attach_skin" child.</param>
     /// <param name="dur">Durability when new at quality 1.</param>
     /// <param name="durl">Durability added per quality level.</param>
-    /// <param name="ms">Item: the largest stack (absent, 1: it does not stack, or an older scan).</param>
+    /// <param name="ms">Item: the largest stack (absent: 1, it does not stack). The catalogue is scanned again by each
+    /// build of the editor (GameData's cache stamp), so none lacks it.</param>
     /// <param name="is">Item stand: item types it takes.</param>
     /// <param name="isi">Item stand: items it takes whatever their type.</param>
     /// <param name="isu">Item stand: items it refuses.</param>

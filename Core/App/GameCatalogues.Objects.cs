@@ -446,7 +446,7 @@ public static partial class GameCatalogues
             {
                 var sh = d["m_itemData"]["m_shared"];
                 item = new Dict { ["it"] = Int(Py(sh["m_itemType"])) };
-                // The largest stack (1 for items that do not stack: left out, as for an older scan).
+                // The largest stack (1 for items that do not stack: left out, as absent means 1).
                 if (Int(Get(sh, "m_maxStackSize", 1L)) is > 1 and long maxStack)
                 {
                     item["ms"] = maxStack;
