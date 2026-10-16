@@ -266,6 +266,9 @@ the plugin is unchanged in versions without that part.
 - **On slopes, pieces Claude placed on the ground floated or sank by up to half a metre's slope against the height
   ground_at gave.** Placing, moving and replacing took the nearest grid point's height; they now take the ground
   between the grid points, as ground_at does.
+- **Claude tools given only one coordinate of a point went on without a word: list_objects dropped its "near" filter,
+  move_objects and copy_objects turned round the given x and the objects' middle z.** list_objects, move_objects,
+  copy_objects, search_world, list_locations, screenshot and add_blueprint now refuse a lone coordinate.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

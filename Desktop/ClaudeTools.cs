@@ -147,6 +147,17 @@ public sealed partial class ClaudeTools
         });
     });
 
+    /// <summary>
+    /// The refusal when only one of a point's two coordinates is given (null: both or neither): the other was dropped
+    /// or mixed with a default without a word.
+    /// </summary>
+    /// <param name="x">The point's x, if given.</param>
+    /// <param name="z">The point's z, if given.</param>
+    /// <param name="xName">The x argument's name.</param>
+    /// <param name="zName">The z argument's name.</param>
+    internal static string? LoneCoordinate(float? x, float? z, string xName = "x", string zName = "z") =>
+        x.HasValue == z.HasValue ? null : $"Give {xName} and {zName} together, or neither: only {(x.HasValue ? xName : zName)} was given.";
+
     /// <summary>A thing's object kind, as describe_area and list_objects name it.</summary>
     private string KindOf(WorldScene.Thing t) => TerrainEditor.App.ObjectKinds.Of(_w.NameOfPrefab(t.Prefab), t.Piece, t.Tamed).ToString();
 
@@ -164,6 +175,10 @@ public sealed partial class ClaudeTools
         if (_w.Session?.Scene is not { } scene)
         {
             return "No area is open.";
+        }
+        if (LoneCoordinate(x, z) is string lone)
+        {
+            return lone;
         }
         List<object> found;
         int reads;
@@ -295,6 +310,10 @@ public sealed partial class ClaudeTools
         [Description("Height of the point looked at (optional: the ground's).")] float? height = null,
         [Description("4: four pictures in one (from above, and from the south-west, east and north-west, all at the point, or the area's middle), to see a building or a place from every side. 1: one picture (default).")] int views = 1)
     {
+        if (LoneCoordinate(x, z) is string lone)
+        {
+            return new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = lone } } };
+        }
         if (views >= 4)
         {
             return await FourViews(x, z, distance, height);
@@ -1446,6 +1465,10 @@ public sealed partial class ClaudeTools
         if (found is not string path)
         {
             return $"No blueprint \"{blueprint}\" in the library (list_blueprints).";
+        }
+        if (LoneCoordinate(x, z) is string lone)
+        {
+            return lone;
         }
         string label = $"Claude: added {blueprint}";
         if (_w.InWorkshop)

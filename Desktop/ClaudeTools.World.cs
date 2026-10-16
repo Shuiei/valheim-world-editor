@@ -30,6 +30,10 @@ public sealed partial class ClaudeTools
         {
             return "what is kinds, items or texts.";
         }
+        if (LoneCoordinate(x, z) is string lone)
+        {
+            return lone;
+        }
         // The open area and how often its world was read, to tell after the search whether its ids still fit.
         var (world, scene, reads) = await OnUi(() =>
         {
@@ -154,6 +158,10 @@ public sealed partial class ClaudeTools
         [Description("How far from it, metres (default 2000).")] float radius = 2000,
         [Description("At most this many (default 100).")] int limit = 100)
     {
+        if (LoneCoordinate(x, z) is string lone)
+        {
+            return lone;
+        }
         await GameRules();
         return await OnUi(() => Locations(query, x, z, radius, limit));
     }
@@ -409,6 +417,10 @@ public sealed partial class ClaudeTools
         if (StaleIds(scene) is string stale)
         {
             return stale;
+        }
+        if (LoneCoordinate(pivotX, pivotZ, "pivotX", "pivotZ") is string lone)
+        {
+            return lone;
         }
         var (usable, problems) = Usable(scene, ids);
         if (usable.Count == 0)

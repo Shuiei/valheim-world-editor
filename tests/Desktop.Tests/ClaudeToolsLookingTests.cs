@@ -75,6 +75,7 @@ public class ClaudeToolsLookingTests
         Assert.All(distances, d => Assert.True(d <= 15.01f, $"{d} m away"));
         Assert.True(distances[0] <= distances.Min() + 0.02f);
         Assert.Single(ClaudeRun.J(await r.T.ListObjects(x: x, z: z, radius: 15, limit: 0)).EnumerateArray());
+        Assert.StartsWith("Give x and z together", await r.T.ListObjects(x: x));
 
         int id = all[0].GetProperty("id").GetInt32();
         // A repeated id is one id: two of them were not objects.

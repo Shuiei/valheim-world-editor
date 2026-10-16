@@ -135,6 +135,10 @@ public sealed partial class ClaudeTools
         {
             return stale;
         }
+        if (LoneCoordinate(pivotX, pivotZ, "pivotX", "pivotZ") is string lone)
+        {
+            return lone;
+        }
         var (usable, problems) = Usable(scene, ids);
         if (usable.Count == 0)
         {
