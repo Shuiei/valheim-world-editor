@@ -146,9 +146,9 @@ public sealed class ToolPanel
     /// <summary>The rail's short names (the web editor's).</summary>
     private static string RailLabel(BrushTool t) => t switch
     {
-        BrushTool.Natural => "Natural",
-        BrushTool.PaintCultivated => "Cultivate",
-        BrushTool.PaintClear => "Clear",
+        BrushTool.Natural => Lang.T("rail.label.natural"),
+        BrushTool.PaintCultivated => Lang.T("rail.label.cultivated"),
+        BrushTool.PaintClear => Lang.T("rail.label.clear"),
         _ => Brush.Label(t),
     };
 
@@ -252,57 +252,57 @@ public sealed class ToolPanel
         }
         // Sculpt, then the tools that draw on the world (Area, Path, Place), Paint, the tools that make things, and
         // last the tools that only look or pick.
-        Cap("Sculpt");
+        Cap(Lang.T("rail.cap.sculpt"));
         foreach (var (t, key) in Keys.Where(k => !IsPaint(k.Tool)))
         {
             AddBrush(t, key);
         }
-        Cap("Edit");
-        _areaButton = Make("Area", "B", "area");
+        Cap(Lang.T("rail.cap.edit"));
+        _areaButton = Make(Lang.T("rail.label.area"), "B", "area");
         ToolTip.SetTip(_areaButton, Lang.T("rail.tip.area"));
         _areaButton.Click += (_, _) => ChooseMode(ToolMode.Area);
-        _pathButton = Make("Path", "P", "path");
+        _pathButton = Make(Lang.T("rail.label.path"), "P", "path");
         ToolTip.SetTip(_pathButton, Lang.T("rail.tip.path"));
         _pathButton.Click += (_, _) => ChooseMode(ToolMode.Path);
-        _placeButton = Make("Place", "T", "place");
+        _placeButton = Make(Lang.T("rail.label.place"), "T", "place");
         ToolTip.SetTip(_placeButton, Lang.T("rail.tip.place"));
         _placeButton.Click += (_, _) => ChooseMode(ToolMode.Place);
-        Cap("Paint");
+        Cap(Lang.T("rail.cap.paint"));
         foreach (var (t, key) in Keys.Where(k => IsPaint(k.Tool)))
         {
             AddBrush(t, key);
         }
-        Cap("Create");
-        _shapeButton = Make("Shape", "G", "shape");
+        Cap(Lang.T("rail.cap.create"));
+        _shapeButton = Make(Lang.T("rail.label.shape"), "G", "shape");
         ToolTip.SetTip(_shapeButton, Lang.T("rail.tip.shape"));
         _shapeButton.Click += (_, _) => ChooseMode(ToolMode.Shape);
-        _mountainButton = Make("Mountain", "", "mountain");
+        _mountainButton = Make(Lang.T("rail.label.mountain"), "", "mountain");
         ToolTip.SetTip(_mountainButton, Lang.T("rail.tip.mountain"));
         _mountainButton.Click += (_, _) => ChooseMode(ToolMode.Mountain);
-        _caveButton = Make("Cave", "", "cave");
+        _caveButton = Make(Lang.T("rail.label.cave"), "", "cave");
         ToolTip.SetTip(_caveButton, Lang.T("rail.tip.cave"));
         _caveButton.Click += (_, _) =>
         {
             ChooseMode(ToolMode.Path);
             CaveChosen?.Invoke();
         };
-        _dungeonButton = Make("Dungeon", "", "dungeon");
+        _dungeonButton = Make(Lang.T("rail.label.dungeon"), "", "dungeon");
         _dungeonButton.Tip("tools.dungeon");
         _dungeonButton.Click += (_, _) => ChooseMode(ToolMode.Dungeon);
-        _scriptButton = Make("Script", "", "script");
+        _scriptButton = Make(Lang.T("rail.label.script"), "", "script");
         ToolTip.SetTip(_scriptButton, Lang.T("rail.tip.script"));
         _scriptButton.Click += (_, _) => ChooseMode(ToolMode.Script);
-        BlueprintsButton = Make("Blueprints", "", "paste");
+        BlueprintsButton = Make(Lang.T("rail.label.blueprints"), "", "paste");
         BlueprintsButton.Tip("tools.blueprints");
         BlueprintsButton.Click += (_, _) => ChooseMode(ToolMode.Blueprints);
-        Cap("Tools");
-        SelectButton = Make("Select", "E", "select");
+        Cap(Lang.T("rail.cap.tools"));
+        SelectButton = Make(Lang.T("rail.label.select"), "E", "select");
         ToolTip.SetTip(SelectButton, Lang.T("rail.tip.select"));
         SelectButton.Click += (_, _) => ChooseSelect();
-        _measureButton = Make("Measure", "M", "measure");
+        _measureButton = Make(Lang.T("rail.label.measure"), "M", "measure");
         ToolTip.SetTip(_measureButton, Lang.T("rail.tip.measure"));
         _measureButton.Click += (_, _) => ChooseMode(ToolMode.Measure);
-        _viewButton = Make("View", "Esc", "move");
+        _viewButton = Make(Lang.T("rail.label.view"), "Esc", "move");
         ToolTip.SetTip(_viewButton, Lang.T("rail.tip.view"));
         _viewButton.Click += (_, _) => Choose(null);
         // On a short window the rail scrolls with the wheel; no bar (it would squeeze the buttons).

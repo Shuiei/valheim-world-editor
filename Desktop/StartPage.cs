@@ -363,15 +363,16 @@ public sealed class StartPage
     /// <summary>The page shown (a <c>ModeButtons</c> key).</summary>
     public string Mode { get; private set; } = "";
 
-    /// <summary>Each page's title and what it is for.</summary>
+    /// <summary>Each page's title and what it is for, in the editor's language.</summary>
     private static readonly Dictionary<string, (string Title, string Text)> Pages = new()
     {
-        ["home"] = ("Pick up where you left off", ""),
-        ["game"] = ("My game", "Edit the world you are playing in, single player or the one you host. You see the changes in game right away."),
-        ["server"] = ("A dedicated server", "Edit your server's world while people play. The editor connects to the server itself."),
-        ["offline"] = ("A saved world", "Edit world files on this computer with the game closed, then start the game again."),
-        ["workshop"] = ("The Workshop", "Build on a blank plot with every piece the game has, see what would hold, and keep it as a blueprint to build in game with Homestead. Your blueprints are in the Workshop's Library too: open them, add them, or drag them onto the plot."),
-        ["new"] = ("A new world", "Look at seeds before their world exists: land, biomes, and exactly where the game will put the start, the bosses, the traders and the dungeons. Let the editor search many seeds for one that suits you, then make the world."),
+        ["home"] = (Lang.T("start.page.home"), ""),
+        ["game"] = (Lang.T("start.page.game"), Lang.T("start.page.gameText")),
+        ["server"] = (Lang.T("start.page.server"), Lang.T("start.page.serverText")),
+        // The same words as the mode's tip on the left.
+        ["offline"] = (Lang.T("start.page.offline"), Lang.T("tip.start.offline")),
+        ["workshop"] = (Lang.T("start.page.workshop"), Lang.T("start.page.workshopText")),
+        ["new"] = (Lang.T("start.page.new"), Lang.T("start.page.newText")),
     };
 
     /// <summary>
