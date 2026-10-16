@@ -268,17 +268,8 @@ public static class BlueprintFormats
         const float K = MathF.PI / 360f;
         Quaternion qx = new(MathF.Sin(e.X * K), 0, 0, MathF.Cos(e.X * K)), qy = new(0, MathF.Sin(e.Y * K), 0, MathF.Cos(e.Y * K)), qz = new(0, 0, MathF.Sin(e.Z * K), MathF.Cos(e.Z * K));
         // System.Numerics multiplies right to left like Unity: qy * qx * qz applies qz first.
-        return Mul(Mul(qy, qx), qz);
+        return qy * qx * qz;
     }
-
-    /// <summary>
-    /// Hamilton product a * b written out (a applied after b).
-    /// </summary>
-    private static Quaternion Mul(Quaternion a, Quaternion b) => new(
-        a.W * b.X + a.X * b.W + a.Y * b.Z - a.Z * b.Y,
-        a.W * b.Y - a.X * b.Z + a.Y * b.W + a.Z * b.X,
-        a.W * b.Z + a.X * b.Y - a.Y * b.X + a.Z * b.W,
-        a.W * b.W - a.X * b.X - a.Y * b.Y - a.Z * b.Z);
 
     /// <summary>
     /// The most metres the ground grid of a clip spans on a side: more than the editor's largest area (17 zones,
