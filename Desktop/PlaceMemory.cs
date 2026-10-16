@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Avalonia.Threading;
 using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
@@ -101,6 +102,7 @@ public sealed class PlaceMemory
     /// </summary>
     public void Save()
     {
+        _later?.Stop();
         if (_unread)
         {
             Console.WriteLine($"Place memory: not saved, {Where} could not be read when the editor started.");
@@ -113,6 +115,33 @@ public sealed class PlaceMemory
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             Console.WriteLine($"Place memory: {Where} could not be written ({ex.Message}).");
+        }
+    }
+
+    /// <summary>The timer of a save asked for with <see cref="SaveLater"/>; null until the first one.</summary>
+    private DispatcherTimer? _later;
+
+    /// <summary>
+    /// Saves 300 ms from now (again from now when asked again), on the UI thread: a slider dragged or kinds ticked in a
+    /// row write the file once. <see cref="Flush"/> writes a save still waiting.
+    /// </summary>
+    public void SaveLater()
+    {
+        if (_later == null)
+        {
+            _later = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+            _later.Tick += (_, _) => Save();
+        }
+        _later.Stop();
+        _later.Start();
+    }
+
+    /// <summary>Writes now a save asked for with <see cref="SaveLater"/> and still waiting (the editor is closing).</summary>
+    public void Flush()
+    {
+        if (_later?.IsEnabled == true)
+        {
+            Save();
         }
     }
 

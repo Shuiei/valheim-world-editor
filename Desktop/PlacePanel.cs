@@ -544,12 +544,12 @@ public sealed class PlacePanel
         _filling = false;
     }
 
-    /// <summary>Remembers the chosen kinds and weights for the next time (saves the memory).</summary>
+    /// <summary>Remembers the chosen kinds and weights for the next time (saves the memory a moment later).</summary>
     private void Remember()
     {
         Memory.Chosen = [.. T.Chosen];
         Memory.Weights = new(T.Weights);
-        Memory.Save();
+        Memory.SaveLater();
     }
 
     /// <summary>The heading of a chip row, with its all and none buttons.</summary>
