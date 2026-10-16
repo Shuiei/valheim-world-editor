@@ -165,6 +165,18 @@ public class HomesteadTests : IDisposable
         Assert.StartsWith("#Name:New\n #Creator:Tester\n#Description:New one\n#Tags:new\n#Pieces", changed);
     }
 
+    // A copy's numbers written as strings are read as numbers (they threw).
+    [Fact]
+    public void NumbersWrittenAsStringsAreRead()
+    {
+        var clip = Clip(("wood_floor", 0, 0, 0, 0));
+        clip["objects"]![0]!["dx"] = "1.5";
+
+        string text = Homestead.Write(clip, "Hut", "Tester", null, DateTime.Now);
+
+        Assert.Contains("\nwood_floor;Building;1.5;0;0;", text);
+    }
+
     [Fact]
     public void TheDungeonTagIsReadInAnyCaseSetOnceAndTakenAway()
     {

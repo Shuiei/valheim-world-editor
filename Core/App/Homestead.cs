@@ -368,8 +368,17 @@ public static class Homestead
         return sb.ToString();
     }
 
-    /// <summary>A JSON number as a float, 0 when missing.</summary>
-    private static float F(JsonNode? n) => n == null ? 0 : float.Parse(n.ToJsonString(), CultureInfo.InvariantCulture);
+    /// <summary>
+    /// A JSON number as a float, 0 when missing; a number written as a string ("1.5") is read too. Read in place, not
+    /// through its JSON text, but for numbers no float holds as they are (FormatException for what is no number).
+    /// </summary>
+    private static float F(JsonNode? n) => n switch
+    {
+        null => 0,
+        JsonValue v when v.TryGetValue(out float f) => f,
+        JsonValue v when v.TryGetValue(out string? text) => float.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture),
+        _ => float.Parse(n.ToJsonString(), CultureInfo.InvariantCulture),
+    };
 
     /// <summary>Homestead writes numbers with three decimals at most.</summary>
     private static string S(float v) => v.ToString("0.###", CultureInfo.InvariantCulture);

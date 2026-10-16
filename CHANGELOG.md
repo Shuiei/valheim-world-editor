@@ -93,6 +93,9 @@ the plugin is unchanged in versions without that part.
 - **Renaming a hand-edited Homestead blueprint shows its new name.** Header lines with spaces before them (" #Name:
   Old") were read, but not replaced when the name, description or tags changed, so the old line stayed and, read last,
   won. They are now replaced as they are read.
+- **A copy with numbers stored as text can be saved as a Homestead blueprint.** Each position and turn was read back
+  through its JSON text, so a number written as a string ("1.5") threw. Numbers are now read in place, strings holding
+  numbers too.
 
 ### Changed
 
