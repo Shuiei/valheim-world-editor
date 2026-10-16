@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.83 — unreleased
+
+### Fixed
+- **The Place tool could lose its presets, favourites and weights, or fail to open.** place.json was written in place,
+  so a write cut short left it broken, and a broken or unreadable file gave an empty memory that the next save wrote
+  over. A hand-edited file with `"Chosen": null` or `"Weights": null` crashed the Place panel, and a preset with
+  `"Kinds": null` crashed when loaded. The file is now written through a temporary one; a broken one is first copied
+  aside as place.json.bad, and one that cannot be read is not written over. Nulls are taken as empty, and presets
+  without a name or kinds are left out.
+
 ## v1.45.82 — unreleased
 
 ### Fixed
