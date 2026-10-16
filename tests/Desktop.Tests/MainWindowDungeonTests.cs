@@ -63,6 +63,8 @@ public class MainWindowDungeonTests
             Assert.StartsWith($"Generated {r.Name}:", w.MessageText.Text);
             Assert.Contains("Its burial chamber entrance stands here, facing you.", w.MessageText.Text);
             Assert.Equal(steps + 1, s.UndoList.Count);
+            // The Dungeon panel's own name for the step (Claude's generate_dungeon gives its own).
+            Assert.Equal($"Dungeon: generated {r.Name}", s.UndoLabel);
             var added = s.Scene.Things.Skip(things).ToList();
             Assert.NotEmpty(added);
             // No portals: the entrance's doors lead in and out. The pieces are high up; the entrance's own objects
