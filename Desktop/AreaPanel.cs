@@ -1133,9 +1133,32 @@ public sealed class AreaPanel
                 && MathF.Abs(((r.Rotation.Y - o.Rotation.Y) % 360 + 540) % 360 - 180) < 0.6f;
             var kept = new HashSet<int>();
             var source = bw.SourceReader();
+            // The current objects by prefab and metre cell, in their order: a backup object is matched against the
+            // cells round it only (Same is within a centimetre), the first in that order still free.
+            static (int, int, int) CellOf(WorldScene.Thing t) => (t.Prefab, (int)MathF.Floor(t.Position.X), (int)MathF.Floor(t.Position.Z));
+            var byCell = new Dictionary<(int, int, int), List<int>>();
+            var order = new Dictionary<int, int>();
+            foreach (int i in current)
+            {
+                var key = CellOf(s.Things[i]);
+                (byCell.TryGetValue(key, out var list) ? list : byCell[key] = []).Add(i);
+                order.TryAdd(i, order.Count);
+            }
             foreach (var o in wanted)
             {
-                int r = current.FirstOrDefault(i => !kept.Contains(i) && Same(s.Things[i], o), -1);
+                var (prefab, cx, cz) = CellOf(o);
+                int r = -1;
+                for (int dz = -1; dz <= 1; dz++)
+                {
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        if (byCell.TryGetValue((prefab, cx + dx, cz + dz), out var near)
+                            && near.FirstOrDefault(i => !kept.Contains(i) && Same(s.Things[i], o), -1) is int c and >= 0 && (r < 0 || order[c] < order[r]))
+                        {
+                            r = c;
+                        }
+                    }
+                }
                 if (r >= 0)
                 {
                     kept.Add(r);
