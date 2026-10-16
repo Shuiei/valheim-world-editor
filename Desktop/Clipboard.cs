@@ -488,13 +488,21 @@ public sealed class PasteTool
         g.NoLimit = true;
         // Where each copy's objects start in the list.
         var copyStarts = new List<int>();
+        // Each copy's height read from the ground as it is before any copy shapes it, as the preview reads it: copies
+        // overlapping (a negative gap) would otherwise stand on what the copy before them pasted.
+        float[] anchors = new float[Count];
+        for (int k = 0; k < Count; k++)
+        {
+            var (ca, lift) = CopyAt(at, k);
+            anchors[k] = (up ? baseH : g.HeightOf(Index(g, ca)) + Offset) + lift;
+        }
         try
         {
             for (int k = 0; k < Count; k++)
             {
                 copyStarts.Add(add.Count);
                 var (ca, lift) = CopyAt(at, k);
-                float anchor = (up ? baseH : g.HeightOf(Index(g, ca)) + Offset) + lift;
+                float anchor = anchors[k];
                 int x0 = Math.Max(1, (int)MathF.Floor(ca.X - half)), x1 = Math.Min(g.W - 2, (int)MathF.Ceiling(ca.X + half));
                 int z0 = Math.Max(1, (int)MathF.Floor(ca.Y - half)), z1 = Math.Min(g.H - 2, (int)MathF.Ceiling(ca.Y + half));
                 // Stacked upwards, only the first copy shapes the ground.

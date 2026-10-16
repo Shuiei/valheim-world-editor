@@ -266,6 +266,23 @@ public class ClipboardTests
         Assert.Equal(Beech, prefab);
     }
 
+    // Copies overlapping (a negative gap) each stand where the ghost shows them: every copy's height is read from the
+    // ground before any copy shapes it, not from the ground the copy before it pasted.
+    [Fact]
+    public void OverlappingCopiesStandWhereTheGhostShowsThem()
+    {
+        var s = Walled();
+        var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0, 1], _ => "Beech1"), Copies = 2 };
+        var at = new Vector2(90, 90);
+        // A step of one metre: the second copy's middle on the first copy's ground.
+        paste.Gap = 1 - (paste.CopyAt(at, 1).At.X - paste.CopyAt(at, 0).At.X);
+        Assert.Equal(1f, paste.CopyAt(at, 1).At.X - paste.CopyAt(at, 0).At.X, 3);
+        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+        var ghosts = paste.Ghosts(at, g => H(s, (int)MathF.Round(g.X), (int)MathF.Round(g.Y)), ox, oz);
+        var (_, _, add) = paste.Apply(s.Ground, at);
+        Assert.Equal(ghosts.Select(g => g.Position), add.Select(a => a.Item1.Position));
+    }
+
     // Copied with the Select tool on a slope: building pieces keep the building's shape (each piece's
     // height from the others), trees and the like keep their height above the ground where they land.
     [Fact]
