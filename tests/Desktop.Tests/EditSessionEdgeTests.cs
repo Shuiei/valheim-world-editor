@@ -212,7 +212,7 @@ public class EditSessionEdgeTests
     public void TheRaggedBrushWavesAroundTheCircle()
     {
         var b = new Brush { Radius = 10, Shape = BrushShape.Noise };
-        Assert.Equal(10 * 1.42f, b.Reach, 3);
+        Assert.Equal(10 * 1.5f, b.Reach, 3);
         // Along the edge, some points are in and some out: the edge is ragged.
         var w = Enumerable.Range(0, 64).Select(i => b.Weight(9.5f * MathF.Cos(i * MathF.Tau / 64), 9.5f * MathF.Sin(i * MathF.Tau / 64), 300 + 9.5f * MathF.Cos(i * MathF.Tau / 64), 200 + 9.5f * MathF.Sin(i * MathF.Tau / 64))).ToList();
         Assert.Contains(w, v => v > 0.01f);

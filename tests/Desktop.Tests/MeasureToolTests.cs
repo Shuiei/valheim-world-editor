@@ -90,7 +90,9 @@ public class MeasureToolTests
         Dispatcher.UIThread.RunJobs();
         Assert.Equal("30.0 / 36.0 m", w.MeasurePanel.Shown["Lowest / highest"]);
         // Shown again (the tape changes at the mouse's pace): the same rows, their text set again.
-        var rows = (Grid)((StackPanel)((Border)w.MeasurePanel.Card).Child!).Children[2];
+        // The window puts the card's content in a scroll viewer.
+        var content = ((Border)w.MeasurePanel.Card).Child;
+        var rows = (Grid)((StackPanel)(content is ScrollViewer sv ? sv.Content! : content!)).Children[2];
         var made = rows.Children.ToList();
         w.MeasurePanel.Refresh();
         Assert.Equal(made, rows.Children);

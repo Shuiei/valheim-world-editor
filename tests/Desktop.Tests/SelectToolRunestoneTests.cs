@@ -51,9 +51,13 @@ public class SelectToolRunestoneTests
         var (x, _, z, _, count) = w.View.SelectTool.Where()!.Value;
         Assert.Equal((10f, 10f, 1), (x, z, count));
         w.View.SelectTool.PlaceAt(20, 30, 20, 0, by: false);
-        Assert.Equal(20, s.Scene.Things[1].Position.X, 3);
-        Assert.Equal(20, s.Scene.Things[1].Position.Z, 3);
+        // The tree's moved copy (a move adds one at the end), and the stone where it was.
+        var moved = Assert.Single(s.Scene.Things.Skip(2));
+        Assert.Equal(tree.Prefab, moved.Prefab);
+        Assert.Equal(20, moved.Position.X, 3);
+        Assert.Equal(20, moved.Position.Z, 3);
         Assert.Equal(new Vector3(0, 30, 0), s.Scene.Things[0].Position);
+        Assert.False(s.Scene.Things[0].Gone);
     }
 
     [AvaloniaFact]

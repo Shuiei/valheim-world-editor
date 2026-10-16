@@ -30,7 +30,8 @@ public class LinesTests
         Vector2[] pts = [new(0, 0), new(100, 0), new(100, 100)];
         Assert.Equal(1, Lines.PointNear(pts, new Point(105, 3), Flat));
         Assert.Equal(-1, Lines.PointNear(pts, new Point(50, 0), Flat));
-        (Vector2, int)[] dense = [(pts[0], 0), (pts[1], 0), (pts[2], 1)];
+        // As CatmullRom names them: each point by the stretch it starts, the last by the one it ends.
+        (Vector2, int)[] dense = [(pts[0], 0), (pts[1], 1), (pts[2], 1)];
         Assert.Equal(0, Lines.StretchNear(dense, new Point(50, 7), Flat));
         Assert.Equal(1, Lines.StretchNear(dense, new Point(95, 50), Flat));
         Assert.Equal(-1, Lines.StretchNear(dense, new Point(50, 9), Flat));
