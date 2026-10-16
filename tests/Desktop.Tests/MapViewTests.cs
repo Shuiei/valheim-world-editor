@@ -48,11 +48,20 @@ public class MapViewTests
     [AvaloniaFact]
     public void PinShapesAreMadeAgainOnlyWhenWhatTheyShowChanges()
     {
-        using var map = new MapView { MetersPerPixel = 2, Pins = [new Vector2(10, 20), new Vector2(30, 40)] };
+        List<Vector2> pins = [new(10, 20), new(30, 40)];
+        using var map = new MapView { MetersPerPixel = 2, Pins = pins };
         float[] shapes = map.PinShapes();
         // Two discs of 8 triangles a pin, 6 floats a corner.
         Assert.Equal(2 * 2 * 8 * 3 * 6, shapes.Length);
+        // The first pin's first triangle, dark: its middle, then its outer disc's edge (4.5 px, 9 m) at 0° and 45°.
+        Assert.Equal([10f, 20f, 30 / 255f, 15 / 255f, 5 / 255f, 0.9f, 19f, 20f], shapes[..8]);
+        Assert.Equal(10 + 9 * MathF.Cos(MathF.Tau / 8), shapes[12], 4);
+        Assert.Equal(20 + 9 * MathF.Sin(MathF.Tau / 8), shapes[13], 4);
         // Frames with nothing changed: the same shapes.
+        Assert.Same(shapes, map.PinShapes());
+        // The list given was copied: changing it afterwards changes nothing shown.
+        pins[0] = new Vector2(50, 50);
+        Assert.Equal(new Vector2(10, 20), map.Pins[0]);
         Assert.Same(shapes, map.PinShapes());
         // A pin chosen: its ring and larger discs instead.
         map.PinChosen = 1;
