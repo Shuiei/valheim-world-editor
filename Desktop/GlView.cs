@@ -1080,6 +1080,33 @@ public sealed class GlView : OpenGlControlBase
     }
 
     /// <summary>
+    /// Points the bound vertex array's instance matrix (attributes 3 to 6, one 64-byte matrix each) into the bound
+    /// buffer from this byte on.
+    /// </summary>
+    /// <param name="offset">The first matrix's byte in the buffer.</param>
+    private unsafe void PointInstances(long offset)
+    {
+        for (uint c = 0; c < 4; c++)
+        {
+            _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(offset + c * 16));
+        }
+    }
+
+    /// <summary>
+    /// Sets a new vertex array's instance matrix up: attributes 3 to 6 on, one step per instance, pointed at the start
+    /// of the bound buffer.
+    /// </summary>
+    private void SetUpInstances()
+    {
+        for (uint c = 0; c < 4; c++)
+        {
+            _gl.EnableVertexAttribArray(3 + c);
+            _gl.VertexAttribDivisor(3 + c, 1);
+        }
+        PointInstances(0);
+    }
+
+    /// <summary>
     /// Draws a model part's instances from another buffer than its own (its material set up), then points its vertex
     /// array back at its own instances. With <paramref name="runs"/>, only the runs whose cell is in view are drawn
     /// (nothing at all, not even the material, when none is).
@@ -1100,10 +1127,7 @@ public sealed class GlView : OpenGlControlBase
         if (runs == null)
         {
             _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
-            for (uint c = 0; c < 4; c++)
-            {
-                _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
-            }
+            PointInstances(0);
             _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)count);
         }
         else
@@ -1113,10 +1137,7 @@ public sealed class GlView : OpenGlControlBase
         }
         // The batch's own instances again.
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
-        for (uint c = 0; c < 4; c++)
-        {
-            _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
-        }
+        PointInstances(0);
         b.PointedAt = 0;
     }
 
@@ -1856,10 +1877,7 @@ public sealed class GlView : OpenGlControlBase
             }
             if (pointed != start)
             {
-                for (uint c = 0; c < 4; c++)
-                {
-                    _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)((start * 64L) + (c * 16)));
-                }
+                PointInstances(start * 64L);
                 pointed = start;
             }
             _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)count);
@@ -2119,12 +2137,7 @@ public sealed class GlView : OpenGlControlBase
             _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
             var one = Matrix4x4.Identity;
             _gl.BufferData(BufferTargetARB.ArrayBuffer, 64, &one, BufferUsageARB.StaticDraw);
-            for (uint c = 0; c < 4; c++)
-            {
-                _gl.EnableVertexAttribArray(3 + c);
-                _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
-                _gl.VertexAttribDivisor(3 + c, 1);
-            }
+            SetUpInstances();
             _gl.BindVertexArray(0);
             _batches.Add(b);
             _shapeBatches.Add(b);
@@ -2413,12 +2426,7 @@ public sealed class GlView : OpenGlControlBase
         _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, mesh.Ebos[sub]);
         b.InstanceVbo = _own.Buffer();
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
-        for (uint c = 0; c < 4; c++)
-        {
-            _gl.EnableVertexAttribArray(3 + c);
-            _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
-            _gl.VertexAttribDivisor(3 + c, 1);
-        }
+        SetUpInstances();
         _gl.BindVertexArray(0);
         _batches.Add(b);
         lock (_groups)
@@ -3790,10 +3798,6 @@ public sealed class GlView : OpenGlControlBase
         {
             return;
         }
-        if (_lineProg == 0)
-        {
-            _lineProg = Program(Shaders.LineVs, Shaders.LineFs);
-        }
         if (_gizmoGl.Count == 0)
         {
             foreach (var h in Enum.GetValues<Gizmo.Handle>())
@@ -3816,9 +3820,7 @@ public sealed class GlView : OpenGlControlBase
         _gl.Disable(EnableCap.DepthTest);
         _gl.Disable(EnableCap.CullFace);
         GlBlend.Over(_gl);
-        _gl.UseProgram(_lineProg);
-        _gl.UniformMatrix4(_u.At(_lineProg, "uViewProj"), 1, false, (float*)&m);
-        int uColor = _u.At(_lineProg, "uColor");
+        int uColor = UseLineProgram(m);
         var hot = SelectTool.HotHandle;
         foreach (var (h, (vao, count)) in _gizmoGl)
         {
@@ -3973,10 +3975,6 @@ public sealed class GlView : OpenGlControlBase
         {
             return;
         }
-        if (_lineProg == 0)
-        {
-            _lineProg = Program(Shaders.LineVs, Shaders.LineFs);
-        }
         if (vao == 0)
         {
             vao = _own.VertexArray();
@@ -3992,9 +3990,7 @@ public sealed class GlView : OpenGlControlBase
             _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 4), p, BufferUsageARB.DynamicDraw);
         }
         _gl.Disable(EnableCap.DepthTest);
-        _gl.UseProgram(_lineProg);
-        _gl.UniformMatrix4(_u.At(_lineProg, "uViewProj"), 1, false, (float*)&vp);
-        _gl.Uniform4(_u.At(_lineProg, "uColor"), color.X, color.Y, color.Z, color.W);
+        _gl.Uniform4(UseLineProgram(vp), color.X, color.Y, color.Z, color.W);
         _gl.BindVertexArray(vao);
         if (blend)
         {
@@ -5267,13 +5263,7 @@ public sealed class GlView : OpenGlControlBase
     /// </summary>
     private unsafe void DrawOverlays(Matrix4x4 vp)
     {
-        if (_lineProg == 0)
-        {
-            _lineProg = Program(Shaders.LineVs, Shaders.LineFs);
-        }
-        _gl.UseProgram(_lineProg);
-        _gl.UniformMatrix4(_u.At(_lineProg, "uViewProj"), 1, false, (float*)&vp);
-        int uColor = _u.At(_lineProg, "uColor");
+        int uColor = UseLineProgram(vp);
         GlBlend.Over(_gl);
         _gl.DepthMask(false);
         foreach (var (layer, (vao, count, _)) in _overlayGl)
@@ -5303,6 +5293,22 @@ public sealed class GlView : OpenGlControlBase
 
     /// <summary>The line shader (made at first use), and the selection's lines on the graphics card.</summary>
     private uint _lineProg, _lineVao, _lineVbo;
+
+    /// <summary>
+    /// Puts the line shader to use (made at first use) with this view × projection.
+    /// </summary>
+    /// <returns>Its colour uniform's location.</returns>
+    private unsafe int UseLineProgram(Matrix4x4 viewProj)
+    {
+        if (_lineProg == 0)
+        {
+            _lineProg = Program(Shaders.LineVs, Shaders.LineFs);
+        }
+        _gl.UseProgram(_lineProg);
+        _gl.UniformMatrix4(_u.At(_lineProg, "uViewProj"), 1, false, (float*)&viewProj);
+        return _u.At(_lineProg, "uColor");
+    }
+
     /// <summary>
     /// Over this many selected objects, one box round them all instead of a box each: thousands of boxes
     /// over a stacked structure make a solid blob that hides it.
