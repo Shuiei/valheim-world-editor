@@ -32,17 +32,7 @@ public static class GameLocations
     /// </summary>
     internal static ((int Locations, int Vegetation)[] Order, string From) ListOrder()
     {
-        var folders = Places.WorldRoots().Select(Path.GetDirectoryName).OfType<string>().ToList();
-        if (OperatingSystem.IsMacOS())
-        {
-            // Unity writes the log apart from the saves on a Mac.
-            folders.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Logs", "IronGate", "Valheim"));
-        }
-        var logs = folders.Distinct()
-            .SelectMany(d => new[] { Path.Combine(d, "Player.log"), Path.Combine(d, "Player-prev.log") })
-            .Where(File.Exists)
-            .OrderByDescending(File.GetLastWriteTimeUtc);
-        foreach (string log in logs)
+        foreach (string log in Logs())
         {
             try
             {
@@ -68,6 +58,27 @@ public static class GameLocations
             }
         }
     }
+
+    /// <summary>
+    /// The game's logs that exist (Player.log and Player-prev.log, beside its saves, or in ~/Library/Logs/IronGate/Valheim
+    /// on a Mac), newest first.
+    /// </summary>
+    private static List<string> Logs()
+    {
+        var folders = Places.WorldRoots().Select(Path.GetDirectoryName).OfType<string>().ToList();
+        if (OperatingSystem.IsMacOS())
+        {
+            // Unity writes the log apart from the saves on a Mac.
+            folders.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Logs", "IronGate", "Valheim"));
+        }
+        return [.. folders.Distinct()
+            .SelectMany(d => new[] { Path.Combine(d, "Player.log"), Path.Combine(d, "Player-prev.log") })
+            .Where(File.Exists)
+            .OrderByDescending(File.GetLastWriteTimeUtc)];
+    }
+
+    /// <summary>The game's logs and when each was last written: changes when the game ran since.</summary>
+    private static string LogsStamp() => string.Join("|", Logs().Select(l => $"{l}:{File.GetLastWriteTimeUtc(l).Ticks}"));
 
     /// <summary>
     /// A log line of a list being added: its location and vegetation counts.
@@ -122,13 +133,15 @@ public static class GameLocations
     /// </summary>
     private static readonly Lock Lock = new();
     /// <summary>
-    /// The bundles whose rules are in use (or being read), with the task reading them.
+    /// The bundles whose rules are in use (or being read), with the task reading them (true when the game's rules were
+    /// read) and the game's logs as they were then (<see cref="LogsStamp"/>).
     /// </summary>
-    private static (GameBundles Bundles, Task Task)? _using;
+    private static (GameBundles Bundles, Task<bool> Task, string Logs)? _using;
 
     /// <summary>
     /// The game's rules in use (SeedLocations.Use) when they can be read, else none: read once for a
-    /// game folder, again when Valheim is found later or another folder is chosen.
+    /// game folder, again when Valheim is found later or another folder is chosen. Rules that could not be read are
+    /// read again once the game has run since (its log tells the lists' order, and a game update needs it new).
     /// </summary>
     public static Task UseGameRules(GameBundles? bundles)
     {
@@ -138,12 +151,18 @@ public static class GameLocations
             {
                 return Task.CompletedTask;
             }
-            if (_using is { } u && ReferenceEquals(u.Bundles, bundles))
+            string logs = LogsStamp();
+            if (_using is { } u && ReferenceEquals(u.Bundles, bundles) && !(u.Task.IsCompletedSuccessfully && !u.Task.Result && u.Logs != logs))
             {
                 return u.Task;
             }
-            var task = Task.Run(() => SeedLocations.Use(Load(bundles, CacheFile) ?? new SeedLocations.RuleSet()));
-            _using = (bundles, task);
+            var task = Task.Run(() =>
+            {
+                var rules = Load(bundles, CacheFile);
+                SeedLocations.Use(rules ?? new SeedLocations.RuleSet());
+                return rules != null;
+            });
+            _using = (bundles, task, logs);
             return task;
         }
     }

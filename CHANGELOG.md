@@ -108,6 +108,9 @@ the plugin is unchanged in versions without that part.
 - **A broken Vulkan shader program is said to be unreadable instead of failing with an unrelated error.** The blob's
   entry offsets and the SPIR-V instructions' lengths were trusted, so bad data threw out-of-range errors that the
   terrain drawing did not expect. They are now checked, and refused as unreadable data.
+- **The New world page reads the game's location rules again once the game has run.** Rules that could not be read
+  (the game's log not matching after an update) were kept as none for the whole session, so bosses and traders stayed
+  missing even after starting the game refreshed its log. They are now read again when the game's log has changed.
 
 ### Changed
 
