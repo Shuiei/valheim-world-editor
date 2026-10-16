@@ -113,9 +113,7 @@ public sealed class BlueprintStore(string directory)
             ["thumb"] = thumb,
             ["clip"] = clip.DeepClone(),
         };
-        string tmp = PathOf(id) + ".tmp";
-        File.WriteAllText(tmp, doc.ToJsonString());
-        File.Move(tmp, PathOf(id), overwrite: true);
+        SafeFile.WriteAllText(PathOf(id), doc.ToJsonString());
         return id;
     }
 

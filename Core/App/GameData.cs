@@ -342,24 +342,15 @@ public static class GameData
     /// <returns>False when it could not be written.</returns>
     internal static bool KeepCache(string file, string text)
     {
-        string part = file + ".part";
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(file)!);
-            File.WriteAllText(part, text);
-            File.Move(part, file, overwrite: true);
+            // Flushed to disk before it replaces the old one; the temporary file is gone when this fails.
+            SafeFile.WriteAllText(file, text);
             return true;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             Console.WriteLine($"{Path.GetFileName(file)} could not be kept ({e.GetType().Name}: {e.Message}); it is read again next time.");
-            try
-            {
-                File.Delete(part);
-            }
-            catch (Exception d) when (d is IOException or UnauthorizedAccessException)
-            {
-            }
             return false;
         }
     }
