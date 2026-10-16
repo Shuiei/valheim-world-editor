@@ -64,6 +64,12 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     /// textures.
     /// </summary>
     private (MapData.Layers Layers, int X0, int Z0, int Size, int Version)? _detail, _detailShown;
+
+    /// <summary>
+    /// The last close-up whose reading failed (logged): not asked for again until the view, the edits or the map's
+    /// data change, so a failure that would repeat is not retried on every frame.
+    /// </summary>
+    private (int X0, int Z0, int Size, int Version)? _detailFailed;
     /// <summary>
     /// Whether the whole-world layers, and the game's map textures, are uploaded into the current context.
     /// </summary>
@@ -209,6 +215,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         _globalShown = false;
         _detail = null;
         _detailShown = null;
+        _detailFailed = null;
         ReadPieces();
         Status?.Invoke("Building the world map (same as the game does)…");
         var data = _data;
@@ -276,6 +283,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     {
         _detailShown = null;
         _detail = null;
+        _detailFailed = null;
         ReadPieces();
         RequestNextFrameRendering();
     }
@@ -775,14 +783,25 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         {
             return;
         }
+        if (_detailFailed == (x0, z0, size, version))
+        {
+            return;
+        }
         _asking = true;
         var data = _data;
         Task.Run(() =>
         {
             MapData.Layers? layers = null;
+            bool failed = false;
             try
             {
                 layers = data.Detail(x0, z0, size, version);
+            }
+            // A stopped build (another world shown) is no failure.
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Console.Error.WriteLine($"The map's close-up could not be read: {ex}");
+                failed = true;
             }
             finally
             {
@@ -793,6 +812,10 @@ public sealed class MapView : OpenGlControlBase, IDisposable
                     if (layers != null && _data == data)
                     {
                         _detail = (layers, x0, z0, size, version);
+                    }
+                    if (failed && _data == data)
+                    {
+                        _detailFailed = (x0, z0, size, version);
                     }
                     _asking = false;
                     RequestNextFrameRendering();
