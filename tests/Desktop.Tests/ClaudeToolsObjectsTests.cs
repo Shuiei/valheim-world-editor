@@ -47,14 +47,19 @@ public class ClaudeToolsObjectsTests
         Assert.Equal(Stale, await r.T.SetObjectData(post, [new ClaudeTools.FieldSpec { Section = "strings", Key = "text", Value = "hello" }]));
         Assert.Equal(Stale, await r.T.SelectObjects([post], focus: false));
         Assert.Equal(0, other.Scene.Things.Count(t => t.Gone));
-        // Listed again, this area's ids are taken.
-        await r.T.ListObjects();
-        Assert.Equal("No object with that id in the area.", await r.T.GetObject(100000));
-        // The world read again (after a save): its things are listed anew, the ids given before are refused too.
+        // A listing or a selection with nothing in it gives no id: the old ones stay refused.
+        Assert.Equal("[]", await r.T.ListObjects(name: "nothing is called this"));
+        Assert.Equal("[]", await r.T.GetSelection());
+        Assert.Equal(Stale, await r.T.GetObject(post));
+        // Ids given for this area are taken.
+        int here = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "wood_pole2", X = 3, Z = 3 }]));
+        Assert.Equal("wood_pole2", ClaudeRun.J(await r.T.GetObject(here)).GetProperty("name").GetString());
+        // The world read again (after a save): its things are listed anew, the ids given before are refused until a
+        // listing gives this area's.
         other.Scene.Reads++;
-        Assert.Equal("The ids are from before the world was read again: list_objects (or get_selection) again for this one.", await r.T.GetObject(0));
-        await r.T.GetSelection();
-        Assert.Equal("No object with that id in the area.", await r.T.GetObject(100000));
+        Assert.Equal("The ids are from before the world was read again: list_objects (or get_selection) again for this one.", await r.T.GetObject(here));
+        Assert.NotEqual("[]", await r.T.ListObjects(name: "wood_pole2"));
+        Assert.Equal("wood_pole2", ClaudeRun.J(await r.T.GetObject(here)).GetProperty("name").GetString());
     }
 
     /// <summary>A value of get_object's answer by key, or null.</summary>

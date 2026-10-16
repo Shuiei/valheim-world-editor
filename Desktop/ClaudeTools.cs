@@ -181,7 +181,11 @@ public sealed partial class ClaudeTools
             }
             found = [.. q.Take(Math.Clamp(limit, 1, 2000)).Select(p => Describe(p.t, p.i))];
         }
-        GaveIds(scene);
+        // (A listing with nothing in it gives no id: ids given before stay refused.)
+        if (found.Count > 0)
+        {
+            GaveIds(scene);
+        }
         return ToJson(found);
     });
 
@@ -194,11 +198,16 @@ public sealed partial class ClaudeTools
         {
             return "No area is open.";
         }
-        GaveIds(scene);
+        List<Dictionary<string, object?>> selected;
         lock (scene.Things)
         {
-            return ToJson(_w.View.Selected.Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).Select(i => Describe(scene.Things[i], i)).ToList());
+            selected = [.. _w.View.Selected.Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).Select(i => Describe(scene.Things[i], i))];
         }
+        if (selected.Count > 0)
+        {
+            GaveIds(scene);
+        }
+        return ToJson(selected);
     });
 
     /// <summary>select_objects: selects objects by id and points the camera at them; changes nothing in the world.</summary>
