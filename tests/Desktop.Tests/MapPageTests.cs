@@ -238,6 +238,19 @@ public class MapPageTests
         Assert.NotEmpty(r.M.Matches);
         r.M.RMaxBox.Text = "0";
         Assert.All(r.M.Matches, z => Assert.Equal((0, 0), z));
+        // A distance that is no number (or not a finite one) is said, not taken as no limit; spaces between thousands
+        // are fine.
+        foreach (string bad in new[] { "abc", "NaN", "Infinity" })
+        {
+            r.M.RMaxBox.Text = bad;
+            Assert.Empty(r.M.Matches);
+            Assert.StartsWith("The distances from the centre must be numbers of metres", r.M.ZoneInfo.Text);
+        }
+        r.M.RMaxBox.Text = "";
+        int all = r.M.Matches.Count;
+        Assert.True(all > 0);
+        r.M.RMaxBox.Text = "20 000";
+        Assert.Equal(all, r.M.Matches.Count);
     }
 
     // Zone counts still being read when another world is shown are the first world's: dropped, not matched against the
