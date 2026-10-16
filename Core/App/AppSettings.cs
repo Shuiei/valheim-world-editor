@@ -161,6 +161,13 @@ public sealed class AppSettings
     public bool FileUnread { get; private init; }
 
     /// <summary>
+    /// Whether there was no settings file when these were loaded: a file there at the next <c>Save</c> was put there
+    /// by another program since (a sync program putting the user's back), and is left as it is. Cleared once these
+    /// are written.
+    /// </summary>
+    private bool _fileMissing;
+
+    /// <summary>
     /// Reads the settings file. A missing file gives the defaults; one that is not valid JSON is first copied aside as
     /// settings.json.bad; one that cannot be read gives the defaults with <c>FileUnread</c> set, which are not saved
     /// over it.
@@ -181,7 +188,7 @@ public sealed class AppSettings
             }
             if (text == null)
             {
-                return new AppSettings();
+                return new AppSettings { _fileMissing = true };
             }
             try
             {
@@ -240,7 +247,8 @@ public sealed class AppSettings
 
     /// <summary>
     /// A file that cannot be written (locked, read-only) is left as it was: the settings stay in memory. So is one
-    /// that could not be read when these were loaded (<c>FileUnread</c>): the user's settings are in it.
+    /// that could not be read when these were loaded (<c>FileUnread</c>), or that was not there then and is now
+    /// (another program put it back): the user's settings are in it.
     /// </summary>
     public void Save()
     {
@@ -251,10 +259,16 @@ public sealed class AppSettings
                 Console.WriteLine($"Settings: not saved: {FilePath} could not be read when the editor started, and is left as it is.");
                 return;
             }
+            if (_fileMissing && File.Exists(FilePath))
+            {
+                Console.WriteLine($"Settings: not saved: {FilePath} was not there when the editor started and is now (put back by another program?), and is left as it is.");
+                return;
+            }
             try
             {
                 // Only the user can read it, from the start: it holds Claude's token.
                 SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, Indented), UnixFileMode.UserRead | UnixFileMode.UserWrite);
+                _fileMissing = false;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

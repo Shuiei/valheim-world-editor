@@ -159,6 +159,35 @@ public class AppSettingsTests : IDisposable
         }
     }
 
+    // No settings file at the start, and one there at the first save (a sync program put the user's back meanwhile):
+    // left as it is. Written by the editor itself, it is written again.
+    [Fact]
+    public void ASettingsFileThatAppearedSinceTheStartIsNotSavedOver()
+    {
+        string path = Path.Combine(_data, "settings.json");
+        string? old = AppSettings.PathOverride;
+        AppSettings.PathOverride = path;
+        try
+        {
+            var fresh = AppSettings.Load();
+            Assert.False(fresh.FileUnread);
+            File.WriteAllText(path, "{\"ValheimPath\": \"/games/Valheim\"}");
+            fresh.ValheimPath = "/elsewhere";
+            fresh.Save();
+            Assert.Equal("{\"ValheimPath\": \"/games/Valheim\"}", File.ReadAllText(path));
+            File.Delete(path);
+            fresh.Save();
+            Assert.Equal("/elsewhere", AppSettings.Load().ValheimPath);
+            fresh.ValheimPath = "/again";
+            fresh.Save();
+            Assert.Equal("/again", AppSettings.Load().ValheimPath);
+        }
+        finally
+        {
+            AppSettings.PathOverride = old;
+        }
+    }
+
     // The settings hold Claude's token: only the user can read them, even over a file others could read.
     [Fact]
     public void OnlyTheUserCanReadTheSettings()
