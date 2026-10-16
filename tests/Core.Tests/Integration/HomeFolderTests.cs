@@ -352,6 +352,30 @@ public sealed class HomeFolderTests : IDisposable
         Assert.Equal(new[] { "flat", "game", "mine", "r2", "ts" }, bridges.Select(b => b.Token).Order().ToArray());
     }
 
+    // A mod's folder in plugins that cannot be read is passed over in the search for the plugin (the whole check threw).
+    [Fact]
+    public void AnUnreadableFolderInPluginsIsPassedOver()
+    {
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            return;
+        }
+        string bep = Local("profile", "BepInEx");
+        string locked = Path.Combine(bep, "plugins", "Locked");
+        Directory.CreateDirectory(locked);
+        File.SetUnixFileMode(locked, UnixFileMode.None);
+        try
+        {
+            Assert.Empty(LocalGame.FindBridges(new AppSettings { BepInExFolders = { bep } }, out bool bepInEx, out bool plugin));
+            Assert.True(bepInEx);
+            Assert.False(plugin);
+        }
+        finally
+        {
+            File.SetUnixFileMode(locked, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+    }
+
     [Fact]
     public void AFolderListedThatDoesNotExistIsPassedOver()
     {

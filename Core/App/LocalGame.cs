@@ -132,6 +132,8 @@ public static class LocalGame
     /// <param name="settings">The editor's settings (Valheim path, added BepInEx folders).</param>
     /// <param name="bepInEx">Whether any of the folders has BepInEx installed (core or plugins).</param>
     /// <param name="plugin">Whether any has WorldEditorBridge.dll in its plugins.</param>
+    /// <exception cref="IOException">A settings file could not be read (being written, say): asked again later.</exception>
+    /// <exception cref="UnauthorizedAccessException">A settings file could not be read (no access).</exception>
     public static List<Bridge> FindBridges(AppSettings settings, out bool bepInEx, out bool plugin)
     {
         bepInEx = false;
@@ -145,7 +147,7 @@ public static class LocalGame
             }
             bepInEx |= Directory.Exists(Path.Combine(dir, "core")) || Directory.Exists(Path.Combine(dir, "plugins"));
             string plugins = Path.Combine(dir, "plugins");
-            plugin |= Directory.Exists(plugins) && Directory.EnumerateFiles(plugins, "WorldEditorBridge.dll", SearchOption.AllDirectories).Any();
+            plugin |= Directory.Exists(plugins) && HasPlugin(plugins);
             string cfg = Path.Combine(dir, "config", ConfigName);
             if (!File.Exists(cfg))
             {
@@ -157,6 +159,23 @@ public static class LocalGame
             }
         }
         return list;
+    }
+
+    /// <summary>
+    /// Whether WorldEditorBridge.dll is somewhere in a plugins folder. Subfolders that cannot be read are passed over
+    /// (another mod's, without access); a folder that cannot be searched at all is said in the log and has none.
+    /// </summary>
+    private static bool HasPlugin(string plugins)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(plugins, "WorldEditorBridge.dll", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0 }).Any();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"my game: {plugins} could not be searched for the plugin ({ex.Message}).");
+            return false;
+        }
     }
 
     /// <summary>The plugin's settings file (BepInEx .cfg: "Key = value" lines).</summary>

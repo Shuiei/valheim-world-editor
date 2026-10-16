@@ -80,6 +80,9 @@ the plugin is unchanged in versions without that part.
   as Alpha8. They now count as not read.
 - **A game bundle that cannot be read is closed at once during the game-data scan.** One that opened but whose inner
   files failed to read stayed open until the end of the scan; it is now closed again, with what was read from it.
+- **A mod folder that cannot be read no longer stops the start page checking your game.** The search for the plugin
+  under BepInEx/plugins threw at the first subfolder without access, so the game could not be checked at all. Such
+  folders are now passed over.
 
 ### Changed
 
