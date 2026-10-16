@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.94 — unreleased
+
+### Changed
+- **The map stays light with many search results.** Every frame, even with the map idle, made all the pins' shapes
+  (and the players') again, with a small array for each corner: with 2,000 results that was about 100,000 arrays a
+  frame. The shapes are now made only when the results, the chosen one, the zoom or the players change.
+
 ## v1.45.93 — unreleased
 
 ### Changed
