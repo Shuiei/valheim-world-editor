@@ -225,7 +225,8 @@ public class SelectToolTests
         }
     }
 
-    // A typed move smaller than the centimetre a dragged move needs is still made: the place was asked for exactly.
+    // A typed move smaller than the centimetre across or millimetre up a dragged move needs is still made: the place
+    // was asked for exactly.
     [AvaloniaFact]
     public void ATypedMoveUnderACentimetreIsMade()
     {
@@ -233,6 +234,10 @@ public class SelectToolTests
         w.View.Select([0]);
         w.View.SelectTool.PlaceAt(0.006f, 0, 0, 0, by: true);
         Assert.True(s.CanUndo);
+        Assert.Equal(20.006f, Last(s).Position.X, 4);
+        float y = Last(s).Position.Y;
+        w.View.SelectTool.PlaceAt(0, 0.0005f, 0, 0, by: true);
+        Assert.InRange(Last(s).Position.Y - y, 0.00049f, 0.00051f);
         Assert.Equal(20.006f, Last(s).Position.X, 4);
         w.CloseWithoutAsking();
     }

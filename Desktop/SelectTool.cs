@@ -307,8 +307,9 @@ public sealed class SelectTool
 
     /// <summary>
     /// Ends a move: the originals are replaced by copies at their new places, and those get selected. A move that
-    /// changed nothing is just dropped: one made with the mouse or keys by less than a centimetre across, a typed one
-    /// (exact place) only when it has no offset at all.
+    /// changed nothing is just dropped: one made with the mouse or keys by less than a centimetre across and a
+    /// millimetre up. A typed one (exact place) is always made, however small: PlaceAt never starts one that asks for
+    /// nothing.
     /// </summary>
     public void Commit()
     {
@@ -320,8 +321,7 @@ public sealed class SelectTool
             return;
         }
         _view.SetPreviews(null);
-        float across = MathF.Abs(m.Dx) + MathF.Abs(m.Dz);
-        if ((m.NoSnap ? across == 0 : across < 0.01f) && m.Turn == 0 && MathF.Abs(m.Dy) < 0.001f && !m.Dropped || Session is not { } session)
+        if (!m.NoSnap && MathF.Abs(m.Dx) + MathF.Abs(m.Dz) < 0.01f && m.Turn == 0 && MathF.Abs(m.Dy) < 0.001f && !m.Dropped || Session is not { } session)
         {
             return;
         }
@@ -482,7 +482,10 @@ public sealed class SelectTool
         return (things.Average(t => t.Position.X), things.Min(t => t.Position.Y), things.Average(t => t.Position.Z), turn, things.Count);
     }
 
-    /// <summary>Moves the selection there (by: by these amounts), as one undo step; typed values are not snapped.</summary>
+    /// <summary>
+    /// Moves the selection there (by: by these amounts), as one undo step; typed values are not snapped. Values that
+    /// ask for no change (all zero, or the place it is at) make no move.
+    /// </summary>
     /// <param name="x">World x of the middle, in metres (or how far to move).</param>
     /// <param name="y">Height of the lowest object, in metres (or how far to lift).</param>
     /// <param name="z">World z of the middle, in metres (or how far to move).</param>
@@ -491,7 +494,13 @@ public sealed class SelectTool
     public void PlaceAt(float x, float y, float z, float turn, bool by)
     {
         Commit();
-        if (Where() is not { } w || Begin() is not { } m)
+        if (Where() is not { } w)
+        {
+            return;
+        }
+        // Checked on the values, not the offsets worked out below: keeping the height adds a lift that is not zero.
+        bool none = by ? x == 0 && y == 0 && z == 0 && turn == 0 : x == w.X && y == w.Y && z == w.Z && turn == w.Turn;
+        if (none || Begin() is not { } m)
         {
             return;
         }
