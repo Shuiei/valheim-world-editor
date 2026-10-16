@@ -215,6 +215,9 @@ public class ClaudeToolsTests
         Assert.Contains("The paint is", await r.T.PaintArea("lava", x: 0, z: 0, radius: 3));
         Assert.Contains("object(s) placed", await r.T.Forest(5, -30, 30, -5, ["Birch1"], spacing: 7));
         Assert.Contains("not an object", await r.T.Forest(5, -30, 30, -5, ["NoSuchTree"]));
+        // Names go into the script escaped: one ending in a backslash, or holding a quote, is just not an object.
+        Assert.Contains("Odd\\: not an object", await r.T.Forest(5, -30, 30, -5, ["Odd\\", "Birch1"]));
+        Assert.Contains("Quote\"d: not an object", await r.T.Forest(5, -30, 30, -5, ["Quote\"d"]));
         await r.T.SelectObjects([1, 2], focus: false);
         Assert.Equal(2, J(await r.T.GetSelection()).GetArrayLength());
         int chest = J(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "piece_chest_wood", X = -10, Z = -10 }])).GetProperty("placed")[0].GetProperty("id").GetInt32();

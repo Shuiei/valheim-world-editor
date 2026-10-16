@@ -793,7 +793,8 @@ public sealed partial class ClaudeTools
         {
             return Task.FromResult("Give at least one prefab name (find_prefabs).");
         }
-        string list = string.Join(", ", kinds.Select(k => "\"" + k.Replace("\"", "", StringComparison.Ordinal) + "\""));
+        // As C# string literals, escaped (a name ending in a backslash broke the script).
+        string list = string.Join(", ", kinds.Select(k => Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(k, quote: true)));
         return RunGenerated($$"""
 			string[] kinds = { {{list}} };
 			foreach (var k in kinds) if (!Objects.CanPlace(k)) { Print($"{k}: not an object this world can have"); return; }

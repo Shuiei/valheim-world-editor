@@ -261,6 +261,8 @@ the plugin is unchanged in versions without that part.
 - **Claude's read-only looks changed the user's view: support_check left the Workshop's Support switch on, and
   screenshot (one view or four) left the camera where it had looked.** The support check is now worked out without the
   switch, and the camera is put back once the picture is taken.
+- **Claude's forest failed with a confusing script error for a name ending in a backslash.** The names went into the
+  generated script with only their quotes taken out; they are now written as escaped string literals.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
