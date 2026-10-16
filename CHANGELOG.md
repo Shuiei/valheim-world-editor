@@ -269,6 +269,9 @@ the plugin is unchanged in versions without that part.
 - **Claude tools given only one coordinate of a point went on without a word: list_objects dropped its "near" filter,
   move_objects and copy_objects turned round the given x and the objects' middle z.** list_objects, move_objects,
   copy_objects, search_world, list_locations, screenshot and add_blueprint now refuse a lone coordinate.
+- **Claude's replace_objects lost each object's size, and replacing a ship's root left its parts hanging on nothing.**
+  The new object now keeps the old one's scale, and a linked group's root takes its parts away with it, as the Area
+  tool's Replace does.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
