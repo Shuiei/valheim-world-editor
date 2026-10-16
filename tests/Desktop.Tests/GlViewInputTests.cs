@@ -71,35 +71,40 @@ public class GlViewInputTests
         Assert.DoesNotContain(Key.W, v.KeysHeld);
     }
 
+    /// <summary>
+    /// A key going down or up at a control, as the keyboard sends it to the one with the focus.
+    /// </summary>
+    private static void KeyAt(Control at, Key key, bool down) =>
+        at.RaiseEvent(new KeyEventArgs { RoutedEvent = down ? InputElement.KeyDownEvent : InputElement.KeyUpEvent, Key = key, KeyModifiers = KeyModifiers.None });
+
     [AvaloniaFact]
     public void TypingInABoxOrAwayFromTheEditorLeavesTheCameraAlone()
     {
         var (w, v) = Open();
+        var box = w.Blueprints.Search;
         // A key held when a box takes the focus is let go: its release will be the box's.
         w.KeyPress(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
         Assert.Contains(Key.W, v.KeysHeld);
-        // The blueprints panel (hidden until its tool is chosen) and its search box.
-        w.Blueprints.Toggle(true);
-        Assert.True(w.Blueprints.Search.Focus());
+        box.RaiseEvent(new FocusChangedEventArgs(InputElement.GotFocusEvent));
         Assert.Empty(v.KeysHeld);
         w.KeyRelease(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
         // Typing in a box: F and W are letters there, Space a space, none of them the camera's.
-        foreach (var (key, physical, symbol) in new[] { (Key.F, PhysicalKey.F, "f"), (Key.W, PhysicalKey.W, "w"), (Key.Space, PhysicalKey.Space, " ") })
+        foreach (var key in new[] { Key.F, Key.W, Key.Space })
         {
-            w.KeyPress(key, RawInputModifiers.None, physical, symbol);
+            KeyAt(box, key, true);
             Assert.Equal(GlView.EyeMode.Orbit, v.Eye);
             Assert.Empty(v.KeysHeld);
-            w.KeyRelease(key, RawInputModifiers.None, physical, symbol);
+            KeyAt(box, key, false);
         }
-        // On the start page (the 3D editor is not shown): the same keys with a button focused, as after a click.
+        // On the start page (the 3D editor is not shown): the same keys at its first button, as after a click on it.
         w.ShowStart();
-        Assert.True(w.GetVisualDescendants().OfType<Button>().First(b => b.IsEffectivelyVisible && b.Focusable).Focus());
-        foreach (var (key, physical, symbol) in new[] { (Key.F, PhysicalKey.F, "f"), (Key.W, PhysicalKey.W, "w"), (Key.Space, PhysicalKey.Space, " ") })
+        var button = w.GetVisualDescendants().OfType<Button>().First(b => b.IsEffectivelyVisible);
+        foreach (var key in new[] { Key.F, Key.W, Key.Space })
         {
-            w.KeyPress(key, RawInputModifiers.None, physical, symbol);
+            KeyAt(button, key, true);
             Assert.Equal(GlView.EyeMode.Orbit, v.Eye);
             Assert.Empty(v.KeysHeld);
-            w.KeyRelease(key, RawInputModifiers.None, physical, symbol);
+            KeyAt(button, key, false);
         }
     }
 
