@@ -264,4 +264,16 @@ public class InspectorPanelTests
         Assert.False(r.I.IsOpen);
         Assert.True(closed);
     }
+
+    // A stack larger than the item's largest is cut to it, and the message says so.
+    [AvaloniaFact]
+    public async Task AStackTooLargeIsCutAndSaid()
+    {
+        using var r = new Run();
+        Assert.True(r.I.Open(r.ChestIndex));
+        var (x, y) = r.I.FreeSlot()!.Value;
+        r.I.Items!.Add(new InspectorPanel.ItemRow { Name = "Resin", Stack = 70, X = x, Y = y });
+        await r.I.Apply();
+        Assert.EndsWith(" Resin: stack of 70 cut to 50 (the item's maximum).", r.Said);
+    }
 }
