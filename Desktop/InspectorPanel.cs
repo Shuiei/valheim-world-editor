@@ -439,7 +439,7 @@ public sealed class InspectorPanel
         var s = _session();
         string? name = PrefabCatalog.DisplayName(z.Prefab);
         _title.Text = name ?? $"Prefab {z.Prefab}";
-        int id = Index is int ix && s != null ? s.Scene.Things[ix].Id : 0;
+        int id = Index is int ix && s != null && ix < s.Scene.Things.Count ? s.Scene.Things[ix].Id : 0;
         _where.Text = $"Object {id} · x {z.Position.X:0.00}, y {z.Position.Y:0.00}, z {z.Position.Z:0.00} · turned {z.Rotation.Y:0.0}°{(z.Connection != null ? " · has a connection (kept)" : "")}";
         if (PrefabCatalog.SpawnOf(z.Prefab) is { } spawn)
         {
@@ -965,10 +965,27 @@ public sealed class InspectorPanel
             Message?.Invoke($"Could not change the object: {ex.Message}");
             return;
         }
+        // Another area open since (its things are others): nothing to change here.
+        if (index >= s.Scene.Things.Count)
+        {
+            Message?.Invoke("This object is not in the open area any more: nothing changed.");
+            Close();
+            return;
+        }
         var t = s.Scene.Things[index];
+        byte[]? now;
+        try
+        {
+            now = t.Gone ? null : ObjectData.Bytes(s.Scene.World, s.Edits, t.Id);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            Message?.Invoke($"That object cannot be read now, nothing changed: {ex.Message}");
+            return;
+        }
         // Live: changed or removed in the game since it was opened (a player used the chest): the copy
         // would bring back its old data. Shown as it is now, to change again.
-        if (t.Gone || !(ObjectData.Bytes(s.Scene.World, s.Edits, t.Id)?.AsSpan().SequenceEqual(_bytes) ?? false))
+        if (t.Gone || !(now?.AsSpan().SequenceEqual(_bytes) ?? false))
         {
             Message?.Invoke(t.Gone ? "This object is gone (removed in the game): nothing changed." : "This object changed in the game since you opened it: here it is as it is now, make your change again.");
             if (t.Gone)

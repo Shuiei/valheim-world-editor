@@ -245,6 +245,39 @@ public class InspectorPanelEditsTests
         Assert.Equal("That object cannot be read.", r.Said);
     }
 
+    // Apply on an object no longer at hand: another area open meanwhile (fewer things), or its file gone. Each is said,
+    // nothing changes and nothing throws.
+    [AvaloniaFact]
+    public async Task AnObjectNoLongerAtHandIsNotApplied()
+    {
+        using var r = new Run();
+        EditSession session = r.S;
+        var panel = new InspectorPanel(() => session);
+        string? said = null;
+        panel.Message += t => said = t;
+        Assert.True(panel.Open(r.ChestIndex));
+        session = TestScenes.Flat(1);
+        panel.Added.Add(("strings", "text", "Elsewhere"));
+        await panel.Apply();
+        Assert.Equal("This object is not in the open area any more: nothing changed.", said);
+        Assert.False(panel.IsOpen);
+        Assert.Empty(session.UndoList);
+        // Its file gone since it was opened.
+        session = r.S;
+        int copy = r.S.Commit("Add", null, [], [(new NewObject(0, r.Scene.Things[r.ChestIndex].Prefab, Vector3.Zero, Vector3.Zero, 0), true)])[0];
+        Assert.True(panel.Open(copy));
+        foreach (string f in Directory.GetFiles(r.Dir))
+        {
+            File.Delete(f);
+        }
+        int steps = r.S.UndoList.Count;
+        said = null;
+        panel.Added.Add(("strings", "text", "Gone"));
+        await panel.Apply();
+        Assert.NotNull(said);
+        Assert.Equal(steps, r.S.UndoList.Count);
+    }
+
     [AvaloniaFact]
     public async Task AnObjectReplacedMeanwhileIsClosed()
     {
