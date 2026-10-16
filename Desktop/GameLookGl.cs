@@ -697,8 +697,7 @@ public sealed class GameLookGl
         _gl.Uniform4(_gl.GetUniformLocation(_water, "uRegion"), _scene.X0 * 64f - 32f, _scene.Z0 * 64f - 32f, _scene.W, _scene.H);
         _gl.Uniform1(_gl.GetUniformLocation(_water, "uWater"), _scene.Water);
         _gl.Disable(EnableCap.CullFace);
-        _gl.Enable(EnableCap.Blend);
-        _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+        GlBlend.Over(_gl);
         _gl.DepthMask(false);
         _gl.BindVertexArray(_waterVao);
         _gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
