@@ -73,6 +73,26 @@ public class EditSessionStepsTests
     }
 
     [Fact]
+    public void TakingAShapeOutOrClearingItsZoneRefreshesOnlyAroundIt()
+    {
+        var s = TestScenes.Flat(3);
+        void ShapeOnly()
+        {
+            var (x0, z0, x1, z1) = s.TakeDirty()!.Value;
+            Assert.True(x0 >= 27 && z0 >= 27 && x1 <= 37 && z1 <= 37, $"{(x0, z0, x1, z1)}");
+        }
+        s.Shape(32, 32, _ => 1, 3, 0, "Shape");
+        s.TakeDirty();
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^1]));
+        ShapeOnly();
+        s.Shape(32, 32, _ => 1, 3, 0, "Shape");
+        s.TakeDirty();
+        s.MarkResets([(0, 0)], keepBuildings: true, ground: true, "Reset");
+        ShapeOnly();
+        Assert.Equal(30, s.Ground.HeightOf(32 * s.Ground.W + 32));
+    }
+
+    [Fact]
     public void TheGamesChangesWaitForAStrokeToEnd()
     {
         var s = TestScenes.Flat(1);

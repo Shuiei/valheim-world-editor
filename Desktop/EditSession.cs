@@ -236,7 +236,7 @@ public sealed class EditSession
             removal = new Change($"Removed: {c.Label}", pts, Pick(start, pts), Pick(g.Snapshot(), pts), c.Zones) { Things = things, Resets = resets, RevertOf = c };
             if (pts.Length > 0)
             {
-                Touch((0, 0, g.W - 1, g.H - 1));
+                Touch(BoxOf(pts));
             }
             Send(c.Zones);
             SetGone(things.Select(t => (t.Index, t.Before)));
@@ -1274,7 +1274,7 @@ public sealed class EditSession
                     }
                 }
             }
-            return (touched, (0, 0, g.W - 1, g.H - 1));
+            return (touched, BoxOf(touched));
         };
         Commit(label, clearGround, [], [], resets);
     }
@@ -1352,6 +1352,25 @@ public sealed class EditSession
         {
             Edits.Put(Ground.ZoneEdit(zx, zz));
         }
+    }
+
+    /// <summary>
+    /// The grid box of some points (all the ground's grid when there are none), a point wider on every side: their
+    /// neighbours' shading changes with them.
+    /// </summary>
+    private (int X0, int Z0, int X1, int Z1) BoxOf(IReadOnlyCollection<int> points)
+    {
+        if (points.Count == 0)
+        {
+            return (0, 0, Ground.W - 1, Ground.H - 1);
+        }
+        int x0 = int.MaxValue, z0 = int.MaxValue, x1 = int.MinValue, z1 = int.MinValue;
+        foreach (int p in points)
+        {
+            int gx = p % Ground.W, gz = p / Ground.W;
+            (x0, z0, x1, z1) = (Math.Min(x0, gx), Math.Min(z0, gz), Math.Max(x1, gx), Math.Max(z1, gz));
+        }
+        return (x0 - 1, z0 - 1, x1 + 1, z1 + 1);
     }
 
     /// <summary>
