@@ -38,8 +38,9 @@ public class BlueprintPicturesTests
             // Decoded again (the headless platform's bitmaps carry no real size to compare).
             Assert.NotNull(changed);
             Assert.NotSame(first, changed);
-            File.WriteAllText(Path.Combine(dir, "bad.png"), "not a picture");
-            Assert.Null(BlueprintPictures.File(Path.Combine(dir, "bad.png")));
+            // A file that cannot be read (gone; the headless platform's bitmaps take any bytes, so a broken picture
+            // cannot stand in for it here).
+            Assert.Null(BlueprintPictures.File(Path.Combine(dir, "gone.png")));
             Assert.Null(BlueprintPictures.File(null));
         }
         finally
