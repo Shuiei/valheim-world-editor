@@ -595,4 +595,35 @@ public class AreaPanelTests
         Assert.Empty(r.W.View.Area.Points);
         Assert.Equal("Selection cleared.", r.Said);
     }
+
+    [AvaloniaFact]
+    public void DraggingABoxCountsWhatIsInsideOnceTheMovesAreHandled()
+    {
+        using var r = new Run(select: false);
+        var a = r.W.View.Area;
+        a.Box = true;
+        a.Down(new Vector2(2, 2), 1);
+        a.Moved(new Vector2(12, 12));
+        a.Moved(new Vector2(22, 22));
+        // Not counted at each move: once the moves waiting are handled.
+        Assert.DoesNotContain("m² selected", r.P.Info.Text ?? "", StringComparison.Ordinal);
+        Dispatcher.UIThread.RunJobs();
+        Assert.StartsWith("400 m² selected", r.P.Info.Text, StringComparison.Ordinal);
+        // Released: counted at once.
+        a.Moved(new Vector2(32, 32));
+        a.Up();
+        Assert.StartsWith("900 m² selected", r.P.Info.Text, StringComparison.Ordinal);
+    }
+
+    [AvaloniaFact]
+    public void TheVolumeIsWorkedOutOnlyForTheActionsShowingIt()
+    {
+        using var r = new Run();
+        r.P.Choose(AreaPanel.Act.Remove);
+        Assert.Equal("", r.P.VolumeText.Text);
+        r.P.Choose(AreaPanel.Act.Flatten);
+        Assert.Contains("Ground inside", r.P.VolumeText.Text, StringComparison.Ordinal);
+        r.P.Choose(AreaPanel.Act.Smooth);
+        Assert.Equal("", r.P.VolumeText.Text);
+    }
 }

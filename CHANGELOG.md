@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.101 — unreleased
+
+### Changed
+- **Dragging an Area selection no longer stutters on a big area.** Every mouse move while dragging the box counted
+  the objects inside (every object of the area, under its lock), rebuilt the kind and name lists and worked out the
+  cut and fill (a copy of the Mask's whole ground each time), the cut and fill even for actions that do not show
+  it, and twice when the action changed. The outline still follows the mouse at once; the counts and lists are now
+  worked out once the moves waiting are handled, and the cut and fill only for Flatten, Raise and Lower.
+
 ## v1.45.100 — unreleased
 
 ### Changed
