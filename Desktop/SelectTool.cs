@@ -107,6 +107,11 @@ public sealed class SelectTool
         /// gathered: Ox, Oz), gathered again once the middle is more than 30 m from there.
         /// </summary>
         public List<(Vector3 P, string Name)>? Others;
+        /// <summary>
+        /// <see cref="Others"/> by the metre cell (x, z) each point is in, as indices into it in its order: a snap within
+        /// 0.75 m is in the cell of the moved point or one beside it.
+        /// </summary>
+        public Dictionary<(int X, int Z), List<int>> OthersAt = [];
         /// <summary>Where the selection's middle was when <see cref="Others"/> were gathered.</summary>
         public float Ox, Oz;
         /// <summary>How many whole linked groups the move takes (their parts were added to the selection's).</summary>
@@ -254,6 +259,7 @@ public sealed class SelectTool
         {
             var sel = m.Items.Select(it => it.Index).ToHashSet();
             m.Others = [];
+            m.OthersAt = [];
             (m.Ox, m.Oz) = (cx, cz);
             for (int i = 0; i < s.Things.Count; i++)
             {
@@ -268,6 +274,8 @@ public sealed class SelectTool
                 }
                 foreach (var p in SnapsAt(t.Prefab, t.Position, t.Rotation))
                 {
+                    var cell = SnapCell(p);
+                    (m.OthersAt.TryGetValue(cell, out var at) ? at : m.OthersAt[cell] = []).Add(m.Others.Count);
                     m.Others.Add((p, info.Name));
                 }
             }
@@ -278,13 +286,31 @@ public sealed class SelectTool
             var at = Target(m, it, shift: false);
             foreach (var mp in SnapsAt(it.Thing.Prefab, at, it.Thing.Rotation + new Vector3(0, m.Turn, 0)))
             {
-                foreach (var (o, name) in m.Others)
+                // The points around only (the nine cells about it), taken in the list's order: the same nearest
+                // (and, between two as near, the same first) as going through the whole list.
+                var (mx, mz) = SnapCell(mp);
+                (float D, int K)? near = null;
+                for (int dz = -1; dz <= 1; dz++)
                 {
-                    float d = Vector3.Distance(o, mp);
-                    if (d < 0.75f && (best == null || d < best.Value.D))
+                    for (int dx = -1; dx <= 1; dx++)
                     {
-                        best = (d, mp, o, name);
+                        if (!m.OthersAt.TryGetValue((mx + dx, mz + dz), out var ks))
+                        {
+                            continue;
+                        }
+                        foreach (int k in ks)
+                        {
+                            float d = Vector3.Distance(m.Others[k].P, mp);
+                            if (d < 0.75f && (near == null || d < near.Value.D || d == near.Value.D && k < near.Value.K))
+                            {
+                                near = (d, k);
+                            }
+                        }
                     }
+                }
+                if (near is { } n && (best == null || n.D < best.Value.D))
+                {
+                    best = (n.D, mp, m.Others[n.K].P, m.Others[n.K].Name);
                 }
             }
         }
@@ -302,6 +328,9 @@ public sealed class SelectTool
         m.Sy = b.O.Y - b.M.Y - (after - before);
         m.Snapped = b.Name;
     }
+
+    /// <summary>The metre cell (x, z) a snap point is in, for <see cref="Move.OthersAt"/>.</summary>
+    private static (int X, int Z) SnapCell(Vector3 p) => ((int)MathF.Floor(p.X), (int)MathF.Floor(p.Z));
 
     /// <summary>Shows the move in progress in the view (as previews) and says how far it went.</summary>
     /// <param name="m">The move in progress.</param>
@@ -436,6 +465,7 @@ public sealed class SelectTool
             Message?.Invoke($"Nothing to drop: a {m.Noun} keeps its height.", true);
             return;
         }
+        var under = DropIndex(s, sel);
         foreach (var it in dropping)
         {
             var p = Target(m, it);
@@ -459,13 +489,8 @@ public sealed class SelectTool
             foreach (var (ox, oz) in new[] { (0f, 0f), (-hx, -hz), (hx, -hz), (-hx, hz), (hx, hz) })
             {
                 float x = cx + ox, z = cz + oz;
-                for (int i = 0; i < s.Things.Count; i++)
+                foreach (var (bl, bh) in under.At(x, z))
                 {
-                    if (sel.Contains(i) || !_view.IsPickable(i))
-                    {
-                        continue;
-                    }
-                    var (bl, bh) = _view.BoundsOf(i);
                     if (x >= bl.X && x <= bh.X && z >= bl.Z && z <= bh.Z && bh.Y <= hi.Y + 0.05f && bh.Y > best)
                     {
                         best = bh.Y;
@@ -483,6 +508,60 @@ public sealed class SelectTool
         Preview(m);
         Later();
         Message?.Invoke($"Dropped {dropping.Count} object(s): {onObjects} onto other objects, {dropping.Count - onObjects} onto the ground.", false);
+    }
+
+    /// <summary>
+    /// The boxes (view space) of the drawn objects a drop can land on, by the 4 m cell (x, z) they cover, so each point
+    /// of a drop looks only at the boxes over it.
+    /// </summary>
+    private sealed class DropBoxes
+    {
+        /// <summary>The cell size, in metres.</summary>
+        private const float Cell = 4;
+        /// <summary>The boxes over each cell.</summary>
+        private readonly Dictionary<(int X, int Z), List<(Vector3 Lo, Vector3 Hi)>> _cells = [];
+        /// <summary>Boxes too wide (or not finite) to file by cell: looked at for every point.</summary>
+        private readonly List<(Vector3 Lo, Vector3 Hi)> _everywhere = [];
+
+        /// <summary>Files a box under each cell it covers.</summary>
+        public void Add(Vector3 lo, Vector3 hi)
+        {
+            float x0 = MathF.Floor(lo.X / Cell), x1 = MathF.Floor(hi.X / Cell), z0 = MathF.Floor(lo.Z / Cell), z1 = MathF.Floor(hi.Z / Cell);
+            if (!float.IsFinite(x0 + x1 + z0 + z1) || (x1 - x0 + 1) * (z1 - z0 + 1) > 1024)
+            {
+                _everywhere.Add((lo, hi));
+                return;
+            }
+            for (int cz = (int)z0; cz <= (int)z1; cz++)
+            {
+                for (int cx = (int)x0; cx <= (int)x1; cx++)
+                {
+                    (_cells.TryGetValue((cx, cz), out var l) ? l : _cells[(cx, cz)] = []).Add((lo, hi));
+                }
+            }
+        }
+
+        /// <summary>The boxes that may be over the point (x, z): those of its cell and the ones filed everywhere.</summary>
+        public IEnumerable<(Vector3 Lo, Vector3 Hi)> At(float x, float z) =>
+            float.IsFinite(x) && float.IsFinite(z) && _cells.TryGetValue(((int)MathF.Floor(x / Cell), (int)MathF.Floor(z / Cell)), out var l) ? l.Concat(_everywhere) : _everywhere;
+    }
+
+    /// <summary>The boxes of every drawn object but the selected ones, for a drop.</summary>
+    /// <param name="s">The scene.</param>
+    /// <param name="sel">The selected things' indices.</param>
+    private DropBoxes DropIndex(WorldScene s, HashSet<int> sel)
+    {
+        var boxes = new DropBoxes();
+        for (int i = 0; i < s.Things.Count; i++)
+        {
+            if (sel.Contains(i) || !_view.IsPickable(i))
+            {
+                continue;
+            }
+            var (bl, bh) = _view.BoundsOf(i);
+            boxes.Add(bl, bh);
+        }
+        return boxes;
     }
 
     // ---- Exact place: the selection's middle (height: its lowest object) and the first one's turn.

@@ -26,6 +26,41 @@ public class SelectToolTests
         new WorldScene.Thing(10, Beech, new Vector3(20, 30, 20), Vector3.Zero, 1, false),
         new WorldScene.Thing(11, Wall, new Vector3(40, 30, 40), new Vector3(0, 90, 0), 0, true));
 
+    // Drop lands each object on the highest drawn top under it, whatever the size of what is under: a platform
+    // across several cells of the drop's index, and a slab too wide to file by cell (looked at everywhere).
+    [AvaloniaFact]
+    public void DropLandsOnWideAndHugeObjectsBelow()
+    {
+        var s = TestScenes.Flat(2,
+            new WorldScene.Thing(1, Beech, new Vector3(42, 40, 22), Vector3.Zero, 1, false),
+            new WorldScene.Thing(2, Beech, new Vector3(2, 40, 62), Vector3.Zero, 1, false),
+            new WorldScene.Thing(3, Wall, new Vector3(32, 30, 32), Vector3.Zero, 0, true),
+            new WorldScene.Thing(4, Wall, new Vector3(32, 29, 32), Vector3.Zero, 0, true));
+        var v = new GlView();
+        v.Show(s.Scene, null);
+        // View space: x - Cx, y, -(z - Cz).
+        Vector3 V(float x, float y, float z) => new(x - s.Scene.Cx, y, -(z - s.Scene.Cz));
+        v.SetBoxes([
+            (0, V(41.5f, 40, 22.5f), V(42.5f, 41, 21.5f)),
+            (1, V(1.5f, 40, 62.5f), V(2.5f, 41, 61.5f)),
+            // A 40 m platform, 4 m high, around the first tree only.
+            (2, V(12, 30, 52), V(52, 34, 12)),
+            // A 300 m slab, 1 m high, under everything.
+            (3, V(-118, 29, 182), V(182, 31, -118)),
+        ]);
+        string? said = null;
+        v.SelectTool.Message += (t, _) => said = t;
+        // Keeping their height (not put on the ground first), the trees drop from 40 m.
+        v.SelectTool.OnGround = false;
+        v.Select([0, 1]);
+        v.SelectTool.Drop();
+        Assert.Equal("Dropped 2 object(s): 2 onto other objects, 0 onto the ground.", said);
+        v.SelectTool.Commit();
+        var trees = s.Scene.Things.Where(t => !t.Gone && t.Prefab == Beech).ToList();
+        Assert.Equal(34, trees.Single(t => MathF.Abs(t.Position.X - 42) < 0.01f).Position.Y, 2);
+        Assert.Equal(31, trees.Single(t => MathF.Abs(t.Position.X - 2) < 0.01f).Position.Y, 2);
+    }
+
     [Fact]
     public void DeletingHidesTheObjectsUntilUndone()
     {
