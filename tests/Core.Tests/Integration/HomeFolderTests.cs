@@ -290,6 +290,24 @@ public sealed class HomeFolderTests : IDisposable
     }
 
     [Fact]
+    public void ACharacterFileIsReadAgainOnlyWhenItChanged()
+    {
+        string chars = Local(".config", "unity3d", "IronGate", "Valheim", "characters_local");
+        Directory.CreateDirectory(chars);
+        string file = Path.Combine(chars, "ragnar.fch");
+        File.WriteAllBytes(file, Fch("Ragnar", 5));
+        Assert.Equal(5, Assert.Single(Characters.Local()).Id);
+        int reads = Characters.FileReads;
+        Assert.Equal(5, Assert.Single(Characters.Local()).Id);
+        Assert.Equal(reads, Characters.FileReads);
+        // Saved again by the game: read again.
+        File.WriteAllBytes(file, Fch("Ragnar", 6));
+        File.SetLastWriteTimeUtc(file, DateTime.UtcNow.AddMinutes(1));
+        Assert.Equal(6, Assert.Single(Characters.Local()).Id);
+        Assert.Equal(reads + 1, Characters.FileReads);
+    }
+
+    [Fact]
     public void ACharacterFileThatCannotBeReadIsPassedOver()
     {
         if (OperatingSystem.IsWindows() || Environment.UserName == "root")

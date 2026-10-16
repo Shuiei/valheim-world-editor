@@ -23,8 +23,41 @@ public static class Characters
         .Distinct();
 
     /// <summary>
+    /// What each character file held when last read (several MB each), by its full path: read again only when its
+    /// length or time written changed.
+    /// </summary>
+    private static readonly Dictionary<string, (long Length, DateTime Written, Character? Character)> _read = [];
+    /// <summary>Guards <see cref="_read"/> (builders are asked for on any thread).</summary>
+    private static readonly Lock _readLock = new();
+    /// <summary>Tests: how many character files this thread read whole.</summary>
+    [ThreadStatic]
+    internal static int FileReads;
+
+    /// <summary>A character file's character (null for none), read again only when it changed since.</summary>
+    private static Character? ReadFile(string f)
+    {
+        var info = new FileInfo(f);
+        long length = info.Length;
+        DateTime written = info.LastWriteTimeUtc;
+        lock (_readLock)
+        {
+            if (_read.TryGetValue(f, out var known) && known.Length == length && known.Written == written)
+            {
+                return known.Character;
+            }
+        }
+        FileReads++;
+        var c = Read(File.ReadAllBytes(f), Path.GetFileNameWithoutExtension(f));
+        lock (_readLock)
+        {
+            _read[f] = (length, written, c);
+        }
+        return c;
+    }
+
+    /// <summary>
     /// This computer's characters, each player id once (the first file by name wins); files that cannot be read are
-    /// passed over.
+    /// passed over. A file unchanged since it was last read is not read again.
     /// </summary>
     public static List<Character> Local()
     {
@@ -37,7 +70,7 @@ public static class Characters
             {
                 try
                 {
-                    if (Read(File.ReadAllBytes(f), Path.GetFileNameWithoutExtension(f)) is { } c && !list.Any(x => x.Id == c.Id))
+                    if (ReadFile(f) is { } c && !list.Any(x => x.Id == c.Id))
                     {
                         list.Add(c);
                     }
