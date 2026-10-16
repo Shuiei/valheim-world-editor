@@ -146,8 +146,13 @@ public sealed class AreaPanel
     internal Button ApplyButton { get; } = new Button { FontSize = 12 }.Classed("primary");
     /// <summary>The rows shown only for some actions, with those actions.</summary>
     private readonly Dictionary<Control, Act[]> _rows = [];
-    /// <summary>The prefab hashes behind <see cref="ToBox"/>'s entries, in its order (filled once).</summary>
+    /// <summary>The prefab hashes behind <see cref="ToBox"/>'s entries, in its order.</summary>
     private List<int> _creatable = [];
+    /// <summary>
+    /// The world and its templates, the game's data, the manifests and the mods' catalogue <c>_creatable</c> was
+    /// worked out from.
+    /// </summary>
+    private (WorldSave? World, int Templates, int Data, int Manifests, int Catalogue) _creatableFrom;
 
     /// <summary>The action chosen on the list.</summary>
     public Act Current => Actions[Math.Max(0, ActionBox.SelectedIndex)].Act;
@@ -526,6 +531,8 @@ public sealed class AreaPanel
     {
         var poly = Area.Polygon();
         RefreshVolume();
+        // Before the selection's lists: the "with" list follows the world, selection or not.
+        FillCreatable();
         if (poly == null)
         {
             Info.Text = Area.Box ? "Drag on the ground to select a box." : "Click points around the area; double-click or Enter closes it. Backspace removes a point, Esc clears.";
@@ -548,17 +555,30 @@ public sealed class AreaPanel
         var names = inside.GroupBy(i => NameOf(s.Things[i].Prefab)).OrderByDescending(x => x.Count()).Select(x => $"{x.Key} ({x.Count()})").ToList();
         FromBox.ItemsSource = names;
         FromBox.SelectedIndex = FromBox.SelectedItem is string keep && names.Contains(keep) ? names.IndexOf(keep) : names.Count > 0 ? 0 : -1;
-        FillCreatable();
         _view.LassoChanged();
     }
 
-    /// <summary>The kinds the world can make, for the "with" list (once: they are the game's).</summary>
+    /// <summary>
+    /// The kinds the world can make, for the "with" list: worked out again for another world (its templates are its
+    /// own), when a live merge brings it new kinds, or when the game's data, the mods' manifests or their catalogue
+    /// change, keeping the chosen kind when it is still offered.
+    /// </summary>
     private void FillCreatable()
     {
-        if (_creatable.Count == 0 && _view.Scene?.World is { } w)
+        if (_view.Scene?.World is { } w && _creatableFrom != (w, w.TemplatesGeneration, GameData.Generation, ModManifests.Generation, ModCatalogue.Generation))
         {
+            _creatableFrom = (w, w.TemplatesGeneration, GameData.Generation, ModManifests.Generation, ModCatalogue.Generation);
+            int chosen = ToBox.SelectedIndex >= 0 && ToBox.SelectedIndex < _creatable.Count ? _creatable[ToBox.SelectedIndex] : 0;
             _creatable = [.. w.Creatable.Where(p => _nameOf(p) != null).OrderBy(p => _nameOf(p), StringComparer.OrdinalIgnoreCase)];
             ToBox.ItemsSource = _creatable.Select(p => _nameOf(p)!).ToList();
+            ToBox.SelectedIndex = _creatable.IndexOf(chosen);
+        }
+        else if (_view.Scene?.World == null && _creatableFrom.World != null)
+        {
+            // No world open: the last one is not kept alive by the list.
+            _creatableFrom = default;
+            _creatable = [];
+            ToBox.ItemsSource = Array.Empty<string>();
         }
     }
 

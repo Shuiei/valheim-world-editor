@@ -211,6 +211,59 @@ public class AreaPanelTests
     }
 
     [AvaloniaFact]
+    public void TheWithListIsWorkedOutAgainForAnotherWorld()
+    {
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        w.Show();
+        // Two worlds, each with a kind of its own to copy (named here: the game's catalogue does not place them); the
+        // first is the live snapshot, for a live merge to bring it a kind.
+        int first = StableHash.Of("mod_first"), second = StableHash.Of("mod_second"), live = StableHash.Of("mod_live");
+        string? Name(int h) => h == first ? "mod_first" : h == second ? "mod_second" : h == live ? "mod_live" : Terrain.PrefabCatalog.DisplayName(h);
+        var p = new AreaPanel(w.View, () => w.Session, Name);
+        var a = TestScenes.Flat(1, new WorldScene.Thing(first, first, new Vector3(10, 30, 10), Vector3.Zero, 0, true));
+        a.Scene.World = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        a.Scene.World.Templates[first] = 0;
+        var b = TestScenes.Flat(1, new WorldScene.Thing(second, second, new Vector3(10, 30, 10), Vector3.Zero, 0, true));
+        b.Scene.World.Templates[second] = 0;
+        w.View.Show(a.Scene, null);
+        w.Edit(a);
+        p.UsePicked(first);
+        var with = ((IEnumerable<object>)p.ToBox.ItemsSource!).Cast<string>().ToList();
+        Assert.Contains("mod_first", with);
+        Assert.DoesNotContain("mod_second", with);
+        Assert.DoesNotContain("mod_live", with);
+        Assert.Equal("mod_first", p.ToBox.SelectedItem);
+        // The game brings the same world a kind it had none of: offered after the next refresh, the choice kept.
+        Assert.NotNull(a.Scene.World.MergeLive([(10, 10)], [(4242, 1, MadeObjects.Piece("mod_live", new Vector3(640, 30, 640), 777, "Astrid"))], _ => false, _ => false));
+        p.Refresh();
+        with = [.. ((IEnumerable<object>)p.ToBox.ItemsSource!).Cast<string>()];
+        Assert.Contains("mod_live", with);
+        Assert.Equal("mod_first", p.ToBox.SelectedItem);
+        // A kind both worlds have (one the game places) stays chosen in the other world; the first world's own kinds
+        // are not offered there.
+        int shared = Terrain.PrefabCatalog.Placeable.Select(i => StableHash.Of(i.Name)).First(h => Name(h) != null);
+        p.UsePicked(shared);
+        w.View.Show(b.Scene, null);
+        w.Edit(b);
+        p.Refresh();
+        with = [.. ((IEnumerable<object>)p.ToBox.ItemsSource!).Cast<string>()];
+        Assert.DoesNotContain("mod_first", with);
+        Assert.DoesNotContain("mod_live", with);
+        Assert.Contains("mod_second", with);
+        Assert.Equal(Terrain.PrefabCatalog.DisplayName(shared), p.ToBox.SelectedItem);
+        p.UsePicked(second);
+        Assert.Equal("mod_second", p.ToBox.SelectedItem);
+        w.View.Show(a.Scene, null);
+        w.Edit(a);
+        p.Refresh();
+        Assert.Equal(-1, p.ToBox.SelectedIndex);
+        // No world open: the list is empty and the last world is let go of.
+        w.View.Show(TestScenes.FlatScene(), null);
+        p.Refresh();
+        Assert.Empty((IEnumerable<object>)p.ToBox.ItemsSource!);
+    }
+
+    [AvaloniaFact]
     public void TheAverageButtonPutsTheMeanHeightInTheBox()
     {
         using var r = new Run();

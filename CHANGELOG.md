@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.46 — unreleased
+
+### Fixed
+- **Replace's "with" list kept the first world's kinds after another world was opened.** The Area tool worked the
+  list out once per window, but the kinds a world can make include its own objects (its templates), so after opening
+  another world the list still offered the first world's modded kinds, which the other world cannot copy, and lacked
+  its own. The list is now worked out again for another world or when the game's data or the mods change, keeping
+  the chosen kind when the new world offers it too.
+
 ## v1.45.45 — unreleased
 
 ### Fixed
