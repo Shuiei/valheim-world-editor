@@ -234,7 +234,8 @@ public class UpliftTests
         Assert.Equal(2, ring.Count);
         Assert.Equal([(0, 12)], ring[1]);
         // Whatever the zones, no two groups' working zones overlap or touch.
-        var rnd = new Random(7);
+        // Seeded so the test repeats; not for security, so the weak random rule does not apply.
+        var rnd = new Random(7); // nosemgrep
         var many = Uplift.Clusters([.. Enumerable.Range(0, 60).Select(_ => (rnd.Next(-40, 40), rnd.Next(-40, 40)))]);
         for (int i = 0; i < many.Count; i++)
         {
