@@ -65,7 +65,6 @@ public sealed partial class WorldGenerator
     private static FastNoise MakeCells()
     {
         var n = new FastNoise(0);
-        n.SetNoiseType(FastNoise.NoiseType.Cellular);
         n.SetCellularDistanceFunction(FastNoise.CellularDistanceFunction.Euclidean);
         n.SetCellularReturnType(FastNoise.CellularReturnType.Distance);
         n.SetFractalOctaves(2);
