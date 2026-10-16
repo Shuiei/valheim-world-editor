@@ -469,10 +469,9 @@ public sealed partial class ClaudeTools
                 }
                 float cy = t.Position.Y + dy * k + (ground ? GroundAt(scene, cx, cz) - GroundAt(scene, t.Position.X, t.Position.Z) : 0);
                 // As the Select tool's copy: what it was copied from, with all it holds.
-                var added = t.Id < 0 ? s.Edits.FindAdded(t.Id) : null;
-                var data = scene.World != null && TerrainEditor.App.ObjectData.Bytes(scene.World, s.Edits, t.Id) is { } bytes ? TerrainEditor.App.ObjectData.Fields(bytes, builder: true) : added?.Data;
+                var (source, data) = s.CopySourceOf(t);
                 copy.Add((new Editing.NewObject(0, t.Prefab, new Vector3(cx, cy, cz), Wrapped(t.Rotation + new Vector3(0, turn * k, 0)), t.Scale,
-                    t.Id >= 0 ? t.Id : added?.SourceId, true, Data: data), t.Piece, i));
+                    source, true, Data: data), t.Piece, i));
             }
             var own = TerrainEditor.App.ObjectLinks.Remap([.. copy.Select(c => c.O)], linkIds);
             for (int j = 0; j < copy.Count; j++)

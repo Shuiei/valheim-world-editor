@@ -177,8 +177,12 @@ public sealed class CopyData
         }
         float cx = (a.X0 + a.X1) / 2f, cz = (a.Z0 + a.Z1) / 2f;
         var taken = objects.Where(i => s.World == null || s.World.CanCreate(s.Things[i].Prefab)).ToList();
-        var objs = taken.Select(i => s.Things[i]).Select(t => new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(),
-            t.Position.X - ox - cx, t.Position.Z - oz - cz, t.Position.Y - reference, t.Rotation, t.Scale, SourceOf(s, t), Data: DataOf(s, t))).ToList();
+        var objs = taken.Select(i => s.Things[i]).Select(t =>
+        {
+            var (source, data) = CopySourceOf(s, t);
+            return new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(), t.Position.X - ox - cx, t.Position.Z - oz - cz, t.Position.Y - reference,
+                t.Rotation, t.Scale, source, Data: data);
+        }).ToList();
         return new CopyData { W = w, H = h, Rel = rel, Wt = wt, Pnt = pnt, Objects = objs, Poly = [.. a.Poly.Select(p => p - new Vector2(cx, cz))], Taken = taken };
     }
 
@@ -221,8 +225,9 @@ public sealed class CopyData
         {
             var t = s.Things[i];
             bool piece = t.Piece || PieceCatalog.Get(t.Prefab) != null || parts.Contains(i);
+            var (source, data) = CopySourceOf(s, t);
             return new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(), t.Position.X - cx, t.Position.Z - cz,
-                t.Position.Y - (piece ? mid : groundAt(t.Position.X, t.Position.Z)), t.Rotation, t.Scale, SourceOf(s, t), Follow: !piece, Data: DataOf(s, t));
+                t.Position.Y - (piece ? mid : groundAt(t.Position.X, t.Position.Z)), t.Rotation, t.Scale, source, Follow: !piece, Data: data);
         }).ToList();
         int w = bx1 - bx0 + 1, h = bz1 - bz0 + 1;
         float[] foot = ext.Count == 0 ? [0f] : Footprint(grounded, w, h, bx0, bz0, groundAt);
@@ -240,17 +245,10 @@ public sealed class CopyData
     }
 
     /// <summary>
-    /// The saved object a thing was copied from: its own id, or for one added in this session the id it was itself
-    /// copied from (null: none).
+    /// What a copy of a thing starts from (EditSession.CopySourceOf); with no session, its own id when saved and no data.
     /// </summary>
-    private static int? SourceOf(WorldScene s, WorldScene.Thing t) => t.Id >= 0 ? t.Id : s.Session?.Edits.FindAdded(t.Id)?.SourceId;
-
-    /// <summary>
-    /// Everything a thing holds, builder included, for its copies (null when it cannot be read): taken when copying,
-    /// so a copy stays whole after the world is saved (the ids change) and in another world.
-    /// </summary>
-    private static List<ObjectField>? DataOf(WorldScene s, WorldScene.Thing t) =>
-        s.World != null && s.Session is { } e && ObjectData.Bytes(s.World, e.Edits, t.Id) is { } bytes ? ObjectData.Fields(bytes, builder: true) : null;
+    private static (int? SourceId, IReadOnlyList<ObjectField>? Data) CopySourceOf(WorldScene s, WorldScene.Thing t) =>
+        s.Session?.CopySourceOf(t) ?? (t.Id >= 0 ? t.Id : null, null);
 }
 
 /// <summary>
