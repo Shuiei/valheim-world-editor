@@ -439,12 +439,14 @@ internal sealed class DungeonPlanner
             {
                 l.Owner.Remove(t);
             }
-            if (s.Tall)
-            {
-                l.TallCells.ExceptWith(s.Tiles.Select(DungeonPlan.CellOf));
-            }
         }
         l.Spaces.RemoveRange(at.Spaces, gone.Count);
+        if (gone.Any(s => s.Tall))
+        {
+            // Made again from the tall rooms kept: one dropped may share a cell with one kept.
+            l.TallCells.Clear();
+            l.TallCells.UnionWith(l.Spaces.Where(s => s.Tall).SelectMany(s => s.Tiles).Select(DungeonPlan.CellOf));
+        }
         _plan.Spaces.RemoveRange(at.AllSpaces, gone.Count);
         _next = at.Next;
         _used.IntersectWith(at.Used);

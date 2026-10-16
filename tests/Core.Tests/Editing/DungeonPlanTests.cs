@@ -54,6 +54,12 @@ public class DungeonPlanTests
             Assert.All(plan.Doors, d => Assert.True(kept.Contains(d.A) && kept.Contains(d.B), $"{where}: a doorway to a dropped space"));
             Assert.All(plan.Spaces, s => Assert.All(s.Doors, d => Assert.Contains(d, plan.Doors)));
             Assert.All(plan.Levels, l => Assert.All(l.Owner.Values, o => Assert.Contains(o, l.Spaces)));
+            // And no tall cell of a dropped tall room.
+            Assert.All(plan.Levels, l =>
+            {
+                HashSet<(int, int)> tall = [.. l.Spaces.Where(s => s.Tall).SelectMany(s => s.Tiles).Select(DungeonPlan.CellOf)];
+                Assert.Equal(tall, l.TallCells);
+            });
         }
     }
 }
