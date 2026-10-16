@@ -42,6 +42,9 @@ the plugin is unchanged in versions without that part.
   step that is no longer where it was picked.
 - **A blueprint piece with blank or zero rotation fields is placed unturned.** Its rotation read as a quaternion of
   length zero, which turned into NaN angles in the clipboard and the world. Such a rotation is now no turn.
+- **One blueprint file that cannot be read no longer empties the Blueprints list.** A file without read access threw
+  out of the listing, so no blueprint was shown. It is now left out (and logged), and the list reads each file's
+  summary without building every value of its copy.
 
 ### Changed
 

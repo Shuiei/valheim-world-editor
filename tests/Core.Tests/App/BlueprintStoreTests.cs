@@ -52,6 +52,22 @@ public sealed class BlueprintStoreTests : IDisposable
         Assert.Equal(3, doc["clip"]!["objects"]!.AsArray().Count);
     }
 
+    // A file that cannot be read is left out, and the others are still listed (the whole list threw).
+    [Fact]
+    public void AnUnreadableFileIsLeftOutOfTheList()
+    {
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            return;
+        }
+        var store = new BlueprintStore(_dir);
+        store.Save("Kept", null, null, Clip(1, ground: false));
+        string locked = store.Save("Locked", null, null, Clip(1, ground: false));
+        File.SetUnixFileMode(Path.Combine(_dir, locked + ".json"), UnixFileMode.None);
+
+        Assert.Equal("Kept", Assert.Single(store.List()).Name);
+    }
+
     [Fact]
     public void SameNameReplacesAndDeleteRemoves()
     {

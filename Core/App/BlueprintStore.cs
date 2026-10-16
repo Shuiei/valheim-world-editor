@@ -52,18 +52,24 @@ public sealed class BlueprintStore(string directory)
         {
             try
             {
-                var doc = JsonNode.Parse(File.ReadAllText(file));
-                if (doc?["clip"] is not JsonObject clip)
+                // Read without making a node per value: a copy's ground and objects can hold hundreds of thousands.
+                using var stream = File.OpenRead(file);
+                using var doc = JsonDocument.Parse(stream);
+                JsonElement root = doc.RootElement;
+                if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("clip", out JsonElement clip) || clip.ValueKind != JsonValueKind.Object)
                 {
                     continue;
                 }
-                list.Add(new Summary(Path.GetFileNameWithoutExtension(file), (string?)doc["name"] ?? Path.GetFileNameWithoutExtension(file),
-                    doc["created"] is JsonNode c && DateTime.TryParse((string?)c, null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime t) ? t : File.GetLastWriteTime(file),
-                    (string?)doc["world"], (int?)clip["w"] ?? 0, (int?)clip["h"] ?? 0, (clip["objects"] as JsonArray)?.Count ?? 0, HasGround(clip), (string?)doc["thumb"], (string?)doc["source"]));
+                string id = Path.GetFileNameWithoutExtension(file);
+                list.Add(new Summary(id, Text(root, "name") ?? id,
+                    DateTime.TryParse(Text(root, "created"), null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime t) ? t : File.GetLastWriteTime(file),
+                    Text(root, "world"), Number(clip, "w"), Number(clip, "h"), clip.TryGetProperty("objects", out JsonElement o) && o.ValueKind == JsonValueKind.Array ? o.GetArrayLength() : 0,
+                    HasGround(clip), Text(root, "thumb"), Text(root, "source")));
             }
-            catch (Exception ex) when (ex is JsonException or IOException or InvalidOperationException or FormatException)
+            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or InvalidOperationException or FormatException)
             {
-                // Not a blueprint (or a half-written file): left out of the list.
+                // Not a blueprint, a half-written file or one that cannot be read: left out of the list.
+                Console.WriteLine($"blueprints: {Path.GetFileName(file)} left out of the list ({ex.Message}).");
             }
         }
         return [.. list.OrderBy(b => b.Name, StringComparer.OrdinalIgnoreCase)];
@@ -160,5 +166,15 @@ public sealed class BlueprintStore(string directory)
     /// <summary>
     /// The copy has ground when any point of its relative heights is set (-32768 marks "no ground").
     /// </summary>
-    private static bool HasGround(JsonObject clip) => clip["rel"] is JsonArray rel && rel.Any(v => v != null && (int)v != -32768);
+    private static bool HasGround(JsonElement clip) =>
+        clip.TryGetProperty("rel", out JsonElement rel) && rel.ValueKind == JsonValueKind.Array
+        && rel.EnumerateArray().Any(v => v.ValueKind != JsonValueKind.Null && v.GetInt32() != -32768);
+
+    /// <summary>A text value of an object; null when missing or null (InvalidOperationException when not text).</summary>
+    private static string? Text(JsonElement o, string key) =>
+        o.TryGetProperty(key, out JsonElement v) && v.ValueKind != JsonValueKind.Null ? v.GetString() : null;
+
+    /// <summary>A whole number of an object; 0 when missing or null (FormatException or InvalidOperationException when not one).</summary>
+    private static int Number(JsonElement o, string key) =>
+        o.TryGetProperty(key, out JsonElement v) && v.ValueKind != JsonValueKind.Null ? v.GetInt32() : 0;
 }
