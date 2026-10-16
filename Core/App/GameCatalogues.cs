@@ -489,7 +489,7 @@ public static partial class GameCatalogues
 
         /// <summary>
         /// Data kept out of the object, in a resource file of the bundle (.resS): meshes. Empty when the bundle has no
-        /// such resource file.
+        /// such resource file, or the range named does not lie inside it.
         /// </summary>
         public byte[] StreamBytes(AssetTypeValueField streamData)
         {
@@ -498,9 +498,15 @@ public static partial class GameCatalogues
             {
                 return [];
             }
-            _bundle.file.GetFileRange(idx, out long start, out _);
-            _bundle.file.DataReader.Position = start + streamData["offset"].AsLong;
-            return _bundle.file.DataReader.ReadBytes((int)streamData["size"].AsUInt);
+            _bundle.file.GetFileRange(idx, out long start, out long length);
+            long offset = streamData["offset"].AsLong, size = streamData["size"].AsUInt;
+            if (!GameBundles.InResource(length, offset, size))
+            {
+                Console.WriteLine($"game files: a mesh names {size} bytes at {offset} of a {length}-byte resource file; not read.");
+                return [];
+            }
+            _bundle.file.DataReader.Position = start + offset;
+            return _bundle.file.DataReader.ReadBytes((int)size);
         }
 
         /// <summary>

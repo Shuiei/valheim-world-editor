@@ -893,7 +893,8 @@ public sealed class GameBundles
     }
 
     /// <summary>
-    /// Data kept out of the object, in a resource file of the same bundle (.resS): meshes, textures.
+    /// Data kept out of the object, in a resource file of the same bundle (.resS): meshes, textures. Empty when there is
+    /// no such file or the range named does not lie inside it.
     /// </summary>
     /// <param name="bundle">The bundle the object is in.</param>
     /// <param name="streamData">The object's m_StreamData field (offset, size, path).</param>
@@ -909,13 +910,26 @@ public sealed class GameBundles
         {
             return [];
         }
-        b.file.GetFileRange(idx, out long start, out _);
+        b.file.GetFileRange(idx, out long start, out long length);
+        if (!InResource(length, offset, size))
+        {
+            Console.WriteLine($"game files: {bundle} names {size} bytes at {offset} of a {length}-byte resource file; not read.");
+            return [];
+        }
         lock (b.file.DataReader)
         {
             b.file.DataReader.Position = start + offset;
             return b.file.DataReader.ReadBytes((int)size);
         }
     }
+
+    /// <summary>
+    /// Whether <paramref name="size"/> bytes at <paramref name="offset"/> lie inside a resource file of
+    /// <paramref name="length"/> bytes, and fit in one array: sizes from a broken file can point anywhere, even into the
+    /// next file.
+    /// </summary>
+    internal static bool InResource(long length, long offset, long size) =>
+        offset >= 0 && size >= 0 && size <= Array.MaxLength && offset <= length - size;
 
     /// <summary>
     /// A GameObject's components that can be read, with their class id and path id.

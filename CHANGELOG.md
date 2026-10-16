@@ -59,6 +59,10 @@ the plugin is unchanged in versions without that part.
   stored path that is not a valid path, made opening a world throw; the same folder written with a trailing separator,
   or with other letter case on Windows, was listed twice. Null lists now read as empty, and entries are compared by
   full path without the trailing separator (case ignored on Windows).
+- **A broken mod bundle no longer fails reading a model or texture, or reads another file's bytes for it.** The offset
+  and size of data kept in a bundle's resource file were taken as written, so a bad size threw out of reading the mesh
+  or texture, and a range past the file's end read the next file. Ranges outside the resource file are now refused
+  (logged) and read as no data.
 
 ### Changed
 
