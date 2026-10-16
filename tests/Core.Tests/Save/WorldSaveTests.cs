@@ -345,8 +345,16 @@ public class WorldSaveTests
             (4242, 1, MadeObjects.Piece("woodwall", at, 777, "Astrid")),
             (4242, 2, MadeObjects.Location(at + new Vector3(5, 0, 5), MadeObjects.MadeUpLocation)),
         ];
+        int templates = world.TemplatesGeneration;
+        Assert.False(world.Templates.ContainsKey(Fixtures.Hash("woodwall")));
         var came = world.MergeLive([(10, 10)], made, _ => false, _ => false)!;
         Assert.Equal(2, came.Added.Count);
+        // A new kind: the templates' generation moved on; the same objects again do not move it.
+        Assert.True(world.Templates.ContainsKey(Fixtures.Hash("woodwall")));
+        Assert.True(world.TemplatesGeneration > templates);
+        templates = world.TemplatesGeneration;
+        world.MergeLive([(10, 10)], made, _ => false, _ => false);
+        Assert.Equal(templates, world.TemplatesGeneration);
         // A placed location shapes the ground as the game runs.
         Assert.True(came.Modifiers);
         Assert.Equal(1, world.Creators[777]);

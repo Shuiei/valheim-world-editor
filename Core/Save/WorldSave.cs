@@ -134,6 +134,20 @@ public sealed class WorldSave
 
     /// <summary>First object of each prefab: the template new objects of that prefab are copied from.</summary>
     public Dictionary<int, int> Templates { get; } = [];
+    /// <summary>
+    /// Counts each prefab added to <see cref="Templates"/> (a live merge brings new kinds), for lists worked out from
+    /// them to be worked out again.
+    /// </summary>
+    public int TemplatesGeneration { get; private set; }
+
+    /// <summary>Makes an object the template of its prefab when it has none yet.</summary>
+    private void RememberTemplate(int prefab, int id)
+    {
+        if (Templates.TryAdd(prefab, id))
+        {
+            TemplatesGeneration++;
+        }
+    }
 
     /// <summary>
     /// The object a new one is built from: its source object when given (and of the same prefab), else the prefab's
@@ -763,7 +777,7 @@ public sealed class WorldSave
         if ((flags & 0xFF) == 0)
         {
             objRef.End = pkg.Position;
-            Templates.TryAdd(prefab, id);
+            RememberTemplate(prefab, id);
             file.Objects.Add((start, pkg.Position));
             if (shown)
             {
@@ -928,7 +942,7 @@ public sealed class WorldSave
         objRef.IsTerrain = terrain;
         if (!terrain)
         {
-            Templates.TryAdd(prefab, id);
+            RememberTemplate(prefab, id);
         }
         if (creator != 0)
         {
