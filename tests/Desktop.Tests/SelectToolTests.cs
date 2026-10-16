@@ -225,6 +225,18 @@ public class SelectToolTests
         }
     }
 
+    // A typed move smaller than the centimetre a dragged move needs is still made: the place was asked for exactly.
+    [AvaloniaFact]
+    public void ATypedMoveUnderACentimetreIsMade()
+    {
+        var (w, s) = Window();
+        w.View.Select([0]);
+        w.View.SelectTool.PlaceAt(0.006f, 0, 0, 0, by: true);
+        Assert.True(s.CanUndo);
+        Assert.Equal(20.006f, Last(s).Position.X, 4);
+        w.CloseWithoutAsking();
+    }
+
     // Put on the ground, an object moved past the area's edge (no ground there) keeps its height, and the others are
     // not thrown off by it: neither a wall sinking 1000 m with the tree inside, nor the wall flying up with the tree out.
     [AvaloniaFact]

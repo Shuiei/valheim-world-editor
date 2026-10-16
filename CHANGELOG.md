@@ -11,8 +11,8 @@ the plugin is unchanged in versions without that part.
   show where the selection is rounded to a centimetre and a tenth of a degree, and Move there took all four as the
   place to reach, so changing only Y (or nothing) replaced every selected object by a copy shifted by up to 5 mm and
   turned by up to 0.05° about the middle: a new undo step, new ids, and a destroy and create on a live server. Move
-  there now moves only along the axes whose box was changed, by the difference from the exact place; with nothing
-  changed it does nothing.
+  there now moves only along the axes whose box was changed, by the difference from the exact place (however
+  small); with nothing changed it does nothing.
 
 ## v1.45.48 — unreleased
 

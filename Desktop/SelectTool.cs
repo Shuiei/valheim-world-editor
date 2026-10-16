@@ -307,7 +307,8 @@ public sealed class SelectTool
 
     /// <summary>
     /// Ends a move: the originals are replaced by copies at their new places, and those get selected. A move that
-    /// changed nothing is just dropped.
+    /// changed nothing is just dropped: one made with the mouse or keys by less than a centimetre across, a typed one
+    /// (exact place) only when it has no offset at all.
     /// </summary>
     public void Commit()
     {
@@ -319,7 +320,8 @@ public sealed class SelectTool
             return;
         }
         _view.SetPreviews(null);
-        if (MathF.Abs(m.Dx) + MathF.Abs(m.Dz) < 0.01f && m.Turn == 0 && MathF.Abs(m.Dy) < 0.001f && !m.Dropped || Session is not { } session)
+        float across = MathF.Abs(m.Dx) + MathF.Abs(m.Dz);
+        if ((m.NoSnap ? across == 0 : across < 0.01f) && m.Turn == 0 && MathF.Abs(m.Dy) < 0.001f && !m.Dropped || Session is not { } session)
         {
             return;
         }
