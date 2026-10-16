@@ -188,6 +188,9 @@ the plugin is unchanged in versions without that part.
   works in long and takes the size.
 - **Support was worked out wrong for scaled pieces.** Stability scaled a piece's colliders but not its centre of mass,
   so its support distances and angles were taken from the wrong point; the centre of mass is now scaled too.
+- **Pointing the hammer from inside a capsule-shaped piece could place a piece at a NaN position.** A ray starting
+  inside the capsule (on its axis: no normal) gave a NaN normal; it now misses, as it does from inside a sphere or a
+  box.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

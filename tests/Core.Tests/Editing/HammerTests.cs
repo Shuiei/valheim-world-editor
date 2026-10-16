@@ -220,6 +220,9 @@ public class HammerTests
         Assert.Equal(9.5f, tc, 2);
         Near(Vector3.UnitY, nc);
         Assert.Null(Hammer.RayShape(new Vector3(5, 10, 0), down, capsule));
+        // From inside, even on its axis (where the normal was NaN, and Place made a NaN position of it).
+        Assert.Null(Hammer.RayShape(Vector3.Zero, down, capsule));
+        Assert.Null(Hammer.RayShape(new Vector3(0, 0.2f, 0), down, capsule));
         // A mesh: the nearest face, its normal against the ray; a ray beside it, or parallel to a face, misses.
         var (tm, nm) = Hammer.RayShape(new Vector3(0.2f, 10, 0.3f), down, Cube())!.Value;
         Assert.Equal(9, tm, 3);

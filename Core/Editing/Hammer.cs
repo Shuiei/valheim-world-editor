@@ -457,7 +457,10 @@ public static class Hammer
         return (t, Vector3.Normalize(o + d * t - c));
     }
 
-    /// <summary>A ray against a capsule, marched up to 64 steps or 1000 m; null when it misses.</summary>
+    /// <summary>
+    /// A ray against a capsule, marched up to 64 steps or 1000 m; null when it misses, starts inside (as for a sphere
+    /// or a box) or reaches a capsule of no width on its axis (no normal there).
+    /// </summary>
     private static (float, Vector3)? RayCapsule(Vector3 o, Vector3 d, Capsule c)
     {
         // Marched: close enough for a cursor, and capsules are rare among pieces.
@@ -469,7 +472,7 @@ public static class Hammer
             float dist = Vector3.Distance(p, q) - c.R;
             if (dist < 1e-3f)
             {
-                return (t, Vector3.Normalize(p - q));
+                return i == 0 && dist < 0 || (p - q).LengthSquared() < 1e-12f ? null : (t, Vector3.Normalize(p - q));
             }
             t += dist;
         }
