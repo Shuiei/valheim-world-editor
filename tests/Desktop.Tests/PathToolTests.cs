@@ -171,11 +171,7 @@ public class PathToolTests
                 for (int i = 1; i < c.Count; i++)
                 {
                     Vector2 a = c[i - 1].P, d = c[i].P - a;
-                    float l2 = d.LengthSquared();
-                    if (l2 == 0)
-                    {
-                        l2 = 1e-9f;
-                    }
+                    float l2 = MathF.Max(d.LengthSquared(), 1e-9f);
                     float t = Math.Clamp(((gx - a.X) * d.X + (gz - a.Y) * d.Y) / l2, 0, 1);
                     float dist = Vector2.Distance(new Vector2(gx, gz), a + d * t);
                     if (dist < best)
@@ -186,7 +182,7 @@ public class PathToolTests
                 int k = (gz - Z0) * w + (gx - X0);
                 if (best > Reach)
                 {
-                    Assert.Equal(float.MaxValue, near.Dist[k]);
+                    Assert.Equal(0, near.Seg[k]);
                     continue;
                 }
                 within++;

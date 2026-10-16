@@ -361,12 +361,12 @@ public sealed class PathTool
                 // The nearest point of the line: distance, and how far along it. None within the cutoff: too far
                 // to change.
                 int ni = (gz - z0) * nw + (gx - x0);
-                float best = near.Dist[ni];
-                if (best == float.MaxValue)
+                int seg = near.Seg[ni];
+                if (seg == 0)
                 {
                     continue;
                 }
-                int seg = near.Seg[ni];
+                float best = near.Dist[ni];
                 float st = near.T[ni];
                 float along = cum[seg - 1] + st * MathF.Sqrt(Segment(curve, seg).L2), caveFloor = 0;
                 if (cave != null)
@@ -481,13 +481,14 @@ public sealed class PathTool
     /// <summary>
     /// The nearest points of the line to the grid points of a rectangle, row by row (x fastest).
     /// </summary>
-    /// <param name="Dist">Distance to the line; <see cref="float.MaxValue"/> where no segment is within reach.</param>
-    /// <param name="Seg">The nearest segment, by the index of its end point in the line.</param>
+    /// <param name="Dist">Distance to the line.</param>
+    /// <param name="Seg">The nearest segment, by the index of its end point in the line; 0 where no segment is within
+    /// reach.</param>
     /// <param name="T">How far along that segment, 0 to 1.</param>
     internal sealed record Nearest(float[] Dist, int[] Seg, float[] T);
 
     /// <summary>
-    /// A segment of the dense line: its start, its run to the end, and its length squared (never 0, so a point
+    /// A segment of the dense line: its start, its run to the end, and its length squared (at least 1e-9, so a point
     /// segment still projects).
     /// </summary>
     /// <param name="curve">The dense line.</param>
@@ -495,12 +496,7 @@ public sealed class PathTool
     private static (Vector2 A, Vector2 D, float L2) Segment(List<(Vector2 P, int Seg)> curve, int i)
     {
         Vector2 a = curve[i - 1].P, d = curve[i].P - a;
-        float l2 = d.LengthSquared();
-        if (l2 == 0)
-        {
-            l2 = 1e-9f;
-        }
-        return (a, d, l2);
+        return (a, d, MathF.Max(d.LengthSquared(), 1e-9f));
     }
 
     /// <summary>
