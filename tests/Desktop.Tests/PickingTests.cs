@@ -37,6 +37,20 @@ public class PickingTests
     }
 
     [Fact]
+    public void ABoxIsNotMetAboveTheCut()
+    {
+        // A 2 m box cut at 1 m: a ray going down into its open top meets nothing (the cut is not a face), one from
+        // the side under the cut meets its side, one from the side above the cut nothing.
+        Vector3 lo = new(-1, -1, -1), hi = new(1, 1, 1);
+        var down = new Vector3(0, -1, 0);
+        Assert.Equal(4f, Picking.HitBox(new Vector3(0, 5, 0), down, lo, hi)!.Value, 4);
+        Assert.Null(Picking.HitBox(new Vector3(0, 5, 0), down, lo, hi, 0));
+        var side = new Vector3(0, 0, -1);
+        Assert.Equal(9f, Picking.HitBox(new Vector3(0, -0.5f, 10), side, lo, hi, 0)!.Value, 4);
+        Assert.Null(Picking.HitBox(new Vector3(0, 0.5f, 10), side, lo, hi, 0));
+    }
+
+    [Fact]
     public void ATurnedBoxGetsTheBoxAroundIt()
     {
         var (lo, hi) = Picking.Transform(new Vector3(-1, 0, -1), new Vector3(1, 2, 1), Matrix4x4.CreateRotationY(MathF.PI / 4) * Matrix4x4.CreateTranslation(10, 0, 0));

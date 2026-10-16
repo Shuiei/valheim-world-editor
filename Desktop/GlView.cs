@@ -4541,7 +4541,7 @@ public sealed class GlView : OpenGlControlBase
         }
         return any ? (solid, cutOut) : (BoxUnderCut(), null);
 
-        // The stand-in box: where the ray enters its part under the cut (the whole box without one).
+        // The stand-in box: where the ray enters it under the cut (anywhere without one). The cut is not a face of it.
         float? BoxUnderCut()
         {
             if (cutY is not float c)
@@ -4549,7 +4549,7 @@ public sealed class GlView : OpenGlControlBase
                 return box;
             }
             var (lo, hi) = _bounds[i];
-            return Picking.HitBox(o, d, lo, new Vector3(hi.X, MathF.Min(hi.Y, c), hi.Z));
+            return Picking.HitBox(o, d, lo, hi, c);
         }
     }
 

@@ -29,7 +29,12 @@ public static class Picking
     /// <param name="d">The ray's direction.</param>
     /// <param name="min">The box's lowest corner.</param>
     /// <param name="max">The box's highest corner.</param>
-    public static float? HitBox(Vector3 o, Vector3 d, Vector3 min, Vector3 max)
+    /// <param name="maxY">
+    /// The height above which the box is cut away, as the Workshop's cut hides what is drawn there: a ray entering
+    /// above it does not meet the box (the cut leaves it open, with no face at the cut, and its inside faces are not
+    /// drawn).
+    /// </param>
+    public static float? HitBox(Vector3 o, Vector3 d, Vector3 min, Vector3 max, float maxY = float.MaxValue)
     {
         float t0 = 0, t1 = float.MaxValue;
         for (int a = 0; a < 3; a++)
@@ -56,7 +61,7 @@ public static class Picking
                 return null;
             }
         }
-        return t0;
+        return o.Y + d.Y * t0 > maxY ? null : t0;
     }
 
     /// <summary>
