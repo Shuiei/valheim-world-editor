@@ -48,9 +48,9 @@ public sealed partial class ClaudeTools
         {
             // The open area's things by world id, to give the hits there their ids.
             var inArea = new Dictionary<int, int>();
-            if (_w.Session?.Scene is { } scene && !_w.InWorkshop)
+            var scene = _w.InWorkshop ? null : _w.Session?.Scene;
+            if (scene != null)
             {
-                GaveIds(scene);
                 lock (scene.Things)
                 {
                     for (int i = 0; i < scene.Things.Count; i++)
@@ -67,19 +67,25 @@ public sealed partial class ClaudeTools
             {
                 hits = hits.OrderBy(h => (h.X - px) * (h.X - px) + (h.Z - pz) * (h.Z - pz));
             }
+            var given = hits.Take(Math.Clamp(limit, 1, MostHits)).Select(h => new
+            {
+                name = h.Name,
+                x = MathF.Round(h.X, 1),
+                y = MathF.Round(h.Y, 1),
+                z = MathF.Round(h.Z, 1),
+                match = h.Match,
+                areaId = inArea.TryGetValue(h.Id, out int i) ? i : (int?)null,
+            }).ToList();
+            // Ids of the area given: the ids are its (a search with no hit in it gives none, and says nothing of them).
+            if (scene != null && given.Any(h => h.areaId != null))
+            {
+                GaveIds(scene);
+            }
             return ToJson(new
             {
                 found = res.Total,
                 byName = res.Counts.OrderByDescending(c => c.Value).Take(40).Select(c => new { name = c.Key, count = c.Value }),
-                hits = hits.Take(Math.Clamp(limit, 1, MostHits)).Select(h => new
-                {
-                    name = h.Name,
-                    x = MathF.Round(h.X, 1),
-                    y = MathF.Round(h.Y, 1),
-                    z = MathF.Round(h.Z, 1),
-                    match = h.Match,
-                    areaId = inArea.TryGetValue(h.Id, out int i) ? i : (int?)null,
-                }),
+                hits = given,
                 note = res.Truncated ? $"Only the first {res.Hits.Count} hits were kept: ask for something narrower." : null,
             });
         });

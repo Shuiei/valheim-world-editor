@@ -56,6 +56,12 @@ public class ClaudeToolsWorldTests
         var nearest = found.GetProperty("hits")[0];
         Assert.Equal(tree, nearest.GetProperty("areaId").GetInt32());
         Assert.Equal(7, nearest.GetProperty("x").GetSingle(), 1);
+        // Another area open: a search with no hit in it gives no id of it, so the ids given before stay refused.
+        var other = TestScenes.Flat();
+        r.W.View.Show(other.Scene, null);
+        r.W.Edit(other);
+        Assert.Equal(0, ClaudeRun.J(await r.T.SearchWorld("NoSuchKindAtAll")).GetProperty("found").GetInt32());
+        Assert.StartsWith("The ids are from another area", await r.T.RemoveObjects([tree]));
     }
 
     // The locations: the list stops at the limit; those asked for are of that kind or have the word in their name.
