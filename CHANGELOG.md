@@ -250,6 +250,8 @@ the plugin is unchanged in versions without that part.
   the middle point was 0 / 0; such a modifier now smooths nothing.
 - **Claude's set_control could set a slider or number to NaN, and threw on a number too big for a decimal.** NaN and
   the infinities are refused now, and a number box's value is held to its range before it becomes a decimal.
+- **Claude's remove_objects and select_objects counted a repeated id as one that was not an object.** The ids found
+  were compared with the list given, repeats included; they are now compared with the different ids given.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

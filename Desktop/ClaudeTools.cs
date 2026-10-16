@@ -232,7 +232,8 @@ public sealed partial class ClaudeTools
         {
             return stale;
         }
-        var ok = ids.Distinct().Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).ToList();
+        int[] asked = [.. ids.Distinct()];
+        var ok = asked.Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).ToList();
         _w.View.Select(ok);
         if (focus && ok.Count > 0)
         {
@@ -240,7 +241,7 @@ public sealed partial class ClaudeTools
             float spread = ok.Select(i => System.Numerics.Vector3.Distance(scene.Things[i].Position, mid)).DefaultIfEmpty(0).Max();
             _w.View.Focus(mid, MathF.Max(20, spread * 2.5f));
         }
-        return $"Selected {ok.Count}{(ok.Count < ids.Length ? $" ({ids.Length - ok.Count} id(s) were not objects of the area)" : "")}.";
+        return $"Selected {ok.Count}{(ok.Count < asked.Length ? $" ({asked.Length - ok.Count} id(s) were not objects of the area)" : "")}.";
     });
 
     /// <summary>
@@ -1110,7 +1111,8 @@ public sealed partial class ClaudeTools
             return stale;
         }
         var things = session.Scene.Things;
-        var given = ids.Distinct().Where(i => i >= 0 && i < things.Count && !things[i].Gone).ToList();
+        int[] asked = [.. ids.Distinct()];
+        var given = asked.Where(i => i >= 0 && i < things.Count && !things[i].Gone).ToList();
         if (given.Count == 0)
         {
             return "None of those ids is an object of the area.";
@@ -1119,7 +1121,7 @@ public sealed partial class ClaudeTools
         var (ok, _, groups, noun) = session.WithLinked(given);
         session.Commit($"Claude: took {ok.Count} away", null, ok, []);
         _w.AfterClaudeEdit($"Claude took {ok.Count} object(s) away; Ctrl+Z puts them back.");
-        return $"Took {ok.Count} away{(given.Count < ids.Length ? $" ({ids.Length - given.Count} id(s) were not objects of the area)" : "")}"
+        return $"Took {ok.Count} away{(given.Count < asked.Length ? $" ({asked.Length - given.Count} id(s) were not objects of the area)" : "")}"
             + $"{(groups > 0 ? $", with {groups} whole {noun}(s)" : "")}. Now pending: {Pending()}";
     });
 

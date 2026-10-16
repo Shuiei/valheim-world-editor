@@ -77,7 +77,8 @@ public class ClaudeToolsLookingTests
         Assert.Single(ClaudeRun.J(await r.T.ListObjects(x: x, z: z, radius: 15, limit: 0)).EnumerateArray());
 
         int id = all[0].GetProperty("id").GetInt32();
-        Assert.Equal("Selected 1 (3 id(s) were not objects of the area).", await r.T.SelectObjects([id, id, -1, 1_000_000]));
+        // A repeated id is one id: two of them were not objects.
+        Assert.Equal("Selected 1 (2 id(s) were not objects of the area).", await r.T.SelectObjects([id, id, -1, 1_000_000]));
         Assert.Equal(id, Assert.Single(ClaudeRun.J(await r.T.GetSelection()).EnumerateArray()).GetProperty("id").GetInt32());
         Assert.Equal("Selected 0 (1 id(s) were not objects of the area).", await r.T.SelectObjects([-3]));
         Assert.Empty(ClaudeRun.J(await r.T.GetSelection()).EnumerateArray());
