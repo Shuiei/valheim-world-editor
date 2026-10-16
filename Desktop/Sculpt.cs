@@ -281,7 +281,7 @@ public static class Sculpt
             return null;
         }
         float rate = b.Strength * MathF.Min(dt, 0.1f);
-        float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
+        float ox = g.OriginX, oz = g.OriginZ;
         // Erosion works on the neighbourhood of every point (Erosion).
         if (s.Tool == BrushTool.Erode)
         {
@@ -415,7 +415,7 @@ public static class Sculpt
     {
         var touched = new List<int>();
         bool clamped = false;
-        float reach = b.Reach, ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
+        float reach = b.Reach, ox = g.OriginX, oz = g.OriginZ;
         int x0 = Math.Max(1, (int)MathF.Floor(cx - reach)), x1 = Math.Min(g.W - 2, (int)MathF.Ceiling(cx + reach));
         int z0 = Math.Max(1, (int)MathF.Floor(cz - reach)), z1 = Math.Min(g.H - 2, (int)MathF.Ceiling(cz + reach));
         for (int gz = z0; gz <= z1; gz++)
@@ -461,7 +461,7 @@ public static class Sculpt
                 n++;
             }
         }
-        float wx = g.X0 * 64 - 32 + gx, wz = g.Z0 * 64 - 32 + gz;
+        float wx = g.OriginX + gx, wz = g.OriginZ + gz;
         t = sum / n + b.NoiseAmp * b.Noise.Fbm(wx / b.NoiseSize, wz / b.NoiseSize);
         s.Natural[p] = t;
         return t;

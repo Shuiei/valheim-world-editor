@@ -751,7 +751,7 @@ public sealed partial class MainWindow
         {
             return;
         }
-        float gx = p.World.X - (s.X0 * 64 - 32), gz = p.World.Z - (s.Z0 * 64 - 32);
+        float gx = p.World.X - s.OriginX, gz = p.World.Z - s.OriginZ;
         if (!(gx > 2 && gz > 2 && gx < s.W - 3 && gz < s.H - 3) && s.Owner != null)
         {
             if (MoveBlocker() is string why)

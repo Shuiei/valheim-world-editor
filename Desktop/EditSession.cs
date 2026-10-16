@@ -567,7 +567,7 @@ public sealed class EditSession
         }
         var shape = Desktop.Mountain.Shape(m);
         var mask = MaskNow();
-        float ox = Scene.X0 * 64 - 32, oz = Scene.Z0 * 64 - 32;
+        float ox = Scene.OriginX, oz = Scene.OriginZ;
         var remove = new List<int>();
         if (clear)
         {
@@ -1663,7 +1663,7 @@ public sealed class EditSession
             }
             var missing = k.Ids.Values.SelectMany(v => v).Where(id => !index.ContainsKey(id)).Distinct().ToList();
             var found = missing.Count > 0 ? find(missing) : [];
-            float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.ZonesX - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.ZonesZ - 1) * 64f + 32f;
+            float minX = Scene.OriginX, maxX = (Scene.X0 + Scene.ZonesX - 1) * 64f + 32f, minZ = Scene.OriginZ, maxZ = (Scene.Z0 + Scene.ZonesZ - 1) * 64f + 32f;
             // Things found elsewhere in the world get an index past the scene's for now (from first, in the order
             // they were met); only those a change kept here refers to join the scene's things, at the end.
             int first = Scene.Things.Count;
@@ -1828,7 +1828,7 @@ public sealed class EditSession
             var world = Scene.World;
             var gone = f.Merged.Vanished.Concat(f.Ours).ToHashSet();
             var update = f.Merged.Updated.Concat(f.Merged.Added).ToHashSet();
-            float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.ZonesX - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.ZonesZ - 1) * 64f + 32f;
+            float minX = Scene.OriginX, maxX = (Scene.X0 + Scene.ZonesX - 1) * 64f + 32f, minZ = Scene.OriginZ, maxZ = (Scene.Z0 + Scene.ZonesZ - 1) * 64f + 32f;
             bool Inside(System.Numerics.Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
             // The objects as the world has them now, by id (those changed or new).
             var now = WorldScene.FindThings(world, Edits, update);

@@ -224,7 +224,7 @@ public static partial class ScriptHost
         HashSet<int> creatable = world != null
             ? [.. world.Creatable, .. PrefabCatalog.Creatures]
             : [.. PrefabCatalog.Placeable.Select(p => StableHash.Of(p.Name))];
-        return new Snapshot(g.W, g.H, scene.X0 * 64f - 32f, scene.Z0 * 64f - 32f, (float[])scene.Heights.Clone(), original, (int[])scene.Biomes.Clone(), (byte[])scene.Mask.Clone(), locked,
+        return new Snapshot(g.W, g.H, scene.OriginX, scene.OriginZ, (float[])scene.Heights.Clone(), original, (int[])scene.Biomes.Clone(), (byte[])scene.Mask.Clone(), locked,
             things, scene.Water, world?.Seed ?? 0, world?.Name ?? "", creatable);
     }
 

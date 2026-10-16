@@ -62,7 +62,7 @@ public static class LocationParts
     /// <param name="added">The objects added in this session: its location proxies (with their bytes) count.</param>
     internal static List<Shown> Find(WorldScene s, WorldSave world, ICollection<int> deleted, IEnumerable<NewObject> added)
     {
-        float minX = s.X0 * 64f - 32f, maxX = (s.X0 + s.ZonesX - 1) * 64f + 32f, minZ = s.Z0 * 64f - 32f, maxZ = (s.Z0 + s.ZonesZ - 1) * 64f + 32f;
+        float minX = s.OriginX, maxX = (s.X0 + s.ZonesX - 1) * 64f + 32f, minZ = s.OriginZ, maxZ = (s.Z0 + s.ZonesZ - 1) * 64f + 32f;
         bool Inside(Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
         var list = new List<Shown>();
         lock (world.Sync)

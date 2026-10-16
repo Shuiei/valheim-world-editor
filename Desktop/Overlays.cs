@@ -63,7 +63,7 @@ public static class Overlays
     /// </summary>
     private static bool Near(WorldScene s, Vector3 p)
     {
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         return p.X >= ox - 40 && p.X <= ox + s.W - 1 + 40 && p.Z >= oz - 40 && p.Z <= oz + s.H - 1 + 40;
     }
 
@@ -92,7 +92,7 @@ public static class Overlays
                 lines[l].AddRange([pts[i - 1].X, pts[i - 1].Y, pts[i - 1].Z, pts[i].X, pts[i].Y, pts[i].Z]);
             }
         }
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         // A ring (or square) around a world point, following the ground.
         void Ring(Layer l, float wx, float wz, float r, bool square = false)
         {

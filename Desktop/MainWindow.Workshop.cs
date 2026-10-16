@@ -166,7 +166,7 @@ public partial class MainWindow
         Vector2? world = null;
         if (Session is { } s && View.GridAt(at, size) is { } g)
         {
-            world = new Vector2(s.Scene.X0 * 64f - 32f + g.X, s.Scene.Z0 * 64f - 32f + g.Y);
+            world = new Vector2(s.Scene.OriginX + g.X, s.Scene.OriginZ + g.Y);
         }
         var paths = new List<string>();
         if (blueprint != null)

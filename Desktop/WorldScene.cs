@@ -42,6 +42,10 @@ public sealed class WorldScene
     public required float[] Heights { get; init; }
     /// <summary>The biome (Heightmap.Biome value) per grid point, laid out like Heights.</summary>
     public required int[] Biomes { get; init; }
+    /// <summary>World x of grid point 0 (the block's west edge: half a zone west of its first zone's middle).</summary>
+    public float OriginX => X0 * 64f - 32f;
+    /// <summary>World z of grid point 0 (the block's south edge).</summary>
+    public float OriginZ => Z0 * 64f - 32f;
     /// <summary>World x of the block's middle, in metres.</summary>
     public float Cx { get; init; }
     /// <summary>World z of the block's middle, in metres.</summary>

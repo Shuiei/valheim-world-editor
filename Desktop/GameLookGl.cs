@@ -694,7 +694,7 @@ public sealed class GameLookGl
         _gl.ActiveTexture(TextureUnit.Texture0);
         _gl.BindTexture(TextureTarget.Texture2D, _heightTex);
         _gl.Uniform1(_u.At(_water, "uHeight"), 0);
-        _gl.Uniform4(_u.At(_water, "uRegion"), _scene.X0 * 64f - 32f, _scene.Z0 * 64f - 32f, _scene.W, _scene.H);
+        _gl.Uniform4(_u.At(_water, "uRegion"), _scene.OriginX, _scene.OriginZ, _scene.W, _scene.H);
         _gl.Uniform1(_u.At(_water, "uWater"), _scene.Water);
         _gl.Disable(EnableCap.CullFace);
         GlBlend.Over(_gl);

@@ -412,7 +412,7 @@ public sealed class AreaTool
             }
             return s / n;
         }
-        float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
+        float ox = g.OriginX, oz = g.OriginZ;
         bool clamped = false;
         foreach (var (p, w) in a.Cells)
         {

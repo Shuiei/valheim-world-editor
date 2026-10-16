@@ -23,6 +23,10 @@ public sealed class Ground
     public int X0 { get; }
     /// <summary>The block's first zone (world zone Z).</summary>
     public int Z0 { get; }
+    /// <summary>World x of grid point 0 (the block's west edge), as WorldScene.OriginX.</summary>
+    public float OriginX => X0 * 64f - 32f;
+    /// <summary>World z of grid point 0 (the block's south edge).</summary>
+    public float OriginZ => Z0 * 64f - 32f;
     /// <summary>The block's size in zones, west to east.</summary>
     public int ZonesX { get; }
     /// <summary>The block's size in zones, south to north.</summary>

@@ -99,7 +99,7 @@ public sealed partial class ClaudeTools
     /// </summary>
     internal static AreaTool BoxOver(WorldScene scene, float x0, float z0, float x1, float z1, float edge)
     {
-        float ox = scene.X0 * 64f - 32f, oz = scene.Z0 * 64f - 32f;
+        float ox = scene.OriginX, oz = scene.OriginZ;
         var box = new AreaTool { Box = true, Soft = MathF.Max(0, edge) };
         box.Points.Add(new Vector2(MathF.Min(x0, x1) - ox, MathF.Min(z0, z1) - oz));
         box.Points.Add(new Vector2(MathF.Max(x0, x1) - ox, MathF.Max(z0, z1) - oz));
@@ -185,7 +185,7 @@ public sealed partial class ClaudeTools
     internal static PathTool LineOver(WorldScene scene, float[][] points, PathTool.Action act, float width, float soft, float? depth, float headroom,
         float? height, float amount, bool natural, bool curved, PathTool.CaveRock rock, int seed)
     {
-        float ox = scene.X0 * 64f - 32f, oz = scene.Z0 * 64f - 32f;
+        float ox = scene.OriginX, oz = scene.OriginZ;
         var path = new PathTool
         {
             Act = act,
@@ -330,7 +330,7 @@ public sealed partial class ClaudeTools
             return wrong;
         }
         var brush = new Brush { Shape = BrushShape.Stamp, StampData = data, Radius = Math.Clamp(radius, 2, 500), Turn = turn };
-        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+        float ox = s.Scene.OriginX, oz = s.Scene.OriginZ;
         bool clamped = false;
         var touched = s.EditGround($"Claude: stamp {stamp}", g =>
         {
@@ -409,7 +409,7 @@ public sealed partial class ClaudeTools
         }
         var scene = s.Scene;
         var (minX, minZ, maxX, maxZ) = Bounds(scene);
-        float ox = scene.X0 * 64f - 32f, oz = scene.Z0 * 64f - 32f;
+        float ox = scene.OriginX, oz = scene.OriginZ;
         return ToJson(points.Select(p =>
         {
             float x = p[0], z = p[1];

@@ -328,7 +328,7 @@ public sealed class PathTool
         }
         int x0 = Math.Max(1, (int)MathF.Floor(curve.Min(c => c.P.X) - cutoff)), x1 = Math.Min(g.W - 2, (int)MathF.Ceiling(curve.Max(c => c.P.X) + cutoff));
         int z0 = Math.Max(1, (int)MathF.Floor(curve.Min(c => c.P.Y) - cutoff)), z1 = Math.Min(g.H - 2, (int)MathF.Ceiling(curve.Max(c => c.P.Y) + cutoff));
-        float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
+        float ox = g.OriginX, oz = g.OriginZ;
         float WorldNoise(float gx, float gz, float scale = 1) => b.Noise.Fbm((ox + gx) / (b.NoiseSize * scale), (oz + gz) / (b.NoiseSize * scale));
         // Smoothing reads the heights from before.
         float[]? before = null;

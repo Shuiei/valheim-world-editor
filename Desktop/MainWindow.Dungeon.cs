@@ -173,7 +173,7 @@ public partial class MainWindow
         {
             return;
         }
-        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+        float ox = s.Scene.OriginX, oz = s.Scene.OriginZ;
         var ground = GroundAt(scene, ox + at.X, oz + at.Y);
         // Turned and mirrored as the Paste tool pastes (PasteTool.Apply).
         var paste = View.Paste;

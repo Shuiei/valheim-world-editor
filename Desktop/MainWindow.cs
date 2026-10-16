@@ -1216,7 +1216,7 @@ public sealed partial class MainWindow : Window
         int touched = 0;
         var paste = View.Paste;
         string label = paste.Count > 1 ? $"Paste ×{paste.Count}" : "Paste";
-        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+        float ox = s.Scene.OriginX, oz = s.Scene.OriginZ;
         var linkIds = s.ReadLinks().Ids;
         s.Commit(label, g =>
         {
@@ -1405,7 +1405,7 @@ public sealed partial class MainWindow : Window
     {
         var scene = s.Scene;
         var cave = path.PlanCave(s.Ground);
-        float ox = scene.X0 * 64f - 32f, oz = scene.Z0 * 64f - 32f, water = scene.Water;
+        float ox = scene.OriginX, oz = scene.OriginZ, water = scene.Water;
         PathTool.CaveRock RockAt(float x, float z)
         {
             if (path.Rock != PathTool.CaveRock.Auto)
@@ -1662,7 +1662,7 @@ public sealed partial class MainWindow : Window
             return;
         }
         var shape = Mountain.Shape(m);
-        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f, wx = ox + gx, wz = oz + gz;
+        float ox = s.Scene.OriginX, oz = s.Scene.OriginZ, wx = ox + gx, wz = oz + gz;
         // The spots are judged on the area as it is now: what grows is only put in if it is still the same.
         int generation = s.Generation;
         // On the slopes it raised by more than a metre (not around its foot, where the old ones stand).

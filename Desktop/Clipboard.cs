@@ -155,7 +155,7 @@ public sealed class CopyData
         objects = chosen;
         float reference = a.Cells.Average(c => g.HeightOf(c.G));
         int w = a.X1 - a.X0 + 1, h = a.Z1 - a.Z0 + 1;
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         float[] foot = Footprint(objects.Where(i => !parts.Contains(i)).Select(i => s.Things[i]), w, h, ox + a.X0, oz + a.Z0,
             (x, z) => g.HeightOf(Math.Clamp((int)MathF.Round(z - oz), 0, g.H - 1) * g.W + Math.Clamp((int)MathF.Round(x - ox), 0, g.W - 1)));
         float[] rel = [.. Enumerable.Repeat(float.NaN, w * h)];
@@ -480,7 +480,7 @@ public sealed class PasteTool
         int half = (int)MathF.Ceiling(MathF.Sqrt(c.W * c.W + c.H * c.H) / 2) + 1;
         int bx0 = g.W, bx1 = 0, bz0 = g.H, bz1 = 0;
         float baseH = g.HeightOf(Index(g, at)) + Offset;
-        float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
+        float ox = g.OriginX, oz = g.OriginZ;
         bool up = Direction == Along.Up;
         bool limit = g.NoLimit;
         g.NoLimit = true;
@@ -608,7 +608,7 @@ public sealed class PasteTool
     /// </summary>
     private (List<int> Dug, (int X0, int Z0, int X1, int Z1) Rect) Clear(Ground g, List<(NewObject O, bool Piece)> placed, HashSet<int> shaped, Func<int, float>? mask)
     {
-        float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
+        float ox = g.OriginX, oz = g.OriginZ;
         var to = new Dictionary<(int, int), float>();
         // A linked group (its parts, and what they hang on) does not stand on the ground: none is dug under it.
         var links = placed.Select(p => ObjectLinks.With(null, p.O.Data)).ToList();

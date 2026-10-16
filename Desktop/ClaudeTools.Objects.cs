@@ -23,7 +23,7 @@ public sealed partial class ClaudeTools
     /// <summary>The open area's bounds in world metres.</summary>
     internal static (float MinX, float MinZ, float MaxX, float MaxZ) Bounds(WorldScene scene)
     {
-        float minX = scene.X0 * 64f - 32f, minZ = scene.Z0 * 64f - 32f;
+        float minX = scene.OriginX, minZ = scene.OriginZ;
         return (minX, minZ, minX + scene.ZonesX * 64f, minZ + scene.ZonesZ * 64f);
     }
 

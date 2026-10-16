@@ -958,7 +958,7 @@ public sealed partial class ClaudeTools
         var session = _w.Session!;
         var scene = session.Scene;
         int reads = scene.Reads;
-        float minX = scene.X0 * 64f - 32f, minZ = scene.Z0 * 64f - 32f, maxX = minX + scene.ZonesX * 64f, maxZ = minZ + scene.ZonesZ * 64f;
+        var (minX, minZ, maxX, maxZ) = Bounds(scene);
         var placed = new List<Editing.Hammer.Placed>();
         // Only the pieces a new one could snap to: within the snap search (10 m beyond the longest piece's reach) of
         // the pieces asked for. One whose place is not a number never snaps.
@@ -1601,10 +1601,10 @@ public sealed partial class ClaudeTools
                 {
                     // Above a point of the open area (its ground is the area's).
                     var sc = opened.Scene;
-                    float minX = sc.X0 * 64f - 32f, minZ = sc.Z0 * 64f - 32f;
-                    if (px < minX || pz < minZ || px > minX + sc.ZonesX * 64f || pz > minZ + sc.ZonesZ * 64f)
+                    var (minX, minZ, maxX, maxZ) = Bounds(sc);
+                    if (px < minX || pz < minZ || px > maxX || pz > maxZ)
                     {
-                        return $"({px}, {pz}) is outside the open area (x {minX} to {minX + sc.ZonesX * 64f}, z {minZ} to {minZ + sc.ZonesZ * 64f}): open_area there first.";
+                        return $"({px}, {pz}) is outside the open area (x {minX} to {maxX}, z {minZ} to {maxZ}): open_area there first.";
                     }
                     _w.View.Orbit(px, pz, 45, 55, 120);
                 }
@@ -1649,10 +1649,10 @@ public sealed partial class ClaudeTools
             area = scene == null ? null : new
             {
                 name = scene.Name,
-                minX = scene.X0 * 64f - 32f,
-                minZ = scene.Z0 * 64f - 32f,
-                maxX = scene.X0 * 64f - 32f + scene.ZonesX * 64f,
-                maxZ = scene.Z0 * 64f - 32f + scene.ZonesZ * 64f,
+                minX = scene.OriginX,
+                minZ = scene.OriginZ,
+                maxX = scene.OriginX + scene.ZonesX * 64f,
+                maxZ = scene.OriginZ + scene.ZonesZ * 64f,
                 water = scene.Water,
                 objects = scene.Things.Count(t => !t.Gone),
             },

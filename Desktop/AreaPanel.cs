@@ -478,7 +478,7 @@ public sealed class AreaPanel
         {
             return out_;
         }
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         // Taken once: each Mask snapshot copies the whole ground.
         maskAt ??= chosenKindsOnly ? MaskTest() : null;
         lock (s.Things)
@@ -962,7 +962,7 @@ public sealed class AreaPanel
     private async Task RegrowNature(EditSession session, List<Vector2> poly)
     {
         var s = session.Scene;
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         // Taken once, when the spots are first judged (after the generator ran), not once per spot.
         var maskAt = new Lazy<Func<float, float, bool>>(MaskTest);
         var adds = await Growth.Spots(session, poly.Min(p => p.X) + ox, poly.Min(p => p.Y) + oz, poly.Max(p => p.X) + ox, poly.Max(p => p.Y) + oz,
@@ -1127,7 +1127,7 @@ public sealed class AreaPanel
         var adds = new List<(NewObject, bool)>();
         if (BackupObjectsBox.IsChecked == true)
         {
-            float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+            float ox = s.OriginX, oz = s.OriginZ;
             // Runestones are left as they are on both sides (a location proxy cannot be copied back). Both sides are
             // picked alike (where the Mask lets through too): an unchanged object picked on one side only would be
             // brought back on top of itself.

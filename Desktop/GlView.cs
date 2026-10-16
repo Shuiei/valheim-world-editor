@@ -1007,7 +1007,7 @@ public sealed class GlView : OpenGlControlBase
         }
         else if (Mode == ToolMode.Paste && Paste.At is { } pat && Paste.Clip != null)
         {
-            shown = Paste.Ghosts(pat, GridHeight, s.X0 * 64f - 32f, s.Z0 * 64f - 32f);
+            shown = Paste.Ghosts(pat, GridHeight, s.OriginX, s.OriginZ);
         }
         else
         {
@@ -3600,7 +3600,7 @@ public sealed class GlView : OpenGlControlBase
         {
             return null;
         }
-        float wx = s.X0 * 64f - 32f + g.X, wz = s.Z0 * 64f - 32f + g.Z;
+        float wx = s.OriginX + g.X, wz = s.OriginZ + g.Z;
         return new Vector3(wx, OnGround(s, g.X, g.Z, 0).Y, wz);
     }
 
@@ -4500,7 +4500,7 @@ public sealed class GlView : OpenGlControlBase
         {
             return;
         }
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         var posts = new List<float>();
         foreach (var o in pl.Shown)
         {
@@ -4679,7 +4679,7 @@ public sealed class GlView : OpenGlControlBase
             {
                 pts.Add(pts[0]);
                 // World points: the area's corner taken off after cutting, as grid points.
-                GroundPolyline(data, s, pts, 0.3f, closed: false, new Vector2(s.X0 * 64f - 32f, s.Z0 * 64f - 32f));
+                GroundPolyline(data, s, pts, 0.3f, closed: false, new Vector2(s.OriginX, s.OriginZ));
             }
             _lassoSegs = [.. data];
         }

@@ -351,7 +351,7 @@ public sealed class PlaceTool
     private static Hash Standing(WorldScene s, float cell)
     {
         var h = new Hash(cell);
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         lock (s.Things)
         {
             foreach (var t in s.Things)
@@ -401,7 +401,7 @@ public sealed class PlaceTool
         {
             return true;
         }
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         float n = Math.Clamp(0.5f + 0.5f * Brush.Noise.Fbm((ox + g.X) / Patch + _clumpSeed, (oz + g.Y) / Patch - _clumpSeed), 0, 1);
         float lo = c * 0.75f - 0.1f, t = Math.Clamp((n - lo) / 0.25f, 0, 1);
         return k < t * t * (3 - 2 * t);
@@ -481,7 +481,7 @@ public sealed class PlaceTool
         }
         float smin = SizeMin / 100, smax = MathF.Max(smin, SizeMax / 100);
         float ry = (yaw ?? (RandomYaw ? d.Ry * 360 : 0)) + RotationNow;
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         return new Placement(name, new Vector3(ox + g.X, Elevated(name, y), oz + g.Y), new Vector3(d.Rx * Tilt, ry, d.Rz * Tilt), smin + d.S * (smax - smin), g);
     }
 
@@ -817,7 +817,7 @@ public sealed class PlaceTool
     private static List<Other> OtherSnaps(WorldScene s, Func<int, string?> nameOf)
     {
         var list = new List<Other>();
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         lock (s.Things)
         {
             for (int i = 0; i < s.Things.Count; i++)
@@ -891,7 +891,7 @@ public sealed class PlaceTool
             st = new Vector2(st0.X, st0.Z);
         }
         int layers = Math.Clamp(Layers, 1, 20);
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         for (; k < MaxShape && outp.Count < MaxShape; k++)
         {
             string name = names[k % names.Count];
@@ -1087,7 +1087,7 @@ public sealed class PlaceTool
         {
             return o;
         }
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         Placement Place(Vector2 g, float y, float ry) => o with { G = g, Position = new Vector3(ox + g.X, y, oz + g.Y), Rotation = new Vector3(0, (ry % 360 + 360) % 360, 0), Scale = 0 };
         if (OnTop)
         {
@@ -1237,7 +1237,7 @@ public sealed class PlaceTool
         {
             return null;
         }
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         var pieces = new List<Hammer.Placed>();
         lock (s.Things)
         {
@@ -1324,7 +1324,7 @@ public sealed class PlaceTool
             return outp;
         }
         var mask = Mask();
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         var chosen = Chosen.Select(StableHash.Of).ToHashSet();
         lock (s.Things)
         {
