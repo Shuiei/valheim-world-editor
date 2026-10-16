@@ -942,13 +942,19 @@ public sealed class SelectTool
         if (_lasso is { } l)
         {
             bool drawing = l.Drawing || Point.Distance(at, l.At) > 6;
+            bool added = false;
             if (drawing && _view.WorldAt(at, size) is { } g && Vector2.Distance(l.Points[^1], new Vector2(g.X, g.Z)) >= 0.5f)
             {
                 l.Points.Add(new Vector2(g.X, g.Z));
+                added = true;
             }
             _lasso = l with { Drawing = drawing };
-            Lasso = [.. l.Points];
-            _view.LassoChanged();
+            // The view's copy is made again only when the zone has a new point.
+            if (added || Lasso == null)
+            {
+                Lasso = [.. l.Points];
+                _view.LassoChanged();
+            }
             return;
         }
         if (_drag is not { } d)
@@ -995,7 +1001,17 @@ public sealed class SelectTool
                 return;
             }
             var s = Scene!;
-            var ids = Shown().Where(i => Inside(l.Points, s.Things[i].Position.X, s.Things[i].Position.Z)).ToList();
+            // Only what is inside the zone's bounding box is tested against its outline.
+            float minX = float.MaxValue, minZ = float.MaxValue, maxX = float.MinValue, maxZ = float.MinValue;
+            foreach (var p in l.Points)
+            {
+                (minX, maxX, minZ, maxZ) = (MathF.Min(minX, p.X), MathF.Max(maxX, p.X), MathF.Min(minZ, p.Y), MathF.Max(maxZ, p.Y));
+            }
+            var ids = Shown().Where(i =>
+            {
+                var pos = s.Things[i].Position;
+                return pos.X >= minX && pos.X <= maxX && pos.Z >= minZ && pos.Z <= maxZ && Inside(l.Points, pos.X, pos.Z);
+            }).ToList();
             _view.Select(ids, l.Add);
             Message?.Invoke(ids.Count > 0 ? $"Selected {ids.Count} object(s) inside the zone{(l.Add ? $" ({_view.Selected.Count} in all)" : "")}." : "Nothing shown inside the zone.", false);
             return;
