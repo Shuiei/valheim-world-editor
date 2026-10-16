@@ -47,6 +47,8 @@ public sealed class ScriptPanel
     private List<(string Name, string Code)> _entries = [];
     /// <summary>Set while the list is filled, so choosing the selection does not replace the code.</summary>
     private bool _filling;
+    /// <summary>Asks a yes-or-no question (replacing another saved script); yes when nothing is set.</summary>
+    internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
 
     /// <summary>The folder saved scripts go in.</summary>
     public static string Folder => Path.Combine(AppSettings.DataDir, "scripts");
@@ -68,7 +70,7 @@ public sealed class ScriptPanel
         };
         RunButton.Click += (_, _) => RunAsked?.Invoke();
         StopButton.Click += (_, _) => StopAsked?.Invoke();
-        SaveButton.Click += (_, _) => Save();
+        SaveButton.Click += async (_, _) => await Save();
         // On the way down (tunnel), before the text box takes Enter for a new line.
         CodeBox.AddHandler(Avalonia.Input.InputElement.KeyDownEvent, (_, e) =>
         {
@@ -130,8 +132,18 @@ public sealed class ScriptPanel
         {
             if (Directory.Exists(Folder))
             {
-                _entries.AddRange(new DirectoryInfo(Folder).GetFiles("*.csx").OrderByDescending(f => f.LastWriteTimeUtc)
-                    .Select(f => (Path.GetFileNameWithoutExtension(f.Name), File.ReadAllText(f.FullName))));
+                foreach (var f in new DirectoryInfo(Folder).GetFiles("*.csx").OrderByDescending(f => f.LastWriteTimeUtc))
+                {
+                    // One that cannot be read is left out (and logged), not the rest with it.
+                    try
+                    {
+                        _entries.Add((Path.GetFileNameWithoutExtension(f.Name), File.ReadAllText(f.FullName)));
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        Console.Error.WriteLine($"Script {f.FullName} not listed: {ex.Message}");
+                    }
+                }
             }
         }
         catch (IOException)
@@ -149,9 +161,10 @@ public sealed class ScriptPanel
     public event Action<string>? Message;
 
     /// <summary>
-    /// Saves the code under the typed name (characters a file name cannot have become _), and selects it.
+    /// Saves the code under the typed name (characters a file name cannot have become _), and selects it. Another saved
+    /// script of that name (not the one chosen in the list) is replaced only when the person says so.
     /// </summary>
-    private void Save()
+    internal async Task Save()
     {
         string name = string.Concat((NameBox.Text ?? "").Trim().Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
         if (name.Length == 0)
@@ -159,10 +172,15 @@ public sealed class ScriptPanel
             Message?.Invoke("Type a name to save the script as.");
             return;
         }
+        string path = Path.Combine(Folder, name + ".csx");
+        bool chosen = ScriptBox.SelectedIndex >= 0 && ScriptBox.SelectedIndex < _entries.Count && _entries[ScriptBox.SelectedIndex].Name == name;
+        if (File.Exists(path) && !chosen && !await Confirm($"There is a saved script called “{name}” already. Replace it?"))
+        {
+            return;
+        }
         try
         {
-            Directory.CreateDirectory(Folder);
-            File.WriteAllText(Path.Combine(Folder, name + ".csx"), CodeBox.Text ?? "");
+            SafeFile.WriteAllText(path, CodeBox.Text ?? "");
             Fill(name);
             Message?.Invoke($"Saved the script “{name}” (in {Folder}).");
         }

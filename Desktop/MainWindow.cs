@@ -2690,6 +2690,7 @@ public sealed partial class MainWindow : Window
         ScriptPanel.RunAsked += () => _ = RunScript();
         ScriptPanel.StopAsked += () => _stopScript?.Invoke();
         ScriptPanel.Message += t => MessageText.Text = t;
+        ScriptPanel.Confirm = text => Dialogs.Ask(this, "Save the script", text, "Replace");
         Tools.Options.VerticalAlignment = VerticalAlignment.Top;
         Tools.Rail.VerticalAlignment = VerticalAlignment.Top;
         Tools.ToolChanged += t =>
