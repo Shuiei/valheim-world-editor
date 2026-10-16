@@ -146,6 +146,10 @@ the plugin is unchanged in versions without that part.
 - **Linked objects of two mods could join up, and a damaged copy pasted two groups under one id.** LinkIndex found
   what a part hangs on by the id alone, whatever rule's key held it; it now looks under the part's rule's id key. A
   pasted copy where two objects held the same id gave both the same new id; each extra holder now gets one of its own.
+- **A shader blob could fail to read on a chance "LOMS" in its data.** Smolv.Programs looked for the next program from
+  just after the last one's magic, inside its data, and a size of 2 GB or more threw; the search now starts at the end
+  of the program decoded, a size past int's range is no program, and one the data left cannot hold is passed over
+  (Decode says it ends early).
 
 ### Changed
 
