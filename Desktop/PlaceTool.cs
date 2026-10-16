@@ -564,25 +564,21 @@ public sealed class PlaceTool
     }
 
     /// <summary>A point turned by the shape's turn about its pivot.</summary>
-    public Vector2 Xf(Vector2 p)
-    {
-        if (ShapeTurn == 0 || _pivot is not { } c)
-        {
-            return p;
-        }
-        float t = ShapeTurn * MathF.PI / 180, co = MathF.Cos(t), sn = MathF.Sin(t);
-        var d = p - c;
-        return new Vector2(c.X + d.X * co + d.Y * sn, c.Y - d.X * sn + d.Y * co);
-    }
+    public Vector2 Xf(Vector2 p) => Turn(p, ShapeTurn);
 
     /// <summary>A point turned back: the opposite of <see cref="Xf"/>.</summary>
-    public Vector2 Inv(Vector2 p)
+    public Vector2 Inv(Vector2 p) => Turn(p, -ShapeTurn);
+
+    /// <summary>A point turned this many degrees (clockwise seen from above) about the shape's pivot; unturned with none.</summary>
+    /// <param name="p">The point.</param>
+    /// <param name="degrees">The turn.</param>
+    private Vector2 Turn(Vector2 p, float degrees)
     {
-        if (ShapeTurn == 0 || _pivot is not { } c)
+        if (degrees == 0 || _pivot is not { } c)
         {
             return p;
         }
-        float t = -ShapeTurn * MathF.PI / 180, co = MathF.Cos(t), sn = MathF.Sin(t);
+        float t = degrees * MathF.PI / 180, co = MathF.Cos(t), sn = MathF.Sin(t);
         var d = p - c;
         return new Vector2(c.X + d.X * co + d.Y * sn, c.Y - d.X * sn + d.Y * co);
     }
@@ -645,20 +641,7 @@ public sealed class PlaceTool
         {
             return [.. p.Select((q, i) => (q, Math.Min(i, Math.Max(0, p.Count - 2))))];
         }
-        var outp = new List<(Vector2, int)>();
-        for (int i = 0; i < p.Count - 1; i++)
-        {
-            Vector2 p0 = p[Math.Max(0, i - 1)], p1 = p[i], p2 = p[i + 1], p3 = p[Math.Min(p.Count - 1, i + 2)];
-            int steps = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(p1, p2)));
-            for (int k = 0; k < steps; k++)
-            {
-                float t = k / (float)steps, t2 = t * t, t3 = t2 * t;
-                Vector2 Cr(Vector2 a, Vector2 b, Vector2 c, Vector2 d) => 0.5f * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
-                outp.Add((Cr(p0, p1, p2, p3), i));
-            }
-        }
-        outp.Add((p[^1], p.Count - 2));
-        return outp;
+        return Lines.CatmullRom(p);
     }
 
     /// <summary>

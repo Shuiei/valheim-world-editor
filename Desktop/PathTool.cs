@@ -175,21 +175,17 @@ public sealed class PathTool
             outp.AddRange(p.Select(q => (q, 0)));
             return outp;
         }
-        bool smooth = Curved && p.Count >= 3;
+        if (Curved && p.Count >= 3)
+        {
+            return Lines.CatmullRom(p);
+        }
         for (int i = 0; i < p.Count - 1; i++)
         {
-            Vector2 p0 = p[Math.Max(0, i - 1)], p1 = p[i], p2 = p[i + 1], p3 = p[Math.Min(p.Count - 1, i + 2)];
+            Vector2 p1 = p[i], p2 = p[i + 1];
             int steps = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(p1, p2)));
             for (int k = 0; k < steps; k++)
             {
-                float t = k / (float)steps, t2 = t * t, t3 = t2 * t;
-                if (!smooth)
-                {
-                    outp.Add((p1 + (p2 - p1) * t, i));
-                    continue;
-                }
-                Vector2 Cr(Vector2 a, Vector2 b, Vector2 c, Vector2 d) => 0.5f * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
-                outp.Add((Cr(p0, p1, p2, p3), i));
+                outp.Add((p1 + (p2 - p1) * (k / (float)steps), i));
             }
         }
         outp.Add((p[^1], p.Count - 2));
@@ -661,48 +657,10 @@ public sealed class PathTool
     }
 
     /// <summary>The point within 10 px of the mouse, or -1.</summary>
-    public int PointAt(Point at, Func<Vector2, Point?> screen)
-    {
-        int best = -1;
-        double bd = 10;
-        for (int i = 0; i < Points.Count; i++)
-        {
-            if (screen(Points[i]) is { } s && Point.Distance(s, at) < bd)
-            {
-                bd = Point.Distance(s, at);
-                best = i;
-            }
-        }
-        return best;
-    }
+    public int PointAt(Point at, Func<Vector2, Point?> screen) => Lines.PointNear(Points, at, screen);
 
     /// <summary>
     /// The stretch of the line within 8 px of the mouse: the index of the point it starts from, or -1.
     /// </summary>
-    public int SegmentAt(Point at, Func<Vector2, Point?> screen)
-    {
-        var dense = Curve();
-        int best = -1;
-        double bd = 8;
-        for (int i = 1; i < dense.Count; i++)
-        {
-            if (screen(dense[i - 1].P) is not { } a || screen(dense[i].P) is not { } b)
-            {
-                continue;
-            }
-            double dx = b.X - a.X, dy = b.Y - a.Y, l2 = dx * dx + dy * dy;
-            if (l2 < 1e-9)
-            {
-                l2 = 1e-9;
-            }
-            double t = Math.Clamp(((at.X - a.X) * dx + (at.Y - a.Y) * dy) / l2, 0, 1);
-            double d = Point.Distance(at, new Point(a.X + dx * t, a.Y + dy * t));
-            if (d < bd)
-            {
-                bd = d;
-                best = dense[i - 1].Seg;
-            }
-        }
-        return best;
-    }
+    public int SegmentAt(Point at, Func<Vector2, Point?> screen) => Lines.StretchNear(Curve(), at, screen);
 }

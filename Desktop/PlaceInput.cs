@@ -168,21 +168,7 @@ public sealed class PlaceInput
     private Point? Screen(Vector2 g) => _view.ScreenOfGrid(g, 0.3f);
 
     /// <summary>The shape's point within 10 px of the mouse, or -1.</summary>
-    private int PointAt(Point at)
-    {
-        int best = -1;
-        double bd = 10;
-        var pts = ShownPoints();
-        for (int i = 0; i < pts.Count; i++)
-        {
-            if (Screen(pts[i]) is { } s && Point.Distance(s, at) < bd)
-            {
-                bd = Point.Distance(s, at);
-                best = i;
-            }
-        }
-        return best;
-    }
+    private int PointAt(Point at) => Lines.PointNear(ShownPoints(), at, Screen);
 
     /// <summary>The stretch of the outline under the mouse: the index of the point it starts from, or -1.</summary>
     private int SegmentAt(Point at)
@@ -190,24 +176,7 @@ public sealed class PlaceInput
         var dense = Tool.Mode == PlaceTool.Modes.Zone
             ? ShownPoints() is { Count: > 0 } z ? [.. z.Append(z[0]).Select((p, i) => (P: p, Seg: i))] : []
             : Tool.LineCurve();
-        int best = -1;
-        double bd = 8;
-        for (int i = 1; i < dense.Count; i++)
-        {
-            if (Screen(dense[i - 1].P) is not { } a || Screen(dense[i].P) is not { } b)
-            {
-                continue;
-            }
-            double dx = b.X - a.X, dy = b.Y - a.Y, l2 = Math.Max(dx * dx + dy * dy, 1e-9);
-            double t = Math.Clamp(((at.X - a.X) * dx + (at.Y - a.Y) * dy) / l2, 0, 1);
-            double d = Point.Distance(at, new Point(a.X + dx * t, a.Y + dy * t));
-            if (d < bd)
-            {
-                bd = d;
-                best = dense[i - 1].Seg;
-            }
-        }
-        return best;
+        return Lines.StretchNear(dense, at, Screen);
     }
 
     /// <summary>
