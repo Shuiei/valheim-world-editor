@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.2 — unreleased
+
+### Changed
+- The main window's code is easier to follow: its constructor's inline handlers and panel wiring are named methods
+  called in the same order, the editor's keys are one ordered table of rules (`MainWindow.Keys.cs`) instead of a long
+  if/else chain, and the View panel is built and then wired. Every key, its precedence and whether it is taken stay
+  the same; nothing in the editor changes.
+
 ## v1.47.1 — unreleased
 
 ### Changed
