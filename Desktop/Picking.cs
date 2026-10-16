@@ -98,7 +98,11 @@ public static class Picking
     /// <param name="indices">The triangles to try, three vertex indices each.</param>
     /// <param name="bounds">The mesh's box, in its own frame.</param>
     /// <param name="m">Where the mesh is placed (its frame into the ray's).</param>
-    public static float? HitMesh(Vector3 o, Vector3 d, float[] positions, uint[] indices, (Vector3 Min, Vector3 Max) bounds, Matrix4x4 m)
+    /// <param name="maxY">
+    /// The height (y in the ray's frame) above which the mesh is cut away, as the Workshop's cut hides what is drawn
+    /// there: a triangle met above it does not count, and the nearest one met below it is the hit.
+    /// </param>
+    public static float? HitMesh(Vector3 o, Vector3 d, float[] positions, uint[] indices, (Vector3 Min, Vector3 Max) bounds, Matrix4x4 m, float maxY = float.MaxValue)
     {
         if (!Matrix4x4.Invert(m, out var inv))
         {
@@ -110,20 +114,22 @@ public static class Picking
         {
             return null;
         }
+        // The distances are in the ray's frame (the mesh's frame may be scaled).
         float best = float.MaxValue;
         for (int i = 0; i + 2 < indices.Length; i += 3)
         {
-            if (HitTriangle(lo, ld, At(indices[i]), At(indices[i + 1]), At(indices[i + 2])) is float t && t < best)
+            if (HitTriangle(lo, ld, At(indices[i]), At(indices[i + 1]), At(indices[i + 2])) is not float t)
             {
-                best = t;
+                continue;
             }
+            var hit = Vector3.Transform(lo + ld * t, m);
+            if (hit.Y > maxY)
+            {
+                continue;
+            }
+            best = MathF.Min(best, Vector3.Distance(o, hit));
         }
-        if (best == float.MaxValue)
-        {
-            return null;
-        }
-        // Back in the ray's frame: the distance there (the mesh's frame may be scaled).
-        return Vector3.Distance(o, Vector3.Transform(lo + ld * best, m));
+        return best == float.MaxValue ? null : best;
 
         Vector3 At(uint i) => new(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
     }

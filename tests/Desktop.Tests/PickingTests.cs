@@ -134,4 +134,21 @@ public class PickingTests
         Assert.Null(Picking.HitMesh(new Vector3(1.9f, 1.9f, 5), -Vector3.UnitZ, positions, oneCorner, bounds, m));
         Assert.NotNull(Picking.HitMesh(new Vector3(0.1f, 0.1f, 5), -Vector3.UnitZ, positions, oneCorner, bounds, m));
     }
+
+    [Fact]
+    public void AMeshIsNotMetAboveTheCut()
+    {
+        // A wall (x, y plane at z 0, 4 m tall) and a floor behind it (x, z plane at y 0, z -1 to -5), one mesh; a ray
+        // going down and forward meets the wall at 3.5 m up, then the floor.
+        float[] positions = [0, 0, 0, 1, 0, 0, 1, 4, 0, 0, 4, 0, 0, 0, -1, 1, 0, -1, 1, 0, -5, 0, 0, -5];
+        uint[] tris = [0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7];
+        var bounds = (new Vector3(0, 0, -5), new Vector3(1, 4, 0));
+        var o = new Vector3(0.5f, 4.5f, 1);
+        var d = Vector3.Normalize(new Vector3(0, -1, -1));
+        Assert.Equal(MathF.Sqrt(2), Picking.HitMesh(o, d, positions, tris, bounds, Matrix4x4.Identity)!.Value, 3);
+        // Cut at 3 m: the wall above it is not there, the floor is met.
+        Assert.Equal(4.5f * MathF.Sqrt(2), Picking.HitMesh(o, d, positions, tris, bounds, Matrix4x4.Identity, 3)!.Value, 3);
+        // Cut under the floor: nothing.
+        Assert.Null(Picking.HitMesh(o, d, positions, tris, bounds, Matrix4x4.Identity, -1));
+    }
 }

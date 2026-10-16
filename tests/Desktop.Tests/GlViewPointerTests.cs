@@ -174,6 +174,24 @@ public class GlViewPointerTests
     }
 
     [AvaloniaFact]
+    public void TheCutHidesTheTopOfABoxFromAClick()
+    {
+        // A 10 m post at world 32, 30, 32 (view 0, 30, 0), seen from the side at 38 m up: with the Workshop's cut at
+        // 35 m its top is not drawn, so a click on it finds nothing; without the cut it is picked.
+        var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("wood_pole2"), new Vector3(32, 30, 32), Vector3.Zero, 0, true));
+        var b = new Bare(s);
+        b.V.SetBoxes([(0, new Vector3(-0.5f, 30, -0.5f), new Vector3(0.5f, 40, 0.5f))]);
+        b.V.SetCamera(new Vector3(0, 38, 30), new Vector3(0, 38, 0), (float)(ViewSize.Width / ViewSize.Height));
+        var top = b.At(0, 38, 0.5f);
+        b.V.CutY = 35;
+        b.Click(top);
+        Assert.Empty(b.V.Selected);
+        b.V.CutY = null;
+        b.Click(top);
+        Assert.Equal([0], b.V.Selected);
+    }
+
+    [AvaloniaFact]
     public void PasteAndShapeClicksGoToWhoeverListens()
     {
         var b = new Bare(TestScenes.Flat(2));

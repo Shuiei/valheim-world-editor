@@ -4484,7 +4484,8 @@ public sealed class GlView : OpenGlControlBase
     /// <summary>
     /// How far along the ray a thing's drawn shape is met: by its solid parts, and by its cut-out parts
     /// (leaves, bushes, grass), null each where the ray misses them. Without its model (the stand-in
-    /// box), its box's distance counts as solid.
+    /// box), its box's distance counts as solid. What the Workshop's cut hides (above <see cref="CutY"/>)
+    /// is not met, as it is not drawn: a wall crossing the cut is met below it or not at all.
     /// </summary>
     /// <param name="s">The scene.</param>
     /// <param name="i">The thing's index.</param>
@@ -4493,12 +4494,13 @@ public sealed class GlView : OpenGlControlBase
     /// <param name="box">Where the ray enters the thing's box.</param>
     private (float? Solid, float? CutOut) MeshHit(WorldScene s, int i, Vector3 o, Vector3 d, float box)
     {
+        float? cutY = CutY;
         WorldScene.Thing t;
         lock (s.Things)
         {
             if (i >= s.Things.Count)
             {
-                return (box, null);
+                return (BoxUnderCut(), null);
             }
             t = _previews.TryGetValue(i, out var p) ? p : s.Things[i];
         }
@@ -4509,7 +4511,7 @@ public sealed class GlView : OpenGlControlBase
         {
             if (!_groups.TryGetValue(KeyOf(t), out var g) || !g.HasModel || !g.Ready || g.Batches.Count == 0)
             {
-                return (box, null);
+                return (BoxUnderCut(), null);
             }
             rootScale = g.RootScale;
             batches = [.. g.Batches];
@@ -4524,7 +4526,7 @@ public sealed class GlView : OpenGlControlBase
                 continue;
             }
             any = true;
-            if (Picking.HitMesh(o, d, pm.Positions, pm.Submeshes[b.Sub], pm.Bounds, pre * m) is not float h)
+            if (Picking.HitMesh(o, d, pm.Positions, pm.Submeshes[b.Sub], pm.Bounds, pre * m, cutY ?? float.MaxValue) is not float h)
             {
                 continue;
             }
@@ -4537,7 +4539,18 @@ public sealed class GlView : OpenGlControlBase
                 solid = solid is float a && a < h ? a : h;
             }
         }
-        return any ? (solid, cutOut) : (box, null);
+        return any ? (solid, cutOut) : (BoxUnderCut(), null);
+
+        // The stand-in box: where the ray enters its part under the cut (the whole box without one).
+        float? BoxUnderCut()
+        {
+            if (cutY is not float c)
+            {
+                return box;
+            }
+            var (lo, hi) = _bounds[i];
+            return Picking.HitBox(o, d, lo, new Vector3(hi.X, MathF.Min(hi.Y, c), hi.Z));
+        }
     }
 
     /// <summary>
