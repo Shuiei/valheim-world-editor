@@ -355,14 +355,7 @@ public static partial class ScriptHost
             Fill("Remove", new Action<int>(i => ch.Remove.Add(i)));
             Fill("CanPlace", new Func<string, bool>(name => snap.CanCreate(StableHash.Of(name))));
             Fill("Place", new Action<string, float, float, float, float, float, float, float, bool>((name, x, z, yaw, scale, y, pitch, roll, snapIt) =>
-            {
-                int prefab = StableHash.Of(name);
-                if (!snap.CanCreate(prefab))
-                {
-                    throw new ArgumentException($"the editor cannot make a “{name}” (a prefab name, like Beech1 or rock4_forest)");
-                }
-                ch.Add.Add((prefab, name, new Vector3(x, y, z), new Vector3(pitch, yaw, roll), scale, snapIt));
-            }));
+                Place(snap, ch, name, x, z, yaw, scale, y, pitch, roll, snapIt)));
             Fill("Move", new Action<int, float, float, float, float, float, float, float>((index, x, z, y, yaw, pitch, roll, scale) => Move(snap, ch, index, x, z, y, yaw, pitch, roll, scale)));
             Fill("Noise", new Func<float, float, int, float>((x, z, seed) =>
             {
@@ -440,15 +433,80 @@ public static partial class ScriptHost
     }
 
     /// <summary>
+    /// A script's Objects.Place: the new object noted (y NaN: on the ground as the script leaves it; scale 0: the
+    /// prefab's own size).
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// A prefab the editor cannot make, a place or turn that is not a number (NaN, infinite), a place outside the
+    /// area, or a scale below 0.
+    /// </exception>
+    internal static void Place(Snapshot snap, Changes ch, string name, float x, float z, float yaw, float scale, float y, float pitch, float roll, bool snapIt)
+    {
+        int prefab = StableHash.Of(name);
+        if (!snap.CanCreate(prefab))
+        {
+            throw new ArgumentException($"the editor cannot make a “{name}” (a prefab name, like Beech1 or rock4_forest)");
+        }
+        Number("x", x);
+        Number("z", z);
+        InArea(snap, x, z);
+        if (!float.IsNaN(y))
+        {
+            Number("y", y);
+        }
+        Number("yaw", yaw);
+        Number("pitch", pitch);
+        Number("roll", roll);
+        if (!float.IsFinite(scale) || scale < 0)
+        {
+            throw new ArgumentException($"a scale of {scale}: give a size above 0 (1 or 0: the prefab's own)");
+        }
+        ch.Add.Add((prefab, name, new Vector3(x, y, z), new Vector3(pitch, yaw, roll), scale, snapIt));
+    }
+
+    /// <summary>Throws unless a script's value is a number: not NaN, not infinite.</summary>
+    /// <param name="what">The argument's name, as the script gives it.</param>
+    /// <param name="v">Its value.</param>
+    /// <exception cref="ArgumentException">It is NaN or infinite.</exception>
+    private static void Number(string what, float v)
+    {
+        if (!float.IsFinite(v))
+        {
+            throw new ArgumentException($"{what} is {v}: give a number (not NaN or infinite)");
+        }
+    }
+
+    /// <summary>Throws unless world point (x, z) is within the area (its first to its last grid point, as Area.MinX..MaxX).</summary>
+    /// <exception cref="ArgumentException">It is outside the area.</exception>
+    private static void InArea(Snapshot snap, float x, float z)
+    {
+        float maxX = snap.Ox + snap.W - 1, maxZ = snap.Oz + snap.H - 1;
+        if (x < snap.Ox || x > maxX || z < snap.Oz || z > maxZ)
+        {
+            throw new ArgumentException($"({x}, {z}) is outside the area (x {snap.Ox} to {maxX}, z {snap.Oz} to {maxZ}): keep to Area.Inside");
+        }
+    }
+
+    /// <summary>
     /// A script's Objects.Move: the thing's new place, rotation and scale noted (NaN keeps a value: as it was, or as an
     /// earlier Move of the script left it).
     /// </summary>
-    /// <exception cref="ArgumentException">No such thing in the area, or a scale not above 0.</exception>
+    /// <exception cref="ArgumentException">
+    /// No such thing in the area, a place or turn given that is infinite, a place outside the area, or a scale not
+    /// above 0.
+    /// </exception>
     internal static void Move(Snapshot snap, Changes ch, int index, float x, float z, float y, float yaw, float pitch, float roll, float scale)
     {
         if (!snap.Things.Exists(t => t.Index == index))
         {
             throw new ArgumentException($"no object {index} in the area (Objects.All gives them)");
+        }
+        foreach (var (what, v) in new[] { ("x", x), ("z", z), ("y", y), ("yaw", yaw), ("pitch", pitch), ("roll", roll) })
+        {
+            if (!float.IsNaN(v))
+            {
+                Number(what, v);
+            }
         }
         if (!float.IsNaN(scale) && (!float.IsFinite(scale) || scale <= 0))
         {
@@ -457,6 +515,10 @@ public static partial class ScriptHost
         var t = snap.Things.Find(t => t.Index == index);
         var (p, r, sc) = ch.Moves.TryGetValue(index, out var m) ? m : (t.Position, t.Rotation, t.Scale);
         static float Or(float v, float was) => float.IsNaN(v) ? was : v;
+        if (!float.IsNaN(x) || !float.IsNaN(z))
+        {
+            InArea(snap, Or(x, p.X), Or(z, p.Z));
+        }
         ch.Moves[index] = (new Vector3(Or(x, p.X), Or(y, p.Y), Or(z, p.Z)), new Vector3(Or(pitch, r.X), Or(yaw, r.Y), Or(roll, r.Z)), Or(scale, sc));
     }
 

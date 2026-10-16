@@ -144,8 +144,8 @@ take away are still listed.
 | `Objects.OfKind("Trees")` | Those of a kind (capitals do not matter): `Buildings`, `Ruins`, `Furniture`, `Trees`, `Rocks`, `Ore`, `Bushes`, `Pickables`, `Remains`, `Animals` (tamed), `Creatures` (wild, traders, birds), `SpawnPoints`, `Nests`, `Runestones`, `Dungeons`, `Effects`, `Other`. These are the kinds of the [View panel](editor-basics.md#view-panel). |
 | `Objects.Near(x, z, radius)` | Those within the radius of a point (measured flat: heights do not count). |
 | `Objects.Remove(o)` | Takes it away. |
-| `Objects.Place("Beech1", x, z, yaw:, scale:, y:, pitch:, roll:, snap:)` | A new object of the game, by its prefab name (`Beech1`, `Pinetree_01`, `rock4_forest`, `piece_chest_wood`...: the names the [Place](place.md) tool lists). Without `y` it stands on the ground **as the script leaves it** (dig first, then place: it sits in the hole). `yaw` turns it (degrees; 0: its front faces north, 90: east), `pitch` and `roll` tilt it, `scale` sizes it (`0.5f` half, `2` double; leave it out for the game's own size). With `snap: true`, a building piece moves to meet the snap points of the pieces there (and of those the script placed before it) within 0.5 m, as the hammer does. Building pieces are player built, by the builder chosen in View → Building → **Built by** (see [Player-built pieces](editor-basics.md#player-built-pieces)). |
-| `Objects.Move(o, x:, z:, y:, yaw:, pitch:, roll:, scale:)` | Moves, turns or sizes an object that is there; what you leave out stays as it is (or as an earlier `Move` of the script left it). It keeps what it holds (chest contents, builder...). The size must be above 0. |
+| `Objects.Place("Beech1", x, z, yaw:, scale:, y:, pitch:, roll:, snap:)` | A new object of the game, by its prefab name (`Beech1`, `Pinetree_01`, `rock4_forest`, `piece_chest_wood`...: the names the [Place](place.md) tool lists). Without `y` it stands on the ground **as the script leaves it** (dig first, then place: it sits in the hole). `yaw` turns it (degrees; 0: its front faces north, 90: east), `pitch` and `roll` tilt it, `scale` sizes it (`0.5f` half, `2` double; leave it out for the game's own size). With `snap: true`, a building piece moves to meet the snap points of the pieces there (and of those the script placed before it) within 0.5 m, as the hammer does. Building pieces are player built, by the builder chosen in View → Building → **Built by** (see [Player-built pieces](editor-basics.md#player-built-pieces)). A point outside the area (`Area.Inside` tells), a value that is not a number (NaN, infinite) or a size below 0 stops the script. |
+| `Objects.Move(o, x:, z:, y:, yaw:, pitch:, roll:, scale:)` | Moves, turns or sizes an object that is there; what you leave out stays as it is (or as an earlier `Move` of the script left it). It keeps what it holds (chest contents, builder...). The size must be above 0, the place within the area and every value given a number. |
 | `Objects.CanPlace("Beech1")` | Whether the editor knows how to make that object. Use it before `Place` when a name may be wrong: `Place` with a name the editor cannot make stops the script. |
 
 ### Noise and random numbers
@@ -204,7 +204,10 @@ foreach (var (x, z) in Area.Points(step: 5))
     float slope = MathF.Abs(Ground.Height(x + 1, z) - Ground.Height(x - 1, z)) / 2;   // rise per metre
     if (slope > 0.45f || Ground.Height(x, z) < Area.Water + 1) continue;             // about 25°, and dry land
     if (Noise.At(x, z, 50, seed: 2) < 0 || !Rnd.Chance(0.6f)) continue;
-    Objects.Place(Rnd.Pick("Pinetree_01", "FirTree"), x + Rnd.Range(-2, 2), z + Rnd.Range(-2, 2), yaw: Rnd.Range(0, 360));
+    string tree = Rnd.Pick("Pinetree_01", "FirTree");
+    float px = x + Rnd.Range(-2, 2), pz = z + Rnd.Range(-2, 2);   // a little off the grid
+    if (!Area.Inside(px, pz)) continue;
+    Objects.Place(tree, px, pz, yaw: Rnd.Range(0, 360));
     planted++;
 }
 Print($"{planted} trees planted.");
