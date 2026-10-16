@@ -328,7 +328,8 @@ public sealed class GlView : OpenGlControlBase
         _sceneDirty = true;
         _marksDirty = true;
         _spawnsDirty = true;
-        _lookFiles = null;
+        // The game look's files do not depend on the area: kept from the last one unless another Valheim was chosen.
+        _lookFiles = GameLookGl.Kept();
         // The game look is set up for the area's own textures (mask, heights): again for a new one. The
         // old one's textures go at the next frame (only the drawing may touch the graphics card).
         if (_look != null)

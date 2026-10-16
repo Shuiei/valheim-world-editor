@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.92 — unreleased
+
+### Changed
+- **Opening another area no longer reads the game's terrain look again.** Each area shown (another area, Follow
+  growing it, entering the Workshop) read the terrain shader and its textures (tens of MB) from Valheim's files again,
+  and the ground showed plain colours meanwhile. They do not depend on the area: they are now read once, and again
+  only when another Valheim folder is chosen.
+
 ## v1.45.91 — unreleased
 
 ### Changed
