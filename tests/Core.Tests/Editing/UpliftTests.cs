@@ -221,7 +221,7 @@ public class UpliftTests
     public void LiftsFarApartAreGroupedApart()
     {
         // The working block was the box round every lifted zone: lifts at two ends of the world made one grid of
-        // billions of points. Zones whose blocks (a zone round each) overlap or touch go together, the others apart.
+        // billions of points. Zones whose working zones (a zone round each) overlap or touch go together, the others apart.
         var groups = Uplift.Clusters([(0, 0), (1, 0), (100, 100), (4, 0), (8, 0), (1, 0)]);
         Assert.Equal(3, groups.Count);
         Assert.Equal([(0, 0), (1, 0), (4, 0)], groups[0]);
@@ -229,20 +229,58 @@ public class UpliftTests
         Assert.Equal([(8, 0)], groups[2]);
         // A chain of near ones is one group.
         Assert.Single(Uplift.Clusters([(0, 0), (3, 3), (6, 6), (9, 9)]));
-        // A zone far from every other but inside a group's box shares its block: one group.
-        Assert.Single(Uplift.Clusters([(0, 0), (3, 0), (6, 0), (9, 0), (12, 0), (12, 3), (12, 6), (12, 9), (12, 12), (0, 12)]));
-        // Whatever the zones, no two groups' blocks overlap or touch.
+        // A zone far from every other is a group of its own, even inside the box round another group.
+        var ring = Uplift.Clusters([(0, 0), (3, 0), (6, 0), (9, 0), (12, 0), (12, 3), (12, 6), (12, 9), (12, 12), (0, 12)]);
+        Assert.Equal(2, ring.Count);
+        Assert.Equal([(0, 12)], ring[1]);
+        // Whatever the zones, no two groups' working zones overlap or touch.
         var rnd = new Random(7);
         var many = Uplift.Clusters([.. Enumerable.Range(0, 60).Select(_ => (rnd.Next(-40, 40), rnd.Next(-40, 40)))]);
-        var boxes = many.Select(g => (X0: g.Min(t => t.X) - 1, Z0: g.Min(t => t.Z) - 1, X1: g.Max(t => t.X) + 1, Z1: g.Max(t => t.Z) + 1)).ToList();
-        for (int i = 0; i < boxes.Count; i++)
+        for (int i = 0; i < many.Count; i++)
         {
-            for (int j = i + 1; j < boxes.Count; j++)
+            for (int j = i + 1; j < many.Count; j++)
             {
-                var (a, b) = (boxes[i], boxes[j]);
-                Assert.True(b.X0 > a.X1 + 1 || a.X0 > b.X1 + 1 || b.Z0 > a.Z1 + 1 || a.Z0 > b.Z1 + 1, $"blocks {a} and {b} meet");
+                foreach (var (a, b) in many[i].SelectMany(a => many[j].Select(b => (a, b))))
+                {
+                    Assert.True(Math.Max(Math.Abs(a.X - b.X), Math.Abs(a.Z - b.Z)) > 3, $"zones {a} and {b} meet");
+                }
             }
         }
+    }
+
+    [Fact]
+    public void ASparseChainOfLiftsIsWorkedOnlyNearItsLifts()
+    {
+        // A chain of lifts each three zones from the next is one group, but its working zones are only those round
+        // each lift (a zone each way), not the box round the chain (300 zones a side).
+        var chain = Enumerable.Range(0, 100).Select(i => (X: 3 * i, Z: 3 * i)).ToList();
+        Assert.Single(Uplift.Clusters(chain));
+        var zones = Uplift.WorkingZones(chain);
+        Assert.Equal(100 * 9, zones.Count);
+        Assert.All(zones, z => Assert.Contains(chain, c => Math.Abs(c.X - z.X) <= 1 && Math.Abs(c.Z - z.Z) <= 1));
+        // Lifts side by side fill their box: the zones worked on are the box and a zone round it, as before.
+        var square = Uplift.WorkingZones([(0, 0), (1, 0), (0, 1), (1, 1), (2, 1), (2, 0)]);
+        Assert.Equal([.. from z in Enumerable.Range(-1, 4) from x in Enumerable.Range(-1, 5) select (x, z)], square);
+    }
+
+    [Fact]
+    public void AChainOfHillsIsPlannedOnTheZonesNearThem()
+    {
+        // Three hills along a diagonal of the test world, three zones apart: one group, worked only near the hills.
+        using var w = new TempWorld();
+        var o = Open.Of(w.Load());
+        var hills = new[] { (X: 2 * 64f, Z: 2 * 64f), (X: 5 * 64f, Z: 5 * 64f), (X: 8 * 64f, Z: 8 * 64f) };
+        foreach (var (x, z) in hills)
+        {
+            o.Lift(x, z, Bell(x, z, 20, 40));
+        }
+        var lifted = o.Edits.All().Where(e => e.HasLift).Select(e => (e.ZoneX, e.ZoneZ)).ToList();
+        Assert.Single(Uplift.Clusters(lifted));
+        var near = Uplift.WorkingZones(lifted).ToHashSet();
+        var plan = Uplift.Make(o.World, o.Terrain, o.Edits, o.NextId)!;
+        Assert.All(plan.Zones, e => Assert.Contains((e.ZoneX, e.ZoneZ), near));
+        // Every hill gets its discs.
+        Assert.All(hills, h => Assert.Contains(plan.Add, n => Vector2.Distance(new(n.Position.X, n.Position.Z), new(h.X, h.Z)) < 40));
     }
 
     [Fact]

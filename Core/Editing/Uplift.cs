@@ -126,8 +126,9 @@ public static class Uplift
     private static readonly int ReachZones = (int)MathF.Ceiling((Spacing + DiscRadius + DiscReach + 8f) / 64f);
 
     /// <summary>
-    /// The plan for every lift waiting in the edits, or null when there is none. Lifts far apart are planned each on
-    /// its own block of zones (<see cref="Clusters"/>), never on one block spanning them all.
+    /// The plan for every lift waiting in the edits, or null when there is none. Each group of lifts near one another
+    /// (<see cref="Clusters"/>) is planned alone, on only the zones near its lifts (<see cref="WorkingZones"/>), never
+    /// on the box round them.
     /// </summary>
     /// <param name="world">The world, for its discs, objects and generated zones.</param>
     /// <param name="terrain">The generated ground the discs are fitted on.</param>
@@ -150,66 +151,93 @@ public static class Uplift
     }
 
     /// <summary>
-    /// Lifted zones in groups, in the order first met, whose blocks (the box round a group's zones and
-    /// <see cref="ReachZones"/> beyond) neither overlap nor touch: a group's discs and ground never reach another's
-    /// block, and no zone is in two blocks, so each group is planned alone. Groups whose blocks would overlap or touch
-    /// are one group.
+    /// Lifted zones in connected groups, in the order first met (and in that order within a group): two zones whose
+    /// working zones (<see cref="WorkingZones"/>) overlap or touch are in one group. A group's discs and ground never
+    /// reach another's zones, and no zone is worked on by two groups, so each group is planned alone.
     /// </summary>
     /// <param name="zones">The lifted zones.</param>
     internal static List<List<(int X, int Z)>> Clusters(IEnumerable<(int X, int Z)> zones)
     {
-        var groups = zones.Distinct().Select(z => new List<(int X, int Z)> { z }).ToList();
-        // Two boxes of zones (lowest and highest x and z) whose blocks overlap or touch: at most this far apart.
-        int gap = 2 * ReachZones + 1;
-        static (int X0, int Z0, int X1, int Z1) Box(List<(int X, int Z)> g) => (g.Min(t => t.X), g.Min(t => t.Z), g.Max(t => t.X), g.Max(t => t.Z));
-        bool merged = true;
-        while (merged)
+        var order = zones.Distinct().ToList();
+        var index = new Dictionary<(int X, int Z), int>();
+        for (int i = 0; i < order.Count; i++)
         {
-            merged = false;
-            for (int i = 0; i < groups.Count && !merged; i++)
+            index[order[i]] = i;
+        }
+        // Two zones whose working zones overlap or touch: at most this far apart either way.
+        int gap = 2 * ReachZones + 1;
+        bool[] met = new bool[order.Count];
+        var groups = new List<List<(int X, int Z)>>();
+        for (int i = 0; i < order.Count; i++)
+        {
+            if (met[i])
             {
-                var (ax0, az0, ax1, az1) = Box(groups[i]);
-                for (int j = i + 1; j < groups.Count; j++)
+                continue;
+            }
+            met[i] = true;
+            var members = new List<int> { i };
+            for (int k = 0; k < members.Count; k++)
+            {
+                var (x, z) = order[members[k]];
+                for (int dz = -gap; dz <= gap; dz++)
                 {
-                    var (bx0, bz0, bx1, bz1) = Box(groups[j]);
-                    if (bx0 - ax1 <= gap && ax0 - bx1 <= gap && bz0 - az1 <= gap && az0 - bz1 <= gap)
+                    for (int dx = -gap; dx <= gap; dx++)
                     {
-                        groups[i].AddRange(groups[j]);
-                        groups.RemoveAt(j);
-                        merged = true;
-                        break;
+                        if (index.TryGetValue((x + dx, z + dz), out int j) && !met[j])
+                        {
+                            met[j] = true;
+                            members.Add(j);
+                        }
                     }
                 }
             }
+            members.Sort();
+            groups.Add([.. members.Select(m => order[m])]);
         }
         return groups;
+    }
+
+    /// <summary>
+    /// The zones a group of lifted zones is worked on: each lifted zone and those within <see cref="ReachZones"/> of
+    /// it, by rows (z, then x). Only these: a sparse chain of lifts takes the zones near its lifts, not the box round
+    /// the chain; a group that fills its box (lifts side by side) takes the whole box, as before.
+    /// </summary>
+    /// <param name="lifted">The group's lifted zones.</param>
+    internal static List<(int X, int Z)> WorkingZones(IEnumerable<(int X, int Z)> lifted)
+    {
+        var zones = new HashSet<(int X, int Z)>();
+        foreach (var (x, z) in lifted)
+        {
+            for (int dz = -ReachZones; dz <= ReachZones; dz++)
+            {
+                for (int dx = -ReachZones; dx <= ReachZones; dx++)
+                {
+                    zones.Add((x + dx, z + dz));
+                }
+            }
+        }
+        return [.. zones.OrderBy(t => t.Z).ThenBy(t => t.X)];
     }
 
     /// <summary>The plan for a group of lifted zones, worked on one block: them and the zones the discs reach from them.</summary>
     private static Plan MakeBlock(WorldSave world, ValheimGen.TerrainService terrain, EditStore edits, Func<int> nextId, List<ZoneEdit> lifted)
     {
         // The block of zones worked on: the lifted ones and those the discs reach from them.
-        int reachZones = ReachZones;
-        int zx0 = lifted.Min(e => e.ZoneX) - reachZones, zx1 = lifted.Max(e => e.ZoneX) + reachZones;
-        int zz0 = lifted.Min(e => e.ZoneZ) - reachZones, zz1 = lifted.Max(e => e.ZoneZ) + reachZones;
-        var block = new Block(zx0, zz0, zx1, zz1);
+        var block = new Block(WorkingZones(lifted.Select(e => (e.ZoneX, e.ZoneZ))));
 
         // The ground asked for, as it shows in the editor now (old discs, edits, lift), and the lift.
         float[] want = new float[block.N], lift = new float[block.N];
         var zones = new Dictionary<(int, int), ZoneEdit>();
-        for (int zz = zz0; zz <= zz1; zz++)
+        foreach (var (zx, zz) in block.Zones)
         {
-            for (int zx = zx0; zx <= zx1; zx++)
+            float[] b = terrain.BaseZone(zx, zz);
+            ZoneEdit e = edits.Get(zx, zz) ?? new ZoneEdit(zx, zz);
+            zones[(zx, zz)] = e;
+            block.Each(zx, zz, (i, p) =>
             {
-                float[] b = terrain.BaseZone(zx, zz);
-                ZoneEdit e = edits.Get(zx, zz) ?? new ZoneEdit(zx, zz);
-                zones[(zx, zz)] = e;
-                block.Each(zx, zz, (i, p) =>
-                {
-                    want[p] = b[i] + (e.Modified[i] ? Math.Clamp(e.Level[i] + e.Smooth[i], -EditStore.MaxLevel, EditStore.MaxLevel) : 0) + e.Lift[i];
-                    lift[p] = e.Lift[i];
-                });
-            }
+                want[p] = b[i] + (e.Modified[i] ? Math.Clamp(e.Level[i] + e.Smooth[i], -EditStore.MaxLevel, EditStore.MaxLevel) : 0) + e.Lift[i];
+                lift[p] = e.Lift[i];
+            });
         }
 
         // Lift in zones not generated yet is dropped (the game would generate them on the old ground).
@@ -247,18 +275,15 @@ public static class Uplift
         {
             var mods = new TerrainModifiers(keep.Concat(discs.Select(DiscAt)));
             float[] g = new float[block.N];
-            for (int zz = zz0; zz <= zz1; zz++)
+            foreach (var (zx, zz) in block.Zones)
             {
-                for (int zx = zx0; zx <= zx1; zx++)
+                if (!raw.TryGetValue((zx, zz), out float[]? r))
                 {
-                    if (!raw.TryGetValue((zx, zz), out float[]? r))
-                    {
-                        r = raw[(zx, zz)] = terrain.RawZone(zx, zz);
-                    }
-                    float[] h = (float[])r.Clone();
-                    mods.Apply(zx, zz, h);
-                    block.Each(zx, zz, (i, p) => g[p] = h[i]);
+                    r = raw[(zx, zz)] = terrain.RawZone(zx, zz);
                 }
+                float[] h = (float[])r.Clone();
+                mods.Apply(zx, zz, h);
+                block.Each(zx, zz, (i, p) => g[p] = h[i]);
             }
             return g;
         }
@@ -272,7 +297,7 @@ public static class Uplift
         }
         float[] bare = Ground([]);
         bool[] need = new bool[block.N];
-        for (int p = 0; p < block.N; p++)
+        foreach (int p in block.Points)
         {
             need[p] = region[p] && open[p] && MathF.Abs(want[p] - bare[p]) > Need;
         }
@@ -293,7 +318,7 @@ public static class Uplift
                 }
             }
         }
-        for (int p = 0; p < block.N; p++)
+        foreach (int p in block.Points)
         {
             if (need[p])
             {
@@ -310,7 +335,7 @@ public static class Uplift
         double Miss(float[] g)
         {
             double m = 0;
-            for (int p = 0; p < block.N; p++)
+            foreach (int p in block.Points)
             {
                 if (region[p] || lift[p] != 0)
                 {
@@ -338,7 +363,7 @@ public static class Uplift
                 return (lo, hi);
             }).ToList();
             float[] r = new float[block.N];
-            for (int p = 0; p < block.N; p++)
+            foreach (int p in block.Points)
             {
                 r[p] = want[p] - ground[p];
             }
@@ -375,7 +400,7 @@ public static class Uplift
             {
                 // Still too far off out of the discs' reach (at a disc's blended edge): one more disc there.
                 int before = nodes.Count;
-                for (int p = 0; p < block.N; p++)
+                foreach (int p in block.Points)
                 {
                     if (region[p] && open[p] && MathF.Abs(want[p] - ground[p]) > Need)
                     {
@@ -518,89 +543,174 @@ public static class Uplift
             src[p] = on(values[p]);
         }
         // Separable square dilation (rows, then columns): every point within r of one that is on.
-        bool[] rows = new bool[block.N];
-        for (int z = 0; z < block.H; z++)
-        {
-            int last = int.MinValue / 2;
-            for (int x = 0; x < block.W; x++)
-            {
-                if (src[z * block.W + x])
-                {
-                    last = x;
-                }
-
-                rows[z * block.W + x] = x - last <= r;
-            }
-            last = int.MaxValue / 2;
-            for (int x = block.W - 1; x >= 0; x--)
-            {
-                if (src[z * block.W + x])
-                {
-                    last = x;
-                }
-
-                rows[z * block.W + x] |= last - x <= r;
-            }
-        }
-        bool[] res = new bool[block.N];
-        for (int x = 0; x < block.W; x++)
-        {
-            int last = int.MinValue / 2;
-            for (int z = 0; z < block.H; z++)
-            {
-                if (rows[z * block.W + x])
-                {
-                    last = z;
-                }
-
-                res[z * block.W + x] = z - last <= r;
-            }
-            last = int.MaxValue / 2;
-            for (int z = block.H - 1; z >= 0; z--)
-            {
-                if (rows[z * block.W + x])
-                {
-                    last = z;
-                }
-
-                res[z * block.W + x] |= last - z <= r;
-            }
-        }
+        bool[] rows = new bool[block.N], res = new bool[block.N];
+        block.Sweep(src, rows, r, false);
+        block.Sweep(rows, res, r, true);
         return res;
     }
 
-    /// <summary>A block of zones as one grid of world points, one per metre (zones share their edge points).</summary>
-    private sealed class Block(int zx0, int zz0, int zx1, int zz1)
+    /// <summary>
+    /// Some zones as one grid of world points, one per metre (zones share their edge points). The points are kept in
+    /// tiles of 64x64, one per zone of the block and per zone holding their far edges, so only the zones in the block
+    /// take memory however far apart they are; a table of the tiles spans their box (one entry a zone).
+    /// </summary>
+    private sealed class Block
     {
-        /// <summary>The world position of the block's first point (metres).</summary>
-        public readonly int X0 = zx0 * 64 - 32, Z0 = zz0 * 64 - 32;
-        /// <summary>The block's size in points.</summary>
-        public readonly int W = (zx1 - zx0 + 1) * 64 + 1, H = (zz1 - zz0 + 1) * 64 + 1;
-        /// <summary>How many points it has.</summary>
-        public int N => W * H;
+        /// <summary>Points a side of a tile: a zone's points without its far edges.</summary>
+        private const int Tile = 64;
 
-        /// <summary>A point's world position (metres).</summary>
-        public (int X, int Z) World(int p) => (X0 + p % W, Z0 + p / W);
+        /// <summary>Points in a tile.</summary>
+        private const int TilePoints = Tile * Tile;
 
-        /// <summary>The point nearest a world position, or null outside the block.</summary>
-        public int? At(Vector3 v)
+        /// <summary>The lowest zone x and z: the tile table's first tile.</summary>
+        private readonly int _zx0, _zz0;
+
+        /// <summary>The tile table's size in tiles (one more than the zones' box each way, for their far edges).</summary>
+        private readonly int _tw, _th;
+
+        /// <summary>Whether a tile's zone is in the block, by tile (rows of z).</summary>
+        private readonly bool[] _member;
+
+        /// <summary>Each tile's place in the point arrays (in tiles), or -1 when it has none, by tile (rows of z).</summary>
+        private readonly int[] _slot;
+
+        /// <summary>The tile (in the table) at each place in the point arrays.</summary>
+        private readonly List<(int X, int Z)> _tiles = [];
+
+        /// <summary>Whether a point belongs to a zone of the block (a far-edge tile also holds points of other zones).</summary>
+        private readonly bool[] _inside;
+
+        /// <summary>The world position of the first tile's first point (metres).</summary>
+        public readonly int X0, Z0;
+
+        /// <summary>The block's zones, by rows (z, then x).</summary>
+        public IReadOnlyList<(int X, int Z)> Zones { get; }
+
+        /// <summary>The size of the point arrays (points outside the block's zones included).</summary>
+        public int N { get; }
+
+        /// <summary>The points of the block's zones, by rows of the world (z, then x), each once.</summary>
+        public int[] Points { get; }
+
+        /// <summary>A block of the given zones.</summary>
+        /// <param name="zones">The zones, by rows (z, then x), each once.</param>
+        public Block(List<(int X, int Z)> zones)
         {
-            int x = (int)MathF.Round(v.X) - X0, z = (int)MathF.Round(v.Z) - Z0;
-            return x >= 0 && z >= 0 && x < W && z < H ? z * W + x : null;
+            Zones = zones;
+            _zx0 = zones.Min(z => z.X);
+            _zz0 = zones.Min(z => z.Z);
+            _tw = zones.Max(z => z.X) - _zx0 + 2;
+            _th = zones.Max(z => z.Z) - _zz0 + 2;
+            X0 = _zx0 * 64 - 32;
+            Z0 = _zz0 * 64 - 32;
+            _member = new bool[_tw * _th];
+            foreach (var (x, z) in zones)
+            {
+                _member[(z - _zz0) * _tw + x - _zx0] = true;
+            }
+            bool Member(int tx, int tz) => tx >= 0 && tz >= 0 && _member[tz * _tw + tx];
+            _slot = new int[_tw * _th];
+            for (int tz = 0; tz < _th; tz++)
+            {
+                for (int tx = 0; tx < _tw; tx++)
+                {
+                    bool used = Member(tx, tz) || Member(tx - 1, tz) || Member(tx, tz - 1) || Member(tx - 1, tz - 1);
+                    _slot[tz * _tw + tx] = used ? _tiles.Count : -1;
+                    if (used)
+                    {
+                        _tiles.Add((tx, tz));
+                    }
+                }
+            }
+            N = _tiles.Count * TilePoints;
+            _inside = new bool[N];
+            foreach (var (zx, zz) in zones)
+            {
+                Each(zx, zz, (_, p) => _inside[p] = true);
+            }
+            var points = new List<int>();
+            for (int tz = 0; tz < _th; tz++)
+            {
+                for (int oz = 0; oz < Tile; oz++)
+                {
+                    for (int tx = 0; tx < _tw; tx++)
+                    {
+                        int s = _slot[tz * _tw + tx];
+                        for (int ox = 0; s >= 0 && ox < Tile; ox++)
+                        {
+                            int p = s * TilePoints + oz * Tile + ox;
+                            if (_inside[p])
+                            {
+                                points.Add(p);
+                            }
+                        }
+                    }
+                }
+            }
+            Points = [.. points];
         }
 
-        /// <summary>Whether a world position is within margin metres of the block.</summary>
-        public bool Near(Vector3 v, float margin) => v.X >= X0 - margin && v.Z >= Z0 - margin && v.X <= X0 + W - 1 + margin && v.Z <= Z0 + H - 1 + margin;
+        /// <summary>The place of a point (in points from the first one) in the arrays, or -1 when no tile holds it.</summary>
+        private int Slot(int x, int z)
+        {
+            if (x < 0 || z < 0 || x >= _tw * Tile || z >= _th * Tile)
+            {
+                return -1;
+            }
+            int s = _slot[z / Tile * _tw + x / Tile];
+            return s < 0 ? -1 : s * TilePoints + z % Tile * Tile + x % Tile;
+        }
+
+        /// <summary>The place of a point (in points from the first one) in the arrays, or -1 when it is not in the block's zones.</summary>
+        private int Index(int x, int z)
+        {
+            int p = Slot(x, z);
+            return p >= 0 && _inside[p] ? p : -1;
+        }
+
+        /// <summary>A point's world position (metres).</summary>
+        public (int X, int Z) World(int p)
+        {
+            var (tx, tz) = _tiles[p / TilePoints];
+            int q = p % TilePoints;
+            return (X0 + tx * Tile + q % Tile, Z0 + tz * Tile + q / Tile);
+        }
+
+        /// <summary>The point nearest a world position, or null outside the block's zones.</summary>
+        public int? At(Vector3 v)
+        {
+            int p = Index((int)MathF.Round(v.X) - X0, (int)MathF.Round(v.Z) - Z0);
+            return p >= 0 ? p : null;
+        }
+
+        /// <summary>Whether a world position is within margin metres of one of the block's zones (of its square of points).</summary>
+        public bool Near(Vector3 v, float margin)
+        {
+            int zx0 = (int)MathF.Floor((v.X - 32 - margin) / 64) - _zx0, zx1 = (int)MathF.Ceiling((v.X + 32 + margin) / 64) - _zx0;
+            int zz0 = (int)MathF.Floor((v.Z - 32 - margin) / 64) - _zz0, zz1 = (int)MathF.Ceiling((v.Z + 32 + margin) / 64) - _zz0;
+            for (int tz = Math.Max(0, zz0); tz <= Math.Min(_th - 1, zz1); tz++)
+            {
+                for (int tx = Math.Max(0, zx0); tx <= Math.Min(_tw - 1, zx1); tx++)
+                {
+                    int x = X0 + tx * Tile, z = Z0 + tz * Tile;
+                    if (_member[tz * _tw + tx] && v.X >= x - margin && v.Z >= z - margin && v.X <= x + Tile + margin && v.Z <= z + Tile + margin)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
 
         /// <summary>A zone's 65x65 points: (index in the zone, point in the block).</summary>
         public void Each(int zx, int zz, Action<int, int> f)
         {
-            int ox = zx * 64 - 32 - X0, oz = zz * 64 - 32 - Z0;
+            int ox = (zx - _zx0) * Tile, oz = (zz - _zz0) * Tile;
             for (int k = 0; k < 65; k++)
             {
                 for (int l = 0; l < 65; l++)
                 {
-                    f(k * 65 + l, (oz + k) * W + ox + l);
+                    f(k * 65 + l, Slot(ox + l, oz + k));
                 }
             }
         }
@@ -612,15 +722,67 @@ public static class Uplift
         public void Disc(Vector3 c, float r, Action<int, float> f)
         {
             int cx = (int)MathF.Floor(c.X + 0.5f) - X0, cz = (int)MathF.Floor(c.Z + 0.5f) - Z0, n = (int)MathF.Ceiling(r);
-            for (int z = Math.Max(0, cz - n); z <= Math.Min(H - 1, cz + n); z++)
+            for (int z = cz - n; z <= cz + n; z++)
             {
-                for (int x = Math.Max(0, cx - n); x <= Math.Min(W - 1, cx + n); x++)
+                for (int x = cx - n; x <= cx + n; x++)
                 {
+                    int p = Index(x, z);
+                    if (p < 0)
+                    {
+                        continue;
+                    }
                     float dx = x - cx, dz = z - cz;
                     float d = MathF.Sqrt(dx * dx + dz * dz);
                     if (d <= r)
                     {
-                        f(z * W + x, d);
+                        f(p, d);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// One pass of a square dilation: each point is on in <paramref name="to"/> when a point within r of it on its
+        /// row (or column) is on in <paramref name="from"/>. Tiles missing on the way count as off.
+        /// </summary>
+        /// <param name="from">The points that are on.</param>
+        /// <param name="to">Gets the points within r of them.</param>
+        /// <param name="r">How far (points).</param>
+        /// <param name="columns">Along the columns (z) rather than the rows (x).</param>
+        public void Sweep(bool[] from, bool[] to, int r, bool columns)
+        {
+            int lines = columns ? _tw : _th, along = columns ? _th : _tw;
+            for (int a = 0; a < lines; a++)
+            {
+                for (int o = 0; o < Tile; o++)
+                {
+                    int last = int.MinValue / 2;
+                    for (int b = 0; b < along; b++)
+                    {
+                        int s = columns ? _slot[b * _tw + a] : _slot[a * _tw + b];
+                        for (int i = 0; s >= 0 && i < Tile; i++)
+                        {
+                            int p = s * TilePoints + (columns ? i * Tile + o : o * Tile + i), at = b * Tile + i;
+                            if (from[p])
+                            {
+                                last = at;
+                            }
+                            to[p] = at - last <= r;
+                        }
+                    }
+                    last = int.MaxValue / 2;
+                    for (int b = along - 1; b >= 0; b--)
+                    {
+                        int s = columns ? _slot[b * _tw + a] : _slot[a * _tw + b];
+                        for (int i = Tile - 1; s >= 0 && i >= 0; i--)
+                        {
+                            int p = s * TilePoints + (columns ? i * Tile + o : o * Tile + i), at = b * Tile + i;
+                            if (from[p])
+                            {
+                                last = at;
+                            }
+                            to[p] |= last - at <= r;
+                        }
                     }
                 }
             }
