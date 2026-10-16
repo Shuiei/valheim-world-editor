@@ -180,7 +180,9 @@ public sealed class Ground
     public bool Locked(int gx, int gz) => gx == 0 || gz == 0 || gx == W - 1 || gz == H - 1;
 
     /// <summary>
-    /// Moves a point to a height (kept within the game's limit unless NoLimit); true when the limit stopped it.
+    /// Moves a point to a height (kept within the game's limit unless NoLimit); true when a limit stopped it: the
+    /// point ends more than a millimetre from the height (the game's ±8 m, the level part's own ±8 m beside the
+    /// smoothing, or No limit's lift).
     /// </summary>
     public bool SetHeight(int g, float h)
     {
@@ -195,12 +197,15 @@ public sealed class Ground
             // The edit keeps its level and smoothing; the lift takes the rest.
             float lift = Math.Clamp(h - Base[g] - Math.Clamp(Level[g] + Smooth[g], -EditStore.MaxLevel, EditStore.MaxLevel), -EditStore.MaxLift, EditStore.MaxLift);
             Lift[g] = MathF.Abs(lift) < 1e-3f ? 0 : lift;
-            return false;
         }
-        float o = Original(g), target = Math.Clamp(h, o - EditStore.MaxLevel, o + EditStore.MaxLevel);
-        // Keep the smoothing part and put the rest in the level part (itself limited to ± 8 m).
-        Level[g] = Math.Clamp(target - o - Smooth[g], -EditStore.MaxLevel, EditStore.MaxLevel);
-        return MathF.Abs(target - h) > 1e-4f;
+        else
+        {
+            float o = Original(g), target = Math.Clamp(h, o - EditStore.MaxLevel, o + EditStore.MaxLevel);
+            // Keep the smoothing part and put the rest in the level part (itself limited to ± 8 m).
+            Level[g] = Math.Clamp(target - o - Smooth[g], -EditStore.MaxLevel, EditStore.MaxLevel);
+        }
+        // Where it ended, whichever limit stopped it (a lift under a millimetre is dropped: not a stop).
+        return MathF.Abs(HeightOf(g) - h) > 2e-3f;
     }
 
     /// <summary>
