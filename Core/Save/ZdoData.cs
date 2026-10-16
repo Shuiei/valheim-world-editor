@@ -317,6 +317,24 @@ public sealed class ZdoData
     /// <summary>The byte array value with this key, or null when there is none.</summary>
     public byte[]? GetBytes(int key) => ByteList.FirstOrDefault(i => i.Key == key).Value;
 
+    /// <summary>The int value with this key, or null when there is none.</summary>
+    public int? GetInt(int key) => TryGet(IntList, key, out int v) ? v : null;
+
+    /// <summary>The first value of a key in a section's list of values; false when the list has none.</summary>
+    public static bool TryGet<T>(IReadOnlyList<(int Key, T Value)> list, int key, out T value)
+    {
+        foreach (var (k, v) in list)
+        {
+            if (k == key)
+            {
+                value = v;
+                return true;
+            }
+        }
+        value = default!;
+        return false;
+    }
+
     /// <summary>Replaces or adds the value for the key in a section, or removes it when the value is null.</summary>
     private static void Put<T, TIn>(List<(int Key, T Value)> list, int key, TIn? value, Func<TIn, T> parse)
     {

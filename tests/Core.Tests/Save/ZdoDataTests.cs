@@ -272,4 +272,17 @@ public class ZdoDataTests
         Assert.True(ZdoData.Valid("vec3", "1;2;3"));
         Assert.False(ZdoData.Valid("vec3", "1 2"));
     }
+
+    [Fact]
+    public void AnIntIsFoundByItsKeyFirstValueFirst()
+    {
+        var z = new ZdoData();
+        Assert.Null(z.GetInt(StableHash.Of("pose")));
+        z.IntList.Add((StableHash.Of("pose"), 3));
+        z.IntList.Add((StableHash.Of("pose"), 7));
+        Assert.Equal(3, z.GetInt(StableHash.Of("pose")));
+        Assert.True(ZdoData.TryGet(z.IntList, StableHash.Of("pose"), out int pose));
+        Assert.Equal(3, pose);
+        Assert.False(ZdoData.TryGet(z.StringList, StableHash.Of("pose"), out _));
+    }
 }

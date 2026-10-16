@@ -116,17 +116,7 @@ public static class ObjectLinks
     public static ObjectLink? Read(LinkSet set, IReadOnlyList<(int Key, int Value)> ints, IReadOnlyList<(int Key, Vector3 Value)>? vec3s,
         IReadOnlyList<(int Key, Quaternion Value)>? quats)
     {
-        int Int(int key)
-        {
-            foreach (var (k, v) in ints)
-            {
-                if (k == key)
-                {
-                    return v;
-                }
-            }
-            return 0;
-        }
+        int Int(int key) => ZdoData.TryGet(ints, key, out int v) ? v : 0;
         foreach (var rule in set.Rules)
         {
             int id = Int(rule.IdKey);
