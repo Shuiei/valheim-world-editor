@@ -340,17 +340,19 @@ public class WorldSaveTests
         var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
         var at = new Vector3(640, 30, 640);
         // ZDOIDs of a user the snapshot has none of.
+        // The piece is of a kind the world has none of (a mod's).
         List<(long, uint, byte[])> made =
         [
-            (4242, 1, MadeObjects.Piece("woodwall", at, 777, "Astrid")),
+            (4242, 1, MadeObjects.Piece("mod_live_wall", at, 777, "Astrid")),
             (4242, 2, MadeObjects.Location(at + new Vector3(5, 0, 5), MadeObjects.MadeUpLocation)),
         ];
         int templates = world.TemplatesGeneration;
-        Assert.False(world.Templates.ContainsKey(Fixtures.Hash("woodwall")));
+        Assert.False(world.Templates.ContainsKey(Fixtures.Hash("mod_live_wall")));
         var came = world.MergeLive([(10, 10)], made, _ => false, _ => false)!;
         Assert.Equal(2, came.Added.Count);
-        // A new kind: the templates' generation moved on; the same objects again do not move it.
-        Assert.True(world.Templates.ContainsKey(Fixtures.Hash("woodwall")));
+        // A kind the world had none of: its first object is its template, and the templates' generation moved on;
+        // the same objects again do not move it.
+        Assert.True(world.Templates.ContainsKey(Fixtures.Hash("mod_live_wall")));
         Assert.True(world.TemplatesGeneration > templates);
         templates = world.TemplatesGeneration;
         world.MergeLive([(10, 10)], made, _ => false, _ => false);
@@ -360,7 +362,7 @@ public class WorldSaveTests
         Assert.Equal(1, world.Creators[777]);
         Assert.Equal(777, world.TopBuilder);
         Assert.Equal("Astrid", world.PlayerNames[777]);
-        Assert.Contains(world.Pieces, p => p.Prefab == Fixtures.Hash("woodwall"));
+        Assert.Contains(world.Pieces, p => p.Prefab == Fixtures.Hash("mod_live_wall"));
         Assert.Contains(world.Locations, l => l.Location == MadeObjects.MadeUpLocation);
         Assert.Contains(world.Placed, p => p.Location == MadeObjects.MadeUpLocation);
         // Gone from the game: out of every list, its builder's count down.
