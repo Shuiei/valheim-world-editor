@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.98 — unreleased
+
+### Changed
+- **Regrowing nature over a big area no longer stalls the editor.** Once the game's spots were worked out, each one
+  was checked against every object of the area, up to three times, in the editor's window: a Mountain with Grow over
+  49 zones meant thousands of spots times tens of thousands of objects, seconds of stall. Only the objects near the
+  spots are now taken, sorted by place, and the check runs in the background. The same spots are grown (Area Regrow,
+  Mountain Grow and Claude's regrow_nature).
+
 ## v1.45.97 — unreleased
 
 ### Changed

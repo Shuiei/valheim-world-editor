@@ -68,4 +68,37 @@ public class GrowthTests
             Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
         }
     }
+
+    [Fact]
+    public async Task ABuildingStopsASpotUpTo4MetresAwayOnEitherSide()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            var scene = WorldScene.Load(dir, 0, 0, 1);
+            var s = scene.Session!;
+            var said = new List<string>();
+            s.Delete([.. Enumerable.Range(0, scene.Things.Count).Where(i => !scene.Things[i].Piece && !scene.Things[i].Gone)]);
+            var spot = (await Growth.Spots(s, -30, -30, 30, 30, _ => true, NameOf, said.Add))![0];
+            // West and east: one of the two lies past a cell line of the neighbour search, whatever the cells.
+            foreach (float dx in (float[])[-3.9f, 3.9f, -4.1f, 4.1f])
+            {
+                lock (scene.Things)
+                {
+                    scene.Things.Add(new WorldScene.Thing(int.MaxValue - 2, StableHash.Of("wood_wall_half"), new Vector3(spot.X + dx, spot.Y, spot.Z), Vector3.Zero, 0, true));
+                }
+                var spots = await Growth.Spots(s, -30, -30, 30, 30, _ => true, NameOf, said.Add);
+                Assert.NotNull(spots);
+                Assert.Equal(MathF.Abs(dx) > 4, spots.Contains(spot));
+                lock (scene.Things)
+                {
+                    scene.Things.RemoveAt(scene.Things.Count - 1);
+                }
+            }
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
 }
