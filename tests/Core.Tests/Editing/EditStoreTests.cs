@@ -87,4 +87,20 @@ public class EditStoreTests
         edits.Restore(mark);
         Assert.Equal(20f, edits.Get(zone.ZoneX, zone.ZoneZ)!.Lift[0]);
     }
+
+    // Only the zones passing the test are copied, and they are copies.
+    [Fact]
+    public void CopiesTakesOnlyTheZonesPassingTheTest()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");
+        var edits = new EditStore(world);
+        var zone = Assert.Single(world.TerrainZones);
+        edits.Put(new ZoneEdit(zone.ZoneX + 1, zone.ZoneZ) { Lift = { [0] = 5f } });
+        var lifted = Assert.Single(edits.Copies(e => e.HasLift));
+        Assert.Equal((zone.ZoneX + 1, zone.ZoneZ), (lifted.ZoneX, lifted.ZoneZ));
+        Assert.Equal(2, edits.Copies(_ => true).Count);
+        Assert.Empty(edits.Copies(_ => false));
+        lifted.Lift[0] = 9f;
+        Assert.Equal(5f, edits.Get(zone.ZoneX + 1, zone.ZoneZ)!.Lift[0]);
+    }
 }

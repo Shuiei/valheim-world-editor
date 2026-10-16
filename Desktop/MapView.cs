@@ -1083,7 +1083,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         {
             var edited = new List<float>();
             var changed = new List<float>();
-            foreach (var e in s.Edits.All().Where(e => e.HeightCount + e.PaintCount > 0 || e.Changed))
+            foreach (var e in s.Edits.Copies(e => e.HeightCount + e.PaintCount > 0 || e.Changed))
             {
                 Box(e.Changed ? changed : edited, e.ZoneX * 64 - 32, e.ZoneZ * 64 - 32, e.ZoneX * 64 + 32, e.ZoneZ * 64 + 32);
             }

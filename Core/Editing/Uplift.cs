@@ -136,7 +136,7 @@ public static class Uplift
     /// <param name="nextId">Gives each new disc object its (negative) id.</param>
     public static Plan? Make(WorldSave world, ValheimGen.TerrainService terrain, EditStore edits, Func<int> nextId)
     {
-        var lifted = edits.All().Where(e => e.HasLift).ToList();
+        var lifted = edits.Copies(e => e.HasLift);
         if (lifted.Count == 0)
         {
             return null;

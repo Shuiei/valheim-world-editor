@@ -56,7 +56,7 @@ public static class ZoneStats
                 pieces[key] = pieces.GetValueOrDefault(key) + 1;
             }
         }
-        HashSet<(int, int)> edited = [.. edits.All().Where(e => e.HeightCount + e.PaintCount > 0).Select(e => (e.ZoneX, e.ZoneZ))];
+        HashSet<(int, int)> edited = [.. edits.Copies(e => e.HeightCount + e.PaintCount > 0).Select(e => (e.ZoneX, e.ZoneZ))];
         // Distance to buildings: a breadth-first walk out from every zone with pieces (8 neighbours, so
         // the distance is the larger of the x and z steps).
         int size = maxZone * 2 + 1;

@@ -403,9 +403,10 @@ public sealed class WorldSession : IDisposable
             return new Outcome(false, newer, false, new WorldWriter.Result(false, newer, null, 0, 0, []));
         }
         var lift = LiftToDiscs();
-        var zones = Edits.All().Where(e => e.Changed).Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
+        // The changed zones and those the last save wrote (each copied once).
+        var changed = Edits.Copies(e => e.Changed || _savedZones.Contains((e.ZoneX, e.ZoneZ)));
+        var zones = changed.Where(e => e.Changed).Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
         zones.UnionWith(_savedZones);
-        var changed = Edits.All().Where(e => zones.Contains((e.ZoneX, e.ZoneZ))).ToList();
         bool reread = lift != null || Edits.ResetCount > 0;
         WorldWriter.Result result;
         try
@@ -538,7 +539,7 @@ public sealed class WorldSession : IDisposable
         try
         {
             // Copies as sent: edits made while the game answers are not marked as applied.
-            var zones = Edits.All().Where(e => e.Changed).Select(e => e.Clone()).ToList();
+            var zones = Edits.Copies(e => e.Changed);
             if (zones.Count > 0)
             {
                 try

@@ -246,6 +246,19 @@ public sealed class EditStore
         }
     }
 
+    /// <summary>
+    /// Copies of the zones' working edits that pass a test, tried on the edits themselves: only those are copied, each
+    /// copy being a zone's whole ground (about 127 KB).
+    /// </summary>
+    /// <param name="keep">The test; it only reads the edit, under the store's lock.</param>
+    public List<ZoneEdit> Copies(Func<ZoneEdit, bool> keep)
+    {
+        lock (_lock)
+        {
+            return [.. _zones.Values.Where(keep).Select(e => e.Clone())];
+        }
+    }
+
     /// <summary>Objects (by WorldSave id) to leave out of the next save.</summary>
     private readonly HashSet<int> _deleted = [];
 
