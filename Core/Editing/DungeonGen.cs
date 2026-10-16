@@ -129,6 +129,7 @@ public static class DungeonGen
     /// then laid out from there as the game lays them out from its dungeon object (the first room's way in at it, the
     /// rooms kept in its zone's box), in world metres. Null: from the origin, facing +z.
     /// </param>
+    /// <exception cref="InvalidDataException">The game's rooms are asked for and its data has none to join (nor a cave).</exception>
     public static Result Make(Settings s, int worldSeed = 0, DungeonEntrances.Pose? dungeon = null) => s.Made == Made.Rooms ? MakeRooms(s, worldSeed, dungeon) : MakePieces(s);
 
     /// <summary>
@@ -239,12 +240,20 @@ public static class DungeonGen
     private static Result MakeRooms(Settings s, int worldSeed, DungeonEntrances.Pose? dungeon)
     {
         var notes = new List<string>();
-        var cave = Dungeons.KindOf(Save.StableHash.Of("DG_Cave"))!;
-        var kind = Dungeons.Kinds.FirstOrDefault(k => k.Name == (s.Kind ?? KindFor(s.Biome))) ?? cave;
+        static bool Joinable(Dungeons.Kind k) => Dungeons.RoomsFor(k).Any(r => !r.Entrance && !r.EndCap && !r.Divider && r.Openings.Length > 0);
+        var cave = Dungeons.KindOf(Save.StableHash.Of("DG_Cave"));
+        string wanted = s.Kind ?? KindFor(s.Biome);
+        var kind = Dungeons.Kinds.FirstOrDefault(k => k.Name == wanted) ?? cave;
         // Camps and villages are laid out on the ground, not joined room to room: a cave instead.
-        if (!Dungeons.RoomsFor(kind).Any(r => !r.Entrance && !r.EndCap && !r.Divider && r.Openings.Length > 0))
+        if (kind == null || !Joinable(kind))
         {
-            notes.Add($"{Describe(kind)} has no rooms to join: a cave instead");
+            if (cave == null || !Joinable(cave))
+            {
+                throw new InvalidDataException($"The game's data has no rooms to join for {wanted.Replace("DG_", "", StringComparison.Ordinal)}, and no cave to make instead "
+                    + "(a game update may have changed its dungeons).");
+            }
+            // (No kind at all only when there is no cave either.)
+            notes.Add($"{Describe(kind!)} has no rooms to join: a cave instead");
             kind = cave;
         }
         var rnd = new Random(s.Seed);

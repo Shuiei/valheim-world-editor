@@ -174,6 +174,9 @@ the plugin is unchanged in versions without that part.
   burial chamber's foes were always sleeping draugr, and an ossuary's bone pile kept raising the dead with Respawn
   off; chosen foes now stand in for the elites and the sleepers, and the bone pile is left out when foes are chosen or
   nothing respawns.
+- **A dungeon of the game's rooms failed with a meaningless error when the game's data had none to join.** Without
+  DG_Cave, or with no joinable rooms left, MakeRooms hit a null or an empty list; it now says the game's data has no
+  rooms to join (a game update may have changed its dungeons).
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
