@@ -133,7 +133,7 @@ public sealed class MaskPanel
                 biomes,
                 Pair("Height", HeightMin, HeightMax, "m"),
                 Pair("Slope", SlopeMin, SlopeMax, "°"),
-                new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,14"), ColumnSpacing = 4, Children = { new TextBlock { Text = "Paint", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Column(PaintBox, 1) } },
+                new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,14"), ColumnSpacing = 4, Children = { new TextBlock { Text = "Paint", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PaintBox, 1) } },
                 WarningText,
                 new TextBlock { Text = "No biome selected = all biomes. Leave a box empty for no limit. Alt + Shift + click the ground fills the height range around it (±2 m).", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
             },
@@ -145,15 +145,6 @@ public sealed class MaskPanel
         });
         mask.Changed += Fill;
         Fill();
-    }
-
-    /// <summary>
-    /// <paramref name="c"/> set in grid column <paramref name="col"/>, for use inside an initializer.
-    /// </summary>
-    private static Control Column(Control c, int col)
-    {
-        Grid.SetColumn(c, col);
-        return c;
     }
 
     /// <summary>

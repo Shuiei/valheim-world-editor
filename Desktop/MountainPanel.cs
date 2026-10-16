@@ -108,25 +108,6 @@ public sealed class MountainPanel
     public bool Grow => GrowBox.IsChecked == true;
 
     /// <summary>
-    /// A labelled row: the label, the input, and an optional value text on the right.
-    /// </summary>
-    private static Grid Row(string label, Control input, Control? after = null)
-    {
-        var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,46") };
-        var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-        Tips.Label(l, input);
-        g.Children.Add(l);
-        Grid.SetColumn(input, 1);
-        g.Children.Add(input);
-        if (after != null)
-        {
-            Grid.SetColumn(after, 2);
-            g.Children.Add(after);
-        }
-        return g;
-    }
-
-    /// <summary>
     /// A slider snapping to <paramref name="step"/> that writes its value into <paramref name="shown"/> and raises
     /// Changed.
     /// </summary>
@@ -158,7 +139,7 @@ public sealed class MountainPanel
         RadiusSlider = Slide(20, 280, 1, radiusV, v => $"{v:0} m");
         RoughSlider = Slide(0, 1, 0.05, roughV, v => $"{v:0.00}");
         TurnSlider = Slide(0, 179, 1, turnV, v => $"{v:0}°");
-        _turnRow = Row("Turn", TurnSlider, turnV);
+        _turnRow = Ui.Row("Turn", TurnSlider, turnV);
         PresetBox.SelectionChanged += (_, _) => Randomize();
         RandomizeButton.Click += (_, _) => Randomize();
         SeedBox.ValueChanged += (_, _) =>
@@ -187,13 +168,13 @@ public sealed class MountainPanel
                 Children =
                 {
                     new TextBlock { Text = "Mountain", FontSize = 14, FontWeight = FontWeight.SemiBold },
-                    Row("Preset", PresetBox),
+                    Ui.Row("Preset", PresetBox),
                     HelpText,
-                    Row("Height", HeightSlider, heightV),
-                    Row("Radius", RadiusSlider, radiusV),
-                    Row("Rough", RoughSlider, roughV),
+                    Ui.Row("Height", HeightSlider, heightV),
+                    Ui.Row("Radius", RadiusSlider, radiusV),
+                    Ui.Row("Rough", RoughSlider, roughV),
                     _turnRow,
-                    Row("Seed", SeedBox),
+                    Ui.Row("Seed", SeedBox),
                     RandomizeButton,
                     ClearBox,
                     GrowBox,

@@ -176,10 +176,10 @@ public sealed class StartPage
         {
             var label = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
             label.Children.Add(Icons.Make(icon, 16));
-            label.Children.Add(Col(new TextBlock { Text = title, FontSize = 13.5, VerticalAlignment = VerticalAlignment.Center }, 1));
+            label.Children.Add(Ui.Col(new TextBlock { Text = title, FontSize = 13.5, VerticalAlignment = VerticalAlignment.Center }, 1));
             if (tag != null)
             {
-                label.Children.Add(Col(tag, 2));
+                label.Children.Add(Ui.Col(tag, 2));
             }
             var b = new Button { Content = label, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(12, 9) }.Classed("ghost");
             b.Tip($"start.{key}");
@@ -251,7 +251,7 @@ public sealed class StartPage
             Children =
             {
                 new TextBlock { Text = "Another world folder", FontWeight = FontWeight.SemiBold },
-                new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 6, Children = { PathBox, Col(browse, 1), Col(openPath, 2) } },
+                new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 6, Children = { PathBox, Ui.Col(browse, 1), Ui.Col(openPath, 2) } },
                 PathError,
                 Hint("For example a copy of a dedicated server's world: <savedir>/worlds_local/<World>."),
             },
@@ -351,13 +351,6 @@ public sealed class StartPage
             c.IsEnabled = !LookBanner.Busy;
             c.Opacity = LookBanner.Busy ? 0.45 : 1;
         }
-    }
-
-    /// <summary>Puts a control in a grid column and returns it.</summary>
-    private static Control Col(Control c, int col)
-    {
-        Grid.SetColumn(c, col);
-        return c;
     }
 
     /// <summary>The page shown (a <c>ModeButtons</c> key).</summary>
@@ -526,7 +519,7 @@ public sealed class StartPage
                 Children =
                 {
                     new StackPanel { Children = { new TextBlock { Text = $"Valheim is running with the world {running.World}", FontSize = 15, FontWeight = FontWeight.SemiBold }, Hint($"{running.Players} player(s) connected{(where != "" ? $" ({where})" : "")}") } },
-                    Col(edit, 1),
+                    Ui.Col(edit, 1),
                 },
             };
         }
@@ -620,7 +613,7 @@ public sealed class StartPage
                 Children =
                 {
                     new StackPanel { Children = { new TextBlock { Text = $"Valheim is running with the world {running.World}", FontSize = 15, FontWeight = FontWeight.SemiBold }, Hint($"{running.Players} player(s) connected · changes show in game at once{(where != "" ? $" ({where})" : "")}") } },
-                    Col(edit, 1),
+                    Ui.Col(edit, 1),
                 },
             },
         };
@@ -955,7 +948,7 @@ public sealed class StartPage
         SBridge.Tip("start.bridgePort");
         LiveUrl.Tip("start.bridgeUrl");
         LiveToken.Tip("start.token");
-        Control Two(Control a, Control b, string cols = "*,*") => new Grid { ColumnDefinitions = new ColumnDefinitions(cols), ColumnSpacing = 10, Children = { a, Col(b, 1) } };
+        Control Two(Control a, Control b, string cols = "*,*") => new Grid { ColumnDefinitions = new ColumnDefinitions(cols), ColumnSpacing = 10, Children = { a, Ui.Col(b, 1) } };
         var keyBrowse = new Button { Content = "Browse…", VerticalAlignment = VerticalAlignment.Bottom }.Tip("start.browse");
         keyBrowse.Click += async (_, _) => { if (await PickFile("Choose the SSH key file") is string p) { SKey.Text = p; } };
         var connect = new Button { Content = "Connect", HorizontalAlignment = HorizontalAlignment.Right }.Classed("primary").Tip("start.connect");
@@ -977,7 +970,7 @@ public sealed class StartPage
                 Two(Field("SSH key file (optional)", SKey), keyBrowse, "*,Auto"),
                 Field("Plugin token", SToken),
                 Field("Server's Valheim folder (optional)", SFolder),
-                new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { SSave, Col(connect, 1) } },
+                new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { SSave, Ui.Col(connect, 1) } },
                 ServerError,
                 Hint("The server needs BepInEx and the WorldEditorBridge plugin. The editor logs in with SSH and connects to the plugin through its own encrypted tunnel: no ssh command to type. After the first connection the server (with its token) is saved for one-click access."),
                 new Expander
@@ -991,7 +984,7 @@ public sealed class StartPage
                         {
                             Two(Field("Key passphrase", SPhrase), Field("Plugin port", SBridge), "*,130"),
                             new TextBlock { Text = "I made my own tunnel", FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 8, 0, 0) },
-                            new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,Auto"), ColumnSpacing = 10, Children = { Field("Bridge address", LiveUrl), Col(Field("Token", LiveToken), 1), Col(connectUrl, 2) } },
+                            new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,Auto"), ColumnSpacing = 10, Children = { Field("Bridge address", LiveUrl), Ui.Col(Field("Token", LiveToken), 1), Ui.Col(connectUrl, 2) } },
                             UrlError,
                         },
                     },

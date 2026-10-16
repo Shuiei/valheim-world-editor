@@ -1,4 +1,3 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -74,37 +73,12 @@ public sealed class PathPanel
     /// <summary>A number box starting at <c>v</c> that steps by <c>step</c>.</summary>
     private static NumericUpDown Num(decimal v, decimal step) => new() { Value = v, Increment = step, FormatString = "0.0#", FontSize = 12 };
 
-    /// <summary>A labelled row: the label, the input, and optionally something after it (a unit or a button).</summary>
-    private static Grid Row(string label, Control input, Control? after = null)
-    {
-        var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,46") };
-        var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-        Tips.Label(l, input);
-        g.Children.Add(l);
-        Grid.SetColumn(input, 1);
-        g.Children.Add(input);
-        if (after != null)
-        {
-            Grid.SetColumn(after, 2);
-            g.Children.Add(after);
-        }
-        return g;
-    }
-
     /// <summary>
     /// A slider that shows its value with the unit in <c>shown</c> and passes each new value to
     /// <c>set</c>.
     /// </summary>
-    private static Slider Slide(double min, double max, double step, double value, TextBlock shown, string unit, Action<float> set)
-    {
-        var s = new Slider { Minimum = min, Maximum = max, SmallChange = step, TickFrequency = step, IsSnapToTickEnabled = true, Value = value };
-        shown.Text = $"{value:0.#} {unit}";
-        shown.FontSize = 12;
-        shown.VerticalAlignment = VerticalAlignment.Center;
-        shown.Margin = new Thickness(6, 0, 0, 0);
-        s.ValueChanged += (_, e) => { shown.Text = $"{e.NewValue:0.#} {unit}"; set((float)e.NewValue); };
-        return s;
-    }
+    private static Slider Slide(double min, double max, double step, double value, TextBlock shown, string unit, Action<float> set) =>
+        Ui.Slide(min, max, step, value, shown, v => $"{v:0.#} {unit}", v => set((float)v));
 
     /// <summary>A " m" unit label.</summary>
     private static TextBlock M() => new() { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
@@ -169,8 +143,8 @@ public sealed class PathPanel
             Spacing = 4,
             Children =
             {
-                Row("Bumps", Slide(0.2, 4, 0.1, brush.NoiseAmp, ampV, "m", v => brush.NoiseAmp = v).Tip("natural.amp"), ampV),
-                Row("Bump size", Slide(4, 60, 1, brush.NoiseSize, sizeV, "m", v => brush.NoiseSize = v).Tip("natural.size"), sizeV),
+                Ui.Row("Bumps", Slide(0.2, 4, 0.1, brush.NoiseAmp, ampV, "m", v => brush.NoiseAmp = v).Tip("natural.amp"), ampV),
+                Ui.Row("Bump size", Slide(4, 60, 1, brush.NoiseSize, sizeV, "m", v => brush.NoiseSize = v).Tip("natural.size"), sizeV),
             },
         };
         Control Only(Control c, params PathTool.Action[] for_)
@@ -180,7 +154,7 @@ public sealed class PathPanel
         }
         Control R(string label, NumericUpDown box, params PathTool.Action[] for_)
         {
-            var r = Row(label, box, M());
+            var r = Ui.Row(label, box, M());
             _rows[r] = for_;
             return r;
         }
@@ -194,19 +168,19 @@ public sealed class PathPanel
                 Children =
                 {
                     new TextBlock { Text = "Path", FontSize = 14, FontWeight = FontWeight.SemiBold },
-                    Row("Action", ActionBox),
-                    Row("Width", WidthSlider, widthV),
-                    Row("Soft edge", SoftSlider, softV),
+                    Ui.Row("Action", ActionBox),
+                    Ui.Row("Width", WidthSlider, widthV),
+                    Ui.Row("Soft edge", SoftSlider, softV),
                     R("Height", HeightBox, PathTool.Action.Flatten),
                     R("Amount", AmountBox, PathTool.Action.Raise, PathTool.Action.Lower),
                     R("Start", StartBox, PathTool.Action.Ramp),
                     R("End", EndBox, PathTool.Action.Ramp),
                     R("Depth", DepthBox, PathTool.Action.River),
-                    Only(Row("Preset", CavePresetBox, CaveRandomButton), PathTool.Action.Cave),
+                    Only(Ui.Row("Preset", CavePresetBox, CaveRandomButton), PathTool.Action.Cave),
                     Only(CaveHelp, PathTool.Action.Cave),
                     R("Depth", CaveDepthBox, PathTool.Action.Cave),
                     R("Headroom", HeadroomBox, PathTool.Action.Cave),
-                    Only(Row("Roof", RockBox), PathTool.Action.Cave),
+                    Only(Ui.Row("Roof", RockBox), PathTool.Action.Cave),
                     CurveBox,
                     NaturalBox,
                     _naturalRows,

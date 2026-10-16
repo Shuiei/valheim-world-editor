@@ -173,35 +173,6 @@ public sealed class ToolPanel
         }),
     };
 
-    /// <summary>An option row: label, control, and the value shown after it when there is one.</summary>
-    private static Grid Row(string label, Control input, TextBlock? value = null)
-    {
-        var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,46") };
-        var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-        Tips.Label(l, input);
-        g.Children.Add(l);
-        Grid.SetColumn(input, 1);
-        g.Children.Add(input);
-        if (value != null)
-        {
-            Grid.SetColumn(value, 2);
-            value.VerticalAlignment = VerticalAlignment.Center;
-            value.FontSize = 12;
-            value.Margin = new Thickness(6, 0, 0, 0);
-            g.Children.Add(value);
-        }
-        return g;
-    }
-
-    /// <summary>A snapping slider whose value is shown (formatted) in <paramref name="shown"/> and passed to <paramref name="set"/>.</summary>
-    private static Slider Slide(double min, double max, double step, double value, TextBlock shown, Func<double, string> format, Action<double> set)
-    {
-        var s = new Slider { Minimum = min, Maximum = max, SmallChange = step, TickFrequency = step, IsSnapToTickEnabled = true, Value = value };
-        shown.Text = format(value);
-        s.ValueChanged += (_, e) => { shown.Text = format(e.NewValue); set(e.NewValue); };
-        return s;
-    }
-
     /// <summary>Builds the rail and the options, with View in use.</summary>
     public ToolPanel()
     {
@@ -298,15 +269,15 @@ public sealed class ToolPanel
 
         // The options: size and strength, the brush shape, and each tool's own.
         var sizeV = new TextBlock();
-        SizeSlider = Slide(1, 30, 0.5, Brush.Radius, sizeV, v => $"{v:0.#} m", v => Brush.Radius = (float)v);
+        SizeSlider = Ui.Slide(1, 30, 0.5, Brush.Radius, sizeV, v => $"{v:0.#} m", v => Brush.Radius = (float)v);
         var strengthV = new TextBlock();
-        StrengthSlider = Slide(0.05, 1, 0.05, Brush.Strength, strengthV, v => $"{v:0.00}", v => Brush.Strength = (float)v);
+        StrengthSlider = Ui.Slide(0.05, 1, 0.05, Brush.Strength, strengthV, v => $"{v:0.00}", v => Brush.Strength = (float)v);
         ShapeBox = new ComboBox { SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12, MaxDropDownHeight = 400 };
         FillShapes();
         FalloffBox = new ComboBox { ItemsSource = new[] { "Smooth", "Linear", "Dome", "Flat top", "Peak", "Sharp edge (pickaxe)" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
         var turnV = new TextBlock();
-        var turn = Slide(-180, 180, 1, 0, turnV, v => $"{v:0}°", v => Brush.Turn = (float)v);
-        _turnRow = Row("Turn", turn.Tip("brush.turn"), turnV);
+        var turn = Ui.Slide(-180, 180, 1, 0, turnV, v => $"{v:0}°", v => Brush.Turn = (float)v);
+        _turnRow = Ui.Row("Turn", turn.Tip("brush.turn"), turnV);
         ShapeBox.SelectionChanged += (_, _) => ShapeChosen();
         LoadStampButton.Tip("brush.loadStamp");
         ForgetStampButton.Tip("brush.forgetStamp");
@@ -332,7 +303,7 @@ public sealed class ToolPanel
         };
         StampOnceBox.IsCheckedChanged += (_, _) => { Brush.StampOnce = StampOnceBox.IsChecked == true; SyncStamp(); };
         StampHeightBox.ValueChanged += (_, e) => Brush.StampHeight = (float)(e.NewValue ?? 0);
-        _stampHeightRow = Row("Height", StampHeightBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+        _stampHeightRow = Ui.Row("Height", StampHeightBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
         _stampOnceRows = new StackPanel { Spacing = 4, Children = { StampOnceBox, _stampHeightRow } };
         FalloffBox.SelectionChanged += (_, _) => Brush.Falloff = (Falloff)Math.Max(0, FalloffBox.SelectedIndex);
         _turnRow.IsVisible = false;
@@ -342,7 +313,7 @@ public sealed class ToolPanel
         TargetFromClickBox.Tip("brush.targetFromClick");
         TargetFromClickBox.IsCheckedChanged += (_, _) => { Brush.TargetFromClick = TargetFromClickBox.IsChecked == true; TargetBox.IsEnabled = !Brush.TargetFromClick; };
         TargetBox.ValueChanged += (_, e) => Brush.Target = (float)(e.NewValue ?? 0);
-        _flattenRows = new StackPanel { Spacing = 4, Children = { TargetFromClickBox, Row("Height (m)", TargetBox) } };
+        _flattenRows = new StackPanel { Spacing = 4, Children = { TargetFromClickBox, Ui.Row("Height (m)", TargetBox) } };
 
         var ampV = new TextBlock();
         var noiseV = new TextBlock();
@@ -351,8 +322,8 @@ public sealed class ToolPanel
             Spacing = 4,
             Children =
             {
-                Row("Bumps", Slide(0.2, 4, 0.1, Brush.NoiseAmp, ampV, v => $"{v:0.0} m", v => Brush.NoiseAmp = (float)v).Tip("natural.amp"), ampV),
-                Row("Bump size", Slide(4, 60, 1, Brush.NoiseSize, noiseV, v => $"{v:0} m", v => Brush.NoiseSize = (float)v).Tip("natural.size"), noiseV),
+                Ui.Row("Bumps", Ui.Slide(0.2, 4, 0.1, Brush.NoiseAmp, ampV, v => $"{v:0.0} m", v => Brush.NoiseAmp = (float)v).Tip("natural.amp"), ampV),
+                Ui.Row("Bump size", Ui.Slide(4, 60, 1, Brush.NoiseSize, noiseV, v => $"{v:0} m", v => Brush.NoiseSize = (float)v).Tip("natural.size"), noiseV),
                 NewPatternButton,
             },
         };
@@ -360,8 +331,8 @@ public sealed class ToolPanel
         NewPatternButton.Tip("natural.seed");
 
         var restV = new TextBlock();
-        RestSlider = Slide(10, 60, 1, Brush.RestAngle, restV, v => $"{v:0}°", v => Brush.RestAngle = (float)v).Tip("erode.rest");
-        var restRow = Row("Rest angle", RestSlider, restV);
+        RestSlider = Ui.Slide(10, 60, 1, Brush.RestAngle, restV, v => $"{v:0}°", v => Brush.RestAngle = (float)v).Tip("erode.rest");
+        var restRow = Ui.Row("Rest angle", RestSlider, restV);
         void Mode(bool water)
         {
             Brush.ErodeWater = water;
@@ -384,10 +355,10 @@ public sealed class ToolPanel
             Children =
             {
                 _title, _help,
-                Row("Size", SizeSlider, sizeV),
-                Row("Strength", StrengthSlider, strengthV),
-                Row("Shape", ShapeBox),
-                (_falloffRow = Row("Falloff", FalloffBox)),
+                Ui.Row("Size", SizeSlider, sizeV),
+                Ui.Row("Strength", StrengthSlider, strengthV),
+                Ui.Row("Shape", ShapeBox),
+                (_falloffRow = Ui.Row("Falloff", FalloffBox)),
                 _turnRow,
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { LoadStampButton, ForgetStampButton } },
                 _stampOnceRows,

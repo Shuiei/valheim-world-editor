@@ -78,6 +78,51 @@ public static class Ui
         return g;
     }
 
+    /// <summary>Puts a control in a grid column; returns it, for building rows inline.</summary>
+    /// <param name="c">The control.</param>
+    /// <param name="col">The column.</param>
+    public static Control Col(Control c, int col)
+    {
+        Grid.SetColumn(c, col);
+        return c;
+    }
+
+    /// <summary>A tool card's labelled row: the label, the input, and optionally something after it (a value, a unit, a button).</summary>
+    /// <param name="label">The label, also the input's name for screen readers and tips.</param>
+    /// <param name="input">The input.</param>
+    /// <param name="after">What goes after it (null: nothing).</param>
+    /// <param name="columns">The three columns' widths.</param>
+    public static Grid Row(string label, Control input, Control? after = null, string columns = "70,*,46")
+    {
+        var g = new Grid { ColumnDefinitions = new ColumnDefinitions(columns) };
+        var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+        Tips.Label(l, input);
+        g.Children.Add(l);
+        Grid.SetColumn(input, 1);
+        g.Children.Add(input);
+        if (after != null)
+        {
+            Grid.SetColumn(after, 2);
+            g.Children.Add(after);
+        }
+        return g;
+    }
+
+    /// <summary>
+    /// A slider snapping to <paramref name="step"/> whose value is shown through <paramref name="format"/> in
+    /// <paramref name="shown"/> (set up as a row's value) and passed to <paramref name="set"/> on each change.
+    /// </summary>
+    public static Slider Slide(double min, double max, double step, double value, TextBlock shown, Func<double, string> format, Action<double> set)
+    {
+        var s = new Slider { Minimum = min, Maximum = max, SmallChange = step, TickFrequency = step, IsSnapToTickEnabled = true, Value = value };
+        shown.Text = format(value);
+        shown.FontSize = 12;
+        shown.VerticalAlignment = VerticalAlignment.Center;
+        shown.Margin = new Thickness(6, 0, 0, 0);
+        s.ValueChanged += (_, e) => { shown.Text = format(e.NewValue); set(e.NewValue); };
+        return s;
+    }
+
     /// <summary>
     /// A path under the home folder as ~/… (Linux and macOS, as a terminal shows it): shorter, and no
     /// one's user name on screen. Unchanged on Windows and outside the home folder.

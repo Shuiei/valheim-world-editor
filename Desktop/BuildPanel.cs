@@ -174,7 +174,7 @@ public sealed class BuildPanel
         static Control Row(string label, Control c) => new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("90,*"),
-            Children = { new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Col(c) },
+            Children = { new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(c, 1) },
         };
         PiecesTab.Click += (_, _) => ShowLibrary(false);
         LibraryTab.Click += (_, _) => ShowLibrary(true);
@@ -248,7 +248,7 @@ public sealed class BuildPanel
                 {
                     ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"),
                     ColumnSpacing = 4,
-                    Children = { new TextBlock { Text = "Build", FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, Col(PiecesTab), Col(LibraryTab, 2) },
+                    Children = { new TextBlock { Text = "Build", FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PiecesTab, 1), Ui.Col(LibraryTab, 2) },
                 },
                 _pieces,
                 _library,
@@ -257,13 +257,6 @@ public sealed class BuildPanel
         });
         Card.IsVisible = false;
         ShowLibrary(false);
-    }
-
-    /// <summary>Puts a control in a grid column.</summary>
-    private static Control Col(Control c, int col = 1)
-    {
-        Grid.SetColumn(c, col);
-        return c;
     }
 
     // ---- The Library tab: Homestead's blueprints, opened on the plot, added to it, or dragged onto it.
@@ -385,7 +378,7 @@ public sealed class BuildPanel
                 Children =
                 {
                     image,
-                    Col(new StackPanel
+                    Ui.Col(new StackPanel
                     {
                         Spacing = 2,
                         Children =
@@ -394,7 +387,7 @@ public sealed class BuildPanel
                             new TextBlock { Text = $"{e.Pieces} piece(s) · {PieceCost.Of(e.Kinds).Describe(3)}", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { open, add } },
                         },
-                    }),
+                    }, 1),
                 },
             },
         };

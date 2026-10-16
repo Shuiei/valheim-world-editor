@@ -233,12 +233,12 @@ public sealed class InspectorPanel
                     Spacing = 6,
                     Children =
                     {
-                        new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { _title, Col(close, 1) } },
+                        new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { _title, Ui.Col(close, 1) } },
                         _where,
                         ItemsBox,
                         new TextBlock { Text = "DATA", FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 0) },
                         Fields,
-                        new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,*,Auto"), ColumnSpacing = 4, Children = { AddSection, Col(AddKey, 1), Col(AddValue, 2), Col(AddButton, 3) } },
+                        new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,*,Auto"), ColumnSpacing = 4, Children = { AddSection, Ui.Col(AddKey, 1), Ui.Col(AddValue, 2), Ui.Col(AddButton, 3) } },
                         new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ApplyButton, RevertButton } },
                         new TextBlock
                         {
@@ -249,13 +249,6 @@ public sealed class InspectorPanel
                 },
             },
         });
-    }
-
-    /// <summary>Puts a control in a grid column.</summary>
-    private static Control Col(Control c, int col)
-    {
-        Grid.SetColumn(c, col);
-        return c;
     }
 
     /// <summary>True while the card is shown.</summary>
@@ -490,7 +483,7 @@ public sealed class InspectorPanel
             rm.Click += (_, _) => { f.Removed = !f.Removed; Render(); };
             var label = new TextBlock { Text = Label(f), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextDecorations = f.Removed ? TextDecorations.Strikethrough : null };
             ToolTip.SetTip(label, $"{f.Name} · {Sections.FirstOrDefault(x => x.Section == f.Section).Name ?? "data"} · key {f.Key}");
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,170,Auto"), ColumnSpacing = 4, Children = { label, Col(box, 1), Col(rm, 2) } };
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,170,Auto"), ColumnSpacing = 4, Children = { label, Ui.Col(box, 1), Ui.Col(rm, 2) } };
             // Under a value: its note, or bytes as a mod's extension reads them.
             string? under = !ro ? f.Note : isItems ? null : Decoded(f);
             Fields.Children.Add(under != null
@@ -505,7 +498,7 @@ public sealed class InspectorPanel
             {
                 ColumnDefinitions = new ColumnDefinitions("*,170,Auto"),
                 ColumnSpacing = 4,
-                Children = { new TextBlock { Text = $"{(Labels.TryGetValue(a.Key, out string? l) ? l : a.Key)} (new)", FontSize = 11 }, Col(new TextBlock { Text = a.Value, FontSize = 11 }, 1), Col(x, 2) },
+                Children = { new TextBlock { Text = $"{(Labels.TryGetValue(a.Key, out string? l) ? l : a.Key)} (new)", FontSize = 11 }, Ui.Col(new TextBlock { Text = a.Value, FontSize = 11 }, 1), Ui.Col(x, 2) },
             });
         }
         Dirty();
@@ -583,12 +576,12 @@ public sealed class InspectorPanel
                 Children =
                 {
                     name,
-                    Col(Num(it.Stack, 1, MaxStack, v => it.Stack = v, "inspect.count"), 1),
-                    Col(Num(it.Quality, 1, 10, v => it.Quality = v, "inspect.quality"), 2),
-                    Col(dur, 3),
-                    Col(WithBorder(Num(it.X, 0, 255, v => it.X = v, "inspect.slotX"), bad), 4),
-                    Col(WithBorder(Num(it.Y, 0, 255, v => it.Y = v, "inspect.slotY"), bad), 5),
-                    Col(x, 6),
+                    Ui.Col(Num(it.Stack, 1, MaxStack, v => it.Stack = v, "inspect.count"), 1),
+                    Ui.Col(Num(it.Quality, 1, 10, v => it.Quality = v, "inspect.quality"), 2),
+                    Ui.Col(dur, 3),
+                    Ui.Col(WithBorder(Num(it.X, 0, 255, v => it.X = v, "inspect.slotX"), bad), 4),
+                    Ui.Col(WithBorder(Num(it.Y, 0, 255, v => it.Y = v, "inspect.slotY"), bad), 5),
+                    Ui.Col(x, 6),
                 },
             });
         }
@@ -838,9 +831,9 @@ public sealed class InspectorPanel
                 Children =
                 {
                     name,
-                    Col(StandNum(row.Quality, 1, 10, v => row.Quality = v, "inspect.quality"), 1),
-                    Col(StandNum(row.Variant, 0, 99, v => row.Variant = v, "inspect.variant"), 2),
-                    Col(empty, 3),
+                    Ui.Col(StandNum(row.Quality, 1, 10, v => row.Quality = v, "inspect.quality"), 1),
+                    Ui.Col(StandNum(row.Variant, 0, 99, v => row.Variant = v, "inspect.variant"), 2),
+                    Ui.Col(empty, 3),
                 },
             });
         }
@@ -873,7 +866,7 @@ public sealed class InspectorPanel
     }
 
     /// <summary>A column heading.</summary>
-    private static Control Head(string t, int col) => Col(new TextBlock { Text = t, FontSize = 10, Foreground = Ui.Muted }, col);
+    private static Control Head(string t, int col) => Ui.Col(new TextBlock { Text = t, FontSize = 10, Foreground = Ui.Muted }, col);
 
     /// <summary>Outlines a number box in orange when <paramref name="bad"/> (a slot outside the container).</summary>
     private static NumericUpDown WithBorder(NumericUpDown n, bool bad)

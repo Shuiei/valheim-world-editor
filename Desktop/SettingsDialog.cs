@@ -161,13 +161,13 @@ public static class SettingsDialog
         claudeDetails.Children.Add(scripts);
         claudeDetails.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { new TextBlock { Text = Lang.T("settings.port"), VerticalAlignment = VerticalAlignment.Center }, port, renew } });
         claudeDetails.Children.Add(Hint(Lang.T("settings.claudeCodeHint")));
-        claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { command, Col(copy, 1) } });
+        claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { command, Ui.Col(copy, 1) } });
         // Claude Desktop starts a program: this one, relaying to the running editor (ClaudeRelay).
         var desktop = new TextBox { Name = "ClaudeDesktop", IsReadOnly = true, TextWrapping = TextWrapping.Wrap, FontSize = 12, FontFamily = new FontFamily("monospace"), Text = ClaudeServer.DesktopConfig(Environment.ProcessPath ?? "ValheimWorldEditor") }.Tip("settings.claudeDesktop");
         var copyDesktop = new Button { Content = Lang.T("common.copy") }.Tip("settings.claudeCopy");
         copyDesktop.Click += async (_, _) => { if (TopLevel.GetTopLevel(dialog)?.Clipboard is { } cb) { await Avalonia.Input.Platform.ClipboardExtensions.SetTextAsync(cb, desktop.Text ?? ""); } };
         claudeDetails.Children.Add(Hint(Lang.T("settings.claudeDesktopHint")));
-        claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { desktop, Col(copyDesktop, 1) } });
+        claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { desktop, Ui.Col(copyDesktop, 1) } });
         if (ClaudeServer.Status is string status)
         {
             claudeDetails.Children.Add(Hint(status));
@@ -275,7 +275,7 @@ public static class SettingsDialog
                     Hint(Lang.T("settings.languageHint", Ui.Tilde(Lang.Folder))),
                     H2(Lang.T("settings.valheimFolder")),
                     Hint(detected),
-                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 4, Children = { valheim, Col(browse, 1), Col(auto, 2) } },
+                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 4, Children = { valheim, Ui.Col(browse, 1), Ui.Col(auto, 2) } },
                     Hint(Lang.T("settings.valheimHint")),
                     H2(Lang.T("settings.bepInExFolders")),
                     bep,
@@ -298,12 +298,5 @@ public static class SettingsDialog
         };
         await dialog.ShowDialog(owner);
         return saved;
-    }
-
-    /// <summary>Puts a control in a grid column and returns it, for building rows inline.</summary>
-    private static Control Col(Control c, int col)
-    {
-        Grid.SetColumn(c, col);
-        return c;
     }
 }

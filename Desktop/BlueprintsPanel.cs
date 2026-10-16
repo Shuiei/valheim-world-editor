@@ -104,22 +104,15 @@ public sealed class BlueprintsPanel
                 Spacing = 6,
                 Children =
                 {
-                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "Blueprints", FontSize = 14, FontWeight = FontWeight.SemiBold }, Col(close, 1) } },
+                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "Blueprints", FontSize = 14, FontWeight = FontWeight.SemiBold }, Ui.Col(close, 1) } },
                     _bannerBox,
-                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { Search, Col(ImportButton, 1) } },
+                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { Search, Ui.Col(ImportButton, 1) } },
                     NewButton,
                     new ScrollViewer { MaxHeight = 640, Content = List },
                     _folder,
                 },
             },
         });
-    }
-
-    /// <summary>Puts a control in a grid column.</summary>
-    private static Control Col(Control c, int col)
-    {
-        Grid.SetColumn(c, col);
-        return c;
     }
 
     /// <summary>Shows or hides the panel, and refreshes it.</summary>
@@ -225,7 +218,7 @@ public sealed class BlueprintsPanel
             Children =
             {
                 new Image { Source = picture, Width = 80, Height = 80, VerticalAlignment = VerticalAlignment.Top },
-                Col(text, 1),
+                Ui.Col(text, 1),
             },
         };
         return new Border { Padding = new Thickness(4), CornerRadius = new CornerRadius(6), Child = grid };
