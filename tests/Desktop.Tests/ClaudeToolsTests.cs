@@ -83,6 +83,11 @@ public class ClaudeToolsTests
         Assert.Contains("Auto on", await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "woodwall", X = 0, Z = 0 }]));
         Assert.Contains("Auto on", await r.T.RemoveObjects([0]));
         Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+        // Scripts not allowed either: that is what is said, since turning Auto off would not be enough.
+        r.W.Settings.ClaudeScripts = false;
+        Assert.Equal(ClaudeTools.ScriptsRefused, await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+        Assert.Contains("not allowed Claude to run scripts", await r.T.SetControl("script.run", "click"));
+        r.W.Settings.ClaudeScripts = true;
         // Auto off: Claude's change waits for Apply live.
         r.W.Settings.AutoApply = false;
         Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));

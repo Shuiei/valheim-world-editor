@@ -620,14 +620,15 @@ public sealed partial class ClaudeTools
         [Description("A few words for the history (\"Claude: river valley\").")] string label = "Claude: script",
         [Description("true: only say what it would change (ground points, paint, objects placed and taken away), changing nothing. Use it before a large change.")] bool dryRun = false) => OnUi(async () =>
     {
-        if (CannotEdit() is string why)
-        {
-            return why;
-        }
-        // A dry run compiles and runs the code too: the same leave.
+        // A dry run compiles and runs the code too: the same leave. Said first: the user's own setting, which no
+        // other change (opening an area, turning Auto off) would get round.
         if (!_w.Settings.ClaudeScripts)
         {
             return ScriptsRefused;
+        }
+        if (CannotEdit() is string why)
+        {
+            return why;
         }
         var r = await _w.RunScriptCode(code, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, apply: !dryRun);
         _w.MessageText.Text = r.Message;
