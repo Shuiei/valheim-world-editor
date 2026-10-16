@@ -48,14 +48,21 @@ public static partial class Lang
         ? t
         : throw new KeyNotFoundException("No text " + key);
 
-    /// <summary>The text of <paramref name="key"/> in the language in use, with the values put in its places ({0}, {1}…).</summary>
-    public static string T(string key, params object?[] values) => string.Format(CultureInfo.InvariantCulture, T(key), values);
+    /// <summary>
+    /// The text of <paramref name="key"/> in the language in use, with the values put in its places ({0}, {1}…). With no
+    /// values the text is shown as it is, like <see cref="T(string)"/>: a translation of a text without places may hold
+    /// braces (<c>Fits</c> lets them through), and formatting it would throw.
+    /// </summary>
+    public static string T(string key, params object?[] values) => Filled(T(key), values);
 
     /// <summary>
     /// The English text of <paramref name="key"/>, with the values put in its places, whatever the language in use: for
-    /// what is not shown to the user (Claude's answers).
+    /// what is not shown to the user (Claude's answers). With no values the text is shown as it is.
     /// </summary>
-    public static string En(string key, params object?[] values) => string.Format(CultureInfo.InvariantCulture, English[key], values);
+    public static string En(string key, params object?[] values) => Filled(English[key], values);
+
+    /// <summary><paramref name="text"/> with the values put in its places; the text as it is when there are none.</summary>
+    private static string Filled(string text, object?[] values) => values.Length == 0 ? text : string.Format(CultureInfo.InvariantCulture, text, values);
 
     /// <summary>
     /// The English of a text shown in the language in use: what does not depend on the language (Claude's ids for the

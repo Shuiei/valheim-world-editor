@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.42 — unreleased
+
+### Fixed
+- **A translation of "Free" or "Cost unknown" with a brace in it broke the Build panel.** A text without places for
+  values is taken from a language file as it is, braces and all, since it is never formatted; but the cost line asked
+  for it with an empty list of values and formatted it anyway, which threw and broke the Build panel, the blueprint
+  list and Claude's piece search. A text asked for with no values is now shown as it is.
+
 ## v1.45.41 — unreleased
 
 ### Fixed
