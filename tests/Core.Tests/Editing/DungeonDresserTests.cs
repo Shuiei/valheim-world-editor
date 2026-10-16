@@ -105,4 +105,32 @@ public class DungeonDresserTests
         Assert.True(checkedStairs > 0, "no steps before a platform");
         Assert.Superset(new HashSet<string> { "Burial chamber", "Chapel", "Shrine", "Tomb" }, rooms);
     }
+
+    [Fact]
+    public void TheAntechambersWarningHangsOnTheWallsInnerFace()
+    {
+        // The warning beside the boss's locked gate was put 4 cm from the doorway's middle, which is on the wall's centre
+        // line: 0.54 m deep in a stone wall. It belongs on the antechamber's side, on the wall's inner face.
+        int signs = 0;
+        foreach (string biome in new[] { "Black Forest", "Mistlands" })
+        {
+            float thick = DungeonKit.MaterialOf(DungeonKit.BiomeOf(biome).Material).Thick;
+            for (int seed = 1; seed <= 3; seed++)
+            {
+                var r = DungeonGen.Make(new DungeonGen.Settings(Biome: biome, Style: "Crypt", Size: 2, Levels: 1, Seed: seed));
+                foreach (var sign in r.Items.Where(i => i.Prefab == "sign" && i.Data != null && i.Data.Any(d => d.Value.StartsWith("Sealed", StringComparison.Ordinal))))
+                {
+                    signs++;
+                    var ante = r.Map!.Single(m => m.Name == "Antechamber");
+                    var gate = r.Doors!.Where(d => d.Kind == "Key").MinBy(d => Vector2.Distance(new(d.X, d.Z), new(sign.Position.X, sign.Position.Z)))!;
+                    float dx = MathF.Abs(sign.Position.X - gate.X), dz = MathF.Abs(sign.Position.Z - gate.Z);
+                    Assert.Equal(2.6f, MathF.Max(dx, dz), 0.01f);
+                    Assert.Equal(thick / 2 + 0.04f, MathF.Min(dx, dz), 0.01f);
+                    Assert.True(sign.Position.X > ante.X0 && sign.Position.X < ante.X1 && sign.Position.Z > ante.Z0 && sign.Position.Z < ante.Z1,
+                        $"{biome}, seed {seed}: the warning at {sign.Position} is not on the antechamber's side");
+                }
+            }
+        }
+        Assert.True(signs > 0, "no warning by a locked gate");
+    }
 }

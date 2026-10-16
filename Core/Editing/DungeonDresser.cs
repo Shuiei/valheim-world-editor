@@ -2598,8 +2598,9 @@ internal sealed partial class DungeonDresser
             Brazier(f, u + sideU * 1.2f - alongU * 3.2f, v + sideV * 1.2f - alongV * 3.2f);
             if (m.Door.Kind == Door.Key)
             {
-                float yaw = MathF.Atan2(sideU, sideV) * 180 / MathF.PI;
-                _o.Add("sign", f.W(u + alongU * 2.6f - sideU * 0.04f, v + alongV * 2.6f - sideV * 0.04f, f.Top + 2.1f), f.Yaw(yaw + DungeonProps.Turn("sign")),
+                // The doorway's middle is on the wall's centre line: the sign goes on its inner face, a touch out.
+                float yaw = MathF.Atan2(sideU, sideV) * 180 / MathF.PI, inset = _mat.Thick / 2 + 0.04f;
+                _o.Add("sign", f.W(u + alongU * 2.6f + sideU * inset, v + alongV * 2.6f + sideV * inset, f.Top + 2.1f), f.Yaw(yaw + DungeonProps.Turn("sign")),
                     [("strings", "text", "Sealed. The key lies within these halls.")]);
             }
         }
