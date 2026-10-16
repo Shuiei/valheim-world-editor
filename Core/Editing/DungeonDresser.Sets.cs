@@ -636,8 +636,11 @@ internal sealed partial class DungeonDresser
             return;
         }
         // A corridor is 3 m wide within its walls: no room for jambs beside a 2 m door, so the gate is the door alone
-        // under a band of wall from wall to wall (held by both; it may rise into the roof).
-        InnerWall(f, -f.HalfA, v, f.HalfA, v, 3, f.H);
+        // under a band of wall from wall to wall (held by both; it may rise into the roof). The band runs on into the
+        // walls to their middle: between their faces a thin material's width is no whole number of pieces, and the gap
+        // left at one end let it fall.
+        float into = f.HalfA + _mat.Thick / 2;
+        InnerWall(f, -into, v, into, v, 3, f.H);
         string door = _style.Name switch
         {
             "Fortress" or "Temple" => "dungeon_forestcrypt_door",

@@ -219,6 +219,9 @@ the plugin is unchanged in versions without that part.
   objects are now left out of those to patch, and the zone gets a new one.
 - **Refusing a world in an older save format named the wrong format.** The message gave the first chunk file's format
   ("uses save format 41; the writer only supports 41"); it now names the first one that differs.
+- **A corridor gate's band of wall could fall in a stave or wood dungeon.** The band ran between the walls' faces, a
+  width no whole number of pieces fills in a thin material, and the gap left at one end let it fall; it now runs on
+  into the walls.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
