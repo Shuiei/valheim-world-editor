@@ -1928,6 +1928,12 @@ public sealed class GlView : OpenGlControlBase
     private readonly HashSet<string> _claimed = [];
 
     /// <summary>
+    /// The scene's cut grid once the extensions' cuts were marked into it (null: none were, it holds zeros): the next
+    /// rebuild clears it, and only then.
+    /// </summary>
+    private float[]? _cutMarked;
+
+    /// <summary>
     /// The shapes the mods' running extensions draw for the area's things (ModExtensions.ShapesOf), made again: in view
     /// space, one batch per kind of object, colour and sidedness, each a single instance the object passes draw like any
     /// model (see-through ones with the glass). And where they cut the ground (ModExtensions.CutsOf): the grid points
@@ -1951,8 +1957,13 @@ public sealed class GlView : OpenGlControlBase
         {
             s.Cut = new float[s.W * s.H];
         }
-        bool wasCut = Array.Exists(s.Cut, c => c != 0);
-        Array.Clear(s.Cut);
+        // Cleared only when cuts were marked into it (no extension cuts the ground: nothing to go over).
+        bool wasCut = ReferenceEquals(_cutMarked, s.Cut);
+        if (wasCut)
+        {
+            Array.Clear(s.Cut);
+            _cutMarked = null;
+        }
         if (s.World is not { } world || s.Session is not { } session || !ModExtensions.AnyShapes && !ModExtensions.AnyCuts)
         {
             SendCuts(s, wasCut);
@@ -1996,6 +2007,7 @@ public sealed class GlView : OpenGlControlBase
             foreach (var cut in ModExtensions.CutsOf(t.Prefab, view, around))
             {
                 GroundCuts.Mark(s.Cut, s.W, s.H, [.. cut.Outline.Select(p => Grid(p, cut.WorldSpace))]);
+                _cutMarked = s.Cut;
             }
             foreach (var shape in ModExtensions.ShapesOf(t.Prefab, view, around))
             {
@@ -2085,7 +2097,7 @@ public sealed class GlView : OpenGlControlBase
     /// <param name="wasCut">Whether the ground was cut before this rebuild.</param>
     private unsafe void SendCuts(WorldScene s, bool wasCut)
     {
-        if (_terrainCutVbo == 0 || !wasCut && !Array.Exists(s.Cut, c => c != 0))
+        if (_terrainCutVbo == 0 || !wasCut && !ReferenceEquals(_cutMarked, s.Cut))
         {
             return;
         }
