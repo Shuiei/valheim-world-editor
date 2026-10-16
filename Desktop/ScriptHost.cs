@@ -476,14 +476,21 @@ public static partial class ScriptHost
         }
     }
 
-    /// <summary>Throws unless world point (x, z) is within the area (its first to its last grid point, as Area.MinX..MaxX).</summary>
+    /// <summary>
+    /// Throws unless world point (x, z) is within the area (its first to its last grid point, as Area.MinX..MaxX); a
+    /// coordinate that is not a number is not.
+    /// </summary>
+    /// <param name="snap">The area.</param>
+    /// <param name="x">World x.</param>
+    /// <param name="z">World z.</param>
+    /// <param name="what">The point as the error names it (null: its coordinates).</param>
     /// <exception cref="ArgumentException">It is outside the area.</exception>
-    private static void InArea(Snapshot snap, float x, float z)
+    private static void InArea(Snapshot snap, float x, float z, string? what = null)
     {
         float maxX = snap.Ox + snap.W - 1, maxZ = snap.Oz + snap.H - 1;
-        if (x < snap.Ox || x > maxX || z < snap.Oz || z > maxZ)
+        if (!(x >= snap.Ox && x <= maxX && z >= snap.Oz && z <= maxZ))
         {
-            throw new ArgumentException($"({x}, {z}) is outside the area (x {snap.Ox} to {maxX}, z {snap.Oz} to {maxZ}): keep to Area.Inside");
+            throw new ArgumentException($"{what ?? $"({x}, {z})"} is outside the area (x {snap.Ox} to {maxX}, z {snap.Oz} to {maxZ}): keep to Area.Inside");
         }
     }
 
@@ -529,6 +536,7 @@ public static partial class ScriptHost
     /// <param name="snap">The area as the script saw it.</param>
     /// <param name="ch">The script's changes; its new pieces are moved in place.</param>
     /// <param name="cancel">Stop: checked before each piece (thousands take a while).</param>
+    /// <exception cref="ArgumentException">A piece snaps to a place outside the area.</exception>
     internal static void SnapPieces(Snapshot snap, Changes ch, CancellationToken cancel = default)
     {
         if (!ch.Add.Any(a => a.Snap))
@@ -551,7 +559,9 @@ public static partial class ScriptHost
             var q = BlueprintFormats.FromEuler(a.Rotation);
             if (a.Snap && Hammer.Get(a.Name) != null)
             {
-                ch.Add[i] = a with { Position = Hammer.Snap(a.Name, q, a.Position, placed).Position };
+                var to = Hammer.Snap(a.Name, q, a.Position, placed).Position;
+                InArea(snap, to.X, to.Z, $"the {a.Name} placed at ({a.Position.X}, {a.Position.Z}) snaps to ({to.X}, {to.Z}), which");
+                ch.Add[i] = a with { Position = to };
             }
             placed.Add(new(-1 - i, a.Name, ch.Add[i].Position, q));
         }

@@ -347,6 +347,20 @@ public class ScriptHostTests
         Assert.Equal(new Vector3(-32, 31, 20), ch.Moves[0].Position);
     }
 
+    // A piece placed inside the area near its edge, snapped 0.4 m to a wall standing beyond the edge, would end outside
+    // it: refused.
+    [Fact]
+    public void APieceSnappedOutsideTheAreaIsRefused()
+    {
+        var s = TestScenes.Flat(1, new WorldScene.Thing(7, StableHash.Of("woodwall"), new Vector3(34.2f, 31, 20), Vector3.Zero, 0, true));
+        var snap = ScriptHost.Take(s, Terrain.PrefabCatalog.NameOf);
+        var ch = new ScriptHost.Changes();
+        ch.Add.Add((StableHash.Of("woodwall"), "woodwall", new Vector3(31.8f, 31, 20), Vector3.Zero, 0, true));
+        var ex = Assert.Throws<ArgumentException>(() => ScriptHost.SnapPieces(snap, ch));
+        Assert.Contains("snaps to", ex.Message);
+        Assert.Equal(31.8f, ch.Add[0].Position.X);
+    }
+
     // SnapPieces: a wall placed with snap 0.3 m off meets the one standing; without snap it stays; a wall the script
     // took away is not snapped to; Stop ends the snapping.
     [Fact]

@@ -9,7 +9,8 @@ the plugin is unchanged in versions without that part.
 ### Fixed
 - **A script could put objects at impossible places into the world.** `Objects.Place` took a place, turn or tilt that
   was not a number (NaN, infinite), a negative size and a point outside the open area, and `Objects.Move` took
-  infinite values and places outside the area; the object went into the world like that. These now stop the script
+  infinite values and places outside the area; the object went into the world like that (a piece snapped near the
+  edge could also end past it). These now stop the script
   with an error saying what was wrong (NaN still means "on the ground" for `Place`'s `y` and "as it was" for `Move`).
   The boulder and ring-of-trees examples keep their objects inside the area.
 
