@@ -187,6 +187,7 @@ public sealed partial class GlView
     private static (int Prefab, bool Piece, bool Tamed) KeyOf(WorldScene.Thing t) => (t.Prefab, t.Piece || t.Joined, t.Tamed);
 
     /// <summary>The group a thing belongs to (made, and its model read, if it is the first of its kind).</summary>
+#pragma warning disable S3241 // OnThingsChanged marks the group it returns dirty (MarkDirty(GroupOf(s, i))).
     private Group GroupOf(WorldScene s, int i, bool start = true)
     {
         var t = s.Things[i];
@@ -211,6 +212,7 @@ public sealed partial class GlView
         }
         return g;
     }
+#pragma warning restore S3241
 
     /// <summary>A kind's group without things yet (the Place tool's ghosts), its model read if new.</summary>
     private Group KindGroup(int prefab, bool piece)

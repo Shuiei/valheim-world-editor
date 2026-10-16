@@ -158,7 +158,9 @@ public sealed partial class GlView
         }
         lock (_camLock)
         {
+#pragma warning disable S1244 // up is a sum of whole steps (+1 for Space, -1 for C): exactly 0 when neither or both are held.
             if (_eye == EyeMode.Fly && up != 0)
+#pragma warning restore S1244
             {
                 d.Y = up;
             }
