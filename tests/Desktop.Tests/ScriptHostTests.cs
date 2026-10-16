@@ -39,6 +39,26 @@ public class ScriptHostTests
     }
 
     [Fact]
+    public void AScriptMayChangeTheGroundFromSeveralThreads()
+    {
+        var s = TestScenes.Flat(2);
+        var ch = Run(s, """
+			System.Threading.Tasks.Parallel.For(0, 100, i =>
+			{
+			    for (int j = 0; j < 100; j++)
+			    {
+			        Ground.Set(Area.MinX + 2 + i, Area.MinZ + 2 + j, 40);
+			        Ground.Paint(Area.MinX + 2 + i, Area.MinZ + 2 + j, "dirt");
+			    }
+			    Print("row");
+			});
+			""");
+        Assert.Equal(10000, ch.Heights.Count);
+        Assert.Equal(10000, ch.Paint.Count);
+        Assert.Equal(100, ch.Output.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries).Length);
+    }
+
+    [Fact]
     public void AScriptsChangesAreOneUndoStepAndGoPastTheLimit()
     {
         var s = TestScenes.Flat(2);

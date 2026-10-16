@@ -274,13 +274,18 @@ public static partial class ScriptHost
             float h00 = a[z0 * snap.W + x0], h10 = a[z0 * snap.W + x0 + 1], h01 = a[(z0 + 1) * snap.W + x0], h11 = a[(z0 + 1) * snap.W + x0 + 1];
             return (h00 * (1 - u) + h10 * u) * (1 - v) + (h01 * (1 - u) + h11 * u) * v;
         }
+        // The callbacks that change something hold the changes' lock: a script may call them from several threads
+        // (Parallel.For), and the changes are dictionaries and lists.
         void SetHeight(float x, float z, float h)
         {
             int p = Point(x, z);
             if (p >= 0 && !snap.Locked[p] && float.IsFinite(h))
             {
-                heights[p] = h;
-                ch.Heights[p] = h;
+                lock (ch)
+                {
+                    heights[p] = h;
+                    ch.Heights[p] = h;
+                }
             }
         }
         var alc = new AssemblyLoadContext("Script", isCollectible: true);
@@ -308,9 +313,12 @@ public static partial class ScriptHost
                 {
                     return;
                 }
-                float[] now = ch.Paint.TryGetValue(p, out float[]? c) ? c : [.. Enumerable.Range(0, 4).Select(i => snap.Mask[p * 4 + i] / 255f)];
-                float k = Math.Clamp(strength, 0, 1);
-                ch.Paint[p] = [.. now.Select((v, i) => v + (colour[i] - v) * k)];
+                lock (ch)
+                {
+                    float[] now = ch.Paint.TryGetValue(p, out float[]? c) ? c : [.. Enumerable.Range(0, 4).Select(i => snap.Mask[p * 4 + i] / 255f)];
+                    float k = Math.Clamp(strength, 0, 1);
+                    ch.Paint[p] = [.. now.Select((v, i) => v + (colour[i] - v) * k)];
+                }
             }));
             Fill("Mountain", new Action<float, float, string, float, float, float, float, int>((x, z, preset, height, radius, rough, turn, seed) =>
             {
@@ -337,7 +345,11 @@ public static partial class ScriptHost
                         float v = shape(dx, dz);
                         if (v != 0 && Point(x + dx, z + dz) is int p and >= 0)
                         {
-                            SetHeight(x + dx, z + dz, heights[p] + v);
+                            // Read and written under the lock, so two mountains at once both count.
+                            lock (ch)
+                            {
+                                SetHeight(x + dx, z + dz, heights[p] + v);
+                            }
                         }
                     }
                 }
@@ -346,17 +358,37 @@ public static partial class ScriptHost
                 {
                     if (!t.Piece && t.Kind is "Trees" or "Rocks" or "Ore" or "Bushes" or "Pickables" && shape(t.Position.X - x, t.Position.Z - z) > Uplift.ClearHeight)
                     {
-                        ch.Remove.Add(t.Index);
+                        lock (ch)
+                        {
+                            ch.Remove.Add(t.Index);
+                        }
                     }
                 }
             }));
             Fill("Objects", new Func<(int, string, float, float, float, string, bool, float, float, float, float)[]>(() =>
                 [.. snap.Things.Select(t => (t.Index, t.Prefab, t.Position.X, t.Position.Y, t.Position.Z, t.Kind, t.Piece, t.Rotation.X, t.Rotation.Y, t.Rotation.Z, t.Scale > 0 ? t.Scale : 1))]));
-            Fill("Remove", new Action<int>(i => ch.Remove.Add(i)));
+            Fill("Remove", new Action<int>(i =>
+            {
+                lock (ch)
+                {
+                    ch.Remove.Add(i);
+                }
+            }));
             Fill("CanPlace", new Func<string, bool>(name => snap.CanCreate(StableHash.Of(name))));
             Fill("Place", new Action<string, float, float, float, float, float, float, float, bool>((name, x, z, yaw, scale, y, pitch, roll, snapIt) =>
-                Place(snap, ch, name, x, z, yaw, scale, y, pitch, roll, snapIt)));
-            Fill("Move", new Action<int, float, float, float, float, float, float, float>((index, x, z, y, yaw, pitch, roll, scale) => Move(snap, ch, index, x, z, y, yaw, pitch, roll, scale)));
+            {
+                lock (ch)
+                {
+                    Place(snap, ch, name, x, z, yaw, scale, y, pitch, roll, snapIt);
+                }
+            }));
+            Fill("Move", new Action<int, float, float, float, float, float, float, float>((index, x, z, y, yaw, pitch, roll, scale) =>
+            {
+                lock (ch)
+                {
+                    Move(snap, ch, index, x, z, y, yaw, pitch, roll, scale);
+                }
+            }));
             Fill("Noise", new Func<float, float, int, float>((x, z, seed) =>
             {
                 lock (noises)
@@ -370,9 +402,12 @@ public static partial class ScriptHost
             }));
             Fill("Print", new Action<string>(text =>
             {
-                if (lines++ < 2000)
+                lock (ch)
                 {
-                    ch.Output.AppendLine(text);
+                    if (lines++ < 2000)
+                    {
+                        ch.Output.AppendLine(text);
+                    }
                 }
             }));
             Fill("Check", new Action(cancel.ThrowIfCancellationRequested));
