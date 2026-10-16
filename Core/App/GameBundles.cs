@@ -709,6 +709,37 @@ public sealed class GameBundles
         }
     }
 
+    /// <summary>How many bundles are open now (each kept open from its first use until <see cref="Close"/>).</summary>
+    internal int OpenBundles
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _open.Count;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Closes every bundle the reader keeps open (its file streams with it) and forgets the fields read from them:
+    /// what a folder about to be deleted or copied over needs, since Windows refuses that while a file in it is open.
+    /// The reader stays usable: a bundle is opened again on its next use.
+    /// </summary>
+    public void Close()
+    {
+        lock (_sync)
+        {
+            foreach (var (b, a) in _open.Values)
+            {
+                _am.UnloadAssetsFile(a);
+                _am.UnloadBundleFile(b);
+            }
+            _open.Clear();
+            _fields.Clear();
+        }
+    }
+
     /// <summary>
     /// A bundle and its assets file, opened on first use and kept open.
     /// </summary>
