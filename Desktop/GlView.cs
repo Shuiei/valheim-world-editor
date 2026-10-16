@@ -4298,6 +4298,49 @@ public sealed class GlView : OpenGlControlBase
     /// </summary>
     private uint _pathBandVao, _pathBandVbo, _pathSoftVao, _pathSoftVbo, _pathPreviewVao, _pathPreviewVbo, _pathPreviewSoftVao, _pathPreviewSoftVbo;
     /// <summary>
+    /// A line through points on the ground as line pairs, each stretch cut about every metre so it follows hills.
+    /// </summary>
+    /// <param name="into">Where the pairs go.</param>
+    /// <param name="s">The area.</param>
+    /// <param name="pts">The points, grid points once <paramref name="offset"/> is taken off.</param>
+    /// <param name="lift">Metres above the ground.</param>
+    /// <param name="closed">Whether the last point joins the first.</param>
+    /// <param name="offset">Taken off each cut point to make it a grid point (world points: the area's corner).</param>
+    private static void GroundPolyline(List<float> into, WorldScene s, IReadOnlyList<Vector2> pts, float lift, bool closed, Vector2 offset = default)
+    {
+        int n = closed ? pts.Count : pts.Count - 1;
+        for (int i = 0; i < n; i++)
+        {
+            Vector2 a = pts[i], b = pts[(i + 1) % pts.Count];
+            int steps = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(a, b)));
+            for (int k = 0; k < steps; k++)
+            {
+                Vector2 g = Vector2.Lerp(a, b, k / (float)steps) - offset, h = Vector2.Lerp(a, b, (k + 1) / (float)steps) - offset;
+                var p = OnGround(s, g.X, g.Y, lift);
+                var q = OnGround(s, h.X, h.Y, lift);
+                into.AddRange([p.X, p.Y, p.Z, q.X, q.Y, q.Z]);
+            }
+        }
+    }
+
+    /// <summary>
+    /// A small flat square round a point as line pairs, its size a fixed share of the distance to the eye.
+    /// </summary>
+    /// <param name="into">Where the pairs go.</param>
+    /// <param name="c">The point, in view space.</param>
+    /// <returns>Its half width.</returns>
+    private float Marker(List<float> into, Vector3 c)
+    {
+        float r = Vector3.Distance(_lastEye, c) * 0.008f;
+        Vector3[] k = [c + new Vector3(-r, 0, -r), c + new Vector3(r, 0, -r), c + new Vector3(r, 0, r), c + new Vector3(-r, 0, r)];
+        for (int j = 0; j < 4; j++)
+        {
+            into.AddRange([k[j].X, k[j].Y, k[j].Z, k[(j + 1) % 4].X, k[(j + 1) % 4].Y, k[(j + 1) % 4].Z]);
+        }
+        return r;
+    }
+
+    /// <summary>
     /// The Path tool: the ground it covers (a light band), its width's edges and the soft edge's outer
     /// line, the centre line (red) and its points; under the cursor, the width (and the soft edge) the
     /// next point brings, with the stretch from the last point to it. Lines are flat ribbons on the
@@ -4440,12 +4483,7 @@ public sealed class GlView : OpenGlControlBase
         foreach (var p in pts)
         {
             var c = V(p, 0.6f);
-            float r = Vector3.Distance(_lastEye, c) * 0.008f;
-            Vector3[] k = [c + new Vector3(-r, 0, -r), c + new Vector3(r, 0, -r), c + new Vector3(r, 0, r), c + new Vector3(-r, 0, r)];
-            for (int j = 0; j < 4; j++)
-            {
-                Seg(dots, k[j], k[(j + 1) % 4]);
-            }
+            float r = Marker(dots, c);
             Seg(dots, c - new Vector3(0, r, 0), c + new Vector3(0, r, 0));
         }
         DrawLines(ref _pathBandVao, ref _pathBandVbo, [.. band], vp, new Vector4(1, 0.45f, 0.35f, 0.16f), PrimitiveType.Triangles, blend: true);
@@ -4500,21 +4538,8 @@ public sealed class GlView : OpenGlControlBase
             }
             DrawLines(ref _placeRingVao, ref _placeRingVbo, [.. ring], vp, new Vector4(0.62f, 0.88f, 1, 1), width: 1.2f);
         }
-        Vector3 V(Vector2 g) => OnGround(s, g.X, g.Y, 0.3f);
         var data = new List<float>();
-        void Strip(IReadOnlyList<Vector2> pts)
-        {
-            for (int i = 1; i < pts.Count; i++)
-            {
-                int n = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(pts[i - 1], pts[i])));
-                for (int k = 0; k < n; k++)
-                {
-                    var a = V(Vector2.Lerp(pts[i - 1], pts[i], k / (float)n));
-                    var b = V(Vector2.Lerp(pts[i - 1], pts[i], (k + 1) / (float)n));
-                    data.AddRange([a.X, a.Y, a.Z, b.X, b.Y, b.Z]);
-                }
-            }
-        }
+        void Strip(IReadOnlyList<Vector2> pts) => GroundPolyline(data, s, pts, 0.3f, closed: false);
         if (t.Mode == PlaceTool.Modes.Line)
         {
             foreach (var run in t.LineRuns())
@@ -4538,13 +4563,7 @@ public sealed class GlView : OpenGlControlBase
         {
             foreach (var p in pl.ShownPoints())
             {
-                var c = V(p);
-                float r = Vector3.Distance(_lastEye, c) * 0.008f;
-                Vector3[] k = [c + new Vector3(-r, 0, -r), c + new Vector3(r, 0, -r), c + new Vector3(r, 0, r), c + new Vector3(-r, 0, r)];
-                for (int j = 0; j < 4; j++)
-                {
-                    data.AddRange([k[j].X, k[j].Y, k[j].Z, k[(j + 1) % 4].X, k[(j + 1) % 4].Y, k[(j + 1) % 4].Z]);
-                }
+                Marker(data, OnGround(s, p.X, p.Y, 0.3f));
             }
         }
         DrawLines(ref _placeShapeVao, ref _placeShapeVbo, [.. data], vp, new Vector4(0.62f, 0.88f, 1, 1));
@@ -4558,22 +4577,7 @@ public sealed class GlView : OpenGlControlBase
     /// </summary>
     private void DrawArea(WorldScene s, Matrix4x4 vp)
     {
-        Vector3 V(Vector2 g, float lift) => OnGround(s, g.X, g.Y, lift);
-        void Ring(List<float> to, List<Vector2> pts, bool closed, float lift)
-        {
-            int n = closed ? pts.Count : pts.Count - 1;
-            for (int i = 0; i < n; i++)
-            {
-                Vector2 a = pts[i], b = pts[(i + 1) % pts.Count];
-                int steps = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(a, b)));
-                for (int k = 0; k < steps; k++)
-                {
-                    var p = V(Vector2.Lerp(a, b, k / (float)steps), lift);
-                    var q = V(Vector2.Lerp(a, b, (k + 1) / (float)steps), lift);
-                    to.AddRange([p.X, p.Y, p.Z, q.X, q.Y, q.Z]);
-                }
-            }
-        }
+        void Ring(List<float> to, List<Vector2> pts, bool closed, float lift) => GroundPolyline(to, s, pts, lift, closed);
         if (Mode == ToolMode.Paste && Paste.At is { } pat && Paste.Clip != null)
         {
             // Where the paste would go: its outlines and a small post at each object whose model is not
@@ -4683,22 +4687,8 @@ public sealed class GlView : OpenGlControlBase
             if (pts is { Count: > 1 })
             {
                 pts.Add(pts[0]);
-                float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
-                for (int i = 1; i < pts.Count; i++)
-                {
-                    var a = pts[i - 1];
-                    var b = pts[i];
-                    int n = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(a, b)));
-                    for (int k = 0; k < n; k++)
-                    {
-                        foreach (float t in new[] { k / (float)n, (k + 1) / (float)n })
-                        {
-                            var p = Vector2.Lerp(a, b, t);
-                            var v = OnGround(s, p.X - ox, p.Y - oz, 0.3f);
-                            data.AddRange([v.X, v.Y, v.Z]);
-                        }
-                    }
-                }
+                // World points: the area's corner taken off after cutting, as grid points.
+                GroundPolyline(data, s, pts, 0.3f, closed: false, new Vector2(s.X0 * 64f - 32f, s.Z0 * 64f - 32f));
             }
             _lassoSegs = [.. data];
         }
