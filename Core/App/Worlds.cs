@@ -34,8 +34,10 @@ public static class Worlds
                 (int n, DateTime t) = LatestSave(full);
                 list.Add(new Info(WorldName(full), full, t, n, where, problem == null, problem));
             }
-            catch
+            // A folder that cannot be read, or a stored path that is no path: left out, and said in the log.
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
             {
+                Console.WriteLine($"worlds: {dir} left out of the list ({ex.Message}).");
             }
         }
         foreach (var r in settings.Recent)
@@ -128,17 +130,20 @@ public static class Worlds
         return Path.GetFileName(Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
     }
 
-    /// <summary>The highest n of the folder's _main.&lt;n&gt;.chunks and its write time; (0, MinValue) when none.</summary>
-    private static (int, DateTime) LatestSave(string dir)
+    /// <summary>
+    /// The highest n of the folder's _main.&lt;n&gt;.chunks and its write time; (0, MinValue) when none. A number too
+    /// large to be a save's is passed over.
+    /// </summary>
+    internal static (int, DateTime) LatestSave(string dir)
     {
         int best = 0;
         DateTime t = DateTime.MinValue;
         foreach (string f in Directory.GetFiles(dir, "_main.*.chunks"))
         {
             Match m = Regex.Match(Path.GetFileName(f), @"_main\.(\d+)\.chunks");
-            if (m.Success && int.Parse(m.Groups[1].Value) >= best)
+            if (m.Success && int.TryParse(m.Groups[1].Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int n) && n >= best)
             {
-                best = int.Parse(m.Groups[1].Value);
+                best = n;
                 t = File.GetLastWriteTime(f);
             }
         }

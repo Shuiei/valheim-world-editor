@@ -125,6 +125,9 @@ the plugin is unchanged in versions without that part.
   so every world played through Proton was listed twice; on Windows a world written with other letter case or a
   trailing separator was too. Worlds are now told apart by their folder with links followed (case ignored on Windows),
   and Flatpak Steam's Proton prefix is searched as well.
+- **A world with a stray save file is listed, and one that cannot be read is said in the log.** A file such as
+  _main.99999999999.chunks overflowed reading the save number, and every error dropped the world from the list with
+  nothing said. Such numbers are now passed over, and only read errors leave a world out, each logged.
 
 ### Changed
 

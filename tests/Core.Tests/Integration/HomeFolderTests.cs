@@ -182,6 +182,18 @@ public sealed class HomeFolderTests : IDisposable
         Assert.Single(found, w => w.Name == "Converted");
     }
 
+    // A save number too large for one (a stray file) is passed over: the world is still listed (it vanished, with
+    // nothing said).
+    [Fact]
+    public void AWorldWithAStraySaveNumberIsStillListed()
+    {
+        string local = Local(".config", "unity3d", "IronGate", "Valheim", "worlds_local");
+        CopyWorld(Path.Combine(local, "Odd"));
+        File.WriteAllText(Path.Combine(local, "Odd", "_main.99999999999.chunks"), "");
+
+        Assert.Equal(2, Assert.Single(Worlds.Find(new AppSettings()), w => w.Name == "Odd").SaveNumber);
+    }
+
     [Fact]
     public void RecentWorldsComeFirstAndMissingOnesAreLeftOut()
     {
