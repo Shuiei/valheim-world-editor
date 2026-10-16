@@ -17,6 +17,9 @@ the plugin is unchanged in versions without that part.
   token or folder holding "a line break then HostKey = …" became a line of its own and could replace the saved server
   key. Connecting now refuses details with line breaks, the file never writes one (a name's becomes a space), and
   ports out of range read as the defaults.
+- **A live server's zone answer can no longer make the editor take unbounded memory.** The objects of changed zones
+  were unpacked with no size limit, so a misbehaving service on the tunnelled port could fill memory. The answer is
+  now refused past the size of a whole world snapshot.
 
 ### Changed
 

@@ -399,15 +399,12 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     }
 
     /// <summary>The saved objects of the zones as the game has them now: ZDOID and save-format bytes.</summary>
+    /// <exception cref="InvalidDataException">The answer is damaged or unpacks to more than a world snapshot can.</exception>
     public async Task<List<(long User, uint Id, byte[] Bytes)>> ZoneObjects(IReadOnlyCollection<(int X, int Z)> zones)
     {
         using var res = await Post("zone", ZoneList(zones));
-        using var raw = new MemoryStream();
-        using (var gz = new System.IO.Compression.GZipStream(await res.Content.ReadAsStreamAsync(), System.IO.Compression.CompressionMode.Decompress))
-        {
-            await gz.CopyToAsync(raw);
-        }
-        raw.Position = 0;
+        // Some zones' objects: never more than the whole world's snapshot unpacks to.
+        using var raw = new MemoryStream(CheckedReads.Gunzip(await res.Content.ReadAsByteArrayAsync(), WorldSave.MaxSnapshot));
         using var r = new BinaryReader(raw);
         // Each: ZDOID (8 + 4), then the bytes' length (4).
         int count = r.CheckCount(r.ReadInt32(), 16);

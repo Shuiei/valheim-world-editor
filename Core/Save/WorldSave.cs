@@ -682,9 +682,11 @@ public sealed class WorldSave
         TerrainZones.RemoveAll(z => z.Source is { } src && sources.Contains((src.File, src.Start)));
     }
 
-    // The largest live snapshot read, unpacked: the biggest worlds' saves are a few hundred megabytes,
-    // and one array cannot pass 2 GiB anyway.
-    private const int MaxSnapshot = 1536 << 20;
+    /// <summary>
+    /// The largest live snapshot read, unpacked: the biggest worlds' saves are a few hundred megabytes, and one array
+    /// cannot pass 2 GiB anyway.
+    /// </summary>
+    internal const int MaxSnapshot = 1536 << 20;
 
     /// <summary>Loads a world from a WorldEditorBridge snapshot (gzip-compressed, snapshot version 1).</summary>
     /// <param name="gzipped">The snapshot as <c>LiveBridge.Snapshot</c> returns it.</param>
