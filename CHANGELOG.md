@@ -152,6 +152,8 @@ the plugin is unchanged in versions without that part.
   (Decode says it ends early).
 
 ### Changed
+- SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
+  a native context.
 
 ## v1.45.108 — unreleased
 

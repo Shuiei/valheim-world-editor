@@ -77,7 +77,7 @@ public static partial class TerrainShader
         {
             throw new InvalidDataException("The terrain shader file is not SPIR-V.");
         }
-        var api = Api();
+        var api = Shared();
         Context* ctx;
         Check(api.ContextCreate(&ctx), null);
         try
@@ -113,6 +113,24 @@ public static partial class TerrainShader
                 string? why = c == null ? null : Marshal.PtrToStringUTF8((nint)api.ContextGetLastErrorString(c));
                 throw new InvalidDataException($"SPIRV-Cross could not read the terrain shader ({r}): {why}");
             }
+        }
+    }
+
+    /// <summary>Guards <see cref="_cross"/>.</summary>
+    private static readonly Lock CrossLock = new();
+
+    /// <summary>SPIRV-Cross's API once loaded (<see cref="Shared"/>).</summary>
+    private static Cross? _cross;
+
+    /// <summary>
+    /// SPIRV-Cross's API, loaded once for every compile (each load made a native context that was never freed); a
+    /// load that fails is tried again next time.
+    /// </summary>
+    internal static Cross Shared()
+    {
+        lock (CrossLock)
+        {
+            return _cross ??= Api();
         }
     }
 
