@@ -275,8 +275,6 @@ public sealed class GlView : OpenGlControlBase
     public bool LimitMarks { get => _limit; set { _limit = value; Wake(); } }
     /// <summary>How many wards, crafting stations, flattened places and locations the overlays show.</summary>
     public event Action<Overlays.Built>? OverlaysBuilt;
-    /// <summary>The overlays as last built.</summary>
-    private Overlays.Built? _overlays;
     /// <summary>Each overlay's lines on the graphics card.</summary>
     private readonly Dictionary<Overlays.Layer, (uint Vao, int Count, uint Vbo)> _overlayGl = [];
 
@@ -574,8 +572,6 @@ public sealed class GlView : OpenGlControlBase
     private static readonly (Vector3 Min, Vector3 Max) StandInBox = (new Vector3(-0.5f, 0, -0.5f), new Vector3(0.5f, 2, 0.5f));
     /// <summary>Models still being read.</summary>
     private int _pending;
-    /// <summary>The stand-in box's vertex and index buffers.</summary>
-    private uint _boxVbo, _boxEbo;
 
     /// <summary>Sets up the OpenGL calls and the shader programs.</summary>
     protected override void OnOpenGlInit(GlInterface gl)
@@ -605,7 +601,7 @@ public sealed class GlView : OpenGlControlBase
         _terrainEbo = _terrainBiomeVbo = _waterVbo = _waterEbo = 0;
         _terrainProg = _objectProg = _waterProg = _lineProg = 0;
         _terrainVao = _terrainIndexCount = _waterVao = _terrainVbo = _terrainExtraVbo = _terrainCutVbo = 0;
-        _boxVbo = _boxEbo = _ghostVbo = 0;
+        _ghostVbo = 0;
         _roomsMade.Forget();
         _locationsMade.Forget();
         _pathVao = _pathVbo = _pathEdgeVao = _pathEdgeVbo = _pathDotVao = _pathDotVbo = 0;
@@ -1599,7 +1595,6 @@ public sealed class GlView : OpenGlControlBase
     /// <summary>Guards the per-thing arrays (boxes, kinds), which the loaders and the drawing thread both use.</summary>
     private readonly Lock _objLock = new();
 
-    /// <summary>A group's instances (and its things' boxes) from where its things are now.</summary>
     /// <summary>The side of the area's cells objects are drawn by (metres): only cells in view are drawn.</summary>
     internal const float CellSize = 128;
     /// <summary>
@@ -1741,6 +1736,7 @@ public sealed class GlView : OpenGlControlBase
         return [.. runs];
     }
 
+    /// <summary>A group's instances (and its things' boxes) from where its things are now.</summary>
     private unsafe void Rebuild(WorldScene s, Group g)
     {
         EnsureCells(s);
@@ -2490,7 +2486,7 @@ public sealed class GlView : OpenGlControlBase
                 Overlays.Built o;
                 lock (s.Things)
                 {
-                    o = _overlays = Overlays.Build(s, s.Modifiers, i => NameOf(s.Things[i].Prefab));
+                    o = Overlays.Build(s, s.Modifiers, i => NameOf(s.Things[i].Prefab));
                 }
                 UploadOverlays(o);
                 Dispatcher.UIThread.Post(() => OverlaysBuilt?.Invoke(o));
