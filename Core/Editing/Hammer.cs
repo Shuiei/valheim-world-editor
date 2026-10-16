@@ -210,13 +210,13 @@ public static class Hammer
             var ghost = point + normal * 50f;
             Vector3? nearest = null;
             float nd = float.MaxValue;
+            var lp = Vector3.Transform(point - ghost, Quaternion.Inverse(rotation));
             foreach (var shape in data.Colliders)
             {
                 if (shape is Mesh { Convex: false })
                 {
                     continue;
                 }
-                var lp = Vector3.Transform(point - ghost, Quaternion.Inverse(rotation));
                 var c = ghost + Vector3.Transform(Closest(shape, lp), rotation);
                 float dist = Vector3.Distance(c, point);
                 if (dist < nd)
@@ -246,6 +246,12 @@ public static class Hammer
         float bestD = SnapDistance;
         Vector3? move = null;
         int? to = null;
+        // The piece's own snap points in the world, worked out once for every piece near.
+        var own = new Vector3[data.Snaps.Length];
+        for (int k = 0; k < own.Length; k++)
+        {
+            own[k] = pos + Vector3.Transform(data.Snaps[k], rotation);
+        }
         foreach (var p in pieces)
         {
             if (Get(p.Prefab) is not { Snaps.Length: > 0 } other || Vector3.Distance(p.Position, pos) - other.Radius > SnapRadius)
@@ -255,9 +261,8 @@ public static class Hammer
             foreach (var b in other.Snaps)
             {
                 var bw = p.Position + Vector3.Transform(b, p.Rotation);
-                foreach (var a in data.Snaps)
+                foreach (var aw in own)
                 {
-                    var aw = pos + Vector3.Transform(a, rotation);
                     float dist = Vector3.Distance(aw, bw);
                     if (dist <= bestD)
                     {
