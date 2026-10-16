@@ -63,6 +63,9 @@ the plugin is unchanged in versions without that part.
   and size of data kept in a bundle's resource file were taken as written, so a bad size threw out of reading the mesh
   or texture, and a range past the file's end read the next file. Ranges outside the resource file are now refused
   (logged) and read as no data.
+- **A broken mod mesh no longer fails drawing a building's picture.** Its submesh sizes could overflow the bounds
+  check, and indices were not checked against the mesh's vertices, so drawing threw. Sizes are now checked without
+  overflow, and triangles with a corner outside the mesh are left out.
 
 ### Changed
 

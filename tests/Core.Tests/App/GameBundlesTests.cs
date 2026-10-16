@@ -51,6 +51,16 @@ public class GameBundlesTests
         Assert.Equal(read, GameBundles.InResource(length, offset, size));
     }
 
+    // A triangle with a corner that is not one of the mesh's vertices is left out (drawing it threw); a part triangle
+    // at the end too.
+    [Fact]
+    public void TrianglesWithCornersOutsideTheMeshAreLeftOut()
+    {
+        long[] corners = [0, 1, 2, 2, 3, 4, 1, 2, -1, 3, 2, 1, 0];
+
+        Assert.Equal([0, 1, 2, 3, 2, 1], GameBundles.Triangles(corners.Length, 4, k => corners[k]));
+    }
+
     [Fact]
     public void CutOutTexturesTakeTheColourOfTheirOpaquePixels()
     {
