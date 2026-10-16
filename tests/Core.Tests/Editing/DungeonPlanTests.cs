@@ -39,13 +39,15 @@ public class DungeonPlanTests
     public void AnAntechamberIsKeptOnlyWithTheArenaBeyondIt()
     {
         // The antechamber was placed before the arena was tried, and stayed when the arena did not fit; the next try
-        // added another. Plans that used to hold two or three antechambers, or one with no arena at all.
-        foreach (var (styleName, size, seed) in new[] { ("Goblin warren", 1, 20), ("Goblin warren", 1, 57), ("Ruins", 3, 20), ("Ruins", 4, 60) })
+        // added another. Plans that used to hold two or three antechambers, or one with no arena at all: in the first
+        // three a later try finds room for both, in the last none does.
+        foreach (var (styleName, size, seed, arena) in new[] { ("Goblin warren", 1, 20, true), ("Goblin warren", 1, 57, true), ("Ruins", 3, 20, true), ("Ruins", 4, 60, false) })
         {
             var plan = DungeonPlanner.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: styleName, Size: size, Levels: 2, Secrets: true, Seed: seed), DungeonKit.StyleOf(styleName), new Random(seed));
             var antes = plan.Spaces.Where(s => s.Room == DungeonKit.Room.Antechamber).ToList();
             string where = $"{styleName} size {size} seed {seed}";
             Assert.True(antes.Count <= 1, $"{where}: {antes.Count} antechambers");
+            Assert.True(arena == (plan.Boss != null), $"{where}: arena {plan.Boss != null}");
             Assert.True(antes.Count == (plan.Boss == null ? 0 : 1), $"{where}: {antes.Count} antechambers, arena {plan.Boss != null}");
             Assert.True(plan.Boss == null || plan.Boss.Parent == antes[0], $"{where}: the arena is not off the antechamber");
             // What was taken back left nothing behind: ids in order, doorways and tiles only of spaces still there.
