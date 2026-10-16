@@ -570,11 +570,7 @@ public sealed class StartPage
     /// </summary>
     internal void OpenFolder(string path)
     {
-        path = path.Trim().Trim('"');
-        if (path.StartsWith('~'))
-        {
-            path = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + path[1..];
-        }
+        path = Places.ExpandHome(path);
         if (Worlds.Check(path) is string problem)
         {
             PathError.Text = problem;

@@ -160,11 +160,7 @@ public static class Tunnel
         {
             if (!string.IsNullOrWhiteSpace(r.KeyPath))
             {
-                string key = r.KeyPath.Trim().Trim('"');
-                if (key.StartsWith('~'))
-                {
-                    key = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + key[1..];
-                }
+                string key = Places.ExpandHome(r.KeyPath);
                 keys.Add(string.IsNullOrEmpty(r.Passphrase) ? new PrivateKeyFile(key) : new PrivateKeyFile(key, r.Passphrase));
                 methods.Add(new PrivateKeyAuthenticationMethod(user, keys[^1]));
             }

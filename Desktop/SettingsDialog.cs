@@ -12,16 +12,8 @@ namespace TerrainEditor.Desktop;
 /// </summary>
 public static class SettingsDialog
 {
-    /// <summary>A typed folder made absolute: trimmed, quotes dropped, a leading ~ turned into the home folder.</summary>
-    private static string Expand(string path)
-    {
-        path = path.Trim().Trim('"');
-        if (path.StartsWith('~'))
-        {
-            path = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + path[1..];
-        }
-        return Path.GetFullPath(path);
-    }
+    /// <summary>A typed folder made absolute (Places.ExpandHome first).</summary>
+    private static string Expand(string path) => Path.GetFullPath(Places.ExpandHome(path));
 
     /// <summary>
     /// Checks and applies the folder choices, saving the settings; nothing is changed when there is a problem. A

@@ -10,6 +10,21 @@ namespace TerrainEditor.App;
 public static class Places
 {
     /// <summary>
+    /// A path as typed, ready to use: trimmed, surrounding quotes dropped, and a leading ~ (alone or before a
+    /// separator) turned into the home folder. Another user's ~name is left as it is.
+    /// </summary>
+    /// <param name="path">The typed path.</param>
+    public static string ExpandHome(string path)
+    {
+        path = path.Trim().Trim('"');
+        if (path == "~" || path.StartsWith("~/", StringComparison.Ordinal) || path.StartsWith("~" + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+        {
+            path = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + path[1..];
+        }
+        return path;
+    }
+
+    /// <summary>
     /// The folders in a folder; none when it cannot be read (a drive's "System Volume Information", a
     /// root-owned lost+found, another user's folder).
     /// </summary>
