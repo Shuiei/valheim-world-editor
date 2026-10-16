@@ -96,19 +96,25 @@ public sealed partial class WorldGenerator
         }
         // The seed's draws, in the game's order (the rivers' and streams' own seeds among them).
         var saved = Rnd.state;
-        Rnd.InitState(world.m_seed);
-        _offsetA = Rnd.Range(-10000, 10000);
-        _offsetB = Rnd.Range(-10000, 10000);
-        _offsetForest = Rnd.Range(-10000, 10000);
-        _offsetDetail = Rnd.Range(-10000, 10000);
-        _riverSeed = Rnd.Range(int.MinValue, int.MaxValue);
-        _streamSeed = Rnd.Range(int.MinValue, int.MaxValue);
-        _offsetMist = Rnd.Range(-10000, 10000);
-        if (!world.m_menu)
+        try
         {
-            LayOutWater();
+            Rnd.InitState(world.m_seed);
+            _offsetA = Rnd.Range(-10000, 10000);
+            _offsetB = Rnd.Range(-10000, 10000);
+            _offsetForest = Rnd.Range(-10000, 10000);
+            _offsetDetail = Rnd.Range(-10000, 10000);
+            _riverSeed = Rnd.Range(int.MinValue, int.MaxValue);
+            _streamSeed = Rnd.Range(int.MinValue, int.MaxValue);
+            _offsetMist = Rnd.Range(-10000, 10000);
+            if (!world.m_menu)
+            {
+                LayOutWater();
+            }
         }
-        Rnd.state = saved;
+        finally
+        {
+            Rnd.state = saved;
+        }
     }
 
     /// <summary>

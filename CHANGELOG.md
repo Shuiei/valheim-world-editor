@@ -261,6 +261,8 @@ the plugin is unchanged in versions without that part.
   ends today).
 - The world generator's dump check counts unknown Random calls and short lines as unreadable instead of replaying them
   as insideUnitCircle (which moved the random state on) or throwing.
+- The world generator's constructor, PlaceRivers and PlaceStreams give the thread's Random state back in a finally, as
+  SeedLocations does, so a failure no longer leaves it reseeded.
 
 ## v1.45.108 — unreleased
 
