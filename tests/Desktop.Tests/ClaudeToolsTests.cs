@@ -107,6 +107,24 @@ public class ClaudeToolsTests
         Assert.Contains("No blueprint", await r.T.AddBlueprint("Nothing like this"));
     }
 
+    // The ids support_check gives (the pieces falling, the weakest) are the plot's: usable at once, even when the
+    // ids given before were another area's.
+    [AvaloniaFact]
+    public async Task SupportCheckGivesTheIdsOfThePlot()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "wood_pole2", X = 3, Z = 3 }]);
+        await r.T.Undo();
+        r.Hut("Hut", "A hut");
+        Assert.Equal("workshop", J(await r.T.OpenWorkshop("Hut")).GetProperty("page").GetString());
+        Assert.StartsWith("The ids are from another area", await r.T.RemoveObjects([0]));
+        var support = J(await r.T.SupportCheck());
+        var given = support.GetProperty("weakest").EnumerateArray().Concat(support.GetProperty("falling").EnumerateArray()).ToList();
+        Assert.NotEmpty(given);
+        Assert.StartsWith("Took 1 away", await r.T.RemoveObjects([given[0].GetProperty("id").GetInt32()]));
+    }
+
     // Floors, walls and roofs over a rectangle, from the game's pieces: an 8 x 6 m house is 12 floor tiles,
     // 28 wall pieces with its door, 18 roof pieces with its gables (the 2 m under the ridge closed), and
     // it stands.

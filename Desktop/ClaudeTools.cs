@@ -1131,13 +1131,19 @@ public sealed partial class ClaudeTools
             z = MathF.Round(scene.Things[things[k]].Position.Z, 2),
             support = MathF.Round(r.Colour[k], 2),
         };
+        var falling = r.Falls.Take(60).Select(Piece).ToList();
+        // Support: 0 (red, about to fall) to 1 (green); pieces on the ground (light blue in the editor) hold best and are left out.
+        var weakest = Enumerable.Range(0, things.Count).Where(k => !r.Free[k] && !r.Breaks[k] && r.Colour[k] >= 0).OrderBy(k => r.Colour[k]).Take(10).Select(Piece).ToList();
+        if (falling.Count > 0 || weakest.Count > 0)
+        {
+            GaveIds(scene);
+        }
         return ToJson(new
         {
             pieces = things.Count,
             wouldFall = r.Breaking,
-            falling = r.Falls.Take(60).Select(Piece),
-            // Support: 0 (red, about to fall) to 1 (green); pieces on the ground (light blue in the editor) hold best and are left out.
-            weakest = Enumerable.Range(0, things.Count).Where(k => !r.Free[k] && !r.Breaks[k] && r.Colour[k] >= 0).OrderBy(k => r.Colour[k]).Take(10).Select(Piece),
+            falling,
+            weakest,
             onTheGround = Enumerable.Range(0, things.Count).Count(k => r.Colour[k] < 0),
         });
     });
