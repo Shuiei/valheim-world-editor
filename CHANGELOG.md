@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.87 — unreleased
+
+### Changed
+- **Finding where locations go (new worlds, seed search) is faster.** The generator caches each zone corner's biome,
+  but corners west of the world's middle all fell into about 160 hash buckets (the corner's x was sign-extended over
+  its y), so half the lookups walked chains of hundreds of entries. Their hash now keeps both coordinates.
+
 ## v1.45.86 — unreleased
 
 ### Fixed

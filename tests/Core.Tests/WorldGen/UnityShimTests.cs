@@ -61,6 +61,16 @@ public class UnityShimTests
         Assert.NotEqual(a.GetHashCode(), b.GetHashCode());
     }
 
+    // Corners west of the middle (x < 0) keep y in their hash: x was sign-extended over it, so every corner of
+    // half the world shared ~160 hashes and the generator's corner caches became long chains.
+    [Fact]
+    public void ShortVectorsWestOfTheMiddleHashTheirY()
+    {
+        var hashes = Enumerable.Range(-160, 321).Select(y => new Vector2s(-64, y * 64).GetHashCode()).ToHashSet();
+        Assert.Equal(321, hashes.Count);
+        Assert.Equal(new Vector2s(-64, 128).GetHashCode(), new Vector2s(-64, 128).GetHashCode());
+    }
+
     [Fact]
     public void MathfLikeUnity()
     {
