@@ -47,6 +47,16 @@ public sealed class WorldSessionTests : IDisposable
     }
 
     [Fact]
+    public async Task AWorldThatCannotBeOpenedLiveClosesItsConnection()
+    {
+        using var game = new FakeGame();
+        game.Fail["/snapshot"] = 500;
+        var live = new LiveBridge(game.Url, game.Token);
+        await Assert.ThrowsAnyAsync<Exception>(() => WorldSession.OpenLive(live, FakeGame.Label()));
+        await Assert.ThrowsAsync<ObjectDisposedException>(live.LoadWorld);
+    }
+
+    [Fact]
     public async Task ZoneResetsAreNotSentAgainWhenTheWorldCannotBeReadBack()
     {
         using var game = new FakeGame();

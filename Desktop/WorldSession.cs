@@ -179,12 +179,23 @@ public sealed class WorldSession : IDisposable
     /// <param name="label">The connection's name, for <c>Label</c>.</param>
     public static async Task<WorldSession> OpenLive(LiveBridge live, string label)
     {
-        await Task.Run(NeedGame);
-        await LearnMods(live);
-        var mods = await BridgeMods(live);
-        var world = await live.LoadWorld();
-        WorldSave.Builder = Builders.Default(world);
-        var session = From(world, live, label);
+        WorldSession session;
+        List<string> mods;
+        try
+        {
+            await Task.Run(NeedGame);
+            await LearnMods(live);
+            mods = await BridgeMods(live);
+            var world = await live.LoadWorld();
+            WorldSave.Builder = Builders.Default(world);
+            session = From(world, live, label);
+        }
+        catch
+        {
+            // No session to own the connection: it is closed here.
+            live.Dispose();
+            throw;
+        }
         // Once the session is there to end it (Dispose): a world that failed to load leaves no game connected.
         ModExtensions.LiveConnected(new LiveGame(live, mods));
         return session;
