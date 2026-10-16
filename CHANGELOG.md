@@ -196,6 +196,9 @@ the plugin is unchanged in versions without that part.
   list.
 - **A location scan with "teleports": null loaded no location prefab at all.** LocationPrefabs enumerated it without
   checking it is a list; anything else now counts as none.
+- **A new world that failed halfway blocked another try in the same folder.** Its metadata, index and zone file were
+  written before the flat zone was looked for, so the next try found the folder "already holds a world"; what was
+  written is now taken away on any failure (and the folder, when it was made for it).
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
