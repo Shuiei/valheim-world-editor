@@ -101,12 +101,13 @@ public static class CheckedReads
 {
     /// <summary>
     /// Whether a read of saved bytes failed because they are damaged or in a form the editor does not read: short
-    /// (EndOfStream, IO), a count or length that does not fit (InvalidData), a bad 7-bit length prefix (Format) or
-    /// an item format older than the editor reads (NotSupported). What a reader of one object catches to skip it
-    /// and go on with the rest; anything else is a bug and goes up.
+    /// (EndOfStream), a count or length that does not fit (InvalidData), a bad 7-bit length prefix (Format) or an
+    /// item format older than the editor reads (NotSupported). What a reader of one object catches to skip it and
+    /// go on with the rest. A plain IOException is not one: the bytes come from memory once read, so it says the file
+    /// could not be read at all, which goes up like any other bug.
     /// </summary>
     public static bool Damaged(Exception ex) =>
-        ex is EndOfStreamException or IOException or InvalidDataException or FormatException or NotSupportedException;
+        ex is EndOfStreamException or InvalidDataException or FormatException or NotSupportedException;
 
     /// <summary>How many bytes are left (as many as asked for when the stream cannot tell).</summary>
     public static long Remaining(this BinaryReader r) =>
