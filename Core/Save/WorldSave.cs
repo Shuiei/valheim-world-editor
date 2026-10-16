@@ -401,15 +401,10 @@ public sealed class WorldSave
     public byte[]? LiveBytes { get; private set; }
 
     /// <summary>
-    /// Live: the bytes an object's offsets are in, the snapshot's or those of objects read since from the game
-    /// (MergeLive: each read is its own little file).
+    /// Live: the bytes a chunk file's object offsets point into (the snapshot unless MergeLive made the file: each read
+    /// of objects from the game is its own little file, holding its bytes, and let go with the last object read from it).
     /// </summary>
-    private readonly Dictionary<ChunkFile, byte[]> _liveFiles = [];
-
-    /// <summary>
-    /// Live: the bytes a chunk file's object offsets point into (the snapshot unless MergeLive made the file).
-    /// </summary>
-    public byte[] LiveSource(ChunkFile file) => _liveFiles.TryGetValue(file, out byte[]? b) ? b : LiveBytes!;
+    public byte[] LiveSource(ChunkFile file) => file.Bytes ?? LiveBytes!;
 
     /// <summary>
     /// Live: objects the game no longer has (removed in the game). Left out of every list; their ids stay taken, and
@@ -608,8 +603,7 @@ public sealed class WorldSave
             if (fresh.Count > 0)
             {
                 byte[] all = [.. fresh.SelectMany(f => f.Bytes)];
-                ChunkFile file = new() { Chunk = 0, Size = 0, Version = 0, IndexCount = 0, WorldVersion = Chunks.Count > 0 ? Chunks[0].WorldVersion : 41, Count = fresh.Count, Length = all.Length };
-                _liveFiles[file] = all;
+                ChunkFile file = new() { Chunk = 0, Size = 0, Version = 0, IndexCount = 0, WorldVersion = Chunks.Count > 0 ? Chunks[0].WorldVersion : 41, Count = fresh.Count, Length = all.Length, Bytes = all };
                 using ValheimReader pkg = new(new MemoryStream(all));
                 foreach (var (user, zid, _, replace) in fresh)
                 {
@@ -1059,6 +1053,12 @@ public sealed class ChunkFile
 
     /// <summary>Byte range of every object in the file, in file order.</summary>
     public List<(long Start, long End)> Objects { get; } = [];
+
+    /// <summary>
+    /// Live: the file's bytes, for one WorldSave.MergeLive made of objects read from the game since the snapshot (kept
+    /// only as long as something refers to the file); null for the snapshot's and saved files.
+    /// </summary>
+    internal byte[]? Bytes { get; init; }
 
     /// <summary>Same naming as ChunkSaveMapping.GetChunkFilename.</summary>
     public string FileName => NameFor(Chunk, Size, Version);

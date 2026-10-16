@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
@@ -304,6 +305,43 @@ public class WorldSaveTests
         Assert.Contains(id, world.Vanished);
         world.SetLiveId(id, (5, 5));
         Assert.Equal((5L, 5u), world.ObjectRefs[id].LiveId);
+    }
+
+    [Fact]
+    public void LiveBytesReadAgainAreLetGoOnceNoObjectIsInThem()
+    {
+        // A creature moving in the game is read again at every check: the bytes of each older read are let go once no
+        // object of the world is in them any more, instead of being kept for the session.
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        int id = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1")).Id;
+        Vector3 at = world.ObjectRefs[id].Position;
+        var firstRead = MergeMoved(world, id, at + new Vector3(1, 0, 0));
+        MergeMoved(world, id, at + new Vector3(2, 0, 0));
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        Assert.False(firstRead.IsAlive);
+        Assert.Equal(at + new Vector3(2, 0, 0), world.ObjectRefs[id].Position);
+        var read = ZdoData.Parse(world.ObjectBytes(id), world.ObjectRefs[id].File.WorldVersion);
+        Assert.Equal(at + new Vector3(2, 0, 0), read.Position);
+    }
+
+    /// <summary>
+    /// The game sends the object's zone with the object moved to <paramref name="to"/>; the bytes it is read again
+    /// from, held weakly (not inlined, so no reference to them is left on the caller's stack).
+    /// </summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference MergeMoved(WorldSave world, int id, Vector3 to)
+    {
+        var zone = world.ObjectRefs[id].Zone;
+        var z = ZdoData.Parse(world.ObjectBytes(id), world.ObjectRefs[id].File.WorldVersion);
+        z.Position = to;
+        List<(long, uint, byte[])> objects = [.. Enumerable.Range(0, world.ObjectRefs.Count)
+            .Where(i => world.ObjectRefs[i].Zone == zone && !world.Vanished.Contains(i))
+            .Select(i => (world.ObjectRefs[i].LiveId.User, world.ObjectRefs[i].LiveId.Id, i == id ? z.Serialize() : world.ObjectBytes(i)))];
+        var merged = world.MergeLive([zone], objects, _ => false, _ => false)!;
+        Assert.Equal([id], merged.Updated);
+        return new WeakReference(world.LiveSource(world.ObjectRefs[id].File));
     }
 
     [Fact]

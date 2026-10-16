@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.107 — unreleased
+
+### Changed
+- **A long live session no longer keeps every past read of the game in memory.** Each check of the game that found
+  objects changed kept the bytes it read for as long as the world stayed open, even after those objects were read
+  again: moving creatures and burning fires change at every check, so memory grew all session. Each read's bytes
+  now go with the last object still read from them.
+
 ## v1.45.106 — unreleased
 
 ### Changed
