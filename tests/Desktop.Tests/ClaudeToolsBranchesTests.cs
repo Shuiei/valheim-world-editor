@@ -161,6 +161,10 @@ public class ClaudeToolsBranchesTests
         Assert.StartsWith("Changed", await r.T.SetContents(armour, [new ClaudeTools.ItemSpec { Item = "HelmetBronze" }], pose: 2));
 
         Assert.StartsWith("Could not change it: ", await r.T.SetContents(chest, [new ClaudeTools.ItemSpec { Item = "NoSuchItem" }]));
+        // A chest's item keeps its style (it was always 0).
+        string styled = await r.T.SetContents(chest, [new ClaudeTools.ItemSpec { Item = "SwordIron", Variant = 2 }]);
+        Assert.StartsWith("Changed", styled);
+        Assert.Equal(2, ClaudeRun.J(await r.T.GetObject(NewId(styled))).GetProperty("contents")[0].GetProperty("variant").GetInt32());
     }
 
     // On the plot: a creature's stars (clamped to 2: level 3), stars refused for a chest, a blueprint's chest filled,

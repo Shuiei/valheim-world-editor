@@ -252,6 +252,8 @@ the plugin is unchanged in versions without that part.
   the infinities are refused now, and a number box's value is held to its range before it becomes a decimal.
 - **Claude's remove_objects and select_objects counted a repeated id as one that was not an object.** The ids found
   were compared with the list given, repeats included; they are now compared with the different ids given.
+- **Shields and banners Claude put in a chest always got the first style.** set_contents took the item's Variant but
+  never passed it on to the chest's contents.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
