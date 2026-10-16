@@ -36,16 +36,23 @@ public static class Ui
     public const double Gap = 10;
 
     /// <summary>A floating card (tool options, the View panel...).</summary>
-    public static Border Card(Control child) => new()
+    public static Border Card(Control child) => AsCard(new Border { Child = child });
+
+    /// <summary>
+    /// Gives a border the floating cards' look (background, line, rounded corners, padding, shadow); its own place,
+    /// size and child stay.
+    /// </summary>
+    /// <returns>The same border.</returns>
+    public static Border AsCard(Border b)
     {
-        Background = Panel,
-        BorderBrush = Line,
-        BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(10),
-        Padding = Pad,
-        BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-        Child = child,
-    };
+        b.Background = Panel;
+        b.BorderBrush = Line;
+        b.BorderThickness = new Thickness(1);
+        b.CornerRadius = new CornerRadius(10);
+        b.Padding = Pad;
+        b.BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000");
+        return b;
+    }
 
     /// <summary>A small grey heading in capitals (VIEW, OVERLAYS...).</summary>
     /// <param name="text">The heading, turned to capitals.</param>

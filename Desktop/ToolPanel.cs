@@ -173,18 +173,6 @@ public sealed class ToolPanel
         }),
     };
 
-    /// <summary>The options card's frame.</summary>
-    private static Border Card(Control child) => new()
-    {
-        Background = Ui.Panel,
-        BorderBrush = Ui.Line,
-        BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-        BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(10),
-        Padding = Ui.Pad,
-        Child = child,
-    };
-
     /// <summary>An option row: label, control, and the value shown after it when there is one.</summary>
     private static Grid Row(string label, Control input, TextBlock? value = null)
     {
@@ -389,7 +377,7 @@ public sealed class ToolPanel
         Mode(false);
         NoLimitBox.Tip("brush.noLimit");
         NoLimitBox.IsCheckedChanged += (_, _) => NoLimitChanged?.Invoke(NoLimitBox.IsChecked == true);
-        Options = Card(new StackPanel
+        Options = Ui.Card(new StackPanel
         {
             Width = 280,
             Spacing = 6,

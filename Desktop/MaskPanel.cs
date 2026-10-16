@@ -138,17 +138,11 @@ public sealed class MaskPanel
                 new TextBlock { Text = "No biome selected = all biomes. Leave a box empty for no limit. Alt + Shift + click the ground fills the height range around it (±2 m).", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
             },
         };
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             VerticalAlignment = VerticalAlignment.Top,
             Child = new StackPanel { Width = 280, Spacing = 6, Children = { OnBox, _body } },
-        };
+        });
         mask.Changed += Fill;
         Fill();
     }

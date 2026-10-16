@@ -85,14 +85,8 @@ public sealed class PastePanel
             }
             return g;
         }
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             VerticalAlignment = VerticalAlignment.Top,
             Child = new StackPanel
             {
@@ -115,7 +109,7 @@ public sealed class PastePanel
                     },
                 },
             },
-        };
+        });
         Refresh();
     }
 

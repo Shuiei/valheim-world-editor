@@ -218,14 +218,8 @@ public sealed class InspectorPanel
         };
         RevertButton.Click += (_, _) => Reset();
         ApplyButton.Click += async (_, _) => await Apply();
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             Margin = new Thickness(10),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top,
@@ -254,7 +248,7 @@ public sealed class InspectorPanel
                     },
                 },
             },
-        };
+        });
     }
 
     /// <summary>Puts a control in a grid column.</summary>

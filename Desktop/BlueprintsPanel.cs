@@ -94,14 +94,8 @@ public sealed class BlueprintsPanel
             Padding = new Thickness(8, 6),
             Child = new StackPanel { Spacing = 4, Children = { Banner, GetHomesteadButton } },
         };
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             VerticalAlignment = VerticalAlignment.Top,
             IsVisible = false,
             Child = new StackPanel
@@ -118,7 +112,7 @@ public sealed class BlueprintsPanel
                     _folder,
                 },
             },
-        };
+        });
     }
 
     /// <summary>Puts a control in a grid column.</summary>

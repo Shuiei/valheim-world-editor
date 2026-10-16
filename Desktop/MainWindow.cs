@@ -2433,20 +2433,14 @@ public sealed partial class MainWindow : Window
             box.FontSize = 12.5;
         }
         list.Width = 240;
-        return new Border
+        return Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             Margin = new Thickness(10),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top,
             // Scrolls when the window is too short for it (a bar only then).
             Child = new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, Content = list },
-        };
+        });
     }
 
     /// <summary>

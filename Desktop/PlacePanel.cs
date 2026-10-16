@@ -233,18 +233,12 @@ public sealed class PlacePanel
     }
 
     /// <summary>A floating card of the given width that scrolls when the window is too short.</summary>
-    private static Border CardOf(Control child, double width) => new()
+    private static Border CardOf(Control child, double width) => Ui.AsCard(new Border
     {
-        Background = Ui.Panel,
-        BorderBrush = Ui.Line,
-        BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-        BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(10),
-        Padding = Ui.Pad,
         VerticalAlignment = VerticalAlignment.Top,
         // As tall as the window allows: the scroll bar only when it does not fit.
         Child = new ScrollViewer { Content = new StackPanel { Width = width, Spacing = 6, Children = { child } } },
-    };
+    });
 
     /// <summary>
     /// Builds the panel and the list of kinds, and restores the chosen kinds and weights from the memory.

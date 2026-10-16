@@ -39,14 +39,8 @@ public sealed class HistoryPanel
         var close = new Button { Content = Icons.Make("close", 14), Padding = new Thickness(5), HorizontalAlignment = HorizontalAlignment.Right }.Classed("ghost").Tip("card.close");
         close.Click += (_, _) => { Card!.IsVisible = false; Closed?.Invoke(); };
         TakeBackClaude.Click += async (_, _) => await TakeBackClaudes();
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             // Just above the save bar.
             Margin = new Thickness(10, 10, 10, 70),
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -67,7 +61,7 @@ public sealed class HistoryPanel
                     new ScrollViewer { MaxHeight = 520, Content = Rows },
                 },
             },
-        };
+        });
     }
 
     /// <summary>Puts a control in a grid column, with an optional margin.</summary>
