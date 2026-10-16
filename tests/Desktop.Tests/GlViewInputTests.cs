@@ -118,12 +118,9 @@ public class GlViewInputTests
         // the view takes the focus to it, so the keys come from the view, not from a box typed in before.
         var other = w.GetVisualDescendants().OfType<Button>().First(b => b.IsEffectivelyVisible && b.Focusable);
         Assert.True(other.Focus());
-        // A point of the view no panel covers.
-        w.UpdateLayout();
-        var at = Enumerable.Range(1, 9).SelectMany(i => Enumerable.Range(1, 9).Select(j => new Point(i * 80, j * 60)))
-            .First(p => InputExtensions.InputHitTest(w, p) == w.Surface);
-        w.MouseDown(at, MouseButton.Left);
-        w.MouseUp(at, MouseButton.Left);
+        // A middle click in the view (as the drags above, it reaches the view; it does nothing else without a move).
+        w.MouseDown(new Point(400, 300), MouseButton.Middle);
+        w.MouseUp(new Point(400, 300), MouseButton.Middle);
         Assert.True(w.Surface.IsFocused);
         Assert.False(other.IsFocused);
         w.KeyPress(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
