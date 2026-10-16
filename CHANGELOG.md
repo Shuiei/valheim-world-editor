@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.66 — unreleased
+
+### Fixed
+- **Claude: a step made through `set_control` was not named "Claude: …".** A control Claude pressed (a button, a
+  toggle, a tool's Apply) ran the editor's own handler, which labelled the step as the user's; the history and
+  **Take back Claude's changes** could not tell it from the user's own work. While Claude sets a control, the steps
+  its handler makes, at once or after an await, now get the "Claude: " prefix like every other step of Claude's.
+
 ## v1.45.65 — unreleased
 
 ### Fixed
