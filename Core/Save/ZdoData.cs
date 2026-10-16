@@ -80,58 +80,40 @@ public sealed class ZdoData
     /// <param name="worldVersion">
     /// The world version it was written in (older ones carry a sector and a full rotation).
     /// </param>
-    public static ZdoData Parse(byte[] bytes, int worldVersion = 41)
+    public static ZdoData Parse(byte[] bytes, int worldVersion = 41) => Parse(bytes, 0, bytes.Length, worldVersion);
+
+    /// <summary>Reads the object saved in part of a buffer (a chunk file's bytes, say).</summary>
+    /// <param name="buffer">The bytes the object is in.</param>
+    /// <param name="start">Where the object starts (at its flags).</param>
+    /// <param name="length">Its length in bytes; nothing past it is read.</param>
+    /// <param name="worldVersion">The world version it was written in.</param>
+    public static ZdoData Parse(byte[] buffer, int start, int length, int worldVersion)
     {
-        using ValheimReader r = new(new MemoryStream(bytes));
-        ZdoData z = new();
-        ushort flags = r.ReadUShort();
-        z.BaseFlags = (ushort)(flags & KeptFlags);
-        if (worldVersion < WorldVersion.ChunkedSave)
+        using ValheimReader r = new(new MemoryStream(buffer, start, length));
+        ZdoReader read = new(r, worldVersion);
+        ZdoData z = new()
         {
-            r.ReadVector2s();
-        }
-        if ((flags & SmallPositionFlag) != 0)
+            BaseFlags = (ushort)(read.Flags & KeptFlags),
+            Position = read.Position,
+            SmallPosition = read.SmallPosition,
+            Prefab = read.Prefab,
+            Rotation = read.Rotation,
+        };
+        while (read.Next())
         {
-            var (x, y) = r.ReadVector2s();
-            z.Position = new Vector3(x, 0f, y);
-            z.SmallPosition = true;
-        }
-        else
-        {
-            z.Position = r.ReadVector3();
-        }
-        z.Prefab = r.ReadInt();
-        if ((flags & RotationFlag) != 0)
-        {
-            z.Rotation = worldVersion >= WorldVersion.ChunkedSave ? r.ReadSmallRotation() : r.ReadVector3();
-        }
-        if ((flags & 0xFF) == 0)
-        {
-            return z;
-        }
-        if ((flags & Connections) != 0)
-        {
-            z.Connection = r.ReadBytes(5);
-        }
-        void Each(ushort flag, Action<int> read)
-        {
-            if ((flags & flag) == 0)
+            int k = read.Key;
+            switch (read.Section)
             {
-                return;
-            }
-            int n = r.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                read(r.ReadInt());
+                case Connections: z.Connection = read.Connection; break;
+                case Floats: z.FloatList.Add((k, read.FloatValue)); break;
+                case Vec3s: z.Vec3List.Add((k, read.Vec3Value)); break;
+                case Quats: z.QuatList.Add((k, read.QuatValue)); break;
+                case Ints: z.IntList.Add((k, read.IntValue)); break;
+                case Longs: z.LongList.Add((k, read.LongValue)); break;
+                case Strings: z.StringList.Add((k, read.StringValue!)); break;
+                default: z.ByteList.Add((k, read.BytesValue!)); break;
             }
         }
-        Each(Floats, k => z.FloatList.Add((k, r.ReadSingle())));
-        Each(Vec3s, k => z.Vec3List.Add((k, r.ReadVector3())));
-        Each(Quats, k => z.QuatList.Add((k, new Quaternion(r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle()))));
-        Each(Ints, k => z.IntList.Add((k, r.ReadInt())));
-        Each(Longs, k => z.LongList.Add((k, r.ReadLong())));
-        Each(Strings, k => z.StringList.Add((k, r.ReadString())));
-        Each(ByteArrays, k => z.ByteList.Add((k, r.ReadByteArray())));
         return z;
     }
 
