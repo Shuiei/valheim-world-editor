@@ -119,6 +119,33 @@ public class WorldWriterCheckTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheReadBackCheckCatchesAnotherZonesSmoothingOrPaintAltered(bool paint)
+    {
+        // Only the levels and the modified flags were compared: a write bug changing these passed, and the old save
+        // was deleted.
+        var (dir, before) = Copy();
+        try
+        {
+            var t = before.TerrainZones[0];
+            if (paint)
+            {
+                t.Paint[100] += Vector4.One;
+            }
+            else
+            {
+                t.SmoothDelta[100] += 1;
+            }
+            Assert.Equal($"unchanged zone {t.ZoneX}, {t.ZoneZ} was altered", WorldWriter.Verify(dir, before, [], 0, 0, NoReset, []));
+        }
+        finally
+        {
+            Delete(dir);
+        }
+    }
+
     /// <summary>
     /// A live snapshot holding one tree saved in the old format: before chunk files (version 40) each object also
     /// carried its sector, and a rotation was three whole floats.

@@ -568,7 +568,8 @@ public static class WorldWriter
             {
                 TerrainZone? a = n < now.Count ? now[n] : null;
                 n++;
-                if (a == null || !a.LevelDelta.SequenceEqual(z.LevelDelta) || !a.ModifiedHeight.SequenceEqual(z.ModifiedHeight) || !a.ModifiedPaint.SequenceEqual(z.ModifiedPaint))
+                if (a == null || !a.LevelDelta.SequenceEqual(z.LevelDelta) || !a.SmoothDelta.SequenceEqual(z.SmoothDelta) || !a.ModifiedHeight.SequenceEqual(z.ModifiedHeight)
+                    || !a.ModifiedPaint.SequenceEqual(z.ModifiedPaint) || !a.Paint.SequenceEqual(z.Paint))
                 {
                     return $"unchanged zone {z.ZoneX}, {z.ZoneZ} was altered";
                 }

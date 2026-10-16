@@ -208,6 +208,9 @@ the plugin is unchanged in versions without that part.
 - **Lifting ground could treat an object at a half metre as standing on another point than a disc centred on it.**
   Uplift's Block.At rounded halves to even while Block.Disc rounded them up; both now round as the game's
   Heightmap.WorldToVertex (halves up).
+- **The save's read-back check missed smoothing and paint changes in zones not edited.** Verify compared an untouched
+  zone's levels and modified flags only, so a write bug altering its smoothing or paint would pass and the old save be
+  deleted; it compares those too.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
