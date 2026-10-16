@@ -121,6 +121,10 @@ the plugin is unchanged in versions without that part.
   range in the server's settings, the local port taken in the meantime, or another failure once connected threw past
   the connection, which stayed open (and the port bound) until the editor closed, while the page kept saying
   "Connecting to …". Ports are now checked first, and any failure once connected closes the connection and is said.
+- **Proton worlds are listed once, and Flatpak Steam's are found.** ~/.steam/steam is a link to ~/.local/share/Steam,
+  so every world played through Proton was listed twice; on Windows a world written with other letter case or a
+  trailing separator was too. Worlds are now told apart by their folder with links followed (case ignored on Windows),
+  and Flatpak Steam's Proton prefix is searched as well.
 
 ### Changed
 

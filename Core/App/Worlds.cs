@@ -25,7 +25,8 @@ public static class Worlds
             try
             {
                 string full = Path.GetFullPath(dir);
-                if (!Directory.Exists(full) || !seen.Add(full))
+                // Once, however it is reached (a link to it, a separator at the end, another letter case on Windows).
+                if (!Directory.Exists(full) || !seen.Add(Places.FolderKey(full)))
                 {
                     return;
                 }
@@ -78,7 +79,7 @@ public static class Worlds
             foreach (string db in dbs)
             {
                 string name = Path.GetFileNameWithoutExtension(db);
-                if (!Directory.Exists(Path.Combine(root, name)) && seen.Add(db))
+                if (!Directory.Exists(Path.Combine(root, name)) && seen.Add(Places.FolderKey(db)))
                 {
                     list.Add(new Info(name, db, File.GetLastWriteTime(db), 0, "local", false, "Old save format: load this world in Valheim once, then it can be edited here."));
                 }

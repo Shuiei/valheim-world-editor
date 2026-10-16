@@ -138,8 +138,28 @@ public sealed class HomeFolderTests : IDisposable
         Assert.Contains(Local(".config", "unity3d", "IronGate", "Valheim", "worlds_local"), roots);
         Assert.Contains(Local(".config", "unity3d", "IronGate", "Valheim", "worlds"), roots);
         Assert.All(roots, r => Assert.StartsWith(_home, r));
-        // Valheim through Proton keeps its folder inside Steam's prefix.
+        // Valheim through Proton keeps its folder inside Steam's prefix (Flatpak's Steam too).
         Assert.Contains(roots, r => r.Contains(Path.Combine("compatdata", "892970")));
+        Assert.Contains(roots, r => r.Contains(Path.Combine("com.valvesoftware.Steam", ".local", "share", "Steam")));
+    }
+
+    // ~/.steam/steam is a link to ~/.local/share/Steam: a Proton world reached both ways is listed once (twice before),
+    // and so is one added with a separator at the end.
+    [Fact]
+    public void AWorldReachedThroughALinkIsListedOnce()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+        string steam = Local(".local", "share", "Steam");
+        string prefix = Path.Combine(steam, "steamapps", "compatdata", "892970", "pfx", "drive_c", "users", "steamuser", "AppData", "LocalLow", "IronGate", "Valheim", "worlds_local");
+        CopyWorld(Path.Combine(prefix, "Proton"));
+        Directory.CreateDirectory(Local(".steam"));
+        Directory.CreateSymbolicLink(Local(".steam", "steam"), steam);
+        var s = new AppSettings { WorldFolders = { Path.Combine(prefix, "Proton") + Path.DirectorySeparatorChar } };
+
+        Assert.Single(Worlds.Find(s), w => w.Name == "Proton");
     }
 
     [Fact]
