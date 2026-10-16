@@ -159,6 +159,9 @@ the plugin is unchanged in versions without that part.
 - **Some dungeon stones sank into their plinth or floated over it.** A shrine's memorial stone and dolmen were lifted
   by the first prop's foot height whichever one was picked (a large memorial stone sank 0.13 m); the pick is now kept
   and its own foot used.
+- **Dungeon columns could rise through the roof into the room above.** A column (and a post) took its last segment
+  however far it rose past the top, so wood logs in a tall room reached 13.3 m, 1.3 m into the room two levels up; the
+  last segment may now rise into the roof slab, never past it.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

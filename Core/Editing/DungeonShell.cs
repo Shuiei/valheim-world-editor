@@ -202,10 +202,22 @@ internal static class DungeonShell
     private static bool InWell(DungeonPlan.Space s, (int, int) t) =>
         s.Room == Room.StairTop && DungeonPlanner.Depth((s.X0, s.Z0, s.W, s.H), s.Dir, t) >= 4;
 
-    /// <summary>A pillar or post of segments at (x, z) from y0 up to about y1 (metres).</summary>
+    /// <summary>
+    /// How far past a room's top a pillar's last segment may rise: through the roof slab (2 m), not into the room
+    /// above it.
+    /// </summary>
+    public const float RoofSlab = 2f;
+
+    /// <summary>Whether a segment from y would rise past the roof slab over <paramref name="top"/>.</summary>
+    public static bool PastRoof(Column c, float y, float top) => y + c.H > top + RoofSlab + 0.01f;
+
+    /// <summary>
+    /// A pillar or post of segments at (x, z) from y0 up to about y1 (metres): the last may rise into the roof slab
+    /// over y1, never past it.
+    /// </summary>
     public static void Stack(Column c, DungeonOut o, float x, float z, float y0, float y1)
     {
-        for (float y = y0; y < y1 - 0.3f; y += c.H)
+        for (float y = y0; y < y1 - 0.3f && !PastRoof(c, y, y1); y += c.H)
         {
             o.Add(c.Prefab, new Vector3(x, y + c.Bottom, z), 0);
         }

@@ -470,7 +470,10 @@ internal sealed partial class DungeonDresser
         return null;
     }
 
-    /// <summary>A column of the material's segments from floor to roof at (u, v), keeping the floor round it.</summary>
+    /// <summary>
+    /// A column of the material's segments from floor to roof at (u, v), keeping the floor round it: the last may rise
+    /// into the roof slab, never past it into the room above.
+    /// </summary>
     private void Column(Frame f, float u, float v)
     {
         if (!f.Inside(u, v))
@@ -482,6 +485,10 @@ internal sealed partial class DungeonDresser
         while (y < top - 0.3f)
         {
             var c = _mat.Column.FirstOrDefault(c => c.H <= top - y + 0.01f) ?? _mat.Column[^1];
+            if (DungeonShell.PastRoof(c, y, top))
+            {
+                break;
+            }
             _o.Add(c.Prefab, new Vector3(p.X, y + c.Bottom, p.Z), 0);
             y += c.H;
         }
