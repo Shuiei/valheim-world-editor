@@ -217,10 +217,12 @@ public sealed class AreaPanel
     /// <summary>Asks for a picture to import (the window's file picker).</summary>
     internal Func<Task<string?>> PickPicture { get; set; } = () => Task.FromResult<string?>(null);
     /// <summary>
-    /// The picture read: its values (0 to 1, row by row), the box of the ground it is fitted to (grid points),
-    /// and the ground points it goes into with their weights.
+    /// The picture read: its values (0 to 1, row by row), the ground it is fitted to and the box of it (grid points),
+    /// the ground points it goes into with their weights, and the selection it was fitted to (null: the whole
+    /// area). Dropped when the selection becomes another, and refused for another ground: its points are that
+    /// ground's.
     /// </summary>
-    private (float[] Values, int X0, int Z0, int W, int H, List<(int G, float W)> Cells)? _picture;
+    private (float[] Values, Ground Ground, int X0, int Z0, int W, int H, List<(int G, float W)> Cells, List<Vector2>? Fit)? _picture;
 
     /// <summary>Builds the panel.</summary>
     /// <param name="view">The view: its selection, scene and shown kinds.</param>
@@ -328,6 +330,7 @@ public sealed class AreaPanel
         ToPickButton.Tip("area.pick");
         ToPickButton.Click += (_, _) => PickKindAsked?.Invoke("Replace", UsePicked);
         Area.Changed += Refresh;
+        Area.Changed += DropPicture;
         NoLimitBox.Tip("brush.noLimit");
         NoLimitBox.IsCheckedChanged += (_, _) => NoLimitChanged?.Invoke(NoLimitBox.IsChecked == true);
 
@@ -796,7 +799,7 @@ public sealed class AreaPanel
             Message?.Invoke($"That picture cannot be used: {ex.Message}");
             return;
         }
-        _picture = (pic.Values, x0, z0, w, h, cells);
+        _picture = (pic.Values, g, x0, z0, w, h, cells, Area.Polygon());
         // The heights written in the picture by the editor, else the range of the ground it covers now.
         float lo = cells.Count > 0 ? cells.Min(c => g.HeightOf(c.G)) : 0, hi = cells.Count > 0 ? cells.Max(c => g.HeightOf(c.G)) : 0;
         LowestBox.Value = (decimal)(pic.Min is float mn ? MathF.Round(mn, 3) : MathF.Round(lo, 1));
@@ -815,6 +818,14 @@ public sealed class AreaPanel
         {
             return;
         }
+        if (p.Ground != session.Ground)
+        {
+            // Fitted to another area's ground: its points would land anywhere in this one.
+            _picture = null;
+            _pictureBox.IsVisible = false;
+            Message?.Invoke("The picture was fitted to another area: import it again.");
+            return;
+        }
         float lo = Value(LowestBox), hi = Value(HighestBox);
         int clamped = 0;
         var touched = session.EditGround("Heightmap import", g =>
@@ -827,6 +838,26 @@ public sealed class AreaPanel
         _pictureBox.IsVisible = false;
         Message?.Invoke(clamped > 0 ? $"Imported, but {clamped} point(s) could not reach their height: the game keeps the ground within ±8 m of the original (red points)."
             : $"Imported the heightmap into {touched.Count} point(s). Ctrl+Z undoes it.");
+    }
+
+    /// <summary>
+    /// The selection changed: a picture read was fitted to the old one, so it is dropped, unless the outline is still
+    /// the same (a polygon closed with Enter, a box redrawn where it is).
+    /// </summary>
+    private void DropPicture()
+    {
+        if (_picture is not { } p)
+        {
+            return;
+        }
+        var now = Area.Polygon();
+        if (p.Fit == null ? now == null : now != null && p.Fit.SequenceEqual(now))
+        {
+            return;
+        }
+        _picture = null;
+        _pictureBox.IsVisible = false;
+        Message?.Invoke("The picture read was dropped: the selection changed. Import it again.");
     }
 
     /// <summary>

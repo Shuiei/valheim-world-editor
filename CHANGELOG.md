@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.47 — unreleased
+
+### Fixed
+- **A heightmap read but not yet put could land in another area.** The picture read by Import was fitted to the
+  selection and the area open at the time, as grid points of that ground, but it survived a change of selection or
+  the opening of another area, so "Put it into the ground" then wrote it into the wrong points of another ground.
+  The picture is now dropped when the selection changes, and refused (with a message) when another area is open.
+
 ## v1.45.46 — unreleased
 
 ### Fixed

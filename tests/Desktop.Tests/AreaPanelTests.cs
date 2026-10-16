@@ -47,13 +47,17 @@ public class AreaPanelTests
         }
 
         /// <summary>
-        /// Selects the box between two grid points.
+        /// Selects the box between two grid points, as a drag does: the points replaced, then one change notice.
         /// </summary>
         public void Select(float x0, float z0, float x1, float z1)
         {
-            W.View.Area.Clear();
-            W.View.Area.Points.Add(new Vector2(x0, z0));
-            W.View.Area.Points.Add(new Vector2(x1, z1));
+            var points = W.View.Area.Points;
+            lock (points)
+            {
+                points.Clear();
+                points.Add(new Vector2(x0, z0));
+                points.Add(new Vector2(x1, z1));
+            }
             W.View.Area.Notify();
         }
 
@@ -494,6 +498,42 @@ public class AreaPanelTests
         Click(r.P.PutButton);
         Assert.StartsWith("Imported, but", r.Said);
         Assert.Contains("could not reach their height", r.Said);
+    }
+
+    [AvaloniaFact]
+    public async Task APictureReadIsDroppedWhenTheSelectionChangesAndRefusedForAnotherArea()
+    {
+        using var r = new Run();
+        string folder = Path.Combine(Path.GetDirectoryName(r.Dir)!, "maps");
+        r.P.HeightmapFolder = folder;
+        Click(r.P.ExportButton);
+        string png = Assert.Single(Directory.GetFiles(folder, "*.png"));
+        r.P.PickPicture = () => Task.FromResult<string?>(png);
+        Click(r.P.ImportButton);
+        await TestWindows.Until(() => r.P.PictureInfo.Text?.Contains("the selection") == true);
+        // The same outline again (the box redrawn where it is, Enter on a polygon that already has its points): the
+        // picture stays.
+        r.Select(2, 2, 62, 62);
+        Assert.DoesNotContain("dropped", r.Said);
+        // The selection changes: the picture was fitted to the old one.
+        r.Select(2, 2, 30, 30);
+        Assert.Equal("The picture read was dropped: the selection changed. Import it again.", r.Said);
+        Click(r.P.PutButton);
+        Assert.False(r.S.CanUndo);
+        // Read again, then another area opens without the selection changing: its grid indices are the old ground's.
+        Click(r.P.ImportButton);
+        await TestWindows.Until(() => r.P.PictureInfo.Text?.Contains("the selection") == true);
+        var scene = WorldScene.Load(r.Dir, 0, 0, 1);
+        r.W.View.Show(scene, null);
+        r.W.Edit(scene.Session!);
+        Click(r.P.PutButton);
+        Assert.Equal("The picture was fitted to another area: import it again.", r.Said);
+        Assert.False(scene.Session!.CanUndo);
+        Assert.False(r.S.CanUndo);
+        // Dropped: putting again does nothing.
+        r.W.MessageText.Text = "";
+        Click(r.P.PutButton);
+        Assert.Equal("", r.Said);
     }
 
     [AvaloniaFact]
