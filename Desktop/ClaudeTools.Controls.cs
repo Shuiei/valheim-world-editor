@@ -243,7 +243,8 @@ public sealed partial class ClaudeTools
     private static string? Invoke(Ctl c, string value, bool enter)
     {
         static bool? Bool(string v) => v.Trim().ToLowerInvariant() switch { "true" or "on" or "yes" or "1" or "checked" => true, "false" or "off" or "no" or "0" or "unchecked" => false, _ => null };
-        static double? Num(string v) => double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out double d) ? d : null;
+        // NaN and the infinities parse too, but are no value to set.
+        static double? Num(string v) => double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out double d) && double.IsFinite(d) ? d : null;
         switch (c.Control)
         {
             case ToggleButton t when value.Trim().Equals("click", StringComparison.OrdinalIgnoreCase):
@@ -294,7 +295,8 @@ public sealed partial class ClaudeTools
                 {
                     return $"{c.Id} takes a number from {u.Minimum} to {u.Maximum}.";
                 }
-                u.Value = Math.Clamp((decimal)d, u.Minimum, u.Maximum);
+                // Held to the range before it becomes a decimal, which cannot hold every double (1e30 threw).
+                u.Value = d >= (double)u.Maximum ? u.Maximum : d <= (double)u.Minimum ? u.Minimum : (decimal)d;
                 return null;
             case TextBox t:
                 t.Text = value;

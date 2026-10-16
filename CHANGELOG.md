@@ -248,6 +248,8 @@ the plugin is unchanged in versions without that part.
   entry at " ("; the list's own names are now kept beside it.
 - **A terrain modifier that smooths with a radius of 0 (odd mod data) made a NaN height at its middle.** The share of
   the middle point was 0 / 0; such a modifier now smooths nothing.
+- **Claude's set_control could set a slider or number to NaN, and threw on a number too big for a decimal.** NaN and
+  the infinities are refused now, and a number box's value is held to its range before it becomes a decimal.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
