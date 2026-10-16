@@ -38,9 +38,32 @@ public sealed partial class DungeonTool
     public bool WithContents { get; set; } = true;
 
     /// <summary>
-    /// The room clicked last (an index into the current dungeon's list).
+    /// The room clicked last (an index into the current dungeon's list), found again by its prefab and place each time,
+    /// so an undo or redo that shifts or takes away rooms never leaves it on another room; null when it is gone.
     /// </summary>
-    public int? Selected { get; private set; }
+    public int? Selected
+    {
+        get
+        {
+            if (_selected is not { } s || Dungeon is not { } d)
+            {
+                return null;
+            }
+            bool Same(Dungeons.Placed p) => p.Hash == s.Hash && Vector3.DistanceSquared(p.Position, s.Position) < 1e-6f;
+            if (s.Index < d.Rooms.Count && Same(d.Rooms[s.Index]))
+            {
+                return s.Index;
+            }
+            int at = d.Rooms.FindIndex(Same);
+            return at >= 0 ? at : null;
+        }
+        private set => _selected = value is int i && Dungeon is { } d && i < d.Rooms.Count ? (i, d.Rooms[i].Hash, d.Rooms[i].Position) : null;
+    }
+
+    /// <summary>
+    /// The selected room: its index then, its prefab's hash and its place (Selected finds it again by them).
+    /// </summary>
+    private (int Index, int Hash, Vector3 Position)? _selected;
 
     /// <summary>
     /// The free opening the pointer is over (its index in FreeEnds); null when none.
@@ -440,7 +463,7 @@ public sealed partial class DungeonTool
             }
         }
         // Selected before the change is told (Changed): the panel shows Delete for it at once.
-        Selected = rooms.Count - 1;
+        _selected = (rooms.Count - 1, p.Hash, p.Position);
         Commit(d, rooms, label ?? $"Dungeon: added {p.Name}", problem == null ? $"Added {p.Name}{with}." : $"Added {p.Name}{with}. {problem}", add: made);
         return true;
     }
