@@ -211,6 +211,9 @@ the plugin is unchanged in versions without that part.
 - **The save's read-back check missed smoothing and paint changes in zones not edited.** Verify compared an untouched
   zone's levels and modified flags only, so a write bug altering its smoothing or paint would pass and the old save be
   deleted; it compares those too.
+- **Resetting the ground of a zone that held two terrain objects could refuse the save ("terrain zones were lost").**
+  The save check's last count allowed one terrain object lost per reset zone; it now allows the reset zones' own
+  terrain objects, however many.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

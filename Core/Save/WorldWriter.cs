@@ -575,6 +575,8 @@ public static class WorldWriter
                 }
             }
         }
-        return after.TerrainZones.Count >= before.TerrainZones.Count - groundReset.Count ? null : "terrain zones were lost";
+        // A zone whose ground is reset may lose its terrain objects (one or two each), no other.
+        int resetObjects = before.TerrainZones.Count(t => groundReset.Contains((t.ZoneX, t.ZoneZ)));
+        return after.TerrainZones.Count >= before.TerrainZones.Count - resetObjects ? null : "terrain zones were lost";
     }
 }
