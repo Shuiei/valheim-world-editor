@@ -466,7 +466,7 @@ public partial class MainWindow
     /// The support check over the plot's building pieces (Stability), whether or not its colours are shown.
     /// </summary>
     /// <returns>The result, and the scene's index of each piece it was worked out for.</returns>
-    private (Stability.Result Result, List<int> Index) SolveSupport(EditSession s)
+    internal (Stability.Result Result, List<int> Index) SolveSupport(EditSession s)
     {
         var index = new List<int>();
         var pieces = new List<Stability.Piece>();

@@ -258,6 +258,9 @@ the plugin is unchanged in versions without that part.
   nothing.** A joint whose opening has no door of the dungeon's kind was passed over silently, and both tools took any
   return as a change; the Dungeon tool now says so, and the tools answer what it said (or "Nothing changed.") when no
   step was made.
+- **Claude's read-only looks changed the user's view: support_check left the Workshop's Support switch on, and
+  screenshot (one view or four) left the camera where it had looked.** The support check is now worked out without the
+  switch, and the camera is put back once the picture is taken.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

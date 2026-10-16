@@ -70,6 +70,7 @@ public class ClaudeToolsBranchesTests
     {
         using var r = new ClaudeRun();
         await r.OpenArea();
+        var (yaw0, pitch0, distance0, target0) = r.W.View.Camera;
         int taking = 0, most = 0;
         var cameras = new List<(int Yaw, float X, float Z)>();
         r.T.ViewPicture = async path =>
@@ -88,6 +89,10 @@ public class ClaudeToolsBranchesTests
         var scene = r.W.Session!.Scene;
         (int, float, float)[] expected = [(0, 0f, 0f), (10, -scene.Cx, scene.Cz), (90, 0f, 0f), (200, 5 - scene.Cx, scene.Cz - 5), (225, 0f, 0f), (315, 0f, 0f)];
         Assert.Equal(expected, cameras.OrderBy(c => c.Yaw).ToArray());
+        // Read-only looks: the user's camera is back as it was.
+        var (yaw1, pitch1, distance1, target1) = r.W.View.Camera;
+        Assert.Equal((yaw0, pitch0, distance0), (yaw1, pitch1, distance1));
+        Assert.True(Vector3.Distance(target0, target1) < 1e-3f, $"{target0} {target1}");
     }
 
     // A road painted dirt on the ground's heights (none given, or not one per point): one pending step each.

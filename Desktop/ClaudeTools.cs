@@ -306,11 +306,20 @@ public sealed partial class ClaudeTools
                 {
                     return "Nothing to see: open a world's area (open_area) or the Workshop.";
                 }
-                if (x is float cx && z is float cz)
+                // A read-only look: the user's camera is put back once the picture is taken.
+                var kept = _w.View.WorldCamera;
+                try
                 {
-                    _w.View.Orbit(cx, cz, yaw, pitch, distance, height);
+                    if (x is float cx && z is float cz)
+                    {
+                        _w.View.Orbit(cx, cz, yaw, pitch, distance, height);
+                    }
+                    await ViewPicture(path).WaitAsync(TimeSpan.FromSeconds(60));
                 }
-                await ViewPicture(path).WaitAsync(TimeSpan.FromSeconds(60));
+                finally
+                {
+                    _w.View.WorldCamera = kept;
+                }
                 return null;
             });
             if (problem != null)
@@ -344,8 +353,16 @@ public sealed partial class ClaudeTools
                             return "Four views need an area or the Workshop open in 3D.";
                         }
                         float cx = x ?? scene.Cx, cz = z ?? scene.Cz;
-                        _w.View.Orbit(cx, cz, yaw, pitch, distance, height);
-                        await ViewPicture(path).WaitAsync(TimeSpan.FromSeconds(60));
+                        var kept = _w.View.WorldCamera;
+                        try
+                        {
+                            _w.View.Orbit(cx, cz, yaw, pitch, distance, height);
+                            await ViewPicture(path).WaitAsync(TimeSpan.FromSeconds(60));
+                        }
+                        finally
+                        {
+                            _w.View.WorldCamera = kept;
+                        }
                         return null;
                     });
                     if (problem != null)
@@ -1136,13 +1153,13 @@ public sealed partial class ClaudeTools
         }
         // The read the pieces' indices are of, taken before they are worked out.
         int reads = _w.Session?.Scene.Reads ?? 0;
-        _w.SupportBox.IsChecked = true;
-        _w.RefreshSupport();
-        if (_w.LastSupport is not { } r || _w.Session?.Scene is not { } scene)
+        if (_w.Session is not { } session)
         {
             return "No building piece on the plot.";
         }
-        var things = _w.LastSupportThings;
+        // Worked out without turning the user's Support switch on (a read-only check).
+        var (r, things) = _w.SolveSupport(session);
+        var scene = session.Scene;
         object Piece(int k) => new
         {
             id = things[k],

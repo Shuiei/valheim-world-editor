@@ -67,6 +67,8 @@ public class ClaudeToolsWorkshopTests
         await r.T.OpenWorkshop();
         var empty = ClaudeRun.J(await r.T.SupportCheck());
         Assert.Equal((0, 0), (empty.GetProperty("pieces").GetInt32(), empty.GetProperty("wouldFall").GetInt32()));
+        // A read-only check: the user's Support switch is left as it was.
+        Assert.NotEqual(true, r.W.SupportBox.IsChecked);
 
         string none = await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "no_such_piece" }, new ClaudeTools.PieceSpec { Prefab = "woodwall", X = 0, Z = 900 }]);
         Assert.StartsWith("Nothing put down: #0 no_such_piece: not an object the game has (find_prefabs); #1 woodwall: (0, 900) is outside the area", none);
