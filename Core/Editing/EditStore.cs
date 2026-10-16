@@ -664,6 +664,13 @@ public sealed class ZoneEdit(int zoneX, int zoneZ)
     /// </summary>
     public float[] Lift { get; init; } = new float[EditStore.Cells];
 
+    /// <summary>
+    /// The ground shown at cell <paramref name="i"/> over its generated height: the edit (level and smoothing, held to the
+    /// game's ±8 m) where the cell is modified, then the No limit lift.
+    /// </summary>
+    public float HeightAt(int i, float baseHeight) =>
+        baseHeight + (Modified[i] ? Math.Clamp(Level[i] + Smooth[i], -EditStore.MaxLevel, EditStore.MaxLevel) : 0) + Lift[i];
+
     /// <summary>Whether any vertex has a lift.</summary>
     public bool HasLift => Lift.Any(l => l != 0f);
 

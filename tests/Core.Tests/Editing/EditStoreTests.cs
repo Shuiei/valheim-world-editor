@@ -147,4 +147,20 @@ public class EditStoreTests
         ObjectField.Put(data, "floats", key, "2");
         Assert.Equal(new ObjectField("floats", key, "2"), data[^1]);
     }
+
+    [Fact]
+    public void AZoneShowsItsEditHeldTo8MetresThenItsLift()
+    {
+        // One rule for the ground shown (HeightGrid and Uplift each wrote it out).
+        var e = new ZoneEdit(0, 0);
+        e.Lift[0] = 3;
+        Assert.Equal(13f, e.HeightAt(0, 10));
+        e.Modified[1] = true;
+        e.Level[1] = 6;
+        e.Smooth[1] = 5;
+        Assert.Equal(18f, e.HeightAt(1, 10));
+        // Level without Modified is not shown.
+        e.Level[2] = 4;
+        Assert.Equal(10f, e.HeightAt(2, 10));
+    }
 }

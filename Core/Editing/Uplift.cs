@@ -258,7 +258,7 @@ public static class Uplift
             zones[(zx, zz)] = e;
             block.Each(zx, zz, (i, p) =>
             {
-                want[p] = b[i] + (e.Modified[i] ? Math.Clamp(e.Level[i] + e.Smooth[i], -EditStore.MaxLevel, EditStore.MaxLevel) : 0) + e.Lift[i];
+                want[p] = e.HeightAt(i, b[i]);
                 lift[p] = e.Lift[i];
             });
         }
