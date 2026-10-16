@@ -429,15 +429,40 @@ public sealed class WorldSession : IDisposable
         {
             lift = null;
         }
+        string? unread = null;
         if (result.Saved && reread)
         {
-            World = WorldSave.Load(World.Directory);
-            WorldWriter.Prune(World.Directory);
+            // Written: whatever happens reading it back, what went in is not pending any more (it would be written
+            // twice). Not read back, the session starts over from the world as it was and says to open it again.
+            try
+            {
+                World = WorldSave.Load(World.Directory);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                unread = $" It could not be read back ({ex.Message}): open the world again to go on.";
+            }
+            if (unread == null)
+            {
+                try
+                {
+                    WorldWriter.Prune(World.Directory);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+                {
+                    Console.WriteLine($"Saved: its earlier saves could not be removed: {ex.Message}");
+                }
+            }
             Edits.ResetFrom(World);
             UseModifiers(new TerrainModifiers(World));
             _nextId = -1;
             ForgetHistory();
             ForgetSaves();
+            if (unread != null)
+            {
+                // The session's own save is not one the game made since.
+                _lastNumber = result.Number;
+            }
         }
         else if (result.Saved)
         {
@@ -450,7 +475,7 @@ public sealed class WorldSession : IDisposable
             MarkHistoryApplied();
             KeepHistory();
         }
-        string message = lift != null ? $"{result.Message} No limit ground: {lift.Plan.Describe()}." : result.Message;
+        string message = (lift != null ? $"{result.Message} No limit ground: {lift.Plan.Describe()}." : result.Message) + unread;
         return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message }) { Lifted = lift != null };
     }
 
