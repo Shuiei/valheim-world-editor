@@ -539,4 +539,28 @@ public class WorldSaveTests
         Func<ObjectRef, byte[]> read = world.SourceReader();
         Assert.All(Enumerable.Range(0, world.ObjectRefs.Count), id => Assert.Equal(world.ObjectBytes(id), world.ObjectBytes(id, read)));
     }
+
+    [Fact]
+    public void SaveNumbersAreReadOneWay()
+    {
+        // The writer's next number read "+7" as 7 where the loader skipped it: the two could disagree.
+        string dir = Path.Combine(Path.GetTempPath(), "vwe-savenumbers-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(dir);
+        try
+        {
+            foreach (string f in new[] { "_main.2.chunks", "_main.2.ok", "_main.3.chunks", "_main.+7.chunks", "_main.x.chunks" })
+            {
+                File.WriteAllBytes(Path.Combine(dir, f), []);
+            }
+            Assert.Equal((3, 2), WorldSave.SaveNumbers(dir));
+            Assert.Equal(2, WorldSave.CommittedSave(dir));
+            Assert.Equal(3, WorldWriter.LatestNumber(dir));
+            File.Delete(Path.Combine(dir, "_main.2.ok"));
+            Assert.Equal(3, WorldSave.CommittedSave(dir));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
 }

@@ -498,9 +498,8 @@ public static class WorldWriter
         ? $"Valheim saved this world (save #{newest}) after the editor read it: saving now would throw away what was done in the game since. Nothing was saved. Leave the world and open it again to edit the game's save."
         : null;
 
-    /// <summary>The highest save number in a world folder (-1: none).</summary>
-    public static int LatestNumber(string dir) => Directory.GetFiles(dir, "_main.*.chunks")
-        .Select(f => Path.GetFileName(f).Split('.')).Where(p => p.Length == 3 && int.TryParse(p[1], out _)).Select(p => int.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture)).DefaultIfEmpty(-1).Max();
+    /// <summary>The highest save number in a world folder (-1: none), as <see cref="WorldSave.SaveNumbers"/> reads them.</summary>
+    public static int LatestNumber(string dir) => WorldSave.SaveNumbers(dir).Latest;
 
     /// <summary>
     /// The world folder down to its latest save: earlier save numbers' files and the chunk files its index does not

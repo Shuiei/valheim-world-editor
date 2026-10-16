@@ -364,7 +364,14 @@ public sealed class WorldSave
     /// the commit marker (.ok, written last: a save without it was cut short, or is being written right now). A folder
     /// where no save has the marker: the highest index. -1: none.
     /// </summary>
-    public static int CommittedSave(string directory)
+    public static int CommittedSave(string directory) => SaveNumbers(directory) is var (latest, committed) && committed >= 0 ? committed : latest;
+
+    /// <summary>
+    /// The save numbers of a world folder, by its index files (_main.&lt;n&gt;.chunks, n plain digits): the highest, and
+    /// the highest with its commit marker (.ok); -1 for none. The one scan for <see cref="CommittedSave"/> and the
+    /// writer's next number.
+    /// </summary>
+    public static (int Latest, int Committed) SaveNumbers(string directory)
     {
         int best = -1, committed = -1;
         foreach (string path in System.IO.Directory.GetFiles(directory, "_main.*.chunks"))
@@ -379,7 +386,7 @@ public sealed class WorldSave
                 }
             }
         }
-        return committed >= 0 ? committed : best;
+        return (best, committed);
     }
 
     /// <summary>Reads the .chunks index, then every chunk file it lists.</summary>
