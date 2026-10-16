@@ -96,6 +96,7 @@
   "build.tab.hammer": "The pieces of the hammer's {0} tab.",
   "build.dragTip": "Drag onto the plot to add it there.",
   "build.modTip": "The pieces {0} adds.",
+  "build.noPieces": "No pieces to build with",
   "history.tip.redoTo": "Redo up to this change",
   "history.tip.backTo": "Undo every change after this one",
   "history.tip.remove": "Take out only this change",

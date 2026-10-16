@@ -452,7 +452,7 @@ public sealed class BuildPanel
         {
             // Nothing to build with (the game's data not read, or every piece hidden by the mods' manifests).
             t.Chosen.Clear();
-            Chosen.Text = "No pieces to build with";
+            Chosen.Text = Lang.T("build.noPieces");
             Cost.Text = "";
         }
         else if (!(t.Chosen.Count == 1 && pieces.Any(p => p.Prefab == t.Chosen[0])))
