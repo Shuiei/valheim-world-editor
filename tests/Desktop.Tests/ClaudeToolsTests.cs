@@ -116,13 +116,27 @@ public class ClaudeToolsTests
         await r.OpenArea();
         await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "wood_pole2", X = 3, Z = 3 }]);
         await r.T.Undo();
-        r.Hut("Hut", "A hut");
-        Assert.Equal("workshop", J(await r.T.OpenWorkshop("Hut")).GetProperty("page").GetString());
+        // A floor on the ground and a post 6 m above it, held by nothing: it falls.
+        static System.Text.Json.Nodes.JsonNode Piece(string prefab, float dy) => new System.Text.Json.Nodes.JsonObject
+        {
+            ["name"] = prefab,
+            ["dx"] = 0,
+            ["dy"] = dy,
+            ["dz"] = 0,
+            ["rx"] = 0,
+            ["ry"] = 0,
+            ["rz"] = 0,
+            ["scale"] = 0,
+        };
+        var clip = new System.Text.Json.Nodes.JsonObject { ["objects"] = new System.Text.Json.Nodes.JsonArray(Piece("wood_floor", 0), Piece("wood_pole2", 6)) };
+        Directory.CreateDirectory(r.Homestead);
+        File.WriteAllText(Path.Combine(r.Homestead, TerrainEditor.App.Homestead.FileName("Floating")), TerrainEditor.App.Homestead.Write(clip, "Floating", "Tester", null, DateTime.Now));
+        Assert.Equal("workshop", J(await r.T.OpenWorkshop("Floating")).GetProperty("page").GetString());
         Assert.StartsWith("The ids are from another area", await r.T.RemoveObjects([0]));
         var support = J(await r.T.SupportCheck());
-        var given = support.GetProperty("weakest").EnumerateArray().Concat(support.GetProperty("falling").EnumerateArray()).ToList();
-        Assert.NotEmpty(given);
-        Assert.StartsWith("Took 1 away", await r.T.RemoveObjects([given[0].GetProperty("id").GetInt32()]));
+        Assert.Equal(1, support.GetProperty("wouldFall").GetInt32());
+        int post = support.GetProperty("falling")[0].GetProperty("id").GetInt32();
+        Assert.StartsWith("Took 1 away", await r.T.RemoveObjects([post]));
     }
 
     // Floors, walls and roofs over a rectangle, from the game's pieces: an 8 x 6 m house is 12 floor tiles,
