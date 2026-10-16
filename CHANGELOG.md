@@ -294,6 +294,8 @@ the plugin is unchanged in versions without that part.
 - **Claude's reset_zones with a huge rectangle could hang the editor or run out of memory.** Every zone of the
   rectangle was listed on the window's thread before those outside the area were dropped; the range is now cut to the
   area's zones first.
+- **In the Generate panel, with the biome's style, choosing another biome kept the old biome's decay.** The decay
+  followed only a change of Style; it now follows the biome too while Style is the biome's.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
