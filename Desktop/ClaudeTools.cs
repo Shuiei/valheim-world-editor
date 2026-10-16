@@ -233,12 +233,19 @@ public sealed partial class ClaudeTools
             return stale;
         }
         int[] asked = [.. ids.Distinct()];
-        var ok = asked.Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).ToList();
+        List<int> ok;
+        List<System.Numerics.Vector3> at;
+        // Under the things' lock, as every other reader of them.
+        lock (scene.Things)
+        {
+            ok = [.. asked.Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone)];
+            at = [.. ok.Select(i => scene.Things[i].Position)];
+        }
         _w.View.Select(ok);
         if (focus && ok.Count > 0)
         {
-            var mid = ok.Select(i => scene.Things[i].Position).Aggregate(System.Numerics.Vector3.Zero, (a, b) => a + b) / ok.Count;
-            float spread = ok.Select(i => System.Numerics.Vector3.Distance(scene.Things[i].Position, mid)).DefaultIfEmpty(0).Max();
+            var mid = at.Aggregate(System.Numerics.Vector3.Zero, (a, b) => a + b) / ok.Count;
+            float spread = at.Select(p => System.Numerics.Vector3.Distance(p, mid)).DefaultIfEmpty(0).Max();
             _w.View.Focus(mid, MathF.Max(20, spread * 2.5f));
         }
         return $"Selected {ok.Count}{(ok.Count < asked.Length ? $" ({asked.Length - ok.Count} id(s) were not objects of the area)" : "")}.";
@@ -1134,7 +1141,11 @@ public sealed partial class ClaudeTools
         }
         var things = session.Scene.Things;
         int[] asked = [.. ids.Distinct()];
-        var given = asked.Where(i => i >= 0 && i < things.Count && !things[i].Gone).ToList();
+        List<int> given;
+        lock (things)
+        {
+            given = [.. asked.Where(i => i >= 0 && i < things.Count && !things[i].Gone)];
+        }
         if (given.Count == 0)
         {
             return "None of those ids is an object of the area.";

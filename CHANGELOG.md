@@ -285,6 +285,7 @@ the plugin is unchanged in versions without that part.
   SeedLocations does, so a failure no longer leaves it reseeded.
 - The Claude server's host is disposed when it cannot start (its port taken), instead of being left behind at each
   failed Apply.
+- Claude's select_objects and remove_objects read the area's objects under their lock, as the other Claude tools do.
 
 ## v1.45.108 — unreleased
 
