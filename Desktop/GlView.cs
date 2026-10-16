@@ -2928,6 +2928,8 @@ public sealed class GlView : OpenGlControlBase
         // Keys held when the window loses the focus would keep moving the camera; so would a key held while a box
         // takes the focus (its release goes to the box).
         window.Deactivated += (_, _) => { lock (_keys) { _keys.Clear(); } };
+        // So would one held while the editor is hidden: its release, on the start page or the map, is not the view's.
+        surface.DetachedFromVisualTree += (_, _) => { lock (_keys) { _keys.Clear(); } };
         // Handled ones too: a box (or a control around it) marking the focus event handled still took the focus.
         window.AddHandler(GotFocusEvent, (_, e) =>
         {

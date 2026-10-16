@@ -111,6 +111,19 @@ public class GlViewInputTests
     }
 
     [AvaloniaFact]
+    public void KeysHeldWhenTheEditorIsHiddenAreLetGo()
+    {
+        var (w, v) = Open();
+        w.KeyPress(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
+        w.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.Space, " ");
+        Assert.Contains(Key.W, v.KeysHeld);
+        Assert.Contains(Key.Space, v.KeysHeld);
+        // Their releases come on the start page, where the view takes no key.
+        w.ShowStart();
+        Assert.Empty(v.KeysHeld);
+    }
+
+    [AvaloniaFact]
     public void TheInfoPanelDoesNotTakeTheViewsInput()
     {
         // A drag that starts on the panel (top left) leaves the camera alone.
