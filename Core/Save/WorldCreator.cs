@@ -168,7 +168,7 @@ public static class WorldCreator
             string main = Path.Combine(folder, "_main.1");
             written.AddRange([main + ".fwl2", main + ".chunks", main + ".db2"]);
             WriteMetadata(main + ".fwl2", name, seedName, seed, uid ?? Random.Shared.NextInt64(1, long.MaxValue));
-            WriteIndex(main + ".chunks", []);
+            WorldWriter.WriteIndex(main + ".chunks", []);
             var db = ZoneDb.Empty(SaveFileVersion, LocationVersion, Tail());
             db.Save(main + ".db2");
 
@@ -258,12 +258,15 @@ public static class WorldCreator
                     WriteChunk(file, list);
                     index.Add((chunk, list.Count));
                 }
-                WriteIndex(main + ".chunks", index);
+                WorldWriter.WriteIndex(main + ".chunks", [.. index.Select(c => (c.Chunk, (byte)0, 1u, c.Count))]);
                 db.Save(main + ".db2");
             }
-            // Written last, like the game: only then is the save complete.
+            // Written last, like the game: only then is the save complete. Every file and its name are on disk before it
+            // (a crash must not leave a marker vouching for files that are not), the marker's name after it.
             written.Add(main + ".ok");
-            File.WriteAllBytes(main + ".ok", BitConverter.GetBytes(SaveFileVersion));
+            DirectorySync.Flush(folder);
+            WorldWriter.WriteAllBytesDurable(main + ".ok", BitConverter.GetBytes(SaveFileVersion));
+            DirectorySync.Flush(folder);
             return new Created(folder, seed, zones, objects, flatZone is var (cx, cz, _) ? (cx, cz) : null, flatZone?.Span ?? 0, placed);
         }
         catch
@@ -441,40 +444,22 @@ public static class WorldCreator
             p.Write(0);
             p.Write(0);
         }
-        using BinaryWriter w = new(File.Create(path));
-        w.Write((int)pkg.Length);
-        w.Write(pkg.ToArray());
+        WorldWriter.WriteAllBytesDurable(path, [.. BitConverter.GetBytes((int)pkg.Length), .. pkg.ToArray()]);
     }
 
-    /// <summary>
-    /// The .chunks index: version, total object count, chunk count, then per chunk its id, size 0, file version 1 and
-    /// object count.
-    /// </summary>
-    private static void WriteIndex(string path, List<(ushort Chunk, int Count)> chunks)
-    {
-        using BinaryWriter w = new(File.Create(path));
-        w.Write((short)SaveFileVersion);
-        w.Write(chunks.Sum(c => c.Count));
-        w.Write(chunks.Count);
-        foreach (var (chunk, count) in chunks)
-        {
-            w.Write(chunk);
-            w.Write((byte)0);
-            w.Write(1u);
-            w.Write(count);
-        }
-    }
-
-    /// <summary>One chunk file: version, object count, then the objects' save-format bytes back to back.</summary>
+    /// <summary>One chunk file: version, object count, then the objects' save-format bytes back to back; flushed to disk.</summary>
     private static void WriteChunk(string path, List<byte[]> objects)
     {
-        using BinaryWriter w = new(File.Create(path));
+        using FileStream fs = new(path, FileMode.Create, FileAccess.Write);
+        using BinaryWriter w = new(fs);
         w.Write((short)SaveFileVersion);
         w.Write(objects.Count);
         foreach (byte[] o in objects)
         {
             w.Write(o);
         }
+        w.Flush();
+        fs.Flush(flushToDisk: true);
     }
 
     /// <summary>

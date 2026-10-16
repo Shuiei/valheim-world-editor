@@ -243,7 +243,7 @@ public static class WorldWriter
             string main = Path.Combine(dir, $"_main.{newNumber}");
             // Each file is listed before it is written: a failure halfway removes it too.
             newFiles.AddRange([main + ".chunks", main + ".db2", main + ".fwl2", main + ".ok"]);
-            WriteIndex(main + ".chunks", world.Chunks, updated);
+            WriteIndex(main + ".chunks", [.. world.Chunks.Select(c => updated.TryGetValue(c, out var u) ? (c.Chunk, c.Size, u.Version, u.Count) : (c.Chunk, c.Size, c.Version, c.IndexCount))]);
             if (resets.Count > 0)
             {
                 var db = ZoneDb.Load(Path.Combine(dir, $"_main.{world.SaveNumber}.db2"));
@@ -432,28 +432,30 @@ public static class WorldWriter
         return count;
     }
 
-    /// <summary>The new .chunks index: every chunk file, with the new version and count of those rewritten.</summary>
-    private static void WriteIndex(string path, List<ChunkFile> chunks, Dictionary<ChunkFile, (uint Version, int Count)> updated)
+    /// <summary>
+    /// A .chunks index (version, total object count, chunk count, then per chunk its id, size, file version and object
+    /// count), flushed to disk before returning: the save's and a new world's.
+    /// </summary>
+    internal static void WriteIndex(string path, IReadOnlyList<(ushort Chunk, byte Size, uint Version, int Count)> chunks)
     {
         using FileStream fs = new(path, FileMode.Create, FileAccess.Write);
         using BinaryWriter w = new(fs);
-        int Count(ChunkFile c) => updated.TryGetValue(c, out var u) ? u.Count : c.IndexCount;
         w.Write((short)SaveFileVersion);
-        w.Write(chunks.Sum(Count));
+        w.Write(chunks.Sum(c => c.Count));
         w.Write(chunks.Count);
-        foreach (ChunkFile c in chunks)
+        foreach (var (chunk, size, version, count) in chunks)
         {
-            w.Write(c.Chunk);
-            w.Write(c.Size);
-            w.Write(updated.TryGetValue(c, out var u) ? u.Version : c.Version);
-            w.Write(Count(c));
+            w.Write(chunk);
+            w.Write(size);
+            w.Write(version);
+            w.Write(count);
         }
         w.Flush();
         fs.Flush(flushToDisk: true);
     }
 
     /// <summary>Writes a file and flushes it to disk before returning.</summary>
-    private static void WriteAllBytesDurable(string path, byte[] bytes)
+    internal static void WriteAllBytesDurable(string path, byte[] bytes)
     {
         using FileStream fs = new(path, FileMode.Create, FileAccess.Write);
         fs.Write(bytes);
