@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.109 — unreleased
+
+### Fixed
+
+### Changed
+
 ## v1.45.108 — unreleased
 
 ### Changed
