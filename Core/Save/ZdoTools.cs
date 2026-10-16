@@ -49,17 +49,6 @@ public sealed class ObjectRef
 /// </summary>
 public static class ZdoBuilder
 {
-    /// <summary>The ZDO flag bits that say which data sections follow.</summary>
-    private const ushort Connections = 0x1, Floats = 0x2, Vec3 = 0x4, Quats = 0x8, Ints = 0x10, Longs = 0x20, Strings = 0x40, ByteArrays = 0x80;
-
-    /// <summary>ZDO flag bits: a rotation is stored; the position is in the short form.</summary>
-    private const ushort RotationFlag = 0x1000, SmallPositionFlag = 0x2000;
-
-    /// <summary>Vec3 data key of a per-axis scale.</summary>
-    private static readonly int ScaleKey = StableHash.Of("scale");
-
-    /// <summary>Float data key of a uniform scale.</summary>
-    private static readonly int ScaleScalarKey = StableHash.Of("scaleScalar");
 
     /// <summary>A copy of the template object at a new place, in the world version 41 format.</summary>
     /// <param name="source">The chunk file bytes the template lives in.</param>
@@ -77,36 +66,36 @@ public static class ZdoBuilder
     {
         euler = new Vector3(Wrap(euler.X), Wrap(euler.Y), Wrap(euler.Z));
         bool rotated = euler.LengthSquared() > 1e-6f;
-        ushort flags = (ushort)(template.Flags & ~SmallPositionFlag & ~RotationFlag);
+        ushort flags = (ushort)(template.Flags & ~ZdoData.SmallPositionFlag & ~ZdoData.RotationFlag);
         if (rotated)
         {
-            flags |= RotationFlag;
+            flags |= ZdoData.RotationFlag;
         }
         List<Section> sections = ReadSections(source, template, worldVersion);
         if (fresh)
         {
-            sections.RemoveAll(s => s.Flag == Connections);
+            sections.RemoveAll(s => s.Flag == ZdoData.Connections);
             foreach (Section s in sections)
             {
-                s.Items.RemoveAll(i => !(s.Flag == Longs && i.Key == Editing.ObjectField.CreatorKey) && !(s.Flag == Vec3 && i.Key == ScaleKey) && !(s.Flag == Floats && i.Key == ScaleScalarKey));
+                s.Items.RemoveAll(i => !(s.Flag == ZdoData.Longs && i.Key == Editing.ObjectField.CreatorKey) && !(s.Flag == ZdoData.Vec3s && i.Key == ZdoData.ScaleKey) && !(s.Flag == ZdoData.Floats && i.Key == ZdoData.ScaleScalarKey));
             }
         }
         if (scale > 0f)
         {
             // The game stores a non-default scale as a Vector3 "scale" (ZNetView.SetLocalScale); scale 1 is no value,
             // as Blank writes it.
-            sections.FirstOrDefault(s => s.Flag == Floats)?.Items.RemoveAll(i => i.Key == ScaleScalarKey);
+            sections.FirstOrDefault(s => s.Flag == ZdoData.Floats)?.Items.RemoveAll(i => i.Key == ZdoData.ScaleScalarKey);
             if (MathF.Abs(scale - 1f) > 1e-4f)
             {
-                Section vec = sections.FirstOrDefault(s => s.Flag == Vec3) ?? AddSection(sections, Vec3);
-                vec.Set(ScaleKey, Concat(BitConverter.GetBytes(scale), BitConverter.GetBytes(scale), BitConverter.GetBytes(scale)));
+                Section vec = sections.FirstOrDefault(s => s.Flag == ZdoData.Vec3s) ?? AddSection(sections, ZdoData.Vec3s);
+                vec.Set(ZdoData.ScaleKey, Concat(BitConverter.GetBytes(scale), BitConverter.GetBytes(scale), BitConverter.GetBytes(scale)));
             }
             else
             {
-                sections.FirstOrDefault(s => s.Flag == Vec3)?.Items.RemoveAll(i => i.Key == ScaleKey);
+                sections.FirstOrDefault(s => s.Flag == ZdoData.Vec3s)?.Items.RemoveAll(i => i.Key == ZdoData.ScaleKey);
             }
         }
-        sections.RemoveAll(s => s.Flag != Connections && s.Items.Count == 0);
+        sections.RemoveAll(s => s.Flag != ZdoData.Connections && s.Items.Count == 0);
         flags = (ushort)(flags & 0xFF00);
         foreach (Section s in sections)
         {
@@ -123,7 +112,7 @@ public static class ZdoBuilder
         }
         foreach (Section s in sections.OrderBy(s => s.Flag))
         {
-            if (s.Flag == Connections)
+            if (s.Flag == ZdoData.Connections)
             {
                 w.Write(s.Raw!);
                 continue;
@@ -156,15 +145,15 @@ public static class ZdoBuilder
         ushort flags = (ushort)(baseFlags & 0x0F00);
         if (rotated)
         {
-            flags |= RotationFlag;
+            flags |= ZdoData.RotationFlag;
         }
         if (scale > 0f && MathF.Abs(scale - 1f) > 1e-4f)
         {
-            flags |= Vec3;
+            flags |= ZdoData.Vec3s;
         }
         if (ints is { Count: > 0 })
         {
-            flags |= Ints;
+            flags |= ZdoData.Ints;
         }
         using MemoryStream ms = new();
         using BinaryWriter w = new(ms);
@@ -175,13 +164,13 @@ public static class ZdoBuilder
         {
             WriteSmallRotation(w, euler);
         }
-        if ((flags & Vec3) != 0)
+        if ((flags & ZdoData.Vec3s) != 0)
         {
             WriteNumItems(w, 1);
-            w.Write(ScaleKey);
+            w.Write(ZdoData.ScaleKey);
             w.Write(scale); w.Write(scale); w.Write(scale);
         }
-        if ((flags & Ints) != 0)
+        if ((flags & ZdoData.Ints) != 0)
         {
             WriteNumItems(w, ints!.Count);
             foreach (var (key, value) in ints)
@@ -275,19 +264,19 @@ public static class ZdoBuilder
             return result;
         }
         using ValheimReader pkg = new(new MemoryStream(source, (int)t.DataStart, (int)(t.End - t.DataStart)));
-        if ((t.Flags & Connections) != 0)
+        if ((t.Flags & ZdoData.Connections) != 0)
         {
-            result.Add(new Section(Connections) { Raw = pkg.ReadBytes(5) });
+            result.Add(new Section(ZdoData.Connections) { Raw = pkg.ReadBytes(5) });
         }
         foreach (var (flag, read) in new (ushort, Func<ValheimReader, byte[]>)[]
         {
-            (Floats, p => p.ReadBytes(4)),
-            (Vec3, p => p.ReadBytes(12)),
-            (Quats, p => p.ReadBytes(16)),
-            (Ints, p => p.ReadBytes(4)),
-            (Longs, p => p.ReadBytes(8)),
-            (Strings, p => { string s = p.ReadString(); using MemoryStream m = new(); using BinaryWriter bw = new(m); bw.Write(s); bw.Flush(); return m.ToArray(); }),
-            (ByteArrays, p => { byte[] b = p.ReadByteArray(); return Concat(BitConverter.GetBytes(b.Length), b); }),
+            (ZdoData.Floats, p => p.ReadBytes(4)),
+            (ZdoData.Vec3s, p => p.ReadBytes(12)),
+            (ZdoData.Quats, p => p.ReadBytes(16)),
+            (ZdoData.Ints, p => p.ReadBytes(4)),
+            (ZdoData.Longs, p => p.ReadBytes(8)),
+            (ZdoData.Strings, p => { string s = p.ReadString(); using MemoryStream m = new(); using BinaryWriter bw = new(m); bw.Write(s); bw.Flush(); return m.ToArray(); }),
+            (ZdoData.ByteArrays, p => { byte[] b = p.ReadByteArray(); return Concat(BitConverter.GetBytes(b.Length), b); }),
         })
         {
             if ((t.Flags & flag) == 0)

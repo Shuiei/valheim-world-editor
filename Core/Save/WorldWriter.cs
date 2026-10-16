@@ -108,7 +108,7 @@ public static class WorldWriter
         }
         // New ground copies a terrain object whose position is in the short format (the layout the copy patches).
         bool anyTerrain = world.TerrainZones.Any(z => z.Source != null);
-        TerrainZone? template = world.TerrainZones.FirstOrDefault(z => z.Source != null && (z.Source.Flags & ShortPosition) != 0);
+        TerrainZone? template = world.TerrainZones.FirstOrDefault(z => z.Source != null && (z.Source.Flags & ZdoData.SmallPositionFlag) != 0);
         Dictionary<ChunkFile, HashSet<long>> removals = [];
         void Remove(ObjectRef o) => (removals.TryGetValue(o.File, out var set) ? set : removals[o.File] = []).Add(o.Start);
         foreach (int id in deleted)
@@ -336,9 +336,6 @@ public static class WorldWriter
         return compressed.ToArray();
     }
 
-    /// <summary>The ZDO flag of a position saved as two shorts (the zone), which new terrain objects are copied from.</summary>
-    private const ushort ShortPosition = 0x2000;
-
     /// <summary>
     /// Template objects' bytes read from their chunk files on this thread so far: a test seam, a save reads its
     /// template once however many zones get new ground.
@@ -367,7 +364,7 @@ public static class WorldWriter
     /// <exception cref="InvalidOperationException">The template's position is not in the short format.</exception>
     private static byte[] NewTerrainObject(ZdoLocation src, byte[] own, ZoneEdit edit, byte[] data)
     {
-        if ((src.Flags & ShortPosition) == 0)
+        if ((src.Flags & ZdoData.SmallPositionFlag) == 0)
         {
             throw new InvalidOperationException("Unexpected terrain object layout (position is not in the short format).");
         }

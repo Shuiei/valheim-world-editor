@@ -17,8 +17,14 @@ public sealed class ZdoData
     /// </summary>
     public const ushort Connections = 0x1, Floats = 0x2, Vec3s = 0x4, Quats = 0x8, Ints = 0x10, Longs = 0x20, Strings = 0x40, ByteArrays = 0x80;
 
-    /// <summary>ZDO flag bits: a rotation is stored; the position is in the short form.</summary>
-    private const ushort RotationFlag = 0x1000, SmallPositionFlag = 0x2000;
+    /// <summary>ZDO flag bits: a rotation is stored; the position is in the short form (the zone, as two shorts).</summary>
+    public const ushort RotationFlag = 0x1000, SmallPositionFlag = 0x2000;
+
+    /// <summary>Vec3 data key of a per-axis scale.</summary>
+    public static readonly int ScaleKey = StableHash.Of("scale");
+
+    /// <summary>Float data key of a uniform scale.</summary>
+    public static readonly int ScaleScalarKey = StableHash.Of("scaleScalar");
 
     /// <summary>
     /// The flag bits kept as saved: persistent / distant / object type (0x0F00) and the two the format leaves unused

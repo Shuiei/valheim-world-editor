@@ -36,12 +36,6 @@ public sealed class WorldSave
     /// <summary>Player id and name keys on player objects.</summary>
     private static readonly int PlayerIdKey = StableHash.Of("playerID"), PlayerNameKey = StableHash.Of("playerName");
 
-    /// <summary>Vec3 data key of a per-axis scale.</summary>
-    private static readonly int ScaleKey = StableHash.Of("scale");
-
-    /// <summary>Float data key of a uniform scale.</summary>
-    private static readonly int ScaleScalarKey = StableHash.Of("scaleScalar");
-
     /// <summary>Tameable.SetTamed writes it (an int, 1 when tamed).</summary>
     private static readonly int TamedKey = StableHash.Of("tamed");
 
@@ -237,8 +231,8 @@ public sealed class WorldSave
             z.Rotation = n.Rotation;
             if (n.Scale > 0f)
             {
-                z.Set("vec3", ScaleKey, $"{n.Scale.ToString(CultureInfo.InvariantCulture)} {n.Scale.ToString(CultureInfo.InvariantCulture)} {n.Scale.ToString(CultureInfo.InvariantCulture)}");
-                z.Set("floats", ScaleScalarKey, null);
+                z.Set("vec3", ZdoData.ScaleKey, $"{n.Scale.ToString(CultureInfo.InvariantCulture)} {n.Scale.ToString(CultureInfo.InvariantCulture)} {n.Scale.ToString(CultureInfo.InvariantCulture)}");
+                z.Set("floats", ZdoData.ScaleScalarKey, null);
             }
             return z.Serialize();
         }
@@ -815,8 +809,6 @@ public sealed class WorldSave
         {
             ObjectRefs.Add(objRef);
         }
-        const ushort Connections = 0x1, Floats = 0x2, Vec3 = 0x4, Quats = 0x8, Ints = 0x10, Longs = 0x20, Strings = 0x40, ByteArrays = 0x80;
-        const ushort Rotation = 0x1000, SmallPosition = 0x2000;
         bool chunked = worldVersion >= WorldVersion.ChunkedSave;
         ushort flags = pkg.ReadUShort();
         if (!chunked)
@@ -824,7 +816,7 @@ public sealed class WorldSave
             pkg.ReadVector2s();
         }
         Vector3 position;
-        if ((flags & SmallPosition) != 0)
+        if ((flags & ZdoData.SmallPositionFlag) != 0)
         {
             var (x, y) = pkg.ReadVector2s();
             position = new Vector3(x, 0f, y);
@@ -835,7 +827,7 @@ public sealed class WorldSave
         }
         int prefab = pkg.ReadInt();
         Vector3 rotation = Vector3.Zero;
-        if ((flags & Rotation) != 0)
+        if ((flags & ZdoData.RotationFlag) != 0)
         {
             rotation = chunked ? pkg.ReadSmallRotation() : pkg.ReadVector3();
         }
@@ -871,32 +863,32 @@ public sealed class WorldSave
             }
             return id;
         }
-        if ((flags & Connections) != 0)
+        if ((flags & ZdoData.Connections) != 0)
         {
             pkg.ReadByte();
             pkg.ReadInt();
         }
-        if ((flags & Floats) != 0)
+        if ((flags & ZdoData.Floats) != 0)
         {
             int n = pkg.ReadNumItems(worldVersion);
             for (int i = 0; i < n; i++)
             {
                 int key = pkg.ReadInt();
                 float value = pkg.ReadSingle();
-                if (key == ScaleScalarKey)
+                if (key == ZdoData.ScaleScalarKey)
                 {
                     scale = new Vector3(value);
                 }
             }
         }
-        if ((flags & Vec3) != 0)
+        if ((flags & ZdoData.Vec3s) != 0)
         {
             int n = pkg.ReadNumItems(worldVersion);
             for (int i = 0; i < n; i++)
             {
                 int key = pkg.ReadInt();
                 Vector3 value = pkg.ReadVector3();
-                if (key == ScaleKey)
+                if (key == ZdoData.ScaleKey)
                 {
                     scale = value;
                 }
@@ -906,7 +898,7 @@ public sealed class WorldSave
                 }
             }
         }
-        if ((flags & Quats) != 0)
+        if ((flags & ZdoData.Quats) != 0)
         {
             int n = pkg.ReadNumItems(worldVersion);
             for (int i = 0; i < n; i++)
@@ -919,7 +911,7 @@ public sealed class WorldSave
                 }
             }
         }
-        if ((flags & Ints) != 0)
+        if ((flags & ZdoData.Ints) != 0)
         {
             int n = pkg.ReadNumItems(worldVersion);
             for (int i = 0; i < n; i++)
@@ -941,7 +933,7 @@ public sealed class WorldSave
                 }
             }
         }
-        if ((flags & Longs) != 0)
+        if ((flags & ZdoData.Longs) != 0)
         {
             int n = pkg.ReadNumItems(worldVersion);
             for (int i = 0; i < n; i++)
@@ -966,7 +958,7 @@ public sealed class WorldSave
                 }
             }
         }
-        if ((flags & Strings) != 0)
+        if ((flags & ZdoData.Strings) != 0)
         {
             int n = pkg.ReadNumItems(worldVersion);
             for (int i = 0; i < n; i++)
@@ -980,7 +972,7 @@ public sealed class WorldSave
                 }
             }
         }
-        if ((flags & ByteArrays) != 0)
+        if ((flags & ZdoData.ByteArrays) != 0)
         {
             int n = pkg.ReadNumItems(worldVersion);
             for (int i = 0; i < n; i++)
