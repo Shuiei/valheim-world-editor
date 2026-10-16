@@ -247,6 +247,30 @@ public class InspectorPanelEditsTests
 
     // Apply on an object no longer at hand: another area open meanwhile (fewer things), or its file gone. Each is said,
     // nothing changes and nothing throws.
+    // A key added twice, or one the object has already, is refused (Apply would set one over the other); the chest's
+    // contents, edited above, cannot be removed from the list (Apply writes them again).
+    [AvaloniaFact]
+    public async Task AKeyIsAddedOnceAndTheContentsAreNotRemovable()
+    {
+        using var r = new Run();
+        Assert.True(r.I.Open(r.ChestIndex));
+        var (x, y) = r.I.FreeSlot()!.Value;
+        r.I.Items!.Add(new InspectorPanel.ItemRow { Name = "Resin", Stack = 7, X = x, Y = y });
+        AddValue(r.I, "zz_note", "1");
+        AddValue(r.I, "zz_note", "2");
+        Assert.Equal("zz_note is there already: change its value in the list.", r.Said);
+        Assert.Equal(("strings", "zz_note", "1"), Assert.Single(r.I.Added));
+        await r.I.Apply();
+        Assert.StartsWith("Changed", r.Said);
+        Assert.Contains(r.I.FieldList, f => f.Section == "strings" && f.Key == StableHash.Of("zz_note"));
+        r.Said = null;
+        AddValue(r.I, "zz_note", "3");
+        Assert.Equal("zz_note is there already: change its value in the list.", r.Said);
+        Assert.Empty(r.I.Added);
+        var items = r.I.Fields.GetLogicalDescendants().OfType<TextBox>().First(b => b.Text == "see Contents above");
+        Assert.False(((Grid)items.Parent!).Children.OfType<Button>().Single().IsEnabled);
+    }
+
     [AvaloniaFact]
     public async Task AnObjectNoLongerAtHandIsNotApplied()
     {

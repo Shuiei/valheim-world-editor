@@ -198,7 +198,15 @@ public sealed class InspectorPanel
                 Message?.Invoke($"{key} is shown only: the mod that keeps it says it must not be changed.");
                 return;
             }
-            Added.Add((Sections[Math.Max(0, AddSection.SelectedIndex)].Section, key, AddValue.Text ?? ""));
+            // One value a key: a second would be set over the first (or over the one in the list) on Apply.
+            string section = Sections[Math.Max(0, AddSection.SelectedIndex)].Section;
+            int hash = ZdoKeys.Parse(key);
+            if (FieldList.Exists(f => f.Section == section && f.Key == hash) || Added.Exists(a => a.Section == section && ZdoKeys.Parse(a.Key) == hash))
+            {
+                Message?.Invoke($"{key} is there already: change its value in the list.");
+                return;
+            }
+            Added.Add((section, key, AddValue.Text ?? ""));
             AddKey.Text = AddValue.Text = "";
             Render();
         };
@@ -475,8 +483,9 @@ public sealed class InspectorPanel
                     Dirty();
                 }
             };
-            // A value a mod's manifest shows only cannot be removed either.
-            var rm = new Button { Content = f.Removed ? "↺" : "✕", FontSize = 11, Padding = new Thickness(4, 0), IsEnabled = note?.ReadOnly != true };
+            // A value a mod's manifest shows only cannot be removed either; nor can the contents while they are edited
+            // above (Apply writes them again): empty them there instead.
+            var rm = new Button { Content = f.Removed ? "↺" : "✕", FontSize = 11, Padding = new Thickness(4, 0), IsEnabled = note?.ReadOnly != true && !isItems };
             rm.Tip(f.Removed ? "inspect.keepValue" : "inspect.removeValue");
             rm.Click += (_, _) => { f.Removed = !f.Removed; Render(); };
             var label = new TextBlock { Text = Label(f), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextDecorations = f.Removed ? TextDecorations.Strikethrough : null };
