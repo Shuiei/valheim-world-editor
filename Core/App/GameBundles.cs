@@ -129,6 +129,11 @@ public sealed class GameBundles
     /// </summary>
     private readonly Dictionary<string, string> _cab = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>
+    /// Whether <see cref="_cab"/> holds every bundle's names: once the index is built, or <see cref="EnsureCabs"/> has
+    /// gone through every bundle (some names alone, from bundles read before, do not count).
+    /// </summary>
+    private bool _cabsFull;
+    /// <summary>
     /// Bundles kept open after being read once, by file name.
     /// </summary>
     private readonly Dictionary<string, (BundleFileInstance Bundle, AssetsFileInstance Assets)> _open = [];
@@ -437,6 +442,8 @@ public sealed class GameBundles
                 }
             }
         }
+        // Every bundle's contents were read, and with them its names.
+        _cabsFull = true;
         foreach (var (n, list) in twice)
         {
             res[n] = list.FirstOrDefault(IsNetworked) ?? list[0];
@@ -807,21 +814,30 @@ public sealed class GameBundles
     /// </summary>
     private void EnsureCabs()
     {
-        if (_cab.Count > 0)
+        if (_cabsFull)
         {
             return;
         }
         foreach (var (name, path) in _files)
         {
-            // A file that is not a bundle is passed over, as the index does.
+            // A bundle kept open is read as it is: loading it again opened its file a second time, never closed.
+            bool kept = _open.TryGetValue(name, out var open);
             BundleFileInstance b;
-            try
+            if (kept)
             {
-                b = _am.LoadBundleFile(path, false);
+                b = open.Bundle;
             }
-            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException)
+            else
             {
-                continue;
+                // A file that is not a bundle is passed over, as the index does.
+                try
+                {
+                    b = _am.LoadBundleFile(path, false);
+                }
+                catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException)
+                {
+                    continue;
+                }
             }
             try
             {
@@ -830,14 +846,21 @@ public sealed class GameBundles
                     _cab[d.Name.Split('.')[0]] = name;
                 }
             }
+            // One bundle that cannot be read is said and passed over: the others' names are still taken.
+            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or EndOfStreamException
+                or IndexOutOfRangeException or ArgumentException or NullReferenceException or OverflowException)
+            {
+                Console.WriteLine($"game files: the files in {name} could not be listed ({e.Message}), skipped");
+            }
             finally
             {
-                if (!_open.ContainsKey(name))
+                if (!kept)
                 {
                     _am.UnloadBundleFile(b);
                 }
             }
         }
+        _cabsFull = true;
     }
 
     /// <summary>

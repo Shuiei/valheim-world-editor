@@ -66,6 +66,11 @@ the plugin is unchanged in versions without that part.
 - **A broken mod mesh no longer fails drawing a building's picture.** Its submesh sizes could overflow the bounds
   check, and indices were not checked against the mesh's vertices, so drawing threw. Sizes are now checked without
   overflow, and triangles with a corner outside the mesh are left out.
+- **Following models into other bundles no longer leaves game files open or stops after one bad bundle.** Listing
+  every bundle's inner files opened again the bundles already open (their files stayed open, which on Windows can
+  block Steam updates), and a bundle that failed midway left the list part-filled for the session, so later references
+  found nothing. Open bundles are read as they are, a bad one is skipped (logged), and the list counts as complete
+  only once every bundle was gone through.
 
 ### Changed
 
