@@ -154,65 +154,56 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
         return body;
     }
 
-    /// <summary>
-    /// Whether the plugin moves objects in place (<see cref="ApplyObjects"/>'s moves; 1.40.0 on, which lists "move"
-    /// among the features in its status). Asked once; a check that fails says no, and is asked again next time.
-    /// </summary>
-    public Task<bool> CanMove() => Has("move");
+    /// <summary>The plugin's run and what it can do, as its status says now.</summary>
+    /// <param name="Run">
+    /// This run of the plugin: a new id each time the game starts (1.45.3 on; "" before). A call whose answer was lost is
+    /// sent again under its id only to the run it went to: another run does not know what that one did.
+    /// </param>
+    /// <param name="Features">The features its status lists.</param>
+    public sealed record Abilities(string Run, IReadOnlySet<string> Features)
+    {
+        /// <summary>
+        /// Whether the plugin moves objects in place (<see cref="ApplyObjects"/>'s moves; 1.40.0 on, which lists "move").
+        /// </summary>
+        public bool CanMove => Features.Contains("move");
+
+        /// <summary>
+        /// Whether the plugin does an <see cref="ApplyObjects"/> call sent again under the same call id only once,
+        /// answering the second time with what it did the first (1.45.3 on, which lists "once").
+        /// </summary>
+        public bool CanCallOnce => Features.Contains("once");
+    }
 
     /// <summary>
-    /// Whether the plugin does an <see cref="ApplyObjects"/> call sent again under the same call id only once, answering
-    /// the second time with what it did the first (1.45.3 on, which lists "once" among the features in its status). Asked
-    /// once; a check that fails says no, and is asked again next time.
+    /// The plugin's run and what it can do, asked now (once per apply: a game started again with another plugin is
+    /// seen). A check that fails is an error, so a move is never sent as a destroy and a creation for want of an answer.
     /// </summary>
-    public Task<bool> CanCallOnce() => Has("once");
-
-    /// <summary>
-    /// This run of the plugin, asked now: a new id each time the game starts (1.45.3 on; "" before). A call whose answer
-    /// was lost is sent again under its id only to the run it went to: another run does not know what that one did.
-    /// </summary>
-    public async Task<string> Run()
+    /// <exception cref="HttpRequestException">The bridge could not be reached.</exception>
+    /// <exception cref="InvalidOperationException">The bridge answered with an error status.</exception>
+    /// <exception cref="JsonException">The status is not JSON.</exception>
+    public async Task<Abilities> Ask()
     {
         using var doc = JsonDocument.Parse(await Status());
-        return doc.RootElement.TryGetProperty("run", out var r) && r.ValueKind == JsonValueKind.String ? r.GetString()! : "";
+        JsonElement root = doc.RootElement;
+        string run = root.TryGetProperty("run", out var r) && r.ValueKind == JsonValueKind.String ? r.GetString()! : "";
+        HashSet<string> features = root.TryGetProperty("features", out var f) && f.ValueKind == JsonValueKind.Array
+            ? [.. f.EnumerateArray().Select(e => e.GetString() ?? "")]
+            : [];
+        return new Abilities(run, features);
     }
-
-    /// <summary>Whether the plugin's status lists this feature; asked once, a check that fails says no.</summary>
-    /// <param name="feature">The feature's name in the status.</param>
-    private async Task<bool> Has(string feature)
-    {
-        if (_features == null)
-        {
-            try
-            {
-                using var doc = JsonDocument.Parse(await Status());
-                _features = doc.RootElement.TryGetProperty("features", out var f) && f.ValueKind == JsonValueKind.Array
-                    ? [.. f.EnumerateArray().Select(e => e.GetString() ?? "")]
-                    : [];
-            }
-            catch (Exception e) when (e is HttpRequestException or InvalidOperationException or JsonException or TaskCanceledException)
-            {
-                return false;
-            }
-        }
-        return _features.Contains(feature);
-    }
-
-    /// <summary>The features the plugin's status lists, once asked.</summary>
-    private HashSet<string>? _features;
 
     /// <summary>
     /// Objects to destroy (live ZDOIDs) and to create (save-format bytes); returns the plugin's JSON. After them, each
     /// destroyed object's prefab and position: another mod may have made the object again under a new ZDOID
     /// (ServersideQoL does, for build pieces, plants, fires and more), and the plugin finds it by those. Plugins from
-    /// before 1.15.4 stop reading before them. Then the moves, only for a plugin that can (<see cref="CanMove"/>):
+    /// before 1.15.4 stop reading before them. Then the moves, only for a plugin that can (<see cref="Abilities.CanMove"/>):
     /// one that cannot would leave them out.
     /// </summary>
     /// <param name="destroy">The objects to destroy.</param>
     /// <param name="create">The objects to make, in the save format.</param>
     /// <param name="moves">The objects to move (none: the call older plugins take).</param>
     /// <param name="callId">
-    /// The call's id, for a plugin that can (<see cref="CanCallOnce"/>): the same call sent again under it after its
+    /// The call's id, for a plugin that can (<see cref="Abilities.CanCallOnce"/>): the same call sent again under it after its
     /// answer was lost is not done twice. Null: none sent.
     /// </param>
     public async Task<string> ApplyObjects(IReadOnlyList<LiveTarget> destroy, IReadOnlyList<byte[]> create, IReadOnlyList<LiveMove>? moves = null, string? callId = null)

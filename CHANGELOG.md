@@ -30,6 +30,10 @@ the plugin is unchanged in versions without that part.
   format's locale, so English Windows with French formats would start in French once a French catalogue exists; macOS
   read only LANG, which apps opened from Finder lack, so they always started in English. Windows now reads the user's
   display languages and macOS the preferred languages.
+- **A failed plugin check no longer turns a live move into a destroyed and remade object.** What the plugin can do was
+  asked once per connection, and a check that failed (a slow answer, say) counted as "cannot move": the moved chest
+  was destroyed and made again under a new id, and ContainerSigns doubled its signs. It is now asked at each Apply
+  live, a check that fails stops the apply, and a plugin changed since (the game started again) is seen.
 
 ### Changed
 

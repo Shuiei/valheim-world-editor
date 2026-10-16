@@ -192,23 +192,26 @@ public sealed class LiveSync
         {
             unanswered = _unanswered;
         }
+        // Asked at each apply, and refused when it cannot be: a move sent as a destroy and a creation would give the
+        // object a new id (mods' notes of it lost), and the plugin may have changed since the last apply.
+        LiveBridge.Abilities plugin = await live.Ask();
         if (unanswered != null)
         {
             // The game started again since: the new run does not know what the last one did, so the call may be in
             // the world already (saved before the game stopped). Not sent again until the world is read again.
-            if (await live.Run() != unanswered.Run)
+            if (plugin.Run != unanswered.Run)
             {
                 throw new InvalidOperationException("the game started again after an apply whose answer was lost, so whether it was done is unknown: reload the world from the game before applying again, so no object is made twice");
             }
             said.Add(await Send(world, live, unanswered));
         }
-        Call call = Plan(world, edits, await live.CanMove());
+        Call call = Plan(world, edits, plugin.CanMove);
         if (!call.Empty)
         {
-            if (await live.CanCallOnce())
+            if (plugin.CanCallOnce)
             {
                 call.Id = Guid.NewGuid().ToString("N");
-                call.Run = await live.Run();
+                call.Run = plugin.Run;
             }
             said.Add(await Send(world, live, call));
         }
@@ -221,10 +224,10 @@ public sealed class LiveSync
     /// </summary>
     private sealed class Call
     {
-        /// <summary>The call's id, for a plugin that does a call once (<see cref="LiveBridge.CanCallOnce"/>); null: none.</summary>
+        /// <summary>The call's id, for a plugin that does a call once (<see cref="LiveBridge.Abilities.CanCallOnce"/>); null: none.</summary>
         public string? Id { get; set; }
 
-        /// <summary>The plugin's run the call went to (<see cref="LiveBridge.Run"/>), with an id.</summary>
+        /// <summary>The plugin's run the call went to (<see cref="LiveBridge.Abilities.Run"/>), with an id.</summary>
         public string Run { get; set; } = "";
 
         /// <summary>The game objects to destroy.</summary>
