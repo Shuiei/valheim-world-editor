@@ -601,6 +601,8 @@ public sealed partial class MainWindow : Window
         {
             Edit(scene.Session);
         }
+        // The Area tool's lists follow the scene shown (its selection was cleared before, with the old one shown).
+        AreaPanel.Refresh();
         MapButton.IsVisible = scene.Owner != null && !Options.Direct;
         _title.Text = scene.Name;
         _subtitle.Text = $"{scene.ZonesX} × {scene.ZonesZ} zones, from zone {scene.X0}, {scene.Z0} to {scene.X0 + scene.ZonesX - 1}, {scene.Z0 + scene.ZonesZ - 1} · {scene.Things.Count(t => !t.Gone):N0} objects";

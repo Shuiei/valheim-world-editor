@@ -370,7 +370,7 @@ public class WorldSaveTests
         Assert.Equal(2, gone.Vanished.Count);
         Assert.True(gone.Modifiers);
         Assert.Equal(0, world.Creators[777]);
-        Assert.DoesNotContain(world.Pieces, p => p.Prefab == Fixtures.Hash("woodwall"));
+        Assert.DoesNotContain(world.Pieces, p => p.Prefab == Fixtures.Hash("mod_live_wall"));
         Assert.DoesNotContain(world.Locations, l => l.Location == MadeObjects.MadeUpLocation);
         Assert.DoesNotContain(world.Placed, p => p.Location == MadeObjects.MadeUpLocation);
     }

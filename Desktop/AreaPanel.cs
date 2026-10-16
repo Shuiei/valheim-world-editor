@@ -573,6 +573,13 @@ public sealed class AreaPanel
             ToBox.ItemsSource = _creatable.Select(p => _nameOf(p)!).ToList();
             ToBox.SelectedIndex = _creatable.IndexOf(chosen);
         }
+        else if (_view.Scene?.World == null && _creatableFrom.World != null)
+        {
+            // No world open: the last one is not kept alive by the list.
+            _creatableFrom = default;
+            _creatable = [];
+            ToBox.ItemsSource = Array.Empty<string>();
+        }
     }
 
     /// <summary>The ground action behind an action, null for the object and other actions.</summary>

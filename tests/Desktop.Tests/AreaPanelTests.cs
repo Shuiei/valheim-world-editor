@@ -257,6 +257,10 @@ public class AreaPanelTests
         w.Edit(a);
         p.Refresh();
         Assert.Equal(-1, p.ToBox.SelectedIndex);
+        // No world open: the list is empty and the last world is let go of.
+        w.View.Show(TestScenes.FlatScene(), null);
+        p.Refresh();
+        Assert.Empty((IEnumerable<object>)p.ToBox.ItemsSource!);
     }
 
     [AvaloniaFact]
