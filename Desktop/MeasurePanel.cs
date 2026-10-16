@@ -22,9 +22,12 @@ public sealed class MeasurePanel
     /// </summary>
     private readonly Grid _rows = new() { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12, RowSpacing = 3 };
     /// <summary>
-    /// The rows of <see cref="_rows"/> made so far, in order: those past the values shown are hidden.
+    /// The rows of <see cref="_rows"/> made so far, in order: those past the values shown are kept out of the grid
+    /// for the next time.
     /// </summary>
     private readonly List<(TextBlock Label, SelectableTextBlock Value)> _rowsMade = [];
+    /// <summary>How many of <see cref="_rowsMade"/>, from the first, are in the grid now.</summary>
+    private int _rowsIn;
     /// <summary>
     /// The 3D view whose tape the panel shows.
     /// </summary>
@@ -89,20 +92,27 @@ public sealed class MeasurePanel
                 Grid.SetRow(l, r);
                 Grid.SetRow(v, r);
                 Grid.SetColumn(v, 1);
-                _rows.Children.Add(l);
-                _rows.Children.Add(v);
                 _rowsMade.Add((l, v));
             }
-            var (labelBlock, valueBlock) = _rowsMade[r++];
+            var (labelBlock, valueBlock) = _rowsMade[r];
+            if (r == _rowsIn)
+            {
+                _rows.Children.Add(labelBlock);
+                _rows.Children.Add(valueBlock);
+                _rowsIn++;
+            }
             labelBlock.Text = label;
             valueBlock.Text = value;
-            labelBlock.IsVisible = valueBlock.IsVisible = true;
             Shown[label] = value;
+            r++;
         }
-        // Rows not needed now are hidden, kept for the next time, and their grid rows go (no spacing left for them).
-        for (int k = r; k < _rowsMade.Count; k++)
+        // Rows not needed now leave the grid, kept for the next time, and so do their grid rows (no spacing left for
+        // them; a control left on a grid row that is gone breaks the grid's layout).
+        while (_rowsIn > r)
         {
-            _rowsMade[k].Label.IsVisible = _rowsMade[k].Value.IsVisible = false;
+            _rowsIn--;
+            _rows.Children.Remove(_rowsMade[_rowsIn].Label);
+            _rows.Children.Remove(_rowsMade[_rowsIn].Value);
         }
         while (_rows.RowDefinitions.Count > r)
         {
