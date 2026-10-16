@@ -144,10 +144,14 @@ public sealed class BlueprintsPanel
     /// <summary>Homestead as last looked for (on refresh and before saving or importing; first when needed).</summary>
     internal Homestead.Status Status { get => field ??= FindHomestead(); private set; }
 
+    /// <summary>Looks for Homestead again (installed or moved since), without listing the blueprints.</summary>
+    /// <returns>What was found, now <see cref="Status"/>.</returns>
+    internal Homestead.Status LookAgain() => Status = FindHomestead();
+
     /// <summary>Looks for Homestead again and, while the panel is shown, lists the blueprints again.</summary>
     public void Refresh()
     {
-        Status = FindHomestead();
+        LookAgain();
         if (!Card.IsVisible)
         {
             return;

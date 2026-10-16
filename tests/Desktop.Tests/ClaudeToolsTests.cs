@@ -298,6 +298,20 @@ public class ClaudeToolsTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromResult(answer(request));
     }
 
+    // Homestead moved (or installed) after the Blueprints panel last looked: the blueprint tools look again.
+    [AvaloniaFact]
+    public async Task TheBlueprintToolsLookForHomesteadAgain()
+    {
+        using var r = new ClaudeRun();
+        r.Hut("Hut", "A floor");
+        Assert.Equal("Hut", J(await r.T.ListBlueprints())[0].GetProperty("name").GetString());
+        string elsewhere = Path.Combine(r.Homestead, "moved");
+        Directory.CreateDirectory(elsewhere);
+        r.W.Blueprints.FindHomestead = () => new TerrainEditor.App.Homestead.Status(true, "1.3.2", ["test"], elsewhere);
+        Assert.Equal(0, J(await r.T.ListBlueprints()).GetArrayLength());
+        Assert.Equal("No blueprint \"Hut\" in the library (list_blueprints).", await r.T.OpenWorkshop("Hut"));
+    }
+
     // A point's coordinates come both or neither: a lone one was dropped (list_objects' near) or mixed with a default
     // (move_objects' pivot with the objects' middle z).
     [Fact]

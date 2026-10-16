@@ -1410,7 +1410,8 @@ public sealed partial class ClaudeTools
     /// <param name="then">The tool's work with the file found.</param>
     private async Task<string> WithLibraryFile(string? name, Func<string?, Task<string>> then)
     {
-        string folder = await OnUi(() => _w.Blueprints.Status.Folder);
+        // Homestead looked for again: installed or moved since the panel last looked.
+        string folder = await OnUi(() => _w.Blueprints.LookAgain().Folder);
         string? path = string.IsNullOrWhiteSpace(name) ? null : await Task.Run(() => BlueprintPath(folder, name));
         return await then(path);
     }
@@ -1439,7 +1440,7 @@ public sealed partial class ClaudeTools
     public Task<string> ListBlueprints([Description("Words to find in the name, description or tags (optional).")] string? query = null) => OnUi(() =>
     {
         string[] words = (query ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return ToJson(TerrainEditor.App.Homestead.List(_w.Blueprints.Status.Folder)
+        return ToJson(TerrainEditor.App.Homestead.List(_w.Blueprints.LookAgain().Folder)
             .Where(e => words.All(w => e.Name.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Description.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase))))
             .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Terrain.PieceCost.Of(e.Kinds).Describe(4, english: true), description = e.Description, tags = e.Tags }));
     });

@@ -274,6 +274,9 @@ the plugin is unchanged in versions without that part.
   tool's Replace does.
 - **Claude's build_roof gave a bare tool error, or ran on to a runaway piece count, when the roof piece had too few
   snap points or none sloping one way in the game data read.** It now says why no roof was laid.
+- **Claude's blueprint tools kept using the Homestead folder found when the Blueprints panel last looked, so a
+  Homestead installed or moved since was not seen.** list_blueprints, open_workshop and add_blueprint now look for
+  Homestead again.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
