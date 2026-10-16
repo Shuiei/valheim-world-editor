@@ -206,6 +206,12 @@ public class BlueprintsPanelTests
         r.Said = null;
         Assert.Null(r.B.ToHomestead("hs:wide.blueprint"));
         Assert.StartsWith("That blueprint could not be read: its ground marks span ", r.Said);
+        // An older editor blueprint whose ground arrays are shorter than its size says: said, nothing pasted.
+        var shortClip = CopyFormat.ToJson(BlueprintsPanelRun.Clip("Short", "woodwall"));
+        shortClip["rel"] = new System.Text.Json.Nodes.JsonArray(0);
+        r.B.Paste(r.B.Store.Save("Short", null, null, shortClip));
+        Assert.StartsWith("That blueprint could not be read: its \"rel\" list holds 1 values", r.Said);
+        Assert.Null(r.W.View.Paste.Clip);
     }
 
     // A blueprints folder that cannot be written (here a file where the folder should be) is said so;

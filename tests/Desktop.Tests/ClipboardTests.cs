@@ -327,6 +327,17 @@ public class ClipboardTests
         Assert.False(s.Ground.NoLimit);
     }
 
+    // A paste that fails part-way (a copy whose arrays are shorter than its size) leaves No limit as it was: it
+    // stayed on, and every later brush went past the game's ±8 m.
+    [Fact]
+    public void AFailedPasteLeavesNoLimitAsItWas()
+    {
+        var s = TestScenes.Flat();
+        var paste = new PasteTool { Clip = new CopyData { W = 3, H = 3, Rel = [0f], Wt = [1f], Pnt = [-1f, -1, -1, -1], Objects = [], Poly = [] } };
+        Assert.Throws<IndexOutOfRangeException>(() => paste.Apply(s.Ground, new Vector2(40, 40)));
+        Assert.False(s.Ground.NoLimit);
+    }
+
     // Clear the site leaves the copied ground alone (a wall set a metre into it stays so, no trench
     // dug round it) and pieces hidden far underground (a mod's stations) dig nothing.
     [Fact]

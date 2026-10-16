@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.85 — unreleased
+
+### Fixed
+- **Pasting a hand-edited or older blueprint could stop half-way and leave No limit on for every later brush.** A
+  blueprint's ground lists were never checked against its size: one shorter than it said (or without its paint list)
+  stopped the paste part-way, with the ground partly changed and no step in the history, and the switch that lets a
+  paste go past the game's ±8 m stayed on, so every later brush ignored the limit. A blueprint whose lists do not
+  match its size, whose size is not a grid or with a nameless object is now refused with the reason, and every tool
+  that turns that switch on for a moment (paste, clear the site, Mountain, scripts) turns it back off even when it
+  fails.
+
 ## v1.45.84 — unreleased
 
 ### Fixed

@@ -51,19 +51,55 @@ public static class CopyFormat
     /// <param name="o">The JSON.</param>
     /// <param name="name">Its name; null: the one in the JSON.</param>
     /// <param name="keepSources">Keep the objects' source ids: they only mean something in the world the copy came from.</param>
-    public static CopyData FromJson(JsonObject o, string? name = null, bool keepSources = true) => new()
+    /// <exception cref="FormatException">
+    /// The copy's size is not positive, its ground arrays are missing or not as long as its size says (W × H heights and
+    /// weights, four paint values a point), or an object has no name: pasted, it would stop half-way through.
+    /// </exception>
+    public static CopyData FromJson(JsonObject o, string? name = null, bool keepSources = true)
     {
-        W = I(o["w"]),
-        H = I(o["h"]),
-        Rel = [.. o["rel"]!.AsArray().Select(v => I(v) == -32768 ? float.NaN : I(v) / 100f)],
-        Wt = [.. o["wt"]!.AsArray().Select(v => I(v) / 255f)],
-        Pnt = [.. o["pnt"]!.AsArray().Select(v => I(v) < 0 ? -1f : I(v) / 255f)],
-        Objects = [.. o["objects"]!.AsArray().Select(x => new CopyData.Obj(StableHash.OfName((string)x!["name"]!), (string)x["name"]!, F(x["dx"]), F(x["dz"]), F(x["dy"]),
-            new Vector3(F(x["rx"]), F(x["ry"]), F(x["rz"])), F(x["scale"]), keepSources && x["sourceId"] != null ? I(x["sourceId"]) : null, (bool?)x["follow"] ?? false,
-            BlueprintFormats.DataOf(x["data"])))],
-        Poly = (o["poly"] as JsonArray)?.Select(p => new Vector2(F(p!["gx"]), F(p["gz"]))).ToList() ?? [],
-        Name = name ?? (string?)o["name"],
-    };
+        int w = I(o["w"]), h = I(o["h"]);
+        if (w <= 0 || h <= 0)
+        {
+            throw new FormatException($"its size ({w} × {h}) is not a grid");
+        }
+        long points = (long)w * h;
+        var rel = Numbers(o, "rel", points, w, h);
+        var wt = Numbers(o, "wt", points, w, h);
+        var pnt = Numbers(o, "pnt", points * 4, w, h);
+        if (o["objects"] is not JsonArray objects)
+        {
+            throw new FormatException("it has no objects list");
+        }
+        if (objects.Any(x => x is not JsonObject ob || ob["name"] is not JsonValue v || !v.TryGetValue<string>(out _)))
+        {
+            throw new FormatException("an object in it has no name");
+        }
+        return new()
+        {
+            W = w,
+            H = h,
+            Rel = [.. rel.Select(v => I(v) == -32768 ? float.NaN : I(v) / 100f)],
+            Wt = [.. wt.Select(v => I(v) / 255f)],
+            Pnt = [.. pnt.Select(v => I(v) < 0 ? -1f : I(v) / 255f)],
+            Objects = [.. objects.Select(x => new CopyData.Obj(StableHash.OfName((string)x!["name"]!), (string)x["name"]!, F(x["dx"]), F(x["dz"]), F(x["dy"]),
+                new Vector3(F(x["rx"]), F(x["ry"]), F(x["rz"])), F(x["scale"]), keepSources && x["sourceId"] != null ? I(x["sourceId"]) : null, (bool?)x["follow"] ?? false,
+                BlueprintFormats.DataOf(x["data"])))],
+            Poly = (o["poly"] as JsonArray)?.Select(p => new Vector2(F(p!["gx"]), F(p["gz"]))).ToList() ?? [],
+            Name = name ?? (string?)o["name"],
+        };
+    }
+
+    /// <summary>A copy's ground array, checked to hold as many values as its size says.</summary>
+    /// <param name="o">The copy's JSON.</param>
+    /// <param name="key">The array's key.</param>
+    /// <param name="count">How many values it must hold.</param>
+    /// <param name="w">The copy's width, for the message.</param>
+    /// <param name="h">The copy's depth, for the message.</param>
+    /// <exception cref="FormatException">It is missing or of another length.</exception>
+    private static JsonArray Numbers(JsonObject o, string key, long count, int w, int h) =>
+        o[key] is not JsonArray a ? throw new FormatException($"it has no \"{key}\" list")
+        : a.Count != count ? throw new FormatException($"its \"{key}\" list holds {a.Count} values, not the {count} a {w} × {h} copy needs")
+        : a;
 
     /// <summary>
     /// A small picture of a copy seen from above (north up): the ground shaded by height, objects as dots

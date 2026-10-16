@@ -529,7 +529,17 @@ public sealed class BlueprintsPanel
             return;
         }
         var world = _scene()?.World;
-        var data = CopyFormat.FromJson(clip, name, keepSources: world != null && from == world.Name);
+        CopyData data;
+        try
+        {
+            data = CopyFormat.FromJson(clip, name, keepSources: world != null && from == world.Name);
+        }
+        catch (Exception ex) when (ex is FormatException or InvalidOperationException)
+        {
+            Message?.Invoke($"That blueprint could not be read: {ex.Message}.");
+            Refresh();
+            return;
+        }
         data.Dungeon = dungeon;
         var missing = data.Objects.Where(o => world != null && !world.CanCreate(o.Prefab)).Select(o => o.Name).Distinct().ToList();
         data.Objects.RemoveAll(o => missing.Contains(o.Name));

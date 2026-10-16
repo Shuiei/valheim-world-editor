@@ -602,15 +602,21 @@ public static partial class ScriptHost
             var touched = new List<int>();
             bool was = g.NoLimit;
             g.NoLimit = ch.NoLimit;
-            foreach (var (p, h) in ch.Heights)
+            try
             {
-                if (g.SetHeight(p, h))
+                foreach (var (p, h) in ch.Heights)
                 {
-                    clamped++;
+                    if (g.SetHeight(p, h))
+                    {
+                        clamped++;
+                    }
+                    touched.Add(p);
                 }
-                touched.Add(p);
             }
-            g.NoLimit = was;
+            finally
+            {
+                g.NoLimit = was;
+            }
             foreach (var (p, colour) in ch.Paint)
             {
                 Array.Copy(colour, 0, g.Paint, p * 4, 4);

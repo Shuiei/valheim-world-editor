@@ -548,26 +548,32 @@ public sealed class EditSession
             bool was = gr.NoLimit;
             gr.NoLimit = true;
             int x0 = (int)MathF.Floor(cx - reach), x1 = (int)MathF.Ceiling(cx + reach), z0 = (int)MathF.Floor(cz - reach), z1 = (int)MathF.Ceiling(cz + reach);
-            for (int gz = z0; gz <= z1; gz++)
+            try
             {
-                for (int gx = x0; gx <= x1; gx++)
+                for (int gz = z0; gz <= z1; gz++)
                 {
-                    int p = gz * gr.W + gx;
-                    float w = mask?.Invoke(p) ?? 1;
-                    if (gr.Locked(gx, gz) || w <= 0)
+                    for (int gx = x0; gx <= x1; gx++)
                     {
-                        continue;
+                        int p = gz * gr.W + gx;
+                        float w = mask?.Invoke(p) ?? 1;
+                        if (gr.Locked(gx, gz) || w <= 0)
+                        {
+                            continue;
+                        }
+                        float v = shape(gx - cx, gz - cz) * w;
+                        if (v == 0)
+                        {
+                            continue;
+                        }
+                        gr.SetHeight(p, gr.HeightOf(p) + v);
+                        touched.Add(p);
                     }
-                    float v = shape(gx - cx, gz - cz) * w;
-                    if (v == 0)
-                    {
-                        continue;
-                    }
-                    gr.SetHeight(p, gr.HeightOf(p) + v);
-                    touched.Add(p);
                 }
             }
-            gr.NoLimit = was;
+            finally
+            {
+                gr.NoLimit = was;
+            }
             touchedCount = touched.Count;
             return (touched, (x0 - 1, z0 - 1, x1 + 1, z1 + 1));
         }, remove, []);
