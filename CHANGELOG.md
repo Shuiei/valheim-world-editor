@@ -99,6 +99,9 @@ the plugin is unchanged in versions without that part.
 - **One odd line in the game's localisation table no longer stops every world opening.** A carriage return followed by
   more text in an unquoted field was refused, as Python's csv does, which failed the build-cost table and with it the
   whole game data pass. It now ends the row, as a line break does.
+- **Steam rewriting its library list no longer fails finding the game.** libraryfolders.vdf was read unguarded, so a
+  moment when Steam was writing it (or a file without access) threw out of the game check and the game data export.
+  The search now goes on without that list (logged).
 
 ### Changed
 
