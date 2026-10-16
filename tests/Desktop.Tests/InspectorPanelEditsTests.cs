@@ -115,14 +115,17 @@ public class InspectorPanelEditsTests
         // The details rows: how many, quality, durability, slot x and y of the first item.
         var nums = r.I.ItemsBox.GetLogicalDescendants().OfType<NumericUpDown>().ToList();
         nums[1].Value = 3;
-        nums[2].Value = 50;
+        nums[2].Value = 50.25m;
         nums[3].Value = 2;
         nums[4].Value = 1;
-        Assert.Equal((3, 50f, 2, 1), (a.Quality, a.Durability, a.X, a.Y));
+        // Durability points keep their fraction.
+        Assert.Equal((3, 50.25f, 2, 1), (a.Quality, a.Durability, a.X, a.Y));
         Click(Labelled(r.I.ItemsBox, "Tidy slots"));
         Assert.Equal((0, 0), (a.X, a.Y));
         // The first slot picked: how many and how good.
         Click(Slot(r.I, 0, 0));
+        // The same most for a stack here as in the details rows.
+        Assert.Equal(nums[0].Maximum, SlotNumber(r.I, 90).Maximum);
         SlotNumber(r.I, 90).Value = 5;
         SlotNumber(r.I, 70).Value = 4;
         Assert.Equal((5, 4), (a.Stack, a.Quality));

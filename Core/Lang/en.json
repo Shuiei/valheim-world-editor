@@ -237,7 +237,7 @@
   "tip.inspect.item": "The item's name as the game knows it (the list completes it).",
   "tip.inspect.count": "How many of the item are in the stack.",
   "tip.inspect.quality": "The item's quality (upgrade level).",
-  "tip.inspect.durability": "The item's durability.",
+  "tip.inspect.durability": "The item's durability, in points as the game saves them (not a percentage).",
   "tip.inspect.slotX": "The item's column in the container.",
   "tip.inspect.slotY": "The item's row in the container.",
   "tip.inspect.removeValue": "Remove this value from the object (applied with Apply changes).",

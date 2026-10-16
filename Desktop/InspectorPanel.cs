@@ -111,6 +111,12 @@ public sealed class InspectorPanel
         /// <summary>Taken out on Apply.</summary>
         public bool Removed;
     }
+    /// <summary>The most items a stack may hold, as the save keeps them (the details row and the picked slot alike).</summary>
+    internal const int MaxStack = 65535;
+
+    /// <summary>The most durability points an item's box takes.</summary>
+    private const int MaxDurability = 100000;
+
     /// <summary>The object's values, as built when opened.</summary>
     internal List<Field> FieldList { get; private set; } = [];
     /// <summary>Values to add, as typed (section, name, value).</summary>
@@ -548,7 +554,7 @@ public sealed class InspectorPanel
         {
             ColumnDefinitions = new ColumnDefinitions("*,54,44,50,40,40,26"),
             ColumnSpacing = 3,
-            Children = { Head("Item", 0), Head("Stack", 1), Head("Qual.", 2), Head("Dur. %", 3), Head("X", 4), Head("Y", 5) },
+            Children = { Head("Item", 0), Head("Stack", 1), Head("Qual.", 2), Head("Dur.", 3), Head("X", 4), Head("Y", 5) },
         });
         foreach (var it in Items.ToList())
         {
@@ -560,6 +566,18 @@ public sealed class InspectorPanel
                 n.ValueChanged += (_, e) => { set((int)(e.NewValue ?? min)); Dirty(); };
                 return n;
             }
+            // Durability points as the game saves them (not a percentage), fractions kept.
+            var dur = new NumericUpDown
+            {
+                Value = float.IsFinite(it.Durability) ? (decimal)Math.Clamp(it.Durability, 0, MaxDurability) : 0,
+                Minimum = 0,
+                Maximum = MaxDurability,
+                Increment = 1,
+                FormatString = "0.##",
+                FontSize = 11,
+                ShowButtonSpinner = false,
+            }.Tip("inspect.durability");
+            dur.ValueChanged += (_, e) => { it.Durability = (float)(e.NewValue ?? 0); Dirty(); };
             var x = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(4, 0) };
             x.Tip("inspect.removeItem");
             x.Click += (_, _) => { Items.Remove(it); RenderItems(); Dirty(); };
@@ -571,9 +589,9 @@ public sealed class InspectorPanel
                 Children =
                 {
                     name,
-                    Col(Num(it.Stack, 1, 65535, v => it.Stack = v, "inspect.count"), 1),
+                    Col(Num(it.Stack, 1, MaxStack, v => it.Stack = v, "inspect.count"), 1),
                     Col(Num(it.Quality, 1, 10, v => it.Quality = v, "inspect.quality"), 2),
-                    Col(Num((int)MathF.Round(it.Durability), 0, 100000, v => it.Durability = v, "inspect.durability"), 3),
+                    Col(dur, 3),
                     Col(WithBorder(Num(it.X, 0, 255, v => it.X = v, "inspect.slotX"), bad), 4),
                     Col(WithBorder(Num(it.Y, 0, 255, v => it.Y = v, "inspect.slotY"), bad), 5),
                     Col(x, 6),
@@ -721,7 +739,7 @@ public sealed class InspectorPanel
         }
         pick.SelectionChanged += (_, _) => Chosen();
         pick.LostFocus += (_, _) => Chosen();
-        var count = new NumericUpDown { Value = item?.Stack ?? 1, Minimum = 1, Maximum = 9999, Increment = 1, FormatString = "0", FontSize = 11, Width = 90, IsEnabled = item != null }.Tip("inspect.count");
+        var count = new NumericUpDown { Value = item?.Stack ?? 1, Minimum = 1, Maximum = MaxStack, Increment = 1, FormatString = "0", FontSize = 11, Width = 90, IsEnabled = item != null }.Tip("inspect.count");
         count.ValueChanged += (_, e) =>
         {
             if (item != null)
