@@ -272,6 +272,8 @@ the plugin is unchanged in versions without that part.
 - **Claude's replace_objects lost each object's size, and replacing a ship's root left its parts hanging on nothing.**
   The new object now keeps the old one's scale, and a linked group's root takes its parts away with it, as the Area
   tool's Replace does.
+- **Claude's build_roof gave a bare tool error, or ran on to a runaway piece count, when the roof piece had too few
+  snap points or none sloping one way in the game data read.** It now says why no roof was laid.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
