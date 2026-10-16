@@ -181,6 +181,8 @@ the plugin is unchanged in versions without that part.
   middle with no check; it now stands only where every spot along it is free.
 - **A corridor gate could stand on a pilaster's band of wall.** The gate was put anywhere within a metre of the
   corridor's middle without looking at the pilasters placed every 8 m; it now keeps off their bands.
+- **A Black Forest dungeon's sword-skeleton elite came back as an ordinary skeleton.** It was paired with
+  Spawner_Skeleton, which makes archers too; no spawner makes it alone, so it now stands once, as the creature.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
