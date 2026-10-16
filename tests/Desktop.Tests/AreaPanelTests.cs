@@ -220,12 +220,13 @@ public class AreaPanelTests
         using var r = new Run();
         var ship = TestScenes.AddShip(r.S, 0, 0);
         int beech = StableHash.Of("Beech1");
+        int beeches = r.S.Scene.Things.Count(t => !t.Gone && t.Prefab == beech);
         r.P.Replace(r.S, [ship[0]], beech);
         Assert.StartsWith("Replaced 1 object(s) with ", r.Said);
         Assert.EndsWith(". Their 4 linked part(s) went with them.", r.Said);
         Assert.All(ship, i => Assert.True(r.S.Scene.Things[i].Gone));
         Assert.Equal(beech, r.S.Scene.Things[^1].Prefab);
-        Assert.Equal(1, r.S.Scene.Things.Count(t => !t.Gone && t.Prefab == beech));
+        Assert.Equal(beeches + 1, r.S.Scene.Things.Count(t => !t.Gone && t.Prefab == beech));
         // One undo step brings the whole ship back. The root and a part given together: the four parts are counted.
         r.S.Undo();
         Assert.All(ship, i => Assert.False(r.S.Scene.Things[i].Gone));
