@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.54 — unreleased
+
+### Fixed
+- **Claude's object ids could hit the wrong objects after another area was opened or the world read again.** The ids
+  Claude's tools give are indices into the open area's objects, and they were taken as they were once another area
+  was open, the same one opened again, or the world read again after a save: remove_objects, move_objects,
+  set_object_data and the others then changed whatever objects had those indices. The tools now remember which area's
+  objects the ids were given for and refuse ids from another, or from before the world was read again, until
+  objects are listed again.
+
 ## v1.45.53 — unreleased
 
 ### Fixed

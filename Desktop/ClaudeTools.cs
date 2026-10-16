@@ -181,6 +181,7 @@ public sealed partial class ClaudeTools
             }
             found = [.. q.Take(Math.Clamp(limit, 1, 2000)).Select(p => Describe(p.t, p.i))];
         }
+        GaveIds(scene);
         return ToJson(found);
     });
 
@@ -193,6 +194,7 @@ public sealed partial class ClaudeTools
         {
             return "No area is open.";
         }
+        GaveIds(scene);
         lock (scene.Things)
         {
             return ToJson(_w.View.Selected.Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).Select(i => Describe(scene.Things[i], i)).ToList());
@@ -209,6 +211,10 @@ public sealed partial class ClaudeTools
         if (_w.Session?.Scene is not { } scene)
         {
             return "No area is open.";
+        }
+        if (StaleIds(scene) is string stale)
+        {
+            return stale;
         }
         var ok = ids.Distinct().Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).ToList();
         _w.View.Select(ok);
@@ -904,6 +910,7 @@ public sealed partial class ClaudeTools
         }
         var ids = session.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, [], adds);
         _w.AfterClaudeEdit($"Claude put down {adds.Count} piece(s); Ctrl+Z takes them back.");
+        GaveIds(session.Scene);
         return ToJson(new { placed = report.Select((r, i) => new { id = i < ids.Count ? ids[i] : -1, piece = r }), problems, pending = Pending() });
     }
 
@@ -1072,6 +1079,10 @@ public sealed partial class ClaudeTools
             return why;
         }
         var session = _w.Session!;
+        if (StaleIds(session.Scene) is string stale)
+        {
+            return stale;
+        }
         var things = session.Scene.Things;
         var given = ids.Distinct().Where(i => i >= 0 && i < things.Count && !things[i].Gone).ToList();
         if (given.Count == 0)
@@ -1161,6 +1172,10 @@ public sealed partial class ClaudeTools
             return why;
         }
         var s = _w.Session!;
+        if (StaleIds(s.Scene) is string stale)
+        {
+            return stale;
+        }
         var things = s.Scene.Things;
         if (id < 0 || id >= things.Count || things[id].Gone)
         {
@@ -1398,6 +1413,7 @@ public sealed partial class ClaudeTools
         }
         int before = scene.Things.Count;
         var added = Workshop.Put(s, plan, label);
+        GaveIds(scene);
         _w.AfterClaudeEdit($"Claude added “{blueprint}”: {added.Placed} piece(s); Ctrl+Z takes it back.");
         return $"Added {added.Placed} piece(s) of \"{blueprint}\", ids {before} to {scene.Things.Count - 1}."
             + (added.Unknown.Count > 0 ? $" Left out (unknown kinds): {string.Join(", ", added.Unknown.Take(10))}." : "")

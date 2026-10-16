@@ -24,6 +24,39 @@ public class ClaudeToolsObjectsTests
         return int.Parse(said[at..].Split('.')[0], System.Globalization.CultureInfo.InvariantCulture);
     }
 
+    // Ids are indices into the things of the area they were given for: once another area is opened (or the same one
+    // again), or the world was read again after a save, they would hit whatever objects have those indices now, so
+    // every tool taking ids refuses them until objects are listed again.
+    [AvaloniaFact]
+    public async Task IdsOfAnotherAreaAreRefusedUntilListedAgain()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        int post = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "wood_pole2", X = 3, Z = 3 }]));
+        var other = TestScenes.Flat();
+        r.W.View.Show(other.Scene, null);
+        r.W.Edit(other);
+        const string Stale = "The ids are from another area: list_objects (or get_selection) again for this one.";
+        Assert.Equal(Stale, await r.T.RemoveObjects([post]));
+        Assert.Equal(Stale, await r.T.GetObject(post));
+        Assert.Equal(Stale, await r.T.MoveObjects([post], dx: 1));
+        Assert.Equal(Stale, await r.T.SetTransform([new ClaudeTools.TransformSpec { Id = post, X = 1 }]));
+        Assert.Equal(Stale, await r.T.ReplaceObjects([post], "Birch1"));
+        Assert.Equal(Stale, await r.T.CopyObjects([post], dx: 2));
+        Assert.Equal(Stale, await r.T.SetContents(post, text: "hello"));
+        Assert.Equal(Stale, await r.T.SetObjectData(post, [new ClaudeTools.FieldSpec { Section = "strings", Key = "text", Value = "hello" }]));
+        Assert.Equal(Stale, await r.T.SelectObjects([post], focus: false));
+        Assert.Equal(0, other.Scene.Things.Count(t => t.Gone));
+        // Listed again, this area's ids are taken.
+        await r.T.ListObjects();
+        Assert.Equal("No object with that id in the area.", await r.T.GetObject(100000));
+        // The world read again (after a save): its things are listed anew, the ids given before are refused too.
+        other.Scene.Reads++;
+        Assert.Equal("The ids are from before the world was read again: list_objects (or get_selection) again for this one.", await r.T.GetObject(0));
+        await r.T.GetSelection();
+        Assert.Equal("No object with that id in the area.", await r.T.GetObject(100000));
+    }
+
     /// <summary>A value of get_object's answer by key, or null.</summary>
     private static JsonElement? Value(JsonElement o, string key) =>
         o.GetProperty("values").EnumerateArray().Cast<JsonElement?>().FirstOrDefault(v => v!.Value.GetProperty("key").GetString() == key);

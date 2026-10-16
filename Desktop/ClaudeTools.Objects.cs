@@ -53,6 +53,25 @@ public sealed partial class ClaudeTools
         return (ok, problems);
     }
 
+    /// <summary>
+    /// The scene whose things the ids last given were indices into, and its read count then (list_objects,
+    /// get_selection, place_pieces, each change's new ids...). Null until ids were given.
+    /// </summary>
+    private (WorldScene Scene, int Reads)? _ids;
+
+    /// <summary>Notes that the ids given now are indices into this scene's things as they are read now.</summary>
+    private void GaveIds(WorldScene scene) => _ids = (scene, scene.Reads);
+
+    /// <summary>
+    /// Why the ids given before cannot be used on this scene: they were given for another area (opened since, or this
+    /// one opened again), or for this one before the world was read again (after a save), which lists its things anew;
+    /// whatever objects have those indices now would be hit. Null when they fit (or none was given yet: each is checked
+    /// on its own).
+    /// </summary>
+    private string? StaleIds(WorldScene scene) => _ids is { } ids && (ids.Scene != scene || ids.Reads != scene.Reads)
+        ? $"The ids are from {(ids.Scene != scene ? "another area" : "before the world was read again")}: list_objects (or get_selection) again for this one."
+        : null;
+
     /// <summary>An object after a change: its new id and where it is now.</summary>
     private object Moved(WorldScene scene, int was, int id)
     {
@@ -106,6 +125,10 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        if (StaleIds(scene) is string stale)
+        {
+            return stale;
+        }
         var (usable, problems) = Usable(scene, ids);
         if (usable.Count == 0)
         {
@@ -134,6 +157,7 @@ public sealed partial class ClaudeTools
         }
         var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label);
         _w.AfterClaudeEdit($"Claude moved {copies.Count} object(s); Ctrl+Z puts them back.");
+        GaveIds(scene);
         return ToJson(new { moved = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), wholeGroups = groups, problems, pending = Pending() });
     });
 
@@ -190,6 +214,10 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        if (StaleIds(scene) is string stale)
+        {
+            return stale;
+        }
         var (ok, problems) = Usable(scene, objects.Select(o => o.Id));
         var (minX, minZ, maxX, maxZ) = Bounds(scene);
         var moves = new List<(int Index, Vector3 Position, Vector3 Rotation, float Scale)>();
@@ -222,6 +250,7 @@ public sealed partial class ClaudeTools
         var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label);
         _w.AfterClaudeEdit($"Claude placed {copies.Count} object(s); Ctrl+Z puts them back.");
         // Then come the other parts of the linked groups moved (ObjectLinks), which went along.
+        GaveIds(scene);
         return ToJson(new { placed = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), alongWithGroups = copies.Count - moves.Count, problems, pending = Pending() });
     });
 
@@ -245,6 +274,10 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        if (StaleIds(scene) is string stale)
+        {
+            return stale;
+        }
         var (ok, problems) = Usable(scene, ids);
         if (ok.Count == 0)
         {
@@ -257,6 +290,7 @@ public sealed partial class ClaudeTools
         }).ToList();
         var copies = s.Commit($"Claude: replaced {ok.Count} with {prefab}", null, ok, adds);
         _w.AfterClaudeEdit($"Claude replaced {ok.Count} object(s) with {prefab}; Ctrl+Z puts them back.");
+        GaveIds(scene);
         return ToJson(new { replaced = copies.Select((c, k) => Moved(scene, ok[k], c)), problems, pending = Pending() });
     });
 
@@ -306,11 +340,16 @@ public sealed partial class ClaudeTools
         {
             return "No area is open.";
         }
+        if (StaleIds(s.Scene) is string stale)
+        {
+            return stale;
+        }
         var things = s.Scene.Things;
         if (id < 0 || id >= things.Count || things[id].Gone)
         {
             return "No object with that id in the area.";
         }
+        GaveIds(s.Scene);
         var t = things[id];
         var head = new Dictionary<string, object?>
         {
@@ -410,6 +449,10 @@ public sealed partial class ClaudeTools
             return why;
         }
         var scene = _w.Session!.Scene;
+        if (StaleIds(scene) is string stale)
+        {
+            return stale;
+        }
         var (ok, problems) = Usable(scene, [id]);
         if (ok.Count == 0)
         {
@@ -487,6 +530,7 @@ public sealed partial class ClaudeTools
                 replacement = new(0, t.Prefab, t.Position, t.Rotation, t.Scale, Data: fields);
             }
             var copies = s.Commit(label, null, [id], [(replacement, t.Piece)]);
+            GaveIds(s.Scene);
             return (copies[0], null);
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or OverflowException)

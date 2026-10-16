@@ -50,6 +50,7 @@ public sealed partial class ClaudeTools
             var inArea = new Dictionary<int, int>();
             if (_w.Session?.Scene is { } scene && !_w.InWorkshop)
             {
+                GaveIds(scene);
                 lock (scene.Things)
                 {
                     for (int i = 0; i < scene.Things.Count; i++)
@@ -361,6 +362,10 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        if (StaleIds(scene) is string stale)
+        {
+            return stale;
+        }
         var (usable, problems) = Usable(scene, ids);
         if (usable.Count == 0)
         {
@@ -409,6 +414,7 @@ public sealed partial class ClaudeTools
         }
         var made = s.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, [], adds);
         _w.AfterClaudeEdit($"Claude made {made.Count} cop{(made.Count == 1 ? "y" : "ies")}; Ctrl+Z takes them back.");
+        GaveIds(scene);
         return ToJson(new { copied = made.Select((c, k) => Moved(scene, from[k], c)), problems, pending = Pending() });
     });
 }

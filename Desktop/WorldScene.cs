@@ -53,6 +53,11 @@ public sealed class WorldScene
     /// <see cref="Thing"/>). Lock it to read.
     /// </summary>
     public required List<Thing> Things { get; init; }
+    /// <summary>
+    /// How many times the things were read again from the world (after a save: EditSession.Reread). Their indices
+    /// change then: what was worked out from them before (ids given to Claude) is out of date.
+    /// </summary>
+    public int Reads { get; set; }
     /// <summary>The ground the world's locations and pieces flatten (for the Location flattening overlay).</summary>
     public TerrainModifiers? Modifiers { get; set; }
     /// <summary>The world generator's ground (regrow asks it what grows where); null in tests that only draw.</summary>
