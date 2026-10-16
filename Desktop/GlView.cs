@@ -1699,6 +1699,9 @@ public sealed class GlView : OpenGlControlBase
         var list = new List<(int Cell, Matrix4x4 M, Vector3 Tint)>();
         var support = _support;
         var previews = _previews;
+        // The largest scale an instance is drawn at (its own, or the model's when it has none): culling reaches as
+        // far as the largest one needs.
+        float rootMost = MathF.Max(g.RootScale.X, MathF.Max(g.RootScale.Y, g.RootScale.Z)), most = 0;
         lock (s.Things)
         {
             lock (_objLock)
@@ -1723,6 +1726,7 @@ public sealed class GlView : OpenGlControlBase
                         int cell = CellOf(s, m.Translation);
                         Grow(_cellBounds, cell, bounds);
                         list.Add((cell, m, support != null && support.TryGetValue(i, out float sv) ? SupportTint(sv) : Vector3.Zero));
+                        most = MathF.Max(most, t.Scale > 0 ? t.Scale : rootMost);
                     }
                 }
             }
@@ -1730,7 +1734,7 @@ public sealed class GlView : OpenGlControlBase
         // By cell, so each cell's instances are one run of the buffer.
         list.Sort((a, b) => a.Cell.CompareTo(b.Cell));
         var cells = Runs([.. list.Select(e => e.Cell)]);
-        float size = g.Box is { } gb ? Vector3.Distance(gb.Min, gb.Max) * MathF.Max(g.RootScale.X, MathF.Max(g.RootScale.Y, g.RootScale.Z)) : 1;
+        float size = g.Box is { } gb ? Vector3.Distance(gb.Min, gb.Max) * (list.Count > 0 ? most : rootMost) : 1;
         var data = new Matrix4x4[list.Count];
         foreach (var (b, pre) in g.Batches)
         {
