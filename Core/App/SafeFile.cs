@@ -36,8 +36,10 @@ public static class SafeFile
         {
             File.Move(temp, path, overwrite);
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            // Refused (a file put there meanwhile, locked, or read-only on Windows): the temporary copy, which may
+            // hold a saved password, is not left behind.
             File.Delete(temp);
             throw;
         }
