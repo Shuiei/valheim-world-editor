@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.106 — unreleased
+
+### Changed
+- **Generating a deep dungeon is faster.** Adding the loops between rooms worked out, for every room of a level at
+  every try, how far each other room is, and every step of that search looked through all the dungeon's rooms for
+  stairs: with many levels, hundreds of millions of steps. The stairs are now found once per try, and a room's
+  distances only when it has a room to join. The dungeons made are the same.
+
 ## v1.45.105 — unreleased
 
 ### Changed

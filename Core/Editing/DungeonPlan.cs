@@ -352,7 +352,7 @@ internal sealed class DungeonPlanner
         // The boss's key, in a chest far from the boss's door; a hidden cache or two.
         if (_s.BossKey && _plan.Boss != null)
         {
-            var dist = Distances(_plan.Boss);
+            var dist = Distances(_plan.Boss, StairLinks(_plan.Spaces));
             var keyRoom = _plan.Spaces.Where(s => s.IsRoom && !s.Main && s.Room is not (Room.Secret or Room.StairTop or Room.StairBottom or Room.Treasury) && dist.ContainsKey(s))
                 .OrderByDescending(s => dist[s] + _rnd.NextDouble()).FirstOrDefault()
                 ?? _plan.Spaces.Where(s => s.IsRoom && s.Room is not (Room.Boss or Room.Treasury or Room.Antechamber or Room.StairTop or Room.StairBottom)).OrderByDescending(s => dist.GetValueOrDefault(s)).FirstOrDefault();
@@ -1079,10 +1079,43 @@ internal sealed class DungeonPlanner
         dir.X > 0 ? t.I - box.X0 : dir.X < 0 ? box.X0 + box.W - 1 - t.I : dir.Z > 0 ? t.J - box.Z0 : box.Z0 + box.H - 1 - t.J;
 
     /// <summary>
+    /// The spaces the stairs join each space to, in the plan's order: a stair foot's top (its parent), and a space's
+    /// stair feet (the feet it is the parent of). Spaces without stairs are missing.
+    /// </summary>
+    /// <param name="spaces">The plan's spaces.</param>
+    internal static Dictionary<DungeonPlan.Space, List<DungeonPlan.Space>> StairLinks(IReadOnlyList<DungeonPlan.Space> spaces)
+    {
+        var feetOf = new Dictionary<DungeonPlan.Space, List<DungeonPlan.Space>>();
+        foreach (var o in spaces)
+        {
+            if (o.Room == Room.StairBottom && o.Parent is { } p)
+            {
+                (feetOf.TryGetValue(p, out var feet) ? feet : feetOf[p] = []).Add(o);
+            }
+        }
+        var links = new Dictionary<DungeonPlan.Space, List<DungeonPlan.Space>>();
+        void Link(DungeonPlan.Space s, DungeonPlan.Space o) => (links.TryGetValue(s, out var l) ? l : links[s] = []).Add(o);
+        foreach (var o in spaces)
+        {
+            if (o.Room == Room.StairBottom && o.Parent is { } p)
+            {
+                Link(p, o);
+            }
+            foreach (var foot in feetOf.GetValueOrDefault(o) ?? [])
+            {
+                Link(foot, o);
+            }
+        }
+        return links;
+    }
+
+    /// <summary>
     /// How many rooms away each space is from <paramref name="from"/>, through doorways and stairs
     /// (corridors do not count); spaces not reached are missing.
     /// </summary>
-    private Dictionary<DungeonPlan.Space, int> Distances(DungeonPlan.Space from)
+    /// <param name="from">The space to count from.</param>
+    /// <param name="stairs">The plan's <see cref="StairLinks"/> as it stands.</param>
+    private static Dictionary<DungeonPlan.Space, int> Distances(DungeonPlan.Space from, Dictionary<DungeonPlan.Space, List<DungeonPlan.Space>> stairs)
     {
         var dist = new Dictionary<DungeonPlan.Space, int> { [from] = 0 };
         var queue = new Queue<DungeonPlan.Space>();
@@ -1092,7 +1125,7 @@ internal sealed class DungeonPlanner
             var s = queue.Dequeue();
             var next = s.Doors.Select(d => d.Other(s)).ToList();
             // The stairs join a stairwell's two rooms.
-            next.AddRange(_plan.Spaces.Where(o => o.Parent == s && o.Room == Room.StairBottom || s.Room == Room.StairBottom && s.Parent == o));
+            next.AddRange(stairs.GetValueOrDefault(s) ?? []);
             foreach (var o in next)
             {
                 if (!dist.ContainsKey(o))
@@ -1118,9 +1151,12 @@ internal sealed class DungeonPlanner
         for (int made = 0, tries = 0; made < want && tries < want * 3 + 3; tries++)
         {
             var options = new List<(float Score, Action Make)>();
+            // Joins change the ways between rooms, so the distances are worked out again each try: the stairs once,
+            // and each room's only when it has a room to join.
+            var stairs = StairLinks(_plan.Spaces);
             foreach (var a in l.Spaces.Where(Loopable))
             {
-                var dist = Distances(a);
+                Dictionary<DungeonPlan.Space, int>? dist = null;
                 foreach (var dir in Dirs)
                 {
                     var side = SideTiles(a, dir);
@@ -1138,6 +1174,7 @@ internal sealed class DungeonPlanner
                             var b = l.Owner.GetValueOrDefault(n1);
                             if (b != null && b == l.Owner.GetValueOrDefault(n2) && b != a && Loopable(b))
                             {
+                                dist ??= Distances(a, stairs);
                                 int d = dist.GetValueOrDefault(b, 99);
                                 var path = Enumerable.Range(1, len).SelectMany(t => new[] { Add(t1, dir, t), Add(t2, dir, t) }).ToList();
                                 if (d >= 3 && path.All(t => Free(l, t)) && SlotAllowed(b, n1, n2, (-dir.X, -dir.Z)))

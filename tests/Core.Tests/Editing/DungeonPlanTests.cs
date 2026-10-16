@@ -66,6 +66,24 @@ public class DungeonPlanTests
     }
 
     [Fact]
+    public void StairLinksJoinEachStairwellsTopAndFootOnly()
+    {
+        // Worked out once for the plan instead of by scanning every space at each step of the distance search.
+        var style = DungeonKit.StyleOf("Crypt");
+        var plan = DungeonPlanner.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: "Crypt", Size: 3, Levels: 3, Seed: 5), style, new Random(5));
+        var feet = plan.Spaces.Where(s => s.Room == DungeonKit.Room.StairBottom).ToList();
+        Assert.NotEmpty(feet);
+        var links = DungeonPlanner.StairLinks(plan.Spaces);
+        foreach (var foot in feet)
+        {
+            Assert.Equal(DungeonKit.Room.StairTop, foot.Parent!.Room);
+            Assert.Equal([foot.Parent], links[foot]);
+            Assert.Equal([foot], links[foot.Parent]);
+        }
+        Assert.Equal(feet.Count * 2, links.Count);
+    }
+
+    [Fact]
     public void ARoomThatComesOnceIsNotTwinned()
     {
         // A side room is sometimes mirrored across its parent; kinds that come only once were mirrored too. Plans that
