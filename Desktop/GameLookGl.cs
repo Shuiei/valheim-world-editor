@@ -417,27 +417,48 @@ public sealed class GameLookGl
         _terrain = _sky = _water = _skyVao = _waterVao = _maskTex = _heightTex = 0;
     }
 
+    /// <summary>The changed paint mask and heights on their way to the graphics card, kept from edit to edit.</summary>
+    private byte[] _maskRows = [];
+    /// <summary>See <see cref="_maskRows"/>.</summary>
+    private Half[] _heightRows = [];
+
     /// <summary>
-    /// After an edit: the paint mask and the heights (the water's depth) of grid rows z0..z1 (included) again.
+    /// After an edit: the paint mask and the heights (the water's depth) of grid points x0..x1 of rows z0..z1
+    /// (included) again.
     /// </summary>
-    public unsafe void UpdateRows(WorldScene s, int z0, int z1)
+    public unsafe void UpdateRows(WorldScene s, int x0, int z0, int x1, int z1)
     {
-        int n = z1 - z0 + 1;
+        int n = x1 - x0 + 1, rows = z1 - z0 + 1;
+        // Kept for brush-sized changes (as the view's own, GlView.KeptUploadPoints); a bigger one gets its own.
+        byte[] mask = _maskRows;
+        Half[] heights = _heightRows;
+        if (heights.Length < n * rows)
+        {
+            (mask, heights) = (new byte[n * rows * 4], new Half[n * rows]);
+            if (n * rows <= GlView.KeptUploadPoints)
+            {
+                (_maskRows, _heightRows) = (mask, heights);
+            }
+        }
+        for (int r = 0; r < rows; r++)
+        {
+            int from = (z0 + r) * s.W + x0;
+            Array.Copy(s.Mask, from * 4, mask, r * n * 4, n * 4);
+            for (int i = 0; i < n; i++)
+            {
+                heights[r * n + i] = (Half)s.Heights[from + i];
+            }
+        }
         _gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
         _gl.BindTexture(TextureTarget.Texture2D, _maskTex);
-        fixed (byte* p = &s.Mask[z0 * s.W * 4])
+        fixed (byte* p = mask)
         {
-            _gl.TexSubImage2D(TextureTarget.Texture2D, 0, 0, z0, (uint)s.W, (uint)n, PixelFormat.Rgba, PixelType.UnsignedByte, p);
-        }
-        var h = new Half[s.W * n];
-        for (int i = 0; i < h.Length; i++)
-        {
-            h[i] = (Half)s.Heights[z0 * s.W + i];
+            _gl.TexSubImage2D(TextureTarget.Texture2D, 0, x0, z0, (uint)n, (uint)rows, PixelFormat.Rgba, PixelType.UnsignedByte, p);
         }
         _gl.BindTexture(TextureTarget.Texture2D, _heightTex);
-        fixed (Half* p = h)
+        fixed (Half* p = heights)
         {
-            _gl.TexSubImage2D(TextureTarget.Texture2D, 0, 0, z0, (uint)s.W, (uint)n, PixelFormat.Red, PixelType.HalfFloat, p);
+            _gl.TexSubImage2D(TextureTarget.Texture2D, 0, x0, z0, (uint)n, (uint)rows, PixelFormat.Red, PixelType.HalfFloat, p);
         }
     }
 
