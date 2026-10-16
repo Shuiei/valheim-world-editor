@@ -186,9 +186,11 @@ public partial class MainWindow
         var marker = markerAt >= 0 ? clip.Objects[markerAt] : null;
         var pieces = clip.Objects.Where((o, i) => i != markerAt)
             .Select(o => new DungeonPiece(o.Prefab, Place(o), BlueprintFormats.FromEuler(paste.Rotated(o.Rotation)), o.Scale, o.Data, Terrain.PieceCatalog.Get(o.Prefab)?.Tool != null)).ToList();
-        if (pieces.Count == 0)
+        // Counted as placing counts them: only what this world can make.
+        if (!pieces.Exists(p => CanMake(scene.World, p.Prefab)))
         {
-            MessageText.Text = "Nothing to paste: the blueprint has no piece this world can have.";
+            MessageText.Text = pieces.Count == 0 && marker != null ? "Nothing to paste: the blueprint holds only its portal (where players arrive), no piece."
+                : "Nothing to paste: the blueprint has no piece this world can have.";
             return;
         }
         string biome = BiomeName(scene.Terrain?.BiomeAt(ground.X, ground.Z));
@@ -196,6 +198,9 @@ public partial class MainWindow
         PlaceDungeon(scene, s, ground, new DungeonToPlace(name, "Pasted", biome, PortalTag(StableHash.Of(name)), pieces,
             marker == null ? Vector3.Zero : Place(marker), marker == null ? 0f : paste.Rotated(marker.Rotation).Y, null));
     }
+
+    /// <summary>Whether this world can make a prefab (its model or its details are known): placing leaves out the rest.</summary>
+    private static bool CanMake(WorldSave world, int prefab) => world.ModelFor(prefab, null) != null || Terrain.PrefabCatalog.Details(prefab) != null;
 
     /// <summary>The biome's name as the dungeon generator knows it (the Black Forest's for none, or the sea's).</summary>
     private static string BiomeName(ValheimGen.Heightmap.Biome? biome) => biome switch
@@ -264,7 +269,7 @@ public partial class MainWindow
         var taken = DungeonGen.Taken(high, near);
         Func<ObjectRef, byte[]> source = world.SourceReader();
         byte[]? Blank(NewObject n) => world.NewObjectBytes(n, source);
-        bool Known(int prefab) => world.ModelFor(prefab, null) != null || Terrain.PrefabCatalog.Details(prefab) != null;
+        bool Known(int prefab) => CanMake(world, prefab);
         var adds = new List<(NewObject, bool)>();
         // The entrance of its kind, when the game's files describe one with a door out; its front toward the camera.
         var kindOf = d.Rooms?.Invoke(null).Kind;

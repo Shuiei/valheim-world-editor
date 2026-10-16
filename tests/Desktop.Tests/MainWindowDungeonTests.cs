@@ -193,6 +193,33 @@ public class MainWindowDungeonTests
         }
     }
 
+    // A dungeon blueprint with nothing this world can place says so: only its portal (no piece), or only pieces the
+    // world cannot make (they were counted before they were left out, and the paste went on with nothing).
+    [AvaloniaFact]
+    public void ADungeonBlueprintWithNothingToPlaceSaysWhy()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            var (w, s) = Open(dir);
+            int steps = s.UndoList.Count;
+            var portalOnly = BlueprintsPanelRun.Clip("Door only", "portal_wood");
+            portalOnly.Dungeon = true;
+            w.PasteDungeon(portalOnly, new Vector2(40, 40));
+            Assert.Equal("Nothing to paste: the blueprint holds only its portal (where players arrive), no piece.", w.MessageText.Text);
+            var unknown = BlueprintsPanelRun.Clip("Strange", "zz_no_such_piece", "portal_wood");
+            unknown.Dungeon = true;
+            w.PasteDungeon(unknown, new Vector2(40, 40));
+            Assert.Equal("Nothing to paste: the blueprint has no piece this world can have.", w.MessageText.Text);
+            Assert.Equal(steps, s.UndoList.Count);
+            Assert.Null(w.LastPlaced);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
+
     [AvaloniaFact]
     public void APastedDungeonBlueprintGoesUpBehindAnEntranceItsPortalMarkingTheArrival()
     {
