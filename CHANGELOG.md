@@ -111,6 +111,9 @@ the plugin is unchanged in versions without that part.
 - **The New world page reads the game's location rules again once the game has run.** Rules that could not be read
   (the game's log not matching after an update) were kept as none for the whole session, so bosses and traders stayed
   missing even after starting the game refreshed its log. They are now read again when the game's log has changed.
+- **Two of the game's location lists with the same counts are both read.** Lists were told apart by their location and
+  vegetation counts alone, so a second list with the same counts was replaced by the first, its locations lost and the
+  first's counted twice. Lists of the same counts are now taken one after the other, in the game's order.
 
 ### Changed
 

@@ -253,7 +253,9 @@ public static class GameLocations
     private static SeedLocations.RuleSet? Read(GameBundles bundles, List<string> scanned, Manifest manifest, (int Locations, int Vegetation)[] order)
     {
         AssetTypeValueField? zone = null, alts = null;
-        var lists = new Dictionary<(int, int), AssetTypeValueField>();
+        // Every list of a pair, in the scene's order: two lists of the same counts are two lists (the second was taken
+        // for the first).
+        var lists = new Dictionary<(int, int), List<AssetTypeValueField>>();
         foreach (string bundle in scanned)
         {
             foreach (var f in bundles.MonoBehaviours(bundle))
@@ -272,7 +274,7 @@ public static class GameLocations
                     var key = (Count(locations), Count(f["m_vegetation"]));
                     if (order.Contains(key))
                     {
-                        lists.TryAdd(key, locations);
+                        (lists.TryGetValue(key, out var same) ? same : lists[key] = []).Add(locations);
                     }
                 }
                 else if (!f["m_alts"].IsDummy && alts == null)
@@ -281,16 +283,22 @@ public static class GameLocations
                 }
             }
         }
-        if (zone == null || alts == null || order.Any(k => !lists.ContainsKey(k)))
+        // Each pair the order names as many times as the scene has lists of it, at least.
+        int found = order.CountBy(k => k).Sum(g => Math.Min(g.Value, lists.TryGetValue(g.Key, out var l) ? l.Count : 0));
+        if (zone == null || alts == null || found < order.Length)
         {
-            Console.WriteLine($"The game's location rules were not all found (ZoneSystem: {zone != null}, alt biomes: {alts != null}, lists: {lists.Count}/{order.Length}); a game update changed them (start the game once to refresh its log)? No bosses or traders on the New world page.");
+            Console.WriteLine($"The game's location rules were not all found (ZoneSystem: {zone != null}, alt biomes: {alts != null}, lists: {found}/{order.Length}); a game update changed them (start the game once to refresh its log)? No bosses or traders on the New world page.");
             return null;
         }
         var rules = new SeedLocations.RuleSet();
         rules.locations.AddRange(Items(zone).Select(l => Location(l, manifest, null)));
+        // A pair named twice takes its lists one after the other.
+        var taken = new Dictionary<(int, int), int>();
         foreach (var key in order)
         {
-            rules.locations.AddRange(Items(lists[key]).Select(l => Location(l, manifest, null)));
+            int n = taken.GetValueOrDefault(key);
+            taken[key] = n + 1;
+            rules.locations.AddRange(Items(lists[key][n]).Select(l => Location(l, manifest, null)));
         }
         foreach (var a in Items(alts))
         {
