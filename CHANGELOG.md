@@ -202,6 +202,9 @@ the plugin is unchanged in versions without that part.
 - **Connecting with an odd address or a token holding a line break failed with an exception instead of a message.**
   LiveBridge.Check took "httpsrv:5182" for an address of another scheme and let the header's FormatException through;
   it now says the address is not valid (only http and https) or that the token cannot be sent.
+- **A PNG file with no header was refused as a "0-bit PNG".** Png.Read now says the header (IHDR) is missing; and
+  Png.WriteGray16 refuses what cannot make a valid picture (a filter past 4, which its own Read refused, too few
+  values, notes PNG cannot hold).
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
