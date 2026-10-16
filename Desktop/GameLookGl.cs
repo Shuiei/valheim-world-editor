@@ -345,6 +345,8 @@ public sealed class GameLookGl
     /// Everything made on the graphics card, deleted together by Delete.
     /// </summary>
     private GlObjects _own = null!;
+    /// <summary>The programs' uniform locations, asked once each; made again with the programs (Init).</summary>
+    private GlUniforms _u = null!;
     /// <summary>
     /// The three programs.
     /// </summary>
@@ -377,6 +379,7 @@ public sealed class GameLookGl
     {
         _gl = gl;
         _own = new GlObjects(gl);
+        _u = new GlUniforms(gl);
         _scene = s;
         // Rows of odd widths (the grid's 64n + 1 points, as half floats) are not padded to 4 bytes.
         _gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
@@ -618,12 +621,12 @@ public sealed class GameLookGl
     private unsafe void Shared(uint prog, Matrix4x4 vp, Vector3 eye, float time)
     {
         _gl.UseProgram(prog);
-        void V3(string n, Vector3 v) => _gl.Uniform3(_gl.GetUniformLocation(prog, n), v.X, v.Y, v.Z);
-        _gl.UniformMatrix4(_gl.GetUniformLocation(prog, "uViewProj"), 1, false, (float*)&vp);
+        void V3(string n, Vector3 v) => _gl.Uniform3(_u.At(prog, n), v.X, v.Y, v.Z);
+        _gl.UniformMatrix4(_u.At(prog, "uViewProj"), 1, false, (float*)&vp);
         V3("uFogColor", FogColor);
         V3("uSunFogColor", SunFogColor);
-        _gl.Uniform1(_gl.GetUniformLocation(prog, "uFogDensity"), FogDensity);
-        _gl.Uniform1(_gl.GetUniformLocation(prog, "uFogStart"), FogStart);
+        _gl.Uniform1(_u.At(prog, "uFogDensity"), FogDensity);
+        _gl.Uniform1(_u.At(prog, "uFogStart"), FogStart);
         V3("uSunDir", SunDir);
         V3("uSunColor", SunColor);
         V3("uOffset", new Vector3(_scene.Cx, 0, _scene.Cz));
@@ -631,7 +634,7 @@ public sealed class GameLookGl
         V3("uEye", eye);
         V3("uTop", SkyTop);
         V3("uHorizon", SkyHorizon);
-        _gl.Uniform4(_gl.GetUniformLocation(prog, "_Time"), time / 20, time, time * 2, time * 3);
+        _gl.Uniform4(_u.At(prog, "_Time"), time / 20, time, time * 2, time * 3);
     }
 
     /// <summary>
@@ -662,17 +665,14 @@ public sealed class GameLookGl
     public void UseTerrain(Matrix4x4 vp, Vector3 eye, float time, bool slope, float contour, bool limit)
     {
         Shared(_terrain, vp, eye, time);
-        void F(string n, float v) => _gl.Uniform1(_gl.GetUniformLocation(_terrain, n), v);
-        float[] shr = [Ambient.X, Ambient.Y, Ambient.Z];
-        string[] sh = ["unity_SHAr", "unity_SHAg", "unity_SHAb"];
-        for (int c = 0; c < 3; c++)
-        {
-            _gl.Uniform4(_gl.GetUniformLocation(_terrain, sh[c]), 0, 0, 0, shr[c]);
-        }
-        _gl.Uniform3(_gl.GetUniformLocation(_terrain, "_SkyAlphaPosition"), 0, -1e5f, 0);
+        void F(string n, float v) => _gl.Uniform1(_u.At(_terrain, n), v);
+        _gl.Uniform4(_u.At(_terrain, "unity_SHAr"), 0, 0, 0, Ambient.X);
+        _gl.Uniform4(_u.At(_terrain, "unity_SHAg"), 0, 0, 0, Ambient.Y);
+        _gl.Uniform4(_u.At(_terrain, "unity_SHAb"), 0, 0, 0, Ambient.Z);
+        _gl.Uniform3(_u.At(_terrain, "_SkyAlphaPosition"), 0, -1e5f, 0);
         F("_SnowGlintSize", 0.2f); F("_SnowGlintDensity", 0.15f); F("_SnowGlintStrength", 4);
         F("_SnowGlintNoiseDensity", 1); F("_SnowGlintNoiseAmount", 80); F("_SnowGlintViewAmount", 0.5f); F("_SnowGlintTimeAmount", 3);
-        _gl.Uniform3(_gl.GetUniformLocation(_terrain, "_AshlandsVariationCol"), 0.4104f, 0.4838f, 0.5472f);
+        _gl.Uniform3(_u.At(_terrain, "_AshlandsVariationCol"), 0.4104f, 0.4838f, 0.5472f);
         F("_Glossiness", 0.1f); F("_SnowGloss", 1); F("_RockGloss", 0.7f); F("_Metallic", 0);
         F("_WaterLevel", _scene.Water); F("_LodHideDistance", 1e6f); F("_LodHideModifier", 0);
         F("_UVScale", 0.5f); F("_BumpScale", 1); F("_Wet", 0);
@@ -682,7 +682,7 @@ public sealed class GameLookGl
         {
             _gl.ActiveTexture(TextureUnit.Texture0 + unit);
             _gl.BindTexture(target, tex);
-            _gl.Uniform1(_gl.GetUniformLocation(_terrain, name), unit);
+            _gl.Uniform1(_u.At(_terrain, name), unit);
             unit++;
         }
         _gl.ActiveTexture(TextureUnit.Texture0);
@@ -699,9 +699,9 @@ public sealed class GameLookGl
         Shared(_water, vp, eye, time);
         _gl.ActiveTexture(TextureUnit.Texture0);
         _gl.BindTexture(TextureTarget.Texture2D, _heightTex);
-        _gl.Uniform1(_gl.GetUniformLocation(_water, "uHeight"), 0);
-        _gl.Uniform4(_gl.GetUniformLocation(_water, "uRegion"), _scene.X0 * 64f - 32f, _scene.Z0 * 64f - 32f, _scene.W, _scene.H);
-        _gl.Uniform1(_gl.GetUniformLocation(_water, "uWater"), _scene.Water);
+        _gl.Uniform1(_u.At(_water, "uHeight"), 0);
+        _gl.Uniform4(_u.At(_water, "uRegion"), _scene.X0 * 64f - 32f, _scene.Z0 * 64f - 32f, _scene.W, _scene.H);
+        _gl.Uniform1(_u.At(_water, "uWater"), _scene.Water);
         _gl.Disable(EnableCap.CullFace);
         GlBlend.Over(_gl);
         _gl.DepthMask(false);

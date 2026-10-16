@@ -27,6 +27,8 @@ public sealed class GlView : OpenGlControlBase
     private GL _gl = null!;
     /// <summary>Every OpenGL object this view made, deleted with its context (see GlObjects).</summary>
     private GlObjects _own = null!;
+    /// <summary>Its programs' uniform locations, asked once each; made again with the context.</summary>
+    private GlUniforms _u = null!;
     /// <summary>True on OpenGL ES (the shaders get its header).</summary>
     private bool _es;
 
@@ -580,6 +582,7 @@ public sealed class GlView : OpenGlControlBase
     {
         _gl = GL.GetApi(gl.GetProcAddress);
         _own = new GlObjects(_gl);
+        _u = new GlUniforms(_gl);
         _es = GlVersion.Type == GlProfileType.OpenGLES;
         _terrainProg = Program(Shaders.TerrainVs, Shaders.TerrainFs);
         _objectProg = Program(Shaders.ObjectVs, Shaders.ObjectFs);
@@ -1003,8 +1006,8 @@ public sealed class GlView : OpenGlControlBase
             _ghostVbo = _own.Buffer();
         }
         _gl.UseProgram(_objectProg);
-        _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 1f);
-        var u = MaterialUniforms.Of(_gl, _objectProg);
+        _gl.Uniform1(_u.At(_objectProg, "uGhost"), 1f);
+        var u = MaterialUniforms.Of(_u, _objectProg);
         // Ghosts are see-through whole.
         GlBlend.Over(_gl);
         _gl.DepthMask(false);
@@ -1030,7 +1033,7 @@ public sealed class GlView : OpenGlControlBase
                 DrawFrom(b, _ghostVbo, data.Length, null, u);
             }
         }
-        _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 0f);
+        _gl.Uniform1(_u.At(_objectProg, "uGhost"), 0f);
         _gl.DepthMask(true);
         _gl.Disable(EnableCap.Blend);
         _gl.BindVertexArray(0);
@@ -1151,8 +1154,8 @@ public sealed class GlView : OpenGlControlBase
             return;
         }
         _gl.UseProgram(_objectProg);
-        _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 0f);
-        var u = MaterialUniforms.Of(_gl, _objectProg);
+        _gl.Uniform1(_u.At(_objectProg, "uGhost"), 0f);
+        var u = MaterialUniforms.Of(_u, _objectProg);
         foreach (bool glass in (ReadOnlySpan<bool>)[false, true])
         {
             if (glass)
@@ -1241,8 +1244,8 @@ public sealed class GlView : OpenGlControlBase
     private readonly record struct MaterialUniforms(int Color, int Cutoff, int HasMap, int Uv, int Blend)
     {
         /// <summary>The locations in this program.</summary>
-        public static MaterialUniforms Of(GL gl, uint program) => new(gl.GetUniformLocation(program, "uColor"), gl.GetUniformLocation(program, "uCutoff"),
-            gl.GetUniformLocation(program, "uHasMap"), gl.GetUniformLocation(program, "uUv"), gl.GetUniformLocation(program, "uBlend"));
+        public static MaterialUniforms Of(GlUniforms u, uint program) => new(u.At(program, "uColor"), u.At(program, "uCutoff"),
+            u.At(program, "uHasMap"), u.At(program, "uUv"), u.At(program, "uBlend"));
     }
 
     /// <summary>
@@ -2543,29 +2546,29 @@ public sealed class GlView : OpenGlControlBase
             {
                 _gl.Enable(EnableCap.CullFace);
                 _gl.UseProgram(_terrainProg);
-                _gl.UniformMatrix4(_gl.GetUniformLocation(_terrainProg, "uViewProj"), 1, false, (float*)&vp);
-                _gl.Uniform3(_gl.GetUniformLocation(_terrainProg, "uSun"), sun.X, sun.Y, sun.Z);
+                _gl.UniformMatrix4(_u.At(_terrainProg, "uViewProj"), 1, false, (float*)&vp);
+                _gl.Uniform3(_u.At(_terrainProg, "uSun"), sun.X, sun.Y, sun.Z);
             }
             _gl.BindVertexArray(_terrainVao);
             _gl.DrawElements(PrimitiveType.Triangles, _terrainIndexCount, DrawElementsType.UnsignedInt, (void*)0);
 
             _gl.UseProgram(_objectProg);
-            _gl.UniformMatrix4(_gl.GetUniformLocation(_objectProg, "uViewProj"), 1, false, (float*)&vp);
-            _gl.Uniform3(_gl.GetUniformLocation(_objectProg, "uSun"), sun.X, sun.Y, sun.Z);
-            void V3(string n, Vector3 v) => _gl.Uniform3(_gl.GetUniformLocation(_objectProg, n), v.X, v.Y, v.Z);
+            _gl.UniformMatrix4(_u.At(_objectProg, "uViewProj"), 1, false, (float*)&vp);
+            _gl.Uniform3(_u.At(_objectProg, "uSun"), sun.X, sun.Y, sun.Z);
+            void V3(string n, Vector3 v) => _gl.Uniform3(_u.At(_objectProg, n), v.X, v.Y, v.Z);
             V3("uSunColor", GameLookGl.SunColor);
             V3("uAmbient", GameLookGl.Ambient);
             V3("uFogColor", GameLookGl.FogColor);
             V3("uSunFogColor", GameLookGl.SunFogColor);
-            _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uFogDensity"), GameLookGl.FogDensity);
-            _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uFogStart"), GameLookGl.FogStart);
+            _gl.Uniform1(_u.At(_objectProg, "uFogDensity"), GameLookGl.FogDensity);
+            _gl.Uniform1(_u.At(_objectProg, "uFogStart"), GameLookGl.FogStart);
             V3("uEye", eye);
-            var u = MaterialUniforms.Of(_gl, _objectProg);
-            _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uMap"), 0);
+            var u = MaterialUniforms.Of(_u, _objectProg);
+            _gl.Uniform1(_u.At(_objectProg, "uMap"), 0);
             _gl.ActiveTexture(TextureUnit.Texture0);
             bool seeThrough = _seeThrough;
-            int uSee = _gl.GetUniformLocation(_objectProg, "uSeeThrough");
-            _gl.Uniform2(_gl.GetUniformLocation(_objectProg, "uCut"), CutY != null ? 1f : 0f, CutY ?? 0f);
+            int uSee = _u.At(_objectProg, "uSeeThrough");
+            _gl.Uniform2(_u.At(_objectProg, "uCut"), CutY != null ? 1f : 0f, CutY ?? 0f);
             if (_cellScene == s)
             {
                 SeeCells(vp, eye);
@@ -2622,7 +2625,7 @@ public sealed class GlView : OpenGlControlBase
                     GlBlend.Over(_gl);
                     _gl.DepthMask(false);
                     _gl.UseProgram(_waterProg);
-                    _gl.UniformMatrix4(_gl.GetUniformLocation(_waterProg, "uViewProj"), 1, false, (float*)&vp);
+                    _gl.UniformMatrix4(_u.At(_waterProg, "uViewProj"), 1, false, (float*)&vp);
                     _gl.BindVertexArray(_waterVao);
                     _gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
                     _gl.DepthMask(true);
@@ -3760,8 +3763,8 @@ public sealed class GlView : OpenGlControlBase
         _gl.Disable(EnableCap.CullFace);
         GlBlend.Over(_gl);
         _gl.UseProgram(_lineProg);
-        _gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&m);
-        int uColor = _gl.GetUniformLocation(_lineProg, "uColor");
+        _gl.UniformMatrix4(_u.At(_lineProg, "uViewProj"), 1, false, (float*)&m);
+        int uColor = _u.At(_lineProg, "uColor");
         var hot = SelectTool.HotHandle;
         foreach (var (h, (vao, count)) in _gizmoGl)
         {
@@ -3914,8 +3917,8 @@ public sealed class GlView : OpenGlControlBase
         }
         _gl.Disable(EnableCap.DepthTest);
         _gl.UseProgram(_lineProg);
-        _gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
-        _gl.Uniform4(_gl.GetUniformLocation(_lineProg, "uColor"), color.X, color.Y, color.Z, color.W);
+        _gl.UniformMatrix4(_u.At(_lineProg, "uViewProj"), 1, false, (float*)&vp);
+        _gl.Uniform4(_u.At(_lineProg, "uColor"), color.X, color.Y, color.Z, color.W);
         _gl.BindVertexArray(vao);
         if (blend)
         {
@@ -4204,10 +4207,10 @@ public sealed class GlView : OpenGlControlBase
         // The dot's soft edge blends over what is under it.
         GlBlend.Over(_gl);
         _gl.UseProgram(_markProg);
-        _gl.UniformMatrix4(_gl.GetUniformLocation(_markProg, "uViewProj"), 1, false, (float*)&vp);
-        _gl.Uniform4(_gl.GetUniformLocation(_markProg, "uColor"), 0x5d / 255f, 1, 0x8a / 255f, 1);
+        _gl.UniformMatrix4(_u.At(_markProg, "uViewProj"), 1, false, (float*)&vp);
+        _gl.Uniform4(_u.At(_markProg, "uColor"), 0x5d / 255f, 1, 0x8a / 255f, 1);
         // A small mark, not a blob: 0.43% of the height (5 pixels at 1080p, 9 at 4K), never under 3.
-        _gl.Uniform1(_gl.GetUniformLocation(_markProg, "uSize"), MathF.Max(3, 0.0043f * height));
+        _gl.Uniform1(_u.At(_markProg, "uSize"), MathF.Max(3, 0.0043f * height));
         _gl.BindVertexArray(_markVao);
         _gl.DrawArrays(PrimitiveType.Points, 0, (uint)_markCount);
         _gl.Disable(EnableCap.Blend);
@@ -5200,8 +5203,8 @@ public sealed class GlView : OpenGlControlBase
             _lineProg = Program(Shaders.LineVs, Shaders.LineFs);
         }
         _gl.UseProgram(_lineProg);
-        _gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
-        int uColor = _gl.GetUniformLocation(_lineProg, "uColor");
+        _gl.UniformMatrix4(_u.At(_lineProg, "uViewProj"), 1, false, (float*)&vp);
+        int uColor = _u.At(_lineProg, "uColor");
         GlBlend.Over(_gl);
         _gl.DepthMask(false);
         foreach (var (layer, (vao, count, _)) in _overlayGl)
