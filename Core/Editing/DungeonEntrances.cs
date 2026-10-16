@@ -21,12 +21,24 @@ public static class DungeonEntrances
         public Vector3 Forward => Vector3.Transform(Vector3.UnitZ, Rotation);
     }
 
-    /// <summary>The entrances preferred for a dungeon kind, in this order, before any other location that holds it.</summary>
-    private static readonly string[] Preferred =
+    /// <summary>
+    /// The locations with a dungeon (the game lays it out 5000 m above them when a player first comes near), with what
+    /// each is called as an entrance (null: its name) and whether it is preferred as one; the preferred come first for a
+    /// dungeon kind, in this order. One table for <see cref="DungeonGen.DungeonLocations"/>, <see cref="For"/> and
+    /// <see cref="Describe"/>.
+    /// </summary>
+    internal static readonly (string Name, string? Description, bool Preferred)[] Locations =
     [
-        "Crypt2", "Crypt3", "Crypt4", "SunkenCrypt4", "MountainCave02", "Mistlands_DvergrTownEntrance1", "Mistlands_DvergrTownEntrance2",
-        "MorgenHole1", "MorgenHole2", "MorgenHole3",
+        ("Crypt2", "burial chamber", true), ("Crypt3", "burial chamber", true), ("Crypt4", "burial chamber", true),
+        ("HalfBurried_ForestCrypt", "burial chamber", false), ("SunkenCrypt4", "sunken crypt", true), ("MountainCave02", "Frost Cave", true),
+        ("Hildir_crypt", null, false), ("Hildir_cave", null, false), ("Hildir_plainsfortress", null, false),
+        ("Mistlands_DvergrTownEntrance1", "infested mine", true), ("Mistlands_DvergrTownEntrance2", "infested mine", true),
+        ("Mistlands_DvergrBossEntrance1", null, false), ("MorgenHole1", "Morgen hole", true), ("MorgenHole2", "Morgen hole", true),
+        ("MorgenHole3", "Morgen hole", true), ("TheHole01", null, false), ("TheDarkestHole", null, false), ("CharredFortress", null, false),
     ];
+
+    /// <summary>The entrances preferred for a dungeon kind, in this order, before any other location that holds it.</summary>
+    private static readonly string[] Preferred = [.. Locations.Where(l => l.Preferred).Select(l => l.Name)];
 
     /// <summary>Locations that never serve as an entrance: a quest's or a boss's own places.</summary>
     private static readonly string[] Never = ["Hildir_", "Mistlands_DvergrBossEntrance"];
@@ -139,13 +151,5 @@ public static class DungeonEntrances
     }
 
     /// <summary>What a location is called as an entrance: a burial chamber, a Frost Cave...</summary>
-    public static string Describe(LocationPrefabs.Prefab p) => p.Name switch
-    {
-        "Crypt2" or "Crypt3" or "Crypt4" or "HalfBurried_ForestCrypt" => "burial chamber",
-        "SunkenCrypt4" => "sunken crypt",
-        "MountainCave02" => "Frost Cave",
-        "Mistlands_DvergrTownEntrance1" or "Mistlands_DvergrTownEntrance2" => "infested mine",
-        "MorgenHole1" or "MorgenHole2" or "MorgenHole3" => "Morgen hole",
-        _ => p.Name,
-    };
+    public static string Describe(LocationPrefabs.Prefab p) => Array.Find(Locations, l => l.Name == p.Name).Description ?? p.Name;
 }

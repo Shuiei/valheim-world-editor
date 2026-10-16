@@ -136,12 +136,7 @@ public static class DungeonGen
     /// Locations with a dungeon (name hashes), which the game lays out 5000 m above them when a player first
     /// comes near: nothing of it is in the save until then.
     /// </summary>
-    public static readonly HashSet<int> DungeonLocations = [.. new[]
-    {
-        "Crypt2", "Crypt3", "Crypt4", "HalfBurried_ForestCrypt", "SunkenCrypt4", "MountainCave02", "Hildir_crypt", "Hildir_cave", "Hildir_plainsfortress",
-        "Mistlands_DvergrTownEntrance1", "Mistlands_DvergrTownEntrance2", "Mistlands_DvergrBossEntrance1", "MorgenHole1", "MorgenHole2", "MorgenHole3",
-        "TheHole01", "TheDarkestHole", "CharredFortress",
-    }.Select(Save.StableHash.Of)];
+    public static readonly HashSet<int> DungeonLocations = [.. DungeonEntrances.Locations.Select(l => Save.StableHash.Of(l.Name))];
 
     /// <summary>An axis-aligned box of space (metres).</summary>
     /// <param name="Min">Its lowest corner.</param>
