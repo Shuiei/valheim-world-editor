@@ -875,6 +875,11 @@ public sealed partial class MainWindow : Window
             {
                 AreaPanel.RefreshVolume();
             }
+            // And the tape's lowest and highest ground.
+            if (Tools.Mode == ToolMode.Measure)
+            {
+                MeasurePanel.Refresh();
+            }
         });
         session.EditMade += () => Dispatcher.UIThread.Post(() => AutoApply(session));
         // Saved: the objects were read again, with new indices.
@@ -2693,6 +2698,11 @@ public sealed partial class MainWindow : Window
             View.Mode = Tools.Mode;
             SelectPanel.Card.IsVisible = Tools.SelectMode;
             MeasurePanel.Card.IsVisible = Tools.Mode == ToolMode.Measure;
+            if (Tools.Mode == ToolMode.Measure)
+            {
+                // The ground may have changed since the tape was drawn.
+                MeasurePanel.Refresh();
+            }
             if (Tools.Mode == ToolMode.Dungeon)
             {
                 DungeonPanel.Reload();

@@ -2,6 +2,7 @@ using System.Numerics;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Threading;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -33,6 +34,17 @@ public class MeasureToolTests
         m.Down(new Vector3(5, 20, 5));
         Assert.Null(m.B);
         Assert.Equal(new Vector3(5, 20, 5), m.A);
+    }
+
+    [Fact]
+    public void TheClickedHeightsCountForLowestAndHighest()
+    {
+        var m = new MeasureTool();
+        m.Down(new Vector3(0, 40, 0));
+        m.Down(new Vector3(10, 20, 0));
+        var r = m.Measure((_, _) => 30, water: 0)!;
+        Assert.Equal(20, r.Lowest, 3);
+        Assert.Equal(40, r.Highest, 3);
     }
 
     [Fact]
@@ -72,6 +84,10 @@ public class MeasureToolTests
         Assert.True(w.View.Tape.Fixed);
         Assert.Equal("20.0 m", w.MeasurePanel.Shown["Distance"]);
         Assert.Equal("30.0 → 30.0 m (+0.0)", w.MeasurePanel.Shown["Height A → B"]);
+        // An edit under the tape: the panel follows.
+        s.Shape(64, 64, Formula.Compile("d < 3 ? 6 : 0", ["d"]), 3, 0, "step");
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal("30.0 / 36.0 m", w.MeasurePanel.Shown["Lowest / highest"]);
         w.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
         Assert.Null(w.View.Tape.A);
         Assert.Empty(w.MeasurePanel.Shown);
