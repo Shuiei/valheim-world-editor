@@ -11,7 +11,8 @@ the plugin is unchanged in versions without that part.
   each save and each Apply live (with Auto apply, after every edit) copied the whole ground of every edited zone,
   about 127 KB each, and kept only the lifted ones: with 2,000 edited zones, some 250 MB each time, even with
   nothing lifted. A save also copied every zone twice, and Apply live copied the zones it sends twice. Only the zones
-  needed are copied now, once; the map's edited-zone marks and list and the zone statistics likewise.
+  needed are copied now, once; the map's edited-zone list and the zone statistics likewise, and the map's
+  edited-zone marks, drawn ten times a second, copy none.
 
 ## v1.45.103 — unreleased
 
