@@ -140,6 +140,9 @@ the plugin is unchanged in versions without that part.
 - **Dungeon generation could rarely stop with an error on a random pick.** The growths and corridor-feature picks took
   the first item whose running weight reached the draw, with no fallback when float rounding left a little over; one
   shared Weighted.Pick (also used by the planner and Rooms mode) falls back to the last item.
+- **The map's zone filter ignored what was placed this session.** ZoneStats counted only saved objects, so a building
+  placed and not yet saved showed 0 pieces and a "far from buildings" filter could pick its zone for reset; added
+  objects now count, a piece when it will have a builder once saved.
 
 ### Changed
 
