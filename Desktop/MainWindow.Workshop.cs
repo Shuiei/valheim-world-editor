@@ -332,8 +332,11 @@ public partial class MainWindow
         _workshopLift = 0;
         _workshopTerrain = [];
         _workshopDetails = details;
-        // Only Homestead's own folder is saved back to without asking.
-        _workshopFile = path != null && string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), Path.GetFullPath(Blueprints.Status.Folder), StringComparison.Ordinal) ? path : null;
+        // Only Homestead's own folder is saved back to without asking (however its path is written: a separator at the
+        // end, a link, Windows' letter case), and then by the path the editor saves under.
+        _workshopFile = path != null && Path.GetDirectoryName(Path.GetFullPath(path)) is { } dir
+            && Places.FolderKey(dir) == Places.FolderKey(Blueprints.Status.Folder)
+            ? Path.Combine(Blueprints.Status.Folder, Path.GetFileName(path)) : null;
         string msg = "The Workshop: pick a piece in Build and click to put it down (it snaps like the game's hammer); Select (E) moves, turns and deletes; then Save blueprint.";
         if (path != null)
         {
@@ -452,7 +455,7 @@ public partial class MainWindow
         // The library's folder as it is now (Homestead may have been installed or moved since).
         Blueprints.Refresh();
         string path = Path.Combine(Blueprints.Status.Folder, Homestead.FileName(details.Name));
-        if (File.Exists(path) && !overwrite && !string.Equals(path, _workshopFile, StringComparison.Ordinal))
+        if (File.Exists(path) && !overwrite && !string.Equals(path, _workshopFile, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
         {
             return $"There is a blueprint called {details.Name} already: ask the user before replacing it (overwrite), or choose another name.";
         }

@@ -215,4 +215,18 @@ public class MainWindowWorkshopBranchesTests
         Assert.NotEqual("The Workshop is already opening.", w.StatusMessage);
         await again;
     }
+
+    [AvaloniaFact]
+    public async Task ABlueprintOpenedThroughALinkToTheFolderIsSavedBackWithoutAsking()
+    {
+        using var r = new BlueprintsPanelRun();
+        var w = r.W;
+        w.Ask = (_, _, _, _) => Task.FromResult(true);
+        r.Keep("Tower", "woodwall");
+        string link = Path.Combine(r.Dir, "linked");
+        Directory.CreateSymbolicLink(link, r.Homestead);
+        await w.OpenWorkshop(Path.Combine(link, Homestead.FileName("Tower")));
+        Assert.Null(w.SaveWorkshopAs(new Homestead.Details("Tower", "", []), overwrite: false, evenIfFalling: true));
+    }
 }
+
