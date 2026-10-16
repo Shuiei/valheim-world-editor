@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.65 — unreleased
+
+### Fixed
+- **New world: a name the game accepts on one system broke the world on another.** The name check followed the
+  system the editor ran on: on Linux and macOS "My:World?" went through (and the world could not be copied to
+  Windows), and on Windows "CON" or "COM1" went through and failed when the files were written. The check is now
+  the same everywhere: no / \ : * ? " < > |, no device name, nothing ending with a dot or a space.
+
 ## v1.45.64 — unreleased
 
 ### Fixed

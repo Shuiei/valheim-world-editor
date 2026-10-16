@@ -8,6 +8,7 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using TerrainEditor.App;
+using TerrainEditor.Save;
 using ValheimGen;
 
 namespace TerrainEditor.Desktop;
@@ -1162,17 +1163,17 @@ public sealed class NewWorldPage : IDisposable
     }
 
     /// <summary>
-    /// Why a world of that name and seed cannot be made in that worlds folder (a name that cannot be a file name, a
-    /// seed not of 1 to 10 characters, a world of that name there already), or null when it can.
+    /// Why a world of that name and seed cannot be made in that worlds folder (a name that cannot be a file name on
+    /// every system, a seed not of 1 to 10 characters, a world of that name there already), or null when it can.
     /// </summary>
     /// <param name="root">The worlds folder.</param>
     /// <param name="name">The world's name, trimmed.</param>
     /// <param name="seed">The seed, trimmed.</param>
     internal static string? Check(string root, string name, string seed)
     {
-        if (name.Length == 0 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        if (!WorldCreator.IsWorldName(name))
         {
-            return "Give the world a name that can be a file name (no / \\ : * ? \" < > |).";
+            return "Give the world a name that can be a file name on every system (no / \\ : * ? \" < > |, not a device name such as CON or COM1, not ending with a dot).";
         }
         if (seed.Length is 0 or > 10)
         {
