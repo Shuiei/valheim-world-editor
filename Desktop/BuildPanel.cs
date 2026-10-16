@@ -431,7 +431,7 @@ public sealed class BuildPanel
 
     /// <summary>
     /// Into the Workshop: the Place tool set for building (one piece at a time, as it is, facing the
-    /// turn), woodwall (else the first piece) chosen when no single piece of the list is.
+    /// turn), woodwall (else the first piece) chosen when no single piece of the list is; none when the list is empty.
     /// </summary>
     public void Start()
     {
@@ -448,7 +448,14 @@ public sealed class BuildPanel
         t.GridStep = Grids[Math.Max(0, GridBox.SelectedIndex)];
         _input.TurnStep = Turns[Math.Max(0, TurnBox.SelectedIndex)];
         var pieces = Pieces;
-        if (!(t.Chosen.Count == 1 && pieces.Any(p => p.Prefab == t.Chosen[0])))
+        if (pieces.Count == 0)
+        {
+            // Nothing to build with (the game's data not read, or every piece hidden by the mods' manifests).
+            t.Chosen.Clear();
+            Chosen.Text = "No pieces to build with";
+            Cost.Text = "";
+        }
+        else if (!(t.Chosen.Count == 1 && pieces.Any(p => p.Prefab == t.Chosen[0])))
         {
             Choose(pieces.FirstOrDefault(p => p.Prefab == "woodwall").Prefab ?? pieces[0].Prefab);
         }

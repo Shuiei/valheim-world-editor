@@ -277,6 +277,8 @@ the plugin is unchanged in versions without that part.
 - **Claude's blueprint tools kept using the Homestead folder found when the Blueprints panel last looked, so a
   Homestead installed or moved since was not seen.** list_blueprints, open_workshop and add_blueprint now look for
   Homestead again.
+- **Opening the Workshop threw when there were no pieces to build with (the game's data missing, or every piece hidden
+  by the mods' manifests).** It took the list's first piece without checking; it now chooses none and says so.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
