@@ -193,17 +193,18 @@ public static class Homestead
         foreach (string raw in lines)
         {
             string line = raw.Trim();
-            if (line.StartsWith("#Name:", StringComparison.OrdinalIgnoreCase))
+            if (BlueprintFormats.HeaderValue(line, "#Name:") is { } named)
             {
-                name = line[6..].Trim();
+                name = named;
             }
-            else if (line.StartsWith("#Creator:", StringComparison.OrdinalIgnoreCase))
+            else if (BlueprintFormats.HeaderValue(line, "#Creator:") is { } by)
             {
-                creator = line[9..].Trim();
+                creator = by;
             }
-            else if (line.StartsWith("#Description:", StringComparison.OrdinalIgnoreCase))
+            else if (BlueprintFormats.HeaderValue(line, "#Description:") is { } about)
             {
-                description = line[13..].Trim().Trim('"');
+                // As a paste reads it: a quoted description loses its quotes, one only starting with a quote keeps it.
+                description = BlueprintFormats.Unquote(about);
             }
             else if (line.StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase))
             {

@@ -82,9 +82,9 @@ public static class BlueprintFormats
             {
                 continue;
             }
-            if (line.StartsWith("#Name:", StringComparison.Ordinal)) { name = line[6..].Trim() is { Length: > 0 } n ? n : name; continue; }
-            if (line.StartsWith("#Creator:", StringComparison.Ordinal)) { creator = line[9..].Trim(); continue; }
-            if (line.StartsWith("#Description:", StringComparison.Ordinal)) { description = Unquote(line[13..].Trim()); continue; }
+            if (HeaderValue(line, "#Name:") is { } named) { name = named.Length > 0 ? named : name; continue; }
+            if (HeaderValue(line, "#Creator:") is { } by) { creator = by; continue; }
+            if (HeaderValue(line, "#Description:") is { } about) { description = Unquote(about); continue; }
             if (line.StartsWith("#Category:", StringComparison.Ordinal)) { continue; }
             if (line == RuinHeader) { ruin = true; continue; }
             if (line.StartsWith(DataHeader, StringComparison.Ordinal))
@@ -204,9 +204,17 @@ public static class BlueprintFormats
     private static string PrefabName(string s) => s.Split('(')[0].Trim();
 
     /// <summary>
+    /// The value of a header line when it is that field's ("#Name:" for "#name: Hut" gives "Hut"), trimmed; the field is
+    /// matched ignoring case. Null for another line. One rule for every reader of blueprint headers (a paste and the
+    /// Workshop's library), so both show the same name and description.
+    /// </summary>
+    internal static string? HeaderValue(string line, string field) =>
+        line.StartsWith(field, StringComparison.OrdinalIgnoreCase) ? line[field.Length..].Trim() : null;
+
+    /// <summary>
     /// Strips the surrounding quotes PlanBuild writes around a description and undoes its \" and \n escapes.
     /// </summary>
-    private static string Unquote(string s) => s.Length >= 2 && s[0] == '"' && s[^1] == '"' ? s[1..^1].Replace("\\\"", "\"").Replace("\\n", "\n") : s;
+    internal static string Unquote(string s) => s.Length >= 2 && s[0] == '"' && s[^1] == '"' ? s[1..^1].Replace("\\\"", "\"").Replace("\\n", "\n") : s;
 
     /// <summary>
     /// A number in invariant culture; empty gives 0. One that is not finite ("NaN", "Infinity") is a FormatException,

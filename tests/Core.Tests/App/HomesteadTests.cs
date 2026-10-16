@@ -189,4 +189,19 @@ public class HomesteadTests : IDisposable
         Assert.True(new Homestead.Details("Crypt", "", ["DUNGEON"]).Dungeon);
         Assert.Equal(["house"], new Homestead.Details("Crypt", "", ["Dungeon", "house"]).WithDungeon(false).Tags);
     }
+
+    [Fact]
+    public void TheLibraryReadsHeadersAsAPasteDoes()
+    {
+        // The list trimmed every quote off a description (and a paste only whole surrounding ones, undoing \" and \n),
+        // and matched field names ignoring case where a paste did not: the two showed the same file differently.
+        string[] lines = ["#name:Hut", "#Description:\"Big\" house", "#Pieces", "wood_floor;Building;0;0;0;0;0;0;1;\"\";1;1;1"];
+        var listed = Homestead.Read("hut.blueprint", lines);
+        var pasted = BlueprintFormats.Parse("hut.blueprint", string.Join('\n', lines));
+        Assert.Equal(("Hut", "\"Big\" house"), (listed.Name, listed.Description));
+        Assert.Equal((listed.Name, listed.Description), (pasted.Name, pasted.Description));
+        string[] quoted = ["#Description:\"Say \\\"hi\\\"\"", "#Pieces"];
+        Assert.Equal("Say \"hi\"", Homestead.Read("x.blueprint", quoted).Description);
+        Assert.Equal("Say \"hi\"", BlueprintFormats.Parse("x.blueprint", string.Join('\n', quoted)).Description);
+    }
 }
