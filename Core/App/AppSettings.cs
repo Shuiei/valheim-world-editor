@@ -206,7 +206,9 @@ public sealed class AppSettings
 
     /// <summary>
     /// The settings file's text, or null when there is none. A read that fails (the file held by a sync or antivirus
-    /// program for a moment) is tried again twice, 100 ms apart, before its exception goes up.
+    /// program for a moment) is tried again twice, 100 ms apart, before its exception goes up; a file not there is
+    /// looked for once more (one being put back by such a program), and none the second time is none (no data
+    /// folder: none at once).
     /// </summary>
     private static string? ReadText()
     {
@@ -216,7 +218,11 @@ public sealed class AppSettings
             {
                 return File.ReadAllText(FilePath);
             }
-            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+            catch (DirectoryNotFoundException)
+            {
+                return null;
+            }
+            catch (FileNotFoundException) when (attempt > 0)
             {
                 return null;
             }
