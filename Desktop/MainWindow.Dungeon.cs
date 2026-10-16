@@ -178,11 +178,10 @@ public partial class MainWindow
             var p = paste.Xf(new Vector2(o.Dx, o.Dz));
             return new Vector3(p.X, o.Dy, p.Y);
         }
-        Vector3 Turned(CopyData.Obj o) => new(paste.Mirror ? -o.Rotation.X : o.Rotation.X, (paste.Mirror ? -o.Rotation.Y : o.Rotation.Y) - paste.Turn, paste.Mirror ? -o.Rotation.Z : o.Rotation.Z);
         int markerAt = clip.Objects.FindIndex(o => o.Name == "portal_wood");
         var marker = markerAt >= 0 ? clip.Objects[markerAt] : null;
         var pieces = clip.Objects.Where((o, i) => i != markerAt)
-            .Select(o => new DungeonPiece(o.Prefab, Place(o), BlueprintFormats.FromEuler(Turned(o)), o.Scale, o.Data, Terrain.PieceCatalog.Get(o.Prefab)?.Tool != null)).ToList();
+            .Select(o => new DungeonPiece(o.Prefab, Place(o), BlueprintFormats.FromEuler(paste.Rotated(o.Rotation)), o.Scale, o.Data, Terrain.PieceCatalog.Get(o.Prefab)?.Tool != null)).ToList();
         if (pieces.Count == 0)
         {
             MessageText.Text = "Nothing to paste: the blueprint has no piece this world can have.";
@@ -191,7 +190,7 @@ public partial class MainWindow
         string biome = BiomeName(scene.Terrain?.BiomeAt(ground.X, ground.Z));
         string name = clip.Name ?? "dungeon";
         PlaceDungeon(scene, s, ground, new DungeonToPlace(name, "Pasted", biome, $"dg{Math.Abs(StableHash.Of(name)) % 100000}", pieces,
-            marker == null ? Vector3.Zero : Place(marker), marker == null ? 0f : Turned(marker).Y, null));
+            marker == null ? Vector3.Zero : Place(marker), marker == null ? 0f : paste.Rotated(marker.Rotation).Y, null));
     }
 
     /// <summary>The biome's name as the dungeon generator knows it (the Black Forest's for none, or the sea's).</summary>

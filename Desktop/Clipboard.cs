@@ -319,6 +319,12 @@ public sealed class PasteTool
         return new Vector2(d.X * c - d.Y * s, d.X * s + d.Y * c);
     }
 
+    /// <summary>
+    /// A copied object's Euler angles (degrees) where it lands: mirrored east to west, which keeps the pitch
+    /// (X) and reverses the yaw and the roll, then turned.
+    /// </summary>
+    public Vector3 Rotated(Vector3 r) => new(r.X, (Mirror ? -r.Y : r.Y) - Turn, Mirror ? -r.Z : r.Z);
+
     /// <summary>Offset where it lands → source offset: the inverse of <see cref="Xf"/>.</summary>
     public Vector2 Inv(Vector2 d)
     {
@@ -411,8 +417,7 @@ public sealed class PasteTool
             {
                 var p = ca + Xf(new Vector2(o.Dx, o.Dz));
                 float y = o.Follow ? heightAt(p) + o.Dy + up : anchor + o.Dy;
-                var r = o.Rotation;
-                list.Add((o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), new Vector3(Mirror ? -r.X : r.X, (Mirror ? -r.Y : r.Y) - Turn, Mirror ? -r.Z : r.Z), o.Scale));
+                list.Add((o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), Rotated(o.Rotation), o.Scale));
             }
         }
         return list;
@@ -543,9 +548,7 @@ public sealed class PasteTool
                     var p = ca + Xf(new Vector2(o.Dx, o.Dz));
                     // Objects copied with the Select tool keep their height above the ground where they land.
                     float y = o.Follow ? g.HeightOf(Index(g, p)) + o.Dy + lift : anchor + o.Dy;
-                    var r = o.Rotation;
-                    var rot = new Vector3(Mirror ? -r.X : r.X, (Mirror ? -r.Y : r.Y) - Turn, Mirror ? -r.Z : r.Z);
-                    add.Add((new NewObject(0, o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), rot, o.Scale, o.SourceId, true, Data: o.Data), PieceCatalog.Get(o.Prefab)?.Tool != null));
+                    add.Add((new NewObject(0, o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), Rotated(o.Rotation), o.Scale, o.SourceId, true, Data: o.Data), PieceCatalog.Get(o.Prefab)?.Tool != null));
                 }
             }
         }

@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.41 — unreleased
+
+### Fixed
+- **Mirrored pastes tilted pieces the wrong way.** Pasting with Mirror on reversed the pitch of every object as
+  well as its yaw and roll, so a beam sloping nose-down came out nose-up and tilted trees leaned the other way.
+  Mirroring east to west now keeps the pitch; the same went for mirrored dungeon pastes and the paste ghost.
+
 ## v1.45.40 — unreleased
 
 ### Fixed
