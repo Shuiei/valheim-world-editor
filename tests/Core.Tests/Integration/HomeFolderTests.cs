@@ -501,6 +501,36 @@ public sealed class HomeFolderTests : IDisposable
     }
 
     [Fact]
+    public async Task BridgesAreProbedTogetherAndTheFirstThatAnswersIsTaken()
+    {
+        // Three ports that take the connection but never answer: asked one after another they would cost 4.5 s.
+        var silent = Enumerable.Range(0, 3).Select(_ => new TcpListener(IPAddress.Loopback, 0)).ToList();
+        try
+        {
+            foreach (var l in silent)
+            {
+                l.Start();
+            }
+            using var first = new Status(200, "{\"world\":\"First\"}").Start();
+            using var second = new Status(200, "{\"world\":\"Second\"}").Start();
+            var bridges = silent.Select(l => new LocalGame.Bridge("cfg", "here", ((IPEndPoint)l.LocalEndpoint).Port, "t"))
+                .Append(new LocalGame.Bridge("cfg", "here", first.Port, "t"))
+                .Append(new LocalGame.Bridge("cfg", "here", second.Port, "t"));
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            var r = await LocalGame.FindRunning(bridges);
+            Assert.Equal("First", r!.World);
+            Assert.True(clock.Elapsed < TimeSpan.FromSeconds(4), $"{clock.Elapsed}");
+        }
+        finally
+        {
+            foreach (var l in silent)
+            {
+                l.Stop();
+            }
+        }
+    }
+
+    [Fact]
     public void TheEditorKnowsWhenAModManagerInstalledIt()
     {
         Assert.Equal(Local("p", "BepInEx"), LocalGame.InstalledIn(Local("p", "BepInEx", "plugins", "Tie-ValheimWorldEditor")));

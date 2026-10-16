@@ -196,34 +196,40 @@ public static class LocalGame
         return new Bridge(path, where, int.TryParse(Get("Port"), out int p) ? p : 5182, token);
     }
 
+    /// <summary>One client for every probe, with the 1.5 second wait.</summary>
+    private static readonly HttpClient Prober = new() { Timeout = TimeSpan.FromSeconds(1.5) };
+
     /// <summary>
-    /// Which bridge (if any) answers on this computer, and with which world: the first whose /status on
-    /// 127.0.0.1 answers within 1.5 seconds.
+    /// Which bridge (if any) answers on this computer, and with which world: the first, in the order given, whose
+    /// /status on 127.0.0.1 answers within 1.5 seconds. All are asked at once, so silent ports cost 1.5 s in all.
     /// </summary>
     public static async Task<Running?> FindRunning(IEnumerable<Bridge> bridges)
     {
-        foreach (Bridge b in bridges.DistinctBy(b => (b.Port, b.Token)))
+        Running?[] answers = await Task.WhenAll(bridges.DistinctBy(b => (b.Port, b.Token)).Select(Probe));
+        return Array.Find(answers, a => a != null);
+    }
+
+    /// <summary>The bridge's /status, or null when it does not answer within 1.5 seconds or refuses.</summary>
+    private static async Task<Running?> Probe(Bridge b)
+    {
+        try
         {
-            try
+            using HttpRequestMessage req = new(HttpMethod.Get, $"http://127.0.0.1:{b.Port}/status");
+            req.Headers.Add("X-Bridge-Token", b.Token);
+            using HttpResponseMessage res = await Prober.SendAsync(req);
+            if (!res.IsSuccessStatusCode)
             {
-                using HttpClient http = new() { Timeout = TimeSpan.FromSeconds(1.5) };
-                using HttpRequestMessage req = new(HttpMethod.Get, $"http://127.0.0.1:{b.Port}/status");
-                req.Headers.Add("X-Bridge-Token", b.Token);
-                using HttpResponseMessage res = await http.SendAsync(req);
-                if (!res.IsSuccessStatusCode)
-                {
-                    continue;
-                }
-                using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-                string world = doc.RootElement.TryGetProperty("world", out var w) ? w.GetString() ?? "" : "";
-                int players = doc.RootElement.TryGetProperty("players", out var pl) && pl.TryGetInt32(out int n) ? n : 0;
-                return new Running(b, world, players);
+                return null;
             }
-            catch
-            {
-            }
+            using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+            string world = doc.RootElement.TryGetProperty("world", out var w) ? w.GetString() ?? "" : "";
+            int players = doc.RootElement.TryGetProperty("players", out var pl) && pl.TryGetInt32(out int n) ? n : 0;
+            return new Running(b, world, players);
         }
-        return null;
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
