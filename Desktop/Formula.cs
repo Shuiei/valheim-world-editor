@@ -61,7 +61,8 @@ public static class Formula
         ["max"] = a => a.Length == 0 ? double.NegativeInfinity : a.Max(),
         ["pow"] = a => Math.Pow(a[0], a[1]),
         ["atan2"] = a => Math.Atan2(a[0], a[1]),
-        ["sign"] = a => Math.Sign(a[0]),
+        // JavaScript's Math.sign: NaN stays NaN (Math.Sign throws on it).
+        ["sign"] = a => double.IsNaN(a[0]) ? double.NaN : Math.Sign(a[0]),
         ["clamp"] = a => Math.Max(a[1], Math.Min(a[2], a[0])),
         ["smooth"] = a => Smooth(a[0]),
         ["bell"] = a => Math.Exp(-a[0] * a[0] * 2.5),
@@ -103,7 +104,7 @@ public static class Formula
     /// <summary>
     /// One token from where it is asked for (\G), spaces before it skipped: a number, a name, or an operator.
     /// </summary>
-    private static readonly Regex Token = new(@"\G\s*(?:(\d+\.?\d*(?:e[+-]?\d+)?|\.\d+)|([A-Za-z_]\w*)|(<=|>=|==|!=|&&|\|\||[-+*/%^(),<>?:!]))", RegexOptions.Compiled);
+    private static readonly Regex Token = new(@"\G\s*(?:(\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+(?:[eE][+-]?\d+)?)|([A-Za-z_]\w*)|(<=|>=|==|!=|&&|\|\||[-+*/%^(),<>?:!]))", RegexOptions.Compiled);
 
     /// <summary>
     /// Compiles a formula once into a function of an environment.

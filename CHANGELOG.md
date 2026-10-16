@@ -284,6 +284,8 @@ the plugin is unchanged in versions without that part.
   session's generation, which those changes move.
 - **A formula mixing && and || worked out differently from the web editor: 1 || 0 && 0 gave 0.** Both were read left
   to right at one level; && now binds tighter than ||, as in JavaScript.
+- **Formulas refused numbers written with a capital E (2E3), and sign() of a NaN failed at every point, so every point
+  counted as bad.** Exponents take e or E (also after a leading point, .5e1), and sign(NaN) is NaN, as in JavaScript.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

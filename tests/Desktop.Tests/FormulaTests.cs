@@ -40,10 +40,17 @@ public class FormulaTests
     [InlineData("max(1, x, 3)", 3)]
     [InlineData("round(2.5)", 3)]
     [InlineData("1e2 + .5", 100.5)]
+    [InlineData("2E3 + .5e1", 2005)]
+    [InlineData("sign(-3)", -1)]
     public void FormulasWorkOutLikeTheWebEditors(string src, double want)
     {
         Assert.Equal(want, Eval(src, x: 2), 9);
     }
+
+    [Fact]
+    public void TheSignOfNaNIsNaN() =>
+        // Math.Sign threw on it, at every point, so every point counted as bad.
+        Assert.True(double.IsNaN(Eval("sign(0 / 0)")));
 
     [Theory]
     [InlineData("", "the formula is empty")]
