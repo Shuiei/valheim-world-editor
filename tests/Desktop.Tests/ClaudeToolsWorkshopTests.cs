@@ -43,6 +43,13 @@ public class ClaudeToolsWorkshopTests
         File.Move(Path.Combine(r.Homestead, TerrainEditor.App.Homestead.FileName("Tower")), Path.Combine(r.Homestead, "Tower (2).blueprint"));
         Assert.Equal("Tower", ClaudeRun.J(await r.T.ListBlueprints("defence"))[0].GetProperty("name").GetString());
         Assert.EndsWith("Now pending: 6 building piece(s) on the plot, not saved as a blueprint.", await r.T.AddBlueprint("tower", -20, 0));
+        // Two files with that name: the one named after it comes first.
+        var one = new System.Text.Json.Nodes.JsonObject
+        {
+            ["objects"] = new System.Text.Json.Nodes.JsonArray(new System.Text.Json.Nodes.JsonObject { ["name"] = "wood_floor", ["dx"] = 0, ["dy"] = 0, ["dz"] = 0, ["rx"] = 0, ["ry"] = 0, ["rz"] = 0, ["scale"] = 0 }),
+        };
+        File.WriteAllText(Path.Combine(r.Homestead, TerrainEditor.App.Homestead.FileName("Tower")), TerrainEditor.App.Homestead.Write(one, "Tower", "Tester", null, DateTime.Now));
+        Assert.StartsWith("Added “Tower”: 1 piece(s).", await r.T.AddBlueprint("Tower", 20, -20));
     }
 
     // On the plot: an empty one stands; a chest filled and a sign written keep their values on the piece; pieces
