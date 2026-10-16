@@ -282,6 +282,8 @@ the plugin is unchanged in versions without that part.
 - **Live, a dungeon laid out or gone in the game kept showing as it was until an unrelated edit.** The dungeon caches
   were keyed on the edit version and the object count, which the game's changes leave alone; they now also follow the
   session's generation, which those changes move.
+- **A formula mixing && and || worked out differently from the web editor: 1 || 0 && 0 gave 0.** Both were read left
+  to right at one level; && now binds tighter than ||, as in JavaScript.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

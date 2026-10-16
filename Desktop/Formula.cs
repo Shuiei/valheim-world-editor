@@ -296,22 +296,33 @@ public static class Formula
             }
             return a;
         }
-        Func<Env, double> Logic()
+        // && binds tighter than ||, as in JavaScript: 1 || 0 && 0 is 1. Like JavaScript, each gives the deciding value
+        // itself, not 1.
+        Func<Env, double> And()
         {
             var a = Compare();
-            while (Peek()?.Op is "&&" or "||")
+            while (Eat("&&"))
             {
-                string op = toks[i++].Op!;
                 var b = Compare();
                 var l = a;
-                // Like JavaScript: the deciding value itself, not 1.
-                a = op == "&&" ? env => l(env) is var x && Truthy(x) ? b(env) : x : env => l(env) is var y && Truthy(y) ? y : b(env);
+                a = env => l(env) is var x && Truthy(x) ? b(env) : x;
+            }
+            return a;
+        }
+        Func<Env, double> Or()
+        {
+            var a = And();
+            while (Eat("||"))
+            {
+                var b = And();
+                var l = a;
+                a = env => l(env) is var y && Truthy(y) ? y : b(env);
             }
             return a;
         }
         Func<Env, double> Ternary()
         {
-            var c = Logic();
+            var c = Or();
             if (Eat("?"))
             {
                 var a = Ternary();

@@ -32,6 +32,8 @@ public class FormulaTests
     [InlineData("x > 1 ? 10 : 20", 10)]
     [InlineData("2 && 3", 3)]
     [InlineData("0 || 4", 4)]
+    [InlineData("1 || 0 && 0", 1)]
+    [InlineData("0 && 0 || 5", 5)]
     [InlineData("!0", 1)]
     [InlineData("smooth(0.5)", 0.5)]
     [InlineData("clamp(5, 0, 2)", 2)]
