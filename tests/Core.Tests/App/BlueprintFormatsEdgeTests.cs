@@ -108,6 +108,10 @@ public class BlueprintFormatsEdgeTests
         var bp = BlueprintFormats.Parse("wide.blueprint", string.Join("\n", "#Terrain", "circle;0;0;0;1;0;0;dirt", "circle;2000;0;0;1;0;0;dirt"));
         var e = Assert.Throws<InvalidDataException>(() => BlueprintFormats.ToClip(bp, _ => true, out _));
         Assert.Contains("ground marks span 2002 m by 2 m", e.Message);
+        // Exactly the most the grid spans: made, a point a metre.
+        bp = BlueprintFormats.Parse("edge.blueprint", string.Join("\n", "#Terrain", "circle;0;0;0;0;0;0;dirt", $"circle;{BlueprintFormats.MaxGround};0;0;0;0;0;dirt"));
+        var clip = BlueprintFormats.ToClip(bp, _ => true, out _);
+        Assert.Equal((BlueprintFormats.MaxGround + 1, 1), ((int)clip["w"]!, (int)clip["h"]!));
         // A radius that would overflow the grid is refused the same way, not an overflow.
         bp = BlueprintFormats.Parse("huge.blueprint", string.Join("\n", "#Terrain", "circle;0;0;0;100000;0;0;dirt"));
         Assert.Throws<InvalidDataException>(() => BlueprintFormats.ToClip(bp, _ => true, out _));
