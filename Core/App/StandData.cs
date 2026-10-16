@@ -211,7 +211,7 @@ public static class StandData
                 quality = it.Quality;
                 variant = it.Variant;
             }
-            catch (Exception ex) when (ex is EndOfStreamException or IOException)
+            catch (Exception ex) when (CheckedReads.Damaged(ex))
             {
                 // Kept as the stand's own values say.
             }

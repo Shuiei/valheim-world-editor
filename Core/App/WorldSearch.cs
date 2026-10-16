@@ -131,7 +131,7 @@ public static class WorldSearch
             {
                 z = ZdoData.Parse(b);
             }
-            catch (Exception ex) when (ex is EndOfStreamException or IOException)
+            catch (Exception ex) when (CheckedReads.Damaged(ex))
             {
                 continue;
             }
@@ -147,7 +147,7 @@ public static class WorldSearch
                 {
                     inv = InventoryData.Read(items);
                 }
-                catch (Exception ex) when (ex is NotSupportedException or EndOfStreamException or IOException)
+                catch (Exception ex) when (CheckedReads.Damaged(ex))
                 {
                     continue;
                 }

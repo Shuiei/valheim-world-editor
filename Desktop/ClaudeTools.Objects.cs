@@ -419,7 +419,7 @@ public sealed partial class ClaudeTools
                     slot = new[] { i.X, i.Y },
                 });
             }
-            catch (Exception ex) when (ex is EndOfStreamException or InvalidDataException or FormatException)
+            catch (Exception ex) when (Save.CheckedReads.Damaged(ex))
             {
                 head["contents"] = "cannot be read";
             }
