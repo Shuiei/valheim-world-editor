@@ -1664,8 +1664,13 @@ public sealed partial class MainWindow : Window
         {
             Growth.Commit(s, $"Mountain: grew {spots.Count} object(s)", spots);
             placed += $" Grew {spots.Count} of the biome's trees and rocks on it.";
+            MessageText.Text = placed + " Ctrl+Z takes it back (twice with what grew); saving turns it into ground discs.";
         }
-        MessageText.Text = placed + " Ctrl+Z takes it back (twice with what grew); saving turns it into ground discs.";
+        else
+        {
+            // Nothing grew: one step to take back. When growing could not be done, why (Spots said it) stays.
+            MessageText.Text = (spots == null ? MessageText.Text : placed) + " Ctrl+Z takes it back; saving turns it into ground discs.";
+        }
         UpdateSaveBar();
     }
 
