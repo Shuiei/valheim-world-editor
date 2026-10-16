@@ -1141,6 +1141,13 @@ public sealed partial class MainWindow : Window
                 MessageText.Text = "Select an area first.";
                 return null;
             }
+            // No objects and so no ground (it goes with buildings only): nothing a paste would put down. The clipboard
+            // keeps what it had.
+            if (clip.Objects.Count == 0 && Array.TrueForAll(clip.Rel, float.IsNaN))
+            {
+                MessageText.Text = "Nothing to copy here: the area holds no objects (its ground goes only with buildings).";
+                return null;
+            }
         }
         View.Paste.Clip = clip;
         View.Paste.Notify();

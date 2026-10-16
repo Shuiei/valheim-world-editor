@@ -138,18 +138,22 @@ public class MainWindowKeysTests
     }
 
     [AvaloniaFact]
-    public void CtrlXOnAnEmptyAreaCopiesTheGroundAndCutsNothing()
+    public void CtrlXAndCtrlCOnAnEmptyAreaCopyAndCutNothing()
     {
         var (w, s) = Open();
         w.Tools.ChooseMode(ToolMode.Area);
         w.View.Area.Points.Add(new Vector2(32, 32));
         w.View.Area.Points.Add(new Vector2(48, 48));
         Press(w, Key.X, PhysicalKey.X, "x", RawInputModifiers.Control);
-        Assert.Empty(w.View.Paste.Clip!.Objects);
-        Assert.Empty(w.View.Paste.Clip.Taken);
-        Assert.Contains("no objects to cut here", w.MessageText.Text);
+        // No objects, so no ground either: nothing goes on the clipboard, and it is said.
+        Assert.Null(w.View.Paste.Clip);
+        Assert.StartsWith("Nothing to copy here", w.MessageText.Text);
         // Nothing was taken away, so there is nothing to undo.
         Assert.False(s.CanUndo);
+        w.MessageText.Text = "";
+        Press(w, Key.C, PhysicalKey.C, "c", RawInputModifiers.Control);
+        Assert.Null(w.View.Paste.Clip);
+        Assert.StartsWith("Nothing to copy here", w.MessageText.Text);
     }
 
     [AvaloniaFact]
