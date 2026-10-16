@@ -324,8 +324,11 @@ public sealed class BlueprintsPanel
     }
 
     /// <summary>A blueprint as a copy (the clipboard format), its name and the world it came from, or null.</summary>
-    private (JsonObject Clip, string Name, string? World, bool Dungeon)? Load(string id)
+    /// <param name="id">The blueprint's id ("hs:" and its file name, or its store id).</param>
+    /// <param name="problem">Why a blueprint file could not be made a copy, when that is why (null otherwise).</param>
+    private (JsonObject Clip, string Name, string? World, bool Dungeon)? Load(string id, out string? problem)
     {
+        problem = null;
         if (id.StartsWith(HomesteadId, StringComparison.Ordinal))
         {
             string path = Path.Combine(Status.Folder, id[HomesteadId.Length..]);
@@ -336,7 +339,16 @@ public sealed class BlueprintsPanel
             string text = File.ReadAllText(path);
             var parsed = BlueprintFormats.Parse(path, text);
             var world = _scene()?.World;
-            var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out _);
+            JsonObject clip;
+            try
+            {
+                clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out _);
+            }
+            catch (InvalidDataException ex)
+            {
+                problem = $"That blueprint could not be read: {ex.Message}.";
+                return null;
+            }
             // A dungeon by its tags: pasted, it goes up behind an entrance.
             return (clip, parsed.Name, null, new Homestead.Details(parsed.Name, "", Homestead.Details.ParseTags(TagsOf(text))).Dungeon);
         }
@@ -510,9 +522,9 @@ public sealed class BlueprintsPanel
     /// </summary>
     public void Paste(string id)
     {
-        if (Load(id) is not var (clip, name, from, dungeon))
+        if (Load(id, out string? problem) is not var (clip, name, from, dungeon))
         {
-            Message?.Invoke("That blueprint could not be read.");
+            Message?.Invoke(problem ?? "That blueprint could not be read.");
             Refresh();
             return;
         }
@@ -533,9 +545,9 @@ public sealed class BlueprintsPanel
     /// <returns>The name it was saved under (numbered when taken), null when not saved.</returns>
     public string? ToHomestead(string id)
     {
-        if (Load(id) is not var (clip, name, world, _))
+        if (Load(id, out string? problem) is not var (clip, name, world, _))
         {
-            Message?.Invoke("That blueprint could not be read.");
+            Message?.Invoke(problem ?? "That blueprint could not be read.");
             return null;
         }
         string target = Homestead.FreeName(name, HomesteadExists);
@@ -580,9 +592,9 @@ public sealed class BlueprintsPanel
     /// <returns>The file written, null when not.</returns>
     public string? Export(string id, string format)
     {
-        if (Load(id) is not var (clip, name, _, _))
+        if (Load(id, out string? problem) is not var (clip, name, _, _))
         {
-            Message?.Invoke("Could not export that blueprint.");
+            Message?.Invoke(problem ?? "Could not export that blueprint.");
             return null;
         }
         string text = BlueprintFormats.Write(clip, format, name, n => Terrain.PieceCatalog.Get(StableHash.Of(n))?.Category ?? 0);
@@ -627,7 +639,17 @@ public sealed class BlueprintsPanel
         }
         Status = FindHomestead();
         var world = _scene()?.World;
-        var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out var unknown);
+        JsonObject clip;
+        List<string> unknown;
+        try
+        {
+            clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out unknown);
+        }
+        catch (InvalidDataException ex)
+        {
+            Message?.Invoke($"Could not import that file: {ex.Message}.");
+            return null;
+        }
         string name = Homestead.FreeName(string.IsNullOrWhiteSpace(parsed.Name) ? "Imported" : parsed.Name, HomesteadExists);
         if (!TryWrite(() => WriteHomestead(clip, new Homestead.Details(name, parsed.Description ?? "", Homestead.Details.ParseTags(TagsOf(text))), null)))
         {

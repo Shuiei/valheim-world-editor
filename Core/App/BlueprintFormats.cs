@@ -191,9 +191,18 @@ public static class BlueprintFormats
     private static string Unquote(string s) => s.Length >= 2 && s[0] == '"' && s[^1] == '"' ? s[1..^1].Replace("\\\"", "\"").Replace("\\n", "\n") : s;
 
     /// <summary>
-    /// A number in invariant culture; empty gives 0.
+    /// A number in invariant culture; empty gives 0. One that is not finite ("NaN", "Infinity") is a FormatException,
+    /// like text that is not a number: the line cannot be read.
     /// </summary>
-    private static float F(string s) => string.IsNullOrWhiteSpace(s) ? 0f : float.Parse(s.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture);
+    private static float F(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s))
+        {
+            return 0f;
+        }
+        float v = float.Parse(s.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture);
+        return float.IsFinite(v) ? v : throw new FormatException($"{s.Trim()} is not a finite number");
+    }
 
     /// <summary>
     /// A number as written to blueprint files: invariant culture, at most five decimals.
@@ -248,13 +257,22 @@ public static class BlueprintFormats
         a.W * b.W - a.X * b.X - a.Y * b.Y - a.Z * b.Z);
 
     /// <summary>
+    /// The most metres the ground grid of a clip spans on a side: more than the editor's largest area (17 zones,
+    /// 1088 m). A blueprint whose terrain entries reach further is refused rather than given a grid that does not
+    /// fit in memory.
+    /// </summary>
+    public const int MaxGround = 1200;
+
+    /// <summary>
     /// The editor's clipboard (as stored: heights in cm, -32768 = no ground; weights and paint in 1/255)
     /// from a parsed file. The lowest piece rests on the point where it is pasted; ground from terrain
-    /// entries is levelled to their height, relative to the same point.
+    /// entries is levelled to their height, relative to the same point. The ground grid, centred on the
+    /// same point, is as large as the terrain entries reach.
     /// </summary>
     /// <param name="bp">The parsed file.</param>
     /// <param name="known">Whether a prefab name can be placed; pieces it rejects are left out.</param>
     /// <param name="unknown">The rejected prefab names, distinct and sorted.</param>
+    /// <exception cref="InvalidDataException">The terrain entries span more than <c>MaxGround</c> metres.</exception>
     public static JsonObject ToClip(Parsed bp, Func<string, bool> known, out List<string> unknown)
     {
         var pieces = bp.Pieces.Where(p => known(p.Name)).ToList();
@@ -297,8 +315,20 @@ public static class BlueprintFormats
         int[] rel = [-32768], wt = [0], pnt = [-255, -255, -255, -255];
         if (bp.Terrain.Count > 0)
         {
-            w = (int)MathF.Ceiling(x1 - x0) + 1;
-            h = (int)MathF.Ceiling(z1 - z0) + 1;
+            // Only the ground the terrain entries reach is gridded, however far the pieces go, around the centre.
+            float tx0 = float.MaxValue, tx1 = float.MinValue, tz0 = float.MaxValue, tz1 = float.MinValue;
+            foreach (TerrainMod t in bp.Terrain)
+            {
+                tx0 = Math.Min(tx0, t.Position.X - t.Radius); tx1 = Math.Max(tx1, t.Position.X + t.Radius);
+                tz0 = Math.Min(tz0, t.Position.Z - t.Radius); tz1 = Math.Max(tz1, t.Position.Z + t.Radius);
+            }
+            float halfW = Math.Max(cx - tx0, tx1 - cx), halfH = Math.Max(cz - tz0, tz1 - cz);
+            if (halfW * 2 > MaxGround || halfH * 2 > MaxGround)
+            {
+                throw new InvalidDataException($"its ground marks span {halfW * 2:F0} m by {halfH * 2:F0} m, more than the editor's {MaxGround} m");
+            }
+            w = 2 * (int)MathF.Ceiling(halfW) + 1;
+            h = 2 * (int)MathF.Ceiling(halfH) + 1;
             rel = [.. Enumerable.Repeat(-32768, w * h)];
             wt = new int[w * h];
             pnt = [.. Enumerable.Repeat(-255, w * h * 4)];

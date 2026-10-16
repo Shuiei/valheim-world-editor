@@ -76,6 +76,39 @@ public class BlueprintFormatsEdgeTests
     }
 
     [Fact]
+    public void TheGroundGridReachesOnlyAsFarAsTheTerrainMarks()
+    {
+        // Pieces 100 m apart with one small mark between them: the grid, centred like the copy, spans the mark only.
+        var bp = BlueprintFormats.Parse("far.blueprint", string.Join("\n",
+            "#Terrain", "circle;50;0;0;1;0;0;dirt", "#Pieces", "wood_wall;0;0;0;0;0;0;0;1;", "wood_wall;0;100;0;0;0;0;0;1;"));
+        var clip = BlueprintFormats.ToClip(bp, _ => true, out _);
+        Assert.Equal((3, 3), ((int)clip["w"]!, (int)clip["h"]!));
+        Assert.Equal(0, (int)((JsonArray)clip["rel"]!)[4]!);
+        Assert.Equal(2, ((JsonArray)clip["objects"]!).Count);
+    }
+
+    [Fact]
+    public void TerrainMarksTooFarApartAreRefused()
+    {
+        var bp = BlueprintFormats.Parse("wide.blueprint", string.Join("\n", "#Terrain", "circle;0;0;0;1;0;0;dirt", "circle;2000;0;0;1;0;0;dirt"));
+        var e = Assert.Throws<InvalidDataException>(() => BlueprintFormats.ToClip(bp, _ => true, out _));
+        Assert.Contains("ground marks span 2002 m by 2 m", e.Message);
+        // A radius that would overflow the grid is refused the same way, not an overflow.
+        bp = BlueprintFormats.Parse("huge.blueprint", string.Join("\n", "#Terrain", "circle;0;0;0;100000;0;0;dirt"));
+        Assert.Throws<InvalidDataException>(() => BlueprintFormats.ToClip(bp, _ => true, out _));
+    }
+
+    [Fact]
+    public void ANumberThatIsNotFiniteMakesALineUnreadable()
+    {
+        var bp = BlueprintFormats.Parse("nan.blueprint", string.Join("\n",
+            "#Terrain", "circle;NaN;0;0;1;0;0;dirt", "circle;0;0;0;Infinity;0;0;dirt", "#Pieces", "wood_wall;0;-Infinity;0;0;0;0;0;1;", "wood_wall;0;1;0;0;0;0;0;1;"));
+        Assert.Equal(3, bp.SkippedLines);
+        Assert.Empty(bp.Terrain);
+        Assert.Single(bp.Pieces);
+    }
+
+    [Fact]
     public void AnEmptyBlueprintIsAOnePointCopy()
     {
         var clip = BlueprintFormats.ToClip(BlueprintFormats.Parse("empty.vbuild", ""), _ => true, out _);
