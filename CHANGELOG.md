@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.70 — unreleased
+
+### Fixed
+- **Typing in a text box moved the camera or changed how it moves, and so did keys on the start page and the map.**
+  The window took every key for the 3D view: an F typed in a search box switched the camera between orbiting, walking
+  and flying, W, A, S or D held while typing moved it, and Space on the start page was taken from the focused button.
+  The view now takes a key only when the 3D editor is shown and nothing is being typed in a box.
+
 ## v1.45.69 — unreleased
 
 ### Fixed

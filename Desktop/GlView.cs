@@ -7,6 +7,7 @@ using Avalonia.Input;
 using Avalonia.OpenGL;
 using Avalonia.OpenGL.Controls;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Silk.NET.OpenGL;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
@@ -2877,7 +2878,7 @@ public sealed class GlView : OpenGlControlBase
         // button's, which it would press; typing keeps it.
         window.AddHandler(KeyDownEvent, (_, e) =>
         {
-            if (e.Key == Key.Space && e.Source is not TextBox)
+            if (e.Key == Key.Space && TakesKey(surface, e))
             {
                 lock (_keys)
                 {
@@ -2889,7 +2890,7 @@ public sealed class GlView : OpenGlControlBase
         }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         window.AddHandler(KeyUpEvent, (_, e) =>
         {
-            if (e.Key == Key.Space && e.Source is not TextBox)
+            if (e.Key == Key.Space && TakesKey(surface, e))
             {
                 lock (_keys)
                 {
@@ -2901,6 +2902,10 @@ public sealed class GlView : OpenGlControlBase
         }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         window.KeyDown += (_, e) =>
         {
+            if (!TakesKey(surface, e))
+            {
+                return;
+            }
             if (e.Key == Key.F && e.KeyModifiers == KeyModifiers.None)
             {
                 CycleEye();
@@ -2923,6 +2928,13 @@ public sealed class GlView : OpenGlControlBase
         // Keys held when the window loses the focus would keep moving the camera.
         window.Deactivated += (_, _) => { lock (_keys) { _keys.Clear(); } };
     }
+
+    /// <summary>
+    /// Whether a key pressed in the window is the view's: not while typing in a box (its keys are its own: an F
+    /// there is a letter, not a change of eye), and only while the 3D editor is shown (the <paramref name="surface"/>
+    /// is in the window), not on the start page or the map, where W would move a camera nobody sees.
+    /// </summary>
+    private static bool TakesKey(Control surface, KeyEventArgs e) => e.Source is not TextBox && surface.IsAttachedToVisualTree();
 
     /// <summary>Where the mouse button went down, to tell a click from a drag.</summary>
     private Point? _pressAt;

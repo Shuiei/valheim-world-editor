@@ -1,7 +1,9 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -67,6 +69,31 @@ public class GlViewInputTests
         Assert.Contains(Key.W, v.KeysHeld);
         w.KeyRelease(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
         Assert.DoesNotContain(Key.W, v.KeysHeld);
+    }
+
+    [AvaloniaFact]
+    public void TypingInABoxOrAwayFromTheEditorLeavesTheCameraAlone()
+    {
+        var (w, v) = Open();
+        // Typing in a box: F and W are letters there, Space a space, none of them the camera's.
+        Assert.True(w.Blueprints.Search.Focus());
+        foreach (var (key, physical, symbol) in new[] { (Key.F, PhysicalKey.F, "f"), (Key.W, PhysicalKey.W, "w"), (Key.Space, PhysicalKey.Space, " ") })
+        {
+            w.KeyPress(key, RawInputModifiers.None, physical, symbol);
+            Assert.Equal(GlView.EyeMode.Orbit, v.Eye);
+            Assert.Empty(v.KeysHeld);
+            w.KeyRelease(key, RawInputModifiers.None, physical, symbol);
+        }
+        // On the start page (the 3D editor is not shown): the same keys with a button focused, as after a click.
+        w.ShowStart();
+        Assert.True(w.GetVisualDescendants().OfType<Button>().First(b => b.IsEffectivelyVisible && b.Focusable).Focus());
+        foreach (var (key, physical, symbol) in new[] { (Key.F, PhysicalKey.F, "f"), (Key.W, PhysicalKey.W, "w"), (Key.Space, PhysicalKey.Space, " ") })
+        {
+            w.KeyPress(key, RawInputModifiers.None, physical, symbol);
+            Assert.Equal(GlView.EyeMode.Orbit, v.Eye);
+            Assert.Empty(v.KeysHeld);
+            w.KeyRelease(key, RawInputModifiers.None, physical, symbol);
+        }
     }
 
     [AvaloniaFact]
