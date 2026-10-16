@@ -262,7 +262,7 @@ public static class Sculpt
 {
     /// <summary>
     /// One frame of a stroke with the brush's middle at grid point (cx, cz), <c>dt</c> seconds after the last (counted
-    /// as 0.1 at most). Returns the grid rectangle changed (to redraw), or null.
+    /// as 0.1 at most). Returns the grid rectangle changed (to redraw), or null when no point changed.
     /// </summary>
     /// <param name="g">The ground.</param>
     /// <param name="b">The brush.</param>
@@ -303,19 +303,21 @@ public static class Sculpt
             s.Clamped |= clamped;
             return (ex0 - 1, ez0 - 1, ex1 + 1, ez1 + 1);
         }
-        // Smoothing reads the heights from before this frame.
-        Dictionary<int, float>? snapshot = null;
+        // Smoothing reads the heights from before this frame: the brush rectangle and a point around it, row by row.
+        int sw = x1 - x0 + 3;
+        float[]? snapshot = null;
         if (s.Tool == BrushTool.Smooth)
         {
-            snapshot = [];
+            snapshot = new float[sw * (z1 - z0 + 3)];
             for (int gz = z0 - 1; gz <= z1 + 1; gz++)
             {
                 for (int gx = x0 - 1; gx <= x1 + 1; gx++)
                 {
-                    snapshot[gz * g.W + gx] = g.HeightOf(gz * g.W + gx);
+                    snapshot[(gz - z0 + 1) * sw + gx - x0 + 1] = g.HeightOf(gz * g.W + gx);
                 }
             }
         }
+        bool any = false;
         float[]? colour = Brush.PaintOf(s.Tool);
         for (int gz = z0; gz <= z1; gz++)
         {
@@ -338,6 +340,7 @@ public static class Sculpt
                 }
                 float h = g.HeightOf(p);
                 s.Touched.Add(p);
+                any = true;
                 switch (s.Tool)
                 {
                     case BrushTool.Raise:
@@ -356,7 +359,7 @@ public static class Sculpt
                         {
                             for (int dx = -1; dx <= 1; dx++)
                             {
-                                sum += snapshot![(gz + dz) * g.W + gx + dx];
+                                sum += snapshot![(gz + dz - z0 + 1) * sw + gx + dx - x0 + 1];
                             }
                         }
                         s.Clamped |= g.SetHeight(p, h + (sum / 9 - h) * MathF.Min(1, 10 * rate * w));
@@ -400,7 +403,8 @@ public static class Sculpt
                 }
             }
         }
-        return (x0 - 1, z0 - 1, x1 + 1, z1 + 1);
+        // Nothing changed (locked ground, the mask or the brush's shape left it all out): nothing to redraw.
+        return any ? (x0 - 1, z0 - 1, x1 + 1, z1 + 1) : null;
     }
 
     /// <summary>

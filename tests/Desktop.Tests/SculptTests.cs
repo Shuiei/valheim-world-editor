@@ -47,6 +47,18 @@ public class SculptTests
     }
 
     [Fact]
+    public void AFrameThatChangesNothingHasNothingToRedraw()
+    {
+        // A frame the mask left all out still returned the brush rectangle, so the view refreshed and uploaded it.
+        var s = TestScenes.Flat();
+        var stroke = new Stroke { Tool = BrushTool.Smooth, Start = s.Ground.Snapshot() };
+        Assert.Null(Sculpt.Apply(s.Ground, s.Brush, stroke, 64, 64, 0.1f, _ => 0));
+        Assert.Empty(stroke.Touched);
+        Assert.NotNull(Sculpt.Apply(s.Ground, s.Brush, stroke, 64, 64, 0.1f));
+        Assert.NotEmpty(stroke.Touched);
+    }
+
+    [Fact]
     public void LowerDigsAndTheGameLimitStopsItAt8Metres()
     {
         var s = TestScenes.Flat();
