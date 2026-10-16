@@ -730,8 +730,9 @@ public sealed class AreaPanel
         var s = session.Scene;
         bool piece = PieceCatalog.Get(prefab)?.Tool != null;
         var adds = things.Select(i => s.Things[i]).Select(t => (new NewObject(0, prefab, t.Position, t.Rotation, 0), piece)).ToList();
-        var removed = session.WithLinked(things, anyPart: false).Indices;
-        int parts = removed.Count - things.Count;
+        var (removed, linked, groups, _) = session.WithLinked(things, anyPart: false);
+        // The groups' parts, roots left out (a part among the things given counts: it goes as a part).
+        int parts = linked.Count - groups;
         session.Commit($"Replaced {things.Count} with {NameOf(prefab)}", null, removed, adds);
         Message?.Invoke($"Replaced {things.Count} object(s) with {NameOf(prefab)}.{(parts > 0 ? $" Their {parts} linked part(s) went with them." : "")}");
     }
