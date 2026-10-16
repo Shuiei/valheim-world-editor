@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.48 — unreleased
+
+### Fixed
+- **Replacing a ship or another linked group's root left its parts behind.** Replace (the Area tool's, and the
+  Select tool's "Replace the selection") removed only the objects given, unlike Remove, so replacing a vehicle's
+  root left its parts in the save with nothing to hang on. Replace now takes a root's parts away with it, in the
+  same undo step, and says how many went; a part replaced on its own still goes alone.
+
 ## v1.45.47 — unreleased
 
 ### Fixed

@@ -718,7 +718,10 @@ public sealed class AreaPanel
         Message?.Invoke($"Replace with {NameOf(prefab)}.");
     }
 
-    /// <summary>Replaces things with objects of another kind, where they are and turned as they are.</summary>
+    /// <summary>
+    /// Replaces things with objects of another kind, where they are and turned as they are. A linked group's root
+    /// takes its parts away with it (ObjectLinks: a ship), as Remove does: they would have nothing to hang on.
+    /// </summary>
     /// <param name="session">The session the change is committed to (one undo step).</param>
     /// <param name="things">The things, as indices into the scene's things.</param>
     /// <param name="prefab">The prefab hash of the new kind.</param>
@@ -727,8 +730,11 @@ public sealed class AreaPanel
         var s = session.Scene;
         bool piece = PieceCatalog.Get(prefab)?.Tool != null;
         var adds = things.Select(i => s.Things[i]).Select(t => (new NewObject(0, prefab, t.Position, t.Rotation, 0), piece)).ToList();
-        session.Commit($"Replaced {things.Count} with {NameOf(prefab)}", null, things, adds);
-        Message?.Invoke($"Replaced {things.Count} object(s) with {NameOf(prefab)}.");
+        var (removed, linked, groups, _) = session.WithLinked(things, anyPart: false);
+        // The groups' parts, roots left out (a part among the things given counts: it goes as a part).
+        int parts = linked.Count - groups;
+        session.Commit($"Replaced {things.Count} with {NameOf(prefab)}", null, removed, adds);
+        Message?.Invoke($"Replaced {things.Count} object(s) with {NameOf(prefab)}.{(parts > 0 ? $" Their {parts} linked part(s) went with them." : "")}");
     }
 
     // ---- Heightmaps: the area's ground as a 16-bit picture (with its lowest and highest heights), and a
