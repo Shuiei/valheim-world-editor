@@ -28,6 +28,17 @@ public class DungeonShellTests
     }
 
     [Fact]
+    public void APillarOfSeveralSegmentsTakesTheTallestThatFits()
+    {
+        // The dresser's columns stacked their own way (DungeonDresser.Column); they now share Stack.
+        var o = new DungeonOut();
+
+        DungeonShell.Stack([new DungeonKit.Column("tall", 4, 2), new DungeonKit.Column("short", 2, 1)], o, 0, 0, 0, 7);
+
+        Assert.Equal([("tall", 2f), ("short", 5f), ("short", 7f)], o.Items.Select(i => (i.Prefab, i.Position.Y)));
+    }
+
+    [Fact]
     public void WindowsAreTheSameWhateverTheCulture()
     {
         // Where a wall gets a window is drawn from a hash of its place as text, which a comma-decimal culture wrote

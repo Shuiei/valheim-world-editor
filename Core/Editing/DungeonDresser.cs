@@ -515,17 +515,7 @@ internal sealed partial class DungeonDresser
             return;
         }
         var p = f.W(u, v, 0);
-        float y = f.F, top = f.F + f.H;
-        while (y < top - 0.3f)
-        {
-            var c = _mat.Column.FirstOrDefault(c => c.H <= top - y + 0.01f) ?? _mat.Column[^1];
-            if (DungeonShell.PastRoof(c, y, top))
-            {
-                break;
-            }
-            _o.Add(c.Prefab, new Vector3(p.X, y + c.Bottom, p.Z), 0);
-            y += c.H;
-        }
+        DungeonShell.Stack(_mat.Column, _o, p.X, p.Z, f.F, f.F + f.H);
         f.Take(u, v, 0.8f);
     }
 
