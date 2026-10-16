@@ -97,6 +97,21 @@ public class MaskTests
     }
 
     [Fact]
+    public void TheBorderSlopeIsMeasuredOverItsOwnStep()
+    {
+        // A 45° ramp west to east: the border points have one neighbour 1 m away, not 2 m.
+        var g = new Ground(129, 129, 0, 0, 2);
+        for (int p = 0; p < g.Base.Length; p++)
+        {
+            g.Base[p] = p % g.W;
+        }
+        var f = new Mask { On = true, SlopeMin = 40 }.For(g, new int[g.Base.Length])!;
+        Assert.Equal(1, f(64 * g.W));
+        Assert.Equal(1, f(64 * g.W + 64));
+        Assert.Equal(1, f(65 * g.W - 1));
+    }
+
+    [Fact]
     public void ShapesPathsAndAreasFollowTheMaskToo()
     {
         var s = Area();

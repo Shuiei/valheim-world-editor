@@ -128,9 +128,11 @@ public sealed class Mask
         float Slope(int p)
         {
             int gx = p % w, gz = p / w;
-            float hx = heights![gz * w + Math.Min(w - 1, gx + 1)] - heights[gz * w + Math.Max(0, gx - 1)];
-            float hz = heights[Math.Min(h - 1, gz + 1) * w + gx] - heights[Math.Max(0, gz - 1) * w + gx];
-            return MathF.Atan(MathF.Sqrt(hx * hx + hz * hz) / 2) * 180 / MathF.PI;
+            // On the border one neighbour is the point itself, so the step is 1 m there, not 2 m.
+            int x0 = Math.Max(0, gx - 1), x1 = Math.Min(w - 1, gx + 1), z0 = Math.Max(0, gz - 1), z1 = Math.Min(h - 1, gz + 1);
+            float hx = x1 > x0 ? (heights![gz * w + x1] - heights[gz * w + x0]) / (x1 - x0) : 0;
+            float hz = z1 > z0 ? (heights![z1 * w + gx] - heights[z0 * w + gx]) / (z1 - z0) : 0;
+            return MathF.Atan(MathF.Sqrt(hx * hx + hz * hz)) * 180 / MathF.PI;
         }
         bool PaintOk(int p)
         {
