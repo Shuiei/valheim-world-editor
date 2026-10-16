@@ -75,8 +75,13 @@ public class GlViewInputTests
     public void TypingInABoxOrAwayFromTheEditorLeavesTheCameraAlone()
     {
         var (w, v) = Open();
-        // Typing in a box: F and W are letters there, Space a space, none of them the camera's.
+        // A key held when a box takes the focus is let go: its release will be the box's.
+        w.KeyPress(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
+        Assert.Contains(Key.W, v.KeysHeld);
         Assert.True(w.Blueprints.Search.Focus());
+        Assert.Empty(v.KeysHeld);
+        w.KeyRelease(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
+        // Typing in a box: F and W are letters there, Space a space, none of them the camera's.
         foreach (var (key, physical, symbol) in new[] { (Key.F, PhysicalKey.F, "f"), (Key.W, PhysicalKey.W, "w"), (Key.Space, PhysicalKey.Space, " ") })
         {
             w.KeyPress(key, RawInputModifiers.None, physical, symbol);

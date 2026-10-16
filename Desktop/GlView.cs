@@ -2925,8 +2925,19 @@ public sealed class GlView : OpenGlControlBase
             }
             Wake();
         };
-        // Keys held when the window loses the focus would keep moving the camera.
+        // Keys held when the window loses the focus would keep moving the camera; so would a key held while a box
+        // takes the focus (its release goes to the box).
         window.Deactivated += (_, _) => { lock (_keys) { _keys.Clear(); } };
+        window.AddHandler(GotFocusEvent, (_, e) =>
+        {
+            if (e.Source is TextBox)
+            {
+                lock (_keys)
+                {
+                    _keys.Clear();
+                }
+            }
+        });
     }
 
     /// <summary>
