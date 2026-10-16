@@ -299,6 +299,27 @@ public class SettingsDialogTests
     }
 
     [AvaloniaFact]
+    public void SettingsThatCannotBeSavedAreSaidAndNotKept()
+    {
+        using var t = new Temp();
+        string? was = AppSettings.PathOverride;
+        // A folder where the file should be: it cannot be written.
+        AppSettings.PathOverride = t.Dir("settings.json");
+        try
+        {
+            var settings = new AppSettings();
+            string worlds = t.Dir("Worlds");
+            string? problem = SettingsDialog.Apply(settings, null, [], [worlds]);
+            Assert.StartsWith("The settings could not be saved: ", problem);
+            Assert.Empty(settings.WorldFolders);
+        }
+        finally
+        {
+            AppSettings.PathOverride = was;
+        }
+    }
+
+    [AvaloniaFact]
     public void AHomePathAndQuotesAreUnderstood()
     {
         var settings = new AppSettings();

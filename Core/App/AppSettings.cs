@@ -261,34 +261,43 @@ public sealed class AppSettings
     /// that could not be read when these were loaded (<c>FileUnread</c>), or that was not there then and is now
     /// (another program put it back): the user's settings are in it.
     /// </summary>
-    public void Save()
+    /// <returns>Null when saved, else why not (also logged).</returns>
+    public string? Save()
     {
         lock (Lock)
         {
+            string? problem = null;
             if (FileUnread)
             {
                 // Not its path: finding it may be what failed then (the data folder could not be made).
-                Console.WriteLine("Settings: not saved: settings.json could not be read when the editor started, and is left as it is.");
-                return;
+                problem = "settings.json could not be read when the editor started, and is left as it is.";
             }
-            // Found once, as in Load: the logs of a failure to find it must not look for it again.
-            string? path = null;
-            try
+            else
             {
-                path = FilePath;
-                // Only the user can read it, from the start: it holds Claude's token. Not over a file that was not
-                // there at the start: the move itself refuses one put there since.
-                SafeFile.WriteAllText(path, JsonSerializer.Serialize(this, Indented), UnixFileMode.UserRead | UnixFileMode.UserWrite, overwrite: !_fileMissing);
-                _fileMissing = false;
+                // Found once, as in Load: the logs of a failure to find it must not look for it again.
+                string? path = null;
+                try
+                {
+                    path = FilePath;
+                    // Only the user can read it, from the start: it holds Claude's token. Not over a file that was not
+                    // there at the start: the move itself refuses one put there since.
+                    SafeFile.WriteAllText(path, JsonSerializer.Serialize(this, Indented), UnixFileMode.UserRead | UnixFileMode.UserWrite, overwrite: !_fileMissing);
+                    _fileMissing = false;
+                }
+                catch (IOException) when (_fileMissing && path != null && File.Exists(path))
+                {
+                    problem = $"{path} was not there when the editor started and is now (put back by another program?), and is left as it is.";
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    problem = $"could not write {path ?? "settings.json"}: {ex.Message}";
+                }
             }
-            catch (IOException) when (_fileMissing && path != null && File.Exists(path))
+            if (problem != null)
             {
-                Console.WriteLine($"Settings: not saved: {path} was not there when the editor started and is now (put back by another program?), and is left as it is.");
+                Console.WriteLine($"Settings: not saved: {problem}");
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                Console.WriteLine($"Settings: could not write {path ?? "settings.json"}: {ex.Message}");
-            }
+            return problem;
         }
     }
 

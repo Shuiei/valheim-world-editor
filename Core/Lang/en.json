@@ -7,6 +7,7 @@
   "settings.notValheim": "The Valheim folder must be the game's folder, the one with valheim_Data, or valheim.app on a Mac (in Steam: right-click Valheim, Manage › Browse local files).",
   "settings.bepInExNotFound": "BepInEx folder not found: {0}",
   "settings.worldNotFound": "World folder not found: {0}",
+  "settings.notSaved": "The settings could not be saved: {0}",
   "settings.title": "Settings: folders on this computer",
   "settings.valheimAuto": "automatic (Steam libraries)",
   "settings.pickValheim": "The Valheim game folder (with valheim_Data)",

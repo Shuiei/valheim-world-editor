@@ -53,10 +53,16 @@ public static class SettingsDialog
             return string.Join(" ", problems);
         }
         bool gameChanged = game != settings.ValheimPath;
+        var before = (settings.ValheimPath, settings.BepInExFolders, settings.WorldFolders);
         settings.ValheimPath = game;
         settings.BepInExFolders = bep;
         settings.WorldFolders = wl;
-        settings.Save();
+        if (settings.Save() is string notSaved)
+        {
+            // Not saved, not changed: they would look kept until the next start.
+            (settings.ValheimPath, settings.BepInExFolders, settings.WorldFolders) = before;
+            return Lang.T("settings.notSaved", notSaved);
+        }
         if (gameChanged)
         {
             // Another game folder: its look (copied again when it is another version).
