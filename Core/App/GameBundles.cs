@@ -1569,18 +1569,25 @@ public sealed class GameBundles
     private TextureLevel? LoadCrunched(string bundle, AssetTypeValueField t, int maxSize)
     {
         byte[] crn = t["m_StreamData.size"].AsUInt > 0 ? StreamBytes(bundle, t["m_StreamData"]) : t["image data"].AsByteArray;
-        if (!UnityCrunchFormat(Open(bundle).Assets.file.Metadata.UnityVersion) || Crunch.Read(crn) is not { } info)
+        if (!UnityCrunchFormat(Open(bundle).Assets.file.Metadata.UnityVersion))
         {
             return null;
         }
-        int w = info.Width, h = info.Height, level = 0;
-        while (level < info.Levels - 1 && Math.Max(w, h) > maxSize)
+        // The level picked from the header read once (its CRCs cover the whole file).
+        int w = 0, h = 0;
+        int Pick(Crunch.Texture info)
         {
-            w = Math.Max(1, w / 2);
-            h = Math.Max(1, h / 2);
-            level++;
+            int level = 0;
+            (w, h) = (info.Width, info.Height);
+            while (level < info.Levels - 1 && Math.Max(w, h) > maxSize)
+            {
+                w = Math.Max(1, w / 2);
+                h = Math.Max(1, h / 2);
+                level++;
+            }
+            return level;
         }
-        return Crunch.Unpack(crn, level) is { } blocks ? new TextureLevel(t["m_Name"].AsString, info.Dxt5 ? 12 : 10, w, h, blocks) : null;
+        return Crunch.Unpack(crn, Pick) is { } got ? new TextureLevel(t["m_Name"].AsString, got.Info.Dxt5 ? 12 : 10, w, h, got.Blocks) : null;
     }
 
     /// <summary>
