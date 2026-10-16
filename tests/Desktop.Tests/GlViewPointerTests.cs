@@ -197,7 +197,8 @@ public class GlViewPointerTests
     }
 
     // A move queues the look, and a press before it runs drops it (no hover while the button is down): the release
-    // looks again, so the object the click ended on does not wait for the next move.
+    // looks again, so the object the click ended on does not wait for the next move. (An Alt click, on the ground only:
+    // nothing gets selected, so no handle comes under the pointer.)
     [AvaloniaFact]
     public void TheObjectUnderThePointerIsLookedForAgainWhenAClickEnds()
     {
@@ -210,12 +211,13 @@ public class GlViewPointerTests
         Point on = b.At(5, 31.9f, -5);
         b.Surface.RaiseEvent(new PointerEventArgs(InputElement.PointerMovedEvent, b.Surface, mouse, b.W, on, 0, new PointerPointProperties(), KeyModifiers.None));
         b.Surface.RaiseEvent(new PointerPressedEventArgs(b.Surface, mouse, b.W, on, 0,
-            new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed), KeyModifiers.None, 1));
+            new PointerPointProperties(RawInputModifiers.LeftMouseButton | RawInputModifiers.Alt, PointerUpdateKind.LeftButtonPressed), KeyModifiers.Alt, 1));
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
         Assert.Null(b.V.HoverObject);
         b.Surface.RaiseEvent(new PointerReleasedEventArgs(b.Surface, mouse, b.W, on, 0,
-            new PointerPointProperties(RawInputModifiers.None, PointerUpdateKind.LeftButtonReleased), KeyModifiers.None, MouseButton.Left));
+            new PointerPointProperties(RawInputModifiers.Alt, PointerUpdateKind.LeftButtonReleased), KeyModifiers.Alt, MouseButton.Left));
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Empty(b.V.Selected);
         Assert.Equal(0, b.V.HoverObject);
     }
 
