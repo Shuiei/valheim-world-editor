@@ -118,7 +118,10 @@ public sealed class AreaTool
         }
     }
 
-    /// <summary>The mouse button released: a box ends there, or is dropped if smaller than a metre.</summary>
+    /// <summary>
+    /// The mouse button released: a box ends there, or is dropped if less than a metre across either way (a line has
+    /// no area to work on).
+    /// </summary>
     public void Up()
     {
         if (!Dragging)
@@ -126,7 +129,7 @@ public sealed class AreaTool
             return;
         }
         Dragging = false;
-        if (Vector2.Distance(Points[0], Points[1]) < 1)
+        if (MathF.Abs(Points[1].X - Points[0].X) < 1 || MathF.Abs(Points[1].Y - Points[0].Y) < 1)
         {
             Clear();
         }

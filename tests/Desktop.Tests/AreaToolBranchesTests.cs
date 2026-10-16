@@ -55,6 +55,11 @@ public class AreaToolBranchesTests
         a.Up();
         Assert.Empty(a.Points);
         Assert.Null(a.Polygon());
+        // Long but less than a metre wide (a line): dropped too.
+        a.Down(new Vector2(10, 10), 1);
+        a.Moved(new Vector2(40, 10.5f));
+        a.Up();
+        Assert.Empty(a.Points);
         // A box has no polygon to close or shorten.
         a.Points.Add(new Vector2(1, 1));
         a.Points.Add(new Vector2(4, 4));

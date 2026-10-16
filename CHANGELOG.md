@@ -241,6 +241,9 @@ the plugin is unchanged in versions without that part.
 - **A selection whose outline crossed itself showed the wrong area (a figure eight about 0 m²), and Place scattered
   too few or too many objects in it.** The area came from the shoelace formula, where crossed parts cancel; it is now
   the area the selection picks (each part counted the even-odd way, as Inside does).
+- **A box selection dragged along one axis was kept though it had no area: actions then changed nothing, or edited a
+  line at half strength.** A box is now dropped when it is less than a metre across either way, not only when both
+  ends are within a metre.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
