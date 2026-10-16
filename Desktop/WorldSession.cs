@@ -487,6 +487,132 @@ public sealed class WorldSession : IDisposable
         return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message }) { Lifted = lift != null };
     }
 
+    /// <summary>
+    /// Offline: the number of a save the game made after the editor read the world (or last saved it), which a save
+    /// would throw away (<see cref="Save"/> refuses); null when there is none.
+    /// </summary>
+    public int? GameSaveSince()
+    {
+        int known = _lastNumber ?? World.SaveNumber;
+        return !IsLive && Directory.Exists(World.Directory) && WorldSave.CommittedSave(World.Directory) is int newest && newest > known ? newest : null;
+    }
+
+    /// <summary>
+    /// Offline, after the game saved the world since it was read (<see cref="GameSaveSince"/>): reads the game's save and
+    /// works out how the pending changes go onto it, and what the game changed too (<see cref="EditReplay.Clashes"/>).
+    /// Nothing changes yet; <see cref="Replay"/> does it. Null when the game made no newer save.
+    /// </summary>
+    public EditReplay? PrepareReplay() => GameSaveSince() == null
+        ? null
+        : EditReplay.Prepare(World, Edits, new EditReplay.Saved(_savedZones, _savedDeleted, _savedAdded), WorldSave.Load(World.Directory));
+
+    /// <summary>
+    /// Brings the pending changes onto the game's save (<see cref="PrepareReplay"/>): the world is that save from now
+    /// on, with every change pending on it, the clashes settled as <paramref name="keepMine"/> says per kind. Nothing
+    /// is written to disk: the next save writes it, from the game's save. The history comes along, fitted to the
+    /// game's save, its steps asked about before they are undone (the world changed under them); steps that touch what
+    /// the game's version was kept for, and the steps before them, are dropped. The area open must be read again
+    /// (Reloaded): its history was taken here.
+    /// </summary>
+    /// <param name="plan">What <see cref="PrepareReplay"/> worked out.</param>
+    /// <param name="keepMine">Per kind of clash: true keeps the editor's change, false the game's version.</param>
+    public Outcome Replay(EditReplay plan, Func<ReplayClash, bool> keepMine)
+    {
+        var kept = Area?.Export() ?? History;
+        var r = plan.Apply(keepMine, Edits, NextId);
+        if (r == null)
+        {
+            return new Outcome(false, Lang.T("replay.stale"), false);
+        }
+        World = plan.Newer;
+        UseModifiers(new TerrainModifiers(Uplift.PlacedNow(World, Edits)));
+        // The game's save is the base now; the files of the session's own save may be part of it, so they stay.
+        ForgetSaves();
+        Area = null;
+        var (history, steps, dropped) = Refit(kept, plan, r);
+        History = history;
+        Restored = history == null ? null : new HistoryFile.Restored(history, steps, true, DateTime.Now) { Replayed = true };
+        EarlierAllowed = false;
+        RestoredSaid = true;
+        var text = new System.Text.StringBuilder(Lang.T("replay.done", World.SaveNumber, r.Zones, r.Deleted, r.Added, r.Resets));
+        if (r.GameGround.Count > 0 || r.Dropped.Count > 0)
+        {
+            text.Append(' ').Append(Lang.T("replay.gameKept", r.GameGround.Count, plan.Clashes.Count(c => c.Kind != ReplayClash.Ground && !keepMine(c.Kind))));
+        }
+        if (r.Unread > 0)
+        {
+            text.Append(' ').Append(Lang.T("replay.unread", r.Unread));
+        }
+        if (steps + dropped > 0)
+        {
+            text.Append(' ').Append(dropped > 0 ? Lang.T("replay.historyDropped", steps, dropped) : Lang.T("replay.history", steps));
+        }
+        return new Outcome(true, text.ToString(), true);
+    }
+
+    /// <summary>
+    /// The history fitted to the game's save: objects by their ids there (or kept as gone objects an undo or redo brings
+    /// back), every step from before the game's save (asked about before it is undone). A step touching what the game's
+    /// version was kept for cannot be undone, nor the steps before it: dropped, and with them a redo step touching it
+    /// and those after it.
+    /// </summary>
+    /// <returns>The history (null: none left), how many steps it has, how many were dropped.</returns>
+    private (EditSession.Kept? History, int Steps, int Dropped) Refit(EditSession.Kept? k, EditReplay plan, EditReplay.Replayed r)
+    {
+        if (k == null)
+        {
+            return (null, 0, 0);
+        }
+        bool Touches(EditSession.Change c)
+        {
+            var f = k.FrameOf(c);
+            return k.Ids[c].Any(r.Dropped.Contains) || c.Zones.Any(z => r.GameGround.Contains((z.X + f.X0, z.Z + f.Z0)));
+        }
+        int undoFrom = k.Undo.FindLastIndex(Touches) + 1;
+        int redoFrom = k.Redo.FindLastIndex(Touches) + 1;
+        var undo = k.Undo.Skip(undoFrom).ToList();
+        var redo = k.Redo.Skip(redoFrom).ToList();
+        int dropped = undoFrom + redoFrom;
+        if (undo.Count + redo.Count == 0)
+        {
+            return (null, 0, dropped);
+        }
+        var gone = new List<NewObject>();
+        var goneIds = new Dictionary<int, int>();
+        int Fitted(int id)
+        {
+            if (plan.NewerId(id) is int y)
+            {
+                return y;
+            }
+            if (id < 0)
+            {
+                return id;
+            }
+            if (!goneIds.TryGetValue(id, out int g))
+            {
+                var o = plan.Gone(id, NextId());
+                gone.Add(o);
+                goneIds[id] = g = o.Id;
+            }
+            return g;
+        }
+        // Oldest first (the undo list, then the redo list from its last), so a removal finds the step it took out.
+        var map = new Dictionary<EditSession.Change, EditSession.Change>();
+        var ids = new Dictionary<EditSession.Change, int[]>();
+        var frames = new Dictionary<EditSession.Change, EditSession.Frame>();
+        foreach (var c in undo.Concat(Enumerable.Reverse(redo)))
+        {
+            var f = c with { Earlier = true, RevertOf = c.RevertOf != null && map.TryGetValue(c.RevertOf, out var was) ? was : null };
+            map[c] = f;
+            ids[f] = [.. k.Ids[c].Select(Fitted)];
+            frames[f] = k.FrameOf(c);
+        }
+        Edits.KeepGone(gone);
+        var fitted = new EditSession.Kept([.. undo.Select(c => map[c])], [.. redo.Select(c => map[c])], k.Ox, k.Oz, k.W, k.X0, k.Z0, ids, frames);
+        return (fitted, undo.Count + redo.Count, dropped);
+    }
+
     /// <summary>Leaving an offline world it saved: the save it was opened from goes (only the latest stays).</summary>
     private void PruneSaves()
     {

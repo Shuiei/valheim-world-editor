@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.0 — unreleased
+
+### Added
+- **Your changes are kept when the game saved the world since you opened it.** Save was refused then, and the only
+  way out was to leave the world and lose every unsaved change. The editor now offers to bring them over: it reads
+  the game's save and makes each pending change again on it (changed ground, zone resets, No limit ground, deleted,
+  added and moved objects with their data). Where the game changed the same zone or object, it asks once per kind
+  whose version stays. The world is then the game's save with your changes pending and the history kept, and nothing
+  is written until you save. See [Saving](docs/editor-basics.md#saving).
+
 ## v1.45.110 — unreleased
 
 ### Fixed

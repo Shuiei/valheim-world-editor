@@ -502,7 +502,7 @@ public static class WorldWriter
     /// block every save.
     /// </summary>
     public static string? Newer(string dir, int known) => WorldSave.CommittedSave(dir) is int newest && newest > known
-        ? $"Valheim saved this world (save #{newest}) after the editor read it: saving now would throw away what was done in the game since. Nothing was saved. Leave the world and open it again to edit the game's save."
+        ? $"Valheim saved this world (save #{newest}) after the editor read it: saving now would throw away what was done in the game since. Nothing was saved."
         : null;
 
     /// <summary>The highest save number in a world folder (-1: none), as <see cref="WorldSave.SaveNumbers"/> reads them.</summary>

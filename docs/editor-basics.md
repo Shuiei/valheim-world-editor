@@ -193,8 +193,32 @@ what could not be saved, with the reason:
   ground object of the world to make new ones, so dig once anywhere in game first.
 
 **The game saved since?** If the game saved the world after the editor read it (you played between two saves),
-the editor saves nothing and says so, because saving would throw away what was done in the game. Leave the world
-and open it again, so you edit the game's save.
+the editor saves nothing, because saving would throw away what was done in the game. Instead it offers to **bring
+your changes over** onto the game's save:
+
+1. It reads the game's save and makes each of your unsaved changes again on it: the changed zones' ground (heights,
+   paint, smoothing, zone resets and No limit ground), the objects you deleted, added and moved, with their data and
+   links. Objects are found again by kind and place, since their ids change with every save.
+2. Where the game changed the same thing, it asks once per kind, **Keep mine** or **Keep the game's**, listing the
+   first few (name and place, or zone):
+   - **zones whose ground you both changed**: keeping yours puts your changed points and paint over the game's,
+     and the game's ground stays everywhere else in those zones;
+   - **objects the game changed** (a chest's contents, a sign, a growing plant) that you deleted, moved or edited:
+     keeping yours deletes, moves or edits them (a moved one takes the game's data along, an edited one keeps
+     yours);
+   - **objects the game removed** that you moved or edited (taken or destroyed by players, or moved away, like a
+     creature or a ship): keeping yours brings them back where you put them, as you had them. One the game only
+     moved is then there twice.
+
+   If the save the editor read is gone (the game keeps only its last two saves), the editor cannot tell whether
+   the game changed an object, and the question says how many of them may be unchanged.
+3. The world is then the game's save with your changes pending on it, and the area is read again. **Nothing is
+   written yet**: look the changes over, then save as usual. The next save is made from the game's save.
+
+The history comes along: its steps find their objects in the game's save, and you are asked once before undoing
+one (the game changed the world under it). A step that touches something you gave to the game's version cannot be
+undone any more, nor can the steps before it: those are dropped, and the result says how many. **Not now** leaves
+everything as it was; saving again offers the same.
 
 After [zone resets](area.md#reset-zones), or when [No limit](terrain.md#no-limit) ground is turned into ground discs,
 the world is read again from what was written, because the ground under the area is no longer the same. That

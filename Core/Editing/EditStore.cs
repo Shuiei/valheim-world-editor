@@ -101,6 +101,12 @@ public sealed class EditStore
         }
     }
 
+    /// <summary>
+    /// A zone's terrain data as an edit (marked as in the world), as the store takes it; null for a damaged zone (not
+    /// 65 × 65), which the store skips.
+    /// </summary>
+    public static ZoneEdit? Of(TerrainZone z) => z.ModifiedHeight.Length == Cells && z.ModifiedPaint.Length == Cells ? FromTerrain(z) : null;
+
     /// <summary>A zone's terrain data as an edit (marked as in the world).</summary>
     private static ZoneEdit FromTerrain(TerrainZone z)
     {
@@ -235,6 +241,15 @@ public sealed class EditStore
     /// </summary>
     private readonly Dictionary<(int, int), ZoneEdit> _baseline = [];
 
+    /// <summary>A copy of a zone as last saved or applied (its baseline), or null when it had no terrain data then.</summary>
+    public ZoneEdit? BaselineOf(int zx, int zz)
+    {
+        lock (_lock)
+        {
+            return _baseline.TryGetValue((zx, zz), out ZoneEdit? e) ? e.Clone() : null;
+        }
+    }
+
     /// <summary>A copy of a zone's working edit, or null when the zone has no terrain data.</summary>
     public ZoneEdit? Get(int zx, int zz)
     {
@@ -348,6 +363,18 @@ public sealed class EditStore
         lock (_lock)
         {
             return answer(_deleted, _added);
+        }
+    }
+
+    /// <summary>A copy of the objects added and deleted again, or kept for a history (<see cref="KeepGone"/>): what undo can bring back.</summary>
+    public List<NewObject> Gone
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return [.. _addedTrash.Values];
+            }
         }
     }
 
