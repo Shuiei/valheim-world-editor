@@ -123,12 +123,16 @@ public class ScriptHostChildTests
             Console.WriteLine("noise");
             Print("hello");
             Ground.Raise(10, 10, 2);
-            Objects.Place("woodwall", 0, 0, snap: true);
+            Objects.Place("woodwall", 22.3f, 20, y: 31, snap: true);
             """);
-        var ch = await ScriptHost.RunInChild(image, pdb, Snap(), TestContext.Current.CancellationToken);
+        // A wall standing for the new one to snap to: the script's process has no piece data, the editor snaps.
+        var area = TestScenes.Flat(1, new WorldScene.Thing(7, StableHash.Of("woodwall"), new Vector3(20, 31, 20), Vector3.Zero, 0, true));
+        var ch = await ScriptHost.RunInChild(image, pdb, ScriptHost.Take(area, Terrain.PrefabCatalog.NameOf), TestContext.Current.CancellationToken);
         Assert.Equal("hello" + Environment.NewLine, ch.Output.ToString());
         Assert.Equal(32, Assert.Single(ch.Heights.Values), 3);
-        Assert.Equal("woodwall", Assert.Single(ch.Add).Name);
+        var wall = Assert.Single(ch.Add);
+        Assert.Equal("woodwall", wall.Name);
+        Assert.Equal(22, wall.Position.X, 3);
     }
 
     // A script's own error comes back with its line and kind, as when it ran in the editor.
