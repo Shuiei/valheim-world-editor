@@ -74,19 +74,7 @@ public sealed class ValheimReader(Stream stream) : IDisposable
     }
 
     /// <summary>ZPackage.ReadNumItems: 1 byte, or 2 bytes when the high bit is set (world version &gt;= 33).</summary>
-    public int ReadNumItems(int worldVersion)
-    {
-        if (worldVersion < WorldVersion.NumItems)
-        {
-            return _reader.ReadByte();
-        }
-        int num = _reader.ReadByte();
-        if ((num & 0x80) != 0)
-        {
-            num = ((num & 0x7F) << 8) | _reader.ReadByte();
-        }
-        return num;
-    }
+    public int ReadNumItems(int worldVersion) => worldVersion < WorldVersion.NumItems ? _reader.ReadByte() : _reader.ReadNumItems();
 
     /// <inheritdoc/>
     public void Dispose() => _reader.Dispose();
@@ -153,6 +141,16 @@ public static class CheckedReads
             all.Write(part);
         }
         return all.ToArray();
+    }
+
+    /// <summary>
+    /// A count in the game's compact form (ZPackage.ReadNumItems): one byte below 128, else two bytes, the first with its
+    /// high bit set.
+    /// </summary>
+    public static int ReadNumItems(this BinaryReader r)
+    {
+        int n = r.ReadByte();
+        return (n & 0x80) != 0 ? ((n & 0x7F) << 8) | r.ReadByte() : n;
     }
 
     /// <summary>
