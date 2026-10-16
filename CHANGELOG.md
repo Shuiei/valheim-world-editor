@@ -105,6 +105,9 @@ the plugin is unchanged in versions without that part.
 - **A prefab name found in two game bundles is described by the same object in every catalogue.** The prefabs
   catalogue kept the first object of a name, but the pieces, placing, support and terrain-modifier catalogues kept the
   last, so they could describe different objects. All now keep the first.
+- **A broken Vulkan shader program is said to be unreadable instead of failing with an unrelated error.** The blob's
+  entry offsets and the SPIR-V instructions' lengths were trusted, so bad data threw out-of-range errors that the
+  terrain drawing did not expect. They are now checked, and refused as unreadable data.
 
 ### Changed
 
