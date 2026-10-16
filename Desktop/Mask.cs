@@ -8,15 +8,6 @@ namespace TerrainEditor.Desktop;
 public sealed class Mask
 {
     /// <summary>
-    /// The biomes the Mask panel offers, in its order: the game's biome flag and its display name.
-    /// </summary>
-    public static readonly (int Biome, string Name)[] BiomeNames =
-    [
-        (1, "Meadows"), (8, "Black Forest"), (2, "Swamp"), (4, "Mountain"), (16, "Plains"),
-        (512, "Mistlands"), (32, "Ashlands"), (64, "Deep North"), (256, "Ocean"),
-    ];
-
-    /// <summary>
     /// Which ground passes by its paint. Dirt, Cultivated and Paved need painted ground with that colour channel (red,
     /// green, blue) at least half.
     /// </summary>

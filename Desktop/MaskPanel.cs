@@ -80,7 +80,7 @@ public sealed class MaskPanel
     {
         _mask = mask;
         var biomes = new WrapPanel { ItemSpacing = 4, LineSpacing = 4 };
-        foreach (var (b, name) in Mask.BiomeNames)
+        foreach (var (b, name) in ZoneFilter.BiomeChoices)
         {
             var t = new ToggleButton { Content = name, FontSize = 11, Padding = new Thickness(6, 2) }.Tip("mask.biome");
             t.IsCheckedChanged += (_, _) =>

@@ -642,24 +642,13 @@ public sealed class MapPage : IDisposable
     }
 
     /// <summary>
-    /// A biome's name as the game shows it.
-    /// </summary>
-    private static string BiomeName(ValheimGen.Heightmap.Biome b) => b switch
-    {
-        ValheimGen.Heightmap.Biome.BlackForest => "Black Forest",
-        ValheimGen.Heightmap.Biome.AshLands => "Ashlands",
-        ValheimGen.Heightmap.Biome.DeepNorth => "Deep North",
-        _ => b.ToString(),
-    };
-
-    /// <summary>
     /// A zone picked: its name, the area the 3D editor would open around it, and its edits.
     /// </summary>
     public void Pick(int zx, int zz)
     {
         Spot = (zx, zz);
         Target = null;
-        string biome = _session != null ? BiomeName(_session.Terrain.BiomeAt(zx * 64f, zz * 64f)) : "";
+        string biome = _session != null ? NewWorldPage.Name(_session.Terrain.BiomeAt(zx * 64f, zz * 64f)) : "";
         PickTitle.Text = $"Zone {zx}, {zz} · {biome}";
         _pickBox.IsVisible = true;
         ShowChosen();
@@ -687,7 +676,7 @@ public sealed class MapPage : IDisposable
             return;
         }
         var (zx, zz) = TerrainEditor.Save.ChunkMath.SectorOf(x, z);
-        Cursor.Text = $"x {x:0}, z {z:0} · zone {zx}, {zz} · {BiomeName(_session.Terrain.BiomeAt(x, z))}";
+        Cursor.Text = $"x {x:0}, z {z:0} · zone {zx}, {zz} · {NewWorldPage.Name(_session.Terrain.BiomeAt(x, z))}";
     }
 
     // ---- Search: every object of the world by kind, items in containers, or texts.
