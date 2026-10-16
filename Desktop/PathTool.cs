@@ -218,6 +218,47 @@ public sealed class PathTool
     /// show in the floor), less the depth.</param>
     public sealed record CavePlan(List<(Vector2 P, int Seg)> Curve, float[] Along, float[] Depth, float[] Floor);
 
+    /// <summary>
+    /// A test of whether a point (grid metres) is within <paramref name="reach"/> of a point of the cave's line
+    /// deeper than half a metre. The deep points are put once in square cells a metre wider than the reach, so a test
+    /// looks only at the points of its own cell and the eight around it.
+    /// </summary>
+    /// <param name="cave">The cave worked out before the ground changes.</param>
+    /// <param name="reach">How far from the line, metres.</param>
+    internal static Func<Vector2, bool> NearDeep(CavePlan cave, float reach)
+    {
+        float cell = MathF.Max(reach, 0) + 1;
+        var cells = new Dictionary<(int, int), List<Vector2>>();
+        for (int k = 0; k < cave.Curve.Count; k++)
+        {
+            if (cave.Depth[k] > 0.5f)
+            {
+                Vector2 p = cave.Curve[k].P;
+                var key = ((int)MathF.Floor(p.X / cell), (int)MathF.Floor(p.Y / cell));
+                if (!cells.TryGetValue(key, out var list))
+                {
+                    cells[key] = list = [];
+                }
+                list.Add(p);
+            }
+        }
+        return at =>
+        {
+            int cx = (int)MathF.Floor(at.X / cell), cz = (int)MathF.Floor(at.Y / cell);
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    if (cells.TryGetValue((cx + dx, cz + dz), out var list) && list.Exists(p => Vector2.Distance(p, at) <= reach))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+    }
+
     /// <summary>Works out the cave along the current line from the ground as it is now.</summary>
     public CavePlan PlanCave(Ground g)
     {
@@ -303,6 +344,12 @@ public sealed class PathTool
             Action.PaintClear => Brush.PaintOf(BrushTool.PaintClear),
             _ => null,
         };
+        // The farthest a changed point can be from the line: the widest a natural path gets, its soft edge (or the
+        // half metre a hard edge shares), and the most its ragged edge reaches out; a metre more against rounding.
+        float edge = soft > 0 ? soft : 0.5f;
+        float cutoff = (Natural ? MathF.Abs(half) * (1 + 0.45f * Noise.FbmBound) + edge + MathF.Max(soft, 2) * 0.6f * Noise.FbmBound : half + edge) + 1;
+        var near = NearestOnLine(curve, x0, z0, x1, z1, cutoff);
+        int nw = x1 - x0 + 1;
         for (int gz = z0; gz <= z1; gz++)
         {
             for (int gx = x0; gx <= x1; gx++)
@@ -311,27 +358,20 @@ public sealed class PathTool
                 {
                     continue;
                 }
-                // The nearest point of the line: distance, and how far along it.
-                float best = float.MaxValue, along = 0, caveFloor = 0;
-                for (int i = 1; i < curve.Count; i++)
+                // The nearest point of the line: distance, and how far along it. None within the cutoff: too far
+                // to change.
+                int ni = (gz - z0) * nw + (gx - x0);
+                float best = near.Dist[ni];
+                if (best == float.MaxValue)
                 {
-                    Vector2 a = curve[i - 1].P, d = curve[i].P - a;
-                    float l2 = d.LengthSquared();
-                    if (l2 == 0)
-                    {
-                        l2 = 1e-9f;
-                    }
-                    float t = Math.Clamp(((gx - a.X) * d.X + (gz - a.Y) * d.Y) / l2, 0, 1);
-                    float dist = Vector2.Distance(new Vector2(gx, gz), a + d * t);
-                    if (dist < best)
-                    {
-                        best = dist;
-                        along = cum[i - 1] + t * MathF.Sqrt(l2);
-                        if (cave != null)
-                        {
-                            caveFloor = cave.Floor[i - 1] + (cave.Floor[i] - cave.Floor[i - 1]) * t;
-                        }
-                    }
+                    continue;
+                }
+                int seg = near.Seg[ni];
+                float st = near.T[ni];
+                float along = cum[seg - 1] + st * MathF.Sqrt(Segment(curve, seg).L2), caveFloor = 0;
+                if (cave != null)
+                {
+                    caveFloor = cave.Floor[seg - 1] + (cave.Floor[seg] - cave.Floor[seg - 1]) * st;
                 }
                 float dEff = best, halfEff = half, bump = 0;
                 if (Natural)
@@ -436,6 +476,74 @@ public sealed class PathTool
             }
         }
         return (touched, (x0 - 1, z0 - 1, x1 + 1, z1 + 1), clamped);
+    }
+
+    /// <summary>
+    /// The nearest points of the line to the grid points of a rectangle, row by row (x fastest).
+    /// </summary>
+    /// <param name="Dist">Distance to the line; <see cref="float.MaxValue"/> where no segment is within reach.</param>
+    /// <param name="Seg">The nearest segment, by the index of its end point in the line.</param>
+    /// <param name="T">How far along that segment, 0 to 1.</param>
+    internal sealed record Nearest(float[] Dist, int[] Seg, float[] T);
+
+    /// <summary>
+    /// A segment of the dense line: its start, its run to the end, and its length squared (never 0, so a point
+    /// segment still projects).
+    /// </summary>
+    /// <param name="curve">The dense line.</param>
+    /// <param name="i">The index of the segment's end point (1 or more).</param>
+    private static (Vector2 A, Vector2 D, float L2) Segment(List<(Vector2 P, int Seg)> curve, int i)
+    {
+        Vector2 a = curve[i - 1].P, d = curve[i].P - a;
+        float l2 = d.LengthSquared();
+        if (l2 == 0)
+        {
+            l2 = 1e-9f;
+        }
+        return (a, d, l2);
+    }
+
+    /// <summary>
+    /// For each grid point of the rectangle <paramref name="x0"/>..<paramref name="x1"/> by
+    /// <paramref name="z0"/>..<paramref name="z1"/>, the nearest segment of the line within
+    /// <paramref name="reach"/>. Each segment visits only the points of its box widened by the reach, in the line's
+    /// order, so a point gets what testing every segment would give (ties to the earlier one) without the cost of
+    /// every point times every segment.
+    /// </summary>
+    /// <param name="curve">The dense line (<see cref="Curve"/>).</param>
+    /// <param name="x0">First column.</param>
+    /// <param name="z0">First row.</param>
+    /// <param name="x1">Last column.</param>
+    /// <param name="z1">Last row.</param>
+    /// <param name="reach">How far from a segment its points are looked at, metres.</param>
+    internal static Nearest NearestOnLine(List<(Vector2 P, int Seg)> curve, int x0, int z0, int x1, int z1, float reach)
+    {
+        int w = Math.Max(0, x1 - x0 + 1), h = Math.Max(0, z1 - z0 + 1);
+        var near = new Nearest(new float[w * h], new int[w * h], new float[w * h]);
+        Array.Fill(near.Dist, float.MaxValue);
+        for (int i = 1; i < curve.Count; i++)
+        {
+            var (a, d, l2) = Segment(curve, i);
+            Vector2 b = curve[i].P;
+            int sx0 = Math.Max(x0, (int)MathF.Floor(MathF.Min(a.X, b.X) - reach)), sx1 = Math.Min(x1, (int)MathF.Ceiling(MathF.Max(a.X, b.X) + reach));
+            int sz0 = Math.Max(z0, (int)MathF.Floor(MathF.Min(a.Y, b.Y) - reach)), sz1 = Math.Min(z1, (int)MathF.Ceiling(MathF.Max(a.Y, b.Y) + reach));
+            for (int gz = sz0; gz <= sz1; gz++)
+            {
+                for (int gx = sx0; gx <= sx1; gx++)
+                {
+                    float t = Math.Clamp(((gx - a.X) * d.X + (gz - a.Y) * d.Y) / l2, 0, 1);
+                    float dist = Vector2.Distance(new Vector2(gx, gz), a + d * t);
+                    int k = (gz - z0) * w + (gx - x0);
+                    if (dist <= reach && dist < near.Dist[k])
+                    {
+                        near.Dist[k] = dist;
+                        near.Seg[k] = i;
+                        near.T[k] = t;
+                    }
+                }
+            }
+        }
+        return near;
     }
 
     // ---- The mouse: click points along the route, or hold and drag; drag a point to move it, drag the

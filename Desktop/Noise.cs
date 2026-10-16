@@ -67,6 +67,12 @@ public sealed class Noise
     }
 
     /// <summary>
+    /// What <see cref="Fbm"/> never goes beyond either way: each octave's gradient term is at most |x| + |y| = 2,
+    /// blended (never more than its corners) and scaled by 0.7; the octaves' weighted mean is scaled by 1.6.
+    /// </summary>
+    public const float FbmBound = 2 * 0.7f * 1.6f;
+
+    /// <summary>
     /// About -1..1, four octaves: each one twice the frequency and half the amplitude of the last, offset so they do
     /// not line up.
     /// </summary>

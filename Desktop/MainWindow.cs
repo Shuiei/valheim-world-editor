@@ -1404,25 +1404,16 @@ public sealed partial class MainWindow : Window
             .Where(r => scene.World?.CanCreate(r.Hash) != false)
             .Select(r => (new Editing.NewObject(0, r.Hash, r.Position, r.Rotation, r.Scale), false)).ToList();
         // Natural objects in the trench (deeper than half a metre there) would float or stand in the way.
-        float reach = path.Width / 2 + path.Soft;
+        var inTrench = PathTool.NearDeep(cave, path.Width / 2 + path.Soft);
         var remove = new List<int>();
         lock (scene.Things)
         {
             for (int i = 0; i < scene.Things.Count; i++)
             {
                 var t = scene.Things[i];
-                if (t.Gone || !EditSession.Natural(t))
+                if (!t.Gone && EditSession.Natural(t) && inTrench(new System.Numerics.Vector2(t.Position.X - ox, t.Position.Z - oz)))
                 {
-                    continue;
-                }
-                var at = new System.Numerics.Vector2(t.Position.X - ox, t.Position.Z - oz);
-                for (int k = 0; k < cave.Curve.Count; k++)
-                {
-                    if (cave.Depth[k] > 0.5f && System.Numerics.Vector2.Distance(cave.Curve[k].P, at) <= reach)
-                    {
-                        remove.Add(i);
-                        break;
-                    }
+                    remove.Add(i);
                 }
             }
         }
