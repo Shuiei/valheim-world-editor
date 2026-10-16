@@ -128,8 +128,8 @@ public static class DungeonEntrances
     public static Vector3 Landing(Pose door) => door.Position + door.Forward - Vector3.UnitY;
 
     /// <summary>
-    /// The turn (degrees about the vertical) that makes the location's door into its interior face from
-    /// <paramref name="at"/> toward <paramref name="toward"/>; 0 when it has no such door or the two are one place.
+    /// The turn (degrees about the vertical, from 0 up to 360) that makes the location's door into its interior face
+    /// from <paramref name="at"/> toward <paramref name="toward"/>; 0 when it has no such door or the two are one place.
     /// </summary>
     public static float YawToFace(LocationPrefabs.Prefab p, Vector3 at, Vector3 toward)
     {
@@ -143,16 +143,18 @@ public static class DungeonEntrances
         {
             return 0f;
         }
-        float yaw = (MathF.Atan2(dx, dz) - MathF.Atan2(f.X, f.Z)) * 180f / MathF.PI;
-        return ((yaw % 360f) + 360f) % 360f;
+        return Wrapped((MathF.Atan2(dx, dz) - MathF.Atan2(f.X, f.Z)) * 180f / MathF.PI);
     }
 
-    /// <summary>The turn about the vertical a pose faces (degrees, 0 along +z).</summary>
+    /// <summary>The turn about the vertical a pose faces (degrees from 0 up to 360, 0 along +z), as YawToFace's.</summary>
     public static float YawOf(Pose pose)
     {
         var f = pose.Forward;
-        return MathF.Atan2(f.X, f.Z) * 180f / MathF.PI;
+        return Wrapped(MathF.Atan2(f.X, f.Z) * 180f / MathF.PI);
     }
+
+    /// <summary>An angle in degrees brought into 0 up to 360.</summary>
+    private static float Wrapped(float degrees) => ((degrees % 360f) + 360f) % 360f;
 
     /// <summary>What a location is called as an entrance: a burial chamber, a Frost Cave...</summary>
     public static string Describe(LocationPrefabs.Prefab p) => Array.Find(Locations, l => l.Name == p.Name).Description ?? p.Name;
