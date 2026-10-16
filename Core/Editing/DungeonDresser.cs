@@ -894,7 +894,7 @@ internal sealed partial class DungeonDresser
     /// <summary>About n of the biome's pickable loot lying about, more with the settings' Loot.</summary>
     private void Pickables(Frame f, float n)
     {
-        for (int i = 0; i < Count(n * (0.5f + 0.5f * _s.Loot) * Depth(f)); i++)
+        for (int i = 0, times = Count(n * (0.5f + 0.5f * _s.Loot) * Depth(f)); i < times; i++)
         {
             if (Spot(f, 0.5f) is var (u, v))
             {
@@ -1618,7 +1618,7 @@ internal sealed partial class DungeonDresser
                 Chains(f, 2);
                 break;
             default:
-                for (int i = 0; i < Count(f.Area / 14); i++)
+                for (int i = 0, times = Count(f.Area / 14); i < times; i++)
                 {
                     if (Spot(f, 1.2f, 0.6f) is var (u, v))
                     {
@@ -1851,7 +1851,7 @@ internal sealed partial class DungeonDresser
             default:
                 Plinth(f, 0, f.HalfD - 2, 2, 2);
                 _o.Add(One("StatueThor", "StatueFreya", "StatueEvil"), f.W(0, f.HalfD - 2, f.F + 1 + Lift * 2), f.Yaw(180));
-                for (int i = 0; i < Count(2 + _s.Loot * 2); i++)
+                for (int i = 0, times = Count(2 + _s.Loot * 2); i < times; i++)
                 {
                     PutNear(f, "treasure_stack", R(-1.5f, 1.5f), f.HalfD - 4.2f, R(0, 360), 0.3f, 0.8f);
                 }
@@ -1896,7 +1896,7 @@ internal sealed partial class DungeonDresser
         }
         Brazier(f, -f.HalfA + 1, -f.HalfD + 1);
         Brazier(f, f.HalfA - 1, -f.HalfD + 1);
-        for (int i = 0; i < Count(1 + _s.Loot); i++)
+        for (int i = 0, times = Count(1 + _s.Loot); i < times; i++)
         {
             PutNear(f, "treasure_stack", R(-1, 1), -1.2f, R(0, 360), 0.3f, 0.8f);
         }
@@ -2489,15 +2489,15 @@ internal sealed partial class DungeonDresser
     private void Treasury(Frame f)
     {
         float loot = Math.Max(0.5f, _s.Loot) * Depth(f);
-        for (int i = 0; i < Count(1 + loot); i++)
+        for (int i = 0, times = Count(1 + loot); i < times; i++)
         {
             PutNear(f, "treasure_pile", R(-1.5f, 1.5f), R(-0.5f, 1.5f), R(0, 360), 1.2f, 1.5f);
         }
-        for (int i = 0; i < Count(3 * loot); i++)
+        for (int i = 0, times = Count(3 * loot); i < times; i++)
         {
             PutNear(f, "treasure_stack", R(-2, 2), R(-1, 2), R(0, 360), 0.3f, 2f);
         }
-        for (int i = 0; i < Count(2 * loot); i++)
+        for (int i = 0, times = Count(2 * loot); i < times; i++)
         {
             PutNear(f, _b.Bars, R(-2.5f, 2.5f), f.HalfD - 1.2f, R(-10, 10), 0.5f, 1f);
         }
@@ -2640,7 +2640,7 @@ internal sealed partial class DungeonDresser
         }
         if (_s.Monsters > 0)
         {
-            for (int i = 0; i < Count(2 * _s.Monsters); i++)
+            for (int i = 0, times = Count(2 * _s.Monsters); i < times; i++)
             {
                 if (Spot(f, 0.7f, 2f) is var (u, v))
                 {

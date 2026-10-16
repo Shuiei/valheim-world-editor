@@ -185,6 +185,8 @@ the plugin is unchanged in versions without that part.
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
   a native context.
+- Dungeon dressing draws each random count once: eight loops drew it again at every turn, which used extra draws (the
+  same seed now makes a slightly different dungeon).
 
 ## v1.45.108 — unreleased
 
