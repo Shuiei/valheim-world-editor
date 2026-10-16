@@ -193,4 +193,37 @@ public class HistoryFileTests
             Done(dir);
         }
     }
+
+    // Apply live writes the history in the background (it can come at every edit): what is written is taken when it
+    // is asked for, a read waits for it, the last write asked for is the one kept, and a removal is not undone by a
+    // write still queued.
+    [AvaloniaFact]
+    public void AWriteLaterIsTakenWhenAskedAndComesBeforeAReadOrARemoval()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            var scene = WorldScene.Load(dir, 0, 0, 1);
+            var s = scene.Session!;
+            var owner = scene.Owner!;
+            s.Shape(32, 32, Formula.Compile("3", []), 4, 0, "Raise");
+            HistoryFile.WriteLater(owner, s.Export());
+            s.Shape(40, 40, Formula.Compile("-3", []), 4, 0, "Lower");
+            string[] Labels() => [.. HistoryFile.Read(owner)!.Kept.Undo.Select(c => c.Label.Split(' ')[0])];
+            Assert.Equal(["Raise"], Labels());
+            HistoryFile.WriteLater(owner, s.Export());
+            Assert.Equal(["Raise", "Lower"], Labels());
+            string path = HistoryFile.PathOf(HistoryFile.KeyOf(owner));
+            HistoryFile.WriteLater(owner, s.Export());
+            HistoryFile.Delete(owner);
+            Assert.False(File.Exists(path));
+            HistoryFile.Flush();
+            Assert.False(File.Exists(path));
+            owner.Dispose();
+        }
+        finally
+        {
+            Done(dir);
+        }
+    }
 }

@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.99 — unreleased
+
+### Changed
+- **Apply live no longer waits for the history file to be written.** After each Apply live (with Auto apply, after
+  every edit) the whole history was written to disk in the editor's window: every step's ground compressed again and
+  the file written, longer as the history grew. The steps are now taken at once and the file is written in the
+  background, one write after the other (a write a newer one replaced before it started is left out). Opening the
+  world again or closing the editor waits for the writes still to do.
+
 ## v1.45.98 — unreleased
 
 ### Changed

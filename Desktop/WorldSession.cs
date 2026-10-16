@@ -86,13 +86,22 @@ public sealed class WorldSession : IDisposable
     /// After a save or Apply live: the history as it is now (it matches what the world holds) goes to
     /// disk. A failure to write it is only logged: the save itself is done.
     /// </summary>
-    private void KeepHistory()
+    /// <param name="later">Apply live: taken now, written in the background (<see cref="HistoryFile.WriteLater"/>),
+    /// since it can come at every edit.</param>
+    private void KeepHistory(bool later = false)
     {
         try
         {
             if ((Area?.Export() ?? History) is { } kept)
             {
-                HistoryFile.Write(this, kept);
+                if (later)
+                {
+                    HistoryFile.WriteLater(this, kept);
+                }
+                else
+                {
+                    HistoryFile.Write(this, kept);
+                }
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -569,7 +578,7 @@ public sealed class WorldSession : IDisposable
                 catch (Exception ex) when (GameFailed(ex))
                 {
                     MarkHistoryApplied();
-                    KeepHistory();
+                    KeepHistory(later: true);
                     return new Outcome(true, $"Applied to the running game: {string.Join("; ", done)}; but the world could not be read again from the game ({ex.Message}): open it again to see the reset zones.", false) { Lifted = plan != null };
                 }
                 Edits.ResetFrom(World);
@@ -583,7 +592,7 @@ public sealed class WorldSession : IDisposable
             else if (done.Count > 0)
             {
                 MarkHistoryApplied();
-                KeepHistory();
+                KeepHistory(later: true);
             }
             return new Outcome(done.Count > 0, done.Count > 0 ? $"Applied to the running game: {string.Join("; ", done)}." : "Nothing to apply.", reloaded) { Lifted = plan != null };
         }
@@ -602,7 +611,7 @@ public sealed class WorldSession : IDisposable
                     UnsentResets = resets,
                 };
                 MarkHistoryApplied(partly.Sent);
-                KeepHistory();
+                KeepHistory(later: true);
                 return partly;
             }
             bool lifted = lift != null && (unsure || !Unlift(lift));
