@@ -231,15 +231,32 @@ public static class Regrow
                 return Corners[0];
             }
             float nx = (x - Cx) / 64f + 0.5f, ny = (z - Cz) / 64f + 0.5f;
-            Dictionary<int, float> weights = [];
-            void Add(int b, float cx, float cy)
+            // Each corner's weight added to its biome's, corners in the game's order (0,0), (1,0), (0,1), (1,1).
+            Span<int> biomes = stackalloc int[4];
+            Span<float> weights = stackalloc float[4];
+            int count = 0;
+            for (int c = 0; c < 4; c++)
             {
-                float dx = nx - cx, dy = ny - cy, d = MathF.Sqrt(dx * dx + dy * dy), k = 1.414f - d;
-                weights[b] = weights.GetValueOrDefault(b) + k * k * k;
+                float dx = nx - (c & 1), dy = ny - (c >> 1), d = MathF.Sqrt(dx * dx + dy * dy), k = 1.414f - d;
+                int at = biomes[..count].IndexOf(Corners[c]);
+                if (at < 0)
+                {
+                    at = count++;
+                    biomes[at] = Corners[c];
+                    weights[at] = 0f;
+                }
+                weights[at] += k * k * k;
             }
-            Add(Corners[0], 0f, 0f); Add(Corners[1], 1f, 0f); Add(Corners[2], 0f, 1f); Add(Corners[3], 1f, 1f);
             // Ties go to the lowest biome index, as the game walks its weights in index order.
-            return weights.OrderByDescending(kv => kv.Value).ThenBy(kv => BitOperations.Log2((uint)kv.Key)).First().Key;
+            int best = 0;
+            for (int i = 1; i < count; i++)
+            {
+                if (weights[i] > weights[best] || (weights[i] == weights[best] && BitOperations.Log2((uint)biomes[i]) < BitOperations.Log2((uint)biomes[best])))
+                {
+                    best = i;
+                }
+            }
+            return biomes[best];
         }
 
         /// <summary>Heightmap.GetVegetationMask: the alpha of the base paint mask at the vertex under the point.</summary>
