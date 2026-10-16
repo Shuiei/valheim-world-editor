@@ -1291,13 +1291,14 @@ public sealed partial class ClaudeTools
             return "Nothing to change: give items, text, stars, an orientation or a pose.";
         }
         string name = _w.NameOfPrefab(t.Prefab) ?? "object";
-        var (copy, problem) = Rewrite(id, set, inv, $"Claude: filled {name}");
+        var notes = new List<string>();
+        var (copy, problem) = Rewrite(id, set, inv, $"Claude: filled {name}", notes);
         if (copy is not int newId)
         {
             return problem!;
         }
         _w.AfterClaudeEdit($"Claude changed what {name} holds; Ctrl+Z puts it back.");
-        return $"Changed {name}; its id is now {newId}.";
+        return $"Changed {name}; its id is now {newId}." + string.Concat(notes.Select(n => " " + n + "."));
     });
 
     /// <summary>open_workshop: the blank plot, optionally with a library blueprint; refused while there are unsaved changes.</summary>

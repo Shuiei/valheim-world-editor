@@ -500,8 +500,13 @@ public sealed partial class ClaudeTools
     /// Replaces an object by a copy with these values set (null takes one away) and these contents (null: as they
     /// are), as one pending step: from its saved bytes in a world, from its values on the Workshop's plot.
     /// </summary>
+    /// <param name="id">The object's index into the scene's things.</param>
+    /// <param name="set">Values to set or remove.</param>
+    /// <param name="inv">The container's new contents, or null.</param>
+    /// <param name="label">The undo step's name.</param>
+    /// <param name="notes">Told of stacks cut to the item's maximum, when given.</param>
     /// <returns>The copy's id, or why nothing changed.</returns>
-    internal (int? Id, string? Problem) Rewrite(int id, List<TerrainEditor.App.FieldChange> set, List<TerrainEditor.App.ItemUpload>? inv, string label)
+    internal (int? Id, string? Problem) Rewrite(int id, List<TerrainEditor.App.FieldChange> set, List<TerrainEditor.App.ItemUpload>? inv, string label, ICollection<string>? notes = null)
     {
         var s = _w.Session!;
         int reads = s.Scene.Reads;
@@ -513,7 +518,7 @@ public sealed partial class ClaudeTools
             if (!_w.InWorkshop && s.Scene.World is { } world && TerrainEditor.App.ObjectData.Bytes(world, s.Edits, t.Id) is { } bytes)
             {
                 // A world's object: its own data, changed (as the inspector does).
-                var z = TerrainEditor.App.ObjectData.Edited(bytes, set, inv);
+                var z = TerrainEditor.App.ObjectData.Edited(bytes, set, inv, notes);
                 replacement = new(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize());
             }
             else
@@ -534,7 +539,7 @@ public sealed partial class ClaudeTools
                 }
                 if (inv != null)
                 {
-                    Put("bytes", TerrainEditor.App.ObjectData.ItemsKey, Convert.ToBase64String(TerrainEditor.App.ObjectData.BuildInventory(inv).Write()));
+                    Put("bytes", TerrainEditor.App.ObjectData.ItemsKey, Convert.ToBase64String(TerrainEditor.App.ObjectData.BuildInventory(inv, notes).Write()));
                     Put("ints", TerrainEditor.App.ObjectData.AddedDefaultItemsKey, "1");
                 }
                 replacement = new(0, t.Prefab, t.Position, t.Rotation, t.Scale, Data: fields);
