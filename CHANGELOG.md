@@ -289,6 +289,8 @@ the plugin is unchanged in versions without that part.
 - **The Area tool never said when its ground actions (Erode among them) reached the game's ±8 m limit, as strokes,
   Shape and paths do.** AreaTool.Apply and Erosion.Area dropped what SetHeight reported; they now return it, and the
   Area panel and Claude's shape_ground say so.
+- **The game's look banner said the editor works without the game's files, with plain colours, though no world, server
+  or Workshop opens without them.** Both hints (Valheim not found, its files not read) now say worlds need them.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

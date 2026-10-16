@@ -203,13 +203,13 @@ public sealed class GameLookBanner
                 {
                     PathBox.Text = s.Valheim ?? "";
                 }
-                Hint.Text = "The editor only reads the game's files (nothing is copied or changed). Without them it works too, with plain colours and boxes instead of the game's textures and models. The folder can be changed later in Settings.";
+                Hint.Text = "The editor only reads the game's files (nothing is copied or changed). Worlds, servers and the Workshop need them to open: the ground and the objects come from the game's data. The folder can be changed later in Settings.";
                 break;
             case "failed":
                 Title.Text = "The game's look could not be read";
                 Message.Text = s.Message ?? "";
                 Retry.IsVisible = ShowLog.IsVisible = true;
-                Hint.Text = "The editor works without it, with plain colours and no models. To report the problem, attach the editor's log (Open log) to an issue on GitHub.";
+                Hint.Text = "Worlds, servers and the Workshop open only once the game's data is read: try again, or check the folder in Settings. To report the problem, attach the editor's log (Open log) to an issue on GitHub.";
                 break;
             default:
                 Title.Text = "The game's look is ready.";
