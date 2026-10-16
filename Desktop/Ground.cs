@@ -52,9 +52,10 @@ public sealed class Ground
     /// <summary>
     /// The values as loaded (or last saved), and each zone's own saved values: zones share their edge
     /// points, and saved zones do not always agree on them. A point unchanged since loading is given
-    /// back with the zone's own value, so an untouched zone stays identical to what is saved.
+    /// back with the zone's own value, so an untouched zone stays identical to what is saved. Null until edits are
+    /// taken (TakeEdits): the ground as made, every value 0.
     /// </summary>
-    private State _loaded;
+    private State? _loaded;
     /// <summary>Each zone's own saved edit (block-relative zone; null when it had none), see <c>_loaded</c>.</summary>
     private readonly Dictionary<(int, int), ZoneEdit?> _own = [];
 
@@ -82,7 +83,6 @@ public sealed class Ground
         PMod = new byte[n];
         Lift = new float[n];
         BaseMask = new float[n * 4];
-        _loaded = Snapshot();
     }
 
     /// <summary>An empty, unchanged ground of a square block of <paramref name="size"/> × <paramref name="size"/> zones.</summary>
@@ -260,13 +260,19 @@ public sealed class Ground
     /// <summary>True when nothing at the point (height, paint, lift) changed since loading or the last save.</summary>
     private bool UnchangedSinceLoad(int g)
     {
-        if (Level[g] != _loaded.Level[g] || Smooth[g] != _loaded.Smooth[g] || Mod[g] != _loaded.Mod[g] || PMod[g] != _loaded.PMod[g] || Lift[g] != _loaded.Lift[g])
+        if (_loaded is not { } loaded)
+        {
+            // As made: everything 0.
+            return Level[g] == 0 && Smooth[g] == 0 && Mod[g] == 0 && PMod[g] == 0 && Lift[g] == 0
+                && Paint[g * 4] == 0 && Paint[g * 4 + 1] == 0 && Paint[g * 4 + 2] == 0 && Paint[g * 4 + 3] == 0;
+        }
+        if (Level[g] != loaded.Level[g] || Smooth[g] != loaded.Smooth[g] || Mod[g] != loaded.Mod[g] || PMod[g] != loaded.PMod[g] || Lift[g] != loaded.Lift[g])
         {
             return false;
         }
         for (int c = 0; c < 4; c++)
         {
-            if (Paint[g * 4 + c] != _loaded.Paint[g * 4 + c])
+            if (Paint[g * 4 + c] != loaded.Paint[g * 4 + c])
             {
                 return false;
             }

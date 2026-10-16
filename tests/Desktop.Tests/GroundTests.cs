@@ -10,6 +10,20 @@ namespace TerrainEditor.Desktop.Tests;
 public class GroundTests
 {
     [Fact]
+    public void ANewGroundHoldsItsArraysOnly()
+    {
+        const int W = 17 * 64 + 1;
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        var g = new Ground(W, W, 0, 0, 17);
+        long made = GC.GetAllocatedBytesForCurrentThread() - before;
+        // Base, level, smooth, lift (4 bytes a point each), paint and its base mask (16 each), the two flags (1 each):
+        // 50 bytes a point, and no copy of them as loaded.
+        Assert.True(made < 55L * W * W, $"{made / (W * W)} bytes a point");
+        // An edit store's zone of it: as made, unchanged.
+        Assert.All(g.ZoneEdit(0, 0).Modified, Assert.False);
+    }
+
+    [Fact]
     public void NoLimitPutsWhatIsPastTheLimitInTheLift()
     {
         var g = new Ground(65, 65, 0, 0, 1);
