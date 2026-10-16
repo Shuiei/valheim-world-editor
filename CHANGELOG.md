@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.91 — unreleased
+
+### Changed
+- **Areas with many dungeon rooms or location parts draw faster.** Each frame worked out every room's and location
+  part's place again and sent them all to the graphics card anew. They are now sent once and kept there until the
+  rooms or locations change (or a model they use is read).
+
 ## v1.45.90 — unreleased
 
 ### Changed

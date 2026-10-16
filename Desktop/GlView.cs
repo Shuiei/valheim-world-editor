@@ -586,6 +586,8 @@ public sealed class GlView : OpenGlControlBase
         _terrainProg = _objectProg = _waterProg = _lineProg = 0;
         _terrainVao = _terrainIndexCount = _waterVao = _terrainVbo = _terrainExtraVbo = _terrainCutVbo = 0;
         _boxVbo = _boxEbo = _ghostVbo = 0;
+        _roomsMade.Forget();
+        _locationsMade.Forget();
         _pathVao = _pathVbo = _pathEdgeVao = _pathEdgeVbo = _pathDotVao = _pathDotVbo = 0;
         _placeRingVao = _placeRingVbo = _hoverBoxVao = _hoverBoxVbo = _previewVao = _previewVbo = 0;
         _dungeonVao = _dungeonVbo = _dungeonPickVao = _dungeonPickVbo = _dungeonAddVao = _dungeonAddVbo = 0;
@@ -949,81 +951,212 @@ public sealed class GlView : OpenGlControlBase
             return drawn;
         }
         _pasteGhosts = Mode == ToolMode.Paste ? drawn : null;
-        DrawInstances(s, shown, ghost: true, drawn);
+        DrawGhostInstances(s, shown, drawn);
         return drawn;
     }
 
     /// <summary>
-    /// Models at places that are not things of the scene, one draw per model part: see-through (ghost:
-    /// the Place and Paste previews) or solid (dungeon rooms, locations' parts). Kinds whose model is not read yet, or that
-    /// have none, are skipped (and left out of <paramref name="drawn"/>).
+    /// The Place and Paste previews: models at places that are not things of the scene, see-through, one draw per model
+    /// part. Kinds whose model is not read yet, or that have none, are skipped (and left out of
+    /// <paramref name="drawn"/>).
     /// </summary>
-    private unsafe void DrawInstances(WorldScene s, IEnumerable<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> shown, bool ghost, HashSet<int>? drawn = null)
+    private unsafe void DrawGhostInstances(WorldScene s, IEnumerable<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> shown, HashSet<int>? drawn = null)
     {
         if (_ghostVbo == 0)
         {
             _ghostVbo = _own.Buffer();
         }
         _gl.UseProgram(_objectProg);
-        _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), ghost ? 1f : 0f);
+        _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 1f);
         var u = MaterialUniforms.Of(_gl, _objectProg);
-        var models = new List<(Group Group, List<Matrix4x4> Placements)>();
+        // Ghosts are see-through whole.
+        GlBlend.Over(_gl);
+        _gl.DepthMask(false);
         foreach (var byKind in shown.GroupBy(o => o.Prefab))
         {
             int prefab = byKind.Key;
             bool piece = Terrain.PieceCatalog.Get(prefab)?.Tool != null;
             var g = KindGroup(prefab, piece);
-            if (!g.Ready || g.Batches.Count == 0 || !ghost && !g.HasModel)
+            if (!g.Ready || g.Batches.Count == 0)
             {
                 continue;
             }
             drawn?.Add(prefab);
-            models.Add((g, byKind.Select(o => Placement(s, new WorldScene.Thing(0, prefab, o.Position, o.Rotation, o.Scale, piece), g.RootScale)).ToList()));
-        }
-        // Ghosts are see-through whole; solid models draw their opaque parts first, then their see-through ones (glass)
-        // blended over them.
-        foreach (bool glass in ghost ? [true] : new[] { false, true })
-        {
-            if (glass)
+            var placements = byKind.Select(o => Placement(s, new WorldScene.Thing(0, prefab, o.Position, o.Rotation, o.Scale, piece), g.RootScale)).ToList();
+            foreach (var (b, pre) in g.Batches)
             {
-                GlBlend.Over(_gl);
-                _gl.DepthMask(false);
-            }
-            foreach (var (g, placements) in models)
-            {
-                foreach (var (b, pre) in g.Batches)
+                var data = placements.Select(m => pre * m).ToArray();
+                _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _ghostVbo);
+                fixed (Matrix4x4* p = data)
                 {
-                    if (!ghost && b.Material.Transparent != glass)
-                    {
-                        continue;
-                    }
-                    var data = placements.Select(m => pre * m).ToArray();
-                    _gl.BindVertexArray(b.Vao);
-                    _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _ghostVbo);
-                    fixed (Matrix4x4* p = data)
-                    {
-                        _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 64), p, BufferUsageARB.DynamicDraw);
-                    }
-                    for (uint c = 0; c < 4; c++)
-                    {
-                        _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
-                    }
-                    UseMaterial(b, u);
-                    _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)data.Length);
-                    // The batch's own instances again.
-                    _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
-                    for (uint c = 0; c < 4; c++)
-                    {
-                        _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
-                    }
-                    b.PointedAt = 0;
+                    _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 64), p, BufferUsageARB.DynamicDraw);
                 }
+                DrawFrom(b, _ghostVbo, data.Length, u);
             }
         }
         _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 0f);
         _gl.DepthMask(true);
         _gl.Disable(EnableCap.Blend);
         _gl.BindVertexArray(0);
+    }
+
+    /// <summary>
+    /// Draws a model part's instances from another buffer than its own (its material set up), then points its vertex
+    /// array back at its own instances.
+    /// </summary>
+    /// <param name="b">The model part.</param>
+    /// <param name="vbo">The buffer of the instances' matrices.</param>
+    /// <param name="count">How many instances it holds.</param>
+    /// <param name="u">The object shader's material uniforms.</param>
+    private unsafe void DrawFrom(Batch b, uint vbo, int count, MaterialUniforms u)
+    {
+        _gl.BindVertexArray(b.Vao);
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
+        for (uint c = 0; c < 4; c++)
+        {
+            _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
+        }
+        UseMaterial(b, u);
+        _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)count);
+        // The batch's own instances again.
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
+        for (uint c = 0; c < 4; c++)
+        {
+            _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
+        }
+        b.PointedAt = 0;
+    }
+
+    /// <summary>
+    /// The instances of models drawn solid at places that are not things of the scene (dungeon rooms, locations'
+    /// parts), on the graphics card: made from one list and kept while that list and its kinds' models stay the same,
+    /// so a frame only draws them.
+    /// </summary>
+    private sealed class Solid
+    {
+        /// <summary>The list they were made from (compared by reference: the caches give the same list until it changes).</summary>
+        public object? Source;
+        /// <summary>The area they were made for (its middle places them).</summary>
+        public WorldScene? Scene;
+        /// <summary>Each kind in the list: its group then, and whether it was drawn (its model read).</summary>
+        public readonly List<(int Prefab, bool Piece, Group Group, bool Drawn)> Kinds = [];
+        /// <summary>One draw per model part of each kind drawn: its batch, the buffer of its instances and how many.</summary>
+        public readonly List<(Batch Batch, uint Vbo, int Count)> Draws = [];
+        /// <summary>The buffers made so far, used again when the instances are made again.</summary>
+        public readonly List<uint> Buffers = [];
+
+        /// <summary>Forgets everything (the graphics context went, and its buffers with it).</summary>
+        public void Forget()
+        {
+            Source = null;
+            Scene = null;
+            Kinds.Clear();
+            Draws.Clear();
+            Buffers.Clear();
+        }
+    }
+
+    /// <summary>The dungeon rooms' instances (DrawRooms).</summary>
+    private readonly Solid _roomsMade = new();
+    /// <summary>The locations' parts' instances (DrawLocations).</summary>
+    private readonly Solid _locationsMade = new();
+
+    /// <summary>Whether a kind's model is drawn solid: read, with parts.</summary>
+    private static bool DrawnSolid(Group g) => g.Ready && g.Batches.Count > 0 && g.HasModel;
+
+    /// <summary>
+    /// Draws models solid at places that are not things of the scene: opaque parts first, then see-through ones
+    /// (glass) blended over them. Their instances are made again (<c>MakeSolid</c>) only when <paramref name="source"/>
+    /// is another list, the area changed, or one of its kinds' models was read or let go since; kinds whose model is
+    /// not read yet, or that have none, are skipped.
+    /// </summary>
+    /// <param name="s">The area.</param>
+    /// <param name="source">The list the places come from, the same object until they change.</param>
+    /// <param name="shown">The places, taken from <paramref name="source"/> only when the instances are made again.</param>
+    /// <param name="made">The instances made last from this kind of list.</param>
+    private void DrawSolid(WorldScene s, object source, Func<IEnumerable<(int Prefab, Vector3 Position, Vector3 Rotation)>> shown, Solid made)
+    {
+        bool stale = made.Source != source || made.Scene != s;
+        for (int k = 0; k < made.Kinds.Count && !stale; k++)
+        {
+            var (prefab, piece, group, drawn) = made.Kinds[k];
+            var g = KindGroup(prefab, piece);
+            stale = g != group || DrawnSolid(g) != drawn;
+        }
+        if (stale)
+        {
+            MakeSolid(s, source, shown(), made);
+        }
+        if (made.Draws.Count == 0)
+        {
+            return;
+        }
+        _gl.UseProgram(_objectProg);
+        _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 0f);
+        var u = MaterialUniforms.Of(_gl, _objectProg);
+        foreach (bool glass in (ReadOnlySpan<bool>)[false, true])
+        {
+            if (glass)
+            {
+                GlBlend.Over(_gl);
+                _gl.DepthMask(false);
+            }
+            foreach (var (b, vbo, count) in made.Draws)
+            {
+                if (b.Material.Transparent == glass)
+                {
+                    DrawFrom(b, vbo, count, u);
+                }
+            }
+        }
+        _gl.DepthMask(true);
+        _gl.Disable(EnableCap.Blend);
+        _gl.BindVertexArray(0);
+    }
+
+    /// <summary>
+    /// Makes the instances of <c>DrawSolid</c> again: one buffer of matrices per model part of each kind whose model is
+    /// read, the buffers made before used again.
+    /// </summary>
+    private unsafe void MakeSolid(WorldScene s, object source, IEnumerable<(int Prefab, Vector3 Position, Vector3 Rotation)> shown, Solid made)
+    {
+        made.Source = source;
+        made.Scene = s;
+        made.Kinds.Clear();
+        made.Draws.Clear();
+        int used = 0;
+        foreach (var byKind in shown.GroupBy(o => o.Prefab))
+        {
+            int prefab = byKind.Key;
+            bool piece = Terrain.PieceCatalog.Get(prefab)?.Tool != null;
+            var g = KindGroup(prefab, piece);
+            bool drawn = DrawnSolid(g);
+            made.Kinds.Add((prefab, piece, g, drawn));
+            if (!drawn)
+            {
+                continue;
+            }
+            var placements = byKind.Select(o => Placement(s, new WorldScene.Thing(0, prefab, o.Position, o.Rotation, 0f, piece), g.RootScale)).ToList();
+            var data = new Matrix4x4[placements.Count];
+            foreach (var (b, pre) in g.Batches)
+            {
+                for (int i = 0; i < data.Length; i++)
+                {
+                    data[i] = pre * placements[i];
+                }
+                if (used == made.Buffers.Count)
+                {
+                    made.Buffers.Add(_own.Buffer());
+                }
+                uint vbo = made.Buffers[used++];
+                _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
+                fixed (Matrix4x4* p = data)
+                {
+                    _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 64), p, BufferUsageARB.StaticDraw);
+                }
+                made.Draws.Add((b, vbo, data.Length));
+            }
+        }
     }
 
     /// <summary>The object shader's uniforms a batch's material sets (their locations in the program).</summary>
@@ -1111,18 +1244,8 @@ public sealed class GlView : OpenGlControlBase
     /// </summary>
     private void DrawRooms(WorldScene s)
     {
-        var shown = new List<(int, Vector3, Vector3, float)>();
-        foreach (var d in DungeonRooms.Shown(s, Wake))
-        {
-            foreach (var r in d.Rooms)
-            {
-                shown.Add((r.Hash, r.Position, BlueprintFormats.ToEuler(r.Rotation), 0f));
-            }
-        }
-        if (shown.Count > 0)
-        {
-            DrawInstances(s, shown, ghost: false);
-        }
+        var dungeons = DungeonRooms.Shown(s, Wake);
+        DrawSolid(s, dungeons, () => dungeons.SelectMany(d => d.Rooms).Select(r => (r.Hash, r.Position, BlueprintFormats.ToEuler(r.Rotation))), _roomsMade);
     }
 
     /// <summary>
@@ -1132,10 +1255,7 @@ public sealed class GlView : OpenGlControlBase
     private void DrawLocations(WorldScene s)
     {
         var shown = LocationParts.Of(s);
-        if (shown.Count > 0)
-        {
-            DrawInstances(s, shown.Select(l => (l.Location, l.Position, l.Rotation, 0f)), ghost: false);
-        }
+        DrawSolid(s, shown, () => shown.Select(l => (l.Location, l.Position, l.Rotation)), _locationsMade);
     }
 
     /// <summary>Grows the per-thing arrays (boxes, kinds) to hold at least <paramref name="n"/> things.</summary>
@@ -3119,7 +3239,7 @@ public sealed class GlView : OpenGlControlBase
         // The room a click adds: its model see-through, its box green, or red when it would not fit.
         if (Dungeon.Preview is { } p)
         {
-            DrawInstances(s, [(p.Hash, p.Position, BlueprintFormats.ToEuler(p.Rotation), 0f)], ghost: true);
+            DrawGhostInstances(s, [(p.Hash, p.Position, BlueprintFormats.ToEuler(p.Rotation), 0f)]);
             BoxLines(hovered, Dungeons.Box(p), V);
         }
         if (hovered.Count > 0)
