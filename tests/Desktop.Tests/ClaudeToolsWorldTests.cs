@@ -134,10 +134,18 @@ public class ClaudeToolsWorldTests
         Assert.StartsWith("(500, 0) is outside the open area", await r.T.AddBlueprint("Shed", 500, 0));
         Assert.StartsWith("Nothing added: 1 piece(s) would be outside the area", await r.T.AddBlueprint("Fence", 28, 0));
         Assert.Equal(0, w.Pending.Added);
+        // Refused before anything is put down: a step undone before stays there to redo, and no step was added.
+        Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "wood_pole2", X = 3, Z = 3 }], label: "a post"));
+        await r.T.Undo();
+        int steps = r.W.Session!.UndoList.Count;
+        Assert.StartsWith("Nothing added: 1 piece(s) would be outside the area", await r.T.AddBlueprint("Fence", 28, 0));
+        Assert.Equal("Claude: a post", r.W.Session.RedoLabel);
+        Assert.Equal(steps, r.W.Session.UndoList.Count);
+        Assert.Equal(0, w.Pending.Added);
 
         string added = await r.T.AddBlueprint("Shed", 10, 10, turn: 90, y: 50);
         Assert.StartsWith("Added 2 piece(s) of \"Shed\"", added);
-        Assert.Equal("Claude: added Shed", r.W.Session!.UndoLabel);
+        Assert.Equal("Claude: added Shed", r.W.Session.UndoLabel);
         Assert.Equal(2, w.Pending.Added);
         var pieces = ClaudeRun.J(await r.T.ListObjects(name: "wood", x: 10, z: 10, radius: 3));
         Assert.Equal(2, pieces.GetArrayLength());

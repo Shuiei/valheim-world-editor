@@ -80,7 +80,28 @@ public static class Workshop
     /// per whole metre (x, z).
     /// </returns>
     public static (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain) Add(EditSession s, string path, string? text, Vector2? at,
-        float turn = 0, float? ground = null, string? label = null)
+        float turn = 0, float? ground = null, string? label = null) => Put(s, Plan(s, path, text, at, turn, ground), label);
+
+    /// <summary>
+    /// A blueprint worked out for <c>Add</c> but not put down yet: the objects to add, where they go, and what
+    /// <c>Add</c> reports. Nothing of the session is touched until <c>Put</c>, so what would be added can be
+    /// checked first (Claude's add_blueprint refuses pieces outside the area) without a step in the history.
+    /// </summary>
+    /// <param name="Name">The blueprint's name.</param>
+    /// <param name="AtMiddle">Its anchor at the plot's middle (<c>Add</c>'s at was null): the plot takes its ruin flag.</param>
+    /// <param name="Ruin">The blueprint's ruin flag.</param>
+    /// <param name="Adds">The objects to add, in order, with whether each is a player-built piece.</param>
+    /// <param name="Unknown">The kinds the editor cannot make, each once, sorted.</param>
+    /// <param name="Lift">How far it was lifted.</param>
+    /// <param name="Terrain">The ground it stood on, lowest height per whole metre (x, z).</param>
+    public sealed record Planned(string Name, bool AtMiddle, bool Ruin, List<(NewObject Object, bool Piece)> Adds, List<string> Unknown, float Lift,
+        Dictionary<(int, int), float> Terrain);
+
+    /// <summary>
+    /// Works out what <c>Add</c> would put down, from the same arguments, without changing the session or the scene:
+    /// <c>Put</c> puts it. Reads the file when <paramref name="text"/> is null.
+    /// </summary>
+    public static Planned Plan(EditSession s, string path, string? text, Vector2? at, float turn = 0, float? ground = null)
     {
         text ??= File.ReadAllText(path);
         var parsed = BlueprintFormats.Parse(Path.GetFileName(path), text);
@@ -103,13 +124,8 @@ public static class Workshop
         var spin = Matrix4x4.CreateRotationY(turn * MathF.PI / 180f);
         Vector3 At(Vector3 fromAnchor) => anchor + Vector3.Transform(fromAnchor, spin);
         Vector3 Euler(Vector3 e) => e with { Y = e.Y + turn };
-        if (at == null)
-        {
-            s.Scene.Ruin = parsed.Ruin;
-        }
         var adds = known.Select(p => (new NewObject(0, StableHash.Of(p.Name), At(p.Position + shift), Euler(p.Euler), MathF.Abs(p.Scale - 1) < 1e-3f ? 0 : p.Scale, Data: p.Data),
             PieceCatalog.Get(StableHash.Of(p.Name))?.Tool != null)).ToList();
-        s.Commit(label ?? $"{(at == null ? "Opened" : "Added")} {parsed.Name}", null, [], adds);
         // The ground it stood on in game, for the support check: Homestead's terrain contacts when the file
         // has them, else the bottom of its lowest piece at each spot (the terrain reached each post).
         var contacts = text.Split('\n').Select(l => l.Trim()).Where(l => l.StartsWith("#HomesteadTerrainContact:", StringComparison.OrdinalIgnoreCase))
@@ -156,7 +172,24 @@ public static class Workshop
                 }
             }
         }
-        return (adds.Count, unknown, shift.Y, terrain);
+        return new Planned(parsed.Name, at == null, parsed.Ruin, adds, unknown, shift.Y, terrain);
+    }
+
+    /// <summary>
+    /// Puts a planned blueprint on the plot as one undo step (the plot takes its ruin flag when its anchor is at the
+    /// middle), and returns what <c>Add</c> does.
+    /// </summary>
+    /// <param name="s">The edit session <c>Plan</c> was given.</param>
+    /// <param name="plan">What to put down.</param>
+    /// <param name="label">The history's name for the step; null: "Opened" or "Added" and the blueprint's name.</param>
+    public static (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain) Put(EditSession s, Planned plan, string? label = null)
+    {
+        if (plan.AtMiddle)
+        {
+            s.Scene.Ruin = plan.Ruin;
+        }
+        s.Commit(label ?? $"{(plan.AtMiddle ? "Opened" : "Added")} {plan.Name}", null, [], plan.Adds);
+        return (plan.Adds.Count, plan.Unknown, plan.Lift, plan.Terrain);
     }
 
     /// <summary>Pieces players build: the hammer's, the cultivator's, the serving tray's (not the hoe's rocks).</summary>
