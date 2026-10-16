@@ -150,26 +150,37 @@ public static class Uplift
     }
 
     /// <summary>
-    /// Lifted zones in groups whose blocks (each zone and <see cref="ReachZones"/> around it) overlap or touch, in
-    /// the order first met: a group's discs and ground never reach another's block, so each is planned alone.
+    /// Lifted zones in groups, in the order first met, whose blocks (the box round a group's zones and
+    /// <see cref="ReachZones"/> beyond) neither overlap nor touch: a group's discs and ground never reach another's
+    /// block, and no zone is in two blocks, so each group is planned alone. Groups whose blocks would overlap or touch
+    /// are one group.
     /// </summary>
     /// <param name="zones">The lifted zones.</param>
     internal static List<List<(int X, int Z)>> Clusters(IEnumerable<(int X, int Z)> zones)
     {
-        var left = zones.Distinct().ToList();
-        var groups = new List<List<(int X, int Z)>>();
-        while (left.Count > 0)
+        var groups = zones.Distinct().Select(z => new List<(int X, int Z)> { z }).ToList();
+        // Two boxes of zones (lowest and highest x and z) whose blocks overlap or touch: at most this far apart.
+        int gap = 2 * ReachZones + 1;
+        static (int X0, int Z0, int X1, int Z1) Box(List<(int X, int Z)> g) => (g.Min(t => t.X), g.Min(t => t.Z), g.Max(t => t.X), g.Max(t => t.Z));
+        bool merged = true;
+        while (merged)
         {
-            var group = new List<(int X, int Z)> { left[0] };
-            left.RemoveAt(0);
-            for (int k = 0; k < group.Count; k++)
+            merged = false;
+            for (int i = 0; i < groups.Count && !merged; i++)
             {
-                var (x, z) = group[k];
-                var near = left.Where(o => Math.Abs(o.X - x) <= 2 * ReachZones + 1 && Math.Abs(o.Z - z) <= 2 * ReachZones + 1).ToList();
-                group.AddRange(near);
-                left.RemoveAll(near.Contains);
+                var (ax0, az0, ax1, az1) = Box(groups[i]);
+                for (int j = i + 1; j < groups.Count; j++)
+                {
+                    var (bx0, bz0, bx1, bz1) = Box(groups[j]);
+                    if (bx0 - ax1 <= gap && ax0 - bx1 <= gap && bz0 - az1 <= gap && az0 - bz1 <= gap)
+                    {
+                        groups[i].AddRange(groups[j]);
+                        groups.RemoveAt(j);
+                        merged = true;
+                        break;
+                    }
+                }
             }
-            groups.Add(group);
         }
         return groups;
     }

@@ -229,6 +229,20 @@ public class UpliftTests
         Assert.Equal([(8, 0)], groups[2]);
         // A chain of near ones is one group.
         Assert.Single(Uplift.Clusters([(0, 0), (3, 3), (6, 6), (9, 9)]));
+        // A zone far from every other but inside a group's box shares its block: one group.
+        Assert.Single(Uplift.Clusters([(0, 0), (3, 0), (6, 0), (9, 0), (12, 0), (12, 3), (12, 6), (12, 9), (12, 12), (0, 12)]));
+        // Whatever the zones, no two groups' blocks overlap or touch.
+        var rnd = new Random(7);
+        var many = Uplift.Clusters([.. Enumerable.Range(0, 60).Select(_ => (rnd.Next(-40, 40), rnd.Next(-40, 40)))]);
+        var boxes = many.Select(g => (X0: g.Min(t => t.X) - 1, Z0: g.Min(t => t.Z) - 1, X1: g.Max(t => t.X) + 1, Z1: g.Max(t => t.Z) + 1)).ToList();
+        for (int i = 0; i < boxes.Count; i++)
+        {
+            for (int j = i + 1; j < boxes.Count; j++)
+            {
+                var (a, b) = (boxes[i], boxes[j]);
+                Assert.True(b.X0 > a.X1 + 1 || a.X0 > b.X1 + 1 || b.Z0 > a.Z1 + 1 || a.Z0 > b.Z1 + 1, $"blocks {a} and {b} meet");
+            }
+        }
     }
 
     [Fact]
