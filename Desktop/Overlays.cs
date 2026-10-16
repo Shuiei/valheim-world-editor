@@ -160,7 +160,7 @@ public static class Overlays
         }
 
         // Wards and crafting stations: the kinds with a ward radius or a build range.
-        var ranges = PrefabCatalog.Placeable.Where(p => p.WardRadius > 0 || p.BuildRange > 0).ToDictionary(p => p.Name, p => (p.WardRadius, p.BuildRange));
+        var ranges = PrefabCatalog.Ranges;
         int wards = 0, stations = 0;
         for (int i = 0; i < s.Things.Count; i++)
         {

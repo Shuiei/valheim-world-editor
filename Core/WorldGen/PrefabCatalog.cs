@@ -53,7 +53,14 @@ public static class PrefabCatalog
     /// <param name="Spawns">See <see cref="SpawnOf(int)"/>.</param>
     private sealed record Data(Dictionary<int, Info> ByHash, Dictionary<int, string> AllNames, List<string> ItemNames, Dictionary<int, Info> Extra, HashSet<int> Creatures,
         Dictionary<string, (float Radius, string Sapling)> GrownFrom, Dictionary<int, ItemKind> ItemKinds, Dictionary<int, StandRule> ItemStands, Dictionary<int, int[][]> ArmourStands,
-        Dictionary<string, (float Radius, bool Cultivated)> Grow, Dictionary<int, SpawnKind> Spawns);
+        Dictionary<string, (float Radius, bool Cultivated)> Grow, Dictionary<int, SpawnKind> Spawns)
+    {
+        /// <summary>
+        /// See <see cref="Ranges"/>: made once per catalogue.
+        /// </summary>
+        public Dictionary<string, (float WardRadius, float BuildRange)> Ranges { get; } =
+            ByHash.Values.Where(p => p.WardRadius > 0 || p.BuildRange > 0).ToDictionary(p => p.Name, p => (p.WardRadius, p.BuildRange));
+    }
 
     /// <summary>
     /// Whether a prefab (by hash) is a creature.
@@ -67,6 +74,11 @@ public static class PrefabCatalog
     /// Kinds the editor offers to place: saved objects (persistent), not creatures, item drops or ragdolls.
     /// </summary>
     public static IEnumerable<Info> Placeable => _catalogue.ByHash.Values;
+
+    /// <summary>
+    /// The placeable kinds with a ward radius or a build range (wards and crafting stations), by prefab name.
+    /// </summary>
+    public static IReadOnlyDictionary<string, (float WardRadius, float BuildRange)> Ranges => _catalogue.Ranges;
 
     /// <summary>
     /// A placeable kind by prefab hash; null for anything not offered for placing (see <see cref="Details"/>).
