@@ -2352,8 +2352,16 @@ internal sealed partial class DungeonDresser
                 }
             }
         }
-        // The aisle's walls are the cells': only the aisle is free.
-        f.Take(-(f.HalfA + aisle) / 2 - 0.5f, 0, 0);
+        // The aisle's walls are the cells': only the aisle is free. Each row of cells is kept by circles a metre apart
+        // along its middle, each just wide enough that together they cover the row up to its grates.
+        float half = (f.HalfA - aisle) / 2, keep = MathF.Sqrt(half * half + 0.25f);
+        foreach (int side in new[] { -1, 1 })
+        {
+            for (float v = v0 + 0.5f; v < -v0; v++)
+            {
+                f.Take(side * (aisle + half), v, keep);
+            }
+        }
         for (float v = v0 + 2; v < -v0; v += 8)
         {
             Put(f, _b.Torch, aisle - 0.4f, v, -90, 0.3f);
