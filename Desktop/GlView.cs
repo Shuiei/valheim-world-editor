@@ -819,6 +819,18 @@ public sealed class GlView : OpenGlControlBase
     /// <summary>A prefab's name: the model store's, else the catalogue's display name; null when unknown.</summary>
     private string? NameOf(int prefab) => Models?.NameOf(prefab) ?? Terrain.PrefabCatalog.DisplayName(prefab);
 
+    /// <summary>
+    /// Tests (headless, so nothing is drawn): the shown area's models read on worker threads now, as the first frame
+    /// drawn would start them.
+    /// </summary>
+    internal void ReadModels()
+    {
+        if (Scene is { } s)
+        {
+            StartModels(s);
+        }
+    }
+
     /// <summary>A new area's objects: every thing in its group, and every group's model read on worker threads.</summary>
     private void StartModels(WorldScene s)
     {

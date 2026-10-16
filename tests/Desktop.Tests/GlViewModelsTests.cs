@@ -37,7 +37,8 @@ public class GlViewModelsTests
         v.Status += said.Add;
         var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(32, 30, 32), Vector3.Zero, 0, false));
         v.Show(s.Scene, new ModelStore(new TextureTooBig()));
-        // Read on a worker thread.
+        // Headless, nothing is drawn: the models are read as the first frame would have them read, on a worker thread.
+        v.ReadModels();
         for (int i = 0; i < 200 && v.ModelsWaiting.Length == 0; i++)
         {
             await Task.Delay(50);
