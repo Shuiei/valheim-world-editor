@@ -555,9 +555,7 @@ public partial class MainWindow
         SaveButton.IsEnabled = n > 0;
         SaveButton.Content = "Save blueprint";
         SaveButton.Tip("top.saveBlueprint");
-        _pendingPill.Background = dirty ? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#2c2416")) : Avalonia.Media.Brushes.Transparent;
-        _pendingPill.BorderBrush = dirty ? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#7a5a2a")) : Ui.Line;
-        PendingText.Foreground = dirty ? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#f3d29b")) : Ui.Muted;
+        SetPendingPill(dirty);
         _liveBadge.IsVisible = false;
         UndoButton.IsEnabled = s.CanUndo;
         RedoButton.IsEnabled = s.CanRedo;

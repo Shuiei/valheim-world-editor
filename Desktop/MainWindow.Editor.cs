@@ -702,31 +702,45 @@ public sealed partial class MainWindow
         PlaceLabels();
     }
 
-    /// <summary>The players' names over their posts (4 m above their feet), where the camera sees them.</summary>
+    /// <summary>The players' labels' text and backing colours.</summary>
+    private static readonly IImmutableSolidColorBrush LabelInk = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.Parse("#bfeaff")), LabelShade = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.FromArgb(150, 0, 0, 0));
+
+    /// <summary>
+    /// The players' names over their posts (4 m above their feet), where the camera sees them. The labels are kept
+    /// from tick to tick (ten a second while live): moved and renamed, made only for more players, dropped when fewer
+    /// are seen.
+    /// </summary>
     internal void PlaceLabels()
     {
-        PlayerLabels.Children.Clear();
-        if (View.Scene is not { } s || LivePlayers.Count == 0 || _pages.Content != _editorPage)
+        int shown = 0;
+        if (View.Scene is { } s && LivePlayers.Count > 0 && _pages.Content == _editorPage)
         {
-            return;
+            var size = View.Bounds.Size;
+            foreach (var (name, w) in LivePlayers)
+            {
+                var q = Vector4.Transform(new Vector4(w.X - s.Cx, w.Y + 4, -(w.Z - s.Cz), 1), View.ViewProj);
+                if (q.W <= 0.01f)
+                {
+                    continue;
+                }
+                double x = (q.X / q.W + 1) / 2 * size.Width, y = (1 - q.Y / q.W) / 2 * size.Height;
+                if (x < 0 || y < 0 || x > size.Width || y > size.Height)
+                {
+                    continue;
+                }
+                if (shown == PlayerLabels.Children.Count)
+                {
+                    PlayerLabels.Children.Add(new TextBlock { FontSize = 13, FontWeight = FontWeight.Bold, Foreground = LabelInk, Background = LabelShade, Padding = new Thickness(4, 1) });
+                }
+                var label = (TextBlock)PlayerLabels.Children[shown++];
+                label.Text = name;
+                Canvas.SetLeft(label, x - 4 * name.Length - 4);
+                Canvas.SetTop(label, y - 10);
+            }
         }
-        var size = View.Bounds.Size;
-        foreach (var (name, w) in LivePlayers)
+        if (PlayerLabels.Children.Count > shown)
         {
-            var q = Vector4.Transform(new Vector4(w.X - s.Cx, w.Y + 4, -(w.Z - s.Cz), 1), View.ViewProj);
-            if (q.W <= 0.01f)
-            {
-                continue;
-            }
-            double x = (q.X / q.W + 1) / 2 * size.Width, y = (1 - q.Y / q.W) / 2 * size.Height;
-            if (x < 0 || y < 0 || x > size.Width || y > size.Height)
-            {
-                continue;
-            }
-            var label = new TextBlock { Text = name, FontSize = 13, FontWeight = FontWeight.Bold, Foreground = new SolidColorBrush(Color.Parse("#bfeaff")), Background = new SolidColorBrush(Color.FromArgb(150, 0, 0, 0)), Padding = new Thickness(4, 1) };
-            Canvas.SetLeft(label, x - 4 * name.Length - 4);
-            Canvas.SetTop(label, y - 10);
-            PlayerLabels.Children.Add(label);
+            PlayerLabels.Children.RemoveRange(shown, PlayerLabels.Children.Count - shown);
         }
     }
 

@@ -894,6 +894,18 @@ public sealed partial class MainWindow : Window
         UpdateSaveBar();
     }
 
+    /// <summary>The save bar's pill while something waits: amber background, border and text.</summary>
+    private static readonly IImmutableSolidColorBrush PillWaiting = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.Parse("#2c2416")),
+        PillWaitingBorder = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.Parse("#7a5a2a")), PillWaitingText = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.Parse("#f3d29b"));
+
+    /// <summary>The save bar's pill: amber while something waits, grey when all is saved.</summary>
+    private void SetPendingPill(bool waiting)
+    {
+        _pendingPill.Background = waiting ? PillWaiting : Brushes.Transparent;
+        _pendingPill.BorderBrush = waiting ? PillWaitingBorder : Ui.Line;
+        PendingText.Foreground = waiting ? PillWaitingText : Ui.Muted;
+    }
+
     /// <summary>
     /// The save bar and the editor's world card as the session now stands (in the Workshop: its own save bar).
     /// </summary>
@@ -915,10 +927,7 @@ public sealed partial class MainWindow : Window
         SaveButton.IsEnabled = dirty;
         SaveButton.Content = s.IsLive ? "Apply live" : "Save to world";
         SaveButton.Tip(s.IsLive ? "top.apply" : "top.save");
-        // The pill: amber while something waits, grey when all is saved.
-        _pendingPill.Background = dirty ? new SolidColorBrush(Color.Parse("#2c2416")) : Brushes.Transparent;
-        _pendingPill.BorderBrush = dirty ? new SolidColorBrush(Color.Parse("#7a5a2a")) : Ui.Line;
-        PendingText.Foreground = dirty ? new SolidColorBrush(Color.Parse("#f3d29b")) : Ui.Muted;
+        SetPendingPill(dirty);
         _liveBadge.IsVisible = s.IsLive;
         UndoButton.IsEnabled = s.CanUndo;
         RedoButton.IsEnabled = s.CanRedo;
