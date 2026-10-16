@@ -66,8 +66,8 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
     /// <summary>
     /// A tunnel request to the local sshd as the test's user, with its key unless another is given.
     /// </summary>
-    private Tunnel.Request Req(string? key = null, string? token = "tok", int? bridge = null, string? password = null, bool savePassword = false, string? name = null, string? folder = null) =>
-        new("127.0.0.1", _ssh.Port, _ssh.User, password, key ?? _ssh.Key, null, token, bridge, savePassword, name, folder);
+    private Tunnel.Request Req(string? key = null, string? token = "tok", int? bridge = null, string? password = null, bool savePassword = false, string? name = null, string? folder = null, int? sshPort = null) =>
+        new("127.0.0.1", sshPort ?? _ssh.Port, _ssh.User, password, key ?? _ssh.Key, null, token, bridge, savePassword, name, folder);
 
     /// <summary>
     /// The first line a local port answers (10 s at most).
@@ -278,9 +278,41 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
     public async Task TheServerCheckDoesNotHoldTheCallersThread()
     {
         _ssh.Need();
-        Assert.Null((await Tunnel.Start(Req(bridge: BridgePort))).Error);
+        // A relay in front of sshd that holds the server's answers while the test holds the gate: the check cannot
+        // finish before the test lets it, however fast the server answers.
+        using var relay = new TcpListener(IPAddress.Loopback, 0);
+        relay.Start();
+        var gate = new SemaphoreSlim(1, 1);
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        _ = Task.Run(async () =>
+        {
+            using TcpClient app = await relay.AcceptTcpClientAsync(ct);
+            using var server = new TcpClient();
+            await server.ConnectAsync(IPAddress.Loopback, _ssh.Port, ct);
+            NetworkStream toApp = app.GetStream();
+            NetworkStream toServer = server.GetStream();
+            Task up = toApp.CopyToAsync(toServer, ct);
+            byte[] buffer = new byte[65536];
+            int n;
+            while ((n = await toServer.ReadAsync(buffer, ct)) > 0)
+            {
+                await gate.WaitAsync(ct);
+                try
+                {
+                    await toApp.WriteAsync(buffer.AsMemory(0, n), ct);
+                }
+                finally
+                {
+                    gate.Release();
+                }
+            }
+            await up;
+        }, ct);
+        Assert.Null((await Tunnel.Start(Req(bridge: BridgePort, sshPort: ((IPEndPoint)relay.LocalEndpoint).Port))).Error);
+        await gate.WaitAsync(ct);
         var check = Tunnel.Diagnose(Path.Combine(_dir, "valheim"));
         Assert.False(check.IsCompleted);
+        gate.Release();
         Assert.StartsWith("The folder ", await check);
     }
 }
