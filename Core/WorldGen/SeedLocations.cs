@@ -698,9 +698,14 @@ public static class SeedLocations
         /// </summary>
         private readonly Neighbours _byPrefab = new(), _byGroup = new(), _byGroupMax = new();
         /// <summary>
-        /// The vegetation sums of the kind's spots so far (the "stands out" check).
+        /// How many of the kind's spots so far had their vegetation summed (the "stands out" check), the total of
+        /// those sums (in double, as an average of them is taken) and the best of them.
         /// </summary>
-        private readonly List<float> _sums = [];
+        private int _sums;
+        /// <summary>See <see cref="_sums"/>.</summary>
+        private double _sumsTotal;
+        /// <summary>See <see cref="_sums"/>.</summary>
+        private float _sumsBest;
 
         /// <summary>
         /// Spots tried in each zone drawn.
@@ -714,7 +719,7 @@ public static class SeedLocations
         {
             Rnd.InitState(gen.GetSeed() + StableHash.Of(rule.prefab));
             int have = Instances.Values.Count(p => p.Rule.prefab == rule.prefab);
-            _sums.Clear();
+            (_sums, _sumsTotal, _sumsBest) = (0, 0, float.NegativeInfinity);
             if (rule.unique != 0 && have > 0)
             {
                 return;
@@ -892,12 +897,17 @@ public static class SeedLocations
                     total += around.a * weight;
                 }
             }
-            _sums.Add(total);
-            if (_sums.Count < 10)
+            _sums++;
+            _sumsTotal += total;
+            if (total > _sumsBest)
+            {
+                _sumsBest = total;
+            }
+            if (_sums < 10)
             {
                 return false;
             }
-            float best = _sums.Max(), average = _sums.Average();
+            float best = _sumsBest, average = (float)(_sumsTotal / _sums);
             return total >= average + (best - average) * rule.surroundBetterThanAverage;
         }
 
