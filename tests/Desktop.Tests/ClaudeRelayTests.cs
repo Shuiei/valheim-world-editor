@@ -101,6 +101,8 @@ public class ClaudeRelayTests
         Assert.Equal(1, answers[0].GetProperty("id").GetInt32());
         Assert.Contains("gave no answer within 5 minutes", answers[0].GetProperty("error").GetProperty("message").GetString());
         Assert.Equal(2, answers[1].GetProperty("id").GetInt32());
+        // A cancellation that is not the timeout is not answered as one: it is not swallowed.
+        await Assert.ThrowsAsync<TaskCanceledException>(() => Relay("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}\n", _ => throw new TaskCanceledException("cancelled")));
     }
 
     // Nothing listening on the port: the editor is not running.

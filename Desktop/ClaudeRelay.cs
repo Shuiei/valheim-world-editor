@@ -91,9 +91,10 @@ public static class ClaudeRelay
                 }
                 continue;
             }
-            catch (OperationCanceledException)
+            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
             {
-                // The client's timeout (a tool that ran too long): answered, not the end of the relay.
+                // The client's timeout (a tool that ran too long): answered, not the end of the relay. Only that one:
+                // any other cancellation is not a timeout and is not reported as one.
                 if (id != null)
                 {
                     await output.WriteLineAsync(Error(id, -32000, $"Valheim World Editor gave no answer within {http.Timeout.TotalMinutes} minutes."));
