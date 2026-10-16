@@ -199,6 +199,9 @@ the plugin is unchanged in versions without that part.
 - **A new world that failed halfway blocked another try in the same folder.** Its metadata, index and zone file were
   written before the flat zone was looked for, so the next try found the folder "already holds a world"; what was
   written is now taken away on any failure (and the folder, when it was made for it).
+- **Connecting with an odd address or a token holding a line break failed with an exception instead of a message.**
+  LiveBridge.Check took "httpsrv:5182" for an address of another scheme and let the header's FormatException through;
+  it now says the address is not valid (only http and https) or that the token cannot be sent.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

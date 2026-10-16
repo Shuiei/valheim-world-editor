@@ -96,9 +96,21 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
         {
             return "That is not a valid address. Use host:port, for example 127.0.0.1:5182.";
         }
+        // "httpsrv:5182" reads as an address of the scheme "httpsrv", which nothing can ask.
+        if (uri.Scheme is not ("http" or "https"))
+        {
+            return "That is not a valid address. Use host:port, for example 127.0.0.1:5182.";
+        }
         using HttpClient http = new() { Timeout = timeout };
         using HttpRequestMessage req = new(HttpMethod.Get, uri);
-        req.Headers.Add("X-Bridge-Token", token);
+        try
+        {
+            req.Headers.Add("X-Bridge-Token", token);
+        }
+        catch (FormatException)
+        {
+            return "That token cannot be sent (it holds a line break or another character a request cannot carry). Copy the Token again from BepInEx/config/Tie.WorldEditorBridge.cfg on the server.";
+        }
         string tunnel = $"The bridge only listens on the server itself. Open an SSH tunnel on this computer (ssh -N -L {uri.Port}:127.0.0.1:{uri.Port} user@your-server) and connect to 127.0.0.1:{uri.Port}.";
         bool local = uri.IsLoopback;
         try

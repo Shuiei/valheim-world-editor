@@ -53,6 +53,17 @@ public class LiveBridgeTests
         Assert.Contains("does not host the world", await LiveBridge.Check($"http://127.0.0.1:{bridge.Port}", bridge.Token, TimeSpan.FromSeconds(5)));
     }
 
+    [Theory]
+    // A scheme of its own (the "http" typo'd), which SendAsync refused with an exception.
+    [InlineData("httpsrv:5182", "x", "not a valid address")]
+    [InlineData("ftp://127.0.0.1:5182", "x", "not a valid address")]
+    // A line break in the token, which Headers.Add refused with an exception.
+    [InlineData("http://127.0.0.1:5182", "to\nken", "token cannot be sent")]
+    public async Task CheckExplainsAnAddressOrTokenItCannotSend(string url, string token, string why)
+    {
+        Assert.Contains(why, await LiveBridge.Check(url, token, TimeSpan.FromSeconds(5)));
+    }
+
     [Fact]
     public async Task CheckExplainsNothingListening()
     {
