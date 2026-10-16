@@ -220,6 +220,8 @@ public sealed partial class ClaudeTools
         {
             return $"{c.Id} is greyed out now (the editor does not allow it in this state).";
         }
+        // Put back as it was, not cleared: a control set while one already is keeps the outer one Claude's.
+        bool was = Acting.Value;
         Acting.Value = true;
         try
         {
@@ -227,7 +229,7 @@ public sealed partial class ClaudeTools
         }
         finally
         {
-            Acting.Value = false;
+            Acting.Value = was;
         }
     }
 

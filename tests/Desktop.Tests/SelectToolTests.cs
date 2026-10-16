@@ -128,6 +128,23 @@ public class SelectToolTests
         Assert.False(s.Scene.Things[0].Gone);
     }
 
+    // A key move of the user's still waiting when Claude presses Apply in the Select panel is the user's step, and the
+    // move Claude's typed place makes is Claude's: Take back Claude's changes leaves the user's.
+    [AvaloniaFact]
+    public async Task AUsersKeyMoveCommittedByClaudesApplyStaysTheUsers()
+    {
+        var (w, s) = Window();
+        w.View.Select([0]);
+        w.KeyPress(Key.PageUp, RawInputModifiers.None, PhysicalKey.PageUp, null);
+        Assert.True(w.View.SelectTool.Moving);
+        var t = new ClaudeTools(w);
+        await t.SetControl("select.x", "22");
+        await t.SetControl("select.apply", "click");
+        Assert.Equal(["Moved 1", "Claude: Moved 1"], s.UndoList.Select(c => c.Label));
+        Assert.Equal(22, Last(s).Position.X, 2);
+        w.CloseWithoutAsking();
+    }
+
     [AvaloniaFact]
     public void EscapeCancelsAMove()
     {
