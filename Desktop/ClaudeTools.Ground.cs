@@ -155,9 +155,15 @@ public sealed partial class ClaudeTools
             Random = new Random(seed),
         };
         string name = act == AreaTool.GroundAction.Paint ? $"paint {paint.ToLowerInvariant()}" : AreaTool.Label(act).ToLowerInvariant();
-        var touched = s.EditGround($"Claude: {name}", g => box.Apply(g, brush, act, 0, MathF.Max(0, amount), Brush.PaintOf(paintTool)!, only));
+        bool clamped = false;
+        var touched = s.EditGround($"Claude: {name}", g =>
+        {
+            var (t, rect, c) = box.Apply(g, brush, act, 0, MathF.Max(0, amount), Brush.PaintOf(paintTool)!, only);
+            clamped = c;
+            return (t, rect);
+        });
         _w.AfterClaudeEdit($"Claude's {name}: {touched.Count} ground point(s); Ctrl+Z takes it back.");
-        return touched.Count == 0 ? "Nothing changed." : $"{AreaTool.Label(act)}: {touched.Count} ground point(s) changed. Now pending: {Pending()}";
+        return touched.Count == 0 ? "Nothing changed." : $"{AreaTool.Label(act)}: {touched.Count} ground point(s) changed.{(clamped ? " Part of it reached the game's ±8 m limit." : "")} Now pending: {Pending()}";
     });
 
     /// <summary>The Path tool's actions dig_path takes, by name.</summary>

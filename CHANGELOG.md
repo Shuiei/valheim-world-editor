@@ -286,6 +286,9 @@ the plugin is unchanged in versions without that part.
   to right at one level; && now binds tighter than ||, as in JavaScript.
 - **Formulas refused numbers written with a capital E (2E3), and sign() of a NaN failed at every point, so every point
   counted as bad.** Exponents take e or E (also after a leading point, .5e1), and sign(NaN) is NaN, as in JavaScript.
+- **The Area tool never said when its ground actions (Erode among them) reached the game's ±8 m limit, as strokes,
+  Shape and paths do.** AreaTool.Apply and Erosion.Area dropped what SetHeight reported; they now return it, and the
+  Area panel and Claude's shape_ground say so.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

@@ -226,17 +226,21 @@ public static class Erosion
     /// <param name="restAngle">The resting angle in degrees.</param>
     /// <param name="rand">Where the drops fall.</param>
     /// <param name="touched">Gets the indices of the points changed.</param>
-    /// <returns>The grid rectangle worked on (the selection and one point around it).</returns>
-    public static (int X0, int Z0, int X1, int Z1) Area(Ground g, AreaTool.Weights a, float restAngle, Random rand, ICollection<int> touched)
+    /// <returns>
+    /// The grid rectangle worked on (the selection and one point around it), and whether a point reached the game's
+    /// ±8 m limit.
+    /// </returns>
+    public static ((int X0, int Z0, int X1, int Z1) Rect, bool Clamped) Area(Ground g, AreaTool.Weights a, float restAngle, Random rand, ICollection<int> touched)
     {
         var weights = a.Cells.ToDictionary(c => c.G, c => c.W);
         bool clamped = false;
         float talus = Talus(restAngle);
-        return Run(g, a.X0 - 1, a.Z0 - 1, a.X1 + 1, a.Z1 + 1, (_, _, p) => weights.GetValueOrDefault(p), (h, wt, w, d) =>
+        var rect = Run(g, a.X0 - 1, a.Z0 - 1, a.X1 + 1, a.Z1 + 1, (_, _, p) => weights.GetValueOrDefault(p), (h, wt, w, d) =>
         {
             Thermal(h, wt, w, d, talus, 0.8f, 12);
             Hydraulic(h, wt, w, d, (int)MathF.Ceiling(w * d * 0.6f), 1, rand);
             Thermal(h, wt, w, d, talus, 0.5f, 4);
         }, touched, ref clamped);
+        return (rect, clamped);
     }
 }

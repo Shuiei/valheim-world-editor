@@ -106,7 +106,7 @@ public class AreaToolBranchesTests
     {
         var g = Flat();
         var a = new AreaTool();
-        var (touched, rect) = a.Apply(g, new Brush(), AreaTool.GroundAction.Raise, 0, 2, new float[4]);
+        var (touched, rect, _) = a.Apply(g, new Brush(), AreaTool.GroundAction.Raise, 0, 2, new float[4]);
         Assert.Empty(touched);
         Assert.Equal((0, 0, 0, 0), rect);
         Assert.Equal("", a.Volume(g, AreaTool.GroundAction.Flatten, 30, 2));
@@ -123,14 +123,33 @@ public class AreaToolBranchesTests
         g.Mod[3 * 129 + 3] = 1;
         g.Level[3 * 129 + 3] = 4;
         var a = Box(0, 0, 10, 10);
-        var (touched, _) = a.Apply(g, new Brush(), AreaTool.GroundAction.Smooth, 0, 0, new float[4]);
+        var (touched, _, _) = a.Apply(g, new Brush(), AreaTool.GroundAction.Smooth, 0, 0, new float[4]);
         Assert.DoesNotContain(0, touched);
         Assert.Contains(129 + 1, touched);
         Assert.True(g.HeightOf(3 * 129 + 3) < 34);
-        var (natural, _) = a.Apply(g, new Brush(), AreaTool.GroundAction.Natural, 0, 0, new float[4]);
+        var (natural, _, _) = a.Apply(g, new Brush(), AreaTool.GroundAction.Natural, 0, 0, new float[4]);
         Assert.NotEmpty(natural);
-        var (eroded, _) = Box(20, 20, 40, 40).Apply(g, new Brush(), AreaTool.GroundAction.Erode, 0, 0, new float[4]);
+        var (eroded, _, _) = Box(20, 20, 40, 40).Apply(g, new Brush(), AreaTool.GroundAction.Erode, 0, 0, new float[4]);
         Assert.NotNull(eroded);
+    }
+
+    // Each action says when a point reached the game's ±8 m limit; Erode dropped it.
+    [Fact]
+    public void PointsReachingTheLimitAreSaid()
+    {
+        var g = Flat();
+        var a = Box(10, 10, 30, 30);
+        Assert.False(a.Apply(g, new Brush(), AreaTool.GroundAction.Raise, 0, 2, new float[4]).Clamped);
+        Assert.True(a.Apply(g, new Brush(), AreaTool.GroundAction.Raise, 0, 10, new float[4]).Clamped);
+        // A slope already dug the full 8 m down: eroding it digs further.
+        var slope = Flat();
+        for (int p = 0; p < slope.W * slope.H; p++)
+        {
+            slope.Base[p] = 30 + p % slope.W;
+            slope.Mod[p] = 1;
+            slope.Level[p] = -8;
+        }
+        Assert.True(Box(20, 20, 40, 40).Apply(slope, new Brush(), AreaTool.GroundAction.Erode, 0, 0, new float[4]).Clamped);
     }
 
     [Fact]

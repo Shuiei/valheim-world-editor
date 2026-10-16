@@ -361,19 +361,19 @@ public sealed class AreaTool
     /// <param name="amount">Raise and Lower's amount, in metres.</param>
     /// <param name="paint">The colour (four weights, as the paint brushes put down).</param>
     /// <param name="mask">The Mask's weight per grid point (null: none).</param>
-    /// <returns>The grid points changed and the box to redraw.</returns>
-    public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect) Apply(Ground g, Brush b, GroundAction act, float height, float amount, float[] paint, Func<int, float>? mask = null)
+    /// <returns>The grid points changed, the box to redraw, and whether a point reached the game's ±8 m limit.</returns>
+    public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, bool Clamped) Apply(Ground g, Brush b, GroundAction act, float height, float amount, float[] paint, Func<int, float>? mask = null)
     {
         var touched = new List<int>();
         if (WeightsIn(g.W, g.H, mask) is not { } a)
         {
-            return (touched, (0, 0, 0, 0));
+            return (touched, (0, 0, 0, 0), false);
         }
         if (act == GroundAction.Erode)
         {
             var set = new HashSet<int>();
-            var (x0, z0, x1, z1) = Erosion.Area(g, a, b.RestAngle, b.Random, set);
-            return (set.ToList(), (x0 - 1, z0 - 1, x1 + 1, z1 + 1));
+            var ((x0, z0, x1, z1), eroded) = Erosion.Area(g, a, b.RestAngle, b.Random, set);
+            return (set.ToList(), (x0 - 1, z0 - 1, x1 + 1, z1 + 1), eroded);
         }
         float[] before = new float[g.W * g.H];
         for (int i = 0; i < before.Length; i++)
@@ -400,6 +400,7 @@ public sealed class AreaTool
         }
         int rNat = Math.Max(2, Math.Min(8, (int)MathF.Round(b.NoiseSize / 3)));
         float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
+        bool clamped = false;
         foreach (var (p, w) in a.Cells)
         {
             int gx = p % g.W, gz = p / g.W;
@@ -412,19 +413,19 @@ public sealed class AreaTool
             switch (act)
             {
                 case GroundAction.Flatten:
-                    g.SetHeight(p, h + (height - h) * w);
+                    clamped |= g.SetHeight(p, h + (height - h) * w);
                     break;
                 case GroundAction.Raise:
-                    g.SetHeight(p, h + amount * w);
+                    clamped |= g.SetHeight(p, h + amount * w);
                     break;
                 case GroundAction.Lower:
-                    g.SetHeight(p, h - amount * w);
+                    clamped |= g.SetHeight(p, h - amount * w);
                     break;
                 case GroundAction.Smooth:
-                    g.SetHeight(p, h + (Blur(p, 3) - h) * w);
+                    clamped |= g.SetHeight(p, h + (Blur(p, 3) - h) * w);
                     break;
                 case GroundAction.Natural:
-                    g.SetHeight(p, h + (Blur(p, rNat) + b.NoiseAmp * b.Noise.Fbm((ox + gx) / b.NoiseSize, (oz + gz) / b.NoiseSize) - h) * w);
+                    clamped |= g.SetHeight(p, h + (Blur(p, rNat) + b.NoiseAmp * b.Noise.Fbm((ox + gx) / b.NoiseSize, (oz + gz) / b.NoiseSize) - h) * w);
                     break;
                 case GroundAction.Restore:
                     if (g.Mod[p] != 0)
@@ -458,7 +459,7 @@ public sealed class AreaTool
                     break;
             }
         }
-        return (touched, (a.X0 - 1, a.Z0 - 1, a.X1 + 1, a.Z1 + 1));
+        return (touched, (a.X0 - 1, a.Z0 - 1, a.X1 + 1, a.Z1 + 1), clamped);
     }
 
     /// <summary>

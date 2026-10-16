@@ -105,12 +105,20 @@ public class AreaToolTests
         var s = TestScenes.Flat(2);
         var a = Box(40, 40, 80, 80, soft: 2);
         Assert.Contains("dig 0 m³, fill", a.Volume(s.Ground, AreaTool.GroundAction.Flatten, 33, 2));
-        s.EditGround("Area: Flatten", g => a.Apply(g, s.Brush, AreaTool.GroundAction.Flatten, 33, 0, new float[4]));
+        s.EditGround("Area: Flatten", g =>
+        {
+            var (t, rect, _) = a.Apply(g, s.Brush, AreaTool.GroundAction.Flatten, 33, 0, new float[4]);
+            return (t, rect);
+        });
         Assert.Equal(33, H(s, 60, 60), 3);
         Assert.Equal(30, H(s, 90, 60), 3);
         Assert.Equal(33, a.Average(s.Ground)!.Value, 0);
         Assert.Contains("raised", a.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 2));
-        s.EditGround("Area: Restore", g => a.Apply(g, s.Brush, AreaTool.GroundAction.Restore, 0, 0, new float[4]));
+        s.EditGround("Area: Restore", g =>
+        {
+            var (t, rect, _) = a.Apply(g, s.Brush, AreaTool.GroundAction.Restore, 0, 0, new float[4]);
+            return (t, rect);
+        });
         Assert.Equal(30, H(s, 60, 60), 3);
         Assert.Equal(new[] { (0, 0), (1, 0), (0, 1), (1, 1) }.OrderBy(z => z), a.ZonesUnder(s.Ground).OrderBy(z => z));
     }
@@ -174,7 +182,11 @@ public class AreaToolTests
         Assert.NotNull(s.Mountain(160, 160, new MountainSpec(MountainKind.Peak, 80, 60, 0.6f, 0, 42), clear: false, "Mountain: test"));
         Assert.True(H(s, 160, 160) > 80);
         var a = Box(100, 100, 220, 220);
-        s.EditGround("Area: Restore", g => a.Apply(g, s.Brush, AreaTool.GroundAction.Restore, 0, 0, new float[4]));
+        s.EditGround("Area: Restore", g =>
+        {
+            var (t, rect, _) = a.Apply(g, s.Brush, AreaTool.GroundAction.Restore, 0, 0, new float[4]);
+            return (t, rect);
+        });
         Assert.Equal(30, H(s, 160, 160), 3);
         Assert.Equal(0, s.Ground.Lift[160 * s.Ground.W + 160]);
     }

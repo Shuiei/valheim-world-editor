@@ -108,7 +108,11 @@ public class MaskTests
         var a = new AreaTool { Soft = 0 };
         a.Points.Add(new Vector2(50, 50));
         a.Points.Add(new Vector2(80, 80));
-        s.EditGround("a", g => a.Apply(g, s.Brush, AreaTool.GroundAction.Raise, 0, 1, new float[4], s.MaskNow()));
+        s.EditGround("a", g =>
+        {
+            var (t, rect, _) = a.Apply(g, s.Brush, AreaTool.GroundAction.Raise, 0, 1, new float[4], s.MaskNow());
+            return (t, rect);
+        });
         Assert.Equal(31, H(s, 60, 60), 3);
         Assert.Equal(30, H(s, 70, 60), 3);
     }

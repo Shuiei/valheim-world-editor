@@ -699,8 +699,15 @@ public sealed class AreaPanel
         {
             float[] paint = Brush.PaintOf(Paints[Math.Max(0, PaintBox.SelectedIndex)].Tool)!;
             string name = act == Act.Paint ? $"Paint {Paints[Math.Max(0, PaintBox.SelectedIndex)].Label.ToLowerInvariant()}" : AreaTool.Label(ga);
-            var touched = session.EditGround($"Area: {name}", g => Area.Apply(g, session.Brush, ga, Value(HeightBox), Value(AmountBox), paint, session.MaskNow()));
-            Message?.Invoke($"{name} applied to {touched.Count} point(s).");
+            bool clamped = false;
+            var touched = session.EditGround($"Area: {name}", g =>
+            {
+                var (t, rect, c) = Area.Apply(g, session.Brush, ga, Value(HeightBox), Value(AmountBox), paint, session.MaskNow());
+                clamped = c;
+                return (t, rect);
+            });
+            Message?.Invoke(clamped ? $"{name} applied to {touched.Count} point(s), but some reached the game limit: ground can only move 8 m from its original height (red points)."
+                : $"{name} applied to {touched.Count} point(s).");
             Refresh();
             return;
         }
