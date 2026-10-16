@@ -340,7 +340,9 @@ public class ClaudeToolsTests
         ])).GetProperty("placed");
         var ground = J(await r.T.GroundAtPoints([[cx, cz], [cx + 0.4f, cz + 0.3f]]));
         float rise = ground[1].GetProperty("height").GetSingle() - ground[0].GetProperty("height").GetSingle();
-        Assert.True(rise > 0.1f, $"{rise}");
+        // On a slope either way (the area's own ground under the shaped one): both points share a nearest grid point, so
+        // they stood at one height before.
+        Assert.True(MathF.Abs(rise) > 0.1f, $"{rise}");
         Assert.Equal(rise, placed[1].GetProperty("piece").GetProperty("y").GetSingle() - placed[0].GetProperty("piece").GetProperty("y").GetSingle(), 2);
     }
 
