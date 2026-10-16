@@ -114,12 +114,12 @@ public static class Mountain
         static float Bumps(List<(float X, float Z, float R, float H)> bumps, float u, float v)
         {
             float acc = 0f;
-            const float k = 0.15f;
+            const float Soft = 0.15f;
             foreach (var (bx, bz, br, bh) in bumps)
             {
                 float bu = (u - bx) / br, bv = (v - bz) / br;
-                float bump = bh * Bell(MathF.Sqrt(bu * bu + bv * bv)), t = Math.Clamp(0.5f + 0.5f * (bump - acc) / k, 0, 1);
-                acc = bump <= 0 ? acc : acc <= 0 ? bump : acc + (bump - acc) * t + k * t * (1 - t);
+                float bump = bh * Bell(MathF.Sqrt(bu * bu + bv * bv)), t = Math.Clamp(0.5f + 0.5f * (bump - acc) / Soft, 0, 1);
+                acc = bump <= 0 ? acc : acc <= 0 ? bump : acc + (bump - acc) * t + Soft * t * (1 - t);
             }
             return acc;
         }

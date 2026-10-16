@@ -319,7 +319,7 @@ public sealed class MapPage : IDisposable
         EditButton.Click += (_, _) => { if (Spot is var (x, z)) { EditRequested?.Invoke(x, z, Size); } };
         SizeBox.SelectionChanged += (_, _) => ShowChosen();
         SizeBox.Tip("map.size");
-        Map.Picked += (x, z) => { var (zx, zz) = TerrainEditor.Save.ChunkMath.SectorOf(x, z); Pick(zx, zz); };
+        Map.Picked += (x, z) => { var (zx, zz) = Save.ChunkMath.SectorOf(x, z); Pick(zx, zz); };
         Map.Hovered += Hover;
         Map.Status += t => _status.Text = t;
         Map.PiecesRead += () => BuildingsBox.Content = $"Show buildings ({Map.PieceCount:N0} player-built pieces)";
@@ -675,7 +675,7 @@ public sealed class MapPage : IDisposable
         {
             return;
         }
-        var (zx, zz) = TerrainEditor.Save.ChunkMath.SectorOf(x, z);
+        var (zx, zz) = Save.ChunkMath.SectorOf(x, z);
         Cursor.Text = $"x {x:0}, z {z:0} · zone {zx}, {zz} · {NewWorldPage.Name(_session.Terrain.BiomeAt(x, z))}";
     }
 
@@ -762,7 +762,7 @@ public sealed class MapPage : IDisposable
         var h = _hits[i];
         Map.PinChosen = i;
         Map.LookAt(h.X, h.Z, MathF.Min(Map.MetersPerPixel, 0.6f));
-        var (zx, zz) = TerrainEditor.Save.ChunkMath.SectorOf(h.X, h.Z);
+        var (zx, zz) = Save.ChunkMath.SectorOf(h.X, h.Z);
         Pick(zx, zz);
         Target = (h.Id, _searchWhat != "kinds");
         PickTitle.Text = $"{h.Name} at {h.X:0}, {h.Z:0} · zone {zx}, {zz}";

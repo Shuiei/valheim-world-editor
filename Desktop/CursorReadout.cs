@@ -30,7 +30,7 @@ public static class CursorReadout
         {
             height = string.Format(c, "ground {0:0.00} m", s.Heights[g]);
         }
-        var (zx, zz) = TerrainEditor.Save.ChunkMath.SectorOf(wx, wz);
+        var (zx, zz) = Save.ChunkMath.SectorOf(wx, wz);
         return string.Format(c, "x {0}, z {1}   {2}   zone {3}, {4}", wx, wz, height, zx, zz);
     }
 }

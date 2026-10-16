@@ -26,9 +26,9 @@ public static class Characters
     /// What each character file held when last read (several MB each), by its full path: read again only when its
     /// length or time written changed.
     /// </summary>
-    private static readonly Dictionary<string, (long Length, DateTime Written, Character? Character)> _read = [];
-    /// <summary>Guards <see cref="_read"/> (builders are asked for on any thread).</summary>
-    private static readonly Lock _readLock = new();
+    private static readonly Dictionary<string, (long Length, DateTime Written, Character? Character)> Known = [];
+    /// <summary>Guards <see cref="Known"/> (builders are asked for on any thread).</summary>
+    private static readonly Lock KnownLock = new();
     /// <summary>Tests: how many character files this thread read whole.</summary>
     [ThreadStatic]
     internal static int FileReads;
@@ -39,18 +39,18 @@ public static class Characters
         var info = new FileInfo(f);
         long length = info.Length;
         DateTime written = info.LastWriteTimeUtc;
-        lock (_readLock)
+        lock (KnownLock)
         {
-            if (_read.TryGetValue(f, out var known) && known.Length == length && known.Written == written)
+            if (Known.TryGetValue(f, out var known) && known.Length == length && known.Written == written)
             {
                 return known.Character;
             }
         }
         FileReads++;
         var c = Read(File.ReadAllBytes(f), Path.GetFileNameWithoutExtension(f));
-        lock (_readLock)
+        lock (KnownLock)
         {
-            _read[f] = (length, written, c);
+            Known[f] = (length, written, c);
         }
         return c;
     }
