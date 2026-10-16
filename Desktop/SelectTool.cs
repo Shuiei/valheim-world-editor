@@ -570,7 +570,8 @@ public sealed class SelectTool
     // ---- Exact place: the selection's middle (height: its lowest object) and the first one's turn.
     /// <summary>
     /// The selection's middle (height: its lowest object), the first one's turn (-180..180) and how many there
-    /// are; null when nothing is selected.
+    /// are, of the objects a move takes (not runestones, unless only runestones are selected); null when nothing is
+    /// selected.
     /// </summary>
     public (float X, float Y, float Z, float Turn, int Count)? Where()
     {
@@ -585,6 +586,12 @@ public sealed class SelectTool
         if (things.Count == 0)
         {
             return null;
+        }
+        // Runestones do not move (Begin leaves them out): the place is the moved objects', unless there are only
+        // runestones.
+        if (things.Where(t => !t.Runestone).ToList() is { Count: > 0 } moved)
+        {
+            things = moved;
         }
         float turn = ((things[0].Rotation.Y + 180) % 360 + 360) % 360 - 180;
         return (things.Average(t => t.Position.X), things.Min(t => t.Position.Y), things.Average(t => t.Position.Z), turn, things.Count);

@@ -37,6 +37,26 @@ public class SelectToolRunestoneTests
     }
 
     [AvaloniaFact]
+    public void ATypedPlaceIsTheMovedObjectsNotTheRunestones()
+    {
+        var stone = new WorldScene.Thing(4, StableHash.Of("Runestone_Meadows"), new Vector3(0, 30, 0), Vector3.Zero, 1, false);
+        var tree = new WorldScene.Thing(5, StableHash.Of("Beech1"), new Vector3(10, 30, 10), Vector3.Zero, 1, false);
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        w.Show();
+        var s = TestScenes.Flat(1, stone, tree);
+        w.View.Show(s.Scene, null);
+        w.Edit(s);
+        w.Tools.ChooseSelect();
+        w.View.Select([0, 1]);
+        var (x, _, z, _, count) = w.View.SelectTool.Where()!.Value;
+        Assert.Equal((10f, 10f, 1), (x, z, count));
+        w.View.SelectTool.PlaceAt(20, 30, 20, 0, by: false);
+        Assert.Equal(20, s.Scene.Things[1].Position.X, 3);
+        Assert.Equal(20, s.Scene.Things[1].Position.Z, 3);
+        Assert.Equal(new Vector3(0, 30, 0), s.Scene.Things[0].Position);
+    }
+
+    [AvaloniaFact]
     public void TheMouseWithNoAreaOrNoDragDoesNothing()
     {
         var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
