@@ -1278,20 +1278,22 @@ public sealed partial class ClaudeTools
 
     /// <summary>
     /// The library file of a blueprint named as list_blueprints names it (its #Name: header, or its file's name when
-    /// it has none): the file named after the name when there is one (as the editor saves them: of two files with
-    /// the same header, "Tower" is Tower.blueprint, not "Tower (2)"), else the first entry with that name, whatever
-    /// its file is called (the game's own files, downloaded ones and numbered copies are not named after their
-    /// header). Null for none.
+    /// it has none), whatever its file is called (the game's own files, downloaded ones and numbered copies are not
+    /// named after their header): of the entries with that name, the one in the file named after it when there is
+    /// one (as the editor saves them: "Tower" is Tower.blueprint, not "Tower (2)"), else the first. With no entry
+    /// of that name, a file named after it. Null for none.
     /// </summary>
     private string? BlueprintPath(string name)
     {
         string folder = _w.Blueprints.Status.Folder;
-        string path = Path.Combine(folder, TerrainEditor.App.Homestead.FileName(name));
-        if (File.Exists(path))
+        string file = TerrainEditor.App.Homestead.FileName(name);
+        var entries = TerrainEditor.App.Homestead.List(folder).Where(e => e.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+        if ((entries.Find(e => string.Equals(Path.GetFileName(e.Path), file, StringComparison.OrdinalIgnoreCase)) ?? entries.FirstOrDefault()) is { } entry)
         {
-            return path;
+            return entry.Path;
         }
-        return TerrainEditor.App.Homestead.List(folder).FirstOrDefault(e => e.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase))?.Path;
+        string path = Path.Combine(folder, file);
+        return File.Exists(path) ? path : null;
     }
 
     /// <summary>save_blueprint: the Workshop's building saved as a blueprint of the library (MainWindow.SaveWorkshopAs).</summary>
