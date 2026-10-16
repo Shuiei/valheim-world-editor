@@ -109,6 +109,20 @@ public class ObjectKindsTests
     public void EachObjectHasTheKindItLooksLike(string name, ObjectKind want) => Assert.Equal(want, ObjectKinds.Of(name, false));
 
     [Fact]
+    public void ANameIsSortedByTheRulesOnlyOnce()
+    {
+        string name = "rock_" + Guid.NewGuid().ToString("N");
+        int before = ObjectKinds.Finds;
+        Assert.Equal(ObjectKind.Rocks, ObjectKinds.Of(name, false));
+        Assert.Equal(ObjectKind.Rocks, ObjectKinds.Of(name, false));
+        Assert.Equal(before + 1, ObjectKinds.Finds);
+        // A placed piece or a tamed creature needs no rules.
+        Assert.Equal(ObjectKind.Buildings, ObjectKinds.Of(name, true));
+        Assert.Equal(ObjectKind.Animals, ObjectKinds.Of(name, false, tamed: true));
+        Assert.Equal(before + 1, ObjectKinds.Finds);
+    }
+
+    [Fact]
     public void EveryKindHasItsOwnLabel()
     {
         Assert.Equal(ObjectKinds.All.Length, ObjectKinds.All.Select(ObjectKinds.Label).Distinct().Count());
