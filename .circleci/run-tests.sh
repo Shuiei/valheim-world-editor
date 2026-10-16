@@ -2,7 +2,8 @@
 # One batch of a test project's classes, for CircleCI's testsuite CLI (.circleci/test-suites.yml):
 #   run-tests.sh <suite> <project> <junit file>
 # The classes come on stdin, one full name a line (as the suite's discover lists them); each becomes a
-# --filter-class of dotnet test, and the results (JUnit) go where the CLI asks. Every test runs,
+# --filter-class of dotnet test (an empty batch runs nothing and writes an empty result), and the
+# results (JUnit) go where the CLI asks. Every test runs,
 # failing or not; a test stuck 5 minutes ends the run with a dump (tests/testconfig.json; 10 minutes
 # under coverage). On main only, the batch's coverage is kept for the coverage job
 # (.circleci/continue.yml) in /tmp/coverage/<suite>-<container>/<batch>/. A test process that
@@ -30,11 +31,21 @@ if [ "${CIRCLE_BRANCH:-}" = main ]; then
     --coverage-output "$report" --hangdump-timeout 10m)
 fi
 
-sed 's/^/--filter-class=/' \
-  | xargs dotnet test --project "$project" -c Release --no-build --no-ansi --no-progress --output Detailed \
-      --results-directory "$runs" "${coverage[@]}" --report-spekt-junit --report-spekt-junit-filename "$junit" \
+mapfile -t classes < <(grep -v '^[[:space:]]*$')
+if [ "${#classes[@]}" -eq 0 ]; then
+  # An empty batch (a container left with nothing to run): dotnet test with no --filter-class would run
+  # every class of the project again here. No tests, an empty result.
+  echo "Empty batch: no test classes to run."
+  mkdir -p "$(dirname "$junit")"
+  printf '%s\n' '<?xml version="1.0" encoding="utf-8"?>' '<testsuites />' > "$junit"
+  exit 0
+fi
+
+dotnet test --project "$project" -c Release --no-build --no-ansi --no-progress --output Detailed \
+    --results-directory "$runs" "${coverage[@]}" --report-spekt-junit --report-spekt-junit-filename "$junit" \
+    "${classes[@]/#/--filter-class=}" \
   2>&1 | tee "$log"
-rc=${PIPESTATUS[1]}
+rc=${PIPESTATUS[0]}
 
 if [ ! -e "$junit" ]; then
   # No results: the test process crashed or was stopped stuck. One failed test in their place; its class
