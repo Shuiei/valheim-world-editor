@@ -356,7 +356,7 @@ public class ScriptHostTests
         var snap = ScriptHost.Take(s, Terrain.PrefabCatalog.NameOf);
         var ch = new ScriptHost.Changes();
         ch.Add.Add((StableHash.Of("woodwall"), "woodwall", new Vector3(31.8f, 31, 20), Vector3.Zero, 0, true));
-        var ex = Assert.Throws<ArgumentException>(() => ScriptHost.SnapPieces(snap, ch));
+        var ex = Assert.Throws<ArgumentException>(() => ScriptHost.SnapPieces(snap, ch, TestContext.Current.CancellationToken));
         Assert.Contains("snaps to", ex.Message);
         Assert.Equal(31.8f, ch.Add[0].Position.X);
     }
