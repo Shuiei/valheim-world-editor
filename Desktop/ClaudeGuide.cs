@@ -143,7 +143,8 @@ public sealed class ClaudePrompts
 
 		Steps: open_workshop (ask me first if it has unsaved work); plan the size on the 2 m grid; build_floor,
 		build_walls (with doors), build_roof; details with place_pieces; then support_check and screenshot
-		from a few sides, and fix what would fall or looks wrong. Tell me when it is ready: I save the blueprint.
+		from a few sides, and fix what would fall or looks wrong. Tell me when it is ready, and save it with
+		save_blueprint only when I ask (with the name and tags I give).
 		""";
 
     /// <summary>Shape an area of the open world: the shaping guide and the steps, with what to make.</summary>
