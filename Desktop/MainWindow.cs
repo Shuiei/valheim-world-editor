@@ -2601,19 +2601,107 @@ public sealed partial class MainWindow : Window
         History = new HistoryPanel(() => Session);
         Inspector = new InspectorPanel(() => Session);
         Blueprints = new BlueprintsPanel(View.Paste, () => View.Scene);
+        WireBlueprints();
+        SetUpWorkshop();
+        WireInspector();
+        WireSelectPanel();
+        AskPlayerId = () => Dialogs.AskText(this, "Built by", "Player id to write as the builder (the number Valheim keeps for a character):");
+        History.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
+        History.Allow = AllowEarlier;
+        MaskPanel = new MaskPanel(Mask);
+        WireGroundTools();
+        MeasurePanel = new MeasurePanel(View);
+        DungeonPanel = new DungeonPanel(View);
+        WireDungeonPanel();
+        PathPanel = new PathPanel(View, Tools.Brush);
+        PathPanel.ApplyAsked += ApplyPath;
+        AreaPanel = new AreaPanel(View, () => Session, prefab => _models?.NameOf(prefab) ?? Terrain.PrefabCatalog.DisplayName(prefab));
+        WireAreaPanel();
+        PastePanel = new PastePanel(View.Paste);
+        SetUpPlaceTool();
+        PlaceInput = new PlaceInput(View, PlaceTool) { Session = () => Session };
+        PlaceInput.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
+        View.Place = PlaceInput;
+        PlacePanel = new PlacePanel(PlaceInput, () => View.Scene, NameOfPrefab);
+        BuildPanel = new BuildPanel(PlaceInput) { Models = () => _models };
+        SetUpLibrary();
+        WirePlacePanel();
+        PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
+        View.PasteClicked += PasteAt;
+        Title = $"Valheim World Editor {BuildInfo.Version}";
+        Icon = new WindowIcon(Avalonia.Platform.AssetLoader.Open(new Uri($"avares://{typeof(MainWindow).Assembly.GetName().Name}/Assets/icon.png")));
+        Width = Options.WindowWidth > 0 ? Options.WindowWidth : 1500;
+        Height = Options.WindowHeight > 0 ? Options.WindowHeight : 950;
+        Background = Ui.Bg;
+        HelpCard = Help(RecordBox());
+        ConfirmSave = text => Dialogs.Ask(this, "Save into the world", text, "Save");
+        Ask = (title, text, yes, no) => Dialogs.Ask(this, title, text, yes, no);
+        Tell = text => Dialogs.Tell(this, "Valheim World Editor", text);
+        var tools = BuildToolColumn();
+        WireShapePanels();
+        WireScriptPanel();
+        Tools.ToolChanged += OnToolChanged;
+        View.SelectTool.Message += (text, _) => MessageText.Text = text;
+        View.StrokeEnded += OnStrokeEnded;
+        WireKeys();
+        Closing += async (_, e) => await OnClosingAsync(e);
+        // Takes the mouse for the 3D view (see GlView.Attach).
+        var surface = new Border { Background = Brushes.Transparent };
+        Surface = surface;
+        SetUpDrops(surface);
+        SetUpEditorWorld();
+        ViewPanelCard = ViewPanel();
+        LayOutRightPanels();
+        _editorPage = new Grid { Children = { View, surface, PlayerLabels, tools, LocationNote, ViewPanelCard, History.Card, Inspector.Card, HelpCard, TopBar(), StatusBar() } };
+        _busy.Child = _busyText;
+        _pages.Content = _editorPage;
+        Content = new Grid { Children = { _pages, _busy } };
+        View.Attach(surface, this);
+        View.AltWheel = AltWheel;
+        View.CtrlWheel = CtrlWheel;
+        TrackCursor(surface);
+        View.Perf = _perf;
+        WireViewReports();
+        // Once really closed (Closing also comes when "Keep editing" keeps the window open).
+        Closed += (_, _) => { MapPage?.Dispose(); _perf.Flush(); Prefs.Flush(); PlacePanel.Memory.Flush(); };
+        RememberPrefs();
+        _info.Text = "Loading the world…";
+        Opened += async (_, _) => await OnOpenedAsync(load);
+    }
+
+    /// <summary>
+    /// Wires the Blueprints panel to the window: its messages, pasting a blueprint, its dialogs and file picker.
+    /// </summary>
+    private void WireBlueprints()
+    {
         Blueprints.Message += t => MessageText.Text = t;
         Blueprints.Pasting += () => { ViewPanelCard.IsVisible = true; StartPaste(); };
         Blueprints.AskDetails = (start, cost) => Dialogs.AskBlueprint(this, start, cost);
         Blueprints.Models = () => _models;
         Blueprints.Confirm = text => Dialogs.Ask(this, "Blueprints", text, "Yes");
         Blueprints.OpenUrl = Launcher.LaunchUriAsync;
-        SetUpWorkshop();
         Blueprints.PickFile = () => Pickers.File(StorageProvider, "Import a .blueprint (Homestead, PlanBuild) or .vbuild file",
             new Avalonia.Platform.Storage.FilePickerFileType("Blueprints") { Patterns = BlueprintPatterns });
+    }
+
+    /// <summary>
+    /// Wires the Inspector to the window: its messages, the object it replaced, its dialog, and the View panel back
+    /// when it closes.
+    /// </summary>
+    private void WireInspector()
+    {
         Inspector.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
         Inspector.Replaced += i => View.Select([i]);
         Inspector.Confirm = text => Dialogs.Ask(this, "Contents", text, "Apply anyway");
         Inspector.Closed += () => ViewPanelCard.IsVisible = true;
+    }
+
+    /// <summary>
+    /// Wires the Select panel to the window and the 3D view: the selection and saved selections, picking a kind,
+    /// Inspect (also asked from the view), Claim and Replace.
+    /// </summary>
+    private void WireSelectPanel()
+    {
         SelectPanel.Message += t => MessageText.Text = t;
         SelectPanel.PickKindAsked += PickKind;
         SelectPanel.NameOf = NameOfPrefab;
@@ -2626,67 +2714,101 @@ public sealed partial class MainWindow : Window
         SelectPanel.InspectButton.Click += (_, _) => Inspect();
         View.InspectAsked += () => { if (View.Selected.Count == 1) { Inspect(); } };
         SelectPanel.ClaimButton.Click += (_, _) => Claim();
-        AskPlayerId = () => Dialogs.AskText(this, "Built by", "Player id to write as the builder (the number Valheim keeps for a character):");
-        History.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
-        History.Allow = AllowEarlier;
-        SelectPanel.ReplaceAsked += prefab =>
+        SelectPanel.ReplaceAsked += ReplaceSelection;
+    }
+
+    /// <summary>
+    /// Replace (Select panel): the selected objects become the given kind.
+    /// </summary>
+    /// <param name="prefab">The kind they become.</param>
+    private void ReplaceSelection(int prefab)
+    {
+        View.SelectTool.Commit();
+        var sel = View.Selected.ToList();
+        if (Session is not { } s || sel.Count == 0)
         {
-            View.SelectTool.Commit();
-            var sel = View.Selected.ToList();
-            if (Session is not { } s || sel.Count == 0)
-            {
-                MessageText.Text = "Select objects to replace first.";
-                return;
-            }
-            AreaPanel!.Replace(s, sel, prefab);
-            View.Select([]);
-            UpdateSaveBar();
-        };
-        MaskPanel = new MaskPanel(Mask);
+            MessageText.Text = "Select objects to replace first.";
+            return;
+        }
+        AreaPanel!.Replace(s, sel, prefab);
+        View.Select([]);
+        UpdateSaveBar();
+    }
+
+    /// <summary>
+    /// Wires the ground brushes: stamps, the tools' messages, No limit, loading a stamp picture and the brush's
+    /// Alt + click.
+    /// </summary>
+    private void WireGroundTools()
+    {
         View.StampClicked += StampAt;
         Tools.Message += t => MessageText.Text = t;
-        Tools.NoLimitChanged += on =>
+        Tools.NoLimitChanged += OnNoLimitChanged;
+        Tools.LoadStampAsked += async () => await LoadStampAsync();
+        View.BrushAltClick += OnBrushAltClick;
+    }
+
+    /// <summary>
+    /// No limit switched (tool options): the session's ground and the Area panel's same switch follow.
+    /// </summary>
+    /// <param name="on">Whether the ground tools go past the game's ±8 m.</param>
+    private void OnNoLimitChanged(bool on)
+    {
+        Session?.Ground.NoLimit = on;
+        // The Area panel shows the same switch under Flatten, Raise and Lower.
+        if (AreaPanel != null)
         {
-            Session?.Ground.NoLimit = on;
-            // The Area panel shows the same switch under Flatten, Raise and Lower.
-            if (AreaPanel != null)
-            {
-                AreaPanel.NoLimitBox.IsChecked = on;
-                AreaPanel.RefreshVolume();
-            }
-            MessageText.Text = on ? "No limit: the ground tools go past the game's ±8 m. Saving turns that ground into ground discs every player's game counts as generated ground." : "The ground tools keep to the game's ±8 m.";
-        };
-        Tools.LoadStampAsked += async () =>
+            AreaPanel.NoLimitBox.IsChecked = on;
+            AreaPanel.RefreshVolume();
+        }
+        MessageText.Text = on ? "No limit: the ground tools go past the game's ±8 m. Saving turns that ground into ground discs every player's game counts as generated ground." : "The ground tools keep to the game's ±8 m.";
+    }
+
+    /// <summary>
+    /// Load stamp…: a grayscale picture chosen from the computer's files becomes a brush shape.
+    /// </summary>
+    private async Task LoadStampAsync()
+    {
+        if (await Pickers.File(StorageProvider, "Use a grayscale picture as the brush shape",
+            new Avalonia.Platform.Storage.FilePickerFileType("Pictures") { Patterns = PicturePatterns }) is not string path)
         {
-            if (await Pickers.File(StorageProvider, "Use a grayscale picture as the brush shape",
-                new Avalonia.Platform.Storage.FilePickerFileType("Pictures") { Patterns = PicturePatterns }) is not string path)
-            {
-                return;
-            }
-            if (Stamps.FromPicture(File.ReadAllBytes(path)) is { } data)
-            {
-                Tools.AddStamp(Path.GetFileNameWithoutExtension(path), data);
-            }
-            else
-            {
-                MessageText.Text = "That picture could not be read.";
-            }
-        };
-        View.BrushAltClick += (h, shift) =>
+            return;
+        }
+        if (Stamps.FromPicture(File.ReadAllBytes(path)) is { } data)
         {
-            if (shift)
-            {
-                Mask.PickHeight(h);
-                MessageText.Text = $"Mask: ground between {h - 2:0.0} and {h + 2:0.0} m.";
-            }
-            else
-            {
-                Tools.FlattenTo(h);
-                MessageText.Text = $"Flatten to {h:0.0} m.";
-            }
-        };
-        MeasurePanel = new MeasurePanel(View);
-        DungeonPanel = new DungeonPanel(View);
+            Tools.AddStamp(Path.GetFileNameWithoutExtension(path), data);
+        }
+        else
+        {
+            MessageText.Text = "That picture could not be read.";
+        }
+    }
+
+    /// <summary>
+    /// Alt + click with a brush: the ground's height there becomes Flatten's target, or with Shift the mask's band.
+    /// </summary>
+    /// <param name="h">The ground's height clicked.</param>
+    /// <param name="shift">Shift held: the mask's band instead.</param>
+    private void OnBrushAltClick(float h, bool shift)
+    {
+        if (shift)
+        {
+            Mask.PickHeight(h);
+            MessageText.Text = $"Mask: ground between {h - 2:0.0} and {h + 2:0.0} m.";
+        }
+        else
+        {
+            Tools.FlattenTo(h);
+            MessageText.Text = $"Flatten to {h:0.0} m.";
+        }
+    }
+
+    /// <summary>
+    /// Wires the Dungeon panel and its Generate part: building in the dungeon, placing a generated one, going to it
+    /// or its entrance, opening it in the Workshop, and the dungeon tool's messages.
+    /// </summary>
+    private void WireDungeonPanel()
+    {
         DungeonPanel.BuildAsked += () => BuildInDungeon(true);
         DungeonPanel.Gen.PlaceAsked += (settings, result) => PlaceGenerated(settings, result);
         DungeonPanel.Gen.DungeonAsked += GoToDungeon;
@@ -2703,9 +2825,14 @@ public sealed partial class MainWindow : Window
             }
         };
         View.Dungeon.Message += t => MessageText.Text = t;
-        PathPanel = new PathPanel(View, Tools.Brush);
-        PathPanel.ApplyAsked += ApplyPath;
-        AreaPanel = new AreaPanel(View, () => Session, prefab => _models?.NameOf(prefab) ?? Terrain.PrefabCatalog.DisplayName(prefab));
+    }
+
+    /// <summary>
+    /// Wires the Area panel: its messages, No limit, picking a kind, copy, cut, paste, blueprints and the library,
+    /// the clipboard's line, its dialog and its picture and backup pickers.
+    /// </summary>
+    private void WireAreaPanel()
+    {
         AreaPanel.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
         AreaPanel.NoLimitChanged += on => Tools.NoLimitBox.IsChecked = on;
         AreaPanel.PickKindAsked += PickKind;
@@ -2727,35 +2854,47 @@ public sealed partial class MainWindow : Window
         AreaPanel.PickPicture = () => Pickers.File(StorageProvider, "Import a heightmap (grayscale PNG)",
             new Avalonia.Platform.Storage.FilePickerFileType("PNG pictures") { Patterns = PngPatterns });
         AreaPanel.PickFolder = () => Pickers.Folder(StorageProvider, "Choose a backup (or copy) of this world: the folder with _main.<n>.chunks");
-        PastePanel = new PastePanel(View.Paste);
+    }
+
+    /// <summary>
+    /// Gives the Place tool what it reads from the window: the brush, the scene, the mask, names and model boxes.
+    /// </summary>
+    private void SetUpPlaceTool()
+    {
         PlaceTool.Brush = Tools.Brush;
         PlaceTool.Scene = () => View.Scene;
         PlaceTool.Mask = () => Session?.MaskNow();
         PlaceTool.NameOf = NameOfPrefab;
         PlaceTool.ModelBox = ModelBox;
-        PlaceInput = new PlaceInput(View, PlaceTool) { Session = () => Session };
-        PlaceInput.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
-        View.Place = PlaceInput;
-        PlacePanel = new PlacePanel(PlaceInput, () => View.Scene, NameOfPrefab);
-        BuildPanel = new BuildPanel(PlaceInput) { Models = () => _models };
-        SetUpLibrary();
+    }
+
+    /// <summary>
+    /// Wires the Place panel's messages and its preset dialogs.
+    /// </summary>
+    private void WirePlacePanel()
+    {
         PlacePanel.Message += t => MessageText.Text = t;
         PlacePanel.AskName = () => Dialogs.AskText(this, "Save as preset", "Name of the preset:");
         PlacePanel.Confirm = text => Dialogs.Ask(this, "Delete the preset", text, "Delete");
-        PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
-        View.PasteClicked += PasteAt;
-        Title = $"Valheim World Editor {BuildInfo.Version}";
-        Icon = new WindowIcon(Avalonia.Platform.AssetLoader.Open(new Uri($"avares://{typeof(MainWindow).Assembly.GetName().Name}/Assets/icon.png")));
-        Width = Options.WindowWidth > 0 ? Options.WindowWidth : 1500;
-        Height = Options.WindowHeight > 0 ? Options.WindowHeight : 950;
-        Background = Ui.Bg;
+    }
+
+    /// <summary>
+    /// The Help card's Record frame rates switch: frame rates written to the log file while on.
+    /// </summary>
+    private CheckBox RecordBox()
+    {
         var record = new CheckBox { Content = "Record frame rates", FontSize = 12.5 };
         record.IsCheckedChanged += (_, _) => { _perf.On = record.IsChecked == true; _perf.Restart(); if (!_perf.On) { _perf.Flush(); } };
         ToolTip.SetTip(record, Lang.T("view.perfFile", Tips.Of("view.perf"), Ui.Tilde(PerfLog.FilePath)));
-        HelpCard = Help(record);
-        ConfirmSave = text => Dialogs.Ask(this, "Save into the world", text, "Save");
-        Ask = (title, text, yes, no) => Dialogs.Ask(this, title, text, yes, no);
-        Tell = text => Dialogs.Tell(this, "Valheim World Editor", text);
+        return record;
+    }
+
+    /// <summary>
+    /// The column of tools on the left: the rail, the tool's options and every tool's panel, each scrolling when the
+    /// window is too short; the panels start hidden until their tool is chosen.
+    /// </summary>
+    private StackPanel BuildToolColumn()
+    {
         var tools = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -2776,146 +2915,196 @@ public sealed partial class MainWindow : Window
             }
         }
         SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = DungeonPanel.Card.IsVisible = ShapePanel.Card.IsVisible = MountainPanel.Card.IsVisible = ScriptPanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = PlacePanel.Card.IsVisible = false;
+        Tools.Options.VerticalAlignment = VerticalAlignment.Top;
+        Tools.Rail.VerticalAlignment = VerticalAlignment.Top;
+        return tools;
+    }
+
+    /// <summary>
+    /// Wires the Shape and Mountain panels to the 3D view's preview and clicks, and the Path panel's cave to the rail.
+    /// </summary>
+    private void WireShapePanels()
+    {
         ShapePanel.Changed += () => View.ShapeRadius = ShapePanel.Radius;
-        MountainPanel.Changed += () =>
-        {
-            if (Tools.Mode == ToolMode.Mountain)
-            {
-                View.ShapeRadius = MountainPanel.Spec.Reach;
-                View.MountainPreview = Mountain.Shape(MountainPanel.Spec);
-            }
-        };
-        View.ShapeClicked += (x, z) =>
-        {
-            if (Tools.Mode == ToolMode.Mountain)
-            {
-                _ = PutMountain(x, z);
-            }
-            else
-            {
-                PutShape(x, z);
-            }
-        };
+        MountainPanel.Changed += OnMountainChanged;
+        View.ShapeClicked += OnShapeClicked;
         Tools.CaveChosen += () =>
         {
             PathPanel.ChooseCave();
             Tools.MarkCave(true);
         };
         PathPanel.ActionChanged += a => Tools.MarkCave(a == PathTool.Action.Cave);
+    }
+
+    /// <summary>
+    /// The Mountain panel changed: with the Mountain tool on, the preview follows.
+    /// </summary>
+    private void OnMountainChanged()
+    {
+        if (Tools.Mode == ToolMode.Mountain)
+        {
+            View.ShapeRadius = MountainPanel.Spec.Reach;
+            View.MountainPreview = Mountain.Shape(MountainPanel.Spec);
+        }
+    }
+
+    /// <summary>
+    /// A click with the Shape or Mountain tool: puts the shape, or the mountain, there.
+    /// </summary>
+    /// <param name="x">Where, east-west.</param>
+    /// <param name="z">Where, north-south.</param>
+    private void OnShapeClicked(float x, float z)
+    {
+        if (Tools.Mode == ToolMode.Mountain)
+        {
+            _ = PutMountain(x, z);
+        }
+        else
+        {
+            PutShape(x, z);
+        }
+    }
+
+    /// <summary>
+    /// Wires the Script panel's Run, Stop, messages and its dialog.
+    /// </summary>
+    private void WireScriptPanel()
+    {
         ScriptPanel.RunAsked += () => _ = RunScript();
         ScriptPanel.StopAsked += () => _stopScript?.Invoke();
         ScriptPanel.Message += t => MessageText.Text = t;
         ScriptPanel.Confirm = text => Dialogs.Ask(this, "Save the script", text, "Replace");
-        Tools.Options.VerticalAlignment = VerticalAlignment.Top;
-        Tools.Rail.VerticalAlignment = VerticalAlignment.Top;
-        Tools.ToolChanged += t =>
+    }
+
+    /// <summary>
+    /// Another tool chosen: the 3D view takes it, its panel shows and the others hide, and what the last tool left
+    /// (the dungeon's cut, building in the dungeon, the kinds chooser) is put away.
+    /// </summary>
+    /// <param name="t">The brush chosen, if the tool is a brush.</param>
+    private void OnToolChanged(BrushTool? t)
+    {
+        View.Tool = t;
+        View.Mode = Tools.Mode;
+        SelectPanel.Card.IsVisible = Tools.SelectMode;
+        MeasurePanel.Card.IsVisible = Tools.Mode == ToolMode.Measure;
+        if (Tools.Mode == ToolMode.Measure)
         {
-            View.Tool = t;
-            View.Mode = Tools.Mode;
-            SelectPanel.Card.IsVisible = Tools.SelectMode;
-            MeasurePanel.Card.IsVisible = Tools.Mode == ToolMode.Measure;
-            if (Tools.Mode == ToolMode.Measure)
+            // The ground may have changed since the tape was drawn.
+            MeasurePanel.Refresh();
+        }
+        if (Tools.Mode == ToolMode.Dungeon)
+        {
+            DungeonPanel.Reload();
+        }
+        else if (DungeonPanel.Card.IsVisible && !BuildingInDungeon)
+        {
+            // Not into Build here (it builds under the dungeon's cut): the cut off.
+            DungeonPanel.Leave();
+        }
+        DungeonPanel.Card.IsVisible = Tools.Mode == ToolMode.Dungeon;
+        ShapePanel.Card.IsVisible = Tools.Mode == ToolMode.Shape;
+        MountainPanel.Card.IsVisible = Tools.Mode == ToolMode.Mountain;
+        ScriptPanel.Card.IsVisible = Tools.Mode == ToolMode.Script;
+        if (Blueprints.Card.IsVisible != (Tools.Mode == ToolMode.Blueprints))
+        {
+            Blueprints.Toggle(Tools.Mode == ToolMode.Blueprints);
+        }
+        View.ShapeRadius = Tools.Mode == ToolMode.Mountain ? MountainPanel.Spec.Reach : ShapePanel.Radius;
+        View.MountainPreview = Tools.Mode == ToolMode.Mountain ? Mountain.Shape(MountainPanel.Spec) : null;
+        PathPanel.Card.IsVisible = Tools.Mode == ToolMode.Path;
+        if (Tools.Mode == ToolMode.Path)
+        {
+            Tools.MarkCave(View.Path.Act == PathTool.Action.Cave);
+        }
+        AreaPanel.Card.IsVisible = Tools.Mode == ToolMode.Area;
+        PastePanel.Card.IsVisible = Tools.Mode == ToolMode.Paste;
+        if (BuildingInDungeon && Tools.Mode != ToolMode.Place)
+        {
+            if (Tools.Mode != ToolMode.Dungeon)
             {
-                // The ground may have changed since the tape was drawn.
-                MeasurePanel.Refresh();
-            }
-            if (Tools.Mode == ToolMode.Dungeon)
-            {
-                DungeonPanel.Reload();
-            }
-            else if (DungeonPanel.Card.IsVisible && !BuildingInDungeon)
-            {
-                // Not into Build here (it builds under the dungeon's cut): the cut off.
                 DungeonPanel.Leave();
             }
-            DungeonPanel.Card.IsVisible = Tools.Mode == ToolMode.Dungeon;
-            ShapePanel.Card.IsVisible = Tools.Mode == ToolMode.Shape;
-            MountainPanel.Card.IsVisible = Tools.Mode == ToolMode.Mountain;
-            ScriptPanel.Card.IsVisible = Tools.Mode == ToolMode.Script;
-            if (Blueprints.Card.IsVisible != (Tools.Mode == ToolMode.Blueprints))
-            {
-                Blueprints.Toggle(Tools.Mode == ToolMode.Blueprints);
-            }
-            View.ShapeRadius = Tools.Mode == ToolMode.Mountain ? MountainPanel.Spec.Reach : ShapePanel.Radius;
-            View.MountainPreview = Tools.Mode == ToolMode.Mountain ? Mountain.Shape(MountainPanel.Spec) : null;
-            PathPanel.Card.IsVisible = Tools.Mode == ToolMode.Path;
-            if (Tools.Mode == ToolMode.Path)
-            {
-                Tools.MarkCave(View.Path.Act == PathTool.Action.Cave);
-            }
-            AreaPanel.Card.IsVisible = Tools.Mode == ToolMode.Area;
-            PastePanel.Card.IsVisible = Tools.Mode == ToolMode.Paste;
-            if (BuildingInDungeon && Tools.Mode != ToolMode.Place)
-            {
-                if (Tools.Mode != ToolMode.Dungeon)
-                {
-                    DungeonPanel.Leave();
-                }
-                BuildInDungeon(false);
-            }
-            PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place && !InWorkshop && !BuildingInDungeon;
-            BuildPanel.Card.IsVisible = Tools.Mode == ToolMode.Place && (InWorkshop || BuildingInDungeon);
-            if (Tools.Mode != ToolMode.Place)
-            {
-                PlacePanel.Chooser.IsVisible = false;
-                PlacePanel.KindsButton.Content = PlacePanel.ChooseKindsText;
-            }
-            PlaceInput.Refresh();
-            MaskPanel.Card.IsVisible = !InWorkshop && Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape or ToolMode.Mountain or ToolMode.Place;
-            if (Tools.Mode == ToolMode.Area)
-            {
-                AreaPanel.Refresh();
-            }
-        };
-        View.SelectTool.Message += (text, _) => MessageText.Text = text;
-        View.StrokeEnded += msg =>
+            BuildInDungeon(false);
+        }
+        PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place && !InWorkshop && !BuildingInDungeon;
+        BuildPanel.Card.IsVisible = Tools.Mode == ToolMode.Place && (InWorkshop || BuildingInDungeon);
+        if (Tools.Mode != ToolMode.Place)
         {
-            MessageText.Text = msg;
-            if (Tools.Tool == BrushTool.Flatten && Tools.Brush.TargetFromClick)
-            {
-                Tools.ShowTarget(Tools.Brush.Target);
-            }
-            UpdateSaveBar();
-        };
+            PlacePanel.Chooser.IsVisible = false;
+            PlacePanel.KindsButton.Content = PlacePanel.ChooseKindsText;
+        }
+        PlaceInput.Refresh();
+        MaskPanel.Card.IsVisible = !InWorkshop && Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape or ToolMode.Mountain or ToolMode.Place;
+        if (Tools.Mode == ToolMode.Area)
+        {
+            AreaPanel.Refresh();
+        }
+    }
+
+    /// <summary>
+    /// A stroke ended: its message, Flatten's target when it came from the click, and the save bar.
+    /// </summary>
+    /// <param name="msg">What the stroke did.</param>
+    private void OnStrokeEnded(string msg)
+    {
+        MessageText.Text = msg;
+        if (Tools.Tool == BrushTool.Flatten && Tools.Brush.TargetFromClick)
+        {
+            Tools.ShowTarget(Tools.Brush.Target);
+        }
+        UpdateSaveBar();
+    }
+
+    /// <summary>
+    /// The editor's keys, and Shift held shown by the Place brush (a drag removes).
+    /// </summary>
+    private void WireKeys()
+    {
         KeyDown += OnKey;
         // Shift held: the Place brush shows that a drag removes.
         KeyDown += (_, e) => { if (e.Key is Avalonia.Input.Key.LeftShift or Avalonia.Input.Key.RightShift) { PlaceInput.ShiftHeld(true); } };
         KeyUp += (_, e) => { if (e.Key is Avalonia.Input.Key.LeftShift or Avalonia.Input.Key.RightShift) { PlaceInput.ShiftHeld(false); } };
-        Closing += async (_, e) =>
+    }
+
+    /// <summary>
+    /// The window is closing: unsaved changes (or an unsaved Workshop building) keep it open and ask first; quitting
+    /// anyway closes it again. Otherwise the tunnel to a live game is closed.
+    /// </summary>
+    /// <param name="e">The closing, cancelled to ask.</param>
+    private async Task OnClosingAsync(WindowClosingEventArgs e)
+    {
+        var pending = World?.Pending ?? Session?.Pending ?? (0, 0, 0, 0);
+        if (InWorkshop && !_closeAnyway)
         {
-            var pending = World?.Pending ?? Session?.Pending ?? (0, 0, 0, 0);
-            if (InWorkshop && !_closeAnyway)
+            if (WorkshopDirty)
             {
-                if (WorkshopDirty)
+                e.Cancel = true;
+                if (await Ask("Unsaved building", "The building in the Workshop is not saved as a blueprint. Quit without saving it?", "Quit anyway", "Keep building"))
                 {
-                    e.Cancel = true;
-                    if (await Ask("Unsaved building", "The building in the Workshop is not saved as a blueprint. Quit without saving it?", "Quit anyway", "Keep building"))
-                    {
-                        _closeAnyway = true;
-                        Close();
-                    }
+                    _closeAnyway = true;
+                    Close();
                 }
-                return;
             }
-            if (_closeAnyway || pending is (0, 0, 0, 0))
-            {
-                Tunnel.Close();
-                return;
-            }
-            e.Cancel = true;
-            if (await Ask("Unsaved changes", $"{(World?.IsLive == true ? "Not applied" : "Unsaved")}: {Describe(pending)}. Quit without {(World?.IsLive == true ? "applying" : "saving")} them?", "Quit anyway", "Keep editing"))
-            {
-                _closeAnyway = true;
-                Close();
-            }
-        };
-        // Takes the mouse for the 3D view (see GlView.Attach).
-        var surface = new Border { Background = Brushes.Transparent };
-        Surface = surface;
-        SetUpDrops(surface);
-        SetUpEditorWorld();
-        ViewPanelCard = ViewPanel();
-        // The panels on the right: under the top bar, one at a time.
+            return;
+        }
+        if (_closeAnyway || pending is (0, 0, 0, 0))
+        {
+            Tunnel.Close();
+            return;
+        }
+        e.Cancel = true;
+        if (await Ask("Unsaved changes", $"{(World?.IsLive == true ? "Not applied" : "Unsaved")}: {Describe(pending)}. Quit without {(World?.IsLive == true ? "applying" : "saving")} them?", "Quit anyway", "Keep editing"))
+        {
+            _closeAnyway = true;
+            Close();
+        }
+    }
+
+    /// <summary>
+    /// The panels on the right: under the top bar, one at a time, the View panel shown first.
+    /// </summary>
+    private void LayOutRightPanels()
+    {
         foreach (var right in new[] { ViewPanelCard, History.Card, Inspector.Card, HelpCard })
         {
             right.Margin = new Thickness(10, 70, 10, 58);
@@ -2923,45 +3112,52 @@ public sealed partial class MainWindow : Window
             right.VerticalAlignment = VerticalAlignment.Top;
         }
         ViewButton.Classes.Add("on");
-        _editorPage = new Grid { Children = { View, surface, PlayerLabels, tools, LocationNote, ViewPanelCard, History.Card, Inspector.Card, HelpCard, TopBar(), StatusBar() } };
-        _busy.Child = _busyText;
-        _pages.Content = _editorPage;
-        Content = new Grid { Children = { _pages, _busy } };
-        View.Attach(surface, this);
-        View.AltWheel = AltWheel;
-        // Building (the Workshop): Ctrl + wheel lifts the piece.
-        View.CtrlWheel = (dir, shift) =>
+    }
+
+    /// <summary>
+    /// Ctrl + wheel: pasting, the paste is lowered (into a mountain: Clear the site digs it out) or raised; building
+    /// (the Workshop), the piece is lifted; otherwise (false) the wheel is not taken.
+    /// </summary>
+    /// <param name="dir">The wheel's direction: 1 up, -1 down.</param>
+    /// <param name="shift">Shift held: finer steps.</param>
+    /// <returns>Whether a tool took it.</returns>
+    private bool CtrlWheel(int dir, bool shift)
+    {
+        // Pasting: the paste lowered (into a mountain: Clear the site digs it out) or raised.
+        if (Tools.Mode == ToolMode.Paste)
         {
-            // Pasting: the paste lowered (into a mountain: Clear the site digs it out) or raised.
-            if (Tools.Mode == ToolMode.Paste)
-            {
-                PastePanel.OffsetBox.Value = Math.Round((PastePanel.OffsetBox.Value ?? 0) + dir * (shift ? 0.1m : 0.5m), 2);
-                MessageText.Text = $"Paste height: {PastePanel.OffsetBox.Value:+0.0#;-0.0#;0} m from the ground clicked (Ctrl + wheel; Shift: 0.1 m).";
-                return true;
-            }
-            if (Tools.Mode != ToolMode.Place || !PlaceTool.Building)
-            {
-                return false;
-            }
-            PlaceInput.Lift(dir * (shift ? 0.1f : 0.5f));
-            BuildPanel.ShowLift();
+            PastePanel.OffsetBox.Value = Math.Round((PastePanel.OffsetBox.Value ?? 0) + dir * (shift ? 0.1m : 0.5m), 2);
+            MessageText.Text = $"Paste height: {PastePanel.OffsetBox.Value:+0.0#;-0.0#;0} m from the ground clicked (Ctrl + wheel; Shift: 0.1 m).";
             return true;
-        };
+        }
+        if (Tools.Mode != ToolMode.Place || !PlaceTool.Building)
+        {
+            return false;
+        }
+        PlaceInput.Lift(dir * (shift ? 0.1f : 0.5f));
+        BuildPanel.ShowLift();
+        return true;
+    }
+
+    /// <summary>
+    /// The status bar's cursor readout follows the mouse over the 3D view (and is read again after a stroke).
+    /// </summary>
+    /// <param name="surface">The control that takes the mouse for the 3D view.</param>
+    private void TrackCursor(Control surface)
+    {
         surface.PointerMoved += (_, e) => ShowCursor(e.GetPosition(surface));
         surface.PointerExited += (_, _) => ShowCursor(null);
         View.StrokeEnded += _ => ShowCursor(_cursorAt);
-        View.Perf = _perf;
+    }
+
+    /// <summary>
+    /// What the 3D view reports, shown: frame rates, the selection (the Select panel, the Inspector and the status
+    /// line follow it), walking or flying, and its status lines.
+    /// </summary>
+    private void WireViewReports()
+    {
         View.StatsChanged += s => _fps.Text = $"{s.Fps} frames/s · {s.WorkMs:0.0} ms of work each · {s.Objects:N0} objects ({s.Instances:N0} model parts in {s.Batches:N0} draws){(s.PendingModels > 0 ? $" · {s.PendingModels} kinds loading" : "")}";
-        View.SelectionChanged += _ =>
-        {
-            SelectPanel.Refresh();
-            // Open: it follows the selection.
-            var sel = View.Selected;
-            if (Inspector.IsOpen && sel.Count == 1 && sel.First() != Inspector.Index)
-            {
-                Inspect();
-            }
-        };
+        View.SelectionChanged += _ => FollowSelection();
         View.SelectionChanged += things => _selection.Text = things.Count == 0 ? "" : things.Count == 1
             ? $"Selected: {ThingName(things[0])} at {things[0].Position.X:0.0}, {things[0].Position.Z:0.0} (height {things[0].Position.Y:0.0})"
             : $"Selected: {things.Count} objects ({string.Join(", ", things.GroupBy(ThingName).OrderByDescending(g => g.Count()).Take(4).Select(g => $"{g.Key} ×{g.Count()}"))})";
@@ -2972,65 +3168,82 @@ public sealed partial class MainWindow : Window
             _ => "",
         };
         View.Status += t => { Options.Say(t); Dispatcher.UIThread.Post(() => _info.Text = t + "\n" + _info.Text); };
-        // Once really closed (Closing also comes when "Keep editing" keeps the window open).
-        Closed += (_, _) => { MapPage?.Dispose(); _perf.Flush(); Prefs.Flush(); PlacePanel.Memory.Flush(); };
-        RememberPrefs();
-        _info.Text = "Loading the world…";
-        Opened += async (_, _) =>
+    }
+
+    /// <summary>
+    /// The selection changed: the Select panel shows it, and an open Inspector follows a single selected object.
+    /// </summary>
+    private void FollowSelection()
+    {
+        SelectPanel.Refresh();
+        // Open: it follows the selection.
+        var sel = View.Selected;
+        if (Inspector.IsOpen && sel.Count == 1 && sel.First() != Inspector.Index)
         {
-            if (!load)
+            Inspect();
+        }
+    }
+
+    /// <summary>
+    /// The window is open: with <paramref name="load"/>, the game's look is checked, Claude's connection applied and
+    /// the models read; then the world given on the command line opens (or the start page shows), and the test
+    /// driver starts when asked.
+    /// </summary>
+    /// <param name="load">False (tests): nothing is loaded.</param>
+    private async Task OnOpenedAsync(bool load)
+    {
+        if (!load)
+        {
+            return;
+        }
+        Options.Say("window open");
+        // The game's look: copied from the player's Valheim when missing or after a game update
+        // (when driven by the tests, only whether it is there: they never copy from the game).
+        GameLook.Check(Settings);
+        // Claude's connection, when chosen in Settings.
+        await ClaudeServer.Apply(Settings, this);
+        if (!Options.Driver)
+        {
+            // The copy older editors made of the game's look: nothing reads it any more.
+            _ = Task.Run(GameLook.DeleteOldCopy);
+            _modelsLoading = Task.Run(ModelStore.Open);
+        }
+        if (Options.Direct)
+        {
+            // --world (and --zone): that area in the 3D editor at once.
+            try
             {
-                return;
+                var world = await Task.Run(() => WorldSession.Open(WorldScene.FindWorld(Options.World)));
+                World = world;
+                var scene = await Task.Run(() => WorldScene.Load(world, Options.ZoneX, Options.ZoneZ, Options.Size));
+                await ShowEditor(scene);
             }
-            Options.Say("window open");
-            // The game's look: copied from the player's Valheim when missing or after a game update
-            // (when driven by the tests, only whether it is there: they never copy from the game).
-            GameLook.Check(Settings);
-            // Claude's connection, when chosen in Settings.
-            await ClaudeServer.Apply(Settings, this);
-            if (!Options.Driver)
+            catch (Exception ex)
             {
-                // The copy older editors made of the game's look: nothing reads it any more.
-                _ = Task.Run(GameLook.DeleteOldCopy);
-                _modelsLoading = Task.Run(ModelStore.Open);
+                _info.Text = "Could not open the world: " + ex.Message;
+                Options.Say(_info.Text);
             }
-            if (Options.Direct)
+        }
+        else
+        {
+            ShowStart();
+            // A world folder or a live game given on the command line: as if chosen on the start page.
+            if (Options.LiveUrl is string url)
             {
-                // --world (and --zone): that area in the 3D editor at once.
-                try
-                {
-                    var world = await Task.Run(() => WorldSession.Open(WorldScene.FindWorld(Options.World)));
-                    World = world;
-                    var scene = await Task.Run(() => WorldScene.Load(world, Options.ZoneX, Options.ZoneZ, Options.Size));
-                    await ShowEditor(scene);
-                }
-                catch (Exception ex)
-                {
-                    _info.Text = "Could not open the world: " + ex.Message;
-                    Options.Say(_info.Text);
-                }
+                StartPage!.SetMode("server");
+                StartPage.LiveUrl.Text = url;
+                StartPage.LiveToken.Text = Options.LiveToken ?? "";
+                await StartPage.ConnectUrl();
             }
-            else
+            else if (Options.Folder is string folder)
             {
-                ShowStart();
-                // A world folder or a live game given on the command line: as if chosen on the start page.
-                if (Options.LiveUrl is string url)
-                {
-                    StartPage!.SetMode("server");
-                    StartPage.LiveUrl.Text = url;
-                    StartPage.LiveToken.Text = Options.LiveToken ?? "";
-                    await StartPage.ConnectUrl();
-                }
-                else if (Options.Folder is string folder)
-                {
-                    StartPage!.SetMode("offline");
-                    StartPage.OpenFolder(folder);
-                }
+                StartPage!.SetMode("offline");
+                StartPage.OpenFolder(folder);
             }
-            if (Options.Driver)
-            {
-                Driver.Start(this);
-            }
-        };
+        }
+        if (Options.Driver)
+        {
+            Driver.Start(this);
+        }
     }
 }
