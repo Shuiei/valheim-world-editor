@@ -90,6 +90,17 @@ public class ZdoDataTests
     }
 
     [Fact]
+    public void UnusedHighFlagBitsComeBackAsSaved()
+    {
+        // ZdoBuilder keeps the bits 0x4000 and 0x8000; ZdoData dropped them on the way through the inspector.
+        var z = new ZdoData { Prefab = 123, BaseFlags = 0x0100 | 0x4000 | 0x8000 };
+        z.IntList.Add((1, 2));
+        var back = ZdoData.Parse(z.Serialize());
+        Assert.Equal(0x0100 | 0x4000 | 0x8000, back.BaseFlags);
+        Assert.Equal(0x0100 | 0x4000 | 0x8000 | ZdoData.Ints, BitConverter.ToUInt16(back.Serialize(), 0));
+    }
+
+    [Fact]
     public void ValuesAreSetReplacedAndRemoved()
     {
         var z = new ZdoData();

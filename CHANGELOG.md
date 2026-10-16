@@ -225,6 +225,8 @@ the plugin is unchanged in versions without that part.
 - **The save message could count the objects a zone reset cleared wrong, even below zero.** It took the number of
   deleted ids away from all removals, though an id in a reset zone, a repeated id or one past the list removes nothing
   more; it now counts the objects the deletions removed.
+- **An object changed in the inspector lost the high flag bits it was saved with.** ZdoData kept only the bits 0x0F00
+  while ZdoBuilder kept them all; it now keeps the unused bits 0xC000 too and writes them back.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

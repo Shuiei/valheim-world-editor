@@ -20,7 +20,13 @@ public sealed class ZdoData
     /// <summary>ZDO flag bits: a rotation is stored; the position is in the short form.</summary>
     private const ushort RotationFlag = 0x1000, SmallPositionFlag = 0x2000;
 
-    /// <summary>Persistent / distant / object type bits (0x0F00) as saved.</summary>
+    /// <summary>
+    /// The flag bits kept as saved: persistent / distant / object type (0x0F00) and the two the format leaves unused
+    /// (0xC000), as ZdoBuilder keeps them.
+    /// </summary>
+    private const ushort KeptFlags = 0xCF00;
+
+    /// <summary>Persistent / distant / object type bits (0x0F00) and any unused high bits (0xC000), as saved.</summary>
     public ushort BaseFlags { get; set; }
 
     /// <summary>World position in metres.</summary>
@@ -72,7 +78,7 @@ public sealed class ZdoData
         using ValheimReader r = new(new MemoryStream(bytes));
         ZdoData z = new();
         ushort flags = r.ReadUShort();
-        z.BaseFlags = (ushort)(flags & 0x0F00);
+        z.BaseFlags = (ushort)(flags & KeptFlags);
         if (worldVersion < WorldVersion.ChunkedSave)
         {
             r.ReadVector2s();
@@ -130,7 +136,7 @@ public sealed class ZdoData
     {
         Vector3 euler = new(ZdoBuilder.Wrap(Rotation.X), ZdoBuilder.Wrap(Rotation.Y), ZdoBuilder.Wrap(Rotation.Z));
         bool rotated = euler.LengthSquared() > 1e-6f;
-        ushort flags = (ushort)(BaseFlags & 0x0F00);
+        ushort flags = (ushort)(BaseFlags & KeptFlags);
         bool small = SmallPosition && Position.Y == 0f && Fits(Position.X) && Fits(Position.Z);
         if (small)
         {
