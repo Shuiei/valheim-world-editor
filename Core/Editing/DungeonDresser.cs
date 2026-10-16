@@ -1807,7 +1807,8 @@ internal sealed partial class DungeonDresser
             case 1 when _b.Name is "Deep North" or "Mountain":
                 // A memorial stone on a plinth, snow lanterns before it.
                 Plinth(f, 0, 0.5f, 2, 2);
-                _o.Add(One("MemorialStone_Medium", "MemorialStone_Large"), f.W(0, 0.5f, f.F + 1 + Lift * 2 + DungeonProps.Foot("MemorialStone_Medium")), f.Yaw(180));
+                string stone = One("MemorialStone_Medium", "MemorialStone_Large");
+                _o.Add(stone, f.W(0, 0.5f, f.F + 1 + Lift * 2 + DungeonProps.Foot(stone)), f.Yaw(180));
                 Steps(f, 0, -1.5f, 180, 2);
                 Put(f, "piece_snowlantern", -1.6f, -1.6f, 0, 0.3f);
                 Put(f, "piece_snowlantern", 1.6f, -1.6f, 0, 0.3f);
@@ -1822,7 +1823,8 @@ internal sealed partial class DungeonDresser
                 break;
             case 1:
                 Plinth(f, 0, 0, 4, 4);
-                _o.Add(One("RockDolmen_1", "RockDolmen_2", "RockDolmen_3"), f.W(0, 0, f.F + 1 + Lift * 2 + DungeonProps.Foot("RockDolmen_1")), f.Yaw(R(0, 360)));
+                string dolmen = One("RockDolmen_1", "RockDolmen_2", "RockDolmen_3");
+                _o.Add(dolmen, f.W(0, 0, f.F + 1 + Lift * 2 + DungeonProps.Foot(dolmen)), f.Yaw(R(0, 360)));
                 Steps(f, 0, -3, 180, 2);
                 Brazier(f, -(f.HalfA - 1.1f), -(f.HalfD - 1.1f));
                 Brazier(f, f.HalfA - 1.1f, -(f.HalfD - 1.1f));

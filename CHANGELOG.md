@@ -156,6 +156,9 @@ the plugin is unchanged in versions without that part.
 - **A pit arena's four corner columns never stood.** The ledges round the pit kept 1.3 m round each edge tile, so the
   columns 2 m in from them never found room; the columns are now placed first (away from the doorways), then the
   ledges.
+- **Some dungeon stones sank into their plinth or floated over it.** A shrine's memorial stone and dolmen were lifted
+  by the first prop's foot height whichever one was picked (a large memorial stone sank 0.13 m); the pick is now kept
+  and its own foot used.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

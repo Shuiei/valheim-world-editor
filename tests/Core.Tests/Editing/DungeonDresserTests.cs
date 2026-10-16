@@ -215,4 +215,25 @@ public class DungeonDresserTests
         Assert.True(pits > 0, "no pit arena");
         Assert.True(whole > 0, $"none of {pits} pit arenas has its four corner columns");
     }
+
+    [Fact]
+    public void AShrinesStoneStandsOnItsPlinthWhicheverIsPicked()
+    {
+        // The memorial stone was lifted by the medium one's foot whichever was picked: the large one sank 0.13 m.
+        var bases = new List<(string Prefab, float Base)>();
+        for (int seed = 1; seed <= 8; seed++)
+        {
+            var r = DungeonGen.Make(new DungeonGen.Settings(Biome: "Mountain", Style: "Temple", Size: 3, Levels: 1, Seed: seed));
+            foreach (var i in r.Items.Where(i => i.Prefab.StartsWith("MemorialStone_", StringComparison.Ordinal)))
+            {
+                var shrine = r.Map!.Where(m => m.Name == "Shrine").SingleOrDefault(m => i.Position.X > m.X0 && i.Position.X < m.X1 && i.Position.Z > m.Z0 && i.Position.Z < m.Z1);
+                if (shrine != null)
+                {
+                    bases.Add((i.Prefab, i.Position.Y - DungeonProps.Foot(i.Prefab) - shrine.Y));
+                }
+            }
+        }
+        Assert.Contains(bases, b => b.Prefab == "MemorialStone_Large");
+        Assert.All(bases, b => Assert.Equal(bases[0].Base, b.Base, 0.001f));
+    }
 }
