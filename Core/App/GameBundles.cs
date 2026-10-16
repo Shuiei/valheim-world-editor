@@ -408,52 +408,79 @@ public sealed class GameBundles
         foreach (string bundle in _files.Keys.Order(StringComparer.Ordinal))
         {
             progress?.Invoke(done++, _files.Count);
-            BundleFileInstance b;
+            // A file that is not a bundle is passed over; a bundle that cannot be read (a mod's, damaged or unusual)
+            // is skipped and said: the others' prefabs are still indexed.
+            BundleFileInstance? b = null;
+            AssetsFileInstance? a = null;
             try
             {
-                b = _am.LoadBundleFile(_files[bundle], false);
-            }
-            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException)
-            {
-                continue;
-            }
-            foreach (var d in b.file.BlockAndDirInfo.DirectoryInfos)
-            {
-                _cab[d.Name.Split('.')[0]] = bundle;
-            }
-            var a = _am.LoadAssetsFileFromBundle(b, 0, false);
-            // Without type trees its table of contents is not described either: nothing listed.
-            var ab = a.file.Metadata.TypeTreeEnabled ? a.file.GetAssetsOfType(AssetClassID.AssetBundle).FirstOrDefault() : null;
-            if (ab != null)
-            {
-                foreach (var c in _am.GetBaseField(a, ab)["m_Container.Array"].Children)
+                try
                 {
-                    string path = c["first"].AsString;
-                    if (!path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
+                    b = _am.LoadBundleFile(_files[bundle], false);
+                }
+                catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException)
+                {
+                    continue;
+                }
+                foreach (var d in b.file.BlockAndDirInfo.DirectoryInfos)
+                {
+                    _cab[d.Name.Split('.')[0]] = bundle;
+                }
+                a = _am.LoadAssetsFileFromBundle(b, 0, false);
+                if (a == null)
+                {
+                    Console.WriteLine($"game files: {bundle} does not start with an assets file, skipped");
+                    continue;
+                }
+                // Without type trees its table of contents is not described either: nothing listed.
+                var ab = a.file.Metadata.TypeTreeEnabled ? a.file.GetAssetsOfType(AssetClassID.AssetBundle).FirstOrDefault() : null;
+                if (ab != null)
+                {
+                    foreach (var c in _am.GetBaseField(a, ab)["m_Container.Array"].Children)
                     {
-                        string file = Path.GetFileName(path);
-                        if (Array.IndexOf(NamedAssets, file) >= 0)
+                        string path = c["first"].AsString;
+                        if (!path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
                         {
-                            assets.TryAdd(file, new Where(bundle, c["second.asset.m_PathID"].AsLong));
+                            string file = Path.GetFileName(path);
+                            if (Array.IndexOf(NamedAssets, file) >= 0)
+                            {
+                                assets.TryAdd(file, new Where(bundle, c["second.asset.m_PathID"].AsLong));
+                            }
+                            continue;
                         }
-                        continue;
-                    }
-                    string n = Path.GetFileNameWithoutExtension(path);
-                    var w = new Where(bundle, c["second.asset.m_PathID"].AsLong);
-                    if (!res.TryAdd(n, w))
-                    {
-                        if (!twice.TryGetValue(n, out var l))
+                        string n = Path.GetFileNameWithoutExtension(path);
+                        var w = new Where(bundle, c["second.asset.m_PathID"].AsLong);
+                        if (!res.TryAdd(n, w))
                         {
-                            twice[n] = l = [res[n]];
+                            if (!twice.TryGetValue(n, out var l))
+                            {
+                                twice[n] = l = [res[n]];
+                            }
+                            l.Add(w);
                         }
-                        l.Add(w);
                     }
                 }
             }
-            if (!_open.ContainsKey(bundle))
+            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or EndOfStreamException
+                or IndexOutOfRangeException or ArgumentException or NullReferenceException or OverflowException)
             {
-                _am.UnloadAssetsFile(a);
-                _am.UnloadBundleFile(b);
+                Console.WriteLine($"game files: the contents of {bundle} could not be read ({e.Message}), skipped");
+            }
+            finally
+            {
+                // Closed again, read whole or not (a file kept open could not be replaced later), unless kept for
+                // reading its assets.
+                if (!_open.ContainsKey(bundle))
+                {
+                    if (a != null)
+                    {
+                        _am.UnloadAssetsFile(a);
+                    }
+                    if (b != null)
+                    {
+                        _am.UnloadBundleFile(b);
+                    }
+                }
             }
         }
         foreach (var (n, list) in twice)

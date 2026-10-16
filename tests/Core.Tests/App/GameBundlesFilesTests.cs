@@ -76,6 +76,26 @@ public class GameBundlesFilesTests
         Assert.Null(GameBundles.ForGame(Path.Combine(game.Root, "valheim_Data"), null));
     }
 
+    [Fact]
+    public void AnUnusualBundleIsSkippedAndTheOthersIndexed()
+    {
+        using var game = new TestGame();
+        // A bundle that starts with a resource file (no assets file to read), and one whose table of contents is laid
+        // out otherwise (m_Container not a list): neither stops the index, and the usual bundle after them is read.
+        var odd = game.Bundle("b_table");
+        odd.WithContents = false;
+        odd.Assets.Add(UnityClass.AssetBundle, UnityField.Struct("AssetBundle", "Base", UnityField.Text("m_Name"), UnityField.Of("int", "m_Container")),
+            new Fields { ["m_Name"] = "b_table", ["m_Container"] = 1 });
+        var usual = game.Bundle("c_models");
+        usual.Prefab("Rock", r => r.Mono("ZNetView", new Fields { ["m_persistent"] = true }));
+        game.Save();
+        new UnityFsWriter().Resource("CAB-a_odd.resS", [1, 2, 3, 4]).Save(Path.Combine(game.BundlesDir, "a_odd"));
+
+        var bundles = new GameBundles(game.BundlesDir, null);
+        Assert.Equal(["Rock"], bundles.Index.Keys);
+        Assert.Equal("c_models", bundles.Index["Rock"].Bundle);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
