@@ -80,12 +80,12 @@ public static partial class GameCatalogues
     /// </summary>
     /// <param name="Cab">The internal file's name, lower case.</param>
     /// <param name="PathId">The object's path id in that file.</param>
-    private readonly record struct Ref(string Cab, long PathId);
+    internal readonly record struct Ref(string Cab, long PathId);
 
     /// <summary>
     /// The game's bundles, opened one at a time (all of them at once do not fit in memory).
     /// </summary>
-    private sealed class Game : IDisposable
+    internal sealed class Game : IDisposable
     {
         /// <summary>
         /// AssetsTools.NET's manager for every bundle opened here.
@@ -263,7 +263,7 @@ public static partial class GameCatalogues
     /// A bundle open for a scan: its internal files with objects (scene bundles have two), and every
     /// object read once (kept until the bundle is closed).
     /// </summary>
-    private sealed class Bundle : IDisposable
+    internal sealed class Bundle : IDisposable
     {
         /// <summary>
         /// One internal file of a bundle that has objects.

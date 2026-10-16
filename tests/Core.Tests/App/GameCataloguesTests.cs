@@ -139,6 +139,31 @@ public class GameCataloguesTests
         Assert.Equal(["last_floor"], JsonNode.Parse(kinds["piece-support"])!.AsObject().Select(kv => kv.Key));
     }
 
+    // A bundle opened while open is the same one, shared: it stays readable until its last user disposes it, is opened
+    // anew after that, and a dispose too many neither closes it again nor forgets the newer one.
+    [Fact]
+    public void ABundleOpenTwiceIsSharedUntilItsLastUserIsDone()
+    {
+        using var game = new TestGame();
+        game.Bundle("a_pieces").Prefab("floor", r => r.Box((0, 0, 0), (1, 0.2, 1)));
+        game.Save();
+        using var g = new GameCatalogues.Game(game.BundlesDir);
+        var a = g.Open("a_pieces")!;
+        Assert.Same(a, g.Open("a_pieces"));
+        var (file, info) = a.Objects.First();
+        a.Dispose();
+        Assert.NotNull(a.Read(file, info.PathId));
+        Assert.Same(a, g.Open("a_pieces"));
+        a.Dispose();
+        a.Dispose();
+        var b = g.Open("a_pieces")!;
+        Assert.NotSame(a, b);
+        a.Dispose();
+        Assert.Same(b, g.Open("a_pieces"));
+        var (bFile, bInfo) = b.Objects.First();
+        Assert.NotNull(b.Read(bFile, bInfo.PathId));
+    }
+
     [Fact]
     public void ObjectsLaidOutOtherwiseAreSaidRatherThanReadWrong()
     {
