@@ -12,7 +12,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The 3D editor's keys in the window: V and L for the right-hand panels, the Paste tool's F, Esc and Ctrl + wheel, the
 /// Area tool's Enter and Backspace, the Dungeon tool's R and Delete, Esc for the Measure tool's tape, I and Esc for the
-/// inspector; the walking and flying eyes; and Inspect on a runestone or on more than one object.
+/// inspector; the walking and flying eyes; Inspect on a runestone or on more than one object; and the key table's
+/// order and which keys it marks handled.
 /// </summary>
 [Collection("World files")]
 public class MainWindowKeysTests
@@ -37,6 +38,17 @@ public class MainWindowKeysTests
     {
         w.KeyPress(key, mods, physical, text);
         Dispatcher.UIThread.RunJobs();
+    }
+
+    /// <summary>
+    /// Presses a key (with these modifiers) on the window; whether the window marked it handled.
+    /// </summary>
+    private static bool Handled(MainWindow w, Key key, KeyModifiers mods = KeyModifiers.None)
+    {
+        var e = new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key, KeyModifiers = mods, Source = w };
+        w.RaiseEvent(e);
+        Dispatcher.UIThread.RunJobs();
+        return e.Handled;
     }
 
     [AvaloniaFact]
@@ -113,6 +125,32 @@ public class MainWindowKeysTests
         w.View.CycleEye();
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(GlView.EyeMode.Orbit, w.View.Eye);
+    }
+
+    [AvaloniaFact]
+    public void TheKeyTableKeepsItsOrderAndWhatItMarksHandled()
+    {
+        var (w, _) = Open();
+        // The rail's keys act and stay unhandled; a panel's key is taken.
+        Assert.False(Handled(w, Key.D1));
+        Assert.False(Handled(w, Key.Escape));
+        Assert.True(Handled(w, Key.L));
+        Assert.True(w.History.Card.IsVisible);
+        // Picking a kind comes before the Paste tool's Esc: Esc cancels the pick and the paste goes on.
+        w.View.Paste.Clip = BlueprintsPanelRun.Clip("Hut", "Beech1");
+        Assert.True(Handled(w, Key.V, KeyModifiers.Control));
+        Assert.Equal(ToolMode.Paste, w.Tools.Mode);
+        w.PickKind("the test", _ => { });
+        Assert.True(Handled(w, Key.Escape));
+        Assert.Null(w.View.PickObjectOnce);
+        Assert.Equal("Picking cancelled.", w.MessageText.Text);
+        Assert.Equal(ToolMode.Paste, w.Tools.Mode);
+        // The Paste tool's F is taken, so the view's F (walk) never sees it.
+        Assert.True(Handled(w, Key.F));
+        Assert.Equal(GlView.EyeMode.Orbit, w.View.Eye);
+        // The Dungeon tool turns Delete down with no room chosen, and no later rule takes it.
+        w.Tools.ChooseMode(ToolMode.Dungeon);
+        Assert.False(Handled(w, Key.Delete));
     }
 
     [AvaloniaFact]
