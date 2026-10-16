@@ -103,6 +103,21 @@ public class BlueprintFormatsEdgeTests
     }
 
     [Fact]
+    public void ATurnedSquaresCornersAreOnTheGrid()
+    {
+        // A square of half side 10 turned 45°: its corners reach 14.1 m along x and z, and the grid goes as far, so
+        // the ground point 12 m east of its middle (inside it) is levelled too.
+        var bp = BlueprintFormats.Parse("turned.blueprint", string.Join("\n", "#Terrain", "square;0;2;0;10;45;0;dirt"));
+        var clip = BlueprintFormats.ToClip(bp, _ => true, out _);
+        int w = (int)clip["w"]!, h = (int)clip["h"]!;
+        Assert.Equal((30, 30), (w, h));
+        var rel = (JsonArray)clip["rel"]!;
+        // The grid's points are 1 m apart from -14.5: the one at x 11.5, z -0.5.
+        int ix = (int)MathF.Round(12 + (w - 1) / 2f), iz = (h - 1) / 2;
+        Assert.Equal(0, (int)rel[iz * w + ix]!);
+    }
+
+    [Fact]
     public void TerrainMarksTooFarApartAreRefused()
     {
         var bp = BlueprintFormats.Parse("wide.blueprint", string.Join("\n", "#Terrain", "circle;0;0;0;1;0;0;dirt", "circle;2000;0;0;1;0;0;dirt"));

@@ -313,9 +313,10 @@ public static class BlueprintFormats
             {
                 throw new InvalidDataException("a terrain mark has a negative radius");
             }
-            tx0 = Math.Min(tx0, t.Position.X - t.Radius); tx1 = Math.Max(tx1, t.Position.X + t.Radius);
-            tz0 = Math.Min(tz0, t.Position.Z - t.Radius); tz1 = Math.Max(tz1, t.Position.Z + t.Radius);
-            Grow(t.Position.X - t.Radius, t.Position.Z - t.Radius); Grow(t.Position.X + t.Radius, t.Position.Z + t.Radius);
+            float r = Reach(t);
+            tx0 = Math.Min(tx0, t.Position.X - r); tx1 = Math.Max(tx1, t.Position.X + r);
+            tz0 = Math.Min(tz0, t.Position.Z - r); tz1 = Math.Max(tz1, t.Position.Z + r);
+            Grow(t.Position.X - r, t.Position.Z - r); Grow(t.Position.X + r, t.Position.Z + r);
         }
         if (x0 > x1)
         {
@@ -417,6 +418,20 @@ public static class BlueprintFormats
     /// </summary>
     public static List<Editing.ObjectField>? DataOf(JsonNode? data) =>
         data is JsonArray a && a.Count > 0 ? [.. a.Select(n => Editing.ObjectField.Parse((string?)n ?? "")).OfType<Editing.ObjectField>()] : null;
+
+    /// <summary>
+    /// How far a terrain entry reaches from its middle along x and z: its radius, or for a square turned by its
+    /// rotation, half its side times (|cos| + |sin|) of the turn (a corner, at 45° the half-diagonal).
+    /// </summary>
+    private static float Reach(TerrainMod t)
+    {
+        if (t.Shape != "square")
+        {
+            return t.Radius;
+        }
+        float a = t.Rotation * MathF.PI / 180f;
+        return t.Radius * (MathF.Abs(MathF.Cos(a)) + MathF.Abs(MathF.Sin(a)));
+    }
 
     /// <summary>
     /// Whether a terrain entry covers the ground point (x, z): a circle, or a square turned by its rotation.
