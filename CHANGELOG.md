@@ -36,6 +36,10 @@ the plugin is unchanged in versions without that part.
   live, a check that fails stops the apply, and a plugin changed since (the game started again) is seen.
 - **Editing a chest no longer wears the items in it.** Durability is kept in hundredths and was cut down when written,
   so about one value in five came back a hundredth lower after each save of the chest. It is now rounded.
+- **A history action on a step undone meanwhile no longer undoes everything or doubles the change.** While the History
+  panel asked to allow an action, Claude could undo the step, or the history drop it; Back to here then undid every
+  step, and Remove applied the step's change again to ground that no longer had it. These actions now do nothing for a
+  step that is no longer where it was picked.
 
 ### Changed
 

@@ -129,22 +129,41 @@ public sealed class EditSession
     public IReadOnlyList<Change> RedoList { get { lock (_lock) { return [.. _redo]; } } }
 
     /// <summary>
-    /// Undoes every change made after this one.
+    /// Undoes every change made after this one; nothing when it is no longer on the undo list (undone or dropped since it
+    /// was picked, by Claude or the history's length).
     /// </summary>
     public void BackTo(Change c)
     {
-        while (UndoList.Count > 0 && UndoList[^1] != c && Undo())
+        if (!Holds(_undo, c))
+        {
+            return;
+        }
+        while (UndoList.Count > 0 && !ReferenceEquals(UndoList[^1], c) && Undo())
         {
         }
     }
 
     /// <summary>
-    /// Redoes up to and including this one.
+    /// Redoes up to and including this one; nothing when it is no longer on the redo list (redone or dropped since it
+    /// was picked).
     /// </summary>
     public void ForwardTo(Change c)
     {
-        while (RedoList.Count > 0 && (UndoList.Count == 0 || UndoList[^1] != c) && Redo())
+        if (!Holds(_redo, c))
         {
+            return;
+        }
+        while (RedoList.Count > 0 && (UndoList.Count == 0 || !ReferenceEquals(UndoList[^1], c)) && Redo())
+        {
+        }
+    }
+
+    /// <summary>Whether the list holds this very change (not an equal one), under the lock.</summary>
+    private bool Holds(List<Change> list, Change c)
+    {
+        lock (_lock)
+        {
+            return list.Exists(l => ReferenceEquals(l, c));
         }
     }
 
@@ -167,6 +186,11 @@ public sealed class EditSession
             if (_stroke != null)
             {
                 return "";
+            }
+            // Undone or dropped since it was picked: its delta would go onto ground that no longer has it.
+            if (!Holds(_undo, c))
+            {
+                return "That change is no longer in the history to undo: nothing was removed.";
             }
             if (c.Things.Any(t => t.Before && !t.After && Scene.Things[t.Index].Gone && TakenLater(c, t.Index)))
             {

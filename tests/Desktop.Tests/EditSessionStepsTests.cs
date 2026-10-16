@@ -26,6 +26,29 @@ public class EditSessionStepsTests
         Assert.Single(s.UndoList);
     }
 
+    // A step picked in the history, then undone or dropped before the action ran (the panel waits for the user to
+    // allow it, while Claude undoes): going back to it, forward to it or taking it out does nothing.
+    [Fact]
+    public void AStepNoLongerInTheHistoryIsLeftAlone()
+    {
+        var s = TestScenes.Flat(1);
+        s.Shape(32, 32, _ => 1, 3, 0, "A");
+        float afterA = s.Ground.HeightOf(32 * s.Ground.W + 32);
+        s.Shape(32, 32, _ => 3, 3, 0, "B");
+        var b = s.UndoList[^1];
+        Assert.True(s.Undo());
+        Assert.Equal("That change is no longer in the history to undo: nothing was removed.", s.RemoveChange(b));
+        Assert.Equal(afterA, s.Ground.HeightOf(32 * s.Ground.W + 32));
+        s.Shape(32, 32, _ => 2, 3, 0, "C");
+        // B is dropped (a new step clears the redo list): neither undoes A and C nor redoes anything.
+        s.BackTo(b);
+        Assert.Equal(["A", "C"], s.UndoList.Select(c => c.Label));
+        Assert.True(s.Undo());
+        s.ForwardTo(b);
+        Assert.Equal(["A"], s.UndoList.Select(c => c.Label));
+        Assert.Equal(["C"], s.RedoList.Select(c => c.Label));
+    }
+
     [Fact]
     public void AFormulaFailingAtSomePointsLeavesThemAsTheyWere()
     {
