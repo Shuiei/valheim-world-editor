@@ -38,10 +38,7 @@ public static class SavedSelections
         string text;
         try
         {
-            if (!File.Exists(FilePath))
-            {
-                return [];
-            }
+            // Read at once: File.Exists says no for a file there that cannot be read, which must not count as none.
             text = File.ReadAllText(FilePath);
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
