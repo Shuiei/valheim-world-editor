@@ -142,6 +142,14 @@ public class ClaudeToolsWorldTests
         Assert.Equal("Claude: a post", r.W.Session.RedoLabel);
         Assert.Equal(steps, r.W.Session.UndoList.Count);
         Assert.Equal(0, w.Pending.Added);
+        // Nor is one with no piece this world can have.
+        var ghost = Post(0);
+        ghost["name"] = "no_such_piece";
+        var none = new System.Text.Json.Nodes.JsonObject { ["objects"] = new System.Text.Json.Nodes.JsonArray(ghost) };
+        File.WriteAllText(Path.Combine(r.Homestead, Homestead.FileName("Ghost")), Homestead.Write(none, "Ghost", "Tester", null, DateTime.Now));
+        Assert.Equal("Nothing added: the blueprint has no piece this world can have.", await r.T.AddBlueprint("Ghost", 10, 10));
+        Assert.Equal("Claude: a post", r.W.Session.RedoLabel);
+        Assert.Equal(steps, r.W.Session.UndoList.Count);
 
         string added = await r.T.AddBlueprint("Shed", 10, 10, turn: 90, y: 50);
         Assert.StartsWith("Added 2 piece(s) of \"Shed\"", added);
