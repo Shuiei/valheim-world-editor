@@ -1321,7 +1321,7 @@ public sealed partial class MainWindow : Window
         }
         // The objects' heights come from the ground as the paste leaves it: the ground step fills the list,
         // which Commit reads after it (one undo step for both).
-        var add = new List<(Editing.NewObject, bool)>();
+        var add = new List<(NewObject, bool)>();
         // Clear the site: the trees, rocks and the like where the pasted building stands go too.
         var cleared = new List<int>();
         int touched = 0;
@@ -1428,14 +1428,14 @@ public sealed partial class MainWindow : Window
         }
         var sel = View.Selected.ToList();
         var remove = new List<int>();
-        var adds = new List<(Editing.NewObject, bool)>();
+        var adds = new List<(NewObject, bool)>();
         foreach (int i in sel)
         {
             var t = s.Scene.Things[i];
             if (ObjectData.Bytes(world, s.Edits, t.Id) is { } bytes && Builders.Claimed(bytes, TerrainEditor.Save.WorldSave.Builder) is { } z)
             {
                 remove.Add(i);
-                adds.Add((new Editing.NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), true));
+                adds.Add((new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), true));
             }
         }
         if (adds.Count == 0)
@@ -1536,7 +1536,7 @@ public sealed partial class MainWindow : Window
         var roof = built.Rocks
             .Select(r => (r.Prefab, Hash: TerrainEditor.Save.StableHash.Of(r.Prefab), r.Position, r.Rotation, r.Scale))
             .Where(r => scene.World?.CanCreate(r.Hash) != false)
-            .Select(r => (new Editing.NewObject(0, r.Hash, r.Position, r.Rotation, r.Scale), false)).ToList();
+            .Select(r => (new NewObject(0, r.Hash, r.Position, r.Rotation, r.Scale), false)).ToList();
         // Natural objects in the trench (deeper than half a metre there) would float or stand in the way.
         var inTrench = PathTool.NearDeep(cave, path.Width / 2 + path.Soft);
         var remove = new List<int>();
