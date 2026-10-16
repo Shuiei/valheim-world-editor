@@ -256,7 +256,7 @@ public sealed class WorldScene
                 }
             }
         }
-        float minX = x0 * 64f - 32f, maxX = x1 * 64f + 32f, minZ = z0 * 64f - 32f, maxZ = z1 * 64f + 32f;
+        float minX = x0 * 64f - 32f, minZ = z0 * 64f - 32f;
         var things = ReadThings(world, x0, z0, zonesX, zonesZ, edits.Deleted, edits.Added);
         var scene = new WorldScene
         {
@@ -283,9 +283,9 @@ public sealed class WorldScene
             LoadInfo = $"{world.Name}: read in {readMs} ms, {zonesX}×{zonesZ} zones and {things.Count:N0} objects ready in {watch.ElapsedMilliseconds} ms",
         };
         scene.Session = new EditSession(scene, Ground.Read(terrain, edits, x0, z0, zonesX, zonesZ), edits);
-        owner?.Area = scene.Session;
+        owner.Area = scene.Session;
         // The world's history (made in other areas), fitted to this one.
-        if (owner?.History is { } kept)
+        if (owner.History is { } kept)
         {
             scene.Session.Import(kept, ids => FindThings(world, edits, ids));
         }
