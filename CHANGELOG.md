@@ -20,6 +20,9 @@ the plugin is unchanged in versions without that part.
 - **A live server's zone answer can no longer make the editor take unbounded memory.** The objects of changed zones
   were unpacked with no size limit, so a misbehaving service on the tunnelled port could fill memory. The answer is
   now refused past the size of a whole world snapshot.
+- **Claude can no longer make a world outside the game's worlds folders.** create_world took any folder it was given,
+  so world files could be written in any folder the editor can write to. A folder that is not one of the game's worlds
+  folders is now refused.
 
 ### Changed
 

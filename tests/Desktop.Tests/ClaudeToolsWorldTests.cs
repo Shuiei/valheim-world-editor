@@ -235,16 +235,20 @@ public class ClaudeToolsWorldTests
     }
 
     // A world made in the folder given is opened on its map; a name taken there is refused (Check) and nothing
-    // changes.
+    // changes. A folder that is not one of the game's worlds folders is refused.
     [AvaloniaFact]
     public async Task ANewWorldIsMadeAndOpened()
     {
         using var r = new ClaudeRun();
         string root = Path.Combine(Path.GetTempPath(), "vwe-claude-world-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(root);
+        r.T.WorldFolders = () => [root];
         try
         {
-            string made = await r.T.CreateWorld("Fresh", "abc", root);
+            string elsewhere = Path.Combine(root, "elsewhere");
+            Assert.Equal($"{elsewhere} is not one of the game's worlds folders: {root}.", await r.T.CreateWorld("Fresh", "abc", elsewhere));
+            Assert.False(Directory.Exists(elsewhere));
+            string made = await r.T.CreateWorld("Fresh", "abc", root + Path.DirectorySeparatorChar);
             Assert.StartsWith("Made Fresh (seed abc).", made);
             Assert.Equal("Fresh", r.W.World!.World.Name);
             Assert.StartsWith("There is a world called Fresh already in ", await r.T.CreateWorld("Fresh", "xyz", root));

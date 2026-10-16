@@ -33,6 +33,9 @@ public sealed partial class ClaudeTools
     /// <summary>Saves a picture of the world's map as a PNG file (the map's, drawn by OpenGL; tests give their own).</summary>
     internal Func<string, Task> MapPicture { get; set; }
 
+    /// <summary>The worlds folders create_world may make a world in (the game's that exist; tests give their own).</summary>
+    internal Func<List<string>> WorldFolders { get; set; } = NewWorldPage.Roots;
+
     /// <summary>Compact JSON for the answers.</summary>
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
 
