@@ -229,7 +229,25 @@ public static class Formula
                         throw new FormatException($"{id}(…) takes {(arity == 1 ? "one number" : $"{arity} numbers")}");
                     }
                     var arr = args.ToArray();
-                    return env => f([.. arr.Select(a => a(env))]);
+                    // The numbers go in one array kept for the next point; a second thread running the formula at
+                    // the same time meanwhile gets its own.
+                    double[]? spare = new double[arr.Length];
+                    return env =>
+                    {
+                        double[] values = Interlocked.Exchange(ref spare, null) ?? new double[arr.Length];
+                        try
+                        {
+                            for (int i = 0; i < arr.Length; i++)
+                            {
+                                values[i] = arr[i](env);
+                            }
+                            return f(values);
+                        }
+                        finally
+                        {
+                            Volatile.Write(ref spare, values);
+                        }
+                    };
                 }
                 if (id == "pi")
                 {

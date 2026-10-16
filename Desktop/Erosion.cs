@@ -105,11 +105,12 @@ public static class Erosion
         {
             int x = (int)MathF.Floor(px), z = (int)MathF.Floor(pz);
             float u = px - x, v = pz - z;
-            foreach (var (dx, dz, f) in new[] { (0, 0, (1 - u) * (1 - v)), (1, 0, u * (1 - v)), (0, 1, (1 - u) * v), (1, 1, u * v) })
-            {
-                int i = (z + dz) * w + x + dx;
-                h[i] += amount * f * wt[i];
-            }
+            // The four corners round the point, each by its share.
+            Add(z * w + x, (1 - u) * (1 - v));
+            Add(z * w + x + 1, u * (1 - v));
+            Add((z + 1) * w + x, (1 - u) * v);
+            Add((z + 1) * w + x + 1, u * v);
+            void Add(int i, float f) => h[i] += amount * f * wt[i];
         }
         for (int n = 0; n < drops; n++)
         {

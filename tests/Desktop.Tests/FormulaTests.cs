@@ -23,6 +23,26 @@ public class FormulaTests
         return f(env);
     }
 
+    [Fact]
+    public void AFormulaRunAgainAndOnTwoThreadsGivesEachPointItsOwnNumbers()
+    {
+        // Functions inside functions of the same arity, run point after point with one compiled formula.
+        var f = Formula.Compile("max(min(x, 2), min(3, z)) + pow(max(x, z), 2)", ["x", "z"]);
+        double At(double x, double z)
+        {
+            var env = new Formula.Env();
+            env.Vars["x"] = x;
+            env.Vars["z"] = z;
+            return f(env);
+        }
+        double Want(double x, double z) => Math.Max(Math.Min(x, 2), Math.Min(3, z)) + Math.Pow(Math.Max(x, z), 2);
+        for (int k = 0; k < 20; k++)
+        {
+            Assert.Equal(Want(k * 0.3, 5 - k * 0.4), At(k * 0.3, 5 - k * 0.4));
+        }
+        Parallel.For(0, 2000, k => Assert.Equal(Want(k % 7, k % 5), At(k % 7, k % 5)));
+    }
+
     [Theory]
     [InlineData("1 + 2 * 3", 7)]
     [InlineData("(1 + 2) * 3", 9)]
