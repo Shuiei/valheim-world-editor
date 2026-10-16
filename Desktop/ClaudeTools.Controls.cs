@@ -71,6 +71,11 @@ public sealed partial class ClaudeTools
         {
             return "the open world is live with Auto on, so what it changes would go to the game at once; only the View panel's controls can be used. Ask the user to turn Auto off";
         }
+        // The Script tool's Run is run_script by another door: the same leave.
+        if (Tips.KeyOf(c.Control) == "script.run" && !_w.Settings.ClaudeScripts)
+        {
+            return "the user has not allowed Claude to run scripts (Settings → Claude → Claude may run scripts)";
+        }
         return null;
     }
 
