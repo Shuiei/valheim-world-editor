@@ -31,6 +31,14 @@ public class HammerTests
     }
 
     [Fact]
+    public void TheLongestReachIsOfThePieceThatReachesFurthest()
+    {
+        float most = Hammer.MaxRadius();
+        Assert.True(most > 0);
+        Assert.All(["woodwall", "wood_floor", "piece_workbench"], p => Assert.True(Hammer.Get(p)!.Radius <= most, p));
+    }
+
+    [Fact]
     public void OnTheGroundAPieceRestsOnItsColliders()
     {
         var none = new List<Hammer.Placed>();

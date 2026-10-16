@@ -106,6 +106,9 @@ public static class Hammer
     /// <summary>A piece's data, or null when the scan has no such piece.</summary>
     public static Data? Get(string prefab) => _all.GetValueOrDefault(prefab);
 
+    /// <summary>The longest reach (<see cref="Data.Radius"/>) of any piece the scan has (0 for none).</summary>
+    public static float MaxRadius() => _all.Values.Select(d => d.Radius).DefaultIfEmpty(0).Max();
+
     /// <summary>
     /// The points of a piece's colliders (box corners, mesh vertices, the bottoms and sides of spheres
     /// and capsules), turned and scaled, from its origin; none for a piece the game gives no collider.
