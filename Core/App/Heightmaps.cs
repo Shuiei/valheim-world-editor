@@ -48,7 +48,8 @@ public static class Heightmaps
         {
             [MinKey] = lo.ToString("R", CultureInfo.InvariantCulture),
             [MaxKey] = hi.ToString("R", CultureInfo.InvariantCulture),
-            [AreaKey] = area,
+            // A PNG note holds Latin-1 only: a world's name outside it keeps its place as '?'.
+            [AreaKey] = new string([.. area.Select(c => c is '\0' or > '\u00ff' ? '?' : c)]),
             ["Software"] = "Valheim World Editor",
         });
     }
@@ -73,6 +74,12 @@ public static class Heightmaps
         return o;
     }
 
+    /// <summary>
+    /// The farthest from 0 a height written in a picture may be (metres): far past any world's ground, which the
+    /// editor's export never passes; the Area panel's boxes take it.
+    /// </summary>
+    internal const float MostHeight = 100_000f;
+
     /// <summary>A heightmap picture as read back.</summary>
     /// <param name="Width">The picture's width in pixels.</param>
     /// <param name="Height">The picture's height in pixels.</param>
@@ -84,13 +91,13 @@ public static class Heightmaps
 
     /// <summary>
     /// A picture's brightness (0..1) resampled to w × h points, rows from south to north, with the
-    /// heights written in it when the editor exported it (only finite numbers, and both left out when the highest is not
-    /// above the lowest). Throws InvalidDataException or IOException.
+    /// heights written in it when the editor exported it (only numbers within <see cref="MostHeight"/> of 0, and both
+    /// left out when the highest is not above the lowest). Throws InvalidDataException or IOException.
     /// </summary>
     public static Picture Read(byte[] bytes, int w, int h)
     {
         Png.Image img = Png.Read(bytes);
-        float? Num(string key) => img.Text.TryGetValue(key, out string? s) && float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out float v) && float.IsFinite(v) ? v : null;
+        float? Num(string key) => img.Text.TryGetValue(key, out string? s) && float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out float v) && MathF.Abs(v) <= MostHeight ? v : null;
         float? min = Num(MinKey), max = Num(MaxKey);
         if (min is float lo && max is float hi && hi <= lo)
         {
