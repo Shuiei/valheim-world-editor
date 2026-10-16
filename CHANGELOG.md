@@ -183,6 +183,9 @@ the plugin is unchanged in versions without that part.
   corridor's middle without looking at the pilasters placed every 8 m; it now keeps off their bands.
 - **A Black Forest dungeon's sword-skeleton elite came back as an ordinary skeleton.** It was paired with
   Spawner_Skeleton, which makes archers too; no spawner makes it alone, so it now stands once, as the creature.
+- **A dungeon blueprint whose name hashed to the lowest int failed to paste, and a negative seed gave portal tags like
+  "dg-123".** The portal pair's tag took Math.Abs of an int and the seed's remainder as it was; MainWindow.PortalTag
+  works in long and takes the size.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

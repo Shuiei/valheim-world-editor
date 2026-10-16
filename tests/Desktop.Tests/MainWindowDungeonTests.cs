@@ -37,6 +37,17 @@ public class MainWindowDungeonTests
     private static List<int> Proxies(EditSession s) => [.. s.Edits.Added.Where(n => n.Prefab == WorldSave.LocationProxyPrefab && n.Raw != null)
         .Select(n => ZdoData.Parse(n.Raw!).IntList.First(i => i.Key == WorldSave.LocationKey).Value)];
 
+    [Theory]
+    [InlineData(123L, "dg123")]
+    [InlineData(1234567L, "dg34567")]
+    // A negative seed gave "dg-123"; a name hashing to int.MinValue failed to paste (Math.Abs of an int overflowed).
+    [InlineData(-123L, "dg123")]
+    [InlineData((long)int.MinValue, "dg83648")]
+    public void APortalPairsTagIsFiveDigits(long n, string tag)
+    {
+        Assert.Equal(tag, MainWindow.PortalTag(n));
+    }
+
     [AvaloniaFact]
     public void WithoutAnAreaTheDungeonGoesNowhere()
     {

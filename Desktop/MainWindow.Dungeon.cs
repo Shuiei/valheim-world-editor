@@ -155,7 +155,7 @@ public partial class MainWindow
         var at = GroundAt(scene, target.X + scene.Cx, scene.Cz - target.Z);
         var world = scene.World;
         Func<DungeonEntrances.Pose?, DungeonGen.Result>? rooms = r.Rooms == null ? null : pose => pose is { } p ? DungeonGen.Make(settings, world.Seed, p) : r;
-        PlaceDungeon(scene, session, at, new DungeonToPlace(r.Name, "Generated", settings.Biome, $"dg{settings.Seed % 100000}", ToPieces(r.Items), r.Arrival, 0f, rooms, label));
+        PlaceDungeon(scene, session, at, new DungeonToPlace(r.Name, "Generated", settings.Biome, PortalTag(settings.Seed), ToPieces(r.Items), r.Arrival, 0f, rooms, label));
     }
 
     /// <summary>
@@ -193,7 +193,7 @@ public partial class MainWindow
         }
         string biome = BiomeName(scene.Terrain?.BiomeAt(ground.X, ground.Z));
         string name = clip.Name ?? "dungeon";
-        PlaceDungeon(scene, s, ground, new DungeonToPlace(name, "Pasted", biome, $"dg{Math.Abs(StableHash.Of(name)) % 100000}", pieces,
+        PlaceDungeon(scene, s, ground, new DungeonToPlace(name, "Pasted", biome, PortalTag(StableHash.Of(name)), pieces,
             marker == null ? Vector3.Zero : Place(marker), marker == null ? 0f : paste.Rotated(marker.Rotation).Y, null));
     }
 
@@ -382,6 +382,12 @@ public partial class MainWindow
         View.CutY = null;
         UpdateSaveBar();
     }
+
+    /// <summary>
+    /// The tag of a dungeon's portal pair from a number (its seed, its name's hash): "dg" and the last five digits of
+    /// its size, never negative (a negative seed) nor failing (a hash of int.MinValue has no int size).
+    /// </summary>
+    internal static string PortalTag(long n) => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"dg{Math.Abs(n) % 100000}");
 
     /// <summary>The tags a generated dungeon's blueprint is written with: a dungeon (pasted, it goes up behind an entrance), generated.</summary>
     private static readonly string[] DungeonTags = [Homestead.Details.DungeonTag, "generated"];
