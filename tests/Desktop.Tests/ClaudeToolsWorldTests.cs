@@ -189,6 +189,9 @@ public class ClaudeToolsWorldTests
     {
         Assert.Equal([(0, 0)], ClaudeTools.ZonesOf(-31, -31, 31, 31));
         Assert.Equal([(-1, 0), (0, 0), (-1, 1), (0, 1)], ClaudeTools.ZonesOf(10, 40, -40, 10));
+        // Cut to the zones given before listing: a rectangle of a million metres lists only those.
+        Assert.Equal([(0, 0), (1, 0)], ClaudeTools.ZonesOf(-1e6f, -1e6f, 1e6f, 1e6f, (0, 0, 1, 0)));
+        Assert.Empty(ClaudeTools.ZonesOf(500, 500, 600, 600, (0, 0, 1, 1)));
     }
 
     // In the Workshop, or outside the area: said. Zones of the area marked (buildings kept), then unmarked; nothing

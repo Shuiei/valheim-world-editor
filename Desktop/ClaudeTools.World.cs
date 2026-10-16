@@ -212,14 +212,27 @@ public sealed partial class ClaudeTools
         });
     }
 
-    /// <summary>The zones (world column, row) a world rectangle touches.</summary>
-    internal static List<(int X, int Z)> ZonesOf(float x0, float z0, float x1, float z1)
+    /// <summary>
+    /// The zones (world column, row) a world rectangle touches, within these zones (inclusive) when given: the range is
+    /// cut to them before the zones are listed, so a huge rectangle does not list millions first.
+    /// </summary>
+    /// <param name="x0">One corner, x.</param>
+    /// <param name="z0">One corner, z.</param>
+    /// <param name="x1">The opposite corner, x.</param>
+    /// <param name="z1">The opposite corner, z.</param>
+    /// <param name="within">The first and last zone columns and rows to keep (null: all).</param>
+    internal static List<(int X, int Z)> ZonesOf(float x0, float z0, float x1, float z1, (int X0, int Z0, int X1, int Z1)? within = null)
     {
-        static int Zone(float v) => (int)MathF.Floor((v + 32) / 64);
-        var zones = new List<(int X, int Z)>();
-        for (int zz = Zone(MathF.Min(z0, z1)); zz <= Zone(MathF.Max(z0, z1)); zz++)
+        static int Zone(float v) => (int)Math.Clamp((double)MathF.Floor((v + 32) / 64), int.MinValue / 2, int.MaxValue / 2);
+        int fromX = Zone(MathF.Min(x0, x1)), toX = Zone(MathF.Max(x0, x1)), fromZ = Zone(MathF.Min(z0, z1)), toZ = Zone(MathF.Max(z0, z1));
+        if (within is { } w)
         {
-            for (int zx = Zone(MathF.Min(x0, x1)); zx <= Zone(MathF.Max(x0, x1)); zx++)
+            (fromX, toX, fromZ, toZ) = (Math.Max(fromX, w.X0), Math.Min(toX, w.X1), Math.Max(fromZ, w.Z0), Math.Min(toZ, w.Z1));
+        }
+        var zones = new List<(int X, int Z)>();
+        for (int zz = fromZ; zz <= toZ; zz++)
+        {
+            for (int zx = fromX; zx <= toX; zx++)
             {
                 zones.Add((zx, zz));
             }
@@ -247,7 +260,7 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
-        var zones = ZonesOf(x0, z0, x1, z1).Where(z => z.X >= scene.X0 && z.X < scene.X0 + scene.ZonesX && z.Z >= scene.Z0 && z.Z < scene.Z0 + scene.ZonesZ).ToList();
+        var zones = ZonesOf(x0, z0, x1, z1, (scene.X0, scene.Z0, scene.X0 + scene.ZonesX - 1, scene.Z0 + scene.ZonesZ - 1));
         if (zones.Count == 0)
         {
             return "The rectangle touches no zone of the open area (editor_state gives its bounds).";

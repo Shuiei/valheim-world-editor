@@ -291,6 +291,9 @@ the plugin is unchanged in versions without that part.
   Area panel and Claude's shape_ground say so.
 - **The game's look banner said the editor works without the game's files, with plain colours, though no world, server
   or Workshop opens without them.** Both hints (Valheim not found, its files not read) now say worlds need them.
+- **Claude's reset_zones with a huge rectangle could hang the editor or run out of memory.** Every zone of the
+  rectangle was listed on the window's thread before those outside the area were dropped; the range is now cut to the
+  area's zones first.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
