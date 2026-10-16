@@ -987,7 +987,10 @@ public sealed class InspectorPanel
         // would bring back its old data. Shown as it is now, to change again.
         if (t.Gone || !(now?.AsSpan().SequenceEqual(_bytes) ?? false))
         {
-            Message?.Invoke(t.Gone ? "This object is gone (removed in the game): nothing changed." : "This object changed in the game since you opened it: here it is as it is now, make your change again.");
+            // Gone offline: deleted, replaced or undone here; live, the game may have taken it too.
+            string gone = s.IsLive ? "This object is gone (removed in the game, or here since you opened it): nothing changed."
+                : "This object is gone (deleted, replaced or undone since you opened it): nothing changed.";
+            Message?.Invoke(t.Gone ? gone : "This object changed in the game since you opened it: here it is as it is now, make your change again.");
             if (t.Gone)
             {
                 Close();

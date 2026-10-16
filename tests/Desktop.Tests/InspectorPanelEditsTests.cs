@@ -295,7 +295,8 @@ public class InspectorPanelEditsTests
         Assert.True(r.Scene.Things[opened].Gone);
         mine.Added.Add(("strings", "text", "Second"));
         await mine.Apply();
-        Assert.Equal("This object is gone (removed in the game): nothing changed.", said);
+        // Offline: not blamed on the game.
+        Assert.Equal("This object is gone (deleted, replaced or undone since you opened it): nothing changed.", said);
         Assert.False(mine.IsOpen);
     }
 
