@@ -357,7 +357,9 @@ public sealed class SelectPanel
         static float V(NumericUpDown b) => (float)(b.Value ?? 0);
         if (_by)
         {
-            _tool.PlaceAt(V(XBox), V(YBox), V(ZBox), V(TurnBox), by: true);
+            // An empty or zero box is no move along that axis.
+            static float? By(NumericUpDown b) => b.Value is { } v && v != 0 ? (float)v : null;
+            _tool.PlaceAt(By(XBox), By(YBox), By(ZBox), By(TurnBox), by: true);
             SetBy(false);
             return;
         }
@@ -377,7 +379,7 @@ public sealed class SelectPanel
         }
         if (_shown is { } at)
         {
-            _tool.PlaceAt(cx ? x - at.X : 0, cy ? y - at.Y : 0, cz ? z - at.Z : 0, ct ? turn - at.Turn : 0, by: true);
+            _tool.PlaceAt(cx ? x - at.X : null, cy ? y - at.Y : null, cz ? z - at.Z : null, ct ? turn - at.Turn : null, by: true);
         }
         SetBy(false);
     }
