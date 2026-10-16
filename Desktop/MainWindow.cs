@@ -342,16 +342,8 @@ public sealed partial class MainWindow : Window
                 }
             };
             StartPage.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, "Yes");
-            StartPage.PickFolder = async title =>
-            {
-                var picked = await StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions { Title = title });
-                return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
-            };
-            StartPage.PickFile = async title =>
-            {
-                var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions { Title = title });
-                return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
-            };
+            StartPage.PickFolder = title => Pickers.Folder(StorageProvider, title);
+            StartPage.PickFile = title => Pickers.File(StorageProvider, title);
         }
         else
         {
@@ -2482,15 +2474,8 @@ public sealed partial class MainWindow : Window
         Blueprints.Confirm = text => Dialogs.Ask(this, "Blueprints", text, "Yes");
         Blueprints.OpenUrl = Launcher.LaunchUriAsync;
         SetUpWorkshop();
-        Blueprints.PickFile = async () =>
-        {
-            var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
-            {
-                Title = "Import a .blueprint (Homestead, PlanBuild) or .vbuild file",
-                FileTypeFilter = [new Avalonia.Platform.Storage.FilePickerFileType("Blueprints") { Patterns = BlueprintPatterns }],
-            });
-            return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
-        };
+        Blueprints.PickFile = () => Pickers.File(StorageProvider, "Import a .blueprint (Homestead, PlanBuild) or .vbuild file",
+            new Avalonia.Platform.Storage.FilePickerFileType("Blueprints") { Patterns = BlueprintPatterns });
         Inspector.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
         Inspector.Replaced += i => View.Select([i]);
         Inspector.Confirm = text => Dialogs.Ask(this, "Contents", text, "Apply anyway");
@@ -2539,16 +2524,11 @@ public sealed partial class MainWindow : Window
         };
         Tools.LoadStampAsked += async () =>
         {
-            var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
-            {
-                Title = "Use a grayscale picture as the brush shape",
-                FileTypeFilter = [new Avalonia.Platform.Storage.FilePickerFileType("Pictures") { Patterns = PicturePatterns }],
-            });
-            if (picked.Count == 0 || !picked[0].Path.IsFile)
+            if (await Pickers.File(StorageProvider, "Use a grayscale picture as the brush shape",
+                new Avalonia.Platform.Storage.FilePickerFileType("Pictures") { Patterns = PicturePatterns }) is not string path)
             {
                 return;
             }
-            string path = picked[0].Path.LocalPath;
             if (Stamps.FromPicture(File.ReadAllBytes(path)) is { } data)
             {
                 Tools.AddStamp(Path.GetFileNameWithoutExtension(path), data);
@@ -2610,23 +2590,9 @@ public sealed partial class MainWindow : Window
                 : $"Clipboard{(c.Name != null ? $" ({c.Name})" : "")}: {c.W} × {c.H} m, {c.Objects.Count} object(s).";
         };
         AreaPanel.Confirm = text => Dialogs.Ask(this, "Reset zones", text, "Reset when saving");
-        AreaPanel.PickPicture = async () =>
-        {
-            var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
-            {
-                Title = "Import a heightmap (grayscale PNG)",
-                FileTypeFilter = [new Avalonia.Platform.Storage.FilePickerFileType("PNG pictures") { Patterns = PngPatterns }],
-            });
-            return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
-        };
-        AreaPanel.PickFolder = async () =>
-        {
-            var picked = await StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions
-            {
-                Title = "Choose a backup (or copy) of this world: the folder with _main.<n>.chunks",
-            });
-            return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
-        };
+        AreaPanel.PickPicture = () => Pickers.File(StorageProvider, "Import a heightmap (grayscale PNG)",
+            new Avalonia.Platform.Storage.FilePickerFileType("PNG pictures") { Patterns = PngPatterns });
+        AreaPanel.PickFolder = () => Pickers.Folder(StorageProvider, "Choose a backup (or copy) of this world: the folder with _main.<n>.chunks");
         PastePanel = new PastePanel(View.Paste);
         PlaceTool.Brush = Tools.Brush;
         PlaceTool.Scene = () => View.Scene;

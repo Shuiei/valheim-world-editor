@@ -104,8 +104,7 @@ public static class SettingsDialog
             {
                 return await pick(title);
             }
-            var picked = await dialog.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions { Title = title });
-            return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
+            return await Pickers.Folder(dialog.StorageProvider, title);
         }
         var valheim = new TextBox { Text = settings.ValheimPath, PlaceholderText = Lang.T("settings.valheimAuto") }.Tip("settings.valheim");
         var browse = new Button { Content = Lang.T("common.browse") }.Tip("settings.browse");
