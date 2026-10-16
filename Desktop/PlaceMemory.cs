@@ -49,10 +49,7 @@ public sealed class PlaceMemory
         string text;
         try
         {
-            if (!File.Exists(Where))
-            {
-                return new();
-            }
+            // Read at once: File.Exists says no for a file there that cannot be read, which must not count as none.
             text = File.ReadAllText(Where);
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
