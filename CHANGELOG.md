@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.90 — unreleased
+
+### Changed
+- **Showing spawn points or nests in a big area no longer costs every frame.** While either kind was shown, each frame
+  looked through every object of the area for them. They are now found once and looked for again only when the
+  objects change (placed, deleted, moved, read again); each frame only picks the ones near the camera.
+
 ## v1.45.89 — unreleased
 
 ### Changed

@@ -325,6 +325,7 @@ public sealed class GlView : OpenGlControlBase
         SelectionDone();
         _sceneDirty = true;
         _marksDirty = true;
+        _spawnsDirty = true;
         _lookFiles = null;
         // The game look is set up for the area's own textures (mask, heights): again for a new one. The
         // old one's textures go at the next frame (only the drawing may touch the graphics card).
@@ -869,6 +870,8 @@ public sealed class GlView : OpenGlControlBase
         }
         SendKindCounts(s);
         _overlaysDirty = true;
+        // The kinds were worked out again (another area, or the things read again).
+        _spawnsDirty = true;
     }
 
     /// <summary>
@@ -1198,6 +1201,7 @@ public sealed class GlView : OpenGlControlBase
         _selectionDirty = true;
         _overlaysDirty = true;
         _marksDirty = true;
+        _spawnsDirty = true;
         SendKindCounts(s);
         Wake();
     }
@@ -3693,7 +3697,7 @@ public sealed class GlView : OpenGlControlBase
     /// Spawn points and nests within <see cref="SpawnMarkerRange"/> of the camera, for the kinds shown: where their
     /// marker goes (above the stand-in box) and its colour (<see cref="SpawnColour"/>, <see cref="NestColour"/>).
     /// They have no model in the game (spawn points are invisible), so the marker shows where they are through
-    /// anything in front.
+    /// anything in front. Each frame looks only through <c>_spawns</c>, found again when the things change.
     /// </summary>
     internal List<(Vector3 At, Vector4 Colour)> SpawnMarkers(WorldScene s)
     {
@@ -3703,7 +3707,42 @@ public sealed class GlView : OpenGlControlBase
         {
             return list;
         }
-        var colours = new Dictionary<int, Vector4?>();
+        if (_spawnsDirty)
+        {
+            _spawnsDirty = false;
+            _spawns = FindSpawns(s);
+            SpawnFinds++;
+        }
+        foreach (var (kind, at, colour) in _spawns)
+        {
+            if ((kind == ObjectKind.SpawnPoints ? points : nests) && Vector3.DistanceSquared(at, _lastEye) <= SpawnMarkerRange * SpawnMarkerRange)
+            {
+                list.Add((at, colour));
+            }
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// The spawn points and nests still there, whatever is shown or where the camera is: <c>SpawnMarkers</c> picks
+    /// from these at each frame. Found again (<c>FindSpawns</c>) when <c>_spawnsDirty</c> is set.
+    /// </summary>
+    private (ObjectKind Kind, Vector3 At, Vector4 Colour)[] _spawns = [];
+
+    /// <summary>
+    /// The spawn points and nests are found again at the next frame: the things changed (appeared, went, came back,
+    /// moved, read again) or their kinds were worked out again (<c>StartModels</c>).
+    /// </summary>
+    private volatile bool _spawnsDirty = true;
+
+    /// <summary>How many times the things were looked through for spawn points and nests (tests).</summary>
+    internal int SpawnFinds { get; private set; }
+
+    /// <summary>Every spawn point and nest of the scene still there: its kind, where its marker goes and its colour.</summary>
+    private (ObjectKind Kind, Vector3 At, Vector4 Colour)[] FindSpawns(WorldScene s)
+    {
+        var found = new List<(ObjectKind, Vector3, Vector4)>();
+        var colours = new Dictionary<int, Vector4>();
         lock (s.Things)
         {
             lock (_objLock)
@@ -3711,26 +3750,20 @@ public sealed class GlView : OpenGlControlBase
                 for (int i = 0; i < s.Things.Count && i < _kinds.Length; i++)
                 {
                     var k = _kinds[i];
-                    if (k is not (ObjectKind.SpawnPoints or ObjectKind.Nests) || (k == ObjectKind.SpawnPoints ? !points : !nests))
-                    {
-                        continue;
-                    }
                     var t = s.Things[i];
-                    var at = new Vector3(t.Position.X - s.Cx, t.Position.Y + 2.4f, -(t.Position.Z - s.Cz));
-                    if (t.Gone || Vector3.DistanceSquared(at, _lastEye) > SpawnMarkerRange * SpawnMarkerRange)
+                    if (k is not (ObjectKind.SpawnPoints or ObjectKind.Nests) || t.Gone)
                     {
                         continue;
                     }
                     if (!colours.TryGetValue(t.Prefab, out var c))
                     {
-                        var spawn = Terrain.PrefabCatalog.SpawnOf(t.Prefab);
-                        c = colours[t.Prefab] = k == ObjectKind.Nests ? NestColour : SpawnColour(spawn?.Respawns == true);
+                        c = colours[t.Prefab] = k == ObjectKind.Nests ? NestColour : SpawnColour(Terrain.PrefabCatalog.SpawnOf(t.Prefab)?.Respawns == true);
                     }
-                    list.Add((at, c!.Value));
+                    found.Add((k, new Vector3(t.Position.X - s.Cx, t.Position.Y + 2.4f, -(t.Position.Z - s.Cz)), c));
                 }
             }
         }
-        return list;
+        return [.. found];
     }
 
     /// <summary>The spawn markers on the graphics card, one buffer per colour.</summary>
@@ -3794,6 +3827,7 @@ public sealed class GlView : OpenGlControlBase
     public void RefreshNewMarkers()
     {
         _marksDirty = true;
+        _spawnsDirty = true;
         Wake();
     }
 
