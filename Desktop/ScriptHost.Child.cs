@@ -100,21 +100,23 @@ public static partial class ScriptHost
         var answer = new MemoryStream();
         var reading = p.StandardOutput.BaseStream.CopyToAsync(answer, CancellationToken.None);
         string? unsent = null;
+        // On a worker: a pipe holds little, and the process reads as it comes. Buffered: a pipe write is a system
+        // call, and a snapshot holds hundreds of thousands of small values. The input stays open (closing it is the
+        // stop signal), so the buffer is flushed and left, not disposed.
+        var sending = Task.Run(() =>
+        {
+            var buffered = new BufferedStream(p.StandardInput.BaseStream, 1 << 16);
+            using var w = new BinaryWriter(buffered, Encoding.UTF8, leaveOpen: true);
+            WriteRequest(w, image, pdb, snap);
+            w.Flush();
+            buffered.Flush();
+        }, CancellationToken.None);
         try
         {
             try
             {
-                // On a worker: a pipe holds little, and the process reads as it comes. Buffered: a pipe write is a
-                // system call, and a snapshot holds hundreds of thousands of small values. The input stays open
-                // (closing it is the stop signal), so the buffer is flushed and left, not disposed.
-                await Task.Run(() =>
-                {
-                    var buffered = new BufferedStream(p.StandardInput.BaseStream, 1 << 16);
-                    using var w = new BinaryWriter(buffered, Encoding.UTF8, leaveOpen: true);
-                    WriteRequest(w, image, pdb, snap);
-                    w.Flush();
-                    buffered.Flush();
-                }, CancellationToken.None);
+                // Stop is heard while the request is still going out too (a process that stopped reading it).
+                await sending.WaitAsync(cancel);
             }
             catch (IOException e)
             {
@@ -126,6 +128,7 @@ public static partial class ScriptHost
         catch (OperationCanceledException)
         {
             await Stop(p);
+            await Sent(sending);
             throw;
         }
         finally
@@ -137,9 +140,32 @@ public static partial class ScriptHost
         }
         await reading;
         answer.Position = 0;
-        var ch = ReadAnswer(answer, p.ExitCode, unsent != null ? $"the script could not be sent ({unsent})\n{errors}" : errors.ToString());
-        SnapPieces(snap, ch);
-        return ch;
+        int exit = p.ExitCode;
+        string report = unsent != null ? $"the script could not be sent ({unsent})\n{errors}" : errors.ToString();
+        // On a worker, as the script ran: snapping thousands of new pieces takes a while, and the window must stay
+        // free for Stop, which the snapping checks.
+        return await Task.Run(() =>
+        {
+            var ch = ReadAnswer(answer, exit, report);
+            SnapPieces(snap, ch, cancel);
+            return ch;
+        }, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Waits for a request still being sent when the script was stopped: it ends once the process has (Stop), with
+    /// the pipe broken or closed under it, which is the stop itself and not an error of its own.
+    /// </summary>
+    private static async Task Sent(Task sending)
+    {
+        try
+        {
+            await sending;
+        }
+        catch (Exception e) when (e is IOException or ObjectDisposedException)
+        {
+            // The process is gone, or its input was closed by Stop: the request no longer matters.
+        }
     }
 
     /// <summary>

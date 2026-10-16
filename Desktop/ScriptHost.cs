@@ -241,7 +241,7 @@ public static partial class ScriptHost
     public static Changes Run(byte[] image, byte[]? pdb, Snapshot snap, CancellationToken cancel)
     {
         var ch = Execute(image, pdb, snap, cancel);
-        SnapPieces(snap, ch);
+        SnapPieces(snap, ch, cancel);
         return ch;
     }
 
@@ -464,7 +464,10 @@ public static partial class ScriptHost
     /// The new pieces placed with snap moved to meet the snap points of the pieces standing (where the script left
     /// them; those it took away do not count) and of those placed before them, as the game's hammer does.
     /// </summary>
-    internal static void SnapPieces(Snapshot snap, Changes ch)
+    /// <param name="snap">The area as the script saw it.</param>
+    /// <param name="ch">The script's changes; its new pieces are moved in place.</param>
+    /// <param name="cancel">Stop: checked before each piece (thousands take a while).</param>
+    internal static void SnapPieces(Snapshot snap, Changes ch, CancellationToken cancel = default)
     {
         if (!ch.Add.Any(a => a.Snap))
         {
@@ -481,6 +484,7 @@ public static partial class ScriptHost
         }
         for (int i = 0; i < ch.Add.Count; i++)
         {
+            cancel.ThrowIfCancellationRequested();
             var a = ch.Add[i];
             var q = BlueprintFormats.FromEuler(a.Rotation);
             if (a.Snap && Hammer.Get(a.Name) != null)
