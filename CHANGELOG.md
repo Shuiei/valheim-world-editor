@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.57 — unreleased
+
+### Fixed
+- **Exporting To Homestead, importing a blueprint or generating a dungeon with a long name could hang the editor.**
+  A blueprint's file name keeps 64 characters of its name, so for a name that long every "name (2)", "name (3)"…
+  tried when the name was taken already gave the same file, and the search for a free name never ended. The name is
+  now cut so that its number stays in the file name.
+
 ## v1.45.56 — unreleased
 
 ### Fixed

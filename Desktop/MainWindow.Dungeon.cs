@@ -443,11 +443,7 @@ public partial class MainWindow
             string folder = Blueprints.Status.Folder;
             Directory.CreateDirectory(folder);
             // A blueprint of that name already (one changed in the Workshop, perhaps): kept, this one numbered.
-            string path = Path.Combine(folder, Homestead.FileName(r.Name));
-            for (int n = 2; File.Exists(path); n++)
-            {
-                path = Path.Combine(folder, Homestead.FileName($"{r.Name} ({n})"));
-            }
+            string path = Path.Combine(folder, Homestead.FileName(Homestead.FreeName(r.Name, n => File.Exists(Path.Combine(folder, Homestead.FileName(n))))));
             await WriteBlueprintFile(path, GeneratedBlueprint(settings, r));
             return path;
         }

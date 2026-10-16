@@ -538,11 +538,7 @@ public sealed class BlueprintsPanel
             Message?.Invoke("That blueprint could not be read.");
             return null;
         }
-        string target = name;
-        for (int n = 2; HomesteadExists(target); n++)
-        {
-            target = $"{name} ({n})";
-        }
+        string target = Homestead.FreeName(name, HomesteadExists);
         if (!TryWrite(() => WriteHomestead(clip, Named(target), world)))
         {
             return null;
@@ -632,11 +628,7 @@ public sealed class BlueprintsPanel
         Status = FindHomestead();
         var world = _scene()?.World;
         var clip = BlueprintFormats.ToClip(parsed, n => world?.CanCreate(StableHash.OfName(n)) ?? Terrain.PrefabCatalog.Get(StableHash.OfName(n)) != null, out var unknown);
-        string baseName = string.IsNullOrWhiteSpace(parsed.Name) ? "Imported" : parsed.Name, name = baseName;
-        for (int n = 2; HomesteadExists(name); n++)
-        {
-            name = $"{baseName} ({n})";
-        }
+        string name = Homestead.FreeName(string.IsNullOrWhiteSpace(parsed.Name) ? "Imported" : parsed.Name, HomesteadExists);
         if (!TryWrite(() => WriteHomestead(clip, new Homestead.Details(name, parsed.Description ?? "", Homestead.Details.ParseTags(TagsOf(text))), null)))
         {
             return null;
