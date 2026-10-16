@@ -109,8 +109,8 @@ The editor must be running for Claude to reach it.
 
 Each of these changes is one step of the history, and it stays pending: nothing reaches the world's files or the
 game until you **Save to world** or **Apply live**, and the Workshop's building becomes a blueprint when you
-**Save blueprint**. (A dungeon generated on the plot is also kept in your library as its own blueprint, as the
-Workshop's **Generate dungeon** does.)
+**Save blueprint**. (A dungeon Claude generates on the plot is not kept in your library: it is part of the plot's
+building, pending like the rest. The Workshop's own **Generate dungeon** also keeps one as its own blueprint.)
 
 ## How it works
 
