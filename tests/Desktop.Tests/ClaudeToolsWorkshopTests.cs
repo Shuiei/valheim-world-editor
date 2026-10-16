@@ -50,6 +50,9 @@ public class ClaudeToolsWorkshopTests
         };
         File.WriteAllText(Path.Combine(r.Homestead, TerrainEditor.App.Homestead.FileName("Tower")), TerrainEditor.App.Homestead.Write(one, "Tower", "Tester", null, DateTime.Now));
         Assert.StartsWith("Added “Tower”: 1 piece(s).", await r.T.AddBlueprint("Tower", 20, -20));
+        // No entry of a name, but a file named after it (its #Name: says another): that file, as before.
+        File.WriteAllText(Path.Combine(r.Homestead, "Gate.blueprint"), TerrainEditor.App.Homestead.Write(one, "Castle gate", "Tester", null, DateTime.Now));
+        Assert.StartsWith("Added “Castle gate”: 1 piece(s).", await r.T.AddBlueprint("Gate", -20, -20));
         // open_workshop finds a blueprint the same way (the plot saved first: it is refused with pieces not saved).
         Assert.StartsWith("Saved the blueprint", await r.T.SaveBlueprint("Keep", evenIfFalling: true));
         Assert.Equal(1, ClaudeRun.J(await r.T.OpenWorkshop("Tower")).GetProperty("area").GetProperty("objects").GetInt32());
