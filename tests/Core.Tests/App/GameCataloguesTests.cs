@@ -112,6 +112,34 @@ public class GameCataloguesTests
     }
 
     [Fact]
+    public void AScriptsBundleReadInThePassStaysOpenForLaterScripts()
+    {
+        // The scripts' bundle is kept open from the first piece on, and is one of the pass's bundles too: read there
+        // (AssetsTools gives the same instance again) and let go, it must stay open for the last piece's classes.
+        using var game = new TestGame();
+        var scripts = game.Bundle("m_scripts");
+        var first = game.Bundle("a_pieces");
+        first.ScriptsFrom = scripts;
+        first.Prefab("first_floor", r =>
+        {
+            r.Mono("Piece", new Fields { ["m_category"] = 0, ["m_resources"] = new List<Fields>() });
+            r.Box((0, 0, 0), (1, 0.2, 1));
+        });
+        var last = game.Bundle("z_pieces");
+        last.ScriptsFrom = scripts;
+        last.Prefab("last_floor", r =>
+        {
+            r.Mono("Piece", new Fields { ["m_category"] = 0, ["m_resources"] = new List<Fields>() });
+            r.Mono("WearNTear", new Fields { ["m_materialType"] = 1, ["m_supports"] = false });
+            r.Box((0, 0, 0), (1, 0.2, 1));
+        });
+        game.Save();
+        var kinds = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["pieces", "piece-support"]);
+        Assert.Equal(["first_floor", "last_floor"], JsonNode.Parse(kinds["pieces"])!.AsObject().Select(kv => kv.Key));
+        Assert.Equal(["last_floor"], JsonNode.Parse(kinds["piece-support"])!.AsObject().Select(kv => kv.Key));
+    }
+
+    [Fact]
     public void ObjectsLaidOutOtherwiseAreSaidRatherThanReadWrong()
     {
         // A Transform with a field more before its children (another Unity's layout): read raw, the piece's object
