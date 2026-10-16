@@ -27,6 +27,8 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     /// The OpenGL functions of the current context.
     /// </summary>
     private GL _gl = null!;
+    /// <summary>The programs' uniform locations, asked once each; made again with the context.</summary>
+    private GlUniforms _u = null!;
     /// <summary>
     /// Every OpenGL object the map made, deleted with its context (see GlObjects).
     /// </summary>
@@ -357,6 +359,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     {
         _gl = GL.GetApi(gl.GetProcAddress);
         _own = new GlObjects(_gl);
+        _u = new GlUniforms(_gl);
         _es = GlVersion.Type == GlProfileType.OpenGLES;
         // In the log, as the 3D view's: what draws the map.
         Options.Say($"map: OpenGL {(_es ? "ES " : "")}{GlVersion.Major}.{GlVersion.Minor}: {_gl.GetStringS(StringName.Renderer)}");
@@ -485,7 +488,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         _gl.BindTexture(TextureTarget.Texture2D, t.Tex);
         fill(t.Tex);
         _gl.UseProgram(_prog);
-        _gl.Uniform1(_gl.GetUniformLocation(_prog, name), t.Unit);
+        _gl.Uniform1(_u.At(_prog, name), t.Unit);
     }
 
     /// <summary>
@@ -605,6 +608,9 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         ("_SunColor", new[] { 1.0f, 0.97f, 0.9f, 1 }), ("_AmbientColor", new[] { 0.36f, 0.38f, 0.44f, 1 }), ("_SunFogColor", new[] { 0.9f, 0.9f, 1, 1 }),
     ];
 
+    /// <summary><see cref="Material"/> as set: its colours (the first three values) made linear once.</summary>
+    private static readonly (string Name, float[] V)[] MaterialLinear = [.. Material.Select(m => (m.Name, m.V.Select((x, i) => i < 3 ? ToLinear(x) : x).ToArray()))];
+
     /// <summary>
     /// One sRGB channel (0..1) to linear.
     /// </summary>
@@ -657,21 +663,19 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         {
             _gl.ActiveTexture(TextureUnit.Texture0 + unit);
             _gl.BindTexture(TextureTarget.Texture2D, tex);
-            _gl.Uniform1(_gl.GetUniformLocation(_prog, name), unit);
+            _gl.Uniform1(_u.At(_prog, name), unit);
         }
         _gl.ActiveTexture(TextureUnit.Texture0);
-        int U(string n) => _gl.GetUniformLocation(_prog, n);
+        int U(string n) => _u.At(_prog, n);
         float time = _clock.ElapsedMilliseconds / 1000f;
         _gl.Uniform4(U("_Time"), time / 20, time, time * 2, time * 3);
-        foreach (var (name, v) in Material)
+        foreach (var (name, c) in MaterialLinear)
         {
             int loc = U(name);
             if (loc < 0)
             {
                 continue;
             }
-
-            float[] c = [.. v.Select((x, i) => i < 3 ? ToLinear(x) : x)];
             if (c.Length == 3)
             {
                 _gl.Uniform3(loc, c[0], c[1], c[2]);
@@ -703,7 +707,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
         GlBlend.Over(_gl);
         _gl.UseProgram(_fillProg);
-        _gl.Uniform4(_gl.GetUniformLocation(_fillProg, "uView"), Center.X, Center.Y, 2 / (w * mpp), 2 / (h * mpp));
+        _gl.Uniform4(_u.At(_fillProg, "uView"), Center.X, Center.Y, 2 / (w * mpp), 2 / (h * mpp));
         DrawBuildings();
         DrawZoneFills();
         DrawLines(w, h, mpp);
@@ -999,6 +1003,13 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         {
             return;
         }
+        // Made again only when the edits (their resets) or the matches changed: the same while the map idles.
+        var key = (s, s.Edits.Version, Matches);
+        if (_zoneFillsKey == key)
+        {
+            Fill(_zoneFills, PrimitiveType.Triangles);
+            return;
+        }
         var marked = s.Edits.Resets.Select(r => (r.X, r.Z)).ToHashSet();
         var data = new List<float>();
         void Zone(int x, int z, Vector4 col) => Quad(data, new(x * 64 - 32, z * 64 - 32), new(x * 64 + 32, z * 64 - 32), new(x * 64 + 32, z * 64 + 32), new(x * 64 - 32, z * 64 + 32), col);
@@ -1013,8 +1024,15 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         {
             Zone(x, z, new Vector4(1, 70 / 255f, 50 / 255f, 0.45f));
         }
-        Fill([.. data], PrimitiveType.Triangles);
+        (_zoneFillsKey, _zoneFills) = (key, [.. data]);
+        Fill(_zoneFills, PrimitiveType.Triangles);
     }
+
+    /// <summary>What the zone fills were last made for: the session, its edits' version and the matches.</summary>
+    private (WorldSession?, int, IReadOnlyList<(int X, int Z)>?) _zoneFillsKey;
+
+    /// <summary>The zone fills last made (<see cref="DrawZoneFills"/>).</summary>
+    private float[] _zoneFills = [];
 
     /// <summary>What the pins' shapes were last made for: the pins, the chosen one, the zoom and the players.</summary>
     private (IReadOnlyList<Vector2>? Pins, int Chosen, float Mpp, IReadOnlyList<(string, float, float)>? Players) _pinsKey;
@@ -1092,6 +1110,39 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         {
             return;
         }
+        // Made again only when what they show or where the map looks changed: the same while the map idles.
+        var key = (s, s.Edits.Version, Center, mpp, w, h, Chosen, ShowGrid, ShowEdited, MetersPerPixel);
+        if (_linesKey != key)
+        {
+            (_linesKey, _lines) = (key, Lines(s, w, h, mpp));
+        }
+        var id = Matrix4x4.Identity;
+        _gl.UseProgram(_lineProg);
+        _gl.UniformMatrix4(_u.At(_lineProg, "uViewProj"), 1, false, (float*)&id);
+        GlBlend.Over(_gl);
+        _gl.BindVertexArray(_lineVao);
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _lineVbo);
+        foreach (var (data, col) in _lines)
+        {
+            fixed (float* p = data)
+            {
+                _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 4), p, BufferUsageARB.DynamicDraw);
+            }
+            _gl.Uniform4(_u.At(_lineProg, "uColor"), col.X, col.Y, col.Z, col.W);
+            _gl.DrawArrays(PrimitiveType.Lines, 0, (uint)(data.Length / 3));
+        }
+        _gl.Disable(EnableCap.Blend);
+    }
+
+    /// <summary>What the lines were last made for (<see cref="DrawLines"/>).</summary>
+    private (WorldSession?, int, Vector2, float, int, int, (int X, int Z, int Size)?, bool, bool, float) _linesKey;
+
+    /// <summary>The lines last made, by colour, those with any line only.</summary>
+    private List<(float[] Data, Vector4 Color)> _lines = [];
+
+    /// <summary>The lines of <see cref="DrawLines"/>, in clip space, by colour (groups without a line left out).</summary>
+    private List<(float[] Data, Vector4 Color)> Lines(WorldSession s, int w, int h, float mpp)
+    {
         var groups = new List<(float[] Data, Vector4 Color)>();
         // World metres → clip space.
         Vector2 C(float x, float z) => new((x - Center.X) / mpp / (w / 2f), (z - Center.Y) / mpp / (h / 2f));
@@ -1144,22 +1195,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
             Box(area, x0 * 64 - 32, z0 * 64 - 32, (x0 + size) * 64 - 32, (z0 + size) * 64 - 32);
             groups.Add((area.ToArray(), new Vector4(0.37f, 0.83f, 1, 1)));
         }
-        var id = Matrix4x4.Identity;
-        _gl.UseProgram(_lineProg);
-        _gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&id);
-        GlBlend.Over(_gl);
-        _gl.BindVertexArray(_lineVao);
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _lineVbo);
-        foreach (var (data, col) in groups.Where(gr => gr.Data.Length > 0))
-        {
-            fixed (float* p = data)
-            {
-                _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 4), p, BufferUsageARB.DynamicDraw);
-            }
-            _gl.Uniform4(_gl.GetUniformLocation(_lineProg, "uColor"), col.X, col.Y, col.Z, col.W);
-            _gl.DrawArrays(PrimitiveType.Lines, 0, (uint)(data.Length / 3));
-        }
-        _gl.Disable(EnableCap.Blend);
+        return [.. groups.Where(gr => gr.Data.Length > 0)];
     }
 
     // ---- The mouse.
