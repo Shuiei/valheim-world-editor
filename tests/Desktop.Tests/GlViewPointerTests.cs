@@ -187,6 +187,32 @@ public class GlViewPointerTests
         Assert.Null(b.V.HoverObject);
     }
 
+    // A move queues the look, and a press before it runs drops it (no hover while the button is down): the release
+    // looks again, so the object the click ended on does not wait for the next move.
+    [AvaloniaFact]
+    public void TheObjectUnderThePointerIsLookedForAgainWhenAClickEnds()
+    {
+        var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("wood_wall_half"), new Vector3(37, 30, 37), Vector3.Zero, 0, true));
+        var b = new Bare(s);
+        b.V.SetBoxes([(0, new Vector3(4.5f, 30, -5.5f), new Vector3(5.5f, 32, -4.5f))]);
+        b.V.Mode = ToolMode.Select;
+        b.W.MouseMove(b.At(-20, 30, 20));
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Null(b.V.HoverObject);
+        // Onto the piece and pressed before the window runs anything else; the look runs while the button is down.
+        var mouse = new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true);
+        Point on = b.At(5, 31.9f, -5);
+        b.Surface.RaiseEvent(new PointerEventArgs(InputElement.PointerMovedEvent, b.Surface, mouse, b.W, on, 0, new PointerPointProperties(), KeyModifiers.None));
+        b.Surface.RaiseEvent(new PointerPressedEventArgs(b.Surface, mouse, b.W, on, 0,
+            new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed), KeyModifiers.None, 1));
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Null(b.V.HoverObject);
+        b.Surface.RaiseEvent(new PointerReleasedEventArgs(b.Surface, mouse, b.W, on, 0,
+            new PointerPointProperties(RawInputModifiers.None, PointerUpdateKind.LeftButtonReleased), KeyModifiers.None, MouseButton.Left));
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Equal(0, b.V.HoverObject);
+    }
+
     [AvaloniaFact]
     public void AClickInABoxWithoutAModelPicksTheNearestBox()
     {

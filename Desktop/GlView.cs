@@ -2815,6 +2815,8 @@ public sealed class GlView : OpenGlControlBase
             {
                 _selectDown = false;
                 SelectTool.Up(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || Ctrl(e.KeyModifiers));
+                // A look queued by a move just before the press was dropped while the button was down.
+                QueueHoverPick();
             }
             else if (_brushDown)
             {
@@ -2862,11 +2864,7 @@ public sealed class GlView : OpenGlControlBase
                 SelectTool.Hover(_pointer.Value, _surfaceSize);
                 // The object a click would pick (none over a move handle), looked for once the moves waiting are
                 // taken: a fast mouse sends many a frame, and each look tries every object's box.
-                if (!_hoverQueued)
-                {
-                    _hoverQueued = true;
-                    Dispatcher.UIThread.Post(PickHover, DispatcherPriority.Background);
-                }
+                QueueHoverPick();
             }
             else if (Mode == ToolMode.Dungeon && WorldRay(_pointer.Value, _surfaceSize) is { } ray)
             {
@@ -4940,6 +4938,16 @@ public sealed class GlView : OpenGlControlBase
 
     /// <summary>Tests: how many times the object under the pointer was looked for.</summary>
     internal int HoverPicks { get; private set; }
+
+    /// <summary>Queues a look for the object under the pointer, unless one is waiting.</summary>
+    private void QueueHoverPick()
+    {
+        if (!_hoverQueued)
+        {
+            _hoverQueued = true;
+            Dispatcher.UIThread.Post(PickHover, DispatcherPriority.Background);
+        }
+    }
 
     /// <summary>
     /// The object under the pointer as it is now, looked for once for all the pointer's moves since the last look
