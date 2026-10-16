@@ -95,7 +95,7 @@ public sealed partial class ClaudeTools
             // Ids of the area given: the ids are its (a search with no hit in it gives none, and says nothing of them).
             if (scene != null && given.Any(h => h.areaId != null))
             {
-                GaveIds(scene);
+                GaveIds(scene, reads);
             }
             return ToJson(new
             {
@@ -384,6 +384,7 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        int reads = scene.Reads;
         if (StaleIds(scene) is string stale)
         {
             return stale;
@@ -436,7 +437,7 @@ public sealed partial class ClaudeTools
         }
         var made = s.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, [], adds);
         _w.AfterClaudeEdit($"Claude made {made.Count} cop{(made.Count == 1 ? "y" : "ies")}; Ctrl+Z takes them back.");
-        GaveIds(scene);
+        GaveIds(scene, reads);
         return ToJson(new { copied = made.Select((c, k) => Moved(scene, from[k], c)), problems, pending = Pending() });
     });
 }

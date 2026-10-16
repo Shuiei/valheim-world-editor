@@ -59,8 +59,13 @@ public sealed partial class ClaudeTools
     /// </summary>
     private (WorldScene Scene, int Reads)? _ids;
 
-    /// <summary>Notes that the ids given now are indices into this scene's things as they are read now.</summary>
-    private void GaveIds(WorldScene scene) => _ids = (scene, scene.Reads);
+    /// <summary>
+    /// Notes that the ids given now are indices into this scene's things as they were at that read count, taken before
+    /// the ids were worked out: a save that reads the world again meanwhile (on another thread) leaves them refused.
+    /// </summary>
+    /// <param name="scene">The scene the ids are of.</param>
+    /// <param name="reads">Its read count before the ids were worked out.</param>
+    private void GaveIds(WorldScene scene, int reads) => _ids = (scene, reads);
 
     /// <summary>
     /// Why the ids given before cannot be used on this scene: they were given for another area (opened since, or this
@@ -125,6 +130,7 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        int reads = scene.Reads;
         if (StaleIds(scene) is string stale)
         {
             return stale;
@@ -157,7 +163,7 @@ public sealed partial class ClaudeTools
         }
         var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label);
         _w.AfterClaudeEdit($"Claude moved {copies.Count} object(s); Ctrl+Z puts them back.");
-        GaveIds(scene);
+        GaveIds(scene, reads);
         return ToJson(new { moved = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), wholeGroups = groups, problems, pending = Pending() });
     });
 
@@ -214,6 +220,7 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        int reads = scene.Reads;
         if (StaleIds(scene) is string stale)
         {
             return stale;
@@ -250,7 +257,7 @@ public sealed partial class ClaudeTools
         var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label);
         _w.AfterClaudeEdit($"Claude placed {copies.Count} object(s); Ctrl+Z puts them back.");
         // Then come the other parts of the linked groups moved (ObjectLinks), which went along.
-        GaveIds(scene);
+        GaveIds(scene, reads);
         return ToJson(new { placed = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), alongWithGroups = copies.Count - moves.Count, problems, pending = Pending() });
     });
 
@@ -274,6 +281,7 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        int reads = scene.Reads;
         if (StaleIds(scene) is string stale)
         {
             return stale;
@@ -290,7 +298,7 @@ public sealed partial class ClaudeTools
         }).ToList();
         var copies = s.Commit($"Claude: replaced {ok.Count} with {prefab}", null, ok, adds);
         _w.AfterClaudeEdit($"Claude replaced {ok.Count} object(s) with {prefab}; Ctrl+Z puts them back.");
-        GaveIds(scene);
+        GaveIds(scene, reads);
         return ToJson(new { replaced = copies.Select((c, k) => Moved(scene, ok[k], c)), problems, pending = Pending() });
     });
 
@@ -340,6 +348,7 @@ public sealed partial class ClaudeTools
         {
             return "No area is open.";
         }
+        int reads = s.Scene.Reads;
         if (StaleIds(s.Scene) is string stale)
         {
             return stale;
@@ -349,7 +358,7 @@ public sealed partial class ClaudeTools
         {
             return "No object with that id in the area.";
         }
-        GaveIds(s.Scene);
+        GaveIds(s.Scene, reads);
         var t = things[id];
         var head = new Dictionary<string, object?>
         {
@@ -495,6 +504,7 @@ public sealed partial class ClaudeTools
     internal (int? Id, string? Problem) Rewrite(int id, List<TerrainEditor.App.FieldChange> set, List<TerrainEditor.App.ItemUpload>? inv, string label)
     {
         var s = _w.Session!;
+        int reads = s.Scene.Reads;
         var t = s.Scene.Things[id];
         try
         {
@@ -530,7 +540,7 @@ public sealed partial class ClaudeTools
                 replacement = new(0, t.Prefab, t.Position, t.Rotation, t.Scale, Data: fields);
             }
             var copies = s.Commit(label, null, [id], [(replacement, t.Piece)]);
-            GaveIds(s.Scene);
+            GaveIds(s.Scene, reads);
             return (copies[0], null);
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or OverflowException)
