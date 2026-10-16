@@ -492,6 +492,12 @@ public static class SeedLocations
         public static float MapToWorld(float x) => (x - 1024f) * 12f + 6f;
 
         /// <summary>
+        /// World metres to the map coordinate of the 12 m cell holding them (WorldSpaceToMapSpace, cut toward zero as
+        /// the game casts it); <see cref="MapToWorld"/> of it snaps a point to its cell's middle.
+        /// </summary>
+        public static int WorldToMap(float v) => (int)((v - 6f) / 12f + 1024f);
+
+        /// <summary>
         /// A single biome's index (Heightmap.BiomeIndex); -1 for combined flags.
         /// </summary>
         public static int Index(Heightmap.Biome b) => Array.IndexOf(ByIndex, b);
@@ -517,7 +523,7 @@ public static class SeedLocations
                 {
                     float wx = MapToWorld(j);
                     int k = j + i * Size;
-                    if (wx * wx + wy * wy > 110250000f)
+                    if (wx * wx + wy * wy > TerrainService.MapRadius * TerrainService.MapRadius)
                     {
                         _cell[k] = Sea;
                         continue;

@@ -180,9 +180,9 @@ public sealed class TerrainService
     /// <returns>Four biomes: corners (-x, -z), (+x, -z), (-x, +z), (+x, +z); Ocean beyond the world's edge.</returns>
     public int[] CornerBiomes(int zx, int zz)
     {
-        static float Snap(float v) => ((int)((v - 6f) / 12f + 1024f) - 1024) * 12f + 6f;
+        static float Snap(float v) => SeedLocations.BiomeMap.MapToWorld(SeedLocations.BiomeMap.WorldToMap(v));
         float x0 = zx * 64f - 32f, z0 = zz * 64f - 32f;
-        return [.. new[] { (x0, z0), (x0 + 64f, z0), (x0, z0 + 64f), (x0 + 64f, z0 + 64f) }.Select(c => { float sx = Snap(c.Item1), sz = Snap(c.Item2); return sx * sx + sz * sz > 110250000f ? (int)Heightmap.Biome.Ocean : (int)Generator.GetBiome(sx, sz); })];
+        return [.. new[] { (x0, z0), (x0 + 64f, z0), (x0, z0 + 64f), (x0 + 64f, z0 + 64f) }.Select(c => { float sx = Snap(c.Item1), sz = Snap(c.Item2); return sx * sx + sz * sz > MapRadius * MapRadius ? (int)Heightmap.Biome.Ocean : (int)Generator.GetBiome(sx, sz); })];
     }
 
     /// <summary>
