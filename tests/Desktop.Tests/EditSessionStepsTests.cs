@@ -141,6 +141,29 @@ public class EditSessionStepsTests
         Assert.Equal("Unmark", s.UndoLabel);
     }
 
+    // Taking out a step keeps the modified flag a later step set at its points: here a paint, then a flatten back to
+    // the original height (modified, no level). Removing the paint cleared the flatten's flag.
+    [Fact]
+    public void RemovingAStepKeepsALaterStepsModifiedFlag()
+    {
+        var s = TestScenes.Flat(1);
+        int p = 32 * s.Ground.W + 32;
+        s.EditGround("Paint", g =>
+        {
+            g.PMod[p] = 1;
+            g.Paint[p * 4] = 1;
+            return ([p], (31, 31, 33, 33));
+        });
+        s.EditGround("Flatten", g =>
+        {
+            g.SetHeight(p, g.HeightOf(p));
+            return ([p], (31, 31, 33, 33));
+        });
+        Assert.Equal(1, s.Ground.Mod[p]);
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[0]));
+        Assert.Equal(1, s.Ground.Mod[p]);
+    }
+
     // Marking a marked zone again with other options: undo, redo and removing the step each bring back the options
     // of their side, not the newest ones.
     [Fact]

@@ -203,7 +203,12 @@ public sealed class EditSession
                 int p = c.Points[k];
                 g.Level[p] = Math.Clamp(g.Level[p] + c.Before.Level[k] - c.After.Level[k], -EditStore.MaxLevel, EditStore.MaxLevel);
                 g.Smooth[p] = Math.Clamp(g.Smooth[p] + c.Before.Smooth[k] - c.After.Smooth[k], -EditStore.MaxSmooth, EditStore.MaxSmooth);
-                g.Mod[p] = (byte)(MathF.Abs(g.Level[p]) + MathF.Abs(g.Smooth[p]) > 1e-4f || c.Before.Mod[k] != 0 && g.Mod[p] != 0 ? 1 : 0);
+                // A later step that changed the point's modified flag keeps it (a flatten back to the original height
+                // leaves it set with no level).
+                if (g.Mod[p] == c.After.Mod[k])
+                {
+                    g.Mod[p] = (byte)(MathF.Abs(g.Level[p]) + MathF.Abs(g.Smooth[p]) > 1e-4f || c.Before.Mod[k] != 0 && g.Mod[p] != 0 ? 1 : 0);
+                }
                 g.Lift[p] = Math.Clamp(g.Lift[p] + c.Before.Lift[k] - c.After.Lift[k], -EditStore.MaxLift, EditStore.MaxLift);
                 bool samePaint = g.PMod[p] == c.After.PMod[k];
                 for (int ch = 0; ch < 4 && samePaint; ch++)
