@@ -263,6 +263,9 @@ the plugin is unchanged in versions without that part.
   switch, and the camera is put back once the picture is taken.
 - **Claude's forest failed with a confusing script error for a name ending in a backslash.** The names went into the
   generated script with only their quotes taken out; they are now written as escaped string literals.
+- **On slopes, pieces Claude placed on the ground floated or sank by up to half a metre's slope against the height
+  ground_at gave.** Placing, moving and replacing took the nearest grid point's height; they now take the ground
+  between the grid points, as ground_at does.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

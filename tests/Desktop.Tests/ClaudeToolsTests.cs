@@ -298,6 +298,27 @@ public class ClaudeToolsTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromResult(answer(request));
     }
 
+    // On a slope a piece stands on the ground between the grid points, as ground_at gives it: it took the nearest grid
+    // point's height, up to half a metre's slope off.
+    [AvaloniaFact]
+    public async Task PiecesStandOnTheGroundBetweenTheGridPoints()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        var s = r.W.Session!;
+        s.Shape((s.Scene.W - 1) / 2f, (s.Scene.H - 1) / 2f, Formula.Compile("x * 0.3 + z * 0.2", ["x", "z"]), 20, 0, "slope");
+        float cx = s.Scene.Cx + 3, cz = s.Scene.Cz;
+        var placed = J(await r.T.PlacePieces(
+        [
+            new ClaudeTools.PieceSpec { Prefab = "Birch1", X = cx, Z = cz, Snap = false },
+            new ClaudeTools.PieceSpec { Prefab = "Birch1", X = cx + 0.4f, Z = cz + 0.3f, Snap = false },
+        ])).GetProperty("placed");
+        var ground = J(await r.T.GroundAtPoints([[cx, cz], [cx + 0.4f, cz + 0.3f]]));
+        float rise = ground[1].GetProperty("height").GetSingle() - ground[0].GetProperty("height").GetSingle();
+        Assert.True(rise > 0.1f, $"{rise}");
+        Assert.Equal(rise, placed[1].GetProperty("piece").GetProperty("y").GetSingle() - placed[0].GetProperty("piece").GetProperty("y").GetSingle(), 2);
+    }
+
     // The server: only for callers with the token, only under this computer's address; then MCP.
     [AvaloniaFact]
     public async Task TheServerAnswersOnlyWithTheTokenOnThisComputer()

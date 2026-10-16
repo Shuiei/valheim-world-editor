@@ -1106,12 +1106,16 @@ public sealed partial class ClaudeTools
             eave ?? HighestPieceTop(scene, x0, z0, x1, z1) ?? throw new ArgumentException("No walls under the roof: build the walls first, or give eave."),
             angle, material, gables), $"{material} roof");
 
-    /// <summary>The ground's height at a world point of the area (its nearest grid point, clamped to the area).</summary>
+    /// <summary>
+    /// The ground's height at a world point of the area, between the grid points as ground_at gives it (Picking.HeightAt),
+    /// the point held to the area's edge (a coordinate that is not a number: its west or south edge).
+    /// </summary>
     private static float GroundAt(WorldScene scene, float x, float z)
     {
-        int i = Math.Clamp((int)MathF.Round(x - scene.Cx + (scene.W - 1) / 2f), 0, scene.W - 1);
-        int j = Math.Clamp((int)MathF.Round(z - scene.Cz + (scene.H - 1) / 2f), 0, scene.H - 1);
-        return scene.Heights[j * scene.W + i];
+        float hx = (scene.W - 1) / 2f, hz = (scene.H - 1) / 2f, vx = x - scene.Cx, vz = z - scene.Cz;
+        vx = vx > -hx ? (vx < hx ? vx : hx) : -hx;
+        vz = vz > -hz ? (vz < hz ? vz : hz) : -hz;
+        return Picking.HeightAt(scene, vx, -vz);
     }
 
     /// <summary>remove_objects: takes objects away by id, as one pending step.</summary>
