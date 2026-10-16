@@ -32,13 +32,14 @@ public class GlViewPointerTests
         public Window W { get; }
         public GlView V { get; } = new();
         public WorldScene Scene { get; }
+        /// <summary>The transparent surface over the view that takes its mouse.</summary>
+        public Border Surface { get; } = new() { Background = Brushes.Transparent };
 
         public Bare(EditSession session)
         {
             Scene = session.Scene;
-            var surface = new Border { Background = Brushes.Transparent };
-            W = new Window { Width = ViewSize.Width, Height = ViewSize.Height, Content = new Grid { Children = { V, surface } } };
-            V.Attach(surface, W);
+            W = new Window { Width = ViewSize.Width, Height = ViewSize.Height, Content = new Grid { Children = { V, Surface } } };
+            V.Attach(Surface, W);
             W.Show();
             V.Show(Scene, null);
             V.SetCamera(new Vector3(0, 100, 1), new Vector3(0, 30, 0), (float)(ViewSize.Width / ViewSize.Height));
@@ -154,6 +155,36 @@ public class GlViewPointerTests
         b.Click(over);
         b.Click(b.At(-20, 30, 20));
         Assert.Empty(b.V.Selected);
+    }
+
+    // In the Select tool the object under the pointer is looked for once for a burst of moves (a fast mouse sends many
+    // a frame, and each look tries every object's box), once the moves waiting are taken; it was looked for on every
+    // move.
+    [AvaloniaFact]
+    public void TheObjectUnderThePointerIsLookedForOnceForABurstOfMoves()
+    {
+        // A building piece at world 37, 30, 37: view 5, 30, -5, its box 1 × 2 × 1.
+        var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("wood_wall_half"), new Vector3(37, 30, 37), Vector3.Zero, 0, true));
+        var b = new Bare(s);
+        b.V.SetBoxes([(0, new Vector3(4.5f, 30, -5.5f), new Vector3(5.5f, 32, -4.5f))]);
+        b.V.Mode = ToolMode.Select;
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        int before = b.V.HoverPicks;
+        // Three moves in a row, as the window gets them before it runs anything else (the headless MouseMove runs the
+        // jobs waiting after each).
+        var mouse = new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true);
+        foreach (var p in new[] { b.At(-20, 30, 20), b.At(0, 30, 0), b.At(5, 31.9f, -5) })
+        {
+            b.Surface.RaiseEvent(new PointerEventArgs(InputElement.PointerMovedEvent, b.Surface, mouse, b.W, p, 0, new PointerPointProperties(), KeyModifiers.None));
+        }
+        Assert.Equal(before, b.V.HoverPicks);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Equal(before + 1, b.V.HoverPicks);
+        Assert.Equal(0, b.V.HoverObject);
+        // Off it: none.
+        b.W.MouseMove(b.At(-20, 30, 20));
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Null(b.V.HoverObject);
     }
 
     [AvaloniaFact]

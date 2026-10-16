@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.89 — unreleased
+
+### Changed
+- **Moving the mouse in the Select tool over a big area no longer bogs the window down.** The object under the
+  pointer (outlined before a click picks it) was looked for on every mouse move, each look trying every object's
+  box; a fast mouse sends many moves a frame. It is now looked for once for all the moves waiting.
+
 ## v1.45.88 — unreleased
 
 ### Changed
