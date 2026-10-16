@@ -28,8 +28,22 @@ public static class PortalMap
     /// <param name="Links">The linked pairs, as indices into <paramref name="Portals"/> (A before B).</param>
     public sealed record Result(List<Portal> Portals, List<(int A, int B)> Links)
     {
+        /// <summary>For each portal, whether it has a link: worked out once, as the map asks every frame.</summary>
+        private readonly bool[] _linked = LinkedOf(Portals.Count, Links);
+
         /// <summary>Whether the portal at <paramref name="index"/> has a link.</summary>
-        public bool IsLinked(int index) => Links.Any(l => l.A == index || l.B == index);
+        public bool IsLinked(int index) => _linked[index];
+
+        /// <summary>Which of <paramref name="count"/> portals the <paramref name="links"/> join.</summary>
+        private static bool[] LinkedOf(int count, List<(int A, int B)> links)
+        {
+            bool[] linked = new bool[count];
+            foreach (var (a, b) in links)
+            {
+                linked[a] = linked[b] = true;
+            }
+            return linked;
+        }
     }
 
     /// <summary>The string key holding a portal's tag.</summary>

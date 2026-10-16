@@ -609,6 +609,12 @@ public sealed class MapPage : IDisposable
         {
             foreach (var p in portals.Portals)
             {
+                // Off the map: no label (the text runs right of its portal, so one just left of the edge still shows).
+                var at = Map.ScreenOf(p.X, p.Z);
+                if (at.X < -PortalTagRoom || at.X > Map.Bounds.Width || at.Y < -16 || at.Y > Map.Bounds.Height + 16)
+                {
+                    continue;
+                }
                 Label(p.Tag.Length > 0 ? p.Tag : "no tag", p.X, p.Z, PortalTag, p.Tag.Length > 0 ? FontStyle.Normal : FontStyle.Italic);
             }
         }
@@ -622,6 +628,11 @@ public sealed class MapPage : IDisposable
     /// The portals' tags are written from this many metres a pixel in.
     /// </summary>
     internal const float PortalTagZoom = 8f;
+
+    /// <summary>
+    /// How far left of the map a portal's tag may still show (its text runs right of the portal), in pixels.
+    /// </summary>
+    private const double PortalTagRoom = 200;
 
     /// <summary>
     /// The portal tags' colour (the map's violet).

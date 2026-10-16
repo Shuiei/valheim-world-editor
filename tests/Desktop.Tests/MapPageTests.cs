@@ -110,9 +110,10 @@ public class MapPageTests
         Assert.NotNull(r.M.Map.Portals);
     }
 
-    // Show portals: a portal's tag is written over the map from PortalTagZoom metres a pixel in, not further out.
+    // Show portals: a portal's tag is written over the map from PortalTagZoom metres a pixel in, not further out, and
+    // only while the portal is on the map.
     [AvaloniaFact]
-    public async Task PortalTagsAreWrittenOnlyZoomedIn()
+    public async Task PortalTagsAreWrittenOnlyZoomedInAndOnTheMap()
     {
         using var r = new Run();
         await r.Open();
@@ -130,6 +131,9 @@ public class MapPageTests
         r.M.Map.LookAt(123, 456, MapPage.PortalTagZoom);
         Assert.Contains(r.M.Labels.Children.OfType<TextBlock>(), t => t.Text == "home");
         r.M.Map.LookAt(123, 456, MapPage.PortalTagZoom * 2);
+        Assert.DoesNotContain(r.M.Labels.Children.OfType<TextBlock>(), t => t.Text == "home");
+        // Close in, but far from it: off the map, no label.
+        r.M.Map.LookAt(123 + 50_000 * MapPage.PortalTagZoom, 456, MapPage.PortalTagZoom);
         Assert.DoesNotContain(r.M.Labels.Children.OfType<TextBlock>(), t => t.Text == "home");
     }
 
