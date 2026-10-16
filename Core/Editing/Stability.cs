@@ -135,10 +135,19 @@ public static class Stability
         }
     }
 
+    /// <summary>A piece's scale (0 or less: as made, 1).</summary>
+    private static float ScaleOf(Piece p) => p.Scale > 0 ? p.Scale : 1f;
+
+    /// <summary>A piece's centre of mass in the world: its own, scaled and turned as the piece is.</summary>
+    private static Vector3 Com(Data d, Piece p) => p.Position + Vector3.Transform(d.Com * ScaleOf(p), p.Rotation);
+
+    /// <summary>A piece's centre of mass in the world; null for a piece with no support rules.</summary>
+    internal static Vector3? CentreOfMass(Piece p) => _pieces.GetValueOrDefault(p.Prefab) is { } d ? Com(d, p) : null;
+
     /// <summary>A piece's collider in the world (its axis-aligned bounds for a non-box), grown by grow metres on every side.</summary>
     private static Obb World(Box b, Piece p, float grow)
     {
-        float s = p.Scale > 0 ? p.Scale : 1f;
+        float s = ScaleOf(p);
         var q = p.Rotation * b.Q;
         var c = p.Position + Vector3.Transform(b.C * s, p.Rotation);
         var obb = new Obb(c, Vector3.Transform(Vector3.UnitX, q), Vector3.Transform(Vector3.UnitY, q), Vector3.Transform(Vector3.UnitZ, q), b.H * s);
@@ -214,7 +223,7 @@ public static class Stability
             }
             grown[i] = [.. d.Boxes.Select(b => World(b, pieces[i], 0.15f))];
             seen[i] = [.. d.Boxes.Where(b => b.Counts).Select(b => World(b, pieces[i], 0f))];
-            com[i] = pieces[i].Position + Vector3.Transform(d.Com, pieces[i].Rotation);
+            com[i] = Com(d, pieces[i]);
             // Touching the terrain: a grown box reaching the ground anywhere under it.
             grounded[i] = d.Free || grown[i].Any(g => g.Corners().Append(g.C).Any(c => c.Y <= groundAt(c.X, c.Z)));
         }

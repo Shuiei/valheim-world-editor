@@ -186,6 +186,8 @@ the plugin is unchanged in versions without that part.
 - **A dungeon blueprint whose name hashed to the lowest int failed to paste, and a negative seed gave portal tags like
   "dg-123".** The portal pair's tag took Math.Abs of an int and the seed's remainder as it was; MainWindow.PortalTag
   works in long and takes the size.
+- **Support was worked out wrong for scaled pieces.** Stability scaled a piece's colliders but not its centre of mass,
+  so its support distances and angles were taken from the wrong point; the centre of mass is now scaled too.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
