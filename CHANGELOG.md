@@ -239,8 +239,9 @@ the plugin is unchanged in versions without that part.
   turn could be looked up for another throne than the one placed.
 - A dungeon wall's window is drawn from its place written in the invariant culture, so a seed makes the same windows
   whatever the culture (the app runs invariant; the tests may not).
-- F190: a copy at scale 1 no longer stores a scale of (1, 1, 1) (and drops the template's scale), as new blank objects
-  do.
+- A copy at scale 1 no longer stores a scale of (1, 1, 1) (and drops the template's scale), as new blank objects do.
+- The world generator's Step and Smooth make a step, not NaN, when their two ends are the same (no caller passes such
+  ends today).
 
 ## v1.45.108 — unreleased
 
