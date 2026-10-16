@@ -709,10 +709,15 @@ internal sealed class DungeonPlanner
         {
             // Two floors high: nothing on the level above in its cells.
             var above = _plan.Levels[l.Index - 1];
-            var cells = Box(box).Select(DungeonPlan.CellOf).ToHashSet();
-            if (above.Owner.Keys.Any(t => cells.Contains(DungeonPlan.CellOf(t))))
+            foreach (var (ci, cj) in Box(box).Select(DungeonPlan.CellOf).ToHashSet())
             {
-                return null;
+                for (int k = 0; k < 16; k++)
+                {
+                    if (above.Owner.ContainsKey((4 * ci + k % 4, 4 * cj + k / 4)))
+                    {
+                        return null;
+                    }
+                }
             }
         }
         // A shaped room keeps its whole box clear (what it cuts away stays empty, walled off), its tiles being
