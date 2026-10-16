@@ -2066,8 +2066,9 @@ public sealed partial class MainWindow : Window
             e.Handled = true;
             return;
         }
-        // The right-hand panels, as in the web editor: V the View panel, L the history, ? (or F3) the help.
-        if (!ctrl && e.Key is Avalonia.Input.Key.F3 or Avalonia.Input.Key.OemQuestion || (!ctrl && mods.HasFlag(Avalonia.Input.KeyModifiers.Shift) && e.Key == Avalonia.Input.Key.Oem2))
+        // The right-hand panels, as in the web editor: V the View panel, L the history, ? (or F3) the help. ? is Shift
+        // and the / key (OemQuestion and Oem2 are that one key): / alone is not it.
+        if (!ctrl && (e.Key == Avalonia.Input.Key.F3 || mods.HasFlag(Avalonia.Input.KeyModifiers.Shift) && e.Key == Avalonia.Input.Key.OemQuestion))
         {
             ShowRight(HelpCard.IsVisible ? null : HelpCard);
             e.Handled = true;
