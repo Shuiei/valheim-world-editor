@@ -220,7 +220,8 @@ public sealed class PrefsTests : IDisposable
     }
 
     /// <summary>
-    /// A small 2 × 2 clipboard with a missing height and mixed weights, to see it remembered as it was.
+    /// A small 2 × 2 clipboard with a missing height, mixed weights and paint (four values a point), to see it
+    /// remembered as it was.
     /// </summary>
     private static CopyData Clip() => new()
     {
@@ -228,7 +229,7 @@ public sealed class PrefsTests : IDisposable
         H = 2,
         Rel = [0f, 1f, float.NaN, 2f],
         Wt = [1f, 1f, 0f, 0.5f],
-        Pnt = [-1f, 0f, 0.5f, 1f],
+        Pnt = [-1f, -1, -1, -1, 0f, 0.5f, 1f, 0, 0.5f, 0.5f, 0, 0, 1f, 0, 0, 0],
         Objects = [new(Save.StableHash.Of("Beech1"), "Beech1", 1, 1, 0, new Vector3(0, 90, 0), 1, 1234)],
         Poly = [new(0, 0), new(2, 0), new(2, 2)],
         Name = "kept",
