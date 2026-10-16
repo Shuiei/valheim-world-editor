@@ -194,6 +194,8 @@ the plugin is unchanged in versions without that part.
 - **Damaged dungeon or location scan data could crash or hang placing rooms.** Dungeons.Replay walked up a part's
   parents with no bounds or loop check; a node past the list now ends the walk, and so does a walk longer than the
   list.
+- **A location scan with "teleports": null loaded no location prefab at all.** LocationPrefabs enumerated it without
+  checking it is a list; anything else now counts as none.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
