@@ -1014,13 +1014,17 @@ internal sealed class DungeonPlanner
             return null;
         }
         var below = _plan.Levels[l.Index + 1];
+        // The search off one side gives the same answer each time: a side already tried is passed over (its draw
+        // still made, for the same dungeon from the same seed).
+        var tried = new List<(int X, int Z)>(4);
         for (int attempt = 0; attempt < 40; attempt++)
         {
             var dir = attempt < 12 ? parent.Dir : Dirs[_rnd.Next(4)];
-            if (dir == (-parent.Dir.X, -parent.Dir.Z) && parent.Room != Room.Hub)
+            if ((dir == (-parent.Dir.X, -parent.Dir.Z) && parent.Room != Room.Hub) || tried.Contains(dir))
             {
                 continue;
             }
+            tried.Add(dir);
             var side = SideTiles(parent, dir);
             for (int at = 0; at + 1 < side.Count; at++)
             {
