@@ -306,7 +306,9 @@ public static class ObjectLinks
             var data = o.Data!.ToList();
             if (link.Id != 0)
             {
-                Put(data, "ints", rule.IdKey, ids[link.Id].ToString(CultureInfo.InvariantCulture));
+                // Another object holding the same id (damaged data) gets one of its own: the parts follow the first.
+                int id = at[link.Id] == i ? ids[link.Id] : NewId(taken, random);
+                Put(data, "ints", rule.IdKey, id.ToString(CultureInfo.InvariantCulture));
             }
             bool attached = link.Holder != 0 && at.ContainsKey(link.Holder);
             foreach (int key in rule.ParentKeys.Concat(rule.ReferenceKeys))
@@ -476,8 +478,11 @@ public sealed class LinkIndex
     /// <summary>The objects with a link, by id.</summary>
     private readonly Dictionary<int, Member> _members = [];
 
-    /// <summary>The object holding each id (the first one read when two hold it).</summary>
-    private readonly Dictionary<int, int> _holders = [];
+    /// <summary>
+    /// The object holding each id, by its rule's id key and the id (the first one read when two hold it): an id under
+    /// another rule's key (another mod's) is not the same one.
+    /// </summary>
+    private readonly Dictionary<(int IdKey, int Id), int> _holders = [];
 
     /// <summary>The objects hanging on each object, by its id.</summary>
     private readonly Dictionary<int, List<int>> _children = [];
@@ -543,7 +548,7 @@ public sealed class LinkIndex
         _members[m.Id] = m;
         if (m.Link.Id != 0)
         {
-            _holders.TryAdd(m.Link.Id, m.Id);
+            _holders.TryAdd((m.Link.Rule.IdKey, m.Link.Id), m.Id);
         }
     }
 
@@ -552,7 +557,7 @@ public sealed class LinkIndex
     {
         foreach (var m in _members.Values)
         {
-            if (m.Link.Holder != 0 && _holders.TryGetValue(m.Link.Holder, out int up) && up != m.Id)
+            if (HolderOf(m) is int up && up != m.Id)
             {
                 (_children.TryGetValue(up, out var list) ? list : _children[up] = []).Add(m.Id);
             }
@@ -565,7 +570,10 @@ public sealed class LinkIndex
     /// <summary>The object holding an id of a rule's (the first read when two hold it); null when none does.</summary>
     /// <param name="idKey">The rule's id key (hash): an id under another key is not it.</param>
     /// <param name="id">The id.</param>
-    public Member? Holder(int idKey, int id) => _holders.TryGetValue(id, out int o) && _members[o] is { } m && m.Link.Rule.IdKey == idKey ? m : null;
+    public Member? Holder(int idKey, int id) => _holders.TryGetValue((idKey, id), out int o) ? _members[o] : null;
+
+    /// <summary>The object a member hangs on (holding its parent id under its rule's id key); null when none does.</summary>
+    private int? HolderOf(Member m) => m.Link.Holder != 0 && _holders.TryGetValue((m.Link.Rule.IdKey, m.Link.Holder), out int up) ? up : null;
 
     /// <summary>What the group an object belongs to is called (its root's rule's name); null for one with no link.</summary>
     public string? NameOf(int id) => Get(RootOf(id))?.Link.Rule.Name;
@@ -578,7 +586,7 @@ public sealed class LinkIndex
     {
         var chain = new List<Member> { m };
         var seen = new HashSet<int> { m.Id };
-        while (chain[^1].Link.Holder != 0 && _holders.TryGetValue(chain[^1].Link.Holder, out int up))
+        while (HolderOf(chain[^1]) is int up)
         {
             if (!seen.Add(up) || chain.Count > ObjectLinks.MaxDepth)
             {
@@ -626,7 +634,7 @@ public sealed class LinkIndex
             return id;
         }
         var seen = new HashSet<int> { id };
-        while (m.Link.Holder != 0 && _holders.TryGetValue(m.Link.Holder, out int up) && seen.Add(up))
+        while (HolderOf(m) is int up && seen.Add(up))
         {
             m = _members[up];
         }

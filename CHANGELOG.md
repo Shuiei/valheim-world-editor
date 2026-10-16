@@ -143,6 +143,9 @@ the plugin is unchanged in versions without that part.
 - **The map's zone filter ignored what was placed this session.** ZoneStats counted only saved objects, so a building
   placed and not yet saved showed 0 pieces and a "far from buildings" filter could pick its zone for reset; added
   objects now count, a piece when it will have a builder once saved.
+- **Linked objects of two mods could join up, and a damaged copy pasted two groups under one id.** LinkIndex found
+  what a part hangs on by the id alone, whatever rule's key held it; it now looks under the part's rule's id key. A
+  pasted copy where two objects held the same id gave both the same new id; each extra holder now gets one of its own.
 
 ### Changed
 
