@@ -218,7 +218,13 @@ internal sealed partial class DungeonDresser
         /// The room's corners on the walls' inner faces (u, v), with the way into the room from each (local yaw of the
         /// diagonal) and whether it is an outer corner of the room (convex) or one where a notch meets a wall.
         /// </summary>
-        public List<(float U, float V, float Yaw, bool Convex)> Corners()
+        public IReadOnlyList<(float U, float V, float Yaw, bool Convex)> Corners() => _corners ??= FindCorners();
+
+        /// <summary>Backs <see cref="Corners"/>: worked out once, the room's tiles never changing while it is dressed.</summary>
+        private List<(float U, float V, float Yaw, bool Convex)>? _corners;
+
+        /// <summary>Works out <see cref="Corners"/>.</summary>
+        private List<(float U, float V, float Yaw, bool Convex)> FindCorners()
         {
             float thick = Across - HalfA;
             var corners = new List<(float, float, float, bool)>();
@@ -319,7 +325,13 @@ internal sealed partial class DungeonDresser
         /// (du, dv, unit), how long it is (metres) and the way into the room from it (local yaw). The four walls of
         /// a whole box; more for a shaped room, round its notches; none where a corridor opens into another.
         /// </summary>
-        public List<(float U, float V, float DU, float DV, float Length, float Yaw)> Walls()
+        public IReadOnlyList<(float U, float V, float DU, float DV, float Length, float Yaw)> Walls() => _walls ??= FindWalls();
+
+        /// <summary>Backs <see cref="Walls"/>: worked out once, the room and its level never changing while it is dressed.</summary>
+        private List<(float U, float V, float DU, float DV, float Length, float Yaw)>? _walls;
+
+        /// <summary>Works out <see cref="Walls"/>.</summary>
+        private List<(float U, float V, float DU, float DV, float Length, float Yaw)> FindWalls()
         {
             float thick = Across - HalfA;
             // Each tile's walled sides, in the frame: (along the run, across the run) with the run's start.
