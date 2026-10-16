@@ -1598,7 +1598,8 @@ public sealed class GameBundles
     }
 
     /// <summary>
-    /// A Texture2DArray's GraphicsFormat as a TextureFormat (the compressed ones read here).
+    /// A Texture2DArray's GraphicsFormat as a TextureFormat (the compressed ones read here, and RGBA8); 0 (not read) for
+    /// any other: the two enums number formats differently (GraphicsFormat 5, R8, is TextureFormat 5, ARGB32).
     /// </summary>
     private static int FromGraphicsFormat(int gf) => gf switch
     {
@@ -1610,7 +1611,7 @@ public sealed class GameBundles
         106 or 107 => 24,
         108 or 109 => 25,
         8 or 4 => 4,
-        _ => gf,
+        _ => 0,
     };
 
     /// <summary>

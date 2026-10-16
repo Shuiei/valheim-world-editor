@@ -75,6 +75,9 @@ the plugin is unchanged in versions without that part.
   error.** The per-platform offset and length lists were indexed without checking their sizes, and a part's unpacked
   length was allocated as written. They are now checked first, a part outside the data or past what LZ4 can unpack to
   is refused, and the message no longer says "terrain shader" for every shader.
+- **A texture array in a format the editor does not read is left out instead of read as another format.** Unknown
+  graphics formats were passed on as texture formats, which number formats differently: R8 was read as ARGB32, R8 sRGB
+  as Alpha8. They now count as not read.
 
 ### Changed
 

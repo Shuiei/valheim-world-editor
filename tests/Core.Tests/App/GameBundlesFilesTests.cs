@@ -623,6 +623,8 @@ public class GameBundlesFilesTests
         // DXT1 (graphics format 96): one 4 x 4 block of 8 bytes per slice.
         long dxt = TestAssets.TextureArray(b, "dxt", 4, 4, 96, 1, new byte[8]);
         long unknown = TestAssets.TextureArray(b, "unknown", 1, 1, 200, 1, [1, 2, 3, 4]);
+        // Graphics format 5 (R8) is not TextureFormat 5 (ARGB32): not read (it was, as ARGB32).
+        long r8 = TestAssets.TextureArray(b, "r8", 1, 1, 5, 1, [1, 2, 3, 4]);
         long missing = TestAssets.TextureArray(b, "missing", 2, 2, 8, 2, [1, 2, 3, 4]);
         long tex = TestAssets.Texture(b, "plain", 1, 1, Rgba32, 1, [1, 2, 3, 4]);
         game.Save();
@@ -635,6 +637,7 @@ public class GameBundlesFilesTests
         Assert.Equal([1, 2, 3, 4], bundles.LoadTextureArray(new("arrays", streamed))![0].Data);
         Assert.Equal(10, bundles.LoadTextureArray(new("arrays", dxt))![0].Format);
         Assert.Null(bundles.LoadTextureArray(new("arrays", unknown)));
+        Assert.Null(bundles.LoadTextureArray(new("arrays", r8)));
         Assert.Null(bundles.LoadTextureArray(new("arrays", missing)));
         Assert.Null(bundles.LoadTextureArray(new("arrays", tex)));
     }
