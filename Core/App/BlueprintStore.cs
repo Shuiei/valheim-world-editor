@@ -148,7 +148,8 @@ public sealed class BlueprintStore(string directory)
         {
             id = "blueprint";
         }
-        return SafeFile.IsDeviceName(id) ? "_" + id : id;
+        // Cut again after the "_": an id is always one Clean keeps as it is (ValidId), so it can be read back.
+        return SafeFile.IsDeviceName(id) ? Clean("_" + id) : id;
     }
 
     /// <summary>

@@ -68,7 +68,8 @@ public sealed class BlueprintStoreTests : IDisposable
         Assert.Equal("Kept", Assert.Single(store.List()).Name);
     }
 
-    // Names Windows keeps for devices get a "_" (saving "con" failed there), and a cut ending in a dot drops it.
+    // Names Windows keeps for devices get a "_" (saving "con" failed there), within the 80 characters, and a cut ending
+    // in a dot drops it.
     [Fact]
     public void IdsAvoidWindowsDeviceNamesAndATrailingDot()
     {
@@ -78,6 +79,10 @@ public sealed class BlueprintStoreTests : IDisposable
         var store = new BlueprintStore(_dir);
         Assert.Equal("_con", store.Save("con", null, null, Clip(1, ground: false)));
         Assert.NotNull(store.Read("_con"));
+        // A device name cut at 80 characters stays within them with its "_", so it can be read back (it could not).
+        string id = store.Save("CON." + new string('a', 76), null, null, Clip(1, ground: false));
+        Assert.Equal(80, id.Length);
+        Assert.NotNull(store.Read(id));
     }
 
     [Fact]
