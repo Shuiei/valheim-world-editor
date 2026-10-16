@@ -218,12 +218,17 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// Moves the area by zones (+X east, +Z north), keeping its size and the view; the edits and the history stay
-    /// with the world.
+    /// with the world. Not while something unfinished would be lost (MoveBlocker): the status bar says why.
     /// </summary>
     internal async Task MoveArea(int dx, int dz)
     {
         if (View.Scene is not { Owner: not null } s)
         {
+            return;
+        }
+        if (MoveBlocker() is string why)
+        {
+            MessageText.Text = $"The area cannot move now: {why}.";
             return;
         }
         await OpenBlockKeepingView(s.X0 + dx, s.Z0 + dz, s.ZonesX, s.ZonesZ);
@@ -735,6 +740,11 @@ public sealed partial class MainWindow
         float gx = p.World.X - (s.X0 * 64 - 32), gz = p.World.Z - (s.Z0 * 64 - 32);
         if (!(gx > 2 && gz > 2 && gx < s.W - 3 && gz < s.H - 3) && s.Owner != null)
         {
+            if (MoveBlocker() is string why)
+            {
+                MessageText.Text = $"Cannot go to {name}, outside the area, now: {why}.";
+                return;
+            }
             int zx = (int)MathF.Floor((p.World.X + 32) / 64), zz = (int)MathF.Floor((p.World.Z + 32) / 64);
             await EditBlock(zx - s.ZonesX / 2, zz - s.ZonesZ / 2, s.ZonesX, s.ZonesZ);
         }
