@@ -222,6 +222,9 @@ the plugin is unchanged in versions without that part.
 - **A corridor gate's band of wall could fall in a stave or wood dungeon.** The band ran between the walls' faces, a
   width no whole number of pieces fills in a thin material, and the gap left at one end let it fall; it now runs on
   into the walls.
+- **The save message could count the objects a zone reset cleared wrong, even below zero.** It took the number of
+  deleted ids away from all removals, though an id in a reset zone, a repeated id or one past the list removes nothing
+  more; it now counts the objects the deletions removed.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving

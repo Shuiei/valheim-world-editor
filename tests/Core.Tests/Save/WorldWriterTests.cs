@@ -117,6 +117,24 @@ public class WorldWriterTests
     }
 
     [Fact]
+    public void TheMessageCountsOnlyWhatTheResetCleared()
+    {
+        // The message took the deleted ids' count from the reset's: an id in the reset zone, a repeated id or one past
+        // the list made "objects cleared" too low, or negative.
+        using var w = new TempWorld();
+        var world = w.Load();
+        var t = world.TerrainZones[0];
+        int[] inZone = [.. Enumerable.Range(0, world.ObjectRefs.Count).Where(i => world.ObjectRefs[i].Zone == (t.ZoneX, t.ZoneZ) && world.ObjectRefs[i].Prefab != WorldWriter.TombstonePrefab)];
+        Assert.True(inZone.Length > 1);
+
+        var r = WorldWriter.Save(world, [], deleted: [inZone[0], inZone[0], world.ObjectRefs.Count + 5], resets: [new ZoneReset(t.ZoneX, t.ZoneZ, false, true)]);
+
+        Assert.True(r.Saved, r.Message);
+        Assert.Contains("1 deleted object(s)", r.Message);
+        Assert.Contains($"({inZone.Length - 1} objects cleared)", r.Message);
+    }
+
+    [Fact]
     public void AnOlderSaveFormatIsNamedFromTheChunkThatHasIt()
     {
         // It named the first chunk file's format: "uses save format 41; the writer only supports 41".

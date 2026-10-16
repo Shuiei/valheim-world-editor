@@ -116,6 +116,8 @@ public static class WorldWriter
                 Remove(world.ObjectRefs[id]);
             }
         }
+        // Objects the deletions take out: ids past the list and repeated ids take out none.
+        int deletedCount = removals.Values.Sum(s => s.Count);
         Dictionary<(int, int), ZoneReset> resetByZone = resets.ToDictionary(r => (r.X, r.Z));
         foreach (ObjectRef o in world.ObjectRefs)
         {
@@ -281,7 +283,7 @@ public static class WorldWriter
             old.AddRange(options.Drop.Where(f => !newFiles.Contains(f)));
         }
         RemoveAll(old);
-        string what = string.Join(", ", new[] { written + created > 0 ? $"{written + created} zone(s)" : null, deleted.Count > 0 ? $"{deleted.Count} deleted object(s)" : null, addedCount > 0 ? $"{addedCount} new object(s)" : null, resets.Count > 0 ? $"{resets.Count} reset zone(s) ({removed - deleted.Count} objects cleared)" : null }.Where(x => x != null));
+        string what = string.Join(", ", new[] { written + created > 0 ? $"{written + created} zone(s)" : null, deletedCount > 0 ? $"{deletedCount} deleted object(s)" : null, addedCount > 0 ? $"{addedCount} new object(s)" : null, resets.Count > 0 ? $"{resets.Count} reset zone(s) ({removed - deletedCount} objects cleared)" : null }.Where(x => x != null));
         return new Result(true, $"Saved {what} to save #{newNumber}.", null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles, Number = newNumber };
     }
 
