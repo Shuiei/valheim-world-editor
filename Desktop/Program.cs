@@ -20,11 +20,11 @@ public static class Program
     public static void Main(string[] args)
     {
         // --script-host: one script run for the editor that started this process (the script and the area on
-        // stdin, the changes on stdout: nothing else on it, no log, no window).
+        // stdin, the changes on stdout: nothing else on it, no log, no window). Ended outright once it has answered:
+        // a thread the script started and left running would keep it alive.
         if (args.Contains("--script-host"))
         {
-            Environment.ExitCode = ScriptHost.Serve();
-            return;
+            Environment.Exit(ScriptHost.Serve());
         }
         // --mcp-stdio: only the relay to the running editor for Claude (nothing else on stdout: no log,
         // no window).

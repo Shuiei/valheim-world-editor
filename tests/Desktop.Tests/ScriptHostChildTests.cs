@@ -8,7 +8,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// Scripts run in a process of their own (ScriptHost.Child): the request and the answer as sent, a script's prints,
-/// changes and error through its process, Stop ending a call no Check can interrupt, and a process that dies.
+/// changes and error through its process, Stop ending a call no Check can interrupt, a thread left running not
+/// keeping the process, and a process that dies.
 /// </summary>
 public class ScriptHostChildTests
 {
@@ -149,6 +150,20 @@ public class ScriptHostChildTests
         var watch = Stopwatch.StartNew();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => ScriptHost.RunInChild(image, pdb, Snap(), cancel.Token));
         Assert.True(watch.Elapsed < TimeSpan.FromSeconds(15), $"stopped after {watch.Elapsed}");
+    }
+
+    // A script that leaves a thread running when it ends still answers at once: its process ends with the answer.
+    [Fact]
+    public async Task AThreadLeftRunningDoesNotKeepTheProcess()
+    {
+        var (image, pdb) = Compiled("""
+            new System.Threading.Thread(() => System.Threading.Thread.Sleep(600000)).Start();
+            Print("done");
+            """);
+        using var cancel = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cancel.CancelAfter(TimeSpan.FromSeconds(30));
+        var ch = await ScriptHost.RunInChild(image, pdb, Snap(), cancel.Token);
+        Assert.Equal("done" + Environment.NewLine, ch.Output.ToString());
     }
 
     // A script that takes its process down is an error, not a wait.

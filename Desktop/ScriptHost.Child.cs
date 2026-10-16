@@ -159,7 +159,10 @@ public static partial class ScriptHost
     /// the changes, the script's error, or stopped). The input closing meanwhile is the editor's Stop: the script's
     /// loops end at their next Check. Nothing else of the editor starts.
     /// </summary>
-    /// <returns>The process's exit code: 0 once it has answered.</returns>
+    /// <returns>
+    /// The process's exit code: 0 once it has answered (the answer flushed). The caller ends the process with it, so
+    /// that a thread the script left running cannot keep it alive.
+    /// </returns>
     internal static int Serve()
     {
         // Buffered: a pipe read is a system call, and the request holds hundreds of thousands of small values.
