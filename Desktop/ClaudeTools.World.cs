@@ -46,6 +46,12 @@ public sealed partial class ClaudeTools
         }
         return await OnUi(() =>
         {
+            // Another world opened while it was searched: its hits are the old world's, and the area's ids would be
+            // given to objects of the new one with the same saved ids.
+            if (_w.World != world)
+            {
+                return "The world changed while it was searched: search again.";
+            }
             // The open area's things by world id, to give the hits there their ids.
             var inArea = new Dictionary<int, int>();
             var scene = _w.InWorkshop ? null : _w.Session?.Scene;
