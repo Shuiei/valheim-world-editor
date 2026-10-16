@@ -35,35 +35,86 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     /// <inheritdoc/>
     public void Dispose() => _http.Dispose();
 
-    /// <summary>A GET request with the token.</summary>
+    /// <summary>
+    /// Sends a request with the token (and a binary body and call id when given); the answer, whatever its status, for
+    /// the caller to check and dispose.
+    /// </summary>
+    private async Task<HttpResponseMessage> Send(HttpMethod method, string path, byte[]? body = null, string? callId = null, CancellationToken cancel = default)
+    {
+        using HttpRequestMessage req = new(method, path);
+        if (body != null)
+        {
+            req.Content = new ByteArrayContent(body);
+        }
+        req.Headers.Add("X-Bridge-Token", token);
+        if (callId != null)
+        {
+            req.Headers.Add("X-Call-Id", callId);
+        }
+        return await _http.SendAsync(req, cancel);
+    }
+
+    /// <summary>A request body written with a binary writer (UTF-8 strings, as the plugin's ZPackage reads them).</summary>
+    private static byte[] Build(Action<BinaryWriter> write)
+    {
+        using MemoryStream ms = new();
+        using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+        {
+            write(w);
+        }
+        return ms.ToArray();
+    }
+
+    /// <summary>A point as three floats (x, y, z).</summary>
+    private static void Write(BinaryWriter w, System.Numerics.Vector3 v)
+    {
+        w.Write(v.X);
+        w.Write(v.Y);
+        w.Write(v.Z);
+    }
+
+    /// <summary>A GET request with the token; the caller disposes the answer.</summary>
     /// <exception cref="InvalidOperationException">The bridge answered with an error status.</exception>
     private async Task<HttpResponseMessage> Get(string path)
     {
-        using HttpRequestMessage req = new(HttpMethod.Get, path);
-        req.Headers.Add("X-Bridge-Token", token);
-        HttpResponseMessage res = await _http.SendAsync(req);
+        HttpResponseMessage res = await Send(HttpMethod.Get, path);
         if (!res.IsSuccessStatusCode)
         {
-            string body = await res.Content.ReadAsStringAsync();
-            throw new InvalidOperationException($"bridge {path}: {(int)res.StatusCode} {body}");
+            using (res)
+            {
+                string body = await res.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"bridge {path}: {(int)res.StatusCode} {body}");
+            }
         }
         return res;
+    }
+
+    /// <summary>A GET request's answer as text.</summary>
+    /// <exception cref="InvalidOperationException">The bridge answered with an error status.</exception>
+    private async Task<string> GetText(string path)
+    {
+        using var res = await Get(path);
+        return await res.Content.ReadAsStringAsync();
     }
 
     /// <summary>
     /// The whole persistent world as the running game has it (world info, zone data and every persistent object),
     /// gzip-compressed; <c>WorldSave.LoadLive</c> reads it.
     /// </summary>
-    public async Task<byte[]> Snapshot() => await (await Get("snapshot")).Content.ReadAsByteArrayAsync();
+    public async Task<byte[]> Snapshot()
+    {
+        using var res = await Get("snapshot");
+        return await res.Content.ReadAsByteArrayAsync();
+    }
 
     /// <summary>The connected players and their positions, as the plugin's JSON array.</summary>
-    public async Task<string> Players() => await (await Get("players")).Content.ReadAsStringAsync();
+    public Task<string> Players() => GetText("players");
 
     /// <summary>
     /// Every prefab the running game knows, mods' too, as the plugin's JSON (ModCatalogue reads it); a plugin older
     /// than 1.26.0 answers 404.
     /// </summary>
-    public async Task<string> Catalogue() => await (await Get("catalogue")).Content.ReadAsStringAsync();
+    public Task<string> Catalogue() => GetText("catalogue");
 
     /// <summary>
     /// What the game draws of these prefabs (mod prefabs: their meshes', materials' names and places), as the plugin's
@@ -76,7 +127,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     }
 
     /// <summary>Plugin and world info, as the plugin's JSON.</summary>
-    public async Task<string> Status() => await (await Get("status")).Content.ReadAsStringAsync();
+    public Task<string> Status() => GetText("status");
 
     /// <summary>
     /// A quick reachability check before opening a live world: null when the bridge answers, else a plain explanation
@@ -143,8 +194,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     /// <exception cref="BridgeAnswerException">The bridge answered with an error status.</exception>
     public async Task<string> ApplyTerrain(IReadOnlyList<(int X, int Z, byte[] Data)> zones)
     {
-        using MemoryStream ms = new();
-        using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+        using var res = await Send(HttpMethod.Post, "terrain", Build(w =>
         {
             w.Write(zones.Count);
             foreach (var (x, z, data) in zones)
@@ -154,10 +204,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
                 w.Write(data.Length);
                 w.Write(data);
             }
-        }
-        using HttpRequestMessage req = new(HttpMethod.Post, "terrain") { Content = new ByteArrayContent(ms.ToArray()) };
-        req.Headers.Add("X-Bridge-Token", token);
-        HttpResponseMessage res = await _http.SendAsync(req);
+        }));
         string body = await res.Content.ReadAsStringAsync();
         if (!res.IsSuccessStatusCode)
         {
@@ -220,8 +267,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     /// </param>
     public async Task<string> ApplyObjects(IReadOnlyList<LiveTarget> destroy, IReadOnlyList<byte[]> create, IReadOnlyList<LiveMove>? moves = null, string? callId = null)
     {
-        using MemoryStream ms = new();
-        using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+        byte[] call = Build(w =>
         {
             w.Write(destroy.Count);
             foreach (LiveTarget t in destroy)
@@ -238,9 +284,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
             foreach (LiveTarget t in destroy)
             {
                 w.Write(t.Prefab);
-                w.Write(t.Position.X);
-                w.Write(t.Position.Y);
-                w.Write(t.Position.Z);
+                Write(w, t.Position);
             }
             if (moves is { Count: > 0 })
             {
@@ -257,20 +301,8 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
                     w.Write(m.Fallback);
                 }
             }
-        }
-        static void Write(BinaryWriter w, System.Numerics.Vector3 v)
-        {
-            w.Write(v.X);
-            w.Write(v.Y);
-            w.Write(v.Z);
-        }
-        using HttpRequestMessage req = new(HttpMethod.Post, "objects") { Content = new ByteArrayContent(ms.ToArray()) };
-        req.Headers.Add("X-Bridge-Token", token);
-        if (callId != null)
-        {
-            req.Headers.Add("X-Call-Id", callId);
-        }
-        HttpResponseMessage res = await _http.SendAsync(req);
+        });
+        using var res = await Send(HttpMethod.Post, "objects", call, callId);
         string body = await res.Content.ReadAsStringAsync();
         if (!res.IsSuccessStatusCode)
         {
@@ -285,8 +317,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     /// </summary>
     public async Task<string> ResetZones(IReadOnlyList<Editing.ZoneReset> zones)
     {
-        using MemoryStream ms = new();
-        using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+        using var res = await Send(HttpMethod.Post, "zones/reset", Build(w =>
         {
             w.Write(zones.Count);
             foreach (var z in zones)
@@ -296,10 +327,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
                 w.Write(z.KeepBuildings);
                 w.Write(z.Ground);
             }
-        }
-        using HttpRequestMessage req = new(HttpMethod.Post, "zones/reset") { Content = new ByteArrayContent(ms.ToArray()) };
-        req.Headers.Add("X-Bridge-Token", token);
-        HttpResponseMessage res = await _http.SendAsync(req);
+        }));
         string body = await res.Content.ReadAsStringAsync();
         if (!res.IsSuccessStatusCode)
         {
@@ -311,20 +339,15 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     }
 
     /// <summary>The zones asked for as an int count, then int x, int z each.</summary>
-    private static byte[] ZoneList(IReadOnlyCollection<(int X, int Z)> zones)
+    private static byte[] ZoneList(IReadOnlyCollection<(int X, int Z)> zones) => Build(w =>
     {
-        using MemoryStream ms = new();
-        using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+        w.Write(zones.Count);
+        foreach (var (x, z) in zones)
         {
-            w.Write(zones.Count);
-            foreach (var (x, z) in zones)
-            {
-                w.Write(x);
-                w.Write(z);
-            }
+            w.Write(x);
+            w.Write(z);
         }
-        return ms.ToArray();
-    }
+    });
 
     /// <summary>
     /// The mods' plugins registered with the bridge (WorldEditorBridge.Api: routes to call, listeners told of changes),
@@ -332,9 +355,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     /// </summary>
     public async Task<(int Api, List<string> Mods)> Mods()
     {
-        using HttpRequestMessage req = new(HttpMethod.Get, "mods");
-        req.Headers.Add("X-Bridge-Token", token);
-        using HttpResponseMessage res = await _http.SendAsync(req);
+        using HttpResponseMessage res = await Send(HttpMethod.Get, "mods");
         if (res.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             return (0, []);
@@ -357,9 +378,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     /// <exception cref="InvalidOperationException">The bridge answered with an error status (its message given).</exception>
     public async Task<byte[]> Call(string modId, string name, byte[] body, CancellationToken cancel = default)
     {
-        using HttpRequestMessage req = new(HttpMethod.Post, $"mods/{Uri.EscapeDataString(modId)}/{Uri.EscapeDataString(name)}") { Content = new ByteArrayContent(body) };
-        req.Headers.Add("X-Bridge-Token", token);
-        using HttpResponseMessage res = await _http.SendAsync(req, cancel);
+        using HttpResponseMessage res = await Send(HttpMethod.Post, $"mods/{Uri.EscapeDataString(modId)}/{Uri.EscapeDataString(name)}", body, cancel: cancel);
         if (!res.IsSuccessStatusCode)
         {
             throw new InvalidOperationException($"bridge mods/{modId}/{name}: {(int)res.StatusCode} {await res.Content.ReadAsStringAsync(cancel)}");
@@ -367,21 +386,22 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
         return await res.Content.ReadAsByteArrayAsync(cancel);
     }
 
-    /// <summary>A POST request with the token and a binary body.</summary>
+    /// <summary>A POST request with the token and a binary body; the caller disposes the answer.</summary>
     /// <exception cref="InvalidOperationException">
     /// The bridge answered with an error status (404 means the plugin is too old for that endpoint).
     /// </exception>
     private async Task<HttpResponseMessage> Post(string path, byte[] body)
     {
-        using HttpRequestMessage req = new(HttpMethod.Post, path) { Content = new ByteArrayContent(body) };
-        req.Headers.Add("X-Bridge-Token", token);
-        HttpResponseMessage res = await _http.SendAsync(req);
+        HttpResponseMessage res = await Send(HttpMethod.Post, path, body);
         if (!res.IsSuccessStatusCode)
         {
-            string text = await res.Content.ReadAsStringAsync();
-            throw new InvalidOperationException(res.StatusCode == System.Net.HttpStatusCode.NotFound
-                ? $"the WorldEditorBridge plugin on the server is too old for {path}: update it"
-                : $"bridge {path}: {(int)res.StatusCode} {text}");
+            using (res)
+            {
+                string text = await res.Content.ReadAsStringAsync();
+                throw new InvalidOperationException(res.StatusCode == System.Net.HttpStatusCode.NotFound
+                    ? $"the WorldEditorBridge plugin on the server is too old for {path}: update it"
+                    : $"bridge {path}: {(int)res.StatusCode} {text}");
+            }
         }
         return res;
     }
