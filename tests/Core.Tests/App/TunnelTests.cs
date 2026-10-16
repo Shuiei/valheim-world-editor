@@ -260,6 +260,19 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         File.Delete(Path.Combine(game, "BepInEx", "config", config));
         r = await Tunnel.Start(Req(folder: game));
         Assert.Equal(5182, r.Server!.BridgePort);
+        // A port no number of 1 to 65535 fits: the usual port too (it threw, leaving the connection open).
+        File.WriteAllText(Path.Combine(game, "BepInEx", "config", config), "Port = 99999999999\n");
+        r = await Tunnel.Start(Req(folder: game));
+        Assert.Equal(5182, r.Server!.BridgePort);
+    }
+
+    // A port out of range given: said before connecting (it threw).
+    [Fact]
+    public async Task APortOutOfRangeIsRefused()
+    {
+        Assert.Equal("A port is a number from 1 to 65535.", (await Tunnel.Start(new Tunnel.Request("127.0.0.1", 70000, "u", "pw", null, null, "tok", null, false, null))).Error);
+        Assert.Equal("A port is a number from 1 to 65535.", (await Tunnel.Start(Req(bridge: 0))).Error);
+        Assert.False(Tunnel.Open);
     }
 
     [Fact]

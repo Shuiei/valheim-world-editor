@@ -117,6 +117,10 @@ the plugin is unchanged in versions without that part.
 - **A very large terrain texture array is said to be too large instead of failing with an overflow.** Its size was
   worked out in 32-bit numbers, so 4096 × 4096 with 32 slices came out negative. It is now worked out in 64 bits, and
   an array too large for one buffer is refused with a clear message.
+- **A tunnel that fails after logging in no longer stays open with the start page waiting.** A plugin port out of
+  range in the server's settings, the local port taken in the meantime, or another failure once connected threw past
+  the connection, which stayed open (and the port bound) until the editor closed, while the page kept saying
+  "Connecting to …". Ports are now checked first, and any failure once connected closes the connection and is said.
 
 ### Changed
 
