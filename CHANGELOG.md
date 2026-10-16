@@ -23,6 +23,9 @@ the plugin is unchanged in versions without that part.
 - **Claude can no longer make a world outside the game's worlds folders.** create_world took any folder it was given,
   so world files could be written in any folder the editor can write to. A folder that is not one of the game's worlds
   folders is now refused.
+- **A damaged history file no longer makes opening a world take gigabytes of memory.** Each count in the file made
+  room for that many entries before any was read, so a count of 200 million allocated gigabytes before the file ran
+  out. Entries are now kept as they are read, and a negative count is refused.
 
 ### Changed
 

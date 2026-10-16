@@ -117,6 +117,51 @@ public class HistoryFileTests
         }
     }
 
+    // A count far past what the file holds (200 million objects) is refused at the file's end, without making room
+    // for that many first (it allocated gigabytes, and relied on running out of memory).
+    [AvaloniaFact]
+    public void AHugeCountInAHistoryFileIsNotAllocatedBeforeItIsRead()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            EditAndSave(dir);
+            using var world = WorldSession.Open(dir);
+            string path = HistoryFile.PathOf(HistoryFile.KeyOf(world));
+            byte[] raw;
+            using (var gz = new System.IO.Compression.GZipStream(File.OpenRead(path), System.IO.Compression.CompressionMode.Decompress))
+            using (var ms = new MemoryStream())
+            {
+                gz.CopyTo(ms);
+                raw = ms.ToArray();
+            }
+            // Header: magic, version, key, has stamp, stamp, saved at; then the object count.
+            long at;
+            using (var r = new BinaryReader(new MemoryStream(raw), System.Text.Encoding.UTF8))
+            {
+                r.ReadInt32();
+                r.ReadInt32();
+                r.ReadString();
+                r.ReadBoolean();
+                r.ReadString();
+                r.ReadInt64();
+                at = r.BaseStream.Position;
+            }
+            BitConverter.GetBytes(200_000_000).CopyTo(raw, at);
+            using (var gz = new System.IO.Compression.GZipStream(File.Create(path), System.IO.Compression.CompressionLevel.Fastest))
+            {
+                gz.Write(raw);
+            }
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            Assert.Null(HistoryFile.Read(world));
+            Assert.InRange(GC.GetAllocatedBytesForCurrentThread() - before, 0, 64 << 20);
+        }
+        finally
+        {
+            Done(dir);
+        }
+    }
+
     [AvaloniaFact]
     public void TheHistoryComesBackWhenTheWorldIsOpenedAgain()
     {
