@@ -14,24 +14,16 @@ public static class Dialogs
     /// <param name="title">The dialog's title.</param>
     /// <param name="text">The question (selectable, to copy).</param>
     /// <param name="yes">The first button (Enter).</param>
-    /// <param name="no">The second button (Esc); null: none.</param>
+    /// <param name="no">The second button (Esc); null: none, and Esc presses the first.</param>
     public static async Task<bool> Ask(Window owner, string title, string text, string yes, string? no = "Cancel")
     {
         bool result = false;
-        var dialog = new Window
-        {
-            Title = title,
-            Width = 560,
-            SizeToContent = SizeToContent.Height,
-            CanResize = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Background = new SolidColorBrush(Color.FromRgb(24, 28, 34)),
-        };
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
-        var ok = new Button { Content = yes, IsDefault = true };
+        var dialog = Modal(title, 560);
+        // A lone button answers Esc too, so a message closes with it.
+        var ok = new Button { Content = yes, IsDefault = true, IsCancel = no == null };
         ToolTip.SetTip(ok, Lang.T("dialog.okEnter", yes));
         ok.Click += (_, _) => { result = true; dialog.Close(); };
-        buttons.Children.Add(ok);
+        var buttons = ButtonRow(ok);
         if (no != null)
         {
             var cancel = new Button { Content = no, IsCancel = true }.Tip("dialog.cancel");
@@ -59,15 +51,7 @@ public static class Dialogs
     public static async Task<string?> AskText(Window owner, string title, string text, string initial = "")
     {
         string? result = null;
-        var dialog = new Window
-        {
-            Title = title,
-            Width = 420,
-            SizeToContent = SizeToContent.Height,
-            CanResize = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Background = new SolidColorBrush(Color.FromRgb(24, 28, 34)),
-        };
+        var dialog = Modal(title, 420);
         var box = new TextBox { Text = initial }.Tip("dialog.text");
         var ok = new Button { Content = "OK", IsDefault = true };
         ToolTip.SetTip(ok, Lang.T("dialog.useAnswer"));
@@ -79,7 +63,7 @@ public static class Dialogs
             Margin = new Thickness(18),
             Spacing = 12,
             Children = { new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 13 }, box,
-                new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Children = { ok, cancel } } },
+                ButtonRow(ok, cancel) },
         };
         dialog.Opened += (_, _) => box.Focus();
         await dialog.ShowDialog(owner);
@@ -96,15 +80,7 @@ public static class Dialogs
     public static async Task<Homestead.Details?> AskBlueprint(Window owner, Homestead.Details start, string cost)
     {
         Homestead.Details? result = null;
-        var dialog = new Window
-        {
-            Title = "Blueprint",
-            Width = 460,
-            SizeToContent = SizeToContent.Height,
-            CanResize = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Background = new SolidColorBrush(Color.FromRgb(24, 28, 34)),
-        };
+        var dialog = Modal("Blueprint", 460);
         var name = new TextBox { Text = start.Name }.Tip("dialog.blueprintName");
         var description = new TextBox { Text = start.Description, AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, MinHeight = 54, PlaceholderText = "What it is, how to build it…" }.Tip("dialog.blueprintDescription");
         var tags = new TextBox { Text = string.Join(", ", start.Tags), PlaceholderText = "house, viking, stone" }.Tip("dialog.blueprintTags");
@@ -119,6 +95,8 @@ public static class Dialogs
         };
         var cancel = new Button { Content = "Cancel", IsCancel = true }.Tip("dialog.cancel");
         cancel.Click += (_, _) => dialog.Close();
+        var row = ButtonRow(ok, cancel);
+        row.Margin = new Thickness(0, 8, 0, 0);
         static TextBlock Label(string t) => new() { Text = t, FontSize = 12, Foreground = Brushes.Gray };
         dialog.Content = new StackPanel
         {
@@ -131,11 +109,33 @@ public static class Dialogs
                 Label("Tags (separated by commas)"), tags,
                 dungeon,
                 new TextBlock { Text = "Cost in game: " + cost, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) },
-                new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0), Children = { ok, cancel } },
+                row,
             },
         };
         dialog.Opened += (_, _) => name.Focus();
         await dialog.ShowDialog(owner);
         return result;
+    }
+
+    /// <summary>A dark modal window as tall as its content.</summary>
+    /// <param name="title">Its title.</param>
+    /// <param name="width">Its width.</param>
+    private static Window Modal(string title, double width) => new()
+    {
+        Title = title,
+        Width = width,
+        SizeToContent = SizeToContent.Height,
+        CanResize = false,
+        WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        Background = new SolidColorBrush(Color.FromRgb(24, 28, 34)),
+    };
+
+    /// <summary>A dialog's buttons in a row on the right.</summary>
+    /// <param name="buttons">The buttons, in order.</param>
+    private static StackPanel ButtonRow(params Button[] buttons)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
+        row.Children.AddRange(buttons);
+        return row;
     }
 }
