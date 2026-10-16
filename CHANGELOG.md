@@ -86,6 +86,10 @@ the plugin is unchanged in versions without that part.
 - **A heightmap picture with odd heights written in it no longer breaks its import.** Lowest and highest heights such
   as NaN, Infinity or 1e39 were taken as written, so the Area panel threw and Claude's import used them; a highest not
   above the lowest was taken too. Such heights are now left out, and the ground's own heights used instead.
+- **Two mods' bundles whose names differ only by punctuation or letter case are both drawn.** Copies were named with
+  punctuation made "_" and matched ignoring case, so "Mod A.bundle" and "Mod_A.bundle" (or "Foo" and "foo" in two
+  mods) counted as one, and the older one's models were never drawn. The same bundle is now matched by its exact file
+  and resource name, and copies that would share a name each get one of their own.
 
 ### Changed
 

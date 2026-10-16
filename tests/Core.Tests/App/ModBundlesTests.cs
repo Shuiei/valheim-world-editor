@@ -148,6 +148,29 @@ public sealed class ModBundlesTests : IDisposable
         Assert.Empty(reader.Named(AssetClassID.Mesh, "old_plank"));
     }
 
+    // Different bundles whose copies would have had the same name (punctuation made "_", letter case ignored) are both
+    // copied and read (the older was dropped, its models never drawn).
+    [Fact]
+    public void BundlesWhoseNamesWouldMeetAreEachCopied()
+    {
+        string plugins = Plugins("Default");
+        Directory.CreateDirectory(Path.Combine(plugins, "One"));
+        Directory.CreateDirectory(Path.Combine(plugins, "Two"));
+        Directory.CreateDirectory(Path.Combine(plugins, "Three"));
+        File.WriteAllBytes(Path.Combine(plugins, "One", "Mod A.bundle"), Bundle("a", "space_plank"));
+        File.WriteAllBytes(Path.Combine(plugins, "Two", "Mod_A.bundle"), Bundle("b", "underscore_plank"));
+        File.WriteAllBytes(Path.Combine(plugins, "Three", "mod_a.bundle"), Bundle("c", "lower_plank"));
+
+        var sources = ModBundles.Find(Settings("Default"));
+        var reader = ModBundles.Reader(Settings("Default"))!;
+
+        Assert.Equal(3, sources.Select(s => s.Name.ToLowerInvariant()).Distinct().Count());
+        Assert.All(sources, s => Assert.StartsWith("Mod_A.bundle-", s.Name, StringComparison.OrdinalIgnoreCase));
+        Assert.Single(reader.Named(AssetClassID.Mesh, "space_plank"));
+        Assert.Single(reader.Named(AssetClassID.Mesh, "underscore_plank"));
+        Assert.Single(reader.Named(AssetClassID.Mesh, "lower_plank"));
+    }
+
     [Fact]
     public void TheCopiesAreKeptWhileTheModsAreUnchanged()
     {
