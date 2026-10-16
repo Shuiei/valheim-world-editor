@@ -151,7 +151,8 @@ public sealed class EditSession
     /// <summary>
     /// Takes out one change and keeps everything done after it: its height change is taken off the points it touched
     /// (later edits there stay), paint goes back where nothing repainted it since, its objects and zone resets go back.
-    /// The removal is itself a change that can be undone.
+    /// The removal is itself a change that can be undone. A change whose added objects a later step moved or deleted
+    /// is refused: taking it out would bring back what it replaced beside the later step's copies (undo instead).
     /// </summary>
     /// <returns>A message for the status line ("" during a stroke, when nothing was done).</returns>
     public string RemoveChange(Change c)
@@ -166,6 +167,10 @@ public sealed class EditSession
             if (_stroke != null)
             {
                 return "";
+            }
+            if (c.Things.Any(t => t.Before && !t.After && Scene.Things[t.Index].Gone && TakenLater(c, t.Index)))
+            {
+                return "That change cannot be removed: a later step moved or deleted what it added. Undo back to it instead.";
             }
             var g = Ground;
             var start = g.Snapshot();
@@ -217,6 +222,18 @@ public sealed class EditSession
         Edited();
         return $"Removed “{c.Label}”; everything else is kept. Ctrl+Z brings it back.";
     }
+    /// <summary>
+    /// Whether a step after <paramref name="c"/> that is still in (not taken out) took the thing away: moved or deleted
+    /// it. A thing gone without a step (removed in the game, TakeGameChanges) does not count. Under the lock.
+    /// </summary>
+    /// <param name="c">The change about to be taken out.</param>
+    /// <param name="index">A thing it added, an index into the scene's things.</param>
+    private bool TakenLater(Change c, int index)
+    {
+        int at = _undo.IndexOf(c);
+        return at >= 0 && _undo.Skip(at + 1).Any(l => !l.Removed && l.Things.Any(t => t.Index == index && t.After));
+    }
+
     /// <summary>
     /// The ground state of a change that touched no ground points.
     /// </summary>
