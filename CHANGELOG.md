@@ -187,6 +187,8 @@ the plugin is unchanged in versions without that part.
   a native context.
 - Dungeon dressing draws each random count once: eight loops drew it again at every turn, which used extra draws (the
   same seed now makes a slightly different dungeon).
+- A dungeon's throne is drawn once per seat (PickThrone): the ThronePiece property drew again on each read, so its
+  turn could be looked up for another throne than the one placed.
 
 ## v1.45.108 — unreleased
 

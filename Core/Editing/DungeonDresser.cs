@@ -1420,8 +1420,8 @@ internal sealed partial class DungeonDresser
         }
     }
 
-    /// <summary>A throne that suits the material (a bone throne in a stone crypt).</summary>
-    private string ThronePiece => _mat.Name switch
+    /// <summary>A throne that suits the material (a bone throne in a stone crypt); some are drawn, so call it once a seat.</summary>
+    private string PickThrone() => _mat.Name switch
     {
         "Marble" or "Grausten" => "piece_blackmarble_throne",
         "Goblin" => "piece_bone_throne",
@@ -1448,7 +1448,8 @@ internal sealed partial class DungeonDresser
             _o.Add("stone_stair", f.W(u, back - 5, f.F + Lift), f.Yaw(180));
         }
         f.Take(0, back - 2.5f, 3.6f);
-        _o.Add(ThronePiece, f.W(0, back - 1.2f, f.F + 1 + Lift * 2), f.Yaw(180 + DungeonProps.Turn(ThronePiece)));
+        string throne = PickThrone();
+        _o.Add(throne, f.W(0, back - 1.2f, f.F + 1 + Lift * 2), f.Yaw(180 + DungeonProps.Turn(throne)));
         Brazier(f, -3.6f, back - 1.5f);
         Brazier(f, 3.6f, back - 1.5f);
     }
@@ -2564,7 +2565,8 @@ internal sealed partial class DungeonDresser
                 // The dais at the far end, the boss's seat on it, rows of braziers and skulls before it.
                 Plinth(f, 0, f.HalfD - 3, 8, 4);
                 Steps(f, 0, f.HalfD - 6, 180, 4);
-                _o.Add(ThronePiece, f.W(0, f.HalfD - 2.2f, f.F + 1 + Lift * 2), f.Yaw(180 + DungeonProps.Turn(ThronePiece)));
+                string throne = PickThrone();
+                _o.Add(throne, f.W(0, f.HalfD - 2.2f, f.F + 1 + Lift * 2), f.Yaw(180 + DungeonProps.Turn(throne)));
                 _o.Add("skull_pile", f.W(-2.6f, f.HalfD - 2.6f, f.F + 1 + Lift * 2), f.Yaw(R(0, 360)));
                 _o.Add("skull_pile", f.W(2.6f, f.HalfD - 2.6f, f.F + 1 + Lift * 2), f.Yaw(R(0, 360)));
                 for (float v = -f.HalfD + 3; v <= f.HalfD - 7; v += 4)
