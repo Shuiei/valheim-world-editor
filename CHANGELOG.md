@@ -90,6 +90,9 @@ the plugin is unchanged in versions without that part.
   punctuation made "_" and matched ignoring case, so "Mod A.bundle" and "Mod_A.bundle" (or "Foo" and "foo" in two
   mods) counted as one, and the older one's models were never drawn. The same bundle is now matched by its exact file
   and resource name, and copies that would share a name each get one of their own.
+- **Renaming a hand-edited Homestead blueprint shows its new name.** Header lines with spaces before them (" #Name:
+  Old") were read, but not replaced when the name, description or tags changed, so the old line stayed and, read last,
+  won. They are now replaced as they are read.
 
 ### Changed
 

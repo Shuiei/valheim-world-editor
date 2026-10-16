@@ -248,14 +248,15 @@ public static class Homestead
         {
             pieces = lines.Count;
         }
-        var head = lines.Take(pieces).Where(l => !(l.StartsWith("#Name:", StringComparison.OrdinalIgnoreCase) || l.StartsWith("#Description:", StringComparison.OrdinalIgnoreCase)
-            || l.StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase))).ToList();
+        // Matched as Read matches them, spaces before the # aside (a hand-edited " #Name: Old" stayed, and won).
+        var head = lines.Take(pieces).Where(l => !(l.TrimStart().StartsWith("#Name:", StringComparison.OrdinalIgnoreCase) || l.TrimStart().StartsWith("#Description:", StringComparison.OrdinalIgnoreCase)
+            || l.TrimStart().StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase))).ToList();
         var mine = new List<string> { "#Name:" + Header(details.Name), "#Description:" + Header(details.Description) };
         if (details.Tags.Count > 0)
         {
             mine.Add("#Tags:" + Header(string.Join(", ", details.Tags)));
         }
-        int creator = head.FindIndex(l => l.StartsWith("#Creator:", StringComparison.OrdinalIgnoreCase));
+        int creator = head.FindIndex(l => l.TrimStart().StartsWith("#Creator:", StringComparison.OrdinalIgnoreCase));
         head.InsertRange(0, mine.Take(1));
         head.InsertRange(creator < 0 ? 1 : creator + 2, mine.Skip(1));
         return string.Join("\n", head.Concat(lines.Skip(pieces)));

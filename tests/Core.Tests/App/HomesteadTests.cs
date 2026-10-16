@@ -150,6 +150,21 @@ public class HomesteadTests : IDisposable
         Assert.Equal(new[] { "house", "Viking", "stone" }, Homestead.Details.ParseTags("house, Viking,stone ,HOUSE;; "));
     }
 
+    // A hand-edited header with spaces before its lines: the old name, description and tags go, as Read reads them
+    // (the old lines stayed, and Read kept the last name: the rename showed the old one).
+    [Fact]
+    public void ChangedDetailsReplaceIndentedHeaderLines()
+    {
+        string text = "  #Name:Old\n #Creator:Tester\n\t#Description:Old one\n #Tags:old\n#Pieces\nwood_floor;Misc;0;0;0;0;0;0;1;\"\";1;1;1\n";
+
+        string changed = Homestead.WithDetails(text, new Homestead.Details("New", "New one", ["new"]));
+
+        var e = Homestead.Read("x.blueprint", changed.Split('\n'));
+        Assert.Equal(("New", "New one"), (e.Name, e.Description));
+        Assert.Equal(["new"], e.Tags);
+        Assert.StartsWith("#Name:New\n #Creator:Tester\n#Description:New one\n#Tags:new\n#Pieces", changed);
+    }
+
     [Fact]
     public void TheDungeonTagIsReadInAnyCaseSetOnceAndTakenAway()
     {
