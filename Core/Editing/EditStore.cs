@@ -35,6 +35,12 @@ public sealed class EditStore
     /// <summary>Bumped on every change so cached map detail can be rebuilt.</summary>
     public int Version { get; private set; }
 
+    /// <summary>
+    /// Bumped when the objects to leave out or the added ones change (not the ground): for what is worked out from
+    /// the objects alone, kept through ground strokes.
+    /// </summary>
+    public int ObjectsVersion { get; private set; }
+
     /// <summary>Starts from the world's terrain, with nothing pending.</summary>
     public EditStore(WorldSave world)
     {
@@ -72,6 +78,7 @@ public sealed class EditStore
             _gameChanged.Clear();
             Load(world);
             Version++;
+            ObjectsVersion++;
         }
     }
 
@@ -364,6 +371,7 @@ public sealed class EditStore
                 _added[o.Id] = o;
             }
             Version++;
+            ObjectsVersion++;
         }
     }
 
@@ -475,6 +483,7 @@ public sealed class EditStore
                 }
             }
             Version++;
+            ObjectsVersion++;
         }
     }
 
@@ -611,6 +620,7 @@ public sealed class EditStore
                 _addedTrash[id] = o;
             }
             Version++;
+            ObjectsVersion++;
         }
     }
 }
