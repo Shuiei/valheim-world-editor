@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using TerrainEditor.Terrain;
 using Xunit;
@@ -8,8 +9,8 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// The game's runtime terrain modifiers (TerrainModifiers, Heightmap.ApplyModifiers) on a flat 30 m zone: the hoe's
 /// raise and dig (round and square, the 8 m limit of what players do), cultivating (smoothing kept within 1 m of the
-/// levelled ground), a location's flattening and its rotation, which zones a modifier reaches, the game's order, and
-/// what does not count as a modifier.
+/// levelled ground), a location's flattening and its rotation, its cleared paint, which zones a modifier reaches, the
+/// game's order, and what does not count as a modifier.
 /// </summary>
 public class TerrainModifiersTests
 {
@@ -44,6 +45,16 @@ public class TerrainModifiersTests
     /// The vertex of zone 0, 0 at world x, z (the zone spans -32..32).
     /// </summary>
     private static float At(float[] h, int x, int z) => h[(z + 32) * N + x + 32];
+
+    /// <summary>
+    /// A zone's 65 × 65 paint mask, every vertex this RGBA.
+    /// </summary>
+    private static float[] Mask(float r, float g, float b, float a) => [.. Enumerable.Range(0, N * N).SelectMany(_ => new[] { r, g, b, a })];
+
+    /// <summary>
+    /// The paint of the vertex of zone 0, 0 at world x, z.
+    /// </summary>
+    private static float[] PaintAt(float[] mask, int x, int z) => mask[(((z + 32) * N + x + 32) * 4)..(((z + 32) * N + x + 32) * 4 + 4)];
 
     [Fact]
     public void TheHoesRaiseLevelsARoundSpotAndKeepsTheGroundBefore()
@@ -141,6 +152,73 @@ public class TerrainModifiersTests
     }
 
     [Fact]
+    public void ALocationPaintsItsClearedGroundWithinItsRadius()
+    {
+        // Eikthyr's altar paints dirt over 4.14 m, fading out as the game does; the vegetation (alpha) is kept.
+        var m = new TerrainModifiers(World(Loc("Eikthyrnir", 0, 30, 0)));
+        float[] h = Flat(), mask = Mask(0f, 0.5f, 0f, 0.4f);
+        m.Apply(0, 0, h, mask);
+        Assert.Equal([1f, 0f, 0f, 0.4f], PaintAt(mask, 0, 0));
+        float t = MathF.Pow(1f - 2f / 4.14f, 0.1f);
+        float[] two = PaintAt(mask, 2, 0);
+        Assert.Equal(t, two[0], 4);
+        Assert.Equal(0.5f * (1f - t), two[1], 4);
+        Assert.Equal(0f, two[2]);
+        Assert.Equal(0.4f, two[3]);
+        // Beyond its radius (5 m, and the corner at 3, 3 is 4.24 m away): untouched.
+        Assert.Equal([0f, 0.5f, 0f, 0.4f], PaintAt(mask, 5, 0));
+        Assert.Equal([0f, 0.5f, 0f, 0.4f], PaintAt(mask, 3, 3));
+        // Without a mask, only the heights.
+        float[] alone = Flat();
+        m.Apply(0, 0, alone);
+        Assert.Equal(h, alone);
+    }
+
+    [Fact]
+    public void ClearingVegetationTakesEveryChannelToNothing()
+    {
+        // The second place of mystery clears 20 m: paint and vegetation both go.
+        var m = new TerrainModifiers(World(Loc("PlaceofMystery2", 0, 30, 0)));
+        float[] mask = Mask(0.2f, 0.5f, 0.1f, 1f);
+        m.Apply(0, 0, Flat(), mask);
+        Assert.Equal([0f, 0f, 0f, 0f], PaintAt(mask, 0, 0));
+        float keep = 1f - MathF.Pow(0.5f, 0.1f);
+        float[] ten = PaintAt(mask, 10, 0);
+        Assert.Equal(0.2f * keep, ten[0], 4);
+        Assert.Equal(0.5f * keep, ten[1], 4);
+        Assert.Equal(0.1f * keep, ten[2], 4);
+        Assert.Equal(keep, ten[3], 4);
+        Assert.Equal([0.2f, 0.5f, 0.1f, 1f], PaintAt(mask, 21, 0));
+    }
+
+    [Fact]
+    public void ThePaintsHeightCheckLeavesTheGroundAboveIt()
+    {
+        // The coast rock's two dirt patches paint only ground no higher than themselves: the first sits 0.36 m up
+        // (the 30 m ground is painted), the second 0.25 m down (it is not).
+        var m = new TerrainModifiers(World(Net("rock4_coast", 0, 30, 0)));
+        float[] mask = Mask(0f, 0f, 0f, 1f);
+        m.Apply(0, 0, Flat(), mask);
+        Assert.Equal([1f, 0f, 0f, 1f], PaintAt(mask, -1, 0));
+        Assert.Equal([0f, 0f, 0f, 1f], PaintAt(mask, 10, -1));
+        // Sunk a metre, neither paints.
+        float[] sunk = Mask(0f, 0f, 0f, 1f);
+        new TerrainModifiers(World(Net("rock4_coast", 0, 29, 0))).Apply(0, 0, Flat(), sunk);
+        Assert.Equal(Mask(0f, 0f, 0f, 1f), sunk);
+    }
+
+    [Fact]
+    public void AGroundDiscsDirtIsLeftOut()
+    {
+        // Uplift paints the ground under its discs back with saved paint, so their dirt is never seen.
+        var m = new TerrainModifiers(World(Loc(Uplift.DiscName, 0, 30, 0)));
+        Assert.True(m.InZone(0, 0)[0].PaintCleared);
+        float[] mask = Mask(0f, 0f, 0f, 1f);
+        m.Apply(0, 0, Flat(), mask);
+        Assert.Equal(Mask(0f, 0f, 0f, 1f), mask);
+    }
+
+    [Fact]
     public void AModifierNearABorderReachesTheZonesItTouches()
     {
         var m = new TerrainModifiers(World(Net("raise", 31, 31, 31)));
@@ -186,7 +264,7 @@ public class TerrainModifiersTests
     [Fact]
     public void TheRadiusIsTheLargestOfWhatTheModifierDoes()
     {
-        var m = new TerrainModifiers.Modifier(Vector3.Zero, true, 0, 2, false, true, 5, 3, true, 7, 0, false, 0);
+        var m = new TerrainModifiers.Modifier(Vector3.Zero, true, 0, 2, false, true, 5, 3, true, 7, TerrainModifiers.Paint.Dirt, 1, false, 0, false, 0);
         Assert.Equal(7, m.Radius);
         Assert.Equal(5, (m with { PaintCleared = false }).Radius);
         Assert.Equal(2, (m with { PaintCleared = false, Smooth = false }).Radius);

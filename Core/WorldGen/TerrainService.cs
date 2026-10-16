@@ -25,15 +25,18 @@ public sealed class TerrainService
     internal WorldGenerator Generator { get; }
 
     /// <summary>
-    /// The runtime modifiers laid over generated terrain, with BaseZone's heights by zone built with them (on first
-    /// use). Swapped whole by UseModifiers, so a zone a build with the old modifiers finishes goes into the old cache,
-    /// never the new one.
+    /// The runtime modifiers laid over generated terrain, with BaseZone's heights and BaseMask's paint by zone built
+    /// with them (on first use). Swapped whole by UseModifiers, so a zone a build with the old modifiers finishes goes
+    /// into the old cache, never the new one.
     /// </summary>
     /// <param name="Modifiers">The modifiers; null for none.</param>
     private sealed record Modified(TerrainEditor.Terrain.TerrainModifiers? Modifiers)
     {
         /// <summary>BaseZone's heights by zone, built with <see cref="Modifiers"/>.</summary>
         public ConcurrentDictionary<(int, int), float[]> Zones { get; } = new();
+
+        /// <summary>BaseMask's paint masks by zone, painted by <see cref="Modifiers"/>.</summary>
+        public ConcurrentDictionary<(int, int), float[]> Masks { get; } = new();
     }
 
     /// <summary>The modifiers in use and the zones built with them.</summary>
@@ -98,7 +101,7 @@ public sealed class TerrainService
     {
         var key = (zx, zz);
         Modified ground = _ground;
-        if (_masks.ContainsKey(key))
+        if (ground.Masks.ContainsKey(key))
         {
             BaseZone(zx, zz);
             return;
@@ -110,12 +113,9 @@ public sealed class TerrainService
         }
         float[] mask = new float[65 * 65 * 4];
         float[] heights = Build(zx, zz, mask);
-        _masks.TryAdd(key, mask);
-        ground.Zones.GetOrAdd(key, k =>
-        {
-            ground.Modifiers?.Apply(k.Item1, k.Item2, heights);
-            return heights;
-        });
+        ground.Modifiers?.Apply(zx, zz, heights, mask);
+        ground.Masks.TryAdd(key, mask);
+        ground.Zones.TryAdd(key, heights);
     }
 
     /// <summary>How many generator passes over a zone were made (see <see cref="ZoneBuilds"/>).</summary>
@@ -130,11 +130,6 @@ public sealed class TerrainService
         Interlocked.Increment(ref _builds);
         return BaseTerrain.BuildZone(Generator, zx, zz, mask);
     }
-
-    /// <summary>
-    /// BaseMask's masks by zone, built on first use.
-    /// </summary>
-    private readonly ConcurrentDictionary<(int, int), float[]> _masks = new();
 
     /// <summary>
     /// VertexBiomes' biomes by zone, built on first use.
@@ -159,14 +154,21 @@ public sealed class TerrainService
     });
 
     /// <summary>
-    /// The game's base paint mask for a zone (biome-specific; Color.black elsewhere): 65x65 RGBA floats, cached.
+    /// The game's paint mask for a zone before the saved edits: the generated mask (biome-specific; Color.black
+    /// elsewhere) with the runtime modifiers' cleared paint (dirt or paving around locations...). 65x65 RGBA floats,
+    /// cached; callers must not change the array.
     /// </summary>
-    public float[] BaseMask(int zx, int zz) => _masks.GetOrAdd((zx, zz), k =>
+    public float[] BaseMask(int zx, int zz)
     {
-        float[] m = new float[65 * 65 * 4];
-        Build(k.Item1, k.Item2, m);
-        return m;
-    });
+        Modified ground = _ground;
+        return ground.Masks.GetOrAdd((zx, zz), k =>
+        {
+            float[] m = new float[65 * 65 * 4];
+            float[] h = Build(k.Item1, k.Item2, m);
+            ground.Modifiers?.Apply(k.Item1, k.Item2, h, m);
+            return m;
+        });
+    }
 
     /// <summary>
     /// Heightmap.m_cornerBiomes: the biome sector at each zone corner. Sectors sample GetBiome on the

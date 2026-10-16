@@ -77,7 +77,7 @@ flowchart LR
    `WorldSave` is read-only: it keeps each object's prefab, position and where its bytes are
    (`ObjectRef`), the terrain data (`TCData`) of each zone, the locations and the zone list. The
    session then makes the `EditStore` (empty pending changes), the `TerrainModifiers` (how the
-   world's locations flatten the ground) and the `TerrainService` (the generated ground). Live,
+   world's locations flatten and paint the ground) and the `TerrainService` (the generated ground). Live,
    `WorldSession.OpenLive` does the same from the plugin's snapshot (`WorldSave.LoadLive`).
 2. **The map.** `Desktop/MapPage.cs` and `Desktop/MapView.cs` draw the world with the game's map
    shader from `Core/WorldGen/MapData.cs` (biomes, heights, the edits).

@@ -26,6 +26,9 @@ public sealed class TerrainModifiers
     /// <param name="SmoothPower">How the blend falls off towards the edge (exponent of the distance as a share of the radius).</param>
     /// <param name="PaintCleared">Whether it paints the ground cleared.</param>
     /// <param name="PaintRadius">Radius it paints, metres.</param>
+    /// <param name="PaintType">What it paints.</param>
+    /// <param name="PaintStrength">How far it blends towards its paint (1: all the way at its middle).</param>
+    /// <param name="PaintHeightCheck">Whether it leaves the ground above it unpainted.</param>
     /// <param name="SortOrder">The game's order among modifiers of the same kind.</param>
     /// <param name="Player">A player-made modifier: applied after the others, its levelling held to the ground ±8 m
     /// and its smoothing to the levelled ground ±1 m.</param>
@@ -34,12 +37,37 @@ public sealed class TerrainModifiers
     /// <param name="Disc">One of the editor's own ground discs for No limit ground (Uplift).</param>
     public sealed record Modifier(
         Vector3 Position, bool Level, float LevelOffset, float LevelRadius, bool Square, bool Smooth, float SmoothRadius, float SmoothPower,
-        bool PaintCleared, float PaintRadius, int SortOrder, bool Player, long CreationTime, bool Disc = false)
+        bool PaintCleared, float PaintRadius, Paint PaintType, float PaintStrength, bool PaintHeightCheck, int SortOrder, bool Player, long CreationTime,
+        bool Disc = false)
     {
         /// <summary>
         /// The largest radius of what it does (TerrainModifier.GetRadius).
         /// </summary>
         public float Radius => Math.Max(Level ? LevelRadius : 0f, Math.Max(Smooth ? SmoothRadius : 0f, PaintCleared ? PaintRadius : 0f));
+    }
+
+    /// <summary>
+    /// What a modifier paints (TerrainModifier.PaintType, in the game's order).
+    /// </summary>
+    public enum Paint
+    {
+        /// <summary>Dirt (the paint mask's red).</summary>
+        Dirt,
+
+        /// <summary>Cultivated ground (green).</summary>
+        Cultivate,
+
+        /// <summary>Paved ground (blue).</summary>
+        Paved,
+
+        /// <summary>The biome's own ground: no dirt, cultivated or paved.</summary>
+        Reset,
+
+        /// <summary>No paint and no vegetation (all four channels to 0).</summary>
+        ClearVegetation,
+
+        /// <summary>Deep snow (red, green and blue all full).</summary>
+        DeepSnow,
     }
 
     /// <summary>
@@ -55,9 +83,13 @@ public sealed class TerrainModifiers
     /// <param name="SmoothPower">Smoothing falloff exponent.</param>
     /// <param name="PaintCleared">Whether it paints cleared ground.</param>
     /// <param name="PaintRadius">Radius it paints.</param>
+    /// <param name="PaintType">What it paints.</param>
+    /// <param name="PaintStrength">How far it blends towards its paint.</param>
+    /// <param name="PaintHeightCheck">Whether it leaves the ground above it unpainted.</param>
     /// <param name="SortOrder">The game's sort order.</param>
     /// <param name="Player">A player-made modifier.</param>
-    private sealed record Template(Vector3 Offset, bool Level, float LevelOffset, float LevelRadius, bool Square, bool Smooth, float SmoothRadius, float SmoothPower, bool PaintCleared, float PaintRadius, int SortOrder, bool Player);
+    private sealed record Template(Vector3 Offset, bool Level, float LevelOffset, float LevelRadius, bool Square, bool Smooth, float SmoothRadius, float SmoothPower, bool PaintCleared, float PaintRadius,
+        Paint PaintType, float PaintStrength, bool PaintHeightCheck, int SortOrder, bool Player);
 
     /// <summary>
     /// Prefabs and locations with modifiers by name hash. None until Use: no world opens before then (GameData).
@@ -136,7 +168,7 @@ public sealed class TerrainModifiers
             foreach (Template t in prefab.Mods)
             {
                 Vector3 pos = p.Position + Vector3.Transform(t.Offset, rot);
-                all.Add(new Modifier(pos, t.Level, t.LevelOffset, t.LevelRadius, t.Square, t.Smooth, t.SmoothRadius, t.SmoothPower, t.PaintCleared, t.PaintRadius, t.SortOrder, t.Player, prefab.Location ? 0 : p.TimeCreated,
+                all.Add(new Modifier(pos, t.Level, t.LevelOffset, t.LevelRadius, t.Square, t.Smooth, t.SmoothRadius, t.SmoothPower, t.PaintCleared, t.PaintRadius, t.PaintType, t.PaintStrength, t.PaintHeightCheck, t.SortOrder, t.Player, prefab.Location ? 0 : p.TimeCreated,
                     prefab.Location && Editing.Uplift.IsDisc(p.Location)));
             }
         }
@@ -201,11 +233,16 @@ public sealed class TerrainModifiers
     }
 
     /// <summary>
-    /// Applies the zone's modifiers to its 65x65 base heights (in place). Returns the heights the
-    /// saved edits are clamped against (TerrainComp.ApplyToHeightmap's baseHeights).
+    /// Applies the zone's modifiers to its 65x65 base heights (in place), and their cleared paint to its base paint
+    /// mask when one is given. Returns the heights the saved edits are clamped against (TerrainComp.ApplyToHeightmap's
+    /// baseHeights).
     /// </summary>
+    /// <param name="zx">Zone x.</param>
+    /// <param name="zz">Zone z.</param>
+    /// <param name="heights">The zone's generated heights, changed in place.</param>
+    /// <param name="mask">The zone's generated paint mask (65x65 RGBA), painted in place; null: heights only.</param>
     /// <returns>The heights before the first player-made modifier; a copy of the result when there is none.</returns>
-    public float[] Apply(int zx, int zz, float[] heights)
+    public float[] Apply(int zx, int zz, float[] heights, float[]? mask = null)
     {
         float[]? baseHeights = null, levelOnly = null;
         foreach (Modifier m in InZone(zx, zz))
@@ -223,6 +260,11 @@ public sealed class TerrainModifiers
             if (m.Smooth)
             {
                 SmoothTerrain2(zx, zz, heights, at, m.SmoothRadius, levelOnly, m.SmoothPower, m.Player);
+            }
+            // A ground disc's dirt is never seen: Uplift paints the ground under it back with saved paint.
+            if (mask != null && m.PaintCleared && !m.Disc)
+            {
+                PaintCleared(zx, zz, heights, mask, m);
             }
         }
         return baseHeights ?? (float[])heights.Clone();
@@ -307,6 +349,57 @@ public sealed class TerrainModifiers
     }
 
     /// <summary>
+    /// A modifier's cleared paint, as the game was seen to paint it (a probe of Heightmap's paint mask on a dedicated
+    /// server, every paint type over several biomes): each vertex within the paint radius of the vertex nearest the
+    /// modifier blends towards the paint by (1 - distance / radius)^0.1 times the strength, after the modifier's
+    /// levelling and smoothing. ClearVegetation blends all four channels towards 0; the others blend red, green and
+    /// blue and keep the vegetation (alpha). With the height check, vertices above the modifier are left.
+    /// </summary>
+    private static void PaintCleared(int zx, int zz, float[] h, float[] mask, Modifier m)
+    {
+        float radius = m.PaintRadius;
+        if (radius <= 0f)
+        {
+            return;
+        }
+        (float r, float g, float b, float a) = m.PaintType switch
+        {
+            Paint.Dirt => (1f, 0f, 0f, 1f),
+            Paint.Cultivate => (0f, 1f, 0f, 1f),
+            Paint.Paved => (0f, 0f, 1f, 1f),
+            Paint.Reset => (0f, 0f, 0f, 1f),
+            Paint.ClearVegetation => (0f, 0f, 0f, 0f),
+            Paint.DeepSnow => (1f, 1f, 1f, 1f),
+            _ => throw new InvalidDataException($"Unknown terrain paint type {(int)m.PaintType}"),
+        };
+        bool alpha = m.PaintType == Paint.ClearVegetation;
+        int x = (int)MathF.Floor(m.Position.X - zx * 64f + 0.5f) + Width / 2;
+        int y = (int)MathF.Floor(m.Position.Z - zz * 64f + 0.5f) + Width / 2;
+        int reach = (int)MathF.Ceiling(radius);
+        int n = Width + 1;
+        for (int i = Math.Max(0, y - reach); i <= Math.Min(n - 1, y + reach); i++)
+        {
+            for (int j = Math.Max(0, x - reach); j <= Math.Min(n - 1, x + reach); j++)
+            {
+                float d = Distance(x, y, j, i);
+                if (d > radius || (m.PaintHeightCheck && h[i * n + j] > m.Position.Y))
+                {
+                    continue;
+                }
+                float t = Math.Clamp(MathF.Pow(1f - d / radius, 0.1f) * m.PaintStrength, 0f, 1f);
+                int o = (i * n + j) * 4;
+                mask[o] += (r - mask[o]) * t;
+                mask[o + 1] += (g - mask[o + 1]) * t;
+                mask[o + 2] += (b - mask[o + 2]) * t;
+                if (alpha)
+                {
+                    mask[o + 3] += (a - mask[o + 3]) * t;
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// UnityEngine.Vector2.Distance in single precision.
     /// </summary>
     private static float Distance(int ax, int ay, int bx, int by)
@@ -330,8 +423,14 @@ public sealed class TerrainModifiers
                 JsonElement pos = m.GetProperty("pos");
                 bool B(string k) => m.GetProperty(k).GetInt32() != 0;
                 float F(string k) => m.GetProperty(k).GetSingle();
+                var paint = (Paint)m.GetProperty("paintType").GetInt32();
+                if (!Enum.IsDefined(paint))
+                {
+                    throw new InvalidDataException($"{p.Name}: unknown terrain paint type {(int)paint}");
+                }
                 mods.Add(new Template(new Vector3(pos[0].GetSingle(), pos[1].GetSingle(), pos[2].GetSingle()), B("level"), F("levelOffset"), F("levelRadius"), B("square"),
-                    B("smooth"), F("smoothRadius"), F("smoothPower"), B("paintCleared"), F("paintRadius"), m.GetProperty("sortOrder").GetInt32(), B("player")));
+                    B("smooth"), F("smoothRadius"), F("smoothPower"), B("paintCleared"), F("paintRadius"), paint, F("paintStrength"), B("paintHeightCheck"),
+                    m.GetProperty("sortOrder").GetInt32(), B("player")));
             }
             result[StableHash.Of(p.Name)] = (p.Name, p.Value.GetProperty("location").GetBoolean(), mods);
         }
