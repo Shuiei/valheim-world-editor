@@ -1132,6 +1132,7 @@ public sealed class AreaPanel
                 && MathF.Abs(r.Position.Y - o.Position.Y) < 0.01f && MathF.Abs(r.Position.Z - o.Position.Z) < 0.01f
                 && MathF.Abs(((r.Rotation.Y - o.Rotation.Y) % 360 + 540) % 360 - 180) < 0.6f;
             var kept = new HashSet<int>();
+            var source = bw.SourceReader();
             foreach (var o in wanted)
             {
                 int r = current.FirstOrDefault(i => !kept.Contains(i) && Same(s.Things[i], o), -1);
@@ -1140,7 +1141,7 @@ public sealed class AreaPanel
                     kept.Add(r);
                     continue;
                 }
-                byte[] raw = bw.ObjectBytes(o.Id);
+                byte[] raw = bw.ObjectBytes(o.Id, source);
                 var z = ZdoData.Parse(raw);
                 adds.Add((new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, raw), o.Piece));
             }

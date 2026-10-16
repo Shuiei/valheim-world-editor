@@ -530,4 +530,13 @@ public class WorldSaveTests
         Assert.Equal(world.ObjectBytes(world.ObjectRefs.IndexOf(o)), first[(int)o.Start..(int)o.End]);
         Assert.Equal(world.ObjectBytes(world.ObjectRefs.IndexOf(otherFile)), read(otherFile)[(int)otherFile.Start..(int)otherFile.End]);
     }
+
+    [Fact]
+    public void ObjectBytesCutFromAReaderAreTheSavedOnes()
+    {
+        using var w = new TempWorld();
+        WorldSave world = w.Load();
+        Func<ObjectRef, byte[]> read = world.SourceReader();
+        Assert.All(Enumerable.Range(0, world.ObjectRefs.Count), id => Assert.Equal(world.ObjectBytes(id), world.ObjectBytes(id, read)));
+    }
 }

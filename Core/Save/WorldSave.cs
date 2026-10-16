@@ -287,7 +287,17 @@ public sealed class WorldSave
     }
 
     /// <summary>
-    /// An object's saved bytes as <see cref="ObjectBytes"/> gives them, live without a copy: a view into the bytes it
+    /// The saved bytes of an object of the save (id &gt;= 0), cut out of what a <see cref="SourceReader"/> gives: for
+    /// many objects, each chunk file is read once instead of opened for every object.
+    /// </summary>
+    public byte[] ObjectBytes(int id, Func<ObjectRef, byte[]> source)
+    {
+        ObjectRef o = ObjectRefs[id];
+        return source(o)[(int)o.Start..(int)o.End];
+    }
+
+    /// <summary>
+    /// An object's saved bytes as <see cref="ObjectBytes(int)"/> gives them, live without a copy: a view into the bytes it
     /// was read from.
     /// </summary>
     private ReadOnlySpan<byte> SavedSpan(int id)
