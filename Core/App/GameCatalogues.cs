@@ -132,9 +132,11 @@ public static partial class GameCatalogues
             {
                 return open.Share();
             }
+            BundleFileInstance? file = null;
             try
             {
-                var b = new Bundle(_am, _am.LoadBundleFile(Path.Combine(_dir, name), false), () => _open.Remove(name));
+                file = _am.LoadBundleFile(Path.Combine(_dir, name), false);
+                var b = new Bundle(_am, file, () => _open.Remove(name));
                 foreach (var f in b.Files)
                 {
                     CabBundle[f.Cab] = name;
@@ -144,6 +146,16 @@ public static partial class GameCatalogues
             }
             catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
             {
+                // A bundle that opened but whose files could not be read is closed again at once, with the files read
+                // from it so far (it stayed open until the end of the scan).
+                if (file != null)
+                {
+                    foreach (var assets in file.loadedAssetsFiles.ToList())
+                    {
+                        _am.UnloadAssetsFile(assets);
+                    }
+                    _am.UnloadBundleFile(file);
+                }
                 return null;
             }
         }

@@ -78,6 +78,8 @@ the plugin is unchanged in versions without that part.
 - **A texture array in a format the editor does not read is left out instead of read as another format.** Unknown
   graphics formats were passed on as texture formats, which number formats differently: R8 was read as ARGB32, R8 sRGB
   as Alpha8. They now count as not read.
+- **A game bundle that cannot be read is closed at once during the game-data scan.** One that opened but whose inner
+  files failed to read stayed open until the end of the scan; it is now closed again, with what was read from it.
 
 ### Changed
 
