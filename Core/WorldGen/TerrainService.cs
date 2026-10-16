@@ -25,9 +25,19 @@ public sealed class TerrainService
     internal WorldGenerator Generator { get; }
 
     /// <summary>
-    /// BaseZone's heights by zone, built on first use.
+    /// The runtime modifiers laid over generated terrain, with BaseZone's heights by zone built with them (on first
+    /// use). Swapped whole by UseModifiers, so a zone a build with the old modifiers finishes goes into the old cache,
+    /// never the new one.
     /// </summary>
-    private readonly ConcurrentDictionary<(int, int), float[]> _zones = new();
+    /// <param name="Modifiers">The modifiers; null for none.</param>
+    private sealed record Modified(TerrainEditor.Terrain.TerrainModifiers? Modifiers)
+    {
+        /// <summary>BaseZone's heights by zone, built with <see cref="Modifiers"/>.</summary>
+        public ConcurrentDictionary<(int, int), float[]> Zones { get; } = new();
+    }
+
+    /// <summary>The modifiers in use and the zones built with them.</summary>
+    private volatile Modified _ground;
 
     /// <summary>
     /// The overview PNG, rendered on first use.
@@ -35,17 +45,11 @@ public sealed class TerrainService
     private readonly Lazy<byte[]> _overviewPng;
 
     /// <summary>
-    /// The runtime modifiers laid over generated terrain in BaseZone; null for none.
-    /// </summary>
-    private TerrainEditor.Terrain.TerrainModifiers? _modifiers;
-
-    /// <summary>
     /// New modifiers (ground discs added or taken away): the zones' ground is worked out again.
     /// </summary>
     public void UseModifiers(TerrainEditor.Terrain.TerrainModifiers modifiers)
     {
-        _modifiers = modifiers;
-        _zones.Clear();
+        _ground = new Modified(modifiers);
     }
 
     /// <summary>
@@ -56,7 +60,7 @@ public sealed class TerrainService
     /// <param name="overviewSize">Texels per side of <see cref="OverviewPng"/>.</param>
     public TerrainService(WorldSave save, TerrainEditor.Terrain.TerrainModifiers? modifiers = null, int overviewSize = 1024)
     {
-        _modifiers = modifiers;
+        _ground = new Modified(modifiers);
         World world = new() { m_seed = save.Seed, m_seedName = save.SeedName, m_worldGenVersion = save.WorldGenVersion };
         Generator = WorldGenerator.Create(world);
         _overviewPng = new Lazy<byte[]>(() => RenderOverview(overviewSize), LazyThreadSafetyMode.ExecutionAndPublication);
@@ -77,12 +81,16 @@ public sealed class TerrainService
     /// locations (TerrainModifier), exactly as Heightmap.ApplyModifiers does before TerrainComp.
     /// 65x65 vertex heights, row = z, cached; callers must not change the array.
     /// </summary>
-    public float[] BaseZone(int zx, int zz) => _zones.GetOrAdd((zx, zz), k =>
+    public float[] BaseZone(int zx, int zz)
     {
-        float[] h = Build(k.Item1, k.Item2, null);
-        _modifiers?.Apply(k.Item1, k.Item2, h);
-        return h;
-    });
+        Modified ground = _ground;
+        return ground.Zones.GetOrAdd((zx, zz), k =>
+        {
+            float[] h = Build(k.Item1, k.Item2, null);
+            ground.Modifiers?.Apply(k.Item1, k.Item2, h);
+            return h;
+        });
+    }
 
     /// <summary>
     /// A zone's <see cref="BaseZone"/> and <see cref="BaseMask"/> made ready, in one generator pass when neither is
@@ -94,12 +102,13 @@ public sealed class TerrainService
     public void Warm(int zx, int zz)
     {
         var key = (zx, zz);
+        Modified ground = _ground;
         if (_masks.ContainsKey(key))
         {
             BaseZone(zx, zz);
             return;
         }
-        if (_zones.ContainsKey(key))
+        if (ground.Zones.ContainsKey(key))
         {
             BaseMask(zx, zz);
             return;
@@ -107,9 +116,9 @@ public sealed class TerrainService
         float[] mask = new float[65 * 65 * 4];
         float[] heights = Build(zx, zz, mask);
         _masks.TryAdd(key, mask);
-        _zones.GetOrAdd(key, k =>
+        ground.Zones.GetOrAdd(key, k =>
         {
-            _modifiers?.Apply(k.Item1, k.Item2, heights);
+            ground.Modifiers?.Apply(k.Item1, k.Item2, heights);
             return heights;
         });
     }

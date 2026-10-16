@@ -229,6 +229,9 @@ the plugin is unchanged in versions without that part.
   while ZdoBuilder kept them all; it now keeps the unused bits 0xC000 too and writes them back.
 - **A player whose pieces had all gone from the live game could still be named the world's top builder.** Their count
   stayed in the list at zero; it is now taken out when it reaches zero.
+- **After a ground disc was added or taken away, a zone could keep the ground of the old discs.** A zone still being
+  built with the old modifiers was added to the cache UseModifiers had just cleared; the modifiers and the zones built
+  with them are now swapped together.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
