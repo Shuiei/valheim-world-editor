@@ -48,6 +48,10 @@ the plugin is unchanged in versions without that part.
 - **Blueprints named after a Windows device (con, nul, com1…) can be saved on Windows.** Their file names were refused
   there; they now start with "_". A Homestead blueprint name cut at 64 characters no longer ends in a dot, which
   Windows dropped so the picture beside it no longer matched.
+- **A world's backups are found when its folder ends in "/" on Windows, and a folder that cannot be read no longer
+  fails the search.** Only the system's own separator was trimmed, so "C:/x/worlds/World1/" gave an empty name and no
+  backups; a folder beside the world without read access threw. Both separators are trimmed now, and an unreadable
+  folder has no backups (logged).
 
 ### Changed
 
