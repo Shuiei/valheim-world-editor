@@ -331,6 +331,19 @@ public sealed class EditStore
         }
     }
 
+    /// <summary>
+    /// Answers from the objects to leave out (by WorldSave id) and the objects added (by their negative id) as they
+    /// are, under the store's lock: for counts that would otherwise copy both at every status refresh. The answer must
+    /// not keep either.
+    /// </summary>
+    public T WithObjects<T>(Func<IReadOnlySet<int>, IReadOnlyDictionary<int, NewObject>, T> answer)
+    {
+        lock (_lock)
+        {
+            return answer(_deleted, _added);
+        }
+    }
+
     /// <summary>An object added in this session (also one deleted again, which undo can bring back).</summary>
     public NewObject? FindAdded(int id)
     {

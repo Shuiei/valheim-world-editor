@@ -267,11 +267,11 @@ public sealed class WorldSession : IDisposable
             // Saved already: what differs from that save (an undo after it is pending too).
             // Counted against the saved sets only (no set of the current ones): after a save with millions of
             // new objects this runs at every change. Both lists hold each object once.
-            var deleted = Edits.Deleted;
-            var added = Edits.Added;
-            int keptDel = deleted.Count(_savedDeleted.Contains), keptAdd = added.Count(_savedAdded.Contains);
-            int del = deleted.Count - keptDel + _savedDeleted.Count - keptDel;
-            int add = added.Count - keptAdd + _savedAdded.Count - keptAdd;
+            var (del, add) = Edits.WithObjects((deleted, added) =>
+            {
+                int keptDel = deleted.Count(_savedDeleted.Contains), keptAdd = added.Values.Count(_savedAdded.Contains);
+                return (deleted.Count - keptDel + _savedDeleted.Count - keptDel, added.Count - keptAdd + _savedAdded.Count - keptAdd);
+            });
             return (Edits.ChangedZoneCount, del, add, Edits.ResetCount);
         }
     }

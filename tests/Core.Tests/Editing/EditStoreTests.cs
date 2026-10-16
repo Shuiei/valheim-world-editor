@@ -88,6 +88,19 @@ public class EditStoreTests
         Assert.Equal(20f, edits.Get(zone.ZoneX, zone.ZoneZ)!.Lift[0]);
     }
 
+    [Fact]
+    public void WithObjectsAnswersFromTheObjectsAsTheyAre()
+    {
+        var edits = new EditStore(WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test"));
+        var placed = new NewObject(-1, 1, System.Numerics.Vector3.Zero, System.Numerics.Vector3.Zero, 1f);
+        edits.AddObjects([placed, placed with { Id = -2 }]);
+        edits.SetDeleted([5, 7, -2], true);
+        var (deleted, added) = edits.WithObjects((d, a) => (d.Order().ToList(), a.Keys.Order().ToList()));
+        Assert.Equal([5, 7], deleted);
+        Assert.Equal([-1], added);
+        Assert.Equal(placed, edits.WithObjects((_, a) => a[-1]));
+    }
+
     // Only the zones passing the test are copied, and they are copies.
     [Fact]
     public void CopiesTakesOnlyTheZonesPassingTheTest()

@@ -164,11 +164,12 @@ public sealed class LiveSync
     {
         lock (_lock)
         {
-            HashSet<int> deleted = edits.Deleted;
-            var added = edits.Added.Select(a => a.Id).ToHashSet();
-            int d = deleted.Count(id => id >= 0 && !_destroyed.Contains(id)) + _destroyed.Count(id => !deleted.Contains(id));
-            int a = added.Count(id => !_liveIds.ContainsKey(id)) + _liveIds.Keys.Count(id => id < 0 && !added.Contains(id));
-            return (d, a);
+            return edits.WithObjects((deleted, added) =>
+            {
+                int d = deleted.Count(id => id >= 0 && !_destroyed.Contains(id)) + _destroyed.Count(id => !deleted.Contains(id));
+                int a = added.Keys.Count(id => !_liveIds.ContainsKey(id)) + _liveIds.Keys.Count(id => id < 0 && !added.ContainsKey(id));
+                return (d, a);
+            });
         }
     }
 
