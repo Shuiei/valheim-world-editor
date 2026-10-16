@@ -265,6 +265,32 @@ public sealed class ModCatalogueTests : IDisposable
     }
 
     [Fact]
+    public void ReportsAndModelsTakenAtOnceLoseNoChange()
+    {
+        const int Prefabs = 40;
+        string names = string.Join(",", Enumerable.Range(0, Prefabs).Select(i => $"\"mod_piece{i}\":{{\"p\":1,\"d\":0,\"t\":2}}"));
+        string Costed(int wood) => "{\"prefabs\":{" + names + "},\"cost\":{\"pieces\":{\"mod_piece0\":{\"n\":\"Piece\",\"r\":[[\"Wood\"," + wood + ",1]]}}}}";
+        ModCatalogue.Take(Costed(0), Vanilla);
+        int before = ModCatalogue.Generation;
+
+        // Each report changes a cost and each model is new: every call is a change, and none may undo another.
+        Parallel.For(0, 2 * Prefabs, i =>
+        {
+            if (i % 2 == 0)
+            {
+                ModCatalogue.Take(Costed(i + 1), Vanilla);
+            }
+            else
+            {
+                ModCatalogue.TakeModels($$"""{"mod_piece{{i / 2}}":{{ModelJson("1,1,1")}}}""");
+            }
+        });
+
+        Assert.All(Enumerable.Range(0, Prefabs), i => Assert.NotNull(ModCatalogue.ModelOf($"mod_piece{i}")));
+        Assert.Equal(before + (2 * Prefabs), ModCatalogue.Generation);
+    }
+
+    [Fact]
     public void APartGivesItsMeshsBoundsWhenTheGameToldThem()
     {
         ModCatalogue.Take(Report(), Vanilla);

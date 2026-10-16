@@ -96,27 +96,36 @@ public static class ModCatalogue
     public static int TakeModels(string json)
     {
         var root = JsonNode.Parse(json) as JsonObject ?? throw new JsonException("the models are not a JSON object");
-        var now = _data;
-        var models = new Dictionary<string, JsonNode>(now.Models);
-        int taken = 0;
-        bool changed = false;
-        foreach (var (name, e) in Entries(root))
+        lock (Writing)
         {
-            if (now.Prefabs.ContainsKey(name) && IsModel(e))
+            var now = _data;
+            var models = new Dictionary<string, JsonNode>(now.Models);
+            int taken = 0;
+            bool changed = false;
+            foreach (var (name, e) in Entries(root))
             {
-                taken++;
-                changed |= Put(models, name, e.DeepClone());
+                if (now.Prefabs.ContainsKey(name) && IsModel(e))
+                {
+                    taken++;
+                    changed |= Put(models, name, e.DeepClone());
+                }
             }
+            if (changed)
+            {
+                var next = now with { Models = models };
+                // Kept first, as Take does.
+                SafeFile.WriteAllText(FilePath, Write(next));
+                Use(next);
+            }
+            return taken;
         }
-        if (changed)
-        {
-            var next = now with { Models = models };
-            // Kept first, as Take does.
-            SafeFile.WriteAllText(FilePath, Write(next));
-            Use(next);
-        }
-        return taken;
     }
+
+    /// <summary>
+    /// Taken by each change to what is known (Load, Take, TakeModels, Forget): each starts from what the one before
+    /// left, so none loses another's update.
+    /// </summary>
+    private static readonly Lock Writing = new();
 
     /// <summary>What is known now, swapped in whole (<see cref="Use"/>).</summary>
     private static volatile Data _data = Empty();
@@ -130,7 +139,7 @@ public static class ModCatalogue
     private static void Use(Data next)
     {
         _data = next;
-        _generation++;
+        Interlocked.Increment(ref _generation);
     }
 
     /// <summary>How many mod prefabs are known.</summary>
@@ -150,21 +159,30 @@ public static class ModCatalogue
     /// </summary>
     public static void Load()
     {
-        try
+        lock (Writing)
         {
-            Use(File.Exists(FilePath) ? Read(File.ReadAllText(FilePath)) : Empty());
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
-        {
-            Console.WriteLine($"mod catalogue: {FilePath} could not be read ({e.Message}); starting without it.");
-            Use(Empty());
+            try
+            {
+                Use(File.Exists(FilePath) ? Read(File.ReadAllText(FilePath)) : Empty());
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
+            {
+                Console.WriteLine($"mod catalogue: {FilePath} could not be read ({e.Message}); starting without it.");
+                Use(Empty());
+            }
         }
     }
 
     /// <summary>
     /// Nothing known any more (the tests).
     /// </summary>
-    internal static void Forget() => Use(Empty());
+    internal static void Forget()
+    {
+        lock (Writing)
+        {
+            Use(Empty());
+        }
+    }
 
     /// <summary>
     /// Takes a game's report (GET /catalogue): its prefabs that are not the game's own (<paramref name="vanilla"/>)
@@ -178,41 +196,44 @@ public static class ModCatalogue
     public static (int Mods, bool Changed) Take(string report, IReadOnlySet<string> vanilla)
     {
         var got = Read(report);
-        var now = _data;
-        var next = new Data(new(now.Prefabs), new(now.Pieces), new(now.Costs), new(now.Items), new(now.Mods), new(now.Models));
-        int mods = 0;
-        bool changed = false;
-        foreach (var (name, entry) in got.Prefabs)
+        lock (Writing)
         {
-            if (vanilla.Contains(name))
+            var now = _data;
+            var next = new Data(new(now.Prefabs), new(now.Pieces), new(now.Costs), new(now.Items), new(now.Mods), new(now.Models));
+            int mods = 0;
+            bool changed = false;
+            foreach (var (name, entry) in got.Prefabs)
             {
-                continue;
+                if (vanilla.Contains(name))
+                {
+                    continue;
+                }
+                mods++;
+                changed |= Put(next.Prefabs, name, entry);
+                changed |= got.Pieces.TryGetValue(name, out var piece) ? Put(next.Pieces, name, piece) : next.Pieces.Remove(name);
+                changed |= got.Costs.TryGetValue(name, out var cost) ? Put(next.Costs, name, cost) : next.Costs.Remove(name);
+                if (got.Mods.TryGetValue(name, out string? mod) && next.Mods.GetValueOrDefault(name) != mod)
+                {
+                    next.Mods[name] = mod;
+                    changed = true;
+                }
             }
-            mods++;
-            changed |= Put(next.Prefabs, name, entry);
-            changed |= got.Pieces.TryGetValue(name, out var piece) ? Put(next.Pieces, name, piece) : next.Pieces.Remove(name);
-            changed |= got.Costs.TryGetValue(name, out var cost) ? Put(next.Costs, name, cost) : next.Costs.Remove(name);
-            if (got.Mods.TryGetValue(name, out string? mod) && next.Mods.GetValueOrDefault(name) != mod)
+            foreach (var (item, name) in got.Items)
             {
-                next.Mods[name] = mod;
-                changed = true;
+                if (next.Costs.Values.Any(c => Uses(c, item)) && next.Items.GetValueOrDefault(item) != name)
+                {
+                    next.Items[item] = name;
+                    changed = true;
+                }
             }
-        }
-        foreach (var (item, name) in got.Items)
-        {
-            if (next.Costs.Values.Any(c => Uses(c, item)) && next.Items.GetValueOrDefault(item) != name)
+            if (changed)
             {
-                next.Items[item] = name;
-                changed = true;
+                // Kept first: should writing fail, nothing is in use that a retry would take for already known.
+                SafeFile.WriteAllText(FilePath, Write(next));
+                Use(next);
             }
+            return (mods, changed);
         }
-        if (changed)
-        {
-            // Kept first: should writing fail, nothing is in use that a retry would take for already known.
-            SafeFile.WriteAllText(FilePath, Write(next));
-            Use(next);
-        }
-        return (mods, changed);
     }
 
     /// <summary>

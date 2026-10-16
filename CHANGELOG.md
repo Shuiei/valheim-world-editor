@@ -128,6 +128,9 @@ the plugin is unchanged in versions without that part.
 - **A world with a stray save file is listed, and one that cannot be read is said in the log.** A file such as
   _main.99999999999.chunks overflowed reading the save number, and every error dropped the world from the list with
   nothing said. Such numbers are now passed over, and only read errors leave a world out, each logged.
+- **Mod models taken while a game's catalogue came in could be lost.** ModCatalogue.TakeModels changed what is known
+  without the lock Take holds, so one overlapping the other dropped its update; both (and Load, Forget) now take one
+  lock, and the mod catalogue, manifests and extensions count their generations with Interlocked.
 
 ### Changed
 

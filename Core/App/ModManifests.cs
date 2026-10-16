@@ -71,7 +71,7 @@ public static class ModManifests
             field = value;
             _baseNotes = null;
             _notes = BaseNotes();
-            _generation++;
+            Interlocked.Increment(ref _generation);
         }
     } = [];
 
@@ -171,7 +171,7 @@ public static class ModManifests
         }
         notes.LinkSet = new LinkSet([.. notes.Links.Values]);
         _notes = notes;
-        _generation++;
+        Interlocked.Increment(ref _generation);
         return read;
     }
 
@@ -179,7 +179,7 @@ public static class ModManifests
     internal static void Forget()
     {
         _notes = BaseNotes();
-        _generation++;
+        Interlocked.Increment(ref _generation);
     }
 
     /// <summary>
