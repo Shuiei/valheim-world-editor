@@ -653,7 +653,9 @@ public sealed class GlView : OpenGlControlBase
     /// <summary>A program not yet anyone's (the game look keeps its own).</summary>
     private uint Link(string vs, string fs)
     {
-        string head = _es ? "#version 300 es\nprecision highp float;\nprecision highp int;\n" : "#version 330 core\n";
+        // GLSL ES gives samplers low precision by default: heights read from a texture (the water's uHeight) need
+        // high.
+        string head = _es ? "#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2D;\n" : "#version 330 core\n";
         uint Compile(ShaderType t, string src)
         {
             uint s = _gl.CreateShader(t);
