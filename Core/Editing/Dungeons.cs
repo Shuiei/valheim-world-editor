@@ -586,8 +586,10 @@ public static class Dungeons
         }
         foreach (var c in contents)
         {
+            // Up its parents to the prefab: a node past the list (damaged scan data) ends the walk, and so does a walk
+            // longer than the list (a loop).
             bool shown = true;
-            for (int n = c.Node; n >= 0 && shown; n = nodes[n])
+            for (int n = c.Node, steps = 0; n >= 0 && n < nodes.Length && shown && steps <= nodes.Length; n = nodes[n], steps++)
             {
                 shown = !off[n];
             }

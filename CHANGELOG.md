@@ -191,6 +191,9 @@ the plugin is unchanged in versions without that part.
 - **Pointing the hammer from inside a capsule-shaped piece could place a piece at a NaN position.** A ray starting
   inside the capsule (on its axis: no normal) gave a NaN normal; it now misses, as it does from inside a sphere or a
   box.
+- **Damaged dungeon or location scan data could crash or hang placing rooms.** Dungeons.Replay walked up a part's
+  parents with no bounds or loop check; a node past the list now ends the walk, and so does a walk longer than the
+  list.
 
 ### Changed
 - SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
