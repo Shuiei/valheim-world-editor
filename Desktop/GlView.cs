@@ -3506,6 +3506,9 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
+    /// <summary>A box's twelve edges, as pairs of corners (corner k: bit 0 x, bit 1 y, bit 2 z, set: the high side).</summary>
+    private static readonly (int A, int B)[] BoxEdges = [(0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7)];
+
     /// <summary>
     /// The twelve edges of a turned box (centre, half size at least 25 cm, turn) as line pairs, through
     /// <paramref name="view"/>.
@@ -3514,7 +3517,7 @@ public sealed class GlView : OpenGlControlBase
     {
         Vector3 h = new(Math.Max(box.H.X, 0.25f), Math.Max(box.H.Y, 0.25f), Math.Max(box.H.Z, 0.25f));
         Vector3 Corner(int k) => view(box.C + Vector3.Transform(new Vector3((k & 1) == 0 ? -h.X : h.X, (k & 2) == 0 ? -h.Y : h.Y, (k & 4) == 0 ? -h.Z : h.Z), box.R));
-        foreach (var (a, b) in new[] { (0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7) })
+        foreach (var (a, b) in BoxEdges)
         {
             var p = Corner(a);
             var q = Corner(b);
@@ -5317,7 +5320,7 @@ public sealed class GlView : OpenGlControlBase
         void Box(Vector3 lo, Vector3 hi)
         {
             Vector3 C(int k) => new((k & 1) == 0 ? lo.X : hi.X, (k & 2) == 0 ? lo.Y : hi.Y, (k & 4) == 0 ? lo.Z : hi.Z);
-            foreach (var (a, b) in new[] { (0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7) })
+            foreach (var (a, b) in BoxEdges)
             {
                 var p = C(a); var q = C(b);
                 v.AddRange([p.X, p.Y, p.Z, q.X, q.Y, q.Z]);
@@ -5419,15 +5422,7 @@ public sealed class GlView : OpenGlControlBase
         {
             return;
         }
-        var (lo, hi) = OutlineBoxOf(sc, i);
-        Vector3 C(int k) => new((k & 1) == 0 ? lo.X : hi.X, (k & 2) == 0 ? lo.Y : hi.Y, (k & 4) == 0 ? lo.Z : hi.Z);
-        var v = new List<float>();
-        foreach (var (a, b) in new[] { (0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7) })
-        {
-            var p = C(a); var q = C(b);
-            v.AddRange([p.X, p.Y, p.Z, q.X, q.Y, q.Z]);
-        }
-        DrawLines(ref _hoverBoxVao, ref _hoverBoxVbo, [.. v], vp, new Vector4(1, 0.85f, 0.55f, 0.6f), blend: true, width: 0.8f);
+        DrawLines(ref _hoverBoxVao, ref _hoverBoxVbo, SelectionBoxes([OutlineBoxOf(sc, i)]), vp, new Vector4(1, 0.85f, 0.55f, 0.6f), blend: true, width: 0.8f);
     }
 
     /// <summary>Slides the view along the ground by a drag of (dx, dy) points (under the camera lock).</summary>
