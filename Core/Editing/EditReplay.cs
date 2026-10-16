@@ -98,6 +98,13 @@ public sealed class EditReplay
     /// <summary>The added objects as of the editor's last save, by id.</summary>
     private readonly Dictionary<int, NewObject> _savedAdds = [];
 
+    /// <summary>
+    /// Objects of the save read that the editor deleted where its save wrote another of their kind (a piece claimed,
+    /// an object turned in place), whose place in the game's save went to the original: that other object, by the
+    /// original's id.
+    /// </summary>
+    private readonly Dictionary<int, NewObject> _contested = [];
+
     /// <summary>Reads the chunk files of the save read, each once.</summary>
     private readonly Func<ObjectRef, byte[]> _oldSource;
 
@@ -228,6 +235,11 @@ public sealed class EditReplay
     {
         var moves = added.Where(n => !n.Fresh && n.SourceId is int s && s >= 0 && deleted.Contains(s))
             .GroupBy(n => n.SourceId!.Value).ToDictionary(g => g.Key, g => g.ToList());
+        var current = added.ToHashSet();
+        Contest(deleted, saved);
+        // Added, saved, and put where a deleted object of its kind was, then left to the original: added with the
+        // original's clash (kept with the editor's change, dropped with the game's), not on its own.
+        var attached = new HashSet<NewObject>();
         // Deleted: gone from the game's save too (the game removed it, or the editor's save did), nothing to do.
         foreach (int s in deleted.Where(s => !moves.ContainsKey(s)).Order())
         {
@@ -239,7 +251,9 @@ public sealed class EditReplay
                 }
                 else
                 {
-                    Clashing(new Item(ReplayClash.Changed, s, y, [], []));
+                    List<NewObject> with = _contested.TryGetValue(s, out var n) && current.Contains(n) && !InGameSave(n) ? [n] : [];
+                    attached.UnionWith(with);
+                    Clashing(new Item(ReplayClash.Changed, s, y, [.. with.Select(Remapped)], with));
                 }
             }
         }
@@ -252,7 +266,6 @@ public sealed class EditReplay
             }
         }
         // Added, saved, then deleted or changed: gone from the game's save too.
-        var current = added.ToHashSet();
         foreach (var n in saved.Added.Where(n => !current.Contains(n)))
         {
             if (FindSaved(n.Id) is int y)
@@ -261,7 +274,7 @@ public sealed class EditReplay
             }
         }
         var moved = moves.Values.SelectMany(m => m).ToHashSet();
-        foreach (var n in added.Where(n => !moved.Contains(n) && !InGameSave(n)))
+        foreach (var n in added.Where(n => !moved.Contains(n) && !attached.Contains(n) && !InGameSave(n)))
         {
             _adds.Add(Remapped(n));
         }
@@ -295,6 +308,70 @@ public sealed class EditReplay
         // bring it back).
         var goneIds = gone.Select(n => n.Id).ToHashSet();
         _gone.AddRange(saved.Added.Where(n => !current.Contains(n) && FindSaved(n.Id) == null && !goneIds.Contains(n.Id)).Select(Remapped));
+    }
+
+    /// <summary>
+    /// Where the editor's save put an object at the very place of a deleted one of its kind (a piece claimed, an object
+    /// turned in place), the game's object there is either: the one whose data it has gets it (the original, when the
+    /// game saved from the save it had; the editor's, when it saved from the editor's save). When neither's data is
+    /// the game's, the game changed it: the original gets it (a clash, the editor's object going with it).
+    /// </summary>
+    private void Contest(HashSet<int> deleted, Saved saved)
+    {
+        var at = new Dictionary<(int, long, long, long), Queue<NewObject>>();
+        foreach (var n in _savedAdds.Values.OrderByDescending(n => n.Id))
+        {
+            var key = ObjectPlaces.Key(n.Prefab, n.Position);
+            if (!at.TryGetValue(key, out var q))
+            {
+                at[key] = q = new Queue<NewObject>();
+            }
+            q.Enqueue(n);
+        }
+        foreach (int s in deleted.Union(saved.Deleted).Order())
+        {
+            var o = _old.ObjectRefs[s];
+            if (!at.TryGetValue(ObjectPlaces.Key(o.Prefab, o.Position), out var q) || q.Count == 0)
+            {
+                continue;
+            }
+            var n = q.Dequeue();
+            int? y = _places.Take(o.Prefab, o.Position);
+            if (y is int g && SameData(s, g) is not true && WrittenBy(n) is { } mine && NewData(g) is { } now && mine.AsSpan().SequenceEqual(now))
+            {
+                _found[n.Id] = g;
+                _found[s] = _places.Take(o.Prefab, o.Position);
+            }
+            else
+            {
+                _found[s] = y;
+                _found[n.Id] = _places.Take(n.Prefab, n.Position);
+                _contested[s] = n;
+            }
+        }
+    }
+
+    /// <summary>
+    /// An added object's data as the editor's save wrote it (as the editor writes it now); null when it cannot be made
+    /// again (its source's chunk file is gone, or its data is damaged).
+    /// </summary>
+    private byte[]? WrittenBy(NewObject n)
+    {
+        try
+        {
+            return _old.NewObjectBytes(n, _oldSource) is { } bytes ? Written(bytes, 41) : null;
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException || CheckedReads.Damaged(ex))
+        {
+            return null;
+        }
+    }
+
+    /// <summary>An object's data in the game's save, as the editor writes it; null when it is damaged.</summary>
+    private byte[]? NewData(int id)
+    {
+        var o = Newer.ObjectRefs[id];
+        return Written(_newSource(o)[(int)o.Start..(int)o.End], o.File.WorldVersion);
     }
 
     /// <summary>Notes an object change that clashes.</summary>
@@ -399,8 +476,7 @@ public sealed class EditReplay
         {
             return null;
         }
-        var o = Newer.ObjectRefs[newerId];
-        byte[]? now = Written(_newSource(o)[(int)o.Start..(int)o.End], o.File.WorldVersion);
+        byte[]? now = NewData(newerId);
         if (now == null)
         {
             _unread.Add(oldId);

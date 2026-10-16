@@ -15,8 +15,10 @@ public sealed class ObjectPlaces
     /// <summary>The ids noted at a kind and place after its first, in the order they were noted.</summary>
     private readonly Dictionary<(int Prefab, long X, long Y, long Z), Queue<int>> _more = [];
 
-    /// <summary>The key of a kind at a place: its prefab and its position in whole centimetres.</summary>
-    private static (int, long, long, long) Key(int prefab, Vector3 p) =>
+    /// <summary>The key of a kind at a place: its prefab and its position in whole centimetres (two objects are found at one place when their keys are equal).</summary>
+    /// <param name="prefab">Its prefab hash.</param>
+    /// <param name="p">Where it stands, in metres.</param>
+    public static (int Prefab, long X, long Y, long Z) Key(int prefab, Vector3 p) =>
         (prefab, (long)MathF.Round(p.X * 100), (long)MathF.Round(p.Y * 100), (long)MathF.Round(p.Z * 100));
 
     /// <summary>Notes an object, to be found by its kind and place (all are noted before any is taken).</summary>

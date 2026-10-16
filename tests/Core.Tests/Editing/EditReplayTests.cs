@@ -9,7 +9,8 @@ namespace WorldEditor.Tests;
 /// Pending edits brought onto a save the game made after the editor read the world: what does not clash is made again
 /// on the game's save (a moved, an added and a deleted object, a changed zone) without writing anything; an object the
 /// game removed or changed and the editor moved or deleted, and a zone both changed, are clashes kept or dropped as
-/// chosen; what the editor's own save wrote and the game's save holds is not made twice.
+/// chosen; what the editor's own save wrote and the game's save holds is not made twice, an object it replaced at its
+/// own place told from the original by its data.
 /// </summary>
 public class EditReplayTests
 {
@@ -214,5 +215,37 @@ public class EditReplayTests
         Assert.NotNull(replay.NewerId(-1));
         Assert.Null(replay.NewerId(moved.Id));
         Assert.NotNull(edits.FindAdded(-2));
+    }
+
+    // An object replaced at its own place (a piece claimed: deleted, and a copy with a builder put where it was) and
+    // saved: the game's object there is the editor's copy when the game saved from the editor's save (nothing to do),
+    // the original when it saved from the save it had (the claim made again). Neither is a clash.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AnObjectReplacedAtItsPlaceIsToldFromTheOriginalByItsData(bool fromEditorsSave)
+    {
+        using var w = new TempWorld();
+        var read = w.Load();
+        var edits = new EditStore(read);
+        var (id, prefab, position, rotation, _) = Near(read)[0];
+        var claimed = ZdoData.Parse(read.ObjectBytes(id));
+        claimed.Set("longs", ObjectField.CreatorKey, "12345");
+        edits.SetDeleted([id], true);
+        edits.AddObjects([new NewObject(-1, prefab, position, rotation, 0f, null, false, claimed.Serialize())]);
+        var first = WorldWriter.Save(read, [], edits.Deleted, edits.Added, options: new WorldWriter.Options(KeepBase: true, Latest: read.SaveNumber));
+        Assert.True(first.Saved, first.Message);
+        var saved = new EditReplay.Saved(new HashSet<(int X, int Z)>(), edits.Deleted, edits.Added.ToHashSet());
+        int n = WorldWriter.LatestNumber(w.Dir);
+        int from = fromEditorsSave ? n : read.SaveNumber;
+        foreach (string ext in new[] { ".chunks", ".db2", ".fwl2", ".ok" })
+        {
+            File.Copy(Path.Combine(w.Dir, $"_main.{from}{ext}"), Path.Combine(w.Dir, $"_main.{n + 1}{ext}"));
+        }
+
+        var replay = EditReplay.Prepare(read, edits, saved, w.Load());
+        Assert.Empty(replay.Clashes);
+        var r = replay.Apply(_ => throw new InvalidOperationException("nothing clashes"), edits, Next)!;
+        Assert.Equal(fromEditorsSave ? (0, 0) : (1, 1), (r.Deleted, r.Added));
     }
 }
