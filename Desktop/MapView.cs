@@ -286,6 +286,11 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     }
 
     /// <summary>
+    /// The number of the newest piece read (ReadPieces), changed on the UI thread only.
+    /// </summary>
+    private int _piecesRead;
+
+    /// <summary>
     /// Reads the world's player-built pieces in the background (deleted ones left out); dropped if another world is
     /// shown meanwhile.
     /// </summary>
@@ -296,6 +301,9 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         {
             return;
         }
+        // Only the newest read is shown: an older one of the same world that finishes later would bring back what
+        // the newer one no longer has.
+        int read = ++_piecesRead;
         var world = s.World;
         var deleted = s.Edits.Deleted;
         Task.Run(() =>
@@ -320,7 +328,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
                 .OrderBy(e => (e.Ruin ? ruins : data)[e.Index * S + 8])];
             Dispatcher.UIThread.Post(() =>
             {
-                if (_session != s)
+                if (_session != s || _piecesRead != read)
                 {
                     return;
                 }
