@@ -45,6 +45,7 @@
   "inspect.section.longs": "large number",
   "inspect.section.vec3": "3 numbers (x y z)",
   "inspect.section.quats": "4 numbers (x y z w)",
+  "inspect.section.data": "data",
   "inspect.hint.addKey": "name (text, tag…)",
   "inspect.hint.addValue": "value",
   "inspect.label.apply": "Apply changes",

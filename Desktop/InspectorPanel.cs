@@ -58,9 +58,9 @@ public sealed class InspectorPanel
     /// <summary>The object data's sections (as ObjectData names them) the Add row offers, in its order.</summary>
     private static readonly string[] Sections = ["strings", "ints", "floats", "longs", "vec3", "quats"];
 
-    /// <summary>What a section of the object data holds, in the user's language; null for bytes.</summary>
+    /// <summary>What a section of the object data holds, in the user's language ("data" for bytes).</summary>
     /// <param name="section">The section, as ObjectData names it.</param>
-    private static string? SectionName(string section) => section switch
+    private static string SectionName(string section) => section switch
     {
         "strings" => Lang.T("inspect.section.strings"),
         "ints" => Lang.T("inspect.section.ints"),
@@ -68,7 +68,7 @@ public sealed class InspectorPanel
         "longs" => Lang.T("inspect.section.longs"),
         "vec3" => Lang.T("inspect.section.vec3"),
         "quats" => Lang.T("inspect.section.quats"),
-        _ => null,
+        _ => Lang.T("inspect.section.data"),
     };
 
     /// <summary>The floating card, hidden until an object is opened.</summary>
@@ -518,7 +518,7 @@ public sealed class InspectorPanel
             rm.Tip(f.Removed ? "inspect.keepValue" : "inspect.removeValue");
             rm.Click += (_, _) => { f.Removed = !f.Removed; Render(); };
             var label = new TextBlock { Text = Label(f), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextDecorations = f.Removed ? TextDecorations.Strikethrough : null };
-            ToolTip.SetTip(label, $"{f.Name} · {SectionName(f.Section) ?? "data"} · key {f.Key}");
+            ToolTip.SetTip(label, $"{f.Name} · {SectionName(f.Section)} · key {f.Key}");
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,170,Auto"), ColumnSpacing = 4, Children = { label, Ui.Col(box, 1), Ui.Col(rm, 2) } };
             // Under a value: its note, or bytes as a mod's extension reads them.
             string? under = !ro ? f.Note : isItems ? null : Decoded(f);

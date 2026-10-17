@@ -44,7 +44,7 @@ public sealed class InspectorPanelLangTests
         .. ins.FieldList.Select(f => f.Note ?? ""),
         .. ins.Items?.Select(i => i.Name) ?? [],
         .. ins.Stand?.Select(r => r.Name) ?? [],
-        "key", "data", "slot",
+        "key", "slot",
     ];
 
     /// <summary>
