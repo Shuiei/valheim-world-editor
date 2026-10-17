@@ -582,6 +582,21 @@ public class WorldControlsTests
         Assert.Equal((-1, MainWindow.MaxFollowZones), (first, count));
     }
 
+    [Fact]
+    public void FollowNearACornerGrowsTheWaysThatAreNotFull()
+    {
+        int most = MainWindow.MaxFollowZones;
+        // Both ways near a corner: one row more each (west and north here).
+        Assert.Equal((-1, 0, 3, 3), MainWindow.Grown((0, 0, 2, 2), upX: false, upZ: true));
+        // East at the most: only north grows, east keeps its zones.
+        Assert.Equal((0, 0, most, 3), MainWindow.Grown((0, 0, most, 2), upX: true, upZ: true));
+        // North at the most: only west grows.
+        Assert.Equal((-1, 0, 3, most), MainWindow.Grown((0, 0, 2, most), upX: false, upZ: true));
+        // Both at the most, or near no edge: nothing.
+        Assert.Null(MainWindow.Grown((0, 0, most, most), upX: true, upZ: false));
+        Assert.Null(MainWindow.Grown((0, 0, 2, 2), upX: null, upZ: null));
+    }
+
     [AvaloniaFact]
     public async Task FollowWaitsWhileSomethingWouldBeLost()
     {

@@ -67,6 +67,10 @@ internal sealed partial class DungeonDresser
         }
     }
 
+    /// <summary>Dresses one corridor as the kind named, as <see cref="Dress"/> would have picked it (tests: each kind).</summary>
+    internal static void DressCorridor(Frame f, string kind, Material mat, Biome b, Style style, DungeonGen.Settings s, Random rnd, DungeonOut o)
+        => new DungeonDresser(mat, b, style, s, rnd, o, "Corridor").CorridorAs(f, kind);
+
     /// <summary>
     /// A foe by its spawner's or its creature's name; one not in any biome is taken as it is (a Spawner_
     /// name for both, its creature the name without the prefix).

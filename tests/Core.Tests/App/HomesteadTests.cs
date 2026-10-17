@@ -150,6 +150,15 @@ public class HomesteadTests : IDisposable
         Assert.Equal(new[] { "house", "Viking", "stone" }, Homestead.Details.ParseTags("house, Viking,stone ,HOUSE;; "));
     }
 
+    [Fact]
+    public void TagsAreCutToTwelve()
+    {
+        // Semicolons split as commas do, duplicates do not count toward the twelve, and the first twelve stay.
+        string text = string.Join(";", Enumerable.Range(1, 15).Select(i => $" t{i} ")) + ",T1,t2";
+        Assert.Equal(Enumerable.Range(1, 12).Select(i => $"t{i}"), Homestead.Details.ParseTags(text));
+        Assert.Empty(Homestead.Details.ParseTags(null));
+    }
+
     // A hand-edited header with spaces before its lines: the old name, description and tags go, as Read reads them
     // (the old lines stayed, and Read kept the last name: the rename showed the old one).
     [Fact]
