@@ -10,7 +10,7 @@ namespace TerrainEditor.Desktop;
 /// covered, then the walls are raised into the rock wherever its underside is above them: no daylight
 /// at the sides.
 /// </summary>
-public static class CaveRoof
+public static partial class CaveRoof
 {
     /// <summary>A boulder of the roof.</summary>
     /// <param name="Prefab">The boulder's prefab.</param>
@@ -76,120 +76,5 @@ public static class CaveRoof
             }
         }
         return low;
-    }
-
-    /// <summary>The roof over a cave.</summary>
-    /// <param name="path">The Path tool: its seed, width, soft edge and headroom.</param>
-    /// <param name="c">The cave's plan: its line, floor and depth along it.</param>
-    /// <param name="w">The grid's width.</param>
-    /// <param name="h">The grid's height.</param>
-    /// <param name="ox">The grid's world corner, x.</param>
-    /// <param name="oz">The grid's world corner, z.</param>
-    /// <param name="rockAt">The boulders for a world point.</param>
-    public static Result Build(PathTool path, PathTool.CavePlan c, int w, int h, float ox, float oz, Func<float, float, PathTool.CaveRock> rockAt)
-    {
-        var rnd = new Random(path.Seed);
-        int n = c.Curve.Count;
-        var rocks = new List<Rock>();
-        var seal = new Dictionary<int, float>();
-        if (n < 2)
-        {
-            return new Result(rocks, seal, 0);
-        }
-        float half = path.Width / 2, cover = half + path.Soft * 0.6f, reach = half + path.Soft + 3;
-        // Each grid point near the roofed stretch: its distance from the line and the ceiling above it.
-        var near = new Dictionary<int, (float Dist, float Ceiling, bool Roofed)>();
-        int gx0 = Math.Max(0, (int)MathF.Floor(c.Curve.Min(q => q.P.X) - reach)), gx1 = Math.Min(w - 1, (int)MathF.Ceiling(c.Curve.Max(q => q.P.X) + reach));
-        int gz0 = Math.Max(0, (int)MathF.Floor(c.Curve.Min(q => q.P.Y) - reach)), gz1 = Math.Min(h - 1, (int)MathF.Ceiling(c.Curve.Max(q => q.P.Y) + reach));
-        for (int z = gz0; z <= gz1; z++)
-        {
-            for (int x = gx0; x <= gx1; x++)
-            {
-                float best = float.MaxValue, ceiling = 0, depth = 0;
-                for (int i = 1; i < n; i++)
-                {
-                    Vector2 a = c.Curve[i - 1].P, d = c.Curve[i].P - a;
-                    float t = Math.Clamp(((x - a.X) * d.X + (z - a.Y) * d.Y) / MathF.Max(1e-9f, d.LengthSquared()), 0, 1);
-                    float dist = Vector2.Distance(new Vector2(x, z), a + d * t);
-                    if (dist < best)
-                    {
-                        best = dist;
-                        ceiling = c.Floor[i - 1] + (c.Floor[i] - c.Floor[i - 1]) * t + path.Headroom;
-                        depth = c.Depth[i - 1] + (c.Depth[i] - c.Depth[i - 1]) * t;
-                    }
-                }
-                if (best <= reach)
-                {
-                    near[z * w + x] = (best, ceiling, depth >= path.Headroom + 1.5f);
-                }
-            }
-        }
-        // What must be under rock: the floor and the foot of the walls along the roofed stretch.
-        var must = near.Where(kv => kv.Value.Roofed && kv.Value.Dist <= cover).Select(kv => kv.Key).ToHashSet();
-        var covered = new HashSet<int>();
-        var underside = new Dictionary<int, float>();
-        void Place(float px, float pz)
-        {
-            var kind = rockAt(ox + px, oz + pz);
-            var (prefab, footprint, _) = PathTool.RoofRocks[kind == PathTool.CaveRock.Auto ? PathTool.CaveRock.Forest : kind];
-            float scale = Math.Clamp((path.Width + path.Soft * 2 + 4) / (footprint * 0.8f), 0.25f, 2.5f) * (0.8f + 0.5f * (float)rnd.NextDouble());
-            // Upside down: the boulder's flat dome (the part the game shows above ground) is the ceiling,
-            // nearly level across the cave; its deep keel stands up out of the ground like an outcrop.
-            var rot = new Vector3(180 + ((float)rnd.NextDouble() - 0.5f) * 16, (float)rnd.NextDouble() * 360, ((float)rnd.NextDouble() - 0.5f) * 16);
-            var low = Underside(prefab, px, pz, rot, scale, w, h);
-            // High enough that its underside clears the ceiling everywhere over the cave's floor.
-            float y = float.MinValue;
-            foreach (var (p, u) in low)
-            {
-                if (near.TryGetValue(p, out var q) && q.Dist <= half + 0.5f)
-                {
-                    y = MathF.Max(y, q.Ceiling - u);
-                }
-            }
-            if (y == float.MinValue)
-            {
-                return;
-            }
-            rocks.Add(new Rock(prefab, new Vector3(ox + px, y, oz + pz), rot, scale));
-            foreach (var (p, u) in low)
-            {
-                covered.Add(p);
-                underside[p] = underside.TryGetValue(p, out float o) ? MathF.Min(o, u + y) : u + y;
-            }
-        }
-        // Along the roofed stretch, a boulder every so often; then more where the floor is still open.
-        float total = c.Along[^1], s = 0;
-        while (s <= total)
-        {
-            int i = Math.Max(1, Array.FindIndex(c.Along, a => a >= s));
-            float t = (s - c.Along[i - 1]) / MathF.Max(1e-4f, c.Along[i] - c.Along[i - 1]);
-            var p = Vector2.Lerp(c.Curve[i - 1].P, c.Curve[i].P, t);
-            if (c.Depth[i - 1] + (c.Depth[i] - c.Depth[i - 1]) * t >= path.Headroom + 1.5f)
-            {
-                Place(p.X + ((float)rnd.NextDouble() - 0.5f) * half * 0.4f, p.Y + ((float)rnd.NextDouble() - 0.5f) * half * 0.4f);
-            }
-            s += MathF.Max(2, path.Width * 0.9f);
-        }
-        var tried = new HashSet<int>();
-        for (int tries = 0; tries < 200; tries++)
-        {
-            // A point no boulder can cover (at the very edge of the grid) is not tried forever.
-            int open = must.FirstOrDefault(p => !covered.Contains(p) && !tried.Contains(p), -1);
-            if (open < 0)
-            {
-                break;
-            }
-            tried.Add(open);
-            Place(open % w, open / w);
-        }
-        // The walls rise into the rock wherever its underside is above them (half a metre into it).
-        foreach (var (p, q) in near)
-        {
-            if (q.Dist > half && underside.TryGetValue(p, out float u))
-            {
-                seal[p] = u - 0.5f;
-            }
-        }
-        return new Result(rocks, seal, must.Count(p => !covered.Contains(p)));
     }
 }

@@ -10,14 +10,12 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("DataDir")]
 public class PlaceMemoryTests
 {
+    private static readonly string[] Expected1 = ["Rock_3", "Beech1", "Oak1"];
     [AvaloniaFact]
     public async Task PresetsFavouritesAndRecentAreKept()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
         var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = TestWindows.Editing(s);
         var p = w.PlacePanel;
         // From an empty memory: the tests before it in the run may have left favourites and recent kinds.
         p.Memory.Presets.Clear();
@@ -42,7 +40,7 @@ public class PlaceMemoryTests
         Assert.Contains("Oak1", PlaceMemory.Load().Favourites);
         p.Memory.NoteRecent(["Beech1", "Oak1"]);
         p.Memory.NoteRecent(["Rock_3"]);
-        Assert.Equal(new[] { "Rock_3", "Beech1", "Oak1" }, PlaceMemory.Load().Recent);
+        Assert.Equal(Expected1, PlaceMemory.Load().Recent);
         p.DeletePresetButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
         await Task.Delay(10);
         Assert.Empty(p.Memory.Presets);

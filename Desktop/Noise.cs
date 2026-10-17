@@ -26,18 +26,10 @@ public sealed class Noise
     {
         Seed = seed;
         uint a = (uint)seed;
-        double Rnd()
-        {
-            a += 0x6D2B79F5;
-            uint t = a;
-            t = (t ^ (t >> 15)) * (t | 1);
-            t ^= t + (t ^ (t >> 7)) * (t | 61);
-            return (t ^ (t >> 14)) / 4294967296.0;
-        }
         int[] p = [.. Enumerable.Range(0, 256)];
         for (int i = 255; i > 0; i--)
         {
-            int j = (int)Math.Floor(Rnd() * (i + 1));
+            int j = (int)Math.Floor(SeededRandom.NextUnit(ref a) * (i + 1));
             (p[i], p[j]) = (p[j], p[i]);
         }
         for (int i = 0; i < 512; i++)

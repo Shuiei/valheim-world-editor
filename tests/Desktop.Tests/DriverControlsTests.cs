@@ -17,6 +17,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class DriverControlsTests
 {
+    private static readonly string[] Expected1 = ["Red"];
     /// <summary>
     /// A shown main window that tells and asks nothing.
     /// </summary>
@@ -104,7 +105,7 @@ public class DriverControlsTests
         var w = Window();
         try
         {
-            var d = Dialog(w, Row("Delta", new Button { Content = "Go" }), Row("Epsilon", new ComboBox { ItemsSource = new[] { "Red" } }));
+            var d = Dialog(w, Row("Delta", new Button { Content = "Go" }), Row("Epsilon", new ComboBox { ItemsSource = Expected1 }));
             Assert.Equal("nothing to set beside \"Delta\"", (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "set Delta|1"))).Message);
             // A list without the value asked for: nothing set.
             Assert.Equal("nothing to set beside \"Epsilon\"", (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "set Epsilon|purple"))).Message);

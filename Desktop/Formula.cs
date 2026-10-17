@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text.RegularExpressions;
 using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
@@ -10,7 +8,7 @@ namespace TerrainEditor.Desktop;
 /// once into a function of an environment; a mistake throws a FormatException with a plain message, in the user's language (the
 /// Shape panel shows it).
 /// </summary>
-public static class Formula
+public static partial class Formula
 {
     /// <summary>
     /// What a compiled formula reads: its variables' values and the noise behind n(x, z). One is reused from point to
@@ -90,23 +88,31 @@ public static class Formula
     private const int MaxDepth = 100, MaxTokens = 4000;
 
     /// <summary>
-    /// A token of the formula: a number, a name or an operator (only one is set).
+    /// Applies a function to its arguments' values. The numbers go in one array kept for the next point; a second
+    /// thread running the formula at the same time meanwhile gets its own.
     /// </summary>
-    /// <param name="N">A number.</param>
-    /// <param name="Id">A name (variable, function, pi).</param>
-    /// <param name="Op">An operator or bracket.</param>
-    private sealed record Tok(double? N = null, string? Id = null, string? Op = null)
+    /// <param name="f">The function, given the argument values.</param>
+    /// <param name="arr">The arguments.</param>
+    internal static Func<Env, double> Apply(Func<double[], double> f, Func<Env, double>[] arr)
     {
-        /// <summary>
-        /// The token as it is written, for messages.
-        /// </summary>
-        public override string ToString() => Op ?? Id ?? N?.ToString(CultureInfo.InvariantCulture) ?? "";
+        double[]? spare = new double[arr.Length];
+        return env =>
+        {
+            double[] values = Interlocked.Exchange(ref spare, null) ?? new double[arr.Length];
+            try
+            {
+                for (int i = 0; i < arr.Length; i++)
+                {
+                    values[i] = arr[i](env);
+                }
+                return f(values);
+            }
+            finally
+            {
+                Volatile.Write(ref spare, values);
+            }
+        };
     }
-
-    /// <summary>
-    /// One token from where it is asked for (\G), spaces before it skipped: a number, a name, or an operator.
-    /// </summary>
-    private static readonly Regex Token = new(@"\G\s*(?:(\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+(?:[eE][+-]?\d+)?)|([A-Za-z_]\w*)|(<=|>=|==|!=|&&|\|\||[-+*/%^(),<>?:!]))", RegexOptions.Compiled);
 
     /// <summary>
     /// Compiles a formula once into a function of an environment.
@@ -117,20 +123,7 @@ public static class Formula
     public static Func<Env, double> Compile(string src, IReadOnlyList<string> names)
     {
         src = src.Trim();
-        var toks = new List<Tok>();
-        int pos = 0;
-        while (pos < src.Length)
-        {
-            var m = Token.Match(src, pos);
-            if (!m.Success || m.Length == 0)
-            {
-                string rest = src[pos..].Trim();
-                throw new FormatException(Lang.T("shape.error.notUnderstood", rest[..Math.Min(12, rest.Length)]));
-            }
-            toks.Add(m.Groups[1].Success ? new Tok(N: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))
-                : m.Groups[2].Success ? new Tok(Id: m.Groups[2].Value) : new Tok(Op: m.Groups[3].Value));
-            pos = m.Index + m.Length;
-        }
+        var toks = Tokenize(src);
         if (toks.Count == 0)
         {
             throw new FormatException(Lang.T("shape.error.empty"));
@@ -139,225 +132,6 @@ public static class Formula
         {
             throw new FormatException(Lang.T("shape.error.tooLong"));
         }
-        int i = 0, depth = 0;
-        Tok? Peek() => i < toks.Count ? toks[i] : null;
-        bool Eat(string op)
-        {
-            if (Peek()?.Op == op)
-            {
-                i++;
-                return true;
-            }
-            return false;
-        }
-        void Need(string op)
-        {
-            if (!Eat(op))
-            {
-                throw new FormatException(Peek() is { } t ? Lang.T("shape.error.expectedBefore", op, t.ToString()) : Lang.T("shape.error.expectedAtEnd", op));
-            }
-        }
-        Func<Env, double> Primary()
-        {
-            if (++depth > MaxDepth)
-            {
-                throw new FormatException(Lang.T("shape.error.nestedTooDeeply"));
-            }
-            try
-            {
-                return PrimaryAt();
-            }
-            finally
-            {
-                depth--;
-            }
-        }
-        Func<Env, double> PrimaryAt()
-        {
-            if (i >= toks.Count)
-            {
-                throw new FormatException(Lang.T("shape.error.endsTooEarly"));
-            }
-            var t = toks[i++];
-            if (t.N is double n)
-            {
-                return _ => n;
-            }
-            if (t.Op == "(")
-            {
-                var e = Ternary();
-                Need(")");
-                return e;
-            }
-            if (t.Op == "-")
-            {
-                var e = Power();
-                return env => -e(env);
-            }
-            if (t.Op == "!")
-            {
-                var e = Power();
-                return env => Truthy(e(env)) ? 0 : 1;
-            }
-            if (t.Id is string id)
-            {
-                if (Eat("("))
-                {
-                    var args = new List<Func<Env, double>>();
-                    if (!Eat(")"))
-                    {
-                        do
-                        {
-                            args.Add(Ternary());
-                        }
-                        while (Eat(","));
-                        Need(")");
-                    }
-                    if (id == "n")
-                    {
-                        if (args.Count != 2)
-                        {
-                            throw new FormatException(Lang.T("shape.error.noiseTakesTwo"));
-                        }
-                        return env => env.Noise(args[0](env), args[1](env));
-                    }
-                    if (!Funcs.TryGetValue(id, out var f))
-                    {
-                        throw new FormatException(Lang.T("shape.error.noFunction", id));
-                    }
-                    int arity = Arity.GetValueOrDefault(id, 1);
-                    if (arity >= 0 && args.Count != arity)
-                    {
-                        throw new FormatException(arity == 1 ? Lang.T("shape.error.takesOne", id) : Lang.T("shape.error.takesMany", id, arity));
-                    }
-                    var arr = args.ToArray();
-                    // The numbers go in one array kept for the next point; a second thread running the formula at
-                    // the same time meanwhile gets its own.
-                    double[]? spare = new double[arr.Length];
-                    return env =>
-                    {
-                        double[] values = Interlocked.Exchange(ref spare, null) ?? new double[arr.Length];
-                        try
-                        {
-                            for (int i = 0; i < arr.Length; i++)
-                            {
-                                values[i] = arr[i](env);
-                            }
-                            return f(values);
-                        }
-                        finally
-                        {
-                            Volatile.Write(ref spare, values);
-                        }
-                    };
-                }
-                if (id == "pi")
-                {
-                    return _ => Math.PI;
-                }
-                if (!names.Contains(id))
-                {
-                    throw new FormatException(Lang.T("shape.error.noName", id, string.Join(", ", names)));
-                }
-                return env => env.Vars[id];
-            }
-            throw new FormatException(Lang.T("shape.error.outOfPlace", t.Op));
-        }
-        Func<Env, double> Power()
-        {
-            var a = Primary();
-            if (Eat("^"))
-            {
-                var b = Power();
-                return env => Math.Pow(a(env), b(env));
-            }
-            return a;
-        }
-        Func<Env, double> Product()
-        {
-            var a = Power();
-            while (Peek()?.Op is "*" or "/" or "%")
-            {
-                string op = toks[i++].Op!;
-                var b = Power();
-                var l = a;
-                a = op == "*" ? env => l(env) * b(env) : op == "/" ? env => l(env) / b(env) : env => l(env) % b(env);
-            }
-            return a;
-        }
-        Func<Env, double> Sum()
-        {
-            var a = Product();
-            while (Peek()?.Op is "+" or "-")
-            {
-                string op = toks[i++].Op!;
-                var b = Product();
-                var l = a;
-                a = op == "+" ? env => l(env) + b(env) : env => l(env) - b(env);
-            }
-            return a;
-        }
-        Func<Env, double> Compare()
-        {
-            var a = Sum();
-            while (Peek()?.Op is "<" or ">" or "<=" or ">=" or "==" or "!=")
-            {
-                string op = toks[i++].Op!;
-                var b = Sum();
-                var l = a;
-                a = op switch
-                {
-                    "<" => env => l(env) < b(env) ? 1 : 0,
-                    ">" => env => l(env) > b(env) ? 1 : 0,
-                    "<=" => env => l(env) <= b(env) ? 1 : 0,
-                    ">=" => env => l(env) >= b(env) ? 1 : 0,
-                    "==" => env => l(env) == b(env) ? 1 : 0,
-                    _ => env => l(env) != b(env) ? 1 : 0,
-                };
-            }
-            return a;
-        }
-        // && binds tighter than ||, as in JavaScript: 1 || 0 && 0 is 1. Like JavaScript, each gives the deciding value
-        // itself, not 1.
-        Func<Env, double> And()
-        {
-            var a = Compare();
-            while (Eat("&&"))
-            {
-                var b = Compare();
-                var l = a;
-                a = env => l(env) is var x && Truthy(x) ? b(env) : x;
-            }
-            return a;
-        }
-        Func<Env, double> Or()
-        {
-            var a = And();
-            while (Eat("||"))
-            {
-                var b = And();
-                var l = a;
-                a = env => l(env) is var y && Truthy(y) ? y : b(env);
-            }
-            return a;
-        }
-        Func<Env, double> Ternary()
-        {
-            var c = Or();
-            if (Eat("?"))
-            {
-                var a = Ternary();
-                Need(":");
-                var b = Ternary();
-                return env => Truthy(c(env)) ? a(env) : b(env);
-            }
-            return c;
-        }
-        var result = Ternary();
-        if (i < toks.Count)
-        {
-            throw new FormatException(Lang.T("shape.error.outOfPlace", toks[i].ToString()));
-        }
-        return result;
+        return new Parser(toks, names).Parse();
     }
 }

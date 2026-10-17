@@ -105,78 +105,13 @@ public sealed class Mask
         {
             return null;
         }
-        var set = Biomes.Count > 0 ? new HashSet<int>(Biomes) : null;
-        float? hmin = HeightMin, hmax = HeightMax, smin = SlopeMin, smax = SlopeMax;
-        var paint = Paint;
-        int w = g.W, h = g.H;
-        float[]? heights = null;
-        if (hmin != null || hmax != null || smin != null || smax != null)
-        {
-            heights = new float[w * h];
-            for (int p = 0; p < heights.Length; p++)
-            {
-                heights[p] = g.HeightOf(p);
-            }
-        }
-        byte[]? pmod = paint != PaintRule.Any ? (byte[])g.PMod.Clone() : null;
-        float[]? colours = paint != PaintRule.Any ? (float[])g.Paint.Clone() : null;
-        float Slope(int p)
-        {
-            int gx = p % w, gz = p / w;
-            // On the border one neighbour is the point itself, so the step is 1 m there, not 2 m.
-            int x0 = Math.Max(0, gx - 1), x1 = Math.Min(w - 1, gx + 1), z0 = Math.Max(0, gz - 1), z1 = Math.Min(h - 1, gz + 1);
-            float hx = x1 > x0 ? (heights![gz * w + x1] - heights[gz * w + x0]) / (x1 - x0) : 0;
-            float hz = z1 > z0 ? (heights![z1 * w + gx] - heights[z0 * w + gx]) / (z1 - z0) : 0;
-            return MathF.Atan(MathF.Sqrt(hx * hx + hz * hz)) * 180 / MathF.PI;
-        }
-        bool PaintOk(int p)
-        {
-            if (paint == PaintRule.Any)
-            {
-                return true;
-            }
-            bool painted = pmod![p] != 0;
-            float r = colours![p * 4], gr = colours[p * 4 + 1], b = colours[p * 4 + 2];
-            return paint switch
-            {
-                PaintRule.Unpainted => !painted || r + gr + b < 0.3f,
-                _ when !painted => false,
-                PaintRule.Painted => r + gr + b >= 0.3f,
-                PaintRule.Dirt => r >= 0.5f,
-                PaintRule.Cultivated => gr >= 0.5f,
-                _ => b >= 0.5f,
-            };
-        }
-        float Test(int p)
-        {
-            if (set != null && (p >= biomes.Length || !set.Contains(biomes[p])))
-            {
-                return 0;
-            }
-            if (hmin != null || hmax != null)
-            {
-                float at = heights![p];
-                if (at < hmin || at > hmax)
-                {
-                    return 0;
-                }
-            }
-            if (smin != null || smax != null)
-            {
-                float s = Slope(p);
-                if (s < smin || s > smax)
-                {
-                    return 0;
-                }
-            }
-            return PaintOk(p) ? 1 : 0;
-        }
+        var judge = new MaskJudge(this, g, biomes);
         if (!frozen)
         {
-            return Test;
+            return judge.Test;
         }
         var seen = new Dictionary<int, float>();
-        return p => seen.TryGetValue(p, out float v) ? v : seen[p] = Test(p);
+        return p => seen.TryGetValue(p, out float v) ? v : seen[p] = judge.Test(p);
     }
 
     /// <summary>

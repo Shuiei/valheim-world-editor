@@ -27,7 +27,7 @@ replaced. Tests from that time check that what it did still works (`KeysAndMouse
 | `tools/DocsScreenshots/` | `TerrainEditor.DocsScreenshots` | The pictures in `docs/images`, taken through the app's `--driver`. |
 
 `Core/WorldGen/` has two namespaces: `ValheimGen` for the generator itself (`WorldGenerator*.cs`,
-`GenMath.cs`, `UnityShim.cs`, `UnityNative.cs`, `FastNoise.cs`, `TerrainService.cs`, `MapData.cs`,
+`GenMath.cs`, `Vector2.cs`, `Vector3.cs`, `Mathf.cs`, `UnityNative.cs`, `FastNoise.cs`, `TerrainService.cs`, `MapData.cs`,
 `SeedLocations.cs`, `DumpVerifier.cs`), and `TerrainEditor.Terrain` for what it is given from the
 game's data (`TerrainModifiers`, `PrefabCatalog`, `PieceCatalog`, `PieceCost`, `CaveRocks`,
 `ZdoKeys`). Core gives its internals to the app and the tests (`InternalsVisibleTo` in the csproj).
@@ -219,13 +219,13 @@ the game's. So:
 
 - **Keep the arithmetic as it is.** Where the game works in float or double, where it rounds back
   to float, the `+ 0.0` that turns `-0` into `0`, the order of operations: each is there on purpose
-  (`GenMath.cs`, `UnityShim.cs`, `UnityNative.cs`: Unity's `Random` (Xorshift128) and
+  (`GenMath.cs`, `Mathf.cs`, `UnityNative.cs`: Unity's `Random` (Xorshift128) and
   `Mathf.PerlinNoise` written to match the engine's machine code). A "simplification" that the
   compiler takes as the same maths may not give the same bits.
 - **Keep the order of random draws.** One draw added, removed or moved changes every river.
 - **The analyzers' fixes count.** A code-style fix in `Core/WorldGen/` is a change to the maths:
   `.editorconfig` already turns off the rules (CA1051, CA1708, CA2231) that would change the Unity
-  stand-ins' public fields, names and operators in `UnityShim.cs` and `UnityNative.cs`.
+  stand-ins' public fields, names and operators in `Vector2.cs`, `Vector3.cs`, `Mathf.cs` and `UnityNative.cs`.
 - **Check.** `WorldGeneratorReferenceTests` compares Unity's random numbers, Perlin noise, 3000 heights and
   biomes, eight whole zones and the water's count with values recorded in the game
   (`tests/fixtures/worldgen-reference.txt`, seed `5DCcdIcuYJ`); any change that moves away from the

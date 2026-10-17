@@ -16,24 +16,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// name the Replace pick button gives the eyedropper.
 /// </summary>
 [Collection("DataDir")]
-public sealed class SelectPanelLangTests : IDisposable
+public sealed class SelectPanelLangTests : SavedSelectionsFolder
 {
-    private readonly string? _old = SavedSelections.PathOverride;
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-select-lang-" + Guid.NewGuid().ToString("N")[..8]);
-
-    public SelectPanelLangTests()
-    {
-        Directory.CreateDirectory(_dir);
-        SavedSelections.PathOverride = Path.Combine(_dir, "selections.json");
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        SavedSelections.PathOverride = _old;
-        Directory.Delete(_dir, true);
-    }
-
     private static readonly int Beech = StableHash.Of("Beech1");
 
     /// <summary>A shown window, made in the pseudo language, editing a flat area with two trees, in the Select tool.</summary>

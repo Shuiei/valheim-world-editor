@@ -7,11 +7,8 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The Place tool's mouse and keys through an input of its own on a shown window, looking straight down on a flat
-/// 2 × 2 zone area: picking a kind or a height, brush strokes (painting, erasing, nothing under the brush, no area
-/// open), building one piece where the ray points, lines clicked off the area or double-clicked away from their end,
-/// freehand lines, turned zones edited, grid boxes, circles and rectangles let go off the area, the keys, and
-/// everything again with nobody listening.
+/// The Place tool's input in the 3D view: the eyedropper and the height picker, the strokes of the brush, erasing, and
+/// building a piece where the ray points. The rig they drive is here too, for the Place input tests of the other panels.
 /// </summary>
 public class PlaceInputTests
 {
@@ -30,7 +27,7 @@ public class PlaceInputTests
         public EditSession S { get; }
         public PlaceTool T { get; }
         public PlaceInput In { get; }
-        public Avalonia.Size Size { get; } = new(1600, 1000);
+        public Avalonia.Size Size { get; } = SharedPlaceWindow.Size;
         public List<string> Said { get; } = [];
         /// <summary>What was said, in both languages.</summary>
         public List<TerrainEditor.App.Said> Told { get; } = [];
@@ -39,13 +36,7 @@ public class PlaceInputTests
 
         public Rig(PlaceTool.Modes mode, bool listen = true, params WorldScene.Thing[] things)
         {
-            W = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            W.Show();
-            S = TestScenes.Flat(2, things);
-            W.View.Show(S.Scene, null);
-            W.Edit(S);
-            W.Tools.ChooseMode(ToolMode.Place);
-            W.View.SetCamera(new Vector3(0, 150, 1), Vector3.Zero, 1.6f);
+            (W, S) = SharedPlaceWindow.Open(things);
             var scene = S.Scene;
             T = new PlaceTool { Scene = () => scene, Brush = S.Brush, Mode = mode, Tilt = 0, NameOf = h => h == StableHash.Of(Wall) ? Wall : null };
             T.Chosen.Clear();
@@ -68,11 +59,7 @@ public class PlaceInputTests
         public string? Last => Said.Count > 0 ? Said[^1] : null;
 
         /// <summary>Grid point (gx, gz) on the view (the ground is at 30 m).</summary>
-        public Avalonia.Point At(float gx, float gz)
-        {
-            var q = Vector4.Transform(new Vector4(gx - 64, 30, -(gz - 64), 1), W.View.ViewProj);
-            return new Avalonia.Point((q.X / q.W + 1) / 2 * Size.Width, (1 - q.Y / q.W) / 2 * Size.Height);
-        }
+        public Avalonia.Point At(float gx, float gz) => SharedPlaceWindow.At(W, gx, gz);
 
         /// <summary>A grid point on the view.</summary>
         public Avalonia.Point At(Vector2 g) => At(g.X, g.Y);
@@ -92,15 +79,7 @@ public class PlaceInputTests
         }
 
         /// <summary>A drag along these grid points.</summary>
-        public void Drag(params (float X, float Z)[] path)
-        {
-            In.Down(At(path[0].X, path[0].Z), Size, false, false, false, 1);
-            foreach (var (x, z) in path.Skip(1))
-            {
-                In.Moved(At(x, z), Size);
-            }
-            In.Up(At(path[^1].X, path[^1].Z), Size);
-        }
+        public void Drag(params (float X, float Z)[] path) => SharedPlaceWindow.Drag(In, W, Size, path);
 
         /// <summary>A key with Shift held or not.</summary>
         public bool Key(Key key, bool shift = false) => In.Key(key, shift, false);
@@ -258,190 +237,5 @@ public class PlaceInputTests
         Assert.StartsWith("Lift: +", r.Last);
         r.In.Lift(-0.5f);
         Assert.Equal("Lift: none (where the cursor points).", r.Last);
-    }
-
-    [AvaloniaFact]
-    public void LinePointsOffTheAreaAndDoubleClicksAwayFromTheEnd()
-    {
-        var r = new Rig(PlaceTool.Modes.Line);
-        // Off the area: nothing.
-        r.Click(Sky);
-        Assert.Empty(r.T.Points);
-        // A double-click on the first point: no line yet to place.
-        r.Click(40, 64, clicks: 2);
-        r.Click(64, 64);
-        // A double-click away from the last point adds one.
-        r.Click(30, 30, clicks: 2);
-        Assert.Equal(3, r.T.Points.Count);
-        Assert.Equal(0, r.S.Pending.Added);
-        // Esc takes the line; with none left Backspace and Esc are not the tool's.
-        Assert.True(r.Key(Key.Escape));
-        Assert.Empty(r.T.Points);
-        Assert.False(r.Key(Key.Back));
-        Assert.False(r.Key(Key.Escape));
-        r.In.RemoveLastPoint();
-        Assert.Empty(r.T.Points);
-    }
-
-    [AvaloniaFact]
-    public void AFreehandDragAddsAPointEveryTwoMetres()
-    {
-        var r = new Rig(PlaceTool.Modes.Line);
-        r.Drag((30, 40), (33, 40), (36, 40), (39, 40));
-        // Let go where the last point went: none added there again.
-        Assert.Equal(4, r.T.Points.Count);
-        // Pressed and barely moved: no drag yet; then on from the line's end.
-        r.In.Down(r.At(50, 40), r.Size, false, false, false, 1);
-        r.In.Moved(r.At(50.5f, 40), r.Size);
-        Assert.Equal(4, r.T.Points.Count);
-        r.In.Moved(r.At(54, 40), r.Size);
-        r.In.Moved(r.At(55, 40), r.Size);
-        Assert.Equal(6, r.T.Points.Count);
-        r.In.Up(r.At(56, 40), r.Size);
-        Assert.Equal(7, r.T.Points.Count);
-    }
-
-    [AvaloniaFact]
-    public void AZoneIsClickedEditedTurnedAndPlaced()
-    {
-        var r = new Rig(PlaceTool.Modes.Zone);
-        Assert.True(r.Key(Key.OemPeriod));
-        Assert.Equal("Draw a zone first, then turn it.", r.Last);
-        foreach (var (x, z) in new[] { (40f, 40f), (90f, 40f), (90f, 90f) })
-        {
-            r.Click(x, z);
-        }
-        Assert.Equal(3, r.T.Points.Count);
-        // Turned by 15° (Shift); its points are kept unturned and dragged where they are drawn.
-        Assert.True(r.Key(Key.OemPeriod, shift: true));
-        Assert.Equal(15, r.T.ShapeTurn, 3);
-        var first = r.T.Xf(r.T.Points[0]);
-        var to = first + new Vector2(0, -6);
-        r.In.Down(r.At(first), r.Size, false, false, false, 1);
-        r.In.Moved(r.At(to), r.Size);
-        r.In.Up(r.At(to), r.Size);
-        Assert.Equal(3, r.T.Points.Count);
-        Assert.True(Vector2.Distance(r.T.Xf(r.T.Points[0]), to) < 0.5f, $"{r.T.Xf(r.T.Points[0])}");
-        // A new point, kept unturned.
-        r.Click(60, 110);
-        Assert.Equal(4, r.T.Points.Count);
-        Assert.True(Vector2.Distance(r.T.Xf(r.T.Points[^1]), new Vector2(60, 110)) < 0.5f);
-        int shown = r.In.Shown.Length;
-        Assert.True(shown > 0);
-        Assert.True(r.Key(Key.Enter));
-        Assert.Equal($"Placed {shown} in a zone", r.S.UndoLabel);
-        Assert.True(r.Key(Key.Escape));
-        Assert.Empty(r.T.Points);
-    }
-
-    [AvaloniaFact]
-    public void AGridBoxIsPlacedAndClearedWithTheKeys()
-    {
-        var r = new Rig(PlaceTool.Modes.Grid);
-        r.Drag((50, 50), (60, 60), (70, 66));
-        Assert.NotNull(r.T.GridB);
-        int shown = r.In.Shown.Length;
-        Assert.True(shown > 0);
-        Assert.True(r.Key(Key.Enter));
-        Assert.Equal($"Placed {shown} in a grid", r.S.UndoLabel);
-        // Backspace is no grid key; Esc clears the box.
-        Assert.False(r.Key(Key.Back));
-        r.In.RemoveLastPoint();
-        Assert.True(r.Key(Key.Escape));
-        Assert.Null(r.T.GridA);
-    }
-
-    [AvaloniaFact]
-    public void CirclesAndRectanglesAreDraggedOutAndCleared()
-    {
-        var r = new Rig(PlaceTool.Modes.Line);
-        r.T.LineShape = PlaceTool.LineShapes.Circle;
-        r.Click(64, 64);
-        Assert.Equal("Press at the centre and drag out to the size.", r.Last);
-        Assert.Null(r.T.FigA);
-        r.Drag((64, 64), (70, 68));
-        Assert.NotNull(r.T.FigA);
-        Assert.NotNull(r.T.FigB);
-        Assert.True(r.In.Shown.Length > 0);
-        // Dragged off the area and let go there: as a click.
-        r.In.Down(r.At(64, 64), r.Size, false, false, false, 1);
-        r.In.Moved(Sky, r.Size);
-        r.In.Up(Sky, r.Size);
-        Assert.Null(r.T.FigA);
-        r.T.LineShape = PlaceTool.LineShapes.Rect;
-        r.Click(64, 64);
-        Assert.Equal("Press at a corner and drag to the opposite one.", r.Last);
-        r.Drag((64, 64), (70, 68));
-        Assert.True(r.Key(Key.Escape));
-        Assert.Null(r.T.FigA);
-    }
-
-    [AvaloniaFact]
-    public void KeysTurnByTheirStepAndLeaveTheRest()
-    {
-        var r = new Rig(PlaceTool.Modes.Brush);
-        Assert.False(r.In.Key(Key.R, false, true));
-        // The Workshop's own step; Shift: 1°.
-        r.In.TurnStep = 22.5f;
-        Assert.True(r.Key(Key.OemPeriod));
-        Assert.True(r.Key(Key.OemPeriod, shift: true));
-        Assert.Equal(23.5f, r.T.Rotation, 3);
-        r.In.TurnStep = null;
-        Assert.True(r.Key(Key.OemComma, shift: true));
-        Assert.Equal(8.5f, r.T.Rotation, 3);
-        // Not the brush's keys.
-        Assert.False(r.Key(Key.Enter));
-        Assert.False(r.Key(Key.Escape));
-        Assert.False(r.Key(Key.Back));
-        Assert.True(r.Key(Key.R));
-        Assert.True(r.Key(Key.PageDown, shift: true));
-        Assert.StartsWith("Elevation: above the ground by -0.1", r.Last);
-    }
-
-    [AvaloniaFact]
-    public void PlacingAShapeNeedsAnAreaOpen()
-    {
-        var r = new Rig(PlaceTool.Modes.Line);
-        r.Click(40, 64);
-        r.Click(60, 64);
-        Assert.True(r.In.Shown.Length > 0);
-        r.In.Session = () => null;
-        r.In.PlaceShape();
-        Assert.Equal("Draw a line first (click points on the ground).", r.Last);
-        Assert.Equal(0, r.S.Pending.Added);
-    }
-
-    [AvaloniaFact]
-    public void WithNobodyListeningNothingIsSaid()
-    {
-        var r = new Rig(PlaceTool.Modes.Brush, listen: false);
-        r.In.Moved(r.At(64, 64), r.Size);
-        r.In.PickOnce = (_, _) => { };
-        r.Click(10, 10);
-        r.Click(40, 40, alt: true);
-        r.In.Lift(0.5f);
-        Assert.True(r.Key(Key.PageUp));
-        r.In.PickOnce = (_, _) => { };
-        Assert.True(r.Key(Key.Escape));
-        // A click places, a Shift click erases.
-        r.Click(64, 64);
-        int placed = r.S.Pending.Added;
-        Assert.True(placed > 0);
-        r.Click(20, 20, shift: true);
-        // Building, with nothing placed.
-        r.T.Building = true;
-        r.Click(Sky);
-        r.T.Building = false;
-        r.T.Mode = PlaceTool.Modes.Grid;
-        Assert.True(r.Key(Key.OemPeriod));
-        r.In.PlaceShape();
-        r.T.Mode = PlaceTool.Modes.Line;
-        r.T.LineShape = PlaceTool.LineShapes.Circle;
-        r.Click(64, 64);
-        r.T.LineShape = PlaceTool.LineShapes.Points;
-        r.Click(40, 64);
-        r.Click(60, 64);
-        Assert.True(r.Key(Key.Enter));
-        Assert.True(r.S.Pending.Added > placed);
     }
 }

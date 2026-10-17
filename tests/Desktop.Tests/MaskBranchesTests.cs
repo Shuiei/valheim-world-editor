@@ -20,11 +20,7 @@ public class MaskBranchesTests
     /// </summary>
     private static Ground Ground()
     {
-        var g = new Ground(N, N, 0, 0, 1);
-        for (int p = 0; p < N * N; p++)
-        {
-            g.Base[p] = p % N >= 40 ? 40 : 30;
-        }
+        var g = CliffGround.Make(N, 40);
         float[][] paints = [[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1], [0, 0, 0, 1]];
         for (int i = 0; i < paints.Length; i++)
         {
@@ -44,12 +40,7 @@ public class MaskBranchesTests
     [Fact]
     public void EachPaintRuleLetsItsGroundThrough()
     {
-        Assert.Equal(new[] { true, true, true, true, true }, Pass(Mask.PaintRule.Any));
-        Assert.Equal(new[] { false, false, false, true, true }, Pass(Mask.PaintRule.Unpainted));
-        Assert.Equal(new[] { true, true, true, false, false }, Pass(Mask.PaintRule.Painted));
-        Assert.Equal(new[] { true, false, false, false, false }, Pass(Mask.PaintRule.Dirt));
-        Assert.Equal(new[] { false, true, false, false, false }, Pass(Mask.PaintRule.Cultivated));
-        Assert.Equal(new[] { false, false, true, false, false }, Pass(Mask.PaintRule.Paved));
+        PaintRuleChecks.AssertFivePointsPassEachRule(Pass);
     }
 
     [Fact]

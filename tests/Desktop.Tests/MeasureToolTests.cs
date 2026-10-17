@@ -62,11 +62,7 @@ public class MeasureToolTests
     [AvaloniaFact]
     public void ClickingTwicePutsTheValuesInThePanel()
     {
-        var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var (w, s, _) = ShownEditor.Open();
         w.KeyPress(Key.M, RawInputModifiers.None, PhysicalKey.M, "m");
         Assert.Equal(ToolMode.Measure, w.View.Mode);
         Assert.True(w.MeasurePanel.Card.IsVisible);

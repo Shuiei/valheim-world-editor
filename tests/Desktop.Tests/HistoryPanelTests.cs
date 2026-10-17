@@ -73,11 +73,8 @@ public class HistoryPanelTests
     [AvaloniaFact]
     public void ThePanelListsTheChanges()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
         var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = TestWindows.Editing(s);
         s.Shape(30, 30, Two, 3, 0, "one");
         s.Shape(60, 60, Two, 3, 0, "two");
         s.Undo();
@@ -97,11 +94,8 @@ public class HistoryPanelTests
     [AvaloniaFact]
     public void TheSelectToolReplacesWithAnotherKind()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
         var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(0, 30, 0), new Vector3(0, 40, 0), 1, false));
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = TestWindows.Editing(s);
         w.Tools.ChooseSelect();
         w.View.Select([0]);
         int i = w.SelectPanel.ReplaceKinds.IndexOf(StableHash.Of("Oak1"));
@@ -123,10 +117,7 @@ public class HistoryPanelTests
         string dir = Fixtures.CopyFixture();
         try
         {
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
-            await w.EditArea(0, 0, 3);
+            var w = await TestWindows.EditingWorld(dir, 0, 0, 3);
             w.ShowRight(w.History.Card);
             var s = w.Session!;
             // Ground in the middle zone, and an object deleted.

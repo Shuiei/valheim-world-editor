@@ -52,8 +52,7 @@ public class MainWindowClosingTests
     {
         using var r = new BlueprintsPanelRun();
         var w = r.W;
-        var asked = new List<string>();
-        w.Ask = (title, _, _, _) => { asked.Add(title); return Task.FromResult(false); };
+        var asked = r.AnswerNo();
         await w.OpenWorkshop(null);
         AddWall(w);
         Assert.True(w.WorkshopDirty);
