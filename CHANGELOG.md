@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.26 — unreleased
+
+### Fixed
+- **The SSH key tests no longer keep private keys in the repository.** `HomeFolderTests` kept two OpenSSH private keys
+  as text (Codacy: hard-coded private keys). The tests now make their two throwaway keys with `ssh-keygen` when they
+  start, as the local sshd tests already do, so the keys exist only in the test's temporary folder.
+
 ## v1.47.25 — unreleased
 
 ### Fixed
