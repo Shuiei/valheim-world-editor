@@ -2656,14 +2656,26 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void WireBlueprints()
     {
-        Blueprints.Message += t => MessageText.Text = t;
+        Blueprints.Message += Msg;
         Blueprints.Pasting += () => { ViewPanelCard.IsVisible = true; StartPaste(); };
         Blueprints.AskDetails = (start, cost) => Dialogs.AskBlueprint(this, start, cost);
         Blueprints.Models = () => _models;
-        Blueprints.Confirm = text => Dialogs.Ask(this, "Blueprints", text, Lang.T("common.yes"));
+        Blueprints.Confirm = text => Dialogs.Ask(this, Lang.T("rail.label.blueprints"), text, Lang.T("common.yes"));
         Blueprints.OpenUrl = Launcher.LaunchUriAsync;
-        Blueprints.PickFile = () => Pickers.File(StorageProvider, "Import a .blueprint (Homestead, PlanBuild) or .vbuild file",
-            new Avalonia.Platform.Storage.FilePickerFileType("Blueprints") { Patterns = BlueprintPatterns });
+        Blueprints.PickFile = () =>
+        {
+            var (title, type) = ImportPicker();
+            return Pickers.File(StorageProvider, title, type);
+        };
+    }
+
+    /// <summary>
+    /// The import picker's title and file type, in the language in use (asked for each time it opens).
+    /// </summary>
+    internal static (string Title, Avalonia.Platform.Storage.FilePickerFileType Type) ImportPicker()
+    {
+        var type = new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("rail.label.blueprints")) { Patterns = BlueprintPatterns };
+        return (Lang.T("blueprints.pickTitle"), type);
     }
 
     /// <summary>

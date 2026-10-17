@@ -16,6 +16,8 @@ internal sealed class BlueprintsPanelRun : IDisposable
     public string Homestead => Path.Combine(Dir, "homestead");
     public BlueprintsPanel B => W.Blueprints;
     public string? Said;
+    /// <summary>The panel's last message in English (what Claude reads).</summary>
+    public string? SaidEn;
     public bool Installed { get; set; } = true;
 
     public BlueprintsPanelRun(EditSession? s = null)
@@ -26,7 +28,11 @@ internal sealed class BlueprintsPanelRun : IDisposable
         W.Edit(s);
         B.Store = new BlueprintStore(Path.Combine(Dir, "older"));
         B.FindHomestead = () => new Homestead.Status(Installed, Installed ? "1.3.2" : null, Installed ? new() { "test profile" } : new(), Homestead);
-        B.Message += t => Said = t;
+        B.Message += t =>
+        {
+            Said = t.Shown;
+            SaidEn = t.English;
+        };
         // Its questions answered Yes, not asked in a dialog: headless, nobody would answer it and the test would wait
         // for ever (a test that wants No says so).
         B.Confirm = _ => Task.FromResult(true);
