@@ -10,7 +10,7 @@ namespace TerrainEditor.Desktop;
 /// start from, the scripts saved in the data folder (scripts/*.csx), Run and Stop, and what the script printed or got
 /// wrong. The window runs it (it has the edit session).
 /// </summary>
-public sealed class ScriptPanel
+public sealed partial class ScriptPanel
 {
     /// <summary>The panel itself, shown over the view while the Script tool is on.</summary>
     public Control Card { get; }
@@ -112,41 +112,6 @@ public sealed class ScriptPanel
                 },
             },
         });
-    }
-
-    /// <summary>
-    /// Fills the list: the examples, then the saved scripts (newest first); selects the entry of that name if given,
-    /// else none.
-    /// </summary>
-    public void Fill(string? select = null)
-    {
-        _filling = true;
-        _entries = [.. ScriptExamples.All.Select(e => (e.Name, e.Code, true))];
-        try
-        {
-            if (Directory.Exists(Folder))
-            {
-                foreach (var f in new DirectoryInfo(Folder).GetFiles("*.csx").OrderByDescending(f => f.LastWriteTimeUtc))
-                {
-                    // One that cannot be read is left out (and logged), not the rest with it.
-                    try
-                    {
-                        _entries.Add((Path.GetFileNameWithoutExtension(f.Name), File.ReadAllText(f.FullName), false));
-                    }
-                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                    {
-                        Log.Caught(ex, "reading a script to list it (it is left out)");
-                    }
-                }
-            }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Log.Caught(ex, "listing the scripts folder");
-        }
-        ScriptBox.ItemsSource = _entries.Select(e => e.Example ? Lang.T("script.example", e.Name) : e.Name).ToList();
-        ScriptBox.SelectedIndex = select != null ? _entries.FindIndex(e => !e.Example && e.Name == select) : -1;
-        _filling = false;
     }
 
     /// <summary>

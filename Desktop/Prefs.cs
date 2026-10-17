@@ -1,7 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
@@ -13,7 +11,7 @@ namespace TerrainEditor.Desktop;
 /// means the defaults. Each value has its own name, so remembering another control is one Bind line where it is made.
 /// Saved a moment after the last change (a dragged map writes once), and on Flush.
 /// </summary>
-public sealed class Prefs
+public sealed partial class Prefs
 {
     /// <summary>The file, or null when kept in memory only.</summary>
     private readonly string? _path;
@@ -24,41 +22,12 @@ public sealed class Prefs
     /// <summary>Writes the file 300 ms after the last change.</summary>
     private Timer? _timer;
 
-    /// <summary>Tests: another file, never the user's.</summary>
-    internal static string? PathOverride { get; set; }
-
-    /// <summary>prefs.json in the data folder, or the tests' file.</summary>
-    public static string DefaultPath => PathOverride ?? Path.Combine(AppSettings.DataDir, "prefs.json");
-
     /// <summary>Prefs over the given values, written to the file (null: never written).</summary>
     private Prefs(string? path, Dictionary<string, JsonNode?> values)
     {
         _path = path;
         _values = values;
     }
-
-    /// <summary>The remembered values (from DefaultPath unless another file is given).</summary>
-    public static Prefs Load(string? path = null)
-    {
-        path ??= DefaultPath;
-        var values = new Dictionary<string, JsonNode?>();
-        try
-        {
-            if (File.Exists(path) && JsonNode.Parse(File.ReadAllText(path)) is JsonObject o)
-            {
-                foreach (var (k, v) in o)
-                {
-                    values[k] = v?.DeepClone();
-                }
-            }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
-        {
-            Log.Caught(ex, "reading the remembered preferences (starting from none)");
-        }
-        return new Prefs(path, values);
-    }
-
     /// <summary>Remembered only while the program runs (the tests' windows: never written, never shared).</summary>
     public static Prefs InMemory() => new(null, []);
 
@@ -123,93 +92,5 @@ public sealed class Prefs
                 Later();
             }
         }
-    }
-
-    /// <summary>Writes the file 300 ms from now (again from now when called again), unless kept in memory.</summary>
-    private void Later()
-    {
-        if (_path == null)
-        {
-            return;
-        }
-        _timer ??= new Timer(_ => Flush());
-        _timer.Change(300, Timeout.Infinite);
-    }
-
-    /// <summary>
-    /// Writes the file now, sorted by name, through a temporary file (a file that cannot be written is left as it was:
-    /// the values stay in memory).
-    /// </summary>
-    public void Flush()
-    {
-        if (_path == null)
-        {
-            return;
-        }
-        string text;
-        lock (_lock)
-        {
-            _timer?.Change(Timeout.Infinite, Timeout.Infinite);
-            var o = new JsonObject();
-            foreach (var (k, v) in _values.OrderBy(kv => kv.Key, StringComparer.Ordinal))
-            {
-                o[k] = v?.DeepClone();
-            }
-            text = o.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
-        }
-        try
-        {
-            SafeFile.WriteAllText(_path, text);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Log.Caught(ex, "writing the remembered preferences");
-        }
-    }
-
-    /// <summary>A switch (CheckBox, ToggleButton): set from what is remembered, remembered when changed.</summary>
-    public void Bind(ToggleButton box, string key)
-    {
-        if (TryGet(key, out bool on))
-        {
-            box.IsChecked = on;
-        }
-        box.IsCheckedChanged += (_, _) => Set(key, box.IsChecked == true);
-    }
-
-    /// <summary>
-    /// A list of texts (ComboBox): the entry remembered by its text, so a list that changes order or grows keeps the
-    /// choice; an entry no longer there leaves the list as it is. The text is kept in English (<c>Lang.EnglishOf</c>),
-    /// so the choice comes back in whatever language the editor shows; a text no catalogue has (a stamp's name) is
-    /// kept as it is.
-    /// </summary>
-    public void Bind(ComboBox box, string key)
-    {
-        Restore(box, key);
-        box.SelectionChanged += (_, _) =>
-        {
-            if (box.SelectedItem is string text)
-            {
-                Set(key, Lang.EnglishOf(text));
-            }
-        };
-    }
-
-    /// <summary>
-    /// Chooses the remembered entry, when the list has it (for lists filled again later), comparing the entries' English
-    /// with the English kept; true when it did.
-    /// </summary>
-    public bool Restore(ComboBox box, string key)
-    {
-        if (TryGet(key, out string? text) && text != null && box.ItemsSource is IEnumerable<object> items)
-        {
-            int i = items.Select(o => o is string s ? Lang.EnglishOf(s) : null).ToList().IndexOf(text);
-            if (i >= 0)
-            {
-                box.SelectedIndex = i;
-                return true;
-            }
-        }
-        return false;
     }
 }
