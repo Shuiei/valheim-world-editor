@@ -346,15 +346,13 @@ public sealed partial class MainWindow
             SayFollow(Said.Of("top.msg.followWaits", why));
             return null;
         }
-        int x0 = s.X0, z0 = s.Z0, zonesX = s.ZonesX, zonesZ = s.ZonesZ;
-        // The view mirrors z: north is -t.Z. Both ways grow when the camera is near a corner.
-        bool grownX = nearX && Grow(ref x0, ref zonesX, t.X > 0);
-        bool grownZ = nearZ && Grow(ref z0, ref zonesZ, t.Z < 0);
-        if (!grownX && !grownZ)
+        // The view mirrors z: north is -t.Z.
+        if (Grown((s.X0, s.Z0, s.ZonesX, s.ZonesZ), nearX ? t.X > 0 : null, nearZ ? t.Z < 0 : null) is not { } grown)
         {
             SayFollow(Said.Of("top.msg.followFull", MaxFollowZones));
             return null;
         }
+        var (x0, z0, zonesX, zonesZ) = grown;
         Msg("top.msg.growing");
         _followBusy = true;
         try
@@ -394,6 +392,20 @@ public sealed partial class MainWindow
         first -= up ? 0 : 1;
         count++;
         return true;
+    }
+
+    /// <summary>
+    /// The block Follow grows an area (south-west zone and size) to: a row of zones more each way the view is near an
+    /// edge, both near a corner, each up to <c>MaxFollowZones</c>. Null when neither way can grow.
+    /// </summary>
+    /// <param name="block">The area's block.</param>
+    /// <param name="upX">Near the east edge (true) or the west (false); null: near neither.</param>
+    /// <param name="upZ">Near the north edge (true) or the south (false); null: near neither.</param>
+    internal static (int X0, int Z0, int ZonesX, int ZonesZ)? Grown((int X0, int Z0, int ZonesX, int ZonesZ) block, bool? upX, bool? upZ)
+    {
+        bool grownX = upX is { } east && Grow(ref block.X0, ref block.ZonesX, east);
+        bool grownZ = upZ is { } north && Grow(ref block.Z0, ref block.ZonesZ, north);
+        return grownX || grownZ ? block : null;
     }
 
     // ---- Discard and Reload, here in the editor.

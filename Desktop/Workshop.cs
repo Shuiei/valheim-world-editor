@@ -174,7 +174,7 @@ public static class Workshop
     }
 
     /// <summary>A terrain contact's point from its first three fields; false when one is not a number.</summary>
-    private static bool TryPoint(string[] f, out Vector3 p)
+    internal static bool TryPoint(string[] f, out Vector3 p)
     {
         var n = System.Globalization.NumberStyles.Float;
         var c = System.Globalization.CultureInfo.InvariantCulture;
