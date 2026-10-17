@@ -39,21 +39,21 @@ public class MapViewTests
     [AvaloniaFact]
     public async Task AWorldMapThatCannotBeBuiltIsSaid()
     {
-        var stdout = Console.Out;
+        var stderr = Console.Error;
         using var output = new StringWriter();
         List<string> said;
         try
         {
-            Console.SetOut(TextWriter.Synchronized(output));
+            Console.SetError(TextWriter.Synchronized(output));
             said = await FailedBuildSays(map => Assert.False(map.Ready));
         }
         finally
         {
-            Console.SetOut(stdout);
+            Console.SetError(stderr);
         }
         Assert.Equal(["Building the world map (same as the game does)…", "Could not build the world map: a broken zone"], said);
         // The details go to the log.
-        Assert.Contains("World map: could not build it: System.IO.InvalidDataException: a broken zone", output.ToString());
+        Assert.Contains("while building the world map: System.IO.InvalidDataException: a broken zone", output.ToString());
     }
 
     [AvaloniaFact]
