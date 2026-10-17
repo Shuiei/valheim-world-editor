@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.84 — unreleased
+
+### Fixed
+- **Saving or applying ground lifted past the ±8 m limit in two far-apart places could run out of memory.** The
+  ground discs were worked out on one grid of every zone between the lifted ones: two lifts at opposite ends of the
+  world made a grid of billions of points, many times over. Lifts far apart are now each worked out on their own few
+  zones.
+
 ## v1.45.83 — unreleased
 
 ### Fixed
