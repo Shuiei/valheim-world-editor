@@ -15,6 +15,8 @@ public sealed class FakeGame : IDisposable
     private readonly HttpListener _listener = new();
     /// <summary>Answering the requests: Dispose waits for it to end, and its errors fail the test.</summary>
     private readonly Task _serving;
+    /// <summary>The requests answered on their own (Answer): Dispose waits for them, and their errors fail the test.</summary>
+    private readonly List<Task> _answering = [];
     private readonly byte[] _snapshot;
 
     public int Port { get; }
@@ -95,7 +97,11 @@ public sealed class FakeGame : IDisposable
             }
             // Each request on its own: a held one (HoldTerrain) or a broken connection never keeps the others
             // from being answered.
-            _ = Task.Run(() => Answer(ctx));
+            var answer = Task.Run(() => Answer(ctx));
+            lock (_answering)
+            {
+                _answering.Add(answer);
+            }
         }
     }
 
@@ -304,10 +310,21 @@ public sealed class FakeGame : IDisposable
         return p;
     }
 
-    /// <summary>Stops answering and waits until the wait for requests has ended; an error in it fails the test.</summary>
+    /// <summary>
+    /// Stops answering, lets held requests go, and waits until the wait for requests and every request being answered
+    /// have ended; an error in them fails the test.
+    /// </summary>
     public void Dispose()
     {
         _listener.Close();
+        HoldPlayers?.TrySetResult();
+        HoldTerrain?.TrySetResult();
         Assert.True(_serving.Wait(TimeSpan.FromSeconds(30)), "the stand-in game did not stop answering");
+        Task[] answers;
+        lock (_answering)
+        {
+            answers = [.. _answering];
+        }
+        Assert.True(Task.WaitAll(answers, TimeSpan.FromSeconds(30)), "a request to the stand-in game was still being answered");
     }
 }
