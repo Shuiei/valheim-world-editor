@@ -22,6 +22,16 @@ public static class EditReplayHelpers
     public static List<(int Id, int Prefab, Vector3 Position, Vector3 Rotation, Vector3 Scale)> Near(WorldSave world) =>
         [.. world.Objects.Where(o => MathF.Abs(o.Position.X) < 200 && MathF.Abs(o.Position.Z) < 200)];
 
+    /// <summary>
+    /// The copy's save as read, its edits, and its first object near the middle (see <see cref="Near"/>): where a test
+    /// edits that object.
+    /// </summary>
+    public static (WorldSave Read, EditStore Edits, (int Id, int Prefab, Vector3 Position, Vector3 Rotation, Vector3 Scale) First) OpenEditsOfNearObject(TempWorld w)
+    {
+        var read = w.Load();
+        return (read, new EditStore(read), Near(read)[0]);
+    }
+
     /// <summary>The game saving the world: the next save, with these objects removed and these added (the base stays).</summary>
     public static void GameSaves(string dir, IReadOnlyList<ZoneEdit> ground, int[] removed, NewObject[]? added = null)
     {

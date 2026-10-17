@@ -14,8 +14,7 @@ public class WorldSaveZoneResetTests
     public void ZoneResetRemovesGeneratedObjects()
     {
         using var w = new TempWorld();
-        WorldSave world = w.Load();
-        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
+        var (world, (id, prefab, position, rotation, scale)) = TestWorldTree.Open(w);
         int zx = (int)MathF.Floor((position.X + 32f) / 64f), zz = (int)MathF.Floor((position.Z + 32f) / 64f);
         int inZone = world.Objects.Count(o => (int)MathF.Floor((o.Position.X + 32f) / 64f) == zx && (int)MathF.Floor((o.Position.Z + 32f) / 64f) == zz);
         Assert.True(inZone > 0);
@@ -29,9 +28,8 @@ public class WorldSaveZoneResetTests
     public void AZoneResetKeepsPlayersTombstones()
     {
         using var w = new TempWorld();
-        WorldSave world = w.Load();
+        var (world, (id, prefab, position, rotation, scale)) = TestWorldTree.Open(w);
         var edits = new EditStore(world);
-        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
         edits.AddObjects([new NewObject(-1, Fixtures.Hash("Player_tombstone"), position + new Vector3(1, 0, 1), Vector3.Zero, 0f)]);
         Assert.True(WorldWriter.Save(world, [], edits.Deleted, edits.Added).Saved);
         var saved = WorldSave.Load(w.Dir);

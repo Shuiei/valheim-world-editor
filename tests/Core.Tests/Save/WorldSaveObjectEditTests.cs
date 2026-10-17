@@ -14,8 +14,7 @@ public class WorldSaveObjectEditTests
     public void DeletedObjectsAreGone()
     {
         using var w = new TempWorld();
-        WorldSave world = w.Load();
-        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
+        var (world, (id, prefab, position, rotation, scale)) = TestWorldTree.Open(w);
         WorldWriter.Result r = WorldWriter.Save(world, [], deleted: [id]);
         Assert.True(r.Saved, r.Message);
         var again = WorldSave.Load(w.Dir);

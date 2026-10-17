@@ -56,9 +56,7 @@ public class EditReplayObjectClashTests
     public void AnObjectTheGameChangedThatTheEditorDeletedClashes(bool readSaveKept)
     {
         using var w = new TempWorld();
-        var read = w.Load();
-        var edits = new EditStore(read);
-        var (id, prefab, position, rotation, _) = Near(read)[0];
+        var (read, edits, (id, prefab, position, rotation, _)) = OpenEditsOfNearObject(w);
         edits.SetDeleted([id], true);
         var changed = ZdoData.Parse(read.ObjectBytes(id));
         changed.Set("ints", StableHash.Of("vwe-test"), "7");
@@ -84,9 +82,7 @@ public class EditReplayObjectClashTests
     public void AnObjectEditedInPlaceGoesWithItsOriginalsClash(bool gameRemoved, bool keepMine)
     {
         using var w = new TempWorld();
-        var read = w.Load();
-        var edits = new EditStore(read);
-        var (id, prefab, position, rotation, _) = Near(read)[0];
+        var (read, edits, (id, prefab, position, rotation, _)) = OpenEditsOfNearObject(w);
         var edited = ZdoData.Parse(read.ObjectBytes(id));
         edited.Set("ints", StableHash.Of("vwe-mine"), "1");
         edits.SetDeleted([id], true);

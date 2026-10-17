@@ -62,6 +62,17 @@ internal sealed class BlueprintsPanelRun : IDisposable
         return W;
     }
 
+    /// <summary>
+    /// The window's questions answered No, each one's title recorded in the list returned (for a test that leaves a
+    /// building unsaved).
+    /// </summary>
+    public List<string> AnswerNo()
+    {
+        var asked = new List<string>();
+        W.Ask = (title, _, _, _) => { asked.Add(title); return Task.FromResult(false); };
+        return asked;
+    }
+
     public List<Homestead.Entry> Listed => TerrainEditor.App.Homestead.List(Homestead);
 
     /// <summary>

@@ -1,4 +1,3 @@
-using ValheimGen;
 using Xunit;
 
 namespace WorldEditor.Tests;
@@ -12,8 +11,7 @@ public class MapDataDetailTests
     public void ABuiltWindowHasTheRequestedSize()
     {
         using var w = new TempWorld();
-        var (_, terrain, edits) = MapDataTestWorld.Open(w);
-        var map = new MapData(terrain, edits);
+        var map = MapDataTestWorld.Map(w);
 
         var window = map.BuildDetail(0, 0, 8);
 
@@ -26,8 +24,7 @@ public class MapDataDetailTests
     public void AWindowOfTheSameEditsIsKept()
     {
         using var w = new TempWorld();
-        var (_, terrain, edits) = MapDataTestWorld.Open(w);
-        var map = new MapData(terrain, edits);
+        var map = MapDataTestWorld.Map(w);
 
         var first = map.Detail(0, 0, 8, 1);
 
@@ -38,8 +35,7 @@ public class MapDataDetailTests
     public void AWindowOfNewerEditsIsBuiltAgain()
     {
         using var w = new TempWorld();
-        var (_, terrain, edits) = MapDataTestWorld.Open(w);
-        var map = new MapData(terrain, edits);
+        var map = MapDataTestWorld.Map(w);
         var first = map.Detail(0, 0, 8, 1);
 
         var newer = map.Detail(0, 0, 8, 2);
