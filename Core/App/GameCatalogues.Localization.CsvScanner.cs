@@ -84,6 +84,8 @@ public static partial class GameCatalogues
                     case StartOfField when _rowStarted:
                         _row.Add("");
                         break;
+                    default:
+                        break;
                 }
                 return _state == InQuotes ? null : TakeRow();
             }

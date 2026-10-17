@@ -22,15 +22,16 @@ public static partial class ClaudeRelay
         List<string> answers = response.Content.Headers.ContentType?.MediaType == "text/event-stream"
             ? [.. body.Split('\n').Where(l => l.StartsWith("data:", StringComparison.Ordinal)).Select(l => l[5..].Trim())]
             : body.Trim().Length > 0 ? [body.Trim()] : [];
+        string? agreed = protocol;
         foreach (string a in answers.Where(a => a.Length > 0))
         {
             if (method == "initialize" && JsonNode.Parse(a)?["result"]?["protocolVersion"]?.GetValue<string>() is string v)
             {
-                protocol = v;
+                agreed = v;
             }
             await output.WriteLineAsync(a);
         }
-        return protocol;
+        return agreed;
     }
 
     /// <summary>A JSON-RPC error answer, one line.</summary>
