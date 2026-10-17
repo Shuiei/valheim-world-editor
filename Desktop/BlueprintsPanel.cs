@@ -252,7 +252,7 @@ public sealed class BlueprintsPanel
             var cost = Terrain.PieceCost.Of(e.Kinds);
             List.Children.Add(Row(BlueprintPictures.File(e.Picture), e.Name, meta, act =>
             {
-                act(Lang.T("common.paste"), "blueprints.paste", () => Paste(id));
+                act(Lang.T("paste.label.paste"), "blueprints.paste", () => Paste(id));
                 act(Lang.T("blueprints.label.edit"), "blueprints.edit", () => EditAsked?.Invoke(e.Path));
                 act(Lang.T("blueprints.label.details"), "blueprints.details", async () => await EditDetails(e));
                 act(VbuildLabel, "blueprints.vbuild", () => Export(id, "vbuild"));
@@ -273,7 +273,7 @@ public sealed class BlueprintsPanel
                 b.Source);
             List.Children.Add(Row(BlueprintPictures.Url(b.Thumb), b.Name, meta, act =>
             {
-                act(Lang.T("common.paste"), "blueprints.paste", () => Paste(b.Id));
+                act(Lang.T("paste.label.paste"), "blueprints.paste", () => Paste(b.Id));
                 act(Lang.T("blueprints.label.toHomestead"), "blueprints.toHomestead", () => ToHomestead(b.Id));
                 act(VbuildLabel, "blueprints.vbuildOld", () => Export(b.Id, "vbuild"));
                 act(Lang.T("common.delete"), "blueprints.deleteOld", async () => await Delete(b.Id, b.Name));
