@@ -137,6 +137,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            Log.Caught(ex, "putting a generated dungeon on the Workshop's plot");
             Msg("workshop.msg.dungeonFailed", ex.Message);
         }
     }
@@ -232,6 +233,7 @@ public partial class MainWindow
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "adding a blueprint to the Workshop's plot");
             Msg("workshop.msg.addFailed", ex.Message);
         }
         UpdateSaveBar();
@@ -398,6 +400,7 @@ public partial class MainWindow
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "reading a blueprint to open it in the Workshop");
             Msg("workshop.msg.openFailed", ex.Message);
             return null;
         }

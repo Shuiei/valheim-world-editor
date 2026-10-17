@@ -341,6 +341,7 @@ public sealed partial class ClaudeTools
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
+                Log.CaughtBrief(ex, "reading the stamp picture Claude named");
                 return $"That picture cannot be read: {ex.Message}";
             }
         }
@@ -406,6 +407,7 @@ public sealed partial class ClaudeTools
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
         {
+            Log.CaughtBrief(ex, "reading the heightmap picture Claude named");
             return $"That picture cannot be used: {ex.Message}";
         }
         float lo = lowest ?? pic.Min ?? a.Cells.Min(c => s.Ground.HeightOf(c.G)), hi = highest ?? pic.Max ?? a.Cells.Max(c => s.Ground.HeightOf(c.G));

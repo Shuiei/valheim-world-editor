@@ -1138,6 +1138,7 @@ public sealed partial class ClaudeTools
         }
         catch (ArgumentException ex)
         {
+            Log.CaughtBrief(ex, "building what Claude asked for");
             return ex.Message;
         }
     });
@@ -1372,6 +1373,7 @@ public sealed partial class ClaudeTools
         }
         catch (ArgumentException ex)
         {
+            Log.CaughtBrief(ex, "reading the values Claude gave for an object");
             return ex.Message;
         }
         if (items != null)
@@ -1554,6 +1556,7 @@ public sealed partial class ClaudeTools
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException or JsonException)
         {
+            Log.CaughtBrief(ex, "reading the blueprint Claude asked to place");
             return "Could not read that blueprint: " + ex.Message;
         }
         if (plan.Adds.Count == 0)

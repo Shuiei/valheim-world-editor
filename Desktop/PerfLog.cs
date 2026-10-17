@@ -106,7 +106,8 @@ public sealed class PerfLog
             if (!_writeFailed)
             {
                 _writeFailed = true;
-                Console.Error.WriteLine($"Performance log not written ({FilePath}): {ex.Message}");
+                // Once: it would fail at every flush.
+                Log.Caught(ex, "writing the performance log");
             }
         }
         finally

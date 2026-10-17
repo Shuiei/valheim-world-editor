@@ -54,6 +54,7 @@ public sealed class Prefs
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
+            Log.Caught(ex, "reading the remembered preferences (starting from none)");
         }
         return new Prefs(path, values);
     }
@@ -93,6 +94,7 @@ public sealed class Prefs
             }
             catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException or NotSupportedException)
             {
+                Log.CaughtBrief(ex, $"reading the remembered preference {key} (it is not used)");
             }
             return false;
         }
@@ -161,6 +163,7 @@ public sealed class Prefs
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "writing the remembered preferences");
         }
     }
 

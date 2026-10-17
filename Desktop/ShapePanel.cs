@@ -162,6 +162,8 @@ public sealed class ShapePanel
         }
         catch (FormatException ex)
         {
+            // A formula being typed: brief.
+            Log.CaughtBrief(ex, "compiling the typed formula");
             Function = null;
             ErrorText.Text = Lang.T("shape.error.formula", ex.Message);
         }

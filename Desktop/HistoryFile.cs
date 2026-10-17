@@ -75,18 +75,16 @@ public static class HistoryFile
         Remove(PathOf(KeyOf(w)));
     }
 
-    /// <summary>Removes a history file; one that cannot be removed is left as it is.</summary>
+    /// <summary>Removes a history file; one that cannot be removed is left as it is, and that is logged.</summary>
     private static void Remove(string path)
     {
         try
         {
             File.Delete(path);
         }
-        catch (IOException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-        }
-        catch (UnauthorizedAccessException)
-        {
+            Log.CaughtBrief(e, "removing a history file (left as it is)");
         }
     }
 
@@ -177,7 +175,7 @@ public static class HistoryFile
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    Console.WriteLine($"History: could not keep it on disk: {ex.Message}");
+                    Log.Caught(ex, "keeping the history on disk");
                 }
                 finally
                 {
@@ -284,7 +282,7 @@ public static class HistoryFile
                 }
                 catch (Exception ex) when (ex is IOException or InvalidDataException or ArgumentException)
                 {
-                    Console.WriteLine($"History: no data kept for object {id}: {ex.Message}");
+                    Log.CaughtBrief(ex, $"reading object {id}'s data for the history (none is kept)");
                 }
                 index[id] = things.Count;
                 things.Add(new KeptThing(t.Prefab, t.Piece, t.Position, t.Rotation, t.Scale, bytes));
@@ -512,7 +510,7 @@ public static class HistoryFile
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or OverflowException or ArgumentException
             or IndexOutOfRangeException or OutOfMemoryException or KeyNotFoundException or FormatException)
         {
-            Console.WriteLine($"History: could not read {path}: {ex.Message}");
+            Log.Caught(ex, "reading the world's history file (the world opens without the earlier history)");
             return null;
         }
     }

@@ -501,7 +501,7 @@ public sealed class StartPage
             string why = Lang.T("start.error.check", ex.Message);
             if (_gameError.Text != why)
             {
-                Console.Error.WriteLine($"My game: {ex}");
+                Log.Caught(ex, "checking the game on this computer");
                 _gameError.Text = why;
             }
             return;
@@ -708,6 +708,7 @@ public sealed class StartPage
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(e, "listing the Library's blueprints");
             return [];
         }
     }
@@ -732,6 +733,7 @@ public sealed class StartPage
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
                 {
                     // The kind's icon instead.
+                    Log.CaughtBrief(e, "decoding a blueprint's picture");
                 }
             }
             pictured.Add((b, picture));
@@ -836,7 +838,10 @@ public sealed class StartPage
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            return; // A folder changing while it is read (or the settings while they are walked): the next look sees it.
+            // A folder changing while it is read (or the settings while they are walked): the next look sees it (brief:
+            // looked at every few seconds).
+            Log.CaughtBrief(ex, "looking for saved worlds");
+            return;
         }
         if (look == _worldsLook && (always || Mode == "offline" && WorldsKey(worlds) != _worldsKey))
         {

@@ -43,11 +43,13 @@ public static class SavedSelections
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
+            // None yet: brief.
+            Log.CaughtBrief(ex, "reading selections.json (none yet)");
             return [];
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Console.WriteLine($"Saved selections: {FilePath} could not be read ({ex.Message}); not saving over it.");
+            Log.Caught(ex, "reading selections.json (not saving over it)");
             return null;
         }
         try
@@ -58,7 +60,7 @@ public static class SavedSelections
         }
         catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {
-            Console.WriteLine($"Saved selections: {FilePath} is not readable ({ex.Message}); kept as {FilePath}.bad, starting from none.");
+            Log.Caught(ex, "parsing selections.json (kept as selections.json.bad, starting from none)");
             try
             {
                 File.Copy(FilePath, FilePath + ".bad", overwrite: true);
@@ -66,7 +68,7 @@ public static class SavedSelections
             }
             catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
             {
-                Console.WriteLine($"Saved selections: {FilePath} could not be kept as {FilePath}.bad ({copy.Message}); not saving over it.");
+                Log.Caught(copy, "keeping the unreadable selections.json as selections.json.bad (not saving over it)");
                 return null;
             }
         }
@@ -85,7 +87,7 @@ public static class SavedSelections
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Console.WriteLine($"Saved selections: {FilePath} could not be written ({ex.Message}).");
+            Log.Caught(ex, "writing selections.json");
             return false;
         }
     }

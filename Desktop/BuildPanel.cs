@@ -631,6 +631,7 @@ public sealed class BuildPanel
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
+                Log.CaughtBrief(ex, "reading a blueprint to draw its picture (shown without it)");
                 return null;
             }
         }).ContinueWith(t => Dispatcher.UIThread.Post(() =>

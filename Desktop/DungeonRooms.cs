@@ -68,7 +68,7 @@ public static class DungeonRooms
                 {
                     // Logged, and what was shown kept for this state: a read failing the same way is not started again
                     // on every frame.
-                    Console.Error.WriteLine($"The dungeons' rooms could not be read: {e}");
+                    Log.Caught(e, "reading the dungeons' rooms (what was shown is kept)");
                     Caches.AddOrUpdate(s, new Cache(now, c?.Dungeons ?? []));
                 }
                 finally
@@ -119,6 +119,7 @@ public static class DungeonRooms
             }
             catch (Exception e) when (e is InvalidDataException or IOException or EndOfStreamException or ArgumentException or FormatException or OverflowException)
             {
+                Log.CaughtBrief(e, "reading a dungeon's rooms (it is listed with the problem)");
                 problem = Said.Raw(e.Message);
             }
             list.Add(new Dungeon(i, t, kind, rooms, problem));
