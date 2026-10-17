@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using TerrainEditor.App;
 using Xunit;
+using System.Text.Json.Nodes;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -93,5 +94,102 @@ public class ClaudeRelayEdgeTests
                 Directory.Delete(home, true);
             }
         }
+    }
+
+    [Fact]
+    public async Task AnEventStreamsDataLinesAreWrittenOneEach()
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("event: x\ndata: {\"a\":1}\n\ndata: {\"b\":2}\n", System.Text.Encoding.UTF8, "text/event-stream") };
+        var output = new StringWriter();
+        string? protocol = await ClaudeRelay.WriteAnswers(response, "event: x\ndata: {\"a\":1}\n\ndata: {\"b\":2}\n", "tools/list", output, null);
+        Assert.Null(protocol);
+        Assert.Equal("{\"a\":1}" + Environment.NewLine + "{\"b\":2}" + Environment.NewLine, output.ToString());
+    }
+
+    [Fact]
+    public async Task AnInitializeAnswersAgreedProtocolVersionIsKept()
+    {
+        const string body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":\"2025-06-18\"}}";
+        var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") };
+        Assert.Equal("2025-06-18", await ClaudeRelay.WriteAnswers(response, body, "initialize", new StringWriter(), null));
+    }
+
+    [Fact]
+    public async Task AnAnswerToAnotherMethodLeavesTheProtocolVersionAsItWas()
+    {
+        const string body = "{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"protocolVersion\":\"2025-06-18\"}}";
+        var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") };
+        Assert.Equal("2024-11-05", await ClaudeRelay.WriteAnswers(response, body, "tools/list", new StringWriter(), "2024-11-05"));
+    }
+
+    [Fact]
+    public async Task AnEmptyAnswerWritesNothing()
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("   ", System.Text.Encoding.UTF8, "application/json") };
+        var output = new StringWriter();
+        await ClaudeRelay.WriteAnswers(response, "   ", "tools/list", output, null);
+        Assert.Equal("", output.ToString());
+    }
+
+    [Fact]
+    public async Task ASendReturnsTheAnswerWhenTheEditorGivesOne()
+    {
+        var (response, failure) = await ClaudeRelay.Send(new HttpClient(new Answer(_ => new HttpResponseMessage(HttpStatusCode.OK))), new HttpRequestMessage(HttpMethod.Post, "http://localhost/"));
+        Assert.NotNull(response);
+        Assert.Null(failure);
+    }
+
+    [Fact]
+    public async Task ASendSaysTheEditorIsNotRunningWhenItCannotBeReached()
+    {
+        var (response, failure) = await ClaudeRelay.Send(new HttpClient(new Answer(_ => throw new HttpRequestException("refused"))), new HttpRequestMessage(HttpMethod.Post, "http://localhost/"));
+        Assert.Null(response);
+        Assert.Contains("is not running", failure!);
+    }
+
+    [Fact]
+    public async Task ASendSaysTheEditorGaveNoAnswerInTimeWhenTheClientTimesOut()
+    {
+        var (response, failure) = await ClaudeRelay.Send(new HttpClient(new Answer(_ => throw new TaskCanceledException("slow", new TimeoutException()))), new HttpRequestMessage(HttpMethod.Post, "http://localhost/"));
+        Assert.Null(response);
+        Assert.Contains("gave no answer within", failure!);
+    }
+
+    [Fact]
+    public async Task AForwardedMessageThatCannotBeReachedIsAnsweredWithItsId()
+    {
+        var output = new StringWriter();
+        var settings = new AppSettings { ClaudeConnect = true, ClaudeToken = "tok", ClaudePort = 5799 };
+        string line = "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/list\"}";
+        string? protocol = await ClaudeRelay.Forward(new HttpClient(new Answer(_ => throw new HttpRequestException("refused"))), line, settings, JsonNode.Parse("3"), "tools/list", output, "2024-11-05");
+        Assert.Equal("2024-11-05", protocol);
+        Assert.Contains("\"id\":3", output.ToString());
+        Assert.Contains("is not running", output.ToString());
+    }
+
+    [Fact]
+    public async Task AForwardedMessageWithoutAnIdGetsNoErrorAnswer()
+    {
+        var output = new StringWriter();
+        var settings = new AppSettings { ClaudeConnect = true, ClaudeToken = "tok", ClaudePort = 5799 };
+        await ClaudeRelay.Forward(new HttpClient(new Answer(_ => throw new HttpRequestException("refused"))), "{\"jsonrpc\":\"2.0\",\"method\":\"x\"}", settings, null, "x", output, null);
+        Assert.Equal("", output.ToString());
+    }
+
+    [Fact]
+    public async Task ALineThatIsNotJsonIsAnsweredWithAParseErrorAndTheProtocolKept()
+    {
+        var output = new StringWriter();
+        string? protocol = await ClaudeRelay.RelayLine(new HttpClient(), "{nope", output, () => new AppSettings(), "2025-06-18");
+        Assert.Equal("2025-06-18", protocol);
+        Assert.Contains("-32700", output.ToString());
+    }
+
+    [Fact]
+    public async Task ABatchLineIsAnsweredWithAnInvalidRequestError()
+    {
+        var output = new StringWriter();
+        await ClaudeRelay.RelayLine(new HttpClient(), "[1]", output, () => new AppSettings(), null);
+        Assert.Contains("-32600", output.ToString());
     }
 }
