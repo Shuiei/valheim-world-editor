@@ -67,11 +67,7 @@ public sealed partial class GameLookGl
         uint a = seed;
         for (int i = 0; i < data.Length; i++)
         {
-            a += 0x6D2B79F5;
-            uint t = a;
-            t = (t ^ (t >> 15)) * (t | 1);
-            t ^= t + (t ^ (t >> 7)) * (t | 61);
-            data[i] = (byte)(((t ^ (t >> 14)) / 4294967296.0) * 256);
+            data[i] = (byte)(SeededRandom.NextUnit(ref a) * 256);
         }
         uint tex = _own.Texture();
         _gl.BindTexture(TextureTarget.Texture3D, tex);

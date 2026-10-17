@@ -1,4 +1,3 @@
-using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
 
@@ -16,8 +15,7 @@ public class WorldWriterReadBackTests
     {
         using var w = new TempWorld();
         var world = w.Load();
-        var t = world.TerrainZones[0];
-        var e = new EditStore(world).Get(t.ZoneX, t.ZoneZ)!.Clone();
+        var e = FirstZoneEditCopy.Of(world);
         // Not a number never equals itself: the read-back check finds the zone different.
         e.Modified[500] = true;
         e.Level[500] = float.NaN;
@@ -35,8 +33,7 @@ public class WorldWriterReadBackTests
     {
         using var w = new TempWorld();
         var world = w.Load();
-        var t = world.TerrainZones[0];
-        var e = new EditStore(world).Get(t.ZoneX, t.ZoneZ)!.Clone();
+        var e = FirstZoneEditCopy.Of(world);
         e.PaintModified[600] = true;
         e.Paint[600 * 4] = float.NaN;
         var before = Files(w.Dir);

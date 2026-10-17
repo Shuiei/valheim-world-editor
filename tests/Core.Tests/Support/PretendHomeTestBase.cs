@@ -9,8 +9,7 @@ namespace WorldEditor.Tests;
 /// </summary>
 public abstract class PretendHomeTestBase : IDisposable
 {
-    private static readonly string[] Vars = ["HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "LOCALAPPDATA"];
-    private readonly Dictionary<string, string?> _old = Vars.ToDictionary(v => v, Environment.GetEnvironmentVariable);
+    private readonly PretendHomeEnvironment _environment;
     private readonly bool _defaults = LocalGame.SearchDefaultPlaces;
     /// <summary>The pretend home: a folder of its own under the temporary folder.</summary>
     protected string Home { get; } = Path.Combine(Path.GetTempPath(), "vwe-pretend-" + Guid.NewGuid().ToString("N")[..8]);
@@ -20,11 +19,7 @@ public abstract class PretendHomeTestBase : IDisposable
     /// </summary>
     protected PretendHomeTestBase()
     {
-        Directory.CreateDirectory(Home);
-        Environment.SetEnvironmentVariable("HOME", Home);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(Home, ".config"));
-        Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(Home, ".local", "share"));
-        Environment.SetEnvironmentVariable("LOCALAPPDATA", Path.Combine(Home, "AppData", "Local"));
+        _environment = new PretendHomeEnvironment(Home, Path.Combine(Home, "AppData", "Local"));
         // Only the folders a test gives.
         LocalGame.SearchDefaultPlaces = false;
     }
@@ -35,10 +30,7 @@ public abstract class PretendHomeTestBase : IDisposable
     public void Dispose()
     {
         ForgetMods();
-        foreach (var (k, v) in _old)
-        {
-            Environment.SetEnvironmentVariable(k, v);
-        }
+        _environment.Dispose();
         LocalGame.SearchDefaultPlaces = _defaults;
         if (Directory.Exists(Home))
         {

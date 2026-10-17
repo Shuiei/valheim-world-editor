@@ -10,9 +10,7 @@ public class EditSessionRevertTests
     [Fact]
     public void RevertPointsPutsEachPointsLevelBackToItsValueBefore()
     {
-        var s = TestScenes.Flat(1);
-        s.Shape(32, 32, _ => 2, 3, 0, "A");
-        var c = s.UndoList[^1];
+        var (s, c) = ShapedChange.Make(_ => 2);
         int k = Array.IndexOf(c.Points, 32 * s.Ground.W + 32);
         Assert.True(k >= 0);
         s.RevertPoints(c);
@@ -22,9 +20,7 @@ public class EditSessionRevertTests
     [Fact]
     public void RevertPaintLeavesPaintThatALaterStepChanged()
     {
-        var s = TestScenes.Flat(1);
-        s.Shape(32, 32, _ => 1, 3, 0, "A");
-        var c = s.UndoList[^1];
+        var (s, c) = ShapedChange.Make(_ => 1);
         int k = 0, p = c.Points[k];
         // A later step repainted the point: its paint differs from what this change left, so it stays.
         s.Ground.PMod[p] = c.After.PMod[k];
@@ -37,9 +33,7 @@ public class EditSessionRevertTests
     [Fact]
     public void RevertPaintRestoresPaintNothingRepaintedSinceTheChange()
     {
-        var s = TestScenes.Flat(1);
-        s.Shape(32, 32, _ => 1, 3, 0, "A");
-        var c = s.UndoList[^1];
+        var (s, c) = ShapedChange.Make(_ => 1);
         int k = 0, p = c.Points[k];
         s.Ground.PMod[p] = c.After.PMod[k];
         for (int ch = 0; ch < 4; ch++)

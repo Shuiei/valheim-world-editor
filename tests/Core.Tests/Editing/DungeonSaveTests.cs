@@ -17,11 +17,7 @@ public class DungeonSaveTests
         var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
         Assert.Empty(Dungeons.In(world));
         var at = new Vector3(640, 30, 640);
-        List<Dungeons.Placed> rooms =
-        [
-            new(StableHash.Of("cave_new_entrance02"), at + new Vector3(0, 5000, 0), Quaternion.Identity),
-            new(StableHash.Of("cave_new_endcap02"), at + new Vector3(0, 5000, 8), Quaternion.Identity),
-        ];
+        var rooms = CaveDungeonRooms.At(at);
         world.MergeLive([(10, 10)],
         [
             (4242, 1, MadeObjects.Dungeon("DG_Cave", at, rooms)),
@@ -46,11 +42,7 @@ public class DungeonSaveTests
         int loaded = world.Chunks[0].WorldVersion;
         world.Chunks[0].WorldVersion = 39;
         var at = new Vector3(640, 30, 640);
-        List<Dungeons.Placed> rooms =
-        [
-            new(StableHash.Of("cave_new_entrance02"), at + new Vector3(0, 5000, 0), Quaternion.Identity),
-            new(StableHash.Of("cave_new_endcap02"), at + new Vector3(0, 5000, 8), Quaternion.Identity),
-        ];
+        var rooms = CaveDungeonRooms.At(at);
         byte[] current = MadeObjects.Dungeon("DG_Cave", at, rooms);
         world.MergeLive([(10, 10)], [(4242, 1, [.. current[..2], 0, 0, 0, 0, .. current[2..]])], _ => false, _ => false);
         // Back to the loaded version, so only the object's own file says 39.
