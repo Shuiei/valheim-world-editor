@@ -120,7 +120,7 @@ public class UpliftTests
         int piecesBefore = o.World.Pieces.Count;
         o.Lift(Cx, Cz, hill);
         var plan = o.Save();
-        Assert.True(plan.Discs > 20, plan.Describe());
+        Assert.True(plan.Discs > 20, plan.Describe().English);
         Assert.Equal(0, plan.OldDiscs);
 
         var after = Open.Of(w.Load());
@@ -211,10 +211,10 @@ public class UpliftTests
         const float Cx = 15 * 64 + 32, Cz = 300;
         o.Lift(Cx, Cz, Bell(Cx, Cz, 20, 40));
         var plan = Uplift.Make(o.World, o.Terrain, o.Edits, o.NextId)!;
-        Assert.True(plan.Ungenerated > 0, plan.Describe());
+        Assert.True(plan.Ungenerated > 0, plan.Describe().English);
         Assert.Contains(plan.Zones, e => e.ZoneX >= 16);
         Assert.All(plan.Zones.Where(e => e.ZoneX >= 16), e => Assert.False(e.HasLift));
-        Assert.Contains("not generated yet", plan.Describe());
+        Assert.Contains("not generated yet", plan.Describe().English);
     }
 
     [Fact]
@@ -300,7 +300,7 @@ public class UpliftTests
             o.Lift(x, z, Bell(x, z, 20, 40));
             alone.Add(Uplift.Make(o.World, o.Terrain, o.Edits, o.NextId)!);
         }
-        Assert.All(alone, p => Assert.True(p.Discs > 0, p.Describe()));
+        Assert.All(alone, p => Assert.True(p.Discs > 0, p.Describe().English));
         Assert.Equal(alone.Sum(p => p.Discs), plan.Discs);
         Assert.Equal(alone.SelectMany(p => p.Add).Select(n => n.Position).Order(Comparer<Vector3>.Create((u, v) => (u.X, u.Z).CompareTo((v.X, v.Z)))),
             plan.Add.Select(n => n.Position).Order(Comparer<Vector3>.Create((u, v) => (u.X, u.Z).CompareTo((v.X, v.Z)))));

@@ -103,7 +103,7 @@ public class GlViewPointerTests
         var s = TestScenes.Flat(2);
         var b = new Bare(s);
         string? ended = null;
-        b.V.StrokeEnded += m => ended = m;
+        b.V.StrokeEnded += m => ended = m.Shown;
         b.V.Tool = BrushTool.Raise;
         b.W.MouseDown(b.At(0, 30, 0), MouseButton.Left);
         Assert.True(b.V.BrushDown);

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Avalonia;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -62,8 +63,8 @@ public sealed partial class GlView
     // ---- Tools: a sculpt or paint brush (null: looking around and picking objects).
     /// <summary>The sculpt or paint brush in use; null: looking around and picking objects.</summary>
     public BrushTool? Tool { get; set { field = value; Wake(); } }
-    /// <summary>A stroke finished, with what to say about it ("" when nothing).</summary>
-    public event Action<string>? StrokeEnded;
+    /// <summary>A stroke finished, with what to say about it (empty when nothing).</summary>
+    public event Action<Said>? StrokeEnded;
     /// <summary>Where the pointer is over the view, null when it is outside.</summary>
     private Point? _pointer;
 

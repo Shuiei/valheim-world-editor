@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -70,7 +71,7 @@ public sealed partial class GlView
         else if (_brushDown)
         {
             _brushDown = false;
-            string message = Scene?.Session?.EndStroke() ?? "";
+            var message = Scene?.Session?.EndStroke() ?? Said.Empty;
             StrokeEnded?.Invoke(message);
         }
         else if (click && Mode == ToolMode.View && !Panning && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)

@@ -23,15 +23,15 @@ public static class Growth
     /// <param name="z1">Its highest Z, world metres.</param>
     /// <param name="keep">Which spots to keep (the tool's own shape, for example).</param>
     /// <param name="nameOf">The prefab name of a prefab hash, null when unknown.</param>
-    /// <param name="message">Shows a status line (progress, or why it cannot be done).</param>
+    /// <param name="message">Shows a status line (progress, or why it cannot be done), in both languages.</param>
     /// <param name="maxZones">The most zones the rectangle may cover (the work grows with them).</param>
     /// <returns>Null when it cannot be done (a message says why).</returns>
-    public static async Task<List<Regrow.Spot>?> Spots(EditSession session, float x0, float z0, float x1, float z1, Func<Regrow.Spot, bool> keep, Func<int, string?> nameOf, Action<string> message, int maxZones = 16)
+    public static async Task<List<Regrow.Spot>?> Spots(EditSession session, float x0, float z0, float x1, float z1, Func<Regrow.Spot, bool> keep, Func<int, string?> nameOf, Action<Said> message, int maxZones = 16)
     {
         var s = session.Scene;
         if (s.Terrain is not { } terrain || s.World == null)
         {
-            message("Regrow needs the world's generator (not available here).");
+            message(Said.Of("regrow.msg.noGenerator"));
             return null;
         }
         var (zx0, zz0) = ChunkMath.SectorOf(x0, z0);
@@ -39,10 +39,10 @@ public static class Growth
         if ((zx1 - zx0 + 1) * (zz1 - zz0 + 1) > maxZones)
         {
             int side = (int)Math.Sqrt(maxZones);
-            message($"Choose a smaller area: regrow works on up to {maxZones} zones ({side * 64} x {side * 64} m) at once.");
+            message(Said.Of("regrow.msg.tooBig", maxZones, side * 64));
             return null;
         }
-        message("Working out what the game grows here…");
+        message(Said.Of("regrow.msg.working"));
         var world = s.World;
         var spots = await Task.Run(() => Regrow.Zones(terrain, session.Edits, world.Seed, zx0, zz0, zx1, zz1).Where(p => world.CanCreate(StableHash.Of(p.Name))).ToList());
         // The tool's own test first, here (it may read the window's state); the rest away from the window.

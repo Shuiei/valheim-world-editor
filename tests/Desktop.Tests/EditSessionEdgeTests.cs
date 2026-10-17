@@ -43,13 +43,13 @@ public class EditSessionEdgeTests
         var s = TestScenes.Flat(2);
         Assert.False(s.Stroking);
         Assert.False(s.StrokeStep(64, 64, 0.1f));
-        Assert.Equal("", s.EndStroke());
+        Assert.Equal("", s.EndStroke().Shown);
         // During a stroke: undo, removing a change and saving wait for it to end.
         s.Shape(64, 64, Two, 3, 0, "raise");
         s.BeginStroke(BrushTool.Raise, 64, 64);
         Assert.True(s.Stroking);
         Assert.False(s.Undo());
-        Assert.Equal("", s.RemoveChange(s.UndoList[0]));
+        Assert.Equal("", s.RemoveChange(s.UndoList[0]).Shown);
         Assert.Throws<InvalidOperationException>(s.Save);
         s.EndStroke();
         Assert.True(s.Undo());
@@ -142,7 +142,7 @@ public class EditSessionEdgeTests
         float raised = s.Ground.HeightOf(p);
         Assert.NotEqual(before, raised);
         Assert.True(s.StrokeStep(40, 40, 0.1f));
-        Assert.Equal("", s.EndStroke());
+        Assert.Equal("", s.EndStroke().Shown);
         Assert.True(s.Ground.HeightOf(p) > raised);
         Assert.Equal(2, s.UndoList.Count);
         Assert.True(s.Undo());
@@ -159,9 +159,9 @@ public class EditSessionEdgeTests
         Assert.False(s.Stroking);
         Assert.Equal(before, s.Ground.HeightOf(p), 3);
         Assert.False(s.StrokeStep(40, 40, 0.1f));
-        Assert.Contains("stroke was dropped", s.EndStroke());
+        Assert.Contains("stroke was dropped", s.EndStroke().Shown);
         Assert.Empty(s.UndoList);
-        Assert.Equal("", s.EndStroke());
+        Assert.Equal("", s.EndStroke().Shown);
     }
 
     [Fact]
@@ -171,7 +171,7 @@ public class EditSessionEdgeTests
         var reset = new ZoneReset(0, 0, true, false);
         s.Commit("Area: Reset", null, [], [], [(reset, false, true)]);
         Assert.Equal(1, s.Pending.Resets);
-        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[0]));
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[0]).Shown);
         Assert.Equal(0, s.Pending.Resets);
         s.Undo();
         Assert.Equal(1, s.Pending.Resets);
@@ -260,7 +260,7 @@ public class EditSessionEdgeTests
         s.Brush.Radius = 3;
         s.BeginStroke(BrushTool.Raise, -50, -50);
         Assert.False(s.StrokeStep(-50, -50, 0.1f));
-        Assert.Equal("", s.EndStroke());
+        Assert.Equal("", s.EndStroke().Shown);
         Assert.False(s.CanUndo);
     }
 }

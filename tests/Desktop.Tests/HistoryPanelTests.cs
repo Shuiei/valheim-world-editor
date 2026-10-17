@@ -58,7 +58,7 @@ public class HistoryPanelTests
         s.Undo();
         Assert.True(s.Scene.Things[0].Gone);
         Assert.False(s.UndoList[1].Removed);
-        Assert.Equal("That change cannot be removed.", s.RemoveChange(s.UndoList[0]));
+        Assert.Equal("That change cannot be removed.", s.RemoveChange(s.UndoList[0]).Shown);
     }
 
     /// <summary>

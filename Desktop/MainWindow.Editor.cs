@@ -520,7 +520,7 @@ public sealed partial class MainWindow
                 var o = await s.ApplyLive(ConfirmOverGame);
                 // Applied objects lose their green marks.
                 View.RefreshNewMarkers();
-                MessageText.Text = o.Message;
+                Msg(o.Report);
                 if (o.Declined)
                 {
                     UpdateSaveBar();

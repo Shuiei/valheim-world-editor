@@ -104,24 +104,24 @@ public sealed class EditSession
             var parts = new List<string>();
             if (Zones.Count > 0)
             {
-                parts.Add($"{Zones.Count} zone{(Zones.Count > 1 ? "s" : "")}");
+                parts.Add(Zones.Count > 1 ? Lang.T("save.zones.many", Zones.Count) : Lang.T("save.zones.one", Zones.Count));
             }
 
             int added = Things.Count(t => t.Before && !t.After), removed = Things.Count(t => !t.Before && t.After);
             if (added > 0)
             {
-                parts.Add($"{added} new");
+                parts.Add(Lang.T("history.change.new", added));
             }
 
             if (removed > 0)
             {
-                parts.Add($"{removed} removed");
+                parts.Add(Lang.T("history.change.removed", removed));
             }
 
             int resets = Resets.Select(r => (r.Reset.X, r.Reset.Z)).Distinct().Count();
             if (resets > 0)
             {
-                parts.Add($"{resets} zone reset");
+                parts.Add(Lang.T("save.count.resets", resets));
             }
 
             return string.Join(" · ", parts);
@@ -204,28 +204,28 @@ public sealed class EditSession
     /// The removal is itself a change that can be undone. A change whose added objects a later step moved or deleted
     /// is refused: taking it out would bring back what it replaced beside the later step's copies (undo instead).
     /// </summary>
-    /// <returns>A message for the status line ("" during a stroke, when nothing was done).</returns>
-    public string RemoveChange(Change c)
+    /// <returns>A message for the status line (empty during a stroke, when nothing was done).</returns>
+    public Said RemoveChange(Change c)
     {
         if (c.Removed || c.RevertOf != null)
         {
-            return "That change cannot be removed.";
+            return Said.Of("history.msg.cannotRemove");
         }
         Change removal;
         lock (_lock)
         {
             if (_stroke != null)
             {
-                return "";
+                return Said.Empty;
             }
             // Undone or dropped since it was picked: its delta would go onto ground that no longer has it.
             if (!Holds(_undo, c))
             {
-                return "That change is no longer in the history to undo: nothing was removed.";
+                return Said.Of("history.msg.notInHistory");
             }
             if (c.Things.Any(t => t.Before && !t.After && Scene.Things[t.Index].Gone && TakenLater(c, t.Index)))
             {
-                return "That change cannot be removed: a later step moved or deleted what it added. Undo back to it instead.";
+                return Said.Of("history.msg.takenLater");
             }
             var g = Ground;
             var start = g.Snapshot();
@@ -264,7 +264,7 @@ public sealed class EditSession
                     return ResetEntries(now, now == left ? z.Where(r => r.Before).Select(r => r.Reset).FirstOrDefault() : now);
                 })
                 .ToArray();
-            removal = new Change($"Removed: {c.Label}", pts, Pick(start, pts), Pick(g.Snapshot(), pts), c.Zones) { Things = things, Resets = resets, RevertOf = c };
+            removal = new Change(Lang.T("history.undo.removed", c.Label), pts, Pick(start, pts), Pick(g.Snapshot(), pts), c.Zones) { Things = things, Resets = resets, RevertOf = c };
             if (pts.Length > 0)
             {
                 Touch(BoxOf(pts));
@@ -280,7 +280,7 @@ public sealed class EditSession
             Notify(removal.Things.Select(t => t.Index));
         }
         Edited();
-        return $"Removed “{c.Label}”; everything else is kept. Ctrl+Z brings it back.";
+        return Said.Of("history.msg.removed", c.Label);
     }
     /// <summary>
     /// Whether a step after <paramref name="c"/> that is still in (not taken out) took the thing away: moved or deleted
@@ -445,8 +445,18 @@ public sealed class EditSession
         get
         {
             var (z, d, a, r) = Pending;
-            var parts = new[] { z > 0 ? $"{z} zone{(z > 1 ? "s" : "")}" : "", d > 0 ? $"{d} deleted" : "", a > 0 ? $"{a} added" : "", r > 0 ? $"{r} reset" : "" }.Where(p => p != "").ToList();
-            return parts.Count > 0 ? (IsLive ? "Not applied: " : "Unsaved: ") + string.Join(", ", parts) : IsLive ? "All applied" : "All saved";
+            var parts = new[]
+            {
+                z > 1 ? Lang.T("save.zones.many", z) : z > 0 ? Lang.T("save.zones.one", z) : "",
+                d > 0 ? Lang.T("save.count.deleted", d) : "",
+                a > 0 ? Lang.T("save.count.added", a) : "",
+                r > 0 ? Lang.T("save.count.reset", r) : "",
+            }.Where(p => p != "").ToList();
+            if (parts.Count == 0)
+            {
+                return IsLive ? Lang.T("save.pending.allApplied") : Lang.T("save.pending.allSaved");
+            }
+            return IsLive ? Lang.T("save.pending.notApplied", string.Join(", ", parts)) : Lang.T("save.pending.unsaved", string.Join(", ", parts));
         }
     }
 
@@ -493,11 +503,11 @@ public sealed class EditSession
     /// <summary>
     /// The brush comes up: the zones it touched go to the edit store and the stroke to the history.
     /// </summary>
-    /// <returns>A message for the status line ("" when there is nothing to say): the game's ±8 m limit reached, or the
-    /// Mask leaving out all the ground.</returns>
-    public string EndStroke()
+    /// <returns>A message for the status line (empty when there is nothing to say): the game's ±8 m limit reached, or
+    /// the Mask leaving out all the ground.</returns>
+    public Said EndStroke()
     {
-        string message;
+        Said message;
         lock (_lock)
         {
             var s = _stroke;
@@ -507,9 +517,9 @@ public sealed class EditSession
                 if (_strokeDropped)
                 {
                     _strokeDropped = false;
-                    return "The stroke was dropped: Apply live read the area again from the game while it went on. Draw it again.";
+                    return Said.Of("brush.msg.dropped");
                 }
-                return "";
+                return Said.Empty;
             }
             if (s.Touched.Count > 0)
             {
@@ -523,8 +533,8 @@ public sealed class EditSession
                 _takeEditsAfterStroke = false;
                 Ground.TakeEdits(Edits);
             }
-            message = s.Clamped ? "Reached the game limit: ground can only move 8 m from its original height (red points)."
-                : s.Touched.Count == 0 && _strokeMask != null ? "Nothing changed: the Mask leaves out all the ground under the brush (check its height, slope, biome and paint settings)." : "";
+            message = s.Clamped ? Said.Of("brush.msg.limit")
+                : s.Touched.Count == 0 && _strokeMask != null ? Said.Of("brush.msg.masked") : Said.Empty;
             _strokeMask = null;
         }
         Edited();
@@ -918,7 +928,7 @@ public sealed class EditSession
             return;
         }
         SetGone(live.Select(i => (i, true)));
-        AddChange(new Change($"Deleted {live.Length}", [], NoPoints, NoPoints, []) { Things = [.. live.Select(i => (i, false, true))] });
+        AddChange(new Change(Lang.T("history.undo.deleted", live.Length), [], NoPoints, NoPoints, []) { Things = [.. live.Select(i => (i, false, true))] });
         Notify(live);
         Edited();
     }
@@ -942,7 +952,7 @@ public sealed class EditSession
     {
         var live = WholeGroupMoves([.. moves.Where(m => !Scene.Things[m.Index].Gone)]);
         var adds = live.Select(m => MovedCopy(m.Index, m.Position, m.Rotation, m.Scale)).ToList();
-        return Commit(label ?? $"Moved {live.Count}", null, [.. live.Select(m => m.Index)], adds);
+        return Commit(label ?? Lang.T("history.undo.moved", live.Count), null, [.. live.Select(m => m.Index)], adds);
     }
 
     /// <summary>
@@ -1431,8 +1441,13 @@ public sealed class EditSession
     /// again and the history cleared.
     /// </summary>
     /// <returns>What the writer did.</returns>
-    public WorldWriter.Result Save()
+    public WorldWriter.Result Save() => SaveOutcome().Saved!;
+
+    /// <summary>As <see cref="Save"/>, with what to tell the user in both languages (the status bar's English is Claude's).</summary>
+    /// <returns>The world's outcome: the writer's result in <see cref="WorldSession.Outcome.Saved"/>.</returns>
+    public WorldSession.Outcome SaveOutcome()
     {
+        WorldSession.Outcome o;
         WorldWriter.Result result;
         bool reread;
         lock (_lock)
@@ -1443,7 +1458,7 @@ public sealed class EditSession
             }
             // Every area opened in the app belongs to an open world (WorldScene.Load), which saves.
             var owner = Scene.Owner ?? throw new InvalidOperationException("This area is not part of an open world, so it cannot be saved.");
-            var o = owner.Save();
+            o = owner.Save();
             result = o.Saved!;
             // Read again only when the world was (zone resets) or No limit ground became ground discs
             // (a failed save puts it back): the ground under the area is not the same any more.
@@ -1464,7 +1479,7 @@ public sealed class EditSession
             ThingsReset?.Invoke();
         }
         Changed?.Invoke();
-        return result;
+        return o;
     }
 
     /// <summary>
