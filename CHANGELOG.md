@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.72 — unreleased
+
+### Fixed
+- **In the Workshop, a wall crossing the cut height was picked and hovered instead of what stands inside.** The cut hides
+  everything drawn above it, but picking only passed over objects wholly above it: a wall's hidden top still took the
+  click meant for the chest behind it. Picking now meets an object's shape only below the cut, as drawn.
+
 ## v1.45.71 — unreleased
 
 ### Fixed
