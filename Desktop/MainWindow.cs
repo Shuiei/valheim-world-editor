@@ -2617,9 +2617,9 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void WireInspector()
     {
-        Inspector.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
+        Inspector.Message += said => { Msg(said); UpdateSaveBar(); };
         Inspector.Replaced += i => View.Select([i]);
-        Inspector.Confirm = text => Dialogs.Ask(this, "Contents", text, "Apply anyway");
+        Inspector.Confirm = (title, text, yes) => Dialogs.Ask(this, title, text, yes);
         Inspector.Closed += () => ViewPanelCard.IsVisible = true;
     }
 

@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.23 — unreleased
+
+### Changed
+- **The Inspector comes from the language catalogue.** Its buttons, headings, explanations and messages, the plain
+  names of the values players meet most (Text, Builder name, Contents…), the kinds of values to add, the kinds of
+  items an armour stand's slots take, and its question about items outside a container's slots show in the language
+  chosen in Settings. The names of objects, items and values, and the tips made from them, stay as the save has
+  them. In English nothing changes.
+
 ## v1.47.22 — unreleased
 
 ### Changed

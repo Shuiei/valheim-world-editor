@@ -27,33 +27,36 @@ public static class StandData
     /// <summary>Whether the prefab is an armour stand (the catalogue has its slots).</summary>
     public static bool IsArmourStand(int prefab) => PrefabCatalog.ArmourSlotsOf(prefab) != null;
 
-    /// <summary>ItemDrop.ItemData.ItemType, as words.</summary>
-    public static string TypeName(int type) => type switch
+    /// <summary>ItemDrop.ItemData.ItemType, as words, in English (what the refusals and Claude are told).</summary>
+    /// <param name="type">The item type's number.</param>
+    public static string TypeName(int type) => TypeWords(type).English;
+
+    /// <summary>ItemDrop.ItemData.ItemType, as words in both languages (the inspector shows the user's).</summary>
+    /// <param name="type">The item type's number.</param>
+    public static Said TypeWords(int type) => type switch
     {
-        1 => "material",
-        2 => "food or potion",
-        3 => "one-handed weapon",
-        4 => "bow",
-        5 => "shield",
-        6 => "helmet",
-        7 => "chest armour",
-        9 => "ammo",
-        10 => "customization",
-        11 => "legs armour",
-        12 => "hands",
-        13 => "trophy",
-        14 => "two-handed weapon",
-        15 => "torch",
-        16 => "misc item",
-        17 => "cape",
-        18 => "utility item",
-        19 => "tool",
-        20 => "atgeir",
-        21 => "fish",
-        22 => "two-handed weapon",
-        23 => "ammo",
-        24 => "trinket",
-        _ => "item",
+        1 => Said.Of("inspect.type.material"),
+        2 => Said.Of("inspect.type.foodOrPotion"),
+        3 => Said.Of("inspect.type.oneHandedWeapon"),
+        4 => Said.Of("inspect.type.bow"),
+        5 => Said.Of("inspect.type.shield"),
+        6 => Said.Of("inspect.type.helmet"),
+        7 => Said.Of("inspect.type.chestArmour"),
+        9 or 23 => Said.Of("inspect.type.ammo"),
+        10 => Said.Of("inspect.type.customization"),
+        11 => Said.Of("inspect.type.legsArmour"),
+        12 => Said.Of("inspect.type.hands"),
+        13 => Said.Of("inspect.type.trophy"),
+        14 or 22 => Said.Of("inspect.type.twoHandedWeapon"),
+        15 => Said.Of("inspect.type.torch"),
+        16 => Said.Of("inspect.type.miscItem"),
+        17 => Said.Of("inspect.type.cape"),
+        18 => Said.Of("inspect.type.utilityItem"),
+        19 => Said.Of("inspect.type.tool"),
+        20 => Said.Of("inspect.type.atgeir"),
+        21 => Said.Of("inspect.type.fish"),
+        24 => Said.Of("inspect.type.trinket"),
+        _ => Said.Of("inspect.type.item"),
     };
 
     /// <summary>Why this item stand does not take the item (ItemStand.CanAttach), or null when it does.</summary>

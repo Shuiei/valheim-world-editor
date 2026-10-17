@@ -40,7 +40,7 @@ public class InspectorPanelTests
             W.Show();
             W.View.Show(Scene, null);
             W.Edit(Scene.Session!);
-            I.Message += t => Said = t;
+            I.Message += t => Said = t.Shown;
         }
 
         public int ChestIndex => Scene.Things.FindLastIndex(t => t.Prefab == Chest && !t.Gone);
@@ -208,12 +208,12 @@ public class InspectorPanelTests
         Click(Labelled(r.I.ItemsBox, "Add item"));
         Assert.Contains(r.I.ItemsBox.GetLogicalDescendants().OfType<NumericUpDown>(), n => n.BorderBrush == Avalonia.Media.Brushes.Orange);
         string? question = null;
-        r.I.Confirm = q => { question = q; return Task.FromResult(false); };
+        r.I.Confirm = (_, q, _) => { question = q; return Task.FromResult(false); };
         int pending = r.Scene.Session!.Pending.Added;
         await r.I.Apply();
         Assert.Contains("outside the", question);
         Assert.Equal(pending, r.Scene.Session.Pending.Added);
-        r.I.Confirm = _ => Task.FromResult(true);
+        r.I.Confirm = (_, _, _) => Task.FromResult(true);
         await r.I.Apply();
         Assert.Equal(pending + 1, r.Scene.Session.Pending.Added);
     }
