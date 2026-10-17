@@ -4,6 +4,28 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.26 — unreleased
+
+### Fixed
+- **Errors that were caught were not written to the log, so the log said nothing about what went wrong.** Many places
+  that handle an error (a file that cannot be read, a game bundle that cannot be opened, a bridge that does not
+  answer, a model that cannot be loaded) went on without a word, or wrote a line with the user's folders in it. Every
+  one now writes a line to `ValheimWorldEditor.log`: where it was caught (source file, line and member), what was
+  being done, and the error's type and message, with the stack trace unless the failure is an expected one (a probe,
+  text being typed), which gets one line; a failure that repeats every few seconds is written when it changes. A
+  cancellation the user asked for is a plain line, not an error. Personal data is taken out first: the home folder is
+  written `~`, and file paths, web addresses, user@host names, IP addresses other than the local one, host names
+  before a port, the account's user name, and the saved servers' addresses, accounts, passwords and tokens become
+  placeholders. Crashes and errors no handler caught are scrubbed the same way. The log's own failures go to the
+  error output, and a console that cannot be written is said in the log once.
+
+### WorldEditorBridge
+- **Errors the plugin caught were not all in BepInEx's log.** A listener that could not be stopped, an error answer
+  that could not be sent and an unreadable mod manifest.json were passed over in silence. Every caught error is now
+  logged as `WorldEditorBridge: caught at <file>:<line> (<member>) while <doing>: <type>: <message>`, with its stack
+  trace unless it is an expected one, the server's home folder written `~`; an error on the game's main thread keeps
+  its stack trace in the request's line.
+
 ## v1.47.24 — unreleased
 
 ### Changed
