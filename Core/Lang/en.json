@@ -173,8 +173,6 @@
   "brush.falloff.sharpEdge": "Sharp edge (pickaxe)",
   "brush.label.turn": "Turn",
   "brush.msg.notLoaded": "Choose a loaded picture as Shape first (built-in stamps stay).",
-  "brush.label.height": "Height",
-  "brush.unit.metres": " m",
   "brush.label.targetFromClick": "Level to the height where the stroke starts",
   "brush.label.heightMetres": "Height (m)",
   "brush.label.bumps": "Bumps",
