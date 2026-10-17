@@ -12,59 +12,16 @@ internal sealed partial class DungeonPlanner
         int want = (int)MathF.Round(_s.Loops * l.Spaces.Count(s => s.IsRoom) / 5f);
         for (int made = 0, tries = 0; made < want && tries < want * 3 + 3; tries++)
         {
-            var options = new List<(float Score, Action Make)>();
             // Joins change the ways between rooms, so the distances are worked out again each try: the stairs once,
             // and each room's only when it has a room to join.
             var stairs = StairLinks(_plan.Spaces);
+            var options = new List<(float Score, Action Make)>();
             foreach (var a in l.Spaces.Where(Loopable))
             {
-                Dictionary<DungeonPlan.Space, int>? dist = null;
+                var dist = new Lazy<Dictionary<DungeonPlan.Space, int>>(() => Distances(a, stairs));
                 foreach (var dir in Dirs)
                 {
-                    var side = SideTiles(a, dir);
-                    for (int at = 0; at + 1 < side.Count; at++)
-                    {
-                        var (t1, t2) = (side[at], side[at + 1]);
-                        if (!IsSlot(t1, t2, a, dir))
-                        {
-                            continue;
-                        }
-                        for (int len = 0; len <= 6; len++)
-                        {
-                            var n1 = Add(t1, dir, len + 1);
-                            var n2 = Add(t2, dir, len + 1);
-                            var b = l.Owner.GetValueOrDefault(n1);
-                            if (b != null && b == l.Owner.GetValueOrDefault(n2) && b != a && Loopable(b))
-                            {
-                                dist ??= Distances(a, stairs);
-                                int d = dist.GetValueOrDefault(b, 99);
-                                var path = Enumerable.Range(1, len).SelectMany(t => new[] { Add(t1, dir, t), Add(t2, dir, t) }).ToList();
-                                if (d >= 3 && path.All(t => Free(l, t)) && SlotAllowed(b, n1, n2, (-dir.X, -dir.Z)))
-                                {
-                                    var (aa, bb, tt1, tt2, dd, ll, pp) = (a, b, t1, t2, dir, len, path);
-                                    void MakeLoop()
-                                    {
-                                        if (ll == 0)
-                                        {
-                                            Connect(aa, bb, tt1, tt2, dd, loop: true);
-                                        }
-                                        else
-                                        {
-                                            var c = NewCorridor(l, pp, dd);
-                                            Connect(aa, c, tt1, tt2, dd, loop: true);
-                                            Connect(c, bb, Add(tt1, dd, ll), Add(tt2, dd, ll), dd, loop: true);
-                                        }
-                                    }
-                                    options.Add((d - len * 0.3f + (float)_rnd.NextDouble(), MakeLoop));
-                                }
-                                break;
-                            }
-                            if (b != null || !Free(l, n1) || !Free(l, n2))
-                            {
-                                break;
-                            }
-                        }
-                    }
+                    AddLoopOptionsAlong(l, a, dir, dist, options);
                 }
             }
             if (options.Count == 0)
@@ -74,5 +31,22 @@ internal sealed partial class DungeonPlanner
             options.OrderByDescending(o => o.Score).First().Make();
             made++;
         }
+    }
+
+    /// <summary>
+    /// Makes a loop join: a doorway from a to b when len is 0, otherwise a new corridor over <paramref name="path"/>
+    /// with a doorway at each end.
+    /// </summary>
+    private void MakeLoop(DungeonPlan.Level l, DungeonPlan.Space a, DungeonPlan.Space b, (int, int) t1, (int, int) t2, (int X, int Z) dir, int len,
+        List<(int, int)> path)
+    {
+        if (len == 0)
+        {
+            Connect(a, b, t1, t2, dir, loop: true);
+            return;
+        }
+        var c = NewCorridor(l, path, dir);
+        Connect(a, c, t1, t2, dir, loop: true);
+        Connect(c, b, Add(t1, dir, len), Add(t2, dir, len), dir, loop: true);
     }
 }
