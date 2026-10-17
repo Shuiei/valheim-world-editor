@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.88 — unreleased
+
+### Changed
+- **Moving or dropping a big selection among many objects is much faster.** Each mouse move of a drag looked at every
+  snap point around for every snap point moved, and End (drop) tested five points of each selected object against
+  every object in the area. Both now look only at what is near: the snap points around are filed by metre, the
+  objects' boxes by 4 m cell. What snaps and where things land are unchanged.
+
 ## v1.45.87 — unreleased
 
 ### Changed
