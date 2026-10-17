@@ -32,7 +32,12 @@ public class WorldWriterTests
     /// <summary>
     /// A zone that has world data (a chunk file) but no ground edits yet.
     /// </summary>
-    private static (int X, int Z) FreshZone(WorldSave world)
+    private static (int X, int Z) FreshZone(WorldSave world) => FreshZones(world).First();
+
+    /// <summary>
+    /// Zones that have world data (a chunk file) but no ground edits yet, nearest the first edited zone first.
+    /// </summary>
+    private static IEnumerable<(int X, int Z)> FreshZones(WorldSave world)
     {
         var t = world.TerrainZones[0];
         for (int r = 1; r < 6; r++)
@@ -42,14 +47,13 @@ public class WorldWriterTests
                 for (int dx = -r; dx <= r; dx++)
                 {
                     int x = t.ZoneX + dx, z = t.ZoneZ + dz;
-                    if (ChunkMath.Find(world.Chunks, x, z) != null && world.TerrainZones.All(q => q.ZoneX != x || q.ZoneZ != z))
+                    if (Math.Max(Math.Abs(dx), Math.Abs(dz)) == r && ChunkMath.Find(world.Chunks, x, z) != null && world.TerrainZones.All(q => q.ZoneX != x || q.ZoneZ != z))
                     {
-                        return (x, z);
+                        yield return (x, z);
                     }
                 }
             }
         }
-        throw new InvalidOperationException("no fresh zone");
     }
 
     /// <summary>
@@ -110,6 +114,26 @@ public class WorldWriterTests
         Assert.False(r.Saved);
         Assert.Contains(r.Skipped, s => s.Contains("unexpected layout"));
         AssertSame(before, w.Dir);
+    }
+
+    // New ground in several zones copies the template object's own bytes, read once, not its whole chunk file per zone;
+    // a save without new ground does not read it.
+    [Fact]
+    public void NewGroundReadsTheTemplateOnce()
+    {
+        using var w = new TempWorld();
+        var world = w.Load();
+        var zones = FreshZones(world).Take(3).ToList();
+        Assert.Equal(3, zones.Count);
+        int before = WorldWriter.TemplateReads;
+        var r = WorldWriter.Save(world, [.. zones.Select(q => Raised(q.X, q.Z, 1.5f, 100))]);
+        Assert.True(r.Saved, r.Message);
+        Assert.Equal(1, WorldWriter.TemplateReads - before);
+        var saved = WorldSave.Load(w.Dir);
+        Assert.All(zones, q => Assert.Equal(1.5f, saved.TerrainZones.Single(t => t.ZoneX == q.X && t.ZoneZ == q.Z).LevelDelta[100], 4));
+        before = WorldWriter.TemplateReads;
+        Assert.True(WorldWriter.Save(saved, [Raised(zones[0].X, zones[0].Z, 2f, 100)]).Saved);
+        Assert.Equal(before, WorldWriter.TemplateReads);
     }
 
     // A terrain object in another layout ahead of a usable one: the usable one is copied. The fixture has one terrain
