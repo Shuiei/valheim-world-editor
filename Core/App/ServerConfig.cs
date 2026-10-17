@@ -1,6 +1,3 @@
-using System.Text;
-using System.Text.RegularExpressions;
-
 namespace TerrainEditor.App;
 
 /// <summary>
@@ -67,54 +64,11 @@ public static class ServerConfig
     {
         lock (Lock)
         {
-            var list = new List<Server>();
             if (!File.Exists(FilePath))
             {
-                return list;
+                return [];
             }
-            Server? cur = null;
-            foreach (string raw in File.ReadAllLines(FilePath))
-            {
-                string line = raw.Trim();
-                if (line.Length == 0 || line.StartsWith('#') || line.StartsWith(';'))
-                {
-                    continue;
-                }
-                Match sec = Regex.Match(line, @"^\[(.*)\]$");
-                if (sec.Success)
-                {
-                    cur = new Server { Name = sec.Groups[1].Value.Trim() };
-                    list.Add(cur);
-                    continue;
-                }
-                int eq = line.IndexOf('=');
-                if (cur == null || eq < 0)
-                {
-                    continue;
-                }
-                string key = line[..eq].Trim(), value = line[(eq + 1)..].Trim();
-                // A password is taken as written (spaces at its ends are part of it): after "= ".
-                if (key.Equals("password", StringComparison.OrdinalIgnoreCase))
-                {
-                    string after = raw[(raw.IndexOf('=') + 1)..];
-                    value = after.StartsWith(' ') ? after[1..] : after;
-                }
-                string? opt = value.Length == 0 ? null : value;
-                switch (key.ToLowerInvariant())
-                {
-                    case "host": cur.Host = value; break;
-                    case "sshport": cur.SshPort = int.TryParse(value, out int sp) && IsPort(sp) ? sp : 22; break;
-                    case "user": cur.User = value; break;
-                    case "password": cur.Password = opt; break;
-                    case "keyfile": cur.KeyFile = opt; break;
-                    case "token": cur.Token = opt; break;
-                    case "bridgeport": cur.BridgePort = int.TryParse(value, out int bp) && IsPort(bp) ? bp : 5182; break;
-                    case "hostkey": cur.HostKey = opt; break;
-                    case "gamefolder": cur.GameFolder = opt; break;
-                    default:
-                        break;
-                }
-            }
+            List<Server> list = ServerConfigFile.Parse(File.ReadAllLines(FilePath));
             foreach (Server s in list)
             {
                 // Kept out of the log, whatever fails later.
@@ -177,30 +131,8 @@ public static class ServerConfig
     /// <exception cref="ArgumentException">A value (other than the name) holds a line break.</exception>
     private static void Write(List<Server> list)
     {
-        var sb = new StringBuilder();
-        sb.AppendLine("# Valheim World Editor: dedicated servers, saved after connecting. Edit or delete freely.");
-        sb.AppendLine("# Password is only kept when \"Save password\" was ticked (plain text: keep this file private).");
-        foreach (Server s in list)
-        {
-            // A line break would add a line of its own (another HostKey, say): never written.
-            if (!new[] { s.Host, s.User, s.Password, s.KeyFile, s.Token, s.GameFolder, s.HostKey }.All(OneLine))
-            {
-                throw new ArgumentException($"The saved server {s.Id} has a value with a line break.", nameof(list));
-            }
-            sb.AppendLine();
-            sb.AppendLine($"[{SectionName(s)}]");
-            sb.AppendLine($"Host = {s.Host}");
-            sb.AppendLine($"SshPort = {s.SshPort}");
-            sb.AppendLine($"User = {s.User}");
-            sb.AppendLine($"Password = {s.Password}");
-            sb.AppendLine($"KeyFile = {s.KeyFile}");
-            sb.AppendLine($"Token = {s.Token}");
-            sb.AppendLine($"BridgePort = {s.BridgePort}");
-            sb.AppendLine($"GameFolder = {s.GameFolder}");
-            sb.AppendLine($"HostKey = {s.HostKey}");
-        }
         // Only the user can read it, from the start (it can hold a password).
-        SafeFile.WriteAllText(FilePath, sb.ToString(), UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        SafeFile.WriteAllText(FilePath, ServerConfigFile.Format(list), UnixFileMode.UserRead | UnixFileMode.UserWrite);
         if (!OperatingSystem.IsWindows())
         {
             File.SetUnixFileMode(FilePath, UnixFileMode.UserRead | UnixFileMode.UserWrite);

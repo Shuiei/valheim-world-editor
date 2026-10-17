@@ -122,11 +122,8 @@ public class MainWindowEditorWorldTests
     [AvaloniaFact]
     public async Task WhatStopsTheAreaMovingAndTheQuestionBeforeApplyingOverManyZones()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
         var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = TestWindows.Editing(s);
         Assert.Null(w.MoveBlocker());
         s.Brush.Radius = 4;
         s.BeginStroke(BrushTool.Raise, 32, 32);
@@ -165,6 +162,27 @@ public class MainWindowEditorWorldTests
         Assert.NotNull(r.W.Session);
     }
 
+    /// <summary>
+    /// An area of the world given that cannot be opened again (no zones), with the world it is of, as its owner and
+    /// the session it was open in when given.
+    /// </summary>
+    private static WorldScene UnopenableArea(WorldSession world, WorldSession? owner = null, EditSession? session = null) => new()
+    {
+        World = world.World,
+        Owner = owner,
+        Session = session,
+        Name = "test",
+        ZonesX = -1,
+        ZonesZ = -1,
+        Heights = [],
+        Biomes = [],
+        Things = [],
+        BiomeColor = [],
+        Mask = [],
+        OceanDepth = [],
+        Limit = [],
+    };
+
     // The world read again, but its area does not open again: the map, and the failure in a dialog (not the editor
     // left with no area, or a message that it worked).
     [AvaloniaFact]
@@ -172,20 +190,7 @@ public class MainWindowEditorWorldTests
     {
         using var r = new WorldWindowRun();
         await r.Open();
-        var bad = new WorldScene
-        {
-            World = r.W.World!.World,
-            Name = "test",
-            ZonesX = -1,
-            ZonesZ = -1,
-            Heights = [],
-            Biomes = [],
-            Things = [],
-            BiomeColor = [],
-            Mask = [],
-            OceanDepth = [],
-            Limit = [],
-        };
+        var bad = UnopenableArea(r.W.World!);
         Assert.False(await r.W.ReopenArea(bad));
         Assert.True(r.W.MapShown);
         Assert.Null(r.W.Session);
@@ -200,20 +205,7 @@ public class MainWindowEditorWorldTests
     {
         using var r = new WorldWindowRun();
         await r.Open();
-        var bad = new WorldScene
-        {
-            World = r.W.World!.World,
-            Name = "test",
-            ZonesX = -1,
-            ZonesZ = -1,
-            Heights = [],
-            Biomes = [],
-            Things = [],
-            BiomeColor = [],
-            Mask = [],
-            OceanDepth = [],
-            Limit = [],
-        };
+        var bad = UnopenableArea(r.W.World!);
         // Both loads held, so the arrow move is asked for while the reopen loads and fails after it.
         var first = new TaskCompletionSource();
         var second = new TaskCompletionSource();
@@ -240,22 +232,7 @@ public class MainWindowEditorWorldTests
         using var r = new WorldWindowRun();
         await r.Open();
         var world = r.W.World!;
-        var bad = new WorldScene
-        {
-            World = world.World,
-            Owner = world,
-            Session = r.W.Session,
-            Name = "test",
-            ZonesX = -1,
-            ZonesZ = -1,
-            Heights = [],
-            Biomes = [],
-            Things = [],
-            BiomeColor = [],
-            Mask = [],
-            OceanDepth = [],
-            Limit = [],
-        };
+        var bad = UnopenableArea(world, world, r.W.Session);
         Assert.Same(bad.Session, world.Area);
         Assert.False(await r.W.ReopenArea(bad));
         Assert.True(r.W.MapShown);

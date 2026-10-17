@@ -1,6 +1,6 @@
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Headless.XUnit;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using TerrainEditor.App;
 using TerrainEditor.Terrain;

@@ -1,7 +1,5 @@
-using System.Globalization;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
-using TerrainEditor.Terrain;
 
 namespace TerrainEditor.App;
 
@@ -50,126 +48,20 @@ public static class WorldSearch
     private static Result SearchIn(WorldSave world, EditStore edits, string query, string what, int limit)
     {
         query = query.Trim();
-        List<Hit> hits = [];
-        Dictionary<string, int> counts = new(StringComparer.Ordinal);
-        int total = 0;
+        var tally = new WorldSearchTally(query, limit);
         if (query.Length == 0)
         {
-            return new Result(hits, counts, 0, false);
+            return tally.Finish();
         }
-        HashSet<int> deleted = edits.Deleted;
-        // amount: how much the hit adds to its count (items: the stack sizes).
-        void Found(int id, string name, System.Numerics.Vector3 p, string? match, string countKey, int amount = 1)
-        {
-            total++;
-            counts[countKey] = counts.GetValueOrDefault(countKey) + amount;
-            if (hits.Count < limit)
-            {
-                hits.Add(new Hit(id, name, p.X, p.Y, p.Z, match));
-            }
-        }
-        bool Matches(string s) => s.Contains(query, StringComparison.OrdinalIgnoreCase);
-        // The game's own bookkeeping objects (_ZoneCtrl, _TerrainCompiler...) only when asked for by name.
-        bool Shown(string name) => !name.StartsWith('_') || query.StartsWith('_');
-
         if (what == "kinds")
         {
-            for (int id = 0; id < world.ObjectRefs.Count; id++)
-            {
-                ObjectRef o = world.ObjectRefs[id];
-                if (deleted.Contains(id) || world.Vanished.Contains(id) || o.IsTerrain || o.Prefab == WorldSave.LocationProxyPrefab)
-                {
-                    continue;
-                }
-                string? name = PrefabCatalog.DisplayName(o.Prefab);
-                if (name != null && Shown(name) && Matches(name))
-                {
-                    Found(id, name, o.Position, null, name);
-                }
-            }
-            foreach (NewObject n in edits.Added)
-            {
-                string? name = PrefabCatalog.DisplayName(n.Prefab);
-                if (name != null && Shown(name) && Matches(name))
-                {
-                    Found(n.Id, name, n.Position, null, name);
-                }
-            }
-            return new Result(hits, counts, total, total > hits.Count);
+            WorldSearchKinds.Run(world, edits, tally);
         }
-
-        // Items and texts: only objects with byte arrays (containers) or strings are read.
-        ushort needed = what == "items" ? ZdoData.ByteArrays : ZdoData.Strings;
-        Func<ObjectRef, byte[]> source = world.SourceReader();
-        IEnumerable<(int Id, Func<byte[]> Bytes)> Candidates()
+        else
         {
-            for (int id = 0; id < world.ObjectRefs.Count; id++)
-            {
-                ObjectRef o = world.ObjectRefs[id];
-                if (!deleted.Contains(id) && !world.Vanished.Contains(id) && !o.IsTerrain && (o.Flags & needed) != 0)
-                {
-                    yield return (id, () => source(o)[(int)o.Start..(int)o.End]);
-                }
-            }
-            foreach (NewObject n in edits.Added)
-            {
-                yield return (n.Id, () => world.NewObjectBytes(n, source) ?? []);
-            }
+            // Items and texts: only objects with byte arrays (containers) or strings are read.
+            WorldSearchContents.Run(world, edits, tally, what);
         }
-        foreach (var (id, bytes) in Candidates())
-        {
-            ZdoData z;
-            try
-            {
-                // A new object's bytes are built from its raw ones, which are parsed on the way: damaged ones throw
-                // here too, and that object alone is skipped.
-                byte[] b = bytes();
-                if (b.Length == 0)
-                {
-                    continue;
-                }
-                z = ZdoData.Parse(b);
-            }
-            catch (Exception ex) when (CheckedReads.Damaged(ex))
-            {
-                Log.CaughtBrief(ex, "reading an object while searching the world (damaged: passed over)");
-                continue;
-            }
-            string name = PrefabCatalog.DisplayName(z.Prefab) ?? z.Prefab.ToString(CultureInfo.InvariantCulture);
-            if (what == "items")
-            {
-                if (z.GetBytes(ObjectData.ItemsKey) is not byte[] items)
-                {
-                    continue;
-                }
-                InventoryData inv;
-                try
-                {
-                    inv = InventoryData.Read(items);
-                }
-                catch (Exception ex) when (CheckedReads.Damaged(ex))
-                {
-                    Log.CaughtBrief(ex, "reading a container's items while searching the world (damaged: passed over)");
-                    continue;
-                }
-                foreach (var g in inv.Items.GroupBy(i => PrefabCatalog.NameOf(i.Prefab) ?? "?").Where(g => Matches(g.Key)))
-                {
-                    int stack = g.Sum(i => i.Stack);
-                    Found(id, name, z.Position, $"{g.Key} ×{stack}", g.Key, stack);
-                }
-            }
-            else
-            {
-                foreach (var (key, value) in z.StringList)
-                {
-                    if (value.Length > 0 && Matches(value))
-                    {
-                        Found(id, name, z.Position, $"{ZdoKeys.NameOf(key) ?? "text"}: {value}", name);
-                        break;
-                    }
-                }
-            }
-        }
-        return new Result(hits, counts, total, total > hits.Count);
+        return tally.Finish();
     }
 }

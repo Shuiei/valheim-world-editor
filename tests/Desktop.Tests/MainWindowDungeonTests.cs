@@ -26,10 +26,7 @@ public class MainWindowDungeonTests
     private static (MainWindow W, EditSession S) Open(string dir)
     {
         var scene = WorldScene.Load(dir, 0, 0, 1);
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        w.View.Show(scene, null);
-        w.Edit(scene.Session!);
+        var w = TestWindows.Editing(scene.Session!);
         return (w, scene.Session!);
     }
 

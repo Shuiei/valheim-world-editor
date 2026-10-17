@@ -5,7 +5,7 @@ namespace WorldEditor.Tests.Unity;
 /// the GameObject and Transform themselves are written last (their path ids are kept from the start, so components and
 /// children can point at them).
 /// </summary>
-public sealed class PrefabNode
+public sealed partial class PrefabNode
 {
     /// <summary>
     /// The bundle written to.
@@ -32,6 +32,9 @@ public sealed class PrefabNode
         _b = b;
         _father = father;
         Name = name;
+        Active = true;
+        Rotation = (0, 0, 0, 1);
+        Scale = (1, 1, 1);
         Go = b.Reserve();
         Tr = b.Reserve();
     }
@@ -64,7 +67,7 @@ public sealed class PrefabNode
     /// <summary>
     /// Whether it is active.
     /// </summary>
-    public bool Active { get; set; } = true;
+    public bool Active { get; set; }
 
     /// <summary>
     /// Its local position.
@@ -74,12 +77,12 @@ public sealed class PrefabNode
     /// <summary>
     /// Its local rotation (x, y, z, w).
     /// </summary>
-    public (double X, double Y, double Z, double W) Rotation { get; set; } = (0, 0, 0, 1);
+    public (double X, double Y, double Z, double W) Rotation { get; set; }
 
     /// <summary>
     /// Its local scale.
     /// </summary>
-    public (double X, double Y, double Z) Scale { get; set; } = (1, 1, 1);
+    public (double X, double Y, double Z) Scale { get; set; }
 
     /// <summary>
     /// Adds a script's MonoBehaviour (see TestBundle.Mono).
@@ -112,19 +115,19 @@ public sealed class PrefabNode
     /// Adds a box collider.
     /// </summary>
     public long Box((double X, double Y, double Z) center, (double X, double Y, double Z) size, bool enabled = true, bool trigger = false) =>
-        Component(UnityClass.BoxCollider, UnityTypes.BoxCollider, new Fields { ["m_Enabled"] = enabled, ["m_IsTrigger"] = trigger, ["m_Center"] = V(center), ["m_Size"] = V(size) });
+        Component(UnityClass.BoxCollider, UnityTypes.BoxCollider, new Fields { ["m_Enabled"] = enabled, ["m_IsTrigger"] = trigger, ["m_Center"] = Fields.Vector3(center.X, center.Y, center.Z), ["m_Size"] = Fields.Vector3(size.X, size.Y, size.Z) });
 
     /// <summary>
     /// Adds a sphere collider.
     /// </summary>
     public long Sphere((double X, double Y, double Z) center, double radius) =>
-        Component(UnityClass.SphereCollider, UnityTypes.SphereCollider, new Fields { ["m_Enabled"] = true, ["m_Center"] = V(center), ["m_Radius"] = radius });
+        Component(UnityClass.SphereCollider, UnityTypes.SphereCollider, new Fields { ["m_Enabled"] = true, ["m_Center"] = Fields.Vector3(center.X, center.Y, center.Z), ["m_Radius"] = radius });
 
     /// <summary>
     /// Adds a capsule collider along an axis (0 x, 1 y, 2 z).
     /// </summary>
     public long Capsule((double X, double Y, double Z) center, double radius, double height, int direction) =>
-        Component(UnityClass.CapsuleCollider, UnityTypes.CapsuleCollider, new Fields { ["m_Enabled"] = true, ["m_Center"] = V(center), ["m_Radius"] = radius, ["m_Height"] = height, ["m_Direction"] = direction });
+        Component(UnityClass.CapsuleCollider, UnityTypes.CapsuleCollider, new Fields { ["m_Enabled"] = true, ["m_Center"] = Fields.Vector3(center.X, center.Y, center.Z), ["m_Radius"] = radius, ["m_Height"] = height, ["m_Direction"] = direction });
 
     /// <summary>
     /// Adds a mesh collider on a mesh of the same file.
@@ -141,45 +144,4 @@ public sealed class PrefabNode
         Component(UnityClass.MeshFilter, UnityTypes.MeshFilter, new Fields { ["m_Mesh"] = mesh });
         return Component(UnityClass.MeshRenderer, UnityTypes.MeshRenderer, new Fields { ["m_Enabled"] = enabled, ["m_Materials"] = materials.ToList() });
     }
-
-    /// <summary>
-    /// Adds a child (built by <paramref name="build"/>); returns it.
-    /// </summary>
-    public PrefabNode Child(string name, Action<PrefabNode>? build = null)
-    {
-        var child = new PrefabNode(_b, name, Tr);
-        build?.Invoke(child);
-        child.Write();
-        _children.Add(child.Tr);
-        return child;
-    }
-
-    /// <summary>
-    /// Writes the GameObject (Transform first among its components) and the Transform.
-    /// </summary>
-    internal void Write()
-    {
-        _b.Assets.Add(UnityClass.GameObject, UnityTypes.GameObject, new Fields
-        {
-            ["m_Component"] = new[] { Tr }.Concat(_components).Select(c => new Fields { ["component"] = Fields.Ref(c) }).ToList(),
-            ["m_Layer"] = Layer,
-            ["m_Name"] = Name,
-            ["m_Tag"] = Tag,
-            ["m_IsActive"] = Active,
-        }, pathId: Go);
-        _b.Assets.Add(UnityClass.Transform, UnityTypes.Transform, new Fields
-        {
-            ["m_GameObject"] = Fields.Ref(Go),
-            ["m_LocalRotation"] = Fields.Quaternion(Rotation.X, Rotation.Y, Rotation.Z, Rotation.W),
-            ["m_LocalPosition"] = V(Position),
-            ["m_LocalScale"] = V(Scale),
-            ["m_Children"] = _children.Select(c => Fields.Ref(c)).ToList(),
-            ["m_Father"] = Fields.Ref(_father),
-        }, pathId: Tr);
-    }
-
-    /// <summary>
-    /// A vector's values.
-    /// </summary>
-    private static Fields V((double X, double Y, double Z) v) => Fields.Vector3(v.X, v.Y, v.Z);
 }

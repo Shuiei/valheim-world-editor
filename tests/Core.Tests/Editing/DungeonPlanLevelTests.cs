@@ -1,0 +1,86 @@
+using TerrainEditor.Editing;
+using Xunit;
+
+namespace WorldEditor.Tests;
+
+/// <summary>
+/// The levels of a dungeon plan of building pieces (DungeonPlanner, DungeonPlan): tall rooms stay clear of the level above,
+/// stairs link each stairwell's top and foot only, and an antechamber is kept only with its arena.
+/// </summary>
+public class DungeonPlanLevelTests
+{
+    [Fact]
+    public void NothingStandsOverATallRoomNotEvenAHiddenCache()
+    {
+        // A tall room rises through the level above it, which is laid out before it; the hidden caches are attached last,
+        // to any level. Plans where a cache (once with its corridor) used to land over a great hall or chapel of the
+        // level below, its floor cutting the room's upper half.
+        int tallUnder = 0;
+        foreach (var (styleName, seed) in new[] { ("Crypt", 8), ("Crypt", 22), ("Temple", 27), ("Temple", 37), ("Dvergr hold", 15) })
+        {
+            var style = DungeonKit.StyleOf(styleName);
+            var plan = DungeonPlanner.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: styleName, Size: 3, Levels: 3, Secrets: true, Seed: seed), style, new Random(seed));
+            Assert.Contains(plan.Spaces, s => s.Room == DungeonKit.Room.Secret);
+            for (int k = 1; k < plan.Levels.Count; k++)
+            {
+                var above = plan.Levels[k - 1];
+                foreach (var tall in plan.Levels[k].Spaces.Where(s => s.Tall))
+                {
+                    tallUnder++;
+                    var cells = tall.Tiles.Select(DungeonPlan.CellOf).ToHashSet();
+                    var over = above.Spaces.Where(s => s.Tiles.Any(t => cells.Contains(DungeonPlan.CellOf(t)))).Select(s => s.Name).ToList();
+                    Assert.True(over.Count == 0, $"{styleName} seed {seed}: {string.Join(", ", over)} over the {tall.Name} of level {k}");
+                }
+            }
+        }
+        Assert.True(tallUnder > 0, "no tall room under another level");
+    }
+
+    [Fact]
+    public void AnAntechamberIsKeptOnlyWithTheArenaBeyondIt()
+    {
+        // The antechamber was placed before the arena was tried, and stayed when the arena did not fit; the next try
+        // added another. Plans that used to hold two or three antechambers, or one with no arena at all: in the first
+        // three a later try finds room for both, in the last none does.
+        foreach (var (styleName, size, seed, arena) in new[] { ("Goblin warren", 1, 20, true), ("Goblin warren", 1, 57, true), ("Ruins", 3, 20, true), ("Ruins", 4, 60, false) })
+        {
+            var plan = DungeonPlanner.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: styleName, Size: size, Levels: 2, Secrets: true, Seed: seed), DungeonKit.StyleOf(styleName), new Random(seed));
+            var antes = plan.Spaces.Where(s => s.Room == DungeonKit.Room.Antechamber).ToList();
+            string where = $"{styleName} size {size} seed {seed}";
+            Assert.True(antes.Count <= 1, $"{where}: {antes.Count} antechambers");
+            Assert.True(arena == (plan.Boss != null), $"{where}: arena {plan.Boss != null}");
+            Assert.True(antes.Count == (plan.Boss == null ? 0 : 1), $"{where}: {antes.Count} antechambers, arena {plan.Boss != null}");
+            Assert.True(plan.Boss == null || plan.Boss.Parent == antes[0], $"{where}: the arena is not off the antechamber");
+            // What was taken back left nothing behind: ids in order, doorways and tiles only of spaces still there.
+            Assert.Equal(Enumerable.Range(0, plan.Spaces.Count), plan.Spaces.Select(s => s.Id));
+            var kept = plan.Spaces.ToHashSet();
+            Assert.All(plan.Doors, d => Assert.True(kept.Contains(d.A) && kept.Contains(d.B), $"{where}: a doorway to a dropped space"));
+            Assert.All(plan.Spaces, s => Assert.All(s.Doors, d => Assert.Contains(d, plan.Doors)));
+            Assert.All(plan.Levels, l => Assert.All(l.Owner.Values, o => Assert.Contains(o, l.Spaces)));
+            // And no tall cell of a dropped tall room.
+            Assert.All(plan.Levels, l =>
+            {
+                HashSet<(int, int)> tall = [.. l.Spaces.Where(s => s.Tall).SelectMany(s => s.Tiles).Select(DungeonPlan.CellOf)];
+                Assert.Equal(tall, l.TallCells);
+            });
+        }
+    }
+
+    [Fact]
+    public void StairLinksJoinEachStairwellsTopAndFootOnly()
+    {
+        // Worked out once for the plan instead of by scanning every space at each step of the distance search.
+        var style = DungeonKit.StyleOf("Crypt");
+        var plan = DungeonPlanner.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: "Crypt", Size: 3, Levels: 3, Seed: 5), style, new Random(5));
+        var feet = plan.Spaces.Where(s => s.Room == DungeonKit.Room.StairBottom).ToList();
+        Assert.NotEmpty(feet);
+        var links = DungeonPlanner.StairLinks(plan.Spaces);
+        foreach (var foot in feet)
+        {
+            Assert.Equal(DungeonKit.Room.StairTop, foot.Parent!.Room);
+            Assert.Equal([foot.Parent], links[foot]);
+            Assert.Equal([foot], links[foot.Parent]);
+        }
+        Assert.Equal(feet.Count * 2, links.Count);
+    }
+}

@@ -115,11 +115,8 @@ public class CopyFormatTests
         string dir = Path.Combine(Path.GetTempPath(), "vwe-bp-" + Guid.NewGuid().ToString("N")[..8]);
         try
         {
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
             var s = TestScenes.Flat(2);
-            w.View.Show(s.Scene, null);
-            w.Edit(s);
+            var w = TestWindows.Editing(s);
             var bp = w.Blueprints;
             bp.Store = new BlueprintStore(dir);
             string hs = Path.Combine(dir, "homestead");

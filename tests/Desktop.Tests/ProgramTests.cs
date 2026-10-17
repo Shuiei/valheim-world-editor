@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Headless.XUnit;
@@ -10,8 +9,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The app's start (Program), run as the app is (ValheimWorldEditor.dll in a process of its own): the jobs that end at
 /// once (Claude's relay with nothing to relay, the exports not told where to write) and a command line that cannot be
-/// read, none of which opens a window; the handler of SIGTERM and SIGHUP; and the order Windows tries its ways of
-/// drawing in.
+/// read, none of which opens a window; the relay answering on its own standard input and output; the handler of SIGTERM
+/// and SIGHUP; and the order Windows tries its ways of drawing in.
 /// </summary>
 public sealed class ProgramTests
 {
@@ -21,22 +20,10 @@ public sealed class ProgramTests
     /// </summary>
     private static async Task<(int Code, string Output, string Error)> Run(params string[] args)
     {
-        string home = Path.Combine(Path.GetTempPath(), "vwe-program-" + Guid.NewGuid().ToString("N")[..8]);
-        Directory.CreateDirectory(home);
+        string home = EditorApp.MakeHome("vwe-program-");
         try
         {
-            // The copy beside the tests, so that its coverage adds to theirs (EditorApp).
-            string app = EditorApp.Path;
-            var psi = new ProcessStartInfo(EditorApp.Dotnet) { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
-            psi.ArgumentList.Add(app);
-            foreach (string a in args)
-            {
-                psi.ArgumentList.Add(a);
-            }
-            psi.Environment["XDG_DATA_HOME"] = home;
-            psi.Environment["HOME"] = home;
-            psi.Environment["LOCALAPPDATA"] = home;
-            using var p = Process.Start(psi)!;
+            using var p = EditorApp.Start(home, args);
             p.StandardInput.Close();
             using var cancel = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
             cancel.CancelAfter(TimeSpan.FromMinutes(2));
@@ -55,10 +42,7 @@ public sealed class ProgramTests
         }
         finally
         {
-            if (Directory.Exists(home))
-            {
-                Directory.Delete(home, true);
-            }
+            EditorApp.RemoveHome(home);
         }
     }
 
@@ -68,6 +52,31 @@ public sealed class ProgramTests
         var (code, output, _) = await Run("--mcp-stdio");
         Assert.Equal(0, code);
         Assert.Equal("", output);
+    }
+
+    // The program as the relay, with settings of its own (Claude not let in): a request is answered with the error on
+    // its standard output, and the program ends with its input.
+    [Fact]
+    public async Task TheProgramRelaysOnItsStandardInputAndOutput()
+    {
+        string home = EditorApp.MakeHome("vwe-relay-");
+        try
+        {
+            // Its settings from an empty folder: never the user's.
+            using var p = EditorApp.Start(home, "--mcp-stdio");
+            var errors = p.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
+            await p.StandardInput.WriteLineAsync("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}");
+            p.StandardInput.Close();
+            string said = await p.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromMinutes(2), TestContext.Current.CancellationToken);
+            await p.WaitForExitAsync(TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromMinutes(1), TestContext.Current.CancellationToken);
+            Assert.True(p.ExitCode == 0, await errors);
+            Assert.Contains("does not let Claude connect", said);
+            Assert.Contains("\"id\":1", said);
+        }
+        finally
+        {
+            EditorApp.RemoveHome(home);
+        }
     }
 
     [Fact]

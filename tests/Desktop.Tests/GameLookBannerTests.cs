@@ -15,6 +15,7 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("DataDir")]
 public class GameLookBannerTests
 {
+    private static readonly string[] Expected1 = ["ready", "missing", "running", "failed"];
     /// <summary>
     /// A game-look card in a shown window, first reading <c>first</c>: what copies it started (the folder and
     /// settings), and a setter for the state it reads next. A folder with "bad" in its name fails to start.
@@ -309,6 +310,6 @@ public class GameLookBannerTests
     public void TheExportersStateReadsAsASnapshot()
     {
         var s = GameLook.Now();
-        Assert.Contains(s.State, new[] { "ready", "missing", "running", "failed" });
+        Assert.Contains(s.State, Expected1);
     }
 }

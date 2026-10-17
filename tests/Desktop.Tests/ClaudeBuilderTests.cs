@@ -1,3 +1,4 @@
+using TerrainEditor.Terrain;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -67,5 +68,70 @@ public class ClaudeBuilderTests
         Assert.Contains("more than 5000", Assert.Throws<ArgumentException>(() => ClaudeBuilder.CheckWalls(0, 0, 4, 4, 626, "stone")).Message);
         Assert.Contains("more than 5000", Assert.Throws<ArgumentException>(() => ClaudeBuilder.Walls(0, 0, 4, 4, 34, 1e9f, "stone", [])).Message);
         Assert.Contains("more than 5000", Assert.Throws<ArgumentException>(() => ClaudeBuilder.Roof(0, 0, 3e7f, 2e7f, 40, 45, "thatch", true)).Message);
+    }
+
+    [Fact]
+    public void AThatchRoofsPiecesAreTheWoodRoofAtThatAngle()
+    {
+        Assert.Equal(("wood_roof", "wood_roof_top", "wood_wall_roof"), ClaudeBuilder.RoofNames("Thatch", 26));
+    }
+
+    [Fact]
+    public void AShingleRoofAt45DegreesHasItsOwnPieces()
+    {
+        Assert.Equal(("darkwood_roof_45", "darkwood_roof_top_45", "wood_wall_roof_45"), ClaudeBuilder.RoofNames("shingle", 45));
+    }
+
+    [Fact]
+    public void AnUnknownRoofMaterialIsRefused()
+    {
+        Assert.Equal("A roof is thatch or shingle.", Assert.Throws<ArgumentException>(() => ClaudeBuilder.RoofNames("tin", 26)).Message);
+    }
+
+    [Fact]
+    public void ASlopeCourseGoesOnBothSidesOfTheRidgeAndThenTheRidgePiece()
+    {
+        var list = new List<ClaudeTools.PieceSpec>();
+        ClaudeBuilder.Slopes(list, new ClaudeBuilder.Ridge(true, 0, 0, 4, 2), [0f], 1, 10f, 1f, 0f, "s", "r");
+        Assert.Equal([("s", 2f), ("s", -2f), ("r", 0f)], list.Select(p => (p.Prefab, p.Z)));
+    }
+
+    [Fact]
+    public void AWallOfMoreThanTwoMetresIsFullWallsAndAHalfWallForTheRest()
+    {
+        var list = new List<ClaudeTools.PieceSpec>();
+        ClaudeBuilder.FillWall(list, 0, 0, 0, 5, 0, 0, 0);
+        Assert.Equal([("woodwall", 0f), ("woodwall", 2f), ("wood_wall_half", 4f)], list.Select(p => (p.Prefab, p.Y!.Value)));
+    }
+
+    [Fact]
+    public void AWallShorterThanAMetreIsNothing()
+    {
+        var list = new List<ClaudeTools.PieceSpec>();
+        ClaudeBuilder.FillWall(list, 0, 0, 0, 0.5f, 0, 0, 0);
+        Assert.Empty(list);
+    }
+
+    [Fact]
+    public void EachGableEndOfAShallowRidgeIsTwoSlopedPieces()
+    {
+        var list = new List<ClaudeTools.PieceSpec>();
+        ClaudeBuilder.Gables(list, new ClaudeBuilder.Ridge(true, 0, 0, 4, 2), 38f, 0.5f, "wood_wall_roof");
+        Assert.Equal(4, list.Count);
+        Assert.All(list, p => Assert.Equal("wood_wall_roof", p.Prefab));
+    }
+
+    [Fact]
+    public void ASlopeWithItsSnapPointsGivesItsRiseRunPitchAndHighEdge()
+    {
+        var slope = new PieceCatalog.Info("s", 0, 0, 0, 0, 0, 0, 0, 0) { Snaps = [[0, 0, 2], [0, 1, -2]] };
+        Assert.Equal((1f, 4f, 0.25f, 1f), ClaudeBuilder.SlopeOf(slope, "s"));
+    }
+
+    [Fact]
+    public void ASlopeWithoutTwoSnapPointsCannotBeLaid()
+    {
+        var slope = new PieceCatalog.Info("s", 0, 0, 0, 0, 0, 0, 0, 0);
+        Assert.Contains("has no snap points", Assert.Throws<ArgumentException>(() => ClaudeBuilder.SlopeOf(slope, "s")).Message);
     }
 }

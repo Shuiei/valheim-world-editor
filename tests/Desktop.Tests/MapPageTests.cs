@@ -1,44 +1,23 @@
 using Avalonia.Headless.XUnit;
-using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
-using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The map page's edges on the test world: nothing happens without a world, the players' line when the game errors or
-/// sends garbage (or is slow, while another world is shown, or shown again), the biomes' names, the cursor's line when the mouse is over the map, an empty search and one that
-/// fails, the zone filter's messages and questions (kept with their world when another is shown), Show ruins, the
-/// pending line for each count and for a live world, and the found line for each kind of search.
+/// The map page: the messages it gives (the pending line for each count and for a live world, and the found line for
+/// each kind of search), the biomes, the cursor line, the search and the zone filter.
 /// </summary>
 [Collection("World files")]
 public class MapPageTests
 {
     /// <summary>
-    /// A main window on its own copy of the test world, with the map page's messages collected; deleted when disposed.
+    /// What the map raises when the mouse moves over it (headless windows put an overlay above the map, so the event is
+    /// raised as the map does).
     /// </summary>
-    private sealed class Run : IDisposable
-    {
-        public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
-        public string Dir { get; } = Fixtures.CopyFixture();
-        public List<string> Told { get; } = [];
-        public MapPage M => W.MapPage!;
-
-        /// <summary>
-        /// Opens the world (its map page) and collects what the map tells.
-        /// </summary>
-        public async Task Open()
-        {
-            W.Show();
-            await W.OpenWorld(() => Task.Run(() => WorldSession.Open(Dir)), "Opening…");
-            M.Tell = t => { Told.Add(t); return Task.CompletedTask; };
-        }
-
-        /// <inheritdoc/>
-        public void Dispose() => Directory.Delete(Path.GetDirectoryName(Dir)!, recursive: true);
-    }
+    private static void Hovered(MapPage m, float x, float z) =>
+        (typeof(MapView).GetField("Hovered", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(m.Map) as Action<float, float>)!(x, z);
 
     [AvaloniaFact]
     public async Task WithoutAWorldNothingHappens()
@@ -69,79 +48,9 @@ public class MapPageTests
     }
 
     [AvaloniaFact]
-    public async Task ThePlayersLineSaysWhenTheGameDoesNotAnswer()
-    {
-        foreach (var broken in new Action<FakeGame>[] { g => g.Fail["/players"] = 500, g => g.Players = "this is not json" })
-        {
-            using var game = new FakeGame();
-            broken(game);
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            await w.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label()), "Connecting…");
-            await TestWindows.Until(() => w.MapPage!.LiveText.Text == "Live world · the game does not answer right now.");
-            w.MapPage!.Stop();
-        }
-    }
-
-    // A game slow to answer gets one players question at a time, and its answer, come after another world is
-    // shown, does not put its players on that world's map.
-    [AvaloniaFact]
-    public async Task PlayersAreAskedOnceAtATimeAndAnOldWorldsAnswerIsDropped()
-    {
-        using var slow = new FakeGame { HoldPlayers = new(TaskCreationOptions.RunContinuationsAsynchronously) };
-        using var other = new FakeGame { Players = "[{\"name\":\"Cyd\",\"x\":0,\"y\":30,\"z\":0,\"yaw\":0}]" };
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        await w.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(slow.Url, slow.Token), FakeGame.Label()), "Connecting…");
-        var m = w.MapPage!;
-        await TestWindows.Until(() => slow.PlayerReads == 1);
-        // The timer's next ticks while the first question waits: no more questions.
-        for (int i = 0; i < 3; i++)
-        {
-            await m.PollPlayers();
-        }
-        Assert.Equal(1, slow.PlayerReads);
-        // Another world shown; then the slow game answers.
-        using var session = await WorldSession.OpenLive(new LiveBridge(other.Url, other.Token), FakeGame.Label());
-        m.Show(session);
-        await TestWindows.Until(() => m.LiveText.Text == "Live world · 1 player(s) online: Cyd");
-        slow.HoldPlayers.SetResult();
-        await Task.Delay(300);
-        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
-        Assert.Equal("Live world · 1 player(s) online: Cyd", m.LiveText.Text);
-        Assert.Equal(["Cyd"], m.Map.Players.Select(p => p.Name));
-        m.Stop();
-    }
-
-    // A world shown again (A, B, then A) before its game answered is not asked a second time; its one answer then
-    // puts its players on the map.
-    [AvaloniaFact]
-    public async Task AWorldShownAgainBeforeItsGameAnsweredIsNotAskedTwice()
-    {
-        using var slow = new FakeGame { HoldPlayers = new(TaskCreationOptions.RunContinuationsAsynchronously), Players = "[{\"name\":\"Ash\",\"x\":0,\"y\":30,\"z\":0,\"yaw\":0}]" };
-        using var other = new FakeGame();
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        await w.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(slow.Url, slow.Token), FakeGame.Label()), "Connecting…");
-        var m = w.MapPage!;
-        var first = w.World!;
-        await TestWindows.Until(() => slow.PlayerReads == 1);
-        using var session = await WorldSession.OpenLive(new LiveBridge(other.Url, other.Token), FakeGame.Label());
-        m.Show(session);
-        await TestWindows.Until(() => other.PlayerReads == 1);
-        m.Show(first);
-        await m.PollPlayers();
-        Assert.Equal(1, slow.PlayerReads);
-        slow.HoldPlayers.SetResult();
-        await TestWindows.Until(() => m.LiveText.Text == "Live world · 1 player(s) online: Ash");
-        Assert.Equal(["Ash"], m.Map.Players.Select(p => p.Name));
-        m.Stop();
-    }
-
-    [AvaloniaFact]
     public async Task EachBiomeHasItsName()
     {
-        using var r = new Run();
+        using var r = new MapPageRun();
         await r.Open();
         var terrain = r.W.World!.Terrain;
         foreach (var (biome, name) in new[] { (ValheimGen.Heightmap.Biome.BlackForest, "Black Forest"), (ValheimGen.Heightmap.Biome.AshLands, "Ashlands"), (ValheimGen.Heightmap.Biome.DeepNorth, "Deep North"), (ValheimGen.Heightmap.Biome.Meadows, "Meadows") })
@@ -164,13 +73,6 @@ public class MapPageTests
         }
     }
 
-    /// <summary>
-    /// What the map raises when the mouse moves over it (headless windows put an overlay above the map, so the event is
-    /// raised as the map does).
-    /// </summary>
-    private static void Hovered(MapPage m, float x, float z) =>
-        (typeof(MapView).GetField("Hovered", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(m.Map) as Action<float, float>)!(x, z);
-
     [AvaloniaFact]
     public async Task TheCursorLineFollowsTheMouseOverTheMap()
     {
@@ -178,7 +80,7 @@ public class MapPageTests
         var empty = new MapPage();
         Hovered(empty, 10, 10);
         Assert.Equal("", empty.Cursor.Text ?? "");
-        using var r = new Run();
+        using var r = new MapPageRun();
         await r.Open();
         Hovered(r.M, 100.4f, -40.6f);
         Assert.Matches(@"^x 100, z -41 · zone 2, -1 · \w", r.M.Cursor.Text);
@@ -187,7 +89,7 @@ public class MapPageTests
     [AvaloniaFact]
     public async Task AnEmptySearchClearsThePinsAndAFailedOneSaysSo()
     {
-        using var r = new Run();
+        using var r = new MapPageRun();
         // A sign with a text, saved into the world first (the test world has none).
         var world = WorldSave.Load(r.Dir);
         var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == StableHash.Of("Beech1"));
@@ -217,7 +119,7 @@ public class MapPageTests
     [AvaloniaFact]
     public async Task TheZoneFilterSaysWhenNothingMatchesOrIsMarked()
     {
-        using var r = new Run();
+        using var r = new MapPageRun();
         await r.Open();
         await r.M.UnmarkAll();
         Assert.Equal("No zone is marked for reset.", r.Told.Single());
@@ -253,115 +155,5 @@ public class MapPageTests
         Assert.True(all > 0);
         r.M.RMaxBox.Text = "20 000";
         Assert.Equal(all, r.M.Matches.Count);
-    }
-
-    // Zone counts still being read when another world is shown are the first world's: dropped, not matched against the
-    // second; a question answered once another world is shown marks nothing in either.
-    [AvaloniaFact]
-    public async Task ZoneCountsAndMarksStayWithTheirWorld()
-    {
-        using var r = new Run();
-        await r.Open();
-        var first = r.W.World!;
-        string otherDir = Fixtures.CopyFixture();
-        try
-        {
-            var other = WorldSession.Open(otherDir);
-            r.M.NoBuildBox.IsChecked = false;
-            r.M.OnlyGenBox.IsChecked = false;
-            r.M.NoEditBox.IsChecked = false;
-            // Shown before the counts come back (they come back on this thread, after it).
-            var showing = r.M.ShowMatching();
-            r.M.Show(other);
-            await showing;
-            Assert.Empty(r.M.Matches);
-            // The second world's own counts are read when asked.
-            await r.M.ShowMatching();
-            Assert.NotEmpty(r.M.Matches);
-            // Back to the first, which switches to the second while asking.
-            r.M.Show(first);
-            r.M.Confirm = _ =>
-            {
-                r.M.Show(other);
-                return Task.FromResult(true);
-            };
-            await r.M.MarkMatching();
-            Assert.Equal(0, first.Pending.Resets);
-            Assert.Equal(0, other.Pending.Resets);
-        }
-        finally
-        {
-            Directory.Delete(Path.GetDirectoryName(otherDir)!, recursive: true);
-        }
-    }
-
-    // Zone counts still being read when the same world is shown again (after a save or a discard) are from before: dropped
-    // (with their "Reading" status), and read again when next asked; a question answered once it is shown again marks
-    // nothing.
-    [AvaloniaFact]
-    public async Task ZoneCountsAndMarksFromBeforeTheWorldIsShownAgainAreDropped()
-    {
-        using var r = new Run();
-        await r.Open();
-        r.M.NoBuildBox.IsChecked = false;
-        r.M.OnlyGenBox.IsChecked = false;
-        r.M.NoEditBox.IsChecked = false;
-        // Shown again before the counts come back (they come back on this thread, after it).
-        var showing = r.M.ShowMatching();
-        r.M.Show(r.W.World!);
-        await showing;
-        Assert.Empty(r.M.Matches);
-        Assert.Equal("", r.M.ZoneInfo.Text);
-        var again = r.M.ShowMatching();
-        Assert.Equal("Reading every zone…", r.M.ZoneInfo.Text);
-        await again;
-        Assert.NotEmpty(r.M.Matches);
-        r.M.Confirm = _ =>
-        {
-            r.M.Show(r.W.World!);
-            return Task.FromResult(true);
-        };
-        await r.M.MarkMatching();
-        Assert.Equal(0, r.W.World!.Pending.Resets);
-    }
-
-    [AvaloniaFact]
-    public async Task UnmarkingBeforeTheZonesAreReadStillWorks()
-    {
-        using var r = new Run();
-        await r.Open();
-        r.W.World!.Edits.SetReset(new ZoneReset(3, 4, true, false), true);
-        await r.M.UnmarkAll();
-        Assert.Equal(0, r.W.World.Pending.Resets);
-        Assert.Equal("Everything is saved.", r.M.Pending.Text);
-    }
-
-    // The pending line: all saved or applied, else what waits, one zone or several.
-    [Theory]
-    [InlineData(0, 0, 0, 0, false, "Everything is saved.")]
-    [InlineData(0, 0, 0, 0, true, "Everything is applied.")]
-    [InlineData(1, 0, 0, 0, false, "Not saved yet: 1 zone of ground.")]
-    [InlineData(3, 2, 1, 1, true, "Not applied yet: 3 zones of ground, 2 deleted, 1 added, 1 zone reset.")]
-    [InlineData(0, 0, 4, 0, false, "Not saved yet: 4 added.")]
-    public void ThePendingLineSaysWhatWaits(int zones, int deleted, int added, int resets, bool live, string said) =>
-        Assert.Equal(said, MapPage.PendingText((zones, deleted, added, resets), live));
-
-    // The found line: the counts (twelve at most, then how many more), and how many found, in all for items, with
-    // how many are pinned when the search kept only the first.
-    [Theory]
-    [InlineData("kinds", false, 2, "2 Beech · 1 Kind1\n3 found. Click one to go there.")]
-    [InlineData("kinds", true, 2, "2 Beech · 1 Kind1\n3 found, the first 2 pinned. Click one to go there.")]
-    [InlineData("items", false, 2, "2 Beech · 1 Kind1\n3 found in all. Click one to go there.")]
-    [InlineData("items", true, 2, "2 Beech · 1 Kind1\n3 found in all, the first 2 pinned. Click one to go there.")]
-    [InlineData("texts", false, 14, "2 Beech · 1 Kind1 · 1 Kind2 · 1 Kind3 · 1 Kind4 · 1 Kind5 · 1 Kind6 · 1 Kind7 · 1 Kind8 · 1 Kind9 · 1 Kind10 · 1 Kind11 · +2 more\n15 found. Click one to go there.")]
-    public void TheFoundLineSaysWhatWasFound(string what, bool truncated, int kinds, string said)
-    {
-        var counts = new Dictionary<string, int> { ["Beech"] = 2 };
-        for (int i = 1; i < kinds; i++)
-        {
-            counts[$"Kind{i}"] = 1;
-        }
-        var hits = new List<WorldSearch.Hit> { new(1, "Beech", 0, 0, 0, null), new(2, "Beech", 1, 0, 1, null) };
-        Assert.Equal(said, MapPage.Found(new WorldSearch.Result(hits, counts, counts.Values.Sum(), truncated), what));
     }
 }

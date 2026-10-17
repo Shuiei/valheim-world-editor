@@ -29,10 +29,7 @@ public sealed class TempWorldTests
             return;
         }
         var world = new TempWorld();
-        string locked = Path.Combine(world.Dir, "locked");
-        Directory.CreateDirectory(locked);
-        File.WriteAllText(Path.Combine(locked, "held"), "");
-        File.SetUnixFileMode(locked, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+        string locked = LockedFolders.Make(world.Dir);
         try
         {
             var e = Record.Exception(world.Dispose);
@@ -42,7 +39,7 @@ public sealed class TempWorldTests
         }
         finally
         {
-            File.SetUnixFileMode(locked, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            LockedFolders.Unlock(locked);
             world.Dispose();
         }
     }

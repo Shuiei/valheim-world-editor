@@ -22,14 +22,7 @@ public class MainWindowKeysTests
     /// A shown window editing a flat 2 × 2 zone area (ground at 30 m) with these objects.
     /// </summary>
     private static (MainWindow W, EditSession S) Open(params WorldScene.Thing[] things)
-    {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2, things);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
-        return (w, s);
-    }
+        => TestWindows.EditingFlat(things);
 
     /// <summary>
     /// Presses a key (with these modifiers) on the window.
@@ -218,13 +211,8 @@ public class MainWindowKeysTests
         try
         {
             int chestKind = StableHash.Of("piece_chest_wood");
-            var world = WorldSave.Load(dir);
-            var at = world.Objects.First(o => o.Prefab == chestKind).Position;
-            var scene = WorldScene.Load(dir, (int)MathF.Floor((at.X + 32) / 64), (int)MathF.Floor((at.Z + 32) / 64), 1);
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            w.View.Show(scene, null);
-            w.Edit(scene.Session!);
+            var scene = TestScenes.ZoneHolding(dir, chestKind);
+            var w = TestWindows.Editing(scene.Session!);
             w.Tools.ChooseSelect();
             int chest = scene.Things.FindIndex(t => t.Prefab == chestKind);
             w.View.Select([chest]);

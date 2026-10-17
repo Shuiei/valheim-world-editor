@@ -20,11 +20,8 @@ public class MainWindowDungeonBuildTests
     /// </summary>
     private static (MainWindow W, EditSession S) Open()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
         var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = TestWindows.Editing(s);
         return (w, s);
     }
 
@@ -70,10 +67,7 @@ public class MainWindowDungeonBuildTests
         try
         {
             var scene = WorldScene.Load(dir, 0, 0, 1);
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            w.View.Show(scene, null);
-            w.Edit(scene.Session!);
+            var w = TestWindows.Editing(scene.Session!);
             var settings = new DungeonGen.Settings(Size: 1, Levels: 1, Seed: 12345);
             var r = DungeonGen.Make(settings);
             r.Items.Add(new DungeonGen.Item("no_such_piece_xyz", r.Items[0].Position, Quaternion.Identity));

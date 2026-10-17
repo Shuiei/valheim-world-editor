@@ -16,7 +16,7 @@ public class WorldGeneratorTests
     /// A generator for the seed, of a world generator version, or the main menu's world.
     /// </summary>
     private static WorldGenerator Generator(int version = 2, bool menu = false) =>
-        WorldGenerator.Create(new World { m_seed = Seed, m_worldGenVersion = version, m_menu = menu });
+        WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = version, Menu = menu });
 
     /// <summary>
     /// Points on rings round the world's middle, from r0 up to r1 (step metres apart), at n angles.

@@ -14,6 +14,7 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class ClaudeToolsControlsTests
 {
+    private static readonly string[] Expected1 = ["Fast", "Sharp"];
     // KindOf: each kind of control by its most specific type; others are not controls Claude sets.
     [AvaloniaFact]
     public void ControlsAreKnownByKind()
@@ -53,7 +54,7 @@ public class ClaudeToolsControlsTests
             {
                 new CheckBox { Content = "Show water", IsChecked = true }.Tip("view.water"),
                 new Button { Content = "Go" }, new Button { Content = "Go" },
-                new ComboBox { ItemsSource = new[] { "Fast", "Sharp" }, SelectedIndex = 1 },
+                new ComboBox { ItemsSource = Expected1, SelectedIndex = 1 },
                 new Slider { Minimum = 0, Maximum = 40, Value = 7 },
             },
         };
