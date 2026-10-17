@@ -31,45 +31,8 @@ public static partial class Dungeons
         try
         {
             Rnd.InitState(seed);
-            foreach (var s in spawns)
-            {
-                bool spawned = Rnd.Range(0f, 100f) <= s.Chance;
-                if (s.Theme != 0 && (themes & s.Theme) == 0 || y < s.MinY || y > s.MaxY)
-                {
-                    spawned = false;
-                }
-                Set(s.Node, !spawned);
-                if (s.Off >= 0)
-                {
-                    Set(s.Off, spawned);
-                }
-            }
-            foreach (var pick in picks)
-            {
-                float total = pick.Choices.Sum(c => c.Weight), roll = Rnd.Range(0f, total), sum = 0;
-                int? chosen = null;
-                foreach (var (node, weight) in pick.Choices)
-                {
-                    sum += weight;
-                    if (roll <= sum)
-                    {
-                        chosen = node;
-                        break;
-                    }
-                }
-                if (pick.Theme != 0 && (themes & pick.Theme) == 0 || y < pick.MinY || y > pick.MaxY)
-                {
-                    chosen = null;
-                }
-                foreach (var (node, _) in pick.Choices)
-                {
-                    Set(node, node != chosen);
-                }
-                if (chosen == null)
-                {
-                    Set(pick.Node, true);
-                }
-            }
+            RollSpawns(spawns, themes, y, off);
+            RollPicks(picks, themes, y, off);
         }
         finally
         {
@@ -77,26 +40,34 @@ public static partial class Dungeons
         }
         foreach (var c in contents)
         {
-            // Up its parents to the prefab: a node past the list (damaged scan data) ends the walk, and so does a walk
-            // longer than the list (a loop).
-            bool shown = true;
-            for (int n = c.Node, steps = 0; n >= 0 && n < nodes.Length && shown && steps <= nodes.Length; n = nodes[n], steps++)
-            {
-                shown = !off[n];
-            }
-            if (shown)
+            if (IsShown(c.Node, nodes, off))
             {
                 made.Add(new Made(c.Prefab, position + Vector3.Transform(c.Position, rotation), Quaternion.Normalize(rotation * c.Rotation)));
             }
         }
         return made;
+    }
 
-        void Set(int node, bool hidden)
+    /// <summary>
+    /// Whether a part is shown: no node up its parents to the prefab is hidden. A node past the list (damaged scan
+    /// data) ends the walk, and so does a walk longer than the list (a loop).
+    /// </summary>
+    internal static bool IsShown(int node, int[] nodes, bool[] off)
+    {
+        bool shown = true;
+        for (int n = node, steps = 0; n >= 0 && n < nodes.Length && shown && steps <= nodes.Length; n = nodes[n], steps++)
         {
-            if (node >= 0 && node < off.Length)
-            {
-                off[node] = hidden;
-            }
+            shown = !off[n];
+        }
+        return shown;
+    }
+
+    /// <summary>Sets whether a node is hidden; a node outside the list is ignored.</summary>
+    internal static void SetHidden(bool[] off, int node, bool hidden)
+    {
+        if (node >= 0 && node < off.Length)
+        {
+            off[node] = hidden;
         }
     }
 }
