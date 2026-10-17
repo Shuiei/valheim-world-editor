@@ -26,7 +26,7 @@ public static partial class GameShader
     /// <param name="decl">The module's declarations.</param>
     /// <param name="prm">The names of the parameter blob.</param>
     /// <param name="add">The instructions to add to the module, collected here.</param>
-    private static void AddBlockMemberNames(SpirvDeclarations decl, Params prm, List<(uint Op, List<uint> Words)> add)
+    internal static void AddBlockMemberNames(SpirvDeclarations decl, Params prm, List<(uint Op, List<uint> Words)> add)
     {
         foreach (var (v, ptype, storage) in decl.Variables)
         {
@@ -51,7 +51,7 @@ public static partial class GameShader
     /// </summary>
     /// <param name="words">The module.</param>
     /// <param name="add">The instructions to insert.</param>
-    private static uint[] InsertNames(uint[] words, List<(uint Op, List<uint> Words)> add)
+    internal static uint[] InsertNames(uint[] words, List<(uint Op, List<uint> Words)> add)
     {
         var output = new List<uint>(words.Length + 64);
         output.AddRange(words.AsSpan(0, 5).ToArray());

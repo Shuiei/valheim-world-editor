@@ -9,7 +9,7 @@ public static partial class GameShader
     /// <param name="decl">The module's declarations.</param>
     /// <param name="prm">The names of the parameter blob.</param>
     /// <param name="add">The instructions to add to the module, collected here.</param>
-    private static void AddVariableNames(SpirvDeclarations decl, Params prm, List<(uint Op, List<uint> Words)> add)
+    internal static void AddVariableNames(SpirvDeclarations decl, Params prm, List<(uint Op, List<uint> Words)> add)
     {
         foreach (var (v, _, storage) in decl.Variables)
         {

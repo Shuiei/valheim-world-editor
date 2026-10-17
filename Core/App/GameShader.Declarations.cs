@@ -14,7 +14,7 @@ public static partial class GameShader
     /// <param name="Pointers">Each pointer type's storage class and pointee type.</param>
     /// <param name="Variables">Each variable: its id, its pointer type and its storage class.</param>
     /// <param name="Blocks">The structs decorated as blocks.</param>
-    private sealed record SpirvDeclarations(Dictionary<uint, string> Names, Dictionary<uint, Dictionary<uint, uint[]>> Decorations,
+    internal sealed record SpirvDeclarations(Dictionary<uint, string> Names, Dictionary<uint, Dictionary<uint, uint[]>> Decorations,
         Dictionary<uint, Dictionary<uint, uint>> MemberOffsets, Dictionary<uint, (uint Storage, uint Type)> Pointers,
         List<(uint Var, uint Ptype, uint Storage)> Variables, HashSet<uint> Blocks)
     {
