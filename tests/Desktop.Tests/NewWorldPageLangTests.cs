@@ -137,11 +137,9 @@ public sealed class NewWorldPageLangTests
     {
         using var pseudo = new PseudoLang();
         string dir = Fixtures.CopyFixture();
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        var w = MainWindowNewWorldTests.OnNewWorldPage();
         try
         {
-            w.Show();
-            w.ShowNewWorld();
             var page = w.NewWorld!;
             page.ShowSeed("ABCDEFGHIJK");
             Assert.Empty(PseudoLang.Untranslated(page.Info));
