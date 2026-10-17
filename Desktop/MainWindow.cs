@@ -2066,7 +2066,7 @@ public sealed partial class MainWindow : Window
     private Border StatusBar()
     {
         var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto,Auto"), ColumnSpacing = 18 };
-        var tips = new TextBlock { Text = "Right drag turns · Wheel zooms · Middle drag slides · ? help", FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
+        var tips = new TextBlock { Text = Lang.T("help.statusTips"), FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
         _selection.VerticalAlignment = _eye.VerticalAlignment = VerticalAlignment.Center;
         _selection.TextWrapping = _eye.TextWrapping = TextWrapping.NoWrap;
         _selection.MaxWidth = 380;
@@ -2095,15 +2095,16 @@ public sealed partial class MainWindow : Window
         var list = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12, RowSpacing = 5 };
         var rows = new (string Keys, string What)[]
         {
-            ("Left drag", "Use the tool"), ("Right drag", "Turn the view"), ("Wheel", "Zoom"),
-            ("Middle drag", "Slide the view (also Space + left drag, Shift + right drag, the View tool)"), ("W A S D", "Move around"),
-            ("F", "Walk at eye height · fly (Space up, C down) · back to the usual view"), ("1–9, 0, O", "Sculpt and paint tools (O: Erode)"),
-            ("B / P / T / G", "Area, Path, Place, Shape"), ("E / M / H", "Select, Measure, View (Esc too)"), ("[  ]", "Brush size"),
-            ("Ctrl+C / Ctrl+X / Ctrl+V", "Copy or cut the area or selection / paste it (R turns 90°, , . turn 1°, F mirrors)"),
-            ("Alt + wheel", "Turn the selection, the paste or the Place preview (, . too; Shift: 15°)"), ("Place: R", "New layout"),
-            ("Alt + click", "Pick the ground height"), ("Del", "Delete the selected objects"), ("I", "Inspect the selected object"),
-            ("PgUp / PgDn / End", "Lift, lower or drop the selection"),
-            ("Ctrl+Z / Ctrl+Y", "Undo / redo"), ("Ctrl+S", "Save"), ("V / L / ?", "View panel / history / this help"),
+            (Lang.T("help.leftDrag.keys"), Lang.T("help.leftDrag.what")), (Lang.T("help.rightDrag.keys"), Lang.T("help.rightDrag.what")),
+            (Lang.T("help.wheel.keys"), Lang.T("help.wheel.what")), (Lang.T("help.middleDrag.keys"), Lang.T("help.middleDrag.what")),
+            (Lang.T("help.move.keys"), Lang.T("help.move.what")), (Lang.T("help.walk.keys"), Lang.T("help.walk.what")),
+            (Lang.T("help.sculpt.keys"), Lang.T("help.sculpt.what")), (Lang.T("help.tools.keys"), Lang.T("help.tools.what")),
+            (Lang.T("help.select.keys"), Lang.T("help.select.what")), (Lang.T("help.brushSize.keys"), Lang.T("help.brushSize.what")),
+            (Lang.T("help.copy.keys"), Lang.T("help.copy.what")), (Lang.T("help.turn.keys"), Lang.T("help.turn.what")),
+            (Lang.T("help.layout.keys"), Lang.T("help.layout.what")), (Lang.T("help.pickHeight.keys"), Lang.T("help.pickHeight.what")),
+            (Lang.T("help.delete.keys"), Lang.T("help.delete.what")), (Lang.T("help.inspect.keys"), Lang.T("help.inspect.what")),
+            (Lang.T("help.lift.keys"), Lang.T("help.lift.what")), (Lang.T("help.undo.keys"), Lang.T("help.undo.what")),
+            (Lang.T("help.save.keys"), Lang.T("common.save")), (Lang.T("help.panels.keys"), Lang.T("help.panels.what")),
         };
         for (int i = 0; i < rows.Length; i++)
         {
@@ -2118,7 +2119,7 @@ public sealed partial class MainWindow : Window
         }
         var close = new Button { Content = Icons.Make("close", 14), Padding = new Thickness(5) }.Classed("ghost").Tip("card.close");
         close.Click += (_, _) => ShowRight(null);
-        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "Controls", FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center } } };
+        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = Lang.T("help.head.controls"), FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center } } };
         Grid.SetColumn(close, 1);
         head.Children.Add(close);
         record.Classes.Add("switch");
@@ -2130,9 +2131,9 @@ public sealed partial class MainWindow : Window
                 Children =
                 {
                     head, list,
-                    Ui.Hint("Edits stay within the game's limit of ±8 m from the original ground; points at the limit turn red (View: Limit marks)."),
-                    Ui.Hint("The outer line of points is locked so the area always joins its neighbours seamlessly."),
-                    Ui.Heading("This computer"),
+                    Ui.Hint(Lang.T("help.hint.limit")),
+                    Ui.Hint(Lang.T("help.hint.edges")),
+                    Ui.Heading(Lang.T("help.head.computer")),
                     _fps, LoadedInfo, record,
                 },
             },
@@ -2239,13 +2240,13 @@ public sealed partial class MainWindow : Window
     /// <param name="indices">The new objects' indices in it.</param>
     internal void ShowKindsOf(WorldScene scene, IReadOnlyList<int> indices)
     {
-        var turned = new List<string>();
+        var turned = new List<Said>();
         foreach (var k in indices.Where(i => i < scene.Things.Count).Select(i => ObjectKinds.Of(NameOfPrefab(scene.Things[i].Prefab), scene.Things[i].Piece, scene.Things[i].Tamed)).Distinct())
         {
             if (_kindBoxes.TryGetValue(k, out var box) && box.IsChecked != true)
             {
                 box.IsChecked = true;
-                turned.Add(ObjectKinds.Label(k));
+                turned.Add(ObjectKinds.Name(k));
             }
         }
         // (The Workshop has no View panel to say it in.)
@@ -2255,7 +2256,7 @@ public sealed partial class MainWindow : Window
         }
         Dispatcher.UIThread.Post(() =>
         {
-            Msg(LastSaid + Said.Raw($"Switched on {string.Join(", ", turned)} in View, so what you placed stays visible."));
+            Msg(LastSaid + Said.Of("view.msg.switchedOn", Said.Join(", ", turned)));
         }, DispatcherPriority.Background);
     }
 
@@ -2274,10 +2275,11 @@ public sealed partial class MainWindow : Window
             }
             else
             {
-                MessageText.Text = "Nothing picked: click right on an object (only things that are shown can be picked).";
+                Msg("view.msg.nothingPicked");
             }
         };
-        MessageText.Text = $"Click an object to pick its kind for {label}. Esc cancels.";
+        // The label as the panel shows it; Claude reads its English.
+        Msg(new Said(Lang.T("view.msg.pickKind", label), Lang.En("view.msg.pickKind", Lang.EnglishOf(label))));
     }
     /// <summary>
     /// , . turn the paste by 1° (Shift: 15°); . is clockwise seen from above, like the other tools.
@@ -2314,15 +2316,15 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Draw the water.
     /// </summary>
-    internal CheckBox WaterBox { get; } = new() { Content = "Water", IsChecked = true, FontSize = 12 };
+    internal CheckBox WaterBox { get; } = new() { Content = Lang.T("view.label.water"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Mark what is not saved yet (new objects keep a green marker).
     /// </summary>
-    internal CheckBox UnsavedBox { get; } = new() { Content = "Unsaved marks", IsChecked = true, FontSize = 12 };
+    internal CheckBox UnsavedBox { get; } = new() { Content = Lang.T("view.label.unsaved"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Mark ground points at the game's ±8 m limit in red.
     /// </summary>
-    internal CheckBox LimitBox { get; } = new() { Content = "Limit marks", IsChecked = true, FontSize = 12 };
+    internal CheckBox LimitBox { get; } = new() { Content = Lang.T("view.label.limit"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// One switch per overlay layer.
     /// </summary>
@@ -2334,7 +2336,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Colour the ground by its slope.
     /// </summary>
-    internal CheckBox SlopeBox { get; } = new() { Content = "Slope colours", FontSize = 12 };
+    internal CheckBox SlopeBox { get; } = new() { Content = Lang.T("view.label.slope"), FontSize = 12 };
     /// <summary>
     /// Building: who new pieces are built by (the player ids: the list's entries).
     /// </summary>
@@ -2350,7 +2352,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Draw height lines.
     /// </summary>
-    internal CheckBox ContourBox { get; } = new() { Content = "Height lines every", FontSize = 12 };
+    internal CheckBox ContourBox { get; } = new() { Content = Lang.T("view.label.contour"), FontSize = 12 };
     /// <summary>
     /// How far apart the height lines are, in metres.
     /// </summary>
@@ -2367,27 +2369,27 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// The game's look, or plain colours and boxes.
     /// </summary>
-    internal CheckBox GameLookBox { get; } = new() { Content = "Game look", IsChecked = true, FontSize = 12 };
+    internal CheckBox GameLookBox { get; } = new() { Content = Lang.T("view.label.gameLook"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Draw buildings see-through.
     /// </summary>
-    internal CheckBox SeeThroughBox { get; } = new() { Content = "See-through buildings", FontSize = 12 };
+    internal CheckBox SeeThroughBox { get; } = new() { Content = Lang.T("view.label.seeThrough"), FontSize = 12 };
     /// <summary>
     /// The 3D view's resolution: the screen's, balanced, or fast.
     /// </summary>
-    internal ComboBox ResolutionBox { get; } = new() { ItemsSource = new[] { "Sharp (the screen's)", "Balanced", "Fast" }, SelectedIndex = 0, FontSize = 12, MinWidth = 150 };
+    internal ComboBox ResolutionBox { get; } = new() { ItemsSource = new[] { Lang.T("view.res.sharp"), Lang.T("view.res.balanced"), Lang.T("view.res.fast") }, SelectedIndex = 0, FontSize = 12, MinWidth = 150 };
     /// <summary>
     /// Every kind, the water and the overlays as they start.
     /// </summary>
-    internal Button DefaultsButton { get; } = new() { Content = "Defaults", FontSize = 12 };
+    internal Button DefaultsButton { get; } = new() { Content = Lang.T("view.label.defaults"), FontSize = 12 };
     /// <summary>
     /// Every kind, the water and the overlays on.
     /// </summary>
-    internal Button AllButton { get; } = new() { Content = "All", FontSize = 12 };
+    internal Button AllButton { get; } = new() { Content = Lang.T("view.label.all"), FontSize = 12 };
     /// <summary>
     /// Only the ground: every kind, the water and the overlays off.
     /// </summary>
-    internal Button GroundButton { get; } = new() { Content = "Ground", FontSize = 12 };
+    internal Button GroundButton { get; } = new() { Content = Lang.T("view.label.ground"), FontSize = 12 };
     /// <summary>
     /// Each preset switch and whether it starts on (the defaults).
     /// </summary>
@@ -2420,14 +2422,31 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
+    /// The View panel's overlay switches, each with its tip, as the 3D view shows the overlays now.
+    /// </summary>
+    /// <param name="list">The panel's list they go into.</param>
+    private void AddOverlayBoxes(StackPanel list)
+    {
+        foreach (var (layer, label) in new[] { (Overlays.Layer.Borders, Lang.T("view.overlay.borders")), (Overlays.Layer.Markers, Lang.T("view.overlay.markers")),
+            (Overlays.Layer.Wards, Lang.T("view.overlay.wards")), (Overlays.Layer.Stations, Lang.T("view.overlay.stations")),
+            (Overlays.Layer.Flatten, Lang.T("view.overlay.flatten")) })
+        {
+            var box = new CheckBox { Content = label, IsChecked = View.IsOverlayShown(layer), FontSize = 12, Tag = label };
+            ToolTip.SetTip(box, Tips.Overlay(layer));
+            _overlayBoxes[layer] = box;
+            list.Children.Add(box);
+        }
+    }
+
+    /// <summary>
     /// Lays out the View panel: its headings, switches, lists and preset buttons with their tips; the switches'
     /// starting states are kept as the presets' defaults.
     /// </summary>
     private Border BuildViewPanel()
     {
         var list = new StackPanel { Spacing = 2 };
-        list.Children.Add(Ui.Heading("View", 0));
-        list.Children.Add(Heading("LOOK"));
+        list.Children.Add(Ui.Heading(Lang.T("rail.label.view"), 0));
+        list.Children.Add(Heading(Lang.T("view.head.look")));
         GameLookBox.Tip("view.gameLook");
         WaterBox.Tip("view.water");
         SlopeBox.Tip("view.slope");
@@ -2439,8 +2458,8 @@ public sealed partial class MainWindow : Window
         ResolutionBox.Tip("view.res3d");
         list.Children.Add(GameLookBox);
         list.Children.Add(SeeThroughBox);
-        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = "3D resolution", FontSize = 12 }, ResolutionBox } });
-        list.Children.Add(Heading("OBJECTS"));
+        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = Lang.T("view.label.res3d"), FontSize = 12 }, ResolutionBox } });
+        list.Children.Add(Heading(Lang.T("view.head.objects")));
         foreach (var k in ObjectKinds.All)
         {
             var box = new CheckBox { Content = ObjectKinds.Label(k), IsChecked = View.IsShown(k), FontSize = 12 };
@@ -2449,15 +2468,8 @@ public sealed partial class MainWindow : Window
             list.Children.Add(box);
         }
         list.Children.Add(WaterBox);
-        list.Children.Add(Heading("OVERLAYS"));
-        foreach (var (layer, label) in new[] { (Overlays.Layer.Borders, "Zone borders"), (Overlays.Layer.Markers, "Location markers"), (Overlays.Layer.Wards, "Ward areas"),
-            (Overlays.Layer.Stations, "Build ranges"), (Overlays.Layer.Flatten, "Location flattening") })
-        {
-            var box = new CheckBox { Content = label, IsChecked = View.IsOverlayShown(layer), FontSize = 12, Tag = label };
-            ToolTip.SetTip(box, Tips.Overlay(layer));
-            _overlayBoxes[layer] = box;
-            list.Children.Add(box);
-        }
+        list.Children.Add(Heading(Lang.T("view.head.overlays")));
+        AddOverlayBoxes(list);
         UnsavedBox.Tip("view.unsaved");
         list.Children.Add(UnsavedBox);
         LimitBox.Tip("view.limit");
@@ -2469,12 +2481,12 @@ public sealed partial class MainWindow : Window
         }
         GroundButton.Tip("view.ground");
         list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 6, 0, 0), Children = { DefaultsButton, AllButton, GroundButton } });
-        list.Children.Add(Heading("BUILDING"));
+        list.Children.Add(Heading(Lang.T("view.head.building")));
         BuilderBox.Tip("view.builder");
-        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = "Built by", FontSize = 12 }, BuilderBox } });
-        list.Children.Add(Heading("GROUND (game look)"));
+        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = Lang.T("view.label.builtBy"), FontSize = 12 }, BuilderBox } });
+        list.Children.Add(Heading(Lang.T("view.head.ground")));
         list.Children.Add(SlopeBox);
-        list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ContourBox, ContourStepBox, new TextBlock { Text = "m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } });
+        list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ContourBox, ContourStepBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } });
         list.Children.Add(PlayersControl());
         // The web editor's switches.
         foreach (var box in Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(list).OfType<CheckBox>())
@@ -2505,7 +2517,13 @@ public sealed partial class MainWindow : Window
         {
             View.Resolution3D = (GlView.Resolution)Math.Max(0, ResolutionBox.SelectedIndex);
             var (w, h) = View.RenderSize();
-            MessageText.Text = $"3D resolution: {ResolutionBox.SelectedItem}, {w}×{h} pixels.";
+            var name = View.Resolution3D switch
+            {
+                GlView.Resolution.Sharp => Said.Of("view.res.sharp"),
+                GlView.Resolution.Balanced => Said.Of("view.res.balanced"),
+                _ => Said.Of("view.res.fast"),
+            };
+            Msg("view.msg.resolution", name, w, h);
         };
         foreach (var (k, box) in _kindBoxes)
         {
@@ -2847,7 +2865,7 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private CheckBox RecordBox()
     {
-        var record = new CheckBox { Content = "Record frame rates", FontSize = 12.5 };
+        var record = new CheckBox { Content = Lang.T("help.label.record"), FontSize = 12.5 };
         record.IsCheckedChanged += (_, _) => { _perf.On = record.IsChecked == true; _perf.Restart(); if (!_perf.On) { _perf.Flush(); } };
         ToolTip.SetTip(record, Lang.T("view.perfFile", Tips.Of("view.perf"), Ui.Tilde(PerfLog.FilePath)));
         return record;
@@ -3092,7 +3110,7 @@ public sealed partial class MainWindow : Window
         if (Tools.Mode == ToolMode.Paste)
         {
             PastePanel.OffsetBox.Value = Math.Round((PastePanel.OffsetBox.Value ?? 0) + dir * (shift ? 0.1m : 0.5m), 2);
-            MessageText.Text = $"Paste height: {PastePanel.OffsetBox.Value:+0.0#;-0.0#;0} m from the ground clicked (Ctrl + wheel; Shift: 0.1 m).";
+            Msg("view.msg.pasteHeight", PastePanel.OffsetBox.Value);
             return true;
         }
         if (Tools.Mode != ToolMode.Place || !PlaceTool.Building)
@@ -3121,15 +3139,16 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void WireViewReports()
     {
-        View.StatsChanged += s => _fps.Text = $"{s.Fps} frames/s · {s.WorkMs:0.0} ms of work each · {s.Objects:N0} objects ({s.Instances:N0} model parts in {s.Batches:N0} draws){(s.PendingModels > 0 ? $" · {s.PendingModels} kinds loading" : "")}";
+        View.StatsChanged += s => _fps.Text = Lang.T("help.fps", s.Fps, s.WorkMs, s.Objects, s.Instances, s.Batches)
+            + (s.PendingModels > 0 ? " " + Lang.T("help.fpsLoading", s.PendingModels) : "");
         View.SelectionChanged += _ => FollowSelection();
         View.SelectionChanged += things => _selection.Text = things.Count == 0 ? "" : things.Count == 1
-            ? $"Selected: {ThingName(things[0])} at {things[0].Position.X:0.0}, {things[0].Position.Z:0.0} (height {things[0].Position.Y:0.0})"
-            : $"Selected: {things.Count} objects ({string.Join(", ", things.GroupBy(ThingName).OrderByDescending(g => g.Count()).Take(4).Select(g => $"{g.Key} ×{g.Count()}"))})";
+            ? Lang.T("view.selected.one", ThingName(things[0]), things[0].Position.X, things[0].Position.Z, things[0].Position.Y)
+            : Lang.T("view.selected.many", things.Count, string.Join(", ", things.GroupBy(ThingName).OrderByDescending(g => g.Count()).Take(4).Select(g => $"{g.Key} ×{g.Count()}")));
         View.EyeChanged += e => _eye.Text = e switch
         {
-            GlView.EyeMode.Walk => "Walking at eye height: WASD moves (Shift runs), right drag looks around · F flies",
-            GlView.EyeMode.Fly => "Flying: WASD moves, Space up, C down (Shift faster) · F back to the usual view",
+            GlView.EyeMode.Walk => Lang.T("view.eye.walk"),
+            GlView.EyeMode.Fly => Lang.T("view.eye.fly"),
             _ => "",
         };
         View.Status += t => { Options.Say(t.English); Dispatcher.UIThread.Post(() => LoadedInfo.Text = t.Shown + "\n" + LoadedInfo.Text); };

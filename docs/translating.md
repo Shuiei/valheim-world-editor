@@ -10,9 +10,10 @@ Not every text comes from the catalogue yet: every hover tip does (but the Inspe
 the small dialogs (questions, messages, a blueprint's details) and the words they share, the
 History panel, the save bar with what saving, applying, discarding, leaving and quitting ask and
 say, the brush options with the stamps and the cursor readout, the Measure, Mask, Script, Path,
-Cave, Shape, Mountain, Select and Paste tools, the biome names, and the 3D editor's area bar with
-the live game's messages and players; the rest moves over window by window. A catalogue made now
-keeps working as more texts are added: the new ones show in English until translated.
+Cave, Shape, Mountain, Select and Paste tools, the biome names, the 3D editor's area bar with the
+live game's messages and players, the View panel, the help card and the status bar's readouts; the
+rest moves over window by window. A catalogue made now keeps working as more texts are added: the
+new ones show in English until translated.
 
 ## Making a catalogue
 

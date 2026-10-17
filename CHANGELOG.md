@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.14 — unreleased
+
+### Changed
+- **The View panel, the help card and the status bar's readouts come from the language catalogue.** The View
+  panel's switches, kinds of objects, overlays, 3D resolutions and headings, the help card's controls, the frame
+  rate, the selection and walking or flying lines, picking a kind and the paste height show in the language chosen
+  in Settings. In English nothing changes.
+
 ## v1.47.13 — unreleased
 
 ### Changed
