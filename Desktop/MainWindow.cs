@@ -1816,18 +1816,18 @@ public sealed partial class MainWindow : Window
             return;
         }
         var m = MountainPanel.Spec;
-        string name = MountainPanel.Preset.Name;
-        if (s.Mountain(gx, gz, m, MountainPanel.Clear, $"Mountain: {name}") is not { } done)
+        var preset = MountainPanel.Preset;
+        if (s.Mountain(gx, gz, m, MountainPanel.Clear, Lang.T("mountain.undo.placed", preset.Shown)) is not { } done)
         {
-            MessageText.Text = $"The {name.ToLowerInvariant()} reaches {m.Reach:0} m around the click and does not fit in the open area: click nearer its middle, make it smaller, or open a bigger area.";
+            Msg(MountainTooBig(m.Kind, m.Reach));
             return;
         }
         UpdateSaveBar();
-        string placed = $"Placed a {name.ToLowerInvariant()}, {m.Height:0} m high{(done.Cleared > 0 ? $"; {done.Cleared} tree(s) and rock(s) it buried taken away" : "")}.";
-        MessageText.Text = placed;
+        var placed = MountainPlaced(m.Kind, m.Height, done.Cleared > 0 ? Said.Of("mountain.msg.buried", done.Cleared) : Said.Empty);
+        Msg(placed);
         if (!MountainPanel.Grow)
         {
-            MessageText.Text = placed + " Ctrl+Z takes it back; saving turns it into ground discs.";
+            Msg(placed + Said.Of("mountain.msg.undoDiscs"));
             return;
         }
         var shape = Mountain.Shape(m);
@@ -1836,28 +1836,59 @@ public sealed partial class MainWindow : Window
         int generation = s.Generation;
         // On the slopes it raised by more than a metre (not around its foot, where the old ones stand).
         var spots = await Growth.Spots(s, wx - m.Reach, wz - m.Reach, wx + m.Reach, wz + m.Reach, o => shape(o.X - wx, o.Z - wz) > 1,
-            NameOfPrefab, t => Msg(Said.Raw(placed) + t), maxZones: 49);
+            NameOfPrefab, t => Msg(placed + t), maxZones: 49);
         if (Session != s || s.Generation != generation)
         {
             // Another area opened (Follow grew it), or the ground changed (an undo, a stroke, another mountain): the
             // trees would go to an area no longer shown, or float or be buried.
-            MessageText.Text = placed + " Nothing grew on it: the area changed while its trees were worked out.";
+            Msg(placed + Said.Of("mountain.msg.areaChanged"));
             UpdateSaveBar();
             return;
         }
         if (spots is { Count: > 0 })
         {
-            Growth.Commit(s, $"Mountain: grew {spots.Count} object(s)", spots);
-            placed += $" Grew {spots.Count} of the biome's trees and rocks on it.";
-            MessageText.Text = placed + " Ctrl+Z takes it back (twice with what grew); saving turns it into ground discs.";
+            Growth.Commit(s, Lang.T("mountain.undo.grew", spots.Count), spots);
+            placed += Said.Of("mountain.msg.grew", spots.Count);
+            Msg(placed + Said.Of("mountain.msg.undoTwice"));
         }
         else
         {
             // Nothing grew: one step to take back. When growing could not be done, why (Spots said it) stays.
-            MessageText.Text = (spots == null ? MessageText.Text : placed) + " Ctrl+Z takes it back; saving turns it into ground discs.";
+            Msg((spots == null ? LastSaid : placed) + Said.Of("mountain.msg.undoDiscs"));
         }
         UpdateSaveBar();
     }
+
+    /// <summary>The message for a mountain that does not fit in the open area: one whole sentence per kind.</summary>
+    /// <param name="kind">The mountain's kind.</param>
+    /// <param name="reach">How far it reaches around the click, in metres.</param>
+    /// <exception cref="ArgumentOutOfRangeException">An unknown kind.</exception>
+    private static Said MountainTooBig(MountainKind kind, float reach) => kind switch
+    {
+        MountainKind.Peak => Said.Of("mountain.msg.tooBig.peak", reach),
+        MountainKind.Ridge => Said.Of("mountain.msg.tooBig.ridge", reach),
+        MountainKind.Range => Said.Of("mountain.msg.tooBig.range", reach),
+        MountainKind.Mesa => Said.Of("mountain.msg.tooBig.mesa", reach),
+        MountainKind.Volcano => Said.Of("mountain.msg.tooBig.volcano", reach),
+        MountainKind.Hills => Said.Of("mountain.msg.tooBig.hills", reach),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "No such mountain kind."),
+    };
+
+    /// <summary>The message for a mountain put in: one whole sentence per kind.</summary>
+    /// <param name="kind">The mountain's kind.</param>
+    /// <param name="height">Its height, in metres.</param>
+    /// <param name="buried">The clause on the trees and rocks it buried, or <c>Said.Empty</c>.</param>
+    /// <exception cref="ArgumentOutOfRangeException">An unknown kind.</exception>
+    private static Said MountainPlaced(MountainKind kind, float height, Said buried) => kind switch
+    {
+        MountainKind.Peak => Said.Of("mountain.msg.placed.peak", height, buried),
+        MountainKind.Ridge => Said.Of("mountain.msg.placed.ridge", height, buried),
+        MountainKind.Range => Said.Of("mountain.msg.placed.range", height, buried),
+        MountainKind.Mesa => Said.Of("mountain.msg.placed.mesa", height, buried),
+        MountainKind.Volcano => Said.Of("mountain.msg.placed.volcano", height, buried),
+        MountainKind.Hills => Said.Of("mountain.msg.placed.hills", height, buried),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "No such mountain kind."),
+    };
 
     /// <summary>
     /// The Shape tool's click: the shape goes into the ground there (grid point).
@@ -1870,13 +1901,13 @@ public sealed partial class MainWindow : Window
         }
         if (ShapePanel.Function is not { } f)
         {
-            MessageText.Text = "Fix the formula first.";
+            Msg("shape.msg.fixFirst");
             return;
         }
         var (touched, clamped, bad) = s.Shape(gx, gz, f, ShapePanel.Radius, ShapePanel.Height, ShapePanel.Label);
-        MessageText.Text = touched == 0 ? "The formula gives 0 everywhere within the radius: nothing changed." + (bad > 0 ? $" ({bad} point(s) gave no number.)" : "")
-            : clamped ? "Placed, but part of the shape reached the game limit of ±8 m from the original ground (red points)."
-            : $"Placed the shape on {touched} point(s). Ctrl+Z undoes it.";
+        Msg(touched == 0 ? Said.Of("shape.msg.nothing") + (bad > 0 ? Said.Of("shape.msg.noNumber", bad) : Said.Empty)
+            : clamped ? Said.Of("shape.msg.clamped")
+            : Said.Of("shape.msg.placed", touched));
         UpdateSaveBar();
     }
 

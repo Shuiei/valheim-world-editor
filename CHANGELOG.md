@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.10 — unreleased
+
+### Changed
+- **The Shape and Mountain tools come from the language catalogue.** Their panels (presets, rows, help lines, a
+  formula's mistakes), the status messages of putting a shape or a mountain and their History steps show in the
+  language chosen in Settings. In English nothing changes; scripts still name a mountain preset in English.
+
 ## v1.47.9 — unreleased
 
 ### Changed

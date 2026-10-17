@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -48,15 +49,15 @@ public sealed class MountainPanel
     /// <summary>
     /// Rolls a new mountain of the chosen preset.
     /// </summary>
-    internal Button RandomizeButton { get; } = new Button { Content = "Randomize", FontSize = 12 }.Classed("primary");
+    internal Button RandomizeButton { get; } = new Button { Content = Lang.T("common.randomize"), FontSize = 12 }.Classed("primary");
     /// <summary>
     /// Take away the trees and rocks the mountain buries.
     /// </summary>
-    internal CheckBox ClearBox { get; } = new() { Content = "Take away the trees and rocks it buries", IsChecked = true, FontSize = 12 };
+    internal CheckBox ClearBox { get; } = new() { Content = Lang.T("mountain.label.clear"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Grow the biome's trees and rocks on the new mountain.
     /// </summary>
-    internal CheckBox GrowBox { get; } = new() { Content = "Grow the biome's trees and rocks on it", IsChecked = true, FontSize = 12 };
+    internal CheckBox GrowBox { get; } = new() { Content = Lang.T("mountain.label.grow"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// The chosen preset's help line.
     /// </summary>
@@ -133,13 +134,13 @@ public sealed class MountainPanel
     /// </summary>
     public MountainPanel()
     {
-        PresetBox = new ComboBox { ItemsSource = Mountain.Presets.Select(p => p.Name).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+        PresetBox = new ComboBox { ItemsSource = Mountain.Presets.Select(p => p.Shown).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
         TextBlock heightV = new(), radiusV = new(), roughV = new(), turnV = new();
         HeightSlider = Slide(5, 300, 1, heightV, v => $"{v:0} m");
         RadiusSlider = Slide(20, 280, 1, radiusV, v => $"{v:0} m");
         RoughSlider = Slide(0, 1, 0.05, roughV, v => $"{v:0.00}");
         TurnSlider = Slide(0, 179, 1, turnV, v => $"{v:0}°");
-        _turnRow = Ui.Row("Turn", TurnSlider, turnV);
+        _turnRow = Ui.Row(Lang.T("brush.label.turn"), TurnSlider, turnV);
         PresetBox.SelectionChanged += (_, _) => Randomize();
         RandomizeButton.Click += (_, _) => Randomize();
         SeedBox.ValueChanged += (_, _) =>
@@ -167,21 +168,20 @@ public sealed class MountainPanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = "Mountain", FontSize = 14, FontWeight = FontWeight.SemiBold },
-                    Ui.Row("Preset", PresetBox),
+                    new TextBlock { Text = Lang.T("rail.label.mountain"), FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    Ui.Row(Lang.T("common.preset"), PresetBox),
                     HelpText,
-                    Ui.Row("Height", HeightSlider, heightV),
-                    Ui.Row("Radius", RadiusSlider, radiusV),
-                    Ui.Row("Rough", RoughSlider, roughV),
+                    Ui.Row(Lang.T("common.height"), HeightSlider, heightV),
+                    Ui.Row(Lang.T("shape.label.radius"), RadiusSlider, radiusV),
+                    Ui.Row(Lang.T("mountain.label.rough"), RoughSlider, roughV),
                     _turnRow,
-                    Ui.Row("Seed", SeedBox),
+                    Ui.Row(Lang.T("common.seed"), SeedBox),
                     RandomizeButton,
                     ClearBox,
                     GrowBox,
                     new TextBlock
                     {
-                        Text = "Click the ground to put the mountain there (the circle shows how far it reaches); Ctrl+Z takes it back. "
-                            + "It goes past the game's ±8 m: saving turns it into ground discs every player's game counts as generated ground, console players too.",
+                        Text = Lang.T("mountain.hint.click"),
                         FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
                     },
                 },

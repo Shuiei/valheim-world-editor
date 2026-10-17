@@ -104,7 +104,7 @@ public class FormulaTests
     [Fact]
     public void EveryPresetCompiles()
     {
-        foreach (var (_, _, src) in ShapePanel.Presets)
+        foreach (var (_, src) in ShapePanel.Presets)
         {
             Formula.Compile(src, ["x", "z", "d", "r", "h"]);
         }
