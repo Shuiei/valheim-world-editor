@@ -45,10 +45,10 @@ public sealed partial class ClaudeTools
         {
             return "Open a world first (open_world).";
         }
-        TerrainEditor.App.WorldSearch.Result res;
+        WorldSearch.Result res;
         try
         {
-            res = await Task.Run(() => TerrainEditor.App.WorldSearch.Search(world.World, world.Edits, query, what));
+            res = await Task.Run(() => WorldSearch.Search(world.World, world.Edits, query, what));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -122,11 +122,11 @@ public sealed partial class ClaudeTools
     private static Dictionary<string, (string What, string Kind)> BuildKnown()
     {
         var known = new Dictionary<string, (string What, string Kind)>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (prefab, name, kind) in TerrainEditor.App.SeedPreview.Landmarks)
+        foreach (var (prefab, name, kind) in SeedPreview.Landmarks)
         {
             known[prefab] = (name, kind);
         }
-        foreach (var (name, _, prefabs) in TerrainEditor.App.SeedPreview.Dungeons)
+        foreach (var (name, _, prefabs) in SeedPreview.Dungeons)
         {
             foreach (string p in prefabs)
             {
@@ -147,7 +147,7 @@ public sealed partial class ClaudeTools
         rules.TryGetValue(hash, out string? n) ? n : KnownByHash.TryGetValue(hash, out n) ? n : Terrain.PrefabCatalog.NameOf(hash);
 
     /// <summary>The game's location rules in use (read from the game once, as the New world page does).</summary>
-    private static Task GameRules() => TerrainEditor.App.GameLocations.UseGameRules(TerrainEditor.App.GameLook.Bundles);
+    private static Task GameRules() => GameLocations.UseGameRules(GameLook.Bundles);
 
     /// <summary>list_locations: the world's locations from its zone file (or, without one, those of zones generated).</summary>
     [McpServerTool(Name = "list_locations", ReadOnly = true, Title = "The world's locations")]
@@ -296,7 +296,7 @@ public sealed partial class ClaudeTools
             return new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = "The seed is 1 to 10 characters, as in the game." } } };
         }
         await GameRules();
-        var p = await Task.Run(() => TerrainEditor.App.SeedPreview.Make(seed, 160, parallel: true, landmarks: true));
+        var p = await Task.Run(() => SeedPreview.Make(seed, 160, parallel: true, landmarks: true));
         var st = p.Stats;
         string text = ToJson(new
         {
@@ -319,7 +319,7 @@ public sealed partial class ClaudeTools
     }
 
     /// <summary>A seed preview's biomes as a 640-pixel picture, north up, with its start, traders and bosses as dots.</summary>
-    internal static byte[] SeedPicture(TerrainEditor.App.SeedPreview.Preview p)
+    internal static byte[] SeedPicture(SeedPreview.Preview p)
     {
         const int Side = 640;
         using var cells = new SkiaSharp.SKBitmap(p.Size, p.Size);
@@ -339,13 +339,13 @@ public sealed partial class ClaudeTools
             {
                 canvas.DrawImage(image, SkiaSharp.SKRect.Create(0, 0, Side, Side), new SkiaSharp.SKSamplingOptions(SkiaSharp.SKFilterMode.Nearest));
             }
-            float k = Side / (2 * TerrainEditor.App.SeedPreview.Radius);
+            float k = Side / (2 * SeedPreview.Radius);
             using var dot = new SkiaSharp.SKPaint { IsAntialias = true };
             using var rim = new SkiaSharp.SKPaint { IsAntialias = true, Color = SkiaSharp.SKColors.Black, Style = SkiaSharp.SKPaintStyle.Stroke, StrokeWidth = 1 };
             foreach (var l in p.Landmarks ?? [])
             {
                 dot.Color = l.Kind switch { "start" => SkiaSharp.SKColors.White, "trader" => SkiaSharp.SKColors.Gold, _ => SkiaSharp.SKColors.Red };
-                float x = (l.X + TerrainEditor.App.SeedPreview.Radius) * k, y = Side - (l.Z + TerrainEditor.App.SeedPreview.Radius) * k;
+                float x = (l.X + SeedPreview.Radius) * k, y = Side - (l.Z + SeedPreview.Radius) * k;
                 canvas.DrawCircle(x, y, 4, dot);
                 canvas.DrawCircle(x, y, 4, rim);
             }
@@ -380,7 +380,7 @@ public sealed partial class ClaudeTools
         string root;
         if (folder == null)
         {
-            root = roots.FirstOrDefault() ?? TerrainEditor.App.Places.WorldRoots().First();
+            root = roots.FirstOrDefault() ?? Places.WorldRoots().First();
         }
         else if (roots.FirstOrDefault(r => SameFolder(r, folder)) is string known)
         {
@@ -474,7 +474,7 @@ public sealed partial class ClaudeTools
                 copy.Add((new Editing.NewObject(0, t.Prefab, new Vector3(cx, cy, cz), Wrapped(t.Rotation + new Vector3(0, turn * k, 0)), t.Scale,
                     source, true, Data: data), t.Piece, i));
             }
-            var own = TerrainEditor.App.ObjectLinks.Remap([.. copy.Select(c => c.O)], linkIds);
+            var own = ObjectLinks.Remap([.. copy.Select(c => c.O)], linkIds);
             for (int j = 0; j < copy.Count; j++)
             {
                 adds.Add((own[j], copy[j].Piece));

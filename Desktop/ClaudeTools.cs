@@ -88,7 +88,7 @@ public sealed partial class ClaudeTools
     /// <summary>list_worlds: the start page's worlds.</summary>
     [McpServerTool(Name = "list_worlds", ReadOnly = true, Title = "Worlds on this computer")]
     [Description("The Valheim worlds on this computer (the start page's list): name, folder, last save. Open one with open_world.")]
-    public Task<string> ListWorlds() => OnUi(() => ToJson(TerrainEditor.App.Worlds.Find(_w.Settings)
+    public Task<string> ListWorlds() => OnUi(() => ToJson(Worlds.Find(_w.Settings)
         .Select(i => new { name = i.Name, folder = i.Path, saved = i.Saved, where = i.Where, usable = i.Usable, problem = i.Problem })));
 
     /// <summary>open_world: opens a world offline, refused while there are unsaved changes.</summary>
@@ -160,7 +160,7 @@ public sealed partial class ClaudeTools
         x.HasValue == z.HasValue ? null : $"Give {xName} and {zName} together, or neither: only {(x.HasValue ? xName : zName)} was given.";
 
     /// <summary>A thing's object kind, as describe_area and list_objects name it.</summary>
-    private string KindOf(WorldScene.Thing t) => TerrainEditor.App.ObjectKinds.Of(_w.NameOfPrefab(t.Prefab), t.Piece, t.Tamed).ToString();
+    private string KindOf(WorldScene.Thing t) => ObjectKinds.Of(_w.NameOfPrefab(t.Prefab), t.Piece, t.Tamed).ToString();
 
     /// <summary>list_objects: objects of the open area, filtered by kind, name and distance (limit clamped to 1 to 2000).</summary>
     [McpServerTool(Name = "list_objects", ReadOnly = true, Title = "List objects")]
@@ -618,8 +618,8 @@ public sealed partial class ClaudeTools
         var others = piecesOnly ? [] : Terrain.PrefabCatalog.Placeable
             .Where(i => Terrain.PieceCatalog.Get(Save.StableHash.Of(i.Name)) == null && (Match(i.Name) || Terrain.PrefabCatalog.SpawnOf(i.Name) is { } sp && Match(string.Join(" ", sp.Creatures))))
             .Select(i => Terrain.PrefabCatalog.SpawnOf(i.Name) is { } sp
-                ? (object)new { prefab = i.Name, kind = TerrainEditor.App.ObjectKinds.Of(i.Name, false).ToString(), spawns = sp.Summary(english: true) }
-                : new { prefab = i.Name, kind = TerrainEditor.App.ObjectKinds.Of(i.Name, false).ToString() });
+                ? (object)new { prefab = i.Name, kind = ObjectKinds.Of(i.Name, false).ToString(), spawns = sp.Summary(english: true) }
+                : new { prefab = i.Name, kind = ObjectKinds.Of(i.Name, false).ToString() });
         return ToJson(pieces.Concat(others).Take(Math.Clamp(limit, 1, 500)));
     });
 
@@ -994,7 +994,7 @@ public sealed partial class ClaudeTools
                 if (!t.Gone && t.Position.X >= lx && t.Position.X <= hx && t.Position.Z >= lz && t.Position.Z <= hz
                     && _w.NameOfPrefab(t.Prefab) is string n && Editing.Hammer.Get(n) != null)
                 {
-                    placed.Add(new(i, n, t.Position, TerrainEditor.App.BlueprintFormats.FromEuler(t.Rotation)));
+                    placed.Add(new(i, n, t.Position, BlueprintFormats.FromEuler(t.Rotation)));
                 }
             }
         }
@@ -1016,7 +1016,7 @@ public sealed partial class ClaudeTools
                 continue;
             }
             var euler = new System.Numerics.Vector3(p.Pitch, p.Yaw, p.Roll);
-            var q = TerrainEditor.App.BlueprintFormats.FromEuler(euler);
+            var q = BlueprintFormats.FromEuler(euler);
             float y = p.Y ?? GroundAt(scene, p.X, p.Z) - Editing.Hammer.Bottom(p.Prefab, q);
             var pos = new System.Numerics.Vector3(p.X, y, p.Z);
             int? to = null;
@@ -1324,9 +1324,9 @@ public sealed partial class ClaudeTools
         }
         var t = things[id];
         var info = Terrain.PrefabCatalog.Details(t.Prefab);
-        var set = new List<TerrainEditor.App.FieldChange>();
-        List<TerrainEditor.App.ItemUpload>? inv = null;
-        bool itemStand = TerrainEditor.App.StandData.IsItemStand(t.Prefab), armourStand = TerrainEditor.App.StandData.IsArmourStand(t.Prefab);
+        var set = new List<FieldChange>();
+        List<ItemUpload>? inv = null;
+        bool itemStand = StandData.IsItemStand(t.Prefab), armourStand = StandData.IsArmourStand(t.Prefab);
         if ((orientation != null && !itemStand) || (pose != null && !armourStand))
         {
             return $"{_w.NameOfPrefab(t.Prefab)} is not {(orientation != null ? "an item stand: only item stands take an orientation" : "an armour stand: only armour stands take a pose")}.";
@@ -1341,8 +1341,8 @@ public sealed partial class ClaudeTools
                 }
                 if (items != null)
                 {
-                    var held = items.Length == 0 ? null : new TerrainEditor.App.StandData.Held(items[0].Item, items[0].Quality, items[0].Variant);
-                    set.AddRange(TerrainEditor.App.StandData.ForItemStand(t.Prefab, held, orientation ?? 0));
+                    var held = items.Length == 0 ? null : new StandData.Held(items[0].Item, items[0].Quality, items[0].Variant);
+                    set.AddRange(StandData.ForItemStand(t.Prefab, held, orientation ?? 0));
                 }
                 else
                 {
@@ -1354,7 +1354,7 @@ public sealed partial class ClaudeTools
             {
                 if (items != null)
                 {
-                    set.AddRange(TerrainEditor.App.StandData.ForArmourStand(t.Prefab, [.. items.Select(i => new TerrainEditor.App.StandData.Held(i.Item, i.Quality, i.Variant))], pose));
+                    set.AddRange(StandData.ForArmourStand(t.Prefab, [.. items.Select(i => new StandData.Held(i.Item, i.Quality, i.Variant))], pose));
                 }
                 else
                 {
@@ -1377,7 +1377,7 @@ public sealed partial class ClaudeTools
             {
                 return $"{_w.NameOfPrefab(t.Prefab)} has {box.ContainerW * box.ContainerH} slots, not {items.Length}.";
             }
-            inv = [.. items.Select((it, i) => new TerrainEditor.App.ItemUpload(it.Item, null, Math.Max(1, it.Stack), Math.Max(1, it.Quality), X: i % box.ContainerW, Y: i / box.ContainerW, Variant: Math.Max(0, it.Variant)))];
+            inv = [.. items.Select((it, i) => new ItemUpload(it.Item, null, Math.Max(1, it.Stack), Math.Max(1, it.Quality), X: i % box.ContainerW, Y: i / box.ContainerW, Variant: Math.Max(0, it.Variant)))];
         }
         string kindName = _w.NameOfPrefab(t.Prefab) ?? "";
         if (text != null)
@@ -1445,8 +1445,8 @@ public sealed partial class ClaudeTools
     /// <param name="name">The blueprint's name.</param>
     private static string? BlueprintPath(string folder, string name)
     {
-        string file = TerrainEditor.App.Homestead.FileName(name);
-        var entries = TerrainEditor.App.Homestead.List(folder).Where(e => e.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+        string file = Homestead.FileName(name);
+        var entries = Homestead.List(folder).Where(e => e.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
         if ((entries.Find(e => string.Equals(Path.GetFileName(e.Path), file, StringComparison.OrdinalIgnoreCase)) ?? entries.FirstOrDefault()) is { } entry)
         {
             return entry.Path;
@@ -1483,7 +1483,7 @@ public sealed partial class ClaudeTools
         {
             return "Give the blueprint a name.";
         }
-        var details = new TerrainEditor.App.Homestead.Details(name.Trim(), description.Trim(), [.. (tags ?? []).Select(t => t.Trim()).Where(t => t.Length > 0)]);
+        var details = new Homestead.Details(name.Trim(), description.Trim(), [.. (tags ?? []).Select(t => t.Trim()).Where(t => t.Length > 0)]);
         return _w.SaveWorkshopAs(details, overwrite, evenIfFalling) is string problem ? problem : _w.LastMessageEn + " " + ToJson(StateOf(_w));
     });
 
@@ -1492,7 +1492,7 @@ public sealed partial class ClaudeTools
     [Description("The user's blueprints (Homestead's library): name, pieces, cost, description, tags. Open one in the Workshop (open_workshop) or add it to the plot (add_blueprint).")]
     public Task<string> ListBlueprints([Description("Words to find in the name, creator, description or tags (optional).")] string? query = null) => OnUi(() =>
     {
-        return ToJson(TerrainEditor.App.Homestead.List(_w.Blueprints.LookAgain().Folder)
+        return ToJson(Homestead.List(_w.Blueprints.LookAgain().Folder)
             .Where(e => e.Matches(query))
             .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Terrain.PieceCost.Of(e.Kinds).Describe(4, english: true), description = e.Description, tags = e.Tags }));
     });

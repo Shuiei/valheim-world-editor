@@ -45,7 +45,7 @@ public sealed partial class ClaudeTools
     internal static string TypeName(string type) => type.Length == 0 ? "plain" : type;
 
     /// <summary>A rotation's turn round the vertical, in degrees.</summary>
-    private static float YawOf(System.Numerics.Quaternion q) => MathF.Round(TerrainEditor.App.BlueprintFormats.ToEuler(q).Y, 1);
+    private static float YawOf(System.Numerics.Quaternion q) => MathF.Round(BlueprintFormats.ToEuler(q).Y, 1);
 
     /// <summary>list_dungeons: the dungeons of the open area.</summary>
     [McpServerTool(Name = "list_dungeons", ReadOnly = true, Title = "The dungeons of the area")]

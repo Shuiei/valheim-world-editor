@@ -251,7 +251,7 @@ public sealed partial class ClaudeTools
             float scale = o.Scale ?? t.Scale;
             // A scale of 0 is the prefab's own size.
             float y = o.Y ?? (o.OnGround && _w.NameOfPrefab(t.Prefab) is string n
-                ? GroundAt(scene, x, z) - Editing.Hammer.Bottom(n, TerrainEditor.App.BlueprintFormats.FromEuler(rot), scale > 0 ? scale : 1)
+                ? GroundAt(scene, x, z) - Editing.Hammer.Bottom(n, BlueprintFormats.FromEuler(rot), scale > 0 ? scale : 1)
                 : t.Position.Y);
             moves.Add((o.Id, new Vector3(x, y, z), rot, scale));
         }
@@ -300,7 +300,7 @@ public sealed partial class ClaudeTools
         // tool's Replace does: they would have nothing to hang on. A part goes alone.
         var adds = ok.Select(i => scene.Things[i]).Select(t =>
         {
-            float y = onGround ? GroundAt(scene, t.Position.X, t.Position.Z) - Editing.Hammer.Bottom(prefab, TerrainEditor.App.BlueprintFormats.FromEuler(t.Rotation), t.Scale > 0 ? t.Scale : 1) : t.Position.Y;
+            float y = onGround ? GroundAt(scene, t.Position.X, t.Position.Z) - Editing.Hammer.Bottom(prefab, BlueprintFormats.FromEuler(t.Rotation), t.Scale > 0 ? t.Scale : 1) : t.Position.Y;
             return (new Editing.NewObject(0, hash, t.Position with { Y = y }, t.Rotation, t.Scale), piece);
         }).ToList();
         var (removed, linked, groups, _) = s.WithLinked(ok, anyPart: false);
@@ -325,7 +325,7 @@ public sealed partial class ClaudeTools
         byte[]? bytes;
         try
         {
-            bytes = TerrainEditor.App.ObjectData.Bytes(world, s.Edits, t.Id);
+            bytes = ObjectData.Bytes(world, s.Edits, t.Id);
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
@@ -401,7 +401,7 @@ public sealed partial class ClaudeTools
             if (section == "bytes")
             {
                 // Contents are given as items below; other byte values only by size.
-                if (key != TerrainEditor.App.ObjectData.ItemsKey)
+                if (key != ObjectData.ItemsKey)
                 {
                     data.Add(new { section, key = name ?? key.ToString(CultureInfo.InvariantCulture), bytes = Convert.FromBase64String(value).Length });
                 }
@@ -415,7 +415,7 @@ public sealed partial class ClaudeTools
         {
             head["slots"] = new { columns = box.ContainerW, rows = box.ContainerH };
         }
-        if (values.FirstOrDefault(v => v.Section == "bytes" && v.Key == TerrainEditor.App.ObjectData.ItemsKey).Value is string items)
+        if (values.FirstOrDefault(v => v.Section == "bytes" && v.Key == ObjectData.ItemsKey).Value is string items)
         {
             try
             {
@@ -496,7 +496,7 @@ public sealed partial class ClaudeTools
             }
         }
         string name = _w.NameOfPrefab(scene.Things[id].Prefab) ?? "object";
-        var (copy, problem) = Rewrite(id, [.. values.Select(v => new TerrainEditor.App.FieldChange(v.Section, v.Key, v.Value))], null, ClaudesStep(Lang.T("claude.undo.edited", name)));
+        var (copy, problem) = Rewrite(id, [.. values.Select(v => new FieldChange(v.Section, v.Key, v.Value))], null, ClaudesStep(Lang.T("claude.undo.edited", name)));
         if (copy is not int newId)
         {
             return problem!;
@@ -515,7 +515,7 @@ public sealed partial class ClaudeTools
     /// <param name="label">The undo step's name.</param>
     /// <param name="notes">Told of stacks cut to the item's maximum, when given.</param>
     /// <returns>The copy's id, or why nothing changed.</returns>
-    internal (int? Id, string? Problem) Rewrite(int id, List<TerrainEditor.App.FieldChange> set, List<TerrainEditor.App.ItemUpload>? inv, string label, ICollection<string>? notes = null)
+    internal (int? Id, string? Problem) Rewrite(int id, List<FieldChange> set, List<ItemUpload>? inv, string label, ICollection<string>? notes = null)
     {
         var s = _w.Session!;
         int reads = s.Scene.Reads;
@@ -524,10 +524,10 @@ public sealed partial class ClaudeTools
         {
             Editing.NewObject replacement;
             // (The Workshop's plot has no world files behind it: its objects carry their values.)
-            if (!_w.InWorkshop && s.Scene.World is { } world && TerrainEditor.App.ObjectData.Bytes(world, s.Edits, t.Id) is { } bytes)
+            if (!_w.InWorkshop && s.Scene.World is { } world && ObjectData.Bytes(world, s.Edits, t.Id) is { } bytes)
             {
                 // A world's object: its own data, changed (as the inspector does).
-                var z = TerrainEditor.App.ObjectData.Edited(bytes, set, inv, notes);
+                var z = ObjectData.Edited(bytes, set, inv, notes);
                 replacement = new(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize());
             }
             else
@@ -548,8 +548,8 @@ public sealed partial class ClaudeTools
                 }
                 if (inv != null)
                 {
-                    Put("bytes", TerrainEditor.App.ObjectData.ItemsKey, Convert.ToBase64String(TerrainEditor.App.ObjectData.BuildInventory(inv, notes).Write()));
-                    Put("ints", TerrainEditor.App.ObjectData.AddedDefaultItemsKey, "1");
+                    Put("bytes", ObjectData.ItemsKey, Convert.ToBase64String(ObjectData.BuildInventory(inv, notes).Write()));
+                    Put("ints", ObjectData.AddedDefaultItemsKey, "1");
                 }
                 replacement = new(0, t.Prefab, t.Position, t.Rotation, t.Scale, Data: fields);
             }

@@ -399,10 +399,10 @@ public sealed partial class ClaudeTools
             return "The rectangle holds no ground of the open area.";
         }
         int w = a.X1 - a.X0 + 1, h = a.Z1 - a.Z0 + 1;
-        TerrainEditor.App.Heightmaps.Picture pic;
+        Heightmaps.Picture pic;
         try
         {
-            pic = TerrainEditor.App.Heightmaps.Read(File.ReadAllBytes(path), w, h);
+            pic = Heightmaps.Read(File.ReadAllBytes(path), w, h);
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
         {
@@ -469,10 +469,10 @@ public sealed partial class ClaudeTools
         [Description("East edge (x).")] float x1, [Description("North edge (z).")] float z1,
         [Description("Kinds to grow: Trees, Rocks, Bushes, Pickables (default: all four).")] string[]? kinds = null)
     {
-        var chosen = new HashSet<TerrainEditor.App.ObjectKind>();
+        var chosen = new HashSet<ObjectKind>();
         foreach (string k in kinds is { Length: > 0 } ? kinds : ["Trees", "Rocks", "Bushes", "Pickables"])
         {
-            if (!Enum.TryParse<TerrainEditor.App.ObjectKind>(k, true, out var kind) || kind is not (TerrainEditor.App.ObjectKind.Trees or TerrainEditor.App.ObjectKind.Rocks or TerrainEditor.App.ObjectKind.Bushes or TerrainEditor.App.ObjectKind.Pickables))
+            if (!Enum.TryParse<ObjectKind>(k, true, out var kind) || kind is not (ObjectKind.Trees or ObjectKind.Rocks or ObjectKind.Bushes or ObjectKind.Pickables))
             {
                 return $"{k}: the kinds are Trees, Rocks, Bushes and Pickables.";
             }
@@ -500,7 +500,7 @@ public sealed partial class ClaudeTools
         float ax = MathF.Min(x0, x1), az = MathF.Min(z0, z1), bx = MathF.Max(x0, x1), bz = MathF.Max(z0, z1);
         string said = "";
         var spots = await OnUi(() => Growth.Spots(session, ax, az, bx, bz,
-            o => o.X >= ax && o.X <= bx && o.Z >= az && o.Z <= bz && chosen.Contains(TerrainEditor.App.ObjectKinds.Of(o.Name, false)),
+            o => o.X >= ax && o.X <= bx && o.Z >= az && o.Z <= bz && chosen.Contains(ObjectKinds.Of(o.Name, false)),
             _w.NameOfPrefab, m => said = m.English));
         if (spots == null)
         {
