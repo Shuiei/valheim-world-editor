@@ -10,12 +10,14 @@
 //       The package folder follows Thunderstore's rules: name a-z A-Z 0-9 _, description up to 250
 //       characters, a Major.Minor.Patch version, dependencies as Team-Name-1.2.3, a 256x256 PNG icon
 //       and a README.md and CHANGELOG.md in UTF-8, each up to 100,000 characters.
-using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
 const string Repo = "https://github.com/Shuiei/valheim-world-editor";
+
+// The heading of the plugin's part of a version in CHANGELOG.md.
+const string PluginHeading = "### WorldEditorBridge";
 
 // The most characters Thunderstore takes in a package's README.md or CHANGELOG.md.
 const int MaxMarkdown = 100_000;
@@ -45,17 +47,11 @@ catch (InvalidDataException ex)
 // does each older version whose tag (v1.2.3) is in tags.
 static string Changelog(string text, string version, HashSet<string> tags)
 {
-    var lines = new List<string>
-    {
-        "# Changelog", "",
-        "WorldEditorBridge is the live-editing plugin of **Valheim World Editor**: the two share one version.",
-        "**Download the editor that goes with this plugin from GitHub:**",
-        $"[Valheim World Editor v{version}]({Repo}/releases/tag/v{version}) (every version: the",
-        $"[releases page]({Repo}/releases)). This mod page only hosts the plugin.", "",
-        "Each version below says what changed in this plugin, then what changed in the editor.", "",
-    };
+    var lines = ChangelogHeader(version);
     string older = $"Older history: [the full changelog]({Repo}/blob/main/CHANGELOG.md).";
     int length = Length(lines) + Length([older]);
+    // The version's own tag counts as released too, so its download link is always there.
+    HashSet<string> released = [.. tags, $"v{version}"];
     foreach (string sec in Regex.Split(text, "^(?=## )", RegexOptions.Multiline))
     {
         var m = Regex.Match(sec, @"^## v([0-9]+\.[0-9]+\.[0-9]+)\b(.*)");
@@ -63,24 +59,7 @@ static string Changelog(string text, string version, HashSet<string> tags)
         {
             continue;
         }
-        string v = m.Groups[1].Value, title = m.Groups[2].Value;
-        // The version's parts ("### Added", "### WorldEditorBridge"...).
-        int nl = sec.IndexOf('\n');
-        string[] parts = Regex.Split(nl >= 0 ? sec[(nl + 1)..] : "", "^(?=### )", RegexOptions.Multiline);
-        var plugin = parts.Where(p => p.StartsWith("### WorldEditorBridge", StringComparison.Ordinal)).ToList();
-        var editor = parts.Where(p => p.StartsWith("### ", StringComparison.Ordinal) && !p.StartsWith("### WorldEditorBridge", StringComparison.Ordinal)).ToList();
-        List<string> block =
-        [
-            $"## {v}{title}", "", "### WorldEditorBridge (this plugin)", "",
-            plugin.Count > 0 ? plugin[0][(plugin[0].IndexOf('\n') + 1)..].Trim('\n') : "Unchanged: only the version number follows the editor's.",
-            "", "### Valheim World Editor", "",
-        ];
-        if (v == version || tags.Contains($"v{v}"))
-        {
-            block.AddRange([$"Download: [Valheim World Editor v{v}]({Repo}/releases/tag/v{v})", ""]);
-        }
-        block.Add(editor.Count > 0 ? string.Join("\n\n", editor.Select(p => ("#" + p).Trim('\n'))) : "No change.");
-        block.Add("");
+        List<string> block = VersionBlock(sec, m.Groups[1].Value, m.Groups[2].Value, released);
         // Versions are newest first: once one does not fit, the rest is left to the full changelog.
         length += Length(block);
         if (length > MaxMarkdown)
@@ -91,6 +70,41 @@ static string Changelog(string text, string version, HashSet<string> tags)
     }
     lines.Add(older);
     return string.Join("\n", lines).TrimEnd('\n') + "\n";
+}
+
+// The first lines of the mod pages' changelog, before its versions.
+static List<string> ChangelogHeader(string version) =>
+[
+    "# Changelog", "",
+    "WorldEditorBridge is the live-editing plugin of **Valheim World Editor**: the two share one version.",
+    "**Download the editor that goes with this plugin from GitHub:**",
+    $"[Valheim World Editor v{version}]({Repo}/releases/tag/v{version}) (every version: the",
+    $"[releases page]({Repo}/releases)). This mod page only hosts the plugin.", "",
+    "Each version below says what changed in this plugin, then what changed in the editor.", "",
+];
+
+// The lines of one version of the changelog: v and title come from its "## vX.Y.Z title" heading, sec is its whole
+// section, and released holds the tags (vX.Y.Z) that have a download link.
+static List<string> VersionBlock(string sec, string v, string title, HashSet<string> released)
+{
+    // The version's parts ("### Added", "### WorldEditorBridge"...), split apart by whether they are the plugin's part.
+    string[] parts = Regex.Split(sec.Split('\n', 2).ElementAtOrDefault(1) ?? "", "^(?=### )", RegexOptions.Multiline);
+    var byPlugin = parts.Where(p => p.StartsWith("### ", StringComparison.Ordinal)).ToLookup(p => p.StartsWith(PluginHeading, StringComparison.Ordinal));
+    // A version without a plugin part says so; one without an editor part reads "No change.".
+    string pluginText = byPlugin[true].Select(p => p[(p.IndexOf('\n') + 1)..].Trim('\n')).DefaultIfEmpty("Unchanged: only the version number follows the editor's.").First();
+    string editorText = string.Join("\n\n", byPlugin[false].Select(p => ("#" + p).Trim('\n')).DefaultIfEmpty("No change."));
+    List<string> block =
+    [
+        $"## {v}{title}", "", "### WorldEditorBridge (this plugin)", "", pluginText,
+        "", "### Valheim World Editor", "",
+    ];
+    if (released.Contains($"v{v}"))
+    {
+        block.AddRange([$"Download: [Valheim World Editor v{v}]({Repo}/releases/tag/v{v})", ""]);
+    }
+    block.Add(editorText);
+    block.Add("");
+    return block;
 }
 
 // The check command: throws InvalidDataException naming the first rule the package folder breaks (a missing
@@ -105,8 +119,9 @@ static void Check(string dir)
     Require(root.GetProperty("dependencies").EnumerateArray().All(d => Regex.IsMatch(d.GetString()!, @"^\w+-\w+-[0-9]+\.[0-9]+\.[0-9]+$")), "dependencies");
     byte[] png = File.ReadAllBytes(Path.Combine(dir, "icon.png"));
     ReadOnlySpan<byte> signature = [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A];
-    Require(png.Length >= 24 && png.AsSpan(0, 8).SequenceEqual(signature)
-        && BinaryPrimitives.ReadUInt32BigEndian(png.AsSpan(16)) == 256 && BinaryPrimitives.ReadUInt32BigEndian(png.AsSpan(20)) == 256, "icon must be a 256x256 PNG");
+    // Width and height, 256 each, as big-endian 32-bit numbers at bytes 16 to 23 of the IHDR chunk.
+    ReadOnlySpan<byte> size256 = [0, 0, 1, 0, 0, 0, 1, 0];
+    Require(png.Length >= 24 && png.AsSpan(0, 8).SequenceEqual(signature) && png.AsSpan(16, 8).SequenceEqual(size256), "icon must be a 256x256 PNG");
     foreach (string name in new[] { "README.md", "CHANGELOG.md" })
     {
         string markdown;
