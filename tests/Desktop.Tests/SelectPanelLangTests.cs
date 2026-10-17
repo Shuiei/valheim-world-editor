@@ -112,8 +112,8 @@ public sealed class SelectPanelLangTests : IDisposable
         using var pseudo = new PseudoLang();
         w.View.Select([0]);
 
-        w.SelectPanel.InvertButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        w.SelectPanel.DeleteButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.StartsWith(PseudoLang.Open.ToString(), w.MessageText.Text, StringComparison.Ordinal);
-        Assert.Equal("Selected the 1 shown object(s) that were not selected.", w.LastMessageEn);
+        Assert.Equal("Deleted 1 object(s). Ctrl+Z brings them back; they leave the world when it is saved.", w.LastMessageEn);
     }
 }
