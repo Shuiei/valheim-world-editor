@@ -181,10 +181,7 @@ public sealed class WorldSessionTests : IDisposable
         using var world = WorldSession.Open(w.Dir);
         var s = WorldScene.Load(world, 0, 0, 1).Session!;
         s.Shape(32, 32, Formula.Compile("2", []), 3, 0, "raise");
-        int index = s.Scene.Things.FindIndex(t => t.Id >= 0 && !t.Gone);
-        var thing = s.Scene.Things[index];
-        s.Move([(index, thing.Position + new System.Numerics.Vector3(3, 0, 3), thing.Rotation)]);
-        Assert.True(WorldWriter.Save(WorldSave.Load(w.Dir), [], [thing.Id], options: new WorldWriter.Options(KeepBase: true)).Saved);
+        TestScenes.MovedThenRemovedByTheGame(s, w.Dir);
 
         var plan = world.PrepareReplay()!;
         Assert.Equal(Editing.ReplayClash.Removed, Assert.Single(plan.Clashes).Kind);

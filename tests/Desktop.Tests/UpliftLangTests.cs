@@ -28,5 +28,6 @@ public sealed class UpliftLangTests
             said.Shown);
         // Only what applies: no replaced discs, nothing taken away, nothing off, every zone generated.
         Assert.Equal("5 ground disc(s)", new Uplift.Plan([], [], [], 5, 0, 0, 0).Describe().English);
+        Assert.Equal(PseudoLang.Wrap("5 ground disc(s)"), new Uplift.Plan([], [], [], 5, 0, 0, 0).Describe().Shown);
     }
 }

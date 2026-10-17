@@ -43,6 +43,97 @@ public sealed class MainWindowLangTests
         Assert.Equal(new Said("disk full", "disk full"), w.LastSaid);
     }
 
+    // The questions and messages the start page, the map and the window itself show in a dialog of the window's: the
+    // title is the editor's name (the same in every language), the rest catalogue texts, Yes, Cancel and OK included.
+    [AvaloniaFact]
+    public async Task ThePagesDialogsAreCatalogueTexts()
+    {
+        using var pseudo = new PseudoLang();
+        static async Task Answered(Avalonia.Controls.Window owner, Task asking, string button)
+        {
+            var d = TestWindows.Shown(owner);
+            Assert.Empty(PseudoLang.Untranslated(d, "Valheim World Editor"));
+            DialogsTests.Press(d, button);
+            await asking;
+        }
+        var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
+        w.Show();
+        w.ShowStart();
+        await Answered(w, w.StartPage!.Confirm(Lang.T("common.keepThem")), Lang.T("common.cancel"));
+        await Answered(w, w.Tell(Lang.T("common.keepThem")), Lang.T("common.ok"));
+
+        using var r = new WorldWindowRun();
+        await r.Open();
+        r.W.ShowMap();
+        await Answered(r.W, r.W.MapPage!.Confirm(Lang.T("common.keepThem")), Lang.T("common.cancel"));
+        await Answered(r.W, r.W.MapPage.Tell(Lang.T("common.keepThem")), Lang.T("common.ok"));
+    }
+
+    // A save after the game saved the world, with an object the editor moved and the game removed: the offer to bring
+    // the changes over (not now, then yes), whose version stays for that object, what bringing them over did, and then
+    // undoing a step from before it. Each question with its title and buttons, and what is said or told, is a catalogue
+    // text (the object's name in the question is game data).
+    [AvaloniaFact]
+    public async Task TheReplayAndEarlierStepQuestionsAreCatalogueTexts()
+    {
+        using var pseudo = new PseudoLang();
+        using var r = new WorldWindowRun();
+        var asked = new List<string>();
+        // Not now; bring them over; keep mine; do not undo the earlier step.
+        var answers = new Queue<bool>([false, true, true, false]);
+        r.W.Ask = (title, text, yes, no) =>
+        {
+            asked.AddRange([title, text, yes, no]);
+            return Task.FromResult(answers.Dequeue());
+        };
+        await r.Open();
+        var s = r.W.Session!;
+        var thing = TestScenes.MovedThenRemovedByTheGame(s, r.Dir);
+        string[] data = [r.W.NameOfPrefab(thing.Prefab) ?? thing.Prefab.ToString(System.Globalization.CultureInfo.InvariantCulture)];
+
+        await r.W.Save();
+        Assert.True(PseudoLang.Translated(r.Said, data), r.Said);
+        Assert.StartsWith("Nothing was saved: the game saved this world", r.W.LastMessageEn);
+        await r.W.Save();
+        await r.W.Undo();
+        Assert.Equal("Nothing changed.", r.W.LastMessageEn);
+
+        // The offer twice, the object's question, the earlier step's question.
+        Assert.Equal(4 * 4, asked.Count);
+        Assert.Empty(answers);
+        Assert.All(asked, t => Assert.True(PseudoLang.Translated(t, data), t));
+        string told = Assert.Single(r.Told);
+        Assert.True(PseudoLang.Translated(told, data), told);
+        Assert.True(PseudoLang.Translated(r.Said, data), r.Said);
+    }
+
+    // A file chosen as the brush's stamp that is not a picture: said in the language in use, read in English, and no
+    // stamp added.
+    [AvaloniaFact]
+    public void AStampPictureThatCannotBeReadIsSaidInTheLanguage()
+    {
+        string file = Path.Combine(Path.GetTempPath(), "vwe-stamp-" + Guid.NewGuid().ToString("N")[..8] + ".png");
+        File.WriteAllText(file, "not a picture");
+        try
+        {
+            using var pseudo = new PseudoLang();
+            var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
+            w.Show();
+            Dispatcher.UIThread.RunJobs();
+            int stamps = w.Tools.StampList.Count;
+
+            w.LoadStamp(file);
+
+            Assert.Equal(PseudoLang.Wrap("That picture could not be read."), w.MessageText.Text);
+            Assert.Equal("That picture could not be read.", w.LastMessageEn);
+            Assert.Equal(stamps, w.Tools.StampList.Count);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
     // Save with nothing to save, then Save, Discard, Leave and Quit with a change waiting: what each asks or says, its
     // title and its buttons, are catalogue texts (the world's folder in the save's question is data).
     [AvaloniaFact]

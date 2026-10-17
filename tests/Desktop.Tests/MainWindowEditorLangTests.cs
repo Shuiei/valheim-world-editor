@@ -116,4 +116,27 @@ public sealed class MainWindowEditorLangTests
             asked.AddRange([title, text, yes, no]);
             return Task.FromResult(r.Answers.Count > 0 && r.Answers.Dequeue());
         };
+
+    // A world given on the command line (--world) that cannot be opened: said in the language where the editor shows
+    // how it loaded.
+    [AvaloniaFact]
+    public async Task ACommandLineWorldThatCannotOpenIsSaidInTheLanguage()
+    {
+        using var pseudo = new PseudoLang();
+        string folder = Directory.CreateTempSubdirectory("vwe-no-world-").FullName;
+        var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
+        try
+        {
+            w.Show();
+            await w.OpenDirect(folder, 0, 0, 1);
+            Assert.Null(w.Session);
+            // Its last line (what the 3D view says when it starts goes above).
+            Assert.Matches("⟦Could not open the world: .+⟧$", w.LoadedInfo.Text);
+        }
+        finally
+        {
+            w.Close();
+            Directory.Delete(folder, true);
+        }
+    }
 }

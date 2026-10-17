@@ -2772,6 +2772,16 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+        LoadStamp(path);
+    }
+
+    /// <summary>
+    /// The picture at <paramref name="path"/> added to the brush's stamps and chosen, or said in the status bar that it
+    /// could not be read.
+    /// </summary>
+    /// <param name="path">The picture file.</param>
+    internal void LoadStamp(string path)
+    {
         if (Stamps.FromPicture(File.ReadAllBytes(path)) is { } data)
         {
             Tools.AddStamp(Path.GetFileNameWithoutExtension(path), data);
@@ -2849,10 +2859,27 @@ public sealed partial class MainWindow : Window
                 : c.Name != null ? Lang.T("area.hint.clipboardNamed", c.Name, c.W, c.H, c.Objects.Count) : Lang.T("area.hint.clipboard", c.W, c.H, c.Objects.Count);
         };
         AreaPanel.Confirm = text => Dialogs.Ask(this, Lang.T("area.action.reset"), text, Lang.T("area.ask.reset.yes"));
-        AreaPanel.PickPicture = () => Pickers.File(StorageProvider, Lang.T("area.pick.picture"),
-            new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("area.pick.png")) { Patterns = PngPatterns });
-        AreaPanel.PickFolder = () => Pickers.Folder(StorageProvider, Lang.T("area.pick.backup"));
+        AreaPanel.PickPicture = () =>
+        {
+            var (title, type) = HeightmapPicker();
+            return Pickers.File(StorageProvider, title, type);
+        };
+        AreaPanel.PickFolder = () => Pickers.Folder(StorageProvider, BackupPickerTitle());
     }
+
+    /// <summary>
+    /// The Area tool's heightmap picker's title and file type, in the language in use (asked for each time it opens).
+    /// </summary>
+    internal static (string Title, Avalonia.Platform.Storage.FilePickerFileType Type) HeightmapPicker()
+    {
+        var type = new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("area.pick.png")) { Patterns = PngPatterns };
+        return (Lang.T("area.pick.picture"), type);
+    }
+
+    /// <summary>
+    /// The Area tool's backup folder picker's title, in the language in use (asked for each time it opens).
+    /// </summary>
+    internal static string BackupPickerTitle() => Lang.T("area.pick.backup");
 
     /// <summary>
     /// Gives the Place tool what it reads from the window: the brush, the scene, the mask, names and model boxes.
@@ -3150,13 +3177,19 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Shows the 3D view's report in the help card's frame rate line, in the language in use.
+    /// </summary>
+    /// <param name="s">The view's report: frames, work, objects, draws and the kinds still loading.</param>
+    internal void ShowStats(GlView.Stats s) => _fps.Text = Lang.T("help.fps", s.Fps, s.WorkMs, s.Objects, s.Instances, s.Batches)
+        + (s.PendingModels > 0 ? " " + Lang.T("help.fpsLoading", s.PendingModels) : "");
+
+    /// <summary>
     /// What the 3D view reports, shown: frame rates, the selection (the Select panel, the Inspector and the status
     /// line follow it), walking or flying, and its status lines.
     /// </summary>
     private void WireViewReports()
     {
-        View.StatsChanged += s => _fps.Text = Lang.T("help.fps", s.Fps, s.WorkMs, s.Objects, s.Instances, s.Batches)
-            + (s.PendingModels > 0 ? " " + Lang.T("help.fpsLoading", s.PendingModels) : "");
+        View.StatsChanged += ShowStats;
         View.SelectionChanged += _ => FollowSelection();
         View.SelectionChanged += things => _selection.Text = things.Count == 0 ? "" : things.Count == 1
             ? Lang.T("view.selected.one", ThingName(things[0]), things[0].Position.X, things[0].Position.Z, things[0].Position.Y)
@@ -3181,6 +3214,30 @@ public sealed partial class MainWindow : Window
         if (Inspector.IsOpen && sel.Count == 1 && sel.First() != Inspector.Index)
         {
             Inspect();
+        }
+    }
+
+    /// <summary>
+    /// The world given on the command line (--world, --zone, --size) opened straight in the 3D editor; one that cannot be
+    /// opened is said where the editor shows how it loaded (in the language in use) and on the console (in English).
+    /// </summary>
+    /// <param name="world">The world's folder or name (null: the first one found).</param>
+    /// <param name="zoneX">The middle zone, x.</param>
+    /// <param name="zoneZ">The middle zone, z.</param>
+    /// <param name="size">The area, in zones each way.</param>
+    internal async Task OpenDirect(string? world, int zoneX, int zoneZ, int size)
+    {
+        try
+        {
+            var session = await Task.Run(() => WorldSession.Open(WorldScene.FindWorld(world)));
+            World = session;
+            var scene = await Task.Run(() => WorldScene.Load(session, zoneX, zoneZ, size));
+            await ShowEditor(scene);
+        }
+        catch (Exception ex)
+        {
+            LoadedInfo.Text = Lang.T("world.msg.openFailed", ex.Message);
+            Options.Say(Lang.En("world.msg.openFailed", ex.Message));
         }
     }
 
@@ -3211,18 +3268,7 @@ public sealed partial class MainWindow : Window
         if (Options.Direct)
         {
             // --world (and --zone): that area in the 3D editor at once.
-            try
-            {
-                var world = await Task.Run(() => WorldSession.Open(WorldScene.FindWorld(Options.World)));
-                World = world;
-                var scene = await Task.Run(() => WorldScene.Load(world, Options.ZoneX, Options.ZoneZ, Options.Size));
-                await ShowEditor(scene);
-            }
-            catch (Exception ex)
-            {
-                LoadedInfo.Text = Lang.T("world.msg.openFailed", ex.Message);
-                Options.Say(Lang.En("world.msg.openFailed", ex.Message));
-            }
+            await OpenDirect(Options.World, Options.ZoneX, Options.ZoneZ, Options.Size);
         }
         else
         {

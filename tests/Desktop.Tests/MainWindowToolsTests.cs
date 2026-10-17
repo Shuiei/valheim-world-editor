@@ -82,6 +82,29 @@ public class MainWindowToolsTests
         Assert.Equal(things, s.Scene.Things.Count);
     }
 
+    // A path the Mask keeps off all the ground changes nothing and says so; one raised past the game's ±8 m says it
+    // reached the limit; both word for word as before the catalogue, the step named after its action.
+    [AvaloniaFact]
+    public void APathThatChangesNothingOrReachesTheLimitSaysSo()
+    {
+        var (w, s) = Open();
+        var path = w.View.Path;
+        path.Points.AddRange([new Vector2(20, 64), new Vector2(108, 64)]);
+        path.Act = PathTool.Action.Raise;
+        s.Mask = new Mask { On = true, HeightMin = 100 };
+        int steps = s.UndoList.Count;
+        w.ApplyPath();
+        Assert.Equal("Nothing changed along the line.", w.MessageText.Text);
+        Assert.Equal(steps, s.UndoList.Count);
+
+        s.Mask = new Mask();
+        path.Amount = 12;
+        w.ApplyPath();
+        Assert.Equal("Applied, but part of the path reached the game limit of ±8 m from the original ground (red points).", w.MessageText.Text);
+        Assert.Equal("Path: Raise by", s.UndoLabel);
+        Assert.Equal(steps + 1, s.UndoList.Count);
+    }
+
     [AvaloniaFact]
     public async Task AMountainTooBigForTheAreaIsRefusedAndOneThatFitsIsPlaced()
     {

@@ -16,7 +16,7 @@ namespace TerrainEditor.Desktop.Tests;
 public class ClaudeToolsDungeonsTests
 {
     /// <summary>The test world's zone 0, 0 open, with a Frost Cave of its entrance room alone (three open ends).</summary>
-    private static async Task<ClaudeRun> WithCave()
+    internal static async Task<ClaudeRun> WithCave()
     {
         var r = new ClaudeRun();
         await r.OpenArea();
@@ -29,10 +29,10 @@ public class ClaudeToolsDungeonsTests
     }
 
     /// <summary>The id of the area's one dungeon.</summary>
-    private static async Task<int> Id(ClaudeRun r) => ClaudeRun.J(await r.T.ListDungeons())[0].GetProperty("id").GetInt32();
+    internal static async Task<int> Id(ClaudeRun r) => ClaudeRun.J(await r.T.ListDungeons())[0].GetProperty("id").GetInt32();
 
     /// <summary>The new id at the end of an answer ("… The dungeon's id is now 12 (2 rooms). …").</summary>
-    private static int NewId(string said)
+    internal static int NewId(string said)
     {
         const string Mark = "The dungeon's id is now ";
         int at = said.IndexOf(Mark, StringComparison.Ordinal) + Mark.Length;

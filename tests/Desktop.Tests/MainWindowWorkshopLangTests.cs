@@ -142,6 +142,27 @@ public sealed class MainWindowWorkshopLangTests
     }
 
     [AvaloniaFact]
+    public async Task QuittingOverABuildingNotSavedIsAskedInTheLanguage()
+    {
+        using var pseudo = new PseudoLang();
+        using var r = new BlueprintsPanelRun();
+        var w = r.W;
+        w.Ask = (_, _, _, _) => Task.FromResult(true);
+        w.Tell = _ => Task.CompletedTask;
+        await w.OpenWorkshop(BlueprintFiles.Hut(r.Homestead));
+        w.Session!.Commit("Moved", null, [w.Session.Scene.Things.FindIndex(t => !t.Gone)], []);
+        var asked = new List<string>();
+        w.Ask = (title, text, yes, no) => { asked.AddRange([title, text, yes, no]); return Task.FromResult(false); };
+
+        w.Close();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(w.IsVisible);
+        Assert.Equal(4, asked.Count);
+        Assert.All(asked, text => Assert.True(PseudoLang.Translated(text, Data), text));
+    }
+
+    [AvaloniaFact]
     public async Task LeavingAWorldWithChangesForTheWorkshopIsAskedInTheLanguage()
     {
         string dir = Fixtures.CopyFixture();

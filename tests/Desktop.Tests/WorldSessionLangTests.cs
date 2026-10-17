@@ -1,3 +1,4 @@
+using TerrainEditor.Editing;
 using WorldEditor.Tests;
 using Xunit;
 
@@ -61,5 +62,53 @@ public sealed class WorldSessionLangTests
                 Shown(await s.ApplyLive(), "^Could not apply live: ");
             }
         }
+    }
+
+    // Apply live with nothing to send, declined over ground the game changed too, and zone resets after which the world
+    // could not be read again from the game: each said in the language in use, with its English kept.
+    [Fact]
+    public async Task TheOtherApplyLiveOutcomesAreInTheLanguageAndInEnglish()
+    {
+        using var pseudo = new PseudoLang();
+        using var game = new FakeGame();
+        var (world, s) = await TestScenes.LiveArea(game);
+        Shown(await world.ApplyLive(), @"^Nothing to apply\.$");
+
+        s.Shape(10, 10, Two, 3, 0, "raise");
+        // The game sends other ground for the zone changed: the change waits over it.
+        var zone = Assert.Single(world.Edits.Copies(e => e.Changed));
+        var other = world.World.TerrainZones.Any(t => (t.ZoneX, t.ZoneZ) == (zone.ZoneX, zone.ZoneZ)) ? null : world.World.TerrainZones[0];
+        Assert.Equal(EditStore.GameGround.Kept, world.Edits.TakeGameGround(zone.ZoneX, zone.ZoneZ, other));
+        Shown(await world.ApplyLive(_ => Task.FromResult(false)), "^Not applied: the game changed the ground where you have changes ");
+
+        world.Edits.SetReset(new ZoneReset(5, 5, true, false), true);
+        game.Fail["/snapshot"] = 500;
+        Shown(await world.ApplyLive(), @"^Applied to the running game: .*1 zone\(s\) reset; but the world could not be read again from the game \(.+\): ");
+    }
+
+    // Changes brought onto a save the game made since: refused when the game saved again meanwhile; then what was
+    // brought over, the game's version kept for an object it removed, and the steps dropped with it. Each said in the
+    // language in use, with its English kept.
+    [Fact]
+    public void BringingTheChangesOverSaysWhatItDidInTheLanguageAndInEnglish()
+    {
+        using var pseudo = new PseudoLang();
+        using var w = new TempWorld();
+        using var world = WorldSession.Open(w.Dir);
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.Shape(32, 32, Two, 3, 0, "raise");
+        TestScenes.MovedThenRemovedByTheGame(s, w.Dir);
+        var plan = world.PrepareReplay()!;
+        // The game saves again while its save is read.
+        int n = plan.Newer.SaveNumber;
+        foreach (string ext in new[] { ".chunks", ".db2", ".fwl2", ".ok" })
+        {
+            File.Copy(Path.Combine(w.Dir, $"_main.{n}{ext}"), Path.Combine(w.Dir, $"_main.{n + 1}{ext}"));
+        }
+        Shown(world.Replay(plan, _ => false), @"^Not brought over: the game saved this world again ");
+
+        plan = world.PrepareReplay()!;
+        Shown(world.Replay(plan, _ => false),
+            @"^Your changes are on the game's save #\d+ now, .* The game's version stays for 0 zone\(s\) and 1 object\(s\)\. History: 0 step\(s\) kept, 2 dropped ");
     }
 }
