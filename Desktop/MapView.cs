@@ -668,8 +668,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         _gl.Uniform1(U("showClouds"), ShowClouds ? 1f : 0f);
         _gl.BindVertexArray(_vao);
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
-        _gl.Enable(EnableCap.Blend);
-        _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+        GlBlend.Over(_gl);
         _gl.UseProgram(_fillProg);
         _gl.Uniform4(_gl.GetUniformLocation(_fillProg, "uView"), Center.X, Center.Y, 2 / (w * mpp), 2 / (h * mpp));
         DrawBuildings();
@@ -1065,8 +1064,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         var id = Matrix4x4.Identity;
         _gl.UseProgram(_lineProg);
         _gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&id);
-        _gl.Enable(EnableCap.Blend);
-        _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+        GlBlend.Over(_gl);
         _gl.BindVertexArray(_lineVao);
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _lineVbo);
         foreach (var (data, col) in groups.Where(gr => gr.Data.Length > 0))

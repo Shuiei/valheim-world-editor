@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.71 — unreleased
+
+### Fixed
+- **Pictures of the 3D view and the map came out part-transparent under water, glass, ghosts and overlays.** Every
+  see-through surface was blended into the picture's alpha as well as its colour, lowering it, and `--shot`, the docs'
+  pictures and Claude's screenshots were see-through there (and the view could look washed out where the window shows
+  what is behind it). Blending now leaves the alpha opaque, as cleared, and the PNG written is always opaque.
+
 ## v1.45.70 — unreleased
 
 ### Fixed

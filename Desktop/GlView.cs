@@ -954,8 +954,7 @@ public sealed class GlView : OpenGlControlBase
         {
             if (glass)
             {
-                _gl.Enable(EnableCap.Blend);
-                _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+                GlBlend.Over(_gl);
                 _gl.DepthMask(false);
             }
             foreach (var (g, placements) in models)
@@ -1058,8 +1057,7 @@ public sealed class GlView : OpenGlControlBase
             {
                 started = true;
                 _gl.UseProgram(_objectProg);
-                _gl.Enable(EnableCap.Blend);
-                _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+                GlBlend.Over(_gl);
                 _gl.DepthMask(false);
             }
             UseMaterial(b, u);
@@ -2255,8 +2253,7 @@ public sealed class GlView : OpenGlControlBase
             {
                 if (pass)
                 {
-                    _gl.Enable(EnableCap.Blend);
-                    _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+                    GlBlend.Over(_gl);
                     _gl.DepthMask(false);
                     _gl.Uniform1(uSee, 1f);
                 }
@@ -2297,8 +2294,7 @@ public sealed class GlView : OpenGlControlBase
                 else
                 {
                     _gl.Disable(EnableCap.CullFace);
-                    _gl.Enable(EnableCap.Blend);
-                    _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+                    GlBlend.Over(_gl);
                     _gl.DepthMask(false);
                     _gl.UseProgram(_waterProg);
                     _gl.UniformMatrix4(_gl.GetUniformLocation(_waterProg, "uViewProj"), 1, false, (float*)&vp);
@@ -3381,8 +3377,7 @@ public sealed class GlView : OpenGlControlBase
         var m = Matrix4x4.CreateScale(scale) * Matrix4x4.CreateTranslation(c) * vp;
         _gl.Disable(EnableCap.DepthTest);
         _gl.Disable(EnableCap.CullFace);
-        _gl.Enable(EnableCap.Blend);
-        _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+        GlBlend.Over(_gl);
         _gl.UseProgram(_lineProg);
         _gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&m);
         int uColor = _gl.GetUniformLocation(_lineProg, "uColor");
@@ -3538,8 +3533,7 @@ public sealed class GlView : OpenGlControlBase
         if (blend)
         {
             // See-through (alpha), on both sides (ribbons on slopes may face away).
-            _gl.Enable(EnableCap.Blend);
-            _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+            GlBlend.Over(_gl);
         }
         bool cull = _gl.IsEnabled(EnableCap.CullFace);
         _gl.Disable(EnableCap.CullFace);
@@ -3791,8 +3785,7 @@ public sealed class GlView : OpenGlControlBase
         }
         _gl.Disable(EnableCap.DepthTest);
         // The dot's soft edge blends over what is under it.
-        _gl.Enable(EnableCap.Blend);
-        _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+        GlBlend.Over(_gl);
         _gl.UseProgram(_markProg);
         _gl.UniformMatrix4(_gl.GetUniformLocation(_markProg, "uViewProj"), 1, false, (float*)&vp);
         _gl.Uniform4(_gl.GetUniformLocation(_markProg, "uColor"), 0x5d / 255f, 1, 0x8a / 255f, 1);
@@ -4779,8 +4772,7 @@ public sealed class GlView : OpenGlControlBase
         _gl.UseProgram(_lineProg);
         _gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
         int uColor = _gl.GetUniformLocation(_lineProg, "uColor");
-        _gl.Enable(EnableCap.Blend);
-        _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+        GlBlend.Over(_gl);
         _gl.DepthMask(false);
         foreach (var (layer, (vao, count, _)) in _overlayGl)
         {
