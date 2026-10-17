@@ -38,18 +38,6 @@ public class PlacePanelTests
     /// </summary>
     private static List<CheckBox> Ticks(Run r) => [.. r.P.List.GetLogicalDescendants().OfType<CheckBox>()];
 
-    /// <summary>
-    /// Chooses these kinds, as ticking them in the panel does.
-    /// </summary>
-    private static void Choose(Run r, params string[] names)
-    {
-        r.T.Chosen.Clear();
-        r.T.Chosen.AddRange(names);
-        // What ticking a kind does in the panel.
-        typeof(PlacePanel).GetMethod("Chosen", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(r.P, [true]);
-        Dispatcher.UIThread.RunJobs();
-    }
-
     [AvaloniaFact]
     public void TheMemoryBringsBackTheKindsAndWeights()
     {
@@ -64,7 +52,7 @@ public class PlacePanelTests
     public void TheChooserSearchesTicksAndStarsKinds()
     {
         using var r = new Run();
-        Choose(r);
+        SharedPlaceWindow.ChoosePanelKinds(r);
         Assert.False(r.P.Chooser.IsVisible);
         Click(r.P.KindsButton);
         Assert.True(r.P.Chooser.IsVisible);
@@ -105,7 +93,7 @@ public class PlacePanelTests
     public void RecentKindsBecomeChips()
     {
         using var r = new Run();
-        Choose(r, "Beech1");
+        SharedPlaceWindow.ChoosePanelKinds(r, "Beech1");
         // Placing notes the kinds as recent (the input's Placed event); the chip ticks the kind.
         var raise = typeof(PlaceInput).GetField("Placed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(r.W.PlaceInput) as Action<IReadOnlyList<string>>;
         raise!(["Oak1"]);
@@ -119,7 +107,7 @@ public class PlacePanelTests
     public void WeightsAreSetWithSlidersAndKindsTakenOutWithTheCross()
     {
         using var r = new Run();
-        Choose(r, "Beech1", "Oak1");
+        SharedPlaceWindow.ChoosePanelKinds(r, "Beech1", "Oak1");
         var sliders = r.P.Mix.GetLogicalDescendants().OfType<Slider>().ToList();
         Assert.Equal(2, sliders.Count);
         // A slider is the kind's share: the other one follows, so they make 100%.
@@ -138,7 +126,7 @@ public class PlacePanelTests
         Assert.Empty(r.P.Mix.GetLogicalDescendants().OfType<Slider>());
         Assert.Contains("100%", Texts(r.P.Mix));
         // None: said so.
-        Choose(r);
+        SharedPlaceWindow.ChoosePanelKinds(r);
         Assert.Contains("None yet", Texts(r.P.Mix));
     }
 
@@ -148,7 +136,7 @@ public class PlacePanelTests
         using var r = new Run();
         // Even to start with (the tests' memory may hold weights from others).
         r.T.Weights.Clear();
-        Choose(r, "Beech1", "Oak1", "Birch1");
+        SharedPlaceWindow.ChoosePanelKinds(r, "Beech1", "Oak1", "Birch1");
         var sliders = r.P.Mix.GetLogicalDescendants().OfType<Slider>().ToList();
         sliders[1].Value = 20;
         sliders[2].Value = 60;
@@ -174,7 +162,7 @@ public class PlacePanelTests
         r.T.Weights.Clear();
         foreach (string[] kinds in new[] { new[] { "Beech1", "Oak1" }, ["Beech1", "Oak1", "Birch1"], ["Beech1", "Oak1", "Birch1", "FirTree"] })
         {
-            Choose(r, kinds);
+            SharedPlaceWindow.ChoosePanelKinds(r, kinds);
             Assert.All(r.P.Mix.GetLogicalDescendants().OfType<Slider>(), s =>
             {
                 Assert.Equal(PlacePanel.MaxShare(kinds.Length), s.Maximum);
@@ -187,7 +175,7 @@ public class PlacePanelTests
     public void OneAtATimeHidesTheScatterSettings()
     {
         using var r = new Run();
-        Choose(r, "Beech1");
+        SharedPlaceWindow.ChoosePanelKinds(r, "Beech1");
         r.W.UpdateLayout();
         Assert.True(r.P.DensitySlider.IsEffectivelyVisible);
         r.P.SingleBox.IsChecked = true;
@@ -223,13 +211,13 @@ public class PlacePanelTests
     {
         using var r = new Run();
         r.P.Memory.Recent.Add("Oak1");
-        Choose(r, "Beech1");
+        SharedPlaceWindow.ChoosePanelKinds(r, "Beech1");
         var chips = r.P.Recent.Children.OfType<ToggleButton>().ToList();
         Assert.Equal(["Beech1", "Oak1"], chips.Select(c => (string)c.Tag!));
         Assert.Equal([true, false], chips.Select(c => c.IsChecked == true));
         // The name shows whole: its underscores are not taken as access keys.
         string named = r.P.Creatable().First(c => c.Name.Contains('_', StringComparison.Ordinal)).Name;
-        Choose(r, named);
+        SharedPlaceWindow.ChoosePanelKinds(r, named);
         var chip = r.P.Recent.Children.OfType<ToggleButton>().Single(c => (string)c.Tag! == named);
         Assert.Equal(named, ((TextBlock)chip.Content!).Text);
     }
@@ -243,10 +231,10 @@ public class PlacePanelTests
         Assert.Equal(PlaceTool.BuiltIn[0].Kinds.Keys.Where(k => r.P.Creatable().Any(c => c.Name == k)).Order(), r.T.Chosen.Order());
         Assert.False(r.P.DeletePresetButton.IsEnabled);
         // Saving needs kinds, and a name.
-        Choose(r);
+        SharedPlaceWindow.ChoosePanelKinds(r);
         Click(r.P.SavePresetButton);
         Assert.Equal("Tick one or more kinds first.", r.Said);
-        Choose(r, "Beech1");
+        SharedPlaceWindow.ChoosePanelKinds(r, "Beech1");
         r.P.AskName = () => Task.FromResult<string?>(null);
         Click(r.P.SavePresetButton);
         Assert.Empty(r.P.Memory.Presets);
@@ -293,10 +281,10 @@ public class PlacePanelTests
         Assert.Contains("Press at the centre and drag out", Texts(r.P.Card));
         Click(r.P.ShapeButtons[PlaceTool.LineShapes.Rect]);
         Assert.Contains("Press at one corner and drag", Texts(r.P.Card));
-        Choose(r);
+        SharedPlaceWindow.ChoosePanelKinds(r);
         Assert.Equal("Tick at least one kind to place.", r.P.Info.Text);
         Assert.Equal("Nothing to place yet: Choose kinds… below, or a preset.", r.P.Note.Text);
-        Choose(r, "sapling_turnip");
+        SharedPlaceWindow.ChoosePanelKinds(r, "sapling_turnip");
         Assert.Contains("only grows on cultivated ground", r.P.Note.Text);
     }
 
