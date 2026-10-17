@@ -387,21 +387,7 @@ public sealed class AreaPanel
         NoLimitBox.Tip("brush.noLimit");
         NoLimitBox.IsCheckedChanged += (_, _) => NoLimitChanged?.Invoke(NoLimitBox.IsChecked == true);
 
-        Control Row(string label, Control input, Control? after = null)
-        {
-            var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,Auto") };
-            var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-            Tips.Label(l, input);
-            g.Children.Add(l);
-            Grid.SetColumn(input, 1);
-            g.Children.Add(input);
-            if (after != null)
-            {
-                Grid.SetColumn(after, 2);
-                g.Children.Add(after);
-            }
-            return g;
-        }
+        Control Row(string label, Control input, Control? after = null) => Ui.Row(label, input, after, "70,*,Auto");
         Control For(Control c, params Act[] acts)
         {
             _rows[c] = acts;

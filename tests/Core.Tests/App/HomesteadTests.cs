@@ -50,14 +50,9 @@ public class HomesteadTests : IDisposable
     /// <summary>
     /// A one-cell clipboard copy with no ground holding these pieces (name, position and yaw).
     /// </summary>
-    private static JsonObject Clip(params (string Name, float X, float Y, float Z, float Yaw)[] pieces) => new()
+    private static JsonObject Clip(params (string Name, float X, float Y, float Z, float Yaw)[] pieces)
     {
-        ["w"] = 1,
-        ["h"] = 1,
-        ["rel"] = new JsonArray(-32768),
-        ["wt"] = new JsonArray(0),
-        ["pnt"] = new JsonArray(-255, -255, -255, -255),
-        ["objects"] = new JsonArray(pieces.Select(p => (JsonNode)new JsonObject
+        JsonArray objects = [.. pieces.Select(p => (JsonNode)new JsonObject
         {
             ["name"] = p.Name,
             ["dx"] = p.X,
@@ -67,9 +62,9 @@ public class HomesteadTests : IDisposable
             ["ry"] = p.Yaw,
             ["rz"] = 0,
             ["scale"] = 0,
-        }).ToArray()),
-        ["poly"] = new JsonArray(),
-    };
+        })];
+        return BlueprintFormats.OneCellClip(objects, []);
+    }
 
     [Fact]
     public void ABlueprintIsWrittenAsHomesteadWritesThemAndReadsBack()

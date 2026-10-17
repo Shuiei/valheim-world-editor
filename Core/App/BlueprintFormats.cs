@@ -415,6 +415,23 @@ public static class BlueprintFormats
     }
 
     /// <summary>
+    /// A one-cell clipboard copy holding these objects, with no ground: the cell's size and the relations and paint
+    /// the clipboard keeps are the empty ones, and the footprint is <paramref name="poly"/>.
+    /// </summary>
+    /// <param name="objects">The objects, as the clipboard keeps them.</param>
+    /// <param name="poly">The footprint's corner points.</param>
+    public static JsonObject OneCellClip(JsonArray objects, JsonArray poly) => new()
+    {
+        ["w"] = 1,
+        ["h"] = 1,
+        ["rel"] = new JsonArray(-32768),
+        ["wt"] = new JsonArray(0),
+        ["pnt"] = new JsonArray(-255, -255, -255, -255),
+        ["objects"] = objects,
+        ["poly"] = poly,
+    };
+
+    /// <summary>
     /// Rounds to a thousandth, to keep the clipboard JSON short.
     /// </summary>
     private static float R(float v) => MathF.Round(v * 1000f) / 1000f;
