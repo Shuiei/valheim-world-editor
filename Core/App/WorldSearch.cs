@@ -121,17 +121,19 @@ public static class WorldSearch
         }
         foreach (var (id, bytes) in Candidates())
         {
-            byte[] b = bytes();
-            if (b.Length == 0)
-            {
-                continue;
-            }
             ZdoData z;
             try
             {
+                // A new object's bytes are built from its raw ones, which are parsed on the way: damaged ones throw
+                // here too, and that object alone is skipped.
+                byte[] b = bytes();
+                if (b.Length == 0)
+                {
+                    continue;
+                }
                 z = ZdoData.Parse(b);
             }
-            catch (Exception ex) when (ex is EndOfStreamException or IOException)
+            catch (Exception ex) when (CheckedReads.Damaged(ex))
             {
                 continue;
             }
@@ -147,7 +149,7 @@ public static class WorldSearch
                 {
                     inv = InventoryData.Read(items);
                 }
-                catch (Exception ex) when (ex is NotSupportedException or EndOfStreamException or IOException)
+                catch (Exception ex) when (CheckedReads.Damaged(ex))
                 {
                     continue;
                 }

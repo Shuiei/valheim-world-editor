@@ -368,7 +368,7 @@ public sealed class InspectorPanel
                     CustomData = new(i.CustomData),
                 })];
             }
-            catch (Exception ex) when (ex is NotSupportedException or EndOfStreamException or IOException)
+            catch (Exception ex) when (CheckedReads.Damaged(ex))
             {
                 _inventoryError = ex.Message;
                 Items = [];

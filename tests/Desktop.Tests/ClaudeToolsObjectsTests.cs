@@ -97,6 +97,23 @@ public class ClaudeToolsObjectsTests
         Assert.Equal("No object with that id in the area.", await r.T.GetObject(chest));
     }
 
+    // A chest whose contents are in an item format older than the editor reads: get_object says they cannot be read
+    // and still answers with the rest.
+    [AvaloniaFact]
+    public async Task ContentsInAnOlderItemFormatCannotBeRead()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        int chest = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "piece_chest_wood", X = -4, Z = 0, Snap = false }]));
+        Assert.True(r.W.Inspector.Open(chest));
+        r.W.Inspector.Added.Add(("bytes", "items", Convert.ToBase64String(new byte[] { 100, 0, 0, 0, 0, 0 })));
+        await r.W.Inspector.Apply();
+        int changed = r.W.Session!.Scene.Things.FindLastIndex(t => t.Prefab == Save.StableHash.Of("piece_chest_wood") && !t.Gone);
+        var o = ClaudeRun.J(await r.T.GetObject(changed));
+        Assert.Equal("cannot be read", o.GetProperty("contents").GetString());
+        Assert.Equal("piece_chest_wood", o.GetProperty("name").GetString());
+    }
+
     // Exact places, turns and sizes, each object its own; what is left out stays; a size out of range and a place
     // out of the area are named and left out.
     [AvaloniaFact]

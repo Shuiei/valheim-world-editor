@@ -77,6 +77,11 @@ public class StandDataTests
         Assert.Equal((null, 0), StandData.ReadItemStand(empty));
         Assert.Null(empty.GetBytes(StableHash.Of("itemData")));
         Assert.Throws<ArgumentException>(() => StandData.ForItemStand(Wall, new StandData.Held("Wood"), 0));
+        // Item data with a bad length prefix (a FormatException, not only a short read): the stand's own values are
+        // kept instead of the read ending the inspector.
+        var damaged = With(set);
+        damaged.SetBytes(StableHash.Of("itemData"), [InventoryData.Version, 0, 0, 0, 0, 0, 0, 0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+        Assert.Equal((new StandData.Held("SwordIron", 3, 0), 1), StandData.ReadItemStand(damaged));
     }
 
     [Fact]

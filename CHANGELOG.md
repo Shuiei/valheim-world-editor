@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.59 — unreleased
+
+### Fixed
+- **One damaged object ended a world search, and a damaged item stand broke the inspector.** Search world, the
+  inspector's chest and stand reads and Claude's get_object skipped an object only when its bytes were short; a bad
+  count or length prefix in them (what damaged saves have) was an exception that ended the whole search or the
+  inspector. Every reader of one object now skips what cannot be read, whichever way it is damaged, and goes on with
+  the rest.
+
 ## v1.45.58 — unreleased
 
 ### Fixed

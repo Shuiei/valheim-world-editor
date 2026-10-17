@@ -136,6 +136,17 @@ public class ValheimReaderTests
         Assert.DoesNotContain(back.FloatList, f => f.Key == StableHash.Of("scaleScalar"));
     }
 
+    // CheckedReads.Damaged: what a read of damaged bytes throws, and nothing else (a plain IOException is a file that
+    // could not be read, not damaged bytes).
+    [Fact]
+    public void DamagedBytesAreKnownByWhatTheirReadThrows()
+    {
+        Assert.All(new Exception[] { new EndOfStreamException(), new InvalidDataException(), new FormatException(), new NotSupportedException() }, e => Assert.True(CheckedReads.Damaged(e)));
+        Assert.False(CheckedReads.Damaged(new IOException()));
+        Assert.False(CheckedReads.Damaged(new ArgumentException()));
+        Assert.False(CheckedReads.Damaged(new InvalidOperationException()));
+    }
+
     [Fact]
     public void AZoneListThatCannotBeReadLeavesTheRestOfTheWorld()
     {
