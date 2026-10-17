@@ -182,9 +182,8 @@ public sealed class AppSettings
     {
         lock (Lock)
         {
-            // The path is found once: finding it can fail too (the data folder cannot be made), and the log of that
-            // failure must not look for it again.
-            string? path = null;
+            // The path is found once: finding it can fail too (the data folder cannot be made).
+            string path;
             string? text;
             try
             {
@@ -193,7 +192,7 @@ public sealed class AppSettings
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                Console.WriteLine($"Settings: {path ?? "settings.json"} could not be read ({ex.Message}); using the defaults for now, and not saving over it.");
+                Log.Caught(ex, "reading settings.json (the defaults are used for now, and it is not saved over)");
                 return new AppSettings { FileUnread = true };
             }
             if (text == null)
@@ -207,14 +206,14 @@ public sealed class AppSettings
             catch (JsonException ex)
             {
                 // Not readable: kept aside as settings.json.bad (the next save would write over it).
-                Console.WriteLine($"Settings: {path} could not be read ({ex.Message}); kept as {path}.bad, starting from the defaults.");
+                Log.Caught(ex, "reading settings.json (kept as settings.json.bad, starting from the defaults)");
                 try
                 {
                     File.Copy(path, path + ".bad", overwrite: true);
                 }
                 catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
                 {
-                    Console.WriteLine($"Settings: {path} could not be kept as {path}.bad: {copy.Message}");
+                    Log.Caught(copy, "keeping the unreadable settings.json as settings.json.bad");
                 }
                 return new AppSettings();
             }
@@ -236,16 +235,19 @@ public sealed class AppSettings
             {
                 return File.ReadAllText(path);
             }
-            catch (DirectoryNotFoundException)
+            catch (DirectoryNotFoundException e)
             {
+                Log.CaughtBrief(e, "reading settings.json (none yet: the defaults)");
                 return null;
             }
-            catch (FileNotFoundException) when (attempt > 0)
+            catch (FileNotFoundException e) when (attempt > 0)
             {
+                Log.CaughtBrief(e, "reading settings.json (none yet: the defaults)");
                 return null;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < 2)
             {
+                Log.CaughtBrief(ex, "reading settings.json (tried again in 100 ms)");
                 Thread.Sleep(100);
             }
         }
@@ -271,6 +273,7 @@ public sealed class AppSettings
             {
                 // Not its path: finding it may be what failed then (the data folder could not be made).
                 problem = "settings.json could not be read when the editor started, and is left as it is.";
+                Console.WriteLine($"Settings: not saved: {problem}");
             }
             else
             {
@@ -284,18 +287,16 @@ public sealed class AppSettings
                     SafeFile.WriteAllText(path, JsonSerializer.Serialize(this, Indented), UnixFileMode.UserRead | UnixFileMode.UserWrite, overwrite: !_fileMissing);
                     _fileMissing = false;
                 }
-                catch (IOException) when (_fileMissing && path != null && File.Exists(path))
+                catch (IOException ex) when (_fileMissing && path != null && File.Exists(path))
                 {
+                    Log.Caught(ex, "saving settings.json (not there at the start, now put back by another program: left as it is)");
                     problem = $"{path} was not there when the editor started and is now (put back by another program?), and is left as it is.";
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
+                    Log.Caught(ex, "saving settings.json (the settings stay in memory)");
                     problem = $"could not write {path ?? "settings.json"}: {ex.Message}";
                 }
-            }
-            if (problem != null)
-            {
-                Console.WriteLine($"Settings: not saved: {problem}");
             }
             return problem;
         }
@@ -341,6 +342,7 @@ public sealed class AppSettings
         }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
+            Log.CaughtBrief(ex, "making a recent world's path full (compared as it is)");
             return path;
         }
     }

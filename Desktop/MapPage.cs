@@ -625,6 +625,8 @@ public sealed partial class MapPage : IDisposable
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException or FormatException)
         {
+            // Brief: it can fail at every poll while the game does not answer.
+            Log.CaughtBrief(ex, "asking the game where the players are");
             if (_session == s)
             {
                 LiveText.Text = Lang.T("map.live.noAnswer");
@@ -734,6 +736,7 @@ public sealed partial class MapPage : IDisposable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "searching the world");
             if (search == _searches && _session == s)
             {
                 _searching = false;

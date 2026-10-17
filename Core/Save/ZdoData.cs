@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Text;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Save;
 
@@ -296,6 +297,7 @@ public sealed class ZdoData
         }
         catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
         {
+            Log.CaughtBrief(ex, $"checking a value for the {section} section (not taken)");
             return false;
         }
     }

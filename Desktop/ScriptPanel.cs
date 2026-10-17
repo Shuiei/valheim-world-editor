@@ -135,16 +135,14 @@ public sealed class ScriptPanel
                     }
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                     {
-                        Console.Error.WriteLine($"Script {f.FullName} not listed: {ex.Message}");
+                        Log.Caught(ex, "reading a script to list it (it is left out)");
                     }
                 }
             }
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-        }
-        catch (UnauthorizedAccessException)
-        {
+            Log.Caught(ex, "listing the scripts folder");
         }
         ScriptBox.ItemsSource = _entries.Select(e => e.Example ? Lang.T("script.example", e.Name) : e.Name).ToList();
         ScriptBox.SelectedIndex = select != null ? _entries.FindIndex(e => !e.Example && e.Name == select) : -1;
@@ -186,6 +184,7 @@ public sealed class ScriptPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "saving a script");
             Message?.Invoke(Said.Of("script.msg.notSaved", ex.Message));
         }
     }

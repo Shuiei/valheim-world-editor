@@ -55,11 +55,13 @@ public sealed class PlaceMemory
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
+            // None yet (the first run): brief.
+            Log.CaughtBrief(ex, "reading place.json (none yet: starting empty)");
             return new();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Console.WriteLine($"Place memory: {Where} could not be read ({ex.Message}); starting empty, not saving over it.");
+            Log.Caught(ex, "reading place.json (starting empty, not saving over it)");
             return new() { _unread = true };
         }
         try
@@ -68,7 +70,7 @@ public sealed class PlaceMemory
         }
         catch (JsonException ex)
         {
-            Console.WriteLine($"Place memory: {Where} is not readable ({ex.Message}); kept as {Where}.bad, starting empty.");
+            Log.Caught(ex, "parsing place.json (kept as place.json.bad, starting empty)");
             try
             {
                 File.Copy(Where, Where + ".bad", overwrite: true);
@@ -76,7 +78,7 @@ public sealed class PlaceMemory
             }
             catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
             {
-                Console.WriteLine($"Place memory: {Where} could not be kept as {Where}.bad ({copy.Message}); not saving over it.");
+                Log.Caught(copy, "keeping the unreadable place.json as place.json.bad (not saving over it)");
                 return new() { _unread = true };
             }
         }
@@ -114,7 +116,7 @@ public sealed class PlaceMemory
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Console.WriteLine($"Place memory: {Where} could not be written ({ex.Message}).");
+            Log.Caught(ex, "writing place.json");
         }
     }
 

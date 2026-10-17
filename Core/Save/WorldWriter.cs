@@ -220,6 +220,7 @@ public static class WorldWriter
         }
         catch (Exception ex)
         {
+            Log.Caught(ex, "making the save's changes (nothing saved)");
             return Refused(Said.Of("save.writer.failed", ex.Message), skipped);
         }
         if (written + created + removed + addedCount + resets.Count == 0)
@@ -285,6 +286,7 @@ public static class WorldWriter
         }
         catch (Exception ex)
         {
+            Log.Caught(ex, "writing the save's files (the new files are removed, nothing saved)");
             RemoveAll(newFiles);
             return Refused(Said.Of("save.writer.failed", ex.Message), skipped);
         }
@@ -511,6 +513,7 @@ public static class WorldWriter
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
+                Log.CaughtBrief(ex, "removing a file of a save that was not made (left behind)");
             }
         }
     }

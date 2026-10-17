@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.App;
 using TerrainEditor.Save;
 
 namespace TerrainEditor.Editing;
@@ -420,6 +421,7 @@ public sealed class EditReplay
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException || CheckedReads.Damaged(ex))
         {
+            Log.CaughtBrief(ex, "reading a new object's bytes again for the replay (taken as unread)");
             return null;
         }
     }
@@ -569,6 +571,7 @@ public sealed class EditReplay
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
+            Log.CaughtBrief(ex, "reading an object of the older save for the replay (its chunk file is gone: taken as unread)");
             data = null;
         }
         if (data == null)
@@ -587,6 +590,7 @@ public sealed class EditReplay
         }
         catch (Exception ex) when (CheckedReads.Damaged(ex))
         {
+            Log.CaughtBrief(ex, "reading an object's saved bytes for the replay (damaged)");
             return null;
         }
     }

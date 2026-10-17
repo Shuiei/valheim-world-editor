@@ -47,8 +47,9 @@ public static class ClaudeRelay
             {
                 message = JsonNode.Parse(line);
             }
-            catch (System.Text.Json.JsonException)
+            catch (System.Text.Json.JsonException ex)
             {
+                Log.CaughtBrief(ex, "reading a message from Claude");
                 await output.WriteLineAsync(Error(null, -32700, "Not JSON."));
                 continue;
             }
@@ -83,8 +84,9 @@ public static class ClaudeRelay
             {
                 response = await http.SendAsync(request);
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException ex)
             {
+                Log.CaughtBrief(ex, "passing a message from Claude to the editor");
                 if (id != null)
                 {
                     await output.WriteLineAsync(Error(id, -32000, "Valheim World Editor is not running (or not on this port): start it, with Settings > Claude > Allow Claude to connect on."));
@@ -93,6 +95,7 @@ public static class ClaudeRelay
             }
             catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
             {
+                Log.CaughtBrief(ex, "waiting for the editor's answer to Claude");
                 // The client's timeout (a tool that ran too long): answered, not the end of the relay. Only that one:
                 // any other cancellation is not a timeout and is not reported as one.
                 if (id != null)

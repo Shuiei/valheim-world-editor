@@ -177,6 +177,7 @@ public static class ModExtensions
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(e, "reading an extension's DLL (taken as empty: not run)");
             return [];
         }
     }
@@ -208,6 +209,7 @@ public static class ModExtensions
         catch (Exception e)
         {
             // Whatever the extension's code throws while loading: it does not run.
+            Log.Caught(e, $"loading the extension of {mod} (not run)");
             return (null, $"{e.GetType().Name}: {e.Message}");
         }
     }
@@ -228,6 +230,7 @@ public static class ModExtensions
         }
         catch (Exception e)
         {
+            Log.Caught(e, $"running a hook of the extension of {l.Mod} (turned off)");
             TurnOff(l, $"{e.GetType().Name}: {e.Message}");
             return fallback;
         }

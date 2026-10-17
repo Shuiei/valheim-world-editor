@@ -661,7 +661,7 @@ public sealed class EditSession
         var env = new Formula.Env { Noise = (x, z) => Brush.Noise.Fbm((float)x, (float)z) / 1.6 };
         var mask = MaskNow();
         int touchedCount = 0, bad = 0;
-        bool clamped = false;
+        bool clamped = false, failed = false;
         Commit(label, g =>
         {
             var touched = new List<int>();
@@ -689,8 +689,14 @@ public sealed class EditSession
                     {
                         v = f(env);
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
+                        // Logged at the first point only: a formula that fails tends to fail at every point.
+                        if (!failed)
+                        {
+                            failed = true;
+                            Log.CaughtBrief(e, "working out the shape's formula at a point (said once for the shape)");
+                        }
                         v = double.NaN;
                     }
                     if (!double.IsFinite(v))

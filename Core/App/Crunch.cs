@@ -82,8 +82,9 @@ public static class Crunch
             var h = new Header(crn);
             return new Texture(h.Width, h.Height, h.Levels, h.Format == Dxt5);
         }
-        catch (InvalidDataException)
+        catch (InvalidDataException e)
         {
+            Log.CaughtBrief(e, "reading a crunched texture's header (not drawn from it)");
             return null;
         }
     }
@@ -111,8 +112,9 @@ public static class Crunch
             int level = pick(info);
             return level < 0 || level >= h.Levels ? null : (info, level, new Unpacker(crn, h).Level(level));
         }
-        catch (InvalidDataException)
+        catch (InvalidDataException e)
         {
+            Log.CaughtBrief(e, "unpacking a crunched texture (not drawn from it)");
             return null;
         }
     }

@@ -329,6 +329,7 @@ public sealed partial class ClaudeTools
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "reading an object's data for Claude (none is given)");
             bytes = null;
         }
         if (bytes == null)
@@ -430,6 +431,7 @@ public sealed partial class ClaudeTools
             }
             catch (Exception ex) when (Save.CheckedReads.Damaged(ex))
             {
+                Log.Caught(ex, "reading a container's contents for Claude");
                 head["contents"] = "cannot be read";
             }
         }
@@ -559,6 +561,7 @@ public sealed partial class ClaudeTools
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or OverflowException)
         {
+            Log.CaughtBrief(ex, "setting the object data Claude gave");
             return (null, $"Could not change it: {ex.Message}");
         }
     }

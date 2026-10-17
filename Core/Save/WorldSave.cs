@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Numerics;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Save;
 
@@ -105,7 +106,7 @@ public sealed class WorldSave
     /// data says of their place in their group, and their turn as stored (Pieces keep only the turn about y; a group's
     /// root may lean).
     /// </summary>
-    public Dictionary<int, (App.ObjectLink Link, Vector3 Rotation)> Links { get; } = [];
+    public Dictionary<int, (ObjectLink Link, Vector3 Rotation)> Links { get; } = [];
 
     /// <summary>Player-built pieces (objects with a creator): prefab, position and Y rotation in degrees.</summary>
     public List<(int Id, int Prefab, Vector3 Position, float RotationY)> Pieces { get; } = [];
@@ -335,7 +336,7 @@ public sealed class WorldSave
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Could not read the zone list in the .db2 file: {ex.Message}");
+            Log.Caught(ex, "reading the zone list in the world's .db2 file (the world opens without it)");
         }
         return save;
     }
@@ -842,7 +843,7 @@ public sealed class WorldSave
         // Zero = not stored: the object keeps its prefab's own scale.
         Vector3 scale = Vector3.Zero;
         // The values mods link objects by (App.ObjectLinks): ids, and a part's place and turn in its parent's frame.
-        var links = App.ObjectLinks.Current;
+        var links = ObjectLinks.Current;
         List<(int Key, int Value)>? linkInts = null;
         List<(int Key, Vector3 Value)>? linkVec3s = null;
         List<(int Key, Quaternion Value)>? linkQuats = null;
@@ -938,7 +939,7 @@ public sealed class WorldSave
                     {
                         // Damaged ground data: the game loses only this zone's ground edits. Here the object stays an
                         // ordinary one, kept byte for byte, and the rest of the world reads on.
-                        Console.WriteLine($"Damaged ground data in the terrain object at {position}, kept as it is: {ex.Message}");
+                        Log.CaughtBrief(ex, $"reading the ground data of the terrain object at {position} (damaged: kept as it is)");
                         break;
                     }
                     zone.Source = new ZdoLocation(file, start, -1, zdo.ValueStart, pkg.Position, flags);
@@ -957,7 +958,7 @@ public sealed class WorldSave
             Placed.Add(new PlacedObject(prefab, location, position, rotation, timeCreated));
         }
         bool terrain = TerrainZones.Count > 0 && TerrainZones[^1].Source is { } last && last.File == file && last.Start == start;
-        if (linkInts != null && App.ObjectLinks.Read(links, linkInts, linkVec3s, linkQuats) is { } link)
+        if (linkInts != null && ObjectLinks.Read(links, linkInts, linkVec3s, linkQuats) is { } link)
         {
             Links[id] = (link, rotation);
         }

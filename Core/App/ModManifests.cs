@@ -141,6 +141,7 @@ public static class ModManifests
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
                 // A folder that cannot be listed: its manifests are not read.
+                Log.Caught(e, "listing a plugins folder for worldeditor.json files (its manifests are not read)");
             }
         }
         var notes = BaseNotes();
@@ -166,7 +167,7 @@ public static class ModManifests
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
             {
-                Console.WriteLine($"mod manifest {file.FullName}: not read ({e.Message}).");
+                Log.Caught(e, "reading a mod's worldeditor.json (skipped)");
             }
         }
         notes.LinkSet = new LinkSet([.. notes.Links.Values]);

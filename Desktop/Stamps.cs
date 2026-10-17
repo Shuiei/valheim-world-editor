@@ -204,6 +204,7 @@ public static class Stamps
         }
         catch (Exception ex) when (ex is IOException or JsonException or FormatException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "reading stamps.json (starting with none)");
             return [];
         }
     }
@@ -221,7 +222,7 @@ public static class Stamps
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Console.Error.WriteLine($"Stamps not kept ({FilePath}): {ex.Message}");
+            Log.Caught(ex, "writing stamps.json");
         }
     }
 }

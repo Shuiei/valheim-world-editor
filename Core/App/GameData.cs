@@ -132,7 +132,7 @@ public static class GameData
             {
                 // A kind the editor cannot take (the game changed what it holds): those before it are in use already,
                 // so none counts as had, and the next Ensure takes them all again.
-                Console.WriteLine($"The game's data could not be used ({e.GetType().Name}: {e.Message}).");
+                Log.Caught(e, "using the game's data (none counts as had; taken again next time)");
                 _from = null;
                 _generation++;
                 return false;
@@ -184,7 +184,7 @@ public static class GameData
         }
         catch (Exception e) when (e is JsonException or InvalidOperationException or KeyNotFoundException or FormatException or InvalidCastException)
         {
-            Console.WriteLine($"Game data {kind.Name}: the mods' prefabs could not be used ({e.Message}); the game's own only.");
+            Log.Caught(e, $"laying the mods' prefabs over the game data {kind.Name} (the game's own only)");
             kind.Use(json);
         }
     }
@@ -329,7 +329,7 @@ public static class GameData
         catch (Exception e)
         {
             // Anything in the game's files can fail the reading: no world opens then.
-            Console.WriteLine($"The game's {what} could not be read ({e.GetType().Name}: {e.Message}).");
+            Log.Caught(e, $"reading the game's {what} (no world opens)");
             return null;
         }
     }
@@ -350,7 +350,7 @@ public static class GameData
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            Console.WriteLine($"{Path.GetFileName(file)} could not be kept ({e.GetType().Name}: {e.Message}); it is read again next time.");
+            Log.Caught(e, $"keeping the cache {Path.GetFileName(file)} (read again next time)");
             return false;
         }
     }
@@ -371,6 +371,7 @@ public static class GameData
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(e, $"reading the cache {Path.GetFileName(file)} (read from the game again)");
             return null;
         }
     }

@@ -313,7 +313,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
-            Console.WriteLine($"New world: could not make {name} (seed {seed}) in {folder}: {ex}");
+            Log.Caught(ex, "making a new world");
             Busy(null);
             var failed = Said.Of("newWorld.error.make", ex.Message);
             if (NewWorld is { } p)
@@ -389,6 +389,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            Log.Caught(ex, "opening a world");
             Busy(null);
             Tunnel.Close();
             ShowStart(Lang.T("world.msg.openFailed", ex.Message));
@@ -534,6 +535,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            Log.Caught(ex, "opening an area");
             Unleave(left, navigation);
             failed = (context ?? Said.Empty) + Said.Of("world.msg.openAreaFailed", ex.Message);
             Report(failed);
@@ -658,6 +660,7 @@ public sealed partial class MainWindow : Window
             }
             catch (Exception ex)
             {
+                Log.Caught(ex, "applying the changes to the running game");
                 message = Lang.T("save.msg.couldNotApply", ex.Message);
             }
             finally
@@ -691,6 +694,7 @@ public sealed partial class MainWindow : Window
             }
             catch (Exception ex)
             {
+                Log.Caught(ex, "saving the world");
                 msg = Lang.T("save.msg.couldNotSave", ex.Message);
             }
             finally
@@ -733,6 +737,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            Log.Caught(ex, "reading the game's newer save to replay the changes on it");
             Busy(null);
             await Tell(Lang.T("replay.failed", ex.Message));
             return;
@@ -760,6 +765,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            Log.Caught(ex, "replaying the changes on the game's newer save");
             Busy(null);
             await Tell(Lang.T("replay.failed", ex.Message));
             return;
@@ -814,6 +820,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            Log.Caught(ex, "discarding the changes (reading the world again)");
             Say(Said.Of("save.msg.couldNotRead", ex.Message));
         }
         finally
@@ -854,6 +861,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException or System.Text.Json.JsonException)
         {
+            Log.Caught(ex, "reading the world from the game again");
             return Said.Of("save.msg.unreachable", ex.Message);
         }
         finally
@@ -1213,6 +1221,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            Log.Caught(ex, "saving the Workshop or area");
             Msg("save.msg.couldNotSave", ex.Message);
         }
         finally
@@ -1844,10 +1853,13 @@ public sealed partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
+            // The user's Stop: not an error.
+            Console.WriteLine("Script: stopped.");
             return new(false, Said.Of("script.msg.stoppedBelow"), Said.Of("script.msg.stopped"));
         }
         catch (Exception ex)
         {
+            Log.Caught(ex, "running a script");
             return new(false, Said.Of("script.msg.errorBelow", ScriptHost.Describe(ex)), Said.Of("script.msg.error"));
         }
         finally
@@ -2218,6 +2230,7 @@ public sealed partial class MainWindow : Window
             }
             catch (Exception ex) when (ex is FormatException or InvalidOperationException or NullReferenceException or ArgumentException or System.Text.Json.JsonException)
             {
+                Log.Caught(ex, "restoring the clipboard kept in the preferences (it is dropped)");
                 p.Remove("clipboard");
             }
         }
@@ -2813,11 +2826,8 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
         {
-            // The path may hold the user's name: the log says "the stamp picture" instead (the message has it in full).
-            string full = Path.IsPathFullyQualified(path) ? path : Path.Join(Environment.CurrentDirectory, path);
-            string why = ex.Message.Replace(full, "the stamp picture", StringComparison.Ordinal)
-                .Replace(path, "the stamp picture", StringComparison.Ordinal);
-            Console.Error.WriteLine($"Load stamp: the stamp picture could not be read: {ex.GetType().Name}: {why}");
+            // The path may hold the user's name: Log takes it out of the message.
+            Log.Caught(ex, "reading the stamp picture to load (not loaded)");
             return null;
         }
     }
@@ -2859,6 +2869,7 @@ public sealed partial class MainWindow : Window
             }
             catch (Exception ex)
             {
+                Log.Caught(ex, "opening a generated dungeon in the Workshop");
                 Msg("dungeon.msg.notOpened", ex.Message);
             }
         };
@@ -3266,8 +3277,8 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            Log.Caught(ex, "opening the world given on the command line");
             LoadedInfo.Text = Lang.T("world.msg.openFailed", ex.Message);
-            Options.Say(Lang.En("world.msg.openFailed", ex.Message));
         }
     }
 

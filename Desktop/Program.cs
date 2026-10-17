@@ -57,14 +57,15 @@ public static class Program
         }
         catch (Exception e) when (e is ArgumentException or FormatException or OverflowException or IndexOutOfRangeException)
         {
+            // Before the log starts, and the answer to whoever typed the command: the error output only, as typed.
             Console.Error.WriteLine($"ValheimWorldEditor: {e.Message}");
             Environment.ExitCode = 2;
             return;
         }
         // Everything said also goes to ValheimWorldEditor.log in the data folder (a window app has no console on Windows).
         TerrainEditor.App.Log.Start(BuildInfo.Version);
-        AppDomain.CurrentDomain.UnhandledException += (_, e) => Options.Say($"crash: {e.ExceptionObject}");
-        TaskScheduler.UnobservedTaskException += (_, e) => Options.Say($"error in a background task: {e.Exception}");
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => Options.Say($"crash: {TerrainEditor.App.Log.Scrub(e.ExceptionObject.ToString() ?? "")}");
+        TaskScheduler.UnobservedTaskException += (_, e) => Options.Say($"error in a background task: {TerrainEditor.App.Log.Scrub(e.Exception.ToString())}");
         // Logging out, shutting down or `kill` (SIGTERM, SIGHUP): the tunnel closes,
         // then the app ends (changes not saved are lost, as when the computer turns off).
         using var term = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGTERM, Quit);
@@ -140,7 +141,7 @@ public sealed class App : Application
             // it is logged and shown instead.
             Avalonia.Threading.Dispatcher.UIThread.UnhandledException += (_, e) =>
             {
-                Options.Say($"error: {e.Exception}");
+                Options.Say($"error: {TerrainEditor.App.Log.Scrub(e.Exception.ToString())}");
                 e.Handled = true;
                 window.ShowError(e.Exception);
             };

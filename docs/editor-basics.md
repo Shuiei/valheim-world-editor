@@ -400,7 +400,11 @@ written. The view is only drawn at full speed while something happens; otherwise
 Everything the editor says also goes to `ValheimWorldEditor.log` in the same data folder
 (`~/.local/share/ValheimWorldEditor` on Linux, `%LOCALAPPDATA%\ValheimWorldEditor` on Windows), each line with its
 time, started over at each run. **Open log** at the bottom of the start page's menu opens it: attach it when you
-report a problem.
+report a problem. Every error the editor handles is in it, as a line starting `Caught at` with where it happened,
+what the editor was doing and the error itself (with its stack trace, unless it is an expected one such as text
+being typed). Personal data is left out of these lines: your home folder is written `~`, and file paths, web
+addresses, user@host names, IP and server addresses, your account name and the saved servers' accounts, passwords
+and tokens are replaced by placeholders such as `<path>`.
 
 The keys below work in the 3D editor only: not while you type in a box, and not on the start page or the map. This
 is the full list; the help card shows the main ones.

@@ -75,6 +75,7 @@ public sealed partial class GlView
             }
             catch (Exception ex)
             {
+                Log.Caught(ex, "setting up the game's look for drawing");
                 made.Delete();
                 _lookFiles = null;
                 Status?.Invoke(Said.Of("world.msg.lookSetupFailed", ex.Message));
@@ -453,6 +454,7 @@ public sealed partial class GlView
             }
             catch (Exception ex)
             {
+                // Handed to the one waiting for the picture (the driver), which logs it.
                 req.Done.SetException(ex);
             }
         }
