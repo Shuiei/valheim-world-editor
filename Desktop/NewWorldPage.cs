@@ -797,16 +797,23 @@ public sealed class NewWorldPage : IDisposable
     /// catalogue text, or the id itself for a kind not named here.
     /// </summary>
     /// <param name="name">The kind's name in <see cref="SeedPreview.Dungeons"/>.</param>
-    internal static string DungeonName(string name) => name switch
+    internal static string DungeonName(string name)
     {
-        "Burial chambers" => Lang.T("newWorld.dungeon.burialChambers"),
-        "Troll caves" => Lang.T("newWorld.dungeon.trollCaves"),
-        "Sunken crypts" => Lang.T("newWorld.dungeon.sunkenCrypts"),
-        "Frost caves" => Lang.T("newWorld.dungeon.frostCaves"),
-        "Infested mines" => Lang.T("newWorld.dungeon.infestedMines"),
-        "Charred fortresses" => Lang.T("newWorld.dungeon.charredFortresses"),
-        "Hildir's dungeons" => Lang.T("newWorld.dungeon.hildirs"),
-        _ => name,
+        return DungeonKeys.TryGetValue(name, out string? key) ? Lang.T(key) : name;
+    }
+
+    /// <summary>
+    /// The catalogue key of each dungeon kind's name, by its id in <see cref="SeedPreview.Dungeons"/>.
+    /// </summary>
+    private static readonly Dictionary<string, string> DungeonKeys = new(StringComparer.Ordinal)
+    {
+        ["Burial chambers"] = "newWorld.dungeon.burialChambers",
+        ["Troll caves"] = "newWorld.dungeon.trollCaves",
+        ["Sunken crypts"] = "newWorld.dungeon.sunkenCrypts",
+        ["Frost caves"] = "newWorld.dungeon.frostCaves",
+        ["Infested mines"] = "newWorld.dungeon.infestedMines",
+        ["Charred fortresses"] = "newWorld.dungeon.charredFortresses",
+        ["Hildir's dungeons"] = "newWorld.dungeon.hildirs",
     };
 
     /// <summary>
@@ -814,20 +821,27 @@ public sealed class NewWorldPage : IDisposable
     /// catalogue text, or the id itself for one not named here.
     /// </summary>
     /// <param name="name">The landmark's name in <see cref="SeedPreview.Landmarks"/>.</param>
-    internal static string LandmarkName(string name) => name switch
+    internal static string LandmarkName(string name)
     {
-        "The start" => Lang.T("newWorld.label.start"),
-        "Haldor" => Lang.T("newWorld.landmark.haldor"),
-        "The Bog Witch" => Lang.T("newWorld.landmark.bogWitch"),
-        "Hildir" => Lang.T("newWorld.landmark.hildir"),
-        "Eikthyr" => Lang.T("newWorld.landmark.eikthyr"),
-        "The Elder" => Lang.T("newWorld.landmark.elder"),
-        "Bonemass" => Lang.T("newWorld.landmark.bonemass"),
-        "Moder" => Lang.T("newWorld.landmark.moder"),
-        "Yagluth" => Lang.T("newWorld.landmark.yagluth"),
-        "The Queen" => Lang.T("newWorld.landmark.queen"),
-        "Fader" => Lang.T("newWorld.landmark.fader"),
-        _ => name,
+        return LandmarkKeys.TryGetValue(name, out string? key) ? Lang.T(key) : name;
+    }
+
+    /// <summary>
+    /// The catalogue key of each landmark's name, by its id in <see cref="SeedPreview.Landmarks"/>.
+    /// </summary>
+    private static readonly Dictionary<string, string> LandmarkKeys = new(StringComparer.Ordinal)
+    {
+        ["The start"] = "newWorld.label.start",
+        ["Haldor"] = "newWorld.landmark.haldor",
+        ["The Bog Witch"] = "newWorld.landmark.bogWitch",
+        ["Hildir"] = "newWorld.landmark.hildir",
+        ["Eikthyr"] = "newWorld.landmark.eikthyr",
+        ["The Elder"] = "newWorld.landmark.elder",
+        ["Bonemass"] = "newWorld.landmark.bonemass",
+        ["Moder"] = "newWorld.landmark.moder",
+        ["Yagluth"] = "newWorld.landmark.yagluth",
+        ["The Queen"] = "newWorld.landmark.queen",
+        ["Fader"] = "newWorld.landmark.fader",
     };
 
     /// <summary>
