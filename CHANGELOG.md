@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.53 — unreleased
+
+### Fixed
+- **Claude could not open or add a blueprint whose file was not named after it.** list_blueprints gives each
+  blueprint's name from its #Name: header, but open_workshop and add_blueprint looked for a file named after that
+  name, so a numbered copy, a downloaded blueprint or one the game saved under another file name was "not in the
+  library". The name is now looked up among the library's entries first, the file name after.
+
 ## v1.45.52 — unreleased
 
 ### Fixed
