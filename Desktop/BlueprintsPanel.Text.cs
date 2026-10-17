@@ -23,7 +23,7 @@ public sealed partial class BlueprintsPanel
     /// <param name="terrain">Whether the file had terrain, which is not kept.</param>
     /// <param name="unknown">The kinds this world cannot make (left out).</param>
     /// <param name="skipped">The lines that could not be read.</param>
-    private Said ImportedSaid(string name, int count, bool terrain, List<string> unknown, int skipped)
+    internal Said ImportedSaid(string name, int count, bool terrain, List<string> unknown, int skipped)
     {
         return Said.Of("blueprints.msg.imported", name, count)
             + (terrain ? Said.Of("blueprints.msg.terrainNotKept") : Said.Empty)

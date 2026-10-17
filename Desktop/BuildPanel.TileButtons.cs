@@ -9,7 +9,7 @@ public sealed partial class BuildPanel
 {
     /// <summary>The heading a piece's tile sits under: its mod's group (on the Mods tab) and its station, or the piece's own group.</summary>
     /// <param name="prefab">The piece's prefab name.</param>
-    private static string StationHeading(string prefab)
+    internal static string StationHeading(string prefab)
     {
         string? station = PieceCost.Get(prefab)?.Station;
         string mod = ModGroup(prefab);

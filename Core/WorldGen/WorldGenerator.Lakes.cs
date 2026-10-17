@@ -26,7 +26,7 @@ public sealed partial class WorldGenerator
     /// <summary>
     /// The nearest other point within range (the first of equals), or -1.
     /// </summary>
-    private static int Nearest(List<Vector2> points, Vector2 p, float range)
+    internal static int Nearest(List<Vector2> points, Vector2 p, float range)
     {
         int best = -1;
         float bestDistance = 99999f;

@@ -15,7 +15,7 @@ public sealed partial class AreaTool
     /// <param name="Paint">The colour (four weights, as the paint brushes put down).</param>
     /// <param name="Before">The heights before the action.</param>
     /// <param name="NaturalReach">Naturalize's blur reach, in grid points.</param>
-    private sealed record CellChange(Ground G, Brush B, GroundAction Act, float Height, float Amount, float[] Paint, HeightSnapshot Before, int NaturalReach)
+    internal sealed record CellChange(Ground G, Brush B, GroundAction Act, float Height, float Amount, float[] Paint, HeightSnapshot Before, int NaturalReach)
     {
         /// <summary>Changes one grid point by its weight, as the action does.</summary>
         /// <param name="p">The grid point (index z * width + x).</param>
@@ -51,7 +51,7 @@ public sealed partial class AreaTool
         /// <summary>Takes a point back towards the generated ground, its paint and its lift too (as the Restore brush does).</summary>
         /// <param name="p">The grid point.</param>
         /// <param name="w">The point's weight.</param>
-        private void RestorePoint(int p, float w)
+        internal void RestorePoint(int p, float w)
         {
             if (G.Mod[p] != 0)
             {
@@ -74,7 +74,7 @@ public sealed partial class AreaTool
         /// <summary>Paints a point with the colour, by its weight.</summary>
         /// <param name="p">The grid point.</param>
         /// <param name="w">The point's weight.</param>
-        private void PaintPoint(int p, float w)
+        internal void PaintPoint(int p, float w)
         {
             G.StartPaint(p);
             for (int c = 0; c < 4; c++)

@@ -34,11 +34,11 @@ public sealed partial class AreaPanel
     /// <summary>Whether a current object is the backup's: same prefab, place within a centimetre and turned within 0.6°.</summary>
     /// <param name="r">The current object.</param>
     /// <param name="o">The backup's object.</param>
-    private static bool SameObject(WorldScene.Thing r, WorldScene.Thing o) => r.Prefab == o.Prefab && MathF.Abs(r.Position.X - o.Position.X) < 0.01f
+    internal static bool SameObject(WorldScene.Thing r, WorldScene.Thing o) => r.Prefab == o.Prefab && MathF.Abs(r.Position.X - o.Position.X) < 0.01f
         && MathF.Abs(r.Position.Y - o.Position.Y) < 0.01f && MathF.Abs(r.Position.Z - o.Position.Z) < 0.01f
         && MathF.Abs(((r.Rotation.Y - o.Rotation.Y) % 360 + 540) % 360 - 180) < 0.6f;
 
     /// <summary>An object's prefab and the metre cell it stands in.</summary>
     /// <param name="t">The object.</param>
-    private static (int, int, int) CellOf(WorldScene.Thing t) => (t.Prefab, (int)MathF.Floor(t.Position.X), (int)MathF.Floor(t.Position.Z));
+    internal static (int, int, int) CellOf(WorldScene.Thing t) => (t.Prefab, (int)MathF.Floor(t.Position.X), (int)MathF.Floor(t.Position.Z));
 }

@@ -47,14 +47,14 @@ public sealed partial class AreaPanel
     /// <param name="g">The current ground.</param>
     /// <param name="bk">The backup's ground.</param>
     /// <param name="p">The point's index.</param>
-    private static bool SameGroundPoint(Ground g, Ground bk, int p) => g.Mod[p] == bk.Mod[p] && g.PMod[p] == bk.PMod[p] && MathF.Abs(g.HeightOf(p) - bk.HeightOf(p)) < 1e-4f && MathF.Abs(g.Original(p) - bk.Original(p)) < 1e-4f
+    internal static bool SameGroundPoint(Ground g, Ground bk, int p) => g.Mod[p] == bk.Mod[p] && g.PMod[p] == bk.PMod[p] && MathF.Abs(g.HeightOf(p) - bk.HeightOf(p)) < 1e-4f && MathF.Abs(g.Original(p) - bk.Original(p)) < 1e-4f
         && (g.PMod[p] == 0 || Enumerable.Range(0, 4).All(c => MathF.Abs(g.Paint[p * 4 + c] - bk.Paint[p * 4 + c]) < 1e-4f));
 
     /// <summary>Takes the backup's edits of a point outright (inside the soft edge).</summary>
     /// <param name="g">The current ground, changed.</param>
     /// <param name="bk">The backup's ground.</param>
     /// <param name="p">The point's index.</param>
-    private static void CopyGroundPoint(Ground g, Ground bk, int p)
+    internal static void CopyGroundPoint(Ground g, Ground bk, int p)
     {
         g.Mod[p] = bk.Mod[p];
         g.Level[p] = bk.Level[p];
@@ -70,7 +70,7 @@ public sealed partial class AreaPanel
     /// <param name="bk">The backup's ground.</param>
     /// <param name="p">The point's index.</param>
     /// <param name="w">The weight: how far towards the backup.</param>
-    private static void BlendGroundPoint(Ground g, Ground bk, int p, float w)
+    internal static void BlendGroundPoint(Ground g, Ground bk, int p, float w)
     {
         float h = g.HeightOf(p);
         g.SetHeight(p, h + (bk.HeightOf(p) - h) * w);

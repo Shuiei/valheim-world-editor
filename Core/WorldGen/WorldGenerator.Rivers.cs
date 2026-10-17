@@ -50,7 +50,7 @@ public sealed partial class WorldGenerator
     /// Points within range of each other merged into one (halfway each time), in the game's order.
     /// Empties <paramref name="points"/>.
     /// </summary>
-    private static List<Vector2> Merge(List<Vector2> points, float range)
+    internal static List<Vector2> Merge(List<Vector2> points, float range)
     {
         var merged = new List<Vector2>();
         while (points.Count > 0)

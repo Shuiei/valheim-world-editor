@@ -12,7 +12,7 @@ public sealed partial class WorldGenerator
     /// <param name="fromMiddle">The point's distance from the middle of the world.</param>
     /// <param name="land">The point's continent height.</param>
     /// <param name="wave">The world's edge wave, in metres (added to the distance limits).</param>
-    private Heightmap.Biome LandBiome(float x, float z, float fromMiddle, float land, float wave)
+    internal Heightmap.Biome LandBiome(float x, float z, float fromMiddle, float land, float wave)
     {
         if (Field(_offsetA, x, z) > 0.6f && fromMiddle > 2000f && fromMiddle < _swampMaxDistance && land > 0.05f && land < 0.25f)
         {

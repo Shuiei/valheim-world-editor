@@ -12,7 +12,7 @@ public sealed partial class AreaTool
     /// <param name="X0">The box's west grid point.</param>
     /// <param name="Z0">The box's south grid point.</param>
     /// <param name="W">The box's width in grid points.</param>
-    private sealed record HeightSnapshot(Ground G, float[] Heights, int X0, int Z0, int W)
+    internal sealed record HeightSnapshot(Ground G, float[] Heights, int X0, int Z0, int W)
     {
         /// <summary>Reads the heights before an action.</summary>
         /// <param name="g">The ground.</param>

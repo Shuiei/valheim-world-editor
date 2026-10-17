@@ -43,5 +43,5 @@ public sealed partial class BuildPanel
     /// <summary>The tab a piece is listed under: the mods' for a mod's piece, else the cultivator's, the serving tray's or its hammer category.</summary>
     /// <param name="prefab">The piece's prefab name.</param>
     /// <param name="piece">The piece's catalogue entry.</param>
-    private static int TabOf(string prefab, PieceCatalog.Info piece) => ModCatalogue.IsModded(prefab) ? Mods : piece.Tool switch { "cultivator" => Plants, "feaster" => Feasts, _ => piece.Category };
+    internal static int TabOf(string prefab, PieceCatalog.Info piece) => ModCatalogue.IsModded(prefab) ? Mods : piece.Tool switch { "cultivator" => Plants, "feaster" => Feasts, _ => piece.Category };
 }
