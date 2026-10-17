@@ -89,12 +89,11 @@ public sealed class WorldWriterLangTests
             Shown(WorldWriter.Save(world, [nan]), "The saved world did not read back correctly (");
 
             var (id, prefab, position, _, _) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
-            // A zone away from the tree's, where the new tree goes too.
-            var treeZone = ChunkMath.SectorOf(position.X, position.Z);
-            var t = world.TerrainZones.First(z => (z.ZoneX, z.ZoneZ) != treeZone);
+            // A zone far from the tree's, where the new tree goes too (the test world may have no other ground saved).
+            var (treeX, treeZ) = ChunkMath.SectorOf(position.X, position.Z);
             var saved = WorldWriter.Save(world, [], [id],
                 [new NewObject(-1, prefab, position + new System.Numerics.Vector3(3, 0, 3), System.Numerics.Vector3.Zero, 1f)],
-                [new ZoneReset(t.ZoneX, t.ZoneZ, true, false)]);
+                [new ZoneReset(treeX + 20, treeZ + 20, true, false)]);
             Assert.True(saved.Saved, saved.Message);
             Shown(saved, "Saved 1 deleted object(s), 1 new object(s), 1 reset zone(s) (");
         }
