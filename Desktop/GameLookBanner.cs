@@ -64,23 +64,23 @@ public sealed class GameLookBanner
     /// <summary>
     /// The Valheim folder to use, when it was not found.
     /// </summary>
-    internal TextBox PathBox { get; } = new() { PlaceholderText = "…/steamapps/common/Valheim", FontSize = 13 };
+    internal TextBox PathBox { get; } = new() { PlaceholderText = Lang.T("look.hint.path"), FontSize = 13 };
     /// <summary>
     /// Picks the folder for PathBox.
     /// </summary>
-    internal Button Browse { get; } = new() { Content = "Browse…" };
+    internal Button Browse { get; } = new() { Content = Lang.T("common.browse") };
     /// <summary>
     /// Starts reading from the folder in PathBox.
     /// </summary>
-    internal Button Use { get; } = new Button { Content = "Use" }.Classed("primary");
+    internal Button Use { get; } = new Button { Content = Lang.T("look.label.use") }.Classed("primary");
     /// <summary>
     /// Starts reading again after a failure (from the folder last tried, else the settings').
     /// </summary>
-    internal Button Retry { get; } = new Button { Content = "Try again" }.Classed("primary");
+    internal Button Retry { get; } = new Button { Content = Lang.T("look.label.retry") }.Classed("primary");
     /// <summary>
     /// Opens the editor's log after a failure (OpenLog).
     /// </summary>
-    internal Button ShowLog { get; } = new() { Content = "Open log" };
+    internal Button ShowLog { get; } = new() { Content = Lang.T("start.label.log") };
     /// <summary>
     /// Opens the editor's log; set by the start page.
     /// </summary>
@@ -134,7 +134,7 @@ public sealed class GameLookBanner
         Retry.Tip("look.retry");
         ShowLog.Tip("look.log");
         ShowLog.Click += async (_, _) => await OpenLog();
-        Browse.Click += async (_, _) => { if (await PickFolder("Choose the Valheim game folder (with valheim_Data)") is string p) { PathBox.Text = p; } };
+        Browse.Click += async (_, _) => { if (await PickFolder(Lang.T("look.pickFolder")) is string p) { PathBox.Text = p; } };
         Use.Click += (_, _) => Start(PathBox.Text);
         Retry.Click += (_, _) => Start(Read().Valheim ?? _settings.ValheimPath);
         _timer.Tick += (_, _) => Refresh();
@@ -147,16 +147,12 @@ public sealed class GameLookBanner
     /// </summary>
     internal static string SetupSteps(bool windows, bool mac = false) => string.Join("\n", new[]
     {
-        "1. Install Valheim with Steam on this computer (owning it is enough: the editor needs its files, not the game running).",
-        mac
-            ? "2. In Steam, right-click Valheim in your Library, then Manage › Browse local files. The folder that opens is the one to choose: it holds valheim.app."
-            : "2. In Steam, right-click Valheim in your Library, then Manage › Browse local files. The folder that opens is the one to choose: it holds valheim_Data.",
-        windows
-            ? "3. Usually: C:\\Program Files (x86)\\Steam\\steamapps\\common\\Valheim, or <your Steam library>\\steamapps\\common\\Valheim on another drive."
-            : mac
-            ? "3. Usually: ~/Library/Application Support/Steam/steamapps/common/Valheim, or <your Steam library>/steamapps/common/Valheim."
-            : "3. Usually: ~/.local/share/Steam/steamapps/common/Valheim (Flatpak Steam: ~/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/Valheim), or <your Steam library>/steamapps/common/Valheim.",
-        "4. Paste it below or use Browse…, then Use. A folder near it works too (steamapps, common, valheim_Data or valheim.app).",
+        Lang.T("look.step1"),
+        mac ? Lang.T("look.step2Mac") : Lang.T("look.step2"),
+        windows ? Lang.T("look.step3Windows")
+            : mac ? Lang.T("look.step3Mac")
+            : Lang.T("look.step3Linux"),
+        Lang.T("look.step4"),
     });
 
     /// <summary>
@@ -167,7 +163,7 @@ public sealed class GameLookBanner
     {
         if (string.IsNullOrWhiteSpace(folder))
         {
-            Error.Text = "Choose the folder Steam installed Valheim into (the one with valheim_Data, or valheim.app on a Mac).";
+            Error.Text = Lang.T("look.error.noFolder");
             Error.IsVisible = true;
             return;
         }
@@ -188,32 +184,32 @@ public sealed class GameLookBanner
         {
             case "running" when s.Reading:
                 _sawRunning = true;
-                Title.Text = "Preparing the game's look";
-                Message.Text = s.Message ?? "Reading the game's files (a few seconds, only after a game update).";
+                Title.Text = Lang.T("look.head.preparing");
+                Message.Text = s.Message ?? Lang.T("look.msg.reading");
                 Bar.IsVisible = LastLine.IsVisible = true;
                 Bar.Value = s.Progress ?? 0;
                 LastLine.Text = s.LastLine ?? "";
-                Hint.Text = "Worlds, servers and the Workshop can be opened once this is done.";
+                Hint.Text = Lang.T("look.hint.reading");
                 break;
             case "missing":
-                Title.Text = "Get the game's look";
-                Message.Text = s.Message ?? "Valheim was not found on this computer.";
+                Title.Text = Lang.T("look.head.missing");
+                Message.Text = s.Message ?? Lang.T("look.msg.missing");
                 PathRow.IsVisible = Steps.IsVisible = true;
                 if (changed && string.IsNullOrEmpty(PathBox.Text))
                 {
                     PathBox.Text = s.Valheim ?? "";
                 }
-                Hint.Text = "The editor only reads the game's files (nothing is copied or changed). Worlds, servers and the Workshop need them to open: the ground and the objects come from the game's data. The folder can be changed later in Settings.";
+                Hint.Text = Lang.T("look.hint.missing");
                 break;
             case "failed":
-                Title.Text = "The game's look could not be read";
+                Title.Text = Lang.T("look.head.failed");
                 Message.Text = s.Message ?? "";
                 Retry.IsVisible = ShowLog.IsVisible = true;
-                Hint.Text = "Worlds, servers and the Workshop open only once the game's data is read: try again, or check the folder in Settings. To report the problem, attach the editor's log (Open log) to an issue on GitHub.";
+                Hint.Text = Lang.T("look.hint.failed");
                 break;
             default:
-                Title.Text = "The game's look is ready.";
-                Message.Text = "The next world or area you open has the game's textures and models.";
+                Title.Text = Lang.T("look.head.ready");
+                Message.Text = Lang.T("look.msg.ready");
                 Hint.Text = "";
                 break;
         }
