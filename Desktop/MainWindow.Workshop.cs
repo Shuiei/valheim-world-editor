@@ -616,11 +616,13 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// After a change Claude made (ClaudeTools): the save bar, the support check, the message.
+    /// After a change Claude made (ClaudeTools): the save bar, the support check, the message (in the user's language,
+    /// its English kept for Claude).
     /// </summary>
-    internal void AfterClaudeEdit(string message)
+    /// <param name="message">What the status bar says.</param>
+    internal void AfterClaudeEdit(Said message)
     {
-        MessageText.Text = message;
+        Msg(message);
         UpdateSaveBar();
         QueueSupport();
     }

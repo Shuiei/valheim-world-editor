@@ -12,7 +12,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// with a selection under every action, with a heightmap read, and its Reset zones question show only catalogue
 /// texts; every action's message (ground, remove, regrow, replace, reset and its cancelling, backups, heightmaps) and
 /// History step is shown in the language with its English kept for Claude; the cut and fill readout and the clipboard
-/// line are translated with their units; Claude's own ground changes are named in English.
+/// line are translated with their units; Claude's own ground changes are named to Claude in English (the History shows
+/// the step in the language, behind its "Claude: " mark).
 /// </summary>
 [Collection("DataDir")]
 public sealed class AreaPanelLangTests
@@ -83,7 +84,8 @@ public sealed class AreaPanelLangTests
         string said = await r.T.ShapeGround("restore", -10, -10, 10, 10, edge: 0);
         Assert.StartsWith("Restore the ground: ", said);
         Assert.DoesNotContain(PseudoLang.Open, said[..said.IndexOf(" Now pending", StringComparison.Ordinal)]);
-        Assert.Equal("Claude: restore the ground", r.W.Session!.UndoLabel);
+        // The History names the step in the language, behind the English "Claude: " mark it is found by.
+        Assert.Equal("Claude: " + PseudoLang.Wrap("restore the ground"), r.W.Session!.UndoLabel);
     }
 
     /// <summary>

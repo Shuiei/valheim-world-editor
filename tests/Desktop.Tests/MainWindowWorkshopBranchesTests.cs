@@ -190,7 +190,7 @@ public class MainWindowWorkshopBranchesTests
         Assert.Contains(wall, w.LastSupportThings);
         Assert.StartsWith("Wood ", w.WorkshopCost);
         // A check queued as the Workshop closes runs on the next area harmlessly.
-        w.AfterClaudeEdit("Claude did something.");
+        w.AfterClaudeEdit(Said.Raw("Claude did something."));
         await w.LeaveWorkshop();
         Assert.False(w.InWorkshop);
         w.Edit(TestScenes.Flat(2));

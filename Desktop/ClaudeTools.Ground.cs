@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Numerics;
 using ModelContextProtocol.Server;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -154,17 +155,45 @@ public sealed partial class ClaudeTools
             RestAngle = Math.Clamp(restAngle, 5, 80),
             Random = new Random(seed),
         };
-        string name = act == AreaTool.GroundAction.Paint ? $"paint {paint.ToLowerInvariant()}" : AreaTool.Label(act, english: true).ToLowerInvariant();
+        var name = GroundStep(act, paintTool);
         bool clamped = false;
-        var touched = s.EditGround($"Claude: {name}", g =>
+        var touched = s.EditGround(ClaudesStep(name.Shown), g =>
         {
             var (t, rect, c) = box.Apply(g, brush, act, 0, MathF.Max(0, amount), Brush.PaintOf(paintTool)!, only);
             clamped = c;
             return (t, rect);
         });
-        _w.AfterClaudeEdit($"Claude's {name}: {touched.Count} ground point(s); Ctrl+Z takes it back.");
+        _w.AfterClaudeEdit(Said.Of("claude.msg.ground", name, touched.Count));
         return touched.Count == 0 ? "Nothing changed." : $"{AreaTool.Label(act, english: true)}: {touched.Count} ground point(s) changed.{(clamped ? " Part of it reached the game's ±8 m limit." : "")} Now pending: {Pending()}";
     });
+
+    /// <summary>An Area tool action as Claude's history step and status bar name it ("smooth", "paint dirt").</summary>
+    /// <param name="act">The action.</param>
+    /// <param name="paint">The paint brush, for Paint.</param>
+    private static Said GroundStep(AreaTool.GroundAction act, BrushTool paint) => act switch
+    {
+        AreaTool.GroundAction.Flatten => Said.Of("claude.undo.flatten"),
+        AreaTool.GroundAction.Raise => Said.Of("claude.undo.raise"),
+        AreaTool.GroundAction.Lower => Said.Of("claude.undo.lower"),
+        AreaTool.GroundAction.Smooth => Said.Of("claude.undo.smooth"),
+        AreaTool.GroundAction.Natural => Said.Of("claude.undo.naturalize"),
+        AreaTool.GroundAction.Restore => Said.Of("claude.undo.restore"),
+        AreaTool.GroundAction.Erode => Said.Of("claude.undo.erode"),
+        _ => PaintStep(paint),
+    };
+
+    /// <summary>A Path tool action along Claude's line, as its history step names it, in the user's language.</summary>
+    /// <param name="act">The action (one of PathActions).</param>
+    private static string PathStep(PathTool.Action act) => act switch
+    {
+        PathTool.Action.River => Lang.T("claude.undo.riverLine"),
+        PathTool.Action.Cave => Lang.T("claude.undo.caveLine"),
+        PathTool.Action.Ramp => Lang.T("claude.undo.rampLine"),
+        PathTool.Action.Flatten => Lang.T("claude.undo.flattenLine"),
+        PathTool.Action.Raise => Lang.T("claude.undo.raiseLine"),
+        PathTool.Action.Lower => Lang.T("claude.undo.lowerLine"),
+        _ => Lang.T("claude.undo.smoothLine"),
+    };
 
     /// <summary>The Path tool's actions dig_path takes, by name.</summary>
     internal static readonly Dictionary<string, PathTool.Action> PathActions = new(StringComparer.OrdinalIgnoreCase)
@@ -261,11 +290,11 @@ public sealed partial class ClaudeTools
         }
         var path = LineOver(s.Scene, points, act, width, soft, depth, headroom, height, amount, natural, curved, caveRock, seed);
         var brush = new Brush { Noise = new Noise(seed) };
-        string label = $"Claude: {action.ToLowerInvariant()} along a line";
-        string said;
+        string label = ClaudesStep(PathStep(act));
+        Said said;
         if (act == PathTool.Action.Cave)
         {
-            said = MainWindow.ApplyCave(s, path, brush, only, label).English;
+            said = MainWindow.ApplyCave(s, path, brush, only, label);
         }
         else
         {
@@ -276,11 +305,12 @@ public sealed partial class ClaudeTools
                 clamped = c;
                 return (t, rect);
             });
-            said = touched.Count == 0 ? "Nothing changed along the line."
-                : $"{PathTool.Label(act).English} along {PathTool.Length(path.Curve()):0} m: {touched.Count} ground point(s).{(clamped ? " Part of it reached the game's ±8 m limit." : "")}";
+            said = touched.Count == 0 ? Said.Of("path.msg.nothing")
+                : Said.Of("claude.msg.path", PathTool.Label(act), PathTool.Length(path.Curve()), touched.Count)
+                    + (clamped ? Said.Of("claude.msg.limitReached") : Said.Empty);
         }
         _w.AfterClaudeEdit(said);
-        return said + " Now pending: " + Pending();
+        return said.English + " Now pending: " + Pending();
     });
 
     /// <summary>The stamps offered: the built-in ones, then those the user loaded (by name or label).</summary>
@@ -332,13 +362,13 @@ public sealed partial class ClaudeTools
         var brush = new Brush { Shape = BrushShape.Stamp, StampData = data, Radius = Math.Clamp(radius, 2, 500), Turn = turn };
         float ox = s.Scene.OriginX, oz = s.Scene.OriginZ;
         bool clamped = false;
-        var touched = s.EditGround($"Claude: stamp {stamp}", g =>
+        var touched = s.EditGround(ClaudesStep(Lang.T("claude.undo.stamp", stamp)), g =>
         {
             var (t, rect, c) = Sculpt.StampOnce(g, brush, x - ox, z - oz, height, only);
             clamped = c;
             return (t, rect);
         });
-        _w.AfterClaudeEdit($"Claude pressed a stamp into {touched.Count} ground point(s); Ctrl+Z takes it back.");
+        _w.AfterClaudeEdit(Said.Of("claude.msg.stamp", touched.Count));
         return touched.Count == 0 ? "Nothing changed." : $"Stamped {touched.Count} ground point(s){(clamped ? "; part of it reached the game's ±8 m limit" : "")}. Now pending: {Pending()}";
     });
 
@@ -369,10 +399,10 @@ public sealed partial class ClaudeTools
             return "The rectangle holds no ground of the open area.";
         }
         int w = a.X1 - a.X0 + 1, h = a.Z1 - a.Z0 + 1;
-        TerrainEditor.App.Heightmaps.Picture pic;
+        Heightmaps.Picture pic;
         try
         {
-            pic = TerrainEditor.App.Heightmaps.Read(File.ReadAllBytes(path), w, h);
+            pic = Heightmaps.Read(File.ReadAllBytes(path), w, h);
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
         {
@@ -380,13 +410,13 @@ public sealed partial class ClaudeTools
         }
         float lo = lowest ?? pic.Min ?? a.Cells.Min(c => s.Ground.HeightOf(c.G)), hi = highest ?? pic.Max ?? a.Cells.Max(c => s.Ground.HeightOf(c.G));
         int clamped = 0;
-        var touched = s.EditGround("Claude: heightmap import", g =>
+        var touched = s.EditGround(ClaudesStep(Lang.T("claude.undo.heightmap")), g =>
         {
             var (list, c) = AreaPanel.PutHeights(g, pic.Values, a.X0, a.Z0, w, h, a.Cells, lo, hi);
             clamped = c;
             return (list, (0, 0, g.W - 1, g.H - 1));
         });
-        _w.AfterClaudeEdit($"Claude imported a heightmap into {touched.Count} ground point(s); Ctrl+Z takes it back.");
+        _w.AfterClaudeEdit(Said.Of("claude.msg.heightmap", touched.Count));
         return $"Imported {pic.Width} × {pic.Height} into {w} × {h} m, {lo:0.##} to {hi:0.##} m: {touched.Count} ground point(s){(clamped > 0 ? $", {clamped} kept from their height by the game's ±8 m" : "")}. Now pending: {Pending()}";
     });
 
@@ -439,10 +469,10 @@ public sealed partial class ClaudeTools
         [Description("East edge (x).")] float x1, [Description("North edge (z).")] float z1,
         [Description("Kinds to grow: Trees, Rocks, Bushes, Pickables (default: all four).")] string[]? kinds = null)
     {
-        var chosen = new HashSet<TerrainEditor.App.ObjectKind>();
+        var chosen = new HashSet<ObjectKind>();
         foreach (string k in kinds is { Length: > 0 } ? kinds : ["Trees", "Rocks", "Bushes", "Pickables"])
         {
-            if (!Enum.TryParse<TerrainEditor.App.ObjectKind>(k, true, out var kind) || kind is not (TerrainEditor.App.ObjectKind.Trees or TerrainEditor.App.ObjectKind.Rocks or TerrainEditor.App.ObjectKind.Bushes or TerrainEditor.App.ObjectKind.Pickables))
+            if (!Enum.TryParse<ObjectKind>(k, true, out var kind) || kind is not (ObjectKind.Trees or ObjectKind.Rocks or ObjectKind.Bushes or ObjectKind.Pickables))
             {
                 return $"{k}: the kinds are Trees, Rocks, Bushes and Pickables.";
             }
@@ -470,7 +500,7 @@ public sealed partial class ClaudeTools
         float ax = MathF.Min(x0, x1), az = MathF.Min(z0, z1), bx = MathF.Max(x0, x1), bz = MathF.Max(z0, z1);
         string said = "";
         var spots = await OnUi(() => Growth.Spots(session, ax, az, bx, bz,
-            o => o.X >= ax && o.X <= bx && o.Z >= az && o.Z <= bz && chosen.Contains(TerrainEditor.App.ObjectKinds.Of(o.Name, false)),
+            o => o.X >= ax && o.X <= bx && o.Z >= az && o.Z <= bz && chosen.Contains(ObjectKinds.Of(o.Name, false)),
             _w.NameOfPrefab, m => said = m.English));
         if (spots == null)
         {
@@ -487,8 +517,8 @@ public sealed partial class ClaudeTools
             {
                 return "The open area changed meanwhile: nothing regrown.";
             }
-            Growth.Commit(session, $"Claude: regrew {spots.Count} object(s)", spots);
-            _w.AfterClaudeEdit($"Claude regrew {spots.Count} object(s); Ctrl+Z takes them back.");
+            Growth.Commit(session, ClaudesStep(Lang.T("claude.undo.regrew", spots.Count)), spots);
+            _w.AfterClaudeEdit(Said.Of("claude.msg.regrew", spots.Count));
             var counts = spots.GroupBy(o => o.Name).OrderByDescending(g => g.Count()).Select(g => $"{g.Count()} {g.Key}");
             return $"Regrew {spots.Count} object(s): {string.Join(", ", counts.Take(12))}. Now pending: {Pending()}";
         });

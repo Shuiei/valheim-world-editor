@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using Avalonia.Threading;
 using ModelContextProtocol.Server;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -40,8 +41,8 @@ public sealed partial class ClaudeTools
     /// The whole-world search search_world runs away from the window's thread (WorldSearch.Search; tests hold it to
     /// change the world while it runs).
     /// </summary>
-    internal Func<Save.WorldSave, Editing.EditStore, string, string, TerrainEditor.App.WorldSearch.Result> SearchFiles { get; set; } =
-        (world, edits, query, what) => TerrainEditor.App.WorldSearch.Search(world, edits, query, what);
+    internal Func<Save.WorldSave, Editing.EditStore, string, string, WorldSearch.Result> SearchFiles { get; set; } =
+        (world, edits, query, what) => WorldSearch.Search(world, edits, query, what);
 
     /// <summary>Compact JSON for the answers.</summary>
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
@@ -94,7 +95,7 @@ public sealed partial class ClaudeTools
     /// <summary>list_worlds: the start page's worlds.</summary>
     [McpServerTool(Name = "list_worlds", ReadOnly = true, Title = "Worlds on this computer")]
     [Description("The Valheim worlds on this computer (the start page's list): name, folder, last save. Open one with open_world.")]
-    public Task<string> ListWorlds() => OnUi(() => ToJson(TerrainEditor.App.Worlds.Find(_w.Settings)
+    public Task<string> ListWorlds() => OnUi(() => ToJson(Worlds.Find(_w.Settings)
         .Select(i => new { name = i.Name, folder = i.Path, saved = i.Saved, where = i.Where, usable = i.Usable, problem = i.Problem })));
 
     /// <summary>open_world: opens a world offline, refused while there are unsaved changes.</summary>
@@ -166,7 +167,7 @@ public sealed partial class ClaudeTools
         x.HasValue == z.HasValue ? null : $"Give {xName} and {zName} together, or neither: only {(x.HasValue ? xName : zName)} was given.";
 
     /// <summary>A thing's object kind, as describe_area and list_objects name it.</summary>
-    private string KindOf(WorldScene.Thing t) => TerrainEditor.App.ObjectKinds.Of(_w.NameOfPrefab(t.Prefab), t.Piece, t.Tamed).ToString();
+    private string KindOf(WorldScene.Thing t) => ObjectKinds.Of(_w.NameOfPrefab(t.Prefab), t.Piece, t.Tamed).ToString();
 
     /// <summary>list_objects: objects of the open area, filtered by kind, name and distance (limit clamped to 1 to 2000).</summary>
     [McpServerTool(Name = "list_objects", ReadOnly = true, Title = "List objects")]
@@ -487,7 +488,7 @@ public sealed partial class ClaudeTools
         byte[] jpeg = await Task.Run(() =>
         {
             List<(float X, float Z, string Kind)> things = objects
-                ? [.. data.Things.Select(t => (t.X, t.Z, TerrainEditor.App.ObjectKinds.Of(data.Names[t.Prefab], t.Piece, t.Tamed).ToString()))]
+                ? [.. data.Things.Select(t => (t.X, t.Z, ObjectKinds.Of(data.Names[t.Prefab], t.Piece, t.Tamed).ToString()))]
                 : [];
             return DrawMap(data.W, data.H, data.Cx, data.Cz, data.Water, data.Heights, data.Paint, things, MathF.Max(4, grid));
         });
@@ -624,8 +625,8 @@ public sealed partial class ClaudeTools
         var others = piecesOnly ? [] : Terrain.PrefabCatalog.Placeable
             .Where(i => Terrain.PieceCatalog.Get(Save.StableHash.Of(i.Name)) == null && (Match(i.Name) || Terrain.PrefabCatalog.SpawnOf(i.Name) is { } sp && Match(string.Join(" ", sp.Creatures))))
             .Select(i => Terrain.PrefabCatalog.SpawnOf(i.Name) is { } sp
-                ? (object)new { prefab = i.Name, kind = TerrainEditor.App.ObjectKinds.Of(i.Name, false).ToString(), spawns = sp.Summary(english: true) }
-                : new { prefab = i.Name, kind = TerrainEditor.App.ObjectKinds.Of(i.Name, false).ToString() });
+                ? (object)new { prefab = i.Name, kind = ObjectKinds.Of(i.Name, false).ToString(), spawns = sp.Summary(english: true) }
+                : new { prefab = i.Name, kind = ObjectKinds.Of(i.Name, false).ToString() });
         return ToJson(pieces.Concat(others).Take(Math.Clamp(limit, 1, 500)));
     });
 
@@ -710,7 +711,7 @@ public sealed partial class ClaudeTools
         {
             return why;
         }
-        var r = await _w.RunScriptCode(code, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, apply: !dryRun);
+        var r = await _w.RunScriptCode(code, label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label), apply: !dryRun);
         _w.Msg(r.Message);
         return r.Output.English;
     });
@@ -723,14 +724,33 @@ public sealed partial class ClaudeTools
     /// <summary>The paints paint_area and road take.</summary>
     private static readonly HashSet<string> PaintKinds = new(StringComparer.OrdinalIgnoreCase) { "dirt", "cultivated", "paved", "clear" };
 
+    /// <summary>
+    /// A history label of Claude's: the "Claude: " mark, which stays the same in every language since Take back
+    /// Claude's changes finds Claude's steps by it (HistoryPanel.ByClaude), then what the step did.
+    /// </summary>
+    /// <param name="text">What the step did: in the user's language, or the words Claude gave.</param>
+    internal static string ClaudesStep(string text) => "Claude: " + text;
+
+    /// <summary>A paint's name in the history (paint_area, shape_ground's paint), in the user's language.</summary>
+    /// <param name="paint">The paint brush whose colour is put down.</param>
+    private static Said PaintStep(BrushTool paint) => paint switch
+    {
+        BrushTool.PaintDirt => Said.Of("claude.undo.paintDirt"),
+        BrushTool.PaintCultivated => Said.Of("claude.undo.paintCultivated"),
+        BrushTool.PaintPaved => Said.Of("claude.undo.paintPaved"),
+        _ => Said.Of("claude.undo.paintClear"),
+    };
+
     /// <summary>Runs a script written by a tool as one pending step labelled "Claude: label".</summary>
+    /// <param name="code">The script.</param>
+    /// <param name="label">What the step did, in the user's language (ClaudesStep puts the mark before it).</param>
     private Task<string> RunGenerated(string code, string label) => OnUi(async () =>
     {
         if (CannotEdit() is string why)
         {
             return why;
         }
-        var r = await _w.RunScriptCode(code, "Claude: " + label);
+        var r = await _w.RunScriptCode(code, ClaudesStep(label));
         _w.Msg(r.Message);
         return r.Output.English;
     });
@@ -762,7 +782,7 @@ public sealed partial class ClaudeTools
 				Ground.Set(x, z, h + (target - h) * w);
 			}
 			Print($"levelled to {target:0.0} m");
-			""", "flatten");
+			""", Lang.T("claude.undo.flatten"));
 
     /// <summary>paint_area: paints a rectangle or a circle.</summary>
     [McpServerTool(Name = "paint_area", Title = "Paint the ground")]
@@ -791,7 +811,7 @@ public sealed partial class ClaudeTools
 			int n = 0;
 			foreach (var (x, z) in Area.Points()) if ({{inside}}) { Ground.Paint(x, z, "{{kind.ToLowerInvariant()}}"); n++; }
 			Print($"painted {n} points");
-			""", $"paint {kind.ToLowerInvariant()}");
+			""", PaintStep(Paints[kind]).Shown);
     }
 
     /// <summary>road: levels the ground along a line of points to a smooth slope, blends its edges (3 m) and paints it.</summary>
@@ -835,7 +855,7 @@ public sealed partial class ClaudeTools
 				if ({{(paint == "none" ? "false" : "true")}} && best <= half) Ground.Paint(x, z, "{{paint.ToLowerInvariant()}}");
 			}
 			Print($"road of {px.Length - 1} segment(s)");
-			""", "road");
+			""", Lang.T("claude.undo.road"));
     }
 
     /// <summary>forest: plants a mix of prefabs on a jittered grid, off water and away from buildings, trees and rocks.</summary>
@@ -870,7 +890,7 @@ public sealed partial class ClaudeTools
 					n++;
 				}
 			Print($"placed {n}");
-			""", "forest");
+			""", Lang.T("claude.undo.forest"));
     }
 
     /// <summary>undo: the last change of the area, anyone's, as Ctrl+Z.</summary>
@@ -981,7 +1001,7 @@ public sealed partial class ClaudeTools
                 if (!t.Gone && t.Position.X >= lx && t.Position.X <= hx && t.Position.Z >= lz && t.Position.Z <= hz
                     && _w.NameOfPrefab(t.Prefab) is string n && Editing.Hammer.Get(n) != null)
                 {
-                    placed.Add(new(i, n, t.Position, TerrainEditor.App.BlueprintFormats.FromEuler(t.Rotation)));
+                    placed.Add(new(i, n, t.Position, BlueprintFormats.FromEuler(t.Rotation)));
                 }
             }
         }
@@ -1003,7 +1023,7 @@ public sealed partial class ClaudeTools
                 continue;
             }
             var euler = new System.Numerics.Vector3(p.Pitch, p.Yaw, p.Roll);
-            var q = TerrainEditor.App.BlueprintFormats.FromEuler(euler);
+            var q = BlueprintFormats.FromEuler(euler);
             float y = p.Y ?? GroundAt(scene, p.X, p.Z) - Editing.Hammer.Bottom(p.Prefab, q);
             var pos = new System.Numerics.Vector3(p.X, y, p.Z);
             int? to = null;
@@ -1019,8 +1039,8 @@ public sealed partial class ClaudeTools
         {
             return "Nothing put down: " + string.Join("; ", problems);
         }
-        var ids = session.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, [], adds);
-        _w.AfterClaudeEdit($"Claude put down {adds.Count} piece(s); Ctrl+Z takes them back.");
+        var ids = session.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label), null, [], adds);
+        _w.AfterClaudeEdit(Said.Of("claude.msg.putDown", adds.Count));
         GaveIds(scene, reads);
         return ToJson(new { placed = report.Select((r, i) => new { id = i < ids.Count ? ids[i] : -1, piece = r }), problems, pending = Pending() });
     }
@@ -1211,8 +1231,8 @@ public sealed partial class ClaudeTools
         }
         // A linked group's part never goes alone (ObjectLinks: a ship): the whole group does.
         var (ok, _, groups, noun) = session.WithLinked(given);
-        session.Commit($"Claude: took {ok.Count} away", null, ok, []);
-        _w.AfterClaudeEdit($"Claude took {ok.Count} object(s) away; Ctrl+Z puts them back.");
+        session.Commit(ClaudesStep(Lang.T("claude.undo.tookAway", ok.Count)), null, ok, []);
+        _w.AfterClaudeEdit(Said.Of("claude.msg.tookAway", ok.Count));
         return $"Took {ok.Count} away{(given.Count < asked.Length ? $" ({asked.Length - given.Count} id(s) were not objects of the area)" : "")}"
             + $"{(groups > 0 ? $", with {groups} whole {noun}(s)" : "")}. Now pending: {Pending()}";
     });
@@ -1311,9 +1331,9 @@ public sealed partial class ClaudeTools
         }
         var t = things[id];
         var info = Terrain.PrefabCatalog.Details(t.Prefab);
-        var set = new List<TerrainEditor.App.FieldChange>();
-        List<TerrainEditor.App.ItemUpload>? inv = null;
-        bool itemStand = TerrainEditor.App.StandData.IsItemStand(t.Prefab), armourStand = TerrainEditor.App.StandData.IsArmourStand(t.Prefab);
+        var set = new List<FieldChange>();
+        List<ItemUpload>? inv = null;
+        bool itemStand = StandData.IsItemStand(t.Prefab), armourStand = StandData.IsArmourStand(t.Prefab);
         if ((orientation != null && !itemStand) || (pose != null && !armourStand))
         {
             return $"{_w.NameOfPrefab(t.Prefab)} is not {(orientation != null ? "an item stand: only item stands take an orientation" : "an armour stand: only armour stands take a pose")}.";
@@ -1328,8 +1348,8 @@ public sealed partial class ClaudeTools
                 }
                 if (items != null)
                 {
-                    var held = items.Length == 0 ? null : new TerrainEditor.App.StandData.Held(items[0].Item, items[0].Quality, items[0].Variant);
-                    set.AddRange(TerrainEditor.App.StandData.ForItemStand(t.Prefab, held, orientation ?? 0));
+                    var held = items.Length == 0 ? null : new StandData.Held(items[0].Item, items[0].Quality, items[0].Variant);
+                    set.AddRange(StandData.ForItemStand(t.Prefab, held, orientation ?? 0));
                 }
                 else
                 {
@@ -1341,7 +1361,7 @@ public sealed partial class ClaudeTools
             {
                 if (items != null)
                 {
-                    set.AddRange(TerrainEditor.App.StandData.ForArmourStand(t.Prefab, [.. items.Select(i => new TerrainEditor.App.StandData.Held(i.Item, i.Quality, i.Variant))], pose));
+                    set.AddRange(StandData.ForArmourStand(t.Prefab, [.. items.Select(i => new StandData.Held(i.Item, i.Quality, i.Variant))], pose));
                 }
                 else
                 {
@@ -1364,7 +1384,7 @@ public sealed partial class ClaudeTools
             {
                 return $"{_w.NameOfPrefab(t.Prefab)} has {box.ContainerW * box.ContainerH} slots, not {items.Length}.";
             }
-            inv = [.. items.Select((it, i) => new TerrainEditor.App.ItemUpload(it.Item, null, Math.Max(1, it.Stack), Math.Max(1, it.Quality), X: i % box.ContainerW, Y: i / box.ContainerW, Variant: Math.Max(0, it.Variant)))];
+            inv = [.. items.Select((it, i) => new ItemUpload(it.Item, null, Math.Max(1, it.Stack), Math.Max(1, it.Quality), X: i % box.ContainerW, Y: i / box.ContainerW, Variant: Math.Max(0, it.Variant)))];
         }
         string kindName = _w.NameOfPrefab(t.Prefab) ?? "";
         if (text != null)
@@ -1389,12 +1409,12 @@ public sealed partial class ClaudeTools
         }
         string name = _w.NameOfPrefab(t.Prefab) ?? "object";
         var notes = new List<string>();
-        var (copy, problem) = Rewrite(id, set, inv, $"Claude: filled {name}", notes);
+        var (copy, problem) = Rewrite(id, set, inv, ClaudesStep(Lang.T("claude.undo.filled", name)), notes);
         if (copy is not int newId)
         {
             return problem!;
         }
-        _w.AfterClaudeEdit($"Claude changed what {name} holds; Ctrl+Z puts it back.");
+        _w.AfterClaudeEdit(Said.Of("claude.msg.filled", name));
         return $"Changed {name}; its id is now {newId}." + string.Concat(notes.Select(n => " " + n + "."));
     });
 
@@ -1432,8 +1452,8 @@ public sealed partial class ClaudeTools
     /// <param name="name">The blueprint's name.</param>
     private static string? BlueprintPath(string folder, string name)
     {
-        string file = TerrainEditor.App.Homestead.FileName(name);
-        var entries = TerrainEditor.App.Homestead.List(folder).Where(e => e.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+        string file = Homestead.FileName(name);
+        var entries = Homestead.List(folder).Where(e => e.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
         if ((entries.Find(e => string.Equals(Path.GetFileName(e.Path), file, StringComparison.OrdinalIgnoreCase)) ?? entries.FirstOrDefault()) is { } entry)
         {
             return entry.Path;
@@ -1470,7 +1490,7 @@ public sealed partial class ClaudeTools
         {
             return "Give the blueprint a name.";
         }
-        var details = new TerrainEditor.App.Homestead.Details(name.Trim(), description.Trim(), [.. (tags ?? []).Select(t => t.Trim()).Where(t => t.Length > 0)]);
+        var details = new Homestead.Details(name.Trim(), description.Trim(), [.. (tags ?? []).Select(t => t.Trim()).Where(t => t.Length > 0)]);
         return _w.SaveWorkshopAs(details, overwrite, evenIfFalling) is string problem ? problem : _w.LastMessageEn + " " + ToJson(StateOf(_w));
     });
 
@@ -1479,7 +1499,7 @@ public sealed partial class ClaudeTools
     [Description("The user's blueprints (Homestead's library): name, pieces, cost, description, tags. Open one in the Workshop (open_workshop) or add it to the plot (add_blueprint).")]
     public Task<string> ListBlueprints([Description("Words to find in the name, creator, description or tags (optional).")] string? query = null) => OnUi(() =>
     {
-        return ToJson(TerrainEditor.App.Homestead.List(_w.Blueprints.LookAgain().Folder)
+        return ToJson(Homestead.List(_w.Blueprints.LookAgain().Folder)
             .Where(e => e.Matches(query))
             .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Terrain.PieceCost.Of(e.Kinds).Describe(4, english: true), description = e.Description, tags = e.Tags }));
     });
@@ -1510,7 +1530,7 @@ public sealed partial class ClaudeTools
         {
             return lone;
         }
-        string label = $"Claude: added {blueprint}";
+        string label = ClaudesStep(Lang.T("claude.undo.added", blueprint));
         if (_w.InWorkshop)
         {
             _w.AddToWorkshop(path, x is float ax && z is float az ? new System.Numerics.Vector2(ax, az) : null, turn, label);
@@ -1548,7 +1568,7 @@ public sealed partial class ClaudeTools
         int before = scene.Things.Count;
         var added = Workshop.Put(s, plan, label);
         GaveIds(scene, reads);
-        _w.AfterClaudeEdit($"Claude added “{blueprint}”: {added.Placed} piece(s); Ctrl+Z takes it back.");
+        _w.AfterClaudeEdit(Said.Of("claude.msg.blueprint", blueprint, added.Placed));
         return $"Added {added.Placed} piece(s) of \"{blueprint}\", ids {before} to {scene.Things.Count - 1}."
             + (added.Unknown.Count > 0 ? $" Left out (unknown kinds): {string.Join(", ", added.Unknown.Take(10))}." : "")
             + " Now pending: " + Pending();
@@ -1597,7 +1617,7 @@ public sealed partial class ClaudeTools
             }
             // One of Claude's steps ("Claude:", as Take back Claude's changes finds them), and no file in the user's
             // blueprint Library.
-            string label = $"Claude: generated dungeon {result.Name}";
+            string label = ClaudesStep(Lang.T("claude.undo.dungeon", result.Name));
             if (_w.InWorkshop)
             {
                 _w.AddGeneratedToPlot(settings, result, label);
@@ -1617,7 +1637,7 @@ public sealed partial class ClaudeTools
                 }
                 _w.PlaceGenerated(settings, result, label);
             }
-            return $"{TerrainEditor.App.Said.Join(" ", result.Notes).English} {_w.LastMessageEn} Now pending: {Pending()}";
+            return $"{Said.Join(" ", result.Notes).English} {_w.LastMessageEn} Now pending: {Pending()}";
         });
     }
 

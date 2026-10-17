@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.23 — unreleased
+
+### Changed
+- **What the status bar and the History say of Claude's changes comes from the language catalogue.** The message
+  after each change Claude makes ("Claude moved 3 object(s); Ctrl+Z puts them back.") and the names of its steps in
+  the History show in the language chosen in Settings; the steps keep their "Claude: " mark, which Take back Claude's
+  changes finds them by. In English nothing changes, and Claude is still answered in English.
+
 ## v1.47.22 — unreleased
 
 ### Changed
