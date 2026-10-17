@@ -94,6 +94,9 @@ public sealed class LocalSshd : IDisposable
 
     public bool Available => _p != null;
 
+    /// <summary>The sshd process's id (its sessions are its children).</summary>
+    internal int ProcessId => _p!.Id;
+
     /// <summary>
     /// Skips the test without sshd (fails instead when CI asks for it).
     /// </summary>

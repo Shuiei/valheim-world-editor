@@ -20,6 +20,18 @@ public sealed class FakeGame : IDisposable
     private readonly byte[] _snapshot;
 
     public int Port { get; }
+
+    /// <summary>Whether the wait for requests or the answer to one ended with an error (Dispose then throws it).</summary>
+    public bool Broken
+    {
+        get
+        {
+            lock (_answering)
+            {
+                return _serving.IsFaulted || _answering.Exists(a => a.IsFaulted);
+            }
+        }
+    }
     public string Url => $"http://127.0.0.1:{Port}";
     public string Token { get; } = "test-token";
     public string Players { get; set; } = "[{\"name\":\"Ada\",\"x\":10,\"y\":30,\"z\":-20,\"yaw\":0},{\"name\":\"Bjorn\",\"x\":-40,\"y\":31,\"z\":5,\"yaw\":90}]";

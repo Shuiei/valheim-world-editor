@@ -17,6 +17,9 @@ public sealed class FakeBridge : IDisposable
 
     public int Port { get; }
 
+    /// <summary>Whether answering ended with an error (Dispose then throws it).</summary>
+    public bool Broken => _serving.IsFaulted;
+
     public string Token { get; } = "test-token";
 
     public int Status { get; set; } = 200;

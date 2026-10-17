@@ -31,6 +31,12 @@ public class EditorProcess : IDisposable
     private static readonly TimeSpan PictureWait = TimeSpan.FromMinutes(Environment.GetEnvironmentVariable("VWE_COVERAGE") == "1" ? 8 : 3);
 
     public string? Why { get; }
+
+    /// <summary>How long Dispose waits for the editor to quit before killing it.</summary>
+    public TimeSpan QuitWait { get; init; } = TimeSpan.FromSeconds(15);
+
+    /// <summary>The editor's exit code once it has ended (137 when killed), else null.</summary>
+    public int? ExitCode => _p is { HasExited: true } ? _p.ExitCode : null;
     public bool Available => _p != null;
     // The editor's data folder (--data): its settings, log...
     public string Data { get; } = Path.Combine(Path.GetTempPath(), "vwe-visual-" + Guid.NewGuid().ToString("N")[..8]);
@@ -151,7 +157,7 @@ public class EditorProcess : IDisposable
             // An editor that ended before being told to quit failed: telling it then throws, and fails the clean-up.
             _p.StandardInput.WriteLine("quit");
             _p.StandardInput.Flush();
-            if (!_p.WaitForExit(15000))
+            if (!_p.WaitForExit(QuitWait))
             {
                 // Ended before its data folder is deleted, which it may still be writing.
                 _p.Kill(entireProcessTree: true);

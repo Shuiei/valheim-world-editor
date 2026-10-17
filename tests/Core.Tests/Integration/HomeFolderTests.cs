@@ -442,6 +442,9 @@ public sealed class HomeFolderTests : IDisposable
         private Task _serving = Task.CompletedTask;
         public int Port { get; } = FakeGame.FreePort();
 
+        /// <summary>Whether answering ended with an error (Dispose then throws it).</summary>
+        public bool Broken => _serving.IsFaulted;
+
         public Status Start()
         {
             _l.Prefixes.Add($"http://127.0.0.1:{Port}/");
@@ -474,6 +477,20 @@ public sealed class HomeFolderTests : IDisposable
             _l.Close();
             Assert.True(_serving.Wait(TimeSpan.FromSeconds(30)), "the status server did not stop answering");
         }
+    }
+
+    [Fact]
+    public void AStatusServerThatFailsToAnswerFailsItsDisposal()
+    {
+        // Not a status an HTTP answer can have: setting it throws.
+        var broken = new Status(42, "").Start();
+        using var http = new System.Net.Http.HttpClient();
+        _ = http.GetAsync($"http://127.0.0.1:{broken.Port}/status", TestContext.Current.CancellationToken);
+
+        Assert.True(SpinWait.SpinUntil(() => broken.Broken, TimeSpan.FromSeconds(30)), "the request was never answered");
+        var e = Assert.Throws<AggregateException>(broken.Dispose);
+
+        Assert.IsType<ProtocolViolationException>(e.InnerException);
     }
 
     [Fact]
