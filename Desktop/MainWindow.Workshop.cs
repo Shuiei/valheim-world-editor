@@ -166,7 +166,7 @@ public partial class MainWindow
         Vector2? world = null;
         if (Session is { } s && View.GridAt(at, size) is { } g)
         {
-            world = new Vector2(s.Scene.X0 * 64f - 32f + g.X, s.Scene.Z0 * 64f - 32f + g.Y);
+            world = new Vector2(s.Scene.OriginX + g.X, s.Scene.OriginZ + g.Y);
         }
         var paths = new List<string>();
         if (blueprint != null)
@@ -236,6 +236,35 @@ public partial class MainWindow
     /// <param name="path">The blueprint to open, or null for a blank plot.</param>
     internal async Task OpenWorkshop(string? path)
     {
+        // A second open while one is under way (a double click while the game's files are read) would ask and show
+        // the plot twice.
+        if (_openingWorkshop)
+        {
+            MessageText.Text = "The Workshop is already opening.";
+            return;
+        }
+        _openingWorkshop = true;
+        try
+        {
+            await OpenWorkshopOnce(path);
+        }
+        finally
+        {
+            _openingWorkshop = false;
+        }
+    }
+
+    /// <summary>
+    /// True while <see cref="OpenWorkshop"/> runs.
+    /// </summary>
+    private bool _openingWorkshop;
+
+    /// <summary>
+    /// <see cref="OpenWorkshop"/>'s work, once no other open is under way.
+    /// </summary>
+    /// <param name="path">The blueprint to open, or null for a blank plot.</param>
+    private async Task OpenWorkshopOnce(string? path)
+    {
         // The game's files are needed here too (its pieces, and how ground discs shape the plot).
         bool ready = await Task.Run(() =>
         {
@@ -303,8 +332,11 @@ public partial class MainWindow
         _workshopLift = 0;
         _workshopTerrain = [];
         _workshopDetails = details;
-        // Only Homestead's own folder is saved back to without asking.
-        _workshopFile = path != null && string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), Path.GetFullPath(Blueprints.Status.Folder), StringComparison.Ordinal) ? path : null;
+        // Only Homestead's own folder is saved back to without asking (however its path is written: a separator at the
+        // end, a link, Windows' letter case), and then by the path the editor saves under.
+        _workshopFile = path != null && Path.GetDirectoryName(Path.GetFullPath(path)) is { } dir
+            && Places.FolderKey(dir) == Places.FolderKey(Blueprints.Status.Folder)
+            ? Path.Combine(Blueprints.Status.Folder, Path.GetFileName(path)) : null;
         string msg = "The Workshop: pick a piece in Build and click to put it down (it snaps like the game's hammer); Select (E) moves, turns and deletes; then Save blueprint.";
         if (path != null)
         {
@@ -423,7 +455,7 @@ public partial class MainWindow
         // The library's folder as it is now (Homestead may have been installed or moved since).
         Blueprints.Refresh();
         string path = Path.Combine(Blueprints.Status.Folder, Homestead.FileName(details.Name));
-        if (File.Exists(path) && !overwrite && !string.Equals(path, _workshopFile, StringComparison.Ordinal))
+        if (File.Exists(path) && !overwrite && !string.Equals(path, _workshopFile, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
         {
             return $"There is a blueprint called {details.Name} already: ask the user before replacing it (overwrite), or choose another name.";
         }
@@ -466,7 +498,7 @@ public partial class MainWindow
     /// The support check over the plot's building pieces (Stability), whether or not its colours are shown.
     /// </summary>
     /// <returns>The result, and the scene's index of each piece it was worked out for.</returns>
-    private (Stability.Result Result, List<int> Index) SolveSupport(EditSession s)
+    internal (Stability.Result Result, List<int> Index) SolveSupport(EditSession s)
     {
         var index = new List<int>();
         var pieces = new List<Stability.Piece>();
@@ -523,9 +555,7 @@ public partial class MainWindow
         SaveButton.IsEnabled = n > 0;
         SaveButton.Content = "Save blueprint";
         SaveButton.Tip("top.saveBlueprint");
-        _pendingPill.Background = dirty ? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#2c2416")) : Avalonia.Media.Brushes.Transparent;
-        _pendingPill.BorderBrush = dirty ? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#7a5a2a")) : Ui.Line;
-        PendingText.Foreground = dirty ? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#f3d29b")) : Ui.Muted;
+        SetPendingPill(dirty);
         _liveBadge.IsVisible = false;
         UndoButton.IsEnabled = s.CanUndo;
         RedoButton.IsEnabled = s.CanRedo;

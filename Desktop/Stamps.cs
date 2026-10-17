@@ -155,17 +155,20 @@ public static class Stamps
         }
     }
 
-    /// <summary>Writes the loaded stamps to stamps.json, replacing it; a failure to write is ignored.</summary>
+    /// <summary>
+    /// Writes the loaded stamps to stamps.json, replacing it whole (a write cut short leaves the old file); a failure
+    /// to write is logged, and the stamps stay loaded for this run.
+    /// </summary>
     public static void SaveKept(IEnumerable<Stamp> loaded)
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
             var list = loaded.Select(s => new Kept(s.Name, s.Label, Convert.ToBase64String(s.Data.Select(v => (byte)Math.Clamp((int)MathF.Round(v * 255), 0, 255)).ToArray()))).ToList();
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(list));
+            SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(list));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Console.Error.WriteLine($"Stamps not kept ({FilePath}): {ex.Message}");
         }
     }
 }

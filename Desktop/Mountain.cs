@@ -110,6 +110,19 @@ public static class Mountain
         static float Smooth(float t) => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
         // A natural profile: steeper up high, easing out at the foot (a gaussian, brought to 0 at the edge).
         static float Bell(float d) => d >= 1 ? 0 : (MathF.Exp(-3.2f * d * d) - 0.0408f) / 0.9592f;
+        // Hills and ranges: their bumps joined by a smooth maximum (where two peaks meet, a saddle instead of a crease).
+        static float Bumps(List<(float X, float Z, float R, float H)> bumps, float u, float v)
+        {
+            float acc = 0f;
+            const float Soft = 0.15f;
+            foreach (var (bx, bz, br, bh) in bumps)
+            {
+                float bu = (u - bx) / br, bv = (v - bz) / br;
+                float bump = bh * Bell(MathF.Sqrt(bu * bu + bv * bv)), t = Math.Clamp(0.5f + 0.5f * (bump - acc) / Soft, 0, 1);
+                acc = bump <= 0 ? acc : acc <= 0 ? bump : acc + (bump - acc) * t + Soft * t * (1 - t);
+            }
+            return acc;
+        }
         return (x, z) =>
         {
             // The outline warped by noise, so no mountain is a perfect circle.
@@ -124,13 +137,7 @@ public static class Mountain
                 MountainKind.Ridge => Bell(MathF.Sqrt(u * u + (v / 0.5f) * (v / 0.5f))),
                 MountainKind.Mesa => Smooth((1 - d) / 0.35f),
                 MountainKind.Volcano => Bell(d) - 0.45f * Bell(d / 0.22f),
-                _ => bumps.Aggregate(0f, (acc, b) =>
-                {
-                    float bu = (u - b.X) / b.R, bv = (v - b.Z) / b.R;
-                    // A smooth maximum: where two peaks meet, a saddle instead of a crease.
-                    float h = b.H * Bell(MathF.Sqrt(bu * bu + bv * bv)), k = 0.15f, t = Math.Clamp(0.5f + 0.5f * (h - acc) / k, 0, 1);
-                    return h <= 0 ? acc : acc <= 0 ? h : acc + (h - acc) * t + k * t * (1 - t);
-                }),
+                _ => Bumps(bumps, u, v),
             };
             if (body <= 0)
             {

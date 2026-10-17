@@ -35,14 +35,22 @@ public static class GenMath
         t <= 0.0 ? a : t >= 1.0 ? b : a * (1.0 - t) + b * t;
 
     /// <summary>
-    /// Where v lies from lo (0) to hi (1), held to 0..1.
+    /// Where v lies from lo (0) to hi (1), held to 0..1; when lo and hi are the same, a step there (0 below, 1 from it
+    /// on) instead of 0 / 0.
     /// </summary>
-    public static float Step(float lo, float hi, float v) => (float)Clamp01(((double)v - lo) / ((double)hi - lo));
+#pragma warning disable S1244 // Exactly equal ends only: they alone make 0 / 0; close ends divide as they should.
+    private static double Fraction(double lo, double hi, double v) => lo == hi ? (v < lo ? 0.0 : 1.0) : Clamp01((v - lo) / (hi - lo));
+#pragma warning restore S1244
+
+    /// <summary>
+    /// Where v lies from lo (0) to hi (1), held to 0..1 (a step at lo when lo and hi are the same).
+    /// </summary>
+    public static float Step(float lo, float hi, float v) => (float)Fraction(lo, hi, v);
 
     /// <summary>
     /// The same in double.
     /// </summary>
-    public static double Step(double lo, double hi, double v) => Clamp01((v - lo) / (hi - lo));
+    public static double Step(double lo, double hi, double v) => Fraction(lo, hi, v);
 
     /// <summary>
     /// Where v lies from lo (0) to hi (1), held to 0..1; 0 when lo and hi are the same.
@@ -54,7 +62,7 @@ public static class GenMath
     /// </summary>
     public static float Smooth(float lo, float hi, float x)
     {
-        float s = (float)Clamp01(((double)x - lo) / ((double)hi - lo));
+        float s = (float)Fraction(lo, hi, x);
         return (float)((double)s * s * (3.0 - 2.0 * s));
     }
 

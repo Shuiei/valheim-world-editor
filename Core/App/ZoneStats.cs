@@ -19,7 +19,7 @@ public static class ZoneStats
 
     /// <summary>
     /// The zones' stats, <see cref="Stride"/> ints each, zones ordered by z then x; only zones inside the
-    /// world. Deleted objects are left out. Empty when the save has no zone list. Runs under the world's lock.
+    /// world. Deleted objects are left out, objects added in the session counted. Empty when the save has no zone list. Runs under the world's lock.
     /// </summary>
     /// <param name="world">The world.</param>
     /// <param name="edits">The session's edits (deleted objects, ground edits).</param>
@@ -52,6 +52,16 @@ public static class ZoneStats
             var key = o.Zone;
             objects[key] = objects.GetValueOrDefault(key) + 1;
             if (o.IsPiece)
+            {
+                pieces[key] = pieces.GetValueOrDefault(key) + 1;
+            }
+        }
+        // Objects added in this session count as the save will hold them.
+        foreach (NewObject n in edits.Added)
+        {
+            var key = ZoneOf(n.Position);
+            objects[key] = objects.GetValueOrDefault(key) + 1;
+            if (IsBuilt(world, n))
             {
                 pieces[key] = pieces.GetValueOrDefault(key) + 1;
             }
@@ -115,5 +125,26 @@ public static class ZoneStats
             result[o + 7] = generated.Contains((x, z)) ? 1 : 0;
         }
         return result;
+    }
+
+    /// <summary>The zone a position lies in (as ObjectRef.Zone).</summary>
+    private static (int X, int Z) ZoneOf(System.Numerics.Vector3 p) => ChunkMath.SectorOf(p.X, p.Z);
+
+    /// <summary>
+    /// Whether an added object will be a player-built piece (have a builder) once saved: a builder given in its data
+    /// decides; a new one is when players build its kind (WorldSave.NewObjectBytes gives it the builder); a moved or
+    /// edited one keeps its source's.
+    /// </summary>
+    private static bool IsBuilt(WorldSave world, NewObject n)
+    {
+        if (n.Data?.LastOrDefault(f => f.Section == "longs" && f.Key == ObjectField.CreatorKey) is { } given)
+        {
+            return given.Value is { } v && v != "0";
+        }
+        if (!n.Fresh && n.SourceId is int s && s >= 0 && s < world.ObjectRefs.Count)
+        {
+            return world.ObjectRefs[s].IsPiece;
+        }
+        return Terrain.PieceCatalog.Get(n.Prefab)?.Tool != null;
     }
 }

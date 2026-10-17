@@ -342,16 +342,8 @@ public sealed partial class MainWindow : Window
                 }
             };
             StartPage.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, "Yes");
-            StartPage.PickFolder = async title =>
-            {
-                var picked = await StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions { Title = title });
-                return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
-            };
-            StartPage.PickFile = async title =>
-            {
-                var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions { Title = title });
-                return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
-            };
+            StartPage.PickFolder = title => Pickers.Folder(StorageProvider, title);
+            StartPage.PickFile = title => Pickers.File(StorageProvider, title);
         }
         else
         {
@@ -643,10 +635,7 @@ public sealed partial class MainWindow : Window
         else
         {
             string what = Describe(w.Pending);
-            if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {Ui.Tilde(w.World.Directory)}\n\n"
-                + "• Like Apply live: the world stays open with its history; undo a step and save again to take it back. The save it was opened from is kept until you leave the world.\n"
-                + "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
-                + "• Test on a copy first: open it as a local world, or upload it to a test server."))
+            if (!await ConfirmSave(SaveConfirmText(what, w.World.Directory)))
             {
                 return;
             }
@@ -716,11 +705,15 @@ public sealed partial class MainWindow : Window
         {
             await w.Reload();
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
+        // As ReloadHere: the bridge's answers (a refusal, broken JSON) too.
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException or System.Text.Json.JsonException)
         {
             Say("Could not reach the game: " + ex.Message);
         }
-        Busy(null);
+        finally
+        {
+            Busy(null);
+        }
         MapPage?.Show(w);
     }
 
@@ -739,6 +732,8 @@ public sealed partial class MainWindow : Window
         World?.Dispose();
         World = null;
         Session = null;
+        // A backup read for the Area tool's restore is not kept for the next world.
+        AreaPanel.ForgetBackup();
         Tunnel.Close();
         ShowStart();
     }
@@ -800,6 +795,16 @@ public sealed partial class MainWindow : Window
     /// Asks before writing into the world (replaced by tests).
     /// </summary>
     internal Func<string, Task<bool>> ConfirmSave { get; set; }
+    /// <summary>
+    /// The question asked before saving into the world files, with what to keep in mind.
+    /// </summary>
+    /// <param name="what">What would be written, in words.</param>
+    /// <param name="directory">The world's folder.</param>
+    private static string SaveConfirmText(string what, string directory) =>
+        $"Write {what} into the world files?\n\nWorld folder: {Ui.Tilde(directory)}\n\n"
+        + "• Like Apply live: the world stays open with its history; undo a step and save again to take it back. The save it was opened from is kept until you leave the world.\n"
+        + "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
+        + "• Test on a copy first: open it as a local world, or upload it to a test server.";
     /// <summary>
     /// A yes / no question (title, text, yes, no): Discard, Leave, Quit with unsaved changes. Tests answer it.
     /// </summary>
@@ -871,6 +876,11 @@ public sealed partial class MainWindow : Window
             {
                 AreaPanel.RefreshVolume();
             }
+            // And the tape's lowest and highest ground.
+            if (Tools.Mode == ToolMode.Measure)
+            {
+                MeasurePanel.Refresh();
+            }
         });
         session.EditMade += () => Dispatcher.UIThread.Post(() => AutoApply(session));
         // Saved: the objects were read again, with new indices.
@@ -881,6 +891,18 @@ public sealed partial class MainWindow : Window
         SelectPanel.ReplaceBox.ItemsSource = kinds.Select(p => NameOfPrefab(p)!).ToList();
         SelectPanel.FillSaved();
         UpdateSaveBar();
+    }
+
+    /// <summary>The save bar's pill while something waits: amber background, border and text.</summary>
+    private static readonly IImmutableSolidColorBrush PillWaiting = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.Parse("#2c2416")),
+        PillWaitingBorder = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.Parse("#7a5a2a")), PillWaitingText = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.Parse("#f3d29b"));
+
+    /// <summary>The save bar's pill: amber while something waits, grey when all is saved.</summary>
+    private void SetPendingPill(bool waiting)
+    {
+        _pendingPill.Background = waiting ? PillWaiting : Brushes.Transparent;
+        _pendingPill.BorderBrush = waiting ? PillWaitingBorder : Ui.Line;
+        PendingText.Foreground = waiting ? PillWaitingText : Ui.Muted;
     }
 
     /// <summary>
@@ -904,10 +926,7 @@ public sealed partial class MainWindow : Window
         SaveButton.IsEnabled = dirty;
         SaveButton.Content = s.IsLive ? "Apply live" : "Save to world";
         SaveButton.Tip(s.IsLive ? "top.apply" : "top.save");
-        // The pill: amber while something waits, grey when all is saved.
-        _pendingPill.Background = dirty ? new SolidColorBrush(Color.Parse("#2c2416")) : Brushes.Transparent;
-        _pendingPill.BorderBrush = dirty ? new SolidColorBrush(Color.Parse("#7a5a2a")) : Ui.Line;
-        PendingText.Foreground = dirty ? new SolidColorBrush(Color.Parse("#f3d29b")) : Ui.Muted;
+        SetPendingPill(dirty);
         _liveBadge.IsVisible = s.IsLive;
         UndoButton.IsEnabled = s.CanUndo;
         RedoButton.IsEnabled = s.CanRedo;
@@ -992,11 +1011,8 @@ public sealed partial class MainWindow : Window
             await ApplyNow();
             return;
         }
-        string what = s.PendingText.Replace("Unsaved: ", "");
-        if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {Ui.Tilde(s.Scene.World.Directory)}\n\n"
-            + "• Like Apply live: the world stays open with its history; undo a step and save again to take it back. The save it was opened from is kept until you leave the world.\n"
-            + "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
-            + "• Test on a copy first: open it as a local world, or upload it to a test server."))
+        string what = Describe(s.Pending);
+        if (!await ConfirmSave(SaveConfirmText(what, s.Scene.World.Directory)))
         {
             return;
         }
@@ -1141,6 +1157,13 @@ public sealed partial class MainWindow : Window
                 MessageText.Text = "Select an area first.";
                 return null;
             }
+            // No objects and so no ground (it goes with buildings only): nothing a paste would put down. The clipboard
+            // keeps what it had.
+            if (clip.Objects.Count == 0 && Array.TrueForAll(clip.Rel, float.IsNaN))
+            {
+                MessageText.Text = "Nothing to copy here: the area holds no objects (its ground goes only with buildings).";
+                return null;
+            }
         }
         View.Paste.Clip = clip;
         View.Paste.Notify();
@@ -1193,7 +1216,7 @@ public sealed partial class MainWindow : Window
         int touched = 0;
         var paste = View.Paste;
         string label = paste.Count > 1 ? $"Paste ×{paste.Count}" : "Paste";
-        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+        float ox = s.Scene.OriginX, oz = s.Scene.OriginZ;
         var linkIds = s.ReadLinks().Ids;
         s.Commit(label, g =>
         {
@@ -1382,7 +1405,7 @@ public sealed partial class MainWindow : Window
     {
         var scene = s.Scene;
         var cave = path.PlanCave(s.Ground);
-        float ox = scene.X0 * 64f - 32f, oz = scene.Z0 * 64f - 32f, water = scene.Water;
+        float ox = scene.OriginX, oz = scene.OriginZ, water = scene.Water;
         PathTool.CaveRock RockAt(float x, float z)
         {
             if (path.Rock != PathTool.CaveRock.Auto)
@@ -1639,7 +1662,7 @@ public sealed partial class MainWindow : Window
             return;
         }
         var shape = Mountain.Shape(m);
-        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f, wx = ox + gx, wz = oz + gz;
+        float ox = s.Scene.OriginX, oz = s.Scene.OriginZ, wx = ox + gx, wz = oz + gz;
         // The spots are judged on the area as it is now: what grows is only put in if it is still the same.
         int generation = s.Generation;
         // On the slopes it raised by more than a metre (not around its foot, where the old ones stand).
@@ -1657,8 +1680,13 @@ public sealed partial class MainWindow : Window
         {
             Growth.Commit(s, $"Mountain: grew {spots.Count} object(s)", spots);
             placed += $" Grew {spots.Count} of the biome's trees and rocks on it.";
+            MessageText.Text = placed + " Ctrl+Z takes it back (twice with what grew); saving turns it into ground discs.";
         }
-        MessageText.Text = placed + " Ctrl+Z takes it back (twice with what grew); saving turns it into ground discs.";
+        else
+        {
+            // Nothing grew: one step to take back. When growing could not be done, why (Spots said it) stays.
+            MessageText.Text = (spots == null ? MessageText.Text : placed) + " Ctrl+Z takes it back; saving turns it into ground discs.";
+        }
         UpdateSaveBar();
     }
 
@@ -2050,8 +2078,9 @@ public sealed partial class MainWindow : Window
             e.Handled = true;
             return;
         }
-        // The right-hand panels, as in the web editor: V the View panel, L the history, ? (or F3) the help.
-        if (!ctrl && e.Key is Avalonia.Input.Key.F3 or Avalonia.Input.Key.OemQuestion || (!ctrl && mods.HasFlag(Avalonia.Input.KeyModifiers.Shift) && e.Key == Avalonia.Input.Key.Oem2))
+        // The right-hand panels, as in the web editor: V the View panel, L the history, ? (or F3) the help. ? is Shift
+        // and the / key (OemQuestion and Oem2 are that one key): / alone is not it.
+        if (!ctrl && (e.Key == Avalonia.Input.Key.F3 || mods.HasFlag(Avalonia.Input.KeyModifiers.Shift) && e.Key == Avalonia.Input.Key.OemQuestion))
         {
             ShowRight(HelpCard.IsVisible ? null : HelpCard);
             e.Handled = true;
@@ -2404,20 +2433,14 @@ public sealed partial class MainWindow : Window
             box.FontSize = 12.5;
         }
         list.Width = 240;
-        return new Border
+        return Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             Margin = new Thickness(10),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top,
             // Scrolls when the window is too short for it (a bar only then).
             Child = new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, Content = list },
-        };
+        });
     }
 
     /// <summary>
@@ -2445,15 +2468,8 @@ public sealed partial class MainWindow : Window
         Blueprints.Confirm = text => Dialogs.Ask(this, "Blueprints", text, "Yes");
         Blueprints.OpenUrl = Launcher.LaunchUriAsync;
         SetUpWorkshop();
-        Blueprints.PickFile = async () =>
-        {
-            var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
-            {
-                Title = "Import a .blueprint (Homestead, PlanBuild) or .vbuild file",
-                FileTypeFilter = [new Avalonia.Platform.Storage.FilePickerFileType("Blueprints") { Patterns = BlueprintPatterns }],
-            });
-            return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
-        };
+        Blueprints.PickFile = () => Pickers.File(StorageProvider, "Import a .blueprint (Homestead, PlanBuild) or .vbuild file",
+            new Avalonia.Platform.Storage.FilePickerFileType("Blueprints") { Patterns = BlueprintPatterns });
         Inspector.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
         Inspector.Replaced += i => View.Select([i]);
         Inspector.Confirm = text => Dialogs.Ask(this, "Contents", text, "Apply anyway");
@@ -2502,16 +2518,11 @@ public sealed partial class MainWindow : Window
         };
         Tools.LoadStampAsked += async () =>
         {
-            var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
-            {
-                Title = "Use a grayscale picture as the brush shape",
-                FileTypeFilter = [new Avalonia.Platform.Storage.FilePickerFileType("Pictures") { Patterns = PicturePatterns }],
-            });
-            if (picked.Count == 0 || !picked[0].Path.IsFile)
+            if (await Pickers.File(StorageProvider, "Use a grayscale picture as the brush shape",
+                new Avalonia.Platform.Storage.FilePickerFileType("Pictures") { Patterns = PicturePatterns }) is not string path)
             {
                 return;
             }
-            string path = picked[0].Path.LocalPath;
             if (Stamps.FromPicture(File.ReadAllBytes(path)) is { } data)
             {
                 Tools.AddStamp(Path.GetFileNameWithoutExtension(path), data);
@@ -2573,23 +2584,9 @@ public sealed partial class MainWindow : Window
                 : $"Clipboard{(c.Name != null ? $" ({c.Name})" : "")}: {c.W} × {c.H} m, {c.Objects.Count} object(s).";
         };
         AreaPanel.Confirm = text => Dialogs.Ask(this, "Reset zones", text, "Reset when saving");
-        AreaPanel.PickPicture = async () =>
-        {
-            var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
-            {
-                Title = "Import a heightmap (grayscale PNG)",
-                FileTypeFilter = [new Avalonia.Platform.Storage.FilePickerFileType("PNG pictures") { Patterns = PngPatterns }],
-            });
-            return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
-        };
-        AreaPanel.PickFolder = async () =>
-        {
-            var picked = await StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions
-            {
-                Title = "Choose a backup (or copy) of this world: the folder with _main.<n>.chunks",
-            });
-            return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
-        };
+        AreaPanel.PickPicture = () => Pickers.File(StorageProvider, "Import a heightmap (grayscale PNG)",
+            new Avalonia.Platform.Storage.FilePickerFileType("PNG pictures") { Patterns = PngPatterns });
+        AreaPanel.PickFolder = () => Pickers.Folder(StorageProvider, "Choose a backup (or copy) of this world: the folder with _main.<n>.chunks");
         PastePanel = new PastePanel(View.Paste);
         PlaceTool.Brush = Tools.Brush;
         PlaceTool.Scene = () => View.Scene;
@@ -2668,6 +2665,7 @@ public sealed partial class MainWindow : Window
         ScriptPanel.RunAsked += () => _ = RunScript();
         ScriptPanel.StopAsked += () => _stopScript?.Invoke();
         ScriptPanel.Message += t => MessageText.Text = t;
+        ScriptPanel.Confirm = text => Dialogs.Ask(this, "Save the script", text, "Replace");
         Tools.Options.VerticalAlignment = VerticalAlignment.Top;
         Tools.Rail.VerticalAlignment = VerticalAlignment.Top;
         Tools.ToolChanged += t =>
@@ -2676,6 +2674,11 @@ public sealed partial class MainWindow : Window
             View.Mode = Tools.Mode;
             SelectPanel.Card.IsVisible = Tools.SelectMode;
             MeasurePanel.Card.IsVisible = Tools.Mode == ToolMode.Measure;
+            if (Tools.Mode == ToolMode.Measure)
+            {
+                // The ground may have changed since the tape was drawn.
+                MeasurePanel.Refresh();
+            }
             if (Tools.Mode == ToolMode.Dungeon)
             {
                 DungeonPanel.Reload();
@@ -2830,7 +2833,7 @@ public sealed partial class MainWindow : Window
         };
         View.Status += t => { Options.Say(t); Dispatcher.UIThread.Post(() => _info.Text = t + "\n" + _info.Text); };
         // Once really closed (Closing also comes when "Keep editing" keeps the window open).
-        Closed += (_, _) => { MapPage?.Dispose(); _perf.Flush(); Prefs.Flush(); };
+        Closed += (_, _) => { MapPage?.Dispose(); _perf.Flush(); Prefs.Flush(); PlacePanel.Memory.Flush(); };
         RememberPrefs();
         _info.Text = "Loading the world…";
         Opened += async (_, _) =>

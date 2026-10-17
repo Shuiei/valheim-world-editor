@@ -166,4 +166,14 @@ public class ValheimReaderTests
         Assert.Equal(65, t.HeightWidth);
         Assert.Equal(65, t.PaintWidth);
     }
+
+    [Fact]
+    public void ACompactCountIsOneByteOrTwo()
+    {
+        // The one reader of the game's compact counts (InventoryData had a copy of its own).
+        using var r = new BinaryReader(new MemoryStream([0x05, 0x81, 0x02, 0x7F]));
+        Assert.Equal(5, r.ReadNumItems());
+        Assert.Equal(0x102, r.ReadNumItems());
+        Assert.Equal(127, r.ReadNumItems());
+    }
 }

@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Numerics;
 using System.Security.Cryptography;
@@ -310,76 +311,93 @@ public static class HistoryFile
         var (things, index) = Find(s.Objects);
         Directory.CreateDirectory(Folder);
         string temp = s.Path + ".new";
-        using (var file = File.Create(temp))
-        using (var gz = new GZipStream(file, CompressionLevel.Fastest))
-        using (var o = new BinaryWriter(gz, Encoding.UTF8))
+        try
         {
-            o.Write(Magic);
-            o.Write(Version);
-            o.Write(s.Key);
-            o.Write(s.Stamp != null);
-            o.Write(s.Stamp ?? "");
-            o.Write(s.SavedAt);
-            o.Write(things.Count);
-            foreach (var t in things)
+            WriteFile(s, things, index, temp);
+            File.Move(temp, s.Path, overwrite: true);
+        }
+        catch (Exception) when (File.Exists(temp))
+        {
+            // Not left half-written beside the history (the error goes on).
+            File.Delete(temp);
+            throw;
+        }
+    }
+
+    /// <summary>Writes a snapshot to a file (the temporary one Save then moves in place).</summary>
+    /// <param name="s">The snapshot.</param>
+    /// <param name="things">The steps' objects, found (<see cref="Find"/>).</param>
+    /// <param name="index">Each found object's place among <paramref name="things"/>, by id.</param>
+    /// <param name="temp">The file.</param>
+    private static void WriteFile(Snapshot s, List<KeptThing> things, Dictionary<int, int> index, string temp)
+    {
+        using var file = File.Create(temp);
+        using var gz = new GZipStream(file, CompressionLevel.Fastest);
+        using var o = new BinaryWriter(gz, Encoding.UTF8);
+        o.Write(Magic);
+        o.Write(Version);
+        o.Write(s.Key);
+        o.Write(s.Stamp != null);
+        o.Write(s.Stamp ?? "");
+        o.Write(s.SavedAt);
+        o.Write(things.Count);
+        foreach (var t in things)
+        {
+            o.Write(t.Prefab);
+            o.Write(t.Piece);
+            WriteVector(o, t.Position);
+            WriteVector(o, t.Rotation);
+            o.Write(t.Scale);
+            o.Write(t.Bytes?.Length ?? -1);
+            if (t.Bytes != null)
             {
-                o.Write(t.Prefab);
-                o.Write(t.Piece);
-                WriteVector(o, t.Position);
-                WriteVector(o, t.Rotation);
-                o.Write(t.Scale);
-                o.Write(t.Bytes?.Length ?? -1);
-                if (t.Bytes != null)
-                {
-                    o.Write(t.Bytes);
-                }
-            }
-            o.Write(s.UndoCount);
-            o.Write(s.RedoCount);
-            foreach (var c in s.Steps)
-            {
-                o.Write(c.Label);
-                o.Write(c.Ticks);
-                o.Write(c.Removed);
-                o.Write(c.Applied);
-                o.Write(c.RevertOf);
-                // Each step's points and zones are in the frame of the area it was made in.
-                var f = c.Frame;
-                o.Write(c.Points.Length);
-                foreach (int p in c.Points)
-                {
-                    o.Write(p % f.W + f.Ox);
-                    o.Write(p / f.W + f.Oz);
-                }
-                WriteState(o, c.Before);
-                WriteState(o, c.After);
-                o.Write(c.Zones.Length);
-                foreach (var (x, z) in c.Zones)
-                {
-                    o.Write(x + f.X0);
-                    o.Write(z + f.Z0);
-                }
-                var kept = c.Things.Where(t => index.ContainsKey(t.Id)).ToList();
-                o.Write(kept.Count);
-                foreach (var (id, before, after) in kept)
-                {
-                    o.Write(index[id]);
-                    o.Write(before);
-                    o.Write(after);
-                }
-                o.Write(c.Resets.Length);
-                foreach (var (reset, before, after) in c.Resets)
-                {
-                    o.Write(reset.X);
-                    o.Write(reset.Z);
-                    o.Write(reset.KeepBuildings);
-                    o.Write(reset.Ground);
-                    o.Write(before);
-                    o.Write(after);
-                }
+                o.Write(t.Bytes);
             }
         }
-        File.Move(temp, s.Path, overwrite: true);
+        o.Write(s.UndoCount);
+        o.Write(s.RedoCount);
+        foreach (var c in s.Steps)
+        {
+            o.Write(c.Label);
+            o.Write(c.Ticks);
+            o.Write(c.Removed);
+            o.Write(c.Applied);
+            o.Write(c.RevertOf);
+            // Each step's points and zones are in the frame of the area it was made in.
+            var f = c.Frame;
+            o.Write(c.Points.Length);
+            foreach (int p in c.Points)
+            {
+                o.Write(p % f.W + f.Ox);
+                o.Write(p / f.W + f.Oz);
+            }
+            WriteState(o, c.Before);
+            WriteState(o, c.After);
+            o.Write(c.Zones.Length);
+            foreach (var (x, z) in c.Zones)
+            {
+                o.Write(x + f.X0);
+                o.Write(z + f.Z0);
+            }
+            var kept = c.Things.Where(t => index.ContainsKey(t.Id)).ToList();
+            o.Write(kept.Count);
+            foreach (var (id, before, after) in kept)
+            {
+                o.Write(index[id]);
+                o.Write(before);
+                o.Write(after);
+            }
+            o.Write(c.Resets.Length);
+            foreach (var (reset, before, after) in c.Resets)
+            {
+                o.Write(reset.X);
+                o.Write(reset.Z);
+                o.Write(reset.KeepBuildings);
+                o.Write(reset.Ground);
+                o.Write(before);
+                o.Write(after);
+            }
+        }
     }
 
     /// <summary>Writes a vector as three floats.</summary>
@@ -424,23 +442,37 @@ public static class HistoryFile
     /// <summary>Reads ground values written by <c>WriteState</c> for <paramref name="n"/> points.</summary>
     private static Ground.State ReadState(BinaryReader i, int n)
     {
+        // Each array is made once its bytes are read: a damaged count is refused at the end of the file, not
+        // allocated first.
         float[] Floats(int count)
         {
+            byte[] raw = i.ReadExactBytes(checked(count * 4));
             float[] a = new float[count];
             for (int k = 0; k < count; k++)
             {
-                a[k] = i.ReadSingle();
+                a[k] = BinaryPrimitives.ReadSingleLittleEndian(raw.AsSpan(k * 4));
             }
             return a;
         }
         float[] level = Floats(n);
         float[] smooth = Floats(n);
-        byte[] mod = i.ReadBytes(n);
-        float[] paint = Floats(n * 4);
-        byte[] pmod = i.ReadBytes(n);
+        byte[] mod = i.ReadExactBytes(n);
+        float[] paint = Floats(checked(n * 4));
+        byte[] pmod = i.ReadExactBytes(n);
         float[] lift = Floats(n);
         return new Ground.State(level, smooth, mod, paint, pmod, lift);
     }
+
+    /// <summary>A count from the file: never negative.</summary>
+    /// <exception cref="InvalidDataException">A negative count (a damaged file).</exception>
+    private static int ReadCount(BinaryReader i) =>
+        i.ReadInt32() is int n and >= 0 ? n : throw new InvalidDataException("a negative count");
+
+    /// <summary>
+    /// A list's first capacity for a count from the file: the count, up to a few thousand (a damaged count past what
+    /// the file holds is not allocated up front; the list grows with what is read).
+    /// </summary>
+    private static int Capacity(int count) => Math.Min(count, 4096);
 
     // ---- Reading.
 
@@ -516,8 +548,8 @@ public static class HistoryFile
         {
             Add(id, prefab, p);
         }
-        int count = i.ReadInt32();
-        int[] ids = new int[count];
+        int count = ReadCount(i);
+        var ids = new List<int>(Capacity(count));
         var gone = new List<NewObject>();
         for (int n = 0; n < count; n++)
         {
@@ -527,20 +559,20 @@ public static class HistoryFile
             var rotation = ReadVector(i);
             float scale = i.ReadSingle();
             int length = i.ReadInt32();
-            byte[]? bytes = length >= 0 ? i.ReadBytes(length) : null;
+            byte[]? bytes = length >= 0 ? i.ReadExactBytes(length) : null;
             if (world.TryGetValue(Place(prefab, position), out var q) && q.Count > 0)
             {
-                ids[n] = q.Dequeue();
+                ids.Add(q.Dequeue());
             }
             else
             {
                 // Not in the world now (deleted, or added and undone): an undo or redo brings it back.
                 var o = new NewObject(w.NextId(), prefab, position, rotation, scale, Fresh: bytes == null, Raw: bytes);
-                ids[n] = o.Id;
+                ids.Add(o.Id);
                 gone.Add(o);
             }
         }
-        int undoCount = i.ReadInt32(), redoCount = i.ReadInt32();
+        int undoCount = ReadCount(i), redoCount = ReadCount(i);
         var changes = new List<(EditSession.Change C, int RevertOf)>();
         var points = new List<(int X, int Z)[]>();
         var thingIds = new List<int[]>();
@@ -550,48 +582,48 @@ public static class HistoryFile
             var time = new DateTime(i.ReadInt64(), DateTimeKind.Local);
             bool removed = i.ReadBoolean(), applied = i.ReadBoolean();
             int revertOf = i.ReadInt32();
-            int np = i.ReadInt32();
-            var pts = new (int X, int Z)[np];
+            int np = ReadCount(i);
+            var pts = new List<(int X, int Z)>(Capacity(np));
             for (int k = 0; k < np; k++)
             {
-                pts[k] = (i.ReadInt32(), i.ReadInt32());
+                pts.Add((i.ReadInt32(), i.ReadInt32()));
             }
             var before = ReadState(i, np);
             var after = ReadState(i, np);
-            int nz = i.ReadInt32();
-            var zones = new List<(int X, int Z)>();
+            int nz = ReadCount(i);
+            var zones = new List<(int X, int Z)>(Capacity(nz));
             for (int k = 0; k < nz; k++)
             {
                 zones.Add((i.ReadInt32(), i.ReadInt32()));
             }
-            int nt = i.ReadInt32();
-            var things = new (int Index, bool Before, bool After)[nt];
-            int[] tids = new int[nt];
+            int nt = ReadCount(i);
+            var things = new List<(int Index, bool Before, bool After)>(Capacity(nt));
+            var tids = new List<int>(Capacity(nt));
             for (int k = 0; k < nt; k++)
             {
                 int t = i.ReadInt32();
-                tids[k] = ids[t];
-                things[k] = (k, i.ReadBoolean(), i.ReadBoolean());
+                tids.Add(ids[t]);
+                things.Add((k, i.ReadBoolean(), i.ReadBoolean()));
             }
-            int nr = i.ReadInt32();
-            var resets = new (ZoneReset, bool, bool)[nr];
+            int nr = ReadCount(i);
+            var resets = new List<(ZoneReset, bool, bool)>(Capacity(nr));
             for (int k = 0; k < nr; k++)
             {
-                resets[k] = (new ZoneReset(i.ReadInt32(), i.ReadInt32(), i.ReadBoolean(), i.ReadBoolean()), i.ReadBoolean(), i.ReadBoolean());
+                resets.Add((new ZoneReset(i.ReadInt32(), i.ReadInt32(), i.ReadBoolean(), i.ReadBoolean()), i.ReadBoolean(), i.ReadBoolean()));
             }
             // Points are fitted below, once the grid holding all of them is known.
             var c = new EditSession.Change(label, [], before, after, zones)
             {
-                Things = things,
-                Resets = resets,
+                Things = [.. things],
+                Resets = [.. resets],
                 Time = time,
                 Removed = removed,
                 Applied = applied || n < undoCount,
                 Earlier = true,
             };
             changes.Add((c, revertOf));
-            points.Add(pts);
-            thingIds.Add(tids);
+            points.Add([.. pts]);
+            thingIds.Add([.. tids]);
         }
         if (changes.Count == 0)
         {

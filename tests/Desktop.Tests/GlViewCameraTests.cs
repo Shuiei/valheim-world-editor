@@ -11,7 +11,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The 3D view's camera with the keys held: the arrows and W A S D slide the orbit camera, walking and flying go at
 /// their speeds (Shift faster, Space and C up and down, never under the eyes' height), a dungeon's height is kept, and
-/// with no area open the camera calls do nothing.
+/// with no area open the camera calls do nothing; the benchmark's seconds are checked.
 /// </summary>
 public class GlViewCameraTests
 {
@@ -78,6 +78,15 @@ public class GlViewCameraTests
         }
         var to = v.EyePosition;
         return Vector2.Distance(new Vector2(from.X, from.Z), new Vector2(to.X, to.Z));
+    }
+
+    // The turning camera's measure (bench) refuses seconds it could never finish with.
+    [AvaloniaFact]
+    public async Task TheBenchmarkRefusesBadSeconds()
+    {
+        var (_, v) = Open();
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => v.Benchmark(double.NaN));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => v.Benchmark(-1));
     }
 
     [AvaloniaFact]

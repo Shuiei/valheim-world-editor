@@ -100,6 +100,56 @@ public class WorldWriterTests
     }
 
     [Fact]
+    public void AnEditedZoneWhoseTerrainObjectsAreDeletedGetsANewOne()
+    {
+        // The deleted objects were patched (and left out, removal winning) while the zone counted as written: the
+        // read-back check found the zone missing and refused the save.
+        using var w = new TempWorld();
+        var world = w.Load();
+        var t = world.TerrainZones[0];
+        int[] terrain = [.. Enumerable.Range(0, world.ObjectRefs.Count).Where(i => world.ObjectRefs[i].IsTerrain && world.ObjectRefs[i].Zone == (t.ZoneX, t.ZoneZ))];
+        Assert.NotEmpty(terrain);
+
+        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 1.5f, 500)], deleted: terrain);
+
+        Assert.True(r.Saved, r.Message);
+        Assert.Equal(1.5f, WorldSave.Load(w.Dir).TerrainZones.Single(q => q.ZoneX == t.ZoneX && q.ZoneZ == t.ZoneZ).LevelDelta[500], 4);
+    }
+
+    [Fact]
+    public void TheMessageCountsOnlyWhatTheResetCleared()
+    {
+        // The message took the deleted ids' count from the reset's: an id in the reset zone, a repeated id or one past
+        // the list made "objects cleared" too low, or negative.
+        using var w = new TempWorld();
+        var world = w.Load();
+        var t = world.TerrainZones[0];
+        int[] inZone = [.. Enumerable.Range(0, world.ObjectRefs.Count).Where(i => world.ObjectRefs[i].Zone == (t.ZoneX, t.ZoneZ) && world.ObjectRefs[i].Prefab != WorldWriter.TombstonePrefab)];
+        Assert.True(inZone.Length > 1);
+
+        var r = WorldWriter.Save(world, [], deleted: [inZone[0], inZone[0], world.ObjectRefs.Count + 5], resets: [new ZoneReset(t.ZoneX, t.ZoneZ, false, true)]);
+
+        Assert.True(r.Saved, r.Message);
+        Assert.Contains("1 deleted object(s)", r.Message);
+        Assert.Contains($"({inZone.Length - 1} objects cleared)", r.Message);
+    }
+
+    [Fact]
+    public void AnOlderSaveFormatIsNamedFromTheChunkThatHasIt()
+    {
+        // It named the first chunk file's format: "uses save format 41; the writer only supports 41".
+        using var w = new TempWorld();
+        var world = w.Load();
+        Assert.True(world.Chunks.Count > 1);
+        world.Chunks[^1].WorldVersion = 39;
+
+        var r = WorldWriter.Save(world, [Raised(world.TerrainZones[0].ZoneX, world.TerrainZones[0].ZoneZ, 1, 100)]);
+
+        Assert.False(r.Saved);
+        Assert.StartsWith("This world uses save format 39;", r.Message);
+    }
+
+    [Fact]
     public void TerrainTemplatesInAnUnexpectedLayoutAreRefusedBeforeWriting()
     {
         using var w = new TempWorld();

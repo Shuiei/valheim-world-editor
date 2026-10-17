@@ -189,6 +189,9 @@ public class ClaudeToolsWorldTests
     {
         Assert.Equal([(0, 0)], ClaudeTools.ZonesOf(-31, -31, 31, 31));
         Assert.Equal([(-1, 0), (0, 0), (-1, 1), (0, 1)], ClaudeTools.ZonesOf(10, 40, -40, 10));
+        // Cut to the zones given before listing: a rectangle of a million metres lists only those.
+        Assert.Equal([(0, 0), (1, 0)], ClaudeTools.ZonesOf(-1e6f, -1e6f, 1e6f, 1e6f, (0, 0, 1, 0)));
+        Assert.Empty(ClaudeTools.ZonesOf(500, 500, 600, 600, (0, 0, 1, 1)));
     }
 
     // In the Workshop, or outside the area: said. Zones of the area marked (buildings kept), then unmarked; nothing
@@ -235,16 +238,20 @@ public class ClaudeToolsWorldTests
     }
 
     // A world made in the folder given is opened on its map; a name taken there is refused (Check) and nothing
-    // changes.
+    // changes. A folder that is not one of the game's worlds folders is refused.
     [AvaloniaFact]
     public async Task ANewWorldIsMadeAndOpened()
     {
         using var r = new ClaudeRun();
         string root = Path.Combine(Path.GetTempPath(), "vwe-claude-world-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(root);
+        r.T.WorldFolders = () => [root];
         try
         {
-            string made = await r.T.CreateWorld("Fresh", "abc", root);
+            string elsewhere = Path.Combine(root, "elsewhere");
+            Assert.Equal($"{elsewhere} is not one of the game's worlds folders: {root}.", await r.T.CreateWorld("Fresh", "abc", elsewhere));
+            Assert.False(Directory.Exists(elsewhere));
+            string made = await r.T.CreateWorld("Fresh", "abc", root + Path.DirectorySeparatorChar);
             Assert.StartsWith("Made Fresh (seed abc).", made);
             Assert.Equal("Fresh", r.W.World!.World.Name);
             Assert.StartsWith("There is a world called Fresh already in ", await r.T.CreateWorld("Fresh", "xyz", root));

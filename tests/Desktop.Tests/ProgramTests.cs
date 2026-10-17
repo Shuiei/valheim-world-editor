@@ -93,6 +93,23 @@ public sealed class ProgramTests
         Assert.Equal("", output);
     }
 
+    [Fact]
+    public async Task ADataFolderThatCannotBeMadeStopsTheStart()
+    {
+        // Under a file: no folder can be made there.
+        string file = Path.GetTempFileName();
+        try
+        {
+            var (code, _, error) = await Run("--data", Path.Combine(file, "data"));
+            Assert.Equal(2, code);
+            Assert.StartsWith($"ValheimWorldEditor: --data {Path.Combine(file, "data")} cannot be used: ", error.Trim());
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
     // Direct3D (ANGLE) first unless the driver's OpenGL is chosen in Settings; software last either way.
     [Fact]
     public void WindowsDrawsThroughDirect3DUnlessTheDriversOpenGlIsChosen()

@@ -129,6 +129,11 @@ public sealed class GameBundles
     /// </summary>
     private readonly Dictionary<string, string> _cab = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>
+    /// Whether <see cref="_cab"/> holds every bundle's names: once the index is built, or <see cref="EnsureCabs"/> has
+    /// gone through every bundle (some names alone, from bundles read before, do not count).
+    /// </summary>
+    private bool _cabsFull;
+    /// <summary>
     /// Bundles kept open after being read once, by file name.
     /// </summary>
     private readonly Dictionary<string, (BundleFileInstance Bundle, AssetsFileInstance Assets)> _open = [];
@@ -437,6 +442,8 @@ public sealed class GameBundles
                 }
             }
         }
+        // Every bundle's contents were read, and with them its names.
+        _cabsFull = true;
         foreach (var (n, list) in twice)
         {
             res[n] = list.FirstOrDefault(IsNetworked) ?? list[0];
@@ -807,21 +814,30 @@ public sealed class GameBundles
     /// </summary>
     private void EnsureCabs()
     {
-        if (_cab.Count > 0)
+        if (_cabsFull)
         {
             return;
         }
         foreach (var (name, path) in _files)
         {
-            // A file that is not a bundle is passed over, as the index does.
+            // A bundle kept open is read as it is: loading it again opened its file a second time, never closed.
+            bool kept = _open.TryGetValue(name, out var open);
             BundleFileInstance b;
-            try
+            if (kept)
             {
-                b = _am.LoadBundleFile(path, false);
+                b = open.Bundle;
             }
-            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException)
+            else
             {
-                continue;
+                // A file that is not a bundle is passed over, as the index does.
+                try
+                {
+                    b = _am.LoadBundleFile(path, false);
+                }
+                catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException)
+                {
+                    continue;
+                }
             }
             try
             {
@@ -830,14 +846,21 @@ public sealed class GameBundles
                     _cab[d.Name.Split('.')[0]] = name;
                 }
             }
+            // One bundle that cannot be read is said and passed over: the others' names are still taken.
+            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or EndOfStreamException
+                or IndexOutOfRangeException or ArgumentException or NullReferenceException or OverflowException)
+            {
+                Console.WriteLine($"game files: the files in {name} could not be listed ({e.Message}), skipped");
+            }
             finally
             {
-                if (!_open.ContainsKey(name))
+                if (!kept)
                 {
                     _am.UnloadBundleFile(b);
                 }
             }
         }
+        _cabsFull = true;
     }
 
     /// <summary>
@@ -893,7 +916,8 @@ public sealed class GameBundles
     }
 
     /// <summary>
-    /// Data kept out of the object, in a resource file of the same bundle (.resS): meshes, textures.
+    /// Data kept out of the object, in a resource file of the same bundle (.resS): meshes, textures. Empty when there is
+    /// no such file or the range named does not lie inside it.
     /// </summary>
     /// <param name="bundle">The bundle the object is in.</param>
     /// <param name="streamData">The object's m_StreamData field (offset, size, path).</param>
@@ -909,13 +933,26 @@ public sealed class GameBundles
         {
             return [];
         }
-        b.file.GetFileRange(idx, out long start, out _);
+        b.file.GetFileRange(idx, out long start, out long length);
+        if (!InResource(length, offset, size))
+        {
+            Console.WriteLine($"game files: {bundle} names {size} bytes at {offset} of a {length}-byte resource file; not read.");
+            return [];
+        }
         lock (b.file.DataReader)
         {
             b.file.DataReader.Position = start + offset;
             return b.file.DataReader.ReadBytes((int)size);
         }
     }
+
+    /// <summary>
+    /// Whether <paramref name="size"/> bytes at <paramref name="offset"/> lie inside a resource file of
+    /// <paramref name="length"/> bytes, and fit in one array: sizes from a broken file can point anywhere, even into the
+    /// next file.
+    /// </summary>
+    internal static bool InResource(long length, long offset, long size) =>
+        offset >= 0 && size >= 0 && size <= Array.MaxLength && offset <= length - size;
 
     /// <summary>
     /// A GameObject's components that can be read, with their class id and path id.
@@ -1167,6 +1204,80 @@ public sealed class GameBundles
     private static readonly int[] FormatSize = [4, 2, 1, 1, 2, 2, 1, 1, 2, 2, 4, 4];
 
     /// <summary>
+    /// A mesh's vertex layout, for every reader of its vertex data: its channels, and each stream's start in the data
+    /// and bytes per vertex. Streams follow one another, each starting 16-byte aligned; in a stream a vertex's channels
+    /// are side by side.
+    /// </summary>
+    /// <param name="Channels">The channels (stream, offset in the stream's vertex, Unity's VertexFormat, dimension; 0
+    /// for none), in Unity's order: position, normal, tangent, colour, uv0...</param>
+    /// <param name="Count">The number of vertices.</param>
+    /// <param name="Start">Each stream's first byte.</param>
+    /// <param name="Stride">Each stream's bytes per vertex.</param>
+    internal sealed record VertexLayout(List<(int Stream, int Offset, int Format, int Dim)> Channels, int Count, int[] Start, int[] Stride)
+    {
+        /// <summary>Whether a channel's format is one read here (its size is known).</summary>
+        public static bool Known(int format) => format >= 0 && format < FormatSize.Length;
+
+        /// <summary>The layout a mesh's m_VertexData describes (channels of an unknown format take no room).</summary>
+        public static VertexLayout Of(AssetTypeValueField vd)
+        {
+            int n = (int)vd["m_VertexCount"].AsUInt;
+            var channels = vd["m_Channels.Array"].Children.Select(c => (Stream: (int)c["stream"].AsByte, Offset: (int)c["offset"].AsByte, Format: (int)c["format"].AsByte, Dim: c["dimension"].AsByte & 0xF)).ToList();
+            var used = channels.Where(c => c.Dim > 0 && Known(c.Format)).ToList();
+            int streams = used.Select(c => c.Stream).DefaultIfEmpty(0).Max() + 1;
+            int[] stride = new int[streams];
+            foreach (var c in used)
+            {
+                stride[c.Stream] = Math.Max(stride[c.Stream], c.Offset + c.Dim * FormatSize[c.Format]);
+            }
+            int[] start = new int[streams];
+            for (int s = 1; s < streams; s++)
+            {
+                start[s] = (start[s - 1] + stride[s - 1] * n + 15) & ~15;
+            }
+            return new VertexLayout(channels, n, start, stride);
+        }
+
+        /// <summary>
+        /// Channel <paramref name="i"/> of every vertex as <paramref name="want"/> floats each (normalised formats
+        /// scaled to 0..1 or -1..1); null when there is no such channel or its format is not read here. A vertex past
+        /// the end of <paramref name="data"/> stops the reading: it and those after it stay 0.
+        /// </summary>
+        public float[]? Read(byte[] data, int i, int want)
+        {
+            if (i >= Channels.Count || Channels[i].Dim == 0 || !Known(Channels[i].Format))
+            {
+                return null;
+            }
+            var c = Channels[i];
+            int n = Count;
+            float[] res = new float[n * want];
+            for (int v = 0; v < n; v++)
+            {
+                int p = Start[c.Stream] + v * Stride[c.Stream] + c.Offset;
+                if (p + c.Dim * FormatSize[c.Format] > data.Length)
+                {
+                    break;
+                }
+                for (int d = 0; d < Math.Min(want, c.Dim); d++)
+                {
+                    res[v * want + d] = c.Format switch
+                    {
+                        0 => BitConverter.ToSingle(data, p + 4 * d),
+                        1 => (float)BitConverter.ToHalf(data, p + 2 * d),
+                        2 => data[p + d] / 255f,
+                        3 => Math.Max((sbyte)data[p + d] / 127f, -1),
+                        4 => BitConverter.ToUInt16(data, p + 2 * d) / 65535f,
+                        5 => Math.Max(BitConverter.ToInt16(data, p + 2 * d) / 32767f, -1),
+                        _ => 0,
+                    };
+                }
+            }
+            return res;
+        }
+    }
+
+    /// <summary>
     /// A mesh's vertices and triangles, null when there is no such object (a compressed mesh too: Unity's mesh
     /// compression, which some mods' bundles use).
     /// </summary>
@@ -1195,79 +1306,29 @@ public sealed class GameBundles
         {
             return ReadCompressedMesh(name, m);
         }
-        var vd = m["m_VertexData"];
-        int n = (int)vd["m_VertexCount"].AsUInt;
-        byte[] data = vd["m_DataSize"].AsByteArray;
+        var layout = VertexLayout.Of(m["m_VertexData"]);
+        int n = layout.Count;
+        byte[] data = m["m_VertexData.m_DataSize"].AsByteArray;
         if (data.Length == 0 && m["m_StreamData.size"].AsUInt > 0)
         {
             data = StreamBytes(at.Bundle, m["m_StreamData"]);
-        }
-        var channels = vd["m_Channels.Array"].Children.Select(c => (Stream: (int)c["stream"].AsByte, Offset: (int)c["offset"].AsByte, Format: (int)c["format"].AsByte, Dim: c["dimension"].AsByte & 0xF)).ToList();
-        var used = channels.Where(c => c.Dim > 0 && c.Format < FormatSize.Length).ToList();
-        // Streams follow one another, each starting 16-byte aligned; in a stream a vertex's channels are
-        // side by side.
-        int streams = used.Select(c => c.Stream).DefaultIfEmpty(0).Max() + 1;
-        int[] stride = new int[streams];
-        foreach (var c in used)
-        {
-            stride[c.Stream] = Math.Max(stride[c.Stream], c.Offset + c.Dim * FormatSize[c.Format]);
-        }
-        int[] start = new int[streams];
-        for (int s = 1; s < streams; s++)
-        {
-            start[s] = (start[s - 1] + stride[s - 1] * n + 15) & ~15;
-        }
-        float[]? Channel(int i, int want)
-        {
-            if (i >= channels.Count || channels[i].Dim == 0 || channels[i].Format >= FormatSize.Length)
-            {
-                return null;
-            }
-            var c = channels[i];
-            float[] res = new float[n * want];
-            for (int v = 0; v < n; v++)
-            {
-                int p = start[c.Stream] + v * stride[c.Stream] + c.Offset;
-                if (p + c.Dim * FormatSize[c.Format] > data.Length)
-                {
-                    break;
-                }
-                for (int d = 0; d < Math.Min(want, c.Dim); d++)
-                {
-                    res[v * want + d] = c.Format switch
-                    {
-                        0 => BitConverter.ToSingle(data, p + 4 * d),
-                        1 => (float)BitConverter.ToHalf(data, p + 2 * d),
-                        2 => data[p + d] / 255f,
-                        3 => Math.Max((sbyte)data[p + d] / 127f, -1),
-                        4 => BitConverter.ToUInt16(data, p + 2 * d) / 65535f,
-                        5 => Math.Max(BitConverter.ToInt16(data, p + 2 * d) / 32767f, -1),
-                        _ => 0,
-                    };
-                }
-            }
-            return res;
         }
         byte[] ib = m["m_IndexBuffer.Array"].AsByteArray;
         bool wide = m["m_IndexFormat"].AsInt == 1;
         var subs = new List<int[]>();
         foreach (var sm in m["m_SubMeshes.Array"].Children)
         {
-            int first = (int)sm["firstByte"].AsUInt, count = (int)sm["indexCount"].AsUInt, baseV = (int)sm["baseVertex"].AsUInt;
+            // In long: sizes from a broken file can pass int's range.
+            long first = sm["firstByte"].AsUInt, count = sm["indexCount"].AsUInt, baseV = sm["baseVertex"].AsUInt;
             // Triangles only (0); other topologies (lines, points) draw nothing here.
             if (sm["topology"].AsInt != 0 || first + count * (wide ? 4 : 2) > ib.Length)
             {
                 subs.Add([]);
                 continue;
             }
-            int[] idx = new int[count - count % 3];
-            for (int k = 0; k < idx.Length; k++)
-            {
-                idx[k] = baseV + (wide ? (int)BitConverter.ToUInt32(ib, first + 4 * k) : BitConverter.ToUInt16(ib, first + 2 * k));
-            }
-            subs.Add(idx);
+            subs.Add(Triangles(count, n, k => baseV + (wide ? BitConverter.ToUInt32(ib, (int)(first + 4 * k)) : BitConverter.ToUInt16(ib, (int)(first + 2 * k)))));
         }
-        return new Mesh(name, n, Channel(0, 3) ?? new float[n * 3], Channel(1, 3), Channel(4, 2), [.. subs]);
+        return new Mesh(name, n, layout.Read(data, 0, 3) ?? new float[n * 3], layout.Read(data, 1, 3), layout.Read(data, 4, 2), [.. subs]);
     }
 
     /// <summary>
@@ -1310,15 +1371,38 @@ public sealed class GameBundles
         var subs = new List<int[]>();
         foreach (var sm in m["m_SubMeshes.Array"].Children)
         {
-            int first = (int)sm["firstByte"].AsUInt / (wide ? 4 : 2), count = (int)sm["indexCount"].AsUInt, baseV = (int)sm["baseVertex"].AsUInt;
+            long first = sm["firstByte"].AsUInt / (wide ? 4 : 2), count = sm["indexCount"].AsUInt, baseV = sm["baseVertex"].AsUInt;
             if (sm["topology"].AsInt != 0 || first + count > triangles.Length)
             {
                 subs.Add([]);
                 continue;
             }
-            subs.Add([.. triangles.AsSpan(first, count - count % 3).ToArray().Select(i => baseV + i)]);
+            subs.Add(Triangles(count, n, k => baseV + triangles[first + k]));
         }
         return new Mesh(name, n, positions, normals, uv, [.. subs]);
+    }
+
+    /// <summary>
+    /// A submesh's triangles, from its <paramref name="count"/> indices (whole triangles only), leaving out those with a
+    /// corner that is not one of the mesh's <paramref name="vertices"/>: a broken mod mesh's indices can point anywhere.
+    /// </summary>
+    /// <param name="count">How many indices the submesh has.</param>
+    /// <param name="vertices">How many vertices the mesh has.</param>
+    /// <param name="corner">The vertex of the k-th index (base vertex added).</param>
+    internal static int[] Triangles(long count, int vertices, Func<long, long> corner)
+    {
+        int[] tris = new int[count - count % 3];
+        int kept = 0;
+        for (long k = 0; k < tris.Length; k += 3)
+        {
+            long a = corner(k), b = corner(k + 1), c = corner(k + 2);
+            if (a >= 0 && a < vertices && b >= 0 && b < vertices && c >= 0 && c < vertices)
+            {
+                (tris[kept], tris[kept + 1], tris[kept + 2]) = ((int)a, (int)b, (int)c);
+                kept += 3;
+            }
+        }
+        return kept == tris.Length ? tris : tris[..kept];
     }
 
     /// <summary>
@@ -1513,18 +1597,25 @@ public sealed class GameBundles
     private TextureLevel? LoadCrunched(string bundle, AssetTypeValueField t, int maxSize)
     {
         byte[] crn = t["m_StreamData.size"].AsUInt > 0 ? StreamBytes(bundle, t["m_StreamData"]) : t["image data"].AsByteArray;
-        if (!UnityCrunchFormat(Open(bundle).Assets.file.Metadata.UnityVersion) || Crunch.Read(crn) is not { } info)
+        if (!UnityCrunchFormat(Open(bundle).Assets.file.Metadata.UnityVersion))
         {
             return null;
         }
-        int w = info.Width, h = info.Height, level = 0;
-        while (level < info.Levels - 1 && Math.Max(w, h) > maxSize)
+        // The level picked from the header read once (its CRCs cover the whole file).
+        int w = 0, h = 0;
+        int Pick(Crunch.Texture info)
         {
-            w = Math.Max(1, w / 2);
-            h = Math.Max(1, h / 2);
-            level++;
+            int level = 0;
+            (w, h) = (info.Width, info.Height);
+            while (level < info.Levels - 1 && Math.Max(w, h) > maxSize)
+            {
+                w = Math.Max(1, w / 2);
+                h = Math.Max(1, h / 2);
+                level++;
+            }
+            return level;
         }
-        return Crunch.Unpack(crn, level) is { } blocks ? new TextureLevel(t["m_Name"].AsString, info.Dxt5 ? 12 : 10, w, h, blocks) : null;
+        return Crunch.Unpack(crn, Pick) is { } got ? new TextureLevel(t["m_Name"].AsString, got.Info.Dxt5 ? 12 : 10, w, h, got.Blocks) : null;
     }
 
     /// <summary>
@@ -1542,7 +1633,8 @@ public sealed class GameBundles
     }
 
     /// <summary>
-    /// A Texture2DArray's GraphicsFormat as a TextureFormat (the compressed ones read here).
+    /// A Texture2DArray's GraphicsFormat as a TextureFormat (the compressed ones read here, and RGBA8); 0 (not read) for
+    /// any other: the two enums number formats differently (GraphicsFormat 5, R8, is TextureFormat 5, ARGB32).
     /// </summary>
     private static int FromGraphicsFormat(int gf) => gf switch
     {
@@ -1554,7 +1646,7 @@ public sealed class GameBundles
         106 or 107 => 24,
         108 or 109 => 25,
         8 or 4 => 4,
-        _ => gf,
+        _ => 0,
     };
 
     /// <summary>
@@ -1603,7 +1695,7 @@ public sealed class GameBundles
 
     /// <summary>
     /// A shader's programs, null when the object is not a Shader. Throws InvalidDataException when a blob does not
-    /// unpack.
+    /// unpack, or its parts' offsets and lengths do not fit together or in its data.
     /// </summary>
     public ShaderPrograms? LoadShader(Where at)
     {
@@ -1618,14 +1710,30 @@ public sealed class GameBundles
                 int[] platforms = [.. sh["platforms.Array"].Children.Select(c => (int)c.AsUInt)];
                 byte[] blob = sh["compressedBlob.Array"].AsByteArray;
                 var blobs = new Dictionary<int, byte[]>();
+                var offsets = sh["offsets.Array"].Children;
+                var compressed = sh["compressedLengths.Array"].Children;
+                var decompressed = sh["decompressedLengths.Array"].Children;
+                if (offsets.Count < platforms.Length || compressed.Count < platforms.Length || decompressed.Count < platforms.Length)
+                {
+                    throw new InvalidDataException("a shader names more platforms than it has programs for");
+                }
                 for (int pi = 0; pi < platforms.Length; pi++)
                 {
-                    var offs = Numbers(sh["offsets.Array"].Children[pi]).ToList();
-                    var comp = Numbers(sh["compressedLengths.Array"].Children[pi]).ToList();
-                    var full = Numbers(sh["decompressedLengths.Array"].Children[pi]).ToList();
+                    var offs = Numbers(offsets[pi]).ToList();
+                    var comp = Numbers(compressed[pi]).ToList();
+                    var full = Numbers(decompressed[pi]).ToList();
+                    if (comp.Count != offs.Count || full.Count != offs.Count)
+                    {
+                        throw new InvalidDataException("a shader's program parts do not match their lengths");
+                    }
                     using var ms = new MemoryStream();
                     for (int k = 0; k < offs.Count; k++)
                     {
+                        // LZ4 unpacks to at most 255 times its size (and a bit): a larger length is not made room for.
+                        if ((long)offs[k] + comp[k] > blob.Length || full[k] > (long)comp[k] * 255 + 16)
+                        {
+                            throw new InvalidDataException("a shader's program part lies outside its data");
+                        }
                         byte[] outBuf = new byte[full[k]];
                         int got;
                         try
@@ -1639,7 +1747,7 @@ public sealed class GameBundles
                         }
                         if (got != full[k])
                         {
-                            throw new InvalidDataException("the terrain shader's program could not be unpacked");
+                            throw new InvalidDataException("a shader's program could not be unpacked");
                         }
                         ms.Write(outBuf);
                     }

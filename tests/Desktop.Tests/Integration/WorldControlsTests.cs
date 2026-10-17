@@ -465,6 +465,19 @@ public class WorldControlsTests
         Assert.Equal((3, 3), (r.W.View.Scene.ZonesX, r.W.View.Scene.ZonesZ));
     }
 
+    // A path drawn (or anything else unfinished, as for a resize) keeps the area where it is, and says why.
+    [AvaloniaFact]
+    public async Task TheAreaDoesNotMoveWithAPathDrawn()
+    {
+        using var r = new Run();
+        await r.Open();
+        r.W.View.Path.Points.Add(new Vector2(20, 20));
+        await r.W.MoveArea(1, 0);
+        Assert.Equal(0, r.W.View.Scene!.X0);
+        Assert.Equal("The area cannot move now: a path is drawn (apply or clear it).", r.W.MessageText.Text);
+        Assert.Single(r.W.View.Path.Points);
+    }
+
     // The area made bigger (or smaller) on the fly, around the same middle zone, keeping the view and
     // what waits to be saved; not while something unfinished would be lost.
     [AvaloniaFact]

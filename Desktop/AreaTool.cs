@@ -118,7 +118,10 @@ public sealed class AreaTool
         }
     }
 
-    /// <summary>The mouse button released: a box ends there, or is dropped if smaller than a metre.</summary>
+    /// <summary>
+    /// The mouse button released: a box ends there, or is dropped if less than a metre across either way (a line has
+    /// no area to work on).
+    /// </summary>
     public void Up()
     {
         if (!Dragging)
@@ -126,7 +129,7 @@ public sealed class AreaTool
             return;
         }
         Dragging = false;
-        if (Vector2.Distance(Points[0], Points[1]) < 1)
+        if (MathF.Abs(Points[1].X - Points[0].X) < 1 || MathF.Abs(Points[1].Y - Points[0].Y) < 1)
         {
             Clear();
         }
@@ -179,15 +182,71 @@ public sealed class AreaTool
         return best;
     }
 
-    /// <summary>An outline's area (shoelace formula), in square units of its points (m² for grid points).</summary>
+    /// <summary>
+    /// The area <see cref="Inside"/> picks within an outline, in square units of its points (m² for grid points). An
+    /// outline that crosses itself counts each part the even-odd way, as the selection does (a figure eight both
+    /// loops, a crossed star not its middle), where the shoelace formula let crossed parts cancel out.
+    /// </summary>
     public static float Area(List<Vector2> poly)
     {
-        float a = 0;
-        for (int i = 0, j = poly.Count - 1; i < poly.Count; j = i++)
+        int n = poly.Count;
+        // Between the heights where the outline turns or crosses itself, the inside's width changes linearly: the
+        // width halfway up a slab gives its area exactly.
+        List<double> ys = [.. poly.Select(p => (double)p.Y)];
+        for (int i = 0; i < n; i++)
         {
-            a += (poly[j].X + poly[i].X) * (poly[j].Y - poly[i].Y);
+            for (int j = i + 2; j < n; j++)
+            {
+                if (i == 0 && j == n - 1)
+                {
+                    continue;
+                }
+                if (Crossing(poly[i], poly[(i + 1) % n], poly[j], poly[(j + 1) % n]) is double y)
+                {
+                    ys.Add(y);
+                }
+            }
         }
-        return MathF.Abs(a / 2);
+        ys.Sort();
+        double area = 0;
+        List<double> xs = [];
+        for (int k = 0; k + 1 < ys.Count; k++)
+        {
+            double y0 = ys[k], y1 = ys[k + 1];
+            if (y1 <= y0)
+            {
+                continue;
+            }
+            double mid = (y0 + y1) / 2;
+            xs.Clear();
+            for (int i = 0, j = n - 1; i < n; j = i++)
+            {
+                Vector2 a = poly[i], b = poly[j];
+                if ((a.Y > mid) != (b.Y > mid))
+                {
+                    xs.Add(a.X + (mid - a.Y) * (b.X - a.X) / (b.Y - a.Y));
+                }
+            }
+            xs.Sort();
+            for (int i = 0; i + 1 < xs.Count; i += 2)
+            {
+                area += (xs[i + 1] - xs[i]) * (y1 - y0);
+            }
+        }
+        return (float)area;
+    }
+
+    /// <summary>The height at which two edges cross, if they do (not where they only touch end to end).</summary>
+    private static double? Crossing(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
+    {
+        double rx = b.X - a.X, ry = b.Y - a.Y, sx = d.X - c.X, sy = d.Y - c.Y;
+        double den = rx * sy - ry * sx;
+        if (Math.Abs(den) < 1e-12)
+        {
+            return null;
+        }
+        double t = ((c.X - a.X) * sy - (c.Y - a.Y) * sx) / den, u = ((c.X - a.X) * ry - (c.Y - a.Y) * rx) / den;
+        return t is > 0 and < 1 && u is > 0 and < 1 ? a.Y + t * ry : null;
     }
 
     /// <summary>The grid points an action works on.</summary>
@@ -200,6 +259,23 @@ public sealed class AreaTool
     public sealed record Weights(List<Vector2> Poly, int X0, int Z0, int X1, int Z1, List<(int G, float W)> Cells);
 
     /// <summary>
+    /// The selection's own box on the grid: the whole points round its outline, clamped to the block (every point the
+    /// selection weighs is in it).
+    /// </summary>
+    /// <param name="w">The block's width in grid points.</param>
+    /// <param name="h">The block's height in grid points.</param>
+    /// <returns>West, south, east and north grid points; null while there is no selection.</returns>
+    public (int X0, int Z0, int X1, int Z1)? GridBox(int w, int h)
+    {
+        if (Polygon() is not { } poly)
+        {
+            return null;
+        }
+        return (Math.Max(0, (int)MathF.Floor(poly.Min(p => p.X))), Math.Max(0, (int)MathF.Floor(poly.Min(p => p.Y))),
+            Math.Min(w - 1, (int)MathF.Ceiling(poly.Max(p => p.X))), Math.Min(h - 1, (int)MathF.Ceiling(poly.Max(p => p.Y))));
+    }
+
+    /// <summary>
     /// The grid points inside the selection and their weights (the soft edge going inwards).
     /// </summary>
     /// <param name="w">The block's width in grid points.</param>
@@ -208,12 +284,12 @@ public sealed class AreaTool
     /// <returns>The points, or null while there is no selection.</returns>
     public Weights? WeightsIn(int w, int h, Func<int, float>? mask = null)
     {
-        if (Polygon() is not { } poly)
+        if (Polygon() is not { } poly || GridBox(w, h) is not { } box)
         {
             return null;
         }
-        int x0 = Math.Max(0, (int)MathF.Floor(poly.Min(p => p.X)) - 1), x1 = Math.Min(w - 1, (int)MathF.Ceiling(poly.Max(p => p.X)) + 1);
-        int z0 = Math.Max(0, (int)MathF.Floor(poly.Min(p => p.Y)) - 1), z1 = Math.Min(h - 1, (int)MathF.Ceiling(poly.Max(p => p.Y)) + 1);
+        int x0 = Math.Max(0, box.X0 - 1), x1 = Math.Min(w - 1, box.X1 + 1);
+        int z0 = Math.Max(0, box.Z0 - 1), z1 = Math.Min(h - 1, box.Z1 + 1);
         var cells = new List<(int, float)>();
         for (int gz = z0; gz <= z1; gz++)
         {
@@ -285,24 +361,38 @@ public sealed class AreaTool
     /// <param name="amount">Raise and Lower's amount, in metres.</param>
     /// <param name="paint">The colour (four weights, as the paint brushes put down).</param>
     /// <param name="mask">The Mask's weight per grid point (null: none).</param>
-    /// <returns>The grid points changed and the box to redraw.</returns>
-    public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect) Apply(Ground g, Brush b, GroundAction act, float height, float amount, float[] paint, Func<int, float>? mask = null)
+    /// <returns>The grid points changed, the box to redraw, and whether a point reached the game's ±8 m limit.</returns>
+    public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, bool Clamped) Apply(Ground g, Brush b, GroundAction act, float height, float amount, float[] paint, Func<int, float>? mask = null)
     {
         var touched = new List<int>();
         if (WeightsIn(g.W, g.H, mask) is not { } a)
         {
-            return (touched, (0, 0, 0, 0));
+            return (touched, (0, 0, 0, 0), false);
         }
         if (act == GroundAction.Erode)
         {
             var set = new HashSet<int>();
-            var (x0, z0, x1, z1) = Erosion.Area(g, a, b.RestAngle, b.Random, set);
-            return (set.ToList(), (x0 - 1, z0 - 1, x1 + 1, z1 + 1));
+            var ((x0, z0, x1, z1), eroded) = Erosion.Area(g, a, b.RestAngle, b.Random, set);
+            return (set.ToList(), (x0 - 1, z0 - 1, x1 + 1, z1 + 1), eroded);
         }
-        float[] before = new float[g.W * g.H];
-        for (int i = 0; i < before.Length; i++)
+        int rNat = Math.Max(2, Math.Min(8, (int)MathF.Round(b.NoiseSize / 3)));
+        // The heights before the action, for Smooth and Naturalize's blur only: over the selection's box and the
+        // blur's reach round it (every point a blur reads).
+        int reach = act == GroundAction.Smooth ? 3 : act == GroundAction.Natural ? rNat : -1;
+        int bx0 = Math.Max(0, a.X0 - reach), bz0 = Math.Max(0, a.Z0 - reach), bw = 0;
+        float[] before = [];
+        if (reach >= 0)
         {
-            before[i] = g.HeightOf(i);
+            int bx1 = Math.Min(g.W - 1, a.X1 + reach), bz1 = Math.Min(g.H - 1, a.Z1 + reach);
+            bw = bx1 - bx0 + 1;
+            before = new float[bw * (bz1 - bz0 + 1)];
+            for (int z = bz0; z <= bz1; z++)
+            {
+                for (int x = bx0; x <= bx1; x++)
+                {
+                    before[(z - bz0) * bw + x - bx0] = g.HeightOf(z * g.W + x);
+                }
+            }
         }
         float Blur(int p, int r)
         {
@@ -315,15 +405,15 @@ public sealed class AreaTool
                     int x = gx + dx, z = gz + dz;
                     if (x >= 0 && z >= 0 && x < g.W && z < g.H)
                     {
-                        s += before[z * g.W + x];
+                        s += before[(z - bz0) * bw + x - bx0];
                         n++;
                     }
                 }
             }
             return s / n;
         }
-        int rNat = Math.Max(2, Math.Min(8, (int)MathF.Round(b.NoiseSize / 3)));
-        float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
+        float ox = g.OriginX, oz = g.OriginZ;
+        bool clamped = false;
         foreach (var (p, w) in a.Cells)
         {
             int gx = p % g.W, gz = p / g.W;
@@ -336,19 +426,19 @@ public sealed class AreaTool
             switch (act)
             {
                 case GroundAction.Flatten:
-                    g.SetHeight(p, h + (height - h) * w);
+                    clamped |= g.SetHeight(p, h + (height - h) * w);
                     break;
                 case GroundAction.Raise:
-                    g.SetHeight(p, h + amount * w);
+                    clamped |= g.SetHeight(p, h + amount * w);
                     break;
                 case GroundAction.Lower:
-                    g.SetHeight(p, h - amount * w);
+                    clamped |= g.SetHeight(p, h - amount * w);
                     break;
                 case GroundAction.Smooth:
-                    g.SetHeight(p, h + (Blur(p, 3) - h) * w);
+                    clamped |= g.SetHeight(p, h + (Blur(p, 3) - h) * w);
                     break;
                 case GroundAction.Natural:
-                    g.SetHeight(p, h + (Blur(p, rNat) + b.NoiseAmp * b.Noise.Fbm((ox + gx) / b.NoiseSize, (oz + gz) / b.NoiseSize) - h) * w);
+                    clamped |= g.SetHeight(p, h + (Blur(p, rNat) + b.NoiseAmp * b.Noise.Fbm((ox + gx) / b.NoiseSize, (oz + gz) / b.NoiseSize) - h) * w);
                     break;
                 case GroundAction.Restore:
                     if (g.Mod[p] != 0)
@@ -369,12 +459,7 @@ public sealed class AreaTool
                     }
                     break;
                 case GroundAction.Paint:
-                    if (g.PMod[p] == 0)
-                    {
-                        g.Paint[p * 4] = g.Paint[p * 4 + 1] = g.Paint[p * 4 + 2] = 0;
-                        g.Paint[p * 4 + 3] = 1;
-                        g.PMod[p] = 1;
-                    }
+                    g.StartPaint(p);
                     for (int c = 0; c < 4; c++)
                     {
                         g.Paint[p * 4 + c] += (paint[c] - g.Paint[p * 4 + c]) * w;
@@ -382,7 +467,7 @@ public sealed class AreaTool
                     break;
             }
         }
-        return (touched, (a.X0 - 1, a.Z0 - 1, a.X1 + 1, a.Z1 + 1));
+        return (touched, (a.X0 - 1, a.Z0 - 1, a.X1 + 1, a.Z1 + 1), clamped);
     }
 
     /// <summary>

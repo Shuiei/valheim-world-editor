@@ -238,18 +238,7 @@ public static class StandData
     }
 
     /// <summary>An int value by key name, or <paramref name="otherwise"/> when the object has none.</summary>
-    private static int Int(ZdoData z, string key, int otherwise = 0)
-    {
-        int k = StableHash.Of(key);
-        foreach (var (kk, v) in z.IntList)
-        {
-            if (kk == k)
-            {
-                return v;
-            }
-        }
-        return otherwise;
-    }
+    private static int Int(ZdoData z, string key, int otherwise = 0) => z.GetInt(StableHash.Of(key)) ?? otherwise;
 
     /// <summary>A number as invariant text.</summary>
     private static string I(int v) => v.ToString(CultureInfo.InvariantCulture);

@@ -18,6 +18,9 @@ public sealed class FakeBridge : IDisposable
 
     public int Status { get; set; } = 200;
 
+    /// <summary>Whether its status request fails (500) while the other requests are answered.</summary>
+    public bool StatusFails { get; set; }
+
     /// <summary>
     /// How many destroyed objects another mod had made again (found at their place), as the plugin tells.
     /// </summary>
@@ -80,6 +83,10 @@ public sealed class FakeBridge : IDisposable
             Connections.Add(ctx.Request.RemoteEndPoint.Port);
             string body = "";
             int status = ctx.Request.Headers["X-Bridge-Token"] == Token ? Status : 401;
+            if (StatusFails && ctx.Request.Url!.AbsolutePath == "/status")
+            {
+                status = 500;
+            }
             if (status == 200 && ctx.Request.Url!.AbsolutePath == "/status")
             {
                 body = "{\"plugin\":\"0.3.0\",\"world\":\"CITest\",\"players\":0,\"features\":[" + string.Join(",", Features.Select(f => $"\"{f}\"")) + "],\"run\":\"" + Run + "\"}";

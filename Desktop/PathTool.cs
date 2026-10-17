@@ -175,21 +175,17 @@ public sealed class PathTool
             outp.AddRange(p.Select(q => (q, 0)));
             return outp;
         }
-        bool smooth = Curved && p.Count >= 3;
+        if (Curved && p.Count >= 3)
+        {
+            return Lines.CatmullRom(p);
+        }
         for (int i = 0; i < p.Count - 1; i++)
         {
-            Vector2 p0 = p[Math.Max(0, i - 1)], p1 = p[i], p2 = p[i + 1], p3 = p[Math.Min(p.Count - 1, i + 2)];
+            Vector2 p1 = p[i], p2 = p[i + 1];
             int steps = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(p1, p2)));
             for (int k = 0; k < steps; k++)
             {
-                float t = k / (float)steps, t2 = t * t, t3 = t2 * t;
-                if (!smooth)
-                {
-                    outp.Add((p1 + (p2 - p1) * t, i));
-                    continue;
-                }
-                Vector2 Cr(Vector2 a, Vector2 b, Vector2 c, Vector2 d) => 0.5f * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
-                outp.Add((Cr(p0, p1, p2, p3), i));
+                outp.Add((p1 + (p2 - p1) * (k / (float)steps), i));
             }
         }
         outp.Add((p[^1], p.Count - 2));
@@ -303,11 +299,12 @@ public sealed class PathTool
     /// <param name="cave">Cave: the cave worked out before the ground changes; worked out here when not given.</param>
     public (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect, bool Clamped) Apply(Ground g, Brush b, float water, Func<int, float>? mask = null, CavePlan? cave = null)
     {
-        var curve = Curve();
         if (Act == Action.Cave)
         {
             cave ??= PlanCave(g);
         }
+        // A cave follows the line it was planned on: its floors are by that curve's points.
+        var curve = cave?.Curve ?? Curve();
         var touched = new List<int>();
         bool clamped = false;
         if (curve.Count < 2)
@@ -315,16 +312,19 @@ public sealed class PathTool
             return (touched, (0, 0, 0, 0), false);
         }
         float half = Width / 2, soft = Soft, total = Math.Max(Length(curve), 1e-6f);
-        // Natural paths can be up to 45% wider and have ragged edges, so look a bit further out.
-        float reach = Natural ? half * 1.45f + soft + MathF.Max(soft, 2) * 0.6f * 1.6f : half + soft;
+        // The farthest a changed point can be from the line: the widest a natural path gets, its soft edge (or the
+        // half metre a hard edge shares), and the most its ragged edge reaches out; a metre more against rounding.
+        // The box looked through is as wide, so the ragged edge is never cut straight.
+        float edge = soft > 0 ? soft : 0.5f;
+        float cutoff = (Natural ? MathF.Abs(half) * (1 + 0.45f * Noise.FbmBound) + edge + MathF.Max(soft, 2) * 0.6f * Noise.FbmBound : half + edge) + 1;
         float[] cum = new float[curve.Count];
         for (int i = 1; i < curve.Count; i++)
         {
             cum[i] = cum[i - 1] + Vector2.Distance(curve[i].P, curve[i - 1].P);
         }
-        int x0 = Math.Max(1, (int)MathF.Floor(curve.Min(c => c.P.X) - reach)), x1 = Math.Min(g.W - 2, (int)MathF.Ceiling(curve.Max(c => c.P.X) + reach));
-        int z0 = Math.Max(1, (int)MathF.Floor(curve.Min(c => c.P.Y) - reach)), z1 = Math.Min(g.H - 2, (int)MathF.Ceiling(curve.Max(c => c.P.Y) + reach));
-        float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
+        int x0 = Math.Max(1, (int)MathF.Floor(curve.Min(c => c.P.X) - cutoff)), x1 = Math.Min(g.W - 2, (int)MathF.Ceiling(curve.Max(c => c.P.X) + cutoff));
+        int z0 = Math.Max(1, (int)MathF.Floor(curve.Min(c => c.P.Y) - cutoff)), z1 = Math.Min(g.H - 2, (int)MathF.Ceiling(curve.Max(c => c.P.Y) + cutoff));
+        float ox = g.OriginX, oz = g.OriginZ;
         float WorldNoise(float gx, float gz, float scale = 1) => b.Noise.Fbm((ox + gx) / (b.NoiseSize * scale), (oz + gz) / (b.NoiseSize * scale));
         // Smoothing reads the heights from before.
         float[]? before = null;
@@ -344,10 +344,6 @@ public sealed class PathTool
             Action.PaintClear => Brush.PaintOf(BrushTool.PaintClear),
             _ => null,
         };
-        // The farthest a changed point can be from the line: the widest a natural path gets, its soft edge (or the
-        // half metre a hard edge shares), and the most its ragged edge reaches out; a metre more against rounding.
-        float edge = soft > 0 ? soft : 0.5f;
-        float cutoff = (Natural ? MathF.Abs(half) * (1 + 0.45f * Noise.FbmBound) + edge + MathF.Max(soft, 2) * 0.6f * Noise.FbmBound : half + edge) + 1;
         var near = NearestOnLine(curve, x0, z0, x1, z1, cutoff);
         int nw = x1 - x0 + 1;
         for (int gz = z0; gz <= z1; gz++)
@@ -461,12 +457,7 @@ public sealed class PathTool
                         break;
                     }
                     default:
-                        if (g.PMod[p] == 0)
-                        {
-                            g.Paint[p * 4] = g.Paint[p * 4 + 1] = g.Paint[p * 4 + 2] = 0;
-                            g.Paint[p * 4 + 3] = 1;
-                            g.PMod[p] = 1;
-                        }
+                        g.StartPaint(p);
                         for (int c = 0; c < 4; c++)
                         {
                             g.Paint[p * 4 + c] += (colour![c] - g.Paint[p * 4 + c]) * w;
@@ -666,48 +657,10 @@ public sealed class PathTool
     }
 
     /// <summary>The point within 10 px of the mouse, or -1.</summary>
-    public int PointAt(Point at, Func<Vector2, Point?> screen)
-    {
-        int best = -1;
-        double bd = 10;
-        for (int i = 0; i < Points.Count; i++)
-        {
-            if (screen(Points[i]) is { } s && Point.Distance(s, at) < bd)
-            {
-                bd = Point.Distance(s, at);
-                best = i;
-            }
-        }
-        return best;
-    }
+    public int PointAt(Point at, Func<Vector2, Point?> screen) => Lines.PointNear(Points, at, screen);
 
     /// <summary>
     /// The stretch of the line within 8 px of the mouse: the index of the point it starts from, or -1.
     /// </summary>
-    public int SegmentAt(Point at, Func<Vector2, Point?> screen)
-    {
-        var dense = Curve();
-        int best = -1;
-        double bd = 8;
-        for (int i = 1; i < dense.Count; i++)
-        {
-            if (screen(dense[i - 1].P) is not { } a || screen(dense[i].P) is not { } b)
-            {
-                continue;
-            }
-            double dx = b.X - a.X, dy = b.Y - a.Y, l2 = dx * dx + dy * dy;
-            if (l2 < 1e-9)
-            {
-                l2 = 1e-9;
-            }
-            double t = Math.Clamp(((at.X - a.X) * dx + (at.Y - a.Y) * dy) / l2, 0, 1);
-            double d = Point.Distance(at, new Point(a.X + dx * t, a.Y + dy * t));
-            if (d < bd)
-            {
-                bd = d;
-                best = dense[i - 1].Seg;
-            }
-        }
-        return best;
-    }
+    public int SegmentAt(Point at, Func<Vector2, Point?> screen) => Lines.StretchNear(Curve(), at, screen);
 }

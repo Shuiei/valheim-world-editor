@@ -110,37 +110,34 @@ public static class GameTextures
             return;
         }
         var next = new List<(int I, byte R, byte G, byte B)>();
-        for (int it = 0; it < 16; it++)
+        // Each pass looks only at the frontier: the pixels not filled yet next to one the last pass filled (the
+        // first pass, at every one not filled). Any other has no filled neighbour, or got its colour already.
+        List<int> frontier = [.. Enumerable.Range(0, n).Where(i => !filled[i])];
+        int[] queued = new int[n];
+        for (int it = 0; it < 16 && frontier.Count > 0; it++)
         {
             next.Clear();
-            for (int y = 0; y < h; y++)
+            foreach (int i in frontier)
             {
-                for (int x = 0; x < w; x++)
+                int x = i % w, y = i / w;
+                int c = 0, r = 0, g = 0, b = 0;
+                for (int dy = -1; dy <= 1; dy++)
                 {
-                    int i = y * w + x;
-                    if (filled[i])
+                    for (int dx = -1; dx <= 1; dx++)
                     {
-                        continue;
-                    }
-                    int c = 0, r = 0, g = 0, b = 0;
-                    for (int dy = -1; dy <= 1; dy++)
-                    {
-                        for (int dx = -1; dx <= 1; dx++)
+                        int j = ((y + dy + h) % h) * w + (x + dx + w) % w;
+                        if (filled[j])
                         {
-                            int j = ((y + dy + h) % h) * w + (x + dx + w) % w;
-                            if (filled[j])
-                            {
-                                c++;
-                                r += rgba[j * 4];
-                                g += rgba[j * 4 + 1];
-                                b += rgba[j * 4 + 2];
-                            }
+                            c++;
+                            r += rgba[j * 4];
+                            g += rgba[j * 4 + 1];
+                            b += rgba[j * 4 + 2];
                         }
                     }
-                    if (c > 0)
-                    {
-                        next.Add((i, (byte)((r + c / 2) / c), (byte)((g + c / 2) / c), (byte)((b + c / 2) / c)));
-                    }
+                }
+                if (c > 0)
+                {
+                    next.Add((i, (byte)((r + c / 2) / c), (byte)((g + c / 2) / c), (byte)((b + c / 2) / c)));
                 }
             }
             if (next.Count == 0)
@@ -153,6 +150,24 @@ public static class GameTextures
                 rgba[i * 4 + 1] = g;
                 rgba[i * 4 + 2] = b;
                 filled[i] = true;
+            }
+            // The next frontier, each pixel once (the order does not matter: a pass reads only what was filled before it).
+            frontier.Clear();
+            foreach (var (i, _, _, _) in next)
+            {
+                int x = i % w, y = i / w;
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        int j = ((y + dy + h) % h) * w + (x + dx + w) % w;
+                        if (!filled[j] && queued[j] != it + 1)
+                        {
+                            queued[j] = it + 1;
+                            frontier.Add(j);
+                        }
+                    }
+                }
             }
         }
         byte mr = (byte)(sr / opaque), mg = (byte)(sg / opaque), mb = (byte)(sb / opaque);

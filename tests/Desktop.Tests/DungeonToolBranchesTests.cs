@@ -179,6 +179,8 @@ public class DungeonToolBranchesTests
         r.T.ToggleDoor(r.T.Dungeon!, new Dungeons.Joint(0, 1, At, Quaternion.Identity, "nosuchkind", true));
         Assert.Equal(steps, r.S.UndoList.Count);
         Assert.Equal(changes + 1, r.Changes);
+        // Said, not silent (Claude's set_dungeon_door answered as if a door was put in).
+        Assert.Equal("This dungeon has no door for that kind of opening.", r.Said[^1]);
         // Without an edit session the dungeon's rooms are not read, and nothing is toggled or told.
         r.S.Scene.Session = null;
         var d = Assert.Single(r.T.All);

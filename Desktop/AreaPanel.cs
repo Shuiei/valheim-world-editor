@@ -88,6 +88,9 @@ public sealed class AreaPanel
     /// </summary>
     private bool _applying;
     private readonly Func<int, string?> _nameOf;
+
+    /// <summary>The kinds' names in the Replace list, in its order (its entries add a count to them).</summary>
+    private List<string> _fromNames = [];
     /// <summary>Asks a yes/no question (the window's dialog); resetting zones goes on only on true.</summary>
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
     /// <summary>A line for the status bar.</summary>
@@ -179,7 +182,7 @@ public sealed class AreaPanel
     private List<string> _backupPaths = [];
     /// <summary>Asks for another backup folder (the window's folder picker).</summary>
     internal Func<Task<string?>> PickFolder { get; set; } = () => Task.FromResult<string?>(null);
-    /// <summary>The last backup read by <see cref="OpenBackup"/>, kept for the next restore from it.</summary>
+    /// <summary>The last backup read by <see cref="OpenBackup"/>, kept for the next restore from it while its world is shown.</summary>
     private (string Path, WorldSave World, EditStore Edits)? _backup;
 
     // Copy and paste: the window copies, pastes and keeps blueprints.
@@ -357,14 +360,8 @@ public sealed class AreaPanel
             return c;
         }
         TextBlock Help(string t) => new() { Text = t, FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             VerticalAlignment = VerticalAlignment.Top,
             Child = new StackPanel
             {
@@ -418,7 +415,7 @@ public sealed class AreaPanel
                     ApplyButton,
                 },
             },
-        };
+        });
         ShowShape();
         ShowRows();
     }
@@ -475,7 +472,7 @@ public sealed class AreaPanel
         {
             return out_;
         }
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         // Taken once: each Mask snapshot copies the whole ground.
         maskAt ??= chosenKindsOnly ? MaskTest() : null;
         lock (s.Things)
@@ -573,6 +570,11 @@ public sealed class AreaPanel
     {
         Refreshes++;
         _refreshPosted = false;
+        // The backup read last goes with its world: kept only while a world of its seed is shown.
+        if (_backup is { } kept && (_view.Scene?.World is not { } shown || shown.Seed != kept.World.Seed || shown.SeedName != kept.World.SeedName))
+        {
+            ForgetBackup();
+        }
         var poly = Area.Polygon();
         RefreshVolume();
         // Before the selection's lists: the "with" list follows the world, selection or not.
@@ -580,6 +582,7 @@ public sealed class AreaPanel
         if (poly == null)
         {
             Info.Text = Area.Box ? "Drag on the ground to select a box." : "Click points around the area; double-click or Enter closes it. Backspace removes a point, Esc clears.";
+            _fromNames = [];
             FromBox.ItemsSource = Array.Empty<string>();
             foreach (var (k, b) in KindButtons)
             {
@@ -596,7 +599,9 @@ public sealed class AreaPanel
         {
             b.Content = $"{ObjectKinds.Label(k)} {(_view.IsShown(k) ? byKind.GetValueOrDefault(k).ToString() : "hidden")}";
         }
-        var names = inside.GroupBy(i => NameOf(s.Things[i].Prefab)).OrderByDescending(x => x.Count()).Select(x => $"{x.Key} ({x.Count()})").ToList();
+        var kinds = inside.GroupBy(i => NameOf(s.Things[i].Prefab)).OrderByDescending(x => x.Count()).ToList();
+        var names = kinds.Select(x => $"{x.Key} ({x.Count()})").ToList();
+        _fromNames = [.. kinds.Select(x => x.Key)];
         FromBox.ItemsSource = names;
         FromBox.SelectedIndex = FromBox.SelectedItem is string keep && names.Contains(keep) ? names.IndexOf(keep) : names.Count > 0 ? 0 : -1;
         _view.LassoChanged();
@@ -693,8 +698,15 @@ public sealed class AreaPanel
         {
             float[] paint = Brush.PaintOf(Paints[Math.Max(0, PaintBox.SelectedIndex)].Tool)!;
             string name = act == Act.Paint ? $"Paint {Paints[Math.Max(0, PaintBox.SelectedIndex)].Label.ToLowerInvariant()}" : AreaTool.Label(ga);
-            var touched = session.EditGround($"Area: {name}", g => Area.Apply(g, session.Brush, ga, Value(HeightBox), Value(AmountBox), paint, session.MaskNow()));
-            Message?.Invoke($"{name} applied to {touched.Count} point(s).");
+            bool clamped = false;
+            var touched = session.EditGround($"Area: {name}", g =>
+            {
+                var (t, rect, c) = Area.Apply(g, session.Brush, ga, Value(HeightBox), Value(AmountBox), paint, session.MaskNow());
+                clamped = c;
+                return (t, rect);
+            });
+            Message?.Invoke(clamped ? $"{name} applied to {touched.Count} point(s), but some reached the game limit: ground can only move 8 m from its original height (red points)."
+                : $"{name} applied to {touched.Count} point(s).");
             Refresh();
             return;
         }
@@ -721,7 +733,8 @@ public sealed class AreaPanel
             case Act.Replace:
             {
                 var s = _view.Scene!;
-                string? from = (FromBox.SelectedItem as string)?.Split(" (")[0];
+                // By the list's own names: a name holding " (" (a mod's) cannot be cut back out of the entry.
+                string? from = FromBox.SelectedIndex >= 0 && FromBox.SelectedIndex < _fromNames.Count ? _fromNames[FromBox.SelectedIndex] : null;
                 int to = ToBox.SelectedIndex >= 0 && ToBox.SelectedIndex < _creatable.Count ? _creatable[ToBox.SelectedIndex] : 0;
                 if (from == null || to == 0)
                 {
@@ -827,9 +840,10 @@ public sealed class AreaPanel
         List<(int G, float W)> cells;
         int x0, z0, w, h;
         var mask = session.MaskNow();
-        if (Area.WeightsIn(g.W, g.H, mask) is { } a)
+        if (Area.WeightsIn(g.W, g.H, mask) is { } a && Area.GridBox(g.W, g.H) is { } box)
         {
-            (cells, x0, z0, w, h) = (a.Cells, a.X0, a.Z0, a.X1 - a.X0 + 1, a.Z1 - a.Z0 + 1);
+            // Fitted to the selection's own box, not the weights' (one point wider all round).
+            (cells, x0, z0, w, h) = (a.Cells, box.X0, box.Z0, box.X1 - box.X0 + 1, box.Z1 - box.Z0 + 1);
         }
         else
         {
@@ -942,7 +956,7 @@ public sealed class AreaPanel
     private async Task RegrowNature(EditSession session, List<Vector2> poly)
     {
         var s = session.Scene;
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         // Taken once, when the spots are first judged (after the generator ran), not once per spot.
         var maskAt = new Lazy<Func<float, float, bool>>(MaskTest);
         var adds = await Growth.Spots(session, poly.Min(p => p.X) + ox, poly.Min(p => p.Y) + oz, poly.Max(p => p.X) + ox, poly.Max(p => p.Y) + oz,
@@ -1014,6 +1028,9 @@ public sealed class AreaPanel
             return null;
         }
     }
+
+    /// <summary>Lets the backup read last go (its world is left): its world and edits are no longer kept in memory.</summary>
+    internal void ForgetBackup() => _backup = null;
 
     /// <summary>
     /// Puts the ground and the objects of the chosen kinds inside the selection back as they were in a backup (each
@@ -1104,7 +1121,7 @@ public sealed class AreaPanel
         var adds = new List<(NewObject, bool)>();
         if (BackupObjectsBox.IsChecked == true)
         {
-            float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+            float ox = s.OriginX, oz = s.OriginZ;
             // Runestones are left as they are on both sides (a location proxy cannot be copied back). Both sides are
             // picked alike (where the Mask lets through too): an unchanged object picked on one side only would be
             // brought back on top of itself.
@@ -1117,15 +1134,39 @@ public sealed class AreaPanel
                 && MathF.Abs(r.Position.Y - o.Position.Y) < 0.01f && MathF.Abs(r.Position.Z - o.Position.Z) < 0.01f
                 && MathF.Abs(((r.Rotation.Y - o.Rotation.Y) % 360 + 540) % 360 - 180) < 0.6f;
             var kept = new HashSet<int>();
+            var source = bw.SourceReader();
+            // The current objects by prefab and metre cell, in their order: a backup object is matched against the
+            // cells round it only (Same is within a centimetre), the first in that order still free.
+            static (int, int, int) CellOf(WorldScene.Thing t) => (t.Prefab, (int)MathF.Floor(t.Position.X), (int)MathF.Floor(t.Position.Z));
+            var byCell = new Dictionary<(int, int, int), List<int>>();
+            var order = new Dictionary<int, int>();
+            foreach (int i in current)
+            {
+                var key = CellOf(s.Things[i]);
+                (byCell.TryGetValue(key, out var list) ? list : byCell[key] = []).Add(i);
+                order.TryAdd(i, order.Count);
+            }
             foreach (var o in wanted)
             {
-                int r = current.FirstOrDefault(i => !kept.Contains(i) && Same(s.Things[i], o), -1);
+                var (prefab, cx, cz) = CellOf(o);
+                int r = -1;
+                for (int dz = -1; dz <= 1; dz++)
+                {
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        if (byCell.TryGetValue((prefab, cx + dx, cz + dz), out var near)
+                            && near.FirstOrDefault(i => !kept.Contains(i) && Same(s.Things[i], o), -1) is int c and >= 0 && (r < 0 || order[c] < order[r]))
+                        {
+                            r = c;
+                        }
+                    }
+                }
                 if (r >= 0)
                 {
                     kept.Add(r);
                     continue;
                 }
-                byte[] raw = bw.ObjectBytes(o.Id);
+                byte[] raw = bw.ObjectBytes(o.Id, source);
                 var z = ZdoData.Parse(raw);
                 adds.Add((new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, raw), o.Piece));
             }

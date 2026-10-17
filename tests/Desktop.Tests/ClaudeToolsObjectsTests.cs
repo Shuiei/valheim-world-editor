@@ -170,6 +170,11 @@ public class ClaudeToolsObjectsTests
         Assert.Equal(5, replaced.GetProperty("x").GetSingle(), 2);
         Assert.Equal(30, replaced.GetProperty("yaw").GetSingle(), 1);
         Assert.Equal("Claude: replaced 1 with Birch1", r.W.Session!.UndoLabel);
+        // The new one keeps the old one's size (it got none: the prefab's own).
+        var s = r.W.Session!;
+        int big = s.Commit("big", null, [], [(new Editing.NewObject(0, Save.StableHash.Of("Beech1"), new Vector3(8, 30, 8), Vector3.Zero, 2f), false)])[0];
+        int grown = ClaudeRun.J(await r.T.ReplaceObjects([big], "Birch1")).GetProperty("replaced")[0].GetProperty("id").GetInt32();
+        Assert.Equal(2f, s.Scene.Things[grown].Scale);
     }
 
     // A world's object: values set (a portal's tag), changed (taken away) and read back by name; wrong kinds and

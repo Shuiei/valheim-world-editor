@@ -59,7 +59,7 @@ public static class DungeonKit
     public static Material MaterialOf(string? name) => Materials.FirstOrDefault(m => string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase)) ?? Materials[0];
 
     /// <summary>A monster.</summary>
-    /// <param name="Spawner">Its spawner (comes back).</param>
+    /// <param name="Spawner">Its spawner (comes back); the creature's own name when no spawner makes it alone (it then stands once).</param>
     /// <param name="Creature">The creature itself (placed once, can have stars).</param>
     public sealed record Foe(string Spawner, string Creature);
 
@@ -93,7 +93,8 @@ public static class DungeonKit
             ["cloth_hanging_door", "Morkhalla_WallChain1"], [("Coins", 60), ("Amber", 4), ("Flint", 10), ("LeatherScraps", 10)]),
         new("Black Forest", "Stone", "Crypt", "CastleKit_groundtorch_green", "CastleKit_brazier", "Morkhalla_giant_railing_torch",
             [new("Spawner_Skeleton", "Skeleton"), new("Spawner_Greydwarf", "Greydwarf"), new("Spawner_Greydwarf_Shaman", "Greydwarf_Shaman"), new("Spawner_Ghost", "Ghost")],
-            [new("Spawner_Greydwarf_Elite", "Greydwarf_Elite"), new("Spawner_Skeleton", "Skeleton_NoArcher")], new("Spawner_Troll", "Troll"),
+            // No spawner makes the sword skeleton alone (Spawner_Skeleton makes archers too): it stands once.
+            [new("Spawner_Greydwarf_Elite", "Greydwarf_Elite"), new("Skeleton_NoArcher", "Skeleton_NoArcher")], new("Spawner_Troll", "Troll"),
             "TreasureChest_forestcrypt", "Pickable_ForestCryptRandom", "bar_bronze_stack",
             ["Pickable_ForestCryptRemains01", "Pickable_ForestCryptRemains02", "Pickable_ForestCryptRemains03", "Skull1", "LargeBone", "LargeBone_half01", "piece_pot2_cracked"],
             ["cloth_hanging_door", "Morkhalla_WallChain1", "hanging_hairstrands"], [("Coins", 120), ("Amber", 6), ("AmberPearl", 3), ("Ruby", 2), ("SurtlingCore", 3)]),

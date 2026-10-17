@@ -319,7 +319,7 @@ public sealed class MapPage : IDisposable
         EditButton.Click += (_, _) => { if (Spot is var (x, z)) { EditRequested?.Invoke(x, z, Size); } };
         SizeBox.SelectionChanged += (_, _) => ShowChosen();
         SizeBox.Tip("map.size");
-        Map.Picked += (x, z) => Pick((int)MathF.Floor((x + 32) / 64), (int)MathF.Floor((z + 32) / 64));
+        Map.Picked += (x, z) => { var (zx, zz) = Save.ChunkMath.SectorOf(x, z); Pick(zx, zz); };
         Map.Hovered += Hover;
         Map.Status += t => _status.Text = t;
         Map.PiecesRead += () => BuildingsBox.Content = $"Show buildings ({Map.PieceCount:N0} player-built pieces)";
@@ -642,24 +642,13 @@ public sealed class MapPage : IDisposable
     }
 
     /// <summary>
-    /// A biome's name as the game shows it.
-    /// </summary>
-    private static string BiomeName(ValheimGen.Heightmap.Biome b) => b switch
-    {
-        ValheimGen.Heightmap.Biome.BlackForest => "Black Forest",
-        ValheimGen.Heightmap.Biome.AshLands => "Ashlands",
-        ValheimGen.Heightmap.Biome.DeepNorth => "Deep North",
-        _ => b.ToString(),
-    };
-
-    /// <summary>
     /// A zone picked: its name, the area the 3D editor would open around it, and its edits.
     /// </summary>
     public void Pick(int zx, int zz)
     {
         Spot = (zx, zz);
         Target = null;
-        string biome = _session != null ? BiomeName(_session.Terrain.BiomeAt(zx * 64f, zz * 64f)) : "";
+        string biome = _session != null ? NewWorldPage.Name(_session.Terrain.BiomeAt(zx * 64f, zz * 64f)) : "";
         PickTitle.Text = $"Zone {zx}, {zz} · {biome}";
         _pickBox.IsVisible = true;
         ShowChosen();
@@ -686,8 +675,8 @@ public sealed class MapPage : IDisposable
         {
             return;
         }
-        int zx = (int)MathF.Floor((x + 32) / 64), zz = (int)MathF.Floor((z + 32) / 64);
-        Cursor.Text = $"x {x:0}, z {z:0} · zone {zx}, {zz} · {BiomeName(_session.Terrain.BiomeAt(x, z))}";
+        var (zx, zz) = Save.ChunkMath.SectorOf(x, z);
+        Cursor.Text = $"x {x:0}, z {z:0} · zone {zx}, {zz} · {NewWorldPage.Name(_session.Terrain.BiomeAt(x, z))}";
     }
 
     // ---- Search: every object of the world by kind, items in containers, or texts.
@@ -773,7 +762,7 @@ public sealed class MapPage : IDisposable
         var h = _hits[i];
         Map.PinChosen = i;
         Map.LookAt(h.X, h.Z, MathF.Min(Map.MetersPerPixel, 0.6f));
-        int zx = (int)MathF.Floor((h.X + 32) / 64), zz = (int)MathF.Floor((h.Z + 32) / 64);
+        var (zx, zz) = Save.ChunkMath.SectorOf(h.X, h.Z);
         Pick(zx, zz);
         Target = (h.Id, _searchWhat != "kinds");
         PickTitle.Text = $"{h.Name} at {h.X:0}, {h.Z:0} · zone {zx}, {zz}";
@@ -783,12 +772,30 @@ public sealed class MapPage : IDisposable
     /// <summary>
     /// The zone filter as the boxes set it.
     /// </summary>
-    private ZoneFilter Filter()
+    private ZoneFilter Filter() =>
+        new(BiomeButtons.Where(b => b.Value.IsChecked == true).Select(b => b.Key).ToHashSet(), NoBuildBox.IsChecked == true, (int)(DistBox.Value ?? 0),
+            NoEditBox.IsChecked == true, OnlyGenBox.IsChecked == true, Radius(RMinBox).Value, Radius(RMaxBox).Value);
+
+    /// <summary>
+    /// A distance box's metres: blank is no limit (null). A point or the computer's own decimal mark, spaces between
+    /// thousands; Bad when it is not a finite number (it was taken as no limit without a word).
+    /// </summary>
+    private static (float? Value, bool Bad) Radius(TextBox b)
     {
-        static float? Num(TextBox b) => float.TryParse(b.Text?.Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v) ? v : null;
-        return new ZoneFilter(BiomeButtons.Where(b => b.Value.IsChecked == true).Select(b => b.Key).ToHashSet(), NoBuildBox.IsChecked == true, (int)(DistBox.Value ?? 0),
-            NoEditBox.IsChecked == true, OnlyGenBox.IsChecked == true, Num(RMinBox), Num(RMaxBox));
+        string t = string.Concat((b.Text ?? "").Where(c => !char.IsWhiteSpace(c)));
+        if (t.Length == 0)
+        {
+            return (null, false);
+        }
+        const System.Globalization.NumberStyles F = System.Globalization.NumberStyles.Float;
+        return (float.TryParse(t, F, System.Globalization.CultureInfo.InvariantCulture, out float v) || float.TryParse(t, F, System.Globalization.CultureInfo.CurrentCulture, out v))
+            && float.IsFinite(v) ? (v, false) : (null, true);
     }
+
+    /// <summary>What is wrong with the distance boxes, null when nothing.</summary>
+    private string? RadiusProblem() => Radius(RMinBox).Bad || Radius(RMaxBox).Bad
+        ? "The distances from the centre must be numbers of metres (like 1500), or blank for no limit."
+        : null;
 
     /// <summary>
     /// Every zone's counts, read once (in the background) until the world changes; null when no world is shown, or when
@@ -850,6 +857,15 @@ public sealed class MapPage : IDisposable
             return;
         }
         _filtered = true;
+        if (RadiusProblem() is string problem)
+        {
+            // Nothing matches a filter that cannot be read: said, not taken as no limit.
+            Matches = [];
+            Map.Matches = [];
+            ZoneInfo.Text = problem;
+            Map.RequestNextFrameRendering();
+            return;
+        }
         var (zones, objects) = Filter().Match(stats);
         Matches = zones;
         Map.Matches = zones;
@@ -881,7 +897,7 @@ public sealed class MapPage : IDisposable
         ApplyFilter();
         if (Matches.Count == 0)
         {
-            await Tell("No zone matches the filter.");
+            await Tell(RadiusProblem() ?? "No zone matches the filter.");
             return;
         }
         bool live = s.IsLive, ground = GroundBox.IsChecked == true;

@@ -125,6 +125,22 @@ public sealed class GameLookTests : IDisposable
         Assert.Equal(valheim, GameLook.FindValheim(Path.Combine(_home, "nowhere")));
     }
 
+    // Steam's library list that cannot be read (being rewritten, no access): the search goes on without it (it threw).
+    [Fact]
+    public void ASteamLibraryListThatCannotBeReadIsPassedOver()
+    {
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            return;
+        }
+        string vdf = Path.Combine(_home, ".steam", "steam", "steamapps", "libraryfolders.vdf");
+        Directory.CreateDirectory(Path.GetDirectoryName(vdf)!);
+        File.WriteAllText(vdf, "\"libraryfolders\" { }");
+        File.SetUnixFileMode(vdf, UnixFileMode.None);
+
+        Assert.Null(GameLook.FindValheim(null));
+    }
+
     [Fact]
     public async Task AChosenFolderIsTakenOnlyWhenItHoldsTheGame()
     {

@@ -132,9 +132,11 @@ public static partial class GameCatalogues
             {
                 return open.Share();
             }
+            BundleFileInstance? file = null;
             try
             {
-                var b = new Bundle(_am, _am.LoadBundleFile(Path.Combine(_dir, name), false), () => _open.Remove(name));
+                file = _am.LoadBundleFile(Path.Combine(_dir, name), false);
+                var b = new Bundle(_am, file, () => _open.Remove(name));
                 foreach (var f in b.Files)
                 {
                     CabBundle[f.Cab] = name;
@@ -144,6 +146,16 @@ public static partial class GameCatalogues
             }
             catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
             {
+                // A bundle that opened but whose files could not be read is closed again at once, with the files read
+                // from it so far (it stayed open until the end of the scan).
+                if (file != null)
+                {
+                    foreach (var assets in file.loadedAssetsFiles.ToList())
+                    {
+                        _am.UnloadAssetsFile(assets);
+                    }
+                    _am.UnloadBundleFile(file);
+                }
                 return null;
             }
         }
@@ -489,7 +501,7 @@ public static partial class GameCatalogues
 
         /// <summary>
         /// Data kept out of the object, in a resource file of the bundle (.resS): meshes. Empty when the bundle has no
-        /// such resource file.
+        /// such resource file, or the range named does not lie inside it.
         /// </summary>
         public byte[] StreamBytes(AssetTypeValueField streamData)
         {
@@ -498,9 +510,15 @@ public static partial class GameCatalogues
             {
                 return [];
             }
-            _bundle.file.GetFileRange(idx, out long start, out _);
-            _bundle.file.DataReader.Position = start + streamData["offset"].AsLong;
-            return _bundle.file.DataReader.ReadBytes((int)streamData["size"].AsUInt);
+            _bundle.file.GetFileRange(idx, out long start, out long length);
+            long offset = streamData["offset"].AsLong, size = streamData["size"].AsUInt;
+            if (!GameBundles.InResource(length, offset, size))
+            {
+                Console.WriteLine($"game files: a mesh names {size} bytes at {offset} of a {length}-byte resource file; not read.");
+                return [];
+            }
+            _bundle.file.DataReader.Position = start + offset;
+            return _bundle.file.DataReader.ReadBytes((int)size);
         }
 
         /// <summary>
@@ -885,19 +903,14 @@ public static partial class GameCatalogues
     private static (double X, double Y, double Z) Scale((double X, double Y, double Z) a, (double X, double Y, double Z) s) => (a.X * s.X, a.Y * s.Y, a.Z * s.Z);
 
     /// <summary>
-    /// Bytes per component, by Unity's VertexFormat (Float, Float16, UNorm8, SNorm8, UNorm16, SNorm16, UInt8, SInt8,
-    /// UInt16, SInt16, UInt32, SInt32).
-    /// </summary>
-    private static readonly int[] VertexFormatSize = [4, 2, 1, 1, 2, 2, 1, 1, 2, 2, 4, 4];
-
-    /// <summary>
     /// A mesh's vertices (x, y, z each) and each submesh's triangles, as UnityPy reads them (the
     /// submesh's base vertex not added); null when it has no vertex data, or one not read here.
     /// </summary>
     private static (float[] Vertices, List<int[]> Triangles)? MeshData(Bundle b, AssetTypeValueField m)
     {
         var vd = m["m_VertexData"];
-        int n = (int)vd["m_VertexCount"].AsUInt;
+        var layout = GameBundles.VertexLayout.Of(vd);
+        int n = layout.Count;
         byte[] data = vd["m_DataSize"].AsByteArray;
         if (Has(m, "m_StreamData") && m["m_StreamData.path"].AsString.Length > 0)
         {
@@ -907,33 +920,14 @@ public static partial class GameCatalogues
         {
             return null;
         }
-        var channels = vd["m_Channels.Array"].Children.Select(c => (Stream: (int)c["stream"].AsByte, Offset: (int)c["offset"].AsByte, Format: (int)c["format"].AsByte, Dim: c["dimension"].AsByte & 0xF)).ToList();
-        if (channels.Count == 0 || channels[0].Dim < 3 || channels[0].Format > 1 || channels.Any(c => c.Dim > 0 && c.Format >= VertexFormatSize.Length))
+        // Positions as floats or halves only; a channel of a format not read here and the layout would be a guess.
+        var channels = layout.Channels;
+        if (channels.Count == 0 || channels[0].Dim < 3 || channels[0].Format > 1 || channels.Any(c => c.Dim > 0 && !GameBundles.VertexLayout.Known(c.Format)))
         {
             return null;
         }
-        // Streams one after another, each 16-byte aligned; in a stream a vertex's channels side by side.
-        int streams = channels.Max(c => c.Stream) + 1;
-        int[] stride = new int[streams];
-        int[] start = new int[streams];
-        foreach (var c in channels.Where(c => c.Dim > 0))
-        {
-            stride[c.Stream] += c.Dim * VertexFormatSize[c.Format];
-        }
-        for (int s = 1; s < streams; s++)
-        {
-            start[s] = (start[s - 1] + n * stride[s - 1] + 15) & ~15;
-        }
-        var pos = channels[0];
-        float[] vertices = new float[n * 3];
-        for (int v = 0; v < n; v++)
-        {
-            int p = start[pos.Stream] + v * stride[pos.Stream] + pos.Offset;
-            for (int d = 0; d < 3; d++)
-            {
-                vertices[v * 3 + d] = pos.Format == 0 ? BitConverter.ToSingle(data, p + 4 * d) : (float)BitConverter.ToHalf(data, p + 2 * d);
-            }
-        }
+        // The renderer's layout and bounds check (GameBundles): a vertex past the data stays at 0, nothing throws.
+        float[] vertices = layout.Read(data, 0, 3)!;
         byte[] ib = m["m_IndexBuffer.Array"].AsByteArray;
         bool wide = m["m_IndexFormat"].AsInt == 1;
         int count = ib.Length / (wide ? 4 : 2);

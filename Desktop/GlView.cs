@@ -27,6 +27,8 @@ public sealed class GlView : OpenGlControlBase
     private GL _gl = null!;
     /// <summary>Every OpenGL object this view made, deleted with its context (see GlObjects).</summary>
     private GlObjects _own = null!;
+    /// <summary>Its programs' uniform locations, asked once each; made again with the context.</summary>
+    private GlUniforms _u = null!;
     /// <summary>True on OpenGL ES (the shaders get its header).</summary>
     private bool _es;
 
@@ -273,8 +275,6 @@ public sealed class GlView : OpenGlControlBase
     public bool LimitMarks { get => _limit; set { _limit = value; Wake(); } }
     /// <summary>How many wards, crafting stations, flattened places and locations the overlays show.</summary>
     public event Action<Overlays.Built>? OverlaysBuilt;
-    /// <summary>The overlays as last built.</summary>
-    private Overlays.Built? _overlays;
     /// <summary>Each overlay's lines on the graphics card.</summary>
     private readonly Dictionary<Overlays.Layer, (uint Vao, int Count, uint Vbo)> _overlayGl = [];
 
@@ -340,22 +340,21 @@ public sealed class GlView : OpenGlControlBase
             }
         }
         _look = null;
+        // The last area's session is not followed any more: its late events hold its indices, not this scene's.
+        if (_followed is { } old)
+        {
+            old.Changed -= Wake;
+            old.ThingsChanged -= OnThingsChanged;
+            old.ThingsReset -= RefreshNewMarkers;
+            old.ThingsReset -= OnThingsReset;
+        }
+        _followed = scene.Session;
         if (scene.Session != null)
         {
             scene.Session.Changed += Wake;
             scene.Session.ThingsChanged += OnThingsChanged;
             scene.Session.ThingsReset += RefreshNewMarkers;
-            // Read again after a save: new indices, so the selection goes at once (not at the next frame).
-            scene.Session.ThingsReset += () =>
-            {
-                lock (_selection)
-                {
-                    _selection.Clear();
-                }
-                SelectionDone();
-                _thingsReset = true;
-                Wake();
-            };
+            scene.Session.ThingsReset += OnThingsReset;
         }
         Task.Run(() =>
         {
@@ -372,6 +371,23 @@ public sealed class GlView : OpenGlControlBase
         });
         Wake();
     }
+    /// <summary>The session whose changes are followed (the shown scene's), null when none.</summary>
+    private EditSession? _followed;
+
+    /// <summary>
+    /// The area read again (after a save): new indices, so the selection goes at once (not at the next frame).
+    /// </summary>
+    private void OnThingsReset()
+    {
+        lock (_selection)
+        {
+            _selection.Clear();
+        }
+        SelectionDone();
+        _thingsReset = true;
+        Wake();
+    }
+
     /// <summary>The game look's files as read, null until read (or when Valheim was not found).</summary>
     private volatile GameLookGl.Files? _lookFiles;
     /// <summary>The game look set up for this area, null until set up (at a frame).</summary>
@@ -556,14 +572,13 @@ public sealed class GlView : OpenGlControlBase
     private static readonly (Vector3 Min, Vector3 Max) StandInBox = (new Vector3(-0.5f, 0, -0.5f), new Vector3(0.5f, 2, 0.5f));
     /// <summary>Models still being read.</summary>
     private int _pending;
-    /// <summary>The stand-in box's vertex and index buffers.</summary>
-    private uint _boxVbo, _boxEbo;
 
     /// <summary>Sets up the OpenGL calls and the shader programs.</summary>
     protected override void OnOpenGlInit(GlInterface gl)
     {
         _gl = GL.GetApi(gl.GetProcAddress);
         _own = new GlObjects(_gl);
+        _u = new GlUniforms(_gl);
         _es = GlVersion.Type == GlProfileType.OpenGLES;
         _terrainProg = Program(Shaders.TerrainVs, Shaders.TerrainFs);
         _objectProg = Program(Shaders.ObjectVs, Shaders.ObjectFs);
@@ -586,7 +601,7 @@ public sealed class GlView : OpenGlControlBase
         _terrainEbo = _terrainBiomeVbo = _waterVbo = _waterEbo = 0;
         _terrainProg = _objectProg = _waterProg = _lineProg = 0;
         _terrainVao = _terrainIndexCount = _waterVao = _terrainVbo = _terrainExtraVbo = _terrainCutVbo = 0;
-        _boxVbo = _boxEbo = _ghostVbo = 0;
+        _ghostVbo = 0;
         _roomsMade.Forget();
         _locationsMade.Forget();
         _pathVao = _pathVbo = _pathEdgeVao = _pathEdgeVbo = _pathDotVao = _pathDotVbo = 0;
@@ -606,6 +621,7 @@ public sealed class GlView : OpenGlControlBase
         _playersVao = _playersVbo = 0;
         _lowFbo = _lowColor = _lowDepth = 0;
         _lowW = _lowH = 0;
+        _lowFailed = null;
         _batches.Clear();
         // The extensions' shapes went with the context: made again for the next one.
         _shapeBatches.Clear();
@@ -637,7 +653,9 @@ public sealed class GlView : OpenGlControlBase
     /// <summary>A program not yet anyone's (the game look keeps its own).</summary>
     private uint Link(string vs, string fs)
     {
-        string head = _es ? "#version 300 es\nprecision highp float;\nprecision highp int;\n" : "#version 330 core\n";
+        // GLSL ES gives samplers low precision by default: heights read from a texture (the water's uHeight) need
+        // high.
+        string head = _es ? "#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2D;\n" : "#version 330 core\n";
         uint Compile(ShaderType t, string src)
         {
             uint s = _gl.CreateShader(t);
@@ -646,19 +664,35 @@ public sealed class GlView : OpenGlControlBase
             _gl.GetShader(s, ShaderParameterName.CompileStatus, out int ok);
             if (ok == 0)
             {
-                throw new InvalidOperationException($"{t}: {_gl.GetShaderInfoLog(s)}");
+                // What failed goes with the error (a failing game shader would leak them each time it is tried).
+                string log = _gl.GetShaderInfoLog(s);
+                _gl.DeleteShader(s);
+                throw new InvalidOperationException($"{t}: {log}");
             }
             return s;
         }
+        uint v = Compile(ShaderType.VertexShader, vs), f;
+        try
+        {
+            f = Compile(ShaderType.FragmentShader, fs);
+        }
+        catch (InvalidOperationException)
+        {
+            _gl.DeleteShader(v);
+            throw;
+        }
         uint p = _gl.CreateProgram();
-        uint v = Compile(ShaderType.VertexShader, vs), f = Compile(ShaderType.FragmentShader, fs);
         _gl.AttachShader(p, v);
         _gl.AttachShader(p, f);
         _gl.LinkProgram(p);
         _gl.GetProgram(p, ProgramPropertyARB.LinkStatus, out int linked);
         if (linked == 0)
         {
-            throw new InvalidOperationException(_gl.GetProgramInfoLog(p));
+            string log = _gl.GetProgramInfoLog(p);
+            _gl.DeleteProgram(p);
+            _gl.DeleteShader(v);
+            _gl.DeleteShader(f);
+            throw new InvalidOperationException(log);
         }
         _gl.DeleteShader(v);
         _gl.DeleteShader(f);
@@ -667,58 +701,98 @@ public sealed class GlView : OpenGlControlBase
 
     // ---- The ground: one point per metre, normals from the neighbours, colour from the biome.
     /// <summary>Position, normal and colour of rows z0..z1 (9 floats a point).</summary>
-    private static float[] TerrainRows(WorldScene s, int z0, int z1)
+    internal static float[] TerrainRows(WorldScene s, int z0, int z1)
     {
-        int w = s.W, h = s.H;
-        float[] v = new float[w * (z1 - z0 + 1) * 9];
-        float H(int x, int z) => s.Heights[Math.Clamp(z, 0, h - 1) * w + Math.Clamp(x, 0, w - 1)];
-        for (int gz = z0; gz <= z1; gz++)
-        {
-            for (int gx = 0; gx < w; gx++)
-            {
-                int g = gz * w + gx, o = ((gz - z0) * w + gx) * 9;
-                var n = Vector3.Normalize(new Vector3(H(gx - 1, gz) - H(gx + 1, gz), 2f, -(H(gx, gz - 1) - H(gx, gz + 1))));
-                var c = Shaders.BiomeColor(s.Biomes[g]);
-                v[o] = gx - (w - 1) / 2f; v[o + 1] = s.Heights[g]; v[o + 2] = -(gz - (h - 1) / 2f);
-                v[o + 3] = n.X; v[o + 4] = n.Y; v[o + 5] = n.Z;
-                v[o + 6] = c.X; v[o + 7] = c.Y; v[o + 8] = c.Z;
-            }
-        }
+        float[] v = new float[s.W * (z1 - z0 + 1) * 9];
+        TerrainPoints(s, 0, z0, s.W - 1, z1, v);
         return v;
     }
 
-    /// <summary>Mask uv, ocean depth and limit tint of rows z0..z1 (4 floats a point).</summary>
-    private static float[] ExtraRows(WorldScene s, int z0, int z1)
+    /// <summary>Position, normal and colour of the points x0..x1 of rows z0..z1 (9 floats a point), row after row, into v.</summary>
+    internal static void TerrainPoints(WorldScene s, int x0, int z0, int x1, int z1, float[] v)
     {
-        int w = s.W, h = s.H;
-        float[] extra = new float[w * (z1 - z0 + 1) * 4];
-        for (int g = z0 * w, o = 0; g < (z1 + 1) * w; g++, o += 4)
+        int w = s.W, h = s.H, n = x1 - x0 + 1;
+        float H(int x, int z) => s.Heights[Math.Clamp(z, 0, h - 1) * w + Math.Clamp(x, 0, w - 1)];
+        for (int gz = z0; gz <= z1; gz++)
         {
-            extra[o] = (g % w + 0.5f) / w;
-            extra[o + 1] = (g / w + 0.5f) / h;
-            extra[o + 2] = s.OceanDepth[g];
-            extra[o + 3] = s.Limit[g];
+            for (int gx = x0; gx <= x1; gx++)
+            {
+                int g = gz * w + gx, o = ((gz - z0) * n + gx - x0) * 9;
+                var nv = Vector3.Normalize(new Vector3(H(gx - 1, gz) - H(gx + 1, gz), 2f, -(H(gx, gz - 1) - H(gx, gz + 1))));
+                var c = Shaders.BiomeColor(s.Biomes[g]);
+                v[o] = gx - (w - 1) / 2f; v[o + 1] = s.Heights[g]; v[o + 2] = -(gz - (h - 1) / 2f);
+                v[o + 3] = nv.X; v[o + 4] = nv.Y; v[o + 5] = nv.Z;
+                v[o + 6] = c.X; v[o + 7] = c.Y; v[o + 8] = c.Z;
+            }
         }
+    }
+
+    /// <summary>Mask uv, ocean depth and limit tint of rows z0..z1 (4 floats a point).</summary>
+    internal static float[] ExtraRows(WorldScene s, int z0, int z1)
+    {
+        float[] extra = new float[s.W * (z1 - z0 + 1) * 4];
+        ExtraPoints(s, 0, z0, s.W - 1, z1, extra);
         return extra;
     }
 
-    /// <summary>After an edit: the changed rows (and their neighbours, whose normals move) to the graphics card.</summary>
-    private unsafe void UpdateTerrain(WorldScene s, int z0, int z1)
+    /// <summary>Mask uv, ocean depth and limit tint of the points x0..x1 of rows z0..z1 (4 floats a point), into extra.</summary>
+    internal static void ExtraPoints(WorldScene s, int x0, int z0, int x1, int z1, float[] extra)
     {
-        z0 = Math.Max(0, z0 - 1);
-        z1 = Math.Min(s.H - 1, z1 + 1);
-        float[] v = TerrainRows(s, z0, z1), extra = ExtraRows(s, z0, z1);
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _terrainVbo);
-        fixed (float* p = v)
+        int w = s.W, h = s.H, o = 0;
+        for (int gz = z0; gz <= z1; gz++)
         {
-            _gl.BufferSubData(BufferTargetARB.ArrayBuffer, z0 * s.W * 36, (nuint)(v.Length * 4), p);
+            for (int gx = x0; gx <= x1; gx++, o += 4)
+            {
+                int g = gz * w + gx;
+                extra[o] = (gx + 0.5f) / w;
+                extra[o + 1] = (gz + 0.5f) / h;
+                extra[o + 2] = s.OceanDepth[g];
+                extra[o + 3] = s.Limit[g];
+            }
         }
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _terrainExtraVbo);
-        fixed (float* p = extra)
+    }
+
+    /// <summary>The changed ground's vertices and extra values on their way to the graphics card, kept from step to step.</summary>
+    private float[] _rowsBuffer = [], _extraBuffer = [];
+
+    /// <summary>The most grid points whose upload buffers are kept (a 256 m square): larger changes are rare.</summary>
+    internal const int KeptUploadPoints = 256 * 256;
+
+    /// <summary>
+    /// After an edit: the changed points (and their neighbours, whose normals move) to the graphics card, row by row
+    /// (all of a row's points at once when the rectangle is as wide as the area).
+    /// </summary>
+    private unsafe void UpdateTerrain(WorldScene s, (int X0, int Z0, int X1, int Z1) d)
+    {
+        int x0 = Math.Max(0, d.X0 - 1), x1 = Math.Min(s.W - 1, d.X1 + 1);
+        int z0 = Math.Max(0, d.Z0 - 1), z1 = Math.Min(s.H - 1, d.Z1 + 1);
+        int n = x1 - x0 + 1, rows = z1 - z0 + 1;
+        // Kept for brush-sized changes; a bigger one (the whole area read again) gets buffers of its own.
+        float[] vs = _rowsBuffer, extras = _extraBuffer;
+        if (vs.Length < n * rows * 9)
         {
-            _gl.BufferSubData(BufferTargetARB.ArrayBuffer, z0 * s.W * 16, (nuint)(extra.Length * 4), p);
+            (vs, extras) = (new float[n * rows * 9], new float[n * rows * 4]);
+            if (n * rows <= KeptUploadPoints)
+            {
+                (_rowsBuffer, _extraBuffer) = (vs, extras);
+            }
         }
-        _look?.UpdateRows(s, z0, z1);
+        TerrainPoints(s, x0, z0, x1, z1, vs);
+        ExtraPoints(s, x0, z0, x1, z1, extras);
+        // Whole rows are one run in the buffers; a narrower rectangle is a run per row.
+        int runs = n == s.W ? 1 : rows, perRun = n == s.W ? n * rows : n;
+        fixed (float* v = vs, extra = extras)
+        {
+            for (int r = 0; r < runs; r++)
+            {
+                int first = (z0 + r) * s.W + x0;
+                _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _terrainVbo);
+                _gl.BufferSubData(BufferTargetARB.ArrayBuffer, first * 36, (nuint)(perRun * 36), v + r * perRun * 9);
+                _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _terrainExtraVbo);
+                _gl.BufferSubData(BufferTargetARB.ArrayBuffer, first * 16, (nuint)(perRun * 16), extra + r * perRun * 4);
+            }
+        }
+        _look?.UpdateRows(s, x0, z0, x1, z1);
     }
 
     /// <summary>The last area's ground and sea.</summary>
@@ -813,23 +887,7 @@ public sealed class GlView : OpenGlControlBase
         float hw = w / 2f + 400, hh = h / 2f + 400, y = s.Water;
         float[] q = [-hw, y, -hh, hw, y, -hh, hw, y, hh, -hw, y, hh];
         uint[] qi = [0, 2, 1, 0, 3, 2];
-        _waterVao = _own.VertexArray();
-        _gl.BindVertexArray(_waterVao);
-        uint wv = _waterVbo = _own.Buffer();
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, wv);
-        fixed (float* p = q)
-        {
-            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(q.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
-        uint we = _waterEbo = _own.Buffer();
-        _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, we);
-        fixed (uint* p = qi)
-        {
-            _gl.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(qi.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
-        _gl.EnableVertexAttribArray(0);
-        _gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
-        _gl.BindVertexArray(0);
+        (_waterVao, _waterVbo, _waterEbo) = _own.PositionMesh(q, qi);
     }
 
     // ---- Objects: read each kind's model on worker threads; the drawing thread uploads them.
@@ -945,7 +1003,7 @@ public sealed class GlView : OpenGlControlBase
         }
         else if (Mode == ToolMode.Paste && Paste.At is { } pat && Paste.Clip != null)
         {
-            shown = Paste.Ghosts(pat, GridHeight, s.X0 * 64f - 32f, s.Z0 * 64f - 32f);
+            shown = Paste.Ghosts(pat, GridHeight, s.OriginX, s.OriginZ);
         }
         else
         {
@@ -968,8 +1026,8 @@ public sealed class GlView : OpenGlControlBase
             _ghostVbo = _own.Buffer();
         }
         _gl.UseProgram(_objectProg);
-        _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 1f);
-        var u = MaterialUniforms.Of(_gl, _objectProg);
+        _gl.Uniform1(_u.At(_objectProg, "uGhost"), 1f);
+        var u = MaterialUniforms.Of(_u, _objectProg);
         // Ghosts are see-through whole.
         GlBlend.Over(_gl);
         _gl.DepthMask(false);
@@ -995,10 +1053,37 @@ public sealed class GlView : OpenGlControlBase
                 DrawFrom(b, _ghostVbo, data.Length, null, u);
             }
         }
-        _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 0f);
+        _gl.Uniform1(_u.At(_objectProg, "uGhost"), 0f);
         _gl.DepthMask(true);
         _gl.Disable(EnableCap.Blend);
         _gl.BindVertexArray(0);
+    }
+
+    /// <summary>
+    /// Points the bound vertex array's instance matrix (attributes 3 to 6, one 64-byte matrix each) into the bound
+    /// buffer from this byte on.
+    /// </summary>
+    /// <param name="offset">The first matrix's byte in the buffer.</param>
+    private unsafe void PointInstances(long offset)
+    {
+        for (uint c = 0; c < 4; c++)
+        {
+            _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(offset + c * 16));
+        }
+    }
+
+    /// <summary>
+    /// Sets a new vertex array's instance matrix up: attributes 3 to 6 on, one step per instance, pointed at the start
+    /// of the bound buffer.
+    /// </summary>
+    private void SetUpInstances()
+    {
+        for (uint c = 0; c < 4; c++)
+        {
+            _gl.EnableVertexAttribArray(3 + c);
+            _gl.VertexAttribDivisor(3 + c, 1);
+        }
+        PointInstances(0);
     }
 
     /// <summary>
@@ -1022,10 +1107,7 @@ public sealed class GlView : OpenGlControlBase
         if (runs == null)
         {
             _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
-            for (uint c = 0; c < 4; c++)
-            {
-                _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
-            }
+            PointInstances(0);
             _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)count);
         }
         else
@@ -1035,10 +1117,7 @@ public sealed class GlView : OpenGlControlBase
         }
         // The batch's own instances again.
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
-        for (uint c = 0; c < 4; c++)
-        {
-            _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
-        }
+        PointInstances(0);
         b.PointedAt = 0;
     }
 
@@ -1116,8 +1195,8 @@ public sealed class GlView : OpenGlControlBase
             return;
         }
         _gl.UseProgram(_objectProg);
-        _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uGhost"), 0f);
-        var u = MaterialUniforms.Of(_gl, _objectProg);
+        _gl.Uniform1(_u.At(_objectProg, "uGhost"), 0f);
+        var u = MaterialUniforms.Of(_u, _objectProg);
         foreach (bool glass in (ReadOnlySpan<bool>)[false, true])
         {
             if (glass)
@@ -1206,8 +1285,8 @@ public sealed class GlView : OpenGlControlBase
     private readonly record struct MaterialUniforms(int Color, int Cutoff, int HasMap, int Uv, int Blend)
     {
         /// <summary>The locations in this program.</summary>
-        public static MaterialUniforms Of(GL gl, uint program) => new(gl.GetUniformLocation(program, "uColor"), gl.GetUniformLocation(program, "uCutoff"),
-            gl.GetUniformLocation(program, "uHasMap"), gl.GetUniformLocation(program, "uUv"), gl.GetUniformLocation(program, "uBlend"));
+        public static MaterialUniforms Of(GlUniforms u, uint program) => new(u.At(program, "uColor"), u.At(program, "uCutoff"),
+            u.At(program, "uHasMap"), u.At(program, "uUv"), u.At(program, "uBlend"));
     }
 
     /// <summary>
@@ -1516,7 +1595,6 @@ public sealed class GlView : OpenGlControlBase
     /// <summary>Guards the per-thing arrays (boxes, kinds), which the loaders and the drawing thread both use.</summary>
     private readonly Lock _objLock = new();
 
-    /// <summary>A group's instances (and its things' boxes) from where its things are now.</summary>
     /// <summary>The side of the area's cells objects are drawn by (metres): only cells in view are drawn.</summary>
     internal const float CellSize = 128;
     /// <summary>
@@ -1658,12 +1736,16 @@ public sealed class GlView : OpenGlControlBase
         return [.. runs];
     }
 
+    /// <summary>A group's instances (and its things' boxes) from where its things are now.</summary>
     private unsafe void Rebuild(WorldScene s, Group g)
     {
         EnsureCells(s);
         var list = new List<(int Cell, Matrix4x4 M, Vector3 Tint)>();
         var support = _support;
         var previews = _previews;
+        // The largest scale an instance is drawn at (its own, or the model's when it has none): culling reaches as
+        // far as the largest one needs.
+        float rootMost = MathF.Max(g.RootScale.X, MathF.Max(g.RootScale.Y, g.RootScale.Z)), most = 0;
         lock (s.Things)
         {
             lock (_objLock)
@@ -1688,6 +1770,7 @@ public sealed class GlView : OpenGlControlBase
                         int cell = CellOf(s, m.Translation);
                         Grow(_cellBounds, cell, bounds);
                         list.Add((cell, m, support != null && support.TryGetValue(i, out float sv) ? SupportTint(sv) : Vector3.Zero));
+                        most = MathF.Max(most, t.Scale > 0 ? t.Scale : rootMost);
                     }
                 }
             }
@@ -1695,7 +1778,7 @@ public sealed class GlView : OpenGlControlBase
         // By cell, so each cell's instances are one run of the buffer.
         list.Sort((a, b) => a.Cell.CompareTo(b.Cell));
         var cells = Runs([.. list.Select(e => e.Cell)]);
-        float size = g.Box is { } gb ? Vector3.Distance(gb.Min, gb.Max) * MathF.Max(g.RootScale.X, MathF.Max(g.RootScale.Y, g.RootScale.Z)) : 1;
+        float size = g.Box is { } gb ? Vector3.Distance(gb.Min, gb.Max) * (list.Count > 0 ? most : rootMost) : 1;
         var data = new Matrix4x4[list.Count];
         foreach (var (b, pre) in g.Batches)
         {
@@ -1774,10 +1857,7 @@ public sealed class GlView : OpenGlControlBase
             }
             if (pointed != start)
             {
-                for (uint c = 0; c < 4; c++)
-                {
-                    _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)((start * 64L) + (c * 16)));
-                }
+                PointInstances(start * 64L);
                 pointed = start;
             }
             _gl.DrawElementsInstanced(PrimitiveType.Triangles, (uint)b.IndexCount, DrawElementsType.UnsignedInt, (void*)0, (uint)count);
@@ -1886,6 +1966,12 @@ public sealed class GlView : OpenGlControlBase
     private readonly HashSet<string> _claimed = [];
 
     /// <summary>
+    /// The scene's cut grid once the extensions' cuts were marked into it (null: none were, it holds zeros): the next
+    /// rebuild clears it, and only then.
+    /// </summary>
+    private float[]? _cutMarked;
+
+    /// <summary>
     /// The shapes the mods' running extensions draw for the area's things (ModExtensions.ShapesOf), made again: in view
     /// space, one batch per kind of object, colour and sidedness, each a single instance the object passes draw like any
     /// model (see-through ones with the glass). And where they cut the ground (ModExtensions.CutsOf): the grid points
@@ -1909,8 +1995,13 @@ public sealed class GlView : OpenGlControlBase
         {
             s.Cut = new float[s.W * s.H];
         }
-        bool wasCut = Array.Exists(s.Cut, c => c != 0);
-        Array.Clear(s.Cut);
+        // Cleared only when cuts were marked into it (no extension cuts the ground: nothing to go over).
+        bool wasCut = ReferenceEquals(_cutMarked, s.Cut);
+        if (wasCut)
+        {
+            Array.Clear(s.Cut);
+            _cutMarked = null;
+        }
         if (s.World is not { } world || s.Session is not { } session || !ModExtensions.AnyShapes && !ModExtensions.AnyCuts)
         {
             SendCuts(s, wasCut);
@@ -1943,7 +2034,7 @@ public sealed class GlView : OpenGlControlBase
             Vector3 View(Vector3 v, bool worldSpace)
             {
                 var p = worldSpace ? v : t.Position + Vector3.Transform(v * scale, q);
-                return new Vector3(p.X - s.Cx, p.Y, -(p.Z - s.Cz));
+                return ToView(s, p);
             }
             // Grid coordinates of a point on the ground (x, z in the object's frame, or the world's).
             Vector2 Grid(Vector2 p, bool worldSpace)
@@ -1954,6 +2045,7 @@ public sealed class GlView : OpenGlControlBase
             foreach (var cut in ModExtensions.CutsOf(t.Prefab, view, around))
             {
                 GroundCuts.Mark(s.Cut, s.W, s.H, [.. cut.Outline.Select(p => Grid(p, cut.WorldSpace))]);
+                _cutMarked = s.Cut;
             }
             foreach (var shape in ModExtensions.ShapesOf(t.Prefab, view, around))
             {
@@ -2025,12 +2117,7 @@ public sealed class GlView : OpenGlControlBase
             _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
             var one = Matrix4x4.Identity;
             _gl.BufferData(BufferTargetARB.ArrayBuffer, 64, &one, BufferUsageARB.StaticDraw);
-            for (uint c = 0; c < 4; c++)
-            {
-                _gl.EnableVertexAttribArray(3 + c);
-                _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
-                _gl.VertexAttribDivisor(3 + c, 1);
-            }
+            SetUpInstances();
             _gl.BindVertexArray(0);
             _batches.Add(b);
             _shapeBatches.Add(b);
@@ -2043,7 +2130,7 @@ public sealed class GlView : OpenGlControlBase
     /// <param name="wasCut">Whether the ground was cut before this rebuild.</param>
     private unsafe void SendCuts(WorldScene s, bool wasCut)
     {
-        if (_terrainCutVbo == 0 || !wasCut && !Array.Exists(s.Cut, c => c != 0))
+        if (_terrainCutVbo == 0 || !wasCut && !ReferenceEquals(_cutMarked, s.Cut))
         {
             return;
         }
@@ -2116,7 +2203,7 @@ public sealed class GlView : OpenGlControlBase
         var q = Quaternion.CreateFromYawPitchRoll(t.Rotation.Y * D, t.Rotation.X * D, t.Rotation.Z * D);
         q = new Quaternion(-q.X, -q.Y, q.Z, q.W);
         var scale = t.Scale > 0 ? new Vector3(t.Scale) : rootScale;
-        var pos = new Vector3(t.Position.X - s.Cx, t.Position.Y, -(t.Position.Z - s.Cz));
+        var pos = ToView(s, t.Position);
         return Matrix4x4.CreateScale(scale) * Matrix4x4.CreateFromQuaternion(q) * Matrix4x4.CreateTranslation(pos);
     }
 
@@ -2319,12 +2406,7 @@ public sealed class GlView : OpenGlControlBase
         _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, mesh.Ebos[sub]);
         b.InstanceVbo = _own.Buffer();
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
-        for (uint c = 0; c < 4; c++)
-        {
-            _gl.EnableVertexAttribArray(3 + c);
-            _gl.VertexAttribPointer(3 + c, 4, VertexAttribPointerType.Float, false, 64, (void*)(c * 16));
-            _gl.VertexAttribDivisor(3 + c, 1);
-        }
+        SetUpInstances();
         _gl.BindVertexArray(0);
         _batches.Add(b);
         lock (_groups)
@@ -2404,7 +2486,7 @@ public sealed class GlView : OpenGlControlBase
                 Overlays.Built o;
                 lock (s.Things)
                 {
-                    o = _overlays = Overlays.Build(s, s.Modifiers, i => NameOf(s.Things[i].Prefab));
+                    o = Overlays.Build(s, s.Modifiers, i => NameOf(s.Things[i].Prefab));
                 }
                 UploadOverlays(o);
                 Dispatcher.UIThread.Post(() => OverlaysBuilt?.Invoke(o));
@@ -2427,13 +2509,11 @@ public sealed class GlView : OpenGlControlBase
         int pw = Math.Max(1, (int)(Bounds.Width * scaling)), ph = Math.Max(1, (int)(Bounds.Height * scaling));
         // Fewer pixels than the screen's (3D resolution): drawn into a smaller picture, then stretched.
         var (rw, rh) = RenderSize();
-        bool low = rw < pw || rh < ph;
-        if (low)
+        bool low = (rw < pw || rh < ph) && LowResolution(rw, rh);
+        if (!low)
         {
-            LowResolution(rw, rh);
-        }
-        else
-        {
+            // Back to the screen's resolution (or the smaller picture could not be made): its picture goes.
+            DropLowResolution();
             rw = pw;
             rh = ph;
         }
@@ -2480,7 +2560,7 @@ public sealed class GlView : OpenGlControlBase
             }
             if (s.Session?.TakeDirty() is { } d && _terrainVao != 0)
             {
-                UpdateTerrain(s, d.Z0, d.Z1);
+                UpdateTerrain(s, d);
                 // The mountain preview and the overlays stand on the ground as it is now.
                 _previewKey = null;
                 if (!_overlaysDirty)
@@ -2506,29 +2586,29 @@ public sealed class GlView : OpenGlControlBase
             {
                 _gl.Enable(EnableCap.CullFace);
                 _gl.UseProgram(_terrainProg);
-                _gl.UniformMatrix4(_gl.GetUniformLocation(_terrainProg, "uViewProj"), 1, false, (float*)&vp);
-                _gl.Uniform3(_gl.GetUniformLocation(_terrainProg, "uSun"), sun.X, sun.Y, sun.Z);
+                _gl.UniformMatrix4(_u.At(_terrainProg, "uViewProj"), 1, false, (float*)&vp);
+                _gl.Uniform3(_u.At(_terrainProg, "uSun"), sun.X, sun.Y, sun.Z);
             }
             _gl.BindVertexArray(_terrainVao);
             _gl.DrawElements(PrimitiveType.Triangles, _terrainIndexCount, DrawElementsType.UnsignedInt, (void*)0);
 
             _gl.UseProgram(_objectProg);
-            _gl.UniformMatrix4(_gl.GetUniformLocation(_objectProg, "uViewProj"), 1, false, (float*)&vp);
-            _gl.Uniform3(_gl.GetUniformLocation(_objectProg, "uSun"), sun.X, sun.Y, sun.Z);
-            void V3(string n, Vector3 v) => _gl.Uniform3(_gl.GetUniformLocation(_objectProg, n), v.X, v.Y, v.Z);
+            _gl.UniformMatrix4(_u.At(_objectProg, "uViewProj"), 1, false, (float*)&vp);
+            _gl.Uniform3(_u.At(_objectProg, "uSun"), sun.X, sun.Y, sun.Z);
+            void V3(string n, Vector3 v) => _gl.Uniform3(_u.At(_objectProg, n), v.X, v.Y, v.Z);
             V3("uSunColor", GameLookGl.SunColor);
             V3("uAmbient", GameLookGl.Ambient);
             V3("uFogColor", GameLookGl.FogColor);
             V3("uSunFogColor", GameLookGl.SunFogColor);
-            _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uFogDensity"), GameLookGl.FogDensity);
-            _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uFogStart"), GameLookGl.FogStart);
+            _gl.Uniform1(_u.At(_objectProg, "uFogDensity"), GameLookGl.FogDensity);
+            _gl.Uniform1(_u.At(_objectProg, "uFogStart"), GameLookGl.FogStart);
             V3("uEye", eye);
-            var u = MaterialUniforms.Of(_gl, _objectProg);
-            _gl.Uniform1(_gl.GetUniformLocation(_objectProg, "uMap"), 0);
+            var u = MaterialUniforms.Of(_u, _objectProg);
+            _gl.Uniform1(_u.At(_objectProg, "uMap"), 0);
             _gl.ActiveTexture(TextureUnit.Texture0);
             bool seeThrough = _seeThrough;
-            int uSee = _gl.GetUniformLocation(_objectProg, "uSeeThrough");
-            _gl.Uniform2(_gl.GetUniformLocation(_objectProg, "uCut"), CutY != null ? 1f : 0f, CutY ?? 0f);
+            int uSee = _u.At(_objectProg, "uSeeThrough");
+            _gl.Uniform2(_u.At(_objectProg, "uCut"), CutY != null ? 1f : 0f, CutY ?? 0f);
             if (_cellScene == s)
             {
                 SeeCells(vp, eye);
@@ -2585,7 +2665,7 @@ public sealed class GlView : OpenGlControlBase
                     GlBlend.Over(_gl);
                     _gl.DepthMask(false);
                     _gl.UseProgram(_waterProg);
-                    _gl.UniformMatrix4(_gl.GetUniformLocation(_waterProg, "uViewProj"), 1, false, (float*)&vp);
+                    _gl.UniformMatrix4(_u.At(_waterProg, "uViewProj"), 1, false, (float*)&vp);
                     _gl.BindVertexArray(_waterVao);
                     _gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
                     _gl.DepthMask(true);
@@ -2637,19 +2717,24 @@ public sealed class GlView : OpenGlControlBase
     /// <summary>The smaller picture's size in pixels.</summary>
     private int _lowW, _lowH;
 
-    /// <summary>The smaller picture, made again when <paramref name="w"/> × <paramref name="h"/> is not its size.</summary>
-    private void LowResolution(int w, int h)
+    /// <summary>A size the smaller picture could not be made at (incomplete), not tried again; null when none.</summary>
+    private (int W, int H)? _lowFailed;
+
+    /// <summary>
+    /// The smaller picture, made again when <paramref name="w"/> × <paramref name="h"/> is not its size.
+    /// </summary>
+    /// <returns>False when the graphics card does not take it (incomplete; logged once a size): draw at full size.</returns>
+    private bool LowResolution(int w, int h)
     {
         if (_lowFbo != 0 && w == _lowW && h == _lowH)
         {
-            return;
+            return true;
         }
-        if (_lowFbo != 0)
+        if (_lowFailed == (w, h))
         {
-            _own.DeleteFramebuffer(_lowFbo);
-            _own.DeleteRenderbuffer(_lowColor);
-            _own.DeleteRenderbuffer(_lowDepth);
+            return false;
         }
+        DropLowResolution();
         (_lowW, _lowH) = (w, h);
         _lowFbo = _own.Framebuffer();
         _lowColor = _own.Renderbuffer();
@@ -2662,11 +2747,35 @@ public sealed class GlView : OpenGlControlBase
         _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _lowFbo);
         _gl.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, RenderbufferTarget.Renderbuffer, _lowColor);
         _gl.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, _lowDepth);
+        var status = _gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
+        if (status != GLEnum.FramebufferComplete)
+        {
+            Console.Error.WriteLine($"The {w}×{h} picture for a lower 3D resolution is incomplete ({status}): drawn at full resolution.");
+            DropLowResolution();
+            _lowFailed = (w, h);
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>Deletes the smaller picture, if there is one.</summary>
+    private void DropLowResolution()
+    {
+        if (_lowFbo == 0)
+        {
+            return;
+        }
+        _own.DeleteFramebuffer(_lowFbo);
+        _own.DeleteRenderbuffer(_lowColor);
+        _own.DeleteRenderbuffer(_lowDepth);
+        _lowFbo = _lowColor = _lowDepth = 0;
+        _lowW = _lowH = 0;
     }
 
     /// <summary>Counts a frame for the frame rate and the log, and makes a report twice a second.</summary>
     private void Measure(long now, double work, bool camMoved, int pw, int ph)
     {
+        Interlocked.Exchange(ref _lastFrameAt, now);
         _frames.Add((now, work));
         while (_frames.Count > 0 && now - _frames[0].At > 1000)
         {
@@ -2733,7 +2842,8 @@ public sealed class GlView : OpenGlControlBase
             {
                 _yaw += 0.01f;
             }
-            if (now - bench.From > bench.Seconds * 1000)
+            // Two frames at least, apart in time: the gaps between frames and the rate need them.
+            if (bench.Frames.Count >= 2 && now > bench.From && now - bench.From > bench.Seconds * 1000)
             {
                 _bench = null;
                 var gaps = bench.Frames.Zip(bench.Frames.Skip(1), (a, b) => b - a).OrderBy(g => g).ToList();
@@ -2760,8 +2870,13 @@ public sealed class GlView : OpenGlControlBase
     private volatile Bench? _bench;
 
     /// <summary>The camera turns on its own for this many seconds; the frame rates come back.</summary>
+    /// <exception cref="ArgumentOutOfRangeException">The seconds are negative or not a number.</exception>
     internal Task<string> Benchmark(double seconds)
     {
+        if (!double.IsFinite(seconds) || seconds < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "the seconds must be 0 or more");
+        }
         var b = new Bench { Seconds = seconds };
         _bench = b;
         Wake();
@@ -2860,8 +2975,69 @@ public sealed class GlView : OpenGlControlBase
         {
             return;
         }
-        int gx = Math.Clamp((int)MathF.Round(_target.X + (s.W - 1) / 2f), 0, s.W - 1), gz = Math.Clamp((int)MathF.Round(-_target.Z + (s.H - 1) / 2f), 0, s.H - 1);
-        _target.Y = Math.Max(s.Heights[gz * s.W + gx], s.Water);
+        _target.Y = GroundOrWater(s, _target);
+    }
+
+    /// <summary>The ground's height at the grid point nearest a view-space point (held to the area), or the sea's when higher.</summary>
+    /// <param name="s">The area.</param>
+    /// <param name="v">The point, in view space.</param>
+    private static float GroundOrWater(WorldScene s, Vector3 v)
+    {
+        int gx = Math.Clamp((int)MathF.Round(v.X + (s.W - 1) / 2f), 0, s.W - 1), gz = Math.Clamp((int)MathF.Round(-v.Z + (s.H - 1) / 2f), 0, s.H - 1);
+        return Math.Max(s.Heights[gz * s.W + gx], s.Water);
+    }
+
+    /// <summary>
+    /// The button let go (or the pointer lost): ends what the press started (a path, area, place, select drag or a
+    /// brush stroke) and the view's sliding; a click (not a drag) in the View tool picks the object under the pointer.
+    /// Nothing when nothing is held.
+    /// </summary>
+    /// <param name="at">Where the pointer is, on the surface.</param>
+    /// <param name="size">The surface's size.</param>
+    /// <param name="mods">The keys held.</param>
+    /// <param name="click">Whether it is a real release, which may pick (not a lost pointer).</param>
+    private void Up(Point at, Size size, KeyModifiers mods, bool click)
+    {
+        if (_pathDown)
+        {
+            _pathDown = false;
+            Path.Up();
+        }
+        if (_areaDown)
+        {
+            _areaDown = false;
+            Area.Up();
+        }
+        if (_placeDown)
+        {
+            _placeDown = false;
+            Place?.Up(at, size);
+        }
+        if (_selectDown)
+        {
+            _selectDown = false;
+            SelectTool.Up(at, size, mods.HasFlag(KeyModifiers.Shift) || Ctrl(mods));
+            // A look queued by a move just before the press was dropped while the button was down. The handle
+            // under the pointer is found again first: the drag's moves did not look for it, and over a handle no
+            // object is outlined.
+            SelectTool.Hover(at, size);
+            QueueHoverPick();
+        }
+        else if (_brushDown)
+        {
+            _brushDown = false;
+            string message = Scene?.Session?.EndStroke() ?? "";
+            StrokeEnded?.Invoke(message);
+        }
+        else if (click && Mode == ToolMode.View && !Panning && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
+        {
+            Pick(at, size, mods.HasFlag(KeyModifiers.Shift) || Ctrl(mods), mods.HasFlag(KeyModifiers.Shift) && !Ctrl(mods));
+        }
+        _pressAt = null;
+        _dragFrom = null;
+        _pickSwallow = false;
+        Panning = false;
+        Wake();
     }
 
     /// <summary>
@@ -2882,7 +3058,7 @@ public sealed class GlView : OpenGlControlBase
             _pressAt = p.Position;
             _dragFrom = p.Position;
             _dragButton = p.Properties.PointerUpdateKind;
-            _pointer = p.Position;
+            _pointer = _heldAt = p.Position;
             _surfaceSize = surface.Bounds.Size;
             e.Pointer.Capture(surface);
             // The eyedropper waits: this click is its, not the tool's (nor is the release).
@@ -3035,53 +3211,16 @@ public sealed class GlView : OpenGlControlBase
                 e.Pointer.Capture(null);
                 return;
             }
-            // A left click (not a drag) picks the object under the pointer.
-            var at = e.GetPosition(surface);
-            if (_pathDown)
-            {
-                _pathDown = false;
-                Path.Up();
-            }
-            if (_areaDown)
-            {
-                _areaDown = false;
-                Area.Up();
-            }
-            if (_placeDown)
-            {
-                _placeDown = false;
-                Place?.Up(at, surface.Bounds.Size);
-            }
-            if (_selectDown)
-            {
-                _selectDown = false;
-                SelectTool.Up(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || Ctrl(e.KeyModifiers));
-                // A look queued by a move just before the press was dropped while the button was down. The handle
-                // under the pointer is found again first: the drag's moves did not look for it, and over a handle no
-                // object is outlined.
-                SelectTool.Hover(at, surface.Bounds.Size);
-                QueueHoverPick();
-            }
-            else if (_brushDown)
-            {
-                _brushDown = false;
-                string message = Scene?.Session?.EndStroke() ?? "";
-                StrokeEnded?.Invoke(message);
-            }
-            else if (Mode == ToolMode.View && !Panning && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
-            {
-                Pick(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || Ctrl(e.KeyModifiers),
-                    e.KeyModifiers.HasFlag(KeyModifiers.Shift) && !Ctrl(e.KeyModifiers));
-            }
-            _pressAt = null;
-            _dragFrom = null;
-            Panning = false;
+            Up(e.GetPosition(surface), surface.Bounds.Size, e.KeyModifiers, click: true);
             e.Pointer.Capture(null);
-            Wake();
         };
+        // The pointer taken away mid-drag (the system's capture ended: a dialog, another window): what was held ends
+        // where the pointer last was, as a release there (no click), so no stroke or drag keeps going until the next
+        // click.
+        surface.PointerCaptureLost += (_, _) => Up(_heldAt, surface.Bounds.Size, KeyModifiers.None, click: false);
         surface.PointerMoved += (_, e) =>
         {
-            _pointer = e.GetPosition(surface);
+            _pointer = _heldAt = e.GetPosition(surface);
             _surfaceSize = surface.Bounds.Size;
             if (_pathDown)
             {
@@ -3288,7 +3427,7 @@ public sealed class GlView : OpenGlControlBase
         {
             return;
         }
-        Vector3 V(Vector3 w) => new(w.X - s.Cx, w.Y, -(w.Z - s.Cz));
+        Vector3 V(Vector3 w) => ToView(s, w);
         // Free openings: a square across each, 2 m wide, 3 m high, standing on its floor point.
         var ends = new List<float>();
         var hovered = new List<float>();
@@ -3364,6 +3503,9 @@ public sealed class GlView : OpenGlControlBase
         }
     }
 
+    /// <summary>A box's twelve edges, as pairs of corners (corner k: bit 0 x, bit 1 y, bit 2 z, set: the high side).</summary>
+    private static readonly (int A, int B)[] BoxEdges = [(0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7)];
+
     /// <summary>
     /// The twelve edges of a turned box (centre, half size at least 25 cm, turn) as line pairs, through
     /// <paramref name="view"/>.
@@ -3372,7 +3514,7 @@ public sealed class GlView : OpenGlControlBase
     {
         Vector3 h = new(Math.Max(box.H.X, 0.25f), Math.Max(box.H.Y, 0.25f), Math.Max(box.H.Z, 0.25f));
         Vector3 Corner(int k) => view(box.C + Vector3.Transform(new Vector3((k & 1) == 0 ? -h.X : h.X, (k & 2) == 0 ? -h.Y : h.Y, (k & 4) == 0 ? -h.Z : h.Z), box.R));
-        foreach (var (a, b) in new[] { (0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7) })
+        foreach (var (a, b) in BoxEdges)
         {
             var p = Corner(a);
             var q = Corner(b);
@@ -3427,8 +3569,7 @@ public sealed class GlView : OpenGlControlBase
         {
             return null;
         }
-        float x = g.X - (s.W - 1) / 2f, z = -(g.Y - (s.H - 1) / 2f);
-        var q = Vector4.Transform(new Vector4(x, Picking.HeightAt(s, x, z) + lift, z, 1), _lastViewProj);
+        var q = Vector4.Transform(new Vector4(OnGround(s, g.X, g.Y, lift), 1), _lastViewProj);
         if (q.W <= 0)
         {
             return null;
@@ -3443,7 +3584,7 @@ public sealed class GlView : OpenGlControlBase
     internal float GridHeight(Vector2 g)
     {
         var s = Scene;
-        return s == null ? 0 : Picking.HeightAt(s, g.X - (s.W - 1) / 2f, -(g.Y - (s.H - 1) / 2f));
+        return s == null ? 0 : OnGround(s, g.X, g.Y, 0).Y;
     }
     /// <summary>The left button went down with the Select tool.</summary>
     private bool _selectDown;
@@ -3456,8 +3597,8 @@ public sealed class GlView : OpenGlControlBase
         {
             return null;
         }
-        float wx = s.X0 * 64f - 32f + g.X, wz = s.Z0 * 64f - 32f + g.Z;
-        return new Vector3(wx, Picking.HeightAt(s, g.X - (s.W - 1) / 2f, -(g.Z - (s.H - 1) / 2f)), wz);
+        float wx = s.OriginX + g.X, wz = s.OriginZ + g.Z;
+        return new Vector3(wx, OnGround(s, g.X, g.Z, 0).Y, wz);
     }
 
     /// <summary>Where the camera was at the last frame, in view space.</summary>
@@ -3481,9 +3622,8 @@ public sealed class GlView : OpenGlControlBase
         }
         lock (_camLock)
         {
-            var t = new Vector3(x - s.Cx, 0, -(z - s.Cz));
-            int gx = Math.Clamp((int)MathF.Round(t.X + (s.W - 1) / 2f), 0, s.W - 1), gz = Math.Clamp((int)MathF.Round(-t.Z + (s.H - 1) / 2f), 0, s.H - 1);
-            t.Y = height ?? Math.Max(s.Heights[gz * s.W + gx], s.Water);
+            var t = ToView(s, new Vector3(x, 0, z));
+            t.Y = height ?? GroundOrWater(s, t);
             _target = t;
             _yaw = yawDegrees * MathF.PI / 180;
             _pitch = Math.Clamp(pitchDegrees * MathF.PI / 180, 0.05f, 1.55f);
@@ -3501,7 +3641,7 @@ public sealed class GlView : OpenGlControlBase
         }
         lock (_camLock)
         {
-            _target = new Vector3(world.X - s.Cx, world.Y, -(world.Z - s.Cz));
+            _target = ToView(s, world);
             _distance = distance;
         }
         Wake();
@@ -3530,7 +3670,7 @@ public sealed class GlView : OpenGlControlBase
             lock (_camLock)
             {
                 (_yaw, _pitch, _distance) = (yaw, pitch, distance);
-                _target = new Vector3(world.X - s.Cx, world.Y, -(world.Z - s.Cz));
+                _target = ToView(s, world);
             }
             Wake();
         }
@@ -3559,7 +3699,7 @@ public sealed class GlView : OpenGlControlBase
         void Seg(Vector3 p, Vector3 q) => data.AddRange([p.X, p.Y, p.Z, q.X, q.Y, q.Z]);
         foreach (var (_, w) in players)
         {
-            var c = new Vector3(w.X - s.Cx, w.Y, -(w.Z - s.Cz));
+            var c = ToView(s, w);
             for (int i = 0; i < 12; i++)
             {
                 float a0 = i * MathF.Tau / 12, a1 = (i + 1) * MathF.Tau / 12;
@@ -3623,7 +3763,7 @@ public sealed class GlView : OpenGlControlBase
                 {
                     continue;
                 }
-                sum += new Vector3(t.Position.X - s.Cx, t.Position.Y, -(t.Position.Z - s.Cz));
+                sum += ToView(s, t.Position);
                 n++;
             }
         }
@@ -3645,10 +3785,6 @@ public sealed class GlView : OpenGlControlBase
         if (GizmoAt() is not var (c, scale))
         {
             return;
-        }
-        if (_lineProg == 0)
-        {
-            _lineProg = Program(Shaders.LineVs, Shaders.LineFs);
         }
         if (_gizmoGl.Count == 0)
         {
@@ -3672,9 +3808,7 @@ public sealed class GlView : OpenGlControlBase
         _gl.Disable(EnableCap.DepthTest);
         _gl.Disable(EnableCap.CullFace);
         GlBlend.Over(_gl);
-        _gl.UseProgram(_lineProg);
-        _gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&m);
-        int uColor = _gl.GetUniformLocation(_lineProg, "uColor");
+        int uColor = UseLineProgram(m);
         var hot = SelectTool.HotHandle;
         foreach (var (h, (vao, count)) in _gizmoGl)
         {
@@ -3703,6 +3837,12 @@ public sealed class GlView : OpenGlControlBase
     public event Action<string>? StrokeEnded;
     /// <summary>Where the pointer is over the view, null when it is outside.</summary>
     private Point? _pointer;
+
+    /// <summary>
+    /// Where the pointer was last seen over the surface (kept when it leaves): where a drag ends when the pointer is
+    /// taken away.
+    /// </summary>
+    private Point _heldAt;
     /// <summary>The size of the surface taking the mouse, in its own units.</summary>
     private Size _surfaceSize;
     /// <summary>A brush stroke is on (the left button held).</summary>
@@ -3728,6 +3868,28 @@ public sealed class GlView : OpenGlControlBase
         }
         var p = o + d * t;
         return (p.X + (s.W - 1) / 2f, -p.Z + (s.H - 1) / 2f);
+    }
+
+    /// <summary>A world point (x east, height, z north) in view space: from the area's middle, north as -z.</summary>
+    /// <param name="s">The area.</param>
+    /// <param name="world">The world point.</param>
+    private static Vector3 ToView(WorldScene s, Vector3 world) => new(world.X - s.Cx, world.Y, -(world.Z - s.Cz));
+
+    /// <summary>A grid point of the area (x east, z north) in view space: from the area's middle, north as -z.</summary>
+    /// <param name="s">The area.</param>
+    /// <param name="gx">The grid x.</param>
+    /// <param name="gz">The grid z.</param>
+    private static (float X, float Z) GridToView(WorldScene s, float gx, float gz) => (gx - (s.W - 1) / 2f, -(gz - (s.H - 1) / 2f));
+
+    /// <summary>A grid point of the area in view space, on the ground there and lifted this many metres.</summary>
+    /// <param name="s">The area.</param>
+    /// <param name="gx">The grid x.</param>
+    /// <param name="gz">The grid z.</param>
+    /// <param name="lift">Metres above the ground.</param>
+    private static Vector3 OnGround(WorldScene s, float gx, float gz, float lift)
+    {
+        var (x, z) = GridToView(s, gx, gz);
+        return new Vector3(x, Picking.HeightAt(s, x, z) + lift, z);
     }
 
     /// <summary>The ground's height at a world point.</summary>
@@ -3801,10 +3963,6 @@ public sealed class GlView : OpenGlControlBase
         {
             return;
         }
-        if (_lineProg == 0)
-        {
-            _lineProg = Program(Shaders.LineVs, Shaders.LineFs);
-        }
         if (vao == 0)
         {
             vao = _own.VertexArray();
@@ -3820,9 +3978,7 @@ public sealed class GlView : OpenGlControlBase
             _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 4), p, BufferUsageARB.DynamicDraw);
         }
         _gl.Disable(EnableCap.DepthTest);
-        _gl.UseProgram(_lineProg);
-        _gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
-        _gl.Uniform4(_gl.GetUniformLocation(_lineProg, "uColor"), color.X, color.Y, color.Z, color.W);
+        _gl.Uniform4(UseLineProgram(vp), color.X, color.Y, color.Z, color.W);
         _gl.BindVertexArray(vao);
         if (blend)
         {
@@ -3865,7 +4021,7 @@ public sealed class GlView : OpenGlControlBase
                     var t = s.Things[i];
                     if (t.Id < 0 && !t.Gone && i < _kinds.Length && _shown[(int)_kinds[i]] && !InGame(t.Id))
                     {
-                        list.Add(new Vector3(t.Position.X - s.Cx, t.Position.Y + 0.4f, -(t.Position.Z - s.Cz)));
+                        list.Add(ToView(s, t.Position + new Vector3(0, 0.4f, 0)));
                     }
                 }
             }
@@ -3996,7 +4152,7 @@ public sealed class GlView : OpenGlControlBase
                     {
                         c = colours[t.Prefab] = k == ObjectKind.Nests ? NestColour : SpawnColour(Terrain.PrefabCatalog.SpawnOf(t.Prefab)?.Respawns == true);
                     }
-                    found.Add((k, new Vector3(t.Position.X - s.Cx, t.Position.Y + 2.4f, -(t.Position.Z - s.Cz)), c));
+                    found.Add((k, ToView(s, t.Position + new Vector3(0, 2.4f, 0)), c));
                 }
             }
         }
@@ -4111,10 +4267,10 @@ public sealed class GlView : OpenGlControlBase
         // The dot's soft edge blends over what is under it.
         GlBlend.Over(_gl);
         _gl.UseProgram(_markProg);
-        _gl.UniformMatrix4(_gl.GetUniformLocation(_markProg, "uViewProj"), 1, false, (float*)&vp);
-        _gl.Uniform4(_gl.GetUniformLocation(_markProg, "uColor"), 0x5d / 255f, 1, 0x8a / 255f, 1);
+        _gl.UniformMatrix4(_u.At(_markProg, "uViewProj"), 1, false, (float*)&vp);
+        _gl.Uniform4(_u.At(_markProg, "uColor"), 0x5d / 255f, 1, 0x8a / 255f, 1);
         // A small mark, not a blob: 0.43% of the height (5 pixels at 1080p, 9 at 4K), never under 3.
-        _gl.Uniform1(_gl.GetUniformLocation(_markProg, "uSize"), MathF.Max(3, 0.0043f * height));
+        _gl.Uniform1(_u.At(_markProg, "uSize"), MathF.Max(3, 0.0043f * height));
         _gl.BindVertexArray(_markVao);
         _gl.DrawArrays(PrimitiveType.Points, 0, (uint)_markCount);
         _gl.Disable(EnableCap.Blend);
@@ -4129,6 +4285,49 @@ public sealed class GlView : OpenGlControlBase
     /// The Path tool's bands on the graphics card: the ground it covers, the soft edge, and the next point's preview.
     /// </summary>
     private uint _pathBandVao, _pathBandVbo, _pathSoftVao, _pathSoftVbo, _pathPreviewVao, _pathPreviewVbo, _pathPreviewSoftVao, _pathPreviewSoftVbo;
+    /// <summary>
+    /// A line through points on the ground as line pairs, each stretch cut about every metre so it follows hills.
+    /// </summary>
+    /// <param name="into">Where the pairs go.</param>
+    /// <param name="s">The area.</param>
+    /// <param name="pts">The points, grid points once <paramref name="offset"/> is taken off.</param>
+    /// <param name="lift">Metres above the ground.</param>
+    /// <param name="closed">Whether the last point joins the first.</param>
+    /// <param name="offset">Taken off each cut point to make it a grid point (world points: the area's corner).</param>
+    private static void GroundPolyline(List<float> into, WorldScene s, IReadOnlyList<Vector2> pts, float lift, bool closed, Vector2 offset = default)
+    {
+        int n = closed ? pts.Count : pts.Count - 1;
+        for (int i = 0; i < n; i++)
+        {
+            Vector2 a = pts[i], b = pts[(i + 1) % pts.Count];
+            int steps = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(a, b)));
+            for (int k = 0; k < steps; k++)
+            {
+                Vector2 g = Vector2.Lerp(a, b, k / (float)steps) - offset, h = Vector2.Lerp(a, b, (k + 1) / (float)steps) - offset;
+                var p = OnGround(s, g.X, g.Y, lift);
+                var q = OnGround(s, h.X, h.Y, lift);
+                into.AddRange([p.X, p.Y, p.Z, q.X, q.Y, q.Z]);
+            }
+        }
+    }
+
+    /// <summary>
+    /// A small flat square round a point as line pairs, its size a fixed share of the distance to the eye.
+    /// </summary>
+    /// <param name="into">Where the pairs go.</param>
+    /// <param name="c">The point, in view space.</param>
+    /// <returns>Its half width.</returns>
+    private float Marker(List<float> into, Vector3 c)
+    {
+        float r = Vector3.Distance(_lastEye, c) * 0.008f;
+        Vector3[] k = [c + new Vector3(-r, 0, -r), c + new Vector3(r, 0, -r), c + new Vector3(r, 0, r), c + new Vector3(-r, 0, r)];
+        for (int j = 0; j < 4; j++)
+        {
+            into.AddRange([k[j].X, k[j].Y, k[j].Z, k[(j + 1) % 4].X, k[(j + 1) % 4].Y, k[(j + 1) % 4].Z]);
+        }
+        return r;
+    }
+
     /// <summary>
     /// The Path tool: the ground it covers (a light band), its width's edges and the soft edge's outer
     /// line, the centre line (red) and its points; under the cursor, the width (and the soft edge) the
@@ -4149,11 +4348,7 @@ public sealed class GlView : OpenGlControlBase
             curve = Path.Curve();
             pts = [.. Path.Points];
         }
-        Vector3 V(Vector2 g, float lift)
-        {
-            float x = g.X - (s.W - 1) / 2f, z = -(g.Y - (s.H - 1) / 2f);
-            return new Vector3(x, Picking.HeightAt(s, x, z) + lift, z);
-        }
+        Vector3 V(Vector2 g, float lift) => OnGround(s, g.X, g.Y, lift);
         // Grid points every metre or so along a line (the ground's own spacing), so a ribbon follows it.
         static List<Vector2> Dense(IReadOnlyList<Vector2> line)
         {
@@ -4276,12 +4471,7 @@ public sealed class GlView : OpenGlControlBase
         foreach (var p in pts)
         {
             var c = V(p, 0.6f);
-            float r = Vector3.Distance(_lastEye, c) * 0.008f;
-            Vector3[] k = [c + new Vector3(-r, 0, -r), c + new Vector3(r, 0, -r), c + new Vector3(r, 0, r), c + new Vector3(-r, 0, r)];
-            for (int j = 0; j < 4; j++)
-            {
-                Seg(dots, k[j], k[(j + 1) % 4]);
-            }
+            float r = Marker(dots, c);
             Seg(dots, c - new Vector3(0, r, 0), c + new Vector3(0, r, 0));
         }
         DrawLines(ref _pathBandVao, ref _pathBandVbo, [.. band], vp, new Vector4(1, 0.45f, 0.35f, 0.16f), PrimitiveType.Triangles, blend: true);
@@ -4307,7 +4497,7 @@ public sealed class GlView : OpenGlControlBase
         {
             return;
         }
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         var posts = new List<float>();
         foreach (var o in pl.Shown)
         {
@@ -4315,7 +4505,8 @@ public sealed class GlView : OpenGlControlBase
             {
                 continue;
             }
-            float x = o.Position.X - ox - (s.W - 1) / 2f, z = -(o.Position.Z - oz - (s.H - 1) / 2f), y = o.Position.Y;
+            var (x, z) = GridToView(s, o.Position.X - ox, o.Position.Z - oz);
+            float y = o.Position.Y;
             posts.AddRange([x, y, z, x, y + 1.5f, z, x - 0.35f, y + 0.6f, z, x + 0.35f, y + 0.6f, z, x, y + 0.6f, z - 0.35f, x, y + 0.6f, z + 0.35f]);
         }
         DrawLines(ref _placeVao, ref _placeVbo, [.. posts], vp, new Vector4(0.62f, 0.88f, 1, 1));
@@ -4329,27 +4520,14 @@ public sealed class GlView : OpenGlControlBase
             {
                 foreach (var (ox2, oz2) in new[] { outline[i], outline[(i + 1) % outline.Count] })
                 {
-                    float x = h.X + ox2 - (s.W - 1) / 2f, z = -(h.Z + oz2 - (s.H - 1) / 2f);
-                    ring.AddRange([x, Picking.HeightAt(s, x, z) + 0.3f, z]);
+                    var p = OnGround(s, h.X + ox2, h.Z + oz2, 0.3f);
+                    ring.AddRange([p.X, p.Y, p.Z]);
                 }
             }
             DrawLines(ref _placeRingVao, ref _placeRingVbo, [.. ring], vp, new Vector4(0.62f, 0.88f, 1, 1), width: 1.2f);
         }
-        Vector3 V(Vector2 g) { float x = g.X - (s.W - 1) / 2f, z = -(g.Y - (s.H - 1) / 2f); return new Vector3(x, Picking.HeightAt(s, x, z) + 0.3f, z); }
         var data = new List<float>();
-        void Strip(IReadOnlyList<Vector2> pts)
-        {
-            for (int i = 1; i < pts.Count; i++)
-            {
-                int n = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(pts[i - 1], pts[i])));
-                for (int k = 0; k < n; k++)
-                {
-                    var a = V(Vector2.Lerp(pts[i - 1], pts[i], k / (float)n));
-                    var b = V(Vector2.Lerp(pts[i - 1], pts[i], (k + 1) / (float)n));
-                    data.AddRange([a.X, a.Y, a.Z, b.X, b.Y, b.Z]);
-                }
-            }
-        }
+        void Strip(IReadOnlyList<Vector2> pts) => GroundPolyline(data, s, pts, 0.3f, closed: false);
         if (t.Mode == PlaceTool.Modes.Line)
         {
             foreach (var run in t.LineRuns())
@@ -4373,13 +4551,7 @@ public sealed class GlView : OpenGlControlBase
         {
             foreach (var p in pl.ShownPoints())
             {
-                var c = V(p);
-                float r = Vector3.Distance(_lastEye, c) * 0.008f;
-                Vector3[] k = [c + new Vector3(-r, 0, -r), c + new Vector3(r, 0, -r), c + new Vector3(r, 0, r), c + new Vector3(-r, 0, r)];
-                for (int j = 0; j < 4; j++)
-                {
-                    data.AddRange([k[j].X, k[j].Y, k[j].Z, k[(j + 1) % 4].X, k[(j + 1) % 4].Y, k[(j + 1) % 4].Z]);
-                }
+                Marker(data, OnGround(s, p.X, p.Y, 0.3f));
             }
         }
         DrawLines(ref _placeShapeVao, ref _placeShapeVbo, [.. data], vp, new Vector4(0.62f, 0.88f, 1, 1));
@@ -4393,26 +4565,7 @@ public sealed class GlView : OpenGlControlBase
     /// </summary>
     private void DrawArea(WorldScene s, Matrix4x4 vp)
     {
-        Vector3 V(Vector2 g, float lift)
-        {
-            float x = g.X - (s.W - 1) / 2f, z = -(g.Y - (s.H - 1) / 2f);
-            return new Vector3(x, Picking.HeightAt(s, x, z) + lift, z);
-        }
-        void Ring(List<float> to, List<Vector2> pts, bool closed, float lift)
-        {
-            int n = closed ? pts.Count : pts.Count - 1;
-            for (int i = 0; i < n; i++)
-            {
-                Vector2 a = pts[i], b = pts[(i + 1) % pts.Count];
-                int steps = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(a, b)));
-                for (int k = 0; k < steps; k++)
-                {
-                    var p = V(Vector2.Lerp(a, b, k / (float)steps), lift);
-                    var q = V(Vector2.Lerp(a, b, (k + 1) / (float)steps), lift);
-                    to.AddRange([p.X, p.Y, p.Z, q.X, q.Y, q.Z]);
-                }
-            }
-        }
+        void Ring(List<float> to, List<Vector2> pts, bool closed, float lift) => GroundPolyline(to, s, pts, lift, closed);
         if (Mode == ToolMode.Paste && Paste.At is { } pat && Paste.Clip != null)
         {
             // Where the paste would go: its outlines and a small post at each object whose model is not
@@ -4431,7 +4584,7 @@ public sealed class GlView : OpenGlControlBase
                     continue;
                 }
                 var o = objs[k];
-                float x = o.X - (s.W - 1) / 2f, z = -(o.Z - (s.H - 1) / 2f);
+                var (x, z) = GridToView(s, o.X, o.Z);
                 data.AddRange([x, o.Y, z, x, o.Y + 1.2f, z, x - 0.3f, o.Y + 0.5f, z, x + 0.3f, o.Y + 0.5f, z]);
             }
             // Red where it would be refused: past the open area.
@@ -4522,22 +4675,8 @@ public sealed class GlView : OpenGlControlBase
             if (pts is { Count: > 1 })
             {
                 pts.Add(pts[0]);
-                float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
-                for (int i = 1; i < pts.Count; i++)
-                {
-                    var a = pts[i - 1];
-                    var b = pts[i];
-                    int n = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(a, b)));
-                    for (int k = 0; k < n; k++)
-                    {
-                        foreach (float t in new[] { k / (float)n, (k + 1) / (float)n })
-                        {
-                            var p = Vector2.Lerp(a, b, t);
-                            float x = p.X - ox - (s.W - 1) / 2f, z = -(p.Y - oz - (s.H - 1) / 2f);
-                            data.AddRange([x, Picking.HeightAt(s, x, z) + 0.3f, z]);
-                        }
-                    }
-                }
+                // World points: the area's corner taken off after cutting, as grid points.
+                GroundPolyline(data, s, pts, 0.3f, closed: false, new Vector2(s.OriginX, s.OriginZ));
             }
             _lassoSegs = [.. data];
         }
@@ -4586,7 +4725,7 @@ public sealed class GlView : OpenGlControlBase
                 data.AddRange([ax, ya + 0.3f, az, bx, yb + 0.3f, bz]);
             }
         }
-        (float, float) At((float X, float Z) o) => (h.X + o.X - (s.W - 1) / 2f, -(h.Z + o.Z - (s.H - 1) / 2f));
+        (float, float) At((float X, float Z) o) => GridToView(s, h.X + o.X, h.Z + o.Z);
         Loop(Tool == null ? [.. Enumerable.Range(0, n).Select(i => (MathF.Cos(i * MathF.Tau / n) * ShapeRadius, MathF.Sin(i * MathF.Tau / n) * ShapeRadius))] : session.Brush.Outline(n));
         if (Tool != null && session.Brush.InnerOutline(n) is { } inner)
         {
@@ -4622,8 +4761,7 @@ public sealed class GlView : OpenGlControlBase
             {
                 float dx = -reach + i * step, dz = -reach + j * step;
                 float add = shape(dx, dz);
-                float x = cx + dx - (s.W - 1) / 2f, z = -(cz + dz - (s.H - 1) / 2f);
-                y[j * (Cells + 1) + i] = Picking.HeightAt(s, x, z) + add + 0.3f;
+                y[j * (Cells + 1) + i] = OnGround(s, cx + dx, cz + dz, 0).Y + add + 0.3f;
                 up[j * (Cells + 1) + i] = add > 0.5f;
             }
         }
@@ -4635,8 +4773,9 @@ public sealed class GlView : OpenGlControlBase
             {
                 return;
             }
-            data.AddRange([cx - reach + i0 * step - (s.W - 1) / 2f, y[a], -(cz - reach + j0 * step - (s.H - 1) / 2f)]);
-            data.AddRange([cx - reach + i1 * step - (s.W - 1) / 2f, y[b], -(cz - reach + j1 * step - (s.H - 1) / 2f)]);
+            var (ax, az) = GridToView(s, cx - reach + i0 * step, cz - reach + j0 * step);
+            var (bx, bz) = GridToView(s, cx - reach + i1 * step, cz - reach + j1 * step);
+            data.AddRange([ax, y[a], az, bx, y[b], bz]);
         }
         for (int j = 0; j <= Cells; j++)
         {
@@ -4687,7 +4826,7 @@ public sealed class GlView : OpenGlControlBase
     private (Vector3 Min, Vector3 Max) OutlineBoxOf(WorldScene s, int i)
     {
         var at = _boundsAt[i];
-        return OutlineBox(_kinds[i], _bounds[i], new Vector3(at.X - s.Cx, at.Y, -(at.Z - s.Cz)));
+        return OutlineBox(_kinds[i], _bounds[i], ToView(s, at));
     }
     /// <summary>Whether a thing's box is known (its model read, and it is not gone).</summary>
     private bool[] _known = [];
@@ -5001,6 +5140,21 @@ public sealed class GlView : OpenGlControlBase
     /// <summary>The test driver's pictures: the next frame once the area and its models are in.</summary>
     private volatile GlPicture.Request? _picture;
 
+    /// <summary>When the last frame was drawn to its end, on the view's clock (-1: none yet).</summary>
+    private long _lastFrameAt = -1;
+
+    /// <summary>
+    /// What a picture the test driver asked for waits on, in words (for its error when it times out): the frames, the
+    /// area, the ground and the models.
+    /// </summary>
+    internal string PictureWaiting()
+    {
+        long last = Interlocked.Read(ref _lastFrameAt);
+        string frames = last < 0 ? "no frame drawn yet" : $"the last frame ended {_clock.ElapsedMilliseconds - last} ms ago";
+        return $"{frames}; {(Scene == null ? "no area" : "an area")} shown, its ground {(_terrainVao != 0 ? "on" : "not on")} the graphics card, "
+            + $"{Volatile.Read(ref _pending)} model(s) being read, {_ready.Count} read and not uploaded, {(_loadedAt < 0 ? "not all in yet" : "all in")}";
+    }
+
     /// <summary>Saves a picture of the view to <paramref name="path"/> once the area and its models are in.</summary>
     internal Task Picture(string path)
     {
@@ -5102,13 +5256,7 @@ public sealed class GlView : OpenGlControlBase
     /// </summary>
     private unsafe void DrawOverlays(Matrix4x4 vp)
     {
-        if (_lineProg == 0)
-        {
-            _lineProg = Program(Shaders.LineVs, Shaders.LineFs);
-        }
-        _gl.UseProgram(_lineProg);
-        _gl.UniformMatrix4(_gl.GetUniformLocation(_lineProg, "uViewProj"), 1, false, (float*)&vp);
-        int uColor = _gl.GetUniformLocation(_lineProg, "uColor");
+        int uColor = UseLineProgram(vp);
         GlBlend.Over(_gl);
         _gl.DepthMask(false);
         foreach (var (layer, (vao, count, _)) in _overlayGl)
@@ -5138,6 +5286,22 @@ public sealed class GlView : OpenGlControlBase
 
     /// <summary>The line shader (made at first use), and the selection's lines on the graphics card.</summary>
     private uint _lineProg, _lineVao, _lineVbo;
+
+    /// <summary>
+    /// Puts the line shader to use (made at first use) with this view × projection.
+    /// </summary>
+    /// <returns>Its colour uniform's location.</returns>
+    private unsafe int UseLineProgram(Matrix4x4 viewProj)
+    {
+        if (_lineProg == 0)
+        {
+            _lineProg = Program(Shaders.LineVs, Shaders.LineFs);
+        }
+        _gl.UseProgram(_lineProg);
+        _gl.UniformMatrix4(_u.At(_lineProg, "uViewProj"), 1, false, (float*)&viewProj);
+        return _u.At(_lineProg, "uColor");
+    }
+
     /// <summary>
     /// Over this many selected objects, one box round them all instead of a box each: thousands of boxes
     /// over a stacked structure make a solid blob that hides it.
@@ -5155,7 +5319,7 @@ public sealed class GlView : OpenGlControlBase
         void Box(Vector3 lo, Vector3 hi)
         {
             Vector3 C(int k) => new((k & 1) == 0 ? lo.X : hi.X, (k & 2) == 0 ? lo.Y : hi.Y, (k & 4) == 0 ? lo.Z : hi.Z);
-            foreach (var (a, b) in new[] { (0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7) })
+            foreach (var (a, b) in BoxEdges)
             {
                 var p = C(a); var q = C(b);
                 v.AddRange([p.X, p.Y, p.Z, q.X, q.Y, q.Z]);
@@ -5257,15 +5421,7 @@ public sealed class GlView : OpenGlControlBase
         {
             return;
         }
-        var (lo, hi) = OutlineBoxOf(sc, i);
-        Vector3 C(int k) => new((k & 1) == 0 ? lo.X : hi.X, (k & 2) == 0 ? lo.Y : hi.Y, (k & 4) == 0 ? lo.Z : hi.Z);
-        var v = new List<float>();
-        foreach (var (a, b) in new[] { (0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7) })
-        {
-            var p = C(a); var q = C(b);
-            v.AddRange([p.X, p.Y, p.Z, q.X, q.Y, q.Z]);
-        }
-        DrawLines(ref _hoverBoxVao, ref _hoverBoxVbo, [.. v], vp, new Vector4(1, 0.85f, 0.55f, 0.6f), blend: true, width: 0.8f);
+        DrawLines(ref _hoverBoxVao, ref _hoverBoxVbo, SelectionBoxes([OutlineBoxOf(sc, i)]), vp, new Vector4(1, 0.85f, 0.55f, 0.6f), blend: true, width: 0.8f);
     }
 
     /// <summary>Slides the view along the ground by a drag of (dx, dy) points (under the camera lock).</summary>

@@ -71,6 +71,8 @@ public class AreaPanelHeightmapTests
             a.Points.Add(new Vector2(20, 20));
             a.Points.Add(new Vector2(100, 100));
             p.LoadPicture(Directory.GetFiles(dir).Single());
+            // The selection's own box (20 to 100), not the weights' one point wider all round.
+            Assert.Contains("fitted to 81 × 81 m", p.PictureInfo.Text);
             p.LowestBox.Value = 31;
             p.HighestBox.Value = 33;
             p.PutPicture();

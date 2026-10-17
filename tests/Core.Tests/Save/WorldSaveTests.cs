@@ -437,7 +437,9 @@ public class WorldSaveTests
         var gone = world.MergeLive([(10, 10)], [], _ => false, _ => false)!;
         Assert.Equal(2, gone.Vanished.Count);
         Assert.True(gone.Modifiers);
-        Assert.Equal(0, world.Creators[777]);
+        // A builder with no pieces left is no builder: kept at zero, TopBuilder could still name them.
+        Assert.False(world.Creators.ContainsKey(777));
+        Assert.NotEqual(777, world.TopBuilder);
         Assert.DoesNotContain(world.Pieces, p => p.Prefab == Fixtures.Hash("mod_live_wall"));
         Assert.DoesNotContain(world.Locations, l => l.Location == MadeObjects.MadeUpLocation);
         Assert.DoesNotContain(world.Placed, p => p.Location == MadeObjects.MadeUpLocation);
@@ -465,7 +467,7 @@ public class WorldSaveTests
         // Gone: the one object vanishes and nothing stays behind.
         var gone = world.MergeLive([(10, 10)], [], _ => false, _ => false)!;
         Assert.Equal([id], gone.Vanished);
-        Assert.Equal(0, world.Creators[777]);
+        Assert.False(world.Creators.ContainsKey(777));
     }
 
     // A vehicle's root and part (the example mod's): their links read (the root's
@@ -527,5 +529,38 @@ public class WorldSaveTests
         Assert.NotSame(first, read(otherFile));
         Assert.Equal(world.ObjectBytes(world.ObjectRefs.IndexOf(o)), first[(int)o.Start..(int)o.End]);
         Assert.Equal(world.ObjectBytes(world.ObjectRefs.IndexOf(otherFile)), read(otherFile)[(int)otherFile.Start..(int)otherFile.End]);
+    }
+
+    [Fact]
+    public void ObjectBytesCutFromAReaderAreTheSavedOnes()
+    {
+        using var w = new TempWorld();
+        WorldSave world = w.Load();
+        Func<ObjectRef, byte[]> read = world.SourceReader();
+        Assert.All(Enumerable.Range(0, world.ObjectRefs.Count), id => Assert.Equal(world.ObjectBytes(id), world.ObjectBytes(id, read)));
+    }
+
+    [Fact]
+    public void SaveNumbersAreReadOneWay()
+    {
+        // The writer's next number read "+7" as 7 where the loader skipped it: the two could disagree.
+        string dir = Path.Combine(Path.GetTempPath(), "vwe-savenumbers-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(dir);
+        try
+        {
+            foreach (string f in new[] { "_main.2.chunks", "_main.2.ok", "_main.3.chunks", "_main.+7.chunks", "_main.x.chunks" })
+            {
+                File.WriteAllBytes(Path.Combine(dir, f), []);
+            }
+            Assert.Equal((3, 2), WorldSave.SaveNumbers(dir));
+            Assert.Equal(2, WorldSave.CommittedSave(dir));
+            Assert.Equal(3, WorldWriter.LatestNumber(dir));
+            File.Delete(Path.Combine(dir, "_main.2.ok"));
+            Assert.Equal(3, WorldSave.CommittedSave(dir));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
     }
 }

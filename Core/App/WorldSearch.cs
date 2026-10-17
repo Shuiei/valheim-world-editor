@@ -29,9 +29,6 @@ public static class WorldSearch
     /// <param name="Truncated">Whether more hits were found than <paramref name="Hits"/> holds.</param>
     public sealed record Result(List<Hit> Hits, Dictionary<string, int> Counts, int Total, bool Truncated);
 
-    /// <summary>The byte-array key holding a container's inventory.</summary>
-    private static readonly int ItemsKey = StableHash.Of("items");
-
     /// <summary>
     /// Searches the world's objects and those added in this session, deleted ones left out; matching ignores
     /// case. (Live: under the world's lock, so what the game changes comes in before or after, not during.)
@@ -140,7 +137,7 @@ public static class WorldSearch
             string name = PrefabCatalog.DisplayName(z.Prefab) ?? z.Prefab.ToString(CultureInfo.InvariantCulture);
             if (what == "items")
             {
-                if (z.GetBytes(ItemsKey) is not byte[] items)
+                if (z.GetBytes(ObjectData.ItemsKey) is not byte[] items)
                 {
                     continue;
                 }

@@ -181,16 +181,8 @@ public sealed class PlacePanel
     /// <summary>
     /// A slider that shows its value through <c>fmt</c> in <c>shown</c> and passes each new value to <c>set</c>.
     /// </summary>
-    private static Slider Slide(double min, double max, double step, double value, TextBlock shown, Func<double, string> fmt, Action<float> set)
-    {
-        var s = new Slider { Minimum = min, Maximum = max, SmallChange = step, TickFrequency = step, IsSnapToTickEnabled = true, Value = value };
-        shown.Text = fmt(value);
-        shown.FontSize = 12;
-        shown.VerticalAlignment = VerticalAlignment.Center;
-        shown.Margin = new Thickness(6, 0, 0, 0);
-        s.ValueChanged += (_, e) => { shown.Text = fmt(e.NewValue); set((float)e.NewValue); };
-        return s;
-    }
+    private static Slider Slide(double min, double max, double step, double value, TextBlock shown, Func<double, string> fmt, Action<float> set) =>
+        Ui.Slide(min, max, step, value, shown, fmt, v => set((float)v));
 
     /// <summary>A small flat button (the all / none of the chips).</summary>
     private static Button Link(string text) => new() { Content = text, FontSize = 11, Padding = new Thickness(9, 2), MinHeight = 22, VerticalAlignment = VerticalAlignment.Center, Background = Brushes.Transparent, Foreground = Ui.Muted };
@@ -216,35 +208,15 @@ public sealed class PlacePanel
     private static StackPanel Section(string title, params Control[] rows) => Section(Head(title), rows);
 
     /// <summary>A labelled row: the label, the input, and optionally something after it (a value or a unit).</summary>
-    private static Grid Row(string label, Control input, Control? after = null)
-    {
-        var g = new Grid { ColumnDefinitions = new ColumnDefinitions("72,*,Auto") };
-        var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-        Tips.Label(l, input);
-        g.Children.Add(l);
-        Grid.SetColumn(input, 1);
-        g.Children.Add(input);
-        if (after != null)
-        {
-            Grid.SetColumn(after, 2);
-            g.Children.Add(after);
-        }
-        return g;
-    }
+    private static Grid Row(string label, Control input, Control? after = null) => Ui.Row(label, input, after, "72,*,Auto");
 
     /// <summary>A floating card of the given width that scrolls when the window is too short.</summary>
-    private static Border CardOf(Control child, double width) => new()
+    private static Border CardOf(Control child, double width) => Ui.AsCard(new Border
     {
-        Background = Ui.Panel,
-        BorderBrush = Ui.Line,
-        BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-        BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(10),
-        Padding = Ui.Pad,
         VerticalAlignment = VerticalAlignment.Top,
         // As tall as the window allows: the scroll bar only when it does not fit.
         Child = new ScrollViewer { Content = new StackPanel { Width = width, Spacing = 6, Children = { child } } },
-    };
+    });
 
     /// <summary>
     /// Builds the panel and the list of kinds, and restores the chosen kinds and weights from the memory.
@@ -482,7 +454,7 @@ public sealed class PlacePanel
         _lineBox = new StackPanel { Spacing = 4, Children = { _snapRows, _loopRow, _freeLineRows, CurveBox } };
         _gridRow = Row("Spacing", CellSlider, ceV);
         _shapeRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { PlaceButton, ClearButton } };
-        _fitRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 6, Children = { FitText, Col(FitButton, 1) } };
+        _fitRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 6, Children = { FitText, Ui.Col(FitButton, 1) } };
         _undoRow = UndoPointButton;
         _brushHint = Hint("Density is objects per 100 m². Spacing keeps them apart (also from what is already there). Shift + drag removes the chosen kinds. The Mask applies.");
 
@@ -544,12 +516,12 @@ public sealed class PlacePanel
         _filling = false;
     }
 
-    /// <summary>Remembers the chosen kinds and weights for the next time (saves the memory).</summary>
+    /// <summary>Remembers the chosen kinds and weights for the next time (saves the memory a moment later).</summary>
     private void Remember()
     {
         Memory.Chosen = [.. T.Chosen];
         Memory.Weights = new(T.Weights);
-        Memory.Save();
+        Memory.SaveLater();
     }
 
     /// <summary>The heading of a chip row, with its all and none buttons.</summary>
@@ -640,13 +612,6 @@ public sealed class PlacePanel
         }
     }
 
-    /// <summary>Puts a control in a grid column; returns it.</summary>
-    private static Control Col(Control c, int col)
-    {
-        Grid.SetColumn(c, col);
-        return c;
-    }
-
     /// <summary>A line for the status bar.</summary>
     public event Action<string>? Message;
     /// <summary>Raises <see cref="Message"/>.</summary>
@@ -732,7 +697,7 @@ public sealed class PlacePanel
                 Children =
                 {
                     new TextBlock { Text = ObjectKinds.Label(k).ToUpperInvariant(), FontSize = 10.5, FontWeight = FontWeight.SemiBold, Foreground = Ui.Muted },
-                    Col(new TextBlock { Text = names.Count(T.Chosen.Contains) is int on && on > 0 ? $"{on} / {names.Count}" : $"{names.Count}", FontSize = 10.5, Foreground = names.Any(T.Chosen.Contains) ? Ui.Accent : Ui.Muted, Margin = new Thickness(8, 0, 0, 0) }, 1),
+                    Ui.Col(new TextBlock { Text = names.Count(T.Chosen.Contains) is int on && on > 0 ? $"{on} / {names.Count}" : $"{names.Count}", FontSize = 10.5, Foreground = names.Any(T.Chosen.Contains) ? Ui.Accent : Ui.Muted, Margin = new Thickness(8, 0, 0, 0) }, 1),
                 },
             };
             Header();
@@ -773,7 +738,7 @@ public sealed class PlacePanel
                     var star = new Button { Content = fav ? "★" : "☆", FontSize = 12, Padding = new Thickness(4, 0), Background = Brushes.Transparent };
                     ToolTip.SetTip(star, Lang.T(fav ? "place.favRemove" : "place.favAdd"));
                     star.Click += (_, _) => { Memory.ToggleFavourite(n); FillList(); RenderChips(); };
-                    var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { box, Col(star, 1) } };
+                    var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { box, Ui.Col(star, 1) } };
                     // Spawn points and nests: what they spawn, under their name.
                     body.Children.Add(PrefabCatalog.SpawnOf(n) is { } spawn
                         ? new StackPanel { Children = { row, new TextBlock { Text = spawn.Summary(), FontSize = 10.5, Foreground = Ui.Muted, Margin = new Thickness(26, -4, 0, 2), TextWrapping = TextWrapping.Wrap } } }
@@ -865,14 +830,14 @@ public sealed class PlacePanel
                     Remember();
                     T.NewLayout();
                 };
-                g.Children.Add(Col(w, 1));
+                g.Children.Add(Ui.Col(w, 1));
             }
             _shares[n] = (pct, w);
-            g.Children.Add(Col(pct, 2));
+            g.Children.Add(Ui.Col(pct, 2));
             var x = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(6, 2), VerticalAlignment = VerticalAlignment.Center };
             ToolTip.SetTip(x, $"{Tips.Of("place.unchoose")} ({n})");
             x.Click += (_, _) => { T.Chosen.Remove(n); Chosen(); };
-            g.Children.Add(Col(x, 3));
+            g.Children.Add(Ui.Col(x, 3));
             Mix.Children.Add(g);
         }
     }

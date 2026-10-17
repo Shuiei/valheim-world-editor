@@ -218,12 +218,17 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// Moves the area by zones (+X east, +Z north), keeping its size and the view; the edits and the history stay
-    /// with the world.
+    /// with the world. Not while something unfinished would be lost (MoveBlocker): the status bar says why.
     /// </summary>
     internal async Task MoveArea(int dx, int dz)
     {
         if (View.Scene is not { Owner: not null } s)
         {
+            return;
+        }
+        if (MoveBlocker() is string why)
+        {
+            MessageText.Text = $"The area cannot move now: {why}.";
             return;
         }
         await OpenBlockKeepingView(s.X0 + dx, s.Z0 + dz, s.ZonesX, s.ZonesZ);
@@ -697,31 +702,45 @@ public sealed partial class MainWindow
         PlaceLabels();
     }
 
-    /// <summary>The players' names over their posts (4 m above their feet), where the camera sees them.</summary>
+    /// <summary>The players' labels' text and backing colours.</summary>
+    private static readonly IImmutableSolidColorBrush LabelInk = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.Parse("#bfeaff")), LabelShade = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.FromArgb(150, 0, 0, 0));
+
+    /// <summary>
+    /// The players' names over their posts (4 m above their feet), where the camera sees them. The labels are kept
+    /// from tick to tick (ten a second while live): moved and renamed, made only for more players, dropped when fewer
+    /// are seen.
+    /// </summary>
     internal void PlaceLabels()
     {
-        PlayerLabels.Children.Clear();
-        if (View.Scene is not { } s || LivePlayers.Count == 0 || _pages.Content != _editorPage)
+        int shown = 0;
+        if (View.Scene is { } s && LivePlayers.Count > 0 && _pages.Content == _editorPage)
         {
-            return;
+            var size = View.Bounds.Size;
+            foreach (var (name, w) in LivePlayers)
+            {
+                var q = Vector4.Transform(new Vector4(w.X - s.Cx, w.Y + 4, -(w.Z - s.Cz), 1), View.ViewProj);
+                if (q.W <= 0.01f)
+                {
+                    continue;
+                }
+                double x = (q.X / q.W + 1) / 2 * size.Width, y = (1 - q.Y / q.W) / 2 * size.Height;
+                if (x < 0 || y < 0 || x > size.Width || y > size.Height)
+                {
+                    continue;
+                }
+                if (shown == PlayerLabels.Children.Count)
+                {
+                    PlayerLabels.Children.Add(new TextBlock { FontSize = 13, FontWeight = FontWeight.Bold, Foreground = LabelInk, Background = LabelShade, Padding = new Thickness(4, 1) });
+                }
+                var label = (TextBlock)PlayerLabels.Children[shown++];
+                label.Text = name;
+                Canvas.SetLeft(label, x - 4 * name.Length - 4);
+                Canvas.SetTop(label, y - 10);
+            }
         }
-        var size = View.Bounds.Size;
-        foreach (var (name, w) in LivePlayers)
+        if (PlayerLabels.Children.Count > shown)
         {
-            var q = Vector4.Transform(new Vector4(w.X - s.Cx, w.Y + 4, -(w.Z - s.Cz), 1), View.ViewProj);
-            if (q.W <= 0.01f)
-            {
-                continue;
-            }
-            double x = (q.X / q.W + 1) / 2 * size.Width, y = (1 - q.Y / q.W) / 2 * size.Height;
-            if (x < 0 || y < 0 || x > size.Width || y > size.Height)
-            {
-                continue;
-            }
-            var label = new TextBlock { Text = name, FontSize = 13, FontWeight = FontWeight.Bold, Foreground = new SolidColorBrush(Color.Parse("#bfeaff")), Background = new SolidColorBrush(Color.FromArgb(150, 0, 0, 0)), Padding = new Thickness(4, 1) };
-            Canvas.SetLeft(label, x - 4 * name.Length - 4);
-            Canvas.SetTop(label, y - 10);
-            PlayerLabels.Children.Add(label);
+            PlayerLabels.Children.RemoveRange(shown, PlayerLabels.Children.Count - shown);
         }
     }
 
@@ -732,10 +751,15 @@ public sealed partial class MainWindow
         {
             return;
         }
-        float gx = p.World.X - (s.X0 * 64 - 32), gz = p.World.Z - (s.Z0 * 64 - 32);
+        float gx = p.World.X - s.OriginX, gz = p.World.Z - s.OriginZ;
         if (!(gx > 2 && gz > 2 && gx < s.W - 3 && gz < s.H - 3) && s.Owner != null)
         {
-            int zx = (int)MathF.Floor((p.World.X + 32) / 64), zz = (int)MathF.Floor((p.World.Z + 32) / 64);
+            if (MoveBlocker() is string why)
+            {
+                MessageText.Text = $"Cannot go to {name}, outside the area, now: {why}.";
+                return;
+            }
+            var (zx, zz) = TerrainEditor.Save.ChunkMath.SectorOf(p.World.X, p.World.Z);
             await EditBlock(zx - s.ZonesX / 2, zz - s.ZonesZ / 2, s.ZonesX, s.ZonesZ);
         }
         View.Focus(p.World);

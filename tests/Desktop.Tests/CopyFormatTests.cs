@@ -45,6 +45,21 @@ public class CopyFormatTests
         Assert.StartsWith("data:image/png;base64,", CopyFormat.Thumb(c));
     }
 
+    // Heights past ±327.67 m (a copy off a tall No-limit mountain) are kept as they are, not cut there; only the "no
+    // ground" marker's value is moved a centimetre.
+    [Fact]
+    public void HeightsPastTheOldLimitAreKept()
+    {
+        var c = Sample();
+        c.Rel[0] = 500f;
+        c.Rel[1] = -400f;
+        c.Rel[3] = -327.68f;
+        var back = CopyFormat.FromJson(CopyFormat.ToJson(c));
+        Assert.Equal(500f, back.Rel[0], 2);
+        Assert.Equal(-400f, back.Rel[1], 2);
+        Assert.Equal(-327.67f, back.Rel[3], 2);
+    }
+
     // A kind without a known name (a mod's) is written as its hash and read back as that kind (it came
     // back as the hash of the number's text: an unknown kind, left out when pasted).
     [Fact]

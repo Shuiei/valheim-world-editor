@@ -104,9 +104,11 @@ public sealed class WorldSession : IDisposable
                 }
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex)
         {
-            Console.WriteLine($"History: could not keep it on disk: {ex.Message}");
+            // The save itself is done: any failure here is logged (an unexpected one in full), not reported as a
+            // failed save.
+            Console.WriteLine($"History: could not keep it on disk: {(ex is IOException or UnauthorizedAccessException ? ex.Message : ex.ToString())}");
         }
     }
 
@@ -119,11 +121,7 @@ public sealed class WorldSession : IDisposable
     {
         if (Area == null && History != null)
         {
-            // Applied is part of a step's hash: the ids and frames are keyed again once it is set.
-            var ids = History.Ids.ToList();
-            var frames = History.Frames?.ToList();
             EditSession.MarkSent(History.Undo, sent ?? (static _ => true));
-            History = History with { Ids = ids.ToDictionary(p => p.Key, p => p.Value), Frames = frames?.ToDictionary(p => p.Key, p => p.Value) };
         }
     }
 
@@ -177,12 +175,23 @@ public sealed class WorldSession : IDisposable
     /// <param name="label">The connection's name, for <c>Label</c>.</param>
     public static async Task<WorldSession> OpenLive(LiveBridge live, string label)
     {
-        await Task.Run(NeedGame);
-        await LearnMods(live);
-        var mods = await BridgeMods(live);
-        var world = await live.LoadWorld();
-        WorldSave.Builder = Builders.Default(world);
-        var session = From(world, live, label);
+        WorldSession session;
+        List<string> mods;
+        try
+        {
+            await Task.Run(NeedGame);
+            await LearnMods(live);
+            mods = await BridgeMods(live);
+            var world = await live.LoadWorld();
+            WorldSave.Builder = Builders.Default(world);
+            session = From(world, live, label);
+        }
+        catch
+        {
+            // No session to own the connection: it is closed here.
+            live.Dispose();
+            throw;
+        }
         // Once the session is there to end it (Dispose): a world that failed to load leaves no game connected.
         ModExtensions.LiveConnected(new LiveGame(live, mods));
         return session;
@@ -254,11 +263,11 @@ public sealed class WorldSession : IDisposable
             // Saved already: what differs from that save (an undo after it is pending too).
             // Counted against the saved sets only (no set of the current ones): after a save with millions of
             // new objects this runs at every change. Both lists hold each object once.
-            var deleted = Edits.Deleted;
-            var added = Edits.Added;
-            int keptDel = deleted.Count(_savedDeleted.Contains), keptAdd = added.Count(_savedAdded.Contains);
-            int del = deleted.Count - keptDel + _savedDeleted.Count - keptDel;
-            int add = added.Count - keptAdd + _savedAdded.Count - keptAdd;
+            var (del, add) = Edits.WithObjects((deleted, added) =>
+            {
+                int keptDel = deleted.Count(_savedDeleted.Contains), keptAdd = added.Values.Count(_savedAdded.Contains);
+                return (deleted.Count - keptDel + _savedDeleted.Count - keptDel, added.Count - keptAdd + _savedAdded.Count - keptAdd);
+            });
             return (Edits.ChangedZoneCount, del, add, Edits.ResetCount);
         }
     }
@@ -427,15 +436,41 @@ public sealed class WorldSession : IDisposable
         {
             lift = null;
         }
+        string? unread = null;
         if (result.Saved && reread)
         {
-            World = WorldSave.Load(World.Directory);
-            WorldWriter.Prune(World.Directory);
+            // Written: whatever happens reading it back, what went in is not pending any more (it would be written
+            // twice). Not read back, the session starts over from the world as it was and says to open it again.
+            try
+            {
+                // The save as read back to check it: not read a third time.
+                World = result.Read ?? WorldSave.Load(World.Directory);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                unread = $" It could not be read back ({ex.Message}): open the world again to go on.";
+            }
+            if (unread == null)
+            {
+                try
+                {
+                    WorldWriter.Prune(World);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+                {
+                    Console.WriteLine($"Saved: its earlier saves could not be removed: {ex.Message}");
+                }
+            }
             Edits.ResetFrom(World);
             UseModifiers(new TerrainModifiers(World));
             _nextId = -1;
             ForgetHistory();
             ForgetSaves();
+            if (unread != null)
+            {
+                // The session's own save is not one the game made since.
+                _lastNumber = result.Number;
+            }
         }
         else if (result.Saved)
         {
@@ -448,7 +483,7 @@ public sealed class WorldSession : IDisposable
             MarkHistoryApplied();
             KeepHistory();
         }
-        string message = lift != null ? $"{result.Message} No limit ground: {lift.Plan.Describe()}." : result.Message;
+        string message = (lift != null ? $"{result.Message} No limit ground: {lift.Plan.Describe()}." : result.Message) + unread;
         return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message }) { Lifted = lift != null };
     }
 
@@ -493,7 +528,8 @@ public sealed class WorldSession : IDisposable
         }
         PruneSaves();
         Live?.Dispose();
-        _applying.Dispose();
+        // The apply lock is not disposed: an apply still under way releases it when it ends (its outcome would be
+        // lost to an ObjectDisposedException), and it holds nothing to free (its wait handle is never asked for).
     }
 
     /// <summary>
@@ -759,7 +795,7 @@ public sealed class WorldSession : IDisposable
     public List<(int X, int Z)> TakeWaitingGround() => Edits.TakeWaitingGround();
 
     /// <summary>The zone a world position is in (zones are 64 m, centred on multiples of 64).</summary>
-    private static (int, int) Zone(System.Numerics.Vector3 p) => ((int)MathF.Floor((p.X + 32f) / 64f), (int)MathF.Floor((p.Z + 32f) / 64f));
+    private static (int, int) Zone(System.Numerics.Vector3 p) => ChunkMath.SectorOf(p.X, p.Z);
 
     /// <summary>Live: the world read again from the game (what players changed since); pending edits are dropped.</summary>
     public async Task Reload()
@@ -780,8 +816,10 @@ public sealed class WorldSession : IDisposable
     {
         if (!IsLive)
         {
+            // Read first: a folder that cannot be read leaves the session as it was, its own saves still known.
+            var saved = WorldSave.Load(World.Directory);
             PruneSaves();
-            World = WorldSave.Load(World.Directory);
+            World = saved;
         }
         Edits.ResetFrom(World);
         UseModifiers(new TerrainModifiers(World));

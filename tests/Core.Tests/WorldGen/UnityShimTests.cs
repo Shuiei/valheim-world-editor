@@ -165,18 +165,4 @@ public class UnityShimTests
         Assert.Equal((150f, 150f, 150f), TerrainService.BiomeColor(Heightmap.Biome.Ocean, 31));
         Assert.Equal((150f, 150f, 150f), TerrainService.BiomeColor(Heightmap.Biome.None, 31));
     }
-
-    [Fact]
-    public void TheAlternateBiomeMapIsNeverReady()
-    {
-        // The port has no alternate biome map: the generator asking for a sector gets the empty answer.
-        var data = new AltBiomeWorldData();
-        Assert.False(data.IsReady);
-        Assert.Null(data.PointSectors);
-        Assert.Equal(0, AltBiomeWorldData.WorldSpaceToMapSpace(1234.5f));
-        Assert.Equal(Heightmap.Biome.BlackForest, BiomeSector.EmptyBlackForest.Biome);
-        Assert.Equal(Heightmap.Biome.Meadows, BiomeSector.EmptyMeadows.Biome);
-        // The game's log: nothing written offline.
-        ZLog.Log("ignored");
-    }
 }

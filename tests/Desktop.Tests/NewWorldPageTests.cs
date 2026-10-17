@@ -307,6 +307,8 @@ public class NewWorldPageTests
             Assert.Null(r.P.Shown);
             Assert.False(r.P.Loading.IsVisible);
             Assert.Empty(r.P.Marks.Children);
+            // The last seed's dungeon search stopped with it.
+            Assert.False(r.P.FindingDungeons);
             Assert.Equal("The seed is 1 to 10 characters, as in the game.", Texts(r.P.Info));
         }
     }
@@ -373,6 +375,22 @@ public class NewWorldPageTests
         Assert.False(r.P.Generate.IsEnabled);
         Assert.False(r.P.Loading.IsVisible);
         Assert.Same(shown, r.P.Shown);
+    }
+
+    // Leaving the page while a search reads the location rules: its source was disposed under it, and the search
+    // failed with ObjectDisposedException on a page no longer shown.
+    [AvaloniaFact]
+    public async Task LeavingDuringASearchIsNoFailure()
+    {
+        using var r = new Run();
+        OnUi(() =>
+        {
+            r.P.StartSearch();
+            r.P.Dispose();
+        });
+        await TestWindows.Until(() => r.P.Pending.IsCompleted, SeedWait);
+        Settle();
+        Assert.DoesNotContain("The search failed", Texts(r.P.Found));
     }
 
     [AvaloniaFact]
@@ -471,6 +489,10 @@ public class NewWorldPageTests
         Assert.Equal("none", NewWorldPage.Km(float.PositiveInfinity));
         Assert.Equal("400 m", NewWorldPage.Km(430));
         Assert.Equal("1.2 km", NewWorldPage.Km(1234));
+        // Both ends: under 50 m said so (it read "000 m"), 950 m and more in km (it read "1000 m").
+        Assert.Equal("< 100 m", NewWorldPage.Km(30));
+        Assert.Equal("100 m", NewWorldPage.Km(60));
+        Assert.Equal("1.0 km", NewWorldPage.Km(970));
         Assert.Equal("Black Forest", NewWorldPage.Name(Heightmap.Biome.BlackForest));
         Assert.Equal("Ashlands", NewWorldPage.Name(Heightmap.Biome.AshLands));
         Assert.Equal("Deep North", NewWorldPage.Name(Heightmap.Biome.DeepNorth));

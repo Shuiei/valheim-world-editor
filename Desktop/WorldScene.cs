@@ -42,6 +42,10 @@ public sealed class WorldScene
     public required float[] Heights { get; init; }
     /// <summary>The biome (Heightmap.Biome value) per grid point, laid out like Heights.</summary>
     public required int[] Biomes { get; init; }
+    /// <summary>World x of grid point 0 (the block's west edge: half a zone west of its first zone's middle).</summary>
+    public float OriginX => X0 * 64f - 32f;
+    /// <summary>World z of grid point 0 (the block's south edge).</summary>
+    public float OriginZ => Z0 * 64f - 32f;
     /// <summary>World x of the block's middle, in metres.</summary>
     public float Cx { get; init; }
     /// <summary>World z of the block's middle, in metres.</summary>
@@ -252,7 +256,7 @@ public sealed class WorldScene
                 }
             }
         }
-        float minX = x0 * 64f - 32f, maxX = x1 * 64f + 32f, minZ = z0 * 64f - 32f, maxZ = z1 * 64f + 32f;
+        float minX = x0 * 64f - 32f, minZ = z0 * 64f - 32f;
         var things = ReadThings(world, x0, z0, zonesX, zonesZ, edits.Deleted, edits.Added);
         var scene = new WorldScene
         {
@@ -279,9 +283,9 @@ public sealed class WorldScene
             LoadInfo = $"{world.Name}: read in {readMs} ms, {zonesX}×{zonesZ} zones and {things.Count:N0} objects ready in {watch.ElapsedMilliseconds} ms",
         };
         scene.Session = new EditSession(scene, Ground.Read(terrain, edits, x0, z0, zonesX, zonesZ), edits);
-        owner?.Area = scene.Session;
+        owner.Area = scene.Session;
         // The world's history (made in other areas), fitted to this one.
-        if (owner?.History is { } kept)
+        if (owner.History is { } kept)
         {
             scene.Session.Import(kept, ids => FindThings(world, edits, ids));
         }

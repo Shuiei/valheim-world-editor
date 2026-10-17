@@ -49,7 +49,8 @@ public class ClaudeToolsChangingTests
         Assert.Equal("None of those ids is an object of the area.", await r.T.RemoveObjects([-1, 1_000_000]));
         int id = ClaudeRun.J(await r.T.ListObjects(limit: 1))[0].GetProperty("id").GetInt32();
         string took = await r.T.RemoveObjects([id, id, -1]);
-        Assert.Equal("Took 1 away (2 id(s) were not objects of the area). Now pending: 0 zone(s) of ground, 0 object(s) added, 1 taken away.", took);
+        // A repeated id is one id: only -1 was not an object (the count took the list with repeats).
+        Assert.Equal("Took 1 away (1 id(s) were not objects of the area). Now pending: 0 zone(s) of ground, 0 object(s) added, 1 taken away.", took);
         Assert.Equal("No object with that id in the area.", await r.T.SetContents(id, text: "gone"));
         Assert.Equal("Undone. Now pending: nothing.", await r.T.Undo());
         Assert.StartsWith("Redone. Now pending: 0 zone(s) of ground, 0 object(s) added, 1 taken away.", await r.T.Redo());

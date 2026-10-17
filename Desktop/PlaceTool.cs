@@ -351,7 +351,7 @@ public sealed class PlaceTool
     private static Hash Standing(WorldScene s, float cell)
     {
         var h = new Hash(cell);
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         lock (s.Things)
         {
             foreach (var t in s.Things)
@@ -401,7 +401,7 @@ public sealed class PlaceTool
         {
             return true;
         }
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         float n = Math.Clamp(0.5f + 0.5f * Brush.Noise.Fbm((ox + g.X) / Patch + _clumpSeed, (oz + g.Y) / Patch - _clumpSeed), 0, 1);
         float lo = c * 0.75f - 0.1f, t = Math.Clamp((n - lo) / 0.25f, 0, 1);
         return k < t * t * (3 - 2 * t);
@@ -481,7 +481,7 @@ public sealed class PlaceTool
         }
         float smin = SizeMin / 100, smax = MathF.Max(smin, SizeMax / 100);
         float ry = (yaw ?? (RandomYaw ? d.Ry * 360 : 0)) + RotationNow;
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         return new Placement(name, new Vector3(ox + g.X, Elevated(name, y), oz + g.Y), new Vector3(d.Rx * Tilt, ry, d.Rz * Tilt), smin + d.S * (smax - smin), g);
     }
 
@@ -509,12 +509,12 @@ public sealed class PlaceTool
 
     /// <summary>
     /// Makes the brush layout: one object at the cursor (One at a time), or random points in the disc at least the
-    /// spacing apart (400 at most).
+    /// spacing apart (one at least, so a click with a small brush places something; 400 at most).
     /// </summary>
     private void MakePattern()
     {
         float r = Brush.Radius;
-        int n = Math.Min(400, (int)MathF.Round(Density / 100 * MathF.PI * r * r));
+        int n = Math.Clamp((int)MathF.Round(Density / 100 * MathF.PI * r * r), 1, 400);
         _pattern = [];
         if (OneAtATime)
         {
@@ -564,25 +564,21 @@ public sealed class PlaceTool
     }
 
     /// <summary>A point turned by the shape's turn about its pivot.</summary>
-    public Vector2 Xf(Vector2 p)
-    {
-        if (ShapeTurn == 0 || _pivot is not { } c)
-        {
-            return p;
-        }
-        float t = ShapeTurn * MathF.PI / 180, co = MathF.Cos(t), sn = MathF.Sin(t);
-        var d = p - c;
-        return new Vector2(c.X + d.X * co + d.Y * sn, c.Y - d.X * sn + d.Y * co);
-    }
+    public Vector2 Xf(Vector2 p) => Turn(p, ShapeTurn);
 
     /// <summary>A point turned back: the opposite of <see cref="Xf"/>.</summary>
-    public Vector2 Inv(Vector2 p)
+    public Vector2 Inv(Vector2 p) => Turn(p, -ShapeTurn);
+
+    /// <summary>A point turned this many degrees (clockwise seen from above) about the shape's pivot; unturned with none.</summary>
+    /// <param name="p">The point.</param>
+    /// <param name="degrees">The turn.</param>
+    private Vector2 Turn(Vector2 p, float degrees)
     {
-        if (ShapeTurn == 0 || _pivot is not { } c)
+        if (degrees == 0 || _pivot is not { } c)
         {
             return p;
         }
-        float t = -ShapeTurn * MathF.PI / 180, co = MathF.Cos(t), sn = MathF.Sin(t);
+        float t = degrees * MathF.PI / 180, co = MathF.Cos(t), sn = MathF.Sin(t);
         var d = p - c;
         return new Vector2(c.X + d.X * co + d.Y * sn, c.Y - d.X * sn + d.Y * co);
     }
@@ -645,20 +641,7 @@ public sealed class PlaceTool
         {
             return [.. p.Select((q, i) => (q, Math.Min(i, Math.Max(0, p.Count - 2))))];
         }
-        var outp = new List<(Vector2, int)>();
-        for (int i = 0; i < p.Count - 1; i++)
-        {
-            Vector2 p0 = p[Math.Max(0, i - 1)], p1 = p[i], p2 = p[i + 1], p3 = p[Math.Min(p.Count - 1, i + 2)];
-            int steps = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(p1, p2)));
-            for (int k = 0; k < steps; k++)
-            {
-                float t = k / (float)steps, t2 = t * t, t3 = t2 * t;
-                Vector2 Cr(Vector2 a, Vector2 b, Vector2 c, Vector2 d) => 0.5f * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
-                outp.Add((Cr(p0, p1, p2, p3), i));
-            }
-        }
-        outp.Add((p[^1], p.Count - 2));
-        return outp;
+        return Lines.CatmullRom(p);
     }
 
     /// <summary>
@@ -817,7 +800,7 @@ public sealed class PlaceTool
     private static List<Other> OtherSnaps(WorldScene s, Func<int, string?> nameOf)
     {
         var list = new List<Other>();
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         lock (s.Things)
         {
             for (int i = 0; i < s.Things.Count; i++)
@@ -869,7 +852,8 @@ public sealed class PlaceTool
     /// <param name="s">The scene.</param>
     /// <param name="pts">The run.</param>
     /// <param name="names">The kinds, used in turn.</param>
-    /// <param name="k">Pieces placed so far (picks the next kind; stops at MaxShape).</param>
+    /// <param name="k">Pieces placed so far (picks the next kind; stops at MaxShape, as does outp, layers
+    /// included).</param>
     /// <param name="outp">Where the placements go.</param>
     /// <param name="mask">The mask, or null.</param>
     /// <param name="others">Pieces already there to start from (null: no snapping).</param>
@@ -890,8 +874,8 @@ public sealed class PlaceTool
             st = new Vector2(st0.X, st0.Z);
         }
         int layers = Math.Clamp(Layers, 1, 20);
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
-        for (; k < MaxShape; k++)
+        float ox = s.OriginX, oz = s.OriginZ;
+        for (; k < MaxShape && outp.Count < MaxShape; k++)
         {
             string name = names[k % names.Count];
             sSeg = seg;
@@ -907,7 +891,7 @@ public sealed class PlaceTool
                 : MathF.Min(MathF.Min(HeightAt(s, st), HeightAt(s, q)), HeightAt(s, (st + q) / 2)) + (Elevation == Elevations.Above ? Elev : 0);
             if (px >= 1 && pz >= 1 && px <= s.W - 2 && pz <= s.H - 2 && (mask == null || mask((int)MathF.Round(pz) * s.W + (int)MathF.Round(px)) > 0))
             {
-                for (int l = 0; l < (e.H > 0.1f ? layers : 1); l++)
+                for (int l = 0; l < (e.H > 0.1f ? layers : 1) && outp.Count < MaxShape; l++)
                 {
                     outp.Add(new Placement(name, new Vector3(ox + px, bottom - e.A.Y + l * e.H, oz + pz), new Vector3(0, (yaw % 360 + 360) % 360, 0), 0, new Vector2(px, pz)));
                 }
@@ -1086,7 +1070,7 @@ public sealed class PlaceTool
         {
             return o;
         }
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         Placement Place(Vector2 g, float y, float ry) => o with { G = g, Position = new Vector3(ox + g.X, y, oz + g.Y), Rotation = new Vector3(0, (ry % 360 + 360) % 360, 0), Scale = 0 };
         if (OnTop)
         {
@@ -1236,7 +1220,7 @@ public sealed class PlaceTool
         {
             return null;
         }
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         var pieces = new List<Hammer.Placed>();
         lock (s.Things)
         {
@@ -1323,7 +1307,7 @@ public sealed class PlaceTool
             return outp;
         }
         var mask = Mask();
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         var chosen = Chosen.Select(StableHash.Of).ToHashSet();
         lock (s.Things)
         {

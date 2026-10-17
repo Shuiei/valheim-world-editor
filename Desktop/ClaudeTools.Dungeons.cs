@@ -103,6 +103,15 @@ public sealed partial class ClaudeTools
         });
     });
 
+    /// <summary>The session's last step, to tell afterwards whether a tool made one (it may also make none and say why).</summary>
+    private EditSession.Change? LastStep() => _w.Session?.UndoList is { Count: > 0 } steps ? steps[^1] : null;
+
+    /// <summary>Whether a step was made since <see cref="LastStep"/> gave this one.</summary>
+    private bool Stepped(EditSession.Change? before) => !ReferenceEquals(LastStep(), before);
+
+    /// <summary>The answer when a dungeon tool made no step: what the tool said, else that nothing changed.</summary>
+    private static string Unchanged(string said) => said.Length > 0 ? said : "Nothing changed.";
+
     /// <summary>The answer after a dungeon change: what the tool said, the dungeon's new id and its room count.</summary>
     private string AfterDungeon(DungeonTool tool, string said)
     {
@@ -191,7 +200,9 @@ public sealed partial class ClaudeTools
         {
             return problem!;
         }
-        return tool.CloseOpenEnds("Claude: closed open ends") > 0 ? AfterDungeon(tool, said) : said;
+        var before = LastStep();
+        tool.CloseOpenEnds("Claude: closed open ends");
+        return Stepped(before) ? AfterDungeon(tool, said) : Unchanged(said);
     });
 
     /// <summary>set_dungeon_door: the door at a joint put in or taken out.</summary>
@@ -221,7 +232,12 @@ public sealed partial class ClaudeTools
         {
             return door ? "There is a door there already." : "There is no door there.";
         }
+        var before = LastStep();
         tool.ToggleDoor(d, joints[joint], door ? "Claude: added a dungeon door" : "Claude: removed a dungeon door");
+        if (!Stepped(before))
+        {
+            return Unchanged(said);
+        }
         _w.AfterClaudeEdit(said);
         return $"{said} Now pending: {Pending()}";
     });

@@ -133,6 +133,18 @@ public class ZdoToolsTests
     }
 
     [Fact]
+    public void ScaleOneIsWrittenAsNoScaleAsBlankDoes()
+    {
+        // Build wrote a "scale" of (1, 1, 1) where Blank writes none.
+        using var w = new TempWorld();
+        var (world, id, _, src) = Richest(w);
+        var o = world.ObjectRefs[id];
+        var z = ZdoData.Parse(ZdoBuilder.Build(src, o, o.File.WorldVersion, Vector3.Zero, Vector3.Zero, 1f));
+        Assert.DoesNotContain(z.Vec3List, i => i.Key == StableHash.Of("scale"));
+        Assert.Contains(z.Vec3List, i => i.Key == StableHash.Of("spawnpoint"));
+    }
+
+    [Fact]
     public void AKindTheWorldHasNoExampleOfIsBuiltBlank()
     {
         byte[] bytes = ZdoBuilder.Blank(StableHash.Of("Rock_7"), 0x0100, new Vector3(5, 6, 7), new Vector3(0, 30, 0), 2f);

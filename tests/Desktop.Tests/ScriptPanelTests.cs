@@ -66,6 +66,33 @@ public sealed class ScriptPanelTests : IDisposable
         Assert.Equal(-1, p.ScriptBox.SelectedIndex);
     }
 
+    // Saving over another saved script asks first (No keeps it); the script picked in the list is saved over without
+    // asking. A saved script that cannot be read is left out of the list, not the others with it.
+    [AvaloniaFact]
+    public async Task AnotherScriptIsReplacedOnlyWhenSaidAndAnUnreadableOneIsLeftOut()
+    {
+        Directory.CreateDirectory(ScriptPanel.Folder);
+        File.WriteAllText(Path.Combine(ScriptPanel.Folder, "mine.csx"), "Print(1);");
+        File.CreateSymbolicLink(Path.Combine(ScriptPanel.Folder, "gone.csx"), Path.Combine(_data, "missing.csx"));
+        var p = new ScriptPanel();
+        var asked = new List<string>();
+        p.Confirm = q => { asked.Add(q); return Task.FromResult(false); };
+        int examples = ScriptExamples.All.Length;
+        Assert.Equal(examples + 1, p.ScriptBox.ItemCount);
+        // An example open, saved as "mine": asked, and No keeps the saved one.
+        p.ScriptBox.SelectedIndex = 0;
+        p.NameBox.Text = "mine";
+        await p.Save();
+        Assert.Equal("There is a saved script called “mine” already. Replace it?", Assert.Single(asked));
+        Assert.Equal("Print(1);", File.ReadAllText(Path.Combine(ScriptPanel.Folder, "mine.csx")));
+        // "mine" itself picked and changed: saved without asking.
+        p.ScriptBox.SelectedIndex = examples;
+        p.CodeBox.Text = "Print(2);";
+        await p.Save();
+        Assert.Single(asked);
+        Assert.Equal("Print(2);", File.ReadAllText(Path.Combine(ScriptPanel.Folder, "mine.csx")));
+    }
+
     // The scripts folder cannot be made (a file is in its place): said, nothing saved.
     [AvaloniaFact]
     public void ASaveThatFailsIsSaid()

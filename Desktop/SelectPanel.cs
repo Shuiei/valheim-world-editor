@@ -195,14 +195,8 @@ public sealed class SelectPanel
                 _info,
             },
         };
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             VerticalAlignment = VerticalAlignment.Top,
             Child = new StackPanel
             {
@@ -213,12 +207,12 @@ public sealed class SelectPanel
                     new TextBlock { Text = "Select", FontSize = 14, FontWeight = FontWeight.SemiBold },
                     new TextBlock { Text = "Click objects (Ctrl adds; Shift + click takes the row from the last one), or drag on the ground around them. Drag a selected object to move the selection.", FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                     new WrapPanel { Children = { DeleteButton, BuildingButton, SameButton, InvertButton, InspectButton, ClaimButton }, ItemSpacing = 4, LineSpacing = 4 },
-                    new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 6, Children = { new TextBlock { Text = "Replace with", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Col(ReplaceBox, 1), Col(ReplacePickButton, 2) } },
+                    new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 6, Children = { new TextBlock { Text = "Replace with", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(ReplaceBox, 1), Ui.Col(ReplacePickButton, 2) } },
                     ReplaceButton,
                     GroundBox,
                     SnapBox,
                     new TextBlock { Text = "SAVED SELECTIONS", FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 0) },
-                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 6, Children = { SavedBox, Col(KeepButton, 1) } },
+                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 6, Children = { SavedBox, Ui.Col(KeepButton, 1) } },
                     _savedRow,
                     _exact,
                     new TextBlock
@@ -228,7 +222,7 @@ public sealed class SelectPanel
                     },
                 },
             },
-        };
+        });
         Refresh();
     }
 
@@ -322,13 +316,6 @@ public sealed class SelectPanel
 
     /// <summary>The name of a kind (the window's models), for messages.</summary>
     public Func<int, string?>? NameOf { get; set; }
-
-    /// <summary>Puts a control in a grid column; returns it.</summary>
-    private static Control Col(Control c, int col)
-    {
-        Grid.SetColumn(c, col);
-        return c;
-    }
 
     /// <summary>Switches Move by: on, the boxes start at 0; off, they show where the selection is.</summary>
     private void SetBy(bool by)

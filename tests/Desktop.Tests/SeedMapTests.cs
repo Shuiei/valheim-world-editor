@@ -269,4 +269,22 @@ public class SeedMapTests
         Dispatcher.UIThread.RunJobs();
         Assert.False(map.HasCloseLook);
     }
+
+    [AvaloniaFact]
+    public async Task ADisposedMapMovedOrResizedSamplesNothing()
+    {
+        using var open = Open(160, 120);
+        var (w, map) = open;
+        map.Show(Preview());
+        map.Dispose();
+        // Zoomed in and resized after: no close look is sampled any more.
+        map.LookAt(0, 0, 1);
+        w.Width = 200;
+        for (int i = 0; i < 10; i++)
+        {
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+            Settle();
+        }
+        Assert.False(map.HasCloseLook);
+    }
 }

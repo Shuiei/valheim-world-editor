@@ -88,6 +88,19 @@ public class EditStoreTests
         Assert.Equal(20f, edits.Get(zone.ZoneX, zone.ZoneZ)!.Lift[0]);
     }
 
+    [Fact]
+    public void WithObjectsAnswersFromTheObjectsAsTheyAre()
+    {
+        var edits = new EditStore(WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test"));
+        var placed = new NewObject(-1, 1, System.Numerics.Vector3.Zero, System.Numerics.Vector3.Zero, 1f);
+        edits.AddObjects([placed, placed with { Id = -2 }]);
+        edits.SetDeleted([5, 7, -2], true);
+        var (deleted, added) = edits.WithObjects((d, a) => (d.Order().ToList(), a.Keys.Order().ToList()));
+        Assert.Equal([5, 7], deleted);
+        Assert.Equal([-1], added);
+        Assert.Equal(placed, edits.WithObjects((_, a) => a[-1]));
+    }
+
     // Only the zones passing the test are copied, and they are copies.
     [Fact]
     public void CopiesTakesOnlyTheZonesPassingTheTest()
@@ -118,5 +131,36 @@ public class EditStoreTests
         edits.Put(new ZoneEdit(x + 3, z));
         var marks = edits.EditedZones().Where(m => m.ZoneX != x).OrderBy(m => m.ZoneX).ToList();
         Assert.Equal([(x + 1, z, false), (x + 2, z, true)], marks);
+    }
+
+    [Fact]
+    public void AFieldPutReplacesAddsOrKeepsItTakenAway()
+    {
+        int key = StableHash.Of("text");
+        var data = new List<ObjectField> { new("strings", key, "old"), new("ints", key, "1") };
+        ObjectField.Put(data, "strings", key, "new");
+        Assert.Equal([new("strings", key, "new"), new("ints", key, "1")], data);
+        // Taken away: kept with no value, as copies keep it; one never there is not added.
+        ObjectField.Put(data, "ints", key, null);
+        ObjectField.Put(data, "floats", key, null);
+        Assert.Equal([new("strings", key, "new"), new("ints", key, null)], data);
+        ObjectField.Put(data, "floats", key, "2");
+        Assert.Equal(new ObjectField("floats", key, "2"), data[^1]);
+    }
+
+    [Fact]
+    public void AZoneShowsItsEditHeldTo8MetresThenItsLift()
+    {
+        // One rule for the ground shown (HeightGrid and Uplift each wrote it out).
+        var e = new ZoneEdit(0, 0);
+        e.Lift[0] = 3;
+        Assert.Equal(13f, e.HeightAt(0, 10));
+        e.Modified[1] = true;
+        e.Level[1] = 6;
+        e.Smooth[1] = 5;
+        Assert.Equal(18f, e.HeightAt(1, 10));
+        // Level without Modified is not shown.
+        e.Level[2] = 4;
+        Assert.Equal(10f, e.HeightAt(2, 10));
     }
 }

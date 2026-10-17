@@ -80,7 +80,7 @@ public sealed class MaskPanel
     {
         _mask = mask;
         var biomes = new WrapPanel { ItemSpacing = 4, LineSpacing = 4 };
-        foreach (var (b, name) in Mask.BiomeNames)
+        foreach (var (b, name) in ZoneFilter.BiomeChoices)
         {
             var t = new ToggleButton { Content = name, FontSize = 11, Padding = new Thickness(6, 2) }.Tip("mask.biome");
             t.IsCheckedChanged += (_, _) =>
@@ -133,39 +133,29 @@ public sealed class MaskPanel
                 biomes,
                 Pair("Height", HeightMin, HeightMax, "m"),
                 Pair("Slope", SlopeMin, SlopeMax, "°"),
-                new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,14"), ColumnSpacing = 4, Children = { new TextBlock { Text = "Paint", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Column(PaintBox, 1) } },
+                new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,14"), ColumnSpacing = 4, Children = { new TextBlock { Text = "Paint", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PaintBox, 1) } },
                 WarningText,
                 new TextBlock { Text = "No biome selected = all biomes. Leave a box empty for no limit. Alt + Shift + click the ground fills the height range around it (±2 m).", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
             },
         };
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             VerticalAlignment = VerticalAlignment.Top,
             Child = new StackPanel { Width = 280, Spacing = 6, Children = { OnBox, _body } },
-        };
+        });
         mask.Changed += Fill;
         Fill();
-    }
-
-    /// <summary>
-    /// <paramref name="c"/> set in grid column <paramref name="col"/>, for use inside an initializer.
-    /// </summary>
-    private static Control Column(Control c, int col)
-    {
-        Grid.SetColumn(c, col);
-        return c;
     }
 
     /// <summary>
     /// A box's value, or null when it is empty.
     /// </summary>
     private static float? F(NumericUpDown n) => n.Value is decimal d ? (float)d : null;
+
+    /// <summary>
+    /// A box's value for a mask limit: null (empty) for no limit.
+    /// </summary>
+    private static decimal? Box(float? v) => v is float f ? (decimal)f : null;
 
     /// <summary>
     /// A box changed: the mask takes the panel's settings and the warning is updated.
@@ -188,14 +178,22 @@ public sealed class MaskPanel
     }
 
     /// <summary>
-    /// The mask changed elsewhere (Alt + Shift + click): the boxes follow.
+    /// The mask changed elsewhere (Alt + Shift + click): every box follows, so <c>Changed</c> writes back what the
+    /// mask already holds.
     /// </summary>
     private void Fill()
     {
         _filling = true;
         OnBox.IsChecked = _mask.On;
-        HeightMin.Value = _mask.HeightMin is float a ? (decimal)a : null;
-        HeightMax.Value = _mask.HeightMax is float b ? (decimal)b : null;
+        foreach (var (b, t) in BiomeButtons)
+        {
+            t.IsChecked = _mask.Biomes.Contains(b);
+        }
+        HeightMin.Value = Box(_mask.HeightMin);
+        HeightMax.Value = Box(_mask.HeightMax);
+        SlopeMin.Value = Box(_mask.SlopeMin);
+        SlopeMax.Value = Box(_mask.SlopeMax);
+        PaintBox.SelectedIndex = (int)_mask.Paint;
         _filling = false;
         Changed();
     }

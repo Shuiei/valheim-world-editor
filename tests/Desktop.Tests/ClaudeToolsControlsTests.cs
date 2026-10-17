@@ -84,6 +84,16 @@ public class ClaudeToolsControlsTests
         var slider = new Slider { Minimum = 0, Maximum = 40 };
         Assert.Null(t.Set(C("c", slider), "99", false));
         Assert.Equal(40, slider.Value);
+        // Not a number to set (NaN went through Math.Clamp), and a number too big for a decimal (it threw).
+        Assert.StartsWith("c is a slider from 0 to 40: give a number", t.Set(C("c", slider), "NaN", false));
+        Assert.StartsWith("c is a slider", t.Set(C("c", slider), "-Infinity", false));
+        Assert.Equal(40, slider.Value);
+        var number = new NumericUpDown { Minimum = 1, Maximum = 50 };
+        Assert.Null(t.Set(C("g", number), "1e30", false));
+        Assert.Equal(50m, number.Value);
+        Assert.Null(t.Set(C("g", number), "-1e30", false));
+        Assert.Equal(1m, number.Value);
+        Assert.StartsWith("g takes a number", t.Set(C("g", number), "Infinity", false));
         var text = new TextBox();
         Assert.Null(t.Set(C("d", text), "Beech", true));
         Assert.Equal("Beech", text.Text);

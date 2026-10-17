@@ -7,7 +7,8 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// The terrain's zone caches: <see cref="TerrainService.Warm"/> makes a zone's ground and paint mask in one generator
-/// pass, the same as <see cref="TerrainService.BaseZone"/> and <see cref="TerrainService.BaseMask"/> make them apart.
+/// pass, the same as <see cref="TerrainService.BaseZone"/> and <see cref="TerrainService.BaseMask"/> make them apart; the
+/// mask has the locations' cleared paint.
 /// </summary>
 [Collection("World files")]
 public class TerrainServiceTests
@@ -49,7 +50,7 @@ public class TerrainServiceTests
     }
 
     [Fact]
-    public void WarmGivesThePlayersModifiersToTheGroundAndNotToTheMask()
+    public void WarmGivesThePlayersModifiersToTheGroundAndTheMaskAsReadingThemDoes()
     {
         using var w = new TempWorld();
         WorldSave world = w.Load();
@@ -63,7 +64,42 @@ public class TerrainServiceTests
         float[] heights = warmed.BaseZone(3, -2);
         Assert.True(heights[Centre] > generated + 1);
         Assert.Equal(new TerrainService(world, mods).BaseZone(3, -2), heights);
-        Assert.Equal(plain.BaseMask(3, -2), warmed.BaseMask(3, -2));
+        Assert.Equal(new TerrainService(world, mods).BaseMask(3, -2), warmed.BaseMask(3, -2));
+        Assert.Equal(1, warmed.ZoneBuilds);
+    }
+
+    [Fact]
+    public void TheMaskHasALocationsClearedPaintWithinItsRadiusOnly()
+    {
+        using var w = new TempWorld();
+        WorldSave world = w.Load();
+        // Eikthyr's altar (dirt over 4.14 m) at vertex 37, 34 of zone 3, -2.
+        var altar = new PlacedObject(0, StableHash.Of("Eikthyrnir"), new System.Numerics.Vector3(3 * 64 + 5, 40, -2 * 64 + 2), System.Numerics.Vector3.Zero, 0);
+        var mods = new TerrainModifiers([altar]);
+        float[] bare = new TerrainService(world, null).BaseMask(3, -2);
+        float[] painted = new TerrainService(world, mods).BaseMask(3, -2);
+        for (int i = 0; i < 65; i++)
+        {
+            for (int j = 0; j < 65; j++)
+            {
+                int o = (i * 65 + j) * 4;
+                float d = MathF.Sqrt((j - 37) * (j - 37) + (i - 34) * (i - 34));
+                if (d > 4.14f)
+                {
+                    Assert.Equal(bare[o..(o + 4)], painted[o..(o + 4)]);
+                }
+                else
+                {
+                    Assert.True(painted[o] > bare[o] || bare[o] == 1f, $"vertex {j}, {i} has no dirt");
+                    Assert.Equal(bare[o + 3], painted[o + 3]);
+                }
+            }
+        }
+        Assert.Equal(1f, painted[(34 * 65 + 37) * 4]);
+        // Warm paints the same.
+        var warmed = new TerrainService(world, mods);
+        warmed.Warm(3, -2);
+        Assert.Equal(painted, warmed.BaseMask(3, -2));
         Assert.Equal(1, warmed.ZoneBuilds);
     }
 }

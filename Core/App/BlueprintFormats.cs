@@ -82,9 +82,9 @@ public static class BlueprintFormats
             {
                 continue;
             }
-            if (line.StartsWith("#Name:", StringComparison.Ordinal)) { name = line[6..].Trim() is { Length: > 0 } n ? n : name; continue; }
-            if (line.StartsWith("#Creator:", StringComparison.Ordinal)) { creator = line[9..].Trim(); continue; }
-            if (line.StartsWith("#Description:", StringComparison.Ordinal)) { description = Unquote(line[13..].Trim()); continue; }
+            if (HeaderValue(line, "#Name:") is { } named) { name = named.Length > 0 ? named : name; continue; }
+            if (HeaderValue(line, "#Creator:") is { } by) { creator = by; continue; }
+            if (HeaderValue(line, "#Description:") is { } about) { description = Unquote(about); continue; }
             if (line.StartsWith("#Category:", StringComparison.Ordinal)) { continue; }
             if (line == RuinHeader) { ruin = true; continue; }
             if (line.StartsWith(DataHeader, StringComparison.Ordinal))
@@ -151,7 +151,7 @@ public static class BlueprintFormats
             line = line.Replace(',', '.');
         }
         string[] p = line.Split(';');
-        var q = Quaternion.Normalize(new Quaternion(F(p[5]), F(p[6]), F(p[7]), F(p[8])));
+        var q = new Quaternion(F(p[5]), F(p[6]), F(p[7]), F(p[8]));
         float scale = p.Length > 12 ? F(p[10]) : 1f;
         return new Piece(PrefabName(p[0]), new Vector3(Coord(p[2]), Coord(p[3]), Coord(p[4])), ToEuler(q), scale);
     }
@@ -166,7 +166,7 @@ public static class BlueprintFormats
             line = line.Replace(',', '.');
         }
         string[] p = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var q = Quaternion.Normalize(new Quaternion(F(p[1]), F(p[2]), F(p[3]), F(p[4])));
+        var q = new Quaternion(F(p[1]), F(p[2]), F(p[3]), F(p[4]));
         return new Piece(PrefabName(p[0]), new Vector3(Coord(p[5]), Coord(p[6]), Coord(p[7])), ToEuler(q), 1f);
     }
 
@@ -204,9 +204,17 @@ public static class BlueprintFormats
     private static string PrefabName(string s) => s.Split('(')[0].Trim();
 
     /// <summary>
+    /// The value of a header line when it is that field's ("#Name:" for "#name: Hut" gives "Hut"), trimmed; the field is
+    /// matched ignoring case. Null for another line. One rule for every reader of blueprint headers (a paste and the
+    /// Workshop's library), so both show the same name and description.
+    /// </summary>
+    internal static string? HeaderValue(string line, string field) =>
+        line.StartsWith(field, StringComparison.OrdinalIgnoreCase) ? line[field.Length..].Trim() : null;
+
+    /// <summary>
     /// Strips the surrounding quotes PlanBuild writes around a description and undoes its \" and \n escapes.
     /// </summary>
-    private static string Unquote(string s) => s.Length >= 2 && s[0] == '"' && s[^1] == '"' ? s[1..^1].Replace("\\\"", "\"").Replace("\\n", "\n") : s;
+    internal static string Unquote(string s) => s.Length >= 2 && s[0] == '"' && s[^1] == '"' ? s[1..^1].Replace("\\\"", "\"").Replace("\\n", "\n") : s;
 
     /// <summary>
     /// A number in invariant culture; empty gives 0. One that is not finite ("NaN", "Infinity") is a FormatException,
@@ -228,11 +236,17 @@ public static class BlueprintFormats
     private static string S(float f) => f.ToString("0.#####", CultureInfo.InvariantCulture);
 
     /// <summary>
-    /// Unity's Euler angles (degrees, applied z, then x, then y: R = Ry * Rx * Rz) of a quaternion.
+    /// Unity's Euler angles (degrees, applied z, then x, then y: R = Ry * Rx * Rz) of a quaternion, normalised first. One
+    /// with no length to normalise (all zero, as blank rotation fields read) or none that fits a float is no turn.
     /// </summary>
     public static Vector3 ToEuler(Quaternion q)
     {
-        q = Quaternion.Normalize(q);
+        float length = q.Length();
+        if (!float.IsFinite(length) || length < 1e-6f)
+        {
+            return Vector3.Zero;
+        }
+        q *= 1f / length;
         float m02 = 2f * (q.X * q.Z + q.W * q.Y), m22 = 1f - 2f * (q.X * q.X + q.Y * q.Y);
         float m12 = 2f * (q.Y * q.Z - q.W * q.X), m10 = 2f * (q.X * q.Y + q.W * q.Z), m11 = 1f - 2f * (q.X * q.X + q.Z * q.Z);
         float m00 = 1f - 2f * (q.Y * q.Y + q.Z * q.Z), m20 = 2f * (q.X * q.Z - q.W * q.Y);
@@ -262,17 +276,8 @@ public static class BlueprintFormats
         const float K = MathF.PI / 360f;
         Quaternion qx = new(MathF.Sin(e.X * K), 0, 0, MathF.Cos(e.X * K)), qy = new(0, MathF.Sin(e.Y * K), 0, MathF.Cos(e.Y * K)), qz = new(0, 0, MathF.Sin(e.Z * K), MathF.Cos(e.Z * K));
         // System.Numerics multiplies right to left like Unity: qy * qx * qz applies qz first.
-        return Mul(Mul(qy, qx), qz);
+        return qy * qx * qz;
     }
-
-    /// <summary>
-    /// Hamilton product a * b written out (a applied after b).
-    /// </summary>
-    private static Quaternion Mul(Quaternion a, Quaternion b) => new(
-        a.W * b.X + a.X * b.W + a.Y * b.Z - a.Z * b.Y,
-        a.W * b.Y - a.X * b.Z + a.Y * b.W + a.Z * b.X,
-        a.W * b.Z + a.X * b.Y - a.Y * b.X + a.Z * b.W,
-        a.W * b.W - a.X * b.X - a.Y * b.Y - a.Z * b.Z);
 
     /// <summary>
     /// The most metres the ground grid of a clip spans on a side: more than the editor's largest area (17 zones,
@@ -461,8 +466,9 @@ public static class BlueprintFormats
     };
 
     /// <summary>
-    /// The objects of a clipboard (blueprint file content) as a PlanBuild .blueprint or a .vbuild file.
-    /// Ground is not written: PlanBuild's terrain entries cannot describe free-form ground.
+    /// The objects of a clipboard (blueprint file content) as a PlanBuild .blueprint or a .vbuild file. The .blueprint
+    /// also gets the editor's lines for what objects hold (as Homestead's, read back when opened again); a .vbuild has
+    /// no place for them. Ground is not written: PlanBuild's terrain entries cannot describe free-form ground.
     /// </summary>
     /// <param name="clip">The clipboard: its "objects" are written.</param>
     /// <param name="format">"vbuild" for a .vbuild file, anything else for a PlanBuild .blueprint.</param>
@@ -470,15 +476,13 @@ public static class BlueprintFormats
     /// <param name="category">A prefab's piece category index (0 Misc, 1 Crafting...); out of range gives Misc.</param>
     public static string Write(JsonObject clip, string format, string name, Func<string, int> category)
     {
-        var objs = (clip["objects"] as JsonArray ?? []).OfType<JsonObject>().Select(o => (
-            Name: (string?)o["name"] ?? "", X: (float?)o["dx"] ?? 0, Y: (float?)o["dy"] ?? 0, Z: (float?)o["dz"] ?? 0,
-            Rot: FromEuler(new Vector3((float?)o["rx"] ?? 0, (float?)o["ry"] ?? 0, (float?)o["rz"] ?? 0)), Scale: (float?)o["scale"] ?? 0)).ToList();
+        var objs = Homestead.Pieces(clip);
         // PlanBuild measures from the lowest corner; ground level stays where the copy had it.
         float minX = objs.Count > 0 ? objs.Min(o => o.X) : 0, minZ = objs.Count > 0 ? objs.Min(o => o.Z) : 0;
         StringBuilder sb = new();
         if (format == "vbuild")
         {
-            foreach (var (prefab, x, y, z, rot, scale) in objs.OrderBy(o => o.Y))
+            foreach (var (prefab, x, y, z, rot, _, _) in objs)
             {
                 sb.Append(prefab).Append(' ').Append(S(rot.X)).Append(' ').Append(S(rot.Y)).Append(' ').Append(S(rot.Z)).Append(' ').Append(S(rot.W))
                     .Append(' ').Append(S(x - minX)).Append(' ').Append(S(y)).Append(' ').Append(S(z - minZ)).Append('\n');
@@ -486,16 +490,18 @@ public static class BlueprintFormats
             return sb.ToString();
         }
         string[] categories = ["Misc", "Crafting", "BuildingWorkbench", "BuildingStonecutter", "Furniture", "DeepNorth", "Feasts", "Food", "Meads"];
-        sb.Append("#Name:").Append(name).Append('\n');
+        sb.Append("#Name:").Append(Homestead.Header(name)).Append('\n');
         sb.Append("#Creator:Valheim World Editor\n");
         sb.Append("#Description:\"\"\n");
         sb.Append("#Category:Misc\n");
+        // The editor's own lines (what the pieces hold), read back when the file is opened again.
+        Homestead.DataLines(sb, objs);
         sb.Append("#Pieces\n");
-        foreach (var (prefab, x, y, z, rot, scale) in objs.OrderBy(o => o.Y).ThenBy(o => o.X).ThenBy(o => o.Z))
+        foreach (var (prefab, x, y, z, rot, scale, _) in objs)
         {
             int cat = category(prefab);
             float s = scale > 0 ? scale : 1f;
-            sb.Append(string.Join(";", prefab, cat >= 0 && cat < categories.Length ? categories[cat] : "Misc",
+            sb.Append(string.Join(";", Homestead.PieceName(prefab), cat >= 0 && cat < categories.Length ? categories[cat] : "Misc",
                 S(x - minX), S(y), S(z - minZ), S(rot.X), S(rot.Y), S(rot.Z), S(rot.W), "\"\"", S(s), S(s), S(s))).Append('\n');
         }
         return sb.ToString();

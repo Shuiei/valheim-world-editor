@@ -90,6 +90,17 @@ public class ZdoDataTests
     }
 
     [Fact]
+    public void UnusedHighFlagBitsComeBackAsSaved()
+    {
+        // ZdoBuilder keeps the bits 0x4000 and 0x8000; ZdoData dropped them on the way through the inspector.
+        var z = new ZdoData { Prefab = 123, BaseFlags = 0x0100 | 0x4000 | 0x8000 };
+        z.IntList.Add((1, 2));
+        var back = ZdoData.Parse(z.Serialize());
+        Assert.Equal(0x0100 | 0x4000 | 0x8000, back.BaseFlags);
+        Assert.Equal(0x0100 | 0x4000 | 0x8000 | ZdoData.Ints, BitConverter.ToUInt16(back.Serialize(), 0));
+    }
+
+    [Fact]
     public void ValuesAreSetReplacedAndRemoved()
     {
         var z = new ZdoData();
@@ -107,6 +118,12 @@ public class ZdoDataTests
         Assert.Equal(Quaternion.Identity, z.QuatList.Single().Value);
         Assert.Throws<ArgumentException>(() => z.Set("colours", k, "1"));
         Assert.Throws<FormatException>(() => z.Set("vec3", k, "1 2"));
+        // Numbers the game cannot use are refused, whole or in a vector.
+        Assert.Throws<FormatException>(() => z.Set("floats", k, "NaN"));
+        Assert.Throws<FormatException>(() => z.Set("floats", k, "-Infinity"));
+        Assert.Throws<FormatException>(() => z.Set("floats", k, "1e40"));
+        Assert.Throws<FormatException>(() => z.Set("vec3", k, "1 Infinity 3"));
+        Assert.False(ZdoData.Valid("floats", "NaN"));
     }
 
     [Fact]
@@ -241,5 +258,31 @@ public class ZdoDataTests
         Assert.Equal(new Vector3(3f), keep.Vec3List.Single().Value);
         var scaled = ZdoData.Parse(ZdoBuilder.Build(src, o, o.File.WorldVersion, Vector3.One, Vector3.Zero, 1.25f));
         Assert.Equal(new Vector3(1.25f), Assert.Single(scaled.Vec3List).Value);
+    }
+
+    [Fact]
+    public void NumbersAreReadAsSetReadsThem()
+    {
+        // One reader of "x y z" for the save and for extensions' copies (CopyView had its own, without ';').
+        Assert.Equal([1f, 2.5f, -3f], ZdoData.Numbers("1 2.5,-3", 3)!);
+        Assert.Equal([1f, 2f, 3f, 4f], ZdoData.Numbers("1;2;3;4", 4)!);
+        Assert.Null(ZdoData.Numbers("1 2", 3));
+        Assert.Null(ZdoData.Numbers("1 x 3", 3));
+        Assert.Null(ZdoData.Numbers(null, 3));
+        Assert.True(ZdoData.Valid("vec3", "1;2;3"));
+        Assert.False(ZdoData.Valid("vec3", "1 2"));
+    }
+
+    [Fact]
+    public void AnIntIsFoundByItsKeyFirstValueFirst()
+    {
+        var z = new ZdoData();
+        Assert.Null(z.GetInt(StableHash.Of("pose")));
+        z.IntList.Add((StableHash.Of("pose"), 3));
+        z.IntList.Add((StableHash.Of("pose"), 7));
+        Assert.Equal(3, z.GetInt(StableHash.Of("pose")));
+        Assert.True(ZdoData.TryGet(z.IntList, StableHash.Of("pose"), out int pose));
+        Assert.Equal(3, pose);
+        Assert.False(ZdoData.TryGet(z.StringList, StableHash.Of("pose"), out _));
     }
 }

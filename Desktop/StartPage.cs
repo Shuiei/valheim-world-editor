@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using TerrainEditor.App;
 using TerrainEditor.Save;
@@ -106,6 +107,14 @@ public sealed class StartPage
     internal Task? WorldsCheck { get; private set; }
     /// <summary>Counts the looks for the worlds, so a look overtaken by a later one shows nothing.</summary>
     private int _worldsLook;
+    /// <summary>Counts the fills of Home's tiles, so a fill overtaken by a later one shows nothing.</summary>
+    private int _homeLook;
+    /// <summary>Counts the fills of the Workshop's tiles, likewise.</summary>
+    private int _workshopLook;
+    /// <summary>The blueprint pictures Home's tiles show, disposed when the tiles are made again.</summary>
+    private readonly List<Bitmap> _homePictures = [];
+    /// <summary>The blueprint pictures the Workshop's tiles show, likewise.</summary>
+    private readonly List<Bitmap> _workshopPictures = [];
 
     /// <summary>Homestead (the building library's in-game side): found in the game's BepInEx or not.</summary>
     internal TextBlock HomesteadText { get; } = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12 };
@@ -152,6 +161,11 @@ public sealed class StartPage
     public StartPage(AppSettings settings, string? lastError = null)
     {
         _settings = settings;
+        // The bridge address last connected to (Connect by address), so a tunnel's is not typed again each start.
+        if (!string.IsNullOrWhiteSpace(settings.LiveUrl))
+        {
+            LiveUrl.Text = settings.LiveUrl;
+        }
         LookBanner = new GameLookBanner(settings) { PickFolder = t => PickFolder(t), OpenLog = OpenLog };
         LookBanner.BusyChanged += _ => ShowBusy();
         var settingsButton = new Button { Content = Icons.With("settings", "Settings"), FontSize = 13 }.Classed("ghost");
@@ -167,10 +181,10 @@ public sealed class StartPage
         {
             var label = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 10 };
             label.Children.Add(Icons.Make(icon, 16));
-            label.Children.Add(Col(new TextBlock { Text = title, FontSize = 13.5, VerticalAlignment = VerticalAlignment.Center }, 1));
+            label.Children.Add(Ui.Col(new TextBlock { Text = title, FontSize = 13.5, VerticalAlignment = VerticalAlignment.Center }, 1));
             if (tag != null)
             {
-                label.Children.Add(Col(tag, 2));
+                label.Children.Add(Ui.Col(tag, 2));
             }
             var b = new Button { Content = label, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, Padding = new Thickness(12, 9) }.Classed("ghost");
             b.Tip($"start.{key}");
@@ -242,7 +256,7 @@ public sealed class StartPage
             Children =
             {
                 new TextBlock { Text = "Another world folder", FontWeight = FontWeight.SemiBold },
-                new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 6, Children = { PathBox, Col(browse, 1), Col(openPath, 2) } },
+                new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 6, Children = { PathBox, Ui.Col(browse, 1), Ui.Col(openPath, 2) } },
                 PathError,
                 Hint("For example a copy of a dedicated server's world: <savedir>/worlds_local/<World>."),
             },
@@ -344,25 +358,19 @@ public sealed class StartPage
         }
     }
 
-    /// <summary>Puts a control in a grid column and returns it.</summary>
-    private static Control Col(Control c, int col)
-    {
-        Grid.SetColumn(c, col);
-        return c;
-    }
-
     /// <summary>The page shown (a <c>ModeButtons</c> key).</summary>
     public string Mode { get; private set; } = "";
 
-    /// <summary>Each page's title and what it is for.</summary>
+    /// <summary>Each page's title and what it is for, in the editor's language.</summary>
     private static readonly Dictionary<string, (string Title, string Text)> Pages = new()
     {
-        ["home"] = ("Pick up where you left off", ""),
-        ["game"] = ("My game", "Edit the world you are playing in, single player or the one you host. You see the changes in game right away."),
-        ["server"] = ("A dedicated server", "Edit your server's world while people play. The editor connects to the server itself."),
-        ["offline"] = ("A saved world", "Edit world files on this computer with the game closed, then start the game again."),
-        ["workshop"] = ("The Workshop", "Build on a blank plot with every piece the game has, see what would hold, and keep it as a blueprint to build in game with Homestead. Your blueprints are in the Workshop's Library too: open them, add them, or drag them onto the plot."),
-        ["new"] = ("A new world", "Look at seeds before their world exists: land, biomes, and exactly where the game will put the start, the bosses, the traders and the dungeons. Let the editor search many seeds for one that suits you, then make the world."),
+        ["home"] = (Lang.T("start.page.home"), ""),
+        ["game"] = (Lang.T("start.page.game"), Lang.T("start.page.gameText")),
+        ["server"] = (Lang.T("start.page.server"), Lang.T("start.page.serverText")),
+        // The same words as the mode's tip on the left.
+        ["offline"] = (Lang.T("start.page.offline"), Lang.T("tip.start.offline")),
+        ["workshop"] = (Lang.T("start.page.workshop"), Lang.T("start.page.workshopText")),
+        ["new"] = (Lang.T("start.page.new"), Lang.T("start.page.newText")),
     };
 
     /// <summary>
@@ -395,11 +403,11 @@ public sealed class StartPage
         }
         if (mode == "home")
         {
-            FillHome();
+            _ = FillHome();
         }
         if (mode == "workshop")
         {
-            FillBlueprints();
+            _ = FillBlueprints();
         }
         if (mode == "server")
         {
@@ -463,6 +471,7 @@ public sealed class StartPage
         List<LocalGame.Bridge> bridges;
         bool bepInEx, plugin;
         LocalGame.Running? running;
+        string where, state, key;
         try
         {
             (bridges, bepInEx, plugin) = await Task.Run(() =>
@@ -471,7 +480,14 @@ public sealed class StartPage
                 return (found, b, p);
             });
             running = await LocalGame.FindRunning(bridges);
-            ShowHomestead(await Task.Run(() => Homestead.Find(_settings)));
+            where = running?.Bridge.Where ?? bridges.FirstOrDefault()?.Where ?? "";
+            state = running != null ? "running" : bridges.Count > 0 ? "installed" : plugin ? "plugin-not-started" : bepInEx ? "no-plugin" : "no-bepinex";
+            key = $"{state}|{running?.World}|{running?.Players}|{where}";
+            // Homestead is looked for again only when the game's state changes: it searches every BepInEx's plugins.
+            if (key != _gameKey)
+            {
+                ShowHomestead(await Task.Run(() => Homestead.Find(_settings)));
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or HttpRequestException)
         {
@@ -489,9 +505,6 @@ public sealed class StartPage
             Console.Error.WriteLine("My game: checked again.");
             _gameError.Text = "";
         }
-        string where = running?.Bridge.Where ?? bridges.FirstOrDefault()?.Where ?? "";
-        string state = running != null ? "running" : bridges.Count > 0 ? "installed" : plugin ? "plugin-not-started" : bepInEx ? "no-plugin" : "no-bepinex";
-        string key = $"{state}|{running?.World}|{running?.Players}|{where}";
         if (key == _gameKey)
         {
             return;
@@ -502,16 +515,14 @@ public sealed class StartPage
         Control content;
         if (running != null)
         {
-            var edit = new Button { Content = "Edit live", VerticalAlignment = VerticalAlignment.Center }.Classed("primary").Tip("start.editLive");
-            var bridge = running.Bridge;
-            edit.Click += (_, _) => OpenLive(new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token), "my game", "game", "Connecting to your game…");
+            var edit = EditLiveButton(running);
             content = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitions("*,Auto"),
                 Children =
                 {
                     new StackPanel { Children = { new TextBlock { Text = $"Valheim is running with the world {running.World}", FontSize = 15, FontWeight = FontWeight.SemiBold }, Hint($"{running.Players} player(s) connected{(where != "" ? $" ({where})" : "")}") } },
-                    Col(edit, 1),
+                    Ui.Col(edit, 1),
                 },
             };
         }
@@ -564,11 +575,7 @@ public sealed class StartPage
     /// </summary>
     internal void OpenFolder(string path)
     {
-        path = path.Trim().Trim('"');
-        if (path.StartsWith('~'))
-        {
-            path = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + path[1..];
-        }
+        path = Places.ExpandHome(path);
         if (Worlds.Check(path) is string problem)
         {
             PathError.Text = problem;
@@ -577,18 +584,27 @@ public sealed class StartPage
         PathError.Text = "";
         string full = Path.GetFullPath(path);
         _settings.LastMode = "offline";
+        // Saves the settings, LastMode with them.
         _settings.AddRecent(full, Worlds.WorldName(full));
-        _settings.Save();
         OpenRequested?.Invoke(() => Task.Run(() => WorldSession.Open(full)), "Opening the world…");
     }
 
     // ---- Saved worlds.
+    /// <summary>The Edit live button for the game running with the plugin: opens its world live through the bridge.</summary>
+    /// <param name="running">The running game.</param>
+    private Button EditLiveButton(LocalGame.Running running)
+    {
+        var edit = new Button { Content = "Edit live", VerticalAlignment = VerticalAlignment.Center }.Classed("primary").Tip("start.editLive");
+        var bridge = running.Bridge;
+        edit.Click += (_, _) => OpenLive(new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token), "my game", "game", "Connecting to your game…");
+        return edit;
+    }
+
     /// <summary>Home's card when the game runs with the plugin: its world, and Edit live.</summary>
     private Border RunningCard(LocalGame.Running running, string where)
     {
-        var edit = new Button { Content = "Edit live", VerticalAlignment = VerticalAlignment.Center, FontSize = 13 }.Classed("primary").Tip("start.editLive");
-        var bridge = running.Bridge;
-        edit.Click += (_, _) => OpenLive(new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token), "my game", "game", "Connecting to your game…");
+        var edit = EditLiveButton(running);
+        edit.FontSize = 13;
         return new Border
         {
             Background = new SolidColorBrush(Color.FromRgb(31, 42, 34)),
@@ -605,7 +621,7 @@ public sealed class StartPage
                 Children =
                 {
                     new StackPanel { Children = { new TextBlock { Text = $"Valheim is running with the world {running.World}", FontSize = 15, FontWeight = FontWeight.SemiBold }, Hint($"{running.Players} player(s) connected · changes show in game at once{(where != "" ? $" ({where})" : "")}") } },
-                    Col(edit, 1),
+                    Ui.Col(edit, 1),
                 },
             },
         };
@@ -615,8 +631,16 @@ public sealed class StartPage
     /// Home's tiles: saved worlds and blueprints opened or saved last (newest first), then the servers
     /// that connect in one click (token and password or key saved).
     /// </summary>
-    internal void FillHome()
+    internal async Task FillHome()
     {
+        int look = ++_homeLook;
+        var blueprints = await Task.Run(() => Pictured(Blueprints().Take(4)));
+        if (look != _homeLook)
+        {
+            Dispose(blueprints);
+            return;
+        }
+        Keep(_homePictures, blueprints);
         RecentTiles.Children.Clear();
         var dated = new List<(DateTime When, Button Tile)>();
         foreach (var r in _settings.Recent.Where(r => Directory.Exists(r.Path)).Take(8))
@@ -624,10 +648,10 @@ public sealed class StartPage
             string path = r.Path;
             dated.Add((r.Opened, Tile(null, "folder", Color.FromRgb(42, 58, 44), r.Name, $"Saved world · {Ago(r.Opened)}", Ui.Tilde(path), () => OpenFolder(path))));
         }
-        foreach (var b in Blueprints().Take(4))
+        foreach (var (b, picture) in blueprints)
         {
             string path = b.Path;
-            dated.Add((b.Saved, Tile(b.Picture, "shape", Color.FromRgb(58, 48, 36), b.Name, $"Blueprint · {b.Pieces} pieces", Lang.T("start.tip.openWorkshop"), () => WorkshopRequested?.Invoke(path))));
+            dated.Add((b.Saved, Tile(picture, "shape", Color.FromRgb(58, 48, 36), b.Name, $"Blueprint · {b.Pieces} pieces", Lang.T("start.tip.openWorkshop"), () => WorkshopRequested?.Invoke(path))));
         }
         foreach (var (_, tile) in dated.OrderByDescending(d => d.When).Take(8))
         {
@@ -647,13 +671,21 @@ public sealed class StartPage
     }
 
     /// <summary>The Workshop's tiles: every blueprint, newest first.</summary>
-    internal void FillBlueprints()
+    internal async Task FillBlueprints()
     {
+        int look = ++_workshopLook;
+        var blueprints = await Task.Run(() => Pictured(Blueprints()));
+        if (look != _workshopLook)
+        {
+            Dispose(blueprints);
+            return;
+        }
+        Keep(_workshopPictures, blueprints);
         BlueprintTiles.Children.Clear();
-        foreach (var b in Blueprints())
+        foreach (var (b, picture) in blueprints)
         {
             string path = b.Path;
-            BlueprintTiles.Children.Add(Tile(b.Picture, "shape", Color.FromRgb(58, 48, 36), b.Name, $"{b.Pieces} pieces · {Ago(b.Saved)}", Lang.T("start.tip.openWorkshop"), () => WorkshopRequested?.Invoke(path)));
+            BlueprintTiles.Children.Add(Tile(picture, "shape", Color.FromRgb(58, 48, 36), b.Name, $"{b.Pieces} pieces · {Ago(b.Saved)}", Lang.T("start.tip.openWorkshop"), () => WorkshopRequested?.Invoke(path)));
         }
         if (BlueprintTiles.Children.Count == 0)
         {
@@ -674,29 +706,71 @@ public sealed class StartPage
         }
     }
 
+    /// <summary>
+    /// Blueprints with their pictures decoded at twice the tiles' width (sharp on high-density screens, not full size);
+    /// a picture missing or unreadable is null. Run away from the window's thread.
+    /// </summary>
+    private static List<(Homestead.Entry Entry, Bitmap? Picture)> Pictured(IEnumerable<Homestead.Entry> blueprints)
+    {
+        var pictured = new List<(Homestead.Entry, Bitmap?)>();
+        foreach (var b in blueprints)
+        {
+            Bitmap? picture = null;
+            if (b.Picture != null && File.Exists(b.Picture))
+            {
+                try
+                {
+                    using var s = File.OpenRead(b.Picture);
+                    picture = Bitmap.DecodeToWidth(s, 440);
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+                {
+                    // The kind's icon instead.
+                }
+            }
+            pictured.Add((b, picture));
+        }
+        return pictured;
+    }
+
+    /// <summary>Disposes the pictures of blueprints that are not shown (a fill overtaken by a later one).</summary>
+    private static void Dispose(List<(Homestead.Entry Entry, Bitmap? Picture)> unshown)
+    {
+        foreach (var (_, picture) in unshown)
+        {
+            picture?.Dispose();
+        }
+    }
+
+    /// <summary>Disposes the pictures tiles showed until now and holds the new tiles' ones instead.</summary>
+    private static void Keep(List<Bitmap> held, List<(Homestead.Entry Entry, Bitmap? Picture)> now)
+    {
+        foreach (var b in held)
+        {
+            b.Dispose();
+        }
+        held.Clear();
+        foreach (var (_, picture) in now)
+        {
+            if (picture != null)
+            {
+                held.Add(picture);
+            }
+        }
+    }
+
     /// <summary>A tile: a picture (or the kind's icon on its colour), the name, a line under it.</summary>
-    /// <param name="picture">A picture file; null or unreadable shows the icon instead.</param>
+    /// <param name="picture">A picture; null shows the icon instead.</param>
     /// <param name="icon">The kind's icon.</param>
     /// <param name="tint">The icon's background colour.</param>
     /// <param name="name">The name, in bold.</param>
     /// <param name="line">The line under it.</param>
     /// <param name="tip">The tile's tooltip.</param>
     /// <param name="open">What a click does.</param>
-    private static Button Tile(string? picture, string icon, Color tint, string name, string line, string tip, Action open)
+    private static Button Tile(Bitmap? picture, string icon, Color tint, string name, string line, string tip, Action open)
     {
-        Control top = new Border { Background = new SolidColorBrush(tint), Child = new Viewbox { Width = 30, Height = 30, Child = Icons.Make(icon, 30), Opacity = 0.7 } };
-        if (picture != null && File.Exists(picture))
-        {
-            try
-            {
-                using var s = File.OpenRead(picture);
-                top = new Image { Source = new Avalonia.Media.Imaging.Bitmap(s), Stretch = Stretch.UniformToFill };
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
-            {
-                // The kind's icon instead.
-            }
-        }
+        Control top = picture != null ? new Image { Source = picture, Stretch = Stretch.UniformToFill }
+            : new Border { Background = new SolidColorBrush(tint), Child = new Viewbox { Width = 30, Height = 30, Child = Icons.Make(icon, 30), Opacity = 0.7 } };
         var tile = new Button
         {
             Width = 220,
@@ -733,19 +807,20 @@ public sealed class StartPage
         return days <= 0 ? "today" : days == 1 ? "yesterday" : days < 14 ? $"{days} days ago" : when.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    /// <summary>A card per world found on this computer (worlds that cannot be opened greyed out, with why).</summary>
-    internal void FillWorlds()
-    {
-        _worldsLook++;
-        ShowWorlds(FindWorlds(_settings));
-    }
+    /// <summary>
+    /// A card per world found on this computer (worlds that cannot be opened greyed out, with why), looked for away
+    /// from the window's thread (<see cref="WorldsCheck"/>): a slow or broken folder neither freezes the page nor
+    /// leaves it half set.
+    /// </summary>
+    internal void FillWorlds() => WorldsCheck = CheckWorlds(always: true);
 
     /// <summary>
     /// Looks for the worlds again away from the window's thread (a slow drive does not freeze it) and shows
     /// them when they changed: a world folder added or removed, or a world saved again. A look that a later
     /// one (Refresh, or the page shown again) overtook shows nothing: its worlds are older.
     /// </summary>
-    internal async Task CheckWorlds()
+    /// <param name="always">Shows them even when they did not change, or another page shows (the list filled).</param>
+    internal async Task CheckWorlds(bool always = false)
     {
         int look = ++_worldsLook;
         List<Worlds.Info> worlds;
@@ -757,7 +832,7 @@ public sealed class StartPage
         {
             return; // A folder changing while it is read (or the settings while they are walked): the next look sees it.
         }
-        if (look == _worldsLook && Mode == "offline" && WorldsKey(worlds) != _worldsKey)
+        if (look == _worldsLook && (always || Mode == "offline" && WorldsKey(worlds) != _worldsKey))
         {
             ShowWorlds(worlds);
         }
@@ -881,7 +956,7 @@ public sealed class StartPage
         SBridge.Tip("start.bridgePort");
         LiveUrl.Tip("start.bridgeUrl");
         LiveToken.Tip("start.token");
-        Control Two(Control a, Control b, string cols = "*,*") => new Grid { ColumnDefinitions = new ColumnDefinitions(cols), ColumnSpacing = 10, Children = { a, Col(b, 1) } };
+        Control Two(Control a, Control b, string cols = "*,*") => new Grid { ColumnDefinitions = new ColumnDefinitions(cols), ColumnSpacing = 10, Children = { a, Ui.Col(b, 1) } };
         var keyBrowse = new Button { Content = "Browse…", VerticalAlignment = VerticalAlignment.Bottom }.Tip("start.browse");
         keyBrowse.Click += async (_, _) => { if (await PickFile("Choose the SSH key file") is string p) { SKey.Text = p; } };
         var connect = new Button { Content = "Connect", HorizontalAlignment = HorizontalAlignment.Right }.Classed("primary").Tip("start.connect");
@@ -903,7 +978,7 @@ public sealed class StartPage
                 Two(Field("SSH key file (optional)", SKey), keyBrowse, "*,Auto"),
                 Field("Plugin token", SToken),
                 Field("Server's Valheim folder (optional)", SFolder),
-                new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { SSave, Col(connect, 1) } },
+                new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { SSave, Ui.Col(connect, 1) } },
                 ServerError,
                 Hint("The server needs BepInEx and the WorldEditorBridge plugin. The editor logs in with SSH and connects to the plugin through its own encrypted tunnel: no ssh command to type. After the first connection the server (with its token) is saved for one-click access."),
                 new Expander
@@ -917,7 +992,7 @@ public sealed class StartPage
                         {
                             Two(Field("Key passphrase", SPhrase), Field("Plugin port", SBridge), "*,130"),
                             new TextBlock { Text = "I made my own tunnel", FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 8, 0, 0) },
-                            new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,Auto"), ColumnSpacing = 10, Children = { Field("Bridge address", LiveUrl), Col(Field("Token", LiveToken), 1), Col(connectUrl, 2) } },
+                            new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,Auto"), ColumnSpacing = 10, Children = { Field("Bridge address", LiveUrl), Ui.Col(Field("Token", LiveToken), 1), Ui.Col(connectUrl, 2) } },
                             UrlError,
                         },
                     },

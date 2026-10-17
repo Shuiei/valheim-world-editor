@@ -32,17 +32,7 @@ public static class GameLocations
     /// </summary>
     internal static ((int Locations, int Vegetation)[] Order, string From) ListOrder()
     {
-        var folders = Places.WorldRoots().Select(Path.GetDirectoryName).OfType<string>().ToList();
-        if (OperatingSystem.IsMacOS())
-        {
-            // Unity writes the log apart from the saves on a Mac.
-            folders.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Logs", "IronGate", "Valheim"));
-        }
-        var logs = folders.Distinct()
-            .SelectMany(d => new[] { Path.Combine(d, "Player.log"), Path.Combine(d, "Player-prev.log") })
-            .Where(File.Exists)
-            .OrderByDescending(File.GetLastWriteTimeUtc);
-        foreach (string log in logs)
+        foreach (string log in Logs())
         {
             try
             {
@@ -67,6 +57,61 @@ public static class GameLocations
                 yield return line;
             }
         }
+    }
+
+    /// <summary>
+    /// The game's logs that exist (Player.log and Player-prev.log, beside its saves, or in ~/Library/Logs/IronGate/Valheim
+    /// on a Mac), newest first.
+    /// </summary>
+    private static List<string> Logs()
+    {
+        var folders = Places.WorldRoots().Select(Path.GetDirectoryName).OfType<string>().ToList();
+        if (OperatingSystem.IsMacOS())
+        {
+            // Unity writes the log apart from the saves on a Mac.
+            folders.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Logs", "IronGate", "Valheim"));
+        }
+        return [.. folders.Distinct()
+            .SelectMany(d => new[] { Path.Combine(d, "Player.log"), Path.Combine(d, "Player-prev.log") })
+            .Where(File.Exists)
+            .OrderByDescending(File.GetLastWriteTimeUtc)];
+    }
+
+    /// <summary>The game's logs, their sizes and when each was last written: changes when the game ran since.</summary>
+    private static string LogsStamp() => string.Join("|", Logs().Select(l => $"{l}:{new FileInfo(l).Length}:{File.GetLastWriteTimeUtc(l).Ticks}"));
+
+    /// <summary>The lists' order as text ("3/0,2/0,…"), as the cache keeps it.</summary>
+    private static string OrderText((int Locations, int Vegetation)[] order) => string.Join(",", order.Select(o => $"{o.Locations}/{o.Vegetation}"));
+
+    /// <summary>
+    /// The cache file's first line: the game's logs as they were when the lists' order was taken from them
+    /// (<see cref="LogsStamp"/>), and that order.
+    /// </summary>
+    internal static string OrderLine(string logs, (int Locations, int Vegetation)[] order) => $"{logs}\t{OrderText(order)}";
+
+    /// <summary>
+    /// The lists' order a cache file's first line keeps, when the game's logs are still as they were then (they need
+    /// not be read again: tens of MB with mods); else null.
+    /// </summary>
+    internal static (int Locations, int Vegetation)[]? KeptOrder(string? line, string logs)
+    {
+        int tab = line?.LastIndexOf('\t') ?? -1;
+        if (line == null || tab < 0 || line[..tab] != logs)
+        {
+            return null;
+        }
+        var order = new List<(int, int)>();
+        foreach (string pair in line[(tab + 1)..].Split(',', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string[] n = pair.Split('/');
+            if (n.Length != 2 || !int.TryParse(n[0], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int l)
+                || !int.TryParse(n[1], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int v))
+            {
+                return null;
+            }
+            order.Add((l, v));
+        }
+        return order.Count > 0 ? [.. order] : null;
     }
 
     /// <summary>
@@ -122,13 +167,15 @@ public static class GameLocations
     /// </summary>
     private static readonly Lock Lock = new();
     /// <summary>
-    /// The bundles whose rules are in use (or being read), with the task reading them.
+    /// The bundles whose rules are in use (or being read), with the task reading them (true when the game's rules were
+    /// read) and the game's logs as they were then (<see cref="LogsStamp"/>).
     /// </summary>
-    private static (GameBundles Bundles, Task Task)? _using;
+    private static (GameBundles Bundles, Task<bool> Task, string Logs)? _using;
 
     /// <summary>
     /// The game's rules in use (SeedLocations.Use) when they can be read, else none: read once for a
-    /// game folder, again when Valheim is found later or another folder is chosen.
+    /// game folder, again when Valheim is found later or another folder is chosen. Rules that could not be read are
+    /// read again once the game has run since (its log tells the lists' order, and a game update needs it new).
     /// </summary>
     public static Task UseGameRules(GameBundles? bundles)
     {
@@ -138,12 +185,18 @@ public static class GameLocations
             {
                 return Task.CompletedTask;
             }
-            if (_using is { } u && ReferenceEquals(u.Bundles, bundles))
+            string logs = LogsStamp();
+            if (_using is { } u && ReferenceEquals(u.Bundles, bundles) && !(u.Task.IsCompletedSuccessfully && !u.Task.Result && u.Logs != logs))
             {
                 return u.Task;
             }
-            var task = Task.Run(() => SeedLocations.Use(Load(bundles, CacheFile) ?? new SeedLocations.RuleSet()));
-            _using = (bundles, task);
+            var task = Task.Run(() =>
+            {
+                var rules = Load(bundles, CacheFile);
+                SeedLocations.Use(rules ?? new SeedLocations.RuleSet());
+                return rules != null;
+            });
+            _using = (bundles, task, logs);
             return task;
         }
     }
@@ -169,10 +222,18 @@ public static class GameLocations
             {
                 return null;
             }
-            var (order, from) = ListOrder();
-            string stamp = CacheVersion + " " + string.Join(",", order.Select(o => $"{o.Locations}/{o.Vegetation}")) + " " + JsonSerializer.Serialize(scanned.Select(b => new FileInfo(bundles.PathOf(b)!)).Select(f => $"{f.Name}:{f.Length}:{f.LastWriteTimeUtc.Ticks}"));
-            if (cacheFile != null && Cached(cacheFile, stamp) is { } cached)
+            // The logs are read only when they changed since the cache was made (the order they gave is kept with it).
+            string logs = LogsStamp();
+            string[]? kept = cacheFile != null ? CacheLines(cacheFile) : null;
+            var (order, from) = KeptOrder(kept?[0], logs) is { } known ? (known, "the game's log, unchanged since it was last read") : ListOrder();
+            string stamp = CacheVersion + " " + OrderText(order) + " " + JsonSerializer.Serialize(scanned.Select(b => new FileInfo(bundles.PathOf(b)!)).Select(f => $"{f.Name}:{f.Length}:{f.LastWriteTimeUtc.Ticks}"));
+            if (kept is { } k && k[1] == stamp && Rules(k[2]) is { } cached)
             {
+                if (k[0] != OrderLine(logs, order))
+                {
+                    // The game ran since, giving the same order: the logs as they are now are kept with it.
+                    GameData.KeepCache(cacheFile!, OrderLine(logs, order) + "\n" + stamp + "\n" + k[2]);
+                }
                 Console.WriteLine($"Location rules: {cached.locations.Count} kinds, from the cache.");
                 return cached;
             }
@@ -184,7 +245,7 @@ public static class GameLocations
             }
             if (rules != null && cacheFile != null)
             {
-                GameData.KeepCache(cacheFile, stamp + "\n" + rules.ToJson());
+                GameData.KeepCache(cacheFile, OrderLine(logs, order) + "\n" + stamp + "\n" + rules.ToJson());
             }
             return rules;
         }
@@ -208,9 +269,10 @@ public static class GameLocations
     private static List<string> MainSceneBundles(GameBundles bundles, Manifest manifest) => [.. manifest.SceneBundles("main").Where(bundles.HasBundle)];
 
     /// <summary>
-    /// The cached rules when they are for this game and editor and can be read; else null (read again).
+    /// The cache file's three parts: the logs and order line (<see cref="OrderLine"/>), the stamp of what the rules
+    /// were read from, and the rules; null when there is no such file or it cannot be read (read again).
     /// </summary>
-    private static SeedLocations.RuleSet? Cached(string file, string stamp)
+    private static string[]? CacheLines(string file)
     {
         try
         {
@@ -218,10 +280,23 @@ public static class GameLocations
             {
                 return null;
             }
-            string[] cached = File.ReadAllText(file).Split('\n', 2);
-            return cached.Length == 2 && cached[0] == stamp ? SeedLocations.RuleSet.FromJson(cached[1]) : null;
+            string[] parts = File.ReadAllText(file).Split('\n', 3);
+            return parts.Length == 3 ? parts : null;
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Cached rules from their JSON; null when it cannot be read (read again).</summary>
+    private static SeedLocations.RuleSet? Rules(string json)
+    {
+        try
+        {
+            return SeedLocations.RuleSet.FromJson(json);
+        }
+        catch (JsonException)
         {
             return null;
         }
@@ -234,7 +309,9 @@ public static class GameLocations
     private static SeedLocations.RuleSet? Read(GameBundles bundles, List<string> scanned, Manifest manifest, (int Locations, int Vegetation)[] order)
     {
         AssetTypeValueField? zone = null, alts = null;
-        var lists = new Dictionary<(int, int), AssetTypeValueField>();
+        // Every list of a pair, in the scene's order: two lists of the same counts are two lists (the second was taken
+        // for the first).
+        var lists = new Dictionary<(int, int), List<AssetTypeValueField>>();
         foreach (string bundle in scanned)
         {
             foreach (var f in bundles.MonoBehaviours(bundle))
@@ -253,7 +330,7 @@ public static class GameLocations
                     var key = (Count(locations), Count(f["m_vegetation"]));
                     if (order.Contains(key))
                     {
-                        lists.TryAdd(key, locations);
+                        (lists.TryGetValue(key, out var same) ? same : lists[key] = []).Add(locations);
                     }
                 }
                 else if (!f["m_alts"].IsDummy && alts == null)
@@ -262,16 +339,22 @@ public static class GameLocations
                 }
             }
         }
-        if (zone == null || alts == null || order.Any(k => !lists.ContainsKey(k)))
+        // Each pair the order names as many times as the scene has lists of it, at least.
+        int found = order.CountBy(k => k).Sum(g => Math.Min(g.Value, lists.TryGetValue(g.Key, out var l) ? l.Count : 0));
+        if (zone == null || alts == null || found < order.Length)
         {
-            Console.WriteLine($"The game's location rules were not all found (ZoneSystem: {zone != null}, alt biomes: {alts != null}, lists: {lists.Count}/{order.Length}); a game update changed them (start the game once to refresh its log)? No bosses or traders on the New world page.");
+            Console.WriteLine($"The game's location rules were not all found (ZoneSystem: {zone != null}, alt biomes: {alts != null}, lists: {found}/{order.Length}); a game update changed them (start the game once to refresh its log)? No bosses or traders on the New world page.");
             return null;
         }
         var rules = new SeedLocations.RuleSet();
         rules.locations.AddRange(Items(zone).Select(l => Location(l, manifest, null)));
+        // A pair named twice takes its lists one after the other.
+        var taken = new Dictionary<(int, int), int>();
         foreach (var key in order)
         {
-            rules.locations.AddRange(Items(lists[key]).Select(l => Location(l, manifest, null)));
+            int n = taken.GetValueOrDefault(key);
+            taken[key] = n + 1;
+            rules.locations.AddRange(Items(lists[key][n]).Select(l => Location(l, manifest, null)));
         }
         foreach (var a in Items(alts))
         {

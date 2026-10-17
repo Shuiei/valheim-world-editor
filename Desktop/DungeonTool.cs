@@ -38,9 +38,32 @@ public sealed partial class DungeonTool
     public bool WithContents { get; set; } = true;
 
     /// <summary>
-    /// The room clicked last (an index into the current dungeon's list).
+    /// The room clicked last (an index into the current dungeon's list), found again by its prefab and place each time,
+    /// so an undo or redo that shifts or takes away rooms never leaves it on another room; null when it is gone.
     /// </summary>
-    public int? Selected { get; private set; }
+    public int? Selected
+    {
+        get
+        {
+            if (_selected is not { } s || Dungeon is not { } d)
+            {
+                return null;
+            }
+            bool Same(Dungeons.Placed p) => p.Hash == s.Hash && Vector3.DistanceSquared(p.Position, s.Position) < 1e-6f;
+            if (s.Index < d.Rooms.Count && Same(d.Rooms[s.Index]))
+            {
+                return s.Index;
+            }
+            int at = d.Rooms.FindIndex(Same);
+            return at >= 0 ? at : null;
+        }
+        private set => _selected = value is int i && Dungeon is { } d && i < d.Rooms.Count ? (i, d.Rooms[i].Hash, d.Rooms[i].Position) : null;
+    }
+
+    /// <summary>
+    /// The selected room: its index then, its prefab's hash and its place (Selected finds it again by them).
+    /// </summary>
+    private (int Index, int Hash, Vector3 Position)? _selected;
 
     /// <summary>
     /// The free opening the pointer is over (its index in FreeEnds); null when none.
@@ -90,16 +113,18 @@ public sealed partial class DungeonTool
     /// </summary>
     /// <param name="D">The dungeon it was worked out for.</param>
     /// <param name="Version">The edit store's version then.</param>
+    /// <param name="Generation">The session's generation then (it moves when the live game changes things in place).</param>
     /// <param name="Count">How many things the scene had then.</param>
     /// <param name="Free">The free openings.</param>
     /// <param name="Joints">The joints that can take one of the dungeon's doors.</param>
     /// <param name="Doors">The scene's doors of the dungeon's kinds, by their place rounded to 5 cm (see Spot).</param>
     /// <param name="Overlapping">How many pairs of rooms overlap.</param>
-    private sealed record Derived(DungeonRooms.Dungeon D, int Version, int Count, List<Dungeons.OpenEnd> Free, List<Dungeons.Joint> Joints,
+    private sealed record Derived(DungeonRooms.Dungeon D, int Version, int Generation, int Count, List<Dungeons.OpenEnd> Free, List<Dungeons.Joint> Joints,
         Dictionary<(long, long, long), List<int>> Doors, int Overlapping);
 
     /// <summary>
-    /// The last Derived, kept while the dungeon, the edit version and the thing count stay the same.
+    /// The last Derived, kept while the dungeon, the edit version, the session's generation and the thing count stay the
+    /// same.
     /// </summary>
     private Derived? _derived;
 
@@ -109,8 +134,8 @@ public sealed partial class DungeonTool
     private static (long, long, long) Spot(Vector3 p) => ((long)MathF.Round(p.X * 20), (long)MathF.Round(p.Y * 20), (long)MathF.Round(p.Z * 20));
 
     /// <summary>
-    /// The Derived of the open dungeon, worked out again only when it, the edits or the scene's thing count changed;
-    /// null when no scene or dungeon is open.
+    /// The Derived of the open dungeon, worked out again only when it, the edits, the session's generation or the
+    /// scene's thing count changed; null when no scene or dungeon is open.
     /// </summary>
     private Derived? Derive()
     {
@@ -118,8 +143,8 @@ public sealed partial class DungeonTool
         {
             return null;
         }
-        int version = s.Session?.Edits.Version ?? 0, count = s.Things.Count;
-        if (_derived is { } c && ReferenceEquals(c.D, d) && c.Version == version && c.Count == count)
+        int version = s.Session?.Edits.Version ?? 0, generation = s.Session?.Generation ?? 0, count = s.Things.Count;
+        if (_derived is { } c && ReferenceEquals(c.D, d) && c.Version == version && c.Generation == generation && c.Count == count)
         {
             return c;
         }
@@ -138,7 +163,7 @@ public sealed partial class DungeonTool
         }
         int overlapping = d.Rooms.Select((r, i) => Dungeons.Overlaps(d.Rooms, r, i).Count > 0 ? 1 : 0).Sum() / 2;
         var joints = Dungeons.Joints(d.Rooms).Where(j => j.DoorAllowed && Dungeons.DoorsFor(d.Kind, j.Type).Any()).ToList();
-        return _derived = new Derived(d, version, count, Dungeons.Openings(d.Rooms, freeOnly: true), joints, doors, overlapping);
+        return _derived = new Derived(d, version, generation, count, Dungeons.Openings(d.Rooms, freeOnly: true), joints, doors, overlapping);
     }
 
     /// <summary>
@@ -438,7 +463,7 @@ public sealed partial class DungeonTool
             }
         }
         // Selected before the change is told (Changed): the panel shows Delete for it at once.
-        Selected = rooms.Count - 1;
+        _selected = (rooms.Count - 1, p.Hash, p.Position);
         Commit(d, rooms, label ?? $"Dungeon: added {p.Name}", problem == null ? $"Added {p.Name}{with}." : $"Added {p.Name}{with}. {problem}", add: made);
         return true;
     }
@@ -573,6 +598,10 @@ public sealed partial class DungeonTool
         {
             s.Commit(label ?? "Dungeon: added a door", null, [], [(new NewObject(0, StableHash.Of(door), j.Position, BlueprintFormats.ToEuler(j.Rotation), 0), false)]);
             Message?.Invoke($"Added a door ({door}). Click it again to take it away.");
+        }
+        else
+        {
+            Message?.Invoke("This dungeon has no door for that kind of opening.");
         }
         Changed?.Invoke();
     }

@@ -66,6 +66,15 @@ public class PlaceToolTests
     }
 
     [Fact]
+    public void ASmallBrushStillPlacesOne()
+    {
+        var (t, _) = Tool();
+        t.Brush.Radius = 2;
+        t.Density = 3;
+        Assert.Single(t.Preview(new Vector2(64, 64)));
+    }
+
+    [Fact]
     public void SingleIsExactlyAtTheCursorAndStaysAwayFromOthers()
     {
         var (t, _) = Tool(new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(32, 30, 32), Vector3.Zero, 1, false));
@@ -119,6 +128,23 @@ public class PlaceToolTests
         var two = t.Preview(null);
         Assert.Equal(2 * n, two.Count);
         Assert.Equal(e.H, two[1].Position.Y - two[0].Position.Y, 2);
+    }
+
+    [Fact]
+    public void LayersStopAtTheShapesCap()
+    {
+        var (t, _) = Tool();
+        t.Chosen.Clear();
+        t.Chosen.Add(Wall);
+        t.AutoSnap();
+        t.Mode = PlaceTool.Modes.Line;
+        // A zigzag of about 130 walls, 20 high: some 2600 placements.
+        foreach (var (x, z) in new[] { (2, 2), (126, 2), (126, 10), (2, 10), (2, 20) })
+        {
+            t.Points.Add(new Vector2(x, z));
+        }
+        t.Layers = 20;
+        Assert.Equal(PlaceTool.MaxShape, t.Preview(null).Count);
     }
 
     [Fact]

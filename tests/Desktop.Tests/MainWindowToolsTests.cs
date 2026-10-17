@@ -100,11 +100,13 @@ public class MainWindowToolsTests
         Assert.EndsWith("Ctrl+Z takes it back; saving turns it into ground discs.", w.MessageText.Text);
         Assert.Equal(steps + 1, s.UndoList.Count);
         Assert.True(s.Ground.HeightOf(64 * s.Ground.W + 64) > 30 + 1);
-        // Growing, where there is no world generator: the mountain is placed, nothing grows.
+        // Growing, where there is no world generator: the mountain is placed, nothing grows, and why stays said (one
+        // step to take back, not two).
         m.GrowBox.IsChecked = true;
         s.Undo();
         await w.PutMountain(64, 64);
-        Assert.EndsWith("Ctrl+Z takes it back (twice with what grew); saving turns it into ground discs.", w.MessageText.Text);
+        Assert.Contains("Regrow needs the world's generator", w.MessageText.Text);
+        Assert.EndsWith("Ctrl+Z takes it back; saving turns it into ground discs.", w.MessageText.Text);
         Assert.DoesNotContain("Grew", w.MessageText.Text);
     }
 

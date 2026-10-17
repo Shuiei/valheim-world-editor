@@ -95,6 +95,25 @@ public class GlViewPointerTests
         Assert.Equal(ToolMode.Dungeon, b.V.Mode);
     }
 
+    // The pointer taken away mid-stroke (a dialog, another window): the stroke ends there as one step, it does not go
+    // on painting until the next click.
+    [AvaloniaFact]
+    public void ALostPointerEndsTheStroke()
+    {
+        var s = TestScenes.Flat(2);
+        var b = new Bare(s);
+        string? ended = null;
+        b.V.StrokeEnded += m => ended = m;
+        b.V.Tool = BrushTool.Raise;
+        b.W.MouseDown(b.At(0, 30, 0), MouseButton.Left);
+        Assert.True(b.V.BrushDown);
+        Assert.True(s.Stroking);
+        b.Surface.RaiseEvent(new PointerCaptureLostEventArgs(b.Surface, new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true)));
+        Assert.False(b.V.BrushDown);
+        Assert.False(s.Stroking);
+        Assert.NotNull(ended);
+    }
+
     [AvaloniaFact]
     public void AltAndAClickWithABrushPickTheGroundsHeight()
     {

@@ -116,6 +116,24 @@ public class DungeonToolTests
     }
 
     [AvaloniaFact]
+    public void ASelectedRoomTakenAwayByUndoIsNotSelectedAnyMore()
+    {
+        using var r = new Run();
+        r.T.Choose("cave_new_corridor03");
+        r.PointAt(r.T.FreeEnds[0]);
+        Assert.True(r.T.Click());
+        Assert.Equal(1, r.T.Selected);
+        // Undo takes the corridor away: index 1 names no room, and Delete removes nothing.
+        Assert.True(r.Scene.Session!.Undo());
+        Assert.Null(r.T.Selected);
+        Assert.False(r.T.Delete());
+        Assert.Single(r.Rooms);
+        // Redo brings it back where it was: selected again.
+        Assert.True(r.Scene.Session.Redo());
+        Assert.Equal(1, r.T.Selected);
+    }
+
+    [AvaloniaFact]
     public void TurnJoinsByAnotherOpeningAndAnOverlapIsSaid()
     {
         using var r = new Run();

@@ -138,8 +138,28 @@ public sealed class HomeFolderTests : IDisposable
         Assert.Contains(Local(".config", "unity3d", "IronGate", "Valheim", "worlds_local"), roots);
         Assert.Contains(Local(".config", "unity3d", "IronGate", "Valheim", "worlds"), roots);
         Assert.All(roots, r => Assert.StartsWith(_home, r));
-        // Valheim through Proton keeps its folder inside Steam's prefix.
+        // Valheim through Proton keeps its folder inside Steam's prefix (Flatpak's Steam too).
         Assert.Contains(roots, r => r.Contains(Path.Combine("compatdata", "892970")));
+        Assert.Contains(roots, r => r.Contains(Path.Combine("com.valvesoftware.Steam", ".local", "share", "Steam")));
+    }
+
+    // ~/.steam/steam is a link to ~/.local/share/Steam: a Proton world reached both ways is listed once (twice before),
+    // and so is one added with a separator at the end.
+    [Fact]
+    public void AWorldReachedThroughALinkIsListedOnce()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+        string steam = Local(".local", "share", "Steam");
+        string prefix = Path.Combine(steam, "steamapps", "compatdata", "892970", "pfx", "drive_c", "users", "steamuser", "AppData", "LocalLow", "IronGate", "Valheim", "worlds_local");
+        CopyWorld(Path.Combine(prefix, "Proton"));
+        Directory.CreateDirectory(Local(".steam"));
+        Directory.CreateSymbolicLink(Local(".steam", "steam"), steam);
+        var s = new AppSettings { WorldFolders = { Path.Combine(prefix, "Proton") + Path.DirectorySeparatorChar } };
+
+        Assert.Single(Worlds.Find(s), w => w.Name == "Proton");
     }
 
     [Fact]
@@ -160,6 +180,18 @@ public sealed class HomeFolderTests : IDisposable
         Assert.StartsWith("Old save format", ancient.Problem);
         Assert.DoesNotContain(found, w => w.Path.EndsWith("Converted.db", StringComparison.Ordinal));
         Assert.Single(found, w => w.Name == "Converted");
+    }
+
+    // A save number too large for one (a stray file) is passed over: the world is still listed (it vanished, with
+    // nothing said).
+    [Fact]
+    public void AWorldWithAStraySaveNumberIsStillListed()
+    {
+        string local = Local(".config", "unity3d", "IronGate", "Valheim", "worlds_local");
+        CopyWorld(Path.Combine(local, "Odd"));
+        File.WriteAllText(Path.Combine(local, "Odd", "_main.99999999999.chunks"), "");
+
+        Assert.Equal(2, Assert.Single(Worlds.Find(new AppSettings()), w => w.Name == "Odd").SaveNumber);
     }
 
     [Fact]
@@ -258,6 +290,24 @@ public sealed class HomeFolderTests : IDisposable
     }
 
     [Fact]
+    public void ACharacterFileIsReadAgainOnlyWhenItChanged()
+    {
+        string chars = Local(".config", "unity3d", "IronGate", "Valheim", "characters_local");
+        Directory.CreateDirectory(chars);
+        string file = Path.Combine(chars, "ragnar.fch");
+        File.WriteAllBytes(file, Fch("Ragnar", 5));
+        Assert.Equal(5, Assert.Single(Characters.Local()).Id);
+        int reads = Characters.FileReads;
+        Assert.Equal(5, Assert.Single(Characters.Local()).Id);
+        Assert.Equal(reads, Characters.FileReads);
+        // Saved again by the game: read again.
+        File.WriteAllBytes(file, Fch("Ragnar", 6));
+        File.SetLastWriteTimeUtc(file, DateTime.UtcNow.AddMinutes(1));
+        Assert.Equal(6, Assert.Single(Characters.Local()).Id);
+        Assert.Equal(reads + 1, Characters.FileReads);
+    }
+
+    [Fact]
     public void ACharacterFileThatCannotBeReadIsPassedOver()
     {
         if (OperatingSystem.IsWindows() || Environment.UserName == "root")
@@ -352,6 +402,30 @@ public sealed class HomeFolderTests : IDisposable
         Assert.Equal(new[] { "flat", "game", "mine", "r2", "ts" }, bridges.Select(b => b.Token).Order().ToArray());
     }
 
+    // A mod's folder in plugins that cannot be read is passed over in the search for the plugin (the whole check threw).
+    [Fact]
+    public void AnUnreadableFolderInPluginsIsPassedOver()
+    {
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            return;
+        }
+        string bep = Local("profile", "BepInEx");
+        string locked = Path.Combine(bep, "plugins", "Locked");
+        Directory.CreateDirectory(locked);
+        File.SetUnixFileMode(locked, UnixFileMode.None);
+        try
+        {
+            Assert.Empty(LocalGame.FindBridges(new AppSettings { BepInExFolders = { bep } }, out bool bepInEx, out bool plugin));
+            Assert.True(bepInEx);
+            Assert.False(plugin);
+        }
+        finally
+        {
+            File.SetUnixFileMode(locked, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+    }
+
     [Fact]
     public void AFolderListedThatDoesNotExistIsPassedOver()
     {
@@ -424,6 +498,36 @@ public sealed class HomeFolderTests : IDisposable
         var r = await LocalGame.FindRunning(LocalGame.FindBridges(settings, out _, out _));
         Assert.Equal("", r!.World);
         Assert.Equal(0, r.Players);
+    }
+
+    [Fact]
+    public async Task BridgesAreProbedTogetherAndTheFirstThatAnswersIsTaken()
+    {
+        // Three ports that take the connection but never answer: asked one after another they would cost 4.5 s.
+        var silent = Enumerable.Range(0, 3).Select(_ => new TcpListener(IPAddress.Loopback, 0)).ToList();
+        try
+        {
+            foreach (var l in silent)
+            {
+                l.Start();
+            }
+            using var first = new Status(200, "{\"world\":\"First\"}").Start();
+            using var second = new Status(200, "{\"world\":\"Second\"}").Start();
+            var bridges = silent.Select(l => new LocalGame.Bridge("cfg", "here", ((IPEndPoint)l.LocalEndpoint).Port, "t"))
+                .Append(new LocalGame.Bridge("cfg", "here", first.Port, "t"))
+                .Append(new LocalGame.Bridge("cfg", "here", second.Port, "t"));
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            var r = await LocalGame.FindRunning(bridges);
+            Assert.Equal("First", r!.World);
+            Assert.True(clock.Elapsed < TimeSpan.FromSeconds(4), $"{clock.Elapsed}");
+        }
+        finally
+        {
+            foreach (var l in silent)
+            {
+                l.Stop();
+            }
+        }
     }
 
     [Fact]

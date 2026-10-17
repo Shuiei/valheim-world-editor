@@ -72,6 +72,34 @@ public class HistoryFileTests
         return (raw, objects);
     }
 
+    // The history file cannot be put in place (a folder stands at its path): the save is still done, and no
+    // half-written ".new" file is left beside it.
+    [AvaloniaFact]
+    public void AHistoryThatCannotBeWrittenLeavesNoTemporaryFile()
+    {
+        string dir = Fixtures.CopyFixture();
+        string? path = null;
+        try
+        {
+            var scene = WorldScene.Load(dir, 0, 0, 1);
+            var s = scene.Session!;
+            path = HistoryFile.PathOf(HistoryFile.KeyOf(scene.Owner!));
+            Directory.CreateDirectory(Path.Combine(path, "in the way"));
+            s.Shape(32, 32, Formula.Compile("3", []), 4, 0, "Raise");
+            Assert.True(s.Save().Saved);
+            Assert.False(File.Exists(path + ".new"));
+            scene.Owner!.Dispose();
+        }
+        finally
+        {
+            if (path != null && Directory.Exists(path))
+            {
+                Directory.Delete(path, recursive: true);
+            }
+            Done(dir);
+        }
+    }
+
     // A history file damaged after its header (a count out of range, as a file changed by hand can
     // have): the world still opens, without it (it threw, and the world could not be opened).
     [AvaloniaFact]
@@ -110,6 +138,51 @@ public class HistoryFileTests
             }
             using var world = WorldSession.Open(dir);
             Assert.Null(world.Restored);
+        }
+        finally
+        {
+            Done(dir);
+        }
+    }
+
+    // A count far past what the file holds (200 million objects) is refused at the file's end, without making room
+    // for that many first (it allocated gigabytes, and relied on running out of memory).
+    [AvaloniaFact]
+    public void AHugeCountInAHistoryFileIsNotAllocatedBeforeItIsRead()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            EditAndSave(dir);
+            using var world = WorldSession.Open(dir);
+            string path = HistoryFile.PathOf(HistoryFile.KeyOf(world));
+            byte[] raw;
+            using (var gz = new System.IO.Compression.GZipStream(File.OpenRead(path), System.IO.Compression.CompressionMode.Decompress))
+            using (var ms = new MemoryStream())
+            {
+                gz.CopyTo(ms);
+                raw = ms.ToArray();
+            }
+            // Header: magic, version, key, has stamp, stamp, saved at; then the object count.
+            long at;
+            using (var r = new BinaryReader(new MemoryStream(raw), System.Text.Encoding.UTF8))
+            {
+                r.ReadInt32();
+                r.ReadInt32();
+                r.ReadString();
+                r.ReadBoolean();
+                r.ReadString();
+                r.ReadInt64();
+                at = r.BaseStream.Position;
+            }
+            BitConverter.GetBytes(200_000_000).CopyTo(raw, at);
+            using (var gz = new System.IO.Compression.GZipStream(File.Create(path), System.IO.Compression.CompressionLevel.Fastest))
+            {
+                gz.Write(raw);
+            }
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            Assert.Null(HistoryFile.Read(world));
+            Assert.InRange(GC.GetAllocatedBytesForCurrentThread() - before, 0, 64 << 20);
         }
         finally
         {

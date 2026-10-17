@@ -12,11 +12,6 @@ namespace TerrainEditor.App;
 public static class Builders
 {
     /// <summary>
-    /// The ZDO key ("creator") holding a piece's builder: a player id.
-    /// </summary>
-    public static readonly int CreatorKey = StableHash.Of("creator");
-
-    /// <summary>
     /// When no player is known: still a builder, so pieces are player built (wards and private chests
     /// answer to nobody until another one is chosen).
     /// </summary>
@@ -66,11 +61,11 @@ public static class Builders
     public static ZdoData? Claimed(byte[] bytes, long builder)
     {
         var z = ZdoData.Parse(bytes);
-        if (PieceCatalog.Get(z.Prefab)?.Tool == null || z.LongList.FirstOrDefault(l => l.Key == CreatorKey).Value != 0)
+        if (PieceCatalog.Get(z.Prefab)?.Tool == null || z.LongList.FirstOrDefault(l => l.Key == Editing.ObjectField.CreatorKey).Value != 0)
         {
             return null;
         }
-        z.Set("longs", CreatorKey, builder.ToString(CultureInfo.InvariantCulture));
+        z.Set("longs", Editing.ObjectField.CreatorKey, builder.ToString(CultureInfo.InvariantCulture));
         return z;
     }
 }

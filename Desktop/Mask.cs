@@ -8,15 +8,6 @@ namespace TerrainEditor.Desktop;
 public sealed class Mask
 {
     /// <summary>
-    /// The biomes the Mask panel offers, in its order: the game's biome flag and its display name.
-    /// </summary>
-    public static readonly (int Biome, string Name)[] BiomeNames =
-    [
-        (1, "Meadows"), (8, "Black Forest"), (2, "Swamp"), (4, "Mountain"), (16, "Plains"),
-        (512, "Mistlands"), (32, "Ashlands"), (64, "Deep North"), (256, "Ocean"),
-    ];
-
-    /// <summary>
     /// Which ground passes by its paint. Dirt, Cultivated and Paved need painted ground with that colour channel (red,
     /// green, blue) at least half.
     /// </summary>
@@ -128,9 +119,11 @@ public sealed class Mask
         float Slope(int p)
         {
             int gx = p % w, gz = p / w;
-            float hx = heights![gz * w + Math.Min(w - 1, gx + 1)] - heights[gz * w + Math.Max(0, gx - 1)];
-            float hz = heights[Math.Min(h - 1, gz + 1) * w + gx] - heights[Math.Max(0, gz - 1) * w + gx];
-            return MathF.Atan(MathF.Sqrt(hx * hx + hz * hz) / 2) * 180 / MathF.PI;
+            // On the border one neighbour is the point itself, so the step is 1 m there, not 2 m.
+            int x0 = Math.Max(0, gx - 1), x1 = Math.Min(w - 1, gx + 1), z0 = Math.Max(0, gz - 1), z1 = Math.Min(h - 1, gz + 1);
+            float hx = x1 > x0 ? (heights![gz * w + x1] - heights[gz * w + x0]) / (x1 - x0) : 0;
+            float hz = z1 > z0 ? (heights![z1 * w + gx] - heights[z0 * w + gx]) / (z1 - z0) : 0;
+            return MathF.Atan(MathF.Sqrt(hx * hx + hz * hz)) * 180 / MathF.PI;
         }
         bool PaintOk(int p)
         {

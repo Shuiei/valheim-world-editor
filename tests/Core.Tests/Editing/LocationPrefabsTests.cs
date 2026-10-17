@@ -81,6 +81,24 @@ public class LocationPrefabsTests
     }
 
     [Fact]
+    public void TeleportsThatAreNoListAreNone()
+    {
+        // "teleports": null threw from Use, and no location prefab loaded at all.
+        string json = File.ReadAllText(Path.Combine(Fixtures.Root, "dungeon-rooms.json"));
+        try
+        {
+            LocationPrefabs.Use("""
+                {"dungeons":{},"rooms":{},"locations":{"Odd":{"clearArea":0,"randomDamage":0,"interior":0,"contents":[],"spawns":[],"picks":[],"nodes":[],"teleports":null}}}
+                """);
+            Assert.Empty(LocationPrefabs.Get("Odd")!.Doors);
+        }
+        finally
+        {
+            LocationPrefabs.Use(json);
+        }
+    }
+
+    [Fact]
     public void ADungeonsEntranceHasItsDoorsAndMayMoveItsInteriorToTheZonesMiddle()
     {
         // A burial chamber: its door at the ground faces -z (a player leaving stands south of it), its door out stands

@@ -1,4 +1,3 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -138,14 +137,8 @@ public sealed class DungeonPanel
         _generate.Tip("dungeon.gen");
         _go = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, IsVisible = false, Children = { Gen.ToDungeon, Gen.ToEntrance } };
         Gen.PlacedChanged += yes => _go.IsVisible = yes;
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             VerticalAlignment = VerticalAlignment.Top,
             Child = new ScrollViewer
             {
@@ -165,7 +158,7 @@ public sealed class DungeonPanel
                     },
                 },
             },
-        };
+        });
         SetCut(CutOff);
     }
 

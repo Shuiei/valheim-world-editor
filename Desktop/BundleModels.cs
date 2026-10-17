@@ -315,9 +315,9 @@ internal sealed class BundleModels : ModelStore.ISource
     }
 
     /// <summary>
-    /// A mesh or material by name: the mods' bundles first, then the game's; of several so named, those in
-    /// <paramref name="near"/>'s bundle first, then a mesh with that vertex count. Its id (with <see cref="Mod"/> in the
-    /// mods' bundles); null when none has the name.
+    /// A mesh or material by name. Of several so named, a mesh with that vertex count comes first, then those in
+    /// <paramref name="near"/>'s bundle, then the mods' bundles' before the game's. Its id (with <see cref="Mod"/> in
+    /// the mods' bundles); null when none has the name.
     /// </summary>
     /// <param name="mods">The mods' bundles, if any.</param>
     /// <param name="kind">Mesh or Material.</param>

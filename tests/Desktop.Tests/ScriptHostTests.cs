@@ -39,6 +39,50 @@ public class ScriptHostTests
     }
 
     [Fact]
+    public void AScriptMayChangeTheGroundFromSeveralThreads()
+    {
+        var s = TestScenes.Flat(2);
+        var ch = Run(s, """
+			System.Threading.Tasks.Parallel.For(0, 100, i =>
+			{
+			    for (int j = 0; j < 100; j++)
+			    {
+			        Ground.Set(Area.MinX + 2 + i, Area.MinZ + 2 + j, 40);
+			        Ground.Paint(Area.MinX + 2 + i, Area.MinZ + 2 + j, "dirt");
+			    }
+			    Print("row");
+			});
+			""");
+        Assert.Equal(10000, ch.Heights.Count);
+        Assert.Equal(10000, ch.Paint.Count);
+        Assert.Equal(100, ch.Output.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries).Length);
+    }
+
+    [Fact]
+    public void ANonNumberIsNoPoint()
+    {
+        var ch = Run(TestScenes.Flat(2), """
+			Ground.Set(float.NaN, 10, 40);
+			Ground.Set(10, float.PositiveInfinity, 40);
+			Ground.Paint(float.NaN, float.NaN, "dirt");
+			Print(Ground.Biome(float.NaN, 10));
+			""");
+        Assert.Empty(ch.Heights);
+        Assert.Empty(ch.Paint);
+        Assert.Equal("None", ch.Output.ToString().Trim());
+    }
+
+    [Fact]
+    public void TheApiNamesEveryKindOfObject()
+    {
+        using var stream = typeof(ScriptHost).Assembly.GetManifestResourceStream("TerrainEditor.ScriptApi.csx")!;
+        string api = new StreamReader(stream).ReadToEnd();
+        int at = api.IndexOf("// Kinds: ", StringComparison.Ordinal);
+        string kinds = api[at..api.IndexOf("public static IEnumerable<Obj> OfKind", at, StringComparison.Ordinal)];
+        Assert.All(Enum.GetNames<TerrainEditor.App.ObjectKind>(), k => Assert.Contains($" {k}", kinds));
+    }
+
+    [Fact]
     public void AScriptsChangesAreOneUndoStepAndGoPastTheLimit()
     {
         var s = TestScenes.Flat(2);

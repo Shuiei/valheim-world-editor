@@ -843,7 +843,8 @@ public static partial class GameCatalogues
                     continue;
                 }
                 mods.Sort((x, y) => Order(x.Path, y.Path) is var c and not 0 ? c : x.Index.CompareTo(y.Index));
-                Entries[go["m_Name"].AsString] = new Dict { ["location"] = kinds.Contains("Location"), ["modifiers"] = mods.Select(x => (object?)x.Entry).ToList() };
+                // The first of a name, as every scan takes it.
+                Entries.TryAdd(go["m_Name"].AsString, new Dict { ["location"] = kinds.Contains("Location"), ["modifiers"] = mods.Select(x => (object?)x.Entry).ToList() });
             }
 
             static int Order(List<int> a, List<int> c)

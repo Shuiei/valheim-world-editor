@@ -94,14 +94,8 @@ public sealed class BlueprintsPanel
             Padding = new Thickness(8, 6),
             Child = new StackPanel { Spacing = 4, Children = { Banner, GetHomesteadButton } },
         };
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             VerticalAlignment = VerticalAlignment.Top,
             IsVisible = false,
             Child = new StackPanel
@@ -110,22 +104,15 @@ public sealed class BlueprintsPanel
                 Spacing = 6,
                 Children =
                 {
-                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "Blueprints", FontSize = 14, FontWeight = FontWeight.SemiBold }, Col(close, 1) } },
+                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "Blueprints", FontSize = 14, FontWeight = FontWeight.SemiBold }, Ui.Col(close, 1) } },
                     _bannerBox,
-                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { Search, Col(ImportButton, 1) } },
+                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { Search, Ui.Col(ImportButton, 1) } },
                     NewButton,
                     new ScrollViewer { MaxHeight = 640, Content = List },
                     _folder,
                 },
             },
-        };
-    }
-
-    /// <summary>Puts a control in a grid column.</summary>
-    private static Control Col(Control c, int col)
-    {
-        Grid.SetColumn(c, col);
-        return c;
+        });
     }
 
     /// <summary>Shows or hides the panel, and refreshes it.</summary>
@@ -144,10 +131,14 @@ public sealed class BlueprintsPanel
     /// <summary>Homestead as last looked for (on refresh and before saving or importing; first when needed).</summary>
     internal Homestead.Status Status { get => field ??= FindHomestead(); private set; }
 
+    /// <summary>Looks for Homestead again (installed or moved since), without listing the blueprints.</summary>
+    /// <returns>What was found, now <see cref="Status"/>.</returns>
+    internal Homestead.Status LookAgain() => Status = FindHomestead();
+
     /// <summary>Looks for Homestead again and, while the panel is shown, lists the blueprints again.</summary>
     public void Refresh()
     {
-        Status = FindHomestead();
+        LookAgain();
         if (!Card.IsVisible)
         {
             return;
@@ -171,42 +162,6 @@ public sealed class BlueprintsPanel
         }
         _folder.Text = $"Homestead's blueprints: {Ui.Tilde(Status.Folder)}." + (_older.Count > 0 ? $" Older editor blueprints: {Ui.Tilde(Store.Directory)}." : "");
         Render();
-    }
-
-    /// <summary>An older blueprint's thumbnail (a PNG data URL), null when there is none or it cannot be read.</summary>
-    private static Bitmap? Picture(string? dataUrl)
-    {
-        if (dataUrl == null || !dataUrl.StartsWith("data:image/png;base64,", StringComparison.Ordinal))
-        {
-            return null;
-        }
-        try
-        {
-            using var ms = new MemoryStream(Convert.FromBase64String(dataUrl["data:image/png;base64,".Length..]));
-            return new Bitmap(ms);
-        }
-        catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidOperationException)
-        {
-            return null;
-        }
-    }
-
-    /// <summary>A Homestead blueprint's picture file, null when there is none or it cannot be read.</summary>
-    private static Bitmap? PictureFile(string? path)
-    {
-        if (path == null)
-        {
-            return null;
-        }
-        try
-        {
-            using var s = File.OpenRead(path);
-            return new Bitmap(s);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
-        {
-            return null;
-        }
     }
 
     /// <summary>One row: picture, name, what it holds, its buttons.</summary>
@@ -263,7 +218,7 @@ public sealed class BlueprintsPanel
             Children =
             {
                 new Image { Source = picture, Width = 80, Height = 80, VerticalAlignment = VerticalAlignment.Top },
-                Col(text, 1),
+                Ui.Col(text, 1),
             },
         };
         return new Border { Padding = new Thickness(4), CornerRadius = new CornerRadius(6), Child = grid };
@@ -275,11 +230,7 @@ public sealed class BlueprintsPanel
         List.Children.Clear();
         string q = Search.Text?.Trim() ?? "";
         bool Match(string name) => q == "" || name.Contains(q, StringComparison.OrdinalIgnoreCase);
-        // Every word somewhere in the name, creator, description or tags.
-        bool Matches(Homestead.Entry e) => q.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(w =>
-            e.Name.Contains(w, StringComparison.OrdinalIgnoreCase) || (e.Creator ?? "").Contains(w, StringComparison.OrdinalIgnoreCase)
-            || e.Description.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase)));
-        var homestead = _homestead.Where(Matches).ToList();
+        var homestead = _homestead.Where(e => e.Matches(q)).ToList();
         var older = _older.Where(b => Match(b.Name)).ToList();
         if (homestead.Count + older.Count == 0)
         {
@@ -297,7 +248,7 @@ public sealed class BlueprintsPanel
             string id = HomesteadId + Path.GetFileName(e.Path);
             string meta = $"{e.Pieces} piece(s){(e.Creator is { Length: > 0 } c ? $" · by {c}" : "")}{(e.World != null ? $" · from {e.World}" : "")}";
             var cost = Terrain.PieceCost.Of(e.Kinds);
-            List.Children.Add(Row(PictureFile(e.Picture), e.Name, meta, act =>
+            List.Children.Add(Row(BlueprintPictures.File(e.Picture), e.Name, meta, act =>
             {
                 act("Paste", "blueprints.paste", () => Paste(id));
                 act("Edit", "blueprints.edit", () => EditAsked?.Invoke(e.Path));
@@ -313,7 +264,7 @@ public sealed class BlueprintsPanel
         foreach (var b in older)
         {
             string meta = $"{b.W} × {b.H} m · {b.Objects} object(s){(b.Ground ? " · ground" : "")}{(b.World != null ? $" · from {b.World}" : "")}{(b.Source != null ? $" · {b.Source}" : "")}";
-            List.Children.Add(Row(Picture(b.Thumb), b.Name, meta, act =>
+            List.Children.Add(Row(BlueprintPictures.Url(b.Thumb), b.Name, meta, act =>
             {
                 act("Paste", "blueprints.paste", () => Paste(b.Id));
                 act("To Homestead", "blueprints.toHomestead", () => ToHomestead(b.Id));

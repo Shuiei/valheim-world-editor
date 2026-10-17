@@ -206,16 +206,27 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         Assert.Equal("Saved", r.Server.Name);
         Assert.Equal("/nowhere", r.Server.GameFolder);
         Assert.Equal("hello from the plugin", ReadThrough(r.LocalPort));
-        // Another key than the one remembered: refused, saying both.
+        // Another key than the one remembered: refused, saying both, and naming every entry that pins the old key.
+        ServerConfig.Remember(new ServerConfig.Server { Name = "Other account", Host = "127.0.0.1", SshPort = _ssh.Port, User = "someone-else", HostKey = "SHA256:somethingelse" });
         ServerConfig.Remember(new ServerConfig.Server { Name = "Saved", Host = "127.0.0.1", SshPort = _ssh.Port, User = _ssh.User, HostKey = "SHA256:somethingelse" });
         r = await Tunnel.Start(Req());
         Assert.StartsWith($"The server's identity changed (it was SHA256:somethingelse, now {_ssh.Fingerprint}).", r.Error);
+        Assert.Contains("empty the HostKey line of [Saved], [Other account] in", r.Error);
         Assert.False(Tunnel.Open);
         // Known under another account only: the same server, so still refused (it was trusted afresh).
         ServerConfig.Forget(id);
-        ServerConfig.Remember(new ServerConfig.Server { Name = "Other account", Host = "127.0.0.1", SshPort = _ssh.Port, User = "someone-else", HostKey = "SHA256:somethingelse" });
         r = await Tunnel.Start(Req());
         Assert.StartsWith("The server's identity changed (it was SHA256:somethingelse", r.Error);
+        Assert.Contains("empty the HostKey line of [Other account] in", r.Error);
+    }
+
+    [Fact]
+    public async Task ALineBreakInWhatIsSavedIsRefusedBeforeConnecting()
+    {
+        var r = await Tunnel.Start(Req(token: "tok\nHostKey = SHA256:other"));
+
+        Assert.Equal("The server's details cannot hold line breaks: enter each on one line.", r.Error);
+        Assert.False(Tunnel.Open);
     }
 
     [Fact]
@@ -235,7 +246,8 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         _ssh.Need();
         string game = Path.Combine(_dir, "it's a server");
         Directory.CreateDirectory(Path.Combine(game, "BepInEx", "config"));
-        File.WriteAllText(Path.Combine(game, "BepInEx", "config", config), $"[Bridge]\nToken = never read\n Port = {BridgePort}\n");
+        string file = Path.Combine(game, "BepInEx", "config", Path.GetFileName(config));
+        File.WriteAllText(file, $"[Bridge]\nToken = never read\n Port = {BridgePort}\n");
         var r = await Tunnel.Start(Req(folder: slash ? game + "/ " : game));
         Assert.Null(r.Error);
         Assert.Equal(BridgePort, r.Server!.BridgePort);
@@ -246,9 +258,22 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         r = await Tunnel.Start(Req(folder: game, bridge: 4321));
         Assert.Equal(4321, r.Server!.BridgePort);
         // No settings there: the usual port.
-        File.Delete(Path.Combine(game, "BepInEx", "config", config));
+        File.Delete(file);
         r = await Tunnel.Start(Req(folder: game));
         Assert.Equal(5182, r.Server!.BridgePort);
+        // A port no number of 1 to 65535 fits: the usual port too (it threw, leaving the connection open).
+        File.WriteAllText(file, "Port = 99999999999\n");
+        r = await Tunnel.Start(Req(folder: game));
+        Assert.Equal(5182, r.Server!.BridgePort);
+    }
+
+    // A port out of range given: said before connecting (it threw).
+    [Fact]
+    public async Task APortOutOfRangeIsRefused()
+    {
+        Assert.Equal("A port is a number from 1 to 65535.", (await Tunnel.Start(new Tunnel.Request("127.0.0.1", 70000, "u", "pw", null, null, "tok", null, false, null))).Error);
+        Assert.Equal("A port is a number from 1 to 65535.", (await Tunnel.Start(Req(bridge: 0))).Error);
+        Assert.False(Tunnel.Open);
     }
 
     [Fact]

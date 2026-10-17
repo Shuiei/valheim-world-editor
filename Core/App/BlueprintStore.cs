@@ -52,18 +52,24 @@ public sealed class BlueprintStore(string directory)
         {
             try
             {
-                var doc = JsonNode.Parse(File.ReadAllText(file));
-                if (doc?["clip"] is not JsonObject clip)
+                // Read without making a node per value: a copy's ground and objects can hold hundreds of thousands.
+                using var stream = File.OpenRead(file);
+                using var doc = JsonDocument.Parse(stream);
+                JsonElement root = doc.RootElement;
+                if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("clip", out JsonElement clip) || clip.ValueKind != JsonValueKind.Object)
                 {
                     continue;
                 }
-                list.Add(new Summary(Path.GetFileNameWithoutExtension(file), (string?)doc["name"] ?? Path.GetFileNameWithoutExtension(file),
-                    doc["created"] is JsonNode c && DateTime.TryParse((string?)c, null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime t) ? t : File.GetLastWriteTime(file),
-                    (string?)doc["world"], (int?)clip["w"] ?? 0, (int?)clip["h"] ?? 0, (clip["objects"] as JsonArray)?.Count ?? 0, HasGround(clip), (string?)doc["thumb"], (string?)doc["source"]));
+                string id = Path.GetFileNameWithoutExtension(file);
+                list.Add(new Summary(id, Text(root, "name") ?? id,
+                    DateTime.TryParse(Text(root, "created"), null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime t) ? t : File.GetLastWriteTime(file),
+                    Text(root, "world"), Number(clip, "w"), Number(clip, "h"), clip.TryGetProperty("objects", out JsonElement o) && o.ValueKind == JsonValueKind.Array ? o.GetArrayLength() : 0,
+                    HasGround(clip), Text(root, "thumb"), Text(root, "source")));
             }
-            catch (Exception ex) when (ex is JsonException or IOException or InvalidOperationException or FormatException)
+            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or InvalidOperationException or FormatException)
             {
-                // Not a blueprint (or a half-written file): left out of the list.
+                // Not a blueprint, a half-written file or one that cannot be read: left out of the list.
+                Console.WriteLine($"blueprints: {Path.GetFileName(file)} left out of the list ({ex.Message}).");
             }
         }
         return [.. list.OrderBy(b => b.Name, StringComparer.OrdinalIgnoreCase)];
@@ -107,9 +113,7 @@ public sealed class BlueprintStore(string directory)
             ["thumb"] = thumb,
             ["clip"] = clip.DeepClone(),
         };
-        string tmp = PathOf(id) + ".tmp";
-        File.WriteAllText(tmp, doc.ToJsonString());
-        File.Move(tmp, PathOf(id), overwrite: true);
+        SafeFile.WriteAllText(PathOf(id), doc.ToJsonString());
         return id;
     }
 
@@ -133,24 +137,35 @@ public sealed class BlueprintStore(string directory)
 
     /// <summary>
     /// A file name from the blueprint's name: letters, digits, spaces, dashes, underscores and dots are kept. Other
-    /// characters become "_", leading and trailing dots and spaces are dropped; at most 80 characters, "blueprint"
-    /// when nothing is left.
+    /// characters become "_", leading and trailing dots and spaces are dropped (after the cut too: Windows drops a
+    /// trailing dot itself); at most 80 characters, "blueprint" when nothing is left, and "_" before a name Windows
+    /// keeps for a device (CON, NUL…).
     /// </summary>
     public static string IdFor(string name)
     {
-        string id = new([.. name.Trim().Select(c => char.IsLetterOrDigit(c) || c is ' ' or '-' or '_' or '.' ? c : '_')]);
-        id = id.Trim('.', ' ');
+        string id = Clean(name);
         if (id.Length == 0)
         {
             id = "blueprint";
         }
-        return id.Length > 80 ? id[..80] : id;
+        // Cut again after the "_": an id is always one Clean keeps as it is (ValidId), so it can be read back.
+        return SafeFile.IsDeviceName(id) ? Clean("_" + id) : id;
     }
 
     /// <summary>
-    /// An id that <c>IdFor</c> leaves as it is and holds no folder part, so it cannot point outside the folder.
+    /// The name's characters a file name keeps (others "_"), without dots and spaces at its ends, at most 80.
     /// </summary>
-    private static bool ValidId(string id) => id.Length > 0 && id == IdFor(id) && Path.GetFileName(id) == id;
+    private static string Clean(string name)
+    {
+        string id = new string([.. name.Trim().Select(c => char.IsLetterOrDigit(c) || c is ' ' or '-' or '_' or '.' ? c : '_')]).Trim('.', ' ');
+        return (id.Length > 80 ? id[..80] : id).TrimEnd('.', ' ');
+    }
+
+    /// <summary>
+    /// An id <c>Clean</c> leaves as it is and holds no folder part, so it cannot point outside the folder. A device
+    /// name saved before such names were changed still counts: its file is there to read or delete.
+    /// </summary>
+    private static bool ValidId(string id) => id.Length > 0 && id == Clean(id) && Path.GetFileName(id) == id;
 
     /// <summary>
     /// The file of a blueprint id.
@@ -160,5 +175,15 @@ public sealed class BlueprintStore(string directory)
     /// <summary>
     /// The copy has ground when any point of its relative heights is set (-32768 marks "no ground").
     /// </summary>
-    private static bool HasGround(JsonObject clip) => clip["rel"] is JsonArray rel && rel.Any(v => v != null && (int)v != -32768);
+    private static bool HasGround(JsonElement clip) =>
+        clip.TryGetProperty("rel", out JsonElement rel) && rel.ValueKind == JsonValueKind.Array
+        && rel.EnumerateArray().Any(v => v.ValueKind != JsonValueKind.Null && v.GetInt32() != -32768);
+
+    /// <summary>A text value of an object; null when missing or null (InvalidOperationException when not text).</summary>
+    private static string? Text(JsonElement o, string key) =>
+        o.TryGetProperty(key, out JsonElement v) && v.ValueKind != JsonValueKind.Null ? v.GetString() : null;
+
+    /// <summary>A whole number of an object; 0 when missing or null (FormatException or InvalidOperationException when not one).</summary>
+    private static int Number(JsonElement o, string key) =>
+        o.TryGetProperty(key, out JsonElement v) && v.ValueKind != JsonValueKind.Null ? v.GetInt32() : 0;
 }

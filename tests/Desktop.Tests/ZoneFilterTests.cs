@@ -4,7 +4,7 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The map's zone filter on made-up zone rows: each of its tests (biome, buildings near or none at all, ground edits,
-/// generated, least and greatest distance from the middle) leaving out a zone on its own.
+/// generated, least and greatest distance from the middle) leaving out a zone on its own; and the biomes it offers.
 /// </summary>
 public class ZoneFilterTests
 {
@@ -22,6 +22,14 @@ public class ZoneFilterTests
         20, 0, 1, 0, 0, 1, -1, 1,   // 1280 m out: too far
         9, 9, 9,                    // a row cut short: not a zone
     ];
+
+    [Fact]
+    public void TheBiomesOfferedAreNamedAsTheGameShowsThem()
+    {
+        Assert.Equal(
+            [(1, "Meadows"), (8, "Black Forest"), (2, "Swamp"), (4, "Mountain"), (16, "Plains"), (512, "Mistlands"), (32, "Ashlands"), (64, "Deep North"), (256, "Ocean")],
+            ZoneFilter.BiomeChoices);
+    }
 
     [Fact]
     public void EachTestLeavesOutItsOwnZones()

@@ -258,7 +258,7 @@ public static class Uplift
             zones[(zx, zz)] = e;
             block.Each(zx, zz, (i, p) =>
             {
-                want[p] = b[i] + (e.Modified[i] ? Math.Clamp(e.Level[i] + e.Smooth[i], -EditStore.MaxLevel, EditStore.MaxLevel) : 0) + e.Lift[i];
+                want[p] = e.HeightAt(i, b[i]);
                 lift[p] = e.Lift[i];
             });
         }
@@ -576,7 +576,7 @@ public static class Uplift
     /// tiles of 64x64, one per zone of the block and per zone holding their far edges, so only the zones in the block
     /// take memory however far apart they are; a table of the tiles spans their box (one entry a zone).
     /// </summary>
-    private sealed class Block
+    internal sealed class Block
     {
         /// <summary>Points a side of a tile: a zone's points without its far edges.</summary>
         private const int Tile = 64;
@@ -698,10 +698,11 @@ public static class Uplift
             return (X0 + tx * Tile + q % Tile, Z0 + tz * Tile + q / Tile);
         }
 
-        /// <summary>The point nearest a world position, or null outside the block's zones.</summary>
+        /// <summary>The point nearest a world position (halves rounded up, as a disc's middle), or null outside the block's
+        /// zones.</summary>
         public int? At(Vector3 v)
         {
-            int p = Index((int)MathF.Round(v.X) - X0, (int)MathF.Round(v.Z) - Z0);
+            int p = Index(Nearest(v.X) - X0, Nearest(v.Z) - Z0);
             return p >= 0 ? p : null;
         }
 
@@ -737,13 +738,16 @@ public static class Uplift
             }
         }
 
+        /// <summary>The whole metre nearest a world coordinate, halves rounded up (as Heightmap.WorldToVertex).</summary>
+        private static int Nearest(float v) => (int)MathF.Floor(v + 0.5f);
+
         /// <summary>The points within r of a disc's middle (as Heightmap.LevelTerrain counts them).</summary>
         public void Disc(Vector3 c, float r, Action<int> f) => Disc(c, r, (p, _) => f(p));
 
         /// <summary>The points within r of a disc's middle, with their distance from it (metres).</summary>
         public void Disc(Vector3 c, float r, Action<int, float> f)
         {
-            int cx = (int)MathF.Floor(c.X + 0.5f) - X0, cz = (int)MathF.Floor(c.Z + 0.5f) - Z0, n = (int)MathF.Ceiling(r);
+            int cx = Nearest(c.X) - X0, cz = Nearest(c.Z) - Z0, n = (int)MathF.Ceiling(r);
             for (int z = cz - n; z <= cz + n; z++)
             {
                 for (int x = cx - n; x <= cx + n; x++)

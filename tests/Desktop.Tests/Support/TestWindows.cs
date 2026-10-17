@@ -24,11 +24,18 @@ internal static class TestWindows
     }
 
     /// <summary>
-    /// The dialog the owner shows (after the posted work that opens it).
+    /// The dialog the owner shows (after the posted work that opens it, and the background work some do first, such as
+    /// Settings finding the mods' extensions).
     /// </summary>
-    internal static Window Shown(Window owner)
+    internal static Window Shown(Window owner, int ms = 15000)
     {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
         Dispatcher.UIThread.RunJobs();
+        while (owner.OwnedWindows.Count == 0 && watch.ElapsedMilliseconds < ms)
+        {
+            Thread.Sleep(10);
+            Dispatcher.UIThread.RunJobs();
+        }
         return Assert.Single(owner.OwnedWindows);
     }
 }

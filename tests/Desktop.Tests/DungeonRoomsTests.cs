@@ -40,6 +40,17 @@ public class DungeonRoomsTests
         Assert.Equal(2, DungeonRooms.Shown(s.Scene, () => { }).Count);
     }
 
+    [Fact]
+    public void ADungeonGoneInTheLiveGameIsReadAgain()
+    {
+        // The game took the cave away: changed in place (no edit, no object more), the cache kept showing it.
+        var cave = new WorldScene.Thing(-1, StableHash.Of("DG_Cave"), new Vector3(0, 5000, 0), Vector3.Zero, 1, false);
+        var s = TestScenes.Flat(1, cave);
+        Assert.Single(DungeonRooms.Of(s.Scene));
+        Assert.True(s.TakeGameChanges(new WorldSession.Followed(new WorldSave.Merged([], [], [-1], []), [], [], [])));
+        Assert.Empty(DungeonRooms.Of(s.Scene));
+    }
+
     [Theory]
     [InlineData("DG_Cave", "Frost Cave")]
     [InlineData("DG_SunkenCrypt", "Sunken Crypt")]

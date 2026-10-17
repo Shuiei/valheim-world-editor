@@ -154,9 +154,10 @@ public sealed class MapData
 
     /// <summary>
     /// The last overview built, by its generator's identity: the same world opened again (Reload, back to the
-    /// worlds and in again) takes it as it is instead of building it again (seconds).
+    /// worlds and in again) takes it as it is instead of building it again (seconds), while it is still in memory.
+    /// Held weakly: once no map uses it, its ~58 MB go when memory is collected (the start page, another world).
     /// </summary>
-    private static ((int Seed, int Version, bool Menu) Key, Layers Layers)? _lastGlobal;
+    private static ((int Seed, int Version, bool Menu) Key, WeakReference<Layers> Layers)? _lastGlobal;
 
     /// <summary>
     /// Guards <see cref="_lastGlobal"/>.
@@ -173,15 +174,15 @@ public sealed class MapData
         var key = Generator.Identity;
         lock (LastGlobalLock)
         {
-            if (_lastGlobal is { } last && last.Key == key)
+            if (_lastGlobal is { } last && last.Key == key && last.Layers.TryGetTarget(out Layers? kept))
             {
-                return last.Layers;
+                return kept;
             }
         }
         var layers = BuildGlobalRows();
         lock (LastGlobalLock)
         {
-            _lastGlobal = (key, layers);
+            _lastGlobal = (key, new WeakReference<Layers>(layers));
         }
         return layers;
     }

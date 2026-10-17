@@ -53,6 +53,8 @@ public static class WorldWriter
         public IReadOnlyList<string> Files { get; init; } = [];
         /// <summary>The save number written (-1: none).</summary>
         public int Number { get; init; } = -1;
+        /// <summary>The new save as it was read back to check it (null when nothing was saved): no need to read it again.</summary>
+        public WorldSave? Read { get; init; }
     }
 
     /// <summary>How a save treats the files around it.</summary>
@@ -100,16 +102,13 @@ public static class WorldWriter
         {
             return new Result(false, newer, null, 0, 0, skipped);
         }
-        if (world.Chunks.Any(c => c.WorldVersion != SaveFileVersion))
+        if (world.Chunks.FirstOrDefault(c => c.WorldVersion != SaveFileVersion) is { } other)
         {
-            return new Result(false, $"This world uses save format {world.Chunks.First().WorldVersion}; the writer only supports {SaveFileVersion}.", null, 0, 0, skipped);
+            return new Result(false, $"This world uses save format {other.WorldVersion}; the writer only supports {SaveFileVersion}.", null, 0, 0, skipped);
         }
-        // A zone can hold two terrain objects with data (the game makes them now and then): each gets
-        // the zone's ground, so whichever one the game uses has it.
-        Dictionary<(int, int), List<TerrainZone>> existing = world.TerrainZones.Where(z => z.Source != null).GroupBy(z => (z.ZoneX, z.ZoneZ)).ToDictionary(g => g.Key, g => g.ToList());
         // New ground copies a terrain object whose position is in the short format (the layout the copy patches).
         bool anyTerrain = world.TerrainZones.Any(z => z.Source != null);
-        TerrainZone? template = world.TerrainZones.FirstOrDefault(z => z.Source != null && (z.Source.Flags & ShortPosition) != 0);
+        TerrainZone? template = world.TerrainZones.FirstOrDefault(z => z.Source != null && (z.Source.Flags & ZdoData.SmallPositionFlag) != 0);
         Dictionary<ChunkFile, HashSet<long>> removals = [];
         void Remove(ObjectRef o) => (removals.TryGetValue(o.File, out var set) ? set : removals[o.File] = []).Add(o.Start);
         foreach (int id in deleted)
@@ -119,6 +118,8 @@ public static class WorldWriter
                 Remove(world.ObjectRefs[id]);
             }
         }
+        // Objects the deletions take out: ids past the list and repeated ids take out none.
+        int deletedCount = removals.Values.Sum(s => s.Count);
         Dictionary<(int, int), ZoneReset> resetByZone = resets.ToDictionary(r => (r.X, r.Z));
         foreach (ObjectRef o in world.ObjectRefs)
         {
@@ -129,6 +130,12 @@ public static class WorldWriter
             }
         }
         int removed = removals.Values.Sum(s => s.Count);
+        // A zone can hold two terrain objects with data (the game makes them now and then): each gets
+        // the zone's ground, so whichever one the game uses has it. Those deleted are not patched (removal wins): a
+        // zone whose terrain objects all go gets a new one.
+        Dictionary<(int, int), List<TerrainZone>> existing = world.TerrainZones
+            .Where(z => z.Source != null && !(removals.TryGetValue(z.Source.File, out var gone) && gone.Contains(z.Source.Start)))
+            .GroupBy(z => (z.ZoneX, z.ZoneZ)).ToDictionary(g => g.Key, g => g.ToList());
 
         // Plan: which chunk files change, and how.
         Dictionary<ChunkFile, Dictionary<long, (ZdoLocation Loc, byte[] Data)>> patches = [];     // object start -> new TCData
@@ -137,6 +144,8 @@ public static class WorldWriter
         int written = 0, created = 0, addedCount = 0;
         // The template terrain object's own bytes, read from its chunk file at the first new ground.
         byte[]? templateBytes = null;
+        // Each base chunk's file looked up once for the new ground and objects.
+        var findChunk = ChunkMath.Finder(world.Chunks);
         // Reading the template and the models can fail (a chunk file gone, data that does not parse): nothing is
         // written yet, and the caller gets a result, not an exception.
         try
@@ -158,7 +167,7 @@ public static class WorldWriter
                     notSaved.Add((edit.ZoneX, edit.ZoneZ));
                     continue;
                 }
-                ChunkFile? target = ChunkMath.Find(world.Chunks, edit.ZoneX, edit.ZoneZ);
+                ChunkFile? target = findChunk(edit.ZoneX, edit.ZoneZ);
                 if (target == null)
                 {
                     skipped.Add(ChunkMath.InWorld(edit.ZoneX, edit.ZoneZ) ? $"zone {edit.ZoneX}, {edit.ZoneZ}: not generated yet (no world data there; visit it in game first)" : $"zone {edit.ZoneX}, {edit.ZoneZ}: outside the world");
@@ -181,8 +190,8 @@ public static class WorldWriter
             Func<ObjectRef, byte[]> source = world.SourceReader();
             foreach (NewObject n in added)
             {
-                int zx = (int)MathF.Floor((n.Position.X + 32f) / 64f), zz = (int)MathF.Floor((n.Position.Z + 32f) / 64f);
-                ChunkFile? target = ChunkMath.Find(world.Chunks, zx, zz);
+                var (zx, zz) = ChunkMath.SectorOf(n.Position.X, n.Position.Z);
+                ChunkFile? target = findChunk(zx, zz);
                 if (target == null)
                 {
                     skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: zone {zx}, {zz} {(ChunkMath.InWorld(zx, zz) ? "is not generated yet" : "is outside the world")}");
@@ -210,6 +219,7 @@ public static class WorldWriter
         string dir = world.Directory;
         int newNumber = Math.Max(world.SaveNumber, LatestNumber(dir)) + 1;
         List<string> newFiles = [];
+        WorldSave? read = null;
         Dictionary<ChunkFile, (uint Version, int Count)> updated = [];
         try
         {
@@ -233,7 +243,7 @@ public static class WorldWriter
             string main = Path.Combine(dir, $"_main.{newNumber}");
             // Each file is listed before it is written: a failure halfway removes it too.
             newFiles.AddRange([main + ".chunks", main + ".db2", main + ".fwl2", main + ".ok"]);
-            WriteIndex(main + ".chunks", world.Chunks, updated);
+            WriteIndex(main + ".chunks", [.. world.Chunks.Select(c => updated.TryGetValue(c, out var u) ? (c.Chunk, c.Size, u.Version, u.Count) : (c.Chunk, c.Size, c.Version, c.IndexCount))]);
             if (resets.Count > 0)
             {
                 var db = ZoneDb.Load(Path.Combine(dir, $"_main.{world.SaveNumber}.db2"));
@@ -254,7 +264,8 @@ public static class WorldWriter
             WriteAllBytesDurable(main + ".ok", BitConverter.GetBytes(SaveFileVersion));
             DirectorySync.Flush(dir);
             // 5. Read back and compare with what was meant to be written (nothing old removed yet).
-            string? problem = Verify(dir, world, [.. changed.Where(e => !notSaved.Contains((e.ZoneX, e.ZoneZ)))], created + addedCount, removed, groundReset, resets);
+            read = WorldSave.Load(dir);
+            string? problem = Check(read, world, [.. changed.Where(e => !notSaved.Contains((e.ZoneX, e.ZoneZ)))], created + addedCount, removed, groundReset, resets);
             if (problem != null)
             {
                 RemoveAll(newFiles);
@@ -278,8 +289,8 @@ public static class WorldWriter
             old.AddRange(options.Drop.Where(f => !newFiles.Contains(f)));
         }
         RemoveAll(old);
-        string what = string.Join(", ", new[] { written + created > 0 ? $"{written + created} zone(s)" : null, deleted.Count > 0 ? $"{deleted.Count} deleted object(s)" : null, addedCount > 0 ? $"{addedCount} new object(s)" : null, resets.Count > 0 ? $"{resets.Count} reset zone(s) ({removed - deleted.Count} objects cleared)" : null }.Where(x => x != null));
-        return new Result(true, $"Saved {what} to save #{newNumber}.", null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles, Number = newNumber };
+        string what = string.Join(", ", new[] { written + created > 0 ? $"{written + created} zone(s)" : null, deletedCount > 0 ? $"{deletedCount} deleted object(s)" : null, addedCount > 0 ? $"{addedCount} new object(s)" : null, resets.Count > 0 ? $"{resets.Count} reset zone(s) ({removed - deletedCount} objects cleared)" : null }.Where(x => x != null));
+        return new Result(true, $"Saved {what} to save #{newNumber}.", null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles, Number = newNumber, Read = read };
     }
 
     /// <summary>Mirrors TerrainComp.Save: a GZip-compressed ZPackage.</summary>
@@ -325,9 +336,6 @@ public static class WorldWriter
         return compressed.ToArray();
     }
 
-    /// <summary>The ZDO flag of a position saved as two shorts (the zone), which new terrain objects are copied from.</summary>
-    private const ushort ShortPosition = 0x2000;
-
     /// <summary>
     /// Template objects' bytes read from their chunk files on this thread so far: a test seam, a save reads its
     /// template once however many zones get new ground.
@@ -356,7 +364,7 @@ public static class WorldWriter
     /// <exception cref="InvalidOperationException">The template's position is not in the short format.</exception>
     private static byte[] NewTerrainObject(ZdoLocation src, byte[] own, ZoneEdit edit, byte[] data)
     {
-        if ((src.Flags & ShortPosition) == 0)
+        if ((src.Flags & ZdoData.SmallPositionFlag) == 0)
         {
             throw new InvalidOperationException("Unexpected terrain object layout (position is not in the short format).");
         }
@@ -421,28 +429,30 @@ public static class WorldWriter
         return count;
     }
 
-    /// <summary>The new .chunks index: every chunk file, with the new version and count of those rewritten.</summary>
-    private static void WriteIndex(string path, List<ChunkFile> chunks, Dictionary<ChunkFile, (uint Version, int Count)> updated)
+    /// <summary>
+    /// A .chunks index (version, total object count, chunk count, then per chunk its id, size, file version and object
+    /// count), flushed to disk before returning: the save's and a new world's.
+    /// </summary>
+    internal static void WriteIndex(string path, IReadOnlyList<(ushort Chunk, byte Size, uint Version, int Count)> chunks)
     {
         using FileStream fs = new(path, FileMode.Create, FileAccess.Write);
         using BinaryWriter w = new(fs);
-        int Count(ChunkFile c) => updated.TryGetValue(c, out var u) ? u.Count : c.IndexCount;
         w.Write((short)SaveFileVersion);
-        w.Write(chunks.Sum(Count));
+        w.Write(chunks.Sum(c => c.Count));
         w.Write(chunks.Count);
-        foreach (ChunkFile c in chunks)
+        foreach (var (chunk, size, version, count) in chunks)
         {
-            w.Write(c.Chunk);
-            w.Write(c.Size);
-            w.Write(updated.TryGetValue(c, out var u) ? u.Version : c.Version);
-            w.Write(Count(c));
+            w.Write(chunk);
+            w.Write(size);
+            w.Write(version);
+            w.Write(count);
         }
         w.Flush();
         fs.Flush(flushToDisk: true);
     }
 
     /// <summary>Writes a file and flushes it to disk before returning.</summary>
-    private static void WriteAllBytesDurable(string path, byte[] bytes)
+    internal static void WriteAllBytesDurable(string path, byte[] bytes)
     {
         using FileStream fs = new(path, FileMode.Create, FileAccess.Write);
         fs.Write(bytes);
@@ -488,9 +498,8 @@ public static class WorldWriter
         ? $"Valheim saved this world (save #{newest}) after the editor read it: saving now would throw away what was done in the game since. Nothing was saved. Leave the world and open it again to edit the game's save."
         : null;
 
-    /// <summary>The highest save number in a world folder (-1: none).</summary>
-    public static int LatestNumber(string dir) => Directory.GetFiles(dir, "_main.*.chunks")
-        .Select(f => Path.GetFileName(f).Split('.')).Where(p => p.Length == 3 && int.TryParse(p[1], out _)).Select(p => int.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture)).DefaultIfEmpty(-1).Max();
+    /// <summary>The highest save number in a world folder (-1: none), as <see cref="WorldSave.SaveNumbers"/> reads them.</summary>
+    public static int LatestNumber(string dir) => WorldSave.SaveNumbers(dir).Latest;
 
     /// <summary>
     /// The world folder down to its latest save: earlier save numbers' files and the chunk files its index does not
@@ -504,7 +513,15 @@ public static class WorldWriter
         {
             return;
         }
-        var now = WorldSave.Load(dir);
+        Prune(WorldSave.Load(dir));
+    }
+
+    /// <summary>
+    /// <see cref="Prune(string)"/> for a world just read from its folder's latest save: its chunk list is what stays.
+    /// </summary>
+    public static void Prune(WorldSave now)
+    {
+        string dir = now.Directory;
         int latest = now.SaveNumber;
         var keep = now.Chunks.Select(c => c.FileName).ToHashSet();
         var old = Directory.GetFiles(dir, "_main.*").Where(f => Path.GetFileName(f).Split('.') is [_, var n, _]
@@ -521,9 +538,12 @@ public static class WorldWriter
     /// the saved zones' ground, and every other zone's ground untouched.
     /// </summary>
     /// <returns>What is wrong, or null when the save is right.</returns>
-    internal static string? Verify(string dir, WorldSave before, IReadOnlyList<ZoneEdit> saved, int created, int removed, HashSet<(int, int)> groundReset, IReadOnlyList<ZoneReset> resets)
+    internal static string? Verify(string dir, WorldSave before, IReadOnlyList<ZoneEdit> saved, int created, int removed, HashSet<(int, int)> groundReset, IReadOnlyList<ZoneReset> resets) =>
+        Check(WorldSave.Load(dir), before, saved, created, removed, groundReset, resets);
+
+    /// <summary><see cref="Verify"/> on the new save already read back (<paramref name="after"/>).</summary>
+    private static string? Check(WorldSave after, WorldSave before, IReadOnlyList<ZoneEdit> saved, int created, int removed, HashSet<(int, int)> groundReset, IReadOnlyList<ZoneReset> resets)
     {
-        var after = WorldSave.Load(dir);
         foreach (ZoneReset r in resets)
         {
             if (after.Zones == null || after.Zones.Generated.Contains(((short)r.X, (short)r.Z)))
@@ -557,10 +577,10 @@ public static class WorldWriter
                 }
             }
         }
-        var changed = saved;
+        var changed = saved.Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
         // Every other terrain zone must be untouched.
         // (Two terrain objects in one zone: compared in order, the writer keeps the objects' order.)
-        foreach (var group in before.TerrainZones.Where(t => changed.All(e => e.ZoneX != t.ZoneX || e.ZoneZ != t.ZoneZ) && !groundReset.Contains((t.ZoneX, t.ZoneZ))).GroupBy(t => (t.ZoneX, t.ZoneZ)))
+        foreach (var group in before.TerrainZones.Where(t => !changed.Contains((t.ZoneX, t.ZoneZ)) && !groundReset.Contains((t.ZoneX, t.ZoneZ))).GroupBy(t => (t.ZoneX, t.ZoneZ)))
         {
             var now = afterZones[group.Key].ToList();
             int n = 0;
@@ -568,12 +588,15 @@ public static class WorldWriter
             {
                 TerrainZone? a = n < now.Count ? now[n] : null;
                 n++;
-                if (a == null || !a.LevelDelta.SequenceEqual(z.LevelDelta) || !a.ModifiedHeight.SequenceEqual(z.ModifiedHeight) || !a.ModifiedPaint.SequenceEqual(z.ModifiedPaint))
+                if (a == null || !a.LevelDelta.SequenceEqual(z.LevelDelta) || !a.SmoothDelta.SequenceEqual(z.SmoothDelta) || !a.ModifiedHeight.SequenceEqual(z.ModifiedHeight)
+                    || !a.ModifiedPaint.SequenceEqual(z.ModifiedPaint) || !a.Paint.SequenceEqual(z.Paint))
                 {
                     return $"unchanged zone {z.ZoneX}, {z.ZoneZ} was altered";
                 }
             }
         }
-        return after.TerrainZones.Count >= before.TerrainZones.Count - groundReset.Count ? null : "terrain zones were lost";
+        // A zone whose ground is reset may lose its terrain objects (one or two each), no other.
+        int resetObjects = before.TerrainZones.Count(t => groundReset.Contains((t.ZoneX, t.ZoneZ)));
+        return after.TerrainZones.Count >= before.TerrainZones.Count - resetObjects ? null : "terrain zones were lost";
     }
 }

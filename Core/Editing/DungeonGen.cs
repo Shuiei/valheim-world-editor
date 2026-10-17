@@ -129,18 +129,14 @@ public static class DungeonGen
     /// then laid out from there as the game lays them out from its dungeon object (the first room's way in at it, the
     /// rooms kept in its zone's box), in world metres. Null: from the origin, facing +z.
     /// </param>
+    /// <exception cref="InvalidDataException">The game's rooms are asked for and its data has none to join (nor a cave).</exception>
     public static Result Make(Settings s, int worldSeed = 0, DungeonEntrances.Pose? dungeon = null) => s.Made == Made.Rooms ? MakeRooms(s, worldSeed, dungeon) : MakePieces(s);
 
     /// <summary>
     /// Locations with a dungeon (name hashes), which the game lays out 5000 m above them when a player first
     /// comes near: nothing of it is in the save until then.
     /// </summary>
-    public static readonly HashSet<int> DungeonLocations = [.. new[]
-    {
-        "Crypt2", "Crypt3", "Crypt4", "HalfBurried_ForestCrypt", "SunkenCrypt4", "MountainCave02", "Hildir_crypt", "Hildir_cave", "Hildir_plainsfortress",
-        "Mistlands_DvergrTownEntrance1", "Mistlands_DvergrTownEntrance2", "Mistlands_DvergrBossEntrance1", "MorgenHole1", "MorgenHole2", "MorgenHole3",
-        "TheHole01", "TheDarkestHole", "CharredFortress",
-    }.Select(Save.StableHash.Of)];
+    public static readonly HashSet<int> DungeonLocations = [.. DungeonEntrances.Locations.Select(l => Save.StableHash.Of(l.Name))];
 
     /// <summary>An axis-aligned box of space (metres).</summary>
     /// <param name="Min">Its lowest corner.</param>
@@ -239,12 +235,20 @@ public static class DungeonGen
     private static Result MakeRooms(Settings s, int worldSeed, DungeonEntrances.Pose? dungeon)
     {
         var notes = new List<string>();
-        var cave = Dungeons.KindOf(Save.StableHash.Of("DG_Cave"))!;
-        var kind = Dungeons.Kinds.FirstOrDefault(k => k.Name == (s.Kind ?? KindFor(s.Biome))) ?? cave;
+        static bool Joinable(Dungeons.Kind k) => Dungeons.RoomsFor(k).Any(r => !r.Entrance && !r.EndCap && !r.Divider && r.Openings.Length > 0);
+        var cave = Dungeons.KindOf(Save.StableHash.Of("DG_Cave"));
+        string wanted = s.Kind ?? KindFor(s.Biome);
+        var kind = Dungeons.Kinds.FirstOrDefault(k => k.Name == wanted) ?? cave;
         // Camps and villages are laid out on the ground, not joined room to room: a cave instead.
-        if (!Dungeons.RoomsFor(kind).Any(r => !r.Entrance && !r.EndCap && !r.Divider && r.Openings.Length > 0))
+        if (kind == null || !Joinable(kind))
         {
-            notes.Add($"{Describe(kind)} has no rooms to join: a cave instead");
+            if (cave == null || !Joinable(cave))
+            {
+                throw new InvalidDataException($"The game's data has no rooms to join for {wanted.Replace("DG_", "", StringComparison.Ordinal)}, and no cave to make instead "
+                    + "(a game update may have changed its dungeons).");
+            }
+            // (No kind at all only when there is no cave either.)
+            notes.Add($"{Describe(kind!)} has no rooms to join: a cave instead");
             kind = cave;
         }
         var rnd = new Random(s.Seed);
@@ -273,8 +277,9 @@ public static class DungeonGen
                 continue;
             }
             // Weighted as the game weighs its rooms (Room.m_weight).
-            float total = fits.Sum(r => r.Weight), roll = (float)rnd.NextDouble() * total;
-            var room = fits.First(r => (roll -= r.Weight) <= 0 || r == fits[^1]);
+#pragma warning disable S2245 // A dungeon must come out the same from its seed; nothing here is a secret.
+            var room = Weighted.Pick(fits, r => r.Weight, rnd.NextDouble());
+#pragma warning restore S2245
             var mine = Dungeons.Matching(room, end.Type).ToList();
             var p = Dungeons.Attach(room, mine[rnd.Next(mine.Count)], end.Position, end.Rotation);
             if (Dungeons.Overlaps(rooms, p).Count == 0 && Dungeons.Inside(kind, origin, p))
@@ -425,7 +430,8 @@ public static class DungeonGen
         DungeonShell.Build(plan, mat, o, s);
         DungeonDresser.Dress(plan, mat, biome, style, s, rnd, o, name);
         var e = plan.Entrance;
-        var arrival = new Vector3(e.CenterX, 0.05f, 2 * e.Z0 + 1.7f);
+        // On the entrance's floor finish (marble tiles, boards), as what is set on its floor stands.
+        var arrival = new Vector3(e.CenterX, new DungeonDresser.Frame(e, mat, plan.Levels[e.Level]).Top + DungeonDresser.Lift, 2 * e.Z0 + 1.7f);
         var map = plan.Spaces.Select(sp => new PlanRoom(sp.Name, sp.Level, DungeonPlan.FloorY(sp.Level), 2 * sp.X0, 2 * sp.Z0, 2 * (sp.X0 + sp.W), 2 * (sp.Z0 + sp.H),
             sp.Corridor, sp.Main, sp.KeyChest, sp.Shape == DungeonPlan.Shape.Rect ? null : Runs(sp),
             sp.Recesses.Count == 0 ? null : sp.Recesses.Select(n => (2f * n.Tiles.Min(t => t.I), 2f * n.Tiles.Min(t => t.J), 2f * (n.Tiles.Max(t => t.I) + 1), 2f * (n.Tiles.Max(t => t.J) + 1))).ToList())).ToList();

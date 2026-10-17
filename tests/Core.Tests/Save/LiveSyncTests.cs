@@ -86,6 +86,24 @@ public class LiveSyncTests
         Assert.False(t.Sync.IsLive(-1));
     }
 
+    // What the plugin can do is asked at each apply: a check that fails refuses the apply (a move was sent as a destroy
+    // and a creation, the object getting a new id), and a plugin that can move since is used to.
+    [Fact]
+    public async Task WhatThePluginCanDoIsAskedAtEachApply()
+    {
+        using var t = new Live(canMove: false);
+        t.Bridge.StatusFails = true;
+        t.MoveTree(-1, new Vector3(4, 0, 2));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => t.Sync.Apply(t.World, t.Edits, t.Game));
+        Assert.Empty(t.Bridge.ObjectCalls);
+
+        t.Bridge.StatusFails = false;
+        t.Bridge.Features.Add("move");
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.Equal((0, 0), t.Bridge.ObjectCalls.Single());
+        Assert.Single(t.Bridge.Moves);
+    }
+
     // Deleted objects with no copy are destroyed without their bytes being read: only the moved one is read.
     [Fact]
     public async Task OnlyObjectsThatMayMoveAreRead()

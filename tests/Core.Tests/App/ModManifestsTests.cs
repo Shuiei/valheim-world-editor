@@ -84,6 +84,22 @@ public sealed class ModManifestsTests : IDisposable
         Assert.Null(ModManifests.PrefabOf("woodwall"));
     }
 
+    [Fact]
+    public void AManifestLyingInPluginsItselfOffersNoExtension()
+    {
+        string mod = Path.Combine(_dir, "BepInEx", "plugins", "SomeMod");
+        Directory.CreateDirectory(mod);
+        File.WriteAllBytes(Path.Combine(mod, "Some.dll"), [0]);
+        File.WriteAllText(Path.Combine(_dir, "BepInEx", "plugins", ModManifests.FileName),
+            """{ "version": 1, "extension": "SomeMod/Some.dll", "data": { "k": { "label": "x" } } }""");
+
+        Assert.Equal(1, ModManifests.Refresh(Settings));
+
+        // What it says of data is still used; the DLL is not offered under the name "plugins".
+        Assert.Equal("x", ModManifests.DataOf("k")?.Label);
+        Assert.Empty(ModManifests.Extensions);
+    }
+
     [Theory]
     [InlineData("""{ "data": {} }""")]
     [InlineData("""{ "version": 2, "data": { "k": { "label": "x" } } }""")]

@@ -164,6 +164,30 @@ public class GameCataloguesTests
         Assert.NotNull(b.Read(bFile, bInfo.PathId));
     }
 
+    // A piece's name in two bundles: the first is taken, as the prefabs catalogue takes it (the last was, so "prefabs"
+    // and "pieces" could describe two objects).
+    [Fact]
+    public void ThePieceOfANameInTwoBundlesIsTheFirst()
+    {
+        using var game = new TestGame();
+        var scripts = game.Bundle("m_scripts");
+        foreach (var (bundle, category) in (ReadOnlySpan<(string, int)>)[("a_pieces", 2), ("z_pieces", 1)])
+        {
+            var b = game.Bundle(bundle);
+            b.ScriptsFrom = scripts;
+            b.Prefab("floor", r =>
+            {
+                r.Mono("Piece", new Fields { ["m_category"] = category, ["m_resources"] = new List<Fields>() });
+                r.Box((0, 0, 0), (1, 0.2, 1));
+            });
+        }
+        game.Save();
+
+        var kinds = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["pieces"]);
+
+        Assert.Equal(2, JsonNode.Parse(kinds["pieces"])!["floor"]!["cat"]!.GetValue<int>());
+    }
+
     [Fact]
     public void ObjectsLaidOutOtherwiseAreSaidRatherThanReadWrong()
     {
@@ -285,13 +309,16 @@ public class GameCataloguesTests
         Assert.Contains("\"st\":\"Bench\"", cost);
     }
 
+    // A carriage return inside an unquoted field ends the row, as a line break does: Python's csv refuses it, and the
+    // whole game data pass failed, so no world opened.
     [Fact]
-    public void ALineBreakInAnUnquotedTextIsSaid()
+    public void ALoneCarriageReturnInAnUnquotedTextEndsItsRow()
     {
-        // As Python's csv reads them: a carriage return inside an unquoted field.
         using var game = CatalogueGame.Make();
-        game.Resources([("localization_english", "item_wood,Ti\rmber\n")]);
+        game.Resources([("localization_english", "item_wood,Ti\rpiece_workbench,Bench\n")]);
         game.Save();
-        Assert.Throws<InvalidDataException>(() => GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["piece-cost"]));
+        string cost = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["piece-cost"])["piece-cost"];
+        Assert.Contains("\"Wood\":\"Ti\"", cost);
+        Assert.Contains("\"st\":\"Bench\"", cost);
     }
 }

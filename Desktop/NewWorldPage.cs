@@ -513,11 +513,9 @@ public sealed class NewWorldPage : IDisposable
     /// </summary>
     public void Dispose()
     {
+        // Stopped, not disposed here: work still running reads their tokens; each is disposed when its work ends.
         StopAll();
         Map.Dispose();
-        _search?.Dispose();
-        _preview?.Dispose();
-        _dungeons?.Dispose();
     }
 
     /// <summary>
@@ -532,13 +530,19 @@ public sealed class NewWorldPage : IDisposable
         if (seed.Length is 0 or > 10)
         {
             Note("The seed is 1 to 10 characters, as in the game.");
+            // Nothing shown: the last seed's dungeon search stops and its marks go (their controls are off the canvas).
+            StopDungeons();
             SetLoading(null);
             Map.Clear();
             Marks.Children.Clear();
+            _marks.Clear();
             Shown = null;
+            FillDungeons();
             return;
         }
         var cancel = _preview = new CancellationTokenSource();
+        // Read now: the source is disposed once the work ends (or the page goes), not while it reads it.
+        var token = cancel.Token;
         StopDungeons();
         SetLoading(seed);
         if (Shown == null)
@@ -550,11 +554,18 @@ public sealed class NewWorldPage : IDisposable
         Pending = Task.Run(async () =>
         {
             await rules.ConfigureAwait(false);
-            return SeedPreview.Make(seed, _previewSize, parallel: true, landmarks: true, cancel.Token);
-        }, cancel.Token).ContinueWith(t =>
+            return SeedPreview.Make(seed, _previewSize, parallel: true, landmarks: true, token);
+        }, token).ContinueWith(t =>
         {
+            // The work is over: its source goes (a replaced one too).
+            bool stopped = cancel.IsCancellationRequested;
+            if (_preview == cancel)
+            {
+                _preview = null;
+            }
+            cancel.Dispose();
             // A newer seed asked for since: that one's answer will come.
-            if (cancel.IsCancellationRequested)
+            if (stopped)
             {
                 return;
             }
@@ -653,15 +664,21 @@ public sealed class NewWorldPage : IDisposable
             return;
         }
         var cancel = _dungeons = new CancellationTokenSource();
+        var token = cancel.Token;
         FillDungeons();
-        Task.Run(() => SeedPreview.FindDungeons(layout, cancel.Token), cancel.Token).ContinueWith(t =>
+        Task.Run(() => SeedPreview.FindDungeons(layout, token), token).ContinueWith(t =>
         {
-            if (cancel.IsCancellationRequested || Shown != p)
+            // The work is over: its source goes (StopDungeons only cancels it).
+            bool stopped = cancel.IsCancellationRequested;
+            if (_dungeons == cancel)
+            {
+                _dungeons = null;
+            }
+            cancel.Dispose();
+            if (stopped || Shown != p)
             {
                 return;
             }
-            cancel.Dispose();
-            _dungeons = null;
             if (_dungeonWait)
             {
                 _dungeonWait = false;
@@ -688,14 +705,17 @@ public sealed class NewWorldPage : IDisposable
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
+    /// <summary>Whether the shown seed's dungeons are being looked for.</summary>
+    internal bool FindingDungeons => _dungeons != null;
+
     /// <summary>
     /// Stops looking for dungeons.
     /// </summary>
     private void StopDungeons()
     {
         _dungeonWait = false;
+        // Cancelled only: its work may still read the token; it is disposed when that work ends.
         _dungeons?.Cancel();
-        _dungeons?.Dispose();
         _dungeons = null;
     }
 
@@ -972,9 +992,19 @@ public sealed class NewWorldPage : IDisposable
     }
 
     /// <summary>
-    /// A distance for people: hundreds of metres under 1 km, else km to one decimal; "none" for infinity.
+    /// A distance for people, to the nearest 100 m: metres under 1 km ("&lt; 100 m" under 50 m), else km to one decimal;
+    /// "none" for infinity.
     /// </summary>
-    internal static string Km(float m) => float.IsPositiveInfinity(m) ? Lang.T("newWorld.none") : m < 1000 ? $"{m / 100:0}00 m" : $"{m / 1000:0.0} km";
+    internal static string Km(float m)
+    {
+        if (float.IsPositiveInfinity(m))
+        {
+            return Lang.T("newWorld.none");
+        }
+        // Rounded to 100 m first, so 950 m and more reads 1.0 km (not "1000 m"), and under 50 m "< 100 m" (not "000 m").
+        float r = MathF.Round(m / 100, MidpointRounding.AwayFromZero) * 100;
+        return r < 100 ? "< 100 m" : r < 1000 ? $"{r:0} m" : $"{r / 1000:0.0} km";
+    }
 
     /// <summary>
     /// A seed's stats as text, for a search result's tooltip.
@@ -1062,6 +1092,7 @@ public sealed class NewWorldPage : IDisposable
     {
         _search?.Cancel();
         var cancel = _search = new CancellationTokenSource();
+        var token = cancel.Token;
         int count = Count.SelectedIndex switch { 0 => 60, 2 => 400, _ => 150 };
         var wishes = Wishes();
         Find.IsEnabled = false;
@@ -1072,10 +1103,17 @@ public sealed class NewWorldPage : IDisposable
         Pending = Task.Run(async () =>
         {
             await rules.ConfigureAwait(false);
-            return SeedPreview.Search(wishes, count, 12, 96, (done, total) => Dispatcher.UIThread.Post(() => Progress.Value = (double)done / total), cancel.Token);
+            return SeedPreview.Search(wishes, count, 12, 96, (done, total) => Dispatcher.UIThread.Post(() => Progress.Value = (double)done / total), token);
         })
             .ContinueWith(t =>
             {
+                // The work is over: its source goes (a replaced one too).
+                bool stopped = cancel.IsCancellationRequested;
+                if (_search == cancel)
+                {
+                    _search = null;
+                }
+                cancel.Dispose();
                 Find.IsEnabled = true;
                 Stop.IsVisible = Progress.IsVisible = false;
                 if (t.Status != TaskStatus.RanToCompletion)
@@ -1086,7 +1124,7 @@ public sealed class NewWorldPage : IDisposable
                     return;
                 }
                 Results = t.Result;
-                Console.WriteLine($"New world: searched {count} seeds{(cancel.IsCancellationRequested ? " (stopped)" : "")}, best {(Results.Count > 0 ? $"{Results[0].Preview.Seed} (score {Results[0].Score:0.0})" : "none")}.");
+                Console.WriteLine($"New world: searched {count} seeds{(stopped ? " (stopped)" : "")}, best {(Results.Count > 0 ? $"{Results[0].Preview.Seed} (score {Results[0].Score:0.0})" : "none")}.");
                 ShowResults();
             }, TaskScheduler.FromCurrentSynchronizationContext());
     }

@@ -79,8 +79,8 @@ public sealed class MeasureTool
     /// <param name="SlopePercent">Rise over flat distance, in percent; null when the points are (almost) one above the
     /// other.</param>
     /// <param name="SlopeDegrees">The slope's angle, 0..90°, whichever way it goes.</param>
-    /// <param name="Lowest">Lowest ground along the line.</param>
-    /// <param name="Highest">Highest ground along the line.</param>
+    /// <param name="Lowest">Lowest ground along the line, A and B included.</param>
+    /// <param name="Highest">Highest ground along the line, A and B included.</param>
     /// <param name="WaterDepth">How far the lower point is under the water; null when both are above it.</param>
     public sealed record Result(float Distance, float AlongSlope, float HeightA, float HeightB, float Rise, float? SlopePercent, float SlopeDegrees, float Lowest, float Highest, float? WaterDepth);
 
@@ -98,7 +98,8 @@ public sealed class MeasureTool
             return null;
         }
         float flat = MathF.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Z - a.Z) * (b.Z - a.Z)), rise = b.Y - a.Y;
-        float lo = float.MaxValue, hi = float.MinValue;
+        // The clicked heights count too: the ground may have changed under them since.
+        float lo = MathF.Min(a.Y, b.Y), hi = MathF.Max(a.Y, b.Y);
         int n = Math.Max(2, (int)MathF.Ceiling(flat));
         for (int i = 0; i <= n; i++)
         {

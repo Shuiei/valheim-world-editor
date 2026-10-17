@@ -16,10 +16,18 @@ namespace TerrainEditor.Desktop;
 /// <param name="MaxRadius">The greatest distance from the world's middle, in metres; null for no limit.</param>
 public sealed record ZoneFilter(IReadOnlySet<int> Biomes, bool NoBuildings, int Distance, bool NoEdits, bool OnlyGenerated, float? MinRadius, float? MaxRadius)
 {
-    /// <summary>The biomes offered (Heightmap.Biome values), in the web editor's order.</summary>
+    /// <summary>
+    /// The biomes offered (the map's filter, the Mask): their Heightmap.Biome values and names, in the web editor's
+    /// order.
+    /// </summary>
     public static readonly (int Value, string Name)[] BiomeChoices =
     [
-        (1, "Meadows"), (8, "Black Forest"), (2, "Swamp"), (4, "Mountain"), (16, "Plains"), (512, "Mistlands"), (32, "Ashlands"), (64, "Deep North"), (256, "Ocean"),
+        .. new[]
+        {
+            ValheimGen.Heightmap.Biome.Meadows, ValheimGen.Heightmap.Biome.BlackForest, ValheimGen.Heightmap.Biome.Swamp, ValheimGen.Heightmap.Biome.Mountain,
+            ValheimGen.Heightmap.Biome.Plains, ValheimGen.Heightmap.Biome.Mistlands, ValheimGen.Heightmap.Biome.AshLands, ValheimGen.Heightmap.Biome.DeepNorth,
+            ValheimGen.Heightmap.Biome.Ocean,
+        }.Select(b => ((int)b, NewWorldPage.Name(b))),
     ];
 
     /// <summary>

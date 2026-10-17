@@ -201,8 +201,12 @@ public sealed class Brush
         return d >= 1 ? 0 : Fade(Falloff, 1 - d);
     }
 
-    /// <summary>How far from the middle a point can be affected (a turned square reaches its corners).</summary>
-    public float Reach => Turnable || Shape == BrushShape.Noise ? Radius * 1.42f : Radius;
+    /// <summary>
+    /// How far from the middle a point can be affected: a turned square reaches its corners; the Noise shape reaches
+    /// 1 / (1 - 0.35 × the noise's lowest), and the noise stays above -0.9 in practice (-0.89 over 8 million samples),
+    /// so 1.5 radii.
+    /// </summary>
+    public float Reach => Shape == BrushShape.Noise ? Radius * 1.5f : Turnable ? Radius * 1.42f : Radius;
 
     /// <summary>The outline drawn on the ground: n points around the brush, as offsets from its middle.</summary>
     public List<(float X, float Z)> Outline(int n)
@@ -258,7 +262,7 @@ public static class Sculpt
 {
     /// <summary>
     /// One frame of a stroke with the brush's middle at grid point (cx, cz), <c>dt</c> seconds after the last (counted
-    /// as 0.1 at most). Returns the grid rectangle changed (to redraw), or null.
+    /// as 0.1 at most). Returns the grid rectangle changed (to redraw), or null when no point changed.
     /// </summary>
     /// <param name="g">The ground.</param>
     /// <param name="b">The brush.</param>
@@ -277,7 +281,7 @@ public static class Sculpt
             return null;
         }
         float rate = b.Strength * MathF.Min(dt, 0.1f);
-        float ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
+        float ox = g.OriginX, oz = g.OriginZ;
         // Erosion works on the neighbourhood of every point (Erosion).
         if (s.Tool == BrushTool.Erode)
         {
@@ -299,19 +303,21 @@ public static class Sculpt
             s.Clamped |= clamped;
             return (ex0 - 1, ez0 - 1, ex1 + 1, ez1 + 1);
         }
-        // Smoothing reads the heights from before this frame.
-        Dictionary<int, float>? snapshot = null;
+        // Smoothing reads the heights from before this frame: the brush rectangle and a point around it, row by row.
+        int sw = x1 - x0 + 3;
+        float[]? snapshot = null;
         if (s.Tool == BrushTool.Smooth)
         {
-            snapshot = [];
+            snapshot = new float[sw * (z1 - z0 + 3)];
             for (int gz = z0 - 1; gz <= z1 + 1; gz++)
             {
                 for (int gx = x0 - 1; gx <= x1 + 1; gx++)
                 {
-                    snapshot[gz * g.W + gx] = g.HeightOf(gz * g.W + gx);
+                    snapshot[(gz - z0 + 1) * sw + gx - x0 + 1] = g.HeightOf(gz * g.W + gx);
                 }
             }
         }
+        bool any = false;
         float[]? colour = Brush.PaintOf(s.Tool);
         for (int gz = z0; gz <= z1; gz++)
         {
@@ -334,6 +340,7 @@ public static class Sculpt
                 }
                 float h = g.HeightOf(p);
                 s.Touched.Add(p);
+                any = true;
                 switch (s.Tool)
                 {
                     case BrushTool.Raise:
@@ -352,7 +359,7 @@ public static class Sculpt
                         {
                             for (int dx = -1; dx <= 1; dx++)
                             {
-                                sum += snapshot![(gz + dz) * g.W + gx + dx];
+                                sum += snapshot![(gz + dz - z0 + 1) * sw + gx + dx - x0 + 1];
                             }
                         }
                         s.Clamped |= g.SetHeight(p, h + (sum / 9 - h) * MathF.Min(1, 10 * rate * w));
@@ -386,12 +393,7 @@ public static class Sculpt
                     default:
                     {
                         float k = MathF.Min(1, 8 * rate * w);
-                        if (g.PMod[p] == 0)
-                        {
-                            g.Paint[p * 4] = g.Paint[p * 4 + 1] = g.Paint[p * 4 + 2] = 0;
-                            g.Paint[p * 4 + 3] = 1;
-                            g.PMod[p] = 1;
-                        }
+                        g.StartPaint(p);
                         for (int c = 0; c < 4; c++)
                         {
                             g.Paint[p * 4 + c] += (colour![c] - g.Paint[p * 4 + c]) * k;
@@ -401,7 +403,8 @@ public static class Sculpt
                 }
             }
         }
-        return (x0 - 1, z0 - 1, x1 + 1, z1 + 1);
+        // Nothing changed (locked ground, the mask or the brush's shape left it all out): nothing to redraw.
+        return any ? (x0 - 1, z0 - 1, x1 + 1, z1 + 1) : null;
     }
 
     /// <summary>
@@ -412,7 +415,7 @@ public static class Sculpt
     {
         var touched = new List<int>();
         bool clamped = false;
-        float reach = b.Reach, ox = g.X0 * 64 - 32, oz = g.Z0 * 64 - 32;
+        float reach = b.Reach, ox = g.OriginX, oz = g.OriginZ;
         int x0 = Math.Max(1, (int)MathF.Floor(cx - reach)), x1 = Math.Min(g.W - 2, (int)MathF.Ceiling(cx + reach));
         int z0 = Math.Max(1, (int)MathF.Floor(cz - reach)), z1 = Math.Min(g.H - 2, (int)MathF.Ceiling(cz + reach));
         for (int gz = z0; gz <= z1; gz++)
@@ -458,7 +461,7 @@ public static class Sculpt
                 n++;
             }
         }
-        float wx = g.X0 * 64 - 32 + gx, wz = g.Z0 * 64 - 32 + gz;
+        float wx = g.OriginX + gx, wz = g.OriginZ + gz;
         t = sum / n + b.NoiseAmp * b.Noise.Fbm(wx / b.NoiseSize, wz / b.NoiseSize);
         s.Natural[p] = t;
         return t;

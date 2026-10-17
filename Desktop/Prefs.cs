@@ -157,10 +157,7 @@ public sealed class Prefs
         }
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(_path))!);
-            string temp = _path + ".tmp";
-            File.WriteAllText(temp, text);
-            File.Move(temp, _path, true);
+            SafeFile.WriteAllText(_path, text);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

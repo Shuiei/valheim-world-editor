@@ -119,6 +119,60 @@ public class WorldWriterCheckTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheReadBackCheckCatchesAnotherZonesSmoothingOrPaintAltered(bool paint)
+    {
+        // Only the levels and the modified flags were compared: a write bug changing these passed, and the old save
+        // was deleted.
+        var (dir, before) = Copy();
+        try
+        {
+            var t = before.TerrainZones[0];
+            if (paint)
+            {
+                t.Paint[100] += Vector4.One;
+            }
+            else
+            {
+                t.SmoothDelta[100] += 1;
+            }
+            Assert.Equal($"unchanged zone {t.ZoneX}, {t.ZoneZ} was altered", WorldWriter.Verify(dir, before, [], 0, 0, NoReset, []));
+        }
+        finally
+        {
+            Delete(dir);
+        }
+    }
+
+    [Fact]
+    public void AResetZonesTerrainObjectsMayAllGo()
+    {
+        // The last count allowed one terrain object lost per reset zone, though a zone holds one or two: a reset zone
+        // with two was taken for terrain lost. Two objects of a zone the file does not have, as if the reset took them.
+        var (dir, before) = Copy();
+        try
+        {
+            static TerrainZone Gone() => new()
+            {
+                Center = new Vector3(500 * 64, 0, 500 * 64),
+                ModifiedHeight = new bool[4225],
+                LevelDelta = new float[4225],
+                SmoothDelta = new float[4225],
+                ModifiedPaint = new bool[4225],
+                Paint = new Vector4[4225],
+            };
+            before.TerrainZones.AddRange([Gone(), Gone()]);
+
+            Assert.Null(WorldWriter.Verify(dir, before, [], 0, 0, [(500, 500)], []));
+        }
+        finally
+        {
+            Delete(dir);
+        }
+    }
+
     /// <summary>
     /// A live snapshot holding one tree saved in the old format: before chunk files (version 40) each object also
     /// carried its sector, and a rotation was three whole floats.

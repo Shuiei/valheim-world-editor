@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using TerrainEditor.Save;
 using TerrainEditor.Terrain;
@@ -129,6 +130,32 @@ public static class ObjectKinds
         {
             return ObjectKind.Other;
         }
+        int generation = GameData.Generation;
+        Memo memo = _memo;
+        if (memo.Generation != generation)
+        {
+            memo = new Memo(generation, new(StringComparer.Ordinal));
+            _memo = memo;
+        }
+        return memo.Kinds.GetOrAdd(name, Find);
+    }
+
+    /// <summary>The kinds found by name, for the game data of one <see cref="GameData.Generation"/>.</summary>
+    /// <param name="Generation">The game data's generation they were found with.</param>
+    /// <param name="Kinds">The kind of each name asked.</param>
+    private sealed record Memo(int Generation, ConcurrentDictionary<string, ObjectKind> Kinds);
+
+    /// <summary>The kinds found so far; started again when the game data changes.</summary>
+    private static volatile Memo _memo = new(-1, new(StringComparer.Ordinal));
+
+    /// <summary>How many names this thread sorted by their rules rather than from those found before (the tests).</summary>
+    [field: ThreadStatic]
+    internal static int Finds { get; private set; }
+
+    /// <summary>The kind of an object that is neither a placed piece nor tamed, by its prefab name.</summary>
+    private static ObjectKind Find(string name)
+    {
+        Finds++;
         if (PrefabCatalog.IsRunestoneName(name))
         {
             return ObjectKind.Runestones;

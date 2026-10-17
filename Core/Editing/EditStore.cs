@@ -35,6 +35,12 @@ public sealed class EditStore
     /// <summary>Bumped on every change so cached map detail can be rebuilt.</summary>
     public int Version { get; private set; }
 
+    /// <summary>
+    /// Bumped when the objects to leave out or the added ones change (not the ground): for what is worked out from
+    /// the objects alone, kept through ground strokes.
+    /// </summary>
+    public int ObjectsVersion { get; private set; }
+
     /// <summary>Starts from the world's terrain, with nothing pending.</summary>
     public EditStore(WorldSave world)
     {
@@ -72,6 +78,7 @@ public sealed class EditStore
             _gameChanged.Clear();
             Load(world);
             Version++;
+            ObjectsVersion++;
         }
     }
 
@@ -331,6 +338,19 @@ public sealed class EditStore
         }
     }
 
+    /// <summary>
+    /// Answers from the objects to leave out (by WorldSave id) and the objects added (by their negative id) as they
+    /// are, under the store's lock: for counts that would otherwise copy both at every status refresh. The answer must
+    /// not keep either.
+    /// </summary>
+    public T WithObjects<T>(Func<IReadOnlySet<int>, IReadOnlyDictionary<int, NewObject>, T> answer)
+    {
+        lock (_lock)
+        {
+            return answer(_deleted, _added);
+        }
+    }
+
     /// <summary>An object added in this session (also one deleted again, which undo can bring back).</summary>
     public NewObject? FindAdded(int id)
     {
@@ -351,6 +371,7 @@ public sealed class EditStore
                 _added[o.Id] = o;
             }
             Version++;
+            ObjectsVersion++;
         }
     }
 
@@ -462,6 +483,7 @@ public sealed class EditStore
                 }
             }
             Version++;
+            ObjectsVersion++;
         }
     }
 
@@ -598,6 +620,7 @@ public sealed class EditStore
                 _addedTrash[id] = o;
             }
             Version++;
+            ObjectsVersion++;
         }
     }
 }
@@ -640,6 +663,13 @@ public sealed class ZoneEdit(int zoneX, int zoneZ)
     /// ground discs the game counts as generated ground (Uplift) when saving or applying.
     /// </summary>
     public float[] Lift { get; init; } = new float[EditStore.Cells];
+
+    /// <summary>
+    /// The ground shown at cell <paramref name="i"/> over its generated height: the edit (level and smoothing, held to the
+    /// game's ±8 m) where the cell is modified, then the No limit lift.
+    /// </summary>
+    public float HeightAt(int i, float baseHeight) =>
+        baseHeight + (Modified[i] ? Math.Clamp(Level[i] + Smooth[i], -EditStore.MaxLevel, EditStore.MaxLevel) : 0) + Lift[i];
 
     /// <summary>Whether any vertex has a lift.</summary>
     public bool HasLift => Lift.Any(l => l != 0f);
@@ -747,7 +777,7 @@ public sealed record NewObject(int Id, int Prefab, System.Numerics.Vector3 Posit
 /// <param name="Value">As ZdoData.Set takes it (text; base64 for bytes), null to remove it.</param>
 public sealed record ObjectField(string Section, int Key, string? Value)
 {
-    /// <summary>The key of an object's builder ("creator").</summary>
+    /// <summary>The data key ("creator") of an object's builder, a player id: the one constant for it.</summary>
     public static readonly int CreatorKey = StableHash.Of("creator");
 
     /// <summary>No builder: the game takes the object for part of a ruin (generated dungeons).</summary>
@@ -756,6 +786,23 @@ public sealed record ObjectField(string Section, int Key, string? Value)
     /// <summary>The field as text: "section;key;value in base64" ("-" for none).</summary>
     public override string ToString() => $"{Section};{Key.ToString(System.Globalization.CultureInfo.InvariantCulture)};"
         + (Value == null ? "-" : Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(Value)));
+
+    /// <summary>
+    /// Sets a value in a list of fields, replacing the one of the same section and key; null takes it away (kept with a
+    /// null value when the list had it, as copies keep a value taken away).
+    /// </summary>
+    public static void Put(List<ObjectField> data, string section, int key, string? value)
+    {
+        int i = data.FindIndex(f => f.Key == key && f.Section == section);
+        if (i >= 0)
+        {
+            data[i] = data[i] with { Value = value };
+        }
+        else if (value != null)
+        {
+            data.Add(new ObjectField(section, key, value));
+        }
+    }
 
     /// <summary>A field from its text form; null when it is malformed or its value does not fit its section.</summary>
     public static ObjectField? Parse(string text)

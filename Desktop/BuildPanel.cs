@@ -174,7 +174,7 @@ public sealed class BuildPanel
         static Control Row(string label, Control c) => new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("90,*"),
-            Children = { new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Col(c) },
+            Children = { new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(c, 1) },
         };
         PiecesTab.Click += (_, _) => ShowLibrary(false);
         LibraryTab.Click += (_, _) => ShowLibrary(true);
@@ -187,7 +187,7 @@ public sealed class BuildPanel
         GenerateButton.Click += (_, _) => ShowDungeon();
         BackToLibrary.Tip("build.backToLibrary");
         BackToLibrary.Click += (_, _) => ShowLibrary(true);
-        LibrarySearch.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { RenderLibrary(); } };
+        LibrarySearch.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { RenderLibrary(again: false); } };
         _library = new StackPanel
         {
             Spacing = 6,
@@ -248,7 +248,7 @@ public sealed class BuildPanel
                 {
                     ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"),
                     ColumnSpacing = 4,
-                    Children = { new TextBlock { Text = "Build", FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, Col(PiecesTab), Col(LibraryTab, 2) },
+                    Children = { new TextBlock { Text = "Build", FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PiecesTab, 1), Ui.Col(LibraryTab, 2) },
                 },
                 _pieces,
                 _library,
@@ -257,13 +257,6 @@ public sealed class BuildPanel
         });
         Card.IsVisible = false;
         ShowLibrary(false);
-    }
-
-    /// <summary>Puts a control in a grid column.</summary>
-    private static Control Col(Control c, int col = 1)
-    {
-        Grid.SetColumn(c, col);
-        return c;
     }
 
     // ---- The Library tab: Homestead's blueprints, opened on the plot, added to it, or dragged onto it.
@@ -322,14 +315,22 @@ public sealed class BuildPanel
         LibraryTab.Classes.Set("on", true);
     }
 
+    /// <summary>The blueprints last read from the folder, and that folder: searched through again as the search changes.</summary>
+    private (string Folder, List<Homestead.Entry> Entries)? _libraryRead;
+
     /// <summary>Lists the blueprints in the folder that match the search.</summary>
-    internal void RenderLibrary()
+    /// <param name="again">Reads the folder again; false (the search changed): the blueprints read last are searched.</param>
+    internal void RenderLibrary(bool again = true)
     {
         LibraryList.Children.Clear();
-        var all = Homestead.List(Folder());
+        string folder = Folder();
+        if (again || _libraryRead is not { } read || read.Folder != folder)
+        {
+            _libraryRead = read = (folder, Homestead.List(folder));
+        }
+        var all = read.Entries;
         string q = LibrarySearch.Text?.Trim() ?? "";
-        var list = all.Where(e => q.Split(' ', StringSplitOptions.RemoveEmptyEntries).All(w => e.Name.Contains(w, StringComparison.OrdinalIgnoreCase)
-            || e.Description.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase)))).ToList();
+        var list = all.Where(e => e.Matches(q)).ToList();
         if (list.Count == 0)
         {
             LibraryList.Children.Add(new TextBlock
@@ -353,18 +354,7 @@ public sealed class BuildPanel
     /// </summary>
     private Border LibraryRow(Homestead.Entry e)
     {
-        Bitmap? pic = null;
-        if (e.Picture != null)
-        {
-            try
-            {
-                using var f = File.OpenRead(e.Picture);
-                pic = new Bitmap(f);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
-            {
-            }
-        }
+        Bitmap? pic = BlueprintPictures.File(e.Picture);
         var open = new Button { Content = "Open", FontSize = 11, Padding = new Thickness(6, 1) }.Tip("build.open");
         var add = new Button { Content = "Add", FontSize = 11, Padding = new Thickness(6, 1) }.Tip("build.add");
         open.Click += (_, _) => OpenAsked?.Invoke(e.Path);
@@ -388,7 +378,7 @@ public sealed class BuildPanel
                 Children =
                 {
                     image,
-                    Col(new StackPanel
+                    Ui.Col(new StackPanel
                     {
                         Spacing = 2,
                         Children =
@@ -397,7 +387,7 @@ public sealed class BuildPanel
                             new TextBlock { Text = $"{e.Pieces} piece(s) · {PieceCost.Of(e.Kinds).Describe(3)}", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { open, add } },
                         },
-                    }),
+                    }, 1),
                 },
             },
         };
@@ -431,7 +421,7 @@ public sealed class BuildPanel
 
     /// <summary>
     /// Into the Workshop: the Place tool set for building (one piece at a time, as it is, facing the
-    /// turn), woodwall (else the first piece) chosen when no single piece of the list is.
+    /// turn), woodwall (else the first piece) chosen when no single piece of the list is; none when the list is empty.
     /// </summary>
     public void Start()
     {
@@ -448,7 +438,14 @@ public sealed class BuildPanel
         t.GridStep = Grids[Math.Max(0, GridBox.SelectedIndex)];
         _input.TurnStep = Turns[Math.Max(0, TurnBox.SelectedIndex)];
         var pieces = Pieces;
-        if (!(t.Chosen.Count == 1 && pieces.Any(p => p.Prefab == t.Chosen[0])))
+        if (pieces.Count == 0)
+        {
+            // Nothing to build with (the game's data not read, or every piece hidden by the mods' manifests).
+            t.Chosen.Clear();
+            Chosen.Text = Lang.T("build.noPieces");
+            Cost.Text = "";
+        }
+        else if (!(t.Chosen.Count == 1 && pieces.Any(p => p.Prefab == t.Chosen[0])))
         {
             Choose(pieces.FirstOrDefault(p => p.Prefab == "woodwall").Prefab ?? pieces[0].Prefab);
         }
@@ -589,6 +586,9 @@ public sealed class BuildPanel
     /// </summary>
     private readonly Dictionary<(string, DateTime), Bitmap?> _blueprintPictures = [];
 
+    /// <summary>Pictures being drawn, with the images waiting for each: a blueprint shown again meanwhile is not drawn twice.</summary>
+    private readonly Dictionary<(string, DateTime), List<Image>> _blueprintDrawing = [];
+
     /// <summary>
     /// A blueprint without its picture (made elsewhere): one drawn from its pieces, kept in memory only
     /// (its folder is left as it is), away from the window's thread.
@@ -601,6 +601,12 @@ public sealed class BuildPanel
             image.Source = known;
             return;
         }
+        if (_blueprintDrawing.TryGetValue(key, out var waiting))
+        {
+            waiting.Add(image);
+            return;
+        }
+        _blueprintDrawing[key] = [image];
         var models = Models();
         Task.Run(() =>
         {
@@ -622,7 +628,13 @@ public sealed class BuildPanel
                 b = new Bitmap(ms);
             }
             _blueprintPictures[key] = b;
-            image.Source = b;
+            if (_blueprintDrawing.Remove(key, out var images))
+            {
+                foreach (var shown in images)
+                {
+                    shown.Source = b;
+                }
+            }
         }), TaskScheduler.Default);
     }
 

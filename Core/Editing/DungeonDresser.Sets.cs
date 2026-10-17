@@ -1,4 +1,3 @@
-using System.Numerics;
 using static TerrainEditor.Editing.DungeonKit;
 
 namespace TerrainEditor.Editing;
@@ -528,8 +527,7 @@ internal sealed partial class DungeonDresser
         {
             kinds.Add(("trap", 0.8f));
         }
-        float total = kinds.Sum(k => k.Weight), pick = R(0, total);
-        string kind = kinds.First(k => (pick -= k.Weight) <= 0).Kind;
+        string kind = Weighted.Pick(kinds, k => k.Weight, _rnd.NextDouble()).Kind;
         switch (kind)
         {
             case "gate":
@@ -631,13 +629,17 @@ internal sealed partial class DungeonDresser
     private void CorridorGate(Frame f)
     {
         float v = R(-1, 1);
-        if (f.NearDoor(-f.HalfA, v, 3) || f.NearDoor(f.HalfA, v, 3))
+        // Not by a doorway, nor on a pilaster's band of wall (the door against its columns, the wall doubled).
+        if (f.NearDoor(-f.HalfA, v, 3) || f.NearDoor(f.HalfA, v, 3) || _bands.Any(b => MathF.Abs(b - v) < _mat.Thick + 0.5f))
         {
             return;
         }
         // A corridor is 3 m wide within its walls: no room for jambs beside a 2 m door, so the gate is the door alone
-        // under a band of wall from wall to wall (held by both; it may rise into the roof).
-        InnerWall(f, -f.HalfA, v, f.HalfA, v, 3, f.H);
+        // under a band of wall from wall to wall (held by both; it may rise into the roof). The band runs on into the
+        // walls to their middle: between their faces a thin material's width is no whole number of pieces, and the gap
+        // left at one end let it fall.
+        float into = f.HalfA + _mat.Thick / 2;
+        InnerWall(f, -into, v, into, v, 3, f.H);
         string door = _style.Name switch
         {
             "Fortress" or "Temple" => "dungeon_forestcrypt_door",
@@ -676,9 +678,7 @@ internal sealed partial class DungeonDresser
         Put(f, "Morkhalla_Rubble1", u - side * 0.6f, v - 1.5f, Rr(0, 360), 0.6f);
         if (_mat.Column[0].Prefab == "stone_pillar" && rnd.NextDouble() < 0.6)
         {
-            var q = DungeonOut.Yaw(f.Yaw(Rr(60, 120))) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 2);
-            _o.Add("stone_pillar", f.W(side * (f.HalfA - 2.1f), v - 0.4f, f.F + 0.55f), q);
-            f.Take(side * (f.HalfA - 2.1f), v - 0.4f, 1.3f);
+            FallenPillar(f, "stone_pillar", side * (f.HalfA - 2.1f), v - 0.4f, Rr(60, 120), 1.3f);
         }
         for (int i = 0; i < 3; i++)
         {

@@ -219,18 +219,9 @@ internal sealed class DungeonPlanner
     private int Even(int min, int max) => min + 2 * _rnd.Next((max - min) / 2 + 1);
 
     /// <summary>One of the items at random, each as likely as its weight.</summary>
-    private T Pick<T>(IReadOnlyList<(T Item, float Weight)> items)
-    {
-        float total = items.Sum(i => i.Weight), roll = (float)_rnd.NextDouble() * total;
-        foreach (var (item, w) in items)
-        {
-            if ((roll -= w) <= 0)
-            {
-                return item;
-            }
-        }
-        return items[^1].Item;
-    }
+#pragma warning disable S2245 // A plan must come out the same from its seed; nothing here is a secret.
+    private T Pick<T>(IReadOnlyList<(T Item, float Weight)> items) => Weighted.Pick(items, i => i.Weight, _rnd.NextDouble()).Item;
+#pragma warning restore S2245
 
     /// <summary>Makes the whole plan into <see cref="_plan"/>.</summary>
     private void Build()
@@ -499,7 +490,6 @@ internal sealed class DungeonPlanner
     private DungeonPlan.Space AnyParent(DungeonPlan.Level l, bool main) =>
         l.Spaces.Where(s => CanParent(s) && (!main || s.Main)).OrderBy(_ => _rnd.Next()).FirstOrDefault() ?? l.Spaces[0];
 
-    /// <summary>A space to put a side room off, weighted towards crossings and long halls; null when none can lead on.</summary>
     /// <summary>The kinds of room that belong beside a kind: what a wing is made of.</summary>
     public static Room[] Kin(Room room) => room switch
     {
@@ -526,6 +516,7 @@ internal sealed class DungeonPlanner
         _ => [],
     };
 
+    /// <summary>A space to put a side room off, weighted towards crossings and long halls; null when none can lead on.</summary>
     private DungeonPlan.Space? SideParent(DungeonPlan.Level l)
     {
         var options = l.Spaces.Where(s => CanParent(s) && s.Room != Room.Antechamber)
@@ -573,7 +564,7 @@ internal sealed class DungeonPlanner
             int mid = s.Across / 2;
             return Math.Min(Across(t1), Across(t2)) == mid - 1;
         }
-        // Not in a corner, not on another doorway's tiles or right next to them.
+        // Not on another doorway's tiles or right next to them (a corner is allowed: the doorway may open flush with it).
         foreach (var d in s.Doors)
         {
             var mine = d.A == s ? [d.T1, d.T2] : new[] { Add(d.T1, d.Dir), Add(d.T2, d.Dir) };
@@ -720,10 +711,15 @@ internal sealed class DungeonPlanner
         {
             // Two floors high: nothing on the level above in its cells.
             var above = _plan.Levels[l.Index - 1];
-            var cells = Box(box).Select(DungeonPlan.CellOf).ToHashSet();
-            if (above.Owner.Keys.Any(t => cells.Contains(DungeonPlan.CellOf(t))))
+            foreach (var (ci, cj) in Box(box).Select(DungeonPlan.CellOf).ToHashSet())
             {
-                return null;
+                for (int k = 0; k < 16; k++)
+                {
+                    if (above.Owner.ContainsKey((4 * ci + k % 4, 4 * cj + k / 4)))
+                    {
+                        return null;
+                    }
+                }
             }
         }
         // A shaped room keeps its whole box clear (what it cuts away stays empty, walled off), its tiles being
@@ -1025,13 +1021,17 @@ internal sealed class DungeonPlanner
             return null;
         }
         var below = _plan.Levels[l.Index + 1];
+        // The search off one side gives the same answer each time: a side already tried is passed over (its draw
+        // still made, for the same dungeon from the same seed).
+        var tried = new List<(int X, int Z)>(4);
         for (int attempt = 0; attempt < 40; attempt++)
         {
             var dir = attempt < 12 ? parent.Dir : Dirs[_rnd.Next(4)];
-            if (dir == (-parent.Dir.X, -parent.Dir.Z) && parent.Room != Room.Hub)
+            if ((dir == (-parent.Dir.X, -parent.Dir.Z) && parent.Room != Room.Hub) || tried.Contains(dir))
             {
                 continue;
             }
+            tried.Add(dir);
             var side = SideTiles(parent, dir);
             for (int at = 0; at + 1 < side.Count; at++)
             {
@@ -1180,7 +1180,7 @@ internal sealed class DungeonPlanner
                                 if (d >= 3 && path.All(t => Free(l, t)) && SlotAllowed(b, n1, n2, (-dir.X, -dir.Z)))
                                 {
                                     var (aa, bb, tt1, tt2, dd, ll, pp) = (a, b, t1, t2, dir, len, path);
-                                    void Join()
+                                    void MakeLoop()
                                     {
                                         if (ll == 0)
                                         {
@@ -1193,7 +1193,7 @@ internal sealed class DungeonPlanner
                                             Connect(c, bb, Add(tt1, dd, ll), Add(tt2, dd, ll), dd, loop: true);
                                         }
                                     }
-                                    options.Add((d - len * 0.3f + (float)_rnd.NextDouble(), Join));
+                                    options.Add((d - len * 0.3f + (float)_rnd.NextDouble(), MakeLoop));
                                 }
                                 break;
                             }
@@ -1295,7 +1295,7 @@ internal sealed class DungeonPlanner
                 d.Kind = Door.Gate;
                 continue;
             }
-            bool grand = rooms.Any(r => r.Room is Room.Hall or Room.Throne or Room.Feast or Room.Chapel) && rooms.All(r => !r.Corridor || true);
+            bool grand = rooms.Any(r => r.Room is Room.Hall or Room.Throne or Room.Feast or Room.Chapel);
             var kind = Pick(_style.Doors);
             if (grand && _rnd.NextDouble() < 0.35)
             {

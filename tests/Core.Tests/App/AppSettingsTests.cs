@@ -91,11 +91,39 @@ public class AppSettingsTests : IDisposable
     {
         ServerConfig.Remember(new ServerConfig.Server { Name = "S", Host = "my.server.com", User = "valheim", Password = " pass word  " });
         Assert.Equal(" pass word  ", Assert.Single(ServerConfig.Load()).Password);
-        Assert.False(File.Exists(ServerConfig.FilePath + ".tmp"));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(ServerConfig.FilePath)!, "*.tmp"));
     }
 
     // Settings that cannot be read are kept aside before the defaults are written over them, and a
     // settings file that cannot be written is left alone without an error.
+    // Lists stored as null read as empty, a stored path that is not a valid path does not stop a world opening, and the
+    // same folder written with a separator at the end is one entry (they threw, or were listed twice).
+    [Fact]
+    public void TheRecentListTakesNullsBadPathsAndTheSameFolderWrittenTwoWays()
+    {
+        string path = Path.Combine(_data, "settings.json");
+        string? old = AppSettings.PathOverride;
+        AppSettings.PathOverride = path;
+        try
+        {
+            File.WriteAllText(path, """{ "Recent": null, "WorldFolders": null, "BepInExFolders": [null], "Extensions": null }""");
+            var s = AppSettings.Load();
+            Assert.Empty(s.Recent);
+            Assert.Empty(s.WorldFolders);
+            Assert.Empty(s.BepInExFolders);
+            Assert.Empty(s.Extensions);
+            s.Recent.Add(new AppSettings.RecentWorld("bad\0path", "Bad", DateTime.Now));
+            string world = Path.Combine(_data, "World1");
+            s.AddRecent(world + Path.DirectorySeparatorChar, "World1");
+            s.AddRecent(world, "World1");
+            Assert.Equal([world, "bad\0path"], s.Recent.Select(r => r.Path));
+        }
+        finally
+        {
+            AppSettings.PathOverride = old;
+        }
+    }
+
     [Fact]
     public void BrokenSettingsAreKeptAsideAndAFailedWriteIsQuiet()
     {
@@ -125,7 +153,7 @@ public class AppSettingsTests : IDisposable
         s.ValheimPath = "/games/Valheim";
         s.Save();
         Assert.Equal("/games/Valheim", AppSettings.Load().ValheimPath);
-        Assert.False(File.Exists(path + ".tmp"));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(path)!, "*.tmp"));
         File.Delete(path);
         Directory.CreateDirectory(path);
         s.Save();

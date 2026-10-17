@@ -36,13 +36,7 @@ public static class HeightGrid
                     for (int l = 0; l < EditStore.Grid; l++)
                     {
                         int i = k * EditStore.Grid + l;
-                        float v = b[i];
-                        if (e != null && e.Modified[i])
-                        {
-                            v = Math.Clamp(b[i] + e.Level[i] + e.Smooth[i], b[i] - EditStore.MaxLevel, b[i] + EditStore.MaxLevel);
-                        }
-                        v += e?.Lift[i] ?? 0;
-                        heights[(oz + k) * w + ox + l] = v;
+                        heights[(oz + k) * w + ox + l] = e?.HeightAt(i, b[i]) ?? b[i];
                     }
                 }
             }

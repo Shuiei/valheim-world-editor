@@ -47,6 +47,49 @@ public sealed class WorldSessionTests : IDisposable
     }
 
     [Fact]
+    public async Task AWorldThatCannotBeOpenedLiveClosesItsConnection()
+    {
+        using var game = new FakeGame();
+        game.Fail["/snapshot"] = 500;
+        var live = new LiveBridge(game.Url, game.Token);
+        await Assert.ThrowsAnyAsync<Exception>(() => WorldSession.OpenLive(live, FakeGame.Label()));
+        await Assert.ThrowsAsync<ObjectDisposedException>(live.LoadWorld);
+    }
+
+    [Fact]
+    public async Task LeavingDuringAnApplyStillGivesItsOutcome()
+    {
+        using var game = new FakeGame();
+        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.Shape(32, 32, Formula.Compile("2", []), 3, 0, "raise");
+        game.HoldTerrain = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var applying = world.ApplyLive();
+        Assert.NotSame(applying, await Task.WhenAny(game.TerrainArrived.Task, applying));
+        // Left while the game holds the ground: the apply ends with an outcome, not a disposed lock.
+        world.Dispose();
+        game.HoldTerrain.SetResult();
+        Assert.NotNull(await applying);
+    }
+
+    [Fact]
+    public void ADiscardThatCannotReadTheWorldKeepsItsSavesKnown()
+    {
+        WorldCreator.Create(Folder("Discard"), "Discard", Seed, radius: 1);
+        using var world = WorldSession.Open(Folder("Discard"));
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.Shape(10, 10, Formula.Compile("2", []), 3, 0, "raise");
+        Assert.True(world.Save().Done);
+        // The folder gone for a moment: Discard fails, and the session's own save is still its own.
+        Directory.Move(Folder("Discard"), Folder("Away"));
+        Assert.ThrowsAny<IOException>(world.Discard);
+        Directory.Move(Folder("Away"), Folder("Discard"));
+        s.Shape(20, 20, Formula.Compile("2", []), 3, 0, "raise");
+        var o = world.Save();
+        Assert.True(o.Done, o.Message);
+    }
+
+    [Fact]
     public async Task ZoneResetsAreNotSentAgainWhenTheWorldCannotBeReadBack()
     {
         using var game = new FakeGame();

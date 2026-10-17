@@ -238,7 +238,15 @@ public static class Options
                     break;
                 case "--data":
                     Data = Path.GetFullPath(Value(args, ref i));
-                    Directory.CreateDirectory(Data);
+                    try
+                    {
+                        Directory.CreateDirectory(Data);
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        // Said like any other option that cannot be used, before the editor starts.
+                        throw new ArgumentException($"--data {Data} cannot be used: {ex.Message}", ex);
+                    }
                     TerrainEditor.App.AppSettings.PathOverride = Path.Combine(Data, "settings.json");
                     TerrainEditor.App.ServerConfig.PathOverride = Path.Combine(Data, "servers.cfg");
                     PlaceMemory.PathOverride = Path.Combine(Data, "place.json");

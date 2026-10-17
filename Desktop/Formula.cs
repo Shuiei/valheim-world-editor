@@ -61,7 +61,8 @@ public static class Formula
         ["max"] = a => a.Length == 0 ? double.NegativeInfinity : a.Max(),
         ["pow"] = a => Math.Pow(a[0], a[1]),
         ["atan2"] = a => Math.Atan2(a[0], a[1]),
-        ["sign"] = a => Math.Sign(a[0]),
+        // JavaScript's Math.sign: NaN stays NaN (Math.Sign throws on it).
+        ["sign"] = a => double.IsNaN(a[0]) ? double.NaN : Math.Sign(a[0]),
         ["clamp"] = a => Math.Max(a[1], Math.Min(a[2], a[0])),
         ["smooth"] = a => Smooth(a[0]),
         ["bell"] = a => Math.Exp(-a[0] * a[0] * 2.5),
@@ -103,7 +104,7 @@ public static class Formula
     /// <summary>
     /// One token from where it is asked for (\G), spaces before it skipped: a number, a name, or an operator.
     /// </summary>
-    private static readonly Regex Token = new(@"\G\s*(?:(\d+\.?\d*(?:e[+-]?\d+)?|\.\d+)|([A-Za-z_]\w*)|(<=|>=|==|!=|&&|\|\||[-+*/%^(),<>?:!]))", RegexOptions.Compiled);
+    private static readonly Regex Token = new(@"\G\s*(?:(\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+(?:[eE][+-]?\d+)?)|([A-Za-z_]\w*)|(<=|>=|==|!=|&&|\|\||[-+*/%^(),<>?:!]))", RegexOptions.Compiled);
 
     /// <summary>
     /// Compiles a formula once into a function of an environment.
@@ -228,7 +229,25 @@ public static class Formula
                         throw new FormatException($"{id}(…) takes {(arity == 1 ? "one number" : $"{arity} numbers")}");
                     }
                     var arr = args.ToArray();
-                    return env => f([.. arr.Select(a => a(env))]);
+                    // The numbers go in one array kept for the next point; a second thread running the formula at
+                    // the same time meanwhile gets its own.
+                    double[]? spare = new double[arr.Length];
+                    return env =>
+                    {
+                        double[] values = Interlocked.Exchange(ref spare, null) ?? new double[arr.Length];
+                        try
+                        {
+                            for (int i = 0; i < arr.Length; i++)
+                            {
+                                values[i] = arr[i](env);
+                            }
+                            return f(values);
+                        }
+                        finally
+                        {
+                            Volatile.Write(ref spare, values);
+                        }
+                    };
                 }
                 if (id == "pi")
                 {
@@ -296,22 +315,33 @@ public static class Formula
             }
             return a;
         }
-        Func<Env, double> Logic()
+        // && binds tighter than ||, as in JavaScript: 1 || 0 && 0 is 1. Like JavaScript, each gives the deciding value
+        // itself, not 1.
+        Func<Env, double> And()
         {
             var a = Compare();
-            while (Peek()?.Op is "&&" or "||")
+            while (Eat("&&"))
             {
-                string op = toks[i++].Op!;
                 var b = Compare();
                 var l = a;
-                // Like JavaScript: the deciding value itself, not 1.
-                a = op == "&&" ? env => l(env) is var x && Truthy(x) ? b(env) : x : env => l(env) is var y && Truthy(y) ? y : b(env);
+                a = env => l(env) is var x && Truthy(x) ? b(env) : x;
+            }
+            return a;
+        }
+        Func<Env, double> Or()
+        {
+            var a = And();
+            while (Eat("||"))
+            {
+                var b = And();
+                var l = a;
+                a = env => l(env) is var y && Truthy(y) ? y : b(env);
             }
             return a;
         }
         Func<Env, double> Ternary()
         {
-            var c = Logic();
+            var c = Or();
             if (Eat("?"))
             {
                 var a = Ternary();

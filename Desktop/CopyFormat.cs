@@ -17,12 +17,23 @@ public static class CopyFormat
     /// <summary>A number rounded to four decimals, for the JSON.</summary>
     private static double R(float v) => Math.Round(v, 4);
 
+    /// <summary>
+    /// A relative height in whole centimetres, as large as it is (a copy off a tall No-limit mountain goes past the web
+    /// editor's ±327.67 m; every reader takes any whole number); only -32768, the "no ground" marker, is moved a
+    /// centimetre.
+    /// </summary>
+    private static int Centimetres(float v)
+    {
+        int cm = (int)MathF.Round(v * 100);
+        return cm == -32768 ? -32767 : cm;
+    }
+
     /// <summary>A copy in the clipboard format.</summary>
     public static JsonObject ToJson(CopyData c) => new()
     {
         ["w"] = c.W,
         ["h"] = c.H,
-        ["rel"] = new JsonArray(c.Rel.Select(v => (JsonNode)(float.IsNaN(v) ? -32768 : (int)Math.Clamp(MathF.Round(v * 100), -32767, 32767))).ToArray()),
+        ["rel"] = new JsonArray(c.Rel.Select(v => (JsonNode)(float.IsNaN(v) ? -32768 : Centimetres(v))).ToArray()),
         ["wt"] = new JsonArray(c.Wt.Select(v => (JsonNode)(int)MathF.Round(v * 255)).ToArray()),
         ["pnt"] = new JsonArray(c.Pnt.Select(v => (JsonNode)(int)MathF.Round(v * 255)).ToArray()),
         ["objects"] = new JsonArray(c.Objects.Select(o => (JsonNode)new JsonObject

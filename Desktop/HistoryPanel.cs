@@ -39,14 +39,8 @@ public sealed class HistoryPanel
         var close = new Button { Content = Icons.Make("close", 14), Padding = new Thickness(5), HorizontalAlignment = HorizontalAlignment.Right }.Classed("ghost").Tip("card.close");
         close.Click += (_, _) => { Card!.IsVisible = false; Closed?.Invoke(); };
         TakeBackClaude.Click += async (_, _) => await TakeBackClaudes();
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             // Just above the save bar.
             Margin = new Thickness(10, 10, 10, 70),
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -67,7 +61,7 @@ public sealed class HistoryPanel
                     new ScrollViewer { MaxHeight = 520, Content = Rows },
                 },
             },
-        };
+        });
     }
 
     /// <summary>Puts a control in a grid column, with an optional margin.</summary>
@@ -106,8 +100,10 @@ public sealed class HistoryPanel
             s.RemoveChange(c);
         }
         // A step refused (RemoveChange: a later step of yours moved or deleted what it added) is not marked Removed.
-        int kept = steps.Count(c => !c.Removed);
-        Message?.Invoke($"Took back {steps.Count - kept} change(s) Claude made; yours are kept."
+        int kept = steps.Count(c => !c.Removed), taken = steps.Count - kept;
+        // Each removal is a step of its own: one Ctrl+Z brings one back, not all.
+        Message?.Invoke($"Took back {taken} change(s) Claude made; yours are kept."
+            + (taken > 1 ? " Each is its own step: Ctrl+Z brings them back one at a time." : "")
             + (kept > 0 ? $" {kept} could not be taken back: a later step moved or deleted what they added (undo instead)." : ""));
         Refresh();
     }

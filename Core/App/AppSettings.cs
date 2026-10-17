@@ -202,7 +202,7 @@ public sealed class AppSettings
             }
             try
             {
-                return JsonSerializer.Deserialize<AppSettings>(text) ?? new AppSettings();
+                return (JsonSerializer.Deserialize<AppSettings>(text) ?? new AppSettings()).WithoutNulls();
             }
             catch (JsonException ex)
             {
@@ -261,51 +261,87 @@ public sealed class AppSettings
     /// that could not be read when these were loaded (<c>FileUnread</c>), or that was not there then and is now
     /// (another program put it back): the user's settings are in it.
     /// </summary>
-    public void Save()
+    /// <returns>Null when saved, else why not (also logged).</returns>
+    public string? Save()
     {
         lock (Lock)
         {
+            string? problem = null;
             if (FileUnread)
             {
                 // Not its path: finding it may be what failed then (the data folder could not be made).
-                Console.WriteLine("Settings: not saved: settings.json could not be read when the editor started, and is left as it is.");
-                return;
+                problem = "settings.json could not be read when the editor started, and is left as it is.";
             }
-            // Found once, as in Load: the logs of a failure to find it must not look for it again.
-            string? path = null;
-            try
+            else
             {
-                path = FilePath;
-                // Only the user can read it, from the start: it holds Claude's token. Not over a file that was not
-                // there at the start: the move itself refuses one put there since.
-                SafeFile.WriteAllText(path, JsonSerializer.Serialize(this, Indented), UnixFileMode.UserRead | UnixFileMode.UserWrite, overwrite: !_fileMissing);
-                _fileMissing = false;
+                // Found once, as in Load: the logs of a failure to find it must not look for it again.
+                string? path = null;
+                try
+                {
+                    path = FilePath;
+                    // Only the user can read it, from the start: it holds Claude's token. Not over a file that was not
+                    // there at the start: the move itself refuses one put there since.
+                    SafeFile.WriteAllText(path, JsonSerializer.Serialize(this, Indented), UnixFileMode.UserRead | UnixFileMode.UserWrite, overwrite: !_fileMissing);
+                    _fileMissing = false;
+                }
+                catch (IOException) when (_fileMissing && path != null && File.Exists(path))
+                {
+                    problem = $"{path} was not there when the editor started and is now (put back by another program?), and is left as it is.";
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    problem = $"could not write {path ?? "settings.json"}: {ex.Message}";
+                }
             }
-            catch (IOException) when (_fileMissing && path != null && File.Exists(path))
+            if (problem != null)
             {
-                Console.WriteLine($"Settings: not saved: {path} was not there when the editor started and is now (put back by another program?), and is left as it is.");
+                Console.WriteLine($"Settings: not saved: {problem}");
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                Console.WriteLine($"Settings: could not write {path ?? "settings.json"}: {ex.Message}");
-            }
+            return problem;
         }
     }
 
     /// <summary>
-    /// Puts a world at the top of the recent list (dropping an older entry for the same full path), keeps the 12 newest
-    /// and saves.
+    /// These settings with lists the file gave as null ("Recent": null), or entries of them null, made empty or left
+    /// out: the rest of the app reads them as lists.
+    /// </summary>
+    private AppSettings WithoutNulls()
+    {
+        BepInExFolders = [.. (BepInExFolders ?? []).Where(f => f != null)];
+        WorldFolders = [.. (WorldFolders ?? []).Where(f => f != null)];
+        Extensions ??= [];
+        Recent = [.. (Recent ?? []).Where(r => r is { Path: not null, Name: not null })];
+        return this;
+    }
+
+    /// <summary>
+    /// Puts a world at the top of the recent list (dropping an older entry for the same folder: its full path, without
+    /// a separator at the end, case ignored on Windows), keeps the 12 newest and saves.
     /// </summary>
     /// <param name="path">The world's path.</param>
     /// <param name="name">The name to show for it.</param>
     public void AddRecent(string path, string name)
     {
-        Recent.RemoveAll(r => string.Equals(Path.GetFullPath(r.Path), Path.GetFullPath(path), StringComparison.Ordinal));
+        string full = FullPath(path);
+        Recent.RemoveAll(r => string.Equals(FullPath(r.Path), full, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
         Recent.Insert(0, new RecentWorld(path, name, DateTime.Now));
         if (Recent.Count > 12)
         {
             Recent.RemoveRange(12, Recent.Count - 12);
         }
         Save();
+    }
+
+    /// <summary>A path as its full path without a separator at the end; as it is when it is not a valid path.</summary>
+    private static string FullPath(string path)
+    {
+        try
+        {
+            return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return path;
+        }
     }
 }

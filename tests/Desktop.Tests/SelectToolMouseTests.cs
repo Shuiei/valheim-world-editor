@@ -151,6 +151,21 @@ public class SelectToolMouseTests
     }
 
     [AvaloniaFact]
+    public void AZoneIsCopiedForTheViewOnlyWhenItGetsAPoint()
+    {
+        // Every pointer move copied all the zone's points; a move that adds none now keeps the view's copy.
+        var v = Open(T(1, Wall, 40, 30, 40));
+        v.Tool.Down(v.At(36, 30, 36), v.Size, false, false, 1);
+        v.Tool.Moved(v.At(46, 30, 36), v.Size);
+        var drawn = v.Tool.Lasso;
+        Assert.Equal(2, drawn!.Length);
+        v.Tool.Moved(v.At(46.1f, 30, 36), v.Size);
+        Assert.Same(drawn, v.Tool.Lasso);
+        v.Tool.Moved(v.At(46, 30, 44), v.Size);
+        Assert.Equal(3, v.Tool.Lasso!.Length);
+    }
+
+    [AvaloniaFact]
     public void EscapeCancelsAZoneBeingDrawn()
     {
         var v = Open(T(1, Wall, 40, 30, 40));
