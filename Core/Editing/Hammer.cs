@@ -67,7 +67,10 @@ public static class Hammer
     private static volatile Dictionary<string, Data> _all = [];
 
     /// <summary>Takes the pieces by name, as GameCatalogues' PlaceScan writes them, in place of any before.</summary>
-    public static void Use(string json)
+    public static void Use(string json) => _all = Read(json);
+
+    /// <summary>The pieces by name, as GameCatalogues' PlaceScan writes them; a collider of a kind not known is left out.</summary>
+    internal static Dictionary<string, Data> Read(string json)
     {
         using var doc = JsonDocument.Parse(json);
         var result = new Dictionary<string, Data>();
@@ -102,7 +105,7 @@ public static class Hammer
             }
             result[p.Name] = new Data(Flag("g"), Flag("cg"), Flag("ce"), Flag("ro"), snaps, [.. shapes]);
         }
-        _all = result;
+        return result;
     }
 
     /// <summary>A piece's data, or null when the scan has no such piece.</summary>

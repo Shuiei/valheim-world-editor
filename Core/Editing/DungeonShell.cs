@@ -263,7 +263,7 @@ internal static class DungeonShell
     }
 
     /// <summary>A doorway: 4 m of wall with its opening and what closes it.</summary>
-    private static void Doorway(DungeonPlan.Doorway d, float f, Material mat, DungeonOut o, string biome)
+    internal static void Doorway(DungeonPlan.Doorway d, float f, Material mat, DungeonOut o, string biome)
     {
         var (cx, cz) = d.Center;
         bool alongZ = d.Dir.X != 0;

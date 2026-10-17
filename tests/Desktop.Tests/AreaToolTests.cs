@@ -123,6 +123,21 @@ public class AreaToolTests
         Assert.Equal(new[] { (0, 0), (1, 0), (0, 1), (1, 1) }.OrderBy(z => z), a.ZonesUnder(s.Ground).OrderBy(z => z));
     }
 
+    // An action of a kind the tool does not know (none the panel offers) leaves the ground as it was, and nothing fails.
+    [Theory]
+    [InlineData((AreaTool.GroundAction)(-1))]
+    [InlineData((AreaTool.GroundAction)99)]
+    public void AnActionOfNoKnownKindLeavesTheGroundAsItWas(AreaTool.GroundAction act)
+    {
+        var s = TestScenes.Flat(2);
+        var before = s.Ground.Snapshot();
+
+        var (_, _, clamped) = Box(40, 40, 80, 80, soft: 2).Apply(s.Ground, s.Brush, act, 33, 5, [1, 0, 0, 0]);
+
+        Assert.False(clamped);
+        Assert.Equivalent(before, s.Ground.Snapshot(), strict: true);
+    }
+
     // The zones under a selection do not depend on the Soft slider: a selection narrower than the soft edge (every
     // point's weight well under one half) still names its zones, and one that crosses a zone border names both sides.
     [Fact]
