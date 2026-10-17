@@ -446,6 +446,11 @@ public static partial class GameCatalogues
             {
                 var sh = d["m_itemData"]["m_shared"];
                 item = new Dict { ["it"] = Int(Py(sh["m_itemType"])) };
+                // The largest stack (1 for items that do not stack: left out, as absent means 1).
+                if (Int(Get(sh, "m_maxStackSize", 1L)) is > 1 and long maxStack)
+                {
+                    item["ms"] = maxStack;
+                }
                 if (Int(Get(sh, "m_attachOverride", 0L)) != 0)
                 {
                     item["ao"] = Int(Py(sh["m_attachOverride"]));
@@ -838,7 +843,8 @@ public static partial class GameCatalogues
                     continue;
                 }
                 mods.Sort((x, y) => Order(x.Path, y.Path) is var c and not 0 ? c : x.Index.CompareTo(y.Index));
-                Entries[go["m_Name"].AsString] = new Dict { ["location"] = kinds.Contains("Location"), ["modifiers"] = mods.Select(x => (object?)x.Entry).ToList() };
+                // The first of a name, as every scan takes it.
+                Entries.TryAdd(go["m_Name"].AsString, new Dict { ["location"] = kinds.Contains("Location"), ["modifiers"] = mods.Select(x => (object?)x.Entry).ToList() });
             }
 
             static int Order(List<int> a, List<int> c)

@@ -26,9 +26,6 @@ public sealed class WorldSave
     /// <summary>Long data key of a terrain modifier's creation time.</summary>
     private static readonly int TimeCreatedKey = StableHash.Of("terrainModifierTimeCreated");
 
-    /// <summary>Long data key of the player id that built a piece.</summary>
-    private static readonly int CreatorKey = StableHash.Of("creator");
-
     /// <summary>
     /// Player ids and the names stored with them: bed and tombstone owners, ward builders, players (live: the players
     /// that are online).
@@ -38,12 +35,6 @@ public sealed class WorldSave
     private static readonly int CreatorNameKey = StableHash.Of("creatorName");
     /// <summary>Player id and name keys on player objects.</summary>
     private static readonly int PlayerIdKey = StableHash.Of("playerID"), PlayerNameKey = StableHash.Of("playerName");
-
-    /// <summary>Vec3 data key of a per-axis scale.</summary>
-    private static readonly int ScaleKey = StableHash.Of("scale");
-
-    /// <summary>Float data key of a uniform scale.</summary>
-    private static readonly int ScaleScalarKey = StableHash.Of("scaleScalar");
 
     /// <summary>Tameable.SetTamed writes it (an int, 1 when tamed).</summary>
     private static readonly int TamedKey = StableHash.Of("tamed");
@@ -70,6 +61,14 @@ public sealed class WorldSave
 
     /// <summary>World.m_worldGenVersion (0 for metadata older than version 26).</summary>
     public int WorldGenVersion { get; private set; }
+
+    /// <summary>
+    /// The save format at the head of the index (_main.&lt;n&gt;.chunks): the game's when it last saved the world (0 for a
+    /// live world). Chunk files the game did not write again keep the format they were written in (see
+    /// <see cref="ChunkFile.WorldVersion"/>): a world of format 41 saved by Valheim 1.0.20 has a 42 index and 41 chunk
+    /// files until their objects change.
+    /// </summary>
+    public int SaveVersion { get; internal set; }
 
     /// <summary>How many objects were read (live: grows as new objects come in).</summary>
     public int ObjectCount { get; private set; }
@@ -134,6 +133,20 @@ public sealed class WorldSave
 
     /// <summary>First object of each prefab: the template new objects of that prefab are copied from.</summary>
     public Dictionary<int, int> Templates { get; } = [];
+    /// <summary>
+    /// Counts each prefab added to <see cref="Templates"/> (a live merge brings new kinds), for lists worked out from
+    /// them to be worked out again.
+    /// </summary>
+    public int TemplatesGeneration { get; private set; }
+
+    /// <summary>Makes an object the template of its prefab when it has none yet.</summary>
+    private void RememberTemplate(int prefab, int id)
+    {
+        if (Templates.TryAdd(prefab, id))
+        {
+            TemplatesGeneration++;
+        }
+    }
 
     /// <summary>
     /// The object a new one is built from: its source object when given (and of the same prefab), else the prefab's
@@ -164,39 +177,53 @@ public sealed class WorldSave
     /// <param name="n">The new object.</param>
     /// <param name="readSource">Gives the chunk file bytes the model lives in.</param>
     /// <returns>The bytes, or null when the prefab is unknown to both the world and the game.</returns>
-    public byte[]? NewObjectBytes(Editing.NewObject n, Func<ObjectRef, byte[]> readSource)
+    public byte[]? NewObjectBytes(Editing.NewObject n, Func<ObjectRef, byte[]> readSource) => NewObjectBytes(n, readSource, Builder);
+
+    /// <summary>
+    /// <see cref="NewObjectBytes(Editing.NewObject, Func{ObjectRef, byte[]})"/> with the builder given (one taken
+    /// earlier) instead of the one chosen now.
+    /// </summary>
+    /// <param name="n">The new object.</param>
+    /// <param name="readSource">Gives the chunk file bytes the model lives in.</param>
+    /// <param name="builder">The builder a new piece of a kind players build is given (0: none).</param>
+    /// <returns>The bytes, or null when the prefab is unknown to both the world and the game.</returns>
+    public byte[]? NewObjectBytes(Editing.NewObject n, Func<ObjectRef, byte[]> readSource, long builder)
     {
         byte[]? bytes = BuildBytes(n, readSource);
+        if (bytes == null)
+        {
+            return null;
+        }
+        // Made here rather than moved or copied with its own fields: placed, pasted or built blank.
+        bool made = n.Fresh || n.Raw == null && ModelFor(n.Prefab, n.SourceId) == null;
+        string? tool = made ? Terrain.PieceCatalog.Get(n.Prefab)?.Tool : null;
         // A new piece of a kind players build (placed, pasted or built blank) is the chosen builder's,
         // like one built in the game. Without a builder the game takes it for part of a ruin: a third of
         // the materials back, no base for fires, ignored by raids. Moved and edited objects keep theirs.
-        if (bytes != null && Builder != 0 && (n.Fresh || n.Raw == null && ModelFor(n.Prefab, n.SourceId) == null)
-            && Terrain.PieceCatalog.Get(n.Prefab)?.Tool != null)
-        {
-            var z = ZdoData.Parse(bytes);
-            z.Set("longs", CreatorKey, Builder.ToString(CultureInfo.InvariantCulture));
-            bytes = z.Serialize();
-        }
+        bool built = builder != 0 && tool != null;
         // Food and drink set out with the serving tray (Feaster) are items made pieces: the game marks
         // them with "piece" (ItemDrop.MakePiece). Without it they would be loose items, falling and
         // despawning away from a base.
-        if (bytes != null && (n.Fresh || n.Raw == null && ModelFor(n.Prefab, n.SourceId) == null)
-            && Terrain.PieceCatalog.Get(n.Prefab)?.Tool == "feaster" && Terrain.PrefabCatalog.ItemKindOf(n.Prefab) != null)
+        bool served = tool == "feaster" && Terrain.PrefabCatalog.ItemKindOf(n.Prefab) != null;
+        if (!built && !served && n.Data is not { Count: > 0 })
         {
-            var z = ZdoData.Parse(bytes);
+            return bytes;
+        }
+        // Parsed and written once for all the fields set.
+        var z = ZdoData.Parse(bytes);
+        if (built)
+        {
+            z.Set("longs", Editing.ObjectField.CreatorKey, builder.ToString(CultureInfo.InvariantCulture));
+        }
+        if (served)
+        {
             z.Set("ints", PieceKey, "1");
-            bytes = z.Serialize();
         }
-        if (bytes != null && n.Data is { Count: > 0 } data)
+        foreach (var f in n.Data ?? [])
         {
-            var z = ZdoData.Parse(bytes);
-            foreach (var f in data)
-            {
-                z.Set(f.Section, f.Key, f.Value);
-            }
-            bytes = z.Serialize();
+            z.Set(f.Section, f.Key, f.Value);
         }
-        return bytes;
+        return z.Serialize();
     }
 
     /// <summary>
@@ -212,8 +239,8 @@ public sealed class WorldSave
             z.Rotation = n.Rotation;
             if (n.Scale > 0f)
             {
-                z.Set("vec3", ScaleKey, $"{n.Scale.ToString(CultureInfo.InvariantCulture)} {n.Scale.ToString(CultureInfo.InvariantCulture)} {n.Scale.ToString(CultureInfo.InvariantCulture)}");
-                z.Set("floats", ScaleScalarKey, null);
+                z.Set("vec3", ZdoData.ScaleKey, $"{n.Scale.ToString(CultureInfo.InvariantCulture)} {n.Scale.ToString(CultureInfo.InvariantCulture)} {n.Scale.ToString(CultureInfo.InvariantCulture)}");
+                z.Set("floats", ZdoData.ScaleScalarKey, null);
             }
             return z.Serialize();
         }
@@ -227,7 +254,7 @@ public sealed class WorldSave
     }
 
     /// <summary>
-    /// A reader of the bytes an object's offsets point into, for <see cref="NewObjectBytes"/>: live, its own
+    /// A reader of the bytes an object's offsets point into, for <see cref="NewObjectBytes(Editing.NewObject, Func{ObjectRef, byte[]}, long)"/>: live, its own
     /// (<see cref="LiveSource"/>: the snapshot, or the bytes of a read since); else its whole chunk file, read once per
     /// reader.
     /// </summary>
@@ -256,6 +283,30 @@ public sealed class WorldSave
         fs.Seek(o.Start, SeekOrigin.Begin);
         fs.ReadExactly(b);
         return b;
+    }
+
+    /// <summary>
+    /// The saved bytes of an object of the save (id &gt;= 0), cut out of what a <see cref="SourceReader"/> gives: for
+    /// many objects, each chunk file is read once instead of opened for every object.
+    /// </summary>
+    public byte[] ObjectBytes(int id, Func<ObjectRef, byte[]> source)
+    {
+        ObjectRef o = ObjectRefs[id];
+        return source(o)[(int)o.Start..(int)o.End];
+    }
+
+    /// <summary>
+    /// An object's saved bytes as <see cref="ObjectBytes(int)"/> gives them, live without a copy: a view into the bytes it
+    /// was read from.
+    /// </summary>
+    private ReadOnlySpan<byte> SavedSpan(int id)
+    {
+        if (LiveBytes == null)
+        {
+            return ObjectBytes(id);
+        }
+        ObjectRef o = ObjectRefs[id];
+        return LiveSource(o.File).AsSpan((int)o.Start, (int)(o.End - o.Start));
     }
 
     /// <summary>Generated zones and location instances from the .db2 file (null if it could not be read).</summary>
@@ -321,7 +372,14 @@ public sealed class WorldSave
     /// the commit marker (.ok, written last: a save without it was cut short, or is being written right now). A folder
     /// where no save has the marker: the highest index. -1: none.
     /// </summary>
-    public static int CommittedSave(string directory)
+    public static int CommittedSave(string directory) => SaveNumbers(directory) is var (latest, committed) && committed >= 0 ? committed : latest;
+
+    /// <summary>
+    /// The save numbers of a world folder, by its index files (_main.&lt;n&gt;.chunks, n plain digits): the highest, and
+    /// the highest with its commit marker (.ok); -1 for none. The one scan for <see cref="CommittedSave"/> and the
+    /// writer's next number.
+    /// </summary>
+    public static (int Latest, int Committed) SaveNumbers(string directory)
     {
         int best = -1, committed = -1;
         foreach (string path in System.IO.Directory.GetFiles(directory, "_main.*.chunks"))
@@ -336,7 +394,7 @@ public sealed class WorldSave
                 }
             }
         }
-        return committed >= 0 ? committed : best;
+        return (best, committed);
     }
 
     /// <summary>Reads the .chunks index, then every chunk file it lists.</summary>
@@ -347,7 +405,7 @@ public sealed class WorldSave
         List<(ushort Chunk, byte Size, uint Version, int Count)> chunks = [];
         using (ValheimReader index = new(File.OpenRead(indexPath)))
         {
-            index.ReadUShort();
+            SaveVersion = index.ReadShort();
             index.ReadInt();
             // Each: chunk (2), size (1), version (4), object count (4).
             int count = index.ReadCount(11);
@@ -377,15 +435,10 @@ public sealed class WorldSave
     public byte[]? LiveBytes { get; private set; }
 
     /// <summary>
-    /// Live: the bytes an object's offsets are in, the snapshot's or those of objects read since from the game
-    /// (MergeLive: each read is its own little file).
+    /// Live: the bytes a chunk file's object offsets point into (the snapshot unless MergeLive made the file: each read
+    /// of objects from the game is its own little file, holding its bytes, and let go with the last object read from it).
     /// </summary>
-    private readonly Dictionary<ChunkFile, byte[]> _liveFiles = [];
-
-    /// <summary>
-    /// Live: the bytes a chunk file's object offsets point into (the snapshot unless MergeLive made the file).
-    /// </summary>
-    public byte[] LiveSource(ChunkFile file) => _liveFiles.TryGetValue(file, out byte[]? b) ? b : LiveBytes!;
+    public byte[] LiveSource(ChunkFile file) => file.Bytes ?? LiveBytes!;
 
     /// <summary>
     /// Live: objects the game no longer has (removed in the game). Left out of every list; their ids stay taken, and
@@ -398,6 +451,44 @@ public sealed class WorldSave
     /// map's search and statistics): what the game changed comes in between.
     /// </summary>
     public object Sync { get; } = new();
+
+    /// <summary>Live: the holds taken (<see cref="Hold"/>) and not let go yet; guarded by <see cref="Sync"/>.</summary>
+    private int _holds;
+
+    /// <summary>
+    /// Keeps the world's lists and object bytes as they are until the hold is disposed: <see cref="MergeLive"/>, the
+    /// only change to them once loaded (<see cref="SetLiveId"/> changes an object's ZDOID alone), returns null meanwhile
+    /// (tried again later). For a reader on another thread that must see the world as it was when it was asked for
+    /// (the history written after Apply live).
+    /// </summary>
+    public IDisposable Hold()
+    {
+        lock (Sync)
+        {
+            _holds++;
+        }
+        return new Held(this);
+    }
+
+    /// <summary>A <see cref="Hold"/> taken; let go once, at the first dispose.</summary>
+    /// <param name="world">The world held.</param>
+    private sealed class Held(WorldSave world) : IDisposable
+    {
+        /// <summary>1 once let go.</summary>
+        private int _done;
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _done, 1) == 0)
+            {
+                lock (world.Sync)
+                {
+                    world._holds--;
+                }
+            }
+        }
+    }
 
     /// <summary>Live: the objects by ZDOID and by zone (not the vanished ones), made at the first merge.</summary>
     private Dictionary<(long, uint), int>? _byLiveId;
@@ -475,7 +566,8 @@ public sealed class WorldSave
 
     /// <summary>
     /// Live: the zones' objects as the game has them now (ZDOID and bytes, as the plugin's /zone sends them), merged
-    /// in. Null when the world's lists are being read elsewhere right now: try again later.
+    /// in. Null when the world's lists are being read elsewhere right now, or held (<see cref="Hold"/>): try again
+    /// later.
     /// </summary>
     /// <param name="zones">The zones the objects were read from; objects of them the game lacks vanish.</param>
     /// <param name="objects">Every object the game has in those zones (a ZDOID listed twice counts once, its last bytes).</param>
@@ -492,6 +584,10 @@ public sealed class WorldSave
         }
         try
         {
+            if (_holds > 0)
+            {
+                return null;
+            }
             Index();
             var result = new Merged([], [], [], []);
             var seen = new HashSet<int>();
@@ -515,7 +611,7 @@ public sealed class WorldSave
                 if (_byLiveId!.TryGetValue((user, zid), out int id) && !(keep(id) && ours((user, zid))))
                 {
                     seen.Add(id);
-                    if (!ObjectBytes(id).AsSpan().SequenceEqual(bytes))
+                    if (!SavedSpan(id).SequenceEqual(bytes))
                     {
                         fresh.Add((user, zid, bytes, id));
                     }
@@ -541,8 +637,7 @@ public sealed class WorldSave
             if (fresh.Count > 0)
             {
                 byte[] all = [.. fresh.SelectMany(f => f.Bytes)];
-                ChunkFile file = new() { Chunk = 0, Size = 0, Version = 0, IndexCount = 0, WorldVersion = Chunks.Count > 0 ? Chunks[0].WorldVersion : 41, Count = fresh.Count, Length = all.Length };
-                _liveFiles[file] = all;
+                ChunkFile file = new() { Chunk = 0, Size = 0, Version = 0, IndexCount = 0, WorldVersion = Chunks.Count > 0 ? Chunks[0].WorldVersion : 41, Count = fresh.Count, Length = all.Length, Bytes = all };
                 using ValheimReader pkg = new(new MemoryStream(all));
                 foreach (var (user, zid, _, replace) in fresh)
                 {
@@ -591,9 +686,17 @@ public sealed class WorldSave
             ObjectRef o = ObjectRefs[id];
             Tamed.Remove(id);
             Links.Remove(id);
+            // A builder with no pieces left is no builder (TopBuilder, Builders).
             if (o.Creator != 0 && Creators.TryGetValue(o.Creator, out int n))
             {
-                Creators[o.Creator] = n - 1;
+                if (n > 1)
+                {
+                    Creators[o.Creator] = n - 1;
+                }
+                else
+                {
+                    Creators.Remove(o.Creator);
+                }
             }
             if (o.Prefab == LocationProxyPrefab)
             {
@@ -621,9 +724,11 @@ public sealed class WorldSave
         TerrainZones.RemoveAll(z => z.Source is { } src && sources.Contains((src.File, src.Start)));
     }
 
-    // The largest live snapshot read, unpacked: the biggest worlds' saves are a few hundred megabytes,
-    // and one array cannot pass 2 GiB anyway.
-    private const int MaxSnapshot = 1536 << 20;
+    /// <summary>
+    /// The largest live snapshot read, unpacked: the biggest worlds' saves are a few hundred megabytes, and one array
+    /// cannot pass 2 GiB anyway.
+    /// </summary>
+    internal const int MaxSnapshot = 1536 << 20;
 
     /// <summary>Loads a world from a WorldEditorBridge snapshot (gzip-compressed, snapshot version 1).</summary>
     /// <param name="gzipped">The snapshot as <c>LiveBridge.Snapshot</c> returns it.</param>
@@ -697,8 +802,8 @@ public sealed class WorldSave
     }
 
     /// <summary>
-    /// Mirrors ZDO.Load(ZPackage, Version.World), recording where things are in the file so a writer can later copy
-    /// objects unchanged or patch just the terrain data.
+    /// Reads one object through <see cref="ZdoReader"/>, keeping what the editor lists and recording where things are
+    /// in the file so a writer can later copy objects unchanged or patch just the terrain data.
     /// </summary>
     /// <param name="pkg">Reader positioned at the object.</param>
     /// <param name="worldVersion">The world version the object was written in.</param>
@@ -719,31 +824,12 @@ public sealed class WorldSave
         {
             ObjectRefs.Add(objRef);
         }
-        const ushort Connections = 0x1, Floats = 0x2, Vec3 = 0x4, Quats = 0x8, Ints = 0x10, Longs = 0x20, Strings = 0x40, ByteArrays = 0x80;
-        const ushort Rotation = 0x1000, SmallPosition = 0x2000;
-        bool chunked = worldVersion >= WorldVersion.ChunkedSave;
-        ushort flags = pkg.ReadUShort();
-        if (!chunked)
-        {
-            pkg.ReadVector2s();
-        }
-        Vector3 position;
-        if ((flags & SmallPosition) != 0)
-        {
-            var (x, y) = pkg.ReadVector2s();
-            position = new Vector3(x, 0f, y);
-        }
-        else
-        {
-            position = pkg.ReadVector3();
-        }
-        int prefab = pkg.ReadInt();
-        Vector3 rotation = Vector3.Zero;
-        if ((flags & Rotation) != 0)
-        {
-            rotation = chunked ? pkg.ReadSmallRotation() : pkg.ReadVector3();
-        }
-        objRef.DataStart = pkg.Position;
+        ZdoReader zdo = new(pkg, worldVersion);
+        ushort flags = zdo.Flags;
+        Vector3 position = zdo.Position;
+        int prefab = zdo.Prefab;
+        Vector3 rotation = zdo.Rotation;
+        objRef.DataStart = zdo.DataStart;
         objRef.Flags = flags;
         objRef.Prefab = prefab;
         objRef.Position = position;
@@ -760,10 +846,10 @@ public sealed class WorldSave
         List<(int Key, int Value)>? linkInts = null;
         List<(int Key, Vector3 Value)>? linkVec3s = null;
         List<(int Key, Quaternion Value)>? linkQuats = null;
-        if ((flags & 0xFF) == 0)
+        if (!zdo.HasData)
         {
             objRef.End = pkg.Position;
-            Templates.TryAdd(prefab, id);
+            RememberTemplate(prefab, id);
             file.Objects.Add((start, pkg.Position));
             if (shown)
             {
@@ -775,140 +861,92 @@ public sealed class WorldSave
             }
             return id;
         }
-        if ((flags & Connections) != 0)
+        while (zdo.Next())
         {
-            pkg.ReadByte();
-            pkg.ReadInt();
-        }
-        if ((flags & Floats) != 0)
-        {
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
+            int key = zdo.Key;
+            switch (zdo.Section)
             {
-                int key = pkg.ReadInt();
-                float value = pkg.ReadSingle();
-                if (key == ScaleScalarKey)
-                {
-                    scale = new Vector3(value);
-                }
-            }
-        }
-        if ((flags & Vec3) != 0)
-        {
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                int key = pkg.ReadInt();
-                Vector3 value = pkg.ReadVector3();
-                if (key == ScaleKey)
-                {
-                    scale = value;
-                }
-                else if (links.Vec3Keys.Contains(key))
-                {
-                    (linkVec3s ??= []).Add((key, value));
-                }
-            }
-        }
-        if ((flags & Quats) != 0)
-        {
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                int key = pkg.ReadInt();
-                Quaternion value = pkg.ReadQuaternion();
-                if (links.QuatKeys.Contains(key))
-                {
-                    (linkQuats ??= []).Add((key, value));
-                }
-            }
-        }
-        if ((flags & Ints) != 0)
-        {
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                int key = pkg.ReadInt();
-                int value = pkg.ReadInt();
-                if (prefab == LocationProxyPrefab && key == LocationKey)
-                {
-                    Locations.Add((position, value));
-                    location = value;
-                }
-                else if (key == TamedKey && value != 0)
-                {
-                    Tamed.Add(id);
-                }
-                else if (links.IntKeys.Contains(key))
-                {
-                    (linkInts ??= []).Add((key, value));
-                }
-            }
-        }
-        if ((flags & Longs) != 0)
-        {
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                int key = pkg.ReadInt();
-                long value = pkg.ReadLong();
-                if (key == TimeCreatedKey)
-                {
-                    timeCreated = value;
-                }
-                else if (key == CreatorKey)
-                {
-                    creator = value;
-                }
-                else if (key == OwnerKey)
-                {
-                    owner = value;
-                }
-                else if (key == PlayerIdKey)
-                {
-                    playerId = value;
-                }
-            }
-        }
-        if ((flags & Strings) != 0)
-        {
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                int key = pkg.ReadInt();
-                string value = pkg.ReadString();
-                long who = key == OwnerNameKey ? owner : key == CreatorNameKey ? creator : key == PlayerNameKey ? playerId : 0;
-                if (who != 0 && value.Length > 0)
-                {
-                    PlayerNames[who] = value;
-                }
-            }
-        }
-        if ((flags & ByteArrays) != 0)
-        {
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                int key = pkg.ReadInt();
-                long valueStart = pkg.Position;
-                byte[] value = pkg.ReadByteArray();
-                if (key == TCDataKey)
-                {
+                case ZdoData.Floats:
+                    if (key == ZdoData.ScaleScalarKey)
+                    {
+                        scale = new Vector3(zdo.FloatValue);
+                    }
+                    break;
+                case ZdoData.Vec3s:
+                    if (key == ZdoData.ScaleKey)
+                    {
+                        scale = zdo.Vec3Value;
+                    }
+                    else if (links.Vec3Keys.Contains(key))
+                    {
+                        (linkVec3s ??= []).Add((key, zdo.Vec3Value));
+                    }
+                    break;
+                case ZdoData.Quats:
+                    if (links.QuatKeys.Contains(key))
+                    {
+                        (linkQuats ??= []).Add((key, zdo.QuatValue));
+                    }
+                    break;
+                case ZdoData.Ints:
+                    if (prefab == LocationProxyPrefab && key == LocationKey)
+                    {
+                        Locations.Add((position, zdo.IntValue));
+                        location = zdo.IntValue;
+                    }
+                    else if (key == TamedKey && zdo.IntValue != 0)
+                    {
+                        Tamed.Add(id);
+                    }
+                    else if (links.IntKeys.Contains(key))
+                    {
+                        (linkInts ??= []).Add((key, zdo.IntValue));
+                    }
+                    break;
+                case ZdoData.Longs:
+                    if (key == TimeCreatedKey)
+                    {
+                        timeCreated = zdo.LongValue;
+                    }
+                    else if (key == Editing.ObjectField.CreatorKey)
+                    {
+                        creator = zdo.LongValue;
+                    }
+                    else if (key == OwnerKey)
+                    {
+                        owner = zdo.LongValue;
+                    }
+                    else if (key == PlayerIdKey)
+                    {
+                        playerId = zdo.LongValue;
+                    }
+                    break;
+                case ZdoData.Strings:
+                    long who = key == OwnerNameKey ? owner : key == CreatorNameKey ? creator : key == PlayerNameKey ? playerId : 0;
+                    if (who != 0 && zdo.StringValue!.Length > 0)
+                    {
+                        PlayerNames[who] = zdo.StringValue;
+                    }
+                    break;
+                case ZdoData.ByteArrays when key == TCDataKey:
                     TerrainZone zone;
                     try
                     {
-                        zone = TerrainZone.Decode(position, prefab, value);
+                        zone = TerrainZone.Decode(position, prefab, zdo.BytesValue!);
                     }
                     catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException)
                     {
                         // Damaged ground data: the game loses only this zone's ground edits. Here the object stays an
                         // ordinary one, kept byte for byte, and the rest of the world reads on.
                         Console.WriteLine($"Damaged ground data in the terrain object at {position}, kept as it is: {ex.Message}");
-                        continue;
+                        break;
                     }
-                    zone.Source = new ZdoLocation(file, start, -1, valueStart, pkg.Position, flags);
+                    zone.Source = new ZdoLocation(file, start, -1, zdo.ValueStart, pkg.Position, flags);
                     TerrainZones.Add(zone);
-                }
+                    break;
+                default:
+                    // The connection and byte arrays other than ground data: read past, nothing the loader lists.
+                    break;
             }
         }
         long end = pkg.Position;
@@ -928,7 +966,7 @@ public sealed class WorldSave
         objRef.IsTerrain = terrain;
         if (!terrain)
         {
-            Templates.TryAdd(prefab, id);
+            RememberTemplate(prefab, id);
         }
         if (creator != 0)
         {
@@ -992,6 +1030,12 @@ public sealed class ChunkFile
 
     /// <summary>Byte range of every object in the file, in file order.</summary>
     public List<(long Start, long End)> Objects { get; } = [];
+
+    /// <summary>
+    /// Live: the file's bytes, for one WorldSave.MergeLive made of objects read from the game since the snapshot (kept
+    /// only as long as something refers to the file); null for the snapshot's and saved files.
+    /// </summary>
+    internal byte[]? Bytes { get; init; }
 
     /// <summary>Same naming as ChunkSaveMapping.GetChunkFilename.</summary>
     public string FileName => NameFor(Chunk, Size, Version);

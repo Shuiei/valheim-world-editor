@@ -21,11 +21,11 @@ public sealed class HistoryPanel
     /// <summary>How many changes are on the undo list (undone ones not counted); empty when none.</summary>
     internal TextBlock Count { get; } = new() { FontSize = 11, Foreground = Ui.Muted };
     /// <summary>Take back Claude's changes; shown only while some of Claude's changes are in.</summary>
-    internal Button TakeBackClaude { get; } = new Button { Content = "Take back Claude's changes", FontSize = 11, Padding = new Thickness(6, 1), IsVisible = false }.Tip("history.claude");
+    internal Button TakeBackClaude { get; } = new Button { Content = Lang.T("history.label.takeBackClaude"), FontSize = 11, Padding = new Thickness(6, 1), IsVisible = false }.Tip("history.claude");
     /// <summary>The current edit session, null when no world is open.</summary>
     private readonly Func<EditSession?> _session;
-    /// <summary>A status line to show (what an action did).</summary>
-    public event Action<string>? Message;
+    /// <summary>A status line to show (what an action did), in both languages.</summary>
+    public event Action<Said>? Message;
     /// <summary>Raised when the card is closed with its close button.</summary>
     public event Action? Closed;
     /// <summary>Whether these steps may be changed (the window asks about steps from an earlier session).</summary>
@@ -39,14 +39,8 @@ public sealed class HistoryPanel
         var close = new Button { Content = Icons.Make("close", 14), Padding = new Thickness(5), HorizontalAlignment = HorizontalAlignment.Right }.Classed("ghost").Tip("card.close");
         close.Click += (_, _) => { Card!.IsVisible = false; Closed?.Invoke(); };
         TakeBackClaude.Click += async (_, _) => await TakeBackClaudes();
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             // Just above the save bar.
             Margin = new Thickness(10, 10, 10, 70),
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -61,13 +55,13 @@ public sealed class HistoryPanel
                     new Grid
                     {
                         ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
-                        Children = { new TextBlock { Text = "History", FontSize = 14, FontWeight = FontWeight.SemiBold }, Col(Count, 1, new Thickness(8, 3, 0, 0)), Col(close, 2) },
+                        Children = { new TextBlock { Text = Lang.T("history.title"), FontSize = 14, FontWeight = FontWeight.SemiBold }, Col(Count, 1, new Thickness(8, 3, 0, 0)), Col(close, 2) },
                     },
                     TakeBackClaude,
                     new ScrollViewer { MaxHeight = 520, Content = Rows },
                 },
             },
-        };
+        });
     }
 
     /// <summary>Puts a control in a grid column, with an optional margin.</summary>
@@ -98,7 +92,7 @@ public sealed class HistoryPanel
         // RemoveChange does nothing during a brush stroke (the card can be opened with L while the brush is down).
         if (s.Stroking)
         {
-            Message?.Invoke("Nothing taken back: finish the brush stroke first.");
+            Message?.Invoke(Said.Of("history.msg.finishStroke"));
             return;
         }
         foreach (var c in steps)
@@ -106,9 +100,11 @@ public sealed class HistoryPanel
             s.RemoveChange(c);
         }
         // A step refused (RemoveChange: a later step of yours moved or deleted what it added) is not marked Removed.
-        int kept = steps.Count(c => !c.Removed);
-        Message?.Invoke($"Took back {steps.Count - kept} change(s) Claude made; yours are kept."
-            + (kept > 0 ? $" {kept} could not be taken back: a later step moved or deleted what they added (undo instead)." : ""));
+        int kept = steps.Count(c => !c.Removed), taken = steps.Count - kept;
+        // Each removal is a step of its own: one Ctrl+Z brings one back, not all.
+        Message?.Invoke(Said.Of("history.msg.tookBack", taken)
+            + (taken > 1 ? Said.Of("history.msg.oneAtATime") : Said.Empty)
+            + (kept > 0 ? Said.Of("history.msg.notTakenBack", kept) : Said.Empty));
         Refresh();
     }
 
@@ -130,11 +126,11 @@ public sealed class HistoryPanel
         var s = _session();
         var undo = s?.UndoList ?? [];
         var redo = s?.RedoList ?? [];
-        Count.Text = undo.Count > 0 ? $"{undo.Count} change(s)" : "";
+        Count.Text = undo.Count > 0 ? Lang.T("history.count", undo.Count) : "";
         TakeBackClaude.IsVisible = s != null && ClaudesChanges(s).Count > 0;
         if (s == null || undo.Count + redo.Count == 0)
         {
-            Rows.Children.Add(new TextBlock { Text = "No changes yet in this session.", FontSize = 12, Foreground = Ui.Muted });
+            Rows.Children.Add(new TextBlock { Text = Lang.T("history.none"), FontSize = 12, Foreground = Ui.Muted });
         }
         else
         {
@@ -153,7 +149,7 @@ public sealed class HistoryPanel
         {
             Rows.Children.Add(new TextBlock
             {
-                Text = $"{aside} step(s) made in other areas are kept: open those areas to undo them.",
+                Text = Lang.T("history.shelved", aside),
                 FontSize = 11,
                 Foreground = Ui.Muted,
                 TextWrapping = TextWrapping.Wrap,
@@ -187,17 +183,17 @@ public sealed class HistoryPanel
         }
         if (undone)
         {
-            Act("Redo to here", Lang.T("history.tip.redoTo"), () => [.. s.RedoList.SkipWhile(r => r != c)], () => s.ForwardTo(c));
+            Act(Lang.T("history.label.redoTo"), Lang.T("history.tip.redoTo"), () => [.. s.RedoList.SkipWhile(r => r != c)], () => s.ForwardTo(c));
         }
         else
         {
             if (!current)
             {
-                Act("Back to here", Lang.T("history.tip.backTo"), () => [.. s.UndoList.SkipWhile(u => u != c).Skip(1)], () => s.BackTo(c));
+                Act(Lang.T("history.label.backTo"), Lang.T("history.tip.backTo"), () => [.. s.UndoList.SkipWhile(u => u != c).Skip(1)], () => s.BackTo(c));
             }
             if (!c.Removed && c.RevertOf == null)
             {
-                Act("Remove", Lang.T("history.tip.remove"), () => [c], () => Message?.Invoke(s.RemoveChange(c)));
+                Act(Lang.T("history.label.remove"), Lang.T("history.tip.remove"), () => [c], () => Message?.Invoke(s.RemoveChange(c)));
             }
         }
         // Steps from an earlier session of the editor show their day too.
@@ -218,7 +214,7 @@ public sealed class HistoryPanel
                 BorderBrush = new SolidColorBrush(Color.Parse("#2a6a4a")),
                 Padding = new Thickness(5, 0),
                 VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock { Text = "applied", FontSize = 10, Foreground = Ui.Live },
+                Child = new TextBlock { Text = Lang.T("history.tag.applied"), FontSize = 10, Foreground = Ui.Live },
             });
         }
         if (ByClaude(c))
@@ -230,7 +226,7 @@ public sealed class HistoryPanel
                 BorderBrush = new SolidColorBrush(Color.Parse("#7a5a2a")),
                 Padding = new Thickness(5, 0),
                 VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock { Text = "Claude", FontSize = 10, Foreground = Ui.Accent },
+                Child = new TextBlock { Text = Lang.T("settings.claude"), FontSize = 10, Foreground = Ui.Accent },
             }.Tip("history.byClaude"));
         }
         if (c.Earlier)
@@ -243,7 +239,7 @@ public sealed class HistoryPanel
                 BorderBrush = Ui.Line,
                 Padding = new Thickness(5, 0),
                 VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock { Text = "earlier session", FontSize = 10, Foreground = Ui.Muted },
+                Child = new TextBlock { Text = Lang.T("history.tag.earlier"), FontSize = 10, Foreground = Ui.Muted },
             }.Tip("history.earlier"));
         }
         // The current change outlined in amber, like the web editor's.

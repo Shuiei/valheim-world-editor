@@ -144,4 +144,15 @@ public class SeedLocationsTests
         Assert.Equal(Heightmap.Biome.Plains, SeedLocations.BiomeMap.RandomBiome(Heightmap.Biome.Plains));
         Assert.Equal(Heightmap.Biome.None, SeedLocations.BiomeMap.RandomBiome(Heightmap.Biome.None));
     }
+
+    [Fact]
+    public void ABiomeTheMapHasNoPointOfGivesNoPoint()
+    {
+        // A rule of no biome indexed an empty list, and an unknown biome flag the list at -1: both threw, and the whole
+        // layout of the seed was dropped.
+        var map = new SeedLocations.BiomeMap(Seed(), true, TestContext.Current.CancellationToken);
+        Assert.Null(map.RandomPoint(Heightmap.Biome.None, false));
+        Assert.Null(map.RandomPoint((Heightmap.Biome)4096, true));
+        Assert.NotNull(map.RandomPoint(Heightmap.Biome.Meadows, true));
+    }
 }

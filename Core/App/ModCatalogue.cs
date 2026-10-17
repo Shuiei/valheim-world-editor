@@ -33,7 +33,15 @@ public static class ModCatalogue
     /// <param name="Mods">The mod that adds each prefab, when the game knew it (with Jötunn).</param>
     /// <param name="Models">What the game draws of each prefab (GET /models), when it was asked.</param>
     private sealed record Data(Dictionary<string, JsonNode> Prefabs, Dictionary<string, JsonNode> Pieces, Dictionary<string, JsonNode> Costs, Dictionary<string, string> Items, Dictionary<string, string> Mods,
-        Dictionary<string, JsonNode> Models);
+        Dictionary<string, JsonNode> Models)
+    {
+        /// <summary>
+        /// <see cref="Models"/> read into records when put in use (<see cref="Use"/>, under the lock): the JSON nodes
+        /// are read on first use, which two threads must not do at once, and ModelOf runs on the model loaders' threads
+        /// and the UI's.
+        /// </summary>
+        public IReadOnlyDictionary<string, Model> Parsed { get; init; } = new Dictionary<string, Model>();
+    }
 
     /// <summary>Nothing known: before Load, and when the kept file is missing or cannot be read.</summary>
     private static Data Empty() => new([], [], [], [], [], []);
@@ -59,12 +67,11 @@ public static class ModCatalogue
     /// <summary>
     /// What the game draws of a mod prefab, as it reported it; null when it was not asked or the prefab is not a mod's.
     /// </summary>
-    public static Model? ModelOf(string prefab)
+    public static Model? ModelOf(string prefab) => _data.Parsed.GetValueOrDefault(prefab);
+
+    /// <summary>A model's JSON (checked by IsModel) as a record.</summary>
+    private static Model ToModel(JsonObject o)
     {
-        if (_data.Models.GetValueOrDefault(prefab) is not JsonObject o)
-        {
-            return null;
-        }
         static float[] Floats(JsonNode? n) => [.. n!.AsArray().Select(x => (float)x!.GetValue<double>())];
         var parts = o["p"]!.AsArray().Select(p => new ModelPart(
             Plain(p!["mesh"]!.GetValue<string>()), p["v"]!.GetValue<int>(), p["sub"]!.GetValue<int>(),
@@ -96,27 +103,36 @@ public static class ModCatalogue
     public static int TakeModels(string json)
     {
         var root = JsonNode.Parse(json) as JsonObject ?? throw new JsonException("the models are not a JSON object");
-        var now = _data;
-        var models = new Dictionary<string, JsonNode>(now.Models);
-        int taken = 0;
-        bool changed = false;
-        foreach (var (name, e) in Entries(root))
+        lock (Writing)
         {
-            if (now.Prefabs.ContainsKey(name) && IsModel(e))
+            var now = _data;
+            var models = new Dictionary<string, JsonNode>(now.Models);
+            int taken = 0;
+            bool changed = false;
+            foreach (var (name, e) in Entries(root))
             {
-                taken++;
-                changed |= Put(models, name, e.DeepClone());
+                if (now.Prefabs.ContainsKey(name) && IsModel(e))
+                {
+                    taken++;
+                    changed |= Put(models, name, e.DeepClone());
+                }
             }
+            if (changed)
+            {
+                var next = now with { Models = models };
+                // Kept first, as Take does.
+                SafeFile.WriteAllText(FilePath, Write(next));
+                Use(next);
+            }
+            return taken;
         }
-        if (changed)
-        {
-            var next = now with { Models = models };
-            // Kept first, as Take does.
-            SafeFile.WriteAllText(FilePath, Write(next));
-            Use(next);
-        }
-        return taken;
     }
+
+    /// <summary>
+    /// Taken by each change to what is known (Load, Take, TakeModels, Forget): each starts from what the one before
+    /// left, so none loses another's update.
+    /// </summary>
+    private static readonly Lock Writing = new();
 
     /// <summary>What is known now, swapped in whole (<see cref="Use"/>).</summary>
     private static volatile Data _data = Empty();
@@ -129,8 +145,8 @@ public static class ModCatalogue
     /// <summary>Puts what is known in use, counting it in <see cref="Generation"/>.</summary>
     private static void Use(Data next)
     {
-        _data = next;
-        _generation++;
+        _data = next with { Parsed = next.Models.ToDictionary(kv => kv.Key, kv => ToModel(kv.Value.AsObject()), StringComparer.Ordinal) };
+        Interlocked.Increment(ref _generation);
     }
 
     /// <summary>How many mod prefabs are known.</summary>
@@ -146,29 +162,43 @@ public static class ModCatalogue
     public static bool IsModded(string prefab) => _data.Prefabs.ContainsKey(prefab);
 
     /// <summary>
-    /// The kept catalogue in use (nothing when there is none or it cannot be read).
+    /// The kept catalogue in use (nothing when there is none or it cannot be read), without the prefabs that are the
+    /// game's own now (a game update made them vanilla).
     /// </summary>
-    public static void Load()
+    /// <param name="vanilla">The game's own prefab names (GameData's prefabs).</param>
+    public static void Load(IReadOnlySet<string> vanilla)
     {
-        try
+        lock (Writing)
         {
-            Use(File.Exists(FilePath) ? Read(File.ReadAllText(FilePath)) : Empty());
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
-        {
-            Console.WriteLine($"mod catalogue: {FilePath} could not be read ({e.Message}); starting without it.");
-            Use(Empty());
+            try
+            {
+                var kept = File.Exists(FilePath) ? Read(File.ReadAllText(FilePath)) : Empty();
+                DropVanilla(kept, vanilla);
+                Use(kept);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
+            {
+                Console.WriteLine($"mod catalogue: {FilePath} could not be read ({e.Message}); starting without it.");
+                Use(Empty());
+            }
         }
     }
 
     /// <summary>
     /// Nothing known any more (the tests).
     /// </summary>
-    internal static void Forget() => Use(Empty());
+    internal static void Forget()
+    {
+        lock (Writing)
+        {
+            Use(Empty());
+        }
+    }
 
     /// <summary>
     /// Takes a game's report (GET /catalogue): its prefabs that are not the game's own (<paramref name="vanilla"/>)
-    /// join those known, replacing their older entries, and the whole is kept. Entries not in the editor's format
+    /// join those known, replacing their older entries, those known that are the game's own now are left out, and
+    /// the whole is kept. Entries not in the editor's format
     /// are left out.
     /// </summary>
     /// <param name="report">The bridge's JSON.</param>
@@ -178,41 +208,65 @@ public static class ModCatalogue
     public static (int Mods, bool Changed) Take(string report, IReadOnlySet<string> vanilla)
     {
         var got = Read(report);
-        var now = _data;
-        var next = new Data(new(now.Prefabs), new(now.Pieces), new(now.Costs), new(now.Items), new(now.Mods), new(now.Models));
-        int mods = 0;
-        bool changed = false;
-        foreach (var (name, entry) in got.Prefabs)
+        lock (Writing)
         {
-            if (vanilla.Contains(name))
+            var now = _data;
+            var next = new Data(new(now.Prefabs), new(now.Pieces), new(now.Costs), new(now.Items), new(now.Mods), new(now.Models));
+            int mods = 0;
+            bool changed = false;
+            foreach (var (name, entry) in got.Prefabs)
             {
-                continue;
+                if (vanilla.Contains(name))
+                {
+                    continue;
+                }
+                mods++;
+                changed |= Put(next.Prefabs, name, entry);
+                changed |= got.Pieces.TryGetValue(name, out var piece) ? Put(next.Pieces, name, piece) : next.Pieces.Remove(name);
+                changed |= got.Costs.TryGetValue(name, out var cost) ? Put(next.Costs, name, cost) : next.Costs.Remove(name);
+                if (got.Mods.TryGetValue(name, out string? mod) && next.Mods.GetValueOrDefault(name) != mod)
+                {
+                    next.Mods[name] = mod;
+                    changed = true;
+                }
             }
-            mods++;
-            changed |= Put(next.Prefabs, name, entry);
-            changed |= got.Pieces.TryGetValue(name, out var piece) ? Put(next.Pieces, name, piece) : next.Pieces.Remove(name);
-            changed |= got.Costs.TryGetValue(name, out var cost) ? Put(next.Costs, name, cost) : next.Costs.Remove(name);
-            if (got.Mods.TryGetValue(name, out string? mod) && next.Mods.GetValueOrDefault(name) != mod)
+            changed |= DropVanilla(next, vanilla);
+            HashSet<string> required = Required(next.Costs.Values);
+            foreach (var (item, name) in got.Items)
             {
-                next.Mods[name] = mod;
-                changed = true;
+                if (required.Contains(item) && next.Items.GetValueOrDefault(item) != name)
+                {
+                    next.Items[item] = name;
+                    changed = true;
+                }
             }
+            if (changed)
+            {
+                // Kept first: should writing fail, nothing is in use that a retry would take for already known.
+                SafeFile.WriteAllText(FilePath, Write(next));
+                Use(next);
+            }
+            return (mods, changed);
         }
-        foreach (var (item, name) in got.Items)
+    }
+
+    /// <summary>
+    /// Leaves out the prefabs that are the game's own (a game update made a mod's name vanilla), with all that is
+    /// known of them; whether any was there.
+    /// </summary>
+    private static bool DropVanilla(Data d, IReadOnlySet<string> vanilla)
+    {
+        bool dropped = false;
+        foreach (string name in d.Prefabs.Keys.Where(vanilla.Contains).ToList())
         {
-            if (next.Costs.Values.Any(c => Uses(c, item)) && next.Items.GetValueOrDefault(item) != name)
-            {
-                next.Items[item] = name;
-                changed = true;
-            }
+            d.Prefabs.Remove(name);
+            d.Pieces.Remove(name);
+            d.Costs.Remove(name);
+            d.Mods.Remove(name);
+            d.Models.Remove(name);
+            dropped = true;
         }
-        if (changed)
-        {
-            // Kept first: should writing fail, nothing is in use that a retry would take for already known.
-            SafeFile.WriteAllText(FilePath, Write(next));
-            Use(next);
-        }
-        return (mods, changed);
+        return dropped;
     }
 
     /// <summary>
@@ -264,8 +318,9 @@ public static class ModCatalogue
         return true;
     }
 
-    /// <summary>Whether a cost entry takes an item.</summary>
-    private static bool Uses(JsonNode cost, string item) => cost["r"]!.AsArray().Any(r => r![0]!.GetValue<string>() == item);
+    /// <summary>Every item some cost entry takes.</summary>
+    private static HashSet<string> Required(IEnumerable<JsonNode> costs) =>
+        costs.SelectMany(c => c["r"]!.AsArray()).Select(r => r![0]!.GetValue<string>()).ToHashSet(StringComparer.Ordinal);
 
     /// <summary>
     /// A report or the kept file: its entries in the editor's formats (the others left out, as a broken entry

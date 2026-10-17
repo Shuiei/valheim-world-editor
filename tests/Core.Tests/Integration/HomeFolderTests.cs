@@ -80,16 +80,13 @@ public sealed class HomeFolderTests : IDisposable
         AppSettings.DataDirOverride = _dataDir;
         ServerConfig.PathOverride = _servers;
         LocalGame.SearchDefaultPlaces = _defaults;
-        try
+        if (Directory.Exists(_home))
         {
             Directory.Delete(_home, true);
         }
-        catch
-        {
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
-        }
     }
 
+            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
     /// <summary>
     /// A path inside the pretend home.
     /// </summary>
@@ -159,8 +156,28 @@ public sealed class HomeFolderTests : IDisposable
         Assert.Contains(Local(".config", "unity3d", "IronGate", "Valheim", "worlds_local"), roots);
         Assert.Contains(Local(".config", "unity3d", "IronGate", "Valheim", "worlds"), roots);
         Assert.All(roots, r => Assert.StartsWith(_home, r));
-        // Valheim through Proton keeps its folder inside Steam's prefix.
+        // Valheim through Proton keeps its folder inside Steam's prefix (Flatpak's Steam too).
         Assert.Contains(roots, r => r.Contains(Path.Combine("compatdata", "892970")));
+        Assert.Contains(roots, r => r.Contains(Path.Combine("com.valvesoftware.Steam", ".local", "share", "Steam")));
+    }
+
+    // ~/.steam/steam is a link to ~/.local/share/Steam: a Proton world reached both ways is listed once (twice before),
+    // and so is one added with a separator at the end.
+    [Fact]
+    public void AWorldReachedThroughALinkIsListedOnce()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+        string steam = Local(".local", "share", "Steam");
+        string prefix = Path.Combine(steam, "steamapps", "compatdata", "892970", "pfx", "drive_c", "users", "steamuser", "AppData", "LocalLow", "IronGate", "Valheim", "worlds_local");
+        CopyWorld(Path.Combine(prefix, "Proton"));
+        Directory.CreateDirectory(Local(".steam"));
+        Directory.CreateSymbolicLink(Local(".steam", "steam"), steam);
+        var s = new AppSettings { WorldFolders = { Path.Combine(prefix, "Proton") + Path.DirectorySeparatorChar } };
+
+        Assert.Single(Worlds.Find(s), w => w.Name == "Proton");
     }
 
     [Fact]
@@ -181,6 +198,18 @@ public sealed class HomeFolderTests : IDisposable
         Assert.StartsWith("Old save format", ancient.Problem);
         Assert.DoesNotContain(found, w => w.Path.EndsWith("Converted.db", StringComparison.Ordinal));
         Assert.Single(found, w => w.Name == "Converted");
+    }
+
+    // A save number too large for one (a stray file) is passed over: the world is still listed (it vanished, with
+    // nothing said).
+    [Fact]
+    public void AWorldWithAStraySaveNumberIsStillListed()
+    {
+        string local = Local(".config", "unity3d", "IronGate", "Valheim", "worlds_local");
+        CopyWorld(Path.Combine(local, "Odd"));
+        File.WriteAllText(Path.Combine(local, "Odd", "_main.99999999999.chunks"), "");
+
+        Assert.Equal(2, Assert.Single(Worlds.Find(new AppSettings()), w => w.Name == "Odd").SaveNumber);
     }
 
     [Fact]
@@ -279,6 +308,24 @@ public sealed class HomeFolderTests : IDisposable
     }
 
     [Fact]
+    public void ACharacterFileIsReadAgainOnlyWhenItChanged()
+    {
+        string chars = Local(".config", "unity3d", "IronGate", "Valheim", "characters_local");
+        Directory.CreateDirectory(chars);
+        string file = Path.Combine(chars, "ragnar.fch");
+        File.WriteAllBytes(file, Fch("Ragnar", 5));
+        Assert.Equal(5, Assert.Single(Characters.Local()).Id);
+        int reads = Characters.FileReads;
+        Assert.Equal(5, Assert.Single(Characters.Local()).Id);
+        Assert.Equal(reads, Characters.FileReads);
+        // Saved again by the game: read again.
+        File.WriteAllBytes(file, Fch("Ragnar", 6));
+        File.SetLastWriteTimeUtc(file, DateTime.UtcNow.AddMinutes(1));
+        Assert.Equal(6, Assert.Single(Characters.Local()).Id);
+        Assert.Equal(reads + 1, Characters.FileReads);
+    }
+
+    [Fact]
     public void ACharacterFileThatCannotBeReadIsPassedOver()
     {
         if (OperatingSystem.IsWindows() || Environment.UserName == "root")
@@ -373,6 +420,30 @@ public sealed class HomeFolderTests : IDisposable
         Assert.Equal(new[] { "flat", "game", "mine", "r2", "ts" }, bridges.Select(b => b.Token).Order().ToArray());
     }
 
+    // A mod's folder in plugins that cannot be read is passed over in the search for the plugin (the whole check threw).
+    [Fact]
+    public void AnUnreadableFolderInPluginsIsPassedOver()
+    {
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            return;
+        }
+        string bep = Local("profile", "BepInEx");
+        string locked = Path.Combine(bep, "plugins", "Locked");
+        Directory.CreateDirectory(locked);
+        File.SetUnixFileMode(locked, UnixFileMode.None);
+        try
+        {
+            Assert.Empty(LocalGame.FindBridges(new AppSettings { BepInExFolders = { bep } }, out bool bepInEx, out bool plugin));
+            Assert.True(bepInEx);
+            Assert.False(plugin);
+        }
+        finally
+        {
+            File.SetUnixFileMode(locked, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+    }
+
     [Fact]
     public void AFolderListedThatDoesNotExistIsPassedOver()
     {
@@ -388,33 +459,59 @@ public sealed class HomeFolderTests : IDisposable
     private sealed class Status(int code, string body) : IDisposable
     {
         private readonly HttpListener _l = new();
+        /// <summary>Answering the requests: Dispose waits for it to end, and its errors fail the test.</summary>
+        private Task _serving = Task.CompletedTask;
         public int Port { get; } = FakeGame.FreePort();
+
+        /// <summary>Whether answering ended with an error (Dispose then throws it).</summary>
+        public bool Broken => _serving.IsFaulted;
 
         public Status Start()
         {
             _l.Prefixes.Add($"http://127.0.0.1:{Port}/");
             _l.Start();
-            _ = Task.Run(async () =>
+            _serving = Task.Run(async () =>
             {
-                while (_l.IsListening)
+                while (true)
                 {
+                    HttpListenerContext ctx;
                     try
                     {
-                        var ctx = await _l.GetContextAsync();
-                        ctx.Response.StatusCode = code;
-                        await ctx.Response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(body));
-                        ctx.Response.Close();
+                        ctx = await _l.GetContextAsync();
                     }
-                    catch (Exception)
+                    catch (Exception) when (!_l.IsListening)
                     {
+                        // Closed (Dispose): the wait for the next request ends with an error, and so does the serving.
                         return;
                     }
+                    ctx.Response.StatusCode = code;
+                    await ctx.Response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(body));
+                    ctx.Response.Close();
                 }
             });
             return this;
         }
 
-        public void Dispose() => _l.Close();
+        /// <summary>Stops answering and waits until the answering has ended; an error in it fails the test.</summary>
+        public void Dispose()
+        {
+            _l.Close();
+            Assert.True(_serving.Wait(TimeSpan.FromSeconds(30)), "the status server did not stop answering");
+        }
+    }
+
+    [Fact]
+    public void AStatusServerThatFailsToAnswerFailsItsDisposal()
+    {
+        // Not a status an HTTP answer can have: setting it throws.
+        var broken = new Status(42, "").Start();
+        using var http = new System.Net.Http.HttpClient();
+        _ = http.GetAsync($"http://127.0.0.1:{broken.Port}/status", TestContext.Current.CancellationToken);
+
+        Assert.True(SpinWait.SpinUntil(() => broken.Broken, TimeSpan.FromSeconds(30)), "the request was never answered");
+        var e = Assert.Throws<AggregateException>(broken.Dispose);
+
+        Assert.IsType<ProtocolViolationException>(e.InnerException);
     }
 
     [Fact]
@@ -445,6 +542,36 @@ public sealed class HomeFolderTests : IDisposable
         var r = await LocalGame.FindRunning(LocalGame.FindBridges(settings, out _, out _));
         Assert.Equal("", r!.World);
         Assert.Equal(0, r.Players);
+    }
+
+    [Fact]
+    public async Task BridgesAreProbedTogetherAndTheFirstThatAnswersIsTaken()
+    {
+        // Three ports that take the connection but never answer: asked one after another they would cost 4.5 s.
+        var silent = Enumerable.Range(0, 3).Select(_ => new TcpListener(IPAddress.Loopback, 0)).ToList();
+        try
+        {
+            foreach (var l in silent)
+            {
+                l.Start();
+            }
+            using var first = new Status(200, "{\"world\":\"First\"}").Start();
+            using var second = new Status(200, "{\"world\":\"Second\"}").Start();
+            var bridges = silent.Select(l => new LocalGame.Bridge("cfg", "here", ((IPEndPoint)l.LocalEndpoint).Port, "t"))
+                .Append(new LocalGame.Bridge("cfg", "here", first.Port, "t"))
+                .Append(new LocalGame.Bridge("cfg", "here", second.Port, "t"));
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            var r = await LocalGame.FindRunning(bridges);
+            Assert.Equal("First", r!.World);
+            Assert.True(clock.Elapsed < TimeSpan.FromSeconds(4), $"{clock.Elapsed}");
+        }
+        finally
+        {
+            foreach (var l in silent)
+            {
+                l.Stop();
+            }
+        }
     }
 
     [Fact]
@@ -591,12 +718,12 @@ public sealed class HomeFolderTests : IDisposable
     }
 
     [Fact]
-    public void WithoutATunnelThereIsNothingToDiagnoseOrClose()
+    public async Task WithoutATunnelThereIsNothingToDiagnoseOrClose()
     {
         Tunnel.Close();
         Tunnel.Close();
         Assert.False(Tunnel.Open);
-        Assert.Null(Tunnel.Diagnose("/home/valheim/server"));
-        Assert.Null(Tunnel.Diagnose(null));
+        Assert.Null(await Tunnel.Diagnose("/home/valheim/server"));
+        Assert.Null(await Tunnel.Diagnose(null));
     }
 }

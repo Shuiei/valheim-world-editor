@@ -29,6 +29,24 @@ public class SaveSmallPartsTests
     }
 
     [Fact]
+    public void TheFinderGivesEachSectorTheChunkFileFindGives()
+    {
+        using var w = new TempWorld();
+        var chunks = w.Load().Chunks;
+        var find = ChunkMath.Finder(chunks);
+        int inFiles = 0;
+        for (int x = -260; x <= 260; x += 3)
+        {
+            for (int z = -260; z <= 260; z += 5)
+            {
+                Assert.Same(ChunkMath.Find(chunks, x, z), find(x, z));
+                inFiles += find(x, z) != null ? 1 : 0;
+            }
+        }
+        Assert.True(inFiles > 0);
+    }
+
+    [Fact]
     public void ItemCountsAreOneOrTwoBytes()
     {
         using (var r = new ValheimReader(new MemoryStream([0x7F])))
@@ -119,7 +137,7 @@ public class SaveSmallPartsTests
             new NewObject(-2, StableHash.Of("NoSuchThing_xyz"), new Vector3(7, 30, 9), Vector3.Zero, 1f),
         ]);
         var sync = new LiveSync();
-        string msg = await sync.Apply(world, edits, live);
+        string msg = (await sync.Apply(world, edits, live)).Shown;
         Assert.Equal((0, 1), Assert.Single(game.ObjectCalls));
         Assert.Contains("1 skipped (unknown kind of object at 7, 9)", msg);
     }

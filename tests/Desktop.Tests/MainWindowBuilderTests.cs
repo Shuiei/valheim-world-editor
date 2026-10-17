@@ -49,7 +49,7 @@ public class MainWindowBuilderTests
             var copy = scene.Things[^1];
             Assert.True(copy.Piece);
             var z = ZdoData.Parse(ObjectData.Bytes(scene.World, scene.Session!.Edits, copy.Id)!);
-            Assert.Equal(12345, z.LongList.First(l => l.Key == Builders.CreatorKey).Value);
+            Assert.Equal(12345, z.LongList.First(l => l.Key == TerrainEditor.Editing.ObjectField.CreatorKey).Value);
             // Again: it has a builder now.
             w.View.Select([scene.Things.Count - 1]);
             w.Claim();

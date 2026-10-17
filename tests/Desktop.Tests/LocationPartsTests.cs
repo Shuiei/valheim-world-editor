@@ -37,7 +37,9 @@ public class LocationPartsTests
 
         var shown = LocationParts.Of(s);
         Assert.Equal([new(Camp, new Vector3(10, 30, 10), new Vector3(0, 45, 0)), new(Crypt, new Vector3(70, 30, 70), Vector3.Zero)], shown);
-        // Nothing changed: what was found is kept.
+        // Nothing changed: what was found is kept, through ground strokes too.
+        Assert.Same(shown, LocationParts.Of(s));
+        session.Shape(32, 32, _ => 1, 3, 0, "Shape");
         Assert.Same(shown, LocationParts.Of(s));
 
         // The crypt's proxy deleted: found again without it.

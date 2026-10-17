@@ -61,6 +61,50 @@ public class ClaudeRelayTests
         Assert.Equal(5, Assert.Single(answers).GetProperty("id").GetInt32());
     }
 
+    // A batch (a JSON array) or a bare value is not a message: an error with no id, and the relay goes on; a method
+    // that is no string is passed on as a message without one. Neither ends the relay.
+    [Fact]
+    public async Task BatchesAndOddMethodsDoNotEndTheRelay()
+    {
+        int sent = 0;
+        var answers = await Relay(
+            "[{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}]\n7\n{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":5}\n{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"ping\"}\n",
+            req =>
+            {
+                sent++;
+                string body = req.Content!.ReadAsStringAsync().Result;
+                int id = body.Contains("\"id\":2", StringComparison.Ordinal) ? 2 : 3;
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent($"{{\"jsonrpc\":\"2.0\",\"id\":{id},\"result\":{{}}}}", System.Text.Encoding.UTF8, "application/json") };
+            });
+        Assert.Equal(2, sent);
+        Assert.Equal(4, answers.Count);
+        foreach (var bad in answers.Take(2))
+        {
+            Assert.Equal(JsonValueKind.Null, bad.GetProperty("id").ValueKind);
+            Assert.Equal(-32600, bad.GetProperty("error").GetProperty("code").GetInt32());
+        }
+        Assert.Equal(2, answers[2].GetProperty("id").GetInt32());
+        Assert.Equal(3, answers[3].GetProperty("id").GetInt32());
+    }
+
+    // The editor not answering within the time allowed (the client's timeout cancels the request): an error for a
+    // request, nothing for a notification, and the relay goes on with the next line.
+    [Fact]
+    public async Task NoAnswerInTimeIsAnErrorNotTheEnd()
+    {
+        var answers = await Relay(
+            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\"}\n{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"ping\"}\n",
+            req => req.Content!.ReadAsStringAsync().Result.Contains("ping", StringComparison.Ordinal)
+                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{}}", System.Text.Encoding.UTF8, "application/json") }
+                : throw new TaskCanceledException("timed out", new TimeoutException()));
+        Assert.Equal(2, answers.Count);
+        Assert.Equal(1, answers[0].GetProperty("id").GetInt32());
+        Assert.Contains("gave no answer within 5 minutes", answers[0].GetProperty("error").GetProperty("message").GetString());
+        Assert.Equal(2, answers[1].GetProperty("id").GetInt32());
+        // A cancellation that is not the timeout is not answered as one: it is not swallowed.
+        await Assert.ThrowsAsync<TaskCanceledException>(() => Relay("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}\n", _ => throw new TaskCanceledException("cancelled")));
+    }
+
     // Nothing listening on the port: the editor is not running.
     [Fact]
     public async Task NoEditorListening()

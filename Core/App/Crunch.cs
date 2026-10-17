@@ -93,12 +93,23 @@ public static class Crunch
     /// other in the file's order. Null when the file is not one read here, the level is not in it, or the data is
     /// broken.
     /// </summary>
-    public static byte[]? Unpack(byte[] crn, int level)
+    public static byte[]? Unpack(byte[] crn, int level) => Unpack(crn, _ => level)?.Blocks;
+
+    /// <summary>
+    /// The texture a crn file holds and the mip level <paramref name="pick"/> chooses from it, unpacked as
+    /// <see cref="Unpack(byte[], int)"/> does: the header read and checked once for both. Null when the file is not one
+    /// read here, the level picked is not in it, or the data is broken.
+    /// </summary>
+    /// <param name="crn">The crn file.</param>
+    /// <param name="pick">The level wanted, from the texture's size, levels and format.</param>
+    public static (Texture Info, int Level, byte[] Blocks)? Unpack(byte[] crn, Func<Texture, int> pick)
     {
         try
         {
             var h = new Header(crn);
-            return level < 0 || level >= h.Levels ? null : new Unpacker(crn, h).Level(level);
+            var info = new Texture(h.Width, h.Height, h.Levels, h.Format == Dxt5);
+            int level = pick(info);
+            return level < 0 || level >= h.Levels ? null : (info, level, new Unpacker(crn, h).Level(level));
         }
         catch (InvalidDataException)
         {

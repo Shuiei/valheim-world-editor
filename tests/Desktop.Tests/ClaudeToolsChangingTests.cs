@@ -49,7 +49,8 @@ public class ClaudeToolsChangingTests
         Assert.Equal("None of those ids is an object of the area.", await r.T.RemoveObjects([-1, 1_000_000]));
         int id = ClaudeRun.J(await r.T.ListObjects(limit: 1))[0].GetProperty("id").GetInt32();
         string took = await r.T.RemoveObjects([id, id, -1]);
-        Assert.Equal("Took 1 away (2 id(s) were not objects of the area). Now pending: 0 zone(s) of ground, 0 object(s) added, 1 taken away.", took);
+        // A repeated id is one id: only -1 was not an object (the count took the list with repeats).
+        Assert.Equal("Took 1 away (1 id(s) were not objects of the area). Now pending: 0 zone(s) of ground, 0 object(s) added, 1 taken away.", took);
         Assert.Equal("No object with that id in the area.", await r.T.SetContents(id, text: "gone"));
         Assert.Equal("Undone. Now pending: nothing.", await r.T.Undo());
         Assert.StartsWith("Redone. Now pending: 0 zone(s) of ground, 0 object(s) added, 1 taken away.", await r.T.Redo());
@@ -79,9 +80,10 @@ public class ClaudeToolsChangingTests
         Assert.Contains("is not a container or a stand", await r.T.SetContents(tree, [new ClaudeTools.ItemSpec { Item = "Wood" }]));
         Assert.Contains("is not a sign: only signs take a text", await r.T.SetContents(tree, text: "hello"));
 
-        // A full chest: ten stacks, laid out in its slots.
-        string filled = await r.T.SetContents(chest, [.. Enumerable.Range(0, 10).Select(i => new ClaudeTools.ItemSpec { Item = "Coins", Stack = i + 1 })]);
+        // A full chest: ten stacks, laid out in its slots; one larger than a stack of coins is cut, and said.
+        string filled = await r.T.SetContents(chest, [.. Enumerable.Range(0, 10).Select(i => new ClaudeTools.ItemSpec { Item = "Coins", Stack = i == 9 ? 5000 : i + 1 })]);
         Assert.StartsWith("Changed", filled);
+        Assert.EndsWith(" Coins: stack of 5000 cut to 999 (the item's maximum).", filled);
         Assert.Equal("Claude: filled piece_chest_wood", r.W.Session!.UndoLabel);
         Assert.StartsWith("Changed", await r.T.SetContents(stand, orientation: 2));
         Assert.StartsWith("Changed", await r.T.SetContents(armour, pose: 3));
@@ -104,6 +106,8 @@ public class ClaudeToolsChangingTests
         string made = await r.T.GenerateDungeon(biome: "Meadows", size: 9, levels: 0, monsters: 5, loot: -1, light: 7, decor: -2, seed: 3, name: "Test hold", x: 5, z: 5);
         Assert.Contains("Now pending:", made);
         Assert.True(r.W.World.Pending.Added > 0, made);
+        // One of Claude's steps, as Take back Claude's changes finds them.
+        Assert.Equal("Claude: generated dungeon Test hold", r.W.Session!.UndoLabel);
     }
 
     // Another area opened while the dungeon is generated: it is not put in that one.

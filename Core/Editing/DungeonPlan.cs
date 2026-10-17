@@ -1,3 +1,4 @@
+using TerrainEditor.App;
 using static TerrainEditor.Editing.DungeonKit;
 
 namespace TerrainEditor.Editing;
@@ -59,8 +60,10 @@ internal sealed class DungeonPlan
         public bool DeadEnd;
         /// <summary>Its recesses (alcoves off a room, niches off a corridor): each one's tiles and the way out of the space into it.</summary>
         public readonly List<(List<(int I, int J)> Tiles, (int X, int Z) Out)> Recesses = [];
-        /// <summary>Its box (tiles, world axes).</summary>
+        /// <summary>Its box (tiles, world axes), grown to hold its recesses.</summary>
         public int X0, Z0, W, H;
+        /// <summary>Its box before recesses grew it (null: it has none).</summary>
+        public (int X0, int Z0, int W, int H)? Before;
         /// <summary>The way in.</summary>
         public (int X, int Z) Dir;
         /// <summary>The doorways on its walls, to either side.</summary>
@@ -72,6 +75,9 @@ internal sealed class DungeonPlan
 
         /// <summary>Whether it is a room (not a corridor).</summary>
         public bool IsRoom => !Corridor;
+
+        /// <summary>Its own box (tiles, world axes): its walls without its recesses, the box its layout is made for.</summary>
+        public (int X0, int Z0, int W, int H) Own => Before ?? (X0, Z0, W, H);
 
         /// <summary>The middle of its box along x (metres).</summary>
         public float CenterX => (X0 + W / 2f) * 2;
@@ -130,6 +136,8 @@ internal sealed class DungeonPlan
         public readonly HashSet<(int, int)> Holes = [];
         /// <summary>Cells with no roof: under a stairwell.</summary>
         public readonly HashSet<(int, int)> Open = [];
+        /// <summary>Cells a tall room rises through: nothing on the level above may stand in them.</summary>
+        public readonly HashSet<(int, int)> TallCells = [];
         /// <summary>The level's rooms and corridors, in the order made.</summary>
         public readonly List<Space> Spaces = [];
     }
@@ -140,8 +148,8 @@ internal sealed class DungeonPlan
     public readonly List<Space> Spaces = [];
     /// <summary>Every doorway of every level.</summary>
     public readonly List<Doorway> Doors = [];
-    /// <summary>What could not be made, for the user.</summary>
-    public readonly List<string> Notes = [];
+    /// <summary>What could not be made, for the user (and in English for Claude).</summary>
+    public readonly List<Said> Notes = [];
     /// <summary>The entrance hall on the first level, at the origin.</summary>
     public Space Entrance = null!;
     /// <summary>The boss's arena and the treasury beyond it (null when there was no room for them).</summary>
@@ -212,18 +220,9 @@ internal sealed class DungeonPlanner
     private int Even(int min, int max) => min + 2 * _rnd.Next((max - min) / 2 + 1);
 
     /// <summary>One of the items at random, each as likely as its weight.</summary>
-    private T Pick<T>(IReadOnlyList<(T Item, float Weight)> items)
-    {
-        float total = items.Sum(i => i.Weight), roll = (float)_rnd.NextDouble() * total;
-        foreach (var (item, w) in items)
-        {
-            if ((roll -= w) <= 0)
-            {
-                return item;
-            }
-        }
-        return items[^1].Item;
-    }
+#pragma warning disable S2245 // A plan must come out the same from its seed; nothing here is a secret.
+    private T Pick<T>(IReadOnlyList<(T Item, float Weight)> items) => Weighted.Pick(items, i => i.Weight, _rnd.NextDouble()).Item;
+#pragma warning restore S2245
 
     /// <summary>Makes the whole plan into <see cref="_plan"/>.</summary>
     private void Build()
@@ -269,7 +268,7 @@ internal sealed class DungeonPlanner
                 var top = AttachStairs(l, cur) ?? l.Spaces.Where(s => s.IsRoom && CanParent(s)).OrderByDescending(s => Dist2(s, _plan.Entrance)).Select(s => AttachStairs(l, s)).FirstOrDefault(s => s != null);
                 if (top == null)
                 {
-                    _plan.Notes.Add($"no room for stairs down from level {k + 1}; the levels below are left out");
+                    _plan.Notes.Add(Said.Of("dungeon.msg.noStairs", k + 1));
                     levels = k + 1;
                     _plan.Levels.RemoveRange(levels, _plan.Levels.Count - levels);
                     last = true;
@@ -281,10 +280,13 @@ internal sealed class DungeonPlanner
             }
             if (last)
             {
+                // The antechamber is kept only with the arena beyond it: one with no arena would be a dead end.
+                var before = Mark(l);
                 var ante = Attach(l, cur, Room.Antechamber, main: true) ?? Attach(l, AnyParent(l, main: true), Room.Antechamber, main: true);
                 var boss = ante == null ? null : Attach(l, ante, Room.Boss, main: true, forward: true) ?? Attach(l, ante, Room.Boss, main: true);
                 if (boss == null)
                 {
+                    Drop(l, before);
                     // Not enough room ahead: anywhere it fits.
                     foreach (var p in l.Spaces.Where(s => s.IsRoom && CanParent(s)).OrderByDescending(s => Dist2(s, _plan.Entrance)).ToList())
                     {
@@ -294,6 +296,7 @@ internal sealed class DungeonPlanner
                         {
                             break;
                         }
+                        Drop(l, before);
                     }
                 }
                 if (boss != null)
@@ -303,7 +306,7 @@ internal sealed class DungeonPlanner
                 }
                 else
                 {
-                    _plan.Notes.Add("no room for the boss arena");
+                    _plan.Notes.Add(Said.Of("dungeon.msg.noArena"));
                 }
             }
             // Rooms off the way: wings, some with a twin across, some leading further.
@@ -341,7 +344,7 @@ internal sealed class DungeonPlanner
         // The boss's key, in a chest far from the boss's door; a hidden cache or two.
         if (_s.BossKey && _plan.Boss != null)
         {
-            var dist = Distances(_plan.Boss);
+            var dist = Distances(_plan.Boss, StairLinks(_plan.Spaces));
             var keyRoom = _plan.Spaces.Where(s => s.IsRoom && !s.Main && s.Room is not (Room.Secret or Room.StairTop or Room.StairBottom or Room.Treasury) && dist.ContainsKey(s))
                 .OrderByDescending(s => dist[s] + _rnd.NextDouble()).FirstOrDefault()
                 ?? _plan.Spaces.Where(s => s.IsRoom && s.Room is not (Room.Boss or Room.Treasury or Room.Antechamber or Room.StairTop or Room.StairBottom)).OrderByDescending(s => dist.GetValueOrDefault(s)).FirstOrDefault();
@@ -399,6 +402,53 @@ internal sealed class DungeonPlanner
         return s;
     }
 
+    /// <summary>How far the plan had got: what <see cref="Drop"/> takes it back to.</summary>
+    /// <param name="Spaces">The level's spaces then.</param>
+    /// <param name="AllSpaces">The plan's spaces then.</param>
+    /// <param name="Doors">The plan's doorways then.</param>
+    /// <param name="Next">The next space's id then.</param>
+    /// <param name="Used">The kinds of room made by then.</param>
+    private readonly record struct Point(int Spaces, int AllSpaces, int Doors, int Next, Room[] Used);
+
+    /// <summary>Where the plan of a level is now, to take back what is added after it.</summary>
+    private Point Mark(DungeonPlan.Level l) => new(l.Spaces.Count, _plan.Spaces.Count, _plan.Doors.Count, _next, [.. _used]);
+
+    /// <summary>
+    /// Takes back every space and doorway added to the level since <paramref name="at"/>: their tiles are free
+    /// again, the rooms they opened off lose those doorways, and kinds first made since count as unmade.
+    /// </summary>
+    private void Drop(DungeonPlan.Level l, Point at)
+    {
+        if (_plan.Spaces.Count - at.AllSpaces != l.Spaces.Count - at.Spaces)
+        {
+            throw new InvalidOperationException("spaces were added to another level since the mark");
+        }
+        var gone = l.Spaces.GetRange(at.Spaces, l.Spaces.Count - at.Spaces);
+        foreach (var d in _plan.Doors.GetRange(at.Doors, _plan.Doors.Count - at.Doors))
+        {
+            d.A.Doors.Remove(d);
+            d.B.Doors.Remove(d);
+        }
+        _plan.Doors.RemoveRange(at.Doors, _plan.Doors.Count - at.Doors);
+        foreach (var s in gone)
+        {
+            foreach (var t in s.Tiles)
+            {
+                l.Owner.Remove(t);
+            }
+        }
+        l.Spaces.RemoveRange(at.Spaces, gone.Count);
+        if (gone.Any(s => s.Tall))
+        {
+            // Made again from the tall rooms kept: one dropped may share a cell with one kept.
+            l.TallCells.Clear();
+            l.TallCells.UnionWith(l.Spaces.Where(s => s.Tall).SelectMany(s => s.Tiles).Select(DungeonPlan.CellOf));
+        }
+        _plan.Spaces.RemoveRange(at.AllSpaces, gone.Count);
+        _next = at.Next;
+        _used.IntersectWith(at.Used);
+    }
+
     /// <summary>Every tile of a box.</summary>
     private static IEnumerable<(int, int)> Box((int X0, int Z0, int W, int H) b)
     {
@@ -441,7 +491,6 @@ internal sealed class DungeonPlanner
     private DungeonPlan.Space AnyParent(DungeonPlan.Level l, bool main) =>
         l.Spaces.Where(s => CanParent(s) && (!main || s.Main)).OrderBy(_ => _rnd.Next()).FirstOrDefault() ?? l.Spaces[0];
 
-    /// <summary>A space to put a side room off, weighted towards crossings and long halls; null when none can lead on.</summary>
     /// <summary>The kinds of room that belong beside a kind: what a wing is made of.</summary>
     public static Room[] Kin(Room room) => room switch
     {
@@ -468,6 +517,7 @@ internal sealed class DungeonPlanner
         _ => [],
     };
 
+    /// <summary>A space to put a side room off, weighted towards crossings and long halls; null when none can lead on.</summary>
     private DungeonPlan.Space? SideParent(DungeonPlan.Level l)
     {
         var options = l.Spaces.Where(s => CanParent(s) && s.Room != Room.Antechamber)
@@ -515,7 +565,7 @@ internal sealed class DungeonPlanner
             int mid = s.Across / 2;
             return Math.Min(Across(t1), Across(t2)) == mid - 1;
         }
-        // Not in a corner, not on another doorway's tiles or right next to them.
+        // Not on another doorway's tiles or right next to them (a corner is allowed: the doorway may open flush with it).
         foreach (var d in s.Doors)
         {
             var mine = d.A == s ? [d.T1, d.T2] : new[] { Add(d.T1, d.Dir), Add(d.T2, d.Dir) };
@@ -528,8 +578,18 @@ internal sealed class DungeonPlanner
         return true;
     }
 
-    /// <summary>Whether a tile is not taken on the level and lies within the reach of the origin (more room ahead than behind).</summary>
-    private bool Free(DungeonPlan.Level l, (int I, int J) t) => !l.Owner.ContainsKey(t) && Math.Abs(t.I) <= _extent && t.J >= -_extent && t.J <= 2 * _extent;
+    /// <summary>
+    /// Whether a tile is not taken on the level, lies within the reach of the origin (more room ahead than behind) and
+    /// is not over a tall room of the level below, which rises through this one.
+    /// </summary>
+    private bool Free(DungeonPlan.Level l, (int I, int J) t) => !l.Owner.ContainsKey(t) && Math.Abs(t.I) <= _extent && t.J >= -_extent && t.J <= 2 * _extent && !OverTall(l, t);
+
+    /// <summary>
+    /// Whether a tile of the level lies in a cell a tall room of the level below rises through. The levels are laid out
+    /// from the first down, so a tall room finds the level above it complete, but the hidden caches come last, on any
+    /// level: one over a tall room would floor its upper half.
+    /// </summary>
+    private bool OverTall(DungeonPlan.Level l, (int I, int J) t) => l.Index + 1 < _plan.Levels.Count && _plan.Levels[l.Index + 1].TallCells.Contains(DungeonPlan.CellOf(t));
 
     /// <summary>What a placement would make: the room's tiles, the corridor's, where they meet.</summary>
     /// <param name="Box">The room's box (tiles).</param>
@@ -652,10 +712,15 @@ internal sealed class DungeonPlanner
         {
             // Two floors high: nothing on the level above in its cells.
             var above = _plan.Levels[l.Index - 1];
-            var cells = Box(box).Select(DungeonPlan.CellOf).ToHashSet();
-            if (above.Owner.Keys.Any(t => cells.Contains(DungeonPlan.CellOf(t))))
+            foreach (var (ci, cj) in Box(box).Select(DungeonPlan.CellOf).ToHashSet())
             {
-                return null;
+                for (int k = 0; k < 16; k++)
+                {
+                    if (above.Owner.ContainsKey((4 * ci + k % 4, 4 * cj + k / 4)))
+                    {
+                        return null;
+                    }
+                }
             }
         }
         // A shaped room keeps its whole box clear (what it cuts away stays empty, walled off), its tiles being
@@ -809,6 +874,13 @@ internal sealed class DungeonPlanner
         n.Shape = best.Shape;
         n.Parent = parent;
         n.Tall = best.Tall;
+        if (n.Tall)
+        {
+            foreach (var t in n.Tiles)
+            {
+                l.TallCells.Add(DungeonPlan.CellOf(t));
+            }
+        }
         Join(l, parent, n, best, door);
         if (!n.Tall && room is Room.Gallery or Room.Burial or Room.Ossuary or Room.Chapel or Room.Hall or Room.Tomb or Room.Throne or Room.Armory or Room.Library && _rnd.NextDouble() < 0.4)
         {
@@ -820,7 +892,8 @@ internal sealed class DungeonPlanner
     /// <summary>
     /// Adds up to count recesses to a space: a run of width tiles pushed out of one of its walls, where the tiles
     /// beyond are free (an alcove off a room, a niche off a corridor). The space's tiles are then more than its box
-    /// says, so it is marked shaped; its box grows to hold them.
+    /// says, so it is marked shaped; its box grows to hold them, and <see cref="DungeonPlan.Space.Before"/> keeps the
+    /// room's own.
     /// </summary>
     private void Recesses(DungeonPlan.Level l, DungeonPlan.Space s, int width, int count)
     {
@@ -850,6 +923,7 @@ internal sealed class DungeonPlanner
                     l.Owner[t] = s;
                 }
                 s.Recesses.Add((outside, dir));
+                s.Before ??= (s.X0, s.Z0, s.W, s.H);
                 int x0 = Math.Min(s.X0, outside.Min(t => t.Item1)), z0 = Math.Min(s.Z0, outside.Min(t => t.Item2));
                 int x1 = Math.Max(s.X0 + s.W - 1, outside.Max(t => t.Item1)), z1 = Math.Max(s.Z0 + s.H - 1, outside.Max(t => t.Item2));
                 (s.X0, s.Z0, s.W, s.H) = (x0, z0, x1 - x0 + 1, z1 - z0 + 1);
@@ -889,12 +963,12 @@ internal sealed class DungeonPlanner
 
     /// <summary>
     /// The same room on the other side of its parent, mirrored across the parent's middle; null when it is
-    /// not a centred, ordinary side room or the mirror does not fit.
+    /// not a centred, ordinary side room, its kind comes only once (a kitchen, a forge) or the mirror does not fit.
     /// </summary>
     private DungeonPlan.Space? Twin(DungeonPlan.Level l, DungeonPlan.Space n)
     {
         var parent = n.Parent;
-        if (parent == null || n.Shift != 0 || n.Tall || n.Dir == parent.Dir || n.Dir == (-parent.Dir.X, -parent.Dir.Z))
+        if (parent == null || SpecOf(n.Room).Unique || n.Shift != 0 || n.Tall || n.Dir == parent.Dir || n.Dir == (-parent.Dir.X, -parent.Dir.Z))
         {
             return null;
         }
@@ -903,7 +977,8 @@ internal sealed class DungeonPlanner
         {
             return null;
         }
-        (int, int) Mirror((int I, int J) t) => n.Dir.X != 0 ? (2 * parent.X0 + parent.W - 1 - t.I, t.J) : (t.I, 2 * parent.Z0 + parent.H - 1 - t.J);
+        var (x0, z0, w, h) = parent.Own;
+        (int, int) Mirror((int I, int J) t) => n.Dir.X != 0 ? (2 * x0 + w - 1 - t.I, t.J) : (t.I, 2 * z0 + h - 1 - t.J);
         var dir = (-n.Dir.X, -n.Dir.Z);
         var side = SideTiles(parent, dir);
         var m1 = Mirror(first.T1);
@@ -947,13 +1022,17 @@ internal sealed class DungeonPlanner
             return null;
         }
         var below = _plan.Levels[l.Index + 1];
+        // The search off one side gives the same answer each time: a side already tried is passed over (its draw
+        // still made, for the same dungeon from the same seed).
+        var tried = new List<(int X, int Z)>(4);
         for (int attempt = 0; attempt < 40; attempt++)
         {
             var dir = attempt < 12 ? parent.Dir : Dirs[_rnd.Next(4)];
-            if (dir == (-parent.Dir.X, -parent.Dir.Z) && parent.Room != Room.Hub)
+            if ((dir == (-parent.Dir.X, -parent.Dir.Z) && parent.Room != Room.Hub) || tried.Contains(dir))
             {
                 continue;
             }
+            tried.Add(dir);
             var side = SideTiles(parent, dir);
             for (int at = 0; at + 1 < side.Count; at++)
             {
@@ -1001,10 +1080,43 @@ internal sealed class DungeonPlanner
         dir.X > 0 ? t.I - box.X0 : dir.X < 0 ? box.X0 + box.W - 1 - t.I : dir.Z > 0 ? t.J - box.Z0 : box.Z0 + box.H - 1 - t.J;
 
     /// <summary>
+    /// The spaces the stairs join each space to, in the plan's order: a stair foot's top (its parent), and a space's
+    /// stair feet (the feet it is the parent of). Spaces without stairs are missing.
+    /// </summary>
+    /// <param name="spaces">The plan's spaces.</param>
+    internal static Dictionary<DungeonPlan.Space, List<DungeonPlan.Space>> StairLinks(IReadOnlyList<DungeonPlan.Space> spaces)
+    {
+        var feetOf = new Dictionary<DungeonPlan.Space, List<DungeonPlan.Space>>();
+        foreach (var o in spaces)
+        {
+            if (o.Room == Room.StairBottom && o.Parent is { } p)
+            {
+                (feetOf.TryGetValue(p, out var feet) ? feet : feetOf[p] = []).Add(o);
+            }
+        }
+        var links = new Dictionary<DungeonPlan.Space, List<DungeonPlan.Space>>();
+        void Link(DungeonPlan.Space s, DungeonPlan.Space o) => (links.TryGetValue(s, out var l) ? l : links[s] = []).Add(o);
+        foreach (var o in spaces)
+        {
+            if (o.Room == Room.StairBottom && o.Parent is { } p)
+            {
+                Link(p, o);
+            }
+            foreach (var foot in feetOf.GetValueOrDefault(o) ?? [])
+            {
+                Link(foot, o);
+            }
+        }
+        return links;
+    }
+
+    /// <summary>
     /// How many rooms away each space is from <paramref name="from"/>, through doorways and stairs
     /// (corridors do not count); spaces not reached are missing.
     /// </summary>
-    private Dictionary<DungeonPlan.Space, int> Distances(DungeonPlan.Space from)
+    /// <param name="from">The space to count from.</param>
+    /// <param name="stairs">The plan's <see cref="StairLinks"/> as it stands.</param>
+    private static Dictionary<DungeonPlan.Space, int> Distances(DungeonPlan.Space from, Dictionary<DungeonPlan.Space, List<DungeonPlan.Space>> stairs)
     {
         var dist = new Dictionary<DungeonPlan.Space, int> { [from] = 0 };
         var queue = new Queue<DungeonPlan.Space>();
@@ -1014,7 +1126,7 @@ internal sealed class DungeonPlanner
             var s = queue.Dequeue();
             var next = s.Doors.Select(d => d.Other(s)).ToList();
             // The stairs join a stairwell's two rooms.
-            next.AddRange(_plan.Spaces.Where(o => o.Parent == s && o.Room == Room.StairBottom || s.Room == Room.StairBottom && s.Parent == o));
+            next.AddRange(stairs.GetValueOrDefault(s) ?? []);
             foreach (var o in next)
             {
                 if (!dist.ContainsKey(o))
@@ -1040,9 +1152,12 @@ internal sealed class DungeonPlanner
         for (int made = 0, tries = 0; made < want && tries < want * 3 + 3; tries++)
         {
             var options = new List<(float Score, Action Make)>();
+            // Joins change the ways between rooms, so the distances are worked out again each try: the stairs once,
+            // and each room's only when it has a room to join.
+            var stairs = StairLinks(_plan.Spaces);
             foreach (var a in l.Spaces.Where(Loopable))
             {
-                var dist = Distances(a);
+                Dictionary<DungeonPlan.Space, int>? dist = null;
                 foreach (var dir in Dirs)
                 {
                     var side = SideTiles(a, dir);
@@ -1060,12 +1175,13 @@ internal sealed class DungeonPlanner
                             var b = l.Owner.GetValueOrDefault(n1);
                             if (b != null && b == l.Owner.GetValueOrDefault(n2) && b != a && Loopable(b))
                             {
+                                dist ??= Distances(a, stairs);
                                 int d = dist.GetValueOrDefault(b, 99);
                                 var path = Enumerable.Range(1, len).SelectMany(t => new[] { Add(t1, dir, t), Add(t2, dir, t) }).ToList();
                                 if (d >= 3 && path.All(t => Free(l, t)) && SlotAllowed(b, n1, n2, (-dir.X, -dir.Z)))
                                 {
                                     var (aa, bb, tt1, tt2, dd, ll, pp) = (a, b, t1, t2, dir, len, path);
-                                    void Join()
+                                    void MakeLoop()
                                     {
                                         if (ll == 0)
                                         {
@@ -1078,7 +1194,7 @@ internal sealed class DungeonPlanner
                                             Connect(c, bb, Add(tt1, dd, ll), Add(tt2, dd, ll), dd, loop: true);
                                         }
                                     }
-                                    options.Add((d - len * 0.3f + (float)_rnd.NextDouble(), Join));
+                                    options.Add((d - len * 0.3f + (float)_rnd.NextDouble(), MakeLoop));
                                 }
                                 break;
                             }
@@ -1180,7 +1296,7 @@ internal sealed class DungeonPlanner
                 d.Kind = Door.Gate;
                 continue;
             }
-            bool grand = rooms.Any(r => r.Room is Room.Hall or Room.Throne or Room.Feast or Room.Chapel) && rooms.All(r => !r.Corridor || true);
+            bool grand = rooms.Any(r => r.Room is Room.Hall or Room.Throne or Room.Feast or Room.Chapel);
             var kind = Pick(_style.Doors);
             if (grand && _rnd.NextDouble() < 0.35)
             {

@@ -43,13 +43,13 @@ public class EditSessionEdgeTests
         var s = TestScenes.Flat(2);
         Assert.False(s.Stroking);
         Assert.False(s.StrokeStep(64, 64, 0.1f));
-        Assert.Equal("", s.EndStroke());
+        Assert.Equal("", s.EndStroke().Shown);
         // During a stroke: undo, removing a change and saving wait for it to end.
         s.Shape(64, 64, Two, 3, 0, "raise");
         s.BeginStroke(BrushTool.Raise, 64, 64);
         Assert.True(s.Stroking);
         Assert.False(s.Undo());
-        Assert.Equal("", s.RemoveChange(s.UndoList[0]));
+        Assert.Equal("", s.RemoveChange(s.UndoList[0]).Shown);
         Assert.Throws<InvalidOperationException>(s.Save);
         s.EndStroke();
         Assert.True(s.Undo());
@@ -87,8 +87,7 @@ public class EditSessionEdgeTests
     public async Task AppliedZoneResetsReadTheAreaAgain()
     {
         using var game = new FakeGame();
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
-        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        var (world, s) = await TestScenes.LiveArea(game);
         s.Shape(32, 32, Two, 3, 0, "raise");
         world.Edits.SetReset(new ZoneReset(5, 5, true, false), true);
         bool reset = false;
@@ -106,8 +105,7 @@ public class EditSessionEdgeTests
     /// <returns>The session, the stroke's point and its height before the stroke, and the Apply's outcome.</returns>
     private static async Task<(EditSession S, int P, float Before, WorldSession.Outcome O)> ApplyDuringAStroke(FakeGame game, bool reset)
     {
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
-        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        var (world, s) = await TestScenes.LiveArea(game);
         s.Shape(32, 32, Two, 3, 0, "raise");
         if (reset)
         {
@@ -142,7 +140,7 @@ public class EditSessionEdgeTests
         float raised = s.Ground.HeightOf(p);
         Assert.NotEqual(before, raised);
         Assert.True(s.StrokeStep(40, 40, 0.1f));
-        Assert.Equal("", s.EndStroke());
+        Assert.Equal("", s.EndStroke().Shown);
         Assert.True(s.Ground.HeightOf(p) > raised);
         Assert.Equal(2, s.UndoList.Count);
         Assert.True(s.Undo());
@@ -159,9 +157,9 @@ public class EditSessionEdgeTests
         Assert.False(s.Stroking);
         Assert.Equal(before, s.Ground.HeightOf(p), 3);
         Assert.False(s.StrokeStep(40, 40, 0.1f));
-        Assert.Contains("stroke was dropped", s.EndStroke());
+        Assert.Contains("stroke was dropped", s.EndStroke().Shown);
         Assert.Empty(s.UndoList);
-        Assert.Equal("", s.EndStroke());
+        Assert.Equal("", s.EndStroke().Shown);
     }
 
     [Fact]
@@ -171,7 +169,7 @@ public class EditSessionEdgeTests
         var reset = new ZoneReset(0, 0, true, false);
         s.Commit("Area: Reset", null, [], [], [(reset, false, true)]);
         Assert.Equal(1, s.Pending.Resets);
-        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[0]));
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[0]).Shown);
         Assert.Equal(0, s.Pending.Resets);
         s.Undo();
         Assert.Equal(1, s.Pending.Resets);
@@ -212,7 +210,7 @@ public class EditSessionEdgeTests
     public void TheRaggedBrushWavesAroundTheCircle()
     {
         var b = new Brush { Radius = 10, Shape = BrushShape.Noise };
-        Assert.Equal(10 * 1.42f, b.Reach, 3);
+        Assert.Equal(10 * 1.5f, b.Reach, 3);
         // Along the edge, some points are in and some out: the edge is ragged.
         var w = Enumerable.Range(0, 64).Select(i => b.Weight(9.5f * MathF.Cos(i * MathF.Tau / 64), 9.5f * MathF.Sin(i * MathF.Tau / 64), 300 + 9.5f * MathF.Cos(i * MathF.Tau / 64), 200 + 9.5f * MathF.Sin(i * MathF.Tau / 64))).ToList();
         Assert.Contains(w, v => v > 0.01f);
@@ -260,7 +258,7 @@ public class EditSessionEdgeTests
         s.Brush.Radius = 3;
         s.BeginStroke(BrushTool.Raise, -50, -50);
         Assert.False(s.StrokeStep(-50, -50, 0.1f));
-        Assert.Equal("", s.EndStroke());
+        Assert.Equal("", s.EndStroke().Shown);
         Assert.False(s.CanUndo);
     }
 }

@@ -62,7 +62,10 @@ public static class Log
         /// <summary>Whether the next text starts a line, so gets the time.</summary>
         private bool _lineStart = true;
 
-        /// <summary>Writes text, the time (HH:mm:ss) before each line it starts; write errors are ignored.</summary>
+        /// <summary>
+        /// Writes text, the time (HH:mm:ss) before each line it starts; carriage returns are dropped (a Windows line end
+        /// written in two parts made a line of its own); write errors are ignored.
+        /// </summary>
         public void Write(string? text)
         {
             if (string.IsNullOrEmpty(text))
@@ -73,7 +76,7 @@ public static class Log
             {
                 try
                 {
-                    string[] parts = text.Replace("\r\n", "\n").Split('\n');
+                    string[] parts = text.Replace("\r", "").Split('\n');
                     for (int i = 0; i < parts.Length; i++)
                     {
                         if (i > 0)
@@ -136,6 +139,28 @@ public static class Log
                 // The console may be closed or redirected; the log file still gets the text.
             }
             file.Write(value);
+        }
+
+        /// <inheritdoc/>
+        public override void Write(char[] buffer, int index, int count)
+        {
+            // Whole, not a character at a time (TextWriter's own goes through Write(char)).
+            try { console.Write(buffer, index, count); } catch { }
+            file.Write(new string(buffer, index, count));
+        }
+
+        /// <inheritdoc/>
+        public override void Write(ReadOnlySpan<char> buffer)
+        {
+            try { console.Write(buffer); } catch { }
+            file.Write(new string(buffer));
+        }
+
+        /// <inheritdoc/>
+        public override void WriteLine()
+        {
+            try { console.WriteLine(); } catch { }
+            file.Write("\n");
         }
 
         /// <inheritdoc/>

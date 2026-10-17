@@ -35,7 +35,7 @@ below show the common patterns.
 | **List** | The seven examples ("Example: …"), then your saved scripts, newest first. Picking one **replaces** the text in the code box (save your own script first). Picking an example empties the name box; picking a saved script puts its name there. |
 | **Code box** | The script. `Tab` indents; `Ctrl+Enter` runs it. |
 | **Run (Ctrl+Enter)** | Compiles and runs the script on the open area. Everything it changes is **one undo step**, named "Script: " and the list entry's name in the [History](editor-basics.md#history). |
-| **Stop** | Stops a running script: nothing it did is kept. See [Stopping a script](#stopping-a-script). |
+| **Stop** | Stops a running script, whatever it is doing: nothing it did is kept. See [Stopping a script](#stopping-a-script). |
 | Name box / **Save** | Saves the code under the name typed ("name to save it as") and selects it in the list. Characters a file name cannot hold become `_`. A saved script of the same name is replaced without asking. |
 | **Output** | What the script printed (`Print`), then what it changed, or its mistakes or error with the line they are on. |
 
@@ -63,10 +63,11 @@ Each example is a whole script, ready to run on any open area. Read them to see 
 - **Compiled in the editor.** Run compiles your code with the editor's own C# compiler (C# 12,
   against .NET 10), together with the editor's API (`Area`, `Ground`, `Objects`, `Noise`, `Rnd`,
   `Print`). Nothing else is needed on your computer.
-- **On a snapshot.** When you press Run, the editor takes a copy of the open area: its ground, its
-  paint, its biomes and its objects. The script runs in the background on that copy. It sees its own
-  changes as it goes (raise a point, then `Ground.Height` gives the new height), but the area itself
-  does not change while it runs.
+- **On a snapshot, in a process of its own.** When you press Run, the editor takes a copy of the open
+  area: its ground, its paint, its biomes and its objects. The script runs on that copy in a process
+  of its own (the editor started again for it), so the editor stays responsive and Stop can always end
+  it. It sees its own changes as it goes (raise a point, then `Ground.Height` gives the new height),
+  but the area itself does not change while it runs.
 - **All at once, at the end.** When the script has finished, everything it changed (ground, paint,
   objects placed, moved and taken away) goes into the area at once, as one undo step. If it has
   mistakes, fails, is stopped or runs for 2 minutes, nothing changes.
@@ -143,8 +144,8 @@ take away are still listed.
 | `Objects.OfKind("Trees")` | Those of a kind (capitals do not matter): `Buildings`, `Ruins`, `Furniture`, `Trees`, `Rocks`, `Ore`, `Bushes`, `Pickables`, `Remains`, `Animals` (tamed), `Creatures` (wild, traders, birds), `SpawnPoints`, `Nests`, `Runestones`, `Dungeons`, `Effects`, `Other`. These are the kinds of the [View panel](editor-basics.md#view-panel). |
 | `Objects.Near(x, z, radius)` | Those within the radius of a point (measured flat: heights do not count). |
 | `Objects.Remove(o)` | Takes it away. |
-| `Objects.Place("Beech1", x, z, yaw:, scale:, y:, pitch:, roll:, snap:)` | A new object of the game, by its prefab name (`Beech1`, `Pinetree_01`, `rock4_forest`, `piece_chest_wood`...: the names the [Place](place.md) tool lists). Without `y` it stands on the ground **as the script leaves it** (dig first, then place: it sits in the hole). `yaw` turns it (degrees; 0: its front faces north, 90: east), `pitch` and `roll` tilt it, `scale` sizes it (`0.5f` half, `2` double; leave it out for the game's own size). With `snap: true`, a building piece moves to meet the snap points of the pieces there (and of those the script placed before it) within 0.5 m, as the hammer does. Building pieces are player built, by the builder chosen in View → Building → **Built by** (see [Player-built pieces](editor-basics.md#player-built-pieces)). |
-| `Objects.Move(o, x:, z:, y:, yaw:, pitch:, roll:, scale:)` | Moves, turns or sizes an object that is there; what you leave out stays as it is (or as an earlier `Move` of the script left it). It keeps what it holds (chest contents, builder...). The size must be above 0. |
+| `Objects.Place("Beech1", x, z, yaw:, scale:, y:, pitch:, roll:, snap:)` | A new object of the game, by its prefab name (`Beech1`, `Pinetree_01`, `rock4_forest`, `piece_chest_wood`...: the names the [Place](place.md) tool lists). Without `y` it stands on the ground **as the script leaves it** (dig first, then place: it sits in the hole). `yaw` turns it (degrees; 0: its front faces north, 90: east), `pitch` and `roll` tilt it, `scale` sizes it (`0.5f` half, `2` double; leave it out for the game's own size). With `snap: true`, a building piece moves to meet the snap points of the pieces there (and of those the script placed before it) within 0.5 m, as the hammer does. Building pieces are player built, by the builder chosen in View → Building → **Built by** (see [Player-built pieces](editor-basics.md#player-built-pieces)). A point outside the area (`Area.MinX` to `MaxX`, `Area.MinZ` to `MaxZ`, its edge included: every point `Area.Inside` takes is in), a value that is not a number (NaN, infinite) or a size below 0 stops the script. |
+| `Objects.Move(o, x:, z:, y:, yaw:, pitch:, roll:, scale:)` | Moves, turns or sizes an object that is there; what you leave out stays as it is (or as an earlier `Move` of the script left it). It keeps what it holds (chest contents, builder...). The size must be above 0, the place within the area and every value given a number. |
 | `Objects.CanPlace("Beech1")` | Whether the editor knows how to make that object. Use it before `Place` when a name may be wrong: `Place` with a name the editor cannot make stops the script. |
 
 ### Noise and random numbers
@@ -203,7 +204,10 @@ foreach (var (x, z) in Area.Points(step: 5))
     float slope = MathF.Abs(Ground.Height(x + 1, z) - Ground.Height(x - 1, z)) / 2;   // rise per metre
     if (slope > 0.45f || Ground.Height(x, z) < Area.Water + 1) continue;             // about 25°, and dry land
     if (Noise.At(x, z, 50, seed: 2) < 0 || !Rnd.Chance(0.6f)) continue;
-    Objects.Place(Rnd.Pick("Pinetree_01", "FirTree"), x + Rnd.Range(-2, 2), z + Rnd.Range(-2, 2), yaw: Rnd.Range(0, 360));
+    string tree = Rnd.Pick("Pinetree_01", "FirTree");
+    float px = x + Rnd.Range(-2, 2), pz = z + Rnd.Range(-2, 2);   // a little off the grid
+    if (!Area.Inside(px, pz)) continue;
+    Objects.Place(tree, px, pz, yaw: Rnd.Range(0, 360));
     planted++;
 }
 Print($"{planted} trees planted.");
@@ -311,11 +315,15 @@ The output box says what happened; the status bar says it in short.
 A loop over a whole 17 × 17 area is about 1.2 million points: a few seconds of work. Use
 `Area.Points(step: 4)` when every point is not needed.
 
-**Stop**, and the 2-minute limit, end a script at the next turn of any of its own loops (`for`,
-`foreach`, `while`, `do`, `goto`), at the next point of `Area.Points()`, and the next time it starts a
-new row of `Ground.Shape` or `Ground.Mountain`. Nothing it did is kept. A single call that takes long by itself, without a loop
-of yours around it (a LINQ query over hundreds of millions of items, `Thread.Sleep`...), cannot be
-stopped in the middle: the editor waits for it to finish.
+**Stop**, and the 2-minute limit, always work. A script ends at the next turn of any of its own loops
+(`for`, `foreach`, `while`, `do`, `goto`), at the next point of `Area.Points()`, and the next time it
+starts a new row of `Ground.Shape` or `Ground.Mountain`. A single call that takes long by itself,
+without a loop of yours around it (a LINQ query over hundreds of millions of items, `Thread.Sleep`, a
+recursion that never ends...), is ended a second later with the process the script runs in. Either
+way nothing it did is kept.
+
+The script's process is not a sandbox: a script runs with your rights, like any program you run, and
+can read and write your files. Run only scripts you understand.
 
 ## Good to know
 

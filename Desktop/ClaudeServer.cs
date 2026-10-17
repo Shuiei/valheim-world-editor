@@ -15,8 +15,9 @@ namespace TerrainEditor.Desktop;
 /// Claude's connection (Settings: Allow Claude to connect): an MCP server inside the editor
 /// (ClaudeTools), so that Claude (Claude Code, Claude Desktop) can look at the open world and change it
 /// as the user would. Only on 127.0.0.1, only for callers that send the token (which also keeps web
-/// pages out: they cannot send it, nor a Host other than this computer's address). What Claude changes
-/// stays pending: it never saves, applies live or saves a blueprint.
+/// pages out: they cannot send it, nor a Host other than this computer's address). What Claude changes in a world
+/// stays pending: it never saves a world or applies live. Only the Workshop's building can be kept, as a blueprint of
+/// the user's library (save_blueprint, which never replaces one without being told to).
 /// </summary>
 public sealed class ClaudeServer
 {
@@ -150,7 +151,16 @@ public sealed class ClaudeServer
             await next();
         });
         app.MapMcp("/mcp");
-        await app.StartAsync();
+        try
+        {
+            await app.StartAsync();
+        }
+        catch
+        {
+            // Not started (the port taken): the host is let go before the failure goes on to the caller.
+            await app.DisposeAsync();
+            throw;
+        }
         return new ClaudeServer(app, port);
     }
 

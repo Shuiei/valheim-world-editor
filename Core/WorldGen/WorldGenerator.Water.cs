@@ -208,32 +208,38 @@ public sealed partial class WorldGenerator
     private List<River> PlaceRivers()
     {
         var saved = Rnd.state;
-        Rnd.InitState(_riverSeed);
-        var rivers = new List<River>();
-        var from = new List<Vector2>(_lakes);
-        while (from.Count > 1)
+        try
         {
-            var p = from[0];
-            int to = RandomRiverEnd(rivers, p, 2000f);
-            if (to == -1 && !rivers.Any(r => r.P0 == p || r.P1 == p))
+            Rnd.InitState(_riverSeed);
+            var rivers = new List<River>();
+            var from = new List<Vector2>(_lakes);
+            while (from.Count > 1)
             {
-                to = RandomRiverEnd(rivers, p, 5000f);
+                var p = from[0];
+                int to = RandomRiverEnd(rivers, p, 2000f);
+                if (to == -1 && !rivers.Any(r => r.P0 == p || r.P1 == p))
+                {
+                    to = RandomRiverEnd(rivers, p, 5000f);
+                }
+                if (to == -1)
+                {
+                    from.RemoveAt(0);
+                    continue;
+                }
+                var river = new River { P0 = p, P1 = _lakes[to] };
+                river.Center = (river.P0 + river.P1) * 0.5f;
+                river.WidthMax = Rnd.Range(60f, 100f);
+                river.WidthMin = Rnd.Range(60f, river.WidthMax);
+                Curves(river);
+                rivers.Add(river);
             }
-            if (to == -1)
-            {
-                from.RemoveAt(0);
-                continue;
-            }
-            var river = new River { P0 = p, P1 = _lakes[to] };
-            river.Center = (river.P0 + river.P1) * 0.5f;
-            river.WidthMax = Rnd.Range(60f, 100f);
-            river.WidthMin = Rnd.Range(60f, river.WidthMax);
-            Curves(river);
-            rivers.Add(river);
+            Draw(rivers, Streams.All);
+            return rivers;
         }
-        Draw(rivers, Streams.All);
-        Rnd.state = saved;
-        return rivers;
+        finally
+        {
+            Rnd.state = saved;
+        }
     }
 
     /// <summary>
@@ -299,27 +305,33 @@ public sealed partial class WorldGenerator
     private List<River> PlaceStreams(bool deepNorth)
     {
         var saved = Rnd.state;
-        Rnd.InitState(_streamSeed);
-        var streams = new List<River>();
-        for (int i = 0; i < 3000; i++)
+        try
         {
-            if (!StreamStart(!deepNorth, out var start) || !StreamEnd(start, !deepNorth, out var end))
+            Rnd.InitState(_streamSeed);
+            var streams = new List<River>();
+            for (int i = 0; i < 3000; i++)
             {
-                continue;
+                if (!StreamStart(!deepNorth, out var start) || !StreamEnd(start, !deepNorth, out var end))
+                {
+                    continue;
+                }
+                var middle = (start + end) * 0.5f;
+                float h = GetPregenerationHeight(middle.x, middle.y, !deepNorth);
+                if (h is < 26f or > 44f)
+                {
+                    continue;
+                }
+                var stream = new River { P0 = start, P1 = end, Center = middle, WidthMax = 20f, WidthMin = 20f };
+                Curves(stream);
+                streams.Add(stream);
             }
-            var middle = (start + end) * 0.5f;
-            float h = GetPregenerationHeight(middle.x, middle.y, !deepNorth);
-            if (h is < 26f or > 44f)
-            {
-                continue;
-            }
-            var stream = new River { P0 = start, P1 = end, Center = middle, WidthMax = 20f, WidthMin = 20f };
-            Curves(stream);
-            streams.Add(stream);
+            Draw(streams, deepNorth ? Streams.DeepNorthOnly : Streams.NotDeepNorth);
+            return streams;
         }
-        Draw(streams, deepNorth ? Streams.DeepNorthOnly : Streams.NotDeepNorth);
-        Rnd.state = saved;
-        return streams;
+        finally
+        {
+            Rnd.state = saved;
+        }
     }
 
     /// <summary>

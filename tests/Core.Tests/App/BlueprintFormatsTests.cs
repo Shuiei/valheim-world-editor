@@ -53,6 +53,16 @@ public class BlueprintFormatsTests
         Assert.Equal(90f, bp.Pieces[0].Euler.Y, 2);
     }
 
+    // Blank or zero rotation fields are no turn (they gave NaN angles), and so is a quaternion too long for a float.
+    [Fact]
+    public void ARotationWithNoLengthIsNoTurn()
+    {
+        var bp = BlueprintFormats.Parse("tower.vbuild", "woodwall 0 0 0 0 1 2 3\nwood_floor 1e30 1e30 0 0 0 0 0\n");
+        Assert.Equal([Vector3.Zero, Vector3.Zero], bp.Pieces.Select(p => p.Euler));
+        bp = BlueprintFormats.Parse("hut.blueprint", "#Pieces\nwoodwall;Building;1;2;3;;;;;;1;1;1\n");
+        Assert.Equal(Vector3.Zero, Assert.Single(bp.Pieces).Euler);
+    }
+
     [Theory]
     [InlineData(0, 90, 0)]
     [InlineData(30, 45, 10)]
@@ -96,6 +106,26 @@ public class BlueprintFormatsTests
         Assert.Equal(-50, (int)clip["rel"]![i]!);
         Assert.Equal(255, (int)clip["pnt"]![i * 4 + 2]!);
         Assert.Equal("Small hut", (string?)clip["name"]);
+    }
+
+    [Fact]
+    public void APlanBuildExportKeepsWhatObjectsHoldAndItsNameOnOneLine()
+    {
+        // The export dropped the objects' data (a chest's contents, a sign's text) and wrote a name's line break as
+        // header lines of its own; an object without a prefab name became a piece line of none.
+        var sign = new TerrainEditor.Editing.ObjectField("strings", TerrainEditor.Save.StableHash.Of("text"), "Welcome");
+        var clip = new JsonObject
+        {
+            ["objects"] = new JsonArray(
+                new JsonObject { ["name"] = "sign", ["dx"] = 1, ["dy"] = 0, ["dz"] = 0, ["data"] = BlueprintFormats.DataJson([sign]) },
+                new JsonObject { ["name"] = "", ["dx"] = 2 }),
+        };
+        string planbuild = BlueprintFormats.Write(clip, "blueprint", "Hut\n#Creator:someone", _ => 0);
+        Assert.Contains("#Name:Hut #Creator:someone\n", planbuild);
+        Assert.Single(planbuild.Split('\n'), l => l.StartsWith("#Creator:", StringComparison.Ordinal));
+        var again = BlueprintFormats.Parse("x.blueprint", planbuild);
+        var piece = Assert.Single(again.Pieces);
+        Assert.Equal([sign], piece.Data!);
     }
 
     [Fact]

@@ -31,6 +31,12 @@ public class EditorProcess : IDisposable
     private static readonly TimeSpan PictureWait = TimeSpan.FromMinutes(Environment.GetEnvironmentVariable("VWE_COVERAGE") == "1" ? 8 : 3);
 
     public string? Why { get; }
+
+    /// <summary>How long Dispose waits for the editor to quit before killing it.</summary>
+    public TimeSpan QuitWait { get; init; } = TimeSpan.FromSeconds(15);
+
+    /// <summary>The editor's exit code once it has ended (137 when killed), else null.</summary>
+    public int? ExitCode => _p is { HasExited: true } ? _p.ExitCode : null;
     public bool Available => _p != null;
     // The editor's data folder (--data): its settings, log...
     public string Data { get; } = Path.Combine(Path.GetTempPath(), "vwe-visual-" + Guid.NewGuid().ToString("N")[..8]);
@@ -71,7 +77,9 @@ public class EditorProcess : IDisposable
         if (first != "@@ ready")
         {
             Why = "the editor did not start: " + first;
-            _p.Kill();
+            // Ended before its data folder is deleted (Dispose), which it may still be writing.
+            _p.Kill(entireProcessTree: true);
+            Assert.True(_p.WaitForExit(15000), "the editor did not end within 15 s of being killed");
             _p = null;
         }
     }
@@ -146,27 +154,21 @@ public class EditorProcess : IDisposable
     {
         if (_p != null)
         {
-            try
-            {
-                _p.StandardInput.WriteLine("quit");
-                _p.StandardInput.Flush();
-                if (!_p.WaitForExit(15000))
-                {
-                    _p.Kill();
-                }
-            }
-            catch
-            {
+            // An editor that ended before being told to quit failed: telling it then throws, and fails the clean-up.
+            _p.StandardInput.WriteLine("quit");
+            _p.StandardInput.Flush();
                 // The process may have exited already; the test is over either way.
+            if (!_p.WaitForExit(QuitWait))
+            {
+                // Ended before its data folder is deleted, which it may still be writing.
+                _p.Kill(entireProcessTree: true);
+                Assert.True(_p.WaitForExit(15000), "the editor did not end within 15 s of being killed");
             }
         }
-        try
+        if (Directory.Exists(Data))
+            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
         {
             Directory.Delete(Data, true);
-        }
-        catch
-        {
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
         }
         GC.SuppressFinalize(this);
     }

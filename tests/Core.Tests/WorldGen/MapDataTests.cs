@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using ValheimGen;
@@ -106,13 +107,58 @@ public class MapDataTests
         var map = new MapData(terrain, edits);
         var first = map.Detail(288, 288, 64, 1);
         Assert.Same(first, map.Detail(288, 288, 64, 1));
-        Assert.NotSame(first, map.Detail(288, 288, 64, 2));
-        // More than six windows: the old ones are dropped and built again when asked.
-        for (int i = 0; i < 7; i++)
-        {
-            map.Detail(288 + i * 64, 288, 64, 1);
-        }
+        // The window before the last one is kept too (panning back), and asking for it keeps it longest.
+        var second = map.Detail(352, 288, 64, 1);
+        Assert.Same(first, map.Detail(288, 288, 64, 1));
+        Assert.Same(second, map.Detail(352, 288, 64, 1));
+        // A third window drops the oldest one asked for: it is built again when asked.
+        map.Detail(416, 288, 64, 1);
+        Assert.Same(second, map.Detail(352, 288, 64, 1));
         Assert.NotSame(first, map.Detail(288, 288, 64, 1));
+    }
+
+    [Fact]
+    public void CloseUpsOfAnOlderEditVersionAreDropped()
+    {
+        using var w = new TempWorld();
+        var (_, terrain, edits) = Open(w);
+        var map = new MapData(terrain, edits);
+        var first = map.Detail(288, 288, 64, 1);
+        var other = map.Detail(352, 288, 64, 1);
+        Assert.NotSame(first, map.Detail(288, 288, 64, 2));
+        // Version 1's other window went when version 2 came, though there was room for it.
+        Assert.NotSame(other, map.Detail(352, 288, 64, 1));
+    }
+
+    [Fact]
+    public async Task ACloseUpOfOlderEditsDoesNotDropNewerOnes()
+    {
+        using var w = new TempWorld();
+        var (_, terrain, edits) = Open(w);
+        var map = new MapData(terrain, edits);
+        using var reached = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        int builds = 0;
+        // The first build (older edits) waits after its cache lookup until the newer one has been built and kept.
+        map.BeforeDetailBuild = () =>
+        {
+            if (Interlocked.Increment(ref builds) == 1)
+            {
+                reached.Set();
+                if (!release.Wait(TimeSpan.FromSeconds(30)))
+                {
+                    throw new TimeoutException("The older build was never released.");
+                }
+            }
+        };
+        var olderBuild = Task.Run(() => map.Detail(352, 288, 64, 1), TestContext.Current.CancellationToken);
+        Assert.True(reached.Wait(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        var newer = map.Detail(288, 288, 64, 2);
+        release.Set();
+        var older = await olderBuild;
+        // The older build ended last: it is given but not kept, and the newer window stays.
+        Assert.Same(newer, map.Detail(288, 288, 64, 2));
+        Assert.NotSame(older, map.Detail(352, 288, 64, 1));
     }
 
     [Fact]
@@ -157,6 +203,26 @@ public class MapDataTests
         var first = new MapData(terrain, edits).Global;
         var (_, again, againEdits) = Open(w);
         Assert.Same(first, new MapData(again, againEdits).Global);
+    }
+
+    // The world map kept for opening the world again does not hold its memory once no map uses it.
+    [Fact]
+    public void AWorldMapNoLongerUsedCanBeCollected()
+    {
+        using var w = new TempWorld();
+        var map = UsedOnce(w);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        Assert.False(map.IsAlive);
+    }
+
+    /// <summary>A world map built for a world and dropped at once.</summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference UsedOnce(TempWorld w)
+    {
+        var (_, terrain, edits) = Open(w);
+        return new WeakReference(new MapData(terrain, edits).Global);
     }
 
     // Cancelled before it is asked for: thrown, as when it is built, though the world map is kept.

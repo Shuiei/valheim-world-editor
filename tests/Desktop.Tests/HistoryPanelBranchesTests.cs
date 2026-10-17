@@ -87,10 +87,25 @@ public class HistoryPanelBranchesTests
         s.BeginStroke(BrushTool.Raise, 40, 40);
         string? said = null;
         var p = new HistoryPanel(() => s) { Allow = _ => Task.FromResult(true) };
-        p.Message += m => said = m;
+        p.Message += m => said = m.Shown;
         await p.TakeBackClaudes();
         Assert.False(s.UndoList[0].Removed);
         Assert.Equal("Nothing taken back: finish the brush stroke first.", said);
+    }
+
+    // Several taken back: each removal is a step of its own, and the message says Ctrl+Z brings them back one at a time.
+    [AvaloniaFact]
+    public async Task SeveralTakenBackAreSaidToComeBackOneAtATime()
+    {
+        var s = TestScenes.Flat(1);
+        s.Shape(32, 32, _ => 1, 3, 0, "Claude: a hill");
+        s.Shape(40, 40, _ => 1, 3, 0, "Claude: another");
+        string? said = null;
+        var p = new HistoryPanel(() => s) { Allow = _ => Task.FromResult(true) };
+        p.Message += m => said = m.Shown;
+        await p.TakeBackClaudes();
+        Assert.Equal("Took back 2 change(s) Claude made; yours are kept. Each is its own step: Ctrl+Z brings them back one at a time.", said);
+        Assert.Equal(4, s.UndoList.Count);
     }
 
     // A change of Claude's that a later step of the user's built on (its copy moved again) stays, and the message
@@ -104,7 +119,7 @@ public class HistoryPanelBranchesTests
         s.Shape(32, 32, _ => 1, 3, 0, "Claude: raised");
         string? said = null;
         var p = new HistoryPanel(() => s) { Allow = _ => Task.FromResult(true) };
-        p.Message += m => said = m;
+        p.Message += m => said = m.Shown;
         await p.TakeBackClaudes();
         Assert.False(s.UndoList[0].Removed);
         Assert.True(s.UndoList[2].Removed);

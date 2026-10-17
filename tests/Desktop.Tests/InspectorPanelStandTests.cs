@@ -39,7 +39,7 @@ public class InspectorPanelStandTests
             var (w, s, stand) = Open(dir, "itemstand");
             var ins = w.Inspector;
             var said = new List<string>();
-            ins.Message += said.Add;
+            ins.Message += t => said.Add(t.Shown);
             Assert.True(ins.Open(stand));
             // Empty: one row, nothing in it.
             var row = Assert.Single(ins.Stand!);
@@ -83,7 +83,7 @@ public class InspectorPanelStandTests
             var (w, s, stand) = Open(dir, "ArmorStand");
             var ins = w.Inspector;
             var said = new List<string>();
-            ins.Message += said.Add;
+            ins.Message += t => said.Add(t.Shown);
             Assert.True(ins.Open(stand));
             // A row per kind of slot, each empty.
             var rows = ins.Stand!;

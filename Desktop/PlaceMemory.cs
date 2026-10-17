@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Avalonia.Threading;
 using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
@@ -32,29 +33,115 @@ public sealed class PlaceMemory
     /// <summary>The file in use: the override, or place.json in the data folder.</summary>
     private static string Where => PathOverride ?? FilePath;
 
-    /// <summary>Reads the file; a missing or unreadable file gives an empty memory.</summary>
+    /// <summary>
+    /// Whether the file could not be read (or, broken, kept aside) when this was loaded: what is in it is not
+    /// written over.
+    /// </summary>
+    private bool _unread;
+
+    /// <summary>
+    /// Reads the file. A missing one gives an empty memory; a broken one is first copied aside as place.json.bad (the
+    /// next save writes over it), then gives an empty memory; one that cannot be read (or kept aside) gives an empty
+    /// memory that is never saved over it. Nulls a hand-edited file holds are taken as empty, and presets without a
+    /// name or kinds are left out.
+    /// </summary>
     public static PlaceMemory Load()
     {
+        string text;
         try
         {
-            return File.Exists(Where) ? JsonSerializer.Deserialize<PlaceMemory>(File.ReadAllText(Where)) ?? new() : new();
+            // Read at once: File.Exists says no for a file there that cannot be read, which must not count as none.
+            text = File.ReadAllText(Where);
         }
-        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
             return new();
         }
-    }
-
-    /// <summary>Writes the file (errors are ignored: the memory is a convenience).</summary>
-    public void Save()
-    {
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"Place memory: {Where} could not be read ({ex.Message}); starting empty, not saving over it.");
+            return new() { _unread = true };
+        }
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(Where)!);
-            File.WriteAllText(Where, JsonSerializer.Serialize(this, Indented));
+            return (JsonSerializer.Deserialize<PlaceMemory>(text) ?? new()).Mended();
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"Place memory: {Where} is not readable ({ex.Message}); kept as {Where}.bad, starting empty.");
+            try
+            {
+                File.Copy(Where, Where + ".bad", overwrite: true);
+                return new();
+            }
+            catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
+            {
+                Console.WriteLine($"Place memory: {Where} could not be kept as {Where}.bad ({copy.Message}); not saving over it.");
+                return new() { _unread = true };
+            }
+        }
+    }
+
+    /// <summary>This memory with the nulls of a hand-edited file taken as empty, and its presets without a name or kinds left out.</summary>
+    private PlaceMemory Mended()
+    {
+        // The JSON may hold null where the types say there is none.
+        Presets = [.. (Presets ?? []).Where(p => p?.Name != null && p.Kinds != null)];
+        Favourites = [.. (Favourites ?? []).Where(n => n != null)];
+        Recent = [.. (Recent ?? []).Where(n => n != null)];
+        Chosen = [.. (Chosen ?? []).Where(n => n != null)];
+        Weights ??= [];
+        Builders ??= [];
+        return this;
+    }
+
+    /// <summary>
+    /// Writes the file through a temporary one, so a write cut short leaves the old file whole. A failure is logged,
+    /// not shown: the memory is a convenience, and stays as it is in this run. Nothing is written over a file that
+    /// could not be read.
+    /// </summary>
+    public void Save()
+    {
+        _later?.Stop();
+        if (_unread)
+        {
+            Console.WriteLine($"Place memory: not saved, {Where} could not be read when the editor started.");
+            return;
+        }
+        try
+        {
+            SafeFile.WriteAllText(Where, JsonSerializer.Serialize(this, Indented));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Console.WriteLine($"Place memory: {Where} could not be written ({ex.Message}).");
+        }
+    }
+
+    /// <summary>The timer of a save asked for with <see cref="SaveLater"/>; null until the first one.</summary>
+    private DispatcherTimer? _later;
+
+    /// <summary>
+    /// Saves 300 ms from now (again from now when asked again), on the UI thread: a slider dragged or kinds ticked in a
+    /// row write the file once. <see cref="Flush"/> writes a save still waiting.
+    /// </summary>
+    public void SaveLater()
+    {
+        if (_later == null)
+        {
+            _later = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+            _later.Tick += (_, _) => Save();
+        }
+        _later.Stop();
+        _later.Start();
+    }
+
+    /// <summary>Writes now a save asked for with <see cref="SaveLater"/> and still waiting (the editor is closing).</summary>
+    public void Flush()
+    {
+        if (_later?.IsEnabled == true)
+        {
+            Save();
         }
     }
 

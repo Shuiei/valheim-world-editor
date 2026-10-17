@@ -102,10 +102,8 @@ public static class LocationPrefabs
             bool B(string k) => l.GetProperty(k).GetInt32() != 0;
             var (contents, spawns, picks, nodes) = Dungeons.Parts(l);
             // Teleports and the interior's place: of scans since v1.39; older copies have neither.
-            static Vector3 V(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle());
-            static Quaternion Q(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle(), a[i + 3].GetSingle());
-            var teleports = l.TryGetProperty("teleports", out var ts) ? ts.EnumerateArray().Select(t => new Frame(V(t, 0), Q(t, 3))).ToList() : [];
-            Frame? interiorAt = l.TryGetProperty("interiorAt", out var at) && at.ValueKind == JsonValueKind.Array ? new Frame(V(at, 0), Q(at, 3)) : null;
+            var teleports = l.TryGetProperty("teleports", out var ts) && ts.ValueKind == JsonValueKind.Array ? ts.EnumerateArray().Select(t => new Frame(Dungeons.V(t, 0), Dungeons.Q(t, 3))).ToList() : [];
+            Frame? interiorAt = l.TryGetProperty("interiorAt", out var at) && at.ValueKind == JsonValueKind.Array ? new Frame(Dungeons.V(at, 0), Dungeons.Q(at, 3)) : null;
             bool custom = l.TryGetProperty("customInterior", out var c) && c.GetInt32() != 0;
             all[p.Name] = new Prefab(p.Name, StableHash.Of(p.Name), B("clearArea"), B("randomDamage"), B("interior"), contents, spawns, picks, nodes, custom, teleports, interiorAt);
         }

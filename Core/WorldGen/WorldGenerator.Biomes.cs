@@ -225,11 +225,4 @@ public sealed partial class WorldGenerator
         }
         return biome;
     }
-
-    /// <summary>
-    /// A point's area as the game finds it from its biome sectors (AltBiomeWorldData). The editor has
-    /// none, and the game without them sees one sector everywhere: never an edge.
-    /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822", Justification = "Asked of a world, as the game does.")]
-    public Heightmap.BiomeArea GetBiomeArea(Vector3 _) => Heightmap.BiomeArea.Median;
 }

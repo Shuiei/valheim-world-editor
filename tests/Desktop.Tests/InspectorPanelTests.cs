@@ -40,7 +40,7 @@ public class InspectorPanelTests
             W.Show();
             W.View.Show(Scene, null);
             W.Edit(Scene.Session!);
-            I.Message += t => Said = t;
+            I.Message += t => Said = t.Shown;
         }
 
         public int ChestIndex => Scene.Things.FindLastIndex(t => t.Prefab == Chest && !t.Gone);
@@ -208,25 +208,32 @@ public class InspectorPanelTests
         Click(Labelled(r.I.ItemsBox, "Add item"));
         Assert.Contains(r.I.ItemsBox.GetLogicalDescendants().OfType<NumericUpDown>(), n => n.BorderBrush == Avalonia.Media.Brushes.Orange);
         string? question = null;
-        r.I.Confirm = q => { question = q; return Task.FromResult(false); };
+        r.I.Confirm = (_, q, _) => { question = q; return Task.FromResult(false); };
         int pending = r.Scene.Session!.Pending.Added;
         await r.I.Apply();
         Assert.Contains("outside the", question);
         Assert.Equal(pending, r.Scene.Session.Pending.Added);
-        r.I.Confirm = _ => Task.FromResult(true);
+        r.I.Confirm = (_, _, _) => Task.FromResult(true);
         await r.I.Apply();
         Assert.Equal(pending + 1, r.Scene.Session.Pending.Added);
     }
 
+    // Contents in an item format older than the editor reads, and contents whose crafter name has a length prefix that
+    // never ends: both said, neither written back.
     [AvaloniaFact]
     public async Task UnreadableContentsAreSaidAndLeftAlone()
     {
-        using var r = new Run();
-        Assert.True(r.I.Open(r.ChestIndex));
-        r.I.Added.Add(("bytes", "items", Convert.ToBase64String(new byte[] { 255, 255, 255, 255, 1, 2 })));
-        await r.I.Apply();
-        Assert.Contains("The contents cannot be read", Texts(r.I.ItemsBox));
-        Assert.Null(r.I.Changes().Inventory);
+        byte[] older = [255, 255, 255, 255, 1, 2];
+        byte[] badPrefix = [108, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+        foreach (byte[] items in new[] { older, badPrefix })
+        {
+            using var r = new Run();
+            Assert.True(r.I.Open(r.ChestIndex));
+            r.I.Added.Add(("bytes", "items", Convert.ToBase64String(items)));
+            await r.I.Apply();
+            Assert.Contains("The contents cannot be read", Texts(r.I.ItemsBox));
+            Assert.Null(r.I.Changes().Inventory);
+        }
     }
 
     [AvaloniaFact]
@@ -256,5 +263,17 @@ public class InspectorPanelTests
         Click(r.I.Card.GetLogicalDescendants().OfType<Button>().First(b => b.Content as string == "✕"));
         Assert.False(r.I.IsOpen);
         Assert.True(closed);
+    }
+
+    // A stack larger than the item's largest is cut to it, and the message says so.
+    [AvaloniaFact]
+    public async Task AStackTooLargeIsCutAndSaid()
+    {
+        using var r = new Run();
+        Assert.True(r.I.Open(r.ChestIndex));
+        var (x, y) = r.I.FreeSlot()!.Value;
+        r.I.Items!.Add(new InspectorPanel.ItemRow { Name = "Resin", Stack = 70, X = x, Y = y });
+        await r.I.Apply();
+        Assert.EndsWith(" Resin: stack of 70 cut to 50 (the item's maximum).", r.Said);
     }
 }

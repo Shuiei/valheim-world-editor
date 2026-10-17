@@ -78,9 +78,13 @@ public sealed class SeedMap : Control, IDisposable
         };
     }
 
+    /// <summary>Set once disposed: a later resize or move samples and keeps no close look.</summary>
+    private bool _disposed;
+
     /// <summary>Stops any close look being sampled and frees the pictures.</summary>
     public void Dispose()
     {
+        _disposed = true;
         _closeWait.Stop();
         _closeWork?.Cancel();
         _closeWork?.Dispose();
@@ -187,7 +191,10 @@ public sealed class SeedMap : Control, IDisposable
         InvalidateVisual();
         ViewChanged?.Invoke();
         _closeWait.Stop();
-        _closeWait.Start();
+        if (!_disposed)
+        {
+            _closeWait.Start();
+        }
     }
 
     /// <inheritdoc/>
@@ -244,6 +251,10 @@ public sealed class SeedMap : Control, IDisposable
         _closeWork?.Cancel();
         _closeWork?.Dispose();
         _closeWork = null;
+        if (_disposed)
+        {
+            return;
+        }
         if (_preview?.Generator is not { } gen || MetersPerPixel >= _preview.Cell * 0.8f || Bounds.Width < 2 || Bounds.Height < 2)
         {
             if (_close != null)
@@ -263,7 +274,7 @@ public sealed class SeedMap : Control, IDisposable
         var work = _closeWork = new CancellationTokenSource();
         Task.Run(() => SeedPreview.Sample(gen, x0, z0, cell, w, h, parallel: true, work.Token), work.Token).ContinueWith(t =>
         {
-            if (work.IsCancellationRequested || t.Status != TaskStatus.RanToCompletion || preview != _preview)
+            if (_disposed || work.IsCancellationRequested || t.Status != TaskStatus.RanToCompletion || preview != _preview)
             {
                 return;
             }

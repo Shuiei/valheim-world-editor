@@ -16,20 +16,30 @@ public static class Backups
     public sealed record Info(string Path, string Name, DateTime Date, string Kind);
 
     /// <summary>
-    /// The backups found next to a world folder, newest first.
+    /// The backups found next to a world folder, newest first; none when the folder beside it cannot be read (said in
+    /// the log).
     /// </summary>
     public static List<Info> Find(string worldDir)
     {
-        string trimmed = worldDir.TrimEnd(Path.DirectorySeparatorChar);
+        // Either separator at the end ("C:/x/World1/" on Windows too).
+        string trimmed = worldDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         string? parent = Path.GetDirectoryName(trimmed);
         if (parent == null || !Directory.Exists(parent))
         {
             return [];
         }
         string prefix = Path.GetFileName(trimmed) + "_backup_";
-        return [.. Directory.GetDirectories(parent, prefix + "*")
-            .Where(Places.HasWorld)
-            .Select(d => new Info(d, Path.GetFileName(d), Directory.GetLastWriteTime(d), Path.GetFileName(d)[prefix.Length..].StartsWith("auto", StringComparison.Ordinal) ? "game" : "editor"))
-            .OrderByDescending(b => b.Date)];
+        try
+        {
+            return [.. Directory.GetDirectories(parent, prefix + "*")
+                .Where(Places.HasWorld)
+                .Select(d => new Info(d, Path.GetFileName(d), Directory.GetLastWriteTime(d), Path.GetFileName(d)[prefix.Length..].StartsWith("auto", StringComparison.Ordinal) ? "game" : "editor"))
+                .OrderByDescending(b => b.Date)];
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Console.WriteLine($"backups: {parent} could not be read ({ex.Message}).");
+            return [];
+        }
     }
 }

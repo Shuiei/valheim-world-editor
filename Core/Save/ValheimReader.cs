@@ -74,19 +74,7 @@ public sealed class ValheimReader(Stream stream) : IDisposable
     }
 
     /// <summary>ZPackage.ReadNumItems: 1 byte, or 2 bytes when the high bit is set (world version &gt;= 33).</summary>
-    public int ReadNumItems(int worldVersion)
-    {
-        if (worldVersion < WorldVersion.NumItems)
-        {
-            return _reader.ReadByte();
-        }
-        int num = _reader.ReadByte();
-        if ((num & 0x80) != 0)
-        {
-            num = ((num & 0x7F) << 8) | _reader.ReadByte();
-        }
-        return num;
-    }
+    public int ReadNumItems(int worldVersion) => worldVersion < WorldVersion.NumItems ? _reader.ReadByte() : _reader.ReadNumItems();
 
     /// <inheritdoc/>
     public void Dispose() => _reader.Dispose();
@@ -99,6 +87,16 @@ public sealed class ValheimReader(Stream stream) : IDisposable
 /// </summary>
 public static class CheckedReads
 {
+    /// <summary>
+    /// Whether a read of saved bytes failed because they are damaged or in a form the editor does not read: short
+    /// (EndOfStream), a count or length that does not fit (InvalidData), a bad 7-bit length prefix (Format) or an
+    /// item format older than the editor reads (NotSupported). What a reader of one object catches to skip it and
+    /// go on with the rest. A plain IOException is not one: the bytes come from memory once read, so it says the file
+    /// could not be read at all, which goes up like any other bug.
+    /// </summary>
+    public static bool Damaged(Exception ex) =>
+        ex is EndOfStreamException or InvalidDataException or FormatException or NotSupportedException;
+
     /// <summary>How many bytes are left (as many as asked for when the stream cannot tell).</summary>
     public static long Remaining(this BinaryReader r) =>
         r.BaseStream.CanSeek ? Math.Max(0, r.BaseStream.Length - r.BaseStream.Position) : long.MaxValue;
@@ -143,6 +141,16 @@ public static class CheckedReads
             all.Write(part);
         }
         return all.ToArray();
+    }
+
+    /// <summary>
+    /// A count in the game's compact form (ZPackage.ReadNumItems): one byte below 128, else two bytes, the first with its
+    /// high bit set.
+    /// </summary>
+    public static int ReadNumItems(this BinaryReader r)
+    {
+        int n = r.ReadByte();
+        return (n & 0x80) != 0 ? ((n & 0x7F) << 8) | r.ReadByte() : n;
     }
 
     /// <summary>
@@ -192,6 +200,18 @@ public static class WorldVersion
     /// rotation in the small form.
     /// </summary>
     public const int ChunkedSave = 40;
+
+    /// <summary>The oldest save format the writer changes (the Deep North save as the game wrote it until 1.0.17).</summary>
+    public const int OldestWritable = 41;
+
+    /// <summary>
+    /// The save format the game writes since Valheim 1.0.20, and the newest the editor reads and writes. It differs
+    /// from 41 only by the number in each file's head: the objects, the zone list and the metadata are laid out the same.
+    /// </summary>
+    public const int Latest = 42;
+
+    /// <summary>Whether the writer can change a file in this save format.</summary>
+    public static bool Writable(int version) => version is >= OldestWritable and <= Latest;
 }
 
 /// <summary>The game's string hashing, for prefab names and data keys.</summary>

@@ -16,16 +16,13 @@ public sealed class BlueprintStoreTests : IDisposable
     /// </summary>
     public void Dispose()
     {
-        try
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, recursive: true);
         }
-        catch
-        {
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
-        }
     }
 
+            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
     /// <summary>
     /// A 3 × 2 clipboard copy holding this many beeches, with ground in one cell or none.
     /// </summary>
@@ -51,6 +48,39 @@ public sealed class BlueprintStoreTests : IDisposable
         Assert.Equal((3, 2), (b.W, b.H));
         JsonNode doc = JsonNode.Parse(store.Read(id)!)!;
         Assert.Equal(3, doc["clip"]!["objects"]!.AsArray().Count);
+    }
+
+    // A file that cannot be read is left out, and the others are still listed (the whole list threw).
+    [Fact]
+    public void AnUnreadableFileIsLeftOutOfTheList()
+    {
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            return;
+        }
+        var store = new BlueprintStore(_dir);
+        store.Save("Kept", null, null, Clip(1, ground: false));
+        string locked = store.Save("Locked", null, null, Clip(1, ground: false));
+        File.SetUnixFileMode(Path.Combine(_dir, locked + ".json"), UnixFileMode.None);
+
+        Assert.Equal("Kept", Assert.Single(store.List()).Name);
+    }
+
+    // Names Windows keeps for devices get a "_" (saving "con" failed there), within the 80 characters, and a cut ending
+    // in a dot drops it.
+    [Fact]
+    public void IdsAvoidWindowsDeviceNamesAndATrailingDot()
+    {
+        Assert.Equal("_nul", BlueprintStore.IdFor("nul"));
+        Assert.Equal("_COM1.old", BlueprintStore.IdFor("COM1.old"));
+        Assert.Equal(new string('h', 79), BlueprintStore.IdFor(new string('h', 79) + ".more"));
+        var store = new BlueprintStore(_dir);
+        Assert.Equal("_con", store.Save("con", null, null, Clip(1, ground: false)));
+        Assert.NotNull(store.Read("_con"));
+        // A device name cut at 80 characters stays within them with its "_", so it can be read back (it could not).
+        string id = store.Save("CON." + new string('a', 76), null, null, Clip(1, ground: false));
+        Assert.Equal(80, id.Length);
+        Assert.NotNull(store.Read(id));
     }
 
     [Fact]

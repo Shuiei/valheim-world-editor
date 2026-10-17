@@ -86,18 +86,29 @@ public sealed class WorldSession : IDisposable
     /// After a save or Apply live: the history as it is now (it matches what the world holds) goes to
     /// disk. A failure to write it is only logged: the save itself is done.
     /// </summary>
-    private void KeepHistory()
+    /// <param name="later">Apply live: taken now, written in the background (<see cref="HistoryFile.WriteLater"/>),
+    /// since it can come at every edit.</param>
+    private void KeepHistory(bool later = false)
     {
         try
         {
             if ((Area?.Export() ?? History) is { } kept)
             {
-                HistoryFile.Write(this, kept);
+                if (later)
+                {
+                    HistoryFile.WriteLater(this, kept);
+                }
+                else
+                {
+                    HistoryFile.Write(this, kept);
+                }
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex)
         {
-            Console.WriteLine($"History: could not keep it on disk: {ex.Message}");
+            // The save itself is done: any failure here is logged (an unexpected one in full), not reported as a
+            // failed save.
+            Console.WriteLine($"History: could not keep it on disk: {(ex is IOException or UnauthorizedAccessException ? ex.Message : ex.ToString())}");
         }
     }
 
@@ -110,11 +121,7 @@ public sealed class WorldSession : IDisposable
     {
         if (Area == null && History != null)
         {
-            // Applied is part of a step's hash: the ids and frames are keyed again once it is set.
-            var ids = History.Ids.ToList();
-            var frames = History.Frames?.ToList();
             EditSession.MarkSent(History.Undo, sent ?? (static _ => true));
-            History = History with { Ids = ids.ToDictionary(p => p.Key, p => p.Value), Frames = frames?.ToDictionary(p => p.Key, p => p.Value) };
         }
     }
 
@@ -168,12 +175,23 @@ public sealed class WorldSession : IDisposable
     /// <param name="label">The connection's name, for <c>Label</c>.</param>
     public static async Task<WorldSession> OpenLive(LiveBridge live, string label)
     {
-        await Task.Run(NeedGame);
-        await LearnMods(live);
-        var mods = await BridgeMods(live);
-        var world = await live.LoadWorld();
-        WorldSave.Builder = Builders.Default(world);
-        var session = From(world, live, label);
+        WorldSession session;
+        List<string> mods;
+        try
+        {
+            await Task.Run(NeedGame);
+            await LearnMods(live);
+            mods = await BridgeMods(live);
+            var world = await live.LoadWorld();
+            WorldSave.Builder = Builders.Default(world);
+            session = From(world, live, label);
+        }
+        catch
+        {
+            // No session to own the connection: it is closed here.
+            live.Dispose();
+            throw;
+        }
         // Once the session is there to end it (Dispose): a world that failed to load leaves no game connected.
         ModExtensions.LiveConnected(new LiveGame(live, mods));
         return session;
@@ -245,11 +263,11 @@ public sealed class WorldSession : IDisposable
             // Saved already: what differs from that save (an undo after it is pending too).
             // Counted against the saved sets only (no set of the current ones): after a save with millions of
             // new objects this runs at every change. Both lists hold each object once.
-            var deleted = Edits.Deleted;
-            var added = Edits.Added;
-            int keptDel = deleted.Count(_savedDeleted.Contains), keptAdd = added.Count(_savedAdded.Contains);
-            int del = deleted.Count - keptDel + _savedDeleted.Count - keptDel;
-            int add = added.Count - keptAdd + _savedAdded.Count - keptAdd;
+            var (del, add) = Edits.WithObjects((deleted, added) =>
+            {
+                int keptDel = deleted.Count(_savedDeleted.Contains), keptAdd = added.Values.Count(_savedAdded.Contains);
+                return (deleted.Count - keptDel + _savedDeleted.Count - keptDel, added.Count - keptAdd + _savedAdded.Count - keptAdd);
+            });
             return (Edits.ChangedZoneCount, del, add, Edits.ResetCount);
         }
     }
@@ -284,15 +302,18 @@ public sealed class WorldSession : IDisposable
 
     /// <summary>What a save or Apply live did.</summary>
     /// <param name="Done">Saved, or something was applied.</param>
-    /// <param name="Message">What to tell the user.</param>
+    /// <param name="Report">What to tell the user, in both languages (Claude reads the English in the status bar).</param>
     /// <param name="Reloaded">
     /// The world was read again (a save after zone resets or No limit ground; live, after zone resets only):
     /// areas must be read again too. Live No limit ground shows in <see cref="Lifted"/> alone, which callers
     /// check as well.
     /// </param>
     /// <param name="Saved">The writer's result (offline only).</param>
-    public sealed record Outcome(bool Done, string Message, bool Reloaded, WorldWriter.Result? Saved = null)
+    public sealed record Outcome(bool Done, Said Report, bool Reloaded, WorldWriter.Result? Saved = null)
     {
+        /// <summary>What to tell the user, in the language in use.</summary>
+        public string Message => Report.Shown;
+
         /// <summary>No limit ground was turned into ground discs: the ground under the area changed.</summary>
         public bool Lifted { get; init; }
         /// <summary>Live: not applied, the answer to "apply over the game's changes?" was no.</summary>
@@ -389,14 +410,15 @@ public sealed class WorldSession : IDisposable
     public Outcome Save()
     {
         int known = _lastNumber ?? World.SaveNumber;
-        if (WorldWriter.Newer(World.Directory, known) is string newer)
+        if (WorldWriter.Newer(World.Directory, known) is Said newer)
         {
-            return new Outcome(false, newer, false, new WorldWriter.Result(false, newer, null, 0, 0, []));
+            return new Outcome(false, newer, false, new WorldWriter.Result(false, newer.Shown, null, 0, 0, []) { Report = newer });
         }
         var lift = LiftToDiscs();
-        var zones = Edits.All().Where(e => e.Changed).Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
+        // The changed zones and those the last save wrote (each copied once).
+        var changed = Edits.Copies(e => e.Changed || _savedZones.Contains((e.ZoneX, e.ZoneZ)));
+        var zones = changed.Where(e => e.Changed).Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
         zones.UnionWith(_savedZones);
-        var changed = Edits.All().Where(e => zones.Contains((e.ZoneX, e.ZoneZ))).ToList();
         bool reread = lift != null || Edits.ResetCount > 0;
         WorldWriter.Result result;
         try
@@ -417,15 +439,41 @@ public sealed class WorldSession : IDisposable
         {
             lift = null;
         }
+        Said unread = Said.Empty;
         if (result.Saved && reread)
         {
-            World = WorldSave.Load(World.Directory);
-            WorldWriter.Prune(World.Directory);
+            // Written: whatever happens reading it back, what went in is not pending any more (it would be written
+            // twice). Not read back, the session starts over from the world as it was and says to open it again.
+            try
+            {
+                // The save as read back to check it: not read a third time.
+                World = result.Read ?? WorldSave.Load(World.Directory);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                unread = Said.Of("save.msg.notReadBack", ex.Message);
+            }
+            if (unread == Said.Empty)
+            {
+                try
+                {
+                    WorldWriter.Prune(World);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+                {
+                    Console.WriteLine($"Saved: its earlier saves could not be removed: {ex.Message}");
+                }
+            }
             Edits.ResetFrom(World);
             UseModifiers(new TerrainModifiers(World));
             _nextId = -1;
             ForgetHistory();
             ForgetSaves();
+            if (unread != Said.Empty)
+            {
+                // The session's own save is not one the game made since.
+                _lastNumber = result.Number;
+            }
         }
         else if (result.Saved)
         {
@@ -438,8 +486,140 @@ public sealed class WorldSession : IDisposable
             MarkHistoryApplied();
             KeepHistory();
         }
-        string message = lift != null ? $"{result.Message} No limit ground: {lift.Plan.Describe()}." : result.Message;
-        return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message }) { Lifted = lift != null };
+        var message = result.Report + (lift != null ? Said.Of("save.msg.lifted", lift.Plan.Describe()) : Said.Empty) + unread;
+        return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message.Shown, Report = message }) { Lifted = lift != null };
+    }
+
+    /// <summary>
+    /// Offline: the number of a save the game made after the editor read the world (or last saved it), which a save
+    /// would throw away (<see cref="Save"/> refuses); null when there is none.
+    /// </summary>
+    public int? GameSaveSince()
+    {
+        int known = _lastNumber ?? World.SaveNumber;
+        return !IsLive && Directory.Exists(World.Directory) && WorldSave.CommittedSave(World.Directory) is int newest && newest > known ? newest : null;
+    }
+
+    /// <summary>
+    /// Offline, after the game saved the world since it was read (<see cref="GameSaveSince"/>): reads the game's save and
+    /// works out how the pending changes go onto it, and what the game changed too (<see cref="EditReplay.Clashes"/>).
+    /// Nothing changes yet; <see cref="Replay"/> does it. Null when the game made no newer save.
+    /// </summary>
+    public EditReplay? PrepareReplay() => GameSaveSince() == null
+        ? null
+        : EditReplay.Prepare(World, Edits, new EditReplay.Saved(_savedZones, _savedDeleted, _savedAdded), WorldSave.Load(World.Directory));
+
+    /// <summary>
+    /// Brings the pending changes onto the game's save (<see cref="PrepareReplay"/>): the world is that save from now
+    /// on, with every change pending on it, the clashes settled as <paramref name="keepMine"/> says per kind. Nothing
+    /// is written to disk: the next save writes it, from the game's save. The history comes along, fitted to the
+    /// game's save, its steps asked about before they are undone (the world changed under them); steps that touch what
+    /// the game's version was kept for, and the steps before them, are dropped. The area open must be read again
+    /// (Reloaded): its history was taken here.
+    /// </summary>
+    /// <param name="plan">What <see cref="PrepareReplay"/> worked out.</param>
+    /// <param name="keepMine">Per kind of clash: true keeps the editor's change, false the game's version.</param>
+    public Outcome Replay(EditReplay plan, Func<ReplayClash, bool> keepMine)
+    {
+        // The game saved again since its save was read: that save is not the latest any more.
+        if (WorldSave.CommittedSave(World.Directory) != plan.Newer.SaveNumber)
+        {
+            return new Outcome(false, Said.Of("replay.savedAgain"), false);
+        }
+        var kept = Area?.Export() ?? History;
+        var r = plan.Apply(keepMine, Edits, NextId);
+        if (r == null)
+        {
+            return new Outcome(false, Said.Of("replay.stale"), false);
+        }
+        World = plan.Newer;
+        UseModifiers(new TerrainModifiers(Uplift.PlacedNow(World, Edits)));
+        // The game's save is the base now; the files of the session's own save may be part of it, so they stay.
+        ForgetSaves();
+        Area = null;
+        var (history, steps, dropped) = Refit(kept, plan, r);
+        History = history;
+        Restored = history == null ? null : new HistoryFile.Restored(history, steps, true, DateTime.Now) { Replayed = true };
+        EarlierAllowed = false;
+        RestoredSaid = true;
+        var text = Said.Of("replay.done", World.SaveNumber, r.Zones, r.Deleted, r.Added, r.Resets);
+        if (r.GameGround.Count > 0 || r.Dropped.Count > 0)
+        {
+            text += Said.Of("replay.gameKept", r.GameGround.Count, plan.Clashes.Count(c => c.Kind != ReplayClash.Ground && !keepMine(c.Kind)));
+        }
+        if (r.Unread > 0)
+        {
+            text += Said.Of("replay.unread", r.Unread);
+        }
+        if (steps + dropped > 0)
+        {
+            text += dropped > 0 ? Said.Of("replay.historyDropped", steps, dropped) : Said.Of("replay.history", steps);
+        }
+        return new Outcome(true, text, true);
+    }
+
+    /// <summary>
+    /// The history fitted to the game's save: objects by their ids there (or kept as gone objects an undo or redo brings
+    /// back), every step from before the game's save (asked about before it is undone). A step touching what the game's
+    /// version was kept for cannot be undone, nor the steps before it: dropped, and with them a redo step touching it
+    /// and those after it.
+    /// </summary>
+    /// <returns>The history (null: none left), how many steps it has, how many were dropped.</returns>
+    private (EditSession.Kept? History, int Steps, int Dropped) Refit(EditSession.Kept? k, EditReplay plan, EditReplay.Replayed r)
+    {
+        if (k == null)
+        {
+            return (null, 0, 0);
+        }
+        bool Touches(EditSession.Change c)
+        {
+            var f = k.FrameOf(c);
+            return k.Ids[c].Any(r.Dropped.Contains) || c.Zones.Any(z => r.GameGround.Contains((z.X + f.X0, z.Z + f.Z0)))
+                || c.Resets.Any(x => x.Reset.Ground && r.GameGround.Contains((x.Reset.X, x.Reset.Z)));
+        }
+        int undoFrom = k.Undo.FindLastIndex(Touches) + 1;
+        int redoFrom = k.Redo.FindLastIndex(Touches) + 1;
+        var undo = k.Undo.Skip(undoFrom).ToList();
+        var redo = k.Redo.Skip(redoFrom).ToList();
+        int dropped = undoFrom + redoFrom;
+        if (undo.Count + redo.Count == 0)
+        {
+            return (null, 0, dropped);
+        }
+        var gone = new List<NewObject>();
+        var goneIds = new Dictionary<int, int>();
+        int Fitted(int id)
+        {
+            if (plan.NewerId(id) is int y)
+            {
+                return y;
+            }
+            if (id < 0)
+            {
+                return id;
+            }
+            if (!goneIds.TryGetValue(id, out int g))
+            {
+                var o = plan.Gone(id, NextId());
+                gone.Add(o);
+                goneIds[id] = g = o.Id;
+            }
+            return g;
+        }
+        // Oldest first (the undo list, then the redo list from its last), so a removal finds the step it took out.
+        var map = new Dictionary<EditSession.Change, EditSession.Change>();
+        var ids = new Dictionary<EditSession.Change, int[]>();
+        var frames = new Dictionary<EditSession.Change, EditSession.Frame>();
+        foreach (var c in undo.Concat(Enumerable.Reverse(redo)))
+        {
+            var f = c with { Earlier = true, RevertOf = c.RevertOf != null && map.TryGetValue(c.RevertOf, out var was) ? was : null };
+            map[c] = f;
+            ids[f] = [.. k.Ids[c].Select(Fitted)];
+            frames[f] = k.FrameOf(c);
+        }
+        Edits.KeepGone(gone);
+        var fitted = new EditSession.Kept([.. undo.Select(c => map[c])], [.. redo.Select(c => map[c])], k.Ox, k.Oz, k.W, k.X0, k.Z0, ids, frames);
+        return (fitted, undo.Count + redo.Count, dropped);
     }
 
     /// <summary>Leaving an offline world it saved: the save it was opened from goes (only the latest stays).</summary>
@@ -483,7 +663,8 @@ public sealed class WorldSession : IDisposable
         }
         PruneSaves();
         Live?.Dispose();
-        _applying.Dispose();
+        // The apply lock is not disposed: an apply still under way releases it when it ends (its outcome would be
+        // lost to an ObjectDisposedException), and it holds nothing to free (its wait handle is never asked for).
     }
 
     /// <summary>
@@ -500,7 +681,7 @@ public sealed class WorldSession : IDisposable
         {
             if (confirm != null && Edits.PendingOverGame() is { Count: > 0 } over && !await confirm(over))
             {
-                return new Outcome(false, "Not applied: the game changed the ground where you have changes (Apply live asks again).", false) { Declined = true };
+                return new Outcome(false, Said.Of("save.msg.declined"), false) { Declined = true };
             }
             return await ApplyLiveOnce();
         }
@@ -515,13 +696,13 @@ public sealed class WorldSession : IDisposable
     private async Task<Outcome> ApplyLiveOnce()
     {
         var live = Live!;
-        var done = new List<string>();
+        var done = new List<Said>();
         bool reloaded = false;
         var lift = LiftToDiscs();
         var plan = lift?.Plan;
         if (plan != null)
         {
-            done.Add($"No limit ground: {plan.Describe()}");
+            done.Add(Said.Of("save.done.lifted", plan.Describe()));
         }
         // Until the ground or objects went in (sent), or the ground may have (unsure), a failure has sent nothing: the
         // No limit ground is put back as it was.
@@ -529,7 +710,7 @@ public sealed class WorldSession : IDisposable
         try
         {
             // Copies as sent: edits made while the game answers are not marked as applied.
-            var zones = Edits.All().Where(e => e.Changed).Select(e => e.Clone()).ToList();
+            var zones = Edits.Copies(e => e.Changed);
             if (zones.Count > 0)
             {
                 try
@@ -545,11 +726,11 @@ public sealed class WorldSession : IDisposable
                 }
                 sent = true;
                 Edits.MarkApplied(zones);
-                done.Add($"{zones.Count} zone(s) of ground");
+                done.Add(Said.Of("save.count.zones", zones.Count));
             }
-            string objects = await LiveSync.Apply(World, Edits, live);
+            var objects = await LiveSync.Apply(World, Edits, live);
             objectsDone = true;
-            if (objects != "")
+            if (objects != Said.Empty)
             {
                 sent = true;
                 done.Add(objects);
@@ -561,7 +742,7 @@ public sealed class WorldSession : IDisposable
                 // Done in the game: not pending any more, even if reading the world below fails (sent again, they
                 // would wipe what players built there since).
                 Edits.MarkResetsApplied(resets);
-                done.Add($"{resets.Count} zone(s) reset");
+                done.Add(Said.Of("save.done.resets", resets.Count));
                 try
                 {
                     World = await live.LoadWorld();
@@ -569,8 +750,8 @@ public sealed class WorldSession : IDisposable
                 catch (Exception ex) when (GameFailed(ex))
                 {
                     MarkHistoryApplied();
-                    KeepHistory();
-                    return new Outcome(true, $"Applied to the running game: {string.Join("; ", done)}; but the world could not be read again from the game ({ex.Message}): open it again to see the reset zones.", false) { Lifted = plan != null };
+                    KeepHistory(later: true);
+                    return new Outcome(true, Said.Of("save.msg.appliedUnread", Said.Join("; ", done), ex.Message), false) { Lifted = plan != null };
                 }
                 Edits.ResetFrom(World);
                 UseModifiers(new TerrainModifiers(World));
@@ -583,9 +764,9 @@ public sealed class WorldSession : IDisposable
             else if (done.Count > 0)
             {
                 MarkHistoryApplied();
-                KeepHistory();
+                KeepHistory(later: true);
             }
-            return new Outcome(done.Count > 0, done.Count > 0 ? $"Applied to the running game: {string.Join("; ", done)}." : "Nothing to apply.", reloaded) { Lifted = plan != null };
+            return new Outcome(done.Count > 0, done.Count > 0 ? Said.Of("save.msg.applied", Said.Join("; ", done)) : Said.Of("save.msg.nothingToApply"), reloaded) { Lifted = plan != null };
         }
         // The game answering with an error (InvalidOperationException from the bridge) is reported too.
         catch (Exception ex) when (GameFailed(ex))
@@ -594,7 +775,7 @@ public sealed class WorldSession : IDisposable
             {
                 // Some parts went in: said, and the steps the game has all of are applied.
                 var resets = Edits.Resets.Select(r => (r.X, r.Z)).ToHashSet();
-                var partly = new Outcome(true, $"Applied to the running game: {string.Join("; ", done)}; but then it failed ({ex.Message}): Apply live again for the rest.", false)
+                var partly = new Outcome(true, Said.Of("save.msg.appliedPartly", Said.Join("; ", done), ex.Message), false)
                 {
                     Lifted = lift != null,
                     // Resets only while some are still to send: a reset unmarked since leaves none, though steps keep it.
@@ -602,11 +783,11 @@ public sealed class WorldSession : IDisposable
                     UnsentResets = resets,
                 };
                 MarkHistoryApplied(partly.Sent);
-                KeepHistory();
+                KeepHistory(later: true);
                 return partly;
             }
             bool lifted = lift != null && (unsure || !Unlift(lift));
-            return new Outcome(false, "Could not apply live: " + ex.Message, false) { Lifted = lifted };
+            return new Outcome(false, Said.Of("save.msg.couldNotApply", ex.Message), false) { Lifted = lifted };
         }
     }
 
@@ -749,7 +930,7 @@ public sealed class WorldSession : IDisposable
     public List<(int X, int Z)> TakeWaitingGround() => Edits.TakeWaitingGround();
 
     /// <summary>The zone a world position is in (zones are 64 m, centred on multiples of 64).</summary>
-    private static (int, int) Zone(System.Numerics.Vector3 p) => ((int)MathF.Floor((p.X + 32f) / 64f), (int)MathF.Floor((p.Z + 32f) / 64f));
+    private static (int, int) Zone(System.Numerics.Vector3 p) => ChunkMath.SectorOf(p.X, p.Z);
 
     /// <summary>Live: the world read again from the game (what players changed since); pending edits are dropped.</summary>
     public async Task Reload()
@@ -770,8 +951,10 @@ public sealed class WorldSession : IDisposable
     {
         if (!IsLive)
         {
+            // Read first: a folder that cannot be read leaves the session as it was, its own saves still known.
+            var saved = WorldSave.Load(World.Directory);
             PruneSaves();
-            World = WorldSave.Load(World.Directory);
+            World = saved;
         }
         Edits.ResetFrom(World);
         UseModifiers(new TerrainModifiers(World));

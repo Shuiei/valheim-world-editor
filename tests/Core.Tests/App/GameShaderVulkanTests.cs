@@ -76,6 +76,14 @@ public class GameShaderVulkanTests
         uint[] broken = TestSpirv.Program();
         broken[5] = 0;
         Assert.Throws<InvalidDataException>(() => GameShader.Named(broken, GameShader.Parameters(Params)));
+        // One running past the end, and no whole header (other exceptions came out).
+        uint[] past = TestSpirv.Program();
+        past[5] = (uint)(past.Length << 16) | (past[5] & 0xFFFF);
+        Assert.Throws<InvalidDataException>(() => GameShader.Named(past, GameShader.Parameters(Params)));
+        Assert.Throws<InvalidDataException>(() => GameShader.Named([0x07230203, 0], GameShader.Parameters(Params)));
+        // A blob listing more entries than it holds, or an entry outside it.
+        Assert.Throws<InvalidDataException>(() => GameShader.FromVulkan([5, 0, 0, 0], subs));
+        Assert.Throws<InvalidDataException>(() => GameShader.FromVulkan([1, 0, 0, 0, 100, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0], subs));
     }
 
     [Fact]

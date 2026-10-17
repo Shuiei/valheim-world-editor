@@ -202,7 +202,7 @@ public class PlaceToolEdgeTests
     {
         var wall = new WorldScene.Thing(1, StableHash.Of(Wall), new Vector3(0, 31, 0), Vector3.Zero, 0, true);
         var (t, _) = Tool(wall);
-        string said = t.PickElevation(0, 30);
+        string said = t.PickElevation(0, 30).Shown;
         Assert.Equal(PlaceTool.Elevations.At, t.Elevation);
         Assert.Equal(31 + PlaceTool.RotU(new Vector3(0, 1, 0), Vector3.Zero).Y, t.Elev, 2);
         Assert.Contains("the top of woodwall", said);

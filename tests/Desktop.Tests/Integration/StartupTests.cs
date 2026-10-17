@@ -27,16 +27,13 @@ public sealed class StartupTests : IDisposable
         AppSettings.DataDirOverride = _data;
         Environment.SetEnvironmentVariable("WORLD_BRIDGE_TOKEN", _token);
         Options.Parse([]);
-        try
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, true);
         }
-        catch
-        {
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
-        }
     }
 
+            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
     [Fact]
     public void AWorldFolderAloneOpensItsMap()
     {

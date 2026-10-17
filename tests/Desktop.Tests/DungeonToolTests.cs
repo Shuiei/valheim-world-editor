@@ -14,7 +14,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// The Dungeon tool on the test world (zone 0, 0), with a Frost Cave of one room made there (the test world has no
 /// dungeon): the panel lists it, a room picked and clicked onto an open end joins there, the open ends close with end
 /// caps, a selected room is deleted, and each change is one step of the history that rewrites the dungeon object's room
-/// list; a room placed at an open end without the pointer (PlaceAt), and changes named as asked.
+/// list; a room placed at an open end without the pointer (PlaceAt), and changes named as asked; what adding a room
+/// says for each count of its objects and doors.
 /// </summary>
 [Collection("World files")]
 public class DungeonToolTests
@@ -45,7 +46,7 @@ public class DungeonToolTests
             var entrance = new Dungeons.Placed(StableHash.Of("cave_new_entrance02"), At, Quaternion.Identity);
             byte[] blank = ZdoBuilder.Blank(Cave, Terrain.PrefabCatalog.Get(Cave)!.Flags, At, Vector3.Zero, 0f);
             Scene.Session!.Commit("A dungeon", null, [], [(new NewObject(0, Cave, At, Vector3.Zero, 0, null, false, Dungeons.WithRooms(blank, [entrance])), false)]);
-            T.Message += t => Said = t;
+            T.Message += t => Said = t.Shown;
             W.Tools.ChooseMode(ToolMode.Dungeon);
         }
 
@@ -116,6 +117,24 @@ public class DungeonToolTests
     }
 
     [AvaloniaFact]
+    public void ASelectedRoomTakenAwayByUndoIsNotSelectedAnyMore()
+    {
+        using var r = new Run();
+        r.T.Choose("cave_new_corridor03");
+        r.PointAt(r.T.FreeEnds[0]);
+        Assert.True(r.T.Click());
+        Assert.Equal(1, r.T.Selected);
+        // Undo takes the corridor away: index 1 names no room, and Delete removes nothing.
+        Assert.True(r.Scene.Session!.Undo());
+        Assert.Null(r.T.Selected);
+        Assert.False(r.T.Delete());
+        Assert.Single(r.Rooms);
+        // Redo brings it back where it was: selected again.
+        Assert.True(r.Scene.Session.Redo());
+        Assert.Equal(1, r.T.Selected);
+    }
+
+    [AvaloniaFact]
     public void TurnJoinsByAnotherOpeningAndAnOverlapIsSaid()
     {
         using var r = new Run();
@@ -134,7 +153,7 @@ public class DungeonToolTests
             r.PointAt(r.T.FreeEnds[e]);
             for (int k = 0; k < 8 && problem == null; k++, r.T.Turn())
             {
-                problem = r.T.Preview is { } p ? r.T.Problem(p) : null;
+                problem = r.T.Preview is { } p ? r.T.Problem(p)?.Shown : null;
             }
         }
         Assert.NotNull(problem);
@@ -345,4 +364,15 @@ public class DungeonToolTests
         r.T.CloseOpenEnds("Mine: capped");
         Assert.Equal("Mine: capped", s.UndoLabel);
     }
+
+    // A room added says what came with it: no objects or some, no door, one, or how many.
+    [Theory]
+    [InlineData(0, 0, "Added cave_room.")]
+    [InlineData(0, 1, "Added cave_room with a door.")]
+    [InlineData(0, 3, "Added cave_room with 3 doors.")]
+    [InlineData(2, 0, "Added cave_room with 2 object(s).")]
+    [InlineData(2, 1, "Added cave_room with 2 object(s) and a door.")]
+    [InlineData(2, 2, "Added cave_room with 2 object(s) and 2 doors.")]
+    public void AddingARoomSaysItsObjectsAndDoors(int objects, int doors, string said) =>
+        Assert.Equal(said, DungeonTool.Added("cave_room", objects, doors).English);
 }

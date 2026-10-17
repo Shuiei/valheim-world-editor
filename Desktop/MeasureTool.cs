@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -79,8 +80,8 @@ public sealed class MeasureTool
     /// <param name="SlopePercent">Rise over flat distance, in percent; null when the points are (almost) one above the
     /// other.</param>
     /// <param name="SlopeDegrees">The slope's angle, 0..90°, whichever way it goes.</param>
-    /// <param name="Lowest">Lowest ground along the line.</param>
-    /// <param name="Highest">Highest ground along the line.</param>
+    /// <param name="Lowest">Lowest ground along the line, A and B included.</param>
+    /// <param name="Highest">Highest ground along the line, A and B included.</param>
     /// <param name="WaterDepth">How far the lower point is under the water; null when both are above it.</param>
     public sealed record Result(float Distance, float AlongSlope, float HeightA, float HeightB, float Rise, float? SlopePercent, float SlopeDegrees, float Lowest, float Highest, float? WaterDepth);
 
@@ -98,7 +99,8 @@ public sealed class MeasureTool
             return null;
         }
         float flat = MathF.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Z - a.Z) * (b.Z - a.Z)), rise = b.Y - a.Y;
-        float lo = float.MaxValue, hi = float.MinValue;
+        // The clicked heights count too: the ground may have changed under them since.
+        float lo = MathF.Min(a.Y, b.Y), hi = MathF.Max(a.Y, b.Y);
         int n = Math.Max(2, (int)MathF.Ceiling(flat));
         for (int i = 0; i <= n; i++)
         {
@@ -112,26 +114,28 @@ public sealed class MeasureTool
     }
 
     /// <summary>
-    /// What to show: the hint and the measured values (label, value).
+    /// What to show, in the language in use: the hint and the measured values (label, value).
     /// </summary>
     public (string Hint, List<(string, string)> Rows) Describe(Func<float, float, float> heightAt, float water)
     {
         if (A == null)
         {
-            return ("Click a first point on the ground.", []);
+            return (Lang.T("measure.hint.first"), []);
         }
         if (Measure(heightAt, water) is not { } r)
         {
-            return ("Click a second point.", []);
+            return (Lang.T("measure.hint.second"), []);
         }
-        return (Fixed ? "Click again to start a new measurement." : "Click to fix the second point.",
+        return (Fixed ? Lang.T("measure.hint.again") : Lang.T("measure.hint.fix"),
         [
-            ("Distance", $"{r.Distance:0.0} m"),
-            ("Along the slope", $"{r.AlongSlope:0.0} m"),
-            ("Height A → B", $"{r.HeightA:0.0} → {r.HeightB:0.0} m ({(r.Rise >= 0 ? "+" : "")}{r.Rise:0.0})"),
-            ("Slope", $"{(r.SlopePercent is float p ? $"{p:0} %" : "–")} · {r.SlopeDegrees:0.0}°"),
-            ("Lowest / highest", $"{r.Lowest:0.0} / {r.Highest:0.0} m"),
-            ("Water depth", r.WaterDepth is float d ? $"{d:0.0} m" : "above sea"),
+            (Lang.T("measure.label.distance"), Lang.T("measure.value.metres", r.Distance)),
+            (Lang.T("measure.label.alongSlope"), Lang.T("measure.value.metres", r.AlongSlope)),
+            (Lang.T("measure.label.heights"), Lang.T("measure.value.heights", r.HeightA, r.HeightB, r.Rise >= 0 ? "+" : "", r.Rise)),
+            (Lang.T("common.slope"), r.SlopePercent is float p
+                ? Lang.T("measure.value.slope", p, r.SlopeDegrees)
+                : Lang.T("measure.value.upright", r.SlopeDegrees)),
+            (Lang.T("measure.label.lowHigh"), Lang.T("measure.value.lowHigh", r.Lowest, r.Highest)),
+            (Lang.T("measure.label.water"), r.WaterDepth is float d ? Lang.T("measure.value.metres", d) : Lang.T("measure.value.aboveSea")),
         ]);
     }
 }

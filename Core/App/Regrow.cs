@@ -115,6 +115,13 @@ public static class Regrow
     /// <summary>How many vegetation rules are loaded (0 before <see cref="Use"/>).</summary>
     public static int RuleCount => _rules.Count;
 
+    /// <summary>
+    /// Zones read (biomes, paint mask, ocean depths) on this thread so far: a test seam, each zone is read once per
+    /// <see cref="Zones"/> call.
+    /// </summary>
+    [field: ThreadStatic]
+    internal static int ZoneReads { get; private set; }
+
     /// <summary>One object the game would place: prefab, Unity world position, Euler rotation (degrees), scale.</summary>
     /// <param name="Name">The prefab.</param>
     /// <param name="X">World x (metres).</param>
@@ -143,6 +150,8 @@ public static class Regrow
         var (w, h, heights) = HeightGrid.Read(terrain, edits, x0 - 1, z0 - 1, x1 + 1, z1 + 1);
         Ground ground = new(heights, w, h, (x0 - 1) * 64f - 32f, (z0 - 1) * 64f - 32f);
         List<Spot> spots = [];
+        // Each zone's biomes, paint mask and ocean depths, made once for the whole call: groups reach into neighbours.
+        Dictionary<(int, int), Zone> zones = [];
         // Unity's Random has one state per thread: put back what this thread had.
         Rnd.State saved = Rnd.state;
         try
@@ -151,7 +160,7 @@ public static class Regrow
             {
                 for (int zx = x0; zx <= x1; zx++)
                 {
-                    PlaceZone(terrain, ground, seed, zx, zz, spots);
+                    PlaceZone(terrain, ground, zones, seed, zx, zz, spots);
                 }
             }
         }
@@ -222,15 +231,32 @@ public static class Regrow
                 return Corners[0];
             }
             float nx = (x - Cx) / 64f + 0.5f, ny = (z - Cz) / 64f + 0.5f;
-            Dictionary<int, float> weights = [];
-            void Add(int b, float cx, float cy)
+            // Each corner's weight added to its biome's, corners in the game's order (0,0), (1,0), (0,1), (1,1).
+            Span<int> biomes = stackalloc int[4];
+            Span<float> weights = stackalloc float[4];
+            int count = 0;
+            for (int c = 0; c < 4; c++)
             {
-                float dx = nx - cx, dy = ny - cy, d = MathF.Sqrt(dx * dx + dy * dy), k = 1.414f - d;
-                weights[b] = weights.GetValueOrDefault(b) + k * k * k;
+                float dx = nx - (c & 1), dy = ny - (c >> 1), d = MathF.Sqrt(dx * dx + dy * dy), k = 1.414f - d;
+                int at = biomes[..count].IndexOf(Corners[c]);
+                if (at < 0)
+                {
+                    at = count++;
+                    biomes[at] = Corners[c];
+                    weights[at] = 0f;
+                }
+                weights[at] += k * k * k;
             }
-            Add(Corners[0], 0f, 0f); Add(Corners[1], 1f, 0f); Add(Corners[2], 0f, 1f); Add(Corners[3], 1f, 1f);
             // Ties go to the lowest biome index, as the game walks its weights in index order.
-            return weights.OrderByDescending(kv => kv.Value).ThenBy(kv => BitOperations.Log2((uint)kv.Key)).First().Key;
+            int best = 0;
+            for (int i = 1; i < count; i++)
+            {
+                if (weights[i] > weights[best] || (weights[i] == weights[best] && BitOperations.Log2((uint)biomes[i]) < BitOperations.Log2((uint)biomes[best])))
+                {
+                    best = i;
+                }
+            }
+            return biomes[best];
         }
 
         /// <summary>Heightmap.GetVegetationMask: the alpha of the base paint mask at the vertex under the point.</summary>
@@ -256,7 +282,7 @@ public static class Regrow
     /// <summary>The zone holding a world point, made once per <paramref name="cache"/>.</summary>
     private static Zone ZoneAt(TerrainService terrain, Ground ground, Dictionary<(int, int), Zone> cache, float x, float z)
     {
-        int zx = (int)MathF.Floor((x + 32f) / 64f), zz = (int)MathF.Floor((z + 32f) / 64f);
+        var (zx, zz) = Save.ChunkMath.SectorOf(x, z);
         if (cache.TryGetValue((zx, zz), out Zone? zone))
         {
             return zone;
@@ -273,16 +299,17 @@ public static class Regrow
             Cz = cz,
         };
         cache[(zx, zz)] = zone;
+        ZoneReads++;
         return zone;
     }
 
     /// <summary>
     /// ZoneSystem.PlaceVegetation for one zone: every enabled rule of its biomes, the same draws in the same
-    /// order, adding what passes the checks to <paramref name="spots"/>.
+    /// order, adding what passes the checks to <paramref name="spots"/>. <paramref name="zones"/> holds the zones
+    /// read so far, shared by every zone of one <see cref="Zones"/> call.
     /// </summary>
-    private static void PlaceZone(TerrainService terrain, Ground ground, int seed, int zx, int zz, List<Spot> spots)
+    private static void PlaceZone(TerrainService terrain, Ground ground, Dictionary<(int, int), Zone> zones, int seed, int zx, int zz, List<Spot> spots)
     {
-        Dictionary<(int, int), Zone> zones = [];
         Zone hmap = ZoneAt(terrain, ground, zones, zx * 64f, zz * 64f);
         float cx = zx * 64f, cz = zz * 64f;
         foreach (Rule veg in _rules)

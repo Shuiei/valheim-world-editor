@@ -40,4 +40,18 @@ public class DungeonGenPanelTests
         Assert.True(p.Place.IsEnabled);
         Assert.StartsWith(DungeonGen.NameFor(123, null, "Black Forest"), p.Summary.Text);
     }
+
+    [AvaloniaFact]
+    public void TheGamesRoomsAreShownWithTheNameTheyArePlacedWith()
+    {
+        // A style is the building pieces' own: the game's rooms are named after the biome (DungeonGen.MakeRooms), as the
+        // placed dungeon is.
+        var p = new DungeonGenPanel();
+        p.Style.SelectedIndex = 5;
+        Assert.Equal(DungeonGen.NameFor(1, "Prison", "Black Forest"), p.Name.PlaceholderText);
+
+        p.Made.SelectedIndex = 1;
+
+        Assert.Equal(DungeonGen.NameFor(1, null, "Black Forest"), p.Name.PlaceholderText);
+    }
 }

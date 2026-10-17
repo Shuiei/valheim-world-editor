@@ -22,24 +22,26 @@ public sealed class ScriptPanelTests : IDisposable
     public void Dispose()
     {
         AppSettings.DataDirOverride = _old;
-        try
+        if (Directory.Exists(_data))
         {
             Directory.Delete(_data, true);
         }
-        catch
-        {
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
-        }
     }
 
+            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
     // A script saved under a name (characters a file cannot have replaced), then listed after the examples and
-    // picked: its code and name back. An example picked leaves the name empty; no name is said.
+    // picked: its code and name back. An example picked leaves the name empty; no name is said. The panel opens with
+    // the first example chosen.
     [AvaloniaFact]
     public void ScriptsAreSavedAndPicked()
     {
         var p = new ScriptPanel();
+        Assert.Equal(0, p.ScriptBox.SelectedIndex);
+        Assert.Equal(ScriptExamples.All[0].Name, p.ChosenName);
+        Assert.Equal(ScriptExamples.All[0].Code, p.CodeBox.Text);
+        Assert.Equal("", p.NameBox.Text);
         var said = new List<string>();
-        p.Message += said.Add;
+        p.Message += m => said.Add(m.Shown);
         p.Fill();
         Assert.Equal(-1, p.ScriptBox.SelectedIndex);
         int examples = ScriptExamples.All.Length;
@@ -67,6 +69,33 @@ public sealed class ScriptPanelTests : IDisposable
         Assert.Equal(-1, p.ScriptBox.SelectedIndex);
     }
 
+    // Saving over another saved script asks first (No keeps it); the script picked in the list is saved over without
+    // asking. A saved script that cannot be read is left out of the list, not the others with it.
+    [AvaloniaFact]
+    public async Task AnotherScriptIsReplacedOnlyWhenSaidAndAnUnreadableOneIsLeftOut()
+    {
+        Directory.CreateDirectory(ScriptPanel.Folder);
+        File.WriteAllText(Path.Combine(ScriptPanel.Folder, "mine.csx"), "Print(1);");
+        File.CreateSymbolicLink(Path.Combine(ScriptPanel.Folder, "gone.csx"), Path.Combine(_data, "missing.csx"));
+        var p = new ScriptPanel();
+        var asked = new List<string>();
+        p.Confirm = q => { asked.Add(q); return Task.FromResult(false); };
+        int examples = ScriptExamples.All.Length;
+        Assert.Equal(examples + 1, p.ScriptBox.ItemCount);
+        // An example open, saved as "mine": asked, and No keeps the saved one.
+        p.ScriptBox.SelectedIndex = 0;
+        p.NameBox.Text = "mine";
+        await p.Save();
+        Assert.Equal("There is a saved script called “mine” already. Replace it?", Assert.Single(asked));
+        Assert.Equal("Print(1);", File.ReadAllText(Path.Combine(ScriptPanel.Folder, "mine.csx")));
+        // "mine" itself picked and changed: saved without asking.
+        p.ScriptBox.SelectedIndex = examples;
+        p.CodeBox.Text = "Print(2);";
+        await p.Save();
+        Assert.Single(asked);
+        Assert.Equal("Print(2);", File.ReadAllText(Path.Combine(ScriptPanel.Folder, "mine.csx")));
+    }
+
     // The scripts folder cannot be made (a file is in its place): said, nothing saved.
     [AvaloniaFact]
     public void ASaveThatFailsIsSaid()
@@ -75,7 +104,7 @@ public sealed class ScriptPanelTests : IDisposable
         File.WriteAllText(ScriptPanel.Folder, "not a folder");
         var p = new ScriptPanel();
         string? said = null;
-        p.Message += m => said = m;
+        p.Message += m => said = m.Shown;
         p.NameBox.Text = "mine";
         p.SaveButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
         Assert.StartsWith("Could not save the script: ", said);

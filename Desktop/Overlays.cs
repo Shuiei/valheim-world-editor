@@ -55,11 +55,16 @@ public static class Overlays
     /// The locations (villages, the trader, dungeon entrances...) in the area or within 40 m of it, as the Location
     /// markers show them.
     /// </summary>
-    public static int LocationsNear(WorldScene s)
+    public static int LocationsNear(WorldScene s) => RealLocations(s).Count(l => Near(s, l.Position));
+
+    /// <summary>
+    /// Whether world point <paramref name="p"/> lies in the area or within 40 m of it (the area's last grid point is
+    /// W - 1 m east of its first, and H - 1 m north).
+    /// </summary>
+    private static bool Near(WorldScene s, Vector3 p)
     {
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
-        float minX = ox - 40, maxX = ox + s.W + 40, minZ = oz - 40, maxZ = oz + s.H + 40;
-        return RealLocations(s).Count(l => l.Position.X >= minX && l.Position.X <= maxX && l.Position.Z >= minZ && l.Position.Z <= maxZ);
+        float ox = s.OriginX, oz = s.OriginZ;
+        return p.X >= ox - 40 && p.X <= ox + s.W - 1 + 40 && p.Z >= oz - 40 && p.Z <= oz + s.H - 1 + 40;
     }
 
     /// <summary>The world's locations without the invisible ground discs of No limit (not places to show).</summary>
@@ -87,7 +92,7 @@ public static class Overlays
                 lines[l].AddRange([pts[i - 1].X, pts[i - 1].Y, pts[i - 1].Z, pts[i].X, pts[i].Y, pts[i].Z]);
             }
         }
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
+        float ox = s.OriginX, oz = s.OriginZ;
         // A ring (or square) around a world point, following the ground.
         void Ring(Layer l, float wx, float wz, float r, bool square = false)
         {
@@ -139,11 +144,10 @@ public static class Overlays
         }
 
         // Location markers: a post 14 m tall at each location in or near the area.
-        float minX = ox - 40, maxX = ox + s.W + 40, minZ = oz - 40, maxZ = oz + s.H + 40;
         int locations = 0;
         foreach (var (p, _) in RealLocations(s))
         {
-            if (p.X < minX || p.X > maxX || p.Z < minZ || p.Z > maxZ)
+            if (!Near(s, p))
             {
                 continue;
             }
@@ -156,7 +160,7 @@ public static class Overlays
         }
 
         // Wards and crafting stations: the kinds with a ward radius or a build range.
-        var ranges = PrefabCatalog.Placeable.Where(p => p.WardRadius > 0 || p.BuildRange > 0).ToDictionary(p => p.Name, p => (p.WardRadius, p.BuildRange));
+        var ranges = PrefabCatalog.Ranges;
         int wards = 0, stations = 0;
         for (int i = 0; i < s.Things.Count; i++)
         {

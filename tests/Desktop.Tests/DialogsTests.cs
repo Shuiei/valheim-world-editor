@@ -60,7 +60,8 @@ public class DialogsTests
         var d = TestWindows.Shown(owner);
         var buttons = d.GetLogicalDescendants().OfType<Button>().ToList();
         Assert.Equal("OK", Assert.Single(buttons).Content);
-        Assert.True(buttons[0].IsDefault);
+        // Enter and Esc both close it.
+        Assert.True(buttons[0].IsDefault && buttons[0].IsCancel);
         Press(d, "OK");
         await told;
         Assert.Empty(owner.OwnedWindows);

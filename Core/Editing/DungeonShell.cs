@@ -202,12 +202,37 @@ internal static class DungeonShell
     private static bool InWell(DungeonPlan.Space s, (int, int) t) =>
         s.Room == Room.StairTop && DungeonPlanner.Depth((s.X0, s.Z0, s.W, s.H), s.Dir, t) >= 4;
 
-    /// <summary>A pillar or post of segments at (x, z) from y0 up to about y1 (metres).</summary>
-    public static void Stack(Column c, DungeonOut o, float x, float z, float y0, float y1)
+    /// <summary>
+    /// How far past a room's top a pillar's last segment may rise: through the roof slab (2 m), not into the room
+    /// above it.
+    /// </summary>
+    public const float RoofSlab = 2f;
+
+    /// <summary>Whether a segment from y would rise past the roof slab over <paramref name="top"/>.</summary>
+    public static bool PastRoof(Column c, float y, float top) => y + c.H > top + RoofSlab + 0.01f;
+
+    /// <summary>
+    /// A pillar or post of segments at (x, z) from y0 up to about y1 (metres): the last may rise into the roof slab
+    /// over y1, never past it.
+    /// </summary>
+    public static void Stack(Column c, DungeonOut o, float x, float z, float y0, float y1) => Stack([c], o, x, z, y0, y1);
+
+    /// <summary>
+    /// A pillar of a material's segments at (x, z) from y0 up to about y1 (metres): at each step the first segment that
+    /// fits under y1 (the list tallest first), else the last; the last may rise into the roof slab over y1, never past it.
+    /// </summary>
+    public static void Stack(IReadOnlyList<Column> segments, DungeonOut o, float x, float z, float y0, float y1)
     {
-        for (float y = y0; y < y1 - 0.3f; y += c.H)
+        float y = y0;
+        while (y < y1 - 0.3f)
         {
+            var c = segments.FirstOrDefault(c => c.H <= y1 - y + 0.01f) ?? segments[^1];
+            if (PastRoof(c, y, y1))
+            {
+                break;
+            }
             o.Add(c.Prefab, new Vector3(x, y + c.Bottom, z), 0);
+            y += c.H;
         }
     }
 
@@ -231,7 +256,7 @@ internal static class DungeonShell
         var part = low.Count > 0 ? low.OrderByDescending(p => p.H).ThenByDescending(p => p.W).First() : fits.OrderBy(p => p.H).ThenByDescending(p => p.W).First();
         float tc = t0 + part.W / 2, y = y0 + part.Bottom;
         // A window now and then in a material that has one, on the upper row (never the lowest), by the spot's hash.
-        string prefab = mat.Window is { } window && part.W >= 4 && y0 >= 1.9f && (StableHash.Of($"{line:0.#}|{tc:0.#}|{y0:0.#}") & 0xFF) < 46 ? window : part.Prefab;
+        string prefab = mat.Window is { } window && part.W >= 4 && y0 >= 1.9f && (StableHash.Of(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{line:0.#}|{tc:0.#}|{y0:0.#}")) & 0xFF) < 46 ? window : part.Prefab;
         o.Add(prefab, alongZ ? new Vector3(line, y, tc) : new Vector3(tc, y, line), alongZ ? 90 : 0);
         Fill(mat, o, alongZ, line, t0 + part.W, t1, y0, y0 + Math.Min(part.H, y1 - y0));
         Fill(mat, o, alongZ, line, t0, t1, y0 + part.H, y1);

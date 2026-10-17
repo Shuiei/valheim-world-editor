@@ -440,7 +440,18 @@ public static class GameLook
             {
                 continue;
             }
-            foreach (Match m in Regex.Matches(File.ReadAllText(vdf), "\"path\"\\s+\"([^\"]+)\""))
+            // Being rewritten by Steam, or without access: that root's other libraries are not searched this time.
+            string libraries;
+            try
+            {
+                libraries = File.ReadAllText(vdf);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Console.WriteLine($"game: {vdf} could not be read ({ex.Message}); the libraries it lists are not searched.");
+                continue;
+            }
+            foreach (Match m in Regex.Matches(libraries, "\"path\"\\s+\"([^\"]+)\""))
             {
                 string lib = m.Groups[1].Value.Replace(@"\\", @"\");
                 if (Directory.Exists(lib) && seen.Add(Path.GetFullPath(lib)))

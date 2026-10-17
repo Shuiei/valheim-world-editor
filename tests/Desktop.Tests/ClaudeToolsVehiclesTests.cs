@@ -31,4 +31,20 @@ public class ClaudeToolsVehiclesTests
         Assert.StartsWith("Took 5 away, with 1 whole vehicle(s).", await r.T.RemoveObjects([part]));
         Assert.All(moved.GetProperty("moved").EnumerateArray(), m => Assert.True(s.Scene.Things[m.GetProperty("id").GetInt32()].Gone));
     }
+
+    // replace_objects: a ship's root takes its parts away with it (they would hang on nothing); a part goes alone.
+    [AvaloniaFact]
+    public async Task ReplacingAShipsRootTakesItsPartsAway()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        var s = r.W.Session!;
+        var ship = TestScenes.AddShip(s, 0, 0);
+        var part = ClaudeRun.J(await r.T.ReplaceObjects([ship[1]], "Birch1"));
+        Assert.Equal(0, part.GetProperty("partsTakenAway").GetInt32());
+        Assert.False(s.Scene.Things[ship[2]].Gone);
+        var root = ClaudeRun.J(await r.T.ReplaceObjects([ship[0]], "Birch1"));
+        Assert.Equal(3, root.GetProperty("partsTakenAway").GetInt32());
+        Assert.All(ship.Skip(2), i => Assert.True(s.Scene.Things[i].Gone));
+    }
 }

@@ -13,9 +13,25 @@ namespace WorldEditor.Tests;
 public sealed class FakeGame : IDisposable
 {
     private readonly HttpListener _listener = new();
+    /// <summary>Answering the requests: Dispose waits for it to end, and its errors fail the test.</summary>
+    private readonly Task _serving;
+    /// <summary>The requests answered on their own (Answer): Dispose waits for them, and their errors fail the test.</summary>
+    private readonly List<Task> _answering = [];
     private readonly byte[] _snapshot;
 
     public int Port { get; }
+
+    /// <summary>Whether the wait for requests or the answer to one ended with an error (Dispose then throws it).</summary>
+    public bool Broken
+    {
+        get
+        {
+            lock (_answering)
+            {
+                return _serving.IsFaulted || _answering.Exists(a => a.IsFaulted);
+            }
+        }
+    }
     public string Url => $"http://127.0.0.1:{Port}";
     public string Token { get; } = "test-token";
     public string Players { get; set; } = "[{\"name\":\"Ada\",\"x\":10,\"y\":30,\"z\":-20,\"yaw\":0},{\"name\":\"Bjorn\",\"x\":-40,\"y\":31,\"z\":5,\"yaw\":90}]";
@@ -59,7 +75,7 @@ public sealed class FakeGame : IDisposable
         Port = FreePort();
         _listener.Prefixes.Add($"http://127.0.0.1:{Port}/");
         _listener.Start();
-        _ = Task.Run(Serve);
+        _serving = Task.Run(Serve);
     }
 
     // The fixture world as the plugin sends it.
@@ -86,13 +102,18 @@ public sealed class FakeGame : IDisposable
             {
                 ctx = await _listener.GetContextAsync();
             }
-            catch
+            catch (Exception) when (!_listener.IsListening)
             {
+                // Closed (Dispose): the wait for the next request ends with an error, and so does the serving.
                 return;
             }
             // Each request on its own: a held one (HoldTerrain) or a broken connection never keeps the others
             // from being answered.
-            _ = Task.Run(() => Answer(ctx));
+            var answer = Task.Run(() => Answer(ctx));
+            lock (_answering)
+            {
+                _answering.Add(answer);
+            }
         }
     }
 
@@ -301,6 +322,21 @@ public sealed class FakeGame : IDisposable
         return p;
     }
 
-    /// <inheritdoc/>
-    public void Dispose() => _listener.Close();
+    /// <summary>
+    /// Stops answering, lets held requests go, and waits until the wait for requests and every request being answered
+    /// have ended; an error in them fails the test.
+    /// </summary>
+    public void Dispose()
+    {
+        _listener.Close();
+        HoldPlayers?.TrySetResult();
+        HoldTerrain?.TrySetResult();
+        Assert.True(_serving.Wait(TimeSpan.FromSeconds(30)), "the stand-in game did not stop answering");
+        Task[] answers;
+        lock (_answering)
+        {
+            answers = [.. _answering];
+        }
+        Assert.True(Task.WaitAll(answers, TimeSpan.FromSeconds(30)), "a request to the stand-in game was still being answered");
+    }
 }

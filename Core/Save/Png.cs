@@ -28,8 +28,31 @@ public static class Png
     /// <param name="filter">
     /// The PNG row filter to use (0 none ... 4 Paeth; the default 1 Sub compresses heightmaps well).
     /// </param>
+    /// <exception cref="ArgumentException">
+    /// No pixels, fewer values than pixels, a filter PNG does not have, or a note PNG cannot hold (a keyword of 1 to 79
+    /// printable Latin-1 characters without spaces at its ends or two in a row; Latin-1 text without NUL).
+    /// </exception>
     public static byte[] WriteGray16(int width, int height, ushort[] values, IReadOnlyDictionary<string, string>? text = null, int filter = 1)
     {
+        if (width <= 0 || height <= 0)
+        {
+            throw new ArgumentException("A PNG picture has at least one pixel.", width <= 0 ? nameof(width) : nameof(height));
+        }
+        if (values.Length < (long)width * height)
+        {
+            throw new ArgumentException($"{width} × {height} pixels need as many values; there are {values.Length}.", nameof(values));
+        }
+        if (filter is < 0 or > 4)
+        {
+            throw new ArgumentOutOfRangeException(nameof(filter), "PNG's row filters are 0 (none) to 4 (Paeth).");
+        }
+        foreach (var (k, v) in text ?? new Dictionary<string, string>())
+        {
+            if (!IsKeyword(k) || v.Any(c => c is '\0' or > '\u00ff'))
+            {
+                throw new ArgumentException($"The note \"{k}\" cannot be a PNG tEXt note.", nameof(text));
+            }
+        }
         using MemoryStream png = new();
         png.Write(Signature);
         byte[] ihdr = new byte[13];
@@ -85,6 +108,7 @@ public static class Png
             throw new InvalidDataException("not a PNG picture");
         }
         int width = 0, height = 0, depth = 0, color = 0;
+        bool header = false;
         Dictionary<string, string> text = [];
         using MemoryStream idat = new();
         int p = 8;
@@ -109,6 +133,7 @@ public static class Png
                     height = (data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7];
                     depth = data[8];
                     color = data[9];
+                    header = true;
                     if (data[12] != 0)
                     {
                         throw new InvalidDataException("interlaced PNG pictures are not supported; save it without interlacing");
@@ -130,6 +155,10 @@ public static class Png
             {
                 break;
             }
+        }
+        if (!header)
+        {
+            throw new InvalidDataException("the PNG picture has no header (IHDR)");
         }
         int channels = color switch { 0 => 1, 2 => 3, 4 => 2, 6 => 4, _ => throw new InvalidDataException("palette PNG pictures are not supported; save it as grayscale or RGB") };
         if (depth is not 8 and not 16)
@@ -246,4 +275,12 @@ public static class Png
         }
         return crc;
     }
+
+    /// <summary>
+    /// Whether a text is a PNG tEXt keyword: 1 to 79 printable Latin-1 characters (32 to 126, 161 to 255), no space at
+    /// either end nor two in a row.
+    /// </summary>
+    private static bool IsKeyword(string k) =>
+        k.Length is >= 1 and <= 79 && k.All(c => c is >= ' ' and <= '~' or >= '\u00a1' and <= '\u00ff')
+        && k[0] != ' ' && k[^1] != ' ' && !k.Contains("  ", StringComparison.Ordinal);
 }
