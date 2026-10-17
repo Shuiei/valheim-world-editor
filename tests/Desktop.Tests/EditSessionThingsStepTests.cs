@@ -10,6 +10,10 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class EditSessionThingsStepTests
 {
+    private static readonly int[] Expected4 = [0];
+    private static readonly int[] Expected3 = [0];
+    private static readonly int[] Expected2 = [0];
+    private static readonly int[] Expected1 = [1];
     private static WorldScene.Thing Rock() => new(3, StableHash.Of("Rock_4"), new Vector3(0, 30, 0), Vector3.Zero, 1, false);
 
     [Fact]
@@ -36,7 +40,7 @@ public class EditSessionThingsStepTests
         var probe = TestScenes.Flat(1);
         float ox = probe.Scene.OriginX, oz = probe.Scene.OriginZ;
         var s = TestScenes.Flat(1, TestScenes.Beech(1, new Vector3(ox + 32, 30, oz + 32)), TestScenes.Beech(2, new Vector3(ox + 50, 30, oz + 32)));
-        Assert.Equal(new[] { 0 }, s.ObjectsToClear(32, 32, 3, (_, _) => 1000f, null));
+        Assert.Equal(Expected4, s.ObjectsToClear(32, 32, 3, (_, _) => 1000f, null));
     }
 
     [Fact]
@@ -55,7 +59,7 @@ public class EditSessionThingsStepTests
         var changed = new List<int>();
         s.TakeThingChanges([3], [], changed);
         Assert.True(s.Scene.Things[0].Gone);
-        Assert.Equal(new[] { 0 }, changed);
+        Assert.Equal(Expected3, changed);
     }
 
     [Fact]
@@ -66,7 +70,7 @@ public class EditSessionThingsStepTests
         var changed = new List<int>();
         s.TakeThingChanges([], new Dictionary<int, WorldScene.Thing> { [3] = moved }, changed);
         Assert.Equal(new Vector3(5, 30, 5), s.Scene.Things[0].Position);
-        Assert.Equal(new[] { 0 }, changed);
+        Assert.Equal(Expected2, changed);
     }
 
     [Fact]
@@ -81,6 +85,6 @@ public class EditSessionThingsStepTests
         s.TakeThingChanges([], new Dictionary<int, WorldScene.Thing> { [9] = inside, [10] = outside }, changed);
         Assert.Equal(2, s.Scene.Things.Count);
         Assert.Equal(9, s.Scene.Things[1].Id);
-        Assert.Equal(new[] { 1 }, changed);
+        Assert.Equal(Expected1, changed);
     }
 }

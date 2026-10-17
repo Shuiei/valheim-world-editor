@@ -11,7 +11,7 @@ public sealed partial class WorldGenerator
     /// </summary>
     private List<River> PlaceRivers()
     {
-        var saved = Rnd.state;
+        var saved = Rnd.State;
         try
         {
             Rnd.InitState(_riverSeed);
@@ -42,7 +42,7 @@ public sealed partial class WorldGenerator
         }
         finally
         {
-            Rnd.state = saved;
+            Rnd.State = saved;
         }
     }
 

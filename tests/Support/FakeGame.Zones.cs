@@ -1,5 +1,5 @@
-using System.Net;
 using System.IO.Compression;
+using System.Net;
 using System.Text;
 
 namespace WorldEditor.Tests;

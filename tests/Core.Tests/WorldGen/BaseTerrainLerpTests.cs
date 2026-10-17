@@ -16,10 +16,10 @@ public class BaseTerrainLerpTests
     {
         Color mid = PrivateMember.Call<Color>(typeof(BaseTerrain), "Lerp", null, Black, White, 0.5f);
 
-        Assert.Equal(0.5f, mid.r);
-        Assert.Equal(0.5f, mid.g);
-        Assert.Equal(0.5f, mid.b);
-        Assert.Equal(0.5f, mid.a);
+        Assert.Equal(0.5f, mid.R);
+        Assert.Equal(0.5f, mid.G);
+        Assert.Equal(0.5f, mid.B);
+        Assert.Equal(0.5f, mid.A);
     }
 
     [Fact]

@@ -1,5 +1,5 @@
-using Avalonia.Controls.Documents;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 
 namespace TerrainEditor.Desktop.Tests;
 

@@ -9,6 +9,15 @@ namespace WorldEditor.Tests;
 [Collection("World files")]
 public class AppDataServersTests
 {
+    private static readonly string[] ConfigLines =
+    [
+        "Host = before any section", "; a comment", "# another",
+        "[Main]", "Host = 203.0.113.1", "User = valheim", "SshPort = not a number", "BridgePort = x", "Password =", "KeyFile = ~/.ssh/k", "no equals sign here",
+        "[No user]", "Host = 203.0.113.2",
+        "[  Spaced  ]", "Host = 203.0.113.3", "User = u", "SshPort = 2222", "BridgePort = 5190", "Token = t", "HostKey = SHA256:x", "GameFolder = /srv/v", "Unknown = 1",
+    ];
+
+    private static readonly string[] Expected1 = ["Main", "Spaced"];
     [Fact]
     public void TheServerListIsReadLeniently()
     {
@@ -18,15 +27,9 @@ public class AppDataServersTests
         try
         {
             Assert.Empty(ServerConfig.Load());
-            File.WriteAllText(file, string.Join("\n", new[]
-            {
-                "Host = before any section", "; a comment", "# another",
-                "[Main]", "Host = 203.0.113.1", "User = valheim", "SshPort = not a number", "BridgePort = x", "Password =", "KeyFile = ~/.ssh/k", "no equals sign here",
-                "[No user]", "Host = 203.0.113.2",
-                "[  Spaced  ]", "Host = 203.0.113.3", "User = u", "SshPort = 2222", "BridgePort = 5190", "Token = t", "HostKey = SHA256:x", "GameFolder = /srv/v", "Unknown = 1",
-            }));
+            File.WriteAllText(file, string.Join("\n", ConfigLines));
             var list = ServerConfig.Load();
-            Assert.Equal(new[] { "Main", "Spaced" }, list.Select(s => s.Name).ToArray());
+            Assert.Equal(Expected1, list.Select(s => s.Name).ToArray());
             Assert.Equal((22, 5182, null, "~/.ssh/k"), (list[0].SshPort, list[0].BridgePort, list[0].Password, list[0].KeyFile));
             Assert.Equal((2222, 5190, "t", "SHA256:x", "/srv/v"), (list[1].SshPort, list[1].BridgePort, list[1].Token, list[1].HostKey, list[1].GameFolder));
             // A server remembered without a name is named after its address; ] in a name cannot end the section.

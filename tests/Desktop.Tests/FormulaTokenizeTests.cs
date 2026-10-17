@@ -7,6 +7,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class FormulaTokenizeTests
 {
+    private static readonly string[] Expected1 = ["<=", "&&", "!=", "||"];
     [Fact]
     public void NumbersNamesAndOperatorsComeInOrder()
     {
@@ -23,7 +24,7 @@ public class FormulaTokenizeTests
     public void TwoCharacterOperatorsAreOneToken()
     {
         var toks = Formula.Tokenize("a<=b&&c!=d||e");
-        Assert.Equal(new[] { "<=", "&&", "!=", "||" }, toks.Where(t => t.Op != null).Select(t => t.Op).ToArray());
+        Assert.Equal(Expected1, toks.Where(t => t.Op != null).Select(t => t.Op).ToArray());
     }
 
     [Fact]

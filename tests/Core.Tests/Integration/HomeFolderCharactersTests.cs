@@ -11,6 +11,7 @@ namespace WorldEditor.Tests;
 [Collection("DataDir")]
 public sealed class HomeFolderCharactersTests : HomeFolderTestBase
 {
+    private static readonly long[] Expected1 = [10L];
     /// <summary>
     /// A character file as the game writes it, around the bits that are read: name, id, seed.
     /// </summary>
@@ -114,7 +115,7 @@ public sealed class HomeFolderCharactersTests : HomeFolderTestBase
         File.WriteAllBytes(Path.Combine(chars, "secret.fch"), Fch("Secret", 9));
         File.SetUnixFileMode(Path.Combine(chars, "secret.fch"), UnixFileMode.None);
         File.WriteAllBytes(Path.Combine(chars, "open.fch"), Fch("Open", 10));
-        Assert.Equal(new[] { 10L }, Characters.Local().Select(c => c.Id).ToArray());
+        Assert.Equal(Expected1, Characters.Local().Select(c => c.Id).ToArray());
     }
 
     [Fact]

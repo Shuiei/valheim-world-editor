@@ -62,25 +62,25 @@ public static partial class SeedLocations
         /// </summary>
         public void Generate(Rule rule)
         {
-            Rnd.InitState(_gen.GetSeed() + StableHash.Of(rule.prefab));
-            int have = Instances.Values.Count(p => p.Rule.prefab == rule.prefab);
+            Rnd.InitState(_gen.GetSeed() + StableHash.Of(rule.Prefab));
+            int have = Instances.Values.Count(p => p.Rule.Prefab == rule.Prefab);
             (_sums, _sumsTotal, _sumsBest) = (0, 0, float.NegativeInfinity);
-            if (rule.unique != 0 && have > 0)
+            if (rule.Unique != 0 && have > 0)
             {
                 return;
             }
-            var biomes = (Heightmap.Biome)rule.biome;
-            float margin = MathF.Max(rule.exteriorRadius, rule.interiorRadius);
+            var biomes = (Heightmap.Biome)rule.Biome;
+            float margin = MathF.Max(rule.ExteriorRadius, rule.InteriorRadius);
             // Kinds laid out from the middle out (the start temple): the reach grows a metre a try.
-            float reach = rule.minDistance;
-            for (int left = rule.prioritized != 0 ? 60000 : 12000; left > 0 && have < rule.quantity; left--)
+            float reach = rule.MinDistance;
+            for (int left = rule.Prioritized != 0 ? 60000 : 12000; left > 0 && have < rule.Quantity; left--)
             {
                 (int X, int Y) zone;
-                if (rule.centerFirst != 0)
+                if (rule.CenterFirst != 0)
                 {
                     zone = ZoneNearMiddle(reach++);
                 }
-                else if (_map().RandomPoint(biomes, rule.minAltitude >= 0f) is { } point)
+                else if (_map().RandomPoint(biomes, rule.MinAltitude >= 0f) is { } point)
                 {
                     zone = ZoneOf(point);
                 }
@@ -89,7 +89,7 @@ public static partial class SeedLocations
                     // A biome with no point on the map (or none at all): this try finds no zone.
                     continue;
                 }
-                if (Instances.ContainsKey(zone) || ((Heightmap.BiomeArea)rule.biomeArea & _gen.GetBiomeArea(new Vector2s(zone.X * 64, zone.Y * 64))) == 0)
+                if (Instances.ContainsKey(zone) || ((Heightmap.BiomeArea)rule.BiomeArea & _gen.GetBiomeArea(new Vector2s(zone.X * 64, zone.Y * 64))) == 0)
                 {
                     continue;
                 }

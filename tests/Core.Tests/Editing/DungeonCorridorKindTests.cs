@@ -8,6 +8,10 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class DungeonCorridorKindTests
 {
+    private static readonly string[] Expected4 = ["skull_pile", "bone_stack", "LargeBone"];
+    private static readonly string[] Expected3 = ["root11", "root12", "root07"];
+    private static readonly string[] Expected2 = ["CreepProp_wall01", "CreepProp_egg_hanging01", "CreepProp_egg_hanging02", "SeekerEgg"];
+    private static readonly string[] Expected1 = ["caverock_ice_stalagtite", "BlackIceShard_01"];
     private static readonly int[] Seeds = [1, 2, 3, 4, 5, 6];
 
     [Fact]
@@ -15,7 +19,7 @@ public class DungeonCorridorKindTests
     {
         var items = DungeonCorridorSupport.Dress("bones", Seeds);
         Assert.NotEmpty(items);
-        Assert.All(items, i => Assert.Contains(i.Prefab, new[] { "skull_pile", "bone_stack", "LargeBone" }));
+        Assert.All(items, i => Assert.Contains(i.Prefab, Expected4));
     }
 
     [Fact]
@@ -39,7 +43,7 @@ public class DungeonCorridorKindTests
     {
         var items = DungeonCorridorSupport.Dress("roots", Seeds);
         Assert.NotEmpty(items);
-        Assert.All(items, i => Assert.Contains(i.Prefab, new[] { "root11", "root12", "root07" }));
+        Assert.All(items, i => Assert.Contains(i.Prefab, Expected3));
     }
 
     [Fact]
@@ -55,7 +59,7 @@ public class DungeonCorridorKindTests
     {
         var items = DungeonCorridorSupport.Dress("creep", Seeds);
         Assert.NotEmpty(items);
-        Assert.All(items, i => Assert.Contains(i.Prefab, new[] { "CreepProp_wall01", "CreepProp_egg_hanging01", "CreepProp_egg_hanging02", "SeekerEgg" }));
+        Assert.All(items, i => Assert.Contains(i.Prefab, Expected2));
     }
 
     [Fact]
@@ -64,6 +68,6 @@ public class DungeonCorridorKindTests
         // Every corridor at least four metres across gets at least one icicle from the ceiling.
         var items = DungeonCorridorSupport.Dress("icicles", Seeds);
         Assert.Contains(items, i => i.Prefab == "caverock_ice_stalagtite");
-        Assert.All(items, i => Assert.Contains(i.Prefab, new[] { "caverock_ice_stalagtite", "BlackIceShard_01" }));
+        Assert.All(items, i => Assert.Contains(i.Prefab, Expected1));
     }
 }

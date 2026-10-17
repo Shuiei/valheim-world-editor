@@ -12,6 +12,7 @@ namespace WorldEditor.Tests;
 [Collection("DataDir")]
 public sealed partial class LangCatalogueTests : LangTestBase
 {
+    private static readonly string[] Expected1 = ["Core", "Desktop"];
     /// <summary>
     /// A key asked for in the code: Lang.T("key"…), Lang.En("key"…), and the status bar's messages in two languages,
     /// Said.Of("key"…) and Msg("key"…).
@@ -69,7 +70,7 @@ public sealed partial class LangCatalogueTests : LangTestBase
     public void TheCataloguesMatchTheCodeAndTheEnglish()
     {
         string repo = Path.Combine(Fixtures.Root, "..", "..");
-        string code = string.Join("\n", new[] { "Core", "Desktop" }
+        string code = string.Join("\n", Expected1
             .SelectMany(d => Directory.GetFiles(Path.Combine(repo, d), "*.cs", SearchOption.AllDirectories))
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .Select(File.ReadAllText));

@@ -19,10 +19,10 @@ public static partial class SeedPreview
         var marks = new List<Landmark>();
         foreach (var p in placed)
         {
-            int at = Array.FindIndex(Landmarks, l => l.Prefab == p.Rule.prefab);
+            int at = Array.FindIndex(Landmarks, l => l.Prefab == p.Rule.Prefab);
             if (at >= 0)
             {
-                marks.Add(new Landmark(Landmarks[at].Name, Landmarks[at].Kind, p.X, p.Z, p.Rule.unique != 0 && p.Rule.quantity > 1));
+                marks.Add(new Landmark(Landmarks[at].Name, Landmarks[at].Kind, p.X, p.Z, p.Rule.Unique != 0 && p.Rule.Quantity > 1));
             }
         }
         var start = marks.FirstOrDefault(m => m.Kind == "start");

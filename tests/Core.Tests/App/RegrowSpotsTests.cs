@@ -1,6 +1,6 @@
-using Vector3 = System.Numerics.Vector3;
 using TerrainEditor.App;
 using Xunit;
+using Vector3 = System.Numerics.Vector3;
 
 namespace WorldEditor.Tests;
 

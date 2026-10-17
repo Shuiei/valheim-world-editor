@@ -1,7 +1,7 @@
-using Avalonia.Headless.XUnit;
-using Avalonia.Headless;
-using Avalonia.Input;
 using Avalonia;
+using Avalonia.Headless;
+using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using TerrainEditor.App;
 using Xunit;
 using static TerrainEditor.Desktop.Tests.SeedMapRun;

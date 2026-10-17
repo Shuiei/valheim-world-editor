@@ -1,6 +1,6 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Text;
 using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop.Tests;

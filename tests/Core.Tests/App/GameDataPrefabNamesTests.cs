@@ -8,12 +8,13 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class GameDataPrefabNamesTests
 {
+    private static readonly string[] Expected1 = ["Stone", "Wood"];
     [Fact]
     public void EachKeyOfThePrefabListIsAPrefabName()
     {
         var names = (HashSet<string>)PrivateCall.Static(typeof(GameData), "PrefabNames", """{"Wood":{"a":1},"Stone":{}}""")!;
 
-        Assert.Equal(new[] { "Stone", "Wood" }, names.Order().ToArray());
+        Assert.Equal(Expected1, names.Order().ToArray());
     }
 
     [Fact]

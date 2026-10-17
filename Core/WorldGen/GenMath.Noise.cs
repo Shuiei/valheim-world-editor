@@ -16,12 +16,12 @@ public static partial class GenMath
     /// Layers of noise, each <paramref name="lacunarity"/> times finer and <paramref name="gain"/> times weaker
     /// (in float).
     /// </summary>
-    public static float Layers(Vector2 p, int count, float lacunarity, float gain)
+    internal static float Layers(Vector2 p, int count, float lacunarity, float gain)
     {
         float sum = 0f, weight = 1f;
         for (int i = 0; i < count; i++)
         {
-            sum = (float)((double)sum + (double)weight * Noise(p.x, p.y));
+            sum = (float)((double)sum + (double)weight * Noise(p.X, p.Y));
             weight = (float)((double)weight * gain);
             p *= lacunarity;
         }
@@ -31,15 +31,15 @@ public static partial class GenMath
     /// <summary>
     /// The same at a world position's x and z.
     /// </summary>
-    public static float Layers(Vector3 p, int count, float lacunarity, float gain) => Layers(new Vector2(p.x, p.z), count, lacunarity, gain);
+    internal static float Layers(Vector3 p, int count, float lacunarity, float gain) => Layers(new Vector2(p.X, p.Z), count, lacunarity, gain);
 
     /// <summary>
     /// Layers of noise in double, each <paramref name="lacunarity"/> times finer and <paramref name="gain"/>
     /// times weaker.
     /// </summary>
-    public static double Layers(Vector2 p, int count, double lacunarity, double gain)
+    internal static double Layers(Vector2 p, int count, double lacunarity, double gain)
     {
-        double sum = 0.0, weight = 1.0, x = p.x, y = p.y;
+        double sum = 0.0, weight = 1.0, x = p.X, y = p.Y;
         for (int i = 0; i < count; i++)
         {
             sum += weight * Noise(x, y);

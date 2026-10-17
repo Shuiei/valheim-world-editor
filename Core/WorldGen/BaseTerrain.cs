@@ -69,7 +69,7 @@ public static class BaseTerrain
                 if (mask != null)
                 {
                     int o = (k * num + l) * 4;
-                    mask[o] = m.r; mask[o + 1] = m.g; mask[o + 2] = m.b; mask[o + 3] = m.a;
+                    mask[o] = m.R; mask[o + 1] = m.G; mask[o + 2] = m.B; mask[o + 3] = m.A;
                 }
             }
         }
@@ -82,6 +82,6 @@ public static class BaseTerrain
     private static Color Lerp(Color a, Color b, float t)
     {
         t = Math.Clamp(t, 0f, 1f);
-        return new Color(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, a.a + (b.a - a.a) * t);
+        return new Color(a.R + (b.R - a.R) * t, a.G + (b.G - a.G) * t, a.B + (b.B - a.B) * t, a.A + (b.A - a.A) * t);
     }
 }

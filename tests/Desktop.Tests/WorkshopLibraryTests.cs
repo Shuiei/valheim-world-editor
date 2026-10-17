@@ -1,6 +1,6 @@
+using System.Numerics;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
-using System.Numerics;
 using TerrainEditor.App;
 using Xunit;
 

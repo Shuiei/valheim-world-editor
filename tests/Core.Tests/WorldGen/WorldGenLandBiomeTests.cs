@@ -12,7 +12,7 @@ public class WorldGenLandBiomeTests
     /// <summary>
     /// A generator for a seed of the current generator version.
     /// </summary>
-    private static WorldGenerator Generator() => WorldGenerator.Create(new World { m_seed = 12345, m_worldGenVersion = 2 });
+    private static WorldGenerator Generator() => WorldGenerator.Create(new World { Seed = 12345, WorldGenVersion = 2 });
 
     [Fact]
     public void NearTheMiddleOfTheWorldTheLandIsMeadows()

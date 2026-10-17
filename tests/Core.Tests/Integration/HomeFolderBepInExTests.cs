@@ -9,6 +9,7 @@ namespace WorldEditor.Tests;
 [Collection("DataDir")]
 public sealed class HomeFolderBepInExTests : HomeFolderTestBase
 {
+    private static readonly string[] Expected1 = ["flat", "game", "mine", "r2", "ts"];
     [Fact]
     public void TheGameAndModManagerProfilesAreSearched()
     {
@@ -32,7 +33,7 @@ public sealed class HomeFolderBepInExTests : HomeFolderTestBase
         Assert.Contains(folders, f => f.Where == "Thunderstore Mod Manager profile \"Tsmm\"");
         var bridges = LocalGame.FindBridges(settings, out bool bepInEx, out bool plugin);
         Assert.True(bepInEx && plugin);
-        Assert.Equal(new[] { "flat", "game", "mine", "r2", "ts" }, bridges.Select(b => b.Token).Order().ToArray());
+        Assert.Equal(Expected1, bridges.Select(b => b.Token).Order().ToArray());
     }
 
     // A mod's folder in plugins that cannot be read is passed over in the search for the plugin (the whole check threw).

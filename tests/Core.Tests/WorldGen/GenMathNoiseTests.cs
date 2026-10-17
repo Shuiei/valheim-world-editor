@@ -32,7 +32,7 @@ public class GenMathNoiseTests
     {
         var p = new Vector2(3.5f, 1.25f);
 
-        Assert.Equal(GenMath.Noise(p.x, p.y), GenMath.Layers(p, 1, 2f, 0.5f));
+        Assert.Equal(GenMath.Noise(p.X, p.Y), GenMath.Layers(p, 1, 2f, 0.5f));
     }
 
     [Fact]

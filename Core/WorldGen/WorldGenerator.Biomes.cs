@@ -10,7 +10,7 @@ public sealed partial class WorldGenerator
     /// <summary>
     /// The biome at a world position's x and z.
     /// </summary>
-    public Heightmap.Biome GetBiome(Vector3 point) => GetBiome(point.x, point.z);
+    internal Heightmap.Biome GetBiome(Vector3 point) => GetBiome(point.X, point.Z);
 
     /// <summary>
     /// The biome at (x, z).
@@ -21,7 +21,7 @@ public sealed partial class WorldGenerator
     /// <param name="waterAlwaysOcean">Sea by the ground's height instead (and before the Ashlands).</param>
     public Heightmap.Biome GetBiome(float x, float z, float oceanLevel = 0.02f, bool waterAlwaysOcean = false)
     {
-        if (_world.m_menu)
+        if (_world.Menu)
         {
             return MenuContinent(x, z) >= 0.4f ? Heightmap.Biome.Mountain : Heightmap.Biome.BlackForest;
         }

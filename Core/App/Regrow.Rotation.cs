@@ -43,7 +43,7 @@ public static partial class Regrow
     /// </summary>
     private static NVector3 SpotRotation(Rule veg, NVector3 normal, SpotDraw draw)
     {
-        if (veg.chanceToUseGroundTilt > 0f && Rnd.value <= veg.chanceToUseGroundTilt)
+        if (veg.chanceToUseGroundTilt > 0f && Rnd.Value <= veg.chanceToUseGroundTilt)
         {
             // Quaternion.LookRotation(Cross(normal, Euler(0, y, 0) * forward), normal).
             float a = draw.Ry * MathF.PI / 180f;

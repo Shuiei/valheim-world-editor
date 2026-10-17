@@ -17,7 +17,7 @@ public class SeedLocationsLayoutTests
 
         var placed = new SeedLocations.Layout(Seed()).Place(SeedLocations.Which.Start, TestContext.Current.CancellationToken);
 
-        Assert.Equal("StartTemple", Assert.Single(placed).Rule.prefab);
+        Assert.Equal("StartTemple", Assert.Single(placed).Rule.Prefab);
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public class SeedLocationsLayoutTests
         var placed = new SeedLocations.Layout(Seed()).PlaceKinds(["StartTemple"], TestContext.Current.CancellationToken);
 
         Assert.NotEmpty(placed);
-        Assert.All(placed, p => Assert.Equal("StartTemple", p.Rule.prefab));
+        Assert.All(placed, p => Assert.Equal("StartTemple", p.Rule.Prefab));
     }
 
     [Fact]

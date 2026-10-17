@@ -18,7 +18,7 @@ public static partial class SeedLocations
                 return false;
             }
             // The steps after the slope's (which draws from the random sequence) must stay after it.
-            if (!RightNeighbours(rule, spot) || !RightVegetation(rule, vegetation) || rule.altBiome != null || !StandsOut(rule, spot))
+            if (!RightNeighbours(rule, spot) || !RightVegetation(rule, vegetation) || rule.AltBiome != null || !StandsOut(rule, spot))
             {
                 return false;
             }
@@ -31,14 +31,14 @@ public static partial class SeedLocations
         /// </summary>
         internal void Register(Rule rule, Vector3 spot)
         {
-            var placed = new Placed(rule, spot.x, spot.y, spot.z);
-            if (!Instances.TryAdd(ZoneOf((spot.x, spot.z)), placed))
+            var placed = new Placed(rule, spot.X, spot.Y, spot.Z);
+            if (!Instances.TryAdd(ZoneOf((spot.X, spot.Z)), placed))
             {
                 return;
             }
-            _byPrefab.Add(rule.prefab, placed);
-            _byGroup.Add(rule.group, placed);
-            _byGroupMax.Add(rule.groupMax, placed);
+            _byPrefab.Add(rule.Prefab, placed);
+            _byGroup.Add(rule.Group, placed);
+            _byGroupMax.Add(rule.GroupMax, placed);
         }
     }
 }

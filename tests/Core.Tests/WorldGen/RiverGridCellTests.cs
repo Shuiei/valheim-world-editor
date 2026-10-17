@@ -21,16 +21,16 @@ public sealed class RiverGridCellTests
     [Fact]
     public void ACellStartsHalfWayBetweenItsCentres()
     {
-        Assert.Equal(1, WorldGenerator.GetRiverGrid(32f, 0f).x);
-        Assert.Equal(0, WorldGenerator.GetRiverGrid(31.9f, 0f).x);
+        Assert.Equal(1, WorldGenerator.GetRiverGrid(32f, 0f).X);
+        Assert.Equal(0, WorldGenerator.GetRiverGrid(31.9f, 0f).X);
     }
 
     /// <summary>Negative coordinates go to the cell below, not towards zero.</summary>
     [Fact]
     public void NegativeCoordinatesRoundDownToTheCellBelow()
     {
-        Assert.Equal(-1, WorldGenerator.GetRiverGrid(-33f, 0f).x);
-        Assert.Equal(-1, WorldGenerator.GetRiverGrid(0f, -33f).y);
+        Assert.Equal(-1, WorldGenerator.GetRiverGrid(-33f, 0f).X);
+        Assert.Equal(-1, WorldGenerator.GetRiverGrid(0f, -33f).Y);
     }
 
     /// <summary>A point at the centre of its cell is inside it, with no width to add.</summary>

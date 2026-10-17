@@ -10,6 +10,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public sealed class PrefsBindingTests : PrefsFolder
 {
+    private static readonly string[] Expected1 = ["three"];
     [AvaloniaFact]
     public void ASwitchIsSetFromThePrefsAndRememberedWhenChanged()
     {
@@ -43,7 +44,7 @@ public sealed class PrefsBindingTests : PrefsFolder
         Assert.Equal(1, gone.SelectedIndex);
         // An empty list, no list, nothing remembered.
         Assert.False(p.Restore(new ComboBox(), "k"));
-        Assert.False(p.Restore(new ComboBox { ItemsSource = new[] { "three" } }, "nothing"));
+        Assert.False(p.Restore(new ComboBox { ItemsSource = Expected1 }, "nothing"));
         // Cleared: nothing remembered for it.
         other.SelectedIndex = -1;
         Assert.Equal("three", p.Get("k", ""));

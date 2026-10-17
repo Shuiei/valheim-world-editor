@@ -37,7 +37,7 @@ public sealed partial class WorldGenerator
     /// <param name="mask">Lava in alpha (0..1).</param>
     /// <param name="cheap">Fewer octaves (the map's mask needs no more).</param>
     /// <returns>The height in the generator's units, not metres.</returns>
-    public float GetAshlandsHeight(float x, float z, out Color mask, bool cheap = false)
+    internal float GetAshlandsHeight(float x, float z, out Color mask, bool cheap = false)
     {
         double px = x, pz = z;
         double land = Continent((float)px, (float)pz);

@@ -12,6 +12,8 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class HomesteadTests : IDisposable
 {
+    private static readonly string[] Expected2 = ["house", "wood"];
+    private static readonly string[] Expected1 = ["house", "Viking", "stone"];
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-hs-" + Guid.NewGuid().ToString("N")[..8]);
 
     /// <summary>
@@ -137,12 +139,12 @@ public class HomesteadTests : IDisposable
         File.WriteAllText(file, text);
         var e = Homestead.Read(file)!;
         Assert.Equal(("A small hut", 2), (e.Description, e.Kinds["wood_floor"]));
-        Assert.Equal(new[] { "house", "wood" }, e.Tags);
+        Assert.Equal(Expected2, e.Tags);
         string changed = Homestead.WithDetails(text, new Homestead.Details("Big hut", "Bigger", ["house"]));
         Assert.StartsWith("#Name:Big hut\n#Creator:Tester\n#Description:Bigger\n#Tags:house\n#Category:Blueprints\n", changed);
         Assert.EndsWith(text[text.IndexOf("#Pieces", StringComparison.Ordinal)..], changed);
         Assert.DoesNotContain("#Tags:", Homestead.WithDetails(text, new Homestead.Details("Hut", "", [])));
-        Assert.Equal(new[] { "house", "Viking", "stone" }, Homestead.Details.ParseTags("house, Viking,stone ,HOUSE;; "));
+        Assert.Equal(Expected1, Homestead.Details.ParseTags("house, Viking,stone ,HOUSE;; "));
     }
 
     [Fact]

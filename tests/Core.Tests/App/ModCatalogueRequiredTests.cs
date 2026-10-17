@@ -9,6 +9,8 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class ModCatalogueRequiredTests
 {
+    private static readonly string[] Expected2 = ["Resin", "Stone", "Wood"];
+    private static readonly string[] Expected1 = ["Wood"];
     [Fact]
     public void TheItemsOfEveryCostEntryAreRequired()
     {
@@ -20,7 +22,7 @@ public class ModCatalogueRequiredTests
 
         var required = (HashSet<string>)PrivateCall.Static(typeof(ModCatalogue), "Required", costs)!;
 
-        Assert.Equal(new[] { "Resin", "Stone", "Wood" }, required.Order().ToArray());
+        Assert.Equal(Expected2, required.Order().ToArray());
     }
 
     [Fact]
@@ -34,7 +36,7 @@ public class ModCatalogueRequiredTests
 
         var required = (HashSet<string>)PrivateCall.Static(typeof(ModCatalogue), "Required", costs)!;
 
-        Assert.Equal(new[] { "Wood" }, required.ToArray());
+        Assert.Equal(Expected1, required.ToArray());
     }
 
     [Fact]

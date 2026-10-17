@@ -1,7 +1,7 @@
 using System.Numerics;
+using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
-using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop.Tests;
 

@@ -8,7 +8,7 @@ namespace TerrainEditor.Desktop;
 public sealed partial class EditSession
 {
     /// <summary>
-    /// Fits the changes of a kept history to the open area (see <see cref="EditSession.Import"/>).
+    /// Fits the changes of a kept history to the open area (see <see cref="Import"/>).
     /// </summary>
     internal sealed partial class KeptFit
     {

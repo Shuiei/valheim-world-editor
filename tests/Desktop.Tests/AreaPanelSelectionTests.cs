@@ -12,6 +12,7 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class AreaPanelSelectionTests
 {
+    private static readonly string[] Expected1 = ["copy", "cut", "paste", "save", "library"];
     [AvaloniaFact]
     public void CopyPasteAndBlueprintButtonsAskTheWindow()
     {
@@ -27,7 +28,7 @@ public class AreaPanelSelectionTests
         Click(r.P.PasteButton);
         Click(r.P.SaveBlueprintButton);
         Click(r.P.LibraryButton);
-        Assert.Equal(new[] { "copy", "cut", "paste", "save", "library" }, asked);
+        Assert.Equal(Expected1, asked);
     }
 
     [AvaloniaFact]

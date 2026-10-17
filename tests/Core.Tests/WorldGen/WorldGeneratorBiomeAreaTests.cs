@@ -29,7 +29,7 @@ public class WorldGeneratorBiomeAreaTests
         using var w = new TempWorld();
         WorldGenerator g = new TerrainService(w.Load()).Generator;
         Vector2s? median = Grid(6400, 128).Cast<Vector2s?>().FirstOrDefault(c =>
-            Round.All(o => BiomeOf(g, c!.Value.x + o.X, c.Value.y + o.Z) == BiomeOf(g, c.Value.x, c.Value.y)));
+            Round.All(o => BiomeOf(g, c!.Value.X + o.X, c.Value.Y + o.Z) == BiomeOf(g, c.Value.X, c.Value.Y)));
         Assert.NotNull(median);
         Assert.Equal(Heightmap.BiomeArea.Median, g.GetBiomeArea(median!.Value));
     }
@@ -40,7 +40,7 @@ public class WorldGeneratorBiomeAreaTests
         using var w = new TempWorld();
         WorldGenerator g = new TerrainService(w.Load()).Generator;
         Vector2s? edge = Grid(6400, 128).Cast<Vector2s?>().FirstOrDefault(c =>
-            Round.Any(o => BiomeOf(g, c!.Value.x + o.X, c.Value.y + o.Z) != BiomeOf(g, c.Value.x, c.Value.y)));
+            Round.Any(o => BiomeOf(g, c!.Value.X + o.X, c.Value.Y + o.Z) != BiomeOf(g, c.Value.X, c.Value.Y)));
         Assert.NotNull(edge);
         Assert.Equal(Heightmap.BiomeArea.Edge, g.GetBiomeArea(edge!.Value));
     }

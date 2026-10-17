@@ -15,15 +15,15 @@ public sealed partial class WorldGenerator
         /// <summary>
         /// Where it starts.
         /// </summary>
-        public Vector2 P0 { get; set; }
+        internal Vector2 P0 { get; set; }
         /// <summary>
         /// Where it ends.
         /// </summary>
-        public Vector2 P1 { get; set; }
+        internal Vector2 P1 { get; set; }
         /// <summary>
         /// Halfway between the ends.
         /// </summary>
-        public Vector2 Center { get; set; }
+        internal Vector2 Center { get; set; }
         /// <summary>
         /// The narrowest a point of it is, metres (a point's radius in the ground).
         /// </summary>
@@ -132,7 +132,7 @@ public sealed partial class WorldGenerator
     /// <summary>
     /// The lakes' middles; empty for the menu world. The generator's own list: callers must not change it.
     /// </summary>
-    public List<Vector2> GetLakes() => _lakes;
+    internal List<Vector2> GetLakes() => _lakes;
 
     /// <summary>
     /// The rivers; the generator's own list.

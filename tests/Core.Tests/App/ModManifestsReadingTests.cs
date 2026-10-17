@@ -11,6 +11,9 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class ModManifestsReadingTests
 {
+    private static readonly string[] Expected3 = ["p"];
+    private static readonly string[] Expected2 = ["r"];
+    private static readonly string[] Expected1 = ["d"];
     private static object? Read(string name, params object?[] args) =>
         PrivateMember.Call(typeof(ModManifests), name, null, args);
 
@@ -60,7 +63,7 @@ public class ModManifestsReadingTests
         JsonObject o = JsonNode.Parse("{\"id\":\"a\",\"parents\":[\"p\"],\"offset\":\"o\",\"rotation\":\"1 2 3\"}")!.AsObject();
         object? placement = Read("LinkPlacement", o);
         Assert.Equal("a", Item(placement, "Item1"));
-        Assert.Equal(new[] { "p" }, Item(placement, "Item2"));
+        Assert.Equal(Expected3, Item(placement, "Item2"));
         Assert.Equal("o", Item(placement, "Item3"));
         Assert.Equal("1 2 3", Item(placement, "Item4"));
         Assert.Null(Item(placement, "Item5"));
@@ -80,8 +83,8 @@ public class ModManifestsReadingTests
     {
         JsonObject o = JsonNode.Parse("{\"references\":[\"r\"],\"dropOnCopy\":[\"d\"],\"name\":\"n\",\"storedAt\":\"own\"}")!.AsObject();
         object? options = Read("LinkOptions", o);
-        Assert.Equal(new[] { "r" }, Item(options, "Item1"));
-        Assert.Equal(new[] { "d" }, Item(options, "Item2"));
+        Assert.Equal(Expected2, Item(options, "Item1"));
+        Assert.Equal(Expected1, Item(options, "Item2"));
         Assert.Equal("n", Item(options, "Item3"));
         Assert.Equal("own", Item(options, "Item4"));
     }

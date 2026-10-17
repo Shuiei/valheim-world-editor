@@ -11,6 +11,7 @@ namespace WorldEditor.Tests;
 [Collection("World files")]
 public sealed class WorldCreatorFilesTests : WorldCreatorTestBase
 {
+    private static readonly string[] Expected1 = ["_main.1.chunks", "_main.1.db2", "_main.1.fwl2", "_main.1.ok"];
     // The test world's unique id (tests/fixtures/CITest).
     private const long FixtureUid = 0x8d9ed32b;
 
@@ -24,7 +25,7 @@ public sealed class WorldCreatorFilesTests : WorldCreatorTestBase
     {
         var made = WorldCreator.Create(Folder("Fresh"), " Fresh ", Seed, uid: 42);
         Assert.Equal((0, 0, -1261093776), (made.Zones, made.Objects, made.Seed));
-        Assert.Equal(new[] { "_main.1.chunks", "_main.1.db2", "_main.1.fwl2", "_main.1.ok" }, Directory.GetFiles(Folder("Fresh")).Select(Path.GetFileName).Order().ToArray());
+        Assert.Equal(Expected1, Directory.GetFiles(Folder("Fresh")).Select(Path.GetFileName).Order().ToArray());
         // In the format Valheim 1.0.20 writes a new world in (42), as the index, the zone file and the metadata are.
         Assert.Equal(BitConverter.GetBytes(42), File.ReadAllBytes(Path.Combine(Folder("Fresh"), "_main.1.ok")));
         var w = WorldSave.Load(Folder("Fresh"));

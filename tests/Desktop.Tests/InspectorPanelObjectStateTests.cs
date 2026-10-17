@@ -4,8 +4,8 @@ using Avalonia.Headless.XUnit;
 using Avalonia.LogicalTree;
 using TerrainEditor.Save;
 using Xunit;
-using static TerrainEditor.Desktop.Tests.SharedButtons;
 using static TerrainEditor.Desktop.Tests.InspectorControls;
+using static TerrainEditor.Desktop.Tests.SharedButtons;
 using static TerrainEditor.Desktop.Tests.SharedInspectorRun;
 
 namespace TerrainEditor.Desktop.Tests;

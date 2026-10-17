@@ -17,11 +17,11 @@ public class SeedLocationsRulesTests
         var copy = SeedLocations.Current;
         Assert.True(SeedLocations.Available);
         var again = SeedLocations.RuleSet.FromJson(copy.ToJson());
-        Assert.Equal(copy.locations.Select(l => (l.prefab, l.quantity, l.biome, l.altBiome)), again.locations.Select(l => (l.prefab, l.quantity, l.biome, l.altBiome)));
+        Assert.Equal(copy.Locations.Select(l => (l.Prefab, l.Quantity, l.Biome, l.AltBiome)), again.Locations.Select(l => (l.Prefab, l.Quantity, l.Biome, l.AltBiome)));
         Assert.Equal(copy.ToJson(), again.ToJson());
-        Assert.Equal("StartTemple", SeedLocations.Ordered[0].prefab);
+        Assert.Equal("StartTemple", SeedLocations.Ordered[0].Prefab);
         // The tests' copy keeps only what the editor shows, and trimming it again changes nothing.
-        Assert.All(copy.locations, l => Assert.True(l.prioritized != 0 && l.enable != 0 && l.quantity != 0, l.prefab));
+        Assert.All(copy.Locations, l => Assert.True(l.Prioritized != 0 && l.Enable != 0 && l.Quantity != 0, l.Prefab));
         Assert.Equal(copy.ToJson(), SeedLocations.Prioritized(copy).ToJson());
     }
 
@@ -30,13 +30,13 @@ public class SeedLocationsRulesTests
     {
         var rules = new SeedLocations.RuleSet
         {
-            locations = [new SeedLocations.Rule { prefab = "MadeUpRuin", name = "Made-up ruin" }],
-            altBiomes = [new SeedLocations.AltBiomeRule { name = "MadeUpMeadows", blockLocationNames = ["Made-up ruin"] }],
+            Locations = [new SeedLocations.Rule { Prefab = "MadeUpRuin", Name = "Made-up ruin" }],
+            AltBiomes = [new SeedLocations.AltBiomeRule { Name = "MadeUpMeadows", BlockLocationNames = ["Made-up ruin"] }],
         };
         var again = SeedLocations.RuleSet.FromJson(rules.ToJson());
-        var alt = Assert.Single(again.altBiomes);
-        Assert.Equal("MadeUpMeadows", alt.name);
-        Assert.Equal(["Made-up ruin"], alt.blockLocationNames);
+        var alt = Assert.Single(again.AltBiomes);
+        Assert.Equal("MadeUpMeadows", alt.Name);
+        Assert.Equal(["Made-up ruin"], alt.BlockLocationNames);
         Assert.Equal(rules.ToJson(), again.ToJson());
         Assert.Throws<System.Text.Json.JsonException>(() => SeedLocations.RuleSet.FromJson("null"));
     }

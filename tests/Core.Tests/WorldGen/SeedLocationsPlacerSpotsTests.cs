@@ -17,7 +17,7 @@ public class SeedLocationsPlacerSpotsTests
     public void ASpotOutOfTheKindsRingIsNotTried()
     {
         var placer = Placer(Seed());
-        var rule = new SeedLocations.Rule { prefab = "Temple", minDistance = 1_000_000 };
+        var rule = new SeedLocations.Rule { Prefab = "Temple", MinDistance = 1_000_000 };
 
         Assert.False(placer.TrySpot(rule, 0, (0, 0), 0f));
         Assert.Empty(placer.Instances);
@@ -27,7 +27,7 @@ public class SeedLocationsPlacerSpotsTests
     public void ARegisteredSpotIsKeptOncePerZone()
     {
         var placer = Placer(Seed());
-        var rule = new SeedLocations.Rule { prefab = "Temple" };
+        var rule = new SeedLocations.Rule { Prefab = "Temple" };
 
         placer.Register(rule, new Vector3(10, 0, 0));
         placer.Register(rule, new Vector3(20, 0, 0));

@@ -51,10 +51,10 @@ public class DungeonCaveContentsTests
         Assert.Equal(new Vector3(3.01f, 5165.703f, -2642.79f), first.Position, new Vector3Comparer(1e-3f));
         // The roll leaves the game's random numbers as they were (the world generator shares them).
         ValheimGen.UnityEngine.Random.InitState(42);
-        float a = ValheimGen.UnityEngine.Random.value;
+        float a = ValheimGen.UnityEngine.Random.Value;
         ValheimGen.UnityEngine.Random.InitState(42);
         Dungeons.Contents(Cave()[1], kind, CaveAt, 1);
-        Assert.Equal(a, ValheimGen.UnityEngine.Random.value);
+        Assert.Equal(a, ValheimGen.UnityEngine.Random.Value);
         // A room placed elsewhere rolls differently.
         var moved = Cave()[5] with { Position = Cave()[5].Position + new Vector3(24, 0, 0) };
         Assert.NotEqual(Dungeons.Contents(Cave()[5], kind, CaveAt, 1).Select(m => m.Prefab), Dungeons.Contents(moved, kind, CaveAt, 1).Select(m => m.Prefab));

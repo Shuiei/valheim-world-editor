@@ -34,6 +34,6 @@ internal static class LookCheck
     /// <param name="seedName">The seed's name, as typed in the game.</param>
     private static ValheimGen.WorldGenerator Look(string seedName)
     {
-        return ValheimGen.WorldGenerator.Create(new ValheimGen.World { m_seedName = seedName, m_seed = WorldCreator.SeedOf(seedName), m_worldGenVersion = WorldCreator.WorldGenVersion });
+        return ValheimGen.WorldGenerator.Create(new ValheimGen.World { SeedName = seedName, Seed = WorldCreator.SeedOf(seedName), WorldGenVersion = WorldCreator.WorldGenVersion });
     }
 }

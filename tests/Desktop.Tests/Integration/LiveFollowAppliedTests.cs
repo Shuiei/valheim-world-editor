@@ -13,6 +13,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class LiveFollowAppliedTests
 {
+    private static readonly string[] Expected1 = ["Apply over the game's changes"];
     // The editor's own new objects: not taken twice when the game has them, and gone when the game no
     // longer does (a player picked it), with nothing left to apply.
     [Fact]
@@ -177,7 +178,7 @@ public class LiveFollowAppliedTests
         Assert.Contains("where you have changes not applied", w.MessageText.Text);
         int sent = game.Terrain.Count;
         await w.ApplyNow();
-        Assert.Equal(new[] { "Apply over the game's changes" }, asked);
+        Assert.Equal(Expected1, asked);
         Assert.Equal(sent, game.Terrain.Count);
         answer = true;
         await w.ApplyNow();

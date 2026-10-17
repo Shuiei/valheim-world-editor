@@ -29,12 +29,12 @@ public static partial class DumpVerifier
         }
         else if (p[1] == "value")
         {
-            got = $"value {BitConverter.SingleToInt32Bits(Rnd.value):x8}";
+            got = $"value {BitConverter.SingleToInt32Bits(Rnd.Value):x8}";
         }
         else // circle
         {
-            Vector2 v = Rnd.insideUnitCircle;
-            got = $"circle {BitConverter.SingleToInt32Bits(v.x):x8} {BitConverter.SingleToInt32Bits(v.y):x8}";
+            Vector2 v = Rnd.InsideUnitCircle;
+            got = $"circle {BitConverter.SingleToInt32Bits(v.X):x8} {BitConverter.SingleToInt32Bits(v.Y):x8}";
         }
         string gotState = State();
         if (got == expected && gotState == expectedState)

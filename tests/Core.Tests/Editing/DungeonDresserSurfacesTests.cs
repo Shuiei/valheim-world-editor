@@ -9,6 +9,7 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class DungeonDresserSurfacesTests
 {
+    private static readonly string[] Expected1 = ["rug_wolf", "rug_fur", "rug_deer"];
     [Fact]
     public void ARunnerTooShortForTwoPiecesIsOneRug()
     {
@@ -18,7 +19,7 @@ public class DungeonDresserSurfacesTests
         PrivateCall.Instance(dresser, "Runner", room.Frame, -2f, 2f, 0f);
 
         var rug = Assert.Single(o.Items);
-        Assert.Contains(rug.Prefab, new[] { "rug_wolf", "rug_fur", "rug_deer" });
+        Assert.Contains(rug.Prefab, Expected1);
     }
 
     [Fact]

@@ -10,12 +10,13 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class GameCataloguesByHashTests
 {
+    private static readonly string[] Expected1 = ["Foo", "Foo_i", "Foo_u"];
     [Fact]
     public void ANameIsKeptWithItsTwoZdoidSuffixes()
     {
         Dictionary<int, string> table = GameCatalogues.ByHash(["Foo"]);
 
-        Assert.Equal(new[] { "Foo", "Foo_i", "Foo_u" }, table.Values.Order(StringComparer.Ordinal).ToArray());
+        Assert.Equal(Expected1, table.Values.Order(StringComparer.Ordinal).ToArray());
     }
 
     [Fact]

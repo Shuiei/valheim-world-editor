@@ -38,7 +38,7 @@ public static partial class WorldCreator
             return sites;
         }
         ushort proxyFlags = Terrain.PrefabCatalog.Get(WorldSave.LocationProxyPrefab)?.Flags ?? 0x0B00;
-        Rnd.State was = Rnd.state;
+        Rnd.RandomState was = Rnd.State;
         try
         {
             foreach (var p in ValheimGen.SeedLocations.Place(terrain.Generator, ValheimGen.SeedLocations.Which.All))
@@ -48,11 +48,11 @@ public static partial class WorldCreator
                 {
                     continue;
                 }
-                int hash = StableHash.Of(p.Rule.prefab);
-                var position = new Vector3(p.X, p.Rule.snapToWater != 0 ? ValheimGen.TerrainService.WaterLevel : p.Y, p.Z);
-                if (LocationPrefabs.Get(p.Rule.prefab) is not { Interior: false } prefab)
+                int hash = StableHash.Of(p.Rule.Prefab);
+                var position = new Vector3(p.X, p.Rule.SnapToWater != 0 ? ValheimGen.TerrainService.WaterLevel : p.Y, p.Z);
+                if (LocationPrefabs.Get(p.Rule.Prefab) is not { Interior: false } prefab)
                 {
-                    sites.Add(new Site(zone, p.Rule.prefab, hash, position, 0f, null));
+                    sites.Add(new Site(zone, p.Rule.Prefab, hash, position, 0f, null));
                     continue;
                 }
                 int zoneSeed = LocationPrefabs.ZoneSeed(seed, zone.X, zone.Z);
@@ -67,12 +67,12 @@ public static partial class WorldCreator
                     }
                 }
                 objects.Add((position, ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, proxyFlags, position, new Vector3(0f, yaw, 0f), 0f, [(WorldSave.LocationKey, hash), (SeedKey, zoneSeed)])));
-                sites.Add(new Site(zone, p.Rule.prefab, hash, position, prefab.ClearArea ? p.Rule.exteriorRadius : 0f, objects));
+                sites.Add(new Site(zone, p.Rule.Prefab, hash, position, prefab.ClearArea ? p.Rule.ExteriorRadius : 0f, objects));
             }
         }
         finally
         {
-            Rnd.state = was;
+            Rnd.State = was;
         }
         return sites;
     }

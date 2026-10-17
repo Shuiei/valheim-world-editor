@@ -21,6 +21,7 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class PlaceKindChipsTests
 {
+    private static readonly string[] Expected1 = ["Rocks", "Trees"];
     /// <summary>
     /// Clicks the button and runs the posted work it starts.
     /// </summary>
@@ -194,7 +195,7 @@ public class PlaceKindChipsTests
                 r.P.Groups[ObjectKind.Trees].IsExpanded = true;
                 r.W.Prefs.Flush();
             }
-            Assert.Equal(new[] { "Rocks", "Trees" }, Prefs.Load(file).Get<string[]?>("place.openKinds", null));
+            Assert.Equal(Expected1, Prefs.Load(file).Get<string[]?>("place.openKinds", null));
         }
         finally
         {

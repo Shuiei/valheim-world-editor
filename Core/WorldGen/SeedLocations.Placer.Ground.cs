@@ -10,8 +10,8 @@ public static partial class SeedLocations
         /// </summary>
         internal static bool AtRightDistance(Rule rule, Vector3 spot)
         {
-            float fromMiddle = spot.magnitude;
-            return !(rule.minDistance != 0f && fromMiddle < rule.minDistance) && !(rule.maxDistance != 0f && fromMiddle > rule.maxDistance);
+            float fromMiddle = spot.Magnitude;
+            return !(rule.MinDistance != 0f && fromMiddle < rule.MinDistance) && !(rule.MaxDistance != 0f && fromMiddle > rule.MaxDistance);
         }
 
         /// <summary>
@@ -26,27 +26,27 @@ public static partial class SeedLocations
             {
                 return false;
             }
-            spot.y = _gen.GetBiomeHeight(biome, spot.x, spot.z, out Color mask);
-            vegetation = mask.a;
-            float aboveSea = (float)(spot.y - 30.0);
-            if (aboveSea < rule.minAltitude || aboveSea > rule.maxAltitude)
+            spot.Y = _gen.GetBiomeHeight(biome, spot.X, spot.Z, out Color mask);
+            vegetation = mask.A;
+            float aboveSea = (float)(spot.Y - 30.0);
+            if (aboveSea < rule.MinAltitude || aboveSea > rule.MaxAltitude)
             {
                 return false;
             }
-            if (rule.inForest != 0)
+            if (rule.InForest != 0)
             {
                 float forest = WorldGenerator.GetForestFactor(spot);
-                if (forest < rule.forestTresholdMin || forest > rule.forestTresholdMax)
+                if (forest < rule.ForestTresholdMin || forest > rule.ForestTresholdMax)
                 {
                     return false;
                 }
             }
-            if (rule.minDistanceFromCenter <= 0f && rule.maxDistanceFromCenter <= 0f)
+            if (rule.MinDistanceFromCenter <= 0f && rule.MaxDistanceFromCenter <= 0f)
             {
                 return true;
             }
-            float flat = MathF.Sqrt(spot.x * spot.x + spot.z * spot.z);
-            return !(rule.minDistanceFromCenter > 0f && flat < rule.minDistanceFromCenter) && !(rule.maxDistanceFromCenter > 0f && flat > rule.maxDistanceFromCenter);
+            float flat = MathF.Sqrt(spot.X * spot.X + spot.Z * spot.Z);
+            return !(rule.MinDistanceFromCenter > 0f && flat < rule.MinDistanceFromCenter) && !(rule.MaxDistanceFromCenter > 0f && flat > rule.MaxDistanceFromCenter);
         }
 
         /// <summary>
@@ -54,8 +54,8 @@ public static partial class SeedLocations
         /// </summary>
         internal bool FlatEnough(Rule rule, Vector3 spot)
         {
-            _gen.GetTerrainDelta(spot, rule.exteriorRadius, out float rise, out _);
-            return rise >= rule.minTerrainDelta && rise <= rule.maxTerrainDelta;
+            _gen.GetTerrainDelta(spot, rule.ExteriorRadius, out float rise, out _);
+            return rise >= rule.MinTerrainDelta && rise <= rule.MaxTerrainDelta;
         }
     }
 }

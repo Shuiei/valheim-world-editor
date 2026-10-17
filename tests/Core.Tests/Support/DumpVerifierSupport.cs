@@ -25,7 +25,7 @@ public static class DumpVerifierSupport
     public static string StateAfterInit(int seed)
     {
         Rnd.InitState(seed);
-        var s = Rnd.state;
-        return $"{s.s0:x8} {s.s1:x8} {s.s2:x8} {s.s3:x8}";
+        var s = Rnd.State;
+        return $"{s.S0:x8} {s.S1:x8} {s.S2:x8} {s.S3:x8}";
     }
 }

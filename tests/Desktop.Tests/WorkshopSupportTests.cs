@@ -1,5 +1,5 @@
-using Avalonia.Headless.XUnit;
 using System.Numerics;
+using Avalonia.Headless.XUnit;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;

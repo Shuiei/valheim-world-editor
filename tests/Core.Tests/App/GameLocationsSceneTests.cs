@@ -65,12 +65,12 @@ public class GameLocationsSceneTests
         game.Save();
         var bundles = new GameBundles(game.BundlesDir, null);
         var rules = GameLocations.RuleSetOf(GameLocations.FindScene(bundles, Scanned, order), GameLocations.Manifest.Read(bundles.Folder), order);
-        Assert.Equal(6, rules.locations.Count);
-        Assert.Equal(["StartTemple", "Crypt_old"], rules.locations.Take(2).Select(l => l.prefab));
-        Assert.Equal(["L2x1_0", "L2x1_1", "L1x0_0", "IceCave"], rules.locations.Skip(2).Select(l => l.name));
-        Assert.Equal("DeepNorth_Ice", rules.locations[5].altBiome);
-        var alt = Assert.Single(rules.altBiomes);
-        Assert.Equal("DeepNorth_Ice", alt.name);
-        Assert.Equal(["Crypt"], alt.blockLocationNames);
+        Assert.Equal(6, rules.Locations.Count);
+        Assert.Equal(["StartTemple", "Crypt_old"], rules.Locations.Take(2).Select(l => l.Prefab));
+        Assert.Equal(["L2x1_0", "L2x1_1", "L1x0_0", "IceCave"], rules.Locations.Skip(2).Select(l => l.Name));
+        Assert.Equal("DeepNorth_Ice", rules.Locations[5].AltBiome);
+        var alt = Assert.Single(rules.AltBiomes);
+        Assert.Equal("DeepNorth_Ice", alt.Name);
+        Assert.Equal(["Crypt"], alt.BlockLocationNames);
     }
 }

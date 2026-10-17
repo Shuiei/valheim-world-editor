@@ -1,10 +1,10 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace ValheimGen;
 
 public static partial class SeedLocations
 {
-#pragma warning disable IDE1006 // named as the JSON keys they are read from and written as
     /// <summary>
     /// One location kind's rule (the game's ZoneSystem.ZoneLocation), as locations.json keeps it. Flags are 0 or 1.
     /// </summary>
@@ -13,149 +13,185 @@ public static partial class SeedLocations
         /// <summary>
         /// The location's prefab name (the kind; also what seeds its random draws).
         /// </summary>
-        public string prefab { get; set; } = "";
+        [JsonPropertyName("prefab")]
+        public string Prefab { get; set; } = "";
         /// <summary>
         /// The location's name, as alt biomes block it.
         /// </summary>
-        public string name { get; set; } = "";
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = "";
         /// <summary>
         /// Non-zero when the game lays it out.
         /// </summary>
-        public int enable { get; set; }
+        [JsonPropertyName("enable")]
+        public int Enable { get; set; }
         /// <summary>
         /// The biomes it goes in (Heightmap.Biome flags).
         /// </summary>
-        public int biome { get; set; }
+        [JsonPropertyName("biome")]
+        public int Biome { get; set; }
         /// <summary>
         /// Where in those biomes (Heightmap.BiomeArea flags: edge, middle).
         /// </summary>
-        public int biomeArea { get; set; }
+        [JsonPropertyName("biomeArea")]
+        public int BiomeArea { get; set; }
         /// <summary>
         /// How many the game tries to lay out.
         /// </summary>
-        public int quantity { get; set; }
+        [JsonPropertyName("quantity")]
+        public int Quantity { get; set; }
         /// <summary>
         /// Non-zero for the kinds laid out first (start, bosses, traders...), which also get more tries.
         /// </summary>
-        public int prioritized { get; set; }
+        [JsonPropertyName("prioritized")]
+        public int Prioritized { get; set; }
         /// <summary>
         /// Non-zero for kinds laid out from the middle out (the start temple).
         /// </summary>
-        public int centerFirst { get; set; }
+        [JsonPropertyName("centerFirst")]
+        public int CenterFirst { get; set; }
         /// <summary>
         /// Non-zero when one is all there may be.
         /// </summary>
-        public int unique { get; set; }
+        [JsonPropertyName("unique")]
+        public int Unique { get; set; }
         /// <summary>
         /// Its group, for minDistanceFromSimilar (empty: none).
         /// </summary>
-        public string group { get; set; } = "";
+        [JsonPropertyName("group")]
+        public string Group { get; set; } = "";
         /// <summary>
         /// No instance of the same prefab or group within this many metres (0: no check).
         /// </summary>
-        public float minDistanceFromSimilar { get; set; }
+        [JsonPropertyName("minDistanceFromSimilar")]
+        public float MinDistanceFromSimilar { get; set; }
         /// <summary>
         /// Its "max" group, for maxDistanceFromSimilar (empty: none).
         /// </summary>
-        public string groupMax { get; set; } = "";
+        [JsonPropertyName("groupMax")]
+        public string GroupMax { get; set; } = "";
         /// <summary>
         /// An instance of the same prefab or "max" group needed within this many metres (0: no check).
         /// </summary>
-        public float maxDistanceFromSimilar { get; set; }
+        [JsonPropertyName("maxDistanceFromSimilar")]
+        public float MaxDistanceFromSimilar { get; set; }
         /// <summary>
         /// Its inner radius, metres; the larger of it and exteriorRadius is kept from the zone's edges.
         /// </summary>
-        public float interiorRadius { get; set; }
+        [JsonPropertyName("interiorRadius")]
+        public float InteriorRadius { get; set; }
         /// <summary>
         /// Its outer radius, metres: the circle the slope is measured on (see also interiorRadius).
         /// </summary>
-        public float exteriorRadius { get; set; }
+        [JsonPropertyName("exteriorRadius")]
+        public float ExteriorRadius { get; set; }
         /// <summary>
         /// The least rise across its size, metres.
         /// </summary>
-        public float minTerrainDelta { get; set; }
+        [JsonPropertyName("minTerrainDelta")]
+        public float MinTerrainDelta { get; set; }
         /// <summary>
         /// The most rise across its size, metres.
         /// </summary>
-        public float maxTerrainDelta { get; set; }
+        [JsonPropertyName("maxTerrainDelta")]
+        public float MaxTerrainDelta { get; set; }
         /// <summary>
         /// The ground's vegetation (mask alpha) must be above this (0: no check).
         /// </summary>
-        public float minimumVegetation { get; set; }
+        [JsonPropertyName("minimumVegetation")]
+        public float MinimumVegetation { get; set; }
         /// <summary>
         /// The ground's vegetation must be below this (1: no check).
         /// </summary>
-        public float maximumVegetation { get; set; }
+        [JsonPropertyName("maximumVegetation")]
+        public float MaximumVegetation { get; set; }
         /// <summary>
         /// Non-zero for kinds that want the greenest spots (see StandsOut).
         /// </summary>
-        public int surroundCheckVegetation { get; set; }
+        [JsonPropertyName("surroundCheckVegetation")]
+        public int SurroundCheckVegetation { get; set; }
         /// <summary>
         /// How far the vegetation around the spot is read, metres.
         /// </summary>
-        public float surroundCheckDistance { get; set; }
+        [JsonPropertyName("surroundCheckDistance")]
+        public float SurroundCheckDistance { get; set; }
         /// <summary>
         /// On how many rings.
         /// </summary>
-        public int surroundCheckLayers { get; set; }
+        [JsonPropertyName("surroundCheckLayers")]
+        public int SurroundCheckLayers { get; set; }
         /// <summary>
         /// The share of the way from the average to the best a spot must reach.
         /// </summary>
-        public float surroundBetterThanAverage { get; set; }
+        [JsonPropertyName("surroundBetterThanAverage")]
+        public float SurroundBetterThanAverage { get; set; }
         /// <summary>
         /// Non-zero when the forest factor must lie between the two thresholds.
         /// </summary>
-        public int inForest { get; set; }
+        [JsonPropertyName("inForest")]
+        public int InForest { get; set; }
         /// <summary>
         /// The least forest factor (lower: denser forest).
         /// </summary>
-        public float forestTresholdMin { get; set; }
+        [JsonPropertyName("forestTresholdMin")]
+        public float ForestTresholdMin { get; set; }
         /// <summary>
         /// The most forest factor.
         /// </summary>
-        public float forestTresholdMax { get; set; }
+        [JsonPropertyName("forestTresholdMax")]
+        public float ForestTresholdMax { get; set; }
         /// <summary>
         /// The least flat distance from the middle on the ground, metres (0: none).
         /// </summary>
-        public float minDistanceFromCenter { get; set; }
+        [JsonPropertyName("minDistanceFromCenter")]
+        public float MinDistanceFromCenter { get; set; }
         /// <summary>
         /// The most flat distance from the middle on the ground, metres (0: none).
         /// </summary>
-        public float maxDistanceFromCenter { get; set; }
+        [JsonPropertyName("maxDistanceFromCenter")]
+        public float MaxDistanceFromCenter { get; set; }
         /// <summary>
         /// The least distance from the middle, metres (0: none); where centerFirst kinds start.
         /// </summary>
-        public float minDistance { get; set; }
+        [JsonPropertyName("minDistance")]
+        public float MinDistance { get; set; }
         /// <summary>
         /// The most distance from the middle, metres (0: none).
         /// </summary>
-        public float maxDistance { get; set; }
+        [JsonPropertyName("maxDistance")]
+        public float MaxDistance { get; set; }
         /// <summary>
         /// The least height above the sea (30 m), metres; 0 or more draws only points above the sea.
         /// </summary>
-        public float minAltitude { get; set; }
+        [JsonPropertyName("minAltitude")]
+        public float MinAltitude { get; set; }
         /// <summary>
         /// The most height above the sea, metres.
         /// </summary>
-        public float maxAltitude { get; set; }
+        [JsonPropertyName("maxAltitude")]
+        public float MaxAltitude { get; set; }
         /// <summary>
         /// 1: turned along the slope it stands on when spawned (ZoneLocation.m_slopeRotation), before randomRotation
         /// is looked at.
         /// </summary>
-        public int slopeRotation { get; set; }
+        [JsonPropertyName("slopeRotation")]
+        public int SlopeRotation { get; set; }
         /// <summary>
         /// 1: turned by a random multiple of 22.5° when spawned (ZoneLocation.m_randomRotation), rolled from the
         /// zone's seed.
         /// </summary>
-        public int randomRotation { get; set; }
+        [JsonPropertyName("randomRotation")]
+        public int RandomRotation { get; set; }
         /// <summary>
         /// 1: stands at the water's level, not the ground's (ZoneLocation.m_snapToWater).
         /// </summary>
-        public int snapToWater { get; set; }
+        [JsonPropertyName("snapToWater")]
+        public int SnapToWater { get; set; }
         /// <summary>
         /// The alt biome that adds it; null for the game's own kinds.
         /// </summary>
-        public string? altBiome { get; set; }
+        [JsonPropertyName("altBiome")]
+        public string? AltBiome { get; set; }
     }
 
     /// <summary>
@@ -166,11 +202,13 @@ public static partial class SeedLocations
         /// <summary>
         /// The alt biome's name.
         /// </summary>
-        public string name { get; set; } = "";
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = "";
         /// <summary>
         /// Names (Rule.name) of the location kinds it blocks.
         /// </summary>
-        public List<string> blockLocationNames { get; set; } = [];
+        [JsonPropertyName("blockLocationNames")]
+        public List<string> BlockLocationNames { get; set; } = [];
     }
 
     /// <summary>
@@ -182,23 +220,24 @@ public static partial class SeedLocations
         /// <summary>
         /// The location kinds in the game's order.
         /// </summary>
-        public List<Rule> locations { get; set; } = [];
+        [JsonPropertyName("locations")]
+        public List<Rule> Locations { get; set; } = [];
         /// <summary>
         /// The alt biomes.
         /// </summary>
-        public List<AltBiomeRule> altBiomes { get; set; } = [];
+        [JsonPropertyName("altBiomes")]
+        public List<AltBiomeRule> AltBiomes { get; set; } = [];
 
         /// <summary>
         /// As locations.json keeps them: one location or alt biome a line (nulls left out).
         /// </summary>
         public string ToJson() =>
-            "{\"locations\": [\n" + string.Join(",\n", locations.Select(l => JsonSerializer.Serialize(l, JsonOptions))) +
-            "\n],\n\"altBiomes\": [\n" + string.Join(",\n", altBiomes.Select(a => JsonSerializer.Serialize(a, JsonOptions))) + "\n]}\n";
+            "{\"locations\": [\n" + string.Join(",\n", Locations.Select(l => JsonSerializer.Serialize(l, JsonOptions))) +
+            "\n],\n\"altBiomes\": [\n" + string.Join(",\n", AltBiomes.Select(a => JsonSerializer.Serialize(a, JsonOptions))) + "\n]}\n";
 
         /// <summary>
         /// Reads locations.json; throws <see cref="JsonException"/> when it holds no rules.
         /// </summary>
         public static RuleSet FromJson(string json) => JsonSerializer.Deserialize<RuleSet>(json) ?? throw new JsonException("no rules");
     }
-#pragma warning restore IDE1006
 }

@@ -13,7 +13,7 @@ public class WorldGeneratorTerrainTests
     /// <summary>
     /// A generator for a seed of the current generator version.
     /// </summary>
-    private static WorldGenerator Generator() => WorldGenerator.Create(new World { m_seed = 12345, m_worldGenVersion = 2 });
+    private static WorldGenerator Generator() => WorldGenerator.Create(new World { Seed = 12345, WorldGenVersion = 2 });
 
     /// <summary>
     /// A generator whose only river is one point at the origin, of this width, as the generator lays them.
@@ -55,7 +55,7 @@ public class WorldGeneratorTerrainTests
     {
         float height = Generator().GetAshlandsHeight(0f, 12000f, out Color mask);
 
-        Assert.Equal(0f, mask.a);
+        Assert.Equal(0f, mask.A);
         Assert.True(height <= 0f, $"height {height} should be at or below sea level");
     }
 }

@@ -10,6 +10,7 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class ZoneDbPackageReadTests
 {
+    private static readonly string[] Expected1 = ["a key"];
     /// <summary>A zone package written in the layout the game sends.</summary>
     private static byte[] Package()
     {
@@ -49,7 +50,7 @@ public class ZoneDbPackageReadTests
     {
         var db = ZoneDb.FromPackage(Package(), 12.5);
         Assert.Equal(7, db.LocationVersion);
-        Assert.Equal(new[] { "a key" }, db.GlobalKeys);
+        Assert.Equal(Expected1, db.GlobalKeys);
         Assert.True(db.LocationsGenerated);
         Assert.Equal(12.5, db.NetTime);
     }

@@ -49,7 +49,7 @@ public sealed partial class MapData
             }
             case Heightmap.Biome.AshLands:
                 Generator.GetAshlandsHeight(wx, wy, out Color mask, cheap: true);
-                return (0, 0, Byte(mask.a));
+                return (0, 0, Byte(mask.A));
             default:
                 return (0, 0, 0);
         }

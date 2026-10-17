@@ -1,7 +1,7 @@
 using System.ComponentModel;
+using System.Text.Json;
 using ModelContextProtocol.Server;
 using TerrainEditor.App;
-using System.Text.Json;
 
 namespace TerrainEditor.Desktop;
 

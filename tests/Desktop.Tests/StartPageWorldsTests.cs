@@ -15,6 +15,7 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("DataDir")]
 public class StartPageWorldsTests
 {
+    private static readonly string[] Expected1 = ["Opening the world…"];
     [AvaloniaFact]
     public async Task SavedWorldsAreCardsAndNoneIsSaid()
     {
@@ -38,7 +39,7 @@ public class StartPageWorldsTests
             Assert.False(cards[1].IsEnabled);
             Assert.Contains("No save files in it.", Texts(r.P.WorldCards));
             Click(cards[0]);
-            Assert.Equal(new[] { "Opening the world…" }, r.Opened);
+            Assert.Equal(Expected1, r.Opened);
             Assert.Equal("offline", r.Settings.LastMode);
             Assert.Equal(Path.GetFullPath(dir), r.Settings.Recent[0].Path);
         }

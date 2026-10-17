@@ -15,7 +15,7 @@ public sealed partial class WorldGenerator
     /// <returns>Every stream laid out, also those not drawn.</returns>
     private List<River> PlaceStreams(bool deepNorth)
     {
-        var saved = Rnd.state;
+        var saved = Rnd.State;
         try
         {
             Rnd.InitState(_streamSeed);
@@ -27,7 +27,7 @@ public sealed partial class WorldGenerator
                     continue;
                 }
                 var middle = (start + end) * 0.5f;
-                float h = GetPregenerationHeight(middle.x, middle.y, !deepNorth);
+                float h = GetPregenerationHeight(middle.X, middle.Y, !deepNorth);
                 if (h is < 26f or > 44f)
                 {
                     continue;
@@ -41,7 +41,7 @@ public sealed partial class WorldGenerator
         }
         finally
         {
-            Rnd.state = saved;
+            Rnd.State = saved;
         }
     }
 
@@ -60,7 +60,7 @@ public sealed partial class WorldGenerator
                 return true;
             }
         }
-        start = Vector2.zero;
+        start = Vector2.Zero;
         return false;
     }
 
@@ -78,14 +78,14 @@ public sealed partial class WorldGenerator
             length = (float)((double)length - step);
             float angle = Rnd.Range(0f, MathF.PI * 2f);
             var q = start + new Vector2(Mathf.Sin(angle), Mathf.Cos(angle)) * length;
-            float h = GetPregenerationHeight(q.x, q.y, forRivers);
+            float h = GetPregenerationHeight(q.X, q.Y, forRivers);
             if (h is > 36f and < 44f)
             {
                 end = q;
                 return true;
             }
         }
-        end = Vector2.zero;
+        end = Vector2.Zero;
         return false;
     }
 }

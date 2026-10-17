@@ -8,12 +8,13 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class DungeonGenFurnishAlcovesTests
 {
+    private static readonly string[] Expected1 = ["Crypt", "Catacombs"];
     [Fact]
     public void AlcovesAndNichesAreFurnished()
     {
         // Over a few crypts and catacombs: rooms with alcoves (two tiles wide) and corridors with niches (one), each
         // with something standing in it, well inside (nothing in the room's walls).
-        var made = Enumerable.Range(1, 10).SelectMany(seed => new[] { "Crypt", "Catacombs" }.Select(style =>
+        var made = Enumerable.Range(1, 10).SelectMany(seed => Expected1.Select(style =>
             DungeonGen.Make(new DungeonGen.Settings(Biome: "Black Forest", Style: style, Size: 3, Levels: 1, Seed: seed)))).ToList();
         var alcoves = made.SelectMany(r => r.Map!.Where(m => !m.Corridor && m.Nooks != null).SelectMany(m => m.Nooks!.Select(n => (r, m, n)))).ToList();
         var niches = made.SelectMany(r => r.Map!.Where(m => m.Corridor && m.Nooks != null).SelectMany(m => m.Nooks!.Select(n => (r, m, n)))).ToList();

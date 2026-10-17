@@ -35,14 +35,14 @@ public static partial class GameLocations
                     // The game ran since, giving the same order: the logs as they are now are kept with it.
                     GameData.KeepCache(cacheFile!, OrderLine(logs, order) + "\n" + stamp + "\n" + k[2]);
                 }
-                Console.WriteLine($"Location rules: {cached.locations.Count} kinds, from the cache.");
+                Console.WriteLine($"Location rules: {cached.Locations.Count} kinds, from the cache.");
                 return cached;
             }
             var watch = System.Diagnostics.Stopwatch.StartNew();
             var rules = Read(bundles, scanned, manifest, order);
             if (rules != null)
             {
-                Console.WriteLine($"Location rules: {rules.locations.Count} kinds and {rules.altBiomes.Count} alt biomes read from the game ({scanned.Count} bundles) in {watch.ElapsedMilliseconds} ms; the lists' order from {from}.");
+                Console.WriteLine($"Location rules: {rules.Locations.Count} kinds and {rules.AltBiomes.Count} alt biomes read from the game ({scanned.Count} bundles) in {watch.ElapsedMilliseconds} ms; the lists' order from {from}.");
             }
             if (rules != null && cacheFile != null)
             {

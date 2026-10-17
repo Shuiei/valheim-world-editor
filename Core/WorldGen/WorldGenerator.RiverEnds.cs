@@ -29,12 +29,12 @@ public sealed partial class WorldGenerator
     {
         const float Step = 128f;
         float length = Vector2.Distance(a, b);
-        var dir = (b - a).normalized;
+        var dir = (b - a).Normalized;
         bool allWater = true;
         for (float s = Step; s <= (float)((double)length - Step); s = (float)((double)s + Step))
         {
             var q = a + dir * s;
-            float land = Continent(q.x, q.y);
+            float land = Continent(q.X, q.Y);
             if (land > 0.4f)
             {
                 return false;

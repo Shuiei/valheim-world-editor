@@ -9,6 +9,8 @@ namespace WorldEditor.Tests;
 [Collection("DataDir")]
 public sealed class HomeFolderSettingsTests : HomeFolderTestBase
 {
+    private static readonly string[] Expected2 = ["/w"];
+    private static readonly string[] Expected1 = ["/b"];
     [Fact]
     public void SettingsLiveInTheDataFolderAndSurviveARoundTrip()
     {
@@ -19,8 +21,8 @@ public sealed class HomeFolderSettingsTests : HomeFolderTestBase
         var back = AppSettings.Load();
         Assert.Equal("/games/valheim", back.ValheimPath);
         Assert.Equal("server", back.LastMode);
-        Assert.Equal(new[] { "/w" }, back.WorldFolders);
-        Assert.Equal(new[] { "/b" }, back.BepInExFolders);
+        Assert.Equal(Expected2, back.WorldFolders);
+        Assert.Equal(Expected1, back.BepInExFolders);
     }
 
     [Fact]

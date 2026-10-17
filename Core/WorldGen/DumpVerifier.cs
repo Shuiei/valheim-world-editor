@@ -56,8 +56,8 @@ public static partial class DumpVerifier
     /// </summary>
     private static string State()
     {
-        var s = Rnd.state;
-        return $"{s.s0:x8} {s.s1:x8} {s.s2:x8} {s.s3:x8}";
+        var s = Rnd.State;
+        return $"{s.S0:x8} {s.S1:x8} {s.S2:x8} {s.S3:x8}";
     }
 
     /// <summary>
@@ -126,9 +126,9 @@ public static partial class DumpVerifier
     internal static WorldGenerator Init(string seedName)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        World world = new() { m_seedName = seedName, m_seed = TerrainEditor.Save.StableHash.Of(seedName), m_worldGenVersion = 2 };
+        World world = new() { SeedName = seedName, Seed = TerrainEditor.Save.StableHash.Of(seedName), WorldGenVersion = 2 };
         var gen = WorldGenerator.Create(world);
-        Console.WriteLine($"  offline worldgen init {watch.ElapsedMilliseconds} ms, seed {world.m_seed}");
+        Console.WriteLine($"  offline worldgen init {watch.ElapsedMilliseconds} ms, seed {world.Seed}");
         return gen;
     }
 }

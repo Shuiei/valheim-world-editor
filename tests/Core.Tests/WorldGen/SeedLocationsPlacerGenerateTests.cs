@@ -19,7 +19,7 @@ public class SeedLocationsPlacerGenerateTests
     {
         var placer = Placer(Seed());
 
-        placer.Generate(new SeedLocations.Rule { prefab = "Temple", centerFirst = 1, quantity = 0 });
+        placer.Generate(new SeedLocations.Rule { Prefab = "Temple", CenterFirst = 1, Quantity = 0 });
 
         Assert.Empty(placer.Instances);
     }
@@ -28,7 +28,7 @@ public class SeedLocationsPlacerGenerateTests
     public void AUniqueKindAlreadyThereIsNotLaidOutAgain()
     {
         var placer = Placer(Seed());
-        var rule = new SeedLocations.Rule { prefab = "Temple", centerFirst = 1, quantity = 1, unique = 1 };
+        var rule = new SeedLocations.Rule { Prefab = "Temple", CenterFirst = 1, Quantity = 1, Unique = 1 };
         placer.Register(rule, new ValheimGen.Vector3(10, 0, 0));
 
         placer.Generate(rule);
@@ -42,18 +42,18 @@ public class SeedLocationsPlacerGenerateTests
         var placer = Placer(Seed());
         var rule = new SeedLocations.Rule
         {
-            prefab = "Temple",
-            centerFirst = 1,
-            quantity = 1,
-            biome = int.MaxValue,
-            biomeArea = int.MaxValue,
-            minAltitude = -1000,
-            maxAltitude = 1000,
+            Prefab = "Temple",
+            CenterFirst = 1,
+            Quantity = 1,
+            Biome = int.MaxValue,
+            BiomeArea = int.MaxValue,
+            MinAltitude = -1000,
+            MaxAltitude = 1000,
         };
 
         placer.Generate(rule);
 
         Assert.True(placer.Instances.Count <= 1);
-        Assert.All(placer.Instances.Values, p => Assert.Equal("Temple", p.Rule.prefab));
+        Assert.All(placer.Instances.Values, p => Assert.Equal("Temple", p.Rule.Prefab));
     }
 }

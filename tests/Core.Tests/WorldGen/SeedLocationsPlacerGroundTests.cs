@@ -17,7 +17,7 @@ public class SeedLocationsPlacerGroundTests
     [Fact]
     public void ASpotCloserThanTheMinimumIsOutOfTheRing()
     {
-        var rule = new SeedLocations.Rule { minDistance = 100 };
+        var rule = new SeedLocations.Rule { MinDistance = 100 };
 
         Assert.False(SeedLocations.Placer.AtRightDistance(rule, new Vector3(50, 0, 0)));
         Assert.True(SeedLocations.Placer.AtRightDistance(rule, new Vector3(150, 0, 0)));
@@ -26,7 +26,7 @@ public class SeedLocationsPlacerGroundTests
     [Fact]
     public void ASpotFartherThanTheMaximumIsOutOfTheRing()
     {
-        var rule = new SeedLocations.Rule { maxDistance = 200 };
+        var rule = new SeedLocations.Rule { MaxDistance = 200 };
 
         Assert.False(SeedLocations.Placer.AtRightDistance(rule, new Vector3(250, 0, 0)));
         Assert.True(SeedLocations.Placer.AtRightDistance(rule, new Vector3(150, 0, 0)));
@@ -39,12 +39,12 @@ public class SeedLocationsPlacerGroundTests
         var placer = Placer(gen);
         var spot = new Vector3(100, 0, 100);
         var biome = gen.GetBiome(spot);
-        var rule = new SeedLocations.Rule { minAltitude = -10000, maxAltitude = 10000 };
+        var rule = new SeedLocations.Rule { MinAltitude = -10000, MaxAltitude = 10000 };
 
         bool ok = placer.OnRightGround(rule, biome, ref spot, out _);
 
         Assert.True(ok);
-        Assert.Equal(gen.GetBiomeHeight(biome, 100, 100, out _), spot.y);
+        Assert.Equal(gen.GetBiomeHeight(biome, 100, 100, out _), spot.Y);
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class SeedLocationsPlacerGroundTests
     {
         var gen = Seed();
         var spot = new Vector3(100, 0, 100);
-        var rule = new SeedLocations.Rule { minAltitude = -10000, maxAltitude = 10000 };
+        var rule = new SeedLocations.Rule { MinAltitude = -10000, MaxAltitude = 10000 };
 
         Assert.False(Placer(gen).OnRightGround(rule, 0, ref spot, out _));
     }
@@ -63,7 +63,7 @@ public class SeedLocationsPlacerGroundTests
         var gen = Seed();
         var spot = new Vector3(100, 0, 100);
         var biome = gen.GetBiome(spot);
-        var rule = new SeedLocations.Rule { minAltitude = -10000, maxAltitude = -10000 };
+        var rule = new SeedLocations.Rule { MinAltitude = -10000, MaxAltitude = -10000 };
 
         Assert.False(Placer(gen).OnRightGround(rule, biome, ref spot, out _));
     }
@@ -72,7 +72,7 @@ public class SeedLocationsPlacerGroundTests
     public void AFlatEnoughSpotIsWithinTheRiseTheKindAllows()
     {
         var gen = Seed();
-        var rule = new SeedLocations.Rule { exteriorRadius = 10, minTerrainDelta = 0, maxTerrainDelta = 1000 };
+        var rule = new SeedLocations.Rule { ExteriorRadius = 10, MinTerrainDelta = 0, MaxTerrainDelta = 1000 };
 
         Assert.True(Placer(gen).FlatEnough(rule, new Vector3(100, 0, 100)));
     }
@@ -81,7 +81,7 @@ public class SeedLocationsPlacerGroundTests
     public void ASpotWithTooLittleRiseIsRefused()
     {
         var gen = Seed();
-        var rule = new SeedLocations.Rule { exteriorRadius = 10, minTerrainDelta = 1000, maxTerrainDelta = 2000 };
+        var rule = new SeedLocations.Rule { ExteriorRadius = 10, MinTerrainDelta = 1000, MaxTerrainDelta = 2000 };
 
         Assert.False(Placer(gen).FlatEnough(rule, new Vector3(100, 0, 100)));
     }

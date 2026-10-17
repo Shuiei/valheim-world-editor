@@ -30,7 +30,7 @@ public static partial class Regrow
         {
             return true;
         }
-        float forest = WorldGenerator.GetForestFactor(new ValheimGen.Vector3(px, py, pz));
+        float forest = WorldGenerator.GetForestFactor(new Vector3(px, py, pz));
         return !(forest < veg.forestTresholdMin || forest > veg.forestTresholdMax);
     }
 }

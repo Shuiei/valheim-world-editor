@@ -63,7 +63,7 @@ public sealed partial class TerrainService
     public TerrainService(WorldSave save, TerrainEditor.Terrain.TerrainModifiers? modifiers = null, int overviewSize = 1024)
     {
         _ground = new Modified(modifiers);
-        World world = new() { m_seed = save.Seed, m_seedName = save.SeedName, m_worldGenVersion = save.WorldGenVersion };
+        World world = new() { Seed = save.Seed, SeedName = save.SeedName, WorldGenVersion = save.WorldGenVersion };
         Generator = WorldGenerator.Create(world);
         _overviewPng = new Lazy<byte[]>(() => RenderOverview(overviewSize), LazyThreadSafetyMode.ExecutionAndPublication);
     }

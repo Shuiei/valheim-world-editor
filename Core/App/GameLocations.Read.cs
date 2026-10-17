@@ -31,20 +31,20 @@ public static partial class GameLocations
     internal static SeedLocations.RuleSet RuleSetOf(SceneFields scene, Manifest manifest, (int Locations, int Vegetation)[] order)
     {
         var rules = new SeedLocations.RuleSet();
-        rules.locations.AddRange(Items(scene.Zone!).Select(l => Location(l, manifest, null)));
+        rules.Locations.AddRange(Items(scene.Zone!).Select(l => Location(l, manifest, null)));
         // A pair named twice takes its lists one after the other.
         var taken = new Dictionary<(int, int), int>();
         foreach (var key in order)
         {
             int n = taken.GetValueOrDefault(key);
             taken[key] = n + 1;
-            rules.locations.AddRange(Items(scene.Lists[key][n]).Select(l => Location(l, manifest, null)));
+            rules.Locations.AddRange(Items(scene.Lists[key][n]).Select(l => Location(l, manifest, null)));
         }
         foreach (var a in Items(scene.Alts!))
         {
             string name = a["m_name"].AsString;
-            rules.altBiomes.Add(new SeedLocations.AltBiomeRule { name = name, blockLocationNames = [.. Items(a["m_blockLocationNames"]).Select(s => s.AsString)] });
-            rules.locations.AddRange(Items(a["m_addLocations"]).Select(l => Location(l, manifest, name)));
+            rules.AltBiomes.Add(new SeedLocations.AltBiomeRule { Name = name, BlockLocationNames = [.. Items(a["m_blockLocationNames"]).Select(s => s.AsString)] });
+            rules.Locations.AddRange(Items(a["m_addLocations"]).Select(l => Location(l, manifest, name)));
         }
         return rules;
     }

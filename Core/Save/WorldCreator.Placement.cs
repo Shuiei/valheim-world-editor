@@ -13,12 +13,12 @@ public static partial class WorldCreator
     /// </summary>
     private static float Yaw(ValheimGen.SeedLocations.Rule rule, ValheimGen.TerrainService terrain, Vector3 at, int zoneSeed)
     {
-        if (rule.slopeRotation != 0)
+        if (rule.SlopeRotation != 0)
         {
             Vector3 n = Normal(terrain, at.X, at.Z);
             return MathF.Atan2(-n.Z, n.X) * 180f / MathF.PI;
         }
-        if (rule.randomRotation != 0)
+        if (rule.RandomRotation != 0)
         {
             Rnd.InitState(zoneSeed);
             return Rnd.Range(0, 16) * 22.5f;

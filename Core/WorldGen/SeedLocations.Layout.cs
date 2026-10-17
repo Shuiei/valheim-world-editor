@@ -70,7 +70,7 @@ public static partial class SeedLocations
             int count = which switch
             {
                 Which.Start => 1,
-                Which.Prioritized => _state.Ordered.Count(r => r.prioritized != 0),
+                Which.Prioritized => _state.Ordered.Count(r => r.Prioritized != 0),
                 _ => _state.Ordered.Count,
             };
             return [.. Until(count, cancel).Where(p => !Uncertain(_state, p.Rule))];
@@ -82,8 +82,8 @@ public static partial class SeedLocations
         /// </summary>
         public List<Placed> PlaceKinds(IReadOnlyCollection<string> prefabs, CancellationToken cancel = default)
         {
-            int count = _state.Ordered.FindLastIndex(r => prefabs.Contains(r.prefab)) + 1;
-            return [.. Until(count, cancel).Where(p => prefabs.Contains(p.Rule.prefab) && p.Rule.altBiome == null)];
+            int count = _state.Ordered.FindLastIndex(r => prefabs.Contains(r.Prefab)) + 1;
+            return [.. Until(count, cancel).Where(p => prefabs.Contains(p.Rule.Prefab) && p.Rule.AltBiome == null)];
         }
 
         /// <summary>
@@ -96,7 +96,7 @@ public static partial class SeedLocations
             lock (_sync)
             {
                 _cancel = cancel;
-                Rnd.State saved = Rnd.state;
+                Rnd.RandomState saved = Rnd.State;
                 try
                 {
                     for (; _done < Math.Min(count, _state.Ordered.Count); _done++)
@@ -114,7 +114,7 @@ public static partial class SeedLocations
                 }
                 finally
                 {
-                    Rnd.state = saved;
+                    Rnd.State = saved;
                 }
                 return [.. _placer.Instances.Values];
             }

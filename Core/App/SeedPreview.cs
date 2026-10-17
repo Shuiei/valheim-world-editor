@@ -68,7 +68,7 @@ public static partial class SeedPreview
     public static List<Landmark> FindDungeons(SeedLocations.Layout layout, CancellationToken cancel = default)
     {
         var byPrefab = Dungeons.SelectMany(d => d.Prefabs.Select(p => (p, d.Name))).ToDictionary(x => x.p, x => x.Name);
-        return [.. layout.PlaceKinds(byPrefab.Keys, cancel).Select(p => new Landmark(byPrefab[p.Rule.prefab], "dungeon", p.X, p.Z, false))];
+        return [.. layout.PlaceKinds(byPrefab.Keys, cancel).Select(p => new Landmark(byPrefab[p.Rule.Prefab], "dungeon", p.X, p.Z, false))];
     }
 
     /// <summary>The bosses of the first five biomes, for the "bosses within" wish.</summary>
@@ -139,9 +139,9 @@ public static partial class SeedPreview
     /// <summary>The game's world generator for a seed name, at the current world generation version.</summary>
     public static WorldGenerator Generator(string seedName) => WorldGenerator.Create(new World
     {
-        m_seedName = seedName,
-        m_seed = WorldCreator.SeedOf(seedName),
-        m_worldGenVersion = WorldCreator.WorldGenVersion,
+        SeedName = seedName,
+        Seed = WorldCreator.SeedOf(seedName),
+        WorldGenVersion = WorldCreator.WorldGenVersion,
     });
 
     /// <summary>A random seed name as the game makes them: 10 letters and digits.</summary>

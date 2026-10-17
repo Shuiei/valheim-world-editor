@@ -16,12 +16,12 @@ public sealed partial class WorldGenerator
     /// <summary>
     /// The same at a map point (y is world z).
     /// </summary>
-    public static float GetAshlandsOceanGradient(Vector2 pos) => GetAshlandsOceanGradient(pos.x, pos.y);
+    internal static float GetAshlandsOceanGradient(Vector2 pos) => GetAshlandsOceanGradient(pos.X, pos.Y);
 
     /// <summary>
     /// The same at a world position's x and z.
     /// </summary>
-    public static float GetAshlandsOceanGradient(Vector3 pos) => GetAshlandsOceanGradient(pos.x, pos.z);
+    internal static float GetAshlandsOceanGradient(Vector3 pos) => GetAshlandsOceanGradient(pos.X, pos.Z);
 
     /// <summary>
     /// The wave of the Ashlands' and the Deep North's edges: twenty swings round the world, -1 to 1.
@@ -62,7 +62,7 @@ public sealed partial class WorldGenerator
     /// A zone's area by its corner (zone x, z times 64): on a biome's edge when the corner and the
     /// corners round it are not all in one biome, else in its middle.
     /// </summary>
-    public Heightmap.BiomeArea GetBiomeArea(Vector2s corner)
+    internal Heightmap.BiomeArea GetBiomeArea(Vector2s corner)
     {
         if (_cornerAreas.TryGetValue(corner, out var area))
         {
@@ -94,7 +94,7 @@ public sealed partial class WorldGenerator
     {
         if (!_cornerBiomes.TryGetValue(corner, out var biome))
         {
-            biome = GetBiome(corner.x, corner.y);
+            biome = GetBiome(corner.X, corner.Y);
             _cornerBiomes.TryAdd(corner, biome);
         }
         return biome;

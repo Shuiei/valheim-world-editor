@@ -30,7 +30,7 @@ public sealed partial class ClaudeTools
         {
             return "Open a world first (open_world).";
         }
-        var rules = ValheimGen.SeedLocations.Current.locations.GroupBy(r => Save.StableHash.Of(r.prefab)).ToDictionary(g => g.Key, g => g.First().prefab);
+        var rules = ValheimGen.SeedLocations.Current.Locations.GroupBy(r => Save.StableHash.Of(r.Prefab)).ToDictionary(g => g.Key, g => g.First().Prefab);
         var all = world.Zones is { Locations.Count: > 0 } zones
             ? zones.Locations.Select(l => (l.Hash, l.Position, Generated: (bool?)l.Placed))
             : world.Locations.Select(l => (Hash: l.Location, l.Position, Generated: (bool?)true));

@@ -11,6 +11,7 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class BlueprintFormatsClipboardTests
 {
+    private static readonly int[] Expected1 = [255, 0, 0, 255];
     /// <summary>A parsed blueprint with the given terrain marks and no pieces.</summary>
     private static BlueprintFormats.Parsed Terrain(params BlueprintFormats.TerrainMod[] marks) =>
         new("t", null, null, [], [.. marks], 0);
@@ -75,7 +76,7 @@ public class BlueprintFormatsClipboardTests
     public void APaintedPointTakesTheMarksPaintAsFourWeights()
     {
         var (_, _, _, _, pnt) = BlueprintFormats.TerrainGrid(Terrain(Mark(2f, "dirt")), 0f, 0f, 0f, 2f, 2f);
-        Assert.Equal(new[] { 255, 0, 0, 255 }, pnt.AsSpan(16, 4).ToArray());
+        Assert.Equal(Expected1, pnt.AsSpan(16, 4).ToArray());
     }
 
     [Fact]

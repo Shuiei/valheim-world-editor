@@ -13,6 +13,7 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class GameBundlesModelWalkTests
 {
+    private static readonly int[] Expected1 = [0, 1];
     /// <summary>A walk over the prefab's bundle, which holds it.</summary>
     private static GameBundles.ModelWalk Walk(TestGame game) => new(new GameBundles(game.BundlesDir, null), "b_house");
 
@@ -155,6 +156,6 @@ public class GameBundlesModelWalkTests
         var root = b.Prefab("House", r => r.Child("wall", c => c.Renderer(Fields.Ref(split), [first, second])));
 
         var walk = WalkRoot(game, root);
-        Assert.Equal(new[] { 0, 1 }, walk.Parts.Select(p => p.Sub).ToArray());
+        Assert.Equal(Expected1, walk.Parts.Select(p => p.Sub).ToArray());
     }
 }

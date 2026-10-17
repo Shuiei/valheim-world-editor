@@ -47,13 +47,13 @@ public class RegrowTests
             }
         }
         Assert.True(perBiome.Count >= 6, string.Join(", ", perBiome.Keys));
-        var state = ValheimGen.UnityEngine.Random.state;
+        var state = ValheimGen.UnityEngine.Random.State;
         int total = 0;
         foreach (var (zx, zz) in picks)
         {
             var spots = Regrow.Zones(terrain, edits, world.Seed, zx, zz, zx, zz);
             // Unity's random state is put back for the next user.
-            Assert.Equal(state, ValheimGen.UnityEngine.Random.state);
+            Assert.Equal(state, ValheimGen.UnityEngine.Random.State);
             Assert.Equal(spots, Regrow.Zones(terrain, edits, world.Seed, zx, zz, zx, zz));
             foreach (var s in spots)
             {

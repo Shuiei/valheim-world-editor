@@ -1,5 +1,5 @@
-using static TerrainEditor.Editing.DungeonKit;
 using System.Numerics;
+using static TerrainEditor.Editing.DungeonKit;
 
 namespace TerrainEditor.Editing;
 

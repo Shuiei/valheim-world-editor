@@ -1,7 +1,7 @@
-using Avalonia.Headless.XUnit;
-using Avalonia.Headless;
-using Avalonia.Input;
 using System.Numerics;
+using Avalonia.Headless;
+using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Xunit;
 using static TerrainEditor.Desktop.Tests.SelectAreaRun;
 

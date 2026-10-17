@@ -1,7 +1,7 @@
 // What build pieces cost, read at the editor's start: their resources, crafting stations and item names (see GameCatalogues).
 
-using Dict = TerrainEditor.App.CatalogueJson.Dict;
 using AssetsTools.NET;
+using Dict = TerrainEditor.App.CatalogueJson.Dict;
 
 namespace TerrainEditor.App;
 

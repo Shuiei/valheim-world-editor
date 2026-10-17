@@ -1,5 +1,5 @@
-using Avalonia.Headless.XUnit;
 using System.Numerics;
+using Avalonia.Headless.XUnit;
 using WorldEditor.Tests;
 using Xunit;
 using static TerrainEditor.Desktop.Tests.SelectAreaRun;
@@ -14,6 +14,8 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class SelectToolTests
 {
+    private static readonly int[] Expected2 = [0];
+    private static readonly int[] Expected1 = [2];
     // Drop lands each object on the highest drawn top under it, whatever the size of what is under: a platform
     // across several cells of the drop's index, and a slab too wide to file by cell (looked at everywhere).
     [AvaloniaFact]
@@ -80,7 +82,7 @@ public class SelectToolTests
         Assert.True(s.Scene.Things[0].Gone);
         Assert.Contains(10, s.Edits.Deleted);
         Assert.Equal((0, 1, 0, 0), s.Pending);
-        Assert.Equal(new[] { 0 }, changed);
+        Assert.Equal(Expected2, changed);
         Assert.Equal("Deleted 1", s.UndoLabel);
         s.Undo();
         Assert.False(s.Scene.Things[0].Gone);
@@ -94,7 +96,7 @@ public class SelectToolTests
     {
         var s = Area();
         var copies = s.Move([(0, new Vector3(25, 31, 20), new Vector3(0, 45, 0))]);
-        Assert.Equal(new[] { 2 }, copies);
+        Assert.Equal(Expected1, copies);
         Assert.True(s.Scene.Things[0].Gone);
         var copy = s.Scene.Things[2];
         Assert.Equal(new Vector3(25, 31, 20), copy.Position);

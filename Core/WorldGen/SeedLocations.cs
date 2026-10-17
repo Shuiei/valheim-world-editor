@@ -37,11 +37,11 @@ public static partial class SeedLocations
         /// <summary>
         /// The game's order: prioritized kinds first, otherwise as listed; disabled and empty kinds left out.
         /// </summary>
-        public List<Rule> Ordered { get; } = [.. rules.locations.OrderByDescending(l => l.prioritized != 0).Where(l => l.enable != 0 && l.quantity != 0)];
+        public List<Rule> Ordered { get; } = [.. rules.Locations.OrderByDescending(l => l.Prioritized != 0).Where(l => l.Enable != 0 && l.Quantity != 0)];
         /// <summary>
         /// Names of the kinds some alt biome blocks.
         /// </summary>
-        public HashSet<string> Blocked { get; } = [.. rules.altBiomes.SelectMany(a => a.blockLocationNames)];
+        public HashSet<string> Blocked { get; } = [.. rules.AltBiomes.SelectMany(a => a.BlockLocationNames)];
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public static partial class SeedLocations
     /// <summary>
     /// Whether there are rules to place with.
     /// </summary>
-    public static bool Available => _state.Rules.locations.Count > 0;
+    public static bool Available => _state.Rules.Locations.Count > 0;
 
     /// <summary>
     /// The kinds laid out first (start, bosses, traders...), as the tests' copy keeps them: what the
@@ -65,7 +65,7 @@ public static partial class SeedLocations
     /// </summary>
     public static RuleSet Prioritized(RuleSet rules) => new()
     {
-        locations = [.. rules.locations.Where(l => l.prioritized != 0 && l.enable != 0 && l.quantity != 0)],
+        Locations = [.. rules.Locations.Where(l => l.Prioritized != 0 && l.Enable != 0 && l.Quantity != 0)],
     };
 
     /// <summary>
@@ -133,5 +133,5 @@ public static partial class SeedLocations
     /// <summary>
     /// Whether a kind depends on the alt biomes under these rules.
     /// </summary>
-    private static bool Uncertain(State state, Rule r) => r.altBiome != null || state.Blocked.Contains(r.name);
+    private static bool Uncertain(State state, Rule r) => r.AltBiome != null || state.Blocked.Contains(r.Name);
 }

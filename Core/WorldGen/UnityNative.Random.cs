@@ -13,36 +13,42 @@ namespace ValheimGen
             /// <summary>
             /// The generator's four state words, as Random.state saves and restores them.
             /// </summary>
-            public struct State : IEquatable<State>
+            public struct RandomState : IEquatable<RandomState>
             {
                 /// <summary>
                 /// First state word.
                 /// </summary>
-                internal uint s0;
+                internal uint S0;
 
                 /// <summary>
                 /// Second state word.
                 /// </summary>
-                internal uint s1;
+                internal uint S1;
 
                 /// <summary>
                 /// Third state word.
                 /// </summary>
-                internal uint s2;
+                internal uint S2;
 
                 /// <summary>
                 /// Fourth state word.
                 /// </summary>
-                internal uint s3;
+                internal uint S3;
 
                 /// <summary>Equal when the four state words are equal.</summary>
-                public readonly bool Equals(State other) => s0 == other.s0 && s1 == other.s1 && s2 == other.s2 && s3 == other.s3;
+                public readonly bool Equals(RandomState other) => S0 == other.S0 && S1 == other.S1 && S2 == other.S2 && S3 == other.S3;
 
                 /// <summary>Equal to another state with the same four words.</summary>
-                public override readonly bool Equals(object? obj) => obj is State v && Equals(v);
+                public override readonly bool Equals(object? obj) => obj is RandomState v && Equals(v);
+
+                /// <summary>Whether the two states hold the same four words.</summary>
+                public static bool operator ==(RandomState left, RandomState right) => left.Equals(right);
+
+                /// <summary>Whether the states differ in a word.</summary>
+                public static bool operator !=(RandomState left, RandomState right) => !left.Equals(right);
 
                 /// <summary>A hash of the four words, equal for equal states.</summary>
-                public override readonly int GetHashCode() => HashCode.Combine(s0, s1, s2, s3);
+                public override readonly int GetHashCode() => HashCode.Combine(S0, S1, S2, S3);
             }
 
             /// <summary>
@@ -72,15 +78,15 @@ namespace ValheimGen
             /// <summary>
             /// This thread's state, to save and restore around draws (as the game does).
             /// </summary>
-            public static State state
+            public static RandomState State
             {
-                get => new() { s0 = _s0, s1 = _s1, s2 = _s2, s3 = _s3 };
+                get => new() { S0 = _s0, S1 = _s1, S2 = _s2, S3 = _s3 };
                 set
                 {
-                    _s0 = value.s0;
-                    _s1 = value.s1;
-                    _s2 = value.s2;
-                    _s3 = value.s3;
+                    _s0 = value.S0;
+                    _s1 = value.S1;
+                    _s2 = value.S2;
+                    _s3 = value.S3;
                 }
             }
 
@@ -111,7 +117,7 @@ namespace ValheimGen
             /// <summary>
             /// A float in 0..1, both ends included, from the low 23 bits of one draw.
             /// </summary>
-            public static float value => (NextUInt() & 0x7FFFFF) * (1f / 8388607f);
+            public static float Value => (NextUInt() & 0x7FFFFF) * (1f / 8388607f);
 
             /// <summary>
             /// A float between min and max, both included (one draw).
@@ -119,7 +125,7 @@ namespace ValheimGen
             public static float Range(float min, float max)
             {
                 // Unity interpolates from max to min, not min to max.
-                float t = value;
+                float t = Value;
                 return t * min + (1f - t) * max;
             }
 
@@ -143,7 +149,7 @@ namespace ValheimGen
             /// <summary>
             /// A point in the unit disc (two draws: angle, then radius).
             /// </summary>
-            public static Vector2 insideUnitCircle
+            internal static Vector2 InsideUnitCircle
             {
                 get
                 {

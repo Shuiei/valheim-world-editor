@@ -10,6 +10,7 @@ namespace WorldEditor.Tests;
 [Collection("World files")]
 public class AppDataBlueprintTests
 {
+    private static readonly string[] Expected1 = ["Dated", "My house", "Shed"];
     /// <summary>
     /// A 2 × 1 clipboard copy holding this many beeches, with ground in its first cell or none.
     /// </summary>
@@ -39,7 +40,7 @@ public class AppDataBlueprintTests
             // A blueprint with a bad date: the file's own time is used.
             File.WriteAllText(Path.Combine(dir, "Dated.json"), "{\"name\":\"Dated\",\"created\":\"yesterday\",\"clip\":{\"w\":1,\"h\":1,\"objects\":[]}}");
             var list = store.List();
-            Assert.Equal(new[] { "Dated", "My house", "Shed" }, list.Select(b => b.Name).ToArray());
+            Assert.Equal(Expected1, list.Select(b => b.Name).ToArray());
             var house = list[1];
             Assert.Equal((3, true, "Midgard", "data:thumb", "planbuild"), (house.Objects, house.Ground, house.World, house.Thumb, house.Source));
             Assert.False(list[2].Ground);

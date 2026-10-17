@@ -38,7 +38,7 @@ public sealed partial class NewWorldPage : IDisposable
     /// <summary>
     /// Why Create refused, or empty.
     /// </summary>
-    internal TextBlock Problem { get; } = new() { Foreground = new SolidColorBrush(Avalonia.Media.Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, FontSize = 12 };
+    internal TextBlock Problem { get; } = new() { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, FontSize = 12 };
     /// <summary>
     /// The seed's map, the landmarks over it, and which kinds show (switches over the map's corner, as the editor's
     /// View panel).

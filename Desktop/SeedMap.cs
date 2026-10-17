@@ -52,7 +52,7 @@ public sealed partial class SeedMap : Control, IDisposable
     } = [];
 
     /// <summary>The dots' dark outline.</summary>
-    private static readonly Pen DotLine = new(new SolidColorBrush(Avalonia.Media.Color.FromRgb(20, 20, 24)), 1);
+    private static readonly Pen DotLine = new(new SolidColorBrush(Color.FromRgb(20, 20, 24)), 1);
 
     /// <summary>The view moved or zoomed.</summary>
     public event Action? ViewChanged;
@@ -60,7 +60,7 @@ public sealed partial class SeedMap : Control, IDisposable
     public event Action<float, float>? Hovered;
 
     /// <summary>The background, outside the world.</summary>
-    private static readonly IBrush Outside = new SolidColorBrush(Avalonia.Media.Color.FromRgb(18, 22, 28));
+    private static readonly IBrush Outside = new SolidColorBrush(Color.FromRgb(18, 22, 28));
 
     /// <summary>An empty map; Show gives it a preview.</summary>
     public SeedMap()

@@ -7,6 +7,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class SculptPointTests
 {
+    private static readonly float[] Expected2 = [0f, 1f, 0f, 1f];
+    private static readonly float[] Expected1 = [1f, 0f, 0f, 1f];
     /// <summary>
     /// A 5 × 5 ground and its middle point (2, 2).
     /// </summary>
@@ -63,7 +65,7 @@ public class SculptPointTests
     {
         var (g, p) = Point();
         Sculpt.PaintPoint(g, p, [0f, 1f, 0f, 1f], 1f);
-        Assert.Equal(new[] { 0f, 1f, 0f, 1f }, g.Paint.Skip(p * 4).Take(4).ToArray());
+        Assert.Equal(Expected2, g.Paint.Skip(p * 4).Take(4).ToArray());
     }
 
     [Fact]
@@ -71,6 +73,6 @@ public class SculptPointTests
     {
         var (g, p) = Point();
         Sculpt.ApplyPoint(g, new Brush(), StrokeOf(g, BrushTool.PaintDirt), new Sculpt.Frame(0.2f, null, 0, 0, 0, [1f, 0f, 0f, 1f]), 2, 2, p, 1f);
-        Assert.Equal(new[] { 1f, 0f, 0f, 1f }, g.Paint.Skip(p * 4).Take(4).ToArray());
+        Assert.Equal(Expected1, g.Paint.Skip(p * 4).Take(4).ToArray());
     }
 }

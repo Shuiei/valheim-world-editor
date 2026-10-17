@@ -10,6 +10,9 @@ namespace WorldEditor.Tests;
 /// </summary>
 public sealed class StabilityObbTests
 {
+    private static readonly float[] Expected3 = [0f, 2f];
+    private static readonly float[] Expected2 = [0f, 4f];
+    private static readonly float[] Expected1 = [0f, 6f];
     /// <summary>A box centred at (1, 2, 3) on the world axes, with half sizes 1, 2 and 3.</summary>
     private static readonly Stability.Obb Box = new(new Vector3(1, 2, 3), Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ, new Vector3(1, 2, 3));
 
@@ -24,9 +27,9 @@ public sealed class StabilityObbTests
     {
         foreach (var c in Box.Corners())
         {
-            Assert.Contains(c.X, new[] { 0f, 2f });
-            Assert.Contains(c.Y, new[] { 0f, 4f });
-            Assert.Contains(c.Z, new[] { 0f, 6f });
+            Assert.Contains(c.X, Expected3);
+            Assert.Contains(c.Y, Expected2);
+            Assert.Contains(c.Z, Expected1);
         }
     }
 

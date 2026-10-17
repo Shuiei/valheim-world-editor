@@ -5,29 +5,29 @@ namespace ValheimGen;
 /// <summary>
 /// Valheim's Vector2i: an integer grid cell (the river cells' dictionary key).
 /// </summary>
-public struct Vector2i : IEquatable<Vector2i>
+internal struct Vector2i : IEquatable<Vector2i>
 {
     /// <summary>
     /// The cell's x.
     /// </summary>
-    public int x;
+    public int X;
 
     /// <summary>
     /// The cell's y (world z).
     /// </summary>
-    public int y;
+    public int Y;
 
     /// <summary>
     /// The cell (x, y).
     /// </summary>
     public Vector2i(int x, int y)
     {
-        this.x = x;
-        this.y = y;
+        X = x;
+        Y = y;
     }
 
     /// <inheritdoc/>
-    public readonly bool Equals(Vector2i other) => x == other.x && y == other.y;
+    public readonly bool Equals(Vector2i other) => X == other.X && Y == other.Y;
 
     /// <inheritdoc/>
     public override readonly bool Equals(object obj) => obj is Vector2i v && Equals(v);
@@ -35,7 +35,7 @@ public struct Vector2i : IEquatable<Vector2i>
     /// <summary>
     /// Spread out (x ^ y gave the world's grid cells only about 512 hashes: long chains in a dictionary).
     /// </summary>
-    public override readonly int GetHashCode() => unchecked(x * 73856093 ^ y * 19349663);
+    public override readonly int GetHashCode() => unchecked(X * 73856093 ^ Y * 19349663);
 
     /// <summary>
     /// The same cell.

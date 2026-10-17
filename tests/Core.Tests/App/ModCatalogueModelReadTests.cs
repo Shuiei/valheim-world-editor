@@ -10,6 +10,7 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class ModCatalogueModelReadTests
 {
+    private static readonly float[] Expected1 = [2f, 3f, 4f];
     /// <summary>A model read from its report, as the code under test reads it.</summary>
     private static ModCatalogue.Model ToModel(string json) => (ModCatalogue.Model)PrivateCall.Static(typeof(ModCatalogue), "ToModel", JsonNode.Parse(json)!.AsObject())!;
 
@@ -20,7 +21,7 @@ public class ModCatalogueModelReadTests
     {
         string json = "{\"s\":[2,3,4],\"p\":[{\"mesh\":\"Wood Chest Instance\",\"v\":6,\"sub\":1,\"mat\":\"Oak (Instance)\",\"m\":" + Identity + ",\"b\":[0,0,0,1,1,1]}]}";
         var model = ToModel(json);
-        Assert.Equal(new[] { 2f, 3f, 4f }, model.RootScale);
+        Assert.Equal(Expected1, model.RootScale);
         var part = Assert.Single(model.Parts);
         Assert.Equal("Wood Chest", part.Mesh);
         Assert.Equal(6, part.Vertices);

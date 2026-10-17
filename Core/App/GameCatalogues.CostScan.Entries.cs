@@ -1,5 +1,5 @@
-using Dict = TerrainEditor.App.CatalogueJson.Dict;
 using AssetsTools.NET;
+using Dict = TerrainEditor.App.CatalogueJson.Dict;
 
 namespace TerrainEditor.App;
 

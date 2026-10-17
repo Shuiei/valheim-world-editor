@@ -27,7 +27,7 @@ public static partial class GameLocations
         }
         var kept = SeedLocations.Prioritized(rules);
         File.WriteAllText(path, kept.ToJson());
-        Console.WriteLine($"{kept.locations.Count} of {rules.locations.Count} locations written to {path}");
+        Console.WriteLine($"{kept.Locations.Count} of {rules.Locations.Count} locations written to {path}");
         return 0;
     }
 }

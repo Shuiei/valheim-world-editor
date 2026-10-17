@@ -1,6 +1,6 @@
-using Vector3 = System.Numerics.Vector3;
 using ValheimGen;
 using Xunit;
+using Vector3 = System.Numerics.Vector3;
 
 namespace WorldEditor.Tests;
 

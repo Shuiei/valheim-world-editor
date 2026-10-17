@@ -83,8 +83,8 @@ public static partial class Regrow
         float hi = -999999f, lo = 999999f;
         for (int k = 0; k < 10; k++)
         {
-            var c = Rnd.insideUnitCircle;
-            float gh = ground.Height(px + c.x * veg.terrainDeltaRadius, pz + c.y * veg.terrainDeltaRadius);
+            var c = Rnd.InsideUnitCircle;
+            float gh = ground.Height(px + c.X * veg.terrainDeltaRadius, pz + c.Y * veg.terrainDeltaRadius);
             lo = MathF.Min(lo, gh);
             hi = MathF.Max(hi, gh);
         }

@@ -57,7 +57,7 @@ public sealed partial class NewWorldPage : IDisposable
     /// <summary>
     /// A dungeon kind's square mark.
     /// </summary>
-    private static Border DungeonMark(string name) => new() { Width = 8, Height = 8, Background = DungeonFill(name), BorderBrush = new SolidColorBrush(Avalonia.Media.Color.FromRgb(20, 20, 24)), BorderThickness = new Thickness(1) };
+    private static Border DungeonMark(string name) => new() { Width = 8, Height = 8, Background = DungeonFill(name), BorderBrush = new SolidColorBrush(Color.FromRgb(20, 20, 24)), BorderThickness = new Thickness(1) };
 
     /// <summary>
     /// A switch for one dungeon kind, off at first.

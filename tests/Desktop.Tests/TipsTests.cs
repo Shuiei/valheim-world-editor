@@ -1,7 +1,7 @@
+using System.Numerics;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
-using System.Numerics;
 using TerrainEditor.App;
 using TerrainEditor.Save;
 using WorldEditor.Tests;

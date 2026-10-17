@@ -1,7 +1,7 @@
 using System.Numerics;
 using Avalonia;
-using Avalonia.Headless;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Media;
 using Xunit;

@@ -16,6 +16,7 @@ namespace TerrainEditor.Desktop.Tests;
 public class WindowFlowTests
 {
     private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
+    private static readonly string[] Expected1 = ["Leave the world", "Leave the world"];
 
     /// <summary>
     /// A main window on its own copy of the test world, with what it tells and asks collected and every question
@@ -163,7 +164,7 @@ public class WindowFlowTests
         await r.W.LeaveWorld();
         Assert.Null(r.W.World);
         Assert.NotNull(r.W.StartPage);
-        Assert.Equal(new[] { "Leave the world", "Leave the world" }, r.Asked);
+        Assert.Equal(Expected1, r.Asked);
     }
 
     [AvaloniaFact]

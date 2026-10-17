@@ -27,7 +27,7 @@ public static partial class Dungeons
             return made;
         }
         bool[] off = new bool[nodes.Length];
-        var was = Rnd.state;
+        var was = Rnd.State;
         try
         {
             Rnd.InitState(seed);
@@ -36,7 +36,7 @@ public static partial class Dungeons
         }
         finally
         {
-            Rnd.state = was;
+            Rnd.State = was;
         }
         foreach (var c in contents)
         {

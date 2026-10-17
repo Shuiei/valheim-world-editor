@@ -150,7 +150,7 @@ public static partial class Regrow
         // Each zone's biomes, paint mask and ocean depths, made once for the whole call: groups reach into neighbours.
         Dictionary<(int, int), Zone> zones = [];
         // Unity's Random has one state per thread: put back what this thread had.
-        Rnd.State saved = Rnd.state;
+        Rnd.RandomState saved = Rnd.State;
         try
         {
             for (int zz = z0; zz <= z1; zz++)
@@ -163,7 +163,7 @@ public static partial class Regrow
         }
         finally
         {
-            Rnd.state = saved;
+            Rnd.State = saved;
         }
         return spots;
     }

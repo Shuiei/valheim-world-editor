@@ -9,6 +9,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class PlaceToolPlacementRulesTests
 {
+    private static readonly float[] Expected1 = [1f, 2f, 3f];
     [Fact]
     public void AGridPointOnTheEdgeMetreIsOffTheBlock()
     {
@@ -91,7 +92,7 @@ public class PlaceToolPlacementRulesTests
         var e = new PlaceTool.Ends(Vector3.Zero, new Vector3(2, 0, 0), 2, 1, 0);
         PlaceTool.AddRunLayers(outp, "Beech1", e, 5, 6, 1, 0, 3, 0, 0);
         Assert.Equal(3, outp.Count);
-        Assert.Equal(new[] { 1f, 2f, 3f }, outp.Select(o => o.Position.Y).ToArray());
+        Assert.Equal(Expected1, outp.Select(o => o.Position.Y).ToArray());
     }
 
     [Fact]

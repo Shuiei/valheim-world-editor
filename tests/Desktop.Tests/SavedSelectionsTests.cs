@@ -11,6 +11,8 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("Saved selections")]
 public sealed class SavedSelectionsTests : SavedSelectionsFolder
 {
+    private static readonly int[] Expected2 = [0, 1];
+    private static readonly int[] Expected1 = [0, 1, 2];
     [Fact]
     public void SelectionsAreKeptPerWorldAndReplacedByName()
     {
@@ -87,7 +89,7 @@ public sealed class SavedSelectionsTests : SavedSelectionsFolder
             I(Beech, 10, 30, 10), I(Beech, 10, 30, 10), I(Wall, 20, 30.25f, 20), I(Beech, 50, 30, 50), I(Beech, 60, 30, 60), I(Wall, 10, 30, 10)), things);
         // Two items at the same place take two different objects; the wall is 25 cm too high, the
         // deleted one and the one 6 cm away are not found, nor a wall where a tree stands.
-        Assert.Equal(new[] { 0, 1 }, ids);
+        Assert.Equal(Expected2, ids);
         Assert.Equal(4, missing);
         Assert.Empty(SavedSelections.Find(S(), things).Ids);
         Assert.Equal(0, SavedSelections.Find(S(), things).Missing);
@@ -106,7 +108,7 @@ public sealed class SavedSelectionsTests : SavedSelectionsFolder
             T(3, Beech, 0.99f, 30, -0.03f),
         };
         var (ids, missing) = SavedSelections.Find(S(I(Beech, 0.99f, 30, 5), I(Beech, 0.99f, 30, 5), I(Beech, 0.99f, 30, 5), I(Beech, 1, 30, 0.01f)), things);
-        Assert.Equal(new[] { 0, 1, 2 }, ids);
+        Assert.Equal(Expected1, ids);
         Assert.Equal(1, missing);
     }
 }

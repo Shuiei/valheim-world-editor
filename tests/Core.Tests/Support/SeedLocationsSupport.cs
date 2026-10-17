@@ -17,5 +17,5 @@ public static class SeedLocationsSupport
     /// Asserts a location of this prefab was placed at x, z (within 1 cm).
     /// </summary>
     public static void Has(List<SeedLocations.Placed> placed, string prefab, float x, float z) =>
-        Assert.Contains(placed, p => p.Rule.prefab == prefab && MathF.Abs(p.X - x) < 0.01f && MathF.Abs(p.Z - z) < 0.01f);
+        Assert.Contains(placed, p => p.Rule.Prefab == prefab && MathF.Abs(p.X - x) < 0.01f && MathF.Abs(p.Z - z) < 0.01f);
 }

@@ -22,12 +22,12 @@ public sealed partial class WorldGenerator
     /// <param name="preGeneration">The rough shapes the game uses while laying out water: no edge gaps, no
     /// Mistlands, Ashlands or Deep North detail.</param>
     /// <param name="riverPreDN">With <paramref name="preGeneration"/>: the Deep North as it is for rivers.</param>
-    public float GetBiomeHeight(Heightmap.Biome biome, float x, float z, out Color mask, bool preGeneration = false, bool riverPreDN = true)
+    internal float GetBiomeHeight(Heightmap.Biome biome, float x, float z, out Color mask, bool preGeneration = false, bool riverPreDN = true)
     {
         // The ground flattens towards the sea along the Ashlands' and Deep North's edges.
         float scale = preGeneration ? HeightScale : (float)(HeightScale * AshlandsGap(x, z) * CreateDeepNorthGap(x, z));
-        mask = Color.black;
-        if (_world.m_menu)
+        mask = Color.Black;
+        if (_world.Menu)
         {
             float shape = biome == Heightmap.Biome.Mountain ? MountainShape(x, z, menu: true) : MenuShape(x, z);
             return Scaled(shape, scale);
@@ -61,15 +61,15 @@ public sealed partial class WorldGenerator
     /// <param name="delta">The highest point's height minus the lowest's.</param>
     /// <param name="slopeDirection">From the highest point to the lowest, unit length (zero when they are the
     /// same).</param>
-    public void GetTerrainDelta(Vector3 center, float radius, out float delta, out Vector3 slopeDirection)
+    internal void GetTerrainDelta(Vector3 center, float radius, out float delta, out Vector3 slopeDirection)
     {
         float highest = -999999f, lowest = 999999f;
         Vector3 high = center, low = center;
         for (int i = 0; i < 10; i++)
         {
-            var offset = Rnd.insideUnitCircle * radius;
-            var p = center + new Vector3(offset.x, 0f, offset.y);
-            float h = GetHeight(p.x, p.z);
+            var offset = Rnd.InsideUnitCircle * radius;
+            var p = center + new Vector3(offset.X, 0f, offset.Y);
+            float h = GetHeight(p.X, p.Z);
             if (h < lowest)
             {
                 lowest = h;

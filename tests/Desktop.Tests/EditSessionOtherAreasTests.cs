@@ -11,6 +11,11 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class EditSessionOtherAreasTests
 {
+    private static readonly string[] Expected5 = ["Raise here", "Raise there"];
+    private static readonly string[] Expected4 = ["Raise here", "Raise there"];
+    private static readonly string[] Expected3 = ["Raise here", "Raise there"];
+    private static readonly string[] Expected2 = ["Older", "Over the edge"];
+    private static readonly string[] Expected1 = ["Raise here", "Raise there"];
     /// <summary>Deletes the copy of the test world (its temporary parent folder).</summary>
     private static void Done(string dir) => Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
 
@@ -79,7 +84,7 @@ public class EditSessionOtherAreasTests
             Assert.Equal("Raise there", Assert.Single(b.UndoList).Label);
             // Both steps go on with the world, the first one in its own frame, oldest first.
             var kept = b.Export();
-            Assert.Equal(new[] { "Raise here", "Raise there" }, kept.Undo.Select(c => c.Label).ToArray());
+            Assert.Equal(Expected5, kept.Undo.Select(c => c.Label).ToArray());
             Assert.NotEqual(kept.FrameOf(kept.Undo[0]), kept.FrameOf(kept.Undo[1]));
             Assert.Equal((0, 0), (kept.FrameOf(kept.Undo[0]).X0, kept.FrameOf(kept.Undo[0]).Z0));
             Assert.Equal((3, 3), (kept.FrameOf(kept.Undo[1]).X0, kept.FrameOf(kept.Undo[1]).Z0));
@@ -113,11 +118,11 @@ public class EditSessionOtherAreasTests
             Assert.Equal("Raise here", Assert.Single(again.UndoList).Label);
             Assert.Equal(1, again.Shelved);
             var kept = again.Export();
-            Assert.Equal(new[] { "Raise here", "Raise there" }, kept.Undo.Select(c => c.Label).ToArray());
+            Assert.Equal(Expected4, kept.Undo.Select(c => c.Label).ToArray());
             // An area holding both: the newer step is undone first.
             owner.History = kept;
             var both = WorldScene.LoadBlock(owner, 0, 0, 4, 4).Session!;
-            Assert.Equal(new[] { "Raise here", "Raise there" }, both.UndoList.Select(c => c.Label).ToArray());
+            Assert.Equal(Expected3, both.UndoList.Select(c => c.Label).ToArray());
             float near = both.Scene.Heights[32 * both.Scene.W + 32];
             Assert.True(both.Undo());
             Assert.Equal("Raise there", Assert.Single(both.RedoList).Label);
@@ -217,7 +222,7 @@ public class EditSessionOtherAreasTests
             // The two zones again: both fit, in their order.
             owner.History = west.Export();
             var home = WorldScene.LoadBlock(owner, 0, 0, 2, 1).Session!;
-            Assert.Equal(new[] { "Older", "Over the edge" }, home.UndoList.Select(c => c.Label).ToArray());
+            Assert.Equal(Expected2, home.UndoList.Select(c => c.Label).ToArray());
             Assert.Equal(0, home.Shelved);
         });
     }
@@ -263,7 +268,7 @@ public class EditSessionOtherAreasTests
             Assert.Equal(2, restored.Steps);
             owner.History = restored.Kept;
             var both = WorldScene.LoadBlock(owner, 0, 0, 4, 4).Session!;
-            Assert.Equal(new[] { "Raise here", "Raise there" }, both.UndoList.Select(c => c.Label).ToArray());
+            Assert.Equal(Expected1, both.UndoList.Select(c => c.Label).ToArray());
             Assert.Equal(0, both.Shelved);
             // Each stands where it was made: undoing the far one leaves the near one.
             float near = both.Scene.Heights[32 * both.Scene.W + 32];

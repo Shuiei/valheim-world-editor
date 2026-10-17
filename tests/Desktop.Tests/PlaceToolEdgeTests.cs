@@ -11,6 +11,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class PlaceToolEdgeTests
 {
+    private static readonly int[] Expected2 = [0, 1];
+    private static readonly int[] Expected1 = [0];
     private const string Wall = "woodwall";
 
     /// <summary>
@@ -72,10 +74,10 @@ public class PlaceToolEdgeTests
         var gone = Tree(5, 66, 64) with { Gone = true };
         var (t, s) = Tool(Tree(1, 64, 64), Tree(2, 68, 64), Tree(3, 90, 64), wall, gone);
         t.Brush.Radius = 6;
-        Assert.Equal(new[] { 0, 1 }, t.EraseAt(new Vector2(64, 64)));
+        Assert.Equal(Expected2, t.EraseAt(new Vector2(64, 64)));
         // The Mask leaves out what it does not pass.
         t.Mask = () => p => p % s.Scene.W < 66 ? 1 : 0;
-        Assert.Equal(new[] { 0 }, t.EraseAt(new Vector2(64, 64)));
+        Assert.Equal(Expected1, t.EraseAt(new Vector2(64, 64)));
     }
 
     [Fact]

@@ -11,6 +11,7 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class GameBundlesTextureTests
 {
+    private static readonly float[] Expected1 = [1f, 0.5f, 0.25f, 1f];
     [Fact]
     public void MaterialsGiveTheirShaderAndProperties()
     {
@@ -38,7 +39,7 @@ public class GameBundlesTextureTests
         Assert.Equal((2f, 3f, 0.5f, 0.25f), (main.ScaleX, main.ScaleY, main.OffsetX, main.OffsetY));
         Assert.Null(m.Textures["_BumpMap"].Texture);
         Assert.Equal(0.4f, m.Floats["_Cutoff"]);
-        Assert.Equal(new[] { 1f, 0.5f, 0.25f, 1f }, m.Colors["_Color"]);
+        Assert.Equal(Expected1, m.Colors["_Color"]);
         Assert.Equal("", bundles.LoadMaterial(new("b_mats", odd))!.Shader);
         var n = bundles.LoadMaterial(new("b_mats", none))!;
         Assert.Null(n.ShaderAt);

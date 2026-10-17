@@ -51,7 +51,7 @@ public static partial class ScriptHost
         /// <summary>CanPlace: whether the editor can make a prefab of this name.</summary>
         public bool CanPlace(string name) => _snap.CanCreate(StableHash.Of(name));
 
-        /// <summary>Place: a new object noted, checked as <see cref="ScriptHost.Place"/> checks it.</summary>
+        /// <summary>Place: a new object noted, checked as <see cref="Place"/> checks it.</summary>
         public void PlaceObject(string name, float x, float z, float yaw, float scale, float y, float pitch, float roll, bool snapIt)
         {
             lock (_ch)
@@ -60,7 +60,7 @@ public static partial class ScriptHost
             }
         }
 
-        /// <summary>Move: an object's new place, turn and size noted, checked as <see cref="ScriptHost.Move"/> checks it.</summary>
+        /// <summary>Move: an object's new place, turn and size noted, checked as <see cref="Move"/> checks it.</summary>
         public void MoveObject(int index, float x, float z, float y, float yaw, float pitch, float roll, float scale)
         {
             lock (_ch)

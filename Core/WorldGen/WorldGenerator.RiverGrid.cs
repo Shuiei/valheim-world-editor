@@ -14,13 +14,13 @@ public sealed partial class WorldGenerator
         var cells = new Dictionary<Vector2i, List<RiverPoint>>();
         foreach (var river in rivers)
         {
-            if (which != Streams.All && IsDeepnorth(river.P0.x, river.P0.y) != (which == Streams.DeepNorthOnly))
+            if (which != Streams.All && IsDeepnorth(river.P0.X, river.P0.Y) != (which == Streams.DeepNorthOnly))
             {
                 continue;
             }
             float step = (float)((double)river.WidthMin / 8.0);
-            var dir = (river.P1 - river.P0).normalized;
-            var side = new Vector2(0f - dir.y, dir.x);
+            var dir = (river.P1 - river.P0).Normalized;
+            var side = new Vector2(0f - dir.Y, dir.X);
             float length = Vector2.Distance(river.P0, river.P1);
             for (float along = 0f; along <= length; along = (float)((double)along + step))
             {
@@ -41,11 +41,11 @@ public sealed partial class WorldGenerator
     /// </summary>
     private static void AddToCells(Dictionary<Vector2i, List<RiverPoint>> cells, Vector2 p, float width)
     {
-        var home = GetRiverGrid(p.x, p.y);
+        var home = GetRiverGrid(p.X, p.Y);
         int reach = Mathf.CeilToInt((float)((double)width / 64.0));
-        for (int y = home.y - reach; y <= home.y + reach; y++)
+        for (int y = home.Y - reach; y <= home.Y + reach; y++)
         {
-            for (int x = home.x - reach; x <= home.x + reach; x++)
+            for (int x = home.X - reach; x <= home.X + reach; x++)
             {
                 var cell = new Vector2i(x, y);
                 if (!InsideRiverGrid(cell, p, width))
@@ -64,17 +64,17 @@ public sealed partial class WorldGenerator
     /// <summary>
     /// Whether a circle reaches into a cell (the cell and the circle's box overlap).
     /// </summary>
-    public static bool InsideRiverGrid(Vector2i cell, Vector2 p, float r)
+    internal static bool InsideRiverGrid(Vector2i cell, Vector2 p, float r)
     {
-        var away = p - new Vector2((float)(cell.x * 64.0), (float)(cell.y * 64.0));
+        var away = p - new Vector2((float)(cell.X * 64.0), (float)(cell.Y * 64.0));
         float reach = (float)((double)r + 32.0);
-        return Math.Abs(away.x) < reach && Math.Abs(away.y) < reach;
+        return Math.Abs(away.X) < reach && Math.Abs(away.Y) < reach;
     }
 
     /// <summary>
     /// The 64 m river cell a point is in (cells centred on multiples of 64 m, as zones).
     /// </summary>
-    public static Vector2i GetRiverGrid(float x, float z) =>
+    internal static Vector2i GetRiverGrid(float x, float z) =>
         new(Mathf.FloorToInt((float)(((double)x + 32.0) / 64.0)), Mathf.FloorToInt((float)(((double)z + 32.0) / 64.0)));
 
     /// <summary>

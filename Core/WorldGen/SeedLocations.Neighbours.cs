@@ -36,7 +36,7 @@ public static partial class SeedLocations
             float limit = distance * distance;
             foreach (var p in list)
             {
-                float dx = p.X - at.x, dy = p.Y - at.y, dz = p.Z - at.z;
+                float dx = p.X - at.X, dy = p.Y - at.Y, dz = p.Z - at.Z;
                 if (dx * dx + dy * dy + dz * dz < limit)
                 {
                     return true;

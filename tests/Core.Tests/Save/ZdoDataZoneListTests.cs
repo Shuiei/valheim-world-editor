@@ -11,6 +11,7 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class ZdoDataZoneListTests
 {
+    private static readonly string[] Expected1 = ["defeated_eikthyr", "nomap"];
     /// <summary>
     /// A zone list as the live bridge sends it: two generated zones, two global keys, three locations.
     /// </summary>
@@ -42,7 +43,7 @@ public class ZdoDataZoneListTests
     public void TheZoneListKeepsItsKeysAndLocationsThroughASave()
     {
         var db = Package();
-        Assert.Equal(new[] { "defeated_eikthyr", "nomap" }, db.GlobalKeys);
+        Assert.Equal(Expected1, db.GlobalKeys);
         Assert.True(db.LocationsGenerated);
         Assert.Equal(7, db.LocationVersion);
         string path = Path.Combine(Path.GetTempPath(), "vwe-db-" + Guid.NewGuid().ToString("N")[..8] + ".db2");

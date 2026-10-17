@@ -12,6 +12,7 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class GameBundlesPrefabTests
 {
+    private static readonly float[] Expected1 = [2f, 2f, 2f];
     [Fact]
     public void APrefabsRootTellsWhatItIs()
     {
@@ -100,7 +101,7 @@ public class GameBundlesPrefabTests
 
         var model = bundles.LoadModel("House", room: false)!;
         Assert.Equal("House", model.Name);
-        Assert.Equal(new[] { 2f, 2f, 2f }, model.RootScale);
+        Assert.Equal(Expected1, model.RootScale);
         Assert.Equal(4, model.Parts.Count);
         var (first, second) = (model.Parts[0], model.Parts[1]);
         Assert.Equal(new GameBundles.Where("b_house", quad), first.Mesh);

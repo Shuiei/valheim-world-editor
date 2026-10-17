@@ -17,6 +17,7 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("DataDir")]
 public class StartPageServerTests
 {
+    private static readonly string[] Expected1 = ["Loading the world from the server…"];
     [AvaloniaFact]
     public async Task TheServerFormConnectsRemembersTheServerAndOpensIt()
     {
@@ -39,7 +40,7 @@ public class StartPageServerTests
         Assert.Equal(("my.server.example", 2222, "valheim", null, 5190, true, "Friends", "/home/valheim/server"), (t.Host, t.Port, t.User, t.Password, t.BridgePort, t.SavePassword, t.Name, t.GameFolder));
         Assert.Null(t.KeyPath);
         Assert.Equal("", r.P.ServerError.Text);
-        Assert.Equal(new[] { "Loading the world from the server…" }, r.Opened);
+        Assert.Equal(Expected1, r.Opened);
         Assert.Equal("Friends", Assert.Single(ServerConfig.Load()).Name);
         Assert.Equal("server", r.Settings.LastMode);
         var world = await r.Open!();

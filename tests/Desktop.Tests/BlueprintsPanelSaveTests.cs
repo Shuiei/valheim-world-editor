@@ -10,6 +10,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class BlueprintsPanelSaveTests
 {
+    private static readonly string[] Expected1 = ["gate"];
     [AvaloniaFact]
     public async Task SavingAsksForANameAndBeforeReplacingOne()
     {
@@ -56,7 +57,7 @@ public class BlueprintsPanelSaveTests
         var gate = r.Listed.Single(e => e.Name == "North gate");
         Assert.Equal("North gate.blueprint", Path.GetFileName(gate.Path));
         Assert.NotNull(gate.Picture);
-        Assert.Equal(new[] { "gate" }, gate.Tags);
+        Assert.Equal(Expected1, gate.Tags);
         Assert.Equal("A gate for the north wall", gate.Description);
         Assert.Equal(3, gate.Pieces);
         // Cancelled: nothing changes.

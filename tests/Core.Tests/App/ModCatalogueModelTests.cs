@@ -11,6 +11,8 @@ namespace WorldEditor.Tests;
 [Collection("DataDir")]
 public sealed class ModCatalogueModelTests : ModCatalogueTestBase
 {
+    private static readonly float[] Expected2 = [2f, 1.5f, 1f];
+    private static readonly float[] Expected1 = [0f, 1.5f, 0f, 1f, 1.5f, 0.25f];
     [Fact]
     public void OnlyTheModelsOfKnownModPrefabsAreTaken()
     {
@@ -33,7 +35,7 @@ public sealed class ModCatalogueModelTests : ModCatalogueTestBase
 
         var model = ModCatalogue.ModelOf("bfp_finewall")!;
 
-        Assert.Equal(new[] { 2f, 1.5f, 1f }, model.RootScale);
+        Assert.Equal(Expected2, model.RootScale);
         Assert.Equal(2, model.Parts.Count);
         var wall = model.Parts[0];
         Assert.Equal(("wall", 24, 1, "fine_wood"), (wall.Mesh, wall.Vertices, wall.Sub, wall.Material));
@@ -101,7 +103,7 @@ public sealed class ModCatalogueModelTests : ModCatalogueTestBase
 
         var parts = ModCatalogue.ModelOf("bfp_finewall")!.Parts;
 
-        Assert.Equal(new[] { 0f, 1.5f, 0f, 1f, 1.5f, 0.25f }, parts[0].Bounds);
+        Assert.Equal(Expected1, parts[0].Bounds);
         Assert.Null(parts[1].Bounds);
     }
 

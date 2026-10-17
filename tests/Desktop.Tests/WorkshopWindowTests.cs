@@ -11,6 +11,10 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class WorkshopWindowTests
 {
+    private static readonly string[] Expected4 = ["hut"];
+    private static readonly string[] Expected3 = ["woodwall"];
+    private static readonly string[] Expected2 = ["stone_wall_2x1"];
+    private static readonly string[] Expected1 = ["Beech1"];
     [AvaloniaFact]
     public async Task TheWorkshopOpensChecksSupportSavesAndAsksBeforeLeaving()
     {
@@ -54,7 +58,7 @@ public class WorkshopWindowTests
         Assert.Equal("Save blueprint", asked[^1]);
         var saved = Homestead.List(r.Homestead).Single(e => e.Name == "Hut 2");
         Assert.Equal(2, saved.Pieces);
-        Assert.Equal(new[] { "hut" }, saved.Tags);
+        Assert.Equal(Expected4, saved.Tags);
         Assert.StartsWith("Wood ", costAsked);
         Assert.NotNull(saved.Picture);
         Assert.Contains("· saved", w.PendingText.Text);
@@ -89,7 +93,7 @@ public class WorkshopWindowTests
         Assert.False(w.ViewButton.IsVisible);
         Assert.False(w.View.IsOverlayShown(Overlays.Layer.Borders));
         // A building piece, one at a time, facing the turn.
-        Assert.Equal(new[] { "woodwall" }, w.PlaceTool.Chosen);
+        Assert.Equal(Expected3, w.PlaceTool.Chosen);
         Assert.True(w.PlaceTool.Building && w.PlaceTool.OneAtATime && !w.PlaceTool.RandomYaw);
         // World tools are not there.
         w.Tools.ChooseMode(ToolMode.Mountain);
@@ -101,7 +105,7 @@ public class WorkshopWindowTests
         w.Tools.ChooseMode(ToolMode.Place);
         // Choosing a piece, the grid and the turn step.
         w.BuildPanel.Choose("stone_wall_2x1");
-        Assert.Equal(new[] { "stone_wall_2x1" }, w.PlaceTool.Chosen);
+        Assert.Equal(Expected2, w.PlaceTool.Chosen);
         Assert.Contains("Stone 4", w.BuildPanel.Cost.Text);
         w.BuildPanel.GridBox.SelectedIndex = 3;
         Assert.Equal(2, w.PlaceTool.GridStep);
@@ -115,7 +119,7 @@ public class WorkshopWindowTests
         Assert.False(w.PlaceTool.SnapTo);
         await w.LeaveWorkshop();
         Assert.False(w.Tools.Workshop);
-        Assert.Equal(new[] { "Beech1" }, w.PlaceTool.Chosen);
+        Assert.Equal(Expected1, w.PlaceTool.Chosen);
         Assert.True(w.PlaceTool.RandomYaw && w.PlaceTool.SnapTo && !w.PlaceTool.Building);
         Assert.Equal(0, w.PlaceTool.GridStep);
         Assert.Null(w.PlaceInput.TurnStep);

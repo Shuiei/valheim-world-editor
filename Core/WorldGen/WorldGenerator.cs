@@ -29,20 +29,20 @@ public sealed partial class WorldGenerator
     private WorldGenerator(World world)
     {
         _world = world;
-        if (world.m_worldGenVersion <= 0)
+        if (world.WorldGenVersion <= 0)
         {
             _mountainFreeRadius = 1500f;
         }
-        if (world.m_worldGenVersion <= 1)
+        if (world.WorldGenVersion <= 1)
         {
             _mistMinNoise = 0.5f;
             _swampMaxDistance = 8000f;
         }
         // The seed's draws, in the game's order (the rivers' and streams' own seeds among them).
-        var saved = Rnd.state;
+        var saved = Rnd.State;
         try
         {
-            Rnd.InitState(world.m_seed);
+            Rnd.InitState(world.Seed);
             _offsetA = Rnd.Range(-10000, 10000);
             _offsetB = Rnd.Range(-10000, 10000);
             _offsetForest = Rnd.Range(-10000, 10000);
@@ -50,14 +50,14 @@ public sealed partial class WorldGenerator
             _riverSeed = Rnd.Range(int.MinValue, int.MaxValue);
             _streamSeed = Rnd.Range(int.MinValue, int.MaxValue);
             _offsetMist = Rnd.Range(-10000, 10000);
-            if (!world.m_menu)
+            if (!world.Menu)
             {
                 LayOutWater();
             }
         }
         finally
         {
-            Rnd.state = saved;
+            Rnd.State = saved;
         }
     }
 
@@ -65,7 +65,7 @@ public sealed partial class WorldGenerator
     /// A generator for a world. Each caller keeps its own (the game has one, static): the editor can have
     /// several worlds at once.
     /// </summary>
-    public static WorldGenerator Create(World world) => new(world);
+    internal static WorldGenerator Create(World world) => new(world);
 
     /// <summary>
     /// The Ashlands' noise settings: Euclidean cellular distance, two octaves.
@@ -82,18 +82,18 @@ public sealed partial class WorldGenerator
     /// <summary>
     /// The world's seed.
     /// </summary>
-    public int GetSeed() => _world.m_seed;
+    public int GetSeed() => _world.Seed;
 
     // ---- Heights.
     /// <summary>
     /// The generated ground's height (metres) at a world position's x and z.
     /// </summary>
-    public float GetHeight(Vector3 p) => GetHeight(p.x, p.z);
+    internal float GetHeight(Vector3 p) => GetHeight(p.X, p.Z);
 
     /// <summary>
     /// The generated ground's height (metres) at a map point (y is world z).
     /// </summary>
-    public float GetHeight(Vector2 p) => GetHeight(p.x, p.y);
+    internal float GetHeight(Vector2 p) => GetHeight(p.X, p.Y);
 
     /// <summary>
     /// The generated ground's height (metres) at (x, z), in the biome there.
@@ -103,7 +103,7 @@ public sealed partial class WorldGenerator
     /// <summary>
     /// The same, with the ground's mask (see <see cref="GetBiomeHeight"/>).
     /// </summary>
-    public float GetHeight(float x, float z, out Color mask) => GetBiomeHeight(GetBiome(x, z), x, z, out mask);
+    internal float GetHeight(float x, float z, out Color mask) => GetBiomeHeight(GetBiome(x, z), x, z, out mask);
 
     /// <summary>
     /// A shape in metres (the + 0.0 turns a negative zero to a positive one, as the game's sum does).
@@ -113,12 +113,12 @@ public sealed partial class WorldGenerator
     /// <summary>
     /// How much of a forest the game would grow here (lower: denser; under 1.15 counts as forest).
     /// </summary>
-    public static float GetForestFactor(Vector3 pos) => GenMath.Layers(pos * 0.01f * 0.4f, 3, 1.6f, 0.7f);
+    internal static float GetForestFactor(Vector3 pos) => GenMath.Layers(pos * 0.01f * 0.4f, 3, 1.6f, 0.7f);
 
     /// <summary>
     /// Whether the game counts a point as forest (<see cref="GetForestFactor"/> under 1.15).
     /// </summary>
-    public static bool InForest(Vector3 pos) => GetForestFactor(pos) < 1.15f;
+    internal static bool InForest(Vector3 pos) => GetForestFactor(pos) < 1.15f;
 
     /// <summary>
     /// The world's radius (metres); past it, the sea deepens to the edge at 10500 m.
@@ -154,7 +154,7 @@ public sealed partial class WorldGenerator
     /// <summary>
     /// What the generator's ground depends on: two generators with the same make the same world.
     /// </summary>
-    internal (int Seed, int Version, bool Menu) Identity => (_world.m_seed, _world.m_worldGenVersion, _world.m_menu);
+    internal (int Seed, int Version, bool Menu) Identity => (_world.Seed, _world.WorldGenVersion, _world.Menu);
 
     /// <summary>
     /// Where the noise fields sit for this seed (drawn from it): the continents' (A, B, which also place

@@ -19,6 +19,8 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class PlacePanelTests
 {
+    private static readonly string[] Expected2 = ["Oak1", "Beech1"];
+    private static readonly string[] Expected1 = ["Oak1"];
     /// <summary>
     /// Clicks the button and runs the posted work it starts.
     /// </summary>
@@ -44,7 +46,7 @@ public class PlacePanelTests
         using var r = new Run();
         var memory = new PlaceMemory { Chosen = { "Oak1", "Beech1" }, Weights = { ["Oak1"] = 7 } };
         _ = new PlacePanel(r.W.PlaceInput, () => r.Scene, PrefabCatalog.DisplayName, memory);
-        Assert.Equal(new[] { "Oak1", "Beech1" }, r.T.Chosen);
+        Assert.Equal(Expected2, r.T.Chosen);
         Assert.Equal(7, r.T.WeightOf("Oak1"));
     }
 
@@ -121,7 +123,7 @@ public class PlacePanelTests
         Assert.Contains("70%", Texts(r.P.Mix));
         Assert.Contains("30%", Texts(r.P.Mix));
         Click(r.P.Mix.GetLogicalDescendants().OfType<Button>().First(b => b.Content is "✕"));
-        Assert.Equal(new[] { "Oak1" }, r.T.Chosen);
+        Assert.Equal(Expected1, r.T.Chosen);
         // One kind: no weight to set, its share still shown.
         Assert.Empty(r.P.Mix.GetLogicalDescendants().OfType<Slider>());
         Assert.Contains("100%", Texts(r.P.Mix));

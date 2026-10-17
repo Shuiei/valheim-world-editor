@@ -19,7 +19,7 @@ public static partial class Regrow
         if (veg.max < 1f)
         {
             count = 1;
-            return !(Rnd.value > veg.max);
+            return !(Rnd.Value > veg.max);
         }
         count = Rnd.Range((int)veg.min, (int)veg.max + 1);
         return true;
@@ -54,7 +54,7 @@ public static partial class Regrow
             float px = vx, pz = vz;
             if (j > 0)
             {
-                float f = Rnd.value * MathF.PI * 2f, r = Rnd.Range(0f, veg.groupRadius);
+                float f = Rnd.Value * MathF.PI * 2f, r = Rnd.Range(0f, veg.groupRadius);
                 px += MathF.Sin(f) * r;
                 pz += MathF.Cos(f) * r;
             }

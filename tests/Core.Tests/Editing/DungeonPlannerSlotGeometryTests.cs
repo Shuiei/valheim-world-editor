@@ -1,6 +1,6 @@
 using TerrainEditor.Editing;
-using Room = TerrainEditor.Editing.DungeonKit.Room;
 using Xunit;
+using Room = TerrainEditor.Editing.DungeonKit.Room;
 
 namespace WorldEditor.Tests;
 

@@ -10,6 +10,8 @@ namespace WorldEditor.Tests;
 [Collection("World files")]
 public class AppDataHeightmapTests
 {
+    private static readonly float[] Expected2 = [0f, 0.5f, 1f];
+    private static readonly float[] Expected1 = [0f];
     [Fact]
     public void FlatGroundStillMakesAHeightmap()
     {
@@ -30,8 +32,8 @@ public class AppDataHeightmapTests
         Assert.Null(p.Min);
         Assert.Null(p.Max);
         Assert.Null(p.Area);
-        Assert.Equal(new[] { 0f, 0.5f, 1f }, p.Values);
+        Assert.Equal(Expected2, p.Values);
         // One point: the picture's first pixel.
-        Assert.Equal(new[] { 0f }, Heightmaps.Read(png, 1, 1).Values);
+        Assert.Equal(Expected1, Heightmaps.Read(png, 1, 1).Values);
     }
 }

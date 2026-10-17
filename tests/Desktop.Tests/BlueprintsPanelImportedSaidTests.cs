@@ -1,5 +1,5 @@
-using TerrainEditor.App;
 using Avalonia.Headless.XUnit;
+using TerrainEditor.App;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;

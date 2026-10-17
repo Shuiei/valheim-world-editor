@@ -12,6 +12,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class WorkshopPlotTests
 {
+    private static readonly string[] Expected1 = ["no_such_piece_xyz"];
     [Fact]
     public void ABlueprintOpensOnThePlotAndComesBackTheSame()
     {
@@ -24,7 +25,7 @@ public class WorkshopPlotTests
             Assert.Equal(3, placed);
             // Its lowest point (the floor's collider, a little below its origin) on the ground.
             Assert.Equal(-Hammer.Bottom("wood_floor", Quaternion.Identity), lift, 3);
-            Assert.Equal(new[] { "no_such_piece_xyz" }, unknown);
+            Assert.Equal(Expected1, unknown);
             Assert.True(s.CanUndo);
             Assert.Equal(3, Workshop.Pieces(scene));
             Assert.Contains(scene.Things, t => !t.Gone && Vector3.Distance(t.Position, Workshop.Anchor(scene) + new Vector3(1, 1 + lift, 0)) < 1e-3f);

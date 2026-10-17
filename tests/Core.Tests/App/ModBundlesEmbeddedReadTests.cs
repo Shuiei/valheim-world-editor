@@ -9,6 +9,7 @@ namespace WorldEditor.Tests;
 /// </summary>
 public sealed class ModBundlesEmbeddedReadTests : AppSettingsTestBase
 {
+    private static readonly string[] Expected1 = ["a.bundle"];
     /// <summary>The embedded bundle names of a DLL.</summary>
     private static List<string> EmbeddedBundles(string dll) => (List<string>)PrivateCall.Static(typeof(ModBundles), "EmbeddedBundles", dll)!;
 
@@ -20,7 +21,7 @@ public sealed class ModBundlesEmbeddedReadTests : AppSettingsTestBase
     {
         string dll = Path.Combine(Data, "Mod.dll");
         TestDll.Write(dll, [("a.bundle", "UnityFSbody"u8.ToArray()), ("b.txt", "plain text"u8.ToArray())]);
-        Assert.Equal(new[] { "a.bundle" }, EmbeddedBundles(dll));
+        Assert.Equal(Expected1, EmbeddedBundles(dll));
     }
 
     [Fact]

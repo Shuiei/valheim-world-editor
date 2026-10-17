@@ -1,5 +1,5 @@
-using Xunit;
 using TerrainEditor.Terrain;
+using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 

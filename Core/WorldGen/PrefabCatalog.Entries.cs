@@ -8,17 +8,17 @@ public static partial class PrefabCatalog
     /// </summary>
     internal static void AddItemRules(Data d, int hash, Entry e)
     {
-        if (e.it >= 0)
+        if (e.It >= 0)
         {
-            d.ItemKinds[hash] = new ItemKind(e.it, e.ao, e.var, e.at != 0, e.ats != 0, (float)e.dur, (float)e.durl, Math.Max(1, e.ms));
+            d.ItemKinds[hash] = new ItemKind(e.It, e.Ao, e.Var, e.At != 0, e.Ats != 0, (float)e.Dur, (float)e.Durl, Math.Max(1, e.Ms));
         }
-        if (e.@is != null)
+        if (e.Is != null)
         {
-            d.ItemStands[hash] = new StandRule(e.@is.ToHashSet(), (e.isi ?? []).ToHashSet(), (e.isu ?? []).ToHashSet());
+            d.ItemStands[hash] = new StandRule(e.Is.ToHashSet(), (e.Isi ?? []).ToHashSet(), (e.Isu ?? []).ToHashSet());
         }
-        if (e.@as != null)
+        if (e.As != null)
         {
-            d.ArmourStands[hash] = e.@as;
+            d.ArmourStands[hash] = e.As;
         }
     }
 
@@ -27,9 +27,9 @@ public static partial class PrefabCatalog
     /// </summary>
     internal static void AddSpawn(Data d, int hash, Entry e)
     {
-        if ((e.cs ?? e.sa) is { } spawned)
+        if ((e.Cs ?? e.Sa) is { } spawned)
         {
-            d.Spawns[hash] = new SpawnKind(spawned, e.sa != null, e.trig != 0, (float)e.rt, e.lv?.ElementAtOrDefault(0) ?? 1, e.lv?.ElementAtOrDefault(1) ?? 1, e.day != 0, e.night != 0, (float)e.sr, e.max);
+            d.Spawns[hash] = new SpawnKind(spawned, e.Sa != null, e.Trig != 0, (float)e.Rt, e.Lv?.ElementAtOrDefault(0) ?? 1, e.Lv?.ElementAtOrDefault(1) ?? 1, e.Day != 0, e.Night != 0, (float)e.Sr, e.Max);
         }
     }
 
@@ -38,11 +38,11 @@ public static partial class PrefabCatalog
     /// </summary>
     internal static void AddGrownFrom(Data d, string name, Entry e)
     {
-        foreach (string grown in e.grows ?? [])
+        foreach (string grown in e.Grows ?? [])
         {
-            if (!d.GrownFrom.TryGetValue(grown, out var g) || g.Radius < e.gr)
+            if (!d.GrownFrom.TryGetValue(grown, out var g) || g.Radius < e.Gr)
             {
-                d.GrownFrom[grown] = ((float)e.gr, name);
+                d.GrownFrom[grown] = ((float)e.Gr, name);
             }
         }
     }

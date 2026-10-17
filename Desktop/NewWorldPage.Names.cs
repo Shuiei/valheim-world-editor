@@ -13,13 +13,13 @@ public sealed partial class NewWorldPage : IDisposable
     /// </summary>
     private static SolidColorBrush DungeonFill(string name) => new(name switch
     {
-        "Burial chambers" => Avalonia.Media.Color.FromRgb(226, 206, 156),
-        "Troll caves" => Avalonia.Media.Color.FromRgb(64, 170, 150),
-        "Sunken crypts" => Avalonia.Media.Color.FromRgb(160, 116, 78),
-        "Frost caves" => Avalonia.Media.Color.FromRgb(132, 210, 255),
-        "Infested mines" => Avalonia.Media.Color.FromRgb(104, 120, 255),
-        "Charred fortresses" => Avalonia.Media.Color.FromRgb(255, 126, 44),
-        _ => Avalonia.Media.Color.FromRgb(255, 176, 214),
+        "Burial chambers" => Color.FromRgb(226, 206, 156),
+        "Troll caves" => Color.FromRgb(64, 170, 150),
+        "Sunken crypts" => Color.FromRgb(160, 116, 78),
+        "Frost caves" => Color.FromRgb(132, 210, 255),
+        "Infested mines" => Color.FromRgb(104, 120, 255),
+        "Charred fortresses" => Color.FromRgb(255, 126, 44),
+        _ => Color.FromRgb(255, 176, 214),
     });
 
     /// <summary>
