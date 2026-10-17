@@ -9,9 +9,9 @@ the plugin is unchanged in versions without that part.
 ### Changed
 - **The Inspector comes from the language catalogue.** Its buttons, headings, explanations and messages, the plain
   names of the values players meet most (Text, Builder name, Contents…), the kinds of values to add, the kinds of
-  items an armour stand's slots take, and its question about items outside a container's slots show in the language
-  chosen in Settings. The names of objects, items and values, and the tips made from them, stay as the save has
-  them. In English nothing changes.
+  items an armour stand's slots take, why a stand does not take an item, and its question about items outside a
+  container's slots show in the language chosen in Settings. The names of objects, items and values, and the tips
+  made from them, stay as the save has them. In English nothing changes.
 
 ## v1.47.22 — unreleased
 

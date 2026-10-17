@@ -50,12 +50,12 @@ public class StandDataTests
         Assert.Null(StandData.ItemStandRefusal(Wall, "SwordIron"));
         Assert.Null(StandData.ItemStandRefusal(Wall, "TrophyDeer"));
         Assert.Null(StandData.ItemStandRefusal(Wall, "SurtlingCore")); // a material, but on the stand's own list
-        Assert.Contains("does not take", StandData.ItemStandRefusal(Wall, "CookedMeat")); // food: only lying flat
+        Assert.Contains("does not take", StandData.ItemStandRefusal(Wall, "CookedMeat")?.English); // food: only lying flat
         Assert.Null(StandData.ItemStandRefusal(Flat, "CookedMeat"));
-        Assert.Contains("refuses", StandData.ItemStandRefusal(Wall, "MeadTasty"));
-        Assert.Contains("cannot hang", StandData.ItemStandRefusal(Flat, "Wood")); // no attach point
-        Assert.Contains("not an item of the game", StandData.ItemStandRefusal(Wall, "NoSuchThing"));
-        Assert.Contains("not an item stand", StandData.ItemStandRefusal(Armour, "SwordIron"));
+        Assert.Contains("refuses", StandData.ItemStandRefusal(Wall, "MeadTasty")?.English);
+        Assert.Contains("cannot hang", StandData.ItemStandRefusal(Flat, "Wood")?.English); // no attach point
+        Assert.Contains("not an item of the game", StandData.ItemStandRefusal(Wall, "NoSuchThing")?.English);
+        Assert.Contains("not an item stand", StandData.ItemStandRefusal(Armour, "SwordIron")?.English);
     }
 
     [Fact]

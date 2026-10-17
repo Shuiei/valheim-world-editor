@@ -184,7 +184,7 @@ public sealed class InspectorPanel
     /// <summary>The stand as opened (<c>StandKey</c>), to tell whether it changed.</summary>
     private string _standAtOpen = "";
     /// <summary>Why the stand's changes cannot be written (an item it does not take), null when they can.</summary>
-    private string? _standError;
+    private Said? _standError;
     /// <summary>The contents as opened (<c>ItemsKey</c>), to tell whether they changed.</summary>
     private string _itemsAtOpen = "";
     /// <summary>The container's size in slots; 0 × 0 when unknown.</summary>
@@ -873,7 +873,7 @@ public sealed class InspectorPanel
         });
         if (_standError != null)
         {
-            ItemsBox.Children.Add(new TextBlock { Text = _standError, FontSize = 11, Foreground = Brushes.Orange, TextWrapping = TextWrapping.Wrap });
+            ItemsBox.Children.Add(new TextBlock { Text = _standError.Shown, FontSize = 11, Foreground = Brushes.Orange, TextWrapping = TextWrapping.Wrap });
         }
     }
 
@@ -955,9 +955,13 @@ public sealed class InspectorPanel
                 var held = Stand.Where(r => r.Name != "").Select(r => new StandData.Held(r.Name, r.Quality, r.Variant)).ToList();
                 set.AddRange(_armourStand ? StandData.ForArmourStand(_z.Prefab, held, StandWay) : StandData.ForItemStand(_z.Prefab, held.FirstOrDefault(), StandWay));
             }
+            catch (StandRefusalException ex)
+            {
+                _standError = ex.Reason;
+            }
             catch (ArgumentException ex)
             {
-                _standError = ex.Message;
+                _standError = Said.Raw(ex.Message);
             }
         }
         return (set, inv);
@@ -983,7 +987,7 @@ public sealed class InspectorPanel
         var (set, inv) = Changes();
         if (_standError != null)
         {
-            Message?.Invoke(Said.Raw(_standError));
+            Message?.Invoke(_standError);
             return;
         }
         var (w, h) = _grid;

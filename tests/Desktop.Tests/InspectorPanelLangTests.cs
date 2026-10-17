@@ -16,8 +16,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// The object inspector in another language (the made-up one: PseudoLang), on the test world's chest (a value added,
 /// an item put in a picked slot, every item's details) and on an armour stand and an item stand put next to it: only
 /// catalogue texts show, but for the data (names of objects, items and values, and the tips made from them).
-/// Applying says so in the language with its English kept for Claude, and the question about items outside the slots
-/// asks in the language.
+/// Applying, and a stand refusing an item, say so in the language with their English kept for Claude, and the question
+/// about items outside the slots asks in the language.
 /// </summary>
 [Collection("DataDir")]
 public sealed class InspectorPanelLangTests
@@ -86,6 +86,15 @@ public sealed class InspectorPanelLangTests
                 Assert.True(ins.Open(stand));
                 Assert.Empty(PseudoLang.Untranslated(ins.Card, Data(ins, scene, stand)));
             }
+
+            // Food on the armour stand: the refusal is said in the language (the item's type too), in English for Claude.
+            Assert.True(ins.Open(stands[0]));
+            ins.Stand!.First(r => r.Name == "").Name = "CookedMeat";
+            await ins.Apply();
+            Assert.StartsWith("⟦", w.MessageText.Text, StringComparison.Ordinal);
+            Assert.Contains(PseudoLang.Wrap("food or potion"), w.MessageText.Text, StringComparison.Ordinal);
+            Assert.Contains("CookedMeat (a food or potion)", w.LastMessageEn, StringComparison.Ordinal);
+            Assert.DoesNotContain("⟦", w.LastMessageEn, StringComparison.Ordinal);
 
             // Applying the chest's added value: said in the language, its English kept for Claude.
             Assert.True(ins.Open(chest));
