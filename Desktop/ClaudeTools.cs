@@ -481,7 +481,7 @@ public sealed partial class ClaudeTools
         byte[] jpeg = await Task.Run(() =>
         {
             List<(float X, float Z, string Kind)> things = objects
-                ? [.. data.Things.Select(t => (t.X, t.Z, TerrainEditor.App.ObjectKinds.Of(data.Names[t.Prefab], t.Piece, t.Tamed).ToString()))]
+                ? [.. data.Things.Select(t => (t.X, t.Z, ObjectKinds.Of(data.Names[t.Prefab], t.Piece, t.Tamed).ToString()))]
                 : [];
             return DrawMap(data.W, data.H, data.Cx, data.Cz, data.Water, data.Heights, data.Paint, things, MathF.Max(4, grid));
         });
@@ -1630,7 +1630,7 @@ public sealed partial class ClaudeTools
                 }
                 _w.PlaceGenerated(settings, result, label);
             }
-            return $"{TerrainEditor.App.Said.Join(" ", result.Notes).English} {_w.LastMessageEn} Now pending: {Pending()}";
+            return $"{Said.Join(" ", result.Notes).English} {_w.LastMessageEn} Now pending: {Pending()}";
         });
     }
 
