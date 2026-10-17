@@ -33,6 +33,29 @@ public class EditSessionOtherAreasTests
     /// <summary>Raises the ground 3 m in a 4 m circle at grid point (32, 32) of the area, as one step with this label.</summary>
     private static void Raise(EditSession s, string label) => s.Shape(32, 32, Formula.Compile("3", []), 4, 0, label);
 
+    /// <summary>The copy's area at (0, 0) with the step "Raise here" made in it: the world's session and that area's.</summary>
+    private static (WorldSession Owner, EditSession Here) RaiseHere(string dir)
+    {
+        var first = WorldScene.Load(dir, 0, 0, 1);
+        var owner = first.Owner!;
+        var a = first.Session!;
+        Raise(a, "Raise here");
+        return (owner, a);
+    }
+
+    /// <summary>
+    /// <see cref="RaiseHere"/>, its history kept with the world, then the area at (3, 3) with the step "Raise there" made in
+    /// it: the world's session and both areas.
+    /// </summary>
+    private static (WorldSession Owner, EditSession Here, EditSession There) RaiseHereThenThere(string dir)
+    {
+        var (owner, a) = RaiseHere(dir);
+        owner.History = a.Export();
+        var b = WorldScene.Load(owner, 3, 3, 1).Session!;
+        Raise(b, "Raise there");
+        return (owner, a, b);
+    }
+
     /// <summary>The height at grid point (32, 32) of the area.</summary>
     private static float Middle(EditSession s) => s.Scene.Heights[32 * s.Scene.W + 32];
 
@@ -82,13 +105,7 @@ public class EditSessionOtherAreasTests
     {
         WithCopy(dir =>
         {
-            var first = WorldScene.Load(dir, 0, 0, 1);
-            var owner = first.Owner!;
-            var a = first.Session!;
-            Raise(a, "Raise here");
-            owner.History = a.Export();
-            var b = WorldScene.Load(owner, 3, 3, 1).Session!;
-            Raise(b, "Raise there");
+            var (owner, _, b) = RaiseHereThenThere(dir);
             // Back in the first area: its older step is undoable, the newer one kept aside; leaving again, the newer
             // one must still come after it, whichever list each was in.
             owner.History = b.Export();
@@ -113,10 +130,7 @@ public class EditSessionOtherAreasTests
     {
         WithCopy(dir =>
         {
-            var first = WorldScene.Load(dir, 0, 0, 1);
-            var owner = first.Owner!;
-            var a = first.Session!;
-            Raise(a, "Raise here");
+            var (owner, a) = RaiseHere(dir);
             Assert.True(a.Undo());
             Assert.Single(a.RedoList);
             // In another area the undone step is kept aside (as a redo); an edit there drops it, as a redo of the same
@@ -166,10 +180,7 @@ public class EditSessionOtherAreasTests
     {
         WithCopy(dir =>
         {
-            var first = WorldScene.Load(dir, 0, 0, 1);
-            var owner = first.Owner!;
-            var a = first.Session!;
-            Raise(a, "Raise here");
+            var (owner, a) = RaiseHere(dir);
             Assert.Equal(1, a.UnappliedSteps);
             // Saved from another area: the world's pending changes go together, the first area's step among them.
             owner.History = a.Export();
@@ -244,13 +255,7 @@ public class EditSessionOtherAreasTests
     {
         WithCopy(dir =>
         {
-            var first = WorldScene.Load(dir, 0, 0, 1);
-            var owner = first.Owner!;
-            var a = first.Session!;
-            Raise(a, "Raise here");
-            owner.History = a.Export();
-            var b = WorldScene.Load(owner, 3, 3, 1).Session!;
-            Raise(b, "Raise there");
+            var (owner, _, b) = RaiseHereThenThere(dir);
             Assert.True(b.Save().Saved);
             // Written at the save (both steps, the first from the other area), read again into an area holding both.
             var restored = HistoryFile.Read(owner);

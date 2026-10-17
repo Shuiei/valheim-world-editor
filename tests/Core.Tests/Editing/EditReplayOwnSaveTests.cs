@@ -55,9 +55,7 @@ public class EditReplayOwnSaveTests
     public void AnObjectReplacedAtItsPlaceIsToldFromTheOriginalByItsData(bool fromEditorsSave)
     {
         using var w = new TempWorld();
-        var read = w.Load();
-        var edits = new EditStore(read);
-        var (id, prefab, position, rotation, _) = Near(read)[0];
+        var (read, edits, (id, prefab, position, rotation, _)) = OpenEditsOfNearObject(w);
         var claimed = ZdoData.Parse(read.ObjectBytes(id));
         claimed.Set("longs", ObjectField.CreatorKey, "12345");
         edits.SetDeleted([id], true);

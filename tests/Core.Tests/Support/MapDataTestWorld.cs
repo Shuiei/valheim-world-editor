@@ -20,6 +20,15 @@ public static class MapDataTestWorld
     }
 
     /// <summary>
+    /// The map data of the world, read with its terrain service and edit store.
+    /// </summary>
+    public static MapData Map(TempWorld w)
+    {
+        var (_, terrain, edits) = Open(w);
+        return new MapData(terrain, edits);
+    }
+
+    /// <summary>
     /// The height in the layers at this column and row.
     /// </summary>
     public static float H(MapData.Layers l, int col, int row) => (float)l.Heights[row * l.Width + col];

@@ -13,78 +13,33 @@ public sealed class LogTests
     [Fact]
     public void TextWrittenAnyWayMakesWholeTimedLines()
     {
-        var (output, error, data) = (Console.Out, Console.Error, AppSettings.DataDirOverride);
-        string dir = Path.Combine(Path.GetTempPath(), "vwe-log-" + Guid.NewGuid().ToString("N")[..8]);
-        string text;
-        try
+        string text = LogTextOf(null, () =>
         {
-            AppSettings.DataDirOverride = dir;
-            Log.Start("test");
             // Windows' line end, by WriteLine(); characters from an array; a span.
             Console.Out.NewLine = "\r\n";
             Console.Out.Write("abc".ToCharArray(), 0, 3);
             Console.Out.WriteLine();
             Console.Out.Write("def".AsSpan());
             Console.Out.WriteLine();
-            text = Log.Read();
-        }
-        finally
-        {
-            Console.SetOut(output);
-            Console.SetError(error);
-            AppSettings.DataDirOverride = data;
-        }
-        try
-        {
-            // (The header's lines are written as the system ends lines; the console's end with \n alone.)
-            string[] lines = text.Split('\n');
-            Assert.Matches(@"^\d\d:\d\d:\d\d abc$", lines[^3]);
-            Assert.Matches(@"^\d\d:\d\d:\d\d def$", lines[^2]);
-            Assert.Equal("", lines[^1]);
-        }
-        finally
-        {
-            if (Directory.Exists(dir))
-            {
-                Directory.Delete(dir, recursive: true);
-            }
-        }
+        });
+        // (The header's lines are written as the system ends lines; the console's end with \n alone.)
+        string[] lines = text.Split('\n');
+        Assert.Matches(@"^\d\d:\d\d:\d\d abc$", lines[^3]);
+        Assert.Matches(@"^\d\d:\d\d:\d\d def$", lines[^2]);
+        Assert.Equal("", lines[^1]);
     }
 
     // A console that cannot be written is said once in the log, and the log still gets every text.
     [Fact]
     public void AConsoleThatFailsIsSaidOnceAndTheLogGetsEverything()
     {
-        var (output, error, data) = (Console.Out, Console.Error, AppSettings.DataDirOverride);
-        string dir = Path.Combine(Path.GetTempPath(), "vwe-log-" + Guid.NewGuid().ToString("N")[..8]);
-        string text;
-        try
+        string text = LogTextOf(new Gone(), () =>
         {
-            AppSettings.DataDirOverride = dir;
-            Console.SetOut(new Gone());
-            Log.Start("test");
             Console.Out.Write("abc");
             Console.Out.Write("def");
-            text = Log.Read();
-        }
-        finally
-        {
-            Console.SetOut(output);
-            Console.SetError(error);
-            AppSettings.DataDirOverride = data;
-        }
-        try
-        {
-            Assert.Single(text.Split('\n'), l => l.EndsWith("The console could not be written (System.IO.IOException: gone); the log file still gets everything.", StringComparison.Ordinal));
-            Assert.Contains("abcdef", text);
-        }
-        finally
-        {
-            if (Directory.Exists(dir))
-            {
-                Directory.Delete(dir, recursive: true);
-            }
-        }
+        });
+        Assert.Single(text.Split('\n'), l => l.EndsWith("The console could not be written (System.IO.IOException: gone); the log file still gets everything.", StringComparison.Ordinal));
+        Assert.Contains("abcdef", text);
     }
 
     // A log that cannot be started is said on the error output, without its path, and the editor goes on without it.
@@ -202,6 +157,38 @@ public sealed class LogTests
 
         Assert.Equal(Path.Combine("~", ".local", "share"), Log.WithoutHome(Path.Combine(home, ".local", "share")));
         Assert.Equal(home + "2", Log.WithoutHome(home + "2"));
+    }
+
+    /// <summary>
+    /// The log's text: the log started in a new data folder (after the console is set to <paramref name="console"/>, when
+    /// one is given) with <paramref name="write"/> run between its start and its reading. The console and the data
+    /// folder are put back, and the folder deleted, after.
+    /// </summary>
+    private static string LogTextOf(TextWriter? console, Action write)
+    {
+        var (output, error, data) = (Console.Out, Console.Error, AppSettings.DataDirOverride);
+        string dir = Path.Combine(Path.GetTempPath(), "vwe-log-" + Guid.NewGuid().ToString("N")[..8]);
+        try
+        {
+            AppSettings.DataDirOverride = dir;
+            if (console != null)
+            {
+                Console.SetOut(console);
+            }
+            Log.Start("test");
+            write();
+            return Log.Read();
+        }
+        finally
+        {
+            Console.SetOut(output);
+            Console.SetError(error);
+            AppSettings.DataDirOverride = data;
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
     }
 
     /// <summary>A console that cannot be written.</summary>
