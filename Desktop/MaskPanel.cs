@@ -132,7 +132,7 @@ public sealed class MaskPanel
             {
                 new TextBlock { Text = Lang.T("mask.hint.matches"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                 biomes,
-                Pair(Lang.T("common.height"), HeightMin, HeightMax, Lang.T("mask.label.metres")),
+                Pair(Lang.T("common.height"), HeightMin, HeightMax, Lang.T("common.metres")),
                 Pair(Lang.T("common.slope"), SlopeMin, SlopeMax, "°"),
                 new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,14"), ColumnSpacing = 4, Children = { new TextBlock { Text = Lang.T("common.paint"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PaintBox, 1) } },
                 WarningText,
