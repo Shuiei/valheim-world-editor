@@ -5,10 +5,24 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// Waiting on the window under test: its posted work, background tasks and the dialogs it opens.
+/// The window under test: one editing a made-up area, and waiting on its posted work, background tasks and the
+/// dialogs it opens.
 /// </summary>
 internal static class TestWindows
 {
+    /// <summary>
+    /// A shown main window (1600 × 1000) editing a flat 2 × 2 zone area (ground at 30 m) with these objects.
+    /// </summary>
+    internal static (MainWindow W, EditSession S) Editing(params WorldScene.Thing[] things)
+    {
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        w.Show();
+        var s = TestScenes.Flat(2, things);
+        w.View.Show(s.Scene, null);
+        w.Edit(s);
+        return (w, s);
+    }
+
     /// <summary>
     /// Waits for the window's posted work and background tasks.
     /// </summary>
