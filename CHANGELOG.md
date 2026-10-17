@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.75 — unreleased
+
+### Fixed
+- **A generated dungeon could hold extra antechambers that led nowhere.** The antechamber was placed before the boss's
+  arena was tried, and stayed when the arena did not fit; the next try added another, so a dungeon could have two or
+  three "unique" antechambers as dead ends, each with its elites and no gate, or one with no arena at all. The
+  antechamber is now taken back, with its corridor, whenever the arena does not fit beyond it.
+
 ## v1.45.74 — unreleased
 
 ### Fixed
