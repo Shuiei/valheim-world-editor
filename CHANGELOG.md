@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.103 — unreleased
+
+### Changed
+- **Following a live world no longer slows down after a big Apply live.** Each object the game reported that the
+  editor did not know was checked against every object the editor had made in the game, one by one: after a
+  3,000-piece paste went in, any change in those zones cost millions of comparisons in the editor's window at every
+  check of the game. The objects the editor made are now also kept by their game id, and found at once.
+
 ## v1.45.102 — unreleased
 
 ### Changed

@@ -86,6 +86,51 @@ public class LiveSyncTests
         Assert.False(t.Sync.IsLive(-1));
     }
 
+    // IsOurs follows the game objects the editor has: moved there, moved on (counted once), forgotten, and reset.
+    [Fact]
+    public async Task IsOursFollowsTheGameObjectsTheEditorHas()
+    {
+        using var t = new Live();
+        Assert.False(t.Sync.IsOurs(t.TreeZdo));
+        t.MoveTree(-1, new Vector3(4, 0, 2));
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.True(t.Sync.IsOurs(t.TreeZdo));
+        t.MoveTree(-2, new Vector3(9, 0, -3), from: -1);
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.True(t.Sync.IsOurs(t.TreeZdo));
+        t.Sync.Forget(-2);
+        Assert.False(t.Sync.IsOurs(t.TreeZdo));
+
+        using var u = new Live();
+        u.MoveTree(-1, new Vector3(4, 0, 2));
+        await u.Sync.Apply(u.World, u.Edits, u.Game);
+        Assert.True(u.Sync.IsOurs(u.TreeZdo));
+        u.Sync.Reset();
+        Assert.False(u.Sync.IsOurs(u.TreeZdo));
+    }
+
+    // Without moves, IsOurs follows what the game makes (a new object, then the deleted one made again) and what it
+    // destroys again (the new object on undo, the made-again one on a second delete).
+    [Fact]
+    public async Task IsOursFollowsWhatIsMadeAndDestroyed()
+    {
+        using var t = new Live(canMove: false);
+        t.MoveTree(-1, new Vector3(4, 0, 2));
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        var made = t.Sync.NewObjects().Single().Target;
+        Assert.True(t.Sync.IsOurs((made.User, made.Id)));
+        t.Edits.SetDeleted([-1], true);
+        t.Edits.SetDeleted([t.Tree.Id], false);
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.False(t.Sync.IsOurs((made.User, made.Id)));
+        // The tree made again: the bridge's next id.
+        (long, uint) again = (made.User, made.Id + 1);
+        Assert.True(t.Sync.IsOurs(again));
+        t.Edits.SetDeleted([t.Tree.Id], true);
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.False(t.Sync.IsOurs(again));
+    }
+
     // Moved on from where it was moved to: the same game object moves again.
     [Fact]
     public async Task AnObjectMovedAgainMovesTheSameGameObject()
