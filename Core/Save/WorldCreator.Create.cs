@@ -64,7 +64,7 @@ public static partial class WorldCreator
     /// <param name="seedName">The trimmed seed.</param>
     /// <param name="radius">The generated radius in zones.</param>
     /// <param name="flat">Whether a bare zone is asked for.</param>
-    private static void CheckRequest(string name, string seedName, int radius, bool flat)
+    internal static void CheckRequest(string name, string seedName, int radius, bool flat)
     {
         if (!IsWorldName(name))
         {

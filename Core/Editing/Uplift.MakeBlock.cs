@@ -11,7 +11,7 @@ public static partial class Uplift
     /// <param name="Zones">The block's zones' edits, by zone.</param>
     /// <param name="Open">Whether a point belongs to a generated zone (so edits can be saved there).</param>
     /// <param name="Ungenerated">The lifted zones not generated yet (their lift is dropped).</param>
-    private sealed record BlockTargets(float[] Want, float[] Lift, Dictionary<(int, int), ZoneEdit> Zones, bool[] Open, HashSet<(int, int)> Ungenerated);
+    internal sealed record BlockTargets(float[] Want, float[] Lift, Dictionary<(int, int), ZoneEdit> Zones, bool[] Open, HashSet<(int, int)> Ungenerated);
 
     /// <summary>The plan for a group of lifted zones, worked on one block: them and the zones the discs reach from them.</summary>
     private static Plan MakeBlock(WorldSave world, ValheimGen.TerrainService terrain, EditStore edits, Func<int> nextId, List<ZoneEdit> lifted, Shared shared)

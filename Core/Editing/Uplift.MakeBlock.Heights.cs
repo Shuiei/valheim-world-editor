@@ -5,7 +5,7 @@ namespace TerrainEditor.Editing;
 public static partial class Uplift
 {
     /// <summary>Solves the disc heights of a block against the ground asked for, and measures how far a ground misses it.</summary>
-    private sealed class DiscHeights
+    internal sealed class DiscHeights
     {
         /// <summary>The block worked on.</summary>
         private readonly Block _block;
@@ -94,7 +94,7 @@ public static partial class Uplift
         /// <summary>The lowest and highest ground asked for within a disc's reach.</summary>
         /// <param name="disc">The disc's centre.</param>
         /// <returns>The lowest and highest wanted height.</returns>
-        private (float Lo, float Hi) WantedRange(Vector3 disc)
+        internal (float Lo, float Hi) WantedRange(Vector3 disc)
         {
             float lo = float.MaxValue, hi = float.MinValue;
             _block.Disc(disc, DiscRadius, p => { lo = MathF.Min(lo, _targets.Want[p]); hi = MathF.Max(hi, _targets.Want[p]); });

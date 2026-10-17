@@ -6,7 +6,7 @@ public static partial class WorldCreator
     /// The objects of a new world grouped by the base chunk file each goes into, in chunk order. Objects in the
     /// portals' chunk are never added.
     /// </summary>
-    private sealed class ChunkBatch
+    internal sealed class ChunkBatch
     {
         /// <summary>The objects of each chunk, by chunk.</summary>
         private readonly SortedDictionary<ushort, List<byte[]>> _byChunk = [];

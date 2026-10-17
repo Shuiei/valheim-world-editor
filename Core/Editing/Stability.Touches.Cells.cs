@@ -8,7 +8,7 @@ public static partial class Stability
     /// A sphere holding every box's own sphere (<see cref="Obb.Radius"/> round its middle), a little larger for
     /// rounding: boxes of two pieces whose spheres do not meet cannot overlap.
     /// </summary>
-    private static (Vector3 C, float R) Sphere(Obb[] boxes)
+    internal static (Vector3 C, float R) Sphere(Obb[] boxes)
     {
         var c = Vector3.Zero;
         foreach (var b in boxes)
@@ -25,7 +25,7 @@ public static partial class Stability
     }
 
     /// <summary>Calls <paramref name="each"/> for every grid cell a sphere's bounds reach; false (none called) when they reach too many.</summary>
-    private static bool InCells((Vector3 C, float R) s, Action<(int, int, int)> each)
+    internal static bool InCells((Vector3 C, float R) s, Action<(int, int, int)> each)
     {
         static Vector3 Cell(Vector3 p) => new(MathF.Floor(p.X / TouchCell), MathF.Floor(p.Y / TouchCell), MathF.Floor(p.Z / TouchCell));
         var lo = Cell(s.C - new Vector3(s.R));

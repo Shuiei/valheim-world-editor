@@ -5,7 +5,7 @@ namespace TerrainEditor.Editing;
 public static partial class Uplift
 {
     /// <summary>The disc heights of a block, by their metre position, and where new discs go next.</summary>
-    private sealed class DiscNodes
+    internal sealed class DiscNodes
     {
         /// <summary>The block worked on.</summary>
         private readonly Block _block;

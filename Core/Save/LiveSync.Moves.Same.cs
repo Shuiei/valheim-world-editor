@@ -7,7 +7,7 @@ public sealed partial class LiveSync
     /// Whether two objects are the same but for where they stand and how they are turned: prefab, flags, connection
     /// and every value (in any order).
     /// </summary>
-    private static bool SameButPlace(ZdoData a, ZdoData b)
+    internal static bool SameButPlace(ZdoData a, ZdoData b)
     {
         static bool Same<T>(List<(int Key, T Value)> x, List<(int Key, T Value)> y, Func<T, T, bool> eq)
         {

@@ -65,7 +65,7 @@ public static partial class Stability
     /// <param name="support">The settled support per piece.</param>
     /// <param name="data">Each piece's data, or null when unknown.</param>
     /// <param name="falls">The pieces that broke, in the order they fell.</param>
-    private static Result Verdict(float[] support, Data?[] data, List<int> falls)
+    internal static Result Verdict(float[] support, Data?[] data, List<int> falls)
     {
         int n = support.Length;
         float[] colour = new float[n];

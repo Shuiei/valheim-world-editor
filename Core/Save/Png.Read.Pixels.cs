@@ -90,6 +90,6 @@ public static partial class Png
     /// <param name="depth">Bits per channel (8 or 16).</param>
     /// <param name="max">The channel's maximum (255 or 65535).</param>
     /// <returns>The channel's value from 0 to 1.</returns>
-    private static float Sample(byte[] row, int x, int ch, int bpp, int depth, float max) =>
+    internal static float Sample(byte[] row, int x, int ch, int bpp, int depth, float max) =>
         depth == 16 ? ((row[x * bpp + ch * 2] << 8) | row[x * bpp + ch * 2 + 1]) / max : row[x * bpp + ch] / max;
 }

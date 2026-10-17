@@ -49,7 +49,7 @@ public static partial class Png
     /// <summary>Reads the header's data; a short or interlaced header is refused.</summary>
     /// <param name="data">The header chunk's data.</param>
     /// <returns>The header's fields.</returns>
-    private static PngHeader ParseHeader(ReadOnlySpan<byte> data)
+    internal static PngHeader ParseHeader(ReadOnlySpan<byte> data)
     {
         if (data.Length < 13)
         {

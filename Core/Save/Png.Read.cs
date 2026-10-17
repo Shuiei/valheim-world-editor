@@ -8,7 +8,7 @@ public static partial class Png
     /// <param name="Height">Height in pixels.</param>
     /// <param name="Depth">Bits per channel.</param>
     /// <param name="Color">The colour type (0 grey, 2 RGB, 4 grey with alpha, 6 RGB with alpha).</param>
-    private sealed record PngHeader(int Width, int Height, int Depth, int Color);
+    internal sealed record PngHeader(int Width, int Height, int Depth, int Color);
 
     /// <summary>Reads a PNG picture as brightness per pixel; colour becomes luminance and alpha is ignored.</summary>
     /// <exception cref="InvalidDataException">
@@ -49,7 +49,7 @@ public static partial class Png
     /// <summary>The number of channels a colour type stores; a palette picture is refused.</summary>
     /// <param name="color">The colour type.</param>
     /// <returns>The channels per pixel.</returns>
-    private static int ChannelsOf(int color) => color switch
+    internal static int ChannelsOf(int color) => color switch
     {
         0 => 1,
         2 => 3,

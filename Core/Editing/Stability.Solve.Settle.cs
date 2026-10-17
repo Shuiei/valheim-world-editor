@@ -95,7 +95,7 @@ public static partial class Stability
     /// <param name="points">The contact points with their support.</param>
     /// <param name="centre">The piece's centre of mass.</param>
     /// <param name="best">The best support so far.</param>
-    private static float HeldFromTwoSides(List<(Vector3 P, float V)> points, Vector3 centre, float best)
+    internal static float HeldFromTwoSides(List<(Vector3 P, float V)> points, Vector3 centre, float best)
     {
         for (int a = 0; a < points.Count - 1; a++)
         {
