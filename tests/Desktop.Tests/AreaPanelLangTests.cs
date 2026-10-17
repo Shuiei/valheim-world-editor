@@ -12,7 +12,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The Area tool in another language (the made-up one: PseudoLang): its panel with no selection (box and polygon),
 /// with a selection under every action, with a heightmap read, and its Reset zones question show only catalogue
-/// texts; a message's English is kept for Claude, and Claude's own ground changes are named in English.
+/// texts; a message's English is kept for Claude, and Claude's own ground changes are named to Claude in English (the
+/// History shows the step in the language, behind its "Claude: " mark).
 /// </summary>
 [Collection("DataDir")]
 public sealed class AreaPanelLangTests
@@ -111,6 +112,7 @@ public sealed class AreaPanelLangTests
         string said = await r.T.ShapeGround("restore", -10, -10, 10, 10, edge: 0);
         Assert.StartsWith("Restore the ground: ", said);
         Assert.DoesNotContain(PseudoLang.Open, said[..said.IndexOf(" Now pending", StringComparison.Ordinal)]);
-        Assert.Equal("Claude: restore the ground", r.W.Session!.UndoLabel);
+        // The History names the step in the language, behind the English "Claude: " mark it is found by.
+        Assert.Equal("Claude: " + PseudoLang.Wrap("restore the ground"), r.W.Session!.UndoLabel);
     }
 }
