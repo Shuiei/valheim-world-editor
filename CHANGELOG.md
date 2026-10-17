@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.51 — unreleased
+
+### Fixed
+- **A blueprint Claude's add_blueprint refused, because a piece would leave the area, took the place of what the user
+  could redo.** The pieces were put down as a step and the step undone at once, which cleared the redo list (and
+  could drop the oldest undo step), and left the refused blueprint there for the next Ctrl+Y. What the blueprint
+  would add is now worked out first, and nothing is put down when it is refused.
+
 ## v1.45.50 — unreleased
 
 ### Fixed

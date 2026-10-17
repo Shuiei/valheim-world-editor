@@ -1341,27 +1341,28 @@ public sealed partial class ClaudeTools
         {
             return $"({cx}, {cz}) is outside the open area (x {minX} to {maxX}, z {minZ} to {maxZ}): open_area there first.";
         }
-        int before = scene.Things.Count;
-        (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain) added;
+        // Worked out before anything is put down: a refusal leaves the history alone (a step committed and
+        // undone would clear what the user could redo and leave the refused blueprint there instead).
+        Workshop.Planned plan;
         try
         {
-            added = Workshop.Add(s, path, null, new System.Numerics.Vector2(cx, cz), turn, y ?? GroundAt(scene, cx, cz), label);
+            plan = Workshop.Plan(s, path, null, new System.Numerics.Vector2(cx, cz), turn, y ?? GroundAt(scene, cx, cz));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException or JsonException)
         {
             return "Could not read that blueprint: " + ex.Message;
         }
-        if (added.Placed == 0)
+        if (plan.Adds.Count == 0)
         {
             return "Nothing added: the blueprint has no piece this world can have.";
         }
-        var outside = Enumerable.Range(before, scene.Things.Count - before).Select(i => scene.Things[i].Position)
-            .Where(p => p.X < minX || p.X > maxX || p.Z < minZ || p.Z > maxZ).ToList();
-        if (outside.Count > 0)
+        int outside = plan.Adds.Count(a => a.Object.Position.X < minX || a.Object.Position.X > maxX || a.Object.Position.Z < minZ || a.Object.Position.Z > maxZ);
+        if (outside > 0)
         {
-            s.Undo();
-            return $"Nothing added: {outside.Count} piece(s) would be outside the area (x {minX} to {maxX}, z {minZ} to {maxZ}). Open a larger area (open_area) or put it further in.";
+            return $"Nothing added: {outside} piece(s) would be outside the area (x {minX} to {maxX}, z {minZ} to {maxZ}). Open a larger area (open_area) or put it further in.";
         }
+        int before = scene.Things.Count;
+        var added = Workshop.Put(s, plan, label);
         _w.AfterClaudeEdit($"Claude added “{blueprint}”: {added.Placed} piece(s); Ctrl+Z takes it back.");
         return $"Added {added.Placed} piece(s) of \"{blueprint}\", ids {before} to {scene.Things.Count - 1}."
             + (added.Unknown.Count > 0 ? $" Left out (unknown kinds): {string.Join(", ", added.Unknown.Take(10))}." : "")
