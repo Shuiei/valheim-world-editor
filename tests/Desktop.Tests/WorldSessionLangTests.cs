@@ -1,3 +1,6 @@
+using System.Numerics;
+using TerrainEditor.Editing;
+using TerrainEditor.Save;
 using WorldEditor.Tests;
 using Xunit;
 
@@ -70,18 +73,17 @@ public sealed class WorldSessionLangTests
     {
         using var pseudo = new PseudoLang();
         using var game = new FakeGame();
-        using var world = await WorldSession.OpenLive(new Save.LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var (world, s) = await TestScenes.LiveArea(game);
         Shown(await world.ApplyLive(), @"^Nothing to apply\.$");
 
-        var s = WorldScene.Load(world, 0, 0, 1).Session!;
         s.Shape(10, 10, Two, 3, 0, "raise");
         // The game sends other ground for the zone changed: the change waits over it.
         var zone = Assert.Single(world.Edits.Copies(e => e.Changed));
         var other = world.World.TerrainZones.Any(t => (t.ZoneX, t.ZoneZ) == (zone.ZoneX, zone.ZoneZ)) ? null : world.World.TerrainZones[0];
-        Assert.Equal(Editing.EditStore.GameGround.Kept, world.Edits.TakeGameGround(zone.ZoneX, zone.ZoneZ, other));
+        Assert.Equal(EditStore.GameGround.Kept, world.Edits.TakeGameGround(zone.ZoneX, zone.ZoneZ, other));
         Shown(await world.ApplyLive(_ => Task.FromResult(false)), "^Not applied: the game changed the ground where you have changes ");
 
-        world.Edits.SetReset(new Editing.ZoneReset(5, 5, true, false), true);
+        world.Edits.SetReset(new ZoneReset(5, 5, true, false), true);
         game.Fail["/snapshot"] = 500;
         Shown(await world.ApplyLive(), @"^Applied to the running game: .*1 zone\(s\) reset; but the world could not be read again from the game \(.+\): ");
     }
@@ -99,10 +101,10 @@ public sealed class WorldSessionLangTests
         s.Shape(32, 32, Two, 3, 0, "raise");
         int index = s.Scene.Things.FindIndex(t => t.Id >= 0 && !t.Gone);
         var thing = s.Scene.Things[index];
-        s.Move([(index, thing.Position + new System.Numerics.Vector3(3, 0, 3), thing.Rotation)]);
+        s.Move([(index, thing.Position + new Vector3(3, 0, 3), thing.Rotation)]);
         // The game saves, the object moved removed.
-        var options = new Save.WorldWriter.Options(KeepBase: true);
-        Assert.True(Save.WorldWriter.Save(Save.WorldSave.Load(w.Dir), [], [thing.Id], options: options).Saved);
+        var options = new WorldWriter.Options(KeepBase: true);
+        Assert.True(WorldWriter.Save(WorldSave.Load(w.Dir), [], [thing.Id], options: options).Saved);
         var plan = world.PrepareReplay()!;
         // The game saves again while its save is read.
         int n = plan.Newer.SaveNumber;

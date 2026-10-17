@@ -1,4 +1,5 @@
 using System.Numerics;
+using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -56,7 +57,7 @@ public sealed class EditSessionLangTests
     public async Task TheOtherTextsAndRefusalsAreTranslatedToo()
     {
         using var pseudo = new PseudoLang();
-        var s = TestScenes.Flat(2, new WorldScene.Thing(1, Save.StableHash.Of("Beech1"), new Vector3(0, 30, 0), Vector3.Zero, 1, false));
+        var s = TestScenes.Flat(2, TestScenes.Beech(1, new Vector3(0, 30, 0)));
         s.Shape(64, 30, Two, 3, 0, "raise");
         Assert.Equal(PseudoLang.Wrap("2 zones"), s.UndoList[^1].Describe());
         int copy = Assert.Single(s.Move([(0, new Vector3(4, 30, 4), Vector3.Zero)]));
@@ -86,9 +87,8 @@ public sealed class EditSessionLangTests
         Assert.StartsWith(PseudoLang.Open + "Nothing changed: the Mask", masked.Shown);
         Assert.StartsWith("Nothing changed: the Mask", masked.English);
 
-        using var game = new WorldEditor.Tests.FakeGame();
-        using var world = await WorldSession.OpenLive(new Save.LiveBridge(game.Url, game.Token), WorldEditor.Tests.FakeGame.Label());
-        var live = WorldScene.Load(world, 0, 0, 1).Session!;
+        using var game = new FakeGame();
+        var (_, live) = await TestScenes.LiveArea(game);
         Assert.Equal(PseudoLang.Wrap("All applied"), live.PendingText);
         live.Shape(10, 10, Two, 3, 0, "raise");
         Assert.StartsWith(PseudoLang.Open + "Not applied: ", live.PendingText);
