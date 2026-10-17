@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.77 — unreleased
+
+### Fixed
+- **A generated cell block's elite guards could stand locked inside the cells.** The cell block meant to keep only its
+  aisle free for what is placed after its cells, but kept a circle of no size, so its elites and their spawners were
+  put anywhere in the room, behind the grates. Both rows of cells are now kept, up to their grates.
+
 ## v1.45.76 — unreleased
 
 ### Fixed
