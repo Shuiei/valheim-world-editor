@@ -246,6 +246,31 @@ public sealed class EditStore
         }
     }
 
+    /// <summary>
+    /// Copies of the zones' working edits that pass a test, tried on the edits themselves: only those are copied, each
+    /// copy being a zone's whole ground (about 127 KB).
+    /// </summary>
+    /// <param name="keep">The test; it only reads the edit, under the store's lock.</param>
+    public List<ZoneEdit> Copies(Func<ZoneEdit, bool> keep)
+    {
+        lock (_lock)
+        {
+            return [.. _zones.Values.Where(keep).Select(e => e.Clone())];
+        }
+    }
+
+    /// <summary>
+    /// Where the zones with height or paint changes, or changed since the last save or apply, are, and which of them
+    /// changed: what the map outlines, read without copying the edits (it is drawn often).
+    /// </summary>
+    public List<(int ZoneX, int ZoneZ, bool Changed)> EditedZones()
+    {
+        lock (_lock)
+        {
+            return [.. _zones.Values.Where(e => e.Changed || e.HeightCount + e.PaintCount > 0).Select(e => (e.ZoneX, e.ZoneZ, e.Changed))];
+        }
+    }
+
     /// <summary>Objects (by WorldSave id) to leave out of the next save.</summary>
     private readonly HashSet<int> _deleted = [];
 

@@ -942,7 +942,7 @@ public sealed class MapPage : IDisposable
         {
             return;
         }
-        _edited = [.. s.Edits.All().Where(e => e.HeightCount + e.PaintCount > 0).OrderByDescending(e => e.HeightCount + e.PaintCount)];
+        _edited = [.. s.Edits.Copies(e => e.HeightCount + e.PaintCount > 0).OrderByDescending(e => e.HeightCount + e.PaintCount)];
         EditedList.ItemsSource = _edited.Select(e =>
         {
             var (lo, hi) = Range(e);

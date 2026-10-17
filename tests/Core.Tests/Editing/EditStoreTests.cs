@@ -87,4 +87,36 @@ public class EditStoreTests
         edits.Restore(mark);
         Assert.Equal(20f, edits.Get(zone.ZoneX, zone.ZoneZ)!.Lift[0]);
     }
+
+    // Only the zones passing the test are copied, and they are copies.
+    [Fact]
+    public void CopiesTakesOnlyTheZonesPassingTheTest()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");
+        var edits = new EditStore(world);
+        var zone = Assert.Single(world.TerrainZones);
+        edits.Put(new ZoneEdit(zone.ZoneX + 1, zone.ZoneZ) { Lift = { [0] = 5f } });
+        var lifted = Assert.Single(edits.Copies(e => e.HasLift));
+        Assert.Equal((zone.ZoneX + 1, zone.ZoneZ), (lifted.ZoneX, lifted.ZoneZ));
+        Assert.Equal(2, edits.Copies(_ => true).Count);
+        Assert.Empty(edits.Copies(_ => false));
+        lifted.Lift[0] = 9f;
+        Assert.Equal(5f, edits.Get(zone.ZoneX + 1, zone.ZoneZ)!.Lift[0]);
+    }
+
+    // The map's outlines: zones with ground edits or changed, and which changed; a zone with neither is left out.
+    [Fact]
+    public void EditedZonesTellWhichChanged()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");
+        var edits = new EditStore(world);
+        var zone = Assert.Single(world.TerrainZones);
+        int x = zone.ZoneX, z = zone.ZoneZ;
+        edits.Put(new ZoneEdit(x + 1, z) { Modified = { [0] = true }, Level = { [0] = 2f } });
+        edits.MarkApplied([(x + 1, z)]);
+        edits.Put(new ZoneEdit(x + 2, z) { Lift = { [0] = 5f } });
+        edits.Put(new ZoneEdit(x + 3, z));
+        var marks = edits.EditedZones().Where(m => m.ZoneX != x).OrderBy(m => m.ZoneX).ToList();
+        Assert.Equal([(x + 1, z, false), (x + 2, z, true)], marks);
+    }
 }
