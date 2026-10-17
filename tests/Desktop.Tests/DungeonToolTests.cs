@@ -14,7 +14,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// The Dungeon tool on the test world (zone 0, 0), with a Frost Cave of one room made there (the test world has no
 /// dungeon): the panel lists it, a room picked and clicked onto an open end joins there, the open ends close with end
 /// caps, a selected room is deleted, and each change is one step of the history that rewrites the dungeon object's room
-/// list; a room placed at an open end without the pointer (PlaceAt), and changes named as asked.
+/// list; a room placed at an open end without the pointer (PlaceAt), and changes named as asked; what adding a room
+/// says for each count of its objects and doors.
 /// </summary>
 [Collection("World files")]
 public class DungeonToolTests
@@ -363,4 +364,15 @@ public class DungeonToolTests
         r.T.CloseOpenEnds("Mine: capped");
         Assert.Equal("Mine: capped", s.UndoLabel);
     }
+
+    // A room added says what came with it: no objects or some, no door, one, or how many.
+    [Theory]
+    [InlineData(0, 0, "Added cave_room.")]
+    [InlineData(0, 1, "Added cave_room with a door.")]
+    [InlineData(0, 3, "Added cave_room with 3 doors.")]
+    [InlineData(2, 0, "Added cave_room with 2 object(s).")]
+    [InlineData(2, 1, "Added cave_room with 2 object(s) and a door.")]
+    [InlineData(2, 2, "Added cave_room with 2 object(s) and 2 doors.")]
+    public void AddingARoomSaysItsObjectsAndDoors(int objects, int doors, string said) =>
+        Assert.Equal(said, DungeonTool.Added("cave_room", objects, doors).English);
 }

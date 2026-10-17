@@ -14,7 +14,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// The Dungeon panel in another language (the made-up one: PseudoLang): with a Frost Cave in the area and the dungeon
 /// its Generate part made (and that part as the Workshop shows it), it shows only catalogue texts and data (rooms',
 /// biomes', styles', materials' and bosses' names, the made-up dungeon name); a change the tool makes is said in the
-/// language and kept in English for Claude; and Claude's dungeon tools still answer in English.
+/// language and kept in English for Claude, as are a placed or pasted dungeon's message and History step and the
+/// generator's notes; Claude's dungeon tools and a generated dungeon's blueprint still say it in English.
 /// </summary>
 [Collection("DataDir")]
 public sealed class DungeonPanelLangTests
@@ -90,6 +91,58 @@ public sealed class DungeonPanelLangTests
         r.W.DungeonPanel.CloseEnds.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.StartsWith(PseudoLang.Open + "Closed ", r.W.MessageText.Text);
         Assert.Matches(@"^Closed \d+ open end\(s\) with end caps\. (.* )?Ctrl\+Z undoes; Save writes it\.$", r.W.LastMessageEn);
+        // A room added, with what came with it.
+        var added = DungeonTool.Added("cave_room", 2, 3);
+        Assert.Equal(PseudoLang.Wrap("Added cave_room with 2 object(s) and 3 doors."), added.Shown);
+        Assert.Equal("Added cave_room with 2 object(s) and 3 doors.", added.English);
+    }
+
+    // A generated dungeon and a pasted dungeon blueprint: the generator's notes, the status bar and the History step
+    // in the language, the English kept for Claude.
+    [AvaloniaFact]
+    public async Task PlacedAndPastedDungeonsAreSaidInTheLanguage()
+    {
+        using var pseudo = new PseudoLang();
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        var s = r.W.Session!;
+        var settings = new DungeonGen.Settings(Biome: "Black Forest", Size: 1, Levels: 1, Seed: 12345);
+        var made = DungeonGen.Make(settings);
+        Assert.NotEmpty(made.Notes);
+        Assert.All(made.Notes, n =>
+        {
+            Assert.StartsWith(PseudoLang.Open.ToString(), n.Shown);
+            Assert.DoesNotContain(PseudoLang.Open, n.English);
+        });
+        r.W.PlaceGenerated(settings, made);
+        Assert.StartsWith(PseudoLang.Open + "Generated " + made.Name + ":", r.W.MessageText.Text);
+        Assert.StartsWith($"Generated {made.Name}: ", r.W.LastMessageEn);
+        Assert.Contains("Its burial chamber entrance stands here, facing you.", r.W.LastMessageEn);
+        Assert.DoesNotContain(PseudoLang.Open, r.W.LastMessageEn);
+        Assert.Equal(PseudoLang.Wrap($"Dungeon: generated {made.Name}"), s.UndoLabel);
+        Assert.True(s.Undo());
+
+        var clip = BlueprintsPanelRun.Clip("Deep hall", "blackmarble_floor_large", "stone_wall_2x1", "portal_wood");
+        clip.Dungeon = true;
+        r.W.PasteDungeon(clip, new Vector2(40, 40));
+        Assert.StartsWith(PseudoLang.Open + "Pasted Deep hall:", r.W.MessageText.Text);
+        Assert.StartsWith("Pasted Deep hall: ", r.W.LastMessageEn);
+        Assert.DoesNotContain(PseudoLang.Open, r.W.LastMessageEn);
+        Assert.Equal(PseudoLang.Wrap("Dungeon: pasted Deep hall"), s.UndoLabel);
+    }
+
+    // A generated dungeon opened in the Workshop: its blueprint's description (from the generator's notes) is English,
+    // whatever the language shown.
+    [AvaloniaFact]
+    public async Task AGeneratedDungeonsBlueprintIsDescribedInEnglish()
+    {
+        using var pseudo = new PseudoLang();
+        using var r = new BlueprintsPanelRun();
+        r.W.Ask = (_, _, _, _) => Task.FromResult(true);
+        await r.W.OpenGeneratedInWorkshop(new DungeonGen.Settings(Size: 1, Levels: 1, Seed: 7, Name: "Test crypt"));
+        var entry = Homestead.Read(Path.Combine(r.Homestead, Homestead.FileName("Test crypt")))!;
+        Assert.StartsWith("A generated dungeon (seed 7): ", entry.Details.Description);
+        Assert.DoesNotContain(PseudoLang.Open, entry.Details.Description);
     }
 
     // The kind's name, what a tool did and what a generated dungeon holds reach Claude in English.
