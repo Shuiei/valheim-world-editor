@@ -1,0 +1,25 @@
+---
+engines:
+  semgrep:
+    exclude_paths:
+      - "Core/App/Regrow.cs"
+      - "Core/App/ObjectLinks.cs"
+      - "Core/Editing/DungeonPlan.cs"
+      - "Core/Editing/DungeonGen.cs"
+      - "Core/Editing/DungeonDresser.cs"
+      - "Core/Editing/DungeonDresser.Biomes.cs"
+      - "Core/Editing/Dungeons.cs"
+      - "Core/Save/WorldCreator.cs"
+      - "Core/WorldGen/WorldGenerator.Water.cs"
+      - "Core/WorldGen/WorldGenerator.cs"
+      - "Core/WorldGen/SeedLocations.cs"
+      - "Core/WorldGen/DumpVerifier.cs"
+      - "Desktop/PlaceTool.cs"
+      - "Desktop/Mountain.cs"
+      - "Desktop/CaveRoof.cs"
+      - "Desktop/Erosion.cs"
+      - "tests/Core.Tests/WorldGen/UnityShimTests.cs"
+      - "tests/Core.Tests/WorldGen/SeedLocationsTests.cs"
+      - "tests/Core.Tests/Editing/DungeonsTests.cs"
+      - "tests/Core.Tests/App/CrunchTests.cs"
+      - "tests/Desktop.Tests/GlViewTerrainUploadTests.cs"
