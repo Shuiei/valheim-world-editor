@@ -135,6 +135,22 @@ public sealed class SavedSelectionsTests : IDisposable
         Assert.Equal(1, SavedSelections.Find(S(I(Beech, 0, 0, 0)), []).Missing);
     }
 
+    [Fact]
+    public void FindingAcrossMetreCellsTakesTheFirstMatchingThing()
+    {
+        // Both within 5 cm of the items but on either side of a metre line: the later object is in the items' own
+        // cell, the earlier one in the next cell, and the earlier one is still taken first.
+        var things = new List<WorldScene.Thing>
+        {
+            T(1, Beech, 1.02f, 30, 5),
+            T(2, Beech, 0.97f, 30, 5),
+            T(3, Beech, 0.99f, 30, -0.03f),
+        };
+        var (ids, missing) = SavedSelections.Find(S(I(Beech, 0.99f, 30, 5), I(Beech, 0.99f, 30, 5), I(Beech, 0.99f, 30, 5), I(Beech, 1, 30, 0.01f)), things);
+        Assert.Equal(new[] { 0, 1, 2 }, ids);
+        Assert.Equal(1, missing);
+    }
+
     // ---- The Select panel.
 
     /// <summary>

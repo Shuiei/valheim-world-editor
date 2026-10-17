@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.97 — unreleased
+
+### Changed
+- **Picking a big saved selection no longer freezes the editor.** Each object of the selection was compared with
+  every object of the area: 5,000 objects in a 300,000-object area made about 1.5 billion comparisons. The area's
+  objects are now sorted by kind and place once, and each saved object looks only where it can be. The same objects
+  are selected.
+
 ## v1.45.96 — unreleased
 
 ### Changed
