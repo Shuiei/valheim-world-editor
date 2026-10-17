@@ -312,7 +312,7 @@ public class ScriptHostTests
     }
 
     // SnapPieces: a wall placed with snap 0.3 m off meets the one standing; without snap it stays; a wall the script
-    // took away is not snapped to.
+    // took away is not snapped to; Stop ends the snapping.
     [Fact]
     public void NewPiecesSnapToThePiecesStanding()
     {
@@ -321,14 +321,19 @@ public class ScriptHostTests
         var ch = new ScriptHost.Changes();
         ch.Add.Add((wall, "woodwall", new Vector3(22.3f, 31, 20), Vector3.Zero, 0, true));
         ch.Add.Add((wall, "woodwall", new Vector3(17.7f, 31, 20), Vector3.Zero, 0, false));
-        ScriptHost.SnapPieces(snap, ch);
+        ScriptHost.SnapPieces(snap, ch, TestContext.Current.CancellationToken);
         Assert.Equal(22, ch.Add[0].Position.X, 3);
         Assert.Equal(17.7f, ch.Add[1].Position.X, 3);
 
         var gone = new ScriptHost.Changes();
         gone.Remove.Add(0);
         gone.Add.Add((wall, "woodwall", new Vector3(22.3f, 31, 20), Vector3.Zero, 0, true));
-        ScriptHost.SnapPieces(snap, gone);
+        ScriptHost.SnapPieces(snap, gone, TestContext.Current.CancellationToken);
         Assert.Equal(22.3f, gone.Add[0].Position.X, 3);
+
+        var stopped = new ScriptHost.Changes();
+        stopped.Add.Add((wall, "woodwall", new Vector3(22.3f, 31, 20), Vector3.Zero, 0, true));
+        Assert.Throws<OperationCanceledException>(() => ScriptHost.SnapPieces(snap, stopped, new CancellationToken(canceled: true)));
+        Assert.Equal(22.3f, stopped.Add[0].Position.X, 3);
     }
 }

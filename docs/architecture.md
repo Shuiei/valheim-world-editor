@@ -130,9 +130,9 @@ plot that is no world: it has nothing to save; its building becomes a Homestead 
   window's thread only" (`EditSession`). `ClaudeTools` runs every call there (`OnUi`), as a click.
 - **The drawing thread** (`GlView`) runs brush strokes: `EditSession` takes its lock for everything,
   and `EditStore` has its own.
-- **Workers** read models (`ModelStore`), generate ground (`Parallel.ForEach` in `WorldScene.Load`),
-  run scripts (`ScriptHost.Run`) and talk to the network. Their results come back to the window's
-  thread before they touch the scene.
+- **Workers** read models (`ModelStore`), generate ground (`Parallel.ForEach` in `WorldScene.Load`)
+  and talk to the network; scripts run in a process of their own (`ScriptHost.RunInChild`). Their
+  results come back to the window's thread before they touch the scene.
 
 ## Game data comes from the player's Valheim
 
@@ -292,9 +292,14 @@ at a local BepInEx and the game's `Managed` folder; CI does not build it.
 
 **Scripts** (`Desktop/ScriptHost.cs`, user docs in [scripting.md](scripting.md)): the user's C#
 (top-level statements) is compiled in the app with Roslyn against the API in `Desktop/ScriptApi.csx`
-(`Area`, `Ground`, `Objects`, `Noise`, `Rnd`, `Print`), run on a worker over a snapshot of the area,
-and its changes go in afterwards as one undo step, on the window's thread. A script that fails
-changes nothing. It is not a sandbox: a script runs with the editor's rights, like any program the
+(`Area`, `Ground`, `Objects`, `Noise`, `Rnd`, `Print`), run over a snapshot of the area in a process
+of its own (`Desktop/ScriptHost.Child.cs`: the editor started again with `--script-host`, the script
+and the snapshot on its stdin, the changes or the error on its stdout, in the editor's own unversioned
+binary format since both ends are the same build), and its changes go in afterwards as one undo step,
+on the window's thread. Stop and the 2-minute limit close the process's stdin (its loops' `Check`s end
+the script) and kill the process tree a second later when that was not enough; a process that dies
+is an error, never a hang. A script that fails changes nothing. The process limits what a crash can
+take down, but it is not a sandbox: a script runs with the editor's rights, like any program the
 user runs.
 
 **Claude** (`Desktop/ClaudeServer.cs`, `Desktop/ClaudeTools.cs`, user docs in [claude.md](claude.md)):

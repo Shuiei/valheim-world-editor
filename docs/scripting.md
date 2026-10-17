@@ -35,7 +35,7 @@ below show the common patterns.
 | **List** | The seven examples ("Example: …"), then your saved scripts, newest first. Picking one **replaces** the text in the code box (save your own script first). Picking an example empties the name box; picking a saved script puts its name there. |
 | **Code box** | The script. `Tab` indents; `Ctrl+Enter` runs it. |
 | **Run (Ctrl+Enter)** | Compiles and runs the script on the open area. Everything it changes is **one undo step**, named "Script: " and the list entry's name in the [History](editor-basics.md#history). |
-| **Stop** | Stops a running script: nothing it did is kept. See [Stopping a script](#stopping-a-script). |
+| **Stop** | Stops a running script, whatever it is doing: nothing it did is kept. See [Stopping a script](#stopping-a-script). |
 | Name box / **Save** | Saves the code under the name typed ("name to save it as") and selects it in the list. Characters a file name cannot hold become `_`. A saved script of the same name is replaced without asking. |
 | **Output** | What the script printed (`Print`), then what it changed, or its mistakes or error with the line they are on. |
 
@@ -63,10 +63,11 @@ Each example is a whole script, ready to run on any open area. Read them to see 
 - **Compiled in the editor.** Run compiles your code with the editor's own C# compiler (C# 12,
   against .NET 10), together with the editor's API (`Area`, `Ground`, `Objects`, `Noise`, `Rnd`,
   `Print`). Nothing else is needed on your computer.
-- **On a snapshot.** When you press Run, the editor takes a copy of the open area: its ground, its
-  paint, its biomes and its objects. The script runs in the background on that copy. It sees its own
-  changes as it goes (raise a point, then `Ground.Height` gives the new height), but the area itself
-  does not change while it runs.
+- **On a snapshot, in a process of its own.** When you press Run, the editor takes a copy of the open
+  area: its ground, its paint, its biomes and its objects. The script runs on that copy in a process
+  of its own (the editor started again for it), so the editor stays responsive and Stop can always end
+  it. It sees its own changes as it goes (raise a point, then `Ground.Height` gives the new height),
+  but the area itself does not change while it runs.
 - **All at once, at the end.** When the script has finished, everything it changed (ground, paint,
   objects placed, moved and taken away) goes into the area at once, as one undo step. If it has
   mistakes, fails, is stopped or runs for 2 minutes, nothing changes.
@@ -311,11 +312,15 @@ The output box says what happened; the status bar says it in short.
 A loop over a whole 17 × 17 area is about 1.2 million points: a few seconds of work. Use
 `Area.Points(step: 4)` when every point is not needed.
 
-**Stop**, and the 2-minute limit, end a script at the next turn of any of its own loops (`for`,
-`foreach`, `while`, `do`, `goto`), at the next point of `Area.Points()`, and the next time it starts a
-new row of `Ground.Shape` or `Ground.Mountain`. Nothing it did is kept. A single call that takes long by itself, without a loop
-of yours around it (a LINQ query over hundreds of millions of items, `Thread.Sleep`...), cannot be
-stopped in the middle: the editor waits for it to finish.
+**Stop**, and the 2-minute limit, always work. A script ends at the next turn of any of its own loops
+(`for`, `foreach`, `while`, `do`, `goto`), at the next point of `Area.Points()`, and the next time it
+starts a new row of `Ground.Shape` or `Ground.Mountain`. A single call that takes long by itself,
+without a loop of yours around it (a LINQ query over hundreds of millions of items, `Thread.Sleep`, a
+recursion that never ends...), is ended a second later with the process the script runs in. Either
+way nothing it did is kept.
+
+The script's process is not a sandbox: a script runs with your rights, like any program you run, and
+can read and write your files. Run only scripts you understand.
 
 ## Good to know
 

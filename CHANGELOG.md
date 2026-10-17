@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.67 — unreleased
+
+### Fixed
+- **Script: Stop could not end a script busy in one long call.** Stop and the 2-minute limit ended a script only at
+  the next turn of one of its loops; a single call with no loop around it (a LINQ query over a huge range,
+  `Thread.Sleep`, a recursion that never ends) ran on until the editor closed, burning a core. A script now runs in a
+  process of its own (the editor started again for it, the area's snapshot sent to it, its changes sent back); Stop
+  closes that process's input, which ends the script at its next loop turn, and kills the process a second later
+  when that was not enough. A script process that crashes is reported as an error. The process keeps a crash away
+  from the editor, but it is not a sandbox: a script still runs with your rights, like any program you run.
+
 ## v1.45.66 — unreleased
 
 ### Fixed

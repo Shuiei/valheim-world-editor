@@ -1519,9 +1519,10 @@ public sealed partial class MainWindow : Window
     internal sealed record ScriptOutcome(bool Changed, string Output, string Message);
 
     /// <summary>
-    /// A script on the open area (the Script tool's Run, Claude's run_script): compiled and run in the background on a
-    /// snapshot of the area, then what it changed goes in as one undo step, nothing when it fails, is stopped, runs 2
-    /// minutes, or the area changed meanwhile.
+    /// A script on the open area (the Script tool's Run, Claude's run_script): compiled in the background, run in a
+    /// process of its own on a snapshot of the area (ScriptHost.RunInChild: Stop and the 2-minute limit end that
+    /// process whatever the script is doing), then what it changed goes in as one undo step, nothing when it fails,
+    /// is stopped, runs 2 minutes, or the area changed meanwhile.
     /// </summary>
     /// <param name="code">The script's C# source.</param>
     /// <param name="label">The undo step's name.</param>
@@ -1551,7 +1552,7 @@ public sealed partial class MainWindow : Window
                 return new(false, "The script has mistakes:\n" + string.Join("\n", errors), "The script has mistakes (see below it): nothing changed.");
             }
             progress?.Invoke("Running…");
-            var ch = await Task.Run(() => ScriptHost.Run(image, pdb, snap, cancel.Token), cancel.Token);
+            var ch = await ScriptHost.RunInChild(image, pdb, snap, cancel.Token);
             if (Session != s)
             {
                 string gone = Session == null
@@ -1613,7 +1614,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            return new(false, $"The script stopped with an error, nothing changed:\n{ScriptHost.Where(ex)}{ex.GetType().Name}: {ex.Message}", "The script stopped with an error (see below it): nothing changed.");
+            return new(false, $"The script stopped with an error, nothing changed:\n{ScriptHost.Describe(ex)}", "The script stopped with an error (see below it): nothing changed.");
         }
         finally
         {

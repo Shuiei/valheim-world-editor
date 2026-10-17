@@ -14,11 +14,12 @@ namespace TerrainEditor.Desktop;
 
 /// <summary>
 /// The Script tool's engine: a C# script (top-level statements, with the editor's API: ScriptApi.csx) is compiled in
-/// the app (Roslyn, against .NET's reference assemblies carried inside), then run on a background thread against a
-/// snapshot of the open area. What it changes (ground, paint, objects) is kept aside and goes into the area afterwards
-/// as one undo step (Apply), on the window's thread.
+/// the app (Roslyn, against .NET's reference assemblies carried inside), then run against a snapshot of the open area
+/// in a process of its own (RunInChild, in ScriptHost.Child.cs), so that Stop can always end it. What it changes
+/// (ground, paint, objects) comes back and goes into the area afterwards as one undo step (Apply), on the window's
+/// thread.
 /// </summary>
-public static class ScriptHost
+public static partial class ScriptHost
 {
     /// <summary>The script API's source (ScriptApi.csx), embedded in the app; read once.</summary>
     private static readonly Lazy<string> Api = new(() =>
@@ -172,9 +173,14 @@ public static class ScriptHost
     /// <param name="Water">The water level.</param>
     /// <param name="Seed">The world's seed (0 without a world).</param>
     /// <param name="World">The world's name.</param>
-    /// <param name="CanCreate">Whether the editor can make a prefab (by hash).</param>
+    /// <param name="Creatable">The prefabs (by hash) the editor can make: the world's own and the game's placeable
+    /// kinds and creatures.</param>
     public sealed record Snapshot(int W, int H, float Ox, float Oz, float[] Heights, float[] Original, int[] Biomes, byte[] Mask, bool[] Locked,
-        List<(int Index, string Prefab, Vector3 Position, string Kind, bool Piece, Vector3 Rotation, float Scale)> Things, float Water, int Seed, string World, Func<int, bool> CanCreate);
+        List<(int Index, string Prefab, Vector3 Position, string Kind, bool Piece, Vector3 Rotation, float Scale)> Things, float Water, int Seed, string World, HashSet<int> Creatable)
+    {
+        /// <summary>Whether the editor can make a prefab (by hash).</summary>
+        public bool CanCreate(int prefab) => Creatable.Contains(prefab);
+    }
 
     /// <summary>Takes the snapshot of the session's area, on the window's thread.</summary>
     /// <param name="s">The edit session.</param>
@@ -213,12 +219,19 @@ public static class ScriptHost
             }
         }
         var world = scene.World;
+        // As WorldSave.CanCreate: the world's own objects, the game's placeable kinds and its creatures; without a
+        // world (the Workshop), the placeable kinds.
+        HashSet<int> creatable = world != null
+            ? [.. world.Creatable, .. PrefabCatalog.Creatures]
+            : [.. PrefabCatalog.Placeable.Select(p => StableHash.Of(p.Name))];
         return new Snapshot(g.W, g.H, scene.X0 * 64f - 32f, scene.Z0 * 64f - 32f, (float[])scene.Heights.Clone(), original, (int[])scene.Biomes.Clone(), (byte[])scene.Mask.Clone(), locked,
-            things, scene.Water, world?.Seed ?? 0, world?.Name ?? "", prefab => world?.CanCreate(prefab) ?? PrefabCatalog.Get(prefab) != null);
+            things, scene.Water, world?.Seed ?? 0, world?.Name ?? "", creatable);
     }
 
     /// <summary>
-    /// Runs the compiled script against the snapshot (on the calling thread: call it on a background one).
+    /// Runs the compiled script against the snapshot in this process, on the calling thread (call it on a background
+    /// one), with its new pieces snapped (SnapPieces). The editor runs scripts in a process of their own instead
+    /// (RunInChild), which Stop can always end.
     /// </summary>
     /// <param name="image">The compiled assembly.</param>
     /// <param name="pdb">Its debug information, or null (errors then have no line).</param>
@@ -226,6 +239,22 @@ public static class ScriptHost
     /// <param name="cancel">Stops the script at its next Check or Mountain row.</param>
     /// <returns>What the script changed; the script's own exceptions are thrown on.</returns>
     public static Changes Run(byte[] image, byte[]? pdb, Snapshot snap, CancellationToken cancel)
+    {
+        var ch = Execute(image, pdb, snap, cancel);
+        SnapPieces(snap, ch, cancel);
+        return ch;
+    }
+
+    /// <summary>
+    /// Runs the compiled script against the snapshot on the calling thread: Run without the snapping, which needs the
+    /// game's piece data (the script's process has none; the editor snaps when the changes come back).
+    /// </summary>
+    /// <param name="image">The compiled assembly.</param>
+    /// <param name="pdb">Its debug information, or null (errors then have no line).</param>
+    /// <param name="snap">The area as the script sees it.</param>
+    /// <param name="cancel">Stops the script at its next Check or Mountain row.</param>
+    /// <returns>What the script changed; the script's own exceptions are thrown on.</returns>
+    private static Changes Execute(byte[] image, byte[]? pdb, Snapshot snap, CancellationToken cancel)
     {
         var ch = new Changes();
         float[] heights = (float[])snap.Heights.Clone();
@@ -381,7 +410,6 @@ public static class ScriptHost
                     ch.Add[i] = a with { Position = a.Position with { Y = Sample(heights, a.Position.X, a.Position.Z) } };
                 }
             }
-            SnapPieces(snap, ch);
             return ch;
         }
         finally
@@ -436,7 +464,10 @@ public static class ScriptHost
     /// The new pieces placed with snap moved to meet the snap points of the pieces standing (where the script left
     /// them; those it took away do not count) and of those placed before them, as the game's hammer does.
     /// </summary>
-    internal static void SnapPieces(Snapshot snap, Changes ch)
+    /// <param name="snap">The area as the script saw it.</param>
+    /// <param name="ch">The script's changes; its new pieces are moved in place.</param>
+    /// <param name="cancel">Stop: checked before each piece (thousands take a while).</param>
+    internal static void SnapPieces(Snapshot snap, Changes ch, CancellationToken cancel = default)
     {
         if (!ch.Add.Any(a => a.Snap))
         {
@@ -453,6 +484,7 @@ public static class ScriptHost
         }
         for (int i = 0; i < ch.Add.Count; i++)
         {
+            cancel.ThrowIfCancellationRequested();
             var a = ch.Add[i];
             var q = BlueprintFormats.FromEuler(a.Rotation);
             if (a.Snap && Hammer.Get(a.Name) != null)
@@ -468,9 +500,19 @@ public static class ScriptHost
     /// </summary>
     public static string Where(Exception ex)
     {
+        if (ex is ScriptException e)
+        {
+            return e.Where;
+        }
         var frame = new System.Diagnostics.StackTrace(ex, true).GetFrames().FirstOrDefault(f => f.GetFileName() == "script" && f.GetFileLineNumber() > 0);
         return frame != null ? $"line {frame.GetFileLineNumber()}: " : "";
     }
+
+    /// <summary>
+    /// A script's error as the output shows it: "line 12: ArgumentException: …", the exception's kind as the script
+    /// threw it (ScriptException carries one from the script's process; the kind is Crash when that process died).
+    /// </summary>
+    public static string Describe(Exception ex) => $"{Where(ex)}{(ex is ScriptException e ? e.Kind : ex.GetType().Name)}: {ex.Message}";
 
     /// <summary>
     /// The script's changes into the area, one undo step. Returns how many points the game's ±8 m stopped.
