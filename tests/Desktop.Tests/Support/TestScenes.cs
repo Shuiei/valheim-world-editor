@@ -2,6 +2,7 @@ using System.Numerics;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
+using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -77,6 +78,20 @@ internal static class TestScenes
     {
         var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
         return (world, WorldScene.Load(world, 0, 0, 1).Session!);
+    }
+
+    /// <summary>
+    /// The area's first saved object moved 3 m, then left out of a save the game makes meanwhile (on the world's save in
+    /// <paramref name="dir"/>, the editor's base kept): the clash bringing the changes over finds.
+    /// </summary>
+    /// <returns>The object, as it was before the move.</returns>
+    internal static WorldScene.Thing MovedThenRemovedByTheGame(EditSession s, string dir)
+    {
+        int index = s.Scene.Things.FindIndex(t => t.Id >= 0 && !t.Gone);
+        var thing = s.Scene.Things[index];
+        s.Move([(index, thing.Position + new Vector3(3, 0, 3), thing.Rotation)]);
+        Assert.True(WorldWriter.Save(WorldSave.Load(dir), [], [thing.Id], options: new WorldWriter.Options(KeepBase: true)).Saved);
+        return thing;
     }
 
     /// <summary>The ship's root's id (AddShip).</summary>

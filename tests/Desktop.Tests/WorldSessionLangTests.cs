@@ -1,6 +1,4 @@
-using System.Numerics;
 using TerrainEditor.Editing;
-using TerrainEditor.Save;
 using WorldEditor.Tests;
 using Xunit;
 
@@ -99,12 +97,7 @@ public sealed class WorldSessionLangTests
         using var world = WorldSession.Open(w.Dir);
         var s = WorldScene.Load(world, 0, 0, 1).Session!;
         s.Shape(32, 32, Two, 3, 0, "raise");
-        int index = s.Scene.Things.FindIndex(t => t.Id >= 0 && !t.Gone);
-        var thing = s.Scene.Things[index];
-        s.Move([(index, thing.Position + new Vector3(3, 0, 3), thing.Rotation)]);
-        // The game saves, the object moved removed.
-        var options = new WorldWriter.Options(KeepBase: true);
-        Assert.True(WorldWriter.Save(WorldSave.Load(w.Dir), [], [thing.Id], options: options).Saved);
+        TestScenes.MovedThenRemovedByTheGame(s, w.Dir);
         var plan = world.PrepareReplay()!;
         // The game saves again while its save is read.
         int n = plan.Newer.SaveNumber;

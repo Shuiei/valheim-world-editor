@@ -88,12 +88,7 @@ public sealed class MainWindowLangTests
         };
         await r.Open();
         var s = r.W.Session!;
-        int index = s.Scene.Things.FindIndex(t => t.Id >= 0 && !t.Gone);
-        var thing = s.Scene.Things[index];
-        s.Move([(index, thing.Position + new System.Numerics.Vector3(3, 0, 3), thing.Rotation)]);
-        var game = Save.WorldSave.Load(r.Dir);
-        var options = new Save.WorldWriter.Options(KeepBase: true);
-        Assert.True(Save.WorldWriter.Save(game, [], [thing.Id], options: options).Saved);
+        var thing = TestScenes.MovedThenRemovedByTheGame(s, r.Dir);
         string[] data = [r.W.NameOfPrefab(thing.Prefab) ?? thing.Prefab.ToString(System.Globalization.CultureInfo.InvariantCulture)];
 
         await r.W.Save();
