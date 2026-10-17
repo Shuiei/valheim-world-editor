@@ -265,7 +265,7 @@ public sealed partial class ClaudeTools
         string said;
         if (act == PathTool.Action.Cave)
         {
-            said = MainWindow.ApplyCave(s, path, brush, only, label);
+            said = MainWindow.ApplyCave(s, path, brush, only, label).English;
         }
         else
         {
@@ -277,7 +277,7 @@ public sealed partial class ClaudeTools
                 return (t, rect);
             });
             said = touched.Count == 0 ? "Nothing changed along the line."
-                : $"{PathTool.Label(act)} along {PathTool.Length(path.Curve()):0} m: {touched.Count} ground point(s).{(clamped ? " Part of it reached the game's ±8 m limit." : "")}";
+                : $"{PathTool.Label(act).English} along {PathTool.Length(path.Curve()):0} m: {touched.Count} ground point(s).{(clamped ? " Part of it reached the game's ±8 m limit." : "")}";
         }
         _w.AfterClaudeEdit(said);
         return said + " Now pending: " + Pending();

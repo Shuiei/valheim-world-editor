@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.10 — unreleased
+
+### Changed
+- **The Path and Cave tools come from the language catalogue.** The Path panel's actions, rows, cave presets and
+  roofs, the line's length, and what Apply says (and its History step) show in the language chosen in Settings. In
+  English nothing changes; Claude's dig_path is still answered in English.
+
 ## v1.47.9 — unreleased
 
 ### Changed
