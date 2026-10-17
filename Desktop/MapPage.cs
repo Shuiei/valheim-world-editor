@@ -575,20 +575,26 @@ public sealed partial class MapPage : IDisposable
         {
             return;
         }
-        var (z, d, a, r) = _session.Pending;
-        var parts = new[]
-        {
-            z > 1 ? Lang.T("map.pending.zones.many", z) : z == 1 ? Lang.T("map.pending.zones.one") : "",
-            d > 0 ? Lang.T("save.count.deleted", d) : "",
-            a > 0 ? Lang.T("save.count.added", a) : "",
-            r > 0 ? Lang.T("save.count.resets", r) : "",
-        }.Where(p => p != "").ToList();
-        string list = string.Join(", ", parts);
-        Pending.Text = parts.Count == 0
-            ? (_session.IsLive ? Lang.T("map.pending.allApplied") : Lang.T("map.pending.allSaved"))
-            : _session.IsLive ? Lang.T("map.pending.notApplied", list) : Lang.T("map.pending.notSaved", list);
-        SaveButton.IsEnabled = DiscardButton.IsEnabled = parts.Count > 0;
+        var pending = _session.Pending;
+        Pending.Text = PendingText(pending, _session.IsLive);
+        SaveButton.IsEnabled = DiscardButton.IsEnabled = pending != default;
         Map.RequestNextFrameRendering();
+    }
+
+    /// <summary>
+    /// The pending line: everything saved (or applied, live), or what is not yet.
+    /// </summary>
+    /// <param name="p">What is waiting: zones of ground, objects deleted and added, zones marked for reset.</param>
+    /// <param name="live">A live world (applied rather than saved).</param>
+    internal static string PendingText((int Zones, int Deleted, int Added, int Resets) p, bool live)
+    {
+        string zones = p.Zones > 1 ? Lang.T("map.pending.zones.many", p.Zones) : p.Zones == 1 ? Lang.T("map.pending.zones.one") : "";
+        string list = MainWindow.PendingList(zones, p.Deleted, p.Added, p.Resets);
+        if (list.Length == 0)
+        {
+            return live ? Lang.T("map.pending.allApplied") : Lang.T("map.pending.allSaved");
+        }
+        return live ? Lang.T("map.pending.notApplied", list) : Lang.T("map.pending.notSaved", list);
     }
 
     /// <summary>
@@ -765,7 +771,7 @@ public sealed partial class MapPage : IDisposable
     /// </summary>
     /// <param name="res">The search's results (something found).</param>
     /// <param name="what">What was searched: "kinds", "items" or "texts".</param>
-    private static string Found(WorldSearch.Result res, string what)
+    internal static string Found(WorldSearch.Result res, string what)
     {
         var counts = res.Counts.OrderByDescending(c => c.Value).ToList();
         var shown = counts.Take(12).Select(c => Lang.T("map.msg.count", c.Value, c.Key));

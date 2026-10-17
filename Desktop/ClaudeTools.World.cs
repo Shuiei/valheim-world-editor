@@ -48,7 +48,7 @@ public sealed partial class ClaudeTools
         WorldSearch.Result res;
         try
         {
-            res = await Task.Run(() => WorldSearch.Search(world.World, world.Edits, query, what));
+            res = await Task.Run(() => SearchFiles(world.World, world.Edits, query, what));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

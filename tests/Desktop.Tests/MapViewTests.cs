@@ -12,8 +12,11 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class MapViewTests
 {
-    [AvaloniaFact]
-    public async Task AWorldMapThatCannotBeBuiltIsSaid()
+    /// <summary>
+    /// What the map says when it shows the test world and its build fails ("a broken zone"): the building status, then
+    /// the failure. <paramref name="check"/> looks at the map once both are said.
+    /// </summary>
+    internal static async Task<List<string>> FailedBuildSays(Action<MapView>? check = null)
     {
         string dir = Fixtures.CopyFixture();
         try
@@ -22,27 +25,35 @@ public class MapViewTests
             using var map = new MapView { BuildGlobal = _ => throw new InvalidDataException("a broken zone") };
             var said = new List<string>();
             map.Status += said.Add;
-            var stdout = Console.Out;
-            using var output = new StringWriter();
-            try
-            {
-                Console.SetOut(TextWriter.Synchronized(output));
-                map.Show(session);
-                await TestWindows.Until(() => said.Count == 2);
-            }
-            finally
-            {
-                Console.SetOut(stdout);
-            }
-            Assert.Equal(["Building the world map (same as the game does)…", "Could not build the world map: a broken zone"], said);
-            Assert.False(map.Ready);
-            // The details go to the log.
-            Assert.Contains("World map: could not build it: System.IO.InvalidDataException: a broken zone", output.ToString());
+            map.Show(session);
+            await TestWindows.Until(() => said.Count == 2);
+            check?.Invoke(map);
+            return said;
         }
         finally
         {
             Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
         }
+    }
+
+    [AvaloniaFact]
+    public async Task AWorldMapThatCannotBeBuiltIsSaid()
+    {
+        var stdout = Console.Out;
+        using var output = new StringWriter();
+        List<string> said;
+        try
+        {
+            Console.SetOut(TextWriter.Synchronized(output));
+            said = await FailedBuildSays(map => Assert.False(map.Ready));
+        }
+        finally
+        {
+            Console.SetOut(stdout);
+        }
+        Assert.Equal(["Building the world map (same as the game does)…", "Could not build the world map: a broken zone"], said);
+        // The details go to the log.
+        Assert.Contains("World map: could not build it: System.IO.InvalidDataException: a broken zone", output.ToString());
     }
 
     [AvaloniaFact]

@@ -113,17 +113,7 @@ public partial class MainWindow
         BuildPanel.Folder = () => Blueprints.Status.Folder;
         BuildPanel.OpenAsked += async path => await OpenWorkshop(path);
         BuildPanel.AddAsked += path => AddToWorkshop(path, null);
-        BuildPanel.Dungeon.PlotAsked += async (settings, result, add) =>
-        {
-            try
-            {
-                await GeneratedOntoPlot(settings, result, add);
-            }
-            catch (Exception ex)
-            {
-                Msg("workshop.msg.dungeonFailed", ex.Message);
-            }
-        };
+        BuildPanel.Dungeon.PlotAsked += async (settings, result, add) => await PlotDungeon(settings, result, add);
         BuildPanel.ImportAsked += async () =>
         {
             if (await Blueprints.PickFile() is string file && Blueprints.Import(file) != null)
@@ -131,6 +121,24 @@ public partial class MainWindow
                 BuildPanel.RenderLibrary();
             }
         };
+    }
+
+    /// <summary>
+    /// The Dungeon panel's generated dungeon onto the plot, alone or added to what is there; what goes wrong is said.
+    /// </summary>
+    /// <param name="settings">What it was made from.</param>
+    /// <param name="result">The dungeon.</param>
+    /// <param name="add">Added to the plot (true), or alone on a new one.</param>
+    internal async Task PlotDungeon(DungeonGen.Settings settings, DungeonGen.Result result, bool add)
+    {
+        try
+        {
+            await GeneratedOntoPlot(settings, result, add);
+        }
+        catch (Exception ex)
+        {
+            Msg("workshop.msg.dungeonFailed", ex.Message);
+        }
     }
 
     /// <summary>
