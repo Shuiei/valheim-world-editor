@@ -14,16 +14,11 @@ namespace TerrainEditor.Desktop.Tests;
 public sealed class MainWindowPathLangTests
 {
     /// <summary>
-    /// A shown window, in the pseudo language already, editing a flat 2 × 2 zone area (ground at 30 m) with these
-    /// objects, and a line across its middle.
+    /// A window editing a flat area with these objects (TestWindows.Editing) and a line across its middle.
     /// </summary>
     private static (MainWindow W, EditSession S) Open(params WorldScene.Thing[] things)
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2, things);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var (w, s) = TestWindows.Editing(things);
         w.View.Path.Points.AddRange([new Vector2(20, 64), new Vector2(108, 64)]);
         return (w, s);
     }
