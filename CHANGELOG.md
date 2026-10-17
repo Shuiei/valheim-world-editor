@@ -9,8 +9,8 @@ the plugin is unchanged in versions without that part.
 ### Changed
 - **The world map page comes from the language catalogue.** Its buttons and switches, what is waiting to be saved,
   the live players' line, the picked spot, the search and its results' counts, the zone filter with its messages and
-  question, the edited zones and the map's own status show in the language chosen in Settings. In English nothing
-  changes; the world's, biomes' and objects' names stay as they are.
+  question, the edited zones and the map's own status show in the language chosen in Settings. The biomes' names come
+  from the catalogue too. In English nothing changes; the world's and objects' names stay as they are.
 
 ## v1.47.18 — unreleased
 

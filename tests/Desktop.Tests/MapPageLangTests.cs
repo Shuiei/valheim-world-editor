@@ -1,6 +1,5 @@
 using Avalonia.Headless.XUnit;
 using TerrainEditor.App;
-using ValheimGen;
 using WorldEditor.Tests;
 using Xunit;
 
@@ -15,14 +14,12 @@ namespace TerrainEditor.Desktop.Tests;
 public sealed class MapPageLangTests
 {
     /// <summary>
-    /// The names that are data on the page: the brand title's words, the world's name and seed, the biomes' names
-    /// (the map's own and the zone filter's), and what a search found (kinds, items, the texts that matched).
+    /// The names that are data on the page: the brand title's words, the world's name and seed, and what a search found
+    /// (kinds, items, the texts that matched). Biome names come from the catalogue.
     /// </summary>
     private static List<string> Data(MainWindow w, WorldSearch.Result found) =>
     [
         "Valheim", "World Editor", w.World!.World.Name, w.World.World.SeedName,
-        .. Enum.GetValues<Heightmap.Biome>().Select(NewWorldPage.Name),
-        .. ZoneFilter.BiomeChoices.Select(b => b.Name),
         .. found.Counts.Keys,
         .. found.Hits.Select(h => h.Name),
         .. found.Hits.Select(h => h.Match ?? ""),
@@ -43,6 +40,8 @@ public sealed class MapPageLangTests
             m.Tell = t => { told.Add(t); return Task.CompletedTask; };
             m.Confirm = q => { told.Add(q); return Task.FromResult(false); };
             m.Pick(0, 0);
+            // The picked zone's biome is the catalogue's name, inside the zone's line.
+            Assert.Contains(PseudoLang.Wrap(ZoneFilter.BiomeName(w.World!.Terrain.BiomeAt(0, 0)).English), m.PickTitle.Text, StringComparison.Ordinal);
             m.SearchBox.Text = "e";
             await m.Search();
             var found = WorldSearch.Search(w.World!.World, w.World.Edits, "e", "kinds");

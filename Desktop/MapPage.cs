@@ -376,7 +376,7 @@ public sealed partial class MapPage : IDisposable
             biomes,
             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { NoBuildBox, DistBox, new TextBlock { Text = Lang.T("map.label.zones"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } },
             NoEditBox, OnlyGenBox,
-            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { new TextBlock { Text = Lang.T("map.label.fromCentre"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, RMinBox, new TextBlock { Text = Lang.T("map.label.to"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, RMaxBox, new TextBlock { Text = Lang.T("map.label.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } },
+            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { new TextBlock { Text = Lang.T("map.label.fromCentre"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, RMinBox, new TextBlock { Text = Lang.T("map.label.to"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, RMaxBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } },
             GroundBox,
             new WrapPanel { Children = { Spaced(ShowMatchButton), Spaced(MarkButton), Spaced(UnmarkButton) } },
             ZoneInfo);
@@ -417,7 +417,7 @@ public sealed partial class MapPage : IDisposable
                         Meta,
                         _liveBox,
                         _changesBox,
-                        H2(Lang.T("map.head.map")),
+                        H2(Lang.T("top.label.map")),
                         new StackPanel { Children = { BuildingsBox, RuinsBox, EditedBox, PaintBox, GridBox, CloudsBox } },
                         _pickBox,
                         new TextBlock { Text = Lang.T("map.hint.click"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
@@ -538,7 +538,7 @@ public sealed partial class MapPage : IDisposable
             ? Lang.T("map.meta.live", w.Name, session.Label, w.SeedName, w.ObjectCount)
             : Lang.T("map.meta.file", w.Name, w.SeedName, w.SaveNumber, w.ObjectCount, w.ChunkCount);
         _liveBox.IsVisible = session.IsLive;
-        SaveButton.Content = session.IsLive ? Lang.T("map.label.applyLive") : Lang.T("map.label.save");
+        SaveButton.Content = session.IsLive ? Lang.T("save.label.apply") : Lang.T("map.label.save");
         SaveButton.Tip(session.IsLive ? "map.apply" : "map.save");
         UpdatePending();
         FillEdited();
@@ -579,9 +579,9 @@ public sealed partial class MapPage : IDisposable
         var parts = new[]
         {
             z > 1 ? Lang.T("map.pending.zones.many", z) : z == 1 ? Lang.T("map.pending.zones.one") : "",
-            d > 0 ? Lang.T("map.pending.deleted", d) : "",
-            a > 0 ? Lang.T("map.pending.added", a) : "",
-            r > 0 ? Lang.T("map.pending.reset", r) : "",
+            d > 0 ? Lang.T("save.count.deleted", d) : "",
+            a > 0 ? Lang.T("save.count.added", a) : "",
+            r > 0 ? Lang.T("save.count.resets", r) : "",
         }.Where(p => p != "").ToList();
         string list = string.Join(", ", parts);
         Pending.Text = parts.Count == 0
@@ -659,7 +659,7 @@ public sealed partial class MapPage : IDisposable
     {
         Spot = (zx, zz);
         Target = null;
-        string biome = _session != null ? NewWorldPage.Name(_session.Terrain.BiomeAt(zx * 64f, zz * 64f)) : "";
+        string biome = _session != null ? ZoneFilter.BiomeName(_session.Terrain.BiomeAt(zx * 64f, zz * 64f)).Shown : "";
         PickTitle.Text = Lang.T("map.label.zone", zx, zz, biome);
         _pickBox.IsVisible = true;
         ShowChosen();
@@ -687,7 +687,7 @@ public sealed partial class MapPage : IDisposable
             return;
         }
         var (zx, zz) = Save.ChunkMath.SectorOf(x, z);
-        Cursor.Text = Lang.T("map.label.cursor", x, z, zx, zz, NewWorldPage.Name(_session.Terrain.BiomeAt(x, z)));
+        Cursor.Text = Lang.T("map.label.cursor", x, z, zx, zz, ZoneFilter.BiomeName(_session.Terrain.BiomeAt(x, z)).Shown);
     }
 
     // ---- Search: every object of the world by kind, items in containers, or texts.
