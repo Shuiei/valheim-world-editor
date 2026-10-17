@@ -213,7 +213,7 @@ public sealed class AreaPanel
     /// <summary>Import: puts the picture read into the ground (see <see cref="PutPicture"/>).</summary>
     internal Button PutButton { get; } = new Button { Content = "Put it into the ground", FontSize = 12 }.Classed("primary");
     /// <summary>Import: drops the picture read.</summary>
-    internal Button CancelPictureButton { get; } = new() { Content = "Cancel", FontSize = 12 };
+    internal Button CancelPictureButton { get; } = new() { Content = Lang.T("common.cancel"), FontSize = 12 };
     /// <summary>Import: the picture read and where it is fitted.</summary>
     internal TextBlock PictureInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
     /// <summary>The import rows, shown once a picture is read.</summary>

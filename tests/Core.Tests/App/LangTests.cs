@@ -9,8 +9,8 @@ namespace WorldEditor.Tests;
 /// The app's texts by language (Lang): the English catalogue carried inside, a text with values put in, a language
 /// taken from the user's lang folder over English (its broken texts left out), Claude's texts kept in English, a shown
 /// text's English found, the computer's language picked, and the catalogues checked against the code: every key the
-/// code asks for is in English, every English text is asked for, every translation matches the English. It changes the
-/// language in use, so it runs alone.
+/// code asks for is in English, every English text is asked for, formats with its values and has one key, every
+/// translation matches the English. It changes the language in use, so it runs alone.
 /// </summary>
 [Collection("DataDir")]
 public sealed partial class LangTests : IDisposable
@@ -177,9 +177,58 @@ public sealed partial class LangTests : IDisposable
         Assert.True(Lang.SamePlaces("a {{literal}}", "un {{littéral}}"));
     }
 
-    /// <summary>A key asked for in the code: Lang.T("key"…).</summary>
-    [GeneratedRegex("""Lang\.T\("([^"]+)"[,)]""")]
+    /// <summary>
+    /// A key asked for in the code: Lang.T("key"…), Lang.En("key"…), and the status bar's messages in two languages,
+    /// Said.Of("key"…) and Msg("key"…).
+    /// </summary>
+    [GeneratedRegex("""(?:Lang\.(?:T|En)|Said\.Of|\bMsg)\("([^"]+)"[,)]""")]
     private static partial Regex Asked();
+
+    // Every English text can be shown as the code asks for it: one with places takes as many values as its highest
+    // place + 1 (no stray brace, no broken place: the values here are numbers, which every format takes); one without
+    // is shown as it is, so it must not hold a doubled brace, which only formatting turns into one.
+    [Fact]
+    public void EveryEnglishTextFormatsWithItsValues()
+    {
+        Assert.All(Lang.English, kv =>
+        {
+            var places = Lang.Places().Matches(kv.Value);
+            if (places.Count == 0)
+            {
+                Assert.False(kv.Value.Contains("{{", StringComparison.Ordinal) || kv.Value.Contains("}}", StringComparison.Ordinal), kv.Key);
+                Assert.Equal(kv.Value, Lang.En(kv.Key));
+                return;
+            }
+            int values = places.Max(m => int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture)) + 1;
+            object?[] dummies = [.. Enumerable.Range(0, values).Select(i => (object?)(i + 0.5))];
+            // A stray brace or a broken place throws here.
+            Assert.NotEmpty(Lang.En(kv.Key, dummies));
+        });
+    }
+
+    // Stacked changes each add their own block of texts: two adding the same key would leave one text unused (the
+    // last one counts), so a key is given once.
+    [Fact]
+    public void NoKeyIsGivenTwice()
+    {
+        string repo = Path.Combine(Fixtures.Root, "..", "..");
+        ReadOnlySpan<byte> json = File.ReadAllBytes(Path.Combine(repo, "Core", "Lang", "en.json"));
+        if (json.StartsWith("\uFEFF"u8))
+        {
+            json = json[3..];
+        }
+        var reader = new Utf8JsonReader(json, new JsonReaderOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
+        var seen = new HashSet<string>();
+        var twice = new List<string>();
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.PropertyName && reader.CurrentDepth == 1 && !seen.Add(reader.GetString()!))
+            {
+                twice.Add(reader.GetString()!);
+            }
+        }
+        Assert.True(twice.Count == 0, "Keys given twice in en.json: " + string.Join(", ", twice));
+    }
 
     [Fact]
     public void TheCataloguesMatchTheCodeAndTheEnglish()

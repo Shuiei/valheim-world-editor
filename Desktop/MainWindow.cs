@@ -342,7 +342,7 @@ public sealed partial class MainWindow : Window
                     await ClaudeServer.Apply(Settings, this);
                 }
             };
-            StartPage.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, "Yes");
+            StartPage.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, Lang.T("common.yes"));
             StartPage.PickFolder = title => Pickers.Folder(StorageProvider, title);
             StartPage.PickFile = title => Pickers.File(StorageProvider, title);
         }
@@ -412,7 +412,7 @@ public sealed partial class MainWindow : Window
             MapPage.SaveRequested += async () => await SaveWorld();
             MapPage.DiscardRequested += async () => await DiscardWorld();
             MapPage.ReloadRequested += async () => await ReloadWorld();
-            MapPage.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, "Yes");
+            MapPage.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, Lang.T("common.yes"));
             MapPage.Tell = text => Dialogs.Tell(this, "Valheim World Editor", text);
         }
         Title = $"{World.World.Name} · Valheim World Editor {BuildInfo.Version}";
@@ -689,7 +689,7 @@ public sealed partial class MainWindow : Window
     {
         if (!await Ask(Lang.T("replay.title"), Lang.T("replay.offer", newest), Lang.T("replay.bring"), Lang.T("replay.notNow")))
         {
-            Say(Lang.T("replay.notNowSaid", newest));
+            Say(Said.Of("replay.notNowSaid", newest));
             return;
         }
         Busy(Lang.T("replay.reading"));
@@ -769,7 +769,7 @@ public sealed partial class MainWindow : Window
     /// </summary>
     internal async Task DiscardWorld()
     {
-        if (World is not { } w || !await Ask("Discard", $"Discard the unsaved changes ({Describe(w.Pending)})? The world is read again{(w.IsLive ? " from the game" : " from disk")}.", "Discard", "Keep them"))
+        if (World is not { } w || !await Ask("Discard", $"Discard the unsaved changes ({Describe(w.Pending)})? The world is read again{(w.IsLive ? " from the game" : " from disk")}.", Lang.T("common.discard"), Lang.T("common.keepThem")))
         {
             return;
         }
@@ -821,7 +821,7 @@ public sealed partial class MainWindow : Window
     internal async Task LeaveWorld()
     {
         if (World is { } w && w.Pending is not (0, 0, 0, 0)
-            && !await Ask("Leave the world", $"{(w.IsLive ? "Not applied" : "Unsaved")}: {Describe(w.Pending)}. Leave the world without {(w.IsLive ? "applying" : "saving")} them?", "Leave anyway", "Stay"))
+            && !await Ask("Leave the world", $"{(w.IsLive ? "Not applied" : "Unsaved")}: {Describe(w.Pending)}. Leave the world without {(w.IsLive ? "applying" : "saving")} them?", Lang.T("common.leaveAnyway"), Lang.T("common.stay")))
         {
             return;
         }
@@ -840,14 +840,49 @@ public sealed partial class MainWindow : Window
     /// waited for.
     /// </summary>
     /// <param name="text">What to say.</param>
-    private void Say(string text)
+    private void Say(string text) => Say(Said.Raw(text));
+
+    /// <summary>
+    /// Says something in the status bar, in the user's language with its English kept for Claude (<c>Msg</c>), and,
+    /// away from the 3D editor, in a dialog too, not waited for.
+    /// </summary>
+    /// <param name="said">What to say, in both languages.</param>
+    private void Say(Said said)
     {
-        MessageText.Text = text;
+        Msg(said);
         if (_pages.Content != _editorPage)
         {
-            _ = Tell(text);
+            _ = Tell(said.Shown);
         }
     }
+
+    /// <summary>
+    /// Puts a message in the status bar: the text of <paramref name="key"/> in the user's language, its English kept for
+    /// Claude (<c>LastSaid</c>).
+    /// </summary>
+    /// <param name="key">The catalogue key, written in full.</param>
+    /// <param name="values">The values for its places.</param>
+    internal void Msg(string key, params object?[] values) => Msg(Said.Of(key, values));
+
+    /// <summary>Puts a message in the status bar, shown in the user's language, its English kept for Claude.</summary>
+    /// <param name="said">The message in both languages.</param>
+    internal void Msg(Said said)
+    {
+        KeptSaid = said;
+        MessageText.Text = said.Shown;
+    }
+
+    /// <summary>The last message put through <c>Msg</c>, in both languages.</summary>
+    private Said KeptSaid { get; set; } = Said.Empty;
+
+    /// <summary>
+    /// The status bar's message in both languages: the one <c>Msg</c> put there, or, when the text was set directly
+    /// (a text that is the same in every language, or not converted yet), that text on both sides.
+    /// </summary>
+    internal Said LastSaid => MessageText.Text is not { } shown ? Said.Empty : shown == KeptSaid.Shown ? KeptSaid : Said.Raw(shown);
+
+    /// <summary>The status bar's message in English: what Claude reads back, whatever language the window shows.</summary>
+    internal string LastMessageEn => LastSaid.English;
 
     /// <summary>
     /// An error no part of the window caught (App): said in the status bar, so the editor stays open with the changes
@@ -1074,7 +1109,7 @@ public sealed partial class MainWindow : Window
         string question = w.Restored!.Replayed
             ? Lang.T("history.replayedAsk", w.Restored.SavedAt.ToString("g", System.Globalization.CultureInfo.CurrentCulture))
             : $"This step was made in an earlier session of the editor (kept {w.Restored.SavedAt:g}). {since} Undoing or redoing it puts the ground and the objects back as they were then, over what changed since.";
-        if (!await Ask("A step from an earlier session", question, "Go ahead", "Cancel"))
+        if (!await Ask("A step from an earlier session", question, "Go ahead", Lang.T("common.cancel")))
         {
             MessageText.Text = "Nothing changed.";
             return false;
@@ -2119,8 +2154,7 @@ public sealed partial class MainWindow : Window
         }
         Dispatcher.UIThread.Post(() =>
         {
-            string said = MessageText.Text ?? "";
-            MessageText.Text = $"{(said != "" ? said + " " : "")}Switched on {string.Join(", ", turned)} in View, so what you placed stays visible.";
+            Msg(LastSaid + Said.Raw($"Switched on {string.Join(", ", turned)} in View, so what you placed stays visible."));
         }, DispatcherPriority.Background);
     }
 
@@ -2507,7 +2541,7 @@ public sealed partial class MainWindow : Window
         Blueprints.Pasting += () => { ViewPanelCard.IsVisible = true; StartPaste(); };
         Blueprints.AskDetails = (start, cost) => Dialogs.AskBlueprint(this, start, cost);
         Blueprints.Models = () => _models;
-        Blueprints.Confirm = text => Dialogs.Ask(this, "Blueprints", text, "Yes");
+        Blueprints.Confirm = text => Dialogs.Ask(this, "Blueprints", text, Lang.T("common.yes"));
         Blueprints.OpenUrl = Launcher.LaunchUriAsync;
         Blueprints.PickFile = () => Pickers.File(StorageProvider, "Import a .blueprint (Homestead, PlanBuild) or .vbuild file",
             new Avalonia.Platform.Storage.FilePickerFileType("Blueprints") { Patterns = BlueprintPatterns });
@@ -2908,7 +2942,7 @@ public sealed partial class MainWindow : Window
             if (WorkshopDirty)
             {
                 e.Cancel = true;
-                if (await Ask("Unsaved building", "The building in the Workshop is not saved as a blueprint. Quit without saving it?", "Quit anyway", "Keep building"))
+                if (await Ask("Unsaved building", "The building in the Workshop is not saved as a blueprint. Quit without saving it?", "Quit anyway", Lang.T("common.keepBuilding")))
                 {
                     _closeAnyway = true;
                     Close();

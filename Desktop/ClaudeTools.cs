@@ -100,7 +100,7 @@ public sealed partial class ClaudeTools
             return why;
         }
         await _w.OpenWorld(() => Task.Run(() => WorldSession.Open(folder)), "Opening the world for Claude…");
-        return _w.World != null ? ToJson(StateOf(_w)) : "Could not open it: " + _w.MessageText.Text;
+        return _w.World != null ? ToJson(StateOf(_w)) : "Could not open it: " + _w.LastMessageEn;
     });
 
     /// <summary>open_area: opens the zones around a world point in 3D (size clamped to 1 to 17 zones).</summary>
@@ -1464,7 +1464,7 @@ public sealed partial class ClaudeTools
             return "Give the blueprint a name.";
         }
         var details = new TerrainEditor.App.Homestead.Details(name.Trim(), description.Trim(), [.. (tags ?? []).Select(t => t.Trim()).Where(t => t.Length > 0)]);
-        return _w.SaveWorkshopAs(details, overwrite, evenIfFalling) is string problem ? problem : _w.MessageText.Text + " " + ToJson(StateOf(_w));
+        return _w.SaveWorkshopAs(details, overwrite, evenIfFalling) is string problem ? problem : _w.LastMessageEn + " " + ToJson(StateOf(_w));
     });
 
     /// <summary>list_blueprints: Homestead's library, filtered by words of the name, creator, description or tags.</summary>
@@ -1507,7 +1507,7 @@ public sealed partial class ClaudeTools
         if (_w.InWorkshop)
         {
             _w.AddToWorkshop(path, x is float ax && z is float az ? new System.Numerics.Vector2(ax, az) : null, turn, label);
-            return _w.MessageText.Text + " Now pending: " + Pending();
+            return _w.LastMessageEn + " Now pending: " + Pending();
         }
         var s = _w.Session!;
         var scene = s.Scene;
@@ -1610,7 +1610,7 @@ public sealed partial class ClaudeTools
                 }
                 _w.PlaceGenerated(settings, result, label);
             }
-            return $"{string.Join(" ", result.Notes)} {_w.MessageText.Text} Now pending: {Pending()}";
+            return $"{string.Join(" ", result.Notes)} {_w.LastMessageEn} Now pending: {Pending()}";
         });
     }
 
@@ -1658,7 +1658,7 @@ public sealed partial class ClaudeTools
             },
             pending = w.World is { } pw ? new { zones = pw.Pending.Zones, added = pw.Pending.Added, deleted = pw.Pending.Deleted } : null,
             canUndo = s?.CanUndo ?? false,
-            message = w.MessageText.Text ?? "",
+            message = w.LastMessageEn,
         };
     }
 }

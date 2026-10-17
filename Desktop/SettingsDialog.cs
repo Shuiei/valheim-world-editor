@@ -176,7 +176,7 @@ public static class SettingsDialog
         foreach (var x in ModExtensions.Offered)
         {
             var box = new CheckBox { Content = $"{x.Mod} · {Path.GetFileName(x.Dll)}", IsChecked = x.State != ModExtensions.Status.Off }.Classed("switch").Tip("settings.extension");
-            ToolTip.SetTip(box, $"{Ui.Tilde(x.Dll)}\nSHA-256 {x.Sha256}");
+            ToolTip.SetTip(box, Lang.T("settings.extensionFile", Ui.Tilde(x.Dll), x.Sha256));
             extensionBoxes.Add((box, x));
             extensions.Children.Add(box);
             string? state = x.State switch

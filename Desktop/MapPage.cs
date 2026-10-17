@@ -70,7 +70,7 @@ public sealed class MapPage : IDisposable
     /// <summary>
     /// Throws away what is waiting.
     /// </summary>
-    internal Button DiscardButton { get; } = new() { Content = "Discard", FontSize = 12 };
+    internal Button DiscardButton { get; } = new() { Content = Lang.T("common.discard"), FontSize = 12 };
     /// <summary>
     /// Live: the players online, or that the game does not answer.
     /// </summary>

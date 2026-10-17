@@ -289,11 +289,11 @@ public partial class MainWindow
             return;
         }
         if (World is { } w && w.Pending is not (0, 0, 0, 0)
-            && !await Ask("Leave the world", $"{(w.IsLive ? "Not applied" : "Unsaved")}: {Describe(w.Pending)}. Leave the world for the Workshop without {(w.IsLive ? "applying" : "saving")} them?", "Leave anyway", "Stay"))
+            && !await Ask("Leave the world", $"{(w.IsLive ? "Not applied" : "Unsaved")}: {Describe(w.Pending)}. Leave the world for the Workshop without {(w.IsLive ? "applying" : "saving")} them?", Lang.T("common.leaveAnyway"), Lang.T("common.stay")))
         {
             return;
         }
-        if (WorkshopDirty && !await Ask("Workshop", "The building on the plot is not saved as a blueprint. Open another anyway?", "Open anyway", "Stay"))
+        if (WorkshopDirty && !await Ask("Workshop", "The building on the plot is not saved as a blueprint. Open another anyway?", "Open anyway", Lang.T("common.stay")))
         {
             return;
         }
@@ -379,7 +379,7 @@ public partial class MainWindow
     /// </summary>
     internal async Task LeaveWorkshop()
     {
-        if (WorkshopDirty && !await Ask("Leave the Workshop", "The building on the plot is not saved as a blueprint. Leave without saving it?", "Leave anyway", "Stay"))
+        if (WorkshopDirty && !await Ask("Leave the Workshop", "The building on the plot is not saved as a blueprint. Leave without saving it?", Lang.T("common.leaveAnyway"), Lang.T("common.stay")))
         {
             return;
         }
@@ -406,7 +406,7 @@ public partial class MainWindow
         }
         RefreshSupport();
         if (LastSupport is { Breaking: > 0 } r
-            && !await Ask("Save blueprint", $"{r.Breaking} piece(s) would fall in game: nothing holds them up enough (pink outlines). Save the blueprint anyway?", "Save anyway", "Keep building"))
+            && !await Ask("Save blueprint", $"{r.Breaking} piece(s) would fall in game: nothing holds them up enough (pink outlines). Save the blueprint anyway?", "Save anyway", Lang.T("common.keepBuilding")))
         {
             return;
         }
