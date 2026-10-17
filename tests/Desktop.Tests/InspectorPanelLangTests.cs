@@ -33,13 +33,15 @@ public sealed class InspectorPanelLangTests
     }
 
     /// <summary>
-    /// What the card shows as it is in every language: the object's and items' names, the values' names, and the
-    /// words of the tips made from them ("text · … · key 123", "Wood × 1 (slot 1, 1)").
+    /// What the card shows as it is in every language: the object's and items' names, the values' names and notes (the
+    /// prefab or item a number names), and the words of the tips made from them ("text · … · key 123", "Wood × 1 (slot
+    /// 1, 1)").
     /// </summary>
     private static string[] Data(InspectorPanel ins, WorldScene scene, int index) =>
     [
         PrefabCatalog.DisplayName(scene.Things[index].Prefab) ?? "",
         .. ins.FieldList.Select(f => f.Name ?? ""),
+        .. ins.FieldList.Select(f => f.Note ?? ""),
         .. ins.Items?.Select(i => i.Name) ?? [],
         .. ins.Stand?.Select(r => r.Name) ?? [],
         "key", "data", "slot",
