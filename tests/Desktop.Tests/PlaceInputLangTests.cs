@@ -30,15 +30,18 @@ public sealed class PlaceInputLangTests
         r.Click(64, 64);
         Assert.StartsWith(PseudoLang.Open.ToString(), r.S.UndoLabel);
         r.Click(64, 64, shift: true);
-        // Zones and grids turned, and placed, with nothing drawn.
+        // Zones and grids turned, and placed, with nothing drawn (the brush's preview dropped with the mode).
         r.T.Mode = PlaceTool.Modes.Zone;
+        r.In.Refresh();
         Assert.True(r.Key(Key.OemPeriod));
         r.In.PlaceShape();
         r.T.Mode = PlaceTool.Modes.Grid;
+        r.In.Refresh();
         Assert.True(r.Key(Key.OemPeriod));
         r.In.PlaceShape();
         // Lines: placed with nothing drawn, a circle and a rectangle clicked, then a line placed.
         r.T.Mode = PlaceTool.Modes.Line;
+        r.In.Refresh();
         r.In.PlaceShape();
         r.T.LineShape = PlaceTool.LineShapes.Circle;
         r.Click(64, 64);
