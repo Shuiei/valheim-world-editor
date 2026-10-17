@@ -122,7 +122,11 @@ public static class BlueprintFormats
             }
             catch (Exception ex) when (ex is FormatException or IndexOutOfRangeException or OverflowException)
             {
-                skipped++;
+                // Said for the first only: a broken file would fill the log; the count is kept.
+                if (skipped++ == 0)
+                {
+                    Log.CaughtBrief(ex, "reading a blueprint line (it and any other unreadable lines are skipped)");
+                }
             }
         }
         if (data.Count > 0 || ruin)

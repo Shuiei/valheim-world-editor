@@ -175,8 +175,9 @@ public static partial class Lang
             _ = string.Format(CultureInfo.InvariantCulture, text, new object?[values]);
             return true;
         }
-        catch (FormatException)
+        catch (FormatException e)
         {
+            Log.CaughtBrief(e, "checking a translated text's places for values (not used)");
             return false;
         }
     }
@@ -210,7 +211,7 @@ public static partial class Lang
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         {
-            Console.WriteLine($"Language: {path} could not be read ({e.Message}); English is shown for it.");
+            Log.Caught(e, $"reading the language catalogue {Path.GetFileName(path)} (English is shown for it)");
             return null;
         }
     }

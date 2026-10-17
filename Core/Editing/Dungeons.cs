@@ -638,7 +638,7 @@ public static class Dungeons
             catch (Exception e) when (e is InvalidDataException or IOException or ArgumentException or FormatException or OverflowException)
             {
                 // Damaged or unreadable: found with no rooms, said in the log, and the others still listed.
-                Console.WriteLine($"Dungeon object {id} ({kind}) at {position} (world version {world.ObjectRefs[id].File.WorldVersion}): room list not read ({e.GetType().Name}: {e.Message}); listed with no rooms.");
+                Log.CaughtBrief(e, $"reading the room list of the dungeon object {id} ({kind}) at {position}, world version {world.ObjectRefs[id].File.WorldVersion} (listed with no rooms)");
             }
             found.Add(new Found(id, kind, position, count));
         }

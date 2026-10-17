@@ -99,8 +99,9 @@ public sealed class CopyView(string prefab, Vector3 position, Vector3 rotation, 
             value = Convert.FromBase64String(text);
             return true;
         }
-        catch (FormatException)
+        catch (FormatException e)
         {
+            Log.CaughtBrief(e, "reading copied bytes (not base64: left out)");
             return false;
         }
     }

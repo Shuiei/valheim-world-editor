@@ -148,6 +148,7 @@ public static partial class GameCatalogues
             {
                 // A bundle that opened but whose files could not be read is closed again at once, with the files read
                 // from it so far (it stayed open until the end of the scan).
+                Log.Caught(e, $"opening the bundle {name} (closed again, not read)");
                 if (file != null)
                 {
                     foreach (var assets in file.loadedAssetsFiles.ToList())
@@ -180,6 +181,7 @@ public static partial class GameCatalogues
                 catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
                 {
                     // Not a bundle.
+                    Log.CaughtBrief(e, $"listing the files in {name} (not a bundle: passed over)");
                 }
             }
         }
@@ -385,6 +387,7 @@ public static partial class GameCatalogues
                 catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException or NullReferenceException)
                 {
                     // A script whose fields are not described: not one of the game's.
+                    Log.CaughtBrief(e, "reading a script's fields (not described: not one of the game's)");
                 }
             }
             return null;
@@ -460,6 +463,7 @@ public static partial class GameCatalogues
             }
             catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException or NullReferenceException)
             {
+                Log.CaughtBrief(e, "making an object's type tree (none: its fields are not read)");
                 return null;
             }
         }

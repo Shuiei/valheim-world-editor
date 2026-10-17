@@ -84,7 +84,7 @@ public static class Tunnel
         }
         catch (Exception e)
         {
-            Console.WriteLine($"tunnel: the port forward could not be stopped ({e.Message}).");
+            Log.Caught(e, "stopping the tunnel's port forward (dropped anyway)");
         }
         try
         {
@@ -92,7 +92,7 @@ public static class Tunnel
         }
         catch (Exception e)
         {
-            Console.WriteLine($"tunnel: the SSH connection could not be closed cleanly ({e.Message}).");
+            Log.Caught(e, "closing the tunnel's SSH connection (dropped anyway)");
         }
         client?.Dispose();
     }
@@ -142,6 +142,8 @@ public static class Tunnel
             host = host[(host.IndexOf('@') + 1)..];
         }
         int port = r.Port > 0 ? r.Port : 22;
+        // None of these goes in the log, whatever fails from here on.
+        Log.Private(host, user, r.Password, r.Passphrase, r.Token, r.Name, r.KeyPath, r.GameFolder);
         if (host.Length == 0 || user.Length == 0)
         {
             return Fail("Enter the server as user@address (the account you log in to the server with).");
@@ -181,7 +183,7 @@ public static class Tunnel
                         }
                         catch (Exception ex) when (KeyUnreadable(ex))
                         {
-                            Console.WriteLine($"tunnel: {Path.GetFileName(k)} skipped, it could not be read ({ex.GetType().Name}).");
+                            Log.CaughtBrief(ex, $"reading the SSH key {Path.GetFileName(k)} (skipped: the password is still tried)");
                         }
                     }
                 }
@@ -189,6 +191,7 @@ public static class Tunnel
         }
         catch (Exception ex) when (KeyUnreadable(ex))
         {
+            Log.Caught(ex, "reading the chosen SSH key file (not connected)");
             return Fail("The key file could not be read: " + ex.Message);
         }
         if (!string.IsNullOrEmpty(r.Password))
@@ -212,6 +215,7 @@ public static class Tunnel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "reading servers.cfg before connecting (not connected)");
             return Fail($"The saved servers could not be read ({ex.Message}): {ServerConfig.FilePath}.");
         }
         var info = new ConnectionInfo(host, port, user, [.. methods]) { Timeout = TimeSpan.FromSeconds(12) };
@@ -239,6 +243,7 @@ public static class Tunnel
         }
         catch (Exception ex)
         {
+            Log.Caught(ex, "connecting to the server over SSH");
             client.Dispose();
             if (changed != null)
             {
@@ -305,6 +310,7 @@ public static class Tunnel
         }
         catch (Exception ex) when (ex is SshException or System.Net.Sockets.SocketException or IOException or ObjectDisposedException or InvalidOperationException)
         {
+            Log.Caught(ex, "opening the tunnel's port forward");
             Shut(client, forward);
             return Fail("The tunnel could not be opened: " + ex.Message);
         }
@@ -375,8 +381,9 @@ public static class Tunnel
             cmd.CommandTimeout = TimeSpan.FromSeconds(15);
             return cmd.Execute();
         }
-        catch
+        catch (Exception e)
         {
+            Log.CaughtBrief(e, "running a check command on the server (no answer)");
             return "";
         }
     }

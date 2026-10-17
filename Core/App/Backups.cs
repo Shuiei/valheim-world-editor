@@ -38,7 +38,7 @@ public static class Backups
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Console.WriteLine($"backups: {parent} could not be read ({ex.Message}).");
+            Log.Caught(ex, "listing a world's backups (none are shown)");
             return [];
         }
     }

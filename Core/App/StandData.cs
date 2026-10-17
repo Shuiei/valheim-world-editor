@@ -221,6 +221,7 @@ public static class StandData
             catch (Exception ex) when (CheckedReads.Damaged(ex))
             {
                 // Kept as the stand's own values say.
+                Log.CaughtBrief(ex, "reading the item a stand holds (damaged: the stand's own values are kept)");
             }
         }
         return new Held(PrefabCatalog.NameOf(hash) ?? I(hash), quality, variant);

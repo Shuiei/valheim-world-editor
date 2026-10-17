@@ -61,8 +61,14 @@ public sealed class BlueprintStoreTests : IDisposable
         store.Save("Kept", null, null, Clip(1, ground: false));
         string locked = store.Save("Locked", null, null, Clip(1, ground: false));
         File.SetUnixFileMode(Path.Combine(_dir, locked + ".json"), UnixFileMode.None);
+        using var log = Log.Listen();
 
         Assert.Equal("Kept", Assert.Single(store.List()).Name);
+        // Said in the log, without the folder's path (the error's message has it).
+        string line = Assert.Single(log.Lines);
+        Assert.StartsWith("Caught at BlueprintStore.cs:", line);
+        Assert.Contains("while listing a blueprint (left out of the list): System.UnauthorizedAccessException: ", line);
+        Assert.DoesNotContain(_dir, line);
     }
 
     // Names Windows keeps for devices get a "_" (saving "con" failed there), within the 80 characters, and a cut ending

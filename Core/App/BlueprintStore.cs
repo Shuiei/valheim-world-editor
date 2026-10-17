@@ -69,7 +69,7 @@ public sealed class BlueprintStore(string directory)
             catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or InvalidOperationException or FormatException)
             {
                 // Not a blueprint, a half-written file or one that cannot be read: left out of the list.
-                Console.WriteLine($"blueprints: {Path.GetFileName(file)} left out of the list ({ex.Message}).");
+                Log.Caught(ex, "listing a blueprint (left out of the list)");
             }
         }
         return [.. list.OrderBy(b => b.Name, StringComparer.OrdinalIgnoreCase)];

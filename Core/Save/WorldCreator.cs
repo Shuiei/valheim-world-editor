@@ -299,7 +299,7 @@ public static class WorldCreator
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            Console.WriteLine($"New world: what was written in {folder} could not all be taken away after the failure ({e.Message}).");
+            Log.Caught(e, "taking away what a new world that failed had written (some is left)");
         }
     }
 

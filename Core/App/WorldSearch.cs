@@ -132,6 +132,7 @@ public static class WorldSearch
             }
             catch (Exception ex) when (CheckedReads.Damaged(ex))
             {
+                Log.CaughtBrief(ex, "reading an object while searching the world (damaged: passed over)");
                 continue;
             }
             string name = PrefabCatalog.DisplayName(z.Prefab) ?? z.Prefab.ToString(CultureInfo.InvariantCulture);
@@ -148,6 +149,7 @@ public static class WorldSearch
                 }
                 catch (Exception ex) when (CheckedReads.Damaged(ex))
                 {
+                    Log.CaughtBrief(ex, "reading a container's items while searching the world (damaged: passed over)");
                     continue;
                 }
                 foreach (var g in inv.Items.GroupBy(i => PrefabCatalog.NameOf(i.Prefab) ?? "?").Where(g => Matches(g.Key)))

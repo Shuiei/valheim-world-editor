@@ -173,7 +173,7 @@ public static class LocalGame
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Console.WriteLine($"my game: {plugins} could not be searched for the plugin ({ex.Message}).");
+            Log.Caught(ex, "searching a plugins folder for WorldEditorBridge (taken as not there)");
             return false;
         }
     }
@@ -195,6 +195,12 @@ public static class LocalGame
         }
         return new Bridge(path, where, int.TryParse(Get("Port"), out int p) ? p : 5182, token);
     }
+
+    /// <summary>
+    /// Why each port's last probe failed, by port: a failure is logged when it differs from the last one (the start page
+    /// asks every 2.5 seconds), and an answer clears it.
+    /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, string> ProbeFailures = new();
 
     /// <summary>One client for every probe, with the 1.5 second wait.</summary>
     private static readonly HttpClient Prober = new() { Timeout = TimeSpan.FromSeconds(1.5) };
@@ -224,10 +230,18 @@ public static class LocalGame
             using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
             string world = doc.RootElement.TryGetProperty("world", out var w) ? w.GetString() ?? "" : "";
             int players = doc.RootElement.TryGetProperty("players", out var pl) && pl.TryGetInt32(out int n) ? n : 0;
+            ProbeFailures.TryRemove(b.Port, out _);
             return new Running(b, world, players);
         }
-        catch
+        catch (Exception e)
         {
+            // A bridge that does not answer is not running here. Said when it changes, not every 2.5 seconds.
+            string why = e.GetType().FullName + ": " + e.Message;
+            if (!ProbeFailures.TryGetValue(b.Port, out string? last) || last != why)
+            {
+                ProbeFailures[b.Port] = why;
+                Log.CaughtBrief(e, $"asking the bridge on port {b.Port} whether the game runs (not running there; said again only when this changes)");
+            }
             return null;
         }
     }

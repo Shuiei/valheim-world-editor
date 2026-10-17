@@ -78,6 +78,7 @@ public static class Characters
                 // A file that cannot be read (another user's, locked) is passed over.
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
+                    Log.CaughtBrief(ex, "reading a character file (passed over)");
                 }
             }
         }

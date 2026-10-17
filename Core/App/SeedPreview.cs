@@ -474,7 +474,8 @@ public static class SeedPreview
         }
         catch (OperationCanceledException)
         {
-            // Stopped: what was found so far.
+            // Stopped: what was found so far. Not an error: a plain line.
+            Console.WriteLine($"Seed search: stopped after {Volatile.Read(ref done)} of {count} seeds.");
         }
         lock (found)
         {

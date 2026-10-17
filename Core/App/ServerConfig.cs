@@ -113,6 +113,11 @@ public static class ServerConfig
                     case "gamefolder": cur.GameFolder = opt; break;
                 }
             }
+            foreach (Server s in list)
+            {
+                // Kept out of the log, whatever fails later.
+                Log.Private(s.Host, s.User, s.Password, s.Token, s.KeyFile, s.GameFolder);
+            }
             return [.. list.Where(s => s.Host.Length > 0 && s.User.Length > 0)];
         }
     }
