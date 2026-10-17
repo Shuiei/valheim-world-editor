@@ -19,8 +19,9 @@ internal static class DungeonDresserSupport
     /// </summary>
     /// <param name="style">The style's name.</param>
     /// <param name="farEndClear">
-    /// Also no doorway within six metres of the far end's spot (0, HalfD - 2), so that furniture placed there is not
-    /// blocked by a doorway's clear space; a deep room's far wall may have a doorway.
+    /// Also no doorway within six metres of the far end's spots (the middle and both far corners, see
+    /// <see cref="FarEndIsClear"/>), so that furniture placed there is not blocked by a doorway's clear space; a wide
+    /// room's side walls may have a doorway near its far corners.
     /// </param>
     public static DressingRoom ClearRoom(string style, bool farEndClear = false)
     {
@@ -35,13 +36,29 @@ internal static class DungeonDresserSupport
             {
                 var f = new DungeonDresser.Frame(sp, mat, plan.Levels[sp.Level]);
                 if (f.HalfA >= 5 && f.HalfD >= 5 && f.Mouths.All(m => Vector2.Distance(new(m.X, m.Z), new(f.Cx, f.Cz)) > 8)
-                    && (!farEndClear || f.Mouths.All(m => Vector2.Distance(new(f.Local(m.X, m.Z).U, f.Local(m.X, m.Z).V), new(0, f.HalfD - 2)) > 6)))
+                    && (!farEndClear || FarEndIsClear(f)))
                 {
                     return new DressingRoom(f, mat, biome, st, s);
                 }
             }
         }
         throw new InvalidOperationException($"No clear room in the {style} style in 60 seeds.");
+    }
+
+    /// <summary>
+    /// Whether no doorway is within six metres of the far end's spots: the middle of the far end (0, HalfD - 2) and both
+    /// far corners (±(HalfA - 1), HalfD - 2), where the quarters and the hall put their furniture.
+    /// </summary>
+    /// <param name="f">The room's frame.</param>
+    /// <returns>True when the far end's spots are clear of doorways.</returns>
+    public static bool FarEndIsClear(DungeonDresser.Frame f)
+    {
+        Vector2[] spots = [new(0, f.HalfD - 2), new(-(f.HalfA - 1), f.HalfD - 2), new(f.HalfA - 1, f.HalfD - 2)];
+        return f.Mouths.All(m =>
+        {
+            var (u, v) = f.Local(m.X, m.Z);
+            return spots.All(s => Vector2.Distance(new(u, v), s) > 6);
+        });
     }
 
     /// <summary>Dresses a room as the hall variant named (see <c>DungeonDresser.DressHallAs</c>) and returns the pieces placed.</summary>
