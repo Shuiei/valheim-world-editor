@@ -2,6 +2,7 @@ using System.Numerics;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.LogicalTree;
+using TerrainEditor.App;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -10,8 +11,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// The 3D editor's area bar and live game in another language (the made-up one: PseudoLang): the area's controls,
 /// Discard, Reload and Auto, the locations note, the area's line under the title, how it loaded, the live players and
 /// the New world page's title show only catalogue texts; a message is shown in the language while Claude reads its
-/// English; and every question they ask (Discard, the world read again, Reload, Apply over the game's changes) is
-/// asked in it.
+/// English; every question they ask (Discard, the world read again, Reload, Apply over the game's changes) is asked
+/// in it; and an area or a world that cannot be opened is said in it.
 /// </summary>
 [Collection("DataDir")]
 public sealed class MainWindowEditorLangTests
@@ -75,6 +76,35 @@ public sealed class MainWindowEditorLangTests
         Assert.Equal(PseudoLang.Wrap($"Valheim World Editor {BuildInfo.Version} · A new world"), w.Title);
         w.NewWorld!.Dispose();
         w.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task OpenFailuresAreSaidInTheLanguage()
+    {
+        using var pseudo = new PseudoLang();
+        using (var r = new WorldWindowRun())
+        {
+            // An area that cannot be loaded: the status bar in the language, Claude's message in English.
+            await r.Open();
+            await r.W.EditBlock(0, 0, -1, -1);
+            Assert.StartsWith("⟦Could not open that area: ", r.Said);
+            Assert.StartsWith("Could not open that area: ", r.W.LastMessageEn);
+
+            // From the map, with what was said before the failure: both in the language, in a dialog.
+            r.W.ShowMap();
+            await r.W.EditBlock(0, 0, -1, -1, context: Said.Of("top.msg.reopenFailed"));
+            Assert.StartsWith(
+                PseudoLang.Wrap("The world was read again, but the area could not be opened again.") + " ⟦Could not open that area: ",
+                Assert.Single(r.Told));
+        }
+
+        // A world that cannot be opened: the start page says why in the language.
+        using (var r = new WorldWindowRun())
+        {
+            await r.W.OpenWorld(() => Task.FromException<WorldSession>(new InvalidDataException("not a world")), "Opening…");
+            var texts = r.W.StartPage!.View.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text);
+            Assert.Contains(PseudoLang.Wrap("Could not open the world: not a world"), texts);
+        }
     }
 
     /// <summary>The window's questions noted (title, text and both buttons) and answered from the run's queue.</summary>
