@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.79 — unreleased
+
+### Fixed
+- **The warning sign by a generated dungeon's locked boss gate was sunk in the wall.** It was placed 4 cm from the
+  doorway's middle, which lies on the wall's centre line, so it sat about half a metre deep in a stone wall (on the
+  arena's side). It now hangs on the antechamber's side, on the wall's inner face.
+
 ## v1.45.78 — unreleased
 
 ### Fixed
