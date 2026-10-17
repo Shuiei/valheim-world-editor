@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.96 — unreleased
+
+### Changed
+- **Long paths apply without freezing the editor.** Applying a Path action tested every grid point around the line
+  against every metre of it: a 1.5 km diagonal path in a 17 × 17 area made about 1.5 billion tests, and the editor
+  froze for seconds. Each metre of the line now looks only at the points near it, with the same result. A Cave also
+  checked every tree and rock against every metre of the line; it now looks only near each one.
+
 ## v1.45.95 — unreleased
 
 ### Changed
