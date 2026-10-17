@@ -49,7 +49,7 @@ public class SelectToolTests
             (3, V(-118, 29, 182), V(182, 31, -118)),
         ]);
         string? said = null;
-        v.SelectTool.Message += (t, _) => said = t;
+        v.SelectTool.Message += (t, _) => said = t.Shown;
         // Keeping their height (not put on the ground first), the trees drop from 40 m.
         v.SelectTool.OnGround = false;
         v.Select([0, 1]);

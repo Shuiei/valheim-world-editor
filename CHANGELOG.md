@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.11 — unreleased
+
+### Changed
+- **The Select and Paste tools come from the language catalogue.** The Select panel (its buttons, exact place and
+  saved selections), the Paste panel, the messages of selecting, moving, dropping, deleting, copying, cutting and
+  pasting, Make player built and the Built by choices, and the questions they ask show in the language chosen in
+  Settings. In English nothing changes; the name a mod gives its linked objects ("vehicle") stays as the mod wrote it.
+
 ## v1.47.10 — unreleased
 
 ### Changed

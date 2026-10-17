@@ -28,8 +28,8 @@ public sealed class SelectTool
         _commitTimer.Tick += (_, _) => Commit();
     }
 
-    /// <summary>What to tell the user ("" clears the line; the flag (warn): shown as a problem).</summary>
-    public event Action<string, bool>? Message;
+    /// <summary>What to tell the user, in both languages (the flag (warn): shown as a problem).</summary>
+    public event Action<Said, bool>? Message;
     /// <summary>Put each moved object on the ground where it ends up (pieces as one block: see GroundBlock).</summary>
     public bool OnGround { get; set; } = true;
     /// <summary>Snap moved building pieces to the pieces around.</summary>
@@ -174,7 +174,7 @@ public sealed class SelectTool
         {
             if (runestones > 0)
             {
-                Message?.Invoke("Runestones cannot be moved or turned, only deleted (the game builds them from their location).", true);
+                Message?.Invoke(Said.Of("select.msg.runestones"), true);
             }
             return null;
         }
@@ -348,7 +348,10 @@ public sealed class SelectTool
         }
         _view.SetPreviews(shown);
         float moved = MathF.Sqrt(m.Dx * m.Dx + m.Dz * m.Dz);
-        Message?.Invoke($"Moving {m.Items.Count} object(s){WholeGroups(m.Groups, m.Noun)}: {moved:0.0} m{(m.Turn != 0 ? $", turned {m.Turn:0.#}°" : "")}{(m.Dy != 0 ? $", {(m.Dy > 0 ? "+" : "")}{m.Dy:0.00} m" : "")}{(m.Snapped != null ? $" · snapped to {m.Snapped}" : "")}", false);
+        Message?.Invoke(Said.Of("select.msg.moving", m.Items.Count, WholeGroups(m.Groups, m.Noun, deleted: false), moved,
+            m.Turn != 0 ? Said.Of("select.msg.turned", m.Turn) : Said.Empty,
+            m.Dy != 0 ? Said.Of("select.msg.lifted", m.Dy) : Said.Empty,
+            m.Snapped != null ? Said.Of("select.msg.snapped", m.Snapped) : Said.Empty), false);
     }
 
     /// <summary>
@@ -381,22 +384,33 @@ public sealed class SelectTool
         List<int> copies;
         try
         {
-            copies = session.Move(moves, $"Moved {moves.Count}");
+            copies = session.Move(moves, Lang.T("history.undo.moved", moves.Count));
         }
         finally
         {
             ClaudeTools.Acting.Value = acting;
         }
         _view.Select(copies);
-        Message?.Invoke($"Moved {copies.Count} object(s){WholeGroups(m.Groups, m.Noun)}. Ctrl+Z puts them back.", false);
+        Message?.Invoke(Said.Of("select.msg.moved", copies.Count, WholeGroups(m.Groups, m.Noun, deleted: false)), false);
     }
 
-    /// <summary>What a message adds when whole linked groups go along ("" when none).</summary>
+    /// <summary>What a message adds when whole linked groups go along (empty when none): one clause per case.</summary>
     /// <param name="count">How many groups.</param>
     /// <param name="noun">What a group is called ("vehicle").</param>
-    /// <param name="verb">What their parts never do alone.</param>
-    private static string WholeGroups(int count, string noun, string verb = "move") =>
-        count == 0 ? "" : $" ({(count == 1 ? $"a whole {noun}" : $"{count} whole {noun}s")}: a {noun}'s parts never {verb} alone)";
+    /// <param name="deleted">They were deleted (their parts never go alone) rather than moved.</param>
+    private static Said WholeGroups(int count, string noun, bool deleted) => count switch
+    {
+        0 => Said.Empty,
+        1 => Said.Of(deleted ? "select.msg.wholeGroup.go" : "select.msg.wholeGroup.move", Noun(noun)),
+        _ => Said.Of(deleted ? "select.msg.wholeGroups.go" : "select.msg.wholeGroups.move", Noun(noun), count),
+    };
+
+    /// <summary>
+    /// What a linked group is called, in both languages: a mod's own name as it gives it, the editor's "group"
+    /// from the catalogue.
+    /// </summary>
+    /// <param name="noun">The name the links give (<see cref="LinkRule.DefaultName"/> when the mod gave none).</param>
+    private static Said Noun(string noun) => noun == LinkRule.DefaultName ? Said.Of("select.groupNoun") : Said.Raw(noun);
 
     /// <summary>Puts a move back (Esc); false when there was none.</summary>
     public bool Cancel()
@@ -409,7 +423,7 @@ public sealed class SelectTool
         _move = null;
         _handleDrag = null;
         _view.SetPreviews(null);
-        Message?.Invoke("Move cancelled.", false);
+        Message?.Invoke(Said.Of("select.msg.cancelled"), false);
         return true;
     }
 
@@ -465,7 +479,7 @@ public sealed class SelectTool
         var dropping = m.Items.Where(it => !it.Linked).ToList();
         if (dropping.Count == 0)
         {
-            Message?.Invoke($"Nothing to drop: a {m.Noun} keeps its height.", true);
+            Message?.Invoke(Said.Of("select.msg.noDrop", Noun(m.Noun)), true);
             return;
         }
         var under = DropIndex(s, sel);
@@ -510,7 +524,7 @@ public sealed class SelectTool
         m.Dropped = true;
         Preview(m);
         Later();
-        Message?.Invoke($"Dropped {dropping.Count} object(s): {onObjects} onto other objects, {dropping.Count - onObjects} onto the ground.", false);
+        Message?.Invoke(Said.Of("select.msg.dropped", dropping.Count, onObjects, dropping.Count - onObjects), false);
     }
 
     /// <summary>
@@ -644,14 +658,14 @@ public sealed class SelectTool
         Commit();
         if (_view.Selected.Count == 0 || Session is not { } session)
         {
-            Message?.Invoke("Select objects to delete first.", true);
+            Message?.Invoke(Said.Of("select.msg.deleteFirst"), true);
             return;
         }
         // A linked group's part never goes alone: the whole group does.
         var (sel, _, groups, noun) = session.WithLinked(_view.Selected);
         session.Delete(sel);
         _view.Select([]);
-        Message?.Invoke($"Deleted {sel.Count} object(s){WholeGroups(groups, noun, "go")}. Ctrl+Z brings them back; they leave the world when it is saved.", false);
+        Message?.Invoke(Said.Of("select.msg.deleted", sel.Count, WholeGroups(groups, noun, deleted: true)), false);
     }
 
     // ---- More ways to select.
@@ -679,12 +693,12 @@ public sealed class SelectTool
         var kinds = _view.Selected.Select(i => s.Things[i].Prefab).ToHashSet();
         if (kinds.Count == 0)
         {
-            Message?.Invoke("Select an object of each kind you want first.", true);
+            Message?.Invoke(Said.Of("select.msg.sameFirst"), true);
             return;
         }
         var ids = Shown().Where(i => kinds.Contains(s.Things[i].Prefab)).ToList();
         _view.Select(ids);
-        Message?.Invoke($"Selected every shown object of the same kind: {ids.Count}.", false);
+        Message?.Invoke(Said.Of("select.msg.same", ids.Count), false);
     }
 
     /// <summary>Selects the shown objects that are not selected, and only those.</summary>
@@ -697,7 +711,7 @@ public sealed class SelectTool
         var sel = _view.Selected.ToHashSet();
         var ids = Shown().Where(i => !sel.Contains(i)).ToList();
         _view.Select(ids);
-        Message?.Invoke($"Selected the {ids.Count} shown object(s) that were not selected.", false);
+        Message?.Invoke(Said.Of("select.msg.inverted", ids.Count), false);
     }
 
     /// <summary>
@@ -715,7 +729,7 @@ public sealed class SelectTool
         var start = (from ?? _view.Selected).Where(i => IsPiece(s.Things[i])).ToList();
         if (start.Count == 0)
         {
-            Message?.Invoke("Select a building piece first (or double-click one).", true);
+            Message?.Invoke(Said.Of("select.msg.buildingFirst"), true);
             return;
         }
         var boxes = new Dictionary<int, (Vector3 Min, Vector3 Max)>();
@@ -767,7 +781,7 @@ public sealed class SelectTool
             }
         }
         _view.Select(seen, add: true);
-        Message?.Invoke($"Selected the whole building: {seen.Count} connected piece(s).", false);
+        Message?.Invoke(Said.Of("select.msg.building", seen.Count), false);
     }
 
     // ---- The handles (Gizmo): the one under the mouse or being dragged is drawn highlighted.
@@ -864,7 +878,7 @@ public sealed class SelectTool
             if (Session?.WithLinked([dbl]) is { Groups: > 0 } v)
             {
                 _view.Select(v.Indices);
-                Message?.Invoke($"Selected the whole {v.Noun}: {v.Indices.Count} part(s).", false);
+                Message?.Invoke(Said.Of("select.msg.wholeLinked", Noun(v.Noun), v.Indices.Count), false);
                 return;
             }
             if (IsPiece(s.Things[dbl]))
@@ -1013,7 +1027,9 @@ public sealed class SelectTool
                 return pos.X >= minX && pos.X <= maxX && pos.Z >= minZ && pos.Z <= maxZ && Inside(l.Points, pos.X, pos.Z);
             }).ToList();
             _view.Select(ids, l.Add);
-            Message?.Invoke(ids.Count > 0 ? $"Selected {ids.Count} object(s) inside the zone{(l.Add ? $" ({_view.Selected.Count} in all)" : "")}." : "Nothing shown inside the zone.", false);
+            Message?.Invoke(ids.Count == 0 ? Said.Of("select.msg.zoneEmpty")
+                : l.Add ? Said.Of("select.msg.zoneAdded", ids.Count, _view.Selected.Count)
+                : Said.Of("select.msg.zone", ids.Count), false);
             return;
         }
         var d = _drag;

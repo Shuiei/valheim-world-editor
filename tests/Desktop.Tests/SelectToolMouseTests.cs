@@ -241,7 +241,7 @@ public class SelectToolMouseTests
         Assert.Equal([3], v.Selected);
         // A tree is not a building.
         string? said = null;
-        v.Tool.Message += (t, _) => said = t;
+        v.Tool.Message += (t, _) => said = t.Shown;
         v.W.View.Select([4]);
         v.Tool.WholeBuilding();
         Assert.StartsWith("Select a building piece first", said);
@@ -257,7 +257,7 @@ public class SelectToolMouseTests
         var ship = TestScenes.AddShip(v.S);
         v.W.View.SetBoxes(ship.Select(i => Box(v.S.Scene, i)));
         string? said = null;
-        v.Tool.Message += (t, _) => said = t;
+        v.Tool.Message += (t, _) => said = t.Shown;
         v.Click(40, 38, clicks: 2);
         Assert.Equal(ship.Order(), v.Selected.Order());
         Assert.Equal("Selected the whole vehicle: 5 part(s).", said);
@@ -305,7 +305,7 @@ public class SelectToolMouseTests
     {
         var v = Open(T(1, Beech, 40, 30, 40, false), T(2, Beech, 50, 30, 50, false), T(3, Wall, 45, 30, 45));
         string? said = null;
-        v.Tool.Message += (t, _) => said = t;
+        v.Tool.Message += (t, _) => said = t.Shown;
         v.Tool.SameKind();
         Assert.StartsWith("Select an object of each kind", said);
         v.W.View.Select([0]);
@@ -324,7 +324,7 @@ public class SelectToolMouseTests
         // A tree floating 6 m up, and another above a floor.
         var v = Open(T(1, Beech, 40, 36, 40, false), T(2, Floor, 50, 31, 50), T(3, Beech, 50, 40, 50, false));
         string? said = null;
-        v.Tool.Message += (t, _) => said = t;
+        v.Tool.Message += (t, _) => said = t.Shown;
         v.W.View.Select([0, 2]);
         Assert.True(v.Tool.Key(Avalonia.Input.Key.End, false));
         Assert.Equal("Dropped 2 object(s): 1 onto other objects, 1 onto the ground.", said);
@@ -357,7 +357,7 @@ public class SelectToolMouseTests
     {
         var v = Open(T(1, Beech, 40, 30, 40, false));
         string? said = null;
-        v.Tool.Message += (t, _) => said = t;
+        v.Tool.Message += (t, _) => said = t.Shown;
         v.Tool.Delete();
         Assert.Equal("Select objects to delete first.", said);
         Assert.False(v.S.CanUndo);
