@@ -54,16 +54,25 @@ public class LiveSyncIdentityTests
         Assert.False(t.Sync.IsOurs(again));
     }
 
+    /// <summary>
+    /// A rig whose next apply makes the tree's move as a call, and loses the answer of that call.
+    /// </summary>
+    private static async Task<LiveSyncRig> ApplyWithLostAnswer()
+    {
+        var t = new LiveSyncRig(canMove: false);
+        t.Bridge.Features.Add("once");
+        t.MoveTree(-1, new Vector3(4, 0, 2));
+        t.Bridge.LoseNextAnswer = true;
+        await Assert.ThrowsAnyAsync<Exception>(t.Apply);
+        return t;
+    }
+
     // The game does the call but its answer is lost (a dropped tunnel): the next apply sends it again under its id, and
     // the plugin answers with what it did instead of making the objects twice.
     [Fact]
     public async Task ACallWhoseAnswerWasLostIsNotDoneTwice()
     {
-        using var t = new LiveSyncRig(canMove: false);
-        t.Bridge.Features.Add("once");
-        t.MoveTree(-1, new Vector3(4, 0, 2));
-        t.Bridge.LoseNextAnswer = true;
-        await Assert.ThrowsAnyAsync<Exception>(t.Apply);
+        using var t = await ApplyWithLostAnswer();
         Assert.Equal((1, 1), t.Bridge.ObjectCalls.Single());
         Assert.False(t.Sync.IsLive(-1));
 
@@ -82,11 +91,7 @@ public class LiveSyncIdentityTests
     [Fact]
     public async Task ACallWhoseAnswerWasLostIsNotSentToTheGameStartedAgain()
     {
-        using var t = new LiveSyncRig(canMove: false);
-        t.Bridge.Features.Add("once");
-        t.MoveTree(-1, new Vector3(4, 0, 2));
-        t.Bridge.LoseNextAnswer = true;
-        await Assert.ThrowsAnyAsync<Exception>(t.Apply);
+        using var t = await ApplyWithLostAnswer();
         t.Bridge.Run = "run2";
 
         await Assert.ThrowsAsync<InvalidOperationException>(t.Apply);

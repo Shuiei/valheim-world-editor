@@ -80,14 +80,7 @@ public class GameBundlesPrefabTests
             var broken = r.Child("broken", c => c.Renderer(Fields.Ref(single), [ownRef]));
             r.Mono("WearNTear", new Fields { ["m_new"] = Fields.Ref(fresh.Go), ["m_worn"] = Fields.Ref(worn.Go), ["m_broken"] = Fields.Ref(broken.Go) });
             r.Child("far", c => lodRenderer = c.Renderer(Fields.Ref(single), [ownRef]));
-            r.Component(UnityClass.LodGroup, UnityTypes.LodGroup, new Fields
-            {
-                ["m_LODs"] = new List<Fields>
-                {
-                    new() { ["renderers"] = new List<Fields> { new() { ["renderer"] = Fields.Ref(keptRenderer) } } },
-                    new() { ["renderers"] = new List<Fields> { new() { ["renderer"] = Fields.Ref(lodRenderer) }, new() { ["renderer"] = Fields.Ref(0) } } },
-                },
-            });
+            GameBundlesLodGroup.Add(r, [keptRenderer], [lodRenderer, 0]);
             r.Child("off", c =>
             {
                 c.Active = false;
@@ -103,8 +96,7 @@ public class GameBundlesPrefabTests
             // A material pointing into a file the bundle does not list: no material.
             r.Child("lost", c => c.Renderer(Fields.Ref(single), [Fields.Ref(5, fileId: 9)]));
         });
-        game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = SavedGameBundles.Of(game);
 
         var model = bundles.LoadModel("House", room: false)!;
         Assert.Equal("House", model.Name);
@@ -165,8 +157,7 @@ public class GameBundlesPrefabTests
                 ["m_objects"] = new List<Fields> { new() { ["m_object"] = Fields.Ref(one.Go) }, new() { ["m_object"] = Fields.Ref(other.Go) }, new() { ["m_object"] = Fields.Ref(0) } },
             }));
         });
-        game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = SavedGameBundles.Of(game);
 
         // The root, "common" and "one": three parts; as a plain prefab all seven that draw.
         Assert.Equal(3, bundles.LoadModel("Room_hall", room: true)!.Parts.Count);

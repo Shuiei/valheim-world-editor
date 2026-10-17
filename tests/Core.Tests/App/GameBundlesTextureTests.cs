@@ -136,8 +136,7 @@ public class GameBundlesTextureTests
         long r8 = TestAssets.TextureArray(b, "r8", 1, 1, 5, 1, [1, 2, 3, 4]);
         long missing = TestAssets.TextureArray(b, "missing", 2, 2, 8, 2, [1, 2, 3, 4]);
         long tex = TestAssets.Texture(b, "plain", 1, 1, Rgba32, 1, [1, 2, 3, 4]);
-        game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = SavedGameBundles.Of(game);
 
         var slices = bundles.LoadTextureArray(new("arrays", kept))!;
         Assert.Equal(["pair[0]", "pair[1]"], slices.Select(s => s.Name));

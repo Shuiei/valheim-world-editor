@@ -34,10 +34,7 @@ public class SettingsDialogTests
         Click(Buttons(d, "Save").Single());
         Assert.True(await shown);
         Assert.Empty(owner.OwnedWindows);
-        var kept = AppSettings.Load();
-        Assert.Equal(game, kept.ValheimPath);
-        Assert.Equal(new[] { bep }, kept.BepInExFolders);
-        Assert.Equal(new[] { worlds }, kept.WorldFolders);
+        SettingsChecks.AssertKept(game, bep, worlds);
     }
 
     [AvaloniaFact]

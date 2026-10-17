@@ -23,8 +23,7 @@ public class GameBundlesShaderTests
             [new(0, 0, 25, 1), new(2, 1, 25, 3)], part: 128);
         long other = TestAssets.Shader(b, "Custom/Other", new Dictionary<int, byte[]> { [15] = gl }, [new(0, 0, 25, 1)], pass: "FORWARD_DELTA");
         long tex = TestAssets.Texture(b, "plain", 1, 1, Rgba32, 1, [1, 2, 3, 4]);
-        game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = SavedGameBundles.Of(game);
 
         var p = bundles.LoadShader(new("shaders", sh))!;
         Assert.Equal([15, 18], p.Platforms);
@@ -51,8 +50,7 @@ public class GameBundlesShaderTests
         long unlisted = BrokenShader(b, packed, 64, []);
         long past = BrokenShader(b, packed, 64, [new List<object> { 10u }]);
         long huge = BrokenShader(b, packed, uint.MaxValue);
-        game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = SavedGameBundles.Of(game);
 
         Assert.Throws<InvalidDataException>(() => bundles.LoadShader(new("shaders", shorter)));
         Assert.Throws<InvalidDataException>(() => bundles.LoadShader(new("shaders", garbage)));
