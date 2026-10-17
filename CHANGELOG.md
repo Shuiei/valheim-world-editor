@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.30 — unreleased
+
+### Fixed
+- **The last Codacy findings that are not false positives.** The dungeon corridors' `switch` has a `default` that only
+  breaks out, as #341 gave the others. Homestead tags split on `[',', ';']`, so the call can no longer be read as
+  `Split(char, int count)`. The fuzz image's `git clone` quotes `$SRC`. The tests' count of character files read is a
+  property with a private setter, still kept per thread. Follow's growth works out each axis in its own variable,
+  and both still grow near a corner. The Workshop reads a terrain contact's point through `TryPoint`, which parses
+  with `&&` and skips the contact when a field is not a number, as before. A test enumerates a catalogue
+  dictionary through an `IEnumerable` variable instead of a cast. No behaviour changes.
+
 ## v1.47.29 — 2026-10-17
 
 ### Fixed
