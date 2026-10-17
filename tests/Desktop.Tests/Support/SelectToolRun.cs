@@ -23,11 +23,8 @@ internal static class SelectToolRun
         /// <summary>
         /// Where a world point is on screen.
         /// </summary>
-        public Avalonia.Point At(float x, float y, float z)
-        {
-            var q = Vector4.Transform(new Vector4(x - S.Scene.Cx, y, -(z - S.Scene.Cz), 1), W.View.ViewProj);
-            return new Avalonia.Point((q.X / q.W + 1) / 2 * Size.Width, (1 - q.Y / q.W) / 2 * Size.Height);
-        }
+        public Avalonia.Point At(float x, float y, float z) =>
+            ShownEditor.ScreenPoint(W, Size, new Vector3(x - S.Scene.Cx, y, -(z - S.Scene.Cz)));
 
         /// <summary>
         /// A click at world point (x, z) on the ground, with Shift held and as many clicks as given.
@@ -75,17 +72,35 @@ internal static class SelectToolRun
     /// </summary>
     internal static View Open(params WorldScene.Thing[] things)
     {
-        var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2, things);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
-        w.Tools.ChooseSelect();
-        w.View.SetBoxes(Enumerable.Range(0, things.Length).Select(i => Box(s.Scene, i)));
+        var (w, s) = OpenInSelectTool(things);
         // Straight down on the middle of the area (a little south, so north is up), 40 m around.
         var c = new Vector3(40 - s.Scene.Cx, 30, -(40 - s.Scene.Cz));
         w.View.SetCamera(c + new Vector3(0, 40, 0.01f), c, 1);
         return new View(w, s, w.View.Bounds.Size);
+    }
+
+    /// <summary>
+    /// A shown main window editing a flat 2 × 2 zone area with these objects, in the Select tool with each object's box
+    /// set. The camera is left where it was put.
+    /// </summary>
+    /// <returns>The window and its edit session.</returns>
+    internal static (MainWindow W, EditSession S) OpenInSelectTool(params WorldScene.Thing[] things)
+    {
+        var (w, s, _) = ShownEditor.Open(things);
+        w.Tools.ChooseSelect();
+        w.View.SetBoxes(Enumerable.Range(0, things.Length).Select(i => Box(s.Scene, i)));
+        return (w, s);
+    }
+
+    /// <summary>
+    /// Records the messages the tool shows, and returns a reader of the last one (null when none was shown yet).
+    /// </summary>
+    /// <param name="tool">The Select tool to listen to.</param>
+    internal static Func<string?> MessageReader(SelectTool tool)
+    {
+        string? said = null;
+        tool.Message += (t, _) => said = t.Shown;
+        return () => said;
     }
 
     /// <summary>

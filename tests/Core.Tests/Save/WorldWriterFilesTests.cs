@@ -26,7 +26,7 @@ public class WorldWriterFilesTests
         Assert.True(r.Saved, r.Message);
         Assert.True(File.Exists(Path.Combine(w.Dir, ChunkFile.NameFor(file.Chunk, file.Size, file.Version + 2))));
         Assert.Equal("not ours", File.ReadAllText(taken));
-        Assert.Equal(1.5f, WorldSave.Load(w.Dir).TerrainZones.Single(q => q.ZoneX == t.ZoneX && q.ZoneZ == t.ZoneZ).LevelDelta[500], 4);
+        Assert.Equal(1.5f, SavedZoneLevels.LevelDelta(w.Dir, t, 500), 4);
     }
 
     [Fact]

@@ -11,8 +11,7 @@ public class SeedLocationsNeighboursTests
     [Fact]
     public void AnInstanceWithinTheDistanceIsFoundUnderItsName()
     {
-        var neighbours = new SeedLocations.Neighbours();
-        neighbours.Add("a", new SeedLocations.Placed(new SeedLocations.Rule { prefab = "a" }, 0, 0, 0));
+        var neighbours = NeighboursWithA();
 
         Assert.True(neighbours.Within("a", new Vector3(3, 0, 4), 5.1f));
     }
@@ -20,8 +19,7 @@ public class SeedLocationsNeighboursTests
     [Fact]
     public void AnInstanceExactlyTheDistanceAwayIsNotWithin()
     {
-        var neighbours = new SeedLocations.Neighbours();
-        neighbours.Add("a", new SeedLocations.Placed(new SeedLocations.Rule { prefab = "a" }, 0, 0, 0));
+        var neighbours = NeighboursWithA();
 
         Assert.False(neighbours.Within("a", new Vector3(3, 0, 4), 5));
     }
@@ -29,8 +27,7 @@ public class SeedLocationsNeighboursTests
     [Fact]
     public void TheDistanceIsMeasuredInThreeDimensions()
     {
-        var neighbours = new SeedLocations.Neighbours();
-        neighbours.Add("a", new SeedLocations.Placed(new SeedLocations.Rule { prefab = "a" }, 0, 0, 0));
+        var neighbours = NeighboursWithA();
 
         Assert.True(neighbours.Within("a", new Vector3(0, 4, 0), 5));
     }
@@ -38,9 +35,18 @@ public class SeedLocationsNeighboursTests
     [Fact]
     public void AnotherNameIsNotWithin()
     {
-        var neighbours = new SeedLocations.Neighbours();
-        neighbours.Add("a", new SeedLocations.Placed(new SeedLocations.Rule { prefab = "a" }, 0, 0, 0));
+        var neighbours = NeighboursWithA();
 
         Assert.False(neighbours.Within("b", new Vector3(0, 0, 0), 5));
+    }
+
+    /// <summary>
+    /// A set of neighbours holding one instance named "a" at the origin.
+    /// </summary>
+    private static SeedLocations.Neighbours NeighboursWithA()
+    {
+        var neighbours = new SeedLocations.Neighbours();
+        neighbours.Add("a", new SeedLocations.Placed(new SeedLocations.Rule { prefab = "a" }, 0, 0, 0));
+        return neighbours;
     }
 }
