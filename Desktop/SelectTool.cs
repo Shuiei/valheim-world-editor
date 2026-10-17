@@ -917,6 +917,8 @@ public sealed class SelectTool
             case Avalonia.Input.Key.Delete:
                 Delete();
                 return true;
+            default:
+                break;
         }
         if (_view.Selected.Count == 0)
         {
@@ -941,6 +943,8 @@ public sealed class SelectTool
             case Avalonia.Input.Key.End:
                 Drop();
                 return true;
+            default:
+                break;
         }
         return false;
     }

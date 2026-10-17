@@ -124,6 +124,8 @@ public static class Png
                 case "IDAT":
                     idat.Write(data);
                     break;
+                default:
+                    break;
             }
             p += 12 + len;
             if (type == "IEND")

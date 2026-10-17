@@ -734,6 +734,8 @@ public sealed class WorldSession : IDisposable
             {
                 case EditStore.GameGround.Taken: ground.Add((x, z)); break;
                 case EditStore.GameGround.Kept: kept.Add((x, z)); break;
+                default:
+                    break;
             }
         }
         ground.AddRange(Edits.TakeWaitingGround());

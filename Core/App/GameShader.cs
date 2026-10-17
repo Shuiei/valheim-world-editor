@@ -393,6 +393,8 @@ public static partial class GameShader
                 case 59:
                     variables.Add((words[a + 1], words[a], words[a + 2]));
                     break;
+                default:
+                    break;
             }
         }
         var add = new List<(uint Op, List<uint> Words)>();

@@ -838,6 +838,8 @@ public static partial class GameCatalogues
                             }
                             _picks.Add(new List<object?> { Node(gid), Get(b, "m_dungeonRequireTheme", 0L), choices, Get(b, "m_minElevation", -10000L), Get(b, "m_maxElevation", 10000L) });
                             break;
+                        default:
+                            break;
                     }
                 }
                 foreach (long child in t.Children)

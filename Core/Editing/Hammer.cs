@@ -96,6 +96,8 @@ public static class Hammer
                         shapes.Add(new Mesh(c[1].GetInt32() != 0, [.. Enumerable.Range(0, v.Length / 3).Select(i => new Vector3(v[i * 3], v[i * 3 + 1], v[i * 3 + 2]))],
                             [.. c[3].EnumerateArray().Select(x => x.GetInt32())]));
                         break;
+                    default:
+                        break;
                 }
             }
             result[p.Name] = new Data(Flag("g"), Flag("cg"), Flag("ce"), Flag("ro"), snaps, [.. shapes]);

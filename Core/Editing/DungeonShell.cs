@@ -304,6 +304,8 @@ internal static class DungeonShell
                 }
                 Fill(mat, o, alongZ, line, c - 2, c + 2, f + 4.2f, h);
                 break;
+            default:
+                break;
         }
     }
 

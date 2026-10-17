@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.48 — unreleased
+
+### Fixed
+- **The `switch` statements without a `default` that Codacy flagged (Sonar S131) now have one.** There were 20; two
+  more with the same switch in files Codacy had moved were given one too. Each `default` only breaks out, so the cases
+  that matched before behave as before, and a value that matched no case still does nothing, as it did. No behaviour
+  changes.
+
 ## v1.45.47 — unreleased
 
 ### Fixed
