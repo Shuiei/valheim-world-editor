@@ -35,7 +35,8 @@ public sealed class ShapePanelLangTests
     [AvaloniaFact]
     public void PuttingAShapeIsSaidInTheLanguageAndClaudeReadsEnglish()
     {
-        var (w, s) = TestWindows.Editing();
+        var s = TestScenes.Flat(2);
+        var w = TestWindows.Editing(s);
         using var pseudo = new PseudoLang();
 
         w.PutShape(64, 64);
