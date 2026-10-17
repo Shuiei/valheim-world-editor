@@ -21,11 +21,8 @@ public sealed class BuildPanelLangTests
     {
         using var pseudo = new PseudoLang();
         using var r = new BlueprintsPanelRun();
-        var w = r.W;
-        w.Ask = (_, _, _, _) => Task.FromResult(true);
         r.Keep("Gate", "woodwall");
-        await w.OpenWorkshop(null);
-        var p = w.BuildPanel;
+        var p = (await r.OpenWorkshop()).BuildPanel;
         var pieces = BuildPanel.Pieces;
         string[] data =
         [

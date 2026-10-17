@@ -47,6 +47,19 @@ internal sealed class BlueprintsPanelRun : IDisposable
         File.WriteAllText(Path.Combine(Homestead, TerrainEditor.App.Homestead.FileName(name)), TerrainEditor.App.Homestead.Write(CopyFormat.ToJson(Clip(name, kinds)), name, "test", null, DateTime.Now));
     }
 
+    /// <summary>
+    /// The window's Workshop opened, blank or with the blueprint at <paramref name="path"/>; the window's questions
+    /// answered Yes and what it tells let go, like the panel's.
+    /// </summary>
+    /// <param name="path">The blueprint to open, or null for a blank plot.</param>
+    public async Task<MainWindow> OpenWorkshop(string? path = null)
+    {
+        W.Ask = (_, _, _, _) => Task.FromResult(true);
+        W.Tell = _ => Task.CompletedTask;
+        await W.OpenWorkshop(path);
+        return W;
+    }
+
     public List<Homestead.Entry> Listed => TerrainEditor.App.Homestead.List(Homestead);
 
     /// <inheritdoc/>
