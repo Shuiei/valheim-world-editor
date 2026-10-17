@@ -74,7 +74,7 @@ only from `en.json`; `LangTests` checks them).
 
 - Values go into `{0}`, `{1}`… with their format and unit inside the text (`"{0:0.0} m"`,
   `"{0} × {1} zones"`), as raw numbers and names, not formatted strings. A key is always asked for
-  with the same number of values; a text asked for with values doubles its literal braces (`{{`),
+  with the same number of values; a text asked for with values doubles its literal braces (<code>&#123;&#123;</code>),
   one asked for without never has any.
 - A name already in the user's language (a biome, a kind of object) goes in as a value. Do not
   change its case to fit it in a sentence (`ToLowerInvariant`): write the sentence around it.
