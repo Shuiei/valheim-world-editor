@@ -6,6 +6,12 @@ namespace TerrainEditor.Desktop;
 public sealed partial class PlaceInput
 {
     /// <summary>
+    /// What the last press did, for the driver's state: "hit" (a grid point was under it), "nohit" (none was), or "none"
+    /// (no press yet, or it picked something).
+    /// </summary>
+    internal string LastPress { get; private set; } = "none";
+
+    /// <summary>
     /// A mouse press: picks a kind (Pick from world), picks the elevation (Alt), starts a brush stroke, or starts or
     /// edits a shape.
     /// </summary>
@@ -44,6 +50,7 @@ public sealed partial class PlaceInput
         }
         if (hit is not { } h)
         {
+            LastPress = "nohit";
             return;
         }
         _at = h;
@@ -54,6 +61,7 @@ public sealed partial class PlaceInput
             _timer.Start();
             return;
         }
+        LastPress = "hit";
         _press = (at, h, false);
         if (Tool.Mode == PlaceTool.Modes.Line && Tool.LineShape != PlaceTool.LineShapes.Points)
         {
