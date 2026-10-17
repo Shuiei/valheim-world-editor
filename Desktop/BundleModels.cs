@@ -59,7 +59,7 @@ internal sealed class BundleModels : ModelStore.ISource
         }
         catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or NotSupportedException or NotImplementedException)
         {
-            Console.WriteLine($"game files: could not read the bundles in {game.Folder}: {e.Message}");
+            Log.Caught(e, "reading the game's bundles for models (objects are drawn as boxes)");
             return null;
         }
     }

@@ -1,3 +1,4 @@
+using TerrainEditor.App;
 using TerrainEditor.Save;
 
 namespace TerrainEditor.Editing;
@@ -846,8 +847,9 @@ public sealed record ObjectField(string Section, int Key, string? Value)
             // A value the save cannot take (a damaged or hand-edited line) is left out here, not when the world is written.
             return ZdoData.Valid(p[0], value) ? new ObjectField(p[0], key, value) : null;
         }
-        catch (FormatException)
+        catch (FormatException e)
         {
+            Log.CaughtBrief(e, "reading an object field line of the kept edits (not base64: left out)");
             return null;
         }
     }

@@ -158,6 +158,31 @@ public class AppSettingsTests : IDisposable
         Assert.True(Directory.Exists(path));
     }
 
+    // A save that fails is said in the log, without the settings file's path.
+    [Fact]
+    public void AFailedSaveIsLoggedWithoutItsPath()
+    {
+        string path = Path.Combine(_data, "settings.json");
+        string? old = AppSettings.PathOverride;
+        AppSettings.PathOverride = path;
+        try
+        {
+            // A folder where the file goes: the write fails.
+            Directory.CreateDirectory(path);
+            using var log = Log.Listen();
+
+            Assert.NotNull(new AppSettings().Save());
+            string line = Assert.Single(log.Lines);
+            Assert.StartsWith("Caught at AppSettings.cs:", line);
+            Assert.Contains("while saving settings.json (the settings stay in memory): ", line);
+            Assert.DoesNotContain(_data, line);
+        }
+        finally
+        {
+            AppSettings.PathOverride = old;
+        }
+    }
+
     // A settings file held by another program (a sync or antivirus tool) gives the defaults for the session, and a save
     // leaves it as it is: what it holds is the user's settings.
     [Fact]

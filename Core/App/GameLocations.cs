@@ -46,6 +46,7 @@ public static class GameLocations
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
                 // Next one.
+                Log.CaughtBrief(e, "reading a game log for the location lists' order (the next one is tried)");
             }
         }
         return (BuiltInOrder, "the editor's table (Valheim 0.221; no log of the game found)");
@@ -252,7 +253,7 @@ public static class GameLocations
         catch (Exception e)
         {
             // Anything in the game's files can fail the reading: the page goes on without bosses or traders.
-            Console.WriteLine($"The game's location rules could not be read ({e.GetType().Name}: {e.Message}): no bosses or traders on the New world page.");
+            Log.Caught(e, "reading the game's location rules (no bosses or traders on the New world page)");
             return null;
         }
     }
@@ -285,6 +286,7 @@ public static class GameLocations
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(e, "reading the kept location rules (read from the game again)");
             return null;
         }
     }
@@ -296,8 +298,9 @@ public static class GameLocations
         {
             return SeedLocations.RuleSet.FromJson(json);
         }
-        catch (JsonException)
+        catch (JsonException e)
         {
+            Log.Caught(e, "reading the kept location rules' JSON (read from the game again)");
             return null;
         }
     }

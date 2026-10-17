@@ -177,6 +177,7 @@ public static class ObjectLinks
             catch (Exception e) when (e is FormatException or OverflowException or ArgumentException)
             {
                 // A damaged value counts as none.
+                Log.CaughtBrief(e, $"reading the link value {f.Key} (damaged: counts as none)");
             }
         }
         return Read(set, z.IntList, z.Vec3List, z.QuatList);

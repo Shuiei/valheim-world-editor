@@ -232,12 +232,14 @@ public sealed class MapView : OpenGlControlBase, IDisposable
             }
             catch (OperationCanceledException)
             {
+                // Stopped because another world is shown: not an error.
+                Console.WriteLine("World map: building it stopped (another world is shown).");
                 return;
             }
             catch (Exception ex)
             {
                 // Said and logged, not lost in a task nobody waits for (the map left blank, still "Building…").
-                Console.WriteLine($"World map: could not build it: {ex}");
+                Log.Caught(ex, "building the world map");
                 Dispatcher.UIThread.Post(() =>
                 {
                     if (_data == data)
@@ -327,7 +329,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
             catch (Exception ex)
             {
                 // Logged: the map shows the buildings it had (none on a first read).
-                Console.Error.WriteLine($"The map's buildings could not be read: {ex}");
+                Log.Caught(ex, "reading the buildings shown on the map");
                 return;
             }
             Dispatcher.UIThread.Post(() =>
@@ -528,7 +530,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         }
         catch (Exception e) when (e is IOException or InvalidDataException or NotSupportedException)
         {
-            Console.WriteLine($"map: the game's map textures could not be read: {e.Message}");
+            Log.Caught(e, "reading the game's map textures");
         }
         foreach (var (u, f) in new[] { ("Background", "background"), ("FogLayer", "foglayer"), ("Water", "water"), ("lava", "lava"), ("Mountain", "mountain"), ("Cloud", "cloud"), ("Forest", "forest"), ("Space", "space") })
         {
@@ -738,6 +740,8 @@ public sealed class MapView : OpenGlControlBase, IDisposable
             }
             catch (Exception ex)
             {
+                // Not logged here: handed to the one waiting for the picture (the test driver, Claude's tools), which
+                // handles it.
                 req.Done.SetException(ex);
             }
         }
@@ -822,7 +826,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
             // A stopped build (another world shown) is no failure.
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                Console.Error.WriteLine($"The map's close-up could not be read: {ex}");
+                Log.Caught(ex, "reading the map's close-up");
                 failed = true;
             }
             finally

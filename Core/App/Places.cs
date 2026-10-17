@@ -36,6 +36,7 @@ public static class Places
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
         {
+            Log.CaughtBrief(ex, "listing a folder's subfolders (none)");
             return [];
         }
     }
@@ -63,6 +64,7 @@ public static class Places
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 // A link that cannot be followed: the path as written from here on.
+                Log.CaughtBrief(ex, "following a folder's link (the path as written)");
             }
         }
         return OperatingSystem.IsWindows() ? current.ToUpperInvariant() : current;
@@ -77,6 +79,7 @@ public static class Places
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
         {
+            Log.CaughtBrief(ex, "looking for a world in a folder (taken as none)");
             return false;
         }
     }
@@ -127,8 +130,9 @@ public static class Places
                 l.Stop();
                 return p;
             }
-            catch (SocketException)
+            catch (SocketException e)
             {
+                Log.CaughtBrief(e, $"trying the local port {p} (in use: the next one is tried)");
             }
         }
         var any = new TcpListener(IPAddress.Loopback, 0);

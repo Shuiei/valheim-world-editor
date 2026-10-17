@@ -439,6 +439,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException)
         {
+            Log.Caught(ex, "discarding the changes (reading the world again)");
             Msg("save.msg.couldNotRead", ex.Message);
             Busy(null);
             return;
@@ -604,12 +605,14 @@ public sealed partial class MainWindow
         catch (InvalidOperationException ex) when (ex.Message.Contains("too old", StringComparison.Ordinal))
         {
             // An older plugin on the server: no following (Reload still reads the whole world again).
+            Log.CaughtBrief(ex, "following the game's changes");
             _gameTooOld = owner;
             Msg("live.msg.bridgeTooOld");
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidDataException or InvalidOperationException or System.Text.Json.JsonException or FormatException)
         {
-            // The game does not answer right now: asked again at the next tick.
+            // The game does not answer right now: asked again at the next tick (brief: it can fail every tick).
+            Log.CaughtBrief(ex, "following the game's changes");
         }
         finally
         {
@@ -677,7 +680,8 @@ public sealed partial class MainWindow
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException or FormatException)
         {
-            // The game does not answer right now: the last positions stay.
+            // The game does not answer right now: the last positions stay (brief: it can fail every tick).
+            Log.CaughtBrief(ex, "asking the game where the players are");
         }
     }
 

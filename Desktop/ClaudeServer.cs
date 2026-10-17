@@ -97,8 +97,8 @@ public sealed class ClaudeServer
             }
             catch (Exception e) when (e is IOException or System.Net.Sockets.SocketException or InvalidOperationException)
             {
+                Log.Caught(e, $"starting the server for Claude on port {settings.ClaudePort}");
                 Status = $"Could not listen on port {settings.ClaudePort}: {e.Message}";
-                Console.WriteLine($"claude: {Status}");
                 return Status;
             }
         }

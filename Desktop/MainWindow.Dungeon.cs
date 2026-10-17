@@ -252,6 +252,7 @@ public partial class MainWindow
         // The objects' data is read from the world's files (NewObjectBytes): one gone or locked meanwhile places nothing.
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
+            Log.Caught(ex, "placing a dungeon");
             Msg("dungeon.msg.notPlaced", d.Name, ex.Message);
         }
     }
@@ -491,6 +492,7 @@ public partial class MainWindow
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "writing a generated dungeon's blueprint into the Library");
             Msg("dungeon.msg.notWritten", ex.Message);
             return null;
         }

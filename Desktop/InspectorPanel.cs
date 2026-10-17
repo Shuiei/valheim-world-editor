@@ -298,6 +298,7 @@ public sealed class InspectorPanel
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "reading an object's data to inspect it");
             bytes = null;
         }
         if (bytes == null)
@@ -389,6 +390,7 @@ public sealed class InspectorPanel
             }
             catch (Exception ex) when (CheckedReads.Damaged(ex))
             {
+                Log.Caught(ex, "reading a container's items to inspect them");
                 _inventoryError = ex.Message;
                 Items = [];
             }
@@ -979,10 +981,12 @@ public sealed class InspectorPanel
             }
             catch (StandRefusalException ex)
             {
+                Log.CaughtBrief(ex, "setting what a stand holds");
                 _standError = ex.Reason;
             }
             catch (ArgumentException ex)
             {
+                Log.CaughtBrief(ex, "setting what a stand holds");
                 _standError = Said.Raw(ex.Message);
             }
         }
@@ -1026,6 +1030,7 @@ public sealed class InspectorPanel
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or OverflowException)
         {
+            Log.CaughtBrief(ex, "applying the values typed in the Inspector");
             Message?.Invoke(Said.Of("inspect.msg.couldNotChange", ex.Message));
             return;
         }
@@ -1044,6 +1049,7 @@ public sealed class InspectorPanel
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "reading an object's data again before changing it");
             Message?.Invoke(Said.Of("inspect.msg.cannotReadNow", ex.Message));
             return;
         }

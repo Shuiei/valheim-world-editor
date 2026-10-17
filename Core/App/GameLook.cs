@@ -157,7 +157,7 @@ public static class GameLook
                     catch (Exception e)
                     {
                         // Whatever fails, the state leaves "running".
-                        Console.WriteLine($"game look: {e}");
+                        Log.Caught(e, "making the game's data ready");
                         (state, message) = ("failed", "The game's data could not be read: " + e.Message);
                     }
                     lock (Lock)
@@ -188,7 +188,7 @@ public static class GameLook
             catch (Exception e)
             {
                 // Whatever fails, the state leaves "running": the start page would wait for ever.
-                Console.WriteLine($"game look: {e}");
+                Log.Caught(e, "indexing the game's bundles and data");
                 (state, message) = ("failed", "The game's files could not be read: " + e.Message);
             }
             lock (Lock)
@@ -255,7 +255,7 @@ public static class GameLook
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
-                Console.WriteLine($"game look: could not delete the old copy in {d}: {e.Message}");
+                Log.Caught(e, "deleting the game look's old copy (left)");
             }
         }
     }
@@ -290,6 +290,7 @@ public static class GameLook
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
         {
+            Log.CaughtBrief(e, "looking for the game's data folder in a Mac app (none)");
         }
         return null;
     }
@@ -352,8 +353,9 @@ public static class GameLook
             tries.Add(Path.Combine(full, "steamapps", "common", "Valheim"));
             return tries.FirstOrDefault(t => BundlesDir(t) != null);
         }
-        catch
+        catch (Exception e)
         {
+            Log.CaughtBrief(e, "finding the game folder from a chosen folder (none)");
             return null;
         }
     }
@@ -400,9 +402,9 @@ public static class GameLook
                     roots.Add(sp.Replace('/', '\\'));
                 }
             }
-            catch
+            catch (Exception e)
             {
-                // The Steam key may be missing or unreadable; the other places below are still searched.
+                Log.CaughtBrief(e, "reading Steam's folder from the registry (the other places are still searched)");
             }
             if (SearchOutsideHome)
             {
@@ -448,7 +450,7 @@ public static class GameLook
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                Console.WriteLine($"game: {vdf} could not be read ({ex.Message}); the libraries it lists are not searched.");
+                Log.Caught(ex, "reading Steam's libraryfolders.vdf (the libraries it lists are not searched)");
                 continue;
             }
             foreach (Match m in Regex.Matches(libraries, "\"path\"\\s+\"([^\"]+)\""))

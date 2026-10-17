@@ -183,9 +183,9 @@ public sealed class MainWindowLangTests
         }
         string logged = log.ToString();
         // (The exceptions' own messages may be in the system's language.)
-        Assert.Contains("Load stamp: the stamp picture could not be read: FileNotFoundException: ", logged);
-        Assert.Contains("Load stamp: the stamp picture could not be read: UnauthorizedAccessException: ", logged);
-        Assert.Contains("Load stamp: the stamp picture could not be read: IOException: ", logged);
+        Assert.Contains("while reading the stamp picture to load (not loaded): System.IO.FileNotFoundException: ", logged);
+        Assert.Contains("while reading the stamp picture to load (not loaded): System.UnauthorizedAccessException: ", logged);
+        Assert.Contains("while reading the stamp picture to load (not loaded): System.IO.IOException: ", logged);
         Assert.Contains($"Load stamp: the stamp picture is not read: {Stamps.MostPictureBytes + 1} bytes, more than {Stamps.MostPictureBytes}.", logged);
         Assert.DoesNotContain(dir, logged);
     }

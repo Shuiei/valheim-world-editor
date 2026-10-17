@@ -37,7 +37,7 @@ public static class Worlds
             // A folder that cannot be read, or a stored path that is no path: left out, and said in the log.
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
             {
-                Console.WriteLine($"worlds: {dir} left out of the list ({ex.Message}).");
+                Log.Caught(ex, "listing a world folder (left out of the list)");
             }
         }
         foreach (var r in settings.Recent)
@@ -76,6 +76,7 @@ public static class Worlds
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
             {
+                Log.CaughtBrief(ex, "looking for old single-file worlds in a worlds folder (passed over)");
                 continue;
             }
             foreach (string db in dbs)
@@ -119,6 +120,7 @@ public static class Worlds
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
         {
+            Log.Caught(ex, "checking a chosen world folder");
             return $"That folder cannot be read: {ex.Message}";
         }
     }

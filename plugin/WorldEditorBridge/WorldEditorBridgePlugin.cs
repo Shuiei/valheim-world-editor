@@ -8,10 +8,13 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using BepInEx;
 using BepInEx.Configuration;
+using BepInEx.Logging;
 using UnityEngine;
 using WorldEditorBridge.Api;
 
@@ -145,7 +148,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
             }
             catch (IOException ex)
             {
-                Logger.LogWarning($"Could not move {old}: {ex.Message}");
+                Caught(ex, $"moving the settings from {OldGuid}.cfg to {PluginGuid}.cfg (the old file is left)");
             }
         }
         _bind = Config.Bind("Http", "BindAddress", "127.0.0.1", "Address to listen on. Keep 127.0.0.1 and reach it through an SSH tunnel (ssh -L 5182:127.0.0.1:5182 user@server).");
@@ -178,7 +181,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
         }
         catch (Exception ex)
         {
-            Logger.LogError($"WorldEditorBridge could not listen on {_bind.Value}:{_port.Value}: {ex.Message}");
+            Caught(ex, $"listening on {_bind.Value}:{_port.Value} (the bridge does not answer)", level: LogLevel.Error);
         }
     }
 
@@ -191,10 +194,39 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
         {
             _listener?.Stop();
         }
-        catch
+        catch (Exception ex)
         {
-            // The listener may already be stopped; there is nothing left to stop.
+            Caught(ex, "stopping the listener (the game is closing anyway)", brief: true);
         }
+    }
+
+    /// <summary>
+    /// Writes an error that a catch handled to BepInEx's log (a warning unless <paramref name="level"/> says otherwise):
+    /// where it was caught (the source file, line and member, which the compiler fills in), what was being done, and the
+    /// exception's type and message, with its stack trace unless <paramref name="brief"/>. The server's home folder is
+    /// written ~. Every catch that handles an error calls this; one that rethrows leaves it to the one that handles it.
+    /// </summary>
+    /// <param name="e">What was caught.</param>
+    /// <param name="doing">What was being done, to follow "while": "answering a request".</param>
+    /// <param name="brief">One line without the stack trace: for expected failures (a client that went away).</param>
+    /// <param name="level">The log level.</param>
+    /// <param name="file">The source file of the catch (the compiler's).</param>
+    /// <param name="line">The line of the catch (the compiler's).</param>
+    /// <param name="member">The member the catch is in (the compiler's).</param>
+    private void Caught(Exception e, string doing, bool brief = false, LogLevel level = LogLevel.Warning, [CallerFilePath] string file = "", [CallerLineNumber] int line = 0, [CallerMemberName] string member = "")
+    {
+        string where = file.Substring(file.LastIndexOfAny(['/', '\\']) + 1);
+        string text = $"WorldEditorBridge: caught at {where}:{line} ({member}) while {doing}: {e.GetType().FullName}: {e.Message.Replace("\r", " ").Replace("\n", " ")}";
+        if (!brief)
+        {
+            text += Environment.NewLine + e.StackTrace;
+            for (Exception inner = e.InnerException; inner != null; inner = inner.InnerException)
+            {
+                text += Environment.NewLine + " ---> " + inner.GetType().FullName + ": " + inner.Message + Environment.NewLine + inner.StackTrace;
+            }
+        }
+        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile).TrimEnd('/', '\\');
+        Logger.Log(level, home.Length > 1 ? text.Replace(home, "~") : text);
     }
 
     /// <summary>
@@ -222,6 +254,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
             }
             catch (Exception ex)
             {
+                // Handed to the request waiting for the job, which throws it again: its catch logs it.
                 job.Error = ex;
             }
             job.Done.Set();
@@ -253,7 +286,8 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
         }
         if (job.Error != null)
         {
-            throw job.Error;
+            // With the stack trace it had on the main thread; the request's catch logs it.
+            ExceptionDispatchInfo.Capture(job.Error).Throw();
         }
         return job.Result;
     }
@@ -270,12 +304,15 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
             {
                 ctx = _listener.GetContext();
             }
-            catch
+            catch (Exception ex)
             {
                 if (!_running)
                 {
+                    // The listener was stopped (OnDestroy): the end of the loop, not an error.
+                    Logger.LogInfo("WorldEditorBridge: stopped listening.");
                     return;
                 }
+                Caught(ex, "waiting for the next request (waited for again)", brief: true);
                 continue;
             }
             ThreadPool.QueueUserWorkItem(_ => Handle(ctx));
@@ -433,14 +470,14 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
         {
             // The path comes from the request: keep line breaks out so it cannot forge log lines.
             string path = ctx.Request.Url.AbsolutePath.Replace("\r", "").Replace("\n", "");
-            Logger.LogWarning($"WorldEditorBridge request {path} failed: {ex}");
+            Caught(ex, $"answering the request {path}");
             try
             {
                 Reply(res, 500, "text/plain", Encoding.UTF8.GetBytes(ex.Message));
             }
-            catch
+            catch (Exception replyError)
             {
-                // The request's client may have gone; there is nobody left to send the error to.
+                Caught(replyError, $"sending the error answer to the request {path} (its client has gone)", brief: true);
             }
         }
     }

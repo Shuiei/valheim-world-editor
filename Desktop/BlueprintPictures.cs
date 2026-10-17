@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Avalonia.Media.Imaging;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -41,6 +42,7 @@ internal static class BlueprintPictures
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
+            Log.CaughtBrief(ex, "reading a blueprint's picture file (shown without it)");
             picture = null;
         }
         lock (FilesLock)
@@ -70,6 +72,7 @@ internal static class BlueprintPictures
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidOperationException)
         {
+            Log.CaughtBrief(ex, "reading the picture kept in a blueprint (shown without it)");
             return new(null);
         }
     }

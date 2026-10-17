@@ -304,6 +304,7 @@ public sealed class BlueprintsPanel
             }
             catch (InvalidDataException ex)
             {
+                Log.CaughtBrief(ex, "turning a blueprint file into a copy to paste");
                 problem = Said.Of("blueprints.msg.unreadableWhy", ex.Message);
                 return null;
             }
@@ -402,6 +403,7 @@ public sealed class BlueprintsPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "saving the copy as a blueprint");
             Message?.Invoke(Said.Of("blueprints.msg.saveFailed", ex.Message));
             return null;
         }
@@ -438,6 +440,7 @@ public sealed class BlueprintsPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "saving the Workshop's building as a blueprint");
             var problem = Said.Of("blueprints.msg.saveFailed", ex.Message);
             Message?.Invoke(problem);
             return problem.English;
@@ -476,6 +479,7 @@ public sealed class BlueprintsPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "saving a blueprint's details");
             Message?.Invoke(Said.Of("blueprints.msg.changeFailed", ex.Message));
             return false;
         }
@@ -504,6 +508,7 @@ public sealed class BlueprintsPanel
         }
         catch (Exception ex) when (ex is FormatException or InvalidOperationException)
         {
+            Log.CaughtBrief(ex, "reading a blueprint to paste");
             Message?.Invoke(Said.Of("blueprints.msg.unreadableWhy", ex.Message));
             Refresh();
             return;
@@ -585,6 +590,7 @@ public sealed class BlueprintsPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "writing a blueprint in another mod's format");
             Message?.Invoke(Said.Of("blueprints.msg.writeFailed", path, ex.Message));
             return null;
         }
@@ -608,6 +614,7 @@ public sealed class BlueprintsPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "reading a blueprint file to import");
             Message?.Invoke(Said.Of("blueprints.msg.importFailed", ex.Message));
             return null;
         }
@@ -627,6 +634,7 @@ public sealed class BlueprintsPanel
         }
         catch (InvalidDataException ex)
         {
+            Log.CaughtBrief(ex, "turning an imported blueprint into a copy");
             Message?.Invoke(Said.Of("blueprints.msg.importInvalid", ex.Message));
             return null;
         }
@@ -655,6 +663,7 @@ public sealed class BlueprintsPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "writing into the blueprints folder");
             Message?.Invoke(Said.Of("blueprints.msg.folderFailed", ex.Message));
             return false;
         }

@@ -322,6 +322,7 @@ public sealed class DungeonGenPanel
             }
             catch (Exception e)
             {
+                Log.Caught(e, "making a dungeon");
                 return (Result: null, Error: e.Message);
             }
         }).ContinueWith(t =>

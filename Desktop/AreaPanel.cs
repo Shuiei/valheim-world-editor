@@ -875,6 +875,7 @@ public sealed class AreaPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "writing the heightmap picture");
             return Said.Of("area.msg.heightmapFailed", path, ex.Message);
         }
         return Said.Of("area.msg.heightmapWritten", path, s.W, s.H, min, max);
@@ -912,6 +913,7 @@ public sealed class AreaPanel
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
         {
+            Log.CaughtBrief(ex, "reading the heightmap picture to import");
             Say(Said.Of("area.msg.pictureUnusable", ex.Message));
             return;
         }
@@ -1085,6 +1087,7 @@ public sealed class AreaPanel
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "reading the chosen backup");
             ShowBackup(Said.Of("area.backup.unreadable", ex.Message));
             return null;
         }

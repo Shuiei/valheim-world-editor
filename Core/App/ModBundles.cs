@@ -80,7 +80,7 @@ public static class ModBundles
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidDataException or NotSupportedException or NotImplementedException)
             {
-                Console.WriteLine($"mod bundles: could not be copied ({e.Message}).");
+                Log.Caught(e, "copying the mods' bundles (no mod's model is drawn)");
             }
             _made = (stamp, reader);
             return reader;
@@ -109,6 +109,7 @@ public static class ModBundles
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
+                Log.Caught(e, "listing a plugins folder for the mods' bundles (passed over)");
                 continue;
             }
             foreach (string file in files)
@@ -159,6 +160,7 @@ public static class ModBundles
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException)
         {
             // Not a .NET DLL, or not readable: nothing in it.
+            Log.CaughtBrief(e, "looking for bundles in a mod's file (nothing in it)");
         }
         return list;
     }
@@ -261,7 +263,7 @@ public static class ModBundles
             // still go), else no mod's model would be drawn; it is tried again next time.
             catch (Exception e) when (e is not OutOfMemoryException)
             {
-                Console.WriteLine($"mod bundles: {s.Name} could not be copied ({e.Message}).");
+                Log.Caught(e, $"copying the mod bundle {s.Name} (left out, tried again next time)");
                 failed.Add(s.Name);
             }
         }

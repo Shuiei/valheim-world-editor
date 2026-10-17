@@ -178,7 +178,7 @@ public static class ModCatalogue
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
             {
-                Console.WriteLine($"mod catalogue: {FilePath} could not be read ({e.Message}); starting without it.");
+                Log.Caught(e, "reading the kept mod catalogue (starting without it)");
                 Use(Empty());
             }
         }

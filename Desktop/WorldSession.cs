@@ -108,7 +108,7 @@ public sealed class WorldSession : IDisposable
         {
             // The save itself is done: any failure here is logged (an unexpected one in full), not reported as a
             // failed save.
-            Console.WriteLine($"History: could not keep it on disk: {(ex is IOException or UnauthorizedAccessException ? ex.Message : ex.ToString())}");
+            Log.Caught(ex, "keeping the history on disk (the save itself is done)");
         }
     }
 
@@ -214,7 +214,8 @@ public sealed class WorldSession : IDisposable
         }
         catch (Exception e) when (e is InvalidOperationException or HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
         {
-            Console.WriteLine($"bridge mods: not read from the game ({e.Message}).");
+            // Brief: an older plugin has no list of mods.
+            Log.CaughtBrief(e, "asking the game for its mods' plugins");
         }
         return mods;
     }
@@ -239,7 +240,7 @@ public sealed class WorldSession : IDisposable
         }
         catch (Exception e) when (e is InvalidOperationException or HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or IOException or UnauthorizedAccessException)
         {
-            Console.WriteLine($"mod catalogue: not read from the game ({e.Message}).");
+            Log.Caught(e, "reading the game's mod catalogue");
         }
     }
 
@@ -451,6 +452,7 @@ public sealed class WorldSession : IDisposable
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
             {
+                Log.Caught(ex, "reading the save back to check it");
                 unread = Said.Of("save.msg.notReadBack", ex.Message);
             }
             if (unread == Said.Empty)
@@ -461,7 +463,7 @@ public sealed class WorldSession : IDisposable
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
                 {
-                    Console.WriteLine($"Saved: its earlier saves could not be removed: {ex.Message}");
+                    Log.Caught(ex, "removing the world's earlier saves after saving");
                 }
             }
             Edits.ResetFrom(World);
@@ -634,7 +636,7 @@ public sealed class WorldSession : IDisposable
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
             {
-                Console.WriteLine($"Leaving the world: its earlier saves could not be removed: {ex.Message}");
+                Log.Caught(ex, "removing the world's earlier saves on leaving it");
             }
         }
         ForgetSaves();
@@ -749,6 +751,7 @@ public sealed class WorldSession : IDisposable
                 }
                 catch (Exception ex) when (GameFailed(ex))
                 {
+                    Log.Caught(ex, "reading the world from the game after resetting zones");
                     MarkHistoryApplied();
                     KeepHistory(later: true);
                     return new Outcome(true, Said.Of("save.msg.appliedUnread", Said.Join("; ", done), ex.Message), false) { Lifted = plan != null };
@@ -771,6 +774,7 @@ public sealed class WorldSession : IDisposable
         // The game answering with an error (InvalidOperationException from the bridge) is reported too.
         catch (Exception ex) when (GameFailed(ex))
         {
+            Log.Caught(ex, "applying the changes to the running game");
             if (sent)
             {
                 // Some parts went in: said, and the steps the game has all of are applied.

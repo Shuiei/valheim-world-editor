@@ -51,7 +51,7 @@ public sealed partial class WorldEditorBridgePlugin
         }
         catch (Exception ex)
         {
-            Logger.LogWarning($"WorldEditorBridge could not ask Jötunn which mod adds each prefab: {ex.Message}");
+            Caught(ex, "asking Jötunn to note which mod adds each prefab (no mod names)");
         }
     }
 
@@ -85,7 +85,7 @@ public sealed partial class WorldEditorBridgePlugin
         }
         catch (Exception ex)
         {
-            Logger.LogWarning($"WorldEditorBridge could not ask Jötunn which mod adds each prefab: {ex.Message}");
+            Caught(ex, "asking Jötunn which mod adds each prefab (no mod names)");
         }
         return mods;
     }
@@ -96,7 +96,7 @@ public sealed partial class WorldEditorBridgePlugin
     /// plugin's own name. A package can hold several plugins, and Jötunn names the one that added a prefab
     /// (ValheimRAFT's are added by its "Inventory Patch Detector").
     /// </summary>
-    private static string ModName(BepInEx.BepInPlugin plugin)
+    private string ModName(BepInEx.BepInPlugin plugin)
     {
         if (!BepInEx.Bootstrap.Chainloader.PluginInfos.TryGetValue(plugin.GUID, out BepInEx.PluginInfo info) || string.IsNullOrEmpty(info.Location))
         {
@@ -126,6 +126,7 @@ public sealed partial class WorldEditorBridgePlugin
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // An unreadable manifest: the folder's name.
+            Caught(ex, $"reading the manifest.json of {folder} (its folder's name is used)", brief: true);
         }
         int dash = folder.IndexOf('-');
         return dash > 0 && dash < folder.Length - 1 ? folder.Substring(dash + 1) : folder;

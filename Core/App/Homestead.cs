@@ -57,6 +57,7 @@ public static class Homestead
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
+                Log.CaughtBrief(ex, "searching a plugins folder for Homestead (passed over)");
             }
         }
         return new Status(where.Count > 0, version, where, Folder());
@@ -79,6 +80,7 @@ public static class Homestead
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException or InvalidOperationException)
         {
+            Log.CaughtBrief(ex, "reading Homestead's version (unknown)");
             return null;
         }
     }
@@ -185,6 +187,7 @@ public static class Homestead
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "reading a Homestead blueprint (left out)");
             return null;
         }
     }

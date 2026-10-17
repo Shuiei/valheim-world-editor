@@ -415,6 +415,7 @@ public sealed partial class GlView
                 // memory running out on a texture) is said, and the kind's things get the stand-in box rather than
                 // nothing at all: drawn, picked, and their ghosts shown. The textures read go up with it, as any
                 // model's; those claimed and not read are let go, for another loader to read.
+                Log.Caught(ex, $"loading the model of {g.Key.Prefab} (drawn as a box)");
                 Status?.Invoke(Said.Of("world.msg.modelFailed", g.Key.Prefab, ex.Message));
                 lock (_textures)
                 {

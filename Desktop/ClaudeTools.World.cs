@@ -52,6 +52,7 @@ public sealed partial class ClaudeTools
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "searching the world's files for Claude");
             return "The search failed: " + ex.Message;
         }
         return await OnUi(() =>

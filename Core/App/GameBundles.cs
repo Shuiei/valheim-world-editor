@@ -364,7 +364,7 @@ public sealed class GameBundles
             }
             catch (Exception e) when (e is JsonException or IOException or KeyNotFoundException or InvalidOperationException)
             {
-                Console.WriteLine($"game files: the index cache could not be read ({e.Message}), reading the bundles again");
+                Log.Caught(e, "reading the game files' index cache (the bundles are read again)");
             }
         }
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -379,7 +379,7 @@ public sealed class GameBundles
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
-                Console.WriteLine($"game files: the index could not be kept ({e.Message})");
+                Log.Caught(e, "keeping the game files' index (made again next time)");
             }
         }
         return SetIndex(index);
@@ -471,6 +471,7 @@ public sealed class GameBundles
             }
             catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException)
             {
+                Log.CaughtBrief(e, $"opening the bundle {bundle} (not a bundle read here: skipped)");
                 return null;
             }
             foreach (var d in b.file.BlockAndDirInfo.DirectoryInfos)
@@ -497,7 +498,7 @@ public sealed class GameBundles
         catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or EndOfStreamException
             or IndexOutOfRangeException or ArgumentException or NullReferenceException or OverflowException)
         {
-            Console.WriteLine($"game files: the contents of {bundle} could not be read ({e.Message}), skipped");
+            Log.Caught(e, $"reading the contents of the bundle {bundle} (skipped)");
             return null;
         }
         finally
@@ -599,7 +600,7 @@ public sealed class GameBundles
             }
             catch (Exception e) when (e is JsonException or IOException or KeyNotFoundException or InvalidOperationException)
             {
-                Console.WriteLine($"game files: the names cache could not be read ({e.Message}), reading the bundles again");
+                Log.Caught(e, "reading the game files' names cache (the bundles are read again)");
             }
         }
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -638,7 +639,7 @@ public sealed class GameBundles
             catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or EndOfStreamException
                 or IndexOutOfRangeException or ArgumentException or NullReferenceException or OverflowException)
             {
-                Console.WriteLine($"game files: the names of {bundle} could not be read ({e.Message}), skipped");
+                Log.Caught(e, $"reading the names in the bundle {bundle} (skipped)");
             }
             finally
             {
@@ -666,7 +667,7 @@ public sealed class GameBundles
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
-                Console.WriteLine($"game files: the names could not be kept ({e.Message})");
+                Log.Caught(e, "keeping the game files' names (read again next time)");
             }
         }
         return _named = named;
@@ -692,6 +693,7 @@ public sealed class GameBundles
             }
             catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
             {
+                Log.CaughtBrief(e, "reading a mesh's bounds (not a candidate)");
                 return null;
             }
             finally
@@ -715,6 +717,7 @@ public sealed class GameBundles
             }
             catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
             {
+                Log.CaughtBrief(e, "counting a mesh's vertices (taken as unknown)");
                 return -1;
             }
             finally
@@ -746,6 +749,8 @@ public sealed class GameBundles
         {
             var (_, a) = Open(bundle);
             var list = new List<AssetTypeValueField>();
+            Exception? first = null;
+            int unread = 0;
             // Without type trees no script's fields are described: none read.
             foreach (var info in a.file.Metadata.TypeTreeEnabled ? a.file.GetAssetsOfType(AssetClassID.MonoBehaviour) : [])
             {
@@ -755,8 +760,15 @@ public sealed class GameBundles
                 }
                 catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
                 {
-                    // A script whose fields are not described (no type tree): not one of ours.
+                    // A script whose fields are not described (no type tree): not one of ours. Said once below for
+                    // the bundle, as there can be hundreds.
+                    first ??= e;
+                    unread++;
                 }
+            }
+            if (first != null)
+            {
+                Log.CaughtBrief(first, $"reading the fields of {unread} script(s) in the bundle {bundle} (not described: not ours, skipped)");
             }
             return list;
         }
@@ -836,6 +848,7 @@ public sealed class GameBundles
                 }
                 catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException)
                 {
+                    Log.CaughtBrief(e, $"opening {name} (not a bundle: passed over)");
                     continue;
                 }
             }
@@ -850,7 +863,7 @@ public sealed class GameBundles
             catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or EndOfStreamException
                 or IndexOutOfRangeException or ArgumentException or NullReferenceException or OverflowException)
             {
-                Console.WriteLine($"game files: the files in {name} could not be listed ({e.Message}), skipped");
+                Log.Caught(e, $"listing the files in the bundle {name} (skipped)");
             }
             finally
             {
@@ -1742,8 +1755,9 @@ public sealed class GameBundles
                         }
                         catch (Exception e) when (e is IndexOutOfRangeException or ArgumentException)
                         {
-                            // LZ4ps's own errors for a broken block or one shorter than said.
-                            got = -1;
+                            // LZ4ps's own errors for a broken block or one shorter than said: the shader's error, with
+                            // this one in it, is logged where it is handled.
+                            throw new InvalidDataException("a shader's program could not be unpacked", e);
                         }
                         if (got != full[k])
                         {

@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -124,6 +125,7 @@ public static partial class ScriptHost
             catch (IOException e)
             {
                 // The process died before it read the whole script: said with its exit below.
+                Log.CaughtBrief(e, "sending the script to its process");
                 unsent = e.Message;
             }
             await p.WaitForExitAsync(cancel);
@@ -167,7 +169,9 @@ public static partial class ScriptHost
         }
         catch (Exception e) when (e is IOException or ObjectDisposedException)
         {
-            // The process is gone, or its input was closed by Stop: the request no longer matters.
+            // The process is gone, or its input was closed by Stop: the request no longer matters (brief: the stop's
+            // own doing).
+            Log.CaughtBrief(e, "finishing sending a stopped script");
         }
     }
 
@@ -218,9 +222,10 @@ public static partial class ScriptHost
                 {
                 }
             }
-            catch (IOException)
+            catch (IOException e)
             {
                 // The pipe broke: the editor is gone, which is a stop too.
+                Log.CaughtBrief(e, "waiting for the editor's stop");
             }
             stop.Cancel();
         })
@@ -236,11 +241,13 @@ public static partial class ScriptHost
         }
         catch (OperationCanceledException)
         {
+            // The user's Stop: not an error, and the editor writes the line for it.
             w.Write((byte)Answer.Stopped);
         }
         catch (Exception ex)
         {
-            // The script's own error, as the editor would have caught it: reported with its line.
+            // The script's own error, as the editor would have caught it: reported with its line (and logged by the
+            // editor, which gets it as a ScriptException).
             w.Write((byte)Answer.Error);
             w.Write(Where(ex));
             w.Write(ex.GetType().Name);

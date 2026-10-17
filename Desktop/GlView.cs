@@ -188,6 +188,7 @@ public sealed partial class GlView : OpenGlControlBase
             }
             catch (Exception ex)
             {
+                Log.Caught(ex, "reading the game's look");
                 Status?.Invoke(Said.Of("world.msg.lookUnreadable", ex.Message));
             }
             Wake();
