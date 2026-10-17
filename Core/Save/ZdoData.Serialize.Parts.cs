@@ -68,7 +68,7 @@ public sealed partial class ZdoData
     /// (key, value) pairs, in the order the save format reads them.
     /// </summary>
     /// <param name="w">The writer the object's bytes go to.</param>
-    private void WriteParts(BinaryWriter w)
+    internal void WriteParts(BinaryWriter w)
     {
         void Each<T>(List<(int Key, T Value)> list, Action<T> write)
         {

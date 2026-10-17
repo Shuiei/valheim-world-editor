@@ -4,7 +4,7 @@ public static partial class WorldWriter
 {
     /// <summary>Whether every terrain zone that was not edited or reset reads back exactly as it was.</summary>
     /// <returns>What is wrong, or null when the untouched zones are the same.</returns>
-    private static string? CheckUntouchedZones(WorldSave before, ILookup<(int, int), TerrainZone> afterZones, HashSet<(int, int)> changed, HashSet<(int, int)> groundReset)
+    internal static string? CheckUntouchedZones(WorldSave before, ILookup<(int, int), TerrainZone> afterZones, HashSet<(int, int)> changed, HashSet<(int, int)> groundReset)
     {
         // Every other terrain zone must be untouched.
         // (Two terrain objects in one zone: compared in order, the writer keeps the objects' order.)

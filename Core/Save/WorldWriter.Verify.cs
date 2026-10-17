@@ -48,7 +48,7 @@ public static partial class WorldWriter
 
     /// <summary>Whether each saved zone reads back with the ground and paint it was given.</summary>
     /// <returns>What is wrong, or null when every saved zone is right.</returns>
-    private static string? CheckSavedZones(ILookup<(int, int), TerrainZone> afterZones, IReadOnlyList<ZoneEdit> saved)
+    internal static string? CheckSavedZones(ILookup<(int, int), TerrainZone> afterZones, IReadOnlyList<ZoneEdit> saved)
     {
         foreach (ZoneEdit e in saved)
         {

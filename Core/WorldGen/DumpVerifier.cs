@@ -123,7 +123,7 @@ public static partial class DumpVerifier
     /// <summary>
     /// A generator for a seed name (world gen version 2), timed on the console.
     /// </summary>
-    private static WorldGenerator Init(string seedName)
+    internal static WorldGenerator Init(string seedName)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
         World world = new() { m_seedName = seedName, m_seed = TerrainEditor.Save.StableHash.Of(seedName), m_worldGenVersion = 2 };
