@@ -354,14 +354,14 @@ public sealed class AreaTool
     /// <param name="a">The action.</param>
     public static Said Named(GroundAction a) => a switch
     {
-        GroundAction.Flatten => Said.Of("area.action.flatten"),
-        GroundAction.Raise => Said.Of("area.action.raise"),
-        GroundAction.Lower => Said.Of("area.action.lower"),
-        GroundAction.Smooth => Said.Of("area.action.smooth"),
-        GroundAction.Natural => Said.Of("area.action.natural"),
+        GroundAction.Flatten => Said.Of("brush.label.flatten"),
+        GroundAction.Raise => Said.Of("brush.label.raise"),
+        GroundAction.Lower => Said.Of("brush.label.lower"),
+        GroundAction.Smooth => Said.Of("brush.label.smooth"),
+        GroundAction.Natural => Said.Of("brush.label.natural"),
         GroundAction.Restore => Said.Of("area.action.restore"),
-        GroundAction.Erode => Said.Of("area.action.erode"),
-        _ => Said.Of("area.action.paint"),
+        GroundAction.Erode => Said.Of("brush.label.erode"),
+        _ => Said.Of("common.paint"),
     };
 
     /// <summary>The action inside the selection, faded by the soft edge; locked points are left alone.</summary>

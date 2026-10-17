@@ -71,14 +71,14 @@ public sealed class AreaPanel
     /// <param name="a">The action.</param>
     private static string ActionLabel(Act a) => a switch
     {
-        Act.Flatten => Lang.T("area.action.flatten"),
-        Act.Raise => Lang.T("area.action.raise"),
-        Act.Lower => Lang.T("area.action.lower"),
-        Act.Smooth => Lang.T("area.action.smooth"),
-        Act.Natural => Lang.T("area.action.natural"),
+        Act.Flatten => Lang.T("brush.label.flatten"),
+        Act.Raise => Lang.T("brush.label.raise"),
+        Act.Lower => Lang.T("brush.label.lower"),
+        Act.Smooth => Lang.T("brush.label.smooth"),
+        Act.Natural => Lang.T("brush.label.natural"),
         Act.Restore => Lang.T("area.action.restore"),
-        Act.Erode => Lang.T("area.action.erode"),
-        Act.Paint => Lang.T("area.action.paint"),
+        Act.Erode => Lang.T("brush.label.erode"),
+        Act.Paint => Lang.T("common.paint"),
         Act.Remove => Lang.T("area.action.remove"),
         Act.Select => Lang.T("area.action.select"),
         Act.Replace => Lang.T("area.action.replace"),
@@ -96,9 +96,9 @@ public sealed class AreaPanel
     /// <param name="t">The paint's brush tool.</param>
     private static string PaintLabel(BrushTool t) => t switch
     {
-        BrushTool.PaintDirt => Lang.T("area.paint.dirt"),
+        BrushTool.PaintDirt => Lang.T("brush.label.dirt"),
         BrushTool.PaintCultivated => Lang.T("area.paint.cultivated"),
-        BrushTool.PaintPaved => Lang.T("area.paint.paved"),
+        BrushTool.PaintPaved => Lang.T("brush.label.paved"),
         _ => Lang.T("brush.label.clear"),
     };
 
@@ -106,9 +106,9 @@ public sealed class AreaPanel
     /// <param name="t">The paint's brush tool.</param>
     private static Said PaintNamed(BrushTool t) => t switch
     {
-        BrushTool.PaintDirt => Said.Of("area.paintAct.dirt"),
-        BrushTool.PaintCultivated => Said.Of("area.paintAct.cultivated"),
-        BrushTool.PaintPaved => Said.Of("area.paintAct.paved"),
+        BrushTool.PaintDirt => Said.Of("path.action.paintDirt"),
+        BrushTool.PaintCultivated => Said.Of("path.action.paintCultivated"),
+        BrushTool.PaintPaved => Said.Of("path.action.paintPaved"),
         _ => Said.Of("area.paintAct.clear"),
     };
 
@@ -161,7 +161,7 @@ public sealed class AreaPanel
     /// Flatten, Raise and Lower: No limit, the ground goes past the game's ±8 m (the brush options' switch, the
     /// same one shown here; the window keeps the two together).
     /// </summary>
-    internal CheckBox NoLimitBox { get; } = new() { Content = Lang.T("area.label.noLimit"), FontSize = 12 };
+    internal CheckBox NoLimitBox { get; } = new() { Content = Lang.T("brush.label.noLimit"), FontSize = 12 };
     /// <summary>No limit was switched here (on: true).</summary>
     public event Action<bool>? NoLimitChanged;
     /// <summary>Flatten, Raise and Lower: the cut and fill the action would move.</summary>
@@ -173,7 +173,7 @@ public sealed class AreaPanel
     /// <summary>Replace: the kind to put in their place, from the kinds the world can make.</summary>
     internal ComboBox ToBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 400 };
     /// <summary>Eyedropper: the "with" kind picked from the world (the window takes the next click on an object).</summary>
-    internal Button ToPickButton { get; } = new() { Content = Lang.T("area.label.pick"), FontSize = 11, Padding = new Thickness(6, 2), Margin = new Thickness(4, 0, 0, 0) };
+    internal Button ToPickButton { get; } = new() { Content = Lang.T("select.label.pick"), FontSize = 11, Padding = new Thickness(6, 2), Margin = new Thickness(4, 0, 0, 0) };
     /// <summary>
     /// Asks the window to take the next click on an object: the action's name for the prompt, and what to do with
     /// the picked prefab hash.
@@ -411,11 +411,11 @@ public sealed class AreaPanel
                     new TextBlock { Text = Lang.T("rail.label.area"), FontSize = 14, FontWeight = FontWeight.SemiBold },
                     new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { BoxButton, PolyButton, ClearButton } },
                     Info,
-                    Row(Lang.T("area.label.soft"), SoftSlider, softV),
-                    Row(Lang.T("area.label.action"), ActionBox),
+                    Row(Lang.T("path.label.soft"), SoftSlider, softV),
+                    Row(Lang.T("path.label.action"), ActionBox),
                     For(Row(Lang.T("common.height"), HeightBox, AverageButton), Act.Flatten),
-                    For(Row(Lang.T("area.label.amount"), AmountBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }), Act.Raise, Act.Lower),
-                    For(Row(Lang.T("area.action.paint"), PaintBox), Act.Paint),
+                    For(Row(Lang.T("path.label.amount"), AmountBox, new TextBlock { Text = Lang.T("common.metres"), Margin = new Thickness(3, 0, 0, 0), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }), Act.Raise, Act.Lower),
+                    For(Row(Lang.T("common.paint"), PaintBox), Act.Paint),
                     For(NoLimitBox, Act.Flatten, Act.Raise, Act.Lower),
                     For(VolumeText, Act.Flatten, Act.Raise, Act.Lower),
                     For(Help(Lang.T("area.hint.smooth")), Act.Smooth),
@@ -437,8 +437,8 @@ public sealed class AreaPanel
                         Children =
                         {
                             PictureInfo,
-                            Row(Lang.T("area.label.lowest"), LowestBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }),
-                            Row(Lang.T("area.label.highest"), HighestBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }),
+                            Row(Lang.T("area.label.lowest"), LowestBox, new TextBlock { Text = Lang.T("common.metres"), Margin = new Thickness(3, 0, 0, 0), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }),
+                            Row(Lang.T("area.label.highest"), HighestBox, new TextBlock { Text = Lang.T("common.metres"), Margin = new Thickness(3, 0, 0, 0), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }),
                             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { PutButton, CancelPictureButton } },
                         },
                     }, Act.Heightmap),
@@ -736,7 +736,7 @@ public sealed class AreaPanel
         var poly = Area.Polygon();
         if (poly == null)
         {
-            Say(Said.Of("area.msg.selectFirst"));
+            Say(Said.Of("paste.msg.areaFirst"));
             return;
         }
         var act = Current;
@@ -811,11 +811,11 @@ public sealed class AreaPanel
         int i = _creatable.IndexOf(prefab);
         if (i < 0)
         {
-            Say(Said.Of("place.msg.cannotPlace", NameOf(prefab)));
+            Say(Said.Of("select.msg.cannotPlace", NameOf(prefab)));
             return;
         }
         ToBox.SelectedIndex = i;
-        Say(Said.Of("area.msg.replaceWith", NameOf(prefab)));
+        Say(Said.Of("select.msg.replaceWith", NameOf(prefab)));
     }
 
     /// <summary>
@@ -1258,7 +1258,7 @@ public sealed class AreaPanel
         var zones = Area.ZonesUnder(session.Ground);
         if (zones.Count == 0)
         {
-            Say(Said.Of("area.msg.selectFirst"));
+            Say(Said.Of("paste.msg.areaFirst"));
             return;
         }
         bool keep = KeepBuildingsBox.IsChecked == true, ground = ResetGroundBox.IsChecked == true;
