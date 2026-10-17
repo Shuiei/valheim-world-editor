@@ -74,7 +74,7 @@ public static class GameData
     /// <summary>
     /// Where the data in use came from: a bundles folder, Copies, or none yet.
     /// </summary>
-    private static string? _from;
+    private static volatile string? _from;
     /// <summary>
     /// The game's own JSON of the kinds the mods' prefabs are laid over (ModCatalogue.Kinds), as last used: what
     /// AddMods lays them over again.
@@ -86,6 +86,11 @@ public static class GameData
     /// worked out from it to be worked out again.
     /// </summary>
     public static int Generation => _generation;
+    /// <summary>
+    /// Whether some game data is in use (Ensure done, or the tests' copies): before, at the editor's start, the
+    /// catalogues are empty (no item, no piece is known).
+    /// </summary>
+    public static bool InUse => _from != null;
     /// <summary>Backs <see cref="Generation"/>.</summary>
     private static volatile int _generation;
     /// <summary>

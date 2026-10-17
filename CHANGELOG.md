@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.31 — 2026-10-17
+
+### Fixed
+- **The Dungeon panel no longer fails at the editor's start.** It made its first dungeon a moment after the window
+  opened, before the game's data was read, so no item was known yet and the key chest failed ("“CryptKey” is not an
+  item of the game"). It now says it waits for the game's data and makes the dungeon once the data is in use.
+
 ## v1.47.29 — 2026-10-17
 
 ### Fixed
