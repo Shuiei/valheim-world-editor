@@ -66,8 +66,8 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
     /// <summary>
     /// A tunnel request to the local sshd as the test's user, with its key unless another is given.
     /// </summary>
-    private Tunnel.Request Req(string? key = null, string? token = "tok", int? bridge = null, string? password = null, bool savePassword = false, string? name = null, string? folder = null) =>
-        new("127.0.0.1", _ssh.Port, _ssh.User, password, key ?? _ssh.Key, null, token, bridge, savePassword, name, folder);
+    private Tunnel.Request Req(string? key = null, string? token = "tok", int? bridge = null, string? password = null, bool savePassword = false, string? name = null, string? folder = null, int? sshPort = null) =>
+        new("127.0.0.1", sshPort ?? _ssh.Port, _ssh.User, password, key ?? _ssh.Key, null, token, bridge, savePassword, name, folder);
 
     /// <summary>
     /// The first line a local port answers (10 s at most).
@@ -257,18 +257,62 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         _ssh.Need();
         Assert.Null((await Tunnel.Start(Req(bridge: BridgePort))).Error);
         string game = Path.Combine(_dir, "valheim");
-        Assert.Null(Tunnel.Diagnose(" "));
-        Assert.Equal($"The folder {game} does not exist on the server: check the server's Valheim folder.", Tunnel.Diagnose(game + "/"));
+        Assert.Null(await Tunnel.Diagnose(" "));
+        Assert.Equal($"The folder {game} does not exist on the server: check the server's Valheim folder.", await Tunnel.Diagnose(game + "/"));
         Directory.CreateDirectory(game);
-        Assert.Equal($"BepInEx is not installed in {game} on the server: install BepInExPack for Valheim there.", Tunnel.Diagnose(game));
+        Assert.Equal($"BepInEx is not installed in {game} on the server: install BepInExPack for Valheim there.", await Tunnel.Diagnose(game));
         Directory.CreateDirectory(Path.Combine(game, "BepInEx", "plugins", "Tie-WorldEditorBridge"));
-        Assert.Equal($"The plugin is not in {game}/BepInEx/plugins on the server: copy WorldEditorBridge.dll there and restart the server.", Tunnel.Diagnose(game));
+        Assert.Equal($"The plugin is not in {game}/BepInEx/plugins on the server: copy WorldEditorBridge.dll there and restart the server.", await Tunnel.Diagnose(game));
         File.WriteAllText(Path.Combine(game, "BepInEx", "plugins", "Tie-WorldEditorBridge", "WorldEditorBridge.dll"), "");
-        Assert.Equal("The plugin is installed but has never run: restart the server with BepInEx.", Tunnel.Diagnose(game));
+        Assert.Equal("The plugin is installed but has never run: restart the server with BepInEx.", await Tunnel.Diagnose(game));
         Directory.CreateDirectory(Path.Combine(game, "BepInEx", "config"));
         File.WriteAllText(Path.Combine(game, "BepInEx", "config", LocalGame.OldConfigName), "");
-        Assert.StartsWith("The plugin is installed but does not answer", Tunnel.Diagnose(game));
+        Assert.StartsWith("The plugin is installed but does not answer", await Tunnel.Diagnose(game));
         File.Move(Path.Combine(game, "BepInEx", "config", LocalGame.OldConfigName), Path.Combine(game, "BepInEx", "config", LocalGame.ConfigName));
-        Assert.StartsWith("The plugin is installed but does not answer", Tunnel.Diagnose(game));
+        Assert.StartsWith("The plugin is installed but does not answer", await Tunnel.Diagnose(game));
+    }
+
+    // The check of the server's folder waits on the server (15 s at most): it runs off the caller's thread, so the
+    // window does not freeze; it held the UI thread for the whole command.
+    [Fact]
+    public async Task TheServerCheckDoesNotHoldTheCallersThread()
+    {
+        _ssh.Need();
+        // A relay in front of sshd that holds the server's answers while the test holds the gate: the check cannot
+        // finish before the test lets it, however fast the server answers.
+        using var relay = new TcpListener(IPAddress.Loopback, 0);
+        relay.Start();
+        var gate = new SemaphoreSlim(1, 1);
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        _ = Task.Run(async () =>
+        {
+            using TcpClient app = await relay.AcceptTcpClientAsync(ct);
+            using var server = new TcpClient();
+            await server.ConnectAsync(IPAddress.Loopback, _ssh.Port, ct);
+            NetworkStream toApp = app.GetStream();
+            NetworkStream toServer = server.GetStream();
+            Task up = toApp.CopyToAsync(toServer, ct);
+            byte[] buffer = new byte[65536];
+            int n;
+            while ((n = await toServer.ReadAsync(buffer, ct)) > 0)
+            {
+                await gate.WaitAsync(ct);
+                try
+                {
+                    await toApp.WriteAsync(buffer.AsMemory(0, n), ct);
+                }
+                finally
+                {
+                    gate.Release();
+                }
+            }
+            await up;
+        }, ct);
+        Assert.Null((await Tunnel.Start(Req(bridge: BridgePort, sshPort: ((IPEndPoint)relay.LocalEndpoint).Port))).Error);
+        await gate.WaitAsync(ct);
+        var check = Tunnel.Diagnose(Path.Combine(_dir, "valheim"));
+        Assert.False(check.IsCompleted);
+        gate.Release();
+        Assert.StartsWith("The folder ", await check);
     }
 }

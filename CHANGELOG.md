@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.86 — unreleased
+
+### Fixed
+- **Connecting to a server whose plugin did not answer could freeze the window for up to 15 seconds.** The check of
+  the server's Valheim folder that says why ran its SSH command on the window's thread. It now runs in the
+  background, as does the reading of the plugin's port from the server's settings.
+
 ## v1.45.85 — unreleased
 
 ### Fixed
