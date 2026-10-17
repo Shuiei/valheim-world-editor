@@ -5,6 +5,57 @@ namespace TerrainEditor.Save;
 
 public sealed partial class WorldSave
 {
+    /// <summary>One object as it is read: where it is, what it is, and its flags.</summary>
+    /// <param name="Id">The object's id.</param>
+    /// <param name="Prefab">Its prefab hash.</param>
+    /// <param name="Position">Its position.</param>
+    /// <param name="Rotation">Its rotation.</param>
+    /// <param name="File">The chunk file the bytes belong to.</param>
+    /// <param name="Start">Where the object starts in the file.</param>
+    /// <param name="Flags">Its ZDO flags.</param>
+    /// <param name="Ref">The object's reference in the index.</param>
+    /// <param name="Tracked">Whether it is a location proxy or a ground modifier.</param>
+    /// <param name="Shown">Whether the editor lists it.</param>
+    private sealed record ZdoSite(int Id, int Prefab, Vector3 Position, Vector3 Rotation, ChunkFile File, long Start, ushort Flags, ObjectRef Ref, bool Tracked, bool Shown);
+
+    /// <summary>What an object's data sections give while it is read (filled by the section readers).</summary>
+    private sealed class ZdoFields
+    {
+        /// <summary>A fields holder reading link keys from the given set.</summary>
+        /// <param name="links">The mod link keys in use.</param>
+        public ZdoFields(LinkSet links) => Links = links;
+
+        /// <summary>The mod link keys in use.</summary>
+        public LinkSet Links { get; }
+
+        /// <summary>The object's scale; zero when not stored (it keeps its prefab's own scale).</summary>
+        public Vector3 Scale { get; set; } = Vector3.Zero;
+
+        /// <summary>The location index of a location proxy (zero otherwise).</summary>
+        public int Location { get; set; }
+
+        /// <summary>The time the object was created.</summary>
+        public long TimeCreated { get; set; }
+
+        /// <summary>The piece creator's id (zero when none).</summary>
+        public long Creator { get; set; }
+
+        /// <summary>The owner's id.</summary>
+        public long Owner { get; set; }
+
+        /// <summary>The player id.</summary>
+        public long PlayerId { get; set; }
+
+        /// <summary>The int link values, or null when there are none.</summary>
+        public List<(int Key, int Value)>? LinkInts { get; set; }
+
+        /// <summary>The vector link values, or null when there are none.</summary>
+        public List<(int Key, Vector3 Value)>? LinkVec3s { get; set; }
+
+        /// <summary>The quaternion link values, or null when there are none.</summary>
+        public List<(int Key, Quaternion Value)>? LinkQuats { get; set; }
+    }
+
     /// <summary>
     /// Reads one object through <see cref="ZdoReader"/>, keeping what the editor lists and recording where things are
     /// in the file so a writer can later copy objects unchanged or patch just the terrain data.
@@ -40,162 +91,56 @@ public sealed partial class WorldSave
         bool tracked = prefab == LocationProxyPrefab || ModifierPrefabs.Contains(prefab);
         // Objects that shape the ground (rock4_coast, HeathRockPillar...) are still shown; tools' marks are not.
         bool shown = prefab != LocationProxyPrefab && !(tracked && Terrain.TerrainModifiers.IsGroundMark(prefab));
-        int location = 0;
-        long timeCreated = 0;
-        long creator = 0, owner = 0, playerId = 0;
-        // Zero = not stored: the object keeps its prefab's own scale.
-        Vector3 scale = Vector3.Zero;
-        // The values mods link objects by (App.ObjectLinks): ids, and a part's place and turn in its parent's frame.
-        var links = ObjectLinks.Current;
-        List<(int Key, int Value)>? linkInts = null;
-        List<(int Key, Vector3 Value)>? linkVec3s = null;
-        List<(int Key, Quaternion Value)>? linkQuats = null;
+        var site = new ZdoSite(id, prefab, position, rotation, file, start, flags, objRef, tracked, shown);
         if (!zdo.HasData)
         {
-            objRef.End = pkg.Position;
-            RememberTemplate(prefab, id);
-            file.Objects.Add((start, pkg.Position));
-            if (shown)
-            {
-                Objects.Add((id, prefab, position, rotation, scale));
-            }
-            if (tracked && prefab != LocationProxyPrefab)
-            {
-                Placed.Add(new PlacedObject(prefab, 0, position, rotation, 0));
-            }
+            RecordWithoutData(site, pkg.Position);
             return id;
         }
+        // The values mods link objects by (App.ObjectLinks): ids, and a part's place and turn in its parent's frame.
+        var fields = new ZdoFields(ObjectLinks.Current);
+        ReadObjectData(site, fields, zdo, pkg);
+        RecordObject(site, fields, pkg.Position);
+        return id;
+    }
+
+    /// <summary>Reads each data section of an object in turn, handing each entry to the section's reader.</summary>
+    /// <param name="site">The object.</param>
+    /// <param name="fields">The fields the readers fill.</param>
+    /// <param name="zdo">The reader positioned in the object's data.</param>
+    /// <param name="pkg">The reader of the file (for where the terrain data ends).</param>
+    private void ReadObjectData(ZdoSite site, ZdoFields fields, ZdoReader zdo, ValheimReader pkg)
+    {
         while (zdo.Next())
         {
             int key = zdo.Key;
             switch (zdo.Section)
             {
                 case ZdoData.Floats:
-                    if (key == ZdoData.ScaleScalarKey)
-                    {
-                        scale = new Vector3(zdo.FloatValue);
-                    }
+                    ReadFloatField(fields, zdo, key);
                     break;
                 case ZdoData.Vec3s:
-                    if (key == ZdoData.ScaleKey)
-                    {
-                        scale = zdo.Vec3Value;
-                    }
-                    else if (links.Vec3Keys.Contains(key))
-                    {
-                        (linkVec3s ??= []).Add((key, zdo.Vec3Value));
-                    }
+                    ReadVec3Field(fields, zdo, key);
                     break;
                 case ZdoData.Quats:
-                    if (links.QuatKeys.Contains(key))
-                    {
-                        (linkQuats ??= []).Add((key, zdo.QuatValue));
-                    }
+                    ReadQuatField(fields, zdo, key);
                     break;
                 case ZdoData.Ints:
-                    if (prefab == LocationProxyPrefab && key == LocationKey)
-                    {
-                        Locations.Add((position, zdo.IntValue));
-                        location = zdo.IntValue;
-                    }
-                    else if (key == TamedKey && zdo.IntValue != 0)
-                    {
-                        Tamed.Add(id);
-                    }
-                    else if (links.IntKeys.Contains(key))
-                    {
-                        (linkInts ??= []).Add((key, zdo.IntValue));
-                    }
+                    ReadIntField(site, fields, zdo, key);
                     break;
                 case ZdoData.Longs:
-                    if (key == TimeCreatedKey)
-                    {
-                        timeCreated = zdo.LongValue;
-                    }
-                    else if (key == Editing.ObjectField.CreatorKey)
-                    {
-                        creator = zdo.LongValue;
-                    }
-                    else if (key == OwnerKey)
-                    {
-                        owner = zdo.LongValue;
-                    }
-                    else if (key == PlayerIdKey)
-                    {
-                        playerId = zdo.LongValue;
-                    }
+                    ReadLongField(fields, zdo, key);
                     break;
                 case ZdoData.Strings:
-                    long who = key == OwnerNameKey ? owner : key == CreatorNameKey ? creator : key == PlayerNameKey ? playerId : 0;
-                    if (who != 0 && zdo.StringValue!.Length > 0)
-                    {
-                        PlayerNames[who] = zdo.StringValue;
-                    }
+                    ReadStringField(fields, zdo, key);
                     break;
                 case ZdoData.ByteArrays when key == TCDataKey:
-                    TerrainZone zone;
-                    try
-                    {
-                        zone = TerrainZone.Decode(position, prefab, zdo.BytesValue!);
-                    }
-                    catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException)
-                    {
-                        // Damaged ground data: the game loses only this zone's ground edits. Here the object stays an
-                        // ordinary one, kept byte for byte, and the rest of the world reads on.
-                        Log.CaughtBrief(ex, $"reading the ground data of the terrain object at {position} (damaged: kept as it is)");
-                        break;
-                    }
-                    zone.Source = new ZdoLocation(file, start, -1, zdo.ValueStart, pkg.Position, flags);
-                    TerrainZones.Add(zone);
+                    ReadTerrainField(site, zdo, pkg);
                     break;
                 default:
                     // The connection and byte arrays other than ground data: read past, nothing the loader lists.
                     break;
             }
         }
-        long end = pkg.Position;
-        objRef.End = end;
-        file.Objects.Add((start, end));
-        if (tracked && (prefab != LocationProxyPrefab || location != 0))
-        {
-            Placed.Add(new PlacedObject(prefab, location, position, rotation, timeCreated));
-        }
-        bool terrain = TerrainZones.Count > 0 && TerrainZones[^1].Source is { } last && last.File == file && last.Start == start;
-        if (linkInts != null && ObjectLinks.Read(links, linkInts, linkVec3s, linkQuats) is { } link)
-        {
-            Links[id] = (link, rotation);
-        }
-        objRef.IsPiece = creator != 0;
-        objRef.Creator = creator;
-        objRef.IsTerrain = terrain;
-        if (!terrain)
-        {
-            RememberTemplate(prefab, id);
-        }
-        if (creator != 0)
-        {
-            Creators[creator] = Creators.GetValueOrDefault(creator) + 1;
-            Pieces.Add((id, prefab, position, rotation.Y));
-        }
-        else if (shown && !terrain)
-        {
-            Objects.Add((id, prefab, position, rotation, scale));
-        }
-        else if (prefab == LocationProxyPrefab && Editing.Uplift.IsDisc(location))
-        {
-            Discs.Add((id, position));
-        }
-        else if (prefab == LocationProxyPrefab && Terrain.PrefabCatalog.IsRunestone(location))
-        {
-            // A runestone: listed under its location's name (see PrefabCatalog.RunestoneLocations).
-            Objects.Add((id, location, position, rotation, scale));
-        }
-        // Only this object's own terrain data can still lack its end (the last zone added, if it is this
-        // object's): looking through every zone for each object made loading a large world slow.
-        if (terrain && TerrainZones[^1].Source is { End: < 0 } src)
-        {
-            TerrainZones[^1].Source = src with { End = end };
-        }
-        return id;
     }
 }

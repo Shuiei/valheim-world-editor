@@ -45,53 +45,6 @@ public sealed partial class WorldSave
     public byte[]? NewObjectBytes(Editing.NewObject n, Func<ObjectRef, byte[]> readSource) => NewObjectBytes(n, readSource, Builder);
 
     /// <summary>
-    /// <see cref="NewObjectBytes(Editing.NewObject, Func{ObjectRef, byte[]})"/> with the builder given (one taken
-    /// earlier) instead of the one chosen now.
-    /// </summary>
-    /// <param name="n">The new object.</param>
-    /// <param name="readSource">Gives the chunk file bytes the model lives in.</param>
-    /// <param name="builder">The builder a new piece of a kind players build is given (0: none).</param>
-    /// <returns>The bytes, or null when the prefab is unknown to both the world and the game.</returns>
-    public byte[]? NewObjectBytes(Editing.NewObject n, Func<ObjectRef, byte[]> readSource, long builder)
-    {
-        byte[]? bytes = BuildBytes(n, readSource);
-        if (bytes == null)
-        {
-            return null;
-        }
-        // Made here rather than moved or copied with its own fields: placed, pasted or built blank.
-        bool made = n.Fresh || n.Raw == null && ModelFor(n.Prefab, n.SourceId) == null;
-        string? tool = made ? Terrain.PieceCatalog.Get(n.Prefab)?.Tool : null;
-        // A new piece of a kind players build (placed, pasted or built blank) is the chosen builder's,
-        // like one built in the game. Without a builder the game takes it for part of a ruin: a third of
-        // the materials back, no base for fires, ignored by raids. Moved and edited objects keep theirs.
-        bool built = builder != 0 && tool != null;
-        // Food and drink set out with the serving tray (Feaster) are items made pieces: the game marks
-        // them with "piece" (ItemDrop.MakePiece). Without it they would be loose items, falling and
-        // despawning away from a base.
-        bool served = tool == "feaster" && Terrain.PrefabCatalog.ItemKindOf(n.Prefab) != null;
-        if (!built && !served && n.Data is not { Count: > 0 })
-        {
-            return bytes;
-        }
-        // Parsed and written once for all the fields set.
-        var z = ZdoData.Parse(bytes);
-        if (built)
-        {
-            z.Set("longs", Editing.ObjectField.CreatorKey, builder.ToString(CultureInfo.InvariantCulture));
-        }
-        if (served)
-        {
-            z.Set("ints", PieceKey, "1");
-        }
-        foreach (var f in n.Data ?? [])
-        {
-            z.Set(f.Section, f.Key, f.Value);
-        }
-        return z.Serialize();
-    }
-
-    /// <summary>
     /// The new object's bytes before the builder and data fields: its raw bytes moved, else a copy of its model, else a
     /// blank object from the catalogue (null when the game does not know the prefab).
     /// </summary>

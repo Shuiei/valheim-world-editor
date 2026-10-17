@@ -27,7 +27,7 @@ public static partial class Stability
     }
 
     /// <summary>An oriented box in the world: its middle, its three axes (unit length) and its half size along them.</summary>
-    private readonly record struct Obb(Vector3 C, Vector3 X, Vector3 Y, Vector3 Z, Vector3 H)
+    internal readonly record struct Obb(Vector3 C, Vector3 X, Vector3 Y, Vector3 Z, Vector3 H)
     {
         /// <summary>Its eight corners.</summary>
         public IEnumerable<Vector3> Corners()

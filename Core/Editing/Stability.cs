@@ -22,7 +22,7 @@ public static partial class Stability
     /// <param name="Q">Its rotation.</param>
     /// <param name="Aabb">A non-box collider (its axis-aligned bounds count).</param>
     /// <param name="Counts">On a layer the game's support check looks at.</param>
-    private sealed record Box(Vector3 C, Vector3 H, Quaternion Q, bool Aabb, bool Counts);
+    internal sealed record Box(Vector3 C, Vector3 H, Quaternion Q, bool Aabb, bool Counts);
 
     /// <summary>What support needs of a piece.</summary>
     /// <param name="Material">Its WearNTear material (0 wood, 1 stone, 2 iron...; see Stability.Material).</param>
@@ -33,7 +33,7 @@ public static partial class Stability
     /// The game never checks its support (WearNTear.m_noSupportWear off): it stays up, at its material's full
     /// support, wherever it is.
     /// </param>
-    private sealed record Data(int Material, bool Supports, Vector3 Com, Box[] Boxes, bool Free = false);
+    internal sealed record Data(int Material, bool Supports, Vector3 Com, Box[] Boxes, bool Free = false);
 
     /// <summary>None until Use: no world or Workshop opens before then (GameData).</summary>
     private static volatile Dictionary<string, Data> _pieces = [];
