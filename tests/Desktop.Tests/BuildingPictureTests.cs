@@ -2,13 +2,15 @@ using System.Numerics;
 using SkiaSharp;
 using TerrainEditor.App;
 using TerrainEditor.Terrain;
+using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// A blueprint's picture (BuildingPicture) without the game's models: its pieces' boxes, filling the middle and leaving
-/// the corners clear; and what a building costs in game (PieceCost).
+/// the corners clear; the equality of its triangles (NaN and -0 included); and what a building costs in game
+/// (PieceCost).
 /// </summary>
 public class BuildingPictureTests
 {
@@ -62,6 +64,71 @@ public class BuildingPictureTests
         }
         File.WriteAllBytes(outFile, BuildingPicture.Draw(pieces, models));
         File.WriteAllBytes(Path.ChangeExtension(outFile, ".boxes.png"), BuildingPicture.Draw(pieces, null));
+    }
+
+    /// <summary>
+    /// A triangle with every field set, its texture this one.
+    /// </summary>
+    private static BuildingPicture.Tri Triangle(ModelStore.ImageData? texture, float odd = 0.5f)
+    {
+        return new BuildingPicture.Tri
+        {
+            A = new Vector3(1, 2, 3),
+            B = new Vector3(4, 5, 6),
+            C = new Vector3(7, 8, odd),
+            Ua = new Vector2(0, 0),
+            Ub = new Vector2(1, 0),
+            Uc = new Vector2(odd, 1),
+            Colour = new Vector3(200, 100, 50),
+            Texture = texture,
+            UvTransform = new Vector4(1, 1, 0, odd),
+            Cutoff = odd,
+            Alpha = odd,
+        };
+    }
+
+    /// <summary>
+    /// Each field of a triangle changed alone, by name.
+    /// </summary>
+    private static readonly Dictionary<string, Func<BuildingPicture.Tri, BuildingPicture.Tri>> Changes = new()
+    {
+        ["A"] = t => { t.A = Vector3.Zero; return t; },
+        ["B"] = t => { t.B = Vector3.Zero; return t; },
+        ["C"] = t => { t.C = Vector3.Zero; return t; },
+        ["Ua"] = t => { t.Ua = Vector2.One; return t; },
+        ["Ub"] = t => { t.Ub = Vector2.One; return t; },
+        ["Uc"] = t => { t.Uc = Vector2.Zero; return t; },
+        ["Colour"] = t => { t.Colour = Vector3.Zero; return t; },
+        ["Texture"] = t => { t.Texture = null; return t; },
+        ["UvTransform"] = t => { t.UvTransform = Vector4.Zero; return t; },
+        ["Cutoff"] = t => { t.Cutoff = 1; return t; },
+        ["Alpha"] = t => { t.Alpha = 1; return t; },
+    };
+
+    /// <summary>
+    /// The names of the triangle's fields.
+    /// </summary>
+    public static TheoryData<string> TriangleFields => [.. Changes.Keys];
+
+    // Equal field by field, NaN equal to NaN and -0 to 0; the texture by its record equality, so the same pixels in
+    // another array are another texture.
+    [Theory]
+    [InlineData(float.NaN, float.NaN)]
+    [InlineData(-0f, 0f)]
+    [InlineData(0.5f, 0.5f)]
+    public void TrianglesWithTheSameFieldsAreEqual(float odd, float twin)
+    {
+        byte[] pixels = [1, 2, 3, 4];
+        EqualityAsserts.Same(Triangle(new(1, 1, pixels), odd), Triangle(new(1, 1, pixels), twin));
+        EqualityAsserts.Differ(Triangle(new(1, 1, pixels), odd), Triangle(new(1, 1, [1, 2, 3, 4]), twin));
+    }
+
+    [Theory]
+    [MemberData(nameof(TriangleFields))]
+    public void TrianglesDifferingInOneFieldAreNotEqual(string field)
+    {
+        var t = Triangle(new(1, 1, [1, 2, 3, 4]));
+        EqualityAsserts.Differ(t, Changes[field](t));
     }
 
     [Fact]

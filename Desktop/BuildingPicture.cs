@@ -39,7 +39,7 @@ public static class BuildingPicture
     ];
 
     /// <summary>A triangle to draw, in view space.</summary>
-    private struct Tri : IEquatable<Tri>
+    internal struct Tri : IEquatable<Tri>
     {
         /// <summary>The corners.</summary>
         public Vector3 A, B, C;

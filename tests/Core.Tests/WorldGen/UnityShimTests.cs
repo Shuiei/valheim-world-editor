@@ -5,7 +5,8 @@ using Rnd = ValheimGen.UnityEngine.Random;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// The small stand-ins the generator uses for Unity: vectors and their operators, Mathf, the random number generator at
+/// The small stand-ins the generator uses for Unity: vectors and their operators, the equality of vectors and colours
+/// (NaN and -0 included), Mathf, the random number generator at
 /// its edges (backwards ranges, the unit circle), GenMath's remapping, and the piece catalogue's footprints for the
 /// map.
 /// </summary>
@@ -27,6 +28,51 @@ public class UnityShimTests
         Assert.True(new Vector2(1, 2).Equals(new Vector2(1, 2)));
         Assert.False(new Vector2(1, 2).Equals("not a vector"));
         Assert.Equal(new Vector2(1, 2).GetHashCode(), new Vector2(1, 2).GetHashCode());
+    }
+
+    // Equals is float.Equals on each component: NaN equals NaN and -0 equals 0, with equal hashes. Vector2's == is
+    // Unity's approximate one instead, false for NaN.
+    [Theory]
+    [InlineData(float.NaN, float.NaN)]
+    [InlineData(-0f, 0f)]
+    public void VectorsAndColoursEqualTheirTwinWithNaNOrNegativeZero(float odd, float twin)
+    {
+        var v = new Vector2(odd, odd);
+        var w = new Vector2(twin, twin);
+        EqualityAsserts.Same(v, w);
+        Assert.Equal(!float.IsNaN(odd), v == w);
+        EqualityAsserts.Same(new Vector3(odd, odd, odd), new Vector3(twin, twin, twin));
+        EqualityAsserts.Same(new Color(odd, odd, odd, odd), new Color(twin, twin, twin, twin));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void VectorsAndColoursDifferingInOneComponentAreNotEqual(int which)
+    {
+        float[] c = [1, 2, 3, 4];
+        float[] d = [1, 2, 3, 4];
+        d[which] += 0.5f;
+        EqualityAsserts.Differ(new Color(c[0], c[1], c[2], c[3]), new Color(d[0], d[1], d[2], d[3]));
+        if (which < 3)
+        {
+            EqualityAsserts.Differ(new Vector3(c[0], c[1], c[2]), new Vector3(d[0], d[1], d[2]));
+        }
+        if (which < 2)
+        {
+            EqualityAsserts.Differ(new Vector2(c[0], c[1]), new Vector2(d[0], d[1]));
+        }
+    }
+
+    [Fact]
+    public void TwoDimensionalVectorsAFractionApartAreApproximatelyButNotExactlyEqual()
+    {
+        var v = new Vector2(1, 2);
+        var w = new Vector2(1, 2.000001f);
+        Assert.True(v == w);
+        EqualityAsserts.Differ(v, w);
     }
 
     [Fact]
