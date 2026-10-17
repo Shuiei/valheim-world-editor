@@ -3160,13 +3160,19 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Shows the 3D view's report in the help card's frame rate line, in the language in use.
+    /// </summary>
+    /// <param name="s">The view's report: frames, work, objects, draws and the kinds still loading.</param>
+    internal void ShowStats(GlView.Stats s) => _fps.Text = Lang.T("help.fps", s.Fps, s.WorkMs, s.Objects, s.Instances, s.Batches)
+        + (s.PendingModels > 0 ? " " + Lang.T("help.fpsLoading", s.PendingModels) : "");
+
+    /// <summary>
     /// What the 3D view reports, shown: frame rates, the selection (the Select panel, the Inspector and the status
     /// line follow it), walking or flying, and its status lines.
     /// </summary>
     private void WireViewReports()
     {
-        View.StatsChanged += s => _fps.Text = Lang.T("help.fps", s.Fps, s.WorkMs, s.Objects, s.Instances, s.Batches)
-            + (s.PendingModels > 0 ? " " + Lang.T("help.fpsLoading", s.PendingModels) : "");
+        View.StatsChanged += ShowStats;
         View.SelectionChanged += _ => FollowSelection();
         View.SelectionChanged += things => _selection.Text = things.Count == 0 ? "" : things.Count == 1
             ? Lang.T("view.selected.one", ThingName(things[0]), things[0].Position.X, things[0].Position.Z, things[0].Position.Y)
