@@ -44,14 +44,20 @@ public sealed partial class GlView
         }
         else if (_brushDown)
         {
-            _brushDown = false;
-            var message = Scene?.Session?.EndStroke() ?? Said.Empty;
-            StrokeEnded?.Invoke(message);
+            EndBrushStroke();
         }
         else if (click && IsClickInView(at))
         {
-            Pick(at, size, mods.HasFlag(KeyModifiers.Shift) || Ctrl(mods), mods.HasFlag(KeyModifiers.Shift) && !Ctrl(mods));
+            Pick(at, size, AddsToSelection(mods), IsRangeSelect(mods));
         }
+    }
+
+    /// <summary>Ends the brush stroke that the press started: its message is passed on.</summary>
+    private void EndBrushStroke()
+    {
+        _brushDown = false;
+        var message = Scene?.Session?.EndStroke() ?? Said.Empty;
+        StrokeEnded?.Invoke(message);
     }
 
     /// <summary>Ends the path, area and place drags that the press started, if any.</summary>
@@ -83,20 +89,11 @@ public sealed partial class GlView
     private void EndSelectDrag(Point at, Size size, KeyModifiers mods)
     {
         _selectDown = false;
-        SelectTool.Up(at, size, mods.HasFlag(KeyModifiers.Shift) || Ctrl(mods));
+        SelectTool.Up(at, size, AddsToSelection(mods));
         // A look queued by a move just before the press was dropped while the button was down. The handle
         // under the pointer is found again first: the drag's moves did not look for it, and over a handle no
         // object is outlined.
         SelectTool.Hover(at, size);
         QueueHoverPick();
     }
-
-    /// <summary>
-    /// Whether a release at <paramref name="at"/> is a click for the View tool: the left button, no slide, and the
-    /// pointer moved less than 5 pixels from the press.
-    /// </summary>
-    /// <param name="at">Where the pointer is, on the surface.</param>
-    /// <returns>True when the release is a click that picks.</returns>
-    private bool IsClickInView(Point at) =>
-        Mode == ToolMode.View && !Panning && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5;
 }

@@ -18,6 +18,22 @@ public class SeedStartTests
 
     private static float CentreOf(int i, float cell) => -SeedPreview.Radius + (i + 0.5f) * cell;
 
+    /// <summary>
+    /// The distances from the start at the first cell of a 3 × 3 map with Meadows in cell 0 and Plains in cell 2 (ocean
+    /// elsewhere), the start's landmass being the one of cell 0.
+    /// </summary>
+    private static (int Near, int NearLand, Dictionary<Heightmap.Biome, float> Distance, Dictionary<Heightmap.Biome, bool> Same)
+        DistancesFromCornerStart(float cell)
+    {
+        byte[] biome = new byte[9];
+        Array.Fill(biome, SeedPreview.Ocean);
+        biome[0] = Meadows;
+        biome[2] = Plains;
+        var (mass, _) = SeedLandmasses.Find(biome, 3);
+        var start = (CentreOf(0, cell), CentreOf(0, cell));
+        return SeedStart.Distances(biome, 3, cell, start, mass, mass[0]);
+    }
+
     [Fact]
     public void TheMiddleStartIsTheMeadowsCellNearestTheMiddle()
     {
@@ -74,28 +90,15 @@ public class SeedStartTests
     [Fact]
     public void DistancesAreFromTheStartToTheNearestCellOfEachBiome()
     {
-        byte[] biome = new byte[9];
-        Array.Fill(biome, SeedPreview.Ocean);
-        biome[0] = Meadows;
-        biome[2] = Plains;
         float cell = CellOf(3);
-        var (mass, _) = SeedLandmasses.Find(biome, 3);
-        var start = (CentreOf(0, cell), CentreOf(0, cell));
-        var (_, _, distance, _) = SeedStart.Distances(biome, 3, cell, start, mass, mass[0]);
+        var (_, _, distance, _) = DistancesFromCornerStart(cell);
         Assert.InRange(distance[Heightmap.Biome.Plains], 2 * cell - 1f, 2 * cell + 1f);
     }
 
     [Fact]
     public void ABiomeOnAnotherLandmassIsNotOnTheStartsLandmass()
     {
-        byte[] biome = new byte[9];
-        Array.Fill(biome, SeedPreview.Ocean);
-        biome[0] = Meadows;
-        biome[2] = Plains;
-        float cell = CellOf(3);
-        var (mass, _) = SeedLandmasses.Find(biome, 3);
-        var start = (CentreOf(0, cell), CentreOf(0, cell));
-        var (_, _, _, same) = SeedStart.Distances(biome, 3, cell, start, mass, mass[0]);
+        var (_, _, _, same) = DistancesFromCornerStart(CellOf(3));
         Assert.False(same[Heightmap.Biome.Plains]);
     }
 

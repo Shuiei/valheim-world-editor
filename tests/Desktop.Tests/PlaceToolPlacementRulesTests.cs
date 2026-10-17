@@ -9,18 +9,6 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class PlaceToolPlacementRulesTests
 {
-    /// <summary>
-    /// A Place tool on a flat 2 × 2 zone area, Beech1 chosen.
-    /// </summary>
-    private static (PlaceTool T, EditSession S) Tool()
-    {
-        var s = TestScenes.Flat(2);
-        var t = new PlaceTool { Scene = () => s.Scene, Brush = s.Brush };
-        t.Chosen.Clear();
-        t.Chosen.Add("Beech1");
-        return (t, s);
-    }
-
     [Fact]
     public void AGridPointOnTheEdgeMetreIsOffTheBlock()
     {
@@ -44,7 +32,7 @@ public class PlaceToolPlacementRulesTests
     [Fact]
     public void ObjectsKeepTheSpacingWhenNotPlacedOneAtATime()
     {
-        var (t, _) = Tool();
+        var (t, _) = SharedPlaceTool.Tool();
         t.OneAtATime = false;
         t.Spacing = 3;
         Assert.Equal(3f, t.SpacingFor("Beech1"));
@@ -53,7 +41,7 @@ public class PlaceToolPlacementRulesTests
     [Fact]
     public void OneAtATimeOnlyKeepsOffTheObjectRightOnTop()
     {
-        var (t, _) = Tool();
+        var (t, _) = SharedPlaceTool.Tool();
         t.OneAtATime = true;
         t.SnapTo = false;
         Assert.Equal(0.3f, t.SpacingFor("Beech1"));
@@ -62,7 +50,7 @@ public class PlaceToolPlacementRulesTests
     [Fact]
     public void APieceSnapsRightOverThePieceBelowOnBrushMode()
     {
-        var (t, _) = Tool();
+        var (t, _) = SharedPlaceTool.Tool();
         t.OneAtATime = true;
         t.SnapTo = true;
         t.Mode = PlaceTool.Modes.Brush;
@@ -82,7 +70,7 @@ public class PlaceToolPlacementRulesTests
     [Fact]
     public void AnElevatedRunPieceStandsAtTheElevation()
     {
-        var (t, s) = Tool();
+        var (t, s) = SharedPlaceTool.Tool();
         t.Elevation = PlaceTool.Elevations.At;
         t.Elev = 7;
         Assert.Equal(7f, t.RunBottom(s.Scene, new Vector2(1, 1), new Vector2(2, 1), null));
@@ -91,7 +79,7 @@ public class PlaceToolPlacementRulesTests
     [Fact]
     public void AGroundRunPieceNextToASnappedPieceStandsAtItsHeight()
     {
-        var (t, s) = Tool();
+        var (t, s) = SharedPlaceTool.Tool();
         t.Elevation = PlaceTool.Elevations.Ground;
         Assert.Equal(5f, t.RunBottom(s.Scene, new Vector2(1, 1), new Vector2(2, 1), new Vector3(0, 5, 0)));
     }
@@ -131,7 +119,7 @@ public class PlaceToolPlacementRulesTests
     [Fact]
     public void TheGapIsTheWalkFromWhereTheRunStoppedToItsEnd()
     {
-        var (t, _) = Tool();
+        var (t, _) = SharedPlaceTool.Tool();
         var pts = new List<Vector2> { new(0, 0), new(3, 4), new(3, 8) };
         t.AddSnapGap(pts, 0, new Vector2(0, 0));
         Assert.InRange(t.SnapGap, 8.999f, 9.001f);

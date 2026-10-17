@@ -1,4 +1,3 @@
-using TerrainEditor.Save;
 using WorldEditor.Tests;
 using Xunit;
 
@@ -8,12 +7,10 @@ namespace TerrainEditor.Desktop.Tests;
 /// A main window on its own copy of the test world (or a stand-in live game), its questions answered from a queue (no
 /// when empty) and noted, what it tells noted, saves confirmed, and Auto apply and Follow off; deleted when disposed.
 /// </summary>
-internal sealed class WorldWindowRun : IDisposable
+internal sealed class WorldWindowRun : CopiedWorldWindow
 {
     private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
 
-    public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
-    public string Dir { get; } = Fixtures.CopyFixture();
     public List<string> Asked { get; } = [];
     public Queue<bool> Answers { get; } = new();
     public List<string> Told { get; } = [];
@@ -50,11 +47,9 @@ internal sealed class WorldWindowRun : IDisposable
     /// </summary>
     public async Task OpenLive(int x = 0, int z = 0, int size = 1)
     {
-        Game = new FakeGame();
-        var game = Game;
-        await W.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label()), "Opening…");
-        W.MapPage?.Stop();
-        await W.EditArea(x, z, size);
+        var game = new FakeGame();
+        Game = game;
+        await StandInGameArea.OpenLive(W, game, x, z, size);
         Assert.True(W.Session!.IsLive);
     }
 
@@ -73,13 +68,9 @@ internal sealed class WorldWindowRun : IDisposable
     }
 
     /// <inheritdoc/>
-    public void Dispose()
+    public override void Dispose()
     {
         StopGame();
-        string folder = Path.GetDirectoryName(Dir)!;
-        if (Directory.Exists(folder))
-        {
-            Directory.Delete(folder, true);
-        }
+        base.Dispose();
     }
 }
