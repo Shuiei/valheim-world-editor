@@ -9,12 +9,20 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class MapDataLayerTexelTests
 {
+    /// <summary>
+    /// Two texels, the first set to height 1.5 with the biome (1, 2, 3) and the mask (4, 5, 6) and no paint.
+    /// </summary>
+    private static MapData.Layers LayersWithFirstTexelSet()
+    {
+        var layers = new MapData.Layers(2, 1);
+        layers.Set(0, 1.5f, (1, 2, 3), (4, 5, 6), null);
+        return layers;
+    }
+
     [Fact]
     public void ASetTexelHasItsBiomeAndMaskWithFullAlpha()
     {
-        var layers = new MapData.Layers(2, 1);
-
-        layers.Set(0, 1.5f, (1, 2, 3), (4, 5, 6), null);
+        var layers = LayersWithFirstTexelSet();
 
         Assert.Equal(new byte[] { 1, 2, 3, 255 }, layers.Biome[0..4]);
         Assert.Equal(new byte[] { 4, 5, 6, 255 }, layers.Mask[0..4]);
@@ -23,9 +31,7 @@ public class MapDataLayerTexelTests
     [Fact]
     public void AnUnpaintedTexelKeepsNoPaint()
     {
-        var layers = new MapData.Layers(2, 1);
-
-        layers.Set(0, 1.5f, (1, 2, 3), (4, 5, 6), null);
+        var layers = LayersWithFirstTexelSet();
 
         Assert.Equal(new byte[] { 0, 0, 0, 0 }, layers.Paint[0..4]);
     }
@@ -43,8 +49,7 @@ public class MapDataLayerTexelTests
     [Fact]
     public void TheBlobHoldsEachHeightThenEachColourPlane()
     {
-        var layers = new MapData.Layers(2, 1);
-        layers.Set(0, 1.5f, (1, 2, 3), (4, 5, 6), null);
+        var layers = LayersWithFirstTexelSet();
 
         byte[] blob = layers.ToBytes();
 

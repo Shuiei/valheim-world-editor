@@ -166,11 +166,7 @@ public class FormulaTests
     [AvaloniaFact]
     public void ClickingTheGroundPutsTheShapeThere()
     {
-        var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var (w, s, _) = ShownEditor.Open();
         w.KeyPress(Key.G, RawInputModifiers.None, PhysicalKey.G, "g");
         Assert.Equal(ToolMode.Shape, w.View.Mode);
         Assert.True(w.ShapePanel.Card.IsVisible);

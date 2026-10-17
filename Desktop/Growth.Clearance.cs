@@ -13,36 +13,14 @@ public static partial class Growth
     /// <returns>The spots that stay, in their order.</returns>
     internal static List<Regrow.Spot> Unobstructed(List<Regrow.Spot> kept, List<(float X, float Z, string? Name, ObjectKind Kind)> standing)
     {
-        // In cells wider than the farthest test, so a spot looks only at its own cell and the eight around it.
-        var cells = new Dictionary<(int, int), List<int>>();
-        for (int i = 0; i < standing.Count; i++)
+        // Cells wider than the farthest test, so a spot looks only at its own cell and the eight around it.
+        var index = new CellNeighbourIndex<(float X, float Z, string? Name, ObjectKind Kind)>(Farthest + 1);
+        foreach (var s in standing)
         {
-            var key = (Cell(standing[i].X), Cell(standing[i].Z));
-            if (!cells.TryGetValue(key, out var list))
-            {
-                cells[key] = list = [];
-            }
-            list.Add(i);
+            index.Add(s.X, s.Z, s);
         }
-        bool Near(Regrow.Spot o, float d, Func<string?, ObjectKind, bool> test)
-        {
-            int cx = Cell(o.X), cz = Cell(o.Z);
-            for (int dz = -1; dz <= 1; dz++)
-            {
-                for (int dx = -1; dx <= 1; dx++)
-                {
-                    if (cells.TryGetValue((cx + dx, cz + dz), out var list) && list.Exists(i =>
-                    {
-                        var (x, z, name, kind) = standing[i];
-                        return MathF.Abs(x - o.X) < d && MathF.Abs(z - o.Z) < d && MathF.Sqrt((x - o.X) * (x - o.X) + (z - o.Z) * (z - o.Z)) < d && test(name, kind);
-                    }))
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
+        bool Near(Regrow.Spot o, float d, Func<string?, ObjectKind, bool> test) =>
+            index.AnyNear(o.X, o.Z, s => MathF.Abs(s.X - o.X) < d && MathF.Abs(s.Z - o.Z) < d && MathF.Sqrt((s.X - o.X) * (s.X - o.X) + (s.Z - o.Z) * (s.Z - o.Z)) < d && test(s.Name, s.Kind));
         return [.. kept.Where(o => !Near(o, 1, (_, _) => true) && !Near(o, 3, (n, _) => n == o.Name) && !Near(o, Farthest, (_, k) => k == ObjectKind.Buildings))];
     }
 }
