@@ -13,11 +13,11 @@ internal static class SharedPlaceWindow
     internal static readonly Avalonia.Size Size = new(1600, 1000);
 
     /// <summary>
-    /// A shown main window of the Place tests' size, with nothing edited yet.
+    /// A shown main window of the Place tests' size, with nothing edited yet, remembering in the given prefs.
     /// </summary>
-    internal static MainWindow Create()
+    internal static MainWindow Create(Prefs? prefs = null)
     {
-        var w = new MainWindow(load: false) { Width = Size.Width, Height = Size.Height };
+        var w = new MainWindow(load: false, prefs: prefs) { Width = Size.Width, Height = Size.Height };
         w.Show();
         return w;
     }
@@ -49,6 +49,20 @@ internal static class SharedPlaceWindow
     }
 
     /// <summary>
+    /// A drag with the input along these grid points of the window's view: pressed on the first, moved over the rest and
+    /// released on the last.
+    /// </summary>
+    internal static void Drag(PlaceInput input, MainWindow w, Avalonia.Size size, params (float X, float Z)[] path)
+    {
+        input.Down(At(w, path[0].X, path[0].Z), size, false, false, false, 1);
+        foreach (var (x, z) in path.Skip(1))
+        {
+            input.Moved(At(w, x, z), size);
+        }
+        input.Up(At(w, path[^1].X, path[^1].Z), size);
+    }
+
+    /// <summary>
     /// The screen point of grid point (gx, gz) in the window's view (the ground is at 30 m).
     /// </summary>
     internal static Avalonia.Point At(MainWindow w, float gx, float gz)
@@ -64,7 +78,7 @@ internal static class SharedPlaceWindow
     internal sealed class PanelRun : IDisposable
     {
         /// <summary>The window, shown at the Place tests' size.</summary>
-        public MainWindow W { get; } = Create();
+        public MainWindow W { get; }
 
         /// <summary>The folder holding the copy of the test world.</summary>
         public string Dir { get; } = Fixtures.CopyFixture();
@@ -81,15 +95,19 @@ internal static class SharedPlaceWindow
         /// <summary>The last message the panel said, or null.</summary>
         public string? Said;
 
+        /// <summary>The area's edit session.</summary>
+        public EditSession S => Scene.Session!;
+
         /// <summary>
-        /// Opens the copy of the test world in the Place tool, with the panel's memory emptied.
+        /// Opens the copy of the test world in the given tool, with the panel's memory emptied.
         /// </summary>
-        public PanelRun()
+        public PanelRun(ToolMode mode = ToolMode.Place, Prefs? prefs = null)
         {
+            W = Create(prefs);
             Scene = WorldScene.Load(Dir, 0, 0, 1);
             W.View.Show(Scene, null);
             W.Edit(Scene.Session!);
-            W.Tools.ChooseMode(ToolMode.Place);
+            W.Tools.ChooseMode(mode);
             P.Message += t => Said = t.Shown;
             // A clean memory of its own (the tests' place.json is shared).
             P.Memory.Presets.Clear();

@@ -15,13 +15,22 @@ internal static class TestWorldCopy
     internal static string Make(string prefix)
     {
         string root = Path.Combine(Path.GetTempPath(), prefix + Guid.NewGuid().ToString("N")[..8]);
+        CopyInto(root);
+        return root;
+    }
+
+    /// <summary>
+    /// Copies the test world's files into the folder CITest under the root (made if needed), and returns that folder.
+    /// </summary>
+    internal static string CopyInto(string root)
+    {
         string world = Path.Combine(root, "CITest");
         Directory.CreateDirectory(world);
         foreach (string f in Directory.GetFiles(Path.Combine(Fixtures.Root, "CITest")))
         {
             File.Copy(f, Path.Combine(world, Path.GetFileName(f)));
         }
-        return root;
+        return world;
     }
 
     /// <summary>
