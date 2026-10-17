@@ -327,6 +327,8 @@ internal sealed partial class DungeonDresser
                     Put(f, One("prop_wood_stack", "dvergrprops_pickaxe", "prop_piece_workbench_ext4"), ru, rv, yaw, 0.6f);
                 }
                 break;
+            default:
+                break;
         }
     }
 
@@ -521,6 +523,8 @@ internal sealed partial class DungeonDresser
                 break;
             case "Meadows" or "Black Forest":
                 kinds.Add(("roots", 1));
+                break;
+            default:
                 break;
         }
         if (_style.Name is "Fortress" or "Prison" or "Goblin warren" && f.HalfD >= 4)

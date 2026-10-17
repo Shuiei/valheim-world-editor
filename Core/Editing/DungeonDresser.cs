@@ -972,6 +972,8 @@ internal sealed partial class DungeonDresser
             case Room.Quarters: Quarters(f); break;
             case Room.Secret: Secret(f); break;
             case Room.StairTop or Room.StairBottom: Stairwell(f); break;
+            default:
+                break;
         }
         if (f.S.KeyChest)
         {
@@ -1567,6 +1569,8 @@ internal sealed partial class DungeonDresser
                         break;
                     case 3 when slot == 0:
                         Put(f, One("Morkhalla_Rubble2", "skull_pile", "bone_stack"), u, v, R(0, 360), 0.5f);
+                        break;
+                    default:
                         break;
                 }
             }

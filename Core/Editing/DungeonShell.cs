@@ -263,7 +263,7 @@ internal static class DungeonShell
     }
 
     /// <summary>A doorway: 4 m of wall with its opening and what closes it.</summary>
-    private static void Doorway(DungeonPlan.Doorway d, float f, Material mat, DungeonOut o, string biome)
+    internal static void Doorway(DungeonPlan.Doorway d, float f, Material mat, DungeonOut o, string biome)
     {
         var (cx, cz) = d.Center;
         bool alongZ = d.Dir.X != 0;
@@ -328,6 +328,8 @@ internal static class DungeonShell
                     o.Add("cloth_hanging_door_double", At(c, f - 0.25f), yaw);
                 }
                 Fill(mat, o, alongZ, line, c - 2, c + 2, f + 4.2f, h);
+                break;
+            default:
                 break;
         }
     }

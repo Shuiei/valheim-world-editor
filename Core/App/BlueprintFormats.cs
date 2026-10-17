@@ -118,6 +118,8 @@ public static class BlueprintFormats
                         pieces.Add(vbuild ? ParseVBuild(line) : ParseBlueprintPiece(line));
                         lines.Add(n);
                         break;
+                    default:
+                        break;
                 }
             }
             catch (Exception ex) when (ex is FormatException or IndexOutOfRangeException or OverflowException)

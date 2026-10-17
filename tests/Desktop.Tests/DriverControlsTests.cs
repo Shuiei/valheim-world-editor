@@ -104,8 +104,10 @@ public class DriverControlsTests
         var w = Window();
         try
         {
-            var d = Dialog(w, Row("Delta", new Button { Content = "Go" }));
+            var d = Dialog(w, Row("Delta", new Button { Content = "Go" }), Row("Epsilon", new ComboBox { ItemsSource = new[] { "Red" } }));
             Assert.Equal("nothing to set beside \"Delta\"", (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "set Delta|1"))).Message);
+            // A list without the value asked for: nothing set.
+            Assert.Equal("nothing to set beside \"Epsilon\"", (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "set Epsilon|purple"))).Message);
             d.Close();
         }
         finally

@@ -179,6 +179,21 @@ public class HammerTests
         Assert.Equal(0, new Hammer.Data(false, false, false, false, [], [new Odd()]).Radius);
     }
 
+    // A collider of a kind the scan does not write (another version's, or a letter's case changed) is left out; the
+    // piece keeps its other colliders.
+    [Theory]
+    [InlineData("x")]
+    [InlineData("B")]
+    public void AColliderOfAnUnknownKindIsLeftOut(string kind)
+    {
+        var read = Hammer.Read($$$"""{"p":{"f":{"g":1},"s":[[0,1,0]],"c":[["{{{kind}}}",9,9,9],["s",0,1,0,0.5]]}}""");
+
+        var p = read["p"];
+        var sphere = Assert.IsType<Hammer.Sphere>(Assert.Single(p.Colliders));
+        Assert.Equal((new Vector3(0, 1, 0), 0.5f), (sphere.C, sphere.R));
+        Assert.True(p.Ground);
+    }
+
     [Fact]
     public void ClosestPointsOnSpheresCapsulesAndConvexMeshes()
     {

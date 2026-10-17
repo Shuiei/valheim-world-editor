@@ -576,6 +576,8 @@ public sealed class PlaceInput
             case Avalonia.Input.Key.Back when Pointed && Tool.Points.Count > 0:
                 RemoveLastPoint();
                 return true;
+            default:
+                break;
         }
         return false;
     }

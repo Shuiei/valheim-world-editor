@@ -253,6 +253,8 @@ public static class DumpVerifier
                     }
                     break;
                 }
+                default:
+                    break;
             }
         }
         Console.WriteLine($"Random:  {rOk} ok, {rBad} wrong");

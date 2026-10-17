@@ -1163,6 +1163,8 @@ public static partial class GameCatalogues
                             break;
                         case 4:
                             break;
+                        default:
+                            break;
                     }
                 }
                 // The end of a line: the row ends unless a quoted field goes on.
@@ -1174,6 +1176,8 @@ public static partial class GameCatalogues
                         break;
                     case 0 when rowStarted:
                         row.Add("");
+                        break;
+                    default:
                         break;
                 }
                 if (state != 2)

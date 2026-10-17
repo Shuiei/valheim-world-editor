@@ -479,6 +479,8 @@ public sealed class AreaTool
                         g.Paint[p * 4 + c] += (paint[c] - g.Paint[p * 4 + c]) * w;
                     }
                     break;
+                default:
+                    break;
             }
         }
         return (touched, (a.X0 - 1, a.Z0 - 1, a.X1 + 1, a.Z1 + 1), clamped);

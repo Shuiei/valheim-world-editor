@@ -111,6 +111,8 @@ public static class ServerConfig
                     case "bridgeport": cur.BridgePort = int.TryParse(value, out int bp) && IsPort(bp) ? bp : 5182; break;
                     case "hostkey": cur.HostKey = opt; break;
                     case "gamefolder": cur.GameFolder = opt; break;
+                    default:
+                        break;
                 }
             }
             foreach (Server s in list)

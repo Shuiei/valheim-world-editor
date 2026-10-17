@@ -283,6 +283,8 @@ public static class Driver
                         case Avalonia.Controls.ComboBox cb when IndexOf(cb, value) >= 0:
                             cb.SelectedIndex = IndexOf(cb, value);
                             return State(w);
+                        default:
+                            break;
                     }
                 }
                 throw new InvalidOperationException($"nothing to set beside \"{label}\"");

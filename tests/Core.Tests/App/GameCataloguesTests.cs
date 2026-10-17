@@ -10,8 +10,8 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// What the editor reads of the game's files at its start (GameCatalogues), on a made-up game (CatalogueGame,
 /// SceneGame): each kind read in the one pass over the bundles, the vegetation rules of the main scene, the cave rocks,
-/// the names of object data from the game's code, the English texts; and what is said when the files are not as
-/// expected.
+/// the names of object data from the game's code, the English texts, a location's door; and what is said when the files
+/// are not as expected.
 /// </summary>
 public class GameCataloguesTests
 {
@@ -320,5 +320,35 @@ public class GameCataloguesTests
         string cost = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["piece-cost"])["piece-cost"];
         Assert.Contains("\"Wood\":\"Ti\"", cost);
         Assert.Contains("\"st\":\"Bench\"", cost);
+    }
+
+    // A location's door into its interior (a Teleport) is kept where it stands; a script below its root of a kind no
+    // part of a location is (its interior's dungeon generator) is passed over.
+    [Fact]
+    public void ALocationsDoorIsReadAndItsGeneratorPassedOver()
+    {
+        using var game = new TestGame();
+        var scripts = game.Bundle("m_scripts");
+        var b = game.Bundle("e_locations");
+        b.ScriptsFrom = scripts;
+        b.Prefab("Crypt", r =>
+        {
+            r.Mono("Location", new Fields { ["m_exteriorRadius"] = 12.0, ["m_clearArea"] = true, ["m_applyRandomDamage"] = false, ["m_hasInterior"] = true });
+            r.Child("Interior", c => c.Mono("DungeonGenerator", new Fields { ["m_algorithm"] = 1, ["m_maxRooms"] = 4, ["m_minRooms"] = 1, ["m_themes"] = 2 }));
+            r.Child("Door", c =>
+            {
+                c.Position = (0, 0, 6);
+                c.Mono("Teleport", new Fields { ["m_targetPoint"] = Fields.Ref(0), ["m_enterText"] = "Enter" }, fields: [Ref("m_targetPoint"), Text("m_enterText")]);
+            });
+        });
+        game.Save();
+
+        string json = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["dungeon-rooms"])["dungeon-rooms"];
+
+        var crypt = JsonNode.Parse(json)!["locations"]!["Crypt"]!;
+        var door = Assert.Single(crypt["teleports"]!.AsArray())!;
+        Assert.Equal([0.0, 0.0, 6.0, 0.0, 0.0, 0.0, 1.0], door.AsArray().Select(v => v!.GetValue<double>()));
+        Assert.Equal(1, crypt["interior"]!.GetValue<int>());
+        Assert.All(["contents", "spawns", "picks", "nodes"], k => Assert.Empty(crypt[k]!.AsArray()));
     }
 }

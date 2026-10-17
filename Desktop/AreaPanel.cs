@@ -809,6 +809,8 @@ public sealed class AreaPanel
             case Act.Backup:
                 await RestoreBackup(session, poly);
                 break;
+            default:
+                break;
         }
         Refresh();
     }
