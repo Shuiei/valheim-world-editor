@@ -24,19 +24,9 @@ public class KeysAndMouseTests
     /// </summary>
     private static (MainWindow W, EditSession S, Func<float, float, Avalonia.Point> Screen) Open(params WorldScene.Thing[] things)
     {
-        var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2, things);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var (w, s, screen) = ShownEditor.Open(things);
         w.View.SetCamera(new Vector3(0, 150, 1), Vector3.Zero, 1);
-        var size = w.View.Bounds.Size;
-        Avalonia.Point Screen(float gx, float gz)
-        {
-            var q = Vector4.Transform(new Vector4(gx - 64, 30, -(gz - 64), 1), w.View.ViewProj);
-            return new Avalonia.Point((q.X / q.W + 1) / 2 * size.Width, (1 - q.Y / q.W) / 2 * size.Height);
-        }
-        return (w, s, Screen);
+        return (w, s, (gx, gz) => screen(new Vector3(gx - 64, 30, -(gz - 64))));
     }
 
     /// <summary>

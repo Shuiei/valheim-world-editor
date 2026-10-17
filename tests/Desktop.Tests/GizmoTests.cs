@@ -52,23 +52,13 @@ public class GizmoTests
     /// </summary>
     private static (MainWindow W, EditSession S, Func<Vector3, Avalonia.Point> Screen) Open()
     {
-        var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2, new WorldScene.Thing(11, StableHash.Of("wood_wall_half"), new Vector3(40, 30, 40), Vector3.Zero, 0, true));
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var (w, s, screen) = ShownEditor.Open(new WorldScene.Thing(11, StableHash.Of("wood_wall_half"), new Vector3(40, 30, 40), Vector3.Zero, 0, true));
         w.Tools.ChooseSelect();
         w.View.Select([0]);
         // Looking down at the wall from above (a little to the south, so north is up on screen).
         var c = new Vector3(40 - s.Scene.Cx, 30, -(40 - s.Scene.Cz));
         w.View.SetCamera(c + new Vector3(0, 30, 3), c, 1);
-        var size = w.View.Bounds.Size;
-        Avalonia.Point Screen(Vector3 p)
-        {
-            var q = Vector4.Transform(new Vector4(p, 1), w.View.ViewProj);
-            return new Avalonia.Point((q.X / q.W + 1) / 2 * size.Width, (1 - q.Y / q.W) / 2 * size.Height);
-        }
-        return (w, s, Screen);
+        return (w, s, screen);
     }
 
     [AvaloniaFact]

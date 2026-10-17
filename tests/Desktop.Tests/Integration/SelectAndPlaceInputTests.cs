@@ -23,22 +23,12 @@ public class SelectAndPlaceInputTests
     /// </summary>
     private static (MainWindow W, EditSession S, Func<Vector3, Avalonia.Point> Screen) Open(Vector3 eyeFromWall, params WorldScene.Thing[] things)
     {
-        var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2, things.Length > 0 ? things : [new WorldScene.Thing(11, StableHash.Of("wood_wall_half"), new Vector3(40, 30, 40), Vector3.Zero, 0, true)]);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var (w, s, screen) = ShownEditor.Open(things.Length > 0 ? things : [new WorldScene.Thing(11, StableHash.Of("wood_wall_half"), new Vector3(40, 30, 40), Vector3.Zero, 0, true)]);
         w.Tools.ChooseSelect();
         w.View.Select([0]);
         var c = new Vector3(40 - s.Scene.Cx, 30, -(40 - s.Scene.Cz));
         w.View.SetCamera(c + eyeFromWall, c, 1);
-        var size = w.View.Bounds.Size;
-        Avalonia.Point Screen(Vector3 p)
-        {
-            var q = Vector4.Transform(new Vector4(p, 1), w.View.ViewProj);
-            return new Avalonia.Point((q.X / q.W + 1) / 2 * size.Width, (1 - q.Y / q.W) / 2 * size.Height);
-        }
-        return (w, s, Screen);
+        return (w, s, screen);
     }
 
     [AvaloniaFact]
