@@ -13,7 +13,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// The Place tool in another language (the made-up one: PseudoLang): its panel in every mode and line shape, with
 /// nothing, one kind and several kinds chosen, the list of kinds (folded, searched, nothing found), the preset
 /// questions, and a message, show only catalogue texts; the message's English is kept for Claude, and what a spawn
-/// point spawns is told to Claude in English.
+/// point spawns is told to Claude in English. The brush line names what a piece snaps to in a whole sentence for each
+/// way of snapping.
 /// </summary>
 [Collection("DataDir")]
 public sealed class PlacePanelLangTests
@@ -129,6 +130,16 @@ public sealed class PlacePanelLangTests
         {
             Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
         }
+    }
+
+    [Fact]
+    public void TheBrushLineSaysWhatThePieceSnapsToInOneSentence()
+    {
+        using var pseudo = new PseudoLang();
+        Assert.Equal("", PlacePanel.SnapNote(null));
+        Assert.Equal(PseudoLang.Wrap("Snapped on top of Wood Wall."), PlacePanel.SnapNote((PlaceTool.SnapWays.OnTop, "Wood Wall")));
+        Assert.Equal(PseudoLang.Wrap("Snapped beside Wood Wall."), PlacePanel.SnapNote((PlaceTool.SnapWays.Beside, "Wood Wall")));
+        Assert.Equal(PseudoLang.Wrap("Snapped to Wood Wall."), PlacePanel.SnapNote((PlaceTool.SnapWays.To, "Wood Wall")));
     }
 
     [AvaloniaFact]
