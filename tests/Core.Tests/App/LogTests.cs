@@ -87,6 +87,32 @@ public sealed class LogTests
         }
     }
 
+    // A log that cannot be started is said on the error output, without its path, and the editor goes on without it.
+    [Fact]
+    public void ALogThatCannotStartIsSaidAndTheEditorGoesOn()
+    {
+        var (output, error, data) = (Console.Out, Console.Error, AppSettings.DataDirOverride);
+        // A file where the data folder should be: the folder cannot be made.
+        string file = Path.Combine(Path.GetTempPath(), "vwe-log-" + Guid.NewGuid().ToString("N")[..8]);
+        File.WriteAllText(file, "");
+        using var said = new StringWriter();
+        try
+        {
+            AppSettings.DataDirOverride = file;
+            Console.SetError(said);
+            Log.Start("test");
+        }
+        finally
+        {
+            Console.SetOut(output);
+            Console.SetError(error);
+            AppSettings.DataDirOverride = data;
+            File.Delete(file);
+        }
+        Assert.StartsWith("The log could not be started: System.IO.IOException: ", said.ToString());
+        Assert.DoesNotContain(file, said.ToString());
+    }
+
     // A caught error's line says where (file, line and member), what was being done, its type and message, then the
     // stack, whose source files keep only their name.
     [Fact]
