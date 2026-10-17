@@ -617,13 +617,16 @@ public sealed class PlacePanel
 
     /// <summary>A mode's name, on its button.</summary>
     /// <param name="m">The mode.</param>
-    private static string ModeName(PlaceTool.Modes m) => m switch
+    private static string ModeName(PlaceTool.Modes m)
     {
-        PlaceTool.Modes.Line => Lang.T("place.mode.line"),
-        PlaceTool.Modes.Grid => Lang.T("place.mode.grid"),
-        PlaceTool.Modes.Zone => Lang.T("place.mode.zone"),
-        _ => Lang.T("place.mode.brush"),
-    };
+        return m switch
+        {
+            PlaceTool.Modes.Line => Lang.T("place.mode.line"),
+            PlaceTool.Modes.Grid => Lang.T("place.mode.grid"),
+            PlaceTool.Modes.Zone => Lang.T("place.mode.zone"),
+            _ => Lang.T("place.mode.brush"),
+        };
+    }
 
     /// <summary>The kinds that can be placed in this world, with their kind of object (for the list's order).</summary>
     private List<(string Name, ObjectKind Kind)> _creatable = [];

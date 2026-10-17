@@ -1406,16 +1406,19 @@ public sealed class PlaceTool
     /// A preset's name as listed: a built-in one's in the language in use, one of yours as you named it.
     /// </summary>
     /// <param name="p">The preset.</param>
-    public static string ShownName(Preset p) => Array.IndexOf(BuiltIn, p) switch
+    public static string ShownName(Preset p)
     {
-        0 => Lang.T("place.preset.meadowsWoods"),
-        1 => Lang.T("place.preset.blackForest"),
-        2 => Lang.T("place.preset.swamp"),
-        3 => Lang.T("place.preset.berryPatch"),
-        4 => Lang.T("place.preset.forestFloor"),
-        5 => Lang.T("place.preset.meadowsRocks"),
-        _ => p.Name,
-    };
+        return Array.IndexOf(BuiltIn, p) switch
+        {
+            0 => Lang.T("place.preset.meadowsWoods"),
+            1 => Lang.T("place.preset.blackForest"),
+            2 => Lang.T("place.preset.swamp"),
+            3 => Lang.T("place.preset.berryPatch"),
+            4 => Lang.T("place.preset.forestFloor"),
+            5 => Lang.T("place.preset.meadowsRocks"),
+            _ => p.Name,
+        };
+    }
 
     /// <summary>Loads a preset (kinds the world cannot make are left out). Returns what to say.</summary>
     /// <param name="p">The preset.</param>
