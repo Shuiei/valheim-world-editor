@@ -40,14 +40,20 @@ public sealed class GameLookGl
 
     /// <summary>
     /// The terrain's shader and textures, read from the game's files (rows bottom first, Unity's origin; a texture
-    /// array is its square slices one above the other). Null when Valheim is not found.
+    /// array is its square slices one above the other). Null when Valheim is not found. Read once per bundles reader
+    /// (<see cref="Reads"/>): they do not depend on the area.
     /// </summary>
-    public static Files? Read()
+    public static Files? Read() => GameLook.Bundles is { } game ? Reads.Of(game) : null;
+
+    /// <summary>The files as read already for the bundles reader in use, without reading; null when not read (yet).</summary>
+    public static Files? Kept() => GameLook.Bundles is { } game && Reads.TryKept(game, out var files) ? files : null;
+
+    /// <summary>The files read for the last bundles reader asked for (another Valheim folder: read again).</summary>
+    private static readonly KeptRead<GameBundles, Files> Reads = new(ReadFrom);
+
+    /// <summary>Reads the terrain's shader and textures from the game's bundles (see <see cref="Read"/>).</summary>
+    private static Files ReadFrom(GameBundles game)
     {
-        if (GameLook.Bundles is not { } game)
-        {
-            return null;
-        }
         var t = GameLookData.ReadTerrain(game);
         Image Of(GameLookData.Picture p) => new(p.Width, p.Height, p.Rgba);
         Image Tex(string name) => Of(t.Textures[name]);
