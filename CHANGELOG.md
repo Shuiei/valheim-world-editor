@@ -20,6 +20,11 @@ the plugin is unchanged in versions without that part.
   chosen in Settings. In English nothing changes; Claude still names biomes, and is told about masks and scripts, in
   English.
 
+### Fixed
+- **A Run of the Script tool's first example was named "Script: script" in History.** The example shown when the
+  panel opens was not chosen in its list, so the run had no name to take; it is chosen now, and the step is named
+  after it.
+
 ## v1.47.7 — unreleased
 
 ### Changed
