@@ -305,7 +305,7 @@ public sealed partial class ClaudeTools
                 clamped = c;
                 return (t, rect);
             });
-            said = touched.Count == 0 ? Said.Of("claude.msg.pathNothing")
+            said = touched.Count == 0 ? Said.Of("path.msg.nothing")
                 : Said.Of("claude.msg.path", PathTool.Label(act), PathTool.Length(path.Curve()), touched.Count)
                     + (clamped ? Said.Of("claude.msg.limitReached") : Said.Empty);
         }

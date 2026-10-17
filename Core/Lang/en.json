@@ -1649,7 +1649,6 @@
   "claude.undo.raiseLine": "raise along a line",
   "claude.undo.lowerLine": "lower along a line",
   "claude.undo.smoothLine": "smooth along a line",
-  "claude.msg.pathNothing": "Nothing changed along the line.",
   "claude.msg.path": "{0} along {1:0} m: {2} ground point(s).",
   "claude.msg.limitReached": "Part of it reached the game's ±8 m limit.",
   "claude.undo.stamp": "stamp {0}",
