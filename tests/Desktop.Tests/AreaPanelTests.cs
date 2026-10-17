@@ -24,7 +24,7 @@ public class AreaPanelTests
     /// A main window on its own copy of the test world, opened in the Area tool with a zone selected unless told not
     /// to; deleted when disposed.
     /// </summary>
-    private sealed class Run : IDisposable
+    internal sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
         public string Dir { get; } = Fixtures.CopyFixture();
@@ -59,6 +59,42 @@ public class AreaPanelTests
                 points.Add(new Vector2(x1, z1));
             }
             W.View.Area.Notify();
+        }
+
+        /// <summary>Unticks every kind of object, so the object actions find none.</summary>
+        public void ChooseNoKinds()
+        {
+            foreach (var b in P.KindButtons.Values)
+            {
+                b.IsChecked = false;
+            }
+        }
+
+        /// <summary>Replace chosen with neither of its lists chosen, and applied.</summary>
+        public async Task ReplaceWithNothingChosen()
+        {
+            P.Choose(AreaPanel.Act.Replace);
+            P.Refresh();
+            P.FromBox.SelectedIndex = -1;
+            P.ToBox.SelectedIndex = -1;
+            await P.Apply();
+        }
+
+        /// <summary>The heightmap exported (Export clicked) into a "maps" folder next to the world; its file.</summary>
+        public string ExportHeightmap()
+        {
+            string folder = Path.Combine(Path.GetDirectoryName(Dir)!, "maps");
+            P.HeightmapFolder = folder;
+            Click(P.ExportButton);
+            return Assert.Single(Directory.GetFiles(folder, "*.png"));
+        }
+
+        /// <summary>A file named like a picture that is not one, next to <paramref name="png"/>, picked for import.</summary>
+        public void PickABadPicture(string png)
+        {
+            string bad = Path.Combine(Path.GetDirectoryName(png)!, "bad.png");
+            File.WriteAllText(bad, "not a picture");
+            P.PickPicture = () => Task.FromResult<string?>(bad);
         }
 
         /// <summary>
@@ -183,10 +219,7 @@ public class AreaPanelTests
     public async Task RemoveWithNoneOfTheChosenKindsInsideSaysSo()
     {
         using var r = new Run();
-        foreach (var b in r.P.KindButtons.Values)
-        {
-            b.IsChecked = false;
-        }
+        r.ChooseNoKinds();
         r.P.Choose(AreaPanel.Act.Remove);
         await r.P.Apply();
         Assert.Equal("No objects of the chosen kinds inside the selection.", r.Said);
@@ -196,11 +229,7 @@ public class AreaPanelTests
     public async Task ReplaceUsesTheTwoLists()
     {
         using var r = new Run();
-        r.P.Choose(AreaPanel.Act.Replace);
-        r.P.Refresh();
-        r.P.FromBox.SelectedIndex = -1;
-        r.P.ToBox.SelectedIndex = -1;
-        await r.P.Apply();
+        await r.ReplaceWithNothingChosen();
         Assert.Equal("Choose what to replace, and with what.", r.Said);
         var from = ((IEnumerable<object>)r.P.FromBox.ItemsSource!).Cast<string>().ToList();
         Assert.NotEmpty(from);
@@ -221,7 +250,7 @@ public class AreaPanelTests
         using var r = new Run();
         var p = new AreaPanel(r.W.View, () => r.S, k => (TerrainEditor.Terrain.PrefabCatalog.DisplayName(k) ?? k.ToString(CultureInfo.InvariantCulture)) + " (mod)");
         string said = "";
-        p.Message += m => said = m;
+        p.Message += m => said = m.Shown;
         p.Choose(AreaPanel.Act.Replace);
         p.Refresh();
         var from = ((IEnumerable<object>)p.FromBox.ItemsSource!).Cast<string>().ToList();
@@ -401,10 +430,7 @@ public class AreaPanelTests
         TempWorld.CopyDir(r.Dir, r.Dir.TrimEnd(Path.DirectorySeparatorChar) + "_backup_auto-20261001100000");
         Assert.True(r.S.Save().Saved);
         var backup = Assert.Single(Backups.Find(r.Dir));
-        foreach (var b in r.P.KindButtons.Values)
-        {
-            b.IsChecked = false;
-        }
+        r.ChooseNoKinds();
         await r.P.RestoreBackup(r.S, r.W.View.Area.Polygon()!, backup.Path);
         Assert.StartsWith("Restored from the backup: the ground", r.Said);
         // The middle as it was; the soft edge part way; outside the selection, still raised.
@@ -519,15 +545,10 @@ public class AreaPanelTests
     public async Task HeightmapsAreExportedToTheFolderAndBadPicturesRefused()
     {
         using var r = new Run();
-        string folder = Path.Combine(Path.GetDirectoryName(r.Dir)!, "maps");
-        r.P.HeightmapFolder = folder;
-        Click(r.P.ExportButton);
-        Assert.StartsWith($"Heightmap written to {folder}", r.Said);
-        string png = Assert.Single(Directory.GetFiles(folder, "*.png"));
+        string png = r.ExportHeightmap();
+        Assert.StartsWith($"Heightmap written to {Path.GetDirectoryName(png)}", r.Said);
         // A picture that is not one.
-        string bad = Path.Combine(folder, "bad.png");
-        File.WriteAllText(bad, "not a picture");
-        r.P.PickPicture = () => Task.FromResult<string?>(bad);
+        r.PickABadPicture(png);
         Click(r.P.ImportButton);
         await TestWindows.Until(() => r.Said.StartsWith("That picture cannot be used", StringComparison.Ordinal));
         // The exported one, imported back over the whole area (no selection), then cancelled.
@@ -552,10 +573,7 @@ public class AreaPanelTests
     public async Task APictureReadIsDroppedWhenTheSelectionChangesAndRefusedForAnotherArea()
     {
         using var r = new Run();
-        string folder = Path.Combine(Path.GetDirectoryName(r.Dir)!, "maps");
-        r.P.HeightmapFolder = folder;
-        Click(r.P.ExportButton);
-        string png = Assert.Single(Directory.GetFiles(folder, "*.png"));
+        string png = r.ExportHeightmap();
         r.P.PickPicture = () => Task.FromResult<string?>(png);
         Click(r.P.ImportButton);
         await TestWindows.Until(() => r.P.PictureInfo.Text?.Contains("the selection") == true);

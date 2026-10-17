@@ -154,7 +154,7 @@ public sealed partial class ClaudeTools
             RestAngle = Math.Clamp(restAngle, 5, 80),
             Random = new Random(seed),
         };
-        string name = act == AreaTool.GroundAction.Paint ? $"paint {paint.ToLowerInvariant()}" : AreaTool.Label(act).ToLowerInvariant();
+        string name = act == AreaTool.GroundAction.Paint ? $"paint {paint.ToLowerInvariant()}" : AreaTool.Label(act, english: true).ToLowerInvariant();
         bool clamped = false;
         var touched = s.EditGround($"Claude: {name}", g =>
         {
@@ -163,7 +163,7 @@ public sealed partial class ClaudeTools
             return (t, rect);
         });
         _w.AfterClaudeEdit($"Claude's {name}: {touched.Count} ground point(s); Ctrl+Z takes it back.");
-        return touched.Count == 0 ? "Nothing changed." : $"{AreaTool.Label(act)}: {touched.Count} ground point(s) changed.{(clamped ? " Part of it reached the game's ±8 m limit." : "")} Now pending: {Pending()}";
+        return touched.Count == 0 ? "Nothing changed." : $"{AreaTool.Label(act, english: true)}: {touched.Count} ground point(s) changed.{(clamped ? " Part of it reached the game's ±8 m limit." : "")} Now pending: {Pending()}";
     });
 
     /// <summary>The Path tool's actions dig_path takes, by name.</summary>

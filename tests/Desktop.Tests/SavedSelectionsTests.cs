@@ -403,7 +403,7 @@ public sealed class SavedSelectionsTests : IDisposable
         var (w, s, wall, _) = PickWindow();
         var a = w.AreaPanel;
         var messages = new List<string>();
-        a.Message += messages.Add;
+        a.Message += m => messages.Add(m.Shown);
         w.Tools.ChooseMode(ToolMode.Area);
         a.Choose(AreaPanel.Act.Replace);
         a.Refresh();
@@ -424,7 +424,7 @@ public sealed class SavedSelectionsTests : IDisposable
         var (w, s, _, _) = PickWindow();
         var a = w.AreaPanel;
         var messages = new List<string>();
-        a.Message += messages.Add;
+        a.Message += m => messages.Add(m.Shown);
         a.Refresh();
         var creatable = s.Scene.World.Creatable.Where(p => w.NameOfPrefab(p) != null).OrderBy(w.NameOfPrefab, StringComparer.OrdinalIgnoreCase).ToList();
         Assert.NotEmpty(creatable);

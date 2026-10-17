@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.18 — unreleased
+
+### Changed
+- **The Area tool comes from the language catalogue.** Its panel (the selection, every action and its settings and
+  hints, the Replace, heightmap, backup and Reset zones rows), the clipboard line, the Reset zones question, its file
+  pickers, its status messages and History steps show in the language chosen in Settings; Claude still gets the
+  actions' names in English. In English nothing changes.
+
 ## v1.47.17 — unreleased
 
 ### Changed

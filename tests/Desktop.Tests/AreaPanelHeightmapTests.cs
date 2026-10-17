@@ -28,7 +28,7 @@ public class AreaPanelHeightmapTests
             s.Shape(64, 64, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 20, 6, "hill");
             float top = H(s, 64, 64);
             var p = w.AreaPanel;
-            string said = p.ExportHeightmap(dir)!;
+            string said = p.ExportHeightmap(dir)!.Shown;
             Assert.StartsWith("Heightmap written to", said);
             string file = Directory.GetFiles(dir).Single();
             // The hill goes away, then the picture brings it back (the whole area: nothing is selected).
