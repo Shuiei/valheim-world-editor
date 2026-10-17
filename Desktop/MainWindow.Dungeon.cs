@@ -126,7 +126,15 @@ public partial class MainWindow
     /// </param>
     /// <param name="Label">The history's name for the step; null: "Dungeon:", what was done and the name.</param>
     private sealed record DungeonToPlace(string Name, bool Pasted, string Biome, string PortalTag, List<DungeonPiece> Pieces, Vector3 Landing, float Facing,
-        Func<DungeonEntrances.Pose?, DungeonGen.Result>? Rooms, string? Label = null);
+        Func<DungeonEntrances.Pose?, DungeonGen.Result>? Rooms, string? Label = null)
+    {
+        /// <summary>The history's name for the step: <see cref="Label"/>, else "Dungeon:", what was done and the name.</summary>
+        public string Step => Label ?? (Pasted ? Lang.T("dungeon.undo.pasted", Name) : Lang.T("dungeon.undo.generated", Name));
+
+        /// <summary>The first sentence of the message once placed: what was done, with how many objects.</summary>
+        /// <param name="objects">How many objects were added.</param>
+        public Said Done(int objects) => Pasted ? Said.Of("dungeon.msg.pasted", Name, objects) : Said.Of("dungeon.msg.generated", Name, objects);
+    }
 
     /// <summary>The generator's objects as pieces to place: each with its data and no builder (a ruin, as the game's own dungeons).</summary>
     private static List<DungeonPiece> ToPieces(IEnumerable<DungeonGen.Item> items) => [.. items.Select(it =>
@@ -401,9 +409,9 @@ public partial class MainWindow
                 adds.Add((n with { Raw = z.Serialize(), Fresh = false, Data = portalData }, true));
             }
         }
-        session.Commit(d.Label ?? (d.Pasted ? Lang.T("dungeon.undo.pasted", d.Name) : Lang.T("dungeon.undo.generated", d.Name)), null, [], adds);
+        session.Commit(d.Step, null, [], adds);
         LastPlaced = new PlacedDungeon(at, arrival, arrival.Y + 3.5f, dungeonAt);
-        Msg((d.Pasted ? Said.Of("dungeon.msg.pasted", d.Name, adds.Count) : Said.Of("dungeon.msg.generated", d.Name, adds.Count)) + way
+        Msg(d.Done(adds.Count) + way
             + (skipped > 0 ? Said.Of("dungeon.msg.skipped", skipped) : Said.Empty) + Said.Of("dungeon.msg.goUp"));
         // The view stays on the ground, looking at the entrance.
         View.Orbit(at.X, at.Z, camYaw * 180f / MathF.PI, 55, 40);
