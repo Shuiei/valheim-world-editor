@@ -354,4 +354,30 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         gate.Release();
         Assert.StartsWith("The folder ", await check);
     }
+
+    // The stand-in plugin's wait for the next connection ending with an error (its listener stopped under it) fails
+    // the disposal instead of passing unseen.
+    [Fact]
+    public void AnErrorInTheStandInPluginFailsTheDisposal()
+    {
+        var other = new TunnelTests(_ssh);
+        try
+        {
+            other._bridge.Stop();
+            Assert.True(SpinWait.SpinUntil(() => other._hello.IsFaulted, TimeSpan.FromSeconds(30)), "the stand-in plugin did not fail");
+
+            var e = Assert.Throws<AggregateException>(other.Dispose);
+
+            Assert.NotNull(e.InnerException);
+        }
+        finally
+        {
+            // What the failed disposal left: its stop and its folder.
+            other._stop.Dispose();
+            if (Directory.Exists(other._dir))
+            {
+                Directory.Delete(other._dir, true);
+            }
+        }
+    }
 }
