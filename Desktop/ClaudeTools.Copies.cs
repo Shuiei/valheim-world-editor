@@ -63,7 +63,7 @@ public sealed partial class ClaudeTools
     /// <param name="k">Which copy: 1 is the first.</param>
     /// <param name="step">How each copy sits from the one before.</param>
     /// <param name="area">The area's bounds in world metres.</param>
-    private (List<(Editing.NewObject O, bool Piece, int From)>? Copy, string? Problem) CopyOnce(EditSession s, WorldScene scene, List<int> ok, int k, CopyStep step, (float MinX, float MinZ, float MaxX, float MaxZ) area)
+    internal (List<(Editing.NewObject O, bool Piece, int From)>? Copy, string? Problem) CopyOnce(EditSession s, WorldScene scene, List<int> ok, int k, CopyStep step, (float MinX, float MinZ, float MaxX, float MaxZ) area)
     {
         var copy = new List<(Editing.NewObject O, bool Piece, int From)>();
         foreach (int i in ok)

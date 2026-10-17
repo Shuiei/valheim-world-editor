@@ -41,7 +41,7 @@ public sealed partial class ClaudeTools
     /// </summary>
     /// <param name="folder">The library's folder.</param>
     /// <param name="name">The blueprint's name.</param>
-    private static string? BlueprintPath(string folder, string name)
+    internal static string? BlueprintPath(string folder, string name)
     {
         string file = Homestead.FileName(name);
         var entries = Homestead.List(folder).Where(e => e.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();

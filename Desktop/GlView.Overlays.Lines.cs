@@ -10,7 +10,7 @@ public sealed partial class GlView
     /// Line segments (pairs of points) as thin strips facing the eye, <paramref name="width"/> times a tool line's
     /// width: they stay whole at any resolution and angle, where 1-pixel lines broke into dashes.
     /// </summary>
-    private float[] Thicken(float[] seg, float width)
+    internal float[] Thicken(float[] seg, float width)
     {
         float[] o = new float[seg.Length / 6 * 18];
         int n = 0;
