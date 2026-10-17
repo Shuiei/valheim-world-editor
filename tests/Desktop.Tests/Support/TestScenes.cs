@@ -66,6 +66,11 @@ internal static class TestScenes
     };
 
     /// <summary>
+    /// A beech (Beech1) standing upright at full size at the point given, not yet saved in the world.
+    /// </summary>
+    internal static WorldScene.Thing Beech(int id, Vector3 at) => new(id, StableHash.Of("Beech1"), at, Vector3.Zero, 1, false);
+
+    /// <summary>
     /// The game given opened live, and its area of radius 1 around zone (0, 0) with its edit session.
     /// </summary>
     internal static async Task<(WorldSession World, EditSession Area)> LiveArea(FakeGame game)
