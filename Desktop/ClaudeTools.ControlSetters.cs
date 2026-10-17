@@ -6,7 +6,7 @@ namespace TerrainEditor.Desktop;
 public sealed partial class ClaudeTools
 {
     /// <summary>A switch or toggle set to true or false (Invoke): null when done, else why not.</summary>
-    private static string? SetToggle(Ctl c, ToggleButton t, string value)
+    internal static string? SetToggle(Ctl c, ToggleButton t, string value)
     {
         if (BoolOf(value) is not bool on)
         {
@@ -17,7 +17,7 @@ public sealed partial class ClaudeTools
     }
 
     /// <summary>A button pressed (Invoke): null when done, else why not.</summary>
-    private static string? SetButton(Ctl c, Button b, string value)
+    internal static string? SetButton(Ctl c, Button b, string value)
     {
         if (!IsClick(value) && value.Trim().Length > 0)
         {
@@ -28,7 +28,7 @@ public sealed partial class ClaudeTools
     }
 
     /// <summary>A slider's value, held to its range (Invoke): null when done, else why not.</summary>
-    private static string? SetSlider(Ctl c, Slider s, string value)
+    internal static string? SetSlider(Ctl c, Slider s, string value)
     {
         if (NumberOf(value) is not double v)
         {
@@ -39,7 +39,7 @@ public sealed partial class ClaudeTools
     }
 
     /// <summary>A number box's value, held to its range (Invoke): null when done, else why not.</summary>
-    private static string? SetNumber(Ctl c, NumericUpDown u, string value)
+    internal static string? SetNumber(Ctl c, NumericUpDown u, string value)
     {
         if (NumberOf(value) is not double d)
         {

@@ -62,11 +62,11 @@ public sealed partial class BlueprintsPanel
     private bool HomesteadExists(string name) => File.Exists(Path.Combine(Status.Folder, Homestead.FileName(name)));
 
     /// <summary>Whether a copy holds ground (heights other than the "none" marker, -32768).</summary>
-    private static bool HasGround(JsonObject clip) => clip["rel"] is JsonArray rel && rel.Any(v => v != null && (int)v != -32768);
+    internal static bool HasGround(JsonObject clip) => clip["rel"] is JsonArray rel && rel.Any(v => v != null && (int)v != -32768);
 
     /// <summary>The sentence saying a copy's ground is not kept, when it has some (empty otherwise).</summary>
     /// <param name="clip">The copy.</param>
-    private static Said GroundNotKept(JsonObject clip) => HasGround(clip) ? Said.Of("blueprints.msg.groundNotKept") : Said.Empty;
+    internal static Said GroundNotKept(JsonObject clip) => HasGround(clip) ? Said.Of("blueprints.msg.groundNotKept") : Said.Empty;
 
     /// <summary>The sentence ending a message while Homestead is not installed, empty when it is.</summary>
     private Said Reminder => Status.Installed ? Said.Empty : Said.Of("blueprints.msg.notInstalledYet");

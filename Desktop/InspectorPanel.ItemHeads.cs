@@ -26,7 +26,7 @@ public sealed partial class InspectorPanel
     private static Control Head(string t, int col) => Ui.Col(new TextBlock { Text = t, FontSize = 10, Foreground = Ui.Muted }, col);
 
     /// <summary>Outlines a number box in orange when <paramref name="bad"/> (a slot outside the container).</summary>
-    private static NumericUpDown WithBorder(NumericUpDown n, bool bad)
+    internal static NumericUpDown WithBorder(NumericUpDown n, bool bad)
     {
         if (bad)
         {
