@@ -13,58 +13,8 @@ public sealed partial class ZdoData
     {
         Vector3 euler = new(ZdoBuilder.Wrap(Rotation.X), ZdoBuilder.Wrap(Rotation.Y), ZdoBuilder.Wrap(Rotation.Z));
         bool rotated = euler.LengthSquared() > 1e-6f;
-        ushort flags = (ushort)(BaseFlags & KeptFlags);
         bool small = SmallPosition && Position.Y == 0f && Fits(Position.X) && Fits(Position.Z);
-        if (small)
-        {
-            flags |= SmallPositionFlag;
-        }
-
-        if (rotated)
-        {
-            flags |= RotationFlag;
-        }
-
-        if (Connection != null)
-        {
-            flags |= Connections;
-        }
-
-        if (FloatList.Count > 0)
-        {
-            flags |= Floats;
-        }
-
-        if (Vec3List.Count > 0)
-        {
-            flags |= Vec3s;
-        }
-
-        if (QuatList.Count > 0)
-        {
-            flags |= Quats;
-        }
-
-        if (IntList.Count > 0)
-        {
-            flags |= Ints;
-        }
-
-        if (LongList.Count > 0)
-        {
-            flags |= Longs;
-        }
-
-        if (StringList.Count > 0)
-        {
-            flags |= Strings;
-        }
-
-        if (ByteList.Count > 0)
-        {
-            flags |= ByteArrays;
-        }
-
+        ushort flags = SerializeFlags(small, rotated);
         using MemoryStream ms = new();
         using BinaryWriter w = new(ms, Encoding.UTF8);
         w.Write(flags);
@@ -86,26 +36,7 @@ public sealed partial class ZdoData
         {
             w.Write(Connection);
         }
-        void Each<T>(List<(int Key, T Value)> list, Action<T> write)
-        {
-            if (list.Count == 0)
-            {
-                return;
-            }
-            ZdoBuilder.WriteNumItems(w, list.Count);
-            foreach (var (k, v) in list)
-            {
-                w.Write(k);
-                write(v);
-            }
-        }
-        Each(FloatList, w.Write);
-        Each(Vec3List, v => { w.Write(v.X); w.Write(v.Y); w.Write(v.Z); });
-        Each(QuatList, v => { w.Write(v.X); w.Write(v.Y); w.Write(v.Z); w.Write(v.W); });
-        Each(IntList, w.Write);
-        Each(LongList, w.Write);
-        Each(StringList, w.Write);
-        Each(ByteList, v => { w.Write(v.Length); w.Write(v); });
+        WriteParts(w);
         w.Flush();
         return ms.ToArray();
     }
