@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.50 — unreleased
+
+### Fixed
+- **A piece dragged far did not snap to the building where it was dropped.** The snap points of the pieces around
+  were gathered once per move, within 60 m of where the move started, so a piece dragged more than about 60 m to
+  another building never snapped to it. They are now gathered again once the selection has moved more than 30 m
+  from where they were gathered.
+
 ## v1.45.49 — unreleased
 
 ### Fixed
