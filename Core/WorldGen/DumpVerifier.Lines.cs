@@ -29,7 +29,7 @@ public static partial class DumpVerifier
     /// Whether a line of the dump has the values its kind needs: an "R" line has its call's values, its "|" and the
     /// state after it; the other kinds need a count of values (see <see cref="Needed"/>).
     /// </summary>
-    private static bool Readable(string[] p)
+    internal static bool Readable(string[] p)
     {
         if (p[0] != "R")
         {

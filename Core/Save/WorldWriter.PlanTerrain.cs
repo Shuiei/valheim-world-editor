@@ -8,7 +8,7 @@ public static partial class WorldWriter
     /// Plans the zone edits: a zone with terrain objects gets the new ground in them; a zone without one gets a new
     /// terrain object, copied from the world's template terrain object (when the world has one in the short format).
     /// </summary>
-    private static void PlanTerrainEdits(WorldSave world, Planned plan, Dictionary<(int, int), List<TerrainZone>> existing, Func<int, int, ChunkFile?> findChunk)
+    internal static void PlanTerrainEdits(WorldSave world, Planned plan, Dictionary<(int, int), List<TerrainZone>> existing, Func<int, int, ChunkFile?> findChunk)
     {
         // New ground copies a terrain object whose position is in the short format (the layout the copy patches).
         bool anyTerrain = world.TerrainZones.Any(z => z.Source != null);

@@ -10,7 +10,7 @@ public static partial class WorldWriter
     /// failure the new files are removed and the refusal is returned; nothing old is touched.
     /// </summary>
     /// <returns>The refusal, or null when the save is written and checked (the plan then holds its files and read-back).</returns>
-    private static Result? Commit(WorldSave world, Planned plan, IReadOnlyList<ZoneReset> resets)
+    internal static Result? Commit(WorldSave world, Planned plan, IReadOnlyList<ZoneReset> resets)
     {
         string dir = world.Directory;
         plan.NewNumber = Math.Max(world.SaveNumber, LatestNumber(dir)) + 1;
@@ -75,7 +75,7 @@ public static partial class WorldWriter
     }
 
     /// <summary>Removes the save it was made from (unless kept), the chunk files it replaced and an earlier save of the session (Drop).</summary>
-    private static void RemoveOld(WorldSave world, Planned plan, Options options)
+    internal static void RemoveOld(WorldSave world, Planned plan, Options options)
     {
         string dir = world.Directory;
         var old = new List<string>();
@@ -92,7 +92,7 @@ public static partial class WorldWriter
     }
 
     /// <summary>The message's list of what the save did (zones, deletions, additions, resets).</summary>
-    private static Said Summary(Planned plan, IReadOnlyList<ZoneReset> resets) =>
+    internal static Said Summary(Planned plan, IReadOnlyList<ZoneReset> resets) =>
         Said.Join(", ",
         [
             plan.Written + plan.Created > 0 ? Said.Of("save.writer.zones", plan.Written + plan.Created) : Said.Empty,

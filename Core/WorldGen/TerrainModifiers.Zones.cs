@@ -7,7 +7,7 @@ public sealed partial class TerrainModifiers
     /// Sorts the modifiers into the order the game applies them (TerrainModifier.SortByModifiers): player-made last, then by
     /// sort order, creation time and distance from the middle.
     /// </summary>
-    private static void SortByModifiers(List<Modifier> all)
+    internal static void SortByModifiers(List<Modifier> all)
     {
         all.Sort((a, b) =>
         {
@@ -33,7 +33,7 @@ public sealed partial class TerrainModifiers
     /// <summary>
     /// Adds each modifier to the zones its radius reaches, in the order given.
     /// </summary>
-    private void IndexByZone(List<Modifier> all)
+    internal void IndexByZone(List<Modifier> all)
     {
         foreach (Modifier m in all)
         {
@@ -57,12 +57,12 @@ public sealed partial class TerrainModifiers
     /// <summary>
     /// Degrees to radians.
     /// </summary>
-    private static float Deg(float d) => d * (MathF.PI / 180f);
+    internal static float Deg(float d) => d * (MathF.PI / 180f);
 
     /// <summary>
     /// Heightmap.TerrainVSModifier: whether the modifier's radius + 4 m reaches the zone's square.
     /// </summary>
-    private static bool Overlaps(Modifier m, int zx, int zz)
+    internal static bool Overlaps(Modifier m, int zx, int zz)
     {
         float num = m.Radius + 4f;
         float cx = zx * 64f, cz = zz * 64f, half = 32f;

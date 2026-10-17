@@ -134,7 +134,7 @@ public static partial class WorldWriter
     }
 
     /// <summary>The reason a save is refused before anything is planned, or null when it may go on.</summary>
-    private static Result? Refusal(WorldSave world, IReadOnlyList<ZoneEdit> changed, IReadOnlyCollection<int> deleted, IReadOnlyList<NewObject> added, IReadOnlyList<ZoneReset> resets, Options options, List<string> skipped)
+    internal static Result? Refusal(WorldSave world, IReadOnlyList<ZoneEdit> changed, IReadOnlyCollection<int> deleted, IReadOnlyList<NewObject> added, IReadOnlyList<ZoneReset> resets, Options options, List<string> skipped)
     {
         if (resets.Count > 0 && world.Zones == null)
         {

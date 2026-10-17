@@ -27,7 +27,7 @@ public partial class FastNoise
     /// Cellular noise (2D): the nearest jittered cell point's random value or the distance to it (by the distance
     /// function). The point is already scaled by the frequency.
     /// </summary>
-    private FN_DECIMAL SingleCellular(FN_DECIMAL x, FN_DECIMAL y)
+    internal FN_DECIMAL SingleCellular(FN_DECIMAL x, FN_DECIMAL y)
     {
         int xr = FastRound(x);
         int yr = FastRound(y);
@@ -74,7 +74,7 @@ public partial class FastNoise
     /// <param name="function">The distance function.</param>
     /// <param name="vecX">The point's x offset from the sample.</param>
     /// <param name="vecY">The point's y offset from the sample.</param>
-    private static FN_DECIMAL CellDistance(CellularDistanceFunction function, FN_DECIMAL vecX, FN_DECIMAL vecY)
+    internal static FN_DECIMAL CellDistance(CellularDistanceFunction function, FN_DECIMAL vecX, FN_DECIMAL vecY)
     {
         switch (function)
         {

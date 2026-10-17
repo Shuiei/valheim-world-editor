@@ -6,7 +6,7 @@ public static partial class PrefabCatalog
     /// <summary>
     /// Adds an entry's item rules: what the item is, what the item stand takes and the armour stand's slots.
     /// </summary>
-    private static void AddItemRules(Data d, int hash, Entry e)
+    internal static void AddItemRules(Data d, int hash, Entry e)
     {
         if (e.it >= 0)
         {
@@ -25,7 +25,7 @@ public static partial class PrefabCatalog
     /// <summary>
     /// Adds an entry's spawner, when it is a spawn point or a nest.
     /// </summary>
-    private static void AddSpawn(Data d, int hash, Entry e)
+    internal static void AddSpawn(Data d, int hash, Entry e)
     {
         if ((e.cs ?? e.sa) is { } spawned)
         {
@@ -36,7 +36,7 @@ public static partial class PrefabCatalog
     /// <summary>
     /// Records what a sapling grows into, keeping the largest grow radius when several saplings grow the same thing.
     /// </summary>
-    private static void AddGrownFrom(Data d, string name, Entry e)
+    internal static void AddGrownFrom(Data d, string name, Entry e)
     {
         foreach (string grown in e.grows ?? [])
         {

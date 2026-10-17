@@ -16,7 +16,7 @@ public partial class FastNoise
     /// One octave of simplex noise (2D) at a point already scaled by the frequency: gradients at the simplex's corners,
     /// summed with falloff.
     /// </summary>
-    private FN_DECIMAL SingleSimplex(int seed, FN_DECIMAL x, FN_DECIMAL y)
+    internal FN_DECIMAL SingleSimplex(int seed, FN_DECIMAL x, FN_DECIMAL y)
     {
         FN_DECIMAL t = (x + y) * F2;
         int i = FastFloor(x + t);

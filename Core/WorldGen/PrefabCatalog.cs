@@ -50,7 +50,7 @@ public static partial class PrefabCatalog
     /// <param name="ArmourStands">See <see cref="ArmourSlotsOf"/>.</param>
     /// <param name="Grow">The room saplings and what they grow into need (see GrowRoom).</param>
     /// <param name="Spawns">See <see cref="SpawnOf(int)"/>.</param>
-    private sealed record Data(Dictionary<int, Info> ByHash, Dictionary<int, string> AllNames, List<string> ItemNames, Dictionary<int, Info> Extra, HashSet<int> Creatures,
+    internal sealed record Data(Dictionary<int, Info> ByHash, Dictionary<int, string> AllNames, List<string> ItemNames, Dictionary<int, Info> Extra, HashSet<int> Creatures,
         Dictionary<string, (float Radius, string Sapling)> GrownFrom, Dictionary<int, ItemKind> ItemKinds, Dictionary<int, StandRule> ItemStands, Dictionary<int, int[][]> ArmourStands,
         Dictionary<string, (float Radius, bool Cultivated)> Grow, Dictionary<int, SpawnKind> Spawns)
     {

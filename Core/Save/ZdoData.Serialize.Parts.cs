@@ -7,7 +7,7 @@ public sealed partial class ZdoData
     /// </summary>
     /// <param name="small">Whether the position is stored in the short form.</param>
     /// <param name="rotated">Whether a rotation is stored.</param>
-    private ushort SerializeFlags(bool small, bool rotated)
+    internal ushort SerializeFlags(bool small, bool rotated)
     {
         ushort flags = (ushort)(BaseFlags & KeptFlags);
         if (small)

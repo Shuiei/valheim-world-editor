@@ -5,7 +5,7 @@ public static partial class SeedLocations
     /// <summary>
     /// Instances by a name (prefab or group), for "is one within this distance" (3D, as the game measures).
     /// </summary>
-    private sealed class Neighbours
+    internal sealed class Neighbours
     {
         /// <summary>
         /// The instances under each name.

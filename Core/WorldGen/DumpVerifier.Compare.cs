@@ -9,7 +9,7 @@ public static partial class DumpVerifier
     /// <param name="line">The line as written.</param>
     /// <param name="t">Where the result is counted.</param>
     /// <param name="seedName">The world's seed name, for the lines that need a generator.</param>
-    private static void Compare(string[] p, string line, Tally t, string seedName)
+    internal static void Compare(string[] p, string line, Tally t, string seedName)
     {
         switch (p[0])
         {
@@ -36,7 +36,7 @@ public static partial class DumpVerifier
     /// <summary>
     /// Compares one Perlin noise sample, bit for bit.
     /// </summary>
-    private static void ComparePerlin(string[] p, Tally t)
+    internal static void ComparePerlin(string[] p, Tally t)
     {
         float x = F(p[1]), y = F(p[2]), want = F(p[3]);
         float got = UnityPerlin.Noise(x, y);
@@ -55,7 +55,7 @@ public static partial class DumpVerifier
     /// <summary>
     /// Compares the lake, river and stream counts of the seed's generator with the line.
     /// </summary>
-    private static void CompareWater(string line, Tally t, string seedName)
+    internal static void CompareWater(string line, Tally t, string seedName)
     {
         WorldGenerator gen = t.Generator ??= Init(seedName);
         string offline = $"W lakes {gen.GetLakes().Count} rivers {gen.GetRivers().Count} streams {gen.GetStreams().Count}";

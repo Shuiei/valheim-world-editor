@@ -7,7 +7,7 @@ public static partial class DumpVerifier
     /// <summary>
     /// Compares one point's biome and base height with the seed's generator.
     /// </summary>
-    private static void CompareHeight(string[] p, Tally t, string seedName)
+    internal static void CompareHeight(string[] p, Tally t, string seedName)
     {
         WorldGenerator gen = t.Generator ??= Init(seedName);
         float x = F(p[1]), z = F(p[2]), want = F(p[4]);
@@ -33,7 +33,7 @@ public static partial class DumpVerifier
     /// <summary>
     /// Compares a zone's base heights, vertex by vertex, with the seed's generator.
     /// </summary>
-    private static void CompareZone(string[] p, Tally t, string seedName)
+    internal static void CompareZone(string[] p, Tally t, string seedName)
     {
         WorldGenerator gen = t.Generator ??= Init(seedName);
         int zx = int.Parse(p[1], CultureInfo.InvariantCulture), zz = int.Parse(p[2], CultureInfo.InvariantCulture);

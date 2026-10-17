@@ -7,7 +7,7 @@ public sealed partial class TerrainModifiers
     /// <summary>
     /// Heightmap.SmoothTerrain2 (WorldToVertex, round area, blend towards the modifier's height).
     /// </summary>
-    private static void SmoothTerrain2(int zx, int zz, float[] h, Vector3 worldPos, float radius, float[]? levelOnly, float power, bool player)
+    internal static void SmoothTerrain2(int zx, int zz, float[] h, Vector3 worldPos, float radius, float[]? levelOnly, float power, bool player)
     {
         // No reach, nothing to smooth (the middle point's share would be 0 / 0: a NaN height).
         if (radius <= 0f)

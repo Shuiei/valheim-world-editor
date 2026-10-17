@@ -51,7 +51,7 @@ public sealed partial class MapData
     /// <summary>
     /// Builds a detail window: each zone's base heights with its height and paint edits laid over them.
     /// </summary>
-    private Layers BuildDetail(int x0, int z0, int size)
+    internal Layers BuildDetail(int x0, int z0, int size)
     {
         Layers layers = new(size, size);
         // Gather the zones the window touches: base terrain and current edits.

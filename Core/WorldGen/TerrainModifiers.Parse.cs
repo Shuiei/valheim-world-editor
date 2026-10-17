@@ -9,7 +9,7 @@ public sealed partial class TerrainModifiers
     /// <summary>
     /// Reads terrain-modifiers.json into modifiers by prefab name hash.
     /// </summary>
-    private static Dictionary<int, (string, bool, List<Template>)> Parse(string json)
+    internal static Dictionary<int, (string, bool, List<Template>)> Parse(string json)
     {
         using var doc = JsonDocument.Parse(json);
         Dictionary<int, (string, bool, List<Template>)> result = [];

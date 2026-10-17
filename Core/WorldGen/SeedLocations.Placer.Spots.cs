@@ -4,13 +4,13 @@ namespace ValheimGen;
 
 public static partial class SeedLocations
 {
-    private sealed partial class Placer
+    internal sealed partial class Placer
     {
         /// <summary>
         /// One spot of the zone (kept far enough from its edges for the kind's size), checked step by step;
         /// registered when it passes.
         /// </summary>
-        private bool TrySpot(Rule rule, Heightmap.Biome biomes, (int X, int Y) zone, float margin)
+        internal bool TrySpot(Rule rule, Heightmap.Biome biomes, (int X, int Y) zone, float margin)
         {
             var spot = new Vector3(zone.X * 64f + Rnd.Range(-32f + margin, 32f - margin), 0f, zone.Y * 64f + Rnd.Range(-32f + margin, 32f - margin));
             if (!AtRightDistance(rule, spot) || !OnRightGround(rule, biomes, ref spot, out float vegetation) || !FlatEnough(rule, spot))
@@ -29,7 +29,7 @@ public static partial class SeedLocations
         /// <summary>
         /// Keeps an instance, unless its zone already has one.
         /// </summary>
-        private void Register(Rule rule, Vector3 spot)
+        internal void Register(Rule rule, Vector3 spot)
         {
             var placed = new Placed(rule, spot.x, spot.y, spot.z);
             if (!Instances.TryAdd(ZoneOf((spot.x, spot.z)), placed))

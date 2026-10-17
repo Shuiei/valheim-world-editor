@@ -7,7 +7,7 @@ public sealed partial class TerrainModifiers
     /// <summary>
     /// Heightmap.LevelTerrain (WorldToVertexMask, square or round area, sets the modifier's height).
     /// </summary>
-    private static void LevelTerrain(int zx, int zz, float[] h, Vector3 worldPos, float radius, bool square, float[]? baseHeights, float[]? levelOnly, bool player)
+    internal static void LevelTerrain(int zx, int zz, float[] h, Vector3 worldPos, float radius, bool square, float[]? baseHeights, float[]? levelOnly, bool player)
     {
         float dx = worldPos.X - zx * 64f, dz = worldPos.Z - zz * 64f;
         int half = (Width + 1) / 2;
@@ -34,7 +34,7 @@ public sealed partial class TerrainModifiers
     /// Calls <paramref name="visit"/> with the row and column of each vertex in the square of reach <paramref name="reach"/>
     /// around (<paramref name="x"/>, <paramref name="y"/>), row by row; vertices off the zone are visited too (the callers check).
     /// </summary>
-    private static void ForEachVertexInReach(int x, int y, int reach, Action<int, int> visit)
+    internal static void ForEachVertexInReach(int x, int y, int reach, Action<int, int> visit)
     {
         for (int i = y - reach; i <= y + reach; i++)
         {

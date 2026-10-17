@@ -3,13 +3,13 @@ namespace ValheimGen;
 
 public static partial class SeedLocations
 {
-    private sealed partial class Placer
+    internal sealed partial class Placer
     {
         /// <summary>
         /// Far enough from its own prefab or group, and near enough to its own prefab or "max" group when it
         /// needs one.
         /// </summary>
-        private bool RightNeighbours(Rule rule, Vector3 spot)
+        internal bool RightNeighbours(Rule rule, Vector3 spot)
         {
             if (rule.minDistanceFromSimilar > 0f && (_byPrefab.Within(rule.prefab, spot, rule.minDistanceFromSimilar) || (rule.group.Length > 0 && _byGroup.Within(rule.group, spot, rule.minDistanceFromSimilar))))
             {
@@ -21,7 +21,7 @@ public static partial class SeedLocations
         /// <summary>
         /// The ground's vegetation within the kind's bounds (either end left out when not set).
         /// </summary>
-        private static bool RightVegetation(Rule rule, float vegetation) =>
+        internal static bool RightVegetation(Rule rule, float vegetation) =>
             !(rule.minimumVegetation > 0f && vegetation <= rule.minimumVegetation) && !(rule.maximumVegetation < 1f && vegetation >= rule.maximumVegetation);
 
         /// <summary>
@@ -29,7 +29,7 @@ public static partial class SeedLocations
         /// more) must beat the average of the kind's spots so far by a share of the way to the best; the
         /// first nine spots only set the bar.
         /// </summary>
-        private bool StandsOut(Rule rule, Vector3 spot)
+        internal bool StandsOut(Rule rule, Vector3 spot)
         {
             if (rule.surroundCheckVegetation == 0)
             {

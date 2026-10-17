@@ -8,7 +8,7 @@ public static partial class SeedLocations
         /// A biome's points listed the first time they are asked for. Its order depends on its own points
         /// only (the game's fill never crosses into another biome), so each is listed alone.
         /// </summary>
-        private void List(int biome)
+        internal void List(int biome)
         {
             if (All[biome] != null)
             {

@@ -6,7 +6,7 @@ public sealed partial class MapData
     /// <summary>
     /// A 0..1 value as a byte, rounded and held to 0..255.
     /// </summary>
-    private static byte Byte(float v) => (byte)Math.Clamp((int)Math.Round(v * 255f), 0, 255);
+    internal static byte Byte(float v) => (byte)Math.Clamp((int)Math.Round(v * 255f), 0, 255);
 
     /// <summary>
     /// A biome's colour on the map; white for any biome not in the game's list (and for combined flags).
@@ -26,7 +26,7 @@ public sealed partial class MapData
     /// <summary>
     /// The mask texel at a world point (r forest, g mist, b ashlands lava/ocean). Mirrors Minimap.GetMaskColor.
     /// </summary>
-    private (byte, byte, byte) MaskColor(float wx, float wy, float height, Heightmap.Biome biome)
+    internal (byte, byte, byte) MaskColor(float wx, float wy, float height, Heightmap.Biome biome)
     {
         if (height < 30f)
         {

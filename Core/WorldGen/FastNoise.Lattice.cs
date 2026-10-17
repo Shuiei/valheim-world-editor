@@ -16,7 +16,7 @@ public partial class FastNoise
     /// The seed and a 2D grid point mixed into a hash.
     /// </summary>
     [MethodImplAttribute(FN_INLINE)]
-    private static int Hash2D(int seed, int x, int y)
+    internal static int Hash2D(int seed, int x, int y)
     {
         int hash = seed;
         hash ^= X_PRIME * x;
@@ -32,7 +32,7 @@ public partial class FastNoise
     /// A random value, -1..1, for a 2D grid point.
     /// </summary>
     [MethodImplAttribute(FN_INLINE)]
-    private static FN_DECIMAL ValCoord2D(int seed, int x, int y)
+    internal static FN_DECIMAL ValCoord2D(int seed, int x, int y)
     {
         int n = seed;
         n ^= X_PRIME * x;
@@ -45,7 +45,7 @@ public partial class FastNoise
     /// The 2D grid point's hashed gradient dotted with the offset (xd, yd) from it.
     /// </summary>
     [MethodImplAttribute(FN_INLINE)]
-    private static FN_DECIMAL GradCoord2D(int seed, int x, int y, FN_DECIMAL xd, FN_DECIMAL yd)
+    internal static FN_DECIMAL GradCoord2D(int seed, int x, int y, FN_DECIMAL xd, FN_DECIMAL yd)
     {
         int hash = seed;
         hash ^= X_PRIME * x;

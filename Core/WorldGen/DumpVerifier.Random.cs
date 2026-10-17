@@ -8,7 +8,7 @@ public static partial class DumpVerifier
     /// <summary>
     /// Replays one Random call and compares its value and the state after it.
     /// </summary>
-    private static void CompareRandom(string[] p, Tally t)
+    internal static void CompareRandom(string[] p, Tally t)
     {
         int bar = Array.IndexOf(p, "|");
         string expectedState = string.Join(" ", p.Skip(bar + 1));

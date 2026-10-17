@@ -8,7 +8,7 @@ public static partial class WorldWriter
     /// <param name="changed">The zone edits to save (those of reset ground left out).</param>
     /// <param name="groundReset">Zones whose ground is reset.</param>
     /// <param name="skipped">The edits that could not be saved, each with the reason.</param>
-    private sealed class Planned(IReadOnlyList<ZoneEdit> changed, HashSet<(int, int)> groundReset, List<string> skipped)
+    internal sealed class Planned(IReadOnlyList<ZoneEdit> changed, HashSet<(int, int)> groundReset, List<string> skipped)
     {
         /// <summary>The zone edits to save.</summary>
         public IReadOnlyList<ZoneEdit> Changed { get; } = changed;
@@ -45,7 +45,7 @@ public static partial class WorldWriter
     }
 
     /// <summary>Works out which objects the save takes out: the deleted ones, then those cleared by zone resets.</summary>
-    private static void PlanRemovals(WorldSave world, IReadOnlyCollection<int> deleted, IReadOnlyList<ZoneReset> resets, Planned plan)
+    internal static void PlanRemovals(WorldSave world, IReadOnlyCollection<int> deleted, IReadOnlyList<ZoneReset> resets, Planned plan)
     {
         void Remove(ObjectRef o) => (plan.Removals.TryGetValue(o.File, out var set) ? set : plan.Removals[o.File] = []).Add(o.Start);
         foreach (int id in deleted)
@@ -70,7 +70,7 @@ public static partial class WorldWriter
     }
 
     /// <summary>Plans the new objects: a copy of the first object of the same prefab, in the chunk file of their zone.</summary>
-    private static void PlanNewObjects(WorldSave world, Planned plan, IReadOnlyList<NewObject> added, Func<int, int, ChunkFile?> findChunk)
+    internal static void PlanNewObjects(WorldSave world, Planned plan, IReadOnlyList<NewObject> added, Func<int, int, ChunkFile?> findChunk)
     {
         Func<ObjectRef, byte[]> source = world.SourceReader();
         foreach (NewObject n in added)

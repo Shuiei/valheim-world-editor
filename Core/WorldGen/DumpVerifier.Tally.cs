@@ -5,7 +5,7 @@ public static partial class DumpVerifier
     /// <summary>
     /// The counts, the largest differences and the first mismatches of one replay, and the generator it builds on.
     /// </summary>
-    private sealed class Tally
+    internal sealed class Tally
     {
         /// <summary>Random calls that matched.</summary>
         public int RandomOk { get; set; }

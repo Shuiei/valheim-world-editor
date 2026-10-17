@@ -12,7 +12,7 @@ public static partial class SeedLocations
     /// run out. The checks and the random draws come in the game's order: a draw more or less, and every
     /// later spot of the kind moves.
     /// </summary>
-    private sealed partial class Placer
+    internal sealed partial class Placer
     {
         /// <summary>
         /// The seed's generator.

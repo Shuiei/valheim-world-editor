@@ -10,7 +10,7 @@ public sealed partial class TerrainModifiers
     /// levelling and smoothing. ClearVegetation blends all four channels towards 0; the others blend red, green and
     /// blue and keep the vegetation (alpha). With the height check, vertices above the modifier are left.
     /// </summary>
-    private static void PaintCleared(int zx, int zz, float[] h, float[] mask, Modifier m)
+    internal static void PaintCleared(int zx, int zz, float[] h, float[] mask, Modifier m)
     {
         float radius = m.PaintRadius;
         if (radius <= 0f)

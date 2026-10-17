@@ -86,7 +86,7 @@ public sealed partial class TerrainModifiers
     /// <param name="PaintHeightCheck">Whether it leaves the ground above it unpainted.</param>
     /// <param name="SortOrder">The game's sort order.</param>
     /// <param name="Player">A player-made modifier.</param>
-    private sealed record Template(Vector3 Offset, bool Level, float LevelOffset, float LevelRadius, bool Square, bool Smooth, float SmoothRadius, float SmoothPower, bool PaintCleared, float PaintRadius,
+    internal sealed record Template(Vector3 Offset, bool Level, float LevelOffset, float LevelRadius, bool Square, bool Smooth, float SmoothRadius, float SmoothPower, bool PaintCleared, float PaintRadius,
         Paint PaintType, float PaintStrength, bool PaintHeightCheck, int SortOrder, bool Player);
 
     /// <summary>
