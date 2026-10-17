@@ -94,13 +94,52 @@ public static partial class WorldWriter
         deleted ??= [];
         added ??= [];
         resets ??= [];
+        // Terrain edits of zones whose ground is reset are dropped.
+        HashSet<(int, int)> groundReset = [.. resets.Where(r => r.Ground).Select(r => (r.X, r.Z))];
+        changed = [.. changed.Where(e => !groundReset.Contains((e.ZoneX, e.ZoneZ)))];
+        if (Refusal(world, changed, deleted, added, resets, options, skipped) is Result refused)
+        {
+            return refused;
+        }
+        var plan = new Planned(changed, groundReset, skipped);
+        PlanRemovals(world, deleted, resets, plan);
+        Dictionary<(int, int), List<TerrainZone>> existing = world.TerrainZones
+            .Where(z => z.Source != null && !(plan.Removals.TryGetValue(z.Source.File, out var gone) && gone.Contains(z.Source.Start)))
+            .GroupBy(z => (z.ZoneX, z.ZoneZ)).ToDictionary(g => g.Key, g => g.ToList());
+
+        // Plan: which chunk files change, and how. Reading the template and the models can fail (a chunk file gone,
+        // data that does not parse): nothing is written yet, and the caller gets a result, not an exception.
+        Func<int, int, ChunkFile?> findChunk = ChunkMath.Finder(world.Chunks);
+        try
+        {
+            PlanTerrainEdits(world, plan, existing, findChunk);
+            PlanNewObjects(world, plan, added, findChunk);
+        }
+        catch (Exception ex)
+        {
+            Log.Caught(ex, "making the save's changes (nothing saved)");
+            return Refused(Said.Of("save.writer.failed", ex.Message), skipped);
+        }
+        if (plan.Written + plan.Created + plan.Removed + plan.AddedCount + resets.Count == 0)
+        {
+            return Refused(Said.Of("save.writer.nothingSaved"), skipped);
+        }
+        if (Commit(world, plan, resets) is Result failed)
+        {
+            return failed;
+        }
+        RemoveOld(world, plan, options);
+        var saved = Said.Of("save.writer.saved", Summary(plan, resets), plan.NewNumber);
+        return new Result(true, saved.Shown, null, plan.Written, plan.Created, skipped, plan.Removed, plan.AddedCount, resets.Count) { Files = plan.NewFiles, Number = plan.NewNumber, Read = plan.Read, Report = saved };
+    }
+
+    /// <summary>The reason a save is refused before anything is planned, or null when it may go on.</summary>
+    private static Result? Refusal(WorldSave world, IReadOnlyList<ZoneEdit> changed, IReadOnlyCollection<int> deleted, IReadOnlyList<NewObject> added, IReadOnlyList<ZoneReset> resets, Options options, List<string> skipped)
+    {
         if (resets.Count > 0 && world.Zones == null)
         {
             return Refused(Said.Of("save.writer.noDb"), skipped);
         }
-        // Terrain edits of zones whose ground is reset are dropped.
-        HashSet<(int, int)> groundReset = [.. resets.Where(r => r.Ground).Select(r => (r.X, r.Z))];
-        changed = [.. changed.Where(e => !groundReset.Contains((e.ZoneX, e.ZoneZ)))];
         if (changed.Count == 0 && deleted.Count == 0 && added.Count == 0 && resets.Count == 0)
         {
             return Refused(Said.Of("save.writer.nothing"), skipped);
@@ -115,199 +154,6 @@ public static partial class WorldWriter
         {
             return Refused(Said.Of("save.writer.format", format, WorldVersion.OldestWritable, WorldVersion.Latest), skipped);
         }
-        // New ground copies a terrain object whose position is in the short format (the layout the copy patches).
-        bool anyTerrain = world.TerrainZones.Any(z => z.Source != null);
-        TerrainZone? template = world.TerrainZones.FirstOrDefault(z => z.Source != null && (z.Source.Flags & ZdoData.SmallPositionFlag) != 0);
-        Dictionary<ChunkFile, HashSet<long>> removals = [];
-        void Remove(ObjectRef o) => (removals.TryGetValue(o.File, out var set) ? set : removals[o.File] = []).Add(o.Start);
-        foreach (int id in deleted)
-        {
-            if (id >= 0 && id < world.ObjectRefs.Count)
-            {
-                Remove(world.ObjectRefs[id]);
-            }
-        }
-        // Objects the deletions take out: ids past the list and repeated ids take out none.
-        int deletedCount = removals.Values.Sum(s => s.Count);
-        Dictionary<(int, int), ZoneReset> resetByZone = resets.ToDictionary(r => (r.X, r.Z));
-        foreach (ObjectRef o in world.ObjectRefs)
-        {
-            // Players' tombstones (with what they carried) are never cleared.
-            if (resetByZone.TryGetValue(o.Zone, out ZoneReset? r) && !(r.KeepBuildings && o.IsPiece) && !(o.IsTerrain && !r.Ground) && o.Prefab != TombstonePrefab)
-            {
-                Remove(o);
-            }
-        }
-        int removed = removals.Values.Sum(s => s.Count);
-        // A zone can hold two terrain objects with data (the game makes them now and then): each gets
-        // the zone's ground, so whichever one the game uses has it. Those deleted are not patched (removal wins): a
-        // zone whose terrain objects all go gets a new one.
-        Dictionary<(int, int), List<TerrainZone>> existing = world.TerrainZones
-            .Where(z => z.Source != null && !(removals.TryGetValue(z.Source.File, out var gone) && gone.Contains(z.Source.Start)))
-            .GroupBy(z => (z.ZoneX, z.ZoneZ)).ToDictionary(g => g.Key, g => g.ToList());
-
-        // Plan: which chunk files change, and how.
-        Dictionary<ChunkFile, Dictionary<long, (ZdoLocation Loc, byte[] Data)>> patches = [];     // object start -> new TCData
-        HashSet<(int, int)> notSaved = [];
-        Dictionary<ChunkFile, List<byte[]>> additions = [];
-        int written = 0, created = 0, addedCount = 0;
-        // The template terrain object's own bytes, read from its chunk file at the first new ground.
-        byte[]? templateBytes = null;
-        // Each base chunk's file looked up once for the new ground and objects.
-        var findChunk = ChunkMath.Finder(world.Chunks);
-        // Reading the template and the models can fail (a chunk file gone, data that does not parse): nothing is
-        // written yet, and the caller gets a result, not an exception.
-        try
-        {
-            foreach (ZoneEdit edit in changed)
-            {
-                byte[] data = EncodeTerrain(edit);
-                if (existing.TryGetValue((edit.ZoneX, edit.ZoneZ), out List<TerrainZone>? zones))
-                {
-                    foreach (TerrainZone zone in zones)
-                    {
-                        (patches.TryGetValue(zone.Source!.File, out var p) ? p : patches[zone.Source.File] = [])[zone.Source.Start] = (zone.Source, data);
-                    }
-                    written++;
-                    continue;
-                }
-                if (edit.HeightCount + edit.PaintCount == 0)
-                {
-                    notSaved.Add((edit.ZoneX, edit.ZoneZ));
-                    continue;
-                }
-                ChunkFile? target = findChunk(edit.ZoneX, edit.ZoneZ);
-                if (target == null)
-                {
-                    skipped.Add(ChunkMath.InWorld(edit.ZoneX, edit.ZoneZ) ? $"zone {edit.ZoneX}, {edit.ZoneZ}: not generated yet (no world data there; visit it in game first)" : $"zone {edit.ZoneX}, {edit.ZoneZ}: outside the world");
-                    notSaved.Add((edit.ZoneX, edit.ZoneZ));
-                    continue;
-                }
-                if (template == null)
-                {
-                    skipped.Add(anyTerrain
-                        ? $"zone {edit.ZoneX}, {edit.ZoneZ}: the world's terrain objects are in an unexpected layout (position not in the short format), so none can be copied"
-                        : $"zone {edit.ZoneX}, {edit.ZoneZ}: the world has no terrain object to copy yet (edit the ground once in game first)");
-                    notSaved.Add((edit.ZoneX, edit.ZoneZ));
-                    continue;
-                }
-                templateBytes ??= TemplateBytes(world, template.Source!);
-                (additions.TryGetValue(target, out var a) ? a : additions[target] = []).Add(NewTerrainObject(template.Source!, templateBytes, edit, data));
-                created++;
-            }
-            // New objects: a copy of the first object of the same prefab, in the chunk file of their zone.
-            Func<ObjectRef, byte[]> source = world.SourceReader();
-            foreach (NewObject n in added)
-            {
-                var (zx, zz) = ChunkMath.SectorOf(n.Position.X, n.Position.Z);
-                ChunkFile? target = findChunk(zx, zz);
-                if (target == null)
-                {
-                    skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: zone {zx}, {zz} {(ChunkMath.InWorld(zx, zz) ? "is not generated yet" : "is outside the world")}");
-                    continue;
-                }
-                byte[]? bytes = world.NewObjectBytes(n, source);
-                if (bytes == null)
-                {
-                    skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: unknown kind of object");
-                    continue;
-                }
-                (additions.TryGetValue(target, out var list) ? list : additions[target] = []).Add(bytes);
-                addedCount++;
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Caught(ex, "making the save's changes (nothing saved)");
-            return Refused(Said.Of("save.writer.failed", ex.Message), skipped);
-        }
-        if (written + created + removed + addedCount + resets.Count == 0)
-        {
-            return Refused(Said.Of("save.writer.nothingSaved"), skipped);
-        }
-
-        string dir = world.Directory;
-        int newNumber = Math.Max(world.SaveNumber, LatestNumber(dir)) + 1;
-        List<string> newFiles = [];
-        WorldSave? read = null;
-        Dictionary<ChunkFile, (uint Version, int Count)> updated = [];
-        try
-        {
-            // 2. Changed chunk files under a new version.
-            foreach (ChunkFile file in patches.Keys.Union(additions.Keys).Union(removals.Keys))
-            {
-                patches.TryGetValue(file, out var p);
-                additions.TryGetValue(file, out var a);
-                removals.TryGetValue(file, out var r);
-                uint version = file.Version + 1;
-                while (File.Exists(Path.Combine(dir, ChunkFile.NameFor(file.Chunk, file.Size, version))))
-                {
-                    version++;
-                }
-                string path = Path.Combine(dir, ChunkFile.NameFor(file.Chunk, file.Size, version));
-                newFiles.Add(path);
-                int count = WriteChunk(Path.Combine(dir, file.FileName), path, file, p, a, r);
-                updated[file] = (version, count);
-            }
-            // 3. New save number: index, world data, metadata.
-            string main = Path.Combine(dir, $"_main.{newNumber}");
-            // Each file is listed before it is written: a failure halfway removes it too.
-            newFiles.AddRange([main + ".chunks", main + ".db2", main + ".fwl2", main + ".ok"]);
-            WriteIndex(main + ".chunks", world.SaveVersion, [.. world.Chunks.Select(c => updated.TryGetValue(c, out var u) ? (c.Chunk, c.Size, u.Version, u.Count) : (c.Chunk, c.Size, c.Version, c.IndexCount))]);
-            if (resets.Count > 0)
-            {
-                var db = ZoneDb.Load(Path.Combine(dir, $"_main.{world.SaveNumber}.db2"));
-                foreach (ZoneReset r in resets)
-                {
-                    db.ResetZone(r.X, r.Z);
-                }
-                db.Save(main + ".db2");
-            }
-            else
-            {
-                CopyDurable(Path.Combine(dir, $"_main.{world.SaveNumber}.db2"), main + ".db2");
-            }
-            CopyDurable(Path.Combine(dir, $"_main.{world.SaveNumber}.fwl2"), main + ".fwl2");
-            // The new files' names on disk too (Linux, macOS), before the marker that vouches for them.
-            DirectorySync.Flush(dir);
-            // 4. Commit marker, written last like the game does; its name on disk before anything old goes.
-            WriteAllBytesDurable(main + ".ok", BitConverter.GetBytes(world.SaveVersion));
-            DirectorySync.Flush(dir);
-            // 5. Read back and compare with what was meant to be written (nothing old removed yet).
-            read = WorldSave.Load(dir);
-            string? problem = Check(read, world, [.. changed.Where(e => !notSaved.Contains((e.ZoneX, e.ZoneZ)))], created + addedCount, removed, groundReset, resets);
-            if (problem != null)
-            {
-                RemoveAll(newFiles);
-                return Refused(Said.Of("save.writer.badReadBack", problem), skipped);
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Caught(ex, "writing the save's files (the new files are removed, nothing saved)");
-            RemoveAll(newFiles);
-            return Refused(Said.Of("save.writer.failed", ex.Message), skipped);
-        }
-        // 6. The save it was made from (unless kept) and an earlier save of the session go.
-        var old = new List<string>();
-        if (!options.KeepBase)
-        {
-            old.AddRange(MainExtensions.Select(ext => Path.Combine(dir, $"_main.{world.SaveNumber}{ext}")));
-            old.AddRange(updated.Keys.Select(c => Path.Combine(dir, c.FileName)));
-        }
-        if (options.Drop != null)
-        {
-            old.AddRange(options.Drop.Where(f => !newFiles.Contains(f)));
-        }
-        RemoveAll(old);
-        var what = Said.Join(", ",
-        [
-            written + created > 0 ? Said.Of("save.writer.zones", written + created) : Said.Empty,
-            deletedCount > 0 ? Said.Of("save.writer.deleted", deletedCount) : Said.Empty,
-            addedCount > 0 ? Said.Of("save.writer.added", addedCount) : Said.Empty,
-            resets.Count > 0 ? Said.Of("save.writer.resets", resets.Count, removed - deletedCount) : Said.Empty,
-        ]);
-        var saved = Said.Of("save.writer.saved", what, newNumber);
-        return new Result(true, saved.Shown, null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles, Number = newNumber, Read = read, Report = saved };
+        return null;
     }
 }

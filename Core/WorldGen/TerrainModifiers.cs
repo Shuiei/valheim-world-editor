@@ -1,6 +1,4 @@
 using System.Numerics;
-using System.Text.Json;
-using TerrainEditor.Save;
 
 namespace TerrainEditor.Terrain;
 
@@ -11,7 +9,7 @@ namespace TerrainEditor.Terrain;
 /// tests/fixtures/terrain-modifiers.json): the editor keeps no copy, which would go out of date.
 /// Placement comes from the world save. The maths mirrors Heightmap.ApplyModifiers.
 /// </summary>
-public sealed class TerrainModifiers
+public sealed partial class TerrainModifiers
 {
     /// <summary>
     /// One modifier placed in the world (a TerrainModifier's settings at its world position).
@@ -140,97 +138,9 @@ public sealed class TerrainModifiers
     public int LocationsWithModifiers { get; }
 
     /// <summary>
-    /// The modifiers of a world's placed locations and objects.
-    /// </summary>
-    public TerrainModifiers(WorldSave world) : this(world.Placed)
-    {
-    }
-
-    /// <summary>
-    /// From any set of placed objects (Uplift: the world's with ground discs added or taken away).
-    /// </summary>
-    public TerrainModifiers(IEnumerable<PlacedObject> placed)
-    {
-        List<Modifier> all = [];
-        foreach (PlacedObject p in placed)
-        {
-            int key = p.Location != 0 ? p.Location : p.Prefab;
-            if (!_prefabs.TryGetValue(key, out var prefab) || prefab.Location != (p.Location != 0))
-            {
-                continue;
-            }
-            if (prefab.Location)
-            {
-                LocationsWithModifiers++;
-            }
-            // Quaternion.Euler in Unity applies z, then x, then y: the same as yaw/pitch/roll here.
-            var rot = Quaternion.CreateFromYawPitchRoll(Deg(p.Rotation.Y), Deg(p.Rotation.X), Deg(p.Rotation.Z));
-            foreach (Template t in prefab.Mods)
-            {
-                Vector3 pos = p.Position + Vector3.Transform(t.Offset, rot);
-                all.Add(new Modifier(pos, t.Level, t.LevelOffset, t.LevelRadius, t.Square, t.Smooth, t.SmoothRadius, t.SmoothPower, t.PaintCleared, t.PaintRadius, t.PaintType, t.PaintStrength, t.PaintHeightCheck, t.SortOrder, t.Player, prefab.Location ? 0 : p.TimeCreated,
-                    prefab.Location && Editing.Uplift.IsDisc(p.Location)));
-            }
-        }
-        // TerrainModifier.SortByModifiers.
-        all.Sort((a, b) =>
-        {
-            if (a.Player != b.Player)
-            {
-                return a.Player.CompareTo(b.Player);
-            }
-
-            if (a.SortOrder != b.SortOrder)
-            {
-                return a.SortOrder.CompareTo(b.SortOrder);
-            }
-
-            if (a.CreationTime != b.CreationTime)
-            {
-                return a.CreationTime.CompareTo(b.CreationTime);
-            }
-
-            return a.Position.LengthSquared().CompareTo(b.Position.LengthSquared());
-        });
-        foreach (Modifier m in all)
-        {
-            // Heightmap.TerrainVSModifier: radius + 4 m against the zone square.
-            float r = m.Radius + 4f;
-            int zx0 = (int)Math.Floor((m.Position.X - r + 32f) / 64f), zx1 = (int)Math.Floor((m.Position.X + r + 32f) / 64f);
-            int zz0 = (int)Math.Floor((m.Position.Z - r + 32f) / 64f), zz1 = (int)Math.Floor((m.Position.Z + r + 32f) / 64f);
-            for (int zz = zz0; zz <= zz1; zz++)
-            {
-                for (int zx = zx0; zx <= zx1; zx++)
-                {
-                    if (Overlaps(m, zx, zz))
-                    {
-                        (_byZone.TryGetValue((zx, zz), out var list) ? list : _byZone[(zx, zz)] = []).Add(m);
-                    }
-                }
-            }
-        }
-        Count = all.Count;
-    }
-
-    /// <summary>
     /// The modifiers that touch zone (zx, zz), in the order the game applies them; empty when none.
     /// </summary>
     public IReadOnlyList<Modifier> InZone(int zx, int zz) => _byZone.TryGetValue((zx, zz), out var list) ? list : Array.Empty<Modifier>();
-
-    /// <summary>
-    /// Degrees to radians.
-    /// </summary>
-    private static float Deg(float d) => d * (MathF.PI / 180f);
-
-    /// <summary>
-    /// Heightmap.TerrainVSModifier: whether the modifier's radius + 4 m reaches the zone's square.
-    /// </summary>
-    private static bool Overlaps(Modifier m, int zx, int zz)
-    {
-        float num = m.Radius + 4f;
-        float cx = zx * 64f, cz = zz * 64f, half = 32f;
-        return !(m.Position.X + num < cx - half || m.Position.X - num > cx + half || m.Position.Z + num < cz - half || m.Position.Z - num > cz + half);
-    }
 
     /// <summary>
     /// Applies the zone's modifiers to its 65x65 base heights (in place), and their cleared paint to its base paint
@@ -276,164 +186,11 @@ public sealed class TerrainModifiers
     private const int Width = 64;
 
     /// <summary>
-    /// Heightmap.LevelTerrain (WorldToVertexMask, square or round area, sets the modifier's height).
-    /// </summary>
-    private static void LevelTerrain(int zx, int zz, float[] h, Vector3 worldPos, float radius, bool square, float[]? baseHeights, float[]? levelOnly, bool player)
-    {
-        float dx = worldPos.X - zx * 64f, dz = worldPos.Z - zz * 64f;
-        int half = (Width + 1) / 2;
-        int x = (int)MathF.Floor(dx / 1f + 0.5f + half);
-        int y = (int)MathF.Floor(dz / 1f + 0.5f + half);
-        float num = (float)((double)radius / 1.0);
-        int num2 = (int)MathF.Ceiling(num);
-        int n = Width + 1;
-        for (int i = y - num2; i <= y + num2; i++)
-        {
-            for (int j = x - num2; j <= x + num2; j++)
-            {
-                if ((square || !(Distance(x, y, j, i) > num)) && j >= 0 && i >= 0 && j < n && i < n)
-                {
-                    float v = worldPos.Y;
-                    if (player)
-                    {
-                        float b = baseHeights![i * n + j];
-                        v = levelOnly![i * n + j] = Math.Clamp(v, (float)((double)b - 8.0), (float)((double)b + 8.0));
-                    }
-                    h[i * n + j] = v;
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Heightmap.SmoothTerrain2 (WorldToVertex, round area, blend towards the modifier's height).
-    /// </summary>
-    private static void SmoothTerrain2(int zx, int zz, float[] h, Vector3 worldPos, float radius, float[]? levelOnly, float power, bool player)
-    {
-        // No reach, nothing to smooth (the middle point's share would be 0 / 0: a NaN height).
-        if (radius <= 0f)
-        {
-            return;
-        }
-        float dx = worldPos.X - zx * 64f, dz = worldPos.Z - zz * 64f;
-        int x = (int)MathF.Floor(dx / 1f + 0.5f) + Width / 2;
-        int y = (int)MathF.Floor(dz / 1f + 0.5f) + Width / 2;
-        float b = worldPos.Y;
-        float num = radius / 1f;
-        int num2 = (int)MathF.Ceiling(num);
-        int n = Width + 1;
-        for (int i = y - num2; i <= y + num2; i++)
-        {
-            for (int j = x - num2; j <= x + num2; j++)
-            {
-                float d = Distance(x, y, j, i);
-                if (d > num)
-                {
-                    continue;
-                }
-                float num5 = d / num;
-                if (j >= 0 && i >= 0 && j < n && i < n)
-                {
-                    num5 = power != 3f ? MathF.Pow(num5, power) : (float)((double)num5 * num5 * num5);
-                    float t = (float)(1.0 - num5);
-                    float v = ValheimGen.GenMath.Lerp(h[i * n + j], b, t);
-                    if (player)
-                    {
-                        float lo = levelOnly![i * n + j];
-                        v = Math.Clamp(v, (float)((double)lo - 1.0), (float)((double)lo + 1.0));
-                    }
-                    h[i * n + j] = v;
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// A modifier's cleared paint, as the game was seen to paint it (a probe of Heightmap's paint mask on a dedicated
-    /// server, every paint type over several biomes): each vertex within the paint radius of the vertex nearest the
-    /// modifier blends towards the paint by (1 - distance / radius)^0.1 times the strength, after the modifier's
-    /// levelling and smoothing. ClearVegetation blends all four channels towards 0; the others blend red, green and
-    /// blue and keep the vegetation (alpha). With the height check, vertices above the modifier are left.
-    /// </summary>
-    private static void PaintCleared(int zx, int zz, float[] h, float[] mask, Modifier m)
-    {
-        float radius = m.PaintRadius;
-        if (radius <= 0f)
-        {
-            return;
-        }
-        (float r, float g, float b, float a) = m.PaintType switch
-        {
-            Paint.Dirt => (1f, 0f, 0f, 1f),
-            Paint.Cultivate => (0f, 1f, 0f, 1f),
-            Paint.Paved => (0f, 0f, 1f, 1f),
-            Paint.Reset => (0f, 0f, 0f, 1f),
-            Paint.ClearVegetation => (0f, 0f, 0f, 0f),
-            Paint.DeepSnow => (1f, 1f, 1f, 1f),
-            _ => throw new InvalidDataException($"Unknown terrain paint type {(int)m.PaintType}"),
-        };
-        bool alpha = m.PaintType == Paint.ClearVegetation;
-        int x = (int)MathF.Floor(m.Position.X - zx * 64f + 0.5f) + Width / 2;
-        int y = (int)MathF.Floor(m.Position.Z - zz * 64f + 0.5f) + Width / 2;
-        int reach = (int)MathF.Ceiling(radius);
-        int n = Width + 1;
-        for (int i = Math.Max(0, y - reach); i <= Math.Min(n - 1, y + reach); i++)
-        {
-            for (int j = Math.Max(0, x - reach); j <= Math.Min(n - 1, x + reach); j++)
-            {
-                float d = Distance(x, y, j, i);
-                if (d > radius || (m.PaintHeightCheck && h[i * n + j] > m.Position.Y))
-                {
-                    continue;
-                }
-                float t = Math.Clamp(MathF.Pow(1f - d / radius, 0.1f) * m.PaintStrength, 0f, 1f);
-                int o = (i * n + j) * 4;
-                mask[o] += (r - mask[o]) * t;
-                mask[o + 1] += (g - mask[o + 1]) * t;
-                mask[o + 2] += (b - mask[o + 2]) * t;
-                if (alpha)
-                {
-                    mask[o + 3] += (a - mask[o + 3]) * t;
-                }
-            }
-        }
-    }
-
-    /// <summary>
     /// UnityEngine.Vector2.Distance in single precision.
     /// </summary>
     private static float Distance(int ax, int ay, int bx, int by)
     {
         float fx = ax - bx, fy = ay - by;
         return (float)Math.Sqrt(fx * fx + fy * fy);
-    }
-
-    /// <summary>
-    /// Reads terrain-modifiers.json into modifiers by prefab name hash.
-    /// </summary>
-    private static Dictionary<int, (string, bool, List<Template>)> Parse(string json)
-    {
-        using var doc = JsonDocument.Parse(json);
-        Dictionary<int, (string, bool, List<Template>)> result = [];
-        foreach (JsonProperty p in doc.RootElement.EnumerateObject())
-        {
-            List<Template> mods = [];
-            foreach (JsonElement m in p.Value.GetProperty("modifiers").EnumerateArray())
-            {
-                JsonElement pos = m.GetProperty("pos");
-                bool B(string k) => m.GetProperty(k).GetInt32() != 0;
-                float F(string k) => m.GetProperty(k).GetSingle();
-                var paint = (Paint)m.GetProperty("paintType").GetInt32();
-                if (!Enum.IsDefined(paint))
-                {
-                    throw new InvalidDataException($"{p.Name}: unknown terrain paint type {(int)paint}");
-                }
-                mods.Add(new Template(new Vector3(pos[0].GetSingle(), pos[1].GetSingle(), pos[2].GetSingle()), B("level"), F("levelOffset"), F("levelRadius"), B("square"),
-                    B("smooth"), F("smoothRadius"), F("smoothPower"), B("paintCleared"), F("paintRadius"), paint, F("paintStrength"), B("paintHeightCheck"),
-                    m.GetProperty("sortOrder").GetInt32(), B("player")));
-            }
-            result[StableHash.Of(p.Name)] = (p.Name, p.Value.GetProperty("location").GetBoolean(), mods);
-        }
-        return result;
     }
 }

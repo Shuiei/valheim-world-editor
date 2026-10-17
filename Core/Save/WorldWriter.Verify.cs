@@ -32,6 +32,24 @@ public static partial class WorldWriter
             return $"{after.ObjectCount} objects, expected {before.ObjectCount + created - removed}";
         }
         var afterZones = after.TerrainZones.ToLookup(t => (t.ZoneX, t.ZoneZ));
+        if (CheckSavedZones(afterZones, saved) is string problem)
+        {
+            return problem;
+        }
+        var changed = saved.Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
+        if (CheckUntouchedZones(before, afterZones, changed, groundReset) is string altered)
+        {
+            return altered;
+        }
+        // A zone whose ground is reset may lose its terrain objects (one or two each), no other.
+        int resetObjects = before.TerrainZones.Count(t => groundReset.Contains((t.ZoneX, t.ZoneZ)));
+        return after.TerrainZones.Count >= before.TerrainZones.Count - resetObjects ? null : "terrain zones were lost";
+    }
+
+    /// <summary>Whether each saved zone reads back with the ground and paint it was given.</summary>
+    /// <returns>What is wrong, or null when every saved zone is right.</returns>
+    private static string? CheckSavedZones(ILookup<(int, int), TerrainZone> afterZones, IReadOnlyList<ZoneEdit> saved)
+    {
         foreach (ZoneEdit e in saved)
         {
             if (!afterZones.Contains((e.ZoneX, e.ZoneZ)))
@@ -53,26 +71,6 @@ public static partial class WorldWriter
                 }
             }
         }
-        var changed = saved.Select(e => (e.ZoneX, e.ZoneZ)).ToHashSet();
-        // Every other terrain zone must be untouched.
-        // (Two terrain objects in one zone: compared in order, the writer keeps the objects' order.)
-        foreach (var group in before.TerrainZones.Where(t => !changed.Contains((t.ZoneX, t.ZoneZ)) && !groundReset.Contains((t.ZoneX, t.ZoneZ))).GroupBy(t => (t.ZoneX, t.ZoneZ)))
-        {
-            var now = afterZones[group.Key].ToList();
-            int n = 0;
-            foreach (TerrainZone z in group)
-            {
-                TerrainZone? a = n < now.Count ? now[n] : null;
-                n++;
-                if (a == null || !a.LevelDelta.SequenceEqual(z.LevelDelta) || !a.SmoothDelta.SequenceEqual(z.SmoothDelta) || !a.ModifiedHeight.SequenceEqual(z.ModifiedHeight)
-                    || !a.ModifiedPaint.SequenceEqual(z.ModifiedPaint) || !a.Paint.SequenceEqual(z.Paint))
-                {
-                    return $"unchanged zone {z.ZoneX}, {z.ZoneZ} was altered";
-                }
-            }
-        }
-        // A zone whose ground is reset may lose its terrain objects (one or two each), no other.
-        int resetObjects = before.TerrainZones.Count(t => groundReset.Contains((t.ZoneX, t.ZoneZ)));
-        return after.TerrainZones.Count >= before.TerrainZones.Count - resetObjects ? null : "terrain zones were lost";
+        return null;
     }
 }
