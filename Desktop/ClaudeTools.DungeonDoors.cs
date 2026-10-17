@@ -14,7 +14,7 @@ public sealed partial class ClaudeTools
         [Description("The joint, its index in dungeon_rooms' doorJoints.")] int joint,
         [Description("true: a door there; false: none.")] bool door = true) => OnUi(() =>
     {
-        var (tool, said, problem) = DungeonEdit(id);
+        var (tool, says, problem) = DungeonEdit(id);
         if (tool?.Dungeon is not { } d)
         {
             return problem!;
@@ -32,9 +32,9 @@ public sealed partial class ClaudeTools
         tool.ToggleDoor(d, joints[joint], ClaudesStep(door ? Lang.T("claude.undo.addedDoor") : Lang.T("claude.undo.removedDoor")));
         if (!Stepped(before))
         {
-            return Unchanged(said);
+            return Unchanged(says());
         }
-        _w.AfterClaudeEdit(said);
-        return $"{said.English} Now pending: {Pending()}";
+        _w.AfterClaudeEdit(says());
+        return $"{says().English} Now pending: {Pending()}";
     });
 }

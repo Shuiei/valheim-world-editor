@@ -38,16 +38,19 @@ public sealed partial class ClaudeTools
     /// </summary>
     /// <param name="id">The dungeon's id (list_dungeons).</param>
     /// <param name="seed">Any number: other contents and door rolls.</param>
-    /// <returns>The tool (null when none), the messages it said, and why there is no tool or no edit.</returns>
-    private (DungeonTool? Tool, Said Said, string? Problem) DungeonEdit(int id, int seed = 1)
+    /// <returns>
+    /// The tool (null when none), a reader of the last message it said (read after the change, not before), and why
+    /// there is no tool or no edit.
+    /// </returns>
+    private (DungeonTool? Tool, Func<Said> Says, string? Problem) DungeonEdit(int id, int seed = 1)
     {
         if (CannotEdit() is string why)
         {
-            return (null, Said.Empty, why);
+            return (null, () => Said.Empty, why);
         }
         var said = Said.Empty;
         var (tool, problem) = DungeonOf(id, m => said = m, seed);
-        return (tool, said, problem);
+        return (tool, () => said, problem);
     }
 
     /// <summary>The session's last step, to tell afterwards whether a tool made one (it may also make none and say why).</summary>

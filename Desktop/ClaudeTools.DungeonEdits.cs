@@ -18,7 +18,7 @@ public sealed partial class ClaudeTools
         [Description("The door the game would roll where it joins (default true).")] bool doors = true,
         [Description("Any number: other contents and door rolls.")] int seed = 1) => OnUi(() =>
     {
-        var (tool, said, problem) = DungeonEdit(id, seed);
+        var (tool, says, problem) = DungeonEdit(id, seed);
         if (tool?.Dungeon is not { } d)
         {
             return problem!;
@@ -38,7 +38,7 @@ public sealed partial class ClaudeTools
         tool.WithContents = contents;
         tool.WithDoors = doors;
         tool.Add(placed, ClaudesStep(Lang.T("claude.undo.added", room)));
-        return AfterDungeon(tool, said);
+        return AfterDungeon(tool, says());
     });
 
     /// <summary>remove_dungeon_room: a room taken out with what is in it and the doors at its joints.</summary>
@@ -48,7 +48,7 @@ public sealed partial class ClaudeTools
         [Description("The dungeon's id (list_dungeons).")] int id,
         [Description("The room, its index in dungeon_rooms' rooms.")] int room) => OnUi(() =>
     {
-        var (tool, said, problem) = DungeonEdit(id);
+        var (tool, says, problem) = DungeonEdit(id);
         if (tool?.Dungeon is not { } d)
         {
             return problem!;
@@ -58,7 +58,7 @@ public sealed partial class ClaudeTools
             return $"The dungeon has {d.Rooms.Count} room(s): room is 0 to {d.Rooms.Count - 1}.";
         }
         tool.Remove(room, ClaudesStep(Lang.T("claude.undo.removed", d.Rooms[room].Name)));
-        return AfterDungeon(tool, said);
+        return AfterDungeon(tool, says());
     });
 
     /// <summary>close_dungeon_ends: an end cap on every free opening.</summary>
@@ -67,13 +67,13 @@ public sealed partial class ClaudeTools
     public Task<string> CloseDungeonEnds(
         [Description("The dungeon's id (list_dungeons).")] int id) => OnUi(() =>
     {
-        var (tool, said, problem) = DungeonEdit(id);
+        var (tool, says, problem) = DungeonEdit(id);
         if (tool == null)
         {
             return problem!;
         }
         var before = LastStep();
         tool.CloseOpenEnds(ClaudesStep(Lang.T("claude.undo.closedEnds")));
-        return Stepped(before) ? AfterDungeon(tool, said) : Unchanged(said);
+        return Stepped(before) ? AfterDungeon(tool, says()) : Unchanged(says());
     });
 }
