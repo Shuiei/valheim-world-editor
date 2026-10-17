@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.4 — unreleased
+
+### Fixed
+- **The release packages could not be built.** Publishing the single-file editor stopped on an analyzer error: the
+  script process (v1.45.67) found the editor's assembly through `Assembly.Location`, which is empty in a single-file
+  app. It now takes the assembly from the app's folder; the published editor itself starts its scripts as before.
+
 ## v1.47.3 — unreleased
 
 ### Changed
