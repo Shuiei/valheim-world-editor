@@ -6,7 +6,7 @@ public sealed partial class SelectTool
 {
     /// <summary>The ring drag's turn: the heading under the pointer, in 15° steps with Ctrl, wrapped to -180..180.</summary>
     /// <returns>False when the pointer has no heading, and nothing changed.</returns>
-    private static bool TurnBy(Move mv, (Gizmo.Handle Handle, Vector3 Centre, float Start, float Dx, float Dz, float Dy, float Turn) hd, Vector3 ro, Vector3 rd, bool ctrl)
+    internal static bool TurnBy(Move mv, (Gizmo.Handle Handle, Vector3 Centre, float Start, float Dx, float Dz, float Dy, float Turn) hd, Vector3 ro, Vector3 rd, bool ctrl)
     {
         if (Gizmo.Heading(ro, rd, hd.Centre) is not float h)
         {
@@ -27,7 +27,7 @@ public sealed partial class SelectTool
     /// steps with Ctrl. X and Z keep following the ground.
     /// </summary>
     /// <returns>False when the pointer has no place along the axis, and nothing changed.</returns>
-    private static bool SlideBy(Move mv, (Gizmo.Handle Handle, Vector3 Centre, float Start, float Dx, float Dz, float Dy, float Turn) hd, Vector3 ro, Vector3 rd, bool ctrl)
+    internal static bool SlideBy(Move mv, (Gizmo.Handle Handle, Vector3 Centre, float Start, float Dx, float Dz, float Dy, float Turn) hd, Vector3 ro, Vector3 rd, bool ctrl)
     {
         if (Gizmo.Along(ro, rd, hd.Centre, Gizmo.Axis(hd.Handle)) is not float t)
         {

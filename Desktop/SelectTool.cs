@@ -51,7 +51,7 @@ public sealed partial class SelectTool
 
     // ---- A move in progress.
     /// <summary>One object being moved.</summary>
-    private sealed class Item
+    internal sealed class Item
     {
         /// <summary>Its index in the scene's Things.</summary>
         public int Index;
@@ -66,7 +66,7 @@ public sealed partial class SelectTool
     }
 
     /// <summary>A move of the selection, shown live until it is committed.</summary>
-    private sealed class Move
+    internal sealed class Move
     {
         /// <summary>What is moved (runestones and gone objects left out).</summary>
         public required List<Item> Items;

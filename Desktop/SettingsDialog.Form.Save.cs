@@ -5,7 +5,7 @@ namespace TerrainEditor.Desktop;
 
 public static partial class SettingsDialog
 {
-    private sealed partial class Form
+    internal sealed partial class Form
     {
         /// <summary>
         /// Checks the port and applies the window's choices, saving them with the folders. A problem leaves the window open

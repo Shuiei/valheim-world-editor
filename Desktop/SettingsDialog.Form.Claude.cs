@@ -7,7 +7,7 @@ namespace TerrainEditor.Desktop;
 
 public static partial class SettingsDialog
 {
-    private sealed partial class Form
+    internal sealed partial class Form
     {
         /// <summary>
         /// Builds Claude's connection section: the allow switch, the port, the command for Claude Code, the scripts switch,

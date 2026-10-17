@@ -8,7 +8,7 @@ namespace TerrainEditor.Desktop;
 
 public static partial class SettingsDialog
 {
-    private sealed partial class Form
+    internal sealed partial class Form
     {
         /// <summary>
         /// Builds the rest of the window once the extensions are found: their list, the language and what draws (both

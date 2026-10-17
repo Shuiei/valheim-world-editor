@@ -10,7 +10,7 @@ public sealed partial class SelectTool
     /// </summary>
     /// <param name="m">The move, its points around gathered.</param>
     /// <returns>The distance, the selection's point, the point around and its piece's name; null when none is that near.</returns>
-    private (float D, Vector3 M, Vector3 O, string Name)? NearestSnap(Move m)
+    internal (float D, Vector3 M, Vector3 O, string Name)? NearestSnap(Move m)
     {
         (float D, Vector3 M, Vector3 O, string Name)? best = null;
         foreach (var it in m.Items.Where(it => !it.Linked))
@@ -42,7 +42,7 @@ public sealed partial class SelectTool
     /// </summary>
     /// <param name="m">The move, its points gathered.</param>
     /// <param name="mp">A snap point of the selection.</param>
-    private static List<int> PointsAround(Move m, Vector3 mp)
+    internal static List<int> PointsAround(Move m, Vector3 mp)
     {
         var (mx, mz) = SnapCell(mp);
         var around = new List<int>();

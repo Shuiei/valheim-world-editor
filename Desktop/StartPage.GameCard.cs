@@ -17,7 +17,7 @@ public sealed partial class StartPage
     /// <param name="state">The state the check found (running, installed, plugin-not-started, no-plugin or no-bepinex).</param>
     /// <param name="where">Where the game's plugin is (empty when unknown).</param>
     /// <returns>The card's content.</returns>
-    private Control GameContent(LocalGame.Running? running, string state, string where)
+    internal Control GameContent(LocalGame.Running? running, string state, string where)
     {
         if (running != null)
         {

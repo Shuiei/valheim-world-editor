@@ -5,7 +5,7 @@ namespace TerrainEditor.Desktop;
 
 public static partial class SettingsDialog
 {
-    private sealed partial class Form
+    internal sealed partial class Form
     {
         /// <summary>
         /// A list of folder rows, each with its box, a Browse button and a remove button, and an add button under them.
@@ -14,7 +14,7 @@ public static partial class SettingsDialog
         /// <param name="pickTitle">The title of the folder picker its Browse buttons open.</param>
         /// <param name="read">Reads the folders in the boxes as they are now.</param>
         /// <returns>The list, ready to add to the window.</returns>
-        private StackPanel BuildFolders(List<string> initial, string pickTitle, out Func<IEnumerable<string>> read)
+        internal StackPanel BuildFolders(List<string> initial, string pickTitle, out Func<IEnumerable<string>> read)
         {
             var rows = new StackPanel { Spacing = 4 };
             var boxes = new List<TextBox>();

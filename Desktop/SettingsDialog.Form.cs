@@ -11,7 +11,7 @@ public static partial class SettingsDialog
     /// The Settings window and the controls it holds while it is open. The folder and Claude sections are built first
     /// (Form), then the mods' extensions are searched for, then the rest is built (Build), and Save applies the choices.
     /// </summary>
-    private sealed partial class Form
+    internal sealed partial class Form
     {
         private readonly AppSettings _settings;
         private readonly SolidColorBrush _muted = new(Color.FromRgb(142, 151, 166));

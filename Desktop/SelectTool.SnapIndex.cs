@@ -12,7 +12,7 @@ public sealed partial class SelectTool
     /// <param name="m">The move; its Others and OthersAt are replaced.</param>
     /// <param name="cx">The selection's middle x now.</param>
     /// <param name="cz">The selection's middle z now.</param>
-    private void GatherOthers(Move m, float cx, float cz)
+    internal void GatherOthers(Move m, float cx, float cz)
     {
         var s = Scene!;
         var sel = m.Items.Select(it => it.Index).ToHashSet();

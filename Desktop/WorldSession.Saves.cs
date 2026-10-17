@@ -12,7 +12,7 @@ public sealed partial class WorldSession
     /// </summary>
     /// <param name="result">The writer's result, with the save it made.</param>
     /// <returns>What could not be read back as one line, or <see cref="Said.Empty"/> when all of it was.</returns>
-    private Said ReadBackSave(WorldWriter.Result result)
+    internal Said ReadBackSave(WorldWriter.Result result)
     {
         Said unread = Said.Empty;
         // Written: whatever happens reading it back, what went in is not pending any more (it would be written

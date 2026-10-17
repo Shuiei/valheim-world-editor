@@ -7,7 +7,7 @@ namespace TerrainEditor.Desktop;
 
 public static partial class SettingsDialog
 {
-    private sealed partial class Form
+    internal sealed partial class Form
     {
         /// <summary>
         /// Builds the mods' extensions list, each one's switch and its state line under it, or a hint when there are none.
