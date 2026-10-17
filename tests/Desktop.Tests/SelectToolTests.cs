@@ -61,6 +61,27 @@ public class SelectToolTests
         Assert.Equal(31, trees.Single(t => MathF.Abs(t.Position.X - 2) < 0.01f).Position.Y, 2);
     }
 
+    // A turn or lift too small to be a move (float residue) is not said: no ", turned 0°" or ", +0.00 m".
+    [AvaloniaFact]
+    public void ATurnOrLiftTooSmallToBeAMoveIsNotSaid()
+    {
+        var s = Area();
+        var v = new GlView();
+        v.Show(s.Scene, null);
+        string? said = null;
+        v.SelectTool.Message += (t, _) => said = t.English;
+        v.SelectTool.OnGround = false;
+        v.Select([0]);
+        v.SelectTool.Lift(0.0004f);
+        Assert.Equal("Moving 1 object(s): 0.0 m", said);
+        v.SelectTool.Turn(0.0004f);
+        Assert.Equal("Moving 1 object(s): 0.0 m", said);
+        v.SelectTool.Turn(10);
+        v.SelectTool.Lift(0.5f);
+        Assert.Equal("Moving 1 object(s): 0.0 m, turned 10°, +0.50 m", said);
+        Assert.True(v.SelectTool.Cancel());
+    }
+
     [Fact]
     public void DeletingHidesTheObjectsUntilUndone()
     {

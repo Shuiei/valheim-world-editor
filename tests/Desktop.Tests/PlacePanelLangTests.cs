@@ -13,7 +13,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// The Place tool in another language (the made-up one: PseudoLang): its panel in every mode and line shape, with
 /// nothing, one kind and several kinds chosen, the list of kinds (folded, searched, nothing found), the preset
 /// questions, and a message, show only catalogue texts; the message's English is kept for Claude, and what a spawn
-/// point spawns is told to Claude in English.
+/// point spawns is told to Claude in English. The brush line names what a piece snaps to in a whole sentence for each
+/// way of snapping.
 /// </summary>
 [Collection("DataDir")]
 public sealed class PlacePanelLangTests
@@ -32,6 +33,60 @@ public sealed class PlacePanelLangTests
         t.Chosen.AddRange(names);
         typeof(PlacePanel).GetMethod("Chosen", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(p, [true]);
         Dispatcher.UIThread.RunJobs();
+    }
+
+    /// <summary>Every mode, line shape and the one-at-a-time brush, checked with the elevation rows shown.</summary>
+    private static void Modes(PlacePanel p, Action check)
+    {
+        p.ElevationBox.SelectedIndex = 1;
+        foreach (var mode in Enum.GetValues<PlaceTool.Modes>())
+        {
+            Click(p.ModeButtons[mode]);
+            check();
+        }
+        Click(p.ModeButtons[PlaceTool.Modes.Line]);
+        foreach (var shape in p.ShapeButtons.Values)
+        {
+            Click(shape);
+            check();
+        }
+        p.SingleBox.IsChecked = true;
+        Click(p.ModeButtons[PlaceTool.Modes.Brush]);
+        check();
+        p.SingleBox.IsChecked = false;
+    }
+
+    /// <summary>The list of kinds: folded categories, a search showing spawn points and nests, and nothing found.</summary>
+    private static void KindsList(PlacePanel p, Action check)
+    {
+        Click(p.KindsButton);
+        check();
+        p.Search.Text = "Greydwarf";
+        check();
+        p.Search.Text = "no kind is called this";
+        check();
+        Click(p.KindsButton);
+    }
+
+    /// <summary>The preset questions: saving asks for a name, deleting one of yours asks first.</summary>
+    private static async Task PresetQuestions(MainWindow w, PlacePanel p, PlaceTool t, Action check)
+    {
+        Choose(p, t, "Beech1");
+        Click(p.SavePresetButton);
+        var d = TestWindows.Shown(w);
+        Assert.Empty(PseudoLang.Untranslated(d));
+        DialogsTests.Press(d, Lang.T("common.cancel"));
+        await TestWindows.Until(() => w.OwnedWindows.Count == 0);
+        p.AskName = () => Task.FromResult<string?>("My woods");
+        Click(p.SavePresetButton);
+        await TestWindows.Until(() => p.DeletePresetButton.IsEnabled);
+        check();
+        Click(p.DeletePresetButton);
+        d = TestWindows.Shown(w);
+        Assert.Empty(PseudoLang.Untranslated(d, "My woods"));
+        DialogsTests.Press(d, Lang.T("common.cancel"));
+        await TestWindows.Until(() => w.OwnedWindows.Count == 0);
+        Assert.Single(p.Memory.Presets);
     }
 
     [AvaloniaFact]
@@ -71,31 +126,8 @@ public sealed class PlacePanelLangTests
             Check();
             Choose(p, t, "Beech1", "Oak1", "sapling_turnip", "sapling_carrot");
             Check();
-            p.ElevationBox.SelectedIndex = 1;
-            foreach (var mode in Enum.GetValues<PlaceTool.Modes>())
-            {
-                Click(p.ModeButtons[mode]);
-                Check();
-            }
-            Click(p.ModeButtons[PlaceTool.Modes.Line]);
-            foreach (var shape in p.ShapeButtons.Values)
-            {
-                Click(shape);
-                Check();
-            }
-            p.SingleBox.IsChecked = true;
-            Click(p.ModeButtons[PlaceTool.Modes.Brush]);
-            Check();
-            p.SingleBox.IsChecked = false;
-
-            // The list of kinds: folded categories, a search showing spawn points and nests, and nothing found.
-            Click(p.KindsButton);
-            Check();
-            p.Search.Text = "Greydwarf";
-            Check();
-            p.Search.Text = "no kind is called this";
-            Check();
-            Click(p.KindsButton);
+            Modes(p, Check);
+            KindsList(p, Check);
 
             // A message: shown in the language, its English kept for Claude.
             Click(p.PickButton);
@@ -103,23 +135,7 @@ public sealed class PlacePanelLangTests
             Assert.Equal("Click an object to pick its kind for placing. Esc cancels.", w.LastMessageEn);
             w.PlaceInput.PickOnce = null;
 
-            // The preset questions: saving asks for a name, deleting one of yours asks first.
-            Choose(p, t, "Beech1");
-            Click(p.SavePresetButton);
-            var d = TestWindows.Shown(w);
-            Assert.Empty(PseudoLang.Untranslated(d));
-            DialogsTests.Press(d, Lang.T("common.cancel"));
-            await TestWindows.Until(() => w.OwnedWindows.Count == 0);
-            p.AskName = () => Task.FromResult<string?>("My woods");
-            Click(p.SavePresetButton);
-            await TestWindows.Until(() => p.DeletePresetButton.IsEnabled);
-            Check();
-            Click(p.DeletePresetButton);
-            d = TestWindows.Shown(w);
-            Assert.Empty(PseudoLang.Untranslated(d, "My woods"));
-            DialogsTests.Press(d, Lang.T("common.cancel"));
-            await TestWindows.Until(() => w.OwnedWindows.Count == 0);
-            Assert.Single(p.Memory.Presets);
+            await PresetQuestions(w, p, t, Check);
             p.Memory.Presets.Clear();
             p.Memory.Favourites.Clear();
             p.Memory.Recent.Clear();
@@ -129,6 +145,16 @@ public sealed class PlacePanelLangTests
         {
             Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
         }
+    }
+
+    [Fact]
+    public void TheBrushLineSaysWhatThePieceSnapsToInOneSentence()
+    {
+        using var pseudo = new PseudoLang();
+        Assert.Equal("", PlacePanel.SnapNote(null));
+        Assert.Equal(PseudoLang.Wrap("Snapped on top of Wood Wall."), PlacePanel.SnapNote((PlaceTool.SnapWays.OnTop, "Wood Wall")));
+        Assert.Equal(PseudoLang.Wrap("Snapped beside Wood Wall."), PlacePanel.SnapNote((PlaceTool.SnapWays.Beside, "Wood Wall")));
+        Assert.Equal(PseudoLang.Wrap("Snapped to Wood Wall."), PlacePanel.SnapNote((PlaceTool.SnapWays.To, "Wood Wall")));
     }
 
     [AvaloniaFact]

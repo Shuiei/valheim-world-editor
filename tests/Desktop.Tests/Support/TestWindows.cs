@@ -5,23 +5,37 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The window under test: one shown and editing a made-up area, and waiting on its posted work, background tasks and
-/// the dialogs it opens.
+/// The window under test: opening one on an area, and waiting on its posted work, background tasks and the dialogs it
+/// opens.
 /// </summary>
 internal static class TestWindows
 {
     /// <summary>
-    /// A shown window editing a flat area of <paramref name="size"/> × <paramref name="size"/> zones (ground at 30 m)
-    /// with these objects.
+    /// A shown 1600 × 1000 main window editing the area given.
     /// </summary>
-    internal static (MainWindow W, EditSession S) EditingFlat(int size = 2, params WorldScene.Thing[] things)
+    internal static MainWindow Editing(EditSession s)
     {
         var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
         w.Show();
-        var s = TestScenes.Flat(size, things);
         w.View.Show(s.Scene, null);
         w.Edit(s);
-        return (w, s);
+        return w;
+    }
+
+    /// <summary>
+    /// A shown window with the world at <paramref name="dir"/> (a copy of the test world) open, its first zone's area
+    /// edited and its ground raised there: one zone not saved. What it tells is let go.
+    /// </summary>
+    /// <param name="dir">The world's folder.</param>
+    internal static async Task<MainWindow> ChangedWorld(string dir)
+    {
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        w.Show();
+        w.Tell = _ => Task.CompletedTask;
+        await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
+        await w.EditArea(0, 0, 1);
+        w.Session!.Shape(32, 32, Formula.Compile("2", []), 3, 0, "raise");
+        return w;
     }
 
     /// <summary>
