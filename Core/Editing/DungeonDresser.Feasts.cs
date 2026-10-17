@@ -1,4 +1,3 @@
-
 namespace TerrainEditor.Editing;
 
 internal sealed partial class DungeonDresser
@@ -103,65 +102,6 @@ internal sealed partial class DungeonDresser
         Decay();
     }
 
-    /// <summary>
-    /// A storeroom: barrels and crates along the walls with shelves; or stacked in a corner block with a cart; or
-    /// shelves in rows forming aisles. Loot lying about, maybe a chest.
-    /// </summary>
-    private void Store(Frame f)
-    {
-        string[] stock = _mat.Name == "Dvergr" ? ["dvergrprops_barrel", "dvergrprops_crate", "dvergrprops_crate_long"] : ["barrell", "CargoCrate", "barrell", "prop_wood_stack"];
-        switch (_rnd.Next(3))
-        {
-            case 0:
-                foreach (var s in f.WallSpots(1.2f, 2.6f))
-                {
-                    var (u, v) = In(s, 0.6f);
-                    if (Chance(0.75))
-                    {
-                        Put(f, One(stock), u, v, s.Yaw + R(-15, 15), 0.55f);
-                    }
-                }
-                foreach (var s in f.WallSpots(2.4f, 2.6f).OrderBy(_ => _rnd.Next()).Take(2))
-                {
-                    var (u, v) = In(s, 0.12f);
-                    Put(f, "dvergrprops_shelf", u, v, s.Yaw, 0.5f);
-                }
-                break;
-            case 1:
-                foreach (var (u, v, yaw, convex) in f.Corners().Where(c => c.Convex).OrderBy(_ => _rnd.Next()).Take(2))
-                {
-                    for (float du = 0.6f; du <= 2.5f; du += 1.1f)
-                    {
-                        for (float dv = 0.6f; dv <= 2.5f; dv += 1.1f)
-                        {
-                            var (cu, cv) = (u + du * MathF.Sign(MathF.Sin(yaw * MathF.PI / 180) + 0.001f), v + dv * MathF.Sign(MathF.Cos(yaw * MathF.PI / 180) + 0.001f));
-                            Put(f, One(stock), cu, cv, R(0, 360), 0.5f);
-                        }
-                    }
-                }
-                Put(f, "Cart", R(-1, 1), R(-1, 1), R(0, 360), 1.8f);
-                break;
-            default:
-                for (float u = -f.HalfA + 1.6f; u <= f.HalfA - 1.6f; u += 3.2f)
-                {
-                    for (float v = -f.HalfD + 2; v <= f.HalfD - 2; v += 2)
-                    {
-                        Put(f, Chance(0.7) ? "dvergrprops_shelf" : One(stock), u, v, 90, 0.5f);
-                    }
-                }
-                break;
-        }
-        Pickables(f, 1);
-        if (Chance(0.5))
-        {
-            ChestAgainstWall(f);
-        }
-        Webs(f, 0.3f);
-        Lights();
-        Foes(f, 0.3f);
-        Decay();
-    }
-
     /// <summary>A forge: forge and workbench pieces, wood, and metal bars when there is loot.</summary>
     private void Forge(Frame f)
     {
@@ -200,59 +140,6 @@ internal sealed partial class DungeonDresser
         Lights();
         Foes(f, 0.5f);
         Clutter(f, 0.01f);
-        Decay();
-    }
-
-    /// <summary>
-    /// A study: shelves along the walls round a table; or shelves in rows forming aisles with a desk at the end; or a
-    /// scriptorium of several desks with chairs and lanterns. A chest.
-    /// </summary>
-    private void Library(Frame f)
-    {
-        switch (_rnd.Next(3))
-        {
-            case 0:
-                foreach (var s in f.WallSpots(2, 2.8f))
-                {
-                    var (u, v) = In(s, 0.12f);
-                    Put(f, "dvergrprops_shelf", u, v, s.Yaw, 0.6f);
-                }
-                Put(f, One("rug_wolf", "rug_fur", "rug_deer"), 0, 0, 0, 0, force: true);
-                Put(f, "dvergrprops_table", 0, 0, 0, 1.2f);
-                Put(f, "dvergrprops_chair", 0, -1.1f, 0, 0.4f);
-                Put(f, "dvergrprops_chair", 0, 1.1f, 180, 0.4f);
-                Put(f, "dvergrprops_lantern_standing", 0.5f, 0, 0, 0, y: 0.78f, force: true);
-                Chest(f, 0, f.HalfD - 2.2f, 180);
-                break;
-            case 1:
-                for (float u = -f.HalfA + 1.5f; u <= f.HalfA - 1.5f; u += 3)
-                {
-                    for (float v = -f.HalfD + 2; v <= f.HalfD - 3.5f; v += 1.1f)
-                    {
-                        Put(f, "dvergrprops_shelf", u, v, 90, 0.45f);
-                    }
-                }
-                Put(f, "dvergrprops_table", 0, f.HalfD - 1.5f, 90, 1.2f);
-                Put(f, "dvergrprops_chair", 0, f.HalfD - 2.6f, 0, 0.4f);
-                Put(f, "dvergrprops_lantern_standing", 0.6f, f.HalfD - 1.5f, 0, 0, y: 0.78f, force: true);
-                Chest(f, -(f.HalfA - 1), f.HalfD - 1, 180);
-                break;
-            default:
-                foreach (var (u, v) in new[] { (-2.2f, -1.5f), (2.2f, -1.5f), (-2.2f, 1.5f), (2.2f, 1.5f) })
-                {
-                    if (Put(f, "piece_table", u, v, 0, 1f))
-                    {
-                        Put(f, "piece_chair", u, v - 1f, 0, 0.3f);
-                        Put(f, "piece_hoodedlantern", u + 0.5f, v, 0, 0, y: 0.82f, force: true);
-                    }
-                }
-                Shelves(f, 2.4f);
-                Chest(f, 0, f.HalfD - 0.9f, 180);
-                break;
-        }
-        Clusters(f, 1, "scribe");
-        Lights();
-        Foes(f, 0.3f);
         Decay();
     }
 }

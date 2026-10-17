@@ -71,6 +71,37 @@ internal sealed partial class DungeonDresser
     internal static void DressCorridor(Frame f, string kind, Material mat, Biome b, Style style, DungeonGen.Settings s, Random rnd, DungeonOut o)
         => new DungeonDresser(mat, b, style, s, rnd, o, "Corridor").CorridorAs(f, kind);
 
+    /// <summary>Dresses a hall as the variant named: "colonnades", "mead", "dead" or "bare" (tests: each variant).</summary>
+    internal static void DressHallAs(Frame f, string variant, Material mat, Biome b, Style style, DungeonGen.Settings s, Random rnd, DungeonOut o)
+    {
+        var d = new DungeonDresser(mat, b, style, s, rnd, o, "Hall");
+        switch (variant)
+        {
+            case "colonnades":
+                d.HallColonnades(f, f.HalfA >= 5);
+                break;
+            case "mead":
+                d.HallMead(f);
+                break;
+            case "dead":
+                d.HallDead(f);
+                break;
+            case "bare":
+                d.HallBare(f);
+                break;
+            default:
+                throw new ArgumentException($"No hall variant named \"{variant}\".", nameof(variant));
+        }
+    }
+
+    /// <summary>Dresses a cluster of the kind named at the middle of a room, its anchor facing into it (tests: each kind).</summary>
+    internal static void DressClusterAs(Frame f, string kind, Material mat, Biome b, Style style, DungeonGen.Settings s, Random rnd, DungeonOut o)
+        => new DungeonDresser(mat, b, style, s, rnd, o, "Cluster").Cluster(f, kind, 0, 0, 0);
+
+    /// <summary>The dresser each room kind has, by kind (tests: the table Furnish looks each room up in).</summary>
+    internal static IReadOnlyDictionary<Room, Action<Frame>> RoomDresserTable(Material mat, Biome b, Style style, DungeonGen.Settings s, Random rnd, DungeonOut o)
+        => new DungeonDresser(mat, b, style, s, rnd, o, "Rooms").RoomDressers;
+
     /// <summary>
     /// A foe by its spawner's or its creature's name; one not in any biome is taken as it is (a Spawner_
     /// name for both, its creature the name without the prefix).
