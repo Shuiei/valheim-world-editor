@@ -148,13 +148,13 @@ public sealed class PlacePanel
     /// <summary>Line (Points): objects face along the line.</summary>
     internal CheckBox AlongBox { get; } = new() { Content = Lang.T("place.label.along"), IsChecked = true, FontSize = 12 };
     /// <summary>Line (Points): a smooth curve through the points.</summary>
-    internal CheckBox CurveBox { get; } = new() { Content = Lang.T("place.label.curve"), IsChecked = true, FontSize = 12 };
+    internal CheckBox CurveBox { get; } = new() { Content = Lang.T("path.label.curve"), IsChecked = true, FontSize = 12 };
     /// <summary>Grid: the spacing, 1 m to <c>PlaceTool.MaxCell</c>.</summary>
     internal Slider CellSlider { get; private set; } = null!;
     /// <summary>Places what the line, grid or zone shows (Enter).</summary>
     internal Button PlaceButton { get; } = new Button { Content = Lang.T("place.label.place"), FontSize = 12 }.Classed("primary");
     /// <summary>Clears the line, grid box or zone.</summary>
-    internal Button ClearButton { get; } = new() { Content = Lang.T("place.label.clear"), FontSize = 12 };
+    internal Button ClearButton { get; } = new() { Content = Lang.T("common.clearEsc"), FontSize = 12 };
     /// <summary>Removes the line's or zone's last point.</summary>
     internal Button UndoPointButton { get; } = new() { Content = Lang.T("place.label.undoPoint"), FontSize = 12 };
     /// <summary>New random choices (R).</summary>
@@ -336,7 +336,7 @@ public sealed class PlacePanel
             {
                 if (!Creatable().Any(c => c.Name == name))
                 {
-                    Say(Said.Of("place.msg.cannotPlace", name));
+                    Say(Said.Of("select.msg.cannotPlace", name));
                     return;
                 }
                 // A click places only that kind; Shift + click adds it to the ticked kinds.
@@ -404,7 +404,7 @@ public sealed class PlacePanel
         CellSlider.Tip("place.cell");
         var shapes = new UniformGrid { Rows = 1, ColumnSpacing = 4 };
         foreach (var (ls, label, tip) in new[] { (PlaceTool.LineShapes.Points, Lang.T("place.shape.points"), Lang.T("place.tip.points")),
-            (PlaceTool.LineShapes.Circle, Lang.T("place.shape.circle"), Lang.T("place.tip.circle")), (PlaceTool.LineShapes.Rect, Lang.T("place.shape.rect"), Lang.T("place.tip.rect")) })
+            (PlaceTool.LineShapes.Circle, Lang.T("brush.shape.circle"), Lang.T("place.tip.circle")), (PlaceTool.LineShapes.Rect, Lang.T("place.shape.rect"), Lang.T("place.tip.rect")) })
         {
             var b = new Button { Content = label, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
             ToolTip.SetTip(b, tip);
@@ -427,7 +427,7 @@ public sealed class PlacePanel
         };
         static TextBlock Hint(string s) => new() { Text = s, FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 
-        _elevRow = Row(Lang.T("place.label.height"), ElevBox, new TextBlock { Text = Lang.T("place.label.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+        _elevRow = Row(Lang.T("common.height"), ElevBox, new TextBlock { Text = Lang.T("common.metres"), Margin = new Thickness(3, 0, 0, 0), FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
         _attachRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { BesideButton, OnTopButton } };
         _pieceBox = new StackPanel { Spacing = 4, Children = { SnapToBox, _attachRow } };
         _brushRows = new StackPanel { Spacing = 4, Children = { Row(Lang.T("place.label.brushSize"), SizeSlider, sizeV), SingleBox } };
@@ -470,7 +470,7 @@ public sealed class PlacePanel
                     new Border { Background = Ui.Panel2, BorderBrush = Ui.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(7), Padding = new Thickness(8, 4), Child = Mix },
                     Note,
                     KindsButton),
-                Section(Lang.T("place.head.objects"), Row(Lang.T("place.label.elevation"), ElevationBox), _elevRow, _pieceBox, GrowBox, _facingRows),
+                Section(Lang.T("common.objects"), Row(Lang.T("place.label.elevation"), ElevationBox), _elevRow, _pieceBox, GrowBox, _facingRows),
                 Section(_modeHead, _brushRows, _scatterRows, _lineBox, _gridRow, _fitRow),
                 new StackPanel { Spacing = 6, Margin = new Thickness(0, 8, 0, 0), Children = { _shapeRow, _undoRow, NewLayoutButton, Info, _brushHint } },
             },
@@ -775,7 +775,7 @@ public sealed class PlacePanel
         }
         if (List.Children.Count == 0)
         {
-            List.Children.Add(new TextBlock { Text = Lang.T("place.hint.noMatch"), FontSize = 11, Foreground = Ui.Muted });
+            List.Children.Add(new TextBlock { Text = Lang.T("blueprints.noMatch"), FontSize = 11, Foreground = Ui.Muted });
         }
     }
 

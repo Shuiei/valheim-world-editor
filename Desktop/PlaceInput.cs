@@ -208,7 +208,7 @@ public sealed class PlaceInput
             }
             else
             {
-                Message?.Invoke(Said.Of("place.msg.nothingPicked"));
+                Message?.Invoke(Said.Of("view.msg.nothingPicked"));
             }
             return;
         }
@@ -565,7 +565,7 @@ public sealed class PlaceInput
                 return true;
             case Avalonia.Input.Key.Escape when PickOnce != null:
                 PickOnce = null;
-                Message?.Invoke(Said.Of("place.msg.pickCancelled"));
+                Message?.Invoke(Said.Of("view.msg.pickCancelled"));
                 return true;
             case Avalonia.Input.Key.Escape when shape && (Tool.Points.Count > 0 || Tool.GridA != null || Tool.FigA != null):
                 Tool.ClearShape();
