@@ -4,13 +4,20 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.45.46 — unreleased
+## v1.45.47 — unreleased
 
 ### Fixed
 - **Ignored exceptions now say why they are safe to ignore.** Codacy flagged 36 empty `catch` blocks (Sonar S2486,
   "handle the exception or explain"). Each one now has a comment with the reason: a best-effort cleanup of a test folder,
   a process that already exited, the console or the log file failing to write, a bridge that does not answer, or a
   listener already stopped. Nothing else changes.
+
+## v1.45.46 — unreleased
+
+### Fixed
+- **The SSH key tests no longer keep private keys in the repository.** `HomeFolderTests` kept two OpenSSH private keys
+  as text (Codacy: hard-coded private keys). The tests now make their two throwaway keys with `ssh-keygen` when they
+  start, as the local sshd tests already do, so the keys exist only in the test's temporary folder.
 
 ## v1.45.45 — unreleased
 

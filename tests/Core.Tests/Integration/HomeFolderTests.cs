@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -35,6 +36,25 @@ public sealed class HomeFolderTests : IDisposable
         ServerConfig.PathOverride = Path.Combine(_home, "servers.cfg");
         // Only the folders a test sets up (Steam's own folders outside the home are never looked at).
         LocalGame.SearchDefaultPlaces = false;
+        TestKey = MakeKey("testkey", "");
+        // Protected by the passphrase "secret".
+        LockedKey = MakeKey("lockedkey", "secret");
+    }
+
+    /// <summary>
+    /// Makes a throwaway ed25519 key in the pretend home with ssh-keygen (as LocalSshd does) and returns its text.
+    /// </summary>
+    private string MakeKey(string name, string passphrase)
+    {
+        string file = Local(name);
+        var start = new ProcessStartInfo("ssh-keygen", ["-q", "-t", "ed25519", "-N", passphrase, "-C", "vwe-test", "-f", file]) { UseShellExecute = false };
+        using var p = Process.Start(start) ?? throw new InvalidOperationException("ssh-keygen did not start");
+        p.WaitForExit();
+        if (p.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"ssh-keygen failed with exit code {p.ExitCode}");
+        }
+        return File.ReadAllText(file);
     }
 
     /// <summary>
@@ -492,27 +512,9 @@ public sealed class HomeFolderTests : IDisposable
 
     // ---- The SSH tunnel, before any SSH session.
 
-    private const string TestKey = """
-		-----BEGIN OPENSSH PRIVATE KEY-----
-		b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-		QyNTUxOQAAACAg44UvW7VFAN+bXvvnWBPEivp+ps3HWYGmpGk9ygtZuAAAAJA6CD1vOgg9
-		bwAAAAtzc2gtZWQyNTUxOQAAACAg44UvW7VFAN+bXvvnWBPEivp+ps3HWYGmpGk9ygtZuA
-		AAAECPU9rm+e50SHVFbmrQI617lWlEMopN+F0wBk3pjPskACDjhS9btUUA35te++dYE8SK
-		+n6mzcdZgaakaT3KC1m4AAAACHZ3ZS10ZXN0AQIDBAU=
-		-----END OPENSSH PRIVATE KEY-----
-		""";
-
-    // A throwaway key protected by the passphrase "secret".
-    private const string LockedKey = """
-		-----BEGIN OPENSSH PRIVATE KEY-----
-		b3BlbnNzaC1rZXktdjEAAAAACmFlczI1Ni1jdHIAAAAGYmNyeXB0AAAAGAAAABC0fpy3Ip
-		ZdcSSXg9LC86e/AAAAGAAAAAEAAAAzAAAAC3NzaC1lZDI1NTE5AAAAILLzgyUPSgcuWShk
-		4Gop8rD88o2Z7CaxzxWsA+i7yyIBAAAAkKN9z2MvlSVqrCKCJcXXAfmDx/NnGU1FUO7qJk
-		aQkbrHSUe5RaDoug3lXkmPIcgdw2vKFLdNy/psmJiZ/Ru/7BbXPKLullV6vRNeFnlkpUgZ
-		ju2ucw6arztdSFICJ/b4AXhgzabnNuRcueljghRupa/l053rR2uOb8E/6J1aFfhLJNF8DZ
-		axxA5kCHLSqVXJ2Q==
-		-----END OPENSSH PRIVATE KEY-----
-		""";
+    // Throwaway keys, made with ssh-keygen when a test starts, so no private key is kept in the repo.
+    private readonly string TestKey;
+    private readonly string LockedKey;
 
     /// <summary>
     /// A tunnel request with token "token" and nothing else set beyond what is given.
