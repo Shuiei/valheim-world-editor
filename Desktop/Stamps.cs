@@ -14,6 +14,12 @@ public static class Stamps
     /// <summary>A stamp's width and height in pixels: every stamp is Size × Size weights.</summary>
     public const int Size = 128;
 
+    /// <summary>
+    /// The most memory a picture may take once decoded, in bytes (8192 × 8192 colours with opacity): a larger one is
+    /// not read, rather than asking for more memory than there may be. Also the largest picture file loaded.
+    /// </summary>
+    internal const long MostPictureBytes = 256L * 1024 * 1024;
+
     /// <summary>One stamp offered in the brush's shape list.</summary>
     /// <param name="Name">Its key (the built-in ones start with "stamp:").</param>
     /// <param name="Label">Its name in English (Claude asks for a stamp by it); a loaded one's is its picture's name.</param>
@@ -116,18 +122,21 @@ public static class Stamps
         return (At(x0, y0) * (1 - tx) + At(x0 + 1, y0) * tx) * (1 - ty) + (At(x0, y0 + 1) * (1 - tx) + At(x0 + 1, y0 + 1) * tx) * ty;
     }
 
-    /// <summary>A picture (any size) to Size × Size weights: brightness times opacity. Null when it cannot be read.</summary>
+    /// <summary>
+    /// A picture to Size × Size weights: brightness times opacity. Null when it cannot be read or would take more than
+    /// <see cref="MostPictureBytes"/> decoded.
+    /// </summary>
     /// <param name="bytes">The picture file's contents, in any format Skia decodes.</param>
     public static float[]? FromPicture(byte[] bytes)
     {
         // Not a picture: no codec (Decode would throw).
         using var stream = new SKMemoryStream(bytes);
         using var codec = SKCodec.Create(stream);
-        if (codec == null)
+        if (codec == null || codec.Info.BytesSize64 > MostPictureBytes)
         {
             return null;
         }
-        using var src = SKBitmap.Decode(codec);
+        using var src = Decoded(codec);
         if (src == null)
         {
             return null;
@@ -147,6 +156,24 @@ public static class Stamps
             }
         }
         return data;
+    }
+
+    /// <summary>
+    /// The codec's picture as SKBitmap.Decode makes it (premultiplied, no colour space), or null when its pixels cannot be
+    /// allocated or decoded: Decode throws when they cannot be allocated.
+    /// </summary>
+    /// <param name="codec">The picture's codec.</param>
+    private static SKBitmap? Decoded(SKCodec codec)
+    {
+        var info = codec.Info;
+        info = info.WithAlphaType(info.AlphaType == SKAlphaType.Unpremul ? SKAlphaType.Premul : info.AlphaType).WithColorSpace(null);
+        var bitmap = new SKBitmap();
+        if (bitmap.TryAllocPixels(info) && codec.GetPixels(info, bitmap.GetPixels()) is SKCodecResult.Success or SKCodecResult.IncompleteInput)
+        {
+            return bitmap;
+        }
+        bitmap.Dispose();
+        return null;
     }
 
     // ---- Loaded pictures, kept between runs (the weights themselves, 0..255 per pixel).
