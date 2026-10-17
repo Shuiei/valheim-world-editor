@@ -90,7 +90,7 @@ public sealed class InspectorPanel
     /// <summary>The value to add.</summary>
     internal TextBox AddValue { get; } = new() { PlaceholderText = Lang.T("inspect.hint.addValue"), FontSize = 11 };
     /// <summary>Adds the value to <c>Added</c> (written on Apply).</summary>
-    internal Button AddButton { get; } = new() { Content = Lang.T("inspect.label.add"), FontSize = 11 };
+    internal Button AddButton { get; } = new() { Content = Lang.T("common.add"), FontSize = 11 };
     /// <summary>Applies the changes (<c>Apply</c>); enabled only while there are some.</summary>
     internal Button ApplyButton { get; } = new() { Content = Lang.T("inspect.label.apply"), FontSize = 12, IsEnabled = false };
     /// <summary>Throws away the changes, back to the object's data as opened.</summary>

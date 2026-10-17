@@ -47,7 +47,6 @@
   "inspect.section.quats": "4 numbers (x y z w)",
   "inspect.hint.addKey": "name (text, tag…)",
   "inspect.hint.addValue": "value",
-  "inspect.label.add": "Add",
   "inspect.label.apply": "Apply changes",
   "inspect.label.revert": "Revert",
   "inspect.msg.typeName": "Type the name of the value to add (for example text for a sign).",
