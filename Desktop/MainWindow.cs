@@ -2826,11 +2826,8 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
         {
-            // The path may hold the user's name: the log says "the stamp picture" instead (the message has it in full).
-            string full = Path.IsPathFullyQualified(path) ? path : Path.Join(Environment.CurrentDirectory, path);
-            string why = ex.Message.Replace(full, "the stamp picture", StringComparison.Ordinal)
-                .Replace(path, "the stamp picture", StringComparison.Ordinal);
-            Console.Error.WriteLine($"Load stamp: the stamp picture could not be read: {ex.GetType().Name}: {why}");
+            // The path may hold the user's name: Log takes it out of the message.
+            Log.Caught(ex, "reading the stamp picture to load (not loaded)");
             return null;
         }
     }
