@@ -1,4 +1,3 @@
-using System.Text.Json;
 using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
@@ -8,7 +7,7 @@ namespace TerrainEditor.Desktop;
 /// place, since the ids change when the world is saved. Picking one finds the objects again by kind and place (within 5
 /// cm across, 20 cm up). In selections.json in the data folder.
 /// </summary>
-public static class SavedSelections
+public static partial class SavedSelections
 {
     /// <summary>One object of a saved selection: its kind and world position (kept to the millimetre).</summary>
     /// <param name="Prefab">The prefab's hash.</param>
@@ -27,70 +26,6 @@ public static class SavedSelections
 
     /// <summary>selections.json in the data folder, or the tests' file.</summary>
     private static string FilePath => PathOverride ?? Path.Combine(AppSettings.DataDir, "selections.json");
-
-    /// <summary>
-    /// Every world's saved selections, by world name; empty when there is no file. One that is not valid JSON is first
-    /// copied aside as selections.json.bad (the next save writes over it) and counts as empty. Null when the file
-    /// could not be read, or kept aside: it must not be written over.
-    /// </summary>
-    private static Dictionary<string, List<Saved>>? LoadAll()
-    {
-        string text;
-        try
-        {
-            // Read at once: File.Exists says no for a file there that cannot be read, which must not count as none.
-            text = File.ReadAllText(FilePath);
-        }
-        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
-        {
-            // None yet: brief.
-            Log.CaughtBrief(ex, "reading selections.json (none yet)");
-            return [];
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Log.Caught(ex, "reading selections.json (not saving over it)");
-            return null;
-        }
-        try
-        {
-            var all = JsonSerializer.Deserialize<Dictionary<string, List<Saved>>>(text);
-            // A hand-edited file may hold nulls: those entries are left out.
-            return all == null ? [] : all.Where(kv => kv.Value != null).ToDictionary(kv => kv.Key, kv => kv.Value.Where(s => s?.Name != null && s.Items != null).ToList());
-        }
-        catch (Exception ex) when (ex is JsonException or NotSupportedException)
-        {
-            Log.Caught(ex, "parsing selections.json (kept as selections.json.bad, starting from none)");
-            try
-            {
-                File.Copy(FilePath, FilePath + ".bad", overwrite: true);
-                return [];
-            }
-            catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
-            {
-                Log.Caught(copy, "keeping the unreadable selections.json as selections.json.bad (not saving over it)");
-                return null;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Writes every world's saved selections through a temporary file, so a write cut short leaves the old file whole;
-    /// false when the file could not be written.
-    /// </summary>
-    private static bool SaveAll(Dictionary<string, List<Saved>> all)
-    {
-        try
-        {
-            SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(all));
-            return true;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Log.Caught(ex, "writing selections.json");
-            return false;
-        }
-    }
 
     /// <summary>This world's saved selections, oldest first; none when the file could not be read.</summary>
     public static List<Saved> For(string world) => LoadAll() is { } all && all.TryGetValue(world, out var list) ? list : [];
@@ -132,73 +67,4 @@ public static class SavedSelections
         }
         return SaveAll(all);
     }
-
-    /// <summary>
-    /// The objects of a saved selection among these things (indices; the deleted left out, each matched once: the
-    /// first of the matching ones not taken yet), and how many were not found. The things are put in metre cells by
-    /// kind once, so each item looks only at the cells it can match in.
-    /// </summary>
-    public static (List<int> Ids, int Missing) Find(Saved saved, IReadOnlyList<WorldScene.Thing> things)
-    {
-        var cells = new Dictionary<(int Prefab, int X, int Z), List<int>>();
-        for (int i = 0; i < things.Count; i++)
-        {
-            var t = things[i];
-            if (t.Gone)
-            {
-                continue;
-            }
-            var key = (t.Prefab, Cell(t.Position.X), Cell(t.Position.Z));
-            if (!cells.TryGetValue(key, out var list))
-            {
-                cells[key] = list = [];
-            }
-            list.Add(i);
-        }
-        var ids = new List<int>();
-        var taken = new HashSet<int>();
-        int missing = 0;
-        foreach (var it in saved.Items)
-        {
-            // Within 5 cm across: in the item's cell or one next to it.
-            int found = -1, cx = Cell(it.X), cz = Cell(it.Z);
-            for (int dz = -1; dz <= 1; dz++)
-            {
-                for (int dx = -1; dx <= 1; dx++)
-                {
-                    if (!cells.TryGetValue((it.Prefab, cx + dx, cz + dz), out var list))
-                    {
-                        continue;
-                    }
-                    foreach (int i in list)
-                    {
-                        // Each cell's list is in the things' order: past the first match, none comes earlier.
-                        if (found >= 0 && i > found)
-                        {
-                            break;
-                        }
-                        var t = things[i];
-                        if (MathF.Abs(t.Position.X - it.X) < 0.05f && MathF.Abs(t.Position.Z - it.Z) < 0.05f && MathF.Abs(t.Position.Y - it.Y) < 0.2f && !taken.Contains(i))
-                        {
-                            found = i;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (found >= 0)
-            {
-                ids.Add(found);
-                taken.Add(found);
-            }
-            else
-            {
-                missing++;
-            }
-        }
-        return (ids, missing);
-    }
-
-    /// <summary>The metre cell a coordinate is in, for <see cref="Find"/>.</summary>
-    private static int Cell(float v) => (int)MathF.Floor(v);
 }
