@@ -101,7 +101,7 @@ public partial class MainWindow
             Take([Key.Escape], KeyMods.NoCtrl, _ => View.PickObjectOnce != null, _ =>
             {
                 View.PickObjectOnce = null;
-                MessageText.Text = "Picking cancelled.";
+                Msg("view.msg.pickCancelled");
             }),
             // The right-hand panels, as in the web editor: V the View panel, L the history, ? (or F3) the help. ? is Shift
             // and the / key (OemQuestion and Oem2 are that one key): / alone is not it.
