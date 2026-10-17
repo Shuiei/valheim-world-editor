@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.58 — unreleased
+
+### Fixed
+- **A chest could be given something that is not an item, which the game then threw away.** The inspector and
+  Claude's set_contents checked a container's items against every prefab of the game, so "Troll" or "piece_chest"
+  went into a chest and was saved; the game drops such an entry when it loads the chest. Only the game's items are
+  taken now; anything else is refused with its name.
+
 ## v1.45.57 — unreleased
 
 ### Fixed
