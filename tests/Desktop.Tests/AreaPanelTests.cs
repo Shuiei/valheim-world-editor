@@ -595,4 +595,44 @@ public class AreaPanelTests
         Assert.Empty(r.W.View.Area.Points);
         Assert.Equal("Selection cleared.", r.Said);
     }
+
+    [AvaloniaFact]
+    public void DraggingABoxCountsWhatIsInsideOnceTheMovesAreHandled()
+    {
+        using var r = new Run(select: false);
+        var a = r.W.View.Area;
+        a.Box = true;
+        Dispatcher.UIThread.RunJobs();
+        int before = r.P.Refreshes;
+        a.Down(new Vector2(2, 2), 1);
+        a.Moved(new Vector2(12, 12));
+        a.Moved(new Vector2(22, 22));
+        // Not counted at each move: once the moves waiting are handled, once for all of them.
+        Assert.DoesNotContain("m² selected", r.P.Info.Text ?? "", StringComparison.Ordinal);
+        Assert.Equal(before, r.P.Refreshes);
+        Dispatcher.UIThread.RunJobs();
+        Assert.StartsWith("400 m² selected", r.P.Info.Text, StringComparison.Ordinal);
+        Assert.Equal(before + 1, r.P.Refreshes);
+        // Released: counted at once, and the refresh the last move asked for is not run again after it.
+        a.Moved(new Vector2(32, 32));
+        a.Up();
+        Assert.StartsWith("900 m² selected", r.P.Info.Text, StringComparison.Ordinal);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(before + 2, r.P.Refreshes);
+    }
+
+    [AvaloniaFact]
+    public void TheVolumeIsWorkedOutOnlyForTheActionsShowingIt()
+    {
+        using var r = new Run();
+        r.P.Choose(AreaPanel.Act.Remove);
+        Assert.Equal("", r.P.VolumeText.Text);
+        foreach (var act in (AreaPanel.Act[])[AreaPanel.Act.Flatten, AreaPanel.Act.Raise, AreaPanel.Act.Lower])
+        {
+            r.P.Choose(act);
+            Assert.Contains("Ground inside", r.P.VolumeText.Text, StringComparison.Ordinal);
+            r.P.Choose(AreaPanel.Act.Smooth);
+            Assert.Equal("", r.P.VolumeText.Text);
+        }
+    }
 }

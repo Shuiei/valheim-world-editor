@@ -22,8 +22,8 @@ public sealed class AreaTool
     public List<Vector2> Points { get; } = [];
     /// <summary>Whether the polygon is closed: the next click then starts a new one.</summary>
     public bool Closed { get; private set; }
-    /// <summary>Whether a box is being dragged.</summary>
-    private bool _dragging;
+    /// <summary>Whether a box is being dragged (the mouse button held since <see cref="Down"/>).</summary>
+    public bool Dragging { get; private set; }
     /// <summary>The selection changed.</summary>
     public event Action? Changed;
     /// <summary>Raises <see cref="Changed"/>.</summary>
@@ -58,7 +58,7 @@ public sealed class AreaTool
             Points.Clear();
         }
         Closed = false;
-        _dragging = false;
+        Dragging = false;
         Notify();
     }
 
@@ -83,7 +83,7 @@ public sealed class AreaTool
                 Points.Add(h);
                 Points.Add(h);
             }
-            _dragging = true;
+            Dragging = true;
         }
         else if (clicks >= 2 && Points.Count >= 3)
         {
@@ -108,7 +108,7 @@ public sealed class AreaTool
     /// <summary>The mouse moved: a box being dragged follows it to its far corner.</summary>
     public void Moved(Vector2? hit)
     {
-        if (_dragging && hit is { } h)
+        if (Dragging && hit is { } h)
         {
             lock (Points)
             {
@@ -121,11 +121,11 @@ public sealed class AreaTool
     /// <summary>The mouse button released: a box ends there, or is dropped if smaller than a metre.</summary>
     public void Up()
     {
-        if (!_dragging)
+        if (!Dragging)
         {
             return;
         }
-        _dragging = false;
+        Dragging = false;
         if (Vector2.Distance(Points[0], Points[1]) < 1)
         {
             Clear();

@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
@@ -242,7 +243,8 @@ public sealed class AreaPanel
         BoxButton.Click += (_, _) => { Area.Box = true; Area.Clear(); ShowShape(); };
         PolyButton.Click += (_, _) => { Area.Box = false; Area.Clear(); ShowShape(); };
         ClearButton.Click += (_, _) => { Area.Clear(); Message?.Invoke("Selection cleared."); };
-        ActionBox.SelectionChanged += (_, _) => { ShowRows(); RefreshVolume(); if (Current == Act.Backup) { FillBackups(); } };
+        // ShowRows refreshes the panel, the volume with it.
+        ActionBox.SelectionChanged += (_, _) => { ShowRows(); if (Current == Act.Backup) { FillBackups(); } };
         BackupBox.SelectionChanged += async (_, _) =>
         {
             // The last entry: another folder.
@@ -329,7 +331,7 @@ public sealed class AreaPanel
         UnresetButton.Click += (_, _) => CancelReset();
         ToPickButton.Tip("area.pick");
         ToPickButton.Click += (_, _) => PickKindAsked?.Invoke("Replace", UsePicked);
-        Area.Changed += Refresh;
+        Area.Changed += AreaChanged;
         Area.Changed += DropPicture;
         NoLimitBox.Tip("brush.noLimit");
         NoLimitBox.IsCheckedChanged += (_, _) => NoLimitChanged?.Invoke(NoLimitBox.IsChecked == true);
@@ -521,17 +523,56 @@ public sealed class AreaPanel
 
     /// <summary>
     /// Cut and fill: what Flatten, Raise or Lower would move, and how much the ground inside was raised
-    /// and dug since generated (again after every change of the ground, as the web editor did).
+    /// and dug since generated (again after every change of the ground, as the web editor did). Worked out only
+    /// for those three actions, the ones that show it.
     /// </summary>
     public void RefreshVolume()
     {
         var g = _session()?.Ground;
-        VolumeText.Text = g != null ? Area.Volume(g, Ground(Current) ?? AreaTool.GroundAction.Flatten, Value(HeightBox), Value(AmountBox), _session()?.MaskNow()) : "";
+        VolumeText.Text = g != null && Current is Act.Flatten or Act.Raise or Act.Lower
+            ? Area.Volume(g, Ground(Current) ?? AreaTool.GroundAction.Flatten, Value(HeightBox), Value(AmountBox), _session()?.MaskNow())
+            : "";
     }
+
+    /// <summary>A refresh is posted for when the input waiting is handled (see <see cref="AreaChanged"/>).</summary>
+    private bool _refreshPosted;
+
+    /// <summary>
+    /// The selection changed. While a box is being dragged the outline follows the mouse at once, and the rest of
+    /// <see cref="Refresh"/> (the objects inside, the lists, the volume) runs once the mouse moves waiting are
+    /// handled, once for all of them; otherwise it runs now.
+    /// </summary>
+    private void AreaChanged()
+    {
+        if (!Area.Dragging)
+        {
+            Refresh();
+            return;
+        }
+        _view.LassoChanged();
+        if (_refreshPosted)
+        {
+            return;
+        }
+        _refreshPosted = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            // A refresh since (the button released) has done it.
+            if (_refreshPosted)
+            {
+                Refresh();
+            }
+        }, DispatcherPriority.Background);
+    }
+
+    /// <summary>How many times <see cref="Refresh"/> ran: a test seam (a box dragged refreshes once per batch of moves).</summary>
+    internal int Refreshes { get; private set; }
 
     /// <summary>The selection changed: its size, what is inside, the lists and the volumes.</summary>
     public void Refresh()
     {
+        Refreshes++;
+        _refreshPosted = false;
         var poly = Area.Polygon();
         RefreshVolume();
         // Before the selection's lists: the "with" list follows the world, selection or not.
