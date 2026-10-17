@@ -21,24 +21,16 @@ public class PlaceToolBranchesTests
     /// </summary>
     private static (PlaceTool T, EditSession S) Tool(params WorldScene.Thing[] things)
     {
-        var s = TestScenes.Flat(2, things);
-        var t = new PlaceTool
+        var (t, s) = SharedPlaceTool.Tool(things);
+        SharedPlaceTool.NameWallAndBeech(t);
+        t.ModelBox = n => n switch
         {
-            Scene = () => s.Scene,
-            Brush = s.Brush,
-            NameOf = h => h == StableHash.Of(Wall) ? Wall : h == StableHash.Of("Beech1") ? "Beech1" : null,
-            ModelBox = n => n switch
-            {
-                "Deep" => (new Vector3(-0.2f, 0, -1), new Vector3(0.2f, 2, 1)),
-                "Speck" => (Vector3.Zero, new Vector3(0.01f, 0.01f, 0.01f)),
-                "Slab" => (new Vector3(-1, 0, -0.2f), new Vector3(1, 0.05f, 0.2f)),
-                "Post" => (new Vector3(-1, 0, -0.2f), new Vector3(1, 2, 0.2f)),
-                _ => null,
-            },
+            "Deep" => (new Vector3(-0.2f, 0, -1), new Vector3(0.2f, 2, 1)),
+            "Speck" => (Vector3.Zero, new Vector3(0.01f, 0.01f, 0.01f)),
+            "Slab" => (new Vector3(-1, 0, -0.2f), new Vector3(1, 0.05f, 0.2f)),
+            "Post" => (new Vector3(-1, 0, -0.2f), new Vector3(1, 2, 0.2f)),
+            _ => null,
         };
-        t.Chosen.Clear();
-        t.Chosen.Add("Beech1");
-        t.Tilt = 0;
         return (t, s);
     }
 

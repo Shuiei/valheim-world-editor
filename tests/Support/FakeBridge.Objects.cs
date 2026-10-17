@@ -22,13 +22,7 @@ public sealed partial class FakeBridge
         {
             Destroyed.Add((r.ReadInt64(), r.ReadUInt32()));
         }
-        int create = r.ReadInt32();
-        var ids = new List<string>();
-        for (int i = 0; i < create; i++)
-        {
-            r.ReadBytes(r.ReadInt32());
-            ids.Add($"77:{_next++}");
-        }
+        var ids = ObjectsCallReader.ReadCreated(r, () => $"77:{_next++}");
         // What each destroyed object is and where (the editor adds it after the creations).
         for (int i = 0; i < destroy; i++)
         {
@@ -37,7 +31,7 @@ public sealed partial class FakeBridge
         var moved = ReadMoves(r, all);
         lock (ObjectCalls)
         {
-            ObjectCalls.Add((destroy, create));
+            ObjectCalls.Add((destroy, ids.Count));
         }
         string body = $"{{\"destroyed\":{destroy},\"missing\":0,\"refound\":{Refound},\"created\":[{string.Join(",", ids.Select(i => $"\"{i}\""))}],\"moves\":[{string.Join(",", moved)}]}}";
         if (ctx.Request.Headers["X-Call-Id"] is { } call)

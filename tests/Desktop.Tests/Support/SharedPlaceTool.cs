@@ -1,3 +1,4 @@
+using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -17,6 +18,15 @@ internal static class SharedPlaceTool
         t.Chosen.Add("Beech1");
         t.Tilt = 0;
         return (t, s);
+    }
+
+    /// <summary>
+    /// Names the wall piece (woodwall) and Beech1 for the Place tool, and no other kind.
+    /// </summary>
+    internal static void NameWallAndBeech(PlaceTool t)
+    {
+        const string wall = "woodwall";
+        t.NameOf = h => h == StableHash.Of(wall) ? wall : h == StableHash.Of("Beech1") ? "Beech1" : null;
     }
 
     /// <summary>

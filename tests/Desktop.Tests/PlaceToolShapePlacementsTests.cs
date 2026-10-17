@@ -14,12 +14,22 @@ public class PlaceToolShapePlacementsTests
     /// </summary>
     private static (PlaceTool T, WorldScene S, PlaceTool.Hash H) Tool()
     {
-        var s = TestScenes.Flat(2);
-        var t = new PlaceTool { Scene = () => s.Scene, Brush = s.Brush };
-        t.Chosen.Clear();
-        t.Chosen.Add("Beech1");
-        t.Tilt = 0;
+        var (t, s) = SharedPlaceTool.Tool();
         return (t, s.Scene, new PlaceTool.Hash(4));
+    }
+
+    /// <summary>
+    /// A line of two points (20, 20) and (40, 20) placed end to end with this kind, the Line mode set.
+    /// </summary>
+    private static List<PlaceTool.Placement> EndToEndLinePlacements(PlaceTool t, WorldScene s, string kind)
+    {
+        t.Mode = PlaceTool.Modes.Line;
+        t.EndToEnd = true;
+        t.Points.Add(new Vector2(20, 20));
+        t.Points.Add(new Vector2(40, 20));
+        var outp = new List<PlaceTool.Placement>();
+        t.EndToEndPlacements(s, [kind], null, null, outp);
+        return outp;
     }
 
     [Fact]
@@ -54,26 +64,15 @@ public class PlaceToolShapePlacementsTests
     [Fact]
     public void EndToEndWithoutAKindThatHasEndsPlacesNothing()
     {
-        var (t, s, h) = Tool();
-        t.Mode = PlaceTool.Modes.Line;
-        t.EndToEnd = true;
-        t.Points.Add(new Vector2(20, 20));
-        t.Points.Add(new Vector2(40, 20));
-        var outp = new List<PlaceTool.Placement>();
-        t.EndToEndPlacements(s, ["Beech1"], null, null, outp);
-        Assert.Empty(outp);
+        var (t, s, _) = Tool();
+        Assert.Empty(EndToEndLinePlacements(t, s, "Beech1"));
     }
 
     [Fact]
     public void EndToEndLaysPiecesAlongTheRun()
     {
-        var (t, s, h) = Tool();
-        t.Mode = PlaceTool.Modes.Line;
-        t.EndToEnd = true;
-        t.Points.Add(new Vector2(20, 20));
-        t.Points.Add(new Vector2(40, 20));
-        var outp = new List<PlaceTool.Placement>();
-        t.EndToEndPlacements(s, ["woodwall"], null, null, outp);
+        var (t, s, _) = Tool();
+        var outp = EndToEndLinePlacements(t, s, "woodwall");
         Assert.NotEmpty(outp);
         Assert.All(outp, o => Assert.Equal("woodwall", o.Name));
     }

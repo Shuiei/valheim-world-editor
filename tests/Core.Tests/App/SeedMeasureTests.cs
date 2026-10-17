@@ -14,6 +14,19 @@ public class SeedMeasureTests
 
     private static float CellOf(int size) => 2 * SeedPreview.Radius / size;
 
+    /// <summary>
+    /// Measures a 3 × 3 map of ocean whose first two cells are Meadows and whose last cell is <paramref name="last"/>.
+    /// </summary>
+    private static SeedPreview.Stats MeasureCornerMap(byte last)
+    {
+        byte[] biome = new byte[9];
+        Array.Fill(biome, SeedPreview.Ocean);
+        biome[0] = Meadows;
+        biome[1] = Meadows;
+        biome[8] = last;
+        return SeedMeasure.Measure(biome, 3, CellOf(3));
+    }
+
     [Fact]
     public void ASeaOnlyMapHasNoLand()
     {
@@ -35,36 +48,21 @@ public class SeedMeasureTests
     [Fact]
     public void LandShareCountsTheLandCellsInsideTheWorld()
     {
-        byte[] biome = new byte[9];
-        Array.Fill(biome, SeedPreview.Ocean);
-        biome[0] = Meadows;
-        biome[1] = Meadows;
-        biome[8] = Meadows;
-        var s = SeedMeasure.Measure(biome, 3, CellOf(3));
+        var s = MeasureCornerMap(Meadows);
         Assert.InRange(s.Land, 3f / 9f - 0.001f, 3f / 9f + 0.001f);
     }
 
     [Fact]
     public void MainContinentIsTheLargestLandmassShare()
     {
-        byte[] biome = new byte[9];
-        Array.Fill(biome, SeedPreview.Ocean);
-        biome[0] = Meadows;
-        biome[1] = Meadows;
-        biome[8] = Meadows;
-        var s = SeedMeasure.Measure(biome, 3, CellOf(3));
+        var s = MeasureCornerMap(Meadows);
         Assert.InRange(s.MainContinent, 2f / 3f - 0.001f, 2f / 3f + 0.001f);
     }
 
     [Fact]
     public void SharesSplitTheLandByBiome()
     {
-        byte[] biome = new byte[9];
-        Array.Fill(biome, SeedPreview.Ocean);
-        biome[0] = Meadows;
-        biome[1] = Meadows;
-        biome[8] = (byte)Array.IndexOf(SeedPreview.Biomes, Heightmap.Biome.Plains);
-        var s = SeedMeasure.Measure(biome, 3, CellOf(3));
+        var s = MeasureCornerMap((byte)Array.IndexOf(SeedPreview.Biomes, Heightmap.Biome.Plains));
         Assert.InRange(s.Shares[Heightmap.Biome.Meadows], 2f / 3f - 0.001f, 2f / 3f + 0.001f);
         Assert.InRange(s.Shares[Heightmap.Biome.Plains], 1f / 3f - 0.001f, 1f / 3f + 0.001f);
     }
@@ -72,12 +70,7 @@ public class SeedMeasureTests
     [Fact]
     public void StartContinentIsTheShareOfTheStartsLandmass()
     {
-        byte[] biome = new byte[9];
-        Array.Fill(biome, SeedPreview.Ocean);
-        biome[0] = Meadows;
-        biome[1] = Meadows;
-        biome[8] = (byte)Array.IndexOf(SeedPreview.Biomes, Heightmap.Biome.Plains);
-        var s = SeedMeasure.Measure(biome, 3, CellOf(3));
+        var s = MeasureCornerMap((byte)Array.IndexOf(SeedPreview.Biomes, Heightmap.Biome.Plains));
         Assert.InRange(s.StartContinent, 2f / 3f - 0.001f, 2f / 3f + 0.001f);
     }
 

@@ -9,20 +9,33 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class CrunchUnpackerBlockTests
 {
+    /// <summary>The colour endpoint 0x11223344 then the selectors 0xAABBCCDD, as the bytes a DXT1 block holds.</summary>
+    private static readonly byte[] EndpointThenSelectors = [0x44, 0x33, 0x22, 0x11, 0xDD, 0xCC, 0xBB, 0xAA];
+
+    /// <summary>
+    /// A DXT1 block written with this colour endpoint and selector taken by index, and no alpha part.
+    /// </summary>
+    private static byte[] ColourBlock(int colour, int colourSelector, uint[] colourEndpoints, uint[] colourSelectors)
+    {
+        byte[] block = new byte[8];
+        CrunchUnpacker.WriteBlock(block, false, colour, colourSelector, 0, 0, colourEndpoints, colourSelectors, [], []);
+        return block;
+    }
+
     [Fact]
     public void AColourBlockIsItsEndpointThenItsSelectors()
     {
-        byte[] block = new byte[8];
-        CrunchUnpacker.WriteBlock(block, false, 0, 0, 0, 0, [0x11223344u], [0xAABBCCDDu], [], []);
-        Assert.Equal(new byte[] { 0x44, 0x33, 0x22, 0x11, 0xDD, 0xCC, 0xBB, 0xAA }, block);
+        Assert.Equal(
+            EndpointThenSelectors,
+            ColourBlock(0, 0, [0x11223344u], [0xAABBCCDDu]));
     }
 
     [Fact]
     public void TheColourPartIsTakenByItsIndex()
     {
-        byte[] block = new byte[8];
-        CrunchUnpacker.WriteBlock(block, false, 1, 1, 0, 0, [1u, 0x11223344u], [0u, 0xAABBCCDDu], [], []);
-        Assert.Equal(new byte[] { 0x44, 0x33, 0x22, 0x11, 0xDD, 0xCC, 0xBB, 0xAA }, block);
+        Assert.Equal(
+            EndpointThenSelectors,
+            ColourBlock(1, 1, [1u, 0x11223344u], [0u, 0xAABBCCDDu]));
     }
 
     [Fact]

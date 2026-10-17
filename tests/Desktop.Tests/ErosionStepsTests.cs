@@ -8,6 +8,19 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class ErosionStepsTests
 {
+    /// <summary>
+    /// A 5 × 5 window of ground that steps up across it: each cell's height is its column (0 to 4).
+    /// </summary>
+    private static float[] SteppedGround()
+    {
+        float[] h = new float[25];
+        for (int i = 0; i < h.Length; i++)
+        {
+            h[i] = i % 5;
+        }
+        return h;
+    }
+
     [Fact]
     public void ThermalSlidesMaterialFromASteepPointAndKeepsTheTotal()
     {
@@ -41,11 +54,7 @@ public class ErosionStepsTests
     [Fact]
     public void HydraulicWithNoDropsChangesNothing()
     {
-        float[] h = new float[25];
-        for (int i = 0; i < h.Length; i++)
-        {
-            h[i] = i % 5;
-        }
+        float[] h = SteppedGround();
         float[] before = (float[])h.Clone();
         Erosion.Hydraulic(h, [.. Enumerable.Repeat(1f, 25)], 5, 5, 0, 1, new Random(1));
         Assert.Equal(before, h);
@@ -54,11 +63,7 @@ public class ErosionStepsTests
     [Fact]
     public void HydraulicLeavesAWindowWithNoWeightAlone()
     {
-        float[] h = new float[25];
-        for (int i = 0; i < h.Length; i++)
-        {
-            h[i] = i % 5;
-        }
+        float[] h = SteppedGround();
         float[] before = (float[])h.Clone();
         Erosion.Hydraulic(h, new float[25], 5, 5, 50, 1, new Random(1));
         Assert.Equal(before, h);

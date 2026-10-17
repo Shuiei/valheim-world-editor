@@ -19,6 +19,13 @@ internal static class RegrowFixtures
     /// <summary>The private zone type, for the tests that build dictionaries of zones.</summary>
     public static Type Zone => ZoneType;
 
+    /// <summary>Calls one of the private checks a spot passes, by its name, with these arguments.</summary>
+    /// <param name="name">The check's method name on the Regrow type.</param>
+    /// <param name="args">The arguments the check takes.</param>
+    /// <returns>Whether the spot passes the check.</returns>
+    public static bool Check(string name, params object?[] args) =>
+        PrivateMember.Call<bool>(typeof(Regrow), name, null, args);
+
     /// <summary>
     /// A rule that passes every check at any spot: every biome and area, no altitude, mask, ocean, slope or distance
     /// limit, one object per group, placed once.

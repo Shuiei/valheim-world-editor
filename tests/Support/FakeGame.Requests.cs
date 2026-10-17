@@ -57,16 +57,10 @@ public sealed partial class FakeGame
             r.ReadInt64();
             r.ReadUInt32();
         }
-        int create = r.ReadInt32();
-        var ids = new List<string>();
-        for (int i = 0; i < create; i++)
-        {
-            r.ReadBytes(r.ReadInt32());
-            ids.Add($"\"77:{Interlocked.Increment(ref _next) - 1}\"");
-        }
+        var ids = ObjectsCallReader.ReadCreated(r, () => $"\"77:{Interlocked.Increment(ref _next) - 1}\"");
         lock (ObjectCalls)
         {
-            ObjectCalls.Add((destroy, create));
+            ObjectCalls.Add((destroy, ids.Count));
         }
         reply.Body = Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroy - Missing},\"missing\":{Missing},\"created\":[{string.Join(",", ids)}]}}");
     }
