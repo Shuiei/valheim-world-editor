@@ -15,8 +15,7 @@ public class MapDataCacheTests
     public void CloseUpsAreKeptPerEditVersionAndTheCacheStaysSmall()
     {
         using var w = new TempWorld();
-        var (_, terrain, edits) = Open(w);
-        var map = new MapData(terrain, edits);
+        var map = MapOf(w);
         var first = map.Detail(288, 288, 64, 1);
         Assert.Same(first, map.Detail(288, 288, 64, 1));
         // The window before the last one is kept too (panning back), and asking for it keeps it longest.
@@ -33,8 +32,7 @@ public class MapDataCacheTests
     public void CloseUpsOfAnOlderEditVersionAreDropped()
     {
         using var w = new TempWorld();
-        var (_, terrain, edits) = Open(w);
-        var map = new MapData(terrain, edits);
+        var map = MapOf(w);
         var first = map.Detail(288, 288, 64, 1);
         var other = map.Detail(352, 288, 64, 1);
         Assert.NotSame(first, map.Detail(288, 288, 64, 2));
@@ -46,8 +44,7 @@ public class MapDataCacheTests
     public async Task ACloseUpOfOlderEditsDoesNotDropNewerOnes()
     {
         using var w = new TempWorld();
-        var (_, terrain, edits) = Open(w);
-        var map = new MapData(terrain, edits);
+        var map = MapOf(w);
         using var reached = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
         int builds = 0;
@@ -71,5 +68,14 @@ public class MapDataCacheTests
         // The older build ended last: it is given but not kept, and the newer window stays.
         Assert.Same(newer, map.Detail(288, 288, 64, 2));
         Assert.NotSame(older, map.Detail(352, 288, 64, 1));
+    }
+
+    /// <summary>
+    /// The map of the test world in this temporary folder, made from its terrain and its edits.
+    /// </summary>
+    private static MapData MapOf(TempWorld w)
+    {
+        var (_, terrain, edits) = Open(w);
+        return new MapData(terrain, edits);
     }
 }

@@ -68,7 +68,7 @@ public class WorldWriterTests
         var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 1.5f, 500)], deleted: terrain);
 
         Assert.True(r.Saved, r.Message);
-        Assert.Equal(1.5f, WorldSave.Load(w.Dir).TerrainZones.Single(q => q.ZoneX == t.ZoneX && q.ZoneZ == t.ZoneZ).LevelDelta[500], 4);
+        Assert.Equal(1.5f, SavedZoneLevels.LevelDelta(w.Dir, t, 500), 4);
     }
 
     [Fact]

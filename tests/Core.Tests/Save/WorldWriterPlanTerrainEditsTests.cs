@@ -35,10 +35,7 @@ public class WorldWriterPlanTerrainEditsTests
     {
         using var w = new TempWorld();
         var world = w.Load();
-        var edit = new ZoneEdit(1234, -1234);
-        var plan = new WorldWriter.Planned([edit], [], []);
-
-        WorldWriter.PlanTerrainEdits(world, plan, [], (_, _) => null);
+        var plan = PlanOne(world, new ZoneEdit(1234, -1234));
 
         Assert.Equal(0, plan.Written + plan.Created);
         Assert.Contains((1234, -1234), plan.NotSaved);
@@ -49,13 +46,20 @@ public class WorldWriterPlanTerrainEditsTests
     {
         using var w = new TempWorld();
         var world = w.Load();
-        var edit = Raised(0, 0, 3, 500);
-        var plan = new WorldWriter.Planned([edit], [], []);
-
-        WorldWriter.PlanTerrainEdits(world, plan, [], (_, _) => null);
+        var plan = PlanOne(world, Raised(0, 0, 3, 500));
 
         Assert.Equal(0, plan.Created);
         Assert.Contains((0, 0), plan.NotSaved);
         Assert.Contains("not generated yet", Assert.Single(plan.Skipped));
+    }
+
+    /// <summary>
+    /// Plans one zone edit in a world where no zone exists yet, and returns the plan.
+    /// </summary>
+    private static WorldWriter.Planned PlanOne(WorldSave world, ZoneEdit edit)
+    {
+        var plan = new WorldWriter.Planned([edit], [], []);
+        WorldWriter.PlanTerrainEdits(world, plan, [], (_, _) => null);
+        return plan;
     }
 }

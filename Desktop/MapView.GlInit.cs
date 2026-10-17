@@ -102,30 +102,6 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
     private uint Program(string vs, string fs)
     {
         string head = _es ? "#version 300 es\nprecision highp float;\nprecision highp int;\n" : "#version 330 core\n";
-        uint Compile(ShaderType t, string src)
-        {
-            uint s = _gl.CreateShader(t);
-            _gl.ShaderSource(s, head + src);
-            _gl.CompileShader(s);
-            _gl.GetShader(s, ShaderParameterName.CompileStatus, out int ok);
-            if (ok == 0)
-            {
-                throw new InvalidOperationException($"{t}: {_gl.GetShaderInfoLog(s)}");
-            }
-            return s;
-        }
-        uint p = _gl.CreateProgram();
-        uint v = Compile(ShaderType.VertexShader, vs), f = Compile(ShaderType.FragmentShader, fs);
-        _gl.AttachShader(p, v);
-        _gl.AttachShader(p, f);
-        _gl.LinkProgram(p);
-        _gl.GetProgram(p, ProgramPropertyARB.LinkStatus, out int linked);
-        if (linked == 0)
-        {
-            throw new InvalidOperationException(_gl.GetProgramInfoLog(p));
-        }
-        _gl.DeleteShader(v);
-        _gl.DeleteShader(f);
-        return _own.Program(p);
+        return _own.Program(GlProgramLinker.Link(_gl, head, vs, fs));
     }
 }

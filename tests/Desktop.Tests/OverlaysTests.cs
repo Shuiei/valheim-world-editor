@@ -29,12 +29,7 @@ public class OverlaysTests
     [Fact]
     public void AWardAndAWorkbenchGetTheirRings()
     {
-        var things = new[]
-        {
-            new WorldScene.Thing(1, StableHash.Of("guard_stone"), new Vector3(0, 35, 0), Vector3.Zero, 0, true),
-            new WorldScene.Thing(2, StableHash.Of("piece_workbench"), new Vector3(10, 35, 10), Vector3.Zero, 0, true),
-        };
-        string?[] names = ["guard_stone", "piece_workbench"];
+        var (things, names) = WardAndWorkbenchScene.Create();
         var o = Overlays.Build(TestScenes.FlatScene(things), null, i => names[i]);
         Assert.Equal(1, o.Wards);
         Assert.Equal(1, o.Stations);

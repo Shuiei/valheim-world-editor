@@ -45,13 +45,23 @@ public sealed class HomeFolderCharactersTests : HomeFolderTestBase
         Assert.Contains(Characters.Roots(), d => d.EndsWith(Path.Combine("Valheim", "characters"), StringComparison.Ordinal));
     }
 
-    [Fact]
-    public void ACharacterFileIsReadAgainOnlyWhenItChanged()
+    /// <summary>
+    /// Writes Ragnar's character file, with this id, into the game's characters folder.
+    /// </summary>
+    /// <returns>The file's path.</returns>
+    private string WriteRagnarCharacter(long id)
     {
         string chars = Local(".config", "unity3d", "IronGate", "Valheim", "characters_local");
         Directory.CreateDirectory(chars);
         string file = Path.Combine(chars, "ragnar.fch");
-        File.WriteAllBytes(file, Fch("Ragnar", 5));
+        File.WriteAllBytes(file, Fch("Ragnar", id));
+        return file;
+    }
+
+    [Fact]
+    public void ACharacterFileIsReadAgainOnlyWhenItChanged()
+    {
+        string file = WriteRagnarCharacter(5);
         Assert.Equal(5, Assert.Single(Characters.Local()).Id);
         int reads = Characters.FileReads;
         Assert.Equal(5, Assert.Single(Characters.Local()).Id);
@@ -67,10 +77,7 @@ public sealed class HomeFolderCharactersTests : HomeFolderTestBase
     public void EachThreadCountsOnlyTheCharacterFilesItRead()
     {
         // The count is the thread's own (the tests read characters on other threads at the same time).
-        string chars = Local(".config", "unity3d", "IronGate", "Valheim", "characters_local");
-        Directory.CreateDirectory(chars);
-        string file = Path.Combine(chars, "ragnar.fch");
-        File.WriteAllBytes(file, Fch("Ragnar", 5));
+        string file = WriteRagnarCharacter(5);
         Assert.Equal(5, Assert.Single(Characters.Local()).Id);
         int reads = Characters.FileReads;
         File.WriteAllBytes(file, Fch("Ragnar", 6));
