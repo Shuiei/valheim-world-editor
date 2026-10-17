@@ -8,7 +8,7 @@ internal sealed partial class MaskJudge
     /// <summary>Whether a ground point's paint passes the paint rule.</summary>
     /// <param name="p">The ground point index.</param>
     /// <returns>True when the paint passes, or the rule does not care about paint.</returns>
-    private bool PaintOk(int p)
+    internal bool PaintOk(int p)
     {
         if (_paint == Mask.PaintRule.Any)
         {

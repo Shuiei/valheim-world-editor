@@ -4,13 +4,13 @@ namespace TerrainEditor.Desktop;
 
 public sealed partial class PathTool
 {
-    private sealed partial class ApplyRun
+    internal sealed partial class ApplyRun
     {
         /// <summary>
         /// Works out the cutoff, the rectangle looked at, the running length along the line, and the heights or paint
         /// the action needs before it changes anything.
         /// </summary>
-        private void Prepare()
+        internal void Prepare()
         {
             float edge = _soft > 0 ? _soft : 0.5f;
             // The farthest a changed point can be from the line: the widest a natural path gets, its soft edge (or the

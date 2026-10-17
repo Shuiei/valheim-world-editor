@@ -19,7 +19,7 @@ public sealed partial class PathTool
     /// </summary>
     /// <param name="curve">The dense line.</param>
     /// <param name="i">The index of the segment's end point (1 or more).</param>
-    private static (Vector2 A, Vector2 D, float L2) Segment(List<(Vector2 P, int Seg)> curve, int i)
+    internal static (Vector2 A, Vector2 D, float L2) Segment(List<(Vector2 P, int Seg)> curve, int i)
     {
         Vector2 a = curve[i - 1].P, d = curve[i].P - a;
         return (a, d, MathF.Max(d.LengthSquared(), 1e-9f));

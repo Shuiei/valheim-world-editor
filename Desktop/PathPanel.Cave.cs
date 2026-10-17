@@ -29,7 +29,7 @@ public sealed partial class PathPanel
     }
 
     /// <summary>The cave preset's values (random: each within about 15% of them, and new boulders).</summary>
-    private void CavePreset(bool random)
+    internal void CavePreset(bool random)
     {
         var p = _presets[Math.Max(0, CavePresetBox.SelectedIndex)];
         float F() => random ? 0.85f + 0.3f * (float)_random.NextDouble() : 1;

@@ -3,11 +3,11 @@ namespace TerrainEditor.Desktop;
 
 public sealed partial class PathTool
 {
-    private sealed partial class ApplyRun
+    internal sealed partial class ApplyRun
     {
         /// <summary>Applies the tool's action to one grid point, by the action.</summary>
         /// <param name="s">The point and what is known about it.</param>
-        private void ActOn(in PointSample s)
+        internal void ActOn(in PointSample s)
         {
             switch (_tool.Act)
             {
@@ -43,7 +43,7 @@ public sealed partial class PathTool
 
         /// <summary>Digs the river bed under one point; it only digs.</summary>
         /// <param name="s">The point and what is known about it.</param>
-        private void DigRiver(in PointSample s)
+        internal void DigRiver(in PointSample s)
         {
             // A U-shaped bed: Depth below sea level in the middle, at the waterline at the path's
             // width, then the soft edge blends it into the banks. It only digs.
@@ -57,7 +57,7 @@ public sealed partial class PathTool
 
         /// <summary>Digs the cave's floor under one point; it only digs.</summary>
         /// <param name="s">The point and what is known about it.</param>
-        private void DigCave(in PointSample s)
+        internal void DigCave(in PointSample s)
         {
             // The floor across the cave's width; the soft edge makes its walls. It only digs, and keeps
             // within the game's ±8 m unless No limit is on (bumps above the ground's lie would reach it).

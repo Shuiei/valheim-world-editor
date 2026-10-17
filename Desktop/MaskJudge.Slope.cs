@@ -8,7 +8,7 @@ internal sealed partial class MaskJudge
     /// <summary>The slope at a ground point, in degrees, from its neighbours' heights.</summary>
     /// <param name="p">The ground point index.</param>
     /// <returns>The slope in degrees.</returns>
-    private float Slope(int p)
+    internal float Slope(int p)
     {
         int gx = p % _w, gz = p / _w;
         // On the border one neighbour is the point itself, so the step is 1 m there, not 2 m.

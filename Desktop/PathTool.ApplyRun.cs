@@ -8,7 +8,7 @@ public sealed partial class PathTool
     /// One Apply: visits the grid points around the line once, and changes each one that the line's reach and soft edge
     /// let through, by the action.
     /// </summary>
-    private sealed partial class ApplyRun
+    internal sealed partial class ApplyRun
     {
         /// <summary>The tool whose action and values this run applies.</summary>
         private readonly PathTool _tool;
@@ -103,7 +103,7 @@ public sealed partial class PathTool
         /// <param name="gz">The grid row.</param>
         /// <param name="near">The nearest points of the line to the rectangle.</param>
         /// <param name="nw">The rectangle's width in points.</param>
-        private void Point(int gx, int gz, Nearest near, int nw)
+        internal void Point(int gx, int gz, Nearest near, int nw)
         {
             // The nearest point of the line: distance, and how far along it. None within the cutoff: too far to change.
             int ni = (gz - _z0) * nw + (gx - _x0);
@@ -150,7 +150,7 @@ public sealed partial class PathTool
         /// <param name="gz">The grid row.</param>
         /// <param name="scale">How much larger the noise's features are than the brush's.</param>
         /// <returns>The noise value.</returns>
-        private float WorldNoise(float gx, float gz, float scale = 1) => _b.Noise.Fbm((_ox + gx) / (_b.NoiseSize * scale), (_oz + gz) / (_b.NoiseSize * scale));
+        internal float WorldNoise(float gx, float gz, float scale = 1) => _b.Noise.Fbm((_ox + gx) / (_b.NoiseSize * scale), (_oz + gz) / (_b.NoiseSize * scale));
 
         /// <summary>What is known about one grid point the line reaches.</summary>
         /// <param name="Gx">The grid column.</param>
@@ -163,6 +163,6 @@ public sealed partial class PathTool
         /// <param name="CaveFloor">The cave's floor there, in metres.</param>
         /// <param name="DEff">The distance from the line, with the Natural look's ragged edge.</param>
         /// <param name="HalfEff">The half width there, with the Natural look's variation.</param>
-        private readonly record struct PointSample(int Gx, int Gz, int P, float H, float W, float Along, float Bump, float CaveFloor, float DEff, float HalfEff);
+        internal readonly record struct PointSample(int Gx, int Gz, int P, float H, float W, float Along, float Bump, float CaveFloor, float DEff, float HalfEff);
     }
 }

@@ -3,11 +3,11 @@ namespace TerrainEditor.Desktop;
 
 public sealed partial class PathTool
 {
-    private sealed partial class ApplyRun
+    internal sealed partial class ApplyRun
     {
         /// <summary>Evens out one point: its height moves to the average of the heights around it, from before.</summary>
         /// <param name="s">The point and what is known about it.</param>
-        private void Smooth(in PointSample s)
+        internal void Smooth(in PointSample s)
         {
             float sum = 0;
             int n = 0;
@@ -29,7 +29,7 @@ public sealed partial class PathTool
 
         /// <summary>Paints one point with the paint action's colour, by its weight.</summary>
         /// <param name="s">The point and what is known about it.</param>
-        private void Paint(in PointSample s)
+        internal void Paint(in PointSample s)
         {
             _g.StartPaint(s.P);
             for (int c = 0; c < 4; c++)

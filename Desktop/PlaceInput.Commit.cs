@@ -41,7 +41,7 @@ public sealed partial class PlaceInput
     /// <summary>
     /// Commits placements as new objects in one undo step; kinds built with a tool go in as player-built pieces.
     /// </summary>
-    private static void Commit(EditSession session, List<PlaceTool.Placement> list, string label)
+    internal static void Commit(EditSession session, List<PlaceTool.Placement> list, string label)
     {
         var adds = list.Select(o =>
         {

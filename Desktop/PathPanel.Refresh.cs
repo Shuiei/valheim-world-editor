@@ -8,7 +8,7 @@ namespace TerrainEditor.Desktop;
 public sealed partial class PathPanel
 {
     /// <summary>Shows only the rows of the current action, and the bump rows when Natural look is on.</summary>
-    private void ShowRows()
+    internal void ShowRows()
     {
         foreach (var (row, for_) in _rows)
         {

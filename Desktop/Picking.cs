@@ -65,7 +65,7 @@ public static partial class Picking
     }
 
     /// <summary>One axis of a vector: 0 for X, 1 for Y, anything else for Z.</summary>
-    private static float Component(Vector3 v, int axis) => axis == 0 ? v.X : axis == 1 ? v.Y : v.Z;
+    internal static float Component(Vector3 v, int axis) => axis == 0 ? v.X : axis == 1 ? v.Y : v.Z;
 
     /// <summary>The box around a box moved by a matrix (its eight corners).</summary>
     public static (Vector3 Min, Vector3 Max) Transform(Vector3 min, Vector3 max, Matrix4x4 m)

@@ -13,7 +13,7 @@ public sealed partial class PlaceInput
     /// <param name="h">The grid point under the mouse.</param>
     /// <param name="ctrl">Ctrl held: remove the point under the mouse.</param>
     /// <param name="clicks">The click count.</param>
-    private void DownShape(Point at, Vector2 h, bool ctrl, int clicks)
+    internal void DownShape(Point at, Vector2 h, bool ctrl, int clicks)
     {
         // A double-click on the last point places the shape (before the point is taken for a drag: the
         // second click of a double-click is always on it).

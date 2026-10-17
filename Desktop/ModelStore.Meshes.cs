@@ -16,7 +16,7 @@ public sealed partial class ModelStore
     /// </summary>
     /// <param name="id">The mesh's id.</param>
     /// <returns>The mesh, or null when there is none or it could not be read.</returns>
-    private MeshData? ReadMesh(string id)
+    internal MeshData? ReadMesh(string id)
     {
         MeshData? md;
         try

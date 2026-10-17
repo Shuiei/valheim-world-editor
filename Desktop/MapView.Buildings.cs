@@ -47,13 +47,13 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
     /// <summary>The zoom kind of the buildings: 0 dots, 1 footprints, 2 footprints with outlines.</summary>
     /// <param name="mpp">Metres per map pixel of the view.</param>
     /// <returns>The kind.</returns>
-    private static int KindFor(float mpp) => mpp < 0.8f ? 2 : mpp < 2.5f ? 1 : 0;
+    internal static int KindFor(float mpp) => mpp < 0.8f ? 2 : mpp < 2.5f ? 1 : 0;
 
     /// <summary>Whether the building shapes must be made again: the pieces, the zoom kind, the zoom (for dots), or what is shown changed.</summary>
     /// <param name="built">The player-built pieces now shown.</param>
     /// <param name="kind">The zoom kind now.</param>
     /// <param name="mpp">Metres per map pixel of the view now.</param>
     /// <returns>True when the shapes must be made again.</returns>
-    private bool BuildingsStale(float[] built, int kind, float mpp) =>
+    internal bool BuildingsStale(float[] built, int kind, float mpp) =>
         _buildingsKey.Pieces != built || _buildingsKey.Kind != kind || (kind == 0 && _buildingsKey.Mpp != mpp) || _buildingsKey.Buildings != ShowBuildings || _buildingsKey.Ruins != ShowRuins;
 }

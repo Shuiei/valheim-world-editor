@@ -12,7 +12,7 @@ public sealed partial class PlaceInput
     /// <param name="at">The mouse on the view, in pixels.</param>
     /// <param name="h">The grid point under the mouse.</param>
     /// <returns>True when the drag took the move.</returns>
-    private bool DragPress(Point at, Vector2 h)
+    internal bool DragPress(Point at, Vector2 h)
     {
         if (_press is { } pr)
         {

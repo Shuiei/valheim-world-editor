@@ -11,14 +11,14 @@ namespace TerrainEditor.Desktop;
 /// </summary>
 public sealed partial class NewWorldPage : IDisposable
 {
-    private static DockPanel Row(string label, Control c) => new() { Children = { new TextBlock { Text = label, Width = 90, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, c } };
-    private static DockPanel Metres(string label, NumericUpDown n)
+    internal static DockPanel Row(string label, Control c) => new() { Children = { new TextBlock { Text = label, Width = 90, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, c } };
+    internal static DockPanel Metres(string label, NumericUpDown n)
     {
         var unit = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { n, new TextBlock { Text = Lang.T("common.metres"), VerticalAlignment = VerticalAlignment.Center } } };
         return new DockPanel { Children = { new TextBlock { Text = label, Width = 120, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, unit } };
     }
 
-    private static Button ZoomButton(string text, string tip) => new Button { Content = text, FontSize = 13, Width = 30, Height = 30, Padding = new Thickness(0), HorizontalContentAlignment = HorizontalAlignment.Center }.Tip(tip);
+    internal static Button ZoomButton(string text, string tip) => new Button { Content = text, FontSize = 13, Width = 30, Height = 30, Padding = new Thickness(0), HorizontalContentAlignment = HorizontalAlignment.Center }.Tip(tip);
 
     /// <summary>The world card: the name, the seed with Generate and Roll, the folder, and Create.</summary>
     /// <returns>The card.</returns>

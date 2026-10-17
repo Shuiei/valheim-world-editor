@@ -32,7 +32,7 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
     /// <summary>
     /// Adds a quad (two triangles a-b-c, a-c-d) of one colour.
     /// </summary>
-    private static void Quad(List<float> to, Vector2 a, Vector2 b, Vector2 c, Vector2 d, Vector4 col)
+    internal static void Quad(List<float> to, Vector2 a, Vector2 b, Vector2 c, Vector2 d, Vector4 col)
     {
         Corner(to, a.X, a.Y, col);
         Corner(to, b.X, b.Y, col);
@@ -43,7 +43,7 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
     }
 
     /// <summary>Adds one corner: x, z then its colour (no array made for it).</summary>
-    private static void Corner(List<float> to, float x, float z, Vector4 col)
+    internal static void Corner(List<float> to, float x, float z, Vector4 col)
     {
         to.Add(x);
         to.Add(z);
@@ -62,7 +62,7 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
     /// <param name="r">Radius in metres.</param>
     /// <param name="col">Its colour.</param>
     /// <param name="sides">How many triangles.</param>
-    private static void Disc(List<float> to, float x, float z, float r, Vector4 col, int sides = 12)
+    internal static void Disc(List<float> to, float x, float z, float r, Vector4 col, int sides = 12)
     {
         for (int i = 0; i < sides; i++)
         {

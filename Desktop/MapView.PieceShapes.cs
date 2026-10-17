@@ -32,7 +32,7 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
     /// <param name="faint">Whether the piece is a ruin not joined to a building (drawn fainter).</param>
     /// <param name="kind">The zoom kind: 0 dots, 1 footprints, 2 footprints with outlines.</param>
     /// <param name="mpp">Metres per map pixel of the view.</param>
-    private static void AddPiece(List<float> fill, List<float> edge, float[] pc, int o, bool faint, int kind, float mpp)
+    internal static void AddPiece(List<float> fill, List<float> edge, float[] pc, int o, bool faint, int kind, float mpp)
     {
         float px = pc[o], pz = pc[o + 2];
         var style = PieceStyle[Math.Clamp((int)pc[o + 9], 0, PieceStyle.Length - 1)];

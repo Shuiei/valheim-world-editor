@@ -16,7 +16,7 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
     /// <param name="W">The view's width, in device pixels.</param>
     /// <param name="H">The view's height, in device pixels.</param>
     /// <param name="Mpp">Metres per device pixel.</param>
-    private readonly record struct LineFrame(Vector2 Center, int W, int H, float Mpp)
+    internal readonly record struct LineFrame(Vector2 Center, int W, int H, float Mpp)
     {
         /// <summary>A world point in clip space.</summary>
         /// <param name="x">World X, in metres.</param>
