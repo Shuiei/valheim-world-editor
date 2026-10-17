@@ -1,13 +1,12 @@
 using System.Numerics;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
-using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
-using TerrainEditor.Editing;
 using TerrainEditor.Save;
-using WorldEditor.Tests;
 using Xunit;
+using static TerrainEditor.Desktop.Tests.SharedButtons;
+using static TerrainEditor.Desktop.Tests.SharedInspectorRun;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -20,65 +19,6 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class InspectorPanelEditsTests
 {
-    private static readonly int Chest = StableHash.Of("piece_chest_wood");
-
-    /// <summary>
-    /// A main window on its own copy of the test world, opened on the zone with the chest; deleted when disposed.
-    /// </summary>
-    private sealed class Run : IDisposable
-    {
-        public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
-        public string Dir { get; } = Fixtures.CopyFixture();
-        public WorldScene Scene { get; }
-        public EditSession S => Scene.Session!;
-        public InspectorPanel I => W.Inspector;
-        public string? Said;
-
-        public Run()
-        {
-            var world = WorldSave.Load(Dir);
-            var at = world.Objects.First(o => o.Prefab == Chest).Position;
-            Scene = WorldScene.Load(Dir, (int)MathF.Floor((at.X + 32) / 64), (int)MathF.Floor((at.Z + 32) / 64), 1);
-            W.Show();
-            W.View.Show(Scene, null);
-            W.Edit(Scene.Session!);
-            I.Message += t => Said = t.Shown;
-        }
-
-        public int ChestIndex => Scene.Things.FindLastIndex(t => t.Prefab == Chest && !t.Gone);
-
-        /// <summary>
-        /// A new object of this kind beside the chest; its index.
-        /// </summary>
-        public int Add(string prefab)
-        {
-            var p = Scene.Things[ChestIndex].Position + new Vector3(2, 0, 2);
-            return S.Commit("Add", null, [], [(new NewObject(0, StableHash.Of(prefab), p, Vector3.Zero, 0), true)])[0];
-        }
-
-        /// <inheritdoc/>
-        public void Dispose() => Directory.Delete(Path.GetDirectoryName(Dir)!, recursive: true);
-    }
-
-    /// <summary>
-    /// Clicks the button and runs the posted work it starts.
-    /// </summary>
-    private static void Click(Button b)
-    {
-        b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        Dispatcher.UIThread.RunJobs();
-    }
-
-    /// <summary>
-    /// The first button with this label under the control.
-    /// </summary>
-    private static Button Labelled(Control c, string label) => c.GetLogicalDescendants().OfType<Button>().First(b => b.Content as string == label);
-
-    /// <summary>
-    /// Every text block's text under the control, joined with " | ".
-    /// </summary>
-    private static string Texts(Control c) => string.Join(" | ", c.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text));
-
     /// <summary>
     /// The contents grid's button for slot (x, y).
     /// </summary>
@@ -105,7 +45,7 @@ public class InspectorPanelEditsTests
     [AvaloniaFact]
     public void AnItemsRowNumbersAndThePickedSlotAreEdited()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         Assert.True(r.I.Open(r.ChestIndex));
         r.I.Items!.Clear();
         Click(Labelled(r.I.ItemsBox, "Add item"));
@@ -169,7 +109,7 @@ public class InspectorPanelEditsTests
     [AvaloniaFact]
     public async Task AnItemStandsRowIsTypedNumberedEmptiedAndItsRefusalShown()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         int stand = r.Add("itemstand");
         Assert.True(r.I.Open(stand));
         var row = Assert.Single(r.I.Stand!);
@@ -204,7 +144,7 @@ public class InspectorPanelEditsTests
     [AvaloniaFact]
     public async Task ContentsOfUnknownSizeVectorsAndQuaternionsAreShown()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         int tree = r.Scene.Things.FindIndex(t => !t.Piece && !t.Gone && ZdoData.Parse(r.Scene.World.ObjectBytes(t.Id)) is { FloatList.Count: 0, IntList.Count: 0, LongList.Count: 0, StringList.Count: 0, ByteList.Count: 0, Vec3List.Count: 0, QuatList.Count: 0 });
         Assert.True(tree >= 0);
         Assert.True(r.I.Open(tree));
@@ -228,7 +168,7 @@ public class InspectorPanelEditsTests
     [AvaloniaFact]
     public void SpawnPointsAndNestsSayWhatTheySpawn()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         Assert.True(r.I.Open(r.Add("Spawner_Boar")));
         Assert.Contains("Spawn point: ", Texts(r.I.Card));
         Assert.True(r.I.Open(r.Add("Spawner_GreydwarfNest")));
@@ -238,12 +178,9 @@ public class InspectorPanelEditsTests
     [AvaloniaFact]
     public void AnObjectWhoseFileIsGoneCannotBeRead()
     {
-        using var r = new Run();
-        int copy = r.S.Commit("Add", null, [], [(new NewObject(0, r.Scene.Things[r.ChestIndex].Prefab, Vector3.Zero, Vector3.Zero, 0), true)])[0];
-        foreach (string f in Directory.GetFiles(r.Dir))
-        {
-            File.Delete(f);
-        }
+        using var r = new SharedInspectorRun();
+        int copy = r.AddCopyOfChest();
+        r.DeleteWorldFiles();
         Assert.False(r.I.Open(copy));
         Assert.Equal("That object cannot be read.", r.Said);
     }
@@ -255,7 +192,7 @@ public class InspectorPanelEditsTests
     [AvaloniaFact]
     public async Task AKeyIsAddedOnceAndTheContentsAreNotRemovable()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         Assert.True(r.I.Open(r.ChestIndex));
         var (x, y) = r.I.FreeSlot()!.Value;
         r.I.Items!.Add(new InspectorPanel.ItemRow { Name = "Resin", Stack = 7, X = x, Y = y });
@@ -277,7 +214,7 @@ public class InspectorPanelEditsTests
     [AvaloniaFact]
     public async Task AnObjectNoLongerAtHandIsNotApplied()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         EditSession session = r.S;
         var panel = new InspectorPanel(() => session);
         string? said = null;
@@ -291,12 +228,9 @@ public class InspectorPanelEditsTests
         Assert.Empty(session.UndoList);
         // Its file gone since it was opened.
         session = r.S;
-        int copy = r.S.Commit("Add", null, [], [(new NewObject(0, r.Scene.Things[r.ChestIndex].Prefab, Vector3.Zero, Vector3.Zero, 0), true)])[0];
+        int copy = r.AddCopyOfChest();
         Assert.True(panel.Open(copy));
-        foreach (string f in Directory.GetFiles(r.Dir))
-        {
-            File.Delete(f);
-        }
+        r.DeleteWorldFiles();
         int steps = r.S.UndoList.Count;
         said = null;
         panel.Added.Add(("strings", "text", "Gone"));
@@ -308,7 +242,7 @@ public class InspectorPanelEditsTests
     [AvaloniaFact]
     public async Task AnObjectReplacedMeanwhileIsClosed()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         int opened = r.ChestIndex;
         var mine = new InspectorPanel(() => r.S);
         string? said = null;
@@ -330,7 +264,7 @@ public class InspectorPanelEditsTests
     [AvaloniaFact]
     public async Task APanelNobodyListensToSaysNothing()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         EditSession? session = r.S;
         var lone = new InspectorPanel(() => session);
         r.Scene.Things.Add(new WorldScene.Thing(-12345, StableHash.Of("Beech1"), Vector3.Zero, Vector3.Zero, 1, false));

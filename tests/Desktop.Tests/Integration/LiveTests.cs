@@ -20,6 +20,21 @@ public class LiveTests
     private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
 
     /// <summary>
+    /// Opens the running world of the stand-in game, live.
+    /// </summary>
+    private static Task<WorldSession> OpenOn(FakeGame game) => WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+
+    /// <summary>
+    /// Raises the ground at the middle of the area, as one step labelled raise.
+    /// </summary>
+    private static void Raise(EditSession s) => s.Shape(32, 32, Two, 3, 0, "raise");
+
+    /// <summary>
+    /// Presses the button, as a click does.
+    /// </summary>
+    private static void Press(Button b) => b.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+
+    /// <summary>
     /// Every text shown in a control and its children, joined with " | ".
     /// </summary>
     private static string Texts(Control? c) => c == null ? "" : string.Join(" | ", c.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text).Prepend((c as TextBlock)?.Text).Where(t => !string.IsNullOrEmpty(t)));
@@ -28,13 +43,13 @@ public class LiveTests
     public async Task ApplyLiveSendsTheGroundAndObjectsAndKeepsTheHistory()
     {
         using var game = new FakeGame();
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var world = await OpenOn(game);
         Assert.True(world.IsLive);
         Assert.Equal(1, game.Snapshots);
         var scene = WorldScene.Load(world, 0, 0, 1);
         var s = scene.Session!;
         Assert.True(s.IsLive);
-        s.Shape(32, 32, Two, 3, 0, "raise");
+        Raise(s);
         int tree = scene.Things.FindIndex(t => !t.Gone && !t.Piece);
         Assert.True(tree >= 0);
         s.Delete([tree]);
@@ -69,9 +84,9 @@ public class LiveTests
     public async Task ZoneResetsAreAppliedThenTheWorldIsReadAgain()
     {
         using var game = new FakeGame();
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var world = await OpenOn(game);
         var scene = WorldScene.Load(world, 0, 0, 1);
-        scene.Session!.Shape(32, 32, Two, 3, 0, "raise");
+        Raise(scene.Session!);
         world.Edits.SetReset(new ZoneReset(2, 3, true, false), true);
         var o = await world.ApplyLive();
         Assert.True(o.Done, o.Message);
@@ -87,9 +102,9 @@ public class LiveTests
     public async Task ReloadDropsWhatIsNotApplied()
     {
         using var game = new FakeGame();
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var world = await OpenOn(game);
         var scene = WorldScene.Load(world, 0, 0, 1);
-        scene.Session!.Shape(32, 32, Two, 3, 0, "raise");
+        Raise(scene.Session!);
         Assert.Equal(1, world.Pending.Zones);
         await world.Reload();
         Assert.Equal(2, game.Snapshots);
@@ -103,7 +118,7 @@ public class LiveTests
     public async Task AFailedApplyIsSentAgainNextTime()
     {
         using var game = new FakeGame();
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var world = await OpenOn(game);
         var scene = WorldScene.Load(world, 0, 0, 1);
         var s = scene.Session!;
         int tree = scene.Things.FindIndex(t => !t.Gone && !t.Piece);
@@ -125,9 +140,9 @@ public class LiveTests
     public async Task AFailedGroundApplyIsSentAgainNextTime()
     {
         using var game = new FakeGame();
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var world = await OpenOn(game);
         var s = WorldScene.Load(world, 0, 0, 1).Session!;
-        s.Shape(32, 32, Two, 3, 0, "raise");
+        Raise(s);
         game.Fail["/terrain"] = 500;
         var o = await s.ApplyLive();
         Assert.False(o.Done);
@@ -144,12 +159,12 @@ public class LiveTests
     public async Task TwoAppliesAtOnceSendEachChangeOnce()
     {
         using var game = new FakeGame();
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var world = await OpenOn(game);
         var scene = WorldScene.Load(world, 0, 0, 1);
         var s = scene.Session!;
         var tree = (new NewObject(0, StableHash.Of("Beech1"), new System.Numerics.Vector3(10, 30, 10), System.Numerics.Vector3.Zero, 1), false);
         s.Commit("plant", null, [], [tree]);
-        s.Shape(32, 32, Two, 3, 0, "raise");
+        Raise(s);
         var results = await Task.WhenAll(world.ApplyLive(), world.ApplyLive());
         // The first sends everything; the second finds nothing left.
         Assert.Equal(["Applied", "Nothing to apply."], results.Select(r => r.Message.StartsWith("Applied", StringComparison.Ordinal) ? "Applied" : r.Message).Order());
@@ -163,7 +178,7 @@ public class LiveTests
     public async Task ObjectsAlreadyGoneInTheGameAreReported()
     {
         using var game = new FakeGame { Missing = 1 };
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var world = await OpenOn(game);
         var scene = WorldScene.Load(world, 0, 0, 1);
         scene.Session!.Delete([scene.Things.FindIndex(t => !t.Gone && !t.Piece)]);
         var o = await world.ApplyLive();
@@ -177,7 +192,7 @@ public class LiveTests
     {
         using var game = new FakeGame();
         game.Fail["/zones/reset"] = 404;
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        var world = await OpenOn(game);
         world.Edits.SetReset(new ZoneReset(2, 3, true, false), true);
         var o = await world.ApplyLive();
         Assert.False(o.Done);
@@ -226,7 +241,7 @@ public class LiveTests
         map.Stop();
 
         await w.EditArea(0, 0, 1);
-        w.Session!.Shape(32, 32, Two, 3, 0, "raise");
+        Raise(w.Session!);
         Assert.Equal("Apply live", w.SaveButton.Content);
         await w.Save();
         Assert.Equal(new[] { (0, 0) }, game.Terrain);
@@ -273,7 +288,7 @@ public class LiveTests
             File.Move(cfg, Path.Combine(bep, "config", LocalGame.OldConfigName));
             Assert.Equal(game.Port, Assert.Single(LocalGame.FindBridges(settings, out _, out _)).Port);
             var edit = start.GameState.GetLogicalDescendants().OfType<Button>().Single();
-            edit.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            Press(edit);
             Assert.NotNull(opened);
             var world = await opened!();
             Assert.True(world.IsLive);
@@ -312,7 +327,7 @@ public class LiveTests
             Assert.False(start.ServerForm.IsExpanded);
             Assert.Contains("Test server", Texts(start.SavedServers));
             var edit = start.SavedServers.GetLogicalDescendants().OfType<Button>().First(b => b.Content as string == "edit");
-            edit.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            Press(edit);
             Assert.True(start.ServerForm.IsExpanded);
             Assert.Equal("203.0.113.10", start.SHost.Text);
         }

@@ -26,9 +26,31 @@ public class ClipboardTests
     private static EditSession Area()
     {
         var s = TestScenes.Flat(2, new WorldScene.Thing(1, Beech, new Vector3(8, 33, 8), new Vector3(0, 30, 0), 1, false));
-        s.Shape(40, 40, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 6, 3, "mound");
+        Mound(s, 40, 40, 6, 3);
         return s;
     }
+
+    /// <summary>
+    /// A main window of this size, shown with the edit session open.
+    /// </summary>
+    private static MainWindow WindowOn(EditSession s, double width = 1600, double height = 1000)
+    {
+        var w = new MainWindow(load: false) { Width = width, Height = height };
+        w.Show();
+        w.View.Show(s.Scene, null);
+        w.Edit(s);
+        return w;
+    }
+
+    /// <summary>
+    /// The world position of grid point (0, 0) of the area: the offset that turns grid points into world ones.
+    /// </summary>
+    private static (float Ox, float Oz) GridOrigin(EditSession s) => (s.Scene.X0 * 64f - 32f, s.Scene.Z0 * 64f - 32f);
+
+    /// <summary>
+    /// Raises a round mound of this radius and height, centred on grid point (x, z).
+    /// </summary>
+    private static void Mound(EditSession s, int x, int z, float radius, float height) => s.Shape(x, z, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), radius, height, "mound");
 
     /// <summary>
     /// An Area box between two grid points, with no soft edge.
@@ -72,7 +94,7 @@ public class ClipboardTests
         Assert.True(float.IsNaN(c.Rel[9 * c.W + 1]));
         Assert.All(CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0], _ => "Beech1")!.Rel, r => Assert.True(float.IsNaN(r)));
 
-        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+        var (ox, oz) = GridOrigin(s);
         var sel = CopyData.FromThings(s.Scene, [1], _ => "woodwall", (x, z) => H(s, (int)MathF.Round(x - ox), (int)MathF.Round(z - oz)))!;
         Assert.Equal(1, sel.Wt[sel.W / 2 + sel.H / 2 * sel.W]);
         Assert.True(float.IsNaN(sel.Rel[0]));
@@ -161,11 +183,8 @@ public class ClipboardTests
     [AvaloniaFact]
     public void CtrlCAndCtrlVInTheWindow()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
         var s = Area();
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = WindowOn(s);
         w.KeyPress(Key.B, RawInputModifiers.None, PhysicalKey.B, "b");
         w.View.Area.Points.Add(new Vector2(32, 32));
         w.View.Area.Points.Add(new Vector2(48, 48));
@@ -189,11 +208,8 @@ public class ClipboardTests
     [AvaloniaFact]
     public void TheSelectToolCopiesObjectsThatFollowTheGround()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
         var s = Area();
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = WindowOn(s);
         w.Tools.ChooseSelect();
         w.View.Select([0]);
         w.KeyPress(Key.C, RawInputModifiers.Control, PhysicalKey.C, "c");
@@ -213,13 +229,10 @@ public class ClipboardTests
     [AvaloniaFact]
     public void PastingABuildingClearsItsSite()
     {
-        var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
-        w.Show();
         var s = TestScenes.Flat(2, new WorldScene.Thing(1, Beech, new Vector3(60 - 32, 33, 60 - 32), Vector3.Zero, 1, false),
             new WorldScene.Thing(2, Beech, new Vector3(80 - 32, 30, 80 - 32), Vector3.Zero, 1, false));
-        s.Shape(60, 60, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 6, 3, "mound");
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        Mound(s, 60, 60, 6, 3);
+        var w = WindowOn(s, 1200, 900);
         float before = H(s, 60, 60), foot = H(s, 66, 60);
         // A wall 6 m west of the point clicked (its middle 1 m up: its bottom on the ground clicked).
         var wall = new CopyData
@@ -257,7 +270,7 @@ public class ClipboardTests
     {
         var s = Area();
         var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0], _ => "Beech1"), Turn = 90, Offset = -2 };
-        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+        var (ox, oz) = GridOrigin(s);
         var (prefab, position, rotation, scale) = Assert.Single(paste.Ghosts(new Vector2(90, 90), g => H(s, (int)MathF.Round(g.X), (int)MathF.Round(g.Y)), ox, oz));
         var (_, _, add) = paste.Apply(s.Ground, new Vector2(90, 90));
         var placed = Assert.Single(add).Item1;
@@ -277,7 +290,7 @@ public class ClipboardTests
         // A step of one metre: the second copy's middle on the first copy's ground.
         paste.Gap = 1 - (paste.CopyAt(at, 1).At.X - paste.CopyAt(at, 0).At.X);
         Assert.Equal(1f, paste.CopyAt(at, 1).At.X - paste.CopyAt(at, 0).At.X, 3);
-        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+        var (ox, oz) = GridOrigin(s);
         var ghosts = paste.Ghosts(at, g => H(s, (int)MathF.Round(g.X), (int)MathF.Round(g.Y)), ox, oz);
         var (_, _, add) = paste.Apply(s.Ground, at);
         Assert.Equal(ghosts.Select(g => g.Position), add.Select(a => a.Item1.Position));
@@ -291,7 +304,7 @@ public class ClipboardTests
         int wall = StableHash.Of("woodwall");
         var s = Area();
         // On the mound's side: two walls one above the other, a tree beside them.
-        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+        var (ox, oz) = GridOrigin(s);
         float gy = H(s, 37, 40);
         s.Scene.Things.Add(new WorldScene.Thing(2, wall, new Vector3(37 + ox, gy + 1, 40 + oz), Vector3.Zero, 0, true));
         s.Scene.Things.Add(new WorldScene.Thing(3, wall, new Vector3(37 + ox, gy + 3, 40 + oz), Vector3.Zero, 0, true));
@@ -333,7 +346,7 @@ public class ClipboardTests
     {
         var s = TestScenes.Flat();
         s.Ground.NoLimit = true;
-        s.Shape(40, 40, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 8, 12, "mound");
+        Mound(s, 40, 40, 8, 12);
         s.Ground.NoLimit = false;
         Assert.Equal(42, H(s, 40, 40), 1);
         s.Scene.Things.Add(new WorldScene.Thing(1, StableHash.Of("woodwall"), new Vector3(8, 43, 8), Vector3.Zero, 0, true));
@@ -376,7 +389,7 @@ public class ClipboardTests
         Assert.NotEmpty(paste.Site);
         Assert.Equal(30, s.Ground.HeightOf(90 * s.Ground.W + 90), 3);
 
-        s.Shape(60, 60, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 6, 3, "mound");
+        Mound(s, 60, 60, 6, 3);
         float before = s.Ground.HeightOf(60 * s.Ground.W + 60);
         paste.Clip = new CopyData
         {
@@ -398,11 +411,8 @@ public class ClipboardTests
     [AvaloniaFact]
     public void APastePastTheOpenAreaIsRefused()
     {
-        var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
-        w.Show();
         var s = Area();
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = WindowOn(s, 1200, 900);
         w.View.Paste.Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0], _ => "Beech1");
         Assert.True(w.View.Paste.Fits(new Vector2(90, 90), s.Ground.W, s.Ground.H));
         Assert.False(w.View.Paste.Fits(new Vector2(5, 90), s.Ground.W, s.Ground.H));
