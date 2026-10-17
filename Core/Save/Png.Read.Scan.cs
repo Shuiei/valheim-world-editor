@@ -7,7 +7,7 @@ public static partial class Png
     /// <summary>Walks the chunks of a PNG: its header (if any), its text entries and its compressed picture data.</summary>
     /// <param name="bytes">The whole picture, signature included.</param>
     /// <returns>The header (null when there is none), the text entries, and the joined image data.</returns>
-    private static (PngHeader? Header, Dictionary<string, string> Text, byte[] Idat) ScanChunks(byte[] bytes)
+    internal static (PngHeader? Header, Dictionary<string, string> Text, byte[] Idat) ScanChunks(byte[] bytes)
     {
         PngHeader? header = null;
         Dictionary<string, string> text = [];
@@ -67,7 +67,7 @@ public static partial class Png
     /// <summary>Adds a text entry (a keyword, a zero byte, then the text, both Latin-1); an entry with no keyword is skipped.</summary>
     /// <param name="text">The text entries read so far.</param>
     /// <param name="data">The text chunk's data.</param>
-    private static void AddText(Dictionary<string, string> text, ReadOnlySpan<byte> data)
+    internal static void AddText(Dictionary<string, string> text, ReadOnlySpan<byte> data)
     {
         int zero = data.IndexOf((byte)0);
         if (zero > 0)

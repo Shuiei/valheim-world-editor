@@ -85,4 +85,69 @@ public class CheckedReadsTests
     {
         Assert.Throws<InvalidDataException>(() => CheckedReads.Gunzip([1, 2, 3, 4], 100));
     }
+
+    [Fact]
+    public void BytesLeftInASeekableStreamAreCountedFromThePosition()
+    {
+        using var r = new BinaryReader(new MemoryStream([1, 2, 3, 4]));
+        r.ReadByte();
+
+        Assert.Equal(3, r.Remaining());
+    }
+
+    [Fact]
+    public void BytesLeftInAStreamThatCannotSeekAreNotLimited()
+    {
+        using var gz = new GZipStream(new MemoryStream(), CompressionMode.Compress);
+        using var r = new BinaryReader(gz);
+
+        Assert.Equal(long.MaxValue, r.Remaining());
+    }
+
+    [Fact]
+    public void ExactBytesAreReadFromTheCurrentPosition()
+    {
+        using var r = new BinaryReader(new MemoryStream([1, 2, 3, 4]));
+        r.ReadByte();
+
+        Assert.Equal([2, 3], r.ReadExactBytes(2));
+    }
+
+    [Fact]
+    public void AskingForMoreBytesThanTheStreamHoldsIsRefused()
+    {
+        using var r = new BinaryReader(new MemoryStream([1, 2, 3, 4]));
+
+        Assert.Throws<EndOfStreamException>(() => r.ReadExactBytes(5));
+    }
+
+    [Fact]
+    public void ANegativeByteCountIsRefusedBeforeReading()
+    {
+        using var r = new BinaryReader(new MemoryStream([1, 2, 3, 4]));
+
+        Assert.Throws<InvalidDataException>(() => r.ReadExactBytes(-1));
+    }
+
+    [Fact]
+    public void AMegabyteAndAHalfReadFromAStreamThatCannotSeekIsReadWhole()
+    {
+        byte[] data = new byte[1_500_000];
+        for (int i = 0; i < data.Length; i++)
+        {
+            data[i] = (byte)(i * 7);
+        }
+        using var r = new BinaryReader(new GZipStream(new MemoryStream(SaveGzipHelpers.Gzip(data)), CompressionMode.Decompress));
+
+        Assert.Equal(data, r.ReadExactBytes(data.Length));
+    }
+
+    [Fact]
+    public void AMegabyteAndAHalfAskedFromAStreamThatCannotSeekPastItsEndIsRefused()
+    {
+        byte[] data = new byte[1_500_000];
+        using var r = new BinaryReader(new GZipStream(new MemoryStream(SaveGzipHelpers.Gzip(data)), CompressionMode.Decompress));
+
+        Assert.Throws<EndOfStreamException>(() => r.ReadExactBytes(data.Length + 1));
+    }
 }
