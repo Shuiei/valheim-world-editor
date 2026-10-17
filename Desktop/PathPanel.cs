@@ -10,7 +10,7 @@ namespace TerrainEditor.Desktop;
 /// The Path tool's panel, like the web editor's: the action, width and soft edge, each action's own values, curve and
 /// natural look, Apply and Clear, and how long the line is.
 /// </summary>
-public sealed class PathPanel
+public sealed partial class PathPanel
 {
     /// <summary>The panel itself, shown over the view while the Path tool is on.</summary>
     public Control Card { get; }
@@ -69,6 +69,10 @@ public sealed class PathPanel
     private readonly Dictionary<Control, PathTool.Action[]> _rows = [];
     /// <summary>The Natural look's bump rows (the brush's noise amplitude and size).</summary>
     private readonly Control _naturalRows;
+    /// <summary>The width slider's value, shown with its unit.</summary>
+    private readonly TextBlock _widthShown = new();
+    /// <summary>The soft edge slider's value, shown with its unit.</summary>
+    private readonly TextBlock _softShown = new();
     /// <summary>Apply was asked for (the window does it: it has the edit session).</summary>
     public event Action? ApplyAsked;
     /// <summary>The action was changed in the list.</summary>
@@ -97,162 +101,17 @@ public sealed class PathPanel
         var actions = Enum.GetValues<PathTool.Action>();
         ActionBox = new ComboBox { ItemsSource = actions.Select(a => PathTool.Label(a).Shown).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
         ActionBox.SelectionChanged += (_, _) => { _path.Act = actions[Math.Max(0, ActionBox.SelectedIndex)]; ShowRows(); _path.Notify(); ActionChanged?.Invoke(_path.Act); };
-        var widthV = new TextBlock();
-        WidthSlider = Slide(1, 40, 0.5, _path.Width, widthV, "m", v => { _path.Width = v; _path.Notify(); });
-        var softV = new TextBlock();
-        SoftSlider = Slide(0, 15, 0.5, _path.Soft, softV, "m", v => _path.Soft = v);
-        HeightBox.ValueChanged += (_, e) => _path.Height = (float)(e.NewValue ?? 0);
-        AmountBox.ValueChanged += (_, e) => _path.Amount = (float)(e.NewValue ?? 0);
-        StartBox.ValueChanged += (_, e) => { _path.Start = (float)(e.NewValue ?? 0); if (!_filling) { _path.RampEdited = true; } };
-        EndBox.ValueChanged += (_, e) => { _path.End = (float)(e.NewValue ?? 0); if (!_filling) { _path.RampEdited = true; } };
-        DepthBox.ValueChanged += (_, e) => _path.Depth = (float)(e.NewValue ?? 0);
+        WidthSlider = Slide(1, 40, 0.5, _path.Width, _widthShown, "m", v => { _path.Width = v; _path.Notify(); });
+        SoftSlider = Slide(0, 15, 0.5, _path.Soft, _softShown, "m", v => _path.Soft = v);
         CavePresetBox = new ComboBox { ItemsSource = _presets.Select(p => p.Name).ToArray(), SelectedIndex = 1, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
         var rocks = Enum.GetValues<PathTool.CaveRock>();
         RockBox = new ComboBox { ItemsSource = rocks.Select(PathTool.Label).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
-        RockBox.SelectionChanged += (_, _) => _path.Rock = rocks[Math.Max(0, RockBox.SelectedIndex)];
-        CaveDepthBox.Minimum = 2;
-        CaveDepthBox.Maximum = 20;
-        HeadroomBox.Minimum = 2;
-        HeadroomBox.Maximum = 15;
-        CaveDepthBox.ValueChanged += (_, e) => _path.CaveDepth = (float)(e.NewValue ?? 7.5m);
-        HeadroomBox.ValueChanged += (_, e) => _path.Headroom = (float)(e.NewValue ?? 4.5m);
-        CavePresetBox.SelectionChanged += (_, _) => CavePreset(false);
-        CaveRandomButton.Click += (_, _) => CavePreset(true);
-        CavePresetBox.Tip("cave.preset");
-        CaveRandomButton.Tip("cave.randomize");
-        CaveDepthBox.Tip("cave.depth");
-        HeadroomBox.Tip("cave.headroom");
-        RockBox.Tip("cave.rock");
-        DepthBox.Minimum = 0.25m;
-        CurveBox.IsCheckedChanged += (_, _) => { _path.Curved = CurveBox.IsChecked == true; _path.Notify(); };
-        NaturalBox.IsCheckedChanged += (_, _) => { _path.Natural = NaturalBox.IsChecked == true; ShowRows(); };
-        ApplyButton.Click += (_, _) => ApplyAsked?.Invoke();
-        ActionBox.Tip("path.action");
-        WidthSlider.Tip("path.width");
-        SoftSlider.Tip("path.soft");
-        HeightBox.Tip("path.height");
-        AmountBox.Tip("path.amount");
-        StartBox.Tip("path.start");
-        EndBox.Tip("path.end");
-        DepthBox.Tip("path.depth");
-        CurveBox.Tip("path.curve");
-        NaturalBox.Tip("path.natural");
-        ApplyButton.Tip("path.apply");
-        ClearButton.Tip("path.clear");
-        ClearButton.Click += (_, _) => _path.Clear();
-        var ampV = new TextBlock();
-        var sizeV = new TextBlock();
-        _naturalRows = new StackPanel
-        {
-            Spacing = 4,
-            Children =
-            {
-                Ui.Row(Lang.T("brush.label.bumps"), Slide(0.2, 4, 0.1, brush.NoiseAmp, ampV, "m", v => brush.NoiseAmp = v).Tip("natural.amp"), ampV),
-                Ui.Row(Lang.T("brush.label.bumpSize"), Slide(4, 60, 1, brush.NoiseSize, sizeV, "m", v => brush.NoiseSize = v).Tip("natural.size"), sizeV),
-            },
-        };
-        Control Only(Control c, params PathTool.Action[] for_)
-        {
-            _rows[c] = for_;
-            return c;
-        }
-        Control R(string label, NumericUpDown box, params PathTool.Action[] for_)
-        {
-            var r = Ui.Row(label, box, M());
-            _rows[r] = for_;
-            return r;
-        }
-        Card = Ui.AsCard(new Border
-        {
-            VerticalAlignment = VerticalAlignment.Top,
-            Child = new StackPanel
-            {
-                Width = 300,
-                Spacing = 6,
-                Children =
-                {
-                    new TextBlock { Text = Lang.T("rail.label.path"), FontSize = 14, FontWeight = FontWeight.SemiBold },
-                    Ui.Row(Lang.T("path.label.action"), ActionBox),
-                    Ui.Row(Lang.T("path.label.width"), WidthSlider, widthV),
-                    Ui.Row(Lang.T("path.label.soft"), SoftSlider, softV),
-                    R(Lang.T("common.height"), HeightBox, PathTool.Action.Flatten),
-                    R(Lang.T("path.label.amount"), AmountBox, PathTool.Action.Raise, PathTool.Action.Lower),
-                    R(Lang.T("path.label.start"), StartBox, PathTool.Action.Ramp),
-                    R(Lang.T("path.label.end"), EndBox, PathTool.Action.Ramp),
-                    R(Lang.T("path.label.depth"), DepthBox, PathTool.Action.River),
-                    Only(Ui.Row(Lang.T("common.preset"), CavePresetBox, CaveRandomButton), PathTool.Action.Cave),
-                    Only(CaveHelp, PathTool.Action.Cave),
-                    R(Lang.T("path.label.depth"), CaveDepthBox, PathTool.Action.Cave),
-                    R(Lang.T("cave.label.headroom"), HeadroomBox, PathTool.Action.Cave),
-                    Only(Ui.Row(Lang.T("cave.label.roof"), RockBox), PathTool.Action.Cave),
-                    CurveBox,
-                    NaturalBox,
-                    _naturalRows,
-                    new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ApplyButton, ClearButton } },
-                    Info,
-                    new TextBlock
-                    {
-                        Text = Lang.T("path.hint.draw"),
-                        FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
-                    },
-                },
-            },
-        });
+        WireCave(rocks);
+        WireControls();
+        _naturalRows = BuildNaturalRows(brush);
+        Card = BuildCard();
         _path.Changed += Refresh;
         ShowRows();
         Refresh();
-    }
-
-    /// <summary>The cave preset's values (random: each within about 15% of them, and new boulders).</summary>
-    private void CavePreset(bool random)
-    {
-        var p = _presets[Math.Max(0, CavePresetBox.SelectedIndex)];
-        float F() => random ? 0.85f + 0.3f * (float)_random.NextDouble() : 1;
-        static decimal Half(float v) => Math.Round((decimal)v * 2) / 2;
-        WidthSlider.Value = (double)Half(p.Width * F());
-        SoftSlider.Value = (double)Half(p.Soft * F());
-        CaveDepthBox.Value = Math.Min(20, Half(p.Depth * F()));
-        HeadroomBox.Value = Half(p.Headroom * F());
-        _path.Seed = random ? _random.Next() : _path.Seed;
-        CaveHelp.Text = random ? p.Help + " " + Lang.T("cave.hint.randomized") : p.Help;
-    }
-
-    /// <summary>The Cave button: the Cave action with its preset's values.</summary>
-    public void ChooseCave()
-    {
-        ActionBox.SelectedIndex = Array.IndexOf(Enum.GetValues<PathTool.Action>(), PathTool.Action.Cave);
-        CavePreset(false);
-    }
-
-    /// <summary>Shows only the rows of the current action, and the bump rows when Natural look is on.</summary>
-    private void ShowRows()
-    {
-        foreach (var (row, for_) in _rows)
-        {
-            row.IsVisible = for_.Contains(_path.Act);
-        }
-        _naturalRows.IsVisible = _path.Natural;
-    }
-
-    /// <summary>
-    /// The line or a value picked with Alt changed: refills the boxes (the ramp's ends follow the ground at the line's
-    /// ends until typed in), shows the line's length and redraws it.
-    /// </summary>
-    public void Refresh()
-    {
-        _filling = true;
-        var pts = _path.Points;
-        // The ramp's ends follow the ground at the line's ends until typed in.
-        if (pts.Count > 0 && !_path.RampEdited)
-        {
-            _path.Start = MathF.Round(_view.GridHeight(pts[0]), 1);
-            _path.End = MathF.Round(_view.GridHeight(pts[^1]), 1);
-        }
-        StartBox.Value = (decimal)_path.Start;
-        EndBox.Value = (decimal)_path.End;
-        HeightBox.Value = (decimal)_path.Height;
-        _filling = false;
-        Info.Text = pts.Count > 0 ? Lang.T("path.hint.line", pts.Count, PathTool.Length(_path.Curve())) : Lang.T("path.hint.noLine");
-        _view.LassoChanged();
     }
 }

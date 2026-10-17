@@ -1,5 +1,4 @@
 using System.Text.Json;
-using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -11,18 +10,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 [Collection("Visual")]
 [Trait("Category", "Visual")]
-public sealed class GlViewDrawingTests(EditorProcess editor) : IDisposable
+public sealed class GlViewDrawingTests(EditorProcess editor) : WorldsFolder("vwe-visual-draw-")
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-visual-draw-" + Guid.NewGuid().ToString("N")[..8]);
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        if (Directory.Exists(_dir))
-        {
-            Directory.Delete(_dir, true);
-        }
-    }
 
     /// <summary>
     /// A fresh copy of the test world, opened, its area around zone 0, 0 in the 3D view (3 zones across), the camera
@@ -31,13 +20,7 @@ public sealed class GlViewDrawingTests(EditorProcess editor) : IDisposable
     private void OpenArea()
     {
         Assert.SkipUnless(editor.Available, editor.Why ?? "");
-        string world = Path.Combine(_dir, "CITest");
-        Directory.CreateDirectory(world);
-        foreach (string f in Directory.GetFiles(Path.Combine(Fixtures.Root, "CITest")))
-        {
-            File.Copy(f, Path.Combine(world, Path.GetFileName(f)));
-        }
-        editor.Send($"world {world}");
+        editor.Send($"world {TestWorldCopy.CopyInto(Dir)}");
         Do("area 0 0 3", "key Escape", "camera 0 0 0 60 120");
     }
 
@@ -57,7 +40,7 @@ public sealed class GlViewDrawingTests(EditorProcess editor) : IDisposable
     /// </summary>
     private void Picture(string name)
     {
-        string path = Path.Combine(_dir, name + ".png");
+        string path = Path.Combine(Dir, name + ".png");
         editor.Send($"picture {path}");
         Assert.True(File.Exists(path), path);
     }

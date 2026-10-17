@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace TerrainEditor.App;
@@ -7,7 +6,7 @@ namespace TerrainEditor.App;
 /// What the app remembers between runs, per user: settings.json in the app's data folder
 /// (~/.local/share/ValheimWorldEditor on Linux, %LOCALAPPDATA%\ValheimWorldEditor on Windows).
 /// </summary>
-public sealed class AppSettings
+public sealed partial class AppSettings
 {
     /// <summary>
     /// The Valheim game folder chosen in Settings (null: found automatically in the Steam libraries).
@@ -172,135 +171,6 @@ public sealed class AppSettings
     /// are written.
     /// </summary>
     private bool _fileMissing;
-
-    /// <summary>
-    /// Reads the settings file. A missing file gives the defaults; one that is not valid JSON is first copied aside as
-    /// settings.json.bad; one that cannot be read gives the defaults with <c>FileUnread</c> set, which are not saved
-    /// over it.
-    /// </summary>
-    public static AppSettings Load()
-    {
-        lock (Lock)
-        {
-            // The path is found once: finding it can fail too (the data folder cannot be made).
-            string path;
-            string? text;
-            try
-            {
-                path = FilePath;
-                text = ReadText(path);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                Log.Caught(ex, "reading settings.json (the defaults are used for now, and it is not saved over)");
-                return new AppSettings { FileUnread = true };
-            }
-            if (text == null)
-            {
-                return new AppSettings { _fileMissing = true };
-            }
-            try
-            {
-                return (JsonSerializer.Deserialize<AppSettings>(text) ?? new AppSettings()).WithoutNulls();
-            }
-            catch (JsonException ex)
-            {
-                // Not readable: kept aside as settings.json.bad (the next save would write over it).
-                Log.Caught(ex, "reading settings.json (kept as settings.json.bad, starting from the defaults)");
-                try
-                {
-                    File.Copy(path, path + ".bad", overwrite: true);
-                }
-                catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
-                {
-                    Log.Caught(copy, "keeping the unreadable settings.json as settings.json.bad");
-                }
-                return new AppSettings();
-            }
-        }
-    }
-
-    /// <summary>
-    /// The settings file's text, or null when there is none. A read that fails (the file held by a sync or antivirus
-    /// program for a moment: IOException, or access denied while it is) is tried again twice, 100 ms apart, before
-    /// its exception goes up; a file not there is looked for once more (one being put back by such a program), and
-    /// none the second time is none (no data folder: none at once).
-    /// </summary>
-    /// <param name="path">The settings file.</param>
-    private static string? ReadText(string path)
-    {
-        for (int attempt = 0; ; attempt++)
-        {
-            try
-            {
-                return File.ReadAllText(path);
-            }
-            catch (DirectoryNotFoundException e)
-            {
-                Log.CaughtBrief(e, "reading settings.json (none yet: the defaults)");
-                return null;
-            }
-            catch (FileNotFoundException e) when (attempt > 0)
-            {
-                Log.CaughtBrief(e, "reading settings.json (none yet: the defaults)");
-                return null;
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < 2)
-            {
-                Log.CaughtBrief(ex, "reading settings.json (tried again in 100 ms)");
-                Thread.Sleep(100);
-            }
-        }
-    }
-
-    /// <summary>
-    /// JSON options for writing the settings file, indented so it stays readable by hand.
-    /// </summary>
-    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
-
-    /// <summary>
-    /// A file that cannot be written (locked, read-only) is left as it was: the settings stay in memory. So is one
-    /// that could not be read when these were loaded (<c>FileUnread</c>), or that was not there then and is now
-    /// (another program put it back): the user's settings are in it.
-    /// </summary>
-    /// <returns>Null when saved, else why not (also logged).</returns>
-    public string? Save()
-    {
-        lock (Lock)
-        {
-            string? problem = null;
-            if (FileUnread)
-            {
-                // Not its path: finding it may be what failed then (the data folder could not be made).
-                problem = "settings.json could not be read when the editor started, and is left as it is.";
-                Console.WriteLine($"Settings: not saved: {problem}");
-            }
-            else
-            {
-                // Found once, as in Load: the logs of a failure to find it must not look for it again.
-                string? path = null;
-                try
-                {
-                    path = FilePath;
-                    // Only the user can read it, from the start: it holds Claude's token. Not over a file that was not
-                    // there at the start: the move itself refuses one put there since.
-                    SafeFile.WriteAllText(path, JsonSerializer.Serialize(this, Indented), UnixFileMode.UserRead | UnixFileMode.UserWrite, overwrite: !_fileMissing);
-                    _fileMissing = false;
-                }
-                catch (IOException ex) when (_fileMissing && path != null && File.Exists(path))
-                {
-                    Log.Caught(ex, "saving settings.json (not there at the start, now put back by another program: left as it is)");
-                    problem = $"{path} was not there when the editor started and is now (put back by another program?), and is left as it is.";
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                    Log.Caught(ex, "saving settings.json (the settings stay in memory)");
-                    problem = $"could not write {path ?? "settings.json"}: {ex.Message}";
-                }
-            }
-            return problem;
-        }
-    }
 
     /// <summary>
     /// These settings with lists the file gave as null ("Recent": null), or entries of them null, made empty or left

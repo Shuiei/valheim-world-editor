@@ -17,6 +17,7 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("DataDir")]
 public sealed class BundleModelsModsTests : IDisposable
 {
+    private static readonly float[] Expected1 = [0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f];
     private readonly string? _dataDir = AppSettings.DataDirOverride;
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-modmodels-" + Guid.NewGuid().ToString("N")[..8]);
     private readonly TestGame _game = new(), _mods = new();
@@ -238,7 +239,7 @@ public sealed class BundleModelsModsTests : IDisposable
         var models = Models();
 
         var mesh = models.Mesh($"+finemod:{_modBeam}")!;
-        Assert.Equal(new[] { 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f }, mesh.Vertices[..8]);
+        Assert.Equal(Expected1, mesh.Vertices[..8]);
         Assert.Equal(new uint[] { 0, 1, 2 }, mesh.Submeshes[0]);
         // Its texture in the mod's bundles too.
         Assert.Equal($"+finemod:{_fineTexture}", models.Material($"+finemod:{_fineWood}").Map);

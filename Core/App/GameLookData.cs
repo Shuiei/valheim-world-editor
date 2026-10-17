@@ -5,7 +5,7 @@ namespace TerrainEditor.App;
 /// textures (its material Heightmap_basematerial and two texture arrays), and the world map's textures
 /// (material "minimap"). What the Python copy made as files (game-look/terrain, game-look/maptex).
 /// </summary>
-public static class GameLookData
+public static partial class GameLookData
 {
     /// <summary>
     /// Pixels, RGBA, rows in the order asked (Unity keeps them bottom first).
@@ -77,21 +77,32 @@ public static class GameLookData
                 throw new InvalidDataException($"The terrain's texture {prop} could not be read.");
             }
         }
-        var programs = (mat.ShaderAt is { } sh ? game.LoadShader(sh) : null) ?? throw new InvalidDataException("The terrain shader could not be read.");
-        string fragment;
+        var programs = mat.ShaderAt is { } sh ? game.LoadShader(sh) : null;
+        string fragment = TerrainFragment(programs, vulkan);
+        return new Terrain(fragment, Array(game, "terrain_d_array.texture2darray"), Array(game, "terrain_n_array.texture2darray"), textures);
+    }
+
+    /// <summary>
+    /// The terrain's fragment shader as GLSL: its OpenGL program, or its Vulkan one through SPIR-V when there is no
+    /// OpenGL one (or <paramref name="vulkan"/> asks for it). Throws InvalidDataException when neither is there.
+    /// </summary>
+    /// <param name="programs">The terrain shader's programs, or null when it could not be read.</param>
+    /// <param name="vulkan">Take the Vulkan program even when there is an OpenGL one.</param>
+    private static string TerrainFragment(GameBundles.ShaderPrograms? programs, bool vulkan)
+    {
+        if (programs is null)
+        {
+            throw new InvalidDataException("The terrain shader could not be read.");
+        }
         if (programs.Platforms.Contains(GameShader.OpenGlCore) && !vulkan)
         {
-            fragment = GameShader.FromOpenGl(programs.Blobs[GameShader.OpenGlCore]);
+            return GameShader.FromOpenGl(programs.Blobs[GameShader.OpenGlCore]);
         }
-        else if (programs.Platforms.Contains(GameShader.Vulkan))
+        if (programs.Platforms.Contains(GameShader.Vulkan))
         {
-            fragment = TerrainShader.FromSpirv(GameShader.FromVulkan(programs.Blobs[GameShader.Vulkan], programs.Deferred));
+            return TerrainShader.FromSpirv(GameShader.FromVulkan(programs.Blobs[GameShader.Vulkan], programs.Deferred));
         }
-        else
-        {
-            throw new InvalidDataException($"The terrain shader has no OpenGL or Vulkan program (platforms {string.Join(", ", programs.Platforms)}): this copy of the game cannot give the editor its terrain shader.");
-        }
-        return new Terrain(fragment, Array(game, "terrain_d_array.texture2darray"), Array(game, "terrain_n_array.texture2darray"), textures);
+        throw new InvalidDataException($"The terrain shader has no OpenGL or Vulkan program (platforms {string.Join(", ", programs.Platforms)}): this copy of the game cannot give the editor its terrain shader.");
     }
 
     /// <summary>
@@ -113,60 +124,5 @@ public static class GameLookData
             }
         }
         return res;
-    }
-
-    /// <summary>
-    /// A texture's top mip level as RGBA, rows turned top first with <c>flip</c>; null when it cannot be read or
-    /// converted.
-    /// </summary>
-    private static Picture? Texture(GameBundles game, GameBundles.Where at, bool flip)
-    {
-        if (game.LoadTexture(at, int.MaxValue) is not { } t || GameTextures.Rgba(t) is not { } rgba)
-        {
-            return null;
-        }
-        if (flip)
-        {
-            Flip(rgba, t.Width, t.Height);
-        }
-        return new Picture(t.Width, t.Height, rgba);
-    }
-
-    /// <summary>
-    /// A texture array's slices as one picture, one below the other (rows bottom first). Throws InvalidDataException
-    /// when it cannot be read.
-    /// </summary>
-    private static Picture Array(GameBundles game, string file)
-    {
-        var slices = (game.Asset(file) is { } at ? game.LoadTextureArray(at) : null) ?? throw new InvalidDataException($"The terrain's texture array {file} could not be read.");
-        int w = slices[0].Width, h = slices[0].Height;
-        // In long: 4096 × 4096 × 32 slices passes int's range.
-        long size = (long)w * h * 4 * slices.Count;
-        if (size > System.Array.MaxLength)
-        {
-            throw new InvalidDataException($"The terrain's texture array {file} is too large to read here ({w} × {h} × {slices.Count}).");
-        }
-        byte[] all = new byte[size];
-        for (int i = 0; i < slices.Count; i++)
-        {
-            byte[] rgba = GameTextures.Rgba(slices[i]) ?? throw new InvalidDataException($"The terrain's texture array {file} is in a format not read here ({slices[i].Format}).");
-            Buffer.BlockCopy(rgba, 0, all, i * w * h * 4, rgba.Length);
-        }
-        return new Picture(w, h * slices.Count, all);
-    }
-
-    /// <summary>
-    /// Turns an RGBA picture upside down, in place.
-    /// </summary>
-    private static void Flip(byte[] rgba, int w, int h)
-    {
-        int row = w * 4;
-        byte[] tmp = new byte[row];
-        for (int y = 0; y < h / 2; y++)
-        {
-            Buffer.BlockCopy(rgba, y * row, tmp, 0, row);
-            Buffer.BlockCopy(rgba, (h - 1 - y) * row, rgba, y * row, row);
-            Buffer.BlockCopy(tmp, 0, rgba, (h - 1 - y) * row, row);
-        }
     }
 }

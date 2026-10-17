@@ -12,6 +12,8 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class HomesteadTests : IDisposable
 {
+    private static readonly string[] Expected2 = ["house", "wood"];
+    private static readonly string[] Expected1 = ["house", "Viking", "stone"];
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-hs-" + Guid.NewGuid().ToString("N")[..8]);
 
     /// <summary>
@@ -50,14 +52,9 @@ public class HomesteadTests : IDisposable
     /// <summary>
     /// A one-cell clipboard copy with no ground holding these pieces (name, position and yaw).
     /// </summary>
-    private static JsonObject Clip(params (string Name, float X, float Y, float Z, float Yaw)[] pieces) => new()
+    private static JsonObject Clip(params (string Name, float X, float Y, float Z, float Yaw)[] pieces)
     {
-        ["w"] = 1,
-        ["h"] = 1,
-        ["rel"] = new JsonArray(-32768),
-        ["wt"] = new JsonArray(0),
-        ["pnt"] = new JsonArray(-255, -255, -255, -255),
-        ["objects"] = new JsonArray(pieces.Select(p => (JsonNode)new JsonObject
+        JsonArray objects = [.. pieces.Select(p => (JsonNode)new JsonObject
         {
             ["name"] = p.Name,
             ["dx"] = p.X,
@@ -67,9 +64,9 @@ public class HomesteadTests : IDisposable
             ["ry"] = p.Yaw,
             ["rz"] = 0,
             ["scale"] = 0,
-        }).ToArray()),
-        ["poly"] = new JsonArray(),
-    };
+        })];
+        return BlueprintFormats.OneCellClip(objects, []);
+    }
 
     [Fact]
     public void ABlueprintIsWrittenAsHomesteadWritesThemAndReadsBack()
@@ -142,12 +139,12 @@ public class HomesteadTests : IDisposable
         File.WriteAllText(file, text);
         var e = Homestead.Read(file)!;
         Assert.Equal(("A small hut", 2), (e.Description, e.Kinds["wood_floor"]));
-        Assert.Equal(new[] { "house", "wood" }, e.Tags);
+        Assert.Equal(Expected2, e.Tags);
         string changed = Homestead.WithDetails(text, new Homestead.Details("Big hut", "Bigger", ["house"]));
         Assert.StartsWith("#Name:Big hut\n#Creator:Tester\n#Description:Bigger\n#Tags:house\n#Category:Blueprints\n", changed);
         Assert.EndsWith(text[text.IndexOf("#Pieces", StringComparison.Ordinal)..], changed);
         Assert.DoesNotContain("#Tags:", Homestead.WithDetails(text, new Homestead.Details("Hut", "", [])));
-        Assert.Equal(new[] { "house", "Viking", "stone" }, Homestead.Details.ParseTags("house, Viking,stone ,HOUSE;; "));
+        Assert.Equal(Expected1, Homestead.Details.ParseTags("house, Viking,stone ,HOUSE;; "));
     }
 
     [Fact]

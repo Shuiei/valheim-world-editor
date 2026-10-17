@@ -4,7 +4,7 @@ namespace WorldEditor.Tests.Unity;
 /// One made-up asset bundle being written: its serialized file (CAB-name), its scripts, prefabs (GameObject trees),
 /// table of contents (AssetBundle) and resource file (.resS). Saved into a bundles folder with <c>Save</c>.
 /// </summary>
-public sealed class TestBundle
+public sealed partial class TestBundle
 {
     /// <summary>
     /// The scripts made in this bundle (MonoScripts), by class name: their path ids.
@@ -74,42 +74,6 @@ public sealed class TestBundle
     public Fields RefTo(TestBundle other, long pathId) => Fields.Ref(pathId, FileOf(other));
 
     /// <summary>
-    /// The MonoScript of a class here (made on first use); its path id.
-    /// </summary>
-    public long MonoScript(string className)
-    {
-        if (!_scripts.TryGetValue(className, out long pid))
-        {
-            _scripts[className] = pid = Assets.Add(UnityClass.MonoScript, UnityTypes.MonoScript, new Fields { ["m_Name"] = className, ["m_ClassName"] = className, ["m_AssemblyName"] = "assembly_valheim.dll" });
-        }
-        return pid;
-    }
-
-    /// <summary>
-    /// Where a class's MonoScript is for this bundle's references (here, or in <c>ScriptsFrom</c>): file id and path id.
-    /// </summary>
-    private (int FileId, long PathId) ScriptOf(string className) => ScriptsFrom is { } other ? (FileOf(other), other.MonoScript(className)) : (0, MonoScript(className));
-
-    /// <summary>
-    /// Adds a MonoBehaviour of a script class (its fields from GameScripts unless given) on a GameObject.
-    /// </summary>
-    /// <param name="go">The GameObject's path id.</param>
-    /// <param name="className">The script's class.</param>
-    /// <param name="values">Its fields' values.</param>
-    /// <param name="enabled">Its m_Enabled.</param>
-    /// <param name="pathId">Its path id, when kept already.</param>
-    /// <param name="fields">Its fields, when not those of GameScripts.</param>
-    public long Mono(long go, string className, Fields? values = null, bool enabled = true, long? pathId = null, UnityField[]? fields = null)
-    {
-        var v = values ?? [];
-        var (file, script) = ScriptOf(className);
-        v["m_GameObject"] = Fields.Ref(go);
-        v["m_Enabled"] = enabled ? 1 : 0;
-        v["m_Script"] = Fields.Ref(script, file);
-        return Assets.Add(UnityClass.MonoBehaviour, fields == null ? GameScripts.Tree(className) : UnityTypes.MonoBehaviour(fields), v, Assets.Script(file, script), pathId);
-    }
-
-    /// <summary>
     /// Lists an asset in the table of contents (a prefab: "assets/....prefab").
     /// </summary>
     public void Contents(string path, long pathId) => _contents.Add((path, pathId));
@@ -140,37 +104,5 @@ public sealed class TestBundle
         root.Write();
         Contents(path ?? $"assets/prefabs/{name}.prefab", root.Go);
         return root;
-    }
-
-    /// <summary>
-    /// The bundle's bytes: its serialized file (with the table of contents) and its resource file when it has one.
-    /// </summary>
-    public byte[] ToBytes(bool lz4 = true, int blockSize = 1 << 17)
-    {
-        if (WithContents)
-        {
-            Assets.Add(UnityClass.AssetBundle, UnityTypes.AssetBundle, new Fields
-            {
-                ["m_Name"] = Name,
-                ["m_Container"] = _contents.Select(c => new Fields { ["first"] = c.Path, ["second"] = new Fields { ["asset"] = Fields.Ref(c.PathId) } }).ToList(),
-            });
-            WithContents = false;
-        }
-        var fs = new UnityFsWriter { Lz4 = lz4, BlockSize = blockSize }.File(Cab, Assets.ToBytes());
-        if (_resource.Count > 0)
-        {
-            fs.Resource(ResourceName, [.. _resource]);
-        }
-        return fs.ToBytes();
-    }
-
-    /// <summary>
-    /// Writes the bundle into a folder, under its name.
-    /// </summary>
-    public string Save(string dir, bool lz4 = true, int blockSize = 1 << 17)
-    {
-        string path = Path.Combine(dir, Name);
-        File.WriteAllBytes(path, ToBytes(lz4, blockSize));
-        return path;
     }
 }

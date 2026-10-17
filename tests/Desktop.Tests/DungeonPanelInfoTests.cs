@@ -38,10 +38,7 @@ public class DungeonPanelInfoTests
         try
         {
             var scene = WorldScene.Load(dir, 0, 0, 1);
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            w.View.Show(scene, null);
-            w.Edit(scene.Session!);
+            var w = TestWindows.Editing(scene.Session!);
             // The entrance, a copy of it half a metre up (the two overlap), and a corridor 1 m above where one
             // would join the entrance's first opening.
             var entrance = new Dungeons.Placed(StableHash.Of("cave_new_entrance02"), At, Quaternion.Identity);

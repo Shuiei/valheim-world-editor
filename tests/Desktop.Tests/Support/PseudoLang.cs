@@ -1,10 +1,6 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Avalonia.Controls;
-using Avalonia.Controls.Documents;
-using Avalonia.Controls.Primitives;
-using Avalonia.LogicalTree;
 using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -56,124 +52,6 @@ internal sealed partial class PseudoLang : IDisposable
         Lang.FolderOverride = _folderBefore;
         Lang.Use(Lang.Source);
         Directory.Delete(_folder, true);
-    }
-
-    /// <summary>
-    /// Every text <paramref name="root"/> and the controls under it show that did not come from the catalogue: text
-    /// blocks (their runs), string contents and headers, placeholders, a list's string entries, string tooltips (and
-    /// a tooltip's controls) and a window's title. The user's own typing in a text box is not looked at. A text passes
-    /// when nothing outside its ⟦…⟧ has a letter, once numbers with their units and <paramref name="data"/> are taken
-    /// out.
-    /// </summary>
-    /// <param name="root">The window or panel.</param>
-    /// <param name="data">Texts that are data, shown as they are in every language: world, prefab and player names.</param>
-    /// <returns>The texts found, in the order of the controls.</returns>
-    public static List<string> Untranslated(Control root, params string[] data)
-    {
-        var found = new List<string>();
-        var seen = new HashSet<Control>();
-        void Check(object? shown)
-        {
-            if (shown is string text && !Translated(text, data))
-            {
-                found.Add(text);
-            }
-        }
-        void Runs(InlineCollection inlines)
-        {
-            foreach (var inline in inlines)
-            {
-                switch (inline)
-                {
-                    case Run r:
-                        Check(r.Text);
-                        break;
-                    case Span s:
-                        Runs(s.Inlines);
-                        break;
-                    case InlineUIContainer container:
-                        if (container.Child is { } child)
-                        {
-                            Walk(child);
-                        }
-                        break;
-                    case LineBreak:
-                        // No text.
-                        break;
-                    default:
-                        // A kind of inline not read here would let its text through unchecked.
-                        throw new NotSupportedException($"PseudoLang cannot read a {inline.GetType().Name} in a text block.");
-                }
-            }
-        }
-        void Walk(Control c)
-        {
-            if (!seen.Add(c))
-            {
-                return;
-            }
-            if (c is TextBlock t)
-            {
-                if (t.Inlines is { Count: > 0 } inlines)
-                {
-                    Runs(inlines);
-                }
-                else
-                {
-                    Check(t.Text);
-                }
-            }
-            if (c is Window w)
-            {
-                Check(w.Title);
-            }
-            if (c is TextBox box)
-            {
-                Check(box.PlaceholderText);
-            }
-            if (c is ComboBox combo)
-            {
-                Check(combo.PlaceholderText);
-            }
-            if (c is ContentControl content)
-            {
-                Check(content.Content);
-            }
-            if (c is HeaderedContentControl headed)
-            {
-                Check(headed.Header);
-            }
-            if (c is HeaderedItemsControl headedItems)
-            {
-                Check(headedItems.Header);
-            }
-            if (c is HeaderedSelectingItemsControl headedSelecting)
-            {
-                Check(headedSelecting.Header);
-            }
-            if (c is ItemsControl items)
-            {
-                foreach (object? item in items.Items)
-                {
-                    Check(item);
-                }
-            }
-            object? tip = ToolTip.GetTip(c);
-            if (tip is Control tipControl)
-            {
-                Walk(tipControl);
-            }
-            else
-            {
-                Check(tip);
-            }
-            foreach (var child in c.GetLogicalChildren().OfType<Control>())
-            {
-                Walk(child);
-            }
-        }
-        Walk(root);
-        return found;
     }
 
     /// <summary>A number and the unit after it ("12 m", "1.5 km", "60 fps", "×3"): the same in every language.</summary>

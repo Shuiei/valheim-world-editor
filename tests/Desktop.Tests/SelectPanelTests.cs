@@ -12,24 +12,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// eyedropper and the saved selections with nobody told, and a selection that cannot be kept said so.
 /// </summary>
 [Collection("Saved selections")]
-public sealed class SelectPanelTests : IDisposable
+public sealed class SelectPanelTests : SavedSelectionsFolder
 {
-    private readonly string? _old = SavedSelections.PathOverride;
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-panel-" + Guid.NewGuid().ToString("N")[..8]);
-
-    public SelectPanelTests()
-    {
-        Directory.CreateDirectory(_dir);
-        SavedSelections.PathOverride = Path.Combine(_dir, "selections.json");
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        SavedSelections.PathOverride = _old;
-        Directory.Delete(_dir, true);
-    }
-
     private static readonly int Beech = StableHash.Of("Beech1"), Wall = StableHash.Of("wood_wall_half");
 
     [AvaloniaFact]

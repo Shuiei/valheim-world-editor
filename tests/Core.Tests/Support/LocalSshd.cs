@@ -13,6 +13,8 @@ namespace WorldEditor.Tests;
 /// </summary>
 public sealed class LocalSshd : IDisposable
 {
+    private static readonly string[] Expected2 = ["/usr/sbin/sshd", "/usr/bin/sshd", "/sbin/sshd"];
+    private static readonly string[] Expected1 = ["/usr/bin/ssh-keygen", "/usr/sbin/ssh-keygen", "/bin/ssh-keygen"];
     private readonly Process? _p;
     public string Dir { get; } = Path.Combine(Path.GetTempPath(), "vwe-sshd-" + Guid.NewGuid().ToString("N")[..8]);
     public int Port { get; }
@@ -26,8 +28,8 @@ public sealed class LocalSshd : IDisposable
 
     public LocalSshd()
     {
-        string? sshd = new[] { "/usr/sbin/sshd", "/usr/bin/sshd", "/sbin/sshd" }.FirstOrDefault(File.Exists);
-        string? keygen = new[] { "/usr/bin/ssh-keygen", "/usr/sbin/ssh-keygen", "/bin/ssh-keygen" }.FirstOrDefault(File.Exists);
+        string? sshd = Expected2.FirstOrDefault(File.Exists);
+        string? keygen = Expected1.FirstOrDefault(File.Exists);
         if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS() || sshd == null || keygen == null)
         {
             Why = "OpenSSH's sshd and ssh-keygen are needed";

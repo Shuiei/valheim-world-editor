@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using TerrainEditor.Save;
 using WorldEditor.Tests;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -33,11 +32,9 @@ internal sealed class ClaudeRun : IDisposable
     /// <summary>The stand-in game opened live, and its middle zone in 3D.</summary>
     public async Task OpenLive()
     {
-        Game = new FakeGame();
-        var game = Game;
-        await W.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label()), "Opening…");
-        W.MapPage?.Stop();
-        await W.EditArea(0, 0, 1);
+        var game = new FakeGame();
+        Game = game;
+        await StandInGameArea.OpenLive(W, game, 0, 0, 1);
     }
 
     /// <summary>The test world opened, and the zone around (0, 0) in 3D.</summary>

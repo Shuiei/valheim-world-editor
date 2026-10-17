@@ -45,6 +45,16 @@ internal static class TestScenes
     }
 
     /// <summary>
+    /// The one-zone scene of the zone that holds the first object of this kind in the world at <paramref name="dir"/>,
+    /// its edit session made.
+    /// </summary>
+    internal static WorldScene ZoneHolding(string dir, int prefab)
+    {
+        var at = WorldSave.Load(dir).Objects.First(o => o.Prefab == prefab).Position;
+        return WorldScene.Load(dir, (int)MathF.Floor((at.X + 32) / 64), (int)MathF.Floor((at.Z + 32) / 64), 1);
+    }
+
+    /// <summary>
     /// A flat 1 × 1 zone area at 35 m, with the given objects.
     /// </summary>
     internal static WorldScene FlatScene(params WorldScene.Thing[] things) => new()
