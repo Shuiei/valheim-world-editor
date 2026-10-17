@@ -16,7 +16,7 @@ public static class Stamps
 
     /// <summary>
     /// The most memory a picture may take once decoded, in bytes (8192 × 8192 colours with opacity): a larger one is
-    /// not read, since Skia throws when it cannot allocate the pixels. Also the largest picture file loaded.
+    /// not read, rather than asking for more memory than there may be. Also the largest picture file loaded.
     /// </summary>
     internal const long MostPictureBytes = 256L * 1024 * 1024;
 
@@ -136,7 +136,7 @@ public static class Stamps
         {
             return null;
         }
-        using var src = SKBitmap.Decode(codec);
+        using var src = Decoded(codec);
         if (src == null)
         {
             return null;
@@ -156,6 +156,24 @@ public static class Stamps
             }
         }
         return data;
+    }
+
+    /// <summary>
+    /// The codec's picture as SKBitmap.Decode makes it (premultiplied, no colour space), or null when its pixels cannot be
+    /// allocated or decoded: Decode throws when they cannot be allocated.
+    /// </summary>
+    /// <param name="codec">The picture's codec.</param>
+    private static SKBitmap? Decoded(SKCodec codec)
+    {
+        var info = codec.Info;
+        info = info.WithAlphaType(info.AlphaType == SKAlphaType.Unpremul ? SKAlphaType.Premul : info.AlphaType).WithColorSpace(null);
+        var bitmap = new SKBitmap();
+        if (bitmap.TryAllocPixels(info) && codec.GetPixels(info, bitmap.GetPixels()) is SKCodecResult.Success or SKCodecResult.IncompleteInput)
+        {
+            return bitmap;
+        }
+        bitmap.Dispose();
+        return null;
     }
 
     // ---- Loaded pictures, kept between runs (the weights themselves, 0..255 per pixel).

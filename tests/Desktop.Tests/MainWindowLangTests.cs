@@ -18,13 +18,21 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("DataDir")]
 public sealed class MainWindowLangTests
 {
-    [AvaloniaFact]
-    public async Task TheStatusBarShowsTheLanguageAndClaudeReadsEnglish()
+    /// <summary>
+    /// A window without a world, shown, with what it posts when it opens done (it says nothing over the messages tested).
+    /// </summary>
+    private static MainWindow ShownWindow()
     {
         var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
         w.Show();
-        // What the window posts when it opens says nothing over the messages below.
         Dispatcher.UIThread.RunJobs();
+        return w;
+    }
+
+    [AvaloniaFact]
+    public async Task TheStatusBarShowsTheLanguageAndClaudeReadsEnglish()
+    {
+        var w = ShownWindow();
         var tools = new ClaudeTools(w);
         using var pseudo = new PseudoLang();
 
@@ -117,9 +125,7 @@ public sealed class MainWindowLangTests
         try
         {
             using var pseudo = new PseudoLang();
-            var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
-            w.Show();
-            Dispatcher.UIThread.RunJobs();
+            var w = ShownWindow();
             int stamps = w.Tools.StampList.Count;
 
             w.LoadStamp(file);
@@ -134,7 +140,7 @@ public sealed class MainWindowLangTests
         }
     }
 
-    // A stamp picture that cannot be opened (gone since it was chosen, a folder) or is too large to read: said like one
+    // A stamp picture that cannot be opened (gone since it was chosen, a folder, in use) or is too large to read: said like one
     // that is not a picture, no stamp added, and logged with what failed but not where the file is.
     [AvaloniaFact]
     public void AStampPictureThatCannotBeOpenedIsSaidAndLoggedWithoutItsPath()
@@ -147,18 +153,19 @@ public sealed class MainWindowLangTests
         {
             f.SetLength(Stamps.MostPictureBytes + 1);
         }
+        // In use by another program: opened without sharing until the end.
+        string locked = Path.Combine(dir, "locked.png");
+        var holder = new FileStream(locked, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
         var stderr = Console.Error;
         using var log = new StringWriter();
         try
         {
             using var pseudo = new PseudoLang();
-            var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
-            w.Show();
-            Dispatcher.UIThread.RunJobs();
+            var w = ShownWindow();
             int stamps = w.Tools.StampList.Count;
             Console.SetError(TextWriter.Synchronized(log));
 
-            foreach (string path in new[] { Path.Combine(dir, "gone.png"), dir, large })
+            foreach (string path in new[] { Path.Combine(dir, "gone.png"), dir, large, locked })
             {
                 w.MessageText.Text = "";
                 w.LoadStamp(path);
@@ -171,12 +178,14 @@ public sealed class MainWindowLangTests
         finally
         {
             Console.SetError(stderr);
+            holder.Dispose();
             Directory.Delete(dir, recursive: true);
         }
         string logged = log.ToString();
         // (The exceptions' own messages may be in the system's language.)
         Assert.Contains("while reading the stamp picture to load (not loaded): System.IO.FileNotFoundException: ", logged);
         Assert.Contains("while reading the stamp picture to load (not loaded): System.UnauthorizedAccessException: ", logged);
+        Assert.Contains("while reading the stamp picture to load (not loaded): System.IO.IOException: ", logged);
         Assert.Contains($"Load stamp: the stamp picture is not read: {Stamps.MostPictureBytes + 1} bytes, more than {Stamps.MostPictureBytes}.", logged);
         Assert.DoesNotContain(dir, logged);
     }
