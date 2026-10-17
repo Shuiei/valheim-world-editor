@@ -302,10 +302,10 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Makes a world in <paramref name="folder"/> and opens it; on failure the New world page says why.
     /// </summary>
-    /// <returns>Null when made, else why it could not be.</returns>
+    /// <returns>Null when made, else why it could not be, in English (what Claude is told).</returns>
     internal async Task<string?> CreateWorld(string folder, string name, string seed)
     {
-        Busy($"Making the world {name}…");
+        Busy(Lang.T("newWorld.msg.making", name));
         try
         {
             await Task.Run(() => TerrainEditor.Save.WorldCreator.Create(folder, name, seed));
@@ -315,17 +315,18 @@ public sealed partial class MainWindow : Window
         {
             Console.WriteLine($"New world: could not make {name} (seed {seed}) in {folder}: {ex}");
             Busy(null);
+            var failed = Said.Of("newWorld.error.make", ex.Message);
             if (NewWorld is { } p)
             {
-                p.Problem.Text = $"Could not make the world: {ex.Message}";
+                p.Problem.Text = failed.Shown;
             }
-            return $"Could not make the world: {ex.Message}";
+            return failed.English;
         }
         Busy(null);
         NewWorld?.Dispose();
         NewWorld = null;
-        await OpenWorld(() => Task.Run(() => WorldSession.Open(folder)), $"Opening {name}…");
-        string made = $"Made {name} (seed {seed}). The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it: play it before reshaping an area here.";
+        await OpenWorld(() => Task.Run(() => WorldSession.Open(folder)), Lang.T("newWorld.msg.opening", name));
+        var made = Said.Of("newWorld.msg.made", name, seed);
         // Opened: on its map, where the status bar is not shown.
         if (World != null)
         {
@@ -333,7 +334,7 @@ public sealed partial class MainWindow : Window
         }
         else
         {
-            MessageText.Text = made;
+            Msg(made);
         }
         return null;
     }
@@ -881,13 +882,6 @@ public sealed partial class MainWindow : Window
         Tunnel.Close();
         ShowStart();
     }
-    /// <summary>
-    /// Says something in the status bar and, away from the 3D editor (its status bar not shown), in a dialog too, not
-    /// waited for.
-    /// </summary>
-    /// <param name="text">What to say.</param>
-    private void Say(string text) => Say(Said.Raw(text));
-
     /// <summary>
     /// Says something in the status bar, in the user's language with its English kept for Claude (<c>Msg</c>), and,
     /// away from the 3D editor, in a dialog too, not waited for.

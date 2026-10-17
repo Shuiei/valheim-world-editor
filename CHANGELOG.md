@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.21 — unreleased
+
+### Changed
+- **The New world page comes from the language catalogue.** Its boxes and buttons, the search's wishes and results,
+  the lists beside the map (the world, biomes, traders, bosses and dungeons with their distances), the switches and
+  tooltips over the map, why a name or seed is refused and the messages while the world is made show in the language
+  chosen in Settings; Claude is still told in English. In English nothing changes.
+
 ## v1.47.20 — unreleased
 
 ### Changed

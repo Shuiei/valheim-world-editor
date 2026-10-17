@@ -86,7 +86,7 @@ public class NewWorldPageTests
     /// <summary>
     /// The posted work run, and the window laid out and drawn (so the pointer can hit what is in it).
     /// </summary>
-    private static void Settle()
+    internal static void Settle()
     {
         Dispatcher.UIThread.RunJobs();
         AvaloniaHeadlessPlatform.ForceRenderTimerTick();
@@ -97,7 +97,7 @@ public class NewWorldPageTests
     /// Runs this on the window's thread as the app does (posted, so the page's background work comes back to the
     /// window's thread, not to the test's), with the posted work it starts.
     /// </summary>
-    private static void OnUi(Action action)
+    internal static void OnUi(Action action)
     {
         Dispatcher.UIThread.Post(action);
         Dispatcher.UIThread.RunJobs();
@@ -106,7 +106,7 @@ public class NewWorldPageTests
     /// <summary>
     /// Clicks the button (on the window's thread) and runs the posted work it starts.
     /// </summary>
-    private static void Click(Button b) => OnUi(() => b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)));
+    internal static void Click(Button b) => OnUi(() => b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)));
 
     /// <summary>
     /// Every text block's text under the control, joined with " | ", for asserting on what it shows.
