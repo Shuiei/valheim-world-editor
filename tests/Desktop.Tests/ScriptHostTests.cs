@@ -311,6 +311,56 @@ public class ScriptHostTests
         Assert.Throws<ArgumentException>(() => ScriptHost.Move(snap, ch, 0, 0, 0, 0, 0, 0, 0, 0));
     }
 
+    // Place and Move took NaN or infinite places and turns, negative sizes and points outside the area, and wrote them
+    // into the world. They are refused; NaN still means "on the ground" for Place's y and "as it was" for Move.
+    [Fact]
+    public void NonNumbersSizesBelowZeroAndPlacesOutsideTheAreaAreRefused()
+    {
+        var snap = ScriptHost.Take(Wall(), Terrain.PrefabCatalog.NameOf);
+        var ch = new ScriptHost.Changes();
+        void Place(float x, float z, float yaw = 0, float scale = 0, float y = float.NaN, float pitch = 0, float roll = 0) =>
+            ScriptHost.Place(snap, ch, "rock4_forest", x, z, yaw, scale, y, pitch, roll, false);
+        void Move(float x = float.NaN, float z = float.NaN, float y = float.NaN, float yaw = float.NaN, float pitch = float.NaN, float roll = float.NaN) =>
+            ScriptHost.Move(snap, ch, 0, x, z, y, yaw, pitch, roll, float.NaN);
+        Assert.Throws<ArgumentException>(() => Place(float.NaN, 0));
+        Assert.Throws<ArgumentException>(() => Place(0, float.PositiveInfinity));
+        Assert.Throws<ArgumentException>(() => Place(0, 0, y: float.NegativeInfinity));
+        Assert.Throws<ArgumentException>(() => Place(0, 0, yaw: float.NaN));
+        Assert.Throws<ArgumentException>(() => Place(0, 0, pitch: float.PositiveInfinity));
+        Assert.Throws<ArgumentException>(() => Place(0, 0, roll: float.NaN));
+        Assert.Throws<ArgumentException>(() => Place(0, 0, scale: -1));
+        Assert.Throws<ArgumentException>(() => Place(0, 0, scale: float.NaN));
+        Assert.Throws<ArgumentException>(() => Place(32.5f, 0));
+        Assert.Throws<ArgumentException>(() => Place(0, -40));
+        Assert.Throws<ArgumentException>(() => Move(x: float.PositiveInfinity));
+        Assert.Throws<ArgumentException>(() => Move(y: float.NegativeInfinity));
+        Assert.Throws<ArgumentException>(() => Move(yaw: float.PositiveInfinity));
+        Assert.Throws<ArgumentException>(() => Move(z: 100));
+        Assert.Empty(ch.Add);
+        Assert.Empty(ch.Moves);
+        // The area's edges count; NaN y is the ground's, 0 the prefab's size.
+        Place(-32, 32);
+        Place(32, -32, scale: 2, y: 40);
+        Move(x: -32, yaw: 90);
+        Assert.Equal(2, ch.Add.Count);
+        Assert.True(float.IsNaN(ch.Add[0].Position.Y));
+        Assert.Equal(new Vector3(-32, 31, 20), ch.Moves[0].Position);
+    }
+
+    // A piece placed inside the area near its edge, snapped 0.4 m to a wall standing beyond the edge, would end outside
+    // it: refused.
+    [Fact]
+    public void APieceSnappedOutsideTheAreaIsRefused()
+    {
+        var s = TestScenes.Flat(1, new WorldScene.Thing(7, StableHash.Of("woodwall"), new Vector3(34.2f, 31, 20), Vector3.Zero, 0, true));
+        var snap = ScriptHost.Take(s, Terrain.PrefabCatalog.NameOf);
+        var ch = new ScriptHost.Changes();
+        ch.Add.Add((StableHash.Of("woodwall"), "woodwall", new Vector3(31.8f, 31, 20), Vector3.Zero, 0, true));
+        var ex = Assert.Throws<ArgumentException>(() => ScriptHost.SnapPieces(snap, ch, TestContext.Current.CancellationToken));
+        Assert.Contains("snaps to", ex.Message);
+        Assert.Equal(31.8f, ch.Add[0].Position.X);
+    }
+
     // SnapPieces: a wall placed with snap 0.3 m off meets the one standing; without snap it stays; a wall the script
     // took away is not snapped to; Stop ends the snapping.
     [Fact]
