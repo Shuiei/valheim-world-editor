@@ -29,15 +29,15 @@ public sealed class BlueprintsPanel
     /// <summary>Whether Homestead is installed, and its blueprint folder (tests give their own).</summary>
     internal Func<Homestead.Status> FindHomestead { get; set; } = () => Homestead.Find(AppSettings.Load());
     /// <summary>Filters the list: every word somewhere in a blueprint's name, creator, description or tags.</summary>
-    internal TextBox Search { get; } = new() { PlaceholderText = "Search blueprints", FontSize = 12 };
+    internal TextBox Search { get; } = new() { PlaceholderText = Lang.T("blueprints.hint.search"), FontSize = 12 };
     /// <summary>Imports another mod's blueprint file (see <see cref="Import"/>).</summary>
-    internal Button ImportButton { get; } = new() { Content = "Import file…", FontSize = 12 };
+    internal Button ImportButton { get; } = new() { Content = Lang.T("blueprints.label.import"), FontSize = 12 };
     /// <summary>Opens an empty Workshop to build a new blueprint in.</summary>
-    internal Button NewButton { get; } = new() { Content = "New in Workshop", FontSize = 12 };
+    internal Button NewButton { get; } = new() { Content = Lang.T("blueprints.label.new"), FontSize = 12 };
     /// <summary>Edit (a blueprint file) or New in Workshop (null): the window opens the Workshop.</summary>
     public event Action<string?>? EditAsked;
     /// <summary>Opens Homestead's download page; shown only while it is not installed.</summary>
-    internal Button GetHomesteadButton { get; } = new() { Content = "Get Homestead", FontSize = 11, Padding = new Thickness(6, 1) };
+    internal Button GetHomesteadButton { get; } = new() { Content = Lang.T("blueprints.label.getHomestead"), FontSize = 11, Padding = new Thickness(6, 1) };
     /// <summary>The blueprint rows.</summary>
     internal StackPanel List { get; } = new() { Spacing = 4 };
     /// <summary>Whether Homestead is installed, and what that means for the blueprints.</summary>
@@ -50,8 +50,8 @@ public sealed class BlueprintsPanel
     private readonly Func<WorldScene?> _scene;
     /// <summary>The paste tool whose clipboard blueprints are saved from and loaded onto.</summary>
     private readonly PasteTool _paste;
-    /// <summary>A line for the status bar.</summary>
-    public event Action<string>? Message;
+    /// <summary>A line for the status bar, in the user's language and in English (for Claude).</summary>
+    public event Action<Said>? Message;
     /// <summary>✕: the window goes back to View.</summary>
     public event Action? Closed;
     /// <summary>A blueprint went onto the clipboard: the window starts pasting.</summary>
@@ -104,7 +104,7 @@ public sealed class BlueprintsPanel
                 Spacing = 6,
                 Children =
                 {
-                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "Blueprints", FontSize = 14, FontWeight = FontWeight.SemiBold }, Ui.Col(close, 1) } },
+                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = Lang.T("rail.label.blueprints"), FontSize = 14, FontWeight = FontWeight.SemiBold }, Ui.Col(close, 1) } },
                     _bannerBox,
                     new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { Search, Ui.Col(ImportButton, 1) } },
                     NewButton,
@@ -147,20 +147,19 @@ public sealed class BlueprintsPanel
         _older = Store.List();
         if (Status.Installed)
         {
-            Banner.Text = $"Homestead {Status.Version} is installed ({string.Join(", ", Status.Where.Distinct())}): these are its blueprints, shared with its hammer tab in game.";
+            Banner.Text = Lang.T("blueprints.installed", Status.Version, string.Join(", ", Status.Where.Distinct()));
             Banner.Foreground = Ui.Muted;
             _bannerBox.Background = Brushes.Transparent;
             GetHomesteadButton.IsVisible = false;
         }
         else
         {
-            Banner.Text = "Homestead is not installed in your Valheim's BepInEx (nor in a mod manager profile). Blueprints are still saved where it looks for them, "
-                + "so they show in its hammer tab, ready to build in game, once you install it.";
+            Banner.Text = Lang.T("blueprints.notInstalled");
             Banner.Foreground = new SolidColorBrush(Color.FromRgb(240, 180, 90));
             _bannerBox.Background = new SolidColorBrush(Color.FromArgb(40, 240, 160, 60));
             GetHomesteadButton.IsVisible = true;
         }
-        _folder.Text = $"Homestead's blueprints: {Ui.Tilde(Status.Folder)}." + (_older.Count > 0 ? $" Older editor blueprints: {Ui.Tilde(Store.Directory)}." : "");
+        _folder.Text = Lang.T("blueprints.folder", Ui.Tilde(Status.Folder)) + (_older.Count > 0 ? " " + Lang.T("blueprints.folderOlder", Ui.Tilde(Store.Directory)) : "");
         Render();
     }
 
@@ -236,7 +235,7 @@ public sealed class BlueprintsPanel
         {
             List.Children.Add(new TextBlock
             {
-                Text = _homestead.Count + _older.Count > 0 ? "Nothing matches." : "No blueprints yet. Copy something (Area or Select tool, Ctrl+C), then “Save blueprint…”.",
+                Text = _homestead.Count + _older.Count > 0 ? Lang.T("blueprints.noMatch") : Lang.T("blueprints.empty"),
                 FontSize = 11,
                 Foreground = Ui.Muted,
                 TextWrapping = TextWrapping.Wrap,
@@ -246,30 +245,38 @@ public sealed class BlueprintsPanel
         foreach (var e in homestead)
         {
             string id = HomesteadId + Path.GetFileName(e.Path);
-            string meta = $"{e.Pieces} piece(s){(e.Creator is { Length: > 0 } c ? $" · by {c}" : "")}{(e.World != null ? $" · from {e.World}" : "")}";
+            string meta = Meta(
+                Lang.T("blueprints.meta.pieces", e.Pieces),
+                e.Creator is { Length: > 0 } c ? Lang.T("blueprints.meta.by", c) : null,
+                e.World != null ? Lang.T("blueprints.meta.from", e.World) : null);
             var cost = Terrain.PieceCost.Of(e.Kinds);
             List.Children.Add(Row(BlueprintPictures.File(e.Picture), e.Name, meta, act =>
             {
-                act("Paste", "blueprints.paste", () => Paste(id));
-                act("Edit", "blueprints.edit", () => EditAsked?.Invoke(e.Path));
-                act("Details", "blueprints.details", async () => await EditDetails(e));
-                act(".vbuild", "blueprints.vbuild", () => Export(id, "vbuild"));
-                act("Delete", "blueprints.delete", async () => await Delete(id, e.Name));
-            }, "Cost: " + cost.Describe(), e.Description, e.Tags));
+                act(Lang.T("blueprints.label.paste"), "blueprints.paste", () => Paste(id));
+                act(Lang.T("blueprints.label.edit"), "blueprints.edit", () => EditAsked?.Invoke(e.Path));
+                act(Lang.T("blueprints.label.details"), "blueprints.details", async () => await EditDetails(e));
+                act(VbuildLabel, "blueprints.vbuild", () => Export(id, "vbuild"));
+                act(Lang.T("blueprints.label.delete"), "blueprints.delete", async () => await Delete(id, e.Name));
+            }, Lang.T("blueprints.cost", cost.Describe()), e.Description, e.Tags));
         }
         if (older.Count > 0)
         {
-            List.Children.Add(new TextBlock { Text = "Older editor blueprints", FontSize = 11.5, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 6, 0, 0) });
+            List.Children.Add(new TextBlock { Text = Lang.T("blueprints.head.older"), FontSize = 11.5, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 6, 0, 0) });
         }
         foreach (var b in older)
         {
-            string meta = $"{b.W} × {b.H} m · {b.Objects} object(s){(b.Ground ? " · ground" : "")}{(b.World != null ? $" · from {b.World}" : "")}{(b.Source != null ? $" · {b.Source}" : "")}";
+            string meta = Meta(
+                Lang.T("blueprints.meta.size", b.W, b.H),
+                Lang.T("blueprints.meta.objects", b.Objects),
+                b.Ground ? Lang.T("blueprints.meta.ground") : null,
+                b.World != null ? Lang.T("blueprints.meta.from", b.World) : null,
+                b.Source);
             List.Children.Add(Row(BlueprintPictures.Url(b.Thumb), b.Name, meta, act =>
             {
-                act("Paste", "blueprints.paste", () => Paste(b.Id));
-                act("To Homestead", "blueprints.toHomestead", () => ToHomestead(b.Id));
-                act(".vbuild", "blueprints.vbuildOld", () => Export(b.Id, "vbuild"));
-                act("Delete", "blueprints.deleteOld", async () => await Delete(b.Id, b.Name));
+                act(Lang.T("blueprints.label.paste"), "blueprints.paste", () => Paste(b.Id));
+                act(Lang.T("blueprints.label.toHomestead"), "blueprints.toHomestead", () => ToHomestead(b.Id));
+                act(VbuildLabel, "blueprints.vbuildOld", () => Export(b.Id, "vbuild"));
+                act(Lang.T("blueprints.label.delete"), "blueprints.deleteOld", async () => await Delete(b.Id, b.Name));
             }));
         }
     }
@@ -277,7 +284,7 @@ public sealed class BlueprintsPanel
     /// <summary>A blueprint as a copy (the clipboard format), its name and the world it came from, or null.</summary>
     /// <param name="id">The blueprint's id ("hs:" and its file name, or its store id).</param>
     /// <param name="problem">Why a blueprint file could not be made a copy, when that is why (null otherwise).</param>
-    private (JsonObject Clip, string Name, string? World, bool Dungeon)? Load(string id, out string? problem)
+    private (JsonObject Clip, string Name, string? World, bool Dungeon)? Load(string id, out Said? problem)
     {
         problem = null;
         if (id.StartsWith(HomesteadId, StringComparison.Ordinal))
@@ -297,7 +304,7 @@ public sealed class BlueprintsPanel
             }
             catch (InvalidDataException ex)
             {
-                problem = $"That blueprint could not be read: {ex.Message}.";
+                problem = Said.Of("blueprints.msg.unreadableWhy", ex.Message);
                 return null;
             }
             // A dungeon by its tags: pasted, it goes up behind an entrance.
@@ -340,7 +347,7 @@ public sealed class BlueprintsPanel
         }
         d = d with { Name = d.Name.Trim(), Description = d.Description.Trim() };
         if (!string.Equals(Homestead.FileName(d.Name), keep, StringComparison.OrdinalIgnoreCase) && HomesteadExists(d.Name)
-            && !await Confirm($"A blueprint called “{d.Name}” already exists. Replace it?"))
+            && !await Confirm(Lang.T("blueprints.ask.replace.text", d.Name)))
         {
             return null;
         }
@@ -353,8 +360,19 @@ public sealed class BlueprintsPanel
     /// <summary>Whether a copy holds ground (heights other than the "none" marker, -32768).</summary>
     private static bool HasGround(JsonObject clip) => clip["rel"] is JsonArray rel && rel.Any(v => v != null && (int)v != -32768);
 
-    /// <summary>The end of a message while Homestead is not installed, empty when it is.</summary>
-    private string Reminder => Status.Installed ? "" : " Homestead is not installed in your game yet: it shows there once you install it.";
+    /// <summary>The sentence ending a message while Homestead is not installed, empty when it is.</summary>
+    private Said Reminder => Status.Installed ? Said.Empty : Said.Of("blueprints.msg.notInstalledYet");
+
+    /// <summary>The sentence saying a copy's ground is not kept, when it has some (empty otherwise).</summary>
+    /// <param name="clip">The copy.</param>
+    private static Said GroundNotKept(JsonObject clip) => HasGround(clip) ? Said.Of("blueprints.msg.groundNotKept") : Said.Empty;
+
+    /// <summary>The label of the .vbuild buttons: a file format's name, the same in every language.</summary>
+    private const string VbuildLabel = ".vbuild";
+
+    /// <summary>A row's meta line: its parts that are there, separated by " · ".</summary>
+    /// <param name="parts">The parts, in order (null: left out).</param>
+    private static string Meta(params string?[] parts) => string.Join(" · ", parts.Where(p => p != null));
 
     /// <summary>
     /// Saves the clipboard as a Homestead blueprint (asks for the name; one with that name is replaced
@@ -366,12 +384,12 @@ public sealed class BlueprintsPanel
         var clip = _paste.Clip;
         if (clip == null)
         {
-            Message?.Invoke("Copy something first (Area or Select tool, Ctrl+C), then save it as a blueprint.");
+            Message?.Invoke(Said.Of("blueprints.msg.copyFirst"));
             return null;
         }
         Status = FindHomestead();
         var json = CopyFormat.ToJson(clip.WithoutBuilders());
-        if (await Ask(Named(clip.Name ?? $"Blueprint {DateTime.Now:yyyy-MM-dd HH.mm}"), json) is not { } details)
+        if (await Ask(Named(clip.Name ?? Lang.T("blueprints.defaultName", DateTime.Now)), json) is not { } details)
         {
             return null;
         }
@@ -384,11 +402,10 @@ public sealed class BlueprintsPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Message?.Invoke($"Could not save the blueprint: {ex.Message}");
+            Message?.Invoke(Said.Of("blueprints.msg.saveFailed", ex.Message));
             return null;
         }
-        Message?.Invoke($"Saved the blueprint “{name}” ({clip.Objects.Count} object(s)) for Homestead."
-            + (HasGround(json) ? " Its ground shape is not kept: Homestead blueprints hold pieces only." : "") + Reminder);
+        Message?.Invoke(Said.Of("blueprints.msg.saved", name, clip.Objects.Count) + GroundNotKept(json) + Reminder);
         Refresh();
         return name;
     }
@@ -411,7 +428,7 @@ public sealed class BlueprintsPanel
     /// A building written as a Homestead blueprint with these details, without asking (replacing one of that name),
     /// with its picture; Message tells what was done.
     /// </summary>
-    /// <returns>Null when saved, else why not.</returns>
+    /// <returns>Null when saved, else why not, in English (Claude's save_blueprint answers with it).</returns>
     internal string? SaveBuildingAs(JsonObject clip, Homestead.Details details)
     {
         Status = FindHomestead();
@@ -421,12 +438,12 @@ public sealed class BlueprintsPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            string problem = $"Could not save the blueprint: {ex.Message}";
+            var problem = Said.Of("blueprints.msg.saveFailed", ex.Message);
             Message?.Invoke(problem);
-            return problem;
+            return problem.English;
         }
         int count = (clip["objects"] as JsonArray)?.Count ?? 0;
-        Message?.Invoke($"Saved the blueprint “{details.Name}” ({count} piece(s)) for Homestead.{Reminder}");
+        Message?.Invoke(Said.Of("blueprints.msg.savedBuilding", details.Name, count) + Reminder);
         Refresh();
         return null;
     }
@@ -459,10 +476,10 @@ public sealed class BlueprintsPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Message?.Invoke($"Could not change the blueprint: {ex.Message}");
+            Message?.Invoke(Said.Of("blueprints.msg.changeFailed", ex.Message));
             return false;
         }
-        Message?.Invoke($"“{d.Name}”: details saved.");
+        Message?.Invoke(Said.Of("blueprints.msg.detailsSaved", d.Name));
         Refresh();
         return true;
     }
@@ -473,9 +490,9 @@ public sealed class BlueprintsPanel
     /// </summary>
     public void Paste(string id)
     {
-        if (Load(id, out string? problem) is not var (clip, name, from, dungeon))
+        if (Load(id, out Said? problem) is not var (clip, name, from, dungeon))
         {
-            Message?.Invoke(problem ?? "That blueprint could not be read.");
+            Message?.Invoke(problem ?? Said.Of("blueprints.msg.unreadable"));
             Refresh();
             return;
         }
@@ -487,7 +504,7 @@ public sealed class BlueprintsPanel
         }
         catch (Exception ex) when (ex is FormatException or InvalidOperationException)
         {
-            Message?.Invoke($"That blueprint could not be read: {ex.Message}.");
+            Message?.Invoke(Said.Of("blueprints.msg.unreadableWhy", ex.Message));
             Refresh();
             return;
         }
@@ -498,17 +515,17 @@ public sealed class BlueprintsPanel
         _paste.Notify();
         Card.IsVisible = false;
         Pasting?.Invoke();
-        string how = dungeon ? "click where its entrance goes: a dungeon, it goes 5000 m above, behind the entrance of the biome there." : "click to place it.";
-        Message?.Invoke($"“{name}” is on the clipboard: {how}{(missing.Count > 0 ? $" {missing.Count} kind(s) are unknown here and are left out: {string.Join(", ", missing.Take(5))}{(missing.Count > 5 ? "…" : "")}." : "")}");
+        var onClipboard = dungeon ? Said.Of("blueprints.msg.pastingDungeon", name) : Said.Of("blueprints.msg.pasting", name);
+        Message?.Invoke(onClipboard + (missing.Count > 0 ? Said.Of("blueprints.msg.unknownKinds", missing.Count, FirstFew(missing)) : Said.Empty));
     }
 
     /// <summary>An older editor blueprint as a Homestead blueprint (objects only).</summary>
     /// <returns>The name it was saved under (numbered when taken), null when not saved.</returns>
     public string? ToHomestead(string id)
     {
-        if (Load(id, out string? problem) is not var (clip, name, world, _))
+        if (Load(id, out Said? problem) is not var (clip, name, world, _))
         {
-            Message?.Invoke(problem ?? "That blueprint could not be read.");
+            Message?.Invoke(problem ?? Said.Of("blueprints.msg.unreadable"));
             return null;
         }
         string target = Homestead.FreeName(name, HomesteadExists);
@@ -516,7 +533,7 @@ public sealed class BlueprintsPanel
         {
             return null;
         }
-        Message?.Invoke($"“{target}” is now a Homestead blueprint.{(HasGround(clip) ? " Its ground shape is not kept: Homestead blueprints hold pieces only." : "")}{Reminder}");
+        Message?.Invoke(Said.Of("blueprints.msg.movedToHomestead", target) + GroundNotKept(clip) + Reminder);
         Refresh();
         return target;
     }
@@ -524,7 +541,7 @@ public sealed class BlueprintsPanel
     /// <summary>Deletes a blueprint after asking: a Homestead one with its picture, or an older one from its store.</summary>
     public async Task Delete(string id, string name)
     {
-        if (!await Confirm($"Delete the blueprint “{name}”? Its file is removed."))
+        if (!await Confirm(Lang.T("blueprints.ask.delete.text", name)))
         {
             return;
         }
@@ -553,9 +570,9 @@ public sealed class BlueprintsPanel
     /// <returns>The file written, null when not.</returns>
     public string? Export(string id, string format)
     {
-        if (Load(id, out string? problem) is not var (clip, name, _, _))
+        if (Load(id, out Said? problem) is not var (clip, name, _, _))
         {
-            Message?.Invoke(problem ?? "Could not export that blueprint.");
+            Message?.Invoke(problem ?? Said.Of("blueprints.msg.exportUnreadable"));
             return null;
         }
         string text = BlueprintFormats.Write(clip, format, name, n => Terrain.PieceCatalog.Get(StableHash.Of(n))?.Category ?? 0);
@@ -568,10 +585,12 @@ public sealed class BlueprintsPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Message?.Invoke($"Could not write {path}: {ex.Message}");
+            Message?.Invoke(Said.Of("blueprints.msg.writeFailed", path, ex.Message));
             return null;
         }
-        Message?.Invoke($"Written to {path}.{(format == "blueprint" ? " For PlanBuild, copy it into BepInEx/config/PlanBuild/blueprints." : "")} Only the objects are written, not the ground.");
+        Message?.Invoke(Said.Of("blueprints.msg.written", path)
+            + (format == "blueprint" ? Said.Of("blueprints.msg.forPlanBuild") : Said.Empty)
+            + Said.Of("blueprints.msg.objectsOnly"));
         return path;
     }
 
@@ -589,13 +608,13 @@ public sealed class BlueprintsPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Message?.Invoke($"Could not import that file: {ex.Message}");
+            Message?.Invoke(Said.Of("blueprints.msg.importFailed", ex.Message));
             return null;
         }
         var parsed = BlueprintFormats.Parse(Path.GetFileName(path), text);
         if (parsed.Pieces.Count == 0 && parsed.Terrain.Count == 0)
         {
-            Message?.Invoke("Could not import that file: no pieces found in it. Is it a .blueprint (Homestead, PlanBuild) or a .vbuild file?");
+            Message?.Invoke(Said.Of("blueprints.msg.noPieces"));
             return null;
         }
         Status = FindHomestead();
@@ -608,20 +627,21 @@ public sealed class BlueprintsPanel
         }
         catch (InvalidDataException ex)
         {
-            Message?.Invoke($"Could not import that file: {ex.Message}.");
+            Message?.Invoke(Said.Of("blueprints.msg.importInvalid", ex.Message));
             return null;
         }
-        string name = Homestead.FreeName(string.IsNullOrWhiteSpace(parsed.Name) ? "Imported" : parsed.Name, HomesteadExists);
+        string name = Homestead.FreeName(string.IsNullOrWhiteSpace(parsed.Name) ? Lang.T("blueprints.importedName") : parsed.Name, HomesteadExists);
         if (!TryWrite(() => WriteHomestead(clip, new Homestead.Details(name, parsed.Description ?? "", Homestead.Details.ParseTags(TagsOf(text))), null)))
         {
             return null;
         }
         Refresh();
         int count = (clip["objects"] as JsonArray)?.Count ?? 0;
-        Message?.Invoke($"Imported “{name}” as a Homestead blueprint: {count} piece(s)."
-            + (parsed.Terrain.Count > 0 ? " Its terrain marks are not kept: Homestead blueprints hold pieces only." : "")
-            + (unknown.Count > 0 ? $" {unknown.Count} kind(s) the game does not know were left out (mods?): {string.Join(", ", unknown.Take(5))}{(unknown.Count > 5 ? "…" : "")}." : "")
-            + (parsed.SkippedLines > 0 ? $" {parsed.SkippedLines} unreadable line(s) skipped." : "") + Reminder);
+        Message?.Invoke(Said.Of("blueprints.msg.imported", name, count)
+            + (parsed.Terrain.Count > 0 ? Said.Of("blueprints.msg.terrainNotKept") : Said.Empty)
+            + (unknown.Count > 0 ? Said.Of("blueprints.msg.unknownImported", unknown.Count, FirstFew(unknown)) : Said.Empty)
+            + (parsed.SkippedLines > 0 ? Said.Of("blueprints.msg.skippedLines", parsed.SkippedLines) : Said.Empty)
+            + Reminder);
         return name;
     }
 
@@ -635,10 +655,14 @@ public sealed class BlueprintsPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Message?.Invoke($"Could not write in the blueprints folder: {ex.Message}");
+            Message?.Invoke(Said.Of("blueprints.msg.folderFailed", ex.Message));
             return false;
         }
     }
+
+    /// <summary>The first five names, separated by commas, with "…" after them when there are more.</summary>
+    /// <param name="names">The names (kinds of objects: game data, the same in every language).</param>
+    private static string FirstFew(List<string> names) => string.Join(", ", names.Take(5)) + (names.Count > 5 ? "…" : "");
 
     /// <summary>The "#Tags:" line of a blueprint file (null when it has none).</summary>
     private static string? TagsOf(string text) => text.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase))?[6..];

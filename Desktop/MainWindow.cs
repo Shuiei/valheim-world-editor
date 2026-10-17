@@ -2607,14 +2607,14 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void WireBlueprints()
     {
-        Blueprints.Message += t => MessageText.Text = t;
+        Blueprints.Message += Msg;
         Blueprints.Pasting += () => { ViewPanelCard.IsVisible = true; StartPaste(); };
         Blueprints.AskDetails = (start, cost) => Dialogs.AskBlueprint(this, start, cost);
         Blueprints.Models = () => _models;
-        Blueprints.Confirm = text => Dialogs.Ask(this, "Blueprints", text, Lang.T("common.yes"));
+        Blueprints.Confirm = text => Dialogs.Ask(this, Lang.T("rail.label.blueprints"), text, Lang.T("common.yes"));
         Blueprints.OpenUrl = Launcher.LaunchUriAsync;
-        Blueprints.PickFile = () => Pickers.File(StorageProvider, "Import a .blueprint (Homestead, PlanBuild) or .vbuild file",
-            new Avalonia.Platform.Storage.FilePickerFileType("Blueprints") { Patterns = BlueprintPatterns });
+        Blueprints.PickFile = () => Pickers.File(StorageProvider, Lang.T("blueprints.pickTitle"),
+            new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("rail.label.blueprints")) { Patterns = BlueprintPatterns });
     }
 
     /// <summary>

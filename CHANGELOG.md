@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.14 — unreleased
+
+### Changed
+- **The Blueprints panel comes from the language catalogue.** Its buttons, the Homestead banner, each blueprint's
+  line and cost, its questions before replacing or deleting a blueprint, the import file picker and every message it
+  puts in the status bar show in the language chosen in Settings; Claude is still told in English. In English nothing
+  changes.
+
 ## v1.47.13 — unreleased
 
 ### Changed
