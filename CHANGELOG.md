@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.64 — unreleased
+
+### Fixed
+- **A blueprint file with terrain marks far apart, or with numbers that are not numbers, froze or failed the
+  import.** The ground grid of an imported .blueprint was sized from everything in the file, pieces included, with
+  no limit: pieces two kilometres apart meant millions of cells (the editor froze or ran out of memory), a huge
+  radius overflowed the grid, and "NaN" was taken as a position. A line with a number that is not finite is now
+  skipped like an unreadable one, the grid reaches only as far as the terrain marks, and marks that span more than
+  1200 m are refused with the reason, on an import and on a paste.
+
 ## v1.45.63 — unreleased
 
 ### Fixed

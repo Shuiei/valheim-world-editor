@@ -153,7 +153,7 @@ public static class BlueprintFormats
         string[] p = line.Split(';');
         var q = Quaternion.Normalize(new Quaternion(F(p[5]), F(p[6]), F(p[7]), F(p[8])));
         float scale = p.Length > 12 ? F(p[10]) : 1f;
-        return new Piece(PrefabName(p[0]), new Vector3(F(p[2]), F(p[3]), F(p[4])), ToEuler(q), scale);
+        return new Piece(PrefabName(p[0]), new Vector3(Coord(p[2]), Coord(p[3]), Coord(p[4])), ToEuler(q), scale);
     }
 
     /// <summary>
@@ -167,17 +167,35 @@ public static class BlueprintFormats
         }
         string[] p = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var q = Quaternion.Normalize(new Quaternion(F(p[1]), F(p[2]), F(p[3]), F(p[4])));
-        return new Piece(PrefabName(p[0]), new Vector3(F(p[5]), F(p[6]), F(p[7])), ToEuler(q), 1f);
+        return new Piece(PrefabName(p[0]), new Vector3(Coord(p[5]), Coord(p[6]), Coord(p[7])), ToEuler(q), 1f);
     }
 
     /// <summary>
-    /// One PlanBuild "#Terrain" line: shape;x;y;z;radius;rotation;smooth;paint.
+    /// One PlanBuild "#Terrain" line: shape;x;y;z;radius;rotation;smooth;paint. A negative radius is a FormatException
+    /// (the line cannot be read).
     /// </summary>
     private static TerrainMod ParseTerrain(string line)
     {
         string[] p = line.Split(';');
-        return new TerrainMod(p[0].ToLowerInvariant(), new Vector3(F(p[1]), F(p[2]), F(p[3])), F(p[4]),
-            (int)MathF.Round(F(p[5])), p.Length > 7 ? p[7] : "");
+        float radius = F(p[4]);
+        return radius < 0
+            ? throw new FormatException($"{p[4].Trim()} is not a radius")
+            : new TerrainMod(p[0].ToLowerInvariant(), new Vector3(Coord(p[1]), Coord(p[2]), Coord(p[3])), radius, (int)MathF.Round(F(p[5])), p.Length > 7 ? p[7] : "");
+    }
+
+    /// <summary>
+    /// How far a position may be from a blueprint's origin: ten times a Valheim world's radius, further than any
+    /// piece can be placed, and far short of where floats lose their precision and sums of them overflow.
+    /// </summary>
+    private const float MaxCoordinate = 100_000f;
+
+    /// <summary>
+    /// A position's coordinate (<c>F</c>), within <c>MaxCoordinate</c> of the origin; a FormatException beyond.
+    /// </summary>
+    private static float Coord(string s)
+    {
+        float v = F(s);
+        return MathF.Abs(v) <= MaxCoordinate ? v : throw new FormatException($"{s.Trim()} is further than any world reaches");
     }
 
     /// <summary>
@@ -191,9 +209,18 @@ public static class BlueprintFormats
     private static string Unquote(string s) => s.Length >= 2 && s[0] == '"' && s[^1] == '"' ? s[1..^1].Replace("\\\"", "\"").Replace("\\n", "\n") : s;
 
     /// <summary>
-    /// A number in invariant culture; empty gives 0.
+    /// A number in invariant culture; empty gives 0. One that is not finite ("NaN", "Infinity") is a FormatException,
+    /// like text that is not a number: the line cannot be read.
     /// </summary>
-    private static float F(string s) => string.IsNullOrWhiteSpace(s) ? 0f : float.Parse(s.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture);
+    private static float F(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s))
+        {
+            return 0f;
+        }
+        float v = float.Parse(s.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture);
+        return float.IsFinite(v) ? v : throw new FormatException($"{s.Trim()} is not a finite number");
+    }
 
     /// <summary>
     /// A number as written to blueprint files: invariant culture, at most five decimals.
@@ -248,13 +275,24 @@ public static class BlueprintFormats
         a.W * b.W - a.X * b.X - a.Y * b.Y - a.Z * b.Z);
 
     /// <summary>
+    /// The most metres the ground grid of a clip spans on a side: more than the editor's largest area (17 zones,
+    /// 1088 m). A blueprint whose terrain entries reach further is refused rather than given a grid that does not
+    /// fit in memory.
+    /// </summary>
+    public const int MaxGround = 1200;
+
+    /// <summary>
     /// The editor's clipboard (as stored: heights in cm, -32768 = no ground; weights and paint in 1/255)
     /// from a parsed file. The lowest piece rests on the point where it is pasted; ground from terrain
-    /// entries is levelled to their height, relative to the same point.
+    /// entries is levelled to their height, relative to the same point. With terrain entries, that point is
+    /// the middle of the ground they reach (the grid is centred on it and as large as they reach); without,
+    /// the middle of the pieces.
     /// </summary>
     /// <param name="bp">The parsed file.</param>
     /// <param name="known">Whether a prefab name can be placed; pieces it rejects are left out.</param>
     /// <param name="unknown">The rejected prefab names, distinct and sorted.</param>
+    /// <exception cref="InvalidDataException">The terrain entries span more than <c>MaxGround</c> metres, or one has
+    /// a negative radius (<c>Parse</c> leaves such a line out).</exception>
     public static JsonObject ToClip(Parsed bp, Func<string, bool> known, out List<string> unknown)
     {
         var pieces = bp.Pieces.Where(p => known(p.Name)).ToList();
@@ -267,12 +305,25 @@ public static class BlueprintFormats
             Grow(p.Position.X, p.Position.Z);
         }
 
-        foreach (TerrainMod t in bp.Terrain) { Grow(t.Position.X - t.Radius, t.Position.Z - t.Radius); Grow(t.Position.X + t.Radius, t.Position.Z + t.Radius); }
+        // The terrain entries' own extents: the ground grid is centred on them, and the pieces placed from there.
+        float tx0 = float.MaxValue, tx1 = float.MinValue, tz0 = float.MaxValue, tz1 = float.MinValue;
+        foreach (TerrainMod t in bp.Terrain)
+        {
+            if (t.Radius < 0)
+            {
+                throw new InvalidDataException("a terrain mark has a negative radius");
+            }
+            float r = Reach(t);
+            tx0 = Math.Min(tx0, t.Position.X - r); tx1 = Math.Max(tx1, t.Position.X + r);
+            tz0 = Math.Min(tz0, t.Position.Z - r); tz1 = Math.Max(tz1, t.Position.Z + r);
+            Grow(t.Position.X - r, t.Position.Z - r); Grow(t.Position.X + r, t.Position.Z + r);
+        }
         if (x0 > x1)
         {
             x0 = x1 = z0 = z1 = 0f;
         }
-        float cx = (x0 + x1) / 2f, cz = (z0 + z1) / 2f;
+        // Midpoints as halves: a huge radius makes an extent too large to sum, and is refused below.
+        float cx = bp.Terrain.Count > 0 ? tx0 / 2f + tx1 / 2f : x0 / 2f + x1 / 2f, cz = bp.Terrain.Count > 0 ? tz0 / 2f + tz1 / 2f : z0 / 2f + z1 / 2f;
         JsonArray objects = [];
         foreach (Piece p in pieces)
         {
@@ -297,8 +348,15 @@ public static class BlueprintFormats
         int[] rel = [-32768], wt = [0], pnt = [-255, -255, -255, -255];
         if (bp.Terrain.Count > 0)
         {
-            w = (int)MathF.Ceiling(x1 - x0) + 1;
-            h = (int)MathF.Ceiling(z1 - z0) + 1;
+            // Only the ground the terrain entries reach is gridded, however far the pieces go. A whole span starts
+            // the grid on the marks' first edge, so marks a whole number of metres apart fall on its points.
+            float spanW = tx1 - tx0, spanH = tz1 - tz0;
+            if (spanW > MaxGround || spanH > MaxGround)
+            {
+                throw new InvalidDataException($"its ground marks span {spanW:F0} m by {spanH:F0} m, more than the editor's {MaxGround} m");
+            }
+            w = (int)MathF.Ceiling(spanW) + 1;
+            h = (int)MathF.Ceiling(spanH) + 1;
             rel = [.. Enumerable.Repeat(-32768, w * h)];
             wt = new int[w * h];
             pnt = [.. Enumerable.Repeat(-255, w * h * 4)];
@@ -360,6 +418,20 @@ public static class BlueprintFormats
     /// </summary>
     public static List<Editing.ObjectField>? DataOf(JsonNode? data) =>
         data is JsonArray a && a.Count > 0 ? [.. a.Select(n => Editing.ObjectField.Parse((string?)n ?? "")).OfType<Editing.ObjectField>()] : null;
+
+    /// <summary>
+    /// How far a terrain entry reaches from its middle along x and z: its radius, or for a square turned by its
+    /// rotation, half its side times (|cos| + |sin|) of the turn (a corner, at 45° the half-diagonal).
+    /// </summary>
+    private static float Reach(TerrainMod t)
+    {
+        if (t.Shape != "square")
+        {
+            return t.Radius;
+        }
+        float a = t.Rotation * MathF.PI / 180f;
+        return t.Radius * (MathF.Abs(MathF.Cos(a)) + MathF.Abs(MathF.Sin(a)));
+    }
 
     /// <summary>
     /// Whether a terrain entry covers the ground point (x, z): a circle, or a square turned by its rotation.
