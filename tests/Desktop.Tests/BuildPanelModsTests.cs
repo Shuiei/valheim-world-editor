@@ -68,7 +68,7 @@ public sealed class BuildPanelModsTests : IDisposable
         var pieces = BuildPanel.Pieces;
         Assert.Contains(pieces, p => p.Prefab == "bfp_finewall" && p.Name == "Fine wood wall" && p.Category == BuildPanel.Mods);
         Assert.DoesNotContain(pieces, p => p.Prefab == "odin_path");
-        Assert.Contains(BuildPanel.Tabs, t => t.Category == BuildPanel.Mods);
+        Assert.Contains(BuildPanel.Mods, BuildPanel.Tabs);
         Assert.True(Workshop.Buildable("bfp_finewall"));
         Assert.False(Workshop.Buildable("odin_path"));
     }
