@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Text;
 
 namespace WorldEditor.Tests.Unity;
 
@@ -7,7 +6,7 @@ namespace WorldEditor.Tests.Unity;
 /// Lays out one object's values as its type tree says (the bytes of a Unity serialized file's objects), for
 /// <see cref="SerializedFileWriter"/>.
 /// </summary>
-internal static class SerializedFileValues
+internal static partial class SerializedFileValues
 {
     /// <summary>
     /// One value laid out as its field says: a structure field after field (missing ones as zeros), a list or text as
@@ -17,40 +16,15 @@ internal static class SerializedFileValues
     {
         if (f.Type == "string")
         {
-            byte[] b = Encoding.UTF8.GetBytes(v as string ?? "");
-            w.Write(b.Length);
-            w.Write(b);
-            if (f.Children.Count > 0 && f.Children[0].Align)
-            {
-                Pad(w);
-            }
+            Text(w, f, v);
         }
         else if (f.IsArray)
         {
-            var item = f.Children[1];
-            if (v is byte[] bytes)
-            {
-                w.Write(bytes.Length);
-                w.Write(bytes);
-            }
-            else
-            {
-                var items = v as IList ?? (v is IEnumerable e and not string ? e.Cast<object?>().ToList() : []);
-                w.Write(items.Count);
-                foreach (object? it in items)
-                {
-                    Value(w, item, it);
-                }
-            }
+            Items(w, f, v);
         }
         else if (f.Children.Count > 0)
         {
-            var d = v as Fields;
-            foreach (var c in f.Children)
-            {
-                // A list's array node takes the list's own value.
-                Value(w, c, c.IsArray && f.Children.Count == 1 ? v : d?.GetValueOrDefault(c.Name));
-            }
+            Structure(w, f, v);
         }
         else
         {
@@ -63,59 +37,35 @@ internal static class SerializedFileValues
     }
 
     /// <summary>
-    /// A number of a Unity type (null: 0).
+    /// A list as its item count then its items, or a byte array as its length then its bytes.
     /// </summary>
-    private static void Number(BinaryWriter w, string type, object? v)
+    private static void Items(BinaryWriter w, UnityField f, object? v)
     {
-        var c = System.Globalization.CultureInfo.InvariantCulture;
-        switch (type)
+        var item = f.Children[1];
+        if (v is byte[] bytes)
         {
-            case "bool":
-                w.Write(Convert.ToBoolean(v ?? false, c));
-                break;
-            case "UInt8" or "char":
-                w.Write(Convert.ToByte(v ?? 0, c));
-                break;
-            case "SInt8":
-                w.Write(Convert.ToSByte(v ?? 0, c));
-                break;
-            case "UInt16" or "unsigned short":
-                w.Write(Convert.ToUInt16(v ?? 0, c));
-                break;
-            case "SInt16" or "short":
-                w.Write(Convert.ToInt16(v ?? 0, c));
-                break;
-            case "int" or "SInt32":
-                w.Write(Convert.ToInt32(v ?? 0, c));
-                break;
-            case "unsigned int" or "UInt32":
-                w.Write(Convert.ToUInt32(v ?? 0, c));
-                break;
-            case "SInt64" or "long long":
-                w.Write(Convert.ToInt64(v ?? 0, c));
-                break;
-            case "UInt64" or "FileSize":
-                w.Write(Convert.ToUInt64(v ?? 0, c));
-                break;
-            case "float":
-                w.Write(Convert.ToSingle(v ?? 0f, c));
-                break;
-            case "double":
-                w.Write(Convert.ToDouble(v ?? 0.0, c));
-                break;
-            default:
-                throw new ArgumentException($"no number type {type}");
+            w.Write(bytes.Length);
+            w.Write(bytes);
+            return;
+        }
+        var items = v as IList ?? (v is IEnumerable e and not string ? e.Cast<object?>().ToList() : []);
+        w.Write(items.Count);
+        foreach (object? it in items)
+        {
+            Value(w, item, it);
         }
     }
 
     /// <summary>
-    /// Zeros up to the next multiple of 4 bytes.
+    /// A structure's fields in order; a list's own node takes the list's value, and a missing field is zeros.
     /// </summary>
-    internal static void Pad(BinaryWriter w)
+    private static void Structure(BinaryWriter w, UnityField f, object? v)
     {
-        while (w.BaseStream.Position % 4 != 0)
+        var d = v as Fields;
+        foreach (var c in f.Children)
         {
-            w.Write((byte)0);
+            // A list's array node takes the list's own value.
+            Value(w, c, c.IsArray && f.Children.Count == 1 ? v : d?.GetValueOrDefault(c.Name));
         }
     }
 }
