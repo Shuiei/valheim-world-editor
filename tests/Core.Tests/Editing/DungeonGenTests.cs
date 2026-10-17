@@ -8,8 +8,7 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// Generated dungeons (DungeonGen) over the samples of every style and biome (the sample settings are the data the
-/// DungeonGenHolds* classes check): the same settings make the same dungeon, every room can be reached and the boss's key
-/// before the boss's gate, and doorways join their rooms, not walls. The objects hold in the sky and are the game's own.
+/// DungeonGenHolds* classes check): the same settings make the same dungeon, and the holding checks cover every style.
 /// </summary>
 public class DungeonGenTests
 {
@@ -72,72 +71,5 @@ public class DungeonGenTests
             .SelectMany(a => ((MemberDataAttribute)a).Arguments.OfType<string>())
             .ToList();
         Assert.Equal(DungeonKit.Styles.Select(s => s.Name).Order(), styles.Order());
-    }
-
-    [Theory]
-    [MemberData(nameof(Samples))]
-    public void EveryRoomCanBeReachedAndTheKeyBeforeTheBoss(string style, string biome, int size, int levels, int seed)
-    {
-        var r = Make(style, biome, size, levels, seed);
-        var map = r.Map!;
-        int entrance = map.ToList().FindIndex(m => m.Name == "Entrance hall");
-        Assert.True(entrance >= 0);
-        HashSet<int> Reach(bool throughKeyGate)
-        {
-            var seen = new HashSet<int> { entrance };
-            var queue = new Queue<int>(seen);
-            while (queue.Count > 0)
-            {
-                int at = queue.Dequeue();
-                foreach (var d in r.Doors!.Where(d => d.A == at || d.B == at))
-                {
-                    if (d.Kind == "Key" && !throughKeyGate)
-                    {
-                        continue;
-                    }
-                    int other = d.A == at ? d.B : d.A;
-                    if (seen.Add(other))
-                    {
-                        queue.Enqueue(other);
-                    }
-                }
-            }
-            return seen;
-        }
-        Assert.Equal(map.Count, Reach(true).Count);
-        int key = map.ToList().FindIndex(m => m.Key);
-        if (key >= 0)
-        {
-            Assert.Contains(key, Reach(false));
-            Assert.DoesNotContain(map.ToList().FindIndex(m => m.Name == "Arena"), Reach(false));
-        }
-    }
-
-    [Theory]
-    [MemberData(nameof(Samples))]
-    public void RoomsDoNotOverlapAndDoorwaysJoinTheirRooms(string style, string biome, int size, int levels, int seed)
-    {
-        var r = Make(style, biome, size, levels, seed);
-        var map = r.Map!;
-        for (int i = 0; i < map.Count; i++)
-        {
-            for (int j = i + 1; j < map.Count; j++)
-            {
-                var (a, b) = (map[i], map[j]);
-                bool overlap = a.Level == b.Level && a.Floor.Any(p => b.Floor.Any(q => p.X0 < q.X1 - 0.01f && q.X0 < p.X1 - 0.01f && p.Z0 < q.Z1 - 0.01f && q.Z0 < p.Z1 - 0.01f));
-                Assert.False(overlap && !(a.Corridor && b.Corridor), $"{a.Name} and {b.Name} overlap");
-            }
-        }
-        foreach (var d in r.Doors!.Where(d => d.Kind != "Stairs"))
-        {
-            // On the edge of both rooms' boxes.
-            foreach (var room in new[] { map[d.A], map[d.B] })
-            {
-                // On a side of one of its parts (a shaped room's doorway may straddle two parts along one wall).
-                bool onEdge = room.Floor.Any(p => (MathF.Abs(d.X - p.X0) < 0.01f || MathF.Abs(d.X - p.X1) < 0.01f) && d.Z >= p.Z0 - 0.01f && d.Z <= p.Z1 + 0.01f
-                    || (MathF.Abs(d.Z - p.Z0) < 0.01f || MathF.Abs(d.Z - p.Z1) < 0.01f) && d.X >= p.X0 - 0.01f && d.X <= p.X1 + 0.01f);
-                Assert.True(onEdge, $"a {d.Kind} doorway at {d.X}, {d.Z} is not on the edge of {room.Name}");
-            }
-        }
     }
 }
