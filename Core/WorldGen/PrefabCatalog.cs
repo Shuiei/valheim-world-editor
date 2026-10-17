@@ -139,7 +139,8 @@ public static class PrefabCatalog
     /// <param name="Durability">For items that wear, their durability when new at quality 1 (0 for items that do
     /// not wear).</param>
     /// <param name="DurabilityPerLevel">What each further quality level adds to it.</param>
-    public sealed record ItemKind(int Type, int AttachOverride, int Variants, bool Attach, bool AttachSkin, float Durability = 0, float DurabilityPerLevel = 0)
+    /// <param name="MaxStack">The largest stack of the item (1 for items that do not stack).</param>
+    public sealed record ItemKind(int Type, int AttachOverride, int Variants, bool Attach, bool AttachSkin, float Durability = 0, float DurabilityPerLevel = 0, int MaxStack = 1)
     {
         /// <summary>
         /// A new item's durability at this quality (ItemDrop.ItemData.GetMaxDurability); 100 for items that do not
@@ -269,6 +270,8 @@ public static class PrefabCatalog
     /// <param name="ats">Has an "attach_skin" child.</param>
     /// <param name="dur">Durability when new at quality 1.</param>
     /// <param name="durl">Durability added per quality level.</param>
+    /// <param name="ms">Item: the largest stack (absent: 1, it does not stack). The catalogue is scanned again by each
+    /// build of the editor (GameData's cache stamp), so none lacks it.</param>
     /// <param name="is">Item stand: item types it takes.</param>
     /// <param name="isi">Item stand: items it takes whatever their type.</param>
     /// <param name="isu">Item stand: items it refuses.</param>
@@ -283,7 +286,7 @@ public static class PrefabCatalog
     /// <param name="sr">Nest: radius it spawns in.</param>
     /// <param name="max">Nest: how many it keeps around.</param>
     private sealed record Entry(int p, int d, int t, int c = 0, int i = 0, double gr = 0, int cult = 0, int cw = 0, int ch = 0, double ward = 0, double build = 0, string[]? grows = null,
-        int it = -1, int ao = 0, int var = 0, int at = 0, int ats = 0, double dur = 0, double durl = 0, int[]? @is = null, string[]? isi = null, string[]? isu = null, int[][]? @as = null,
+        int it = -1, int ao = 0, int var = 0, int at = 0, int ats = 0, double dur = 0, double durl = 0, int ms = 1, int[]? @is = null, string[]? isi = null, string[]? isu = null, int[][]? @as = null,
         string[]? cs = null, string[]? sa = null, int trig = 0, double rt = 0, int[]? lv = null, int day = 1, int night = 1, double sr = 0, int max = 0);
 #pragma warning restore IDE1006
 
@@ -308,7 +311,7 @@ public static class PrefabCatalog
             }
             if (e.it >= 0)
             {
-                d.ItemKinds[hash] = new ItemKind(e.it, e.ao, e.var, e.at != 0, e.ats != 0, (float)e.dur, (float)e.durl);
+                d.ItemKinds[hash] = new ItemKind(e.it, e.ao, e.var, e.at != 0, e.ats != 0, (float)e.dur, (float)e.durl, Math.Max(1, e.ms));
             }
             if (e.@is != null)
             {

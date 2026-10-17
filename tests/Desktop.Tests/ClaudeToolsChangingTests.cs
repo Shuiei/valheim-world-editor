@@ -79,9 +79,10 @@ public class ClaudeToolsChangingTests
         Assert.Contains("is not a container or a stand", await r.T.SetContents(tree, [new ClaudeTools.ItemSpec { Item = "Wood" }]));
         Assert.Contains("is not a sign: only signs take a text", await r.T.SetContents(tree, text: "hello"));
 
-        // A full chest: ten stacks, laid out in its slots.
-        string filled = await r.T.SetContents(chest, [.. Enumerable.Range(0, 10).Select(i => new ClaudeTools.ItemSpec { Item = "Coins", Stack = i + 1 })]);
+        // A full chest: ten stacks, laid out in its slots; one larger than a stack of coins is cut, and said.
+        string filled = await r.T.SetContents(chest, [.. Enumerable.Range(0, 10).Select(i => new ClaudeTools.ItemSpec { Item = "Coins", Stack = i == 9 ? 5000 : i + 1 })]);
         Assert.StartsWith("Changed", filled);
+        Assert.EndsWith(" Coins: stack of 5000 cut to 999 (the item's maximum).", filled);
         Assert.Equal("Claude: filled piece_chest_wood", r.W.Session!.UndoLabel);
         Assert.StartsWith("Changed", await r.T.SetContents(stand, orientation: 2));
         Assert.StartsWith("Changed", await r.T.SetContents(armour, pose: 3));

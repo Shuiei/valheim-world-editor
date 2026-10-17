@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.69 — unreleased
+
+### Fixed
+- **A chest filled through the editor could hold a stack larger than the game allows.** The inspector's Contents and
+  Claude's `fill_object` took any count up to 65535; the game shows a stack's worth and the rest is lost. The game's
+  catalogue now carries each item's largest stack (read from the game's files, so the cached catalogue is read
+  again), and a larger stack is cut to it, with a note "Stone: stack of 70000 cut to 50 (the item's maximum)" in
+  the message.
+
 ## v1.45.68 — unreleased
 
 ### Fixed

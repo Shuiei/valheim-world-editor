@@ -206,15 +206,26 @@ public class AppDataTests
     [Fact]
     public void ContentsAreBuiltFromItemsWithinTheGamesLimits()
     {
+        // The catalogue knows how large a stack can be (50 for Wood and Stone; CryptKey does not stack).
+        Assert.Equal(50, TerrainEditor.Terrain.PrefabCatalog.ItemKindOf(StableHash.Of("Wood"))!.MaxStack);
+        Assert.Equal(1, TerrainEditor.Terrain.PrefabCatalog.ItemKindOf(StableHash.Of("CryptKey"))!.MaxStack);
+        var notes = new List<string>();
         var inv = ObjectData.BuildInventory(
         [
             new ItemUpload("Wood", null, Stack: 0, Quality: 99999, X: 300, Y: -4, WorldLevel: 900, CrafterId: "123", CrafterName: "Ragnar"),
             new ItemUpload(null, StableHash.Of("Stone"), Stack: 70000, CrafterId: "not a number"),
-        ]);
+            new ItemUpload("Stone", null, Stack: 50),
+            new ItemUpload("CryptKey", null, Stack: 3),
+        ], notes);
         var wood = inv.Items[0];
         Assert.Equal((1, 65535, 255, 0, 255, 123L, "Ragnar"), (wood.Stack, wood.Quality, wood.X, wood.Y, wood.WorldLevel, wood.CrafterId, wood.CrafterName));
-        Assert.Equal(65535, inv.Items[1].Stack);
+        // A stack above the item's maximum is cut to it and said; one at the maximum is kept; an item that does not
+        // stack is cut to one.
+        Assert.Equal(50, inv.Items[1].Stack);
         Assert.Equal(0, inv.Items[1].CrafterId);
+        Assert.Equal(50, inv.Items[2].Stack);
+        Assert.Equal(1, inv.Items[3].Stack);
+        Assert.Equal(["Stone: stack of 65535 cut to 50 (the item's maximum)", "CryptKey: stack of 3 cut to 1 (the item's maximum)"], notes);
         var ex = Assert.Throws<ArgumentException>(() => ObjectData.BuildInventory([new ItemUpload("NoSuchItem", null)]));
         Assert.Contains("NoSuchItem", ex.Message);
         Assert.Throws<ArgumentException>(() => ObjectData.BuildInventory([new ItemUpload(null, 12345)]));

@@ -955,9 +955,10 @@ public sealed class InspectorPanel
             return;
         }
         ZdoData z;
+        var notes = new List<string>();
         try
         {
-            z = ObjectData.Edited(_bytes, set, inv);
+            z = ObjectData.Edited(_bytes, set, inv, notes);
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or OverflowException)
         {
@@ -982,7 +983,7 @@ public sealed class InspectorPanel
         }
         string name = PrefabCatalog.DisplayName(z.Prefab) ?? "object";
         var copies = s.Commit($"Edited {name}", null, [index], [(new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), t.Piece)]);
-        Message?.Invoke($"Changed {name}. Ctrl+Z puts the old one back; Save writes it.");
+        Message?.Invoke($"Changed {name}. Ctrl+Z puts the old one back; Save writes it." + string.Concat(notes.Select(n => " " + n + ".")));
         Open(copies[0]);
         Replaced?.Invoke(copies[0]);
     }
