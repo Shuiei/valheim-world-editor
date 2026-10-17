@@ -131,14 +131,11 @@ public struct Vector2 : IEquatable<Vector2>
     /// </summary>
     public static bool operator !=(Vector2 a, Vector2 b) => !(a == b);
 
-    /// <summary>
-    /// Exact equality of both components, unlike ==.
-    /// </summary>
-    /// <summary>Equal when both components are equal, the same as the default equality (float.Equals each).</summary>
+    /// <summary>Exact equality, unlike the approximate ==: equal when both components are equal (float.Equals each).</summary>
     public readonly bool Equals(Vector2 other) => x.Equals(other.x) && y.Equals(other.y);
 
     /// <summary>Equal to another vector with the same components.</summary>
-    public override readonly bool Equals(object obj) => obj is Vector2 v && x.Equals(v.x) && y.Equals(v.y);
+    public override readonly bool Equals(object obj) => obj is Vector2 v && Equals(v);
 
     /// <inheritdoc/>
     public override readonly int GetHashCode() => x.GetHashCode() ^ (y.GetHashCode() << 2);
