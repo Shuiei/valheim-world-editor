@@ -70,22 +70,10 @@ public sealed class PastePanel
         AlongBox.Tip("paste.along");
         GapBox.Tip("paste.gap");
         paste.Changed += Refresh;
-        static Control Row(string label, Control input, string? unit = null)
-        {
-            var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,Auto") };
-            var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-            Tips.Label(l, input);
-            g.Children.Add(l);
-            Grid.SetColumn(input, 1);
-            g.Children.Add(input);
-            if (unit != null)
-            {
-                var u = new TextBlock { Text = unit, FontSize = 12, Margin = new Thickness(3, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-                Grid.SetColumn(u, 2);
-                g.Children.Add(u);
-            }
-            return g;
-        }
+        // The rows: label, input and, for lengths, the unit after it.
+        static Control Row(string label, Control input, bool metres = false) => Ui.Row(label, input,
+            metres ? new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, Margin = new Thickness(3, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center } : null,
+            "70,*,Auto");
         Card = Ui.AsCard(new Border
         {
             VerticalAlignment = VerticalAlignment.Top,
@@ -97,11 +85,11 @@ public sealed class PastePanel
                 {
                     new TextBlock { Text = Lang.T("paste.label.paste"), FontSize = 14, FontWeight = FontWeight.SemiBold },
                     Info, GroundBox, ObjectsBox, ClearSiteBox,
-                    Row(Lang.T("common.height"), OffsetBox, Lang.T("common.metres")),
+                    Row(Lang.T("common.height"), OffsetBox, metres: true),
                     new TextBlock { Text = Lang.T("paste.head.repeat"), FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 4, 0, 0) },
                     Row(Lang.T("paste.label.copies"), CopiesBox),
                     Row(Lang.T("paste.label.along"), AlongBox),
-                    Row(Lang.T("paste.label.gap"), GapBox, Lang.T("common.metres")),
+                    Row(Lang.T("paste.label.gap"), GapBox, metres: true),
                     new WrapPanel { ItemSpacing = 4, LineSpacing = 4, Children = { TurnButton, MirrorButton, DoneButton } },
                     new TextBlock
                     {
