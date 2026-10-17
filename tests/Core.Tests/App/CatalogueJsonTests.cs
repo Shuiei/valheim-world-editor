@@ -144,7 +144,8 @@ public class CatalogueJsonTests
         Assert.Throws<KeyNotFoundException>(() => d["a"]);
         // The non-generic enumerator too.
         int n = 0;
-        foreach (object _ in (System.Collections.IEnumerable)d)
+        System.Collections.IEnumerable nonGeneric = d;
+        foreach (object _ in nonGeneric)
         {
             n++;
         }

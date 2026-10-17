@@ -130,9 +130,7 @@ public static class Workshop
         // has them, else the bottom of its lowest piece at each spot (the terrain reached each post).
         var contacts = text.Split('\n').Select(l => l.Trim()).Where(l => l.StartsWith("#HomesteadTerrainContact:", StringComparison.OrdinalIgnoreCase))
             .Select(l => l[25..].Split(';')).Where(f => f.Length >= 3)
-            .Select(f => (Ok: float.TryParse(f[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x)
-                & float.TryParse(f[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y)
-                & float.TryParse(f[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float z), P: new Vector3(x, y, z)))
+            .Select(f => (Ok: TryPoint(f, out Vector3 p), P: p))
             .Where(c => c.Ok).Select(c => At(c.P + shift)).ToList();
         var terrain = new Dictionary<(int, int), float>();
         void Lowest(int cx, int cz, float y) => terrain[(cx, cz)] = terrain.TryGetValue((cx, cz), out float was) ? MathF.Min(was, y) : y;
@@ -173,6 +171,20 @@ public static class Workshop
             }
         }
         return new Planned(parsed.Name, at == null, parsed.Ruin, adds, unknown, shift.Y, terrain);
+    }
+
+    /// <summary>A terrain contact's point from its first three fields; false when one is not a number.</summary>
+    internal static bool TryPoint(string[] f, out Vector3 p)
+    {
+        var n = System.Globalization.NumberStyles.Float;
+        var c = System.Globalization.CultureInfo.InvariantCulture;
+        if (float.TryParse(f[0], n, c, out float x) && float.TryParse(f[1], n, c, out float y) && float.TryParse(f[2], n, c, out float z))
+        {
+            p = new Vector3(x, y, z);
+            return true;
+        }
+        p = default;
+        return false;
     }
 
     /// <summary>

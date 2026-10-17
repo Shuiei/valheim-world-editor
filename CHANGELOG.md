@@ -11,6 +11,17 @@ the plugin is unchanged in versions without that part.
   opened, before the game's data was read, so no item was known yet and the key chest failed ("“CryptKey” is not an
   item of the game"). It now says it waits for the game's data and makes the dungeon once the data is in use.
 
+## v1.47.30 — unreleased
+
+### Fixed
+- **The last Codacy findings that are not false positives.** The dungeon corridors' `switch` has a `default` that only
+  breaks out, as #341 gave the others. Homestead tags split on `[',', ';']`, so the call can no longer be read as
+  `Split(char, int count)`. The fuzz image's `git clone` quotes `$SRC`. The tests' count of character files read is a
+  property with a private setter, still kept per thread. Follow's growth works out each axis in its own variable,
+  and both still grow near a corner. The Workshop reads a terrain contact's point through `TryPoint`, which parses
+  with `&&` and skips the contact when a field is not a number, as before. A test enumerates a catalogue
+  dictionary through an `IEnumerable` variable instead of a cast. No behaviour changes.
+
 ## v1.47.29 — 2026-10-17
 
 ### Fixed

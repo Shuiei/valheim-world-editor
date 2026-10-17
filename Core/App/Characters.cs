@@ -30,8 +30,8 @@ public static class Characters
     /// <summary>Guards <see cref="Known"/> (builders are asked for on any thread).</summary>
     private static readonly Lock KnownLock = new();
     /// <summary>Tests: how many character files this thread read whole.</summary>
-    [ThreadStatic]
-    internal static int FileReads;
+    [field: ThreadStatic]
+    internal static int FileReads { get; private set; }
 
     /// <summary>A character file's character (null for none), read again only when it changed since.</summary>
     private static Character? ReadFile(string f)
