@@ -80,12 +80,12 @@ public static partial class GameCatalogues
     /// </summary>
     /// <param name="Cab">The internal file's name, lower case.</param>
     /// <param name="PathId">The object's path id in that file.</param>
-    private readonly record struct Ref(string Cab, long PathId);
+    internal readonly record struct Ref(string Cab, long PathId);
 
     /// <summary>
     /// The game's bundles, opened one at a time (all of them at once do not fit in memory).
     /// </summary>
-    private sealed class Game : IDisposable
+    internal sealed class Game : IDisposable
     {
         /// <summary>
         /// AssetsTools.NET's manager for every bundle opened here.
@@ -116,17 +116,30 @@ public static partial class GameCatalogues
         }
 
         /// <summary>
-        /// A bundle, or null when it is not one. Its internal files are added to <c>CabBundle</c>.
+        /// The bundles open now, by file name. AssetsTools keeps one instance per path, so a bundle asked for
+        /// while open is the same one, given to one more user: its files are closed when the last one is done,
+        /// not when a second wrapper of the same instance would be.
+        /// </summary>
+        private readonly Dictionary<string, Bundle> _open = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// A bundle, or null when it is not one. Its internal files are added to <c>CabBundle</c>. One open
+        /// already is the same bundle, open until every user has disposed it.
         /// </summary>
         public Bundle? Open(string name)
         {
+            if (_open.TryGetValue(name, out var open))
+            {
+                return open.Share();
+            }
             try
             {
-                var b = new Bundle(_am, _am.LoadBundleFile(Path.Combine(_dir, name), false));
+                var b = new Bundle(_am, _am.LoadBundleFile(Path.Combine(_dir, name), false), () => _open.Remove(name));
                 foreach (var f in b.Files)
                 {
                     CabBundle[f.Cab] = name;
                 }
+                _open[name] = b;
                 return b;
             }
             catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
@@ -250,7 +263,7 @@ public static partial class GameCatalogues
     /// A bundle open for a scan: its internal files with objects (scene bundles have two), and every
     /// object read once (kept until the bundle is closed).
     /// </summary>
-    private sealed class Bundle : IDisposable
+    internal sealed class Bundle : IDisposable
     {
         /// <summary>
         /// One internal file of a bundle that has objects.
@@ -289,6 +302,15 @@ public static partial class GameCatalogues
         /// Objects read once, by file and path id (null: not there or not readable).
         /// </summary>
         private readonly Dictionary<(Inner, long), AssetTypeValueField?> _fields = [];
+        /// <summary>
+        /// Told once the bundle is closed (its last user disposed it).
+        /// </summary>
+        private readonly Action _closed;
+        /// <summary>
+        /// How many have the bundle open: one at first, one more per <c>Share</c>, one fewer per
+        /// <c>Dispose</c>, which closes it at none.
+        /// </summary>
+        private int _users = 1;
 
         /// <summary>
         /// The internal files with objects, in the bundle's order.
@@ -298,10 +320,14 @@ public static partial class GameCatalogues
         /// <summary>
         /// Wraps a loaded bundle: its reads go through a <c>BlockCache</c>, and each assets file in it is opened.
         /// </summary>
-        public Bundle(AssetsManager am, BundleFileInstance bundle)
+        /// <param name="am">The manager the bundle was loaded with.</param>
+        /// <param name="bundle">The bundle.</param>
+        /// <param name="closed">Told once the bundle is closed.</param>
+        public Bundle(AssetsManager am, BundleFileInstance bundle, Action closed)
         {
             _am = am;
             _bundle = bundle;
+            _closed = closed;
             if (bundle.file.DataReader.BaseStream is not BlockCache)
             {
                 bundle.file.DataReader = new AssetsFileReader(new BlockCache(bundle.file.DataReader.BaseStream)) { BigEndian = bundle.file.DataReader.BigEndian };
@@ -478,15 +504,29 @@ public static partial class GameCatalogues
         }
 
         /// <summary>
-        /// Unloads the bundle's assets files and the bundle.
+        /// The bundle for one more user: it stays open until that one has disposed it too.
+        /// </summary>
+        public Bundle Share()
+        {
+            _users++;
+            return this;
+        }
+
+        /// <summary>
+        /// One user fewer; the last one's unloads the bundle's assets files and the bundle.
         /// </summary>
         public void Dispose()
         {
+            if (_users == 0 || --_users > 0)
+            {
+                return;
+            }
             foreach (var f in Files)
             {
                 _am.UnloadAssetsFile(f.Assets);
             }
             _am.UnloadBundleFile(_bundle);
+            _closed();
         }
     }
 

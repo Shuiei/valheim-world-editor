@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.61 — unreleased
+
+### Fixed
+- **The editor could fail to start, or miss pieces and models, depending on where the game's scripts are in its
+  bundles.** The bundles are read one by one at the start, and the few that hold the game's scripts are kept open
+  so each class is looked up once. When the pass reached a bundle already kept open, it opened it a second time and
+  closed it after its read; the game's file reader gives the same bundle both times, so the kept one was closed
+  too, and the next class looked up in it failed (an exception that stopped the start) or was not found. A bundle
+  open already is now given again and stays open until its last reader is done; a file handle leaked by each second
+  open goes with it.
+
 ## v1.45.60 — unreleased
 
 ### Fixed
