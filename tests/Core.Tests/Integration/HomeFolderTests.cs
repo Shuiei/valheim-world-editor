@@ -48,7 +48,9 @@ public sealed class HomeFolderTests : IDisposable
     {
         string file = Local(name);
         var start = new ProcessStartInfo("ssh-keygen", ["-q", "-t", "ed25519", "-N", passphrase, "-C", "vwe-test", "-f", file]) { UseShellExecute = false };
-        using var p = Process.Start(start) ?? throw new InvalidOperationException("ssh-keygen did not start");
+        // Not a command injection (the scanners' rule is wrong here): a fixed program, its arguments passed one by one
+        // with no shell, all made by the test (a name in its own temporary folder and a fixed passphrase).
+        using var p = Process.Start(start) ?? throw new InvalidOperationException("ssh-keygen did not start"); // nosemgrep
         p.WaitForExit();
         if (p.ExitCode != 0)
         {
