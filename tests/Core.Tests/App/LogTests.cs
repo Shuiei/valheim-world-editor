@@ -174,6 +174,22 @@ public sealed class LogTests
         Assert.Equal("see <path>.", Log.Scrub("see /srv/\u00a7\u00b6/w.fwl."));
     }
 
+    // This computer's own address is not kept out, even when a tunnel or saved server gives it as private: other
+    // tests' tunnels to 127.0.0.1 then no longer hide it in every later line.
+    [Theory]
+    [InlineData("127.0.0.1")]
+    [InlineData("127.1.2.3")]
+    [InlineData("localhost")]
+    [InlineData("LocalHost")]
+    [InlineData("::1")]
+    [InlineData("[::1]")]
+    public void ThisComputersAddressIsNotPrivate(string address)
+    {
+        Log.Private(address);
+
+        Assert.Equal($"tunnel to {address} refused", Log.Scrub($"tunnel to {address} refused"));
+    }
+
     // The home folder is written ~, but not as the start of another folder's name.
     [Fact]
     public void TheHomeFolderIsWrittenTilde()

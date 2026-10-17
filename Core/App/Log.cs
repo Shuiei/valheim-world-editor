@@ -72,7 +72,8 @@ public static partial class Log
     /// <summary>
     /// Keeps values out of the log from now on (a server's address, an account name, a password, a token):
     /// <see cref="Scrub"/> writes &lt;private&gt; in their place. Empty values and those shorter than three characters are
-    /// left out, as they would take letters out of every word.
+    /// left out, as they would take letters out of every word, and so is this computer's own address (localhost,
+    /// 127.x.x.x, ::1): it is no one's personal data, and <see cref="Scrub"/> keeps it on purpose.
     /// </summary>
     /// <param name="values">The values; nulls are left out.</param>
     public static void Private(params ReadOnlySpan<string?> values)
@@ -81,7 +82,7 @@ public static partial class Log
         {
             foreach (string? v in values)
             {
-                if (v != null && v.Trim().Length >= 3)
+                if (v != null && v.Trim().Length >= 3 && !IsThisComputer(v.Trim()))
                 {
                     PrivateValues.Add(v);
                 }
@@ -243,6 +244,12 @@ public static partial class Log
 
     /// <summary>Text on one line: line breaks become spaces (they would also let a message forge log lines).</summary>
     private static string OneLine(string text) => text.Replace("\r\n", " ").Replace('\r', ' ').Replace('\n', ' ');
+
+    /// <summary>Whether an address is this computer's own: localhost, 127.x.x.x or ::1.</summary>
+    private static bool IsThisComputer(string address) =>
+        address.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+        || address.StartsWith("127.", StringComparison.Ordinal)
+        || address is "::1" or "[::1]";
 
     /// <summary>The last part of a path, on either system's separators.</summary>
     private static string LastPart(string path) => path[(path.LastIndexOfAny(['/', '\\']) + 1)..];
