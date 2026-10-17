@@ -24,7 +24,7 @@ public class AreaPanelTests
     /// A main window on its own copy of the test world, opened in the Area tool with a zone selected unless told not
     /// to; deleted when disposed.
     /// </summary>
-    private sealed class Run : IDisposable
+    internal sealed class Run : IDisposable
     {
         public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
         public string Dir { get; } = Fixtures.CopyFixture();
