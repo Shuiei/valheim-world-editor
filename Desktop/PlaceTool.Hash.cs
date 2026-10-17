@@ -8,7 +8,7 @@ public sealed partial class PlaceTool
     /// <summary>
     /// A spatial hash of points (grid positions), to test quickly whether a spot is the spacing away from all of them.
     /// </summary>
-    private sealed class Hash
+    internal sealed class Hash
     {
         /// <summary>The size of a hash cell, in metres.</summary>
         public readonly float Cell;

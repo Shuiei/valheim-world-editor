@@ -40,7 +40,7 @@ public sealed partial class PlaceTool
     }
 
     /// <summary>The line's pieces laid end to end along each run, from the kinds that have ends (none without such a kind).</summary>
-    private void EndToEndPlacements(WorldScene s, IReadOnlyList<string> names, Func<int, float>? mask, List<Other>? others, List<Placement> outp)
+    internal void EndToEndPlacements(WorldScene s, IReadOnlyList<string> names, Func<int, float>? mask, List<Other>? others, List<Placement> outp)
     {
         var kinds = names.Where(n => EndsOf(n) != null).ToList();
         if (kinds.Count == 0)

@@ -39,7 +39,7 @@ public sealed partial class PlaceTool
     }
 
     /// <summary>The zone's spots: each one an object where it can go (nothing until the zone has three points).</summary>
-    private void ZonePlacements(WorldScene s, IReadOnlyList<string> names, Hash hash, Func<int, float>? mask, List<Placement> outp)
+    internal void ZonePlacements(WorldScene s, IReadOnlyList<string> names, Hash hash, Func<int, float>? mask, List<Placement> outp)
     {
         if (Points.Count < 3)
         {

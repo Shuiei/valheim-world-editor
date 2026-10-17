@@ -13,7 +13,7 @@ public sealed partial class PlaceTool
     /// <param name="Rotation">Its Unity Euler rotation, in degrees.</param>
     /// <param name="Pts">Its snap points (grid x, height, grid z).</param>
     /// <param name="Low">The height of its lowest snap point.</param>
-    private sealed record Other(int Index, string Name, Vector2 G, Vector3 Rotation, List<Vector3> Pts, float Low);
+    internal sealed record Other(int Index, string Name, Vector2 G, Vector3 Rotation, List<Vector3> Pts, float Low);
 
     /// <summary>The snap points of every piece in the block.</summary>
     private static List<Other> OtherSnaps(WorldScene s, Func<int, string?> nameOf)

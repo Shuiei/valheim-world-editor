@@ -56,7 +56,7 @@ public static partial class Sculpt
     }
 
     /// <summary>One frame of an Erode stroke: the erosion runs over the neighbourhood of the brush and reports the rectangle it changed.</summary>
-    private static (int X0, int Z0, int X1, int Z1) ErodeFrame(Ground g, Brush b, Stroke s, float cx, float cz, float reach, float rate, Func<int, float>? mask)
+    internal static (int X0, int Z0, int X1, int Z1) ErodeFrame(Ground g, Brush b, Stroke s, float cx, float cz, float reach, float rate, Func<int, float>? mask)
     {
         float r = b.Radius, er = reach + 2, talus = Erosion.Talus(b.RestAngle);
         float ox = g.OriginX, oz = g.OriginZ;

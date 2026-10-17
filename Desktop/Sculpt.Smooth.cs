@@ -5,7 +5,7 @@ namespace TerrainEditor.Desktop;
 public static partial class Sculpt
 {
     /// <summary>The heights of the brush rectangle and a point around it, as they are before the frame.</summary>
-    private static float[] TakeSnapshot(Ground g, int x0, int x1, int z0, int z1)
+    internal static float[] TakeSnapshot(Ground g, int x0, int x1, int z0, int z1)
     {
         int sw = x1 - x0 + 3;
         float[] snapshot = new float[sw * (z1 - z0 + 3)];
@@ -20,7 +20,7 @@ public static partial class Sculpt
     }
 
     /// <summary>The average of the nine heights around a point, from the snapshot taken before the frame.</summary>
-    private static float SmoothAverage(Frame f, int gx, int gz)
+    internal static float SmoothAverage(Frame f, int gx, int gz)
     {
         float sum = 0;
         for (int dz = -1; dz <= 1; dz++)

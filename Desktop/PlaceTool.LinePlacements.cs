@@ -9,7 +9,7 @@ public sealed partial class PlaceTool
     /// The objects along the line, every <c>Every</c> metres (and wiggled, turned along it where the kind allows), up to
     /// MaxShape of them.
     /// </summary>
-    private void LinePlacements(WorldScene s, IReadOnlyList<string> names, Hash hash, Func<int, float>? mask, List<Placement> outp)
+    internal void LinePlacements(WorldScene s, IReadOnlyList<string> names, Hash hash, Func<int, float>? mask, List<Placement> outp)
     {
         var c = LineRuns().SelectMany(r => r).ToList();
         if (c.Count < 2)
@@ -50,7 +50,7 @@ public sealed partial class PlaceTool
     }
 
     /// <summary>The objects in a grid of cells over the box between the two grid corners: as many whole cells as fit best, centred.</summary>
-    private void GridPlacements(WorldScene s, IReadOnlyList<string> names, Hash hash, Func<int, float>? mask, Vector2 ga, Vector2 gb, List<Placement> outp)
+    internal void GridPlacements(WorldScene s, IReadOnlyList<string> names, Hash hash, Func<int, float>? mask, Vector2 ga, Vector2 gb, List<Placement> outp)
     {
         float x0 = MathF.Min(ga.X, gb.X), x1 = MathF.Max(ga.X, gb.X), z0 = MathF.Min(ga.Y, gb.Y), z1 = MathF.Max(ga.Y, gb.Y);
         // As many whole cells as fit best (at least one each way), centred in the box.

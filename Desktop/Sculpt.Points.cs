@@ -11,10 +11,10 @@ public static partial class Sculpt
     /// <param name="X0">The snapshot's first grid x (less the one-point margin).</param>
     /// <param name="Z0">The snapshot's first grid z (less the one-point margin).</param>
     /// <param name="Colour">The paint the tool moves the ground towards, or null for the sculpt tools.</param>
-    private readonly record struct Frame(float Rate, float[]? Snapshot, int Sw, int X0, int Z0, float[]? Colour);
+    internal readonly record struct Frame(float Rate, float[]? Snapshot, int Sw, int X0, int Z0, float[]? Colour);
 
     /// <summary>Applies the tool to one grid point, by its weight in the brush.</summary>
-    private static void ApplyPoint(Ground g, Brush b, Stroke s, Frame f, int gx, int gz, int p, float w)
+    internal static void ApplyPoint(Ground g, Brush b, Stroke s, Frame f, int gx, int gz, int p, float w)
     {
         float h = g.HeightOf(p);
         float rate = f.Rate;
@@ -45,7 +45,7 @@ public static partial class Sculpt
     }
 
     /// <summary>Restore: backs the point's edits and lift down towards the ground as the world generated it.</summary>
-    private static void RestorePoint(Ground g, int p, float rate, float w)
+    internal static void RestorePoint(Ground g, int p, float rate, float w)
     {
         float k = MathF.Min(1, 8 * rate * w);
         if (g.Mod[p] != 0)
@@ -68,7 +68,7 @@ public static partial class Sculpt
     }
 
     /// <summary>The paint tools: moves the point's paint towards the tool's colour by k.</summary>
-    private static void PaintPoint(Ground g, int p, float[] colour, float k)
+    internal static void PaintPoint(Ground g, int p, float[] colour, float k)
     {
         g.StartPaint(p);
         for (int c = 0; c < 4; c++)
