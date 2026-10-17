@@ -72,6 +72,12 @@ public sealed class AppSettings
     public bool ClaudeConnect { get; set; }
 
     /// <summary>
+    /// Whether Claude may run scripts (run_script, the Script tool's Run): a script has the editor's rights on this
+    /// computer, like any program the user runs, so it takes the user's leave once (Settings). Off unless chosen.
+    /// </summary>
+    public bool ClaudeScripts { get; set; }
+
+    /// <summary>
     /// Windows: draw with the graphics driver's own OpenGL first instead of Direct3D (ANGLE); taken when the editor
     /// starts.
     /// </summary>

@@ -65,6 +65,12 @@ public sealed partial class ClaudeTools
         {
             return "it saves, discards or writes or deletes the user's files: the user's to do";
         }
+        // The Script tool's Run is run_script by another door: the same leave, said first (as run_script does), since
+        // turning Auto off would not be enough.
+        if (Tips.KeyOf(c.Control) == "script.run" && !_w.Settings.ClaudeScripts)
+        {
+            return "the user has not allowed Claude to run scripts (Settings → Claude → Claude may run scripts)";
+        }
         // Like every other editing tool (CannotEdit): a tool's Apply, an Area action or a script run would go to the
         // game at once. Only the View panel's controls, which change nothing in the world, stay.
         if (LiveWithAuto && !(Tips.KeyOf(c.Control) is string view && view.StartsWith("view.", StringComparison.Ordinal)))

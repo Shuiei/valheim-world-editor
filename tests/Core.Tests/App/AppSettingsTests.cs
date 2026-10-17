@@ -53,6 +53,15 @@ public class AppSettingsTests : IDisposable
         Assert.StartsWith(_data, AppSettings.DataDir);
     }
 
+    // Claude may run scripts only once the user said so: off unless saved on.
+    [Fact]
+    public void ClaudeScriptsAreOffUnlessChosen()
+    {
+        Assert.False(AppSettings.Load().ClaudeScripts);
+        new AppSettings { ClaudeScripts = true }.Save();
+        Assert.True(AppSettings.Load().ClaudeScripts);
+    }
+
     [Fact]
     public void SavedServersRoundTripWithoutThePasswordUnlessAsked()
     {

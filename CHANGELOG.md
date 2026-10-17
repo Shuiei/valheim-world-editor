@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.68 — unreleased
+
+### Fixed
+- **Claude could run scripts on your computer without your say.** `run_script` ran C# with your rights (your files
+  included), with nothing more than a sentence in a tip. Scripts from Claude now need your leave, given once:
+  **Settings → Claude → Claude may run scripts** (off by default). While off, `run_script` (dry runs too) and the
+  Script tool's Run through `set_control` are refused with a message that says where to allow them; Claude's other
+  tools and your own scripts work as before. The process a script runs in (v1.45.67) keeps a crash away from the
+  editor but is not a sandbox: a script still has your rights.
+
 ## v1.45.67 — unreleased
 
 ### Fixed

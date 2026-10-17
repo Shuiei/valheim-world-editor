@@ -151,6 +151,9 @@ public static class SettingsDialog
         renew.Click += (_, _) => { token = ClaudeServer.NewToken(); ShowCommand(); };
         var claudeDetails = new StackPanel { Spacing = 6, IsVisible = claude.IsChecked == true };
         claude.IsCheckedChanged += (_, _) => claudeDetails.IsVisible = claude.IsChecked == true;
+        // Scripts have the editor's rights on this computer: the user's leave, once.
+        var scripts = new CheckBox { Content = Lang.T("settings.claudeScripts"), IsChecked = settings.ClaudeScripts }.Classed("switch").Tip("settings.claudeScripts");
+        claudeDetails.Children.Add(scripts);
         claudeDetails.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { new TextBlock { Text = Lang.T("settings.port"), VerticalAlignment = VerticalAlignment.Center }, port, renew } });
         claudeDetails.Children.Add(Hint(Lang.T("settings.claudeCodeHint")));
         claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { command, Col(copy, 1) } });
@@ -223,20 +226,21 @@ public static class SettingsDialog
             }
             // Set before Apply, which saves them with the folders; taken back when the folders are refused, so a
             // Cancel after that keeps nothing.
-            var before = (settings.ClaudeConnect, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl, settings.Language);
+            var before = (settings.ClaudeConnect, settings.ClaudeScripts, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl, settings.Language);
             var allowedBefore = new Dictionary<string, string>(settings.Extensions);
             foreach (var (box, x) in extensionBoxes)
             {
                 ModExtensions.Allow(settings, x, box.IsChecked == true);
             }
             settings.ClaudeConnect = claude.IsChecked == true;
+            settings.ClaudeScripts = scripts.IsChecked == true;
             settings.ClaudePort = claudePort;
             settings.ClaudeToken = token;
             settings.DriverOpenGl = driverGl.IsChecked == true;
             settings.Language = language.SelectedIndex > 0 ? languages[language.SelectedIndex - 1].Code : null;
             if (Apply(settings, valheim.Text, readBep(), readWorlds()) is string problem)
             {
-                (settings.ClaudeConnect, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl, settings.Language) = before;
+                (settings.ClaudeConnect, settings.ClaudeScripts, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl, settings.Language) = before;
                 settings.Extensions = allowedBefore;
                 error.Text = problem;
                 return;

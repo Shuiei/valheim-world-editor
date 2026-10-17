@@ -54,6 +54,25 @@ public class ClaudeToolsTests
         Assert.StartsWith("Redone.", await r.T.Redo());
     }
 
+    // Scripts run with the user's rights: without the user's leave (Settings → Claude → Claude may run scripts, off by
+    // default) run_script is refused, dry runs too, and so is the Script tool's Run through set_control; with it,
+    // they run. The other tools do not need it.
+    [AvaloniaFact]
+    public async Task ScriptsNeedTheUsersLeave()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        r.W.Settings.ClaudeScripts = false;
+        Assert.Equal(ClaudeTools.ScriptsRefused, await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+        Assert.Equal(ClaudeTools.ScriptsRefused, await r.T.RunScript("Ground.Raise(0, 0, 3);", dryRun: true));
+        Assert.Contains("not allowed Claude to run scripts", await r.T.SetControl("script.run", "click"));
+        Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+        Assert.Contains("ground point", await r.T.Flatten(-10, -10, 10, 10, 31));
+        r.W.Settings.ClaudeScripts = true;
+        Assert.StartsWith("Dry run:", await r.T.RunScript("Ground.Raise(0, 0, 3);", dryRun: true));
+        Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+    }
+
     [AvaloniaFact]
     public async Task LiveWithAutoOnClaudeChangesNothing()
     {
@@ -64,6 +83,11 @@ public class ClaudeToolsTests
         Assert.Contains("Auto on", await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "woodwall", X = 0, Z = 0 }]));
         Assert.Contains("Auto on", await r.T.RemoveObjects([0]));
         Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+        // Scripts not allowed either: that is what is said, since turning Auto off would not be enough.
+        r.W.Settings.ClaudeScripts = false;
+        Assert.Equal(ClaudeTools.ScriptsRefused, await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+        Assert.Contains("not allowed Claude to run scripts", await r.T.SetControl("script.run", "click"));
+        r.W.Settings.ClaudeScripts = true;
         // Auto off: Claude's change waits for Apply live.
         r.W.Settings.AutoApply = false;
         Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
