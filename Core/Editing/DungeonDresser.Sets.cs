@@ -626,6 +626,8 @@ internal sealed partial class DungeonDresser
                     }
                 }
                 break;
+            default:
+                break;
         }
     }
 

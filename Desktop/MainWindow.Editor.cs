@@ -347,9 +347,10 @@ public sealed partial class MainWindow
             return null;
         }
         int x0 = s.X0, z0 = s.Z0, zonesX = s.ZonesX, zonesZ = s.ZonesZ;
-        // The view mirrors z: north is -t.Z.
-        bool grown = (nearX && Grow(ref x0, ref zonesX, t.X > 0)) | (nearZ && Grow(ref z0, ref zonesZ, t.Z < 0));
-        if (!grown)
+        // The view mirrors z: north is -t.Z. Both ways grow when the camera is near a corner.
+        bool grownX = nearX && Grow(ref x0, ref zonesX, t.X > 0);
+        bool grownZ = nearZ && Grow(ref z0, ref zonesZ, t.Z < 0);
+        if (!grownX && !grownZ)
         {
             SayFollow(Said.Of("top.msg.followFull", MaxFollowZones));
             return null;
