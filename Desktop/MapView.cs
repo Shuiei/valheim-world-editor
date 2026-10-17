@@ -477,17 +477,23 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     };
 
     /// <summary>
+    /// The game's map textures as decoded for the last bundles reader asked for: decoded once, not again each time the
+    /// map comes back (a new context uploads them again); another Valheim folder is read again.
+    /// </summary>
+    private static readonly KeptRead<GameBundles, IReadOnlyDictionary<string, GameLookData.Picture>> MapPictures = new(GameLookData.ReadMap);
+
+    /// <summary>
     /// Uploads the game's map textures (or the plain stand-ins) and a small placeholder close-up.
     /// </summary>
     private unsafe void LoadTextures()
     {
         _texturesLoaded = true;
-        var pictures = new Dictionary<string, GameLookData.Picture>();
+        IReadOnlyDictionary<string, GameLookData.Picture> pictures = new Dictionary<string, GameLookData.Picture>();
         try
         {
             if (GameLook.Bundles is { } game)
             {
-                pictures = GameLookData.ReadMap(game);
+                pictures = MapPictures.Of(game);
             }
         }
         catch (Exception e) when (e is IOException or InvalidDataException or NotSupportedException)

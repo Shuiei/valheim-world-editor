@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.93 — unreleased
+
+### Changed
+- **Switching between the map and the 3D editor no longer stalls the map's first frame.** Each time the map came
+  back it read the game's minimap material and decoded its eight textures again, inside the drawing. They are now
+  decoded once (again only when another Valheim folder is chosen) and only sent to the graphics card again.
+
 ## v1.45.92 — unreleased
 
 ### Changed
