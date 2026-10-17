@@ -19,7 +19,7 @@ public sealed class PastePanelLangTests
     public void PastePanelShowsOnlyCatalogueTexts()
     {
         using var pseudo = new PseudoLang();
-        var (w, _) = TestWindows.EditingFlat(2, new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(40, 30, 40), Vector3.Zero, 1, false));
+        var (w, _) = TestWindows.Editing(new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(40, 30, 40), Vector3.Zero, 1, false));
         var p = w.PastePanel;
         Assert.Empty(PseudoLang.Untranslated(p.Card));
 
@@ -42,7 +42,7 @@ public sealed class PastePanelLangTests
     public void CopyCutAndPasteAreSaidInTheLanguageAndClaudeReadsEnglish()
     {
         using var pseudo = new PseudoLang();
-        var (w, s) = TestWindows.EditingFlat(2, new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(40, 30, 40), Vector3.Zero, 1, false));
+        var (w, s) = TestWindows.Editing(new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(40, 30, 40), Vector3.Zero, 1, false));
         void Check(string english)
         {
             Assert.Empty(PseudoLang.Untranslated(w.MessageText));

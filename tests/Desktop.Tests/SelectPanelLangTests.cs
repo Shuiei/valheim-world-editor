@@ -38,7 +38,7 @@ public sealed class SelectPanelLangTests : IDisposable
     /// <summary>A shown window, made in the pseudo language, editing a flat area with two trees, in the Select tool.</summary>
     private static MainWindow Window()
     {
-        var (w, _) = TestWindows.EditingFlat(2,
+        var (w, _) = TestWindows.Editing(
             new WorldScene.Thing(1, Beech, new Vector3(40, 30, 40), Vector3.Zero, 1, false),
             new WorldScene.Thing(2, Beech, new Vector3(44, 30, 40), Vector3.Zero, 1, false));
         w.Tools.ChooseSelect();
@@ -121,7 +121,7 @@ public sealed class SelectPanelLangTests : IDisposable
         using var pseudo = new PseudoLang();
         try
         {
-            var (w, s) = TestWindows.EditingFlat(2,
+            var (w, s) = TestWindows.Editing(
                 new WorldScene.Thing(1, Beech, new Vector3(40, 30, 40), Vector3.Zero, 1, false),
                 new WorldScene.Thing(2, StableHash.Of("Runestone_Meadows"), new Vector3(30, 30, 30), Vector3.Zero, 1, false));
             w.Tools.ChooseSelect();
