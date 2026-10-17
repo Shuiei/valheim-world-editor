@@ -7,9 +7,9 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The Place tool's remaining branches, on a flat 2 × 2 zone area: ends from a model box along either axis, end to end
 /// with no known length, at one height, above the ground, masked or off the edge, flat pieces never stacked, the
-/// leftover past several points, repeated points, facings along the line, the most a shape places, single pieces with
-/// nothing near or nothing meeting, zone turns, figures without end to end, short loops, and heights picked with no
-/// area, off a piece, or off a piece of no known name.
+/// leftover past several points, a piece spanning a bend, repeated points, facings along the line, the most a shape
+/// places, single pieces with nothing near or nothing meeting, zone turns, figures without end to end, short loops,
+/// and heights picked with no area, off a piece, or off a piece of no known name.
 /// </summary>
 public class PlaceToolBranchesTests
 {
@@ -116,6 +116,26 @@ public class PlaceToolBranchesTests
         t.SnapTo = false;
         Assert.Equal(5, t.Preview(null).Count);
         Assert.Equal(0.5f, t.SnapGap, 3);
+    }
+
+    // A corner 3 m along: the second 2 m post reaches past it, so it ends on the second stretch, 2 m from its start
+    // ((42, 64) to (43, 64 + √3)), and the run goes on from there; none turns back before the corner.
+    [Fact]
+    public void APieceSpanningABendEndsOnTheNextStretch()
+    {
+        var (t, _) = Tool();
+        Run(t, "Post", new(40, 64), new(43, 64), new(43, 70));
+        t.SnapTo = false;
+        float r3 = MathF.Sqrt(3);
+        var centres = t.Preview(null).Select(o => o.G).ToList();
+        Vector2[] expected = [new(41, 64), new(42.5f, 64 + r3 / 2), new(43, 65 + r3), new(43, 67 + r3)];
+        Assert.Equal(expected.Length, centres.Count);
+        for (int i = 0; i < expected.Length; i++)
+        {
+            Assert.Equal(expected[i].X, centres[i].X, 3);
+            Assert.Equal(expected[i].Y, centres[i].Y, 3);
+        }
+        Assert.Equal(3 - r3, t.SnapGap, 3);
     }
 
     [Fact]
