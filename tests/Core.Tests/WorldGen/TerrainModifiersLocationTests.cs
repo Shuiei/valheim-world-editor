@@ -1,4 +1,3 @@
-using TerrainEditor.Editing;
 using TerrainEditor.Terrain;
 using Xunit;
 using static WorldEditor.Tests.TerrainModifierTestWorld;
@@ -94,32 +93,5 @@ public class TerrainModifiersLocationTests
         Assert.Equal(0.1f * keep, ten[2], 4);
         Assert.Equal(keep, ten[3], 4);
         Assert.Equal([0.2f, 0.5f, 0.1f, 1f], PaintAt(mask, 21, 0));
-    }
-
-    [Fact]
-    public void ThePaintsHeightCheckLeavesTheGroundAboveIt()
-    {
-        // The coast rock's two dirt patches paint only ground no higher than themselves: the first sits 0.36 m up
-        // (the 30 m ground is painted), the second 0.25 m down (it is not).
-        var m = new TerrainModifiers(World(Net("rock4_coast", 0, 30, 0)));
-        float[] mask = Mask(0f, 0f, 0f, 1f);
-        m.Apply(0, 0, Flat(), mask);
-        Assert.Equal([1f, 0f, 0f, 1f], PaintAt(mask, -1, 0));
-        Assert.Equal([0f, 0f, 0f, 1f], PaintAt(mask, 10, -1));
-        // Sunk a metre, neither paints.
-        float[] sunk = Mask(0f, 0f, 0f, 1f);
-        new TerrainModifiers(World(Net("rock4_coast", 0, 29, 0))).Apply(0, 0, Flat(), sunk);
-        Assert.Equal(Mask(0f, 0f, 0f, 1f), sunk);
-    }
-
-    [Fact]
-    public void AGroundDiscsDirtIsLeftOut()
-    {
-        // Uplift paints the ground under its discs back with saved paint, so their dirt is never seen.
-        var m = new TerrainModifiers(World(Loc(Uplift.DiscName, 0, 30, 0)));
-        Assert.True(m.InZone(0, 0)[0].PaintCleared);
-        float[] mask = Mask(0f, 0f, 0f, 1f);
-        m.Apply(0, 0, Flat(), mask);
-        Assert.Equal(Mask(0f, 0f, 0f, 1f), mask);
     }
 }

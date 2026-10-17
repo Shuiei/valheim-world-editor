@@ -75,13 +75,11 @@ public class DumpVerifierCompareTests
     [Fact]
     public void APointHeightAndBiomeThatMatchTheGeneratorAreOk()
     {
-        var gen = SeedLocationsSupport.Seed();
-        var t = new DumpVerifier.Tally { Generator = gen };
+        var t = GeneratedHeightPoint.SeedTally();
         float x = 10f, z = 20f;
-        var biome = gen.GetBiome(x, z);
-        float h = gen.GetBiomeHeight(biome, x, z, out _);
+        var (biome, h) = GeneratedHeightPoint.At(t.Generator!, x, z);
 
-        DumpVerifier.CompareHeight(Split($"H {Hex(x)} {Hex(z)} {(int)biome} {Hex(h)}"), t, "unused");
+        DumpVerifier.CompareHeight(Split($"H {Hex(x)} {Hex(z)} {biome} {Hex(h)}"), t, "unused");
 
         Assert.Equal(1, t.HeightsOk);
         Assert.Equal(0, t.BiomesWrong);
@@ -90,12 +88,10 @@ public class DumpVerifierCompareTests
     [Fact]
     public void AWrongBiomeIsCountedAsABiomeMismatch()
     {
-        var gen = SeedLocationsSupport.Seed();
-        var t = new DumpVerifier.Tally { Generator = gen };
+        var t = GeneratedHeightPoint.SeedTally();
         float x = 10f, z = 20f;
-        var biome = gen.GetBiome(x, z);
-        float h = gen.GetBiomeHeight(biome, x, z, out _);
-        int wrong = (int)biome + 1;
+        var (biome, h) = GeneratedHeightPoint.At(t.Generator!, x, z);
+        int wrong = biome + 1;
 
         DumpVerifier.CompareHeight(Split($"H {Hex(x)} {Hex(z)} {wrong} {Hex(h)}"), t, "unused");
 

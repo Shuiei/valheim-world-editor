@@ -10,19 +10,14 @@ namespace WorldEditor.Tests;
 /// </summary>
 public abstract class HomeFolderTestBase : IDisposable
 {
-    private static readonly string[] Vars = ["HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "LOCALAPPDATA"];
-    private readonly Dictionary<string, string?> _old = Vars.ToDictionary(v => v, Environment.GetEnvironmentVariable);
+    private readonly PretendHomeEnvironment _environment;
     private readonly string? _settings = AppSettings.PathOverride, _servers = ServerConfig.PathOverride, _dataDir = AppSettings.DataDirOverride;
     private readonly bool _defaults = LocalGame.SearchDefaultPlaces;
     protected string Home { get; } = Path.Combine(Path.GetTempPath(), "vwe-home-" + Guid.NewGuid().ToString("N")[..8]);
 
     protected HomeFolderTestBase()
     {
-        Directory.CreateDirectory(Home);
-        Environment.SetEnvironmentVariable("HOME", Home);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(Home, ".config"));
-        Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(Home, ".local", "share"));
-        Environment.SetEnvironmentVariable("LOCALAPPDATA", null);
+        _environment = new PretendHomeEnvironment(Home, localAppData: null);
         AppSettings.PathOverride = null;
         AppSettings.DataDirOverride = null;
         ServerConfig.PathOverride = Path.Combine(Home, "servers.cfg");
@@ -76,10 +71,7 @@ public abstract class HomeFolderTestBase : IDisposable
     /// </summary>
     public void Dispose()
     {
-        foreach (var (k, v) in _old)
-        {
-            Environment.SetEnvironmentVariable(k, v);
-        }
+        _environment.Dispose();
         AppSettings.PathOverride = _settings;
         AppSettings.DataDirOverride = _dataDir;
         ServerConfig.PathOverride = _servers;
