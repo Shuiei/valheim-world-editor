@@ -12,11 +12,6 @@ namespace TerrainEditor.App;
 public static class Builders
 {
     /// <summary>
-    /// The ZDO key ("creator") holding a piece's builder: a player id.
-    /// </summary>
-    public static readonly int CreatorKey = StableHash.Of("creator");
-
-    /// <summary>
     /// When no player is known: still a builder, so pieces are player built (wards and private chests
     /// answer to nobody until another one is chosen).
     /// </summary>
@@ -39,9 +34,26 @@ public static class Builders
     public sealed record Player(long Id, string? Name, int Pieces, bool Local)
     {
         /// <summary>
-        /// The text shown for the choice: the name (or "Player id"), "(this computer)", and the piece count.
+        /// The choice in both languages: the name (or "Player id", or "Unknown player"), "(this computer)", and the
+        /// piece count.
         /// </summary>
-        public string Label => $"{Name ?? $"Player {Id}"}{(Local ? " (this computer)" : "")}{(Pieces > 0 ? $" · {Pieces} piece{(Pieces == 1 ? "" : "s")}" : "")}";
+        public Said Words
+        {
+            get
+            {
+                var name = Name != null ? Said.Raw(Name) : Id == Unknown ? Said.Of("select.builder.unknown") : Said.Of("select.builder.player", Id);
+                var who = Local ? Said.Of("select.builder.local", name) : name;
+                return Pieces switch
+                {
+                    0 => who,
+                    1 => Said.Of("select.builder.piece", who),
+                    _ => Said.Of("select.builder.pieces", who, Pieces),
+                };
+            }
+        }
+
+        /// <summary>The text shown for the choice, in the language in use (<see cref="Words"/>).</summary>
+        public string Label => Words.Shown;
     }
 
     /// <summary>
@@ -53,7 +65,7 @@ public static class Builders
         var local = Characters.Local();
         var ids = w.Creators.OrderByDescending(c => c.Value).Select(c => c.Key)
             .Concat(local.Select(c => c.Id)).Concat(w.PlayerNames.Keys).Append(WorldSave.Builder).Where(id => id != 0).Distinct();
-        return [.. ids.Select(id => new Player(id, local.FirstOrDefault(c => c.Id == id)?.Name ?? w.PlayerNames.GetValueOrDefault(id) ?? (id == Unknown ? "Unknown player" : null),
+        return [.. ids.Select(id => new Player(id, local.FirstOrDefault(c => c.Id == id)?.Name ?? w.PlayerNames.GetValueOrDefault(id),
             w.Creators.GetValueOrDefault(id), local.Any(c => c.Id == id)))];
     }
 
@@ -66,11 +78,11 @@ public static class Builders
     public static ZdoData? Claimed(byte[] bytes, long builder)
     {
         var z = ZdoData.Parse(bytes);
-        if (PieceCatalog.Get(z.Prefab)?.Tool == null || z.LongList.FirstOrDefault(l => l.Key == CreatorKey).Value != 0)
+        if (PieceCatalog.Get(z.Prefab)?.Tool == null || z.LongList.FirstOrDefault(l => l.Key == Editing.ObjectField.CreatorKey).Value != 0)
         {
             return null;
         }
-        z.Set("longs", CreatorKey, builder.ToString(CultureInfo.InvariantCulture));
+        z.Set("longs", Editing.ObjectField.CreatorKey, builder.ToString(CultureInfo.InvariantCulture));
         return z;
     }
 }

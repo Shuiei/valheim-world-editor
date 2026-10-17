@@ -28,7 +28,7 @@ public class AreaPanelHeightmapTests
             s.Shape(64, 64, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 20, 6, "hill");
             float top = H(s, 64, 64);
             var p = w.AreaPanel;
-            string said = p.ExportHeightmap(dir)!;
+            string said = p.ExportHeightmap(dir)!.Shown;
             Assert.StartsWith("Heightmap written to", said);
             string file = Directory.GetFiles(dir).Single();
             // The hill goes away, then the picture brings it back (the whole area: nothing is selected).
@@ -71,6 +71,8 @@ public class AreaPanelHeightmapTests
             a.Points.Add(new Vector2(20, 20));
             a.Points.Add(new Vector2(100, 100));
             p.LoadPicture(Directory.GetFiles(dir).Single());
+            // The selection's own box (20 to 100), not the weights' one point wider all round.
+            Assert.Contains("fitted to 81 × 81 m", p.PictureInfo.Text);
             p.LowestBox.Value = 31;
             p.HighestBox.Value = 33;
             p.PutPicture();

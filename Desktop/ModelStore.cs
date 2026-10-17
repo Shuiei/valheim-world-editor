@@ -182,7 +182,8 @@ public sealed class ModelStore
         }
         catch (Exception e) when (e is not OutOfMemoryException)
         {
-            Console.WriteLine($"model {n} could not be read: {e.Message}");
+            // Brief: when a bundle is damaged, each of its models fails.
+            Log.CaughtBrief(e, $"reading the model {n}");
             return null;
         }
     });
@@ -200,7 +201,7 @@ public sealed class ModelStore
         }
         catch (Exception e) when (e is not OutOfMemoryException)
         {
-            Console.WriteLine($"mesh {i} could not be read: {e.Message}");
+            Log.CaughtBrief(e, $"reading the mesh {i}");
             return null;
         }
         if (md == null)
@@ -246,7 +247,7 @@ public sealed class ModelStore
         }
         catch (Exception e) when (e is not OutOfMemoryException)
         {
-            Console.WriteLine($"material {id} could not be read: {e.Message}");
+            Log.CaughtBrief(e, $"reading the material {id}");
             return new MaterialData(Vector4.One, null, 0, false, new Vector4(1, 1, 0, 0));
         }
     }
@@ -262,7 +263,7 @@ public sealed class ModelStore
         }
         catch (Exception e) when (e is not OutOfMemoryException)
         {
-            Console.WriteLine($"texture {id} could not be read: {e.Message}");
+            Log.CaughtBrief(e, $"reading the texture {id}");
             return null;
         }
     }
@@ -388,8 +389,9 @@ public sealed class ModelStore
                 }
                 return new ImageData(info.Width, info.Height, rgba);
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Log.CaughtBrief(e, "decoding an exported texture file");
                 return null;
             }
         }

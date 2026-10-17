@@ -75,6 +75,32 @@ public class SmolvTests
     }
 
     [Fact]
+    public void TheNextProgramIsLookedForAfterTheOneDecoded()
+    {
+        // A name whose words read as a whole SMOL-V header (magic, version 1, size 20): taken for a program before.
+        uint[] named = Module((5, [1, 0x534D4F4C, 0x01000000, 0, 0, 0, 20]));
+        byte[] a = SmolvWriter.Encode(named), b = SmolvWriter.Encode(Special);
+
+        var found = Smolv.Programs([.. a, .. b]).ToList();
+
+        Assert.Equal([0, a.Length], found.Select(f => f.At));
+        Assert.Equal(named, found[0].Words);
+        Assert.Equal(Special, found[1].Words);
+    }
+
+    [Fact]
+    public void ASizeTheDataCannotHoldIsNoProgram()
+    {
+        byte[] b = SmolvWriter.Encode(Special);
+        // A chance "LOMS" with a size past int's range, then one too large for the bytes after it, before a program.
+        byte[] huge = [.. "LOMS"u8, .. new byte[16], 0, 0, 0, 0x80], large = [.. "LOMS"u8, .. new byte[16], 0, 0, 1, 0];
+
+        Assert.Equal(0, Smolv.DecodedSize(huge));
+        Assert.Contains("ends early", Assert.Throws<InvalidDataException>(() => Smolv.Decode(large)).Message);
+        Assert.Equal(Special, Assert.Single(Smolv.Programs([.. huge, .. large, .. b])).Words);
+    }
+
+    [Fact]
     public void BrokenSmolvIsSaid()
     {
         byte[] good = SmolvWriter.Encode(Special);

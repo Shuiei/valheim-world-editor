@@ -29,9 +29,6 @@ public static class WorldSearch
     /// <param name="Truncated">Whether more hits were found than <paramref name="Hits"/> holds.</param>
     public sealed record Result(List<Hit> Hits, Dictionary<string, int> Counts, int Total, bool Truncated);
 
-    /// <summary>The byte-array key holding a container's inventory.</summary>
-    private static readonly int ItemsKey = StableHash.Of("items");
-
     /// <summary>
     /// Searches the world's objects and those added in this session, deleted ones left out; matching ignores
     /// case. (Live: under the world's lock, so what the game changes comes in before or after, not during.)
@@ -121,24 +118,27 @@ public static class WorldSearch
         }
         foreach (var (id, bytes) in Candidates())
         {
-            byte[] b = bytes();
-            if (b.Length == 0)
-            {
-                continue;
-            }
             ZdoData z;
             try
             {
+                // A new object's bytes are built from its raw ones, which are parsed on the way: damaged ones throw
+                // here too, and that object alone is skipped.
+                byte[] b = bytes();
+                if (b.Length == 0)
+                {
+                    continue;
+                }
                 z = ZdoData.Parse(b);
             }
-            catch (Exception ex) when (ex is EndOfStreamException or IOException)
+            catch (Exception ex) when (CheckedReads.Damaged(ex))
             {
+                Log.CaughtBrief(ex, "reading an object while searching the world (damaged: passed over)");
                 continue;
             }
             string name = PrefabCatalog.DisplayName(z.Prefab) ?? z.Prefab.ToString(CultureInfo.InvariantCulture);
             if (what == "items")
             {
-                if (z.GetBytes(ItemsKey) is not byte[] items)
+                if (z.GetBytes(ObjectData.ItemsKey) is not byte[] items)
                 {
                     continue;
                 }
@@ -147,8 +147,9 @@ public static class WorldSearch
                 {
                     inv = InventoryData.Read(items);
                 }
-                catch (Exception ex) when (ex is NotSupportedException or EndOfStreamException or IOException)
+                catch (Exception ex) when (CheckedReads.Damaged(ex))
                 {
+                    Log.CaughtBrief(ex, "reading a container's items while searching the world (damaged: passed over)");
                     continue;
                 }
                 foreach (var g in inv.Items.GroupBy(i => PrefabCatalog.NameOf(i.Prefab) ?? "?").Where(g => Matches(g.Key)))

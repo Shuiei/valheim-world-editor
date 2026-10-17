@@ -71,7 +71,7 @@ public static class ModManifests
             field = value;
             _baseNotes = null;
             _notes = BaseNotes();
-            _generation++;
+            Interlocked.Increment(ref _generation);
         }
     } = [];
 
@@ -141,6 +141,7 @@ public static class ModManifests
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
                 // A folder that cannot be listed: its manifests are not read.
+                Log.Caught(e, "listing a plugins folder for worldeditor.json files (its manifests are not read)");
             }
         }
         var notes = BaseNotes();
@@ -150,11 +151,12 @@ public static class ModManifests
         {
             try
             {
-                // The mod: its folder right under plugins (the manifest's own when it lies there).
+                // The mod: its folder right under plugins. A manifest lying in plugins itself belongs to no mod: it
+                // offers no extension (any mod's DLL would be "inside" its folder, under the name "plugins").
                 string folder = file.DirectoryName!;
                 string relative = Path.GetRelativePath(plugins, folder);
-                string mod = relative == "." ? Path.GetFileName(folder) : relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
-                if (file.Length <= MaxFile && Read(File.ReadAllText(file.FullName), notes, (folder, mod)))
+                (string, string)? from = relative == "." ? null : (folder, relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0]);
+                if (file.Length <= MaxFile && Read(File.ReadAllText(file.FullName), notes, from))
                 {
                     read++;
                 }
@@ -165,12 +167,12 @@ public static class ModManifests
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
             {
-                Console.WriteLine($"mod manifest {file.FullName}: not read ({e.Message}).");
+                Log.Caught(e, "reading a mod's worldeditor.json (skipped)");
             }
         }
         notes.LinkSet = new LinkSet([.. notes.Links.Values]);
         _notes = notes;
-        _generation++;
+        Interlocked.Increment(ref _generation);
         return read;
     }
 
@@ -178,7 +180,7 @@ public static class ModManifests
     internal static void Forget()
     {
         _notes = BaseNotes();
-        _generation++;
+        Interlocked.Increment(ref _generation);
     }
 
     /// <summary>
@@ -187,7 +189,9 @@ public static class ModManifests
     /// </summary>
     /// <param name="json">The manifest's text.</param>
     /// <param name="notes">What is added to.</param>
-    /// <param name="from">The manifest's folder and its mod (null for one given in code, which offers no extension).</param>
+    /// <param name="from">
+    /// The manifest's folder and its mod (null for one given in code or lying in plugins itself, which offers no extension).
+    /// </param>
     /// <exception cref="JsonException">Not JSON.</exception>
     private static bool Read(string json, Notes notes, (string Folder, string Mod)? from)
     {

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Avalonia.Threading;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -82,6 +83,7 @@ public static class Driver
                 }
                 catch (Exception ex)
                 {
+                    Log.Caught(ex, $"running the driver's command {cmd.Split(' ')[0]}");
                     answer = "@@ error " + (ex.InnerException ?? ex).Message.Replace('\n', ' ');
                 }
                 Console.WriteLine(answer);
@@ -102,6 +104,16 @@ public static class Driver
         Console.Out.Flush();
     }
 
+    /// <summary>A command's argument split at its first '|' (type, set, check).</summary>
+    /// <param name="a">The command and its argument.</param>
+    /// <param name="usage">How the command is written, for the message.</param>
+    /// <exception cref="InvalidOperationException">There is no argument or it has no '|'.</exception>
+    private static (string Before, string After) Bar(string[] a, string usage)
+    {
+        int bar = a.Length > 1 ? a[1].IndexOf('|') : -1;
+        return bar >= 0 ? (a[1][..bar], a[1][(bar + 1)..]) : throw new InvalidOperationException("usage: " + usage);
+    }
+
     /// <summary>Runs one command; its answer's JSON (usually <see cref="State"/>). Throws for an unknown or failed command.</summary>
     internal static async Task<string> Run(MainWindow w, string cmd)
     {
@@ -112,10 +124,10 @@ public static class Driver
         {
             case "spirv":
                 // SPIRV-Cross (the terrain shader from Valheim for Windows) loads in this build.
-                TerrainEditor.App.TerrainShader.SelfTest();
+                TerrainShader.SelfTest();
                 return "{\"spirvCross\":\"ok\"}";
             case "gamedata":
-                TerrainEditor.App.GameData.UseCopies(a[1]);
+                GameData.UseCopies(a[1]);
                 return "{}";
             case "world":
                 await w.OpenWorld(() => Task.Run(() => WorldSession.Open(a[1])), "Opening the world…");
@@ -130,7 +142,7 @@ public static class Driver
             {
                 var s = w.Session ?? throw new InvalidOperationException("no area open");
                 var tool = Enum.Parse<BrushTool>(args[0], ignoreCase: true);
-                float gx = F(1) - (s.Scene.X0 * 64 - 32), gz = F(2) - (s.Scene.Z0 * 64 - 32);
+                float gx = F(1) - s.Scene.OriginX, gz = F(2) - s.Scene.OriginZ;
                 s.BeginStroke(tool, gx, gz);
                 for (int i = 0; i < (int)F(3); i++)
                 {
@@ -150,7 +162,7 @@ public static class Driver
             {
                 // A point in the air: world x, height above the ground, z (pieces, for the Workshop).
                 var sc = w.View.Scene ?? throw new InvalidOperationException("no area open");
-                var g = new System.Numerics.Vector2(F(1) - (sc.X0 * 64 - 32), F(3) - (sc.Z0 * 64 - 32));
+                var g = new System.Numerics.Vector2(F(1) - sc.OriginX, F(3) - sc.OriginZ);
                 var p = w.View.ScreenOfGrid(g, F(2)) ?? throw new InvalidOperationException("not in view");
                 Mouse(w, args[0], p, args.Length > 4 ? args[4] : "left", Mods(args.Skip(5)));
                 return State(w);
@@ -187,7 +199,15 @@ public static class Driver
                 await w.MapPage.ShowMatching();
                 return State(w);
             case "picture":
-                await (w.MapShown ? w.MapPage!.Map.Picture(a[1]) : w.View.Picture(a[1])).WaitAsync(PictureWait);
+                try
+                {
+                    await (w.MapShown ? w.MapPage!.Map.Picture(a[1]) : w.View.Picture(a[1])).WaitAsync(PictureWait);
+                }
+                catch (TimeoutException) when (!w.MapShown)
+                {
+                    // Says what the 3D view still waits on.
+                    throw new TimeoutException($"No picture after {PictureWait.TotalSeconds:0} s: {w.View.PictureWaiting()}.");
+                }
                 return State(w);
             case "shot":
             {
@@ -218,16 +238,14 @@ public static class Driver
                 return State(w);
             case "type":
             {
-                int bar = a[1].IndexOf('|');
-                string hint = a[1][..bar], text = a[1][(bar + 1)..];
+                var (hint, text) = Bar(a, "type <hint>|<text>");
                 var box = Find<Avalonia.Controls.TextBox>(w, b => (b.PlaceholderText ?? "").Contains(hint, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no text box \"{hint}\"");
                 box.Text = text;
                 return State(w);
             }
             case "set":
             {
-                int bar = a[1].IndexOf('|');
-                string label = a[1][..bar], value = a[1][(bar + 1)..];
+                var (label, value) = Bar(a, "set <label>|<value>");
                 var tb = Find<Avalonia.Controls.TextBlock>(w, t => string.Equals(t.Text?.Trim(), label, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no label \"{label}\"");
                 // The row holding the label: the first control after it.
                 var row = Avalonia.VisualTree.VisualExtensions.GetVisualParent(tb);
@@ -286,8 +304,8 @@ public static class Driver
                 var scene = w.View.Scene ?? throw new InvalidOperationException("no area open");
                 // One holding something first (a chest with contents).
                 var all = Enumerable.Range(0, scene.Things.Count).Where(k => !scene.Things[k].Gone && scene.Things[k].Prefab == Save.StableHash.Of(a[1])).ToList();
-                int i = all.Cast<int?>().FirstOrDefault(k => scene.Session is { } ss && TerrainEditor.App.ObjectData.Bytes(scene.World, ss.Edits, scene.Things[k!.Value].Id) is { } b
-                    && Save.ZdoData.Parse(b).GetBytes(TerrainEditor.App.ObjectData.ItemsKey) != null) ?? (all.Count > 0 ? all[0] : -1);
+                int i = all.Cast<int?>().FirstOrDefault(k => scene.Session is { } ss && ObjectData.Bytes(scene.World, ss.Edits, scene.Things[k!.Value].Id) is { } b
+                    && Save.ZdoData.Parse(b).GetBytes(ObjectData.ItemsKey) != null) ?? (all.Count > 0 ? all[0] : -1);
                 if (i < 0)
                 {
                     throw new InvalidOperationException($"no {a[1]} here");
@@ -315,10 +333,9 @@ public static class Driver
             case "check":
             {
                 // check <label>|on|off: a check box or switch by its text.
-                int bar = a[1].IndexOf('|');
-                string label = a[1][..bar];
+                var (label, state) = Bar(a, "check <label>|on|off");
                 var box = Find<Avalonia.Controls.CheckBox>(w, b => string.Equals(TextOf(b).Trim(), label, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"no check box \"{label}\"");
-                box.IsChecked = a[1][(bar + 1)..] == "on";
+                box.IsChecked = state == "on";
                 return State(w);
             }
             case "choose":
@@ -425,7 +442,7 @@ public static class Driver
     private static Avalonia.Point ScreenAt(MainWindow w, float x, float z)
     {
         var s = w.View.Scene ?? throw new InvalidOperationException("no area open");
-        var g = new System.Numerics.Vector2(x - (s.X0 * 64 - 32), z - (s.Z0 * 64 - 32));
+        var g = new System.Numerics.Vector2(x - s.OriginX, z - s.OriginZ);
         return w.View.ScreenOfGrid(g, 0) ?? throw new InvalidOperationException($"{x}, {z} is not in view");
     }
 

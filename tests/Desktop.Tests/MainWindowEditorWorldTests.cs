@@ -48,6 +48,43 @@ public class MainWindowEditorWorldTests
         Assert.Single(s.UndoList);
     }
 
+    // Save after the game saved the world: refused, and the editor offers to bring the changes onto the game's save.
+    // Not now: nothing changes. Bring them over: the area is read again from the game's save with the change pending
+    // and its step, and the next save is made from the game's save.
+    [AvaloniaFact]
+    public async Task ASaveAfterTheGameSavedOffersToBringTheChangesOver()
+    {
+        using var r = new WorldWindowRun();
+        await r.Open();
+        r.Raise();
+        var area = r.W.Session;
+        int n = TerrainEditor.Save.WorldWriter.LatestNumber(r.Dir);
+        foreach (string ext in new[] { ".chunks", ".db2", ".fwl2", ".ok" })
+        {
+            File.Copy(Path.Combine(r.Dir, $"_main.{n}{ext}"), Path.Combine(r.Dir, $"_main.{n + 1}{ext}"));
+        }
+        await r.W.Save();
+        Assert.StartsWith($"Valheim saved this world (save #{n + 1}) after the editor read it", Assert.Single(r.Asked));
+        Assert.StartsWith("Nothing was saved: the game saved this world", r.Said);
+        Assert.Empty(r.Told);
+        Assert.Same(area, r.W.Session);
+        Assert.Equal(n, r.W.World!.World.SaveNumber);
+
+        r.Answers.Enqueue(true);
+        await r.W.Save();
+        Assert.Equal(2, r.Asked.Count);
+        Assert.StartsWith($"Your changes are on the game's save #{n + 1} now", Assert.Single(r.Told));
+        Assert.Equal(n + 1, r.W.World!.World.SaveNumber);
+        Assert.NotSame(area, r.W.Session);
+        Assert.Single(r.W.Session!.UndoList);
+        Assert.Equal(1, r.W.World.Pending.Zones);
+        Assert.False(r.W.IsBusy);
+
+        await r.W.Save();
+        Assert.Equal((0, 0, 0, 0), r.W.World.Pending);
+        Assert.Equal(n + 2, TerrainEditor.Save.WorldWriter.LatestNumber(r.Dir));
+    }
+
     [AvaloniaFact]
     public async Task WhileSavingTheKeysAndFollowWait()
     {
@@ -73,7 +110,7 @@ public class MainWindowEditorWorldTests
         Assert.True(r.W.IsBusy);
         r.W.KeyPress(Key.S, RawInputModifiers.Control, PhysicalKey.S, "s");
         Assert.Equal(1, asked);
-        Assert.Equal("the world is being saved or read", r.W.MoveBlocker());
+        Assert.Equal("the world is being saved or read", r.W.MoveBlocker()?.English);
         read.SetResult();
         await saving;
         Assert.Single(r.Told);
@@ -93,10 +130,10 @@ public class MainWindowEditorWorldTests
         Assert.Null(w.MoveBlocker());
         s.Brush.Radius = 4;
         s.BeginStroke(BrushTool.Raise, 32, 32);
-        Assert.Equal("a stroke is on", w.MoveBlocker());
+        Assert.Equal("a stroke is on", w.MoveBlocker()?.English);
         s.EndStroke();
         w.View.Path.Points.Add(new System.Numerics.Vector2(10, 10));
-        Assert.Equal("a path is drawn (apply or clear it)", w.MoveBlocker());
+        Assert.Equal("a path is drawn (apply or clear it)", w.MoveBlocker()?.English);
         // No live game here: no players to ask for.
         await w.PollPlayers();
         Assert.Empty(w.LivePlayers);

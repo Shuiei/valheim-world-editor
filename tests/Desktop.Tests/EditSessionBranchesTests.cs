@@ -42,7 +42,7 @@ public class EditSessionBranchesTests
         {
             s.StrokeStep(64, 64, 0.1f);
         }
-        Assert.StartsWith("Reached the game limit", s.EndStroke());
+        Assert.StartsWith("Reached the game limit", s.EndStroke().Shown);
         Assert.Equal("Raise", s.UndoLabel);
     }
 

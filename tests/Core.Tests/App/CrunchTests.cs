@@ -79,6 +79,17 @@ public class CrunchTests
     }
 
     [Fact]
+    public void ALevelPickedFromTheHeaderComesWithIt()
+    {
+        byte[] crn = Fixture("crunch-dxt5.crn");
+        var (info, level, blocks) = Crunch.Unpack(crn, t => t.Levels - 1)!.Value;
+        Assert.Equal(Crunch.Read(crn), info);
+        Assert.Equal(5, level);
+        Assert.Equal(Crunch.Unpack(crn, 5), blocks);
+        Assert.Null(Crunch.Unpack(crn, t => t.Levels));
+    }
+
+    [Fact]
     public void BrokenFilesGiveNull()
     {
         byte[] crn = Fixture("crunch-dxt5.crn");

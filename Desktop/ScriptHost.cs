@@ -14,11 +14,12 @@ namespace TerrainEditor.Desktop;
 
 /// <summary>
 /// The Script tool's engine: a C# script (top-level statements, with the editor's API: ScriptApi.csx) is compiled in
-/// the app (Roslyn, against .NET's reference assemblies carried inside), then run on a background thread against a
-/// snapshot of the open area. What it changes (ground, paint, objects) is kept aside and goes into the area afterwards
-/// as one undo step (Apply), on the window's thread.
+/// the app (Roslyn, against .NET's reference assemblies carried inside), then run against a snapshot of the open area
+/// in a process of its own (RunInChild, in ScriptHost.Child.cs), so that Stop can always end it. What it changes
+/// (ground, paint, objects) comes back and goes into the area afterwards as one undo step (Apply), on the window's
+/// thread.
 /// </summary>
-public static class ScriptHost
+public static partial class ScriptHost
 {
     /// <summary>The script API's source (ScriptApi.csx), embedded in the app; read once.</summary>
     private static readonly Lazy<string> Api = new(() =>
@@ -172,9 +173,14 @@ public static class ScriptHost
     /// <param name="Water">The water level.</param>
     /// <param name="Seed">The world's seed (0 without a world).</param>
     /// <param name="World">The world's name.</param>
-    /// <param name="CanCreate">Whether the editor can make a prefab (by hash).</param>
+    /// <param name="Creatable">The prefabs (by hash) the editor can make: the world's own and the game's placeable
+    /// kinds and creatures.</param>
     public sealed record Snapshot(int W, int H, float Ox, float Oz, float[] Heights, float[] Original, int[] Biomes, byte[] Mask, bool[] Locked,
-        List<(int Index, string Prefab, Vector3 Position, string Kind, bool Piece, Vector3 Rotation, float Scale)> Things, float Water, int Seed, string World, Func<int, bool> CanCreate);
+        List<(int Index, string Prefab, Vector3 Position, string Kind, bool Piece, Vector3 Rotation, float Scale)> Things, float Water, int Seed, string World, HashSet<int> Creatable)
+    {
+        /// <summary>Whether the editor can make a prefab (by hash).</summary>
+        public bool CanCreate(int prefab) => Creatable.Contains(prefab);
+    }
 
     /// <summary>Takes the snapshot of the session's area, on the window's thread.</summary>
     /// <param name="s">The edit session.</param>
@@ -213,12 +219,19 @@ public static class ScriptHost
             }
         }
         var world = scene.World;
-        return new Snapshot(g.W, g.H, scene.X0 * 64f - 32f, scene.Z0 * 64f - 32f, (float[])scene.Heights.Clone(), original, (int[])scene.Biomes.Clone(), (byte[])scene.Mask.Clone(), locked,
-            things, scene.Water, world?.Seed ?? 0, world?.Name ?? "", prefab => world?.CanCreate(prefab) ?? PrefabCatalog.Get(prefab) != null);
+        // As WorldSave.CanCreate: the world's own objects, the game's placeable kinds and its creatures; without a
+        // world (the Workshop), the placeable kinds.
+        HashSet<int> creatable = world != null
+            ? [.. world.Creatable, .. PrefabCatalog.Creatures]
+            : [.. PrefabCatalog.Placeable.Select(p => StableHash.Of(p.Name))];
+        return new Snapshot(g.W, g.H, scene.OriginX, scene.OriginZ, (float[])scene.Heights.Clone(), original, (int[])scene.Biomes.Clone(), (byte[])scene.Mask.Clone(), locked,
+            things, scene.Water, world?.Seed ?? 0, world?.Name ?? "", creatable);
     }
 
     /// <summary>
-    /// Runs the compiled script against the snapshot (on the calling thread: call it on a background one).
+    /// Runs the compiled script against the snapshot in this process, on the calling thread (call it on a background
+    /// one), with its new pieces snapped (SnapPieces). The editor runs scripts in a process of their own instead
+    /// (RunInChild), which Stop can always end.
     /// </summary>
     /// <param name="image">The compiled assembly.</param>
     /// <param name="pdb">Its debug information, or null (errors then have no line).</param>
@@ -227,12 +240,33 @@ public static class ScriptHost
     /// <returns>What the script changed; the script's own exceptions are thrown on.</returns>
     public static Changes Run(byte[] image, byte[]? pdb, Snapshot snap, CancellationToken cancel)
     {
+        var ch = Execute(image, pdb, snap, cancel);
+        SnapPieces(snap, ch, cancel);
+        return ch;
+    }
+
+    /// <summary>
+    /// Runs the compiled script against the snapshot on the calling thread: Run without the snapping, which needs the
+    /// game's piece data (the script's process has none; the editor snaps when the changes come back).
+    /// </summary>
+    /// <param name="image">The compiled assembly.</param>
+    /// <param name="pdb">Its debug information, or null (errors then have no line).</param>
+    /// <param name="snap">The area as the script sees it.</param>
+    /// <param name="cancel">Stops the script at its next Check or Mountain row.</param>
+    /// <returns>What the script changed; the script's own exceptions are thrown on.</returns>
+    private static Changes Execute(byte[] image, byte[]? pdb, Snapshot snap, CancellationToken cancel)
+    {
         var ch = new Changes();
         float[] heights = (float[])snap.Heights.Clone();
         int lines = 0;
         var noises = new Dictionary<int, Noise>();
         int Point(float x, float z)
         {
+            // Not a point at all (NaN, infinity): would turn into grid column or row 0.
+            if (!float.IsFinite(x) || !float.IsFinite(z))
+            {
+                return -1;
+            }
             int gx = (int)MathF.Round(x - snap.Ox), gz = (int)MathF.Round(z - snap.Oz);
             return gx < 0 || gz < 0 || gx >= snap.W || gz >= snap.H ? -1 : gz * snap.W + gx;
         }
@@ -245,13 +279,18 @@ public static class ScriptHost
             float h00 = a[z0 * snap.W + x0], h10 = a[z0 * snap.W + x0 + 1], h01 = a[(z0 + 1) * snap.W + x0], h11 = a[(z0 + 1) * snap.W + x0 + 1];
             return (h00 * (1 - u) + h10 * u) * (1 - v) + (h01 * (1 - u) + h11 * u) * v;
         }
+        // The callbacks that change something hold the changes' lock: a script may call them from several threads
+        // (Parallel.For), and the changes are dictionaries and lists.
         void SetHeight(float x, float z, float h)
         {
             int p = Point(x, z);
             if (p >= 0 && !snap.Locked[p] && float.IsFinite(h))
             {
-                heights[p] = h;
-                ch.Heights[p] = h;
+                lock (ch)
+                {
+                    heights[p] = h;
+                    ch.Heights[p] = h;
+                }
             }
         }
         var alc = new AssemblyLoadContext("Script", isCollectible: true);
@@ -279,9 +318,12 @@ public static class ScriptHost
                 {
                     return;
                 }
-                float[] now = ch.Paint.TryGetValue(p, out float[]? c) ? c : [.. Enumerable.Range(0, 4).Select(i => snap.Mask[p * 4 + i] / 255f)];
-                float k = Math.Clamp(strength, 0, 1);
-                ch.Paint[p] = [.. now.Select((v, i) => v + (colour[i] - v) * k)];
+                lock (ch)
+                {
+                    float[] now = ch.Paint.TryGetValue(p, out float[]? c) ? c : [.. Enumerable.Range(0, 4).Select(i => snap.Mask[p * 4 + i] / 255f)];
+                    float k = Math.Clamp(strength, 0, 1);
+                    ch.Paint[p] = [.. now.Select((v, i) => v + (colour[i] - v) * k)];
+                }
             }));
             Fill("Mountain", new Action<float, float, string, float, float, float, float, int>((x, z, preset, height, radius, rough, turn, seed) =>
             {
@@ -308,7 +350,11 @@ public static class ScriptHost
                         float v = shape(dx, dz);
                         if (v != 0 && Point(x + dx, z + dz) is int p and >= 0)
                         {
-                            SetHeight(x + dx, z + dz, heights[p] + v);
+                            // Read and written under the lock, so two mountains at once both count.
+                            lock (ch)
+                            {
+                                SetHeight(x + dx, z + dz, heights[p] + v);
+                            }
                         }
                     }
                 }
@@ -317,24 +363,37 @@ public static class ScriptHost
                 {
                     if (!t.Piece && t.Kind is "Trees" or "Rocks" or "Ore" or "Bushes" or "Pickables" && shape(t.Position.X - x, t.Position.Z - z) > Uplift.ClearHeight)
                     {
-                        ch.Remove.Add(t.Index);
+                        lock (ch)
+                        {
+                            ch.Remove.Add(t.Index);
+                        }
                     }
                 }
             }));
             Fill("Objects", new Func<(int, string, float, float, float, string, bool, float, float, float, float)[]>(() =>
                 [.. snap.Things.Select(t => (t.Index, t.Prefab, t.Position.X, t.Position.Y, t.Position.Z, t.Kind, t.Piece, t.Rotation.X, t.Rotation.Y, t.Rotation.Z, t.Scale > 0 ? t.Scale : 1))]));
-            Fill("Remove", new Action<int>(i => ch.Remove.Add(i)));
+            Fill("Remove", new Action<int>(i =>
+            {
+                lock (ch)
+                {
+                    ch.Remove.Add(i);
+                }
+            }));
             Fill("CanPlace", new Func<string, bool>(name => snap.CanCreate(StableHash.Of(name))));
             Fill("Place", new Action<string, float, float, float, float, float, float, float, bool>((name, x, z, yaw, scale, y, pitch, roll, snapIt) =>
             {
-                int prefab = StableHash.Of(name);
-                if (!snap.CanCreate(prefab))
+                lock (ch)
                 {
-                    throw new ArgumentException($"the editor cannot make a “{name}” (a prefab name, like Beech1 or rock4_forest)");
+                    Place(snap, ch, name, x, z, yaw, scale, y, pitch, roll, snapIt);
                 }
-                ch.Add.Add((prefab, name, new Vector3(x, y, z), new Vector3(pitch, yaw, roll), scale, snapIt));
             }));
-            Fill("Move", new Action<int, float, float, float, float, float, float, float>((index, x, z, y, yaw, pitch, roll, scale) => Move(snap, ch, index, x, z, y, yaw, pitch, roll, scale)));
+            Fill("Move", new Action<int, float, float, float, float, float, float, float>((index, x, z, y, yaw, pitch, roll, scale) =>
+            {
+                lock (ch)
+                {
+                    Move(snap, ch, index, x, z, y, yaw, pitch, roll, scale);
+                }
+            }));
             Fill("Noise", new Func<float, float, int, float>((x, z, seed) =>
             {
                 lock (noises)
@@ -348,9 +407,12 @@ public static class ScriptHost
             }));
             Fill("Print", new Action<string>(text =>
             {
-                if (lines++ < 2000)
+                lock (ch)
                 {
-                    ch.Output.AppendLine(text);
+                    if (lines++ < 2000)
+                    {
+                        ch.Output.AppendLine(text);
+                    }
                 }
             }));
             Fill("Check", new Action(cancel.ThrowIfCancellationRequested));
@@ -381,7 +443,6 @@ public static class ScriptHost
                     ch.Add[i] = a with { Position = a.Position with { Y = Sample(heights, a.Position.X, a.Position.Z) } };
                 }
             }
-            SnapPieces(snap, ch);
             return ch;
         }
         finally
@@ -412,15 +473,88 @@ public static class ScriptHost
     }
 
     /// <summary>
+    /// A script's Objects.Place: the new object noted (y NaN: on the ground as the script leaves it; scale 0: the
+    /// prefab's own size).
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// A prefab the editor cannot make, a place or turn that is not a number (NaN, infinite), a place outside the
+    /// area, or a scale below 0.
+    /// </exception>
+    internal static void Place(Snapshot snap, Changes ch, string name, float x, float z, float yaw, float scale, float y, float pitch, float roll, bool snapIt)
+    {
+        int prefab = StableHash.Of(name);
+        if (!snap.CanCreate(prefab))
+        {
+            throw new ArgumentException($"the editor cannot make a “{name}” (a prefab name, like Beech1 or rock4_forest)");
+        }
+        Number("x", x);
+        Number("z", z);
+        InArea(snap, x, z);
+        if (!float.IsNaN(y))
+        {
+            Number("y", y);
+        }
+        Number("yaw", yaw);
+        Number("pitch", pitch);
+        Number("roll", roll);
+        if (!float.IsFinite(scale) || scale < 0)
+        {
+            throw new ArgumentException($"a scale of {scale}: give a size above 0 (1 or 0: the prefab's own)");
+        }
+        ch.Add.Add((prefab, name, new Vector3(x, y, z), new Vector3(pitch, yaw, roll), scale, snapIt));
+    }
+
+    /// <summary>Throws unless a script's value is a number: not NaN, not infinite.</summary>
+    /// <param name="what">The argument's name, as the script gives it.</param>
+    /// <param name="v">Its value.</param>
+    /// <exception cref="ArgumentException">It is NaN or infinite.</exception>
+    private static void Number(string what, float v)
+    {
+        if (!float.IsFinite(v))
+        {
+            throw new ArgumentException($"{what} is {v}: give a number (not NaN or infinite)");
+        }
+    }
+
+    /// <summary>
+    /// Throws unless world point (x, z) is within the area: its first to its last grid point (Area.MinX to MaxX, MinZ
+    /// to MaxZ), the edge included, so every point the scripts' Area.Inside takes (the edge left out) is in. A
+    /// coordinate that is not a number is not.
+    /// </summary>
+    /// <param name="snap">The area.</param>
+    /// <param name="x">World x.</param>
+    /// <param name="z">World z.</param>
+    /// <param name="what">The point as the error names it (null: its coordinates).</param>
+    /// <exception cref="ArgumentException">It is outside the area.</exception>
+    private static void InArea(Snapshot snap, float x, float z, string? what = null)
+    {
+        float maxX = snap.Ox + snap.W - 1, maxZ = snap.Oz + snap.H - 1;
+        if (!(x >= snap.Ox && x <= maxX && z >= snap.Oz && z <= maxZ))
+        {
+            throw new ArgumentException($"{what ?? $"({x}, {z})"} is outside the area (x {snap.Ox} to {maxX}, z {snap.Oz} to {maxZ}): keep to Area.Inside");
+        }
+    }
+
+    /// <summary>
     /// A script's Objects.Move: the thing's new place, rotation and scale noted (NaN keeps a value: as it was, or as an
     /// earlier Move of the script left it).
     /// </summary>
-    /// <exception cref="ArgumentException">No such thing in the area, or a scale not above 0.</exception>
+    /// <exception cref="ArgumentException">
+    /// No such thing in the area, a place or turn given that is infinite, a place outside the area, or a scale not
+    /// above 0.
+    /// </exception>
     internal static void Move(Snapshot snap, Changes ch, int index, float x, float z, float y, float yaw, float pitch, float roll, float scale)
     {
         if (!snap.Things.Exists(t => t.Index == index))
         {
             throw new ArgumentException($"no object {index} in the area (Objects.All gives them)");
+        }
+        foreach (var (what, v) in new[] { ("x", x), ("z", z), ("y", y), ("yaw", yaw), ("pitch", pitch), ("roll", roll) })
+        {
+            if (!float.IsNaN(v))
+            {
+                Number(what, v);
+            }
         }
         if (!float.IsNaN(scale) && (!float.IsFinite(scale) || scale <= 0))
         {
@@ -429,6 +563,10 @@ public static class ScriptHost
         var t = snap.Things.Find(t => t.Index == index);
         var (p, r, sc) = ch.Moves.TryGetValue(index, out var m) ? m : (t.Position, t.Rotation, t.Scale);
         static float Or(float v, float was) => float.IsNaN(v) ? was : v;
+        if (!float.IsNaN(x) || !float.IsNaN(z))
+        {
+            InArea(snap, Or(x, p.X), Or(z, p.Z));
+        }
         ch.Moves[index] = (new Vector3(Or(x, p.X), Or(y, p.Y), Or(z, p.Z)), new Vector3(Or(pitch, r.X), Or(yaw, r.Y), Or(roll, r.Z)), Or(scale, sc));
     }
 
@@ -436,7 +574,11 @@ public static class ScriptHost
     /// The new pieces placed with snap moved to meet the snap points of the pieces standing (where the script left
     /// them; those it took away do not count) and of those placed before them, as the game's hammer does.
     /// </summary>
-    internal static void SnapPieces(Snapshot snap, Changes ch)
+    /// <param name="snap">The area as the script saw it.</param>
+    /// <param name="ch">The script's changes; its new pieces are moved in place.</param>
+    /// <param name="cancel">Stop: checked before each piece (thousands take a while).</param>
+    /// <exception cref="ArgumentException">A piece snaps to a place outside the area.</exception>
+    internal static void SnapPieces(Snapshot snap, Changes ch, CancellationToken cancel = default)
     {
         if (!ch.Add.Any(a => a.Snap))
         {
@@ -453,11 +595,14 @@ public static class ScriptHost
         }
         for (int i = 0; i < ch.Add.Count; i++)
         {
+            cancel.ThrowIfCancellationRequested();
             var a = ch.Add[i];
             var q = BlueprintFormats.FromEuler(a.Rotation);
             if (a.Snap && Hammer.Get(a.Name) != null)
             {
-                ch.Add[i] = a with { Position = Hammer.Snap(a.Name, q, a.Position, placed).Position };
+                var to = Hammer.Snap(a.Name, q, a.Position, placed).Position;
+                InArea(snap, to.X, to.Z, $"the {a.Name} placed at ({a.Position.X}, {a.Position.Z}) snaps to ({to.X}, {to.Z}), which");
+                ch.Add[i] = a with { Position = to };
             }
             placed.Add(new(-1 - i, a.Name, ch.Add[i].Position, q));
         }
@@ -468,9 +613,19 @@ public static class ScriptHost
     /// </summary>
     public static string Where(Exception ex)
     {
+        if (ex is ScriptException e)
+        {
+            return e.Where;
+        }
         var frame = new System.Diagnostics.StackTrace(ex, true).GetFrames().FirstOrDefault(f => f.GetFileName() == "script" && f.GetFileLineNumber() > 0);
         return frame != null ? $"line {frame.GetFileLineNumber()}: " : "";
     }
+
+    /// <summary>
+    /// A script's error as the output shows it: "line 12: ArgumentException: …", the exception's kind as the script
+    /// threw it (ScriptException carries one from the script's process; the kind is Crash when that process died).
+    /// </summary>
+    public static string Describe(Exception ex) => $"{Where(ex)}{(ex is ScriptException e ? e.Kind : ex.GetType().Name)}: {ex.Message}";
 
     /// <summary>
     /// The script's changes into the area, one undo step. Returns how many points the game's ±8 m stopped.
@@ -487,15 +642,21 @@ public static class ScriptHost
             var touched = new List<int>();
             bool was = g.NoLimit;
             g.NoLimit = ch.NoLimit;
-            foreach (var (p, h) in ch.Heights)
+            try
             {
-                if (g.SetHeight(p, h))
+                foreach (var (p, h) in ch.Heights)
                 {
-                    clamped++;
+                    if (g.SetHeight(p, h))
+                    {
+                        clamped++;
+                    }
+                    touched.Add(p);
                 }
-                touched.Add(p);
             }
-            g.NoLimit = was;
+            finally
+            {
+                g.NoLimit = was;
+            }
             foreach (var (p, colour) in ch.Paint)
             {
                 Array.Copy(colour, 0, g.Paint, p * 4, 4);

@@ -170,14 +170,14 @@ public class PlaceToolBranchesTests
         t.Chosen.Add(Wall);
         t.AutoSnap();
         Assert.Equal(new Vector2(64, 64), Assert.Single(t.Preview(new Vector2(64, 64))).G);
-        Assert.Null(t.SnappedTo);
+        Assert.Null(t.Snapped);
         // A wall 8 m away: near, but no snap points meet.
         var (u, _) = Tool(new WorldScene.Thing(1, StableHash.Of(Wall), new Vector3(72 - 32, 30, 64 - 32), Vector3.Zero, 0, true));
         u.Chosen.Clear();
         u.Chosen.Add(Wall);
         u.AutoSnap();
         Assert.Equal(new Vector2(64, 64), Assert.Single(u.Preview(new Vector2(64, 64))).G);
-        Assert.Null(u.SnappedTo);
+        Assert.Null(u.Snapped);
         // Snapping off: no pieces looked at.
         u.SnapTo = false;
         Assert.Equal(new Vector2(64, 64), Assert.Single(u.Preview(new Vector2(64, 64))).G);
@@ -231,14 +231,14 @@ public class PlaceToolBranchesTests
     public void HeightsArePickedAndNudged()
     {
         var none = new PlaceTool();
-        Assert.Contains("(the ground there)", none.PickElevation(0, 12.3f));
+        Assert.Contains("(the ground there)", none.PickElevation(0, 12.3f).Shown);
         Assert.Equal(12.3f, none.Elev, 3);
         // A tree is no piece: the ground; a wall without a name known: its own.
         var wall = new WorldScene.Thing(2, StableHash.Of(Wall), new Vector3(0, 31, 0), Vector3.Zero, 0, true);
         var (t, _) = Tool(new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(0, 30, 0), Vector3.Zero, 1, false), wall);
-        Assert.Contains("(the ground there)", t.PickElevation(0, 30));
+        Assert.Contains("(the ground there)", t.PickElevation(0, 30).Shown);
         t.NameOf = _ => null;
-        Assert.Contains("(the top of ", t.PickElevation(1, 30));
+        Assert.Contains("(the top of ", t.PickElevation(1, 30).Shown);
         Assert.Equal(PlaceTool.Elevations.At, t.Elevation);
     }
 }

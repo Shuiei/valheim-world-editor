@@ -15,7 +15,7 @@ internal sealed partial class DungeonDresser
     /// What stands on a floor goes 5 cm up: a piece whose middle of mass is right on a floor's surface
     /// gets no support from it in game.
     /// </summary>
-    private const float Lift = 0.05f;
+    internal const float Lift = 0.05f;
 
     private readonly Material _mat;
     /// <summary>The biome's palette (lights, foes, loot, clutter).</summary>
@@ -27,8 +27,12 @@ internal sealed partial class DungeonDresser
     private readonly DungeonOut _o;
     /// <summary>How ruined (0 kept to 1): the settings' Decay, else the style's.</summary>
     private readonly float _decay;
+    /// <summary>Where the corridor being dressed has its pilasters' bands of wall (v), for a gate to keep off them.</summary>
+    private readonly List<float> _bands = [];
     /// <summary>The foes to use: those picked in the settings, else the biome's.</summary>
     private readonly Foe[] _foes;
+    /// <summary>The elite guards: the chosen foes when the settings name some, else the biome's elites.</summary>
+    private readonly Foe[] _elites;
     /// <summary>The arena's boss: the one picked, the biome's when none is, null when "" is.</summary>
     private readonly Foe? _boss;
     /// <summary>The dungeon's name, for the entrance's sign.</summary>
@@ -50,6 +54,7 @@ internal sealed partial class DungeonDresser
         _name = name;
         _decay = Math.Clamp(s.Decay ?? style.Decay, 0, 1);
         _foes = s.Foes is { Count: > 0 } chosen ? [.. chosen.Select(FoeOf)] : b.Foes;
+        _elites = s.Foes is { Count: > 0 } ? _foes : b.Elites;
         _boss = s.Boss == null ? b.Boss : s.Boss.Length == 0 ? null : FoeOf(s.Boss);
     }
 
@@ -81,18 +86,23 @@ internal sealed partial class DungeonDresser
 
     // ---- A room's frame.
     /// <summary>
-    /// A space's own frame (u across, right of the way in; v deep, 0 its middle) and what is already taken
-    /// in it.
+    /// A space's own frame (u across, right of the way in; v deep, 0 the middle of its own box, recesses left out)
+    /// and what is already taken in it. Its tiles are (a, b) of the own box, a across and b deep; a recess's tiles
+    /// may lie beyond it, at -1 or one past the last.
     /// </summary>
-    private sealed class Frame
+    internal sealed class Frame
     {
         /// <summary>The space.</summary>
         public readonly DungeonPlan.Space S;
         /// <summary>
-        /// Its floor (the marble's top), the top of its floor finish, its wall height, its middle (world x, z)
-        /// and the half width and half depth to the walls' inner faces (metres).
+        /// Its floor (the marble's top), the top of its floor finish, its wall height, its own box's middle (world x,
+        /// z) and the half width and half depth to that box's walls' inner faces (metres).
         /// </summary>
         public readonly float F, Top, H, Cx, Cz, HalfA, HalfD;
+        /// <summary>Its own box's tiles across and deep (its recesses not counted).</summary>
+        public readonly int Across, Deep;
+        /// <summary>The first and last tile across (a) and deep (b) that its tiles reach, recesses included.</summary>
+        public readonly int A0, A1, B0, B1;
         /// <summary>The way in (deep, +v) and the way across (+u, to its right), in world axes.</summary>
         public readonly (int X, int Z) D, A;
         /// <summary>Circles kept free (world x, z, radius in metres).</summary>
@@ -102,6 +112,8 @@ internal sealed partial class DungeonDresser
 
         /// <summary>The level the space is on: what lies beyond its walls.</summary>
         private readonly DungeonPlan.Level _level;
+        /// <summary>Its own box (tiles, world axes).</summary>
+        private readonly (int X0, int Z0, int W, int H) _own;
 
         /// <summary>The frame of a space, with the floor before each doorway kept free.</summary>
         public Frame(DungeonPlan.Space s, Material mat, DungeonPlan.Level level)
@@ -111,12 +123,23 @@ internal sealed partial class DungeonDresser
             F = DungeonPlan.FloorY(s.Level);
             Top = F + (s.IsRoom && s.Room is not (Room.StairTop or Room.StairBottom) ? s.Floor != null ? s.FloorTop : mat.Floor != null ? mat.FloorTop : 0 : 0);
             H = DungeonPlan.HeightOf(s);
-            Cx = s.CenterX;
-            Cz = s.CenterZ;
+            _own = s.Own;
+            Cx = (_own.X0 + _own.W / 2f) * 2;
+            Cz = (_own.Z0 + _own.H / 2f) * 2;
             D = s.Dir;
             A = (D.Z, -D.X);
-            HalfA = s.Across - mat.Thick / 2;
-            HalfD = s.Deep - mat.Thick / 2;
+            (Across, Deep) = D.X != 0 ? (_own.H, _own.W) : (_own.W, _own.H);
+            HalfA = Across - mat.Thick / 2;
+            HalfD = Deep - mat.Thick / 2;
+            (A0, A1, B0, B1) = (0, Across - 1, 0, Deep - 1);
+            foreach (var (tiles, _) in s.Recesses)
+            {
+                foreach (var t in tiles)
+                {
+                    var (a, b) = CellOf(t);
+                    (A0, A1, B0, B1) = (Math.Min(A0, a), Math.Max(A1, a), Math.Min(B0, b), Math.Max(B1, b));
+                }
+            }
             foreach (var d in s.Doors)
             {
                 var (x, z) = d.Center;
@@ -127,14 +150,31 @@ internal sealed partial class DungeonDresser
         }
 
         /// <summary>Its floor area inside the walls (square metres): its tiles' less the walls' share.</summary>
-        public float Area => S.Tiles.Count * 4f * (HalfA * HalfD) / (S.Across * S.Deep);
+        public float Area => S.Tiles.Count * 4f * (HalfA * HalfD) / (Across * Deep);
 
-        /// <summary>Whether a point of the frame is over one of the room's own tiles (not what its shape cuts away).</summary>
-        public bool Inside(float u, float v)
+        /// <summary>The world tile at (a across, b deep) of its own box; a and b may lie beyond it, as a recess's do.</summary>
+        public (int, int) TileAt(int a, int b) => D switch
         {
-            int a = (int)MathF.Floor((u + S.Across) / 2), b = (int)MathF.Floor((v + S.Deep) / 2);
-            return a >= 0 && b >= 0 && a < S.Across && b < S.Deep && S.Has(S.TileAt(a, b));
-        }
+            (0, 1) => (_own.X0 + a, _own.Z0 + b),
+            (0, -1) => (_own.X0 + _own.W - 1 - a, _own.Z0 + _own.H - 1 - b),
+            (1, 0) => (_own.X0 + b, _own.Z0 + _own.H - 1 - a),
+            _ => (_own.X0 + _own.W - 1 - b, _own.Z0 + a),
+        };
+
+        /// <summary>Whether its tile (a across, b deep) is one of the space's own, a recess's included.</summary>
+        public bool Has(int a, int b) => S.Has(TileAt(a, b));
+
+        /// <summary>A world tile's place (a across, b deep) in its own box; the inverse of <see cref="TileAt"/>.</summary>
+        private (int A, int B) CellOf((int I, int J) t) => D switch
+        {
+            (0, 1) => (t.I - _own.X0, t.J - _own.Z0),
+            (0, -1) => (_own.X0 + _own.W - 1 - t.I, _own.Z0 + _own.H - 1 - t.J),
+            (1, 0) => (_own.Z0 + _own.H - 1 - t.J, t.I - _own.X0),
+            _ => (t.J - _own.Z0, _own.X0 + _own.W - 1 - t.I),
+        };
+
+        /// <summary>Whether a point of the frame is over one of the room's own tiles (not what its shape cuts away; a recess's included).</summary>
+        public bool Inside(float u, float v) => Has((int)MathF.Floor((u + Across) / 2), (int)MathF.Floor((v + Deep) / 2));
 
         /// <summary>A point of the frame (u, v; y as given) in world space.</summary>
         public Vector3 W(float u, float v, float y) => new(Cx + A.X * u + D.X * v, y, Cz + A.Z * u + D.Z * v);
@@ -148,7 +188,10 @@ internal sealed partial class DungeonDresser
         /// <summary>Whether a circle of radius r at (u, v) is inside the walls (over the room's own tiles) and clear of what is taken.</summary>
         public bool Free(float u, float v, float r)
         {
-            if (Math.Abs(u) > HalfA - r + 0.15f || Math.Abs(v) > HalfD - r + 0.15f)
+            // Within the walls' inner faces of the box its tiles reach (its own, and out over any recess).
+            float thick = Across - HalfA;
+            if (u < 2 * A0 - Across + thick + r - 0.15f || u > 2 * (A1 + 1) - Across - thick - r + 0.15f
+                || v < 2 * B0 - Deep + thick + r - 0.15f || v > 2 * (B1 + 1) - Deep - thick - r + 0.15f)
             {
                 return false;
             }
@@ -175,17 +218,22 @@ internal sealed partial class DungeonDresser
         /// The room's corners on the walls' inner faces (u, v), with the way into the room from each (local yaw of the
         /// diagonal) and whether it is an outer corner of the room (convex) or one where a notch meets a wall.
         /// </summary>
-        public List<(float U, float V, float Yaw, bool Convex)> Corners()
+        public IReadOnlyList<(float U, float V, float Yaw, bool Convex)> Corners() => _corners ??= FindCorners();
+
+        /// <summary>Backs <see cref="Corners"/>: worked out once, the room's tiles never changing while it is dressed.</summary>
+        private List<(float U, float V, float Yaw, bool Convex)>? _corners;
+
+        /// <summary>Works out <see cref="Corners"/>.</summary>
+        private List<(float U, float V, float Yaw, bool Convex)> FindCorners()
         {
-            float thick = S.Across - HalfA;
+            float thick = Across - HalfA;
             var corners = new List<(float, float, float, bool)>();
-            bool In(int a, int b) => a >= 0 && b >= 0 && a < S.Across && b < S.Deep && S.Has(S.TileAt(a, b));
-            for (int a = 0; a <= S.Across; a++)
+            for (int a = A0; a <= A1 + 1; a++)
             {
-                for (int b = 0; b <= S.Deep; b++)
+                for (int b = B0; b <= B1 + 1; b++)
                 {
                     // The point at the low corner of tile (a, b): the four tiles round it.
-                    bool[] q = [In(a - 1, b - 1), In(a, b - 1), In(a - 1, b), In(a, b)];
+                    bool[] q = [Has(a - 1, b - 1), Has(a, b - 1), Has(a - 1, b), Has(a, b)];
                     int n = q.Count(x => x);
                     if (n is not (1 or 3))
                     {
@@ -194,7 +242,7 @@ internal sealed partial class DungeonDresser
                     // Toward the one tile inside, or away from the one missing.
                     int k = Array.IndexOf(q, n == 1);
                     float du = (k % 2 == 0 ? -1 : 1) * (n == 1 ? 1 : -1), dv = (k < 2 ? -1 : 1) * (n == 1 ? 1 : -1);
-                    float u = 2 * a - S.Across + du * thick, v = 2 * b - S.Deep + dv * thick;
+                    float u = 2 * a - Across + du * thick, v = 2 * b - Deep + dv * thick;
                     corners.Add((u, v, MathF.Atan2(du, dv) * 180 / MathF.PI, n == 1));
                 }
             }
@@ -214,13 +262,12 @@ internal sealed partial class DungeonDresser
         /// </summary>
         private bool WallBeyond(int a, int b, int da, int db)
         {
-            int na = a + da, nb = b + db;
-            if (na >= 0 && nb >= 0 && na < S.Across && nb < S.Deep && S.Has(S.TileAt(na, nb)))
+            if (Has(a + da, b + db))
             {
                 return false;
             }
             // The world tile beyond, through the frame's axes.
-            var t = S.TileAt(a, b);
+            var t = TileAt(a, b);
             var (x, z) = (da * A.X + db * D.X, da * A.Z + db * D.Z);
             var other = _level.Owner.GetValueOrDefault((t.Item1 + x, t.Item2 + z));
             return !(S.Corridor && other is { Corridor: true });
@@ -248,11 +295,11 @@ internal sealed partial class DungeonDresser
                 float du = -(out_.X * A.X + out_.Z * A.Z), dv = -(out_.X * D.X + out_.Z * D.Z);
                 nooks.Add((u, v, MathF.Atan2(du, dv) * 180 / MathF.PI, tiles.Count));
             }
-            for (int a = 0; a < S.Across; a++)
+            for (int a = A0; a <= A1; a++)
             {
-                for (int b = 0; b < S.Deep; b++)
+                for (int b = B0; b <= B1; b++)
                 {
-                    if (!S.Has(S.TileAt(a, b)) || inRecess.Contains(S.TileAt(a, b)))
+                    if (!Has(a, b) || inRecess.Contains(TileAt(a, b)))
                     {
                         continue;
                     }
@@ -266,7 +313,7 @@ internal sealed partial class DungeonDresser
                     }
                     if (open.Count == 1)
                     {
-                        nooks.Add((2 * a + 1 - S.Across, 2 * b + 1 - S.Deep, MathF.Atan2(open[0].Item1, open[0].Item2) * 180 / MathF.PI, 1));
+                        nooks.Add((2 * a + 1 - Across, 2 * b + 1 - Deep, MathF.Atan2(open[0].Item1, open[0].Item2) * 180 / MathF.PI, 1));
                     }
                 }
             }
@@ -278,20 +325,26 @@ internal sealed partial class DungeonDresser
         /// (du, dv, unit), how long it is (metres) and the way into the room from it (local yaw). The four walls of
         /// a whole box; more for a shaped room, round its notches; none where a corridor opens into another.
         /// </summary>
-        public List<(float U, float V, float DU, float DV, float Length, float Yaw)> Walls()
+        public IReadOnlyList<(float U, float V, float DU, float DV, float Length, float Yaw)> Walls() => _walls ??= FindWalls();
+
+        /// <summary>Backs <see cref="Walls"/>: worked out once, the room and its level never changing while it is dressed.</summary>
+        private List<(float U, float V, float DU, float DV, float Length, float Yaw)>? _walls;
+
+        /// <summary>Works out <see cref="Walls"/>.</summary>
+        private List<(float U, float V, float DU, float DV, float Length, float Yaw)> FindWalls()
         {
-            float thick = S.Across - HalfA;
+            float thick = Across - HalfA;
             // Each tile's walled sides, in the frame: (along the run, across the run) with the run's start.
             var segments = new List<(float Yaw, float Line, float At)>();
-            for (int a = 0; a < S.Across; a++)
+            for (int a = A0; a <= A1; a++)
             {
-                for (int b = 0; b < S.Deep; b++)
+                for (int b = B0; b <= B1; b++)
                 {
-                    if (!S.Has(S.TileAt(a, b)))
+                    if (!Has(a, b))
                     {
                         continue;
                     }
-                    float u = 2 * a - S.Across, v = 2 * b - S.Deep; // the tile's low corner
+                    float u = 2 * a - Across, v = 2 * b - Deep; // the tile's low corner
                     if (WallBeyond(a, b, 0, -1))
                     {
                         segments.Add((0, v + thick, u));
@@ -360,6 +413,23 @@ internal sealed partial class DungeonDresser
 
     /// <summary>One of the names at random.</summary>
     private string One(params string[] list) => list[_rnd.Next(list.Length)];
+
+    /// <summary>A statue: one of <paramref name="whole"/>, or a broken one in a decayed dungeon.</summary>
+    private string Statue(params string[] whole) => _decay > 0.4f ? One("StatueThor_broken_top", "StatueFreya_broken_left") : One(whole);
+
+    /// <summary>A pair of statues (Freya's and Thor's), broken in a decayed dungeon.</summary>
+    private string[] Statues() => _decay > 0.4f ? ["StatueFreya_broken_left", "StatueThor_broken_top"] : ["StatueFreya", "StatueThor"];
+
+    /// <summary>
+    /// A column lying on the floor at (u, v), its length along <paramref name="yaw"/> (degrees, the room's frame); it
+    /// takes the floor within <paramref name="room"/> metres.
+    /// </summary>
+    private void FallenPillar(Frame f, string prefab, float u, float v, float yaw, float room)
+    {
+        var q = DungeonOut.Yaw(f.Yaw(yaw)) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 2);
+        _o.Add(prefab, f.W(u, v, f.F + 0.55f), q);
+        f.Take(u, v, room);
+    }
 
     /// <summary>One of the names at random, not the one just used when there is a choice (repeated detail is what the eye tires of first).</summary>
     private string Another(string[] list, string last)
@@ -434,7 +504,10 @@ internal sealed partial class DungeonDresser
         return null;
     }
 
-    /// <summary>A column of the material's segments from floor to roof at (u, v), keeping the floor round it.</summary>
+    /// <summary>
+    /// A column of the material's segments from floor to roof at (u, v), keeping the floor round it: the last may rise
+    /// into the roof slab, never past it into the room above.
+    /// </summary>
     private void Column(Frame f, float u, float v)
     {
         if (!f.Inside(u, v))
@@ -442,13 +515,7 @@ internal sealed partial class DungeonDresser
             return;
         }
         var p = f.W(u, v, 0);
-        float y = f.F, top = f.F + f.H;
-        while (y < top - 0.3f)
-        {
-            var c = _mat.Column.FirstOrDefault(c => c.H <= top - y + 0.01f) ?? _mat.Column[^1];
-            _o.Add(c.Prefab, new Vector3(p.X, y + c.Bottom, p.Z), 0);
-            y += c.H;
-        }
+        DungeonShell.Stack(_mat.Column, _o, p.X, p.Z, f.F, f.F + f.H);
         f.Take(u, v, 0.8f);
     }
 
@@ -482,7 +549,10 @@ internal sealed partial class DungeonDresser
         f.Take(u, v, MathF.Sqrt(w * w + d * d) / 2 + 0.3f);
     }
 
-    /// <summary>Steps up a platform's side: a row of stone stairs w metres wide at (u, v), rising toward yaw.</summary>
+    /// <summary>
+    /// Steps up a platform's side: a row of stone stairs w metres wide at (u, v), turned to yaw. A stone stair climbs
+    /// toward its back, so they rise away from yaw: steps before a platform at +v are turned 180.
+    /// </summary>
     private void Steps(Frame f, float u, float v, float yaw, float w)
     {
         for (float du = -w / 2 + 1; du < w / 2; du += 2)
@@ -740,9 +810,7 @@ internal sealed partial class DungeonDresser
                 float pu = Rr(-f.HalfA + 2.1f, f.HalfA - 2.1f), pv = Rr(-f.HalfD + 2.1f, f.HalfD - 2.1f);
                 if (f.Free(pu, pv, 1.3f))
                 {
-                    var q = DungeonOut.Yaw(f.Yaw(Rr(0, 360))) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 2);
-                    _o.Add("stone_pillar", f.W(pu, pv, f.F + 0.55f), q);
-                    f.Take(pu, pv, 1.3f);
+                    FallenPillar(f, "stone_pillar", pu, pv, Rr(0, 360), 1.3f);
                     break;
                 }
             }
@@ -776,12 +844,15 @@ internal sealed partial class DungeonDresser
         }
     }
 
-    /// <summary>One of the biome's elites at (u, v), level 2 when Monsters is 2 or more; none when there are no monsters.</summary>
+    /// <summary>
+    /// One of the elites (the biome's, or the chosen foes) at (u, v), level 2 when Monsters is 2 or more; none when there
+    /// are no monsters.
+    /// </summary>
     private void Elite(Frame f, float u, float v, float yaw)
     {
-        if (_s.Monsters > 0 && _b.Elites.Length > 0)
+        if (_s.Monsters > 0 && _elites.Length > 0)
         {
-            Spawn(f, One(_b.Elites), u, v, yaw, _s.Monsters >= 2 ? 2 : 1);
+            Spawn(f, One(_elites), u, v, yaw, _s.Monsters >= 2 ? 2 : 1);
         }
     }
 
@@ -840,7 +911,7 @@ internal sealed partial class DungeonDresser
     /// <summary>About n of the biome's pickable loot lying about, more with the settings' Loot.</summary>
     private void Pickables(Frame f, float n)
     {
-        for (int i = 0; i < Count(n * (0.5f + 0.5f * _s.Loot) * Depth(f)); i++)
+        for (int i = 0, times = Count(n * (0.5f + 0.5f * _s.Loot) * Depth(f)); i < times; i++)
         {
             if (Spot(f, 0.5f) is var (u, v))
             {
@@ -973,7 +1044,7 @@ internal sealed partial class DungeonDresser
                         Put(f, One("skull_pile", "Skull1", "Candle_resin"), su, sv, R(0, 360), 0.3f);
                         return true;
                     case 1:
-                        if (!Put(f, _decay > 0.4f ? One("StatueThor_broken_top", "StatueFreya_broken_left") : One("StatueEvil", "StatueThor", "StatueFreya"), bu, bv, yaw, 0.7f, force: true))
+                        if (!Put(f, Statue("StatueEvil", "StatueThor", "StatueFreya"), bu, bv, yaw, 0.7f, force: true))
                         {
                             return false;
                         }
@@ -1106,6 +1177,7 @@ internal sealed partial class DungeonDresser
             Cache(f);
         }
         // Pilasters every 8 m along a long straight corridor, a beam of wall between them like an arch.
+        _bands.Clear();
         if (f.S.Shape == DungeonPlan.Shape.Rect && f.HalfD >= 6 && Chance(0.45))
         {
             for (float v = -f.HalfD + 4; v <= f.HalfD - 4; v += 8)
@@ -1117,20 +1189,19 @@ internal sealed partial class DungeonDresser
                 Column(f, -(f.HalfA - 0.45f), v);
                 Column(f, f.HalfA - 0.45f, v);
                 InnerWall(f, -f.HalfA, v, f.HalfA, v, 3, f.H);
+                _bands.Add(v);
             }
         }
         CorridorKind(f);
         // A statue in a bay, a few bones, rubble, cobwebs.
         if (Chance(0.25) && Spot(f, 0.8f, 0.6f) is var (su, sv))
         {
-            Put(f, _decay > 0.4f ? One("StatueThor_broken_top", "StatueFreya_broken_left") : One("StatueThor", "StatueFreya", "StatueDeer"), su, sv, R(0, 360), 0.9f);
+            Put(f, Statue("StatueThor", "StatueFreya", "StatueDeer"), su, sv, R(0, 360), 0.9f);
         }
         Clutter(f, 0.02f);
         Webs(f, 0.1f + _decay * 0.4f);
         Foes(f, 0.25f);
-        // Its lights and a heap of rubble, last, each from a stream of the corridor's own (see Finish).
-        _lights = 1;
-        _decayed = true;
+        // Its lights and a heap of rubble come last, in Finish, each from a stream of the corridor's own.
     }
 
     /// <summary>
@@ -1289,7 +1360,7 @@ internal sealed partial class DungeonDresser
                 Plinth(f, 0, f.HalfD - 3, 6, 4);
                 Steps(f, 0, f.HalfD - 6, 180, 6);
                 _o.Add("crypt_skeleton_chest", f.W(0, f.HalfD - 3, f.F + 1 + Lift * 2), f.Yaw(90));
-                string[] statues = _decay > 0.4f ? ["StatueFreya_broken_left", "StatueThor_broken_top"] : ["StatueFreya", "StatueThor"];
+                string[] statues = Statues();
                 _o.Add(statues[0], f.W(-2.3f, f.HalfD - 2.4f, f.F + 1 + Lift * 2), f.Yaw(180));
                 _o.Add(statues[1], f.W(2.3f, f.HalfD - 2.4f, f.F + 1 + Lift * 2), f.Yaw(180));
                 for (float v = -f.HalfD + 3; v <= f.HalfD - 8; v += 4)
@@ -1317,9 +1388,7 @@ internal sealed partial class DungeonDresser
                         }
                         else if (Spot(f, 1.3f) is var (pu, pv))
                         {
-                            var q = DungeonOut.Yaw(f.Yaw(R(0, 360))) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 2);
-                            _o.Add(_mat.Column[0].Prefab == "stone_pillar" ? "stone_pillar" : "Morkhalla_Rubble4", f.W(pu, pv, f.F + 0.55f), q);
-                            f.Take(pu, pv, 1.3f);
+                            FallenPillar(f, _mat.Column[0].Prefab == "stone_pillar" ? "stone_pillar" : "Morkhalla_Rubble4", pu, pv, R(0, 360), 1.3f);
                         }
                     }
                 }
@@ -1366,8 +1435,8 @@ internal sealed partial class DungeonDresser
         }
     }
 
-    /// <summary>A throne that suits the material (a bone throne in a stone crypt).</summary>
-    private string ThronePiece => _mat.Name switch
+    /// <summary>A throne that suits the material (a bone throne in a stone crypt); some are drawn, so call it once a seat.</summary>
+    private string PickThrone() => _mat.Name switch
     {
         "Marble" or "Grausten" => "piece_blackmarble_throne",
         "Goblin" => "piece_bone_throne",
@@ -1394,7 +1463,8 @@ internal sealed partial class DungeonDresser
             _o.Add("stone_stair", f.W(u, back - 5, f.F + Lift), f.Yaw(180));
         }
         f.Take(0, back - 2.5f, 3.6f);
-        _o.Add(ThronePiece, f.W(0, back - 1.2f, f.F + 1 + Lift * 2), f.Yaw(180 + DungeonProps.Turn(ThronePiece)));
+        string throne = PickThrone();
+        _o.Add(throne, f.W(0, back - 1.2f, f.F + 1 + Lift * 2), f.Yaw(180 + DungeonProps.Turn(throne)));
         Brazier(f, -3.6f, back - 1.5f);
         Brazier(f, 3.6f, back - 1.5f);
     }
@@ -1407,7 +1477,7 @@ internal sealed partial class DungeonDresser
             case 0:
                 if (!(Chance(0.35) && PutHero(f, 0, 0, 180, 1.8f)))
                 {
-                    Put(f, _decay > 0.4f ? One("StatueThor_broken_top", "StatueFreya_broken_left") : One("StatueThor", "StatueFreya", "StatueDeer", "StatueSeed"), 0, 0, 180, 1.4f);
+                    Put(f, Statue("StatueThor", "StatueFreya", "StatueDeer", "StatueSeed"), 0, 0, 180, 1.4f);
                 }
                 break;
             case 1:
@@ -1549,7 +1619,7 @@ internal sealed partial class DungeonDresser
             case 1:
                 Plinth(f, 0, 0.5f, 4, 4);
                 _o.Add("crypt_skeleton_chest", f.W(0, 0.5f, f.F + 1 + Lift * 2), f.Yaw(90));
-                Steps(f, 0, -2.5f, 0, 2);
+                Steps(f, 0, -2.5f, 180, 2);
                 foreach (var (du, dv) in new[] { (-2.6f, -2.6f), (2.6f, -2.6f), (-2.6f, 3.6f), (2.6f, 3.6f) })
                 {
                     Put(f, "skull_pile", du, dv, R(0, 360), 0.5f);
@@ -1566,7 +1636,7 @@ internal sealed partial class DungeonDresser
                 Chains(f, 2);
                 break;
             default:
-                for (int i = 0; i < Count(f.Area / 14); i++)
+                for (int i = 0, times = Count(f.Area / 14); i < times; i++)
                 {
                     if (Spot(f, 1.2f, 0.6f) is var (u, v))
                     {
@@ -1585,7 +1655,7 @@ internal sealed partial class DungeonDresser
         Lights();
         Hangings(f, 1);
         // The dead do not rest here.
-        var sleepers = _b.Name == "Swamp" ? new[] { new Foe("Spawner_Draugr", "Draugr_sleeping"), new Foe("Spawner_Draugr_Ranged", "Draugr_Ranged_sleeping") } : null;
+        var sleepers = _b.Name == "Swamp" && _s.Foes is not { Count: > 0 } ? new[] { new Foe("Spawner_Draugr", "Draugr_sleeping"), new Foe("Spawner_Draugr_Ranged", "Draugr_Ranged_sleeping") } : null;
         Foes(f, 1.1f, sleepers);
         Clutter(f, 0.02f);
         Decay();
@@ -1628,9 +1698,10 @@ internal sealed partial class DungeonDresser
                 }
                 break;
         }
-        if (_s.Monsters > 0)
+        if (_s.Monsters > 0 && _s.Respawn && _s.Foes is not { Count: > 0 })
         {
-            // A heap of bones that keeps raising the dead until broken.
+            // A heap of bones that keeps raising the dead until broken (the biome's: none when foes are chosen, nor when
+            // nothing respawns).
             Put(f, _b.Name == "Swamp" ? "Spawner_DraugrPile" : _b.Name is "Black Forest" or "Meadows" ? "BonePileSpawner" : "BonePileSpawner_swamp", 0, R(-1, 1), R(0, 360), 1.3f);
         }
         Clutter(f, 0.04f, "Skull1", "LargeBone", "LargeBone_half01", "Skull1");
@@ -1648,7 +1719,7 @@ internal sealed partial class DungeonDresser
     {
         float far = f.HalfD - 1.6f;
         string altar = One("Ashlands_Altar", "offeraltar_FrozenKing_bossroom");
-        string[] statues = _decay > 0.4f ? ["StatueFreya_broken_left", "StatueThor_broken_top"] : ["StatueFreya", "StatueThor"];
+        string[] statues = Statues();
         string bench = _mat.Name is "Marble" or "Grausten" ? "piece_blackmarble_bench" : _mat.Name == "Stave" ? "prop_piece_bench_runed" : "piece_bench01";
         int variant = _rnd.Next(3);
         switch (variant)
@@ -1678,7 +1749,7 @@ internal sealed partial class DungeonDresser
             case 1:
                 Plinth(f, 0, 0.5f, 4, 4);
                 _o.Add(altar, f.W(0, 0.5f, f.F + 1 + Lift * 2), f.Yaw(180));
-                Steps(f, 0, -2.5f, 0, 2);
+                Steps(f, 0, -2.5f, 180, 2);
                 float r = Math.Min(f.HalfA, f.HalfD) - 1.4f;
                 for (int i = 0; i < 6; i++)
                 {
@@ -1772,8 +1843,9 @@ internal sealed partial class DungeonDresser
             case 1 when _b.Name is "Deep North" or "Mountain":
                 // A memorial stone on a plinth, snow lanterns before it.
                 Plinth(f, 0, 0.5f, 2, 2);
-                _o.Add(One("MemorialStone_Medium", "MemorialStone_Large"), f.W(0, 0.5f, f.F + 1 + Lift * 2 + DungeonProps.Foot("MemorialStone_Medium")), f.Yaw(180));
-                Steps(f, 0, -1.5f, 0, 2);
+                string stone = One("MemorialStone_Medium", "MemorialStone_Large");
+                _o.Add(stone, f.W(0, 0.5f, f.F + 1 + Lift * 2 + DungeonProps.Foot(stone)), f.Yaw(180));
+                Steps(f, 0, -1.5f, 180, 2);
                 Put(f, "piece_snowlantern", -1.6f, -1.6f, 0, 0.3f);
                 Put(f, "piece_snowlantern", 1.6f, -1.6f, 0, 0.3f);
                 Pilasters(f, 4);
@@ -1787,8 +1859,9 @@ internal sealed partial class DungeonDresser
                 break;
             case 1:
                 Plinth(f, 0, 0, 4, 4);
-                _o.Add(One("RockDolmen_1", "RockDolmen_2", "RockDolmen_3"), f.W(0, 0, f.F + 1 + Lift * 2 + DungeonProps.Foot("RockDolmen_1")), f.Yaw(R(0, 360)));
-                Steps(f, 0, -3, 0, 2);
+                string dolmen = One("RockDolmen_1", "RockDolmen_2", "RockDolmen_3");
+                _o.Add(dolmen, f.W(0, 0, f.F + 1 + Lift * 2 + DungeonProps.Foot(dolmen)), f.Yaw(R(0, 360)));
+                Steps(f, 0, -3, 180, 2);
                 Brazier(f, -(f.HalfA - 1.1f), -(f.HalfD - 1.1f));
                 Brazier(f, f.HalfA - 1.1f, -(f.HalfD - 1.1f));
                 Pilasters(f, 4);
@@ -1796,7 +1869,7 @@ internal sealed partial class DungeonDresser
             default:
                 Plinth(f, 0, f.HalfD - 2, 2, 2);
                 _o.Add(One("StatueThor", "StatueFreya", "StatueEvil"), f.W(0, f.HalfD - 2, f.F + 1 + Lift * 2), f.Yaw(180));
-                for (int i = 0; i < Count(2 + _s.Loot * 2); i++)
+                for (int i = 0, times = Count(2 + _s.Loot * 2); i < times; i++)
                 {
                     PutNear(f, "treasure_stack", R(-1.5f, 1.5f), f.HalfD - 4.2f, R(0, 360), 0.3f, 0.8f);
                 }
@@ -1833,15 +1906,15 @@ internal sealed partial class DungeonDresser
         {
             Plinth(f, 0, 1, 4, 4);
             _o.Add("crypt_skeleton_chest", f.W(0, 1, f.F + 1 + Lift * 2), f.Yaw(90));
-            Steps(f, 0, -2, 0, 2);
-            string[] statues = _decay > 0.4f ? ["StatueFreya_broken_left", "StatueThor_broken_top"] : ["StatueFreya", "StatueThor"];
+            Steps(f, 0, -2, 180, 2);
+            string[] statues = Statues();
             Put(f, statues[0], -(f.HalfA - 1), f.HalfD - 1, 180, 0.6f);
             Put(f, statues[1], f.HalfA - 1, f.HalfD - 1, 180, 0.6f);
             Chains(f, 2);
         }
         Brazier(f, -f.HalfA + 1, -f.HalfD + 1);
         Brazier(f, f.HalfA - 1, -f.HalfD + 1);
-        for (int i = 0; i < Count(1 + _s.Loot); i++)
+        for (int i = 0, times = Count(1 + _s.Loot); i < times; i++)
         {
             PutNear(f, "treasure_stack", R(-1, 1), -1.2f, R(0, 360), 0.3f, 0.8f);
         }
@@ -1882,17 +1955,22 @@ internal sealed partial class DungeonDresser
                 }
                 break;
             case 1:
-                _o.Add("piece_table_oak", f.W(0, -1, f.Top + Lift), f.Yaw(90));
-                for (float dv = -3f; dv <= 3.01f; dv += 1.5f)
+                // The long table, where it has the room: not across the dais' steps or a doorway's floor.
+                float[] along = [-3f, -1.5f, 0f, 1.5f, 3f];
+                if (along.All(dv => f.Free(0, -1 + dv, 0.8f)))
                 {
-                    f.Take(0, -1 + dv, 0.8f);
-                }
-                Put(f, "piece_cartographytable", 0, -1, 0, 0, y: 0.82f, force: true);
-                foreach (int side in new[] { -1, 1 })
-                {
-                    for (float dv = -2.4f; dv <= 2.41f; dv += 1.6f)
+                    _o.Add("piece_table_oak", f.W(0, -1, f.Top + Lift), f.Yaw(90));
+                    foreach (float dv in along)
                     {
-                        Put(f, "piece_chair03", side * 1.4f, -1 + dv, side < 0 ? 90 : -90, 0.4f);
+                        f.Take(0, -1 + dv, 0.8f);
+                    }
+                    Put(f, "piece_cartographytable", 0, -1, 0, 0, y: 0.82f, force: true);
+                    foreach (int side in new[] { -1, 1 })
+                    {
+                        for (float dv = -2.4f; dv <= 2.41f; dv += 1.6f)
+                        {
+                            Put(f, "piece_chair03", side * 1.4f, -1 + dv, side < 0 ? 90 : -90, 0.4f);
+                        }
                     }
                 }
                 foreach (var sp in f.WallSpots(4, 3).Where(x => x.Yaw is 90 or -90).OrderBy(_ => _rnd.Next()).Take(4))
@@ -1913,9 +1991,7 @@ internal sealed partial class DungeonDresser
                         }
                         else if (_mat.Column[0].Prefab == "stone_pillar")
                         {
-                            var q = DungeonOut.Yaw(f.Yaw(R(60, 120))) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 2);
-                            _o.Add("stone_pillar", f.W(side * (f.HalfA - 3.4f), v, f.F + 0.55f), q);
-                            f.Take(side * (f.HalfA - 3.4f), v, 1.4f);
+                            FallenPillar(f, "stone_pillar", side * (f.HalfA - 3.4f), v, R(60, 120), 1.4f);
                         }
                     }
                 }
@@ -2322,7 +2398,7 @@ internal sealed partial class DungeonDresser
     {
         float aisle = 2;
         int n = (int)MathF.Floor((2 * f.HalfD) / 4);
-        float v0 = -n * 2f;
+        float v0 = -n * 2f, end = f.HalfD + _mat.Thick / 2;
         for (int i = 0; i < n; i++)
         {
             float a = v0 + 4 * i, b = a + 4;
@@ -2333,8 +2409,10 @@ internal sealed partial class DungeonDresser
                 {
                     InnerWall(f, Math.Min(front, back), a, Math.Max(front, back), a, 0, 4);
                 }
-                InnerWall(f, front, a, front, a + 1, 0, 4);
-                InnerWall(f, front, b - 1, front, b, 0, 4);
+                // The first and last cells' fronts run on to the end walls' middle: the cells take 4 m each, and the
+                // strip the block leaves at each end was open to the aisle.
+                InnerWall(f, front, i == 0 ? -end : a, front, a + 1, 0, 4);
+                InnerWall(f, front, b - 1, front, i == n - 1 ? end : b, 0, 4);
                 InnerWall(f, front, a + 1, front, b - 1, 3, 4);
                 _o.Add("iron_grate", f.W(front, a + 2, f.F + 1), f.Yaw(90));
                 float mid = (front + back) / 2;
@@ -2356,13 +2434,21 @@ internal sealed partial class DungeonDresser
                 }
             }
         }
-        // The aisle's walls are the cells': only the aisle is free.
-        f.Take(-(f.HalfA + aisle) / 2 - 0.5f, 0, 0);
+        // The aisle's walls are the cells': only the aisle is free. Each row of cells is kept by circles a metre apart
+        // along its middle, each just wide enough that together they cover the row up to its grates.
+        float half = (f.HalfA - aisle) / 2, keep = MathF.Sqrt(half * half + 0.25f);
+        foreach (int side in new[] { -1, 1 })
+        {
+            for (float v = v0 + 0.5f; v < -v0; v++)
+            {
+                f.Take(side * (aisle + half), v, keep);
+            }
+        }
         for (float v = v0 + 2; v < -v0; v += 8)
         {
             Put(f, _b.Torch, aisle - 0.4f, v, -90, 0.3f);
         }
-        Foes(f, 0.3f, _b.Elites.Length > 0 ? _b.Elites : null);
+        Foes(f, 0.3f, _elites.Length > 0 ? _elites : null);
     }
 
     /// <summary>A torture chamber: a butcher's table, chains on the walls, bones about.</summary>
@@ -2419,15 +2505,15 @@ internal sealed partial class DungeonDresser
     private void Treasury(Frame f)
     {
         float loot = Math.Max(0.5f, _s.Loot) * Depth(f);
-        for (int i = 0; i < Count(1 + loot); i++)
+        for (int i = 0, times = Count(1 + loot); i < times; i++)
         {
             PutNear(f, "treasure_pile", R(-1.5f, 1.5f), R(-0.5f, 1.5f), R(0, 360), 1.2f, 1.5f);
         }
-        for (int i = 0; i < Count(3 * loot); i++)
+        for (int i = 0, times = Count(3 * loot); i < times; i++)
         {
             PutNear(f, "treasure_stack", R(-2, 2), R(-1, 2), R(0, 360), 0.3f, 2f);
         }
-        for (int i = 0; i < Count(2 * loot); i++)
+        for (int i = 0, times = Count(2 * loot); i < times; i++)
         {
             PutNear(f, _b.Bars, R(-2.5f, 2.5f), f.HalfD - 1.2f, R(-10, 10), 0.5f, 1f);
         }
@@ -2458,12 +2544,16 @@ internal sealed partial class DungeonDresser
         switch (variant)
         {
             case 3:
-                // The pit: ledges round a sunken floor, columns at its corners, the master down in the middle.
-                Ledges(f);
+                // The pit: ledges round a sunken floor, columns at its corners, the master down in the middle. The columns
+                // first: each ledge keeps 1.3 m round its tile, which took the columns' spots beside them.
                 foreach (var (cu, cv) in new[] { (-1, -1), (1, -1), (-1, 1), (1, 1) })
                 {
-                    Pillar(f, cu * (f.S.Across - 3), cv * (f.S.Deep - 3));
+                    if (!f.NearDoor(cu * (f.Across - 3), cv * (f.Deep - 3), 2.6f))
+                    {
+                        Pillar(f, cu * (f.Across - 3), cv * (f.Deep - 3));
+                    }
                 }
+                Ledges(f);
                 if (f.S.Tall)
                 {
                     _o.Add("StatueEvil", f.W(0, f.HalfD - 1.1f, f.F + 1 + Lift * 2 + DungeonProps.Foot("StatueEvil")), f.Yaw(180));
@@ -2490,7 +2580,8 @@ internal sealed partial class DungeonDresser
                 // The dais at the far end, the boss's seat on it, rows of braziers and skulls before it.
                 Plinth(f, 0, f.HalfD - 3, 8, 4);
                 Steps(f, 0, f.HalfD - 6, 180, 4);
-                _o.Add(ThronePiece, f.W(0, f.HalfD - 2.2f, f.F + 1 + Lift * 2), f.Yaw(180 + DungeonProps.Turn(ThronePiece)));
+                string throne = PickThrone();
+                _o.Add(throne, f.W(0, f.HalfD - 2.2f, f.F + 1 + Lift * 2), f.Yaw(180 + DungeonProps.Turn(throne)));
                 _o.Add("skull_pile", f.W(-2.6f, f.HalfD - 2.6f, f.F + 1 + Lift * 2), f.Yaw(R(0, 360)));
                 _o.Add("skull_pile", f.W(2.6f, f.HalfD - 2.6f, f.F + 1 + Lift * 2), f.Yaw(R(0, 360)));
                 for (float v = -f.HalfD + 3; v <= f.HalfD - 7; v += 4)
@@ -2566,7 +2657,7 @@ internal sealed partial class DungeonDresser
         }
         if (_s.Monsters > 0)
         {
-            for (int i = 0; i < Count(2 * _s.Monsters); i++)
+            for (int i = 0, times = Count(2 * _s.Monsters); i < times; i++)
             {
                 if (Spot(f, 0.7f, 2f) is var (u, v))
                 {
@@ -2591,8 +2682,9 @@ internal sealed partial class DungeonDresser
             Brazier(f, u + sideU * 1.2f - alongU * 3.2f, v + sideV * 1.2f - alongV * 3.2f);
             if (m.Door.Kind == Door.Key)
             {
-                float yaw = MathF.Atan2(sideU, sideV) * 180 / MathF.PI;
-                _o.Add("sign", f.W(u + alongU * 2.6f - sideU * 0.04f, v + alongV * 2.6f - sideV * 0.04f, f.Top + 2.1f), f.Yaw(yaw + DungeonProps.Turn("sign")),
+                // The doorway's middle is on the wall's centre line: the sign goes on its inner face, a touch out.
+                float yaw = MathF.Atan2(sideU, sideV) * 180 / MathF.PI, inset = _mat.Thick / 2 + 0.04f;
+                _o.Add("sign", f.W(u + alongU * 2.6f + sideU * inset, v + alongV * 2.6f + sideV * inset, f.Top + 2.1f), f.Yaw(yaw + DungeonProps.Turn("sign")),
                     [("strings", "text", "Sealed. The key lies within these halls.")]);
             }
         }

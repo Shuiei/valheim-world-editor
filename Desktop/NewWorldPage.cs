@@ -8,6 +8,7 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using TerrainEditor.App;
+using TerrainEditor.Save;
 using ValheimGen;
 
 namespace TerrainEditor.Desktop;
@@ -39,19 +40,19 @@ public sealed class NewWorldPage : IDisposable
     /// <summary>
     /// The world's name; it must be a valid file name.
     /// </summary>
-    internal TextBox NameBox { get; } = new() { Text = "", PlaceholderText = "My world", FontSize = 13 };
+    internal TextBox NameBox { get; } = new() { Text = "", PlaceholderText = Lang.T("newWorld.hint.name"), FontSize = 13 };
     /// <summary>
     /// The seed, up to 10 characters; its world is shown when Generate is pressed.
     /// </summary>
-    internal TextBox SeedBox { get; } = new() { FontSize = 13, MaxLength = 10, PlaceholderText = "Up to 10 letters or digits" };
+    internal TextBox SeedBox { get; } = new() { FontSize = 13, MaxLength = 10, PlaceholderText = Lang.T("newWorld.hint.seed") };
     /// <summary>
     /// Puts a random seed in the seed box.
     /// </summary>
-    internal Button Roll { get; } = new() { Content = "Roll", FontSize = 12 };
+    internal Button Roll { get; } = new() { Content = Lang.T("newWorld.label.roll"), FontSize = 12 };
     /// <summary>
     /// Shows the seed box's world; greyed while that world is the one shown.
     /// </summary>
-    internal Button Generate { get; } = new Button { Content = "Generate world", FontSize = 12, IsEnabled = false }.Classed("primary");
+    internal Button Generate { get; } = new Button { Content = Lang.T("newWorld.label.generate"), FontSize = 12, IsEnabled = false }.Classed("primary");
     /// <summary>
     /// Which of the game's world folders to create the world in; its <c>Tag</c> holds the full paths.
     /// </summary>
@@ -59,7 +60,7 @@ public sealed class NewWorldPage : IDisposable
     /// <summary>
     /// Checks the name and seed, then asks the window to create the world.
     /// </summary>
-    internal Button Create { get; } = new Button { Content = "Create world", FontSize = 13 }.Classed("primary");
+    internal Button Create { get; } = new Button { Content = Lang.T("newWorld.label.create"), FontSize = 13 }.Classed("primary");
     /// <summary>
     /// Why Create refused, or empty.
     /// </summary>
@@ -76,23 +77,23 @@ public sealed class NewWorldPage : IDisposable
     /// <summary>
     /// Show the start.
     /// </summary>
-    internal CheckBox ShowStart { get; } = Toggle("start", "", "The start");
+    internal CheckBox ShowStart { get; } = Toggle("start", "", Lang.T("newWorld.label.start"));
     /// <summary>
     /// Show the bosses' altars.
     /// </summary>
-    internal CheckBox ShowBosses { get; } = Toggle("boss", "", "Bosses' altars");
+    internal CheckBox ShowBosses { get; } = Toggle("boss", "", Lang.T("newWorld.label.bossAltars"));
     /// <summary>
     /// Show Haldor's spots.
     /// </summary>
-    internal CheckBox ShowHaldor { get; } = Toggle("trader", "Haldor", "Haldor");
+    internal CheckBox ShowHaldor { get; } = Toggle("trader", "Haldor", Lang.T("newWorld.landmark.haldor"));
     /// <summary>
     /// Show the Bog Witch's spots.
     /// </summary>
-    internal CheckBox ShowBogWitch { get; } = Toggle("trader", "The Bog Witch", "Bog Witch");
+    internal CheckBox ShowBogWitch { get; } = Toggle("trader", "The Bog Witch", Lang.T("newWorld.label.bogWitch"));
     /// <summary>
     /// Show Hildir's spots.
     /// </summary>
-    internal CheckBox ShowHildir { get; } = Toggle("trader", "Hildir", "Hildir");
+    internal CheckBox ShowHildir { get; } = Toggle("trader", "Hildir", Lang.T("newWorld.landmark.hildir"));
     /// <summary>
     /// The landmarks placed over the map, with their controls, so they can be moved when the view does.
     /// </summary>
@@ -133,15 +134,15 @@ public sealed class NewWorldPage : IDisposable
     /// <summary>
     /// Wish: the start on a large landmass.
     /// </summary>
-    internal CheckBox BigLand { get; } = new() { Content = "The start on a large landmass", IsChecked = true, FontSize = 12 };
+    internal CheckBox BigLand { get; } = new() { Content = Lang.T("newWorld.label.bigLand"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Wish: land all around the start.
     /// </summary>
-    internal CheckBox LandAround { get; } = new() { Content = "Land all around the start", IsChecked = true, FontSize = 12 };
+    internal CheckBox LandAround { get; } = new() { Content = Lang.T("newWorld.label.landAround"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Wish: each biome reachable on foot from the start.
     /// </summary>
-    internal CheckBox OnFoot { get; } = new() { Content = "Each biome reachable on foot from the start", FontSize = 12 };
+    internal CheckBox OnFoot { get; } = new() { Content = Lang.T("newWorld.label.onFoot"), FontSize = 12 };
     /// <summary>
     /// Wish: a Swamp within this many metres of the start (0: no wish).
     /// </summary>
@@ -173,15 +174,15 @@ public sealed class NewWorldPage : IDisposable
     /// <summary>
     /// How many random seeds to look at: 60, 150 or 400.
     /// </summary>
-    internal ComboBox Count { get; } = new() { ItemsSource = new[] { "60 seeds", "150 seeds", "400 seeds" }, SelectedIndex = 1, FontSize = 12 };
+    internal ComboBox Count { get; } = new() { ItemsSource = new[] { Lang.T("newWorld.count.seeds", 60), Lang.T("newWorld.count.seeds", 150), Lang.T("newWorld.count.seeds", 400) }, SelectedIndex = 1, FontSize = 12 };
     /// <summary>
     /// Starts the search.
     /// </summary>
-    internal Button Find { get; } = new Button { Content = "Find seeds", FontSize = 12 }.Classed("primary");
+    internal Button Find { get; } = new Button { Content = Lang.T("newWorld.label.find"), FontSize = 12 }.Classed("primary");
     /// <summary>
     /// Stops the search; the best so far are shown.
     /// </summary>
-    internal Button Stop { get; } = new Button { Content = "Stop", FontSize = 12, IsVisible = false }.Classed("primary");
+    internal Button Stop { get; } = new Button { Content = Lang.T("newWorld.label.stop"), FontSize = 12, IsVisible = false }.Classed("primary");
     /// <summary>
     /// The search's progress, 0..1.
     /// </summary>
@@ -283,7 +284,7 @@ public sealed class NewWorldPage : IDisposable
         Where.Tag = where;
         Where.SelectedIndex = 0;
         SeedBox.Text = SeedPreview.RandomSeed();
-        var back = new Button { Content = Icons.With("back", "Start"), FontSize = 12 }.Classed("ghost").Tip("newWorld.back");
+        var back = new Button { Content = Icons.With("back", Lang.T("workshop.label.start")), FontSize = 12 }.Classed("ghost").Tip("newWorld.back");
         back.Click += (_, _) => { StopAll(); BackRequested?.Invoke(); };
         NameBox.Tip("newWorld.name");
         SeedBox.Tip("newWorld.seed");
@@ -349,8 +350,12 @@ public sealed class NewWorldPage : IDisposable
         Find.Click += (_, _) => StartSearch();
         Stop.Click += (_, _) => _search?.Cancel();
         static Control Row(string label, Control c) => new DockPanel { Children = { new TextBlock { Text = label, Width = 90, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, c } };
-        static Control Metres(string label, NumericUpDown n) => new DockPanel { Children = { new TextBlock { Text = label, Width = 120, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { n, new TextBlock { Text = "m", VerticalAlignment = VerticalAlignment.Center } } } } };
-        var seedRow = new DockPanel { Children = { new TextBlock { Text = "Seed", Width = 90, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Generate, Roll, SeedBox } };
+        static Control Metres(string label, NumericUpDown n)
+        {
+            var unit = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { n, new TextBlock { Text = Lang.T("common.metres"), VerticalAlignment = VerticalAlignment.Center } } };
+            return new DockPanel { Children = { new TextBlock { Text = label, Width = 120, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, unit } };
+        }
+        var seedRow = new DockPanel { Children = { new TextBlock { Text = Lang.T("common.seed"), Width = 90, FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Generate, Roll, SeedBox } };
         DockPanel.SetDock(Generate, Dock.Right);
         DockPanel.SetDock(Roll, Dock.Right);
         Generate.Margin = Roll.Margin = new Thickness(6, 0, 0, 0);
@@ -359,11 +364,11 @@ public sealed class NewWorldPage : IDisposable
             Spacing = 8,
             Children =
             {
-                new TextBlock { Text = "The world", FontSize = 15, FontWeight = FontWeight.SemiBold },
-                Row("Name", NameBox),
+                new TextBlock { Text = Lang.T("newWorld.head.world"), FontSize = 15, FontWeight = FontWeight.SemiBold },
+                Row(Lang.T("dialog.label.name"), NameBox),
                 seedRow,
-                Row("Saved in", Where),
-                Ui.Hint("A normal Valheim world, as the game makes them: players need no mod, console players included. The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it. Play it (or walk around) before reshaping an area in the editor: only the places the game has made can be edited."),
+                Row(Lang.T("newWorld.label.savedIn"), Where),
+                Ui.Hint(Lang.T("newWorld.hint.normalWorld")),
                 Create,
                 Problem,
             },
@@ -374,26 +379,26 @@ public sealed class NewWorldPage : IDisposable
             Spacing = 6,
             Children =
             {
-                new TextBlock { Text = "Find a seed", FontSize = 15, FontWeight = FontWeight.SemiBold },
-                Ui.Hint("Random seeds are looked at with the game's own generator, and the best kept. 0: no wish."),
+                new TextBlock { Text = Lang.T("newWorld.head.find"), FontSize = 15, FontWeight = FontWeight.SemiBold },
+                Ui.Hint(Lang.T("newWorld.hint.search")),
                 BigLand, LandAround, OnFoot,
-                Metres("Swamp within", Swamp),
-                Metres("Mountain within", Mountain),
-                Metres("Plains within", Plains),
-                Metres("Haldor within", Haldor),
-                Metres("Bog Witch within", BogWitch),
-                Metres("Hildir within", Hildir),
-                Metres("Bosses 1–5 within", Bosses),
+                Metres(Lang.T("newWorld.label.swampWithin"), Swamp),
+                Metres(Lang.T("newWorld.label.mountainWithin"), Mountain),
+                Metres(Lang.T("newWorld.label.plainsWithin"), Plains),
+                Metres(Lang.T("newWorld.label.haldorWithin"), Haldor),
+                Metres(Lang.T("newWorld.label.bogWitchWithin"), BogWitch),
+                Metres(Lang.T("newWorld.label.hildirWithin"), Hildir),
+                Metres(Lang.T("newWorld.label.bossesWithin"), Bosses),
                 findRow,
                 Progress,
             },
         });
-        Found.Children.Add(Ui.Hint("The seeds found show here, best first: click one to look at it."));
+        Found.Children.Add(Ui.Hint(Lang.T("newWorld.hint.found")));
         var results = new ScrollViewer { Content = Found, Height = 330 };
         var found = Ui.Card(new StackPanel
         {
             Spacing = 6,
-            Children = { new TextBlock { Text = "Found seeds", FontSize = 15, FontWeight = FontWeight.SemiBold }, results },
+            Children = { new TextBlock { Text = Lang.T("newWorld.head.found"), FontSize = 15, FontWeight = FontWeight.SemiBold }, results },
         });
         // At the top, not stretched to the window: its height is what it holds.
         var column = new StackPanel { Spacing = 10, VerticalAlignment = VerticalAlignment.Top, Children = { world, search, found } };
@@ -450,9 +455,9 @@ public sealed class NewWorldPage : IDisposable
                 Spacing = 8,
                 Children =
                 {
-                    new TextBlock { Text = "On the map", FontSize = 12, FontWeight = FontWeight.SemiBold },
+                    new TextBlock { Text = Lang.T("newWorld.head.onMap"), FontSize = 12, FontWeight = FontWeight.SemiBold },
                     ShowStart, ShowBosses, ShowHaldor, ShowBogWitch, ShowHildir,
-                    new TextBlock { Text = "Dungeons", FontSize = 12, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 6, 0, 0) },
+                    new TextBlock { Text = Lang.T("newWorld.head.dungeons"), FontSize = 12, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 6, 0, 0) },
                 },
             },
         };
@@ -479,7 +484,7 @@ public sealed class NewWorldPage : IDisposable
         Grid.SetColumn(right, 2);
         body.Children.Add(right);
         var page = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), Margin = new Thickness(20), RowSpacing = 12 };
-        page.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Children = { back, new TextBlock { Text = "A new world", FontSize = 20, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center } } });
+        page.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Children = { back, new TextBlock { Text = Lang.T("start.page.new"), FontSize = 20, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center } } });
         Grid.SetRow(body, 1);
         page.Children.Add(body);
         View = page;
@@ -512,11 +517,9 @@ public sealed class NewWorldPage : IDisposable
     /// </summary>
     public void Dispose()
     {
+        // Stopped, not disposed here: work still running reads their tokens; each is disposed when its work ends.
         StopAll();
         Map.Dispose();
-        _search?.Dispose();
-        _preview?.Dispose();
-        _dungeons?.Dispose();
     }
 
     /// <summary>
@@ -530,37 +533,50 @@ public sealed class NewWorldPage : IDisposable
         FitGenerate();
         if (seed.Length is 0 or > 10)
         {
-            Note("The seed is 1 to 10 characters, as in the game.");
+            Note(Lang.T("newWorld.error.seedLength"));
+            // Nothing shown: the last seed's dungeon search stops and its marks go (their controls are off the canvas).
+            StopDungeons();
             SetLoading(null);
             Map.Clear();
             Marks.Children.Clear();
+            _marks.Clear();
             Shown = null;
+            FillDungeons();
             return;
         }
         var cancel = _preview = new CancellationTokenSource();
+        // Read now: the source is disposed once the work ends (or the page goes), not while it reads it.
+        var token = cancel.Token;
         StopDungeons();
         SetLoading(seed);
         if (Shown == null)
         {
-            Note("Looking at the world…");
+            Note(Lang.T("newWorld.msg.looking"));
         }
         // The game's own location rules first (read once, the first time in a few seconds).
         var rules = GameLocations.UseGameRules(GameLook.Bundles);
         Pending = Task.Run(async () =>
         {
             await rules.ConfigureAwait(false);
-            return SeedPreview.Make(seed, _previewSize, parallel: true, landmarks: true, cancel.Token);
-        }, cancel.Token).ContinueWith(t =>
+            return SeedPreview.Make(seed, _previewSize, parallel: true, landmarks: true, token);
+        }, token).ContinueWith(t =>
         {
+            // The work is over: its source goes (a replaced one too).
+            bool stopped = cancel.IsCancellationRequested;
+            if (_preview == cancel)
+            {
+                _preview = null;
+            }
+            cancel.Dispose();
             // A newer seed asked for since: that one's answer will come.
-            if (cancel.IsCancellationRequested)
+            if (stopped)
             {
                 return;
             }
             SetLoading(null);
             if (t.Status != TaskStatus.RanToCompletion)
             {
-                Note($"The seed could not be looked at: {t.Exception?.GetBaseException().Message}");
+                Note(Lang.T("newWorld.error.seedFailed", t.Exception?.GetBaseException().Message));
                 Console.WriteLine($"New world: seed {seed} could not be looked at: {t.Exception?.GetBaseException()}");
                 // Not shown: Generate can try it again.
                 _generated = Shown?.Seed;
@@ -580,7 +596,7 @@ public sealed class NewWorldPage : IDisposable
         Loading.IsVisible = valid;
         if (valid)
         {
-            LoadingText.Text = $"Looking at {seed}'s world…";
+            LoadingText.Text = Lang.T("newWorld.msg.lookingAt", seed);
             MarkFound(seed);
         }
     }
@@ -636,7 +652,7 @@ public sealed class NewWorldPage : IDisposable
         }
         _dungeonWait = true;
         Loading.IsVisible = true;
-        LoadingText.Text = $"Finding {p.Seed}'s dungeons…";
+        LoadingText.Text = Lang.T("newWorld.msg.findingDungeonsOf", p.Seed);
     }
 
     /// <summary>
@@ -652,15 +668,21 @@ public sealed class NewWorldPage : IDisposable
             return;
         }
         var cancel = _dungeons = new CancellationTokenSource();
+        var token = cancel.Token;
         FillDungeons();
-        Task.Run(() => SeedPreview.FindDungeons(layout, cancel.Token), cancel.Token).ContinueWith(t =>
+        Task.Run(() => SeedPreview.FindDungeons(layout, token), token).ContinueWith(t =>
         {
-            if (cancel.IsCancellationRequested || Shown != p)
+            // The work is over: its source goes (StopDungeons only cancels it).
+            bool stopped = cancel.IsCancellationRequested;
+            if (_dungeons == cancel)
+            {
+                _dungeons = null;
+            }
+            cancel.Dispose();
+            if (stopped || Shown != p)
             {
                 return;
             }
-            cancel.Dispose();
-            _dungeons = null;
             if (_dungeonWait)
             {
                 _dungeonWait = false;
@@ -669,7 +691,7 @@ public sealed class NewWorldPage : IDisposable
             if (t.Status != TaskStatus.RanToCompletion)
             {
                 // Said in the list, not kept: switching a kind on again tries again.
-                _dungeonError = t.Exception?.GetBaseException().Message ?? "stopped";
+                _dungeonError = t.Exception?.GetBaseException().Message ?? Lang.T("newWorld.error.stopped");
                 Console.WriteLine($"The dungeons of {p.Seed} could not be found: {t.Exception?.GetBaseException()}");
                 FillDungeons();
                 return;
@@ -687,14 +709,17 @@ public sealed class NewWorldPage : IDisposable
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
+    /// <summary>Whether the shown seed's dungeons are being looked for.</summary>
+    internal bool FindingDungeons => _dungeons != null;
+
     /// <summary>
     /// Stops looking for dungeons.
     /// </summary>
     private void StopDungeons()
     {
         _dungeonWait = false;
+        // Cancelled only: its work may still read the token; it is disposed when that work ends.
         _dungeons?.Cancel();
-        _dungeons?.Dispose();
         _dungeons = null;
     }
 
@@ -711,7 +736,7 @@ public sealed class NewWorldPage : IDisposable
     private void FillDungeons()
     {
         _dungeonList.Children.Clear();
-        _dungeonList.Children.Add(new TextBlock { Text = "Dungeons (the nearest)", FontSize = 13, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
+        _dungeonList.Children.Add(new TextBlock { Text = Lang.T("newWorld.head.dungeonsNearest"), FontSize = 13, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
         if (Shown?.Landmarks == null)
         {
             return;
@@ -720,7 +745,7 @@ public sealed class NewWorldPage : IDisposable
         {
             if (_dungeonError != null)
             {
-                _dungeonList.Children.Add(Ui.Hint($"The dungeons could not be found ({_dungeonError}). Switch a kind on to try again."));
+                _dungeonList.Children.Add(Ui.Hint(Lang.T("newWorld.error.dungeons", _dungeonError)));
             }
             return;
         }
@@ -730,7 +755,7 @@ public sealed class NewWorldPage : IDisposable
             {
                 Spacing = 6,
                 Margin = new Thickness(6, 2, 0, 0),
-                Children = { Ui.Hint("Finding the dungeons (a few seconds)…"), new ProgressBar { IsIndeterminate = true, Height = 4, MinHeight = 4, Width = 200, HorizontalAlignment = HorizontalAlignment.Left } },
+                Children = { Ui.Hint(Lang.T("newWorld.msg.findingDungeons")), new ProgressBar { IsIndeterminate = true, Height = 4, MinHeight = 4, Width = 200, HorizontalAlignment = HorizontalAlignment.Left } },
             });
             return;
         }
@@ -741,8 +766,10 @@ public sealed class NewWorldPage : IDisposable
             var all = DungeonMarks.Where(m => m.Name == name).ToList();
             var near = all.OrderBy(Far).FirstOrDefault();
             int close = all.Count(m => Far(m) <= 2000);
-            string where = biome == Heightmap.Biome.None ? "" : $"{Name(biome)} · ";
-            _dungeonList.Children.Add(Item(DungeonMark(name), name, near == null ? "none" : Km(Far(near)), $"{where}{all.Count} in the world, {close} within 2 km",
+            string count = biome == Heightmap.Biome.None
+                ? Lang.T("newWorld.dungeonCount", all.Count, close)
+                : Lang.T("newWorld.dungeonCountIn", Name(biome), all.Count, close);
+            _dungeonList.Children.Add(Item(DungeonMark(name), DungeonName(name), near == null ? Lang.T("newWorld.none") : Km(Far(near)), count,
                 near == null ? null : () =>
                 {
                     ShowDungeons[name].IsChecked = true;
@@ -766,6 +793,58 @@ public sealed class NewWorldPage : IDisposable
     });
 
     /// <summary>
+    /// A dungeon kind's name as the user reads it (<see cref="SeedPreview.Dungeons"/> names are ids, in English): its
+    /// catalogue text, or the id itself for a kind not named here.
+    /// </summary>
+    /// <param name="name">The kind's name in <see cref="SeedPreview.Dungeons"/>.</param>
+    internal static string DungeonName(string name)
+    {
+        return DungeonKeys.TryGetValue(name, out string? key) ? Lang.T(key) : name;
+    }
+
+    /// <summary>
+    /// The catalogue key of each dungeon kind's name, by its id in <see cref="SeedPreview.Dungeons"/>.
+    /// </summary>
+    private static readonly Dictionary<string, string> DungeonKeys = new(StringComparer.Ordinal)
+    {
+        ["Burial chambers"] = "newWorld.dungeon.burialChambers",
+        ["Troll caves"] = "newWorld.dungeon.trollCaves",
+        ["Sunken crypts"] = "newWorld.dungeon.sunkenCrypts",
+        ["Frost caves"] = "newWorld.dungeon.frostCaves",
+        ["Infested mines"] = "newWorld.dungeon.infestedMines",
+        ["Charred fortresses"] = "newWorld.dungeon.charredFortresses",
+        ["Hildir's dungeons"] = "newWorld.dungeon.hildirs",
+    };
+
+    /// <summary>
+    /// A landmark's name as the user reads it (<see cref="SeedPreview.Landmarks"/> names are ids, in English): its
+    /// catalogue text, or the id itself for one not named here.
+    /// </summary>
+    /// <param name="name">The landmark's name in <see cref="SeedPreview.Landmarks"/>.</param>
+    internal static string LandmarkName(string name)
+    {
+        return LandmarkKeys.TryGetValue(name, out string? key) ? Lang.T(key) : name;
+    }
+
+    /// <summary>
+    /// The catalogue key of each landmark's name, by its id in <see cref="SeedPreview.Landmarks"/>.
+    /// </summary>
+    private static readonly Dictionary<string, string> LandmarkKeys = new(StringComparer.Ordinal)
+    {
+        ["The start"] = "newWorld.label.start",
+        ["Haldor"] = "newWorld.landmark.haldor",
+        ["The Bog Witch"] = "newWorld.landmark.bogWitch",
+        ["Hildir"] = "newWorld.landmark.hildir",
+        ["Eikthyr"] = "newWorld.landmark.eikthyr",
+        ["The Elder"] = "newWorld.landmark.elder",
+        ["Bonemass"] = "newWorld.landmark.bonemass",
+        ["Moder"] = "newWorld.landmark.moder",
+        ["Yagluth"] = "newWorld.landmark.yagluth",
+        ["The Queen"] = "newWorld.landmark.queen",
+        ["Fader"] = "newWorld.landmark.fader",
+    };
+
+    /// <summary>
     /// A dungeon kind's square mark.
     /// </summary>
     private static Border DungeonMark(string name) => new() { Width = 8, Height = 8, Background = DungeonFill(name), BorderBrush = new SolidColorBrush(Avalonia.Media.Color.FromRgb(20, 20, 24)), BorderThickness = new Thickness(1) };
@@ -777,7 +856,7 @@ public sealed class NewWorldPage : IDisposable
     {
         IsChecked = false,
         FontSize = 12.5,
-        Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { DungeonMark(name), new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center } } },
+        Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { DungeonMark(name), new TextBlock { Text = DungeonName(name), VerticalAlignment = VerticalAlignment.Center } } },
     }.Classed("switch");
 
     /// <summary>
@@ -797,36 +876,38 @@ public sealed class NewWorldPage : IDisposable
     {
         var s = p.Stats;
         Info.Children.Clear();
-        Info.Children.Add(Section("The world",
-            Item(null, "Land", $"{s.Land * 100:0} % of the world"),
-            Item(null, "The start's landmass", $"{s.StartContinent * 100:0} % of the land"),
-            Item(null, "The largest landmass", $"{s.MainContinent * 100:0} % of the land"),
-            Item(null, "Land around the start", $"{s.LandNearStart * 100:0} %"),
-            Item(Mark("start"), "The start", $"{s.Start.X:0}, {s.Start.Z:0}", s.TempleStart ? "where the game will put its start temple" : "likely: the game puts it in Meadows close to the middle", () => Map.LookAt(s.Start.X, s.Start.Z))));
+        Info.Children.Add(Section(Lang.T("newWorld.head.world"),
+            Item(null, Lang.T("newWorld.label.land"), Lang.T("newWorld.ofWorld", s.Land * 100)),
+            Item(null, Lang.T("newWorld.label.startLandmass"), Lang.T("newWorld.ofLand", s.StartContinent * 100)),
+            Item(null, Lang.T("newWorld.label.largestLandmass"), Lang.T("newWorld.ofLand", s.MainContinent * 100)),
+            Item(null, Lang.T("newWorld.label.landAroundStart"), Lang.T("newWorld.percent", s.LandNearStart * 100)),
+            Item(Mark("start"), Lang.T("newWorld.label.start"), $"{s.Start.X:0}, {s.Start.Z:0}", s.TempleStart ? Lang.T("newWorld.hint.temple") : Lang.T("newWorld.hint.startLikely"), () => Map.LookAt(s.Start.X, s.Start.Z))));
         var biomes = SeedPreview.Biomes.Where(b => s.Shares[b] > 0.0005f || b == Heightmap.Biome.Meadows).Select(b =>
         {
             var (r, g, bl) = MapData.PixelColor(b);
             var swatch = new Border { Width = 10, Height = 10, CornerRadius = new CornerRadius(2), Background = new SolidColorBrush(Avalonia.Media.Color.FromRgb(r, g, bl)) };
-            string nearest = b == Heightmap.Biome.Meadows ? "" : Km(s.Distance[b]) + (s.SameLand[b] || float.IsPositiveInfinity(s.Distance[b]) ? "" : " by sea");
-            return Item(swatch, Name(b), nearest, $"{s.Shares[b] * 100:0} % of the land");
+            string nearest = b == Heightmap.Biome.Meadows ? ""
+                : s.SameLand[b] || float.IsPositiveInfinity(s.Distance[b]) ? Km(s.Distance[b])
+                : Lang.T("newWorld.distanceBySea", Km(s.Distance[b]));
+            return Item(swatch, Name(b), nearest, Lang.T("newWorld.ofLand", s.Shares[b] * 100));
         }).ToArray();
-        Info.Children.Add(Section("Biomes (the nearest from the start)", biomes));
+        Info.Children.Add(Section(Lang.T("newWorld.head.biomes"), biomes));
         if (p.Landmarks is not { } marks)
         {
-            Info.Children.Add(Ui.Hint("The bosses and traders could not be read from the game's files (the log says why): they are not shown, and the search cannot look for them."));
+            Info.Children.Add(Ui.Hint(Lang.T("newWorld.hint.noLandmarks")));
             return;
         }
         Control Of(string kind, string name)
         {
             var all = marks.Where(m => m.Name == name).ToList();
             var near = all.OrderBy(m => (m.X - s.Start.X) * (m.X - s.Start.X) + (m.Z - s.Start.Z) * (m.Z - s.Start.Z)).FirstOrDefault();
-            string value = near == null ? "none" : Km(MathF.Sqrt((near.X - s.Start.X) * (near.X - s.Start.X) + (near.Z - s.Start.Z) * (near.Z - s.Start.Z)));
-            string detail = all.Count == 0 ? "" : kind == "trader" ? $"{all.Count} spots" : all.Count == 1 ? "1 altar" : $"{all.Count} altars";
-            return Item(Mark(kind, name), name, value, detail, near == null ? null : () => Map.LookAt(near.X, near.Z));
+            string value = near == null ? Lang.T("newWorld.none") : Km(MathF.Sqrt((near.X - s.Start.X) * (near.X - s.Start.X) + (near.Z - s.Start.Z) * (near.Z - s.Start.Z)));
+            string detail = all.Count == 0 ? "" : kind == "trader" ? Lang.T("newWorld.spots", all.Count) : all.Count == 1 ? Lang.T("newWorld.altars.one") : Lang.T("newWorld.altars.many", all.Count);
+            return Item(Mark(kind, name), LandmarkName(name), value, detail, near == null ? null : () => Map.LookAt(near.X, near.Z));
         }
-        Info.Children.Add(Section("Traders (the nearest spot)", [.. SeedPreview.Landmarks.Where(l => l.Kind == "trader").Select(l => Of("trader", l.Name))]));
-        Info.Children.Add(Ui.Hint("Each trader has several spots: the first one players come near becomes the trader's camp, the others vanish."));
-        Info.Children.Add(Section("Bosses (the nearest altar)", [.. SeedPreview.Landmarks.Where(l => l.Kind == "boss").Select(l => Of("boss", l.Name))]));
+        Info.Children.Add(Section(Lang.T("newWorld.head.traders"), [.. SeedPreview.Landmarks.Where(l => l.Kind == "trader").Select(l => Of("trader", l.Name))]));
+        Info.Children.Add(Ui.Hint(Lang.T("newWorld.hint.traderSpots")));
+        Info.Children.Add(Section(Lang.T("newWorld.head.bosses"), [.. SeedPreview.Landmarks.Where(l => l.Kind == "boss").Select(l => Of("boss", l.Name))]));
         (_dungeonList.Parent as Panel)?.Children.Remove(_dungeonList);
         Info.Children.Add(_dungeonList);
     }
@@ -939,7 +1020,7 @@ public sealed class NewWorldPage : IDisposable
         {
             var c = Mark(m.Kind, m.Name);
             float d = MathF.Sqrt((m.X - x) * (m.X - x) + (m.Z - z) * (m.Z - z));
-            string what = m.Kind == "boss" ? Lang.T("newWorld.altar", m.Name) : m.Name;
+            string what = m.Kind == "boss" ? Lang.T("newWorld.altar", LandmarkName(m.Name)) : LandmarkName(m.Name);
             string tip = m.Kind == "start" ? Lang.T("newWorld.startAt", m.X, m.Z) : Lang.T("newWorld.markAt", what, m.X, m.Z, Km(d));
             if (m.OneOf)
             {
@@ -971,9 +1052,19 @@ public sealed class NewWorldPage : IDisposable
     }
 
     /// <summary>
-    /// A distance for people: hundreds of metres under 1 km, else km to one decimal; "none" for infinity.
+    /// A distance for people, to the nearest 100 m: metres under 1 km ("&lt; 100 m" under 50 m), else km to one decimal;
+    /// "none" for infinity.
     /// </summary>
-    internal static string Km(float m) => float.IsPositiveInfinity(m) ? Lang.T("newWorld.none") : m < 1000 ? $"{m / 100:0}00 m" : $"{m / 1000:0.0} km";
+    internal static string Km(float m)
+    {
+        if (float.IsPositiveInfinity(m))
+        {
+            return Lang.T("newWorld.none");
+        }
+        // Rounded to 100 m first, so 950 m and more reads 1.0 km (not "1000 m"), and under 50 m "< 100 m" (not "000 m").
+        float r = MathF.Round(m / 100, MidpointRounding.AwayFromZero) * 100;
+        return r < 100 ? Lang.T("newWorld.km.under100") : r < 1000 ? Lang.T("newWorld.km.metres", r) : Lang.T("newWorld.km.km", r / 1000);
+    }
 
     /// <summary>
     /// A seed's stats as text, for a search result's tooltip.
@@ -983,9 +1074,9 @@ public sealed class NewWorldPage : IDisposable
         var lines = new List<string>
         {
             Lang.T("newWorld.statsLand", s.Land * 100, s.StartContinent * 100, s.MainContinent * 100, s.LandNearStart * 100),
-            Lang.T("newWorld.statsBiomes", string.Join(", ", SeedPreview.Biomes.Where(b => s.Shares[b] > 0.005f).Select(b => $"{Name(b)} {s.Shares[b] * 100:0} %"))),
+            Lang.T("newWorld.statsBiomes", string.Join(", ", SeedPreview.Biomes.Where(b => s.Shares[b] > 0.005f).Select(b => Lang.T("newWorld.biomeShare", Name(b), s.Shares[b] * 100)))),
             Lang.T("newWorld.statsNearest", string.Join(", ", SeedPreview.Biomes.Skip(1).Where(b => b is not (Heightmap.Biome.AshLands or Heightmap.Biome.DeepNorth))
-                .Select(b => s.SameLand[b] || float.IsPositiveInfinity(s.Distance[b]) ? $"{Name(b)} {Km(s.Distance[b])}" : Lang.T("newWorld.bySea", Name(b), Km(s.Distance[b]))))),
+                .Select(b => s.SameLand[b] || float.IsPositiveInfinity(s.Distance[b]) ? Lang.T("newWorld.nameDistance", Name(b), Km(s.Distance[b])) : Lang.T("newWorld.bySea", Name(b), Km(s.Distance[b]))))),
             s.TempleStart
                 ? Lang.T("newWorld.statsTemple", s.Start.X, s.Start.Z)
                 : Lang.T("newWorld.statsStartNear", s.Start.X, s.Start.Z),
@@ -994,21 +1085,19 @@ public sealed class NewWorldPage : IDisposable
         {
             string Of(string name) => Km(n.TryGetValue(name, out float d) ? d : float.PositiveInfinity);
             lines.Add(Lang.T("newWorld.statsTraders", Of("Haldor"), Of("The Bog Witch"), Of("Hildir")));
-            lines.Add(Lang.T("newWorld.statsBosses", string.Join(", ", SeedPreview.Landmarks.Where(l => l.Kind == "boss").Select(l => $"{l.Name} {Of(l.Name)}"))));
+            lines.Add(Lang.T("newWorld.statsBosses", string.Join(", ", SeedPreview.Landmarks.Where(l => l.Kind == "boss").Select(l => Lang.T("newWorld.nameDistance", LandmarkName(l.Name), Of(l.Name))))));
         }
         return string.Join("\n", lines);
     }
 
     /// <summary>
-    /// A biome's name as the game shows it.
+    /// A biome's name as the game shows it, in the language in use (ZoneFilter.BiomeName's catalogue text).
     /// </summary>
-    internal static string Name(Heightmap.Biome b) => b switch
+    /// <param name="b">The biome.</param>
+    internal static string Name(Heightmap.Biome b)
     {
-        Heightmap.Biome.BlackForest => "Black Forest",
-        Heightmap.Biome.AshLands => "Ashlands",
-        Heightmap.Biome.DeepNorth => "Deep North",
-        _ => b.ToString(),
-    };
+        return ZoneFilter.BiomeName(b).Shown;
+    }
 
     /// <summary>
     /// The preview as a small picture of px pixels (a search's results): the map's colours (SeedMap.Shade), the start
@@ -1061,6 +1150,7 @@ public sealed class NewWorldPage : IDisposable
     {
         _search?.Cancel();
         var cancel = _search = new CancellationTokenSource();
+        var token = cancel.Token;
         int count = Count.SelectedIndex switch { 0 => 60, 2 => 400, _ => 150 };
         var wishes = Wishes();
         Find.IsEnabled = false;
@@ -1071,21 +1161,28 @@ public sealed class NewWorldPage : IDisposable
         Pending = Task.Run(async () =>
         {
             await rules.ConfigureAwait(false);
-            return SeedPreview.Search(wishes, count, 12, 96, (done, total) => Dispatcher.UIThread.Post(() => Progress.Value = (double)done / total), cancel.Token);
+            return SeedPreview.Search(wishes, count, 12, 96, (done, total) => Dispatcher.UIThread.Post(() => Progress.Value = (double)done / total), token);
         })
             .ContinueWith(t =>
             {
+                // The work is over: its source goes (a replaced one too).
+                bool stopped = cancel.IsCancellationRequested;
+                if (_search == cancel)
+                {
+                    _search = null;
+                }
+                cancel.Dispose();
                 Find.IsEnabled = true;
                 Stop.IsVisible = Progress.IsVisible = false;
                 if (t.Status != TaskStatus.RanToCompletion)
                 {
                     ClearFound();
-                    Found.Children.Add(Ui.Hint($"The search failed: {t.Exception?.GetBaseException().Message}"));
+                    Found.Children.Add(Ui.Hint(Lang.T("newWorld.error.search", t.Exception?.GetBaseException().Message)));
                     Console.WriteLine($"New world: the seed search failed: {t.Exception?.GetBaseException()}");
                     return;
                 }
                 Results = t.Result;
-                Console.WriteLine($"New world: searched {count} seeds{(cancel.IsCancellationRequested ? " (stopped)" : "")}, best {(Results.Count > 0 ? $"{Results[0].Preview.Seed} (score {Results[0].Score:0.0})" : "none")}.");
+                Console.WriteLine($"New world: searched {count} seeds{(stopped ? " (stopped)" : "")}, best {(Results.Count > 0 ? $"{Results[0].Preview.Seed} (score {Results[0].Score:0.0})" : "none")}.");
                 ShowResults();
             }, TaskScheduler.FromCurrentSynchronizationContext());
     }
@@ -1098,7 +1195,7 @@ public sealed class NewWorldPage : IDisposable
         ClearFound();
         if (Results.Count == 0)
         {
-            Found.Children.Add(Ui.Hint("No seed looked at yet."));
+            Found.Children.Add(Ui.Hint(Lang.T("newWorld.hint.noResults")));
             return;
         }
         foreach (var (p, score) in Results)
@@ -1114,7 +1211,7 @@ public sealed class NewWorldPage : IDisposable
                     {
                         new Image { Source = Draw(p, 120), Width = 120, Height = 120 },
                         new TextBlock { Text = p.Seed, FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center },
-                        new TextBlock { Text = $"score {score:0.0}", FontSize = 10, Foreground = Ui.Muted, HorizontalAlignment = HorizontalAlignment.Center },
+                        new TextBlock { Text = Lang.T("newWorld.score", score), FontSize = 10, Foreground = Ui.Muted, HorizontalAlignment = HorizontalAlignment.Center },
                     },
                 },
             };
@@ -1162,25 +1259,41 @@ public sealed class NewWorldPage : IDisposable
     }
 
     /// <summary>
-    /// Why a world of that name and seed cannot be made in that worlds folder (a name that cannot be a file name, a
-    /// seed not of 1 to 10 characters, a world of that name there already), or null when it can.
+    /// Why a world of that name and seed cannot be made in that worlds folder (a name that cannot be a file name on
+    /// every system, a seed not of 1 to 10 characters, a world of that name there already), or null when it can.
     /// </summary>
     /// <param name="root">The worlds folder.</param>
     /// <param name="name">The world's name, trimmed.</param>
     /// <param name="seed">The seed, trimmed.</param>
-    internal static string? Check(string root, string name, string seed)
+    /// <param name="english">In English (what Claude is told) rather than the language in use (the page's).</param>
+    internal static string? Check(string root, string name, string seed, bool english = false)
     {
-        if (name.Length == 0 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        if (WhyNot(root, name, seed) is not { } problem)
         {
-            return "Give the world a name that can be a file name (no / \\ : * ? \" < > |).";
+            return null;
+        }
+        return english ? problem.English : problem.Shown;
+    }
+
+    /// <summary>
+    /// Why a world cannot be made with this name and seed in the worlds folder, in both languages; null when it can.
+    /// </summary>
+    /// <param name="root">The worlds folder.</param>
+    /// <param name="name">The world's name, trimmed.</param>
+    /// <param name="seed">The seed, trimmed.</param>
+    private static Said? WhyNot(string root, string name, string seed)
+    {
+        if (!WorldCreator.IsWorldName(name))
+        {
+            return Said.Of("newWorld.error.name");
         }
         if (seed.Length is 0 or > 10)
         {
-            return "The seed is 1 to 10 characters, as in the game.";
+            return Said.Of("newWorld.error.seedLength");
         }
         if (Directory.Exists(Path.Combine(root, name)) || File.Exists(Path.Combine(root, name + ".fwl")))
         {
-            return $"There is a world called {name} already in {Ui.Tilde(root)}: choose another name.";
+            return Said.Of("newWorld.error.exists", name, Ui.Tilde(root));
         }
         return null;
     }

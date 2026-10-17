@@ -28,8 +28,8 @@ public sealed class SelectTool
         _commitTimer.Tick += (_, _) => Commit();
     }
 
-    /// <summary>What to tell the user ("" clears the line; the flag (warn): shown as a problem).</summary>
-    public event Action<string, bool>? Message;
+    /// <summary>What to tell the user, in both languages (the flag (warn): shown as a problem).</summary>
+    public event Action<Said, bool>? Message;
     /// <summary>Put each moved object on the ground where it ends up (pieces as one block: see GroundBlock).</summary>
     public bool OnGround { get; set; } = true;
     /// <summary>Snap moved building pieces to the pieces around.</summary>
@@ -95,10 +95,25 @@ public sealed class SelectTool
         public float Cx, Cz, Dx, Dz, Dy, Turn, Sx, Sy, Sz, Block;
         /// <summary>Dropped with End (each item keeps the height it dropped to); typed exactly (no snapping).</summary>
         public bool Dropped, NoSnap;
+        /// <summary>
+        /// Whether Claude started the move (setting a control: ClaudeTools.Acting): its step is Claude's whenever it
+        /// is committed, and a move the user started is the user's even when a control Claude sets commits it.
+        /// </summary>
+        public bool ByClaude;
         /// <summary>The name of the piece the selection snapped to, for the message; null when not snapped.</summary>
         public string? Snapped;
-        /// <summary>The snap points of the pieces around (within 60 m), gathered once per move.</summary>
+        /// <summary>
+        /// The snap points of the pieces around (within 60 m of where the selection's middle was when they were
+        /// gathered: Ox, Oz), gathered again once the middle is more than 30 m from there.
+        /// </summary>
         public List<(Vector3 P, string Name)>? Others;
+        /// <summary>
+        /// <see cref="Others"/> by the metre cell (x, z) each point is in, as indices into it in its order: a snap within
+        /// 0.75 m is in the cell of the moved point or one beside it.
+        /// </summary>
+        public Dictionary<(int X, int Z), List<int>> OthersAt = [];
+        /// <summary>Where the selection's middle was when <see cref="Others"/> were gathered.</summary>
+        public float Ox, Oz;
         /// <summary>How many whole linked groups the move takes (their parts were added to the selection's).</summary>
         public int Groups;
         /// <summary>What such a group is called ("vehicle").</summary>
@@ -159,11 +174,11 @@ public sealed class SelectTool
         {
             if (runestones > 0)
             {
-                Message?.Invoke("Runestones cannot be moved or turned, only deleted (the game builds them from their location).", true);
+                Message?.Invoke(Said.Of("select.msg.runestones"), true);
             }
             return null;
         }
-        return _move = new Move { Items = items, Cx = items.Average(it => it.Thing.Position.X), Cz = items.Average(it => it.Thing.Position.Z), Groups = groups, Noun = noun };
+        return _move = new Move { Items = items, Cx = items.Average(it => it.Thing.Position.X), Cz = items.Average(it => it.Thing.Position.Z), Groups = groups, Noun = noun, ByClaude = ClaudeTools.Acting.Value };
     }
 
     /// <summary>
@@ -237,10 +252,15 @@ public sealed class SelectTool
         {
             return;
         }
-        if (m.Others == null)
+        // The pieces around where the selection is now; gathered again once it has moved far from where they were
+        // gathered, so a long drag still snaps to what stands at its end.
+        float cx = m.Cx + m.Dx, cz = m.Cz + m.Dz;
+        if (m.Others == null || MathF.Sqrt(MathF.Pow(cx - m.Ox, 2) + MathF.Pow(cz - m.Oz, 2)) > 30)
         {
             var sel = m.Items.Select(it => it.Index).ToHashSet();
             m.Others = [];
+            m.OthersAt = [];
+            (m.Ox, m.Oz) = (cx, cz);
             for (int i = 0; i < s.Things.Count; i++)
             {
                 var t = s.Things[i];
@@ -248,29 +268,52 @@ public sealed class SelectTool
                 {
                     continue;
                 }
-                if (MathF.Sqrt(MathF.Pow(t.Position.X - m.Cx - m.Dx, 2) + MathF.Pow(t.Position.Z - m.Cz - m.Dz, 2)) > 60)
+                if (MathF.Sqrt(MathF.Pow(t.Position.X - cx, 2) + MathF.Pow(t.Position.Z - cz, 2)) > 60)
                 {
                     continue;
                 }
                 foreach (var p in SnapsAt(t.Prefab, t.Position, t.Rotation))
                 {
+                    var cell = SnapCell(p);
+                    (m.OthersAt.TryGetValue(cell, out var at) ? at : m.OthersAt[cell] = []).Add(m.Others.Count);
                     m.Others.Add((p, info.Name));
                 }
             }
         }
         (float D, Vector3 M, Vector3 O, string Name)? best = null;
+        var around = new List<int>();
         foreach (var it in m.Items.Where(it => !it.Linked))
         {
             var at = Target(m, it, shift: false);
             foreach (var mp in SnapsAt(it.Thing.Prefab, at, it.Thing.Rotation + new Vector3(0, m.Turn, 0)))
             {
-                foreach (var (o, name) in m.Others)
+                // The points around only (the nine cells about it), taken in the list's order: the same nearest
+                // (and, between two as near, the same first) as going through the whole list.
+                var (mx, mz) = SnapCell(mp);
+                around.Clear();
+                for (int dz = -1; dz <= 1; dz++)
                 {
-                    float d = Vector3.Distance(o, mp);
-                    if (d < 0.75f && (best == null || d < best.Value.D))
+                    for (int dx = -1; dx <= 1; dx++)
                     {
-                        best = (d, mp, o, name);
+                        if (m.OthersAt.TryGetValue((mx + dx, mz + dz), out var ks))
+                        {
+                            around.AddRange(ks);
+                        }
                     }
+                }
+                around.Sort();
+                (float D, int K)? near = null;
+                foreach (int k in around)
+                {
+                    float d = Vector3.Distance(m.Others[k].P, mp);
+                    if (d < 0.75f && (near == null || d < near.Value.D))
+                    {
+                        near = (d, k);
+                    }
+                }
+                if (near is { } n && (best == null || n.D < best.Value.D))
+                {
+                    best = (n.D, mp, m.Others[n.K].P, m.Others[n.K].Name);
                 }
             }
         }
@@ -289,6 +332,14 @@ public sealed class SelectTool
         m.Snapped = b.Name;
     }
 
+    /// <summary>The metre cell (x, z) a snap point is in, for <see cref="Move.OthersAt"/>.</summary>
+    private static (int X, int Z) SnapCell(Vector3 p) => ((int)MathF.Floor(p.X), (int)MathF.Floor(p.Z));
+
+    /// <summary>A turn smaller than this (degrees) is none: float residue, not a move, and not said.</summary>
+    private const float NoTurn = 0.001f;
+    /// <summary>A lift smaller than this (metres) is none: float residue, not a move, and not said.</summary>
+    private const float NoLift = 0.001f;
+
     /// <summary>Shows the move in progress in the view (as previews) and says how far it went.</summary>
     /// <param name="m">The move in progress.</param>
     private void Preview(Move m)
@@ -302,12 +353,17 @@ public sealed class SelectTool
         }
         _view.SetPreviews(shown);
         float moved = MathF.Sqrt(m.Dx * m.Dx + m.Dz * m.Dz);
-        Message?.Invoke($"Moving {m.Items.Count} object(s){WholeGroups(m.Groups, m.Noun)}: {moved:0.0} m{(m.Turn != 0 ? $", turned {m.Turn:0.#}°" : "")}{(m.Dy != 0 ? $", {(m.Dy > 0 ? "+" : "")}{m.Dy:0.00} m" : "")}{(m.Snapped != null ? $" · snapped to {m.Snapped}" : "")}", false);
+        Message?.Invoke(Said.Of("select.msg.moving", m.Items.Count, WholeGroups(m.Groups, m.Noun, deleted: false), moved,
+            MathF.Abs(m.Turn) >= NoTurn ? Said.Of("select.msg.turned", m.Turn) : Said.Empty,
+            MathF.Abs(m.Dy) >= NoLift ? Said.Of("select.msg.lifted", m.Dy) : Said.Empty,
+            m.Snapped != null ? Said.Of("select.msg.snapped", m.Snapped) : Said.Empty), false);
     }
 
     /// <summary>
     /// Ends a move: the originals are replaced by copies at their new places, and those get selected. A move that
-    /// changed nothing is just dropped.
+    /// changed nothing is just dropped: one made with the mouse or keys by less than a centimetre across, a millimetre
+    /// up and a thousandth of a degree round. A typed one (exact place) is always made, however small: PlaceAt never
+    /// starts one that asks for nothing.
     /// </summary>
     public void Commit()
     {
@@ -319,24 +375,47 @@ public sealed class SelectTool
             return;
         }
         _view.SetPreviews(null);
-        if (MathF.Abs(m.Dx) + MathF.Abs(m.Dz) < 0.01f && m.Turn == 0 && MathF.Abs(m.Dy) < 0.001f && !m.Dropped || Session is not { } session)
+        if (!m.NoSnap && MathF.Abs(m.Dx) + MathF.Abs(m.Dz) < 0.01f && MathF.Abs(m.Turn) < NoTurn && MathF.Abs(m.Dy) < NoLift && !m.Dropped || Session is not { } session)
         {
             return;
         }
         GroundBlock(m);
         Snap(m);
         var moves = m.Items.Select(it => (it.Index, Target(m, it), it.Thing.Rotation + new Vector3(0, m.Turn, 0))).ToList();
-        var copies = session.Move(moves, $"Moved {moves.Count}");
+        // The step is whoever started the move's: a key move of the user's committed by a control Claude sets (the
+        // Select panel's Apply) stays the user's, and one Claude started stays Claude's when the timer commits it.
+        bool acting = ClaudeTools.Acting.Value;
+        ClaudeTools.Acting.Value = m.ByClaude;
+        List<int> copies;
+        try
+        {
+            copies = session.Move(moves, Lang.T("history.undo.moved", moves.Count));
+        }
+        finally
+        {
+            ClaudeTools.Acting.Value = acting;
+        }
         _view.Select(copies);
-        Message?.Invoke($"Moved {copies.Count} object(s){WholeGroups(m.Groups, m.Noun)}. Ctrl+Z puts them back.", false);
+        Message?.Invoke(Said.Of("select.msg.moved", copies.Count, WholeGroups(m.Groups, m.Noun, deleted: false)), false);
     }
 
-    /// <summary>What a message adds when whole linked groups go along ("" when none).</summary>
+    /// <summary>What a message adds when whole linked groups go along (empty when none): one clause per case.</summary>
     /// <param name="count">How many groups.</param>
     /// <param name="noun">What a group is called ("vehicle").</param>
-    /// <param name="verb">What their parts never do alone.</param>
-    private static string WholeGroups(int count, string noun, string verb = "move") =>
-        count == 0 ? "" : $" ({(count == 1 ? $"a whole {noun}" : $"{count} whole {noun}s")}: a {noun}'s parts never {verb} alone)";
+    /// <param name="deleted">They were deleted (their parts never go alone) rather than moved.</param>
+    private static Said WholeGroups(int count, string noun, bool deleted) => count switch
+    {
+        0 => Said.Empty,
+        1 => Said.Of(deleted ? "select.msg.wholeGroup.go" : "select.msg.wholeGroup.move", Noun(noun)),
+        _ => Said.Of(deleted ? "select.msg.wholeGroups.go" : "select.msg.wholeGroups.move", Noun(noun), count),
+    };
+
+    /// <summary>
+    /// What a linked group is called, in both languages: a mod's own name as it gives it, the editor's "group"
+    /// from the catalogue.
+    /// </summary>
+    /// <param name="noun">The name the links give (<see cref="LinkRule.DefaultName"/> when the mod gave none).</param>
+    private static Said Noun(string noun) => noun == LinkRule.DefaultName ? Said.Of("select.groupNoun") : Said.Raw(noun);
 
     /// <summary>Puts a move back (Esc); false when there was none.</summary>
     public bool Cancel()
@@ -349,7 +428,7 @@ public sealed class SelectTool
         _move = null;
         _handleDrag = null;
         _view.SetPreviews(null);
-        Message?.Invoke("Move cancelled.", false);
+        Message?.Invoke(Said.Of("select.msg.cancelled"), false);
         return true;
     }
 
@@ -405,9 +484,10 @@ public sealed class SelectTool
         var dropping = m.Items.Where(it => !it.Linked).ToList();
         if (dropping.Count == 0)
         {
-            Message?.Invoke($"Nothing to drop: a {m.Noun} keeps its height.", true);
+            Message?.Invoke(Said.Of("select.msg.noDrop", Noun(m.Noun)), true);
             return;
         }
+        var under = DropIndex(s, sel);
         foreach (var it in dropping)
         {
             var p = Target(m, it);
@@ -431,13 +511,8 @@ public sealed class SelectTool
             foreach (var (ox, oz) in new[] { (0f, 0f), (-hx, -hz), (hx, -hz), (-hx, hz), (hx, hz) })
             {
                 float x = cx + ox, z = cz + oz;
-                for (int i = 0; i < s.Things.Count; i++)
+                foreach (var (bl, bh) in under.At(x, z))
                 {
-                    if (sel.Contains(i) || !_view.IsPickable(i))
-                    {
-                        continue;
-                    }
-                    var (bl, bh) = _view.BoundsOf(i);
                     if (x >= bl.X && x <= bh.X && z >= bl.Z && z <= bh.Z && bh.Y <= hi.Y + 0.05f && bh.Y > best)
                     {
                         best = bh.Y;
@@ -454,13 +529,68 @@ public sealed class SelectTool
         m.Dropped = true;
         Preview(m);
         Later();
-        Message?.Invoke($"Dropped {dropping.Count} object(s): {onObjects} onto other objects, {dropping.Count - onObjects} onto the ground.", false);
+        Message?.Invoke(Said.Of("select.msg.dropped", dropping.Count, onObjects, dropping.Count - onObjects), false);
+    }
+
+    /// <summary>
+    /// The boxes (view space) of the drawn objects a drop can land on, by the 4 m cell (x, z) they cover, so each point
+    /// of a drop looks only at the boxes over it.
+    /// </summary>
+    private sealed class DropBoxes
+    {
+        /// <summary>The cell size, in metres.</summary>
+        private const float Cell = 4;
+        /// <summary>The boxes over each cell.</summary>
+        private readonly Dictionary<(int X, int Z), List<(Vector3 Lo, Vector3 Hi)>> _cells = [];
+        /// <summary>Boxes too wide (or not finite) to file by cell: looked at for every point.</summary>
+        private readonly List<(Vector3 Lo, Vector3 Hi)> _everywhere = [];
+
+        /// <summary>Files a box under each cell it covers.</summary>
+        public void Add(Vector3 lo, Vector3 hi)
+        {
+            float x0 = MathF.Floor(lo.X / Cell), x1 = MathF.Floor(hi.X / Cell), z0 = MathF.Floor(lo.Z / Cell), z1 = MathF.Floor(hi.Z / Cell);
+            if (!float.IsFinite(x0 + x1 + z0 + z1) || (x1 - x0 + 1) * (z1 - z0 + 1) > 1024)
+            {
+                _everywhere.Add((lo, hi));
+                return;
+            }
+            for (int cz = (int)z0; cz <= (int)z1; cz++)
+            {
+                for (int cx = (int)x0; cx <= (int)x1; cx++)
+                {
+                    (_cells.TryGetValue((cx, cz), out var l) ? l : _cells[(cx, cz)] = []).Add((lo, hi));
+                }
+            }
+        }
+
+        /// <summary>The boxes that may be over the point (x, z): those of its cell and the ones filed everywhere.</summary>
+        public IEnumerable<(Vector3 Lo, Vector3 Hi)> At(float x, float z) =>
+            float.IsFinite(x) && float.IsFinite(z) && _cells.TryGetValue(((int)MathF.Floor(x / Cell), (int)MathF.Floor(z / Cell)), out var l) ? l.Concat(_everywhere) : _everywhere;
+    }
+
+    /// <summary>The boxes of every drawn object but the selected ones, for a drop.</summary>
+    /// <param name="s">The scene.</param>
+    /// <param name="sel">The selected things' indices.</param>
+    private DropBoxes DropIndex(WorldScene s, HashSet<int> sel)
+    {
+        var boxes = new DropBoxes();
+        for (int i = 0; i < s.Things.Count; i++)
+        {
+            if (sel.Contains(i) || !_view.IsPickable(i))
+            {
+                continue;
+            }
+            var (bl, bh) = _view.BoundsOf(i);
+            boxes.Add(bl, bh);
+        }
+        return boxes;
     }
 
     // ---- Exact place: the selection's middle (height: its lowest object) and the first one's turn.
     /// <summary>
     /// The selection's middle (height: its lowest object), the first one's turn (-180..180) and how many there
-    /// are; null when nothing is selected.
+    /// are, of the objects a move takes (not runestones, unless only runestones are selected); null when nothing is
+    /// selected.
     /// </summary>
     public (float X, float Y, float Z, float Turn, int Count)? Where()
     {
@@ -476,32 +606,55 @@ public sealed class SelectTool
         {
             return null;
         }
+        // Runestones do not move (Begin leaves them out): the place is the moved objects', unless there are only
+        // runestones.
+        if (things.Where(t => !t.Runestone).ToList() is { Count: > 0 } moved)
+        {
+            things = moved;
+        }
         float turn = ((things[0].Rotation.Y + 180) % 360 + 360) % 360 - 180;
         return (things.Average(t => t.Position.X), things.Min(t => t.Position.Y), things.Average(t => t.Position.Z), turn, things.Count);
     }
 
-    /// <summary>Moves the selection there (by: by these amounts), as one undo step; typed values are not snapped.</summary>
-    /// <param name="x">World x of the middle, in metres (or how far to move).</param>
-    /// <param name="y">Height of the lowest object, in metres (or how far to lift).</param>
-    /// <param name="z">World z of the middle, in metres (or how far to move).</param>
-    /// <param name="turn">The first object's turn, in degrees (or how far to turn).</param>
+    /// <summary>
+    /// Moves the selection there (by: by these amounts), as one undo step; typed values are not snapped. An axis given
+    /// no value (null) is left as it is, and with none given there is no move.
+    /// </summary>
+    /// <param name="x">World x of the middle, in metres (or how far to move); null leaves it.</param>
+    /// <param name="y">Height of the lowest object, in metres (or how far to lift); null leaves it.</param>
+    /// <param name="z">World z of the middle, in metres (or how far to move); null leaves it.</param>
+    /// <param name="turn">The first object's turn, in degrees (or how far to turn); null leaves it.</param>
     /// <param name="by">The values are amounts to move by, not a place.</param>
-    public void PlaceAt(float x, float y, float z, float turn, bool by)
+    public void PlaceAt(float? x, float? y, float? z, float? turn, bool by)
     {
         Commit();
-        if (Where() is not { } w || Begin() is not { } m)
+        // Checked on what was asked, not the offsets worked out below: keeping the height adds a lift that is not zero.
+        if (x is null && y is null && z is null && turn is null || Where() is not { } w || Begin() is not { } m)
         {
             return;
         }
-        m.Dx += by ? x : x - w.X;
-        m.Dz += by ? z : z - w.Z;
-        m.Turn += by ? turn : turn - w.Turn;
+        m.Dx += Amount(x, w.X, by);
+        m.Dz += Amount(z, w.Z, by);
+        m.Turn += Amount(turn, w.Turn, by);
         m.NoSnap = true;
         GroundBlock(m);
         var low = m.Items.MinBy(it => it.Thing.Position.Y)!;
         float now = Target(m, low).Y;
-        m.Dy += low.Thing.Position.Y + (by ? y : y - w.Y) - now;
+        m.Dy += low.Thing.Position.Y + Amount(y, w.Y, by) - now;
         Commit();
+    }
+
+    /// <summary>How far one axis of <see cref="PlaceAt"/> moves: nothing when no value is given.</summary>
+    /// <param name="value">The value given, or null.</param>
+    /// <param name="from">Where that axis is now.</param>
+    /// <param name="by">The value is an amount, not a place.</param>
+    private static float Amount(float? value, float from, bool by)
+    {
+        if (value is not { } v)
+        {
+            return 0;
+        }
+        return by ? v : v - from;
     }
 
     /// <summary>Deletes the selection (Del), as one undo step.</summary>
@@ -510,14 +663,14 @@ public sealed class SelectTool
         Commit();
         if (_view.Selected.Count == 0 || Session is not { } session)
         {
-            Message?.Invoke("Select objects to delete first.", true);
+            Message?.Invoke(Said.Of("select.msg.deleteFirst"), true);
             return;
         }
         // A linked group's part never goes alone: the whole group does.
         var (sel, _, groups, noun) = session.WithLinked(_view.Selected);
         session.Delete(sel);
         _view.Select([]);
-        Message?.Invoke($"Deleted {sel.Count} object(s){WholeGroups(groups, noun, "go")}. Ctrl+Z brings them back; they leave the world when it is saved.", false);
+        Message?.Invoke(Said.Of("select.msg.deleted", sel.Count, WholeGroups(groups, noun, deleted: true)), false);
     }
 
     // ---- More ways to select.
@@ -545,12 +698,12 @@ public sealed class SelectTool
         var kinds = _view.Selected.Select(i => s.Things[i].Prefab).ToHashSet();
         if (kinds.Count == 0)
         {
-            Message?.Invoke("Select an object of each kind you want first.", true);
+            Message?.Invoke(Said.Of("select.msg.sameFirst"), true);
             return;
         }
         var ids = Shown().Where(i => kinds.Contains(s.Things[i].Prefab)).ToList();
         _view.Select(ids);
-        Message?.Invoke($"Selected every shown object of the same kind: {ids.Count}.", false);
+        Message?.Invoke(Said.Of("select.msg.same", ids.Count), false);
     }
 
     /// <summary>Selects the shown objects that are not selected, and only those.</summary>
@@ -563,7 +716,7 @@ public sealed class SelectTool
         var sel = _view.Selected.ToHashSet();
         var ids = Shown().Where(i => !sel.Contains(i)).ToList();
         _view.Select(ids);
-        Message?.Invoke($"Selected the {ids.Count} shown object(s) that were not selected.", false);
+        Message?.Invoke(Said.Of("select.msg.inverted", ids.Count), false);
     }
 
     /// <summary>
@@ -581,7 +734,7 @@ public sealed class SelectTool
         var start = (from ?? _view.Selected).Where(i => IsPiece(s.Things[i])).ToList();
         if (start.Count == 0)
         {
-            Message?.Invoke("Select a building piece first (or double-click one).", true);
+            Message?.Invoke(Said.Of("select.msg.buildingFirst"), true);
             return;
         }
         var boxes = new Dictionary<int, (Vector3 Min, Vector3 Max)>();
@@ -633,7 +786,7 @@ public sealed class SelectTool
             }
         }
         _view.Select(seen, add: true);
-        Message?.Invoke($"Selected the whole building: {seen.Count} connected piece(s).", false);
+        Message?.Invoke(Said.Of("select.msg.building", seen.Count), false);
     }
 
     // ---- The handles (Gizmo): the one under the mouse or being dragged is drawn highlighted.
@@ -730,7 +883,7 @@ public sealed class SelectTool
             if (Session?.WithLinked([dbl]) is { Groups: > 0 } v)
             {
                 _view.Select(v.Indices);
-                Message?.Invoke($"Selected the whole {v.Noun}: {v.Indices.Count} part(s).", false);
+                Message?.Invoke(Said.Of("select.msg.wholeLinked", Noun(v.Noun), v.Indices.Count), false);
                 return;
             }
             if (IsPiece(s.Things[dbl]))
@@ -808,13 +961,19 @@ public sealed class SelectTool
         if (_lasso is { } l)
         {
             bool drawing = l.Drawing || Point.Distance(at, l.At) > 6;
+            bool added = false;
             if (drawing && _view.WorldAt(at, size) is { } g && Vector2.Distance(l.Points[^1], new Vector2(g.X, g.Z)) >= 0.5f)
             {
                 l.Points.Add(new Vector2(g.X, g.Z));
+                added = true;
             }
             _lasso = l with { Drawing = drawing };
-            Lasso = [.. l.Points];
-            _view.LassoChanged();
+            // The view's copy is made again only when the zone has a new point.
+            if (added || Lasso == null)
+            {
+                Lasso = [.. l.Points];
+                _view.LassoChanged();
+            }
             return;
         }
         if (_drag is not { } d)
@@ -861,9 +1020,21 @@ public sealed class SelectTool
                 return;
             }
             var s = Scene!;
-            var ids = Shown().Where(i => Inside(l.Points, s.Things[i].Position.X, s.Things[i].Position.Z)).ToList();
+            // Only what is inside the zone's bounding box is tested against its outline.
+            float minX = float.MaxValue, minZ = float.MaxValue, maxX = float.MinValue, maxZ = float.MinValue;
+            foreach (var p in l.Points)
+            {
+                (minX, maxX, minZ, maxZ) = (MathF.Min(minX, p.X), MathF.Max(maxX, p.X), MathF.Min(minZ, p.Y), MathF.Max(maxZ, p.Y));
+            }
+            var ids = Shown().Where(i =>
+            {
+                var pos = s.Things[i].Position;
+                return pos.X >= minX && pos.X <= maxX && pos.Z >= minZ && pos.Z <= maxZ && Inside(l.Points, pos.X, pos.Z);
+            }).ToList();
             _view.Select(ids, l.Add);
-            Message?.Invoke(ids.Count > 0 ? $"Selected {ids.Count} object(s) inside the zone{(l.Add ? $" ({_view.Selected.Count} in all)" : "")}." : "Nothing shown inside the zone.", false);
+            Message?.Invoke(ids.Count == 0 ? Said.Of("select.msg.zoneEmpty")
+                : l.Add ? Said.Of("select.msg.zoneAdded", ids.Count, _view.Selected.Count)
+                : Said.Of("select.msg.zone", ids.Count), false);
             return;
         }
         var d = _drag;

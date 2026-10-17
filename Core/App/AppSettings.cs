@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace TerrainEditor.App;
 
@@ -69,6 +70,12 @@ public sealed class AppSettings
     /// send <c>ClaudeToken</c>. Off unless chosen.
     /// </summary>
     public bool ClaudeConnect { get; set; }
+
+    /// <summary>
+    /// Whether Claude may run scripts (run_script, the Script tool's Run): a script has the editor's rights on this
+    /// computer, like any program the user runs, so it takes the user's leave once (Settings). Off unless chosen.
+    /// </summary>
+    public bool ClaudeScripts { get; set; }
 
     /// <summary>
     /// Windows: draw with the graphics driver's own OpenGL first instead of Direct3D (ANGLE); taken when the editor
@@ -152,33 +159,96 @@ public sealed class AppSettings
     private static readonly Lock Lock = new();
 
     /// <summary>
-    /// Reads the settings file. A missing or unreadable file gives the defaults; one that is not valid JSON is first
-    /// copied aside as settings.json.bad.
+    /// Whether the settings file was there but could not be read (locked by another program, no permission): these
+    /// are the defaults for now, and <c>Save</c> leaves the file as it is rather than writing them over the user's
+    /// settings.
+    /// </summary>
+    [JsonIgnore]
+    public bool FileUnread { get; private init; }
+
+    /// <summary>
+    /// Whether there was no settings file when these were loaded: a file there when <c>Save</c> writes was put there
+    /// by another program since (a sync program putting the user's back), and is left as it is. Cleared once these
+    /// are written.
+    /// </summary>
+    private bool _fileMissing;
+
+    /// <summary>
+    /// Reads the settings file. A missing file gives the defaults; one that is not valid JSON is first copied aside as
+    /// settings.json.bad; one that cannot be read gives the defaults with <c>FileUnread</c> set, which are not saved
+    /// over it.
     /// </summary>
     public static AppSettings Load()
     {
         lock (Lock)
         {
+            // The path is found once: finding it can fail too (the data folder cannot be made).
+            string path;
+            string? text;
             try
             {
-                return File.Exists(FilePath) ? JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) ?? new AppSettings() : new AppSettings();
+                path = FilePath;
+                text = ReadText(path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Log.Caught(ex, "reading settings.json (the defaults are used for now, and it is not saved over)");
+                return new AppSettings { FileUnread = true };
+            }
+            if (text == null)
+            {
+                return new AppSettings { _fileMissing = true };
+            }
+            try
+            {
+                return (JsonSerializer.Deserialize<AppSettings>(text) ?? new AppSettings()).WithoutNulls();
             }
             catch (JsonException ex)
             {
                 // Not readable: kept aside as settings.json.bad (the next save would write over it).
-                Console.WriteLine($"Settings: {FilePath} could not be read ({ex.Message}); kept as {FilePath}.bad, starting from the defaults.");
+                Log.Caught(ex, "reading settings.json (kept as settings.json.bad, starting from the defaults)");
                 try
                 {
-                    File.Copy(FilePath, FilePath + ".bad", overwrite: true);
+                    File.Copy(path, path + ".bad", overwrite: true);
                 }
                 catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
                 {
+                    Log.Caught(copy, "keeping the unreadable settings.json as settings.json.bad");
                 }
                 return new AppSettings();
             }
-            catch
+        }
+    }
+
+    /// <summary>
+    /// The settings file's text, or null when there is none. A read that fails (the file held by a sync or antivirus
+    /// program for a moment: IOException, or access denied while it is) is tried again twice, 100 ms apart, before
+    /// its exception goes up; a file not there is looked for once more (one being put back by such a program), and
+    /// none the second time is none (no data folder: none at once).
+    /// </summary>
+    /// <param name="path">The settings file.</param>
+    private static string? ReadText(string path)
+    {
+        for (int attempt = 0; ; attempt++)
+        {
+            try
             {
-                return new AppSettings();
+                return File.ReadAllText(path);
+            }
+            catch (DirectoryNotFoundException e)
+            {
+                Log.CaughtBrief(e, "reading settings.json (none yet: the defaults)");
+                return null;
+            }
+            catch (FileNotFoundException e) when (attempt > 0)
+            {
+                Log.CaughtBrief(e, "reading settings.json (none yet: the defaults)");
+                return null;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < 2)
+            {
+                Log.CaughtBrief(ex, "reading settings.json (tried again in 100 ms)");
+                Thread.Sleep(100);
             }
         }
     }
@@ -189,38 +259,91 @@ public sealed class AppSettings
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
     /// <summary>
-    /// A file that cannot be written (locked, read-only) is left as it was: the settings stay in memory.
+    /// A file that cannot be written (locked, read-only) is left as it was: the settings stay in memory. So is one
+    /// that could not be read when these were loaded (<c>FileUnread</c>), or that was not there then and is now
+    /// (another program put it back): the user's settings are in it.
     /// </summary>
-    public void Save()
+    /// <returns>Null when saved, else why not (also logged).</returns>
+    public string? Save()
     {
         lock (Lock)
         {
-            try
+            string? problem = null;
+            if (FileUnread)
             {
-                // Only the user can read it, from the start: it holds Claude's token.
-                SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, Indented), UnixFileMode.UserRead | UnixFileMode.UserWrite);
+                // Not its path: finding it may be what failed then (the data folder could not be made).
+                problem = "settings.json could not be read when the editor started, and is left as it is.";
+                Console.WriteLine($"Settings: not saved: {problem}");
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            else
             {
-                Console.WriteLine($"Settings: could not write {FilePath}: {ex.Message}");
+                // Found once, as in Load: the logs of a failure to find it must not look for it again.
+                string? path = null;
+                try
+                {
+                    path = FilePath;
+                    // Only the user can read it, from the start: it holds Claude's token. Not over a file that was not
+                    // there at the start: the move itself refuses one put there since.
+                    SafeFile.WriteAllText(path, JsonSerializer.Serialize(this, Indented), UnixFileMode.UserRead | UnixFileMode.UserWrite, overwrite: !_fileMissing);
+                    _fileMissing = false;
+                }
+                catch (IOException ex) when (_fileMissing && path != null && File.Exists(path))
+                {
+                    Log.Caught(ex, "saving settings.json (not there at the start, now put back by another program: left as it is)");
+                    problem = $"{path} was not there when the editor started and is now (put back by another program?), and is left as it is.";
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    Log.Caught(ex, "saving settings.json (the settings stay in memory)");
+                    problem = $"could not write {path ?? "settings.json"}: {ex.Message}";
+                }
             }
+            return problem;
         }
     }
 
     /// <summary>
-    /// Puts a world at the top of the recent list (dropping an older entry for the same full path), keeps the 12 newest
-    /// and saves.
+    /// These settings with lists the file gave as null ("Recent": null), or entries of them null, made empty or left
+    /// out: the rest of the app reads them as lists.
+    /// </summary>
+    private AppSettings WithoutNulls()
+    {
+        BepInExFolders = [.. (BepInExFolders ?? []).Where(f => f != null)];
+        WorldFolders = [.. (WorldFolders ?? []).Where(f => f != null)];
+        Extensions ??= [];
+        Recent = [.. (Recent ?? []).Where(r => r is { Path: not null, Name: not null })];
+        return this;
+    }
+
+    /// <summary>
+    /// Puts a world at the top of the recent list (dropping an older entry for the same folder: its full path, without
+    /// a separator at the end, case ignored on Windows), keeps the 12 newest and saves.
     /// </summary>
     /// <param name="path">The world's path.</param>
     /// <param name="name">The name to show for it.</param>
     public void AddRecent(string path, string name)
     {
-        Recent.RemoveAll(r => string.Equals(Path.GetFullPath(r.Path), Path.GetFullPath(path), StringComparison.Ordinal));
+        string full = FullPath(path);
+        Recent.RemoveAll(r => string.Equals(FullPath(r.Path), full, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
         Recent.Insert(0, new RecentWorld(path, name, DateTime.Now));
         if (Recent.Count > 12)
         {
             Recent.RemoveRange(12, Recent.Count - 12);
         }
         Save();
+    }
+
+    /// <summary>A path as its full path without a separator at the end; as it is when it is not a valid path.</summary>
+    private static string FullPath(string path)
+    {
+        try
+        {
+            return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            Log.CaughtBrief(ex, "making a recent world's path full (compared as it is)");
+            return path;
+        }
     }
 }

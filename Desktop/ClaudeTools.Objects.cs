@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Numerics;
 using ModelContextProtocol.Server;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -23,7 +24,7 @@ public sealed partial class ClaudeTools
     /// <summary>The open area's bounds in world metres.</summary>
     internal static (float MinX, float MinZ, float MaxX, float MaxZ) Bounds(WorldScene scene)
     {
-        float minX = scene.X0 * 64f - 32f, minZ = scene.Z0 * 64f - 32f;
+        float minX = scene.OriginX, minZ = scene.OriginZ;
         return (minX, minZ, minX + scene.ZonesX * 64f, minZ + scene.ZonesZ * 64f);
     }
 
@@ -52,6 +53,30 @@ public sealed partial class ClaudeTools
         }
         return (ok, problems);
     }
+
+    /// <summary>
+    /// The scene whose things the ids last given were indices into, and its read count then (list_objects,
+    /// get_selection, place_pieces, each change's new ids...). Null until ids were given.
+    /// </summary>
+    private (WorldScene Scene, int Reads)? _ids;
+
+    /// <summary>
+    /// Notes that the ids given now are indices into this scene's things as they were at that read count, taken before
+    /// the ids were worked out: a save that reads the world again meanwhile (on another thread) leaves them refused.
+    /// </summary>
+    /// <param name="scene">The scene the ids are of.</param>
+    /// <param name="reads">Its read count before the ids were worked out.</param>
+    private void GaveIds(WorldScene scene, int reads) => _ids = (scene, reads);
+
+    /// <summary>
+    /// Why the ids given before cannot be used on this scene: they were given for another area (opened since, or this
+    /// one opened again), or for this one before the world was read again (after a save), which lists its things anew;
+    /// whatever objects have those indices now would be hit. Null when they fit (or none was given yet: each is checked
+    /// on its own).
+    /// </summary>
+    private string? StaleIds(WorldScene scene) => _ids is { } ids && (ids.Scene != scene || ids.Reads != scene.Reads)
+        ? $"The ids are from {(ids.Scene != scene ? "another area" : "before the world was read again")}: list_objects (or get_selection) again for this one."
+        : null;
 
     /// <summary>An object after a change: its new id and where it is now.</summary>
     private object Moved(WorldScene scene, int was, int id)
@@ -106,6 +131,15 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        int reads = scene.Reads;
+        if (StaleIds(scene) is string stale)
+        {
+            return stale;
+        }
+        if (LoneCoordinate(pivotX, pivotZ, "pivotX", "pivotZ") is string lone)
+        {
+            return lone;
+        }
         var (usable, problems) = Usable(scene, ids);
         if (usable.Count == 0)
         {
@@ -132,8 +166,9 @@ public sealed partial class ClaudeTools
             float y = t.Position.Y + dy + (ground ? GroundAt(scene, x, z) - GroundAt(scene, t.Position.X, t.Position.Z) : 0);
             moves.Add((i, new Vector3(x, y, z), Wrapped(t.Rotation + new Vector3(0, turn, 0)), t.Scale));
         }
-        var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label);
-        _w.AfterClaudeEdit($"Claude moved {copies.Count} object(s); Ctrl+Z puts them back.");
+        var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label));
+        _w.AfterClaudeEdit(Said.Of("claude.msg.moved", copies.Count));
+        GaveIds(scene, reads);
         return ToJson(new { moved = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), wholeGroups = groups, problems, pending = Pending() });
     });
 
@@ -190,6 +225,11 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        int reads = scene.Reads;
+        if (StaleIds(scene) is string stale)
+        {
+            return stale;
+        }
         var (ok, problems) = Usable(scene, objects.Select(o => o.Id));
         var (minX, minZ, maxX, maxZ) = Bounds(scene);
         var moves = new List<(int Index, Vector3 Position, Vector3 Rotation, float Scale)>();
@@ -211,7 +251,7 @@ public sealed partial class ClaudeTools
             float scale = o.Scale ?? t.Scale;
             // A scale of 0 is the prefab's own size.
             float y = o.Y ?? (o.OnGround && _w.NameOfPrefab(t.Prefab) is string n
-                ? GroundAt(scene, x, z) - Editing.Hammer.Bottom(n, TerrainEditor.App.BlueprintFormats.FromEuler(rot), scale > 0 ? scale : 1)
+                ? GroundAt(scene, x, z) - Editing.Hammer.Bottom(n, BlueprintFormats.FromEuler(rot), scale > 0 ? scale : 1)
                 : t.Position.Y);
             moves.Add((o.Id, new Vector3(x, y, z), rot, scale));
         }
@@ -219,15 +259,16 @@ public sealed partial class ClaudeTools
         {
             return "Nothing changed: " + string.Join("; ", problems);
         }
-        var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label);
-        _w.AfterClaudeEdit($"Claude placed {copies.Count} object(s); Ctrl+Z puts them back.");
+        var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label));
+        _w.AfterClaudeEdit(Said.Of("claude.msg.placed", copies.Count));
         // Then come the other parts of the linked groups moved (ObjectLinks), which went along.
+        GaveIds(scene, reads);
         return ToJson(new { placed = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), alongWithGroups = copies.Count - moves.Count, problems, pending = Pending() });
     });
 
     /// <summary>replace_objects: objects become another kind, where they are and turned as they are (as the Area tool's Replace).</summary>
     [McpServerTool(Name = "replace_objects", Title = "Replace objects with another kind")]
-    [Description("Replaces objects of the open area (by id) with objects of another kind (a prefab name from find_prefabs), where they are and turned as they are, as the Area tool's Replace does: a birch for a beech, a stone wall for a wooden one, an iron-banded chest for a wooden one. What the old ones held (chest contents, text…) does not go to the new ones. The answer gives the new ids. One pending step.")]
+    [Description("Replaces objects of the open area (by id) with objects of another kind (a prefab name from find_prefabs), where they are and turned as they are, as the Area tool's Replace does: a birch for a beech, a stone wall for a wooden one, an iron-banded chest for a wooden one. What the old ones held (chest contents, text…) does not go to the new ones; each keeps its size. The root of a group a mod links into one (a ship) takes its parts away with it (partsTakenAway); a part is replaced alone. The answer gives the new ids. One pending step.")]
     public Task<string> ReplaceObjects(
         [Description("Their ids (list_objects).")] int[] ids,
         [Description("The new kind's prefab name, e.g. Birch1, stone_wall_2x1, piece_chest.")] string prefab,
@@ -245,19 +286,29 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        int reads = scene.Reads;
+        if (StaleIds(scene) is string stale)
+        {
+            return stale;
+        }
         var (ok, problems) = Usable(scene, ids);
         if (ok.Count == 0)
         {
             return "Nothing replaced: " + string.Join("; ", problems);
         }
+        // Each keeps its size; a linked group's root takes its parts away with it (ObjectLinks: a ship), as the Area
+        // tool's Replace does: they would have nothing to hang on. A part goes alone.
         var adds = ok.Select(i => scene.Things[i]).Select(t =>
         {
-            float y = onGround ? GroundAt(scene, t.Position.X, t.Position.Z) - Editing.Hammer.Bottom(prefab, TerrainEditor.App.BlueprintFormats.FromEuler(t.Rotation)) : t.Position.Y;
-            return (new Editing.NewObject(0, hash, t.Position with { Y = y }, t.Rotation, 0), piece);
+            float y = onGround ? GroundAt(scene, t.Position.X, t.Position.Z) - Editing.Hammer.Bottom(prefab, BlueprintFormats.FromEuler(t.Rotation), t.Scale > 0 ? t.Scale : 1) : t.Position.Y;
+            return (new Editing.NewObject(0, hash, t.Position with { Y = y }, t.Rotation, t.Scale), piece);
         }).ToList();
-        var copies = s.Commit($"Claude: replaced {ok.Count} with {prefab}", null, ok, adds);
-        _w.AfterClaudeEdit($"Claude replaced {ok.Count} object(s) with {prefab}; Ctrl+Z puts them back.");
-        return ToJson(new { replaced = copies.Select((c, k) => Moved(scene, ok[k], c)), problems, pending = Pending() });
+        var (removed, linked, groups, _) = s.WithLinked(ok, anyPart: false);
+        int parts = linked.Count - groups;
+        var copies = s.Commit(ClaudesStep(Lang.T("claude.undo.replaced", ok.Count, prefab)), null, removed, adds);
+        _w.AfterClaudeEdit(Said.Of("claude.msg.replaced", ok.Count, prefab));
+        GaveIds(scene, reads);
+        return ToJson(new { replaced = copies.Select((c, k) => Moved(scene, ok[k], c)), partsTakenAway = parts, problems, pending = Pending() });
     });
 
     /// <summary>
@@ -274,10 +325,11 @@ public sealed partial class ClaudeTools
         byte[]? bytes;
         try
         {
-            bytes = TerrainEditor.App.ObjectData.Bytes(world, s.Edits, t.Id);
+            bytes = ObjectData.Bytes(world, s.Edits, t.Id);
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "reading an object's data for Claude (none is given)");
             bytes = null;
         }
         if (bytes == null)
@@ -306,11 +358,17 @@ public sealed partial class ClaudeTools
         {
             return "No area is open.";
         }
+        int reads = s.Scene.Reads;
+        if (StaleIds(s.Scene) is string stale)
+        {
+            return stale;
+        }
         var things = s.Scene.Things;
         if (id < 0 || id >= things.Count || things[id].Gone)
         {
             return "No object with that id in the area.";
         }
+        GaveIds(s.Scene, reads);
         var t = things[id];
         var head = new Dictionary<string, object?>
         {
@@ -344,7 +402,7 @@ public sealed partial class ClaudeTools
             if (section == "bytes")
             {
                 // Contents are given as items below; other byte values only by size.
-                if (key != TerrainEditor.App.ObjectData.ItemsKey)
+                if (key != ObjectData.ItemsKey)
                 {
                     data.Add(new { section, key = name ?? key.ToString(CultureInfo.InvariantCulture), bytes = Convert.FromBase64String(value).Length });
                 }
@@ -358,7 +416,7 @@ public sealed partial class ClaudeTools
         {
             head["slots"] = new { columns = box.ContainerW, rows = box.ContainerH };
         }
-        if (values.FirstOrDefault(v => v.Section == "bytes" && v.Key == TerrainEditor.App.ObjectData.ItemsKey).Value is string items)
+        if (values.FirstOrDefault(v => v.Section == "bytes" && v.Key == ObjectData.ItemsKey).Value is string items)
         {
             try
             {
@@ -371,8 +429,9 @@ public sealed partial class ClaudeTools
                     slot = new[] { i.X, i.Y },
                 });
             }
-            catch (Exception ex) when (ex is EndOfStreamException or InvalidDataException or FormatException)
+            catch (Exception ex) when (Save.CheckedReads.Damaged(ex))
             {
+                Log.Caught(ex, "reading a container's contents for Claude");
                 head["contents"] = "cannot be read";
             }
         }
@@ -410,6 +469,10 @@ public sealed partial class ClaudeTools
             return why;
         }
         var scene = _w.Session!.Scene;
+        if (StaleIds(scene) is string stale)
+        {
+            return stale;
+        }
         var (ok, problems) = Usable(scene, [id]);
         if (ok.Count == 0)
         {
@@ -435,12 +498,12 @@ public sealed partial class ClaudeTools
             }
         }
         string name = _w.NameOfPrefab(scene.Things[id].Prefab) ?? "object";
-        var (copy, problem) = Rewrite(id, [.. values.Select(v => new TerrainEditor.App.FieldChange(v.Section, v.Key, v.Value))], null, $"Claude: edited {name}");
+        var (copy, problem) = Rewrite(id, [.. values.Select(v => new FieldChange(v.Section, v.Key, v.Value))], null, ClaudesStep(Lang.T("claude.undo.edited", name)));
         if (copy is not int newId)
         {
             return problem!;
         }
-        _w.AfterClaudeEdit($"Claude changed {name}'s values; Ctrl+Z puts them back.");
+        _w.AfterClaudeEdit(Said.Of("claude.msg.edited", name));
         return $"Changed {name}; its id is now {newId}. Now pending: {Pending()}";
     });
 
@@ -448,19 +511,25 @@ public sealed partial class ClaudeTools
     /// Replaces an object by a copy with these values set (null takes one away) and these contents (null: as they
     /// are), as one pending step: from its saved bytes in a world, from its values on the Workshop's plot.
     /// </summary>
+    /// <param name="id">The object's index into the scene's things.</param>
+    /// <param name="set">Values to set or remove.</param>
+    /// <param name="inv">The container's new contents, or null.</param>
+    /// <param name="label">The undo step's name.</param>
+    /// <param name="notes">Told of stacks cut to the item's maximum, when given.</param>
     /// <returns>The copy's id, or why nothing changed.</returns>
-    internal (int? Id, string? Problem) Rewrite(int id, List<TerrainEditor.App.FieldChange> set, List<TerrainEditor.App.ItemUpload>? inv, string label)
+    internal (int? Id, string? Problem) Rewrite(int id, List<FieldChange> set, List<ItemUpload>? inv, string label, ICollection<string>? notes = null)
     {
         var s = _w.Session!;
+        int reads = s.Scene.Reads;
         var t = s.Scene.Things[id];
         try
         {
             Editing.NewObject replacement;
             // (The Workshop's plot has no world files behind it: its objects carry their values.)
-            if (!_w.InWorkshop && s.Scene.World is { } world && TerrainEditor.App.ObjectData.Bytes(world, s.Edits, t.Id) is { } bytes)
+            if (!_w.InWorkshop && s.Scene.World is { } world && ObjectData.Bytes(world, s.Edits, t.Id) is { } bytes)
             {
                 // A world's object: its own data, changed (as the inspector does).
-                var z = TerrainEditor.App.ObjectData.Edited(bytes, set, inv);
+                var z = ObjectData.Edited(bytes, set, inv, notes);
                 replacement = new(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize());
             }
             else
@@ -481,16 +550,18 @@ public sealed partial class ClaudeTools
                 }
                 if (inv != null)
                 {
-                    Put("bytes", TerrainEditor.App.ObjectData.ItemsKey, Convert.ToBase64String(TerrainEditor.App.ObjectData.BuildInventory(inv).Write()));
-                    Put("ints", TerrainEditor.App.ObjectData.AddedDefaultItemsKey, "1");
+                    Put("bytes", ObjectData.ItemsKey, Convert.ToBase64String(ObjectData.BuildInventory(inv, notes).Write()));
+                    Put("ints", ObjectData.AddedDefaultItemsKey, "1");
                 }
                 replacement = new(0, t.Prefab, t.Position, t.Rotation, t.Scale, Data: fields);
             }
             var copies = s.Commit(label, null, [id], [(replacement, t.Piece)]);
+            GaveIds(s.Scene, reads);
             return (copies[0], null);
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or OverflowException)
         {
+            Log.CaughtBrief(ex, "setting the object data Claude gave");
             return (null, $"Could not change it: {ex.Message}");
         }
     }

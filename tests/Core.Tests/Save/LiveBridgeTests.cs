@@ -53,6 +53,17 @@ public class LiveBridgeTests
         Assert.Contains("does not host the world", await LiveBridge.Check($"http://127.0.0.1:{bridge.Port}", bridge.Token, TimeSpan.FromSeconds(5)));
     }
 
+    [Theory]
+    // A scheme of its own (the "http" typo'd), which SendAsync refused with an exception.
+    [InlineData("httpsrv:5182", "x", "not a valid address")]
+    [InlineData("ftp://127.0.0.1:5182", "x", "not a valid address")]
+    // A line break in the token, which Headers.Add refused with an exception.
+    [InlineData("http://127.0.0.1:5182", "to\nken", "token cannot be sent")]
+    public async Task CheckExplainsAnAddressOrTokenItCannotSend(string url, string token, string why)
+    {
+        Assert.Contains(why, await LiveBridge.Check(url, token, TimeSpan.FromSeconds(5)));
+    }
+
     [Fact]
     public async Task CheckExplainsNothingListening()
     {
@@ -108,7 +119,7 @@ public class LiveBridgeTests
         Assert.Equal((0, 0), sync.Pending(edits));
 
         // Nothing new: nothing is sent.
-        Assert.Equal("", await sync.Apply(world, edits, live));
+        Assert.Equal("", (await sync.Apply(world, edits, live)).Shown);
         Assert.Single(bridge.ObjectCalls);
 
         // Undo both: the planted one is destroyed in the game (by its live id), the deleted one comes back.
@@ -156,7 +167,7 @@ public class LiveBridgeTests
         var sync = new LiveSync();
         using var live = new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token);
         edits.SetDeleted([world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1")).Id], true);
-        string said = await sync.Apply(world, edits, live);
+        string said = (await sync.Apply(world, edits, live)).Shown;
         Assert.Contains("1 made again by another mod", said);
     }
 

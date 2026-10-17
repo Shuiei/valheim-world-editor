@@ -88,6 +88,15 @@ public sealed class EditSession
         public bool Earlier { get; init; }
 
         /// <summary>
+        /// Whether it is this very change: a change is itself, not its values, since Removed and Applied are set after
+        /// it is made while it keys the kept history's ids and frames (HistoryFile, Kept).
+        /// </summary>
+        public bool Equals(Change? other) => ReferenceEquals(this, other);
+
+        /// <summary>The change's own hash, which setting Removed or Applied does not move.</summary>
+        public override int GetHashCode() => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
+
+        /// <summary>
         /// A short line of what it did, like the web editor's history: "3 zones · 2 new · 1 removed · 1 zone reset".
         /// </summary>
         public string Describe()
@@ -95,24 +104,24 @@ public sealed class EditSession
             var parts = new List<string>();
             if (Zones.Count > 0)
             {
-                parts.Add($"{Zones.Count} zone{(Zones.Count > 1 ? "s" : "")}");
+                parts.Add(Zones.Count > 1 ? Lang.T("save.zones.many", Zones.Count) : Lang.T("save.zones.one", Zones.Count));
             }
 
             int added = Things.Count(t => t.Before && !t.After), removed = Things.Count(t => !t.Before && t.After);
             if (added > 0)
             {
-                parts.Add($"{added} new");
+                parts.Add(Lang.T("history.change.new", added));
             }
 
             if (removed > 0)
             {
-                parts.Add($"{removed} removed");
+                parts.Add(Lang.T("history.change.removed", removed));
             }
 
             int resets = Resets.Select(r => (r.Reset.X, r.Reset.Z)).Distinct().Count();
             if (resets > 0)
             {
-                parts.Add($"{resets} zone reset");
+                parts.Add(Lang.T("save.count.resets", resets));
             }
 
             return string.Join(" · ", parts);
@@ -129,22 +138,63 @@ public sealed class EditSession
     public IReadOnlyList<Change> RedoList { get { lock (_lock) { return [.. _redo]; } } }
 
     /// <summary>
-    /// Undoes every change made after this one.
+    /// Undoes every change made after this one; nothing when it is no longer on the undo list (undone or dropped since it
+    /// was picked, by Claude or the history's length).
     /// </summary>
     public void BackTo(Change c)
     {
-        while (UndoList.Count > 0 && UndoList[^1] != c && Undo())
+        if (!Holds(_undo, c))
         {
+            return;
+        }
+        // The edit told once for all the steps (one refresh, one auto-apply).
+        bool any = false;
+        while (Last(_undo) is { } last && !ReferenceEquals(last, c) && Step(_undo, _redo, after: false, tell: false))
+        {
+            any = true;
+        }
+        if (any)
+        {
+            Edited();
         }
     }
 
     /// <summary>
-    /// Redoes up to and including this one.
+    /// Redoes up to and including this one; nothing when it is no longer on the redo list (redone or dropped since it
+    /// was picked).
     /// </summary>
     public void ForwardTo(Change c)
     {
-        while (RedoList.Count > 0 && (UndoList.Count == 0 || UndoList[^1] != c) && Redo())
+        if (!Holds(_redo, c))
         {
+            return;
+        }
+        bool any = false;
+        while (!ReferenceEquals(Last(_undo), c) && Step(_redo, _undo, after: true, tell: false))
+        {
+            any = true;
+        }
+        if (any)
+        {
+            Edited();
+        }
+    }
+
+    /// <summary>The list's last change (null: none), under the lock.</summary>
+    private Change? Last(List<Change> list)
+    {
+        lock (_lock)
+        {
+            return list.Count > 0 ? list[^1] : null;
+        }
+    }
+
+    /// <summary>Whether the list holds this very change (not an equal one), under the lock.</summary>
+    private bool Holds(List<Change> list, Change c)
+    {
+        lock (_lock)
+        {
+            return list.Exists(l => ReferenceEquals(l, c));
         }
     }
 
@@ -154,23 +204,28 @@ public sealed class EditSession
     /// The removal is itself a change that can be undone. A change whose added objects a later step moved or deleted
     /// is refused: taking it out would bring back what it replaced beside the later step's copies (undo instead).
     /// </summary>
-    /// <returns>A message for the status line ("" during a stroke, when nothing was done).</returns>
-    public string RemoveChange(Change c)
+    /// <returns>A message for the status line (empty during a stroke, when nothing was done).</returns>
+    public Said RemoveChange(Change c)
     {
         if (c.Removed || c.RevertOf != null)
         {
-            return "That change cannot be removed.";
+            return Said.Of("history.msg.cannotRemove");
         }
         Change removal;
         lock (_lock)
         {
             if (_stroke != null)
             {
-                return "";
+                return Said.Empty;
+            }
+            // Undone or dropped since it was picked: its delta would go onto ground that no longer has it.
+            if (!Holds(_undo, c))
+            {
+                return Said.Of("history.msg.notInHistory");
             }
             if (c.Things.Any(t => t.Before && !t.After && Scene.Things[t.Index].Gone && TakenLater(c, t.Index)))
             {
-                return "That change cannot be removed: a later step moved or deleted what it added. Undo back to it instead.";
+                return Said.Of("history.msg.takenLater");
             }
             var g = Ground;
             var start = g.Snapshot();
@@ -179,7 +234,12 @@ public sealed class EditSession
                 int p = c.Points[k];
                 g.Level[p] = Math.Clamp(g.Level[p] + c.Before.Level[k] - c.After.Level[k], -EditStore.MaxLevel, EditStore.MaxLevel);
                 g.Smooth[p] = Math.Clamp(g.Smooth[p] + c.Before.Smooth[k] - c.After.Smooth[k], -EditStore.MaxSmooth, EditStore.MaxSmooth);
-                g.Mod[p] = (byte)(MathF.Abs(g.Level[p]) + MathF.Abs(g.Smooth[p]) > 1e-4f || c.Before.Mod[k] != 0 && g.Mod[p] != 0 ? 1 : 0);
+                // A later step that changed the point's modified flag keeps it (a flatten back to the original height
+                // leaves it set with no level).
+                if (g.Mod[p] == c.After.Mod[k])
+                {
+                    g.Mod[p] = (byte)(MathF.Abs(g.Level[p]) + MathF.Abs(g.Smooth[p]) > 1e-4f || c.Before.Mod[k] != 0 && g.Mod[p] != 0 ? 1 : 0);
+                }
                 g.Lift[p] = Math.Clamp(g.Lift[p] + c.Before.Lift[k] - c.After.Lift[k], -EditStore.MaxLift, EditStore.MaxLift);
                 bool samePaint = g.PMod[p] == c.After.PMod[k];
                 for (int ch = 0; ch < 4 && samePaint; ch++)
@@ -204,10 +264,10 @@ public sealed class EditSession
                     return ResetEntries(now, now == left ? z.Where(r => r.Before).Select(r => r.Reset).FirstOrDefault() : now);
                 })
                 .ToArray();
-            removal = new Change($"Removed: {c.Label}", pts, Pick(start, pts), Pick(g.Snapshot(), pts), c.Zones) { Things = things, Resets = resets, RevertOf = c };
+            removal = new Change(Lang.T("history.undo.removed", c.Label), pts, Pick(start, pts), Pick(g.Snapshot(), pts), c.Zones) { Things = things, Resets = resets, RevertOf = c };
             if (pts.Length > 0)
             {
-                Touch((0, 0, g.W - 1, g.H - 1));
+                Touch(BoxOf(pts));
             }
             Send(c.Zones);
             SetGone(things.Select(t => (t.Index, t.Before)));
@@ -220,7 +280,7 @@ public sealed class EditSession
             Notify(removal.Things.Select(t => t.Index));
         }
         Edited();
-        return $"Removed “{c.Label}”; everything else is kept. Ctrl+Z brings it back.";
+        return Said.Of("history.msg.removed", c.Label);
     }
     /// <summary>
     /// Whether a step after <paramref name="c"/> that is still in (not taken out) took the thing away: moved or deleted
@@ -385,8 +445,18 @@ public sealed class EditSession
         get
         {
             var (z, d, a, r) = Pending;
-            var parts = new[] { z > 0 ? $"{z} zone{(z > 1 ? "s" : "")}" : "", d > 0 ? $"{d} deleted" : "", a > 0 ? $"{a} added" : "", r > 0 ? $"{r} reset" : "" }.Where(p => p != "").ToList();
-            return parts.Count > 0 ? (IsLive ? "Not applied: " : "Unsaved: ") + string.Join(", ", parts) : IsLive ? "All applied" : "All saved";
+            var parts = new[]
+            {
+                z > 1 ? Lang.T("save.zones.many", z) : z > 0 ? Lang.T("save.zones.one", z) : "",
+                d > 0 ? Lang.T("save.count.deleted", d) : "",
+                a > 0 ? Lang.T("save.count.added", a) : "",
+                r > 0 ? Lang.T("save.count.reset", r) : "",
+            }.Where(p => p != "").ToList();
+            if (parts.Count == 0)
+            {
+                return IsLive ? Lang.T("save.pending.allApplied") : Lang.T("save.pending.allSaved");
+            }
+            return IsLive ? Lang.T("save.pending.notApplied", string.Join(", ", parts)) : Lang.T("save.pending.unsaved", string.Join(", ", parts));
         }
     }
 
@@ -433,11 +503,11 @@ public sealed class EditSession
     /// <summary>
     /// The brush comes up: the zones it touched go to the edit store and the stroke to the history.
     /// </summary>
-    /// <returns>A message for the status line ("" when there is nothing to say): the game's ±8 m limit reached, or the
-    /// Mask leaving out all the ground.</returns>
-    public string EndStroke()
+    /// <returns>A message for the status line (empty when there is nothing to say): the game's ±8 m limit reached, or
+    /// the Mask leaving out all the ground.</returns>
+    public Said EndStroke()
     {
-        string message;
+        Said message;
         lock (_lock)
         {
             var s = _stroke;
@@ -447,9 +517,9 @@ public sealed class EditSession
                 if (_strokeDropped)
                 {
                     _strokeDropped = false;
-                    return "The stroke was dropped: Apply live read the area again from the game while it went on. Draw it again.";
+                    return Said.Of("brush.msg.dropped");
                 }
-                return "";
+                return Said.Empty;
             }
             if (s.Touched.Count > 0)
             {
@@ -463,8 +533,8 @@ public sealed class EditSession
                 _takeEditsAfterStroke = false;
                 Ground.TakeEdits(Edits);
             }
-            message = s.Clamped ? "Reached the game limit: ground can only move 8 m from its original height (red points)."
-                : s.Touched.Count == 0 && _strokeMask != null ? "Nothing changed: the Mask leaves out all the ground under the brush (check its height, slope, biome and paint settings)." : "";
+            message = s.Clamped ? Said.Of("brush.msg.limit")
+                : s.Touched.Count == 0 && _strokeMask != null ? Said.Of("brush.msg.masked") : Said.Empty;
             _strokeMask = null;
         }
         Edited();
@@ -478,20 +548,13 @@ public sealed class EditSession
     /// <returns>The ground points changed (none: no undo step).</returns>
     public List<int> EditGround(string label, Func<Ground, (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect)> change)
     {
-        List<int> touched;
-        lock (_lock)
+        List<int> touched = [];
+        Commit(label, g =>
         {
-            var start = Ground.Snapshot();
-            (touched, var rect) = change(Ground);
-            if (touched.Count > 0)
-            {
-                Touch(rect);
-                var zones = Ground.ZonesOf(touched);
-                Record(label, start, touched, zones);
-                Send(zones);
-            }
-        }
-        Edited();
+            var made = change(g);
+            touched = made.Touched;
+            return made;
+        }, [], []);
         return touched;
     }
 
@@ -523,7 +586,7 @@ public sealed class EditSession
         }
         var shape = Desktop.Mountain.Shape(m);
         var mask = MaskNow();
-        float ox = Scene.X0 * 64 - 32, oz = Scene.Z0 * 64 - 32;
+        float ox = Scene.OriginX, oz = Scene.OriginZ;
         var remove = new List<int>();
         if (clear)
         {
@@ -548,26 +611,32 @@ public sealed class EditSession
             bool was = gr.NoLimit;
             gr.NoLimit = true;
             int x0 = (int)MathF.Floor(cx - reach), x1 = (int)MathF.Ceiling(cx + reach), z0 = (int)MathF.Floor(cz - reach), z1 = (int)MathF.Ceiling(cz + reach);
-            for (int gz = z0; gz <= z1; gz++)
+            try
             {
-                for (int gx = x0; gx <= x1; gx++)
+                for (int gz = z0; gz <= z1; gz++)
                 {
-                    int p = gz * gr.W + gx;
-                    float w = mask?.Invoke(p) ?? 1;
-                    if (gr.Locked(gx, gz) || w <= 0)
+                    for (int gx = x0; gx <= x1; gx++)
                     {
-                        continue;
+                        int p = gz * gr.W + gx;
+                        float w = mask?.Invoke(p) ?? 1;
+                        if (gr.Locked(gx, gz) || w <= 0)
+                        {
+                            continue;
+                        }
+                        float v = shape(gx - cx, gz - cz) * w;
+                        if (v == 0)
+                        {
+                            continue;
+                        }
+                        gr.SetHeight(p, gr.HeightOf(p) + v);
+                        touched.Add(p);
                     }
-                    float v = shape(gx - cx, gz - cz) * w;
-                    if (v == 0)
-                    {
-                        continue;
-                    }
-                    gr.SetHeight(p, gr.HeightOf(p) + v);
-                    touched.Add(p);
                 }
             }
-            gr.NoLimit = was;
+            finally
+            {
+                gr.NoLimit = was;
+            }
             touchedCount = touched.Count;
             return (touched, (x0 - 1, z0 - 1, x1 + 1, z1 + 1));
         }, remove, []);
@@ -591,12 +660,10 @@ public sealed class EditSession
         // The web editor gives shapes its fractal noise scaled to about -1..1.
         var env = new Formula.Env { Noise = (x, z) => Brush.Noise.Fbm((float)x, (float)z) / 1.6 };
         var mask = MaskNow();
-        int touchedCount, bad = 0;
-        bool clamped = false;
-        lock (_lock)
+        int touchedCount = 0, bad = 0;
+        bool clamped = false, failed = false;
+        Commit(label, g =>
         {
-            var g = Ground;
-            var start = g.Snapshot();
             var touched = new List<int>();
             int x0 = Math.Max(1, (int)MathF.Floor(cx - r)), x1 = Math.Min(g.W - 2, (int)MathF.Ceiling(cx + r));
             int z0 = Math.Max(1, (int)MathF.Floor(cz - r)), z1 = Math.Min(g.H - 2, (int)MathF.Ceiling(cz + r));
@@ -622,8 +689,14 @@ public sealed class EditSession
                     {
                         v = f(env);
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
+                        // Logged at the first point only: a formula that fails tends to fail at every point.
+                        if (!failed)
+                        {
+                            failed = true;
+                            Log.CaughtBrief(e, "working out the shape's formula at a point (said once for the shape)");
+                        }
                         v = double.NaN;
                     }
                     if (!double.IsFinite(v))
@@ -640,15 +713,8 @@ public sealed class EditSession
                 }
             }
             touchedCount = touched.Count;
-            if (touched.Count > 0)
-            {
-                Touch((x0 - 1, z0 - 1, x1 + 1, z1 + 1));
-                var zones = g.ZonesOf(touched);
-                Record(label, start, touched, zones);
-                Send(zones);
-            }
-        }
-        Edited();
+            return (touched, (x0 - 1, z0 - 1, x1 + 1, z1 + 1));
+        }, [], []);
         return (touchedCount, clamped, bad);
     }
 
@@ -666,16 +732,8 @@ public sealed class EditSession
     /// </summary>
     private void Record(string label, Ground.State start, IEnumerable<int> touched, List<(int X, int Z)> zones)
     {
-        Interlocked.Increment(ref _generation);
         int[] pts = [.. touched.Distinct().Order()];
-        var now = Ground.Snapshot();
-        _undo.Add(new Change(label, pts, Pick(start, pts), Pick(now, pts), zones));
-        if (_undo.Count > HistoryLength)
-        {
-            _undo.RemoveAt(0);
-        }
-        _redo.Clear();
-        _shelvedRedo.Clear();
+        AddChange(new Change(label, pts, Pick(start, pts), Pick(Ground.Snapshot(), pts), zones));
     }
 
     /// <summary>
@@ -704,8 +762,8 @@ public sealed class EditSession
     }
 
     /// <summary>
-    /// The editor's Discard: undoes those steps, newest first, and drops what could be redone; the rest of the history
-    /// stays.
+    /// The editor's Discard: undoes those steps, newest first, and drops what could be redone, here and in other areas
+    /// (kept aside); the rest of the history stays.
     /// </summary>
     /// <returns>How many were undone (none during a stroke).</returns>
     public int UndoUnapplied()
@@ -731,6 +789,7 @@ public sealed class EditSession
             if (_stroke == null)
             {
                 _redo.Clear();
+                _shelvedRedo.Clear();
             }
         }
         Changed?.Invoke();
@@ -757,8 +816,12 @@ public sealed class EditSession
     /// Undo or redo: moves the last change of one list to the other and puts its ground points, things and zone resets
     /// as they were before it (after: false) or after it (after: true).
     /// </summary>
+    /// <param name="from">The list the change is taken from.</param>
+    /// <param name="to">The list it goes to.</param>
+    /// <param name="after">Puts things as they were after it (redo), else before (undo).</param>
+    /// <param name="tell">Raises Changed and EditMade (false: the caller does, once for several steps).</param>
     /// <returns>False during a stroke or when the list is empty.</returns>
-    private bool Step(List<Change> from, List<Change> to, bool after)
+    private bool Step(List<Change> from, List<Change> to, bool after, bool tell = true)
     {
         Interlocked.Increment(ref _generation);
         Change c;
@@ -798,7 +861,10 @@ public sealed class EditSession
         {
             Notify(c.Things.Select(t => t.Index));
         }
-        Edited();
+        if (tell)
+        {
+            Edited();
+        }
         return true;
     }
 
@@ -826,10 +892,22 @@ public sealed class EditSession
     }
 
     /// <summary>
+    /// The label of a new step: "Claude: " in front while Claude is setting a control (ClaudeTools.Acting) and the
+    /// label lacks it, so a step made by a control Claude pressed is named like every other step of Claude's.
+    /// </summary>
+    private static string Labelled(string label) =>
+        ClaudeTools.Acting.Value && !label.StartsWith("Claude:", StringComparison.Ordinal) ? "Claude: " + label : label;
+
+    /// <summary>
     /// Puts a change on the undo list (dropping the oldest past HistoryLength) and clears the redo list.
     /// </summary>
     private void AddChange(Change c)
     {
+        string label = Labelled(c.Label);
+        if (label != c.Label)
+        {
+            c = c with { Label = label };
+        }
         Interlocked.Increment(ref _generation);
         lock (_lock)
         {
@@ -856,7 +934,7 @@ public sealed class EditSession
             return;
         }
         SetGone(live.Select(i => (i, true)));
-        AddChange(new Change($"Deleted {live.Length}", [], NoPoints, NoPoints, []) { Things = [.. live.Select(i => (i, false, true))] });
+        AddChange(new Change(Lang.T("history.undo.deleted", live.Length), [], NoPoints, NoPoints, []) { Things = [.. live.Select(i => (i, false, true))] });
         Notify(live);
         Edited();
     }
@@ -880,7 +958,7 @@ public sealed class EditSession
     {
         var live = WholeGroupMoves([.. moves.Where(m => !Scene.Things[m.Index].Gone)]);
         var adds = live.Select(m => MovedCopy(m.Index, m.Position, m.Rotation, m.Scale)).ToList();
-        return Commit(label ?? $"Moved {live.Count}", null, [.. live.Select(m => m.Index)], adds);
+        return Commit(label ?? Lang.T("history.undo.moved", live.Count), null, [.. live.Select(m => m.Index)], adds);
     }
 
     /// <summary>
@@ -897,6 +975,20 @@ public sealed class EditSession
         var t = Scene.Things[index];
         var from = t.Id < 0 ? Edits.FindAdded(t.Id) : null;
         return (new NewObject(0, t.Prefab, position, rotation, scale, t.Id < 0 ? from?.SourceId : t.Id, t.Id < 0 && (from?.Fresh ?? true), from?.Raw, from?.Data), t.Piece);
+    }
+
+    /// <summary>
+    /// What a copy of a thing starts from: the saved object it comes from (its own id, or for one added in this session
+    /// the id that was itself copied from; null: none) and everything it holds, builder included (its saved bytes read
+    /// as fields; for an added one they cannot be read for, its own values; null: none), so a copy stays whole after
+    /// the world is saved (the ids change) and in another world.
+    /// </summary>
+    /// <param name="t">The thing copied.</param>
+    internal (int? SourceId, IReadOnlyList<ObjectField>? Data) CopySourceOf(WorldScene.Thing t)
+    {
+        var added = t.Id < 0 ? Edits.FindAdded(t.Id) : null;
+        var data = Scene.World != null && ObjectData.Bytes(Scene.World, Edits, t.Id) is { } bytes ? ObjectData.Fields(bytes, builder: true) : added?.Data;
+        return (t.Id >= 0 ? t.Id : added?.SourceId, data);
     }
 
     // ---- Objects mods link into one (ObjectLinks: a ship and its pieces): drawn from their offsets, edited whole.
@@ -1226,7 +1318,7 @@ public sealed class EditSession
                     }
                 }
             }
-            return (touched, (0, 0, g.W - 1, g.H - 1));
+            return (touched, BoxOf(touched));
         };
         Commit(label, clearGround, [], [], resets);
     }
@@ -1307,6 +1399,25 @@ public sealed class EditSession
     }
 
     /// <summary>
+    /// The grid box of some points (all the ground's grid when there are none), a point wider on every side: their
+    /// neighbours' shading changes with them.
+    /// </summary>
+    private (int X0, int Z0, int X1, int Z1) BoxOf(IReadOnlyCollection<int> points)
+    {
+        if (points.Count == 0)
+        {
+            return (0, 0, Ground.W - 1, Ground.H - 1);
+        }
+        int x0 = int.MaxValue, z0 = int.MaxValue, x1 = int.MinValue, z1 = int.MinValue;
+        foreach (int p in points)
+        {
+            int gx = p % Ground.W, gz = p / Ground.W;
+            (x0, z0, x1, z1) = (Math.Min(x0, gx), Math.Min(z0, gz), Math.Max(x1, gx), Math.Max(z1, gz));
+        }
+        return (x0 - 1, z0 - 1, x1 + 1, z1 + 1);
+    }
+
+    /// <summary>
     /// The scene's heights, paint mask and limit marks follow the ground over a grid rectangle (clamped to the grid),
     /// which joins the dirty rectangle.
     /// </summary>
@@ -1336,8 +1447,13 @@ public sealed class EditSession
     /// again and the history cleared.
     /// </summary>
     /// <returns>What the writer did.</returns>
-    public WorldWriter.Result Save()
+    public WorldWriter.Result Save() => SaveOutcome().Saved!;
+
+    /// <summary>As <see cref="Save"/>, with what to tell the user in both languages (the status bar's English is Claude's).</summary>
+    /// <returns>The world's outcome: the writer's result in <see cref="WorldSession.Outcome.Saved"/>.</returns>
+    public WorldSession.Outcome SaveOutcome()
     {
+        WorldSession.Outcome o;
         WorldWriter.Result result;
         bool reread;
         lock (_lock)
@@ -1348,7 +1464,7 @@ public sealed class EditSession
             }
             // Every area opened in the app belongs to an open world (WorldScene.Load), which saves.
             var owner = Scene.Owner ?? throw new InvalidOperationException("This area is not part of an open world, so it cannot be saved.");
-            var o = owner.Save();
+            o = owner.Save();
             result = o.Saved!;
             // Read again only when the world was (zone resets) or No limit ground became ground discs
             // (a failed save puts it back): the ground under the area is not the same any more.
@@ -1369,7 +1485,7 @@ public sealed class EditSession
             ThingsReset?.Invoke();
         }
         Changed?.Invoke();
-        return result;
+        return o;
     }
 
     /// <summary>
@@ -1577,7 +1693,11 @@ public sealed class EditSession
             }
             var missing = k.Ids.Values.SelectMany(v => v).Where(id => !index.ContainsKey(id)).Distinct().ToList();
             var found = missing.Count > 0 ? find(missing) : [];
-            float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.ZonesX - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.ZonesZ - 1) * 64f + 32f;
+            float minX = Scene.OriginX, maxX = (Scene.X0 + Scene.ZonesX - 1) * 64f + 32f, minZ = Scene.OriginZ, maxZ = (Scene.Z0 + Scene.ZonesZ - 1) * 64f + 32f;
+            // Things found elsewhere in the world get an index past the scene's for now (from first, in the order
+            // they were met); only those a change kept here refers to join the scene's things, at the end.
+            int first = Scene.Things.Count;
+            var pending = new List<WorldScene.Thing>();
             int? Thing(int id)
             {
                 if (index.TryGetValue(id, out int i))
@@ -1586,12 +1706,9 @@ public sealed class EditSession
                 }
                 if (found.TryGetValue(id, out var t) && t.Position.X >= minX && t.Position.X < maxX && t.Position.Z >= minZ && t.Position.Z < maxZ)
                 {
-                    lock (Scene.Things)
-                    {
-                        Scene.Things.Add(t);
-                        index[id] = Scene.Things.Count - 1;
-                    }
-                    return Scene.Things.Count - 1;
+                    pending.Add(t);
+                    index[id] = first + pending.Count - 1;
+                    return index[id];
                 }
                 return null;
             }
@@ -1694,6 +1811,28 @@ public sealed class EditSession
                 _order[n > end && redo[n].Fitted is { } f ? f : k.Redo[n]] = undo.Count + redo.Count - 1 - n;
             }
             _nextOrder = undo.Count + redo.Count;
+            // The things found elsewhere that a step kept here refers to join the scene; those only steps kept aside
+            // refer to stay out (nothing here would show or undo them).
+            var kept = _undo.Concat(_redo).ToList();
+            var joined = new Dictionary<int, int>();
+            lock (Scene.Things)
+            {
+                foreach (int at in kept.SelectMany(c => c.Things).Select(t => t.Index).Where(i => i >= first).Distinct().Order())
+                {
+                    Scene.Things.Add(pending[at - first]);
+                    joined[at] = Scene.Things.Count - 1;
+                }
+            }
+            foreach (var c in kept)
+            {
+                for (int n = 0; n < c.Things.Length; n++)
+                {
+                    if (c.Things[n].Index >= first)
+                    {
+                        c.Things[n].Index = joined[c.Things[n].Index];
+                    }
+                }
+            }
             return _shelvedUndo.Count + _shelvedRedo.Count;
         }
     }
@@ -1719,7 +1858,7 @@ public sealed class EditSession
             var world = Scene.World;
             var gone = f.Merged.Vanished.Concat(f.Ours).ToHashSet();
             var update = f.Merged.Updated.Concat(f.Merged.Added).ToHashSet();
-            float minX = Scene.X0 * 64f - 32f, maxX = (Scene.X0 + Scene.ZonesX - 1) * 64f + 32f, minZ = Scene.Z0 * 64f - 32f, maxZ = (Scene.Z0 + Scene.ZonesZ - 1) * 64f + 32f;
+            float minX = Scene.OriginX, maxX = (Scene.X0 + Scene.ZonesX - 1) * 64f + 32f, minZ = Scene.OriginZ, maxZ = (Scene.Z0 + Scene.ZonesZ - 1) * 64f + 32f;
             bool Inside(System.Numerics.Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
             // The objects as the world has them now, by id (those changed or new).
             var now = WorldScene.FindThings(world, Edits, update);
@@ -1807,6 +1946,7 @@ public sealed class EditSession
         {
             Scene.Things.Clear();
             Scene.Things.AddRange(things);
+            Scene.Reads++;
         }
         _nextId = -1;
     }

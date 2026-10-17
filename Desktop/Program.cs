@@ -12,13 +12,20 @@ namespace TerrainEditor.Desktop;
 public static class Program
 {
     /// <summary>
-    /// Starts the editor, or with <c>--mcp-stdio</c>, <c>--export-test-data</c> or <c>--export-locations</c> does only
-    /// that and ends.
+    /// Starts the editor, or with <c>--script-host</c>, <c>--mcp-stdio</c>, <c>--export-test-data</c> or
+    /// <c>--export-locations</c> does only that and ends.
     /// </summary>
     /// <param name="args">The command line (see <see cref="Options"/>).</param>
     [STAThread]
     public static void Main(string[] args)
     {
+        // --script-host: one script run for the editor that started this process (the script and the area on
+        // stdin, the changes on stdout: nothing else on it, no log, no window). Ended outright once it has answered:
+        // a thread the script started and left running would keep it alive.
+        if (args.Contains("--script-host"))
+        {
+            Environment.Exit(ScriptHost.Serve());
+        }
         // --mcp-stdio: only the relay to the running editor for Claude (nothing else on stdout: no log,
         // no window).
         if (args.Contains("--mcp-stdio"))
@@ -50,14 +57,15 @@ public static class Program
         }
         catch (Exception e) when (e is ArgumentException or FormatException or OverflowException or IndexOutOfRangeException)
         {
+            // Before the log starts, and the answer to whoever typed the command: the error output only, as typed.
             Console.Error.WriteLine($"ValheimWorldEditor: {e.Message}");
             Environment.ExitCode = 2;
             return;
         }
         // Everything said also goes to ValheimWorldEditor.log in the data folder (a window app has no console on Windows).
         TerrainEditor.App.Log.Start(BuildInfo.Version);
-        AppDomain.CurrentDomain.UnhandledException += (_, e) => Options.Say($"crash: {e.ExceptionObject}");
-        TaskScheduler.UnobservedTaskException += (_, e) => Options.Say($"error in a background task: {e.Exception}");
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => Options.Say($"crash: {TerrainEditor.App.Log.Scrub(e.ExceptionObject.ToString() ?? "")}");
+        TaskScheduler.UnobservedTaskException += (_, e) => Options.Say($"error in a background task: {TerrainEditor.App.Log.Scrub(e.Exception.ToString())}");
         // Logging out, shutting down or `kill` (SIGTERM, SIGHUP): the tunnel closes,
         // then the app ends (changes not saved are lost, as when the computer turns off).
         using var term = System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGTERM, Quit);
@@ -79,6 +87,8 @@ public static class Program
             // macOS: OpenGL (4.1, core), which the 3D view and the map draw with; Metal would leave them blank.
             .With(new AvaloniaNativePlatformOptions { RenderingMode = [AvaloniaNativeRenderingMode.OpenGl, AvaloniaNativeRenderingMode.Software] })
             .StartWithClassicDesktopLifetime(args);
+        // History files Apply live queued are written before the process ends (its background threads stop with it).
+        HistoryFile.Flush();
     }
 
     /// <summary>
@@ -131,7 +141,7 @@ public sealed class App : Application
             // it is logged and shown instead.
             Avalonia.Threading.Dispatcher.UIThread.UnhandledException += (_, e) =>
             {
-                Options.Say($"error: {e.Exception}");
+                Options.Say($"error: {TerrainEditor.App.Log.Scrub(e.Exception.ToString())}");
                 e.Handled = true;
                 window.ShowError(e.Exception);
             };
@@ -154,6 +164,8 @@ public sealed class App : Application
 ///                                                      where there is no Valheim (CI), so that worlds open
 ///   --mcp-stdio                                        no window: relays Claude's MCP messages on stdin/stdout to
 ///                                                      the running editor (Claude Desktop; see ClaudeRelay)
+///   --script-host                                      no window: runs one script for the editor that started
+///                                                      this process (see ScriptHost.Serve)
 /// </code>
 /// </summary>
 public static class Options
@@ -227,7 +239,15 @@ public static class Options
                     break;
                 case "--data":
                     Data = Path.GetFullPath(Value(args, ref i));
-                    Directory.CreateDirectory(Data);
+                    try
+                    {
+                        Directory.CreateDirectory(Data);
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        // Said like any other option that cannot be used, before the editor starts.
+                        throw new ArgumentException($"--data {Data} cannot be used: {ex.Message}", ex);
+                    }
                     TerrainEditor.App.AppSettings.PathOverride = Path.Combine(Data, "settings.json");
                     TerrainEditor.App.ServerConfig.PathOverride = Path.Combine(Data, "servers.cfg");
                     PlaceMemory.PathOverride = Path.Combine(Data, "place.json");

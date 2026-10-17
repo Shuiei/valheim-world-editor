@@ -15,7 +15,7 @@ namespace TerrainEditor.Desktop;
 /// saved (Save, or Apply live, and Discard), the map's options, search across the world, zones picked by filter to
 /// reset, the edited zones, and the spot picked with a click, opened in the 3D editor with the size chosen.
 /// </summary>
-public sealed class MapPage : IDisposable
+public sealed partial class MapPage : IDisposable
 {
     /// <summary>
     /// The page: the map with the side panel, the cursor readout and the status over it.
@@ -66,11 +66,11 @@ public sealed class MapPage : IDisposable
     /// <summary>
     /// Save to world, or Apply live for a live world.
     /// </summary>
-    internal Button SaveButton { get; } = new Button { Content = "Save to world…", FontSize = 12.5 }.Classed("primary");
+    internal Button SaveButton { get; } = new Button { Content = Lang.T("map.label.save"), FontSize = 12.5 }.Classed("primary");
     /// <summary>
     /// Throws away what is waiting.
     /// </summary>
-    internal Button DiscardButton { get; } = new() { Content = "Discard", FontSize = 12 };
+    internal Button DiscardButton { get; } = new() { Content = Lang.T("common.discard"), FontSize = 12 };
     /// <summary>
     /// Live: the players online, or that the game does not answer.
     /// </summary>
@@ -78,7 +78,7 @@ public sealed class MapPage : IDisposable
     /// <summary>
     /// Live: reads the world from the game again.
     /// </summary>
-    internal Button ReloadButton { get; } = new() { Content = Icons.With("reload", "Reload from the game"), FontSize = 12 };
+    internal Button ReloadButton { get; } = new() { Content = Icons.With("reload", Lang.T("map.label.reload")), FontSize = 12 };
     /// <summary>
     /// The live box (shown only for a live world) and the waiting-changes box.
     /// </summary>
@@ -86,27 +86,27 @@ public sealed class MapPage : IDisposable
     /// <summary>
     /// Show player-built pieces; its text gets their count once read.
     /// </summary>
-    internal CheckBox BuildingsBox { get; } = new() { Content = "Show buildings (player-built pieces)", IsChecked = true, FontSize = 12 };
+    internal CheckBox BuildingsBox { get; } = new() { Content = Lang.T("map.label.buildings"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Show ruins: the pieces of the world's ruins too (spoilers; off at first).
     /// </summary>
-    internal CheckBox RuinsBox { get; } = new() { Content = "Show ruins (spoilers)", IsChecked = false, FontSize = 12 };
+    internal CheckBox RuinsBox { get; } = new() { Content = Lang.T("map.label.ruins"), IsChecked = false, FontSize = 12 };
     /// <summary>
     /// Show the zone grid.
     /// </summary>
-    internal CheckBox GridBox { get; } = new() { Content = "Zone grid", FontSize = 12 };
+    internal CheckBox GridBox { get; } = new() { Content = Lang.T("map.label.grid"), FontSize = 12 };
     /// <summary>
     /// Outline edited zones.
     /// </summary>
-    internal CheckBox EditedBox { get; } = new() { Content = "Outline edited zones", IsChecked = true, FontSize = 12 };
+    internal CheckBox EditedBox { get; } = new() { Content = Lang.T("map.label.edited"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Show painted ground when zoomed in.
     /// </summary>
-    internal CheckBox PaintBox { get; } = new() { Content = "Show painted ground (dirt, paved, fields) when zoomed in", IsChecked = true, FontSize = 12 };
+    internal CheckBox PaintBox { get; } = new() { Content = Lang.T("map.label.paint"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Show the game's map clouds.
     /// </summary>
-    internal CheckBox CloudsBox { get; } = new() { Content = "Clouds (as in game)", FontSize = 12 };
+    internal CheckBox CloudsBox { get; } = new() { Content = Lang.T("map.label.clouds"), FontSize = 12 };
     /// <summary>
     /// The picked zone (or search result) and its biome.
     /// </summary>
@@ -114,11 +114,11 @@ public sealed class MapPage : IDisposable
     /// <summary>
     /// Opens the picked spot in the 3D editor.
     /// </summary>
-    internal Button EditButton { get; } = new Button { Content = "Edit in 3D", FontSize = 12.5 }.Classed("primary");
+    internal Button EditButton { get; } = new Button { Content = Lang.T("map.label.edit"), FontSize = 12.5 }.Classed("primary");
     /// <summary>
     /// The area to open: 3, 5 or 7 zones a side.
     /// </summary>
-    internal ComboBox SizeBox { get; } = new() { ItemsSource = MainWindow.AreaSizes.Select(n => $"{n} × {n} zones ({n * 64} m)").ToArray(), SelectedIndex = 1, FontSize = 12 };
+    internal ComboBox SizeBox { get; } = new() { ItemsSource = MainWindow.AreaSizes.Select(n => Lang.T("map.label.size", n, n * 64)).ToArray(), SelectedIndex = 1, FontSize = 12 };
     /// <summary>
     /// The picked spot's box, hidden until a spot is picked.
     /// </summary>
@@ -156,15 +156,15 @@ public sealed class MapPage : IDisposable
     /// <summary>
     /// What to search for.
     /// </summary>
-    internal TextBox SearchBox { get; } = new() { PlaceholderText = "Beech, Wood, a sign's text…", FontSize = 12 };
+    internal TextBox SearchBox { get; } = new() { PlaceholderText = Lang.T("map.hint.search"), FontSize = 12 };
     /// <summary>
     /// What to search: object kinds, items in containers, or texts.
     /// </summary>
-    internal ComboBox SearchWhat { get; } = new() { ItemsSource = new[] { "Objects (by kind)", "Items in containers", "Texts (signs, portals, wards…)" }, SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+    internal ComboBox SearchWhat { get; } = new() { ItemsSource = new[] { Lang.T("map.searchWhat.kinds"), Lang.T("map.searchWhat.items"), Lang.T("map.searchWhat.texts") }, SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
     /// <summary>
     /// Runs the search.
     /// </summary>
-    internal Button FindButton { get; } = new Button { Content = Icons.With("search", "Find"), FontSize = 12.5, VerticalAlignment = VerticalAlignment.Stretch }.Classed("primary");
+    internal Button FindButton { get; } = new Button { Content = Icons.With("search", Lang.T("map.label.find")), FontSize = 12.5, VerticalAlignment = VerticalAlignment.Stretch }.Classed("primary");
     /// <summary>
     /// The search's counts, or what went wrong.
     /// </summary>
@@ -199,7 +199,7 @@ public sealed class MapPage : IDisposable
     /// <summary>
     /// Only zones with no buildings in them or within <c>DistBox</c> zones.
     /// </summary>
-    internal CheckBox NoBuildBox { get; } = new() { Content = "No buildings in the zone or within", IsChecked = true, FontSize = 12 };
+    internal CheckBox NoBuildBox { get; } = new() { Content = Lang.T("map.label.noBuild"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// How many zones around a match must have no buildings, 0..50.
     /// </summary>
@@ -207,11 +207,11 @@ public sealed class MapPage : IDisposable
     /// <summary>
     /// Only zones without ground edits.
     /// </summary>
-    internal CheckBox NoEditBox { get; } = new() { Content = "No ground edits", IsChecked = true, FontSize = 12 };
+    internal CheckBox NoEditBox { get; } = new() { Content = Lang.T("map.label.noEdit"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Only zones the game generated.
     /// </summary>
-    internal CheckBox OnlyGenBox { get; } = new() { Content = "Only zones the game generated", IsChecked = true, FontSize = 12 };
+    internal CheckBox OnlyGenBox { get; } = new() { Content = Lang.T("map.label.onlyGen"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Smallest distance from the world centre, in metres; empty for none.
     /// </summary>
@@ -223,19 +223,19 @@ public sealed class MapPage : IDisposable
     /// <summary>
     /// Resetting also undoes the zones' ground edits.
     /// </summary>
-    internal CheckBox GroundBox { get; } = new() { Content = "Also undo their ground edits", FontSize = 12 };
+    internal CheckBox GroundBox { get; } = new() { Content = Lang.T("map.label.ground"), FontSize = 12 };
     /// <summary>
     /// Shows the zones that match the filter on the map.
     /// </summary>
-    internal Button ShowMatchButton { get; } = new() { Content = "Show matching", FontSize = 12 };
+    internal Button ShowMatchButton { get; } = new() { Content = Lang.T("map.label.showMatch"), FontSize = 12 };
     /// <summary>
     /// Marks the matching zones for reset (after asking).
     /// </summary>
-    internal Button MarkButton { get; } = new Button { Content = "Mark for reset…", FontSize = 12 }.Classed("primary");
+    internal Button MarkButton { get; } = new Button { Content = Lang.T("map.label.mark"), FontSize = 12 }.Classed("primary");
     /// <summary>
     /// Unmarks every zone marked for reset.
     /// </summary>
-    internal Button UnmarkButton { get; } = new() { Content = "Unmark all", FontSize = 12 };
+    internal Button UnmarkButton { get; } = new() { Content = Lang.T("map.label.unmark"), FontSize = 12 };
     /// <summary>
     /// How many zones match, and how many are marked.
     /// </summary>
@@ -290,7 +290,7 @@ public sealed class MapPage : IDisposable
     /// </summary>
     public MapPage()
     {
-        var worlds = new Button { Content = Icons.With("back", "Worlds"), FontSize = 12.5 }.Classed("ghost");
+        var worlds = new Button { Content = Icons.With("back", Lang.T("map.label.worlds")), FontSize = 12.5 }.Classed("ghost");
         worlds.Tip("map.worlds");
         SaveButton.Tip("map.save");
         DiscardButton.Tip("map.discard");
@@ -319,10 +319,10 @@ public sealed class MapPage : IDisposable
         EditButton.Click += (_, _) => { if (Spot is var (x, z)) { EditRequested?.Invoke(x, z, Size); } };
         SizeBox.SelectionChanged += (_, _) => ShowChosen();
         SizeBox.Tip("map.size");
-        Map.Picked += (x, z) => Pick((int)MathF.Floor((x + 32) / 64), (int)MathF.Floor((z + 32) / 64));
+        Map.Picked += (x, z) => { var (zx, zz) = Save.ChunkMath.SectorOf(x, z); Pick(zx, zz); };
         Map.Hovered += Hover;
         Map.Status += t => _status.Text = t;
-        Map.PiecesRead += () => BuildingsBox.Content = $"Show buildings ({Map.PieceCount:N0} player-built pieces)";
+        Map.PiecesRead += () => BuildingsBox.Content = Lang.T("map.label.buildingsCount", Map.PieceCount);
         Map.ViewChanged += PlaceLabels;
         Map.SizeChanged += (_, _) => PlaceLabels();
         _liveBox = new StackPanel { Spacing = 6, IsVisible = false, Children = { LiveText, ReloadButton } };
@@ -342,11 +342,11 @@ public sealed class MapPage : IDisposable
         Grid.SetColumn(FindButton, 1);
         Grid.SetRowSpan(FindButton, 2);
         searchRow.Children.Add(FindButton);
-        var search = Section("Search the world", true, searchRow, SearchInfo, Hits);
+        var search = Section(Lang.T("map.head.search"), true, searchRow, SearchInfo, Hits);
 
         // Reset zones across the world.
         var biomes = new WrapPanel();
-        foreach (var (value, name) in ZoneFilter.BiomeChoices)
+        foreach (var (value, name) in ZoneFilter.BiomeChoices())
         {
             var b = new ToggleButton { Content = name, FontSize = 11, Padding = new Thickness(6, 2), Margin = new Thickness(0, 0, 4, 4) }.Tip("map.biome");
             b.IsCheckedChanged += (_, _) => Refilter();
@@ -371,12 +371,12 @@ public sealed class MapPage : IDisposable
         ShowMatchButton.Click += async (_, _) => await ShowMatching();
         MarkButton.Click += async (_, _) => await MarkMatching();
         UnmarkButton.Click += async (_, _) => await UnmarkAll();
-        var zones = Section("Reset zones across the world", false,
-            new TextBlock { Text = "Pick zones everywhere at once (like MCA Selector) and have the game generate them again: new trees, ore and dungeons, for example after a Valheim update. Buildings are never touched.", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
+        var zones = Section(Lang.T("map.head.zones"), false,
+            new TextBlock { Text = Lang.T("map.hint.zones"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
             biomes,
-            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { NoBuildBox, DistBox, new TextBlock { Text = "zone(s)", FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } },
+            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { NoBuildBox, DistBox, new TextBlock { Text = Lang.T("map.label.zones"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } },
             NoEditBox, OnlyGenBox,
-            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { new TextBlock { Text = "From the centre", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, RMinBox, new TextBlock { Text = "to", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, RMaxBox, new TextBlock { Text = "m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } },
+            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { new TextBlock { Text = Lang.T("map.label.fromCentre"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, RMinBox, new TextBlock { Text = Lang.T("map.label.to"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, RMaxBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } },
             GroundBox,
             new WrapPanel { Children = { Spaced(ShowMatchButton), Spaced(MarkButton), Spaced(UnmarkButton) } },
             ZoneInfo);
@@ -392,7 +392,7 @@ public sealed class MapPage : IDisposable
                 Pick(e.ZoneX, e.ZoneZ);
             }
         };
-        _editedSection = Section("Edited zones", false, EditedList);
+        _editedSection = Section(Lang.T("map.head.edited"), false, EditedList);
 
         var side = new Border
         {
@@ -417,10 +417,10 @@ public sealed class MapPage : IDisposable
                         Meta,
                         _liveBox,
                         _changesBox,
-                        H2("Map"),
+                        H2(Lang.T("top.label.map")),
                         new StackPanel { Children = { BuildingsBox, RuinsBox, EditedBox, PaintBox, GridBox, CloudsBox } },
                         _pickBox,
-                        new TextBlock { Text = "Click the map to pick a spot, drag to move, wheel to zoom.", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
+                        new TextBlock { Text = Lang.T("map.hint.click"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                         search,
                         zones,
                         _editedSection,
@@ -498,7 +498,7 @@ public sealed class MapPage : IDisposable
         if (_searching)
         {
             _searching = false;
-            SearchInfo.Text = "The world changed during the search: search again.";
+            SearchInfo.Text = Lang.T("map.msg.searchStale");
         }
         if (!same)
         {
@@ -535,10 +535,10 @@ public sealed class MapPage : IDisposable
         _statsGeneration++;
         var w = session.World;
         Meta.Text = session.IsLive
-            ? $"{w.Name} · live ({session.Label}) · seed {w.SeedName} · {w.ObjectCount:N0} objects"
-            : $"{w.Name} · seed {w.SeedName} · save #{w.SaveNumber} · {w.ObjectCount:N0} objects in {w.ChunkCount} chunks";
+            ? Lang.T("map.meta.live", w.Name, session.Label, w.SeedName, w.ObjectCount)
+            : Lang.T("map.meta.file", w.Name, w.SeedName, w.SaveNumber, w.ObjectCount, w.ChunkCount);
         _liveBox.IsVisible = session.IsLive;
-        SaveButton.Content = session.IsLive ? "Apply live" : "Save to world…";
+        SaveButton.Content = session.IsLive ? Lang.T("save.label.apply") : Lang.T("map.label.save");
         SaveButton.Tip(session.IsLive ? "map.apply" : "map.save");
         UpdatePending();
         FillEdited();
@@ -575,11 +575,26 @@ public sealed class MapPage : IDisposable
         {
             return;
         }
-        var (z, d, a, r) = _session.Pending;
-        var parts = new[] { z > 0 ? $"{z} zone{(z > 1 ? "s" : "")} of ground" : "", d > 0 ? $"{d} deleted" : "", a > 0 ? $"{a} added" : "", r > 0 ? $"{r} zone reset" : "" }.Where(p => p != "").ToList();
-        Pending.Text = parts.Count == 0 ? (_session.IsLive ? "Everything is applied." : "Everything is saved.") : $"{(_session.IsLive ? "Not applied yet" : "Not saved yet")}: {string.Join(", ", parts)}.";
-        SaveButton.IsEnabled = DiscardButton.IsEnabled = parts.Count > 0;
+        var pending = _session.Pending;
+        Pending.Text = PendingText(pending, _session.IsLive);
+        SaveButton.IsEnabled = DiscardButton.IsEnabled = pending != default;
         Map.RequestNextFrameRendering();
+    }
+
+    /// <summary>
+    /// The pending line: everything saved (or applied, live), or what is not yet.
+    /// </summary>
+    /// <param name="p">What is waiting: zones of ground, objects deleted and added, zones marked for reset.</param>
+    /// <param name="live">A live world (applied rather than saved).</param>
+    internal static string PendingText((int Zones, int Deleted, int Added, int Resets) p, bool live)
+    {
+        string zones = p.Zones > 1 ? Lang.T("map.pending.zones.many", p.Zones) : p.Zones == 1 ? Lang.T("map.pending.zones.one") : "";
+        string list = MainWindow.PendingList(zones, p.Deleted, p.Added, p.Resets);
+        if (list.Length == 0)
+        {
+            return live ? Lang.T("map.pending.allApplied") : Lang.T("map.pending.allSaved");
+        }
+        return live ? Lang.T("map.pending.notApplied", list) : Lang.T("map.pending.notSaved", list);
     }
 
     /// <summary>
@@ -601,16 +616,20 @@ public sealed class MapPage : IDisposable
             }
             var json = System.Text.Json.Nodes.JsonNode.Parse(answer)?.AsArray();
             var players = json?.Where(p => p?["name"] != null).Select(p => ((string)p!["name"]!, (float)(p["x"] ?? 0), (float)(p["z"] ?? 0))).ToList() ?? [];
-            LiveText.Text = $"Live world · {players.Count} player(s) online{(players.Count > 0 ? ": " + string.Join(", ", players.Select(p => p.Item1)) : "")}";
+            LiveText.Text = players.Count > 0
+                ? Lang.T("map.live.playersNamed", players.Count, string.Join(", ", players.Select(p => p.Item1)))
+                : Lang.T("map.live.players", players.Count);
             Map.Players = players;
             PlaceLabels();
             Map.RequestNextFrameRendering();
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException or FormatException)
         {
+            // Brief: it can fail at every poll while the game does not answer.
+            Log.CaughtBrief(ex, "asking the game where the players are");
             if (_session == s)
             {
-                LiveText.Text = "Live world · the game does not answer right now.";
+                LiveText.Text = Lang.T("map.live.noAnswer");
             }
         }
         finally
@@ -642,25 +661,14 @@ public sealed class MapPage : IDisposable
     }
 
     /// <summary>
-    /// A biome's name as the game shows it.
-    /// </summary>
-    private static string BiomeName(ValheimGen.Heightmap.Biome b) => b switch
-    {
-        ValheimGen.Heightmap.Biome.BlackForest => "Black Forest",
-        ValheimGen.Heightmap.Biome.AshLands => "Ashlands",
-        ValheimGen.Heightmap.Biome.DeepNorth => "Deep North",
-        _ => b.ToString(),
-    };
-
-    /// <summary>
     /// A zone picked: its name, the area the 3D editor would open around it, and its edits.
     /// </summary>
     public void Pick(int zx, int zz)
     {
         Spot = (zx, zz);
         Target = null;
-        string biome = _session != null ? BiomeName(_session.Terrain.BiomeAt(zx * 64f, zz * 64f)) : "";
-        PickTitle.Text = $"Zone {zx}, {zz} · {biome}";
+        string biome = _session != null ? ZoneFilter.BiomeName(_session.Terrain.BiomeAt(zx * 64f, zz * 64f)).Shown : "";
+        PickTitle.Text = Lang.T("map.label.zone", zx, zz, biome);
         _pickBox.IsVisible = true;
         ShowChosen();
     }
@@ -686,8 +694,8 @@ public sealed class MapPage : IDisposable
         {
             return;
         }
-        int zx = (int)MathF.Floor((x + 32) / 64), zz = (int)MathF.Floor((z + 32) / 64);
-        Cursor.Text = $"x {x:0}, z {z:0} · zone {zx}, {zz} · {BiomeName(_session.Terrain.BiomeAt(x, z))}";
+        var (zx, zz) = Save.ChunkMath.SectorOf(x, z);
+        Cursor.Text = Lang.T("map.label.cursor", x, z, zx, zz, ZoneFilter.BiomeName(_session.Terrain.BiomeAt(x, z)).Shown);
     }
 
     // ---- Search: every object of the world by kind, items in containers, or texts.
@@ -720,7 +728,7 @@ public sealed class MapPage : IDisposable
             Map.RequestNextFrameRendering();
             return;
         }
-        SearchInfo.Text = "Searching…";
+        SearchInfo.Text = Lang.T("map.msg.searching");
         WorldSearch.Result res;
         try
         {
@@ -728,10 +736,11 @@ public sealed class MapPage : IDisposable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "searching the world");
             if (search == _searches && _session == s)
             {
                 _searching = false;
-                SearchInfo.Text = "Search failed: " + ex.Message;
+                SearchInfo.Text = Lang.T("map.msg.searchFailed", ex.Message);
             }
             return;
         }
@@ -748,17 +757,36 @@ public sealed class MapPage : IDisposable
         Map.PinChosen = -1;
         if (res.Total == 0)
         {
-            SearchInfo.Text = "Nothing found.";
+            SearchInfo.Text = Lang.T("map.msg.nothingFound");
             Hits.ItemsSource = null;
         }
         else
         {
-            var counts = res.Counts.OrderByDescending(c => c.Value).ToList();
-            string top = string.Join(" · ", counts.Take(12).Select(c => $"{c.Value:N0} {c.Key}")) + (counts.Count > 12 ? $" · +{counts.Count - 12} more" : "");
-            SearchInfo.Text = $"{top}\n{res.Total:N0} found{(what == "items" ? " in all" : "")}{(res.Truncated ? $", the first {res.Hits.Count:N0} pinned" : "")}. Click one to go there.";
+            SearchInfo.Text = Found(res, what);
             Hits.ItemsSource = _hits.Take(300).Select(h => $"{h.Name}   {h.X:0}, {h.Z:0}{(h.Match != null ? "\n   " + h.Match : "")}").ToList();
         }
         Map.RequestNextFrameRendering();
+    }
+
+    /// <summary>
+    /// What a search found, for the search's info line: the twelve most found kinds or items with their counts, then
+    /// how many in all and how many are pinned.
+    /// </summary>
+    /// <param name="res">The search's results (something found).</param>
+    /// <param name="what">What was searched: "kinds", "items" or "texts".</param>
+    internal static string Found(WorldSearch.Result res, string what)
+    {
+        var counts = res.Counts.OrderByDescending(c => c.Value).ToList();
+        var shown = counts.Take(12).Select(c => Lang.T("map.msg.count", c.Value, c.Key));
+        string top = string.Join(" · ", counts.Count > 12 ? shown.Append(Lang.T("map.msg.more", counts.Count - 12)) : shown);
+        string found = (what == "items", res.Truncated) switch
+        {
+            (true, true) => Lang.T("map.msg.foundInAllPinned", res.Total, res.Hits.Count),
+            (true, false) => Lang.T("map.msg.foundInAll", res.Total),
+            (false, true) => Lang.T("map.msg.foundPinned", res.Total, res.Hits.Count),
+            (false, false) => Lang.T("map.msg.found", res.Total),
+        };
+        return $"{top}\n{found}";
     }
 
     /// <summary>
@@ -773,163 +801,10 @@ public sealed class MapPage : IDisposable
         var h = _hits[i];
         Map.PinChosen = i;
         Map.LookAt(h.X, h.Z, MathF.Min(Map.MetersPerPixel, 0.6f));
-        int zx = (int)MathF.Floor((h.X + 32) / 64), zz = (int)MathF.Floor((h.Z + 32) / 64);
+        var (zx, zz) = Save.ChunkMath.SectorOf(h.X, h.Z);
         Pick(zx, zz);
         Target = (h.Id, _searchWhat != "kinds");
-        PickTitle.Text = $"{h.Name} at {h.X:0}, {h.Z:0} · zone {zx}, {zz}";
-    }
-
-    // ---- Zones across the world, picked by filter, to reset.
-    /// <summary>
-    /// The zone filter as the boxes set it.
-    /// </summary>
-    private ZoneFilter Filter()
-    {
-        static float? Num(TextBox b) => float.TryParse(b.Text?.Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v) ? v : null;
-        return new ZoneFilter(BiomeButtons.Where(b => b.Value.IsChecked == true).Select(b => b.Key).ToHashSet(), NoBuildBox.IsChecked == true, (int)(DistBox.Value ?? 0),
-            NoEditBox.IsChecked == true, OnlyGenBox.IsChecked == true, Num(RMinBox), Num(RMaxBox));
-    }
-
-    /// <summary>
-    /// Every zone's counts, read once (in the background) until the world changes; null when no world is shown, or when
-    /// a world was shown again while they were read (another world, or the same one saved or discarded: they are from
-    /// before, dropped).
-    /// </summary>
-    private async Task<int[]?> Stats()
-    {
-        if (_session is not { } s)
-        {
-            return null;
-        }
-        if (_stats == null)
-        {
-            int generation = _statsGeneration;
-            ZoneInfo.Text = "Reading every zone…";
-            _reading++;
-            int[] stats;
-            try
-            {
-                stats = await Task.Run(() => ZoneStats.Compute(s.World, s.Edits, (x, z) => (int)s.Terrain.BiomeAt(x * 64f, z * 64f)));
-            }
-            finally
-            {
-                _reading--;
-            }
-            if (_session != s || _statsGeneration != generation)
-            {
-                // The status said this read was going on: cleared, unless another read is, or has shown its counts.
-                if (_reading == 0 && _stats == null)
-                {
-                    ZoneInfo.Text = "";
-                }
-                return null;
-            }
-            _stats = stats;
-        }
-        return _stats;
-    }
-
-    /// <summary>
-    /// The filter changed: matches shown are worked out again.
-    /// </summary>
-    private void Refilter()
-    {
-        if (_stats != null && _filtered)
-        {
-            ApplyFilter();
-        }
-    }
-
-    /// <summary>
-    /// Works out the matching zones and shows them on the map with their count.
-    /// </summary>
-    private void ApplyFilter()
-    {
-        if (_stats is not { } stats || _session is not { } s)
-        {
-            return;
-        }
-        _filtered = true;
-        var (zones, objects) = Filter().Match(stats);
-        Matches = zones;
-        Map.Matches = zones;
-        int marked = s.Edits.ResetCount;
-        ZoneInfo.Text = $"{zones.Count:N0} of {stats.Length / ZoneStats.Stride:N0} zones match ({objects:N0} objects in them){(marked > 0 ? $" · {marked:N0} marked for reset" : "")}.";
-        Map.RequestNextFrameRendering();
-    }
-
-    /// <summary>
-    /// Show matching: reads the zones if needed, then shows the matches.
-    /// </summary>
-    internal async Task ShowMatching()
-    {
-        if (await Stats() != null)
-        {
-            ApplyFilter();
-        }
-    }
-
-    /// <summary>
-    /// Mark for reset: after asking, marks every matching zone for reset (with its ground edits when the box says so).
-    /// </summary>
-    internal async Task MarkMatching()
-    {
-        if (_session is not { } s || await Stats() == null)
-        {
-            return;
-        }
-        ApplyFilter();
-        if (Matches.Count == 0)
-        {
-            await Tell("No zone matches the filter.");
-            return;
-        }
-        bool live = s.IsLive, ground = GroundBox.IsChecked == true;
-        int generation = _statsGeneration;
-        if (!await Confirm($"Mark {Matches.Count:N0} zone(s) for reset?\n\n• Their trees, rocks, ore, ruins and dungeon entrances are removed{(ground ? ", and their ground edits undone" : "")}; players' tombstones stay.\n"
-            + $"• Valheim generates them again the next time a player comes near{(live ? " (at once where players are, once applied)" : "")}.\n"
-            + $"• {(live ? "Apply live" : "Save to world")} does it; until then it can be cancelled with Unmark all."))
-        {
-            return;
-        }
-        // A world shown while asking (another one, or this one saved, discarded or read again): the matches were
-        // worked out before, and are gone.
-        if (_session != s || _statsGeneration != generation)
-        {
-            return;
-        }
-        foreach (var (x, z) in Matches)
-        {
-            s.Edits.SetReset(new ZoneReset(x, z, true, ground), true);
-        }
-        ApplyFilter();
-        UpdatePending();
-    }
-
-    /// <summary>
-    /// Unmark all: drops every zone reset still waiting.
-    /// </summary>
-    internal async Task UnmarkAll()
-    {
-        if (_session is not { } s)
-        {
-            return;
-        }
-        var resets = s.Edits.Resets;
-        if (resets.Count == 0)
-        {
-            await Tell("No zone is marked for reset.");
-            return;
-        }
-        foreach (var r in resets)
-        {
-            s.Edits.SetReset(r, false);
-        }
-        if (_stats != null)
-        {
-            ApplyFilter();
-        }
-        UpdatePending();
+        PickTitle.Text = Lang.T("map.label.hit", h.Name, h.X, h.Z, zx, zz);
     }
 
     // ---- The edited zones, most edited first, and the picked zone's edits up close.
@@ -942,13 +817,15 @@ public sealed class MapPage : IDisposable
         {
             return;
         }
-        _edited = [.. s.Edits.All().Where(e => e.HeightCount + e.PaintCount > 0).OrderByDescending(e => e.HeightCount + e.PaintCount)];
+        _edited = [.. s.Edits.Copies(e => e.HeightCount + e.PaintCount > 0).OrderByDescending(e => e.HeightCount + e.PaintCount)];
         EditedList.ItemsSource = _edited.Select(e =>
         {
             var (lo, hi) = Range(e);
-            return $"{e.ZoneX}, {e.ZoneZ}   {e.HeightCount} h · {e.PaintCount} p   {lo:0.0} … {hi:0.0} m{(e.Changed ? "   (not saved)" : "")}";
+            return e.Changed
+                ? Lang.T("map.edited.unsaved", e.ZoneX, e.ZoneZ, e.HeightCount, e.PaintCount, lo, hi)
+                : Lang.T("map.edited.line", e.ZoneX, e.ZoneZ, e.HeightCount, e.PaintCount, lo, hi);
         }).ToList();
-        ((TextBlock)_editedSection.Header!).Text = $"Edited zones ({_edited.Count:N0})";
+        ((TextBlock)_editedSection.Header!).Text = Lang.T("map.head.editedCount", _edited.Count);
     }
 
     /// <summary>

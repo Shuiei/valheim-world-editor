@@ -45,6 +45,21 @@ public class CopyFormatTests
         Assert.StartsWith("data:image/png;base64,", CopyFormat.Thumb(c));
     }
 
+    // Heights past ±327.67 m (a copy off a tall No-limit mountain) are kept as they are, not cut there; only the "no
+    // ground" marker's value is moved a centimetre.
+    [Fact]
+    public void HeightsPastTheOldLimitAreKept()
+    {
+        var c = Sample();
+        c.Rel[0] = 500f;
+        c.Rel[1] = -400f;
+        c.Rel[3] = -327.68f;
+        var back = CopyFormat.FromJson(CopyFormat.ToJson(c));
+        Assert.Equal(500f, back.Rel[0], 2);
+        Assert.Equal(-400f, back.Rel[1], 2);
+        Assert.Equal(-327.67f, back.Rel[3], 2);
+    }
+
     // A kind without a known name (a mod's) is written as its hash and read back as that kind (it came
     // back as the hash of the number's text: an unknown kind, left out when pasted).
     [Fact]
@@ -69,6 +84,29 @@ public class CopyFormatTests
         Assert.False(o.Follow);
         Assert.Equal(3, c.Poly.Count);
         Assert.Equal("Wall", c.Name);
+    }
+
+    // A hand-edited or older blueprint whose ground arrays are not as long as its size says (or missing), whose size
+    // is not a grid or too large to paste, with a nameless object or an outline point that is not one is refused as it is read: pasted, it
+    // stopped half-way through.
+    [Theory]
+    [InlineData("""{"w":2,"h":2,"rel":[0,0,0],"wt":[0,0,0,0],"pnt":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"objects":[]}""", "\"rel\" list holds 3 values, not the 4")]
+    [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0,0],"pnt":[0,0,0,0],"objects":[]}""", "\"wt\" list holds 2 values, not the 1")]
+    [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0],"objects":[]}""", "no \"pnt\" list")]
+    [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0],"pnt":[0,0,0],"objects":[]}""", "\"pnt\" list holds 3 values, not the 4")]
+    [InlineData("""{"w":0,"h":1,"rel":[],"wt":[],"pnt":[],"objects":[]}""", "size (0 × 1)")]
+    [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0],"pnt":[0,0,0,0]}""", "no objects list")]
+    [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0],"pnt":[0,0,0,0],"objects":[{"dx":1}]}""", "has no name")]
+    [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0],"pnt":[0,0,0,0],"objects":[{"name":" "}]}""", "has no name")]
+    [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0],"pnt":[0,0,0,0],"objects":[],"poly":[{"gx":0,"gz":0},null]}""", "outline is not a point")]
+    [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0],"pnt":[0,0,0,0],"objects":[],"poly":[{"gx":0}]}""", "outline is not a point")]
+    [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0],"pnt":[0,0,0,0],"objects":[],"poly":[{"gx":"a","gz":0}]}""", "outline is not a point")]
+    [InlineData("""{"w":1,"h":1,"rel":[0],"wt":[0],"pnt":[0,0,0,0],"objects":[],"poly":[{"gx":1e40,"gz":0}]}""", "outline is not a point")]
+    [InlineData("""{"w":50000,"h":10}""", "size (50000 × 10) is too large")]
+    public void ACopyThatDoesNotHoldTogetherIsRefused(string text, string why)
+    {
+        var e = Assert.Throws<FormatException>(() => CopyFormat.FromJson(JsonNode.Parse(text)!.AsObject()));
+        Assert.Contains(why, e.Message, StringComparison.Ordinal);
     }
 
     [AvaloniaFact]

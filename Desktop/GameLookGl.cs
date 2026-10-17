@@ -40,14 +40,20 @@ public sealed class GameLookGl
 
     /// <summary>
     /// The terrain's shader and textures, read from the game's files (rows bottom first, Unity's origin; a texture
-    /// array is its square slices one above the other). Null when Valheim is not found.
+    /// array is its square slices one above the other). Null when Valheim is not found. Read once per bundles reader
+    /// (<see cref="Reads"/>): they do not depend on the area.
     /// </summary>
-    public static Files? Read()
+    public static Files? Read() => GameLook.Bundles is { } game ? Reads.Of(game) : null;
+
+    /// <summary>The files as read already for the bundles reader in use, without reading; null when not read (yet).</summary>
+    public static Files? Kept() => GameLook.Bundles is { } game && Reads.TryKept(game, out var files) ? files : null;
+
+    /// <summary>The files read for the last bundles reader asked for (another Valheim folder: read again).</summary>
+    private static readonly KeptRead<GameBundles, Files> Reads = new(ReadFrom);
+
+    /// <summary>Reads the terrain's shader and textures from the game's bundles (see <see cref="Read"/>).</summary>
+    private static Files ReadFrom(GameBundles game)
     {
-        if (GameLook.Bundles is not { } game)
-        {
-            return null;
-        }
         var t = GameLookData.ReadTerrain(game);
         Image Of(GameLookData.Picture p) => new(p.Width, p.Height, p.Rgba);
         Image Tex(string name) => Of(t.Textures[name]);
@@ -339,6 +345,8 @@ public sealed class GameLookGl
     /// Everything made on the graphics card, deleted together by Delete.
     /// </summary>
     private GlObjects _own = null!;
+    /// <summary>The programs' uniform locations, asked once each; made again with the programs (Init).</summary>
+    private GlUniforms _u = null!;
     /// <summary>
     /// The three programs.
     /// </summary>
@@ -371,6 +379,7 @@ public sealed class GameLookGl
     {
         _gl = gl;
         _own = new GlObjects(gl);
+        _u = new GlUniforms(gl);
         _scene = s;
         // Rows of odd widths (the grid's 64n + 1 points, as half floats) are not padded to 4 bytes.
         _gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
@@ -408,27 +417,48 @@ public sealed class GameLookGl
         _terrain = _sky = _water = _skyVao = _waterVao = _maskTex = _heightTex = 0;
     }
 
+    /// <summary>The changed paint mask and heights on their way to the graphics card, kept from edit to edit.</summary>
+    private byte[] _maskRows = [];
+    /// <summary>See <see cref="_maskRows"/>.</summary>
+    private Half[] _heightRows = [];
+
     /// <summary>
-    /// After an edit: the paint mask and the heights (the water's depth) of grid rows z0..z1 (included) again.
+    /// After an edit: the paint mask and the heights (the water's depth) of grid points x0..x1 of rows z0..z1
+    /// (included) again.
     /// </summary>
-    public unsafe void UpdateRows(WorldScene s, int z0, int z1)
+    public unsafe void UpdateRows(WorldScene s, int x0, int z0, int x1, int z1)
     {
-        int n = z1 - z0 + 1;
+        int n = x1 - x0 + 1, rows = z1 - z0 + 1;
+        // Kept for brush-sized changes (as the view's own, GlView.KeptUploadPoints); a bigger one gets its own.
+        byte[] mask = _maskRows;
+        Half[] heights = _heightRows;
+        if (heights.Length < n * rows)
+        {
+            (mask, heights) = (new byte[n * rows * 4], new Half[n * rows]);
+            if (n * rows <= GlView.KeptUploadPoints)
+            {
+                (_maskRows, _heightRows) = (mask, heights);
+            }
+        }
+        for (int r = 0; r < rows; r++)
+        {
+            int from = (z0 + r) * s.W + x0;
+            Array.Copy(s.Mask, from * 4, mask, r * n * 4, n * 4);
+            for (int i = 0; i < n; i++)
+            {
+                heights[r * n + i] = (Half)s.Heights[from + i];
+            }
+        }
         _gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
         _gl.BindTexture(TextureTarget.Texture2D, _maskTex);
-        fixed (byte* p = &s.Mask[z0 * s.W * 4])
+        fixed (byte* p = mask)
         {
-            _gl.TexSubImage2D(TextureTarget.Texture2D, 0, 0, z0, (uint)s.W, (uint)n, PixelFormat.Rgba, PixelType.UnsignedByte, p);
-        }
-        var h = new Half[s.W * n];
-        for (int i = 0; i < h.Length; i++)
-        {
-            h[i] = (Half)s.Heights[z0 * s.W + i];
+            _gl.TexSubImage2D(TextureTarget.Texture2D, 0, x0, z0, (uint)n, (uint)rows, PixelFormat.Rgba, PixelType.UnsignedByte, p);
         }
         _gl.BindTexture(TextureTarget.Texture2D, _heightTex);
-        fixed (Half* p = h)
+        fixed (Half* p = heights)
         {
-            _gl.TexSubImage2D(TextureTarget.Texture2D, 0, 0, z0, (uint)s.W, (uint)n, PixelFormat.Red, PixelType.HalfFloat, p);
+            _gl.TexSubImage2D(TextureTarget.Texture2D, 0, x0, z0, (uint)n, (uint)rows, PixelFormat.Red, PixelType.HalfFloat, p);
         }
     }
 
@@ -560,7 +590,7 @@ public sealed class GameLookGl
                 idx.AddRange([a, b, a + 1, b, b + 1, a + 1]);
             }
         }
-        _skyVao = Mesh([.. v], [.. idx]);
+        _skyVao = _own.PositionMesh([.. v], [.. idx]).Vao;
         _skyCount = (uint)idx.Count;
     }
 
@@ -570,34 +600,7 @@ public sealed class GameLookGl
     private void BuildWater(WorldScene s)
     {
         float half = 4000, y = s.Water;
-        _waterVao = Mesh([-half, y, -half, half, y, -half, half, y, half, -half, y, half], [0, 2, 1, 0, 3, 2]);
-    }
-
-    /// <summary>
-    /// Sends an indexed triangle mesh with positions only (attribute 0) and returns its vertex array.
-    /// </summary>
-    /// <param name="v">Positions, x, y, z per corner.</param>
-    /// <param name="idx">Three corner indices per triangle.</param>
-    private unsafe uint Mesh(float[] v, uint[] idx)
-    {
-        uint vao = _own.VertexArray();
-        _gl.BindVertexArray(vao);
-        uint vbo = _own.Buffer();
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
-        fixed (float* p = v)
-        {
-            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(v.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
-        uint ebo = _own.Buffer();
-        _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, ebo);
-        fixed (uint* p = idx)
-        {
-            _gl.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(idx.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
-        _gl.EnableVertexAttribArray(0);
-        _gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
-        _gl.BindVertexArray(0);
-        return vao;
+        _waterVao = _own.PositionMesh([-half, y, -half, half, y, -half, half, y, half, -half, y, half], [0, 2, 1, 0, 3, 2]).Vao;
     }
 
     // ---- Drawing. eye: the camera in view space; time: seconds since the start (water, clouds, glints).
@@ -612,12 +615,12 @@ public sealed class GameLookGl
     private unsafe void Shared(uint prog, Matrix4x4 vp, Vector3 eye, float time)
     {
         _gl.UseProgram(prog);
-        void V3(string n, Vector3 v) => _gl.Uniform3(_gl.GetUniformLocation(prog, n), v.X, v.Y, v.Z);
-        _gl.UniformMatrix4(_gl.GetUniformLocation(prog, "uViewProj"), 1, false, (float*)&vp);
+        void V3(string n, Vector3 v) => _gl.Uniform3(_u.At(prog, n), v.X, v.Y, v.Z);
+        _gl.UniformMatrix4(_u.At(prog, "uViewProj"), 1, false, (float*)&vp);
         V3("uFogColor", FogColor);
         V3("uSunFogColor", SunFogColor);
-        _gl.Uniform1(_gl.GetUniformLocation(prog, "uFogDensity"), FogDensity);
-        _gl.Uniform1(_gl.GetUniformLocation(prog, "uFogStart"), FogStart);
+        _gl.Uniform1(_u.At(prog, "uFogDensity"), FogDensity);
+        _gl.Uniform1(_u.At(prog, "uFogStart"), FogStart);
         V3("uSunDir", SunDir);
         V3("uSunColor", SunColor);
         V3("uOffset", new Vector3(_scene.Cx, 0, _scene.Cz));
@@ -625,7 +628,7 @@ public sealed class GameLookGl
         V3("uEye", eye);
         V3("uTop", SkyTop);
         V3("uHorizon", SkyHorizon);
-        _gl.Uniform4(_gl.GetUniformLocation(prog, "_Time"), time / 20, time, time * 2, time * 3);
+        _gl.Uniform4(_u.At(prog, "_Time"), time / 20, time, time * 2, time * 3);
     }
 
     /// <summary>
@@ -656,17 +659,14 @@ public sealed class GameLookGl
     public void UseTerrain(Matrix4x4 vp, Vector3 eye, float time, bool slope, float contour, bool limit)
     {
         Shared(_terrain, vp, eye, time);
-        void F(string n, float v) => _gl.Uniform1(_gl.GetUniformLocation(_terrain, n), v);
-        float[] shr = [Ambient.X, Ambient.Y, Ambient.Z];
-        string[] sh = ["unity_SHAr", "unity_SHAg", "unity_SHAb"];
-        for (int c = 0; c < 3; c++)
-        {
-            _gl.Uniform4(_gl.GetUniformLocation(_terrain, sh[c]), 0, 0, 0, shr[c]);
-        }
-        _gl.Uniform3(_gl.GetUniformLocation(_terrain, "_SkyAlphaPosition"), 0, -1e5f, 0);
+        void F(string n, float v) => _gl.Uniform1(_u.At(_terrain, n), v);
+        _gl.Uniform4(_u.At(_terrain, "unity_SHAr"), 0, 0, 0, Ambient.X);
+        _gl.Uniform4(_u.At(_terrain, "unity_SHAg"), 0, 0, 0, Ambient.Y);
+        _gl.Uniform4(_u.At(_terrain, "unity_SHAb"), 0, 0, 0, Ambient.Z);
+        _gl.Uniform3(_u.At(_terrain, "_SkyAlphaPosition"), 0, -1e5f, 0);
         F("_SnowGlintSize", 0.2f); F("_SnowGlintDensity", 0.15f); F("_SnowGlintStrength", 4);
         F("_SnowGlintNoiseDensity", 1); F("_SnowGlintNoiseAmount", 80); F("_SnowGlintViewAmount", 0.5f); F("_SnowGlintTimeAmount", 3);
-        _gl.Uniform3(_gl.GetUniformLocation(_terrain, "_AshlandsVariationCol"), 0.4104f, 0.4838f, 0.5472f);
+        _gl.Uniform3(_u.At(_terrain, "_AshlandsVariationCol"), 0.4104f, 0.4838f, 0.5472f);
         F("_Glossiness", 0.1f); F("_SnowGloss", 1); F("_RockGloss", 0.7f); F("_Metallic", 0);
         F("_WaterLevel", _scene.Water); F("_LodHideDistance", 1e6f); F("_LodHideModifier", 0);
         F("_UVScale", 0.5f); F("_BumpScale", 1); F("_Wet", 0);
@@ -676,7 +676,7 @@ public sealed class GameLookGl
         {
             _gl.ActiveTexture(TextureUnit.Texture0 + unit);
             _gl.BindTexture(target, tex);
-            _gl.Uniform1(_gl.GetUniformLocation(_terrain, name), unit);
+            _gl.Uniform1(_u.At(_terrain, name), unit);
             unit++;
         }
         _gl.ActiveTexture(TextureUnit.Texture0);
@@ -693,12 +693,11 @@ public sealed class GameLookGl
         Shared(_water, vp, eye, time);
         _gl.ActiveTexture(TextureUnit.Texture0);
         _gl.BindTexture(TextureTarget.Texture2D, _heightTex);
-        _gl.Uniform1(_gl.GetUniformLocation(_water, "uHeight"), 0);
-        _gl.Uniform4(_gl.GetUniformLocation(_water, "uRegion"), _scene.X0 * 64f - 32f, _scene.Z0 * 64f - 32f, _scene.W, _scene.H);
-        _gl.Uniform1(_gl.GetUniformLocation(_water, "uWater"), _scene.Water);
+        _gl.Uniform1(_u.At(_water, "uHeight"), 0);
+        _gl.Uniform4(_u.At(_water, "uRegion"), _scene.OriginX, _scene.OriginZ, _scene.W, _scene.H);
+        _gl.Uniform1(_u.At(_water, "uWater"), _scene.Water);
         _gl.Disable(EnableCap.CullFace);
-        _gl.Enable(EnableCap.Blend);
-        _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+        GlBlend.Over(_gl);
         _gl.DepthMask(false);
         _gl.BindVertexArray(_waterVao);
         _gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);

@@ -63,6 +63,16 @@ public class UnityShimTests
         Assert.NotEqual(a.GetHashCode(), b.GetHashCode());
     }
 
+    // Corners west of the middle (x < 0) keep y in their hash: x was sign-extended over it, so every corner of
+    // half the world shared ~160 hashes and the generator's corner caches became long chains.
+    [Fact]
+    public void ShortVectorsWestOfTheMiddleHashTheirY()
+    {
+        var hashes = Enumerable.Range(-160, 321).Select(y => new Vector2s(-64, y * 64).GetHashCode()).ToHashSet();
+        Assert.Equal(321, hashes.Count);
+        Assert.Equal(new Vector2s(-64, 128).GetHashCode(), new Vector2s(-64, 128).GetHashCode());
+    }
+
     [Fact]
     public void MathfLikeUnity()
     {
@@ -156,19 +166,5 @@ public class UnityShimTests
         // Ocean ground above the water line (a shore) and no biome at all have no colour of their own.
         Assert.Equal((150f, 150f, 150f), TerrainService.BiomeColor(Heightmap.Biome.Ocean, 31));
         Assert.Equal((150f, 150f, 150f), TerrainService.BiomeColor(Heightmap.Biome.None, 31));
-    }
-
-    [Fact]
-    public void TheAlternateBiomeMapIsNeverReady()
-    {
-        // The port has no alternate biome map: the generator asking for a sector gets the empty answer.
-        var data = new AltBiomeWorldData();
-        Assert.False(data.IsReady);
-        Assert.Null(data.PointSectors);
-        Assert.Equal(0, AltBiomeWorldData.WorldSpaceToMapSpace(1234.5f));
-        Assert.Equal(Heightmap.Biome.BlackForest, BiomeSector.EmptyBlackForest.Biome);
-        Assert.Equal(Heightmap.Biome.Meadows, BiomeSector.EmptyMeadows.Biome);
-        // The game's log: nothing written offline.
-        ZLog.Log("ignored");
     }
 }

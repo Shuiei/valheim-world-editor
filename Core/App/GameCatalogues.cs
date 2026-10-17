@@ -80,12 +80,12 @@ public static partial class GameCatalogues
     /// </summary>
     /// <param name="Cab">The internal file's name, lower case.</param>
     /// <param name="PathId">The object's path id in that file.</param>
-    private readonly record struct Ref(string Cab, long PathId);
+    internal readonly record struct Ref(string Cab, long PathId);
 
     /// <summary>
     /// The game's bundles, opened one at a time (all of them at once do not fit in memory).
     /// </summary>
-    private sealed class Game : IDisposable
+    internal sealed class Game : IDisposable
     {
         /// <summary>
         /// AssetsTools.NET's manager for every bundle opened here.
@@ -116,21 +116,47 @@ public static partial class GameCatalogues
         }
 
         /// <summary>
-        /// A bundle, or null when it is not one. Its internal files are added to <c>CabBundle</c>.
+        /// The bundles open now, by file name. AssetsTools keeps one instance per path, so a bundle asked for
+        /// while open is the same one, given to one more user: its files are closed when the last one is done,
+        /// not when a second wrapper of the same instance would be.
+        /// </summary>
+        private readonly Dictionary<string, Bundle> _open = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// A bundle, or null when it is not one. Its internal files are added to <c>CabBundle</c>. One open
+        /// already is the same bundle, open until every user has disposed it.
         /// </summary>
         public Bundle? Open(string name)
         {
+            if (_open.TryGetValue(name, out var open))
+            {
+                return open.Share();
+            }
+            BundleFileInstance? file = null;
             try
             {
-                var b = new Bundle(_am, _am.LoadBundleFile(Path.Combine(_dir, name), false));
+                file = _am.LoadBundleFile(Path.Combine(_dir, name), false);
+                var b = new Bundle(_am, file, () => _open.Remove(name));
                 foreach (var f in b.Files)
                 {
                     CabBundle[f.Cab] = name;
                 }
+                _open[name] = b;
                 return b;
             }
             catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
             {
+                // A bundle that opened but whose files could not be read is closed again at once, with the files read
+                // from it so far (it stayed open until the end of the scan).
+                Log.Caught(e, $"opening the bundle {name} (closed again, not read)");
+                if (file != null)
+                {
+                    foreach (var assets in file.loadedAssetsFiles.ToList())
+                    {
+                        _am.UnloadAssetsFile(assets);
+                    }
+                    _am.UnloadBundleFile(file);
+                }
                 return null;
             }
         }
@@ -155,6 +181,7 @@ public static partial class GameCatalogues
                 catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
                 {
                     // Not a bundle.
+                    Log.CaughtBrief(e, $"listing the files in {name} (not a bundle: passed over)");
                 }
             }
         }
@@ -250,7 +277,7 @@ public static partial class GameCatalogues
     /// A bundle open for a scan: its internal files with objects (scene bundles have two), and every
     /// object read once (kept until the bundle is closed).
     /// </summary>
-    private sealed class Bundle : IDisposable
+    internal sealed class Bundle : IDisposable
     {
         /// <summary>
         /// One internal file of a bundle that has objects.
@@ -289,6 +316,15 @@ public static partial class GameCatalogues
         /// Objects read once, by file and path id (null: not there or not readable).
         /// </summary>
         private readonly Dictionary<(Inner, long), AssetTypeValueField?> _fields = [];
+        /// <summary>
+        /// Told once the bundle is closed (its last user disposed it).
+        /// </summary>
+        private readonly Action _closed;
+        /// <summary>
+        /// How many have the bundle open: one at first, one more per <c>Share</c>, one fewer per
+        /// <c>Dispose</c>, which closes it at none.
+        /// </summary>
+        private int _users = 1;
 
         /// <summary>
         /// The internal files with objects, in the bundle's order.
@@ -298,10 +334,14 @@ public static partial class GameCatalogues
         /// <summary>
         /// Wraps a loaded bundle: its reads go through a <c>BlockCache</c>, and each assets file in it is opened.
         /// </summary>
-        public Bundle(AssetsManager am, BundleFileInstance bundle)
+        /// <param name="am">The manager the bundle was loaded with.</param>
+        /// <param name="bundle">The bundle.</param>
+        /// <param name="closed">Told once the bundle is closed.</param>
+        public Bundle(AssetsManager am, BundleFileInstance bundle, Action closed)
         {
             _am = am;
             _bundle = bundle;
+            _closed = closed;
             if (bundle.file.DataReader.BaseStream is not BlockCache)
             {
                 bundle.file.DataReader = new AssetsFileReader(new BlockCache(bundle.file.DataReader.BaseStream)) { BigEndian = bundle.file.DataReader.BigEndian };
@@ -347,6 +387,7 @@ public static partial class GameCatalogues
                 catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException or NullReferenceException)
                 {
                     // A script whose fields are not described: not one of the game's.
+                    Log.CaughtBrief(e, "reading a script's fields (not described: not one of the game's)");
                 }
             }
             return null;
@@ -422,6 +463,7 @@ public static partial class GameCatalogues
             }
             catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException or NullReferenceException)
             {
+                Log.CaughtBrief(e, "making an object's type tree (none: its fields are not read)");
                 return null;
             }
         }
@@ -463,7 +505,7 @@ public static partial class GameCatalogues
 
         /// <summary>
         /// Data kept out of the object, in a resource file of the bundle (.resS): meshes. Empty when the bundle has no
-        /// such resource file.
+        /// such resource file, or the range named does not lie inside it.
         /// </summary>
         public byte[] StreamBytes(AssetTypeValueField streamData)
         {
@@ -472,21 +514,41 @@ public static partial class GameCatalogues
             {
                 return [];
             }
-            _bundle.file.GetFileRange(idx, out long start, out _);
-            _bundle.file.DataReader.Position = start + streamData["offset"].AsLong;
-            return _bundle.file.DataReader.ReadBytes((int)streamData["size"].AsUInt);
+            _bundle.file.GetFileRange(idx, out long start, out long length);
+            long offset = streamData["offset"].AsLong, size = streamData["size"].AsUInt;
+            if (!GameBundles.InResource(length, offset, size))
+            {
+                Console.WriteLine($"game files: a mesh names {size} bytes at {offset} of a {length}-byte resource file; not read.");
+                return [];
+            }
+            _bundle.file.DataReader.Position = start + offset;
+            return _bundle.file.DataReader.ReadBytes((int)size);
         }
 
         /// <summary>
-        /// Unloads the bundle's assets files and the bundle.
+        /// The bundle for one more user: it stays open until that one has disposed it too.
+        /// </summary>
+        public Bundle Share()
+        {
+            _users++;
+            return this;
+        }
+
+        /// <summary>
+        /// One user fewer; the last one's unloads the bundle's assets files and the bundle.
         /// </summary>
         public void Dispose()
         {
+            if (_users == 0 || --_users > 0)
+            {
+                return;
+            }
             foreach (var f in Files)
             {
                 _am.UnloadAssetsFile(f.Assets);
             }
             _am.UnloadBundleFile(_bundle);
+            _closed();
         }
     }
 
@@ -845,19 +907,14 @@ public static partial class GameCatalogues
     private static (double X, double Y, double Z) Scale((double X, double Y, double Z) a, (double X, double Y, double Z) s) => (a.X * s.X, a.Y * s.Y, a.Z * s.Z);
 
     /// <summary>
-    /// Bytes per component, by Unity's VertexFormat (Float, Float16, UNorm8, SNorm8, UNorm16, SNorm16, UInt8, SInt8,
-    /// UInt16, SInt16, UInt32, SInt32).
-    /// </summary>
-    private static readonly int[] VertexFormatSize = [4, 2, 1, 1, 2, 2, 1, 1, 2, 2, 4, 4];
-
-    /// <summary>
     /// A mesh's vertices (x, y, z each) and each submesh's triangles, as UnityPy reads them (the
     /// submesh's base vertex not added); null when it has no vertex data, or one not read here.
     /// </summary>
     private static (float[] Vertices, List<int[]> Triangles)? MeshData(Bundle b, AssetTypeValueField m)
     {
         var vd = m["m_VertexData"];
-        int n = (int)vd["m_VertexCount"].AsUInt;
+        var layout = GameBundles.VertexLayout.Of(vd);
+        int n = layout.Count;
         byte[] data = vd["m_DataSize"].AsByteArray;
         if (Has(m, "m_StreamData") && m["m_StreamData.path"].AsString.Length > 0)
         {
@@ -867,33 +924,14 @@ public static partial class GameCatalogues
         {
             return null;
         }
-        var channels = vd["m_Channels.Array"].Children.Select(c => (Stream: (int)c["stream"].AsByte, Offset: (int)c["offset"].AsByte, Format: (int)c["format"].AsByte, Dim: c["dimension"].AsByte & 0xF)).ToList();
-        if (channels.Count == 0 || channels[0].Dim < 3 || channels[0].Format > 1 || channels.Any(c => c.Dim > 0 && c.Format >= VertexFormatSize.Length))
+        // Positions as floats or halves only; a channel of a format not read here and the layout would be a guess.
+        var channels = layout.Channels;
+        if (channels.Count == 0 || channels[0].Dim < 3 || channels[0].Format > 1 || channels.Any(c => c.Dim > 0 && !GameBundles.VertexLayout.Known(c.Format)))
         {
             return null;
         }
-        // Streams one after another, each 16-byte aligned; in a stream a vertex's channels side by side.
-        int streams = channels.Max(c => c.Stream) + 1;
-        int[] stride = new int[streams];
-        int[] start = new int[streams];
-        foreach (var c in channels.Where(c => c.Dim > 0))
-        {
-            stride[c.Stream] += c.Dim * VertexFormatSize[c.Format];
-        }
-        for (int s = 1; s < streams; s++)
-        {
-            start[s] = (start[s - 1] + n * stride[s - 1] + 15) & ~15;
-        }
-        var pos = channels[0];
-        float[] vertices = new float[n * 3];
-        for (int v = 0; v < n; v++)
-        {
-            int p = start[pos.Stream] + v * stride[pos.Stream] + pos.Offset;
-            for (int d = 0; d < 3; d++)
-            {
-                vertices[v * 3 + d] = pos.Format == 0 ? BitConverter.ToSingle(data, p + 4 * d) : (float)BitConverter.ToHalf(data, p + 2 * d);
-            }
-        }
+        // The renderer's layout and bounds check (GameBundles): a vertex past the data stays at 0, nothing throws.
+        float[] vertices = layout.Read(data, 0, 3)!;
         byte[] ib = m["m_IndexBuffer.Array"].AsByteArray;
         bool wide = m["m_IndexFormat"].AsInt == 1;
         int count = ib.Length / (wide ? 4 : 2);

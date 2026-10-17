@@ -43,6 +43,35 @@ public class AreaToolTests
     }
 
     [Fact]
+    public void TheGridBoxIsTheWholePointsRoundTheOutlineInTheBlock()
+    {
+        Assert.Equal((10, 10, 20, 21), Box(10.4f, 10, 20, 20.6f).GridBox(129, 129));
+        Assert.Equal((0, 0, 128, 10), Box(-5, -5, 200, 10).GridBox(129, 129));
+        Assert.Null(new AreaTool().GridBox(129, 129));
+    }
+
+    [Fact]
+    public void ACrossedOutlinesAreaIsWhatTheSelectionPicks()
+    {
+        // The shoelace formula let crossed parts cancel: a figure eight read 0 m² with both loops selected.
+        List<Vector2> eight = [new(0, 0), new(10, 10), new(10, 0), new(0, 10)];
+        Assert.Equal(50, AreaTool.Area(eight), 3);
+        // A crossed star: its middle is not selected, nor counted.
+        List<Vector2> star = [.. Enumerable.Range(0, 5).Select(i => i * 2 % 5 * MathF.Tau / 5).Select(t => new Vector2(20 + 10 * MathF.Cos(t), 20 + 10 * MathF.Sin(t)))];
+        int picked = 0;
+        for (int i = 0; i < 600; i++)
+        {
+            for (int j = 0; j < 600; j++)
+            {
+                picked += AreaTool.Inside(star, 5 + (j + 0.5f) * 0.05f, 5 + (i + 0.5f) * 0.05f) ? 1 : 0;
+            }
+        }
+        Assert.Equal(picked * 0.0025f, AreaTool.Area(star), 1f);
+        // The shoelace formula gave about 147 (the middle counted twice); the five points are about 77.7.
+        Assert.InRange(AreaTool.Area(star), 76f, 79f);
+    }
+
+    [Fact]
     public void TheSoftEdgeFadesInwards()
     {
         var a = Box(10, 10, 30, 30, soft: 4);
@@ -76,12 +105,20 @@ public class AreaToolTests
         var s = TestScenes.Flat(2);
         var a = Box(40, 40, 80, 80, soft: 2);
         Assert.Contains("dig 0 m³, fill", a.Volume(s.Ground, AreaTool.GroundAction.Flatten, 33, 2));
-        s.EditGround("Area: Flatten", g => a.Apply(g, s.Brush, AreaTool.GroundAction.Flatten, 33, 0, new float[4]));
+        s.EditGround("Area: Flatten", g =>
+        {
+            var (t, rect, _) = a.Apply(g, s.Brush, AreaTool.GroundAction.Flatten, 33, 0, new float[4]);
+            return (t, rect);
+        });
         Assert.Equal(33, H(s, 60, 60), 3);
         Assert.Equal(30, H(s, 90, 60), 3);
         Assert.Equal(33, a.Average(s.Ground)!.Value, 0);
         Assert.Contains("raised", a.Volume(s.Ground, AreaTool.GroundAction.Raise, 0, 2));
-        s.EditGround("Area: Restore", g => a.Apply(g, s.Brush, AreaTool.GroundAction.Restore, 0, 0, new float[4]));
+        s.EditGround("Area: Restore", g =>
+        {
+            var (t, rect, _) = a.Apply(g, s.Brush, AreaTool.GroundAction.Restore, 0, 0, new float[4]);
+            return (t, rect);
+        });
         Assert.Equal(30, H(s, 60, 60), 3);
         Assert.Equal(new[] { (0, 0), (1, 0), (0, 1), (1, 1) }.OrderBy(z => z), a.ZonesUnder(s.Ground).OrderBy(z => z));
     }
@@ -145,7 +182,11 @@ public class AreaToolTests
         Assert.NotNull(s.Mountain(160, 160, new MountainSpec(MountainKind.Peak, 80, 60, 0.6f, 0, 42), clear: false, "Mountain: test"));
         Assert.True(H(s, 160, 160) > 80);
         var a = Box(100, 100, 220, 220);
-        s.EditGround("Area: Restore", g => a.Apply(g, s.Brush, AreaTool.GroundAction.Restore, 0, 0, new float[4]));
+        s.EditGround("Area: Restore", g =>
+        {
+            var (t, rect, _) = a.Apply(g, s.Brush, AreaTool.GroundAction.Restore, 0, 0, new float[4]);
+            return (t, rect);
+        });
         Assert.Equal(30, H(s, 160, 160), 3);
         Assert.Equal(0, s.Ground.Lift[160 * s.Ground.W + 160]);
     }

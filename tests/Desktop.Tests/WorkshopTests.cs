@@ -315,7 +315,7 @@ public class WorkshopTests
         Aim(0.3f, 0);
         var up = t.Preview(new Vector2(c, c)).Single();
         Assert.Equal(Workshop.Ground + 3, up.Position.Y, 2);
-        Assert.Equal("snapped to Wood Wall", t.SnappedTo);
+        Assert.Equal((PlaceTool.SnapWays.To, "Wood Wall"), t.Snapped);
         // Turned as asked, by the game's 22.5° step.
         Assert.True(w.PlaceInput.Key(Avalonia.Input.Key.OemPeriod, false, false));
         Assert.Equal(22.5f, t.Rotation);

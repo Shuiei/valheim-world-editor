@@ -140,7 +140,13 @@ public static class GameLookData
     {
         var slices = (game.Asset(file) is { } at ? game.LoadTextureArray(at) : null) ?? throw new InvalidDataException($"The terrain's texture array {file} could not be read.");
         int w = slices[0].Width, h = slices[0].Height;
-        byte[] all = new byte[w * h * 4 * slices.Count];
+        // In long: 4096 × 4096 × 32 slices passes int's range.
+        long size = (long)w * h * 4 * slices.Count;
+        if (size > System.Array.MaxLength)
+        {
+            throw new InvalidDataException($"The terrain's texture array {file} is too large to read here ({w} × {h} × {slices.Count}).");
+        }
+        byte[] all = new byte[size];
         for (int i = 0; i < slices.Count; i++)
         {
             byte[] rgba = GameTextures.Rgba(slices[i]) ?? throw new InvalidDataException($"The terrain's texture array {file} is in a format not read here ({slices[i].Format}).");

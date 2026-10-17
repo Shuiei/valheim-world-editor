@@ -135,13 +135,9 @@ public sealed class TestGame : IDisposable
     /// </summary>
     public void Dispose()
     {
-        try
+        if (Directory.Exists(Root))
         {
             Directory.Delete(Root, recursive: true);
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-        {
-            // Left for the system's cleaning (on Windows a file still held open, or read-only, is refused as access).
         }
     }
 }

@@ -18,13 +18,9 @@ public sealed class GlViewDrawingTests(EditorProcess editor) : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        try
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, true);
-        }
-        catch
-        {
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
         }
     }
 

@@ -27,63 +27,70 @@ public static class StandData
     /// <summary>Whether the prefab is an armour stand (the catalogue has its slots).</summary>
     public static bool IsArmourStand(int prefab) => PrefabCatalog.ArmourSlotsOf(prefab) != null;
 
-    /// <summary>ItemDrop.ItemData.ItemType, as words.</summary>
-    public static string TypeName(int type) => type switch
+    /// <summary>
+    /// ItemDrop.ItemData.ItemType, as words in both languages: the refusals name them (Claude reads their English), the
+    /// inspector shows the user's.
+    /// </summary>
+    /// <param name="type">The item type's number.</param>
+    public static Said TypeWords(int type) => type switch
     {
-        1 => "material",
-        2 => "food or potion",
-        3 => "one-handed weapon",
-        4 => "bow",
-        5 => "shield",
-        6 => "helmet",
-        7 => "chest armour",
-        9 => "ammo",
-        10 => "customization",
-        11 => "legs armour",
-        12 => "hands",
-        13 => "trophy",
-        14 => "two-handed weapon",
-        15 => "torch",
-        16 => "misc item",
-        17 => "cape",
-        18 => "utility item",
-        19 => "tool",
-        20 => "atgeir",
-        21 => "fish",
-        22 => "two-handed weapon",
-        23 => "ammo",
-        24 => "trinket",
-        _ => "item",
+        1 => Said.Of("stand.type.material"),
+        2 => Said.Of("stand.type.foodOrPotion"),
+        3 => Said.Of("stand.type.oneHandedWeapon"),
+        4 => Said.Of("stand.type.bow"),
+        5 => Said.Of("stand.type.shield"),
+        6 => Said.Of("stand.type.helmet"),
+        7 => Said.Of("stand.type.chestArmour"),
+        9 or 23 => Said.Of("stand.type.ammo"),
+        10 => Said.Of("stand.type.customization"),
+        11 => Said.Of("stand.type.legsArmour"),
+        12 => Said.Of("stand.type.hands"),
+        13 => Said.Of("stand.type.trophy"),
+        14 or 22 => Said.Of("stand.type.twoHandedWeapon"),
+        15 => Said.Of("stand.type.torch"),
+        16 => Said.Of("stand.type.miscItem"),
+        17 => Said.Of("stand.type.cape"),
+        18 => Said.Of("stand.type.utilityItem"),
+        19 => Said.Of("stand.type.tool"),
+        20 => Said.Of("stand.type.atgeir"),
+        21 => Said.Of("stand.type.fish"),
+        24 => Said.Of("stand.type.trinket"),
+        _ => Said.Of("stand.type.item"),
     };
 
-    /// <summary>Why this item stand does not take the item (ItemStand.CanAttach), or null when it does.</summary>
+    /// <summary>Why this item stand does not take the item (ItemStand.CanAttach), in both languages, or null when it does.</summary>
     /// <param name="stand">The stand's prefab hash.</param>
     /// <param name="item">The item's prefab name.</param>
-    public static string? ItemStandRefusal(int stand, string item)
+    public static Said? ItemStandRefusal(int stand, string item)
     {
-        string standName = PrefabCatalog.DisplayName(stand) ?? "This object";
+        Said standName = StandName(stand);
         if (PrefabCatalog.ItemStandOf(stand) is not { } rule)
         {
-            return $"{standName} is not an item stand.";
+            return Said.Of("stand.msg.notItemStand", standName);
         }
         if (PrefabCatalog.ItemKindOf(StableHash.Of(item)) is not { } kind)
         {
-            return $"“{item}” is not an item of the game.";
+            return Said.Of("stand.msg.notAnItem", item);
         }
         if (!kind.Attach)
         {
-            return $"{item} cannot hang on a stand (the game shows it on none).";
+            return Said.Of("stand.msg.cannotHang", item);
         }
         if (rule.Refuses.Contains(item))
         {
-            return $"{standName} refuses {item}.";
+            return Said.Of("stand.msg.refuses", standName, item);
         }
         if (rule.Takes.Contains(item) || rule.Types.Contains(kind.Type))
         {
             return null;
         }
-        return $"{standName} does not take {item} (a {TypeName(kind.Type)}); it takes: {string.Join(", ", rule.Types.Select(TypeName).Distinct())}.";
+        return Said.Of("stand.msg.doesNotTake", standName, item, TypeWords(kind.Type), Said.Join(", ", rule.Types.Select(TypeWords).Distinct()));
     }
+
+    /// <summary>The stand's name as the game shows it, or "This object" for a prefab the catalogue does not name.</summary>
+    /// <param name="stand">The stand's prefab hash.</param>
+    private static Said StandName(int stand) =>
+        PrefabCatalog.DisplayName(stand) is { } name ? Said.Raw(name) : Said.Of("stand.thisObject");
 
     /// <summary>
     /// Whether an armour stand's slot takes the item (ArmorStand.CanAttach, and its check that anything
@@ -103,7 +110,7 @@ public static class StandData
 
     /// <summary>
     /// The values that make an item stand hold this item (null: nothing), hanging this way (the game's
-    /// orientations: 0 is the first). Throws ArgumentException when the stand does not take the item.
+    /// orientations: 0 is the first). Throws <see cref="StandRefusalException"/> when the stand does not take the item.
     /// Quality is clamped to 1..10, the variant to the item's.
     /// </summary>
     public static List<FieldChange> ForItemStand(int stand, Held? held, int orientation)
@@ -113,9 +120,9 @@ public static class StandData
             // As ItemStand.DropItem leaves it.
             return [new("ints", "item", "0"), new("ints", "type", "0"), new("bytes", "itemData", null)];
         }
-        if (ItemStandRefusal(stand, held.Item) is string why)
+        if (ItemStandRefusal(stand, held.Item) is { } why)
         {
-            throw new ArgumentException(why);
+            throw new StandRefusalException(why);
         }
         int hash = StableHash.Of(held.Item);
         var kind = PrefabCatalog.ItemKindOf(hash)!;
@@ -129,23 +136,23 @@ public static class StandData
 
     /// <summary>
     /// The values that make an armour stand wear these items (each in the first free slot that takes it;
-    /// the other slots emptied), in this pose when given. Throws ArgumentException when one fits nowhere.
+    /// the other slots emptied), in this pose when given. Throws <see cref="StandRefusalException"/> when one fits nowhere.
     /// </summary>
     public static List<FieldChange> ForArmourStand(int stand, IReadOnlyList<Held> held, int? pose)
     {
-        string standName = PrefabCatalog.DisplayName(stand) ?? "This object";
-        int[][] slots = PrefabCatalog.ArmourSlotsOf(stand) ?? throw new ArgumentException($"{standName} is not an armour stand.");
+        Said standName = StandName(stand);
+        int[][] slots = PrefabCatalog.ArmourSlotsOf(stand) ?? throw new StandRefusalException(Said.Of("stand.msg.notArmourStand", standName));
         var worn = new (Held Item, int Hash, PrefabCatalog.ItemKind Kind)?[slots.Length];
         foreach (Held h in held)
         {
             int hash = StableHash.Of(h.Item);
-            var kind = PrefabCatalog.ItemKindOf(hash) ?? throw new ArgumentException($"“{h.Item}” is not an item of the game.");
+            var kind = PrefabCatalog.ItemKindOf(hash) ?? throw new StandRefusalException(Said.Of("stand.msg.notAnItem", h.Item));
             int slot = Enumerable.Range(0, slots.Length).FirstOrDefault(i => worn[i] == null && FitsArmourSlot(slots[i], kind), -1);
             if (slot < 0)
             {
-                throw new ArgumentException(Enumerable.Range(0, slots.Length).Any(i => FitsArmourSlot(slots[i], kind))
-                    ? $"{standName} has no free slot left for {h.Item} (a {TypeName(kind.Type)})."
-                    : $"{standName} cannot wear {h.Item} (a {TypeName(kind.Type)}): it takes armour, capes, belts, shields, weapons and tools.");
+                throw new StandRefusalException(Enumerable.Range(0, slots.Length).Any(i => FitsArmourSlot(slots[i], kind))
+                    ? Said.Of("stand.msg.noFreeSlot", standName, h.Item, TypeWords(kind.Type))
+                    : Said.Of("stand.msg.cannotWear", standName, h.Item, TypeWords(kind.Type)));
             }
             worn[slot] = (h, hash, kind);
         }
@@ -212,9 +219,10 @@ public static class StandData
                 q = it.Quality;
                 v = it.Variant;
             }
-            catch (Exception ex) when (ex is EndOfStreamException or IOException)
+            catch (Exception ex) when (CheckedReads.Damaged(ex))
             {
                 // Kept as the stand's own values say.
+                Log.CaughtBrief(ex, "reading the item a stand holds (damaged: the stand's own values are kept)");
             }
         }
         return new Held(PrefabCatalog.NameOf(hash) ?? I(hash), q, v);
@@ -239,18 +247,7 @@ public static class StandData
     }
 
     /// <summary>An int value by key name, or <paramref name="otherwise"/> when the object has none.</summary>
-    private static int Int(ZdoData z, string key, int otherwise = 0)
-    {
-        int k = StableHash.Of(key);
-        foreach (var (kk, v) in z.IntList)
-        {
-            if (kk == k)
-            {
-                return v;
-            }
-        }
-        return otherwise;
-    }
+    private static int Int(ZdoData z, string key, int otherwise = 0) => z.GetInt(StableHash.Of(key)) ?? otherwise;
 
     /// <summary>A number as invariant text.</summary>
     private static string I(int v) => v.ToString(CultureInfo.InvariantCulture);

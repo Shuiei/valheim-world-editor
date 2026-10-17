@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 
 namespace TerrainEditor.Save;
@@ -47,10 +48,49 @@ public sealed class LiveSync
     private readonly Dictionary<int, LiveTarget> _liveIds = [];
 
     /// <summary>
+    /// The ZDOIDs in <see cref="_liveIds"/>, each with how many ids stand for it, so <see cref="IsOurs"/> needs no scan.
+    /// Changed only with <see cref="SetLive"/>, <see cref="DropLive"/> and <see cref="Reset"/>.
+    /// </summary>
+    private readonly Dictionary<(long User, uint Id), int> _ours = [];
+
+    /// <summary>Sets an id's object in the game, keeping <see cref="_ours"/> in step. Under the lock.</summary>
+    private void SetLive(int id, LiveTarget target)
+    {
+        DropLive(id);
+        _liveIds[id] = target;
+        var zdo = (target.User, target.Id);
+        _ours[zdo] = _ours.GetValueOrDefault(zdo) + 1;
+    }
+
+    /// <summary>Forgets an id's object in the game, keeping <see cref="_ours"/> in step. Under the lock.</summary>
+    private void DropLive(int id)
+    {
+        if (!_liveIds.Remove(id, out LiveTarget target))
+        {
+            return;
+        }
+        var zdo = (target.User, target.Id);
+        if (_ours[zdo] == 1)
+        {
+            _ours.Remove(zdo);
+        }
+        else
+        {
+            _ours[zdo]--;
+        }
+    }
+
+    /// <summary>
     /// Snapshot objects (in <see cref="_destroyed"/>) whose game object now stands for one of the editor's new objects,
     /// moved there: snapshot id to new object id (its ZDO in <see cref="_liveIds"/>). Moved back, or on, from there.
     /// </summary>
     private readonly Dictionary<int, int> _movedTo = [];
+
+    /// <summary>
+    /// How many snapshot objects' bytes the move search read and parsed, over this sync's life (a test seam: only an
+    /// object that may move is read).
+    /// </summary>
+    internal int SourceReads { get; private set; }
 
     /// <summary>Forgets everything applied, once the world was read again or its pending changes dropped.</summary>
     public void Reset()
@@ -59,6 +99,7 @@ public sealed class LiveSync
         {
             _destroyed.Clear();
             _liveIds.Clear();
+            _ours.Clear();
             _movedTo.Clear();
             _unanswered = null;
         }
@@ -90,7 +131,7 @@ public sealed class LiveSync
     {
         lock (_lock)
         {
-            _liveIds.Remove(id);
+            DropLive(id);
             foreach (int source in _movedTo.Where(m => m.Value == id).Select(m => m.Key).ToList())
             {
                 _movedTo.Remove(source);
@@ -112,7 +153,7 @@ public sealed class LiveSync
     {
         lock (_lock)
         {
-            return _liveIds.Values.Any(t => t.User == zdo.User && t.Id == zdo.Id);
+            return _ours.ContainsKey(zdo);
         }
     }
 
@@ -124,11 +165,12 @@ public sealed class LiveSync
     {
         lock (_lock)
         {
-            HashSet<int> deleted = edits.Deleted;
-            var added = edits.Added.Select(a => a.Id).ToHashSet();
-            int d = deleted.Count(id => id >= 0 && !_destroyed.Contains(id)) + _destroyed.Count(id => !deleted.Contains(id));
-            int a = added.Count(id => !_liveIds.ContainsKey(id)) + _liveIds.Keys.Count(id => id < 0 && !added.Contains(id));
-            return (d, a);
+            return edits.WithObjects((deleted, added) =>
+            {
+                int d = deleted.Count(id => id >= 0 && !_destroyed.Contains(id)) + _destroyed.Count(id => !deleted.Contains(id));
+                int a = added.Keys.Count(id => !_liveIds.ContainsKey(id)) + _liveIds.Keys.Count(id => id < 0 && !added.ContainsKey(id));
+                return (d, a);
+            });
         }
     }
 
@@ -143,36 +185,39 @@ public sealed class LiveSync
     /// twice; the changes since follow in a call of their own. If the game started again since (another run of the
     /// plugin, which does not know what the last one did), the apply fails instead until the world is read again.
     /// </summary>
-    /// <returns>A one-line summary for the user, or "" when there was nothing to send.</returns>
-    public async Task<string> Apply(WorldSave world, EditStore edits, LiveBridge live)
+    /// <returns>A one-line summary for the user in both languages, empty when there was nothing to send.</returns>
+    public async Task<Said> Apply(WorldSave world, EditStore edits, LiveBridge live)
     {
-        List<string> said = [];
+        List<Said> said = [];
         Call? unanswered;
         lock (_lock)
         {
             unanswered = _unanswered;
         }
+        // Asked at each apply, and refused when it cannot be: a move sent as a destroy and a creation would give the
+        // object a new id (mods' notes of it lost), and the plugin may have changed since the last apply.
+        LiveBridge.Abilities plugin = await live.Ask();
         if (unanswered != null)
         {
             // The game started again since: the new run does not know what the last one did, so the call may be in
             // the world already (saved before the game stopped). Not sent again until the world is read again.
-            if (await live.Run() != unanswered.Run)
+            if (plugin.Run != unanswered.Run)
             {
                 throw new InvalidOperationException("the game started again after an apply whose answer was lost, so whether it was done is unknown: reload the world from the game before applying again, so no object is made twice");
             }
             said.Add(await Send(world, live, unanswered));
         }
-        Call call = Plan(world, edits, await live.CanMove());
+        Call call = Plan(world, edits, plugin.CanMove);
         if (!call.Empty)
         {
-            if (await live.CanCallOnce())
+            if (plugin.CanCallOnce)
             {
                 call.Id = Guid.NewGuid().ToString("N");
-                call.Run = await live.Run();
+                call.Run = plugin.Run;
             }
             said.Add(await Send(world, live, call));
         }
-        return string.Join("; ", said);
+        return Said.Join("; ", said);
     }
 
     /// <summary>
@@ -181,10 +226,10 @@ public sealed class LiveSync
     /// </summary>
     private sealed class Call
     {
-        /// <summary>The call's id, for a plugin that does a call once (<see cref="LiveBridge.CanCallOnce"/>); null: none.</summary>
+        /// <summary>The call's id, for a plugin that does a call once (<see cref="LiveBridge.Abilities.CanCallOnce"/>); null: none.</summary>
         public string? Id { get; set; }
 
-        /// <summary>The plugin's run the call went to (<see cref="LiveBridge.Run"/>), with an id.</summary>
+        /// <summary>The plugin's run the call went to (<see cref="LiveBridge.Abilities.Run"/>), with an id.</summary>
         public string Run { get; set; } = "";
 
         /// <summary>The game objects to destroy.</summary>
@@ -302,8 +347,8 @@ public sealed class LiveSync
     /// Sends a call and records what the game did. A call with an id left without an answer is kept, to be sent again
     /// first next time; one the plugin answered with an error was not done, and is planned again.
     /// </summary>
-    /// <returns>A one-line summary for the user.</returns>
-    private async Task<string> Send(WorldSave world, LiveBridge live, Call call)
+    /// <returns>A one-line summary for the user, in both languages.</returns>
+    private async Task<Said> Send(WorldSave world, LiveBridge live, Call call)
     {
         string reply;
         try
@@ -337,7 +382,7 @@ public sealed class LiveSync
     /// <param name="world">The world the ids are of.</param>
     /// <param name="call">The call answered.</param>
     /// <param name="reply">The plugin's JSON answer.</param>
-    private string Record(WorldSave world, Call call, string reply)
+    private Said Record(WorldSave world, Call call, string reply)
     {
         using var doc = JsonDocument.Parse(reply);
         var ids = doc.RootElement.GetProperty("created").EnumerateArray().Select(e => e.GetString()!.Split(':')).ToList();
@@ -351,7 +396,7 @@ public sealed class LiveSync
             foreach (int id in call.DestroyIds)
             {
                 _destroyed.Add(id);
-                _liveIds.Remove(id);
+                DropLive(id);
             }
             foreach (int id in call.RestoreIds)
             {
@@ -361,7 +406,7 @@ public sealed class LiveSync
             }
             foreach (int id in call.DropNew)
             {
-                _liveIds.Remove(id);
+                DropLive(id);
                 foreach (int source in _movedTo.Where(m => m.Value == id).Select(m => m.Key).ToList())
                 {
                     _movedTo.Remove(source);
@@ -369,26 +414,26 @@ public sealed class LiveSync
             }
             for (int i = 0; i < ids.Count && i < call.CreateFor.Count; i++)
             {
-                _liveIds[call.CreateFor[i]] = new LiveTarget(long.Parse(ids[i][0], CultureInfo.InvariantCulture), uint.Parse(ids[i][1], CultureInfo.InvariantCulture), call.CreateWhat[i].Prefab, call.CreateWhat[i].Position);
+                SetLive(call.CreateFor[i], new LiveTarget(long.Parse(ids[i][0], CultureInfo.InvariantCulture), uint.Parse(ids[i][1], CultureInfo.InvariantCulture), call.CreateWhat[i].Prefab, call.CreateWhat[i].Position));
             }
             for (int i = 0; i < moveReplies.Count && i < call.MoveFor.Count; i++)
             {
                 var (source, from, to) = call.MoveFor[i];
                 var zdo = (long.Parse(moveReplies[i].Id[0], CultureInfo.InvariantCulture), uint.Parse(moveReplies[i].Id[1], CultureInfo.InvariantCulture));
                 var target = new LiveTarget(zdo.Item1, zdo.Item2, world.ObjectRefs[source].Prefab, call.Moves[i].Position);
-                _liveIds.Remove(from);
+                DropLive(from);
                 if (to == source)
                 {
                     _destroyed.Remove(source);
                     _movedTo.Remove(source);
-                    _liveIds[source] = target;
+                    SetLive(source, target);
                     movedBack.Add((source, zdo));
                 }
                 else
                 {
                     _destroyed.Add(source);
                     _movedTo[source] = to;
-                    _liveIds[to] = target;
+                    SetLive(to, target);
                 }
             }
         }
@@ -409,29 +454,23 @@ public sealed class LiveSync
             }
         }
         int destroyed = doc.RootElement.GetProperty("destroyed").GetInt32(), missing = doc.RootElement.GetProperty("missing").GetInt32();
-        string msg = $"{destroyed} object(s) removed, {ids.Count} created";
+        var moved = Said.Empty;
         if (moveReplies.Count > 0)
         {
             int inPlace = moveReplies.Count(m => m.InPlace);
-            msg += $", {inPlace} moved";
-            if (inPlace < moveReplies.Count)
-            {
-                msg += $" ({moveReplies.Count - inPlace} more made again at their new place: a player near them would not see them move)";
-            }
+            moved = inPlace < moveReplies.Count ? Said.Of("live.movedRemade", inPlace, moveReplies.Count - inPlace) : Said.Of("live.moved", inPlace);
         }
+        var msg = Said.Join(", ", [Said.Of("live.removed", destroyed), Said.Of("live.created", ids.Count), moved]);
         if (doc.RootElement.TryGetProperty("refound", out var rf) && rf.GetInt32() is > 0 and int refound)
         {
-            msg += $" ({refound} made again by another mod, found at their place)";
+            msg += Said.Of("live.refound", refound);
         }
-        if (missing > 0)
-        {
-            msg += $", {missing} were already gone";
-        }
-        if (call.Skipped.Count > 0)
-        {
-            msg += $", {call.Skipped.Count} skipped ({call.Skipped[0]})";
-        }
-        return msg;
+        return Said.Join(", ",
+        [
+            msg,
+            missing > 0 ? Said.Of("live.gone", missing) : Said.Empty,
+            call.Skipped.Count > 0 ? Said.Of("live.skipped", call.Skipped.Count, call.Skipped[0]) : Said.Empty,
+        ]);
     }
 
     /// <summary>
@@ -468,17 +507,21 @@ public sealed class LiveSync
                 continue;
             }
             ObjectRef o = world.ObjectRefs[source];
-            byte[] own = world.ObjectBytes(source);
-            var original = ZdoData.Parse(own, o.File.WorldVersion);
             LiveTarget at = from == source ? liveId(source) : _liveIds[from];
-            if (!deleted.Contains(source))
+            // Still deleted with no copy to move to: nothing moves, so its bytes are not read. Not deleted any more
+            // (list stays null): it moves back.
+            List<NewObject>? list = null;
+            if (deleted.Contains(source) && !copies.TryGetValue(source, out list))
+            {
+                continue;
+            }
+            byte[] own = world.ObjectBytes(source);
+            SourceReads++;
+            var original = ZdoData.Parse(own, o.File.WorldVersion);
+            if (list == null)
             {
                 moves.Add(new LiveMove(at, o.Position, original.Rotation, own));
                 moveFor.Add((source, from, source));
-                continue;
-            }
-            if (!copies.TryGetValue(source, out var list))
-            {
                 continue;
             }
             foreach (NewObject n in list)

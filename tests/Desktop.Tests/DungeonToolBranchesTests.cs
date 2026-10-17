@@ -30,7 +30,7 @@ public class DungeonToolBranchesTests
         {
             S.Commit("A dungeon", null, [], [(new NewObject(0, StableHash.Of(kind), At, Vector3.Zero, 0, null, false, MadeObjects.Dungeon(kind, At, rooms)), false)]);
             T = new DungeonTool { Scene = S.Scene, Random = () => 1f };
-            T.Message += Said.Add;
+            T.Message += m => Said.Add(m.Shown);
             T.Changed += () => Changes++;
             T.Open(Assert.Single(T.All));
         }
@@ -105,7 +105,7 @@ public class DungeonToolBranchesTests
         r.T.Choose("cave_dome_middle");
         Assert.Null(r.T.Preview);
         // Far from the dungeon's zone.
-        Assert.StartsWith("Goes past the dungeon's space", r.T.Problem(Room("cave_new_corridor03", At + new Vector3(200, 0, 0))));
+        Assert.StartsWith("Goes past the dungeon's space", r.T.Problem(Room("cave_new_corridor03", At + new Vector3(200, 0, 0)))?.Shown);
         // Over nothing: the click does nothing.
         r.T.Hover(At + new Vector3(500, 40, 0), -Vector3.UnitY);
         Assert.Null(r.T.HoverEnd);
@@ -133,7 +133,7 @@ public class DungeonToolBranchesTests
         // From below: the entrance's opening is met before the raised corridor's.
         r.T.Hover(end.Position - new Vector3(0, 30, 0), Vector3.UnitY);
         Assert.Equal(0, r.T.HoverEnd);
-        Assert.Equal("Overlaps cave_new_corridor03.", r.T.Problem(r.T.Preview!));
+        Assert.Equal("Overlaps cave_new_corridor03.", r.T.Problem(r.T.Preview!)?.Shown);
         Assert.True(r.T.Click());
         Assert.Equal(3, r.T.Dungeon!.Rooms.Count);
         Assert.Contains("Overlaps cave_new_corridor03.", r.Said[^1]);
@@ -179,6 +179,8 @@ public class DungeonToolBranchesTests
         r.T.ToggleDoor(r.T.Dungeon!, new Dungeons.Joint(0, 1, At, Quaternion.Identity, "nosuchkind", true));
         Assert.Equal(steps, r.S.UndoList.Count);
         Assert.Equal(changes + 1, r.Changes);
+        // Said, not silent (Claude's set_dungeon_door answered as if a door was put in).
+        Assert.Equal("This dungeon has no door for that kind of opening.", r.Said[^1]);
         // Without an edit session the dungeon's rooms are not read, and nothing is toggled or told.
         r.S.Scene.Session = null;
         var d = Assert.Single(r.T.All);

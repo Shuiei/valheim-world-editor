@@ -3,7 +3,8 @@ namespace TerrainEditor.Desktop;
 /// <summary>
 /// Natural-looking detail: seeded gradient noise layered at several scales (fractal noise), the same family of noise
 /// Valheim's own terrain is built from. The web editor's noise2 and fbm (editor.html), with the same seeding, so a seed
-/// gives the same pattern in both.
+/// gives the same pattern in both; this one works in float where the web editor works in double, so the values differ
+/// in their last digits, more so far from the origin.
 /// </summary>
 public sealed class Noise
 {
@@ -19,7 +20,8 @@ public sealed class Noise
     /// <summary>
     /// A noise whose pattern is fixed by <paramref name="seed"/>.
     /// </summary>
-    /// <param name="seed">Any int; the same seed gives the same pattern here and in the web editor.</param>
+    /// <param name="seed">Any int; the same seed gives the same pattern here and (to float precision) in the web
+    /// editor.</param>
     public Noise(int seed)
     {
         Seed = seed;
@@ -65,6 +67,12 @@ public sealed class Noise
         int aa = _perm[_perm[xi] + yi], ab = _perm[_perm[xi] + yi + 1], ba = _perm[_perm[xi + 1] + yi], bb = _perm[_perm[xi + 1] + yi + 1];
         return Lerp(Lerp(Grad(aa, x, y), Grad(ba, x - 1, y), u), Lerp(Grad(ab, x, y - 1), Grad(bb, x - 1, y - 1), u), v) * 0.7f;
     }
+
+    /// <summary>
+    /// What <see cref="Fbm"/> never goes beyond either way: each octave's gradient term is at most |x| + |y| = 2,
+    /// blended (never more than its corners) and scaled by 0.7; the octaves' weighted mean is scaled by 1.6.
+    /// </summary>
+    public const float FbmBound = 2 * 0.7f * 1.6f;
 
     /// <summary>
     /// About -1..1, four octaves: each one twice the frequency and half the amplitude of the last, offset so they do

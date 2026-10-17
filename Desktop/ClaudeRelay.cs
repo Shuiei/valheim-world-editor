@@ -23,9 +23,10 @@ public static class ClaudeRelay
 
     /// <summary>
     /// Relays each line read to the editor's server and writes its answers (JSON, or the data lines of an event
-    /// stream), one per line. A line that is not JSON gets a JSON-RPC error; a message that cannot be passed on
-    /// (switch off, no token, editor not running, request refused) gets one only when it has an id. The
-    /// protocol version agreed at initialize is sent with the messages after it.
+    /// stream), one per line. A line that is not JSON, or JSON that is not one message (a batch, a plain value), gets
+    /// a JSON-RPC error; a message that cannot be passed on (switch off, no token, editor not running, request
+    /// refused, no answer within the time allowed) gets one only when it has an id. The protocol version agreed at
+    /// initialize is sent with the messages after it. Nothing ends the relay but the end of its input.
     /// </summary>
     /// <param name="input">The client's messages, one JSON-RPC message per line.</param>
     /// <param name="output">Where the answers go.</param>
@@ -46,13 +47,21 @@ public static class ClaudeRelay
             {
                 message = JsonNode.Parse(line);
             }
-            catch (System.Text.Json.JsonException)
+            catch (System.Text.Json.JsonException ex)
             {
+                Log.CaughtBrief(ex, "reading a message from Claude");
                 await output.WriteLineAsync(Error(null, -32700, "Not JSON."));
                 continue;
             }
-            JsonNode? id = message?["id"]?.DeepClone();
-            string? method = message?["method"]?.GetValue<string>();
+            // JSON that is not one message (a batch, which MCP no longer has, null or another bare value): asking it
+            // for an id or a method would throw and end the relay.
+            if (message is not JsonObject)
+            {
+                await output.WriteLineAsync(Error(null, -32600, "Not a JSON-RPC message: one object per line (no batches)."));
+                continue;
+            }
+            JsonNode? id = message["id"]?.DeepClone();
+            string? method = message["method"] is JsonValue m && m.TryGetValue(out string? name) ? name : null;
             var s = settings();
             if (!s.ClaudeConnect || string.IsNullOrEmpty(s.ClaudeToken))
             {
@@ -75,11 +84,23 @@ public static class ClaudeRelay
             {
                 response = await http.SendAsync(request);
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException ex)
             {
+                Log.CaughtBrief(ex, "passing a message from Claude to the editor");
                 if (id != null)
                 {
                     await output.WriteLineAsync(Error(id, -32000, "Valheim World Editor is not running (or not on this port): start it, with Settings > Claude > Allow Claude to connect on."));
+                }
+                continue;
+            }
+            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+            {
+                Log.CaughtBrief(ex, "waiting for the editor's answer to Claude");
+                // The client's timeout (a tool that ran too long): answered, not the end of the relay. Only that one:
+                // any other cancellation is not a timeout and is not reported as one.
+                if (id != null)
+                {
+                    await output.WriteLineAsync(Error(id, -32000, $"Valheim World Editor gave no answer within {http.Timeout.TotalMinutes} minutes."));
                 }
                 continue;
             }

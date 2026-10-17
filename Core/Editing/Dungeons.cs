@@ -128,12 +128,16 @@ public static class Dungeons
     /// </summary>
     public static IEnumerable<Room> RoomsFor(Kind kind) => AllRooms.Where(r => r.Enabled && (r.Theme & kind.Themes) != 0);
 
+    /// <summary>Three numbers of a scan's JSON array from <paramref name="i"/> on, as a point.</summary>
+    internal static Vector3 V(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle());
+
+    /// <summary>Four numbers of a scan's JSON array from <paramref name="i"/> on, as a rotation (x, y, z, w).</summary>
+    internal static Quaternion Q(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle(), a[i + 3].GetSingle());
+
     /// <summary>Reads the scan's JSON ("rooms" and "dungeons", each by prefab name).</summary>
     private static Catalog Load(string json)
     {
         using var doc = JsonDocument.Parse(json);
-        static Vector3 V(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle());
-        static Quaternion Q(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle(), a[i + 3].GetSingle());
         var rooms = new Dictionary<int, Room>();
         foreach (JsonProperty p in doc.RootElement.GetProperty("rooms").EnumerateObject())
         {
@@ -165,8 +169,6 @@ public static class Dungeons
     /// </summary>
     internal static (Content[] Contents, Spawn[] Spawns, Pick[] Picks, int[] Nodes) Parts(JsonElement r)
     {
-        static Vector3 V(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle());
-        static Quaternion Q(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle(), a[i + 3].GetSingle());
         return ([.. r.GetProperty("contents").EnumerateArray().Select(c => new Content(c[0].GetString() ?? "", V(c, 1), Q(c, 4), c[8].GetInt32()))],
             [.. r.GetProperty("spawns").EnumerateArray().Select(x => new Spawn(x[0].GetInt32(), x[1].GetSingle(), x[2].GetInt32(), x[3].GetInt32(), x[4].GetInt32(), x[5].GetInt32()))],
             [.. r.GetProperty("picks").EnumerateArray().Select(x => new Pick(x[0].GetInt32(), x[1].GetInt32(),
@@ -493,7 +495,7 @@ public static class Dungeons
     /// <summary>The dungeon's seed (DungeonGenerator.GetSeed): the world's seed and the dungeon's zone and place.</summary>
     public static int Seed(int worldSeed, Vector3 dungeonPosition)
     {
-        int zx = (int)MathF.Floor((dungeonPosition.X + 32f) / 64f), zz = (int)MathF.Floor((dungeonPosition.Z + 32f) / 64f);
+        var (zx, zz) = ChunkMath.SectorOf(dungeonPosition.X, dungeonPosition.Z);
         return unchecked(worldSeed + zx * 4271 + zz * -7187 + (int)dungeonPosition.X * -4271 + (int)dungeonPosition.Y * 9187 + (int)dungeonPosition.Z * -2134);
     }
 
@@ -586,8 +588,10 @@ public static class Dungeons
         }
         foreach (var c in contents)
         {
+            // Up its parents to the prefab: a node past the list (damaged scan data) ends the walk, and so does a walk
+            // longer than the list (a loop).
             bool shown = true;
-            for (int n = c.Node; n >= 0 && shown; n = nodes[n])
+            for (int n = c.Node, steps = 0; n >= 0 && n < nodes.Length && shown && steps <= nodes.Length; n = nodes[n], steps++)
             {
                 shown = !off[n];
             }
@@ -634,7 +638,7 @@ public static class Dungeons
             catch (Exception e) when (e is InvalidDataException or IOException or ArgumentException or FormatException or OverflowException)
             {
                 // Damaged or unreadable: found with no rooms, said in the log, and the others still listed.
-                Console.WriteLine($"Dungeon object {id} ({kind}) at {position} (world version {world.ObjectRefs[id].File.WorldVersion}): room list not read ({e.GetType().Name}: {e.Message}); listed with no rooms.");
+                Log.CaughtBrief(e, $"reading the room list of the dungeon object {id} ({kind}) at {position}, world version {world.ObjectRefs[id].File.WorldVersion} (listed with no rooms)");
             }
             found.Add(new Found(id, kind, position, count));
         }

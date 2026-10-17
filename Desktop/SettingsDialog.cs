@@ -12,16 +12,8 @@ namespace TerrainEditor.Desktop;
 /// </summary>
 public static class SettingsDialog
 {
-    /// <summary>A typed folder made absolute: trimmed, quotes dropped, a leading ~ turned into the home folder.</summary>
-    private static string Expand(string path)
-    {
-        path = path.Trim().Trim('"');
-        if (path.StartsWith('~'))
-        {
-            path = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + path[1..];
-        }
-        return Path.GetFullPath(path);
-    }
+    /// <summary>A typed folder made absolute (Places.ExpandHome first).</summary>
+    private static string Expand(string path) => Path.GetFullPath(Places.ExpandHome(path));
 
     /// <summary>
     /// Checks and applies the folder choices, saving the settings; nothing is changed when there is a problem. A
@@ -53,10 +45,16 @@ public static class SettingsDialog
             return string.Join(" ", problems);
         }
         bool gameChanged = game != settings.ValheimPath;
+        var before = (settings.ValheimPath, settings.BepInExFolders, settings.WorldFolders);
         settings.ValheimPath = game;
         settings.BepInExFolders = bep;
         settings.WorldFolders = wl;
-        settings.Save();
+        if (settings.Save() is string notSaved)
+        {
+            // Not saved, not changed: they would look kept until the next start.
+            (settings.ValheimPath, settings.BepInExFolders, settings.WorldFolders) = before;
+            return Lang.T("settings.notSaved", notSaved);
+        }
         if (gameChanged)
         {
             // Another game folder: its look (copied again when it is another version).
@@ -98,8 +96,7 @@ public static class SettingsDialog
             {
                 return await pick(title);
             }
-            var picked = await dialog.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions { Title = title });
-            return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
+            return await Pickers.Folder(dialog.StorageProvider, title);
         }
         var valheim = new TextBox { Text = settings.ValheimPath, PlaceholderText = Lang.T("settings.valheimAuto") }.Tip("settings.valheim");
         var browse = new Button { Content = Lang.T("common.browse") }.Tip("settings.browse");
@@ -151,28 +148,35 @@ public static class SettingsDialog
         renew.Click += (_, _) => { token = ClaudeServer.NewToken(); ShowCommand(); };
         var claudeDetails = new StackPanel { Spacing = 6, IsVisible = claude.IsChecked == true };
         claude.IsCheckedChanged += (_, _) => claudeDetails.IsVisible = claude.IsChecked == true;
+        // Scripts have the editor's rights on this computer: the user's leave, once.
+        var scripts = new CheckBox { Content = Lang.T("settings.claudeScripts"), IsChecked = settings.ClaudeScripts }.Classed("switch").Tip("settings.claudeScripts");
+        claudeDetails.Children.Add(scripts);
         claudeDetails.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { new TextBlock { Text = Lang.T("settings.port"), VerticalAlignment = VerticalAlignment.Center }, port, renew } });
         claudeDetails.Children.Add(Hint(Lang.T("settings.claudeCodeHint")));
-        claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { command, Col(copy, 1) } });
+        claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { command, Ui.Col(copy, 1) } });
         // Claude Desktop starts a program: this one, relaying to the running editor (ClaudeRelay).
         var desktop = new TextBox { Name = "ClaudeDesktop", IsReadOnly = true, TextWrapping = TextWrapping.Wrap, FontSize = 12, FontFamily = new FontFamily("monospace"), Text = ClaudeServer.DesktopConfig(Environment.ProcessPath ?? "ValheimWorldEditor") }.Tip("settings.claudeDesktop");
         var copyDesktop = new Button { Content = Lang.T("common.copy") }.Tip("settings.claudeCopy");
         copyDesktop.Click += async (_, _) => { if (TopLevel.GetTopLevel(dialog)?.Clipboard is { } cb) { await Avalonia.Input.Platform.ClipboardExtensions.SetTextAsync(cb, desktop.Text ?? ""); } };
         claudeDetails.Children.Add(Hint(Lang.T("settings.claudeDesktopHint")));
-        claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { desktop, Col(copyDesktop, 1) } });
+        claudeDetails.Children.Add(new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { desktop, Ui.Col(copyDesktop, 1) } });
         if (ClaudeServer.Status is string status)
         {
             claudeDetails.Children.Add(Hint(status));
         }
-        // The mods' editor extensions: found again now (a mod installed since), each allowed or not.
-        ModManifests.Refresh(settings);
-        ModExtensions.Refresh(settings);
+        // The mods' editor extensions: found again now (a mod installed since), each allowed or not. Away from the
+        // window's thread: every extension file is read and hashed.
+        await Task.Run(() =>
+        {
+            ModManifests.Refresh(settings);
+            ModExtensions.Refresh(settings);
+        });
         var extensionBoxes = new List<(CheckBox Box, ModExtensions.Extension Extension)>();
         var extensions = new StackPanel { Spacing = 4 };
         foreach (var x in ModExtensions.Offered)
         {
             var box = new CheckBox { Content = $"{x.Mod} · {Path.GetFileName(x.Dll)}", IsChecked = x.State != ModExtensions.Status.Off }.Classed("switch").Tip("settings.extension");
-            ToolTip.SetTip(box, $"{Ui.Tilde(x.Dll)}\nSHA-256 {x.Sha256}");
+            ToolTip.SetTip(box, Lang.T("settings.extensionFile", Ui.Tilde(x.Dll), x.Sha256));
             extensionBoxes.Add((box, x));
             extensions.Children.Add(box);
             string? state = x.State switch
@@ -223,20 +227,21 @@ public static class SettingsDialog
             }
             // Set before Apply, which saves them with the folders; taken back when the folders are refused, so a
             // Cancel after that keeps nothing.
-            var before = (settings.ClaudeConnect, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl, settings.Language);
+            var before = (settings.ClaudeConnect, settings.ClaudeScripts, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl, settings.Language);
             var allowedBefore = new Dictionary<string, string>(settings.Extensions);
             foreach (var (box, x) in extensionBoxes)
             {
                 ModExtensions.Allow(settings, x, box.IsChecked == true);
             }
             settings.ClaudeConnect = claude.IsChecked == true;
+            settings.ClaudeScripts = scripts.IsChecked == true;
             settings.ClaudePort = claudePort;
             settings.ClaudeToken = token;
             settings.DriverOpenGl = driverGl.IsChecked == true;
             settings.Language = language.SelectedIndex > 0 ? languages[language.SelectedIndex - 1].Code : null;
             if (Apply(settings, valheim.Text, readBep(), readWorlds()) is string problem)
             {
-                (settings.ClaudeConnect, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl, settings.Language) = before;
+                (settings.ClaudeConnect, settings.ClaudeScripts, settings.ClaudePort, settings.ClaudeToken, settings.DriverOpenGl, settings.Language) = before;
                 settings.Extensions = allowedBefore;
                 error.Text = problem;
                 return;
@@ -262,7 +267,7 @@ public static class SettingsDialog
                     Hint(Lang.T("settings.languageHint", Ui.Tilde(Lang.Folder))),
                     H2(Lang.T("settings.valheimFolder")),
                     Hint(detected),
-                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 4, Children = { valheim, Col(browse, 1), Col(auto, 2) } },
+                    new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 4, Children = { valheim, Ui.Col(browse, 1), Ui.Col(auto, 2) } },
                     Hint(Lang.T("settings.valheimHint")),
                     H2(Lang.T("settings.bepInExFolders")),
                     bep,
@@ -285,12 +290,5 @@ public static class SettingsDialog
         };
         await dialog.ShowDialog(owner);
         return saved;
-    }
-
-    /// <summary>Puts a control in a grid column and returns it, for building rows inline.</summary>
-    private static Control Col(Control c, int col)
-    {
-        Grid.SetColumn(c, col);
-        return c;
     }
 }

@@ -25,7 +25,8 @@ public static class Worlds
             try
             {
                 string full = Path.GetFullPath(dir);
-                if (!Directory.Exists(full) || !seen.Add(full))
+                // Once, however it is reached (a link to it, a separator at the end, another letter case on Windows).
+                if (!Directory.Exists(full) || !seen.Add(Places.FolderKey(full)))
                 {
                     return;
                 }
@@ -33,9 +34,10 @@ public static class Worlds
                 (int n, DateTime t) = LatestSave(full);
                 list.Add(new Info(WorldName(full), full, t, n, where, problem == null, problem));
             }
-            catch
+            // A folder that cannot be read, or a stored path that is no path: left out, and said in the log.
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
             {
-                // A folder that cannot be read is left out of the list.
+                Log.Caught(ex, "listing a world folder (left out of the list)");
             }
         }
         foreach (var r in settings.Recent)
@@ -74,12 +76,13 @@ public static class Worlds
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
             {
+                Log.CaughtBrief(ex, "looking for old single-file worlds in a worlds folder (passed over)");
                 continue;
             }
             foreach (string db in dbs)
             {
                 string name = Path.GetFileNameWithoutExtension(db);
-                if (!Directory.Exists(Path.Combine(root, name)) && seen.Add(db))
+                if (!Directory.Exists(Path.Combine(root, name)) && seen.Add(Places.FolderKey(db)))
                 {
                     list.Add(new Info(name, db, File.GetLastWriteTime(db), 0, "local", false, "Old save format: load this world in Valheim once, then it can be edited here."));
                 }
@@ -117,6 +120,7 @@ public static class Worlds
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
         {
+            Log.Caught(ex, "checking a chosen world folder");
             return $"That folder cannot be read: {ex.Message}";
         }
     }
@@ -128,17 +132,20 @@ public static class Worlds
         return Path.GetFileName(Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
     }
 
-    /// <summary>The highest n of the folder's _main.&lt;n&gt;.chunks and its write time; (0, MinValue) when none.</summary>
-    private static (int, DateTime) LatestSave(string dir)
+    /// <summary>
+    /// The highest n of the folder's _main.&lt;n&gt;.chunks and its write time; (0, MinValue) when none. A number too
+    /// large to be a save's is passed over.
+    /// </summary>
+    internal static (int, DateTime) LatestSave(string dir)
     {
         int best = 0;
         DateTime t = DateTime.MinValue;
         foreach (string f in Directory.GetFiles(dir, "_main.*.chunks"))
         {
             Match m = Regex.Match(Path.GetFileName(f), @"_main\.(\d+)\.chunks");
-            if (m.Success && int.Parse(m.Groups[1].Value) >= best)
+            if (m.Success && int.TryParse(m.Groups[1].Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int n) && n >= best)
             {
-                best = int.Parse(m.Groups[1].Value);
+                best = n;
                 t = File.GetLastWriteTime(f);
             }
         }

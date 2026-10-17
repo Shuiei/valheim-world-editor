@@ -30,7 +30,11 @@ public class GroundActionsTests
     /// Runs a ground action of the Area tool as one edit step; returns what EditGround returns.
     /// </summary>
     private static List<int> Area(EditSession s, AreaTool a, AreaTool.GroundAction act, float height = 0, float amount = 2, float[]? paint = null, Func<int, float>? mask = null) =>
-        s.EditGround($"Area: {act}", g => a.Apply(g, s.Brush, act, height, amount, paint ?? new float[4], mask));
+        s.EditGround($"Area: {act}", g =>
+        {
+            var (t, rect, _) = a.Apply(g, s.Brush, act, height, amount, paint ?? new float[4], mask);
+            return (t, rect);
+        });
 
     /// <summary>
     /// Bumpy ground: a 1 m ripple raised over the whole area.

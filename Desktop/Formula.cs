@@ -1,12 +1,14 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
 /// <summary>
 /// A small, safe formula language, the same as the web editor's (editor/shapes.js compile): numbers, named variables, +
 /// - * / % ^, comparisons, &amp;&amp; ||, !, a ? b : c, pi, n(x, z) (smooth noise) and the functions below. Compiled
-/// once into a function of an environment; a mistake throws a FormatException with a plain message.
+/// once into a function of an environment; a mistake throws a FormatException with a plain message, in the user's language (the
+/// Shape panel shows it).
 /// </summary>
 public static class Formula
 {
@@ -61,7 +63,8 @@ public static class Formula
         ["max"] = a => a.Length == 0 ? double.NegativeInfinity : a.Max(),
         ["pow"] = a => Math.Pow(a[0], a[1]),
         ["atan2"] = a => Math.Atan2(a[0], a[1]),
-        ["sign"] = a => Math.Sign(a[0]),
+        // JavaScript's Math.sign: NaN stays NaN (Math.Sign throws on it).
+        ["sign"] = a => double.IsNaN(a[0]) ? double.NaN : Math.Sign(a[0]),
         ["clamp"] = a => Math.Max(a[1], Math.Min(a[2], a[0])),
         ["smooth"] = a => Smooth(a[0]),
         ["bell"] = a => Math.Exp(-a[0] * a[0] * 2.5),
@@ -103,7 +106,7 @@ public static class Formula
     /// <summary>
     /// One token from where it is asked for (\G), spaces before it skipped: a number, a name, or an operator.
     /// </summary>
-    private static readonly Regex Token = new(@"\G\s*(?:(\d+\.?\d*(?:e[+-]?\d+)?|\.\d+)|([A-Za-z_]\w*)|(<=|>=|==|!=|&&|\|\||[-+*/%^(),<>?:!]))", RegexOptions.Compiled);
+    private static readonly Regex Token = new(@"\G\s*(?:(\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+(?:[eE][+-]?\d+)?)|([A-Za-z_]\w*)|(<=|>=|==|!=|&&|\|\||[-+*/%^(),<>?:!]))", RegexOptions.Compiled);
 
     /// <summary>
     /// Compiles a formula once into a function of an environment.
@@ -122,7 +125,7 @@ public static class Formula
             if (!m.Success || m.Length == 0)
             {
                 string rest = src[pos..].Trim();
-                throw new FormatException($"I do not understand “{rest[..Math.Min(12, rest.Length)]}”");
+                throw new FormatException(Lang.T("shape.error.notUnderstood", rest[..Math.Min(12, rest.Length)]));
             }
             toks.Add(m.Groups[1].Success ? new Tok(N: double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))
                 : m.Groups[2].Success ? new Tok(Id: m.Groups[2].Value) : new Tok(Op: m.Groups[3].Value));
@@ -130,11 +133,11 @@ public static class Formula
         }
         if (toks.Count == 0)
         {
-            throw new FormatException("the formula is empty");
+            throw new FormatException(Lang.T("shape.error.empty"));
         }
         if (toks.Count > MaxTokens)
         {
-            throw new FormatException("the formula is too long");
+            throw new FormatException(Lang.T("shape.error.tooLong"));
         }
         int i = 0, depth = 0;
         Tok? Peek() => i < toks.Count ? toks[i] : null;
@@ -151,14 +154,14 @@ public static class Formula
         {
             if (!Eat(op))
             {
-                throw new FormatException($"“{op}” expected{(Peek() is { } t ? $" before “{t}”" : " at the end")}");
+                throw new FormatException(Peek() is { } t ? Lang.T("shape.error.expectedBefore", op, t.ToString()) : Lang.T("shape.error.expectedAtEnd", op));
             }
         }
         Func<Env, double> Primary()
         {
             if (++depth > MaxDepth)
             {
-                throw new FormatException("the formula is nested too deeply");
+                throw new FormatException(Lang.T("shape.error.nestedTooDeeply"));
             }
             try
             {
@@ -173,7 +176,7 @@ public static class Formula
         {
             if (i >= toks.Count)
             {
-                throw new FormatException("the formula ends too early");
+                throw new FormatException(Lang.T("shape.error.endsTooEarly"));
             }
             var t = toks[i++];
             if (t.N is double n)
@@ -214,21 +217,39 @@ public static class Formula
                     {
                         if (args.Count != 2)
                         {
-                            throw new FormatException("n(x, z) takes two numbers");
+                            throw new FormatException(Lang.T("shape.error.noiseTakesTwo"));
                         }
                         return env => env.Noise(args[0](env), args[1](env));
                     }
                     if (!Funcs.TryGetValue(id, out var f))
                     {
-                        throw new FormatException($"there is no function “{id}”");
+                        throw new FormatException(Lang.T("shape.error.noFunction", id));
                     }
                     int arity = Arity.GetValueOrDefault(id, 1);
                     if (arity >= 0 && args.Count != arity)
                     {
-                        throw new FormatException($"{id}(…) takes {(arity == 1 ? "one number" : $"{arity} numbers")}");
+                        throw new FormatException(arity == 1 ? Lang.T("shape.error.takesOne", id) : Lang.T("shape.error.takesMany", id, arity));
                     }
                     var arr = args.ToArray();
-                    return env => f([.. arr.Select(a => a(env))]);
+                    // The numbers go in one array kept for the next point; a second thread running the formula at
+                    // the same time meanwhile gets its own.
+                    double[]? spare = new double[arr.Length];
+                    return env =>
+                    {
+                        double[] values = Interlocked.Exchange(ref spare, null) ?? new double[arr.Length];
+                        try
+                        {
+                            for (int i = 0; i < arr.Length; i++)
+                            {
+                                values[i] = arr[i](env);
+                            }
+                            return f(values);
+                        }
+                        finally
+                        {
+                            Volatile.Write(ref spare, values);
+                        }
+                    };
                 }
                 if (id == "pi")
                 {
@@ -236,11 +257,11 @@ public static class Formula
                 }
                 if (!names.Contains(id))
                 {
-                    throw new FormatException($"there is no “{id}” (you can use {string.Join(", ", names)}, pi)");
+                    throw new FormatException(Lang.T("shape.error.noName", id, string.Join(", ", names)));
                 }
                 return env => env.Vars[id];
             }
-            throw new FormatException($"“{t.Op}” is out of place");
+            throw new FormatException(Lang.T("shape.error.outOfPlace", t.Op));
         }
         Func<Env, double> Power()
         {
@@ -296,22 +317,33 @@ public static class Formula
             }
             return a;
         }
-        Func<Env, double> Logic()
+        // && binds tighter than ||, as in JavaScript: 1 || 0 && 0 is 1. Like JavaScript, each gives the deciding value
+        // itself, not 1.
+        Func<Env, double> And()
         {
             var a = Compare();
-            while (Peek()?.Op is "&&" or "||")
+            while (Eat("&&"))
             {
-                string op = toks[i++].Op!;
                 var b = Compare();
                 var l = a;
-                // Like JavaScript: the deciding value itself, not 1.
-                a = op == "&&" ? env => l(env) is var x && Truthy(x) ? b(env) : x : env => l(env) is var y && Truthy(y) ? y : b(env);
+                a = env => l(env) is var x && Truthy(x) ? b(env) : x;
+            }
+            return a;
+        }
+        Func<Env, double> Or()
+        {
+            var a = And();
+            while (Eat("||"))
+            {
+                var b = And();
+                var l = a;
+                a = env => l(env) is var y && Truthy(y) ? y : b(env);
             }
             return a;
         }
         Func<Env, double> Ternary()
         {
-            var c = Logic();
+            var c = Or();
             if (Eat("?"))
             {
                 var a = Ternary();
@@ -324,7 +356,7 @@ public static class Formula
         var result = Ternary();
         if (i < toks.Count)
         {
-            throw new FormatException($"“{toks[i]}” is out of place");
+            throw new FormatException(Lang.T("shape.error.outOfPlace", toks[i].ToString()));
         }
         return result;
     }

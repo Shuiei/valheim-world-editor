@@ -42,12 +42,9 @@ public sealed class GameLookTests : IDisposable
         }
         AppSettings.PathOverride = _settings;
         GameLook.SearchOutsideHome = _outside;
-        try
+        if (Directory.Exists(_home))
         {
             Directory.Delete(_home, true);
-        }
-        catch (IOException)
-        {
         }
     }
 
@@ -123,6 +120,22 @@ public sealed class GameLookTests : IDisposable
         string chosen = FakeValheim(Path.Combine(_home, "Valheim"));
         Assert.Equal(chosen, GameLook.FindValheim(chosen));
         Assert.Equal(valheim, GameLook.FindValheim(Path.Combine(_home, "nowhere")));
+    }
+
+    // Steam's library list that cannot be read (being rewritten, no access): the search goes on without it (it threw).
+    [Fact]
+    public void ASteamLibraryListThatCannotBeReadIsPassedOver()
+    {
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            return;
+        }
+        string vdf = Path.Combine(_home, ".steam", "steam", "steamapps", "libraryfolders.vdf");
+        Directory.CreateDirectory(Path.GetDirectoryName(vdf)!);
+        File.WriteAllText(vdf, "\"libraryfolders\" { }");
+        File.SetUnixFileMode(vdf, UnixFileMode.None);
+
+        Assert.Null(GameLook.FindValheim(null));
     }
 
     [Fact]

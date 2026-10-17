@@ -111,6 +111,8 @@ public class GameLookBannerTests
         // How to find the folder, step by step.
         Assert.True(b.Steps.IsVisible);
         Assert.Contains("Manage › Browse local files", b.Steps.Text);
+        // Worlds need the game's files to open: the hint said the editor works without them.
+        Assert.Contains("need them to open", b.Hint.Text);
         Assert.False(b.Bar.IsVisible);
         Assert.False(b.Retry.IsVisible);
         // Nothing typed: says what to choose, starts nothing.
@@ -167,6 +169,8 @@ public class GameLookBannerTests
         b.OpenLog = () => { opened++; return Task.FromResult(true); };
         Assert.True(b.ShowLog.IsVisible);
         Assert.Contains("Open log", b.Hint.Text);
+        // Worlds do not open without the game's data (WorldSession.NeedGame): the hint said the editor works without it.
+        Assert.Contains("open only once the game's data is read", b.Hint.Text);
         b.ShowLog.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
         await Task.Delay(10);
         Assert.Equal(1, opened);

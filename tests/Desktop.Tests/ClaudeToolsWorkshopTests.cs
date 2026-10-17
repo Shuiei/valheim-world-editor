@@ -38,6 +38,24 @@ public class ClaudeToolsWorkshopTests
         Assert.EndsWith("Now pending: 4 building piece(s) on the plot, not saved as a blueprint.", added);
         Assert.Equal("Claude: added Tower", r.W.Session!.UndoLabel);
         Assert.Equal(4, ClaudeRun.J(await r.T.EditorState()).GetProperty("area").GetProperty("objects").GetInt32());
+        // A blueprint whose file is not named after its #Name: (a numbered copy, a downloaded one): found by the name
+        // list_blueprints gives, whatever the case.
+        File.Move(Path.Combine(r.Homestead, TerrainEditor.App.Homestead.FileName("Tower")), Path.Combine(r.Homestead, "Tower (2).blueprint"));
+        Assert.Equal("Tower", ClaudeRun.J(await r.T.ListBlueprints("defence"))[0].GetProperty("name").GetString());
+        Assert.EndsWith("Now pending: 6 building piece(s) on the plot, not saved as a blueprint.", await r.T.AddBlueprint("tower", -20, 0));
+        // Two files with that name: the one named after it comes first.
+        var one = new System.Text.Json.Nodes.JsonObject
+        {
+            ["objects"] = new System.Text.Json.Nodes.JsonArray(new System.Text.Json.Nodes.JsonObject { ["name"] = "wood_floor", ["dx"] = 0, ["dy"] = 0, ["dz"] = 0, ["rx"] = 0, ["ry"] = 0, ["rz"] = 0, ["scale"] = 0 }),
+        };
+        File.WriteAllText(Path.Combine(r.Homestead, TerrainEditor.App.Homestead.FileName("Tower")), TerrainEditor.App.Homestead.Write(one, "Tower", "Tester", null, DateTime.Now));
+        Assert.StartsWith("Added “Tower”: 1 piece(s).", await r.T.AddBlueprint("Tower", 20, -20));
+        // No entry of a name, but a file named after it (its #Name: says another): that file, as before.
+        File.WriteAllText(Path.Combine(r.Homestead, "Gate.blueprint"), TerrainEditor.App.Homestead.Write(one, "Castle gate", "Tester", null, DateTime.Now));
+        Assert.StartsWith("Added “Castle gate”: 1 piece(s).", await r.T.AddBlueprint("Gate", -20, -20));
+        // open_workshop finds a blueprint the same way (the plot saved first: it is refused with pieces not saved).
+        Assert.StartsWith("Saved the blueprint", await r.T.SaveBlueprint("Keep", evenIfFalling: true));
+        Assert.Equal(1, ClaudeRun.J(await r.T.OpenWorkshop("Tower")).GetProperty("area").GetProperty("objects").GetInt32());
     }
 
     // On the plot: an empty one stands; a chest filled and a sign written keep their values on the piece; pieces
@@ -47,8 +65,11 @@ public class ClaudeToolsWorkshopTests
     {
         using var r = new ClaudeRun();
         await r.T.OpenWorkshop();
+        // A read-only check: the user's Support switch, turned off, is left so (it was turned on).
+        r.W.SupportBox.IsChecked = false;
         var empty = ClaudeRun.J(await r.T.SupportCheck());
         Assert.Equal((0, 0), (empty.GetProperty("pieces").GetInt32(), empty.GetProperty("wouldFall").GetInt32()));
+        Assert.False(r.W.SupportBox.IsChecked);
 
         string none = await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "no_such_piece" }, new ClaudeTools.PieceSpec { Prefab = "woodwall", X = 0, Z = 900 }]);
         Assert.StartsWith("Nothing put down: #0 no_such_piece: not an object the game has (find_prefabs); #1 woodwall: (0, 900) is outside the area", none);
@@ -74,7 +95,8 @@ public class ClaudeToolsWorkshopTests
         Assert.Contains(chestData, f => f.Key == StableHash.Of("items"));
     }
 
-    // A dungeon on the plot, with what is there: one step, its notes said.
+    // A dungeon on the plot, with what is there: one step of Claude's (Take back Claude's changes finds it), its notes
+    // said, and no file written into the user's blueprint Library.
     [AvaloniaFact]
     public async Task ADungeonGoesOnThePlot()
     {
@@ -83,6 +105,8 @@ public class ClaudeToolsWorkshopTests
         string made = await r.T.GenerateDungeon(size: 1, levels: 1, seed: 7);
         Assert.Contains("building piece(s) on the plot", made);
         Assert.True(ClaudeRun.J(await r.T.EditorState()).GetProperty("area").GetProperty("objects").GetInt32() > 0, made);
+        Assert.StartsWith("Claude: generated dungeon ", r.W.Session!.UndoLabel);
+        Assert.Empty(Directory.Exists(r.Homestead) ? Directory.GetFiles(r.Homestead) : []);
     }
 
     // save_blueprint: outside the Workshop, with no name or no piece: said. Saved, the Workshop holds nothing unsaved

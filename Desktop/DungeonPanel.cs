@@ -1,7 +1,7 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
@@ -27,11 +27,11 @@ public sealed class DungeonPanel
     /// <summary>Which of the area's dungeons is edited.</summary>
     internal ComboBox DungeonBox { get; } = new() { HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
     /// <summary>The camera into the dungeon (see <see cref="Inside"/>).</summary>
-    internal Button GoInside { get; } = new() { Content = "Go inside", FontSize = 12 };
+    internal Button GoInside { get; } = new() { Content = Lang.T("dungeon.label.goInside"), FontSize = 12 };
     /// <summary>The camera back down to the dungeon's entrance on the ground (see <see cref="Outside"/>).</summary>
-    internal Button GoOutside { get; } = new() { Content = "Go to entrance", FontSize = 12 };
+    internal Button GoOutside { get; } = new() { Content = Lang.T("dungeon.label.goToEntrance"), FontSize = 12 };
     /// <summary>Build with the hammer's pieces in this dungeon (<see cref="BuildAsked"/>).</summary>
-    internal Button BuildHere { get; } = new() { Content = "Build here", FontSize = 12 };
+    internal Button BuildHere { get; } = new() { Content = Lang.T("dungeon.label.buildHere"), FontSize = 12 };
     /// <summary>Build here was clicked: the window switches to building in the dungeon.</summary>
     public event Action? BuildAsked;
     /// <summary>The roof cut, 0 to 30 m above the floor of the dungeon's entrance; the right end (<see cref="CutOff"/>) is off.</summary>
@@ -41,28 +41,28 @@ public sealed class DungeonPanel
     /// <summary>The cut slider's label.</summary>
     private readonly TextBlock _cutText = new() { FontSize = 12 };
     /// <summary>Filters the rooms by name.</summary>
-    internal TextBox Filter { get; } = new() { PlaceholderText = "Find a room…", FontSize = 12 };
+    internal TextBox Filter { get; } = new() { PlaceholderText = Lang.T("dungeon.hint.findRoom"), FontSize = 12 };
     /// <summary>The rooms the dungeon can take; the one chosen is added at the next green opening clicked.</summary>
     internal ListBox Rooms { get; } = new() { MaxHeight = 260, FontSize = 12 };
     /// <summary>Turns the room chosen (R).</summary>
-    internal Button TurnButton { get; } = new() { Content = "Turn (R)", FontSize = 12 };
+    internal Button TurnButton { get; } = new() { Content = Lang.T("dungeon.label.turn"), FontSize = 12 };
     /// <summary>Closes the dungeon's open ends; enabled while it has some.</summary>
-    internal Button CloseEnds { get; } = new() { Content = "Close open ends", FontSize = 12 };
+    internal Button CloseEnds { get; } = new() { Content = Lang.T("dungeon.label.closeEnds"), FontSize = 12 };
     /// <summary>Deletes the selected room (Del); enabled while one is selected.</summary>
-    internal Button DeleteButton { get; } = new() { Content = "Delete room (Del)", FontSize = 12 };
+    internal Button DeleteButton { get; } = new() { Content = Lang.T("dungeon.label.deleteRoom"), FontSize = 12 };
     /// <summary>Rooms, open ends, overlaps and problems of the dungeon, and of the room about to be added.</summary>
     internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
     /// <summary>Rooms added with what the game puts in them.</summary>
-    internal CheckBox Contents { get; } = new() { Content = "With what the game puts in them", IsChecked = true, FontSize = 12 };
+    internal CheckBox Contents { get; } = new() { Content = Lang.T("dungeon.label.contents"), IsChecked = true, FontSize = 12 };
     /// <summary>Rooms added with doors where the game might put them.</summary>
-    internal CheckBox Doors { get; } = new() { Content = "Doors where the game might put them", IsChecked = true, FontSize = 12 };
+    internal CheckBox Doors { get; } = new() { Content = Lang.T("dungeon.label.doors"), IsChecked = true, FontSize = 12 };
     /// <summary>Shown when the area has no dungeon.</summary>
     private readonly TextBlock _empty = new()
     {
         FontSize = 12,
         Foreground = Ui.Muted,
         TextWrapping = TextWrapping.Wrap,
-        Text = "No dungeon in this area. Open the area over a Frost Cave, crypt or other dungeon entrance: the game keeps its rooms 5000 m above it."
+        Text = Lang.T("dungeon.hint.none")
     };
     /// <summary>The dungeon rows, shown when the area has a dungeon.</summary>
     private readonly StackPanel _body;
@@ -122,7 +122,7 @@ public sealed class DungeonPanel
                 DungeonBox,
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { GoInside, GoOutside, BuildHere } },
                 new StackPanel { Spacing = 2, Children = { _cutText, CutSlider } },
-                new TextBlock { Text = "ROOMS", FontSize = 11, Foreground = Ui.Muted, FontWeight = FontWeight.SemiBold },
+                new TextBlock { Text = Lang.T("dungeon.head.rooms"), FontSize = 11, Foreground = Ui.Muted, FontWeight = FontWeight.SemiBold },
                 Filter, Rooms, Contents, Doors,
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { TurnButton, DeleteButton } },
                 CloseEnds, Info,
@@ -130,7 +130,7 @@ public sealed class DungeonPanel
         };
         _generate = new Expander
         {
-            Header = new TextBlock { Text = "Generate a dungeon", FontSize = 12, FontWeight = FontWeight.SemiBold },
+            Header = new TextBlock { Text = Lang.T("build.head.generate"), FontSize = 12, FontWeight = FontWeight.SemiBold },
             Content = Gen.View,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             IsExpanded = true,
@@ -138,14 +138,8 @@ public sealed class DungeonPanel
         _generate.Tip("dungeon.gen");
         _go = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, IsVisible = false, Children = { Gen.ToDungeon, Gen.ToEntrance } };
         Gen.PlacedChanged += yes => _go.IsVisible = yes;
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             VerticalAlignment = VerticalAlignment.Top,
             Child = new ScrollViewer
             {
@@ -157,15 +151,15 @@ public sealed class DungeonPanel
                     Spacing = 6,
                     Children =
                     {
-                        new TextBlock { Text = "Dungeon", FontSize = 14, FontWeight = FontWeight.SemiBold },
+                        new TextBlock { Text = Lang.T("rail.label.dungeon"), FontSize = 14, FontWeight = FontWeight.SemiBold },
                         _generate, _go,
                         new TextBlock { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
-                            Text = "Editing this area's dungeons: pick a room below, then click a green opening to add it there. Click a room to select it, an orange or blue square (where rooms meet) to put a door there or take it away." },
+                            Text = Lang.T("dungeon.hint.editing") },
                         _empty, _body,
                     },
                 },
             },
-        };
+        });
         SetCut(CutOff);
     }
 
@@ -203,7 +197,11 @@ public sealed class DungeonPanel
         _filling = true;
         string f = Filter.Text?.Trim() ?? "";
         var items = Tool.Palette.Where(r => f.Length == 0 || r.Name.Contains(f, StringComparison.OrdinalIgnoreCase))
-            .Select(r => new ListBoxItem { Content = r.Name + (r.EndCap ? "  (end cap)" : r.Entrance ? "  (entrance)" : ""), Tag = r.Name }).ToList();
+            .Select(r => new ListBoxItem
+            {
+                Content = r.EndCap ? Lang.T("dungeon.label.endCapRoom", r.Name) : r.Entrance ? Lang.T("dungeon.label.entranceRoom", r.Name) : r.Name,
+                Tag = r.Name,
+            }).ToList();
         Rooms.ItemsSource = items;
         Rooms.SelectedItem = items.FirstOrDefault(i => (string?)i.Tag == Tool.Chosen);
         _filling = false;
@@ -219,20 +217,20 @@ public sealed class DungeonPanel
         }
         int open = Tool.FreeEnds.Count;
         int overlaps = Tool.OverlappingPairs;
-        string text = $"{d.Rooms.Count} rooms, {open} open end(s).";
+        var text = Said.Of("dungeon.hint.count", d.Rooms.Count, open);
         if (overlaps > 0)
         {
-            text += $" {overlaps} overlapping pair(s).";
+            text += Said.Of("dungeon.hint.overlaps", overlaps);
         }
-        if (d.Problem != null)
+        if (d.Problem is { } why)
         {
-            text += " " + d.Problem;
+            text += why;
         }
-        if (Tool.Preview is { } p && Tool.Problem(p) is string problem)
+        if (Tool.Preview is { } p && Tool.Problem(p) is { } problem)
         {
-            text += " This one: " + problem;
+            text += Said.Of("dungeon.hint.thisOne", problem);
         }
-        Info.Text = text;
+        Info.Text = text.Shown;
         DeleteButton.IsEnabled = Tool.Selected != null;
         CloseEnds.IsEnabled = open > 0;
     }
@@ -314,7 +312,7 @@ public sealed class DungeonPanel
         // From about the floor of the dungeon's entrance (3 m under the dungeon object, as in the game's caves).
         float? y = metres < CutOff && Tool.Dungeon is { } d ? d.Thing.Position.Y - 3 + (float)metres : null;
         _view.CutY = y;
-        _cutText.Text = metres < CutOff ? $"Cut {metres:0} m above the floor" : "Cut: off (roofs shown)";
+        _cutText.Text = metres < CutOff ? Lang.T("dungeon.label.cut", metres) : Lang.T("dungeon.label.cutOff");
     }
 
     /// <summary>Leaving the tool: the cut off.</summary>

@@ -75,12 +75,10 @@ internal sealed class WorldWindowRun : IDisposable
     public void Dispose()
     {
         StopGame();
-        try
+        string folder = Path.GetDirectoryName(Dir)!;
+        if (Directory.Exists(folder))
         {
-            Directory.Delete(Path.GetDirectoryName(Dir)!, true);
-        }
-        catch (IOException)
-        {
+            Directory.Delete(folder, true);
         }
     }
 }

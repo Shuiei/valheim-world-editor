@@ -36,16 +36,23 @@ public static class Ui
     public const double Gap = 10;
 
     /// <summary>A floating card (tool options, the View panel...).</summary>
-    public static Border Card(Control child) => new()
+    public static Border Card(Control child) => AsCard(new Border { Child = child });
+
+    /// <summary>
+    /// Gives a border the floating cards' look (background, line, rounded corners, padding, shadow); its own place,
+    /// size and child stay.
+    /// </summary>
+    /// <returns>The same border.</returns>
+    public static Border AsCard(Border b)
     {
-        Background = Panel,
-        BorderBrush = Line,
-        BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(10),
-        Padding = Pad,
-        BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-        Child = child,
-    };
+        b.Background = Panel;
+        b.BorderBrush = Line;
+        b.BorderThickness = new Thickness(1);
+        b.CornerRadius = new CornerRadius(10);
+        b.Padding = Pad;
+        b.BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000");
+        return b;
+    }
 
     /// <summary>A small grey heading in capitals (VIEW, OVERLAYS...).</summary>
     /// <param name="text">The heading, turned to capitals.</param>
@@ -69,6 +76,51 @@ public static class Ui
         Grid.SetColumn(n, 1);
         g.Children.Add(n);
         return g;
+    }
+
+    /// <summary>Puts a control in a grid column; returns it, for building rows inline.</summary>
+    /// <param name="c">The control.</param>
+    /// <param name="col">The column.</param>
+    public static Control Col(Control c, int col)
+    {
+        Grid.SetColumn(c, col);
+        return c;
+    }
+
+    /// <summary>A tool card's labelled row: the label, the input, and optionally something after it (a value, a unit, a button).</summary>
+    /// <param name="label">The label, also the input's name for screen readers and tips.</param>
+    /// <param name="input">The input.</param>
+    /// <param name="after">What goes after it (null: nothing).</param>
+    /// <param name="columns">The three columns' widths.</param>
+    public static Grid Row(string label, Control input, Control? after = null, string columns = "70,*,46")
+    {
+        var g = new Grid { ColumnDefinitions = new ColumnDefinitions(columns) };
+        var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+        Tips.Label(l, input);
+        g.Children.Add(l);
+        Grid.SetColumn(input, 1);
+        g.Children.Add(input);
+        if (after != null)
+        {
+            Grid.SetColumn(after, 2);
+            g.Children.Add(after);
+        }
+        return g;
+    }
+
+    /// <summary>
+    /// A slider snapping to <paramref name="step"/> whose value is shown through <paramref name="format"/> in
+    /// <paramref name="shown"/> (set up as a row's value) and passed to <paramref name="set"/> on each change.
+    /// </summary>
+    public static Slider Slide(double min, double max, double step, double value, TextBlock shown, Func<double, string> format, Action<double> set)
+    {
+        var s = new Slider { Minimum = min, Maximum = max, SmallChange = step, TickFrequency = step, IsSnapToTickEnabled = true, Value = value };
+        shown.Text = format(value);
+        shown.FontSize = 12;
+        shown.VerticalAlignment = VerticalAlignment.Center;
+        shown.Margin = new Thickness(6, 0, 0, 0);
+        s.ValueChanged += (_, e) => { shown.Text = format(e.NewValue); set(e.NewValue); };
+        return s;
     }
 
     /// <summary>

@@ -76,6 +76,78 @@ public class BlueprintFormatsEdgeTests
     }
 
     [Fact]
+    public void TheGroundGridReachesOnlyAsFarAsTheTerrainMarks()
+    {
+        // Pieces 100 m apart with one small mark near one of them: the copy is centred on the mark, its grid spans
+        // the mark only, and the pieces are placed from there, however far they are.
+        var bp = BlueprintFormats.Parse("far.blueprint", string.Join("\n",
+            "#Terrain", "circle;20;0;0;1;0;0;dirt", "#Pieces", "wood_wall;0;0;0;0;0;0;0;1;", "wood_wall;0;3000;0;0;0;0;0;1;"));
+        var clip = BlueprintFormats.ToClip(bp, _ => true, out _);
+        Assert.Equal((3, 3), ((int)clip["w"]!, (int)clip["h"]!));
+        Assert.Equal(0, (int)((JsonArray)clip["rel"]!)[4]!);
+        var objects = (JsonArray)clip["objects"]!;
+        Assert.Equal([-20f, 2980f], objects.Select(o => (float)o!["dx"]!));
+        // The outline still holds everything.
+        Assert.Equal(-21f, (float)((JsonArray)clip["poly"]!)[0]!["gx"]!);
+        Assert.Equal(2981f, (float)((JsonArray)clip["poly"]!)[1]!["gx"]!);
+    }
+
+    [Fact]
+    public void PointMarksAMetreApartAreBothOnTheGrid()
+    {
+        // Two zero-radius marks at x 0 and 1: the grid's two columns are at those, not half a metre off either side.
+        var bp = BlueprintFormats.Parse("points.blueprint", string.Join("\n", "#Terrain", "circle;0;2;0;0;0;0;dirt", "circle;1;2;0;0;0;0;dirt"));
+        var clip = BlueprintFormats.ToClip(bp, _ => true, out _);
+        Assert.Equal((2, 1), ((int)clip["w"]!, (int)clip["h"]!));
+        Assert.Equal([0, 0], ((JsonArray)clip["rel"]!).Select(v => (int)v!));
+    }
+
+    [Fact]
+    public void ATurnedSquaresCornersAreOnTheGrid()
+    {
+        // A square of half side 10 turned 45°: its corners reach 14.1 m along x and z, and the grid goes as far, so
+        // the ground point 12 m east of its middle (inside it) is levelled too.
+        var bp = BlueprintFormats.Parse("turned.blueprint", string.Join("\n", "#Terrain", "square;0;2;0;10;45;0;dirt"));
+        var clip = BlueprintFormats.ToClip(bp, _ => true, out _);
+        int w = (int)clip["w"]!, h = (int)clip["h"]!;
+        Assert.Equal((30, 30), (w, h));
+        var rel = (JsonArray)clip["rel"]!;
+        // The grid's points are 1 m apart from -14.5: the one at x 11.5, z -0.5.
+        int ix = (int)MathF.Round(12 + (w - 1) / 2f), iz = (h - 1) / 2;
+        Assert.Equal(0, (int)rel[iz * w + ix]!);
+    }
+
+    [Fact]
+    public void TerrainMarksTooFarApartAreRefused()
+    {
+        var bp = BlueprintFormats.Parse("wide.blueprint", string.Join("\n", "#Terrain", "circle;0;0;0;1;0;0;dirt", "circle;2000;0;0;1;0;0;dirt"));
+        var e = Assert.Throws<InvalidDataException>(() => BlueprintFormats.ToClip(bp, _ => true, out _));
+        Assert.Contains("ground marks span 2002 m by 2 m", e.Message);
+        // Exactly the most the grid spans: made, a point a metre.
+        bp = BlueprintFormats.Parse("edge.blueprint", string.Join("\n", "#Terrain", "circle;0;0;0;0;0;0;dirt", $"circle;{BlueprintFormats.MaxGround};0;0;0;0;0;dirt"));
+        var clip = BlueprintFormats.ToClip(bp, _ => true, out _);
+        Assert.Equal((BlueprintFormats.MaxGround + 1, 1), ((int)clip["w"]!, (int)clip["h"]!));
+        // A radius that would overflow the grid is refused the same way, not an overflow.
+        bp = BlueprintFormats.Parse("huge.blueprint", string.Join("\n", "#Terrain", "circle;0;0;0;100000;0;0;dirt"));
+        Assert.Throws<InvalidDataException>(() => BlueprintFormats.ToClip(bp, _ => true, out _));
+    }
+
+    [Fact]
+    public void ANumberThatIsNotFiniteOrBeyondAnyWorldMakesALineUnreadable()
+    {
+        var bp = BlueprintFormats.Parse("nan.blueprint", string.Join("\n",
+            "#Terrain", "circle;NaN;0;0;1;0;0;dirt", "circle;0;0;0;Infinity;0;0;dirt", "circle;0;0;2e38;1;0;0;dirt",
+            "#Pieces", "wood_wall;0;-Infinity;0;0;0;0;0;1;", "wood_wall;0;1e30;0;0;0;0;0;1;", "wood_wall;0;1;0;0;0;0;0;1;"));
+        Assert.Equal(5, bp.SkippedLines);
+        Assert.Empty(bp.Terrain);
+        Assert.Single(bp.Pieces);
+        // A negative radius too: it would turn the mark's extents inside out.
+        bp = BlueprintFormats.Parse("neg.blueprint", string.Join("\n", "#Terrain", "circle;0;0;0;-10000;0;0;dirt"));
+        Assert.Equal(1, bp.SkippedLines);
+        Assert.Empty(bp.Terrain);
+    }
+
+    [Fact]
     public void AnEmptyBlueprintIsAOnePointCopy()
     {
         var clip = BlueprintFormats.ToClip(BlueprintFormats.Parse("empty.vbuild", ""), _ => true, out _);

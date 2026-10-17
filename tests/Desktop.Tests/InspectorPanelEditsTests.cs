@@ -42,7 +42,7 @@ public class InspectorPanelEditsTests
             W.Show();
             W.View.Show(Scene, null);
             W.Edit(Scene.Session!);
-            I.Message += t => Said = t;
+            I.Message += t => Said = t.Shown;
         }
 
         public int ChestIndex => Scene.Things.FindLastIndex(t => t.Prefab == Chest && !t.Gone);
@@ -115,14 +115,17 @@ public class InspectorPanelEditsTests
         // The details rows: how many, quality, durability, slot x and y of the first item.
         var nums = r.I.ItemsBox.GetLogicalDescendants().OfType<NumericUpDown>().ToList();
         nums[1].Value = 3;
-        nums[2].Value = 50;
+        nums[2].Value = 50.25m;
         nums[3].Value = 2;
         nums[4].Value = 1;
-        Assert.Equal((3, 50f, 2, 1), (a.Quality, a.Durability, a.X, a.Y));
+        // Durability points keep their fraction.
+        Assert.Equal((3, 50.25f, 2, 1), (a.Quality, a.Durability, a.X, a.Y));
         Click(Labelled(r.I.ItemsBox, "Tidy slots"));
         Assert.Equal((0, 0), (a.X, a.Y));
         // The first slot picked: how many and how good.
         Click(Slot(r.I, 0, 0));
+        // The same most for a stack here as in the details rows.
+        Assert.Equal(nums[0].Maximum, SlotNumber(r.I, 90).Maximum);
         SlotNumber(r.I, 90).Value = 5;
         SlotNumber(r.I, 70).Value = 4;
         Assert.Equal((5, 4), (a.Stack, a.Quality));
@@ -245,6 +248,63 @@ public class InspectorPanelEditsTests
         Assert.Equal("That object cannot be read.", r.Said);
     }
 
+    // Apply on an object no longer at hand: another area open meanwhile (fewer things), or its file gone. Each is said,
+    // nothing changes and nothing throws.
+    // A key added twice, or one the object has already, is refused (Apply would set one over the other); the chest's
+    // contents, edited above, cannot be removed from the list (Apply writes them again).
+    [AvaloniaFact]
+    public async Task AKeyIsAddedOnceAndTheContentsAreNotRemovable()
+    {
+        using var r = new Run();
+        Assert.True(r.I.Open(r.ChestIndex));
+        var (x, y) = r.I.FreeSlot()!.Value;
+        r.I.Items!.Add(new InspectorPanel.ItemRow { Name = "Resin", Stack = 7, X = x, Y = y });
+        AddValue(r.I, "zz_note", "1");
+        AddValue(r.I, "zz_note", "2");
+        Assert.Equal("zz_note is there already: change its value in the list.", r.Said);
+        Assert.Equal(("strings", "zz_note", "1"), Assert.Single(r.I.Added));
+        await r.I.Apply();
+        Assert.StartsWith("Changed", r.Said);
+        Assert.Contains(r.I.FieldList, f => f.Section == "strings" && f.Key == StableHash.Of("zz_note"));
+        r.Said = null;
+        AddValue(r.I, "zz_note", "3");
+        Assert.Equal("zz_note is there already: change its value in the list.", r.Said);
+        Assert.Empty(r.I.Added);
+        var items = r.I.Fields.GetLogicalDescendants().OfType<TextBox>().First(b => b.Text == "see Contents above");
+        Assert.False(((Grid)items.Parent!).Children.OfType<Button>().Single().IsEnabled);
+    }
+
+    [AvaloniaFact]
+    public async Task AnObjectNoLongerAtHandIsNotApplied()
+    {
+        using var r = new Run();
+        EditSession session = r.S;
+        var panel = new InspectorPanel(() => session);
+        string? said = null;
+        panel.Message += t => said = t.Shown;
+        Assert.True(panel.Open(r.ChestIndex));
+        session = TestScenes.Flat(1);
+        panel.Added.Add(("strings", "text", "Elsewhere"));
+        await panel.Apply();
+        Assert.Equal("This object is not in the open area any more: nothing changed.", said);
+        Assert.False(panel.IsOpen);
+        Assert.Empty(session.UndoList);
+        // Its file gone since it was opened.
+        session = r.S;
+        int copy = r.S.Commit("Add", null, [], [(new NewObject(0, r.Scene.Things[r.ChestIndex].Prefab, Vector3.Zero, Vector3.Zero, 0), true)])[0];
+        Assert.True(panel.Open(copy));
+        foreach (string f in Directory.GetFiles(r.Dir))
+        {
+            File.Delete(f);
+        }
+        int steps = r.S.UndoList.Count;
+        said = null;
+        panel.Added.Add(("strings", "text", "Gone"));
+        await panel.Apply();
+        Assert.NotNull(said);
+        Assert.Equal(steps, r.S.UndoList.Count);
+    }
+
     [AvaloniaFact]
     public async Task AnObjectReplacedMeanwhileIsClosed()
     {
@@ -252,7 +312,7 @@ public class InspectorPanelEditsTests
         int opened = r.ChestIndex;
         var mine = new InspectorPanel(() => r.S);
         string? said = null;
-        mine.Message += t => said = t;
+        mine.Message += t => said = t.Shown;
         Assert.True(mine.Open(opened));
         // Another panel changes it first: the copy replaces it.
         var other = new InspectorPanel(() => r.S);
@@ -262,7 +322,8 @@ public class InspectorPanelEditsTests
         Assert.True(r.Scene.Things[opened].Gone);
         mine.Added.Add(("strings", "text", "Second"));
         await mine.Apply();
-        Assert.Equal("This object is gone (removed in the game): nothing changed.", said);
+        // Offline: not blamed on the game.
+        Assert.Equal("This object is gone (deleted, replaced or undone since you opened it): nothing changed.", said);
         Assert.False(mine.IsOpen);
     }
 

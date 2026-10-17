@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -16,7 +17,7 @@ public sealed partial class ClaudeTools
     /// A Dungeon tool of its own on the open area's dungeon of that id (the view's tool is left as the user has it),
     /// telling its messages to said; or why there is none.
     /// </summary>
-    internal (DungeonTool? Tool, string? Problem) DungeonOf(int id, Action<string>? said = null, int seed = 1)
+    internal (DungeonTool? Tool, string? Problem) DungeonOf(int id, Action<Said>? said = null, int seed = 1)
     {
         if (_w.Session?.Scene is not { } scene || _w.InWorkshop)
         {
@@ -30,7 +31,7 @@ public sealed partial class ClaudeTools
         }
         if (d.Problem != null)
         {
-            return (null, d.Problem);
+            return (null, d.Problem.English);
         }
         tool.Open(d);
         if (said != null)
@@ -44,7 +45,7 @@ public sealed partial class ClaudeTools
     internal static string TypeName(string type) => type.Length == 0 ? "plain" : type;
 
     /// <summary>A rotation's turn round the vertical, in degrees.</summary>
-    private static float YawOf(System.Numerics.Quaternion q) => MathF.Round(TerrainEditor.App.BlueprintFormats.ToEuler(q).Y, 1);
+    private static float YawOf(System.Numerics.Quaternion q) => MathF.Round(BlueprintFormats.ToEuler(q).Y, 1);
 
     /// <summary>list_dungeons: the dungeons of the open area.</summary>
     [McpServerTool(Name = "list_dungeons", ReadOnly = true, Title = "The dungeons of the area")]
@@ -55,22 +56,29 @@ public sealed partial class ClaudeTools
         {
             return "Dungeons are listed in a world's area: open_area first.";
         }
+        int reads = scene.Reads;
         var tool = new DungeonTool { Scene = scene };
-        return ToJson(tool.All.Select(d =>
+        var dungeons = tool.All.Select(d =>
         {
             tool.Open(d);
             return new
             {
                 id = d.Index,
-                kind = DungeonTool.KindName(d.Kind),
+                kind = DungeonTool.KindName(d.Kind).English,
                 x = MathF.Round(d.Thing.Position.X, 1),
                 y = MathF.Round(d.Thing.Position.Y, 1),
                 z = MathF.Round(d.Thing.Position.Z, 1),
                 rooms = d.Rooms.Count,
                 openEnds = d.Problem == null ? tool.FreeEnds.Count : 0,
-                problem = d.Problem,
+                problem = d.Problem?.English,
             };
-        }).ToList());
+        }).ToList();
+        // A dungeon's id is its object's, one of the area's ids like list_objects gives (get_object, select_objects).
+        if (dungeons.Count > 0)
+        {
+            GaveIds(scene, reads);
+        }
+        return ToJson(dungeons);
     });
 
     /// <summary>dungeon_rooms: a dungeon's rooms, free openings, door joints and the rooms it can take.</summary>
@@ -87,7 +95,7 @@ public sealed partial class ClaudeTools
         return ToJson(new
         {
             id,
-            kind = DungeonTool.KindName(d.Kind),
+            kind = DungeonTool.KindName(d.Kind).English,
             rooms = d.Rooms.Select((r, i) => new { index = i, name = r.Name, x = MathF.Round(r.Position.X, 2), y = MathF.Round(r.Position.Y, 2), z = MathF.Round(r.Position.Z, 2), yaw = YawOf(r.Rotation) }),
             openEnds = tool.FreeEnds.Select((e, i) => new { index = i, type = TypeName(e.Type), room = e.Room, x = MathF.Round(e.Position.X, 2), y = MathF.Round(e.Position.Y, 2), z = MathF.Round(e.Position.Z, 2), entrance = e.Entrance }),
             doorJoints = tool.DoorJoints.Select((j, i) => new { index = i, rooms = new[] { j.First, j.Second }, type = TypeName(j.Type), door = tool.DoorsAt(j).Count > 0 }),
@@ -96,11 +104,23 @@ public sealed partial class ClaudeTools
         });
     });
 
-    /// <summary>The answer after a dungeon change: what the tool said, the dungeon's new id and its room count.</summary>
-    private string AfterDungeon(DungeonTool tool, string said)
+    /// <summary>The session's last step, to tell afterwards whether a tool made one (it may also make none and say why).</summary>
+    private EditSession.Change? LastStep() => _w.Session?.UndoList is { Count: > 0 } steps ? steps[^1] : null;
+
+    /// <summary>Whether a step was made since <see cref="LastStep"/> gave this one.</summary>
+    private bool Stepped(EditSession.Change? before) => !ReferenceEquals(LastStep(), before);
+
+    /// <summary>The answer when a dungeon tool made no step: what the tool said, else that nothing changed.</summary>
+    private static string Unchanged(Said said) => said.English.Length > 0 ? said.English : "Nothing changed.";
+
+    /// <summary>
+    /// The answer after a dungeon change: what the tool said (the status bar shows it in the language in use, Claude is
+    /// answered in English), the dungeon's new id and its room count.
+    /// </summary>
+    private string AfterDungeon(DungeonTool tool, Said said)
     {
         _w.AfterClaudeEdit(said);
-        return tool.Dungeon is { } d ? $"{said} The dungeon's id is now {d.Index} ({d.Rooms.Count} rooms). Now pending: {Pending()}" : said;
+        return tool.Dungeon is { } d ? $"{said.English} The dungeon's id is now {d.Index} ({d.Rooms.Count} rooms). Now pending: {Pending()}" : said.English;
     }
 
     /// <summary>add_dungeon_room: a room at a free opening, with what the game makes in it and its door.</summary>
@@ -119,7 +139,7 @@ public sealed partial class ClaudeTools
         {
             return why;
         }
-        string said = "";
+        var said = Said.Empty;
         var (tool, problem) = DungeonOf(id, m => said = m, seed);
         if (tool?.Dungeon is not { } d)
         {
@@ -131,7 +151,7 @@ public sealed partial class ClaudeTools
         }
         if (!tool.Palette.Any(r => r.Name == room))
         {
-            return $"{room} is not a room this {DungeonTool.KindName(d.Kind)} can take (dungeon_rooms' canTake).";
+            return $"{room} is not a room this {DungeonTool.KindName(d.Kind).English} can take (dungeon_rooms' canTake).";
         }
         if (tool.PlaceAt(end, room, join) is not { } placed)
         {
@@ -139,7 +159,7 @@ public sealed partial class ClaudeTools
         }
         tool.WithContents = contents;
         tool.WithDoors = doors;
-        tool.Add(placed, $"Claude: added {room}");
+        tool.Add(placed, ClaudesStep(Lang.T("claude.undo.added", room)));
         return AfterDungeon(tool, said);
     });
 
@@ -154,7 +174,7 @@ public sealed partial class ClaudeTools
         {
             return why;
         }
-        string said = "";
+        var said = Said.Empty;
         var (tool, problem) = DungeonOf(id, m => said = m);
         if (tool?.Dungeon is not { } d)
         {
@@ -164,7 +184,7 @@ public sealed partial class ClaudeTools
         {
             return $"The dungeon has {d.Rooms.Count} room(s): room is 0 to {d.Rooms.Count - 1}.";
         }
-        tool.Remove(room, $"Claude: removed {d.Rooms[room].Name}");
+        tool.Remove(room, ClaudesStep(Lang.T("claude.undo.removed", d.Rooms[room].Name)));
         return AfterDungeon(tool, said);
     });
 
@@ -178,13 +198,15 @@ public sealed partial class ClaudeTools
         {
             return why;
         }
-        string said = "";
+        var said = Said.Empty;
         var (tool, problem) = DungeonOf(id, m => said = m);
         if (tool == null)
         {
             return problem!;
         }
-        return tool.CloseOpenEnds("Claude: closed open ends") > 0 ? AfterDungeon(tool, said) : said;
+        var before = LastStep();
+        tool.CloseOpenEnds(ClaudesStep(Lang.T("claude.undo.closedEnds")));
+        return Stepped(before) ? AfterDungeon(tool, said) : Unchanged(said);
     });
 
     /// <summary>set_dungeon_door: the door at a joint put in or taken out.</summary>
@@ -199,7 +221,7 @@ public sealed partial class ClaudeTools
         {
             return why;
         }
-        string said = "";
+        var said = Said.Empty;
         var (tool, problem) = DungeonOf(id, m => said = m);
         if (tool?.Dungeon is not { } d)
         {
@@ -214,8 +236,13 @@ public sealed partial class ClaudeTools
         {
             return door ? "There is a door there already." : "There is no door there.";
         }
-        tool.ToggleDoor(d, joints[joint], door ? "Claude: added a dungeon door" : "Claude: removed a dungeon door");
+        var before = LastStep();
+        tool.ToggleDoor(d, joints[joint], ClaudesStep(door ? Lang.T("claude.undo.addedDoor") : Lang.T("claude.undo.removedDoor")));
+        if (!Stepped(before))
+        {
+            return Unchanged(said);
+        }
         _w.AfterClaudeEdit(said);
-        return $"{said} Now pending: {Pending()}";
+        return $"{said.English} Now pending: {Pending()}";
     });
 }

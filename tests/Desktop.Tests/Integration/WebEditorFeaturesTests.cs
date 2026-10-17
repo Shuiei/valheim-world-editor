@@ -47,7 +47,7 @@ public class WebEditorFeaturesTests
             W.Edit(scene.Session!);
             S = scene.Session!;
             W.Tools.ChooseMode(mode);
-            P.Message += t => Said = t;
+            P.Message += t => Said = t.Shown;
             P.Memory.Presets.Clear();
             P.Memory.Favourites.Clear();
             P.Memory.Recent.Clear();
@@ -257,7 +257,7 @@ public class WebEditorFeaturesTests
     {
         using var r = new Run();
         string? said = null;
-        r.W.PlaceInput.Message += t => said = t;
+        r.W.PlaceInput.Message += t => said = t.Shown;
         Click(r.P.PickButton);
         Assert.True(r.W.PlaceInput.Key(Key.Escape, false, false));
         Assert.Null(r.W.PlaceInput.PickOnce);

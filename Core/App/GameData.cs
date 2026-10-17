@@ -122,7 +122,7 @@ public static class GameData
             }
             try
             {
-                ModCatalogue.Load();
+                ModCatalogue.Load(PrefabNames(read["prefabs"]));
                 foreach (var kind in Kinds)
                 {
                     Use(kind, read[kind.Name]);
@@ -132,7 +132,7 @@ public static class GameData
             {
                 // A kind the editor cannot take (the game changed what it holds): those before it are in use already,
                 // so none counts as had, and the next Ensure takes them all again.
-                Console.WriteLine($"The game's data could not be used ({e.GetType().Name}: {e.Message}).");
+                Log.Caught(e, "using the game's data (none counts as had; taken again next time)");
                 _from = null;
                 _generation++;
                 return false;
@@ -184,7 +184,7 @@ public static class GameData
         }
         catch (Exception e) when (e is JsonException or InvalidOperationException or KeyNotFoundException or FormatException or InvalidCastException)
         {
-            Console.WriteLine($"Game data {kind.Name}: the mods' prefabs could not be used ({e.Message}); the game's own only.");
+            Log.Caught(e, $"laying the mods' prefabs over the game data {kind.Name} (the game's own only)");
             kind.Use(json);
         }
     }
@@ -203,9 +203,7 @@ public static class GameData
             {
                 return 0;
             }
-            using var doc = JsonDocument.Parse(prefabs);
-            var vanilla = doc.RootElement.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
-            var (mods, changed) = ModCatalogue.Take(report, vanilla);
+            var (mods, changed) = ModCatalogue.Take(report, PrefabNames(prefabs));
             if (changed)
             {
                 foreach (var kind in Kinds.Where(k => Own.ContainsKey(k.Name)))
@@ -216,6 +214,13 @@ public static class GameData
             }
             return mods;
         }
+    }
+
+    /// <summary>The prefab names in the game's own prefabs (JSON, by name).</summary>
+    private static HashSet<string> PrefabNames(string prefabs)
+    {
+        using var doc = JsonDocument.Parse(prefabs);
+        return doc.RootElement.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -324,7 +329,7 @@ public static class GameData
         catch (Exception e)
         {
             // Anything in the game's files can fail the reading: no world opens then.
-            Console.WriteLine($"The game's {what} could not be read ({e.GetType().Name}: {e.Message}).");
+            Log.Caught(e, $"reading the game's {what} (no world opens)");
             return null;
         }
     }
@@ -337,24 +342,15 @@ public static class GameData
     /// <returns>False when it could not be written.</returns>
     internal static bool KeepCache(string file, string text)
     {
-        string part = file + ".part";
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(file)!);
-            File.WriteAllText(part, text);
-            File.Move(part, file, overwrite: true);
+            // Flushed to disk before it replaces the old one; the temporary file is gone when this fails.
+            SafeFile.WriteAllText(file, text);
             return true;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            Console.WriteLine($"{Path.GetFileName(file)} could not be kept ({e.GetType().Name}: {e.Message}); it is read again next time.");
-            try
-            {
-                File.Delete(part);
-            }
-            catch (Exception d) when (d is IOException or UnauthorizedAccessException)
-            {
-            }
+            Log.Caught(e, $"keeping the cache {Path.GetFileName(file)} (read again next time)");
             return false;
         }
     }
@@ -375,6 +371,7 @@ public static class GameData
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(e, $"reading the cache {Path.GetFileName(file)} (read from the game again)");
             return null;
         }
     }

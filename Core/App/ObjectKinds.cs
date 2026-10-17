@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using TerrainEditor.Save;
 using TerrainEditor.Terrain;
@@ -55,26 +56,32 @@ public static class ObjectKinds
     /// <summary>Every kind, in the View panel's order.</summary>
     public static readonly ObjectKind[] All = Enum.GetValues<ObjectKind>();
 
-    /// <summary>The kind's name in the View panel.</summary>
-    public static string Label(ObjectKind k) => k switch
+    /// <summary>The kind's name in the View panel, in the language in use.</summary>
+    public static string Label(ObjectKind k) => Lang.T(LabelKey(k));
+
+    /// <summary>The kind's name in the language in use and in English (for what Claude reads back).</summary>
+    public static Said Name(ObjectKind k) => Said.Of(LabelKey(k));
+
+    /// <summary>The catalogue key of the kind's name.</summary>
+    private static string LabelKey(ObjectKind k) => k switch
     {
-        ObjectKind.Buildings => "Your buildings",
-        ObjectKind.Ruins => "Ruins & structures",
-        ObjectKind.Furniture => "Furniture & props",
-        ObjectKind.Trees => "Trees & logs",
-        ObjectKind.Rocks => "Rocks",
-        ObjectKind.Ore => "Ore & deposits",
-        ObjectKind.Bushes => "Bushes & shrubs",
-        ObjectKind.Pickables => "Pickables",
-        ObjectKind.Remains => "Bones & remains",
-        ObjectKind.Animals => "Tamed animals",
-        ObjectKind.Creatures => "Creatures & NPCs",
-        ObjectKind.SpawnPoints => "Spawn points",
-        ObjectKind.Nests => "Creature nests",
-        ObjectKind.Runestones => "Runestones",
-        ObjectKind.Dungeons => "Dungeon rooms",
-        ObjectKind.Effects => "Effects & markers",
-        _ => "Other objects",
+        ObjectKind.Buildings => "kind.label.buildings",
+        ObjectKind.Ruins => "kind.label.ruins",
+        ObjectKind.Furniture => "kind.label.furniture",
+        ObjectKind.Trees => "kind.label.trees",
+        ObjectKind.Rocks => "kind.label.rocks",
+        ObjectKind.Ore => "kind.label.ore",
+        ObjectKind.Bushes => "kind.label.bushes",
+        ObjectKind.Pickables => "kind.label.pickables",
+        ObjectKind.Remains => "kind.label.remains",
+        ObjectKind.Animals => "kind.label.animals",
+        ObjectKind.Creatures => "kind.label.creatures",
+        ObjectKind.SpawnPoints => "kind.label.spawnPoints",
+        ObjectKind.Nests => "kind.label.nests",
+        ObjectKind.Runestones => "kind.label.runestones",
+        ObjectKind.Dungeons => "kind.label.dungeons",
+        ObjectKind.Effects => "kind.label.effects",
+        _ => "kind.label.other",
     };
 
     /// <summary>Shown when the editor opens, as in the web editor's View panel (spoilers stay hidden).</summary>
@@ -129,6 +136,32 @@ public static class ObjectKinds
         {
             return ObjectKind.Other;
         }
+        int generation = GameData.Generation;
+        Memo memo = _memo;
+        if (memo.Generation != generation)
+        {
+            memo = new Memo(generation, new(StringComparer.Ordinal));
+            _memo = memo;
+        }
+        return memo.Kinds.GetOrAdd(name, Find);
+    }
+
+    /// <summary>The kinds found by name, for the game data of one <see cref="GameData.Generation"/>.</summary>
+    /// <param name="Generation">The game data's generation they were found with.</param>
+    /// <param name="Kinds">The kind of each name asked.</param>
+    private sealed record Memo(int Generation, ConcurrentDictionary<string, ObjectKind> Kinds);
+
+    /// <summary>The kinds found so far; started again when the game data changes.</summary>
+    private static volatile Memo _memo = new(-1, new(StringComparer.Ordinal));
+
+    /// <summary>How many names this thread sorted by their rules rather than from those found before (the tests).</summary>
+    [field: ThreadStatic]
+    internal static int Finds { get; private set; }
+
+    /// <summary>The kind of an object that is neither a placed piece nor tamed, by its prefab name.</summary>
+    private static ObjectKind Find(string name)
+    {
+        Finds++;
         if (PrefabCatalog.IsRunestoneName(name))
         {
             return ObjectKind.Runestones;

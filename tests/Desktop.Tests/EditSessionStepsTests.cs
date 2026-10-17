@@ -7,8 +7,9 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// An edit session's smaller rules: deleting what is already gone makes no step, a shape whose formula fails at some
 /// points counts them and leaves them, the changed rectangle is given once, the game's changes wait for a stroke
-/// to end, things moved, turned and sized in one step, the copy that stands for a moved thing, zones marked for
-/// reset, unmarked and marked again with other options, and steps marked applied up to the first the game lacks.
+/// to end, things moved, turned and sized in one step, the copy that stands for a moved thing, what a copy starts
+/// from, a step keyed by itself, zones marked for reset, unmarked and marked again with other options, and steps
+/// marked applied up to the first the game lacks.
 /// </summary>
 public class EditSessionStepsTests
 {
@@ -24,6 +25,53 @@ public class EditSessionStepsTests
         Assert.Equal("1 removed", s.UndoList[0].Describe());
         s.Delete([0]);
         Assert.Single(s.UndoList);
+    }
+
+    // A step picked in the history, then undone or dropped before the action ran (the panel waits for the user to
+    // allow it, while Claude undoes): going back to it, forward to it or taking it out does nothing.
+    [Fact]
+    public void AStepNoLongerInTheHistoryIsLeftAlone()
+    {
+        var s = TestScenes.Flat(1);
+        s.Shape(32, 32, _ => 1, 3, 0, "A");
+        float afterA = s.Ground.HeightOf(32 * s.Ground.W + 32);
+        s.Shape(32, 32, _ => 3, 3, 0, "B");
+        var b = s.UndoList[^1];
+        Assert.True(s.Undo());
+        Assert.Equal("That change is no longer in the history to undo: nothing was removed.", s.RemoveChange(b).Shown);
+        Assert.Equal(afterA, s.Ground.HeightOf(32 * s.Ground.W + 32));
+        s.Shape(32, 32, _ => 2, 3, 0, "C");
+        // B is dropped (a new step clears the redo list): neither undoes A and C nor redoes anything.
+        s.BackTo(b);
+        Assert.Equal(["A", "C"], s.UndoList.Select(c => c.Label));
+        Assert.True(s.Undo());
+        s.ForwardTo(b);
+        Assert.Equal(["A"], s.UndoList.Select(c => c.Label));
+        Assert.Equal(["C"], s.RedoList.Select(c => c.Label));
+    }
+
+    [Fact]
+    public void GoingBackOrForwardSeveralStepsTellsOfTheEditOnce()
+    {
+        var s = TestScenes.Flat(1);
+        foreach (string label in new[] { "A", "B", "C", "D" })
+        {
+            s.Shape(32, 32, _ => 1, 3, 0, label);
+        }
+        var a = s.UndoList[0];
+        var d = s.UndoList[^1];
+        int changed = 0, made = 0;
+        s.Changed += () => changed++;
+        s.EditMade += () => made++;
+        s.BackTo(a);
+        Assert.Equal(["A"], s.UndoList.Select(c => c.Label));
+        Assert.Equal((1, 1), (changed, made));
+        s.ForwardTo(d);
+        Assert.Equal(["A", "B", "C", "D"], s.UndoList.Select(c => c.Label));
+        Assert.Equal((2, 2), (changed, made));
+        // Already there: nothing to tell.
+        s.ForwardTo(d);
+        Assert.Equal((2, 2), (changed, made));
     }
 
     [Fact]
@@ -47,6 +95,26 @@ public class EditSessionStepsTests
         var (x0, z0, x1, z1) = s.TakeDirty()!.Value;
         Assert.True(x0 <= 29 && z0 <= 29 && x1 >= 35 && z1 >= 35);
         Assert.Null(s.TakeDirty());
+    }
+
+    [Fact]
+    public void TakingAShapeOutOrClearingItsZoneRefreshesOnlyAroundIt()
+    {
+        var s = TestScenes.Flat(3);
+        void ShapeOnly()
+        {
+            var (x0, z0, x1, z1) = s.TakeDirty()!.Value;
+            Assert.True(x0 >= 27 && z0 >= 27 && x1 <= 37 && z1 <= 37, $"{(x0, z0, x1, z1)}");
+        }
+        s.Shape(32, 32, _ => 1, 3, 0, "Shape");
+        s.TakeDirty();
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^1]).Shown);
+        ShapeOnly();
+        s.Shape(32, 32, _ => 1, 3, 0, "Shape");
+        s.TakeDirty();
+        s.MarkResets([(0, 0)], keepBuildings: true, ground: true, "Reset");
+        ShapeOnly();
+        Assert.Equal(30, s.Ground.HeightOf(32 * s.Ground.W + 32));
     }
 
     [Fact]
@@ -88,6 +156,30 @@ public class EditSessionStepsTests
     }
 
     [Fact]
+    public void ACopyStartsFromTheSavedObjectItComesFrom()
+    {
+        var s = TestScenes.Flat(1, Rock());
+        // A thing of the world: itself; one added from it: the same; one put new: none.
+        int copied = s.Commit("Put", null, [], [(new Editing.NewObject(0, StableHash.Of("Rock_4"), new Vector3(20, 30, 20), Vector3.Zero, 0, 3, false), false)])[0];
+        int put = s.Commit("Put", null, [], [(new Editing.NewObject(0, StableHash.Of("Rock_4"), new Vector3(25, 30, 20), Vector3.Zero, 0, null, true), false)])[0];
+        Assert.Equal<int?>([3, 3, null], [.. new[] { 0, copied, put }.Select(i => s.CopySourceOf(s.Scene.Things[i]).SourceId)]);
+    }
+
+    [Fact]
+    public void AStepKeysByItselfWhateverIsSetOnItLater()
+    {
+        var s = TestScenes.Flat(1);
+        s.Shape(32, 32, _ => 1, 3, 0, "A");
+        var c = s.UndoList[0];
+        var ids = new Dictionary<EditSession.Change, int[]> { [c] = [7] };
+        c.Applied = true;
+        c.Removed = true;
+        Assert.Equal([7], ids[c]);
+        // A copy with the same values is another step.
+        Assert.NotEqual(c, c with { });
+    }
+
+    [Fact]
     public void ZonesMarkedForResetLoseTheirGroundEditsInOneStep()
     {
         var s = TestScenes.Flat(2);
@@ -118,6 +210,29 @@ public class EditSessionStepsTests
         Assert.Equal("Unmark", s.UndoLabel);
     }
 
+    // Taking out a step keeps the modified flag a later step set at its points: here a paint, then a flatten back to
+    // the original height (modified, no level). Removing the paint cleared the flatten's flag.
+    [Fact]
+    public void RemovingAStepKeepsALaterStepsModifiedFlag()
+    {
+        var s = TestScenes.Flat(1);
+        int p = 32 * s.Ground.W + 32;
+        s.EditGround("Paint", g =>
+        {
+            g.PMod[p] = 1;
+            g.Paint[p * 4] = 1;
+            return ([p], (31, 31, 33, 33));
+        });
+        s.EditGround("Flatten", g =>
+        {
+            g.SetHeight(p, g.HeightOf(p));
+            return ([p], (31, 31, 33, 33));
+        });
+        Assert.Equal(1, s.Ground.Mod[p]);
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[0]).Shown);
+        Assert.Equal(1, s.Ground.Mod[p]);
+    }
+
     // Marking a marked zone again with other options: undo, redo and removing the step each bring back the options
     // of their side, not the newest ones.
     [Fact]
@@ -134,7 +249,7 @@ public class EditSessionStepsTests
         Assert.Equal(kept, Assert.Single(s.Resets));
         Assert.True(s.Redo());
         Assert.Equal(wiped, Assert.Single(s.Resets));
-        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^1]));
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^1]).Shown);
         Assert.Equal(kept, Assert.Single(s.Resets));
         Assert.True(s.Undo());
         Assert.Equal(wiped, Assert.Single(s.Resets));
@@ -148,15 +263,15 @@ public class EditSessionStepsTests
         var s = TestScenes.Flat(1, Rock());
         int first = s.Move([(0, new Vector3(4, 30, 0), Vector3.Zero)], "Claude: moved")[0];
         int second = s.Move([(first, new Vector3(8, 30, 0), Vector3.Zero)])[0];
-        Assert.StartsWith("That change cannot be removed:", s.RemoveChange(s.UndoList[^2]));
+        Assert.StartsWith("That change cannot be removed:", s.RemoveChange(s.UndoList[^2]).Shown);
         Assert.False(s.UndoList[^2].Removed);
         Assert.True(s.Scene.Things[0].Gone);
         Assert.True(s.Scene.Things[first].Gone);
         Assert.False(s.Scene.Things[second].Gone);
         Assert.Equal(1, s.Scene.Things.Count(t => !t.Gone));
         // Taking the later move out first makes the first one removable.
-        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^1]));
-        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^3]));
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^1]).Shown);
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^3]).Shown);
         Assert.False(s.Scene.Things[0].Gone);
         Assert.Equal(1, s.Scene.Things.Count(t => !t.Gone));
     }
@@ -170,7 +285,7 @@ public class EditSessionStepsTests
         int copy = s.Move([(0, new Vector3(4, 30, 0), Vector3.Zero)], "Claude: moved")[0];
         Assert.True(s.TakeGameChanges(new WorldSession.Followed(new WorldSave.Merged([], [], [], []), [s.Scene.Things[copy].Id], [], [])));
         Assert.True(s.Scene.Things[copy].Gone);
-        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^1]));
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^1]).Shown);
         Assert.False(s.Scene.Things[0].Gone);
         Assert.True(s.Scene.Things[copy].Gone);
     }
@@ -183,7 +298,7 @@ public class EditSessionStepsTests
         var later = new Editing.ZoneReset(0, 0, KeepBuildings: true, Ground: false);
         s.MarkResets([(0, 0)], keepBuildings: false, ground: false, "Wipe");
         s.MarkResets([(0, 0)], keepBuildings: true, ground: false, "Keep");
-        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^2]));
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[^2]).Shown);
         Assert.Equal(later, Assert.Single(s.Resets));
     }
 

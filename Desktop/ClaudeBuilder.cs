@@ -199,9 +199,17 @@ public static class ClaudeBuilder
         string slopeName = kind + suffix, ridgeName = kind + "_top" + suffix, gableName = "wood_wall_roof" + suffix;
         var slope = Info(slopeName);
         // The slope's edges: low toward its +z, high toward its -z (snap points).
+        if (slope.Snaps.Length < 2)
+        {
+            throw new ArgumentException($"No roof laid: {slopeName} has no snap points to lay it by in the game data read.");
+        }
         float[] low = slope.Snaps.OrderByDescending(s => s[2]).First();
         float[] high = slope.Snaps.OrderBy(s => s[2]).First();
         float rise = high[1] - low[1], run = low[2] - high[2], pitch = rise / run;
+        if (!(run > 0.01f))
+        {
+            throw new ArgumentException($"No roof laid: {slopeName}'s snap points do not slope down one way in the game data read.");
+        }
         bool alongX = hx - lx >= hz - lz;
         float cx = (lx + hx) / 2, cz = (lz + hz) / 2;
         float depth = (alongX ? hz - lz : hx - lx) / 2, length = alongX ? hx - lx : hz - lz;

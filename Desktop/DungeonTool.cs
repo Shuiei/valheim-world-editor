@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Text;
 using System.Text.RegularExpressions;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
@@ -39,9 +38,32 @@ public sealed partial class DungeonTool
     public bool WithContents { get; set; } = true;
 
     /// <summary>
-    /// The room clicked last (an index into the current dungeon's list).
+    /// The room clicked last (an index into the current dungeon's list), found again by its prefab and place each time,
+    /// so an undo or redo that shifts or takes away rooms never leaves it on another room; null when it is gone.
     /// </summary>
-    public int? Selected { get; private set; }
+    public int? Selected
+    {
+        get
+        {
+            if (_selected is not { } s || Dungeon is not { } d)
+            {
+                return null;
+            }
+            bool Same(Dungeons.Placed p) => p.Hash == s.Hash && Vector3.DistanceSquared(p.Position, s.Position) < 1e-6f;
+            if (s.Index < d.Rooms.Count && Same(d.Rooms[s.Index]))
+            {
+                return s.Index;
+            }
+            int at = d.Rooms.FindIndex(Same);
+            return at >= 0 ? at : null;
+        }
+        private set => _selected = value is int i && Dungeon is { } d && i < d.Rooms.Count ? (i, d.Rooms[i].Hash, d.Rooms[i].Position) : null;
+    }
+
+    /// <summary>
+    /// The selected room: its index then, its prefab's hash and its place (Selected finds it again by them).
+    /// </summary>
+    private (int Index, int Hash, Vector3 Position)? _selected;
 
     /// <summary>
     /// The free opening the pointer is over (its index in FreeEnds); null when none.
@@ -91,16 +113,18 @@ public sealed partial class DungeonTool
     /// </summary>
     /// <param name="D">The dungeon it was worked out for.</param>
     /// <param name="Version">The edit store's version then.</param>
+    /// <param name="Generation">The session's generation then (it moves when the live game changes things in place).</param>
     /// <param name="Count">How many things the scene had then.</param>
     /// <param name="Free">The free openings.</param>
     /// <param name="Joints">The joints that can take one of the dungeon's doors.</param>
     /// <param name="Doors">The scene's doors of the dungeon's kinds, by their place rounded to 5 cm (see Spot).</param>
     /// <param name="Overlapping">How many pairs of rooms overlap.</param>
-    private sealed record Derived(DungeonRooms.Dungeon D, int Version, int Count, List<Dungeons.OpenEnd> Free, List<Dungeons.Joint> Joints,
+    private sealed record Derived(DungeonRooms.Dungeon D, int Version, int Generation, int Count, List<Dungeons.OpenEnd> Free, List<Dungeons.Joint> Joints,
         Dictionary<(long, long, long), List<int>> Doors, int Overlapping);
 
     /// <summary>
-    /// The last Derived, kept while the dungeon, the edit version and the thing count stay the same.
+    /// The last Derived, kept while the dungeon, the edit version, the session's generation and the thing count stay the
+    /// same.
     /// </summary>
     private Derived? _derived;
 
@@ -110,8 +134,8 @@ public sealed partial class DungeonTool
     private static (long, long, long) Spot(Vector3 p) => ((long)MathF.Round(p.X * 20), (long)MathF.Round(p.Y * 20), (long)MathF.Round(p.Z * 20));
 
     /// <summary>
-    /// The Derived of the open dungeon, worked out again only when it, the edits or the scene's thing count changed;
-    /// null when no scene or dungeon is open.
+    /// The Derived of the open dungeon, worked out again only when it, the edits, the session's generation or the
+    /// scene's thing count changed; null when no scene or dungeon is open.
     /// </summary>
     private Derived? Derive()
     {
@@ -119,8 +143,8 @@ public sealed partial class DungeonTool
         {
             return null;
         }
-        int version = s.Session?.Edits.Version ?? 0, count = s.Things.Count;
-        if (_derived is { } c && ReferenceEquals(c.D, d) && c.Version == version && c.Count == count)
+        int version = s.Session?.Edits.Version ?? 0, generation = s.Session?.Generation ?? 0, count = s.Things.Count;
+        if (_derived is { } c && ReferenceEquals(c.D, d) && c.Version == version && c.Generation == generation && c.Count == count)
         {
             return c;
         }
@@ -139,7 +163,7 @@ public sealed partial class DungeonTool
         }
         int overlapping = d.Rooms.Select((r, i) => Dungeons.Overlaps(d.Rooms, r, i).Count > 0 ? 1 : 0).Sum() / 2;
         var joints = Dungeons.Joints(d.Rooms).Where(j => j.DoorAllowed && Dungeons.DoorsFor(d.Kind, j.Type).Any()).ToList();
-        return _derived = new Derived(d, version, count, Dungeons.Openings(d.Rooms, freeOnly: true), joints, doors, overlapping);
+        return _derived = new Derived(d, version, generation, count, Dungeons.Openings(d.Rooms, freeOnly: true), joints, doors, overlapping);
     }
 
     /// <summary>
@@ -149,9 +173,10 @@ public sealed partial class DungeonTool
     public event Action? Changed;
 
     /// <summary>
-    /// A line for the status bar: what a change did, or why it did nothing.
+    /// A line for the status bar: what a change did, or why it did nothing (in the user's language, and in English for
+    /// Claude).
     /// </summary>
-    public event Action<string>? Message;
+    public event Action<Said>? Message;
 
     /// <summary>
     /// The scene: set by the view when it opens an area.
@@ -176,24 +201,24 @@ public sealed partial class DungeonTool
 
     // ---- Names shown for the kinds of dungeon.
     /// <summary>
-    /// The name shown for a kind of dungeon: the game's own for the known ones, else its prefab name without DG_ and
-    /// split into words.
+    /// The name shown for a kind of dungeon, in the language in use and in English (Claude's): the game's own for the
+    /// known ones, else its prefab name without DG_ and split into words (the same in both).
     /// </summary>
-    public static string KindName(Dungeons.Kind k) => k.Name switch
+    public static Said KindName(Dungeons.Kind k) => k.Name switch
     {
-        "DG_Cave" => "Frost Cave",
-        "DG_SunkenCrypt" => "Sunken Crypt",
-        "DG_ForestCrypt" => "Burial Chambers",
-        "DG_HalfBurried_ForestCrypt" => "Burial Chambers (half buried)",
-        "DG_DvergrTown" => "Infested Mine",
-        "DG_DvergrBoss" => "Infested Citadel",
-        "DG_Hildir_Cave" => "Howling Cavern (Hildir)",
-        "DG_Hildir_ForestCrypt" => "Smouldering Tomb (Hildir)",
-        "DG_Hildir_PlainsFortress" => "Sealed Tower (Hildir)",
-        "DG_GoblinCamp" => "Fuling village",
-        "DG_MeadowsVillage" => "Meadows village",
-        "DG_MeadowsFarm" => "Meadows farm",
-        _ => Words().Replace(k.Name.Replace("DG_", "", StringComparison.Ordinal).Replace('_', ' '), " $1").Trim(),
+        "DG_Cave" => Said.Of("dungeon.kind.frostCave"),
+        "DG_SunkenCrypt" => Said.Of("dungeon.kind.sunkenCrypt"),
+        "DG_ForestCrypt" => Said.Of("dungeon.kind.burialChambers"),
+        "DG_HalfBurried_ForestCrypt" => Said.Of("dungeon.kind.burialChambersHalf"),
+        "DG_DvergrTown" => Said.Of("dungeon.kind.infestedMine"),
+        "DG_DvergrBoss" => Said.Of("dungeon.kind.infestedCitadel"),
+        "DG_Hildir_Cave" => Said.Of("dungeon.kind.howlingCavern"),
+        "DG_Hildir_ForestCrypt" => Said.Of("dungeon.kind.smoulderingTomb"),
+        "DG_Hildir_PlainsFortress" => Said.Of("dungeon.kind.sealedTower"),
+        "DG_GoblinCamp" => Said.Of("dungeon.kind.fulingVillage"),
+        "DG_MeadowsVillage" => Said.Of("dungeon.kind.meadowsVillage"),
+        "DG_MeadowsFarm" => Said.Of("dungeon.kind.meadowsFarm"),
+        _ => Said.Raw(Words().Replace(k.Name.Replace("DG_", "", StringComparison.Ordinal).Replace('_', ' '), " $1").Trim()),
     };
 
     /// <summary>
@@ -206,7 +231,7 @@ public sealed partial class DungeonTool
     /// One line for a dungeon in a list: its kind, how many rooms, and where it is (x, z in metres).
     /// </summary>
     public static string Describe(DungeonRooms.Dungeon d) =>
-        $"{KindName(d.Kind)}, {d.Rooms.Count} rooms, at {MathF.Round(d.Thing.Position.X) + 0f:0}, {MathF.Round(d.Thing.Position.Z) + 0f:0}";
+        Lang.T("dungeon.label.entry", KindName(d.Kind).Shown, d.Rooms.Count, MathF.Round(d.Thing.Position.X) + 0f, MathF.Round(d.Thing.Position.Z) + 0f);
 
     // ---- Choosing.
     /// <summary>
@@ -349,8 +374,8 @@ public sealed partial class DungeonTool
     /// </summary>
     /// <param name="p">The placed room.</param>
     /// <param name="skip">A room of the list not to check against (the one being replaced), or -1.</param>
-    /// <returns>The warning, or null when it fits.</returns>
-    public string? Problem(Dungeons.Placed p, int skip = -1)
+    /// <returns>The warning (for the user, and in English for Claude), or null when it fits.</returns>
+    public Said? Problem(Dungeons.Placed p, int skip = -1)
     {
         if (Dungeon is not { } d)
         {
@@ -359,10 +384,10 @@ public sealed partial class DungeonTool
         var over = Dungeons.Overlaps(d.Rooms, p, skip);
         if (over.Count > 0)
         {
-            return $"Overlaps {string.Join(", ", over.Select(i => d.Rooms[i].Name).Distinct())}.";
+            return Said.Of("dungeon.error.overlaps", string.Join(", ", over.Select(i => d.Rooms[i].Name).Distinct()));
         }
         return Dungeons.Inside(d.Kind, d.Thing.Position, p) ? null
-            : $"Goes past the dungeon's space ({d.Kind.ZoneSize.X:0} × {d.Kind.ZoneSize.Z:0} m around its zone's middle): the game keeps its own rooms inside it.";
+            : Said.Of("dungeon.error.outside", d.Kind.ZoneSize.X, d.Kind.ZoneSize.Z);
     }
 
     /// <summary>
@@ -396,7 +421,7 @@ public sealed partial class DungeonTool
         Changed?.Invoke();
         if (HoverRoom is int r && Dungeon is { } dd)
         {
-            Message?.Invoke($"{dd.Rooms[r].Name}: Delete removes it.");
+            Message?.Invoke(Said.Of("dungeon.msg.deleteRemoves", dd.Rooms[r].Name));
         }
         return HoverRoom != null;
     }
@@ -421,11 +446,11 @@ public sealed partial class DungeonTool
         {
             return false;
         }
-        string? problem = Problem(p);
+        var problem = Problem(p);
         var rooms = d.Rooms.ToList();
         rooms.Add(p);
         var made = ContentsOf(d, [p]);
-        var with = new StringBuilder(made.Count > 0 ? $" with {made.Count} object(s)" : "");
+        int objects = made.Count, doors = 0;
         // Its door, as the game rolls one where a room joins (on the opening it took).
         if (WithDoors)
         {
@@ -433,15 +458,35 @@ public sealed partial class DungeonTool
             {
                 if (Dungeons.RollDoor(d.Kind, j, Random) is string door)
                 {
-                    with.Append(with.Length == 0 ? " with a door" : " and a door");
+                    doors++;
                     made.Add((new NewObject(0, StableHash.Of(door), j.Position, BlueprintFormats.ToEuler(j.Rotation), 0), false));
                 }
             }
         }
+        var added = Added(p.Name, objects, doors);
         // Selected before the change is told (Changed): the panel shows Delete for it at once.
-        Selected = rooms.Count - 1;
-        Commit(d, rooms, label ?? $"Dungeon: added {p.Name}", problem == null ? $"Added {p.Name}{with}." : $"Added {p.Name}{with}. {problem}", add: made);
+        _selected = (rooms.Count - 1, p.Hash, p.Position);
+        Commit(d, rooms, label ?? Lang.T("dungeon.undo.added", p.Name), added + (problem ?? Said.Empty), add: made);
         return true;
+    }
+
+    /// <summary>
+    /// What adding a room says: the room, with the objects the game made in it and the doors it rolled, when any.
+    /// </summary>
+    /// <param name="room">The room's name.</param>
+    /// <param name="objects">How many objects of its own it brought.</param>
+    /// <param name="doors">How many doors were rolled where it joins.</param>
+    internal static Said Added(string room, int objects, int doors)
+    {
+        return (objects > 0, doors) switch
+        {
+            (false, 0) => Said.Of("dungeon.msg.added", room),
+            (false, 1) => Said.Of("dungeon.msg.addedDoor", room),
+            (false, _) => Said.Of("dungeon.msg.addedDoors", room, doors),
+            (true, 0) => Said.Of("dungeon.msg.addedObjects", room, objects),
+            (true, 1) => Said.Of("dungeon.msg.addedObjectsDoor", room, objects),
+            (true, _) => Said.Of("dungeon.msg.addedObjectsDoors", room, objects, doors),
+        };
     }
 
     /// <summary>
@@ -469,8 +514,8 @@ public sealed partial class DungeonTool
         {
             inside.AddRange(DoorsAt(j).Where(k => !inside.Contains(k)));
         }
-        Commit(d, rooms, label ?? $"Dungeon: removed {name}", $"Removed {name}" + (inside.Count > 0 ? $" and the {inside.Count} object(s) in it" : "") +
-            ". Its neighbours' openings are open now: Close open ends caps them.", inside);
+        var removed = inside.Count > 0 ? Said.Of("dungeon.msg.removedObjects", name, inside.Count) : Said.Of("dungeon.msg.removed", name);
+        Commit(d, rooms, label ?? Lang.T("dungeon.undo.removed", name), removed + Said.Of("dungeon.msg.openNow"), inside);
         return true;
     }
 
@@ -541,12 +586,12 @@ public sealed partial class DungeonTool
         }
         if (added > 0)
         {
-            Commit(d, rooms, label ?? $"Dungeon: closed {added} open end(s)", $"Closed {added} open end(s) with end caps." + (left > 0 ? $" {left} have no end cap of their type." : ""),
-                add: ContentsOf(d, rooms.Skip(before)));
+            Commit(d, rooms, label ?? Lang.T("dungeon.undo.closed", added),
+                Said.Of("dungeon.msg.closed", added) + (left > 0 ? Said.Of("dungeon.msg.capsLeft", left) : Said.Empty), add: ContentsOf(d, rooms.Skip(before)));
         }
         else
         {
-            Message?.Invoke(left > 0 ? $"{left} open end(s) have no end cap of their type." : "No open end to close.");
+            Message?.Invoke(left > 0 ? Said.Of("dungeon.msg.noCap", left) : Said.Of("dungeon.msg.noOpenEnd"));
         }
         return added;
     }
@@ -567,13 +612,17 @@ public sealed partial class DungeonTool
         var there = DoorsAt(j);
         if (there.Count > 0)
         {
-            s.Commit(label ?? "Dungeon: removed a door", null, there, []);
-            Message?.Invoke("Removed the door. Ctrl+Z puts it back.");
+            s.Commit(label ?? Lang.T("dungeon.undo.doorRemoved"), null, there, []);
+            Message?.Invoke(Said.Of("dungeon.msg.doorRemoved"));
         }
         else if (Dungeons.DoorsFor(d.Kind, j.Type).FirstOrDefault() is { Prefab: { Length: > 0 } door })
         {
-            s.Commit(label ?? "Dungeon: added a door", null, [], [(new NewObject(0, StableHash.Of(door), j.Position, BlueprintFormats.ToEuler(j.Rotation), 0), false)]);
-            Message?.Invoke($"Added a door ({door}). Click it again to take it away.");
+            s.Commit(label ?? Lang.T("dungeon.undo.doorAdded"), null, [], [(new NewObject(0, StableHash.Of(door), j.Position, BlueprintFormats.ToEuler(j.Rotation), 0), false)]);
+            Message?.Invoke(Said.Of("dungeon.msg.doorAdded", door));
+        }
+        else
+        {
+            Message?.Invoke(Said.Of("dungeon.msg.noDoor"));
         }
         Changed?.Invoke();
     }
@@ -607,10 +656,10 @@ public sealed partial class DungeonTool
     /// <param name="d">The dungeon changed.</param>
     /// <param name="rooms">Its new room list.</param>
     /// <param name="label">The history's name for the step.</param>
-    /// <param name="message">What the status line says it did.</param>
+    /// <param name="message">What the status line says it did (for the user, and in English for Claude).</param>
     /// <param name="alsoRemove">Other things to take away (indices into the scene's things).</param>
     /// <param name="add">Other objects to add, each with whether it is a player-built piece.</param>
-    private void Commit(DungeonRooms.Dungeon d, List<Dungeons.Placed> rooms, string label, string message, IReadOnlyCollection<int>? alsoRemove = null,
+    private void Commit(DungeonRooms.Dungeon d, List<Dungeons.Placed> rooms, string label, Said message, IReadOnlyCollection<int>? alsoRemove = null,
         IReadOnlyList<(NewObject, bool)>? add = null)
     {
         if (Scene?.Session is not { } s)
@@ -620,7 +669,7 @@ public sealed partial class DungeonTool
         byte[]? bytes = ObjectData.Bytes(Scene.World, s.Edits, d.Thing.Id);
         if (bytes == null)
         {
-            Message?.Invoke("The dungeon's data could not be read.");
+            Message?.Invoke(Said.Of("dungeon.msg.unreadable"));
             return;
         }
         var z = ZdoData.Parse(Dungeons.WithRooms(bytes, rooms));
@@ -628,7 +677,7 @@ public sealed partial class DungeonTool
         adds.AddRange(add ?? []);
         s.Commit(label, null, [d.Index, .. alsoRemove ?? []], adds);
         HoverEnd = null;
-        Message?.Invoke(message + " Ctrl+Z undoes; Save writes it.");
+        Message?.Invoke(message + Said.Of("dungeon.msg.undoSave"));
         Changed?.Invoke();
     }
 }
