@@ -82,7 +82,7 @@ public static partial class BuildingPicture
     /// <param name="rgba">The picture's pixels, four bytes each.</param>
     /// <param name="at">The pixel's index.</param>
     /// <param name="colour">The colour to set.</param>
-    private static void SetColour(byte[] rgba, int at, Vector3 colour)
+    internal static void SetColour(byte[] rgba, int at, Vector3 colour)
     {
         rgba[at * 4] = (byte)Math.Clamp(colour.X, 0, 255);
         rgba[at * 4 + 1] = (byte)Math.Clamp(colour.Y, 0, 255);
