@@ -101,7 +101,7 @@ public sealed class StartPageLangTests : IDisposable
                 "Valheim", "World Editor", "Hut", "Longhouse", "Valhalla", "Bare", "valheim@203.0.113.10", "admin@203.0.113.11",
                 "/keys/id", "Midgard", Ui.Tilde(world), "/worlds/CITest", "/nowhere", "CITest", "Broken", "No save files in it.",
             ];
-            Assert.Empty(PseudoLang.Untranslated(w, data));
+            Assert.Empty(PseudoLang.Untranslated(page.View, data));
             page.ShowHomestead(new Homestead.Status(false, null, [], "/somewhere"));
             Assert.Empty(PseudoLang.Untranslated(page.WorkshopPanel));
 
