@@ -166,7 +166,7 @@ public sealed class SavedSelectionsTests : IDisposable
         w.Edit(s);
         w.Tools.ChooseSelect();
         var messages = new List<string>();
-        w.SelectPanel.Message += messages.Add;
+        w.SelectPanel.Message += m => messages.Add(m.Shown);
         w.SelectPanel.WorldName = () => "World one";
         w.SelectPanel.AskName = Task.FromResult<string?>;
         w.SelectPanel.Confirm = _ => Task.FromResult(true);
@@ -442,7 +442,7 @@ public sealed class SavedSelectionsTests : IDisposable
         var (w, _, wall, _) = PickWindow();
         var p = w.SelectPanel;
         var messages = new List<string>();
-        p.Message += messages.Add;
+        p.Message += m => messages.Add(m.Shown);
         w.Tools.ChooseSelect();
         Click(p.ReplacePickButton);
         Press(w, wall, MouseButton.Left);

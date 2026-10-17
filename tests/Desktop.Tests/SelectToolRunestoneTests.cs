@@ -25,7 +25,7 @@ public class SelectToolRunestoneTests
         w.Tools.ChooseSelect();
         w.View.Select([0]);
         var said = new List<(string Text, bool Warn)>();
-        w.View.SelectTool.Message += (t, warn) => said.Add((t, warn));
+        w.View.SelectTool.Message += (t, warn) => said.Add((t.Shown, warn));
         w.View.SelectTool.PlaceAt(5, 0, 5, 0, by: true);
         Assert.Contains(("Runestones cannot be moved or turned, only deleted (the game builds them from their location).", true), said);
         Assert.False(w.View.SelectTool.Moving);

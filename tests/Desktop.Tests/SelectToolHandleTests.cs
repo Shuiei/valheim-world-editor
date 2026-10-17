@@ -201,7 +201,7 @@ public class SelectToolHandleTests
     {
         var v = Open(T(1, Beech, 40, 30, 40, false));
         string? said = null;
-        v.Tool.Message += (t, _) => said = t;
+        v.Tool.Message += (t, _) => said = t.Shown;
         v.Tool.OnGround = false;
         Assert.True(v.Tool.Key(Key.PageDown, true));
         Assert.Equal("Moving 1 object(s): 0.0 m, -1.00 m", said);

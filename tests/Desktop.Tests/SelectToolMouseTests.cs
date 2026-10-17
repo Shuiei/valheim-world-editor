@@ -20,7 +20,7 @@ public class SelectToolMouseTests
     /// <summary>
     /// The window, its edit session and the view's size, with the Select tool's mouse driven at world points.
     /// </summary>
-    private sealed record View(MainWindow W, EditSession S, Avalonia.Size Size)
+    internal sealed record View(MainWindow W, EditSession S, Avalonia.Size Size)
     {
         public SelectTool Tool => W.View.SelectTool;
 
@@ -64,7 +64,7 @@ public class SelectToolMouseTests
     /// <summary>
     /// A box around a thing in view space: a piece's own box, or 1 × 5 × 1 m for a tree.
     /// </summary>
-    private static (int, Vector3, Vector3) Box(WorldScene s, int i)
+    internal static (int, Vector3, Vector3) Box(WorldScene s, int i)
     {
         var t = s.Things[i];
         var info = PieceCatalog.Get(t.Prefab);
@@ -77,7 +77,7 @@ public class SelectToolMouseTests
     /// A shown main window editing a flat 2 × 2 zone area with these objects (given their boxes) in the Select tool,
     /// looking straight down on the middle.
     /// </summary>
-    private static View Open(params WorldScene.Thing[] things)
+    internal static View Open(params WorldScene.Thing[] things)
     {
         var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
         w.Show();
@@ -95,7 +95,7 @@ public class SelectToolMouseTests
     /// <summary>
     /// A thing of this kind at world point (x, y, z): a building piece, or a tree when not.
     /// </summary>
-    private static WorldScene.Thing T(int id, int prefab, float x, float y, float z, bool piece = true) => new(id, prefab, new Vector3(x, y, z), Vector3.Zero, piece ? 0 : 1, piece);
+    internal static WorldScene.Thing T(int id, int prefab, float x, float y, float z, bool piece = true) => new(id, prefab, new Vector3(x, y, z), Vector3.Zero, piece ? 0 : 1, piece);
 
     // Shift + click: the row from the last object clicked (w1, Shift + click w3: w1, w2, w3), not what
     // stands off it; Ctrl + click adds one.
@@ -241,7 +241,7 @@ public class SelectToolMouseTests
         Assert.Equal([3], v.Selected);
         // A tree is not a building.
         string? said = null;
-        v.Tool.Message += (t, _) => said = t;
+        v.Tool.Message += (t, _) => said = t.Shown;
         v.W.View.Select([4]);
         v.Tool.WholeBuilding();
         Assert.StartsWith("Select a building piece first", said);
@@ -257,7 +257,7 @@ public class SelectToolMouseTests
         var ship = TestScenes.AddShip(v.S);
         v.W.View.SetBoxes(ship.Select(i => Box(v.S.Scene, i)));
         string? said = null;
-        v.Tool.Message += (t, _) => said = t;
+        v.Tool.Message += (t, _) => said = t.Shown;
         v.Click(40, 38, clicks: 2);
         Assert.Equal(ship.Order(), v.Selected.Order());
         Assert.Equal("Selected the whole vehicle: 5 part(s).", said);
@@ -305,7 +305,7 @@ public class SelectToolMouseTests
     {
         var v = Open(T(1, Beech, 40, 30, 40, false), T(2, Beech, 50, 30, 50, false), T(3, Wall, 45, 30, 45));
         string? said = null;
-        v.Tool.Message += (t, _) => said = t;
+        v.Tool.Message += (t, _) => said = t.Shown;
         v.Tool.SameKind();
         Assert.StartsWith("Select an object of each kind", said);
         v.W.View.Select([0]);
@@ -324,7 +324,7 @@ public class SelectToolMouseTests
         // A tree floating 6 m up, and another above a floor.
         var v = Open(T(1, Beech, 40, 36, 40, false), T(2, Floor, 50, 31, 50), T(3, Beech, 50, 40, 50, false));
         string? said = null;
-        v.Tool.Message += (t, _) => said = t;
+        v.Tool.Message += (t, _) => said = t.Shown;
         v.W.View.Select([0, 2]);
         Assert.True(v.Tool.Key(Avalonia.Input.Key.End, false));
         Assert.Equal("Dropped 2 object(s): 1 onto other objects, 1 onto the ground.", said);
@@ -357,7 +357,7 @@ public class SelectToolMouseTests
     {
         var v = Open(T(1, Beech, 40, 30, 40, false));
         string? said = null;
-        v.Tool.Message += (t, _) => said = t;
+        v.Tool.Message += (t, _) => said = t.Shown;
         v.Tool.Delete();
         Assert.Equal("Select objects to delete first.", said);
         Assert.False(v.S.CanUndo);

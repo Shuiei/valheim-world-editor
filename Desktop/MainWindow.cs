@@ -1246,8 +1246,8 @@ public sealed partial class MainWindow : Window
     {
         if (CopyToClipboard() is { } clip)
         {
-            MessageText.Text = Tools.Mode == ToolMode.Select ? $"Copied {clip.Objects.Count} object(s). Ctrl+V to paste (R turns, F mirrors)."
-                : $"Copied {clip.W} × {clip.H} m and {clip.Objects.Count} object(s). Ctrl+V to paste, here or in another area.";
+            Msg(Tools.Mode == ToolMode.Select ? Said.Of("paste.msg.copiedObjects", clip.Objects.Count)
+                : Said.Of("paste.msg.copiedArea", clip.W, clip.H, clip.Objects.Count));
         }
     }
 
@@ -1264,7 +1264,7 @@ public sealed partial class MainWindow : Window
         // An area with nothing in it copies its ground only: nothing to take away, no undo step.
         if (clip.Taken.Count == 0)
         {
-            MessageText.Text = $"Copied {clip.W} × {clip.H} m of ground: no objects to cut here. Ctrl+V to paste it, here or in another area.";
+            Msg("paste.msg.copiedGround", clip.W, clip.H);
             return;
         }
         s.Delete(clip.Taken);
@@ -1272,8 +1272,7 @@ public sealed partial class MainWindow : Window
         {
             View.Select([]);
         }
-        MessageText.Text = $"Cut {clip.Objects.Count} object(s): gone from here (Ctrl+Z brings them back). Ctrl+V to paste them, here or in another area"
-            + (Tools.Mode == ToolMode.Select ? " (R turns, F mirrors)." : "; the ground stays as it is.");
+        Msg(Tools.Mode == ToolMode.Select ? Said.Of("paste.msg.cutObjects", clip.Objects.Count) : Said.Of("paste.msg.cutArea", clip.Objects.Count));
         UpdateSaveBar();
     }
 
@@ -1294,7 +1293,7 @@ public sealed partial class MainWindow : Window
             clip = CopyData.FromThings(s.Scene, [.. View.Selected], NameOfPrefab, View.GroundHeight);
             if (clip == null)
             {
-                MessageText.Text = "Select objects to copy first.";
+                Msg("paste.msg.copyFirst");
                 return null;
             }
         }
@@ -1305,14 +1304,14 @@ public sealed partial class MainWindow : Window
             clip = CopyData.FromArea(View.Area, s.Ground, s.Scene, inside, NameOfPrefab);
             if (clip == null)
             {
-                MessageText.Text = "Select an area first.";
+                Msg("paste.msg.areaFirst");
                 return null;
             }
             // No objects and so no ground (it goes with buildings only): nothing a paste would put down. The clipboard
             // keeps what it had.
             if (clip.Objects.Count == 0 && Array.TrueForAll(clip.Rel, float.IsNaN))
             {
-                MessageText.Text = "Nothing to copy here: the area holds no objects (its ground goes only with buildings).";
+                Msg("paste.msg.nothingToCopy");
                 return null;
             }
         }
@@ -1328,7 +1327,7 @@ public sealed partial class MainWindow : Window
     {
         if (View.Paste.Clip == null)
         {
-            MessageText.Text = "Copy an area first (Area tool, Ctrl+C).";
+            Msg("paste.msg.copyAreaFirst");
             return;
         }
         View.SelectTool.Commit();
@@ -1356,7 +1355,7 @@ public sealed partial class MainWindow : Window
         // on whatever is there, among the trees.
         if (!View.Paste.Fits(at, s.Ground.W, s.Ground.H))
         {
-            MessageText.Text = "Not pasted: it goes past the open area. Open a bigger area around the place (the map), then paste again.";
+            Msg("paste.msg.tooFar");
             return;
         }
         // The objects' heights come from the ground as the paste leaves it: the ground step fills the list,
@@ -1366,7 +1365,7 @@ public sealed partial class MainWindow : Window
         var cleared = new List<int>();
         int touched = 0;
         var paste = View.Paste;
-        string label = paste.Count > 1 ? $"Paste ×{paste.Count}" : "Paste";
+        string label = paste.Count > 1 ? Lang.T("paste.undo.copies", paste.Count) : Lang.T("paste.label.paste");
         float ox = s.Scene.OriginX, oz = s.Scene.OriginZ;
         var linkIds = s.ReadLinks().Ids;
         s.Commit(label, g =>
@@ -1390,8 +1389,11 @@ public sealed partial class MainWindow : Window
             }
             return (t, rect);
         }, cleared, add);
-        MessageText.Text = $"Pasted{(paste.Count > 1 ? $" {paste.Count} copies" : "")}{(touched > 0 ? " with the ground" : "")}{(add.Count > 0 ? $", {add.Count} object(s)" : "")}"
-            + $"{(cleared.Count > 0 ? $", {cleared.Count} tree(s), rock(s) and the like cleared from the site" : "")}. Click again to paste more, Esc when done.";
+        Msg(Said.Of("paste.msg.pasted", paste.Count > 1 ? Said.Of("paste.msg.pastedCopies", paste.Count) : Said.Empty,
+                touched > 0 ? Said.Of("paste.msg.pastedGround") : Said.Empty,
+                add.Count > 0 ? Said.Of("paste.msg.pastedObjects", add.Count) : Said.Empty,
+                cleared.Count > 0 ? Said.Of("paste.msg.pastedCleared", cleared.Count) : Said.Empty)
+            + Said.Of("paste.msg.pasteMore"));
         UpdateSaveBar();
     }
 
@@ -1410,7 +1412,7 @@ public sealed partial class MainWindow : Window
         BuilderIds.AddRange(players.Select(p => p.Id));
         BuilderIds.Add(-1);
         BuilderIds.Add(0);
-        BuilderBox.ItemsSource = players.Select(p => p.Label).Append("Other player id…").Append("Nobody (not player built)").ToList();
+        BuilderBox.ItemsSource = players.Select(p => p.Label).Append(Lang.T("select.builder.other")).Append(Lang.T("select.builder.nobody")).ToList();
         BuilderBox.SelectedIndex = BuilderIds.IndexOf(TerrainEditor.Save.WorldSave.Builder);
         _fillingBuilders = false;
     }
@@ -1437,7 +1439,7 @@ public sealed partial class MainWindow : Window
             {
                 if (!string.IsNullOrEmpty(text))
                 {
-                    MessageText.Text = "A player id is a whole number other than 0.";
+                    Msg("select.msg.badPlayerId");
                 }
                 FillBuilders();
                 return;
@@ -1447,8 +1449,9 @@ public sealed partial class MainWindow : Window
         PlacePanel.Memory.Builders[w.Name] = id;
         PlacePanel.Memory.Save();
         FillBuilders();
-        MessageText.Text = id == 0 ? "New pieces get no builder: the game takes them for parts of a ruin."
-            : $"New pieces are built by {Builders.Players(w).FirstOrDefault(p => p.Id == id)?.Label ?? $"player {id}"}.";
+        Msg(id == 0 ? Said.Of("select.msg.builtByNobody")
+            : Builders.Players(w).FirstOrDefault(p => p.Id == id)?.Words is { } who ? Said.Of("select.msg.builtBy", who)
+            : Said.Of("select.msg.builtByPlayer", id));
     }
 
     /// <summary>
@@ -1463,7 +1466,7 @@ public sealed partial class MainWindow : Window
         }
         if (TerrainEditor.Save.WorldSave.Builder == 0)
         {
-            MessageText.Text = "Built by is set to Nobody: choose a player first (View panel, Building).";
+            Msg("select.msg.claimNobody");
             return;
         }
         var sel = View.Selected.ToList();
@@ -1480,12 +1483,12 @@ public sealed partial class MainWindow : Window
         }
         if (adds.Count == 0)
         {
-            MessageText.Text = "Nothing to change: the selected pieces already have a builder, or are not things players build.";
+            Msg("select.msg.claimNothing");
             return;
         }
-        var copies = s.Commit($"Made {adds.Count} piece(s) player built", null, remove, adds);
+        var copies = s.Commit(Lang.T("select.undo.claimed", adds.Count), null, remove, adds);
         View.Select(sel.Where(i => !remove.Contains(i)).Concat(copies));
-        MessageText.Text = $"{adds.Count} piece(s) are now player built ({sel.Count - adds.Count} left as they were). Save writes it.";
+        Msg("select.msg.claimed", adds.Count, sel.Count - adds.Count);
         UpdateSaveBar();
     }
 
@@ -1497,7 +1500,7 @@ public sealed partial class MainWindow : Window
         View.SelectTool.Commit();
         if (View.Selected.Count == 1 && Session?.Scene.Things[View.Selected.First()].Runestone == true)
         {
-            MessageText.Text = "A runestone holds no data of its own: the game builds it from its location. It can only be deleted.";
+            Msg("select.msg.runestoneData");
             return;
         }
         if (View.Selected.Count == 1 && Inspector.Open(View.Selected.First()))
@@ -2537,7 +2540,7 @@ public sealed partial class MainWindow : Window
         SetUpWorkshop();
         WireInspector();
         WireSelectPanel();
-        AskPlayerId = () => Dialogs.AskText(this, "Built by", "Player id to write as the builder (the number Valheim keeps for a character):");
+        AskPlayerId = () => Dialogs.AskText(this, Lang.T("select.ask.playerId.title"), Lang.T("select.ask.playerId.text"));
         History.Message += t => { Msg(t); UpdateSaveBar(); };
         History.Allow = AllowEarlier;
         MaskPanel = new MaskPanel(Mask);
@@ -2573,7 +2576,7 @@ public sealed partial class MainWindow : Window
         WireShapePanels();
         WireScriptPanel();
         Tools.ToolChanged += OnToolChanged;
-        View.SelectTool.Message += (text, _) => MessageText.Text = text;
+        View.SelectTool.Message += (said, _) => Msg(said);
         View.StrokeEnded += OnStrokeEnded;
         WireKeys();
         Closing += async (_, e) => await OnClosingAsync(e);
@@ -2634,15 +2637,15 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void WireSelectPanel()
     {
-        SelectPanel.Message += t => MessageText.Text = t;
+        SelectPanel.Message += Msg;
         SelectPanel.PickKindAsked += PickKind;
         SelectPanel.NameOf = NameOfPrefab;
         SelectPanel.WorldName = () => World?.World.Name is { Length: > 0 } n ? n : View.Scene?.World?.Name is { Length: > 0 } m ? m : null;
         SelectPanel.Things = () => View.Scene?.Things;
         SelectPanel.SelectedIds = () => View.Selected;
         SelectPanel.SelectIds = ids => { Tools.ChooseSelect(); View.Select(ids); };
-        SelectPanel.AskName = initial => Dialogs.AskText(this, "Keep the selection", "Name of the selection:", initial);
-        SelectPanel.Confirm = text => Dialogs.Ask(this, "Saved selections", text, "Forget");
+        SelectPanel.AskName = initial => Dialogs.AskText(this, Lang.T("select.ask.keep.title"), Lang.T("select.ask.keep.text"), initial);
+        SelectPanel.Confirm = text => Dialogs.Ask(this, Lang.T("select.ask.forget.title"), text, Lang.T("select.label.forget"));
         SelectPanel.InspectButton.Click += (_, _) => Inspect();
         View.InspectAsked += () => { if (View.Selected.Count == 1) { Inspect(); } };
         SelectPanel.ClaimButton.Click += (_, _) => Claim();
@@ -2659,7 +2662,7 @@ public sealed partial class MainWindow : Window
         var sel = View.Selected.ToList();
         if (Session is not { } s || sel.Count == 0)
         {
-            MessageText.Text = "Select objects to replace first.";
+            Msg("select.msg.replaceFirst");
             return;
         }
         AreaPanel!.Replace(s, sel, prefab);

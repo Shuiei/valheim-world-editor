@@ -176,7 +176,7 @@ public sealed class SelectPanelTests : IDisposable
         await p.Keep();
         Assert.Equal(0, p.SavedBox.ItemCount);
         var messages = new List<string>();
-        p.Message += messages.Add;
+        p.Message += m => messages.Add(m.Shown);
         await p.Keep();
         Assert.Equal("Could not keep the selection: selections.json in the editor's data folder cannot be read or written.", Assert.Single(messages));
     }

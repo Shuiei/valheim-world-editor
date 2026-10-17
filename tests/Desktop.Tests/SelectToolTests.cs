@@ -49,7 +49,7 @@ public class SelectToolTests
             (3, V(-118, 29, 182), V(182, 31, -118)),
         ]);
         string? said = null;
-        v.SelectTool.Message += (t, _) => said = t;
+        v.SelectTool.Message += (t, _) => said = t.Shown;
         // Keeping their height (not put on the ground first), the trees drop from 40 m.
         v.SelectTool.OnGround = false;
         v.Select([0, 1]);
@@ -59,6 +59,27 @@ public class SelectToolTests
         var trees = s.Scene.Things.Where(t => !t.Gone && t.Prefab == Beech).ToList();
         Assert.Equal(34, trees.Single(t => MathF.Abs(t.Position.X - 42) < 0.01f).Position.Y, 2);
         Assert.Equal(31, trees.Single(t => MathF.Abs(t.Position.X - 2) < 0.01f).Position.Y, 2);
+    }
+
+    // A turn or lift too small to be a move (float residue) is not said: no ", turned 0°" or ", +0.00 m".
+    [AvaloniaFact]
+    public void ATurnOrLiftTooSmallToBeAMoveIsNotSaid()
+    {
+        var s = Area();
+        var v = new GlView();
+        v.Show(s.Scene, null);
+        string? said = null;
+        v.SelectTool.Message += (t, _) => said = t.English;
+        v.SelectTool.OnGround = false;
+        v.Select([0]);
+        v.SelectTool.Lift(0.0004f);
+        Assert.Equal("Moving 1 object(s): 0.0 m", said);
+        v.SelectTool.Turn(0.0004f);
+        Assert.Equal("Moving 1 object(s): 0.0 m", said);
+        v.SelectTool.Turn(10);
+        v.SelectTool.Lift(0.5f);
+        Assert.Equal("Moving 1 object(s): 0.0 m, turned 10°, +0.50 m", said);
+        Assert.True(v.SelectTool.Cancel());
     }
 
     [Fact]

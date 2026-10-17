@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -51,43 +52,43 @@ public sealed class SelectPanel
     /// <summary>The exact turn, in degrees clockwise seen from above.</summary>
     internal NumericUpDown TurnBox { get; } = Num(1m);
     /// <summary>Moves the selection there (or by the boxes' values with Move by).</summary>
-    internal Button ApplyButton { get; } = new() { Content = "Move there", FontSize = 12 };
+    internal Button ApplyButton { get; } = new() { Content = Lang.T("select.label.moveThere"), FontSize = 12 };
     /// <summary>Opens the data of the one selected object (the window handles it).</summary>
-    internal Button InspectButton { get; } = new() { Content = "Inspect data (I)", FontSize = 12, IsEnabled = false };
+    internal Button InspectButton { get; } = new() { Content = Lang.T("select.label.inspect"), FontSize = 12, IsEnabled = false };
     /// <summary>Make player built: gives the selected pieces the chosen builder (the window handles it).</summary>
-    internal Button ClaimButton { get; } = new() { Content = "Make player built", FontSize = 12, IsEnabled = false };
+    internal Button ClaimButton { get; } = new() { Content = Lang.T("select.label.claim"), FontSize = 12, IsEnabled = false };
     /// <summary>
     /// Replace with: the kinds this world can make (filled by the window, in <see cref="ReplaceKinds"/> order).
     /// </summary>
     internal ComboBox ReplaceBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 400 };
     /// <summary>Replaces the selection with the kind chosen (raises <see cref="ReplaceAsked"/>).</summary>
-    internal Button ReplaceButton { get; } = new() { Content = "Replace the selection", FontSize = 12 };
+    internal Button ReplaceButton { get; } = new() { Content = Lang.T("select.label.replace"), FontSize = 12 };
     /// <summary>The prefab hashes of <see cref="ReplaceBox"/>'s entries, in its order.</summary>
     public List<int> ReplaceKinds { get; set; } = [];
     /// <summary>Replace the selection with this prefab.</summary>
     public event Action<int>? ReplaceAsked;
     /// <summary>Eyedropper: the "Replace with" kind picked from the world.</summary>
-    internal Button ReplacePickButton { get; } = new() { Content = "pick", FontSize = 11, Padding = new Thickness(6, 2) };
+    internal Button ReplacePickButton { get; } = new() { Content = Lang.T("select.label.pick"), FontSize = 11, Padding = new Thickness(6, 2) };
     /// <summary>
     /// Asks the window to take the next click on an object: the action's name for the prompt, and what to do with the
     /// picked prefab hash.
     /// </summary>
     public event Action<string, Action<int>>? PickKindAsked;
-    /// <summary>A line for the status bar.</summary>
-    public event Action<string>? Message;
+    /// <summary>A line for the status bar, in both languages.</summary>
+    public event Action<Said>? Message;
     /// <summary>Switches Move by on or off.</summary>
-    internal Button ByButton { get; } = new() { Content = "Move by", FontSize = 12 };
+    internal Button ByButton { get; } = new() { Content = Lang.T("select.label.moveBy"), FontSize = 12 };
 
     /// <summary>Saved selections (per world): the open world's, with their object counts.</summary>
     internal ComboBox SavedBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 300 };
     /// <summary>Keeps the selection under a name.</summary>
-    internal Button KeepButton { get; } = new() { Content = "Keep…", FontSize = 12 };
+    internal Button KeepButton { get; } = new() { Content = Lang.T("select.label.keep"), FontSize = 12 };
     /// <summary>Selects the saved selection.</summary>
-    internal Button LoadButton { get; } = new() { Content = "Select", FontSize = 12 };
+    internal Button LoadButton { get; } = new() { Content = Lang.T("rail.label.select"), FontSize = 12 };
     /// <summary>Adds the saved selection to what is selected.</summary>
-    internal Button AddSavedButton { get; } = new() { Content = "Add", FontSize = 12 };
+    internal Button AddSavedButton { get; } = new() { Content = Lang.T("common.add"), FontSize = 12 };
     /// <summary>Forgets the saved selection.</summary>
-    internal Button ForgetButton { get; } = new() { Content = "Forget", FontSize = 12 };
+    internal Button ForgetButton { get; } = new() { Content = Lang.T("select.label.forget"), FontSize = 12 };
     /// <summary>Select, Add and Forget, shown while a saved selection is chosen.</summary>
     private readonly StackPanel _savedRow;
     /// <summary>The open world's saved selections, in the list's order.</summary>
@@ -121,10 +122,10 @@ public sealed class SelectPanel
     {
         _tool = tool;
         // Keyed: Claude is kept from it by its key, whatever its label reads as in the language in use.
-        DeleteButton = Act("Delete", Tips.Of("select.delete")).Tip("select.delete");
-        BuildingButton = Act("Whole building", Tips.Of("select.building"));
-        SameButton = Act("Same kind", Tips.Of("select.same"));
-        InvertButton = Act("Invert", Tips.Of("select.invert"));
+        DeleteButton = Act(Lang.T("common.delete"), Tips.Of("select.delete")).Tip("select.delete");
+        BuildingButton = Act(Lang.T("select.label.building"), Tips.Of("select.building"));
+        SameButton = Act(Lang.T("select.label.same"), Tips.Of("select.same"));
+        InvertButton = Act(Lang.T("select.label.invert"), Tips.Of("select.invert"));
         DeleteButton.Click += (_, _) => tool.Delete();
         ReplaceButton.Click += (_, _) =>
         {
@@ -145,13 +146,13 @@ public sealed class SelectPanel
         YBox.Tip("select.y");
         ZBox.Tip("select.z");
         TurnBox.Tip("select.turn");
-        ReplacePickButton.Click += (_, _) => PickKindAsked?.Invoke("Replace", UsePicked);
+        ReplacePickButton.Click += (_, _) => PickKindAsked?.Invoke(Lang.T("common.replace"), UsePicked);
         BuildingButton.Click += (_, _) => tool.WholeBuilding();
         SameButton.Click += (_, _) => tool.SameKind();
         InvertButton.Click += (_, _) => tool.Invert();
-        GroundBox = new CheckBox { Content = "Put each object on the ground when moving", IsChecked = tool.OnGround, FontSize = 12 }.Tip("select.ground");
+        GroundBox = new CheckBox { Content = Lang.T("select.label.ground"), IsChecked = tool.OnGround, FontSize = 12 }.Tip("select.ground");
         GroundBox.IsCheckedChanged += (_, _) => tool.OnGround = GroundBox.IsChecked == true;
-        SnapBox = new CheckBox { Content = "Snap to other pieces when moving", IsChecked = tool.SnapToPieces, FontSize = 12 }.Tip("select.snap");
+        SnapBox = new CheckBox { Content = Lang.T("select.label.snap"), IsChecked = tool.SnapToPieces, FontSize = 12 }.Tip("select.snap");
         SnapBox.IsCheckedChanged += (_, _) => tool.SnapToPieces = SnapBox.IsChecked == true;
 
         KeepButton.Tip("select.keep");
@@ -177,10 +178,10 @@ public sealed class SelectPanel
             Grid.SetColumn(c, col);
             grid.Children.Add(c);
         }
-        Put(Cell("X", XBox), 0, 0);
-        Put(Cell("Y", YBox), 0, 1);
-        Put(Cell("Z", ZBox), 1, 0);
-        Put(Cell("Turn", TurnBox), 1, 1);
+        Put(Cell(Lang.T("select.label.x"), XBox), 0, 0);
+        Put(Cell(Lang.T("select.label.y"), YBox), 0, 1);
+        Put(Cell(Lang.T("select.label.z"), ZBox), 1, 0);
+        Put(Cell(Lang.T("brush.label.turn"), TurnBox), 1, 1);
         ByButton.Tip("select.by");
         ByButton.Click += (_, _) => SetBy(!_by);
         ApplyButton.Click += (_, _) => Apply();
@@ -189,7 +190,7 @@ public sealed class SelectPanel
             Spacing = 4,
             Children =
             {
-                new TextBlock { Text = "EXACT PLACE", FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 0) },
+                new TextBlock { Text = Lang.T("select.head.exact"), FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 0) },
                 grid,
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ApplyButton, ByButton } },
                 _info,
@@ -204,20 +205,20 @@ public sealed class SelectPanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = "Select", FontSize = 14, FontWeight = FontWeight.SemiBold },
-                    new TextBlock { Text = "Click objects (Ctrl adds; Shift + click takes the row from the last one), or drag on the ground around them. Drag a selected object to move the selection.", FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
+                    new TextBlock { Text = Lang.T("rail.label.select"), FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    new TextBlock { Text = Lang.T("select.hint.click"), FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                     new WrapPanel { Children = { DeleteButton, BuildingButton, SameButton, InvertButton, InspectButton, ClaimButton }, ItemSpacing = 4, LineSpacing = 4 },
-                    new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 6, Children = { new TextBlock { Text = "Replace with", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(ReplaceBox, 1), Ui.Col(ReplacePickButton, 2) } },
+                    new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 6, Children = { new TextBlock { Text = Lang.T("select.label.replaceWith"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(ReplaceBox, 1), Ui.Col(ReplacePickButton, 2) } },
                     ReplaceButton,
                     GroundBox,
                     SnapBox,
-                    new TextBlock { Text = "SAVED SELECTIONS", FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 0) },
+                    new TextBlock { Text = Lang.T("select.head.saved"), FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 0) },
                     new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 6, Children = { SavedBox, Ui.Col(KeepButton, 1) } },
                     _savedRow,
                     _exact,
                     new TextBlock
                     {
-                        Text = ", . turn (Shift: 15°) · PgUp PgDn lift (Shift: 1 m) · End drops onto what is under · Del deletes · Esc cancels a move · Alt + drag draws a zone over objects",
+                        Text = Lang.T("select.hint.keys"),
                         FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
                     },
                 },
@@ -233,11 +234,11 @@ public sealed class SelectPanel
         string name = ReplaceBox.ItemsSource is IList<string> names && i >= 0 && i < names.Count ? names[i] : NameOf?.Invoke(prefab) ?? prefab.ToString();
         if (i < 0)
         {
-            Message?.Invoke($"{name} cannot be placed: the game has no such kind to copy.");
+            Message?.Invoke(Said.Of("select.msg.cannotPlace", Said.Raw(name)));
             return;
         }
         ReplaceBox.SelectedIndex = i;
-        Message?.Invoke($"Replace with {name}.");
+        Message?.Invoke(Said.Of("select.msg.replaceWith", Said.Raw(name)));
     }
 
     /// <summary>The open world's saved selections into the list (the chosen one kept when it is still there).</summary>
@@ -246,8 +247,8 @@ public sealed class SelectPanel
         string? world = WorldName();
         int keep = SavedBox.SelectedIndex;
         _saved = world == null ? [] : SavedSelections.For(world);
-        SavedBox.ItemsSource = _saved.Select(s => $"{s.Name} ({s.Items.Count})").ToList();
-        SavedBox.PlaceholderText = _saved.Count > 0 ? "Saved selections…" : "No saved selections";
+        SavedBox.ItemsSource = _saved.Select(s => Lang.T("select.savedEntry", s.Name, s.Items.Count)).ToList();
+        SavedBox.PlaceholderText = _saved.Count > 0 ? Lang.T("select.savedSome") : Lang.T("select.savedNone");
         SavedBox.SelectedIndex = keep >= 0 && keep < _saved.Count ? keep : -1;
         _savedRow.IsVisible = SavedBox.SelectedIndex >= 0;
     }
@@ -260,22 +261,22 @@ public sealed class SelectPanel
         var items = things == null ? new List<SavedSelections.Item>() : [.. SelectedIds().Where(i => i >= 0 && i < things.Count && !things[i].Gone).Select(i => new SavedSelections.Item(things[i].Prefab, things[i].Position.X, things[i].Position.Y, things[i].Position.Z))];
         if (world == null || items.Count == 0)
         {
-            Message?.Invoke("Select something first.");
+            Message?.Invoke(Said.Of("select.msg.keepFirst"));
             return;
         }
-        string? name = (await AskName($"Selection {SavedSelections.For(world).Count + 1}"))?.Trim();
+        string? name = (await AskName(Lang.T("select.savedName", SavedSelections.For(world).Count + 1)))?.Trim();
         if (string.IsNullOrEmpty(name))
         {
             return;
         }
         if (!SavedSelections.Keep(world, name, items))
         {
-            Message?.Invoke("Could not keep the selection: selections.json in the editor's data folder cannot be read or written.");
+            Message?.Invoke(Said.Of("select.msg.keepFailed"));
             return;
         }
         FillSaved();
         SavedBox.SelectedIndex = _saved.FindIndex(s => s.Name == name);
-        Message?.Invoke($"Kept the selection “{name}” ({items.Count} object(s)). It can be picked again here, also after saving the world.");
+        Message?.Invoke(Said.Of("select.msg.kept", name, items.Count));
     }
 
     /// <summary>
@@ -293,7 +294,7 @@ public sealed class SelectPanel
         var s = _saved[i];
         var (ids, missing) = SavedSelections.Find(s, things);
         SelectIds(add ? [.. SelectedIds().Concat(ids).Distinct()] : ids);
-        Message?.Invoke($"Selected {ids.Count} object(s) of “{s.Name}”{(missing > 0 ? $"; {missing} are not in this area or no longer where they were" : "")}.");
+        Message?.Invoke(missing > 0 ? Said.Of("select.msg.savedMissing", ids.Count, s.Name, missing) : Said.Of("select.msg.saved", ids.Count, s.Name));
     }
 
     /// <summary>Forgets the chosen saved selection, once confirmed.</summary>
@@ -301,13 +302,13 @@ public sealed class SelectPanel
     {
         int i = SavedBox.SelectedIndex;
         string? world = WorldName();
-        if (world == null || i < 0 || i >= _saved.Count || !await Confirm($"Forget the selection “{_saved[i].Name}”?"))
+        if (world == null || i < 0 || i >= _saved.Count || !await Confirm(Lang.T("select.ask.forget.text", _saved[i].Name)))
         {
             return;
         }
         if (!SavedSelections.Forget(world, _saved[i].Name))
         {
-            Message?.Invoke("Could not forget the selection: selections.json in the editor's data folder cannot be read or written.");
+            Message?.Invoke(Said.Of("select.msg.forgetFailed"));
             return;
         }
         SavedBox.SelectedIndex = -1;
@@ -321,12 +322,12 @@ public sealed class SelectPanel
     private void SetBy(bool by)
     {
         _by = by;
-        ApplyButton.Content = by ? "Move by these" : "Move there";
+        ApplyButton.Content = by ? Lang.T("select.label.moveByThese") : Lang.T("select.label.moveThere");
         ByButton.Classes.Set("on", by);
         if (by)
         {
             XBox.Value = YBox.Value = ZBox.Value = TurnBox.Value = 0;
-            _info.Text = "Metres east (X), up (Y) and north (Z), and degrees to turn, from where the selection is now.";
+            _info.Text = Lang.T("select.hint.by");
         }
         else
         {
@@ -394,7 +395,7 @@ public sealed class SelectPanel
         ZBox.Value = (decimal)MathF.Round(at.Z, 2);
         TurnBox.Value = (decimal)MathF.Round(at.Turn, 1);
         _info.Text = at.Count > 1
-            ? $"The middle of the {at.Count} selected objects; Y is the lowest one, Turn the first one's. Turning turns them all around the middle."
-            : "World position (m) and turn (degrees, clockwise seen from above).";
+            ? Lang.T("select.hint.middle", at.Count)
+            : Lang.T("select.hint.one");
     }
 }
