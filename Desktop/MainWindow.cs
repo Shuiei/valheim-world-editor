@@ -3195,6 +3195,30 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
+    /// The world given on the command line (--world, --zone, --size) opened straight in the 3D editor; one that cannot be
+    /// opened is said where the editor shows how it loaded (in the language in use) and on the console (in English).
+    /// </summary>
+    /// <param name="world">The world's folder or name (null: the first one found).</param>
+    /// <param name="zoneX">The middle zone, x.</param>
+    /// <param name="zoneZ">The middle zone, z.</param>
+    /// <param name="size">The area, in zones each way.</param>
+    internal async Task OpenDirect(string? world, int zoneX, int zoneZ, int size)
+    {
+        try
+        {
+            var session = await Task.Run(() => WorldSession.Open(WorldScene.FindWorld(world)));
+            World = session;
+            var scene = await Task.Run(() => WorldScene.Load(session, zoneX, zoneZ, size));
+            await ShowEditor(scene);
+        }
+        catch (Exception ex)
+        {
+            LoadedInfo.Text = Lang.T("world.msg.openFailed", ex.Message);
+            Options.Say(Lang.En("world.msg.openFailed", ex.Message));
+        }
+    }
+
+    /// <summary>
     /// The window is open: with <paramref name="load"/>, the game's look is checked, Claude's connection applied and
     /// the models read; then the world given on the command line opens (or the start page shows), and the test
     /// driver starts when asked.
@@ -3221,18 +3245,7 @@ public sealed partial class MainWindow : Window
         if (Options.Direct)
         {
             // --world (and --zone): that area in the 3D editor at once.
-            try
-            {
-                var world = await Task.Run(() => WorldSession.Open(WorldScene.FindWorld(Options.World)));
-                World = world;
-                var scene = await Task.Run(() => WorldScene.Load(world, Options.ZoneX, Options.ZoneZ, Options.Size));
-                await ShowEditor(scene);
-            }
-            catch (Exception ex)
-            {
-                LoadedInfo.Text = Lang.T("world.msg.openFailed", ex.Message);
-                Options.Say(Lang.En("world.msg.openFailed", ex.Message));
-            }
+            await OpenDirect(Options.World, Options.ZoneX, Options.ZoneZ, Options.Size);
         }
         else
         {
