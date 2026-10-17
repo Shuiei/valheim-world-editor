@@ -240,8 +240,7 @@ public sealed class Editor : IDisposable
     public void CloseLocationNote()
     {
         Send("wait 300");
-        string? window = Xdotool("search", "--onlyvisible", "--pid", _p.Id.ToString(System.Globalization.CultureInfo.InvariantCulture))?
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+        string? window = GameWindow();
         if (window == null)
         {
             return;
@@ -264,8 +263,7 @@ public sealed class Editor : IDisposable
     /// <param name="notches">Wheel notches: down when positive, up when negative.</param>
     public void Scroll(int x, int y, int notches)
     {
-        string? window = Xdotool("search", "--onlyvisible", "--pid", _p.Id.ToString(System.Globalization.CultureInfo.InvariantCulture))?
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+        string? window = GameWindow();
         if (window == null)
         {
             return;
@@ -285,8 +283,7 @@ public sealed class Editor : IDisposable
     /// <param name="y">Pixels from the window's top.</param>
     public void Point(int x, int y)
     {
-        string? window = Xdotool("search", "--onlyvisible", "--pid", _p.Id.ToString(System.Globalization.CultureInfo.InvariantCulture))?
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+        string? window = GameWindow();
         if (window == null)
         {
             return;
@@ -295,6 +292,11 @@ public sealed class Editor : IDisposable
         Xdotool("mousemove", "--window", window, x.ToString(inv), y.ToString(inv));
         Send("wait 300");
     }
+
+    /// <summary>The game window to drive: the last visible window of its process; null when there is none.</summary>
+    private string? GameWindow() =>
+        Xdotool("search", "--onlyvisible", "--pid", _p.Id.ToString(System.Globalization.CultureInfo.InvariantCulture))?
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
 
     /// <summary>Runs xdotool with these arguments; its output, or null when it is missing or fails.</summary>
     private static string? Xdotool(params string[] args)
