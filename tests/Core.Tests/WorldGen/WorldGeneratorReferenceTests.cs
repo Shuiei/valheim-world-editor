@@ -56,7 +56,8 @@ public class WorldGeneratorReferenceTests
     public void UnknownAndShortLinesAreReportedAndLeaveTheRandomStateAlone()
     {
         // An unknown Random call was replayed as insideUnitCircle (moving the state on, so every later line differed),
-        // and a short line threw.
+        // and a short line threw. A line of no kind the verifier compares (a note, another kind) is skipped: neither
+        // unreadable nor counted.
         string bad = Path.Combine(Path.GetTempPath(), "vwe-ref-" + Guid.NewGuid().ToString("N")[..8] + ".txt");
         try
         {
@@ -70,11 +71,14 @@ public class WorldGeneratorReferenceTests
                 "P 3f000000",
                 "H 1",
                 "R value",
+                "# a note",
+                "Q 1 2 3",
             ]);
             var r = DumpVerifier.Run(bad, "5DCcdIcuYJ");
             Assert.Equal(4, r.Unreadable);
             Assert.Equal(0, r.RandomWrong);
             Assert.Equal(2, r.RandomOk);
+            Assert.Equal((0, 0, 0, 0, 0, 0, 0, 0), (r.PerlinOk, r.PerlinWrong, r.HeightsOk, r.HeightsWrong, r.BiomesWrong, r.ZonesOk, r.ZonesWrong, r.WaterWrong));
             Assert.False(r.AllMatch);
             Assert.Contains(r.Errors, e => e.StartsWith("Line 2 not read", StringComparison.Ordinal));
         }

@@ -6,7 +6,7 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// DungeonShell's pillars and posts: segments from the foot up to the top, the last rising into the roof slab, never
-/// past it into the room above. Its walls' windows: the same whatever the culture.
+/// past it into the room above. A doorway of no known kind: nothing. Its walls' windows: the same whatever the culture.
 /// </summary>
 public class DungeonShellTests
 {
@@ -36,6 +36,20 @@ public class DungeonShellTests
         DungeonShell.Stack([new DungeonKit.Column("tall", 4, 2), new DungeonKit.Column("short", 2, 1)], o, 0, 0, 0, 7);
 
         Assert.Equal([("tall", 2f), ("short", 5f), ("short", 7f)], o.Items.Select(i => (i.Prefab, i.Position.Y)));
+    }
+
+    // A door of a kind the shell does not know (none the plan makes) adds nothing, and nothing fails.
+    [Theory]
+    [InlineData((DungeonKit.Door)(-1))]
+    [InlineData((DungeonKit.Door)99)]
+    public void ADoorOfNoKnownKindAddsNothing(DungeonKit.Door kind)
+    {
+        var o = new DungeonOut();
+        var d = new DungeonPlan.Doorway { A = new(), B = new(), T1 = (0, 0), T2 = (0, 1), Dir = (1, 0), Kind = kind };
+
+        DungeonShell.Doorway(d, 0, DungeonKit.MaterialOf("Stone"), o, "Meadows");
+
+        Assert.Empty(o.Items);
     }
 
     [Fact]
