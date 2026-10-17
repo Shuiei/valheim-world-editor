@@ -216,17 +216,17 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
     private void Caught(Exception e, string doing, bool brief = false, LogLevel level = LogLevel.Warning, [CallerFilePath] string file = "", [CallerLineNumber] int line = 0, [CallerMemberName] string member = "")
     {
         string where = file.Substring(file.LastIndexOfAny(['/', '\\']) + 1);
-        string text = $"WorldEditorBridge: caught at {where}:{line} ({member}) while {doing}: {e.GetType().FullName}: {e.Message.Replace("\r", " ").Replace("\n", " ")}";
+        var text = new StringBuilder($"WorldEditorBridge: caught at {where}:{line} ({member}) while {doing}: {e.GetType().FullName}: {e.Message.Replace("\r", " ").Replace("\n", " ")}");
         if (!brief)
         {
-            text += Environment.NewLine + e.StackTrace;
+            text.AppendLine().Append(e.StackTrace);
             for (Exception inner = e.InnerException; inner != null; inner = inner.InnerException)
             {
-                text += Environment.NewLine + " ---> " + inner.GetType().FullName + ": " + inner.Message + Environment.NewLine + inner.StackTrace;
+                text.AppendLine().Append(" ---> ").Append(inner.GetType().FullName).Append(": ").Append(inner.Message).AppendLine().Append(inner.StackTrace);
             }
         }
         string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile).TrimEnd('/', '\\');
-        Logger.Log(level, home.Length > 1 ? text.Replace(home, "~") : text);
+        Logger.Log(level, home.Length > 1 ? text.Replace(home, "~").ToString() : text.ToString());
     }
 
     /// <summary>
