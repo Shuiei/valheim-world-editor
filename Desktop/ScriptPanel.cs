@@ -55,7 +55,7 @@ public sealed class ScriptPanel
     /// <summary>The folder saved scripts go in.</summary>
     public static string Folder => Path.Combine(AppSettings.DataDir, "scripts");
 
-    /// <summary>Builds the panel, starting with the first example's code.</summary>
+    /// <summary>Builds the panel, starting with the first example chosen.</summary>
     public ScriptPanel()
     {
         ScriptBox = new ComboBox { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 420 };
@@ -88,7 +88,8 @@ public sealed class ScriptPanel
         SaveButton.Tip("script.save");
         RunButton.Tip("script.run");
         StopButton.Tip("script.stop");
-        CodeBox.Text = ScriptExamples.All[0].Code;
+        // The first example chosen, so its code is shown and a Run is named after it.
+        ScriptBox.SelectedIndex = 0;
         Card = Ui.AsCard(new Border
         {
             VerticalAlignment = VerticalAlignment.Top,

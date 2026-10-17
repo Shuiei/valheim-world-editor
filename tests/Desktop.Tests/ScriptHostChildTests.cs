@@ -24,13 +24,16 @@ public class ScriptHostChildTests
     /// <summary>The snapshot of a flat 1 × 1 zone area.</summary>
     private static ScriptHost.Snapshot Snap() => ScriptHost.Take(TestScenes.Flat(1), Terrain.PrefabCatalog.NameOf);
 
-    // Inside the tests, the script's process is the dotnet that runs them with the editor's assembly.
+    // Inside the tests, the script's process is the dotnet that runs them with the editor's assembly, found in the
+    // app's folder (not through Assembly.Location, which is empty in a single-file app): the same file.
     [Fact]
     public void TheScriptsProcessIsTheEditor()
     {
         var (file, arguments) = ScriptHost.ChildCommand();
         Assert.True(File.Exists(file), file);
-        Assert.Equal([typeof(ScriptHost).Assembly.Location, "--script-host"], arguments);
+        Assert.Equal([Path.Combine(AppContext.BaseDirectory, "ValheimWorldEditor.dll"), "--script-host"], arguments);
+        Assert.True(File.Exists(arguments[0]), arguments[0]);
+        Assert.Equal(Path.GetFullPath(typeof(ScriptHost).Assembly.Location), Path.GetFullPath(arguments[0]));
     }
 
     // The request (script, debug information, the area) and the answer (every kind of change, the output) are read
