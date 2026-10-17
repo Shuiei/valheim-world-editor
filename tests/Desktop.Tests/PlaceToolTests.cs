@@ -257,24 +257,9 @@ public class PlaceToolTests
     /// </summary>
     private static (MainWindow W, EditSession S, Func<float, float, Avalonia.Point> Screen) Open()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
-        w.KeyPress(Key.T, RawInputModifiers.None, PhysicalKey.T, "t");
-        w.View.SetCamera(new Vector3(0, 150, 1), Vector3.Zero, 1.6f);
-        w.PlaceTool.Chosen.Clear();
-        w.PlaceTool.Chosen.Add("Beech1");
-        // The window's Place panel took the kinds remembered by earlier tests (pieces from the Workshop turn
-        // One at a time and End to end on): set again for the kinds chosen here, as choosing them in the panel does.
-        w.PlaceTool.AutoSnap();
-        Avalonia.Point Screen(float gx, float gz)
-        {
-            var q = Vector4.Transform(new Vector4(gx - 64, 30, -(gz - 64), 1), w.View.ViewProj);
-            return new Avalonia.Point((q.X / q.W + 1) / 2 * 1600, (1 - q.Y / q.W) / 2 * 1000);
-        }
-        return (w, s, Screen);
+        var (w, s) = SharedPlaceWindow.Open();
+        SharedPlaceWindow.ChooseBeech(w);
+        return (w, s, (gx, gz) => SharedPlaceWindow.At(w, gx, gz));
     }
 
     [AvaloniaFact]

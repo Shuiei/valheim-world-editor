@@ -4,8 +4,8 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using TerrainEditor.Terrain;
-using WorldEditor.Tests;
 using Xunit;
+using Run = TerrainEditor.Desktop.Tests.SharedPlaceWindow.PanelRun;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -17,34 +17,6 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class PlacePanelBranchesTests
 {
-    /// <summary>
-    /// A main window on its own copy of the test world (zone 0, 0) in the Place tool, with the panel's memory emptied;
-    /// deleted when disposed.
-    /// </summary>
-    private sealed class Run : IDisposable
-    {
-        public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
-        public string Dir { get; } = Fixtures.CopyFixture();
-        public WorldScene Scene { get; }
-        public PlacePanel P => W.PlacePanel;
-        public PlaceTool T => W.PlaceTool;
-
-        public Run()
-        {
-            Scene = WorldScene.Load(Dir, 0, 0, 1);
-            W.Show();
-            W.View.Show(Scene, null);
-            W.Edit(Scene.Session!);
-            W.Tools.ChooseMode(ToolMode.Place);
-            P.Memory.Presets.Clear();
-            P.Memory.Favourites.Clear();
-            P.Memory.Recent.Clear();
-        }
-
-        /// <inheritdoc/>
-        public void Dispose() => Directory.Delete(Path.GetDirectoryName(Dir)!, recursive: true);
-    }
-
     /// <summary>
     /// Clicks the button and runs the posted work it starts.
     /// </summary>

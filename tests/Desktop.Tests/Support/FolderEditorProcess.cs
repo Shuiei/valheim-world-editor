@@ -1,5 +1,3 @@
-using WorldEditor.Tests;
-
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
@@ -14,23 +12,14 @@ public sealed class FolderEditorProcess() : EditorProcess(Start())
     /// </summary>
     private static string[] Start()
     {
-        _copy = Path.Combine(Path.GetTempPath(), "vwe-visual-folder-" + Guid.NewGuid().ToString("N")[..8]);
-        string world = Path.Combine(_copy, "CITest");
-        Directory.CreateDirectory(world);
-        foreach (string f in Directory.GetFiles(Path.Combine(Fixtures.Root, "CITest")))
-        {
-            File.Copy(f, Path.Combine(world, Path.GetFileName(f)));
-        }
-        return [world];
+        _copy = TestWorldCopy.Make("vwe-visual-folder-");
+        return [Path.Combine(_copy, "CITest")];
     }
 
     /// <inheritdoc/>
     public override void Dispose()
     {
         base.Dispose();
-        if (Directory.Exists(_copy))
-        {
-            Directory.Delete(_copy!, true);
-        }
+        TestWorldCopy.Remove(_copy);
     }
 }
