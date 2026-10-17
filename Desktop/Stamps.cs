@@ -16,7 +16,7 @@ public static class Stamps
 
     /// <summary>
     /// The most memory a picture may take once decoded, in bytes (8192 × 8192 colours with opacity): a larger one is
-    /// not read, since Skia throws when it cannot allocate the pixels.
+    /// not read, since Skia throws when it cannot allocate the pixels. Also the largest picture file loaded.
     /// </summary>
     internal const long MostPictureBytes = 256L * 1024 * 1024;
 

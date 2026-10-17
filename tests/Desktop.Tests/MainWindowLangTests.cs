@@ -134,13 +134,19 @@ public sealed class MainWindowLangTests
         }
     }
 
-    // A stamp picture that cannot be opened (gone since it was chosen, a folder): said like one that is not a picture,
-    // no stamp added, and logged with what failed but not where the file is.
+    // A stamp picture that cannot be opened (gone since it was chosen, a folder) or is too large to read: said like one
+    // that is not a picture, no stamp added, and logged with what failed but not where the file is.
     [AvaloniaFact]
     public void AStampPictureThatCannotBeOpenedIsSaidAndLoggedWithoutItsPath()
     {
         string dir = Path.Combine(Path.GetTempPath(), "vwe-stamp-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(dir);
+        // Sparse: no disk space taken.
+        string large = Path.Combine(dir, "large.png");
+        using (var f = File.Create(large))
+        {
+            f.SetLength(Stamps.MostPictureBytes + 1);
+        }
         var stderr = Console.Error;
         using var log = new StringWriter();
         try
@@ -152,7 +158,7 @@ public sealed class MainWindowLangTests
             int stamps = w.Tools.StampList.Count;
             Console.SetError(TextWriter.Synchronized(log));
 
-            foreach (string path in new[] { Path.Combine(dir, "gone.png"), dir })
+            foreach (string path in new[] { Path.Combine(dir, "gone.png"), dir, large })
             {
                 w.MessageText.Text = "";
                 w.LoadStamp(path);
@@ -168,8 +174,10 @@ public sealed class MainWindowLangTests
             Directory.Delete(dir, recursive: true);
         }
         string logged = log.ToString();
-        Assert.Contains("Load stamp: the stamp picture could not be read: FileNotFoundException: Could not find file 'the stamp picture'.", logged);
+        // (The exceptions' own messages may be in the system's language.)
+        Assert.Contains("Load stamp: the stamp picture could not be read: FileNotFoundException: ", logged);
         Assert.Contains("Load stamp: the stamp picture could not be read: UnauthorizedAccessException: ", logged);
+        Assert.Contains($"Load stamp: the stamp picture is not read: {Stamps.MostPictureBytes + 1} bytes, more than {Stamps.MostPictureBytes}.", logged);
         Assert.DoesNotContain(dir, logged);
     }
 

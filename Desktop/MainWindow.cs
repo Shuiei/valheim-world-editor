@@ -2777,33 +2777,48 @@ public sealed partial class MainWindow : Window
 
     /// <summary>
     /// The picture at <paramref name="path"/> added to the brush's stamps and chosen, or said in the status bar that it
-    /// could not be read. A file that cannot be opened (gone since it was chosen, not allowed, a folder, in use) is also
-    /// logged, without its path.
+    /// could not be read.
     /// </summary>
     /// <param name="path">The picture file.</param>
     internal void LoadStamp(string path)
     {
-        byte[] bytes;
-        try
-        {
-            bytes = File.ReadAllBytes(path);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // The path may hold the user's name: the log says "the stamp picture" instead.
-            string why = ex.Message.Replace(Path.GetFullPath(path), "the stamp picture", StringComparison.Ordinal)
-                .Replace(path, "the stamp picture", StringComparison.Ordinal);
-            Console.Error.WriteLine($"Load stamp: the stamp picture could not be read: {ex.GetType().Name}: {why}");
-            Msg("brush.msg.unreadable");
-            return;
-        }
-        if (Stamps.FromPicture(bytes) is { } data)
+        if (ReadStampFile(path) is { } bytes && Stamps.FromPicture(bytes) is { } data)
         {
             Tools.AddStamp(Path.GetFileNameWithoutExtension(path), data);
         }
         else
         {
             Msg("brush.msg.unreadable");
+        }
+    }
+
+    /// <summary>
+    /// The stamp picture's contents, or null, logged without its path, when it cannot be opened (gone since it was
+    /// chosen, not allowed, a folder, in use) or is larger than <see cref="Stamps.MostPictureBytes"/>.
+    /// </summary>
+    /// <param name="path">The picture file.</param>
+    private static byte[]? ReadStampFile(string path)
+    {
+        try
+        {
+            using var file = File.OpenRead(path);
+            if (file.Length > Stamps.MostPictureBytes)
+            {
+                Console.Error.WriteLine($"Load stamp: the stamp picture is not read: {file.Length} bytes, more than {Stamps.MostPictureBytes}.");
+                return null;
+            }
+            byte[] bytes = new byte[file.Length];
+            file.ReadExactly(bytes);
+            return bytes;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            // The path may hold the user's name: the log says "the stamp picture" instead (the message has it in full).
+            string full = Path.IsPathFullyQualified(path) ? path : Path.Join(Environment.CurrentDirectory, path);
+            string why = ex.Message.Replace(full, "the stamp picture", StringComparison.Ordinal)
+                .Replace(path, "the stamp picture", StringComparison.Ordinal);
+            Console.Error.WriteLine($"Load stamp: the stamp picture could not be read: {ex.GetType().Name}: {why}");
+            return null;
         }
     }
 
