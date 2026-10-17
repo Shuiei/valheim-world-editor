@@ -69,48 +69,57 @@ public sealed class AreaPanel
 
     /// <summary>An action's name on the Action list.</summary>
     /// <param name="a">The action.</param>
-    private static string ActionLabel(Act a) => a switch
+    private static string ActionLabel(Act a)
     {
-        Act.Flatten => Lang.T("brush.label.flatten"),
-        Act.Raise => Lang.T("brush.label.raise"),
-        Act.Lower => Lang.T("brush.label.lower"),
-        Act.Smooth => Lang.T("brush.label.smooth"),
-        Act.Natural => Lang.T("brush.label.natural"),
-        Act.Restore => Lang.T("area.action.restore"),
-        Act.Erode => Lang.T("brush.label.erode"),
-        Act.Paint => Lang.T("common.paint"),
-        Act.Remove => Lang.T("area.action.remove"),
-        Act.Select => Lang.T("area.action.select"),
-        Act.Replace => Lang.T("area.action.replace"),
-        Act.Regrow => Lang.T("area.action.regrow"),
-        Act.Copy => Lang.T("area.action.copy"),
-        Act.Heightmap => Lang.T("area.action.heightmap"),
-        Act.Backup => Lang.T("area.action.backup"),
-        _ => Lang.T("area.action.reset"),
-    };
+        return a switch
+        {
+            Act.Flatten => Lang.T("brush.label.flatten"),
+            Act.Raise => Lang.T("brush.label.raise"),
+            Act.Lower => Lang.T("brush.label.lower"),
+            Act.Smooth => Lang.T("brush.label.smooth"),
+            Act.Natural => Lang.T("brush.label.natural"),
+            Act.Restore => Lang.T("area.action.restore"),
+            Act.Erode => Lang.T("brush.label.erode"),
+            Act.Paint => Lang.T("common.paint"),
+            Act.Remove => Lang.T("area.action.remove"),
+            Act.Select => Lang.T("area.action.select"),
+            Act.Replace => Lang.T("area.action.replace"),
+            Act.Regrow => Lang.T("area.action.regrow"),
+            Act.Copy => Lang.T("area.action.copy"),
+            Act.Heightmap => Lang.T("area.action.heightmap"),
+            Act.Backup => Lang.T("area.action.backup"),
+            _ => Lang.T("area.action.reset"),
+        };
+    }
 
     /// <summary>The Paint action's paints: the brush tools whose paint they put down, in the list's order.</summary>
     private static readonly BrushTool[] Paints = [BrushTool.PaintDirt, BrushTool.PaintCultivated, BrushTool.PaintPaved, BrushTool.PaintClear];
 
     /// <summary>A paint's name on the Paint list.</summary>
     /// <param name="t">The paint's brush tool.</param>
-    private static string PaintLabel(BrushTool t) => t switch
+    private static string PaintLabel(BrushTool t)
     {
-        BrushTool.PaintDirt => Lang.T("brush.label.dirt"),
-        BrushTool.PaintCultivated => Lang.T("area.paint.cultivated"),
-        BrushTool.PaintPaved => Lang.T("brush.label.paved"),
-        _ => Lang.T("brush.label.clear"),
-    };
+        return t switch
+        {
+            BrushTool.PaintDirt => Lang.T("brush.label.dirt"),
+            BrushTool.PaintCultivated => Lang.T("area.paint.cultivated"),
+            BrushTool.PaintPaved => Lang.T("brush.label.paved"),
+            _ => Lang.T("brush.label.clear"),
+        };
+    }
 
     /// <summary>Painting with a paint, as the action's name in messages and History, in both languages.</summary>
     /// <param name="t">The paint's brush tool.</param>
-    private static Said PaintNamed(BrushTool t) => t switch
+    private static Said PaintNamed(BrushTool t)
     {
-        BrushTool.PaintDirt => Said.Of("path.action.paintDirt"),
-        BrushTool.PaintCultivated => Said.Of("path.action.paintCultivated"),
-        BrushTool.PaintPaved => Said.Of("path.action.paintPaved"),
-        _ => Said.Of("area.paintAct.clear"),
-    };
+        return t switch
+        {
+            BrushTool.PaintDirt => Said.Of("path.action.paintDirt"),
+            BrushTool.PaintCultivated => Said.Of("path.action.paintCultivated"),
+            BrushTool.PaintPaved => Said.Of("path.action.paintPaved"),
+            _ => Said.Of("area.paintAct.clear"),
+        };
+    }
 
     /// <summary>The panel itself, shown over the view while the Area tool is on.</summary>
     public Control Card { get; }
