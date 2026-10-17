@@ -39,7 +39,7 @@ public sealed class MountainPanelLangTests
         using var pseudo = new PseudoLang();
         // A tree in the middle, where the mountains go: the lone peak buries it.
         var tree = new WorldScene.Thing(5, StableHash.Of("Beech1"), new Vector3(32, 30, 32), Vector3.Zero, 0, false);
-        var (w, s) = TestWindows.EditingFlat(2, tree);
+        var (w, s) = TestWindows.Editing(tree);
         var m = w.MountainPanel;
         m.GrowBox.IsChecked = false;
         for (int i = 0; i < Mountain.Presets.Length; i++)

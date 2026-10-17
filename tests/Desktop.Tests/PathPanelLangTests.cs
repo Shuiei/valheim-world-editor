@@ -18,11 +18,7 @@ public sealed class PathPanelLangTests
     public void PathPanelShowsOnlyCatalogueTexts()
     {
         using var pseudo = new PseudoLang();
-        var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
-        w.Show();
-        var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var (w, _) = TestWindows.Editing();
         var p = w.PathPanel;
         Assert.Empty(PseudoLang.Untranslated(p.Card));
 

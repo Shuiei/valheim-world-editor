@@ -15,11 +15,7 @@ public sealed class MeasurePanelLangTests
     public void MeasurePanelShowsOnlyCatalogueTexts()
     {
         using var pseudo = new PseudoLang();
-        var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var (w, _) = TestWindows.Editing();
         Assert.Empty(PseudoLang.Untranslated(w.MeasurePanel.Card));
 
         w.View.Tape.Down(new Vector3(-10, 25, 0));
