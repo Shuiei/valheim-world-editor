@@ -19,13 +19,31 @@ public class MainWindowToolsTests
     /// A shown window editing a flat 2 × 2 zone area (ground at 30 m) with these objects.
     /// </summary>
     private static (MainWindow W, EditSession S) Open(params WorldScene.Thing[] things)
+        => TestWindows.EditingFlat(things);
+
+    /// <summary>
+    /// The window from Open with the Path tool's line drawn across the area, from (20, 64) to (108, 64),
+    /// and the tool, with the window and its edit session.
+    /// </summary>
+    private static (MainWindow W, EditSession S, PathTool Path) OpenWithPathAcross()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2, things);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
-        return (w, s);
+        var (w, s) = Open();
+        var path = w.View.Path;
+        path.Points.AddRange([new Vector2(20, 64), new Vector2(108, 64)]);
+        return (w, s, path);
+    }
+
+    /// <summary>
+    /// A window editing the world at <paramref name="dir"/>'s zones 0, 0 to 2, 0 across, with the Mountain tool set to
+    /// grow what the game grows on a mountain of radius 25 m.
+    /// </summary>
+    /// <param name="dir">The world's folder.</param>
+    private static async Task<MainWindow> EditingWithGrowingMountain(string dir)
+    {
+        var w = await TestWindows.EditingWorld(dir, 0, 0, 3);
+        w.MountainPanel.RadiusSlider.Value = 25;
+        w.MountainPanel.GrowBox.IsChecked = true;
+        return w;
     }
 
     /// <summary>
@@ -63,9 +81,7 @@ public class MainWindowToolsTests
     [AvaloniaFact]
     public void ACaveWithChosenRocksAndOneTooShallowForARoof()
     {
-        var (w, s) = Open();
-        var path = w.View.Path;
-        path.Points.AddRange([new Vector2(20, 64), new Vector2(108, 64)]);
+        var (w, s, path) = OpenWithPathAcross();
         path.Act = PathTool.Action.Cave;
         // Chosen rather than by biome (the tests' copy of the game's data has the forest's boulder alone).
         path.Rock = PathTool.CaveRock.Forest;
@@ -87,9 +103,7 @@ public class MainWindowToolsTests
     [AvaloniaFact]
     public void APathThatChangesNothingOrReachesTheLimitSaysSo()
     {
-        var (w, s) = Open();
-        var path = w.View.Path;
-        path.Points.AddRange([new Vector2(20, 64), new Vector2(108, 64)]);
+        var (w, s, path) = OpenWithPathAcross();
         path.Act = PathTool.Action.Raise;
         s.Mask = new Mask { On = true, HeightMin = 100 };
         int steps = s.UndoList.Count;
@@ -139,13 +153,8 @@ public class MainWindowToolsTests
         string dir = Fixtures.CopyFixture();
         try
         {
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
-            await w.EditArea(0, 0, 3);
+            var w = await EditingWithGrowingMountain(dir);
             var s = w.Session!;
-            w.MountainPanel.RadiusSlider.Value = 25;
-            w.MountainPanel.GrowBox.IsChecked = true;
             int steps = s.UndoList.Count;
             await w.PutMountain((s.Ground.W - 1) / 2f, (s.Ground.H - 1) / 2f);
             Assert.Contains("Grew ", w.MessageText.Text);
@@ -164,13 +173,8 @@ public class MainWindowToolsTests
         string dir = Fixtures.CopyFixture();
         try
         {
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
-            await w.EditArea(0, 0, 3);
+            var w = await EditingWithGrowingMountain(dir);
             var s = w.Session!;
-            w.MountainPanel.RadiusSlider.Value = 25;
-            w.MountainPanel.GrowBox.IsChecked = true;
             int steps = s.UndoList.Count;
             // Ctrl+Z while the game's trees are worked out (as soon as it says so, whenever the work ends): they would
             // grow in the air where the mountain was.

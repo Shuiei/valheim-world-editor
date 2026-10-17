@@ -117,11 +117,8 @@ public class StampsTests
     [AvaloniaFact]
     public void ThePanelChoosesStampsAndLoadsPictures()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
         var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = TestWindows.Editing(s);
         w.KeyPress(Key.D1, RawInputModifiers.None, PhysicalKey.Digit1, "1");
         var t = w.Tools;
         t.ShapeBox.SelectedIndex = 4;

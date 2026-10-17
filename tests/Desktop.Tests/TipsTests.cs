@@ -23,11 +23,8 @@ public class TipsTests
     [AvaloniaFact]
     public void EveryControlOfTheEditorHasATip()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
         var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(0, 30, 0), Vector3.Zero, 1, false));
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = TestWindows.Editing(s);
         var missing = new HashSet<string>();
         Check(missing, w);
         foreach (var t in Enum.GetValues<BrushTool>())
@@ -92,9 +89,7 @@ public class TipsTests
         string dir = Fixtures.CopyFixture();
         try
         {
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
+            var w = await TestWindows.OpenedWorld(dir);
             var missing = new HashSet<string>();
             Check(missing, w);
             w.MapPage!.Pick(0, 0);
