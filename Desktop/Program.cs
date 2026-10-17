@@ -86,6 +86,8 @@ public static class Program
             // macOS: OpenGL (4.1, core), which the 3D view and the map draw with; Metal would leave them blank.
             .With(new AvaloniaNativePlatformOptions { RenderingMode = [AvaloniaNativeRenderingMode.OpenGl, AvaloniaNativeRenderingMode.Software] })
             .StartWithClassicDesktopLifetime(args);
+        // History files Apply live queued are written before the process ends (its background threads stop with it).
+        HistoryFile.Flush();
     }
 
     /// <summary>

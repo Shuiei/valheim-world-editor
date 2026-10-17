@@ -178,17 +178,27 @@ public sealed class WorldSave
     /// <param name="n">The new object.</param>
     /// <param name="readSource">Gives the chunk file bytes the model lives in.</param>
     /// <returns>The bytes, or null when the prefab is unknown to both the world and the game.</returns>
-    public byte[]? NewObjectBytes(Editing.NewObject n, Func<ObjectRef, byte[]> readSource)
+    public byte[]? NewObjectBytes(Editing.NewObject n, Func<ObjectRef, byte[]> readSource) => NewObjectBytes(n, readSource, Builder);
+
+    /// <summary>
+    /// <see cref="NewObjectBytes(Editing.NewObject, Func{ObjectRef, byte[]})"/> with the builder given (one taken
+    /// earlier) instead of the one chosen now.
+    /// </summary>
+    /// <param name="n">The new object.</param>
+    /// <param name="readSource">Gives the chunk file bytes the model lives in.</param>
+    /// <param name="builder">The builder a new piece of a kind players build is given (0: none).</param>
+    /// <returns>The bytes, or null when the prefab is unknown to both the world and the game.</returns>
+    public byte[]? NewObjectBytes(Editing.NewObject n, Func<ObjectRef, byte[]> readSource, long builder)
     {
         byte[]? bytes = BuildBytes(n, readSource);
         // A new piece of a kind players build (placed, pasted or built blank) is the chosen builder's,
         // like one built in the game. Without a builder the game takes it for part of a ruin: a third of
         // the materials back, no base for fires, ignored by raids. Moved and edited objects keep theirs.
-        if (bytes != null && Builder != 0 && (n.Fresh || n.Raw == null && ModelFor(n.Prefab, n.SourceId) == null)
+        if (bytes != null && builder != 0 && (n.Fresh || n.Raw == null && ModelFor(n.Prefab, n.SourceId) == null)
             && Terrain.PieceCatalog.Get(n.Prefab)?.Tool != null)
         {
             var z = ZdoData.Parse(bytes);
-            z.Set("longs", CreatorKey, Builder.ToString(CultureInfo.InvariantCulture));
+            z.Set("longs", CreatorKey, builder.ToString(CultureInfo.InvariantCulture));
             bytes = z.Serialize();
         }
         // Food and drink set out with the serving tray (Feaster) are items made pieces: the game marks
@@ -241,7 +251,7 @@ public sealed class WorldSave
     }
 
     /// <summary>
-    /// A reader of the bytes an object's offsets point into, for <see cref="NewObjectBytes"/>: live, its own
+    /// A reader of the bytes an object's offsets point into, for <see cref="NewObjectBytes(Editing.NewObject, Func{ObjectRef, byte[]}, long)"/>: live, its own
     /// (<see cref="LiveSource"/>: the snapshot, or the bytes of a read since); else its whole chunk file, read once per
     /// reader.
     /// </summary>
@@ -413,6 +423,44 @@ public sealed class WorldSave
     /// </summary>
     public object Sync { get; } = new();
 
+    /// <summary>Live: the holds taken (<see cref="Hold"/>) and not let go yet; guarded by <see cref="Sync"/>.</summary>
+    private int _holds;
+
+    /// <summary>
+    /// Keeps the world's lists and object bytes as they are until the hold is disposed: <see cref="MergeLive"/>, the
+    /// only change to them once loaded (<see cref="SetLiveId"/> changes an object's ZDOID alone), returns null meanwhile
+    /// (tried again later). For a reader on another thread that must see the world as it was when it was asked for
+    /// (the history written after Apply live).
+    /// </summary>
+    public IDisposable Hold()
+    {
+        lock (Sync)
+        {
+            _holds++;
+        }
+        return new Held(this);
+    }
+
+    /// <summary>A <see cref="Hold"/> taken; let go once, at the first dispose.</summary>
+    /// <param name="world">The world held.</param>
+    private sealed class Held(WorldSave world) : IDisposable
+    {
+        /// <summary>1 once let go.</summary>
+        private int _done;
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _done, 1) == 0)
+            {
+                lock (world.Sync)
+                {
+                    world._holds--;
+                }
+            }
+        }
+    }
+
     /// <summary>Live: the objects by ZDOID and by zone (not the vanished ones), made at the first merge.</summary>
     private Dictionary<(long, uint), int>? _byLiveId;
     /// <summary>Live: object ids by zone; see <c>_byLiveId</c>.</summary>
@@ -489,7 +537,8 @@ public sealed class WorldSave
 
     /// <summary>
     /// Live: the zones' objects as the game has them now (ZDOID and bytes, as the plugin's /zone sends them), merged
-    /// in. Null when the world's lists are being read elsewhere right now: try again later.
+    /// in. Null when the world's lists are being read elsewhere right now, or held (<see cref="Hold"/>): try again
+    /// later.
     /// </summary>
     /// <param name="zones">The zones the objects were read from; objects of them the game lacks vanish.</param>
     /// <param name="objects">Every object the game has in those zones (a ZDOID listed twice counts once, its last bytes).</param>
@@ -506,6 +555,10 @@ public sealed class WorldSave
         }
         try
         {
+            if (_holds > 0)
+            {
+                return null;
+            }
             Index();
             var result = new Merged([], [], [], []);
             var seen = new HashSet<int>();
