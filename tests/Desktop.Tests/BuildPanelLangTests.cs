@@ -34,9 +34,13 @@ public sealed class BuildPanelLangTests
             .. PieceCost.Of(pieces.Select(x => x.Prefab)).Materials.Select(m => m.Name),
             "Gate",
         ];
-        // The generator below the Library is the Dungeon panel's, checked with it.
-        var generator = PseudoLang.Untranslated(p.Dungeon.View, data).Concat(PseudoLang.Untranslated(p.Dungeon.Actions, data)).ToHashSet();
-        List<string> Shown() => [.. PseudoLang.Untranslated(p.Card, data).Where(t => !generator.Contains(t))];
+        // The generator below the Library is the Dungeon panel's, checked with it. Its texts are read again each
+        // time: it starts making a dungeon on its own and then shows another line.
+        List<string> Shown()
+        {
+            var generator = PseudoLang.Untranslated(p.Dungeon.View, data).Concat(PseudoLang.Untranslated(p.Dungeon.Actions, data)).ToHashSet();
+            return [.. PseudoLang.Untranslated(p.Card, data).Where(t => !generator.Contains(t))];
+        }
 
         foreach (var tab in p.Card.GetLogicalDescendants().OfType<Button>().Where(b => b.Tag is int).ToList())
         {
