@@ -41,7 +41,7 @@ public sealed class StartPageBlueprintsTests : IDisposable
     /// <summary>
     /// A blueprint of two pieces in Homestead's folder, last written that many days ago; its path.
     /// </summary>
-    private static string Blueprint(string name, int daysAgo, byte[]? picture = null)
+    internal static string Blueprint(string name, int daysAgo, byte[]? picture = null)
     {
         Directory.CreateDirectory(Homestead.Folder());
         string path = Path.Combine(Homestead.Folder(), Homestead.FileName(name));

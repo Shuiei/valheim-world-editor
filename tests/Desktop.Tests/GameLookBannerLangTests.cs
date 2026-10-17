@@ -24,7 +24,7 @@ public sealed class GameLookBannerLangTests
         try
         {
             Assert.True(b.Steps.IsVisible);
-            Assert.Empty(PseudoLang.Untranslated(w));
+            Assert.Empty(PseudoLang.Untranslated(b.View));
 
             b.Start("");
             Assert.Equal(PseudoLang.Wrap(Lang.English["look.error.noFolder"]), b.Error.Text);
@@ -38,7 +38,7 @@ public sealed class GameLookBannerLangTests
             {
                 now = state;
                 b.Refresh();
-                Assert.Empty(PseudoLang.Untranslated(w));
+                Assert.Empty(PseudoLang.Untranslated(b.View));
             }
         }
         finally
