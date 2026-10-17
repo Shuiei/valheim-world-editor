@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.18 — unreleased
+
+### Changed
+- **The Dungeon tool and its generator come from the language catalogue.** The panel's buttons, lists and lines, the
+  generator's settings, its summary of what it made, the names of the game's dungeon kinds and entrances, and the
+  status bar and History lines of dungeon edits and placed dungeons show in the language chosen in Settings. In
+  English nothing changes, but a room added with two doors or more now says how many instead of "and a door" for
+  each. Names of rooms, biomes, styles, materials and bosses stay as the game and the generator call them, and
+  Claude is still told in English.
 ## v1.47.17 — unreleased
 
 ### Changed

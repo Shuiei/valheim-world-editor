@@ -30,12 +30,12 @@ public sealed partial class ClaudeTools
         }
         if (d.Problem != null)
         {
-            return (null, d.Problem);
+            return (null, d.Problem.English);
         }
         tool.Open(d);
         if (said != null)
         {
-            tool.Message += said;
+            tool.Message += m => said(m.English);
         }
         return (tool, null);
     }
@@ -63,13 +63,13 @@ public sealed partial class ClaudeTools
             return new
             {
                 id = d.Index,
-                kind = DungeonTool.KindName(d.Kind),
+                kind = DungeonTool.KindName(d.Kind).English,
                 x = MathF.Round(d.Thing.Position.X, 1),
                 y = MathF.Round(d.Thing.Position.Y, 1),
                 z = MathF.Round(d.Thing.Position.Z, 1),
                 rooms = d.Rooms.Count,
                 openEnds = d.Problem == null ? tool.FreeEnds.Count : 0,
-                problem = d.Problem,
+                problem = d.Problem?.English,
             };
         }).ToList();
         // A dungeon's id is its object's, one of the area's ids like list_objects gives (get_object, select_objects).
@@ -94,7 +94,7 @@ public sealed partial class ClaudeTools
         return ToJson(new
         {
             id,
-            kind = DungeonTool.KindName(d.Kind),
+            kind = DungeonTool.KindName(d.Kind).English,
             rooms = d.Rooms.Select((r, i) => new { index = i, name = r.Name, x = MathF.Round(r.Position.X, 2), y = MathF.Round(r.Position.Y, 2), z = MathF.Round(r.Position.Z, 2), yaw = YawOf(r.Rotation) }),
             openEnds = tool.FreeEnds.Select((e, i) => new { index = i, type = TypeName(e.Type), room = e.Room, x = MathF.Round(e.Position.X, 2), y = MathF.Round(e.Position.Y, 2), z = MathF.Round(e.Position.Z, 2), entrance = e.Entrance }),
             doorJoints = tool.DoorJoints.Select((j, i) => new { index = i, rooms = new[] { j.First, j.Second }, type = TypeName(j.Type), door = tool.DoorsAt(j).Count > 0 }),
@@ -147,7 +147,7 @@ public sealed partial class ClaudeTools
         }
         if (!tool.Palette.Any(r => r.Name == room))
         {
-            return $"{room} is not a room this {DungeonTool.KindName(d.Kind)} can take (dungeon_rooms' canTake).";
+            return $"{room} is not a room this {DungeonTool.KindName(d.Kind).English} can take (dungeon_rooms' canTake).";
         }
         if (tool.PlaceAt(end, room, join) is not { } placed)
         {

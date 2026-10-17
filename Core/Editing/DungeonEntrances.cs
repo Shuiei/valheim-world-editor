@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.App;
 using TerrainEditor.Save;
 
 namespace TerrainEditor.Editing;
@@ -21,20 +22,37 @@ public static class DungeonEntrances
         public Vector3 Forward => Vector3.Transform(Vector3.UnitZ, Rotation);
     }
 
+    /// <summary>What a location is called as an entrance (<see cref="Describe"/>).</summary>
+    internal enum Called
+    {
+        /// <summary>Its own name: no other is shown.</summary>
+        OwnName,
+        /// <summary>A burial chamber.</summary>
+        BurialChamber,
+        /// <summary>A sunken crypt.</summary>
+        SunkenCrypt,
+        /// <summary>A Frost Cave.</summary>
+        FrostCave,
+        /// <summary>An infested mine.</summary>
+        InfestedMine,
+        /// <summary>A Morgen hole.</summary>
+        MorgenHole,
+    }
+
     /// <summary>
     /// The locations with a dungeon (the game lays it out 5000 m above them when a player first comes near), with what
-    /// each is called as an entrance (null: its name) and whether it is preferred as one; the preferred come first for a
-    /// dungeon kind, in this order. One table for <see cref="DungeonGen.DungeonLocations"/>, <see cref="For"/> and
-    /// <see cref="Describe"/>.
+    /// each is called as an entrance (<see cref="Called.OwnName"/>: its name) and whether it is preferred as one; the
+    /// preferred come first for a dungeon kind, in this order. One table for <see cref="DungeonGen.DungeonLocations"/>,
+    /// <see cref="For"/> and <see cref="Describe"/>.
     /// </summary>
-    internal static readonly (string Name, string? Description, bool Preferred)[] Locations =
+    internal static readonly (string Name, Called Description, bool Preferred)[] Locations =
     [
-        ("Crypt2", "burial chamber", true), ("Crypt3", "burial chamber", true), ("Crypt4", "burial chamber", true),
-        ("HalfBurried_ForestCrypt", "burial chamber", false), ("SunkenCrypt4", "sunken crypt", true), ("MountainCave02", "Frost Cave", true),
-        ("Hildir_crypt", null, false), ("Hildir_cave", null, false), ("Hildir_plainsfortress", null, false),
-        ("Mistlands_DvergrTownEntrance1", "infested mine", true), ("Mistlands_DvergrTownEntrance2", "infested mine", true),
-        ("Mistlands_DvergrBossEntrance1", null, false), ("MorgenHole1", "Morgen hole", true), ("MorgenHole2", "Morgen hole", true),
-        ("MorgenHole3", "Morgen hole", true), ("TheHole01", null, false), ("TheDarkestHole", null, false), ("CharredFortress", null, false),
+        ("Crypt2", Called.BurialChamber, true), ("Crypt3", Called.BurialChamber, true), ("Crypt4", Called.BurialChamber, true),
+        ("HalfBurried_ForestCrypt", Called.BurialChamber, false), ("SunkenCrypt4", Called.SunkenCrypt, true), ("MountainCave02", Called.FrostCave, true),
+        ("Hildir_crypt", Called.OwnName, false), ("Hildir_cave", Called.OwnName, false), ("Hildir_plainsfortress", Called.OwnName, false),
+        ("Mistlands_DvergrTownEntrance1", Called.InfestedMine, true), ("Mistlands_DvergrTownEntrance2", Called.InfestedMine, true),
+        ("Mistlands_DvergrBossEntrance1", Called.OwnName, false), ("MorgenHole1", Called.MorgenHole, true), ("MorgenHole2", Called.MorgenHole, true),
+        ("MorgenHole3", Called.MorgenHole, true), ("TheHole01", Called.OwnName, false), ("TheDarkestHole", Called.OwnName, false), ("CharredFortress", Called.OwnName, false),
     ];
 
     /// <summary>The entrances preferred for a dungeon kind, in this order, before any other location that holds it.</summary>
@@ -156,6 +174,17 @@ public static class DungeonEntrances
     /// <summary>An angle in degrees brought into 0 up to 360.</summary>
     private static float Wrapped(float degrees) => ((degrees % 360f) + 360f) % 360f;
 
-    /// <summary>What a location is called as an entrance: a burial chamber, a Frost Cave...</summary>
-    public static string Describe(LocationPrefabs.Prefab p) => Array.Find(Locations, l => l.Name == p.Name).Description ?? p.Name;
+    /// <summary>
+    /// What a location is called as an entrance, in the language in use and in English: a burial chamber, a Frost
+    /// Cave... (its own name, the same in both, when it has no other).
+    /// </summary>
+    public static Said Describe(LocationPrefabs.Prefab p) => Array.Find(Locations, l => l.Name == p.Name).Description switch
+    {
+        Called.BurialChamber => Said.Of("dungeon.entrance.burialChamber"),
+        Called.SunkenCrypt => Said.Of("dungeon.entrance.sunkenCrypt"),
+        Called.FrostCave => Said.Of("dungeon.kind.frostCave"),
+        Called.InfestedMine => Said.Of("dungeon.entrance.infestedMine"),
+        Called.MorgenHole => Said.Of("dungeon.entrance.morgenHole"),
+        _ => Said.Raw(p.Name),
+    };
 }

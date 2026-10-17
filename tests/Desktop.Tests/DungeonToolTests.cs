@@ -45,7 +45,7 @@ public class DungeonToolTests
             var entrance = new Dungeons.Placed(StableHash.Of("cave_new_entrance02"), At, Quaternion.Identity);
             byte[] blank = ZdoBuilder.Blank(Cave, Terrain.PrefabCatalog.Get(Cave)!.Flags, At, Vector3.Zero, 0f);
             Scene.Session!.Commit("A dungeon", null, [], [(new NewObject(0, Cave, At, Vector3.Zero, 0, null, false, Dungeons.WithRooms(blank, [entrance])), false)]);
-            T.Message += t => Said = t;
+            T.Message += t => Said = t.Shown;
             W.Tools.ChooseMode(ToolMode.Dungeon);
         }
 
@@ -152,7 +152,7 @@ public class DungeonToolTests
             r.PointAt(r.T.FreeEnds[e]);
             for (int k = 0; k < 8 && problem == null; k++, r.T.Turn())
             {
-                problem = r.T.Preview is { } p ? r.T.Problem(p) : null;
+                problem = r.T.Preview is { } p ? r.T.Problem(p)?.Shown : null;
             }
         }
         Assert.NotNull(problem);

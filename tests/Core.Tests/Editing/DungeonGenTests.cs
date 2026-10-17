@@ -260,8 +260,8 @@ public class DungeonGenTests
     {
         // Small crypts of two levels: some seeds leave no room on the last level for the antechamber and the arena.
         var made = Enumerable.Range(1, 80).Select(seed => DungeonGen.Make(new DungeonGen.Settings(Biome: "Meadows", Style: "Crypt", Size: 1, Levels: 2, Seed: seed))).ToList();
-        Assert.Contains(made, r => r.Notes.Contains("no room for the boss arena"));
-        Assert.Contains(made, r => !r.Notes.Contains("no room for the boss arena"));
+        Assert.Contains(made, r => r.Notes.Exists(n => n.English == "no room for the boss arena"));
+        Assert.Contains(made, r => !r.Notes.Exists(n => n.English == "no room for the boss arena"));
     }
 
     [Fact]
@@ -269,7 +269,7 @@ public class DungeonGenTests
     {
         var r = DungeonGen.Make(new DungeonGen.Settings(Made: DungeonGen.Made.Rooms, Kind: "DG_GoblinCamp", Size: 2, Seed: 3));
         Assert.Equal("DG_Cave", r.Kind!.Name);
-        Assert.Contains(r.Notes, n => n.Contains("a cave instead", StringComparison.Ordinal));
+        Assert.Contains(r.Notes, n => n.English.Contains("a cave instead", StringComparison.Ordinal));
     }
 
     [Fact]

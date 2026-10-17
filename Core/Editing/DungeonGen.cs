@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.App;
 using static TerrainEditor.Editing.DungeonKit;
 
 namespace TerrainEditor.Editing;
@@ -107,7 +108,7 @@ public static class DungeonGen
     /// <param name="Arrival">Where to stand on arriving (a portal there faces the way in).</param>
     /// <param name="Kind">The game dungeon kind the rooms belong to (Made.Rooms; null for pieces).</param>
     /// <param name="Rooms">The game rooms' list (Made.Rooms) for a dungeon object of Kind at the origin.</param>
-    /// <param name="Notes">What was made and what could not be, for the user.</param>
+    /// <param name="Notes">What was made and what could not be, for the user (and in English for Claude and the blueprint).</param>
     /// <param name="Name">The dungeon's.</param>
     /// <param name="Map">Its rooms (pieces).</param>
     /// <param name="Doors">Its doors and stairs between the rooms of Map (pieces).</param>
@@ -115,7 +116,7 @@ public static class DungeonGen
     /// The dungeon object's place and turn in the world when the rooms were made for one (Made.Rooms, see Make): Items,
     /// Arrival and Rooms are then in world metres, not from the dungeon's origin. Null otherwise.
     /// </param>
-    public sealed record Result(List<Item> Items, Vector3 Arrival, Dungeons.Kind? Kind, List<Dungeons.Placed>? Rooms, List<string> Notes, string Name = "",
+    public sealed record Result(List<Item> Items, Vector3 Arrival, Dungeons.Kind? Kind, List<Dungeons.Placed>? Rooms, List<Said> Notes, string Name = "",
         IReadOnlyList<PlanRoom>? Map = null, IReadOnlyList<PlanDoor>? Doors = null, DungeonEntrances.Pose? Dungeon = null);
 
     /// <summary>The most levels a dungeon of building pieces can have.</summary>
@@ -234,7 +235,7 @@ public static class DungeonGen
     /// </summary>
     private static Result MakeRooms(Settings s, int worldSeed, DungeonEntrances.Pose? dungeon)
     {
-        var notes = new List<string>();
+        var notes = new List<Said>();
         static bool Joinable(Dungeons.Kind k) => Dungeons.RoomsFor(k).Any(r => !r.Entrance && !r.EndCap && !r.Divider && r.Openings.Length > 0);
         var cave = Dungeons.KindOf(Save.StableHash.Of("DG_Cave"));
         string wanted = s.Kind ?? KindFor(s.Biome);
@@ -248,7 +249,7 @@ public static class DungeonGen
                     + "(a game update may have changed its dungeons).");
             }
             // (No kind at all only when there is no cave either.)
-            notes.Add($"{Describe(kind!)} has no rooms to join: a cave instead");
+            notes.Add(Said.Of("dungeon.msg.caveInstead", Describe(kind!)));
             kind = cave;
         }
         var rnd = new Random(s.Seed);
@@ -303,7 +304,7 @@ public static class DungeonGen
         }
         if (left > 0)
         {
-            notes.Add($"{left} open end(s) have no end cap of their kind");
+            notes.Add(Said.Of("dungeon.msg.capsMissing", left));
         }
         // What the game puts in the rooms, then doors where rooms meet.
         var items = new List<Item>();
@@ -348,7 +349,7 @@ public static class DungeonGen
         }
         // Arriving in the entrance room, near its middle (the floor is found where it is placed).
         var arrival = rooms[0].Position;
-        notes.Add($"{Describe(kind)}: {rooms.Count} rooms, {items.Count} objects");
+        notes.Add(Said.Of("dungeon.msg.madeRooms", Describe(kind), rooms.Count, items.Count));
         string name = string.IsNullOrWhiteSpace(s.Name) ? NameFor(s.Seed, null, s.Biome) : s.Name!;
         return new Result(items, arrival, kind, rooms, notes, name, Dungeon: dungeon);
     }
@@ -441,10 +442,14 @@ public static class DungeonGen
         {
             doors.Add(new PlanDoor(foot.Level, foot.CenterX, foot.CenterZ, "Stairs", index[foot.Parent!], index[foot]));
         }
-        var notes = new List<string>(plan.Notes);
+        var notes = new List<Said>(plan.Notes);
         var key = plan.Spaces.FirstOrDefault(sp => sp.KeyChest);
-        notes.Insert(0, $"{name}: {style.Name.ToLowerInvariant()} of {mat.Name.ToLowerInvariant()}, {plan.Levels.Count} level(s), {plan.Spaces.Count(sp => sp.IsRoom)} rooms, "
-            + $"{o.Items.Count} objects" + (key != null ? $"; the key is in the {key.Name.ToLowerInvariant()} on level {key.Level + 1}" : ""));
+        // The style's, the material's and the room's names are the generator's own (English in every language).
+        string styleName = style.Name.ToLowerInvariant(), matName = mat.Name.ToLowerInvariant();
+        int levels = plan.Levels.Count, roomCount = plan.Spaces.Count(sp => sp.IsRoom);
+        notes.Insert(0, key != null
+            ? Said.Of("dungeon.msg.madePiecesKey", name, styleName, matName, levels, roomCount, o.Items.Count, key.Name.ToLowerInvariant(), key.Level + 1)
+            : Said.Of("dungeon.msg.madePieces", name, styleName, matName, levels, roomCount, o.Items.Count));
         return new Result(o.Items, arrival, null, null, notes, name, map, doors);
     }
 }

@@ -2754,10 +2754,10 @@ public sealed partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                MessageText.Text = $"Could not open the dungeon in the Workshop: {ex.Message}";
+                Msg("dungeon.msg.notOpened", ex.Message);
             }
         };
-        View.Dungeon.Message += t => MessageText.Text = t;
+        View.Dungeon.Message += Msg;
     }
 
     /// <summary>

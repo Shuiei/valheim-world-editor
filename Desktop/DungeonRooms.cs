@@ -16,8 +16,11 @@ public static class DungeonRooms
     /// <param name="Thing">Its dungeon object.</param>
     /// <param name="Kind">What kind of dungeon it is.</param>
     /// <param name="Rooms">Its rooms, as its data lists them (none when it could not be read).</param>
-    /// <param name="Problem">Why its rooms could not be read (or are not laid out yet), null when they were.</param>
-    public sealed record Dungeon(int Index, WorldScene.Thing Thing, Dungeons.Kind Kind, List<Dungeons.Placed> Rooms, string? Problem);
+    /// <param name="Problem">
+    /// Why its rooms could not be read (or are not laid out yet), for the user and in English for Claude; null when they
+    /// were.
+    /// </param>
+    public sealed record Dungeon(int Index, WorldScene.Thing Thing, Dungeons.Kind Kind, List<Dungeons.Placed> Rooms, Said? Problem);
 
     /// <summary>The dungeons read for a scene, with the state they were read at (see <see cref="Now"/>).</summary>
     private sealed record Cache((int Version, int Generation, int Count) At, IReadOnlyList<Dungeon> Dungeons);
@@ -100,7 +103,7 @@ public static class DungeonRooms
                 continue;
             }
             List<Dungeons.Placed> rooms = [];
-            string? problem = null;
+            Said? problem = null;
             try
             {
                 byte[]? bytes = s.Session != null ? ObjectData.Bytes(s.World, s.Session.Edits, t.Id) : t.Id >= 0 ? s.World.ObjectBytes(t.Id) : null;
@@ -111,12 +114,12 @@ public static class DungeonRooms
                 }
                 else
                 {
-                    problem = "The game has not laid this dungeon out yet (nobody has been near it).";
+                    problem = Said.Of("dungeon.error.notLaidOut");
                 }
             }
             catch (Exception e) when (e is InvalidDataException or IOException or EndOfStreamException or ArgumentException or FormatException or OverflowException)
             {
-                problem = e.Message;
+                problem = Said.Raw(e.Message);
             }
             list.Add(new Dungeon(i, t, kind, rooms, problem));
         }
