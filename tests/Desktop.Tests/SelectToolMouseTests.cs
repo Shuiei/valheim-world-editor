@@ -1,5 +1,7 @@
 using System.Numerics;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using TerrainEditor.App;
 using TerrainEditor.Save;
 using TerrainEditor.Terrain;
@@ -8,8 +10,8 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The Select tool with the mouse, looking straight down on a flat area: clicking and drawing zones, dragging,
-/// double-clicking a building or a ship (the example vehicle mod's), Same kind, Drop and snapping. The view's object boxes come from the pieces' own boxes
+/// The Select tool with the mouse, looking straight down on a flat area: a double click in the View tool choosing it,
+/// clicking and drawing zones, dragging, double-clicking a building or a ship (the example vehicle mod's), Same kind, Drop and snapping. The view's object boxes come from the pieces' own boxes
 /// (headless tests draw nothing, so the view is given them).
 /// </summary>
 [Collection("World files")]
@@ -226,6 +228,24 @@ public class SelectToolMouseTests
         var moved = v.Last;
         Assert.Equal(78, moved.Position.X, 2);
         Assert.Equal(40, moved.Position.Z, 2);
+    }
+
+    [AvaloniaFact]
+    public void ADoubleClickOnAnObjectInTheViewToolChoosesTheSelectToolWithItSelected()
+    {
+        var v = Open(T(1, Wall, 40, 30, 40), T(2, Wall, 42, 30, 40));
+        v.W.Tools.ChooseMode(ToolMode.View);
+        Assert.False(v.W.SelectPanel.Card.IsVisible);
+        var p = v.At(40, 30, 40);
+        for (int i = 0; i < 2; i++)
+        {
+            v.W.MouseDown(p, MouseButton.Left);
+            v.W.MouseUp(p, MouseButton.Left);
+        }
+        Assert.Equal(ToolMode.Select, v.W.Tools.Mode);
+        Assert.True(v.W.SelectPanel.Card.IsVisible);
+        // The piece alone, not its building.
+        Assert.Equal([0], v.Selected);
     }
 
     [AvaloniaFact]

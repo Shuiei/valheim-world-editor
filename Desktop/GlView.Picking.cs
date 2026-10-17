@@ -148,6 +148,8 @@ public sealed partial class GlView
 
     /// <summary>A double click in Select mode.</summary>
     public event Action? InspectAsked;
+    /// <summary>A double click on an object in the View tool: the Select tool wanted, the object picked.</summary>
+    public event Action? SelectToolAsked;
     /// <summary>The objects picked, as indices into the scene's things (a copy).</summary>
     internal IReadOnlyCollection<int> Selected { get { lock (_selection) { return [.. _selection]; } } }
 
@@ -323,7 +325,8 @@ public sealed partial class GlView
     /// A click on an object: it alone, or (add) added or taken out; range (Shift): every shown object in
     /// a row from the last one clicked to this one (w1, Shift + click w3: w1, w2 and w3).
     /// </summary>
-    internal void Pick(Point at, Size size, bool add, bool range = false)
+    /// <returns>The object clicked, null when the click was beside every object.</returns>
+    internal int? Pick(Point at, Size size, bool add, bool range = false)
     {
         int? i = ObjectAt(at, size);
         var s = Scene;
@@ -350,6 +353,7 @@ public sealed partial class GlView
             }
         }
         SelectionDone();
+        return i;
     }
 
     /// <summary>The object a Shift + click's row starts from: the last one clicked.</summary>

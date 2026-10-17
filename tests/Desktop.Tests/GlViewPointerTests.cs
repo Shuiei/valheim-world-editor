@@ -14,7 +14,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The mouse over a 3D view of its own (in a plain window, nobody else listening to it), looking straight down on a
 /// flat area at 30 m: the Dungeon tool's clicks, Alt + click with a brush, Stamp once, a click picking in the View
-/// tool, the Select tool's look for the object under the pointer, Paste and Shape clicks with or without a listener,
+/// tool (a double click asking for the Select tool), the Select tool's look for the object under the pointer, Paste and Shape clicks with or without a listener,
 /// and Ctrl or Alt with the wheel.
 /// </summary>
 public class GlViewPointerTests
@@ -175,6 +175,33 @@ public class GlViewPointerTests
         b.Click(over);
         b.Click(b.At(-20, 30, 20));
         Assert.Empty(b.V.Selected);
+    }
+
+    [AvaloniaFact]
+    public void APlainDoubleClickOnAnObjectInTheViewToolAsksForTheSelectTool()
+    {
+        var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("wood_wall_half"), new Vector3(37, 30, 37), Vector3.Zero, 0, true));
+        var b = new Bare(s);
+        b.V.SetBoxes([(0, new Vector3(4.5f, 30, -5.5f), new Vector3(5.5f, 32, -4.5f))]);
+        int asked = 0;
+        b.V.SelectToolAsked += () => asked++;
+        var over = b.At(5, 31.9f, -5);
+        var beside = b.At(-20, 30, 20);
+        // One click only picks; a click beside it between the tries starts a new double click.
+        b.Click(over);
+        Assert.Equal(0, asked);
+        b.Click(beside);
+        b.Click(over);
+        b.Click(over);
+        Assert.Equal(1, asked);
+        Assert.Equal([0], b.V.Selected);
+        // With Ctrl (adding to the selection), or beside every object: not asked.
+        b.Click(beside);
+        b.Click(over, RawInputModifiers.Control);
+        b.Click(over, RawInputModifiers.Control);
+        b.Click(beside);
+        b.Click(beside);
+        Assert.Equal(1, asked);
     }
 
     /// <summary>

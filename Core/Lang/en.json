@@ -516,7 +516,7 @@
   "rail.tip.script": "Script: write C# that shapes the ground, paints it and places or removes objects over the open area: anything the tools do, and more. Examples to start from.",
   "rail.tip.select": "Select (E): click objects, or drag on the ground around them; then move, turn, lift or delete them.",
   "rail.tip.measure": "Measure (M): click two points to see the distance, height difference and slope.",
-  "rail.tip.view": "View (Esc or H): look around, slide the view with the left button, and click objects to pick them.",
+  "rail.tip.view": "View (Esc or H): look around, slide the view with the left button, and click objects to pick them; double-click one to move it with Select.",
   "rail.tip.place": "Place (T): paint trees, rocks or bushes with a brush, or put walls, fences and other pieces along lines, circles, rectangles, grids and zones.",
   "rail.tip.build": "Build (T): pick a building piece, then click to put it down. It snaps to the pieces already there.",
   "rail.cap.sculpt": "Sculpt",

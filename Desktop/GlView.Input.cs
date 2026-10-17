@@ -76,7 +76,12 @@ public sealed partial class GlView
         }
         else if (click && Mode == ToolMode.View && !Panning && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
         {
-            Pick(at, size, mods.HasFlag(KeyModifiers.Shift) || Ctrl(mods), mods.HasFlag(KeyModifiers.Shift) && !Ctrl(mods));
+            bool add = mods.HasFlag(KeyModifiers.Shift) || Ctrl(mods);
+            // A plain double click on an object: the Select tool, to move it with the handles.
+            if (Pick(at, size, add, mods.HasFlag(KeyModifiers.Shift) && !Ctrl(mods)) != null && _pressClicks == 2 && !add)
+            {
+                SelectToolAsked?.Invoke();
+            }
         }
         _pressAt = null;
         _dragFrom = null;
@@ -101,6 +106,7 @@ public sealed partial class GlView
             surface.Focus(NavigationMethod.Pointer);
             var p = e.GetCurrentPoint(surface);
             _pressAt = p.Position;
+            _pressClicks = e.ClickCount;
             _dragFrom = p.Position;
             _dragButton = p.Properties.PointerUpdateKind;
             _pointer = _heldAt = p.Position;
@@ -431,6 +437,8 @@ public sealed partial class GlView
 
     /// <summary>Where the mouse button went down, to tell a click from a drag.</summary>
     private Point? _pressAt;
+    /// <summary>The press's click count (2: a double click).</summary>
+    private int _pressClicks;
 
     /// <summary>The drag slides the view (Space + left, Shift + right).</summary>
     internal bool Panning { get; private set; }

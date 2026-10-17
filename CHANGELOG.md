@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.48.0 — 2026-10-17
+
+### Added
+- **A double click on an object in the View tool switches to Select with it selected.** Its arrows and ring show at
+  once, ready to move or turn it, without pressing `E` and clicking it again. Only a plain double click on an object
+  does it: with `Ctrl` or `Shift` held, or on empty ground, View stays. See [Select](docs/select.md#how-to-use-it).
+
 ## v1.47.29 — 2026-10-17
 
 ### Fixed
