@@ -12,8 +12,9 @@ namespace WorldEditor.Tests;
 [Collection("World files")]
 public class UpliftDiscListTests
 {
-    // Ids no saved object of the test world has.
-    private const int SavedDisc = -7001, KeptDisc = -7002, AddedDisc = -7003, AddedStone = -7004;
+    // Ids no saved object of the test world has. Saved objects have ids of zero or more (EditStore.SetDeleted takes a
+    // negative id for an object added in the session), so the saved discs are positive.
+    private const int SavedDisc = 7001, KeptDisc = 7002, AddedDisc = -7003, AddedStone = -7004;
 
     [Fact]
     public void ASavedDiscThatIsDeletedIsNotCurrent()

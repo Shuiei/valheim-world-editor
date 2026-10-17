@@ -58,7 +58,7 @@ public class GameShaderNamingTests
     private static uint[] BlockModule(uint storage) => Module(
         [Head(3, 5), 10u, Word("ab")],
         [Head(4, 71), 20u, 33u, 0u],
-        [Head(4, 72), 30u, 0u, 35u, 16u],
+        [Head(5, 72), 30u, 0u, 35u, 16u],
         [Head(3, 71), 30u, 2u],
         [Head(4, 32), 40u, 2u, 30u],
         [Head(4, 59), 40u, 50u, storage]);
@@ -113,7 +113,8 @@ public class GameShaderNamingTests
     [Fact]
     public void InputsWithALocationAreNamedVsColor()
     {
-        var decl = new GameShader.SpirvDeclarations([], [], [], [], [(61, 0, 1)], []);
+        // An input is named only with its location decoration (here location 0).
+        var decl = new GameShader.SpirvDeclarations([], Decorated(61, 30, [0]), [], [], [(61, 0, 1)], []);
         var add = new List<(uint Op, List<uint> Words)>();
         GameShader.AddVariableNames(decl, new GameShader.Params([], []), add);
         Assert.Equal("vs_COLOR0", Text(Assert.Single(add).Words.Skip(1)));

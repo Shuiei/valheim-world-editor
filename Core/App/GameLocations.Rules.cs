@@ -27,7 +27,8 @@ public static partial class GameLocations
         var rule = new SeedLocations.Rule { AltBiome = altBiome };
         foreach (var prop in typeof(SeedLocations.Rule).GetProperties())
         {
-            var f = l["m_" + prop.Name];
+            // The game's field is the property's name in camelCase (Prioritized is m_prioritized).
+            var f = l["m_" + char.ToLowerInvariant(prop.Name[0]) + prop.Name[1..]];
             if (f.IsDummy || f.Value == null)
             {
                 continue;

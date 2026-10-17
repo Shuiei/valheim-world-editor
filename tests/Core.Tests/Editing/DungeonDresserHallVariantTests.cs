@@ -46,7 +46,7 @@ public class DungeonDresserHallVariantTests
     [Fact]
     public void BareHallLeavesItsFarAltarBroken()
     {
-        var room = DungeonDresserSupport.ClearRoom("Crypt");
+        var room = DungeonDresserSupport.ClearRoom("Crypt", farEndClear: true);
         var o = DungeonDresserSupport.DressHall(room, "bare");
         Assert.Contains(DungeonDresserSupport.At(o, room.Frame.W(0, room.Frame.HalfD - 2, 0)), i => i.Prefab == "StatueThor_broken_bottom");
     }
@@ -54,7 +54,7 @@ public class DungeonDresserHallVariantTests
     [Fact]
     public void ColonnadesSetTheirFeatureAtTheFarEnd()
     {
-        var room = DungeonDresserSupport.ClearRoom("Crypt");
+        var room = DungeonDresserSupport.ClearRoom("Crypt", farEndClear: true);
         var o = DungeonDresserSupport.DressHall(room, "colonnades");
         Assert.NotEmpty(DungeonDresserSupport.At(o, room.Frame.W(0, room.Frame.HalfD - 2.2f, 0)));
     }

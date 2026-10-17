@@ -34,7 +34,8 @@ public class SeedLocationsRuleSetTests
         string text = rules.ToJson();
 
         Assert.Contains("\"prefab\":\"A\"", text);
-        Assert.DoesNotContain("altBiome", text);
+        // The key of a location's alt biome, not the file's "altBiomes" list (which is written empty here).
+        Assert.DoesNotContain("\"altBiome\":", text);
     }
 
     [Fact]

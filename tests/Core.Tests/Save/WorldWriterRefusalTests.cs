@@ -10,8 +10,11 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class WorldWriterRefusalTests
 {
-    /// <summary>A world with no database, so zone resets cannot be made.</summary>
-    private static WorldSave NoDatabase() => new() { Directory = "none", SaveNumber = 1 };
+    /// <summary>
+    /// A world with no database, so zone resets cannot be made. Its save is in a format the writer saves (a world
+    /// read from disk always has one), so only the checks under test decide the refusal.
+    /// </summary>
+    private static WorldSave NoDatabase() => new() { Directory = "none", SaveNumber = 1, SaveVersion = WorldVersion.Latest };
 
     [Fact]
     public void ResetsNeedTheWorldsDatabase()

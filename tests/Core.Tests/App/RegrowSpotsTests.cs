@@ -25,6 +25,8 @@ public class RegrowSpotsTests
     [Fact]
     public void NoGroupsAreTriedWhenTheChanceOfAnyMisses()
     {
+        // The draw is seeded: an unseeded generator draws exactly 0, which a chance of 0 does not miss.
+        ValheimGen.UnityEngine.Random.InitState(1);
         object rule = RegrowFixtures.OpenRule();
         PrivateMember.Set(rule, "min", 0f);
         PrivateMember.Set(rule, "max", 0f);

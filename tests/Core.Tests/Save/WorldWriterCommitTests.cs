@@ -16,11 +16,13 @@ public class WorldWriterCommitTests
         using var w = new TempWorld();
         var world = w.Load();
         var plan = new WorldWriter.Planned([], [], []);
+        // The number a save takes is one more than the highest there is before it is written.
+        int expectedNumber = Math.Max(world.SaveNumber, WorldWriter.LatestNumber(w.Dir)) + 1;
 
         var failure = WorldWriter.Commit(world, plan, []);
 
         Assert.Null(failure);
-        Assert.Equal(Math.Max(world.SaveNumber, WorldWriter.LatestNumber(w.Dir)) + 1, plan.NewNumber);
+        Assert.Equal(expectedNumber, plan.NewNumber);
         Assert.Equal(4, plan.NewFiles.Count);
         Assert.EndsWith($"_main.{plan.NewNumber}.ok", plan.NewFiles[3]);
         Assert.All(plan.NewFiles, f => Assert.True(File.Exists(f), f));

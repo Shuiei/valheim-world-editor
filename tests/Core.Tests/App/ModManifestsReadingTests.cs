@@ -38,7 +38,8 @@ public class ModManifestsReadingTests
     [Fact]
     public void TextThatIsNotJsonThrows()
     {
-        Assert.Throws<JsonException>(() => Read("ParseManifest", "{\"version\":1"));
+        // JsonNode.Parse throws JsonReaderException (a JsonException), as it did at the base commit; callers catch JsonException.
+        Assert.ThrowsAny<JsonException>(() => Read("ParseManifest", "{\"version\":1"));
     }
 
     [Theory]

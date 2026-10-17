@@ -98,8 +98,9 @@ public class CheckedReadsTests
     [Fact]
     public void BytesLeftInAStreamThatCannotSeekAreNotLimited()
     {
-        using var gz = new GZipStream(new MemoryStream(), CompressionMode.Compress);
-        using var r = new BinaryReader(gz);
+        // A readable stream that cannot seek: an empty deflate block (the bytes 03 00) read from a decompressing stream.
+        using var deflate = new DeflateStream(new MemoryStream([0x03, 0x00]), CompressionMode.Decompress);
+        using var r = new BinaryReader(deflate);
 
         Assert.Equal(long.MaxValue, r.Remaining());
     }

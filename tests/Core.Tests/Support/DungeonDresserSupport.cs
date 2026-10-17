@@ -17,7 +17,12 @@ internal static class DungeonDresserSupport
     /// A wide room of a Black Forest dungeon in the style named, with no doorway within eight metres of its middle, so
     /// that furniture placed about the middle is not blocked by a doorway's clear space. Taken from the first seed that has one.
     /// </summary>
-    public static DressingRoom ClearRoom(string style)
+    /// <param name="style">The style's name.</param>
+    /// <param name="farEndClear">
+    /// Also no doorway within six metres of the far end's spot (0, HalfD - 2), so that furniture placed there is not
+    /// blocked by a doorway's clear space; a deep room's far wall may have a doorway.
+    /// </param>
+    public static DressingRoom ClearRoom(string style, bool farEndClear = false)
     {
         var biome = DungeonKit.BiomeOf("Black Forest");
         var mat = DungeonKit.MaterialOf(biome.Material);
@@ -29,7 +34,8 @@ internal static class DungeonDresserSupport
             foreach (var sp in plan.Spaces.Where(sp => !sp.Corridor && sp.Shape == DungeonPlan.Shape.Rect))
             {
                 var f = new DungeonDresser.Frame(sp, mat, plan.Levels[sp.Level]);
-                if (f.HalfA >= 5 && f.HalfD >= 5 && f.Mouths.All(m => Vector2.Distance(new(m.X, m.Z), new(f.Cx, f.Cz)) > 8))
+                if (f.HalfA >= 5 && f.HalfD >= 5 && f.Mouths.All(m => Vector2.Distance(new(m.X, m.Z), new(f.Cx, f.Cz)) > 8)
+                    && (!farEndClear || f.Mouths.All(m => Vector2.Distance(new(f.Local(m.X, m.Z).U, f.Local(m.X, m.Z).V), new(0, f.HalfD - 2)) > 6)))
                 {
                     return new DressingRoom(f, mat, biome, st, s);
                 }

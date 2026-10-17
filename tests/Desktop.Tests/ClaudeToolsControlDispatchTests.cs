@@ -30,7 +30,7 @@ public class ClaudeToolsControlDispatchTests
     // NumberOf: a finite number from its text, with surrounding blanks; NaN, the infinities and words are none.
     [Theory]
     [InlineData("2.5", 2.5)]
-    [InlineData(" -3e2 ", -300)]
+    [InlineData(" -3e2 ", -300.0)]
     [InlineData("NaN", null)]
     [InlineData("-Infinity", null)]
     [InlineData("abc", null)]

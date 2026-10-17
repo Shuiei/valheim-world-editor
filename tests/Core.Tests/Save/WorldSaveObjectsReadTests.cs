@@ -13,7 +13,7 @@ public sealed class WorldSaveObjectsReadTests
     [Fact]
     public void AnEmptyChunkReadsItsVersionAndItsLength()
     {
-        var world = (WorldSave)PrivateMember.New(typeof(WorldSave));
+        var world = new WorldSave { Directory = "", SaveNumber = 0 };
         var file = new ChunkFile();
         // Version 7 as a short, then an object count of 0 as an int.
         using var pkg = new ValheimReader(new MemoryStream([0x07, 0x00, 0x00, 0x00, 0x00, 0x00]));
@@ -30,7 +30,7 @@ public sealed class WorldSaveObjectsReadTests
     [Fact]
     public void ALoadedChunkFileIsReadTheSameWay()
     {
-        var world = (WorldSave)PrivateMember.New(typeof(WorldSave));
+        var world = new WorldSave { Directory = "", SaveNumber = 0 };
         var file = new ChunkFile();
         string path = Path.GetTempFileName();
         try

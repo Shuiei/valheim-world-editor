@@ -19,9 +19,12 @@ internal static class PrivateCall
     public static object? Field(object target, string name) =>
         target.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(target);
 
-    /// <summary>Makes an instance through a private constructor with these parameter types.</summary>
+    /// <summary>
+    /// Makes an instance through a constructor with these parameter types, of any access: a record's primary constructor
+    /// is public even when the record itself is private.
+    /// </summary>
     public static object Create(Type type, Type[] parameterTypes, params object?[] args) =>
-        type.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, parameterTypes, null)!.Invoke(args);
+        type.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, parameterTypes, null)!.Invoke(args);
 
     private static object? Invoke(Type type, string name, object? target, object?[] args)
     {

@@ -27,6 +27,7 @@ public class LiveSyncSameButPlaceTests
     [Fact]
     public void DifferentFlagsAreNotTheSameButPlace()
     {
-        Assert.False(LiveSync.SameButPlace(Object(7, 0, Vector3.Zero), Object(7, 1, Vector3.Zero)));
+        // 0x0100 is one of the flags an object keeps when it is read (bit 0x0001 is not kept, so it would not differ).
+        Assert.False(LiveSync.SameButPlace(Object(7, 0, Vector3.Zero), Object(7, 0x0100, Vector3.Zero)));
     }
 }

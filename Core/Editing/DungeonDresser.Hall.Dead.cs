@@ -37,6 +37,8 @@ internal sealed partial class DungeonDresser
     /// </summary>
     private void HallBare(Frame f)
     {
+        // The altar first: the fallen pillars and rubble keep off its place, not the other way round.
+        Put(f, _b.Name == "Ashlands" ? "blackmarble_altar_crystal_broken" : "StatueThor_broken_bottom", 0, f.HalfD - 2, 180, 1.4f);
         for (float v = -f.HalfD + 3; v <= f.HalfD - 3; v += 4)
         {
             foreach (int side in new[] { -1, 1 })
@@ -51,7 +53,6 @@ internal sealed partial class DungeonDresser
                 }
             }
         }
-        Put(f, _b.Name == "Ashlands" ? "blackmarble_altar_crystal_broken" : "StatueThor_broken_bottom", 0, f.HalfD - 2, 180, 1.4f);
         Clutter(f, 0.02f, "Morkhalla_Rubble2", "Morkhalla_Rubble1", "stone_wall_2x1_ruin", "Skull1", "LargeBone");
         Webs(f, 0.7f);
     }

@@ -43,10 +43,10 @@ public class DungeonPlannerMirrorTests
     [Fact]
     public void MirroredSlotFindsTheMirroredDoorwayOnTheOppositeSide()
     {
-        // The parent's doorway at its right-hand side, tiles (3,1) and (3,2), mirrors to the left-hand side's (0,1) and (0,2).
+        // The parent's doorway at its right-hand side, tiles (4,1) and (4,2), mirrors to the left-hand side's (0,1) and (0,2).
         var (parent, room) = ParentAndRoom((1, 0));
-        DungeonPlannerProbe.FillBox(parent, 4, 4);
-        var first = new DungeonPlan.Doorway { T1 = (3, 1), T2 = (3, 2) };
+        DungeonPlannerProbe.FillBox(parent, 5, 5);
+        var first = new DungeonPlan.Doorway { T1 = (4, 1), T2 = (4, 2) };
         object?[] args = [parent, room, first, null, null, null];
         Assert.True((bool)PrivateCall.Static(typeof(DungeonPlanner), "MirroredSlot", args)!);
         Assert.Equal((-1, 0), ((int, int))args[3]!);

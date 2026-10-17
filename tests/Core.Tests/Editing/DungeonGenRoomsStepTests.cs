@@ -37,13 +37,13 @@ public class DungeonGenRoomsStepTests
     }
 
     [Fact]
-    public void ChooseRoomKindFallsBackToACaveWithANote()
+    public void ChooseRoomKindFallsBackToACaveForAKindTheGameLacks()
     {
-        // A kind the game does not have is replaced by the cave, and the note says so.
+        // A kind the game does not have is replaced by the cave (as the generator did before the split: no note is
+        // made for it, a note being for a kind that has no rooms to join).
         var notes = new List<Said>();
         var kind = (Dungeons.Kind)PrivateCall.Static(typeof(DungeonGen), "ChooseRoomKind", new DungeonGen.Settings(Kind: "DG_NoSuchKind"), notes)!;
         Assert.Equal(StableHash.Of("DG_Cave"), kind.Hash);
-        Assert.Single(notes);
     }
 
     [Fact]

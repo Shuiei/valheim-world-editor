@@ -33,14 +33,14 @@ public static partial class Log
     /// <see cref="Private"/>, one shorter than three characters is kept out too, where it stands alone (not inside a
     /// word, which it would otherwise take letters out of: a one-letter token would empty every line).
     /// </summary>
-    /// <param name="values">The secrets; nulls and empty ones are left out.</param>
+    /// <param name="values">The secrets; nulls, empty and blank ones are left out (a blank one would take every space out of the log).</param>
     public static void Secret(params ReadOnlySpan<string?> values)
     {
         lock (PrivateLock)
         {
             foreach (string? v in values)
             {
-                if (!string.IsNullOrEmpty(v))
+                if (!string.IsNullOrWhiteSpace(v))
                 {
                     PrivateValues.Add(v);
                 }

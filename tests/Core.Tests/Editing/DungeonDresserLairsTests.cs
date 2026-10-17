@@ -12,10 +12,11 @@ public class DungeonDresserLairsTests
     [Fact]
     public void ATotemIsFivePolesOrNothingAndFivePolesOccurOnSomeSeed()
     {
-        var room = DungeonDresserSupport.ClearRoom("Crypt");
         var poles = new List<int>();
         for (int seed = 1; seed <= 20; seed++)
         {
+            // A room of its own for each seed: what one dressing keeps taken would block the next one's poles.
+            var room = DungeonDresserSupport.ClearRoom("Crypt");
             var (dresser, o) = DungeonDresserInstance.Of(room, seed);
             PrivateCall.Instance(dresser, "Totem", room.Frame);
             poles.Add(o.Items.Count(i => i.Prefab == "goblin_totempole"));
@@ -44,9 +45,10 @@ public class DungeonDresserLairsTests
     [Fact]
     public void TheQuartersHaveOneWardrobeInEitherArrangement()
     {
-        var room = DungeonDresserSupport.ClearRoom("Crypt");
         for (int seed = 1; seed <= 5; seed++)
         {
+            // A room of its own for each seed, with its far end clear: the wardrobe stands against the far wall.
+            var room = DungeonDresserSupport.ClearRoom("Crypt", farEndClear: true);
             var (dresser, o) = DungeonDresserInstance.Of(room, seed);
             PrivateCall.Instance(dresser, "Quarters", room.Frame);
 

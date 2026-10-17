@@ -16,7 +16,8 @@ public class GlViewGridPickTests
     {
         var b = new BareGlView(TestScenes.Flat(2));
         var grid = new Vector2(40, 50);
-        var at = b.V.ScreenOfGrid(grid);
+        // On the ground itself (no lift): a point lifted above it picks back a little off, along the view's slant.
+        var at = b.V.ScreenOfGrid(grid, 0);
         Assert.NotNull(at);
         var back = b.V.GridAt(at.Value, ViewSize);
         Assert.NotNull(back);

@@ -17,7 +17,8 @@ public class ClaudeToolsContentsTests
     {
         using var r = new ClaudeRun();
         var set = new List<FieldChange>();
-        var (left, refusal) = ClaudeTools.StandChanges(Save.StableHash.Of("itemstand"), "itemstand", [new ClaudeTools.ItemSpec { Item = "Coins" }], null, null, set);
+        // A sword: an item the item stand takes (a material such as Coins is refused by it).
+        var (left, refusal) = ClaudeTools.StandChanges(Save.StableHash.Of("itemstand"), "itemstand", [new ClaudeTools.ItemSpec { Item = "SwordIron" }], null, null, set);
         Assert.Null(left);
         Assert.Null(refusal);
         Assert.NotEmpty(set);

@@ -106,7 +106,8 @@ public class AppSettingsFileTests : AppSettingsTestBase
 
             Assert.NotNull(new AppSettings().Save());
             string line = Assert.Single(log.Lines);
-            Assert.StartsWith("Caught at AppSettings.cs:", line);
+            // The file is AppSettings.cs, or one of its partial files (AppSettings.Writing.cs): only the name's start is fixed.
+            Assert.Matches(@"^Caught at AppSettings(\.\w+)?\.cs:\d+ ", line);
             Assert.Contains("while saving settings.json (the settings stay in memory): ", line);
             Assert.DoesNotContain(Data, line);
         }
