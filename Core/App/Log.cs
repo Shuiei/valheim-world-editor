@@ -91,7 +91,8 @@ public static partial class Log
 
     /// <summary>
     /// Keeps secrets out of the log from now on (passwords, passphrases, tokens), whatever their length: unlike
-    /// <see cref="Private"/>, a short one is kept out too, at the cost of the letters it matches elsewhere.
+    /// <see cref="Private"/>, one shorter than three characters is kept out too, where it stands alone (not inside a
+    /// word, which it would otherwise take letters out of: a one-letter token would empty every line).
     /// </summary>
     /// <param name="values">The secrets; nulls and empty ones are left out.</param>
     public static void Secret(params ReadOnlySpan<string?> values)
@@ -124,7 +125,7 @@ public static partial class Log
         }
         foreach (string v in secrets)
         {
-            text = text.Replace(v, "<private>", StringComparison.Ordinal);
+            text = v.Length < 3 ? ReplaceWhole(text, v, "<private>", wordStart: true) : text.Replace(v, "<private>", StringComparison.Ordinal);
         }
         text = SourceFile().Replace(text, m => ") in " + LastPart(m.Groups[1].Value) + ":line ");
         text = WebAddress().Replace(text, "<url>");
