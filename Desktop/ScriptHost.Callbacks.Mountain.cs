@@ -1,5 +1,4 @@
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;

@@ -1,5 +1,4 @@
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Terrain;

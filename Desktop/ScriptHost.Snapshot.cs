@@ -1,6 +1,5 @@
 using System.Numerics;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using TerrainEditor.App;
 using TerrainEditor.Save;
 using TerrainEditor.Terrain;

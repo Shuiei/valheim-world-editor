@@ -1,7 +1,6 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Numerics;
-using System.Security.Cryptography;
 using System.Text;
 using TerrainEditor.App;
 using TerrainEditor.Save;

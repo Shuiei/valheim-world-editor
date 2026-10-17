@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using System.Security.Cryptography;
 using System.Text;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
