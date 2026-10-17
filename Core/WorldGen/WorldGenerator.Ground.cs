@@ -151,13 +151,27 @@ public sealed partial class WorldGenerator
     }
 
     /// <summary>
+    /// The continents with their hills, the detail points they were read at: the height before rivers and grain.
+    /// </summary>
+    /// <param name="x">World x.</param>
+    /// <param name="z">World z.</param>
+    /// <param name="land">The continents' height at the point.</param>
+    /// <param name="dx">The detail point of x.</param>
+    /// <param name="dz">The detail point of z.</param>
+    private float Hilled(float x, float z, out float land, out double dx, out double dz)
+    {
+        land = Continent(x, z);
+        dx = DetailPoint(x);
+        dz = DetailPoint(z);
+        return (float)((double)land + (double)Hills(dx, dz) * (double)0.1f);
+    }
+
+    /// <summary>
     /// The Meadows: the continents with hills, pressed, rivers cut, then grain.
     /// </summary>
     private float MeadowsShape(float x, float z)
     {
-        float land = Continent(x, z);
-        double dx = DetailPoint(x), dz = DetailPoint(z);
-        float h = (float)((double)land + (double)Hills(dx, dz) * (double)0.1f);
+        float h = Hilled(x, z, out float land, out double dx, out double dz);
         h = CutRivers(x, z, Pressed(h, land));
         return Grain(h, dx, dz);
     }
@@ -168,9 +182,7 @@ public sealed partial class WorldGenerator
     /// </summary>
     private float ForestShape(float x, float z)
     {
-        float land = Continent(x, z);
-        double dx = DetailPoint(x), dz = DetailPoint(z);
-        float h = (float)((double)land + (double)Hills(dx, dz) * (double)0.1f);
+        float h = Hilled(x, z, out _, out double dx, out double dz);
         return Grain(CutRivers(x, z, h), dx, dz);
     }
 
@@ -179,9 +191,7 @@ public sealed partial class WorldGenerator
     /// </summary>
     private float PlainsShape(float x, float z)
     {
-        float land = Continent(x, z);
-        double dx = DetailPoint(x), dz = DetailPoint(z);
-        float h = (float)((double)land + (double)Hills(dx, dz) * (double)0.1f);
+        float h = Hilled(x, z, out float land, out double dx, out double dz);
         float over = h - 0.15f;
         float lift = (float)GenMath.Clamp01((double)land / (double)0.4f);
         if (over > 0f)
@@ -299,9 +309,7 @@ public sealed partial class WorldGenerator
     /// </summary>
     private float AshlandsRoughShape(float x, float z)
     {
-        float land = Continent(x, z);
-        double dx = DetailPoint(x), dz = DetailPoint(z);
-        float h = (float)((double)land + (double)Hills(dx, dz) * (double)0.1f);
+        float h = Hilled(x, z, out _, out double dx, out double dz);
         h = (float)((double)h + (double)0.1f);
         return CutRivers(x, z, Grain(h, dx, dz));
     }
