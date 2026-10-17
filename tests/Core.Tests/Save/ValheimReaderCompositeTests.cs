@@ -46,6 +46,19 @@ public class ValheimReaderCompositeTests
     }
 
     [Fact]
+    public void AQuaternionIsFourLittleEndianFloatsXYZW()
+    {
+        byte[] bytes = new byte[16];
+        BitConverter.GetBytes(0.5f).CopyTo(bytes, 0);
+        BitConverter.GetBytes(-0.25f).CopyTo(bytes, 4);
+        BitConverter.GetBytes(2f).CopyTo(bytes, 8);
+        BitConverter.GetBytes(1f).CopyTo(bytes, 12);
+        using var r = new ValheimReader(new MemoryStream(bytes));
+
+        Assert.Equal(new System.Numerics.Quaternion(0.5f, -0.25f, 2f, 1f), r.ReadQuaternion());
+    }
+
+    [Fact]
     public void TwoShortsAreASectorsXAndY()
     {
         using var r = new ValheimReader(new MemoryStream([1, 0, 2, 0]));
