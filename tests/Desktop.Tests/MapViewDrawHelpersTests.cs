@@ -71,14 +71,23 @@ public class MapViewDrawHelpersTests
         Assert.Equal(6f, fill[1], 4);
     }
 
-    [Fact]
-    public void AClosePieceIsAFootprintWithOutlinesWhenZoomedInMost()
+    /// <summary>
+    /// A piece's catalogue row whose footprint is the square from -1 to 1 metre on both axes.
+    /// </summary>
+    private static float[] SquarePiece()
     {
         float[] pc = new float[PieceCatalog.Stride];
         pc[4] = -1;
         pc[5] = 1;
         pc[6] = -1;
         pc[7] = 1;
+        return pc;
+    }
+
+    [Fact]
+    public void AClosePieceIsAFootprintWithOutlinesWhenZoomedInMost()
+    {
+        float[] pc = SquarePiece();
         List<float> fill = [];
         List<float> edge = [];
         MapView.AddPiece(fill, edge, pc, 0, false, 2, 0.5f);
@@ -90,11 +99,7 @@ public class MapViewDrawHelpersTests
     [Fact]
     public void AFaintRuinIsDimmedToAHalfAndAPlainPieceIsNot()
     {
-        float[] pc = new float[PieceCatalog.Stride];
-        pc[4] = -1;
-        pc[5] = 1;
-        pc[6] = -1;
-        pc[7] = 1;
+        float[] pc = SquarePiece();
         List<float> plain = [];
         List<float> faint = [];
         MapView.AddPiece(plain, [], pc, 0, false, 1, 1f);

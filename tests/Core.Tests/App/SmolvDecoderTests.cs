@@ -15,13 +15,22 @@ public class SmolvDecoderTests
         return [.. header, (2u << 16) | 17u, .. capability];
     }
 
-    [Fact]
-    public void ADecodedInstructionIsWrittenBackAsSpirv()
+    /// <summary>
+    /// A module of one capability encoded by SmolvWriter, with a decoder over its encoding that writes back into a copy of
+    /// the module's header (not yet run).
+    /// </summary>
+    private static (uint[] Spirv, byte[] Data, List<uint> Output, SmolvDecoder Decoder) DecoderOverModule()
     {
         uint[] spirv = Module(1);
         byte[] data = SmolvWriter.Encode(spirv);
         var output = new List<uint>(spirv[..5]);
-        var decoder = new SmolvDecoder(data, 24, output, spirv.Length, 367);
+        return (spirv, data, output, new SmolvDecoder(data, 24, output, spirv.Length, 367));
+    }
+
+    [Fact]
+    public void ADecodedInstructionIsWrittenBackAsSpirv()
+    {
+        var (spirv, _, output, decoder) = DecoderOverModule();
         decoder.Run();
         Assert.Equal(spirv, output);
     }
@@ -29,10 +38,7 @@ public class SmolvDecoderTests
     [Fact]
     public void TheEndOfTheReadDataIsTheEndOfTheProgram()
     {
-        uint[] spirv = Module(1);
-        byte[] data = SmolvWriter.Encode(spirv);
-        var output = new List<uint>(spirv[..5]);
-        var decoder = new SmolvDecoder(data, 24, output, spirv.Length, 367);
+        var (_, data, _, decoder) = DecoderOverModule();
         decoder.Run();
         Assert.Equal(data.Length, decoder.End);
     }

@@ -94,11 +94,7 @@ public class MaskJudgeTests
     [Fact]
     public void TheSlopeIsTheSteepnessOfTheNeighbours()
     {
-        var g = new Ground(N, N, 0, 0, 1);
-        for (int p = 0; p < N * N; p++)
-        {
-            g.Base[p] = p % N >= 3 ? 40 : 30;
-        }
+        var g = CliffGround.Make(N, 3);
         var judge = new MaskJudge(new Mask { On = true, SlopeMax = 90 }, g, new int[N * N]);
         // Column 2: the neighbours are 30 m (x 1) and 40 m (x 3), 10 m over 2 m, so 5 m a metre.
         Assert.Equal(MathF.Atan(5) * 180 / MathF.PI, judge.Slope(2 * N + 2), 3);
@@ -122,11 +118,6 @@ public class MaskJudgeTests
             var judge = new MaskJudge(new Mask { On = true, Paint = rule }, g, new int[N * N]);
             return [.. Enumerable.Range(0, 5).Select(judge.PaintOk)];
         }
-        Assert.Equal(new[] { true, true, true, true, true }, Pass(Mask.PaintRule.Any));
-        Assert.Equal(new[] { false, false, false, true, true }, Pass(Mask.PaintRule.Unpainted));
-        Assert.Equal(new[] { true, true, true, false, false }, Pass(Mask.PaintRule.Painted));
-        Assert.Equal(new[] { true, false, false, false, false }, Pass(Mask.PaintRule.Dirt));
-        Assert.Equal(new[] { false, true, false, false, false }, Pass(Mask.PaintRule.Cultivated));
-        Assert.Equal(new[] { false, false, true, false, false }, Pass(Mask.PaintRule.Paved));
+        PaintRuleChecks.AssertFivePointsPassEachRule(Pass);
     }
 }

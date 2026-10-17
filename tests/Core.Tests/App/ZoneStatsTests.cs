@@ -12,16 +12,26 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class ZoneStatsTests
 {
+    /// <summary>
+    /// A test world's zones: the world, and one row of ZoneStats.Stride numbers for each zone, computed after the edits
+    /// given are made.
+    /// </summary>
+    private static (WorldSave World, List<int[]> Rows) ZoneTable(TempWorld w, Action<EditStore>? edit = null)
+    {
+        WorldSave world = w.Load();
+        var edits = new EditStore(world);
+        edit?.Invoke(edits);
+        int[] data = ZoneStats.Compute(world, edits, (x, z) => 1);
+        var rows = Enumerable.Range(0, data.Length / ZoneStats.Stride).Select(i => data.Skip(i * ZoneStats.Stride).Take(ZoneStats.Stride).ToArray()).ToList();
+        return (world, rows);
+    }
+
     [Fact]
     public void GeneratedZonesInTheWorldAreListed()
     {
         using var w = new TempWorld();
-        WorldSave world = w.Load();
-        var edits = new EditStore(world);
-        int[] data = ZoneStats.Compute(world, edits, (x, z) => 1);
-        int n = data.Length / ZoneStats.Stride;
-        Assert.True(n > 0);
-        var rows = Enumerable.Range(0, n).Select(i => data.Skip(i * ZoneStats.Stride).Take(ZoneStats.Stride).ToArray()).ToList();
+        var (world, rows) = ZoneTable(w);
+        Assert.True(rows.Count > 0);
         // Zones generated far outside the world (around an empty server's reference point, as in this
         // test world) are left out; zones with objects are in, generated or not.
         Assert.All(rows, r => Assert.True(Math.Abs(r[0]) < 170 && Math.Abs(r[1]) < 170));
@@ -36,10 +46,7 @@ public class ZoneStatsTests
     public void DistanceToBuildingsCountsZones()
     {
         using var w = new TempWorld();
-        WorldSave world = w.Load();
-        var edits = new EditStore(world);
-        int[] data = ZoneStats.Compute(world, edits, (x, z) => 1);
-        var rows = Enumerable.Range(0, data.Length / ZoneStats.Stride).Select(i => data.Skip(i * ZoneStats.Stride).Take(ZoneStats.Stride).ToArray()).ToList();
+        var (world, rows) = ZoneTable(w);
         if (world.Pieces.Count == 0)
         {
             Assert.All(rows, r => Assert.Equal(-1, r[6]));
@@ -56,19 +63,14 @@ public class ZoneStatsTests
     public void ObjectsAddedInTheSessionAreCounted()
     {
         using var w = new TempWorld();
-        WorldSave world = w.Load();
-        var edits = new EditStore(world);
         // A fence (a piece players build), a tree, and a fence given no builder (a generated ruin's): zone (78, 78).
-        edits.AddObjects([
+        var (_, rows) = ZoneTable(w, edits => edits.AddObjects([
             new NewObject(-1, Fixtures.Hash("wood_fence"), new Vector3(5000, 30, 5000), Vector3.Zero, 0f),
             new NewObject(-2, Fixtures.Hash("Beech1"), new Vector3(5010, 30, 5000), Vector3.Zero, 0f),
             new NewObject(-3, Fixtures.Hash("wood_fence"), new Vector3(5000, 30, 5010), Vector3.Zero, 0f, Data: [ObjectField.NoBuilder]),
-        ]);
+        ]));
 
-        int[] data = ZoneStats.Compute(world, edits, (x, z) => 1);
-
-        int[] row = Enumerable.Range(0, data.Length / ZoneStats.Stride).Select(i => data.Skip(i * ZoneStats.Stride).Take(ZoneStats.Stride).ToArray())
-            .Single(r => r[0] == 78 && r[1] == 78);
+        int[] row = rows.Single(r => r[0] == 78 && r[1] == 78);
         Assert.Equal(1, row[3]);
         Assert.Equal(3, row[5]);
         Assert.Equal(0, row[6]);
