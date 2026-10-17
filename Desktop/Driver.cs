@@ -259,27 +259,13 @@ public static class Driver
                             sl.Value = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
                             return State(w);
                         case Avalonia.Controls.NumericUpDown:
-                        {
                             // Several boxes in the row (Height min, max): in order, comma separated; empty for none.
-                            var boxes = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(row).OfType<Avalonia.Controls.NumericUpDown>().Where(b => b.IsEffectivelyVisible).ToList();
-                            string[] values = value.Split(',');
-                            for (int k = 0; k < Math.Min(values.Length, boxes.Count); k++)
-                            {
-                                boxes[k].Value = values[k].Trim().Length == 0 ? null : decimal.Parse(values[k], System.Globalization.CultureInfo.InvariantCulture);
-                            }
+                            FillRowBoxes<Avalonia.Controls.NumericUpDown>(row, value, (box, v) => box.Value = v.Trim().Length == 0 ? null : decimal.Parse(v, System.Globalization.CultureInfo.InvariantCulture));
                             return State(w);
-                        }
                         case Avalonia.Controls.TextBox:
-                        {
                             // Several boxes in the row (Size % from, to): the values in order, comma separated.
-                            var boxes = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(row).OfType<Avalonia.Controls.TextBox>().Where(b => b.IsEffectivelyVisible).ToList();
-                            string[] values = value.Split(',');
-                            for (int k = 0; k < Math.Min(values.Length, boxes.Count); k++)
-                            {
-                                boxes[k].Text = values[k].Trim();
-                            }
+                            FillRowBoxes<Avalonia.Controls.TextBox>(row, value, (box, v) => box.Text = v.Trim());
                             return State(w);
-                        }
                         case Avalonia.Controls.ComboBox cb when IndexOf(cb, value) >= 0:
                             cb.SelectedIndex = IndexOf(cb, value);
                             return State(w);
@@ -402,6 +388,21 @@ public static class Driver
     }
 
     /// <summary>The first visible, enabled control of that type in the window or its open dialogs (the newest first).</summary>
+    /// <summary>Sets the visible boxes of one row of a type in order from a comma separated list of values.</summary>
+    /// <typeparam name="T">The box type.</typeparam>
+    /// <param name="row">The row holding the boxes.</param>
+    /// <param name="value">The comma separated values; each goes to the box at its position.</param>
+    /// <param name="set">Sets one box from its value.</param>
+    private static void FillRowBoxes<T>(Avalonia.Visual row, string value, Action<T, string> set) where T : Avalonia.Controls.Control
+    {
+        var boxes = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(row).OfType<T>().Where(b => b.IsEffectivelyVisible).ToList();
+        string[] values = value.Split(',');
+        for (int k = 0; k < Math.Min(values.Length, boxes.Count); k++)
+        {
+            set(boxes[k], values[k]);
+        }
+    }
+
     private static T? Find<T>(MainWindow w, Func<T, bool> match) where T : Avalonia.Controls.Control
     {
         IEnumerable<Avalonia.Controls.Window> windows = new Avalonia.Controls.Window[] { w }.Concat(w.OwnedWindows);

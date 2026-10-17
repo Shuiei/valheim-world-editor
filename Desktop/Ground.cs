@@ -121,18 +121,30 @@ public sealed class Ground
             {
                 float[] b = terrain.BaseZone(X0 + zx, Z0 + zz);
                 float[] m = terrain.BaseMask(X0 + zx, Z0 + zz);
-                for (int k = 0; k < EditStore.Grid; k++)
+                foreach (var (i, p) in ZoneGridPoints(zz, zx))
                 {
-                    for (int l = 0; l < EditStore.Grid; l++)
+                    Base[p] = b[i];
+                    for (int c = 0; c < 4; c++)
                     {
-                        int i = k * EditStore.Grid + l, p = (zz * 64 + k) * W + zx * 64 + l;
-                        Base[p] = b[i];
-                        for (int c = 0; c < 4; c++)
-                        {
-                            BaseMask[p * 4 + c] = m[i * 4 + c];
-                        }
+                        BaseMask[p * 4 + c] = m[i * 4 + c];
                     }
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Each grid point of one zone: its index inside the zone's arrays and its index in the whole ground's.
+    /// </summary>
+    /// <param name="zz">The zone's row.</param>
+    /// <param name="zx">The zone's column.</param>
+    private IEnumerable<(int I, int P)> ZoneGridPoints(int zz, int zx)
+    {
+        for (int k = 0; k < EditStore.Grid; k++)
+        {
+            for (int l = 0; l < EditStore.Grid; l++)
+            {
+                yield return (k * EditStore.Grid + l, (zz * 64 + k) * W + zx * 64 + l);
             }
         }
     }
@@ -147,20 +159,16 @@ public sealed class Ground
             {
                 var e = edits.Get(X0 + zx, Z0 + zz);
                 _own[(zx, zz)] = e;
-                for (int k = 0; k < EditStore.Grid; k++)
+                foreach (var (i, p) in ZoneGridPoints(zz, zx))
                 {
-                    for (int l = 0; l < EditStore.Grid; l++)
+                    Mod[p] = (byte)(e != null && e.Modified[i] ? 1 : 0);
+                    Level[p] = e?.Level[i] ?? 0;
+                    Smooth[p] = e?.Smooth[i] ?? 0;
+                    PMod[p] = (byte)(e != null && e.PaintModified[i] ? 1 : 0);
+                    Lift[p] = e?.Lift[i] ?? 0;
+                    for (int c = 0; c < 4; c++)
                     {
-                        int i = k * EditStore.Grid + l, p = (zz * 64 + k) * W + zx * 64 + l;
-                        Mod[p] = (byte)(e != null && e.Modified[i] ? 1 : 0);
-                        Level[p] = e?.Level[i] ?? 0;
-                        Smooth[p] = e?.Smooth[i] ?? 0;
-                        PMod[p] = (byte)(e != null && e.PaintModified[i] ? 1 : 0);
-                        Lift[p] = e?.Lift[i] ?? 0;
-                        for (int c = 0; c < 4; c++)
-                        {
-                            Paint[p * 4 + c] = e?.Paint[i * 4 + c] ?? 0;
-                        }
+                        Paint[p * 4 + c] = e?.Paint[i * 4 + c] ?? 0;
                     }
                 }
             }

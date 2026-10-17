@@ -110,21 +110,7 @@ public sealed class ShapePanel
         RadiusSlider.Tip("shape.radius");
         HeightBox.Tip("shape.height");
         FormulaBox.Tip("shape.formula");
-        static Control Row(string label, Control input, Control? after = null)
-        {
-            var g = new Grid { ColumnDefinitions = new ColumnDefinitions("60,*,Auto") };
-            var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-            Tips.Label(l, input);
-            g.Children.Add(l);
-            Grid.SetColumn(input, 1);
-            g.Children.Add(input);
-            if (after != null)
-            {
-                Grid.SetColumn(after, 2);
-                g.Children.Add(after);
-            }
-            return g;
-        }
+        static Control Row(string label, Control input, Control? after = null) => Ui.Row(label, input, after, "60,*,Auto");
         Card = Ui.AsCard(new Border
         {
             VerticalAlignment = VerticalAlignment.Top,

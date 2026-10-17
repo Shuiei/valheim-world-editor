@@ -59,8 +59,7 @@ public sealed partial class GlView
         foreach (var byKind in shown.GroupBy(o => o.Prefab))
         {
             int prefab = byKind.Key;
-            bool piece = Terrain.PieceCatalog.Get(prefab)?.Tool != null;
-            var g = KindGroup(prefab, piece);
+            var (piece, g) = PieceAndGroup(prefab);
             if (!g.Ready || g.Batches.Count == 0)
             {
                 continue;
@@ -144,6 +143,16 @@ public sealed partial class GlView
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, b.InstanceVbo);
         PointInstances(0);
         b.PointedAt = 0;
+    }
+
+    /// <summary>
+    /// Whether a prefab is a building piece (not a plain object), and its group of drawn things (see KindGroup).
+    /// </summary>
+    /// <param name="prefab">The prefab's id.</param>
+    private (bool Piece, Group G) PieceAndGroup(int prefab)
+    {
+        bool piece = Terrain.PieceCatalog.Get(prefab)?.Tool != null;
+        return (piece, KindGroup(prefab, piece));
     }
 
     /// <summary>
@@ -258,8 +267,7 @@ public sealed partial class GlView
         foreach (var byKind in shown.GroupBy(o => o.Prefab))
         {
             int prefab = byKind.Key;
-            bool piece = Terrain.PieceCatalog.Get(prefab)?.Tool != null;
-            var g = KindGroup(prefab, piece);
+            var (piece, g) = PieceAndGroup(prefab);
             bool drawn = DrawnSolid(g);
             made.Kinds.Add((prefab, piece, g, drawn));
             if (!drawn)
