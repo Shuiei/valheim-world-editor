@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Xunit;
@@ -60,8 +61,9 @@ public class ClaudeToolsControlsTests
         Assert.Equal([true, null, null, "Sharp", 7.0], list.Select(c => ClaudeTools.ValueOf(c.Control)));
     }
 
-    // Set: a switch on and off, a dropdown by text or number, a slider clamped, a text, a button clicked; wrong
-    // values are said. Blocked: the window's Save and Discard, blocked keys, and blocked labels of untipped buttons.
+    // Set: a switch on and off, a dropdown by text or number, a slider clamped, a text, a button clicked (its Click and
+    // its Command), a switch clicked; wrong values are said. Blocked: the window's Save and Discard, blocked keys, and
+    // blocked labels of untipped buttons.
     [AvaloniaFact]
     public void ControlsAreSetAndBlockedOnesRefused()
     {
@@ -85,11 +87,23 @@ public class ClaudeToolsControlsTests
         Assert.Null(t.Set(C("d", text), "Beech", true));
         Assert.Equal("Beech", text.Text);
         int clicks = 0;
-        var button = new Button { Content = "Go" };
+        var command = new CountingCommand();
+        var button = new Button { Content = "Go", Command = command };
         button.Click += (_, _) => clicks++;
         Assert.Null(t.Set(C("e", button), "click", false));
         Assert.Equal(1, clicks);
+        Assert.Equal(1, command.Runs);
         Assert.Equal("e is a button: give click.", t.Set(C("e", button), "true", false));
+        // A click on a switch changes it before its handlers run, as a pointer's does.
+        var toggle = new CheckBox();
+        bool? seen = null;
+        toggle.Click += (_, _) => seen = toggle.IsChecked;
+        int changes = 0;
+        toggle.IsCheckedChanged += (_, _) => changes++;
+        Assert.Null(t.Set(C("f", toggle), "click", false));
+        Assert.True(toggle.IsChecked);
+        Assert.True(seen);
+        Assert.Equal(1, changes);
 
         Assert.NotNull(t.Blocked(C("save", w.SaveButton)));
         Assert.NotNull(t.Blocked(C("auto", new CheckBox().Tip("top.auto"))));
@@ -139,5 +153,23 @@ public class ClaudeToolsControlsTests
         // Auto off: the script's controls are Claude's again.
         r.W.Settings.AutoApply = false;
         Assert.Equal("script.code", ClaudeRun.J(await r.T.SetControl("script.code", "Ground.Raise(0, 0, 3);")).GetProperty("id").GetString());
+    }
+
+    /// <summary>A command that can always run and counts its runs.</summary>
+    private sealed class CountingCommand : ICommand
+    {
+        /// <summary>Not kept, as it is never raised: the command can always run.</summary>
+#pragma warning disable S3237 // a listener need not be kept for an event that is never raised
+        event EventHandler? ICommand.CanExecuteChanged { add { } remove { } }
+#pragma warning restore S3237
+
+        /// <summary>How many times the command ran.</summary>
+        public int Runs { get; private set; }
+
+        /// <inheritdoc/>
+        public bool CanExecute(object? parameter) => true;
+
+        /// <inheritdoc/>
+        public void Execute(object? parameter) => Runs++;
     }
 }
