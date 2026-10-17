@@ -12,7 +12,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// The Select tool in another language (the made-up one: PseudoLang): its panel shows only catalogue texts with nothing
 /// selected, two objects selected, Move by on and a selection kept; the questions it asks (a selection's name,
 /// forgetting it, a builder's id) too; a tool's message is shown in that language while Claude reads its English; and
-/// so are the window's Built by choices and messages, Make player built, a runestone's Inspect and Replace's.
+/// so are the window's Built by choices and messages, Make player built, a runestone's Inspect and Replace's, and the
+/// name the Replace pick button gives the eyedropper.
 /// </summary>
 [Collection("DataDir")]
 public sealed class SelectPanelLangTests : IDisposable
@@ -113,6 +114,18 @@ public sealed class SelectPanelLangTests : IDisposable
         w.SelectPanel.DeleteButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.StartsWith(PseudoLang.Open.ToString(), w.MessageText.Text, StringComparison.Ordinal);
         Assert.Equal("Deleted 1 object(s). Ctrl+Z brings them back; they leave the world when it is saved.", w.LastMessageEn);
+    }
+
+    [AvaloniaFact]
+    public void ThePickButtonNamesReplaceInTheLanguage()
+    {
+        var w = Window();
+        using var pseudo = new PseudoLang();
+        string? asked = null;
+        w.SelectPanel.PickKindAsked += (label, _) => asked = label;
+
+        w.SelectPanel.ReplacePickButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Assert.Equal(PseudoLang.Wrap("Replace"), asked);
     }
 
     [AvaloniaFact]

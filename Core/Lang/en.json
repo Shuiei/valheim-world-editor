@@ -55,6 +55,7 @@
   "common.add": "Add",
   "common.delete": "Delete",
   "common.objects": "Objects",
+  "common.replace": "Replace",
   "select.label.moveThere": "Move there",
   "select.label.inspect": "Inspect data (I)",
   "select.label.claim": "Make player built",
