@@ -16,15 +16,7 @@ public class ToolPanelTests
     /// <summary>
     /// A shown main window editing a flat 2 × 2 zone area.
     /// </summary>
-    private static MainWindow Open()
-    {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
-        return w;
-    }
+    private static MainWindow Open() => TestWindows.Editing(TestScenes.Flat(2));
 
     /// <summary>
     /// Clicks the button and runs the posted work it starts.
@@ -74,7 +66,7 @@ public class ToolPanelTests
         var w = Open();
         w.Tools.Choose(BrushTool.Raise);
         string? said = null;
-        w.Tools.Message += t => said = t;
+        w.Tools.Message += t => said = t.Shown;
         // A built-in stamp chosen: it stays.
         w.Tools.ShapeBox.SelectedIndex = 4;
         int stamps = w.Tools.StampList.Count;

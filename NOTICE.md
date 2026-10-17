@@ -26,8 +26,8 @@ them from the player's own Valheim install, on their computer.
 
 ## Third-party code
 
-- `Core/WorldGen/FastNoise.cs`: FastNoise, MIT License, Copyright (c) 2017 Jordan Peck (its notice
-  is kept in the file).
+- `Core/WorldGen/FastNoise.cs`: FastNoise, trimmed to the 2D cellular and simplex noise the world
+  generator uses, MIT License, Copyright (c) 2017 Jordan Peck (its notice is kept in the file).
 - `Core/App/Smolv.cs`: a C# port of the decoder in [SMOL-V](https://github.com/aras-p/smol-v),
   MIT License, Copyright (c) 2016-2024 Aras Pranckevicius.
 - `Core/App/Crunch.cs`: a C# port of the DXT1 and DXT5 decoding in crunch's `crn_decomp.h`

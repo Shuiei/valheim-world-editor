@@ -20,7 +20,7 @@ public class GrowthTests
     {
         var s = TestScenes.Flat(1);
         string? said = null;
-        var spots = await Growth.Spots(s, -30, -30, 30, 30, _ => true, NameOf, m => said = m);
+        var spots = await Growth.Spots(s, -30, -30, 30, 30, _ => true, NameOf, m => said = m.Shown);
         Assert.Null(spots);
         Assert.Equal("Regrow needs the world's generator (not available here).", said);
     }
@@ -35,11 +35,11 @@ public class GrowthTests
             var s = scene.Session!;
             var said = new List<string>();
             // Too many zones for the limit.
-            Assert.Null(await Growth.Spots(s, -32, -32, 100, 100, _ => true, NameOf, said.Add, maxZones: 1));
+            Assert.Null(await Growth.Spots(s, -32, -32, 100, 100, _ => true, NameOf, m => said.Add(m.Shown), maxZones: 1));
             Assert.StartsWith("Choose a smaller area: regrow works on up to 1 zones (64 x 64 m)", said[^1]);
             // The trees and rocks taken away first: the game grows them back.
             s.Delete([.. Enumerable.Range(0, scene.Things.Count).Where(i => !scene.Things[i].Piece && !scene.Things[i].Gone)]);
-            var first = await Growth.Spots(s, -30, -30, 30, 30, _ => true, NameOf, said.Add);
+            var first = await Growth.Spots(s, -30, -30, 30, 30, _ => true, NameOf, m => said.Add(m.Shown));
             Assert.NotNull(first);
             Assert.NotEmpty(first);
             Assert.Equal("Working out what the game grows here…", said[^1]);
@@ -51,7 +51,7 @@ public class GrowthTests
                 scene.Things.Add(new WorldScene.Thing(int.MaxValue - 1, StableHash.Of(a.Name), new Vector3(a.X + 2, a.Y, a.Z), Vector3.Zero, 1, false));
                 scene.Things.Add(new WorldScene.Thing(int.MaxValue - 2, StableHash.Of("wood_wall_half"), new Vector3(b.X + 2, b.Y, b.Z), Vector3.Zero, 0, true));
             }
-            var second = await Growth.Spots(s, -30, -30, 30, 30, _ => true, NameOf, said.Add);
+            var second = await Growth.Spots(s, -30, -30, 30, 30, _ => true, NameOf, m => said.Add(m.Shown));
             Assert.NotNull(second);
             Assert.DoesNotContain(a, second);
             Assert.DoesNotContain(b, second);
@@ -59,9 +59,42 @@ public class GrowthTests
             // Grown: nothing is left to grow there.
             Growth.Commit(s, "Area: regrew", second);
             Assert.Equal(second.Count, s.Pending.Added);
-            Assert.Empty((await Growth.Spots(s, -30, -30, 30, 30, _ => true, NameOf, said.Add))!);
+            Assert.Empty((await Growth.Spots(s, -30, -30, 30, 30, _ => true, NameOf, m => said.Add(m.Shown)))!);
             // Nothing kept: none.
-            Assert.Empty((await Growth.Spots(s, -30, -30, 30, 30, _ => false, NameOf, said.Add))!);
+            Assert.Empty((await Growth.Spots(s, -30, -30, 30, 30, _ => false, NameOf, m => said.Add(m.Shown)))!);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ABuildingStopsASpotUpTo4MetresAwayOnEitherSide()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            var scene = WorldScene.Load(dir, 0, 0, 1);
+            var s = scene.Session!;
+            var said = new List<string>();
+            s.Delete([.. Enumerable.Range(0, scene.Things.Count).Where(i => !scene.Things[i].Piece && !scene.Things[i].Gone)]);
+            var spot = (await Growth.Spots(s, -30, -30, 30, 30, _ => true, NameOf, m => said.Add(m.Shown)))![0];
+            // West and east: one of the two lies past a cell line of the neighbour search, whatever the cells.
+            foreach (float dx in (float[])[-3.9f, 3.9f, -4.1f, 4.1f])
+            {
+                lock (scene.Things)
+                {
+                    scene.Things.Add(new WorldScene.Thing(int.MaxValue - 2, StableHash.Of("wood_wall_half"), new Vector3(spot.X + dx, spot.Y, spot.Z), Vector3.Zero, 0, true));
+                }
+                var spots = await Growth.Spots(s, -30, -30, 30, 30, _ => true, NameOf, m => said.Add(m.Shown));
+                Assert.NotNull(spots);
+                Assert.Equal(MathF.Abs(dx) > 4, spots.Contains(spot));
+                lock (scene.Things)
+                {
+                    scene.Things.RemoveAt(scene.Things.Count - 1);
+                }
+            }
         }
         finally
         {

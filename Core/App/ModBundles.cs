@@ -2,6 +2,7 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Text.Json;
 using AssetsTools.NET;
+using TerrainEditor.Save;
 
 namespace TerrainEditor.App;
 
@@ -63,6 +64,10 @@ public static class ModBundles
             {
                 return _made.Reader;
             }
+            // The mods changed: the reader of the last copies lets go of them first, else deleting the folder is
+            // refused on Windows (its bundle files are open) and the mods' models stay missing for the session.
+            _made.Reader?.Close();
+            _made = ("", null);
             GameBundles? reader = null;
             try
             {
@@ -75,7 +80,7 @@ public static class ModBundles
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidDataException or NotSupportedException or NotImplementedException)
             {
-                Console.WriteLine($"mod bundles: could not be copied ({e.Message}).");
+                Log.Caught(e, "copying the mods' bundles (no mod's model is drawn)");
             }
             _made = (stamp, reader);
             return reader;
@@ -83,12 +88,13 @@ public static class ModBundles
     }
 
     /// <summary>
-    /// The mods' bundles in every plugins folder; when the same one is in several (the game and mod manager profiles),
-    /// the newest.
+    /// The mods' bundles in every plugins folder; when the same one is in several (the game and mod manager profiles:
+    /// the same file name and resource, exactly), the newest. Different ones whose copies would have the same name
+    /// ("Mod A.bundle" and "Mod_A.bundle", "Foo" and "foo") each get a name of their own.
     /// </summary>
     internal static List<Source> Find(AppSettings settings)
     {
-        var found = new Dictionary<string, Source>(StringComparer.OrdinalIgnoreCase);
+        var found = new Dictionary<(string File, string? Resource), Source>();
         foreach (var (dir, _) in LocalGame.BepInExFolders(settings))
         {
             string plugins = Path.Combine(dir, "plugins");
@@ -103,20 +109,25 @@ public static class ModBundles
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
+                Log.Caught(e, "listing a plugins folder for the mods' bundles (passed over)");
                 continue;
             }
             foreach (string file in files)
             {
                 foreach (var s in In(file))
                 {
-                    if (!found.TryGetValue(s.Name, out var had) || had.Time < s.Time)
+                    var key = (Path.GetFileName(s.Path), s.Resource);
+                    if (!found.TryGetValue(key, out var had) || had.Time < s.Time)
                     {
-                        found[s.Name] = s;
+                        found[key] = s;
                     }
                 }
             }
         }
-        return [.. found.Values.OrderBy(s => s.Name, StringComparer.Ordinal)];
+        // Copies whose names would be the same file (on Windows, letter case aside): each named after what it is too.
+        var named = found.Values.GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+            .SelectMany(g => g.Count() == 1 ? g : g.Select(s => s with { Name = $"{s.Name}-{StableHash.Of($"{Path.GetFileName(s.Path)}\n{s.Resource}"):x8}" }));
+        return [.. named.OrderBy(s => s.Name, StringComparer.Ordinal)];
     }
 
     /// <summary>
@@ -149,6 +160,7 @@ public static class ModBundles
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException)
         {
             // Not a .NET DLL, or not readable: nothing in it.
+            Log.CaughtBrief(e, "looking for bundles in a mod's file (nothing in it)");
         }
         return list;
     }
@@ -251,7 +263,7 @@ public static class ModBundles
             // still go), else no mod's model would be drawn; it is tried again next time.
             catch (Exception e) when (e is not OutOfMemoryException)
             {
-                Console.WriteLine($"mod bundles: {s.Name} could not be copied ({e.Message}).");
+                Log.Caught(e, $"copying the mod bundle {s.Name} (left out, tried again next time)");
                 failed.Add(s.Name);
             }
         }

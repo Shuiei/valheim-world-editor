@@ -62,13 +62,10 @@ public class WindowFlowTests
         /// <inheritdoc/>
         public void Dispose()
         {
-            try
+            string folder = Path.GetDirectoryName(Dir)!;
+            if (Directory.Exists(folder))
             {
-                Directory.Delete(Path.GetDirectoryName(Dir)!, true);
-            }
-            catch
-            {
-                // Best effort: a folder that cannot be deleted is left for the OS to clean up.
+                Directory.Delete(folder, true);
             }
         }
     }
@@ -236,6 +233,13 @@ public class WindowFlowTests
         w.KeyPress(Key.F3, RawInputModifiers.None, PhysicalKey.F3, null);
         Assert.True(w.HelpCard.IsVisible);
         w.KeyPress(Key.F3, RawInputModifiers.None, PhysicalKey.F3, null);
+        Assert.False(w.HelpCard.IsVisible);
+        // ? (Shift and the / key) too; / alone does not.
+        w.KeyPress(Key.OemQuestion, RawInputModifiers.None, PhysicalKey.Slash, "/");
+        Assert.False(w.HelpCard.IsVisible);
+        w.KeyPress(Key.OemQuestion, RawInputModifiers.Shift, PhysicalKey.Slash, "?");
+        Assert.True(w.HelpCard.IsVisible);
+        w.KeyPress(Key.OemQuestion, RawInputModifiers.Shift, PhysicalKey.Slash, "?");
         Assert.False(w.HelpCard.IsVisible);
         // Undo and redo.
         w.Session!.Shape(32, 32, Two, 3, 0, "raise");

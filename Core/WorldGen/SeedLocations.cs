@@ -492,6 +492,12 @@ public static class SeedLocations
         public static float MapToWorld(float x) => (x - 1024f) * 12f + 6f;
 
         /// <summary>
+        /// World metres to the map coordinate of the 12 m cell holding them (WorldSpaceToMapSpace, cut toward zero as
+        /// the game casts it); <see cref="MapToWorld"/> of it snaps a point to its cell's middle.
+        /// </summary>
+        public static int WorldToMap(float v) => (int)((v - 6f) / 12f + 1024f);
+
+        /// <summary>
         /// A single biome's index (Heightmap.BiomeIndex); -1 for combined flags.
         /// </summary>
         public static int Index(Heightmap.Biome b) => Array.IndexOf(ByIndex, b);
@@ -517,7 +523,7 @@ public static class SeedLocations
                 {
                     float wx = MapToWorld(j);
                     int k = j + i * Size;
-                    if (wx * wx + wy * wy > 110250000f)
+                    if (wx * wx + wy * wy > TerrainService.MapRadius * TerrainService.MapRadius)
                     {
                         _cell[k] = Sea;
                         continue;
@@ -658,11 +664,21 @@ public static class SeedLocations
         /// </summary>
         /// <param name="biomes">The kind's biomes.</param>
         /// <param name="aboveSea">Only points at or above sea level, when the biome has any.</param>
-        public (float X, float Z) RandomPoint(Heightmap.Biome biomes, bool aboveSea)
+        /// <returns>The point; null when the biome drawn is none the map knows (no biome, an unknown flag) or the map
+        /// has no point of it.</returns>
+        public (float X, float Z)? RandomPoint(Heightmap.Biome biomes, bool aboveSea)
         {
             int b = Index(RandomBiome(biomes));
+            if (b < 0)
+            {
+                return null;
+            }
             List(b);
             int[] list = aboveSea && AboveSea[b].Length > 0 ? AboveSea[b] : All[b];
+            if (list.Length == 0)
+            {
+                return null;
+            }
             int p = list[Rnd.Range(0, list.Length)];
             return (MapToWorld(p & 0xFFFF), MapToWorld(p >> 16));
         }
@@ -688,9 +704,14 @@ public static class SeedLocations
         /// </summary>
         private readonly Neighbours _byPrefab = new(), _byGroup = new(), _byGroupMax = new();
         /// <summary>
-        /// The vegetation sums of the kind's spots so far (the "stands out" check).
+        /// How many of the kind's spots so far had their vegetation summed (the "stands out" check), the total of
+        /// those sums (in double, as an average of them is taken) and the best of them.
         /// </summary>
-        private readonly List<float> _sums = [];
+        private int _sums;
+        /// <summary>See <see cref="_sums"/>.</summary>
+        private double _sumsTotal;
+        /// <summary>See <see cref="_sums"/>.</summary>
+        private float _sumsBest;
 
         /// <summary>
         /// Spots tried in each zone drawn.
@@ -704,7 +725,7 @@ public static class SeedLocations
         {
             Rnd.InitState(gen.GetSeed() + StableHash.Of(rule.prefab));
             int have = Instances.Values.Count(p => p.Rule.prefab == rule.prefab);
-            _sums.Clear();
+            (_sums, _sumsTotal, _sumsBest) = (0, 0, float.NegativeInfinity);
             if (rule.unique != 0 && have > 0)
             {
                 return;
@@ -715,7 +736,20 @@ public static class SeedLocations
             float reach = rule.minDistance;
             for (int left = rule.prioritized != 0 ? 60000 : 12000; left > 0 && have < rule.quantity; left--)
             {
-                var zone = rule.centerFirst != 0 ? ZoneNearMiddle(reach++) : ZoneOf(map().RandomPoint(biomes, rule.minAltitude >= 0f));
+                (int X, int Y) zone;
+                if (rule.centerFirst != 0)
+                {
+                    zone = ZoneNearMiddle(reach++);
+                }
+                else if (map().RandomPoint(biomes, rule.minAltitude >= 0f) is { } point)
+                {
+                    zone = ZoneOf(point);
+                }
+                else
+                {
+                    // A biome with no point on the map (or none at all): this try finds no zone.
+                    continue;
+                }
                 if (Instances.ContainsKey(zone) || ((Heightmap.BiomeArea)rule.biomeArea & gen.GetBiomeArea(new Vector2s(zone.X * 64, zone.Y * 64))) == 0)
                 {
                     continue;
@@ -869,12 +903,17 @@ public static class SeedLocations
                     total += around.a * weight;
                 }
             }
-            _sums.Add(total);
-            if (_sums.Count < 10)
+            _sums++;
+            _sumsTotal += total;
+            if (total > _sumsBest)
+            {
+                _sumsBest = total;
+            }
+            if (_sums < 10)
             {
                 return false;
             }
-            float best = _sums.Max(), average = _sums.Average();
+            float best = _sumsBest, average = (float)(_sumsTotal / _sums);
             return total >= average + (best - average) * rule.surroundBetterThanAverage;
         }
 

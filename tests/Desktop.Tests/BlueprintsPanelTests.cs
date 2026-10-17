@@ -189,6 +189,29 @@ public class BlueprintsPanelTests
         File.WriteAllText(empty, "nothing useful here");
         Assert.Null(r.B.Import(empty));
         Assert.Contains("no pieces found in it", r.Said);
+        // Terrain marks too far apart for a ground grid: said, on an import and on a paste, export or copy to Homestead
+        // of a Homestead file.
+        string wide = string.Join("\n", "#Terrain", "circle;0;0;0;1;0;0;dirt", "circle;2000;0;0;1;0;0;dirt");
+        string wideFile = Path.Combine(r.Dir, "wide.blueprint");
+        File.WriteAllText(wideFile, wide);
+        Assert.Null(r.B.Import(wideFile));
+        Assert.StartsWith("Could not import that file: its ground marks span ", r.Said);
+        Directory.CreateDirectory(r.Homestead);
+        File.WriteAllText(Path.Combine(r.Homestead, "wide.blueprint"), wide);
+        r.B.Paste("hs:wide.blueprint");
+        Assert.StartsWith("That blueprint could not be read: its ground marks span ", r.Said);
+        r.Said = null;
+        Assert.Null(r.B.Export("hs:wide.blueprint", "vbuild"));
+        Assert.StartsWith("That blueprint could not be read: its ground marks span ", r.Said);
+        r.Said = null;
+        Assert.Null(r.B.ToHomestead("hs:wide.blueprint"));
+        Assert.StartsWith("That blueprint could not be read: its ground marks span ", r.Said);
+        // An older editor blueprint whose ground arrays are shorter than its size says: said, nothing pasted.
+        var shortClip = CopyFormat.ToJson(BlueprintsPanelRun.Clip("Short", "woodwall"));
+        shortClip["rel"] = new System.Text.Json.Nodes.JsonArray(0);
+        r.B.Paste(r.B.Store.Save("Short", null, null, shortClip));
+        Assert.StartsWith("That blueprint could not be read: its \"rel\" list holds 1 values", r.Said);
+        Assert.Null(r.W.View.Paste.Clip);
     }
 
     // A blueprints folder that cannot be written (here a file where the folder should be) is said so;

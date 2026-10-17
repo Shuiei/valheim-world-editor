@@ -39,12 +39,9 @@ public sealed class EditSessionLinkRulesTests : IDisposable
     {
         ModManifests.Forget();
         LocalGame.SearchDefaultPlaces = _defaults;
-        try
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, true);
-        }
-        catch (IOException)
-        {
         }
     }
 

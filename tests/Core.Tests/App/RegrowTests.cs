@@ -138,4 +138,23 @@ public class RegrowTests
             Assert.Equal(apart[i].Y, together[i].Y, 3);
         }
     }
+
+    [Fact]
+    public void EachZoneIsReadOnceForSeveralZones()
+    {
+        using var w = new TempWorld();
+        WorldSave world = w.Load();
+        var terrain = new ValheimGen.TerrainService(world, null);
+        var edits = new EditStore(world);
+        // A 4 × 4 block inside the Ashlands, away from the world's edge: groups there are up to 50 m wide and reach
+        // into the neighbours, which used to be read again for every zone.
+        var (ax, az) = Enumerable.Range(-150, 301).SelectMany(z => Enumerable.Range(-150, 301).Select(x => (X: x, Z: z)))
+            .First(p => (p.X + 2) * (p.X + 2) + (p.Z + 2) * (p.Z + 2) < 130 * 130 && Enumerable.Range(-1, 6).All(dz => Enumerable.Range(-1, 6)
+                .All(dx => terrain.CornerBiomes(p.X + dx, p.Z + dz).All(b => b == (int)ValheimGen.Heightmap.Biome.AshLands))));
+        int before = Regrow.ZoneReads;
+        var spots = Regrow.Zones(terrain, edits, world.Seed, ax, az, ax + 3, az + 3);
+        Assert.NotEmpty(spots);
+        // At most the block and one ring around it, each once.
+        Assert.InRange(Regrow.ZoneReads - before, 16, 36);
+    }
 }

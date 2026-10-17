@@ -177,16 +177,16 @@ public static partial class GameShader
         var entries = Entries(blob);
         foreach (var sp in deferred)
         {
-            if (sp.GpuProgramType != SpirvProgram || sp.Keywords != 0 || sp.BlobIndex >= entries.Count || sp.ParameterBlobIndex >= entries.Count)
+            if (sp.GpuProgramType != SpirvProgram || sp.Keywords != 0 || (uint)sp.BlobIndex >= entries.Count || (uint)sp.ParameterBlobIndex >= entries.Count)
             {
                 continue;
             }
             var stages = new Dictionary<uint, uint[]>();
             foreach (var (_, w) in Smolv.Programs(entries[sp.BlobIndex]))
             {
-                foreach (var (_, op, a) in Instructions(w))
+                foreach (var (at, op, a) in Instructions(w))
                 {
-                    if (op == 15)
+                    if (op == 15 && Length(w, at) > 0)
                     {
                         stages[w[a]] = w;
                         break;
@@ -209,31 +209,46 @@ public static partial class GameShader
     /// The blob's entries (programs and parameter blobs): a count, then an offset and length per entry
     /// (12-byte records).
     /// </summary>
+    /// <exception cref="InvalidDataException">The records, or an entry they name, do not fit in the blob.</exception>
     private static List<byte[]> Entries(byte[] blob)
     {
-        int n = (int)BitConverter.ToUInt32(blob, 0);
-        var res = new List<byte[]>(n);
+        uint n = blob.Length >= 4 ? BitConverter.ToUInt32(blob, 0) : throw new InvalidDataException("The shader's Vulkan blob is too short.");
+        if (n > (blob.Length - 4) / 12)
+        {
+            throw new InvalidDataException("The shader's Vulkan blob lists more entries than it holds.");
+        }
+        var res = new List<byte[]>((int)n);
         for (int i = 0; i < n; i++)
         {
-            int o = (int)BitConverter.ToUInt32(blob, 4 + 12 * i), l = (int)BitConverter.ToUInt32(blob, 8 + 12 * i);
-            res.Add(blob.AsSpan(o, l).ToArray());
+            uint o = BitConverter.ToUInt32(blob, 4 + 12 * i), l = BitConverter.ToUInt32(blob, 8 + 12 * i);
+            if ((ulong)o + l > (ulong)blob.Length)
+            {
+                throw new InvalidDataException("An entry of the shader's Vulkan blob lies outside it.");
+            }
+            res.Add(blob.AsSpan((int)o, (int)l).ToArray());
         }
         return res;
     }
 
     /// <summary>
-    /// (word index, opcode, index of the first operand) of each instruction after the 5-word header. Throws
-    /// on an instruction of zero length.
+    /// (word index, opcode, index of the first operand) of each instruction after the 5-word header.
     /// </summary>
+    /// <exception cref="InvalidDataException">
+    /// No whole header, or an instruction of zero length or running past the end.
+    /// </exception>
     private static IEnumerable<(int At, int Op, int Args)> Instructions(uint[] words)
     {
+        if (words.Length < 5)
+        {
+            throw new InvalidDataException("bad SPIR-V: shorter than its header");
+        }
         int i = 5;
         while (i < words.Length)
         {
             int n = (int)(words[i] >> 16);
-            if (n == 0)
+            if (n == 0 || n > words.Length - i)
             {
-                throw new InvalidDataException("bad SPIR-V");
+                throw new InvalidDataException("bad SPIR-V: an instruction of no length, or running past the end");
             }
             yield return (i, (int)(words[i] & 0xFFFF), i + 1);
             i += n;

@@ -28,9 +28,23 @@ public static class JoinedRuins
     public static HashSet<int> InWorld(WorldSave world, ICollection<int> deleted, IEnumerable<Vector3>? alsoBuilt = null)
     {
         List<(int Id, Vector3 Position)> ruins = [.. world.Objects.Where(o => !deleted.Contains(o.Id) && PieceCatalog.Get(o.Prefab) != null).Select(o => (o.Id, o.Position))];
-        List<Vector3> built = [.. world.Pieces.Where(p => !deleted.Contains(p.Id)).Select(p => p.Position), .. alsoBuilt ?? []];
-        bool[] joined = Find(built, [.. ruins.Select(r => r.Position)]);
+        bool[] joined = InWorld(world, [.. ruins.Select(r => r.Position)], deleted, alsoBuilt);
         return [.. ruins.Where((_, i) => joined[i]).Select(r => r.Id)];
+    }
+
+    /// <summary>
+    /// Which of the world's ruin pieces the caller already has are joined to its player-built pieces (as the other
+    /// <c>InWorld</c>, without looking through every object again). The caller holds the world's lock.
+    /// </summary>
+    /// <param name="world">The world.</param>
+    /// <param name="ruins">Where the ruin pieces are (every one in the world, the deleted left out).</param>
+    /// <param name="deleted">Object ids to leave out.</param>
+    /// <param name="alsoBuilt">Where more built pieces are (added in this session), if any.</param>
+    /// <returns>For each ruin piece, whether it is joined.</returns>
+    public static bool[] InWorld(WorldSave world, IReadOnlyList<Vector3> ruins, ICollection<int> deleted, IEnumerable<Vector3>? alsoBuilt = null)
+    {
+        List<Vector3> built = [.. world.Pieces.Where(p => !deleted.Contains(p.Id)).Select(p => p.Position), .. alsoBuilt ?? []];
+        return Find(built, ruins);
     }
 
     /// <summary>Which ruin pieces are joined to the built ones.</summary>

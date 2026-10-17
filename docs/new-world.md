@@ -149,8 +149,9 @@ seed's places must be laid out too.
 
 ### What it writes
 
-The editor writes a new folder named after the world, holding save number 1 of an empty world in the game's save
-format:
+The editor writes a new folder named after the world, holding save number 1 of an empty world in the save format
+of Valheim 1.0.20 and later (format 42, as the game writes a new world; an older Valheim refuses it, so update the
+game or the server first):
 
 - the world's details: its name, its seed and the version of the game's world generator;
 - an empty zone list, marked as "locations not laid out yet";

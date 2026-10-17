@@ -297,7 +297,7 @@ public struct Vector2s : IEquatable<Vector2s>
     public override readonly bool Equals(object obj) => obj is Vector2s v && Equals(v);
 
     /// <inheritdoc/>
-    public override readonly int GetHashCode() => x | (y << 16);
+    public override readonly int GetHashCode() => (ushort)x | (y << 16);
 }
 
 /// <summary>
@@ -420,19 +420,6 @@ public static class Utils
 }
 
 /// <summary>
-/// Valheim's ZLog: logging is dropped offline.
-/// </summary>
-public static class ZLog
-{
-    /// <summary>
-    /// Does nothing.
-    /// </summary>
-    public static void Log(object _)
-    {
-    }
-}
-
-/// <summary>
 /// Valheim's Heightmap: only its biome enums.
 /// </summary>
 public static class Heightmap
@@ -493,49 +480,6 @@ public static class Heightmap
 }
 
 /// <summary>
-/// Biome sectors only drive textures and vegetation, never height; the generator gets the
-/// "no biome data" answer, the same as for a world without Deep North data.
-/// </summary>
-public sealed class BiomeSector
-{
-    /// <summary>
-    /// The sector's biome.
-    /// </summary>
-    public Heightmap.Biome Biome;
-
-    /// <summary>
-    /// An empty Black Forest sector.
-    /// </summary>
-    public static readonly BiomeSector EmptyBlackForest = new() { Biome = Heightmap.Biome.BlackForest };
-
-    /// <summary>
-    /// An empty Meadows sector.
-    /// </summary>
-    public static readonly BiomeSector EmptyMeadows = new() { Biome = Heightmap.Biome.Meadows };
-}
-
-/// <summary>
-/// Stand-in for the game's biome sector data: never ready, so the generator takes the "no biome data" path.
-/// </summary>
-public sealed class AltBiomeWorldData
-{
-    /// <summary>
-    /// Always false: there is no sector data offline.
-    /// </summary>
-    public bool IsReady => false;
-
-    /// <summary>
-    /// Always null.
-    /// </summary>
-    public BiomeSector[,] PointSectors => null;
-
-    /// <summary>
-    /// Always 0.
-    /// </summary>
-    public static int WorldSpaceToMapSpace(float _) => 0;
-}
-
-/// <summary>
 /// Valheim's World: what the generator needs to know about the world it makes.
 /// </summary>
 public sealed class World
@@ -559,9 +503,4 @@ public sealed class World
     /// The main menu's background world: simpler terrain and no rivers.
     /// </summary>
     public bool m_menu;
-
-    /// <summary>
-    /// Biome sector data; never set offline.
-    /// </summary>
-    public AltBiomeWorldData m_biomeData;
 }

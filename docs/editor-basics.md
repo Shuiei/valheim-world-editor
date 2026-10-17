@@ -170,7 +170,8 @@ How a save works:
    chunk files that hold the objects and the ground. The editor writes the **next save number** (the highest there
    + 1): new copies of only the chunk files that changed, a new index, and the world's data. Untouched objects are
    copied byte for byte. The `.ok` marker is written last, as the game does: the game only trusts a save that has
-   it.
+   it. Each file keeps the save format it was read in, so worlds saved by Valheim 1.0.20 and later (format 42) and
+   by earlier versions (format 41) both save, and open again in the game that saved them.
 2. **Read back and checked.** The editor reads the new save back and compares it with what it meant to write: the
    saved zones' ground, every other zone's ground untouched, the number of objects, the reset zones. If anything
    differs or fails, the new files are removed and the message ends with "Nothing changed". Nothing of the old save
@@ -192,8 +193,34 @@ what could not be saved, with the reason:
   ground object of the world to make new ones, so dig once anywhere in game first.
 
 **The game saved since?** If the game saved the world after the editor read it (you played between two saves),
-the editor saves nothing and says so, because saving would throw away what was done in the game. Leave the world
-and open it again, so you edit the game's save.
+the editor saves nothing, because saving would throw away what was done in the game. Instead it offers to **bring
+your changes over** onto the game's save:
+
+1. It reads the game's save and makes each of your unsaved changes again on it: the changed zones' ground (heights,
+   paint, smoothing, zone resets and No limit ground), the objects you deleted, added and moved, with their data and
+   links. Objects are found again by kind and place, since their ids change with every save.
+2. Where the game changed the same thing, it asks once per kind, **Keep mine** or **Keep the game's**, listing the
+   first few (name and place, or zone):
+   - **zones whose ground you both changed**: keeping yours puts your changed points and paint over the game's,
+     and the game's ground stays everywhere else in those zones; keeping the game's also drops a reset of that
+     zone's ground you marked there (a reset of its objects alone stays);
+   - **objects the game changed** (a chest's contents, a sign, a growing plant) that you deleted, moved or edited
+     (an object you added and saved counts too):
+     keeping yours deletes, moves or edits them (a moved one takes the game's data along, an edited one keeps
+     yours);
+   - **objects the game removed** that you moved or edited (taken or destroyed by players, or moved away, like a
+     creature or a ship): keeping yours brings them back where you put them, as you had them. One the game only
+     moved is then there twice.
+
+   If the save the editor read is gone (the game keeps only its last two saves), the editor cannot tell whether
+   the game changed an object, and the question says how many of them may be unchanged.
+3. The world is then the game's save with your changes pending on it, and the area is read again. **Nothing is
+   written yet**: look the changes over, then save as usual. The next save is made from the game's save.
+
+The history comes along: its steps find their objects in the game's save, and you are asked once before undoing
+one (the game changed the world under it). A step that touches something you gave to the game's version cannot be
+undone any more, nor can the steps before it: those are dropped, and the result says how many. **Not now** leaves
+everything as it was; saving again offers the same.
 
 After [zone resets](area.md#reset-zones), or when [No limit](terrain.md#no-limit) ground is turned into ground discs,
 the world is read again from what was written, because the ground under the area is no longer the same. That
@@ -373,7 +400,11 @@ written. The view is only drawn at full speed while something happens; otherwise
 Everything the editor says also goes to `ValheimWorldEditor.log` in the same data folder
 (`~/.local/share/ValheimWorldEditor` on Linux, `%LOCALAPPDATA%\ValheimWorldEditor` on Windows), each line with its
 time, started over at each run. **Open log** at the bottom of the start page's menu opens it: attach it when you
-report a problem.
+report a problem. Every error the editor handles is in it, as a line starting `Caught at` with where it happened,
+what the editor was doing and the error itself (with its stack trace, unless it is an expected one such as text
+being typed). Personal data is left out of these lines: your home folder is written `~`, and file paths, web
+addresses, user@host names, IP and server addresses, your account name and the saved servers' accounts, passwords
+and tokens are replaced by placeholders such as `<path>`.
 
 The keys below work in the 3D editor only: not while you type in a box, and not on the start page or the map. This
 is the full list; the help card shows the main ones.

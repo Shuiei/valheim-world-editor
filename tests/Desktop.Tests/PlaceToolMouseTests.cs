@@ -75,7 +75,7 @@ public class PlaceToolMouseTests
         w.PlaceTool.AutoSnap();
         w.PlaceTool.Mode = mode;
         var v = new View(w, s, new Avalonia.Size(1600, 1000));
-        w.PlaceInput.Message += t => v.Said = t;
+        w.PlaceInput.Message += t => v.Said = t.Shown;
         return v;
     }
 

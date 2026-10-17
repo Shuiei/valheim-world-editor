@@ -107,15 +107,20 @@ public static class PieceCatalog
             {
                 continue;
             }
-            Info? info = Get(prefab);
-            if (info == null)
+            if (Get(prefab) is { } info)
             {
-                continue;
+                Pack(data, info, pos, rotY, id);
             }
-            data.AddRange([pos.X, pos.Y, pos.Z, rotY, info.MinX, info.MaxX, info.MinZ, info.MaxZ, pos.Y + info.MaxY, info.Category, pos.Y + info.MinY, info.Index, id]);
         }
         return [.. data];
     }
+
+    /// <summary>
+    /// One piece as <see cref="Stride"/> floats: its position and turn, its box (x and z extents, top), its category,
+    /// its bottom, its catalogue index and its object id.
+    /// </summary>
+    private static void Pack(List<float> data, Info info, System.Numerics.Vector3 pos, float rotY, int id) =>
+        data.AddRange([pos.X, pos.Y, pos.Z, rotY, info.MinX, info.MaxX, info.MinZ, info.MaxZ, pos.Y + info.MaxY, info.Category, pos.Y + info.MinY, info.Index, id]);
 
     /// <summary>
     /// The ruins' pieces (building pieces without a builder: generated with the world) packed as
@@ -126,20 +131,22 @@ public static class PieceCatalog
     /// <param name="deleted">Object ids to leave out.</param>
     public static (float[] Data, bool[] Joined) EncodeRuins(WorldSave world, ICollection<int> deleted)
     {
-        List<(int Id, int Prefab, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation)> ruins;
-        HashSet<int> joined;
+        List<(int Id, Info Info, System.Numerics.Vector3 Position, System.Numerics.Vector3 Rotation)> ruins;
+        bool[] joined;
         lock (world.Sync)
         {
-            ruins = [.. world.Objects.Where(o => !deleted.Contains(o.Id) && Get(o.Prefab) != null).Select(o => (o.Id, o.Prefab, o.Position, o.Rotation))];
-            joined = App.JoinedRuins.InWorld(world, deleted);
+            // The piece's catalogue entry is looked up once, kept from the filter.
+            ruins = [.. world.Objects.Where(o => !deleted.Contains(o.Id)).Select(o => (Object: o, Info: Get(o.Prefab))).Where(t => t.Info != null)
+                .Select(t => (t.Object.Id, t.Info!, t.Object.Position, t.Object.Rotation))];
+            // The ruins just gathered: the world's objects are not looked through a second time.
+            joined = App.JoinedRuins.InWorld(world, [.. ruins.Select(r => r.Position)], deleted);
         }
         List<float> data = new(ruins.Count * Stride);
-        foreach (var (id, prefab, pos, rot) in ruins)
+        foreach (var (id, info, pos, rot) in ruins)
         {
-            Info info = Get(prefab)!;
-            data.AddRange([pos.X, pos.Y, pos.Z, rot.Y, info.MinX, info.MaxX, info.MinZ, info.MaxZ, pos.Y + info.MaxY, info.Category, pos.Y + info.MinY, info.Index, id]);
+            Pack(data, info, pos, rot.Y, id);
         }
-        return ([.. data], [.. ruins.Select(r => joined.Contains(r.Id))]);
+        return ([.. data], joined);
     }
 
     /// <summary>

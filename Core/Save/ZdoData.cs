@@ -1,11 +1,13 @@
 using System.Numerics;
 using System.Text;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Save;
 
 /// <summary>
 /// Everything one saved object (ZDO) holds, read into typed lists that can be looked at and changed, then written back
-/// in the save format (world version 41). The object inspector works on this.
+/// in the save format (world versions 41 and 42, which lay objects out the same). The object inspector works on
+/// this.
 /// </summary>
 public sealed class ZdoData
 {
@@ -17,10 +19,22 @@ public sealed class ZdoData
     /// </summary>
     public const ushort Connections = 0x1, Floats = 0x2, Vec3s = 0x4, Quats = 0x8, Ints = 0x10, Longs = 0x20, Strings = 0x40, ByteArrays = 0x80;
 
-    /// <summary>ZDO flag bits: a rotation is stored; the position is in the short form.</summary>
-    private const ushort RotationFlag = 0x1000, SmallPositionFlag = 0x2000;
+    /// <summary>ZDO flag bits: a rotation is stored; the position is in the short form (the zone, as two shorts).</summary>
+    public const ushort RotationFlag = 0x1000, SmallPositionFlag = 0x2000;
 
-    /// <summary>Persistent / distant / object type bits (0x0F00) as saved.</summary>
+    /// <summary>Vec3 data key of a per-axis scale.</summary>
+    public static readonly int ScaleKey = StableHash.Of("scale");
+
+    /// <summary>Float data key of a uniform scale.</summary>
+    public static readonly int ScaleScalarKey = StableHash.Of("scaleScalar");
+
+    /// <summary>
+    /// The flag bits kept as saved: persistent / distant / object type (0x0F00) and the two the format leaves unused
+    /// (0xC000), as ZdoBuilder keeps them.
+    /// </summary>
+    private const ushort KeptFlags = 0xCF00;
+
+    /// <summary>Persistent / distant / object type bits (0x0F00) and any unused high bits (0xC000), as saved.</summary>
     public ushort BaseFlags { get; set; }
 
     /// <summary>World position in metres.</summary>
@@ -67,70 +81,52 @@ public sealed class ZdoData
     /// <param name="worldVersion">
     /// The world version it was written in (older ones carry a sector and a full rotation).
     /// </param>
-    public static ZdoData Parse(byte[] bytes, int worldVersion = 41)
+    public static ZdoData Parse(byte[] bytes, int worldVersion = 41) => Parse(bytes, 0, bytes.Length, worldVersion);
+
+    /// <summary>Reads the object saved in part of a buffer (a chunk file's bytes, say).</summary>
+    /// <param name="buffer">The bytes the object is in.</param>
+    /// <param name="start">Where the object starts (at its flags).</param>
+    /// <param name="length">Its length in bytes; nothing past it is read.</param>
+    /// <param name="worldVersion">The world version it was written in.</param>
+    public static ZdoData Parse(byte[] buffer, int start, int length, int worldVersion)
     {
-        using ValheimReader r = new(new MemoryStream(bytes));
-        ZdoData z = new();
-        ushort flags = r.ReadUShort();
-        z.BaseFlags = (ushort)(flags & 0x0F00);
-        if (worldVersion < WorldVersion.ChunkedSave)
+        using ValheimReader r = new(new MemoryStream(buffer, start, length));
+        ZdoReader read = new(r, worldVersion);
+        ZdoData z = new()
         {
-            r.ReadVector2s();
-        }
-        if ((flags & SmallPositionFlag) != 0)
+            BaseFlags = (ushort)(read.Flags & KeptFlags),
+            Position = read.Position,
+            SmallPosition = read.SmallPosition,
+            Prefab = read.Prefab,
+            Rotation = read.Rotation,
+        };
+        while (read.Next())
         {
-            var (x, y) = r.ReadVector2s();
-            z.Position = new Vector3(x, 0f, y);
-            z.SmallPosition = true;
-        }
-        else
-        {
-            z.Position = r.ReadVector3();
-        }
-        z.Prefab = r.ReadInt();
-        if ((flags & RotationFlag) != 0)
-        {
-            z.Rotation = worldVersion >= WorldVersion.ChunkedSave ? r.ReadSmallRotation() : r.ReadVector3();
-        }
-        if ((flags & 0xFF) == 0)
-        {
-            return z;
-        }
-        if ((flags & Connections) != 0)
-        {
-            z.Connection = r.ReadBytes(5);
-        }
-        void Each(ushort flag, Action<int> read)
-        {
-            if ((flags & flag) == 0)
+            int k = read.Key;
+            switch (read.Section)
             {
-                return;
-            }
-            int n = r.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                read(r.ReadInt());
+                case Connections: z.Connection = read.Connection; break;
+                case Floats: z.FloatList.Add((k, read.FloatValue)); break;
+                case Vec3s: z.Vec3List.Add((k, read.Vec3Value)); break;
+                case Quats: z.QuatList.Add((k, read.QuatValue)); break;
+                case Ints: z.IntList.Add((k, read.IntValue)); break;
+                case Longs: z.LongList.Add((k, read.LongValue)); break;
+                case Strings: z.StringList.Add((k, read.StringValue!)); break;
+                default: z.ByteList.Add((k, read.BytesValue!)); break;
             }
         }
-        Each(Floats, k => z.FloatList.Add((k, r.ReadSingle())));
-        Each(Vec3s, k => z.Vec3List.Add((k, r.ReadVector3())));
-        Each(Quats, k => z.QuatList.Add((k, new Quaternion(r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle()))));
-        Each(Ints, k => z.IntList.Add((k, r.ReadInt())));
-        Each(Longs, k => z.LongList.Add((k, r.ReadLong())));
-        Each(Strings, k => z.StringList.Add((k, r.ReadString())));
-        Each(ByteArrays, k => z.ByteList.Add((k, r.ReadByteArray())));
         return z;
     }
 
     /// <summary>
-    /// The object in the save format of world version 41; empty sections are left out and a near-zero rotation is not
-    /// stored.
+    /// The object in the save format of world versions 41 and 42; empty sections are left out and a near-zero rotation
+    /// is not stored.
     /// </summary>
     public byte[] Serialize()
     {
         Vector3 euler = new(ZdoBuilder.Wrap(Rotation.X), ZdoBuilder.Wrap(Rotation.Y), ZdoBuilder.Wrap(Rotation.Z));
         bool rotated = euler.LengthSquared() > 1e-6f;
-        ushort flags = (ushort)(BaseFlags & 0x0F00);
+        ushort flags = (ushort)(BaseFlags & KeptFlags);
         bool small = SmallPosition && Position.Y == 0f && Fits(Position.X) && Fits(Position.Z);
         if (small)
         {
@@ -242,14 +238,19 @@ public sealed class ZdoData
     /// the value.
     /// </param>
     /// <exception cref="ArgumentException">An unknown section.</exception>
-    /// <exception cref="FormatException">The value does not parse for that section.</exception>
+    /// <exception cref="FormatException">The value does not parse for that section, or a number in it is not finite.</exception>
     public void Set(string section, int key, string? value)
     {
-        static float F(string s) => float.Parse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture);
+        // A number the game can use: NaN or an infinity (typed, or a number too large) would break the object in it.
+        static float F(string s)
+        {
+            float v = float.Parse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture);
+            return float.IsFinite(v) ? v : throw new FormatException($"{s} is not a finite number");
+        }
         static float[] Fs(string s, int n)
         {
-            float[] v = [.. s.Split(NumberSeparators, StringSplitOptions.RemoveEmptyEntries).Select(F)];
-            return v.Length == n ? v : throw new FormatException($"{n} numbers expected");
+            float[] v = Numbers(s, n) ?? throw new FormatException($"{n} numbers expected");
+            return v.All(float.IsFinite) ? v : throw new FormatException($"{s} is not a finite number");
         }
         switch (section)
         {
@@ -264,6 +265,28 @@ public sealed class ZdoData
         }
     }
 
+    /// <summary>
+    /// Exactly <paramref name="n"/> numbers from a value's text ("x y z"; commas and semicolons part them too), as
+    /// <see cref="Set"/> reads vec3 and quats; null when it holds another count, or something that is no number.
+    /// </summary>
+    public static float[]? Numbers(string? text, int n)
+    {
+        string[] parts = text?.Split(NumberSeparators, StringSplitOptions.RemoveEmptyEntries) ?? [];
+        if (parts.Length != n)
+        {
+            return null;
+        }
+        float[] v = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            if (!float.TryParse(parts[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out v[i]))
+            {
+                return null;
+            }
+        }
+        return v;
+    }
+
     /// <summary>Whether Set takes this value for that section (the numbers it needs, base64 for bytes).</summary>
     public static bool Valid(string section, string? value)
     {
@@ -274,6 +297,7 @@ public sealed class ZdoData
         }
         catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
         {
+            Log.CaughtBrief(ex, $"checking a value for the {section} section (not taken)");
             return false;
         }
     }
@@ -281,8 +305,29 @@ public sealed class ZdoData
     /// <summary>Sets a byte array value, replacing one with the same key.</summary>
     public void SetBytes(int key, byte[] value) => Put(ByteList, key, value, v => v);
 
+    /// <summary>Sets a vector value, replacing one with the same key.</summary>
+    public void SetVec3(int key, Vector3 value) => Put(Vec3List, key, value, v => v);
+
     /// <summary>The byte array value with this key, or null when there is none.</summary>
     public byte[]? GetBytes(int key) => ByteList.FirstOrDefault(i => i.Key == key).Value;
+
+    /// <summary>The int value with this key, or null when there is none.</summary>
+    public int? GetInt(int key) => TryGet(IntList, key, out int v) ? v : null;
+
+    /// <summary>The first value of a key in a section's list of values; false when the list has none.</summary>
+    public static bool TryGet<T>(IReadOnlyList<(int Key, T Value)> list, int key, out T value)
+    {
+        foreach (var (k, v) in list)
+        {
+            if (k == key)
+            {
+                value = v;
+                return true;
+            }
+        }
+        value = default!;
+        return false;
+    }
 
     /// <summary>Replaces or adds the value for the key in a section, or removes it when the value is null.</summary>
     private static void Put<T, TIn>(List<(int Key, T Value)> list, int key, TIn? value, Func<TIn, T> parse)

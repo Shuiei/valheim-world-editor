@@ -46,38 +46,10 @@ public sealed class CopyView(string prefab, Vector3 position, Vector3 rotation, 
     }
 
     /// <summary>Sets a value's text (null: takes it away).</summary>
-    private void Put(string section, string key, string? value)
-    {
-        int h = StableHash.Of(key);
-        int i = data.FindIndex(f => f.Key == h && f.Section == section);
-        if (i >= 0)
-        {
-            data[i] = data[i] with { Value = value };
-        }
-        else if (value != null)
-        {
-            data.Add(new ObjectField(section, h, value));
-        }
-    }
+    private void Put(string section, string key, string? value) => ObjectField.Put(data, section, StableHash.Of(key), value);
 
-    /// <summary>Numbers of a value's text, exactly <paramref name="n"/> of them; null otherwise.</summary>
-    private float[]? Floats(string section, string key, int n)
-    {
-        string[] parts = Text(section, key)?.Split([' ', ','], StringSplitOptions.RemoveEmptyEntries) ?? [];
-        float[] v = new float[n];
-        if (parts.Length != n)
-        {
-            return null;
-        }
-        for (int i = 0; i < n; i++)
-        {
-            if (!float.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out v[i]))
-            {
-                return null;
-            }
-        }
-        return v;
-    }
+    /// <summary>Numbers of a value's text, exactly <paramref name="n"/> of them (as the save reads them); null otherwise.</summary>
+    private float[]? Floats(string section, string key, int n) => ZdoData.Numbers(Text(section, key), n);
 
     /// <summary>Numbers as a value's text.</summary>
     private static string Join(params float[] v) => string.Join(' ', v.Select(x => x.ToString("R", CultureInfo.InvariantCulture)));
@@ -127,8 +99,9 @@ public sealed class CopyView(string prefab, Vector3 position, Vector3 rotation, 
             value = Convert.FromBase64String(text);
             return true;
         }
-        catch (FormatException)
+        catch (FormatException e)
         {
+            Log.CaughtBrief(e, "reading copied bytes (not base64: left out)");
             return false;
         }
     }

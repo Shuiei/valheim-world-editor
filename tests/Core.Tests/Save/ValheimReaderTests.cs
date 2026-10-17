@@ -136,6 +136,17 @@ public class ValheimReaderTests
         Assert.DoesNotContain(back.FloatList, f => f.Key == StableHash.Of("scaleScalar"));
     }
 
+    // CheckedReads.Damaged: what a read of damaged bytes throws, and nothing else (a plain IOException is a file that
+    // could not be read, not damaged bytes).
+    [Fact]
+    public void DamagedBytesAreKnownByWhatTheirReadThrows()
+    {
+        Assert.All(new Exception[] { new EndOfStreamException(), new InvalidDataException(), new FormatException(), new NotSupportedException() }, e => Assert.True(CheckedReads.Damaged(e)));
+        Assert.False(CheckedReads.Damaged(new IOException()));
+        Assert.False(CheckedReads.Damaged(new ArgumentException()));
+        Assert.False(CheckedReads.Damaged(new InvalidOperationException()));
+    }
+
     [Fact]
     public void AZoneListThatCannotBeReadLeavesTheRestOfTheWorld()
     {
@@ -154,5 +165,15 @@ public class ValheimReaderTests
         var t = w.Load().TerrainZones[0];
         Assert.Equal(65, t.HeightWidth);
         Assert.Equal(65, t.PaintWidth);
+    }
+
+    [Fact]
+    public void ACompactCountIsOneByteOrTwo()
+    {
+        // The one reader of the game's compact counts (InventoryData had a copy of its own).
+        using var r = new BinaryReader(new MemoryStream([0x05, 0x81, 0x02, 0x7F]));
+        Assert.Equal(5, r.ReadNumItems());
+        Assert.Equal(0x102, r.ReadNumItems());
+        Assert.Equal(127, r.ReadNumItems());
     }
 }

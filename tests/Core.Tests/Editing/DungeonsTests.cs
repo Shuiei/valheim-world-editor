@@ -307,4 +307,15 @@ public class DungeonsTests
         var bare = new Dungeons.Room("bare", 1, 1, new Vector3(4, 4, 4), false, false, false, 0, 1f, false, true, [], [], [], [], []);
         Assert.Equal(CaveAt, Dungeons.PlaceStart(bare, CaveAt, Quaternion.Identity).Position);
     }
+
+    [Fact]
+    public void DamagedNodesInScanDataEndTheWalkUpThePartsParents()
+    {
+        // A node past the list threw, and parents looping (0 under 1 under 0) never ended.
+        Dungeons.Content[] contents = [new("past", Vector3.Zero, Quaternion.Identity, 5), new("looped", Vector3.One, Quaternion.Identity, 0)];
+
+        var made = Dungeons.Replay(contents, [], [], [1, 0], -1, 0, 1, Vector3.Zero, Quaternion.Identity);
+
+        Assert.Equal(["past", "looped"], made.Select(m => m.Prefab));
+    }
 }

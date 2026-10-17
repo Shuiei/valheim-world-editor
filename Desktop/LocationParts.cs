@@ -25,7 +25,7 @@ public static class LocationParts
     /// <param name="Rotation">Its proxy's turn, Euler degrees.</param>
     public readonly record struct Shown(int Location, Vector3 Position, Vector3 Rotation);
 
-    /// <summary>The locations found for a scene, with the save, edit version and proxy count they were found at.</summary>
+    /// <summary>The locations found for a scene, with the save, objects' edit version and proxy count they were found at.</summary>
     private sealed record Cache(WorldSave World, int Version, int Count, IReadOnlyList<Shown> Locations);
 
     /// <summary>What was found last, per scene.</summary>
@@ -39,7 +39,8 @@ public static class LocationParts
     public static IReadOnlyList<Shown> Of(WorldScene s)
     {
         var world = s.World;
-        int version = s.Session?.Edits.Version ?? 0;
+        // The objects' version: ground strokes leave the locations as they are.
+        int version = s.Session?.Edits.ObjectsVersion ?? 0;
         int count;
         lock (world.Sync)
         {
@@ -61,7 +62,7 @@ public static class LocationParts
     /// <param name="added">The objects added in this session: its location proxies (with their bytes) count.</param>
     internal static List<Shown> Find(WorldScene s, WorldSave world, ICollection<int> deleted, IEnumerable<NewObject> added)
     {
-        float minX = s.X0 * 64f - 32f, maxX = (s.X0 + s.ZonesX - 1) * 64f + 32f, minZ = s.Z0 * 64f - 32f, maxZ = (s.Z0 + s.ZonesZ - 1) * 64f + 32f;
+        float minX = s.OriginX, maxX = (s.X0 + s.ZonesX - 1) * 64f + 32f, minZ = s.OriginZ, maxZ = (s.Z0 + s.ZonesZ - 1) * 64f + 32f;
         bool Inside(Vector3 p) => p.X >= minX && p.X < maxX && p.Z >= minZ && p.Z < maxZ;
         var list = new List<Shown>();
         lock (world.Sync)

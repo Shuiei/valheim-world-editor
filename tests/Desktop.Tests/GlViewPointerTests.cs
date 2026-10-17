@@ -14,7 +14,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The mouse over a 3D view of its own (in a plain window, nobody else listening to it), looking straight down on a
 /// flat area at 30 m: the Dungeon tool's clicks, Alt + click with a brush, Stamp once, a click picking in the View
-/// tool, Paste and Shape clicks with or without a listener, and Ctrl or Alt with the wheel.
+/// tool, the Select tool's look for the object under the pointer, Paste and Shape clicks with or without a listener,
+/// and Ctrl or Alt with the wheel.
 /// </summary>
 public class GlViewPointerTests
 {
@@ -32,13 +33,14 @@ public class GlViewPointerTests
         public Window W { get; }
         public GlView V { get; } = new();
         public WorldScene Scene { get; }
+        /// <summary>The transparent surface over the view that takes its mouse.</summary>
+        public Border Surface { get; } = new() { Background = Brushes.Transparent };
 
         public Bare(EditSession session)
         {
             Scene = session.Scene;
-            var surface = new Border { Background = Brushes.Transparent };
-            W = new Window { Width = ViewSize.Width, Height = ViewSize.Height, Content = new Grid { Children = { V, surface } } };
-            V.Attach(surface, W);
+            W = new Window { Width = ViewSize.Width, Height = ViewSize.Height, Content = new Grid { Children = { V, Surface } } };
+            V.Attach(Surface, W);
             W.Show();
             V.Show(Scene, null);
             V.SetCamera(new Vector3(0, 100, 1), new Vector3(0, 30, 0), (float)(ViewSize.Width / ViewSize.Height));
@@ -91,6 +93,25 @@ public class GlViewPointerTests
         Assert.Null(b.V.Dungeon.HoverRoom);
         Assert.Null(b.V.Dungeon.Selected);
         Assert.Equal(ToolMode.Dungeon, b.V.Mode);
+    }
+
+    // The pointer taken away mid-stroke (a dialog, another window): the stroke ends there as one step, it does not go
+    // on painting until the next click.
+    [AvaloniaFact]
+    public void ALostPointerEndsTheStroke()
+    {
+        var s = TestScenes.Flat(2);
+        var b = new Bare(s);
+        string? ended = null;
+        b.V.StrokeEnded += m => ended = m.Shown;
+        b.V.Tool = BrushTool.Raise;
+        b.W.MouseDown(b.At(0, 30, 0), MouseButton.Left);
+        Assert.True(b.V.BrushDown);
+        Assert.True(s.Stroking);
+        b.Surface.RaiseEvent(new PointerCaptureLostEventArgs(b.Surface, new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true)));
+        Assert.False(b.V.BrushDown);
+        Assert.False(s.Stroking);
+        Assert.NotNull(ended);
     }
 
     [AvaloniaFact]
@@ -156,6 +177,113 @@ public class GlViewPointerTests
         Assert.Empty(b.V.Selected);
     }
 
+    /// <summary>
+    /// A bare view in the Select tool on a flat 2 × 2 zone area with one building piece at world 37, 30, 37 (view 5,
+    /// 30, -5, its box 1 × 2 × 1).
+    /// </summary>
+    private static Bare PieceInSelect()
+    {
+        var b = new Bare(TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("wood_wall_half"), new Vector3(37, 30, 37), Vector3.Zero, 0, true)));
+        b.V.SetBoxes([(0, new Vector3(4.5f, 30, -5.5f), new Vector3(5.5f, 32, -4.5f))]);
+        b.V.Mode = ToolMode.Select;
+        return b;
+    }
+
+    // In the Select tool the object under the pointer is looked for once for a burst of moves (a fast mouse sends many
+    // a frame, and each look tries every object's box), once the moves waiting are taken; it was looked for on every
+    // move.
+    [AvaloniaFact]
+    public void TheObjectUnderThePointerIsLookedForOnceForABurstOfMoves()
+    {
+        var b = PieceInSelect();
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        int before = b.V.HoverPicks;
+        // Three moves in a row, as the window gets them before it runs anything else (the headless MouseMove runs the
+        // jobs waiting after each).
+        var mouse = new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true);
+        foreach (var p in new[] { b.At(-20, 30, 20), b.At(0, 30, 0), b.At(5, 31.9f, -5) })
+        {
+            b.Surface.RaiseEvent(new PointerEventArgs(InputElement.PointerMovedEvent, b.Surface, mouse, b.W, p, 0, new PointerPointProperties(), KeyModifiers.None));
+        }
+        Assert.Equal(before, b.V.HoverPicks);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Equal(before + 1, b.V.HoverPicks);
+        Assert.Equal(0, b.V.HoverObject);
+        // Off it: none.
+        b.W.MouseMove(b.At(-20, 30, 20));
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Null(b.V.HoverObject);
+    }
+
+    // A move queues the look, and a press before it runs drops it (no hover while the button is down): the release
+    // looks again, so the object the click ended on does not wait for the next move. (An Alt click, on the ground only:
+    // nothing gets selected, so no handle comes under the pointer.)
+    [AvaloniaFact]
+    public void TheObjectUnderThePointerIsLookedForAgainWhenAClickEnds()
+    {
+        var b = PieceInSelect();
+        b.W.MouseMove(b.At(-20, 30, 20));
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Null(b.V.HoverObject);
+        // Onto the piece and pressed before the window runs anything else; the look runs while the button is down.
+        var mouse = new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true);
+        Point on = b.At(5, 31.9f, -5);
+        b.Surface.RaiseEvent(new PointerEventArgs(InputElement.PointerMovedEvent, b.Surface, mouse, b.W, on, 0, new PointerPointProperties(), KeyModifiers.None));
+        b.Surface.RaiseEvent(new PointerPressedEventArgs(b.Surface, mouse, b.W, on, 0,
+            new PointerPointProperties(RawInputModifiers.LeftMouseButton | RawInputModifiers.Alt, PointerUpdateKind.LeftButtonPressed), KeyModifiers.Alt, 1));
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Null(b.V.HoverObject);
+        b.Surface.RaiseEvent(new PointerReleasedEventArgs(b.Surface, mouse, b.W, on, 0,
+            new PointerPointProperties(RawInputModifiers.Alt, PointerUpdateKind.LeftButtonReleased), KeyModifiers.Alt, MouseButton.Left));
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Empty(b.V.Selected);
+        Assert.Equal(0, b.V.HoverObject);
+    }
+
+    // A drag that ends over a move handle (here a zone drawn with Ctrl, which keeps the selection) finds the handle
+    // again on release: the look after it outlined the object behind the handle, which a click there would not pick.
+    [AvaloniaFact]
+    public void AfterADragEndingOverAHandleNothingIsOutlined()
+    {
+        var b = new Bare(TestScenes.Flat(2,
+            new WorldScene.Thing(1, StableHash.Of("wood_wall_half"), new Vector3(37, 30, 37), Vector3.Zero, 0, true),
+            new WorldScene.Thing(2, StableHash.Of("Beech1"), new Vector3(20, 30, 20), Vector3.Zero, 1, false)));
+        b.V.Mode = ToolMode.Select;
+        b.V.Select([0]);
+        var (c, scale) = b.V.GizmoAt()!.Value;
+        // The tree's box (whatever its place) right under the east arrow.
+        var east = c + new Vector3(0.7f * scale, 0, 0);
+        b.V.SetBoxes([(0, new Vector3(4.5f, 30, -5.5f), new Vector3(5.5f, 32, -4.5f)), (1, east - new Vector3(0.3f, 2, 0.3f), east + new Vector3(0.3f, 0, 0.3f))]);
+        Point from = b.At(-20, 30, 20), to = b.At(east.X, east.Y, east.Z);
+        Assert.Equal(1, b.V.ObjectAt(to, ViewSize));
+        b.W.MouseMove(from);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.False(b.V.SelectTool.OverHandle);
+        b.W.MouseDown(from, MouseButton.Left, RawInputModifiers.Control);
+        b.W.MouseMove(to, RawInputModifiers.Control | RawInputModifiers.LeftMouseButton);
+        b.W.MouseUp(to, MouseButton.Left, RawInputModifiers.Control);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Equal([0], b.V.Selected);
+        Assert.True(b.V.SelectTool.OverHandle);
+        Assert.Null(b.V.HoverObject);
+    }
+
+    // A look queued by a move is dropped when the Select tool is left before it runs: no object is outlined in
+    // another tool.
+    [AvaloniaFact]
+    public void AQueuedLookIsDroppedOnceTheSelectToolIsLeft()
+    {
+        var b = PieceInSelect();
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        int before = b.V.HoverPicks;
+        var mouse = new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, true);
+        b.Surface.RaiseEvent(new PointerEventArgs(InputElement.PointerMovedEvent, b.Surface, mouse, b.W, b.At(5, 31.9f, -5), 0, new PointerPointProperties(), KeyModifiers.None));
+        b.V.Mode = ToolMode.View;
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.Equal(before, b.V.HoverPicks);
+        Assert.Null(b.V.HoverObject);
+    }
+
     [AvaloniaFact]
     public void AClickInABoxWithoutAModelPicksTheNearestBox()
     {
@@ -171,6 +299,24 @@ public class GlViewPointerTests
         Assert.Equal([0], b.V.Selected);
         b.Click(b.At(20, 30, 20));
         Assert.Empty(b.V.Selected);
+    }
+
+    [AvaloniaFact]
+    public void TheCutHidesTheTopOfABoxFromAClick()
+    {
+        // A 10 m post at world 32, 30, 32 (view 0, 30, 0), seen from the side at 38 m up: with the Workshop's cut at
+        // 35 m its top is not drawn, so a click on it finds nothing; without the cut it is picked.
+        var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("wood_pole2"), new Vector3(32, 30, 32), Vector3.Zero, 0, true));
+        var b = new Bare(s);
+        b.V.SetBoxes([(0, new Vector3(-0.5f, 30, -0.5f), new Vector3(0.5f, 40, 0.5f))]);
+        b.V.SetCamera(new Vector3(0, 38, 30), new Vector3(0, 38, 0), (float)(ViewSize.Width / ViewSize.Height));
+        var top = b.At(0, 38, 0.5f);
+        b.V.CutY = 35;
+        b.Click(top);
+        Assert.Empty(b.V.Selected);
+        b.V.CutY = null;
+        b.Click(top);
+        Assert.Equal([0], b.V.Selected);
     }
 
     [AvaloniaFact]

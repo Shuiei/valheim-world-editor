@@ -103,7 +103,7 @@ public sealed class InventoryData
             it.CrafterName = r.ReadCheckedString();
         }
         it.Prefab = (b & 0x40) != 0 ? r.ReadInt32() : 0;
-        int custom = (b & 0x80) != 0 ? ReadNumItems(r) : 0;
+        int custom = (b & 0x80) != 0 ? r.ReadNumItems() : 0;
         for (int c = 0; c < custom; c++)
         {
             it.CustomData[r.ReadCheckedString()] = r.ReadCheckedString();
@@ -135,7 +135,8 @@ public sealed class InventoryData
     {
         int flags = (it.PickedUp ? 1 : 0) | (it.Equipped ? 2 : 0) | (it.Quality != 1 ? 4 : 0) | (it.Stack != 1 ? 8 : 0)
             | (it.Variant != 0 ? 0x10 : 0) | (it.CrafterId != 0 ? 0x20 : 0) | (it.Prefab != 0 ? 0x40 : 0) | (it.CustomData.Count != 0 ? 0x80 : 0);
-        w.Write((int)(it.Durability * 100f));
+        // Rounded: read as hundredths times 0.01f, a value cut down would come back a hundredth lower each time.
+        w.Write((int)MathF.Round(it.Durability * 100f));
         w.Write((byte)it.X);
         w.Write((byte)it.Y);
         w.Write((byte)it.WorldLevel);
@@ -171,14 +172,5 @@ public sealed class InventoryData
             }
         }
         w.Write((byte)(it.Cheated ? 1 : 0));
-    }
-
-    /// <summary>
-    /// A count in the game's compact form: one byte below 128, else two bytes, the first with its high bit set.
-    /// </summary>
-    private static int ReadNumItems(BinaryReader r)
-    {
-        int n = r.ReadByte();
-        return (n & 0x80) != 0 ? ((n & 0x7F) << 8) | r.ReadByte() : n;
     }
 }

@@ -112,6 +112,18 @@ public class CatalogueJsonTests
         Assert.Equal("{\n\"x\": [],\n\"y\": {}\n}", CatalogueJson.Write(root, new CatalogueJson.Style(ItemSep: ",", Indent: 0)));
     }
 
+    // TryAdd adds a new key at the end and leaves a key already there as it was.
+    [Fact]
+    public void TryAddKeepsTheFirstValueOfAKey()
+    {
+        var d = new CatalogueJson.Dict { ["b"] = 1 };
+
+        Assert.True(d.TryAdd("a", 2));
+        Assert.False(d.TryAdd("b", 3));
+
+        Assert.Equal([new KeyValuePair<string, object?>("b", 1), new KeyValuePair<string, object?>("a", 2)], d);
+    }
+
     [Fact]
     public void ADictKeepsItsKeysInTheOrderTheyCame()
     {

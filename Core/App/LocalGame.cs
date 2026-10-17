@@ -132,6 +132,8 @@ public static class LocalGame
     /// <param name="settings">The editor's settings (Valheim path, added BepInEx folders).</param>
     /// <param name="bepInEx">Whether any of the folders has BepInEx installed (core or plugins).</param>
     /// <param name="plugin">Whether any has WorldEditorBridge.dll in its plugins.</param>
+    /// <exception cref="IOException">A settings file could not be read (being written, say): asked again later.</exception>
+    /// <exception cref="UnauthorizedAccessException">A settings file could not be read (no access).</exception>
     public static List<Bridge> FindBridges(AppSettings settings, out bool bepInEx, out bool plugin)
     {
         bepInEx = false;
@@ -145,7 +147,7 @@ public static class LocalGame
             }
             bepInEx |= Directory.Exists(Path.Combine(dir, "core")) || Directory.Exists(Path.Combine(dir, "plugins"));
             string plugins = Path.Combine(dir, "plugins");
-            plugin |= Directory.Exists(plugins) && Directory.EnumerateFiles(plugins, "WorldEditorBridge.dll", SearchOption.AllDirectories).Any();
+            plugin |= Directory.Exists(plugins) && HasPlugin(plugins);
             string cfg = Path.Combine(dir, "config", ConfigName);
             if (!File.Exists(cfg))
             {
@@ -157,6 +159,23 @@ public static class LocalGame
             }
         }
         return list;
+    }
+
+    /// <summary>
+    /// Whether WorldEditorBridge.dll is somewhere in a plugins folder. Subfolders that cannot be read are passed over
+    /// (another mod's, without access); a folder that cannot be searched at all is said in the log and has none.
+    /// </summary>
+    private static bool HasPlugin(string plugins)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(plugins, "WorldEditorBridge.dll", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0 }).Any();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Caught(ex, "searching a plugins folder for WorldEditorBridge (taken as not there)");
+            return false;
+        }
     }
 
     /// <summary>The plugin's settings file (BepInEx .cfg: "Key = value" lines).</summary>
@@ -178,34 +197,53 @@ public static class LocalGame
     }
 
     /// <summary>
-    /// Which bridge (if any) answers on this computer, and with which world: the first whose /status on
-    /// 127.0.0.1 answers within 1.5 seconds.
+    /// Why each port's last probe failed, by port: a failure is logged when it differs from the last one (the start page
+    /// asks every 2.5 seconds), and an answer clears it.
+    /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, string> ProbeFailures = new();
+
+    /// <summary>One client for every probe, with the 1.5 second wait.</summary>
+    private static readonly HttpClient Prober = new() { Timeout = TimeSpan.FromSeconds(1.5) };
+
+    /// <summary>
+    /// Which bridge (if any) answers on this computer, and with which world: the first, in the order given, whose
+    /// /status on 127.0.0.1 answers within 1.5 seconds. All are asked at once, so silent ports cost 1.5 s in all.
     /// </summary>
     public static async Task<Running?> FindRunning(IEnumerable<Bridge> bridges)
     {
-        foreach (Bridge b in bridges.DistinctBy(b => (b.Port, b.Token)))
+        Running?[] answers = await Task.WhenAll(bridges.DistinctBy(b => (b.Port, b.Token)).Select(Probe));
+        return Array.Find(answers, a => a != null);
+    }
+
+    /// <summary>The bridge's /status, or null when it does not answer within 1.5 seconds or refuses.</summary>
+    private static async Task<Running?> Probe(Bridge b)
+    {
+        try
         {
-            try
+            using HttpRequestMessage req = new(HttpMethod.Get, $"http://127.0.0.1:{b.Port}/status");
+            req.Headers.Add("X-Bridge-Token", b.Token);
+            using HttpResponseMessage res = await Prober.SendAsync(req);
+            if (!res.IsSuccessStatusCode)
             {
-                using HttpClient http = new() { Timeout = TimeSpan.FromSeconds(1.5) };
-                using HttpRequestMessage req = new(HttpMethod.Get, $"http://127.0.0.1:{b.Port}/status");
-                req.Headers.Add("X-Bridge-Token", b.Token);
-                using HttpResponseMessage res = await http.SendAsync(req);
-                if (!res.IsSuccessStatusCode)
-                {
-                    continue;
-                }
-                using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-                string world = doc.RootElement.TryGetProperty("world", out var w) ? w.GetString() ?? "" : "";
-                int players = doc.RootElement.TryGetProperty("players", out var pl) && pl.TryGetInt32(out int n) ? n : 0;
-                return new Running(b, world, players);
+                return null;
             }
-            catch
-            {
-                // A bridge that does not answer is not running here; the next one is tried.
-            }
+            using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+            string world = doc.RootElement.TryGetProperty("world", out var w) ? w.GetString() ?? "" : "";
+            int players = doc.RootElement.TryGetProperty("players", out var pl) && pl.TryGetInt32(out int n) ? n : 0;
+            ProbeFailures.TryRemove(b.Port, out _);
+            return new Running(b, world, players);
         }
-        return null;
+        catch (Exception e)
+        {
+            // A bridge that does not answer is not running here. Said when it changes, not every 2.5 seconds.
+            string why = e.GetType().FullName + ": " + e.Message;
+            if (!ProbeFailures.TryGetValue(b.Port, out string? last) || last != why)
+            {
+                ProbeFailures[b.Port] = why;
+                Log.CaughtBrief(e, $"asking the bridge on port {b.Port} whether the game runs (not running there; said again only when this changes)");
+            }
+            return null;
+        }
     }
 
     /// <summary>

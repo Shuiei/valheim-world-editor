@@ -1,5 +1,7 @@
+using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.LogicalTree;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -60,8 +62,9 @@ public class ClaudeToolsControlsTests
         Assert.Equal([true, null, null, "Sharp", 7.0], list.Select(c => ClaudeTools.ValueOf(c.Control)));
     }
 
-    // Set: a switch on and off, a dropdown by text or number, a slider clamped, a text, a button clicked; wrong
-    // values are said. Blocked: the window's Save and Discard, blocked keys, and blocked labels of untipped buttons.
+    // Set: a switch on and off, a dropdown by text or number, a slider clamped, a text, a button clicked (its Click and
+    // its Command), a switch clicked; wrong values are said. Blocked: the window's Save and Discard, blocked keys, and
+    // blocked labels of untipped buttons.
     [AvaloniaFact]
     public void ControlsAreSetAndBlockedOnesRefused()
     {
@@ -81,15 +84,37 @@ public class ClaudeToolsControlsTests
         var slider = new Slider { Minimum = 0, Maximum = 40 };
         Assert.Null(t.Set(C("c", slider), "99", false));
         Assert.Equal(40, slider.Value);
+        // Not a number to set (NaN went through Math.Clamp), and a number too big for a decimal (it threw).
+        Assert.StartsWith("c is a slider from 0 to 40: give a number", t.Set(C("c", slider), "NaN", false));
+        Assert.StartsWith("c is a slider", t.Set(C("c", slider), "-Infinity", false));
+        Assert.Equal(40, slider.Value);
+        var number = new NumericUpDown { Minimum = 1, Maximum = 50 };
+        Assert.Null(t.Set(C("g", number), "1e30", false));
+        Assert.Equal(50m, number.Value);
+        Assert.Null(t.Set(C("g", number), "-1e30", false));
+        Assert.Equal(1m, number.Value);
+        Assert.StartsWith("g takes a number", t.Set(C("g", number), "Infinity", false));
         var text = new TextBox();
         Assert.Null(t.Set(C("d", text), "Beech", true));
         Assert.Equal("Beech", text.Text);
         int clicks = 0;
-        var button = new Button { Content = "Go" };
+        var command = new CountingCommand();
+        var button = new Button { Content = "Go", Command = command };
         button.Click += (_, _) => clicks++;
         Assert.Null(t.Set(C("e", button), "click", false));
         Assert.Equal(1, clicks);
+        Assert.Equal(1, command.Runs);
         Assert.Equal("e is a button: give click.", t.Set(C("e", button), "true", false));
+        // A click on a switch changes it before its handlers run, as a pointer's does.
+        var toggle = new CheckBox();
+        bool? seen = null;
+        toggle.Click += (_, _) => seen = toggle.IsChecked;
+        int changes = 0;
+        toggle.IsCheckedChanged += (_, _) => changes++;
+        Assert.Null(t.Set(C("f", toggle), "click", false));
+        Assert.True(toggle.IsChecked);
+        Assert.True(seen);
+        Assert.Equal(1, changes);
 
         Assert.NotNull(t.Blocked(C("save", w.SaveButton)));
         Assert.NotNull(t.Blocked(C("auto", new CheckBox().Tip("top.auto"))));
@@ -104,6 +129,41 @@ public class ClaudeToolsControlsTests
         Assert.Null(t.Blocked(C("blueprints.paste", new Button { Content = "Coller" }.Tip("blueprints.paste"))));
         Assert.Null(t.Blocked(C("~go", button)));
         Assert.StartsWith("save is not Claude's to use", t.Set(C("save", w.SaveButton), "click", false));
+        w.CloseWithoutAsking();
+    }
+
+    // A step made by a control Claude sets is Claude's, "Claude: …" in the history, also when the handler makes it
+    // after an await; the user's click of the same control makes a step without the prefix.
+    [AvaloniaFact]
+    public async Task StepsMadeByAControlClaudeSetsAreClaudes()
+    {
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        w.Show();
+        var t = new ClaudeTools(w);
+        var s = TestScenes.Flat(1);
+        w.View.Show(s.Scene, null);
+        w.Edit(s);
+        var done = new TaskCompletionSource();
+        bool keep = false;
+        var button = new Button { Content = "Hill later" };
+        button.Click += async (_, _) =>
+        {
+            await Task.Yield();
+            s.Shape(32, 32, _ => 1, 3, 0, "a hill");
+            // Marked another way each time, so each click is a step.
+            keep = !keep;
+            s.MarkResets([(0, 0)], keepBuildings: keep, ground: false, "Claude: a reset");
+            done.TrySetResult();
+        };
+        w.GetLogicalDescendants().OfType<Panel>().First().Children.Add(button);
+        Assert.Equal("~hill-later", ClaudeRun.J(await t.SetControl("~hill-later", "click")).GetProperty("id").GetString());
+        await done.Task;
+        // The ground step gets the prefix; the one that has it already is kept as it is.
+        Assert.Equal(["Claude: a hill", "Claude: a reset"], s.UndoList.Select(c => c.Label));
+        done = new TaskCompletionSource();
+        button.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        await done.Task;
+        Assert.Equal(["a hill", "Claude: a reset"], s.UndoList.Skip(2).Select(c => c.Label));
         w.CloseWithoutAsking();
     }
 
@@ -139,5 +199,23 @@ public class ClaudeToolsControlsTests
         // Auto off: the script's controls are Claude's again.
         r.W.Settings.AutoApply = false;
         Assert.Equal("script.code", ClaudeRun.J(await r.T.SetControl("script.code", "Ground.Raise(0, 0, 3);")).GetProperty("id").GetString());
+    }
+
+    /// <summary>A command that can always run and counts its runs.</summary>
+    private sealed class CountingCommand : ICommand
+    {
+        /// <summary>Not kept, as it is never raised: the command can always run.</summary>
+#pragma warning disable S3237 // a listener need not be kept for an event that is never raised
+        event EventHandler? ICommand.CanExecuteChanged { add { } remove { } }
+#pragma warning restore S3237
+
+        /// <summary>How many times the command ran.</summary>
+        public int Runs { get; private set; }
+
+        /// <inheritdoc/>
+        public bool CanExecute(object? parameter) => true;
+
+        /// <inheritdoc/>
+        public void Execute(object? parameter) => Runs++;
     }
 }

@@ -56,6 +56,35 @@ public sealed class GlObjects
     public uint Program(uint p) => Keep(_programs, p);
 
     /// <summary>
+    /// Makes an indexed triangle mesh with positions only (attribute 0) that this owner holds; no vertex array is bound
+    /// after.
+    /// </summary>
+    /// <param name="v">Positions, x, y, z per corner.</param>
+    /// <param name="idx">Three corner indices per triangle.</param>
+    /// <returns>Its vertex array and its two buffers.</returns>
+    public unsafe (uint Vao, uint Vbo, uint Ebo) PositionMesh(float[] v, uint[] idx)
+    {
+        uint vao = VertexArray();
+        _gl.BindVertexArray(vao);
+        uint vbo = Buffer();
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
+        fixed (float* p = v)
+        {
+            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(v.Length * 4), p, BufferUsageARB.StaticDraw);
+        }
+        uint ebo = Buffer();
+        _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, ebo);
+        fixed (uint* p = idx)
+        {
+            _gl.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(idx.Length * 4), p, BufferUsageARB.StaticDraw);
+        }
+        _gl.EnableVertexAttribArray(0);
+        _gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
+        _gl.BindVertexArray(0);
+        return (vao, vbo, ebo);
+    }
+
+    /// <summary>
     /// Deletes a buffer if this owner holds it (else nothing: the name may be another's now).
     /// </summary>
     public void DeleteBuffer(uint b)

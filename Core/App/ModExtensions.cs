@@ -140,7 +140,7 @@ public static class ModExtensions
                 }
             }
             _state = new State(offered, running);
-            _generation++;
+            Interlocked.Increment(ref _generation);
             return running.Count;
         }
     }
@@ -177,6 +177,7 @@ public static class ModExtensions
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(e, "reading an extension's DLL (taken as empty: not run)");
             return [];
         }
     }
@@ -208,6 +209,7 @@ public static class ModExtensions
         catch (Exception e)
         {
             // Whatever the extension's code throws while loading: it does not run.
+            Log.Caught(e, $"loading the extension of {mod} (not run)");
             return (null, $"{e.GetType().Name}: {e.Message}");
         }
     }
@@ -228,6 +230,7 @@ public static class ModExtensions
         }
         catch (Exception e)
         {
+            Log.Caught(e, $"running a hook of the extension of {l.Mod} (turned off)");
             TurnOff(l, $"{e.GetType().Name}: {e.Message}");
             return fallback;
         }
@@ -250,7 +253,7 @@ public static class ModExtensions
             _state = new State(
                 [.. s.Offered.Select(o => dlls.Contains(o.Dll) ? o with { State = Status.Failed, Error = why } : o)],
                 s.Running.Where(r => r.Value != l).ToDictionary(r => r.Key, r => r.Value, StringComparer.Ordinal));
-            _generation++;
+            Interlocked.Increment(ref _generation);
         }
     }
 
@@ -371,7 +374,7 @@ public static class ModExtensions
     }
 
     /// <summary>Asks for the shapes and cuts to be made again (IEditorHost.Redraw): a generation more.</summary>
-    public static void Redraw() => _generation++;
+    public static void Redraw() => Interlocked.Increment(ref _generation);
 
     /// <summary>What an extension asks of the editor.</summary>
     private sealed class EditorHost : IEditorHost
@@ -447,7 +450,7 @@ public static class ModExtensions
                 running[mod] = l;
             }
             _state = new State([.. running.Keys.Select(m => new Extension(m, m, "", Status.Running, null))], running);
-            _generation++;
+            Interlocked.Increment(ref _generation);
         }
     }
 
@@ -457,7 +460,7 @@ public static class ModExtensions
         lock (Lock)
         {
             _state = new State([], new Dictionary<string, Loaded>());
-            _generation++;
+            Interlocked.Increment(ref _generation);
         }
     }
 

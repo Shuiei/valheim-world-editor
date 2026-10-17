@@ -1,3 +1,4 @@
+using TerrainEditor.App;
 using TerrainEditor.Save;
 
 namespace TerrainEditor.Editing;
@@ -34,6 +35,12 @@ public sealed class EditStore
 
     /// <summary>Bumped on every change so cached map detail can be rebuilt.</summary>
     public int Version { get; private set; }
+
+    /// <summary>
+    /// Bumped when the objects to leave out or the added ones change (not the ground): for what is worked out from
+    /// the objects alone, kept through ground strokes.
+    /// </summary>
+    public int ObjectsVersion { get; private set; }
 
     /// <summary>Starts from the world's terrain, with nothing pending.</summary>
     public EditStore(WorldSave world)
@@ -72,6 +79,7 @@ public sealed class EditStore
             _gameChanged.Clear();
             Load(world);
             Version++;
+            ObjectsVersion++;
         }
     }
 
@@ -93,6 +101,12 @@ public sealed class EditStore
             _baseline[(z.ZoneX, z.ZoneZ)] = edit.Clone();
         }
     }
+
+    /// <summary>
+    /// A zone's terrain data as an edit (marked as in the world), as the store takes it; null for a damaged zone (not
+    /// 65 × 65), which the store skips.
+    /// </summary>
+    public static ZoneEdit? Of(TerrainZone z) => z.ModifiedHeight.Length == Cells && z.ModifiedPaint.Length == Cells ? FromTerrain(z) : null;
 
     /// <summary>A zone's terrain data as an edit (marked as in the world).</summary>
     private static ZoneEdit FromTerrain(TerrainZone z)
@@ -228,6 +242,15 @@ public sealed class EditStore
     /// </summary>
     private readonly Dictionary<(int, int), ZoneEdit> _baseline = [];
 
+    /// <summary>A copy of a zone as last saved or applied (its baseline), or null when it had no terrain data then.</summary>
+    public ZoneEdit? BaselineOf(int zx, int zz)
+    {
+        lock (_lock)
+        {
+            return _baseline.TryGetValue((zx, zz), out ZoneEdit? e) ? e.Clone() : null;
+        }
+    }
+
     /// <summary>A copy of a zone's working edit, or null when the zone has no terrain data.</summary>
     public ZoneEdit? Get(int zx, int zz)
     {
@@ -243,6 +266,31 @@ public sealed class EditStore
         lock (_lock)
         {
             return [.. _zones.Values.Select(e => e.Clone())];
+        }
+    }
+
+    /// <summary>
+    /// Copies of the zones' working edits that pass a test, tried on the edits themselves: only those are copied, each
+    /// copy being a zone's whole ground (about 127 KB).
+    /// </summary>
+    /// <param name="keep">The test; it only reads the edit, under the store's lock.</param>
+    public List<ZoneEdit> Copies(Func<ZoneEdit, bool> keep)
+    {
+        lock (_lock)
+        {
+            return [.. _zones.Values.Where(keep).Select(e => e.Clone())];
+        }
+    }
+
+    /// <summary>
+    /// Where the zones with height or paint changes, or changed since the last save or apply, are, and which of them
+    /// changed: what the map outlines, read without copying the edits (it is drawn often).
+    /// </summary>
+    public List<(int ZoneX, int ZoneZ, bool Changed)> EditedZones()
+    {
+        lock (_lock)
+        {
+            return [.. _zones.Values.Where(e => e.Changed || e.HeightCount + e.PaintCount > 0).Select(e => (e.ZoneX, e.ZoneZ, e.Changed))];
         }
     }
 
@@ -306,6 +354,31 @@ public sealed class EditStore
         }
     }
 
+    /// <summary>
+    /// Answers from the objects to leave out (by WorldSave id) and the objects added (by their negative id) as they
+    /// are, under the store's lock: for counts that would otherwise copy both at every status refresh. The answer must
+    /// not keep either.
+    /// </summary>
+    public T WithObjects<T>(Func<IReadOnlySet<int>, IReadOnlyDictionary<int, NewObject>, T> answer)
+    {
+        lock (_lock)
+        {
+            return answer(_deleted, _added);
+        }
+    }
+
+    /// <summary>A copy of the objects added and deleted again, or kept for a history (<see cref="KeepGone"/>): what undo can bring back.</summary>
+    public List<NewObject> Gone
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return [.. _addedTrash.Values];
+            }
+        }
+    }
+
     /// <summary>An object added in this session (also one deleted again, which undo can bring back).</summary>
     public NewObject? FindAdded(int id)
     {
@@ -326,6 +399,7 @@ public sealed class EditStore
                 _added[o.Id] = o;
             }
             Version++;
+            ObjectsVersion++;
         }
     }
 
@@ -437,6 +511,7 @@ public sealed class EditStore
                 }
             }
             Version++;
+            ObjectsVersion++;
         }
     }
 
@@ -573,6 +648,7 @@ public sealed class EditStore
                 _addedTrash[id] = o;
             }
             Version++;
+            ObjectsVersion++;
         }
     }
 }
@@ -615,6 +691,13 @@ public sealed class ZoneEdit(int zoneX, int zoneZ)
     /// ground discs the game counts as generated ground (Uplift) when saving or applying.
     /// </summary>
     public float[] Lift { get; init; } = new float[EditStore.Cells];
+
+    /// <summary>
+    /// The ground shown at cell <paramref name="i"/> over its generated height: the edit (level and smoothing, held to the
+    /// game's ±8 m) where the cell is modified, then the No limit lift.
+    /// </summary>
+    public float HeightAt(int i, float baseHeight) =>
+        baseHeight + (Modified[i] ? Math.Clamp(Level[i] + Smooth[i], -EditStore.MaxLevel, EditStore.MaxLevel) : 0) + Lift[i];
 
     /// <summary>Whether any vertex has a lift.</summary>
     public bool HasLift => Lift.Any(l => l != 0f);
@@ -722,7 +805,7 @@ public sealed record NewObject(int Id, int Prefab, System.Numerics.Vector3 Posit
 /// <param name="Value">As ZdoData.Set takes it (text; base64 for bytes), null to remove it.</param>
 public sealed record ObjectField(string Section, int Key, string? Value)
 {
-    /// <summary>The key of an object's builder ("creator").</summary>
+    /// <summary>The data key ("creator") of an object's builder, a player id: the one constant for it.</summary>
     public static readonly int CreatorKey = StableHash.Of("creator");
 
     /// <summary>No builder: the game takes the object for part of a ruin (generated dungeons).</summary>
@@ -731,6 +814,23 @@ public sealed record ObjectField(string Section, int Key, string? Value)
     /// <summary>The field as text: "section;key;value in base64" ("-" for none).</summary>
     public override string ToString() => $"{Section};{Key.ToString(System.Globalization.CultureInfo.InvariantCulture)};"
         + (Value == null ? "-" : Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(Value)));
+
+    /// <summary>
+    /// Sets a value in a list of fields, replacing the one of the same section and key; null takes it away (kept with a
+    /// null value when the list had it, as copies keep a value taken away).
+    /// </summary>
+    public static void Put(List<ObjectField> data, string section, int key, string? value)
+    {
+        int i = data.FindIndex(f => f.Key == key && f.Section == section);
+        if (i >= 0)
+        {
+            data[i] = data[i] with { Value = value };
+        }
+        else if (value != null)
+        {
+            data.Add(new ObjectField(section, key, value));
+        }
+    }
 
     /// <summary>A field from its text form; null when it is malformed or its value does not fit its section.</summary>
     public static ObjectField? Parse(string text)
@@ -747,8 +847,9 @@ public sealed record ObjectField(string Section, int Key, string? Value)
             // A value the save cannot take (a damaged or hand-edited line) is left out here, not when the world is written.
             return ZdoData.Valid(p[0], value) ? new ObjectField(p[0], key, value) : null;
         }
-        catch (FormatException)
+        catch (FormatException e)
         {
+            Log.CaughtBrief(e, "reading an object field line of the kept edits (not base64: left out)");
             return null;
         }
     }

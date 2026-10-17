@@ -67,6 +67,57 @@ public class ErosionTests
         Assert.True(upper < 0, $"the upper slope should lose ground: {upper}");
     }
 
+    /// <summary>
+    /// A 30 × 30 valley: a floor at x = 3, a steep wall to the west, a 2 m-per-point slope to the east. The points up to
+    /// x = 5 may change fully; east of that they may change by 0.01, or (soft) by a share falling over 8 points to 0.01,
+    /// with a locked block on the slope.
+    /// </summary>
+    private static (float[] H, float[] Wt) Valley(bool soft)
+    {
+        float[] h = new float[900];
+        float[] wt = new float[900];
+        for (int i = 0; i < 900; i++)
+        {
+            int x = i % 30, z = i / 30;
+            h[i] = x >= 3 ? (x - 3) * 2f : (3 - x) * 3f;
+            wt[i] = x <= 5 ? 1 : soft ? MathF.Max(0.01f, 1 - (x - 5) / 8f) : 0.01f;
+            if (soft && z is > 12 and < 17 && x is > 6 and < 11)
+            {
+                wt[i] = 0;
+            }
+        }
+        return (h, wt);
+    }
+
+    [Fact]
+    public void RainNeitherMakesNorLosesGroundAtSoftEdgesAndLockedPoints()
+    {
+        var (h, wt) = Valley(soft: true);
+        float[] before = (float[])h.Clone();
+        Erosion.Hydraulic(h, wt, 30, 30, 3000, 1, new Random(3));
+        Assert.Contains(Enumerable.Range(0, 900), i => MathF.Abs(h[i] - before[i]) > 0.1f);
+        Assert.Equal(before.Sum(v => (double)v), h.Sum(v => (double)v), 0.01);
+        Assert.All(Enumerable.Range(0, 900).Where(i => wt[i] == 0), i => Assert.Equal(before[i], h[i]));
+    }
+
+    [Fact]
+    public void HeavyRainNextToNearlyLockedGroundDigsNoRunawayHoles()
+    {
+        var (h, wt) = Valley(soft: false);
+        float[] before = (float[])h.Clone();
+        Erosion.Hydraulic(h, wt, 30, 30, 10000, 1, new Random(0));
+        float most = Enumerable.Range(0, 900).Max(i => MathF.Abs(h[i] - before[i]));
+        Assert.True(most < 20, $"{most}");
+    }
+
+    [Fact]
+    public void ADropSlowsGoingUphillAndSpeedsUpGoingDownhill()
+    {
+        Assert.True(Erosion.DropSpeed(2, 0.5f) < 2);
+        Assert.True(Erosion.DropSpeed(2, -0.5f) > 2);
+        Assert.Equal(0, Erosion.DropSpeed(1, 10));
+    }
+
     [Fact]
     public void TheErodeBrushIsOneStroke()
     {

@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -41,7 +42,7 @@ public sealed class PathPanel
     /// <summary>Cave: the preset; choosing one fills width, soft edge, depth and headroom from it.</summary>
     internal ComboBox CavePresetBox { get; }
     /// <summary>Cave: the preset's values each varied by about 15%, and new boulders.</summary>
-    internal Button CaveRandomButton { get; } = new() { Content = "Randomize", FontSize = 12 };
+    internal Button CaveRandomButton { get; } = new() { Content = Lang.T("common.randomize"), FontSize = 12 };
     /// <summary>Cave: depth below the ground, 2 to 20 m.</summary>
     internal NumericUpDown CaveDepthBox { get; } = Num(7.5m, 0.5m);
     /// <summary>Cave: headroom inside, 2 to 15 m.</summary>
@@ -50,16 +51,18 @@ public sealed class PathPanel
     internal ComboBox RockBox { get; }
     /// <summary>Cave: the preset's description (and a note after Randomize).</summary>
     internal TextBlock CaveHelp { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    /// <summary>The cave presets, named in the language in use, in the preset list's order.</summary>
+    private readonly PathTool.CavePreset[] _presets = PathTool.CavePresets();
     /// <summary>For Randomize: the varied values and the new boulder seed.</summary>
     private readonly Random _random = new();
     /// <summary>Smooth curve through the points, or straight stretches.</summary>
-    internal CheckBox CurveBox { get; } = new() { Content = "Smooth curve through the points", IsChecked = true, FontSize = 12 };
+    internal CheckBox CurveBox { get; } = new() { Content = Lang.T("path.label.curve"), IsChecked = true, FontSize = 12 };
     /// <summary>Natural look; shows the bump rows when on.</summary>
-    internal CheckBox NaturalBox { get; } = new() { Content = "Natural look (ragged edges, bumps)", FontSize = 12 };
+    internal CheckBox NaturalBox { get; } = new() { Content = Lang.T("path.label.natural"), FontSize = 12 };
     /// <summary>Asks for the action to be applied (raises <see cref="ApplyAsked"/>).</summary>
-    internal Button ApplyButton { get; } = new Button { Content = "Apply (Enter)", FontSize = 12 }.Classed("primary");
+    internal Button ApplyButton { get; } = new Button { Content = Lang.T("path.label.apply"), FontSize = 12 }.Classed("primary");
     /// <summary>Removes the line.</summary>
-    internal Button ClearButton { get; } = new() { Content = "Clear (Esc)", FontSize = 12 };
+    internal Button ClearButton { get; } = new() { Content = Lang.T("common.clearEsc"), FontSize = 12 };
     /// <summary>How many points the line has and how long it is.</summary>
     internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted };
     /// <summary>The rows only some actions show, with the actions that show them.</summary>
@@ -74,40 +77,15 @@ public sealed class PathPanel
     /// <summary>A number box starting at <c>v</c> that steps by <c>step</c>.</summary>
     private static NumericUpDown Num(decimal v, decimal step) => new() { Value = v, Increment = step, FormatString = "0.0#", FontSize = 12 };
 
-    /// <summary>A labelled row: the label, the input, and optionally something after it (a unit or a button).</summary>
-    private static Grid Row(string label, Control input, Control? after = null)
-    {
-        var g = new Grid { ColumnDefinitions = new ColumnDefinitions("70,*,46") };
-        var l = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-        Tips.Label(l, input);
-        g.Children.Add(l);
-        Grid.SetColumn(input, 1);
-        g.Children.Add(input);
-        if (after != null)
-        {
-            Grid.SetColumn(after, 2);
-            g.Children.Add(after);
-        }
-        return g;
-    }
-
     /// <summary>
     /// A slider that shows its value with the unit in <c>shown</c> and passes each new value to
     /// <c>set</c>.
     /// </summary>
-    private static Slider Slide(double min, double max, double step, double value, TextBlock shown, string unit, Action<float> set)
-    {
-        var s = new Slider { Minimum = min, Maximum = max, SmallChange = step, TickFrequency = step, IsSnapToTickEnabled = true, Value = value };
-        shown.Text = $"{value:0.#} {unit}";
-        shown.FontSize = 12;
-        shown.VerticalAlignment = VerticalAlignment.Center;
-        shown.Margin = new Thickness(6, 0, 0, 0);
-        s.ValueChanged += (_, e) => { shown.Text = $"{e.NewValue:0.#} {unit}"; set((float)e.NewValue); };
-        return s;
-    }
+    private static Slider Slide(double min, double max, double step, double value, TextBlock shown, string unit, Action<float> set) =>
+        Ui.Slide(min, max, step, value, shown, v => $"{v:0.#} {unit}", v => set((float)v));
 
-    /// <summary>A " m" unit label.</summary>
-    private static TextBlock M() => new() { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>An "m" unit label, a little apart from its box.</summary>
+    private static TextBlock M() => new() { Text = Lang.T("common.metres"), Margin = new Thickness(3, 0, 0, 0), FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
 
     /// <summary>Builds the panel for the view's Path tool.</summary>
     /// <param name="view">The view whose Path tool the panel drives.</param>
@@ -117,7 +95,7 @@ public sealed class PathPanel
         _view = view;
         _path = view.Path;
         var actions = Enum.GetValues<PathTool.Action>();
-        ActionBox = new ComboBox { ItemsSource = actions.Select(PathTool.Label).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+        ActionBox = new ComboBox { ItemsSource = actions.Select(a => PathTool.Label(a).Shown).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
         ActionBox.SelectionChanged += (_, _) => { _path.Act = actions[Math.Max(0, ActionBox.SelectedIndex)]; ShowRows(); _path.Notify(); ActionChanged?.Invoke(_path.Act); };
         var widthV = new TextBlock();
         WidthSlider = Slide(1, 40, 0.5, _path.Width, widthV, "m", v => { _path.Width = v; _path.Notify(); });
@@ -128,7 +106,7 @@ public sealed class PathPanel
         StartBox.ValueChanged += (_, e) => { _path.Start = (float)(e.NewValue ?? 0); if (!_filling) { _path.RampEdited = true; } };
         EndBox.ValueChanged += (_, e) => { _path.End = (float)(e.NewValue ?? 0); if (!_filling) { _path.RampEdited = true; } };
         DepthBox.ValueChanged += (_, e) => _path.Depth = (float)(e.NewValue ?? 0);
-        CavePresetBox = new ComboBox { ItemsSource = PathTool.CavePresets.Select(p => p.Name).ToArray(), SelectedIndex = 1, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+        CavePresetBox = new ComboBox { ItemsSource = _presets.Select(p => p.Name).ToArray(), SelectedIndex = 1, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
         var rocks = Enum.GetValues<PathTool.CaveRock>();
         RockBox = new ComboBox { ItemsSource = rocks.Select(PathTool.Label).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
         RockBox.SelectionChanged += (_, _) => _path.Rock = rocks[Math.Max(0, RockBox.SelectedIndex)];
@@ -169,8 +147,8 @@ public sealed class PathPanel
             Spacing = 4,
             Children =
             {
-                Row("Bumps", Slide(0.2, 4, 0.1, brush.NoiseAmp, ampV, "m", v => brush.NoiseAmp = v).Tip("natural.amp"), ampV),
-                Row("Bump size", Slide(4, 60, 1, brush.NoiseSize, sizeV, "m", v => brush.NoiseSize = v).Tip("natural.size"), sizeV),
+                Ui.Row(Lang.T("brush.label.bumps"), Slide(0.2, 4, 0.1, brush.NoiseAmp, ampV, "m", v => brush.NoiseAmp = v).Tip("natural.amp"), ampV),
+                Ui.Row(Lang.T("brush.label.bumpSize"), Slide(4, 60, 1, brush.NoiseSize, sizeV, "m", v => brush.NoiseSize = v).Tip("natural.size"), sizeV),
             },
         };
         Control Only(Control c, params PathTool.Action[] for_)
@@ -180,18 +158,12 @@ public sealed class PathPanel
         }
         Control R(string label, NumericUpDown box, params PathTool.Action[] for_)
         {
-            var r = Row(label, box, M());
+            var r = Ui.Row(label, box, M());
             _rows[r] = for_;
             return r;
         }
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             VerticalAlignment = VerticalAlignment.Top,
             Child = new StackPanel
             {
@@ -199,20 +171,20 @@ public sealed class PathPanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = "Path", FontSize = 14, FontWeight = FontWeight.SemiBold },
-                    Row("Action", ActionBox),
-                    Row("Width", WidthSlider, widthV),
-                    Row("Soft edge", SoftSlider, softV),
-                    R("Height", HeightBox, PathTool.Action.Flatten),
-                    R("Amount", AmountBox, PathTool.Action.Raise, PathTool.Action.Lower),
-                    R("Start", StartBox, PathTool.Action.Ramp),
-                    R("End", EndBox, PathTool.Action.Ramp),
-                    R("Depth", DepthBox, PathTool.Action.River),
-                    Only(Row("Preset", CavePresetBox, CaveRandomButton), PathTool.Action.Cave),
+                    new TextBlock { Text = Lang.T("rail.label.path"), FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    Ui.Row(Lang.T("path.label.action"), ActionBox),
+                    Ui.Row(Lang.T("path.label.width"), WidthSlider, widthV),
+                    Ui.Row(Lang.T("path.label.soft"), SoftSlider, softV),
+                    R(Lang.T("common.height"), HeightBox, PathTool.Action.Flatten),
+                    R(Lang.T("path.label.amount"), AmountBox, PathTool.Action.Raise, PathTool.Action.Lower),
+                    R(Lang.T("path.label.start"), StartBox, PathTool.Action.Ramp),
+                    R(Lang.T("path.label.end"), EndBox, PathTool.Action.Ramp),
+                    R(Lang.T("path.label.depth"), DepthBox, PathTool.Action.River),
+                    Only(Ui.Row(Lang.T("common.preset"), CavePresetBox, CaveRandomButton), PathTool.Action.Cave),
                     Only(CaveHelp, PathTool.Action.Cave),
-                    R("Depth", CaveDepthBox, PathTool.Action.Cave),
-                    R("Headroom", HeadroomBox, PathTool.Action.Cave),
-                    Only(Row("Roof", RockBox), PathTool.Action.Cave),
+                    R(Lang.T("path.label.depth"), CaveDepthBox, PathTool.Action.Cave),
+                    R(Lang.T("cave.label.headroom"), HeadroomBox, PathTool.Action.Cave),
+                    Only(Ui.Row(Lang.T("cave.label.roof"), RockBox), PathTool.Action.Cave),
                     CurveBox,
                     NaturalBox,
                     _naturalRows,
@@ -220,12 +192,12 @@ public sealed class PathPanel
                     Info,
                     new TextBlock
                     {
-                        Text = "Click points along the route, or hold and drag. Then drag a point to move it, drag the line to add a point, Ctrl + click a point to remove it; Backspace removes the last one. Alt + click picks the height (Alt + Shift: ramp end).",
+                        Text = Lang.T("path.hint.draw"),
                         FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
                     },
                 },
             },
-        };
+        });
         _path.Changed += Refresh;
         ShowRows();
         Refresh();
@@ -234,7 +206,7 @@ public sealed class PathPanel
     /// <summary>The cave preset's values (random: each within about 15% of them, and new boulders).</summary>
     private void CavePreset(bool random)
     {
-        var p = PathTool.CavePresets[Math.Max(0, CavePresetBox.SelectedIndex)];
+        var p = _presets[Math.Max(0, CavePresetBox.SelectedIndex)];
         float F() => random ? 0.85f + 0.3f * (float)_random.NextDouble() : 1;
         static decimal Half(float v) => Math.Round((decimal)v * 2) / 2;
         WidthSlider.Value = (double)Half(p.Width * F());
@@ -242,7 +214,7 @@ public sealed class PathPanel
         CaveDepthBox.Value = Math.Min(20, Half(p.Depth * F()));
         HeadroomBox.Value = Half(p.Headroom * F());
         _path.Seed = random ? _random.Next() : _path.Seed;
-        CaveHelp.Text = p.Help + (random ? " Randomized: new sizes and boulders for the next Apply (Ctrl+Z takes the last one back)." : "");
+        CaveHelp.Text = random ? p.Help + " " + Lang.T("cave.hint.randomized") : p.Help;
     }
 
     /// <summary>The Cave button: the Cave action with its preset's values.</summary>
@@ -280,7 +252,7 @@ public sealed class PathPanel
         EndBox.Value = (decimal)_path.End;
         HeightBox.Value = (decimal)_path.Height;
         _filling = false;
-        Info.Text = pts.Count > 0 ? $"{pts.Count} point(s), {PathTool.Length(_path.Curve()):0} m long." : "No line yet.";
+        Info.Text = pts.Count > 0 ? Lang.T("path.hint.line", pts.Count, PathTool.Length(_path.Curve())) : Lang.T("path.hint.noLine");
         _view.LassoChanged();
     }
 }

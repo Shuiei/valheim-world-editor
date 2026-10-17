@@ -22,13 +22,13 @@ public sealed partial class MainWindow
     /// <summary>Moves the area one zone east.</summary>
     internal Button AreaEast { get; } = NavButton("▶", "East");
     /// <summary>Turns Follow on or off (the area moves by itself near its edge).</summary>
-    internal Button FollowButton { get; } = new Button { Content = "Follow", FontSize = 12.5 }.Classed("ghost");
+    internal Button FollowButton { get; } = new Button { Content = Lang.T("top.label.follow"), FontSize = 12.5 }.Classed("ghost");
     /// <summary>Discard: undoes what is not saved or applied yet; enabled while something is.</summary>
-    internal Button DiscardButton { get; } = new Button { Content = "Discard", FontSize = 12.5, IsEnabled = false }.Classed("ghost");
+    internal Button DiscardButton { get; } = new Button { Content = Lang.T("common.discard"), FontSize = 12.5, IsEnabled = false }.Classed("ghost");
     /// <summary>Live: loads the world again from the game; shown for live worlds only.</summary>
-    internal Button ReloadButton { get; } = new Button { Content = Icons.With("reload", "Reload"), FontSize = 12.5, IsVisible = false }.Classed("ghost");
+    internal Button ReloadButton { get; } = new Button { Content = Icons.With("reload", Lang.T("top.label.reload")), FontSize = 12.5, IsVisible = false }.Classed("ghost");
     /// <summary>Live: Auto apply, every change sent to the game at once; shown for live worlds only.</summary>
-    internal CheckBox AutoApplyBox { get; } = new CheckBox { Content = "Auto", FontSize = 12, IsVisible = false, VerticalAlignment = VerticalAlignment.Center }.Classed("switch");
+    internal CheckBox AutoApplyBox { get; } = new CheckBox { Content = Lang.T("top.label.auto"), FontSize = 12, IsVisible = false, VerticalAlignment = VerticalAlignment.Center }.Classed("switch");
     /// <summary>
     /// The top bar's area controls: the arrows, the size and Follow; shown when the area belongs to a world.
     /// </summary>
@@ -53,7 +53,7 @@ public sealed partial class MainWindow
     /// <summary>The live players to go to, by name.</summary>
     internal ComboBox PlayerBox { get; } = new() { FontSize = 12, MinWidth = 130 };
     /// <summary>Goes to the player chosen in <c>PlayerBox</c>.</summary>
-    internal Button GoPlayerButton { get; } = new Button { Content = "Go", FontSize = 12 };
+    internal Button GoPlayerButton { get; } = new Button { Content = Lang.T("live.label.go"), FontSize = 12 };
     /// <summary>The View panel's players section; shown for live worlds only.</summary>
     internal StackPanel PlayersRow { get; } = new() { Spacing = 2, IsVisible = false };
     /// <summary>The players' names over the view (<c>PlaceLabels</c>).</summary>
@@ -69,7 +69,7 @@ public sealed partial class MainWindow
     /// <summary>Live: the game asked every 2 s what changed in the zones shown (WorldSession.FollowGame).</summary>
     private readonly DispatcherTimer _gameTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     /// <summary>Why Follow last waited, so the same reason is not said again at every tick.</summary>
-    private string _followSaid = "";
+    private Said _followSaid = Said.Empty;
     /// <summary>True while Follow opens the grown area, so the ticks in between do not open it again.</summary>
     private bool _followBusy;
     /// <summary>The editor's settings, loaded when the window is made.</summary>
@@ -90,7 +90,7 @@ public sealed partial class MainWindow
     /// <summary>Set up once, from the constructor (after the top bar).</summary>
     private void SetUpEditorWorld()
     {
-        AreaNav.Children.Add(new TextBlock { Text = "Area", FontSize = 11, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 4, 0) });
+        AreaNav.Children.Add(new TextBlock { Text = Lang.T("top.label.area"), FontSize = 11, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 4, 0) });
         foreach (var (b, dx, dz) in new[] { (AreaWest, -1, 0), (AreaNorth, 0, 1), (AreaSouth, 0, -1), (AreaEast, 1, 0) })
         {
             b.Click += async (_, _) => await MoveArea(dx, dz);
@@ -164,10 +164,10 @@ public sealed partial class MainWindow
     /// <summary>The View panel's Go to a player (live worlds).</summary>
     private StackPanel PlayersControl()
     {
-        PlayersRow.Children.Add(new TextBlock { Text = "PLAYERS", FontSize = 11, FontWeight = FontWeight.SemiBold, Foreground = Ui.Muted, Margin = new Thickness(0, 8, 0, 2) });
+        PlayersRow.Children.Add(new TextBlock { Text = Lang.T("live.head.players"), FontSize = 11, FontWeight = FontWeight.SemiBold, Foreground = Ui.Muted, Margin = new Thickness(0, 8, 0, 2) });
         PlayerBox.Tip("view.player");
         GoPlayerButton.Tip("view.goPlayer");
-        PlayersRow.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { new TextBlock { Text = "Go to", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, PlayerBox, GoPlayerButton } });
+        PlayersRow.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { new TextBlock { Text = Lang.T("live.label.goTo"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, PlayerBox, GoPlayerButton } });
         return PlayersRow;
     }
 
@@ -186,15 +186,16 @@ public sealed partial class MainWindow
         // The history is this area's now (an open panel showed the last area's).
         History.Refresh();
         int n = Overlays.LocationsNear(scene);
-        LocationText.Text = n == 0 ? "" : $"{n} location(s) here. The ground already includes the flattening the game does around them (turn on Location markers in View to see where).";
+        LocationText.Text = n == 0 ? "" : Lang.T("top.hint.locations", n);
         LocationNote.IsVisible = n > 0;
-        _followSaid = "";
+        _followSaid = Said.Empty;
         // The history kept from an earlier session, said once when it first shows.
         if (scene.Owner is { Restored: { } kept, RestoredSaid: false } owner && scene.Session?.UndoList.Concat(scene.Session.RedoList).Any(c => c.Earlier) == true)
         {
             owner.RestoredSaid = true;
             int steps = scene.Session.UndoList.Count(c => c.Earlier) + scene.Session.RedoList.Count(c => c.Earlier);
-            MessageText.Text = $"History from an earlier session ({kept.SavedAt:g}): {steps} step(s) you can undo, in History.{(kept.Changed ? $" The world {(owner.IsLive ? "may have changed" : "was saved again")} since: you are asked before undoing them." : "")}";
+            var since = !kept.Changed ? Said.Empty : owner.IsLive ? Said.Of("top.msg.earlierLiveChanged") : Said.Of("top.msg.earlierSaved");
+            Msg(Said.Of("top.msg.earlierHistory", kept.SavedAt.ToString("g", System.Globalization.CultureInfo.CurrentCulture), steps) + since);
         }
         bool live = scene.Owner?.IsLive == true;
         PlayersRow.IsVisible = live;
@@ -218,12 +219,17 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// Moves the area by zones (+X east, +Z north), keeping its size and the view; the edits and the history stay
-    /// with the world.
+    /// with the world. Not while something unfinished would be lost (MoveBlocker): the status bar says why.
     /// </summary>
     internal async Task MoveArea(int dx, int dz)
     {
         if (View.Scene is not { Owner: not null } s)
         {
+            return;
+        }
+        if (MoveBlocker() is { } why)
+        {
+            Msg("top.msg.cannotMove", why);
             return;
         }
         await OpenBlockKeepingView(s.X0 + dx, s.Z0 + dz, s.ZonesX, s.ZonesZ);
@@ -238,7 +244,7 @@ public sealed partial class MainWindow
     /// <param name="zonesZ">Zones south to north.</param>
     /// <param name="context">Said before the failure, when it cannot be opened (see <see cref="EditBlock"/>).</param>
     /// <returns>Whether the block was opened.</returns>
-    private async Task<bool> OpenBlockKeepingView(int x0, int z0, int zonesX, int zonesZ, string? context = null)
+    private async Task<bool> OpenBlockKeepingView(int x0, int z0, int zonesX, int zonesZ, Said? context = null)
     {
         var cam = View.WorldCamera;
         bool opened = await EditBlock(x0, z0, zonesX, zonesZ, context: context);
@@ -259,14 +265,14 @@ public sealed partial class MainWindow
         {
             return;
         }
-        if (MoveBlocker() is string why)
+        if (MoveBlocker() is { } why)
         {
-            MessageText.Text = $"The area cannot change size now: {why}.";
+            Msg("top.msg.cannotResize", why);
             ShowAreaSize(s.ZonesX, s.ZonesZ);
             return;
         }
         int mx = s.X0 + s.ZonesX / 2, mz = s.Z0 + s.ZonesZ / 2;
-        MessageText.Text = $"Opening {size} × {size} zones…";
+        Msg("top.msg.opening", size);
         await OpenBlockKeepingView(mx - size / 2, mz - size / 2, size, size);
     }
 
@@ -286,33 +292,33 @@ public sealed partial class MainWindow
         Settings.AreaFollow = on;
         SaveSettings(Settings);
         FollowButton.Classes.Set("on", on);
-        MessageText.Text = on ? "Follow: the area grows by itself when you look near its edge." : "Follow is off: move the area with the arrows.";
-        _followSaid = "";
+        Msg(on ? Said.Of("top.msg.followOn") : Said.Of("top.msg.followOff"));
+        _followSaid = Said.Empty;
     }
 
     /// <summary>What stops the area from moving now (Follow waits): something unfinished would be lost.</summary>
-    internal string? MoveBlocker()
+    internal Said? MoveBlocker()
     {
         // First: while saving, the session's other checks would wait for the save to end.
         if (IsBusy)
         {
-            return "the world is being saved or read";
+            return Said.Of("top.blocker.busy");
         }
         if (View.Selected.Count > 0)
         {
-            return "objects are selected (Esc clears)";
+            return Said.Of("top.blocker.selected");
         }
         if (Session?.Stroking == true)
         {
-            return "a stroke is on";
+            return Said.Of("top.blocker.stroke");
         }
         if (View.Path.Points.Count > 0)
         {
-            return "a path is drawn (apply or clear it)";
+            return Said.Of("top.blocker.path");
         }
         if (_applying)
         {
-            return "changes are still being sent";
+            return Said.Of("top.blocker.sending");
         }
         return null;
     }
@@ -332,12 +338,12 @@ public sealed partial class MainWindow
         bool nearX = MathF.Abs(t.X) > (s.W - 1) / 2f - 12, nearZ = MathF.Abs(t.Z) > (s.H - 1) / 2f - 12;
         if (!nearX && !nearZ)
         {
-            _followSaid = "";
+            _followSaid = Said.Empty;
             return null;
         }
-        if (MoveBlocker() is string why)
+        if (MoveBlocker() is { } why)
         {
-            SayFollow($"Follow waits: {why}.");
+            SayFollow(Said.Of("top.msg.followWaits", why));
             return null;
         }
         int x0 = s.X0, z0 = s.Z0, zonesX = s.ZonesX, zonesZ = s.ZonesZ;
@@ -345,10 +351,10 @@ public sealed partial class MainWindow
         bool grown = (nearX && Grow(ref x0, ref zonesX, t.X > 0)) | (nearZ && Grow(ref z0, ref zonesZ, t.Z < 0));
         if (!grown)
         {
-            SayFollow($"The area is as large as Follow makes it ({MaxFollowZones} zones each way): move it with the arrows, or open another from the map.");
+            SayFollow(Said.Of("top.msg.followFull", MaxFollowZones));
             return null;
         }
-        MessageText.Text = "Growing the area…";
+        Msg("top.msg.growing");
         _followBusy = true;
         try
         {
@@ -365,11 +371,11 @@ public sealed partial class MainWindow
     }
 
     /// <summary>Says why Follow does nothing, once while the reason stays.</summary>
-    private void SayFollow(string text)
+    private void SayFollow(Said text)
     {
         if (_followSaid != text)
         {
-            MessageText.Text = text;
+            Msg(text);
         }
         _followSaid = text;
     }
@@ -404,11 +410,13 @@ public sealed partial class MainWindow
         View.SelectTool.Commit();
         if (s.Pending is (0, 0, 0, 0))
         {
-            MessageText.Text = "There is nothing to discard.";
+            Msg("top.msg.nothingToDiscard");
             return;
         }
         int steps = s.UnappliedSteps;
-        if (!await Ask("Discard", $"Discard the {(s.IsLive ? "changes not applied yet" : "unsaved changes")} ({Describe(s.Pending)})?{(steps > 0 ? $" The last {steps} step(s) in History are undone." : "")}", "Discard", "Keep them"))
+        string question = (s.IsLive ? Lang.T("top.ask.discard.textLive", Describe(s.Pending)) : Lang.T("top.ask.discard.text", Describe(s.Pending)))
+            + (steps > 0 ? " " + Lang.T("top.ask.discard.steps", steps) : "");
+        if (!await Ask(Lang.T("common.discard"), question, Lang.T("common.discard"), Lang.T("common.keepThem")))
         {
             return;
         }
@@ -417,28 +425,29 @@ public sealed partial class MainWindow
         History.Refresh();
         if (s.Pending is (0, 0, 0, 0))
         {
-            MessageText.Text = "Discarded. Everything else is kept.";
+            Msg("top.msg.discarded");
             return;
         }
-        if (s.Scene.Owner is not { } w || !await Ask("Discard", "Some of the changes waiting have no step in this area's history (made in another area, or earlier), so they can only be discarded by reading the world again. Read it again now?", "Read it again", "Keep them"))
+        if (s.Scene.Owner is not { } w || !await Ask(Lang.T("common.discard"), Lang.T("top.ask.readAgain.text"), Lang.T("top.ask.readAgain.yes"), Lang.T("common.keepThem")))
         {
             return;
         }
-        Busy("Reading the world again…");
+        Busy(Lang.T("save.msg.reading"));
         try
         {
             await Task.Run(w.Discard);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException)
         {
-            MessageText.Text = "Could not read the world again: " + ex.Message;
+            Log.Caught(ex, "discarding the changes (reading the world again)");
+            Msg("save.msg.couldNotRead", ex.Message);
             Busy(null);
             return;
         }
         Busy(null);
         if (await ReopenArea(s.Scene))
         {
-            MessageText.Text = "Discarded: the world was read again.";
+            Msg("top.msg.discardedReadAgain");
         }
     }
 
@@ -449,25 +458,18 @@ public sealed partial class MainWindow
         {
             return;
         }
-        if (s.Pending is not (0, 0, 0, 0) && !await Ask("Reload", "Reload the world from the game? Your changes not applied yet are dropped.", "Reload", "Keep them"))
+        if (s.Pending is not (0, 0, 0, 0) && !await Ask(Lang.T("top.label.reload"), Lang.T("top.ask.reload.text"), Lang.T("top.label.reload"), Lang.T("common.keepThem")))
         {
             return;
         }
-        Busy("Loading the world from the game…");
-        try
+        if (await ReloadFromGame(w) is { } failed)
         {
-            await w.Reload();
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException or System.Text.Json.JsonException)
-        {
-            Busy(null);
-            MessageText.Text = "Could not reach the game: " + ex.Message;
+            Msg(failed);
             return;
         }
-        Busy(null);
         if (await ReopenArea(s.Scene))
         {
-            MessageText.Text = "The world was loaded again from the game.";
+            Msg("top.msg.reloaded");
         }
     }
 
@@ -484,7 +486,7 @@ public sealed partial class MainWindow
         {
             w.Area = null;
         }
-        return await OpenBlockKeepingView(old.X0, old.Z0, old.ZonesX, old.ZonesZ, "The world was read again, but the area could not be opened again. ");
+        return await OpenBlockKeepingView(old.X0, old.Z0, old.ZonesX, old.ZonesZ, Said.Of("top.msg.reopenFailed"));
     }
 
     // ---- Live: Apply (the button, and every change when Auto is on). Calls while one runs are merged.
@@ -511,11 +513,11 @@ public sealed partial class MainWindow
                     break;
                 }
                 SaveButton.IsEnabled = false;
-                MessageText.Text = "Applying to the running game…";
+                Msg("save.msg.applying");
                 var o = await s.ApplyLive(ConfirmOverGame);
                 // Applied objects lose their green marks.
                 View.RefreshNewMarkers();
-                MessageText.Text = o.Message;
+                Msg(o.Report);
                 if (o.Declined)
                 {
                     UpdateSaveBar();
@@ -596,19 +598,21 @@ public sealed partial class MainWindow
             else if (_gameFetched == null && !open.Stroking && owner.TakeWaitingGround() is { Count: > 0 } waiting)
             {
                 open.TakeGameChanges(new WorldSession.Followed(new Save.WorldSave.Merged([], [], [], []), [], waiting, []));
-                MessageText.Text = $"From the game: the ground of {waiting.Count} zone(s), where your changes were undone.";
+                Msg("live.msg.groundUndone", waiting.Count);
             }
             UpdateSaveBar();
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("too old", StringComparison.Ordinal))
         {
             // An older plugin on the server: no following (Reload still reads the whole world again).
+            Log.CaughtBrief(ex, "following the game's changes");
             _gameTooOld = owner;
-            MessageText.Text = "The WorldEditorBridge plugin on the server is older than this editor: update it to see what players change while you edit (Reload reads the world again meanwhile).";
+            Msg("live.msg.bridgeTooOld");
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidDataException or InvalidOperationException or System.Text.Json.JsonException or FormatException)
         {
-            // The game does not answer right now: asked again at the next tick.
+            // The game does not answer right now: asked again at the next tick (brief: it can fail every tick).
+            Log.CaughtBrief(ex, "following the game's changes");
         }
         finally
         {
@@ -622,31 +626,31 @@ public sealed partial class MainWindow
     /// </summary>
     private void SayFromGame(WorldSession.Followed f)
     {
-        var parts = new List<string>();
+        var parts = new List<Said>();
         int added = f.Merged.Added.Count, gone = f.Merged.Vanished.Count + f.Ours.Count;
         if (added > 0)
         {
-            parts.Add($"{added} new object(s)");
+            parts.Add(Said.Of("live.fromGame.added", added));
         }
 
         if (gone > 0)
         {
-            parts.Add($"{gone} removed");
+            parts.Add(Said.Of("live.fromGame.removed", gone));
         }
 
         if (f.Ground.Count > 0)
         {
-            parts.Add($"the ground of {f.Ground.Count} zone(s)");
+            parts.Add(Said.Of("live.fromGame.ground", f.Ground.Count));
         }
 
-        string text = parts.Count > 0 ? $"From the game: {string.Join(", ", parts)}." : "";
+        var text = parts.Count > 0 ? Said.Of("live.msg.fromGame", Said.Join(", ", parts)) : Said.Empty;
         if (f.Kept.Count > 0)
         {
-            text += $" The game changed the ground of zone(s) {string.Join("; ", f.Kept.Select(z => $"{z.X}, {z.Z}"))}, where you have changes not applied: yours are kept, and applying asks first.";
+            text += Said.Of("live.msg.groundKept", string.Join("; ", f.Kept.Select(z => $"{z.X}, {z.Z}")));
         }
-        if (text != "")
+        if (text.English != "")
         {
-            MessageText.Text = text.Trim();
+            Msg(text);
         }
     }
 
@@ -655,9 +659,9 @@ public sealed partial class MainWindow
     /// applied yet (whatever was dug or built there since). True to go on.
     /// </summary>
     internal async Task<bool> ConfirmOverGame(IReadOnlyList<(int X, int Z)> over) =>
-        await Ask("Apply over the game's changes",
-            $"The ground of {over.Count} zone(s) ({string.Join("; ", over.Take(6).Select(z => $"{z.X}, {z.Z}"))}{(over.Count > 6 ? "…" : "")}) was changed in the game since you started editing it. "
-            + "Applying writes your ground there: what players dug, flattened or paved in those zones since may be erased.\n\nApply anyway?", "Apply", "Not now");
+        await Ask(Lang.T("live.ask.overGame.title"),
+            Lang.T("live.ask.overGame.text", over.Count, string.Join("; ", over.Take(6).Select(z => $"{z.X}, {z.Z}")) + (over.Count > 6 ? "…" : "")),
+            Lang.T("live.ask.overGame.yes"), Lang.T("live.ask.overGame.no"));
 
     // ---- Live players.
 
@@ -676,7 +680,8 @@ public sealed partial class MainWindow
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException or FormatException)
         {
-            // The game does not answer right now: the last positions stay.
+            // The game does not answer right now: the last positions stay (brief: it can fail every tick).
+            Log.CaughtBrief(ex, "asking the game where the players are");
         }
     }
 
@@ -697,31 +702,45 @@ public sealed partial class MainWindow
         PlaceLabels();
     }
 
-    /// <summary>The players' names over their posts (4 m above their feet), where the camera sees them.</summary>
+    /// <summary>The players' labels' text and backing colours.</summary>
+    private static readonly IImmutableSolidColorBrush LabelInk = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.Parse("#bfeaff")), LabelShade = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.FromArgb(150, 0, 0, 0));
+
+    /// <summary>
+    /// The players' names over their posts (4 m above their feet), where the camera sees them. The labels are kept
+    /// from tick to tick (ten a second while live): moved and renamed, made only for more players, dropped when fewer
+    /// are seen.
+    /// </summary>
     internal void PlaceLabels()
     {
-        PlayerLabels.Children.Clear();
-        if (View.Scene is not { } s || LivePlayers.Count == 0 || _pages.Content != _editorPage)
+        int shown = 0;
+        if (View.Scene is { } s && LivePlayers.Count > 0 && _pages.Content == _editorPage)
         {
-            return;
+            var size = View.Bounds.Size;
+            foreach (var (name, w) in LivePlayers)
+            {
+                var q = Vector4.Transform(new Vector4(w.X - s.Cx, w.Y + 4, -(w.Z - s.Cz), 1), View.ViewProj);
+                if (q.W <= 0.01f)
+                {
+                    continue;
+                }
+                double x = (q.X / q.W + 1) / 2 * size.Width, y = (1 - q.Y / q.W) / 2 * size.Height;
+                if (x < 0 || y < 0 || x > size.Width || y > size.Height)
+                {
+                    continue;
+                }
+                if (shown == PlayerLabels.Children.Count)
+                {
+                    PlayerLabels.Children.Add(new TextBlock { FontSize = 13, FontWeight = FontWeight.Bold, Foreground = LabelInk, Background = LabelShade, Padding = new Thickness(4, 1) });
+                }
+                var label = (TextBlock)PlayerLabels.Children[shown++];
+                label.Text = name;
+                Canvas.SetLeft(label, x - 4 * name.Length - 4);
+                Canvas.SetTop(label, y - 10);
+            }
         }
-        var size = View.Bounds.Size;
-        foreach (var (name, w) in LivePlayers)
+        if (PlayerLabels.Children.Count > shown)
         {
-            var q = Vector4.Transform(new Vector4(w.X - s.Cx, w.Y + 4, -(w.Z - s.Cz), 1), View.ViewProj);
-            if (q.W <= 0.01f)
-            {
-                continue;
-            }
-            double x = (q.X / q.W + 1) / 2 * size.Width, y = (1 - q.Y / q.W) / 2 * size.Height;
-            if (x < 0 || y < 0 || x > size.Width || y > size.Height)
-            {
-                continue;
-            }
-            var label = new TextBlock { Text = name, FontSize = 13, FontWeight = FontWeight.Bold, Foreground = new SolidColorBrush(Color.Parse("#bfeaff")), Background = new SolidColorBrush(Color.FromArgb(150, 0, 0, 0)), Padding = new Thickness(4, 1) };
-            Canvas.SetLeft(label, x - 4 * name.Length - 4);
-            Canvas.SetTop(label, y - 10);
-            PlayerLabels.Children.Add(label);
+            PlayerLabels.Children.RemoveRange(shown, PlayerLabels.Children.Count - shown);
         }
     }
 
@@ -732,13 +751,18 @@ public sealed partial class MainWindow
         {
             return;
         }
-        float gx = p.World.X - (s.X0 * 64 - 32), gz = p.World.Z - (s.Z0 * 64 - 32);
+        float gx = p.World.X - s.OriginX, gz = p.World.Z - s.OriginZ;
         if (!(gx > 2 && gz > 2 && gx < s.W - 3 && gz < s.H - 3) && s.Owner != null)
         {
-            int zx = (int)MathF.Floor((p.World.X + 32) / 64), zz = (int)MathF.Floor((p.World.Z + 32) / 64);
+            if (MoveBlocker() is { } why)
+            {
+                Msg("live.msg.cannotGo", name, why);
+                return;
+            }
+            var (zx, zz) = TerrainEditor.Save.ChunkMath.SectorOf(p.World.X, p.World.Z);
             await EditBlock(zx - s.ZonesX / 2, zz - s.ZonesZ / 2, s.ZonesX, s.ZonesZ);
         }
         View.Focus(p.World);
-        MessageText.Text = $"Looking at {name}.";
+        Msg("live.msg.lookingAt", name);
     }
 }

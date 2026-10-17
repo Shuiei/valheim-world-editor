@@ -65,7 +65,6 @@ public sealed partial class WorldGenerator
     private static FastNoise MakeCells()
     {
         var n = new FastNoise(0);
-        n.SetNoiseType(FastNoise.NoiseType.Cellular);
         n.SetCellularDistanceFunction(FastNoise.CellularDistanceFunction.Euclidean);
         n.SetCellularReturnType(FastNoise.CellularReturnType.Distance);
         n.SetFractalOctaves(2);
@@ -96,19 +95,25 @@ public sealed partial class WorldGenerator
         }
         // The seed's draws, in the game's order (the rivers' and streams' own seeds among them).
         var saved = Rnd.state;
-        Rnd.InitState(world.m_seed);
-        _offsetA = Rnd.Range(-10000, 10000);
-        _offsetB = Rnd.Range(-10000, 10000);
-        _offsetForest = Rnd.Range(-10000, 10000);
-        _offsetDetail = Rnd.Range(-10000, 10000);
-        _riverSeed = Rnd.Range(int.MinValue, int.MaxValue);
-        _streamSeed = Rnd.Range(int.MinValue, int.MaxValue);
-        _offsetMist = Rnd.Range(-10000, 10000);
-        if (!world.m_menu)
+        try
         {
-            LayOutWater();
+            Rnd.InitState(world.m_seed);
+            _offsetA = Rnd.Range(-10000, 10000);
+            _offsetB = Rnd.Range(-10000, 10000);
+            _offsetForest = Rnd.Range(-10000, 10000);
+            _offsetDetail = Rnd.Range(-10000, 10000);
+            _riverSeed = Rnd.Range(int.MinValue, int.MaxValue);
+            _streamSeed = Rnd.Range(int.MinValue, int.MaxValue);
+            _offsetMist = Rnd.Range(-10000, 10000);
+            if (!world.m_menu)
+            {
+                LayOutWater();
+            }
         }
-        Rnd.state = saved;
+        finally
+        {
+            Rnd.state = saved;
+        }
     }
 
     /// <summary>
@@ -228,41 +233,6 @@ public sealed partial class WorldGenerator
         }
         delta = (float)((double)highest - lowest);
         slopeDirection = Vector3.Normalize(low - high);
-    }
-
-    /// <summary>
-    /// The ground's normal from its heights a metre to each side (radius is not used, as in the game).
-    /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "The game's signature; it ignores radius too.")]
-    public Vector3 GetNormal(Vector2 point, float radius = 1f)
-    {
-        float east = GetHeight(point + Vector2.right), west = GetHeight(point + Vector2.left);
-        float north = GetHeight(point + Vector2.up), south = GetHeight(point + Vector2.down);
-        return new Vector3(2f * (east - west), 4f, 2f * (south - north)).normalized;
-    }
-
-    /// <summary>
-    /// The same at (x, z).
-    /// </summary>
-    public Vector3 GetNormal(float x, float z, float radius = 1f) => GetNormal(new Vector2(x, z), radius);
-
-    /// <summary>
-    /// Normals averaged over growing rings (up to 16), one every metersPerSample of radius. As GetNormal ignores
-    /// its radius, every ring gives the same normal.
-    /// </summary>
-    public Vector3 GetAverageNormal(Vector2 point, float radius, float metersPerSample = 1.5f)
-    {
-        if (radius <= 1.5f)
-        {
-            return GetNormal(point, radius);
-        }
-        int rings = Mathf.Min(Mathf.FloorToInt(radius / metersPerSample), 16);
-        var sum = Vector3.zero;
-        for (int i = 1; i <= rings; i++)
-        {
-            sum += GetNormal(point, radius * i) / rings;
-        }
-        return sum.normalized;
     }
 
     /// <summary>

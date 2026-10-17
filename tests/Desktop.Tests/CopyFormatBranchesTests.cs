@@ -7,7 +7,7 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The clipboard format's rarer shapes: a copy with fields missing (no size, outline, follow flag or source id) read
+/// The clipboard format's rarer shapes: a copy with fields missing (no outline, follow flag or source id) read
 /// with its own name or the one given; and its picture with nothing in it, flat ground (painted or not) and no
 /// outline, and objects of every kind.
 /// </summary>
@@ -19,10 +19,10 @@ public class CopyFormatBranchesTests
     [Fact]
     public void ACopyWithFieldsMissingIsReadWithDefaults()
     {
-        var json = JsonNode.Parse("""{"rel":[-32768,150],"wt":[255,128],"pnt":[-255,0,0,0,255,0,0,255],"objects":[{"name":"woodwall","dx":1,"dz":2,"dy":0.5,"rx":0,"ry":90,"rz":0,"scale":0,"sourceId":7,"follow":true},{"name":"Beech1"}],"name":"Kept"}""")!.AsObject();
+        var json = JsonNode.Parse("""{"w":2,"h":1,"rel":[-32768,150],"wt":[255,128],"pnt":[-255,0,0,0,255,0,0,255],"objects":[{"name":"woodwall","dx":1,"dz":2,"dy":0.5,"rx":0,"ry":90,"rz":0,"scale":0,"sourceId":7,"follow":true},{"name":"Beech1"}],"name":"Kept"}""")!.AsObject();
         var c = CopyFormat.FromJson(json);
-        // No size, no outline: none.
-        Assert.Equal((0, 0), (c.W, c.H));
+        // No outline: none.
+        Assert.Equal((2, 1), (c.W, c.H));
         Assert.Empty(c.Poly);
         Assert.Equal("Kept", c.Name);
         Assert.True(float.IsNaN(c.Rel[0]));

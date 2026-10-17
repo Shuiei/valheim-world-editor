@@ -42,6 +42,10 @@ public sealed class WorldScene
     public required float[] Heights { get; init; }
     /// <summary>The biome (Heightmap.Biome value) per grid point, laid out like Heights.</summary>
     public required int[] Biomes { get; init; }
+    /// <summary>World x of grid point 0 (the block's west edge: half a zone west of its first zone's middle).</summary>
+    public float OriginX => X0 * 64f - 32f;
+    /// <summary>World z of grid point 0 (the block's south edge).</summary>
+    public float OriginZ => Z0 * 64f - 32f;
     /// <summary>World x of the block's middle, in metres.</summary>
     public float Cx { get; init; }
     /// <summary>World z of the block's middle, in metres.</summary>
@@ -53,6 +57,11 @@ public sealed class WorldScene
     /// <see cref="Thing"/>). Lock it to read.
     /// </summary>
     public required List<Thing> Things { get; init; }
+    /// <summary>
+    /// How many times the things were read again from the world (after a save: EditSession.Reread). Their indices
+    /// change then: what was worked out from them before (ids given to Claude) is out of date.
+    /// </summary>
+    public int Reads { get; set; }
     /// <summary>The ground the world's locations and pieces flatten (for the Location flattening overlay).</summary>
     public TerrainModifiers? Modifiers { get; set; }
     /// <summary>The world generator's ground (regrow asks it what grows where); null in tests that only draw.</summary>
@@ -194,9 +203,10 @@ public sealed class WorldScene
         var modifiers = owner.Modifiers;
         var terrain = owner.Terrain;
         int x1 = x0 + zonesX - 1, z1 = z0 + zonesZ - 1;
-        // The zones' generated ground in parallel (the slow part), then the grid with the edits.
+        // The zones' generated ground and paint mask in parallel, one pass each (the slow part), then the grid with the
+        // edits.
         var keys = (from z in Enumerable.Range(z0, zonesZ) from x in Enumerable.Range(x0, zonesX) select (x, z)).ToArray();
-        Parallel.ForEach(keys, k => terrain.BaseZone(k.x, k.z));
+        Parallel.ForEach(keys, k => terrain.Warm(k.x, k.z));
         var (w, h, heights) = HeightGrid.Read(terrain, edits, x0, z0, x1, z1);
         int[] biomes = new int[w * h];
         byte[] biomeCol = new byte[w * h * 4], mask = new byte[w * h * 4];
@@ -246,7 +256,7 @@ public sealed class WorldScene
                 }
             }
         }
-        float minX = x0 * 64f - 32f, maxX = x1 * 64f + 32f, minZ = z0 * 64f - 32f, maxZ = z1 * 64f + 32f;
+        float minX = x0 * 64f - 32f, minZ = z0 * 64f - 32f;
         var things = ReadThings(world, x0, z0, zonesX, zonesZ, edits.Deleted, edits.Added);
         var scene = new WorldScene
         {
@@ -270,12 +280,12 @@ public sealed class WorldScene
             Modifiers = modifiers,
             Terrain = terrain,
             Owner = owner,
-            LoadInfo = $"{world.Name}: read in {readMs} ms, {zonesX}×{zonesZ} zones and {things.Count:N0} objects ready in {watch.ElapsedMilliseconds} ms",
+            LoadInfo = Lang.T("world.loadInfo", world.Name, readMs, zonesX, zonesZ, things.Count, watch.ElapsedMilliseconds),
         };
         scene.Session = new EditSession(scene, Ground.Read(terrain, edits, x0, z0, zonesX, zonesZ), edits);
-        owner?.Area = scene.Session;
+        owner.Area = scene.Session;
         // The world's history (made in other areas), fitted to this one.
-        if (owner?.History is { } kept)
+        if (owner.History is { } kept)
         {
             scene.Session.Import(kept, ids => FindThings(world, edits, ids));
         }
@@ -290,22 +300,39 @@ public sealed class WorldScene
     {
         lock (world.Sync)
         {
-            return FindThingsIn(world, edits, ids);
+            return FindThingsIn(world, edits.Deleted, edits.Added, edits.FindAdded, ids);
+        }
+    }
+
+    /// <summary>
+    /// <see cref="FindThings(WorldSave, EditStore, IReadOnlyCollection{int})"/> from the edits' objects taken earlier:
+    /// what a reader on another thread finds as the edits were then.
+    /// </summary>
+    /// <param name="world">The world.</param>
+    /// <param name="deleted">The saved objects deleted (<c>EditStore.Deleted</c>).</param>
+    /// <param name="added">The objects added and not deleted again (<c>EditStore.Added</c>).</param>
+    /// <param name="findAdded">An object added by id, deleted again or not (<c>EditStore.FindAdded</c>).</param>
+    /// <param name="ids">The objects to find.</param>
+    public static Dictionary<int, Thing> FindThings(WorldSave world, HashSet<int> deleted, List<NewObject> added, Func<int, NewObject?> findAdded,
+        IReadOnlyCollection<int> ids)
+    {
+        lock (world.Sync)
+        {
+            return FindThingsIn(world, deleted, added, findAdded, ids);
         }
     }
 
     /// <summary><c>FindThings</c>' work, with the world's lock held.</summary>
-    private static Dictionary<int, Thing> FindThingsIn(WorldSave world, EditStore edits, IReadOnlyCollection<int> ids)
+    private static Dictionary<int, Thing> FindThingsIn(WorldSave world, HashSet<int> deleted, List<NewObject> addedNow, Func<int, NewObject?> findAdded,
+        IReadOnlyCollection<int> ids)
     {
         var want = ids.ToHashSet();
-        var deleted = edits.Deleted;
-        var addedNow = edits.Added;
         var added = addedNow.Select(n => n.Id).ToHashSet();
         var links = LinkIndex.Of(world, deleted, addedNow);
         var found = new Dictionary<int, Thing>();
         foreach (int id in want.Where(i => i < 0))
         {
-            if (edits.FindAdded(id) is { } n)
+            if (findAdded(id) is { } n)
             {
                 found[id] = Placed(new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Gone = !added.Contains(id), Tamed = TamedOf(world, n) }, links);
             }

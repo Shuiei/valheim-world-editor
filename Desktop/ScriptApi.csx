@@ -136,7 +136,8 @@ public static class Objects
 	public static IReadOnlyList<Obj> All => _all ??= __Host.Objects()
 		.Select(o => new Obj(o.Id, o.Prefab, o.X, o.Y, o.Z, o.Kind, o.Building) { Yaw = o.Yaw, Pitch = o.Pitch, Roll = o.Roll, Scale = o.Scale }).ToList();
 
-	// Kinds: Buildings, Ruins, Trees, Rocks, Ore, Bushes, Pickables, Animals, Runestones, Other.
+	// Kinds: Buildings, Ruins, Furniture, Trees, Rocks, Ore, Bushes, Pickables, Remains, Animals, Creatures,
+	// SpawnPoints, Nests, Runestones, Dungeons, Effects, Other.
 	public static IEnumerable<Obj> OfKind(string kind) => All.Where(o => string.Equals(o.Kind, kind, StringComparison.OrdinalIgnoreCase));
 
 	public static IEnumerable<Obj> Near(float x, float z, float radius) => All.Where(o => (o.X - x) * (o.X - x) + (o.Z - z) * (o.Z - z) <= radius * radius);
@@ -148,11 +149,13 @@ public static class Objects
 	// yaw: its turn in degrees (0: its front faces north, 90: east); pitch, roll: its tilts in degrees;
 	// scale: its size (0 keeps the prefab's own). snap: a building piece snaps to the snap points of the
 	// pieces there (and of those placed before it) within 0.5 m, as the game's hammer does.
+	// A point outside the area (Area.MinX to MaxX, MinZ to MaxZ, its edge included: every Area.Inside point is in),
+	// a value that is not a number or a size below 0 stops the script.
 	public static void Place(string prefab, float x, float z, float yaw = 0, float scale = 0, float y = float.NaN, float pitch = 0, float roll = 0, bool snap = false) =>
 		__Host.Place(prefab, x, z, yaw, scale, y, pitch, roll, snap);
 
 	// Moves, turns or sizes an object that is there; what is left out (NaN) stays as it is. It keeps what
-	// it holds (chest contents, builder...).
+	// it holds (chest contents, builder...). A point outside the area or an infinite value stops the script.
 	public static void Move(Obj o, float x = float.NaN, float z = float.NaN, float y = float.NaN, float yaw = float.NaN, float pitch = float.NaN, float roll = float.NaN, float scale = float.NaN) =>
 		__Host.Move(o.Id, x, z, y, yaw, pitch, roll, scale);
 

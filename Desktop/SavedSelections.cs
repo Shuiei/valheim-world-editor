@@ -28,52 +28,83 @@ public static class SavedSelections
     /// <summary>selections.json in the data folder, or the tests' file.</summary>
     private static string FilePath => PathOverride ?? Path.Combine(AppSettings.DataDir, "selections.json");
 
-    /// <summary>Every world's saved selections, by world name; empty when the file is missing or unreadable.</summary>
-    private static Dictionary<string, List<Saved>> LoadAll()
+    /// <summary>
+    /// Every world's saved selections, by world name; empty when there is no file. One that is not valid JSON is first
+    /// copied aside as selections.json.bad (the next save writes over it) and counts as empty. Null when the file
+    /// could not be read, or kept aside: it must not be written over.
+    /// </summary>
+    private static Dictionary<string, List<Saved>>? LoadAll()
     {
+        string text;
         try
         {
-            if (File.Exists(FilePath))
+            // Read at once: File.Exists says no for a file there that cannot be read, which must not count as none.
+            text = File.ReadAllText(FilePath);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            // None yet: brief.
+            Log.CaughtBrief(ex, "reading selections.json (none yet)");
+            return [];
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Caught(ex, "reading selections.json (not saving over it)");
+            return null;
+        }
+        try
+        {
+            var all = JsonSerializer.Deserialize<Dictionary<string, List<Saved>>>(text);
+            // A hand-edited file may hold nulls: those entries are left out.
+            return all == null ? [] : all.Where(kv => kv.Value != null).ToDictionary(kv => kv.Key, kv => kv.Value.Where(s => s?.Name != null && s.Items != null).ToList());
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            Log.Caught(ex, "parsing selections.json (kept as selections.json.bad, starting from none)");
+            try
             {
-                var all = JsonSerializer.Deserialize<Dictionary<string, List<Saved>>>(File.ReadAllText(FilePath));
-                if (all != null)
-                {
-                    // A hand-edited file may hold nulls: those entries are left out.
-                    return all.Where(kv => kv.Value != null).ToDictionary(kv => kv.Key, kv => kv.Value.Where(s => s?.Name != null && s.Items != null).ToList());
-                }
+                File.Copy(FilePath, FilePath + ".bad", overwrite: true);
+                return [];
+            }
+            catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
+            {
+                Log.Caught(copy, "keeping the unreadable selections.json as selections.json.bad (not saving over it)");
+                return null;
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
-        {
-        }
-        return [];
     }
 
-    /// <summary>Writes every world's saved selections; false when the file could not be written.</summary>
+    /// <summary>
+    /// Writes every world's saved selections through a temporary file, so a write cut short leaves the old file whole;
+    /// false when the file could not be written.
+    /// </summary>
     private static bool SaveAll(Dictionary<string, List<Saved>> all)
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(all));
+            SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(all));
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "writing selections.json");
             return false;
         }
     }
 
-    /// <summary>This world's saved selections, oldest first.</summary>
-    public static List<Saved> For(string world) => LoadAll().TryGetValue(world, out var list) ? list : [];
+    /// <summary>This world's saved selections, oldest first; none when the file could not be read.</summary>
+    public static List<Saved> For(string world) => LoadAll() is { } all && all.TryGetValue(world, out var list) ? list : [];
 
     /// <summary>
     /// Keeps a selection under this name (one of the same name is replaced; the new one goes last). False when the file
-    /// could not be written.
+    /// could not be read or written.
     /// </summary>
     public static bool Keep(string world, string name, IEnumerable<Item> items)
     {
-        var all = LoadAll();
+        if (LoadAll() is not { } all)
+        {
+            return false;
+        }
         var list = all.TryGetValue(world, out var l) ? l : [];
         list.RemoveAll(s => s.Name == name);
         list.Add(new Saved(name, [.. items.Select(i => new Item(i.Prefab, MathF.Round(i.X, 3), MathF.Round(i.Y, 3), MathF.Round(i.Z, 3)))]));
@@ -82,11 +113,15 @@ public static class SavedSelections
     }
 
     /// <summary>
-    /// Forgets the selection of this name (nothing to forget is fine); false when the file could not be written.
+    /// Forgets the selection of this name (nothing to forget is fine); false when the file could not be read or
+    /// written.
     /// </summary>
     public static bool Forget(string world, string name)
     {
-        var all = LoadAll();
+        if (LoadAll() is not { } all)
+        {
+            return false;
+        }
         if (!all.TryGetValue(world, out var list) || list.RemoveAll(s => s.Name == name) == 0)
         {
             return true;
@@ -99,28 +134,62 @@ public static class SavedSelections
     }
 
     /// <summary>
-    /// The objects of a saved selection among these things (indices; the deleted left out, each matched once), and how
-    /// many were not found.
+    /// The objects of a saved selection among these things (indices; the deleted left out, each matched once: the
+    /// first of the matching ones not taken yet), and how many were not found. The things are put in metre cells by
+    /// kind once, so each item looks only at the cells it can match in.
     /// </summary>
     public static (List<int> Ids, int Missing) Find(Saved saved, IReadOnlyList<WorldScene.Thing> things)
     {
+        var cells = new Dictionary<(int Prefab, int X, int Z), List<int>>();
+        for (int i = 0; i < things.Count; i++)
+        {
+            var t = things[i];
+            if (t.Gone)
+            {
+                continue;
+            }
+            var key = (t.Prefab, Cell(t.Position.X), Cell(t.Position.Z));
+            if (!cells.TryGetValue(key, out var list))
+            {
+                cells[key] = list = [];
+            }
+            list.Add(i);
+        }
         var ids = new List<int>();
+        var taken = new HashSet<int>();
         int missing = 0;
         foreach (var it in saved.Items)
         {
-            int found = -1;
-            for (int i = 0; i < things.Count; i++)
+            // Within 5 cm across: in the item's cell or one next to it.
+            int found = -1, cx = Cell(it.X), cz = Cell(it.Z);
+            for (int dz = -1; dz <= 1; dz++)
             {
-                var t = things[i];
-                if (!t.Gone && t.Prefab == it.Prefab && MathF.Abs(t.Position.X - it.X) < 0.05f && MathF.Abs(t.Position.Z - it.Z) < 0.05f && MathF.Abs(t.Position.Y - it.Y) < 0.2f && !ids.Contains(i))
+                for (int dx = -1; dx <= 1; dx++)
                 {
-                    found = i;
-                    break;
+                    if (!cells.TryGetValue((it.Prefab, cx + dx, cz + dz), out var list))
+                    {
+                        continue;
+                    }
+                    foreach (int i in list)
+                    {
+                        // Each cell's list is in the things' order: past the first match, none comes earlier.
+                        if (found >= 0 && i > found)
+                        {
+                            break;
+                        }
+                        var t = things[i];
+                        if (MathF.Abs(t.Position.X - it.X) < 0.05f && MathF.Abs(t.Position.Z - it.Z) < 0.05f && MathF.Abs(t.Position.Y - it.Y) < 0.2f && !taken.Contains(i))
+                        {
+                            found = i;
+                            break;
+                        }
+                    }
                 }
             }
             if (found >= 0)
             {
                 ids.Add(found);
+                taken.Add(found);
             }
             else
             {
@@ -129,4 +198,7 @@ public static class SavedSelections
         }
         return (ids, missing);
     }
+
+    /// <summary>The metre cell a coordinate is in, for <see cref="Find"/>.</summary>
+    private static int Cell(float v) => (int)MathF.Floor(v);
 }

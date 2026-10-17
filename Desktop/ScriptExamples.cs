@@ -74,9 +74,13 @@ public static class ScriptExamples
 			    float slope = MathF.Abs(Ground.Height(x + 2, z) - Ground.Height(x - 2, z)) / 4;
 			    if (Noise.At(x, z, 60, seed: 5) > 0.25f && Rnd.Chance(0.15f + slope))
 			    {
-			        Objects.Place(Rnd.Pick("rock4_forest", "rock4_coast", "rock4_heath"), x + Rnd.Range(-2, 2), z + Rnd.Range(-2, 2),
-			            yaw: Rnd.Range(0, 360), scale: Rnd.Range(0.25f, 0.6f));
-			        placed++;
+			        string rock = Rnd.Pick("rock4_forest", "rock4_coast", "rock4_heath");
+			        float px = x + Rnd.Range(-2, 2), pz = z + Rnd.Range(-2, 2);   // a little off the grid
+			        if (Area.Inside(px, pz))
+			        {
+			            Objects.Place(rock, px, pz, yaw: Rnd.Range(0, 360), scale: Rnd.Range(0.25f, 0.6f));
+			            placed++;
+			        }
 			    }
 			}
 			Print($"{placed} boulders placed.");
@@ -89,8 +93,9 @@ public static class ScriptExamples
 			Rnd.Seed = 3;
 			for (int i = 0; i < 36; i++)
 			{
-			    float a = i * MathF.Tau / 36;
-			    Objects.Place("Beech1", cx + MathF.Cos(a) * radius, cz + MathF.Sin(a) * radius, yaw: Rnd.Range(0, 360), scale: Rnd.Range(0.9f, 1.2f));
+			    float a = i * MathF.Tau / 36, x = cx + MathF.Cos(a) * radius, z = cz + MathF.Sin(a) * radius;
+			    if (Area.Inside(x, z))   // a small area holds only part of the ring
+			        Objects.Place("Beech1", x, z, yaw: Rnd.Range(0, 360), scale: Rnd.Range(0.9f, 1.2f));
 			}
 			"""),
         new("Flat paved base", """

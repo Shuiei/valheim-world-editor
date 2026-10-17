@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Numerics;
 using ModelContextProtocol.Server;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -30,25 +31,47 @@ public sealed partial class ClaudeTools
         {
             return "what is kinds, items or texts.";
         }
-        var world = await OnUi(() => _w.World);
+        if (LoneCoordinate(x, z) is string lone)
+        {
+            return lone;
+        }
+        // The open area and how often its world was read, to tell after the search whether its ids still fit.
+        var (world, scene, reads) = await OnUi(() =>
+        {
+            var open = _w.InWorkshop ? null : _w.Session?.Scene;
+            return (_w.World, open, open?.Reads ?? 0);
+        });
         if (world == null)
         {
             return "Open a world first (open_world).";
         }
-        TerrainEditor.App.WorldSearch.Result res;
+        WorldSearch.Result res;
         try
         {
-            res = await Task.Run(() => TerrainEditor.App.WorldSearch.Search(world.World, world.Edits, query, what));
+            res = await Task.Run(() => SearchFiles(world.World, world.Edits, query, what));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "searching the world's files for Claude");
             return "The search failed: " + ex.Message;
         }
         return await OnUi(() =>
         {
+            // Another world opened while it was searched: its hits are the old world's, and the area's ids would be
+            // given to objects of the new one with the same saved ids.
+            if (_w.World != world)
+            {
+                return "The world changed while it was searched: search again.";
+            }
+            // Another area opened, or the world read again after a save (the objects added before it have saved ids
+            // now, and new ones take the added ids again): the hits' ids would be given to other objects.
+            if ((_w.InWorkshop ? null : _w.Session?.Scene) != scene || scene != null && scene.Reads != reads)
+            {
+                return "The open area changed while it was searched (another area, or the world saved): search again.";
+            }
             // The open area's things by world id, to give the hits there their ids.
             var inArea = new Dictionary<int, int>();
-            if (_w.Session?.Scene is { } scene && !_w.InWorkshop)
+            if (scene != null)
             {
                 lock (scene.Things)
                 {
@@ -66,19 +89,25 @@ public sealed partial class ClaudeTools
             {
                 hits = hits.OrderBy(h => (h.X - px) * (h.X - px) + (h.Z - pz) * (h.Z - pz));
             }
+            var given = hits.Take(Math.Clamp(limit, 1, MostHits)).Select(h => new
+            {
+                name = h.Name,
+                x = MathF.Round(h.X, 1),
+                y = MathF.Round(h.Y, 1),
+                z = MathF.Round(h.Z, 1),
+                match = h.Match,
+                areaId = inArea.TryGetValue(h.Id, out int i) ? i : (int?)null,
+            }).ToList();
+            // Ids of the area given: the ids are its (a search with no hit in it gives none, and says nothing of them).
+            if (scene != null && given.Any(h => h.areaId != null))
+            {
+                GaveIds(scene, reads);
+            }
             return ToJson(new
             {
                 found = res.Total,
                 byName = res.Counts.OrderByDescending(c => c.Value).Take(40).Select(c => new { name = c.Key, count = c.Value }),
-                hits = hits.Take(Math.Clamp(limit, 1, MostHits)).Select(h => new
-                {
-                    name = h.Name,
-                    x = MathF.Round(h.X, 1),
-                    y = MathF.Round(h.Y, 1),
-                    z = MathF.Round(h.Z, 1),
-                    match = h.Match,
-                    areaId = inArea.TryGetValue(h.Id, out int i) ? i : (int?)null,
-                }),
+                hits = given,
                 note = res.Truncated ? $"Only the first {res.Hits.Count} hits were kept: ask for something narrower." : null,
             });
         });
@@ -94,11 +123,11 @@ public sealed partial class ClaudeTools
     private static Dictionary<string, (string What, string Kind)> BuildKnown()
     {
         var known = new Dictionary<string, (string What, string Kind)>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (prefab, name, kind) in TerrainEditor.App.SeedPreview.Landmarks)
+        foreach (var (prefab, name, kind) in SeedPreview.Landmarks)
         {
             known[prefab] = (name, kind);
         }
-        foreach (var (name, _, prefabs) in TerrainEditor.App.SeedPreview.Dungeons)
+        foreach (var (name, _, prefabs) in SeedPreview.Dungeons)
         {
             foreach (string p in prefabs)
             {
@@ -119,7 +148,7 @@ public sealed partial class ClaudeTools
         rules.TryGetValue(hash, out string? n) ? n : KnownByHash.TryGetValue(hash, out n) ? n : Terrain.PrefabCatalog.NameOf(hash);
 
     /// <summary>The game's location rules in use (read from the game once, as the New world page does).</summary>
-    private static Task GameRules() => TerrainEditor.App.GameLocations.UseGameRules(TerrainEditor.App.GameLook.Bundles);
+    private static Task GameRules() => GameLocations.UseGameRules(GameLook.Bundles);
 
     /// <summary>list_locations: the world's locations from its zone file (or, without one, those of zones generated).</summary>
     [McpServerTool(Name = "list_locations", ReadOnly = true, Title = "The world's locations")]
@@ -131,6 +160,10 @@ public sealed partial class ClaudeTools
         [Description("How far from it, metres (default 2000).")] float radius = 2000,
         [Description("At most this many (default 100).")] int limit = 100)
     {
+        if (LoneCoordinate(x, z) is string lone)
+        {
+            return lone;
+        }
         await GameRules();
         return await OnUi(() => Locations(query, x, z, radius, limit));
     }
@@ -181,14 +214,27 @@ public sealed partial class ClaudeTools
         });
     }
 
-    /// <summary>The zones (world column, row) a world rectangle touches.</summary>
-    internal static List<(int X, int Z)> ZonesOf(float x0, float z0, float x1, float z1)
+    /// <summary>
+    /// The zones (world column, row) a world rectangle touches, within these zones (inclusive) when given: the range is
+    /// cut to them before the zones are listed, so a huge rectangle does not list millions first.
+    /// </summary>
+    /// <param name="x0">One corner, x.</param>
+    /// <param name="z0">One corner, z.</param>
+    /// <param name="x1">The opposite corner, x.</param>
+    /// <param name="z1">The opposite corner, z.</param>
+    /// <param name="within">The first and last zone columns and rows to keep (null: all).</param>
+    internal static List<(int X, int Z)> ZonesOf(float x0, float z0, float x1, float z1, (int X0, int Z0, int X1, int Z1)? within = null)
     {
-        static int Zone(float v) => (int)MathF.Floor((v + 32) / 64);
-        var zones = new List<(int X, int Z)>();
-        for (int zz = Zone(MathF.Min(z0, z1)); zz <= Zone(MathF.Max(z0, z1)); zz++)
+        static int Zone(float v) => (int)Math.Clamp((double)MathF.Floor((v + 32) / 64), int.MinValue / 2, int.MaxValue / 2);
+        int fromX = Zone(MathF.Min(x0, x1)), toX = Zone(MathF.Max(x0, x1)), fromZ = Zone(MathF.Min(z0, z1)), toZ = Zone(MathF.Max(z0, z1));
+        if (within is { } w)
         {
-            for (int zx = Zone(MathF.Min(x0, x1)); zx <= Zone(MathF.Max(x0, x1)); zx++)
+            (fromX, toX, fromZ, toZ) = (Math.Max(fromX, w.X0), Math.Min(toX, w.X1), Math.Max(fromZ, w.Z0), Math.Min(toZ, w.Z1));
+        }
+        var zones = new List<(int X, int Z)>();
+        for (int zz = fromZ; zz <= toZ; zz++)
+        {
+            for (int zx = fromX; zx <= toX; zx++)
             {
                 zones.Add((zx, zz));
             }
@@ -216,7 +262,7 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
-        var zones = ZonesOf(x0, z0, x1, z1).Where(z => z.X >= scene.X0 && z.X < scene.X0 + scene.ZonesX && z.Z >= scene.Z0 && z.Z < scene.Z0 + scene.ZonesZ).ToList();
+        var zones = ZonesOf(x0, z0, x1, z1, (scene.X0, scene.Z0, scene.X0 + scene.ZonesX - 1, scene.Z0 + scene.ZonesZ - 1));
         if (zones.Count == 0)
         {
             return "The rectangle touches no zone of the open area (editor_state gives its bounds).";
@@ -224,16 +270,16 @@ public sealed partial class ClaudeTools
         string list = string.Join(" · ", zones.Select(z => $"{z.X}, {z.Z}"));
         if (cancel)
         {
-            int n = s.UnmarkResets(zones, $"Claude: cancelled reset of {zones.Count} zone(s)");
+            int n = s.UnmarkResets(zones, ClaudesStep(Lang.T("claude.undo.unmarkReset", zones.Count)));
             if (n == 0)
             {
                 return "None of those zones was marked for reset.";
             }
-            _w.AfterClaudeEdit($"Claude unmarked {n} zone(s).");
+            _w.AfterClaudeEdit(Said.Of("claude.msg.unmarked", n));
             return $"Unmarked {n} zone(s). Now pending: {Pending()}";
         }
-        s.MarkResets(zones, keepBuildings, ground, $"Claude: reset {zones.Count} zone(s)");
-        _w.AfterClaudeEdit($"Claude marked {zones.Count} zone(s) for reset; Ctrl+Z cancels.");
+        s.MarkResets(zones, keepBuildings, ground, ClaudesStep(Lang.T("claude.undo.reset", zones.Count)));
+        _w.AfterClaudeEdit(Said.Of("claude.msg.marked", zones.Count));
         return $"Marked {zones.Count} zone(s) for reset when saved ({list}){(keepBuildings ? ", the players' buildings kept" : ", the players' buildings too")}{(ground ? ", their ground edits undone" : "")}. Now pending: {Pending()}";
     });
 
@@ -251,7 +297,7 @@ public sealed partial class ClaudeTools
             return new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = "The seed is 1 to 10 characters, as in the game." } } };
         }
         await GameRules();
-        var p = await Task.Run(() => TerrainEditor.App.SeedPreview.Make(seed, 160, parallel: true, landmarks: true));
+        var p = await Task.Run(() => SeedPreview.Make(seed, 160, parallel: true, landmarks: true));
         var st = p.Stats;
         string text = ToJson(new
         {
@@ -274,7 +320,7 @@ public sealed partial class ClaudeTools
     }
 
     /// <summary>A seed preview's biomes as a 640-pixel picture, north up, with its start, traders and bosses as dots.</summary>
-    internal static byte[] SeedPicture(TerrainEditor.App.SeedPreview.Preview p)
+    internal static byte[] SeedPicture(SeedPreview.Preview p)
     {
         const int Side = 640;
         using var cells = new SkiaSharp.SKBitmap(p.Size, p.Size);
@@ -294,13 +340,13 @@ public sealed partial class ClaudeTools
             {
                 canvas.DrawImage(image, SkiaSharp.SKRect.Create(0, 0, Side, Side), new SkiaSharp.SKSamplingOptions(SkiaSharp.SKFilterMode.Nearest));
             }
-            float k = Side / (2 * TerrainEditor.App.SeedPreview.Radius);
+            float k = Side / (2 * SeedPreview.Radius);
             using var dot = new SkiaSharp.SKPaint { IsAntialias = true };
             using var rim = new SkiaSharp.SKPaint { IsAntialias = true, Color = SkiaSharp.SKColors.Black, Style = SkiaSharp.SKPaintStyle.Stroke, StrokeWidth = 1 };
             foreach (var l in p.Landmarks ?? [])
             {
                 dot.Color = l.Kind switch { "start" => SkiaSharp.SKColors.White, "trader" => SkiaSharp.SKColors.Gold, _ => SkiaSharp.SKColors.Red };
-                float x = (l.X + TerrainEditor.App.SeedPreview.Radius) * k, y = Side - (l.Z + TerrainEditor.App.SeedPreview.Radius) * k;
+                float x = (l.X + SeedPreview.Radius) * k, y = Side - (l.Z + SeedPreview.Radius) * k;
                 canvas.DrawCircle(x, y, 4, dot);
                 canvas.DrawCircle(x, y, 4, rim);
             }
@@ -309,13 +355,21 @@ public sealed partial class ClaudeTools
         return final.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 85).ToArray();
     }
 
-    /// <summary>create_world: a new world of a name and seed in the first worlds folder, then opened (the New world page's Create).</summary>
+    /// <summary>The same folder, written either way (a trailing separator, and on Windows the letters' case, aside).</summary>
+    private static bool SameFolder(string a, string b) =>
+        string.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(a)), Path.TrimEndingDirectorySeparator(Path.GetFullPath(b)),
+            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    /// <summary>
+    /// create_world: a new world of a name and seed in the first worlds folder (or the one of the game's given), then
+    /// opened (the New world page's Create).
+    /// </summary>
     [McpServerTool(Name = "create_world", Title = "Make a new world")]
-    [Description("Makes a new world, as the New world page's Create does: its name, its seed (preview_seed first), in the game's worlds folder (or the one given, from list_worlds' folders), and opens it on its map. Nothing existing is changed: a name already taken is refused, and so is leaving a world or the Workshop with changes not saved. The game lays out the start, traders and dungeons the first time it loads the world, and makes each place as players reach it: shaping an area before anyone played there works, but locations come later.")]
+    [Description("Makes a new world, as the New world page's Create does: its name, its seed (preview_seed first), in the game's worlds folder (or another of the game's worlds folders given), and opens it on its map. Nothing existing is changed: a name already taken is refused, and so is leaving a world or the Workshop with changes not saved. The game lays out the start, traders and dungeons the first time it loads the world, and makes each place as players reach it: shaping an area before anyone played there works, but locations come later.")]
     public Task<string> CreateWorld(
         [Description("The world's name (it must be a valid file name).")] string name,
         [Description("The seed: 1 to 10 characters, as in the game.")] string seed,
-        [Description("The worlds folder to make it in (optional: the game's).")] string? folder = null) => OnUi(async () =>
+        [Description("The game's worlds folder to make it in (optional: the first; another folder is refused).")] string? folder = null) => OnUi(async () =>
     {
         if (Unsaved() is string why)
         {
@@ -323,8 +377,21 @@ public sealed partial class ClaudeTools
         }
         name = name.Trim();
         seed = seed.Trim();
-        string root = folder ?? NewWorldPage.Roots().FirstOrDefault() ?? TerrainEditor.App.Places.WorldRoots().First();
-        if (NewWorldPage.Check(root, name, seed) is string problem)
+        List<string> roots = WorldFolders();
+        string root;
+        if (folder == null)
+        {
+            root = roots.FirstOrDefault() ?? Places.WorldRoots().First();
+        }
+        else if (roots.FirstOrDefault(r => SameFolder(r, folder)) is string known)
+        {
+            root = known;
+        }
+        else
+        {
+            return $"{folder} is not one of the game's worlds folders: {(roots.Count == 0 ? "there is none yet (leave folder out)" : string.Join(", ", roots))}.";
+        }
+        if (NewWorldPage.Check(root, name, seed, english: true) is string problem)
         {
             return problem;
         }
@@ -332,7 +399,7 @@ public sealed partial class ClaudeTools
         {
             return failed;
         }
-        return _w.World?.World.Name == name ? $"{_w.MessageText.Text} {ToJson(StateOf(_w))}" : $"Made {name}, but it could not be opened: {_w.MessageText.Text}";
+        return _w.World?.World.Name == name ? $"{_w.LastMessageEn} {ToJson(StateOf(_w))}" : $"Made {name}, but it could not be opened: {_w.LastMessageEn}";
     });
 
     // ---- Copies.
@@ -361,6 +428,15 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        int reads = scene.Reads;
+        if (StaleIds(scene) is string stale)
+        {
+            return stale;
+        }
+        if (LoneCoordinate(pivotX, pivotZ, "pivotX", "pivotZ") is string lone)
+        {
+            return lone;
+        }
         var (usable, problems) = Usable(scene, ids);
         if (usable.Count == 0)
         {
@@ -395,20 +471,20 @@ public sealed partial class ClaudeTools
                 }
                 float cy = t.Position.Y + dy * k + (ground ? GroundAt(scene, cx, cz) - GroundAt(scene, t.Position.X, t.Position.Z) : 0);
                 // As the Select tool's copy: what it was copied from, with all it holds.
-                var added = t.Id < 0 ? s.Edits.FindAdded(t.Id) : null;
-                var data = scene.World != null && TerrainEditor.App.ObjectData.Bytes(scene.World, s.Edits, t.Id) is { } bytes ? TerrainEditor.App.ObjectData.Fields(bytes, builder: true) : added?.Data;
+                var (source, data) = s.CopySourceOf(t);
                 copy.Add((new Editing.NewObject(0, t.Prefab, new Vector3(cx, cy, cz), Wrapped(t.Rotation + new Vector3(0, turn * k, 0)), t.Scale,
-                    t.Id >= 0 ? t.Id : added?.SourceId, true, Data: data), t.Piece, i));
+                    source, true, Data: data), t.Piece, i));
             }
-            var own = TerrainEditor.App.ObjectLinks.Remap([.. copy.Select(c => c.O)], linkIds);
+            var own = ObjectLinks.Remap([.. copy.Select(c => c.O)], linkIds);
             for (int j = 0; j < copy.Count; j++)
             {
                 adds.Add((own[j], copy[j].Piece));
                 from.Add(copy[j].From);
             }
         }
-        var made = s.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, [], adds);
-        _w.AfterClaudeEdit($"Claude made {made.Count} cop{(made.Count == 1 ? "y" : "ies")}; Ctrl+Z takes them back.");
+        var made = s.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label), null, [], adds);
+        _w.AfterClaudeEdit(made.Count == 1 ? Said.Of("claude.msg.copies.one", made.Count) : Said.Of("claude.msg.copies.many", made.Count));
+        GaveIds(scene, reads);
         return ToJson(new { copied = made.Select((c, k) => Moved(scene, from[k], c)), problems, pending = Pending() });
     });
 }

@@ -24,7 +24,7 @@ public class PlaceInputTests
     /// A shown window editing a flat 2 × 2 zone area in the Place tool, looking straight down, with a Place tool and
     /// input of the test's own (Beech1 chosen, the given mode), its messages and placed kinds kept when listened to.
     /// </summary>
-    private sealed class Rig
+    internal sealed class Rig
     {
         public MainWindow W { get; }
         public EditSession S { get; }
@@ -32,6 +32,8 @@ public class PlaceInputTests
         public PlaceInput In { get; }
         public Avalonia.Size Size { get; } = new(1600, 1000);
         public List<string> Said { get; } = [];
+        /// <summary>What was said, in both languages.</summary>
+        public List<TerrainEditor.App.Said> Told { get; } = [];
         public List<IReadOnlyList<string>> Placed { get; } = [];
         public int Changes { get; private set; }
 
@@ -52,7 +54,11 @@ public class PlaceInputTests
             In = new PlaceInput(W.View, T) { Session = () => session };
             if (listen)
             {
-                In.Message += Said.Add;
+                In.Message += t =>
+                {
+                    Said.Add(t.Shown);
+                    Told.Add(t);
+                };
                 In.Placed += Placed.Add;
                 In.Changed += () => Changes++;
             }

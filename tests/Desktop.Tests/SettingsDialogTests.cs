@@ -46,13 +46,9 @@ public class SettingsDialogTests
         /// <inheritdoc/>
         public void Dispose()
         {
-            try
+            if (Directory.Exists(Root))
             {
                 Directory.Delete(Root, true);
-            }
-            catch
-            {
-                // Best effort: a folder that cannot be deleted is left for the OS to clean up.
             }
         }
     }
@@ -131,13 +127,19 @@ public class SettingsDialogTests
         var shown = SettingsDialog.Show(owner, settings);
         var d = TestWindows.Shown(owner);
         var allow = d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == "Allow Claude to connect");
+        var scripts = d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == "Claude may run scripts");
         var port = Named(d, "ClaudePort");
         var command = Named(d, "ClaudeCommand");
         Assert.False(allow.IsChecked);
         Assert.False(port.IsEffectivelyVisible);
+        // Scripts: off at first, with the other details; the user's leave once.
+        Assert.False(scripts.IsChecked);
+        Assert.False(scripts.IsEffectivelyVisible);
         allow.IsChecked = true;
         Dispatcher.UIThread.RunJobs();
         Assert.True(port.IsEffectivelyVisible);
+        Assert.True(scripts.IsEffectivelyVisible);
+        scripts.IsChecked = true;
         Assert.StartsWith("claude mcp add --transport http valheim-editor http://127.0.0.1:5731/mcp --header \"Authorization: Bearer ", command.Text);
         port.Text = "80";
         Click(Buttons(d, "Save").Single());
@@ -150,6 +152,7 @@ public class SettingsDialogTests
         Assert.True(await shown);
         var kept = AppSettings.Load();
         Assert.True(kept.ClaudeConnect);
+        Assert.True(kept.ClaudeScripts);
         Assert.Equal(6000, kept.ClaudePort);
         Assert.Equal(token, kept.ClaudeToken);
     }
@@ -289,6 +292,27 @@ public class SettingsDialogTests
         finally
         {
             SettingsDialog.PickFolder = null;
+        }
+    }
+
+    [AvaloniaFact]
+    public void SettingsThatCannotBeSavedAreSaidAndNotKept()
+    {
+        using var t = new Temp();
+        string? was = AppSettings.PathOverride;
+        // A folder where the file should be: it cannot be written.
+        AppSettings.PathOverride = t.Dir("settings.json");
+        try
+        {
+            var settings = new AppSettings();
+            string worlds = t.Dir("Worlds");
+            string? problem = SettingsDialog.Apply(settings, null, [], [worlds]);
+            Assert.StartsWith("The settings could not be saved: ", problem);
+            Assert.Empty(settings.WorldFolders);
+        }
+        finally
+        {
+            AppSettings.PathOverride = was;
         }
     }
 

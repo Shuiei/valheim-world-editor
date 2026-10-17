@@ -94,6 +94,9 @@ public sealed class LocalSshd : IDisposable
 
     public bool Available => _p != null;
 
+    /// <summary>The sshd process's id (its sessions are its children).</summary>
+    internal int ProcessId => _p!.Id;
+
     /// <summary>
     /// Skips the test without sshd (fails instead when CI asks for it).
     /// </summary>
@@ -122,27 +125,19 @@ public sealed class LocalSshd : IDisposable
         return output;
     }
 
+    /// <summary>
+    /// Stops sshd (with the sessions it started) and waits for it to end, then deletes its folder.
+    /// </summary>
     public void Dispose()
     {
-        try
+        if (_p is { HasExited: false })
         {
-            if (_p is { HasExited: false })
-            {
-                _p.Kill();
-                _p.WaitForExit(5000);
-            }
+            _p.Kill(entireProcessTree: true);
+            Assert.True(_p.WaitForExit(5000), "sshd did not end within 5 s of being killed");
         }
-        catch
-        {
-            // The process may have exited already; the test is over either way.
-        }
-        try
+        if (Directory.Exists(Dir))
         {
             Directory.Delete(Dir, true);
-        }
-        catch
-        {
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
         }
     }
 }

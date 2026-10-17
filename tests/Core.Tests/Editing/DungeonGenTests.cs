@@ -229,6 +229,23 @@ public class DungeonGenTests
     }
 
     [Fact]
+    public void ChosenFoesAndNoRespawnHoldInEveryRoom()
+    {
+        // The elites were the biome's whatever the foes chosen, a swamp burial chamber's foes sleeping draugr, and an
+        // ossuary's bone pile raised the dead with Respawn off.
+        var others = DungeonKit.Biomes.SelectMany(b => b.Foes.Concat(b.Elites)).SelectMany(f => new[] { f.Spawner, f.Creature })
+            .Concat(["Draugr_sleeping", "Draugr_Ranged_sleeping", "Spawner_DraugrPile", "BonePileSpawner", "BonePileSpawner_swamp"]).ToHashSet();
+        int wolves = 0;
+        for (int seed = 1; seed <= 4; seed++)
+        {
+            var r = DungeonGen.Make(new DungeonGen.Settings(Biome: "Swamp", Style: "Crypt", Size: 3, Levels: 2, Seed: seed, Foes: ["Wolf"], Respawn: false, Boss: ""));
+            Assert.DoesNotContain(r.Items, i => others.Contains(i.Prefab));
+            wolves += r.Items.Count(i => i.Prefab == "Wolf");
+        }
+        Assert.True(wolves > 0);
+    }
+
+    [Fact]
     public void FewerLightsWithoutLightAndLessRubbleWithoutDecay()
     {
         static int Lights(DungeonGen.Result r) => r.Items.Count(i => i.Prefab.Contains("torch", StringComparison.Ordinal) || i.Prefab.Contains("brazier", StringComparison.OrdinalIgnoreCase));
@@ -243,8 +260,8 @@ public class DungeonGenTests
     {
         // Small crypts of two levels: some seeds leave no room on the last level for the antechamber and the arena.
         var made = Enumerable.Range(1, 80).Select(seed => DungeonGen.Make(new DungeonGen.Settings(Biome: "Meadows", Style: "Crypt", Size: 1, Levels: 2, Seed: seed))).ToList();
-        Assert.Contains(made, r => r.Notes.Contains("no room for the boss arena"));
-        Assert.Contains(made, r => !r.Notes.Contains("no room for the boss arena"));
+        Assert.Contains(made, r => r.Notes.Exists(n => n.English == "no room for the boss arena"));
+        Assert.Contains(made, r => !r.Notes.Exists(n => n.English == "no room for the boss arena"));
     }
 
     [Fact]
@@ -252,7 +269,7 @@ public class DungeonGenTests
     {
         var r = DungeonGen.Make(new DungeonGen.Settings(Made: DungeonGen.Made.Rooms, Kind: "DG_GoblinCamp", Size: 2, Seed: 3));
         Assert.Equal("DG_Cave", r.Kind!.Name);
-        Assert.Contains(r.Notes, n => n.Contains("a cave instead", StringComparison.Ordinal));
+        Assert.Contains(r.Notes, n => n.English.Contains("a cave instead", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -519,5 +536,17 @@ public class DungeonGenTests
             (float)rs.Sum(r => r.Items.Count(i => what(i) && r.Map!.Any(m => m.Level == level && i.Position.X > m.X0 && i.Position.X < m.X1 && i.Position.Z > m.Z0 && i.Position.Z < m.Z1 && i.Position.Y >= m.Y - 0.5f && i.Position.Y < m.Y + 5.5f)))
             / Math.Max(1, rs.Sum(r => r.Map!.Count(m => m.Level == level && !m.Corridor)));
         Assert.True(PerRoom(keeps, 1, i => i.Prefab.StartsWith("Pickable_", StringComparison.Ordinal)) > PerRoom(keeps, 0, i => i.Prefab.StartsWith("Pickable_", StringComparison.Ordinal)), "deeper levels hold more loot");
+    }
+
+    [Fact]
+    public void OneArrivesOnTheEntrancesFloorFinish()
+    {
+        // The arrival was 5 cm over the slab whatever lay on it: a portal there stood in the boards or marble tiles.
+        // Wooden walls come with boards 0.1 m thick everywhere.
+        Assert.Equal(0.15f, DungeonGen.Make(new DungeonGen.Settings(Biome: "Black Forest", Walls: "Wood", Seed: 1)).Arrival.Y, 0.001f);
+        // Stone has none, but grand rooms get marble tiles (0.19 m) half the time.
+        float[] heights = [.. Enumerable.Range(1, 8).Select(seed => DungeonGen.Make(new DungeonGen.Settings(Biome: "Black Forest", Size: 1, Seed: seed)).Arrival.Y)];
+        Assert.All(heights, y => Assert.True(MathF.Abs(y - 0.05f) < 0.001f || MathF.Abs(y - 0.24f) < 0.001f, $"arrival at {y}"));
+        Assert.Contains(heights, y => MathF.Abs(y - 0.24f) < 0.001f);
     }
 }

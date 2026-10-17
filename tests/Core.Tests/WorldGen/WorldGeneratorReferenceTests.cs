@@ -53,6 +53,38 @@ public class WorldGeneratorReferenceTests
     }
 
     [Fact]
+    public void UnknownAndShortLinesAreReportedAndLeaveTheRandomStateAlone()
+    {
+        // An unknown Random call was replayed as insideUnitCircle (moving the state on, so every later line differed),
+        // and a short line threw.
+        string bad = Path.Combine(Path.GetTempPath(), "vwe-ref-" + Guid.NewGuid().ToString("N")[..8] + ".txt");
+        try
+        {
+            // The game's first two calls (a seed, then a range), an unknown call between them.
+            string[] game = [.. File.ReadLines(Reference).Where(l => l.StartsWith("R ", StringComparison.Ordinal)).Take(2)];
+            File.WriteAllLines(bad,
+            [
+                game[0],
+                "R gaussian 3f000000 | 6c078966 714acb3f dbffe6dc dbfff5aa",
+                game[1],
+                "P 3f000000",
+                "H 1",
+                "R value",
+            ]);
+            var r = DumpVerifier.Run(bad, "5DCcdIcuYJ");
+            Assert.Equal(4, r.Unreadable);
+            Assert.Equal(0, r.RandomWrong);
+            Assert.Equal(2, r.RandomOk);
+            Assert.False(r.AllMatch);
+            Assert.Contains(r.Errors, e => e.StartsWith("Line 2 not read", StringComparison.Ordinal));
+        }
+        finally
+        {
+            File.Delete(bad);
+        }
+    }
+
+    [Fact]
     public void BrokenRandomRecordsAreReported()
     {
         string bad = Path.Combine(Path.GetTempPath(), "vwe-ref-" + Guid.NewGuid().ToString("N")[..8] + ".txt");

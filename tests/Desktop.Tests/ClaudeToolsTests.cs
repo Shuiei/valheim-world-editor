@@ -54,6 +54,25 @@ public class ClaudeToolsTests
         Assert.StartsWith("Redone.", await r.T.Redo());
     }
 
+    // Scripts run with the user's rights: without the user's leave (Settings → Claude → Claude may run scripts, off by
+    // default) run_script is refused, dry runs too, and so is the Script tool's Run through set_control; with it,
+    // they run. The other tools do not need it.
+    [AvaloniaFact]
+    public async Task ScriptsNeedTheUsersLeave()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        r.W.Settings.ClaudeScripts = false;
+        Assert.Equal(ClaudeTools.ScriptsRefused, await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+        Assert.Equal(ClaudeTools.ScriptsRefused, await r.T.RunScript("Ground.Raise(0, 0, 3);", dryRun: true));
+        Assert.Contains("not allowed Claude to run scripts", await r.T.SetControl("script.run", "click"));
+        Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+        Assert.Contains("ground point", await r.T.Flatten(-10, -10, 10, 10, 31));
+        r.W.Settings.ClaudeScripts = true;
+        Assert.StartsWith("Dry run:", await r.T.RunScript("Ground.Raise(0, 0, 3);", dryRun: true));
+        Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+    }
+
     [AvaloniaFact]
     public async Task LiveWithAutoOnClaudeChangesNothing()
     {
@@ -64,6 +83,11 @@ public class ClaudeToolsTests
         Assert.Contains("Auto on", await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "woodwall", X = 0, Z = 0 }]));
         Assert.Contains("Auto on", await r.T.RemoveObjects([0]));
         Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+        // Scripts not allowed either: that is what is said, since turning Auto off would not be enough.
+        r.W.Settings.ClaudeScripts = false;
+        Assert.Equal(ClaudeTools.ScriptsRefused, await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+        Assert.Contains("not allowed Claude to run scripts", await r.T.SetControl("script.run", "click"));
+        r.W.Settings.ClaudeScripts = true;
         // Auto off: Claude's change waits for Apply live.
         r.W.Settings.AutoApply = false;
         Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
@@ -105,6 +129,38 @@ public class ClaudeToolsTests
         // The plot is not saved as a blueprint: no world is opened over it.
         Assert.Contains("blueprint", await r.T.OpenWorld(r.Dir));
         Assert.Contains("No blueprint", await r.T.AddBlueprint("Nothing like this"));
+    }
+
+    // The ids support_check gives (the pieces falling, the weakest) are the plot's: usable at once, even when the
+    // ids given before were another area's.
+    [AvaloniaFact]
+    public async Task SupportCheckGivesTheIdsOfThePlot()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "wood_pole2", X = 3, Z = 3 }]);
+        await r.T.Undo();
+        // A floor on the ground and a post 6 m above it, held by nothing: it falls.
+        static System.Text.Json.Nodes.JsonNode Piece(string prefab, float dy) => new System.Text.Json.Nodes.JsonObject
+        {
+            ["name"] = prefab,
+            ["dx"] = 0,
+            ["dy"] = dy,
+            ["dz"] = 0,
+            ["rx"] = 0,
+            ["ry"] = 0,
+            ["rz"] = 0,
+            ["scale"] = 0,
+        };
+        var clip = new System.Text.Json.Nodes.JsonObject { ["objects"] = new System.Text.Json.Nodes.JsonArray(Piece("wood_floor", 0), Piece("wood_pole2", 6)) };
+        Directory.CreateDirectory(r.Homestead);
+        File.WriteAllText(Path.Combine(r.Homestead, TerrainEditor.App.Homestead.FileName("Floating")), TerrainEditor.App.Homestead.Write(clip, "Floating", "Tester", null, DateTime.Now));
+        Assert.Equal("workshop", J(await r.T.OpenWorkshop("Floating")).GetProperty("page").GetString());
+        Assert.StartsWith("The ids are from another area", await r.T.RemoveObjects([0]));
+        var support = J(await r.T.SupportCheck());
+        Assert.Equal(1, support.GetProperty("wouldFall").GetInt32());
+        int post = support.GetProperty("falling")[0].GetProperty("id").GetInt32();
+        Assert.StartsWith("Took 1 away", await r.T.RemoveObjects([post]));
     }
 
     // Floors, walls and roofs over a rectangle, from the game's pieces: an 8 x 6 m house is 12 floor tiles,
@@ -159,6 +215,9 @@ public class ClaudeToolsTests
         Assert.Contains("The paint is", await r.T.PaintArea("lava", x: 0, z: 0, radius: 3));
         Assert.Contains("object(s) placed", await r.T.Forest(5, -30, 30, -5, ["Birch1"], spacing: 7));
         Assert.Contains("not an object", await r.T.Forest(5, -30, 30, -5, ["NoSuchTree"]));
+        // Names go into the script escaped: one ending in a backslash, or holding a quote, is just not an object.
+        Assert.Contains("Odd\\: not an object", await r.T.Forest(5, -30, 30, -5, ["Odd\\", "Birch1"]));
+        Assert.Contains("Quote\"d: not an object", await r.T.Forest(5, -30, 30, -5, ["Quote\"d"]));
         await r.T.SelectObjects([1, 2], focus: false);
         Assert.Equal(2, J(await r.T.GetSelection()).GetArrayLength());
         int chest = J(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "piece_chest_wood", X = -10, Z = -10 }])).GetProperty("placed")[0].GetProperty("id").GetInt32();
@@ -237,6 +296,54 @@ public class ClaudeToolsTests
     private sealed class Answer(Func<HttpRequestMessage, HttpResponseMessage> answer) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromResult(answer(request));
+    }
+
+    // Homestead moved (or installed) after the Blueprints panel last looked: the blueprint tools look again.
+    [AvaloniaFact]
+    public async Task TheBlueprintToolsLookForHomesteadAgain()
+    {
+        using var r = new ClaudeRun();
+        r.Hut("Hut", "A floor");
+        Assert.Equal("Hut", J(await r.T.ListBlueprints())[0].GetProperty("name").GetString());
+        string elsewhere = Path.Combine(r.Homestead, "moved");
+        Directory.CreateDirectory(elsewhere);
+        r.W.Blueprints.FindHomestead = () => new TerrainEditor.App.Homestead.Status(true, "1.3.2", ["test"], elsewhere);
+        Assert.Equal(0, J(await r.T.ListBlueprints()).GetArrayLength());
+        Assert.Equal("No blueprint \"Hut\" in the library (list_blueprints).", await r.T.OpenWorkshop("Hut"));
+    }
+
+    // A point's coordinates come both or neither: a lone one was dropped (list_objects' near) or mixed with a default
+    // (move_objects' pivot with the objects' middle z).
+    [Fact]
+    public void ALoneCoordinateIsRefused()
+    {
+        Assert.Null(ClaudeTools.LoneCoordinate(null, null));
+        Assert.Null(ClaudeTools.LoneCoordinate(1, 2));
+        Assert.Equal("Give x and z together, or neither: only x was given.", ClaudeTools.LoneCoordinate(1, null));
+        Assert.Equal("Give pivotX and pivotZ together, or neither: only pivotZ was given.", ClaudeTools.LoneCoordinate(null, 2, "pivotX", "pivotZ"));
+    }
+
+    // On a slope a piece stands on the ground between the grid points, as ground_at gives it: it took the nearest grid
+    // point's height, up to half a metre's slope off.
+    [AvaloniaFact]
+    public async Task PiecesStandOnTheGroundBetweenTheGridPoints()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        var s = r.W.Session!;
+        s.Shape((s.Scene.W - 1) / 2f, (s.Scene.H - 1) / 2f, Formula.Compile("x * 0.3 + z * 0.2", ["x", "z"]), 20, 0, "slope");
+        float cx = s.Scene.Cx + 3, cz = s.Scene.Cz;
+        var placed = J(await r.T.PlacePieces(
+        [
+            new ClaudeTools.PieceSpec { Prefab = "Birch1", X = cx, Z = cz, Snap = false },
+            new ClaudeTools.PieceSpec { Prefab = "Birch1", X = cx + 0.4f, Z = cz + 0.3f, Snap = false },
+        ])).GetProperty("placed");
+        var ground = J(await r.T.GroundAtPoints([[cx, cz], [cx + 0.4f, cz + 0.3f]]));
+        float rise = ground[1].GetProperty("height").GetSingle() - ground[0].GetProperty("height").GetSingle();
+        // On a slope either way (the area's own ground under the shaped one): both points share a nearest grid point, so
+        // they stood at one height before.
+        Assert.True(MathF.Abs(rise) > 0.1f, $"{rise}");
+        Assert.Equal(rise, placed[1].GetProperty("piece").GetProperty("y").GetSingle() - placed[0].GetProperty("piece").GetProperty("y").GetSingle(), 2);
     }
 
     // The server: only for callers with the token, only under this computer's address; then MCP.

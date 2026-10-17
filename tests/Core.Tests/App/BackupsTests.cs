@@ -23,6 +23,28 @@ public class BackupsTests
         Assert.Equal("editor", b.Kind);
     }
 
+    // The folder beside the world cannot be read: no backups (it threw).
+    [Fact]
+    public void AFolderThatCannotBeReadHasNoBackups()
+    {
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            return;
+        }
+        string parent = Path.Combine(Path.GetTempPath(), "vwe-backups-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(Path.Combine(parent, "World1"));
+        File.SetUnixFileMode(parent, UnixFileMode.UserWrite);
+        try
+        {
+            Assert.Empty(TerrainEditor.App.Backups.Find(Path.Combine(parent, "World1") + "/"));
+        }
+        finally
+        {
+            File.SetUnixFileMode(parent, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            Directory.Delete(parent, true);
+        }
+    }
+
     [Fact]
     public void ADeletedObjectComesBackFromTheBackupWithItsData()
     {

@@ -81,7 +81,10 @@ public sealed class PerfLog
         }
     }
 
-    /// <summary>Writes the waiting lines to the file (IO errors are ignored).</summary>
+    /// <summary>
+    /// Writes the waiting lines to the file. A file that cannot be written (a read-only data folder) loses them; the
+    /// first such failure is logged, and the frames go on.
+    /// </summary>
     /// <param name="now">The time now in ms, to space out the next write.</param>
     public void Flush(long now = 0)
     {
@@ -98,11 +101,23 @@ public sealed class PerfLog
             }
             File.AppendAllLines(FilePath, _lines);
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            if (!_writeFailed)
+            {
+                _writeFailed = true;
+                // Once: it would fail at every flush.
+                Log.Caught(ex, "writing the performance log");
+            }
         }
-        _lines.Clear();
+        finally
+        {
+            _lines.Clear();
+        }
     }
+
+    /// <summary>A write of the file failed already (said once in the log).</summary>
+    private bool _writeFailed;
 
     /// <summary>Makes the next sample start with a header line again.</summary>
     public void Restart() => _header = "";

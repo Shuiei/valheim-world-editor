@@ -40,7 +40,7 @@ public sealed class ObjectRef
     public (long User, uint Id) LiveId { get; set; }
 
     /// <summary>The 64 m zone the object is in.</summary>
-    public (int X, int Z) Zone => ((int)MathF.Floor((Position.X + 32f) / 64f), (int)MathF.Floor((Position.Z + 32f) / 64f));
+    public (int X, int Z) Zone => ChunkMath.SectorOf(Position.X, Position.Z);
 }
 
 /// <summary>
@@ -49,22 +49,8 @@ public sealed class ObjectRef
 /// </summary>
 public static class ZdoBuilder
 {
-    /// <summary>The ZDO flag bits that say which data sections follow.</summary>
-    private const ushort Connections = 0x1, Floats = 0x2, Vec3 = 0x4, Quats = 0x8, Ints = 0x10, Longs = 0x20, Strings = 0x40, ByteArrays = 0x80;
 
-    /// <summary>ZDO flag bits: a rotation is stored; the position is in the short form.</summary>
-    private const ushort RotationFlag = 0x1000, SmallPositionFlag = 0x2000;
-
-    /// <summary>Vec3 data key of a per-axis scale.</summary>
-    private static readonly int ScaleKey = StableHash.Of("scale");
-
-    /// <summary>Float data key of a uniform scale.</summary>
-    private static readonly int ScaleScalarKey = StableHash.Of("scaleScalar");
-
-    /// <summary>Long data key of the player id that built a piece.</summary>
-    private static readonly int CreatorKey = StableHash.Of("creator");
-
-    /// <summary>A copy of the template object at a new place, in the world version 41 format.</summary>
+    /// <summary>A copy of the template object at a new place, in the save format of world versions 41 and 42.</summary>
     /// <param name="source">The chunk file bytes the template lives in.</param>
     /// <param name="template">The object to copy.</param>
     /// <param name="worldVersion">The world version the source was written in.</param>
@@ -78,60 +64,36 @@ public static class ZdoBuilder
     /// </param>
     public static byte[] Build(byte[] source, ObjectRef template, int worldVersion, Vector3 position, Vector3 euler, float scale, bool fresh = false)
     {
-        euler = new Vector3(Wrap(euler.X), Wrap(euler.Y), Wrap(euler.Z));
-        bool rotated = euler.LengthSquared() > 1e-6f;
-        ushort flags = (ushort)(template.Flags & ~SmallPositionFlag & ~RotationFlag);
-        if (rotated)
-        {
-            flags |= RotationFlag;
-        }
-        List<Section> sections = ReadSections(source, template, worldVersion);
+        var z = ZdoData.Parse(source, (int)template.Start, (int)(template.End - template.Start), worldVersion);
+        z.Position = position;
+        z.SmallPosition = false;
+        z.Rotation = euler;
         if (fresh)
         {
-            sections.RemoveAll(s => s.Flag == Connections);
-            foreach (Section s in sections)
-            {
-                s.Items.RemoveAll(i => !(s.Flag == Longs && i.Key == CreatorKey) && !(s.Flag == Vec3 && i.Key == ScaleKey) && !(s.Flag == Floats && i.Key == ScaleScalarKey));
-            }
+            z.Connection = null;
+            z.FloatList.RemoveAll(i => i.Key != ZdoData.ScaleScalarKey);
+            z.Vec3List.RemoveAll(i => i.Key != ZdoData.ScaleKey);
+            z.QuatList.Clear();
+            z.IntList.Clear();
+            z.LongList.RemoveAll(i => i.Key != Editing.ObjectField.CreatorKey);
+            z.StringList.Clear();
+            z.ByteList.Clear();
         }
         if (scale > 0f)
         {
-            // The game stores a non-default scale as a Vector3 "scale" (ZNetView.SetLocalScale).
-            Section vec = sections.FirstOrDefault(s => s.Flag == Vec3) ?? AddSection(sections, Vec3);
-            vec.Set(ScaleKey, Concat(BitConverter.GetBytes(scale), BitConverter.GetBytes(scale), BitConverter.GetBytes(scale)));
-            sections.FirstOrDefault(s => s.Flag == Floats)?.Items.RemoveAll(i => i.Key == ScaleScalarKey);
-        }
-        sections.RemoveAll(s => s.Flag != Connections && s.Items.Count == 0);
-        flags = (ushort)(flags & 0xFF00);
-        foreach (Section s in sections)
-        {
-            flags |= s.Flag;
-        }
-        using MemoryStream ms = new();
-        using BinaryWriter w = new(ms);
-        w.Write(flags);
-        w.Write(position.X); w.Write(position.Y); w.Write(position.Z);
-        w.Write(template.Prefab);
-        if (rotated)
-        {
-            WriteSmallRotation(w, euler);
-        }
-        foreach (Section s in sections.OrderBy(s => s.Flag))
-        {
-            if (s.Flag == Connections)
+            // The game stores a non-default scale as a Vector3 "scale" (ZNetView.SetLocalScale); scale 1 is no value,
+            // as Blank writes it.
+            z.FloatList.RemoveAll(i => i.Key == ZdoData.ScaleScalarKey);
+            if (MathF.Abs(scale - 1f) > 1e-4f)
             {
-                w.Write(s.Raw!);
-                continue;
+                z.SetVec3(ZdoData.ScaleKey, new Vector3(scale));
             }
-            WriteNumItems(w, s.Items.Count);
-            foreach (var (key, value) in s.Items)
+            else
             {
-                w.Write(key);
-                w.Write(value);
+                z.Vec3List.RemoveAll(i => i.Key == ZdoData.ScaleKey);
             }
         }
-        w.Flush();
-        return ms.ToArray();
+        return z.Serialize();
     }
 
     /// <summary>
@@ -151,15 +113,15 @@ public static class ZdoBuilder
         ushort flags = (ushort)(baseFlags & 0x0F00);
         if (rotated)
         {
-            flags |= RotationFlag;
+            flags |= ZdoData.RotationFlag;
         }
         if (scale > 0f && MathF.Abs(scale - 1f) > 1e-4f)
         {
-            flags |= Vec3;
+            flags |= ZdoData.Vec3s;
         }
         if (ints is { Count: > 0 })
         {
-            flags |= Ints;
+            flags |= ZdoData.Ints;
         }
         using MemoryStream ms = new();
         using BinaryWriter w = new(ms);
@@ -170,13 +132,13 @@ public static class ZdoBuilder
         {
             WriteSmallRotation(w, euler);
         }
-        if ((flags & Vec3) != 0)
+        if ((flags & ZdoData.Vec3s) != 0)
         {
             WriteNumItems(w, 1);
-            w.Write(ScaleKey);
+            w.Write(ZdoData.ScaleKey);
             w.Write(scale); w.Write(scale); w.Write(scale);
         }
-        if ((flags & Ints) != 0)
+        if ((flags & ZdoData.Ints) != 0)
         {
             WriteNumItems(w, ints!.Count);
             foreach (var (key, value) in ints)
@@ -220,84 +182,6 @@ public static class ZdoBuilder
         }
         w.Write((byte)((n >> 8) | 0x80));
         w.Write((byte)n);
-    }
-
-    /// <summary>One data section of an object being copied, its values kept as raw bytes.</summary>
-    /// <param name="flag">The section's ZDO flag bit.</param>
-    private sealed class Section(ushort flag)
-    {
-        /// <summary>The section's ZDO flag bit.</summary>
-        public ushort Flag { get; } = flag;
-
-        /// <summary>The values by key hash, each as its saved bytes.</summary>
-        public List<(int Key, byte[] Value)> Items { get; } = [];
-
-        /// <summary>The connection section's five bytes (type and target), kept whole.</summary>
-        public byte[]? Raw { get; set; }
-
-        /// <summary>Replaces the value with this key, or adds it.</summary>
-        public void Set(int key, byte[] value)
-        {
-            int i = Items.FindIndex(t => t.Key == key);
-            if (i >= 0)
-            {
-                Items[i] = (key, value);
-            }
-            else
-            {
-                Items.Add((key, value));
-            }
-        }
-    }
-
-    /// <summary>Adds an empty section of that flag.</summary>
-    private static Section AddSection(List<Section> sections, ushort flag)
-    {
-        Section s = new(flag);
-        sections.Add(s);
-        return s;
-    }
-
-    /// <summary>The byte arrays joined in order.</summary>
-    private static byte[] Concat(params byte[][] parts) => [.. parts.SelectMany(p => p)];
-
-    /// <summary>The data sections of the template, in file order (same reading as WorldSave.ReadZdo).</summary>
-    private static List<Section> ReadSections(byte[] source, ObjectRef t, int worldVersion)
-    {
-        List<Section> result = [];
-        if ((t.Flags & 0xFF) == 0)
-        {
-            return result;
-        }
-        using ValheimReader pkg = new(new MemoryStream(source, (int)t.DataStart, (int)(t.End - t.DataStart)));
-        if ((t.Flags & Connections) != 0)
-        {
-            result.Add(new Section(Connections) { Raw = pkg.ReadBytes(5) });
-        }
-        foreach (var (flag, read) in new (ushort, Func<ValheimReader, byte[]>)[]
-        {
-            (Floats, p => p.ReadBytes(4)),
-            (Vec3, p => p.ReadBytes(12)),
-            (Quats, p => p.ReadBytes(16)),
-            (Ints, p => p.ReadBytes(4)),
-            (Longs, p => p.ReadBytes(8)),
-            (Strings, p => { string s = p.ReadString(); using MemoryStream m = new(); using BinaryWriter bw = new(m); bw.Write(s); bw.Flush(); return m.ToArray(); }),
-            (ByteArrays, p => { byte[] b = p.ReadByteArray(); return Concat(BitConverter.GetBytes(b.Length), b); }),
-        })
-        {
-            if ((t.Flags & flag) == 0)
-            {
-                continue;
-            }
-            Section s = new(flag);
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                s.Items.Add((pkg.ReadInt(), read(pkg)));
-            }
-            result.Add(s);
-        }
-        return result;
     }
 }
 
@@ -456,7 +340,7 @@ public sealed class ZoneDb
         for (int i = 0; i < Locations.Count; i++)
         {
             var (hash, pos, placed) = Locations[i];
-            if ((int)MathF.Floor((pos.X + 32f) / 64f) == zx && (int)MathF.Floor((pos.Z + 32f) / 64f) == zz && placed)
+            if (ChunkMath.SectorOf(pos.X, pos.Z) == (zx, zz) && placed)
             {
                 Locations[i] = (hash, pos, false);
             }

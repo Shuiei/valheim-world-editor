@@ -113,6 +113,7 @@ static void Inventory(byte[] data)
     }
     catch (NotSupportedException)
     {
+        // An item format older than the editor reads: refused as such, by design.
     }
 }
 

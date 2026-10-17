@@ -58,7 +58,7 @@ public static class ModKeys
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
             {
-                Console.WriteLine($"mod data names: not read ({e.Message}).");
+                Log.Caught(e, "reading the mods' data names (none used)");
                 ZdoKeys.UseMods(new Dictionary<int, string>());
                 return 0;
             }
@@ -92,6 +92,7 @@ public static class ModKeys
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
                 // A folder that cannot be listed: its DLLs are not read.
+                Log.Caught(e, "listing a plugins folder for the mods' data names (its DLLs are not read)");
             }
         }
         return [.. files.Values.OrderBy(f => f.FullName, StringComparer.Ordinal)];
@@ -106,6 +107,7 @@ public static class ModKeys
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException)
         {
+            Log.CaughtBrief(e, "reading a DLL's data names (not a .NET assembly, or unreadable: none)");
             return [];
         }
     }
@@ -119,6 +121,7 @@ public static class ModKeys
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         {
+            Log.Caught(e, "reading the kept mods' data names (read from the DLLs again)");
             return null;
         }
     }

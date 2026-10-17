@@ -28,13 +28,9 @@ public sealed class FolderEditorProcess() : EditorProcess(Start())
     public override void Dispose()
     {
         base.Dispose();
-        try
+        if (Directory.Exists(_copy))
         {
             Directory.Delete(_copy!, true);
-        }
-        catch
-        {
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
         }
     }
 }

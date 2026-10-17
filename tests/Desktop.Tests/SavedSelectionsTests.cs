@@ -95,6 +95,25 @@ public sealed class SavedSelectionsTests : IDisposable
     }
 
     [Fact]
+    public void ABrokenFileIsKeptAsideBeforeItIsWrittenOver()
+    {
+        // A broken file counted as none, and the next Keep or Forget wrote over it: every world's selections lost. It
+        // is copied aside as selections.json.bad first; when that cannot be done, nothing is written over it.
+        string path = SavedSelections.PathOverride!;
+        Directory.CreateDirectory(path + ".bad");
+        File.WriteAllText(path, "{ not json");
+        Assert.False(SavedSelections.Keep("A", "x", [new SavedSelections.Item(Beech, 0, 0, 0)]));
+        Assert.False(SavedSelections.Forget("A", "x"));
+        Assert.Equal("{ not json", File.ReadAllText(path));
+        Directory.Delete(path + ".bad");
+        Assert.True(SavedSelections.Keep("A", "x", [new SavedSelections.Item(Beech, 0, 0, 0)]));
+        Assert.Equal("{ not json", File.ReadAllText(path + ".bad"));
+        Assert.Equal("x", Assert.Single(SavedSelections.For("A")).Name);
+        // Written through a temporary file, none left behind.
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(path)!, "*.tmp"));
+    }
+
+    [Fact]
     public void FindingMatchesKindAndPlaceWithinTolerances()
     {
         var things = new List<WorldScene.Thing>
@@ -116,6 +135,22 @@ public sealed class SavedSelectionsTests : IDisposable
         Assert.Equal(1, SavedSelections.Find(S(I(Beech, 0, 0, 0)), []).Missing);
     }
 
+    [Fact]
+    public void FindingAcrossMetreCellsTakesTheFirstMatchingThing()
+    {
+        // Both within 5 cm of the items but on either side of a metre line: the later object is in the items' own
+        // cell, the earlier one in the next cell, and the earlier one is still taken first.
+        var things = new List<WorldScene.Thing>
+        {
+            T(1, Beech, 1.02f, 30, 5),
+            T(2, Beech, 0.97f, 30, 5),
+            T(3, Beech, 0.99f, 30, -0.03f),
+        };
+        var (ids, missing) = SavedSelections.Find(S(I(Beech, 0.99f, 30, 5), I(Beech, 0.99f, 30, 5), I(Beech, 0.99f, 30, 5), I(Beech, 1, 30, 0.01f)), things);
+        Assert.Equal(new[] { 0, 1, 2 }, ids);
+        Assert.Equal(1, missing);
+    }
+
     // ---- The Select panel.
 
     /// <summary>
@@ -131,7 +166,7 @@ public sealed class SavedSelectionsTests : IDisposable
         w.Edit(s);
         w.Tools.ChooseSelect();
         var messages = new List<string>();
-        w.SelectPanel.Message += messages.Add;
+        w.SelectPanel.Message += m => messages.Add(m.Shown);
         w.SelectPanel.WorldName = () => "World one";
         w.SelectPanel.AskName = Task.FromResult<string?>;
         w.SelectPanel.Confirm = _ => Task.FromResult(true);
@@ -368,7 +403,7 @@ public sealed class SavedSelectionsTests : IDisposable
         var (w, s, wall, _) = PickWindow();
         var a = w.AreaPanel;
         var messages = new List<string>();
-        a.Message += messages.Add;
+        a.Message += m => messages.Add(m.Shown);
         w.Tools.ChooseMode(ToolMode.Area);
         a.Choose(AreaPanel.Act.Replace);
         a.Refresh();
@@ -389,7 +424,7 @@ public sealed class SavedSelectionsTests : IDisposable
         var (w, s, _, _) = PickWindow();
         var a = w.AreaPanel;
         var messages = new List<string>();
-        a.Message += messages.Add;
+        a.Message += m => messages.Add(m.Shown);
         a.Refresh();
         var creatable = s.Scene.World.Creatable.Where(p => w.NameOfPrefab(p) != null).OrderBy(w.NameOfPrefab, StringComparer.OrdinalIgnoreCase).ToList();
         Assert.NotEmpty(creatable);
@@ -407,7 +442,7 @@ public sealed class SavedSelectionsTests : IDisposable
         var (w, _, wall, _) = PickWindow();
         var p = w.SelectPanel;
         var messages = new List<string>();
-        p.Message += messages.Add;
+        p.Message += m => messages.Add(m.Shown);
         w.Tools.ChooseSelect();
         Click(p.ReplacePickButton);
         Press(w, wall, MouseButton.Left);

@@ -219,7 +219,8 @@ public static partial class GameCatalogues
                 {
                     entry["box"] = new List<object?> { R(Min(pts.Select(q => q.X)), 3), R(Max(pts.Select(q => q.X)), 3), R(Min(pts.Select(q => q.Z)), 3), R(Max(pts.Select(q => q.Z)), 3), R(Min(pts.Select(q => q.Y)), 3), R(Max(pts.Select(q => q.Y)), 3) };
                 }
-                _entries[name] = entry;
+                // The first of a name, as every scan takes it (PrefabScan too): "prefabs" and "pieces" describe one object.
+                _entries.TryAdd(name, entry);
                 _names[new Ref(f.Cab, pid)] = name;
                 if (b.ComponentIds(go).Any(c => c.Type == MonoBehaviourType && game.ScriptClass(b, c.Pid) == "ZNetView"))
                 {
@@ -729,7 +730,8 @@ public static partial class GameCatalogues
                         flags[key] = 1L;
                     }
                 }
-                _entries[go["m_Name"].AsString] = new Dict { ["f"] = flags, ["s"] = snaps, ["c"] = cols };
+                // The first of a name, as every scan takes it.
+                _entries.TryAdd(go["m_Name"].AsString, new Dict { ["f"] = flags, ["s"] = snaps, ["c"] = cols });
             }
         }
 
@@ -885,7 +887,8 @@ public static partial class GameCatalogues
                 {
                     entry["f"] = 1L;
                 }
-                _entries[go["m_Name"].AsString] = entry;
+                // The first of a name, as every scan takes it.
+                _entries.TryAdd(go["m_Name"].AsString, entry);
             }
         }
 
@@ -1057,8 +1060,9 @@ public static partial class GameCatalogues
 
         /// <summary>
         /// Rows of comma-separated text as Python's csv module reads them (quoted fields may hold commas,
-        /// line breaks and doubled quotes; a quote inside an unquoted field is kept as it is). Throws
-        /// InvalidDataException for a line break in an unquoted field, as Python's csv does.
+        /// line breaks and doubled quotes; a quote inside an unquoted field is kept as it is). A lone carriage return
+        /// followed by more text on the line ends the row, as a line break does (Python's csv refuses it, and one odd
+        /// line of a localisation table then stopped every world opening).
         /// </summary>
         public static IEnumerable<List<string>> Csv(string text)
         {
@@ -1068,8 +1072,17 @@ public static partial class GameCatalogues
             bool rowStarted = false;
             foreach (string line in Lines(text))
             {
-                foreach (char c in line)
+                for (int k = 0; k < line.Length; k++)
                 {
+                    char c = line[k];
+                    if (state == 4 && c is not '\n' and not '\r')
+                    {
+                        // Text after a lone carriage return: the next row, this character its first.
+                        yield return row;
+                        row = [];
+                        state = 0;
+                        rowStarted = false;
+                    }
                     switch (state)
                     {
                         case 0 when !rowStarted && (c == '\n' || c == '\r'):
@@ -1149,10 +1162,6 @@ public static partial class GameCatalogues
                             }
                             break;
                         case 4:
-                            if (c is not '\n' and not '\r')
-                            {
-                                throw new InvalidDataException("new-line character seen in unquoted field");
-                            }
                             break;
                         default:
                             break;

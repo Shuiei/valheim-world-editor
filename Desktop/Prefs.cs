@@ -54,6 +54,7 @@ public sealed class Prefs
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
+            Log.Caught(ex, "reading the remembered preferences (starting from none)");
         }
         return new Prefs(path, values);
     }
@@ -93,6 +94,7 @@ public sealed class Prefs
             }
             catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException or NotSupportedException)
             {
+                Log.CaughtBrief(ex, $"reading the remembered preference {key} (it is not used)");
             }
             return false;
         }
@@ -157,13 +159,11 @@ public sealed class Prefs
         }
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(_path))!);
-            string temp = _path + ".tmp";
-            File.WriteAllText(temp, text);
-            File.Move(temp, _path, true);
+            SafeFile.WriteAllText(_path, text);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "writing the remembered preferences");
         }
     }
 
@@ -179,7 +179,9 @@ public sealed class Prefs
 
     /// <summary>
     /// A list of texts (ComboBox): the entry remembered by its text, so a list that changes order or grows keeps the
-    /// choice; an entry no longer there leaves the list as it is.
+    /// choice; an entry no longer there leaves the list as it is. The text is kept in English (<c>Lang.EnglishOf</c>),
+    /// so the choice comes back in whatever language the editor shows; a text no catalogue has (a stamp's name) is
+    /// kept as it is.
     /// </summary>
     public void Bind(ComboBox box, string key)
     {
@@ -188,19 +190,20 @@ public sealed class Prefs
         {
             if (box.SelectedItem is string text)
             {
-                Set(key, text);
+                Set(key, Lang.EnglishOf(text));
             }
         };
     }
 
     /// <summary>
-    /// Chooses the remembered entry, when the list has it (for lists filled again later); true when it did.
+    /// Chooses the remembered entry, when the list has it (for lists filled again later), comparing the entries' English
+    /// with the English kept; true when it did.
     /// </summary>
     public bool Restore(ComboBox box, string key)
     {
         if (TryGet(key, out string? text) && text != null && box.ItemsSource is IEnumerable<object> items)
         {
-            int i = items.Select(o => o as string).ToList().IndexOf(text);
+            int i = items.Select(o => o is string s ? Lang.EnglishOf(s) : null).ToList().IndexOf(text);
             if (i >= 0)
             {
                 box.SelectedIndex = i;

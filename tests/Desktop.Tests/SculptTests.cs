@@ -47,6 +47,18 @@ public class SculptTests
     }
 
     [Fact]
+    public void AFrameThatChangesNothingHasNothingToRedraw()
+    {
+        // A frame the mask left all out still returned the brush rectangle, so the view refreshed and uploaded it.
+        var s = TestScenes.Flat();
+        var stroke = new Stroke { Tool = BrushTool.Smooth, Start = s.Ground.Snapshot() };
+        Assert.Null(Sculpt.Apply(s.Ground, s.Brush, stroke, 64, 64, 0.1f, _ => 0));
+        Assert.Empty(stroke.Touched);
+        Assert.NotNull(Sculpt.Apply(s.Ground, s.Brush, stroke, 64, 64, 0.1f));
+        Assert.NotEmpty(stroke.Touched);
+    }
+
+    [Fact]
     public void LowerDigsAndTheGameLimitStopsItAt8Metres()
     {
         var s = TestScenes.Flat();
@@ -56,7 +68,7 @@ public class SculptTests
         {
             s.StrokeStep(64, 64, 0.1f);
         }
-        string msg = s.EndStroke();
+        string msg = s.EndStroke().Shown;
         Assert.Equal(22, At(s, 64, 64), 3);
         Assert.Contains("8 m", msg);
         Assert.Equal(1, s.Scene.Limit[64 * s.Scene.W + 64]);
@@ -145,6 +157,26 @@ public class SculptTests
     }
 
     [Fact]
+    public void AFirstLightTouchStartsFromTheGeneratedMask()
+    {
+        // Generated dirt everywhere (as around a location); a light cultivated touch keeps it nearly all dirt.
+        var g = new Ground(129, 129, 0, 0, 2);
+        Array.Fill(g.Base, 30f);
+        for (int p = 0; p < g.Base.Length; p++)
+        {
+            g.BaseMask[p * 4] = 1;
+            g.BaseMask[p * 4 + 3] = 1;
+        }
+        var b = new Brush { Radius = 6, Strength = 0.05f };
+        var stroke = new Stroke { Tool = BrushTool.PaintCultivated, Start = g.Snapshot() };
+        Sculpt.Apply(g, b, stroke, 64, 64, 1 / 60f);
+        int at = 64 * g.W + 64;
+        Assert.Equal(1, g.PMod[at]);
+        Assert.InRange(g.Paint[at * 4], 0.9f, 1);
+        Assert.InRange(g.Paint[at * 4 + 1], 0.001f, 0.1f);
+    }
+
+    [Fact]
     public void UndoAndRedoPutTheGroundBackAndForth()
     {
         var s = TestScenes.Flat();
@@ -209,6 +241,26 @@ public class SculptTests
         Assert.Equal(0, b.Weight(0, 0), 4);
         Assert.Equal(1, b.Weight(7, 0), 4);
         Assert.NotNull(b.InnerOutline(16));
+    }
+
+    [Fact]
+    public void TheNoiseShapeChangesNothingPastItsReach()
+    {
+        var b = new Brush { Radius = 10, Shape = BrushShape.Noise, Noise = new Noise(7) };
+        for (int c = 0; c < 60; c++)
+        {
+            float cx = c * 37.3f, cz = c * 11.9f;
+            for (int dz = -20; dz <= 20; dz++)
+            {
+                for (int dx = -20; dx <= 20; dx++)
+                {
+                    if (MathF.Sqrt(dx * dx + dz * dz) > b.Reach)
+                    {
+                        Assert.Equal(0, b.Weight(dx, dz, cx + dx, cz + dz));
+                    }
+                }
+            }
+        }
     }
 
     [Fact]
@@ -353,7 +405,8 @@ public class SculptTests
         w.ConfirmSave = q => { asked = q; return Task.FromResult(false); };
         w.Tell = _ => Task.CompletedTask;
         await w.Save();
-        Assert.Contains("1 zone", asked);
+        // Worded as the map's save asks it, not cut out of the status line's text.
+        Assert.Contains("Write 1 zone(s) of ground into the world files?", asked);
         Assert.True(s.Pending.Zones > 0);
     }
 }
