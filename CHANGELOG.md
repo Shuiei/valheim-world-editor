@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.1 — unreleased
+
+### Changed
+- The 3D view's code (`GlView`, over 5,000 lines in one file) is split into partial files by concern: camera,
+  input, tools, drawing, ground, models, objects, cells, mod shapes, picking and the overlays, one file for each
+  tool's marks. Members are moved whole; nothing in the editor changes.
+
 ## v1.47.0 — unreleased
 
 ### Added

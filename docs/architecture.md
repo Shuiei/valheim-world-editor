@@ -90,7 +90,7 @@ flowchart LR
    generated ground of a square of zones in parallel (`TerrainService.BaseZone`), lays the saved and
    pending edits over it (`Core/Editing/HeightGrid.cs`), reads the objects in it (`ReadThings`) and
    makes the `EditSession` with a `Ground` (`Desktop/Ground.cs`: the arrays the game's `TerrainComp`
-   keeps, over the whole block). `GlView` (`Desktop/GlView.cs`) draws it; `ModelStore` and
+   keeps, over the whole block). `GlView` (`Desktop/GlView.cs` and its `GlView.*.cs` partials) draws it; `ModelStore` and
    `BundleModels` read the models from the game on worker threads. Besides the objects it draws
    what the save keeps no object for: dungeon rooms (`DungeonRooms`, from their dungeon's data)
    and the parts of locations the game makes again from a location proxy (`LocationParts`).
@@ -118,7 +118,7 @@ plot that is no world: it has nothing to save; its building becomes a Homestead 
 | Area | Types | Notes |
 |---|---|---|
 | Start and pages | `Program`, `Options`, `App` (`Desktop/Program.cs`), `MainWindow` (+ `.Editor`, `.Workshop`, `.Dungeon` partials), `StartPage`, `MapPage`, `NewWorldPage`, `SettingsDialog` | `MainWindow` holds the pages and the 3D editor: top bar, tool rail (`ToolPanel`, `ToolMode`), the right-hand panels, keys. |
-| 3D view | `GlView`, `GlObjects`, `Shaders`, `GameLookGl`, `ModelStore`, `BundleModels`, `LocationParts`, `Picking`, `Overlays`, `Gizmo` | OpenGL 3.3 or ES 3.0; objects drawn instanced. The view mirrors z (Unity is left-handed): see the comment at the top of `WorldScene`. |
+| 3D view | `GlView` (one partial file per concern: `.Camera`, `.Input`, `.Tools`, `.Render`, `.Terrain`, `.Models`, `.Objects`, `.Cells`, `.Shapes`, `.Picking`, `.Overlays`, and `.Overlays.<tool>` for each tool's marks), `GlObjects`, `Shaders`, `GameLookGl`, `ModelStore`, `BundleModels`, `LocationParts`, `Picking`, `Overlays`, `Gizmo` | OpenGL 3.3 or ES 3.0; objects drawn instanced. The view mirrors z (Unity is left-handed): see the comment at the top of `WorldScene`. |
 | Open world | `WorldSession`, `WorldScene`, `EditSession`, `Ground`, `HistoryFile` | One `WorldSession` per open world, one `WorldScene` + `EditSession` per open area. |
 | Tools | `Sculpt`, `Erosion`, `Mountain`, `PathTool`, `AreaTool`, `PlaceTool`, `SelectTool`, `MeasureTool`, `DungeonTool`, `Mask`, `Formula`, each with its `*Panel` | A tool works on the `EditSession`; its panel is a card next to the rail. |
 | Save | `WorldSave`, `ValheimReader`, `WorldWriter`, `WorldCreator`, `ZdoTools`, `ZdoData`, `InventoryData`, `ChunkMath` (`Core/Save/`) | Byte formats follow the game's `ZPackage`. |
