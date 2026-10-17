@@ -2647,8 +2647,20 @@ public sealed partial class MainWindow : Window
         Blueprints.Models = () => _models;
         Blueprints.Confirm = text => Dialogs.Ask(this, Lang.T("rail.label.blueprints"), text, Lang.T("common.yes"));
         Blueprints.OpenUrl = Launcher.LaunchUriAsync;
-        Blueprints.PickFile = () => Pickers.File(StorageProvider, Lang.T("blueprints.pickTitle"),
-            new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("rail.label.blueprints")) { Patterns = BlueprintPatterns });
+        Blueprints.PickFile = () =>
+        {
+            var (title, type) = ImportPicker();
+            return Pickers.File(StorageProvider, title, type);
+        };
+    }
+
+    /// <summary>
+    /// The import picker's title and file type, in the language in use (asked for each time it opens).
+    /// </summary>
+    internal static (string Title, Avalonia.Platform.Storage.FilePickerFileType Type) ImportPicker()
+    {
+        var type = new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("rail.label.blueprints")) { Patterns = BlueprintPatterns };
+        return (Lang.T("blueprints.pickTitle"), type);
     }
 
     /// <summary>
