@@ -2,7 +2,6 @@ using System.Numerics;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
-using TerrainEditor.Save;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -19,7 +18,7 @@ public sealed class PastePanelLangTests
     public void PastePanelShowsOnlyCatalogueTexts()
     {
         using var pseudo = new PseudoLang();
-        var (w, _) = TestWindows.Editing(new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(40, 30, 40), Vector3.Zero, 1, false));
+        var w = TestWindows.Editing(TestScenes.Flat(2, TestScenes.Beech(1, new Vector3(40, 30, 40))));
         var p = w.PastePanel;
         Assert.Empty(PseudoLang.Untranslated(p.Card));
 
@@ -42,7 +41,8 @@ public sealed class PastePanelLangTests
     public void CopyCutAndPasteAreSaidInTheLanguageAndClaudeReadsEnglish()
     {
         using var pseudo = new PseudoLang();
-        var (w, s) = TestWindows.Editing(new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(40, 30, 40), Vector3.Zero, 1, false));
+        var s = TestScenes.Flat(2, TestScenes.Beech(1, new Vector3(40, 30, 40)));
+        var w = TestWindows.Editing(s);
         void Check(string english)
         {
             Assert.Empty(PseudoLang.Untranslated(w.MessageText));
