@@ -138,7 +138,7 @@ public sealed partial class Ground
     /// </summary>
     /// <param name="zz">The zone's row.</param>
     /// <param name="zx">The zone's column.</param>
-    private IEnumerable<(int I, int P)> ZoneGridPoints(int zz, int zx)
+    internal IEnumerable<(int I, int P)> ZoneGridPoints(int zz, int zx)
     {
         for (int k = 0; k < EditStore.Grid; k++)
         {

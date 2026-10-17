@@ -43,7 +43,7 @@ internal sealed partial class OverlayBuilder
     /// <summary>Adds a polyline: each consecutive pair of points becomes one segment.</summary>
     /// <param name="l">The layer the segments go to.</param>
     /// <param name="pts">The points, in order.</param>
-    private void Strip(Overlays.Layer l, List<Vector3> pts)
+    internal void Strip(Overlays.Layer l, List<Vector3> pts)
     {
         for (int i = 1; i < pts.Count; i++)
         {
