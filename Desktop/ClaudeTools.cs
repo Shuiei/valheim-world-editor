@@ -1617,7 +1617,7 @@ public sealed partial class ClaudeTools
                 }
                 _w.PlaceGenerated(settings, result, label);
             }
-            return $"{string.Join(" ", result.Notes)} {_w.LastMessageEn} Now pending: {Pending()}";
+            return $"{TerrainEditor.App.Said.Join(" ", result.Notes).English} {_w.LastMessageEn} Now pending: {Pending()}";
         });
     }
 

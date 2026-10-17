@@ -4,6 +4,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
 using Avalonia.Media;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
@@ -40,55 +41,55 @@ public sealed class DungeonGenPanel
     public event Action<bool>? PlacedChanged;
 
     /// <summary>Made of building pieces or of the game's own rooms (not shown in the Workshop).</summary>
-    internal ComboBox Made { get; } = Combo("Building pieces", "The game's own rooms");
+    internal ComboBox Made { get; } = Combo(Lang.T("dungeon.made.pieces"), Lang.T("dungeon.made.rooms"));
     /// <summary>The biome (Black Forest at first).</summary>
     internal ComboBox Biome { get; } = Combo([.. DungeonKit.Biomes.Select(b => b.Name)]);
     /// <summary>The style, or the biome's.</summary>
-    internal ComboBox Style { get; } = Combo(["The biome's", .. DungeonKit.Styles.Select(s => s.Name)]);
+    internal ComboBox Style { get; } = Combo([Lang.T("dungeon.biomesOwn"), .. DungeonKit.Styles.Select(s => s.Name)]);
     /// <summary>The wall material, or the biome's.</summary>
-    internal ComboBox Walls { get; } = Combo(["The biome's", .. DungeonKit.Materials.Select(m => m.Name)]);
+    internal ComboBox Walls { get; } = Combo([Lang.T("dungeon.biomesOwn"), .. DungeonKit.Materials.Select(m => m.Name)]);
     /// <summary>Rooms per level: Small to Huge (1 to 4).</summary>
-    internal ComboBox Size { get; } = Combo("Small", "Medium", "Large", "Huge");
+    internal ComboBox Size { get; } = Combo(Lang.T("dungeon.size.small"), Lang.T("dungeon.size.medium"), Lang.T("dungeon.size.large"), Lang.T("dungeon.size.huge"));
     /// <summary>Levels, 1 to <see cref="DungeonGen.MaxLevels"/>.</summary>
-    internal ComboBox Levels { get; } = Combo([.. Enumerable.Range(1, DungeonGen.MaxLevels).Select(n => n == 1 ? "1 level" : $"{n} levels")]);
+    internal ComboBox Levels { get; } = Combo([.. Enumerable.Range(1, DungeonGen.MaxLevels).Select(n => n == 1 ? Lang.T("dungeon.levels.one") : Lang.T("dungeon.levels.many", n))]);
     /// <summary>Monsters, 0 (none) to 3 times the usual.</summary>
     internal Slider Monsters { get; } = Slide(0, 3, 1, 0.25);
     /// <summary>Monsters come back (spawners).</summary>
-    internal CheckBox Respawn { get; } = new() { Content = "Monsters come back (spawners)", IsChecked = true, FontSize = 12 };
+    internal CheckBox Respawn { get; } = new() { Content = Lang.T("dungeon.label.respawn"), IsChecked = true, FontSize = 12 };
     /// <summary>The boss: the biome's, none, or any biome's boss or elite.</summary>
-    internal ComboBox Boss { get; } = Combo(["The biome's boss", "No boss", .. Bosses]);
+    internal ComboBox Boss { get; } = Combo([Lang.T("dungeon.boss.biomes"), Lang.T("dungeon.boss.none"), .. Bosses]);
     /// <summary>Loot, 0 (none) to 2 times the usual.</summary>
     internal Slider Loot { get; } = Slide(0, 2, 1, 0.25);
     /// <summary>Light: dark, dim or bright.</summary>
-    internal ComboBox Light { get; } = Combo("Dark", "Dim", "Bright");
+    internal ComboBox Light { get; } = Combo(Lang.T("dungeon.light.dark"), Lang.T("dungeon.light.dim"), Lang.T("dungeon.light.bright"));
     /// <summary>Furniture: bare, furnished or rich.</summary>
-    internal ComboBox Decor { get; } = Combo("Bare", "Furnished", "Rich");
+    internal ComboBox Decor { get; } = Combo(Lang.T("dungeon.decor.bare"), Lang.T("dungeon.decor.furnished"), Lang.T("dungeon.decor.rich"));
     /// <summary>Ruin, 0 to 1 (set to the style's own when the style changes).</summary>
     internal Slider Decay { get; } = Slide(0, 1, 0.15, 0.05);
     /// <summary>Ways round, 0 (a tree) to 2 times the usual.</summary>
     internal Slider Loops { get; } = Slide(0, 2, 1, 0.25);
     /// <summary>Boss behind a gate, its key in a chest.</summary>
-    internal CheckBox BossKey { get; } = new() { Content = "Boss behind a gate, its key in a chest", IsChecked = true, FontSize = 12 };
+    internal CheckBox BossKey { get; } = new() { Content = Lang.T("dungeon.label.bossKey"), IsChecked = true, FontSize = 12 };
     /// <summary>Hidden caches.</summary>
-    internal CheckBox Secrets { get; } = new() { Content = "Hidden caches", IsChecked = true, FontSize = 12 };
+    internal CheckBox Secrets { get; } = new() { Content = Lang.T("dungeon.label.secrets"), IsChecked = true, FontSize = 12 };
     /// <summary>The name on the entrance sign; empty: the made-up one shown as its placeholder.</summary>
     internal TextBox Name { get; } = new() { FontSize = 12 };
     /// <summary>The seed (a whole number; anything else counts as 0).</summary>
     internal TextBox Seed { get; } = new() { FontSize = 12, Width = 110, Text = "1" };
     /// <summary>Puts a random seed in.</summary>
-    internal Button Randomize { get; } = new() { Content = "Randomize", FontSize = 12 };
+    internal Button Randomize { get; } = new() { Content = Lang.T("common.randomize"), FontSize = 12 };
     /// <summary>Raises <see cref="PlaceAsked"/>.</summary>
-    internal Button Place { get; } = new() { Content = "Place in the world", FontSize = 12 };
+    internal Button Place { get; } = new() { Content = Lang.T("dungeon.label.place"), FontSize = 12 };
     /// <summary>Raises <see cref="WorkshopAsked"/>.</summary>
-    internal Button ToWorkshop { get; } = new() { Content = "Open in the Workshop", FontSize = 12 };
+    internal Button ToWorkshop { get; } = new() { Content = Lang.T("dungeon.label.toWorkshop"), FontSize = 12 };
     /// <summary>In the Workshop: the dungeon alone on the plot (<see cref="PlotAsked"/>, false).</summary>
-    internal Button OpenOnPlot { get; } = new() { Content = "Open on the plot", FontSize = 12 };
+    internal Button OpenOnPlot { get; } = new() { Content = Lang.T("dungeon.label.openOnPlot"), FontSize = 12 };
     /// <summary>In the Workshop: the dungeon added to what is on the plot (<see cref="PlotAsked"/>, true).</summary>
-    internal Button AddToPlot { get; } = new() { Content = "Add to the plot", FontSize = 12 };
+    internal Button AddToPlot { get; } = new() { Content = Lang.T("dungeon.label.addToPlot"), FontSize = 12 };
     /// <summary>The view up to the dungeon last placed (<see cref="DungeonAsked"/>); enabled once one is placed in the area.</summary>
-    internal Button ToDungeon { get; } = new() { Content = "Go to the dungeon", FontSize = 12, IsEnabled = false };
+    internal Button ToDungeon { get; } = new() { Content = Lang.T("dungeon.label.toDungeon"), FontSize = 12, IsEnabled = false };
     /// <summary>The view back to its entrance on the ground (<see cref="EntranceAsked"/>); enabled with <see cref="ToDungeon"/>.</summary>
-    internal Button ToEntrance { get; } = new() { Content = "Go to the entrance", FontSize = 12, IsEnabled = false };
+    internal Button ToEntrance { get; } = new() { Content = Lang.T("dungeon.label.toEntrance"), FontSize = 12, IsEnabled = false };
     /// <summary>What the dungeon made holds (its notes), or why it could not be made.</summary>
     internal TextBlock Summary { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
     /// <summary>The sliders' labels, with their values.</summary>
@@ -212,18 +213,18 @@ public sealed class DungeonGenPanel
             Spacing = 6,
             Children =
             {
-                Row("Style", Style), Row("Walls", Walls), Row("Levels", Levels),
+                Row(Lang.T("dungeon.label.style"), Style), Row(Lang.T("dungeon.label.walls"), Walls), Row(Lang.T("dungeon.label.levels"), Levels),
                 new StackPanel { Spacing = 0, Children = { _lootText, Loot } },
-                Row("Light", Light), Row("Furniture", Decor),
+                Row(Lang.T("dungeon.label.light"), Light), Row(Lang.T("dungeon.label.furniture"), Decor),
                 new StackPanel { Spacing = 0, Children = { _decayText, Decay } },
                 new StackPanel { Spacing = 0, Children = { _loopsText, Loops } },
-                Row("Boss", Boss), BossKey, Secrets, Row("Name", Name),
+                Row(Lang.T("dungeon.label.boss"), Boss), BossKey, Secrets, Row(Lang.T("dialog.label.name"), Name),
             },
         };
         _piecesOnly.Add(pieces);
         _piecesOnly.Add(ToWorkshop);
         // The plot only takes building pieces (the game's rooms are kept in a world's dungeon).
-        var made = Row("Made of", Made);
+        var made = Row(Lang.T("dungeon.label.madeOf"), Made);
         made.IsVisible = !inWorkshop;
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         actions.Children.AddRange(inWorkshop ? new Control[] { OpenOnPlot, AddToPlot } : [Place, ToWorkshop]);
@@ -233,10 +234,10 @@ public sealed class DungeonGenPanel
             Spacing = 6,
             Children =
             {
-                made, Row("Biome", Biome), Row("Size", Size),
+                made, Row(Lang.T("dungeon.label.biome"), Biome), Row(Lang.T("dungeon.label.size"), Size),
                 new StackPanel { Spacing = 0, Children = { _monstersText, Monsters } }, Respawn,
                 pieces,
-                new DockPanel { Children = { new TextBlock { Text = "Seed", FontSize = 12, Width = 80, VerticalAlignment = VerticalAlignment.Center }, Randomize, Seed } },
+                new DockPanel { Children = { new TextBlock { Text = Lang.T("common.seed"), FontSize = 12, Width = 80, VerticalAlignment = VerticalAlignment.Center }, Randomize, Seed } },
                 new Border { BorderBrush = Ui.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = _plan },
                 _levelButtons, Summary,
             },
@@ -292,10 +293,10 @@ public sealed class DungeonGenPanel
         {
             c.IsVisible = pieces;
         }
-        _monstersText.Text = $"Monsters: {(s.Monsters == 0 ? "none" : $"× {s.Monsters:0.##}")}";
-        _lootText.Text = $"Loot: {(s.Loot == 0 ? "none" : $"× {s.Loot:0.##}")}";
-        _decayText.Text = $"Ruin: {s.Decay * 100:0} %";
-        _loopsText.Text = $"Ways round: {(s.Loops == 0 ? "none (a tree)" : $"× {s.Loops:0.##}")}";
+        _monstersText.Text = s.Monsters == 0 ? Lang.T("dungeon.label.monstersNone") : Lang.T("dungeon.label.monsters", s.Monsters);
+        _lootText.Text = s.Loot == 0 ? Lang.T("dungeon.label.lootNone") : Lang.T("dungeon.label.loot", s.Loot);
+        _decayText.Text = Lang.T("dungeon.label.ruin", s.Decay * 100);
+        _loopsText.Text = s.Loops == 0 ? Lang.T("dungeon.label.waysNone") : Lang.T("dungeon.label.ways", s.Loops);
         // The game's rooms are named after the biome alone (the style, hidden then, is the pieces' own).
         Name.PlaceholderText = DungeonGen.NameFor(s.Seed, pieces ? s.Style : null, s.Biome);
         Place.IsEnabled = OpenOnPlot.IsEnabled = AddToPlot.IsEnabled = false;
@@ -312,7 +313,7 @@ public sealed class DungeonGenPanel
         _wait.Stop();
         var s = Settings();
         int generation = ++_generation;
-        Summary.Text = "Making it…";
+        Summary.Text = Lang.T("dungeon.hint.making");
         Pending = Task.Run<(DungeonGen.Result? Result, string? Error)>(() =>
         {
             try
@@ -336,14 +337,14 @@ public sealed class DungeonGenPanel
     private void Show(DungeonGen.Result? result, string? error)
     {
         _result = result;
-        Summary.Text = result != null ? string.Join(" ", result.Notes) : "Could not make it: " + error;
+        Summary.Text = result != null ? Said.Join(" ", result.Notes).Shown : Lang.T("dungeon.hint.notMade", error);
         Place.IsEnabled = OpenOnPlot.IsEnabled = AddToPlot.IsEnabled = _result != null;
         var levels = _result?.Map?.Select(r => r.Level).Distinct().Order().ToList() ?? [];
         _level = Math.Clamp(_level, 0, Math.Max(0, levels.Count - 1));
         _levelButtons.Children.Clear();
         foreach (int l in levels)
         {
-            var b = new ToggleButton { Content = $"Level {l + 1}", FontSize = 11, IsChecked = l == _level, Padding = new Thickness(6, 2) };
+            var b = new ToggleButton { Content = Lang.T("dungeon.label.level", l + 1), FontSize = 11, IsChecked = l == _level, Padding = new Thickness(6, 2) };
             b.Tip("dungeon.gen.level");
             int at = l;
             b.Click += (_, _) =>

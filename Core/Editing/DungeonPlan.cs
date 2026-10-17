@@ -1,3 +1,4 @@
+using TerrainEditor.App;
 using static TerrainEditor.Editing.DungeonKit;
 
 namespace TerrainEditor.Editing;
@@ -147,8 +148,8 @@ internal sealed class DungeonPlan
     public readonly List<Space> Spaces = [];
     /// <summary>Every doorway of every level.</summary>
     public readonly List<Doorway> Doors = [];
-    /// <summary>What could not be made, for the user.</summary>
-    public readonly List<string> Notes = [];
+    /// <summary>What could not be made, for the user (and in English for Claude).</summary>
+    public readonly List<Said> Notes = [];
     /// <summary>The entrance hall on the first level, at the origin.</summary>
     public Space Entrance = null!;
     /// <summary>The boss's arena and the treasury beyond it (null when there was no room for them).</summary>
@@ -267,7 +268,7 @@ internal sealed class DungeonPlanner
                 var top = AttachStairs(l, cur) ?? l.Spaces.Where(s => s.IsRoom && CanParent(s)).OrderByDescending(s => Dist2(s, _plan.Entrance)).Select(s => AttachStairs(l, s)).FirstOrDefault(s => s != null);
                 if (top == null)
                 {
-                    _plan.Notes.Add($"no room for stairs down from level {k + 1}; the levels below are left out");
+                    _plan.Notes.Add(Said.Of("dungeon.msg.noStairs", k + 1));
                     levels = k + 1;
                     _plan.Levels.RemoveRange(levels, _plan.Levels.Count - levels);
                     last = true;
@@ -305,7 +306,7 @@ internal sealed class DungeonPlanner
                 }
                 else
                 {
-                    _plan.Notes.Add("no room for the boss arena");
+                    _plan.Notes.Add(Said.Of("dungeon.msg.noArena"));
                 }
             }
             // Rooms off the way: wings, some with a twin across, some leading further.

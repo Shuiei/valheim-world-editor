@@ -27,7 +27,7 @@ public class DungeonRoomsTests
         Assert.Equal(1, shown.Index);
         Assert.Equal("DG_Cave", shown.Kind.Name);
         Assert.Empty(shown.Rooms);
-        Assert.Equal("The game has not laid this dungeon out yet (nobody has been near it).", shown.Problem);
+        Assert.Equal("The game has not laid this dungeon out yet (nobody has been near it).", shown.Problem?.English);
         // The same read is kept while nothing changes.
         Assert.Same(DungeonRooms.Of(s.Scene), DungeonRooms.Of(s.Scene));
         // An object more: read again; what was read before is shown meanwhile.
@@ -67,5 +67,5 @@ public class DungeonRoomsTests
     [InlineData("DG_AshlandsFortress_Big", "Ashlands Fortress Big")]
     [InlineData("DG_NewPlace", "New Place")]
     public void EachKindHasANameToShow(string prefab, string shown) =>
-        Assert.Equal(shown, DungeonTool.KindName(new Dungeons.Kind(prefab, StableHash.Of(prefab), 0, true, new Vector3(64, 64, 64))));
+        Assert.Equal(shown, DungeonTool.KindName(new Dungeons.Kind(prefab, StableHash.Of(prefab), 0, true, new Vector3(64, 64, 64))).English);
 }
