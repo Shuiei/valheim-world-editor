@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.21 — unreleased
+
+### Changed
+- **The start page comes from the language catalogue.** Its menu, Home's tiles, My game's state and install steps,
+  the saved servers and the server form, the saved worlds, the Workshop's blueprints and Homestead's state, and the
+  card about reading the game's look show in the language chosen in Settings. In English nothing changes.
+
 ## v1.47.20 — unreleased
 
 ### Changed
