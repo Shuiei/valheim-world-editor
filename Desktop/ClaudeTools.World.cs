@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Numerics;
 using ModelContextProtocol.Server;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -268,16 +269,16 @@ public sealed partial class ClaudeTools
         string list = string.Join(" · ", zones.Select(z => $"{z.X}, {z.Z}"));
         if (cancel)
         {
-            int n = s.UnmarkResets(zones, $"Claude: cancelled reset of {zones.Count} zone(s)");
+            int n = s.UnmarkResets(zones, ClaudesStep(Lang.T("claude.undo.unmarkReset", zones.Count)));
             if (n == 0)
             {
                 return "None of those zones was marked for reset.";
             }
-            _w.AfterClaudeEdit($"Claude unmarked {n} zone(s).");
+            _w.AfterClaudeEdit(Said.Of("claude.msg.unmarked", n));
             return $"Unmarked {n} zone(s). Now pending: {Pending()}";
         }
-        s.MarkResets(zones, keepBuildings, ground, $"Claude: reset {zones.Count} zone(s)");
-        _w.AfterClaudeEdit($"Claude marked {zones.Count} zone(s) for reset; Ctrl+Z cancels.");
+        s.MarkResets(zones, keepBuildings, ground, ClaudesStep(Lang.T("claude.undo.reset", zones.Count)));
+        _w.AfterClaudeEdit(Said.Of("claude.msg.marked", zones.Count));
         return $"Marked {zones.Count} zone(s) for reset when saved ({list}){(keepBuildings ? ", the players' buildings kept" : ", the players' buildings too")}{(ground ? ", their ground edits undone" : "")}. Now pending: {Pending()}";
     });
 
@@ -480,8 +481,8 @@ public sealed partial class ClaudeTools
                 from.Add(copy[j].From);
             }
         }
-        var made = s.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, [], adds);
-        _w.AfterClaudeEdit($"Claude made {made.Count} cop{(made.Count == 1 ? "y" : "ies")}; Ctrl+Z takes them back.");
+        var made = s.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label), null, [], adds);
+        _w.AfterClaudeEdit(made.Count == 1 ? Said.Of("claude.msg.copies.one", made.Count) : Said.Of("claude.msg.copies.many", made.Count));
         GaveIds(scene, reads);
         return ToJson(new { copied = made.Select((c, k) => Moved(scene, from[k], c)), problems, pending = Pending() });
     });

@@ -13,9 +13,9 @@ say, the brush options with the stamps and the cursor readout, the Measure, Mask
 Cave, Shape, Mountain, Select and Paste tools, the biome names, the 3D editor's area bar with the
 live game's messages and players, the View panel, the help card, the status bar's readouts, the
 Blueprints panel, the Workshop and its Build panel, the Place and Area tools, the Dungeon tool with
-its generator, the world map page, the New world page and the start page; the rest moves over
-window by window. A catalogue made now keeps working as more texts are added: the new ones show in
-English until translated.
+its generator, the world map page, the New world page, the start page, and what the status bar and
+the History say of Claude's changes; the rest moves over window by window. A catalogue made now
+keeps working as more texts are added: the new ones show in English until translated.
 
 ## Making a catalogue
 
@@ -89,6 +89,9 @@ only from `en.json`; `LangTests` checks them).
   blueprints), game data (prefab, item and piece names, object data keys), the names of products and
   mods inside the texts (Valheim, Homestead, Steam), and the messages of exceptions (the sentence
   around one is translated).
+- Claude's steps in the History start with the mark `Claude: ` (`ClaudeTools.ClaudesStep`), which
+  stays English: Take back Claude's changes finds Claude's steps by it. The words after it are
+  translated.
 - A text shown to the user that Claude is also given has both: the user's language from `Lang.T`,
   Claude's English from `Lang.En` (`PieceCost.Describe(english: true)`).
 - The status bar's message is read back by Claude. Put it there with `Msg("area.msg.applied", n)`,

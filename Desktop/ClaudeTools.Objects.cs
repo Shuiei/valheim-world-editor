@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Numerics;
 using ModelContextProtocol.Server;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -165,8 +166,8 @@ public sealed partial class ClaudeTools
             float y = t.Position.Y + dy + (ground ? GroundAt(scene, x, z) - GroundAt(scene, t.Position.X, t.Position.Z) : 0);
             moves.Add((i, new Vector3(x, y, z), Wrapped(t.Rotation + new Vector3(0, turn, 0)), t.Scale));
         }
-        var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label);
-        _w.AfterClaudeEdit($"Claude moved {copies.Count} object(s); Ctrl+Z puts them back.");
+        var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label));
+        _w.AfterClaudeEdit(Said.Of("claude.msg.moved", copies.Count));
         GaveIds(scene, reads);
         return ToJson(new { moved = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), wholeGroups = groups, problems, pending = Pending() });
     });
@@ -258,8 +259,8 @@ public sealed partial class ClaudeTools
         {
             return "Nothing changed: " + string.Join("; ", problems);
         }
-        var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label);
-        _w.AfterClaudeEdit($"Claude placed {copies.Count} object(s); Ctrl+Z puts them back.");
+        var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label));
+        _w.AfterClaudeEdit(Said.Of("claude.msg.placed", copies.Count));
         // Then come the other parts of the linked groups moved (ObjectLinks), which went along.
         GaveIds(scene, reads);
         return ToJson(new { placed = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), alongWithGroups = copies.Count - moves.Count, problems, pending = Pending() });
@@ -304,8 +305,8 @@ public sealed partial class ClaudeTools
         }).ToList();
         var (removed, linked, groups, _) = s.WithLinked(ok, anyPart: false);
         int parts = linked.Count - groups;
-        var copies = s.Commit($"Claude: replaced {ok.Count} with {prefab}", null, removed, adds);
-        _w.AfterClaudeEdit($"Claude replaced {ok.Count} object(s) with {prefab}; Ctrl+Z puts them back.");
+        var copies = s.Commit(ClaudesStep(Lang.T("claude.undo.replaced", ok.Count, prefab)), null, removed, adds);
+        _w.AfterClaudeEdit(Said.Of("claude.msg.replaced", ok.Count, prefab));
         GaveIds(scene, reads);
         return ToJson(new { replaced = copies.Select((c, k) => Moved(scene, ok[k], c)), partsTakenAway = parts, problems, pending = Pending() });
     });
@@ -495,12 +496,12 @@ public sealed partial class ClaudeTools
             }
         }
         string name = _w.NameOfPrefab(scene.Things[id].Prefab) ?? "object";
-        var (copy, problem) = Rewrite(id, [.. values.Select(v => new TerrainEditor.App.FieldChange(v.Section, v.Key, v.Value))], null, $"Claude: edited {name}");
+        var (copy, problem) = Rewrite(id, [.. values.Select(v => new TerrainEditor.App.FieldChange(v.Section, v.Key, v.Value))], null, ClaudesStep(Lang.T("claude.undo.edited", name)));
         if (copy is not int newId)
         {
             return problem!;
         }
-        _w.AfterClaudeEdit($"Claude changed {name}'s values; Ctrl+Z puts them back.");
+        _w.AfterClaudeEdit(Said.Of("claude.msg.edited", name));
         return $"Changed {name}; its id is now {newId}. Now pending: {Pending()}";
     });
 

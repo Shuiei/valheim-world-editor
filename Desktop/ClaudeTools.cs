@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using Avalonia.Threading;
 using ModelContextProtocol.Server;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -703,7 +704,7 @@ public sealed partial class ClaudeTools
         {
             return why;
         }
-        var r = await _w.RunScriptCode(code, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, apply: !dryRun);
+        var r = await _w.RunScriptCode(code, label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label), apply: !dryRun);
         _w.Msg(r.Message);
         return r.Output.English;
     });
@@ -716,14 +717,33 @@ public sealed partial class ClaudeTools
     /// <summary>The paints paint_area and road take.</summary>
     private static readonly HashSet<string> PaintKinds = new(StringComparer.OrdinalIgnoreCase) { "dirt", "cultivated", "paved", "clear" };
 
+    /// <summary>
+    /// A history label of Claude's: the "Claude: " mark, which stays the same in every language since Take back
+    /// Claude's changes finds Claude's steps by it (HistoryPanel.ByClaude), then what the step did.
+    /// </summary>
+    /// <param name="text">What the step did: in the user's language, or the words Claude gave.</param>
+    internal static string ClaudesStep(string text) => "Claude: " + text;
+
+    /// <summary>A paint's name in the history (paint_area, shape_ground's paint), in the user's language.</summary>
+    /// <param name="paint">The paint brush whose colour is put down.</param>
+    private static Said PaintStep(BrushTool paint) => paint switch
+    {
+        BrushTool.PaintDirt => Said.Of("claude.undo.paintDirt"),
+        BrushTool.PaintCultivated => Said.Of("claude.undo.paintCultivated"),
+        BrushTool.PaintPaved => Said.Of("claude.undo.paintPaved"),
+        _ => Said.Of("claude.undo.paintClear"),
+    };
+
     /// <summary>Runs a script written by a tool as one pending step labelled "Claude: label".</summary>
+    /// <param name="code">The script.</param>
+    /// <param name="label">What the step did, in the user's language (ClaudesStep puts the mark before it).</param>
     private Task<string> RunGenerated(string code, string label) => OnUi(async () =>
     {
         if (CannotEdit() is string why)
         {
             return why;
         }
-        var r = await _w.RunScriptCode(code, "Claude: " + label);
+        var r = await _w.RunScriptCode(code, ClaudesStep(label));
         _w.Msg(r.Message);
         return r.Output.English;
     });
@@ -755,7 +775,7 @@ public sealed partial class ClaudeTools
 				Ground.Set(x, z, h + (target - h) * w);
 			}
 			Print($"levelled to {target:0.0} m");
-			""", "flatten");
+			""", Lang.T("claude.undo.flatten"));
 
     /// <summary>paint_area: paints a rectangle or a circle.</summary>
     [McpServerTool(Name = "paint_area", Title = "Paint the ground")]
@@ -784,7 +804,7 @@ public sealed partial class ClaudeTools
 			int n = 0;
 			foreach (var (x, z) in Area.Points()) if ({{inside}}) { Ground.Paint(x, z, "{{kind.ToLowerInvariant()}}"); n++; }
 			Print($"painted {n} points");
-			""", $"paint {kind.ToLowerInvariant()}");
+			""", PaintStep(Paints[kind]).Shown);
     }
 
     /// <summary>road: levels the ground along a line of points to a smooth slope, blends its edges (3 m) and paints it.</summary>
@@ -828,7 +848,7 @@ public sealed partial class ClaudeTools
 				if ({{(paint == "none" ? "false" : "true")}} && best <= half) Ground.Paint(x, z, "{{paint.ToLowerInvariant()}}");
 			}
 			Print($"road of {px.Length - 1} segment(s)");
-			""", "road");
+			""", Lang.T("claude.undo.road"));
     }
 
     /// <summary>forest: plants a mix of prefabs on a jittered grid, off water and away from buildings, trees and rocks.</summary>
@@ -863,7 +883,7 @@ public sealed partial class ClaudeTools
 					n++;
 				}
 			Print($"placed {n}");
-			""", "forest");
+			""", Lang.T("claude.undo.forest"));
     }
 
     /// <summary>undo: the last change of the area, anyone's, as Ctrl+Z.</summary>
@@ -1012,8 +1032,8 @@ public sealed partial class ClaudeTools
         {
             return "Nothing put down: " + string.Join("; ", problems);
         }
-        var ids = session.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, [], adds);
-        _w.AfterClaudeEdit($"Claude put down {adds.Count} piece(s); Ctrl+Z takes them back.");
+        var ids = session.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label), null, [], adds);
+        _w.AfterClaudeEdit(Said.Of("claude.msg.putDown", adds.Count));
         GaveIds(scene, reads);
         return ToJson(new { placed = report.Select((r, i) => new { id = i < ids.Count ? ids[i] : -1, piece = r }), problems, pending = Pending() });
     }
@@ -1204,8 +1224,8 @@ public sealed partial class ClaudeTools
         }
         // A linked group's part never goes alone (ObjectLinks: a ship): the whole group does.
         var (ok, _, groups, noun) = session.WithLinked(given);
-        session.Commit($"Claude: took {ok.Count} away", null, ok, []);
-        _w.AfterClaudeEdit($"Claude took {ok.Count} object(s) away; Ctrl+Z puts them back.");
+        session.Commit(ClaudesStep(Lang.T("claude.undo.tookAway", ok.Count)), null, ok, []);
+        _w.AfterClaudeEdit(Said.Of("claude.msg.tookAway", ok.Count));
         return $"Took {ok.Count} away{(given.Count < asked.Length ? $" ({asked.Length - given.Count} id(s) were not objects of the area)" : "")}"
             + $"{(groups > 0 ? $", with {groups} whole {noun}(s)" : "")}. Now pending: {Pending()}";
     });
@@ -1382,12 +1402,12 @@ public sealed partial class ClaudeTools
         }
         string name = _w.NameOfPrefab(t.Prefab) ?? "object";
         var notes = new List<string>();
-        var (copy, problem) = Rewrite(id, set, inv, $"Claude: filled {name}", notes);
+        var (copy, problem) = Rewrite(id, set, inv, ClaudesStep(Lang.T("claude.undo.filled", name)), notes);
         if (copy is not int newId)
         {
             return problem!;
         }
-        _w.AfterClaudeEdit($"Claude changed what {name} holds; Ctrl+Z puts it back.");
+        _w.AfterClaudeEdit(Said.Of("claude.msg.filled", name));
         return $"Changed {name}; its id is now {newId}." + string.Concat(notes.Select(n => " " + n + "."));
     });
 
@@ -1503,7 +1523,7 @@ public sealed partial class ClaudeTools
         {
             return lone;
         }
-        string label = $"Claude: added {blueprint}";
+        string label = ClaudesStep(Lang.T("claude.undo.added", blueprint));
         if (_w.InWorkshop)
         {
             _w.AddToWorkshop(path, x is float ax && z is float az ? new System.Numerics.Vector2(ax, az) : null, turn, label);
@@ -1541,7 +1561,7 @@ public sealed partial class ClaudeTools
         int before = scene.Things.Count;
         var added = Workshop.Put(s, plan, label);
         GaveIds(scene, reads);
-        _w.AfterClaudeEdit($"Claude added “{blueprint}”: {added.Placed} piece(s); Ctrl+Z takes it back.");
+        _w.AfterClaudeEdit(Said.Of("claude.msg.blueprint", blueprint, added.Placed));
         return $"Added {added.Placed} piece(s) of \"{blueprint}\", ids {before} to {scene.Things.Count - 1}."
             + (added.Unknown.Count > 0 ? $" Left out (unknown kinds): {string.Join(", ", added.Unknown.Take(10))}." : "")
             + " Now pending: " + Pending();
@@ -1590,7 +1610,7 @@ public sealed partial class ClaudeTools
             }
             // One of Claude's steps ("Claude:", as Take back Claude's changes finds them), and no file in the user's
             // blueprint Library.
-            string label = $"Claude: generated dungeon {result.Name}";
+            string label = ClaudesStep(Lang.T("claude.undo.dungeon", result.Name));
             if (_w.InWorkshop)
             {
                 _w.AddGeneratedToPlot(settings, result, label);
