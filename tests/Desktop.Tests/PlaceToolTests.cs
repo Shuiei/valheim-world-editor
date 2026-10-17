@@ -211,7 +211,7 @@ public class PlaceToolTests
         t.Elevation = PlaceTool.Elevations.Above;
         t.Elev = 2;
         Assert.Equal(31.95f, t.Preview(new Vector2(50, 50))[0].Position.Y, 3);
-        Assert.Equal("Elevation: above the ground by 2.5 m.", t.NudgeElevation(0.5f));
+        Assert.Equal("Elevation: above the ground by 2.5 m.", t.NudgeElevation(0.5f).Shown);
         // Under water nothing grows (sea level is 30 in this test area: lower it there).
         t.Elevation = PlaceTool.Elevations.Ground;
         s.Shape(50, 50, Formula.Compile("-3", []), 3, 0, "pond");
@@ -228,13 +228,13 @@ public class PlaceToolTests
         t.AutoSnap();
         var e = t.EndsOf(Wall)!;
         var p = Assert.Single(t.Preview(new Vector2(64 + e.Len + 0.3f, 64.2f)));
-        Assert.StartsWith("beside", t.SnappedTo);
+        Assert.Equal(PlaceTool.SnapWays.Beside, t.Snapped?.Way);
         // End to end with it: one wall length along.
         Assert.Equal(e.Len, Vector2.Distance(p.G, new Vector2(64, 64)), 2);
         Assert.Equal(30, p.Position.Y, 2);
         t.OnTop = true;
         var top = Assert.Single(t.Preview(new Vector2(64.2f, 64)));
-        Assert.StartsWith("on top", t.SnappedTo);
+        Assert.Equal(PlaceTool.SnapWays.OnTop, t.Snapped?.Way);
         // Its bottom on the top of the one below: one wall higher.
         Assert.Equal(30 + e.H, top.Position.Y, 2);
     }
@@ -243,12 +243,12 @@ public class PlaceToolTests
     public void PresetsLoadTheKindsTheWorldCanMake()
     {
         var t = new PlaceTool();
-        string msg = t.Load(PlaceTool.BuiltIn[0], n => n != "Oak1");
+        string msg = t.Load(PlaceTool.BuiltIn[0], n => n != "Oak1").Shown;
         Assert.DoesNotContain("Oak1", t.Chosen);
         Assert.Equal(4, t.WeightOf("Beech1"));
         Assert.Contains("1 kind(s) this world cannot place left out", msg);
         Assert.Equal(50, t.Clump);
-        Assert.StartsWith("None of the kinds", t.Load(PlaceTool.BuiltIn[0], _ => false));
+        Assert.StartsWith("None of the kinds", t.Load(PlaceTool.BuiltIn[0], _ => false).Shown);
     }
 
     /// <summary>

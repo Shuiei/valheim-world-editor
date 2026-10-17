@@ -1,4 +1,5 @@
 using System.Text.Json;
+using TerrainEditor.App;
 using TerrainEditor.Save;
 
 namespace TerrainEditor.Terrain;
@@ -226,27 +227,32 @@ public static class PrefabCatalog
 
         /// <summary>
         /// One line on what it spawns: "Boar · 0–2 ★ · spawns once", "Draugr · 0–2 ★ · back 60 min after it dies ·
-        /// by night only", "Greydwarf, Greydwarf_Elite · up to 3 around, within 5 m".
+        /// by night only", "Greydwarf, Greydwarf_Elite · up to 3 around, within 5 m". In the language in use, or in
+        /// English for Claude.
         /// </summary>
-        public string Summary()
+        /// <param name="english">In English whatever the language in use (for Claude).</param>
+        public string Summary(bool english = false)
         {
-            var parts = new List<string> { string.Join(", ", Creatures) };
+            var parts = new List<Said> { Said.Raw(string.Join(", ", Creatures)) };
             if (Nest)
             {
-                parts.Add(MaxNear > 0 ? FormattableString.Invariant($"up to {MaxNear} around, within {Radius:0.#} m") : FormattableString.Invariant($"within {Radius:0.#} m"));
-                return string.Join(" · ", parts);
+                parts.Add(MaxNear > 0 ? Said.Of("place.spawn.upTo", MaxNear, Radius) : Said.Of("place.spawn.within", Radius));
             }
-            var (lo, hi) = Levels;
-            if (hi > 1)
+            else
             {
-                parts.Add(lo == hi ? $"{lo - 1} ★" : $"{lo - 1}–{hi - 1} ★");
+                var (lo, hi) = Levels;
+                if (hi > 1)
+                {
+                    parts.Add(Said.Raw(lo == hi ? $"{lo - 1} ★" : $"{lo - 1}–{hi - 1} ★"));
+                }
+                parts.Add(Trigger ? Said.Of("place.spawn.wakes") : Respawns ? Said.Of("place.spawn.back", RespawnMinutes) : Said.Of("place.spawn.once"));
+                if (Day != Night)
+                {
+                    parts.Add(Night ? Said.Of("place.spawn.nightOnly") : Said.Of("place.spawn.dayOnly"));
+                }
             }
-            parts.Add(Trigger ? "when an event wakes it" : Respawns ? FormattableString.Invariant($"back {RespawnMinutes:0.#} min after it dies") : "spawns once");
-            if (Day != Night)
-            {
-                parts.Add(Night ? "by night only" : "by day only");
-            }
-            return string.Join(" · ", parts);
+            var said = Said.Join(" · ", parts);
+            return english ? said.English : said.Shown;
         }
     }
 

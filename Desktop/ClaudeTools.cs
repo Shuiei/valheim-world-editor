@@ -617,7 +617,7 @@ public sealed partial class ClaudeTools
         var others = piecesOnly ? [] : Terrain.PrefabCatalog.Placeable
             .Where(i => Terrain.PieceCatalog.Get(Save.StableHash.Of(i.Name)) == null && (Match(i.Name) || Terrain.PrefabCatalog.SpawnOf(i.Name) is { } sp && Match(string.Join(" ", sp.Creatures))))
             .Select(i => Terrain.PrefabCatalog.SpawnOf(i.Name) is { } sp
-                ? (object)new { prefab = i.Name, kind = TerrainEditor.App.ObjectKinds.Of(i.Name, false).ToString(), spawns = sp.Summary() }
+                ? (object)new { prefab = i.Name, kind = TerrainEditor.App.ObjectKinds.Of(i.Name, false).ToString(), spawns = sp.Summary(english: true) }
                 : new { prefab = i.Name, kind = TerrainEditor.App.ObjectKinds.Of(i.Name, false).ToString() });
         return ToJson(pieces.Concat(others).Take(Math.Clamp(limit, 1, 500)));
     });

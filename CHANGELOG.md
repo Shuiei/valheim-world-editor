@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.16 — unreleased
+
+### Changed
+- **The Place tool comes from the language catalogue.** Its panel (modes, line shapes, presets, the chosen kinds and
+  their notes, every setting and hint), the list of kinds and what a spawn point spawns, the preset questions, its
+  status messages and History steps show in the language chosen in Settings. In English nothing changes.
+
 ## v1.47.15 — unreleased
 
 ### Changed

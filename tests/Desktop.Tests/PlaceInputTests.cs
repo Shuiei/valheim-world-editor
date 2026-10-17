@@ -52,7 +52,7 @@ public class PlaceInputTests
             In = new PlaceInput(W.View, T) { Session = () => session };
             if (listen)
             {
-                In.Message += Said.Add;
+                In.Message += t => Said.Add(t.Shown);
                 In.Placed += Placed.Add;
                 In.Changed += () => Changes++;
             }
