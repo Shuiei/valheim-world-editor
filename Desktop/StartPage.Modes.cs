@@ -24,7 +24,7 @@ public sealed partial class StartPage
     /// </summary>
     /// <param name="mode">The page (a <c>ModeButtons</c> key).</param>
     /// <exception cref="ArgumentOutOfRangeException">No such page.</exception>
-    private static (string Title, string Text) PageTexts(string mode) => mode switch
+    internal static (string Title, string Text) PageTexts(string mode) => mode switch
     {
         "home" => (Lang.T("start.page.home"), ""),
         "game" => (Lang.T("start.page.game"), Lang.T("start.page.gameText")),
