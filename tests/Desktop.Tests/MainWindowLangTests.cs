@@ -77,4 +77,33 @@ public sealed class MainWindowLangTests
         Assert.All(asked, t => Assert.True(PseudoLang.Translated(t, [folder]), t));
         Assert.True(r.W.IsVisible);
     }
+
+    // What a save and an Apply live did (the writer's and the live sync's summaries in them too) is shown in the
+    // language in use, and Claude reads it in English.
+    [AvaloniaFact]
+    public async Task ASaveAndAnApplySayWhatTheyDidInTheLanguageAndInEnglish()
+    {
+        using var pseudo = new PseudoLang();
+        using (var r = new WorldWindowRun())
+        {
+            await r.Open();
+            r.Raise();
+            await r.W.Save();
+            Assert.StartsWith(PseudoLang.Open.ToString(), r.W.MessageText.Text);
+            Assert.Matches(@"^Saved 1 zone\(s\) to save #\d+\.$", r.W.LastMessageEn);
+            Assert.True(PseudoLang.Translated(Assert.Single(r.Told), []), r.Told[0]);
+        }
+        using (var r = new WorldWindowRun())
+        {
+            await r.OpenLive();
+            var s = r.W.Session!;
+            int thing = s.Scene.Things.FindIndex(t => !t.Gone);
+            Assert.True(thing >= 0);
+            s.Delete([thing]);
+            await r.W.ApplyNow();
+            Assert.StartsWith(PseudoLang.Open.ToString(), r.W.MessageText.Text);
+            Assert.Matches(@"^Applied to the running game: \d+ object\(s\) removed, 0 created", r.W.LastMessageEn);
+            Assert.DoesNotContain(PseudoLang.Open, r.W.LastMessageEn);
+        }
+    }
 }

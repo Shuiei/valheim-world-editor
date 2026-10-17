@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Numerics;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 
 namespace TerrainEditor.Save;
@@ -36,7 +37,7 @@ public static class WorldWriter
 
     /// <summary>The outcome of a <c>Save</c>.</summary>
     /// <param name="Saved">Whether a new save was written.</param>
-    /// <param name="Message">What was saved, or why nothing was, for the user.</param>
+    /// <param name="Message">What was saved, or why nothing was, for the user, in the language in use.</param>
     /// <param name="BackupDirectory">Always null: the writer makes no backup folder.</param>
     /// <param name="ZonesWritten">Zones whose existing terrain objects got new ground data.</param>
     /// <param name="ZonesCreated">Zones that got a new terrain object.</param>
@@ -52,7 +53,15 @@ public static class WorldWriter
         public int Number { get; init; } = -1;
         /// <summary>The new save as it was read back to check it (null when nothing was saved): no need to read it again.</summary>
         public WorldSave? Read { get; init; }
+
+        /// <summary>The message in both languages (a result made with only a message: that text on both sides).</summary>
+        public Said Report { get => field ?? Said.Raw(Message); init; }
     }
+
+    /// <summary>A save refused or failed: nothing written, why in both languages.</summary>
+    /// <param name="why">Why nothing was saved.</param>
+    /// <param name="skipped">The edits that could not be saved so far.</param>
+    private static Result Refused(Said why, List<string> skipped) => new(false, why.Shown, null, 0, 0, skipped) { Report = why };
 
     /// <summary>How a save treats the files around it.</summary>
     /// <param name="KeepBase">The save it is made from stays (an open world saves again from it).</param>
@@ -86,24 +95,24 @@ public static class WorldWriter
         resets ??= [];
         if (resets.Count > 0 && world.Zones == null)
         {
-            return new Result(false, "Zones can't be reset: the world's .db2 file could not be read.", null, 0, 0, skipped);
+            return Refused(Said.Of("save.writer.noDb"), skipped);
         }
         // Terrain edits of zones whose ground is reset are dropped.
         HashSet<(int, int)> groundReset = [.. resets.Where(r => r.Ground).Select(r => (r.X, r.Z))];
         changed = [.. changed.Where(e => !groundReset.Contains((e.ZoneX, e.ZoneZ)))];
         if (changed.Count == 0 && deleted.Count == 0 && added.Count == 0 && resets.Count == 0)
         {
-            return new Result(false, "Nothing to save.", null, 0, 0, skipped);
+            return Refused(Said.Of("save.writer.nothing"), skipped);
         }
-        if (options.Latest is int known && Newer(world.Directory, known) is string newer)
+        if (options.Latest is int known && Newer(world.Directory, known) is Said newer)
         {
-            return new Result(false, newer, null, 0, 0, skipped);
+            return Refused(newer, skipped);
         }
         // Each file keeps the format it was read in, as the game leaves the chunk files it does not write again: the
         // formats the writer knows lay objects out the same, so objects copied or made here fit either.
         if (UnwritableFormat(world) is int format)
         {
-            return new Result(false, $"This world uses save format {format}; the editor saves only formats {WorldVersion.OldestWritable} to {WorldVersion.Latest}.", null, 0, 0, skipped);
+            return Refused(Said.Of("save.writer.format", format, WorldVersion.OldestWritable, WorldVersion.Latest), skipped);
         }
         // New ground copies a terrain object whose position is in the short format (the layout the copy patches).
         bool anyTerrain = world.TerrainZones.Any(z => z.Source != null);
@@ -208,11 +217,11 @@ public static class WorldWriter
         }
         catch (Exception ex)
         {
-            return new Result(false, "Saving failed (" + ex.Message + "). Nothing changed.", null, 0, 0, skipped);
+            return Refused(Said.Of("save.writer.failed", ex.Message), skipped);
         }
         if (written + created + removed + addedCount + resets.Count == 0)
         {
-            return new Result(false, "Nothing could be saved.", null, 0, 0, skipped);
+            return Refused(Said.Of("save.writer.nothingSaved"), skipped);
         }
 
         string dir = world.Directory;
@@ -268,13 +277,13 @@ public static class WorldWriter
             if (problem != null)
             {
                 RemoveAll(newFiles);
-                return new Result(false, "The saved world did not read back correctly (" + problem + "). Nothing changed.", null, 0, 0, skipped);
+                return Refused(Said.Of("save.writer.badReadBack", problem), skipped);
             }
         }
         catch (Exception ex)
         {
             RemoveAll(newFiles);
-            return new Result(false, "Saving failed (" + ex.Message + "). Nothing changed.", null, 0, 0, skipped);
+            return Refused(Said.Of("save.writer.failed", ex.Message), skipped);
         }
         // 6. The save it was made from (unless kept) and an earlier save of the session go.
         var old = new List<string>();
@@ -288,8 +297,15 @@ public static class WorldWriter
             old.AddRange(options.Drop.Where(f => !newFiles.Contains(f)));
         }
         RemoveAll(old);
-        string what = string.Join(", ", new[] { written + created > 0 ? $"{written + created} zone(s)" : null, deletedCount > 0 ? $"{deletedCount} deleted object(s)" : null, addedCount > 0 ? $"{addedCount} new object(s)" : null, resets.Count > 0 ? $"{resets.Count} reset zone(s) ({removed - deletedCount} objects cleared)" : null }.Where(x => x != null));
-        return new Result(true, $"Saved {what} to save #{newNumber}.", null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles, Number = newNumber, Read = read };
+        var what = Said.Join(", ",
+        [
+            written + created > 0 ? Said.Of("save.writer.zones", written + created) : Said.Empty,
+            deletedCount > 0 ? Said.Of("save.writer.deleted", deletedCount) : Said.Empty,
+            addedCount > 0 ? Said.Of("save.writer.added", addedCount) : Said.Empty,
+            resets.Count > 0 ? Said.Of("save.writer.resets", resets.Count, removed - deletedCount) : Said.Empty,
+        ]);
+        var saved = Said.Of("save.writer.saved", what, newNumber);
+        return new Result(true, saved.Shown, null, written, created, skipped, removed, addedCount, resets.Count) { Files = newFiles, Number = newNumber, Read = read, Report = saved };
     }
 
     /// <summary>
@@ -501,8 +517,8 @@ public static class WorldWriter
     /// world since it was read), or null when there is none. Only a complete save counts: one cut short long ago would
     /// block every save.
     /// </summary>
-    public static string? Newer(string dir, int known) => WorldSave.CommittedSave(dir) is int newest && newest > known
-        ? $"Valheim saved this world (save #{newest}) after the editor read it: saving now would throw away what was done in the game since. Nothing was saved."
+    public static Said? Newer(string dir, int known) => WorldSave.CommittedSave(dir) is int newest && newest > known
+        ? Said.Of("save.writer.newer", newest)
         : null;
 
     /// <summary>The highest save number in a world folder (-1: none), as <see cref="WorldSave.SaveNumbers"/> reads them.</summary>

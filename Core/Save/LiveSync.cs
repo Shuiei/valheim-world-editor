@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 
 namespace TerrainEditor.Save;
@@ -184,10 +185,10 @@ public sealed class LiveSync
     /// twice; the changes since follow in a call of their own. If the game started again since (another run of the
     /// plugin, which does not know what the last one did), the apply fails instead until the world is read again.
     /// </summary>
-    /// <returns>A one-line summary for the user, or "" when there was nothing to send.</returns>
-    public async Task<string> Apply(WorldSave world, EditStore edits, LiveBridge live)
+    /// <returns>A one-line summary for the user in both languages, empty when there was nothing to send.</returns>
+    public async Task<Said> Apply(WorldSave world, EditStore edits, LiveBridge live)
     {
-        List<string> said = [];
+        List<Said> said = [];
         Call? unanswered;
         lock (_lock)
         {
@@ -216,7 +217,7 @@ public sealed class LiveSync
             }
             said.Add(await Send(world, live, call));
         }
-        return string.Join("; ", said);
+        return Said.Join("; ", said);
     }
 
     /// <summary>
@@ -346,8 +347,8 @@ public sealed class LiveSync
     /// Sends a call and records what the game did. A call with an id left without an answer is kept, to be sent again
     /// first next time; one the plugin answered with an error was not done, and is planned again.
     /// </summary>
-    /// <returns>A one-line summary for the user.</returns>
-    private async Task<string> Send(WorldSave world, LiveBridge live, Call call)
+    /// <returns>A one-line summary for the user, in both languages.</returns>
+    private async Task<Said> Send(WorldSave world, LiveBridge live, Call call)
     {
         string reply;
         try
@@ -381,7 +382,7 @@ public sealed class LiveSync
     /// <param name="world">The world the ids are of.</param>
     /// <param name="call">The call answered.</param>
     /// <param name="reply">The plugin's JSON answer.</param>
-    private string Record(WorldSave world, Call call, string reply)
+    private Said Record(WorldSave world, Call call, string reply)
     {
         using var doc = JsonDocument.Parse(reply);
         var ids = doc.RootElement.GetProperty("created").EnumerateArray().Select(e => e.GetString()!.Split(':')).ToList();
@@ -453,29 +454,23 @@ public sealed class LiveSync
             }
         }
         int destroyed = doc.RootElement.GetProperty("destroyed").GetInt32(), missing = doc.RootElement.GetProperty("missing").GetInt32();
-        string msg = $"{destroyed} object(s) removed, {ids.Count} created";
+        var moved = Said.Empty;
         if (moveReplies.Count > 0)
         {
             int inPlace = moveReplies.Count(m => m.InPlace);
-            msg += $", {inPlace} moved";
-            if (inPlace < moveReplies.Count)
-            {
-                msg += $" ({moveReplies.Count - inPlace} more made again at their new place: a player near them would not see them move)";
-            }
+            moved = inPlace < moveReplies.Count ? Said.Of("live.movedRemade", inPlace, moveReplies.Count - inPlace) : Said.Of("live.moved", inPlace);
         }
+        var msg = Said.Join(", ", [Said.Of("live.removed", destroyed), Said.Of("live.created", ids.Count), moved]);
         if (doc.RootElement.TryGetProperty("refound", out var rf) && rf.GetInt32() is > 0 and int refound)
         {
-            msg += $" ({refound} made again by another mod, found at their place)";
+            msg += Said.Of("live.refound", refound);
         }
-        if (missing > 0)
-        {
-            msg += $", {missing} were already gone";
-        }
-        if (call.Skipped.Count > 0)
-        {
-            msg += $", {call.Skipped.Count} skipped ({call.Skipped[0]})";
-        }
-        return msg;
+        return Said.Join(", ",
+        [
+            msg,
+            missing > 0 ? Said.Of("live.gone", missing) : Said.Empty,
+            call.Skipped.Count > 0 ? Said.Of("live.skipped", call.Skipped.Count, call.Skipped[0]) : Said.Empty,
+        ]);
     }
 
     /// <summary>

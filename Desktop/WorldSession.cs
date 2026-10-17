@@ -410,9 +410,9 @@ public sealed class WorldSession : IDisposable
     public Outcome Save()
     {
         int known = _lastNumber ?? World.SaveNumber;
-        if (WorldWriter.Newer(World.Directory, known) is string newer)
+        if (WorldWriter.Newer(World.Directory, known) is Said newer)
         {
-            return new Outcome(false, Said.Raw(newer), false, new WorldWriter.Result(false, newer, null, 0, 0, []));
+            return new Outcome(false, newer, false, new WorldWriter.Result(false, newer.Shown, null, 0, 0, []) { Report = newer });
         }
         var lift = LiftToDiscs();
         // The changed zones and those the last save wrote (each copied once).
@@ -486,8 +486,8 @@ public sealed class WorldSession : IDisposable
             MarkHistoryApplied();
             KeepHistory();
         }
-        var message = Said.Raw(result.Message) + (lift != null ? Said.Of("save.msg.lifted", lift.Plan.Describe()) : Said.Empty) + unread;
-        return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message.Shown }) { Lifted = lift != null };
+        var message = result.Report + (lift != null ? Said.Of("save.msg.lifted", lift.Plan.Describe()) : Said.Empty) + unread;
+        return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message.Shown, Report = message }) { Lifted = lift != null };
     }
 
     /// <summary>
@@ -728,12 +728,12 @@ public sealed class WorldSession : IDisposable
                 Edits.MarkApplied(zones);
                 done.Add(Said.Of("save.count.zones", zones.Count));
             }
-            string objects = await LiveSync.Apply(World, Edits, live);
+            var objects = await LiveSync.Apply(World, Edits, live);
             objectsDone = true;
-            if (objects != "")
+            if (objects != Said.Empty)
             {
                 sent = true;
-                done.Add(Said.Raw(objects));
+                done.Add(objects);
             }
             if (Edits.ResetCount > 0)
             {
