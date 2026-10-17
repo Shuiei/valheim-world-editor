@@ -11,7 +11,7 @@ namespace TerrainEditor.App;
 /// will put its start temple), how far each biome is from there and, when asked, where the bosses and
 /// traders will be.
 /// </summary>
-public static class SeedPreview
+public static partial class SeedPreview
 {
     /// <summary>The world's radius in metres (10 km): the preview covers -Radius..Radius on both axes.</summary>
     public const float Radius = WorldGenerator.WorldSize;
@@ -22,9 +22,6 @@ public static class SeedPreview
         Heightmap.Biome.Meadows, Heightmap.Biome.BlackForest, Heightmap.Biome.Swamp, Heightmap.Biome.Mountain,
         Heightmap.Biome.Plains, Heightmap.Biome.Mistlands, Heightmap.Biome.AshLands, Heightmap.Biome.DeepNorth,
     ];
-
-    /// <summary>A cell's four side neighbours, as column and row steps.</summary>
-    private static readonly (int Di, int Dj)[] Sides = [(1, 0), (-1, 0), (0, 1), (0, -1)];
 
     /// <summary>
     /// The places worth knowing about before playing: the start, the traders, the bosses' altars. Prefab is
@@ -147,216 +144,6 @@ public static class SeedPreview
         m_worldGenVersion = WorldCreator.WorldGenVersion,
     });
 
-    /// <summary>
-    /// The seed's preview on size x size cells (128: a quick look, 256: a clearer one); landmarks: where the
-    /// bosses and traders will be too (a fraction of a second more, a few seconds on one core). Landmarks
-    /// stay null when SeedLocations has no location rules.
-    /// </summary>
-    public static Preview Make(string seedName, int size = 160, bool parallel = false, bool landmarks = false, CancellationToken cancel = default)
-    {
-        var gen = Generator(seedName);
-        float cell = 2 * Radius / size;
-        var (biome, height) = Sample(gen, -Radius, -Radius, cell, size, size, parallel, cancel);
-        var layout = new SeedLocations.Layout(gen, parallel);
-        var placed = layout.Place(landmarks ? SeedLocations.Which.Prioritized : SeedLocations.Which.Start, cancel);
-        var marks = new List<Landmark>();
-        foreach (var p in placed)
-        {
-            int at = Array.FindIndex(Landmarks, l => l.Prefab == p.Rule.prefab);
-            if (at >= 0)
-            {
-                marks.Add(new Landmark(Landmarks[at].Name, Landmarks[at].Kind, p.X, p.Z, p.Rule.unique != 0 && p.Rule.quantity > 1));
-            }
-        }
-        var start = marks.FirstOrDefault(m => m.Kind == "start");
-        var stats = Measure(biome, size, cell, start is null ? null : (start.X, start.Z)) with { TempleStart = start != null };
-        landmarks &= SeedLocations.Available;
-        if (landmarks)
-        {
-            stats = stats with
-            {
-                Nearest = Landmarks.Select(l => l.Name).Distinct().ToDictionary(n => n, n => marks.Where(m => m.Name == n)
-                    .Select(m => MathF.Sqrt((m.X - stats.Start.X) * (m.X - stats.Start.X) + (m.Z - stats.Start.Z) * (m.Z - stats.Start.Z)))
-                    .DefaultIfEmpty(float.PositiveInfinity).Min()),
-            };
-        }
-        return new Preview(seedName, size, cell, biome, height, stats, landmarks ? marks : null, gen, layout);
-    }
-
-    /// <summary>
-    /// The generator sampled on w x h cells of cell metres from (x0, z0) (row 0 the south): each cell's
-    /// biome (index in Biomes, Ocean for the sea and outside the world) and ground height (Outside past the
-    /// world's edge; the deepest sea floor is at 0). parallel: rows on every core but one (a search runs
-    /// seeds side by side instead).
-    /// </summary>
-    public static (byte[] Biome, float[] Height) Sample(WorldGenerator gen, float x0, float z0, float cell, int w, int h, bool parallel, CancellationToken cancel = default)
-    {
-        byte[] biome = new byte[w * h];
-        float[] height = new float[w * h];
-        var options = new ParallelOptions { CancellationToken = cancel, MaxDegreeOfParallelism = parallel ? Math.Max(1, Environment.ProcessorCount - 1) : 1 };
-        Parallel.For(0, h, options, j =>
-        {
-            for (int i = 0; i < w; i++)
-            {
-                float x = x0 + (i + 0.5f) * cell, z = z0 + (j + 0.5f) * cell;
-                int k = j * w + i;
-                if (x * x + z * z > Radius * Radius)
-                {
-                    biome[k] = Ocean;
-                    height[k] = Outside;
-                    continue;
-                }
-                var b = gen.GetBiome(x, z);
-                float ground = gen.GetBiomeHeight(b, x, z, out _);
-                height[k] = ground;
-                int index = Array.IndexOf(Biomes, b);
-                // Land: ground a player can stand on or wade through (at most 1 m under water; 3 m in a
-                // Swamp, whose pools are part of it). The game names much of the shallow sea after the land
-                // biome near it (and the southern sea Ashlands): deeper than that, it is sea here.
-                bool swamp = b == Heightmap.Biome.Swamp;
-                biome[k] = index < 0 || ground < TerrainService.WaterLevel - (swamp ? 3 : 1) ? Ocean : (byte)index;
-            }
-        });
-        return (biome, height);
-    }
-
-    /// <summary>The stats of a size x size biome map of the whole world (Nearest and TempleStart left unset).</summary>
-    /// <param name="biome">Each cell's biome byte, as <see cref="Sample"/> makes them.</param>
-    /// <param name="size">Cells on a side.</param>
-    /// <param name="cell">A cell's side in metres.</param>
-    /// <param name="startAt">Where the game puts its start temple (null: the Meadows cell nearest the middle).</param>
-    internal static Stats Measure(byte[] biome, int size, float cell, (float X, float Z)? startAt = null)
-    {
-        int inside = 0, land = 0;
-        int[] counts = new int[Biomes.Length];
-        for (int j = 0; j < size; j++)
-        {
-            for (int i = 0; i < size; i++)
-            {
-                float x = -Radius + (i + 0.5f) * cell, z = -Radius + (j + 0.5f) * cell;
-                if (x * x + z * z > Radius * Radius)
-                {
-                    continue;
-                }
-                inside++;
-                if (biome[j * size + i] != Ocean)
-                {
-                    land++;
-                    counts[biome[j * size + i]]++;
-                }
-            }
-        }
-        // Landmasses: land cells joined side by side.
-        int[] mass = new int[size * size];
-        Array.Fill(mass, -1);
-        var sizes = new List<int>();
-        var queue = new Queue<int>();
-        for (int seedCell = 0; seedCell < mass.Length; seedCell++)
-        {
-            if (biome[seedCell] == Ocean || mass[seedCell] >= 0)
-            {
-                continue;
-            }
-            int id = sizes.Count, n = 0;
-            mass[seedCell] = id;
-            queue.Enqueue(seedCell);
-            while (queue.Count > 0)
-            {
-                int c = queue.Dequeue();
-                n++;
-                int ci = c % size, cj = c / size;
-                foreach (var (di, dj) in Sides)
-                {
-                    int ni = ci + di, nj = cj + dj;
-                    if (ni < 0 || nj < 0 || ni >= size || nj >= size)
-                    {
-                        continue;
-                    }
-                    int nk = nj * size + ni;
-                    if (biome[nk] != Ocean && mass[nk] < 0)
-                    {
-                        mass[nk] = id;
-                        queue.Enqueue(nk);
-                    }
-                }
-            }
-            sizes.Add(n);
-        }
-        // The start: the Meadows cell nearest the middle.
-        int meadows = Array.IndexOf(Biomes, Heightmap.Biome.Meadows);
-        int startCell = -1;
-        float best = float.MaxValue;
-        for (int k = 0; k < biome.Length; k++)
-        {
-            if (biome[k] != meadows)
-            {
-                continue;
-            }
-            float x = -Radius + (k % size + 0.5f) * cell, z = -Radius + (k / size + 0.5f) * cell, d = x * x + z * z;
-            if (d < best)
-            {
-                best = d;
-                startCell = k;
-            }
-        }
-        var start = startCell < 0 ? (0f, 0f) : (-Radius + (startCell % size + 0.5f) * cell, -Radius + (startCell / size + 0.5f) * cell);
-        if (startAt is { } at)
-        {
-            // The temple's own cell, or the nearest land cell (a cell is coarse: the temple can sit on its
-            // shore) for its landmass.
-            start = (at.X, at.Z);
-            startCell = -1;
-            best = float.MaxValue;
-            for (int k = 0; k < biome.Length; k++)
-            {
-                if (biome[k] == Ocean)
-                {
-                    continue;
-                }
-                float dx = -Radius + (k % size + 0.5f) * cell - at.X, dz = -Radius + (k / size + 0.5f) * cell - at.Z, d = dx * dx + dz * dz;
-                if (d < best)
-                {
-                    best = d;
-                    startCell = k;
-                }
-            }
-        }
-        int startMass = startCell < 0 ? -1 : mass[startCell];
-        // Around the start, and the nearest of each biome.
-        int near = 0, nearLand = 0;
-        var distance = Biomes.ToDictionary(b => b, _ => float.PositiveInfinity);
-        var same = Biomes.ToDictionary(b => b, _ => false);
-        for (int k = 0; k < biome.Length; k++)
-        {
-            float x = -Radius + (k % size + 0.5f) * cell, z = -Radius + (k / size + 0.5f) * cell;
-            float d = MathF.Sqrt((x - start.Item1) * (x - start.Item1) + (z - start.Item2) * (z - start.Item2));
-            if (d <= 400 + cell / 2)
-            {
-                near++;
-                nearLand += biome[k] != Ocean ? 1 : 0;
-            }
-            if (biome[k] == Ocean)
-            {
-                continue;
-            }
-            var b = Biomes[biome[k]];
-            if (d < distance[b])
-            {
-                distance[b] = d;
-                same[b] = mass[k] == startMass;
-            }
-        }
-        return new Stats(
-            inside == 0 ? 0 : (float)land / inside,
-            Biomes.Select((b, i) => (b, i)).ToDictionary(p => p.b, p => land == 0 ? 0f : (float)counts[p.i] / land),
-            land == 0 || sizes.Count == 0 ? 0 : (float)sizes.Max() / land,
-            start,
-            near == 0 ? 0 : (float)nearLand / near,
-            land == 0 || startMass < 0 ? 0 : (float)sizes[startMass] / land,
-            distance,
-            same);
-    }
-
     /// <summary>A random seed name as the game makes them: 10 letters and digits.</summary>
     public static string RandomSeed()
     {
@@ -369,7 +156,6 @@ public static class SeedPreview
             }
         });
     }
-
     /// <summary>What makes a seed good: each criterion adds to the score (0 when it is not asked for).</summary>
     /// <param name="BigStartLand">The start on a large landmass.</param>
     /// <param name="LandAroundStart">Little water right around the start.</param>
@@ -399,87 +185,5 @@ public static class SeedPreview
     {
         /// <summary>Whether the bosses and traders must be looked for.</summary>
         public bool NeedsLandmarks => MaxHaldorDistance > 0 || MaxBogWitchDistance > 0 || MaxHildirDistance > 0 || MaxBossDistance > 0;
-    }
-
-    /// <summary>How well a preview meets the wishes, from 0 up (higher is better).</summary>
-    public static float Score(Stats s, Wishes w)
-    {
-        float score = 0;
-        if (w.BigStartLand)
-        {
-            score += 3 * s.StartContinent;
-        }
-        if (w.LandAroundStart)
-        {
-            score += 2 * s.LandNearStart;
-        }
-        static float Within(float d, float max) => max <= 0 ? 0 : float.IsPositiveInfinity(d) ? -2 : d <= max ? 1 + (max - d) / max : -(d - max) / max;
-        float Near(Heightmap.Biome b, float max) => Within(s.Distance[b], max);
-        score += Near(Heightmap.Biome.Swamp, w.MaxSwampDistance) + Near(Heightmap.Biome.Mountain, w.MaxMountainDistance) + Near(Heightmap.Biome.Plains, w.MaxPlainsDistance);
-        if (s.Nearest is { } n)
-        {
-            float To(string name) => n.TryGetValue(name, out float d) ? d : float.PositiveInfinity;
-            score += Within(To("Haldor"), w.MaxHaldorDistance) + Within(To("The Bog Witch"), w.MaxBogWitchDistance) + Within(To("Hildir"), w.MaxHildirDistance);
-            if (w.MaxBossDistance > 0)
-            {
-                score += EarlyBosses.Average(b => Within(To(b), w.MaxBossDistance));
-            }
-        }
-        if (w.BiomesOnStartLand)
-        {
-            score += 0.25f * s.SameLand.Count(kv => kv.Key is not (Heightmap.Biome.AshLands or Heightmap.Biome.DeepNorth) && kv.Value);
-        }
-        if (s.Land < w.MinLand)
-        {
-            score -= 5 * (w.MinLand - s.Land);
-        }
-        if (s.Land > w.MaxLand)
-        {
-            score -= 5 * (s.Land - w.MaxLand);
-        }
-        return MathF.Max(0, score);
-    }
-
-    /// <summary>
-    /// Random seeds tried in parallel (count of them), the best kept (keep), scored by the wishes; progress
-    /// is told after each seed (done, total). Previews of size cells (small: many seeds quickly). Cancelling
-    /// returns what was found so far; the previews come without their generator and layout (kept light).
-    /// </summary>
-    /// <returns>The best previews, best first.</returns>
-    public static List<(Preview Preview, float Score)> Search(Wishes wishes, int count, int keep, int size = 96, Action<int, int>? progress = null, CancellationToken cancel = default)
-    {
-        var found = new List<(Preview, float)>();
-        int done = 0;
-        var options = new ParallelOptions { CancellationToken = cancel, MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) };
-        try
-        {
-            Parallel.For(0, count, options, _ =>
-            {
-                var made = Make(RandomSeed(), size, landmarks: wishes.NeedsLandmarks, cancel: cancel);
-                float score = Score(made.Stats, wishes);
-                // Kept light: the generator and its layout (the biome map: tens of MB) are made again when
-                // a result is looked at.
-                var p = made with { Generator = null, Layout = null };
-                lock (found)
-                {
-                    found.Add((p, score));
-                    found.Sort((a, b) => b.Item2.CompareTo(a.Item2));
-                    if (found.Count > keep)
-                    {
-                        found.RemoveAt(found.Count - 1);
-                    }
-                }
-                progress?.Invoke(Interlocked.Increment(ref done), count);
-            });
-        }
-        catch (OperationCanceledException)
-        {
-            // Stopped: what was found so far. Not an error: a plain line.
-            Console.WriteLine($"Seed search: stopped after {Volatile.Read(ref done)} of {count} seeds.");
-        }
-        lock (found)
-        {
-            return [.. found];
-        }
     }
 }
