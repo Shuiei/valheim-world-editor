@@ -265,37 +265,7 @@ public partial class MainWindow
     /// <param name="path">The blueprint to open, or null for a blank plot.</param>
     private async Task OpenWorkshopOnce(string? path)
     {
-        // The game's files are needed here too (its pieces, and how ground discs shape the plot).
-        bool ready = await Task.Run(() =>
-        {
-            if (!GameData.Ensure(GameLook.Bundles))
-            {
-                return false;
-            }
-            // The player's mods' data names and manifests (their pieces' groups, the ones not offered).
-            WorldSession.ReadModFiles();
-            return true;
-        });
-        if (!ready)
-        {
-            if (World == null && !InWorkshop)
-            {
-                ShowStart(GameData.Missing);
-            }
-            else
-            {
-                MessageText.Text = GameData.Missing;
-            }
-            return;
-        }
-        if (World is { } w && w.Pending is not (0, 0, 0, 0)
-            && !await Ask(Lang.T("save.ask.leave.title"),
-                w.IsLive ? Lang.T("workshop.ask.leaveWorld.textLive", Describe(w.Pending)) : Lang.T("workshop.ask.leaveWorld.text", Describe(w.Pending)),
-                Lang.T("common.leaveAnyway"), Lang.T("common.stay")))
-        {
-            return;
-        }
-        if (WorkshopDirty && !await Ask(Lang.T("workshop.name"), Lang.T("workshop.ask.openAnother.text"), Lang.T("workshop.ask.openAnother.yes"), Lang.T("common.stay")))
+        if (!await WorkshopGameDataReady() || !await MayLeaveForWorkshop())
         {
             return;
         }
@@ -303,19 +273,11 @@ public partial class MainWindow
         Homestead.Details? details = null;
         if (path != null)
         {
-            try
+            if (await ReadForWorkshop(path) is not { } read)
             {
-                text = await File.ReadAllTextAsync(path);
-                var parsed = BlueprintFormats.Parse(path, text);
-                name = parsed.Name;
-                details = Homestead.Read(path)?.Details is { } d ? d with { Name = name } : new Homestead.Details(name, parsed.Description ?? "", []);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                // The world stays open as it was.
-                Msg("workshop.msg.openFailed", ex.Message);
                 return;
             }
+            (name, text, details) = read;
         }
         // Left only once the blueprint could be read.
         if (World is { } open)
@@ -361,6 +323,76 @@ public partial class MainWindow
         RefreshSupport();
         UpdateSaveBar();
         Msg(msg);
+    }
+
+    /// <summary>
+    /// Reads the game's files the Workshop needs (its pieces, and how ground discs shape the plot) and the player's
+    /// mods' data names and manifests (their pieces' groups, the ones not offered). False when the game is missing,
+    /// said on the start page when nothing is open, else in the status bar.
+    /// </summary>
+    private async Task<bool> WorkshopGameDataReady()
+    {
+        bool ready = await Task.Run(() =>
+        {
+            if (!GameData.Ensure(GameLook.Bundles))
+            {
+                return false;
+            }
+            WorldSession.ReadModFiles();
+            return true;
+        });
+        if (!ready)
+        {
+            if (World == null && !InWorkshop)
+            {
+                ShowStart(GameData.Missing);
+            }
+            else
+            {
+                MessageText.Text = GameData.Missing;
+            }
+        }
+        return ready;
+    }
+
+    /// <summary>
+    /// Asks before the Workshop replaces what is open: a world with changes not saved (or not applied), or a building
+    /// not saved. False when the user stays.
+    /// </summary>
+    private async Task<bool> MayLeaveForWorkshop()
+    {
+        if (World is { } w && w.Pending is not (0, 0, 0, 0))
+        {
+            string what = Describe(w.Pending);
+            string text = w.IsLive ? Lang.T("workshop.ask.leaveWorld.textLive", what) : Lang.T("workshop.ask.leaveWorld.text", what);
+            if (!await Ask(Lang.T("save.ask.leave.title"), text, Lang.T("common.leaveAnyway"), Lang.T("common.stay")))
+            {
+                return false;
+            }
+        }
+        return !WorkshopDirty || await Ask(Lang.T("workshop.name"), Lang.T("workshop.ask.openAnother.text"), Lang.T("workshop.ask.openAnother.yes"), Lang.T("common.stay"));
+    }
+
+    /// <summary>
+    /// Reads a blueprint to open in the Workshop: its name, its text and its details. Null when it cannot be read,
+    /// with the reason in the status bar (the world stays open as it was).
+    /// </summary>
+    /// <param name="path">The blueprint's file.</param>
+    private async Task<(string Name, string Text, Homestead.Details Details)?> ReadForWorkshop(string path)
+    {
+        try
+        {
+            string text = await File.ReadAllTextAsync(path);
+            var parsed = BlueprintFormats.Parse(path, text);
+            string name = parsed.Name;
+            var details = Homestead.Read(path)?.Details is { } d ? d with { Name = name } : new Homestead.Details(name, parsed.Description ?? "", []);
+            return (name, text, details);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Msg("workshop.msg.openFailed", ex.Message);
+            return null;
+        }
     }
 
     /// <summary>
