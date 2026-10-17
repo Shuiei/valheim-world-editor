@@ -1,7 +1,4 @@
 using TerrainEditor.App;
-using TerrainEditor.Editing;
-using TerrainEditor.Save;
-using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
@@ -29,16 +26,8 @@ public sealed partial class InspectorPanel
         {
             return;
         }
-        ZdoData z;
-        var notes = new List<string>();
-        try
+        if (BuildEdit(set, inv) is not { } edit)
         {
-            z = ObjectData.Edited(_bytes, set, inv, notes);
-        }
-        catch (Exception ex) when (ex is FormatException or ArgumentException or OverflowException)
-        {
-            Log.CaughtBrief(ex, "applying the values typed in the Inspector");
-            Message?.Invoke(Said.Of("inspect.msg.couldNotChange", ex.Message));
             return;
         }
         // Another area open since (its things are others): nothing to change here.
@@ -49,39 +38,17 @@ public sealed partial class InspectorPanel
             return;
         }
         var t = s.Scene.Things[index];
-        byte[]? now;
-        try
+        if (!TryReadNow(s, t, out byte[]? now))
         {
-            now = t.Gone ? null : ObjectData.Bytes(s.Scene.World, s.Edits, t.Id);
-        }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
-        {
-            Log.Caught(ex, "reading an object's data again before changing it");
-            Message?.Invoke(Said.Of("inspect.msg.cannotReadNow", ex.Message));
             return;
         }
         // Live: changed or removed in the game since it was opened (a player used the chest): the copy
         // would bring back its old data. Shown as it is now, to change again.
-        if (t.Gone || !(now?.AsSpan().SequenceEqual(_bytes) ?? false))
+        if (t.Gone || !SameBytes(now, _bytes))
         {
-            // Gone offline: deleted, replaced or undone here; live, the game may have taken it too.
-            var gone = s.IsLive ? Said.Of("inspect.msg.goneLive") : Said.Of("inspect.msg.gone");
-            Message?.Invoke(t.Gone ? gone : Said.Of("inspect.msg.changedInGame"));
-            if (t.Gone)
-            {
-                Close();
-            }
-            else
-            {
-                Open(index);
-            }
+            ShowChangedSinceOpen(s, t, index);
             return;
         }
-        var name = PrefabCatalog.DisplayName(z.Prefab) is string shown ? Said.Raw(shown) : Said.Of("inspect.object");
-        var copies = s.Commit(Lang.T("inspect.undo.edited", name.Shown), null, [index], [(new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), t.Piece)]);
-        // The notes come from ObjectData in English, each its own sentence.
-        Message?.Invoke(Said.Of("inspect.msg.changed", name) + Said.Join(" ", notes.Select(n => Said.Raw(n + "."))));
-        Open(copies[0]);
-        Replaced?.Invoke(copies[0]);
+        CommitEdit(s, index, t, edit.Z, edit.Notes);
     }
 }
