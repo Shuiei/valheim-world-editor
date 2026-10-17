@@ -297,7 +297,7 @@ public struct Vector2s : IEquatable<Vector2s>
     public override readonly bool Equals(object obj) => obj is Vector2s v && Equals(v);
 
     /// <inheritdoc/>
-    public override readonly int GetHashCode() => x | (y << 16);
+    public override readonly int GetHashCode() => (ushort)x | (y << 16);
 }
 
 /// <summary>
