@@ -634,6 +634,7 @@
   "view.overlay.stations": "Build ranges",
   "view.overlay.flatten": "Location flattening",
   "view.head.building": "BUILDING",
+  "view.label.builtBy": "Built by",
   "view.head.ground": "GROUND (game look)",
   "view.msg.resolution": "3D resolution: {0}, {1}×{2} pixels.",
   "help.label.record": "Record frame rates",
