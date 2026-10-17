@@ -119,14 +119,16 @@ public sealed class LogTests
     }
 
     // Paths (quoted, bare, under the home folder or not), web addresses, user@host, IP addresses but the local one and
-    // host names before a port are taken out; versions and words with a slash are not paths.
+    // host names before a port are taken out; versions and words with a slash are not paths. (Names of their own: other
+    // tests give theirs to Log.Private, which is for the whole run.)
     [Fact]
     public void PersonalDataIsTakenOut()
     {
         string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string id = Guid.NewGuid().ToString("N")[..8];
         string text = $"Could not find file '{Path.Combine(home, "My Worlds", "a.db")}'. Also {Path.Combine(home, "x")}, /srv/games/w.fwl and " +
-            @"C:\Games\w.db; see https://example.com/a?token=1 or bob@server.example; from 203.0.113.7 and [2001:db8::1], not " +
-            "127.0.0.1 or [::1]; Connection refused (server.example:22), (localhost:5182); Version=1.0.0.0, and/or 1/2.";
+            $@"C:\Games\w.db; see https://w{id}.example/a?q{id}=1 or u{id}@h{id}.example; from 203.0.113.7 and [2001:db8::1], not " +
+            $"127.0.0.1 or [::1]; Connection refused (h{id}.example:22), (localhost:5182); Version=1.0.0.0, and/or 1/2.";
 
         Assert.Equal("Could not find file '<path>'. Also <path>, <path> and <path>; see <url> or <user@host>; from <ip> and [<ip>], " +
             "not 127.0.0.1 or [::1]; Connection refused (<host>:22), (localhost:5182); Version=1.0.0.0, and/or 1/2.", Log.Scrub(text));
