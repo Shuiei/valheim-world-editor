@@ -79,10 +79,53 @@ public sealed class TerrainService
     /// </summary>
     public float[] BaseZone(int zx, int zz) => _zones.GetOrAdd((zx, zz), k =>
     {
-        float[] h = BaseTerrain.BuildZone(Generator, k.Item1, k.Item2);
+        float[] h = Build(k.Item1, k.Item2, null);
         _modifiers?.Apply(k.Item1, k.Item2, h);
         return h;
     });
+
+    /// <summary>
+    /// A zone's <see cref="BaseZone"/> and <see cref="BaseMask"/> made ready, in one generator pass when neither is
+    /// cached yet: the mask comes out of the same pass as the heights, so an area's load (zones in parallel) needs
+    /// no second pass for it.
+    /// </summary>
+    /// <param name="zx">Zone x.</param>
+    /// <param name="zz">Zone z.</param>
+    public void Warm(int zx, int zz)
+    {
+        var key = (zx, zz);
+        if (_masks.ContainsKey(key))
+        {
+            BaseZone(zx, zz);
+            return;
+        }
+        if (_zones.ContainsKey(key))
+        {
+            BaseMask(zx, zz);
+            return;
+        }
+        float[] mask = new float[65 * 65 * 4];
+        float[] heights = Build(zx, zz, mask);
+        _masks.TryAdd(key, mask);
+        _zones.GetOrAdd(key, k =>
+        {
+            _modifiers?.Apply(k.Item1, k.Item2, heights);
+            return heights;
+        });
+    }
+
+    /// <summary>How many generator passes over a zone were made (see <see cref="ZoneBuilds"/>).</summary>
+    private int _builds;
+
+    /// <summary>How many generator passes over a zone this terrain made: a test seam.</summary>
+    internal int ZoneBuilds => Volatile.Read(ref _builds);
+
+    /// <summary>One generator pass over a zone: its heights, and its base mask when one is given (see BaseTerrain).</summary>
+    private float[] Build(int zx, int zz, float[]? mask)
+    {
+        Interlocked.Increment(ref _builds);
+        return BaseTerrain.BuildZone(Generator, zx, zz, mask);
+    }
 
     /// <summary>
     /// BaseMask's masks by zone, built on first use.
@@ -117,7 +160,7 @@ public sealed class TerrainService
     public float[] BaseMask(int zx, int zz) => _masks.GetOrAdd((zx, zz), k =>
     {
         float[] m = new float[65 * 65 * 4];
-        BaseTerrain.BuildZone(Generator, k.Item1, k.Item2, m);
+        Build(k.Item1, k.Item2, m);
         return m;
     });
 
@@ -136,7 +179,7 @@ public sealed class TerrainService
     /// <summary>
     /// Generated terrain only, without location flattening (not cached).
     /// </summary>
-    public float[] RawZone(int zx, int zz) => BaseTerrain.BuildZone(Generator, zx, zz);
+    public float[] RawZone(int zx, int zz) => Build(zx, zz, null);
 
     /// <summary>
     /// The biome at a world point.

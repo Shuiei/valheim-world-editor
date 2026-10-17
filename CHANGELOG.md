@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.102 — unreleased
+
+### Changed
+- **Opening an area takes about half as long to work out the generated ground.** Each zone's generated heights were
+  worked out in parallel, then worked out a second time, one zone after the other, only to get the game's base paint
+  of the zone, which comes out of the same pass. The paint is now kept from the first, parallel pass.
+
 ## v1.45.101 — unreleased
 
 ### Changed
