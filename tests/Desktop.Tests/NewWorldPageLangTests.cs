@@ -57,7 +57,7 @@ public sealed class NewWorldPageLangTests
             NewWorldPageTests.Settle();
 
             string[] data = [Seed, .. page.Results.Select(r => r.Preview.Seed), .. folders.Select(Ui.Tilde)];
-            Assert.Empty(PseudoLang.Untranslated(w, data));
+            Assert.Empty(PseudoLang.Untranslated(page.View, data));
         }
         finally
         {
