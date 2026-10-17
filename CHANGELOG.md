@@ -13,6 +13,7 @@ the plugin is unchanged in versions without that part.
   English nothing changes, but a room added with two doors or more now says how many instead of "and a door" for
   each. Names of rooms, biomes, styles, materials and bosses stay as the game and the generator call them, and
   Claude is still told in English.
+
 ## v1.47.17 — unreleased
 
 ### Changed

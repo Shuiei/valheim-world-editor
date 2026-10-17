@@ -130,7 +130,7 @@ public sealed class DungeonPanel
         };
         _generate = new Expander
         {
-            Header = new TextBlock { Text = Lang.T("dungeon.head.generate"), FontSize = 12, FontWeight = FontWeight.SemiBold },
+            Header = new TextBlock { Text = Lang.T("build.head.generate"), FontSize = 12, FontWeight = FontWeight.SemiBold },
             Content = Gen.View,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             IsExpanded = true,

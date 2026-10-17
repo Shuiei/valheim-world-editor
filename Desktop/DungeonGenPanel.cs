@@ -77,7 +77,7 @@ public sealed class DungeonGenPanel
     /// <summary>The seed (a whole number; anything else counts as 0).</summary>
     internal TextBox Seed { get; } = new() { FontSize = 12, Width = 110, Text = "1" };
     /// <summary>Puts a random seed in.</summary>
-    internal Button Randomize { get; } = new() { Content = Lang.T("dungeon.label.randomize"), FontSize = 12 };
+    internal Button Randomize { get; } = new() { Content = Lang.T("common.randomize"), FontSize = 12 };
     /// <summary>Raises <see cref="PlaceAsked"/>.</summary>
     internal Button Place { get; } = new() { Content = Lang.T("dungeon.label.place"), FontSize = 12 };
     /// <summary>Raises <see cref="WorkshopAsked"/>.</summary>
@@ -237,7 +237,7 @@ public sealed class DungeonGenPanel
                 made, Row(Lang.T("dungeon.label.biome"), Biome), Row(Lang.T("dungeon.label.size"), Size),
                 new StackPanel { Spacing = 0, Children = { _monstersText, Monsters } }, Respawn,
                 pieces,
-                new DockPanel { Children = { new TextBlock { Text = Lang.T("dungeon.label.seed"), FontSize = 12, Width = 80, VerticalAlignment = VerticalAlignment.Center }, Randomize, Seed } },
+                new DockPanel { Children = { new TextBlock { Text = Lang.T("common.seed"), FontSize = 12, Width = 80, VerticalAlignment = VerticalAlignment.Center }, Randomize, Seed } },
                 new Border { BorderBrush = Ui.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = _plan },
                 _levelButtons, Summary,
             },
