@@ -463,19 +463,30 @@ public sealed partial class DungeonTool
                 }
             }
         }
-        var added = (objects > 0, doors) switch
-        {
-            (false, 0) => Said.Of("dungeon.msg.added", p.Name),
-            (false, 1) => Said.Of("dungeon.msg.addedDoor", p.Name),
-            (false, _) => Said.Of("dungeon.msg.addedDoors", p.Name, doors),
-            (true, 0) => Said.Of("dungeon.msg.addedObjects", p.Name, objects),
-            (true, 1) => Said.Of("dungeon.msg.addedObjectsDoor", p.Name, objects),
-            (true, _) => Said.Of("dungeon.msg.addedObjectsDoors", p.Name, objects, doors),
-        };
+        var added = Added(p.Name, objects, doors);
         // Selected before the change is told (Changed): the panel shows Delete for it at once.
         _selected = (rooms.Count - 1, p.Hash, p.Position);
         Commit(d, rooms, label ?? Lang.T("dungeon.undo.added", p.Name), added + (problem ?? Said.Empty), add: made);
         return true;
+    }
+
+    /// <summary>
+    /// What adding a room says: the room, with the objects the game made in it and the doors it rolled, when any.
+    /// </summary>
+    /// <param name="room">The room's name.</param>
+    /// <param name="objects">How many objects of its own it brought.</param>
+    /// <param name="doors">How many doors were rolled where it joins.</param>
+    internal static Said Added(string room, int objects, int doors)
+    {
+        return (objects > 0, doors) switch
+        {
+            (false, 0) => Said.Of("dungeon.msg.added", room),
+            (false, 1) => Said.Of("dungeon.msg.addedDoor", room),
+            (false, _) => Said.Of("dungeon.msg.addedDoors", room, doors),
+            (true, 0) => Said.Of("dungeon.msg.addedObjects", room, objects),
+            (true, 1) => Said.Of("dungeon.msg.addedObjectsDoor", room, objects),
+            (true, _) => Said.Of("dungeon.msg.addedObjectsDoors", room, objects, doors),
+        };
     }
 
     /// <summary>

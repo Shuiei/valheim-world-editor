@@ -245,15 +245,25 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// What is waiting to be saved, as a list for people ("3 zone(s) of ground, 2 deleted").
     /// </summary>
-    private static string Describe((int Zones, int Deleted, int Added, int Resets) p)
+    private static string Describe((int Zones, int Deleted, int Added, int Resets) p) =>
+        PendingList(p.Zones > 0 ? Lang.T("save.count.zones", p.Zones) : "", p.Deleted, p.Added, p.Resets);
+
+    /// <summary>
+    /// What is waiting, as a list for people: the zones of ground as the caller says them, then the objects deleted,
+    /// added and the zones reset; empty when nothing is.
+    /// </summary>
+    /// <param name="zones">The zones of ground changed, as text; empty when none.</param>
+    /// <param name="deleted">Objects deleted.</param>
+    /// <param name="added">Objects added.</param>
+    /// <param name="resets">Zones marked for reset.</param>
+    internal static string PendingList(string zones, int deleted, int added, int resets)
     {
-        var (z, d, a, r) = p;
         return string.Join(", ", new[]
         {
-            z > 0 ? Lang.T("save.count.zones", z) : "",
-            d > 0 ? Lang.T("save.count.deleted", d) : "",
-            a > 0 ? Lang.T("save.count.added", a) : "",
-            r > 0 ? Lang.T("save.count.resets", r) : "",
+            zones,
+            deleted > 0 ? Lang.T("save.count.deleted", deleted) : "",
+            added > 0 ? Lang.T("save.count.added", added) : "",
+            resets > 0 ? Lang.T("save.count.resets", resets) : "",
         }.Where(x => x != ""));
     }
 
@@ -519,20 +529,7 @@ public sealed partial class MainWindow : Window
             }
             // Shown: the world's area, even if a load dropped meanwhile had reset it.
             world.Area = scene.Session;
-            // Found by the map's search: selected, the camera on it (items and texts: in the inspector).
-            if (MapPage?.Target is var (id, inspect) && spot != null && MapPage.Spot == spot)
-            {
-                int i = scene.Things.FindIndex(t => t.Id == id && !t.Gone);
-                if (i >= 0)
-                {
-                    View.Focus(scene.Things[i].Position);
-                    View.Select([i]);
-                    if (inspect)
-                    {
-                        Inspect();
-                    }
-                }
-            }
+            FocusSearchTarget(scene, spot);
             return true;
         }
         catch (Exception ex)
@@ -565,6 +562,31 @@ public sealed partial class MainWindow : Window
             {
                 Msg(text);
             }
+        }
+    }
+
+    /// <summary>
+    /// An object the map's search found, when the area was opened around its zone: selected, the camera on it (items
+    /// and texts: in the inspector).
+    /// </summary>
+    /// <param name="scene">The area just shown.</param>
+    /// <param name="spot">The map's chosen zone the area was opened around, if it was.</param>
+    private void FocusSearchTarget(WorldScene scene, (int X, int Z)? spot)
+    {
+        if (MapPage?.Target is not var (id, inspect) || spot == null || MapPage.Spot != spot)
+        {
+            return;
+        }
+        int i = scene.Things.FindIndex(t => t.Id == id && !t.Gone);
+        if (i < 0)
+        {
+            return;
+        }
+        View.Focus(scene.Things[i].Position);
+        View.Select([i]);
+        if (inspect)
+        {
+            Inspect();
         }
     }
 
@@ -810,21 +832,34 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+        if (await ReloadFromGame(w) is { } failed)
+        {
+            Say(failed);
+        }
+        MapPage?.Show(w);
+    }
+
+    /// <summary>
+    /// Live: reads the world from the game again behind the busy veil (the map's Reload and the 3D editor's).
+    /// </summary>
+    /// <param name="w">The live world.</param>
+    /// <returns>Why the game could not be read (unreachable, or the bridge's answer: a refusal, broken JSON); null when read.</returns>
+    private async Task<Said?> ReloadFromGame(WorldSession w)
+    {
         Busy(Lang.T("save.msg.loadingLive"));
         try
         {
             await w.Reload();
+            return null;
         }
-        // As ReloadHere: the bridge's answers (a refusal, broken JSON) too.
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException or System.Text.Json.JsonException)
         {
-            Say(Said.Of("save.msg.unreachable", ex.Message));
+            return Said.Of("save.msg.unreachable", ex.Message);
         }
         finally
         {
             Busy(null);
         }
-        MapPage?.Show(w);
     }
 
     /// <summary>
@@ -1448,7 +1483,7 @@ public sealed partial class MainWindow : Window
         PlacePanel.Memory.Save();
         FillBuilders();
         Msg(id == 0 ? Said.Of("select.msg.builtByNobody")
-            : Builders.Players(w).FirstOrDefault(p => p.Id == id)?.Label is { } who ? Said.Of("select.msg.builtBy", who)
+            : Builders.Players(w).FirstOrDefault(p => p.Id == id)?.Words is { } who ? Said.Of("select.msg.builtBy", who)
             : Said.Of("select.msg.builtByPlayer", id));
     }
 
@@ -1613,17 +1648,32 @@ public sealed partial class MainWindow : Window
             }
             return (t, (rect.X0 - 4, rect.Z0 - 4, rect.X1 + 4, rect.Z1 + 4));
         }, remove, roof);
-        if (built.Uncovered > 0 && roof.Count > 0)
-        {
-            return Said.Of("cave.msg.uncovered", roof.Count, built.Uncovered);
-        }
-        if (roof.Count == 0)
+        return CaveOutcome(roof.Count, built.Uncovered, remove.Count, PathTool.Length(cave.Curve), open, clamped);
+    }
+
+    /// <summary>
+    /// What a dug cave says: roofed with some floor open to the sky, too shallow for a roof, or dug (with what was
+    /// taken away, walls that could not rise and the game's limit reached).
+    /// </summary>
+    /// <param name="boulders">How many boulders roof it.</param>
+    /// <param name="uncovered">Floor points left open to the sky.</param>
+    /// <param name="removed">Trees and rocks taken away from the trench.</param>
+    /// <param name="length">The cave's length (m).</param>
+    /// <param name="walls">Points where the walls could not rise to the rock.</param>
+    /// <param name="clamped">Whether part of it reached the game's ±8 m limit.</param>
+    /// <returns>The message, in the language in use and in English.</returns>
+    internal static Said CaveOutcome(int boulders, int uncovered, int removed, float length, int walls, bool clamped)
+    {
+        if (boulders == 0)
         {
             return Said.Of("cave.msg.noRoof");
         }
-        float length = PathTool.Length(cave.Curve);
-        return (remove.Count > 0 ? Said.Of("cave.msg.dugCleared", length, roof.Count, remove.Count) : Said.Of("cave.msg.dug", length, roof.Count))
-            + (open > 0 ? Said.Of("cave.msg.walls", open) : Said.Empty)
+        if (uncovered > 0)
+        {
+            return Said.Of("cave.msg.uncovered", boulders, uncovered);
+        }
+        return (removed > 0 ? Said.Of("cave.msg.dugCleared", length, boulders, removed) : Said.Of("cave.msg.dug", length, boulders))
+            + (walls > 0 ? Said.Of("cave.msg.walls", walls) : Said.Empty)
             + (clamped ? Said.Of("cave.msg.limit") : Said.Of("cave.msg.undo"));
     }
 
@@ -2376,6 +2426,23 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
+    /// The View panel's overlay switches, each with its tip, as the 3D view shows the overlays now.
+    /// </summary>
+    /// <param name="list">The panel's list they go into.</param>
+    private void AddOverlayBoxes(StackPanel list)
+    {
+        foreach (var (layer, label) in new[] { (Overlays.Layer.Borders, Lang.T("view.overlay.borders")), (Overlays.Layer.Markers, Lang.T("view.overlay.markers")),
+            (Overlays.Layer.Wards, Lang.T("view.overlay.wards")), (Overlays.Layer.Stations, Lang.T("view.overlay.stations")),
+            (Overlays.Layer.Flatten, Lang.T("view.overlay.flatten")) })
+        {
+            var box = new CheckBox { Content = label, IsChecked = View.IsOverlayShown(layer), FontSize = 12, Tag = label };
+            ToolTip.SetTip(box, Tips.Overlay(layer));
+            _overlayBoxes[layer] = box;
+            list.Children.Add(box);
+        }
+    }
+
+    /// <summary>
     /// Lays out the View panel: its headings, switches, lists and preset buttons with their tips; the switches'
     /// starting states are kept as the presets' defaults.
     /// </summary>
@@ -2406,15 +2473,7 @@ public sealed partial class MainWindow : Window
         }
         list.Children.Add(WaterBox);
         list.Children.Add(Heading(Lang.T("view.head.overlays")));
-        foreach (var (layer, label) in new[] { (Overlays.Layer.Borders, Lang.T("view.overlay.borders")), (Overlays.Layer.Markers, Lang.T("view.overlay.markers")),
-            (Overlays.Layer.Wards, Lang.T("view.overlay.wards")), (Overlays.Layer.Stations, Lang.T("view.overlay.stations")),
-            (Overlays.Layer.Flatten, Lang.T("view.overlay.flatten")) })
-        {
-            var box = new CheckBox { Content = label, IsChecked = View.IsOverlayShown(layer), FontSize = 12, Tag = label };
-            ToolTip.SetTip(box, Tips.Overlay(layer));
-            _overlayBoxes[layer] = box;
-            list.Children.Add(box);
-        }
+        AddOverlayBoxes(list);
         UnsavedBox.Tip("view.unsaved");
         list.Children.Add(UnsavedBox);
         LimitBox.Tip("view.limit");
@@ -2428,7 +2487,7 @@ public sealed partial class MainWindow : Window
         list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 6, 0, 0), Children = { DefaultsButton, AllButton, GroundButton } });
         list.Children.Add(Heading(Lang.T("view.head.building")));
         BuilderBox.Tip("view.builder");
-        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = Lang.T("select.ask.playerId.title"), FontSize = 12 }, BuilderBox } });
+        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = Lang.T("view.label.builtBy"), FontSize = 12 }, BuilderBox } });
         list.Children.Add(Heading(Lang.T("view.head.ground")));
         list.Children.Add(SlopeBox);
         list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ContourBox, ContourStepBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } });
@@ -2607,8 +2666,20 @@ public sealed partial class MainWindow : Window
         Blueprints.Models = () => _models;
         Blueprints.Confirm = text => Dialogs.Ask(this, Lang.T("rail.label.blueprints"), text, Lang.T("common.yes"));
         Blueprints.OpenUrl = Launcher.LaunchUriAsync;
-        Blueprints.PickFile = () => Pickers.File(StorageProvider, Lang.T("blueprints.pickTitle"),
-            new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("rail.label.blueprints")) { Patterns = BlueprintPatterns });
+        Blueprints.PickFile = () =>
+        {
+            var (title, type) = ImportPicker();
+            return Pickers.File(StorageProvider, title, type);
+        };
+    }
+
+    /// <summary>
+    /// The import picker's title and file type, in the language in use (asked for each time it opens).
+    /// </summary>
+    internal static (string Title, Avalonia.Platform.Storage.FilePickerFileType Type) ImportPicker()
+    {
+        var type = new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("rail.label.blueprints")) { Patterns = BlueprintPatterns };
+        return (Lang.T("blueprints.pickTitle"), type);
     }
 
     /// <summary>

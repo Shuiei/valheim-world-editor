@@ -20,7 +20,7 @@ public class SelectToolMouseTests
     /// <summary>
     /// The window, its edit session and the view's size, with the Select tool's mouse driven at world points.
     /// </summary>
-    private sealed record View(MainWindow W, EditSession S, Avalonia.Size Size)
+    internal sealed record View(MainWindow W, EditSession S, Avalonia.Size Size)
     {
         public SelectTool Tool => W.View.SelectTool;
 
@@ -64,7 +64,7 @@ public class SelectToolMouseTests
     /// <summary>
     /// A box around a thing in view space: a piece's own box, or 1 × 5 × 1 m for a tree.
     /// </summary>
-    private static (int, Vector3, Vector3) Box(WorldScene s, int i)
+    internal static (int, Vector3, Vector3) Box(WorldScene s, int i)
     {
         var t = s.Things[i];
         var info = PieceCatalog.Get(t.Prefab);
@@ -77,7 +77,7 @@ public class SelectToolMouseTests
     /// A shown main window editing a flat 2 × 2 zone area with these objects (given their boxes) in the Select tool,
     /// looking straight down on the middle.
     /// </summary>
-    private static View Open(params WorldScene.Thing[] things)
+    internal static View Open(params WorldScene.Thing[] things)
     {
         var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
         w.Show();
@@ -95,7 +95,7 @@ public class SelectToolMouseTests
     /// <summary>
     /// A thing of this kind at world point (x, y, z): a building piece, or a tree when not.
     /// </summary>
-    private static WorldScene.Thing T(int id, int prefab, float x, float y, float z, bool piece = true) => new(id, prefab, new Vector3(x, y, z), Vector3.Zero, piece ? 0 : 1, piece);
+    internal static WorldScene.Thing T(int id, int prefab, float x, float y, float z, bool piece = true) => new(id, prefab, new Vector3(x, y, z), Vector3.Zero, piece ? 0 : 1, piece);
 
     // Shift + click: the row from the last object clicked (w1, Shift + click w3: w1, w2, w3), not what
     // stands off it; Ctrl + click adds one.

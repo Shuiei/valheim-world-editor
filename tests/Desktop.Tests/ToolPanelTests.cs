@@ -16,15 +16,7 @@ public class ToolPanelTests
     /// <summary>
     /// A shown main window editing a flat 2 × 2 zone area.
     /// </summary>
-    private static MainWindow Open()
-    {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
-        return w;
-    }
+    private static MainWindow Open() => TestWindows.Editing(TestScenes.Flat(2));
 
     /// <summary>
     /// Clicks the button and runs the posted work it starts.

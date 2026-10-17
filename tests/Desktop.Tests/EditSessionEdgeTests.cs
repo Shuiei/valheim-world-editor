@@ -87,8 +87,7 @@ public class EditSessionEdgeTests
     public async Task AppliedZoneResetsReadTheAreaAgain()
     {
         using var game = new FakeGame();
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
-        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        var (world, s) = await TestScenes.LiveArea(game);
         s.Shape(32, 32, Two, 3, 0, "raise");
         world.Edits.SetReset(new ZoneReset(5, 5, true, false), true);
         bool reset = false;
@@ -106,8 +105,7 @@ public class EditSessionEdgeTests
     /// <returns>The session, the stroke's point and its height before the stroke, and the Apply's outcome.</returns>
     private static async Task<(EditSession S, int P, float Before, WorldSession.Outcome O)> ApplyDuringAStroke(FakeGame game, bool reset)
     {
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
-        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        var (world, s) = await TestScenes.LiveArea(game);
         s.Shape(32, 32, Two, 3, 0, "raise");
         if (reset)
         {
