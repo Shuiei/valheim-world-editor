@@ -65,6 +65,15 @@ internal static class TestScenes
         Limit = new float[65 * 65],
     };
 
+    /// <summary>
+    /// The game given opened live, and its area of radius 1 around zone (0, 0) with its edit session.
+    /// </summary>
+    internal static async Task<(WorldSession World, EditSession Area)> LiveArea(FakeGame game)
+    {
+        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        return (world, WorldScene.Load(world, 0, 0, 1).Session!);
+    }
+
     /// <summary>The ship's root's id (AddShip).</summary>
     internal const int ShipId = 500;
 

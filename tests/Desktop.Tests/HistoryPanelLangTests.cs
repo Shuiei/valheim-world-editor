@@ -25,11 +25,8 @@ public sealed class HistoryPanelLangTests
     public void HistoryPanelShowsOnlyCatalogueTexts()
     {
         using var pseudo = new PseudoLang();
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
         var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(0, 30, 0), Vector3.Zero, 1, false));
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = TestWindows.Editing(s);
         w.ShowRight(w.History.Card);
         Dispatcher.UIThread.RunJobs();
         Assert.Empty(PseudoLang.Untranslated(w.History.Card));
