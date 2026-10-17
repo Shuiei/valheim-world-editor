@@ -802,8 +802,8 @@ public sealed class WorldSave
     }
 
     /// <summary>
-    /// Mirrors ZDO.Load(ZPackage, Version.World), recording where things are in the file so a writer can later copy
-    /// objects unchanged or patch just the terrain data.
+    /// Reads one object through <see cref="ZdoReader"/>, keeping what the editor lists and recording where things are
+    /// in the file so a writer can later copy objects unchanged or patch just the terrain data.
     /// </summary>
     /// <param name="pkg">Reader positioned at the object.</param>
     /// <param name="worldVersion">The world version the object was written in.</param>
@@ -824,29 +824,12 @@ public sealed class WorldSave
         {
             ObjectRefs.Add(objRef);
         }
-        bool chunked = worldVersion >= WorldVersion.ChunkedSave;
-        ushort flags = pkg.ReadUShort();
-        if (!chunked)
-        {
-            pkg.ReadVector2s();
-        }
-        Vector3 position;
-        if ((flags & ZdoData.SmallPositionFlag) != 0)
-        {
-            var (x, y) = pkg.ReadVector2s();
-            position = new Vector3(x, 0f, y);
-        }
-        else
-        {
-            position = pkg.ReadVector3();
-        }
-        int prefab = pkg.ReadInt();
-        Vector3 rotation = Vector3.Zero;
-        if ((flags & ZdoData.RotationFlag) != 0)
-        {
-            rotation = chunked ? pkg.ReadSmallRotation() : pkg.ReadVector3();
-        }
-        objRef.DataStart = pkg.Position;
+        ZdoReader zdo = new(pkg, worldVersion);
+        ushort flags = zdo.Flags;
+        Vector3 position = zdo.Position;
+        int prefab = zdo.Prefab;
+        Vector3 rotation = zdo.Rotation;
+        objRef.DataStart = zdo.DataStart;
         objRef.Flags = flags;
         objRef.Prefab = prefab;
         objRef.Position = position;
@@ -863,7 +846,7 @@ public sealed class WorldSave
         List<(int Key, int Value)>? linkInts = null;
         List<(int Key, Vector3 Value)>? linkVec3s = null;
         List<(int Key, Quaternion Value)>? linkQuats = null;
-        if ((flags & 0xFF) == 0)
+        if (!zdo.HasData)
         {
             objRef.End = pkg.Position;
             RememberTemplate(prefab, id);
@@ -878,140 +861,92 @@ public sealed class WorldSave
             }
             return id;
         }
-        if ((flags & ZdoData.Connections) != 0)
+        while (zdo.Next())
         {
-            pkg.ReadByte();
-            pkg.ReadInt();
-        }
-        if ((flags & ZdoData.Floats) != 0)
-        {
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
+            int key = zdo.Key;
+            switch (zdo.Section)
             {
-                int key = pkg.ReadInt();
-                float value = pkg.ReadSingle();
-                if (key == ZdoData.ScaleScalarKey)
-                {
-                    scale = new Vector3(value);
-                }
-            }
-        }
-        if ((flags & ZdoData.Vec3s) != 0)
-        {
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                int key = pkg.ReadInt();
-                Vector3 value = pkg.ReadVector3();
-                if (key == ZdoData.ScaleKey)
-                {
-                    scale = value;
-                }
-                else if (links.Vec3Keys.Contains(key))
-                {
-                    (linkVec3s ??= []).Add((key, value));
-                }
-            }
-        }
-        if ((flags & ZdoData.Quats) != 0)
-        {
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                int key = pkg.ReadInt();
-                Quaternion value = pkg.ReadQuaternion();
-                if (links.QuatKeys.Contains(key))
-                {
-                    (linkQuats ??= []).Add((key, value));
-                }
-            }
-        }
-        if ((flags & ZdoData.Ints) != 0)
-        {
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                int key = pkg.ReadInt();
-                int value = pkg.ReadInt();
-                if (prefab == LocationProxyPrefab && key == LocationKey)
-                {
-                    Locations.Add((position, value));
-                    location = value;
-                }
-                else if (key == TamedKey && value != 0)
-                {
-                    Tamed.Add(id);
-                }
-                else if (links.IntKeys.Contains(key))
-                {
-                    (linkInts ??= []).Add((key, value));
-                }
-            }
-        }
-        if ((flags & ZdoData.Longs) != 0)
-        {
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                int key = pkg.ReadInt();
-                long value = pkg.ReadLong();
-                if (key == TimeCreatedKey)
-                {
-                    timeCreated = value;
-                }
-                else if (key == Editing.ObjectField.CreatorKey)
-                {
-                    creator = value;
-                }
-                else if (key == OwnerKey)
-                {
-                    owner = value;
-                }
-                else if (key == PlayerIdKey)
-                {
-                    playerId = value;
-                }
-            }
-        }
-        if ((flags & ZdoData.Strings) != 0)
-        {
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                int key = pkg.ReadInt();
-                string value = pkg.ReadString();
-                long who = key == OwnerNameKey ? owner : key == CreatorNameKey ? creator : key == PlayerNameKey ? playerId : 0;
-                if (who != 0 && value.Length > 0)
-                {
-                    PlayerNames[who] = value;
-                }
-            }
-        }
-        if ((flags & ZdoData.ByteArrays) != 0)
-        {
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                int key = pkg.ReadInt();
-                long valueStart = pkg.Position;
-                byte[] value = pkg.ReadByteArray();
-                if (key == TCDataKey)
-                {
+                case ZdoData.Floats:
+                    if (key == ZdoData.ScaleScalarKey)
+                    {
+                        scale = new Vector3(zdo.FloatValue);
+                    }
+                    break;
+                case ZdoData.Vec3s:
+                    if (key == ZdoData.ScaleKey)
+                    {
+                        scale = zdo.Vec3Value;
+                    }
+                    else if (links.Vec3Keys.Contains(key))
+                    {
+                        (linkVec3s ??= []).Add((key, zdo.Vec3Value));
+                    }
+                    break;
+                case ZdoData.Quats:
+                    if (links.QuatKeys.Contains(key))
+                    {
+                        (linkQuats ??= []).Add((key, zdo.QuatValue));
+                    }
+                    break;
+                case ZdoData.Ints:
+                    if (prefab == LocationProxyPrefab && key == LocationKey)
+                    {
+                        Locations.Add((position, zdo.IntValue));
+                        location = zdo.IntValue;
+                    }
+                    else if (key == TamedKey && zdo.IntValue != 0)
+                    {
+                        Tamed.Add(id);
+                    }
+                    else if (links.IntKeys.Contains(key))
+                    {
+                        (linkInts ??= []).Add((key, zdo.IntValue));
+                    }
+                    break;
+                case ZdoData.Longs:
+                    if (key == TimeCreatedKey)
+                    {
+                        timeCreated = zdo.LongValue;
+                    }
+                    else if (key == Editing.ObjectField.CreatorKey)
+                    {
+                        creator = zdo.LongValue;
+                    }
+                    else if (key == OwnerKey)
+                    {
+                        owner = zdo.LongValue;
+                    }
+                    else if (key == PlayerIdKey)
+                    {
+                        playerId = zdo.LongValue;
+                    }
+                    break;
+                case ZdoData.Strings:
+                    long who = key == OwnerNameKey ? owner : key == CreatorNameKey ? creator : key == PlayerNameKey ? playerId : 0;
+                    if (who != 0 && zdo.StringValue!.Length > 0)
+                    {
+                        PlayerNames[who] = zdo.StringValue;
+                    }
+                    break;
+                case ZdoData.ByteArrays when key == TCDataKey:
                     TerrainZone zone;
                     try
                     {
-                        zone = TerrainZone.Decode(position, prefab, value);
+                        zone = TerrainZone.Decode(position, prefab, zdo.BytesValue!);
                     }
                     catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException)
                     {
                         // Damaged ground data: the game loses only this zone's ground edits. Here the object stays an
                         // ordinary one, kept byte for byte, and the rest of the world reads on.
                         Console.WriteLine($"Damaged ground data in the terrain object at {position}, kept as it is: {ex.Message}");
-                        continue;
+                        break;
                     }
-                    zone.Source = new ZdoLocation(file, start, -1, valueStart, pkg.Position, flags);
+                    zone.Source = new ZdoLocation(file, start, -1, zdo.ValueStart, pkg.Position, flags);
                     TerrainZones.Add(zone);
-                }
+                    break;
+                default:
+                    // The connection and byte arrays other than ground data: read past, nothing the loader lists.
+                    break;
             }
         }
         long end = pkg.Position;

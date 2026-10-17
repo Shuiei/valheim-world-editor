@@ -64,68 +64,36 @@ public static class ZdoBuilder
     /// </param>
     public static byte[] Build(byte[] source, ObjectRef template, int worldVersion, Vector3 position, Vector3 euler, float scale, bool fresh = false)
     {
-        euler = new Vector3(Wrap(euler.X), Wrap(euler.Y), Wrap(euler.Z));
-        bool rotated = euler.LengthSquared() > 1e-6f;
-        ushort flags = (ushort)(template.Flags & ~ZdoData.SmallPositionFlag & ~ZdoData.RotationFlag);
-        if (rotated)
-        {
-            flags |= ZdoData.RotationFlag;
-        }
-        List<Section> sections = ReadSections(source, template, worldVersion);
+        var z = ZdoData.Parse(source, (int)template.Start, (int)(template.End - template.Start), worldVersion);
+        z.Position = position;
+        z.SmallPosition = false;
+        z.Rotation = euler;
         if (fresh)
         {
-            sections.RemoveAll(s => s.Flag == ZdoData.Connections);
-            foreach (Section s in sections)
-            {
-                s.Items.RemoveAll(i => !(s.Flag == ZdoData.Longs && i.Key == Editing.ObjectField.CreatorKey) && !(s.Flag == ZdoData.Vec3s && i.Key == ZdoData.ScaleKey) && !(s.Flag == ZdoData.Floats && i.Key == ZdoData.ScaleScalarKey));
-            }
+            z.Connection = null;
+            z.FloatList.RemoveAll(i => i.Key != ZdoData.ScaleScalarKey);
+            z.Vec3List.RemoveAll(i => i.Key != ZdoData.ScaleKey);
+            z.QuatList.Clear();
+            z.IntList.Clear();
+            z.LongList.RemoveAll(i => i.Key != Editing.ObjectField.CreatorKey);
+            z.StringList.Clear();
+            z.ByteList.Clear();
         }
         if (scale > 0f)
         {
             // The game stores a non-default scale as a Vector3 "scale" (ZNetView.SetLocalScale); scale 1 is no value,
             // as Blank writes it.
-            sections.FirstOrDefault(s => s.Flag == ZdoData.Floats)?.Items.RemoveAll(i => i.Key == ZdoData.ScaleScalarKey);
+            z.FloatList.RemoveAll(i => i.Key == ZdoData.ScaleScalarKey);
             if (MathF.Abs(scale - 1f) > 1e-4f)
             {
-                Section vec = sections.FirstOrDefault(s => s.Flag == ZdoData.Vec3s) ?? AddSection(sections, ZdoData.Vec3s);
-                vec.Set(ZdoData.ScaleKey, Concat(BitConverter.GetBytes(scale), BitConverter.GetBytes(scale), BitConverter.GetBytes(scale)));
+                z.SetVec3(ZdoData.ScaleKey, new Vector3(scale));
             }
             else
             {
-                sections.FirstOrDefault(s => s.Flag == ZdoData.Vec3s)?.Items.RemoveAll(i => i.Key == ZdoData.ScaleKey);
+                z.Vec3List.RemoveAll(i => i.Key == ZdoData.ScaleKey);
             }
         }
-        sections.RemoveAll(s => s.Flag != ZdoData.Connections && s.Items.Count == 0);
-        flags = (ushort)(flags & 0xFF00);
-        foreach (Section s in sections)
-        {
-            flags |= s.Flag;
-        }
-        using MemoryStream ms = new();
-        using BinaryWriter w = new(ms);
-        w.Write(flags);
-        w.Write(position.X); w.Write(position.Y); w.Write(position.Z);
-        w.Write(template.Prefab);
-        if (rotated)
-        {
-            WriteSmallRotation(w, euler);
-        }
-        foreach (Section s in sections.OrderBy(s => s.Flag))
-        {
-            if (s.Flag == ZdoData.Connections)
-            {
-                w.Write(s.Raw!);
-                continue;
-            }
-            WriteNumItems(w, s.Items.Count);
-            foreach (var (key, value) in s.Items)
-            {
-                w.Write(key);
-                w.Write(value);
-            }
-        }
-        w.Flush();
-        return ms.ToArray();
+        return z.Serialize();
     }
 
     /// <summary>
@@ -214,84 +182,6 @@ public static class ZdoBuilder
         }
         w.Write((byte)((n >> 8) | 0x80));
         w.Write((byte)n);
-    }
-
-    /// <summary>One data section of an object being copied, its values kept as raw bytes.</summary>
-    /// <param name="flag">The section's ZDO flag bit.</param>
-    private sealed class Section(ushort flag)
-    {
-        /// <summary>The section's ZDO flag bit.</summary>
-        public ushort Flag { get; } = flag;
-
-        /// <summary>The values by key hash, each as its saved bytes.</summary>
-        public List<(int Key, byte[] Value)> Items { get; } = [];
-
-        /// <summary>The connection section's five bytes (type and target), kept whole.</summary>
-        public byte[]? Raw { get; set; }
-
-        /// <summary>Replaces the value with this key, or adds it.</summary>
-        public void Set(int key, byte[] value)
-        {
-            int i = Items.FindIndex(t => t.Key == key);
-            if (i >= 0)
-            {
-                Items[i] = (key, value);
-            }
-            else
-            {
-                Items.Add((key, value));
-            }
-        }
-    }
-
-    /// <summary>Adds an empty section of that flag.</summary>
-    private static Section AddSection(List<Section> sections, ushort flag)
-    {
-        Section s = new(flag);
-        sections.Add(s);
-        return s;
-    }
-
-    /// <summary>The byte arrays joined in order.</summary>
-    private static byte[] Concat(params byte[][] parts) => [.. parts.SelectMany(p => p)];
-
-    /// <summary>The data sections of the template, in file order (same reading as WorldSave.ReadZdo).</summary>
-    private static List<Section> ReadSections(byte[] source, ObjectRef t, int worldVersion)
-    {
-        List<Section> result = [];
-        if ((t.Flags & 0xFF) == 0)
-        {
-            return result;
-        }
-        using ValheimReader pkg = new(new MemoryStream(source, (int)t.DataStart, (int)(t.End - t.DataStart)));
-        if ((t.Flags & ZdoData.Connections) != 0)
-        {
-            result.Add(new Section(ZdoData.Connections) { Raw = pkg.ReadBytes(5) });
-        }
-        foreach (var (flag, read) in new (ushort, Func<ValheimReader, byte[]>)[]
-        {
-            (ZdoData.Floats, p => p.ReadBytes(4)),
-            (ZdoData.Vec3s, p => p.ReadBytes(12)),
-            (ZdoData.Quats, p => p.ReadBytes(16)),
-            (ZdoData.Ints, p => p.ReadBytes(4)),
-            (ZdoData.Longs, p => p.ReadBytes(8)),
-            (ZdoData.Strings, p => { string s = p.ReadString(); using MemoryStream m = new(); using BinaryWriter bw = new(m); bw.Write(s); bw.Flush(); return m.ToArray(); }),
-            (ZdoData.ByteArrays, p => { byte[] b = p.ReadByteArray(); return Concat(BitConverter.GetBytes(b.Length), b); }),
-        })
-        {
-            if ((t.Flags & flag) == 0)
-            {
-                continue;
-            }
-            Section s = new(flag);
-            int n = pkg.ReadNumItems(worldVersion);
-            for (int i = 0; i < n; i++)
-            {
-                s.Items.Add((pkg.ReadInt(), read(pkg)));
-            }
-            result.Add(s);
-        }
-        return result;
     }
 }
 
