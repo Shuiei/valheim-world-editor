@@ -9,14 +9,17 @@ namespace WorldEditor.Tests;
 [Collection("World files")]
 public class UnityNativeTests
 {
+    // The game's seeded generator is what is under test (worlds must come out the same from their seed; nothing here
+    // is a secret): Opengrep's weak-RNG rule does not apply.
     [Fact]
-    public void TheSameSeedGivesEqualStatesAndADrawChangesIt()
+    public void ADrawChangesTheStateAndTheSameSeedGivesItBack()
     {
-        Rnd.InitState(42);
-        var before = Rnd.state;
-        EqualityAsserts.Same(before, Rnd.state);
-        Rnd.NextUInt();
-        EqualityAsserts.Differ(before, Rnd.state);
+        Rnd.InitState(42); // nosemgrep
+        var seeded = Rnd.state;
+        Rnd.NextUInt(); // nosemgrep
+        EqualityAsserts.Differ(seeded, Rnd.state);
+        Rnd.InitState(42); // nosemgrep
+        EqualityAsserts.Same(seeded, Rnd.state);
     }
 
     [Theory]
