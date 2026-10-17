@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.7 — unreleased
+
+### Changed
+- **The brush options come from the language catalogue.** Their rows, shapes, falloffs and stamps, the brushes'
+  messages (No limit, stamps, Alt + click), the Build label of the Workshop's rail and the cursor readout in the
+  status bar show in the language chosen in Settings; a built-in stamp chosen as the brush's shape is still
+  remembered after the language changes. Claude still asks for stamps by their English names. In English nothing
+  changes.
+
 ## v1.47.6 — unreleased
 
 ### Changed

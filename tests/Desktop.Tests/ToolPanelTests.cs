@@ -74,7 +74,7 @@ public class ToolPanelTests
         var w = Open();
         w.Tools.Choose(BrushTool.Raise);
         string? said = null;
-        w.Tools.Message += t => said = t;
+        w.Tools.Message += t => said = t.Shown;
         // A built-in stamp chosen: it stays.
         w.Tools.ShapeBox.SelectedIndex = 4;
         int stamps = w.Tools.StampList.Count;

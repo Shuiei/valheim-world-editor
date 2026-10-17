@@ -16,10 +16,36 @@ public static class Stamps
 
     /// <summary>One stamp offered in the brush's shape list.</summary>
     /// <param name="Name">Its key (the built-in ones start with "stamp:").</param>
-    /// <param name="Label">The name shown in the shape list.</param>
+    /// <param name="Label">Its name in English (Claude asks for a stamp by it); a loaded one's is its picture's name.</param>
     /// <param name="Data">Size × Size weights, 0..1, row by row from the north.</param>
     /// <param name="Loaded">Loaded from a picture (kept in stamps.json and can be forgotten), not built in.</param>
-    public sealed record Stamp(string Name, string Label, float[] Data, bool Loaded = false);
+    public sealed record Stamp(string Name, string Label, float[] Data, bool Loaded = false)
+    {
+        /// <summary>Its name in the language in use (a loaded one's is its picture's name).</summary>
+        public string Shown => Name switch
+        {
+            "stamp:mountain" => Lang.T("brush.stamp.mountain"),
+            "stamp:mesa" => Lang.T("brush.stamp.mesa"),
+            "stamp:crater" => Lang.T("brush.stamp.crater"),
+            "stamp:dunes" => Lang.T("brush.stamp.dunes"),
+            "stamp:rocky" => Lang.T("brush.stamp.rocky"),
+            _ => Label,
+        };
+
+        /// <summary>
+        /// Its entry in the brush's Shape list. A built-in one's is a whole catalogue text, so the remembered choice
+        /// (Prefs, kept in English) comes back in any language.
+        /// </summary>
+        public string Item => Name switch
+        {
+            "stamp:mountain" => Lang.T("brush.shape.stampMountain"),
+            "stamp:mesa" => Lang.T("brush.shape.stampMesa"),
+            "stamp:crater" => Lang.T("brush.shape.stampCrater"),
+            "stamp:dunes" => Lang.T("brush.shape.stampDunes"),
+            "stamp:rocky" => Lang.T("brush.shape.stampRocky"),
+            _ => Lang.T("brush.shape.stamp", Label),
+        };
+    }
 
     /// <summary>The web editor's value noise (the same numbers, so the built-in stamps look the same).</summary>
     private static double Hash(double x, double y)

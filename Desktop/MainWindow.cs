@@ -1635,14 +1635,14 @@ public sealed partial class MainWindow : Window
         var b = Tools.Brush;
         float amount = b.StampHeight * (Tools.Tool == BrushTool.Lower ? -1 : 1);
         bool clamped = false;
-        s.EditGround($"Stamp: {b.StampLabel}", g =>
+        s.EditGround(Lang.T("brush.shape.stamp", b.StampLabel), g =>
         {
             var (t, rect, c) = Sculpt.StampOnce(g, b, gx, gz, amount, s.MaskNow());
             clamped = c;
             return (t, rect);
         });
-        MessageText.Text = clamped ? "Stamped, but part of it reached the game limit of ±8 m from the original ground (red points)."
-            : $"Stamped {MathF.Abs(amount)} m {(amount >= 0 ? "up" : "down")}. Ctrl+Z undoes it.";
+        Msg(clamped ? Said.Of("brush.msg.stampLimit")
+            : amount >= 0 ? Said.Of("brush.msg.stampedUp", MathF.Abs(amount)) : Said.Of("brush.msg.stampedDown", MathF.Abs(amount)));
         UpdateSaveBar();
     }
 
@@ -2610,7 +2610,7 @@ public sealed partial class MainWindow : Window
     private void WireGroundTools()
     {
         View.StampClicked += StampAt;
-        Tools.Message += t => MessageText.Text = t;
+        Tools.Message += Msg;
         Tools.NoLimitChanged += OnNoLimitChanged;
         Tools.LoadStampAsked += async () => await LoadStampAsync();
         View.BrushAltClick += OnBrushAltClick;
@@ -2629,7 +2629,7 @@ public sealed partial class MainWindow : Window
             AreaPanel.NoLimitBox.IsChecked = on;
             AreaPanel.RefreshVolume();
         }
-        MessageText.Text = on ? "No limit: the ground tools go past the game's ±8 m. Saving turns that ground into ground discs every player's game counts as generated ground." : "The ground tools keep to the game's ±8 m.";
+        Msg(on ? Said.Of("brush.msg.noLimitOn") : Said.Of("brush.msg.noLimitOff"));
     }
 
     /// <summary>
@@ -2637,8 +2637,8 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private async Task LoadStampAsync()
     {
-        if (await Pickers.File(StorageProvider, "Use a grayscale picture as the brush shape",
-            new Avalonia.Platform.Storage.FilePickerFileType("Pictures") { Patterns = PicturePatterns }) is not string path)
+        if (await Pickers.File(StorageProvider, Lang.T("brush.pickStamp"),
+            new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("brush.pictures")) { Patterns = PicturePatterns }) is not string path)
         {
             return;
         }
@@ -2648,7 +2648,7 @@ public sealed partial class MainWindow : Window
         }
         else
         {
-            MessageText.Text = "That picture could not be read.";
+            Msg("brush.msg.unreadable");
         }
     }
 
@@ -2662,12 +2662,12 @@ public sealed partial class MainWindow : Window
         if (shift)
         {
             Mask.PickHeight(h);
-            MessageText.Text = $"Mask: ground between {h - 2:0.0} and {h + 2:0.0} m.";
+            Msg("brush.msg.maskBand", h - 2, h + 2);
         }
         else
         {
             Tools.FlattenTo(h);
-            MessageText.Text = $"Flatten to {h:0.0} m.";
+            Msg("brush.msg.flattenTo", h);
         }
     }
 

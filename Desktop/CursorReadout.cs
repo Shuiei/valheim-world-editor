@@ -1,4 +1,4 @@
-using System.Globalization;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -16,7 +16,6 @@ public static class CursorReadout
     /// <param name="gz">Grid z.</param>
     public static string Text(WorldScene s, float gx, float gz)
     {
-        var c = CultureInfo.InvariantCulture;
         int x = Math.Clamp((int)MathF.Round(gx), 0, s.W - 1), z = Math.Clamp((int)MathF.Round(gz), 0, s.H - 1);
         int g = z * s.W + x;
         int wx = s.X0 * 64 - 32 + x, wz = s.Z0 * 64 - 32 + z;
@@ -24,13 +23,14 @@ public static class CursorReadout
         if (s.Session?.Ground is { } ground)
         {
             float h = ground.HeightOf(g), b = ground.Original(g), d = h - b;
-            height = string.Format(c, "ground {0:0.00} m (original {1:0.00}, {2}{3:0.00}{4})", h, b, d >= 0 ? "+" : "", d, ground.AtLimit(g) ? ", at the ±8 m limit" : "");
+            string sign = d >= 0 ? "+" : "";
+            height = ground.AtLimit(g) ? Lang.T("cursor.groundAtLimit", h, b, sign, d) : Lang.T("cursor.groundEdited", h, b, sign, d);
         }
         else
         {
-            height = string.Format(c, "ground {0:0.00} m", s.Heights[g]);
+            height = Lang.T("cursor.ground", s.Heights[g]);
         }
         var (zx, zz) = Save.ChunkMath.SectorOf(wx, wz);
-        return string.Format(c, "x {0}, z {1}   {2}   zone {3}, {4}", wx, wz, height, zx, zz);
+        return Lang.T("cursor.at", wx, wz, height, zx, zz);
     }
 }
