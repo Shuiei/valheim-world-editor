@@ -52,6 +52,25 @@ public class DungeonShellTests
         Assert.Empty(o.Items);
     }
 
+    // Each known door kind puts its own piece in its opening (the frame and what closes it are the shell's own).
+    [Theory]
+    [InlineData(DungeonKit.Door.Wood, "dungeon_forestcrypt_door")]
+    [InlineData(DungeonKit.Door.Grand, "darkwood_gate")]
+    [InlineData(DungeonKit.Door.Gate, "dungeon_sunkencrypt_irongate")]
+    [InlineData(DungeonKit.Door.Key, "sunken_crypt_gate")]
+    [InlineData(DungeonKit.Door.Grate, "iron_grate")]
+    [InlineData(DungeonKit.Door.Curtain, "cloth_hanging_door")]
+    [InlineData(DungeonKit.Door.Secret, "stone_wall_ruin_2")]
+    public void EachDoorKindPutsItsPieceInTheOpening(DungeonKit.Door kind, string prefab)
+    {
+        var o = new DungeonOut();
+        var d = new DungeonPlan.Doorway { A = new(), B = new(), T1 = (0, 0), T2 = (0, 1), Dir = (1, 0), Kind = kind };
+
+        DungeonShell.Doorway(d, 0, DungeonKit.MaterialOf("Stone"), o, "Meadows");
+
+        Assert.Contains(o.Items, i => i.Prefab == prefab);
+    }
+
     [Fact]
     public void WindowsAreTheSameWhateverTheCulture()
     {

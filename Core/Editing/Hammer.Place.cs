@@ -20,82 +20,36 @@ public static partial class Hammer
         }
         else
         {
-            // Out along the normal, then back until its nearest collider point touches the hit. Only the
-            // colliders Unity's ClosestPoint works on: not concave meshes.
-            var ghost = point + normal * 50f;
-            Vector3? nearest = null;
-            float nd = float.MaxValue;
-            var lp = Vector3.Transform(point - ghost, Quaternion.Inverse(rotation));
-            foreach (var shape in data.Colliders)
-            {
-                if (shape is Mesh { Convex: false })
-                {
-                    continue;
-                }
-                var c = ghost + Vector3.Transform(Closest(shape, lp), rotation);
-                float dist = Vector3.Distance(c, point);
-                if (dist < nd)
-                {
-                    nd = dist;
-                    nearest = c;
-                }
-            }
-            pos = nearest is { } np ? point + (ghost - np) : point;
+            pos = OffHit(data, point, normal, rotation);
         }
         pos.Y += lift;
         return snap ? Snap(prefab, rotation, pos, pieces) : (pos, null);
     }
 
     /// <summary>
-    /// FindClosestSnapPoints: the piece at pos, turned by rotation, moved so that the closest pair of its
-    /// snap points and those of the pieces within 10 m meets, when they are within half a metre (and
-    /// unless that puts it right where the same piece already stands). Returns where it goes and what it
-    /// snapped to (null: nothing, it stays at pos).
+    /// Out along the normal, then back until its nearest collider point touches the hit. Only the
+    /// colliders Unity's ClosestPoint works on: not concave meshes.
     /// </summary>
-    public static (Vector3 Position, int? SnappedTo) Snap(string prefab, Quaternion rotation, Vector3 pos, IReadOnlyList<Placed> pieces)
+    private static Vector3 OffHit(Data data, Vector3 point, Vector3 normal, Quaternion rotation)
     {
-        if (Get(prefab) is not { Snaps.Length: > 0 } data)
+        var ghost = point + normal * 50f;
+        Vector3? nearest = null;
+        float nd = float.MaxValue;
+        var lp = Vector3.Transform(point - ghost, Quaternion.Inverse(rotation));
+        foreach (var shape in data.Colliders)
         {
-            return (pos, null);
-        }
-        float bestD = SnapDistance;
-        Vector3? move = null;
-        int? to = null;
-        // The piece's own snap points in the world, worked out once for every piece near.
-        var own = new Vector3[data.Snaps.Length];
-        for (int k = 0; k < own.Length; k++)
-        {
-            own[k] = pos + Vector3.Transform(data.Snaps[k], rotation);
-        }
-        foreach (var p in pieces)
-        {
-            if (Get(p.Prefab) is not { Snaps.Length: > 0 } other || Vector3.Distance(p.Position, pos) - other.Radius > SnapRadius)
+            if (shape is Mesh { Convex: false })
             {
                 continue;
             }
-            foreach (var b in other.Snaps)
+            var c = ghost + Vector3.Transform(Closest(shape, lp), rotation);
+            float dist = Vector3.Distance(c, point);
+            if (dist < nd)
             {
-                var bw = p.Position + Vector3.Transform(b, p.Rotation);
-                foreach (var aw in own)
-                {
-                    float dist = Vector3.Distance(aw, bw);
-                    if (dist <= bestD)
-                    {
-                        bestD = dist;
-                        move = bw - aw;
-                        to = p.Index;
-                    }
-                }
+                nd = dist;
+                nearest = c;
             }
         }
-        if (move is not { } m)
-        {
-            return (pos, null);
-        }
-        var snapped = pos + m;
-        // IsOverlappingOtherPiece: not right where the same piece stands (turned alike, unless it may overlap turned).
-        bool overlaps = pieces.Any(p => p.Prefab == prefab && Vector3.Distance(p.Position, snapped) < 0.05f
-            && (!data.RotatedOverlap || AngleDegrees(p.Rotation, rotation) <= 10f));
-        return overlaps ? (pos, null) : (snapped, to);
+        return nearest is { } np ? point + (ghost - np) : point;
     }
 }

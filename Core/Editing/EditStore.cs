@@ -1,4 +1,3 @@
-using TerrainEditor.App;
 using TerrainEditor.Save;
 
 namespace TerrainEditor.Editing;
@@ -65,7 +64,7 @@ public sealed partial class EditStore
 /// One zone's terrain modifications, as the game keeps them (TerrainComp): per vertex of the 65 × 65 grid,
 /// a height change and a paint, plus the editor's own lift beyond the game's limits.
 /// </summary>
-public sealed class ZoneEdit(int zoneX, int zoneZ)
+public sealed partial class ZoneEdit(int zoneX, int zoneZ)
 {
     /// <summary>The zone's column (64 m zones, 0 at the world's centre).</summary>
     public int ZoneX { get; } = zoneX;
@@ -119,30 +118,6 @@ public sealed class ZoneEdit(int zoneX, int zoneZ)
     /// <summary>Nothing changed: no height, paint or lift.</summary>
     public bool IsEmpty => !Modified.Any(m => m) && !PaintModified.Any(m => m) && !HasLift;
 
-    /// <summary>Same resulting ground and paint (how the height is split between level and smoothing aside).</summary>
-    public bool SameGround(ZoneEdit other)
-    {
-        for (int i = 0; i < EditStore.Cells; i++)
-        {
-            float a = Modified[i] ? Level[i] + Smooth[i] : 0f, b = other.Modified[i] ? other.Level[i] + other.Smooth[i] : 0f;
-            if (Math.Abs(a - b) > 1e-4f || Math.Abs(Lift[i] - other.Lift[i]) > 1e-4f || PaintModified[i] != other.PaintModified[i])
-            {
-                return false;
-            }
-            if (PaintModified[i])
-            {
-                for (int c = 0; c < 4; c++)
-                {
-                    if (Math.Abs(Paint[i * 4 + c] - other.Paint[i * 4 + c]) > 1e-4f)
-                    {
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
-    }
-
     /// <summary>A deep copy (the arrays copied).</summary>
     public ZoneEdit Clone() => new(ZoneX, ZoneZ)
     {
@@ -155,33 +130,6 @@ public sealed class ZoneEdit(int zoneX, int zoneZ)
         Paint = (float[])Paint.Clone(),
         Lift = (float[])Lift.Clone()
     };
-
-    /// <summary>Enforce the game's limits and drop no-op modifications, whatever the browser sent.</summary>
-    /// <exception cref="ArgumentException">An array is not the size of the 65 × 65 grid.</exception>
-    public void Sanitize()
-    {
-        if (Modified.Length != EditStore.Cells || Level.Length != EditStore.Cells || Smooth.Length != EditStore.Cells || PaintModified.Length != EditStore.Cells || Paint.Length != EditStore.Cells * 4
-            || Lift.Length != EditStore.Cells)
-        {
-            throw new ArgumentException("Zone data must have 65x65 entries.");
-        }
-        for (int i = 0; i < EditStore.Cells; i++)
-        {
-            Level[i] = float.IsFinite(Level[i]) ? Math.Clamp(Level[i], -EditStore.MaxLevel, EditStore.MaxLevel) : 0f;
-            Smooth[i] = float.IsFinite(Smooth[i]) ? Math.Clamp(Smooth[i], -EditStore.MaxSmooth, EditStore.MaxSmooth) : 0f;
-            Lift[i] = float.IsFinite(Lift[i]) ? Math.Clamp(Lift[i], -EditStore.MaxLift, EditStore.MaxLift) : 0f;
-            if (!Modified[i])
-            {
-                Level[i] = 0f;
-                Smooth[i] = 0f;
-            }
-            for (int c = 0; c < 4; c++)
-            {
-                float v = Paint[i * 4 + c];
-                Paint[i * 4 + c] = float.IsFinite(v) ? Math.Clamp(v, 0f, 1f) : 0f;
-            }
-        }
-    }
 }
 
 /// <summary>A new object placed in the editor.</summary>
@@ -211,7 +159,7 @@ public sealed record NewObject(int Id, int Prefab, System.Numerics.Vector3 Posit
 /// <param name="Section">floats, vec3, quats, ints, longs, strings or bytes.</param>
 /// <param name="Key">The stable hash of its name.</param>
 /// <param name="Value">As ZdoData.Set takes it (text; base64 for bytes), null to remove it.</param>
-public sealed record ObjectField(string Section, int Key, string? Value)
+public sealed partial record ObjectField(string Section, int Key, string? Value)
 {
     /// <summary>The data key ("creator") of an object's builder, a player id: the one constant for it.</summary>
     public static readonly int CreatorKey = StableHash.Of("creator");
@@ -222,45 +170,6 @@ public sealed record ObjectField(string Section, int Key, string? Value)
     /// <summary>The field as text: "section;key;value in base64" ("-" for none).</summary>
     public override string ToString() => $"{Section};{Key.ToString(System.Globalization.CultureInfo.InvariantCulture)};"
         + (Value == null ? "-" : Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(Value)));
-
-    /// <summary>
-    /// Sets a value in a list of fields, replacing the one of the same section and key; null takes it away (kept with a
-    /// null value when the list had it, as copies keep a value taken away).
-    /// </summary>
-    public static void Put(List<ObjectField> data, string section, int key, string? value)
-    {
-        int i = data.FindIndex(f => f.Key == key && f.Section == section);
-        if (i >= 0)
-        {
-            data[i] = data[i] with { Value = value };
-        }
-        else if (value != null)
-        {
-            data.Add(new ObjectField(section, key, value));
-        }
-    }
-
-    /// <summary>A field from its text form; null when it is malformed or its value does not fit its section.</summary>
-    public static ObjectField? Parse(string text)
-    {
-        string[] p = text.Split(';');
-        if (p.Length != 3 || p[0] is not ("floats" or "vec3" or "quats" or "ints" or "longs" or "strings" or "bytes")
-            || !int.TryParse(p[1], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int key))
-        {
-            return null;
-        }
-        try
-        {
-            string? value = p[2] == "-" ? null : System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(p[2]));
-            // A value the save cannot take (a damaged or hand-edited line) is left out here, not when the world is written.
-            return ZdoData.Valid(p[0], value) ? new ObjectField(p[0], key, value) : null;
-        }
-        catch (FormatException e)
-        {
-            Log.CaughtBrief(e, "reading an object field line of the kept edits (not base64: left out)");
-            return null;
-        }
-    }
 }
 
 /// <summary>Give a zone back to the world generator.</summary>
