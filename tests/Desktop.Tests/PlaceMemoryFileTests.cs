@@ -3,8 +3,8 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The Place tool's memory file when it is not what it should be: empty JSON, broken JSON, and a folder that cannot
-/// be made. Alone (DataDir): it points the memory at a file of its own.
+/// The Place tool's memory file when it is not what it should be: empty JSON, broken JSON (kept aside), nulls, and a
+/// folder that cannot be made. Alone (DataDir): it points the memory at a file of its own.
 /// </summary>
 [Collection("DataDir")]
 public sealed class PlaceMemoryFileTests : IDisposable
@@ -32,6 +32,44 @@ public sealed class PlaceMemoryFileTests : IDisposable
         var m = PlaceMemory.Load();
         Assert.Empty(m.Recent);
         Assert.Empty(m.Favourites);
+    }
+
+    [Fact]
+    public void NullMembersAreTakenAsEmpty()
+    {
+        // A hand-edited file's nulls crashed the Place panel (Chosen, Weights) and loading a preset (its Kinds).
+        string file = Path.Combine(_dir, "place.json");
+        PlaceMemory.PathOverride = file;
+        File.WriteAllText(file, """
+            {"Presets": [null, {"Name": "no kinds", "Kinds": null}, {"Name": null, "Kinds": {"Oak1": 1}}, {"Name": "ok", "Kinds": {"Oak1": 2}}],
+             "Favourites": null, "Recent": [null, "Oak1"], "Chosen": null, "Weights": null, "Builders": null}
+            """);
+        var m = PlaceMemory.Load();
+        Assert.Equal("ok", Assert.Single(m.Presets).Name);
+        Assert.Empty(m.Favourites);
+        Assert.Equal(["Oak1"], m.Recent);
+        Assert.Empty(m.Chosen);
+        Assert.Empty(m.Weights);
+        Assert.Empty(m.Builders);
+    }
+
+    [Fact]
+    public void ABrokenFileIsKeptAsideBeforeItIsWrittenOver()
+    {
+        // A broken file gave an empty memory that the next save wrote over: presets, favourites and weights lost. It is
+        // copied aside as place.json.bad first; when that cannot be done, nothing is written over it.
+        string file = Path.Combine(_dir, "place.json");
+        PlaceMemory.PathOverride = file;
+        File.WriteAllText(file, "{ not json");
+        Directory.CreateDirectory(file + ".bad");
+        PlaceMemory.Load().ToggleFavourite("Oak1");
+        Assert.Equal("{ not json", File.ReadAllText(file));
+        Directory.Delete(file + ".bad");
+        PlaceMemory.Load().ToggleFavourite("Oak1");
+        Assert.Equal("{ not json", File.ReadAllText(file + ".bad"));
+        Assert.Equal("Oak1", Assert.Single(PlaceMemory.Load().Favourites));
+        // Written through a temporary file, none left behind.
+        Assert.False(File.Exists(file + ".tmp"));
     }
 
     [Fact]
