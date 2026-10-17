@@ -59,8 +59,10 @@ internal sealed class DungeonPlan
         public bool DeadEnd;
         /// <summary>Its recesses (alcoves off a room, niches off a corridor): each one's tiles and the way out of the space into it.</summary>
         public readonly List<(List<(int I, int J)> Tiles, (int X, int Z) Out)> Recesses = [];
-        /// <summary>Its box (tiles, world axes).</summary>
+        /// <summary>Its box (tiles, world axes), grown to hold its recesses.</summary>
         public int X0, Z0, W, H;
+        /// <summary>Its box before recesses grew it (null: it has none).</summary>
+        public (int X0, int Z0, int W, int H)? Before;
         /// <summary>The way in.</summary>
         public (int X, int Z) Dir;
         /// <summary>The doorways on its walls, to either side.</summary>
@@ -72,6 +74,9 @@ internal sealed class DungeonPlan
 
         /// <summary>Whether it is a room (not a corridor).</summary>
         public bool IsRoom => !Corridor;
+
+        /// <summary>Its own box (tiles, world axes): its walls without its recesses, the box its layout is made for.</summary>
+        public (int X0, int Z0, int W, int H) Own => Before ?? (X0, Z0, W, H);
 
         /// <summary>The middle of its box along x (metres).</summary>
         public float CenterX => (X0 + W / 2f) * 2;
@@ -890,7 +895,8 @@ internal sealed class DungeonPlanner
     /// <summary>
     /// Adds up to count recesses to a space: a run of width tiles pushed out of one of its walls, where the tiles
     /// beyond are free (an alcove off a room, a niche off a corridor). The space's tiles are then more than its box
-    /// says, so it is marked shaped; its box grows to hold them.
+    /// says, so it is marked shaped; its box grows to hold them, and <see cref="DungeonPlan.Space.Before"/> keeps the
+    /// room's own.
     /// </summary>
     private void Recesses(DungeonPlan.Level l, DungeonPlan.Space s, int width, int count)
     {
@@ -920,6 +926,7 @@ internal sealed class DungeonPlanner
                     l.Owner[t] = s;
                 }
                 s.Recesses.Add((outside, dir));
+                s.Before ??= (s.X0, s.Z0, s.W, s.H);
                 int x0 = Math.Min(s.X0, outside.Min(t => t.Item1)), z0 = Math.Min(s.Z0, outside.Min(t => t.Item2));
                 int x1 = Math.Max(s.X0 + s.W - 1, outside.Max(t => t.Item1)), z1 = Math.Max(s.Z0 + s.H - 1, outside.Max(t => t.Item2));
                 (s.X0, s.Z0, s.W, s.H) = (x0, z0, x1 - x0 + 1, z1 - z0 + 1);
@@ -973,7 +980,8 @@ internal sealed class DungeonPlanner
         {
             return null;
         }
-        (int, int) Mirror((int I, int J) t) => n.Dir.X != 0 ? (2 * parent.X0 + parent.W - 1 - t.I, t.J) : (t.I, 2 * parent.Z0 + parent.H - 1 - t.J);
+        var (x0, z0, w, h) = parent.Own;
+        (int, int) Mirror((int I, int J) t) => n.Dir.X != 0 ? (2 * x0 + w - 1 - t.I, t.J) : (t.I, 2 * z0 + h - 1 - t.J);
         var dir = (-n.Dir.X, -n.Dir.Z);
         var side = SideTiles(parent, dir);
         var m1 = Mirror(first.T1);
