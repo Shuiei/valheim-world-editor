@@ -378,15 +378,12 @@ public sealed class PasteTool
         {
             return (objs, outlines);
         }
-        float baseH = heightAt(at) + Offset;
-        for (int k = 0; k < Count; k++)
+        foreach (var (ca, up, anchor) in CopyAnchors(at, heightAt))
         {
-            var (ca, up) = CopyAt(at, k);
-            float anchor = (Direction == Along.Up ? baseH : heightAt(ca) + Offset) + up;
             foreach (var o in c.Objects)
             {
-                var p = ca + Xf(new Vector2(o.Dx, o.Dz));
-                objs.Add(new Vector3(p.X, o.Follow ? heightAt(p) + o.Dy + up : anchor + o.Dy, p.Y));
+                var (p, y) = ObjectSpot(o, ca, up, anchor, heightAt);
+                objs.Add(new Vector3(p.X, y, p.Y));
             }
             outlines.Add([.. c.Poly.Select(p => ca + Xf(p))]);
         }
@@ -408,19 +405,46 @@ public sealed class PasteTool
         {
             return list;
         }
+        foreach (var (ca, up, anchor) in CopyAnchors(at, heightAt))
+        {
+            foreach (var o in c.Objects)
+            {
+                var (p, y) = ObjectSpot(o, ca, up, anchor, heightAt);
+                list.Add((o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), Rotated(o.Rotation), o.Scale));
+            }
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// Each copy's anchor point on the grid, its lift (see CopyAt), and the height its anchored objects stand at.
+    /// </summary>
+    /// <param name="at">The grid point pasted at.</param>
+    /// <param name="heightAt">The ground's height at a grid point.</param>
+    private IEnumerable<(Vector2 Ca, float Up, float Anchor)> CopyAnchors(Vector2 at, Func<Vector2, float> heightAt)
+    {
         float baseH = heightAt(at) + Offset;
         for (int k = 0; k < Count; k++)
         {
             var (ca, up) = CopyAt(at, k);
             float anchor = (Direction == Along.Up ? baseH : heightAt(ca) + Offset) + up;
-            foreach (var o in c.Objects)
-            {
-                var p = ca + Xf(new Vector2(o.Dx, o.Dz));
-                float y = o.Follow ? heightAt(p) + o.Dy + up : anchor + o.Dy;
-                list.Add((o.Prefab, new Vector3(ox + p.X, y, oz + p.Y), Rotated(o.Rotation), o.Scale));
-            }
+            yield return (ca, up, anchor);
         }
-        return list;
+    }
+
+    /// <summary>
+    /// Where one object of a copy stands: its grid point and its height (following the ground, or at the anchor).
+    /// </summary>
+    /// <param name="o">The copied object.</param>
+    /// <param name="ca">The copy's anchor point on the grid.</param>
+    /// <param name="up">The copy's lift (see CopyAt).</param>
+    /// <param name="anchor">The height the copy's anchored objects stand at.</param>
+    /// <param name="heightAt">The ground's height at a grid point.</param>
+    private (Vector2 P, float Y) ObjectSpot(CopyData.Obj o, Vector2 ca, float up, float anchor, Func<Vector2, float> heightAt)
+    {
+        var p = ca + Xf(new Vector2(o.Dx, o.Dz));
+        float y = o.Follow ? heightAt(p) + o.Dy + up : anchor + o.Dy;
+        return (p, y);
     }
 
     /// <summary>

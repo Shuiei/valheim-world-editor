@@ -148,16 +148,10 @@ public sealed partial class GlView
         _gl.BindVertexArray(_terrainVao);
         uint vbo = _terrainVbo = _own.Buffer();
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
-        fixed (float* p = v)
-        {
-            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(v.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
+        _own.Upload(BufferTargetARB.ArrayBuffer, v);
         uint ebo = _terrainEbo = _own.Buffer();
         _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, ebo);
-        fixed (uint* p = idx)
-        {
-            _gl.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(idx.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
+        _own.Upload(BufferTargetARB.ElementArrayBuffer, idx);
         for (uint a = 0; a < 3; a++)
         {
             _gl.EnableVertexAttribArray(a);

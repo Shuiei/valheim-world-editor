@@ -116,11 +116,18 @@ public static class Ui
     {
         var s = new Slider { Minimum = min, Maximum = max, SmallChange = step, TickFrequency = step, IsSnapToTickEnabled = true, Value = value };
         shown.Text = format(value);
+        StyleValueText(shown);
+        s.ValueChanged += (_, e) => { shown.Text = format(e.NewValue); set(e.NewValue); };
+        return s;
+    }
+
+    /// <summary>Styles a row's value text: small, centred vertically, a little apart from the slider before it.</summary>
+    /// <param name="shown">The value's text block.</param>
+    public static void StyleValueText(TextBlock shown)
+    {
         shown.FontSize = 12;
         shown.VerticalAlignment = VerticalAlignment.Center;
         shown.Margin = new Thickness(6, 0, 0, 0);
-        s.ValueChanged += (_, e) => { shown.Text = format(e.NewValue); set(e.NewValue); };
-        return s;
     }
 
     /// <summary>

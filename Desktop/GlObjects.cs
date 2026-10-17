@@ -68,20 +68,28 @@ public sealed class GlObjects
         _gl.BindVertexArray(vao);
         uint vbo = Buffer();
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
-        fixed (float* p = v)
-        {
-            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(v.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
+        Upload(BufferTargetARB.ArrayBuffer, v);
         uint ebo = Buffer();
         _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, ebo);
-        fixed (uint* p = idx)
-        {
-            _gl.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(idx.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
+        Upload(BufferTargetARB.ElementArrayBuffer, idx);
         _gl.EnableVertexAttribArray(0);
         _gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
         _gl.BindVertexArray(0);
         return (vao, vbo, ebo);
+    }
+
+    /// <summary>
+    /// Copies an array into the buffer bound to a target, as static data.
+    /// </summary>
+    /// <typeparam name="T">The element type (unmanaged, as the GL reads it).</typeparam>
+    /// <param name="target">The buffer target the buffer is bound to.</param>
+    /// <param name="data">The data to copy.</param>
+    public unsafe void Upload<T>(BufferTargetARB target, T[] data) where T : unmanaged
+    {
+        fixed (T* p = data)
+        {
+            _gl.BufferData(target, (nuint)(data.Length * sizeof(T)), p, BufferUsageARB.StaticDraw);
+        }
     }
 
     /// <summary>

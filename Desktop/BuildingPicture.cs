@@ -298,18 +298,27 @@ public static class BuildingPicture
                     }
                     var under = new Vector3(rgba[at * 4], rgba[at * 4 + 1], rgba[at * 4 + 2]);
                     colour = (colour * alpha + under * below) / total;
-                    rgba[at * 4] = (byte)Math.Clamp(colour.X, 0, 255);
-                    rgba[at * 4 + 1] = (byte)Math.Clamp(colour.Y, 0, 255);
-                    rgba[at * 4 + 2] = (byte)Math.Clamp(colour.Z, 0, 255);
+                    SetColour(rgba, at, colour);
                     rgba[at * 4 + 3] = (byte)Math.Clamp(total * 255, 0, 255);
                     continue;
                 }
                 depth[at] = z;
-                rgba[at * 4] = (byte)Math.Clamp(colour.X, 0, 255);
-                rgba[at * 4 + 1] = (byte)Math.Clamp(colour.Y, 0, 255);
-                rgba[at * 4 + 2] = (byte)Math.Clamp(colour.Z, 0, 255);
+                SetColour(rgba, at, colour);
                 rgba[at * 4 + 3] = 255;
             }
         }
+    }
+
+    /// <summary>
+    /// Sets a pixel's red, green and blue (its alpha is left to the caller), each clamped to a byte.
+    /// </summary>
+    /// <param name="rgba">The picture's pixels, four bytes each.</param>
+    /// <param name="at">The pixel's index.</param>
+    /// <param name="colour">The colour to set.</param>
+    private static void SetColour(byte[] rgba, int at, Vector3 colour)
+    {
+        rgba[at * 4] = (byte)Math.Clamp(colour.X, 0, 255);
+        rgba[at * 4 + 1] = (byte)Math.Clamp(colour.Y, 0, 255);
+        rgba[at * 4 + 2] = (byte)Math.Clamp(colour.Z, 0, 255);
     }
 }
