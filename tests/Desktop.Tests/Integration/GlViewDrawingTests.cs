@@ -44,14 +44,12 @@ public sealed class GlViewDrawingTests(EditorProcess editor) : IDisposable
     /// <summary>
     /// Sends the commands in turn; returns the last answer.
     /// </summary>
-    private JsonElement Do(params string[] commands)
+    private void Do(params string[] commands)
     {
-        JsonElement last = default;
         foreach (string c in commands)
         {
-            last = editor.Send(c);
+            editor.Send(c);
         }
-        return last;
     }
 
     /// <summary>

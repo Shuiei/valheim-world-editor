@@ -39,7 +39,7 @@ public static class BuildingPicture
     ];
 
     /// <summary>A triangle to draw, in view space.</summary>
-    private struct Tri
+    private struct Tri : IEquatable<Tri>
     {
         /// <summary>The corners.</summary>
         public Vector3 A, B, C;
@@ -57,6 +57,15 @@ public static class BuildingPicture
         /// A see-through material's alpha (times its texture's), blended over what is drawn before it; 0: opaque.
         /// </summary>
         public float Alpha;
+
+        /// <summary>Equal when every field is equal (the texture by its own equality).</summary>
+        public readonly bool Equals(Tri other) => A.Equals(other.A) && B.Equals(other.B) && C.Equals(other.C) && Ua.Equals(other.Ua) && Ub.Equals(other.Ub) && Uc.Equals(other.Uc) && Colour.Equals(other.Colour) && EqualityComparer<ModelStore.ImageData?>.Default.Equals(Texture, other.Texture) && UvTransform.Equals(other.UvTransform) && Cutoff.Equals(other.Cutoff) && Alpha.Equals(other.Alpha);
+
+        /// <summary>Equal to another triangle with the same fields.</summary>
+        public override readonly bool Equals(object? obj) => obj is Tri t && Equals(t);
+
+        /// <summary>A hash of the fields, equal for equal triangles.</summary>
+        public override readonly int GetHashCode() => HashCode.Combine(HashCode.Combine(A, B, C, Ua), HashCode.Combine(Ub, Uc, Colour, Texture), HashCode.Combine(UvTransform, Cutoff, Alpha));
     }
 
     /// <summary>A PNG of the pieces, size × size pixels.</summary>

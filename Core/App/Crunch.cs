@@ -692,7 +692,7 @@ public static class Crunch
             }
             ushort[] sel = new ushort[num * 3];
             uint s0Linear = 0, s1Linear = 0;
-            for (int i = 0; i < sel.Length;)
+            for (int i = 0; i < sel.Length; i += 3)
             {
                 uint s0 = 0, s1 = 0;
                 for (int j = 0; j < 24; j += 6)
@@ -705,9 +705,9 @@ public static class Crunch
                     s1Linear ^= (uint)_codec.Decode(dm) << j;
                     s1 |= (uint)fromLinear[(s1Linear >> j) & 0x3F] << j;
                 }
-                sel[i++] = (ushort)s0;
-                sel[i++] = (ushort)((s0 >> 16) | (s1 << 8));
-                sel[i++] = (ushort)(s1 >> 8);
+                sel[i] = (ushort)s0;
+                sel[i + 1] = (ushort)((s0 >> 16) | (s1 << 8));
+                sel[i + 2] = (ushort)(s1 >> 8);
             }
             return sel;
         }

@@ -48,7 +48,7 @@ public sealed partial class WorldGenerator
     /// </summary>
     /// <param name="at">Where.</param>
     /// <param name="width">How wide, metres: the ground reads it as the point's radius.</param>
-    private readonly struct RiverPoint(Vector2 at, float width)
+    private readonly struct RiverPoint(Vector2 at, float width) : IEquatable<RiverPoint>
     {
         /// <summary>
         /// Where.
@@ -62,6 +62,15 @@ public sealed partial class WorldGenerator
         /// The width squared (rounded to float as the game's).
         /// </summary>
         public readonly float WidthSquared = (float)((double)width * width);
+
+        /// <summary>Equal when the point, its width and its squared width are equal.</summary>
+        public readonly bool Equals(RiverPoint other) => At.Equals(other.At) && Width.Equals(other.Width) && WidthSquared.Equals(other.WidthSquared);
+
+        /// <summary>Equal to another point with the same position and widths.</summary>
+        public override readonly bool Equals(object? obj) => obj is RiverPoint p && Equals(p);
+
+        /// <summary>A hash of the position and widths, equal for equal points.</summary>
+        public override readonly int GetHashCode() => HashCode.Combine(At, Width, WidthSquared);
     }
 
     /// <summary>

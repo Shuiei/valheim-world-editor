@@ -756,7 +756,8 @@ public sealed class PlaceTool
     /// </summary>
     private static (Vector2 Q, int Seg, float T)? AlongRun(List<Vector2> pts, Vector2 s, int seg, float t0, float dist)
     {
-        for (; seg < pts.Count - 1; seg++, t0 = 0)
+        float tStart = t0;
+        for (; seg < pts.Count - 1; seg++, tStart = 0)
         {
             Vector2 a = pts[seg], d = pts[seg + 1] - a, f = a - s;
             float dd = d.LengthSquared(), b = 2 * Vector2.Dot(f, d), c = f.LengthSquared() - dist * dist, disc = b * b - 4 * dd * c;
@@ -768,7 +769,7 @@ public sealed class PlaceTool
             // A millimetre of slack at the end: float rounding over a whole ring of pieces otherwise
             // leaves the last one just past the end, and the ring one piece short.
             float slack = 1e-3f / MathF.Sqrt(dd);
-            if (t >= t0 - 1e-6f && t <= 1 + slack)
+            if (t >= tStart - 1e-6f && t <= 1 + slack)
             {
                 t = MathF.Min(t, 1);
                 return (a + d * t, seg, t);
