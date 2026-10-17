@@ -9,7 +9,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// The status bar in another language (the made-up one: PseudoLang): a message is shown in it while its English is
 /// kept for Claude, who reads it back in editor_state; a message added to keeps each side's language; a text put
 /// there directly is the same for both. The questions about saving, discarding, leaving and quitting are catalogue
-/// texts, titles and buttons too.
+/// texts, titles and buttons too. The Script tool's question and its run's messages are in the language, what
+/// Claude's run_script is told in English.
 /// </summary>
 [Collection("DataDir")]
 public sealed class MainWindowLangTests
@@ -104,6 +105,57 @@ public sealed class MainWindowLangTests
             Assert.StartsWith(PseudoLang.Open.ToString(), r.W.MessageText.Text);
             Assert.Matches(@"^Applied to the running game: \d+ object\(s\) removed, 0 created", r.W.LastMessageEn);
             Assert.DoesNotContain(PseudoLang.Open, r.W.LastMessageEn);
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task TheScriptToolSpeaksTheLanguageAndClaudeReadsEnglish()
+    {
+        string data = Path.Combine(Path.GetTempPath(), "vwe-script-lang-" + Guid.NewGuid().ToString("N")[..8]);
+        string? old = AppSettings.DataDirOverride;
+        AppSettings.DataDirOverride = data;
+        try
+        {
+            using var pseudo = new PseudoLang();
+            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+            w.Show();
+            Dispatcher.UIThread.RunJobs();
+
+            await w.RunScript();
+            Assert.Equal(PseudoLang.Wrap("Open an area first: a script works on the open area."), w.MessageText.Text);
+            Assert.Equal("Open an area first: a script works on the open area.", w.LastMessageEn);
+
+            // Saving over another saved script asks first: its title, question and buttons.
+            Directory.CreateDirectory(ScriptPanel.Folder);
+            File.WriteAllText(Path.Combine(ScriptPanel.Folder, "mine.csx"), "Print(1);");
+            w.ScriptPanel.Fill();
+            w.ScriptPanel.NameBox.Text = "mine";
+            var saving = w.ScriptPanel.Save();
+            var d = TestWindows.Shown(w);
+            Assert.Empty(PseudoLang.Untranslated(d));
+            DialogsTests.Press(d, Lang.T("common.cancel"));
+            await saving;
+            Assert.Equal("Print(1);", File.ReadAllText(Path.Combine(ScriptPanel.Folder, "mine.csx")));
+
+            // A run: what became of it is shown in the language after what the script printed, and is English for
+            // Claude (run_script answers with the English output).
+            var s = TestScenes.Flat(2);
+            w.View.Show(s.Scene, null);
+            w.Edit(s);
+            var r = await w.RunScriptCode("Print(\"hi\"); Ground.Raise(32, 32, 1);", "Script: test");
+            Assert.True(r.Changed);
+            Assert.StartsWith("hi\n" + PseudoLang.Open + "The script changed ", r.Output.Shown);
+            Assert.StartsWith("hi\nThe script changed ", r.Output.English);
+            Assert.DoesNotContain(PseudoLang.Open, r.Output.English);
+            Assert.DoesNotContain(PseudoLang.Open, r.Message.English);
+        }
+        finally
+        {
+            AppSettings.DataDirOverride = old;
+            if (Directory.Exists(data))
+            {
+                Directory.Delete(data, true);
+            }
         }
     }
 }

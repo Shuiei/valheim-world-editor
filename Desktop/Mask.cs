@@ -1,3 +1,5 @@
+using TerrainEditor.App;
+
 namespace TerrainEditor.Desktop;
 
 /// <summary>
@@ -67,23 +69,25 @@ public sealed class Mask
     /// <summary>
     /// Settings that let (almost) nothing through.
     /// </summary>
+    /// <param name="english">In English (what Claude is told) rather than the language in use (the Mask panel).</param>
     /// <returns>The warnings joined in one line, or empty when the settings are fine.</returns>
-    public string Warning()
+    public string Warning(bool english = false)
     {
-        var w = new List<string>();
+        var w = new List<Said>();
         if (SlopeMax is <= 0)
         {
-            w.Add($"Slope max {SlopeMax}° only lets perfectly flat ground through: empty the box for no limit.");
+            w.Add(Said.Of("mask.error.flatOnly", SlopeMax));
         }
         if (SlopeMin is float a && SlopeMax is float b && a > b)
         {
-            w.Add("Slope min is above max: nothing matches.");
+            w.Add(Said.Of("mask.error.slopeRange"));
         }
         if (HeightMin is float c && HeightMax is float d && c > d)
         {
-            w.Add("Height min is above max: nothing matches.");
+            w.Add(Said.Of("mask.error.heightRange"));
         }
-        return string.Join(" ", w);
+        var said = Said.Join(" ", w);
+        return english ? said.English : said.Shown;
     }
 
     /// <summary>

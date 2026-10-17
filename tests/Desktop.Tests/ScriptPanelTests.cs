@@ -35,7 +35,7 @@ public sealed class ScriptPanelTests : IDisposable
     {
         var p = new ScriptPanel();
         var said = new List<string>();
-        p.Message += said.Add;
+        p.Message += m => said.Add(m.Shown);
         p.Fill();
         Assert.Equal(-1, p.ScriptBox.SelectedIndex);
         int examples = ScriptExamples.All.Length;
@@ -98,7 +98,7 @@ public sealed class ScriptPanelTests : IDisposable
         File.WriteAllText(ScriptPanel.Folder, "not a folder");
         var p = new ScriptPanel();
         string? said = null;
-        p.Message += m => said = m;
+        p.Message += m => said = m.Shown;
         p.NameBox.Text = "mine";
         p.SaveButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
         Assert.StartsWith("Could not save the script: ", said);

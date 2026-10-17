@@ -17,18 +17,41 @@ namespace TerrainEditor.Desktop;
 public sealed record ZoneFilter(IReadOnlySet<int> Biomes, bool NoBuildings, int Distance, bool NoEdits, bool OnlyGenerated, float? MinRadius, float? MaxRadius)
 {
     /// <summary>
-    /// The biomes offered (the map's filter, the Mask): their Heightmap.Biome values and names, in the web editor's
-    /// order.
+    /// The biomes offered (the map's filter, the Mask), in the web editor's order.
     /// </summary>
-    public static readonly (int Value, string Name)[] BiomeChoices =
+    private static readonly ValheimGen.Heightmap.Biome[] Offered =
     [
-        .. new[]
-        {
-            ValheimGen.Heightmap.Biome.Meadows, ValheimGen.Heightmap.Biome.BlackForest, ValheimGen.Heightmap.Biome.Swamp, ValheimGen.Heightmap.Biome.Mountain,
-            ValheimGen.Heightmap.Biome.Plains, ValheimGen.Heightmap.Biome.Mistlands, ValheimGen.Heightmap.Biome.AshLands, ValheimGen.Heightmap.Biome.DeepNorth,
-            ValheimGen.Heightmap.Biome.Ocean,
-        }.Select(b => ((int)b, NewWorldPage.Name(b))),
+        ValheimGen.Heightmap.Biome.Meadows, ValheimGen.Heightmap.Biome.BlackForest, ValheimGen.Heightmap.Biome.Swamp, ValheimGen.Heightmap.Biome.Mountain,
+        ValheimGen.Heightmap.Biome.Plains, ValheimGen.Heightmap.Biome.Mistlands, ValheimGen.Heightmap.Biome.AshLands, ValheimGen.Heightmap.Biome.DeepNorth,
+        ValheimGen.Heightmap.Biome.Ocean,
     ];
+
+    /// <summary>
+    /// The biomes offered (the map's filter, the Mask): their Heightmap.Biome values and names as the game shows them,
+    /// in the web editor's order.
+    /// </summary>
+    /// <param name="english">The English names (what Claude is told and names biomes by) rather than the language in
+    /// use.</param>
+    public static (int Value, string Name)[] BiomeChoices(bool english = false) =>
+        [.. Offered.Select(b => ((int)b, english ? BiomeName(b).English : BiomeName(b).Shown))];
+
+    /// <summary>
+    /// A biome's name as the game shows it, in both languages (the type's own name for one not offered).
+    /// </summary>
+    /// <param name="b">The biome.</param>
+    public static Said BiomeName(ValheimGen.Heightmap.Biome b) => b switch
+    {
+        ValheimGen.Heightmap.Biome.Meadows => Said.Of("biome.meadows"),
+        ValheimGen.Heightmap.Biome.BlackForest => Said.Of("biome.blackForest"),
+        ValheimGen.Heightmap.Biome.Swamp => Said.Of("biome.swamp"),
+        ValheimGen.Heightmap.Biome.Mountain => Said.Of("biome.mountain"),
+        ValheimGen.Heightmap.Biome.Plains => Said.Of("biome.plains"),
+        ValheimGen.Heightmap.Biome.Mistlands => Said.Of("biome.mistlands"),
+        ValheimGen.Heightmap.Biome.AshLands => Said.Of("biome.ashlands"),
+        ValheimGen.Heightmap.Biome.DeepNorth => Said.Of("biome.deepNorth"),
+        ValheimGen.Heightmap.Biome.Ocean => Said.Of("biome.ocean"),
+        _ => Said.Raw(b.ToString()),
+    };
 
     /// <summary>
     /// Picks the zones matching the filter out of <c>ZoneStats.Compute</c>'s rows. A zone with pieces never

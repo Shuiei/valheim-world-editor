@@ -1653,7 +1653,7 @@ public sealed partial class MainWindow : Window
     {
         if (Session == null)
         {
-            MessageText.Text = "Open an area first: a script works on the open area.";
+            Msg("script.msg.noArea");
             return;
         }
         if (_stopScript != null)
@@ -1661,13 +1661,13 @@ public sealed partial class MainWindow : Window
             return;
         }
         var panel = ScriptPanel;
-        string name = panel.ScriptBox.SelectedItem as string ?? "script";
+        string name = panel.ChosenName ?? Lang.T("script.unnamed");
         panel.Running(true);
         try
         {
-            var r = await RunScriptCode(panel.CodeBox.Text ?? "", $"Script: {name.Replace("Example: ", "", StringComparison.Ordinal)}", t => panel.Output.Text = t);
-            panel.Output.Text = r.Output;
-            MessageText.Text = r.Message;
+            var r = await RunScriptCode(panel.CodeBox.Text ?? "", Lang.T("script.undo", name), t => panel.Output.Text = t);
+            panel.Output.Text = r.Output.Shown;
+            Msg(r.Message);
         }
         finally
         {
@@ -1679,9 +1679,21 @@ public sealed partial class MainWindow : Window
     /// What a script gave.
     /// </summary>
     /// <param name="Changed">Whether its changes went in.</param>
-    /// <param name="Output">What it printed and what became of it.</param>
-    /// <param name="Message">The status bar's line.</param>
-    internal sealed record ScriptOutcome(bool Changed, string Output, string Message);
+    /// <param name="Output">What it printed and what became of it, the latter in both languages (Claude's in English).</param>
+    /// <param name="Message">The status bar's line, in both languages.</param>
+    internal sealed record ScriptOutcome(bool Changed, Said Output, Said Message);
+
+    /// <summary>
+    /// What a script printed, then what became of it (<paramref name="end"/>) in each language: the printed text is the
+    /// same in both.
+    /// </summary>
+    /// <param name="printed">What the script printed (empty for none).</param>
+    /// <param name="end">What became of it.</param>
+    private static Said Printed(System.Text.StringBuilder printed, Said end)
+    {
+        string text = printed.ToString();
+        return new(text + end.Shown, text + end.English);
+    }
 
     /// <summary>
     /// A script on the open area (the Script tool's Run, Claude's run_script): compiled in the background, run in a
@@ -1691,19 +1703,19 @@ public sealed partial class MainWindow : Window
     /// </summary>
     /// <param name="code">The script's C# source.</param>
     /// <param name="label">The undo step's name.</param>
-    /// <param name="progress">Told "Compiling…", then "Running…".</param>
+    /// <param name="progress">Told "Compiling…", then "Running…" (in the language in use).</param>
     /// <param name="apply">False: a dry run, only what it would change is said.</param>
     internal async Task<ScriptOutcome> RunScriptCode(string code, string label, Action<string>? progress = null, bool apply = true)
     {
         if (Session is not { } s)
         {
-            return new(false, "", "Open an area first: a script works on the open area.");
+            return new(false, Said.Empty, Said.Of("script.msg.noArea"));
         }
         if (_stopScript != null)
         {
-            return new(false, "", "A script is already running: nothing changed.");
+            return new(false, Said.Empty, Said.Of("script.msg.busy"));
         }
-        progress?.Invoke("Compiling…");
+        progress?.Invoke(Lang.T("script.msg.compiling"));
         using var cancel = new CancellationTokenSource(TimeSpan.FromMinutes(2));
         _stopScript = cancel.Cancel;
         var snap = ScriptHost.Take(s, NameOfPrefab);
@@ -1714,72 +1726,73 @@ public sealed partial class MainWindow : Window
             var (image, pdb, errors) = await Task.Run(() => ScriptHost.Compile(code));
             if (image == null)
             {
-                return new(false, "The script has mistakes:\n" + string.Join("\n", errors), "The script has mistakes (see below it): nothing changed.");
+                return new(false, Said.Of("script.msg.mistakesBelow", string.Join("\n", errors)), Said.Of("script.msg.mistakes"));
             }
-            progress?.Invoke("Running…");
+            progress?.Invoke(Lang.T("script.msg.running"));
             var ch = await ScriptHost.RunInChild(image, pdb, snap, cancel.Token);
             if (Session != s)
             {
-                string gone = Session == null
-                    ? "The area was closed while the script ran: nothing changed."
-                    : "Another area was opened while the script ran: nothing changed.";
-                return new(false, ch.Output + gone, gone);
+                var gone = Session == null ? Said.Of("script.msg.closed") : Said.Of("script.msg.otherArea");
+                return new(false, Printed(ch.Output, gone), gone);
             }
             // Its heights and object numbers are those of the area when it started: changed since (a
             // stroke, an undo, a save that read the world again), they would undo that or hit other objects.
             if (s.Generation != generation)
             {
-                return new(false, ch.Output + "The area changed while the script ran: nothing changed. Run it again.", "The area changed while the script ran: nothing changed. Run it again.");
+                var changed = Said.Of("script.msg.areaChanged");
+                return new(false, Printed(ch.Output, changed), changed);
             }
             if (ch.Empty)
             {
-                return new(false, ch.Output + "The script ran and changed nothing.", "The script ran and changed nothing.");
+                var nothing = Said.Of("script.msg.nothing");
+                return new(false, Printed(ch.Output, nothing), nothing);
             }
-            var parts = new List<string>();
+            var parts = new List<Said>();
             if (ch.Heights.Count > 0)
             {
-                parts.Add($"{ch.Heights.Count:N0} ground point(s)");
+                parts.Add(Said.Of("script.count.points", ch.Heights.Count));
             }
 
             if (ch.Paint.Count > 0)
             {
-                parts.Add($"{ch.Paint.Count:N0} painted");
+                parts.Add(Said.Of("script.count.painted", ch.Paint.Count));
             }
 
             if (ch.Add.Count > 0)
             {
-                parts.Add($"{ch.Add.Count:N0} object(s) placed");
+                parts.Add(Said.Of("script.count.placed", ch.Add.Count));
             }
 
             int moves = ch.Moves.Keys.Count(i => !ch.Remove.Contains(i));
             if (moves > 0)
             {
-                parts.Add($"{moves:N0} moved");
+                parts.Add(Said.Of("script.count.moved", moves));
             }
 
             if (ch.Remove.Count > 0)
             {
-                parts.Add($"{ch.Remove.Count:N0} taken away");
+                parts.Add(Said.Of("script.count.removed", ch.Remove.Count));
             }
 
+            var counts = Said.Join(", ", parts);
             if (!apply)
             {
-                string would = $"Dry run: the script would change {string.Join(", ", parts)}; nothing changed.";
-                return new(false, ch.Output + would, would);
+                var would = Said.Of("script.msg.dryRun", counts);
+                return new(false, Printed(ch.Output, would), would);
             }
             int clamped = ScriptHost.Apply(s, ch, label);
-            string what = $"The script changed {string.Join(", ", parts)} in {watch.Elapsed.TotalSeconds:0.0} s; Ctrl+Z takes it all back."
-                + (clamped > 0 ? $" {clamped:N0} point(s) stopped at the game's ±8 m (Ground.NoLimit = true lets them go further)." : "");
+            var what = Said.Of("script.msg.changed", counts, watch.Elapsed.TotalSeconds)
+                + (clamped > 0 ? Said.Of("script.msg.clamped", clamped) : Said.Empty);
             UpdateSaveBar();
-            return new(true, ch.Output + what, what);
+            return new(true, Printed(ch.Output, what), what);
         }
         catch (OperationCanceledException)
         {
-            return new(false, "Stopped: nothing changed.", "The script was stopped (or ran 2 minutes): nothing changed.");
+            return new(false, Said.Of("script.msg.stoppedBelow"), Said.Of("script.msg.stopped"));
         }
         catch (Exception ex)
         {
-            return new(false, $"The script stopped with an error, nothing changed:\n{ScriptHost.Describe(ex)}", "The script stopped with an error (see below it): nothing changed.");
+            return new(false, Said.Of("script.msg.errorBelow", ScriptHost.Describe(ex)), Said.Of("script.msg.error"));
         }
         finally
         {
@@ -2840,8 +2853,8 @@ public sealed partial class MainWindow : Window
     {
         ScriptPanel.RunAsked += () => _ = RunScript();
         ScriptPanel.StopAsked += () => _stopScript?.Invoke();
-        ScriptPanel.Message += t => MessageText.Text = t;
-        ScriptPanel.Confirm = text => Dialogs.Ask(this, "Save the script", text, "Replace");
+        ScriptPanel.Message += Msg;
+        ScriptPanel.Confirm = text => Dialogs.Ask(this, Lang.T("script.ask.replace.title"), text, Lang.T("script.ask.replace.yes"));
     }
 
     /// <summary>
