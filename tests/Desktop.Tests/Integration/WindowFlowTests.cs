@@ -16,15 +16,14 @@ namespace TerrainEditor.Desktop.Tests;
 public class WindowFlowTests
 {
     private static readonly Func<Formula.Env, double> Two = Formula.Compile("2", []);
+    private static readonly string[] Expected1 = ["Leave the world", "Leave the world"];
 
     /// <summary>
     /// A main window on its own copy of the test world, with what it tells and asks collected and every question
     /// answered with <c>Answer</c>; deleted when disposed.
     /// </summary>
-    private sealed class Run : IDisposable
+    private sealed class Run : CopiedWorldWindow
     {
-        public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
-        public string Dir { get; } = Fixtures.CopyFixture();
         public List<string> Told { get; } = [];
         public List<string> Asked { get; } = [];
         public bool Answer { get; set; }
@@ -58,16 +57,6 @@ public class WindowFlowTests
         }
 
         public int SaveNumber => WorldSave.Load(Dir).SaveNumber;
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            string folder = Path.GetDirectoryName(Dir)!;
-            if (Directory.Exists(folder))
-            {
-                Directory.Delete(folder, true);
-            }
-        }
     }
 
     [AvaloniaFact]
@@ -175,7 +164,7 @@ public class WindowFlowTests
         await r.W.LeaveWorld();
         Assert.Null(r.W.World);
         Assert.NotNull(r.W.StartPage);
-        Assert.Equal(new[] { "Leave the world", "Leave the world" }, r.Asked);
+        Assert.Equal(Expected1, r.Asked);
     }
 
     [AvaloniaFact]

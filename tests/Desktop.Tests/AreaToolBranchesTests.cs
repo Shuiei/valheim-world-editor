@@ -1,5 +1,6 @@
 using System.Numerics;
 using Xunit;
+using static TerrainEditor.Desktop.Tests.AreaToolTestScene;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -10,17 +11,6 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class AreaToolBranchesTests
 {
-    /// <summary>
-    /// A box selection between two grid corners, with this soft edge.
-    /// </summary>
-    private static AreaTool Box(float x0, float z0, float x1, float z1, float soft = 0)
-    {
-        var a = new AreaTool { Soft = soft };
-        a.Points.Add(new Vector2(x0, z0));
-        a.Points.Add(new Vector2(x1, z1));
-        return a;
-    }
-
     /// <summary>
     /// A flat 2 × 2 zone ground at 30 m.
     /// </summary>

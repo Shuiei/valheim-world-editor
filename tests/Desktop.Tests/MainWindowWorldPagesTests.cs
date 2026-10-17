@@ -101,8 +101,7 @@ public class MainWindowWorldPagesTests
     {
         using var r = new WorldWindowRun();
         await r.Open();
-        var scene = r.W.View.Scene!;
-        var load = r.W.EditBlock(scene.X0, scene.Z0, scene.ZonesX, scene.ZonesZ);
+        var (scene, load) = ViewAreaReload.Start(r);
         r.W.ShowMap();
         await load;
         Assert.Equal("That area was not opened: the map or another area was asked for while it loaded.", r.Said);
@@ -136,8 +135,7 @@ public class MainWindowWorldPagesTests
     {
         using var r = new WorldWindowRun();
         await r.Open();
-        var scene = r.W.View.Scene!;
-        var load = r.W.EditBlock(scene.X0, scene.Z0, scene.ZonesX, scene.ZonesZ);
+        var (scene, load) = ViewAreaReload.Start(r);
         await r.W.LeaveWorld();
         await load;
         Assert.Null(r.W.World);

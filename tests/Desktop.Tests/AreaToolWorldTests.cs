@@ -18,18 +18,12 @@ public class AreaToolWorldTests
     /// </summary>
     private static (MainWindow W, EditSession S, string Dir) Open()
     {
-        string dir = Fixtures.CopyFixture();
-        var scene = WorldScene.Load(dir, 0, 0, 1);
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        w.View.Show(scene, null);
-        w.Edit(scene.Session!);
-        w.Tools.ChooseMode(ToolMode.Area);
+        var (w, s, dir) = TestWindows.AreaToolOnWorldCopy();
         // The whole zone (its outer line stays: it is locked).
         w.View.Area.Points.Add(new Vector2(2, 2));
         w.View.Area.Points.Add(new Vector2(62, 62));
         w.View.Area.Notify();
-        return (w, scene.Session!, dir);
+        return (w, s, dir);
     }
 
     /// <summary>

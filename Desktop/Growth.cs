@@ -1,6 +1,4 @@
-using System.Numerics;
 using TerrainEditor.App;
-using TerrainEditor.Editing;
 using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
@@ -10,7 +8,7 @@ namespace TerrainEditor.Desktop;
 /// over a rectangle of the world, for the Area tool's Regrow and the Mountain tool: the spots kept by
 /// keep, not where something already stands (a tree still there is not doubled) or near buildings.
 /// </summary>
-public static class Growth
+public static partial class Growth
 {
     /// <summary>
     /// The spots the game would grow in the rectangle, less those near what already stands (anything within 1 m,
@@ -51,71 +49,7 @@ public static class Growth
         {
             return kept;
         }
-        // Only what stands within 4 m of a kept spot can stop it (the farthest test below); a metre more against
-        // rounding.
-        float minX = kept.Min(o => o.X) - (Farthest + 1), maxX = kept.Max(o => o.X) + (Farthest + 1);
-        float minZ = kept.Min(o => o.Z) - (Farthest + 1), maxZ = kept.Max(o => o.Z) + (Farthest + 1);
-        List<(float X, float Z, string? Name, ObjectKind Kind)> standing = [];
-        lock (s.Things)
-        {
-            foreach (var t in s.Things)
-            {
-                if (t.Gone || !(t.Position.X > minX && t.Position.X < maxX && t.Position.Z > minZ && t.Position.Z < maxZ))
-                {
-                    continue;
-                }
-                string? name = nameOf(t.Prefab);
-                standing.Add((t.Position.X, t.Position.Z, name, ObjectKinds.Of(name, t.Piece, t.Tamed)));
-            }
-        }
-        return await Task.Run(() =>
-        {
-            // In cells wider than the farthest test, so a spot looks only at its own cell and the eight around it.
-            var cells = new Dictionary<(int, int), List<int>>();
-            for (int i = 0; i < standing.Count; i++)
-            {
-                var key = (Cell(standing[i].X), Cell(standing[i].Z));
-                if (!cells.TryGetValue(key, out var list))
-                {
-                    cells[key] = list = [];
-                }
-                list.Add(i);
-            }
-            bool Near(Regrow.Spot o, float d, Func<string?, ObjectKind, bool> test)
-            {
-                int cx = Cell(o.X), cz = Cell(o.Z);
-                for (int dz = -1; dz <= 1; dz++)
-                {
-                    for (int dx = -1; dx <= 1; dx++)
-                    {
-                        if (cells.TryGetValue((cx + dx, cz + dz), out var list) && list.Exists(i =>
-                        {
-                            var (x, z, name, kind) = standing[i];
-                            return MathF.Abs(x - o.X) < d && MathF.Abs(z - o.Z) < d && MathF.Sqrt((x - o.X) * (x - o.X) + (z - o.Z) * (z - o.Z)) < d && test(name, kind);
-                        }))
-                        {
-                            return true;
-                        }
-                    }
-                }
-                return false;
-            }
-            return kept.Where(o => !Near(o, 1, (_, _) => true) && !Near(o, 3, (n, _) => n == o.Name) && !Near(o, Farthest, (_, k) => k == ObjectKind.Buildings)).ToList();
-        });
+        var standing = StandingNear(s, kept, nameOf);
+        return await Task.Run(() => Unobstructed(kept, standing));
     }
-
-    /// <summary>
-    /// The farthest something standing can stop a spot from: a building within 4 m.
-    /// </summary>
-    private const float Farthest = 4;
-
-    /// <summary>
-    /// The cell of a coordinate for the neighbour tests: cells a metre wider than <see cref="Farthest"/>, so whatever
-    /// is close enough is in the same cell or the next one.
-    /// </summary>
-    private static int Cell(float v) => (int)MathF.Floor(v / (Farthest + 1));
-
-    /// <summary>The spots as new objects, in one undo step.</summary>
-    public static void Commit(EditSession session, string label, IEnumerable<Regrow.Spot> spots) =>
-        session.Commit(label, null, [], spots.Select(o => (new NewObject(0, StableHash.Of(o.Name), new Vector3(o.X, o.Y, o.Z), new Vector3(o.Rx, o.Ry, o.Rz), MathF.Abs(o.Scale - 1) < 1e-4f ? 0 : o.Scale), false)).ToList());
 }

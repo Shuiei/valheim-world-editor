@@ -16,6 +16,19 @@ public sealed class PrefsMapTests : IDisposable
     /// <inheritdoc/>
     public void Dispose() => File.Delete(_file);
 
+    /// <summary>
+    /// Remembers this map view (the value of "map.view" in the prefs file), then opens the world in a new window, which
+    /// is returned with its map page.
+    /// </summary>
+    private async Task<MainWindow> OpenWorldWithRememberedView(WorldEditor.Tests.TempWorld world, string view)
+    {
+        File.WriteAllText(_file, $"{{\"map.view\": {view}}}");
+        var w = new MainWindow(load: false, prefs: Prefs.Load(_file)) { Width = 1200, Height = 900 };
+        w.Show();
+        await w.OpenWorld(() => Task.Run(() => WorldSession.Open(world.Dir)), "Opening…");
+        return w;
+    }
+
     [AvaloniaFact]
     public void TheUnsavedMarksCanBeHiddenAndThatIsRemembered()
     {
@@ -83,22 +96,16 @@ public sealed class PrefsMapTests : IDisposable
     [InlineData("[1e39, 2, 3]")]
     public async Task ARememberedPlaceThatMakesNoSenseShowsTheWholeWorld(string json)
     {
-        File.WriteAllText(_file, $"{{\"map.view\": {json}}}");
         using var world = new WorldEditor.Tests.TempWorld();
-        var w = new MainWindow(load: false, prefs: Prefs.Load(_file)) { Width = 1200, Height = 900 };
-        w.Show();
-        await w.OpenWorld(() => Task.Run(() => WorldSession.Open(world.Dir)), "Opening…");
+        var w = await OpenWorldWithRememberedView(world, json);
         Assert.Equal(Vector2.Zero, w.MapPage!.Map.Center);
     }
 
     [AvaloniaFact]
     public async Task AZoomOutOfRangeIsBroughtBack()
     {
-        File.WriteAllText(_file, "{\"map.view\": [10, 20, 500]}");
         using var world = new WorldEditor.Tests.TempWorld();
-        var w = new MainWindow(load: false, prefs: Prefs.Load(_file)) { Width = 1200, Height = 900 };
-        w.Show();
-        await w.OpenWorld(() => Task.Run(() => WorldSession.Open(world.Dir)), "Opening…");
+        var w = await OpenWorldWithRememberedView(world, "[10, 20, 500]");
         Assert.Equal(new Vector2(10, 20), w.MapPage!.Map.Center);
         Assert.Equal(40, w.MapPage.Map.MetersPerPixel, 3);
     }

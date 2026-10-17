@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace TerrainEditor.App;
 
 /// <summary>
@@ -8,7 +6,7 @@ namespace TerrainEditor.App;
 /// reader of its asset bundles (GameBundles). The first time, and after a game update, the bundles are
 /// indexed (a few seconds, in the background; the index is kept in a file).
 /// </summary>
-public static class GameLook
+public static partial class GameLook
 {
     /// <summary>
     /// Valheim's Steam app id (its Proton prefix under compatdata is named by it).
@@ -146,59 +144,12 @@ public static class GameLook
                 // Running without reading: the rest of the game data checked too (from the caches: at once), so
                 // "ready" is said only once it is in use.
                 Set("running", null);
-                Task.Run(() =>
-                {
-                    string state;
-                    string? message;
-                    try
-                    {
-                        (state, message) = GameData.Ensure(game) ? ("ready", null) : ("failed", DataUnread);
-                    }
-                    catch (Exception e)
-                    {
-                        // Whatever fails, the state leaves "running".
-                        Log.Caught(e, "making the game's data ready");
-                        (state, message) = ("failed", "The game's data could not be read: " + e.Message);
-                    }
-                    lock (Lock)
-                    {
-                        if (ReferenceEquals(_bundles, game))
-                        {
-                            Set(state, message);
-                        }
-                    }
-                });
+                Task.Run(() => CheckGameData(game));
                 return;
             }
             Set("running", "Reading the game's files (a few seconds, only after a game update).");
         }
-        Task.Run(() =>
-        {
-            string state, message;
-            // The bar: the bundles' index first (a tenth: its table of contents only), then the game data.
-            void Report(double progress, string step) => _told = new Told(game, progress, step);
-            try
-            {
-                game.EnsureIndexed((done, count) => Report(0.1 * done / Math.Max(1, count), $"Indexing the game's bundles: {done} of {count}"));
-                int n = game.Index.Count;
-                (state, message) = n == 0 ? ("failed", "No models were found in the game's files.")
-                    : !GameData.Ensure(game, (p, step) => Report(0.1 + (0.9 * p), step)) ? ("failed", DataUnread)
-                    : ("ready", "The game's look is ready.");
-            }
-            catch (Exception e)
-            {
-                // Whatever fails, the state leaves "running": the start page would wait for ever.
-                Log.Caught(e, "indexing the game's bundles and data");
-                (state, message) = ("failed", "The game's files could not be read: " + e.Message);
-            }
-            lock (Lock)
-            {
-                if (ReferenceEquals(_bundles, game))
-                {
-                    Set(state, message);
-                }
-            }
-        });
+        Task.Run(() => IndexBundles(game));
     }
 
     /// <summary>
@@ -238,228 +189,18 @@ public static class GameLook
     }
 
     /// <summary>
-    /// The copy older editors made (up to 1.16): about 150 MB nothing reads any more. Called by the app
-    /// at start (not by the tests' editors: their data folder is the user's).
+    /// Sets the state a background reading ended with, unless the game folder has changed since it began.
     /// </summary>
-    public static void DeleteOldCopy()
+    /// <param name="game">The reader the reading was about.</param>
+    /// <param name="state">The state it ended in.</param>
+    /// <param name="message">Its message, or null.</param>
+    internal static void FinishReading(GameBundles game, string state, string? message)
     {
-        foreach (string d in new[] { Dir, OldCache })
+        lock (Lock)
         {
-            try
+            if (ReferenceEquals(_bundles, game))
             {
-                if (Directory.Exists(d))
-                {
-                    Directory.Delete(d, true);
-                    Console.WriteLine($"game look: deleted the old copy in {d}");
-                }
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-            {
-                Log.Caught(e, "deleting the game look's old copy (left)");
-            }
-        }
-    }
-
-    // ---- Finding things.
-
-    /// <summary>
-    /// The data folder of a Valheim game folder, the one holding StreamingAssets and Managed: valheim_Data (either
-    /// spelling) on Windows and Linux; on a Mac, the app bundle's Contents/Resources/Data (valheim.app in the folder
-    /// Steam installed the game into). Null when the folder holds neither, with the game's bundles in it.
-    /// </summary>
-    public static string? DataDir(string valheim)
-    {
-        foreach (string sub in new[] { "valheim_Data", "Valheim_Data" })
-        {
-            string d = Path.Combine(valheim, sub);
-            if (Directory.Exists(BundlesIn(d)))
-            {
-                return d;
-            }
-        }
-        try
-        {
-            foreach (string app in Directory.EnumerateDirectories(valheim, "*.app").Order(StringComparer.Ordinal))
-            {
-                string d = Path.Combine(app, "Contents", "Resources", "Data");
-                if (Directory.Exists(BundlesIn(d)))
-                {
-                    return d;
-                }
-            }
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
-        {
-            Log.CaughtBrief(e, "looking for the game's data folder in a Mac app (none)");
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// The bundles folder of a Valheim game folder (StreamingAssets/SoftRef/Bundles in its data folder, see
-    /// <see cref="DataDir"/>), or null.
-    /// </summary>
-    public static string? BundlesDir(string valheim) => DataDir(valheim) is string d ? BundlesIn(d) : null;
-
-    /// <summary>The bundles folder inside a game's data folder.</summary>
-    private static string BundlesIn(string dataDir) => Path.Combine(dataDir, "StreamingAssets", "SoftRef", "Bundles");
-
-    /// <summary>
-    /// The game folder a data folder (see <see cref="DataDir"/>) belongs to: the folder above valheim_Data, or the
-    /// folder holding the app bundle on a Mac.
-    /// </summary>
-    public static string GameOfData(string dataDir)
-    {
-        string d = Path.TrimEndingDirectorySeparator(dataDir);
-        string? resources = Path.GetDirectoryName(d), contents = resources == null ? null : Path.GetDirectoryName(resources);
-        string? app = contents == null ? null : Path.GetDirectoryName(contents);
-        if (app != null && app.EndsWith(".app", StringComparison.OrdinalIgnoreCase) && Path.GetFileName(contents) == "Contents"
-            && Path.GetFileName(resources) == "Resources" && Path.GetDirectoryName(app) is string folder)
-        {
-            return folder;
-        }
-        return Path.GetDirectoryName(d) ?? d;
-    }
-
-    /// <summary>
-    /// The game folder from a folder chosen near it: the game folder itself, its valheim_Data, on a Mac the app
-    /// bundle or a folder inside it, or a folder above it in a Steam library (Steam, steamapps, common). Null when
-    /// none of these.
-    /// </summary>
-    public static string? GameFolder(string chosen)
-    {
-        try
-        {
-            string full = Path.GetFullPath(chosen.Trim().Trim('"'));
-            // Without a trailing separator (kept on a drive's or the file system's root).
-            full = Path.TrimEndingDirectorySeparator(full);
-            string? parent = Path.GetDirectoryName(full);
-            var tries = new List<string> { full };
-            if (parent != null && Path.GetFileName(full).Equals("valheim_Data", StringComparison.OrdinalIgnoreCase))
-            {
-                tries.Add(parent);
-            }
-            // On a Mac: valheim.app, or a folder inside it (the folder picker can open the bundle).
-            for (string? d = full; d != null; d = Path.GetDirectoryName(d))
-            {
-                if (d.EndsWith(".app", StringComparison.OrdinalIgnoreCase) && Path.GetDirectoryName(d) is string holder)
-                {
-                    tries.Add(holder);
-                    break;
-                }
-            }
-            tries.Add(Path.Combine(full, "Valheim"));
-            tries.Add(Path.Combine(full, "common", "Valheim"));
-            tries.Add(Path.Combine(full, "steamapps", "common", "Valheim"));
-            return tries.FirstOrDefault(t => BundlesDir(t) != null);
-        }
-        catch (Exception e)
-        {
-            Log.CaughtBrief(e, "finding the game folder from a chosen folder (none)");
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// The configured folder if it is valid, else Valheim in any Steam library on this computer.
-    /// </summary>
-    public static string? FindValheim(string? configured)
-    {
-        if (configured != null && BundlesDir(configured) != null)
-        {
-            return configured;
-        }
-        foreach (string lib in SteamLibraries())
-        {
-            string v = Path.Combine(lib, "steamapps", "common", "Valheim");
-            if (BundlesDir(v) != null)
-            {
-                return v;
-            }
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Steam's system-wide folders on Linux (looked at only with <c>SearchOutsideHome</c>).
-    /// </summary>
-    private static readonly string[] SystemSteamRoots = ["/opt/Steam", "/usr/share/steam"];
-
-    /// <summary>
-    /// Steam's folders on this computer (registry and default places on Windows, the home's and Flatpak's on Linux),
-    /// each followed by the other libraries its libraryfolders.vdf lists; each folder once.
-    /// </summary>
-    private static IEnumerable<string> SteamLibraries()
-    {
-        var roots = new List<string>();
-        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (OperatingSystem.IsWindows())
-        {
-            try
-            {
-                if (Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamPath", null) is string sp)
-                {
-                    roots.Add(sp.Replace('/', '\\'));
-                }
-            }
-            catch (Exception e)
-            {
-                Log.CaughtBrief(e, "reading Steam's folder from the registry (the other places are still searched)");
-            }
-            if (SearchOutsideHome)
-            {
-                roots.Add(@"C:\Program Files (x86)\Steam");
-                roots.Add(@"C:\Program Files\Steam");
-            }
-        }
-        else if (OperatingSystem.IsMacOS())
-        {
-            roots.Add(Path.Combine(home, "Library", "Application Support", "Steam"));
-        }
-        else
-        {
-            roots.AddRange(
-            [
-                Path.Combine(home, ".steam", "steam"), Path.Combine(home, ".local", "share", "Steam"), Path.Combine(home, ".steam", "root"),
-                Path.Combine(home, ".var", "app", "com.valvesoftware.Steam", ".local", "share", "Steam"),
-            ]);
-            if (SearchOutsideHome)
-            {
-                roots.AddRange(SystemSteamRoots);
-            }
-        }
-        var seen = new HashSet<string>();
-        foreach (string root in roots)
-        {
-            if (!Directory.Exists(root) || !seen.Add(Path.GetFullPath(root)))
-            {
-                continue;
-            }
-            yield return root;
-            // Other libraries are listed in libraryfolders.vdf: "path"   "D:\\SteamLibrary"
-            string vdf = Path.Combine(root, "steamapps", "libraryfolders.vdf");
-            if (!File.Exists(vdf))
-            {
-                continue;
-            }
-            // Being rewritten by Steam, or without access: that root's other libraries are not searched this time.
-            string libraries;
-            try
-            {
-                libraries = File.ReadAllText(vdf);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                Log.Caught(ex, "reading Steam's libraryfolders.vdf (the libraries it lists are not searched)");
-                continue;
-            }
-            foreach (Match m in Regex.Matches(libraries, "\"path\"\\s+\"([^\"]+)\""))
-            {
-                string lib = m.Groups[1].Value.Replace(@"\\", @"\");
-                if (Directory.Exists(lib) && seen.Add(Path.GetFullPath(lib)))
-                {
-                    yield return lib;
-                }
+                Set(state, message);
             }
         }
     }

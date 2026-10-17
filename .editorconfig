@@ -254,24 +254,3 @@ dotnet_naming_style.pascal_case.capitalization = pascal_case
 dotnet_naming_style.camel_case.capitalization = camel_case
 dotnet_naming_style.underscore_camel_case.required_prefix = _
 dotnet_naming_style.underscore_camel_case.capitalization = camel_case
-
-# The world generator works with stand-ins for Unity's own types (Vector2.x, sqrMagnitude,
-# Random.state...) so its formulas keep Unity's operations and precision and stay bit-exact with the
-# game (verified by WorldCheck); their public fields, Unity's names and its operators stay as Unity
-# has them.
-[Core/WorldGen/{UnityShim,UnityNative}.cs]
-dotnet_diagnostic.CA1051.severity = none
-dotnet_diagnostic.CA1708.severity = none
-dotnet_diagnostic.CA2231.severity = none
-dotnet_diagnostic.CA1822.severity = none
-dotnet_diagnostic.CS0675.severity = none
-dotnet_diagnostic.IDE1006.severity = none
-
-# Harmony finds a patch's arguments by their names (__instance, __result, ___field).
-[plugin/**.cs]
-dotnet_naming_rule.locals_and_parameters_are_camel_case.severity = none
-
-# Tests spell out the values they expect where they assert them; CA1861 (a constant array as an
-# argument: a static field would save its allocation) is about speed and not wanted there.
-[tests/**.cs]
-dotnet_diagnostic.CA1861.severity = none

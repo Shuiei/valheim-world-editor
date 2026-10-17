@@ -14,6 +14,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class BuildingPictureTests
 {
+    private static readonly string[] Expected1 = ["Stonecutter", "Workbench"];
     private static readonly List<BuildingPicture.Piece> Hut =
     [
         new("wood_floor", new Vector3(0, 0, 0), Vector3.Zero, 0),
@@ -137,7 +138,7 @@ public class BuildingPictureTests
         var cost = PieceCost.Of(["woodwall", "woodwall", "wood_floor", "stone_wall_2x1", "no_such_piece_xyz"]);
         Assert.Equal(("Wood", "Wood", 6), cost.Materials[0]);
         Assert.Contains(cost.Materials, m => m.Item == "Stone" && m.Amount == 4);
-        Assert.Equal(new[] { "Stonecutter", "Workbench" }, cost.Stations);
+        Assert.Equal(Expected1, cost.Stations);
         Assert.Equal(1, cost.Unknown["no_such_piece_xyz"]);
         Assert.Equal("Wood 6 · Stone 4 (needs Stonecutter, Workbench)", cost.Describe());
         Assert.Equal("Wood Wall", PieceCost.PieceName("woodwall"));
