@@ -24,40 +24,9 @@ internal sealed partial class DungeonDresser
             Finish(f);
             return;
         }
-        switch (f.S.Room)
+        if (RoomDressers.TryGetValue(f.S.Room, out var dress))
         {
-            case Room.Entrance: Entrance(f); break;
-            case Room.Hall: Hall(f); break;
-            case Room.Hub: Hub(f); break;
-            case Room.Gallery: Gallery(f); break;
-            case Room.Burial: Burial(f); break;
-            case Room.Ossuary: Ossuary(f); break;
-            case Room.Chapel: Chapel(f); break;
-            case Room.Shrine: Shrine(f); break;
-            case Room.Tomb: Tomb(f); break;
-            case Room.Throne: Throne(f); break;
-            case Room.Barracks: Barracks(f); break;
-            case Room.Armory: Armory(f); break;
-            case Room.Feast: Feast(f); break;
-            case Room.Kitchen: Kitchen(f); break;
-            case Room.Store: Store(f); break;
-            case Room.Forge: Forge(f); break;
-            case Room.Library: Library(f); break;
-            case Room.Cells: Cells(f); break;
-            case Room.Torture: Torture(f); break;
-            case Room.Guard: Guard(f); break;
-            case Room.Treasury: Treasury(f); break;
-            case Room.Boss: Boss(f); break;
-            case Room.Antechamber: Antechamber(f); break;
-            case Room.Den: Den(f); break;
-            case Room.Totem: Totem(f); break;
-            case Room.Mine: Mine(f); break;
-            case Room.Workshop: Workshop(f); break;
-            case Room.Quarters: Quarters(f); break;
-            case Room.Secret: Secret(f); break;
-            case Room.StairTop or Room.StairBottom: Stairwell(f); break;
-            default:
-                break;
+            dress(f);
         }
         if (f.S.KeyChest)
         {
@@ -67,6 +36,44 @@ internal sealed partial class DungeonDresser
         Nooks(f);
         Finish(f);
     }
+
+    /// <summary>
+    /// Each room kind's own dressing, by the kind. A kind not listed has none: the room is left as it is.
+    /// </summary>
+    private Dictionary<Room, Action<Frame>> RoomDressers => new()
+    {
+        [Room.Entrance] = Entrance,
+        [Room.Hall] = Hall,
+        [Room.Hub] = Hub,
+        [Room.Gallery] = Gallery,
+        [Room.Burial] = Burial,
+        [Room.Ossuary] = Ossuary,
+        [Room.Chapel] = Chapel,
+        [Room.Shrine] = Shrine,
+        [Room.Tomb] = Tomb,
+        [Room.Throne] = Throne,
+        [Room.Barracks] = Barracks,
+        [Room.Armory] = Armory,
+        [Room.Feast] = Feast,
+        [Room.Kitchen] = Kitchen,
+        [Room.Store] = Store,
+        [Room.Forge] = Forge,
+        [Room.Library] = Library,
+        [Room.Cells] = Cells,
+        [Room.Torture] = Torture,
+        [Room.Guard] = Guard,
+        [Room.Treasury] = Treasury,
+        [Room.Boss] = Boss,
+        [Room.Antechamber] = Antechamber,
+        [Room.Den] = Den,
+        [Room.Totem] = Totem,
+        [Room.Mine] = Mine,
+        [Room.Workshop] = Workshop,
+        [Room.Quarters] = Quarters,
+        [Room.Secret] = Secret,
+        [Room.StairTop] = Stairwell,
+        [Room.StairBottom] = Stairwell,
+    };
 
     /// <summary>
     /// The last touches, once everything that keeps a spot stands: the lights the room asked for, then its decay.
