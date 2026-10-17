@@ -74,7 +74,7 @@ public sealed partial class WorldEditorBridgePlugin
             }
             catch (Exception ex)
             {
-                Logger.LogWarning($"WorldEditorBridge: the mod {registered.Key} failed on what the editor applied: {ex}");
+                Caught(ex, $"telling the mod {registered.Key} what the editor applied");
             }
         }
         return result.Json;
