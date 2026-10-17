@@ -41,6 +41,24 @@ public sealed partial class ClaudeTools
         return (tool, null);
     }
 
+    /// <summary>
+    /// The start of a change to a dungeon: why none may be made now, else the dungeon's tool (see <see cref="DungeonOf"/>),
+    /// with the messages its change says collected for the answer.
+    /// </summary>
+    /// <param name="id">The dungeon's id (list_dungeons).</param>
+    /// <param name="seed">Any number: other contents and door rolls.</param>
+    /// <returns>The tool (null when none), the messages it said, and why there is no tool or no edit.</returns>
+    private (DungeonTool? Tool, Said Said, string? Problem) DungeonEdit(int id, int seed = 1)
+    {
+        if (CannotEdit() is string why)
+        {
+            return (null, Said.Empty, why);
+        }
+        var said = Said.Empty;
+        var (tool, problem) = DungeonOf(id, m => said = m, seed);
+        return (tool, said, problem);
+    }
+
     /// <summary>An opening's type as Claude reads it: the game's plain openings have none ("plain").</summary>
     internal static string TypeName(string type) => type.Length == 0 ? "plain" : type;
 
@@ -135,12 +153,7 @@ public sealed partial class ClaudeTools
         [Description("The door the game would roll where it joins (default true).")] bool doors = true,
         [Description("Any number: other contents and door rolls.")] int seed = 1) => OnUi(() =>
     {
-        if (CannotEdit() is string why)
-        {
-            return why;
-        }
-        var said = Said.Empty;
-        var (tool, problem) = DungeonOf(id, m => said = m, seed);
+        var (tool, said, problem) = DungeonEdit(id, seed);
         if (tool?.Dungeon is not { } d)
         {
             return problem!;
@@ -170,12 +183,7 @@ public sealed partial class ClaudeTools
         [Description("The dungeon's id (list_dungeons).")] int id,
         [Description("The room, its index in dungeon_rooms' rooms.")] int room) => OnUi(() =>
     {
-        if (CannotEdit() is string why)
-        {
-            return why;
-        }
-        var said = Said.Empty;
-        var (tool, problem) = DungeonOf(id, m => said = m);
+        var (tool, said, problem) = DungeonEdit(id);
         if (tool?.Dungeon is not { } d)
         {
             return problem!;
@@ -194,12 +202,7 @@ public sealed partial class ClaudeTools
     public Task<string> CloseDungeonEnds(
         [Description("The dungeon's id (list_dungeons).")] int id) => OnUi(() =>
     {
-        if (CannotEdit() is string why)
-        {
-            return why;
-        }
-        var said = Said.Empty;
-        var (tool, problem) = DungeonOf(id, m => said = m);
+        var (tool, said, problem) = DungeonEdit(id);
         if (tool == null)
         {
             return problem!;
@@ -217,12 +220,7 @@ public sealed partial class ClaudeTools
         [Description("The joint, its index in dungeon_rooms' doorJoints.")] int joint,
         [Description("true: a door there; false: none.")] bool door = true) => OnUi(() =>
     {
-        if (CannotEdit() is string why)
-        {
-            return why;
-        }
-        var said = Said.Empty;
-        var (tool, problem) = DungeonOf(id, m => said = m);
+        var (tool, said, problem) = DungeonEdit(id);
         if (tool?.Dungeon is not { } d)
         {
             return problem!;

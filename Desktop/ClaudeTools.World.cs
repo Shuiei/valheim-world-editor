@@ -422,17 +422,13 @@ public sealed partial class ClaudeTools
         [Description("Keep each copy as high above the ground as its original (default false).")] bool ground = false,
         [Description("A few words for the history.")] string label = "Claude: copied") => OnUi(() =>
     {
-        if (CannotEdit() is string why)
+        if (EditStart() is string why)
         {
             return why;
         }
         var s = _w.Session!;
         var scene = s.Scene;
         int reads = scene.Reads;
-        if (StaleIds(scene) is string stale)
-        {
-            return stale;
-        }
         if (LoneCoordinate(pivotX, pivotZ, "pivotX", "pivotZ") is string lone)
         {
             return lone;
@@ -453,7 +449,7 @@ public sealed partial class ClaudeTools
         {
             return "The copies would be on top of the originals: give dx, dy, dz or turn.";
         }
-        float px = pivotX ?? ok.Average(i => scene.Things[i].Position.X), pz = pivotZ ?? ok.Average(i => scene.Things[i].Position.Z);
+        var (px, pz) = PivotOf(scene, ok, pivotX, pivotZ);
         var (minX, minZ, maxX, maxZ) = Bounds(scene);
         var adds = new List<(Editing.NewObject, bool)>();
         var from = new List<int>();
@@ -482,7 +478,7 @@ public sealed partial class ClaudeTools
                 from.Add(copy[j].From);
             }
         }
-        var made = s.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label), null, [], adds);
+        var made = s.Commit(ClaudesLabel(label), null, [], adds);
         _w.AfterClaudeEdit(made.Count == 1 ? Said.Of("claude.msg.copies.one", made.Count) : Said.Of("claude.msg.copies.many", made.Count));
         GaveIds(scene, reads);
         return ToJson(new { copied = made.Select((c, k) => Moved(scene, from[k], c)), problems, pending = Pending() });

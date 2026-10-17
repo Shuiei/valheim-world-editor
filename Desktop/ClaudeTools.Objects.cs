@@ -78,6 +78,27 @@ public sealed partial class ClaudeTools
         ? $"The ids are from {(ids.Scene != scene ? "another area" : "before the world was read again")}: list_objects (or get_selection) again for this one."
         : null;
 
+    /// <summary>
+    /// The start of a change to objects by their ids: why none may be made now (no area open, live with Auto on, or the
+    /// ids given before no longer fit the area), or null when it may go on.
+    /// </summary>
+    private string? EditStart() => CannotEdit() ?? StaleIds(_w.Session!.Scene);
+
+    /// <summary>The label of a change's undo step: Claude's own label as given, else the Claude-prefixed one.</summary>
+    /// <param name="label">The label given, which starts with Claude or is made to.</param>
+    internal static string ClaudesLabel(string label) => label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label);
+
+    /// <summary>
+    /// The point a group of objects turns round: the pivot given (each coordinate on its own), else the middle of the
+    /// objects' positions.
+    /// </summary>
+    /// <param name="scene">The scene the objects are of.</param>
+    /// <param name="ok">Their indices into the scene's things.</param>
+    /// <param name="pivotX">The pivot's x, or null for the middle.</param>
+    /// <param name="pivotZ">The pivot's z, or null for the middle.</param>
+    internal static (float X, float Z) PivotOf(WorldScene scene, IEnumerable<int> ok, float? pivotX, float? pivotZ) =>
+        (pivotX ?? ok.Average(i => scene.Things[i].Position.X), pivotZ ?? ok.Average(i => scene.Things[i].Position.Z));
+
     /// <summary>An object after a change: its new id and where it is now.</summary>
     private object Moved(WorldScene scene, int was, int id)
     {
@@ -125,17 +146,13 @@ public sealed partial class ClaudeTools
         [Description("Keep each the same height above the ground (default false: dy alone changes heights).")] bool ground = false,
         [Description("A few words for the history.")] string label = "Claude: moved") => OnUi(() =>
     {
-        if (CannotEdit() is string why)
+        if (EditStart() is string why)
         {
             return why;
         }
         var s = _w.Session!;
         var scene = s.Scene;
         int reads = scene.Reads;
-        if (StaleIds(scene) is string stale)
-        {
-            return stale;
-        }
         if (LoneCoordinate(pivotX, pivotZ, "pivotX", "pivotZ") is string lone)
         {
             return lone;
@@ -151,7 +168,7 @@ public sealed partial class ClaudeTools
         {
             return "Nothing to do: give dx, dy, dz, turn or ground.";
         }
-        float px = pivotX ?? ok.Average(i => scene.Things[i].Position.X), pz = pivotZ ?? ok.Average(i => scene.Things[i].Position.Z);
+        var (px, pz) = PivotOf(scene, ok, pivotX, pivotZ);
         var (minX, minZ, maxX, maxZ) = Bounds(scene);
         var moves = new List<(int Index, Vector3 Position, Vector3 Rotation, float Scale)>();
         foreach (int i in ok)
@@ -166,7 +183,7 @@ public sealed partial class ClaudeTools
             float y = t.Position.Y + dy + (ground ? GroundAt(scene, x, z) - GroundAt(scene, t.Position.X, t.Position.Z) : 0);
             moves.Add((i, new Vector3(x, y, z), Wrapped(t.Rotation + new Vector3(0, turn, 0)), t.Scale));
         }
-        var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label));
+        var copies = s.Transform(moves, ClaudesLabel(label));
         _w.AfterClaudeEdit(Said.Of("claude.msg.moved", copies.Count));
         GaveIds(scene, reads);
         return ToJson(new { moved = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), wholeGroups = groups, problems, pending = Pending() });
@@ -219,17 +236,13 @@ public sealed partial class ClaudeTools
         [Description("The objects and their new values.")] TransformSpec[] objects,
         [Description("A few words for the history.")] string label = "Claude: placed exactly") => OnUi(() =>
     {
-        if (CannotEdit() is string why)
+        if (EditStart() is string why)
         {
             return why;
         }
         var s = _w.Session!;
         var scene = s.Scene;
         int reads = scene.Reads;
-        if (StaleIds(scene) is string stale)
-        {
-            return stale;
-        }
         var (ok, problems) = Usable(scene, objects.Select(o => o.Id));
         var (minX, minZ, maxX, maxZ) = Bounds(scene);
         var moves = new List<(int Index, Vector3 Position, Vector3 Rotation, float Scale)>();
@@ -259,7 +272,7 @@ public sealed partial class ClaudeTools
         {
             return "Nothing changed: " + string.Join("; ", problems);
         }
-        var copies = s.Transform(moves, label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label));
+        var copies = s.Transform(moves, ClaudesLabel(label));
         _w.AfterClaudeEdit(Said.Of("claude.msg.placed", copies.Count));
         // Then come the other parts of the linked groups moved (ObjectLinks), which went along.
         GaveIds(scene, reads);
@@ -464,15 +477,11 @@ public sealed partial class ClaudeTools
         [Description("The object's id (list_objects).")] int id,
         [Description("The values to set or take away.")] FieldSpec[] values) => OnUi(() =>
     {
-        if (CannotEdit() is string why)
+        if (EditStart() is string why)
         {
             return why;
         }
         var scene = _w.Session!.Scene;
-        if (StaleIds(scene) is string stale)
-        {
-            return stale;
-        }
         var (ok, problems) = Usable(scene, [id]);
         if (ok.Count == 0)
         {
