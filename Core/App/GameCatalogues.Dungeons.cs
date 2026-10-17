@@ -290,11 +290,7 @@ public static partial class GameCatalogues
                 }
                 else if (type == TransformType)
                 {
-                    long[] children = new long[d.I32(52)];
-                    for (int i = 0; i < children.Length; i++)
-                    {
-                        children[i] = d.I64(60 + 12 * i);
-                    }
+                    long[] children = d.ChildIds(52);
                     _transforms[pid] = (d.I64(4), children, (d.F32(28), d.F32(32), d.F32(36)), new Quat(d.F32(12), d.F32(16), d.F32(20), d.F32(24)));
                 }
                 else if (type == MonoBehaviourType)

@@ -15,7 +15,7 @@ public static partial class GameCatalogues
     /// box, a mesh collider's as its mesh's box). Colliders of every child count, inactive ones too;
     /// triggers and snap points do not. The pieces with a WearNTear (told by its class) on their root.
     /// </summary>
-    private sealed class SupportScan : IStartScan
+    private sealed partial class SupportScan : IStartScan
     {
         /// <summary>
         /// The entries, by piece prefab name.
@@ -70,71 +70,6 @@ public static partial class GameCatalogues
                 }
                 // The first of a name, as every scan takes it.
                 _entries.TryAdd(go["m_Name"].AsString, entry);
-            }
-        }
-
-        /// <summary>
-        /// A piece's colliders as boxes; or (meshes) the meshes its mesh colliders need, to read first.
-        /// </summary>
-        private void Walk(Bundle b, long goPid, V3 pos, Quat rot, V3 scale, bool root, List<object?>? boxes, List<long>? meshes)
-        {
-            if (b.Field(goPid) is not { } g || IsSnapPoint(g))
-            {
-                return;
-            }
-            object? layer = Get(g, "m_Layer", 0L);
-            // Only the Transform and colliders read (not the renderers, scripts...).
-            var (tr, cols) = TransformAndColliders(b, g);
-            if (tr == null)
-            {
-                return;
-            }
-            var (p, q, s) = root ? (default(V3), Quat.Root, (V3)(1.0, 1.0, 1.0)) : ChildFrame(tr, pos, rot, scale);
-            foreach (var (t, cm) in cols)
-            {
-                V3 c, h;
-                long aabb = 1;
-                if (t == BoxColliderType)
-                {
-                    c = Vec(cm["m_Center"]);
-                    var (x, y, z) = Vec(cm["m_Size"]);
-                    h = (x / 2, y / 2, z / 2);
-                    aabb = 0;
-                }
-                else if (t == MeshColliderType)
-                {
-                    var mesh = cm["m_Mesh"];
-                    if (mesh.IsDummy || mesh["m_FileID"].AsInt != 0)
-                    {
-                        continue;
-                    }
-                    meshes?.Add(mesh["m_PathID"].AsLong);
-                    if (!_meshes.TryGetValue(mesh["m_PathID"].AsLong, out var bounds))
-                    {
-                        continue;
-                    }
-                    (c, h) = bounds;
-                }
-                else if (t == SphereColliderType)
-                {
-                    c = Vec(cm["m_Center"]);
-                    double rr = cm["m_Radius"].AsFloat;
-                    h = (rr, rr, rr);
-                }
-                else
-                {
-                    c = Vec(cm["m_Center"]);
-                    double rr = cm["m_Radius"].AsFloat;
-                    double hh = Max(cm["m_Height"].AsFloat / 2.0, rr);
-                    long d = Int(Get(cm, "m_Direction", 1L));
-                    h = (d == 0 ? hh : rr, d == 1 ? hh : rr, d == 2 ? hh : rr);
-                }
-                var (cx, cy, cz) = q.Rotate(Scale(c, s));
-                boxes?.Add(new List<object?> { R(cx + p.X, 4), R(cy + p.Y, 4), R(cz + p.Z, 4), R(Math.Abs(h.X * s.X), 4), R(Math.Abs(h.Y * s.Y), 4), R(Math.Abs(h.Z * s.Z), 4) }.Concat(q.Rounded(4)).Append(aabb).Append(layer).ToList());
-            }
-            foreach (long child in ChildObjects(b, tr))
-            {
-                Walk(b, child, p, q, s, false, boxes, meshes);
             }
         }
     }

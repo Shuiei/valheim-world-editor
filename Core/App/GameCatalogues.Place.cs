@@ -2,7 +2,6 @@
 
 using AssetsTools.NET;
 using Dict = TerrainEditor.App.CatalogueJson.Dict;
-using V3 = (double X, double Y, double Z);
 
 namespace TerrainEditor.App;
 
@@ -21,7 +20,7 @@ public static partial class GameCatalogues
     /// ["s", centre, r] a sphere; ["c", a, b, r] a capsule (its segment); ["m", convex, [x,y,z...], [i,j,k...]] a mesh
     /// (triangles).
     /// </summary>
-    private sealed class PlaceScan : IStartScan
+    private sealed partial class PlaceScan : IStartScan
     {
         /// <summary>
         /// The placement flags written ("f": key -&gt; 1 when the Piece field is set).
@@ -108,77 +107,5 @@ public static partial class GameCatalogues
         /// </summary>
         private static AssetTypeValueField? RootTransform(Bundle b, AssetTypeValueField go) =>
             b.ComponentIds(go).Where(c => c.Type == TransformType).Select(c => b.Field(c.Pid)).FirstOrDefault(f => f != null);
-
-        /// <summary>
-        /// A piece's colliders; or (meshes) the meshes its mesh colliders need, to read first.
-        /// </summary>
-        private void Walk(Bundle b, long goPid, V3 pos, Quat rot, V3 scale, bool root, List<object?>? cols, List<long>? meshes)
-        {
-            if (b.Field(goPid) is not { } g || !Truthy(Get(g, "m_IsActive", 1L)))
-            {
-                return;
-            }
-            // Only the Transform and colliders read (not the renderers, scripts...).
-            var (tr, colliders) = TransformAndColliders(b, g);
-            if (tr == null)
-            {
-                return;
-            }
-            var (pp, q, s) = root ? (default(V3), Quat.Root, scale) : ChildFrame(tr, pos, rot, scale);
-            if (RayLayers.Contains(Int(Get(g, "m_Layer", 0L))))
-            {
-                V3 P(V3 v) => Add(q.Rotate(Scale(v, s)), pp);
-                foreach (var (t, c) in colliders)
-                {
-                    if (t == BoxColliderType)
-                    {
-                        var (cx, cy, cz) = P(Vec(c["m_Center"]));
-                        var (sizeX, sizeY, sizeZ) = Vec(c["m_Size"]);
-                        cols?.Add(new List<object?> { "b", R(cx, 4), R(cy, 4), R(cz, 4), R(Math.Abs(sizeX * s.X) / 2, 4), R(Math.Abs(sizeY * s.Y) / 2, 4), R(Math.Abs(sizeZ * s.Z) / 2, 4) }.Concat(q.Rounded(4)).ToList());
-                    }
-                    else if (t == SphereColliderType)
-                    {
-                        var (x, y, z) = P(Vec(c["m_Center"]));
-                        cols?.Add(new List<object?> { "s", R(x, 4), R(y, 4), R(z, 4), R(c["m_Radius"].AsFloat * Max([Math.Abs(s.X), Math.Abs(s.Y), Math.Abs(s.Z)]), 4) });
-                    }
-                    else if (t == CapsuleColliderType)
-                    {
-                        var (x, y, z) = Vec(c["m_Center"]);
-                        int d = (int)Int(Get(c, "m_Direction", 1L));
-                        double[] sa = [s.X, s.Y, s.Z];
-                        double rr = c["m_Radius"].AsFloat * Max(Enumerable.Range(0, 3).Where(i => i != d).Select(i => Math.Abs(sa[i])));
-                        double half = Max(c["m_Height"].AsFloat * Math.Abs(sa[d]) / 2 - rr, 0);
-                        double[] ax = new double[3];
-                        ax[d] = sa[d] != 0 ? half / Math.Abs(sa[d]) : 0;
-                        var (fromX, fromY, fromZ) = P((x + ax[0], y + ax[1], z + ax[2]));
-                        var (toX, toY, toZ) = P((x - ax[0], y - ax[1], z - ax[2]));
-                        cols?.Add(new List<object?> { "c", R(fromX, 4), R(fromY, 4), R(fromZ, 4), R(toX, 4), R(toY, 4), R(toZ, 4), R(rr, 4) });
-                    }
-                    else if (c["m_Mesh"] is { IsDummy: false } mesh && mesh["m_FileID"].AsInt == 0 && b.TypeOf(mesh["m_PathID"].AsLong) == MeshType)
-                    {
-                        long id = mesh["m_PathID"].AsLong;
-                        meshes?.Add(id);
-                        if (cols == null || !_meshes.TryGetValue(id, out var m))
-                        {
-                            continue;
-                        }
-                        var (vertices, triangles) = m;
-                        var coords = new List<object?>(vertices.Length);
-                        for (int i = 0; i + 2 < vertices.Length; i += 3)
-                        {
-                            var (x, y, z) = P((vertices[i], vertices[i + 1], vertices[i + 2]));
-                            coords.Add(R(x, 4));
-                            coords.Add(R(y, 4));
-                            coords.Add(R(z, 4));
-                        }
-                        cols.Add(new List<object?> { "m", Truthy(Get(c, "m_Convex", 0L)) ? 1L : 0L, coords, triangles.SelectMany(x => x).Select(i => (object?)(long)i).ToList() });
-                    }
-                }
-            }
-            foreach (long child in ChildObjects(b, tr))
-            {
-                Walk(b, child, pp, q, s, false, cols, meshes);
-            }
-        }
     }
 }
