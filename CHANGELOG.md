@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.47.13 — unreleased
+## v1.47.14 — unreleased
 
 ### Changed
 - **The View panel, the help card and the status bar's readouts come from the language catalogue.** The View
@@ -12,7 +12,7 @@ the plugin is unchanged in versions without that part.
   rate, the selection and walking or flying lines, picking a kind and the paste height show in the language chosen
   in Settings. In English nothing changes.
 
-## v1.47.12 — unreleased
+## v1.47.13 — unreleased
 
 ### Changed
 - **The 3D editor's area bar and the live game's messages come from the language catalogue.** The area's arrows,
@@ -20,7 +20,7 @@ the plugin is unchanged in versions without that part.
   what came from the game, the area's line under its name, how it loaded and the window's title on the New world page
   show in the language chosen in Settings. In English nothing changes.
 
-## v1.47.11 — unreleased
+## v1.47.12 — unreleased
 
 ### Changed
 - **The Select and Paste tools come from the language catalogue.** The Select panel (its buttons, exact place and
@@ -28,21 +28,21 @@ the plugin is unchanged in versions without that part.
   pasting, Make player built and the Built by choices, and the questions they ask show in the language chosen in
   Settings. In English nothing changes; the name a mod gives its linked objects ("vehicle") stays as the mod wrote it.
 
-## v1.47.10 — unreleased
+## v1.47.11 — unreleased
 
 ### Changed
 - **The Shape and Mountain tools come from the language catalogue.** Their panels (presets, rows, help lines, a
   formula's mistakes), the status messages of putting a shape or a mountain and their History steps show in the
   language chosen in Settings. In English nothing changes; scripts still name a mountain preset in English.
 
-## v1.47.9 — unreleased
+## v1.47.10 — unreleased
 
 ### Changed
 - **The Path and Cave tools come from the language catalogue.** The Path panel's actions, rows, cave presets and
   roofs, the line's length, and what Apply says (and its History step) show in the language chosen in Settings. In
   English nothing changes; Claude's dig_path is still answered in English.
 
-## v1.47.8 — unreleased
+## v1.47.9 — unreleased
 
 ### Changed
 - **The Measure, Mask and Script tools and the biome names come from the language catalogue.** The tape's hints
@@ -51,7 +51,12 @@ the plugin is unchanged in versions without that part.
   chosen in Settings. In English nothing changes; Claude still names biomes, and is told about masks and scripts, in
   English.
 
-## v1.47.7 — unreleased
+### Fixed
+- **A Run of the Script tool's first example was named "Script: script" in History.** The example shown when the
+  panel opens was not chosen in its list, so the run had no name to take; it is chosen now, and the step is named
+  after it.
+
+## v1.47.8 — unreleased
 
 ### Changed
 - **The brush options come from the language catalogue.** Their rows, shapes, falloffs and stamps, the brushes'
@@ -60,7 +65,7 @@ the plugin is unchanged in versions without that part.
   remembered after the language changes. Claude still asks for stamps by their English names. In English nothing
   changes.
 
-## v1.47.6 — unreleased
+## v1.47.7 — unreleased
 
 ### Changed
 - **The History panel and the save bar come from the language catalogue.** The History card, its rows and buttons,
@@ -68,7 +73,7 @@ the plugin is unchanged in versions without that part.
   leaving and quitting ask and say show in the language chosen in Settings, as do the brush's and Regrow's messages
   about what could not be done. In English nothing changes.
 
-## v1.47.5 — unreleased
+## v1.47.6 — unreleased
 
 ### Changed
 - **The small dialogs and the words they share come from the language catalogue.** Questions, messages, the line
@@ -81,13 +86,20 @@ the plugin is unchanged in versions without that part.
   kept in English, so it still comes back once those lists are translated and the language is changed. Choices kept
   so far are already English.
 
-## v1.47.4 — unreleased
+## v1.47.5 — unreleased
 
 ### Changed
 - The tests' clean-up no longer hides its errors: a temporary folder is deleted only when it is there, and a failure
   to delete it fails the test instead of being caught and ignored. The stand-in game, plugin and SSH server, and the
   editor the visual tests drive, are waited for until they have stopped before their folders go, and an error in the
   stand-ins' answering fails the test instead of silently ending it. Nothing in the editor changes.
+
+## v1.47.4 — unreleased
+
+### Fixed
+- **The release packages could not be built.** Publishing the single-file editor stopped on an analyzer error: the
+  script process (v1.45.67) found the editor's assembly through `Assembly.Location`, which is empty in a single-file
+  app. It now takes the assembly from the app's folder; the published editor itself starts its scripts as before.
 
 ## v1.47.3 — unreleased
 
