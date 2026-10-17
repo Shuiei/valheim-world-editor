@@ -42,15 +42,6 @@ public sealed class StartPageLangTests : IDisposable
         Directory.Delete(_dir, recursive: true);
     }
 
-    /// <summary>A blueprint of two pieces in Homestead's folder, last written that many days ago.</summary>
-    private static void Blueprint(string name, int daysAgo)
-    {
-        Directory.CreateDirectory(Homestead.Folder());
-        string path = Path.Combine(Homestead.Folder(), Homestead.FileName(name));
-        File.WriteAllText(path, Homestead.Write(CopyFormat.ToJson(BlueprintsPanelRun.Clip(name, "wood_floor", "woodwall")), name, "test", null, DateTime.Now));
-        File.SetLastWriteTime(path, DateTime.Now.AddDays(-daysAgo));
-    }
-
     /// <summary>Clicks the button and runs the posted work it starts.</summary>
     private static void Click(Button b)
     {
@@ -63,8 +54,8 @@ public sealed class StartPageLangTests : IDisposable
     {
         using var pseudo = new PseudoLang();
         // Saved today and weeks ago: the tiles say when in words, and as a date.
-        Blueprint("Hut", 0);
-        Blueprint("Longhouse", 20);
+        StartPageBlueprintsTests.Blueprint("Hut", 0);
+        StartPageBlueprintsTests.Blueprint("Longhouse", 20);
         ServerConfig.Remember(new ServerConfig.Server { Name = "Valhalla", Host = "203.0.113.10", User = "valheim", Password = "pw", Token = "t" });
         ServerConfig.Remember(new ServerConfig.Server { Name = "Bare", Host = "203.0.113.11", User = "admin", KeyFile = "/keys/id" });
         string world = Path.Combine(_dir, "Midgard");
@@ -101,7 +92,7 @@ public sealed class StartPageLangTests : IDisposable
                 "Valheim", "World Editor", "Hut", "Longhouse", "Valhalla", "Bare", "valheim@203.0.113.10", "admin@203.0.113.11",
                 "/keys/id", "Midgard", Ui.Tilde(world), "/worlds/CITest", "/nowhere", "CITest", "Broken", "No save files in it.",
             ];
-            Assert.Empty(PseudoLang.Untranslated(w, data));
+            Assert.Empty(PseudoLang.Untranslated(page.View, data));
             page.ShowHomestead(new Homestead.Status(false, null, [], "/somewhere"));
             Assert.Empty(PseudoLang.Untranslated(page.WorkshopPanel));
 
@@ -121,4 +112,34 @@ public sealed class StartPageLangTests : IDisposable
             w.Close();
         }
     }
+
+    // A page shown after the language changed: its title and text are in the language in use then, not the one the
+    // start page was made in; back in English they are the English words, as before the catalogue.
+    [AvaloniaFact]
+    public void APageShownAfterALanguageChangeIsInTheNewLanguage()
+    {
+        var page = new StartPage(new AppSettings());
+        var w = new Window { Width = 1400, Height = 1000, Content = page.View };
+        w.Show();
+        try
+        {
+            using (new PseudoLang())
+            {
+                page.SetMode("server");
+                var shown = Texts(page);
+                Assert.Contains(PseudoLang.Wrap(Lang.English["start.page.server"]), shown);
+                Assert.Contains(PseudoLang.Wrap(Lang.English["start.page.serverText"]), shown);
+            }
+            page.SetMode("workshop");
+            Assert.Contains(Texts(page), t => t?.StartsWith("Build on a blank plot with every piece the game has", StringComparison.Ordinal) == true);
+        }
+        finally
+        {
+            page.Stop();
+            w.Close();
+        }
+    }
+
+    /// <summary>Every text block's text on the start page.</summary>
+    private static List<string?> Texts(StartPage page) => [.. page.View.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text)];
 }

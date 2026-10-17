@@ -1,5 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using TerrainEditor.App;
+using ValheimGen;
 using WorldEditor.Tests;
 using Xunit;
 
@@ -57,7 +59,7 @@ public sealed class NewWorldPageLangTests
             NewWorldPageTests.Settle();
 
             string[] data = [Seed, .. page.Results.Select(r => r.Preview.Seed), .. folders.Select(Ui.Tilde)];
-            Assert.Empty(PseudoLang.Untranslated(w, data));
+            Assert.Empty(PseudoLang.Untranslated(page.View, data));
         }
         finally
         {
@@ -99,6 +101,63 @@ public sealed class NewWorldPageLangTests
         {
             await r.W.LeaveWorld();
             Directory.Delete(root, true);
+        }
+    }
+
+    // The page's own names and distances: each of the game's dungeon kinds, landmarks and biomes is a catalogue text
+    // (an id not named stays as it is), and a distance is written in the language in use.
+    [AvaloniaFact]
+    public void NamesAndDistancesComeFromTheCatalogue()
+    {
+        using var pseudo = new PseudoLang();
+        foreach (var (name, _, _) in SeedPreview.Dungeons)
+        {
+            Assert.Equal(PseudoLang.Wrap(name), NewWorldPage.DungeonName(name));
+        }
+        string[] landmarks = ["The start", "Haldor", "The Bog Witch", "Hildir", "Eikthyr", "The Elder", "Bonemass", "Moder", "Yagluth", "The Queen", "Fader"];
+        foreach (string name in landmarks)
+        {
+            Assert.Equal(PseudoLang.Wrap(name), NewWorldPage.LandmarkName(name));
+        }
+        Assert.Equal("Mystery", NewWorldPage.DungeonName("Mystery"));
+        Assert.Equal("Mystery", NewWorldPage.LandmarkName("Mystery"));
+        Assert.Equal(PseudoLang.Wrap("Black Forest"), NewWorldPage.Name(Heightmap.Biome.BlackForest));
+        Assert.Equal(PseudoLang.Wrap("< 100 m"), NewWorldPage.Km(40));
+        Assert.Equal(PseudoLang.Wrap(Lang.English["newWorld.none"]), NewWorldPage.Km(float.PositiveInfinity));
+        foreach (float m in new[] { 420f, 1530f })
+        {
+            Assert.True(PseudoLang.Translated(NewWorldPage.Km(m), []));
+        }
+    }
+
+    // A seed refused and a world that could not be made: the page says why in the language in use, Claude (Check's
+    // and CreateWorld's answers) is told in English.
+    [AvaloniaFact]
+    public async Task RefusalsAndFailuresAreShownInTheLanguageAndToldInEnglish()
+    {
+        using var pseudo = new PseudoLang();
+        string dir = Fixtures.CopyFixture();
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        try
+        {
+            w.Show();
+            w.ShowNewWorld();
+            var page = w.NewWorld!;
+            page.ShowSeed("ABCDEFGHIJK");
+            Assert.Empty(PseudoLang.Untranslated(page.Info));
+            Assert.Equal(PseudoLang.Wrap(Lang.English["newWorld.error.seedLength"]), NewWorldPage.Check(Path.GetTempPath(), "Fine", ""));
+            Assert.Equal(Lang.English["newWorld.error.seedLength"], NewWorldPage.Check(Path.GetTempPath(), "Fine", "", english: true));
+
+            // The folder already holds a world: the game's files are never written over.
+            string failed = Assert.IsType<string>(await w.CreateWorld(dir, "CITest", "abc"));
+            Assert.StartsWith("Could not make the world:", failed);
+            Assert.DoesNotContain(PseudoLang.Open, failed);
+            Assert.StartsWith(PseudoLang.Open + "Could not make the world:", page.Problem.Text);
+        }
+        finally
+        {
+            w.CloseWithoutAsking();
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
         }
     }
 }
