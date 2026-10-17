@@ -518,20 +518,7 @@ public sealed partial class MainWindow : Window
             }
             // Shown: the world's area, even if a load dropped meanwhile had reset it.
             world.Area = scene.Session;
-            // Found by the map's search: selected, the camera on it (items and texts: in the inspector).
-            if (MapPage?.Target is var (id, inspect) && spot != null && MapPage.Spot == spot)
-            {
-                int i = scene.Things.FindIndex(t => t.Id == id && !t.Gone);
-                if (i >= 0)
-                {
-                    View.Focus(scene.Things[i].Position);
-                    View.Select([i]);
-                    if (inspect)
-                    {
-                        Inspect();
-                    }
-                }
-            }
+            FocusSearchTarget(scene, spot);
             return true;
         }
         catch (Exception ex)
@@ -564,6 +551,31 @@ public sealed partial class MainWindow : Window
             {
                 Msg(text);
             }
+        }
+    }
+
+    /// <summary>
+    /// An object the map's search found, when the area was opened around its zone: selected, the camera on it (items
+    /// and texts: in the inspector).
+    /// </summary>
+    /// <param name="scene">The area just shown.</param>
+    /// <param name="spot">The map's chosen zone the area was opened around, if it was.</param>
+    private void FocusSearchTarget(WorldScene scene, (int X, int Z)? spot)
+    {
+        if (MapPage?.Target is not var (id, inspect) || spot == null || MapPage.Spot != spot)
+        {
+            return;
+        }
+        int i = scene.Things.FindIndex(t => t.Id == id && !t.Gone);
+        if (i < 0)
+        {
+            return;
+        }
+        View.Focus(scene.Things[i].Position);
+        View.Select([i]);
+        if (inspect)
+        {
+            Inspect();
         }
     }
 
