@@ -9,9 +9,10 @@ English. A new language is taken when the editor starts again.
 Not every text comes from the catalogue yet: every hover tip does (but the Inspector's), Settings,
 the small dialogs (questions, messages, a blueprint's details) and the words they share, the
 History panel, the save bar with what saving, applying, discarding, leaving and quitting ask and
-say, the brush options with the stamps and the cursor readout, the Measure, Mask, Script, Path and
-Cave tools and the biome names; the rest moves over window by window. A catalogue made now keeps
-working as more texts are added: the new ones show in English until translated.
+say, the brush options with the stamps and the cursor readout, the Measure, Mask, Script, Path,
+Cave, Shape and Mountain tools and the biome names; the rest moves over window by window. A
+catalogue made now keeps working as more texts are added: the new ones show in English until
+translated.
 
 ## Making a catalogue
 

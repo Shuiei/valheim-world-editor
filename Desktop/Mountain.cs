@@ -1,3 +1,5 @@
+using TerrainEditor.App;
+
 namespace TerrainEditor.Desktop;
 
 /// <summary>
@@ -47,25 +49,49 @@ public static class Mountain
     /// <summary>
     /// The presets: a kind with the ranges Randomize picks its size from.
     /// </summary>
-    /// <param name="Name">Shown in the panel's preset list.</param>
+    /// <param name="Name">Its English name, as scripts give it (the panel shows <see cref="Shown"/>).</param>
     /// <param name="Kind">The shape it makes.</param>
     /// <param name="Height">Range of heights, in metres.</param>
     /// <param name="Radius">Range of radii, in metres.</param>
     /// <param name="Rough">Range of roughness, 0..1.</param>
-    /// <param name="Help">One line shown under the preset in the panel.</param>
-    public sealed record Preset(string Name, MountainKind Kind, (float Min, float Max) Height, (float Min, float Max) Radius, (float Min, float Max) Rough, string Help);
+    public sealed record Preset(string Name, MountainKind Kind, (float Min, float Max) Height, (float Min, float Max) Radius, (float Min, float Max) Rough)
+    {
+        /// <summary>Its name in the panel's preset list, in the language in use.</summary>
+        public string Shown => Kind switch
+        {
+            MountainKind.Peak => Lang.T("mountain.preset.peak"),
+            MountainKind.Ridge => Lang.T("mountain.preset.ridge"),
+            MountainKind.Range => Lang.T("mountain.preset.range"),
+            MountainKind.Mesa => Lang.T("shape.preset.mesa"),
+            MountainKind.Volcano => Lang.T("mountain.preset.volcano"),
+            MountainKind.Hills => Lang.T("mountain.preset.hills"),
+            _ => throw new InvalidOperationException($"No name for the mountain kind {Kind}."),
+        };
+
+        /// <summary>One line shown under the preset in the panel, in the language in use.</summary>
+        public string Help => Kind switch
+        {
+            MountainKind.Peak => Lang.T("mountain.help.peak"),
+            MountainKind.Ridge => Lang.T("mountain.help.ridge"),
+            MountainKind.Range => Lang.T("mountain.help.range"),
+            MountainKind.Mesa => Lang.T("mountain.help.mesa"),
+            MountainKind.Volcano => Lang.T("mountain.help.volcano"),
+            MountainKind.Hills => Lang.T("mountain.help.hills"),
+            _ => throw new InvalidOperationException($"No help for the mountain kind {Kind}."),
+        };
+    }
 
     /// <summary>
     /// The presets the Mountain panel offers, in its order.
     /// </summary>
     public static readonly Preset[] Presets =
     [
-        new("Lone peak", MountainKind.Peak, (50, 110), (120, 240), (0.4f, 0.8f), "One mountain rising to a peak, with ridges down its sides."),
-        new("Ridge", MountainKind.Ridge, (35, 80), (140, 260), (0.4f, 0.8f), "A long crest (Turn sets its direction)."),
-        new("Mountain range", MountainKind.Range, (40, 90), (180, 280), (0.4f, 0.8f), "Several peaks along a line (Turn sets its direction)."),
-        new("Mesa", MountainKind.Mesa, (20, 50), (70, 150), (0.2f, 0.6f), "A flat top with steep, rocky sides: room to build up there."),
-        new("Volcano", MountainKind.Volcano, (45, 100), (130, 240), (0.3f, 0.7f), "A cone with a crater at the top."),
-        new("Rolling hills", MountainKind.Hills, (12, 30), (100, 220), (0.3f, 0.7f), "A few gentle hills together."),
+        new("Lone peak", MountainKind.Peak, (50, 110), (120, 240), (0.4f, 0.8f)),
+        new("Ridge", MountainKind.Ridge, (35, 80), (140, 260), (0.4f, 0.8f)),
+        new("Mountain range", MountainKind.Range, (40, 90), (180, 280), (0.4f, 0.8f)),
+        new("Mesa", MountainKind.Mesa, (20, 50), (70, 150), (0.2f, 0.6f)),
+        new("Volcano", MountainKind.Volcano, (45, 100), (130, 240), (0.3f, 0.7f)),
+        new("Rolling hills", MountainKind.Hills, (12, 30), (100, 220), (0.3f, 0.7f)),
     ];
 
     /// <summary>
