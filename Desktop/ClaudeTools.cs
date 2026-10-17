@@ -41,8 +41,8 @@ public sealed partial class ClaudeTools
     /// The whole-world search search_world runs away from the window's thread (WorldSearch.Search; tests hold it to
     /// change the world while it runs).
     /// </summary>
-    internal Func<Save.WorldSave, Editing.EditStore, string, string, TerrainEditor.App.WorldSearch.Result> SearchFiles { get; set; } =
-        (world, edits, query, what) => TerrainEditor.App.WorldSearch.Search(world, edits, query, what);
+    internal Func<Save.WorldSave, Editing.EditStore, string, string, WorldSearch.Result> SearchFiles { get; set; } =
+        (world, edits, query, what) => WorldSearch.Search(world, edits, query, what);
 
     /// <summary>Compact JSON for the answers.</summary>
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
