@@ -26,6 +26,15 @@ the plugin is unchanged in versions without that part.
   trace unless it is an expected one, the server's home folder written `~`; an error on the game's main thread keeps
   its stack trace in the request's line.
 
+## v1.47.25 — unreleased
+
+### Fixed
+- **Loading a stamp picture that could not be opened stopped the editor.** A picture deleted or moved after it was
+  chosen in Load stamp…, a folder, a file the editor may not read or one in use let the read's error escape, and a
+  picture too large to decode made Skia throw. The status bar now says "That picture could not be read.", as for a
+  file that is not a picture, and the log says what failed (without the file's path); files over 256 MB, and
+  pictures that would take more than that decoded, are not read.
+
 ## v1.47.24 — unreleased
 
 ### Changed

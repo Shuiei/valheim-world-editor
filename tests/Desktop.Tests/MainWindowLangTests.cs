@@ -134,6 +134,53 @@ public sealed class MainWindowLangTests
         }
     }
 
+    // A stamp picture that cannot be opened (gone since it was chosen, a folder) or is too large to read: said like one
+    // that is not a picture, no stamp added, and logged with what failed but not where the file is.
+    [AvaloniaFact]
+    public void AStampPictureThatCannotBeOpenedIsSaidAndLoggedWithoutItsPath()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "vwe-stamp-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(dir);
+        // Sparse: no disk space taken.
+        string large = Path.Combine(dir, "large.png");
+        using (var f = File.Create(large))
+        {
+            f.SetLength(Stamps.MostPictureBytes + 1);
+        }
+        var stderr = Console.Error;
+        using var log = new StringWriter();
+        try
+        {
+            using var pseudo = new PseudoLang();
+            var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
+            w.Show();
+            Dispatcher.UIThread.RunJobs();
+            int stamps = w.Tools.StampList.Count;
+            Console.SetError(TextWriter.Synchronized(log));
+
+            foreach (string path in new[] { Path.Combine(dir, "gone.png"), dir, large })
+            {
+                w.MessageText.Text = "";
+                w.LoadStamp(path);
+
+                Assert.Equal(PseudoLang.Wrap("That picture could not be read."), w.MessageText.Text);
+                Assert.Equal("That picture could not be read.", w.LastMessageEn);
+                Assert.Equal(stamps, w.Tools.StampList.Count);
+            }
+        }
+        finally
+        {
+            Console.SetError(stderr);
+            Directory.Delete(dir, recursive: true);
+        }
+        string logged = log.ToString();
+        // (The exceptions' own messages may be in the system's language.)
+        Assert.Contains("Load stamp: the stamp picture could not be read: FileNotFoundException: ", logged);
+        Assert.Contains("Load stamp: the stamp picture could not be read: UnauthorizedAccessException: ", logged);
+        Assert.Contains($"Load stamp: the stamp picture is not read: {Stamps.MostPictureBytes + 1} bytes, more than {Stamps.MostPictureBytes}.", logged);
+        Assert.DoesNotContain(dir, logged);
+    }
+
     // Save with nothing to save, then Save, Discard, Leave and Quit with a change waiting: what each asks or says, its
     // title and its buttons, are catalogue texts (the world's folder in the save's question is data).
     [AvaloniaFact]
