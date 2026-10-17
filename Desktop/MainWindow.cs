@@ -2777,12 +2777,27 @@ public sealed partial class MainWindow : Window
 
     /// <summary>
     /// The picture at <paramref name="path"/> added to the brush's stamps and chosen, or said in the status bar that it
-    /// could not be read.
+    /// could not be read. A file that cannot be opened (gone since it was chosen, not allowed, a folder, in use) is also
+    /// logged, without its path.
     /// </summary>
     /// <param name="path">The picture file.</param>
     internal void LoadStamp(string path)
     {
-        if (Stamps.FromPicture(File.ReadAllBytes(path)) is { } data)
+        byte[] bytes;
+        try
+        {
+            bytes = File.ReadAllBytes(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The path may hold the user's name: the log says "the stamp picture" instead.
+            string why = ex.Message.Replace(Path.GetFullPath(path), "the stamp picture", StringComparison.Ordinal)
+                .Replace(path, "the stamp picture", StringComparison.Ordinal);
+            Console.Error.WriteLine($"Load stamp: the stamp picture could not be read: {ex.GetType().Name}: {why}");
+            Msg("brush.msg.unreadable");
+            return;
+        }
+        if (Stamps.FromPicture(bytes) is { } data)
         {
             Tools.AddStamp(Path.GetFileNameWithoutExtension(path), data);
         }

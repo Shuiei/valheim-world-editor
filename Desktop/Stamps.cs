@@ -14,6 +14,12 @@ public static class Stamps
     /// <summary>A stamp's width and height in pixels: every stamp is Size × Size weights.</summary>
     public const int Size = 128;
 
+    /// <summary>
+    /// The most memory a picture may take once decoded, in bytes (8192 × 8192 colours with opacity): a larger one is
+    /// not read, since Skia throws when it cannot allocate the pixels.
+    /// </summary>
+    internal const long MostPictureBytes = 256L * 1024 * 1024;
+
     /// <summary>One stamp offered in the brush's shape list.</summary>
     /// <param name="Name">Its key (the built-in ones start with "stamp:").</param>
     /// <param name="Label">Its name in English (Claude asks for a stamp by it); a loaded one's is its picture's name.</param>
@@ -116,14 +122,17 @@ public static class Stamps
         return (At(x0, y0) * (1 - tx) + At(x0 + 1, y0) * tx) * (1 - ty) + (At(x0, y0 + 1) * (1 - tx) + At(x0 + 1, y0 + 1) * tx) * ty;
     }
 
-    /// <summary>A picture (any size) to Size × Size weights: brightness times opacity. Null when it cannot be read.</summary>
+    /// <summary>
+    /// A picture to Size × Size weights: brightness times opacity. Null when it cannot be read or would take more than
+    /// <see cref="MostPictureBytes"/> decoded.
+    /// </summary>
     /// <param name="bytes">The picture file's contents, in any format Skia decodes.</param>
     public static float[]? FromPicture(byte[] bytes)
     {
         // Not a picture: no codec (Decode would throw).
         using var stream = new SKMemoryStream(bytes);
         using var codec = SKCodec.Create(stream);
-        if (codec == null)
+        if (codec == null || codec.Info.BytesSize64 > MostPictureBytes)
         {
             return null;
         }

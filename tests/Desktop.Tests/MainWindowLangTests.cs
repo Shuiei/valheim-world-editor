@@ -134,6 +134,45 @@ public sealed class MainWindowLangTests
         }
     }
 
+    // A stamp picture that cannot be opened (gone since it was chosen, a folder): said like one that is not a picture,
+    // no stamp added, and logged with what failed but not where the file is.
+    [AvaloniaFact]
+    public void AStampPictureThatCannotBeOpenedIsSaidAndLoggedWithoutItsPath()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "vwe-stamp-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(dir);
+        var stderr = Console.Error;
+        using var log = new StringWriter();
+        try
+        {
+            using var pseudo = new PseudoLang();
+            var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
+            w.Show();
+            Dispatcher.UIThread.RunJobs();
+            int stamps = w.Tools.StampList.Count;
+            Console.SetError(TextWriter.Synchronized(log));
+
+            foreach (string path in new[] { Path.Combine(dir, "gone.png"), dir })
+            {
+                w.MessageText.Text = "";
+                w.LoadStamp(path);
+
+                Assert.Equal(PseudoLang.Wrap("That picture could not be read."), w.MessageText.Text);
+                Assert.Equal("That picture could not be read.", w.LastMessageEn);
+                Assert.Equal(stamps, w.Tools.StampList.Count);
+            }
+        }
+        finally
+        {
+            Console.SetError(stderr);
+            Directory.Delete(dir, recursive: true);
+        }
+        string logged = log.ToString();
+        Assert.Contains("Load stamp: the stamp picture could not be read: FileNotFoundException: Could not find file 'the stamp picture'.", logged);
+        Assert.Contains("Load stamp: the stamp picture could not be read: UnauthorizedAccessException: ", logged);
+        Assert.DoesNotContain(dir, logged);
+    }
+
     // Save with nothing to save, then Save, Discard, Leave and Quit with a change waiting: what each asks or says, its
     // title and its buttons, are catalogue texts (the world's folder in the save's question is data).
     [AvaloniaFact]
