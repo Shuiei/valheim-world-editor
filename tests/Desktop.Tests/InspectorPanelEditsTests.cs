@@ -42,7 +42,7 @@ public class InspectorPanelEditsTests
             W.Show();
             W.View.Show(Scene, null);
             W.Edit(Scene.Session!);
-            I.Message += t => Said = t;
+            I.Message += t => Said = t.Shown;
         }
 
         public int ChestIndex => Scene.Things.FindLastIndex(t => t.Prefab == Chest && !t.Gone);
@@ -281,7 +281,7 @@ public class InspectorPanelEditsTests
         EditSession session = r.S;
         var panel = new InspectorPanel(() => session);
         string? said = null;
-        panel.Message += t => said = t;
+        panel.Message += t => said = t.Shown;
         Assert.True(panel.Open(r.ChestIndex));
         session = TestScenes.Flat(1);
         panel.Added.Add(("strings", "text", "Elsewhere"));
@@ -312,7 +312,7 @@ public class InspectorPanelEditsTests
         int opened = r.ChestIndex;
         var mine = new InspectorPanel(() => r.S);
         string? said = null;
-        mine.Message += t => said = t;
+        mine.Message += t => said = t.Shown;
         Assert.True(mine.Open(opened));
         // Another panel changes it first: the copy replaces it.
         var other = new InspectorPanel(() => r.S);
