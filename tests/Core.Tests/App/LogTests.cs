@@ -161,7 +161,7 @@ public sealed class LogTests
     }
 
     // A value given as private never reaches the log; ones too short to be kept out are left. A secret is kept out
-    // whatever its length.
+    // whatever its length, a short one where it stands alone (inside a word it would take letters out of every line).
     [Fact]
     public void PrivateValuesAndSecretsAreTakenOut()
     {
@@ -169,7 +169,7 @@ public sealed class LogTests
         Log.Private(host, "ab", null);
         Log.Secret("\u00a7\u00b6", "", null);
 
-        Assert.Equal("refused by <private> for ab: <private>", Log.Scrub($"refused by {host} for ab: \u00a7\u00b6"));
+        Assert.Equal("refused by <private> for ab: '<private>', a\u00a7\u00b6b", Log.Scrub($"refused by {host} for ab: '\u00a7\u00b6', a\u00a7\u00b6b"));
     }
 
     // The home folder is written ~, but not as the start of another folder's name.
