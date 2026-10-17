@@ -168,11 +168,8 @@ public sealed class MainWindowLangTests
     public void TheBrushMessagesAreShownInTheLanguageAndReadInEnglish()
     {
         using var pseudo = new PseudoLang();
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
         var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = TestWindows.Editing(s);
         Dispatcher.UIThread.RunJobs();
 
         void Said(string english)

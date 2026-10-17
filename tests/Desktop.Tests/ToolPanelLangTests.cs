@@ -92,31 +92,18 @@ public sealed class ToolPanelLangTests
     [AvaloniaFact]
     public void ALoadedStampIsNamedInTheLanguageInUse()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "vwe-stamps-" + Guid.NewGuid().ToString("N")[..8]);
-        string? was = Stamps.PathOverride;
-        try
-        {
-            Stamps.PathOverride = Path.Combine(dir, "stamps.json");
-            using var pseudo = new PseudoLang();
-            var t = new ToolPanel();
-            Said? said = null;
-            t.Message += m => said = m;
-            t.AddStamp("pic", new float[Stamps.Size * Stamps.Size]);
-            Assert.Equal(PseudoLang.Wrap("Stamp: pic"), t.ShapeBox.SelectedItem);
-            Assert.Equal("Loaded the stamp “pic”: white parts work fully, black parts not at all.", said!.English);
-            Assert.True(PseudoLang.Translated(said.Shown, []), said.Shown);
-            Assert.Equal("pic", t.Brush.StampLabel);
-            // Its entry holds its name as a value: no catalogue text gives its English back (the known limit of a
-            // remembered loaded stamp across languages).
-            Assert.Equal(PseudoLang.Wrap("Stamp: pic"), Lang.EnglishOf(PseudoLang.Wrap("Stamp: pic")));
-        }
-        finally
-        {
-            Stamps.PathOverride = was;
-            if (Directory.Exists(dir))
-            {
-                Directory.Delete(dir, true);
-            }
-        }
+        using var kept = new KeptStamps();
+        using var pseudo = new PseudoLang();
+        var t = new ToolPanel();
+        Said? said = null;
+        t.Message += m => said = m;
+        t.AddStamp("pic", new float[Stamps.Size * Stamps.Size]);
+        Assert.Equal(PseudoLang.Wrap("Stamp: pic"), t.ShapeBox.SelectedItem);
+        Assert.Equal("Loaded the stamp “pic”: white parts work fully, black parts not at all.", said!.English);
+        Assert.True(PseudoLang.Translated(said.Shown, []), said.Shown);
+        Assert.Equal("pic", t.Brush.StampLabel);
+        // Its entry holds its name as a value: no catalogue text gives its English back (the known limit of a
+        // remembered loaded stamp across languages).
+        Assert.Equal(PseudoLang.Wrap("Stamp: pic"), Lang.EnglishOf(PseudoLang.Wrap("Stamp: pic")));
     }
 }
