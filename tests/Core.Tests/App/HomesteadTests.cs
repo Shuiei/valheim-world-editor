@@ -105,6 +105,20 @@ public class HomesteadTests : IDisposable
         Assert.Equal("a_b.blueprint", Homestead.FileName("a/b"));
     }
 
+    // FreeName: the name when free, else numbered from 2; a name at the file-name limit is cut so the number stays
+    // in the file name (every numbered name mapped to the same file before, and the search never ended).
+    [Fact]
+    public void FreeNamesAreNumberedWithinTheFileNameLimit()
+    {
+        Assert.Equal("Hut", Homestead.FreeName("Hut ", _ => false));
+        Assert.Equal("Hut (3)", Homestead.FreeName("Hut", n => n is "Hut" or "Hut (2)"));
+        string longName = new('h', 64);
+        var files = new HashSet<string> { Homestead.FileName(longName), Homestead.FileName(longName[..60] + " (2)") };
+        string free = Homestead.FreeName(longName, n => files.Contains(Homestead.FileName(n)));
+        Assert.Equal(longName[..60] + " (3)", free);
+        Assert.Equal(64 + ".blueprint".Length, Homestead.FileName(free).Length);
+    }
+
     [Fact]
     public void DescriptionAndTagsAreWrittenReadAndChangedBeforeThePieces()
     {

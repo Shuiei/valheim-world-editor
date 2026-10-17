@@ -260,6 +260,9 @@ public static class Homestead
         return string.Join("\n", head.Concat(lines.Skip(pieces)));
     }
 
+    /// <summary>Characters a blueprint's file name keeps before ".blueprint".</summary>
+    private const int FileNameLength = 64;
+
     /// <summary>
     /// A file name for a blueprint name: what Windows and Linux both allow. Forbidden characters become _,
     /// at most 64 characters before ".blueprint", "blueprint" when nothing is left.
@@ -268,7 +271,33 @@ public static class Homestead
     {
         string f = new([.. name.Trim().Select(c => Path.GetInvalidFileNameChars().Contains(c) || c is '<' or '>' or ':' or '"' or '/' or '\\' or '|' or '?' or '*' ? '_' : c)]);
         f = f.Trim('.', ' ');
-        return (f.Length == 0 ? "blueprint" : f.Length > 64 ? f[..64] : f) + ".blueprint";
+        return (f.Length == 0 ? "blueprint" : f.Length > FileNameLength ? f[..FileNameLength] : f) + ".blueprint";
+    }
+
+    /// <summary>
+    /// The name itself when <paramref name="taken"/> says it is free, else the first "name (n)" (n from 2) that is.
+    /// A long name is cut so that the number survives <see cref="FileName"/>'s 64-character cut: without that, every
+    /// numbered name of a 64-character blueprint would give the same file and the search would never end.
+    /// </summary>
+    /// <param name="name">The wanted name.</param>
+    /// <param name="taken">Whether a blueprint of that name exists already.</param>
+    public static string FreeName(string name, Func<string, bool> taken)
+    {
+        name = name.Trim();
+        if (!taken(name))
+        {
+            return name;
+        }
+        for (int n = 2; ; n++)
+        {
+            string suffix = $" ({n})";
+            string stem = name.Length + suffix.Length > FileNameLength ? name[..(FileNameLength - suffix.Length)].TrimEnd() : name;
+            string numbered = stem + suffix;
+            if (!taken(numbered))
+            {
+                return numbered;
+            }
+        }
     }
 
     /// <summary>
