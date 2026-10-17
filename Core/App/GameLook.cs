@@ -402,6 +402,7 @@ public static class GameLook
             }
             catch
             {
+                // The Steam key may be missing or unreadable; the other places below are still searched.
             }
             if (SearchOutsideHome)
             {

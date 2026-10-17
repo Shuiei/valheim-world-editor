@@ -193,6 +193,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
         }
         catch
         {
+            // The listener may already be stopped; there is nothing left to stop.
         }
     }
 
@@ -439,6 +440,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
             }
             catch
             {
+                // The request's client may have gone; there is nobody left to send the error to.
             }
         }
     }

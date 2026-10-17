@@ -42,6 +42,7 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
             }
             catch
             {
+                // The accept loop ends when the test disposes the listener; the test has finished by then.
             }
         });
     }
@@ -60,6 +61,7 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         }
         catch
         {
+            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
         }
     }
 

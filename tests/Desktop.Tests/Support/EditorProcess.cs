@@ -157,6 +157,7 @@ public class EditorProcess : IDisposable
             }
             catch
             {
+                // The process may have exited already; the test is over either way.
             }
         }
         try
@@ -165,6 +166,7 @@ public class EditorProcess : IDisposable
         }
         catch
         {
+            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
         }
         GC.SuppressFinalize(this);
     }

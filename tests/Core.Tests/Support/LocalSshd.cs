@@ -134,6 +134,7 @@ public sealed class LocalSshd : IDisposable
         }
         catch
         {
+            // The process may have exited already; the test is over either way.
         }
         try
         {
@@ -141,6 +142,7 @@ public sealed class LocalSshd : IDisposable
         }
         catch
         {
+            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
         }
     }
 }

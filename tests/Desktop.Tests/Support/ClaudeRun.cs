@@ -81,6 +81,7 @@ internal sealed class ClaudeRun : IDisposable
             }
             catch
             {
+                // Best effort: a folder that cannot be deleted is left for the OS to clean up.
             }
         }
     }

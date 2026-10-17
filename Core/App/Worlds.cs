@@ -35,6 +35,7 @@ public static class Worlds
             }
             catch
             {
+                // A folder that cannot be read is left out of the list.
             }
         }
         foreach (var r in settings.Recent)

@@ -202,6 +202,7 @@ public static class LocalGame
             }
             catch
             {
+                // A bridge that does not answer is not running here; the next one is tried.
             }
         }
         return null;

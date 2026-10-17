@@ -34,6 +34,7 @@ public sealed class FolderEditorProcess() : EditorProcess(Start())
         }
         catch
         {
+            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
         }
     }
 }

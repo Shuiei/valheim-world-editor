@@ -50,6 +50,7 @@ public static class Log
         }
         catch
         {
+            // The editor runs without a log file if it cannot be started.
         }
     }
 
@@ -94,6 +95,7 @@ public static class Log
                 }
                 catch
                 {
+                    // A log file that cannot be written cannot report its own failure; the console still gets the text.
                 }
             }
         }
@@ -111,21 +113,42 @@ public static class Log
         /// <inheritdoc/>
         public override void Write(char value)
         {
-            try { console.Write(value); } catch { }
+            try
+            {
+                console.Write(value);
+            }
+            catch
+            {
+                // The console may be closed or redirected; the log file still gets the text.
+            }
             file.Write(value.ToString());
         }
 
         /// <inheritdoc/>
         public override void Write(string? value)
         {
-            try { console.Write(value); } catch { }
+            try
+            {
+                console.Write(value);
+            }
+            catch
+            {
+                // The console may be closed or redirected; the log file still gets the text.
+            }
             file.Write(value);
         }
 
         /// <inheritdoc/>
         public override void WriteLine(string? value)
         {
-            try { console.WriteLine(value); } catch { }
+            try
+            {
+                console.WriteLine(value);
+            }
+            catch
+            {
+                // The console may be closed or redirected; the log file still gets the text.
+            }
             file.Write(value + "\n");
         }
     }
