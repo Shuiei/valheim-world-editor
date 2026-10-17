@@ -36,7 +36,8 @@ public sealed class PseudoLangTests
         var title = new TextBlock();
         title.Inlines ??= [];
         title.Inlines.Add(new Run("Valheim"));
-        title.Inlines.Add(new Run(Lang.T("common.save")));
+        title.Inlines.Add(new LineBreak());
+        title.Inlines.Add(new Bold { Inlines = { new Run(Lang.T("common.save")) } });
         var tipped = new Button { Content = Lang.T("common.ok") };
         ToolTip.SetTip(tipped, "Bare tip");
         var panel = new StackPanel

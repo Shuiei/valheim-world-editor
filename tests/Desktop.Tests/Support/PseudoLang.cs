@@ -91,9 +91,18 @@ internal sealed partial class PseudoLang : IDisposable
                     case Span s:
                         Runs(s.Inlines);
                         break;
-                    case InlineUIContainer { Child: { } child }:
-                        Walk(child);
+                    case InlineUIContainer container:
+                        if (container.Child is { } child)
+                        {
+                            Walk(child);
+                        }
                         break;
+                    case LineBreak:
+                        // No text.
+                        break;
+                    default:
+                        // A kind of inline not read here would let its text through unchecked.
+                        throw new NotSupportedException($"PseudoLang cannot read a {inline.GetType().Name} in a text block.");
                 }
             }
         }
