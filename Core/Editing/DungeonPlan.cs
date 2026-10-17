@@ -959,12 +959,12 @@ internal sealed class DungeonPlanner
 
     /// <summary>
     /// The same room on the other side of its parent, mirrored across the parent's middle; null when it is
-    /// not a centred, ordinary side room or the mirror does not fit.
+    /// not a centred, ordinary side room, its kind comes only once (a kitchen, a forge) or the mirror does not fit.
     /// </summary>
     private DungeonPlan.Space? Twin(DungeonPlan.Level l, DungeonPlan.Space n)
     {
         var parent = n.Parent;
-        if (parent == null || n.Shift != 0 || n.Tall || n.Dir == parent.Dir || n.Dir == (-parent.Dir.X, -parent.Dir.Z))
+        if (parent == null || SpecOf(n.Room).Unique || n.Shift != 0 || n.Tall || n.Dir == parent.Dir || n.Dir == (-parent.Dir.X, -parent.Dir.Z))
         {
             return null;
         }

@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.76 — unreleased
+
+### Fixed
+- **A generated dungeon could hold two kitchens, two forges or two feast halls.** A side room is sometimes mirrored
+  across the room it opens off, and the mirror did not check whether its kind comes only once, so a fortress, prison
+  or Dvergr hold could get its kitchen, forge or feast hall twice. Such rooms are no longer mirrored.
+
 ## v1.45.75 — unreleased
 
 ### Fixed
