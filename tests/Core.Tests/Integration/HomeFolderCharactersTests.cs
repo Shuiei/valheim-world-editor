@@ -64,6 +64,38 @@ public sealed class HomeFolderCharactersTests : HomeFolderTestBase
     }
 
     [Fact]
+    public void EachThreadCountsOnlyTheCharacterFilesItRead()
+    {
+        // The count is the thread's own (the tests read characters on other threads at the same time).
+        string chars = Local(".config", "unity3d", "IronGate", "Valheim", "characters_local");
+        Directory.CreateDirectory(chars);
+        string file = Path.Combine(chars, "ragnar.fch");
+        File.WriteAllBytes(file, Fch("Ragnar", 5));
+        Assert.Equal(5, Assert.Single(Characters.Local()).Id);
+        int reads = Characters.FileReads;
+        File.WriteAllBytes(file, Fch("Ragnar", 6));
+        File.SetLastWriteTimeUtc(file, DateTime.UtcNow.AddMinutes(1));
+        // Read on another thread, asserted here: a failed assert there would end the test run, not fail the test.
+        List<Characters.Character>? otherList = null;
+        int otherReads = -1;
+        var other = new Thread(() =>
+        {
+            otherList = Characters.Local();
+            otherReads = Characters.FileReads;
+        });
+        other.Start();
+        other.Join();
+
+        // The other thread read the changed file: its count only.
+        Assert.Equal(6, Assert.Single(otherList!).Id);
+        Assert.Equal(1, otherReads);
+        Assert.Equal(reads, Characters.FileReads);
+        // Here, the file unchanged since the other thread read it: not read again.
+        Assert.Equal(6, Assert.Single(Characters.Local()).Id);
+        Assert.Equal(reads, Characters.FileReads);
+    }
+
+    [Fact]
     public void ACharacterFileThatCannotBeReadIsPassedOver()
     {
         if (OperatingSystem.IsWindows() || Environment.UserName == "root")

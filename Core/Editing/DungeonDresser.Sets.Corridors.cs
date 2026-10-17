@@ -69,7 +69,15 @@ internal sealed partial class DungeonDresser
         {
             kinds.Add(("trap", 0.8f));
         }
-        string kind = Weighted.Pick(kinds, k => k.Weight, _rnd.NextDouble()).Kind;
+        CorridorAs(f, Weighted.Pick(kinds, k => k.Weight, _rnd.NextDouble()).Kind);
+    }
+
+    /// <summary>
+    /// Dresses a corridor as the kind picked (<see cref="CorridorKind"/>); a plain one, or a kind without dressing of its
+    /// own, gets nothing.
+    /// </summary>
+    private void CorridorAs(Frame f, string kind)
+    {
         switch (kind)
         {
             case "gate":
@@ -163,6 +171,8 @@ internal sealed partial class DungeonDresser
                         }
                     }
                 }
+                break;
+            default:
                 break;
         }
     }

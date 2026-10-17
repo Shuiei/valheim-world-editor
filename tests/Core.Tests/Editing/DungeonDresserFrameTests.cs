@@ -185,4 +185,28 @@ public class DungeonDresserFrameTests
         }
         Assert.True(fronts > 0, "no cell block");
     }
+
+    [Fact]
+    public void APlainCorridorOrAKindWithoutDressingGetsNothing()
+    {
+        // The kinds a corridor is dressed as: a plain one, or one the dresser has no dressing for, adds nothing (the
+        // switch's default); a gate adds its wall and door.
+        var biome = DungeonKit.BiomeOf("Black Forest");
+        var mat = DungeonKit.MaterialOf(biome.Material);
+        var style = DungeonKit.StyleOf("Crypt");
+        var s = new DungeonGen.Settings(Biome: "Black Forest", Style: style.Name, Size: 3, Levels: 1, Seed: 1);
+        var plan = DungeonPlanner.Make(s, style, new Random(1));
+        var f = plan.Spaces.Where(sp => sp.Corridor && sp.Shape == DungeonPlan.Shape.Rect)
+            .Select(sp => new DungeonDresser.Frame(sp, mat, plan.Levels[sp.Level])).First(fr => fr.HalfD >= 4);
+        int Dressed(string kind)
+        {
+            var o = new DungeonOut();
+            DungeonDresser.DressCorridor(f, kind, mat, biome, style, s, new Random(1), o);
+            return o.Items.Count;
+        }
+
+        Assert.Equal(0, Dressed("plain"));
+        Assert.Equal(0, Dressed("no such kind"));
+        Assert.True(Dressed("gate") > 0);
+    }
 }
