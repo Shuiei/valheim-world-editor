@@ -29,9 +29,10 @@ public sealed partial class GlView : OpenGlControlBase
     /// <summary>The models of the area's objects, null when there are none (plain boxes).</summary>
     internal ModelStore? Models { get; private set; }
     /// <summary>
-    /// A status line to show (OpenGL version, game look loaded or not…); may be raised from a worker thread.
+    /// A status line to show (OpenGL version, game look loaded or not…), in the user's language and in English (for
+    /// the log); may be raised from a worker thread.
     /// </summary>
-    public event Action<string>? Status;
+    public event Action<Said>? Status;
 
     // ---- View switches: which kinds of objects are drawn, and the water.
     /// <summary>Which kinds of objects are drawn, by kind.</summary>
@@ -183,11 +184,11 @@ public sealed partial class GlView : OpenGlControlBase
             try
             {
                 _lookFiles = GameLookGl.Read();
-                Status?.Invoke(_lookFiles == null ? "Valheim was not found: plain colours (choose its folder on the start page)." : "Game look loaded.");
+                Status?.Invoke(_lookFiles == null ? Said.Of("world.msg.lookMissing") : Said.Of("world.msg.lookLoaded"));
             }
             catch (Exception ex)
             {
-                Status?.Invoke("Game look could not be read: " + ex.Message);
+                Status?.Invoke(Said.Of("world.msg.lookUnreadable", ex.Message));
             }
             Wake();
         });
@@ -263,7 +264,7 @@ public sealed partial class GlView : OpenGlControlBase
         _terrainProg = Program(Shaders.TerrainVs, Shaders.TerrainFs);
         _objectProg = Program(Shaders.ObjectVs, Shaders.ObjectFs);
         _waterProg = Program(Shaders.WaterVs, Shaders.WaterFs);
-        Status?.Invoke($"OpenGL {(_es ? "ES " : "")}{GlVersion.Major}.{GlVersion.Minor}: {_gl.GetStringS(StringName.Renderer)}");
+        Status?.Invoke(Said.Raw($"OpenGL {(_es ? "ES " : "")}{GlVersion.Major}.{GlVersion.Minor}: {_gl.GetStringS(StringName.Renderer)}"));
     }
 
     /// <summary>

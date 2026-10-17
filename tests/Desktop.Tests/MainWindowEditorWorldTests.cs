@@ -110,7 +110,7 @@ public class MainWindowEditorWorldTests
         Assert.True(r.W.IsBusy);
         r.W.KeyPress(Key.S, RawInputModifiers.Control, PhysicalKey.S, "s");
         Assert.Equal(1, asked);
-        Assert.Equal("the world is being saved or read", r.W.MoveBlocker());
+        Assert.Equal("the world is being saved or read", r.W.MoveBlocker()?.English);
         read.SetResult();
         await saving;
         Assert.Single(r.Told);
@@ -130,10 +130,10 @@ public class MainWindowEditorWorldTests
         Assert.Null(w.MoveBlocker());
         s.Brush.Radius = 4;
         s.BeginStroke(BrushTool.Raise, 32, 32);
-        Assert.Equal("a stroke is on", w.MoveBlocker());
+        Assert.Equal("a stroke is on", w.MoveBlocker()?.English);
         s.EndStroke();
         w.View.Path.Points.Add(new System.Numerics.Vector2(10, 10));
-        Assert.Equal("a path is drawn (apply or clear it)", w.MoveBlocker());
+        Assert.Equal("a path is drawn (apply or clear it)", w.MoveBlocker()?.English);
         // No live game here: no players to ask for.
         await w.PollPlayers();
         Assert.Empty(w.LivePlayers);

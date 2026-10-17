@@ -280,7 +280,7 @@ public sealed class WorldScene
             Modifiers = modifiers,
             Terrain = terrain,
             Owner = owner,
-            LoadInfo = $"{world.Name}: read in {readMs} ms, {zonesX}×{zonesZ} zones and {things.Count:N0} objects ready in {watch.ElapsedMilliseconds} ms",
+            LoadInfo = Lang.T("world.loadInfo", world.Name, readMs, zonesX, zonesZ, things.Count, watch.ElapsedMilliseconds),
         };
         scene.Session = new EditSession(scene, Ground.Read(terrain, edits, x0, z0, zonesX, zonesZ), edits);
         owner.Area = scene.Session;

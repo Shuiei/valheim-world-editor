@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.12 — unreleased
+
+### Changed
+- **The 3D editor's area bar and the live game's messages come from the language catalogue.** The area's arrows,
+  size and Follow, Discard, Reload and Auto, their questions and messages, the locations note, the live players and
+  what came from the game, the area's line under its name, how it loaded and the window's title on the New world page
+  show in the language chosen in Settings. In English nothing changes.
+
 ## v1.47.11 — unreleased
 
 ### Changed
