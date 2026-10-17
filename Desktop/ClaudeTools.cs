@@ -36,6 +36,13 @@ public sealed partial class ClaudeTools
     /// <summary>The worlds folders create_world may make a world in (the game's that exist; tests give their own).</summary>
     internal Func<List<string>> WorldFolders { get; set; } = NewWorldPage.Roots;
 
+    /// <summary>
+    /// The whole-world search search_world runs away from the window's thread (WorldSearch.Search; tests hold it to
+    /// change the world while it runs).
+    /// </summary>
+    internal Func<Save.WorldSave, Editing.EditStore, string, string, TerrainEditor.App.WorldSearch.Result> SearchFiles { get; set; } =
+        (world, edits, query, what) => TerrainEditor.App.WorldSearch.Search(world, edits, query, what);
+
     /// <summary>Compact JSON for the answers.</summary>
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
 
