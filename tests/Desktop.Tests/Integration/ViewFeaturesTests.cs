@@ -1,11 +1,11 @@
 using System.Globalization;
-using System.Numerics;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using TerrainEditor.App;
 using Xunit;
+using static TerrainEditor.Desktop.Tests.KeysAndMouseSetup;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -83,13 +83,6 @@ public class ViewFeaturesTests
     /// A shown main window editing a flat 2 × 2 zone area with these objects, looking straight down; with the screen
     /// point of a grid point (on the ground at 30 m).
     /// </summary>
-    private static (MainWindow W, EditSession S, Func<float, float, Avalonia.Point> Screen) Open(params WorldScene.Thing[] things)
-    {
-        var (w, s, screen) = ShownEditor.Open(things);
-        w.View.SetCamera(new Vector3(0, 150, 1), Vector3.Zero, 1);
-        return (w, s, (gx, gz) => screen(new Vector3(gx - 64, 30, -(gz - 64))));
-    }
-
     [AvaloniaFact]
     public void TheStatusBarFollowsTheMouseOverTheGround()
     {

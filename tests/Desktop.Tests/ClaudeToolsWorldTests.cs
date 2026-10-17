@@ -2,6 +2,7 @@ using Avalonia.Headless.XUnit;
 using TerrainEditor.App;
 using TerrainEditor.Save;
 using Xunit;
+using static TerrainEditor.Desktop.Tests.ClaudePieces;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -152,18 +153,7 @@ public class ClaudeToolsWorldTests
         using var r = new ClaudeRun();
         r.Hut("Shed", "A shed");
         // A fence 12 m long round its anchor: put 6 m from the area's edge, one end is outside.
-        static System.Text.Json.Nodes.JsonNode Post(float dx) => new System.Text.Json.Nodes.JsonObject
-        {
-            ["name"] = "wood_pole2",
-            ["dx"] = dx,
-            ["dy"] = 1,
-            ["dz"] = 0,
-            ["rx"] = 0,
-            ["ry"] = 0,
-            ["rz"] = 0,
-            ["scale"] = 0,
-        };
-        var clip = new System.Text.Json.Nodes.JsonObject { ["objects"] = new System.Text.Json.Nodes.JsonArray(Post(-6), Post(6)) };
+        var clip = new System.Text.Json.Nodes.JsonObject { ["objects"] = new System.Text.Json.Nodes.JsonArray(Piece("wood_pole2", -6, 1), Piece("wood_pole2", 6, 1)) };
         File.WriteAllText(Path.Combine(r.Homestead, Homestead.FileName("Fence")), Homestead.Write(clip, "Fence", "Tester", null, DateTime.Now));
         await r.OpenArea();
         var w = r.W.World!;
@@ -179,7 +169,7 @@ public class ClaudeToolsWorldTests
         Assert.Equal(steps, r.W.Session.UndoList.Count);
         Assert.Equal(0, w.Pending.Added);
         // Nor is one with no piece this world can have.
-        var ghost = Post(0);
+        var ghost = Piece("wood_pole2", 0, 1);
         ghost["name"] = "no_such_piece";
         var none = new System.Text.Json.Nodes.JsonObject { ["objects"] = new System.Text.Json.Nodes.JsonArray(ghost) };
         File.WriteAllText(Path.Combine(r.Homestead, Homestead.FileName("Ghost")), Homestead.Write(none, "Ghost", "Tester", null, DateTime.Now));

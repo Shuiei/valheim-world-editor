@@ -33,16 +33,7 @@ public sealed class BlueprintsPanelBranchesTests : IDisposable
     }
 
     /// <summary>A copy with no ground and no name (a wall).</summary>
-    private static CopyData Unnamed() => new()
-    {
-        W = 1,
-        H = 1,
-        Rel = [float.NaN],
-        Wt = [0f],
-        Pnt = [-1f, -1, -1, -1],
-        Objects = [new(StableHash.Of("woodwall"), "woodwall", 0, 0, 0, Vector3.Zero, 0, null)],
-        Poly = [],
-    };
+    private static CopyData Unnamed() => ClipboardSetup.SingleObjectClip(new CopyData.Obj(StableHash.Of("woodwall"), "woodwall", 0, 0, 0, Vector3.Zero, 0, null), []);
 
     /// <summary>A copy in the clipboard format, without ground (a "none" height and a missing one).</summary>
     private static JsonObject Groundless(params string[] kinds)

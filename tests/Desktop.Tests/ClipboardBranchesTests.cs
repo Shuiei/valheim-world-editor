@@ -1,6 +1,7 @@
 using System.Numerics;
 using TerrainEditor.Save;
 using Xunit;
+using static TerrainEditor.Desktop.Tests.ClipboardSetup;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -25,17 +26,7 @@ public class ClipboardBranchesTests
     [Fact]
     public void GroundOnlyCopiesStackTwoMetresApart()
     {
-        var clip = new CopyData
-        {
-            W = 1,
-            H = 1,
-            Rel = [0f],
-            Wt = [1f],
-            Pnt = [-1f, -1, -1, -1],
-            Objects = [],
-            Poly = [new(-1, -1), new(1, -1), new(1, 1), new(-1, 1)],
-            Name = "Bit",
-        };
+        var clip = GroundOnlyClip(1, 1, [new(-1, -1), new(1, -1), new(1, 1), new(-1, 1)], "Bit");
         var paste = new PasteTool { Clip = clip, Copies = 2, Gap = 1, Direction = PasteTool.Along.Up };
         var (objs, outlines) = paste.Preview(new Vector2(30, 30), _ => 30);
         Assert.Empty(objs);
@@ -48,17 +39,7 @@ public class ClipboardBranchesTests
         var s = TestScenes.Flat(2);
         s.Shape(60, 60, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 6, 3, "mound");
         float before = s.Ground.HeightOf(60 * s.Ground.W + 60), foot = s.Ground.HeightOf(60 * s.Ground.W + 66);
-        var wall = new CopyData
-        {
-            W = 1,
-            H = 1,
-            Rel = [float.NaN],
-            Wt = [0f],
-            Pnt = [-1f, -1, -1, -1],
-            Objects = [new CopyData.Obj(StableHash.Of("woodwall"), "woodwall", -6, 0, 1, new Vector3(0, 90, 0), 1, null)],
-            Poly = [new(-8, -2), new(2, -2), new(2, 2), new(-8, 2)],
-            Name = "Wall",
-        };
+        var wall = SingleObjectClip(new CopyData.Obj(StableHash.Of("woodwall"), "woodwall", -6, 0, 1, new Vector3(0, 90, 0), 1, null), [new(-8, -2), new(2, -2), new(2, 2), new(-8, 2)], "Wall");
         var (touched, _, add) = new PasteTool { Clip = wall }.Apply(s.Ground, new Vector2(66, 60), _ => 1f);
         Assert.Single(add);
         Assert.NotEmpty(touched);
