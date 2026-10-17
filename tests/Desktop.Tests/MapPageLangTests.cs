@@ -1,5 +1,6 @@
 using Avalonia.Headless.XUnit;
 using TerrainEditor.App;
+using TerrainEditor.Save;
 using WorldEditor.Tests;
 using Xunit;
 
@@ -69,6 +70,93 @@ public sealed class MapPageLangTests
         {
             w.CloseWithoutAsking();
             Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task TheMapsMessagesAreCatalogueTexts()
+    {
+        using var pseudo = new PseudoLang();
+        string dir = Fixtures.CopyFixture();
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        try
+        {
+            w.Show();
+            await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
+            var m = w.MapPage!;
+            Assert.Equal(PseudoLang.Wrap("Everything is saved."), m.Pending.Text);
+            Assert.Equal(PseudoLang.Wrap("Not saved yet: " + PseudoLang.Wrap("2 zones of ground") + ", " + PseudoLang.Wrap("1 deleted") + "."),
+                MapPage.PendingText((2, 1, 0, 0), live: false));
+            Assert.Equal(PseudoLang.Wrap("Not applied yet: " + PseudoLang.Wrap("1 zone of ground") + "."), MapPage.PendingText((1, 0, 0, 0), live: true));
+
+            // The search: nothing found, a search that fails, one the world changed under, and what was found.
+            m.SearchBox.Text = "no such thing at all";
+            await m.Search();
+            Assert.Equal(PseudoLang.Wrap("Nothing found."), m.SearchInfo.Text);
+            m.RunSearch = (_, _, _) => Task.FromException<WorldSearch.Result>(new IOException("the disk is gone"));
+            await m.Search();
+            Assert.Equal(PseudoLang.Wrap("Search failed: the disk is gone"), m.SearchInfo.Text);
+            var held = new TaskCompletionSource<WorldSearch.Result>();
+            m.RunSearch = (_, _, _) => held.Task;
+            var running = m.Search();
+            Assert.Equal(PseudoLang.Wrap("Searching…"), m.SearchInfo.Text);
+            m.Show(w.World!);
+            Assert.Equal(PseudoLang.Wrap("The world changed during the search: search again."), m.SearchInfo.Text);
+            held.SetResult(new WorldSearch.Result([], [], 0, false));
+            await running;
+            var found = new WorldSearch.Result([new(1, "Beech", 0, 0, 0, null)], new() { ["Beech"] = 1 }, 1, true);
+            Assert.Equal(PseudoLang.Wrap("1 Beech") + "\n"
+                + PseudoLang.Wrap("1 found in all, the first 1 pinned. Click one to go there."), MapPage.Found(found, "items"));
+        }
+        finally
+        {
+            w.CloseWithoutAsking();
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
+
+    // The map's build status while it builds, and when it cannot be built.
+    [AvaloniaFact]
+    public async Task TheMapsBuildStatusIsCatalogueText()
+    {
+        using var pseudo = new PseudoLang();
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            using var session = WorldSession.Open(dir);
+            using var map = new MapView { BuildGlobal = _ => throw new InvalidDataException("a broken zone") };
+            var said = new List<string>();
+            map.Status += said.Add;
+            map.Show(session);
+            await TestWindows.Until(() => said.Count == 2);
+            Assert.Equal([PseudoLang.Wrap("Building the world map (same as the game does)…"), PseudoLang.Wrap("Could not build the world map: a broken zone")], said);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
+
+    // A live world: the players line with players, without any, and when the game does not answer; all applied.
+    [AvaloniaFact]
+    public async Task ALiveWorldsLinesAreCatalogueTexts()
+    {
+        using var pseudo = new PseudoLang();
+        foreach (var (players, line) in new[]
+        {
+            ("[{\"name\":\"Cyd\",\"x\":0,\"y\":30,\"z\":0,\"yaw\":0}]", "Live world · 1 player(s) online: Cyd"),
+            ("[]", "Live world · 0 player(s) online"),
+            ("this is not json", "Live world · the game does not answer right now."),
+        })
+        {
+            using var game = new FakeGame { Players = players };
+            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+            w.Show();
+            await w.OpenWorld(() => WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label()), "Connecting…");
+            await TestWindows.Until(() => w.MapPage!.LiveText.Text == PseudoLang.Wrap(line));
+            Assert.Equal(PseudoLang.Wrap("Everything is applied."), w.MapPage!.Pending.Text);
+            w.MapPage.Stop();
+            w.CloseWithoutAsking();
         }
     }
 }

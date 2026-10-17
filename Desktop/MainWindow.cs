@@ -245,15 +245,25 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// What is waiting to be saved, as a list for people ("3 zone(s) of ground, 2 deleted").
     /// </summary>
-    private static string Describe((int Zones, int Deleted, int Added, int Resets) p)
+    private static string Describe((int Zones, int Deleted, int Added, int Resets) p) =>
+        PendingList(p.Zones > 0 ? Lang.T("save.count.zones", p.Zones) : "", p.Deleted, p.Added, p.Resets);
+
+    /// <summary>
+    /// What is waiting, as a list for people: the zones of ground as the caller says them, then the objects deleted,
+    /// added and the zones reset; empty when nothing is.
+    /// </summary>
+    /// <param name="zones">The zones of ground changed, as text; empty when none.</param>
+    /// <param name="deleted">Objects deleted.</param>
+    /// <param name="added">Objects added.</param>
+    /// <param name="resets">Zones marked for reset.</param>
+    internal static string PendingList(string zones, int deleted, int added, int resets)
     {
-        var (z, d, a, r) = p;
         return string.Join(", ", new[]
         {
-            z > 0 ? Lang.T("save.count.zones", z) : "",
-            d > 0 ? Lang.T("save.count.deleted", d) : "",
-            a > 0 ? Lang.T("save.count.added", a) : "",
-            r > 0 ? Lang.T("save.count.resets", r) : "",
+            zones,
+            deleted > 0 ? Lang.T("save.count.deleted", deleted) : "",
+            added > 0 ? Lang.T("save.count.added", added) : "",
+            resets > 0 ? Lang.T("save.count.resets", resets) : "",
         }.Where(x => x != ""));
     }
 
