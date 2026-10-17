@@ -76,18 +76,29 @@ public sealed partial class GlView
         }
         else if (click && Mode == ToolMode.View && !Panning && _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5)
         {
-            bool add = mods.HasFlag(KeyModifiers.Shift) || Ctrl(mods);
-            // A plain double click on an object: the Select tool, to move it with the handles.
-            if (Pick(at, size, add, mods.HasFlag(KeyModifiers.Shift) && !Ctrl(mods)) != null && _pressClicks == 2 && !add)
-            {
-                SelectToolAsked?.Invoke();
-            }
+            ViewClick(at, size, mods);
         }
         _pressAt = null;
         _dragFrom = null;
         _pickSwallow = false;
         Panning = false;
         Wake();
+    }
+
+    /// <summary>
+    /// A click in the View tool: picks the object under the pointer; a plain double click on one asks for the Select
+    /// tool, to move it with the handles.
+    /// </summary>
+    /// <param name="at">Where the pointer is, on the surface.</param>
+    /// <param name="size">The surface's size.</param>
+    /// <param name="mods">The keys held.</param>
+    private void ViewClick(Point at, Size size, KeyModifiers mods)
+    {
+        bool add = mods.HasFlag(KeyModifiers.Shift) || Ctrl(mods);
+        if (Pick(at, size, add, mods.HasFlag(KeyModifiers.Shift) && !Ctrl(mods)) != null && _pressClicks == 2 && !add)
+        {
+            SelectToolAsked?.Invoke();
+        }
     }
 
     /// <summary>
