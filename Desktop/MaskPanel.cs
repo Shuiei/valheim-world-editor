@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -31,7 +32,7 @@ public sealed class MaskPanel
     /// <summary>
     /// Turns the mask on or off.
     /// </summary>
-    internal CheckBox OnBox { get; } = new CheckBox { Content = "Mask", FontSize = 13, FontWeight = FontWeight.SemiBold }.Tip("mask.on");
+    internal CheckBox OnBox { get; } = new CheckBox { Content = Lang.T("mask.label.on"), FontSize = 13, FontWeight = FontWeight.SemiBold }.Tip("mask.on");
     /// <summary>
     /// One toggle per biome, by its biome flag.
     /// </summary>
@@ -57,7 +58,7 @@ public sealed class MaskPanel
     /// </summary>
     internal ComboBox PaintBox { get; } = new()
     {
-        ItemsSource = new[] { "Any ground", "Only unpainted", "Only painted", "Only dirt", "Only cultivated", "Only paved" },
+        ItemsSource = new[] { Lang.T("mask.paint.any"), Lang.T("mask.paint.unpainted"), Lang.T("mask.paint.painted"), Lang.T("mask.paint.dirt"), Lang.T("mask.paint.cultivated"), Lang.T("mask.paint.paved") },
         SelectedIndex = 0,
         FontSize = 12,
         HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -71,7 +72,7 @@ public sealed class MaskPanel
     /// A number box that starts empty (no limit).
     /// </summary>
     private static NumericUpDown Num(decimal step, decimal min = -1000, decimal max = 2000) =>
-        new() { Value = null, Increment = step, Minimum = min, Maximum = max, FormatString = "0.#", FontSize = 12, MinWidth = 80, PlaceholderText = "none" };
+        new() { Value = null, Increment = step, Minimum = min, Maximum = max, FormatString = "0.#", FontSize = 12, MinWidth = 80, PlaceholderText = Lang.T("mask.hint.noLimit") };
 
     /// <summary>
     /// Builds the card for <paramref name="mask"/> and keeps the two in step both ways.
@@ -80,7 +81,7 @@ public sealed class MaskPanel
     {
         _mask = mask;
         var biomes = new WrapPanel { ItemSpacing = 4, LineSpacing = 4 };
-        foreach (var (b, name) in ZoneFilter.BiomeChoices)
+        foreach (var (b, name) in ZoneFilter.BiomeChoices())
         {
             var t = new ToggleButton { Content = name, FontSize = 11, Padding = new Thickness(6, 2) }.Tip("mask.biome");
             t.IsCheckedChanged += (_, _) =>
@@ -129,13 +130,13 @@ public sealed class MaskPanel
             Spacing = 6,
             Children =
             {
-                new TextBlock { Text = "Only change ground that matches everything below.", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
+                new TextBlock { Text = Lang.T("mask.hint.matches"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                 biomes,
-                Pair("Height", HeightMin, HeightMax, "m"),
-                Pair("Slope", SlopeMin, SlopeMax, "°"),
-                new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,14"), ColumnSpacing = 4, Children = { new TextBlock { Text = "Paint", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PaintBox, 1) } },
+                Pair(Lang.T("common.height"), HeightMin, HeightMax, Lang.T("common.metres")),
+                Pair(Lang.T("common.slope"), SlopeMin, SlopeMax, "°"),
+                new Grid { ColumnDefinitions = new ColumnDefinitions("50,*,14"), ColumnSpacing = 4, Children = { new TextBlock { Text = Lang.T("common.paint"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PaintBox, 1) } },
                 WarningText,
-                new TextBlock { Text = "No biome selected = all biomes. Leave a box empty for no limit. Alt + Shift + click the ground fills the height range around it (±2 m).", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
+                new TextBlock { Text = Lang.T("mask.hint.limits"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
             },
         };
         Card = Ui.AsCard(new Border

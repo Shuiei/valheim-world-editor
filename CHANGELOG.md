@@ -4,6 +4,20 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.9 — unreleased
+
+### Changed
+- **The Measure, Mask and Script tools and the biome names come from the language catalogue.** The tape's hints
+  and measured values, the Mask's rows, paint rules and warnings, the Script panel, its question before replacing a
+  saved script and what a run says, and the biome names of the Mask and the map's zone filter show in the language
+  chosen in Settings. In English nothing changes; Claude still names biomes, and is told about masks and scripts, in
+  English.
+
+### Fixed
+- **A Run of the Script tool's first example was named "Script: script" in History.** The example shown when the
+  panel opens was not chosen in its list, so the run had no name to take; it is chosen now, and the step is named
+  after it.
+
 ## v1.47.8 — unreleased
 
 ### Changed

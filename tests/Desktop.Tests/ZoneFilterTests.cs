@@ -28,7 +28,7 @@ public class ZoneFilterTests
     {
         Assert.Equal(
             [(1, "Meadows"), (8, "Black Forest"), (2, "Swamp"), (4, "Mountain"), (16, "Plains"), (512, "Mistlands"), (32, "Ashlands"), (64, "Deep North"), (256, "Ocean")],
-            ZoneFilter.BiomeChoices);
+            ZoneFilter.BiomeChoices());
     }
 
     [Fact]

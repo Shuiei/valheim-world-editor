@@ -304,7 +304,7 @@ public sealed class ToolPanel
         };
         StampOnceBox.IsCheckedChanged += (_, _) => { Brush.StampOnce = StampOnceBox.IsChecked == true; SyncStamp(); };
         StampHeightBox.ValueChanged += (_, e) => Brush.StampHeight = (float)(e.NewValue ?? 0);
-        _stampHeightRow = Ui.Row(Lang.T("brush.label.height"), StampHeightBox, new TextBlock { Text = Lang.T("brush.unit.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+        _stampHeightRow = Ui.Row(Lang.T("common.height"), StampHeightBox, new TextBlock { Text = Lang.T("common.metres"), Margin = new Thickness(3, 0, 0, 0), FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
         _stampOnceRows = new StackPanel { Spacing = 4, Children = { StampOnceBox, _stampHeightRow } };
         FalloffBox.SelectionChanged += (_, _) => Brush.Falloff = (Falloff)Math.Max(0, FalloffBox.SelectedIndex);
         _turnRow.IsVisible = false;

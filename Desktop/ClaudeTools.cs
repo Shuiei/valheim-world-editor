@@ -711,8 +711,8 @@ public sealed partial class ClaudeTools
             return why;
         }
         var r = await _w.RunScriptCode(code, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, apply: !dryRun);
-        _w.MessageText.Text = r.Message;
-        return r.Output;
+        _w.Msg(r.Message);
+        return r.Output.English;
     });
 
     // ---- Common tasks, as scripts the Script tool runs (one pending step each).
@@ -731,8 +731,8 @@ public sealed partial class ClaudeTools
             return why;
         }
         var r = await _w.RunScriptCode(code, "Claude: " + label);
-        _w.MessageText.Text = r.Message;
-        return r.Output;
+        _w.Msg(r.Message);
+        return r.Output.English;
     });
 
     /// <summary>flatten: levels a rectangle to a height (default: its average), with a cosine soft edge outside it.</summary>

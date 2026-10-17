@@ -71,10 +71,10 @@ public sealed partial class ClaudeTools
         var mask = new Mask { On = true, HeightMin = spec.HeightMin, HeightMax = spec.HeightMax, SlopeMin = spec.SlopeMin, SlopeMax = spec.SlopeMax };
         foreach (string b in spec.Biomes ?? [])
         {
-            var found = ZoneFilter.BiomeChoices.Where(n => string.Equals(n.Name.Replace(" ", "", StringComparison.Ordinal), b.Replace(" ", "", StringComparison.Ordinal), StringComparison.OrdinalIgnoreCase)).ToList();
+            var found = ZoneFilter.BiomeChoices(english: true).Where(n => string.Equals(n.Name.Replace(" ", "", StringComparison.Ordinal), b.Replace(" ", "", StringComparison.Ordinal), StringComparison.OrdinalIgnoreCase)).ToList();
             if (found.Count == 0)
             {
-                return (null, $"{b}: the biomes are {string.Join(", ", ZoneFilter.BiomeChoices.Select(n => n.Name))}.");
+                return (null, $"{b}: the biomes are {string.Join(", ", ZoneFilter.BiomeChoices(english: true).Select(n => n.Name))}.");
             }
             mask.Biomes.Add(found[0].Value);
         }
@@ -86,7 +86,7 @@ public sealed partial class ClaudeTools
             }
             mask.Paint = rule;
         }
-        if (mask.Warning() is { Length: > 0 } warning)
+        if (mask.Warning(english: true) is { Length: > 0 } warning)
         {
             return (null, "The mask lets nothing through: " + warning);
         }

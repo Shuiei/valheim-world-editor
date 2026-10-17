@@ -346,7 +346,7 @@ public sealed class MapPage : IDisposable
 
         // Reset zones across the world.
         var biomes = new WrapPanel();
-        foreach (var (value, name) in ZoneFilter.BiomeChoices)
+        foreach (var (value, name) in ZoneFilter.BiomeChoices())
         {
             var b = new ToggleButton { Content = name, FontSize = 11, Padding = new Thickness(6, 2), Margin = new Thickness(0, 0, 4, 4) }.Tip("map.biome");
             b.IsCheckedChanged += (_, _) => Refilter();

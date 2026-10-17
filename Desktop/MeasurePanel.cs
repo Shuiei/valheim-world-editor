@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -35,7 +36,7 @@ public sealed class MeasurePanel
     /// <summary>
     /// Clears the tape.
     /// </summary>
-    internal Button ClearButton { get; } = new() { Content = "Clear (Esc)", FontSize = 12 };
+    internal Button ClearButton { get; } = new() { Content = Lang.T("common.clearEsc"), FontSize = 12 };
     /// <summary>
     /// For tests: the values shown, by label.
     /// </summary>
@@ -59,9 +60,9 @@ public sealed class MeasurePanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = "Measure", FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    new TextBlock { Text = Lang.T("rail.label.measure"), FontSize = 14, FontWeight = FontWeight.SemiBold },
                     _hint, _rows, ClearButton,
-                    new TextBlock { Text = "Slope colours and height lines are in the View panel (Look).", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
+                    new TextBlock { Text = Lang.T("measure.hint.look"), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                 },
             },
         });
