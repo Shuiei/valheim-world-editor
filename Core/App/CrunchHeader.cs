@@ -1,14 +1,12 @@
 // CrunchHeader: a part of the Crunch decoder (see Crunch.cs for the source and license).
 
-using System.Numerics;
-
 namespace TerrainEditor.App;
 
 /// <summary>
 /// A crn file's header (crn_header in crn_defs.h; its numbers big-endian), checked: the signature, both CRCs, the
 /// size, levels and format, and every palette, table and level inside the data.
 /// </summary>
-internal sealed class CrunchHeader
+internal sealed partial class CrunchHeader
 {
     /// <summary>The top level's width in pixels.</summary>
     public readonly int Width;
@@ -47,39 +45,17 @@ internal sealed class CrunchHeader
         Height = U(d, 14, 2);
         Levels = d[16];
         Format = d[18];
-        int faces = d[17];
-        if (headerSize < CrunchFormat.FixedHeader + 4 * Math.Max(1, Levels) || headerSize > d.Length || DataSize < headerSize || DataSize > d.Length)
-        {
-            throw new InvalidDataException("crn sizes out of the data");
-        }
-        if (CrunchFormat.Crc16(d.AsSpan(6, headerSize - 6)) != U(d, 4, 2) || CrunchFormat.Crc16(d.AsSpan(headerSize, DataSize - headerSize)) != U(d, 10, 2))
-        {
-            throw new InvalidDataException("crn CRC check failed");
-        }
-        if (faces != 1 || Format is not (CrunchFormat.Dxt1 or CrunchFormat.Dxt5) || Width is < 1 or > CrunchFormat.MaxResolution || Height is < 1 or > CrunchFormat.MaxResolution
-            || Levels < 1 || Levels > 1 + BitOperations.Log2((uint)Math.Max(Width, Height)))
-        {
-            throw new InvalidDataException("crn texture not read here");
-        }
+        CheckSizes(d, headerSize);
+        CheckChecksums(d, headerSize);
+        CheckFormat(d[17]);
         ColorEndpoints = Palette(d, 33);
         ColorSelectors = Palette(d, 41);
         AlphaEndpoints = Palette(d, 49);
         AlphaSelectors = Palette(d, 57);
         Tables = (U(d, 67, 3), U(d, 65, 2));
         Inside(Tables.Ofs, Tables.Size);
-        if (ColorEndpoints.Num == 0 || ColorSelectors.Num == 0 || (Format == CrunchFormat.Dxt5 && (AlphaEndpoints.Num == 0 || AlphaSelectors.Num == 0)))
-        {
-            throw new InvalidDataException("crn palette missing");
-        }
-        LevelOfs = new int[Levels];
-        for (int i = 0; i < Levels; i++)
-        {
-            LevelOfs[i] = U(d, CrunchFormat.FixedHeader + 4 * i, 4);
-            if (LevelOfs[i] < headerSize || LevelOfs[i] >= DataSize || (i > 0 && LevelOfs[i] <= LevelOfs[i - 1]))
-            {
-                throw new InvalidDataException("crn level out of the data");
-            }
-        }
+        CheckPalettes();
+        LevelOfs = ReadLevelOffsets(d, headerSize);
     }
 
     /// <summary>Where a level's data ends (the next level's start, or the file's end).</summary>
@@ -94,25 +70,5 @@ internal sealed class CrunchHeader
             v = (v << 8) | d[at + i];
         }
         return v;
-    }
-
-    /// <summary>A palette's place (crn_palette: offset, size, entries), checked to be inside the data.</summary>
-    private (int Ofs, int Size, int Num) Palette(byte[] d, int at)
-    {
-        var p = (Ofs: U(d, at, 3), Size: U(d, at + 3, 3), Num: U(d, at + 6, 2));
-        if (p.Num > 0)
-        {
-            Inside(p.Ofs, p.Size);
-        }
-        return p;
-    }
-
-    /// <summary>Throws unless these bytes are inside the data, after the header.</summary>
-    private void Inside(int ofs, int size)
-    {
-        if (size <= 0 || ofs < CrunchFormat.FixedHeader || ofs + size > DataSize)
-        {
-            throw new InvalidDataException("crn part out of the data");
-        }
     }
 }

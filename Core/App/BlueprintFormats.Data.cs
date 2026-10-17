@@ -1,0 +1,51 @@
+// BlueprintFormats: a part of the blueprint reader (see BlueprintFormats.cs).
+
+using System.Globalization;
+
+namespace TerrainEditor.App;
+
+/// <summary>
+/// The editor's own #EditorData lines of a blueprint file: read onto each piece, which then holds the object's fields.
+/// </summary>
+public static partial class BlueprintFormats
+{
+    /// <summary>
+    /// Reads an editor data line ("#EditorData:n;section;key;value"): the field is attached to the piece whose line
+    /// among the pieces is n. A line that does not read is left out.
+    /// </summary>
+    /// <param name="line">The whole line.</param>
+    /// <param name="data">The fields by piece line, added to.</param>
+    private static void ReadDataLine(string line, Dictionary<int, List<Editing.ObjectField>> data)
+    {
+        string rest = line[DataHeader.Length..];
+        int bar = rest.IndexOf(';');
+        if (bar > 0 && int.TryParse(rest[..bar], NumberStyles.Integer, CultureInfo.InvariantCulture, out int at) && Editing.ObjectField.Parse(rest[(bar + 1)..]) is { } f)
+        {
+            (data.TryGetValue(at, out var l) ? l : data[at] = []).Add(f);
+        }
+    }
+
+    /// <summary>
+    /// Gives each piece the #EditorData fields written for it (by its line among the pieces), and the no-builder field
+    /// when the file is a ruin. A piece with neither keeps its data as it was.
+    /// </summary>
+    /// <param name="pieces">The pieces, in file order; changed in place.</param>
+    /// <param name="lines">Each piece's line among the pieces, in the same order.</param>
+    /// <param name="data">The fields by that line.</param>
+    /// <param name="ruin">Whether the file is a ruin.</param>
+    private static void AttachData(List<Piece> pieces, List<int> lines, Dictionary<int, List<Editing.ObjectField>> data, bool ruin)
+    {
+        if (data.Count > 0 || ruin)
+        {
+            for (int k = 0; k < pieces.Count; k++)
+            {
+                var d = data.TryGetValue(lines[k], out var held) ? held : [];
+                if (ruin)
+                {
+                    d.Add(Editing.ObjectField.NoBuilder);
+                }
+                pieces[k] = pieces[k] with { Data = d };
+            }
+        }
+    }
+}
