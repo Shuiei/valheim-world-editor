@@ -18,11 +18,11 @@ public class MainWindowWorkshopWorldTests
         try
         {
             var w = await TestWindows.ChangedWorld(dir);
+            var world = w.World;
+            Assert.Equal(1, world!.Pending.Zones);
             var asked = new List<string>();
             bool answer = false;
             w.Ask = (title, _, _, _) => { asked.Add(title); return Task.FromResult(answer); };
-            var world = w.World;
-            Assert.Equal(1, world!.Pending.Zones);
             // Stay: the world and its change are kept.
             await w.OpenWorkshop(null);
             Assert.Equal("Leave the world", Assert.Single(asked));
