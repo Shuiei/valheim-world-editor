@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.47.29 — unreleased
+## v1.47.29 — 2026-10-17
 
 ### Fixed
 - **Codacy's medium findings, fixed where they are not false positives.** The screenshot tool's and the tests' helpers
@@ -14,7 +14,7 @@ the plugin is unchanged in versions without that part.
   `IEquatable<T>` with each field compared by its own `Equals`, the same as the default equality, so NaN and negative
   zero compare as before. No behaviour changes.
 
-## v1.47.28 — unreleased
+## v1.47.28 — 2026-10-17
 
 ### Fixed
 - **The `switch` statements without a `default` that Codacy flagged (Sonar S131) now have one.** There were 20; two
@@ -22,7 +22,7 @@ the plugin is unchanged in versions without that part.
   that matched before behave as before, and a value that matched no case still does nothing, as it did. No behaviour
   changes.
 
-## v1.47.27 — unreleased
+## v1.47.27 — 2026-10-17
 
 ### Fixed
 - **Errors that were caught were not written to the log, so the log said nothing about what went wrong.** Many places
@@ -44,14 +44,14 @@ the plugin is unchanged in versions without that part.
   trace unless it is an expected one, the server's home folder written `~`; an error on the game's main thread keeps
   its stack trace in the request's line.
 
-## v1.47.26 — unreleased
+## v1.47.26 — 2026-10-17
 
 ### Fixed
 - **The SSH key tests no longer keep private keys in the repository.** `HomeFolderTests` kept two OpenSSH private keys
   as text (Codacy: hard-coded private keys). The tests now make their two throwaway keys with `ssh-keygen` when they
   start, as the local sshd tests already do, so the keys exist only in the test's temporary folder.
 
-## v1.47.25 — unreleased
+## v1.47.25 — 2026-10-17
 
 ### Fixed
 - **Loading a stamp picture that could not be opened stopped the editor.** A picture deleted or moved after it was
@@ -60,7 +60,7 @@ the plugin is unchanged in versions without that part.
   file that is not a picture, and the log says what failed (without the file's path); files over 256 MB, and
   pictures that would take more than that decoded, are not read.
 
-## v1.47.24 — unreleased
+## v1.47.24 — 2026-10-17
 
 ### Changed
 - **The Inspector comes from the language catalogue.** Its buttons, headings, explanations and messages, the plain
@@ -69,7 +69,7 @@ the plugin is unchanged in versions without that part.
   container's slots show in the language chosen in Settings. The names of objects, items and values, and the tips
   made from them, stay as the save has them. In English nothing changes.
 
-## v1.47.23 — unreleased
+## v1.47.23 — 2026-10-17
 
 ### Changed
 - **What the status bar and the History say of Claude's changes comes from the language catalogue.** The message
@@ -77,14 +77,14 @@ the plugin is unchanged in versions without that part.
   the History show in the language chosen in Settings; the steps keep their "Claude: " mark, which Take back Claude's
   changes finds them by. In English nothing changes, and Claude is still answered in English.
 
-## v1.47.22 — unreleased
+## v1.47.22 — 2026-10-17
 
 ### Changed
 - **The start page comes from the language catalogue.** Its menu, Home's tiles, My game's state and install steps,
   the saved servers and the server form, the saved worlds, the Workshop's blueprints and Homestead's state, and the
   card about reading the game's look show in the language chosen in Settings. In English nothing changes.
 
-## v1.47.21 — unreleased
+## v1.47.21 — 2026-10-17
 
 ### Changed
 - **The New world page comes from the language catalogue.** Its boxes and buttons, the search's wishes and results,
@@ -92,7 +92,7 @@ the plugin is unchanged in versions without that part.
   tooltips over the map, why a name or seed is refused and the messages while the world is made show in the language
   chosen in Settings; Claude is still told in English. In English nothing changes.
 
-## v1.47.20 — unreleased
+## v1.47.20 — 2026-10-17
 
 ### Changed
 - **The world map page comes from the language catalogue.** Its buttons and switches, what is waiting to be saved,
@@ -100,7 +100,7 @@ the plugin is unchanged in versions without that part.
   question, the edited zones and the map's own status show in the language chosen in Settings. The biomes' names come
   from the catalogue too. In English nothing changes; the world's and objects' names stay as they are.
 
-## v1.47.19 — unreleased
+## v1.47.19 — 2026-10-17
 
 ### Changed
 - **The Dungeon tool and its generator come from the language catalogue.** The panel's buttons, lists and lines, the
@@ -110,7 +110,7 @@ the plugin is unchanged in versions without that part.
   each. Names of rooms, biomes, styles, materials and bosses stay as the game and the generator call them, and
   Claude is still told in English.
 
-## v1.47.18 — unreleased
+## v1.47.18 — 2026-10-17
 
 ### Changed
 - **The Area tool comes from the language catalogue.** Its panel (the selection, every action and its settings and
@@ -118,14 +118,14 @@ the plugin is unchanged in versions without that part.
   pickers, its status messages and History steps show in the language chosen in Settings; Claude still gets the
   actions' names in English. In English nothing changes.
 
-## v1.47.17 — unreleased
+## v1.47.17 — 2026-10-17
 
 ### Changed
 - **The Place tool comes from the language catalogue.** Its panel (modes, line shapes, presets, the chosen kinds and
   their notes, every setting and hint), the list of kinds and what a spawn point spawns, the preset questions, its
   status messages and History steps show in the language chosen in Settings. In English nothing changes.
 
-## v1.47.16 — unreleased
+## v1.47.16 — 2026-10-17
 
 ### Changed
 - **The Workshop and its Build panel come from the language catalogue.** The Build panel's tabs, search, snap, grid,
@@ -133,7 +133,7 @@ the plugin is unchanged in versions without that part.
   cut, its questions before leaving a building or a world not saved, and its status messages and undo steps show in
   the language chosen in Settings; Claude is still told in English. In English nothing changes.
 
-## v1.47.15 — unreleased
+## v1.47.15 — 2026-10-17
 
 ### Changed
 - **The Blueprints panel comes from the language catalogue.** Its buttons, the Homestead banner, each blueprint's
@@ -141,7 +141,7 @@ the plugin is unchanged in versions without that part.
   puts in the status bar show in the language chosen in Settings; Claude is still told in English. In English nothing
   changes.
 
-## v1.47.14 — unreleased
+## v1.47.14 — 2026-10-17
 
 ### Changed
 - **The View panel, the help card and the status bar's readouts come from the language catalogue.** The View
@@ -149,7 +149,7 @@ the plugin is unchanged in versions without that part.
   rate, the selection and walking or flying lines, picking a kind and the paste height show in the language chosen
   in Settings. In English nothing changes.
 
-## v1.47.13 — unreleased
+## v1.47.13 — 2026-10-17
 
 ### Changed
 - **The 3D editor's area bar and the live game's messages come from the language catalogue.** The area's arrows,
@@ -157,7 +157,7 @@ the plugin is unchanged in versions without that part.
   what came from the game, the area's line under its name, how it loaded and the window's title on the New world page
   show in the language chosen in Settings. In English nothing changes.
 
-## v1.47.12 — unreleased
+## v1.47.12 — 2026-10-17
 
 ### Changed
 - **The Select and Paste tools come from the language catalogue.** The Select panel (its buttons, exact place and
@@ -165,21 +165,21 @@ the plugin is unchanged in versions without that part.
   pasting, Make player built and the Built by choices, and the questions they ask show in the language chosen in
   Settings. In English nothing changes; the name a mod gives its linked objects ("vehicle") stays as the mod wrote it.
 
-## v1.47.11 — unreleased
+## v1.47.11 — 2026-10-17
 
 ### Changed
 - **The Shape and Mountain tools come from the language catalogue.** Their panels (presets, rows, help lines, a
   formula's mistakes), the status messages of putting a shape or a mountain and their History steps show in the
   language chosen in Settings. In English nothing changes; scripts still name a mountain preset in English.
 
-## v1.47.10 — unreleased
+## v1.47.10 — 2026-10-17
 
 ### Changed
 - **The Path and Cave tools come from the language catalogue.** The Path panel's actions, rows, cave presets and
   roofs, the line's length, and what Apply says (and its History step) show in the language chosen in Settings. In
   English nothing changes; Claude's dig_path is still answered in English.
 
-## v1.47.9 — unreleased
+## v1.47.9 — 2026-10-17
 
 ### Changed
 - **The Measure, Mask and Script tools and the biome names come from the language catalogue.** The tape's hints
@@ -193,7 +193,7 @@ the plugin is unchanged in versions without that part.
   panel opens was not chosen in its list, so the run had no name to take; it is chosen now, and the step is named
   after it.
 
-## v1.47.8 — unreleased
+## v1.47.8 — 2026-10-17
 
 ### Changed
 - **The brush options come from the language catalogue.** Their rows, shapes, falloffs and stamps, the brushes'
@@ -202,7 +202,7 @@ the plugin is unchanged in versions without that part.
   remembered after the language changes. Claude still asks for stamps by their English names. In English nothing
   changes.
 
-## v1.47.7 — unreleased
+## v1.47.7 — 2026-10-17
 
 ### Changed
 - **The History panel and the save bar come from the language catalogue.** The History card, its rows and buttons,
@@ -210,7 +210,7 @@ the plugin is unchanged in versions without that part.
   leaving and quitting ask and say show in the language chosen in Settings, as do the brush's and Regrow's messages
   about what could not be done. In English nothing changes.
 
-## v1.47.6 — unreleased
+## v1.47.6 — 2026-10-17
 
 ### Changed
 - **The small dialogs and the words they share come from the language catalogue.** Questions, messages, the line
@@ -223,7 +223,7 @@ the plugin is unchanged in versions without that part.
   kept in English, so it still comes back once those lists are translated and the language is changed. Choices kept
   so far are already English.
 
-## v1.47.5 — unreleased
+## v1.47.5 — 2026-10-17
 
 ### Changed
 - The tests' clean-up no longer hides its errors: a temporary folder is deleted only when it is there, and a failure
@@ -231,21 +231,21 @@ the plugin is unchanged in versions without that part.
   editor the visual tests drive, are waited for until they have stopped before their folders go, and an error in the
   stand-ins' answering fails the test instead of silently ending it. Nothing in the editor changes.
 
-## v1.47.4 — unreleased
+## v1.47.4 — 2026-10-17
 
 ### Fixed
 - **The release packages could not be built.** Publishing the single-file editor stopped on an analyzer error: the
   script process (v1.45.67) found the editor's assembly through `Assembly.Location`, which is empty in a single-file
   app. It now takes the assembly from the app's folder; the published editor itself starts its scripts as before.
 
-## v1.47.3 — unreleased
+## v1.47.3 — 2026-10-17
 
 ### Changed
 - Saved objects are read by one reader (`ZdoReader`) instead of three copies of the format: the world loader, the
   copying of a template object and the full read the inspector uses all go through it. Loading, copies and saves
   give the same bytes and lists as before, and loading is as fast.
 
-## v1.47.2 — unreleased
+## v1.47.2 — 2026-10-17
 
 ### Changed
 - The main window's code is easier to follow: its constructor's inline handlers and panel wiring are named methods
@@ -253,14 +253,14 @@ the plugin is unchanged in versions without that part.
   if/else chain, and the View panel is built and then wired. Every key, its precedence and whether it is taken stay
   the same; nothing in the editor changes.
 
-## v1.47.1 — unreleased
+## v1.47.1 — 2026-10-17
 
 ### Changed
 - The 3D view's code (`GlView`, over 5,000 lines in one file) is split into partial files by concern: camera,
   input, tools, drawing, ground, models, objects, cells, mod shapes, picking and the overlays, one file for each
   tool's marks. Members are moved whole; nothing in the editor changes.
 
-## v1.47.0 — unreleased
+## v1.47.0 — 2026-10-17
 
 ### Added
 - **Your changes are kept when the game saved the world since you opened it.** Save was refused then, and the only
@@ -270,7 +270,7 @@ the plugin is unchanged in versions without that part.
   whose version stays. The world is then the game's save with your changes pending and the history kept, and nothing
   is written until you save. See [Saving](docs/editor-basics.md#saving).
 
-## v1.45.110 — unreleased
+## v1.45.110 — 2026-10-17
 
 ### Fixed
 - **Edits to a world saved by Valheim 1.0.20 can be saved.** The game now saves worlds in save format 42, and the editor
@@ -279,7 +279,7 @@ the plugin is unchanged in versions without that part.
   does (a format 41 world the game has saved since holds a 42 index and 41 chunk files until their objects change).
   New worlds are made in format 42, as the game makes them; Valheim 1.0.17 and earlier cannot open them.
 
-## v1.45.109 — unreleased
+## v1.45.109 — 2026-10-17
 
 ### Fixed
 - **A changed server key now names every saved entry still holding the old key.** The refusal said to empty "its"
@@ -943,7 +943,7 @@ the plugin is unchanged in versions without that part.
 - Dead fields in the 3D view are gone and a misplaced summary is back on its method.
 - Unused bounds and needless null checks in the area loader are gone.
 
-## v1.45.108 — unreleased
+## v1.45.108 — 2026-10-17
 
 ### Changed
 - **Saving new ground in many zones no longer reads the same chunk file again for each one.** Ground edited in a
@@ -951,7 +951,7 @@ the plugin is unchanged in versions without that part.
   whole chunk file (often several megabytes) to copy a few bytes out of it. The object alone is now read, once per
   save.
 
-## v1.45.107 — unreleased
+## v1.45.107 — 2026-10-17
 
 ### Changed
 - **A long live session no longer keeps every past read of the game in memory.** Each check of the game that found
@@ -959,7 +959,7 @@ the plugin is unchanged in versions without that part.
   again: moving creatures and burning fires change at every check, so memory grew all session. Each read's bytes
   now go with the last object still read from them.
 
-## v1.45.106 — unreleased
+## v1.45.106 — 2026-10-17
 
 ### Changed
 - **Generating a deep dungeon is faster.** Adding the loops between rooms worked out, for every room of a level at
@@ -967,7 +967,7 @@ the plugin is unchanged in versions without that part.
   stairs: with many levels, hundreds of millions of steps. The stairs are now found once per try, and a room's
   distances only when it has a room to join. The dungeons made are the same.
 
-## v1.45.105 — unreleased
+## v1.45.105 — 2026-10-17
 
 ### Changed
 - **Apply live after a big clear no longer reads every removed object first.** Looking for objects that only moved,
@@ -975,7 +975,7 @@ the plugin is unchanged in versions without that part.
   that had no copy to move to: clearing 20,000 trees meant 20,000 reads and decodes for nothing, holding up the
   live view meanwhile. An object's data is now read only when it may move: moved back, or copied somewhere.
 
-## v1.45.104 — unreleased
+## v1.45.104 — 2026-10-17
 
 ### Changed
 - **Saving and Apply live no longer copy every edited zone to find the few they need.** Looking for No limit ground,
@@ -985,7 +985,7 @@ the plugin is unchanged in versions without that part.
   needed are copied now, once; the map's edited-zone list and the zone statistics likewise, and the map's
   edited-zone marks, drawn ten times a second, copy none.
 
-## v1.45.103 — unreleased
+## v1.45.103 — 2026-10-17
 
 ### Changed
 - **Following a live world no longer slows down after a big Apply live.** Each object the game reported that the
@@ -993,14 +993,14 @@ the plugin is unchanged in versions without that part.
   3,000-piece paste went in, any change in those zones cost millions of comparisons in the editor's window at every
   check of the game. The objects the editor made are now also kept by their game id, and found at once.
 
-## v1.45.102 — unreleased
+## v1.45.102 — 2026-10-17
 
 ### Changed
 - **Opening an area takes about half as long to work out the generated ground.** Each zone's generated heights were
   worked out in parallel, then worked out a second time, one zone after the other, only to get the game's base paint
   of the zone, which comes out of the same pass. The paint is now kept from the first, parallel pass.
 
-## v1.45.101 — unreleased
+## v1.45.101 — 2026-10-17
 
 ### Changed
 - **Dragging an Area selection no longer stutters on a big area.** Every mouse move while dragging the box counted
@@ -1009,7 +1009,7 @@ the plugin is unchanged in versions without that part.
   it, and twice when the action changed. The outline still follows the mouse at once; the counts and lists are now
   worked out once the moves waiting are handled, and the cut and fill only for Flatten, Raise and Lower.
 
-## v1.45.100 — unreleased
+## v1.45.100 — 2026-10-17
 
 ### Changed
 - **Regrowing nature in the Ashlands reads each zone once.** Working out what the game would grow, each zone made its
@@ -1017,7 +1017,7 @@ the plugin is unchanged in versions without that part.
   wide groups reach into was read again for every zone next to it: about three times the reading over a 4 × 4 block.
   The list is now made once for the whole area. The same spots are grown.
 
-## v1.45.99 — unreleased
+## v1.45.99 — 2026-10-17
 
 ### Changed
 - **Apply live no longer waits for the history file to be written.** After each Apply live (with Auto apply, after
@@ -1028,7 +1028,7 @@ the plugin is unchanged in versions without that part.
   with the world as it was at the apply (what players change meanwhile is merged once the objects are read). Opening
   the world again or closing the editor waits for the writes still to do.
 
-## v1.45.98 — unreleased
+## v1.45.98 — 2026-10-17
 
 ### Changed
 - **Regrowing nature over a big area no longer stalls the editor.** Once the game's spots were worked out, each one
@@ -1037,7 +1037,7 @@ the plugin is unchanged in versions without that part.
   spots are now taken, sorted by place, and the check runs in the background. The same spots are grown (Area Regrow,
   Mountain Grow and Claude's regrow_nature).
 
-## v1.45.97 — unreleased
+## v1.45.97 — 2026-10-17
 
 ### Changed
 - **Picking a big saved selection no longer freezes the editor.** Each object of the selection was compared with
@@ -1045,7 +1045,7 @@ the plugin is unchanged in versions without that part.
   objects are now sorted by kind and place once, and each saved object looks only where it can be. The same objects
   are selected.
 
-## v1.45.96 — unreleased
+## v1.45.96 — 2026-10-17
 
 ### Changed
 - **Long paths apply without freezing the editor.** Applying a Path action tested every grid point around the line
@@ -1053,28 +1053,28 @@ the plugin is unchanged in versions without that part.
   froze for seconds. Each metre of the line now looks only at the points near it, with the same result. A Cave also
   checked every tree and rock against every metre of the line; it now looks only near each one.
 
-## v1.45.95 — unreleased
+## v1.45.95 — 2026-10-17
 
 ### Changed
 - **Editing with the map zoomed in no longer piles up memory.** The map kept up to seven close-ups (about 59 MB each
   at the largest), and every edit made the next one new while the old ones stayed until the seventh: up to about
   400 MB for pictures never shown again. It now keeps the last two close-ups of the current edits only.
 
-## v1.45.94 — unreleased
+## v1.45.94 — 2026-10-17
 
 ### Changed
 - **The map stays light with many search results.** Every frame, even with the map idle, made all the pins' shapes
   (and the players') again, with a small array for each corner: with 2,000 results that was about 100,000 arrays a
   frame. The shapes are now made only when the results, the chosen one, the zoom or the players change.
 
-## v1.45.93 — unreleased
+## v1.45.93 — 2026-10-17
 
 ### Changed
 - **Switching between the map and the 3D editor no longer stalls the map's first frame.** Each time the map came
   back it read the game's minimap material and decoded its eight textures again, inside the drawing. They are now
   decoded once (again only when another Valheim folder is chosen) and only sent to the graphics card again.
 
-## v1.45.92 — unreleased
+## v1.45.92 — 2026-10-17
 
 ### Changed
 - **Opening another area no longer reads the game's terrain look again.** Each area shown (another area, Follow
@@ -1082,7 +1082,7 @@ the plugin is unchanged in versions without that part.
   and the ground showed plain colours meanwhile. They do not depend on the area: they are now read once, and again
   only when another Valheim folder is chosen.
 
-## v1.45.91 — unreleased
+## v1.45.91 — 2026-10-17
 
 ### Changed
 - **Areas with many dungeon rooms or location parts draw faster.** Each frame worked out every room's and location
@@ -1090,21 +1090,21 @@ the plugin is unchanged in versions without that part.
   once and kept there until the rooms or locations change (or a model they use is read), and only those in the parts
   of the area in view are drawn, like objects (each part of the area's box holds the whole of the rooms and parts in it).
 
-## v1.45.90 — unreleased
+## v1.45.90 — 2026-10-17
 
 ### Changed
 - **Showing spawn points or nests in a big area no longer costs every frame.** While either kind was shown, each frame
   looked through every object of the area for them. They are now found once and looked for again only when the
   objects change (placed, deleted, moved, read again); each frame only picks the ones near the camera.
 
-## v1.45.89 — unreleased
+## v1.45.89 — 2026-10-17
 
 ### Changed
 - **Moving the mouse in the Select tool over a big area no longer bogs the window down.** The object under the
   pointer (outlined before a click picks it) was looked for on every mouse move, each look trying every object's
   box; a fast mouse sends many moves a frame. It is now looked for once for all the moves waiting.
 
-## v1.45.88 — unreleased
+## v1.45.88 — 2026-10-17
 
 ### Changed
 - **Moving or dropping a big selection among many objects is much faster.** Each mouse move of a drag looked at every
@@ -1112,21 +1112,21 @@ the plugin is unchanged in versions without that part.
   every object in the area. Both now look only at what is near: the snap points around are filed by metre, the
   objects' boxes by 4 m cell. What snaps and where things land are unchanged.
 
-## v1.45.87 — unreleased
+## v1.45.87 — 2026-10-17
 
 ### Changed
 - **Finding where locations go (new worlds, seed search) is faster.** The generator caches each zone corner's biome,
   but corners west of the world's middle all fell into about 160 hash buckets (the corner's x was sign-extended over
   its y), so half the lookups walked chains of hundreds of entries. Their hash now keeps both coordinates.
 
-## v1.45.86 — unreleased
+## v1.45.86 — 2026-10-17
 
 ### Fixed
 - **Connecting to a server whose plugin did not answer could freeze the window for up to 15 seconds.** The check of
   the server's Valheim folder that says why ran its SSH command on the window's thread. It now runs in the
   background, as does the reading of the plugin's port from the server's settings.
 
-## v1.45.85 — unreleased
+## v1.45.85 — 2026-10-17
 
 ### Fixed
 - **Pasting a hand-edited or older blueprint could stop half-way and leave No limit on for every later brush.** A
@@ -1137,7 +1137,7 @@ the plugin is unchanged in versions without that part.
   outline is pasted by its size), and every tool that turns that switch on for a moment (paste, clear the site,
   Mountain, scripts) turns it back off even when it fails.
 
-## v1.45.84 — unreleased
+## v1.45.84 — 2026-10-17
 
 ### Fixed
 - **Saving or applying ground lifted past the ±8 m limit in two far-apart places could run out of memory.** The
@@ -1145,7 +1145,7 @@ the plugin is unchanged in versions without that part.
   world made a grid of billions of points, many times over. Lifts far apart are now each worked out on their own few
   zones.
 
-## v1.45.83 — unreleased
+## v1.45.83 — 2026-10-17
 
 ### Fixed
 - **The Place tool could lose its presets, favourites and weights, or fail to open.** place.json was written in place,
@@ -1155,7 +1155,7 @@ the plugin is unchanged in versions without that part.
   aside as place.json.bad, and one that cannot be read is not written over. Nulls are taken as empty, and presets
   without a name or kinds are left out.
 
-## v1.45.82 — unreleased
+## v1.45.82 — 2026-10-17
 
 ### Fixed
 - **A crash while saving selections could lose every world's saved selections.** selections.json was written in
@@ -1163,7 +1163,7 @@ the plugin is unchanged in versions without that part.
   over it. It is now written through a temporary file, a broken one is first copied aside as selections.json.bad, and
   one that cannot be read (or kept aside) is never written over: Keep and Forget say they could not.
 
-## v1.45.81 — unreleased
+## v1.45.81 — 2026-10-17
 
 ### Fixed
 - **A script could put objects at impossible places into the world.** `Objects.Place` took a place, turn or tilt that
@@ -1173,7 +1173,7 @@ the plugin is unchanged in versions without that part.
   with an error saying what was wrong (NaN still means "on the ground" for `Place`'s `y` and "as it was" for `Move`).
   The boulder and ring-of-trees examples keep their objects inside the area.
 
-## v1.45.80 — unreleased
+## v1.45.80 — 2026-10-17
 
 ### Fixed
 - **Rooms of a generated dungeon with alcoves had their furnishings off to one side.** An alcove grew the room's box by
@@ -1182,35 +1182,35 @@ the plugin is unchanged in versions without that part.
   pair against or in the wall, or missing. A side room's twin was mirrored across the grown box too, 2 m off. Both now
   use the room's own walls, and an alcove is extra floor beyond them.
 
-## v1.45.79 — unreleased
+## v1.45.79 — 2026-10-17
 
 ### Fixed
 - **The warning sign by a generated dungeon's locked boss gate was sunk in the wall.** It was placed 4 cm from the
   doorway's middle, which lies on the wall's centre line, so it sat about half a metre deep in a stone wall (on the
   arena's side). It now hangs on the antechamber's side, on the wall's inner face.
 
-## v1.45.78 — unreleased
+## v1.45.78 — 2026-10-17
 
 ### Fixed
 - **The steps before the plinth of a generated burial chamber, chapel, shrine or tomb rose away from it.** A stone
   stair climbs toward its back; these rooms turned their front steps the other way from the great hall's, arena's and
   feast hall's, so the stairs faced the plinth and climbed toward the room. They are now turned like the others.
 
-## v1.45.77 — unreleased
+## v1.45.77 — 2026-10-17
 
 ### Fixed
 - **A generated cell block's elite guards could stand locked inside the cells.** The cell block meant to keep only its
   aisle free for what is placed after its cells, but kept a circle of no size, so its elites and their spawners were
   put anywhere in the room, behind the grates. Both rows of cells are now kept, up to their grates.
 
-## v1.45.76 — unreleased
+## v1.45.76 — 2026-10-17
 
 ### Fixed
 - **A generated dungeon could hold two kitchens, two forges or two feast halls.** A side room is sometimes mirrored
   across the room it opens off, and the mirror did not check whether its kind comes only once, so a fortress, prison
   or Dvergr hold could get its kitchen, forge or feast hall twice. Such rooms are no longer mirrored.
 
-## v1.45.75 — unreleased
+## v1.45.75 — 2026-10-17
 
 ### Fixed
 - **A generated dungeon could hold extra antechambers that led nowhere.** The antechamber was placed before the boss's
@@ -1218,7 +1218,7 @@ the plugin is unchanged in versions without that part.
   three "unique" antechambers as dead ends, each with its elites and no gate, or one with no arena at all. The
   antechamber is now taken back, with its corridor, whenever the arena does not fit beyond it.
 
-## v1.45.74 — unreleased
+## v1.45.74 — 2026-10-17
 
 ### Fixed
 - **A generated dungeon's hidden cache could sit in the upper half of a tall room on the level below.** Tall rooms (a
@@ -1226,7 +1226,7 @@ the plugin is unchanged in versions without that part.
   caches are added last, to any level: one over a tall room floored its upper 4 m. No room or corridor is placed over
   a tall room any more.
 
-## v1.45.73 — unreleased
+## v1.45.73 — 2026-10-17
 
 ### Fixed
 - **A kind of object whose model failed to load was never drawn at all, and no other model got its textures.** When the
@@ -1235,14 +1235,14 @@ the plugin is unchanged in versions without that part.
   them came up without them until the models were let go. The failure is said as before, the kind's things get the
   stand-in box, the textures read go up and the rest are let go for another model to read.
 
-## v1.45.72 — unreleased
+## v1.45.72 — 2026-10-17
 
 ### Fixed
 - **In the Workshop, a wall crossing the cut height was picked and hovered instead of what stands inside.** The cut hides
   everything drawn above it, but picking only passed over objects wholly above it: a wall's hidden top still took the
   click meant for the chest behind it. Picking now meets an object's shape only below the cut, as drawn.
 
-## v1.45.71 — unreleased
+## v1.45.71 — 2026-10-17
 
 ### Fixed
 - **Pictures of the 3D view and the map came out part-transparent under water, glass, ghosts and overlays.** Every
@@ -1250,7 +1250,7 @@ the plugin is unchanged in versions without that part.
   pictures and Claude's screenshots were see-through there (and the view could look washed out where the window shows
   what is behind it). Blending now leaves the alpha opaque, as cleared, and the PNG written is always opaque.
 
-## v1.45.70 — unreleased
+## v1.45.70 — 2026-10-17
 
 ### Fixed
 - **Typing in a text box moved the camera or changed how it moves, and so did keys on the start page and the map.**
@@ -1258,7 +1258,7 @@ the plugin is unchanged in versions without that part.
   and flying, W, A, S or D held while typing moved it, and Space on the start page was taken from the focused button.
   The view now takes a key only when the 3D editor is shown and nothing is being typed in a box.
 
-## v1.45.69 — unreleased
+## v1.45.69 — 2026-10-17
 
 ### Fixed
 - **A chest filled through the editor could hold a stack larger than the game allows.** The inspector's Contents and
@@ -1267,7 +1267,7 @@ the plugin is unchanged in versions without that part.
   again), and a larger stack is cut to it, with a note "Stone: stack of 70000 cut to 50 (the item's maximum)" in
   the message.
 
-## v1.45.68 — unreleased
+## v1.45.68 — 2026-10-17
 
 ### Fixed
 - **Claude could run scripts on your computer without your say.** `run_script` ran C# with your rights (your files
@@ -1277,7 +1277,7 @@ the plugin is unchanged in versions without that part.
   tools and your own scripts work as before. The process a script runs in (v1.45.67) keeps a crash away from the
   editor but is not a sandbox: a script still has your rights.
 
-## v1.45.67 — unreleased
+## v1.45.67 — 2026-10-17
 
 ### Fixed
 - **Script: Stop could not end a script busy in one long call.** Stop and the 2-minute limit ended a script only at
@@ -1288,7 +1288,7 @@ the plugin is unchanged in versions without that part.
   when that was not enough. A script process that crashes is reported as an error. The process keeps a crash away
   from the editor, but it is not a sandbox: a script still runs with your rights, like any program you run.
 
-## v1.45.66 — unreleased
+## v1.45.66 — 2026-10-17
 
 ### Fixed
 - **Claude: a step made through `set_control` was not named "Claude: …".** A control Claude pressed (a button, a
@@ -1296,7 +1296,7 @@ the plugin is unchanged in versions without that part.
   **Take back Claude's changes** could not tell it from the user's own work. While Claude sets a control, the steps
   its handler makes, at once or after an await, now get the "Claude: " prefix like every other step of Claude's.
 
-## v1.45.65 — unreleased
+## v1.45.65 — 2026-10-17
 
 ### Fixed
 - **New world: a name the game accepts on one system broke the world on another.** The name check followed the
@@ -1304,7 +1304,7 @@ the plugin is unchanged in versions without that part.
   Windows), and on Windows "CON" or "COM1" went through and failed when the files were written. The check is now
   the same everywhere: no / \ : * ? " < > |, no device name, nothing ending with a dot or a space.
 
-## v1.45.64 — unreleased
+## v1.45.64 — 2026-10-17
 
 ### Fixed
 - **A blueprint file with terrain marks far apart, or with numbers that are not numbers, froze or failed the
@@ -1314,7 +1314,7 @@ the plugin is unchanged in versions without that part.
   skipped like an unreadable one, the grid reaches only as far as the terrain marks, and marks that span more than
   1200 m are refused with the reason, on an import and on a paste.
 
-## v1.45.63 — unreleased
+## v1.45.63 — 2026-10-17
 
 ### Fixed
 - **A settings file held by another program for a moment was written over with the defaults.** When settings.json
@@ -1323,7 +1323,7 @@ the plugin is unchanged in versions without that part.
   folder, extra folders, allowed extensions and Claude's token were gone. A read that fails is now tried again, and
   when it still fails the defaults are used for the session but never saved over the file, which the log says.
 
-## v1.45.62 — unreleased
+## v1.45.62 — 2026-10-17
 
 ### Fixed
 - **One unusual bundle (a mod's, damaged, or laid out otherwise) left every mod model undrawn.** The index of prefabs
@@ -1332,7 +1332,7 @@ the plugin is unchanged in versions without that part.
   mod model was drawn. Such a bundle is now skipped and said in the log, closed like the others, and the rest are
   indexed.
 
-## v1.45.61 — unreleased
+## v1.45.61 — 2026-10-17
 
 ### Fixed
 - **The editor could fail to start, or miss pieces and models, depending on where the game's scripts are in its
@@ -1343,7 +1343,7 @@ the plugin is unchanged in versions without that part.
   open already is now given again and stays open until its last reader is done; a file handle leaked by each second
   open goes with it.
 
-## v1.45.60 — unreleased
+## v1.45.60 — 2026-10-17
 
 ### Fixed
 - **On Windows, a mod updated while the editor ran left its models missing until the editor was restarted.** The
@@ -1352,7 +1352,7 @@ the plugin is unchanged in versions without that part.
   mod model was drawn for the rest of the session. The old reader now lets go of its files before the copies are
   replaced.
 
-## v1.45.59 — unreleased
+## v1.45.59 — 2026-10-17
 
 ### Fixed
 - **One damaged object ended a world search, and a damaged item stand broke the inspector.** Search world, the
@@ -1361,7 +1361,7 @@ the plugin is unchanged in versions without that part.
   inspector. Every reader of one object now skips what cannot be read, whichever way it is damaged, and goes on with
   the rest.
 
-## v1.45.58 — unreleased
+## v1.45.58 — 2026-10-17
 
 ### Fixed
 - **A chest could be given something that is not an item, which the game then threw away.** The inspector and
@@ -1369,7 +1369,7 @@ the plugin is unchanged in versions without that part.
   went into a chest and was saved; the game drops such an entry when it loads the chest. Only the game's items are
   taken now; anything else is refused with its name.
 
-## v1.45.57 — unreleased
+## v1.45.57 — 2026-10-17
 
 ### Fixed
 - **Exporting To Homestead, importing a blueprint or generating a dungeon with a long name could hang the editor.**
@@ -1377,7 +1377,7 @@ the plugin is unchanged in versions without that part.
   tried when the name was taken already gave the same file, and the search for a free name never ended. The name is
   now cut so that its number stays in the file name.
 
-## v1.45.56 — unreleased
+## v1.45.56 — 2026-10-17
 
 ### Fixed
 - **Claude's set_control "click" on a switch, toggle or radio button changed nothing.** The click only raised the
@@ -1385,7 +1385,7 @@ the plugin is unchanged in versions without that part.
   its value, its handlers ran against the old one and Claude was told it worked. A click now presses the control as a
   pointer does: the toggle changes, then its handlers and Command run.
 
-## v1.45.55 — unreleased
+## v1.45.55 — 2026-10-17
 
 ### Fixed
 - **Claude Desktop lost the editor's MCP server on a batch request or a tool that ran too long.** The --mcp-stdio
@@ -1394,7 +1394,7 @@ the plugin is unchanged in versions without that part.
   a line is now answered with a JSON-RPC error (a request that timed out too) and the relay goes on until its input
   ends.
 
-## v1.45.54 — unreleased
+## v1.45.54 — 2026-10-17
 
 ### Fixed
 - **Claude's object ids could hit the wrong objects after another area was opened or the world read again.** The ids
@@ -1404,7 +1404,7 @@ the plugin is unchanged in versions without that part.
   objects the ids were given for and refuse ids from another, or from before the world was read again, until
   objects are listed again.
 
-## v1.45.53 — unreleased
+## v1.45.53 — 2026-10-17
 
 ### Fixed
 - **Claude could not open or add a blueprint whose file was not named after it.** list_blueprints gives each
@@ -1412,7 +1412,7 @@ the plugin is unchanged in versions without that part.
   name, so a numbered copy, a downloaded blueprint or one the game saved under another file name was "not in the
   library". The name is now looked up among the library's entries first, the file name after.
 
-## v1.45.52 — unreleased
+## v1.45.52 — 2026-10-17
 
 ### Fixed
 - **A dungeon Claude generated was not one of Claude's changes, and left a file in the blueprint Library.** Its step
@@ -1421,7 +1421,7 @@ the plugin is unchanged in versions without that part.
   is now "Claude: generated dungeon …", and on the plot the dungeon is added straight from its blueprint's text,
   with no file written.
 
-## v1.45.51 — unreleased
+## v1.45.51 — 2026-10-17
 
 ### Fixed
 - **A blueprint Claude's add_blueprint refused, because a piece would leave the area, took the place of what the user
@@ -1429,7 +1429,7 @@ the plugin is unchanged in versions without that part.
   could drop the oldest undo step), and left the refused blueprint there for the next Ctrl+Y. What the blueprint
   would add is now worked out first, and nothing is put down when it is refused.
 
-## v1.45.50 — unreleased
+## v1.45.50 — 2026-10-17
 
 ### Fixed
 - **A piece dragged far did not snap to the building where it was dropped.** The snap points of the pieces around
@@ -1437,7 +1437,7 @@ the plugin is unchanged in versions without that part.
   another building never snapped to it. They are now gathered again once the selection has moved more than 30 m
   from where they were gathered.
 
-## v1.45.49 — unreleased
+## v1.45.49 — 2026-10-17
 
 ### Fixed
 - **"Move there" moved the selection a little on every axis, even the ones left alone.** The X, Y, Z and Turn boxes
@@ -1447,7 +1447,7 @@ the plugin is unchanged in versions without that part.
   there now moves only along the axes whose box was changed, by the difference from the exact place (however
   small); with nothing changed it does nothing.
 
-## v1.45.48 — unreleased
+## v1.45.48 — 2026-10-17
 
 ### Fixed
 - **Replacing a ship or another linked group's root left its parts behind.** Replace (the Area tool's, and the
@@ -1455,7 +1455,7 @@ the plugin is unchanged in versions without that part.
   root left its parts in the save with nothing to hang on. Replace now takes a root's parts away with it, in the
   same undo step, and says how many went; a part replaced on its own still goes alone.
 
-## v1.45.47 — unreleased
+## v1.45.47 — 2026-10-17
 
 ### Fixed
 - **A heightmap read but not yet put could land in another area.** The picture read by Import was fitted to the
@@ -1463,7 +1463,7 @@ the plugin is unchanged in versions without that part.
   the opening of another area, so "Put it into the ground" then wrote it into the wrong points of another ground.
   The picture is now dropped when the selection changes, and refused (with a message) when another area is open.
 
-## v1.45.46 — unreleased
+## v1.45.46 — 2026-10-17
 
 ### Fixed
 - **Replace's "with" list kept the first world's kinds after another world was opened.** The Area tool worked the
@@ -1472,7 +1472,7 @@ the plugin is unchanged in versions without that part.
   its own. The list is now worked out again for another world or when the game's data or the mods change, keeping
   the chosen kind when the new world offers it too.
 
-## v1.45.45 — unreleased
+## v1.45.45 — 2026-10-17
 
 ### Fixed
 - **Reset zones could say "Select an area first" or miss zones, depending on the Soft slider.** The zones under the
@@ -1480,7 +1480,7 @@ the plugin is unchanged in versions without that part.
   and a 15 m wide selection no point weighed that much, so Reset found no zone, and a zone covered only by the outer
   half of the soft edge was left out. The zones are now those with a grid point inside the outline, whatever Soft is.
 
-## v1.45.44 — unreleased
+## v1.45.44 — 2026-10-17
 
 ### Fixed
 - **Removing a move from the history could leave two copies of the object.** A move replaces its object by a copy.
@@ -1489,7 +1489,7 @@ the plugin is unchanged in versions without that part.
   left the moved copy. A change whose added objects a later step moved or deleted is now refused with a message
   ("undo back to it instead"), and "Take back Claude's changes" says how many were left for that reason.
 
-## v1.45.43 — unreleased
+## v1.45.43 — 2026-10-17
 
 ### Fixed
 - **A hand-made language file could stop the editor from starting.** A file in the data folder's `lang` folder whose
@@ -1497,7 +1497,7 @@ the plugin is unchanged in versions without that part.
   before the window existed, even for a language that was never chosen. A key given twice now takes the last text,
   and a file that is not one object of texts is logged and skipped like one that is not JSON.
 
-## v1.45.42 — unreleased
+## v1.45.42 — 2026-10-17
 
 ### Fixed
 - **A translation of "Free" or "Cost unknown" with a brace in it broke the Build panel.** A text without places for
@@ -1505,14 +1505,14 @@ the plugin is unchanged in versions without that part.
   for it with an empty list of values and formatted it anyway, which threw and broke the Build panel, the blueprint
   list and Claude's piece search. A text asked for with no values is now shown as it is.
 
-## v1.45.41 — unreleased
+## v1.45.41 — 2026-10-17
 
 ### Fixed
 - **Mirrored pastes tilted pieces the wrong way.** Pasting with Mirror on reversed the pitch of every object as
   well as its yaw and roll, so a beam sloping nose-down came out nose-up and tilted trees leaned the other way.
   Mirroring east to west now keeps the pitch; the same went for mirrored dungeon pastes and the paste ghost.
 
-## v1.45.40 — unreleased
+## v1.45.40 — 2026-10-17
 
 ### Fixed
 - **A mod extension offered by two mods ran everything twice.** When two mods ship the same extension DLL and both
@@ -1521,7 +1521,7 @@ the plugin is unchanged in versions without that part.
   data), and a hook that failed turned off only one of the two in Settings. Each loaded extension's hooks now run
   once, and a failure shows on every mod offering it.
 
-## v1.45.39 — unreleased
+## v1.45.39 — 2026-10-17
 
 ### Fixed
 - **The start page could say "Reading the game's files" for ever, or "ready" when it was not.** When the editor
@@ -1531,7 +1531,7 @@ the plugin is unchanged in versions without that part.
   editor now logs what failed, counts none of the data as had (it is taken again next time), and the start page says
   some of the game's data could not be read; "ready" is said only once the game data is in use.
 
-## v1.45.38 — unreleased
+## v1.45.38 — 2026-10-17
 
 ### Fixed
 - **A cache that could not be written stopped every world from opening.** At its start the editor reads what it needs
@@ -1540,7 +1540,7 @@ the plugin is unchanged in versions without that part.
   said the game could not be read, and each try read the whole game again. On the New world page the bosses and
   traders were lost the same way. A cache that cannot be written is now only logged, and the data read is used.
 
-## v1.45.37 — unreleased
+## v1.45.37 — 2026-10-17
 
 ### Fixed
 - **A world map that failed to build said "Building the world map…" for ever.** The map is worked out in the
@@ -1548,7 +1548,7 @@ the plugin is unchanged in versions without that part.
   stayed blank, its status kept saying it was building, and nothing went to the log. The map now says it could not
   be built and why, and the log has the details.
 
-## v1.45.36 — unreleased
+## v1.45.36 — 2026-10-17
 
 ### Fixed
 - **A live world's map could show another world's players.** The map asks the game for its players every 5 seconds,
@@ -1557,7 +1557,7 @@ the plugin is unchanged in versions without that part.
   another world was shown put the old world's players on the new map. The map now asks a world's game again only once it
   has answered (also when that world is shown again meanwhile), and drops an answer for a world no longer shown.
 
-## v1.45.35 — unreleased
+## v1.45.35 — 2026-10-17
 
 ### Fixed
 - **The map could pin the results of an older search.** A search started while another was still running (a slow
@@ -1567,7 +1567,7 @@ the plugin is unchanged in versions without that part.
   or saved during the search. Only the latest search on the world as shown is pinned now; one dropped because the
   world changed says to search again.
 
-## v1.45.34 — unreleased
+## v1.45.34 — 2026-10-17
 
 ### Fixed
 - **Claude's screenshots could show the wrong view.** Claude can ask for several screenshots at once. Each set the
@@ -1575,7 +1575,7 @@ the plugin is unchanged in versions without that part.
   other call's camera, and four views could be labelled with the wrong sides. Tools that set the camera or take a
   picture now take turns.
 
-## v1.45.33 — unreleased
+## v1.45.33 — 2026-10-17
 
 ### Fixed
 - **A dungeon Claude generated could land in the wrong place, or go live.** Claude's generate_dungeon checked that an
@@ -1586,7 +1586,7 @@ the plugin is unchanged in versions without that part.
   Claude) writes its blueprint first; a plot opened meanwhile got the dungeon. It is now added only to the plot it
   was made for; otherwise nothing is placed and the status bar says so (the blueprint stays in the Library).
 
-## v1.45.32 — unreleased
+## v1.45.32 — 2026-10-17
 
 ### Fixed
 - **Errors on the map went unseen.** Opening an area that failed to load (or was dropped because the map was shown
@@ -1596,7 +1596,7 @@ the plugin is unchanged in versions without that part.
   now show in a dialog too (not for a world left meanwhile). The window's message dialogs are titled "Valheim World
   Editor", as the map's are, instead of "Save" whatever they said.
 
-## v1.45.31 — unreleased
+## v1.45.31 — 2026-10-17
 
 ### Fixed
 - **After a failed Discard or Reload in the 3D editor, every tool silently did nothing.** Discard (reading the world
@@ -1606,7 +1606,7 @@ the plugin is unchanged in versions without that part.
   again and why (also when another area asked for meanwhile, by an arrow move, fails too); the old area is no longer
   the world's, so its history is not kept after the world is read.
 
-## v1.45.30 — unreleased
+## v1.45.30 — 2026-10-17
 
 ### Fixed
 - **A change finished after going to the map could not be undone.** Going to the map handed the area's history to
@@ -1617,7 +1617,7 @@ the plugin is unchanged in versions without that part.
   before, unless the map or another area was asked for (or the world left) while it loaded; an area that finishes
   loading after that is not shown over them.
 
-## v1.45.29 — unreleased
+## v1.45.29 — 2026-10-17
 
 ### Fixed
 - **Trees grown on a mountain could float, be buried or be lost.** After placing a mountain with Grow on, the editor
@@ -1626,7 +1626,7 @@ the plugin is unchanged in versions without that part.
   area they went into the old area and were lost, though the message said they grew. When the area changed
   meanwhile, nothing grows now and the message says why.
 
-## v1.45.28 — unreleased
+## v1.45.28 — 2026-10-17
 
 ### Fixed
 - **Keys still worked while a world was being saved from the 3D editor.** Saving only greyed out the Save button: Ctrl+S
@@ -1634,7 +1634,7 @@ the plugin is unchanged in versions without that part.
   save ended. Saving now shows the same "Saving…" veil as the map, the editor's keys wait while it is up, and Follow
   waits too.
 
-## v1.45.27 — unreleased
+## v1.45.27 — 2026-10-17
 
 ### Fixed
 - **Pressing Enter again during an Area action could do it twice.** Reset zones (while its question was open),
@@ -1644,7 +1644,7 @@ the plugin is unchanged in versions without that part.
   old one. Apply is now greyed out while an action runs, and an action whose area changed meanwhile applies nothing
   and says so.
 
-## v1.45.26 — unreleased
+## v1.45.26 — 2026-10-17
 
 ### Fixed
 - **Choosing an SSH key in a format the editor cannot read could crash it.** Connecting with a key file that the SSH
@@ -1653,7 +1653,7 @@ the plugin is unchanged in versions without that part.
   of being skipped. Every way a key file can be refused now gives that message (or skips it), and the key files
   read are closed once connecting is over.
 
-## v1.45.25 — unreleased
+## v1.45.25 — 2026-10-17
 
 ### Fixed
 - **Clicking Connect twice could open two connections to the server.** Connecting to a server (the form, a saved
@@ -1663,7 +1663,7 @@ the plugin is unchanged in versions without that part.
   Quitting or going back to Home while a connection is being made now shuts that tunnel as soon as it connects,
   instead of leaving it open until the editor exits.
 
-## v1.45.24 — unreleased
+## v1.45.24 — 2026-10-17
 
 ### Fixed
 - **The dungeon list could fail on one damaged dungeon, and gave wrong room counts in older worlds.** Listing a
@@ -1672,7 +1672,7 @@ the plugin is unchanged in versions without that part.
   save layout, so in worlds saved before chunk files their room counts were wrong. Each dungeon is now read in its
   own world version, and one that cannot be read is listed with no rooms, with a line in the log saying which and why.
 
-## v1.45.23 — unreleased
+## v1.45.23 — 2026-10-17
 
 ### Fixed
 - **One damaged ground record made the whole world fail to open.** Each zone's ground edits are saved as packed data
@@ -1681,7 +1681,7 @@ the plugin is unchanged in versions without that part.
   in the log says where it is, and the rest of the world opens. Damaged data claiming more ground points than a zone
   can have is caught the same way, before the editor sets aside memory for them.
 
-## v1.45.22 — unreleased
+## v1.45.22 — 2026-10-17
 
 ### Fixed
 - **Live, an object the game listed twice could be counted twice or leave a ghost copy behind.** When the game's list
@@ -1689,7 +1689,7 @@ the plugin is unchanged in versions without that part.
   twice and its builder's piece count went up by two, and an object new to it got two entries, one of which never
   went away when the object was removed in the game. Each object is now taken once, with its last data.
 
-## v1.45.21 — unreleased
+## v1.45.21 — 2026-10-17
 
 ### Fixed
 - **Saving could stop with an error instead of saying why it could not save.** Before writing, a save copies an
@@ -1699,7 +1699,7 @@ the plugin is unchanged in versions without that part.
   happen, with the reason, and nothing written; new ground also copies the first terrain object it can use, not
   just the first one.
 
-## v1.45.20 — unreleased
+## v1.45.20 — 2026-10-17
 
 ### Fixed
 - **A power cut just after saving could leave a broken save that the game trusts.** Saving copies the world's data
@@ -1711,7 +1711,7 @@ the plugin is unchanged in versions without that part.
   macOS through the drive's cache, as .NET already flushes the files there), before the marker and again before the
   previous save is removed.
 
-## v1.45.19 — unreleased
+## v1.45.19 — 2026-10-17
 
 ### Fixed
 - **An Apply live that failed partway said nothing had been applied.** The ground goes to the game first, then the
@@ -1720,7 +1720,7 @@ the plugin is unchanged in versions without that part.
   the editor while the game kept them. It now says what went in and what failed, and marks as applied the steps the
   game has all of, up to the first one it lacks; Apply live again sends the rest.
 
-## v1.45.18 — unreleased
+## v1.45.18 — 2026-10-17
 
 ### Fixed
 - **A save or Apply live that failed still turned No limit ground into ground discs and cleared the undo history.**
@@ -1730,7 +1730,7 @@ the plugin is unchanged in versions without that part.
   limit ground is now put back as it was, and the area and its history stay. When the game may have taken the
   ground (no answer, or it failed partway), the discs stay and the area is read again, as before.
 
-## v1.45.17 — unreleased
+## v1.45.17 — 2026-10-17
 
 ### Fixed
 - **Objects you had just applied live could vanish from the editor as if players had removed them.** The editor
@@ -1739,7 +1739,7 @@ the plugin is unchanged in versions without that part.
   dropped them while they stayed in the game, and undo could no longer reach them. Such a read, or one taken while
   an Apply live was under way, is now dropped and the zone read again.
 
-## v1.45.16 — unreleased
+## v1.45.16 — 2026-10-17
 
 ### Fixed
 - **A dungeon placed on a live world could be built from the wrong object's data.** On a live world, objects the
@@ -1748,7 +1748,7 @@ the plugin is unchanged in versions without that part.
   gave the dungeon another object's bytes, or failed. It now copies each model from where its data is, as saving,
   Apply live, search and the inspector already did; they now share one reader.
 
-## v1.45.15 — unreleased
+## v1.45.15 — 2026-10-17
 
 ### Fixed
 - **Other users of the computer could read Claude's token.** The settings file, which keeps the token Claude
@@ -1756,7 +1756,7 @@ the plugin is unchanged in versions without that part.
   with a home folder others can enter, they could read the token and use the editor's Claude tools. It is now
   written so only you can read it, as the saved servers file already was.
 
-## v1.45.14 — unreleased
+## v1.45.14 — 2026-10-17
 
 ### Fixed
 - **In another language, Claude could use the Blueprints buttons that write or delete files.** Claude is kept from
@@ -1767,7 +1767,7 @@ the plugin is unchanged in versions without that part.
   now have tip keys and are blocked by key, and the other ids and label checks use the label's English text. The
   Select tool's **Delete** is blocked by its key too, so a translated text that reads "Delete" cannot unblock it.
 
-## v1.45.13 — unreleased
+## v1.45.13 — 2026-10-17
 
 ### Fixed
 - **Editing a saved server could send another server's password and token to it.** **edit** filled the address,
@@ -1778,7 +1778,7 @@ the plugin is unchanged in versions without that part.
   password** ticked when its password was saved. The password is sent as typed or saved, spaces at its ends
   included.
 
-## v1.45.12 — unreleased
+## v1.45.12 — 2026-10-17
 
 ### Changed
 - **The Area tool's object actions no longer stall on a big area with the Mask on.** Remove, Select, Restore from
@@ -1787,7 +1787,7 @@ the plugin is unchanged in versions without that part.
   thousands of copies of several megabytes, while the scene's objects were locked. The Mask is now taken once per
   action; what is picked is unchanged.
 
-## v1.45.11 — unreleased
+## v1.45.11 — 2026-10-17
 
 ### Fixed
 - **Restore from backup with the Mask on doubled objects.** The objects in the backup were picked by the selection
@@ -1795,7 +1795,7 @@ the plugin is unchanged in versions without that part.
   nothing through was found in the backup but not in the area, so it was brought back on top of itself. Both
   sides are now picked alike, so objects where the Mask lets nothing through are left as they are.
 
-## v1.45.10 — unreleased
+## v1.45.10 — 2026-10-17
 
 ### Fixed
 - **The map's zone filter could judge one world's zones on another world's counts.** The counts behind **Show
@@ -1805,7 +1805,7 @@ the plugin is unchanged in versions without that part.
   the zones in the world left behind. Counts read before the world was shown again (another world, or the same one
   after a save or a discard) are dropped, and so is the marking when the world was shown again while asking.
 
-## v1.45.9 — unreleased
+## v1.45.9 — 2026-10-17
 
 ### Fixed
 - **A brush stroke made while Apply live was answering could lose ground or undo wrongly.** With **Auto** on, a
@@ -1815,7 +1815,7 @@ the plugin is unchanged in versions without that part.
   ground back. The ground now takes the applied edits when the stroke ends, and a stroke under an apply that
   reads the area again is dropped, with a message to draw it again.
 
-## v1.45.8 — unreleased
+## v1.45.8 — 2026-10-17
 
 ### Fixed
 - **Some script calls never ended, even with Stop.** `Area.Points(0)`, a negative step, or one too small to move
@@ -1825,7 +1825,7 @@ the plugin is unchanged in versions without that part.
   never ended either. Such a step is now an error, the rows and points are counted with whole numbers, only the
   part of a shape within the area is gone through, and Stop acts at every point of `Area.Points()`.
 
-## v1.45.7 — unreleased
+## v1.45.7 — 2026-10-17
 
 ### Fixed
 - **A script with an endless loop of its own could not be stopped.** **Stop** and the 2-minute limit only ended a
@@ -1835,7 +1835,7 @@ the plugin is unchanged in versions without that part.
   Every loop of a script's own (`for`, `foreach`, `while`, `do`, `goto`) now checks for Stop at each turn; the
   script's line numbers in error messages are unchanged.
 
-## v1.45.6 — unreleased
+## v1.45.6 — 2026-10-17
 
 ### Fixed
 - **Claude's build_floor, build_walls and build_roof could freeze the editor.** They took any rectangle: one
@@ -1845,7 +1845,7 @@ the plugin is unchanged in versions without that part.
   high among them) is refused before it is laid out, and before the ground under it is read, with a message to
   build it in parts.
 
-## v1.45.5 — unreleased
+## v1.45.5 — 2026-10-17
 
 ### Fixed
 - **Moving objects past the area's edge sank them about 1000 m, or threw others up.** With **Put on ground** on, the
@@ -1854,7 +1854,7 @@ the plugin is unchanged in versions without that part.
   rest of the selection was lifted by as much to make up for it, and the save wrote those heights. Past the edge an
   object now keeps its own height, and only the ground inside the area places the rest.
 
-## v1.45.4 — unreleased
+## v1.45.4 — 2026-10-17
 
 ### Fixed
 - **Claude could change a live world with Auto on through the editor's controls.** Every Claude tool that changes
@@ -1863,7 +1863,7 @@ the plugin is unchanged in versions without that part.
   sent the change to the game at once. While the world is live with Auto on, `set_control` now only sets the View
   panel's controls, and `list_controls` says why the others are blocked.
 
-## v1.45.3 — unreleased
+## v1.45.3 — 2026-10-17
 
 ### Fixed
 - **Applying live again after a lost answer could make every new object twice.** When the game placed the objects but
@@ -1879,7 +1879,7 @@ the plugin is unchanged in versions without that part.
   that lists it. `/status` also gives `"run"`, a new id each time the game starts: a call whose answer was lost is not
   sent again to a game started since (it no longer knows what it did); the apply fails until the world is reloaded.
 
-## v1.45.2 — unreleased
+## v1.45.2 — 2026-10-17
 
 ### Fixed
 - **Live zone resets were sent again after the world failed to load back.** When **Apply live** reset zones in the
@@ -1888,7 +1888,7 @@ the plugin is unchanged in versions without that part.
   there since. The resets are now taken off as soon as the game has done them, and a failed read-back is reported as
   applied, with the world not read again.
 
-## v1.45.1 — unreleased
+## v1.45.1 — 2026-10-17
 
 ### Fixed
 - **Undoing a second Reset zones on the same zones kept the new options.** A zone already marked for reset and marked
@@ -1897,7 +1897,7 @@ the plugin is unchanged in versions without that part.
   remembered whether the zone was marked before, not how. It now takes the old marking off and puts the new one on,
   and undo, redo and removal set each side's options back; the history file keeps both.
 
-## v1.45.0 — unreleased
+## v1.45.0 — 2026-10-17
 
 ### Added
 - **The editor can be translated.** Its texts move into language catalogues (`Core/Lang/en.json`, English); a
