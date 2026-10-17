@@ -68,7 +68,7 @@ public class SculptTests
         {
             s.StrokeStep(64, 64, 0.1f);
         }
-        string msg = s.EndStroke();
+        string msg = s.EndStroke().Shown;
         Assert.Equal(22, At(s, 64, 64), 3);
         Assert.Contains("8 m", msg);
         Assert.Equal(1, s.Scene.Limit[64 * s.Scene.W + 64]);

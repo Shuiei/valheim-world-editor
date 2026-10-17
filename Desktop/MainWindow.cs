@@ -38,7 +38,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Opens the View panel.
     /// </summary>
-    internal Button ViewButton { get; } = new Button { Content = Icons.With("view", "View"), FontSize = 12.5 }.Classed("ghost");
+    internal Button ViewButton { get; } = new Button { Content = Icons.With("view", Lang.T("rail.label.view")), FontSize = 12.5 }.Classed("ghost");
     /// <summary>
     /// The top bar's names: the world, and the area open.
     /// </summary>
@@ -66,7 +66,7 @@ public sealed partial class MainWindow : Window
             Children =
             {
                 new Border { Width = 7, Height = 7, CornerRadius = new CornerRadius(4), Background = new SolidColorBrush(Color.Parse("#4be08a")), VerticalAlignment = VerticalAlignment.Center, BoxShadow = BoxShadows.Parse("0 0 6 0 #4be08a") },
-                new TextBlock { Text = "LIVE", FontSize = 11.5, FontWeight = FontWeight.Bold, LetterSpacing = 0.7, Foreground = new SolidColorBrush(Color.Parse("#8ff0b4")) },
+                new TextBlock { Text = Lang.T("top.live"), FontSize = 11.5, FontWeight = FontWeight.Bold, LetterSpacing = 0.7, Foreground = new SolidColorBrush(Color.Parse("#8ff0b4")) },
             },
         },
     };
@@ -184,11 +184,11 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Save to world, Apply live, or in the Workshop Save blueprint.
     /// </summary>
-    internal Button SaveButton { get; } = new Button { Content = "Save to world", FontSize = 12.5, IsEnabled = false }.Classed("primary");
+    internal Button SaveButton { get; } = new Button { Content = Lang.T("save.label.save"), FontSize = 12.5, IsEnabled = false }.Classed("primary");
     /// <summary>
     /// Opens the History panel.
     /// </summary>
-    internal Button HistoryButton { get; } = new Button { Content = Icons.With("history", "History"), FontSize = 12.5 }.Classed("ghost");
+    internal Button HistoryButton { get; } = new Button { Content = Icons.With("history", Lang.T("history.title")), FontSize = 12.5 }.Classed("ghost");
     /// <summary>
     /// The History panel: the edits so far, to go back to one.
     /// </summary>
@@ -196,7 +196,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Back to the map (in the Workshop: to the start page).
     /// </summary>
-    internal Button MapButton { get; } = new Button { Content = Icons.With("back", "Map"), FontSize = 12.5, IsVisible = false }.Classed("ghost");
+    internal Button MapButton { get; } = new Button { Content = Icons.With("back", Lang.T("top.label.map")), FontSize = 12.5, IsVisible = false }.Classed("ghost");
 
     // ---- Pages: the start page, the world map, and the 3D editor of an area.
     /// <summary>
@@ -244,7 +244,13 @@ public sealed partial class MainWindow : Window
     private static string Describe((int Zones, int Deleted, int Added, int Resets) p)
     {
         var (z, d, a, r) = p;
-        return string.Join(", ", new[] { z > 0 ? $"{z} zone(s) of ground" : "", d > 0 ? $"{d} deleted" : "", a > 0 ? $"{a} added" : "", r > 0 ? $"{r} zone reset" : "" }.Where(x => x != ""));
+        return string.Join(", ", new[]
+        {
+            z > 0 ? Lang.T("save.count.zones", z) : "",
+            d > 0 ? Lang.T("save.count.deleted", d) : "",
+            a > 0 ? Lang.T("save.count.added", a) : "",
+            r > 0 ? Lang.T("save.count.resets", r) : "",
+        }.Where(x => x != ""));
     }
 
     /// <summary>
@@ -617,7 +623,7 @@ public sealed partial class MainWindow : Window
         }
         if (w.IsLive)
         {
-            Busy("Applying to the running game…");
+            Busy(Lang.T("save.msg.applying"));
             string message;
             try
             {
@@ -625,7 +631,7 @@ public sealed partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                message = "Could not apply live: " + ex.Message;
+                message = Lang.T("save.msg.couldNotApply", ex.Message);
             }
             finally
             {
@@ -640,7 +646,7 @@ public sealed partial class MainWindow : Window
             {
                 return;
             }
-            Busy("Saving…");
+            Busy(Lang.T("save.msg.saving"));
             string msg;
             int? newer = null;
             try
@@ -651,14 +657,14 @@ public sealed partial class MainWindow : Window
                 {
                     if (r.Skipped.Count > 0)
                     {
-                        msg += "\n\nNot saved:\n• " + string.Join("\n• ", r.Skipped);
+                        msg = Lang.T("save.msg.skipped", msg, string.Join("\n• ", r.Skipped));
                     }
                 }
                 newer = o.Done ? null : w.GameSaveSince();
             }
             catch (Exception ex)
             {
-                msg = "Could not save: " + ex.Message;
+                msg = Lang.T("save.msg.couldNotSave", ex.Message);
             }
             finally
             {
@@ -736,7 +742,7 @@ public sealed partial class MainWindow : Window
         {
             await ReopenArea(area);
         }
-        MessageText.Text = o.Message;
+        Msg(o.Report);
         await Tell(o.Message);
     }
 
@@ -769,18 +775,19 @@ public sealed partial class MainWindow : Window
     /// </summary>
     internal async Task DiscardWorld()
     {
-        if (World is not { } w || !await Ask("Discard", $"Discard the unsaved changes ({Describe(w.Pending)})? The world is read again{(w.IsLive ? " from the game" : " from disk")}.", Lang.T("common.discard"), Lang.T("common.keepThem")))
+        if (World is not { } w
+            || !await Ask(Lang.T("common.discard"), w.IsLive ? Lang.T("save.ask.discardWorldLive.text", Describe(w.Pending)) : Lang.T("save.ask.discardWorld.text", Describe(w.Pending)), Lang.T("common.discard"), Lang.T("common.keepThem")))
         {
             return;
         }
-        Busy("Reading the world again…");
+        Busy(Lang.T("save.msg.reading"));
         try
         {
             await Task.Run(w.Discard);
         }
         catch (Exception ex)
         {
-            Say("Could not read the world again: " + ex.Message);
+            Say(Said.Of("save.msg.couldNotRead", ex.Message));
         }
         finally
         {
@@ -798,7 +805,7 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
-        Busy("Loading the world from the game…");
+        Busy(Lang.T("save.msg.loadingLive"));
         try
         {
             await w.Reload();
@@ -806,7 +813,7 @@ public sealed partial class MainWindow : Window
         // As ReloadHere: the bridge's answers (a refusal, broken JSON) too.
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException or System.Text.Json.JsonException)
         {
-            Say("Could not reach the game: " + ex.Message);
+            Say(Said.Of("save.msg.unreachable", ex.Message));
         }
         finally
         {
@@ -821,7 +828,7 @@ public sealed partial class MainWindow : Window
     internal async Task LeaveWorld()
     {
         if (World is { } w && w.Pending is not (0, 0, 0, 0)
-            && !await Ask("Leave the world", $"{(w.IsLive ? "Not applied" : "Unsaved")}: {Describe(w.Pending)}. Leave the world without {(w.IsLive ? "applying" : "saving")} them?", Lang.T("common.leaveAnyway"), Lang.T("common.stay")))
+            && !await Ask(Lang.T("save.ask.leave.title"), w.IsLive ? Lang.T("save.ask.leaveLive.text", Describe(w.Pending)) : Lang.T("save.ask.leave.text", Describe(w.Pending)), Lang.T("common.leaveAnyway"), Lang.T("common.stay")))
         {
             return;
         }
@@ -891,13 +898,13 @@ public sealed partial class MainWindow : Window
     internal void ShowError(Exception ex)
     {
         Busy(null);
-        string text = $"Something went wrong: {ex.Message} Your changes are still here. Details in the log (Open log, on the start page).";
-        MessageText.Text = text;
+        var said = Said.Of("save.msg.wentWrong", ex.Message);
+        Msg(said);
         // Away from the 3D editor (its status bar not shown): once in a dialog, not one per error.
         if (_pages.Content != _editorPage && !_errorShown)
         {
             _errorShown = true;
-            _ = Tell(text).ContinueWith(_ => _errorShown = false, TaskScheduler.FromCurrentSynchronizationContext());
+            _ = Tell(said.Shown).ContinueWith(_ => _errorShown = false, TaskScheduler.FromCurrentSynchronizationContext());
         }
     }
     /// <summary>
@@ -919,7 +926,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// What is waiting to be saved, in the save bar.
     /// </summary>
-    internal TextBlock PendingText { get; } = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = "All saved" };
+    internal TextBlock PendingText { get; } = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = Lang.T("save.pending.allSaved") };
     /// <summary>
     /// The status bar's last message.
     /// </summary>
@@ -933,11 +940,7 @@ public sealed partial class MainWindow : Window
     /// </summary>
     /// <param name="what">What would be written, in words.</param>
     /// <param name="directory">The world's folder.</param>
-    private static string SaveConfirmText(string what, string directory) =>
-        $"Write {what} into the world files?\n\nWorld folder: {Ui.Tilde(directory)}\n\n"
-        + "• Like Apply live: the world stays open with its history; undo a step and save again to take it back. The save it was opened from is kept until you leave the world.\n"
-        + "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
-        + "• Test on a copy first: open it as a local world, or upload it to a test server.";
+    private static string SaveConfirmText(string what, string directory) => Lang.T("save.ask.save.text", what, Ui.Tilde(directory));
     /// <summary>
     /// A yes / no question (title, text, yes, no): Discard, Leave, Quit with unsaved changes. Tests answer it.
     /// </summary>
@@ -1057,7 +1060,7 @@ public sealed partial class MainWindow : Window
         var (z, d, a, r) = s.Pending;
         bool dirty = z + d + a + r > 0;
         SaveButton.IsEnabled = dirty;
-        SaveButton.Content = s.IsLive ? "Apply live" : "Save to world";
+        SaveButton.Content = s.IsLive ? Lang.T("save.label.apply") : Lang.T("save.label.save");
         SaveButton.Tip(s.IsLive ? "top.apply" : "top.save");
         SetPendingPill(dirty);
         _liveBadge.IsVisible = s.IsLive;
@@ -1105,13 +1108,13 @@ public sealed partial class MainWindow : Window
         {
             return true;
         }
-        string since = w.IsLive ? "Players may have changed the world since." : "The world was saved again since (by the game, or another program).";
-        string question = w.Restored!.Replayed
-            ? Lang.T("history.replayedAsk", w.Restored.SavedAt.ToString("g", System.Globalization.CultureInfo.CurrentCulture))
-            : $"This step was made in an earlier session of the editor (kept {w.Restored.SavedAt:g}). {since} Undoing or redoing it puts the ground and the objects back as they were then, over what changed since.";
-        if (!await Ask("A step from an earlier session", question, "Go ahead", Lang.T("common.cancel")))
+        string kept = w.Restored!.SavedAt.ToString("g", System.Globalization.CultureInfo.CurrentCulture);
+        string question = w.Restored.Replayed ? Lang.T("history.replayedAsk", kept)
+            : w.IsLive ? Lang.T("history.ask.earlierLive.text", kept)
+            : Lang.T("history.ask.earlier.text", kept);
+        if (!await Ask(Lang.T("history.ask.earlier.title"), question, Lang.T("history.ask.earlier.yes"), Lang.T("common.cancel")))
         {
-            MessageText.Text = "Nothing changed.";
+            Msg("history.msg.nothingChanged");
             return false;
         }
         w.EarlierAllowed = true;
@@ -1139,7 +1142,7 @@ public sealed partial class MainWindow : Window
         var (z, d, a, r) = s.Pending;
         if (z + d + a + r == 0)
         {
-            await Tell("There are no unsaved changes.");
+            await Tell(Lang.T("save.msg.noChanges"));
             return;
         }
         if (s.IsLive)
@@ -1153,20 +1156,22 @@ public sealed partial class MainWindow : Window
             return;
         }
         SaveButton.IsEnabled = false;
-        MessageText.Text = "Saving…";
+        Msg("save.msg.saving");
         // The veil keeps the keys (Ctrl+S, Ctrl+Z), the mouse and Follow off the area while it is written.
-        Busy("Saving…");
+        Busy(Lang.T("save.msg.saving"));
         int? newer = null;
         try
         {
-            var res = await Task.Run(s.Save);
-            string msg = res.Message;
+            var o = await Task.Run(s.SaveOutcome);
+            var res = o.Saved!;
+            string msg = o.Message;
             if (res.Skipped.Count > 0)
             {
-                msg += "\n\nNot saved:\n• " + string.Join("\n• ", res.Skipped);
+                msg = Lang.T("save.msg.skipped", msg, string.Join("\n• ", res.Skipped));
             }
-            MessageText.Text = res.Message;
-            Options.Say("Save: " + res.Message);
+            Msg(o.Report);
+            // The log stays English.
+            Options.Say("Save: " + o.Report.English);
             newer = res.Saved ? null : s.Scene.Owner?.GameSaveSince();
             if (newer == null)
             {
@@ -1175,7 +1180,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageText.Text = "Could not save: " + ex.Message;
+            Msg("save.msg.couldNotSave", ex.Message);
         }
         finally
         {
@@ -1813,7 +1818,7 @@ public sealed partial class MainWindow : Window
         int generation = s.Generation;
         // On the slopes it raised by more than a metre (not around its foot, where the old ones stand).
         var spots = await Growth.Spots(s, wx - m.Reach, wz - m.Reach, wx + m.Reach, wz + m.Reach, o => shape(o.X - wx, o.Z - wz) > 1,
-            NameOfPrefab, t => MessageText.Text = placed + " " + t, maxZones: 49);
+            NameOfPrefab, t => Msg(Said.Raw(placed) + t), maxZones: 49);
         if (Session != s || s.Generation != generation)
         {
             // Another area opened (Follow grew it), or the ground changed (an undo, a stroke, another mountain): the
@@ -2469,7 +2474,7 @@ public sealed partial class MainWindow : Window
         WireInspector();
         WireSelectPanel();
         AskPlayerId = () => Dialogs.AskText(this, "Built by", "Player id to write as the builder (the number Valheim keeps for a character):");
-        History.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
+        History.Message += t => { Msg(t); UpdateSaveBar(); };
         History.Allow = AllowEarlier;
         MaskPanel = new MaskPanel(Mask);
         WireGroundTools();
@@ -2497,7 +2502,7 @@ public sealed partial class MainWindow : Window
         Height = Options.WindowHeight > 0 ? Options.WindowHeight : 950;
         Background = Ui.Bg;
         HelpCard = Help(RecordBox());
-        ConfirmSave = text => Dialogs.Ask(this, "Save into the world", text, "Save");
+        ConfirmSave = text => Dialogs.Ask(this, Lang.T("save.ask.save.title"), text, Lang.T("common.save"));
         Ask = (title, text, yes, no) => Dialogs.Ask(this, title, text, yes, no);
         Tell = text => Dialogs.Tell(this, "Valheim World Editor", text);
         var tools = BuildToolColumn();
@@ -2908,9 +2913,9 @@ public sealed partial class MainWindow : Window
     /// A stroke ended: its message, Flatten's target when it came from the click, and the save bar.
     /// </summary>
     /// <param name="msg">What the stroke did.</param>
-    private void OnStrokeEnded(string msg)
+    private void OnStrokeEnded(Said msg)
     {
-        MessageText.Text = msg;
+        Msg(msg);
         if (Tools.Tool == BrushTool.Flatten && Tools.Brush.TargetFromClick)
         {
             Tools.ShowTarget(Tools.Brush.Target);
@@ -2942,7 +2947,7 @@ public sealed partial class MainWindow : Window
             if (WorkshopDirty)
             {
                 e.Cancel = true;
-                if (await Ask("Unsaved building", "The building in the Workshop is not saved as a blueprint. Quit without saving it?", "Quit anyway", Lang.T("common.keepBuilding")))
+                if (await Ask(Lang.T("save.ask.quitBuilding.title"), Lang.T("save.ask.quitBuilding.text"), Lang.T("save.ask.quit.yes"), Lang.T("common.keepBuilding")))
                 {
                     _closeAnyway = true;
                     Close();
@@ -2956,7 +2961,8 @@ public sealed partial class MainWindow : Window
             return;
         }
         e.Cancel = true;
-        if (await Ask("Unsaved changes", $"{(World?.IsLive == true ? "Not applied" : "Unsaved")}: {Describe(pending)}. Quit without {(World?.IsLive == true ? "applying" : "saving")} them?", "Quit anyway", "Keep editing"))
+        string question = World?.IsLive == true ? Lang.T("save.ask.quitLive.text", Describe(pending)) : Lang.T("save.ask.quit.text", Describe(pending));
+        if (await Ask(Lang.T("save.ask.quit.title"), question, Lang.T("save.ask.quit.yes"), Lang.T("save.ask.quit.no")))
         {
             _closeAnyway = true;
             Close();

@@ -137,7 +137,7 @@ public class SaveSmallPartsTests
             new NewObject(-2, StableHash.Of("NoSuchThing_xyz"), new Vector3(7, 30, 9), Vector3.Zero, 1f),
         ]);
         var sync = new LiveSync();
-        string msg = await sync.Apply(world, edits, live);
+        string msg = (await sync.Apply(world, edits, live)).Shown;
         Assert.Equal((0, 1), Assert.Single(game.ObjectCalls));
         Assert.Contains("1 skipped (unknown kind of object at 7, 9)", msg);
     }

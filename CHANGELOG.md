@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.7 — unreleased
+
+### Changed
+- **The History panel and the save bar come from the language catalogue.** The History card, its rows and buttons,
+  what is waiting to be saved, the Save to world and Apply live buttons, and what saving, applying, discarding,
+  leaving and quitting ask and say show in the language chosen in Settings, as do the brush's and Regrow's messages
+  about what could not be done. In English nothing changes.
+
 ## v1.47.6 — unreleased
 
 ### Changed

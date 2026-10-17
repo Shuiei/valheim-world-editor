@@ -65,7 +65,7 @@ public class LiveSyncTests
     {
         using var t = new Live();
         var n = t.MoveTree(-1, new Vector3(4, 0, 2));
-        string said = await t.Sync.Apply(t.World, t.Edits, t.Game);
+        string said = (await t.Sync.Apply(t.World, t.Edits, t.Game)).Shown;
         Assert.Equal((0, 0), t.Bridge.ObjectCalls.Single());
         var (user, id, prefab, from, to, turn) = t.Bridge.Moves.Single();
         Assert.Equal(t.TreeZdo, (user, id));
@@ -221,7 +221,7 @@ public class LiveSyncTests
         using var t = new Live();
         t.Bridge.MoveInPlace = false;
         t.MoveTree(-1, new Vector3(4, 0, 2));
-        string said = await t.Sync.Apply(t.World, t.Edits, t.Game);
+        string said = (await t.Sync.Apply(t.World, t.Edits, t.Game)).Shown;
         Assert.Contains("0 moved (1 more made again", said);
         Assert.True(t.Sync.IsLive(-1));
         var made = t.Sync.NewObjects().Single().Target;
@@ -266,13 +266,13 @@ public class LiveSyncTests
         Assert.Equal((1, 1), t.Bridge.ObjectCalls.Single());
         Assert.False(t.Sync.IsLive(-1));
 
-        string said = await t.Sync.Apply(t.World, t.Edits, t.Game);
+        string said = (await t.Sync.Apply(t.World, t.Edits, t.Game)).Shown;
         Assert.Equal("1 object(s) removed, 1 created", said);
         Assert.Single(t.Bridge.ObjectCalls);
         Assert.True(t.Sync.IsLive(-1));
         Assert.True(t.Sync.IsDestroyed(t.Tree.Id));
         Assert.Equal((0, 0), t.Sync.Pending(t.Edits));
-        Assert.Equal("", await t.Sync.Apply(t.World, t.Edits, t.Game));
+        Assert.Equal("", (await t.Sync.Apply(t.World, t.Edits, t.Game)).Shown);
         Assert.Single(t.Bridge.ObjectCalls);
     }
 

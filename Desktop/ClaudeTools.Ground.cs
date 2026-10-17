@@ -471,7 +471,7 @@ public sealed partial class ClaudeTools
         string said = "";
         var spots = await OnUi(() => Growth.Spots(session, ax, az, bx, bz,
             o => o.X >= ax && o.X <= bx && o.Z >= az && o.Z <= bz && chosen.Contains(TerrainEditor.App.ObjectKinds.Of(o.Name, false)),
-            _w.NameOfPrefab, m => said = m));
+            _w.NameOfPrefab, m => said = m.English));
         if (spots == null)
         {
             return said;

@@ -1,3 +1,4 @@
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
@@ -221,9 +222,9 @@ public sealed class WorldSessionTests : IDisposable
     public void WithTheGroundDiscsUnsentNoStepIsSent()
     {
         var ground = new EditSession.Change("raise", [], new Ground.State([], [], [], [], [], []), new Ground.State([], [], [], [], [], []), [(0, 0)]);
-        Assert.True(new WorldSession.Outcome(true, "", false) { Unsent = WorldSession.LiveParts.Objects }.Sent(ground));
-        Assert.False(new WorldSession.Outcome(true, "", false) { Unsent = WorldSession.LiveParts.Objects, Lifted = true }.Sent(ground));
-        Assert.True(new WorldSession.Outcome(true, "", false) { Unsent = WorldSession.LiveParts.Resets, Lifted = true }.Sent(ground));
+        Assert.True(new WorldSession.Outcome(true, Said.Empty, false) { Unsent = WorldSession.LiveParts.Objects }.Sent(ground));
+        Assert.False(new WorldSession.Outcome(true, Said.Empty, false) { Unsent = WorldSession.LiveParts.Objects, Lifted = true }.Sent(ground));
+        Assert.True(new WorldSession.Outcome(true, Said.Empty, false) { Unsent = WorldSession.LiveParts.Resets, Lifted = true }.Sent(ground));
     }
 
     [Fact]

@@ -41,7 +41,7 @@ public class MaskTests
         {
             s.StrokeStep(64, 64, 0.1f);
         }
-        Assert.Equal("", s.EndStroke());
+        Assert.Equal("", s.EndStroke().Shown);
         Assert.True(H(s, 67, 64) > 30);
         Assert.Equal(30, H(s, 61, 64), 4);
     }
@@ -71,7 +71,7 @@ public class MaskTests
         s.Mask.HeightMin = 100;
         s.BeginStroke(BrushTool.Raise, 64, 64);
         s.StrokeStep(64, 64, 0.1f);
-        Assert.StartsWith("Nothing changed: the Mask", s.EndStroke());
+        Assert.StartsWith("Nothing changed: the Mask", s.EndStroke().Shown);
     }
 
     [Fact]

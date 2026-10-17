@@ -70,11 +70,24 @@ public static class Uplift
         /// <summary>Lifted zones the game has not generated yet: their lift was dropped.</summary>
         public int Ungenerated { get; init; }
 
-        /// <summary>The plan in a sentence for the user: discs, objects taken away, ground still off, zones left out.</summary>
-        public string Describe() => $"{Discs} ground disc(s){(OldDiscs > 0 ? $" ({OldDiscs} replaced)" : "")}"
-            + (Cleared > 0 ? $", {Cleared} tree(s)/rock(s) taken away" : "")
-            + (Worst > EditStore.MaxLevel + 0.5f ? $"; some ground is up to {Worst - EditStore.MaxLevel:0.#} m off (too steep)" : "")
-            + (Ungenerated > 0 ? $"; {Ungenerated} zone(s) not generated yet were left as they were (visit them in game first)" : "");
+        /// <summary>
+        /// The plan in a sentence for the user, in both languages: discs, objects taken away, ground still off, zones
+        /// left out.
+        /// </summary>
+        public Said Describe()
+        {
+            var discs = Said.Join(", ",
+            [
+                OldDiscs > 0 ? Said.Of("save.lift.discsReplaced", Discs, OldDiscs) : Said.Of("save.lift.discs", Discs),
+                Cleared > 0 ? Said.Of("save.lift.cleared", Cleared) : Said.Empty,
+            ]);
+            return Said.Join("; ",
+            [
+                discs,
+                Worst > EditStore.MaxLevel + 0.5f ? Said.Of("save.lift.steep", Worst - EditStore.MaxLevel) : Said.Empty,
+                Ungenerated > 0 ? Said.Of("save.lift.ungenerated", Ungenerated) : Said.Empty,
+            ]);
+        }
     }
 
     /// <summary>The editor's discs as they are now: the world's (not deleted) and the new ones not saved yet.</summary>

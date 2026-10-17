@@ -302,15 +302,18 @@ public sealed class WorldSession : IDisposable
 
     /// <summary>What a save or Apply live did.</summary>
     /// <param name="Done">Saved, or something was applied.</param>
-    /// <param name="Message">What to tell the user.</param>
+    /// <param name="Report">What to tell the user, in both languages (Claude reads the English in the status bar).</param>
     /// <param name="Reloaded">
     /// The world was read again (a save after zone resets or No limit ground; live, after zone resets only):
     /// areas must be read again too. Live No limit ground shows in <see cref="Lifted"/> alone, which callers
     /// check as well.
     /// </param>
     /// <param name="Saved">The writer's result (offline only).</param>
-    public sealed record Outcome(bool Done, string Message, bool Reloaded, WorldWriter.Result? Saved = null)
+    public sealed record Outcome(bool Done, Said Report, bool Reloaded, WorldWriter.Result? Saved = null)
     {
+        /// <summary>What to tell the user, in the language in use.</summary>
+        public string Message => Report.Shown;
+
         /// <summary>No limit ground was turned into ground discs: the ground under the area changed.</summary>
         public bool Lifted { get; init; }
         /// <summary>Live: not applied, the answer to "apply over the game's changes?" was no.</summary>
@@ -407,9 +410,9 @@ public sealed class WorldSession : IDisposable
     public Outcome Save()
     {
         int known = _lastNumber ?? World.SaveNumber;
-        if (WorldWriter.Newer(World.Directory, known) is string newer)
+        if (WorldWriter.Newer(World.Directory, known) is Said newer)
         {
-            return new Outcome(false, newer, false, new WorldWriter.Result(false, newer, null, 0, 0, []));
+            return new Outcome(false, newer, false, new WorldWriter.Result(false, newer.Shown, null, 0, 0, []) { Report = newer });
         }
         var lift = LiftToDiscs();
         // The changed zones and those the last save wrote (each copied once).
@@ -436,7 +439,7 @@ public sealed class WorldSession : IDisposable
         {
             lift = null;
         }
-        string? unread = null;
+        Said unread = Said.Empty;
         if (result.Saved && reread)
         {
             // Written: whatever happens reading it back, what went in is not pending any more (it would be written
@@ -448,9 +451,9 @@ public sealed class WorldSession : IDisposable
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
             {
-                unread = $" It could not be read back ({ex.Message}): open the world again to go on.";
+                unread = Said.Of("save.msg.notReadBack", ex.Message);
             }
-            if (unread == null)
+            if (unread == Said.Empty)
             {
                 try
                 {
@@ -466,7 +469,7 @@ public sealed class WorldSession : IDisposable
             _nextId = -1;
             ForgetHistory();
             ForgetSaves();
-            if (unread != null)
+            if (unread != Said.Empty)
             {
                 // The session's own save is not one the game made since.
                 _lastNumber = result.Number;
@@ -483,8 +486,8 @@ public sealed class WorldSession : IDisposable
             MarkHistoryApplied();
             KeepHistory();
         }
-        string message = (lift != null ? $"{result.Message} No limit ground: {lift.Plan.Describe()}." : result.Message) + unread;
-        return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message }) { Lifted = lift != null };
+        var message = result.Report + (lift != null ? Said.Of("save.msg.lifted", lift.Plan.Describe()) : Said.Empty) + unread;
+        return new Outcome(result.Saved, message, result.Saved && reread, result with { Message = message.Shown, Report = message }) { Lifted = lift != null };
     }
 
     /// <summary>
@@ -521,13 +524,13 @@ public sealed class WorldSession : IDisposable
         // The game saved again since its save was read: that save is not the latest any more.
         if (WorldSave.CommittedSave(World.Directory) != plan.Newer.SaveNumber)
         {
-            return new Outcome(false, Lang.T("replay.savedAgain"), false);
+            return new Outcome(false, Said.Of("replay.savedAgain"), false);
         }
         var kept = Area?.Export() ?? History;
         var r = plan.Apply(keepMine, Edits, NextId);
         if (r == null)
         {
-            return new Outcome(false, Lang.T("replay.stale"), false);
+            return new Outcome(false, Said.Of("replay.stale"), false);
         }
         World = plan.Newer;
         UseModifiers(new TerrainModifiers(Uplift.PlacedNow(World, Edits)));
@@ -539,20 +542,20 @@ public sealed class WorldSession : IDisposable
         Restored = history == null ? null : new HistoryFile.Restored(history, steps, true, DateTime.Now) { Replayed = true };
         EarlierAllowed = false;
         RestoredSaid = true;
-        var text = new System.Text.StringBuilder(Lang.T("replay.done", World.SaveNumber, r.Zones, r.Deleted, r.Added, r.Resets));
+        var text = Said.Of("replay.done", World.SaveNumber, r.Zones, r.Deleted, r.Added, r.Resets);
         if (r.GameGround.Count > 0 || r.Dropped.Count > 0)
         {
-            text.Append(' ').Append(Lang.T("replay.gameKept", r.GameGround.Count, plan.Clashes.Count(c => c.Kind != ReplayClash.Ground && !keepMine(c.Kind))));
+            text += Said.Of("replay.gameKept", r.GameGround.Count, plan.Clashes.Count(c => c.Kind != ReplayClash.Ground && !keepMine(c.Kind)));
         }
         if (r.Unread > 0)
         {
-            text.Append(' ').Append(Lang.T("replay.unread", r.Unread));
+            text += Said.Of("replay.unread", r.Unread);
         }
         if (steps + dropped > 0)
         {
-            text.Append(' ').Append(dropped > 0 ? Lang.T("replay.historyDropped", steps, dropped) : Lang.T("replay.history", steps));
+            text += dropped > 0 ? Said.Of("replay.historyDropped", steps, dropped) : Said.Of("replay.history", steps);
         }
-        return new Outcome(true, text.ToString(), true);
+        return new Outcome(true, text, true);
     }
 
     /// <summary>
@@ -678,7 +681,7 @@ public sealed class WorldSession : IDisposable
         {
             if (confirm != null && Edits.PendingOverGame() is { Count: > 0 } over && !await confirm(over))
             {
-                return new Outcome(false, "Not applied: the game changed the ground where you have changes (Apply live asks again).", false) { Declined = true };
+                return new Outcome(false, Said.Of("save.msg.declined"), false) { Declined = true };
             }
             return await ApplyLiveOnce();
         }
@@ -693,13 +696,13 @@ public sealed class WorldSession : IDisposable
     private async Task<Outcome> ApplyLiveOnce()
     {
         var live = Live!;
-        var done = new List<string>();
+        var done = new List<Said>();
         bool reloaded = false;
         var lift = LiftToDiscs();
         var plan = lift?.Plan;
         if (plan != null)
         {
-            done.Add($"No limit ground: {plan.Describe()}");
+            done.Add(Said.Of("save.done.lifted", plan.Describe()));
         }
         // Until the ground or objects went in (sent), or the ground may have (unsure), a failure has sent nothing: the
         // No limit ground is put back as it was.
@@ -723,11 +726,11 @@ public sealed class WorldSession : IDisposable
                 }
                 sent = true;
                 Edits.MarkApplied(zones);
-                done.Add($"{zones.Count} zone(s) of ground");
+                done.Add(Said.Of("save.count.zones", zones.Count));
             }
-            string objects = await LiveSync.Apply(World, Edits, live);
+            var objects = await LiveSync.Apply(World, Edits, live);
             objectsDone = true;
-            if (objects != "")
+            if (objects != Said.Empty)
             {
                 sent = true;
                 done.Add(objects);
@@ -739,7 +742,7 @@ public sealed class WorldSession : IDisposable
                 // Done in the game: not pending any more, even if reading the world below fails (sent again, they
                 // would wipe what players built there since).
                 Edits.MarkResetsApplied(resets);
-                done.Add($"{resets.Count} zone(s) reset");
+                done.Add(Said.Of("save.done.resets", resets.Count));
                 try
                 {
                     World = await live.LoadWorld();
@@ -748,7 +751,7 @@ public sealed class WorldSession : IDisposable
                 {
                     MarkHistoryApplied();
                     KeepHistory(later: true);
-                    return new Outcome(true, $"Applied to the running game: {string.Join("; ", done)}; but the world could not be read again from the game ({ex.Message}): open it again to see the reset zones.", false) { Lifted = plan != null };
+                    return new Outcome(true, Said.Of("save.msg.appliedUnread", Said.Join("; ", done), ex.Message), false) { Lifted = plan != null };
                 }
                 Edits.ResetFrom(World);
                 UseModifiers(new TerrainModifiers(World));
@@ -763,7 +766,7 @@ public sealed class WorldSession : IDisposable
                 MarkHistoryApplied();
                 KeepHistory(later: true);
             }
-            return new Outcome(done.Count > 0, done.Count > 0 ? $"Applied to the running game: {string.Join("; ", done)}." : "Nothing to apply.", reloaded) { Lifted = plan != null };
+            return new Outcome(done.Count > 0, done.Count > 0 ? Said.Of("save.msg.applied", Said.Join("; ", done)) : Said.Of("save.msg.nothingToApply"), reloaded) { Lifted = plan != null };
         }
         // The game answering with an error (InvalidOperationException from the bridge) is reported too.
         catch (Exception ex) when (GameFailed(ex))
@@ -772,7 +775,7 @@ public sealed class WorldSession : IDisposable
             {
                 // Some parts went in: said, and the steps the game has all of are applied.
                 var resets = Edits.Resets.Select(r => (r.X, r.Z)).ToHashSet();
-                var partly = new Outcome(true, $"Applied to the running game: {string.Join("; ", done)}; but then it failed ({ex.Message}): Apply live again for the rest.", false)
+                var partly = new Outcome(true, Said.Of("save.msg.appliedPartly", Said.Join("; ", done), ex.Message), false)
                 {
                     Lifted = lift != null,
                     // Resets only while some are still to send: a reset unmarked since leaves none, though steps keep it.
@@ -784,7 +787,7 @@ public sealed class WorldSession : IDisposable
                 return partly;
             }
             bool lifted = lift != null && (unsure || !Unlift(lift));
-            return new Outcome(false, "Could not apply live: " + ex.Message, false) { Lifted = lifted };
+            return new Outcome(false, Said.Of("save.msg.couldNotApply", ex.Message), false) { Lifted = lifted };
         }
     }
 
