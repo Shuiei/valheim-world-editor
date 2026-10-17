@@ -23,6 +23,11 @@ public sealed class SelectPanel
     private readonly Control _exact;
     /// <summary>Move by: the boxes are offsets from where the selection is, not a place.</summary>
     private bool _by;
+    /// <summary>
+    /// Where the selection was when <see cref="Refresh"/> last filled the boxes, unrounded: Move there moves only
+    /// along the axes whose box was changed since, by the difference from this (the boxes show rounded values).
+    /// </summary>
+    private (float X, float Y, float Z, float Turn)? _shown;
 
     // For tests.
     /// <summary>Deletes the selection.</summary>
@@ -342,11 +347,40 @@ public sealed class SelectPanel
         }
     }
 
-    /// <summary>Moves the selection to (or by) the boxes' values, then back to showing where it is.</summary>
+    /// <summary>
+    /// Moves the selection to (or by) the boxes' values, then back to showing where it is. Move there moves only along
+    /// the axes whose box was changed, from the unrounded place the boxes were filled from: a box left as Refresh put
+    /// it (rounded to a centimetre or a tenth of a degree) is not a move.
+    /// </summary>
     private void Apply()
     {
         static float V(NumericUpDown b) => (float)(b.Value ?? 0);
-        _tool.PlaceAt(V(XBox), V(YBox), V(ZBox), V(TurnBox), _by);
+        if (_by)
+        {
+            // An empty or zero box is no move along that axis.
+            static float? By(NumericUpDown b) => b.Value is { } v && v != 0 ? (float)v : null;
+            _tool.PlaceAt(By(XBox), By(YBox), By(ZBox), By(TurnBox), by: true);
+            SetBy(false);
+            return;
+        }
+        if (_shown is not { } was)
+        {
+            return;
+        }
+        // Which boxes were changed, and to what, taken before a move in progress (a turn or lift from the keys, not
+        // committed yet) is committed: the boxes were filled before it, and the place to move from is after it.
+        static bool Changed(NumericUpDown b, float from, int digits) => b.Value != (decimal)MathF.Round(from, digits);
+        var (x, y, z, turn) = (V(XBox), V(YBox), V(ZBox), V(TurnBox));
+        var (cx, cy, cz, ct) = (Changed(XBox, was.X, 2), Changed(YBox, was.Y, 2), Changed(ZBox, was.Z, 2), Changed(TurnBox, was.Turn, 1));
+        if (_tool.Moving)
+        {
+            _tool.Commit();
+            Refresh();
+        }
+        if (_shown is { } at)
+        {
+            _tool.PlaceAt(cx ? x - at.X : null, cy ? y - at.Y : null, cz ? z - at.Z : null, ct ? turn - at.Turn : null, by: true);
+        }
         SetBy(false);
     }
 
@@ -358,10 +392,16 @@ public sealed class SelectPanel
         DeleteButton.IsEnabled = SameButton.IsEnabled = w != null;
         InspectButton.IsEnabled = w is { Count: 1 };
         ClaimButton.IsEnabled = w != null;
-        if (w is not { } at || _by)
+        if (w is not { } at)
+        {
+            _shown = null;
+            return;
+        }
+        if (_by)
         {
             return;
         }
+        _shown = (at.X, at.Y, at.Z, at.Turn);
         XBox.Value = (decimal)MathF.Round(at.X, 2);
         YBox.Value = (decimal)MathF.Round(at.Y, 2);
         ZBox.Value = (decimal)MathF.Round(at.Z, 2);

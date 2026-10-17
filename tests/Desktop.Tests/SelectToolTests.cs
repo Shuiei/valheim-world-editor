@@ -174,6 +174,18 @@ public class SelectToolTests
         p.YBox.Value = 2;
         p.ApplyButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
         Assert.Equal(new Vector3(50, 32, 44), Last(s).Position);
+        // By, with all four boxes: each amount goes to its own axis.
+        p.ByButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+        p.XBox.Value = 1;
+        p.YBox.Value = 2;
+        p.ZBox.Value = -3;
+        p.TurnBox.Value = 45;
+        p.ApplyButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+        moved = Last(s);
+        Assert.Equal(51, moved.Position.X, 3);
+        Assert.Equal(34, moved.Position.Y, 3);
+        Assert.Equal(41, moved.Position.Z, 3);
+        Assert.Equal(45, moved.Rotation.Y, 3);
     }
 
     [AvaloniaFact]
@@ -223,6 +235,23 @@ public class SelectToolTests
         {
             Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
         }
+    }
+
+    // A typed move smaller than the centimetre across or millimetre up a dragged move needs is still made: the place
+    // was asked for exactly.
+    [AvaloniaFact]
+    public void ATypedMoveUnderACentimetreIsMade()
+    {
+        var (w, s) = Window();
+        w.View.Select([0]);
+        w.View.SelectTool.PlaceAt(0.006f, 0, 0, 0, by: true);
+        Assert.True(s.CanUndo);
+        Assert.Equal(20.006f, Last(s).Position.X, 4);
+        float y = Last(s).Position.Y;
+        w.View.SelectTool.PlaceAt(0, 0.0005f, 0, 0, by: true);
+        Assert.InRange(Last(s).Position.Y - y, 0.00049f, 0.00051f);
+        Assert.Equal(20.006f, Last(s).Position.X, 4);
+        w.CloseWithoutAsking();
     }
 
     // Put on the ground, an object moved past the area's edge (no ground there) keeps its height, and the others are
