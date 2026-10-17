@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.55 — unreleased
+
+### Fixed
+- **Claude Desktop lost the editor's MCP server on a batch request or a tool that ran too long.** The --mcp-stdio
+  relay ended on a line of JSON that is not one message (a batch array, a bare value), on a method that is not a
+  string, and when the editor gave no answer within 5 minutes, so Claude Desktop showed the server disconnected. Such
+  a line is now answered with a JSON-RPC error (a request that timed out too) and the relay goes on until its input
+  ends.
+
 ## v1.45.54 — unreleased
 
 ### Fixed
