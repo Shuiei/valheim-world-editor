@@ -136,13 +136,14 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     /// </summary>
     public event Action? PiecesRead;
     /// <summary>
-    /// Live: the players online, by name and world position.
+    /// Live: the players online, by name and world position. Kept as a copy of the list given, so changing that list
+    /// afterwards changes nothing (the pins' shapes are made again only when a new one is given).
     /// </summary>
-    public IReadOnlyList<(string Name, float X, float Z)> Players { get; set; } = [];
+    public IReadOnlyList<(string Name, float X, float Z)> Players { get; set => field = [.. value]; } = [];
     /// <summary>
-    /// Search results, as world points (x east, y north).
+    /// Search results, as world points (x east, y north). Kept as a copy of the list given, like <see cref="Players"/>.
     /// </summary>
-    public IReadOnlyList<Vector2> Pins { get; set; } = [];
+    public IReadOnlyList<Vector2> Pins { get; set => field = [.. value]; } = [];
     /// <summary>
     /// The chosen search result (drawn larger, with a ring), or -1 for none.
     /// </summary>
@@ -824,10 +825,23 @@ public sealed class MapView : OpenGlControlBase, IDisposable
     /// </summary>
     private static void Quad(List<float> to, Vector2 a, Vector2 b, Vector2 c, Vector2 d, Vector4 col)
     {
-        foreach (var p in new[] { a, b, c, a, c, d })
-        {
-            to.AddRange([p.X, p.Y, col.X, col.Y, col.Z, col.W]);
-        }
+        Corner(to, a.X, a.Y, col);
+        Corner(to, b.X, b.Y, col);
+        Corner(to, c.X, c.Y, col);
+        Corner(to, a.X, a.Y, col);
+        Corner(to, c.X, c.Y, col);
+        Corner(to, d.X, d.Y, col);
+    }
+
+    /// <summary>Adds one corner: x, z then its colour (no array made for it).</summary>
+    private static void Corner(List<float> to, float x, float z, Vector4 col)
+    {
+        to.Add(x);
+        to.Add(z);
+        to.Add(col.X);
+        to.Add(col.Y);
+        to.Add(col.Z);
+        to.Add(col.W);
     }
 
     /// <summary>
@@ -844,9 +858,9 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         for (int i = 0; i < sides; i++)
         {
             float a0 = i * MathF.Tau / sides, a1 = (i + 1) * MathF.Tau / sides;
-            to.AddRange([x, z, col.X, col.Y, col.Z, col.W]);
-            to.AddRange([x + r * MathF.Cos(a0), z + r * MathF.Sin(a0), col.X, col.Y, col.Z, col.W]);
-            to.AddRange([x + r * MathF.Cos(a1), z + r * MathF.Sin(a1), col.X, col.Y, col.Z, col.W]);
+            Corner(to, x, z, col);
+            Corner(to, x + r * MathF.Cos(a0), z + r * MathF.Sin(a0), col);
+            Corner(to, x + r * MathF.Cos(a1), z + r * MathF.Sin(a1), col);
         }
     }
 
@@ -961,13 +975,34 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         Fill([.. data], PrimitiveType.Triangles);
     }
 
+    /// <summary>What the pins' shapes were last made for: the pins, the chosen one, the zoom and the players.</summary>
+    private (IReadOnlyList<Vector2>? Pins, int Chosen, float Mpp, IReadOnlyList<(string, float, float)>? Players) _pinsKey;
+
+    /// <summary>The pins' shapes last made (<see cref="PinShapes"/>).</summary>
+    private float[] _pinShapes = [];
+
     /// <summary>
     /// Search results (orange pins, the chosen one larger with a ring) and, live, the players (blue).
     /// </summary>
-    private void DrawPins()
+    private void DrawPins() => Fill(PinShapes(), PrimitiveType.Triangles);
+
+    /// <summary>
+    /// The shapes of <c>DrawPins</c>, as triangles (x, z then RGBA per corner): made again only when the pins, the
+    /// chosen one, the zoom or the players changed (the pins and players are copies made when set, so a new one is a
+    /// change), else the last ones as they are.
+    /// </summary>
+    internal float[] PinShapes()
     {
         float m = MetersPerPixel;
-        var data = new List<float>();
+        var key = (Pins, PinChosen, m, Players);
+        if (_pinsKey == key)
+        {
+            return _pinShapes;
+        }
+        _pinsKey = key;
+        bool chosen = PinChosen >= 0 && PinChosen < Pins.Count;
+        // Corners: 2 discs of 8 sides a pin; the chosen one 24 quads and 2 discs of 12; 2 discs of 12 a player.
+        var data = new List<float>(6 * ((Pins.Count - (chosen ? 1 : 0)) * 48 + (chosen ? 216 : 0) + Players.Count * 72));
         var dark = new Vector4(30 / 255f, 15 / 255f, 5 / 255f, 0.9f);
         for (int i = 0; i < Pins.Count; i++)
         {
@@ -978,7 +1013,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
             Disc(data, Pins[i].X, Pins[i].Y, 4.5f * m, dark, 8);
             Disc(data, Pins[i].X, Pins[i].Y, 3.5f * m, new Vector4(1, 138 / 255f, 42 / 255f, 1), 8);
         }
-        if (PinChosen >= 0 && PinChosen < Pins.Count)
+        if (chosen)
         {
             var p = Pins[PinChosen];
             var gold = new Vector4(1, 210 / 255f, 122 / 255f, 1);
@@ -997,7 +1032,8 @@ public sealed class MapView : OpenGlControlBase, IDisposable
             Disc(data, x, z, 8 * m, new Vector4(11 / 255f, 32 / 255f, 48 / 255f, 1));
             Disc(data, x, z, 6 * m, new Vector4(79 / 255f, 195 / 255f, 1, 1));
         }
-        Fill([.. data], PrimitiveType.Triangles);
+        _pinShapes = [.. data];
+        return _pinShapes;
     }
 
     // ---- Lines over the map (in screen pixels): the chosen area, edited zones, resets, the grid.
