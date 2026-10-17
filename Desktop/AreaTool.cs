@@ -345,12 +345,23 @@ public sealed class AreaTool
         Paint,
     }
 
-    /// <summary>An action's name as shown to the player.</summary>
-    public static string Label(GroundAction a) => a switch
+    /// <summary>An action's name as shown to the player, or in English for Claude.</summary>
+    /// <param name="a">The action.</param>
+    /// <param name="english">In English whatever the language in use (for Claude).</param>
+    public static string Label(GroundAction a, bool english = false) => english ? Named(a).English : Named(a).Shown;
+
+    /// <summary>An action's name in both languages.</summary>
+    /// <param name="a">The action.</param>
+    public static Said Named(GroundAction a) => a switch
     {
-        GroundAction.Natural => "Naturalize",
-        GroundAction.Restore => "Restore the ground",
-        _ => a.ToString(),
+        GroundAction.Flatten => Said.Of("area.action.flatten"),
+        GroundAction.Raise => Said.Of("area.action.raise"),
+        GroundAction.Lower => Said.Of("area.action.lower"),
+        GroundAction.Smooth => Said.Of("area.action.smooth"),
+        GroundAction.Natural => Said.Of("area.action.natural"),
+        GroundAction.Restore => Said.Of("area.action.restore"),
+        GroundAction.Erode => Said.Of("area.action.erode"),
+        _ => Said.Of("area.action.paint"),
     };
 
     /// <summary>The action inside the selection, faded by the soft edge; locked points are left alone.</summary>
@@ -483,7 +494,7 @@ public sealed class AreaTool
         {
             return "";
         }
-        static string M3(double v) => v >= 1000 ? $"{v / 1000:0.0}k m³" : $"{Math.Round(v)} m³";
+        static string M3(double v) => v >= 1000 ? Lang.T("area.volume.thousands", v / 1000) : Lang.T("area.volume.cubic", Math.Round(v));
         double up = 0, down = 0, cut = 0, fill = 0, outOfReach = 0, raise = 0, lower = 0;
         foreach (var (p, w) in a.Cells)
         {
@@ -523,12 +534,14 @@ public sealed class AreaTool
         }
         string first = act switch
         {
-            GroundAction.Flatten => $"Flatten to {height:0.#} m: dig {M3(cut)}, fill {M3(fill)}{(outOfReach >= 1 ? $" ({M3(outOfReach)} out of reach: {(g.NoLimit ? "±400 m lift" : "±8 m")} limit)" : "")}.",
-            GroundAction.Raise => $"Raise {amount:0.#} m: fill {M3(raise)}.",
-            GroundAction.Lower => $"Lower {amount:0.#} m: dig {M3(lower)}.",
+            GroundAction.Flatten when outOfReach >= 1 && g.NoLimit => Lang.T("area.volume.flattenLift", height, M3(cut), M3(fill), M3(outOfReach)),
+            GroundAction.Flatten when outOfReach >= 1 => Lang.T("area.volume.flattenLimit", height, M3(cut), M3(fill), M3(outOfReach)),
+            GroundAction.Flatten => Lang.T("area.volume.flatten", height, M3(cut), M3(fill)),
+            GroundAction.Raise => Lang.T("area.volume.raise", amount, M3(raise)),
+            GroundAction.Lower => Lang.T("area.volume.lower", amount, M3(lower)),
             _ => "",
         };
-        return (first == "" ? "" : first + "\n") + $"Ground inside: {M3(up)} raised, {M3(down)} dug since generated.";
+        return (first == "" ? "" : first + "\n") + Lang.T("area.volume.inside", M3(up), M3(down));
     }
 
     /// <summary>The average height of the ground inside (for Flatten's "avg"), null without a selection.</summary>

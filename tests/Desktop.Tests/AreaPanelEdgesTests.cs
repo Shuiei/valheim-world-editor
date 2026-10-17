@@ -21,7 +21,7 @@ public class AreaPanelEdgesTests
         Assert.Null(p.ExportHeightmap(Path.GetTempPath()));
         Assert.Empty(p.ThingsInside([new Vector2(0, 0), new Vector2(10, 0), new Vector2(10, 10)], chosenKindsOnly: false));
         string? said = null;
-        p.Message += t => said = t;
+        p.Message += t => said = t.Shown;
         p.LoadPicture("no-such-picture.png");
         await p.Apply();
         p.UnresetButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -40,7 +40,7 @@ public class AreaPanelEdgesTests
             w.View.Show(s.Scene, null);
             w.Edit(s);
             // A folder inside a file: it cannot be made.
-            string said = w.AreaPanel.ExportHeightmap(Path.Combine(file, "maps"))!;
+            string said = w.AreaPanel.ExportHeightmap(Path.Combine(file, "maps"))!.Shown;
             Assert.StartsWith($"Could not write the heightmap to {Path.Combine(file, "maps")}", said);
         }
         finally

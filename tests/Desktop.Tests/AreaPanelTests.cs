@@ -221,7 +221,7 @@ public class AreaPanelTests
         using var r = new Run();
         var p = new AreaPanel(r.W.View, () => r.S, k => (TerrainEditor.Terrain.PrefabCatalog.DisplayName(k) ?? k.ToString(CultureInfo.InvariantCulture)) + " (mod)");
         string said = "";
-        p.Message += m => said = m;
+        p.Message += m => said = m.Shown;
         p.Choose(AreaPanel.Act.Replace);
         p.Refresh();
         var from = ((IEnumerable<object>)p.FromBox.ItemsSource!).Cast<string>().ToList();

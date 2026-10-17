@@ -2766,7 +2766,7 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void WireAreaPanel()
     {
-        AreaPanel.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
+        AreaPanel.Message += s => { Msg(s); UpdateSaveBar(); };
         AreaPanel.NoLimitChanged += on => Tools.NoLimitBox.IsChecked = on;
         AreaPanel.PickKindAsked += PickKind;
         AreaPanel.SwitchToSelect += Tools.ChooseSelect;
@@ -2780,13 +2780,13 @@ public sealed partial class MainWindow : Window
         View.Paste.Changed += () =>
         {
             var c = View.Paste.Clip;
-            AreaPanel.ClipInfo.Text = c == null ? "Copies the shown objects inside the selection, with the ground under their buildings."
-                : $"Clipboard{(c.Name != null ? $" ({c.Name})" : "")}: {c.W} × {c.H} m, {c.Objects.Count} object(s).";
+            AreaPanel.ClipInfo.Text = c == null ? Lang.T("area.hint.clip")
+                : c.Name != null ? Lang.T("area.hint.clipboardNamed", c.Name, c.W, c.H, c.Objects.Count) : Lang.T("area.hint.clipboard", c.W, c.H, c.Objects.Count);
         };
-        AreaPanel.Confirm = text => Dialogs.Ask(this, "Reset zones", text, "Reset when saving");
-        AreaPanel.PickPicture = () => Pickers.File(StorageProvider, "Import a heightmap (grayscale PNG)",
-            new Avalonia.Platform.Storage.FilePickerFileType("PNG pictures") { Patterns = PngPatterns });
-        AreaPanel.PickFolder = () => Pickers.Folder(StorageProvider, "Choose a backup (or copy) of this world: the folder with _main.<n>.chunks");
+        AreaPanel.Confirm = text => Dialogs.Ask(this, Lang.T("area.action.reset"), text, Lang.T("area.ask.reset.yes"));
+        AreaPanel.PickPicture = () => Pickers.File(StorageProvider, Lang.T("area.pick.picture"),
+            new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("area.pick.png")) { Patterns = PngPatterns });
+        AreaPanel.PickFolder = () => Pickers.Folder(StorageProvider, Lang.T("area.pick.backup"));
     }
 
     /// <summary>

@@ -60,20 +60,57 @@ public sealed class AreaPanel
         Reset,
     }
 
-    /// <summary>The Action list: each action with its label.</summary>
-    private static readonly (Act Act, string Label)[] Actions =
+    /// <summary>The Action list's actions, in its order.</summary>
+    private static readonly Act[] Actions =
     [
-        (Act.Flatten, "Flatten"), (Act.Raise, "Raise"), (Act.Lower, "Lower"), (Act.Smooth, "Smooth"), (Act.Natural, "Naturalize"),
-        (Act.Restore, "Restore the ground"), (Act.Erode, "Erode"), (Act.Paint, "Paint"),
-        (Act.Remove, "Remove objects"), (Act.Select, "Select objects"), (Act.Replace, "Replace objects"), (Act.Regrow, "Regrow nature"), (Act.Copy, "Copy and paste"), (Act.Heightmap, "Heightmap"),
-        (Act.Backup, "Restore from a backup"), (Act.Reset, "Reset zones"),
+        Act.Flatten, Act.Raise, Act.Lower, Act.Smooth, Act.Natural, Act.Restore, Act.Erode, Act.Paint,
+        Act.Remove, Act.Select, Act.Replace, Act.Regrow, Act.Copy, Act.Heightmap, Act.Backup, Act.Reset,
     ];
 
-    /// <summary>The Paint action's paints, with the brush tool whose paint they put down.</summary>
-    private static readonly (string Label, BrushTool Tool)[] Paints =
-    [
-        ("Dirt", BrushTool.PaintDirt), ("Cultivated", BrushTool.PaintCultivated), ("Paved", BrushTool.PaintPaved), ("Clear paint", BrushTool.PaintClear),
-    ];
+    /// <summary>An action's name on the Action list.</summary>
+    /// <param name="a">The action.</param>
+    private static string ActionLabel(Act a) => a switch
+    {
+        Act.Flatten => Lang.T("area.action.flatten"),
+        Act.Raise => Lang.T("area.action.raise"),
+        Act.Lower => Lang.T("area.action.lower"),
+        Act.Smooth => Lang.T("area.action.smooth"),
+        Act.Natural => Lang.T("area.action.natural"),
+        Act.Restore => Lang.T("area.action.restore"),
+        Act.Erode => Lang.T("area.action.erode"),
+        Act.Paint => Lang.T("area.action.paint"),
+        Act.Remove => Lang.T("area.action.remove"),
+        Act.Select => Lang.T("area.action.select"),
+        Act.Replace => Lang.T("area.action.replace"),
+        Act.Regrow => Lang.T("area.action.regrow"),
+        Act.Copy => Lang.T("area.action.copy"),
+        Act.Heightmap => Lang.T("area.action.heightmap"),
+        Act.Backup => Lang.T("area.action.backup"),
+        _ => Lang.T("area.action.reset"),
+    };
+
+    /// <summary>The Paint action's paints: the brush tools whose paint they put down, in the list's order.</summary>
+    private static readonly BrushTool[] Paints = [BrushTool.PaintDirt, BrushTool.PaintCultivated, BrushTool.PaintPaved, BrushTool.PaintClear];
+
+    /// <summary>A paint's name on the Paint list.</summary>
+    /// <param name="t">The paint's brush tool.</param>
+    private static string PaintLabel(BrushTool t) => t switch
+    {
+        BrushTool.PaintDirt => Lang.T("area.paint.dirt"),
+        BrushTool.PaintCultivated => Lang.T("area.paint.cultivated"),
+        BrushTool.PaintPaved => Lang.T("area.paint.paved"),
+        _ => Lang.T("brush.label.clear"),
+    };
+
+    /// <summary>Painting with a paint, as the action's name in messages and History, in both languages.</summary>
+    /// <param name="t">The paint's brush tool.</param>
+    private static Said PaintNamed(BrushTool t) => t switch
+    {
+        BrushTool.PaintDirt => Said.Of("area.paintAct.dirt"),
+        BrushTool.PaintCultivated => Said.Of("area.paintAct.cultivated"),
+        BrushTool.PaintPaved => Said.Of("area.paintAct.paved"),
+        _ => Said.Of("area.paintAct.clear"),
+    };
 
     /// <summary>The panel itself, shown over the view while the Area tool is on.</summary>
     public Control Card { get; }
@@ -93,17 +130,19 @@ public sealed class AreaPanel
     private List<string> _fromNames = [];
     /// <summary>Asks a yes/no question (the window's dialog); resetting zones goes on only on true.</summary>
     internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
-    /// <summary>A line for the status bar.</summary>
-    public event Action<string>? Message;
+    /// <summary>A line for the status bar, in the user's language and in English (for Claude).</summary>
+    public event Action<Said>? Message;
+    /// <summary>Raises <see cref="Message"/>.</summary>
+    private void Say(Said s) => Message?.Invoke(s);
     /// <summary>Select objects: the window switches to the Select tool.</summary>
     public event Action? SwitchToSelect;
 
     /// <summary>Switches the selection to a box dragged on the ground (clears the current one).</summary>
-    internal Button BoxButton { get; } = new() { Content = "Box", FontSize = 12 };
+    internal Button BoxButton { get; } = new() { Content = Lang.T("area.label.box"), FontSize = 12 };
     /// <summary>Switches the selection to a polygon clicked point by point (clears the current one).</summary>
-    internal Button PolyButton { get; } = new() { Content = "Polygon", FontSize = 12 };
+    internal Button PolyButton { get; } = new() { Content = Lang.T("area.label.poly"), FontSize = 12 };
     /// <summary>Clears the selection.</summary>
-    internal Button ClearButton { get; } = new() { Content = "Clear (Esc)", FontSize = 12 };
+    internal Button ClearButton { get; } = new() { Content = Lang.T("common.clearEsc"), FontSize = 12 };
     /// <summary>The selection's size and what is inside, or how to make one.</summary>
     internal TextBlock Info { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
     /// <summary>The soft edge, 0 to 20 m: how far inwards from the outline an action fades in.</summary>
@@ -113,16 +152,16 @@ public sealed class AreaPanel
     /// <summary>Flatten: the height to flatten to, in metres.</summary>
     internal NumericUpDown HeightBox { get; } = new() { Value = 35, Increment = 0.1m, FormatString = "0.0#", FontSize = 12 };
     /// <summary>Puts the average ground height inside the selection into <see cref="HeightBox"/>.</summary>
-    internal Button AverageButton { get; } = new() { Content = "avg", FontSize = 11, Padding = new Thickness(6, 2) };
+    internal Button AverageButton { get; } = new() { Content = Lang.T("area.label.avg"), FontSize = 11, Padding = new Thickness(6, 2) };
     /// <summary>Raise and Lower: by how much, in metres.</summary>
     internal NumericUpDown AmountBox { get; } = new() { Value = 2, Increment = 0.1m, FormatString = "0.0#", FontSize = 12 };
     /// <summary>Paint: which paint (one of <c>Paints</c>).</summary>
-    internal ComboBox PaintBox { get; } = new() { ItemsSource = Paints.Select(p => p.Label).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+    internal ComboBox PaintBox { get; } = new() { ItemsSource = Paints.Select(PaintLabel).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
     /// <summary>
     /// Flatten, Raise and Lower: No limit, the ground goes past the game's ±8 m (the brush options' switch, the
     /// same one shown here; the window keeps the two together).
     /// </summary>
-    internal CheckBox NoLimitBox { get; } = new() { Content = "No limit: past the game's ±8 m", FontSize = 12 };
+    internal CheckBox NoLimitBox { get; } = new() { Content = Lang.T("area.label.noLimit"), FontSize = 12 };
     /// <summary>No limit was switched here (on: true).</summary>
     public event Action<bool>? NoLimitChanged;
     /// <summary>Flatten, Raise and Lower: the cut and fill the action would move.</summary>
@@ -134,18 +173,18 @@ public sealed class AreaPanel
     /// <summary>Replace: the kind to put in their place, from the kinds the world can make.</summary>
     internal ComboBox ToBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 400 };
     /// <summary>Eyedropper: the "with" kind picked from the world (the window takes the next click on an object).</summary>
-    internal Button ToPickButton { get; } = new() { Content = "pick", FontSize = 11, Padding = new Thickness(6, 2), Margin = new Thickness(4, 0, 0, 0) };
+    internal Button ToPickButton { get; } = new() { Content = Lang.T("area.label.pick"), FontSize = 11, Padding = new Thickness(6, 2), Margin = new Thickness(4, 0, 0, 0) };
     /// <summary>
     /// Asks the window to take the next click on an object: the action's name for the prompt, and what to do with
     /// the picked prefab hash.
     /// </summary>
     public event Action<string, Action<int>>? PickKindAsked;
     /// <summary>Reset zones: keep the player's buildings in the zones.</summary>
-    internal CheckBox KeepBuildingsBox { get; } = new() { Content = "Keep my buildings", IsChecked = true, FontSize = 12 };
+    internal CheckBox KeepBuildingsBox { get; } = new() { Content = Lang.T("area.label.keepBuildings"), IsChecked = true, FontSize = 12 };
     /// <summary>Reset zones: also undo the zones' ground edits.</summary>
-    internal CheckBox ResetGroundBox { get; } = new() { Content = "Reset ground edits too", IsChecked = true, FontSize = 12 };
+    internal CheckBox ResetGroundBox { get; } = new() { Content = Lang.T("area.label.resetGround"), IsChecked = true, FontSize = 12 };
     /// <summary>Reset zones: unmarks the zones under the selection.</summary>
-    internal Button UnresetButton { get; } = new() { Content = "Cancel reset", FontSize = 12 };
+    internal Button UnresetButton { get; } = new() { Content = Lang.T("area.label.unreset"), FontSize = 12 };
     /// <summary>Runs the current action (Enter); its text names the action. Hidden for Copy and Heightmap.</summary>
     internal Button ApplyButton { get; } = new Button { FontSize = 12 }.Classed("primary");
     /// <summary>The rows shown only for some actions, with those actions.</summary>
@@ -159,24 +198,24 @@ public sealed class AreaPanel
     private (WorldSave? World, int Templates, int Data, int Manifests, int Catalogue) _creatableFrom;
 
     /// <summary>The action chosen on the list.</summary>
-    public Act Current => Actions[Math.Max(0, ActionBox.SelectedIndex)].Act;
+    public Act Current => Actions[Math.Max(0, ActionBox.SelectedIndex)];
 
     /// <summary>Chooses an action on the list.</summary>
-    internal void Choose(Act a) => ActionBox.SelectedIndex = Array.FindIndex(Actions, x => x.Act == a);
+    internal void Choose(Act a) => ActionBox.SelectedIndex = Array.IndexOf(Actions, a);
 
     /// <summary>Restore from a backup: the backup, from <c>_backupPaths</c>, then "Another folder…".</summary>
     internal ComboBox BackupBox { get; } = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
     /// <summary>Restore from a backup: put the ground back.</summary>
-    internal CheckBox BackupGroundBox { get; } = new() { Content = "Ground (height and paint)", IsChecked = true, FontSize = 12 };
+    internal CheckBox BackupGroundBox { get; } = new() { Content = Lang.T("area.label.backupGround"), IsChecked = true, FontSize = 12 };
     /// <summary>Restore from a backup: put the objects of the chosen kinds back.</summary>
-    internal CheckBox BackupObjectsBox { get; } = new() { Content = "Objects of the kinds chosen above", IsChecked = true, FontSize = 12 };
+    internal CheckBox BackupObjectsBox { get; } = new() { Content = Lang.T("area.label.backupObjects"), IsChecked = true, FontSize = 12 };
     /// <summary>Restore from a backup: what it does, then the backup read or why it cannot be used.</summary>
     internal TextBlock BackupInfo { get; } = new()
     {
         FontSize = 11,
         Foreground = Ui.Muted,
         TextWrapping = TextWrapping.Wrap,
-        Text = "Puts the selection back as it was in a backup: the editor's backups and the game's own are listed. Choose Your buildings above to bring buildings back too."
+        Text = Lang.T("area.hint.backup"),
     };
     /// <summary>The backup folders behind <see cref="BackupBox"/>'s entries, in its order.</summary>
     private List<string> _backupPaths = [];
@@ -187,15 +226,15 @@ public sealed class AreaPanel
 
     // Copy and paste: the window copies, pastes and keeps blueprints.
     /// <summary>Asks the window to copy the selection.</summary>
-    internal Button CopyButton { get; } = new() { Content = "Copy (Ctrl+C)", FontSize = 12 };
+    internal Button CopyButton { get; } = new() { Content = Lang.T("area.label.copy"), FontSize = 12 };
     /// <summary>Asks the window to cut: copy, then remove the originals.</summary>
-    internal Button CutButton { get; } = new() { Content = "Cut (Ctrl+X)", FontSize = 12 };
+    internal Button CutButton { get; } = new() { Content = Lang.T("area.label.cut"), FontSize = 12 };
     /// <summary>Asks the window to paste.</summary>
-    internal Button PasteButton { get; } = new() { Content = "Paste (Ctrl+V)", FontSize = 12 };
+    internal Button PasteButton { get; } = new() { Content = Lang.T("area.label.paste"), FontSize = 12 };
     /// <summary>Asks the window to save the selection as a blueprint.</summary>
-    internal Button SaveBlueprintButton { get; } = new() { Content = "Save blueprint…", FontSize = 12 };
+    internal Button SaveBlueprintButton { get; } = new() { Content = Lang.T("area.label.saveBlueprint"), FontSize = 12 };
     /// <summary>Asks the window to open the blueprint library.</summary>
-    internal Button LibraryButton { get; } = new() { Content = "Blueprints…", FontSize = 12 };
+    internal Button LibraryButton { get; } = new() { Content = Lang.T("area.label.library"), FontSize = 12 };
     /// <summary>What copying takes.</summary>
     internal TextBlock ClipInfo { get; } = new() { FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
     /// <summary>The Copy, Cut and paste buttons, handled by the window.</summary>
@@ -203,15 +242,15 @@ public sealed class AreaPanel
 
     // Heightmap: export the area, or import a picture into the selection (or the whole area).
     /// <summary>Writes the area's heightmap (see <see cref="ExportHeightmap"/>).</summary>
-    internal Button ExportButton { get; } = new() { Content = "Export the area", FontSize = 12 };
+    internal Button ExportButton { get; } = new() { Content = Lang.T("area.label.export"), FontSize = 12 };
     /// <summary>Reads a picture to import (see <see cref="LoadPicture"/>).</summary>
-    internal Button ImportButton { get; } = new() { Content = "Import…", FontSize = 12 };
+    internal Button ImportButton { get; } = new() { Content = Lang.T("area.label.import"), FontSize = 12 };
     /// <summary>Import: the height black stands for, in metres.</summary>
     internal NumericUpDown LowestBox { get; } = new() { Increment = 0.5m, FormatString = "0.###", FontSize = 12 };
     /// <summary>Import: the height white stands for, in metres.</summary>
     internal NumericUpDown HighestBox { get; } = new() { Increment = 0.5m, FormatString = "0.###", FontSize = 12 };
     /// <summary>Import: puts the picture read into the ground (see <see cref="PutPicture"/>).</summary>
-    internal Button PutButton { get; } = new Button { Content = "Put it into the ground", FontSize = 12 }.Classed("primary");
+    internal Button PutButton { get; } = new Button { Content = Lang.T("area.label.put"), FontSize = 12 }.Classed("primary");
     /// <summary>Import: drops the picture read.</summary>
     internal Button CancelPictureButton { get; } = new() { Content = Lang.T("common.cancel"), FontSize = 12 };
     /// <summary>Import: the picture read and where it is fitted.</summary>
@@ -238,14 +277,14 @@ public sealed class AreaPanel
         _session = session;
         _nameOf = nameOf;
         Area = view.Area;
-        ActionBox = new ComboBox { ItemsSource = Actions.Select(a => a.Label).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 500 };
+        ActionBox = new ComboBox { ItemsSource = Actions.Select(ActionLabel).ToArray(), SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 500 };
         var softV = new TextBlock { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
         SoftSlider = new Slider { Minimum = 0, Maximum = 20, SmallChange = 0.5, TickFrequency = 0.5, IsSnapToTickEnabled = true, Value = Area.Soft };
         softV.Text = $"{Area.Soft:0.#} m";
         SoftSlider.ValueChanged += (_, e) => { Area.Soft = (float)e.NewValue; softV.Text = $"{e.NewValue:0.#} m"; Refresh(); };
         BoxButton.Click += (_, _) => { Area.Box = true; Area.Clear(); ShowShape(); };
         PolyButton.Click += (_, _) => { Area.Box = false; Area.Clear(); ShowShape(); };
-        ClearButton.Click += (_, _) => { Area.Clear(); Message?.Invoke("Selection cleared."); };
+        ClearButton.Click += (_, _) => { Area.Clear(); Say(Said.Of("area.msg.cleared")); };
         // ShowRows refreshes the panel, the volume with it.
         ActionBox.SelectionChanged += (_, _) => { ShowRows(); if (Current == Act.Backup) { FillBackups(); } };
         BackupBox.SelectionChanged += async (_, _) =>
@@ -324,8 +363,8 @@ public sealed class AreaPanel
         PasteButton.Click += (_, _) => PasteAsked?.Invoke();
         SaveBlueprintButton.Click += (_, _) => SaveBlueprintAsked?.Invoke();
         LibraryButton.Click += (_, _) => LibraryAsked?.Invoke();
-        ClipInfo.Text = "Copies the shown objects inside the selection, with the ground under their buildings.";
-        ExportButton.Click += (_, _) => Message?.Invoke(ExportHeightmap() ?? "");
+        ClipInfo.Text = Lang.T("area.hint.clip");
+        ExportButton.Click += (_, _) => Say(ExportHeightmap() ?? Said.Empty);
         ExportButton.Tip("area.export");
         ImportButton.Click += async (_, _) => { if (await PickPicture() is string path) { LoadPicture(path); } };
         ImportButton.Tip("area.import");
@@ -333,7 +372,7 @@ public sealed class AreaPanel
         PutButton.Click += (_, _) => PutPicture();
         UnresetButton.Click += (_, _) => CancelReset();
         ToPickButton.Tip("area.pick");
-        ToPickButton.Click += (_, _) => PickKindAsked?.Invoke("Replace", UsePicked);
+        ToPickButton.Click += (_, _) => PickKindAsked?.Invoke(Lang.T("area.label.replace"), UsePicked);
         Area.Changed += AreaChanged;
         Area.Changed += DropPicture;
         NoLimitBox.Tip("brush.noLimit");
@@ -369,24 +408,24 @@ public sealed class AreaPanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = "Area", FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    new TextBlock { Text = Lang.T("rail.label.area"), FontSize = 14, FontWeight = FontWeight.SemiBold },
                     new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { BoxButton, PolyButton, ClearButton } },
                     Info,
-                    Row("Soft edge", SoftSlider, softV),
-                    Row("Action", ActionBox),
-                    For(Row("Height", HeightBox, AverageButton), Act.Flatten),
-                    For(Row("Amount", AmountBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }), Act.Raise, Act.Lower),
-                    For(Row("Paint", PaintBox), Act.Paint),
+                    Row(Lang.T("area.label.soft"), SoftSlider, softV),
+                    Row(Lang.T("area.label.action"), ActionBox),
+                    For(Row(Lang.T("common.height"), HeightBox, AverageButton), Act.Flatten),
+                    For(Row(Lang.T("area.label.amount"), AmountBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }), Act.Raise, Act.Lower),
+                    For(Row(Lang.T("area.action.paint"), PaintBox), Act.Paint),
                     For(NoLimitBox, Act.Flatten, Act.Raise, Act.Lower),
                     For(VolumeText, Act.Flatten, Act.Raise, Act.Lower),
-                    For(Help("Evens out bumps inside the selection."), Act.Smooth),
-                    For(Help("Natural-looking bumps, with the Bumps and Size of the Naturalize brush."), Act.Natural),
-                    For(Help("Back to the ground the game generated, paint removed."), Act.Restore),
-                    For(Help("Weathers the ground inside: slopes settle and rain cuts gullies (rest angle from the Erode brush)."), Act.Erode),
+                    For(Help(Lang.T("area.hint.smooth")), Act.Smooth),
+                    For(Help(Lang.T("area.hint.natural")), Act.Natural),
+                    For(Help(Lang.T("area.hint.restore")), Act.Restore),
+                    For(Help(Lang.T("area.hint.erode")), Act.Erode),
                     For(kinds, Act.Remove, Act.Select, Act.Replace, Act.Regrow, Act.Backup),
-                    For(Row("Replace", FromBox), Act.Replace),
-                    For(Row("with", ToBox, ToPickButton), Act.Replace),
-                    For(Help("Puts back what the game grows here: its own trees, rocks, bushes and pickables for the biome, by its vegetation rules, for the kinds chosen above."), Act.Regrow),
+                    For(Row(Lang.T("area.label.replace"), FromBox), Act.Replace),
+                    For(Row(Lang.T("area.label.with"), ToBox, ToPickButton), Act.Replace),
+                    For(Help(Lang.T("area.hint.regrow")), Act.Regrow),
                     For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { CopyButton, CutButton, PasteButton } }, Act.Copy),
                     For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SaveBlueprintButton, LibraryButton } }, Act.Copy),
                     For(ClipInfo, Act.Copy),
@@ -398,19 +437,19 @@ public sealed class AreaPanel
                         Children =
                         {
                             PictureInfo,
-                            Row("Lowest", LowestBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }),
-                            Row("Highest", HighestBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }),
+                            Row(Lang.T("area.label.lowest"), LowestBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }),
+                            Row(Lang.T("area.label.highest"), HighestBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }),
                             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { PutButton, CancelPictureButton } },
                         },
                     }, Act.Heightmap),
-                    For(Help("Black is the lowest height, white the highest; north is at the top of the picture, one pixel per metre when exported. An import fits the picture to the selection (or the whole area) and works within the game's ±8 m."), Act.Heightmap),
-                    For(Row("Backup", BackupBox), Act.Backup),
+                    For(Help(Lang.T("area.hint.heightmap")), Act.Heightmap),
+                    For(Row(Lang.T("area.label.backup"), BackupBox), Act.Backup),
                     For(BackupGroundBox, Act.Backup),
                     For(BackupObjectsBox, Act.Backup),
                     For(BackupInfo, Act.Backup),
                     For(KeepBuildingsBox, Act.Reset),
                     For(ResetGroundBox, Act.Reset),
-                    For(Help("On save, the zones under the selection lose their trees, rocks, ruins and dungeon entrances, and the game generates them again the next time someone goes there."), Act.Reset),
+                    For(Help(Lang.T("area.hint.reset")), Act.Reset),
                     For(UnresetButton, Act.Reset),
                     ApplyButton,
                 },
@@ -443,14 +482,21 @@ public sealed class AreaPanel
         ToolTip.SetTip(ApplyButton, Lang.T("area.applyTip", what));
         ApplyButton.Content = act switch
         {
-            Act.Remove => "Remove the objects (Enter)",
-            Act.Select => "Select the objects (Enter)",
-            Act.Replace => "Replace (Enter)",
-            Act.Reset => "Reset zones… (Enter)",
-            Act.Regrow => "Regrow nature (Enter)",
-            Act.Backup => "Restore the selection (Enter)",
-            Act.Heightmap or Act.Copy => "",
-            _ => $"{Actions.First(a => a.Act == act).Label} (Enter)",
+            Act.Flatten => Lang.T("area.apply.flatten"),
+            Act.Raise => Lang.T("area.apply.raise"),
+            Act.Lower => Lang.T("area.apply.lower"),
+            Act.Smooth => Lang.T("area.apply.smooth"),
+            Act.Natural => Lang.T("area.apply.natural"),
+            Act.Restore => Lang.T("area.apply.restore"),
+            Act.Erode => Lang.T("area.apply.erode"),
+            Act.Paint => Lang.T("area.apply.paint"),
+            Act.Remove => Lang.T("area.apply.remove"),
+            Act.Select => Lang.T("area.apply.select"),
+            Act.Replace => Lang.T("area.apply.replace"),
+            Act.Reset => Lang.T("area.apply.reset"),
+            Act.Regrow => Lang.T("area.apply.regrow"),
+            Act.Backup => Lang.T("area.apply.backup"),
+            _ => "",
         };
         Refresh();
     }
@@ -581,7 +627,7 @@ public sealed class AreaPanel
         FillCreatable();
         if (poly == null)
         {
-            Info.Text = Area.Box ? "Drag on the ground to select a box." : "Click points around the area; double-click or Enter closes it. Backspace removes a point, Esc clears.";
+            Info.Text = Area.Box ? Lang.T("area.hint.box") : Lang.T("area.hint.poly");
             _fromNames = [];
             FromBox.ItemsSource = Array.Empty<string>();
             foreach (var (k, b) in KindButtons)
@@ -593,11 +639,11 @@ public sealed class AreaPanel
         }
         var inside = ThingsInside(poly, chosenKindsOnly: false);
         var s = _view.Scene!;
-        Info.Text = $"{AreaTool.Area(poly):0} m² selected · {inside.Count} shown object(s) inside. Click outside to start a new selection.";
+        Info.Text = Lang.T("area.info", AreaTool.Area(poly), inside.Count);
         var byKind = inside.GroupBy(i => KindOf(s.Things[i])).ToDictionary(x => x.Key, x => x.Count());
         foreach (var (k, b) in KindButtons)
         {
-            b.Content = $"{ObjectKinds.Label(k)} {(_view.IsShown(k) ? byKind.GetValueOrDefault(k).ToString() : "hidden")}";
+            b.Content = _view.IsShown(k) ? Lang.T("area.label.kindCount", ObjectKinds.Label(k), byKind.GetValueOrDefault(k)) : Lang.T("area.label.kindHidden", ObjectKinds.Label(k));
         }
         var kinds = inside.GroupBy(i => NameOf(s.Things[i].Prefab)).OrderByDescending(x => x.Count()).ToList();
         var names = kinds.Select(x => $"{x.Key} ({x.Count()})").ToList();
@@ -676,7 +722,7 @@ public sealed class AreaPanel
         {
             return true;
         }
-        Message?.Invoke("The area changed while this was running: nothing was applied.");
+        Say(Said.Of("area.msg.changed"));
         return false;
     }
 
@@ -690,23 +736,23 @@ public sealed class AreaPanel
         var poly = Area.Polygon();
         if (poly == null)
         {
-            Message?.Invoke("Select an area first.");
+            Say(Said.Of("area.msg.selectFirst"));
             return;
         }
         var act = Current;
         if (Ground(act) is { } ga)
         {
-            float[] paint = Brush.PaintOf(Paints[Math.Max(0, PaintBox.SelectedIndex)].Tool)!;
-            string name = act == Act.Paint ? $"Paint {Paints[Math.Max(0, PaintBox.SelectedIndex)].Label.ToLowerInvariant()}" : AreaTool.Label(ga);
+            var paintTool = Paints[Math.Max(0, PaintBox.SelectedIndex)];
+            float[] paint = Brush.PaintOf(paintTool)!;
+            var name = act == Act.Paint ? PaintNamed(paintTool) : AreaTool.Named(ga);
             bool clamped = false;
-            var touched = session.EditGround($"Area: {name}", g =>
+            var touched = session.EditGround(Lang.T("area.undo.ground", name.Shown), g =>
             {
                 var (t, rect, c) = Area.Apply(g, session.Brush, ga, Value(HeightBox), Value(AmountBox), paint, session.MaskNow());
                 clamped = c;
                 return (t, rect);
             });
-            Message?.Invoke(clamped ? $"{name} applied to {touched.Count} point(s), but some reached the game limit: ground can only move 8 m from its original height (red points)."
-                : $"{name} applied to {touched.Count} point(s).");
+            Say(clamped ? Said.Of("area.msg.appliedLimit", name, touched.Count) : Said.Of("area.msg.applied", name, touched.Count));
             Refresh();
             return;
         }
@@ -717,13 +763,13 @@ public sealed class AreaPanel
                 var inside = ThingsInside(poly, chosenKindsOnly: true);
                 if (inside.Count == 0)
                 {
-                    Message?.Invoke("No objects of the chosen kinds inside the selection.");
+                    Say(Said.Of("area.msg.noObjects"));
                     return;
                 }
                 // A linked group's root takes its parts with it (ObjectLinks: a ship).
                 var list = session.WithLinked(inside, anyPart: false).Indices;
-                session.Commit($"Area: removed {list.Count} object(s)", null, list, []);
-                Message?.Invoke($"Removed {list.Count} object(s). Ctrl+Z brings them back.");
+                session.Commit(Lang.T("area.undo.removed", list.Count), null, list, []);
+                Say(Said.Of("area.msg.removed", list.Count));
                 break;
             }
             case Act.Select:
@@ -738,7 +784,7 @@ public sealed class AreaPanel
                 int to = ToBox.SelectedIndex >= 0 && ToBox.SelectedIndex < _creatable.Count ? _creatable[ToBox.SelectedIndex] : 0;
                 if (from == null || to == 0)
                 {
-                    Message?.Invoke("Choose what to replace, and with what.");
+                    Say(Said.Of("area.msg.chooseReplace"));
                     return;
                 }
                 var list = ThingsInside(poly, chosenKindsOnly: false).Where(i => NameOf(s.Things[i].Prefab) == from).ToList();
@@ -765,11 +811,11 @@ public sealed class AreaPanel
         int i = _creatable.IndexOf(prefab);
         if (i < 0)
         {
-            Message?.Invoke($"{NameOf(prefab)} cannot be placed: the game has no such kind to copy.");
+            Say(Said.Of("place.msg.cannotPlace", NameOf(prefab)));
             return;
         }
         ToBox.SelectedIndex = i;
-        Message?.Invoke($"Replace with {NameOf(prefab)}.");
+        Say(Said.Of("area.msg.replaceWith", NameOf(prefab)));
     }
 
     /// <summary>
@@ -787,8 +833,8 @@ public sealed class AreaPanel
         var (removed, linked, groups, _) = session.WithLinked(things, anyPart: false);
         // The groups' parts, roots left out (a part among the things given counts: it goes as a part).
         int parts = linked.Count - groups;
-        session.Commit($"Replaced {things.Count} with {NameOf(prefab)}", null, removed, adds);
-        Message?.Invoke($"Replaced {things.Count} object(s) with {NameOf(prefab)}.{(parts > 0 ? $" Their {parts} linked part(s) went with them." : "")}");
+        session.Commit(Lang.T("area.undo.replaced", things.Count, NameOf(prefab)), null, removed, adds);
+        Say(Said.Of("area.msg.replaced", things.Count, NameOf(prefab)) + (parts > 0 ? Said.Of("area.msg.linkedParts", parts) : Said.Empty));
     }
 
     // ---- Heightmaps: the area's ground as a 16-bit picture (with its lowest and highest heights), and a
@@ -802,7 +848,7 @@ public sealed class AreaPanel
     /// </summary>
     /// <param name="folder">Where to write it; null: <see cref="HeightmapFolder"/>.</param>
     /// <returns>The message for the status bar, or null when no world is open.</returns>
-    internal string? ExportHeightmap(string? folder = null)
+    internal Said? ExportHeightmap(string? folder = null)
     {
         if (_view.Scene is not { World: { } world } s)
         {
@@ -820,9 +866,9 @@ public sealed class AreaPanel
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return $"Could not write the heightmap to {path}: {ex.Message}";
+            return Said.Of("area.msg.heightmapFailed", path, ex.Message);
         }
-        return $"Heightmap written to {path} ({s.W} × {s.H}, {min:0.0} to {max:0.0} m).";
+        return Said.Of("area.msg.heightmapWritten", path, s.W, s.H, min, max);
     }
 
     /// <summary>
@@ -857,7 +903,7 @@ public sealed class AreaPanel
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
         {
-            Message?.Invoke($"That picture cannot be used: {ex.Message}");
+            Say(Said.Of("area.msg.pictureUnusable", ex.Message));
             return;
         }
         _picture = (pic.Values, g, x0, z0, w, h, cells, Area.Polygon());
@@ -865,7 +911,14 @@ public sealed class AreaPanel
         float lo = cells.Count > 0 ? cells.Min(c => g.HeightOf(c.G)) : 0, hi = cells.Count > 0 ? cells.Max(c => g.HeightOf(c.G)) : 0;
         LowestBox.Value = (decimal)(pic.Min is float mn ? MathF.Round(mn, 3) : MathF.Round(lo, 1));
         HighestBox.Value = (decimal)(pic.Max is float mx ? MathF.Round(mx, 3) : MathF.Round(hi, 1));
-        PictureInfo.Text = $"Picture {pic.Width} × {pic.Height} fitted to {w} × {h} m ({(Area.Polygon() != null ? "the selection" : "the whole area")}){(pic.Min != null ? ", with the heights it was exported with" : "")}.";
+        bool selection = Area.Polygon() != null, heights = pic.Min != null;
+        PictureInfo.Text = (selection, heights) switch
+        {
+            (true, true) => Lang.T("area.picture.selectionHeights", pic.Width, pic.Height, w, h),
+            (true, false) => Lang.T("area.picture.selection", pic.Width, pic.Height, w, h),
+            (false, true) => Lang.T("area.picture.wholeHeights", pic.Width, pic.Height, w, h),
+            _ => Lang.T("area.picture.whole", pic.Width, pic.Height, w, h),
+        };
         _pictureBox.IsVisible = true;
     }
 
@@ -884,12 +937,12 @@ public sealed class AreaPanel
             // Fitted to another area's ground: its points would land anywhere in this one.
             _picture = null;
             _pictureBox.IsVisible = false;
-            Message?.Invoke("The picture was fitted to another area: import it again.");
+            Say(Said.Of("area.msg.pictureOtherArea"));
             return;
         }
         float lo = Value(LowestBox), hi = Value(HighestBox);
         int clamped = 0;
-        var touched = session.EditGround("Heightmap import", g =>
+        var touched = session.EditGround(Lang.T("area.undo.heightmap"), g =>
         {
             var (list, c) = PutHeights(g, p.Values, p.X0, p.Z0, p.W, p.H, p.Cells, lo, hi);
             clamped = c;
@@ -897,8 +950,7 @@ public sealed class AreaPanel
         });
         _picture = null;
         _pictureBox.IsVisible = false;
-        Message?.Invoke(clamped > 0 ? $"Imported, but {clamped} point(s) could not reach their height: the game keeps the ground within ±8 m of the original (red points)."
-            : $"Imported the heightmap into {touched.Count} point(s). Ctrl+Z undoes it.");
+        Say(clamped > 0 ? Said.Of("area.msg.importClamped", clamped) : Said.Of("area.msg.imported", touched.Count));
     }
 
     /// <summary>
@@ -918,7 +970,7 @@ public sealed class AreaPanel
         }
         _picture = null;
         _pictureBox.IsVisible = false;
-        Message?.Invoke("The picture read was dropped: the selection changed. Import it again.");
+        Say(Said.Of("area.msg.pictureDropped"));
     }
 
     /// <summary>
@@ -960,19 +1012,19 @@ public sealed class AreaPanel
         // Taken once, when the spots are first judged (after the generator ran), not once per spot.
         var maskAt = new Lazy<Func<float, float, bool>>(MaskTest);
         var adds = await Growth.Spots(session, poly.Min(p => p.X) + ox, poly.Min(p => p.Y) + oz, poly.Max(p => p.X) + ox, poly.Max(p => p.Y) + oz,
-            o => AreaTool.Inside(poly, o.X - ox, o.Z - oz) && Area.Kinds.Contains(ObjectKinds.Of(o.Name, false)) && maskAt.Value(o.X - ox, o.Z - oz), _nameOf, m => Message?.Invoke(m.Shown));
+            o => AreaTool.Inside(poly, o.X - ox, o.Z - oz) && Area.Kinds.Contains(ObjectKinds.Of(o.Name, false)) && maskAt.Value(o.X - ox, o.Z - oz), _nameOf, Say);
         if (adds == null || !StillOpen(session))
         {
             return;
         }
         if (adds.Count == 0)
         {
-            Message?.Invoke("Nothing to regrow: the game grows none of the chosen kinds here, or it is all still standing.");
+            Say(Said.Of("area.msg.nothingRegrow"));
             return;
         }
-        Growth.Commit(session, $"Area: regrew {adds.Count} object(s)", adds);
+        Growth.Commit(session, Lang.T("area.undo.regrew", adds.Count), adds);
         var names = adds.Select(o => o.Name).Distinct().ToList();
-        Message?.Invoke($"Regrew {adds.Count} object(s): {string.Join(", ", names.Take(6))}{(names.Count > 6 ? "…" : "")}. Ctrl+Z takes them back; Save writes them.");
+        Say(Said.Of("area.msg.regrew", adds.Count, string.Join(", ", names.Take(6)) + (names.Count > 6 ? "…" : "")));
     }
 
     // ---- Restore from a backup (WorldEdit's //restore): the ground and objects inside the selection as
@@ -993,7 +1045,7 @@ public sealed class AreaPanel
         // The list keeps the selected text across a new source: with "Another folder…" still selected it
         // would ask for a folder again.
         BackupBox.SelectedIndex = -1;
-        BackupBox.ItemsSource = found.Select(b => $"{(b.Kind == "game" ? "Game" : "Editor")} · {b.Date:g}").Concat(extra).Append("Another folder…").ToList();
+        BackupBox.ItemsSource = found.Select(b => b.Kind == "game" ? Lang.T("area.backup.game", b.Date) : Lang.T("area.backup.editor", b.Date)).Concat(extra).Append(Lang.T("area.backup.other")).ToList();
         BackupBox.SelectedIndex = keep != null ? _backupPaths.IndexOf(keep) : -1;
     }
 
@@ -1008,25 +1060,36 @@ public sealed class AreaPanel
         {
             return (b.World, b.Edits);
         }
-        BackupInfo.Text = "Reading the backup…";
+        ShowBackup(Said.Of("area.backup.reading"));
         try
         {
             var w = await Task.Run(() => WorldSave.Load(path));
             if (w.Seed != current.Seed || w.SeedName != current.SeedName)
             {
-                BackupInfo.Text = $"That is another world (seed {w.SeedName}, this one is {current.SeedName}).";
+                ShowBackup(Said.Of("area.backup.otherWorld", w.SeedName, current.SeedName));
                 return null;
             }
             var edits = new EditStore(w);
             _backup = (path, w, edits);
-            BackupInfo.Text = $"Backup: save #{w.SaveNumber} of {w.Name}, {w.ObjectCount:N0} objects ({Directory.GetLastWriteTime(path):g}).";
+            ShowBackup(Said.Of("area.backup.read", w.SaveNumber, w.Name, w.ObjectCount, Directory.GetLastWriteTime(path)));
             return (w, edits);
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
-            BackupInfo.Text = $"That folder is not a world save that can be read: {ex.Message}";
+            ShowBackup(Said.Of("area.backup.unreadable", ex.Message));
             return null;
         }
+    }
+
+    /// <summary>What <see cref="BackupInfo"/> shows, in both languages: the status bar repeats it when a backup cannot be used.</summary>
+    private Said _backupSaid = Said.Empty;
+
+    /// <summary>Shows a line in <see cref="BackupInfo"/>, keeping its English.</summary>
+    /// <param name="said">The line.</param>
+    private void ShowBackup(Said said)
+    {
+        _backupSaid = said;
+        BackupInfo.Text = said.Shown;
     }
 
     /// <summary>Lets the backup read last go (its world is left): its world and edits are no longer kept in memory.</summary>
@@ -1046,12 +1109,12 @@ public sealed class AreaPanel
         path ??= BackupBox.SelectedIndex >= 0 && BackupBox.SelectedIndex < _backupPaths.Count ? _backupPaths[BackupBox.SelectedIndex] : null;
         if (path == null)
         {
-            Message?.Invoke("Choose a backup first.");
+            Say(Said.Of("area.msg.chooseBackup"));
             return;
         }
         if (await OpenBackup(path, s.World) is not var (bw, be))
         {
-            Message?.Invoke(BackupInfo.Text ?? "");
+            Say(BackupInfo.Text == _backupSaid.Shown ? _backupSaid : Said.Raw(BackupInfo.Text ?? ""));
             return;
         }
         if (!StillOpen(session))
@@ -1174,16 +1237,16 @@ public sealed class AreaPanel
         }
         if (ground == null && remove.Count == 0 && adds.Count == 0)
         {
-            Message?.Invoke("Nothing to restore: the selection is as it was in the backup.");
+            Say(Said.Of("area.msg.nothingRestore"));
             return;
         }
-        var added = session.Commit("Restored from backup", ground, remove, adds);
+        var added = session.Commit(Lang.T("area.undo.restored"), ground, remove, adds);
         if (groundPoints == 0 && remove.Count == 0 && added.Count == 0)
         {
-            Message?.Invoke("Nothing to restore: the selection is as it was in the backup.");
+            Say(Said.Of("area.msg.nothingRestore"));
             return;
         }
-        Message?.Invoke($"Restored from the backup: {(groundPoints > 0 ? "the ground, " : "")}{added.Count} object(s) brought back, {remove.Count} removed. Ctrl+Z undoes it.");
+        Say(groundPoints > 0 ? Said.Of("area.msg.restoredGround", added.Count, remove.Count) : Said.Of("area.msg.restored", added.Count, remove.Count));
     }
 
     /// <summary>
@@ -1195,19 +1258,19 @@ public sealed class AreaPanel
         var zones = Area.ZonesUnder(session.Ground);
         if (zones.Count == 0)
         {
-            Message?.Invoke("Select an area first.");
+            Say(Said.Of("area.msg.selectFirst"));
             return;
         }
         bool keep = KeepBuildingsBox.IsChecked == true, ground = ResetGroundBox.IsChecked == true;
-        if (!await Confirm($"Reset {zones.Count} zone(s) ({string.Join(" · ", zones.Select(z => $"{z.X}, {z.Z}"))}) when you save?\n\n"
-            + $"• Every tree, rock, ruin and dungeon entrance in them is removed{(keep ? " (your buildings stay)" : ", your buildings too")}.\n"
-            + (ground ? "• Their ground edits are undone.\n" : "") + "• Valheim generates the zones again the next time a player goes there.")
+        if (!await Confirm(Lang.T("area.ask.reset.text", zones.Count, string.Join(" · ", zones.Select(z => $"{z.X}, {z.Z}"))) + "\n\n"
+            + (keep ? Lang.T("area.reset.removedKeep") : Lang.T("area.reset.removedAll")) + "\n"
+            + (ground ? Lang.T("area.reset.ground") + "\n" : "") + Lang.T("area.reset.again"))
             || !StillOpen(session))
         {
             return;
         }
-        session.MarkResets(zones, keep, ground, $"Reset {zones.Count} zone(s)");
-        Message?.Invoke($"{zones.Count} zone(s) marked for reset (red outline). Save to apply; Ctrl+Z cancels.");
+        session.MarkResets(zones, keep, ground, Lang.T("area.undo.reset", zones.Count));
+        Say(Said.Of("area.msg.resetMarked", zones.Count));
     }
 
     /// <summary>Unmarks the zones under the selection that are marked for reset.</summary>
@@ -1221,10 +1284,10 @@ public sealed class AreaPanel
         int count = Area.ZonesUnder(session.Ground).Count(marked.Contains);
         if (count == 0)
         {
-            Message?.Invoke("No zone marked for reset under the selection.");
+            Say(Said.Of("area.msg.noReset"));
             return;
         }
-        session.UnmarkResets(Area.ZonesUnder(session.Ground), $"Cancelled reset of {count} zone(s)");
-        Message?.Invoke($"Reset cancelled for {count} zone(s).");
+        session.UnmarkResets(Area.ZonesUnder(session.Ground), Lang.T("area.undo.unreset", count));
+        Say(Said.Of("area.msg.unreset", count));
     }
 }
