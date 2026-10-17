@@ -17,6 +17,7 @@ internal sealed class WorldWindowRun : IDisposable
     public List<string> Asked { get; } = [];
     public Queue<bool> Answers { get; } = new();
     public List<string> Told { get; } = [];
+    public int Saves;
     public FakeGame? Game { get; private set; }
 
     /// <summary>
@@ -30,7 +31,7 @@ internal sealed class WorldWindowRun : IDisposable
         W.Tell = text => { Told.Add(text); return Task.CompletedTask; };
         W.ConfirmSave = _ => Task.FromResult(true);
         W.Ask = (_, text, _, _) => { Asked.Add(text); return Task.FromResult(Answers.Count > 0 && Answers.Dequeue()); };
-        W.SaveSettings = _ => { };
+        W.SaveSettings = _ => Saves++;
         W.Settings.AutoApply = W.Settings.AreaFollow = false;
     }
 
