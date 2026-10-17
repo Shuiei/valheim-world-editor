@@ -83,6 +83,27 @@ public static class GameTextures
     }
 
     /// <summary>
+    /// The pixel at index <paramref name="i"/> and its eight neighbours, wrapping around the edges (the texture tiles),
+    /// as indices into the pixels, the pixel itself among them.
+    /// </summary>
+    /// <param name="i">The pixel's index (row times width, plus column).</param>
+    /// <param name="w">The texture's width in pixels.</param>
+    /// <param name="h">The texture's height in pixels.</param>
+    /// <param name="into">Nine entries to fill, the rows top to bottom and each row left to right.</param>
+    private static void Neighbourhood(int i, int w, int h, Span<int> into)
+    {
+        int x = i % w, y = i / w;
+        int k = 0;
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                into[k++] = ((y + dy + h) % h) * w + (x + dx + w) % w;
+            }
+        }
+    }
+
+    /// <summary>
     /// Cut-out textures: transparent pixels take the colour of nearby opaque ones (up to 16 pixels away,
     /// wrapping around: textures tile), the rest the average opaque colour, so that filtering and mipmaps
     /// do not bleed the hidden colour (often beige) into leaf edges. Alpha is kept. Opaque means alpha of
@@ -114,25 +135,22 @@ public static class GameTextures
         // first pass, at every one not filled). Any other has no filled neighbour, or got its colour already.
         List<int> frontier = [.. Enumerable.Range(0, n).Where(i => !filled[i])];
         int[] queued = new int[n];
+        Span<int> around = stackalloc int[9];
         for (int it = 0; it < 16 && frontier.Count > 0; it++)
         {
             next.Clear();
             foreach (int i in frontier)
             {
-                int x = i % w, y = i / w;
                 int c = 0, r = 0, g = 0, b = 0;
-                for (int dy = -1; dy <= 1; dy++)
+                Neighbourhood(i, w, h, around);
+                foreach (int j in around)
                 {
-                    for (int dx = -1; dx <= 1; dx++)
+                    if (filled[j])
                     {
-                        int j = ((y + dy + h) % h) * w + (x + dx + w) % w;
-                        if (filled[j])
-                        {
-                            c++;
-                            r += rgba[j * 4];
-                            g += rgba[j * 4 + 1];
-                            b += rgba[j * 4 + 2];
-                        }
+                        c++;
+                        r += rgba[j * 4];
+                        g += rgba[j * 4 + 1];
+                        b += rgba[j * 4 + 2];
                     }
                 }
                 if (c > 0)
@@ -155,17 +173,13 @@ public static class GameTextures
             frontier.Clear();
             foreach (var (i, _, _, _) in next)
             {
-                int x = i % w, y = i / w;
-                for (int dy = -1; dy <= 1; dy++)
+                Neighbourhood(i, w, h, around);
+                foreach (int j in around)
                 {
-                    for (int dx = -1; dx <= 1; dx++)
+                    if (!filled[j] && queued[j] != it + 1)
                     {
-                        int j = ((y + dy + h) % h) * w + (x + dx + w) % w;
-                        if (!filled[j] && queued[j] != it + 1)
-                        {
-                            queued[j] = it + 1;
-                            frontier.Add(j);
-                        }
+                        queued[j] = it + 1;
+                        frontier.Add(j);
                     }
                 }
             }
