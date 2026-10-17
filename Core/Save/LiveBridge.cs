@@ -48,6 +48,8 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
         {
             req.Content = new ByteArrayContent(body);
         }
+        // A token the header refuses is in the error: kept out of the log.
+        Log.Secret(token);
         req.Headers.Add("X-Bridge-Token", token);
         if (callId != null)
         {
@@ -159,6 +161,8 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
         using HttpRequestMessage req = new(HttpMethod.Get, uri);
         try
         {
+            // A token the header refuses is in the error: kept out of the log.
+            Log.Secret(token);
             req.Headers.Add("X-Bridge-Token", token);
         }
         catch (FormatException e)

@@ -90,7 +90,27 @@ public static partial class Log
     }
 
     /// <summary>
-    /// Text with personal data taken out, for the log: the values given to <see cref="Private"/>, web addresses,
+    /// Keeps secrets out of the log from now on (passwords, passphrases, tokens), whatever their length: unlike
+    /// <see cref="Private"/>, a short one is kept out too, at the cost of the letters it matches elsewhere.
+    /// </summary>
+    /// <param name="values">The secrets; nulls and empty ones are left out.</param>
+    public static void Secret(params ReadOnlySpan<string?> values)
+    {
+        lock (PrivateLock)
+        {
+            foreach (string? v in values)
+            {
+                if (!string.IsNullOrEmpty(v))
+                {
+                    PrivateValues.Add(v);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Text with personal data taken out, for the log: the values given to <see cref="Private"/> and
+    /// <see cref="Secret"/>, web addresses,
     /// user@host names, file paths (a stack trace's source files keep only their name; a path with spaces that is not
     /// in quotes loses only its first part), IP addresses other than the local one, host names before a port, and the
     /// account's user name.
@@ -181,7 +201,7 @@ public static partial class Log
         public void Dispose() => Listening.Value = _outer;
     }
 
-    /// <summary>Values that must never reach the log: see <see cref="Private"/>.</summary>
+    /// <summary>Values that must never reach the log: see <see cref="Private"/> and <see cref="Secret"/>.</summary>
     private static readonly HashSet<string> PrivateValues = new(StringComparer.Ordinal);
 
     /// <summary>Guards <see cref="PrivateValues"/>.</summary>

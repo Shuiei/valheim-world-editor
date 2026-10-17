@@ -143,7 +143,8 @@ public static class Tunnel
         }
         int port = r.Port > 0 ? r.Port : 22;
         // None of these goes in the log, whatever fails from here on.
-        Log.Private(host, user, r.Password, r.Passphrase, r.Token, r.Name, r.KeyPath, r.GameFolder);
+        Log.Private(host, user, r.Name, r.KeyPath, r.GameFolder);
+        Log.Secret(r.Password, r.Passphrase, r.Token);
         if (host.Length == 0 || user.Length == 0)
         {
             return Fail("Enter the server as user@address (the account you log in to the server with).");

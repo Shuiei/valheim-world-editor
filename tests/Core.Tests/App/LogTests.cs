@@ -132,14 +132,16 @@ public sealed class LogTests
             "not 127.0.0.1 or [::1]; Connection refused (<host>:22), (localhost:5182); Version=1.0.0.0, and/or 1/2.", Log.Scrub(text));
     }
 
-    // A value given as private never reaches the log; ones too short to be kept out are left.
+    // A value given as private never reaches the log; ones too short to be kept out are left. A secret is kept out
+    // whatever its length.
     [Fact]
-    public void PrivateValuesAreTakenOut()
+    public void PrivateValuesAndSecretsAreTakenOut()
     {
-        string secret = "s3cret-" + Guid.NewGuid().ToString("N")[..8];
-        Log.Private(secret, "ab", null);
+        string host = "host-" + Guid.NewGuid().ToString("N")[..8];
+        Log.Private(host, "ab", null);
+        Log.Secret("\u00a7\u00b6", "", null);
 
-        Assert.Equal("wrong password <private> for ab", Log.Scrub($"wrong password {secret} for ab"));
+        Assert.Equal("refused by <private> for ab: <private>", Log.Scrub($"refused by {host} for ab: \u00a7\u00b6"));
     }
 
     // The home folder is written ~, but not as the start of another folder's name.

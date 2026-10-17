@@ -116,7 +116,8 @@ public static class ServerConfig
             foreach (Server s in list)
             {
                 // Kept out of the log, whatever fails later.
-                Log.Private(s.Host, s.User, s.Password, s.Token, s.KeyFile, s.GameFolder);
+                Log.Private(s.Host, s.User, s.KeyFile, s.GameFolder);
+                Log.Secret(s.Password, s.Token);
             }
             return [.. list.Where(s => s.Host.Length > 0 && s.User.Length > 0)];
         }
