@@ -36,20 +36,30 @@ public sealed class HomeFolderTests : IDisposable
         ServerConfig.PathOverride = Path.Combine(_home, "servers.cfg");
         // Only the folders a test sets up (Steam's own folders outside the home are never looked at).
         LocalGame.SearchDefaultPlaces = false;
-        TestKey = MakeKey("testkey", "");
+        TestKey = MakeKey(Local("testkey"), "");
         // Protected by the passphrase "secret".
-        LockedKey = MakeKey("lockedkey", "secret");
+        LockedKey = MakeKey(Local("lockedkey"), "secret");
     }
 
     /// <summary>
-    /// Makes a throwaway ed25519 key in the pretend home with ssh-keygen (as LocalSshd does) and returns its text.
+    /// OpenSSH's ssh-keygen where the systems keep it (by its full path, as LocalSshd finds it: not whatever the PATH
+    /// names first).
     /// </summary>
-    private string MakeKey(string name, string passphrase)
+    private static readonly string KeyGen = new[]
     {
-        string file = Local(name);
-        var start = new ProcessStartInfo("ssh-keygen", ["-q", "-t", "ed25519", "-N", passphrase, "-C", "vwe-test", "-f", file]) { UseShellExecute = false };
-        // Not a command injection (the scanners' rule is wrong here): a fixed program, its arguments passed one by one
-        // with no shell, all made by the test (a name in its own temporary folder and a fixed passphrase).
+        "/usr/bin/ssh-keygen", "/usr/sbin/ssh-keygen", "/bin/ssh-keygen",
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "OpenSSH", "ssh-keygen.exe"),
+    }.FirstOrDefault(File.Exists) ?? throw new InvalidOperationException("OpenSSH's ssh-keygen was not found: the SSH key tests need it.");
+
+    /// <summary>
+    /// Makes a throwaway ed25519 key at <paramref name="file"/> with ssh-keygen (as LocalSshd does) and returns its text.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">ssh-keygen failed (said with its exit code).</exception>
+    private static string MakeKey(string file, string passphrase)
+    {
+        var start = new ProcessStartInfo(KeyGen, ["-q", "-t", "ed25519", "-N", passphrase, "-C", "vwe-test", "-f", file]) { UseShellExecute = false };
+        // Not a command injection (the scanners' rule is wrong here): ssh-keygen by its full path, its arguments passed
+        // one by one with no shell, all made by the test (a name in its own temporary folder and a fixed passphrase).
         using var p = Process.Start(start) ?? throw new InvalidOperationException("ssh-keygen did not start"); // nosemgrep
         p.WaitForExit();
         if (p.ExitCode != 0)
@@ -690,6 +700,17 @@ public sealed class HomeFolderTests : IDisposable
         File.Delete(Local(".ssh", "id_ed25519"));
         File.Delete(Local(".ssh", "id_rsa"));
         Assert.StartsWith("No answer from", (await Tunnel.Start(Req("127.0.0.1", port, password: "pw"))).Error);
+        // The locked key opens with its passphrase.
+        File.WriteAllText(Local("locked"), LockedKey);
+        Assert.StartsWith("No answer from", (await Tunnel.Start(Req("127.0.0.1", port, key: Local("locked"), phrase: "secret"))).Error);
+    }
+
+    // A key ssh-keygen cannot make (its folder is missing) fails the set-up with ssh-keygen's exit code.
+    [Fact]
+    public void AKeyThatCannotBeMadeSaysSshKeygensExitCode()
+    {
+        var e = Assert.Throws<InvalidOperationException>(() => MakeKey(Local("missing", "key"), ""));
+        Assert.StartsWith("ssh-keygen failed with exit code ", e.Message);
     }
 
     [Fact]
