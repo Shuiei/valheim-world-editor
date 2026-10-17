@@ -40,5 +40,5 @@ public sealed partial class SelectTool
     }
 
     /// <summary>The metre cell (x, z) a snap point is in, for <see cref="Move.OthersAt"/>.</summary>
-    private static (int X, int Z) SnapCell(Vector3 p) => ((int)MathF.Floor(p.X), (int)MathF.Floor(p.Z));
+    internal static (int X, int Z) SnapCell(Vector3 p) => ((int)MathF.Floor(p.X), (int)MathF.Floor(p.Z));
 }
