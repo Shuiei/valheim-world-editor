@@ -821,21 +821,34 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+        if (await ReloadFromGame(w) is { } failed)
+        {
+            Say(failed);
+        }
+        MapPage?.Show(w);
+    }
+
+    /// <summary>
+    /// Live: reads the world from the game again behind the busy veil (the map's Reload and the 3D editor's).
+    /// </summary>
+    /// <param name="w">The live world.</param>
+    /// <returns>Why the game could not be read (unreachable, or the bridge's answer: a refusal, broken JSON); null when read.</returns>
+    private async Task<Said?> ReloadFromGame(WorldSession w)
+    {
         Busy(Lang.T("save.msg.loadingLive"));
         try
         {
             await w.Reload();
+            return null;
         }
-        // As ReloadHere: the bridge's answers (a refusal, broken JSON) too.
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException or System.Text.Json.JsonException)
         {
-            Say(Said.Of("save.msg.unreachable", ex.Message));
+            return Said.Of("save.msg.unreachable", ex.Message);
         }
         finally
         {
             Busy(null);
         }
-        MapPage?.Show(w);
     }
 
     /// <summary>
