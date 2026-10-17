@@ -389,7 +389,7 @@ public sealed partial class ClaudeTools
         {
             return $"{folder} is not one of the game's worlds folders: {(roots.Count == 0 ? "there is none yet (leave folder out)" : string.Join(", ", roots))}.";
         }
-        if (NewWorldPage.Check(root, name, seed) is string problem)
+        if (NewWorldPage.Check(root, name, seed, english: true) is string problem)
         {
             return problem;
         }
