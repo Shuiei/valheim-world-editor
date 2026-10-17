@@ -1,4 +1,6 @@
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Threading;
 using TerrainEditor.App;
 using Xunit;
@@ -105,5 +107,46 @@ public sealed class MainWindowLangTests
             Assert.Matches(@"^Applied to the running game: \d+ object\(s\) removed, 0 created", r.W.LastMessageEn);
             Assert.DoesNotContain(PseudoLang.Open, r.W.LastMessageEn);
         }
+    }
+
+    // The brush's messages from the window (Stamp once, No limit, Alt + click to flatten or to set the mask's band) are
+    // shown in the language in use and read in English; Stamp once's step is named in it.
+    [AvaloniaFact]
+    public void TheBrushMessagesAreShownInTheLanguageAndReadInEnglish()
+    {
+        using var pseudo = new PseudoLang();
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        w.Show();
+        var s = TestScenes.Flat(2);
+        w.View.Show(s.Scene, null);
+        w.Edit(s);
+        Dispatcher.UIThread.RunJobs();
+
+        void Said(string english)
+        {
+            Assert.StartsWith(PseudoLang.Open.ToString(), w.MessageText.Text);
+            Assert.Matches(english, w.LastMessageEn);
+        }
+        w.Tools.Choose(BrushTool.Raise);
+        w.Tools.ShapeBox.SelectedIndex = 4;
+        w.StampAt(64, 64);
+        Said(@"^Stamped [\d.]+ m up\. Ctrl\+Z undoes it\.$");
+        Assert.Equal(PseudoLang.Wrap("Stamp: " + PseudoLang.Wrap("Mountain")), s.UndoLabel);
+
+        w.Tools.NoLimitBox.IsChecked = true;
+        Said("^No limit: the ground tools go past the game's ±8 m\\.");
+        w.Tools.NoLimitBox.IsChecked = false;
+        Said("^The ground tools keep to the game's ±8 m\\.$");
+
+        // Alt + click on the ground (30 m high): Flatten to there; with Shift, the mask's band around it.
+        w.View.SetCamera(new System.Numerics.Vector3(0, 150, 1), System.Numerics.Vector3.Zero, 1.6f);
+        var q = System.Numerics.Vector4.Transform(new System.Numerics.Vector4(0, 30, 0, 1), w.View.ViewProj);
+        var at = new Avalonia.Point((q.X / q.W + 1) / 2 * 1600, (1 - q.Y / q.W) / 2 * 1000);
+        w.MouseDown(at, MouseButton.Left, RawInputModifiers.Alt);
+        w.MouseUp(at, MouseButton.Left, RawInputModifiers.Alt);
+        Said(@"^Flatten to 30\.0 m\.$");
+        w.MouseDown(at, MouseButton.Left, RawInputModifiers.Alt | RawInputModifiers.Shift);
+        w.MouseUp(at, MouseButton.Left, RawInputModifiers.Alt | RawInputModifiers.Shift);
+        Said(@"^Mask: ground between 28\.0 and 32\.0 m\.$");
     }
 }
