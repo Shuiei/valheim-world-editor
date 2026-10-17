@@ -747,7 +747,6 @@
   "area.label.put": "Put it into the ground",
   "area.msg.cleared": "Selection cleared.",
   "area.hint.clip": "Copies the shown objects inside the selection, with the ground under their buildings.",
-  "area.label.replace": "Replace",
   "area.hint.smooth": "Evens out bumps inside the selection.",
   "area.hint.natural": "Natural-looking bumps, with the Bumps and Size of the Naturalize brush.",
   "area.hint.restore": "Back to the ground the game generated, paint removed.",
