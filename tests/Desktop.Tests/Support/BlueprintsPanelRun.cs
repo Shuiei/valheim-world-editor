@@ -1,4 +1,6 @@
 using System.Numerics;
+using Avalonia.Controls;
+using Avalonia.LogicalTree;
 using TerrainEditor.App;
 using TerrainEditor.Save;
 
@@ -61,6 +63,11 @@ internal sealed class BlueprintsPanelRun : IDisposable
     }
 
     public List<Homestead.Entry> Listed => TerrainEditor.App.Homestead.List(Homestead);
+
+    /// <summary>
+    /// The buttons with this label in the panel's list (one per row that has it).
+    /// </summary>
+    public List<Button> RowButtons(string label) => [.. B.List.GetLogicalDescendants().OfType<Button>().Where(b => b.Content as string == label)];
 
     /// <inheritdoc/>
     public void Dispose()
