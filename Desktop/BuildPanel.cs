@@ -279,9 +279,9 @@ public sealed class BuildPanel
     /// <summary>Shows the Library: the blueprints.</summary>
     internal Button LibraryTab { get; } = new() { Content = Lang.T("build.label.library"), FontSize = 12, Padding = new Thickness(8, 2) };
     /// <summary>Searches the blueprints by name, description and tags (every word must match).</summary>
-    internal TextBox LibrarySearch { get; } = new() { PlaceholderText = Lang.T("blueprints.hint.search"), FontSize = 12 };
+    internal TextBox LibrarySearch { get; } = BlueprintsPanel.SearchBox();
     /// <summary>Imports another mod's blueprint file (the window handles it).</summary>
-    internal Button ImportButton { get; } = new() { Content = Lang.T("blueprints.label.import"), FontSize = 12 };
+    internal Button ImportButton { get; } = BlueprintsPanel.ImportFileButton();
     /// <summary>The blueprint rows.</summary>
     internal StackPanel LibraryList { get; } = new() { Spacing = 4 };
     /// <summary>Generate dungeon: the Dungeon panel's generator, made of building pieces, onto the plot.</summary>

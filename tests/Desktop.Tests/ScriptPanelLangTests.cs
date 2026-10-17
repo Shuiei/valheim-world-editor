@@ -37,8 +37,8 @@ public sealed class ScriptPanelLangTests : IDisposable
         Assert.Empty(PseudoLang.Untranslated(p.Card, "mine"));
 
         // An example picked: its own name, not the shown "Example: …", names the run.
-        p.ScriptBox.SelectedIndex = 0;
-        Assert.Equal(ScriptExamples.All[0].Name, p.ChosenName);
+        p.ScriptBox.SelectedIndex = 1;
+        Assert.Equal(ScriptExamples.All[1].Name, p.ChosenName);
 
         Said? said = null;
         p.Message += m => said = m;

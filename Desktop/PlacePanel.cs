@@ -615,6 +615,19 @@ public sealed class PlacePanel
     /// <summary>Raises <see cref="Message"/>.</summary>
     private void Say(Said s) => Message?.Invoke(s);
 
+    /// <summary>The brush line's note on what the piece under the cursor snaps to, or "" when it snaps to nothing.</summary>
+    /// <param name="snapped">How and to what the piece snaps, if it does.</param>
+    internal static string SnapNote((PlaceTool.SnapWays Way, string Name)? snapped)
+    {
+        return snapped switch
+        {
+            null => "",
+            { Way: PlaceTool.SnapWays.OnTop } s => Lang.T("place.info.snappedOnTop", s.Name),
+            { Way: PlaceTool.SnapWays.Beside } s => Lang.T("place.info.snappedBeside", s.Name),
+            { } s => Lang.T("place.info.snappedTo", s.Name),
+        };
+    }
+
     /// <summary>A mode's name, on its button.</summary>
     /// <param name="m">The mode.</param>
     private static string ModeName(PlaceTool.Modes m)
@@ -1018,14 +1031,7 @@ public sealed class PlacePanel
         }
         else if (t.Mode == PlaceTool.Modes.Brush)
         {
-            string snapped = t.Snapped switch
-            {
-                null => "",
-                { Way: PlaceTool.SnapWays.OnTop } s => Lang.T("place.info.snappedOnTop", s.Name),
-                { Way: PlaceTool.SnapWays.Beside } s => Lang.T("place.info.snappedBeside", s.Name),
-                { } s => Lang.T("place.info.snappedTo", s.Name),
-            };
-            Info.Text = string.Join(" ", new[] { snapped, Lang.T("place.info.brush", n) }.Where(p => p.Length > 0));
+            Info.Text = string.Join(" ", new[] { SnapNote(t.Snapped), Lang.T("place.info.brush", n) }.Where(p => p.Length > 0));
         }
         else
         {

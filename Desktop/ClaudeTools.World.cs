@@ -47,7 +47,7 @@ public sealed partial class ClaudeTools
         TerrainEditor.App.WorldSearch.Result res;
         try
         {
-            res = await Task.Run(() => TerrainEditor.App.WorldSearch.Search(world.World, world.Edits, query, what));
+            res = await Task.Run(() => SearchFiles(world.World, world.Edits, query, what));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

@@ -29,11 +29,16 @@ public sealed class ScriptPanelTests : IDisposable
     }
 
     // A script saved under a name (characters a file cannot have replaced), then listed after the examples and
-    // picked: its code and name back. An example picked leaves the name empty; no name is said.
+    // picked: its code and name back. An example picked leaves the name empty; no name is said. The panel opens with
+    // the first example chosen.
     [AvaloniaFact]
     public void ScriptsAreSavedAndPicked()
     {
         var p = new ScriptPanel();
+        Assert.Equal(0, p.ScriptBox.SelectedIndex);
+        Assert.Equal(ScriptExamples.All[0].Name, p.ChosenName);
+        Assert.Equal(ScriptExamples.All[0].Code, p.CodeBox.Text);
+        Assert.Equal("", p.NameBox.Text);
         var said = new List<string>();
         p.Message += m => said.Add(m.Shown);
         p.Fill();

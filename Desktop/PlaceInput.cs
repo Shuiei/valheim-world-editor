@@ -476,7 +476,7 @@ public sealed class PlaceInput
     /// <summary>What the status bar says when pieces were built: what, and what they snapped to.</summary>
     /// <param name="pieces">The pieces' names, joined.</param>
     /// <param name="snapped">What the last piece snapped to, if anything.</param>
-    private static Said Built(string pieces, (PlaceTool.SnapWays Way, string Name)? snapped)
+    internal static Said Built(string pieces, (PlaceTool.SnapWays Way, string Name)? snapped)
     {
         return snapped switch
         {

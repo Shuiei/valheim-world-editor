@@ -6,7 +6,6 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using TerrainEditor.App;
-using TerrainEditor.Save;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -25,11 +24,8 @@ public sealed class HistoryPanelLangTests
     public void HistoryPanelShowsOnlyCatalogueTexts()
     {
         using var pseudo = new PseudoLang();
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(0, 30, 0), Vector3.Zero, 1, false));
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var s = TestScenes.Flat(2, TestScenes.Beech(1, new Vector3(0, 30, 0)));
+        var w = TestWindows.Editing(s);
         w.ShowRight(w.History.Card);
         Dispatcher.UIThread.RunJobs();
         Assert.Empty(PseudoLang.Untranslated(w.History.Card));
