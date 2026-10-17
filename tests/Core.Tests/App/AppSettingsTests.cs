@@ -123,6 +123,94 @@ public class AppSettingsTests : IDisposable
         Assert.True(Directory.Exists(path));
     }
 
+    // A settings file held by another program (a sync or antivirus tool) gives the defaults for the session, and a save
+    // leaves it as it is: what it holds is the user's settings.
+    [Fact]
+    public void SettingsThatCannotBeReadAreNotSavedOver()
+    {
+        string path = Path.Combine(_data, "settings.json");
+        string? old = AppSettings.PathOverride;
+        AppSettings.PathOverride = path;
+        try
+        {
+            File.WriteAllText(path, "{\"ValheimPath\": \"/games/Valheim\"}");
+            AppSettings held;
+            using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                held = AppSettings.Load();
+            }
+            Assert.True(held.FileUnread);
+            Assert.Null(held.ValheimPath);
+            held.ValheimPath = "/elsewhere";
+            held.Save();
+            Assert.Equal("{\"ValheimPath\": \"/games/Valheim\"}", File.ReadAllText(path));
+            // Read: as the file says, and saved as usual.
+            var read = AppSettings.Load();
+            Assert.False(read.FileUnread);
+            Assert.Equal("/games/Valheim", read.ValheimPath);
+            read.ValheimPath = "/elsewhere";
+            read.Save();
+            Assert.Equal("/elsewhere", AppSettings.Load().ValheimPath);
+            Assert.DoesNotContain("FileUnread", File.ReadAllText(path));
+        }
+        finally
+        {
+            AppSettings.PathOverride = old;
+        }
+    }
+
+    // A data folder that cannot be made (a file where it should be): the defaults, not saved, and neither the load nor
+    // the save throws while saying so.
+    [Fact]
+    public void SettingsWhoseFolderCannotBeMadeAreDefaults()
+    {
+        string blocker = Path.Combine(_data, "not-a-folder");
+        File.WriteAllText(blocker, "");
+        string? old = AppSettings.PathOverride;
+        AppSettings.PathOverride = null;
+        AppSettings.DataDirOverride = Path.Combine(blocker, "data");
+        try
+        {
+            var settings = AppSettings.Load();
+            Assert.True(settings.FileUnread);
+            settings.Save();
+        }
+        finally
+        {
+            AppSettings.PathOverride = old;
+            AppSettings.DataDirOverride = null;
+        }
+    }
+
+    // No settings file at the start, and one there at the first save (a sync program put the user's back meanwhile):
+    // left as it is. Written by the editor itself, it is written again.
+    [Fact]
+    public void ASettingsFileThatAppearedSinceTheStartIsNotSavedOver()
+    {
+        string path = Path.Combine(_data, "settings.json");
+        string? old = AppSettings.PathOverride;
+        AppSettings.PathOverride = path;
+        try
+        {
+            var fresh = AppSettings.Load();
+            Assert.False(fresh.FileUnread);
+            File.WriteAllText(path, "{\"ValheimPath\": \"/games/Valheim\"}");
+            fresh.ValheimPath = "/elsewhere";
+            fresh.Save();
+            Assert.Equal("{\"ValheimPath\": \"/games/Valheim\"}", File.ReadAllText(path));
+            File.Delete(path);
+            fresh.Save();
+            Assert.Equal("/elsewhere", AppSettings.Load().ValheimPath);
+            fresh.ValheimPath = "/again";
+            fresh.Save();
+            Assert.Equal("/again", AppSettings.Load().ValheimPath);
+        }
+        finally
+        {
+            AppSettings.PathOverride = old;
+        }
+    }
+
     // The settings hold Claude's token: only the user can read them, even over a file others could read.
     [Fact]
     public void OnlyTheUserCanReadTheSettings()
