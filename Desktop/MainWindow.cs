@@ -1450,7 +1450,7 @@ public sealed partial class MainWindow : Window
         PlacePanel.Memory.Save();
         FillBuilders();
         Msg(id == 0 ? Said.Of("select.msg.builtByNobody")
-            : Builders.Players(w).FirstOrDefault(p => p.Id == id)?.Label is { } who ? Said.Of("select.msg.builtBy", who)
+            : Builders.Players(w).FirstOrDefault(p => p.Id == id)?.Words is { } who ? Said.Of("select.msg.builtBy", who)
             : Said.Of("select.msg.builtByPlayer", id));
     }
 
