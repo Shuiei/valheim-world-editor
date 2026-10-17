@@ -95,6 +95,25 @@ public sealed class SavedSelectionsTests : IDisposable
     }
 
     [Fact]
+    public void ABrokenFileIsKeptAsideBeforeItIsWrittenOver()
+    {
+        // A broken file counted as none, and the next Keep or Forget wrote over it: every world's selections lost. It
+        // is copied aside as selections.json.bad first; when that cannot be done, nothing is written over it.
+        string path = SavedSelections.PathOverride!;
+        Directory.CreateDirectory(path + ".bad");
+        File.WriteAllText(path, "{ not json");
+        Assert.False(SavedSelections.Keep("A", "x", [new SavedSelections.Item(Beech, 0, 0, 0)]));
+        Assert.False(SavedSelections.Forget("A", "x"));
+        Assert.Equal("{ not json", File.ReadAllText(path));
+        Directory.Delete(path + ".bad");
+        Assert.True(SavedSelections.Keep("A", "x", [new SavedSelections.Item(Beech, 0, 0, 0)]));
+        Assert.Equal("{ not json", File.ReadAllText(path + ".bad"));
+        Assert.Equal("x", Assert.Single(SavedSelections.For("A")).Name);
+        // Written through a temporary file, none left behind.
+        Assert.False(File.Exists(path + ".tmp"));
+    }
+
+    [Fact]
     public void FindingMatchesKindAndPlaceWithinTolerances()
     {
         var things = new List<WorldScene.Thing>
