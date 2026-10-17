@@ -55,9 +55,10 @@ public sealed class WorldCreatorTests : IDisposable
         var made = WorldCreator.Create(Folder("Fresh"), " Fresh ", Seed, uid: 42);
         Assert.Equal((0, 0, -1261093776), (made.Zones, made.Objects, made.Seed));
         Assert.Equal(new[] { "_main.1.chunks", "_main.1.db2", "_main.1.fwl2", "_main.1.ok" }, Directory.GetFiles(Folder("Fresh")).Select(Path.GetFileName).Order().ToArray());
-        Assert.Equal(BitConverter.GetBytes(41), File.ReadAllBytes(Path.Combine(Folder("Fresh"), "_main.1.ok")));
+        // In the format Valheim 1.0.20 writes a new world in (42), as the index, the zone file and the metadata are.
+        Assert.Equal(BitConverter.GetBytes(42), File.ReadAllBytes(Path.Combine(Folder("Fresh"), "_main.1.ok")));
         var w = WorldSave.Load(Folder("Fresh"));
-        Assert.Equal(1, w.SaveNumber);
+        Assert.Equal((1, 42), (w.SaveNumber, w.SaveVersion));
         Assert.Equal(("Fresh", Seed, -1261093776, 2), (w.Name, w.SeedName, w.Seed, w.WorldGenVersion));
         Assert.Equal(0, w.ObjectCount);
         Assert.Equal(0, w.ChunkCount);
@@ -67,15 +68,15 @@ public sealed class WorldCreatorTests : IDisposable
         Assert.Empty(db.Generated);
         Assert.False(db.LocationsGenerated);
         Assert.Empty(db.Locations);
-        Assert.Equal((41, 32, 0.0), (db.FileVersion, db.LocationVersion, db.NetTime));
+        Assert.Equal((42, 32, 0.0), (db.FileVersion, db.LocationVersion, db.NetTime));
     }
 
     [Fact]
     public void TheMetadataIsByteForByteTheGames()
     {
-        // Same name, seed and unique id as the test world: the very same .fwl2.
+        // Same name, seed and unique id as the test world: the very same .fwl2 as Valheim 1.0.20 saves it.
         WorldCreator.Create(Folder("CITest"), "CITest", Seed, uid: FixtureUid);
-        Assert.Equal(File.ReadAllBytes(Fixture("_main.2.fwl2")), File.ReadAllBytes(Path.Combine(Folder("CITest"), "_main.1.fwl2")));
+        Assert.Equal(File.ReadAllBytes(Path.Combine(Fixtures.World42, "_main.3.fwl2")), File.ReadAllBytes(Path.Combine(Folder("CITest"), "_main.1.fwl2")));
     }
 
     [Fact]
@@ -272,6 +273,7 @@ public sealed class WorldCreatorTests : IDisposable
         var w = WorldSave.Load(Folder("Terrain"));
         var zone = Assert.Single(w.TerrainZones);
         Assert.Equal((0, 0), (zone.ZoneX, zone.ZoneZ));
+        Assert.Equal(42, zone.Source!.File.WorldVersion);
         Assert.DoesNotContain(true, zone.ModifiedHeight);
         Assert.DoesNotContain(true, zone.ModifiedPaint);
         // Its head (flags, short position, prefab, the TCData key) is the game's, as in the test world.

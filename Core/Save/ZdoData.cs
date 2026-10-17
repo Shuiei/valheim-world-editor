@@ -5,7 +5,8 @@ namespace TerrainEditor.Save;
 
 /// <summary>
 /// Everything one saved object (ZDO) holds, read into typed lists that can be looked at and changed, then written back
-/// in the save format (world version 41). The object inspector works on this.
+/// in the save format (world versions 41 and 42, which lay objects out the same). The object inspector works on
+/// this.
 /// </summary>
 public sealed class ZdoData
 {
@@ -135,8 +136,8 @@ public sealed class ZdoData
     }
 
     /// <summary>
-    /// The object in the save format of world version 41; empty sections are left out and a near-zero rotation is not
-    /// stored.
+    /// The object in the save format of world versions 41 and 42; empty sections are left out and a near-zero rotation
+    /// is not stored.
     /// </summary>
     public byte[] Serialize()
     {

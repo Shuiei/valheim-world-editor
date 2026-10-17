@@ -170,7 +170,8 @@ How a save works:
    chunk files that hold the objects and the ground. The editor writes the **next save number** (the highest there
    + 1): new copies of only the chunk files that changed, a new index, and the world's data. Untouched objects are
    copied byte for byte. The `.ok` marker is written last, as the game does: the game only trusts a save that has
-   it.
+   it. Each file keeps the save format it was read in, so worlds saved by Valheim 1.0.20 and later (format 42) and
+   by earlier versions (format 41) both save, and open again in the game that saved them.
 2. **Read back and checked.** The editor reads the new save back and compares it with what it meant to write: the
    saved zones' ground, every other zone's ground untouched, the number of objects, the reset zones. If anything
    differs or fails, the new files are removed and the message ends with "Nothing changed". Nothing of the old save

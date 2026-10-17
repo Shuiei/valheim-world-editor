@@ -28,6 +28,14 @@ public static class Fixtures
     public static string World => Path.Combine(Root, "CITest");
 
     /// <summary>
+    /// The test world as Valheim 1.0.20 saved it, in save format 42: CITest loaded by its dedicated server, one object of
+    /// each chunk file moved and moved back through the bridge (so the game wrote every chunk file again), then saved.
+    /// Its files differ from CITest's only by the version in each file's head, the chunk files' and save's numbers, and
+    /// the random events' timer.
+    /// </summary>
+    public static string World42 => Path.Combine(Root, "CITest42");
+
+    /// <summary>
     /// The game's location rules for the kinds laid out first (start, bosses, traders), as `ValheimWorldEditor
     /// --export-locations` reads them from Valheim 0.221: CI has no game.
     /// </summary>

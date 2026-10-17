@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.110 — unreleased
+
+### Fixed
+- **Edits to a world saved by Valheim 1.0.20 can be saved.** The game now saves worlds in save format 42, and the editor
+  refused to save any world not in format 41 ("the writer only supports 41"). Format 42 differs from 41 only by the
+  number at the head of each file, so the editor now saves both: each file keeps the format it was read in, as the game
+  does (a format 41 world the game has saved since holds a 42 index and 41 chunk files until their objects change).
+  New worlds are made in format 42, as the game makes them; Valheim 1.0.17 and earlier cannot open them.
+
 ## v1.45.109 — unreleased
 
 ### Fixed

@@ -19,8 +19,12 @@ namespace TerrainEditor.Save;
 /// </summary>
 public static class WorldCreator
 {
-    /// <summary>The save format version written into every file of the new world.</summary>
-    public const int SaveFileVersion = 41;
+    /// <summary>
+    /// The save format version written into every file of the new world: the one the game writes for a new world today
+    /// (Valheim 1.0.20 and later, which still opens a 41 world but first migrates it, making a backup of it; 1.0.17 and
+    /// earlier refuse 42).
+    /// </summary>
+    public const int SaveFileVersion = WorldVersion.Latest;
 
     /// <summary>
     /// The generator's version for new worlds (World.m_worldGenVersion) and the location list's
@@ -168,7 +172,7 @@ public static class WorldCreator
             string main = Path.Combine(folder, "_main.1");
             written.AddRange([main + ".fwl2", main + ".chunks", main + ".db2"]);
             WriteMetadata(main + ".fwl2", name, seedName, seed, uid ?? Random.Shared.NextInt64(1, long.MaxValue));
-            WorldWriter.WriteIndex(main + ".chunks", []);
+            WorldWriter.WriteIndex(main + ".chunks", SaveFileVersion, []);
             var db = ZoneDb.Empty(SaveFileVersion, LocationVersion, Tail());
             db.Save(main + ".db2");
 
@@ -258,7 +262,7 @@ public static class WorldCreator
                     WriteChunk(file, list);
                     index.Add((chunk, list.Count));
                 }
-                WorldWriter.WriteIndex(main + ".chunks", [.. index.Select(c => (c.Chunk, (byte)0, 1u, c.Count))]);
+                WorldWriter.WriteIndex(main + ".chunks", SaveFileVersion, [.. index.Select(c => (c.Chunk, (byte)0, 1u, c.Count))]);
                 db.Save(main + ".db2");
             }
             // Written last, like the game: only then is the save complete. Every file and its name are on disk before it

@@ -7,9 +7,9 @@ using Xunit;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// The writer's read-back check catching each kind of damage (a zone still marked generated after a reset, objects lost
-/// or gained, a saved zone missing, another zone altered), an object in the format saved before chunk files (world
-/// version 39), and the player who built the most.
+/// The writer's read-back check catching each kind of damage (the index in another save format, a zone still marked
+/// generated after a reset, objects lost or gained, a saved zone missing, another zone altered), an object in the format
+/// saved before chunk files (world version 39), and the player who built the most.
 /// </summary>
 [Collection("World files")]
 public class WorldWriterCheckTests
@@ -46,6 +46,21 @@ public class WorldWriterCheckTests
         try
         {
             Assert.Null(WorldWriter.Verify(dir, before, [], 0, 0, NoReset, []));
+        }
+        finally
+        {
+            Delete(dir);
+        }
+    }
+
+    [Fact]
+    public void TheReadBackCheckCatchesAnotherSaveFormat()
+    {
+        var (dir, before) = Copy();
+        try
+        {
+            before.SaveVersion = 42;
+            Assert.Equal("the index is in save format 41, not the world's 42", WorldWriter.Verify(dir, before, [], 0, 0, NoReset, []));
         }
         finally
         {
