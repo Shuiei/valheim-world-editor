@@ -120,10 +120,7 @@ public sealed class AreaPanelLangTests
         await r.P.Apply();
         StepShown(r);
         // Remove with none of the kinds chosen, then trees removed and regrown.
-        foreach (var k in r.P.KindButtons.Keys)
-        {
-            r.P.KindButtons[k].IsChecked = false;
-        }
+        r.ChooseNoKinds();
         r.P.Choose(AreaPanel.Act.Remove);
         await r.P.Apply();
         r.P.KindButtons[ObjectKind.Trees].IsChecked = true;
@@ -133,11 +130,7 @@ public sealed class AreaPanelLangTests
         await r.P.Apply();
         StepShown(r);
         // Replace without its lists chosen, then with them.
-        r.P.Choose(AreaPanel.Act.Replace);
-        r.P.Refresh();
-        r.P.FromBox.SelectedIndex = -1;
-        r.P.ToBox.SelectedIndex = -1;
-        await r.P.Apply();
+        await r.ReplaceWithNothingChosen();
         var from = r.P.FromBox.Items.OfType<string>().ToList();
         r.P.FromBox.SelectedIndex = 0;
         r.P.ToBox.SelectedIndex = r.P.ToBox.Items.OfType<string>().ToList().FindIndex(t => t != from[0].Split(" (")[0]);
@@ -175,14 +168,9 @@ public sealed class AreaPanelLangTests
         r.P.BackupObjectsBox.IsChecked = false;
         await r.P.RestoreBackup(r.S, r.W.View.Area.Polygon()!, r.Dir);
         // Heightmaps: written, a picture that is not one, the written one put into the ground.
-        string folder = Path.Combine(Path.GetDirectoryName(r.Dir)!, "maps");
-        r.P.HeightmapFolder = folder;
         r.P.Choose(AreaPanel.Act.Heightmap);
-        Click(r.P.ExportButton);
-        string png = Assert.Single(Directory.GetFiles(folder, "*.png"));
-        string bad = Path.Combine(folder, "bad.png");
-        File.WriteAllText(bad, "not a picture");
-        r.P.PickPicture = () => Task.FromResult<string?>(bad);
+        string png = r.ExportHeightmap();
+        r.PickABadPicture(png);
         Click(r.P.ImportButton);
         await TestWindows.Until(() => told.Any(t => t.English.StartsWith("That picture cannot be used", StringComparison.Ordinal)));
         r.P.PickPicture = () => Task.FromResult<string?>(png);
