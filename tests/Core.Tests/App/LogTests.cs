@@ -170,6 +170,8 @@ public sealed class LogTests
         Log.Secret("\u00a7\u00b6", "", null);
 
         Assert.Equal("refused by <private> for ab: '<private>', a\u00a7\u00b6b", Log.Scrub($"refused by {host} for ab: '\u00a7\u00b6', a\u00a7\u00b6b"));
+        // A short one in a path goes with the path, not before it (which cut the path in two).
+        Assert.Equal("see <path>.", Log.Scrub("see /srv/\u00a7\u00b6/w.fwl."));
     }
 
     // The home folder is written ~, but not as the start of another folder's name.

@@ -123,9 +123,10 @@ public static partial class Log
         {
             secrets = [.. PrivateValues.OrderByDescending(v => v.Length)];
         }
-        foreach (string v in secrets)
+        // Whole values first, before the rules below cut one up (a password holding an @ or a /).
+        foreach (string v in secrets.Where(v => v.Length >= 3))
         {
-            text = v.Length < 3 ? ReplaceWhole(text, v, "<private>", wordStart: true) : text.Replace(v, "<private>", StringComparison.Ordinal);
+            text = text.Replace(v, "<private>", StringComparison.Ordinal);
         }
         text = SourceFile().Replace(text, m => ") in " + LastPart(m.Groups[1].Value) + ":line ");
         text = WebAddress().Replace(text, "<url>");
@@ -136,6 +137,11 @@ public static partial class Log
         text = Ipv4().Replace(text, m => m.Value.StartsWith("127.", StringComparison.Ordinal) ? m.Value : "<ip>");
         text = Ipv6().Replace(text, m => m.Value == "[::1]" ? m.Value : "[<ip>]");
         text = HostPort().Replace(text, m => m.Groups[1].Value.Equals("localhost", StringComparison.OrdinalIgnoreCase) ? m.Value : "(<host>:" + m.Groups[2].Value + ")");
+        // Short secrets last, where they stand alone in what is left (not a letter of a path already taken out).
+        foreach (string v in secrets.Where(v => v.Length < 3))
+        {
+            text = ReplaceWhole(text, v, "<private>", wordStart: true);
+        }
         string user = Environment.UserName;
         return user.Length >= 3 ? ReplaceWhole(text, user, "<user>", wordStart: true) : text;
     }
