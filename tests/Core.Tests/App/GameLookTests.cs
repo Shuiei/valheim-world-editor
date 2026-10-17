@@ -199,7 +199,7 @@ public sealed class GameLookTests : IDisposable
         // Only the game in use takes the reading's state: another game's reading (a folder never set) changes nothing.
         string state = GameLook.State;
         string? message = GameLook.Message;
-        GameLook.FinishReading(new GameBundles(_home, null), "failed", "not this game");
+        GameLook.FinishReading(new GameBundles(_sandbox.Folder, null), "failed", "not this game");
         Assert.Equal(state, GameLook.State);
         Assert.Equal(message, GameLook.Message);
     }
@@ -208,7 +208,7 @@ public sealed class GameLookTests : IDisposable
     public void AGameWithNoModelsIsIndexedWithNoEntries()
     {
         // The index of a folder of bundles holding no model: indexed, and empty (the state then says so).
-        string valheim = FakeValheim(Path.Combine(_home, "Valheim"));
+        string valheim = FakeValheim(Path.Combine(_sandbox.Folder, "Valheim"));
         var game = new GameBundles(GameLook.BundlesDir(valheim)!, null);
         GameLook.IndexBundles(game);
         Assert.True(game.Indexed);
