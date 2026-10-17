@@ -1,5 +1,6 @@
 using System.Numerics;
 using Avalonia;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -71,14 +72,14 @@ public sealed class PathTool
         [CaveRock.Mountain] = ("rock3_mountain", 12.7f, 8.2f),
     };
 
-    /// <summary>The roof choice as the panel lists it.</summary>
+    /// <summary>The roof choice as the panel lists it, in the language in use.</summary>
     public static string Label(CaveRock r) => r switch
     {
-        CaveRock.Auto => "By biome",
-        CaveRock.Forest => "Forest boulders",
-        CaveRock.Coast => "Coast boulders",
-        CaveRock.Heath => "Heath boulders",
-        _ => "Mountain rocks",
+        CaveRock.Auto => Lang.T("cave.rock.auto"),
+        CaveRock.Forest => Lang.T("cave.rock.forest"),
+        CaveRock.Coast => Lang.T("cave.rock.coast"),
+        CaveRock.Heath => Lang.T("cave.rock.heath"),
+        _ => Lang.T("cave.rock.mountain"),
     };
 
     /// <summary>A cave preset the panel offers.</summary>
@@ -90,28 +91,31 @@ public sealed class PathTool
     /// <param name="Help">The line the panel shows under the preset.</param>
     public sealed record CavePreset(string Name, float Width, float Soft, float Depth, float Headroom, string Help);
 
-    /// <summary>Tunnel, Cave and Cavern, as the panel lists them.</summary>
-    public static readonly CavePreset[] CavePresets =
+    /// <summary>Tunnel, Cave and Cavern, as the panel lists them, named in the language in use.</summary>
+    public static CavePreset[] CavePresets() =>
     [
-        new("Tunnel", 5, 1.5f, 6, 3.5f, "A narrow passage, just high enough to walk through."),
-        new("Cave", 8, 2.5f, 7.5f, 4.5f, "A cave to explore or hide a base in."),
-        new("Cavern", 14, 3.5f, 8, 5.5f, "A wide hall under the rocks."),
+        new(Lang.T("cave.preset.tunnel"), 5, 1.5f, 6, 3.5f, Lang.T("cave.preset.tunnelHelp")),
+        new(Lang.T("rail.label.cave"), 8, 2.5f, 7.5f, 4.5f, Lang.T("cave.preset.caveHelp")),
+        new(Lang.T("cave.preset.cavern"), 14, 3.5f, 8, 5.5f, Lang.T("cave.preset.cavernHelp")),
     ];
 
-    /// <summary>The action as the panel lists it (also used in the status line after applying).</summary>
-    public static string Label(Action a) => a switch
+    /// <summary>
+    /// The action as the panel lists it, in both languages: the panel, the status line and the history show it in the
+    /// language in use, Claude is told it in English.
+    /// </summary>
+    public static Said Label(Action a) => a switch
     {
-        Action.Flatten => "Flatten to height",
-        Action.Ramp => "Ramp (start → end)",
-        Action.Raise => "Raise by",
-        Action.Lower => "Lower by",
-        Action.Smooth => "Smooth",
-        Action.River => "River / canal (water)",
-        Action.Cave => "Cave (dig and roof)",
-        Action.PaintDirt => "Paint dirt",
-        Action.PaintPaved => "Paint paved",
-        Action.PaintCultivated => "Paint cultivated",
-        _ => "Clear paint",
+        Action.Flatten => Said.Of("path.action.flatten"),
+        Action.Ramp => Said.Of("path.action.ramp"),
+        Action.Raise => Said.Of("path.action.raise"),
+        Action.Lower => Said.Of("path.action.lower"),
+        Action.Smooth => Said.Of("brush.label.smooth"),
+        Action.River => Said.Of("path.action.river"),
+        Action.Cave => Said.Of("path.action.cave"),
+        Action.PaintDirt => Said.Of("path.action.paintDirt"),
+        Action.PaintPaved => Said.Of("path.action.paintPaved"),
+        Action.PaintCultivated => Said.Of("path.action.paintCultivated"),
+        _ => Said.Of("brush.label.clear"),
     };
 
     /// <summary>The action Apply does.</summary>

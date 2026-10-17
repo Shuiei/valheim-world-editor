@@ -1518,27 +1518,27 @@ public sealed partial class MainWindow : Window
         var path = View.Path;
         if (path.Points.Count < 2)
         {
-            MessageText.Text = "Draw a line with at least two points first.";
+            Msg("path.msg.noLine");
             return;
         }
         bool clamped = false;
         if (path.Act == PathTool.Action.Cave)
         {
-            MessageText.Text = ApplyCave(s, path, s.Brush, s.MaskNow());
+            Msg(ApplyCave(s, path, s.Brush, s.MaskNow()));
             PathPanel.Refresh();
             UpdateSaveBar();
             return;
         }
-        var touched = s.EditGround($"Path: {PathTool.Label(path.Act)}", g =>
+        var touched = s.EditGround(Lang.T("path.undo", PathTool.Label(path.Act).Shown), g =>
         {
             var (t, rect, c) = path.Apply(g, s.Brush, s.Scene.Water, s.MaskNow());
             clamped = c;
             return (t, rect);
         });
         float total = PathTool.Length(path.Curve());
-        MessageText.Text = touched.Count == 0 ? "Nothing changed along the line."
-            : clamped ? "Applied, but part of the path reached the game limit of ±8 m from the original ground (red points)."
-            : $"Applied “{PathTool.Label(path.Act)}” along {total:0} m. The line is kept, so you can apply another action (Clear to start over).";
+        Msg(touched.Count == 0 ? Said.Of("path.msg.nothing")
+            : clamped ? Said.Of("path.msg.limit")
+            : Said.Of("path.msg.applied", PathTool.Label(path.Act), total));
         PathPanel.Refresh();
         UpdateSaveBar();
     }
@@ -1551,8 +1551,8 @@ public sealed partial class MainWindow : Window
     /// <param name="brush">The brush whose noise roughens a natural line.</param>
     /// <param name="mask">Which ground may change (null: all of it).</param>
     /// <param name="label">The history's name for the step; null: "Cave along" and its length.</param>
-    /// <returns>What was done, for the status line.</returns>
-    internal static string ApplyCave(EditSession s, PathTool path, Brush brush, Func<int, float>? mask, string? label = null)
+    /// <returns>What was done, for the status line (in the language in use) and Claude (in English).</returns>
+    internal static Said ApplyCave(EditSession s, PathTool path, Brush brush, Func<int, float>? mask, string? label = null)
     {
         var scene = s.Scene;
         var cave = path.PlanCave(s.Ground);
@@ -1593,7 +1593,7 @@ public sealed partial class MainWindow : Window
         }
         bool clamped = false;
         int open = 0;
-        s.Commit(label ?? $"Cave along {PathTool.Length(cave.Curve):0} m", g =>
+        s.Commit(label ?? Lang.T("cave.undo", PathTool.Length(cave.Curve)), g =>
         {
             var (t, rect, c) = path.Apply(g, brush, water, mask, cave);
             clamped = c;
@@ -1612,13 +1612,18 @@ public sealed partial class MainWindow : Window
             }
             return (t, (rect.X0 - 4, rect.Z0 - 4, rect.X1 + 4, rect.Z1 + 4));
         }, remove, roof);
-        return built.Uncovered > 0 && roof.Count > 0
-            ? $"Dug a cave roofed with {roof.Count} boulder(s), but {built.Uncovered} point(s) of its floor stay open to the sky (at the area's edge?)."
-            : roof.Count == 0
-            ? "Dug the cave's trench, but it is nowhere deep enough for a roof: make Depth larger than Headroom by 1.5 m, or the line longer (its ends slope up to the ground)."
-            : $"Dug a cave {PathTool.Length(cave.Curve):0} m long, roofed with {roof.Count} boulder(s){(remove.Count > 0 ? $"; {remove.Count} tree(s) and rock(s) in the way taken away" : "")}."
-                + (open > 0 ? $" At {open} point(s) the walls could not rise to the rock (the game's ±8 m: No limit in the brush options lets them)." : "")
-                + (clamped ? " Part of it reached the game's ±8 m limit (switch on No limit in the brush options to dig deeper)." : " Ctrl+Z takes it back.");
+        if (built.Uncovered > 0 && roof.Count > 0)
+        {
+            return Said.Of("cave.msg.uncovered", roof.Count, built.Uncovered);
+        }
+        if (roof.Count == 0)
+        {
+            return Said.Of("cave.msg.noRoof");
+        }
+        float length = PathTool.Length(cave.Curve);
+        return (remove.Count > 0 ? Said.Of("cave.msg.dugCleared", length, roof.Count, remove.Count) : Said.Of("cave.msg.dug", length, roof.Count))
+            + (open > 0 ? Said.Of("cave.msg.walls", open) : Said.Empty)
+            + (clamped ? Said.Of("cave.msg.limit") : Said.Of("cave.msg.undo"));
     }
 
     /// <summary>
