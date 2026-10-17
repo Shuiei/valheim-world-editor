@@ -408,52 +408,33 @@ public sealed class GameBundles
         foreach (string bundle in _files.Keys.Order(StringComparer.Ordinal))
         {
             progress?.Invoke(done++, _files.Count);
-            BundleFileInstance b;
-            try
-            {
-                b = _am.LoadBundleFile(_files[bundle], false);
-            }
-            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException)
+            // A file that is not a bundle is passed over; a bundle that cannot be read (a mod's, damaged or unusual)
+            // is skipped and said, none of its entries kept: the others' prefabs are still indexed.
+            if (ReadContents(bundle) is not { } contents)
             {
                 continue;
             }
-            foreach (var d in b.file.BlockAndDirInfo.DirectoryInfos)
+            foreach (var (path, pid) in contents)
             {
-                _cab[d.Name.Split('.')[0]] = bundle;
-            }
-            var a = _am.LoadAssetsFileFromBundle(b, 0, false);
-            // Without type trees its table of contents is not described either: nothing listed.
-            var ab = a.file.Metadata.TypeTreeEnabled ? a.file.GetAssetsOfType(AssetClassID.AssetBundle).FirstOrDefault() : null;
-            if (ab != null)
-            {
-                foreach (var c in _am.GetBaseField(a, ab)["m_Container.Array"].Children)
+                if (!path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
                 {
-                    string path = c["first"].AsString;
-                    if (!path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
+                    string file = Path.GetFileName(path);
+                    if (Array.IndexOf(NamedAssets, file) >= 0)
                     {
-                        string file = Path.GetFileName(path);
-                        if (Array.IndexOf(NamedAssets, file) >= 0)
-                        {
-                            assets.TryAdd(file, new Where(bundle, c["second.asset.m_PathID"].AsLong));
-                        }
-                        continue;
+                        assets.TryAdd(file, new Where(bundle, pid));
                     }
-                    string n = Path.GetFileNameWithoutExtension(path);
-                    var w = new Where(bundle, c["second.asset.m_PathID"].AsLong);
-                    if (!res.TryAdd(n, w))
-                    {
-                        if (!twice.TryGetValue(n, out var l))
-                        {
-                            twice[n] = l = [res[n]];
-                        }
-                        l.Add(w);
-                    }
+                    continue;
                 }
-            }
-            if (!_open.ContainsKey(bundle))
-            {
-                _am.UnloadAssetsFile(a);
-                _am.UnloadBundleFile(b);
+                string n = Path.GetFileNameWithoutExtension(path);
+                var w = new Where(bundle, pid);
+                if (!res.TryAdd(n, w))
+                {
+                    if (!twice.TryGetValue(n, out var l))
+                    {
+                        twice[n] = l = [res[n]];
+                    }
+                    l.Add(w);
+                }
             }
         }
         foreach (var (n, list) in twice)
@@ -463,6 +444,71 @@ public sealed class GameBundles
         _fields.Clear();
         _assets = assets;
         return res;
+    }
+
+    /// <summary>
+    /// A bundle's table of contents: each asset's path and path id, in its order (empty without type trees, which
+    /// describe the table too). Null for a file that is not a bundle, and for a bundle that cannot be read (no assets
+    /// file first, or a table that cannot be read), which is said in the log. The bundle's internal file names are
+    /// added to <c>_cab</c>, and it is closed again unless kept open.
+    /// </summary>
+    private List<(string Path, long PathId)>? ReadContents(string bundle)
+    {
+        BundleFileInstance? b = null;
+        AssetsFileInstance? a = null;
+        try
+        {
+            try
+            {
+                b = _am.LoadBundleFile(_files[bundle], false);
+            }
+            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException)
+            {
+                return null;
+            }
+            foreach (var d in b.file.BlockAndDirInfo.DirectoryInfos)
+            {
+                _cab[d.Name.Split('.')[0]] = bundle;
+            }
+            a = _am.LoadAssetsFileFromBundle(b, 0, false);
+            if (a == null)
+            {
+                Console.WriteLine($"game files: {bundle} does not start with an assets file, skipped");
+                return null;
+            }
+            var contents = new List<(string, long)>();
+            var ab = a.file.Metadata.TypeTreeEnabled ? a.file.GetAssetsOfType(AssetClassID.AssetBundle).FirstOrDefault() : null;
+            if (ab != null)
+            {
+                foreach (var c in _am.GetBaseField(a, ab)["m_Container.Array"].Children)
+                {
+                    contents.Add((c["first"].AsString, c["second.asset.m_PathID"].AsLong));
+                }
+            }
+            return contents;
+        }
+        catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or EndOfStreamException
+            or IndexOutOfRangeException or ArgumentException or NullReferenceException or OverflowException)
+        {
+            Console.WriteLine($"game files: the contents of {bundle} could not be read ({e.Message}), skipped");
+            return null;
+        }
+        finally
+        {
+            // Closed again, read whole or not (a file kept open could not be replaced later), unless kept for reading
+            // its assets.
+            if (!_open.ContainsKey(bundle))
+            {
+                if (a != null)
+                {
+                    _am.UnloadAssetsFile(a);
+                }
+                if (b != null)
+                {
+                    _am.UnloadBundleFile(b);
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -767,14 +813,29 @@ public sealed class GameBundles
         }
         foreach (var (name, path) in _files)
         {
-            var b = _am.LoadBundleFile(path, false);
-            foreach (var d in b.file.BlockAndDirInfo.DirectoryInfos)
+            // A file that is not a bundle is passed over, as the index does.
+            BundleFileInstance b;
+            try
             {
-                _cab[d.Name.Split('.')[0]] = name;
+                b = _am.LoadBundleFile(path, false);
             }
-            if (!_open.ContainsKey(name))
+            catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException)
             {
-                _am.UnloadBundleFile(b);
+                continue;
+            }
+            try
+            {
+                foreach (var d in b.file.BlockAndDirInfo.DirectoryInfos)
+                {
+                    _cab[d.Name.Split('.')[0]] = name;
+                }
+            }
+            finally
+            {
+                if (!_open.ContainsKey(name))
+                {
+                    _am.UnloadBundleFile(b);
+                }
             }
         }
     }

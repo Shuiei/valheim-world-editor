@@ -76,6 +76,37 @@ public class GameBundlesFilesTests
         Assert.Null(GameBundles.ForGame(Path.Combine(game.Root, "valheim_Data"), null));
     }
 
+    [Fact]
+    public void AnUnusualBundleIsSkippedAndTheOthersIndexed()
+    {
+        using var game = new TestGame();
+        // A bundle that starts with a resource file (no assets file to read), and one whose table of contents is cut
+        // short (its name, then nothing): neither stops the index, and the usual bundle after them is read.
+        var odd = game.Bundle("b_table");
+        odd.WithContents = false;
+        odd.Assets.AddRaw(UnityClass.AssetBundle, UnityTypes.AssetBundle, [1, 0, 0, 0, (byte)'b']);
+        var usual = game.Bundle("c_models");
+        var mats = game.Bundle("d_materials");
+        long stone = TestAssets.Material(mats, "stone");
+        long quad = Quad("quad").Add(usual);
+        usual.Prefab("Rock", r =>
+        {
+            r.Mono("ZNetView", new Fields { ["m_persistent"] = true });
+            r.Renderer(Fields.Ref(quad), [usual.RefTo(mats, stone)]);
+        });
+        game.Save();
+        new UnityFsWriter().Resource("CAB-a_odd.resS", [1, 2, 3, 4]).Save(Path.Combine(game.BundlesDir, "a_odd"));
+        File.WriteAllText(Path.Combine(game.BundlesDir, "readme.txt"), "not a bundle");
+        string cache = Path.Combine(game.Root, "index.json");
+
+        var bundles = new GameBundles(game.BundlesDir, cache);
+        Assert.Equal(["Rock"], bundles.Index.Keys);
+        Assert.Equal("c_models", bundles.Index["Rock"].Bundle);
+        // The index read from its kept file: a reference into another bundle is followed over the same files.
+        var again = new GameBundles(game.BundlesDir, cache);
+        Assert.Equal(new GameBundles.Where("d_materials", stone), again.LoadModel("Rock", room: false)!.Parts[0].Material);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.62 — unreleased
+
+### Fixed
+- **One unusual bundle (a mod's, damaged, or laid out otherwise) left every mod model undrawn.** The index of prefabs
+  read at the start skipped a file that is not a bundle, but a bundle without an assets file first, or whose table
+  of contents could not be read, was an exception that ended the index, so every later lookup failed again and no
+  mod model was drawn. Such a bundle is now skipped and said in the log, closed like the others, and the rest are
+  indexed.
+
 ## v1.45.61 — unreleased
 
 ### Fixed
