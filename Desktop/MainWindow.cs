@@ -2859,10 +2859,27 @@ public sealed partial class MainWindow : Window
                 : c.Name != null ? Lang.T("area.hint.clipboardNamed", c.Name, c.W, c.H, c.Objects.Count) : Lang.T("area.hint.clipboard", c.W, c.H, c.Objects.Count);
         };
         AreaPanel.Confirm = text => Dialogs.Ask(this, Lang.T("area.action.reset"), text, Lang.T("area.ask.reset.yes"));
-        AreaPanel.PickPicture = () => Pickers.File(StorageProvider, Lang.T("area.pick.picture"),
-            new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("area.pick.png")) { Patterns = PngPatterns });
-        AreaPanel.PickFolder = () => Pickers.Folder(StorageProvider, Lang.T("area.pick.backup"));
+        AreaPanel.PickPicture = () =>
+        {
+            var (title, type) = HeightmapPicker();
+            return Pickers.File(StorageProvider, title, type);
+        };
+        AreaPanel.PickFolder = () => Pickers.Folder(StorageProvider, BackupPickerTitle());
     }
+
+    /// <summary>
+    /// The Area tool's heightmap picker's title and file type, in the language in use (asked for each time it opens).
+    /// </summary>
+    internal static (string Title, Avalonia.Platform.Storage.FilePickerFileType Type) HeightmapPicker()
+    {
+        var type = new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("area.pick.png")) { Patterns = PngPatterns };
+        return (Lang.T("area.pick.picture"), type);
+    }
+
+    /// <summary>
+    /// The Area tool's backup folder picker's title, in the language in use (asked for each time it opens).
+    /// </summary>
+    internal static string BackupPickerTitle() => Lang.T("area.pick.backup");
 
     /// <summary>
     /// Gives the Place tool what it reads from the window: the brush, the scene, the mask, names and model boxes.

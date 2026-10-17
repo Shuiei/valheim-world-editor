@@ -12,8 +12,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// with a selection under every action, with a heightmap read, and its Reset zones question show only catalogue
 /// texts; every action's message (ground, remove, regrow, replace, reset and its cancelling, backups, heightmaps) and
 /// History step is shown in the language with its English kept for Claude; the cut and fill readout and the clipboard
-/// line are translated with their units; Claude's own ground changes are named to Claude in English (the History shows
-/// the step in the language, behind its "Claude: " mark).
+/// line are translated with their units; so are the heightmap and backup pickers' titles; Claude's own ground changes
+/// are named to Claude in English (the History shows the step in the language, behind its "Claude: " mark).
 /// </summary>
 [Collection("DataDir")]
 public sealed class AreaPanelLangTests
@@ -193,5 +193,16 @@ public sealed class AreaPanelLangTests
         Assert.Equal(PseudoLang.Wrap("Copies the shown objects inside the selection, with the ground under their buildings."), r.P.ClipInfo.Text);
         Click(r.P.CopyButton);
         Assert.Matches(@"^⟦Clipboard: \d+ × \d+ m, \d+ object\(s\)\.⟧$", r.P.ClipInfo.Text);
+    }
+
+    [AvaloniaFact]
+    public void ThePickersAreInTheLanguage()
+    {
+        using var pseudo = new PseudoLang();
+        var (title, type) = MainWindow.HeightmapPicker();
+        Assert.Equal(PseudoLang.Wrap("Import a heightmap (grayscale PNG)"), title);
+        Assert.Equal(PseudoLang.Wrap("PNG pictures"), type.Name);
+        Assert.Equal(["*.png"], type.Patterns);
+        Assert.Equal(PseudoLang.Wrap("Choose a backup (or copy) of this world: the folder with _main.<n>.chunks"), MainWindow.BackupPickerTitle());
     }
 }
