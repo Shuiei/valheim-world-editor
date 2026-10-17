@@ -5,7 +5,7 @@ namespace TerrainEditor.Editing;
 public static partial class Dungeons
 {
     /// <summary>Rolls each RandomSpawn in order: it spawns on its chance, and only where its theme and elevation allow.</summary>
-    private static void RollSpawns(Spawn[] spawns, int themes, float y, bool[] off)
+    internal static void RollSpawns(Spawn[] spawns, int themes, float y, bool[] off)
     {
         foreach (var s in spawns)
         {
@@ -23,7 +23,7 @@ public static partial class Dungeons
     }
 
     /// <summary>Rolls each RandomObject's pick: one of its choices, or none where its theme and elevation do not allow.</summary>
-    private static void RollPicks(Pick[] picks, int themes, float y, bool[] off)
+    internal static void RollPicks(Pick[] picks, int themes, float y, bool[] off)
     {
         foreach (var pick in picks)
         {
@@ -44,7 +44,7 @@ public static partial class Dungeons
     }
 
     /// <summary>Draws one choice of a pick, weighted; null when the weights reach none of them.</summary>
-    private static int? RollChoice(Pick pick)
+    internal static int? RollChoice(Pick pick)
     {
         float total = pick.Choices.Sum(c => c.Weight), roll = Rnd.Range(0f, total), sum = 0;
         foreach (var (node, weight) in pick.Choices)
@@ -59,6 +59,6 @@ public static partial class Dungeons
     }
 
     /// <summary>Whether a part's theme (every bit of it set in the dungeon's themes, or none) and elevation limits allow it.</summary>
-    private static bool Applies(int theme, int minY, int maxY, int themes, float y) =>
+    internal static bool Applies(int theme, int minY, int maxY, int themes, float y) =>
         !(theme != 0 && (themes & theme) == 0 || y < minY || y > maxY);
 }

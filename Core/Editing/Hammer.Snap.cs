@@ -31,7 +31,7 @@ public static partial class Hammer
     /// The closest pair of snap points of a piece at pos (turned by rotation) and of the pieces within SnapRadius,
     /// as the move that makes them meet and the index of the piece met; null when no pair is within SnapDistance.
     /// </summary>
-    private static (Vector3 Move, int Index)? NearestSnapMove(Data data, Quaternion rotation, Vector3 pos, IReadOnlyList<Placed> pieces)
+    internal static (Vector3 Move, int Index)? NearestSnapMove(Data data, Quaternion rotation, Vector3 pos, IReadOnlyList<Placed> pieces)
     {
         float bestD = SnapDistance;
         (Vector3 Move, int Index)? best = null;

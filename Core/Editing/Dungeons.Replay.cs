@@ -52,7 +52,7 @@ public static partial class Dungeons
     /// Whether a part is shown: no node up its parents to the prefab is hidden. A node past the list (damaged scan
     /// data) ends the walk, and so does a walk longer than the list (a loop).
     /// </summary>
-    private static bool IsShown(int node, int[] nodes, bool[] off)
+    internal static bool IsShown(int node, int[] nodes, bool[] off)
     {
         bool shown = true;
         for (int n = node, steps = 0; n >= 0 && n < nodes.Length && shown && steps <= nodes.Length; n = nodes[n], steps++)
@@ -63,7 +63,7 @@ public static partial class Dungeons
     }
 
     /// <summary>Sets whether a node is hidden; a node outside the list is ignored.</summary>
-    private static void SetHidden(bool[] off, int node, bool hidden)
+    internal static void SetHidden(bool[] off, int node, bool hidden)
     {
         if (node >= 0 && node < off.Length)
         {

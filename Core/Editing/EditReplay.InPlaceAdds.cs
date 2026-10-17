@@ -9,7 +9,7 @@ public sealed partial class EditReplay
     /// The added objects with no source, waiting for a deleted or replaced object's place: each place takes at most one,
     /// the newest first, and what it takes is attached to that object so it is settled with it.
     /// </summary>
-    private sealed class InPlaceAdds
+    internal sealed class InPlaceAdds
     {
         private readonly Dictionary<(int, long, long, long), Queue<NewObject>> _byPlace = [];
 

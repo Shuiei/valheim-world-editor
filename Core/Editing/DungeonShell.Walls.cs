@@ -10,13 +10,13 @@ internal static partial class DungeonShell
     /// <param name="Index">The tile it borders, counted along the wall.</param>
     /// <param name="Y0">Its foot (metres).</param>
     /// <param name="Y1">Its top (metres).</param>
-    private sealed record Edge(bool AlongZ, float Line, int Index, float Y0, float Y1);
+    internal sealed record Edge(bool AlongZ, float Line, int Index, float Y0, float Y1);
 
     /// <summary>
     /// Walls between tiles of different spaces and round the outside, except in doorways and between
     /// corridors; each run filled with the material's pieces, posts at its ends if the material has them.
     /// </summary>
-    private static void Walls(DungeonPlan plan, DungeonPlan.Level l, float f, Material mat, DungeonOut o)
+    internal static void Walls(DungeonPlan plan, DungeonPlan.Level l, float f, Material mat, DungeonOut o)
     {
         var posts = new HashSet<(float, float, float, float)>();
         foreach (var g in WallEdges(plan, l, f).GroupBy(e => (e.AlongZ, e.Line, e.Y0, e.Y1)))

@@ -5,7 +5,7 @@ namespace TerrainEditor.Editing;
 internal static partial class DungeonShell
 {
     /// <summary>The tile sides a level's doorways cross, both ways round, so no wall is built across them.</summary>
-    private static HashSet<((int, int), (int, int))> DoorEdges(DungeonPlan plan, DungeonPlan.Level l)
+    internal static HashSet<((int, int), (int, int))> DoorEdges(DungeonPlan plan, DungeonPlan.Level l)
     {
         var doorEdges = new HashSet<((int, int), (int, int))>();
         foreach (var d in plan.Doors.Where(d => d.A.Level == l.Index))
@@ -24,7 +24,7 @@ internal static partial class DungeonShell
     /// The wall edges of a level: one per tile side that borders another space or the outside, skipping doorways
     /// and the sides between two corridor tiles; sunk through the floor round a stairwell.
     /// </summary>
-    private static List<Edge> WallEdges(DungeonPlan plan, DungeonPlan.Level l, float f)
+    internal static List<Edge> WallEdges(DungeonPlan plan, DungeonPlan.Level l, float f)
     {
         var doorEdges = DoorEdges(plan, l);
         var edges = new List<Edge>();

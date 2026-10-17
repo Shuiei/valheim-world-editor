@@ -30,7 +30,7 @@ public static partial class Hammer
     /// Out along the normal, then back until its nearest collider point touches the hit. Only the
     /// colliders Unity's ClosestPoint works on: not concave meshes.
     /// </summary>
-    private static Vector3 OffHit(Data data, Vector3 point, Vector3 normal, Quaternion rotation)
+    internal static Vector3 OffHit(Data data, Vector3 point, Vector3 normal, Quaternion rotation)
     {
         var ghost = point + normal * 50f;
         Vector3? nearest = null;

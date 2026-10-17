@@ -19,17 +19,17 @@ internal sealed partial class DungeonPlanner
                 return false;
             }
         }
-        return !(tall && l.Index > 0) || ClearAbove(l, box);
+        return !(tall && l.Index > 0) || ClearAbove(_plan, l, box);
     }
 
     /// <summary>Whether a box covers whole cells: every side a multiple of 4 tiles.</summary>
-    private static bool IsWholeCells((int, int, int, int) box) =>
+    internal static bool IsWholeCells((int, int, int, int) box) =>
         box.Item1 % 4 == 0 && box.Item2 % 4 == 0 && box.Item3 % 4 == 0 && box.Item4 % 4 == 0;
 
     /// <summary>Whether nothing on the level above lies in the cells of a tall room's box (two floors high).</summary>
-    private bool ClearAbove(DungeonPlan.Level l, (int, int, int, int) box)
+    internal static bool ClearAbove(DungeonPlan plan, DungeonPlan.Level l, (int, int, int, int) box)
     {
-        var above = _plan.Levels[l.Index - 1];
+        var above = plan.Levels[l.Index - 1];
         foreach (var (ci, cj) in Box(box).Select(DungeonPlan.CellOf).ToHashSet())
         {
             for (int k = 0; k < 16; k++)
