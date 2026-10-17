@@ -252,11 +252,11 @@ public sealed class BlueprintsPanel
             var cost = Terrain.PieceCost.Of(e.Kinds);
             List.Children.Add(Row(BlueprintPictures.File(e.Picture), e.Name, meta, act =>
             {
-                act(Lang.T("blueprints.label.paste"), "blueprints.paste", () => Paste(id));
+                act(Lang.T("common.paste"), "blueprints.paste", () => Paste(id));
                 act(Lang.T("blueprints.label.edit"), "blueprints.edit", () => EditAsked?.Invoke(e.Path));
                 act(Lang.T("blueprints.label.details"), "blueprints.details", async () => await EditDetails(e));
                 act(VbuildLabel, "blueprints.vbuild", () => Export(id, "vbuild"));
-                act(Lang.T("blueprints.label.delete"), "blueprints.delete", async () => await Delete(id, e.Name));
+                act(Lang.T("common.delete"), "blueprints.delete", async () => await Delete(id, e.Name));
             }, Lang.T("blueprints.cost", cost.Describe()), e.Description, e.Tags));
         }
         if (older.Count > 0)
@@ -273,10 +273,10 @@ public sealed class BlueprintsPanel
                 b.Source);
             List.Children.Add(Row(BlueprintPictures.Url(b.Thumb), b.Name, meta, act =>
             {
-                act(Lang.T("blueprints.label.paste"), "blueprints.paste", () => Paste(b.Id));
+                act(Lang.T("common.paste"), "blueprints.paste", () => Paste(b.Id));
                 act(Lang.T("blueprints.label.toHomestead"), "blueprints.toHomestead", () => ToHomestead(b.Id));
                 act(VbuildLabel, "blueprints.vbuildOld", () => Export(b.Id, "vbuild"));
-                act(Lang.T("blueprints.label.delete"), "blueprints.deleteOld", async () => await Delete(b.Id, b.Name));
+                act(Lang.T("common.delete"), "blueprints.deleteOld", async () => await Delete(b.Id, b.Name));
             }));
         }
     }
