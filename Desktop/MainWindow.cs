@@ -2602,7 +2602,7 @@ public sealed partial class MainWindow : Window
         PastePanel = new PastePanel(View.Paste);
         SetUpPlaceTool();
         PlaceInput = new PlaceInput(View, PlaceTool) { Session = () => Session };
-        PlaceInput.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
+        PlaceInput.Message += s => { Msg(s); UpdateSaveBar(); };
         View.Place = PlaceInput;
         PlacePanel = new PlacePanel(PlaceInput, () => View.Scene, NameOfPrefab);
         BuildPanel = new BuildPanel(PlaceInput) { Models = () => _models };
@@ -2867,9 +2867,9 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void WirePlacePanel()
     {
-        PlacePanel.Message += t => MessageText.Text = t;
-        PlacePanel.AskName = () => Dialogs.AskText(this, "Save as preset", "Name of the preset:");
-        PlacePanel.Confirm = text => Dialogs.Ask(this, "Delete the preset", text, "Delete");
+        PlacePanel.Message += Msg;
+        PlacePanel.AskName = () => Dialogs.AskText(this, Lang.T("place.ask.savePreset.title"), Lang.T("place.ask.savePreset.text"));
+        PlacePanel.Confirm = text => Dialogs.Ask(this, Lang.T("place.ask.deletePreset.title"), text, Lang.T("common.delete"));
     }
 
     /// <summary>

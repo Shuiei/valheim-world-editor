@@ -1,6 +1,7 @@
 using System.Numerics;
 using Avalonia;
 using Avalonia.Threading;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using TerrainEditor.Terrain;
@@ -22,7 +23,7 @@ public sealed class PlaceInput
     /// <summary>The edit session placements are committed to (null while no world is open).</summary>
     public Func<EditSession?> Session { get; set; } = () => null;
     /// <summary>A line for the status bar.</summary>
-    public event Action<string>? Message;
+    public event Action<Said>? Message;
     /// <summary>The step <c>,</c> and <c>.</c> turn by, in degrees (Shift: 1°); null: 1°, Shift 15°.</summary>
     public float? TurnStep { get; set; }
     /// <summary>Something was placed: the kinds placed, for the recent list.</summary>
@@ -207,7 +208,7 @@ public sealed class PlaceInput
             }
             else
             {
-                Message?.Invoke("Nothing picked: click right on an object (only things that are shown can be picked).");
+                Message?.Invoke(Said.Of("view.msg.nothingPicked"));
             }
             return;
         }
@@ -291,7 +292,7 @@ public sealed class PlaceInput
             Moved(p, _size);
         }
         Tool.Notify();
-        Message?.Invoke(Tool.HeightNudge == 0 ? "Lift: none (where the cursor points)." : $"Lift: {Tool.HeightNudge:+0.0#;-0.0#} m from where the cursor points (Ctrl + wheel; Shift: 0.1 m).");
+        Message?.Invoke(Tool.HeightNudge == 0 ? Said.Of("place.msg.liftNone") : Said.Of("place.msg.lift", Tool.HeightNudge));
     }
 
     /// <summary>
@@ -413,7 +414,7 @@ public sealed class PlaceInput
             if (!p.Drag && Tool.FigB == null)
             {
                 Tool.FigA = null;
-                Message?.Invoke(Tool.LineShape == PlaceTool.LineShapes.Circle ? "Press at the centre and drag out to the size." : "Press at a corner and drag to the opposite one.");
+                Message?.Invoke(Tool.LineShape == PlaceTool.LineShapes.Circle ? Said.Of("place.msg.circleHow") : Said.Of("place.msg.rectHow"));
             }
             Tool.Notify();
             return;
@@ -451,9 +452,9 @@ public sealed class PlaceInput
         {
             if (s.Removed.Count > 0)
             {
-                session.Commit($"Place: removed {s.Removed.Count}", null, s.Removed, []);
+                session.Commit(Lang.T("place.undo.removed", s.Removed.Count), null, s.Removed, []);
             }
-            Message?.Invoke($"Removed {s.Removed.Count} object(s).");
+            Message?.Invoke(Said.Of("place.msg.removed", s.Removed.Count));
         }
         else
         {
@@ -461,15 +462,29 @@ public sealed class PlaceInput
             if (list.Count > 0)
             {
                 var names = list.Select(o => o.Name).Distinct().ToList();
-                Commit(session, list, $"Placed {list.Count} ({string.Join(", ", names.Take(3))})");
+                Commit(session, list, Lang.T("place.undo.placed", list.Count, string.Join(", ", names.Take(3))));
                 Placed?.Invoke(names);
             }
             Message?.Invoke(Tool.Building
-                ? list.Count == 0 ? "Nothing placed here." : $"Placed {string.Join(", ", list.Select(o => PieceCost.PieceName(o.Name)).Distinct())}{(Tool.SnappedTo is string to ? $" {to}" : "")}. Ctrl+Z takes it back."
-                : $"Placed {list.Count} object(s). Ctrl+Z removes them; Save writes them to the world.");
+                ? list.Count == 0 ? Said.Of("place.msg.nothingPlaced") : Built(string.Join(", ", list.Select(o => PieceCost.PieceName(o.Name)).Distinct()), Tool.Snapped)
+                : Said.Of("place.msg.placedSave", list.Count));
         }
         Tool.NewLayout();
         Refresh();
+    }
+
+    /// <summary>What the status bar says when pieces were built: what, and what they snapped to.</summary>
+    /// <param name="pieces">The pieces' names, joined.</param>
+    /// <param name="snapped">What the last piece snapped to, if anything.</param>
+    internal static Said Built(string pieces, (PlaceTool.SnapWays Way, string Name)? snapped)
+    {
+        return snapped switch
+        {
+            null => Said.Of("place.msg.built", pieces),
+            { Way: PlaceTool.SnapWays.OnTop } s => Said.Of("place.msg.builtOnTop", pieces, s.Name),
+            { Way: PlaceTool.SnapWays.Beside } s => Said.Of("place.msg.builtBeside", pieces, s.Name),
+            { } s => Said.Of("place.msg.builtSnapped", pieces, s.Name),
+        };
     }
 
     /// <summary>
@@ -490,14 +505,15 @@ public sealed class PlaceInput
     {
         if (_preview.Count == 0 || Session() is not { } session)
         {
-            Message?.Invoke(Tool.Mode == PlaceTool.Modes.Line ? "Draw a line first (click points on the ground)." : Tool.Mode == PlaceTool.Modes.Zone ? "Draw a zone first (click points around it, or drag)." : "Drag a box on the ground first.");
+            Message?.Invoke(Tool.Mode == PlaceTool.Modes.Line ? Said.Of("place.msg.drawLine") : Tool.Mode == PlaceTool.Modes.Zone ? Said.Of("place.msg.drawZone") : Said.Of("place.msg.dragBox"));
             return;
         }
         var list = _preview.ToList();
-        string where = Tool.Mode == PlaceTool.Modes.Line ? "along a line" : Tool.Mode == PlaceTool.Modes.Zone ? "in a zone" : "in a grid";
-        Commit(session, list, $"Placed {list.Count} {where}");
+        string label = Tool.Mode == PlaceTool.Modes.Line ? Lang.T("place.undo.placedLine", list.Count)
+            : Tool.Mode == PlaceTool.Modes.Zone ? Lang.T("place.undo.placedZone", list.Count) : Lang.T("place.undo.placedGrid", list.Count);
+        Commit(session, list, label);
         Placed?.Invoke([.. list.Select(o => o.Name).Distinct()]);
-        Message?.Invoke($"Placed {list.Count} object(s). Ctrl+Z removes them.");
+        Message?.Invoke(Said.Of("place.msg.placed", list.Count));
         Refresh();
     }
 
@@ -538,7 +554,7 @@ public sealed class PlaceInput
                 {
                     if (!Tool.TurnShape(d))
                     {
-                        Message?.Invoke(Tool.Mode == PlaceTool.Modes.Zone ? "Draw a zone first, then turn it." : "Drag a box first, then turn it.");
+                        Message?.Invoke(Tool.Mode == PlaceTool.Modes.Zone ? Said.Of("place.msg.turnZone") : Said.Of("place.msg.turnBox"));
                     }
                 }
                 else
@@ -552,7 +568,7 @@ public sealed class PlaceInput
                 return true;
             case Avalonia.Input.Key.Escape when PickOnce != null:
                 PickOnce = null;
-                Message?.Invoke("Picking cancelled.");
+                Message?.Invoke(Said.Of("view.msg.pickCancelled"));
                 return true;
             case Avalonia.Input.Key.Escape when shape && (Tool.Points.Count > 0 || Tool.GridA != null || Tool.FigA != null):
                 Tool.ClearShape();

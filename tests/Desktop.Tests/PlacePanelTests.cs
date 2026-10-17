@@ -39,7 +39,7 @@ public class PlacePanelTests
             W.View.Show(Scene, null);
             W.Edit(Scene.Session!);
             W.Tools.ChooseMode(ToolMode.Place);
-            P.Message += t => Said = t;
+            P.Message += t => Said = t.Shown;
             // A clean memory of its own (the tests' place.json is shared).
             P.Memory.Presets.Clear();
             P.Memory.Favourites.Clear();

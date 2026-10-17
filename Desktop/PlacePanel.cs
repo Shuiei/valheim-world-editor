@@ -15,12 +15,10 @@ namespace TerrainEditor.Desktop;
 /// </summary>
 public sealed class PlacePanel
 {
-    /// <summary>The preset list's first entry: no preset (choosing it again unticks the preset's kinds).</summary>
-    private static readonly string[] NoPreset = ["None"];
     /// <summary>The kinds button's text while the list of kinds is closed.</summary>
-    internal const string ChooseKindsText = "Choose kinds…";
+    internal static string ChooseKindsText => Lang.T("place.label.chooseKinds");
     /// <summary>The kinds button's text while the list of kinds is open.</summary>
-    internal const string DoneText = "Done";
+    internal static string DoneText => Lang.T("place.label.done");
 
     /// <summary>The panel itself, shown over the view while the Place tool is on.</summary>
     public Control Card { get; }
@@ -46,9 +44,9 @@ public sealed class PlacePanel
     /// <summary>The presets: "None", the built-in ones, then your own.</summary>
     internal ComboBox PresetBox { get; }
     /// <summary>Saves the chosen kinds, weights and scatter settings as your own preset.</summary>
-    internal Button SavePresetButton { get; } = new() { Content = "Save as preset…", FontSize = 12 };
+    internal Button SavePresetButton { get; } = new() { Content = Lang.T("place.label.savePreset"), FontSize = 12 };
     /// <summary>Deletes the selected preset (your own only).</summary>
-    internal Button DeletePresetButton { get; } = new() { Content = "Delete", FontSize = 12, IsEnabled = false };
+    internal Button DeletePresetButton { get; } = new() { Content = Lang.T("common.delete"), FontSize = 12, IsEnabled = false };
     /// <summary>The favourite kinds as chips.</summary>
     internal WrapPanel Favourites { get; } = new() { ItemSpacing = 4, LineSpacing = 4 };
     /// <summary>The recently placed kinds as chips.</summary>
@@ -74,21 +72,21 @@ public sealed class PlacePanel
     /// <summary>Set while the other sliders follow a moved one, so their own change events leave the weights alone.</summary>
     private bool _sharing;
     /// <summary>Filters the list of kinds by name.</summary>
-    internal TextBox Search { get; } = new() { PlaceholderText = "Search kinds (oak, rock, bush…)", FontSize = 12 };
+    internal TextBox Search { get; } = new() { PlaceholderText = Lang.T("place.hint.search"), FontSize = 12 };
     /// <summary>The kinds this world can place, by category.</summary>
     internal StackPanel List { get; } = new() { Spacing = 1 };
     /// <summary>The next click on an object takes its kind (Shift + click adds it).</summary>
-    internal Button PickButton { get; } = new() { Content = "Pick from world", FontSize = 12 };
+    internal Button PickButton { get; } = new() { Content = Lang.T("place.label.pick"), FontSize = 12 };
     /// <summary>Unchooses every kind.</summary>
-    internal Button UntickAllButton { get; } = new() { Content = "Untick all", FontSize = 12 };
+    internal Button UntickAllButton { get; } = new() { Content = Lang.T("place.label.untickAll"), FontSize = 12 };
     /// <summary>Ticks every favourite kind.</summary>
-    internal Button FavAllButton { get; } = Link("all");
+    internal Button FavAllButton { get; } = Link(Lang.T("place.label.all"));
     /// <summary>Unticks every favourite kind.</summary>
-    internal Button FavNoneButton { get; } = Link("none");
+    internal Button FavNoneButton { get; } = Link(Lang.T("place.label.none"));
     /// <summary>Ticks every recent kind.</summary>
-    internal Button RecentAllButton { get; } = Link("all");
+    internal Button RecentAllButton { get; } = Link(Lang.T("place.label.all"));
     /// <summary>Unticks every recent kind.</summary>
-    internal Button RecentNoneButton { get; } = Link("none");
+    internal Button RecentNoneButton { get; } = Link(Lang.T("place.label.none"));
     /// <summary>
     /// The list's categories that are open (folded ones show only their header); remembered by the window.
     /// </summary>
@@ -100,17 +98,17 @@ public sealed class PlacePanel
     /// <summary>Shift held on the last press of a chip (a click takes Shift from its press).</summary>
     private bool _shiftPress;
     /// <summary>Where objects stand, in <c>PlaceTool.Elevations</c> order.</summary>
-    internal ComboBox ElevationBox { get; } = new() { ItemsSource = new[] { "On the ground", "Above the ground", "At one height" }, SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
+    internal ComboBox ElevationBox { get; } = new() { ItemsSource = new[] { Lang.T("place.elevation.ground"), Lang.T("place.elevation.above"), Lang.T("place.elevation.at") }, SelectedIndex = 0, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch };
     /// <summary>The height above the ground, or the one height for all, in metres.</summary>
     internal NumericUpDown ElevBox { get; } = new() { Value = 0, Increment = 0.5m, FormatString = "0.0#", FontSize = 12 };
     /// <summary>Snap pieces to the pieces already there (shown when pieces are chosen).</summary>
-    internal CheckBox SnapToBox { get; } = new() { Content = "Snap to pieces already there", IsChecked = true, FontSize = 12 };
+    internal CheckBox SnapToBox { get; } = new() { Content = Lang.T("place.label.snapTo"), IsChecked = true, FontSize = 12 };
     /// <summary>Brush: snap a single piece beside the nearest one.</summary>
-    internal Button BesideButton { get; } = new() { Content = "Beside", FontSize = 12 };
+    internal Button BesideButton { get; } = new() { Content = Lang.T("place.label.beside"), FontSize = 12 };
     /// <summary>Brush: snap a single piece on top of the one under the cursor.</summary>
-    internal Button OnTopButton { get; } = new() { Content = "On top", FontSize = 12 };
+    internal Button OnTopButton { get; } = new() { Content = Lang.T("place.label.onTop"), FontSize = 12 };
     /// <summary>Leave saplings and crops room to grow (shown when one is chosen).</summary>
-    internal CheckBox GrowBox { get; } = new() { Content = "Leave saplings and crops room to grow", IsChecked = true, FontSize = 12 };
+    internal CheckBox GrowBox { get; } = new() { Content = Lang.T("place.label.grow"), IsChecked = true, FontSize = 12 };
     /// <summary>A warning: nothing to place yet, or chosen kinds that only grow on cultivated ground.</summary>
     internal TextBlock Note { get; } = new() { FontSize = 11, Foreground = new SolidColorBrush(Color.FromRgb(240, 190, 90)), TextWrapping = TextWrapping.Wrap };
     /// <summary>Brush: its radius, 1 to 30 m.</summary>
@@ -132,41 +130,41 @@ public sealed class PlacePanel
     /// <summary>The turn added to every facing, -180 to 180 degrees.</summary>
     internal Slider RotationSlider { get; private set; } = null!;
     /// <summary>Random facing, or all facing the rotation.</summary>
-    internal CheckBox RandomYawBox { get; } = new() { Content = "Random facing (off: all face the rotation)", IsChecked = true, FontSize = 12 };
+    internal CheckBox RandomYawBox { get; } = new() { Content = Lang.T("place.label.randomYaw"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Brush: one at a time, exactly at the cursor (setting it by hand stops it following the chosen kinds).
     /// </summary>
-    internal CheckBox SingleBox { get; } = new() { Content = "One at a time, exactly at the cursor", FontSize = 12 };
+    internal CheckBox SingleBox { get; } = new() { Content = Lang.T("place.label.single"), FontSize = 12 };
     /// <summary>Line: pieces end to end (setting it by hand stops it following the chosen kinds).</summary>
-    internal CheckBox EndToEndBox { get; } = new() { Content = "End to end (snap together, like in game)", FontSize = 12 };
+    internal CheckBox EndToEndBox { get; } = new() { Content = Lang.T("place.label.endToEnd"), FontSize = 12 };
     /// <summary>End to end: how many pieces high, 1 to 20.</summary>
     internal NumericUpDown LayersBox { get; } = new() { Value = 1, Minimum = 1, Maximum = 20, Increment = 1, FormatString = "0", FontSize = 12 };
     /// <summary>Line (Points): back to the first point.</summary>
-    internal CheckBox LoopBox { get; } = new() { Content = "Close the loop (back to the first point)", FontSize = 12 };
+    internal CheckBox LoopBox { get; } = new() { Content = Lang.T("place.label.loop"), FontSize = 12 };
     /// <summary>Line: the distance between objects, 0.5 m to <c>PlaceTool.MaxEvery</c>.</summary>
     internal Slider EverySlider { get; private set; } = null!;
     /// <summary>Line: the random sideways stray, 0 to 5 m.</summary>
     internal Slider WiggleSlider { get; private set; } = null!;
     /// <summary>Line (Points): objects face along the line.</summary>
-    internal CheckBox AlongBox { get; } = new() { Content = "Follow the line (plus the rotation; replaces random facing)", IsChecked = true, FontSize = 12 };
+    internal CheckBox AlongBox { get; } = new() { Content = Lang.T("place.label.along"), IsChecked = true, FontSize = 12 };
     /// <summary>Line (Points): a smooth curve through the points.</summary>
-    internal CheckBox CurveBox { get; } = new() { Content = "Smooth curve through the points", IsChecked = true, FontSize = 12 };
+    internal CheckBox CurveBox { get; } = new() { Content = Lang.T("path.label.curve"), IsChecked = true, FontSize = 12 };
     /// <summary>Grid: the spacing, 1 m to <c>PlaceTool.MaxCell</c>.</summary>
     internal Slider CellSlider { get; private set; } = null!;
     /// <summary>Places what the line, grid or zone shows (Enter).</summary>
-    internal Button PlaceButton { get; } = new Button { Content = "Place (Enter)", FontSize = 12 }.Classed("primary");
+    internal Button PlaceButton { get; } = new Button { Content = Lang.T("place.label.place"), FontSize = 12 }.Classed("primary");
     /// <summary>Clears the line, grid box or zone.</summary>
-    internal Button ClearButton { get; } = new() { Content = "Clear (Esc)", FontSize = 12 };
+    internal Button ClearButton { get; } = new() { Content = Lang.T("common.clearEsc"), FontSize = 12 };
     /// <summary>Removes the line's or zone's last point.</summary>
-    internal Button UndoPointButton { get; } = new() { Content = "Remove last point (Backspace)", FontSize = 12 };
+    internal Button UndoPointButton { get; } = new() { Content = Lang.T("place.label.undoPoint"), FontSize = 12 };
     /// <summary>New random choices (R).</summary>
-    internal Button NewLayoutButton { get; } = new() { Content = "New layout (R)", FontSize = 12 };
+    internal Button NewLayoutButton { get; } = new() { Content = Lang.T("place.label.newLayout"), FontSize = 12 };
     /// <summary>What the preview shows and the keys that go with it.</summary>
     internal TextBlock Info { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap };
     /// <summary>Kinds wider than the spacing: says so (the fit button then sets the spacing to them).</summary>
     internal TextBlock FitText { get; } = new() { FontSize = 12, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
     /// <summary>Sets the spacing to the widest chosen kind.</summary>
-    internal Button FitButton { get; } = new() { Content = "fit", FontSize = 11, Padding = new Thickness(6, 2), VerticalAlignment = VerticalAlignment.Center };
+    internal Button FitButton { get; } = new() { Content = Lang.T("place.label.fit"), FontSize = 11, Padding = new Thickness(6, 2), VerticalAlignment = VerticalAlignment.Center };
     /// <summary>The fit hint and its button, shown only when a chosen kind is wider than the spacing.</summary>
     private readonly Control _fitRow;
     /// <summary>Brush mode's hint: how the scatter works, or (One at a time) that a click places one.</summary>
@@ -246,7 +244,7 @@ public sealed class PlacePanel
         var modes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2 };
         foreach (var m in Enum.GetValues<PlaceTool.Modes>())
         {
-            var b = new Button { Content = m.ToString(), FontSize = 12 };
+            var b = new Button { Content = ModeName(m), FontSize = 12 };
             b.Click += (_, _) => SetMode(m);
             ModeButtons[m] = b;
             modes.Children.Add(b);
@@ -306,7 +304,7 @@ public sealed class PlacePanel
         {
             if (t.Chosen.Count == 0)
             {
-                Say("Tick one or more kinds first.");
+                Say(Said.Of("place.msg.tickFirst"));
                 return;
             }
             string? name = (await AskName())?.Trim();
@@ -318,11 +316,11 @@ public sealed class PlacePanel
             Memory.Presets = [.. Memory.Presets.Where(x => x.Name != name).Append(p).OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)];
             Memory.Save();
             FillPresets(name);
-            Say($"Saved the preset {name}.");
+            Say(Said.Of("place.msg.presetSaved", name));
         };
         DeletePresetButton.Click += async (_, _) =>
         {
-            if (PresetAt(PresetBox.SelectedIndex) is not { Own: true } p || !await Confirm($"Delete the preset {p.Preset.Name}?"))
+            if (PresetAt(PresetBox.SelectedIndex) is not { Own: true } p || !await Confirm(Lang.T("place.ask.deletePreset.text", p.Preset.Name)))
             {
                 return;
             }
@@ -338,14 +336,14 @@ public sealed class PlacePanel
             {
                 if (!Creatable().Any(c => c.Name == name))
                 {
-                    Say($"{name} cannot be placed: the game has no such kind to copy.");
+                    Say(Said.Of("select.msg.cannotPlace", name));
                     return;
                 }
                 // A click places only that kind; Shift + click adds it to the ticked kinds.
                 Choose(name, add: shift);
-                Say($"Placing {string.Join(", ", T.Chosen)}.");
+                Say(Said.Of("place.msg.placing", string.Join(", ", T.Chosen)));
             };
-            Say("Click an object to pick its kind for placing. Esc cancels.");
+            Say(Said.Of("place.msg.pickHow"));
         };
         UntickAllButton.Tip("place.untickAll");
         UntickAllButton.Click += (_, _) => { T.Chosen.Clear(); Chosen(); };
@@ -405,8 +403,8 @@ public sealed class PlacePanel
         CellSlider = Slide(1, PlaceTool.MaxCell, 0.5, t.Cell, ceV, v => $"{v:0.#} m", v => { t.Cell = v; t.Notify(); });
         CellSlider.Tip("place.cell");
         var shapes = new UniformGrid { Rows = 1, ColumnSpacing = 4 };
-        foreach (var (ls, label, tip) in new[] { (PlaceTool.LineShapes.Points, "Points", Lang.T("place.tip.points")),
-            (PlaceTool.LineShapes.Circle, "Circle", Lang.T("place.tip.circle")), (PlaceTool.LineShapes.Rect, "Rectangle", Lang.T("place.tip.rect")) })
+        foreach (var (ls, label, tip) in new[] { (PlaceTool.LineShapes.Points, Lang.T("place.shape.points"), Lang.T("place.tip.points")),
+            (PlaceTool.LineShapes.Circle, Lang.T("brush.shape.circle"), Lang.T("place.tip.circle")), (PlaceTool.LineShapes.Rect, Lang.T("place.shape.rect"), Lang.T("place.tip.rect")) })
         {
             var b = new Button { Content = label, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
             ToolTip.SetTip(b, tip);
@@ -429,50 +427,50 @@ public sealed class PlacePanel
         };
         static TextBlock Hint(string s) => new() { Text = s, FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
 
-        _elevRow = Row("Height", ElevBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+        _elevRow = Row(Lang.T("common.height"), ElevBox, new TextBlock { Text = Lang.T("common.metres"), Margin = new Thickness(3, 0, 0, 0), FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
         _attachRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, Children = { BesideButton, OnTopButton } };
         _pieceBox = new StackPanel { Spacing = 4, Children = { SnapToBox, _attachRow } };
-        _brushRows = new StackPanel { Spacing = 4, Children = { Row("Brush size", SizeSlider, sizeV), SingleBox } };
-        _patchRow = Row("Patch size", PatchSlider, paV);
-        _scatterRows = new StackPanel { Spacing = 4, Children = { Row("Density", DensitySlider, densV), Row("Spacing", SpacingSlider, spV), Row("Clumping", ClumpSlider, clV), _patchRow } };
+        _brushRows = new StackPanel { Spacing = 4, Children = { Row(Lang.T("place.label.brushSize"), SizeSlider, sizeV), SingleBox } };
+        _patchRow = Row(Lang.T("place.label.patchSize"), PatchSlider, paV);
+        _scatterRows = new StackPanel { Spacing = 4, Children = { Row(Lang.T("place.label.density"), DensitySlider, densV), Row(Lang.T("place.label.spacing"), SpacingSlider, spV), Row(Lang.T("place.label.clumping"), ClumpSlider, clV), _patchRow } };
         _facingRows = new StackPanel
         {
             Spacing = 4,
             Children =
             {
-                Row("Size %", new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SizeMinBox, SizeMaxBox } }),
-                Row("Tilt", TiltSlider, tiV),
-                Row("Rotation", RotationSlider, roV),
+                Row(Lang.T("place.label.sizePercent"), new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SizeMinBox, SizeMaxBox } }),
+                Row(Lang.T("place.label.tilt"), TiltSlider, tiV),
+                Row(Lang.T("place.label.rotation"), RotationSlider, roV),
                 RandomYawBox,
             },
         };
-        _layersRow = Row("Layers", LayersBox);
+        _layersRow = Row(Lang.T("place.label.layers"), LayersBox);
         _loopRow = LoopBox;
         _snapRows = new StackPanel { Spacing = 4, Children = { EndToEndBox, _layersRow } };
-        _freeLineRows = new StackPanel { Spacing = 4, Children = { Row("Every", EverySlider, evV), Row("Wiggle", WiggleSlider, wiV), AlongBox } };
-        _lineShapeBox = Section("Line shape", shapes, _lineHintText);
+        _freeLineRows = new StackPanel { Spacing = 4, Children = { Row(Lang.T("place.label.every"), EverySlider, evV), Row(Lang.T("place.label.wiggle"), WiggleSlider, wiV), AlongBox } };
+        _lineShapeBox = Section(Lang.T("place.head.lineShape"), shapes, _lineHintText);
         _lineBox = new StackPanel { Spacing = 4, Children = { _snapRows, _loopRow, _freeLineRows, CurveBox } };
-        _gridRow = Row("Spacing", CellSlider, ceV);
+        _gridRow = Row(Lang.T("place.label.spacing"), CellSlider, ceV);
         _shapeRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { PlaceButton, ClearButton } };
         _fitRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 6, Children = { FitText, Ui.Col(FitButton, 1) } };
         _undoRow = UndoPointButton;
-        _brushHint = Hint("Density is objects per 100 m². Spacing keeps them apart (also from what is already there). Shift + drag removes the chosen kinds. The Mask applies.");
+        _brushHint = Hint(Lang.T("place.hint.brush"));
 
         Card = CardOf(new StackPanel
         {
             Spacing = 6,
             Children =
             {
-                new TextBlock { Text = "Place", FontSize = 14, FontWeight = FontWeight.SemiBold },
+                new TextBlock { Text = Lang.T("rail.label.place"), FontSize = 14, FontWeight = FontWeight.SemiBold },
                 modes,
                 _lineShapeBox,
-                Section("Choose a preset", PresetBox, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SavePresetButton, DeletePresetButton } }),
+                Section(Lang.T("place.head.preset"), PresetBox, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { SavePresetButton, DeletePresetButton } }),
                 Section(
-                    new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { Head("Selected kinds"), _mixCount } },
+                    new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { Head(Lang.T("place.head.selected")), _mixCount } },
                     new Border { Background = Ui.Panel2, BorderBrush = Ui.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(7), Padding = new Thickness(8, 4), Child = Mix },
                     Note,
                     KindsButton),
-                Section("Objects", Row("Elevation", ElevationBox), _elevRow, _pieceBox, GrowBox, _facingRows),
+                Section(Lang.T("common.objects"), Row(Lang.T("place.label.elevation"), ElevationBox), _elevRow, _pieceBox, GrowBox, _facingRows),
                 Section(_modeHead, _brushRows, _scatterRows, _lineBox, _gridRow, _fitRow),
                 new StackPanel { Spacing = 6, Margin = new Thickness(0, 8, 0, 0), Children = { _shapeRow, _undoRow, NewLayoutButton, Info, _brushHint } },
             },
@@ -482,11 +480,11 @@ public sealed class PlacePanel
             Spacing = 6,
             Children =
             {
-                new TextBlock { Text = "Choose kinds", FontSize = 14, FontWeight = FontWeight.SemiBold },
+                new TextBlock { Text = Lang.T("place.head.chooseKinds"), FontSize = 14, FontWeight = FontWeight.SemiBold },
                 Search,
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { PickButton, UntickAllButton } },
-                (_favBox = new StackPanel { Spacing = 3, Children = { ChipHead("FAVOURITES", FavAllButton, FavNoneButton), Favourites } }),
-                (_recentBox = new StackPanel { Spacing = 3, Children = { ChipHead("RECENT", RecentAllButton, RecentNoneButton), Recent } }),
+                (_favBox = new StackPanel { Spacing = 3, Children = { ChipHead(Lang.T("place.head.favourites"), FavAllButton, FavNoneButton), Favourites } }),
+                (_recentBox = new StackPanel { Spacing = 3, Children = { ChipHead(Lang.T("place.head.recent"), RecentAllButton, RecentNoneButton), Recent } }),
                 List,
             },
         }, 240);
@@ -509,7 +507,7 @@ public sealed class PlacePanel
     private void FillPresets(string? select = null)
     {
         _filling = true;
-        PresetBox.ItemsSource = NoPreset.Concat(PlaceTool.BuiltIn.Select(p => p.Name)).Concat(Memory.Presets.Select(p => $"Yours: {p.Name}")).ToList();
+        PresetBox.ItemsSource = new[] { Lang.T("place.preset.none") }.Concat(PlaceTool.BuiltIn.Select(PlaceTool.ShownName)).Concat(Memory.Presets.Select(p => Lang.T("place.preset.yours", p.Name))).ToList();
         int own = Memory.Presets.FindIndex(p => p.Name == select);
         PresetBox.SelectedIndex = own >= 0 ? 1 + PlaceTool.BuiltIn.Length + own : 0;
         DeletePresetButton.IsEnabled = own >= 0;
@@ -524,13 +522,13 @@ public sealed class PlacePanel
         Memory.SaveLater();
     }
 
-    /// <summary>The heading of a chip row, with its all and none buttons.</summary>
+    /// <summary>The heading of a chip row (in capitals), with its all and none buttons.</summary>
     private static StackPanel ChipHead(string title, Button all, Button none) => new()
     {
         Orientation = Orientation.Horizontal,
         Spacing = 4,
         Margin = new Thickness(0, 6, 0, 2),
-        Children = { new TextBlock { Text = title, FontSize = 10, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) }, all, none },
+        Children = { new TextBlock { Text = title.ToUpperInvariant(), FontSize = 10, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) }, all, none },
     };
 
     /// <summary>
@@ -612,10 +610,36 @@ public sealed class PlacePanel
         }
     }
 
-    /// <summary>A line for the status bar.</summary>
-    public event Action<string>? Message;
+    /// <summary>A line for the status bar, in the user's language and in English (for Claude).</summary>
+    public event Action<Said>? Message;
     /// <summary>Raises <see cref="Message"/>.</summary>
-    private void Say(string s) => Message?.Invoke(s);
+    private void Say(Said s) => Message?.Invoke(s);
+
+    /// <summary>The brush line's note on what the piece under the cursor snaps to, or "" when it snaps to nothing.</summary>
+    /// <param name="snapped">How and to what the piece snaps, if it does.</param>
+    internal static string SnapNote((PlaceTool.SnapWays Way, string Name)? snapped)
+    {
+        return snapped switch
+        {
+            null => "",
+            { Way: PlaceTool.SnapWays.OnTop } s => Lang.T("place.info.snappedOnTop", s.Name),
+            { Way: PlaceTool.SnapWays.Beside } s => Lang.T("place.info.snappedBeside", s.Name),
+            { } s => Lang.T("place.info.snappedTo", s.Name),
+        };
+    }
+
+    /// <summary>A mode's name, on its button.</summary>
+    /// <param name="m">The mode.</param>
+    private static string ModeName(PlaceTool.Modes m)
+    {
+        return m switch
+        {
+            PlaceTool.Modes.Line => Lang.T("place.mode.line"),
+            PlaceTool.Modes.Grid => Lang.T("place.mode.grid"),
+            PlaceTool.Modes.Zone => Lang.T("place.mode.zone"),
+            _ => Lang.T("place.mode.brush"),
+        };
+    }
 
     /// <summary>The kinds that can be placed in this world, with their kind of object (for the list's order).</summary>
     private List<(string Name, ObjectKind Kind)> _creatable = [];
@@ -767,7 +791,7 @@ public sealed class PlacePanel
         }
         if (List.Children.Count == 0)
         {
-            List.Children.Add(new TextBlock { Text = "Nothing matches.", FontSize = 11, Foreground = Ui.Muted });
+            List.Children.Add(new TextBlock { Text = Lang.T("blueprints.noMatch"), FontSize = 11, Foreground = Ui.Muted });
         }
     }
 
@@ -803,7 +827,7 @@ public sealed class PlacePanel
         _mixCount.Text = names.Count > 0 ? $"{names.Count}" : "";
         if (names.Count == 0)
         {
-            Mix.Children.Add(new TextBlock { Text = "None yet", FontSize = 12, Foreground = Ui.Muted, Margin = new Thickness(0, 4) });
+            Mix.Children.Add(new TextBlock { Text = Lang.T("place.hint.noneYet"), FontSize = 12, Foreground = Ui.Muted, Margin = new Thickness(0, 4) });
             return;
         }
         float total = names.Sum(T.WeightOf);
@@ -949,13 +973,13 @@ public sealed class PlacePanel
         _attachRow.IsVisible = m == PlaceTool.Modes.Brush;
         GrowBox.IsVisible = t.GrowMatters;
         _brushRows.IsVisible = m == PlaceTool.Modes.Brush;
-        _modeHead.Text = m switch
+        _modeHead.Text = (m switch
         {
-            PlaceTool.Modes.Line => "ALONG THE LINE",
-            PlaceTool.Modes.Grid => "GRID",
-            PlaceTool.Modes.Zone => "ZONE FILL",
-            _ => "BRUSH",
-        };
+            PlaceTool.Modes.Line => Lang.T("place.head.line"),
+            PlaceTool.Modes.Grid => Lang.T("place.mode.grid"),
+            PlaceTool.Modes.Zone => Lang.T("place.head.zone"),
+            _ => Lang.T("place.mode.brush"),
+        }).ToUpperInvariant();
         // One at a time places only what the click shows: nothing to scatter.
         _scatterRows.IsVisible = m == PlaceTool.Modes.Zone || m == PlaceTool.Modes.Brush && !t.OneAtATime;
         _patchRow.IsVisible = t.Clump > 0;
@@ -971,18 +995,17 @@ public sealed class PlacePanel
         _shapeRow.IsVisible = m != PlaceTool.Modes.Brush;
         _undoRow.IsVisible = m is PlaceTool.Modes.Line or PlaceTool.Modes.Zone && t.Points.Count > 0;
         _brushHint.IsVisible = m == PlaceTool.Modes.Brush;
-        _brushHint.Text = t.OneAtATime
-            ? "A click places one object exactly at the cursor; dragging adds no more. Shift + drag removes the chosen kinds. The Mask applies."
-            : "Density is objects per 100 m². Spacing keeps them apart (also from what is already there). Shift + drag removes the chosen kinds. The Mask applies.";
+        _brushHint.Text = t.OneAtATime ? Lang.T("place.hint.single") : Lang.T("place.hint.brush");
         _lineHintText.Text = t.LineShape switch
         {
-            PlaceTool.LineShapes.Circle => "Press at the centre and drag out to the size; let go to see it, Enter places it. With End to end the size snaps so whole pieces close the ring.",
-            PlaceTool.LineShapes.Rect => "Press at one corner and drag to the opposite one; Enter places it. With End to end the sides snap to whole pieces.",
-            _ => "Click points along the route, or hold and drag to draw freely. Then drag a point to move it, drag the line to add a point, Ctrl + click a point to remove it; Backspace removes the last point.",
+            PlaceTool.LineShapes.Circle => Lang.T("place.hint.circle"),
+            PlaceTool.LineShapes.Rect => Lang.T("place.hint.rect"),
+            _ => Lang.T("place.hint.points"),
         };
         var cult = t.NeedCultivated;
-        Note.Text = t.Chosen.Count == 0 ? $"Nothing to place yet: {ChooseKindsText} below, or a preset."
-            : cult.Count > 0 ? $"{string.Join(", ", cult)} only grow{(cult.Count > 1 ? "" : "s")} on cultivated ground (paint it with Cultivate first)." : "";
+        Note.Text = t.Chosen.Count == 0 ? Lang.T("place.hint.nothingYet", ChooseKindsText)
+            : cult.Count > 1 ? Lang.T("place.hint.cultivated.many", string.Join(", ", cult))
+            : cult.Count == 1 ? Lang.T("place.hint.cultivated.one", cult[0]) : "";
         Note.IsVisible = Note.Text != "";
         ShowFit();
     }
@@ -1004,18 +1027,24 @@ public sealed class PlacePanel
         int n = _input.PreviewNow.Count;
         if (t.Chosen.Count == 0)
         {
-            Info.Text = "Tick at least one kind to place.";
+            Info.Text = Lang.T("place.info.none");
         }
         else if (t.Mode == PlaceTool.Modes.Brush)
         {
-            Info.Text = $"{(t.SnappedTo != null ? $"Snapped {t.SnappedTo}. " : "")}{n} object(s) shown under the cursor. Click places exactly these; drag paints more. R new layout · , . rotate.";
+            Info.Text = string.Join(" ", new[] { SnapNote(t.Snapped), Lang.T("place.info.brush", n) }.Where(p => p.Length > 0));
         }
         else
         {
-            string where = t.Mode == PlaceTool.Modes.Line ? "along the line" : t.Mode == PlaceTool.Modes.Zone ? "in the zone" : "in the grid";
-            string gap = t.Mode == PlaceTool.Modes.Line && t.EndToEnd && t.SnapGap > 0.05f && n > 0 ? $", end to end ({t.SnapGap:0.0} m of the line left at the end: move a point to close it)" : "";
-            string turn = t.Mode is PlaceTool.Modes.Zone or PlaceTool.Modes.Grid ? $" · , . turn the {(t.Mode == PlaceTool.Modes.Zone ? "zone" : "grid")}{(t.ShapeTurn != 0 ? $" (now {t.ShapeTurn:0}°)" : "")}" : "";
-            Info.Text = $"{n} object(s) {where}{gap}. Enter places them{turn} · R new random choices.";
+            bool turned = t.ShapeTurn != 0;
+            Info.Text = t.Mode switch
+            {
+                PlaceTool.Modes.Line when t.EndToEnd && t.SnapGap > 0.05f && n > 0 => Lang.T("place.info.lineGap", n, t.SnapGap),
+                PlaceTool.Modes.Line => Lang.T("place.info.line", n),
+                PlaceTool.Modes.Zone when turned => Lang.T("place.info.zoneTurned", n, t.ShapeTurn),
+                PlaceTool.Modes.Zone => Lang.T("place.info.zone", n),
+                _ when turned => Lang.T("place.info.gridTurned", n, t.ShapeTurn),
+                _ => Lang.T("place.info.grid", n),
+            };
         }
     }
 }
