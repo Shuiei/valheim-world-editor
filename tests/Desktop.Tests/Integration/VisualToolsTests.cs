@@ -46,6 +46,11 @@ public sealed class VisualToolsTests : VisualEditorPictures
         Do("area 0 0 3", "key T", "mouse move 5 5");
         ShowsSomething(Picture("place-preview"));
         var s = Do("mouse down 5 5", "mouse up 5 5");
+        // The tree is placed in the background: on a slow run it is not counted yet on the first look.
+        for (int i = 0; i < 20 && s.GetProperty("added").GetInt32() == 0; i++)
+        {
+            s = Editor.Send("wait 100");
+        }
         Assert.True(s.GetProperty("added").GetInt32() > 0, s.ToString());
         ShowsSomething(Picture("placed"));
         Clean();
