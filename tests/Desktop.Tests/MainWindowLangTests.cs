@@ -112,6 +112,33 @@ public sealed class MainWindowLangTests
         Assert.True(PseudoLang.Translated(r.Said, data), r.Said);
     }
 
+    // A file chosen as the brush's stamp that is not a picture: said in the language in use, read in English, and no
+    // stamp added.
+    [AvaloniaFact]
+    public void AStampPictureThatCannotBeReadIsSaidInTheLanguage()
+    {
+        string file = Path.Combine(Path.GetTempPath(), "vwe-stamp-" + Guid.NewGuid().ToString("N")[..8] + ".png");
+        File.WriteAllText(file, "not a picture");
+        try
+        {
+            using var pseudo = new PseudoLang();
+            var w = new MainWindow(load: false) { Width = 1200, Height = 900 };
+            w.Show();
+            Dispatcher.UIThread.RunJobs();
+            int stamps = w.Tools.StampList.Count;
+
+            w.LoadStamp(file);
+
+            Assert.Equal(PseudoLang.Wrap("That picture could not be read."), w.MessageText.Text);
+            Assert.Equal("That picture could not be read.", w.LastMessageEn);
+            Assert.Equal(stamps, w.Tools.StampList.Count);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
     // Save with nothing to save, then Save, Discard, Leave and Quit with a change waiting: what each asks or says, its
     // title and its buttons, are catalogue texts (the world's folder in the save's question is data).
     [AvaloniaFact]

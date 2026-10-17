@@ -2772,6 +2772,16 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+        LoadStamp(path);
+    }
+
+    /// <summary>
+    /// The picture at <paramref name="path"/> added to the brush's stamps and chosen, or said in the status bar that it
+    /// could not be read.
+    /// </summary>
+    /// <param name="path">The picture file.</param>
+    internal void LoadStamp(string path)
+    {
         if (Stamps.FromPicture(File.ReadAllBytes(path)) is { } data)
         {
             Tools.AddStamp(Path.GetFileNameWithoutExtension(path), data);
