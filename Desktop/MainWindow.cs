@@ -1612,17 +1612,32 @@ public sealed partial class MainWindow : Window
             }
             return (t, (rect.X0 - 4, rect.Z0 - 4, rect.X1 + 4, rect.Z1 + 4));
         }, remove, roof);
-        if (built.Uncovered > 0 && roof.Count > 0)
-        {
-            return Said.Of("cave.msg.uncovered", roof.Count, built.Uncovered);
-        }
-        if (roof.Count == 0)
+        return CaveOutcome(roof.Count, built.Uncovered, remove.Count, PathTool.Length(cave.Curve), open, clamped);
+    }
+
+    /// <summary>
+    /// What a dug cave says: roofed with some floor open to the sky, too shallow for a roof, or dug (with what was
+    /// taken away, walls that could not rise and the game's limit reached).
+    /// </summary>
+    /// <param name="boulders">How many boulders roof it.</param>
+    /// <param name="uncovered">Floor points left open to the sky.</param>
+    /// <param name="removed">Trees and rocks taken away from the trench.</param>
+    /// <param name="length">The cave's length (m).</param>
+    /// <param name="walls">Points where the walls could not rise to the rock.</param>
+    /// <param name="clamped">Whether part of it reached the game's ±8 m limit.</param>
+    /// <returns>The message, in the language in use and in English.</returns>
+    internal static Said CaveOutcome(int boulders, int uncovered, int removed, float length, int walls, bool clamped)
+    {
+        if (boulders == 0)
         {
             return Said.Of("cave.msg.noRoof");
         }
-        float length = PathTool.Length(cave.Curve);
-        return (remove.Count > 0 ? Said.Of("cave.msg.dugCleared", length, roof.Count, remove.Count) : Said.Of("cave.msg.dug", length, roof.Count))
-            + (open > 0 ? Said.Of("cave.msg.walls", open) : Said.Empty)
+        if (uncovered > 0)
+        {
+            return Said.Of("cave.msg.uncovered", boulders, uncovered);
+        }
+        return (removed > 0 ? Said.Of("cave.msg.dugCleared", length, boulders, removed) : Said.Of("cave.msg.dug", length, boulders))
+            + (walls > 0 ? Said.Of("cave.msg.walls", walls) : Said.Empty)
             + (clamped ? Said.Of("cave.msg.limit") : Said.Of("cave.msg.undo"));
     }
 
