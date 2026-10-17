@@ -95,57 +95,27 @@ public sealed class GlObjects
     /// <summary>
     /// Deletes a buffer if this owner holds it (else nothing: the name may be another's now).
     /// </summary>
-    public void DeleteBuffer(uint b)
-    {
-        if (_buffers.Remove(b))
-        {
-            _gl.DeleteBuffer(b);
-        }
-    }
+    public void DeleteBuffer(uint b) => DeleteHeld(_buffers, b, () => _gl.DeleteBuffer(b));
 
     /// <summary>
     /// Deletes a vertex array if this owner holds it.
     /// </summary>
-    public void DeleteVertexArray(uint a)
-    {
-        if (_arrays.Remove(a))
-        {
-            _gl.DeleteVertexArray(a);
-        }
-    }
+    public void DeleteVertexArray(uint a) => DeleteHeld(_arrays, a, () => _gl.DeleteVertexArray(a));
 
     /// <summary>
     /// Deletes a texture if this owner holds it.
     /// </summary>
-    public void DeleteTexture(uint t)
-    {
-        if (_textures.Remove(t))
-        {
-            _gl.DeleteTexture(t);
-        }
-    }
+    public void DeleteTexture(uint t) => DeleteHeld(_textures, t, () => _gl.DeleteTexture(t));
 
     /// <summary>
     /// Deletes a framebuffer if this owner holds it.
     /// </summary>
-    public void DeleteFramebuffer(uint f)
-    {
-        if (_framebuffers.Remove(f))
-        {
-            _gl.DeleteFramebuffer(f);
-        }
-    }
+    public void DeleteFramebuffer(uint f) => DeleteHeld(_framebuffers, f, () => _gl.DeleteFramebuffer(f));
 
     /// <summary>
     /// Deletes a renderbuffer if this owner holds it.
     /// </summary>
-    public void DeleteRenderbuffer(uint r)
-    {
-        if (_renderbuffers.Remove(r))
-        {
-            _gl.DeleteRenderbuffer(r);
-        }
-    }
+    public void DeleteRenderbuffer(uint r) => DeleteHeld(_renderbuffers, r, () => _gl.DeleteRenderbuffer(r));
 
     /// <summary>
     /// Deletes everything still held (the owner's context must be current); the set is empty after.
@@ -182,6 +152,22 @@ public sealed class GlObjects
         _framebuffers.Clear();
         _renderbuffers.Clear();
         _programs.Clear();
+    }
+
+    /// <summary>
+    /// Deletes a name with its delete call only when the set holds it, and takes it out of the set: a name this owner
+    /// does not hold is left alone, since it may be another owner's object now.
+    /// </summary>
+    /// <param name="set">The names this owner holds of one kind.</param>
+    /// <param name="name">The name to delete.</param>
+    /// <param name="delete">The OpenGL delete call for the name (not made when the set does not hold it, so it may name
+    /// OpenGL that is gone).</param>
+    internal static void DeleteHeld(HashSet<uint> set, uint name, Action delete)
+    {
+        if (set.Remove(name))
+        {
+            delete();
+        }
     }
 
     /// <summary>

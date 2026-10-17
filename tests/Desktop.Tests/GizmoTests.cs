@@ -94,4 +94,17 @@ public class GizmoTests
         Assert.Equal(90, s.Scene.Things[^1].Rotation.Y, 1);
         Assert.Equal(new Vector2(40, 40), new Vector2(s.Scene.Things[^1].Position.X, s.Scene.Things[^1].Position.Z));
     }
+
+    [Fact]
+    public void RingHitNeedsARayThatMeetsThePlaneNearTheRing()
+    {
+        // Straight down through the ring's radius at scale 1: hit.
+        Assert.True(Gizmo.RingHit(new Vector3(Gizmo.RingRadius, 5, 0), -Vector3.UnitY, Vector3.Zero, 1));
+        // Straight down through the middle: the plane point is too close to the axis.
+        Assert.False(Gizmo.RingHit(new Vector3(0, 5, 0), -Vector3.UnitY, Vector3.Zero, 1));
+        // Level ray: it never meets the plane.
+        Assert.False(Gizmo.RingHit(new Vector3(Gizmo.RingRadius, 0, 0), Vector3.UnitX, Vector3.Zero, 1));
+        // The plane is behind the ray: no hit.
+        Assert.False(Gizmo.RingHit(new Vector3(Gizmo.RingRadius, -5, 0), -Vector3.UnitY, Vector3.Zero, 1));
+    }
 }
