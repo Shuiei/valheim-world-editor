@@ -94,7 +94,7 @@ public sealed class StartPageLangTests : IDisposable
             ];
             Assert.Empty(PseudoLang.Untranslated(page.View, data));
             page.ShowHomestead(new Homestead.Status(false, null, [], "/somewhere"));
-            Assert.Empty(PseudoLang.Untranslated(page.WorkshopPanel));
+            Assert.Empty(PseudoLang.Untranslated(page.WorkshopPanel, data));
 
             // Forgetting a server asks in the language in use.
             var asked = new List<string>();
