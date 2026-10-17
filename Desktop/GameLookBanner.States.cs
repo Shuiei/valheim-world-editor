@@ -10,7 +10,7 @@ public sealed partial class GameLookBanner
     /// <summary>
     /// The card while the game's files are being read: the progress, its last line, and the note.
     /// </summary>
-    private void ShowReading(GameLook.Snapshot s)
+    internal void ShowReading(GameLook.Snapshot s)
     {
         _sawRunning = true;
         Title.Text = Lang.T("look.head.preparing");
@@ -27,7 +27,7 @@ public sealed partial class GameLookBanner
     /// </summary>
     /// <param name="s">The game look's state.</param>
     /// <param name="changed">Whether the state changed since the card was last shown.</param>
-    private void ShowMissing(GameLook.Snapshot s, bool changed)
+    internal void ShowMissing(GameLook.Snapshot s, bool changed)
     {
         Title.Text = Lang.T("look.head.missing");
         Message.Text = s.Message ?? Lang.T("look.msg.missing");
@@ -43,7 +43,7 @@ public sealed partial class GameLookBanner
     /// The card after a failed read: the message, Try again and the log.
     /// </summary>
     /// <param name="s">The game look's state.</param>
-    private void ShowFailed(GameLook.Snapshot s)
+    internal void ShowFailed(GameLook.Snapshot s)
     {
         Title.Text = Lang.T("look.head.failed");
         Message.Text = s.Message ?? "";
@@ -54,7 +54,7 @@ public sealed partial class GameLookBanner
     /// <summary>
     /// The card when the game look is ready (its heading only; hidden unless it was shown running).
     /// </summary>
-    private void ShowReady()
+    internal void ShowReady()
     {
         Title.Text = Lang.T("look.head.ready");
         Message.Text = Lang.T("look.msg.ready");

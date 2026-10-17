@@ -57,7 +57,7 @@ public sealed partial class EditSession
     /// <summary>
     /// The zones to the edit store, as the web page uploads them.
     /// </summary>
-    private void Send(List<(int X, int Z)> zones)
+    internal void Send(List<(int X, int Z)> zones)
     {
         foreach (var (zx, zz) in zones)
         {

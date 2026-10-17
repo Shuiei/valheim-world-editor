@@ -77,7 +77,7 @@ public sealed partial class EditSession
     /// the redo list from its last (the next redo) to its first; a fitted step under its copy, one kept aside as it came.
     /// Under the lock.
     /// </summary>
-    private void RestoreOrder(Kept k, int undoCount, int redoCount, int start, int end,
+    internal void RestoreOrder(Kept k, int undoCount, int redoCount, int start, int end,
         List<(Standing Standing, Change? Fitted)> undo, List<(Standing Standing, Change? Fitted)> redo)
     {
         for (int n = 0; n < undoCount; n++)
@@ -97,7 +97,7 @@ public sealed partial class EditSession
     /// </summary>
     /// <param name="kept">The steps kept here (the undo and redo lists).</param>
     /// <param name="fit">The fitting of the kept history, with the things found.</param>
-    private void JoinFound(List<Change> kept, KeptFit fit)
+    internal void JoinFound(List<Change> kept, KeptFit fit)
     {
         var joined = new Dictionary<int, int>();
         lock (Scene.Things)

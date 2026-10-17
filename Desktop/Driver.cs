@@ -63,7 +63,7 @@ public static partial class Driver
     /// <summary>
     /// One command as given: the window, the command's words (the first is the command) and its arguments.
     /// </summary>
-    private sealed record Call(MainWindow W, string[] A, string[] Args)
+    internal sealed record Call(MainWindow W, string[] A, string[] Args)
     {
         /// <summary>The argument at this position as a number (invariant culture).</summary>
         public float F(int i) => float.Parse(Args[i], System.Globalization.CultureInfo.InvariantCulture);
@@ -123,7 +123,7 @@ public static partial class Driver
     /// <param name="a">The command and its argument.</param>
     /// <param name="usage">How the command is written, for the message.</param>
     /// <exception cref="InvalidOperationException">There is no argument or it has no '|'.</exception>
-    private static (string Before, string After) Bar(string[] a, string usage)
+    internal static (string Before, string After) Bar(string[] a, string usage)
     {
         int bar = a.Length > 1 ? a[1].IndexOf('|') : -1;
         return bar >= 0 ? (a[1][..bar], a[1][(bar + 1)..]) : throw new InvalidOperationException("usage: " + usage);

@@ -8,12 +8,12 @@ public static partial class Formula
     /// <summary>
     /// The formula's comparisons and logical operators as parser rules.
     /// </summary>
-    private sealed partial class Parser
+    internal sealed partial class Parser
     {
         /// <summary>
         /// Comparisons, each of two sums, giving 1 when it holds and 0 when not.
         /// </summary>
-        private Func<Env, double> Compare()
+        internal Func<Env, double> Compare()
         {
             var a = Sum();
             while (Peek()?.Op is { } op && Comparisons.ContainsKey(op))
@@ -31,7 +31,7 @@ public static partial class Formula
         /// &amp;&amp; binds tighter than ||, as in JavaScript: 1 || 0 &amp;&amp; 0 is 1. Like JavaScript, each gives the deciding value
         /// itself, not 1.
         /// </summary>
-        private Func<Env, double> And()
+        internal Func<Env, double> And()
         {
             var a = Compare();
             while (Eat("&&"))
@@ -46,7 +46,7 @@ public static partial class Formula
         /// <summary>
         /// Or: gives the first value that is true, else the last.
         /// </summary>
-        private Func<Env, double> Or()
+        internal Func<Env, double> Or()
         {
             var a = And();
             while (Eat("||"))

@@ -78,7 +78,7 @@ public sealed partial class EditSession
     }
 
     /// <summary>Where a kept change stands to this area.</summary>
-    private enum Standing
+    internal enum Standing
     {
         /// <summary>Its ground and objects are all in the area: it can be undone here.</summary>
         Fits,

@@ -50,7 +50,7 @@ public sealed partial class EditSession
     /// <param name="shape">The mountain's height at a point, from its middle.</param>
     /// <param name="mask">The mask over the ground, or null when off.</param>
     /// <returns>The indices of the things to take away.</returns>
-    private List<int> ObjectsToClear(float cx, float cz, float reach, Func<float, float, float> shape, Func<int, float>? mask)
+    internal List<int> ObjectsToClear(float cx, float cz, float reach, Func<float, float, float> shape, Func<int, float>? mask)
     {
         var g = Ground;
         float ox = Scene.OriginX, oz = Scene.OriginZ;

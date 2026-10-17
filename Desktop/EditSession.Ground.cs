@@ -28,7 +28,7 @@ public sealed partial class EditSession
     /// the zones they are in (sent to the edit store). Nothing when there is no change or it touched nothing.
     /// </summary>
     /// <param name="ground">The ground change (see Commit); null for none.</param>
-    private (int[] Points, Ground.State Before, Ground.State After, List<(int X, int Z)> Zones) ChangeGround(
+    internal (int[] Points, Ground.State Before, Ground.State After, List<(int X, int Z)> Zones) ChangeGround(
         Func<Ground, (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect)>? ground)
     {
         lock (_lock)
@@ -63,7 +63,7 @@ public sealed partial class EditSession
     /// <param name="shape">The mountain's height at a point, from its middle.</param>
     /// <param name="mask">The mask over the ground, or null when off.</param>
     /// <returns>The points changed, and the grid box around them.</returns>
-    private static (List<int> Touched, (int, int, int, int) Rect) RaiseGround(Ground gr, float cx, float cz, float reach,
+    internal static (List<int> Touched, (int, int, int, int) Rect) RaiseGround(Ground gr, float cx, float cz, float reach,
         Func<float, float, float> shape, Func<int, float>? mask)
     {
         var touched = new List<int>();

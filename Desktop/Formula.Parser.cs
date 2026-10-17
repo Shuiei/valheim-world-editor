@@ -10,7 +10,7 @@ public static partial class Formula
     /// <summary>
     /// Reads the tokens of one formula; each rule takes the tokens its level of operators owns.
     /// </summary>
-    private sealed partial class Parser
+    internal sealed partial class Parser
     {
         /// <summary>
         /// The formula's tokens, in order.
@@ -57,13 +57,13 @@ public static partial class Formula
         /// <summary>
         /// The next token, or null at the end.
         /// </summary>
-        private Tok? Peek() => _i < _toks.Count ? _toks[_i] : null;
+        internal Tok? Peek() => _i < _toks.Count ? _toks[_i] : null;
 
         /// <summary>
         /// Reads the next token when it is this operator or bracket.
         /// </summary>
         /// <returns>Whether it was read.</returns>
-        private bool Eat(string op)
+        internal bool Eat(string op)
         {
             if (Peek()?.Op == op)
             {
@@ -76,7 +76,7 @@ public static partial class Formula
         /// <summary>
         /// Reads this operator or bracket, or fails with a message naming what came instead.
         /// </summary>
-        private void Need(string op)
+        internal void Need(string op)
         {
             if (!Eat(op))
             {

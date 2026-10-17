@@ -24,11 +24,11 @@ public static partial class Driver
     }
 
     /// <summary>A control's own words: its text content, or every text inside it.</summary>
-    private static string TextOf(Avalonia.Controls.ContentControl c) => c.Content is string s ? s.Trim()
+    internal static string TextOf(Avalonia.Controls.ContentControl c) => c.Content is string s ? s.Trim()
         : string.Join(" ", Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(c).OfType<Avalonia.Controls.TextBlock>().Select(t => t.Text?.Trim()).Where(t => !string.IsNullOrEmpty(t))).Trim();
 
     /// <summary>The index of a list's entry by its text (any case), -1 when none.</summary>
-    private static int IndexOf(Avalonia.Controls.ComboBox box, string text)
+    internal static int IndexOf(Avalonia.Controls.ComboBox box, string text)
     {
         int i = 0;
         foreach (object? item in box.Items)

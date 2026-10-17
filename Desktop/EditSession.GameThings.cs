@@ -14,7 +14,7 @@ public sealed partial class EditSession
     /// <param name="gone">The ids the game removed (and the ones this session removed).</param>
     /// <param name="now">The objects the world has now, by id, for those changed or new.</param>
     /// <param name="changed">Gets the indices of the things changed or added.</param>
-    private void TakeThingChanges(HashSet<int> gone, Dictionary<int, WorldScene.Thing> now, List<int> changed)
+    internal void TakeThingChanges(HashSet<int> gone, Dictionary<int, WorldScene.Thing> now, List<int> changed)
     {
         var list = Scene.Things;
         lock (list)

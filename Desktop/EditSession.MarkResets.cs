@@ -31,7 +31,7 @@ public sealed partial class EditSession
     /// <param name="g">The ground.</param>
     /// <param name="zones">The zones (world zone column and row).</param>
     /// <returns>The points changed, and the grid box around them.</returns>
-    private (List<int> Touched, (int, int, int, int) Rect) ClearZoneGround(Ground g, IReadOnlyCollection<(int X, int Z)> zones)
+    internal (List<int> Touched, (int, int, int, int) Rect) ClearZoneGround(Ground g, IReadOnlyCollection<(int X, int Z)> zones)
     {
         var touched = new List<int>();
         foreach (var (zx, zz) in zones)

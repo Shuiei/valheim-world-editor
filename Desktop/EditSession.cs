@@ -83,7 +83,7 @@ public sealed partial class EditSession
     private long _nextOrder;
 
     /// <summary>A step's place in the order they were made; a step not seen yet comes after every other.</summary>
-    private long OrderOf(Change c) => _order.TryGetValue(c, out long o) ? o : _order[c] = _nextOrder++;
+    internal long OrderOf(Change c) => _order.TryGetValue(c, out long o) ? o : _order[c] = _nextOrder++;
 
     /// <summary>
     /// How many steps of the world's history were made in other areas and are kept aside here (they can be undone

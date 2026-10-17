@@ -10,7 +10,7 @@ public sealed partial class GlView
     /// The movement keys held now: the flat direction (X: right, Z: back), the up (Space) or down (C) amount, and
     /// whether Shift is held.
     /// </summary>
-    private (Vector3 Direction, float Up, bool Fast) HeldKeys()
+    internal (Vector3 Direction, float Up, bool Fast) HeldKeys()
     {
         Vector3 d = Vector3.Zero;
         bool fast;

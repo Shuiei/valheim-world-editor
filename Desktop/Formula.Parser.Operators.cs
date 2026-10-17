@@ -8,12 +8,12 @@ public static partial class Formula
     /// <summary>
     /// The formula's operators as parser rules.
     /// </summary>
-    private sealed partial class Parser
+    internal sealed partial class Parser
     {
         /// <summary>
         /// A power: the base, then ^ and the exponent (right to left).
         /// </summary>
-        private Func<Env, double> Power()
+        internal Func<Env, double> Power()
         {
             var a = Primary();
             if (Eat("^"))
@@ -29,7 +29,7 @@ public static partial class Formula
         /// </summary>
         /// <param name="operand">Reads one operand of the level.</param>
         /// <param name="ops">The level's operators, by sign.</param>
-        private Func<Env, double> Chain(Func<Func<Env, double>> operand, Dictionary<string, Func<double, double, double>> ops)
+        internal Func<Env, double> Chain(Func<Func<Env, double>> operand, Dictionary<string, Func<double, double, double>> ops)
         {
             var a = operand();
             while (Peek()?.Op is { } op && ops.ContainsKey(op))
@@ -46,17 +46,17 @@ public static partial class Formula
         /// <summary>
         /// Products and remainders.
         /// </summary>
-        private Func<Env, double> Product() => Chain(Power, Products);
+        internal Func<Env, double> Product() => Chain(Power, Products);
 
         /// <summary>
         /// Sums and differences.
         /// </summary>
-        private Func<Env, double> Sum() => Chain(Product, Sums);
+        internal Func<Env, double> Sum() => Chain(Product, Sums);
 
         /// <summary>
         /// The choice a ? b : c, the loosest operator.
         /// </summary>
-        private Func<Env, double> Ternary()
+        internal Func<Env, double> Ternary()
         {
             var c = Or();
             if (Eat("?"))

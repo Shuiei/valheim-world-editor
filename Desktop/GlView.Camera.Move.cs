@@ -9,7 +9,7 @@ public sealed partial class GlView
     /// Moves the camera by the keys held (WASD or arrows; Space and C up and down when flying; Shift faster when
     /// walking or flying) for <paramref name="dt"/> seconds (at most 0.1). True when it moved.
     /// </summary>
-    private bool MoveWithKeys(float dt)
+    internal bool MoveWithKeys(float dt)
     {
         var (d, up, fast) = HeldKeys();
         lock (_camLock)
@@ -37,7 +37,7 @@ public sealed partial class GlView
     /// <param name="d">The keys' direction: X right, Z back, Y up (flying only).</param>
     /// <param name="dt">The seconds moved for (at most 0.1).</param>
     /// <param name="fast">Shift held: running, or flying faster.</param>
-    private void MoveBy(Vector3 d, float dt, bool fast)
+    internal void MoveBy(Vector3 d, float dt, bool fast)
     {
         float c = MathF.Cos(_yaw), sn = MathF.Sin(_yaw);
         var flat = new Vector3(d.X * c + d.Z * sn, 0, -d.X * sn + d.Z * c);

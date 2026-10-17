@@ -10,7 +10,7 @@ public sealed partial class EditSession
     /// <summary>
     /// Fits the changes of a kept history to the open area (see <see cref="EditSession.Import"/>).
     /// </summary>
-    private sealed partial class KeptFit
+    internal sealed partial class KeptFit
     {
         /// <summary>The session fitted into.</summary>
         private readonly EditSession _session;
@@ -64,7 +64,7 @@ public sealed partial class EditSession
         /// then pending); null when neither.
         /// </summary>
         /// <param name="id">The object id.</param>
-        private int? Thing(int id)
+        internal int? Thing(int id)
         {
             if (_index.TryGetValue(id, out int i))
             {
@@ -84,7 +84,7 @@ public sealed partial class EditSession
         /// </summary>
         /// <param name="zones">The zones in the change's frame.</param>
         /// <param name="f">The frame the zones are in.</param>
-        private (List<(int X, int Z)> Zones, int Inside) Zones(List<(int X, int Z)> zones, Frame f)
+        internal (List<(int X, int Z)> Zones, int Inside) Zones(List<(int X, int Z)> zones, Frame f)
         {
             var scene = _session.Scene;
             var r = zones.Select(z => (X: z.X + f.X0 - scene.X0, Z: z.Z + f.Z0 - scene.Z0)).ToList();

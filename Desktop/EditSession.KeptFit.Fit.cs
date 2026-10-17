@@ -9,14 +9,14 @@ public sealed partial class EditSession
     /// <summary>
     /// Fits the changes of a kept history to the open area (see <see cref="EditSession.Import"/>).
     /// </summary>
-    private sealed partial class KeptFit
+    internal sealed partial class KeptFit
     {
         /// <summary>
         /// The points in this area's grid (-1 for one outside it, or locked), and how many are in.
         /// </summary>
         /// <param name="pts">The points, indices in the change's frame.</param>
         /// <param name="f">The frame the points are in.</param>
-        private (int[] Points, int Inside) Points(int[] pts, Frame f)
+        internal (int[] Points, int Inside) Points(int[] pts, Frame f)
         {
             var ground = _session.Ground;
             int[] r = new int[pts.Length];

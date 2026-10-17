@@ -52,7 +52,7 @@ public sealed partial class EditSession
     /// Takes things away or brings them back, in the scene and in the edit store (an object added in this session goes
     /// to its trash, so it can come back).
     /// </summary>
-    private void SetGone(IEnumerable<(int Index, bool Gone)> things)
+    internal void SetGone(IEnumerable<(int Index, bool Gone)> things)
     {
         var list = Scene.Things;
         lock (list)
@@ -78,7 +78,7 @@ public sealed partial class EditSession
     /// <param name="add">New objects with whether each is a piece.</param>
     /// <returns>The indices of the things added, the things' changes (index, gone before, gone after) and the objects
     /// as they were given their ids.</returns>
-    private (List<int> Indices, List<(int, bool, bool)> Changes, List<NewObject> Added) ChangeThings(
+    internal (List<int> Indices, List<(int, bool, bool)> Changes, List<NewObject> Added) ChangeThings(
         IReadOnlyCollection<int> remove, IReadOnlyList<(NewObject Object, bool Piece)> add)
     {
         var list = Scene.Things;

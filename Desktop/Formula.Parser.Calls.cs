@@ -10,12 +10,12 @@ public static partial class Formula
     /// <summary>
     /// The formula's names and calls as parser rules.
     /// </summary>
-    private sealed partial class Parser
+    internal sealed partial class Parser
     {
         /// <summary>
         /// A name after it was read: a call when a bracket follows, else pi or a variable it may use.
         /// </summary>
-        private Func<Env, double> Name(string id)
+        internal Func<Env, double> Name(string id)
         {
             if (Eat("("))
             {
@@ -35,7 +35,7 @@ public static partial class Formula
         /// <summary>
         /// A call after its opening bracket: n(x, z) or one of the functions, with the number of arguments it takes.
         /// </summary>
-        private Func<Env, double> Call(string id)
+        internal Func<Env, double> Call(string id)
         {
             var args = Arguments();
             if (id == "n")
@@ -57,7 +57,7 @@ public static partial class Formula
         /// <summary>
         /// The arguments of a call, up to and including its closing bracket.
         /// </summary>
-        private List<Func<Env, double>> Arguments()
+        internal List<Func<Env, double>> Arguments()
         {
             var args = new List<Func<Env, double>>();
             if (!Eat(")"))
@@ -75,7 +75,7 @@ public static partial class Formula
         /// <summary>
         /// The noise call n(x, z), which takes exactly two arguments.
         /// </summary>
-        private static Func<Env, double> NoiseCall(List<Func<Env, double>> args)
+        internal static Func<Env, double> NoiseCall(List<Func<Env, double>> args)
         {
             if (args.Count != 2)
             {

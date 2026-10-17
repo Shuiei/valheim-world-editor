@@ -51,7 +51,7 @@ public sealed partial class EditSession
     /// Whether a world position (view space) is inside the area's zones.
     /// </summary>
     /// <param name="p">The position.</param>
-    private bool InsideArea(System.Numerics.Vector3 p) =>
+    internal bool InsideArea(System.Numerics.Vector3 p) =>
         p.X >= Scene.OriginX && p.X < (Scene.X0 + Scene.ZonesX - 1) * 64f + 32f
         && p.Z >= Scene.OriginZ && p.Z < (Scene.Z0 + Scene.ZonesZ - 1) * 64f + 32f;
 
@@ -60,7 +60,7 @@ public sealed partial class EditSession
     /// baseToo), and the edits.
     /// </summary>
     /// <param name="baseToo">Whether the generated ground is read again from the world (its discs or modifiers changed).</param>
-    private void ReadGround(bool baseToo)
+    internal void ReadGround(bool baseToo)
     {
         if (baseToo && Scene.Owner is { } owner)
         {

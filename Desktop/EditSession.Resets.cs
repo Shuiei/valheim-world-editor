@@ -14,7 +14,7 @@ public sealed partial class EditSession
     /// </summary>
     /// <param name="before">The zone's marking before the step.</param>
     /// <param name="after">Its marking after the step.</param>
-    private static IEnumerable<(ZoneReset Reset, bool Before, bool After)> ResetEntries(ZoneReset? before, ZoneReset? after)
+    internal static IEnumerable<(ZoneReset Reset, bool Before, bool After)> ResetEntries(ZoneReset? before, ZoneReset? after)
     {
         if (before == after)
         {
@@ -76,7 +76,7 @@ public sealed partial class EditSession
     /// (as paint); a later step's marking stays.
     /// </summary>
     /// <param name="c">The change taken out.</param>
-    private (ZoneReset Reset, bool Before, bool After)[] ResetsToRevert(Change c)
+    internal (ZoneReset Reset, bool Before, bool After)[] ResetsToRevert(Change c)
     {
         var marked = Edits.Resets.ToDictionary(r => (r.X, r.Z));
         return [.. c.Resets.GroupBy(r => (r.Reset.X, r.Reset.Z))

@@ -12,7 +12,7 @@ public sealed partial class EditSession
     /// change's own delta, the flags follow the change's marks where a later step did not move them. Under the lock.
     /// </summary>
     /// <param name="c">The change taken out.</param>
-    private void RevertPoints(Change c)
+    internal void RevertPoints(Change c)
     {
         var g = Ground;
         for (int k = 0; k < c.Points.Length; k++)
@@ -38,7 +38,7 @@ public sealed partial class EditSession
     /// <param name="c">The change taken out.</param>
     /// <param name="k">The change's index for the point (its values are in the change's order).</param>
     /// <param name="p">The point's index in the ground.</param>
-    private void RevertPaint(Change c, int k, int p)
+    internal void RevertPaint(Change c, int k, int p)
     {
         var g = Ground;
         bool samePaint = g.PMod[p] == c.After.PMod[k];

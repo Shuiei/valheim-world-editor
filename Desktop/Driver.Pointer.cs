@@ -7,7 +7,7 @@ namespace TerrainEditor.Desktop;
 public static partial class Driver
 {
     /// <summary>Key modifiers from their names (shift, ctrl, alt; others ignored).</summary>
-    private static Avalonia.Input.KeyModifiers Mods(IEnumerable<string> names)
+    internal static Avalonia.Input.KeyModifiers Mods(IEnumerable<string> names)
     {
         var m = Avalonia.Input.KeyModifiers.None;
         foreach (string n in names)

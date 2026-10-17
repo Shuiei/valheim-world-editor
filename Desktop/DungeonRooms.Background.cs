@@ -34,7 +34,7 @@ public static partial class DungeonRooms
     /// <param name="now">The scene's state when the read was asked for.</param>
     /// <param name="shown">What was shown before, kept when the read fails.</param>
     /// <param name="ready">Called when the read is done, or failed.</param>
-    private static void ReadInBackground(WorldScene s, (int Version, int Generation, int Count) now, IReadOnlyList<Dungeon> shown, Action ready)
+    internal static void ReadInBackground(WorldScene s, (int Version, int Generation, int Count) now, IReadOnlyList<Dungeon> shown, Action ready)
     {
         try
         {

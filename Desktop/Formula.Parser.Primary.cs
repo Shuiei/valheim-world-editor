@@ -10,12 +10,12 @@ public static partial class Formula
     /// <summary>
     /// The formula's primaries as parser rules.
     /// </summary>
-    private sealed partial class Parser
+    internal sealed partial class Parser
     {
         /// <summary>
         /// A primary (a number, a name, a call, a bracket or a unary sign), counting how deep the formula nests.
         /// </summary>
-        private Func<Env, double> Primary()
+        internal Func<Env, double> Primary()
         {
             if (++_depth > MaxDepth)
             {
@@ -34,7 +34,7 @@ public static partial class Formula
         /// <summary>
         /// Reads one primary from the next token.
         /// </summary>
-        private Func<Env, double> PrimaryAt()
+        internal Func<Env, double> PrimaryAt()
         {
             if (_i >= _toks.Count)
             {
