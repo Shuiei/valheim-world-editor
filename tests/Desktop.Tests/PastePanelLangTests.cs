@@ -18,11 +18,7 @@ public sealed class PastePanelLangTests
     public void PastePanelShowsOnlyCatalogueTexts()
     {
         using var pseudo = new PseudoLang();
-        var w = new MainWindow(load: false) { Width = 1400, Height = 900 };
-        w.Show();
-        var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(40, 30, 40), Vector3.Zero, 1, false));
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var (w, _) = TestWindows.EditingFlat(2, new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(40, 30, 40), Vector3.Zero, 1, false));
         var p = w.PastePanel;
         Assert.Empty(PseudoLang.Untranslated(p.Card));
 
