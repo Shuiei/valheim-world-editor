@@ -16,9 +16,13 @@ namespace TerrainEditor.Desktop;
 public sealed partial class MainWindow : Window
 {
     /// <summary>
-    /// The help card's frame rate, and what was loaded (newest first).
+    /// The help card's frame rate.
     /// </summary>
-    private readonly TextBlock _fps = new() { FontSize = 12.5, TextWrapping = TextWrapping.Wrap }, _info = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _fps = new() { FontSize = 12.5, TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// The help card's notes: how the area was loaded and the 3D view's status lines, newest first.
+    /// </summary>
+    internal TextBlock LoadedInfo { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
     /// <summary>
     /// Writes frame rates to a file while Record frame rates is on.
     /// </summary>
@@ -281,7 +285,7 @@ public sealed partial class MainWindow : Window
         var page = NewWorld = new NewWorldPage();
         page.BackRequested += () => { page.Dispose(); NewWorld = null; ShowStart(); };
         page.CreateRequested += async (folder, name, seed) => await CreateWorld(folder, name, seed);
-        Title = $"Valheim World Editor {BuildInfo.Version} · A new world";
+        Title = Lang.T("world.title.newWorld", BuildInfo.Version);
         _pages.Content = page.View;
     }
 
@@ -376,7 +380,7 @@ public sealed partial class MainWindow : Window
         {
             Busy(null);
             Tunnel.Close();
-            ShowStart($"Could not open the world: {ex.Message}");
+            ShowStart(Lang.T("world.msg.openFailed", ex.Message));
             return;
         }
         finally
@@ -487,7 +491,7 @@ public sealed partial class MainWindow : Window
     /// Whether the block was opened (no: the failure is said in the status bar; when this was the last area asked for
     /// and the 3D editor is left with no area open, the map is shown and the failure in a dialog).
     /// </returns>
-    internal async Task<bool> EditBlock(int x0, int z0, int zonesX, int zonesZ, (int X, int Z)? spot = null, string? context = null)
+    internal async Task<bool> EditBlock(int x0, int z0, int zonesX, int zonesZ, (int X, int Z)? spot = null, Said? context = null)
     {
         if (World is not { } world)
         {
@@ -496,8 +500,8 @@ public sealed partial class MainWindow : Window
         long navigation = ++_navigation;
         View.SelectTool.Commit();
         var left = KeepHistory();
-        Busy($"Loading {zonesX} × {zonesZ} zones…");
-        string failed;
+        Busy(Lang.T("world.msg.loadingZones", zonesX, zonesZ));
+        Said failed;
         try
         {
             await BeforeLoad();
@@ -509,31 +513,18 @@ public sealed partial class MainWindow : Window
                 {
                     world.Area = Session;
                 }
-                Report("That area was not opened: the map or another area was asked for while it loaded.");
+                Report(Said.Of("world.msg.areaDropped"));
                 return false;
             }
             // Shown: the world's area, even if a load dropped meanwhile had reset it.
             world.Area = scene.Session;
-            // Found by the map's search: selected, the camera on it (items and texts: in the inspector).
-            if (MapPage?.Target is var (id, inspect) && spot != null && MapPage.Spot == spot)
-            {
-                int i = scene.Things.FindIndex(t => t.Id == id && !t.Gone);
-                if (i >= 0)
-                {
-                    View.Focus(scene.Things[i].Position);
-                    View.Select([i]);
-                    if (inspect)
-                    {
-                        Inspect();
-                    }
-                }
-            }
+            FocusSearchTarget(scene, spot);
             return true;
         }
         catch (Exception ex)
         {
             Unleave(left, navigation);
-            failed = context + "Could not open that area: " + ex.Message;
+            failed = (context ?? Said.Empty) + Said.Of("world.msg.openAreaFailed", ex.Message);
             Report(failed);
         }
         finally
@@ -545,12 +536,12 @@ public sealed partial class MainWindow : Window
         if (navigation == _navigation && Session == null && _pages.Content == _editorPage)
         {
             ShowMap();
-            await Tell(failed);
+            await Tell(failed.Shown);
         }
         return false;
 
         // The world left meanwhile: only the status bar, no dialog about a world no longer open.
-        void Report(string text)
+        void Report(Said text)
         {
             if (World == world)
             {
@@ -558,8 +549,33 @@ public sealed partial class MainWindow : Window
             }
             else
             {
-                MessageText.Text = text;
+                Msg(text);
             }
+        }
+    }
+
+    /// <summary>
+    /// An object the map's search found, when the area was opened around its zone: selected, the camera on it (items
+    /// and texts: in the inspector).
+    /// </summary>
+    /// <param name="scene">The area just shown.</param>
+    /// <param name="spot">The map's chosen zone the area was opened around, if it was.</param>
+    private void FocusSearchTarget(WorldScene scene, (int X, int Z)? spot)
+    {
+        if (MapPage?.Target is not var (id, inspect) || spot == null || MapPage.Spot != spot)
+        {
+            return;
+        }
+        int i = scene.Things.FindIndex(t => t.Id == id && !t.Gone);
+        if (i < 0)
+        {
+            return;
+        }
+        View.Focus(scene.Things[i].Position);
+        View.Select([i]);
+        if (inspect)
+        {
+            Inspect();
         }
     }
 
@@ -594,7 +610,7 @@ public sealed partial class MainWindow : Window
         View.Tape.Clear();
         PlaceTool.ClearShape();
         Inspector.Close();
-        _info.Text = scene.LoadInfo + (_models == null ? "\nNo game models: Valheim was not found, boxes stand in (choose its folder on the start page)." : "");
+        LoadedInfo.Text = scene.LoadInfo + (_models == null ? "\n" + Lang.T("world.msg.noModels") : "");
         View.Show(scene, _models);
         if (scene.Session != null)
         {
@@ -604,7 +620,7 @@ public sealed partial class MainWindow : Window
         AreaPanel.Refresh();
         MapButton.IsVisible = scene.Owner != null && !Options.Direct;
         _title.Text = scene.Name;
-        _subtitle.Text = $"{scene.ZonesX} × {scene.ZonesZ} zones, from zone {scene.X0}, {scene.Z0} to {scene.X0 + scene.ZonesX - 1}, {scene.Z0 + scene.ZonesZ - 1} · {scene.Things.Count(t => !t.Gone):N0} objects";
+        _subtitle.Text = Lang.T("world.areaInfo", scene.ZonesX, scene.ZonesZ, scene.X0, scene.Z0, scene.X0 + scene.ZonesX - 1, scene.Z0 + scene.ZonesZ - 1, scene.Things.Count(t => !t.Gone));
         Title = $"{scene.Name} · Valheim World Editor {BuildInfo.Version}";
         _pages.Content = _editorPage;
         EditorOpened(scene);
@@ -805,21 +821,34 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+        if (await ReloadFromGame(w) is { } failed)
+        {
+            Say(failed);
+        }
+        MapPage?.Show(w);
+    }
+
+    /// <summary>
+    /// Live: reads the world from the game again behind the busy veil (the map's Reload and the 3D editor's).
+    /// </summary>
+    /// <param name="w">The live world.</param>
+    /// <returns>Why the game could not be read (unreachable, or the bridge's answer: a refusal, broken JSON); null when read.</returns>
+    private async Task<Said?> ReloadFromGame(WorldSession w)
+    {
         Busy(Lang.T("save.msg.loadingLive"));
         try
         {
             await w.Reload();
+            return null;
         }
-        // As ReloadHere: the bridge's answers (a refusal, broken JSON) too.
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException or System.Text.Json.JsonException)
         {
-            Say(Said.Of("save.msg.unreachable", ex.Message));
+            return Said.Of("save.msg.unreachable", ex.Message);
         }
         finally
         {
             Busy(null);
         }
-        MapPage?.Show(w);
     }
 
     /// <summary>
@@ -2104,7 +2133,7 @@ public sealed partial class MainWindow : Window
                     Ui.Hint("Edits stay within the game's limit of ±8 m from the original ground; points at the limit turn red (View: Limit marks)."),
                     Ui.Hint("The outer line of points is locked so the area always joins its neighbours seamlessly."),
                     Ui.Heading("This computer"),
-                    _fps, _info, record,
+                    _fps, LoadedInfo, record,
                 },
             },
         });
@@ -2600,7 +2629,7 @@ public sealed partial class MainWindow : Window
         // Once really closed (Closing also comes when "Keep editing" keeps the window open).
         Closed += (_, _) => { MapPage?.Dispose(); _perf.Flush(); Prefs.Flush(); PlacePanel.Memory.Flush(); };
         RememberPrefs();
-        _info.Text = "Loading the world…";
+        LoadedInfo.Text = Lang.T("world.msg.loading");
         Opened += async (_, _) => await OnOpenedAsync(load);
     }
 
@@ -3103,7 +3132,7 @@ public sealed partial class MainWindow : Window
             GlView.EyeMode.Fly => "Flying: WASD moves, Space up, C down (Shift faster) · F back to the usual view",
             _ => "",
         };
-        View.Status += t => { Options.Say(t); Dispatcher.UIThread.Post(() => _info.Text = t + "\n" + _info.Text); };
+        View.Status += t => { Options.Say(t.English); Dispatcher.UIThread.Post(() => LoadedInfo.Text = t.Shown + "\n" + LoadedInfo.Text); };
     }
 
     /// <summary>
@@ -3156,8 +3185,8 @@ public sealed partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                _info.Text = "Could not open the world: " + ex.Message;
-                Options.Say(_info.Text);
+                LoadedInfo.Text = Lang.T("world.msg.openFailed", ex.Message);
+                Options.Say(Lang.En("world.msg.openFailed", ex.Message));
             }
         }
         else

@@ -607,7 +607,7 @@ public class WorldControlsTests
         r.W.View.Path.Points.Clear();
         // A stroke on.
         r.W.Session!.BeginStroke(BrushTool.Raise, 32, 32);
-        Assert.Equal("a stroke is on", r.W.MoveBlocker());
+        Assert.Equal("a stroke is on", r.W.MoveBlocker()?.English);
         r.W.Session.EndStroke();
         Assert.Null(r.W.MoveBlocker());
         // Nothing in the way: it grows.
@@ -621,7 +621,7 @@ public class WorldControlsTests
         await r.OpenLive();
         r.Raise();
         var apply = r.W.ApplyNow();
-        Assert.Equal("changes are still being sent", r.W.MoveBlocker());
+        Assert.Equal("changes are still being sent", r.W.MoveBlocker()?.English);
         await apply;
         Assert.Null(r.W.MoveBlocker());
     }

@@ -34,7 +34,7 @@ public class GlViewModelsTests
         var w = new Window { Width = 400, Height = 300, Content = v };
         w.Show();
         var said = new List<string>();
-        v.Status += said.Add;
+        v.Status += s => said.Add(s.Shown);
         var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(32, 30, 32), Vector3.Zero, 0, false));
         v.Show(s.Scene, new ModelStore(new TextureTooBig()));
         // Headless, nothing is drawn: the models are read as the first frame would have them read, on a worker thread.

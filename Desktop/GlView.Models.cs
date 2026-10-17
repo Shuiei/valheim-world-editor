@@ -415,7 +415,7 @@ public sealed partial class GlView
                 // memory running out on a texture) is said, and the kind's things get the stand-in box rather than
                 // nothing at all: drawn, picked, and their ghosts shown. The textures read go up with it, as any
                 // model's; those claimed and not read are let go, for another loader to read.
-                Status?.Invoke($"Model of {g.Key.Prefab}: {ex.Message}");
+                Status?.Invoke(Said.Of("world.msg.modelFailed", g.Key.Prefab, ex.Message));
                 lock (_textures)
                 {
                     foreach (string file in claimed)
@@ -473,7 +473,7 @@ public sealed partial class GlView
             _textures.Clear();
             _claimed.Clear();
         }
-        Status?.Invoke($"Models let go from the graphics card ({_gpuBytes >> 20} MB): this area's are read again.");
+        Status?.Invoke(Said.Of("world.msg.modelsFreed", _gpuBytes >> 20));
         _gpuBytes = 0;
     }
 

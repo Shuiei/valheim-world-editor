@@ -77,7 +77,7 @@ public sealed partial class GlView
             {
                 made.Delete();
                 _lookFiles = null;
-                Status?.Invoke("Game look could not be set up: " + ex.Message);
+                Status?.Invoke(Said.Of("world.msg.lookSetupFailed", ex.Message));
             }
         }
         if (s != null && _thingsReset)
