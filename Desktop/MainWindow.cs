@@ -2446,7 +2446,7 @@ public sealed partial class MainWindow : Window
         list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 6, 0, 0), Children = { DefaultsButton, AllButton, GroundButton } });
         list.Children.Add(Heading(Lang.T("view.head.building")));
         BuilderBox.Tip("view.builder");
-        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = Lang.T("select.ask.playerId.title"), FontSize = 12 }, BuilderBox } });
+        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = Lang.T("view.label.builtBy"), FontSize = 12 }, BuilderBox } });
         list.Children.Add(Heading(Lang.T("view.head.ground")));
         list.Children.Add(SlopeBox);
         list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ContourBox, ContourStepBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } });
