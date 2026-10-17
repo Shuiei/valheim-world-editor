@@ -73,4 +73,67 @@ public class CopyFormatBranchesTests
         Assert.Contains(pixels, p => p == new SKColor(170, 135, 90));
         Assert.Contains(pixels, p => p == new SKColor(125, 145, 85));
     }
+
+    [Fact]
+    public void AGridSizeIsAcceptedAsItIs()
+    {
+        Assert.Null(Record.Exception(() => CopyFormat.CheckSize(2, 3)));
+    }
+
+    [Fact]
+    public void ANonPositiveSizeIsNotAGrid()
+    {
+        Assert.Contains("is not a grid", Assert.Throws<FormatException>(() => CopyFormat.CheckSize(0, 3)).Message);
+    }
+
+    [Fact]
+    public void ASizeWhoseDiagonalDoesNotFitIsTooLargeToPaste()
+    {
+        Assert.Contains("is too large to paste", Assert.Throws<FormatException>(() => CopyFormat.CheckSize(50000, 10)).Message);
+    }
+
+    [Fact]
+    public void AnObjectWithANameIsAcceptedByTheNameCheck()
+    {
+        Assert.Null(Record.Exception(() => CopyFormat.CheckNames(JsonNode.Parse("[{\"name\":\"Beech\"}]")!.AsArray())));
+    }
+
+    [Fact]
+    public void AnObjectWithoutANameFailsTheNameCheck()
+    {
+        Assert.Contains("has no name", Assert.Throws<FormatException>(() => CopyFormat.CheckNames(JsonNode.Parse("[{\"dx\":1}]")!.AsArray())).Message);
+    }
+
+    [Fact]
+    public void AnOutlinePointWithFiniteCoordinatesPassesTheOutlineCheck()
+    {
+        Assert.Null(Record.Exception(() => CopyFormat.CheckOutline(JsonNode.Parse("{\"poly\":[{\"gx\":1,\"gz\":2}]}")!.AsObject())));
+    }
+
+    [Fact]
+    public void AnOutlinePointThatIsNotACoordinateFailsTheOutlineCheck()
+    {
+        Assert.Contains("outline is not a point", Assert.Throws<FormatException>(() => CopyFormat.CheckOutline(JsonNode.Parse("{\"poly\":[{\"gx\":\"a\",\"gz\":2}]}")!.AsObject())).Message);
+    }
+
+    [Fact]
+    public void ACopysObjectsListIsReturnedAsIt()
+    {
+        var list = CopyFormat.ObjectsOf(JsonNode.Parse("{\"objects\":[{\"name\":\"Beech\"}]}")!.AsObject());
+        Assert.Single(list);
+    }
+
+    [Fact]
+    public void ACopyWithoutAnObjectsListFailsToRead()
+    {
+        Assert.Contains("no objects list", Assert.Throws<FormatException>(() => CopyFormat.ObjectsOf([])).Message);
+    }
+
+    [Fact]
+    public void ObjectsAreReadWithTheirNameAndOffset()
+    {
+        var list = CopyFormat.ObjectsFrom(JsonNode.Parse("[{\"name\":\"Beech\",\"dx\":2}]")!.AsArray(), true);
+        var o = Assert.Single(list);
+        Assert.Equal(("Beech", 2f), (o.Name, o.Dx));
+    }
 }
