@@ -27,12 +27,9 @@ public sealed class ModExtensionsTests : IDisposable
         ModExtensions.Forget();
         ModManifests.Forget();
         LocalGame.SearchDefaultPlaces = _defaults;
-        try
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, true);
-        }
-        catch (IOException)
-        {
         }
     }
 

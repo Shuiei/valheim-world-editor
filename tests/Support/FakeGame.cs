@@ -13,6 +13,8 @@ namespace WorldEditor.Tests;
 public sealed class FakeGame : IDisposable
 {
     private readonly HttpListener _listener = new();
+    /// <summary>Answering the requests: Dispose waits for it to end, and its errors fail the test.</summary>
+    private readonly Task _serving;
     private readonly byte[] _snapshot;
 
     public int Port { get; }
@@ -59,7 +61,7 @@ public sealed class FakeGame : IDisposable
         Port = FreePort();
         _listener.Prefixes.Add($"http://127.0.0.1:{Port}/");
         _listener.Start();
-        _ = Task.Run(Serve);
+        _serving = Task.Run(Serve);
     }
 
     // The fixture world as the plugin sends it.
@@ -86,8 +88,9 @@ public sealed class FakeGame : IDisposable
             {
                 ctx = await _listener.GetContextAsync();
             }
-            catch
+            catch (Exception) when (!_listener.IsListening)
             {
+                // Closed (Dispose): the wait for the next request ends with an error, and so does the serving.
                 return;
             }
             // Each request on its own: a held one (HoldTerrain) or a broken connection never keeps the others
@@ -301,6 +304,10 @@ public sealed class FakeGame : IDisposable
         return p;
     }
 
-    /// <inheritdoc/>
-    public void Dispose() => _listener.Close();
+    /// <summary>Stops answering and waits until the wait for requests has ended; an error in it fails the test.</summary>
+    public void Dispose()
+    {
+        _listener.Close();
+        Assert.True(_serving.Wait(TimeSpan.FromSeconds(30)), "the stand-in game did not stop answering");
+    }
 }

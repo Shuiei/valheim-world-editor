@@ -26,16 +26,14 @@ public class WorldWriterCheckTests
     }
 
     /// <summary>
-    /// Deletes a copy of the test world, quietly.
+    /// Deletes a copy of the test world, if it is still there; a failure to delete it fails the test.
     /// </summary>
     private static void Delete(string dir)
     {
-        try
+        string folder = Path.GetDirectoryName(dir)!;
+        if (Directory.Exists(folder))
         {
-            Directory.Delete(Path.GetDirectoryName(dir)!, true);
-        }
-        catch (IOException)
-        {
+            Directory.Delete(folder, true);
         }
     }
 

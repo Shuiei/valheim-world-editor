@@ -77,12 +77,9 @@ internal sealed class ClaudeRun : IDisposable
         Game?.Dispose();
         foreach (string d in new[] { Path.GetDirectoryName(Dir)!, Homestead })
         {
-            try
+            if (Directory.Exists(d))
             {
                 Directory.Delete(d, true);
-            }
-            catch
-            {
             }
         }
     }

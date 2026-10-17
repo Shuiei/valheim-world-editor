@@ -29,12 +29,9 @@ public sealed class TinyBudgetEditorProcess() : EditorProcess(Start(), new Dicti
     public override void Dispose()
     {
         base.Dispose();
-        try
+        if (Directory.Exists(_copy))
         {
             Directory.Delete(_copy!, true);
-        }
-        catch
-        {
         }
     }
 }

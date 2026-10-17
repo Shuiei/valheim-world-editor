@@ -36,12 +36,9 @@ public sealed class ModCatalogueTests : IDisposable
         ModCatalogue.Forget();
         GameData.UseCopies(Fixtures.Root);
         AppSettings.DataDirOverride = _dataDir;
-        try
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, true);
-        }
-        catch (IOException)
-        {
         }
     }
 

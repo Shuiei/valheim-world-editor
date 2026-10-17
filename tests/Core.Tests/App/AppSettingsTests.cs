@@ -37,12 +37,9 @@ public class AppSettingsTests : IDisposable
         Environment.SetEnvironmentVariable("XDG_DATA_HOME", _old);
         ServerConfig.PathOverride = _oldServers;
         AppSettings.DataDirOverride = _oldDataDir;
-        try
+        if (Directory.Exists(_data))
         {
             Directory.Delete(_data, true);
-        }
-        catch
-        {
         }
         GC.SuppressFinalize(this);
     }

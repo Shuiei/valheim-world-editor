@@ -62,12 +62,10 @@ public class WindowFlowTests
         /// <inheritdoc/>
         public void Dispose()
         {
-            try
+            string folder = Path.GetDirectoryName(Dir)!;
+            if (Directory.Exists(folder))
             {
-                Directory.Delete(Path.GetDirectoryName(Dir)!, true);
-            }
-            catch
-            {
+                Directory.Delete(folder, true);
             }
         }
     }

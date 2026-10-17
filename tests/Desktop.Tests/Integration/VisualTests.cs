@@ -18,12 +18,9 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        try
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, true);
-        }
-        catch
-        {
         }
     }
 

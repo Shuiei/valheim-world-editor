@@ -28,12 +28,9 @@ public sealed class DirectEditorProcess() : EditorProcess(Start())
     public override void Dispose()
     {
         base.Dispose();
-        try
+        if (Directory.Exists(_copy))
         {
             Directory.Delete(_copy!, true);
-        }
-        catch
-        {
         }
     }
 }

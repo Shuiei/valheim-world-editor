@@ -22,12 +22,9 @@ public sealed class ScriptPanelTests : IDisposable
     public void Dispose()
     {
         AppSettings.DataDirOverride = _old;
-        try
+        if (Directory.Exists(_data))
         {
             Directory.Delete(_data, true);
-        }
-        catch
-        {
         }
     }
 

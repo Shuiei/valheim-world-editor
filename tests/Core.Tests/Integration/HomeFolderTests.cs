@@ -60,12 +60,9 @@ public sealed class HomeFolderTests : IDisposable
         AppSettings.DataDirOverride = _dataDir;
         ServerConfig.PathOverride = _servers;
         LocalGame.SearchDefaultPlaces = _defaults;
-        try
+        if (Directory.Exists(_home))
         {
             Directory.Delete(_home, true);
-        }
-        catch
-        {
         }
     }
 
@@ -441,33 +438,42 @@ public sealed class HomeFolderTests : IDisposable
     private sealed class Status(int code, string body) : IDisposable
     {
         private readonly HttpListener _l = new();
+        /// <summary>Answering the requests: Dispose waits for it to end, and its errors fail the test.</summary>
+        private Task _serving = Task.CompletedTask;
         public int Port { get; } = FakeGame.FreePort();
 
         public Status Start()
         {
             _l.Prefixes.Add($"http://127.0.0.1:{Port}/");
             _l.Start();
-            _ = Task.Run(async () =>
+            _serving = Task.Run(async () =>
             {
-                while (_l.IsListening)
+                while (true)
                 {
+                    HttpListenerContext ctx;
                     try
                     {
-                        var ctx = await _l.GetContextAsync();
-                        ctx.Response.StatusCode = code;
-                        await ctx.Response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(body));
-                        ctx.Response.Close();
+                        ctx = await _l.GetContextAsync();
                     }
-                    catch (Exception)
+                    catch (Exception) when (!_l.IsListening)
                     {
+                        // Closed (Dispose): the wait for the next request ends with an error, and so does the serving.
                         return;
                     }
+                    ctx.Response.StatusCode = code;
+                    await ctx.Response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(body));
+                    ctx.Response.Close();
                 }
             });
             return this;
         }
 
-        public void Dispose() => _l.Close();
+        /// <summary>Stops answering and waits until the answering has ended; an error in it fails the test.</summary>
+        public void Dispose()
+        {
+            _l.Close();
+            Assert.True(_serving.Wait(TimeSpan.FromSeconds(30)), "the status server did not stop answering");
+        }
     }
 
     [Fact]

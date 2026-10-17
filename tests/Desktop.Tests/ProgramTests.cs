@@ -55,12 +55,9 @@ public sealed class ProgramTests
         }
         finally
         {
-            try
+            if (Directory.Exists(home))
             {
                 Directory.Delete(home, true);
-            }
-            catch (IOException)
-            {
             }
         }
     }

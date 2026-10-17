@@ -71,7 +71,9 @@ public class EditorProcess : IDisposable
         if (first != "@@ ready")
         {
             Why = "the editor did not start: " + first;
-            _p.Kill();
+            // Ended before its data folder is deleted (Dispose), which it may still be writing.
+            _p.Kill(entireProcessTree: true);
+            Assert.True(_p.WaitForExit(15000), "the editor did not end within 15 s of being killed");
             _p = null;
         }
     }
@@ -146,25 +148,19 @@ public class EditorProcess : IDisposable
     {
         if (_p != null)
         {
-            try
+            // An editor that ended before being told to quit failed: telling it then throws, and fails the clean-up.
+            _p.StandardInput.WriteLine("quit");
+            _p.StandardInput.Flush();
+            if (!_p.WaitForExit(15000))
             {
-                _p.StandardInput.WriteLine("quit");
-                _p.StandardInput.Flush();
-                if (!_p.WaitForExit(15000))
-                {
-                    _p.Kill();
-                }
-            }
-            catch
-            {
+                // Ended before its data folder is deleted, which it may still be writing.
+                _p.Kill(entireProcessTree: true);
+                Assert.True(_p.WaitForExit(15000), "the editor did not end within 15 s of being killed");
             }
         }
-        try
+        if (Directory.Exists(Data))
         {
             Directory.Delete(Data, true);
-        }
-        catch
-        {
         }
         GC.SuppressFinalize(this);
     }

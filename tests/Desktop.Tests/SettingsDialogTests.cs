@@ -46,12 +46,9 @@ public class SettingsDialogTests
         /// <inheritdoc/>
         public void Dispose()
         {
-            try
+            if (Directory.Exists(Root))
             {
                 Directory.Delete(Root, true);
-            }
-            catch
-            {
             }
         }
     }

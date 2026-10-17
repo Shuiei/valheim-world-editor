@@ -19,6 +19,10 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
     private readonly string? _home = Environment.GetEnvironmentVariable("HOME");
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-tunnel-" + Guid.NewGuid().ToString("N")[..8]);
     private readonly TcpListener _bridge = new(IPAddress.Loopback, 0);
+    /// <summary>Ends the stand-in plugin's wait for the next connection (Dispose).</summary>
+    private readonly CancellationTokenSource _stop = new();
+    /// <summary>The stand-in plugin's work: Dispose waits for it to end, and its errors fail the test.</summary>
+    private readonly Task _hello;
 
     public TunnelTests(LocalSshd ssh)
     {
@@ -30,20 +34,30 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         Environment.SetEnvironmentVariable("HOME", Path.Combine(_dir, "empty-home"));
         // The stand-in plugin: says hello to whoever comes through the tunnel.
         _bridge.Start();
-        _ = Task.Run(async () =>
+        _hello = Task.Run(SayHello);
+    }
+
+    /// <summary>
+    /// Says hello to each connection until Dispose stops it.
+    /// </summary>
+    private async Task SayHello()
+    {
+        while (true)
         {
+            TcpClient c;
             try
             {
-                while (true)
-                {
-                    using var c = await _bridge.AcceptTcpClientAsync();
-                    await c.GetStream().WriteAsync(Encoding.ASCII.GetBytes("hello from the plugin\n"));
-                }
+                c = await _bridge.AcceptTcpClientAsync(_stop.Token);
             }
-            catch
+            catch (OperationCanceledException) when (_stop.IsCancellationRequested)
             {
+                return;
             }
-        });
+            using (c)
+            {
+                await c.GetStream().WriteAsync(Encoding.ASCII.GetBytes("hello from the plugin\n"));
+            }
+        }
     }
 
     private int BridgePort => ((IPEndPoint)_bridge.LocalEndpoint).Port;
@@ -51,15 +65,15 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
     public void Dispose()
     {
         Tunnel.Close();
-        _bridge.Stop();
         ServerConfig.PathOverride = _servers;
         Environment.SetEnvironmentVariable("HOME", _home);
-        try
+        _stop.Cancel();
+        Assert.True(_hello.Wait(TimeSpan.FromSeconds(30)), "the stand-in plugin did not stop");
+        _stop.Dispose();
+        _bridge.Stop();
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, true);
-        }
-        catch
-        {
         }
     }
 

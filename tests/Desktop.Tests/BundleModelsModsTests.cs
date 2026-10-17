@@ -72,12 +72,9 @@ public sealed class BundleModelsModsTests : IDisposable
         AppSettings.DataDirOverride = _dataDir;
         _game.Dispose();
         _mods.Dispose();
-        try
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, true);
-        }
-        catch (IOException)
-        {
         }
     }
 

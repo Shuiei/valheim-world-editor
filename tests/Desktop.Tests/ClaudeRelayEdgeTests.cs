@@ -88,12 +88,9 @@ public class ClaudeRelayEdgeTests
         }
         finally
         {
-            try
+            if (Directory.Exists(home))
             {
                 Directory.Delete(home, true);
-            }
-            catch (IOException)
-            {
             }
         }
     }
