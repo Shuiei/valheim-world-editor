@@ -7,7 +7,7 @@ namespace TerrainEditor.Desktop;
 public static partial class BuildingPicture
 {
     /// <summary>The piece's colliders as boxes in its material's colour (a stand-in box when the game has none).</summary>
-    private static void AddBoxes(List<Tri> tris, Piece p)
+    internal static void AddBoxes(List<Tri> tris, Piece p)
     {
         var (material, boxes) = Stability.Shape(p.Name);
         var colour = material >= 0 && material < MaterialColours.Length ? MaterialColours[material] : new Vector3(130, 130, 130);

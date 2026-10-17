@@ -21,7 +21,7 @@ public sealed partial class PlaceTool
     /// The ends of a set of points (snap points or box corners) given as separate x, y and z lists; null when shorter
     /// than 5 cm.
     /// </summary>
-    private static Ends? EndsFrom(float[] xs, float[] ys, float[] zs)
+    internal static Ends? EndsFrom(float[] xs, float[] ys, float[] zs)
     {
         float x0 = xs.Min(), x1 = xs.Max(), z0 = zs.Min(), z1 = zs.Max(), y = ys.Min();
         bool alongX = x1 - x0 >= z1 - z0 - 1e-3f;
