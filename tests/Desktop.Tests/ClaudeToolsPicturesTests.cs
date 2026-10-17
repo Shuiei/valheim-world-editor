@@ -138,4 +138,30 @@ public class ClaudeToolsPicturesTests
         Assert.Equal(1 + 1 + 4, written.Count);
         Assert.All(written, p => Assert.False(File.Exists(p)));
     }
+
+    // A look at the 3D view moves the camera for its picture only: the user's camera is as it was after the picture.
+    [AvaloniaFact]
+    public async Task ALookAtTheViewPutsTheUsersCameraBack()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        var kept = r.W.View.WorldCamera;
+        object? during = null;
+        string path = Path.Combine(Path.GetTempPath(), $"vwe-claude-{Guid.NewGuid():N}.png");
+        r.T.ViewPicture = p =>
+        {
+            during = r.W.View.WorldCamera;
+            return Png(p, 16, 9, SKColors.SkyBlue);
+        };
+        try
+        {
+            await r.T.ShootView(path, () => r.W.View.Orbit(0, 0, 271, 20, 50));
+            Assert.NotEqual(kept, during);
+            Assert.Equal(kept, r.W.View.WorldCamera);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }

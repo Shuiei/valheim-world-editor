@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text.Json;
-using SkiaSharp;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -12,25 +11,14 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 [Collection("Visual game look")]
 [Trait("Category", "Visual")]
-public sealed class GameLookVisualTests(GameLookEditorProcess editor) : IDisposable
+public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPicturesTestBase("look-pics")
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-visual-look-pics-" + Guid.NewGuid().ToString("N")[..8]);
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        if (Directory.Exists(_dir))
-        {
-            Directory.Delete(_dir, true);
-        }
-    }
-
     [Fact]
     public void TheGamesLookIsReadFromItsFilesAndDrawn()
     {
         Assert.SkipUnless(editor.Available, editor.Why ?? "");
         Assert.SkipUnless(OperatingSystem.IsLinux(), "the made-up game is found in the home's Steam library only on Linux");
-        Directory.CreateDirectory(_dir);
+        Directory.CreateDirectory(Dir);
         BackToStart(editor);
         OpenArea(editor, 2);
         WaitForGameLook(editor);
@@ -108,22 +96,10 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : IDisposa
     /// </summary>
     private double Picture(string name)
     {
-        string path = Path.Combine(_dir, name + ".png");
+        string path = Path.Combine(Dir, name + ".png");
         JsonElement s = editor.Send($"picture {path}");
         Assert.Equal("editor", s.GetProperty("page").GetString());
-        using var bmp = SKBitmap.Decode(path);
-        Assert.NotNull(bmp);
-        int dark = 0, n = 0;
-        for (int y = 0; y < bmp.Height; y += 3)
-        {
-            for (int x = 0; x < bmp.Width; x += 3)
-            {
-                var c = bmp.GetPixel(x, y);
-                dark += 0.2126 * c.Red + 0.7152 * c.Green + 0.0722 * c.Blue < 12 ? 1 : 0;
-                n++;
-            }
-        }
-        return dark / (double)n;
+        return PictureLook.Of(path).Dark;
     }
 
     /// <summary>

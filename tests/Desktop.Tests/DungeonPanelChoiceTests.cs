@@ -25,10 +25,7 @@ public class DungeonPanelChoiceTests
         try
         {
             var scene = WorldScene.Load(dir, 0, 0, 1);
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            w.View.Show(scene, null);
-            w.Edit(scene.Session!);
+            var w = TestWindows.Editing(scene.Session!);
             // Nothing open yet: Inside does nothing.
             w.DungeonPanel.Inside();
             Assert.Null(w.View.CutY);

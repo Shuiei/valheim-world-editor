@@ -16,10 +16,10 @@ public class UnityShimTests
     [Fact]
     public void TwoDimensionalVectors()
     {
-        Assert.Equal(new Vector2(0, 1), Vector2.up);
-        Assert.Equal(new Vector2(0, -1), Vector2.down);
-        Assert.Equal(new Vector2(-1, 0), Vector2.left);
-        Assert.Equal(new Vector2(1, 0), Vector2.right);
+        Assert.Equal(new Vector2(0, 1), Vector2.Up);
+        Assert.Equal(new Vector2(0, -1), Vector2.Down);
+        Assert.Equal(new Vector2(-1, 0), Vector2.Left);
+        Assert.Equal(new Vector2(1, 0), Vector2.Right);
         Assert.Equal(new Vector2(-2, 3), -new Vector2(2, -3));
         Assert.Equal(new Vector2(4, 6), 2f * new Vector2(2, 3));
         Assert.True(new Vector2(1, 2) != new Vector2(1, 3));
@@ -79,18 +79,18 @@ public class UnityShimTests
     public void ThreeDimensionalVectors()
     {
         var v = new Vector3(3, 0, 4);
-        Assert.Equal(5f, v.magnitude);
-        var n = v.normalized;
-        Assert.Equal(0.6f, n.x, 5);
-        Assert.Equal(0.8f, n.z, 5);
+        Assert.Equal(5f, v.Magnitude);
+        var n = v.Normalized;
+        Assert.Equal(0.6f, n.X, 5);
+        Assert.Equal(0.8f, n.Z, 5);
         // A vector too short to have a direction normalizes to zero.
-        var z = new Vector3(0, 1e-6f, 0).normalized;
-        Assert.Equal(0f, z.x + z.y + z.z);
-        Assert.Equal(0f, Vector3.zero.magnitude);
+        var z = new Vector3(0, 1e-6f, 0).Normalized;
+        Assert.Equal(0f, z.X + z.Y + z.Z);
+        Assert.Equal(0f, Vector3.Zero.Magnitude);
         var s = new Vector3(1, 2, 3) + new Vector3(1, 1, 1) - new Vector3(0, 1, 0);
-        Assert.Equal((2f, 2f, 4f), (s.x, s.y, s.z));
+        Assert.Equal((2f, 2f, 4f), (s.X, s.Y, s.Z));
         var d = new Vector3(2, 4, 6) / 2f;
-        Assert.Equal((1f, 2f, 3f), (d.x, d.y, d.z));
+        Assert.Equal((1f, 2f, 3f), (d.X, d.Y, d.Z));
     }
 
     [Fact]
@@ -147,8 +147,8 @@ public class UnityShimTests
         Assert.Equal(4, Rnd.Range(4, 4));
         for (int i = 0; i < 200; i++)
         {
-            var c = Rnd.insideUnitCircle;
-            Assert.True(c.x * c.x + c.y * c.y <= 1.0001f);
+            var c = Rnd.InsideUnitCircle;
+            Assert.True(c.X * c.X + c.Y * c.Y <= 1.0001f);
         }
         // The same seed, the same numbers.
         Rnd.InitState(7);

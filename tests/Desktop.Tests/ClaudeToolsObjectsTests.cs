@@ -73,8 +73,8 @@ public class ClaudeToolsObjectsTests
     {
         using var r = new ClaudeRun();
         await r.OpenArea();
-        int chest = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "piece_chest_wood", X = -4, Z = 0, Snap = false }]));
-        int sign = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "sign", X = 4, Z = 0, Snap = false }]));
+        int chest = await r.PlaceUnsnapped("piece_chest_wood", -4);
+        int sign = await r.PlaceUnsnapped("sign", 4);
         chest = NewId(await r.T.SetContents(chest, [new ClaudeTools.ItemSpec { Item = "Coins", Stack = 25 }]));
 
         Assert.Equal("Nothing to do: give dx, dy, dz, turn or ground.", await r.T.MoveObjects([chest, sign]));
@@ -104,7 +104,7 @@ public class ClaudeToolsObjectsTests
     {
         using var r = new ClaudeRun();
         await r.OpenArea();
-        int chest = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "piece_chest_wood", X = -4, Z = 0, Snap = false }]));
+        int chest = await r.PlaceUnsnapped("piece_chest_wood", -4);
         Assert.True(r.W.Inspector.Open(chest));
         r.W.Inspector.Added.Add(("bytes", "items", Convert.ToBase64String(new byte[] { 100, 0, 0, 0, 0, 0 })));
         await r.W.Inspector.Apply();

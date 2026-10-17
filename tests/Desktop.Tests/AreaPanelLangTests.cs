@@ -29,7 +29,7 @@ public sealed class AreaPanelLangTests
     public async Task AreaPanelShowsOnlyCatalogueTexts()
     {
         using var pseudo = new PseudoLang();
-        using var r = new AreaPanelTests.Run(select: false);
+        using var r = new SharedAreaPanelRun(select: false);
         string maps = Path.Combine(Path.GetDirectoryName(r.Dir)!, "maps");
         var p = r.P;
         void Check()
@@ -103,13 +103,13 @@ public sealed class AreaPanelLangTests
     }
 
     /// <summary>The History step's name is in the language.</summary>
-    private static void StepShown(AreaPanelTests.Run r) => Assert.StartsWith(PseudoLang.Open.ToString(), r.S.UndoLabel);
+    private static void StepShown(SharedAreaPanelRun r) => Assert.StartsWith(PseudoLang.Open.ToString(), r.S.UndoLabel);
 
     [AvaloniaFact]
     public async Task GroundAndObjectActionsSayWhatTheyDidInTheLanguage()
     {
         using var pseudo = new PseudoLang();
-        using var r = new AreaPanelTests.Run();
+        using var r = new SharedAreaPanelRun();
         var told = new List<Said>();
         r.P.Message += told.Add;
         // Raise: its cut and fill readout, units inside each translated line, then applied.
@@ -146,7 +146,7 @@ public sealed class AreaPanelLangTests
     public async Task ResetsBackupsAndHeightmapsSayWhatTheyDidInTheLanguage()
     {
         using var pseudo = new PseudoLang();
-        using var r = new AreaPanelTests.Run();
+        using var r = new SharedAreaPanelRun();
         var told = new List<Said>();
         r.P.Message += told.Add;
         // Zones marked for reset and the mark cancelled, then nothing left to cancel.
@@ -188,7 +188,7 @@ public sealed class AreaPanelLangTests
     public void TheClipboardLineIsShownInTheLanguage()
     {
         using var pseudo = new PseudoLang();
-        using var r = new AreaPanelTests.Run();
+        using var r = new SharedAreaPanelRun();
         r.P.Choose(AreaPanel.Act.Copy);
         Assert.Equal(PseudoLang.Wrap("Copies the shown objects inside the selection, with the ground under their buildings."), r.P.ClipInfo.Text);
         Click(r.P.CopyButton);

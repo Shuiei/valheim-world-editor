@@ -21,6 +21,15 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class MainWindowWorkshopBranchesTests
 {
+    /// <summary>A Workshop run with the Tower blueprint kept in Homestead and the window's questions answered Yes.</summary>
+    private static BlueprintsPanelRun RunWithTowerKept()
+    {
+        var r = new BlueprintsPanelRun();
+        r.W.Ask = (_, _, _, _) => Task.FromResult(true);
+        r.Keep("Tower", "woodwall");
+        return r;
+    }
+
     /// <summary>A drag over the view: the effect it is given.</summary>
     private static DragDropEffects Over(MainWindow w, IDataTransfer data)
     {
@@ -36,10 +45,8 @@ public class MainWindowWorkshopBranchesTests
     [AvaloniaFact]
     public async Task BlueprintsAndFilesAreDraggedOverAndDroppedOntoTheView()
     {
-        using var r = new BlueprintsPanelRun();
+        using var r = RunWithTowerKept();
         var w = r.W;
-        w.Ask = (_, _, _, _) => Task.FromResult(true);
-        r.Keep("Tower", "woodwall");
         using var library = new DataTransfer();
         library.Add(DataTransferItem.Create(BuildPanel.BlueprintFormat, Path.Combine(r.Homestead, "Tower.blueprint")));
         // Files from the computer (only their kind is looked at while dragging).
@@ -65,10 +72,8 @@ public class MainWindowWorkshopBranchesTests
     [AvaloniaFact]
     public async Task BlueprintsGoWhereTheViewPointsAndOnlyOntoThePlot()
     {
-        using var r = new BlueprintsPanelRun();
+        using var r = RunWithTowerKept();
         var w = r.W;
-        w.Ask = (_, _, _, _) => Task.FromResult(true);
-        r.Keep("Tower", "woodwall");
         string tower = Path.Combine(r.Homestead, "Tower.blueprint");
         // Not in the Workshop: nothing is added to the world's area.
         int things = w.Session!.Scene.Things.Count;
@@ -130,8 +135,7 @@ public class MainWindowWorkshopBranchesTests
     {
         using var r = new BlueprintsPanelRun();
         var w = r.W;
-        var asked = new List<string>();
-        w.Ask = (title, _, _, _) => { asked.Add(title); return Task.FromResult(false); };
+        var asked = r.AnswerNo();
         await w.OpenWorkshop(null);
         var s = w.Session!;
         s.Commit("wall", null, [], [(new NewObject(0, StableHash.Of("woodwall"), Workshop.Anchor(s.Scene) + Vector3.UnitY, Vector3.Zero, 0), true)]);
@@ -219,10 +223,8 @@ public class MainWindowWorkshopBranchesTests
     [AvaloniaFact]
     public async Task ABlueprintOpenedThroughALinkToTheFolderIsSavedBackWithoutAsking()
     {
-        using var r = new BlueprintsPanelRun();
+        using var r = RunWithTowerKept();
         var w = r.W;
-        w.Ask = (_, _, _, _) => Task.FromResult(true);
-        r.Keep("Tower", "woodwall");
         string link = Path.Combine(r.Dir, "linked");
         Directory.CreateSymbolicLink(link, r.Homestead);
         await w.OpenWorkshop(Path.Combine(link, Homestead.FileName("Tower")));

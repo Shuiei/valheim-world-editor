@@ -54,13 +54,8 @@ public sealed class InspectorPanelLangTests
     /// </summary>
     private static (MainWindow W, WorldScene Scene, int Chest, int[] Stands) Opened(string dir)
     {
-        var world = WorldSave.Load(dir);
-        var at = world.Objects.First(o => o.Prefab == Chest).Position;
-        var scene = WorldScene.Load(dir, (int)MathF.Floor((at.X + 32) / 64), (int)MathF.Floor((at.Z + 32) / 64), 1);
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        w.View.Show(scene, null);
-        w.Edit(scene.Session!);
+        var scene = TestScenes.ZoneHolding(dir, Chest);
+        var w = TestWindows.Editing(scene.Session!);
         int chest = scene.Things.FindLastIndex(t => t.Prefab == Chest && !t.Gone);
         var near = scene.Things[chest].Position + new Vector3(2, 0, 2);
         int[] stands = [.. scene.Session!.Commit("Stands", null, [], [

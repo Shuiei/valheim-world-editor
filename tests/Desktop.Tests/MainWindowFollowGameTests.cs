@@ -1,7 +1,7 @@
 using Avalonia.Headless.XUnit;
 using TerrainEditor.Editing;
-using TerrainEditor.Save;
 using Xunit;
+using static TerrainEditor.Desktop.Tests.LiveFollowSetup;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -13,29 +13,6 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class MainWindowFollowGameTests
 {
-    private static readonly int TCData = StableHash.Of("TCData");
-
-    /// <summary>
-    /// What the game has in a zone, as the world was read (its objects' ZDOIDs and bytes).
-    /// </summary>
-    private static List<(long, uint, byte[])> AsRead(WorldSave w, (int X, int Z) zone) =>
-        [.. Enumerable.Range(0, w.ObjectRefs.Count).Where(id => !w.Vanished.Contains(id) && w.ObjectRefs[id].Zone == zone).Select(id => (w.ObjectRefs[id].LiveId.User, w.ObjectRefs[id].LiveId.Id, w.ObjectBytes(id)))];
-
-    /// <summary>
-    /// Zone 0, 0 as the game has it with this ground (its terrain object's data replaced).
-    /// </summary>
-    private static List<(long, uint, byte[])> Dug(WorldSave w, ZoneEdit ground)
-    {
-        var src = w.TerrainZones.First(t => t.ZoneX == 0 && t.ZoneZ == 0).Source!;
-        int compiler = Enumerable.Range(0, w.ObjectRefs.Count).First(id => w.ObjectRefs[id].IsTerrain && w.ObjectRefs[id].File == src.File && w.ObjectRefs[id].Start == src.Start);
-        var z = ZdoData.Parse(w.ObjectBytes(compiler));
-        z.Set("bytes", TCData, Convert.ToBase64String(WorldWriter.EncodeTerrain(ground)));
-        var objects = AsRead(w, (0, 0));
-        int at = objects.FindIndex(o => (o.Item1, o.Item2) == w.ObjectRefs[compiler].LiveId);
-        objects[at] = (objects[at].Item1, objects[at].Item2, z.Serialize());
-        return objects;
-    }
-
     [AvaloniaFact]
     public async Task NewObjectsAndGroundAreSaidAndTheGamesGroundComesBackWhereChangesWereUndone()
     {

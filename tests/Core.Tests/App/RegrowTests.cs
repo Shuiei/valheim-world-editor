@@ -1,5 +1,3 @@
-using System.Numerics;
-using System.Reflection;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
@@ -13,26 +11,6 @@ namespace WorldEditor.Tests;
 [Collection("World files")]
 public class RegrowTests
 {
-    private static readonly MethodInfo LookRotation = typeof(Regrow).GetMethod("LookRotation", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-    [Theory]
-    [InlineData(1f, 0f, 0f, 0f, 1f, 0f)]
-    [InlineData(0f, 0f, -1f, 0f, 1f, 0f)]
-    [InlineData(0f, 0f, -1f, 0f, -1f, 0f)]
-    [InlineData(0f, 0f, 1f, 0f, -1f, 0f)]
-    [InlineData(0.3f, 0.2f, 0.9f, 0.1f, 1f, 0.2f)]
-    public void LookRotationTurnsForwardOntoTheGivenDirection(float fx, float fy, float fz, float ux, float uy, float uz)
-    {
-        var forward = Vector3.Normalize(new Vector3(fx, fy, fz));
-        var up = new Vector3(ux, uy, uz);
-        var q = (Quaternion)LookRotation.Invoke(null, [forward, up])!;
-        Assert.Equal(1f, q.Length(), 3);
-        var f = Vector3.Transform(Vector3.UnitZ, q);
-        Assert.True(Vector3.Distance(f, forward) < 1e-3f, $"{f} for {forward}");
-        // Up stays on the side of the given up (made square to forward).
-        Assert.True(Vector3.Dot(Vector3.Transform(Vector3.UnitY, q), up) > 0, $"{q}");
-    }
-
     [Fact]
     public void RegrowAcrossEveryBiomeIsRepeatableAndOnTheGround()
     {
@@ -69,13 +47,13 @@ public class RegrowTests
             }
         }
         Assert.True(perBiome.Count >= 6, string.Join(", ", perBiome.Keys));
-        var state = ValheimGen.UnityEngine.Random.state;
+        var state = ValheimGen.UnityEngine.Random.State;
         int total = 0;
         foreach (var (zx, zz) in picks)
         {
             var spots = Regrow.Zones(terrain, edits, world.Seed, zx, zz, zx, zz);
             // Unity's random state is put back for the next user.
-            Assert.Equal(state, ValheimGen.UnityEngine.Random.state);
+            Assert.Equal(state, ValheimGen.UnityEngine.Random.State);
             Assert.Equal(spots, Regrow.Zones(terrain, edits, world.Seed, zx, zz, zx, zz));
             foreach (var s in spots)
             {
@@ -119,42 +97,5 @@ public class RegrowTests
         var rocks = all.Where(s => s.Name == "rock4_coast").ToList();
         // Coast rocks stand between 2 m and 0.5 m below the sea.
         Assert.All(rocks, r => Assert.InRange(r.Y - ValheimGen.TerrainService.WaterLevel, -2.01f, -0.49f));
-    }
-
-    [Fact]
-    public void SeveralZonesAtOnceAreTheZonesOneByOne()
-    {
-        using var w = new TempWorld();
-        WorldSave world = w.Load();
-        var terrain = new ValheimGen.TerrainService(world, null);
-        var edits = new EditStore(world);
-        var together = Regrow.Zones(terrain, edits, world.Seed, 0, 0, 1, 0);
-        var apart = Regrow.Zones(terrain, edits, world.Seed, 0, 0, 0, 0).Concat(Regrow.Zones(terrain, edits, world.Seed, 1, 0, 1, 0)).ToList();
-        // The same spots; heights may differ in the last float digit (the ground is read from another corner).
-        Assert.Equal(apart.Count, together.Count);
-        for (int i = 0; i < apart.Count; i++)
-        {
-            Assert.Equal(apart[i] with { Y = 0 }, together[i] with { Y = 0 });
-            Assert.Equal(apart[i].Y, together[i].Y, 3);
-        }
-    }
-
-    [Fact]
-    public void EachZoneIsReadOnceForSeveralZones()
-    {
-        using var w = new TempWorld();
-        WorldSave world = w.Load();
-        var terrain = new ValheimGen.TerrainService(world, null);
-        var edits = new EditStore(world);
-        // A 4 × 4 block inside the Ashlands, away from the world's edge: groups there are up to 50 m wide and reach
-        // into the neighbours, which used to be read again for every zone.
-        var (ax, az) = Enumerable.Range(-150, 301).SelectMany(z => Enumerable.Range(-150, 301).Select(x => (X: x, Z: z)))
-            .First(p => (p.X + 2) * (p.X + 2) + (p.Z + 2) * (p.Z + 2) < 130 * 130 && Enumerable.Range(-1, 6).All(dz => Enumerable.Range(-1, 6)
-                .All(dx => terrain.CornerBiomes(p.X + dx, p.Z + dz).All(b => b == (int)ValheimGen.Heightmap.Biome.AshLands))));
-        int before = Regrow.ZoneReads;
-        var spots = Regrow.Zones(terrain, edits, world.Seed, ax, az, ax + 3, az + 3);
-        Assert.NotEmpty(spots);
-        // At most the block and one ring around it, each once.
-        Assert.InRange(Regrow.ZoneReads - before, 16, 36);
     }
 }

@@ -77,10 +77,7 @@ public sealed class LocalSshdTests
             ssh.Dispose();
             ssh.Need();
         }
-        string locked = Path.Combine(ssh.Dir, "locked");
-        Directory.CreateDirectory(locked);
-        File.WriteAllText(Path.Combine(locked, "held"), "");
-        File.SetUnixFileMode(locked, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+        string locked = LockedFolders.Make(ssh.Dir);
         try
         {
             var e = Record.Exception(ssh.Dispose);
@@ -89,7 +86,7 @@ public sealed class LocalSshdTests
         }
         finally
         {
-            File.SetUnixFileMode(locked, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            LockedFolders.Unlock(locked);
             ssh.Dispose();
         }
     }

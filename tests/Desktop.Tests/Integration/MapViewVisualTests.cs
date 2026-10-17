@@ -1,4 +1,3 @@
-using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -9,32 +8,15 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 [Collection("Visual")]
 [Trait("Category", "Visual")]
-public sealed class MapViewVisualTests(EditorProcess editor) : IDisposable
+public sealed class MapViewVisualTests(EditorProcess editor) : WorldsFolder("vwe-visual-map-")
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-visual-map-" + Guid.NewGuid().ToString("N")[..8]);
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        if (Directory.Exists(_dir))
-        {
-            Directory.Delete(_dir, true);
-        }
-    }
-
     /// <summary>
     /// A fresh copy of the test world, opened on its map.
     /// </summary>
     private void Open()
     {
         Assert.SkipUnless(editor.Available, editor.Why ?? "");
-        string world = Path.Combine(_dir, "CITest");
-        Directory.CreateDirectory(world);
-        foreach (string f in Directory.GetFiles(Path.Combine(Fixtures.Root, "CITest")))
-        {
-            File.Copy(f, Path.Combine(world, Path.GetFileName(f)));
-        }
-        editor.Send($"world {world}");
+        editor.Send($"world {TestWorldCopy.CopyInto(Dir)}");
     }
 
     [Fact]
@@ -47,11 +29,11 @@ public sealed class MapViewVisualTests(EditorProcess editor) : IDisposable
             // The grid draws under 8 m a pixel; from 6 m no close-up is built for the picture (under coverage, on
             // main, the largest close-up took minutes).
             Assert.Equal(7, editor.Send("mapview 0 0 7").GetProperty("mapScale").GetSingle(), 3);
-            string path = Path.Combine(_dir, "grid.png");
+            string path = Path.Combine(Dir, "grid.png");
             editor.Send($"picture {path}");
             Assert.True(new FileInfo(path).Length > 0);
             // A folder that is not there: the editor's answer is an error, and it goes on.
-            var e = Assert.ThrowsAny<Xunit.Sdk.XunitException>(() => editor.Send($"picture {Path.Combine(_dir, "no such folder", "grid.png")}"));
+            var e = Assert.ThrowsAny<Xunit.Sdk.XunitException>(() => editor.Send($"picture {Path.Combine(Dir, "no such folder", "grid.png")}"));
             Assert.Contains("@@ error", e.Message);
             Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
         }

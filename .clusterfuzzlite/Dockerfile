@@ -8,7 +8,7 @@ RUN curl -sSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
  && ln -s /opt/dotnet/dotnet /usr/local/bin/dotnet \
  && dotnet tool install --tool-path /opt/sharpfuzz SharpFuzz.CommandLine --version 2.3.0
 ENV DOTNET_ROOT=/opt/dotnet DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1
-RUN git clone --depth 1 https://github.com/Metalnem/libfuzzer-dotnet $SRC/libfuzzer-dotnet
+RUN git clone --depth 1 https://github.com/Metalnem/libfuzzer-dotnet "$SRC/libfuzzer-dotnet"
 COPY . $SRC/valheim-world-editor
 WORKDIR $SRC/valheim-world-editor
 COPY .clusterfuzzlite/build.sh $SRC/

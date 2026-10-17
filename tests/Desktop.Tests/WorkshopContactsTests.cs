@@ -30,4 +30,23 @@ public class WorkshopContactsTests
         Assert.Contains("Opened “Hillside”: 2 piece(s)", w.MessageText.Text);
         Assert.Equal(0, w.LastSupport!.Breaking);
     }
+
+    [Theory]
+    [InlineData("x", "2", "3")]
+    [InlineData("1", "y", "3")]
+    [InlineData("1", "2", "z")]
+    [InlineData("1", "2", "")]
+    public void AContactWithAFieldThatIsNoNumberIsNoPoint(string x, string y, string z)
+    {
+        Assert.False(Workshop.TryPoint([x, y, z], out var p));
+        Assert.Equal(default, p);
+    }
+
+    [Fact]
+    public void AContactsPointIsReadWhateverTheCulture()
+    {
+        // Its fields as the game writes them, with a dot, and a fourth field (the piece) left alone.
+        Assert.True(Workshop.TryPoint(["1.5", "-2", "1e1", "wood_floor"], out var p));
+        Assert.Equal(new System.Numerics.Vector3(1.5f, -2, 10), p);
+    }
 }

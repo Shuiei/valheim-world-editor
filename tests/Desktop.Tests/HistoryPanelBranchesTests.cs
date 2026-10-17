@@ -85,10 +85,7 @@ public class HistoryPanelBranchesTests
         var s = TestScenes.Flat(1);
         s.Shape(32, 32, _ => 1, 3, 0, "Claude: raised");
         s.BeginStroke(BrushTool.Raise, 40, 40);
-        string? said = null;
-        var p = new HistoryPanel(() => s) { Allow = _ => Task.FromResult(true) };
-        p.Message += m => said = m.Shown;
-        await p.TakeBackClaudes();
+        string? said = await HistoryPanelRun.TakeBackClaudesSaid(s);
         Assert.False(s.UndoList[0].Removed);
         Assert.Equal("Nothing taken back: finish the brush stroke first.", said);
     }
@@ -100,10 +97,7 @@ public class HistoryPanelBranchesTests
         var s = TestScenes.Flat(1);
         s.Shape(32, 32, _ => 1, 3, 0, "Claude: a hill");
         s.Shape(40, 40, _ => 1, 3, 0, "Claude: another");
-        string? said = null;
-        var p = new HistoryPanel(() => s) { Allow = _ => Task.FromResult(true) };
-        p.Message += m => said = m.Shown;
-        await p.TakeBackClaudes();
+        string? said = await HistoryPanelRun.TakeBackClaudesSaid(s);
         Assert.Equal("Took back 2 change(s) Claude made; yours are kept. Each is its own step: Ctrl+Z brings them back one at a time.", said);
         Assert.Equal(4, s.UndoList.Count);
     }
@@ -117,10 +111,7 @@ public class HistoryPanelBranchesTests
         int copy = s.Move([(0, new Vector3(4, 30, 0), Vector3.Zero)], "Claude: moved")[0];
         s.Move([(copy, new Vector3(8, 30, 0), Vector3.Zero)]);
         s.Shape(32, 32, _ => 1, 3, 0, "Claude: raised");
-        string? said = null;
-        var p = new HistoryPanel(() => s) { Allow = _ => Task.FromResult(true) };
-        p.Message += m => said = m.Shown;
-        await p.TakeBackClaudes();
+        string? said = await HistoryPanelRun.TakeBackClaudesSaid(s);
         Assert.False(s.UndoList[0].Removed);
         Assert.True(s.UndoList[2].Removed);
         Assert.Equal(1, s.Scene.Things.Count(t => !t.Gone));

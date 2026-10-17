@@ -10,6 +10,7 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class BlueprintFormatsTests
 {
+    private static readonly string[] Expected1 = ["piece_from_a_mod"];
     private const string PlanBuild = """
 		#Name:Small hut
 		#Creator:Someone
@@ -93,7 +94,7 @@ public class BlueprintFormatsTests
     {
         var bp = BlueprintFormats.Parse("hut.blueprint", PlanBuild);
         JsonObject clip = BlueprintFormats.ToClip(bp, n => n != "piece_from_a_mod", out var unknown);
-        Assert.Equal(new[] { "piece_from_a_mod" }, unknown);
+        Assert.Equal(Expected1, unknown);
         JsonArray objects = clip["objects"]!.AsArray();
         Assert.Equal(3, objects.Count);
         // Centred on the footprint (pieces and terrain): x from -1 to 5, z from -1 to 5.

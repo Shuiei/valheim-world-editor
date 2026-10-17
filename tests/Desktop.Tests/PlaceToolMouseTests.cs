@@ -24,11 +24,7 @@ public class PlaceToolMouseTests
         /// <summary>
         /// Grid point (gx, gz) on screen (the ground is at 30 m).
         /// </summary>
-        public Avalonia.Point At(float gx, float gz)
-        {
-            var q = Vector4.Transform(new Vector4(gx - 64, 30, -(gz - 64), 1), W.View.ViewProj);
-            return new Avalonia.Point((q.X / q.W + 1) / 2 * Size.Width, (1 - q.Y / q.W) / 2 * Size.Height);
-        }
+        public Avalonia.Point At(float gx, float gz) => SharedPlaceWindow.At(W, gx, gz);
 
         /// <summary>
         /// A click at grid point (gx, gz), with Ctrl or Alt held and as many clicks as given.
@@ -61,20 +57,10 @@ public class PlaceToolMouseTests
     /// </summary>
     private static View Open(PlaceTool.Modes mode, params WorldScene.Thing[] things)
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2, things);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
-        w.Tools.ChooseMode(ToolMode.Place);
-        w.View.SetCamera(new Vector3(0, 150, 1), Vector3.Zero, 1.6f);
-        w.PlaceTool.Chosen.Clear();
-        w.PlaceTool.Chosen.Add("Beech1");
-        // The window's Place panel took the kinds remembered by earlier tests (pieces from the Workshop turn
-        // One at a time and End to end on): set again for the kinds chosen here, as choosing them in the panel does.
-        w.PlaceTool.AutoSnap();
+        var (w, s) = SharedPlaceWindow.Open(things);
+        SharedPlaceWindow.ChooseBeech(w);
         w.PlaceTool.Mode = mode;
-        var v = new View(w, s, new Avalonia.Size(1600, 1000));
+        var v = new View(w, s, SharedPlaceWindow.Size);
         w.PlaceInput.Message += t => v.Said = t.Shown;
         return v;
     }

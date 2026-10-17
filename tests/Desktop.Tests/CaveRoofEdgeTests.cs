@@ -35,4 +35,22 @@ public class CaveRoofEdgeTests
         // Boulders far off the grid cannot hold up anything there: none was put.
         Assert.All(roof.Rocks, r => Assert.True(r.Position.X > -20, $"a boulder at {r.Position}"));
     }
+
+    [Fact]
+    public void ANearFieldKeepsThePointsWithinReachOfTheLine()
+    {
+        var path = new PathTool { Headroom = 4.5f };
+        var plan = new PathTool.CavePlan([(new Vector2(0, 0), 0), (new Vector2(10, 0), 0)], [0f, 10f], [5f, 5f], [0f, 0f]);
+        var near = CaveRoof.NearField(path, plan, 12, 5, 2f);
+        Assert.True(near.ContainsKey(2 * 12 + 5));
+        Assert.False(near.ContainsKey(3 * 12 + 5));
+    }
+
+    [Fact]
+    public void ANearestPointGivesItsDistanceCeilingAndDepthOnTheLine()
+    {
+        var path = new PathTool { Headroom = 4.5f };
+        var plan = new PathTool.CavePlan([(new Vector2(0, 0), 0), (new Vector2(10, 0), 0)], [0f, 10f], [5f, 5f], [0f, 0f]);
+        Assert.Equal((3f, 4.5f, 5f), CaveRoof.Nearest(path, plan, 5, 3));
+    }
 }

@@ -20,12 +20,8 @@ public class MainWindowBuilderTests
         try
         {
             var world = WorldSave.Load(dir);
-            var at = world.Objects.First(o => o.Prefab == StableHash.Of("piece_chest_wood")).Position;
-            var scene = WorldScene.Load(dir, (int)MathF.Floor((at.X + 32) / 64), (int)MathF.Floor((at.Z + 32) / 64), 1);
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            w.View.Show(scene, null);
-            w.Edit(scene.Session!);
+            var scene = TestScenes.ZoneHolding(dir, StableHash.Of("piece_chest_wood"));
+            var w = TestWindows.Editing(scene.Session!);
             // The list: the world's builders and players, another id, nobody.
             Assert.Equal(WorldSave.Builder, w.BuilderIds[w.BuilderBox.SelectedIndex]);
             Assert.Equal(0, w.BuilderIds[^1]);

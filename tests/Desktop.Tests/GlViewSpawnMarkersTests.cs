@@ -17,15 +17,25 @@ public class GlViewSpawnMarkersTests
     /// <summary>A new object of this kind at (x, 30, z) in the world.</summary>
     private static NewObject Spawner(string name, float x, float z) => new(0, StableHash.Of(name), new Vector3(x, 30, z), Vector3.Zero, 1f);
 
-    [AvaloniaFact]
-    public void TheThingsAreLookedThroughOnlyWhenTheyChange()
+    /// <summary>
+    /// A flat two-zone area with a boar's spawn point at (30, 30, 30), in a view of its own, and the spot above that
+    /// point the camera looks at. Nothing is read from the things or shown yet.
+    /// </summary>
+    private static (EditSession S, GlView V, Vector3 At) ShownWithBoarSpawn()
     {
         var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("Spawner_Boar"), new Vector3(30, 30, 30), Vector3.Zero, 0, false));
         var v = new GlView();
         v.Show(s.Scene, null);
+        var at = new Vector3(30 - s.Scene.Cx, 32.4f, -(30 - s.Scene.Cz));
+        return (s, v, at);
+    }
+
+    [AvaloniaFact]
+    public void TheThingsAreLookedThroughOnlyWhenTheyChange()
+    {
+        var (s, v, at) = ShownWithBoarSpawn();
         v.ReadModels();
         v.SetShown(ObjectKind.SpawnPoints, true);
-        var at = new Vector3(30 - s.Scene.Cx, 32.4f, -(30 - s.Scene.Cz));
         v.SetCamera(at + new Vector3(0, 20, 20), at, 1.5f);
         Assert.Equal([(at, GlView.SpawnColour(false))], v.SpawnMarkers(s.Scene));
         int finds = v.SpawnFinds;
@@ -57,11 +67,8 @@ public class GlViewSpawnMarkersTests
     [AvaloniaFact]
     public void TheThingsAreLookedThroughAgainForNewKindsOrAnotherArea()
     {
-        var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("Spawner_Boar"), new Vector3(30, 30, 30), Vector3.Zero, 0, false));
-        var v = new GlView();
-        v.Show(s.Scene, null);
+        var (s, v, at) = ShownWithBoarSpawn();
         v.SetShown(ObjectKind.SpawnPoints, true);
-        var at = new Vector3(30 - s.Scene.Cx, 32.4f, -(30 - s.Scene.Cz));
         v.SetCamera(at + new Vector3(0, 20, 20), at, 1.5f);
         // Before the kinds are worked out, nothing is a spawn point.
         Assert.Empty(v.SpawnMarkers(s.Scene));

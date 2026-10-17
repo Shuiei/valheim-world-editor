@@ -11,11 +11,55 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class EditSessionOtherAreasTests
 {
+    private static readonly string[] Expected5 = ["Raise here", "Raise there"];
+    private static readonly string[] Expected4 = ["Raise here", "Raise there"];
+    private static readonly string[] Expected3 = ["Raise here", "Raise there"];
+    private static readonly string[] Expected2 = ["Older", "Over the edge"];
+    private static readonly string[] Expected1 = ["Raise here", "Raise there"];
     /// <summary>Deletes the copy of the test world (its temporary parent folder).</summary>
     private static void Done(string dir) => Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
 
+    /// <summary>
+    /// Runs the test on its own copy of the test world, which is deleted after.
+    /// </summary>
+    private static void WithCopy(Action<string> test)
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            test(dir);
+        }
+        finally
+        {
+            Done(dir);
+        }
+    }
+
     /// <summary>Raises the ground 3 m in a 4 m circle at grid point (32, 32) of the area, as one step with this label.</summary>
     private static void Raise(EditSession s, string label) => s.Shape(32, 32, Formula.Compile("3", []), 4, 0, label);
+
+    /// <summary>The copy's area at (0, 0) with the step "Raise here" made in it: the world's session and that area's.</summary>
+    private static (WorldSession Owner, EditSession Here) RaiseHere(string dir)
+    {
+        var first = WorldScene.Load(dir, 0, 0, 1);
+        var owner = first.Owner!;
+        var a = first.Session!;
+        Raise(a, "Raise here");
+        return (owner, a);
+    }
+
+    /// <summary>
+    /// <see cref="RaiseHere"/>, its history kept with the world, then the area at (3, 3) with the step "Raise there" made in
+    /// it: the world's session and both areas.
+    /// </summary>
+    private static (WorldSession Owner, EditSession Here, EditSession There) RaiseHereThenThere(string dir)
+    {
+        var (owner, a) = RaiseHere(dir);
+        owner.History = a.Export();
+        var b = WorldScene.Load(owner, 3, 3, 1).Session!;
+        Raise(b, "Raise there");
+        return (owner, a, b);
+    }
 
     /// <summary>The height at grid point (32, 32) of the area.</summary>
     private static float Middle(EditSession s) => s.Scene.Heights[32 * s.Scene.W + 32];
@@ -23,8 +67,7 @@ public class EditSessionOtherAreasTests
     [AvaloniaFact]
     public void StepsMadeInAnotherAreaAreKeptAsideAndComeBackThere()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
             var first = WorldScene.Load(dir, 0, 0, 1);
             var owner = first.Owner!;
@@ -41,7 +84,7 @@ public class EditSessionOtherAreasTests
             Assert.Equal("Raise there", Assert.Single(b.UndoList).Label);
             // Both steps go on with the world, the first one in its own frame, oldest first.
             var kept = b.Export();
-            Assert.Equal(new[] { "Raise here", "Raise there" }, kept.Undo.Select(c => c.Label).ToArray());
+            Assert.Equal(Expected5, kept.Undo.Select(c => c.Label).ToArray());
             Assert.NotEqual(kept.FrameOf(kept.Undo[0]), kept.FrameOf(kept.Undo[1]));
             Assert.Equal((0, 0), (kept.FrameOf(kept.Undo[0]).X0, kept.FrameOf(kept.Undo[0]).Z0));
             Assert.Equal((3, 3), (kept.FrameOf(kept.Undo[1]).X0, kept.FrameOf(kept.Undo[1]).Z0));
@@ -59,26 +102,15 @@ public class EditSessionOtherAreasTests
             Assert.Equal(0, both.Shelved);
             Assert.Equal("Raise there", Assert.Single(both.UndoList).Label);
             Assert.Equal("Raise here", Assert.Single(both.RedoList).Label);
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 
     [AvaloniaFact]
     public void StepsKeptAsideAndThisAreasGoBackInTheOrderTheyWereMade()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
-            var first = WorldScene.Load(dir, 0, 0, 1);
-            var owner = first.Owner!;
-            var a = first.Session!;
-            Raise(a, "Raise here");
-            owner.History = a.Export();
-            var b = WorldScene.Load(owner, 3, 3, 1).Session!;
-            Raise(b, "Raise there");
+            var (owner, _, b) = RaiseHereThenThere(dir);
             // Back in the first area: its older step is undoable, the newer one kept aside; leaving again, the newer
             // one must still come after it, whichever list each was in.
             owner.History = b.Export();
@@ -86,32 +118,24 @@ public class EditSessionOtherAreasTests
             Assert.Equal("Raise here", Assert.Single(again.UndoList).Label);
             Assert.Equal(1, again.Shelved);
             var kept = again.Export();
-            Assert.Equal(new[] { "Raise here", "Raise there" }, kept.Undo.Select(c => c.Label).ToArray());
+            Assert.Equal(Expected4, kept.Undo.Select(c => c.Label).ToArray());
             // An area holding both: the newer step is undone first.
             owner.History = kept;
             var both = WorldScene.LoadBlock(owner, 0, 0, 4, 4).Session!;
-            Assert.Equal(new[] { "Raise here", "Raise there" }, both.UndoList.Select(c => c.Label).ToArray());
+            Assert.Equal(Expected3, both.UndoList.Select(c => c.Label).ToArray());
             float near = both.Scene.Heights[32 * both.Scene.W + 32];
             Assert.True(both.Undo());
             Assert.Equal("Raise there", Assert.Single(both.RedoList).Label);
             Assert.Equal(near, both.Scene.Heights[32 * both.Scene.W + 32], 3);
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 
     [AvaloniaFact]
     public void ANewEditDropsTheRedoKeptAsideFromAnotherAreaToo()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
-            var first = WorldScene.Load(dir, 0, 0, 1);
-            var owner = first.Owner!;
-            var a = first.Session!;
-            Raise(a, "Raise here");
+            var (owner, a) = RaiseHere(dir);
             Assert.True(a.Undo());
             Assert.Single(a.RedoList);
             // In another area the undone step is kept aside (as a redo); an edit there drops it, as a redo of the same
@@ -126,18 +150,13 @@ public class EditSessionOtherAreasTests
             Assert.Empty(again.RedoList);
             Assert.False(again.CanRedo);
             Assert.Equal(1, again.Shelved);
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 
     [AvaloniaFact]
     public void DiscardDropsTheRedoKeptAsideFromAnotherAreaToo()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
             var first = WorldScene.Load(dir, 0, 0, 1);
             var owner = first.Owner!;
@@ -158,23 +177,15 @@ public class EditSessionOtherAreasTests
             owner.History = there.Export();
             var again = WorldScene.Load(owner, 0, 0, 1).Session!;
             Assert.Empty(again.RedoList);
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 
     [AvaloniaFact]
     public void SavingFromAnotherAreaMarksTheStepsKeptAsideAsSaved()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
-            var first = WorldScene.Load(dir, 0, 0, 1);
-            var owner = first.Owner!;
-            var a = first.Session!;
-            Raise(a, "Raise here");
+            var (owner, a) = RaiseHere(dir);
             Assert.Equal(1, a.UnappliedSteps);
             // Saved from another area: the world's pending changes go together, the first area's step among them.
             owner.History = a.Export();
@@ -188,18 +199,13 @@ public class EditSessionOtherAreasTests
             Assert.True(Assert.Single(again.UndoList).Applied);
             Assert.Equal(0, again.UnappliedSteps);
             Assert.Equal(0, again.UndoUnapplied());
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 
     [AvaloniaFact]
     public void AStepPartlyInTheAreaStillKeepsTheOlderOnesFromBeingUndoneThere()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
             var owner = WorldScene.Load(dir, 0, 0, 1).Owner!;
             // Two zones wide: a raise wholly in the west zone, then one astride the two.
@@ -216,21 +222,16 @@ public class EditSessionOtherAreasTests
             // The two zones again: both fit, in their order.
             owner.History = west.Export();
             var home = WorldScene.LoadBlock(owner, 0, 0, 2, 1).Session!;
-            Assert.Equal(new[] { "Older", "Over the edge" }, home.UndoList.Select(c => c.Label).ToArray());
+            Assert.Equal(Expected2, home.UndoList.Select(c => c.Label).ToArray());
             Assert.Equal(0, home.Shelved);
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 
     // A step kept aside does not bring the things it took away into the area: nothing there shows or undoes them.
     [AvaloniaFact]
     public void AStepKeptAsideAddsNoThingsToTheArea()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
             var owner = WorldScene.Load(dir, 0, 0, 1).Owner!;
             // A block of zones: one step raising the ground of zone (1, 0) and deleting a thing of zone (0, 0) (the
@@ -251,26 +252,15 @@ public class EditSessionOtherAreasTests
             var area = WorldScene.Load(owner, 0, 0, 1).Session!;
             Assert.Equal(1, area.Shelved);
             Assert.DoesNotContain(area.Scene.Things, t => t.Id == id);
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 
     [AvaloniaFact]
     public void TheHistoryFileKeepsStepsOfSeveralAreasEachWhereItWasMade()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
-            var first = WorldScene.Load(dir, 0, 0, 1);
-            var owner = first.Owner!;
-            var a = first.Session!;
-            Raise(a, "Raise here");
-            owner.History = a.Export();
-            var b = WorldScene.Load(owner, 3, 3, 1).Session!;
-            Raise(b, "Raise there");
+            var (owner, _, b) = RaiseHereThenThere(dir);
             Assert.True(b.Save().Saved);
             // Written at the save (both steps, the first from the other area), read again into an area holding both.
             var restored = HistoryFile.Read(owner);
@@ -278,16 +268,12 @@ public class EditSessionOtherAreasTests
             Assert.Equal(2, restored.Steps);
             owner.History = restored.Kept;
             var both = WorldScene.LoadBlock(owner, 0, 0, 4, 4).Session!;
-            Assert.Equal(new[] { "Raise here", "Raise there" }, both.UndoList.Select(c => c.Label).ToArray());
+            Assert.Equal(Expected1, both.UndoList.Select(c => c.Label).ToArray());
             Assert.Equal(0, both.Shelved);
             // Each stands where it was made: undoing the far one leaves the near one.
             float near = both.Scene.Heights[32 * both.Scene.W + 32];
             Assert.True(both.Undo());
             Assert.Equal(near, both.Scene.Heights[32 * both.Scene.W + 32], 3);
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 }
