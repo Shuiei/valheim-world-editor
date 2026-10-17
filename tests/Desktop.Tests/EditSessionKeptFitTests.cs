@@ -26,6 +26,15 @@ public class EditSessionKeptFitTests
     private static EditSession.Change ChangeOn(EditSession s, params int[] points) =>
         new("step", points, s.Ground.Snapshot(), s.Ground.Snapshot(), []);
 
+    /// <summary>
+    /// A beech (id 8) found <paramref name="dx"/> and <paramref name="dz"/> metres from the origin of a flat one-zone area.
+    /// </summary>
+    private static Dictionary<int, WorldScene.Thing> FoundBeech(float dx, float dz)
+    {
+        var probe = TestScenes.Flat(1);
+        return new Dictionary<int, WorldScene.Thing> { [8] = TestScenes.Beech(8, new Vector3(probe.Scene.OriginX + dx, 30, probe.Scene.OriginZ + dz)) };
+    }
+
     private static EditSession.KeptFit FitOf(EditSession s, EditSession.Kept k, Dictionary<int, int>? index = null,
         Dictionary<int, WorldScene.Thing>? found = null) => new(s, k, index ?? [], found ?? []);
 
@@ -73,10 +82,8 @@ public class EditSessionKeptFitTests
     [Fact]
     public void ThingFindsAnObjectElsewhereInsideTheAreaAsPending()
     {
-        var probe = TestScenes.Flat(1);
-        float ox = probe.Scene.OriginX, oz = probe.Scene.OriginZ;
         var s = TestScenes.Flat(1);
-        var found = new Dictionary<int, WorldScene.Thing> { [8] = TestScenes.Beech(8, new Vector3(ox + 32, 30, oz + 32)) };
+        var found = FoundBeech(32, 32);
         var fit = FitOf(s, KeptOf(s, []), found: found);
         Assert.Equal(0, fit.Thing(8));
         Assert.Single(fit.Pending);
@@ -85,10 +92,8 @@ public class EditSessionKeptFitTests
     [Fact]
     public void ThingIgnoresAnObjectElsewhereOutsideTheArea()
     {
-        var probe = TestScenes.Flat(1);
-        float ox = probe.Scene.OriginX, oz = probe.Scene.OriginZ;
         var s = TestScenes.Flat(1);
-        var found = new Dictionary<int, WorldScene.Thing> { [8] = TestScenes.Beech(8, new Vector3(ox + 500, 30, oz + 32)) };
+        var found = FoundBeech(500, 32);
         var fit = FitOf(s, KeptOf(s, []), found: found);
         Assert.Null(fit.Thing(8));
         Assert.Empty(fit.Pending);
@@ -132,10 +137,8 @@ public class EditSessionKeptFitTests
     [Fact]
     public void JoinFoundAddsThePendingThingsAndPointsTheStepAtThem()
     {
-        var probe = TestScenes.Flat(1);
-        float ox = probe.Scene.OriginX, oz = probe.Scene.OriginZ;
         var s = TestScenes.Flat(1);
-        var found = new Dictionary<int, WorldScene.Thing> { [8] = TestScenes.Beech(8, new Vector3(ox + 32, 30, oz + 32)) };
+        var found = FoundBeech(32, 32);
         var fit = FitOf(s, KeptOf(s, []), found: found);
         fit.Thing(8);
         var step = new EditSession.Change("join", [], s.Ground.Snapshot(), s.Ground.Snapshot(), [])

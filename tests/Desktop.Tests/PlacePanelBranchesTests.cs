@@ -26,17 +26,6 @@ public class PlacePanelBranchesTests
         Dispatcher.UIThread.RunJobs();
     }
 
-    /// <summary>
-    /// Chooses these kinds, as ticking them in the panel does.
-    /// </summary>
-    private static void Choose(Run r, params string[] names)
-    {
-        r.T.Chosen.Clear();
-        r.T.Chosen.AddRange(names);
-        typeof(PlacePanel).GetMethod("Chosen", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(r.P, [true]);
-        Dispatcher.UIThread.RunJobs();
-    }
-
     [AvaloniaFact]
     public void DeleteLeavesBuiltInDeclinedAndVanishedPresetsAlone()
     {
@@ -47,7 +36,7 @@ public class PlacePanelBranchesTests
         Click(r.P.DeletePresetButton);
         Assert.Equal(entries, r.P.PresetBox.ItemCount);
         // One of yours, the question declined.
-        Choose(r, "Beech1");
+        SharedPlaceWindow.ChoosePanelKinds(r, "Beech1");
         r.P.AskName = () => Task.FromResult<string?>("Mine");
         Click(r.P.SavePresetButton);
         Assert.Single(r.P.Memory.Presets);
@@ -65,10 +54,10 @@ public class PlacePanelBranchesTests
     public void TheNoteNamesEveryKindThatNeedsCultivatedGround()
     {
         using var r = new Run();
-        Choose(r, "Beech1");
+        SharedPlaceWindow.ChoosePanelKinds(r, "Beech1");
         Assert.Equal("", r.P.Note.Text);
         Assert.False(r.P.Note.IsVisible);
-        Choose(r, "sapling_carrot", "sapling_turnip");
+        SharedPlaceWindow.ChoosePanelKinds(r, "sapling_carrot", "sapling_turnip");
         Assert.Contains("sapling_carrot, sapling_turnip only grow on cultivated ground", r.P.Note.Text);
     }
 
@@ -77,7 +66,7 @@ public class PlacePanelBranchesTests
     {
         using var r = new Run();
         Click(r.P.ModeButtons[PlaceTool.Modes.Line]);
-        Choose(r, "woodwall");
+        SharedPlaceWindow.ChoosePanelKinds(r, "woodwall");
         Assert.True(r.T.EndToEnd);
         r.T.SnapTo = false;
         // 5 m: two 2 m walls, 1 m left.

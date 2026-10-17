@@ -30,13 +30,23 @@ public class WorldWriterResetTests
         Assert.Contains($"({inZone.Length - 1} objects cleared)", r.Message);
     }
 
+    /// <summary>
+    /// Saves the test world with ground raised in its first zone and that zone reset (its ground, its objects, or both):
+    /// the zone and the save's result.
+    /// </summary>
+    private static (TerrainZone Zone, WorldWriter.Result Result) SaveRaisedZoneWithReset(TempWorld w, bool ground, bool objects)
+    {
+        WorldSave world = w.Load();
+        var t = world.TerrainZones[0];
+        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 3, 500)], resets: [new ZoneReset(t.ZoneX, t.ZoneZ, ground, objects)]);
+        return (t, r);
+    }
+
     [Fact]
     public void AGroundResetDropsThatZonesGroundEdits()
     {
         using var w = new TempWorld();
-        WorldSave world = w.Load();
-        var t = world.TerrainZones[0];
-        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 3, 500)], resets: [new ZoneReset(t.ZoneX, t.ZoneZ, true, true)]);
+        var (t, r) = SaveRaisedZoneWithReset(w, ground: true, objects: true);
         Assert.True(r.Saved, r.Message);
         Assert.Equal(0, r.ZonesWritten);
         var again = WorldSave.Load(w.Dir);
@@ -48,9 +58,7 @@ public class WorldWriterResetTests
     public void AResetThatKeepsTheGroundKeepsItsEdits()
     {
         using var w = new TempWorld();
-        WorldSave world = w.Load();
-        var t = world.TerrainZones[0];
-        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 3, 500)], resets: [new ZoneReset(t.ZoneX, t.ZoneZ, true, false)]);
+        var (t, r) = SaveRaisedZoneWithReset(w, ground: true, objects: false);
         Assert.True(r.Saved, r.Message);
         Assert.Equal(1, r.ZonesWritten);
         var again = WorldSave.Load(w.Dir);

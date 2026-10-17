@@ -32,14 +32,22 @@ public class WorldSearchTests
         Assert.NotEmpty(WorldSearch.Search(world, edits, "_zonectrl", "kinds").Hits);
     }
 
+    /// <summary>
+    /// An edit store over the world, and the id and parsed object data of its first wooden chest.
+    /// </summary>
+    private static (EditStore Edits, int Chest, ZdoData Z) WoodenChestOf(WorldSave world)
+    {
+        var edits = new EditStore(world);
+        int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
+        return (edits, chest, ZdoData.Parse(world.ObjectBytes(chest)));
+    }
+
     [Fact]
     public void FindsItemsInContainersAndTexts()
     {
         using var w = new TempWorld();
         WorldSave world = w.Load();
-        var edits = new EditStore(world);
-        int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
-        var z = ZdoData.Parse(world.ObjectBytes(chest));
+        var (edits, chest, z) = WoodenChestOf(world);
         var inv = new InventoryData();
         inv.Items.Add(new InventoryData.Item { Prefab = Fixtures.Hash("Wood"), Stack = 30 });
         inv.Items.Add(new InventoryData.Item { Prefab = Fixtures.Hash("Wood"), Stack = 12, X = 1 });
@@ -63,9 +71,7 @@ public class WorldSearchTests
     {
         using var w = new TempWorld();
         WorldSave world = w.Load();
-        var edits = new EditStore(world);
-        int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
-        var z = ZdoData.Parse(world.ObjectBytes(chest));
+        var (edits, chest, z) = WoodenChestOf(world);
         z.SetBytes(StableHash.Of("damaged"), []);
         byte[] broken = z.Serialize();
         broken.AsSpan(^4).Fill(0xFF); // the (last) byte array's length: -1

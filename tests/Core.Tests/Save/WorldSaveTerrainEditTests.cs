@@ -10,14 +10,22 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class WorldSaveTerrainEditTests
 {
+    /// <summary>
+    /// An edit store over the world, the world's first terrain zone and a copy of that zone's edit to change.
+    /// </summary>
+    private static (EditStore Edits, TerrainZone Zone, ZoneEdit Edit) FirstZoneEditCopy(WorldSave world)
+    {
+        var edits = new EditStore(world);
+        TerrainZone zone = world.TerrainZones[0];
+        return (edits, zone, edits.Get(zone.ZoneX, zone.ZoneZ)!.Clone());
+    }
+
     [Fact]
     public void TerrainEditsRoundTrip()
     {
         using var w = new TempWorld();
         WorldSave world = w.Load();
-        var edits = new EditStore(world);
-        TerrainZone zone = world.TerrainZones[0];
-        ZoneEdit edit = edits.Get(zone.ZoneX, zone.ZoneZ)!.Clone();
+        var (edits, zone, edit) = FirstZoneEditCopy(world);
         // Raise a block of points by 1.5 m and paint one paved.
         var cells = Enumerable.Range(0, EditStore.Cells).Where(i => i % 65 > 20 && i % 65 < 30 && i / 65 > 20 && i / 65 < 30).ToList();
         foreach (int i in cells)
@@ -52,9 +60,7 @@ public class WorldSaveTerrainEditTests
     {
         using var w = new TempWorld();
         WorldSave world = w.Load();
-        var edits = new EditStore(world);
-        TerrainZone zone = world.TerrainZones[0];
-        ZoneEdit edit = edits.Get(zone.ZoneX, zone.ZoneZ)!.Clone();
+        var (edits, zone, edit) = FirstZoneEditCopy(world);
         edit.Modified[100] = true;
         edit.Level[100] = 50f;
         edits.Put(edit);

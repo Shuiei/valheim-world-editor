@@ -1,4 +1,5 @@
 using System.Numerics;
+using Avalonia.Threading;
 using WorldEditor.Tests;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -46,6 +47,18 @@ internal static class SharedPlaceWindow
         // The window's Place panel took the kinds remembered by earlier tests (pieces from the Workshop turn
         // One at a time and End to end on): set again for the kinds chosen here, as choosing them in the panel does.
         w.PlaceTool.AutoSnap();
+    }
+
+    /// <summary>
+    /// Chooses these kinds in the Place panel of the run, as ticking them in the panel does.
+    /// </summary>
+    internal static void ChoosePanelKinds(PanelRun r, params string[] names)
+    {
+        r.T.Chosen.Clear();
+        r.T.Chosen.AddRange(names);
+        // What ticking a kind does in the panel.
+        typeof(PlacePanel).GetMethod("Chosen", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(r.P, [true]);
+        Dispatcher.UIThread.RunJobs();
     }
 
     /// <summary>
