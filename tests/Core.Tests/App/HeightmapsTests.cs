@@ -33,6 +33,35 @@ public class HeightmapsTests
         }
     }
 
+    // Heights written in a picture by hand: not a finite number, or the highest not above the lowest, are left out (an
+    // infinite one, or one too large for the Area panel's boxes, made the Area panel throw).
+    [Theory]
+    [InlineData("NaN", "10", null, 10f)]
+    [InlineData("-5", "Infinity", -5f, null)]
+    [InlineData("1e39", "10", null, 10f)]
+    [InlineData("1e30", "2e30", null, null)]
+    [InlineData("10", "-5", null, null)]
+    [InlineData("10", "10", null, null)]
+    [InlineData("-5", "10", -5f, 10f)]
+    public void OnlyUsableHeightsAreReadFromAPicture(string min, string max, float? lowest, float? highest)
+    {
+        byte[] png = Png.WriteGray16(1, 1, [0], new Dictionary<string, string> { [Heightmaps.MinKey] = min, [Heightmaps.MaxKey] = max });
+
+        var pic = Heightmaps.Read(png, 1, 1);
+
+        Assert.Equal((lowest, highest), (pic.Min, pic.Max));
+    }
+
+    // A world named outside Latin-1 (what a PNG note holds): its heightmap is still written, the name's other
+    // characters as '?' (it threw).
+    [Fact]
+    public void AnAreaNamedOutsideLatin1IsWrittenWithQuestionMarks()
+    {
+        byte[] png = Heightmaps.Encode(1, 1, [0f], "世界 zones 0,0 to 1,1", out _, out _);
+
+        Assert.Equal("?? zones 0,0 to 1,1", Heightmaps.Read(png, 1, 1).Area);
+    }
+
     [Fact]
     public void SomethingElseIsRefused()
     {

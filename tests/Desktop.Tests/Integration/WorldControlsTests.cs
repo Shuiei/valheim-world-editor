@@ -73,12 +73,10 @@ public class WorldControlsTests
         public void Dispose()
         {
             Game?.Dispose();
-            try
+            string folder = Path.GetDirectoryName(Dir)!;
+            if (Directory.Exists(folder))
             {
-                Directory.Delete(Path.GetDirectoryName(Dir)!, true);
-            }
-            catch
-            {
+                Directory.Delete(folder, true);
             }
         }
     }
@@ -465,6 +463,19 @@ public class WorldControlsTests
         Assert.Equal((3, 3), (r.W.View.Scene.ZonesX, r.W.View.Scene.ZonesZ));
     }
 
+    // A path drawn (or anything else unfinished, as for a resize) keeps the area where it is, and says why.
+    [AvaloniaFact]
+    public async Task TheAreaDoesNotMoveWithAPathDrawn()
+    {
+        using var r = new Run();
+        await r.Open();
+        r.W.View.Path.Points.Add(new Vector2(20, 20));
+        await r.W.MoveArea(1, 0);
+        Assert.Equal(0, r.W.View.Scene!.X0);
+        Assert.Equal("The area cannot move now: a path is drawn (apply or clear it).", r.W.MessageText.Text);
+        Assert.Single(r.W.View.Path.Points);
+    }
+
     // The area made bigger (or smaller) on the fly, around the same middle zone, keeping the view and
     // what waits to be saved; not while something unfinished would be lost.
     [AvaloniaFact]
@@ -596,7 +607,7 @@ public class WorldControlsTests
         r.W.View.Path.Points.Clear();
         // A stroke on.
         r.W.Session!.BeginStroke(BrushTool.Raise, 32, 32);
-        Assert.Equal("a stroke is on", r.W.MoveBlocker());
+        Assert.Equal("a stroke is on", r.W.MoveBlocker()?.English);
         r.W.Session.EndStroke();
         Assert.Null(r.W.MoveBlocker());
         // Nothing in the way: it grows.
@@ -610,7 +621,7 @@ public class WorldControlsTests
         await r.OpenLive();
         r.Raise();
         var apply = r.W.ApplyNow();
-        Assert.Equal("changes are still being sent", r.W.MoveBlocker());
+        Assert.Equal("changes are still being sent", r.W.MoveBlocker()?.English);
         await apply;
         Assert.Null(r.W.MoveBlocker());
     }

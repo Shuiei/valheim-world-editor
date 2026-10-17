@@ -24,6 +24,8 @@ internal sealed class ClaudeRun : IDisposable
         W.Ask = (_, _, _, _) => Task.FromResult(false);
         W.SaveSettings = _ => { };
         W.Settings.AutoApply = W.Settings.AreaFollow = false;
+        // The user's leave for scripts, as most tests need it; one test takes it back.
+        W.Settings.ClaudeScripts = true;
         W.Blueprints.FindHomestead = () => new TerrainEditor.App.Homestead.Status(true, "1.3.2", ["test"], Homestead);
         T = new ClaudeTools(W);
     }
@@ -75,12 +77,9 @@ internal sealed class ClaudeRun : IDisposable
         Game?.Dispose();
         foreach (string d in new[] { Path.GetDirectoryName(Dir)!, Homestead })
         {
-            try
+            if (Directory.Exists(d))
             {
                 Directory.Delete(d, true);
-            }
-            catch
-            {
             }
         }
     }

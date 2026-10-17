@@ -17,44 +17,59 @@ namespace TerrainEditor.Desktop;
 /// </summary>
 public sealed class InspectorPanel
 {
-    /// <summary>Plain labels for the data names players meet most; other names are shown as they are.</summary>
-    private static readonly Dictionary<string, string> Labels = new()
+    /// <summary>
+    /// The plain label of a data name players meet most, in the user's language; null for other names (shown as they
+    /// are).
+    /// </summary>
+    /// <param name="name">The data name (its key's name).</param>
+    private static string? PlainLabel(string name) => name switch
     {
-        ["text"] = "Text (sign)",
-        ["tag"] = "Tag (portal)",
-        ["creator"] = "Builder (player id)",
-        ["creatorName"] = "Builder name",
-        ["author"] = "Author",
-        ["health"] = "Health",
-        ["plantTime"] = "Planted at (game time)",
-        ["items"] = "Contents",
-        ["permitted"] = "Permitted players",
-        ["enabled"] = "Enabled (1 = on)",
-        ["item"] = "Item",
-        ["variant"] = "Variant",
-        ["quality"] = "Quality",
-        ["ownerName"] = "Owner name",
-        ["owner"] = "Owner (player id)",
-        ["fuel"] = "Fuel",
-        ["StartTime"] = "Started at",
-        ["level"] = "Level (stars)",
-        ["tamed"] = "Tamed (1 = yes)",
-        ["support"] = "Support",
-        ["scale"] = "Scale",
-        ["picked"] = "Picked (1 = yes)",
-        ["picked_time"] = "Picked at",
-        ["spawntime"] = "Spawned at",
-        ["lastTime"] = "Last updated (game time)",
-        ["accTime"] = "Time accumulated",
-        ["queued"] = "Queued items",
-        ["state"] = "State",
+        "text" => Lang.T("inspect.data.text"),
+        "tag" => Lang.T("inspect.data.tag"),
+        "creator" => Lang.T("inspect.data.creator"),
+        "creatorName" => Lang.T("inspect.data.creatorName"),
+        "author" => Lang.T("inspect.data.author"),
+        "health" => Lang.T("inspect.data.health"),
+        "plantTime" => Lang.T("inspect.data.plantTime"),
+        "items" => Lang.T("inspect.data.items"),
+        "permitted" => Lang.T("inspect.data.permitted"),
+        "enabled" => Lang.T("inspect.data.enabled"),
+        "item" => Lang.T("inspect.data.item"),
+        "variant" => Lang.T("inspect.data.variant"),
+        "quality" => Lang.T("inspect.data.quality"),
+        "ownerName" => Lang.T("inspect.data.ownerName"),
+        "owner" => Lang.T("inspect.data.owner"),
+        "fuel" => Lang.T("inspect.data.fuel"),
+        "StartTime" => Lang.T("inspect.data.startTime"),
+        "level" => Lang.T("inspect.data.level"),
+        "tamed" => Lang.T("inspect.data.tamed"),
+        "support" => Lang.T("inspect.data.support"),
+        "scale" => Lang.T("inspect.data.scale"),
+        "picked" => Lang.T("inspect.data.picked"),
+        "picked_time" => Lang.T("inspect.data.pickedTime"),
+        "spawntime" => Lang.T("inspect.data.spawnTime"),
+        "lastTime" => Lang.T("inspect.data.lastTime"),
+        "accTime" => Lang.T("inspect.data.accTime"),
+        "queued" => Lang.T("inspect.data.queued"),
+        "state" => Lang.T("inspect.data.state"),
+        _ => null,
     };
 
-    /// <summary>The object data's sections (as ObjectData names them) and what each holds, for the Add row.</summary>
-    private static readonly (string Section, string Name)[] Sections =
-    [
-        ("strings", "text"), ("ints", "whole number"), ("floats", "number"), ("longs", "large number"), ("vec3", "3 numbers (x y z)"), ("quats", "4 numbers (x y z w)"),
-    ];
+    /// <summary>The object data's sections (as ObjectData names them) the Add row offers, in its order.</summary>
+    private static readonly string[] Sections = ["strings", "ints", "floats", "longs", "vec3", "quats"];
+
+    /// <summary>What a section of the object data holds, in the user's language ("data" for bytes).</summary>
+    /// <param name="section">The section, as ObjectData names it.</param>
+    private static string SectionName(string section) => section switch
+    {
+        "strings" => Lang.T("inspect.section.strings"),
+        "ints" => Lang.T("inspect.section.ints"),
+        "floats" => Lang.T("inspect.section.floats"),
+        "longs" => Lang.T("inspect.section.longs"),
+        "vec3" => Lang.T("inspect.section.vec3"),
+        "quats" => Lang.T("inspect.section.quats"),
+        _ => Lang.T("inspect.section.data"),
+    };
 
     /// <summary>The floating card, hidden until an object is opened.</summary>
     public Control Card { get; }
@@ -69,23 +84,26 @@ public sealed class InspectorPanel
     /// <summary>One row per data value, rebuilt by <c>Render</c>.</summary>
     internal StackPanel Fields { get; } = new() { Spacing = 2 };
     /// <summary>The section of a value to add.</summary>
-    internal ComboBox AddSection { get; } = new() { ItemsSource = Sections.Select(s => s.Name).ToList(), SelectedIndex = 0, FontSize = 11, Width = 100 };
+    internal ComboBox AddSection { get; } = new() { ItemsSource = Sections.Select(SectionName).ToList(), SelectedIndex = 0, FontSize = 11, Width = 100 };
     /// <summary>The name of a value to add.</summary>
-    internal TextBox AddKey { get; } = new() { PlaceholderText = "name (text, tag…)", FontSize = 11 };
+    internal TextBox AddKey { get; } = new() { PlaceholderText = Lang.T("inspect.hint.addKey"), FontSize = 11 };
     /// <summary>The value to add.</summary>
-    internal TextBox AddValue { get; } = new() { PlaceholderText = "value", FontSize = 11 };
+    internal TextBox AddValue { get; } = new() { PlaceholderText = Lang.T("inspect.hint.addValue"), FontSize = 11 };
     /// <summary>Adds the value to <c>Added</c> (written on Apply).</summary>
-    internal Button AddButton { get; } = new() { Content = "Add", FontSize = 11 };
+    internal Button AddButton { get; } = new() { Content = Lang.T("common.add"), FontSize = 11 };
     /// <summary>Applies the changes (<c>Apply</c>); enabled only while there are some.</summary>
-    internal Button ApplyButton { get; } = new() { Content = "Apply changes", FontSize = 12, IsEnabled = false };
+    internal Button ApplyButton { get; } = new() { Content = Lang.T("inspect.label.apply"), FontSize = 12, IsEnabled = false };
     /// <summary>Throws away the changes, back to the object's data as opened.</summary>
-    internal Button RevertButton { get; } = new() { Content = "Revert", FontSize = 12, IsEnabled = false };
+    internal Button RevertButton { get; } = new() { Content = Lang.T("inspect.label.revert"), FontSize = 12, IsEnabled = false };
     /// <summary>A status line to show (what happened, or why nothing did).</summary>
-    public event Action<string>? Message;
+    public event Action<Said>? Message;
     /// <summary>After applying: the copy that replaced the object (to select it).</summary>
     public event Action<int>? Replaced;
-    /// <summary>Asks a yes/no question before going on (the window shows it; true by default).</summary>
-    internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
+    /// <summary>
+    /// Asks a question before going on, with its title, its text and the button that goes on (the window shows it;
+    /// true by default).
+    /// </summary>
+    internal Func<string, string, string, Task<bool>> Confirm { get; set; } = (_, _, _) => Task.FromResult(true);
 
     /// <summary>What is shown: the thing (index into the scene's things), null when closed.</summary>
     public int? Index { get; private set; }
@@ -111,6 +129,12 @@ public sealed class InspectorPanel
         /// <summary>Taken out on Apply.</summary>
         public bool Removed;
     }
+    /// <summary>The most items a stack may hold, as the save keeps them (the details row and the picked slot alike).</summary>
+    internal const int MaxStack = 65535;
+
+    /// <summary>The most durability points an item's box takes.</summary>
+    private const int MaxDurability = 100000;
+
     /// <summary>The object's values, as built when opened.</summary>
     internal List<Field> FieldList { get; private set; } = [];
     /// <summary>Values to add, as typed (section, name, value).</summary>
@@ -160,7 +184,7 @@ public sealed class InspectorPanel
     /// <summary>The stand as opened (<c>StandKey</c>), to tell whether it changed.</summary>
     private string _standAtOpen = "";
     /// <summary>Why the stand's changes cannot be written (an item it does not take), null when they can.</summary>
-    private string? _standError;
+    private Said? _standError;
     /// <summary>The contents as opened (<c>ItemsKey</c>), to tell whether they changed.</summary>
     private string _itemsAtOpen = "";
     /// <summary>The container's size in slots; 0 × 0 when unknown.</summary>
@@ -190,28 +214,30 @@ public sealed class InspectorPanel
             string key = AddKey.Text?.Trim() ?? "";
             if (key == "")
             {
-                Message?.Invoke("Type the name of the value to add (for example text for a sign).");
+                Message?.Invoke(Said.Of("inspect.msg.typeName"));
                 return;
             }
             if (ReadOnlyKey(key))
             {
-                Message?.Invoke($"{key} is shown only: the mod that keeps it says it must not be changed.");
+                Message?.Invoke(Said.Of("inspect.msg.readOnly", key));
                 return;
             }
-            Added.Add((Sections[Math.Max(0, AddSection.SelectedIndex)].Section, key, AddValue.Text ?? ""));
+            // One value a key: a second would be set over the first (or over the one in the list) on Apply.
+            string section = Sections[Math.Max(0, AddSection.SelectedIndex)];
+            int hash = ZdoKeys.Parse(key);
+            if (FieldList.Exists(f => f.Section == section && f.Key == hash) || Added.Exists(a => a.Section == section && ZdoKeys.Parse(a.Key) == hash))
+            {
+                Message?.Invoke(Said.Of("inspect.msg.already", key));
+                return;
+            }
+            Added.Add((section, key, AddValue.Text ?? ""));
             AddKey.Text = AddValue.Text = "";
             Render();
         };
         RevertButton.Click += (_, _) => Reset();
         ApplyButton.Click += async (_, _) => await Apply();
-        Card = new Border
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             Margin = new Thickness(10),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top,
@@ -225,29 +251,22 @@ public sealed class InspectorPanel
                     Spacing = 6,
                     Children =
                     {
-                        new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { _title, Col(close, 1) } },
+                        new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { _title, Ui.Col(close, 1) } },
                         _where,
                         ItemsBox,
-                        new TextBlock { Text = "DATA", FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 0) },
+                        new TextBlock { Text = Lang.T("inspect.head.data"), FontSize = 10, Foreground = Ui.Muted, Margin = new Thickness(0, 6, 0, 0) },
                         Fields,
-                        new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,*,Auto"), ColumnSpacing = 4, Children = { AddSection, Col(AddKey, 1), Col(AddValue, 2), Col(AddButton, 3) } },
+                        new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,*,Auto"), ColumnSpacing = 4, Children = { AddSection, Ui.Col(AddKey, 1), Ui.Col(AddValue, 2), Ui.Col(AddButton, 3) } },
                         new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ApplyButton, RevertButton } },
                         new TextBlock
                         {
-                            Text = "Applying replaces the object by a copy with the new data (Ctrl+Z puts the old one back), like a move does; Save writes it. Change values only if you know what they do: the game may reset or ignore wrong ones.",
+                            Text = Lang.T("inspect.hint.apply"),
                             FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
                         },
                     },
                 },
             },
-        };
-    }
-
-    /// <summary>Puts a control in a grid column.</summary>
-    private static Control Col(Control c, int col)
-    {
-        Grid.SetColumn(c, col);
-        return c;
+        });
     }
 
     /// <summary>True while the card is shown.</summary>
@@ -283,7 +302,7 @@ public sealed class InspectorPanel
         }
         if (bytes == null)
         {
-            Message?.Invoke("That object cannot be read.");
+            Message?.Invoke(Said.Of("inspect.msg.cannotRead"));
             return false;
         }
         Index = index;
@@ -335,7 +354,7 @@ public sealed class InspectorPanel
 
         foreach (var (k, v) in z.ByteList)
         {
-            Add("bytes", k, Convert.ToBase64String(v), $"{v.Length} bytes");
+            Add("bytes", k, Convert.ToBase64String(v), Lang.T("inspect.bytes", v.Length));
         }
 
         FieldList = list;
@@ -368,7 +387,7 @@ public sealed class InspectorPanel
                     CustomData = new(i.CustomData),
                 })];
             }
-            catch (Exception ex) when (ex is NotSupportedException or EndOfStreamException or IOException)
+            catch (Exception ex) when (CheckedReads.Damaged(ex))
             {
                 _inventoryError = ex.Message;
                 Items = [];
@@ -414,7 +433,7 @@ public sealed class InspectorPanel
     private string StandKey() => Stand == null ? "" : string.Join(";", Stand.Select(r => $"{r.Name},{r.Quality},{r.Variant}")) + "|" + StandWay.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>A value's label: the plain one, else a mod's manifest's, else its name, else its key's hash.</summary>
-    private static string Label(Field f) => f.Name is string n ? Labels.TryGetValue(n, out string? l) ? l : ModManifests.DataOf(n)?.Label ?? n : $"#{f.Key}";
+    private static string Label(Field f) => f.Name is string n ? PlainLabel(n) ?? ModManifests.DataOf(n)?.Label ?? n : $"#{f.Key}";
 
     /// <summary>
     /// A byte-array value as a running mod extension reads it (ModExtensions.Decode); null when none does (or for
@@ -432,29 +451,47 @@ public sealed class InspectorPanel
         return ModExtensions.Decode(f.Key, view, bytes);
     }
 
+    /// <summary>
+    /// The lines under the card's title: the object's id, place and turn (and whether it has a connection), what it
+    /// spawns when it is a spawn point or a nest, and the mod it comes from.
+    /// </summary>
+    /// <param name="z">The object's data.</param>
+    /// <param name="id">The object's id in the area (0: none).</param>
+    /// <param name="name">Its name as the game shows it, null when the catalogue has none.</param>
+    private static string Where(ZdoData z, int id, string? name)
+    {
+        var lines = new List<string>
+        {
+            z.Connection != null
+                ? Lang.T("inspect.whereConnected", id, z.Position.X, z.Position.Y, z.Position.Z, z.Rotation.Y)
+                : Lang.T("inspect.where", id, z.Position.X, z.Position.Y, z.Position.Z, z.Rotation.Y),
+        };
+        if (PrefabCatalog.SpawnOf(z.Prefab) is { } spawn)
+        {
+            lines.Add(spawn.Nest ? Lang.T("inspect.nest", spawn.Summary()) : Lang.T("inspect.spawnPoint", spawn.Summary()));
+        }
+        if (name != null && ModCatalogue.IsModded(name))
+        {
+            lines.Add(ModCatalogue.ModOf(name) is string mod ? Lang.T("inspect.fromMod", mod) : Lang.T("inspect.fromAMod"));
+        }
+        return string.Join("\n", lines);
+    }
+
     /// <summary>Builds the whole card again from what is shown and changed.</summary>
     private void Render()
     {
         var z = _z!;
         var s = _session();
         string? name = PrefabCatalog.DisplayName(z.Prefab);
-        _title.Text = name ?? $"Prefab {z.Prefab}";
-        int id = Index is int ix && s != null ? s.Scene.Things[ix].Id : 0;
-        _where.Text = $"Object {id} · x {z.Position.X:0.00}, y {z.Position.Y:0.00}, z {z.Position.Z:0.00} · turned {z.Rotation.Y:0.0}°{(z.Connection != null ? " · has a connection (kept)" : "")}";
-        if (PrefabCatalog.SpawnOf(z.Prefab) is { } spawn)
-        {
-            _where.Text += $"\n{(spawn.Nest ? "Nest" : "Spawn point")}: {spawn.Summary()}";
-        }
-        if (name != null && ModCatalogue.IsModded(name))
-        {
-            _where.Text += ModCatalogue.ModOf(name) is string mod ? $"\nFrom the mod {mod}" : "\nFrom a mod";
-        }
+        _title.Text = name ?? Lang.T("inspect.prefab", z.Prefab);
+        int id = Index is int ix && s != null && ix < s.Scene.Things.Count ? s.Scene.Things[ix].Id : 0;
+        _where.Text = Where(z, id, name);
         RenderItems();
         RenderStand();
         Fields.Children.Clear();
         if (FieldList.Count == 0 && Added.Count == 0)
         {
-            Fields.Children.Add(new TextBlock { Text = "This object holds no data: the game uses its defaults.", FontSize = 11, Foreground = Ui.Muted });
+            Fields.Children.Add(new TextBlock { Text = Lang.T("inspect.noData"), FontSize = 11, Foreground = Ui.Muted });
         }
         foreach (var f in FieldList)
         {
@@ -462,7 +499,7 @@ public sealed class InspectorPanel
             // A mod's manifest can ask for a value to be shown only, and tell what it is.
             var note = ModManifests.DataOf(f.Name);
             bool ro = f.Section == "bytes";
-            var box = new TextBox { Text = isItems ? "see Contents above" : ro ? f.Note : f.Now, IsReadOnly = ro || note?.ReadOnly == true, FontSize = 11, Opacity = f.Removed ? 0.5 : 1 }.Tip("inspect.value");
+            var box = new TextBox { Text = isItems ? Lang.T("inspect.seeContents") : ro ? f.Note : f.Now, IsReadOnly = ro || note?.ReadOnly == true, FontSize = 11, Opacity = f.Removed ? 0.5 : 1 }.Tip("inspect.value");
             if (note?.Help is string help)
             {
                 ToolTip.SetTip(box, help);
@@ -475,13 +512,14 @@ public sealed class InspectorPanel
                     Dirty();
                 }
             };
-            // A value a mod's manifest shows only cannot be removed either.
-            var rm = new Button { Content = f.Removed ? "↺" : "✕", FontSize = 11, Padding = new Thickness(4, 0), IsEnabled = note?.ReadOnly != true };
+            // A value a mod's manifest shows only cannot be removed either; nor can the contents while they are edited
+            // above (Apply writes them again): empty them there instead.
+            var rm = new Button { Content = f.Removed ? "↺" : "✕", FontSize = 11, Padding = new Thickness(4, 0), IsEnabled = note?.ReadOnly != true && !isItems };
             rm.Tip(f.Removed ? "inspect.keepValue" : "inspect.removeValue");
             rm.Click += (_, _) => { f.Removed = !f.Removed; Render(); };
             var label = new TextBlock { Text = Label(f), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextDecorations = f.Removed ? TextDecorations.Strikethrough : null };
-            ToolTip.SetTip(label, $"{f.Name} · {Sections.FirstOrDefault(x => x.Section == f.Section).Name ?? "data"} · key {f.Key}");
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,170,Auto"), ColumnSpacing = 4, Children = { label, Col(box, 1), Col(rm, 2) } };
+            ToolTip.SetTip(label, $"{f.Name} · {SectionName(f.Section)} · key {f.Key}");
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,170,Auto"), ColumnSpacing = 4, Children = { label, Ui.Col(box, 1), Ui.Col(rm, 2) } };
             // Under a value: its note, or bytes as a mod's extension reads them.
             string? under = !ro ? f.Note : isItems ? null : Decoded(f);
             Fields.Children.Add(under != null
@@ -496,7 +534,7 @@ public sealed class InspectorPanel
             {
                 ColumnDefinitions = new ColumnDefinitions("*,170,Auto"),
                 ColumnSpacing = 4,
-                Children = { new TextBlock { Text = $"{(Labels.TryGetValue(a.Key, out string? l) ? l : a.Key)} (new)", FontSize = 11 }, Col(new TextBlock { Text = a.Value, FontSize = 11 }, 1), Col(x, 2) },
+                Children = { new TextBlock { Text = Lang.T("inspect.added", PlainLabel(a.Key) ?? a.Key), FontSize = 11 }, Ui.Col(new TextBlock { Text = a.Value, FontSize = 11 }, 1), Ui.Col(x, 2) },
             });
         }
         Dirty();
@@ -515,10 +553,10 @@ public sealed class InspectorPanel
             return;
         }
         var (w, h) = _grid;
-        ItemsBox.Children.Add(new TextBlock { Text = $"CONTENTS · {(w > 0 ? $"{w} × {h} slots" : "size unknown")} · {Items.Count} item(s)", FontSize = 10, Foreground = Ui.Muted });
+        ItemsBox.Children.Add(new TextBlock { Text = w > 0 ? Lang.T("inspect.head.contents", w, h, Items.Count) : Lang.T("inspect.head.contentsUnknown", Items.Count), FontSize = 10, Foreground = Ui.Muted });
         if (_inventoryError != null)
         {
-            ItemsBox.Children.Add(new TextBlock { Text = $"The contents cannot be read: {_inventoryError}", FontSize = 11, Foreground = Brushes.Orange, TextWrapping = TextWrapping.Wrap });
+            ItemsBox.Children.Add(new TextBlock { Text = Lang.T("inspect.error.contents", _inventoryError), FontSize = 11, Foreground = Brushes.Orange, TextWrapping = TextWrapping.Wrap });
             return;
         }
         if (w > 0 && h > 0)
@@ -528,19 +566,14 @@ public sealed class InspectorPanel
         var rows = new StackPanel { Spacing = 3 };
         var details = new Expander
         {
-            Header = new TextBlock { Text = "Every item's details", FontSize = 11 },
+            Header = new TextBlock { Text = Lang.T("inspect.label.details"), FontSize = 11 },
             Content = rows,
             IsExpanded = w <= 0 || h <= 0 || Items.Any(i => i.X >= w || i.Y >= h),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Padding = new Thickness(0),
         }.Tip("inspect.details");
         ItemsBox.Children.Add(details);
-        rows.Children.Add(new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("*,54,44,50,40,40,26"),
-            ColumnSpacing = 3,
-            Children = { Head("Item", 0), Head("Stack", 1), Head("Qual.", 2), Head("Dur. %", 3), Head("X", 4), Head("Y", 5) },
-        });
+        rows.Children.Add(ItemHeads());
         foreach (var it in Items.ToList())
         {
             var name = new AutoCompleteBox { Text = it.Name, ItemsSource = PrefabCatalog.Items, FilterMode = AutoCompleteFilterMode.ContainsOrdinal, FontSize = 11, MinimumPrefixLength = 2 }.Tip("inspect.item");
@@ -551,6 +584,18 @@ public sealed class InspectorPanel
                 n.ValueChanged += (_, e) => { set((int)(e.NewValue ?? min)); Dirty(); };
                 return n;
             }
+            // Durability points as the game saves them (not a percentage), fractions kept.
+            var dur = new NumericUpDown
+            {
+                Value = float.IsFinite(it.Durability) ? (decimal)Math.Clamp(it.Durability, 0, MaxDurability) : 0,
+                Minimum = 0,
+                Maximum = MaxDurability,
+                Increment = 1,
+                FormatString = "0.##",
+                FontSize = 11,
+                ShowButtonSpinner = false,
+            }.Tip("inspect.durability");
+            dur.ValueChanged += (_, e) => { it.Durability = (float)(e.NewValue ?? 0); Dirty(); };
             var x = new Button { Content = "✕", FontSize = 11, Padding = new Thickness(4, 0) };
             x.Tip("inspect.removeItem");
             x.Click += (_, _) => { Items.Remove(it); RenderItems(); Dirty(); };
@@ -562,28 +607,28 @@ public sealed class InspectorPanel
                 Children =
                 {
                     name,
-                    Col(Num(it.Stack, 1, 65535, v => it.Stack = v, "inspect.count"), 1),
-                    Col(Num(it.Quality, 1, 10, v => it.Quality = v, "inspect.quality"), 2),
-                    Col(Num((int)MathF.Round(it.Durability), 0, 100000, v => it.Durability = v, "inspect.durability"), 3),
-                    Col(WithBorder(Num(it.X, 0, 255, v => it.X = v, "inspect.slotX"), bad), 4),
-                    Col(WithBorder(Num(it.Y, 0, 255, v => it.Y = v, "inspect.slotY"), bad), 5),
-                    Col(x, 6),
+                    Ui.Col(Num(it.Stack, 1, MaxStack, v => it.Stack = v, "inspect.count"), 1),
+                    Ui.Col(Num(it.Quality, 1, 10, v => it.Quality = v, "inspect.quality"), 2),
+                    Ui.Col(dur, 3),
+                    Ui.Col(WithBorder(Num(it.X, 0, 255, v => it.X = v, "inspect.slotX"), bad), 4),
+                    Ui.Col(WithBorder(Num(it.Y, 0, 255, v => it.Y = v, "inspect.slotY"), bad), 5),
+                    Ui.Col(x, 6),
                 },
             });
         }
-        var add = new Button { Content = "Add item", FontSize = 11 }.Tip("inspect.addItem");
+        var add = new Button { Content = Lang.T("inspect.label.addItem"), FontSize = 11 }.Tip("inspect.addItem");
         add.Click += (_, _) =>
         {
             if (FreeSlot() is not var (fx, fy))
             {
-                Message?.Invoke("No free slot left in this container.");
+                Message?.Invoke(Said.Of("inspect.msg.noFreeSlot"));
                 return;
             }
             Items.Add(new ItemRow { X = fx, Y = fy });
             RenderItems();
             Dirty();
         };
-        var tidy = new Button { Content = "Tidy slots", FontSize = 11 };
+        var tidy = new Button { Content = Lang.T("inspect.label.tidy"), FontSize = 11 };
         tidy.Tip("inspect.tidy");
         tidy.Click += (_, _) =>
         {
@@ -673,7 +718,7 @@ public sealed class InspectorPanel
         ItemsBox.Children.Add(grid);
         if (_slot is not var (sx, sy) || sx >= w || sy >= h)
         {
-            ItemsBox.Children.Add(new TextBlock { Text = "Click a slot to choose what it holds.", FontSize = 11, Foreground = Ui.Muted });
+            ItemsBox.Children.Add(new TextBlock { Text = Lang.T("inspect.hint.clickSlot"), FontSize = 11, Foreground = Ui.Muted });
             return;
         }
         // The picked slot: its item (any of the game's), how many, how good.
@@ -686,7 +731,7 @@ public sealed class InspectorPanel
             FilterMode = AutoCompleteFilterMode.ContainsOrdinal,
             FontSize = 11,
             MinimumPrefixLength = 1,
-            PlaceholderText = "Find an item…",
+            PlaceholderText = Lang.T("inspect.hint.findItem"),
         }.Tip("inspect.slotItem");
         void Chosen()
         {
@@ -712,7 +757,7 @@ public sealed class InspectorPanel
         }
         pick.SelectionChanged += (_, _) => Chosen();
         pick.LostFocus += (_, _) => Chosen();
-        var count = new NumericUpDown { Value = item?.Stack ?? 1, Minimum = 1, Maximum = 9999, Increment = 1, FormatString = "0", FontSize = 11, Width = 90, IsEnabled = item != null }.Tip("inspect.count");
+        var count = new NumericUpDown { Value = item?.Stack ?? 1, Minimum = 1, Maximum = MaxStack, Increment = 1, FormatString = "0", FontSize = 11, Width = 90, IsEnabled = item != null }.Tip("inspect.count");
         count.ValueChanged += (_, e) =>
         {
             if (item != null)
@@ -730,20 +775,20 @@ public sealed class InspectorPanel
                 Dirty();
             }
         };
-        var empty = new Button { Content = "Empty", FontSize = 11, IsEnabled = item != null }.Tip("inspect.emptySlot");
+        var empty = new Button { Content = Lang.T("inspect.label.empty"), FontSize = 11, IsEnabled = item != null }.Tip("inspect.emptySlot");
         empty.Click += (_, _) =>
         {
             items.Remove(item!);
             Dirty();
             RenderItems();
         };
-        var move = new Button { Content = _moving ? "Click a slot…" : "Move", FontSize = 11, IsEnabled = item != null }.Tip("inspect.moveSlot");
+        var move = new Button { Content = _moving ? Lang.T("inspect.label.clickSlot") : Lang.T("inspect.label.move"), FontSize = 11, IsEnabled = item != null }.Tip("inspect.moveSlot");
         move.Click += (_, _) =>
         {
             _moving = !_moving;
             RenderItems();
         };
-        ItemsBox.Children.Add(new TextBlock { Text = $"SLOT {sx + 1}, {sy + 1}", FontSize = 10, Foreground = Ui.Muted });
+        ItemsBox.Children.Add(new TextBlock { Text = Lang.T("inspect.head.slot", sx + 1, sy + 1), FontSize = 10, Foreground = Ui.Muted });
         ItemsBox.Children.Add(pick);
         ItemsBox.Children.Add(new StackPanel
         {
@@ -751,8 +796,8 @@ public sealed class InspectorPanel
             Spacing = 6,
             Children =
             {
-                new TextBlock { Text = "How many", FontSize = 11, VerticalAlignment = VerticalAlignment.Center }, count,
-                new TextBlock { Text = "Quality", FontSize = 11, VerticalAlignment = VerticalAlignment.Center }, quality, empty, move,
+                new TextBlock { Text = Lang.T("inspect.label.howMany"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center }, count,
+                new TextBlock { Text = Lang.T("inspect.data.quality"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center }, quality, empty, move,
             },
         });
     }
@@ -768,19 +813,19 @@ public sealed class InspectorPanel
             return;
         }
         int prefab = _z.Prefab;
-        ItemsBox.Children.Add(new TextBlock { Text = _armourStand ? "WEARS" : "HOLDS", FontSize = 10, Foreground = Ui.Muted });
+        ItemsBox.Children.Add(new TextBlock { Text = _armourStand ? Lang.T("inspect.head.wears") : Lang.T("inspect.head.holds"), FontSize = 10, Foreground = Ui.Muted });
         ItemsBox.Children.Add(new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("*,44,44,26"),
             ColumnSpacing = 3,
-            Children = { Head("Item", 0), Head("Qual.", 1), Head("Style", 2) },
+            Children = { Head(Lang.T("inspect.data.item"), 0), Head(Lang.T("inspect.head.quality"), 1), Head(Lang.T("inspect.head.style"), 2) },
         });
         foreach (var row in Stand)
         {
             var choices = PrefabCatalog.Items.Where(n => _armourStand
                 ? PrefabCatalog.ItemKindOf(StableHash.Of(n)) is { } k && StandData.FitsArmourSlot(row.Types, k)
                 : StandData.ItemStandRefusal(prefab, n) == null).ToList();
-            string slotName = row.Types.Length == 0 ? "Anything" : string.Join(", ", row.Types.Select(StandData.TypeName).Distinct());
+            string slotName = row.Types.Length == 0 ? Lang.T("inspect.anything") : string.Join(", ", row.Types.Select(t => StandData.TypeWords(t).Shown).Distinct());
             var name = new AutoCompleteBox
             {
                 Text = row.Name,
@@ -788,7 +833,7 @@ public sealed class InspectorPanel
                 FilterMode = AutoCompleteFilterMode.ContainsOrdinal,
                 FontSize = 11,
                 MinimumPrefixLength = 1,
-                PlaceholderText = _armourStand ? slotName : "Find an item…",
+                PlaceholderText = _armourStand ? slotName : Lang.T("inspect.hint.findItem"),
             }.Tip("inspect.standItem");
             name.PropertyChanged += (_, e) =>
             {
@@ -817,9 +862,9 @@ public sealed class InspectorPanel
                 Children =
                 {
                     name,
-                    Col(StandNum(row.Quality, 1, 10, v => row.Quality = v, "inspect.quality"), 1),
-                    Col(StandNum(row.Variant, 0, 99, v => row.Variant = v, "inspect.variant"), 2),
-                    Col(empty, 3),
+                    Ui.Col(StandNum(row.Quality, 1, 10, v => row.Quality = v, "inspect.quality"), 1),
+                    Ui.Col(StandNum(row.Variant, 0, 99, v => row.Variant = v, "inspect.variant"), 2),
+                    Ui.Col(empty, 3),
                 },
             });
         }
@@ -829,13 +874,13 @@ public sealed class InspectorPanel
             Spacing = 6,
             Children =
             {
-                new TextBlock { Text = _armourStand ? "Pose" : "Hangs", FontSize = 11, VerticalAlignment = VerticalAlignment.Center },
+                new TextBlock { Text = _armourStand ? Lang.T("inspect.label.pose") : Lang.T("inspect.label.hangs"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center },
                 StandNum(StandWay, 0, 99, v => StandWay = v, _armourStand ? "inspect.pose" : "inspect.orientation"),
             },
         });
         if (_standError != null)
         {
-            ItemsBox.Children.Add(new TextBlock { Text = _standError, FontSize = 11, Foreground = Brushes.Orange, TextWrapping = TextWrapping.Wrap });
+            ItemsBox.Children.Add(new TextBlock { Text = _standError.Shown, FontSize = 11, Foreground = Brushes.Orange, TextWrapping = TextWrapping.Wrap });
         }
     }
 
@@ -851,8 +896,23 @@ public sealed class InspectorPanel
         return n;
     }
 
+    /// <summary>The column heads of every item's details: item, stack, quality, durability, X and Y.</summary>
+    private static Grid ItemHeads()
+    {
+        return new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,54,44,50,40,40,26"),
+            ColumnSpacing = 3,
+            Children =
+            {
+                Head(Lang.T("inspect.data.item"), 0), Head(Lang.T("inspect.head.stack"), 1), Head(Lang.T("inspect.head.quality"), 2),
+                Head(Lang.T("inspect.head.durability"), 3), Head(Lang.T("inspect.head.x"), 4), Head(Lang.T("inspect.head.y"), 5),
+            },
+        };
+    }
+
     /// <summary>A column heading.</summary>
-    private static Control Head(string t, int col) => Col(new TextBlock { Text = t, FontSize = 10, Foreground = Ui.Muted }, col);
+    private static Control Head(string t, int col) => Ui.Col(new TextBlock { Text = t, FontSize = 10, Foreground = Ui.Muted }, col);
 
     /// <summary>Outlines a number box in orange when <paramref name="bad"/> (a slot outside the container).</summary>
     private static NumericUpDown WithBorder(NumericUpDown n, bool bad)
@@ -917,9 +977,13 @@ public sealed class InspectorPanel
                 var held = Stand.Where(r => r.Name != "").Select(r => new StandData.Held(r.Name, r.Quality, r.Variant)).ToList();
                 set.AddRange(_armourStand ? StandData.ForArmourStand(_z.Prefab, held, StandWay) : StandData.ForItemStand(_z.Prefab, held.FirstOrDefault(), StandWay));
             }
+            catch (StandRefusalException ex)
+            {
+                _standError = ex.Reason;
+            }
             catch (ArgumentException ex)
             {
-                _standError = ex.Message;
+                _standError = Said.Raw(ex.Message);
             }
         }
         return (set, inv);
@@ -950,26 +1014,46 @@ public sealed class InspectorPanel
         }
         var (w, h) = _grid;
         if (inv != null && w > 0 && inv.Any(i => i.X >= w || i.Y >= h)
-            && !await Confirm($"Some items are outside the {w} × {h} slots of this container: the game would not show them. Apply anyway?"))
+            && !await Confirm(Lang.T("inspect.data.items"), Lang.T("inspect.ask.outside.text", w, h), Lang.T("inspect.ask.outside.yes")))
         {
             return;
         }
         ZdoData z;
+        var notes = new List<string>();
         try
         {
-            z = ObjectData.Edited(_bytes, set, inv);
+            z = ObjectData.Edited(_bytes, set, inv, notes);
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or OverflowException)
         {
-            Message?.Invoke($"Could not change the object: {ex.Message}");
+            Message?.Invoke(Said.Of("inspect.msg.couldNotChange", ex.Message));
+            return;
+        }
+        // Another area open since (its things are others): nothing to change here.
+        if (index >= s.Scene.Things.Count)
+        {
+            Message?.Invoke(Said.Of("inspect.msg.notInArea"));
+            Close();
             return;
         }
         var t = s.Scene.Things[index];
+        byte[]? now;
+        try
+        {
+            now = t.Gone ? null : ObjectData.Bytes(s.Scene.World, s.Edits, t.Id);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            Message?.Invoke(Said.Of("inspect.msg.cannotReadNow", ex.Message));
+            return;
+        }
         // Live: changed or removed in the game since it was opened (a player used the chest): the copy
         // would bring back its old data. Shown as it is now, to change again.
-        if (t.Gone || !(ObjectData.Bytes(s.Scene.World, s.Edits, t.Id)?.AsSpan().SequenceEqual(_bytes) ?? false))
+        if (t.Gone || !(now?.AsSpan().SequenceEqual(_bytes) ?? false))
         {
-            Message?.Invoke(t.Gone ? "This object is gone (removed in the game): nothing changed." : "This object changed in the game since you opened it: here it is as it is now, make your change again.");
+            // Gone offline: deleted, replaced or undone here; live, the game may have taken it too.
+            var gone = s.IsLive ? Said.Of("inspect.msg.goneLive") : Said.Of("inspect.msg.gone");
+            Message?.Invoke(t.Gone ? gone : Said.Of("inspect.msg.changedInGame"));
             if (t.Gone)
             {
                 Close();
@@ -980,9 +1064,10 @@ public sealed class InspectorPanel
             }
             return;
         }
-        string name = PrefabCatalog.DisplayName(z.Prefab) ?? "object";
-        var copies = s.Commit($"Edited {name}", null, [index], [(new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), t.Piece)]);
-        Message?.Invoke($"Changed {name}. Ctrl+Z puts the old one back; Save writes it.");
+        var name = PrefabCatalog.DisplayName(z.Prefab) is string shown ? Said.Raw(shown) : Said.Of("inspect.object");
+        var copies = s.Commit(Lang.T("inspect.undo.edited", name.Shown), null, [index], [(new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), t.Piece)]);
+        // The notes come from ObjectData in English, each its own sentence.
+        Message?.Invoke(Said.Of("inspect.msg.changed", name) + Said.Join(" ", notes.Select(n => Said.Raw(n + "."))));
         Open(copies[0]);
         Replaced?.Invoke(copies[0]);
     }

@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
@@ -19,10 +20,28 @@ public class WorldSaveTests
         Assert.Equal("CITest", world.Name);
         Assert.Equal("GbXfypqU3G", world.SeedName);
         Assert.Equal(2, world.SaveNumber);
+        Assert.Equal(41, world.SaveVersion);
         Assert.Equal(122, world.ObjectCount);
         Assert.Single(world.TerrainZones);
         Assert.True(world.Templates.ContainsKey(Fixtures.Hash("Beech1")));
         Assert.Contains(world.Objects, o => o.Prefab == Fixtures.Hash("piece_chest_wood"));
+    }
+
+    [Fact]
+    public void ReadsTheTestWorldAsTheGameSavesItInFormat42()
+    {
+        // Valheim 1.0.20 saves worlds in format 42: the same objects, ground and names as format 41 come back.
+        WorldSave old = WorldSave.Load(Fixtures.World), world = WorldSave.Load(Fixtures.World42);
+        Assert.Equal((42, 3), (world.SaveVersion, world.SaveNumber));
+        Assert.All(world.Chunks, c => Assert.Equal(42, c.WorldVersion));
+        Assert.Equal((old.Name, old.SeedName, old.Seed, old.WorldGenVersion), (world.Name, world.SeedName, world.Seed, world.WorldGenVersion));
+        Assert.Equal(old.Objects, world.Objects);
+        Assert.Equal(old.Zones!.Generated, world.Zones!.Generated);
+        Assert.Equal(42, world.Zones.FileVersion);
+        var (a, b) = (Assert.Single(old.TerrainZones), Assert.Single(world.TerrainZones));
+        Assert.Equal((a.ZoneX, a.ZoneZ), (b.ZoneX, b.ZoneZ));
+        Assert.Equal(a.LevelDelta, b.LevelDelta);
+        Assert.Equal(a.Paint, b.Paint);
     }
 
     [Fact]
@@ -307,6 +326,43 @@ public class WorldSaveTests
     }
 
     [Fact]
+    public void LiveBytesReadAgainAreLetGoOnceNoObjectIsInThem()
+    {
+        // A creature moving in the game is read again at every check: the bytes of each older read are let go once no
+        // object of the world is in them any more, instead of being kept for the session.
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        int id = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1")).Id;
+        Vector3 at = world.ObjectRefs[id].Position;
+        var firstRead = MergeMoved(world, id, at + new Vector3(1, 0, 0));
+        MergeMoved(world, id, at + new Vector3(2, 0, 0));
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        Assert.False(firstRead.IsAlive);
+        Assert.Equal(at + new Vector3(2, 0, 0), world.ObjectRefs[id].Position);
+        var read = ZdoData.Parse(world.ObjectBytes(id), world.ObjectRefs[id].File.WorldVersion);
+        Assert.Equal(at + new Vector3(2, 0, 0), read.Position);
+    }
+
+    /// <summary>
+    /// The game sends the object's zone with the object moved to <paramref name="to"/>; the bytes it is read again
+    /// from, held weakly (not inlined, so no reference to them is left on the caller's stack).
+    /// </summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference MergeMoved(WorldSave world, int id, Vector3 to)
+    {
+        var zone = world.ObjectRefs[id].Zone;
+        var z = ZdoData.Parse(world.ObjectBytes(id), world.ObjectRefs[id].File.WorldVersion);
+        z.Position = to;
+        List<(long, uint, byte[])> objects = [.. Enumerable.Range(0, world.ObjectRefs.Count)
+            .Where(i => world.ObjectRefs[i].Zone == zone && !world.Vanished.Contains(i))
+            .Select(i => (world.ObjectRefs[i].LiveId.User, world.ObjectRefs[i].LiveId.Id, i == id ? z.Serialize() : world.ObjectBytes(i)))];
+        var merged = world.MergeLive([zone], objects, _ => false, _ => false)!;
+        Assert.Equal([id], merged.Updated);
+        return new WeakReference(world.LiveSource(world.ObjectRefs[id].File));
+    }
+
+    [Fact]
     public async Task LiveAMergeWaitsWhileTheWorldsListsAreReadElsewhere()
     {
         var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
@@ -334,33 +390,75 @@ public class WorldSaveTests
         Assert.NotNull(world.MergeLive([(0, 0)], [], _ => false, _ => false));
     }
 
+    // A hold (the history written in the background after Apply live) keeps merges out until every hold is let go;
+    // letting one go twice counts once.
+    [Fact]
+    public void LiveAMergeWaitsWhileTheWorldIsHeld()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        var first = world.Hold();
+        var second = world.Hold();
+        Assert.Null(world.MergeLive([(0, 0)], [], _ => false, _ => false));
+        first.Dispose();
+        first.Dispose();
+        Assert.Null(world.MergeLive([(0, 0)], [], _ => false, _ => false));
+        second.Dispose();
+        Assert.NotNull(world.MergeLive([(0, 0)], [], _ => false, _ => false));
+    }
+
+    // A new piece made from what was taken earlier gets the builder taken then, not the one chosen now.
+    [Fact]
+    public void ANewPieceTakesTheBuilderGiven()
+    {
+        using var w = new TempWorld();
+        WorldSave world = w.Load();
+        var wall = new NewObject(-1, StableHash.Of("woodwall"), new Vector3(1, 2, 3), Vector3.Zero, 0f);
+        long? Creator(long builder) => world.NewObjectBytes(wall, world.SourceReader(), builder) is { } b
+            ? ZdoData.Parse(b).LongList.Where(i => i.Key == StableHash.Of("creator")).Select(i => (long?)i.Value).SingleOrDefault()
+            : null;
+        Assert.Equal(4242L, Creator(4242));
+        Assert.Equal(99L, Creator(99));
+    }
+
     [Fact]
     public void LiveAPlayersPieceAndAPlacedLocationComeAndGo()
     {
         var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
         var at = new Vector3(640, 30, 640);
         // ZDOIDs of a user the snapshot has none of.
+        // The piece is of a kind the world has none of (a mod's).
         List<(long, uint, byte[])> made =
         [
-            (4242, 1, MadeObjects.Piece("woodwall", at, 777, "Astrid")),
+            (4242, 1, MadeObjects.Piece("mod_live_wall", at, 777, "Astrid")),
             (4242, 2, MadeObjects.Location(at + new Vector3(5, 0, 5), MadeObjects.MadeUpLocation)),
         ];
+        int templates = world.TemplatesGeneration;
+        Assert.False(world.Templates.ContainsKey(Fixtures.Hash("mod_live_wall")));
         var came = world.MergeLive([(10, 10)], made, _ => false, _ => false)!;
         Assert.Equal(2, came.Added.Count);
+        // A kind the world had none of: its first object is its template, and the templates' generation moved on;
+        // the same objects again do not move it.
+        Assert.True(world.Templates.ContainsKey(Fixtures.Hash("mod_live_wall")));
+        Assert.True(world.TemplatesGeneration > templates);
+        templates = world.TemplatesGeneration;
+        world.MergeLive([(10, 10)], made, _ => false, _ => false);
+        Assert.Equal(templates, world.TemplatesGeneration);
         // A placed location shapes the ground as the game runs.
         Assert.True(came.Modifiers);
         Assert.Equal(1, world.Creators[777]);
         Assert.Equal(777, world.TopBuilder);
         Assert.Equal("Astrid", world.PlayerNames[777]);
-        Assert.Contains(world.Pieces, p => p.Prefab == Fixtures.Hash("woodwall"));
+        Assert.Contains(world.Pieces, p => p.Prefab == Fixtures.Hash("mod_live_wall"));
         Assert.Contains(world.Locations, l => l.Location == MadeObjects.MadeUpLocation);
         Assert.Contains(world.Placed, p => p.Location == MadeObjects.MadeUpLocation);
         // Gone from the game: out of every list, its builder's count down.
         var gone = world.MergeLive([(10, 10)], [], _ => false, _ => false)!;
         Assert.Equal(2, gone.Vanished.Count);
         Assert.True(gone.Modifiers);
-        Assert.Equal(0, world.Creators[777]);
-        Assert.DoesNotContain(world.Pieces, p => p.Prefab == Fixtures.Hash("woodwall"));
+        // A builder with no pieces left is no builder: kept at zero, TopBuilder could still name them.
+        Assert.False(world.Creators.ContainsKey(777));
+        Assert.NotEqual(777, world.TopBuilder);
+        Assert.DoesNotContain(world.Pieces, p => p.Prefab == Fixtures.Hash("mod_live_wall"));
         Assert.DoesNotContain(world.Locations, l => l.Location == MadeObjects.MadeUpLocation);
         Assert.DoesNotContain(world.Placed, p => p.Location == MadeObjects.MadeUpLocation);
     }
@@ -387,7 +485,7 @@ public class WorldSaveTests
         // Gone: the one object vanishes and nothing stays behind.
         var gone = world.MergeLive([(10, 10)], [], _ => false, _ => false)!;
         Assert.Equal([id], gone.Vanished);
-        Assert.Equal(0, world.Creators[777]);
+        Assert.False(world.Creators.ContainsKey(777));
     }
 
     // A vehicle's root and part (the example mod's): their links read (the root's
@@ -449,5 +547,38 @@ public class WorldSaveTests
         Assert.NotSame(first, read(otherFile));
         Assert.Equal(world.ObjectBytes(world.ObjectRefs.IndexOf(o)), first[(int)o.Start..(int)o.End]);
         Assert.Equal(world.ObjectBytes(world.ObjectRefs.IndexOf(otherFile)), read(otherFile)[(int)otherFile.Start..(int)otherFile.End]);
+    }
+
+    [Fact]
+    public void ObjectBytesCutFromAReaderAreTheSavedOnes()
+    {
+        using var w = new TempWorld();
+        WorldSave world = w.Load();
+        Func<ObjectRef, byte[]> read = world.SourceReader();
+        Assert.All(Enumerable.Range(0, world.ObjectRefs.Count), id => Assert.Equal(world.ObjectBytes(id), world.ObjectBytes(id, read)));
+    }
+
+    [Fact]
+    public void SaveNumbersAreReadOneWay()
+    {
+        // The writer's next number read "+7" as 7 where the loader skipped it: the two could disagree.
+        string dir = Path.Combine(Path.GetTempPath(), "vwe-savenumbers-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(dir);
+        try
+        {
+            foreach (string f in new[] { "_main.2.chunks", "_main.2.ok", "_main.3.chunks", "_main.+7.chunks", "_main.x.chunks" })
+            {
+                File.WriteAllBytes(Path.Combine(dir, f), []);
+            }
+            Assert.Equal((3, 2), WorldSave.SaveNumbers(dir));
+            Assert.Equal(2, WorldSave.CommittedSave(dir));
+            Assert.Equal(3, WorldWriter.LatestNumber(dir));
+            File.Delete(Path.Combine(dir, "_main.2.ok"));
+            Assert.Equal(3, WorldSave.CommittedSave(dir));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
     }
 }

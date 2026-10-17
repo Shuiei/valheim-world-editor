@@ -4,12 +4,1433 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.45.46 — unreleased
+## v1.47.26 — unreleased
 
 ### Fixed
 - **The SSH key tests no longer keep private keys in the repository.** `HomeFolderTests` kept two OpenSSH private keys
   as text (Codacy: hard-coded private keys). The tests now make their two throwaway keys with `ssh-keygen` when they
   start, as the local sshd tests already do, so the keys exist only in the test's temporary folder.
+
+## v1.47.25 — unreleased
+
+### Fixed
+- **Loading a stamp picture that could not be opened stopped the editor.** A picture deleted or moved after it was
+  chosen in Load stamp…, a folder, a file the editor may not read or one in use let the read's error escape, and a
+  picture too large to decode made Skia throw. The status bar now says "That picture could not be read.", as for a
+  file that is not a picture, and the log says what failed (without the file's path); files over 256 MB, and
+  pictures that would take more than that decoded, are not read.
+
+## v1.47.24 — unreleased
+
+### Changed
+- **The Inspector comes from the language catalogue.** Its buttons, headings, explanations and messages, the plain
+  names of the values players meet most (Text, Builder name, Contents…), the kinds of values to add, the kinds of
+  items an armour stand's slots take, why a stand does not take an item, and its question about items outside a
+  container's slots show in the language chosen in Settings. The names of objects, items and values, and the tips
+  made from them, stay as the save has them. In English nothing changes.
+
+## v1.47.23 — unreleased
+
+### Changed
+- **What the status bar and the History say of Claude's changes comes from the language catalogue.** The message
+  after each change Claude makes ("Claude moved 3 object(s); Ctrl+Z puts them back.") and the names of its steps in
+  the History show in the language chosen in Settings; the steps keep their "Claude: " mark, which Take back Claude's
+  changes finds them by. In English nothing changes, and Claude is still answered in English.
+
+## v1.47.22 — unreleased
+
+### Changed
+- **The start page comes from the language catalogue.** Its menu, Home's tiles, My game's state and install steps,
+  the saved servers and the server form, the saved worlds, the Workshop's blueprints and Homestead's state, and the
+  card about reading the game's look show in the language chosen in Settings. In English nothing changes.
+
+## v1.47.21 — unreleased
+
+### Changed
+- **The New world page comes from the language catalogue.** Its boxes and buttons, the search's wishes and results,
+  the lists beside the map (the world, biomes, traders, bosses and dungeons with their distances), the switches and
+  tooltips over the map, why a name or seed is refused and the messages while the world is made show in the language
+  chosen in Settings; Claude is still told in English. In English nothing changes.
+
+## v1.47.20 — unreleased
+
+### Changed
+- **The world map page comes from the language catalogue.** Its buttons and switches, what is waiting to be saved,
+  the live players' line, the picked spot, the search and its results' counts, the zone filter with its messages and
+  question, the edited zones and the map's own status show in the language chosen in Settings. The biomes' names come
+  from the catalogue too. In English nothing changes; the world's and objects' names stay as they are.
+
+## v1.47.19 — unreleased
+
+### Changed
+- **The Dungeon tool and its generator come from the language catalogue.** The panel's buttons, lists and lines, the
+  generator's settings, its summary of what it made, the names of the game's dungeon kinds and entrances, and the
+  status bar and History lines of dungeon edits and placed dungeons show in the language chosen in Settings. In
+  English nothing changes, but a room added with two doors or more now says how many instead of "and a door" for
+  each. Names of rooms, biomes, styles, materials and bosses stay as the game and the generator call them, and
+  Claude is still told in English.
+
+## v1.47.18 — unreleased
+
+### Changed
+- **The Area tool comes from the language catalogue.** Its panel (the selection, every action and its settings and
+  hints, the Replace, heightmap, backup and Reset zones rows), the clipboard line, the Reset zones question, its file
+  pickers, its status messages and History steps show in the language chosen in Settings; Claude still gets the
+  actions' names in English. In English nothing changes.
+
+## v1.47.17 — unreleased
+
+### Changed
+- **The Place tool comes from the language catalogue.** Its panel (modes, line shapes, presets, the chosen kinds and
+  their notes, every setting and hint), the list of kinds and what a spawn point spawns, the preset questions, its
+  status messages and History steps show in the language chosen in Settings. In English nothing changes.
+
+## v1.47.16 — unreleased
+
+### Changed
+- **The Workshop and its Build panel come from the language catalogue.** The Build panel's tabs, search, snap, grid,
+  turn and lift rows, its Library and their messages, the Workshop's title, cost line, save bar, support switch and
+  cut, its questions before leaving a building or a world not saved, and its status messages and undo steps show in
+  the language chosen in Settings; Claude is still told in English. In English nothing changes.
+
+## v1.47.15 — unreleased
+
+### Changed
+- **The Blueprints panel comes from the language catalogue.** Its buttons, the Homestead banner, each blueprint's
+  line and cost, its questions before replacing or deleting a blueprint, the import file picker and every message it
+  puts in the status bar show in the language chosen in Settings; Claude is still told in English. In English nothing
+  changes.
+
+## v1.47.14 — unreleased
+
+### Changed
+- **The View panel, the help card and the status bar's readouts come from the language catalogue.** The View
+  panel's switches, kinds of objects, overlays, 3D resolutions and headings, the help card's controls, the frame
+  rate, the selection and walking or flying lines, picking a kind and the paste height show in the language chosen
+  in Settings. In English nothing changes.
+
+## v1.47.13 — unreleased
+
+### Changed
+- **The 3D editor's area bar and the live game's messages come from the language catalogue.** The area's arrows,
+  size and Follow, Discard, Reload and Auto, their questions and messages, the locations note, the live players and
+  what came from the game, the area's line under its name, how it loaded and the window's title on the New world page
+  show in the language chosen in Settings. In English nothing changes.
+
+## v1.47.12 — unreleased
+
+### Changed
+- **The Select and Paste tools come from the language catalogue.** The Select panel (its buttons, exact place and
+  saved selections), the Paste panel, the messages of selecting, moving, dropping, deleting, copying, cutting and
+  pasting, Make player built and the Built by choices, and the questions they ask show in the language chosen in
+  Settings. In English nothing changes; the name a mod gives its linked objects ("vehicle") stays as the mod wrote it.
+
+## v1.47.11 — unreleased
+
+### Changed
+- **The Shape and Mountain tools come from the language catalogue.** Their panels (presets, rows, help lines, a
+  formula's mistakes), the status messages of putting a shape or a mountain and their History steps show in the
+  language chosen in Settings. In English nothing changes; scripts still name a mountain preset in English.
+
+## v1.47.10 — unreleased
+
+### Changed
+- **The Path and Cave tools come from the language catalogue.** The Path panel's actions, rows, cave presets and
+  roofs, the line's length, and what Apply says (and its History step) show in the language chosen in Settings. In
+  English nothing changes; Claude's dig_path is still answered in English.
+
+## v1.47.9 — unreleased
+
+### Changed
+- **The Measure, Mask and Script tools and the biome names come from the language catalogue.** The tape's hints
+  and measured values, the Mask's rows, paint rules and warnings, the Script panel, its question before replacing a
+  saved script and what a run says, and the biome names of the Mask and the map's zone filter show in the language
+  chosen in Settings. In English nothing changes; Claude still names biomes, and is told about masks and scripts, in
+  English.
+
+### Fixed
+- **A Run of the Script tool's first example was named "Script: script" in History.** The example shown when the
+  panel opens was not chosen in its list, so the run had no name to take; it is chosen now, and the step is named
+  after it.
+
+## v1.47.8 — unreleased
+
+### Changed
+- **The brush options come from the language catalogue.** Their rows, shapes, falloffs and stamps, the brushes'
+  messages (No limit, stamps, Alt + click), the Build label of the Workshop's rail and the cursor readout in the
+  status bar show in the language chosen in Settings; a built-in stamp chosen as the brush's shape is still
+  remembered after the language changes. Claude still asks for stamps by their English names. In English nothing
+  changes.
+
+## v1.47.7 — unreleased
+
+### Changed
+- **The History panel and the save bar come from the language catalogue.** The History card, its rows and buttons,
+  what is waiting to be saved, the Save to world and Apply live buttons, and what saving, applying, discarding,
+  leaving and quitting ask and say show in the language chosen in Settings, as do the brush's and Regrow's messages
+  about what could not be done. In English nothing changes.
+
+## v1.47.6 — unreleased
+
+### Changed
+- **The small dialogs and the words they share come from the language catalogue.** Questions, messages, the line
+  of text and a blueprint's details, their OK, Yes, Cancel, Stay, Keep them, Leave anyway, Keep building and Discard
+  buttons, and the file tooltip of a mod's extension in Settings show in the language chosen in Settings. In English
+  nothing changes.
+- The status bar keeps an English copy of its message, and Claude reads that one back in its answers, so it is
+  told in English whatever language the window shows.
+- A remembered list choice (the brush's shape and falloff, the Area action, the Shape preset, the 3D resolution) is
+  kept in English, so it still comes back once those lists are translated and the language is changed. Choices kept
+  so far are already English.
+
+## v1.47.5 — unreleased
+
+### Changed
+- The tests' clean-up no longer hides its errors: a temporary folder is deleted only when it is there, and a failure
+  to delete it fails the test instead of being caught and ignored. The stand-in game, plugin and SSH server, and the
+  editor the visual tests drive, are waited for until they have stopped before their folders go, and an error in the
+  stand-ins' answering fails the test instead of silently ending it. Nothing in the editor changes.
+
+## v1.47.4 — unreleased
+
+### Fixed
+- **The release packages could not be built.** Publishing the single-file editor stopped on an analyzer error: the
+  script process (v1.45.67) found the editor's assembly through `Assembly.Location`, which is empty in a single-file
+  app. It now takes the assembly from the app's folder; the published editor itself starts its scripts as before.
+
+## v1.47.3 — unreleased
+
+### Changed
+- Saved objects are read by one reader (`ZdoReader`) instead of three copies of the format: the world loader, the
+  copying of a template object and the full read the inspector uses all go through it. Loading, copies and saves
+  give the same bytes and lists as before, and loading is as fast.
+
+## v1.47.2 — unreleased
+
+### Changed
+- The main window's code is easier to follow: its constructor's inline handlers and panel wiring are named methods
+  called in the same order, the editor's keys are one ordered table of rules (`MainWindow.Keys.cs`) instead of a long
+  if/else chain, and the View panel is built and then wired. Every key, its precedence and whether it is taken stay
+  the same; nothing in the editor changes.
+
+## v1.47.1 — unreleased
+
+### Changed
+- The 3D view's code (`GlView`, over 5,000 lines in one file) is split into partial files by concern: camera,
+  input, tools, drawing, ground, models, objects, cells, mod shapes, picking and the overlays, one file for each
+  tool's marks. Members are moved whole; nothing in the editor changes.
+
+## v1.47.0 — unreleased
+
+### Added
+- **Your changes are kept when the game saved the world since you opened it.** Save was refused then, and the only
+  way out was to leave the world and lose every unsaved change. The editor now offers to bring them over: it reads
+  the game's save and makes each pending change again on it (changed ground, zone resets, No limit ground, deleted,
+  added and moved objects with their data). Where the game changed the same zone or object, it asks once per kind
+  whose version stays. The world is then the game's save with your changes pending and the history kept, and nothing
+  is written until you save. See [Saving](docs/editor-basics.md#saving).
+
+## v1.45.110 — unreleased
+
+### Fixed
+- **Edits to a world saved by Valheim 1.0.20 can be saved.** The game now saves worlds in save format 42, and the editor
+  refused to save any world not in format 41 ("the writer only supports 41"). Format 42 differs from 41 only by the
+  number at the head of each file, so the editor now saves both: each file keeps the format it was read in, as the game
+  does (a format 41 world the game has saved since holds a 42 index and 41 chunk files until their objects change).
+  New worlds are made in format 42, as the game makes them; Valheim 1.0.17 and earlier cannot open them.
+
+## v1.45.109 — unreleased
+
+### Fixed
+- **A changed server key now names every saved entry still holding the old key.** The refusal said to empty "its"
+  HostKey line, but another saved account on the same server and port also pins the key, so emptying one line kept the
+  connection refused. The message now lists each saved entry to empty.
+- **A worldeditor.json lying directly in BepInEx/plugins no longer offers an extension under the name "plugins".**
+  Such a file belongs to no mod, yet it could point at any mod's DLL, and the consent row named it "plugins". Its data
+  and prefab notes are still read; extensions come only from a mod's own folder.
+- **A line break in a server's details can no longer add lines to servers.cfg.** Values were written as typed, so a
+  token or folder holding "a line break then HostKey = …" became a line of its own and could replace the saved server
+  key. Connecting now refuses details with line breaks, the file never writes one (a name's becomes a space), and
+  ports out of range read as the defaults.
+- **A live server's zone answer can no longer make the editor take unbounded memory.** The objects of changed zones
+  were unpacked with no size limit, so a misbehaving service on the tunnelled port could fill memory. The answer is
+  now refused past the size of a whole world snapshot.
+- **Claude can no longer make a world outside the game's worlds folders.** create_world took any folder it was given,
+  so world files could be written in any folder the editor can write to. A folder that is not one of the game's worlds
+  folders is now refused.
+- **A damaged history file no longer makes opening a world take gigabytes of memory.** Each count in the file made
+  room for that many entries before any was read, so a count of 200 million allocated gigabytes before the file ran
+  out. Entries are now kept as they are read, and a negative count is refused.
+- **The editor's language now follows the system's display language on Windows and macOS.** Windows read the regional
+  format's locale, so English Windows with French formats would start in French once a French catalogue exists; macOS
+  read only LANG, which apps opened from Finder lack, so they always started in English. Windows now reads the user's
+  display languages and macOS the preferred languages.
+- **A failed plugin check no longer turns a live move into a destroyed and remade object.** What the plugin can do was
+  asked once per connection, and a check that failed (a slow answer, say) counted as "cannot move": the moved chest
+  was destroyed and made again under a new id, and ContainerSigns doubled its signs. It is now asked at each Apply
+  live, a check that fails stops the apply, and a plugin changed since (the game started again) is seen.
+- **Editing a chest no longer wears the items in it.** Durability is kept in hundredths and was cut down when written,
+  so about one value in five came back a hundredth lower after each save of the chest. It is now rounded.
+- **A history action on a step undone meanwhile no longer undoes everything or doubles the change.** While the History
+  panel asked to allow an action, Claude could undo the step, or the history drop it; Back to here then undid every
+  step, and Remove applied the step's change again to ground that no longer had it. These actions now do nothing for a
+  step that is no longer where it was picked.
+- **A blueprint piece with blank or zero rotation fields is placed unturned.** Its rotation read as a quaternion of
+  length zero, which turned into NaN angles in the clipboard and the world. Such a rotation is now no turn.
+- **One blueprint file that cannot be read no longer empties the Blueprints list.** A file without read access threw
+  out of the listing, so no blueprint was shown. It is now left out (and logged), and the list reads each file's
+  summary without building every value of its copy.
+- **Blueprints named after a Windows device (con, nul, com1…) can be saved on Windows.** Their file names were refused
+  there; they now start with "_". A Homestead blueprint name cut at 64 characters no longer ends in a dot, which
+  Windows dropped so the picture beside it no longer matched.
+- **A world's backups are found when its folder ends in "/" on Windows, and a folder that cannot be read no longer
+  fails the search.** Only the system's own separator was trimmed, so "C:/x/worlds/World1/" gave an empty name and no
+  backups; a folder beside the world without read access threw. Both separators are trimmed now, and an unreadable
+  folder has no backups (logged).
+- **Characters whose names hold letters beyond ASCII are found.** The file name was lowered with Unicode rules but the
+  file's bytes only for ASCII letters, so a character such as "Ørjan" never matched its own file. Names are now
+  compared as text, ignoring case.
+- **The recent worlds list takes odd stored data and no longer lists a world twice.** A list stored as null, or a
+  stored path that is not a valid path, made opening a world throw; the same folder written with a trailing separator,
+  or with other letter case on Windows, was listed twice. Null lists now read as empty, and entries are compared by
+  full path without the trailing separator (case ignored on Windows).
+- **A broken mod bundle no longer fails reading a model or texture, or reads another file's bytes for it.** The offset
+  and size of data kept in a bundle's resource file were taken as written, so a bad size threw out of reading the mesh
+  or texture, and a range past the file's end read the next file. Ranges outside the resource file are now refused
+  (logged) and read as no data.
+- **A broken mod mesh no longer fails drawing a building's picture.** Its submesh sizes could overflow the bounds
+  check, and indices were not checked against the mesh's vertices, so drawing threw. Sizes are now checked without
+  overflow, and triangles with a corner outside the mesh are left out.
+- **Following models into other bundles no longer leaves game files open or stops after one bad bundle.** Listing
+  every bundle's inner files opened again the bundles already open (their files stayed open, which on Windows can
+  block Steam updates), and a bundle that failed midway left the list part-filled for the session, so later references
+  found nothing. Open bundles are read as they are, a bad one is skipped (logged), and the list counts as complete
+  only once every bundle was gone through.
+- **A shader whose program lengths do not fit together is said to be unreadable instead of failing with an unrelated
+  error.** The per-platform offset and length lists were indexed without checking their sizes, and a part's unpacked
+  length was allocated as written. They are now checked first, a part outside the data or past what LZ4 can unpack to
+  is refused, and the message no longer says "terrain shader" for every shader.
+- **A texture array in a format the editor does not read is left out instead of read as another format.** Unknown
+  graphics formats were passed on as texture formats, which number formats differently: R8 was read as ARGB32, R8 sRGB
+  as Alpha8. They now count as not read.
+- **A game bundle that cannot be read is closed at once during the game-data scan.** One that opened but whose inner
+  files failed to read stayed open until the end of the scan; it is now closed again, with what was read from it.
+- **A mod folder that cannot be read no longer stops the start page checking your game.** The search for the plugin
+  under BepInEx/plugins threw at the first subfolder without access, so the game could not be checked at all. Such
+  folders are now passed over.
+- **A heightmap picture with odd heights written in it no longer breaks its import.** Lowest and highest heights such
+  as NaN, Infinity or 1e39 were taken as written, so the Area panel threw and Claude's import used them; a highest not
+  above the lowest was taken too. Such heights are now left out, and the ground's own heights used instead.
+- **Two mods' bundles whose names differ only by punctuation or letter case are both drawn.** Copies were named with
+  punctuation made "_" and matched ignoring case, so "Mod A.bundle" and "Mod_A.bundle" (or "Foo" and "foo" in two
+  mods) counted as one, and the older one's models were never drawn. The same bundle is now matched by its exact file
+  and resource name, and copies that would share a name each get one of their own.
+- **Renaming a hand-edited Homestead blueprint shows its new name.** Header lines with spaces before them (" #Name:
+  Old") were read, but not replaced when the name, description or tags changed, so the old line stayed and, read last,
+  won. They are now replaced as they are read.
+- **A copy with numbers stored as text can be saved as a Homestead blueprint.** Each position and turn was read back
+  through its JSON text, so a number written as a string ("1.5") threw. Numbers are now read in place, strings holding
+  numbers too.
+- **One odd line in the game's localisation table no longer stops every world opening.** A carriage return followed by
+  more text in an unquoted field was refused, as Python's csv does, which failed the build-cost table and with it the
+  whole game data pass. It now ends the row, as a line break does.
+- **Steam rewriting its library list no longer fails finding the game.** libraryfolders.vdf was read unguarded, so a
+  moment when Steam was writing it (or a file without access) threw out of the game check and the game data export.
+  The search now goes on without that list (logged).
+- **A prefab name found in two game bundles is described by the same object in every catalogue.** The prefabs
+  catalogue kept the first object of a name, but the pieces, placing, support and terrain-modifier catalogues kept the
+  last, so they could describe different objects. All now keep the first.
+- **A broken Vulkan shader program is said to be unreadable instead of failing with an unrelated error.** The blob's
+  entry offsets and the SPIR-V instructions' lengths were trusted, so bad data threw out-of-range errors that the
+  terrain drawing did not expect. They are now checked, and refused as unreadable data.
+- **The New world page reads the game's location rules again once the game has run.** Rules that could not be read
+  (the game's log not matching after an update) were kept as none for the whole session, so bosses and traders stayed
+  missing even after starting the game refreshed its log. They are now read again when the game's log has changed.
+- **Two of the game's location lists with the same counts are both read.** Lists were told apart by their location and
+  vegetation counts alone, so a second list with the same counts was replaced by the first, its locations lost and the
+  first's counted twice. Lists of the same counts are now taken one after the other, in the game's order.
+- **A very large terrain texture array is said to be too large instead of failing with an overflow.** Its size was
+  worked out in 32-bit numbers, so 4096 × 4096 with 32 slices came out negative. It is now worked out in 64 bits, and
+  an array too large for one buffer is refused with a clear message.
+- **A tunnel that fails after logging in no longer stays open with the start page waiting.** A plugin port out of
+  range in the server's settings, the local port taken in the meantime, or another failure once connected threw past
+  the connection, which stayed open (and the port bound) until the editor closed, while the page kept saying
+  "Connecting to …". Ports are now checked first, and any failure once connected closes the connection and is said.
+- **Proton worlds are listed once, and Flatpak Steam's are found.** ~/.steam/steam is a link to ~/.local/share/Steam,
+  so every world played through Proton was listed twice; on Windows a world written with other letter case or a
+  trailing separator was too. Worlds are now told apart by their folder with links followed (case ignored on Windows),
+  and Flatpak Steam's Proton prefix is searched as well.
+- **A world with a stray save file is listed, and one that cannot be read is said in the log.** A file such as
+  _main.99999999999.chunks overflowed reading the save number, and every error dropped the world from the list with
+  nothing said. Such numbers are now passed over, and only read errors leave a world out, each logged.
+- **Mod models taken while a game's catalogue came in could be lost.** ModCatalogue.TakeModels changed what is known
+  without the lock Take holds, so one overlapping the other dropped its update; both (and Load, Forget) now take one
+  lock, and the mod catalogue, manifests and extensions count their generations with Interlocked.
+- **A prefab a game update made the game's own still showed under Mods and as "From a mod".** The kept mod catalogue
+  never dropped an entry; Load and Take now leave out the names that are the game's own prefabs, with their pieces,
+  costs, mods and models.
+- **Two saves of the same app file at once could fail or keep a half-written one.** SafeFile wrote every file through
+  the one name path + ".tmp", so two writers deleted or moved each other's; each write now has a temporary file of its
+  own, deleted on any failure.
+- **Dungeon generation could rarely stop with an error on a random pick.** The growths and corridor-feature picks took
+  the first item whose running weight reached the draw, with no fallback when float rounding left a little over; one
+  shared Weighted.Pick (also used by the planner and Rooms mode) falls back to the last item.
+- **The map's zone filter ignored what was placed this session.** ZoneStats counted only saved objects, so a building
+  placed and not yet saved showed 0 pieces and a "far from buildings" filter could pick its zone for reset; added
+  objects now count, a piece when it will have a builder once saved.
+- **Linked objects of two mods could join up, and a damaged copy pasted two groups under one id.** LinkIndex found
+  what a part hangs on by the id alone, whatever rule's key held it; it now looks under the part's rule's id key. A
+  pasted copy where two objects held the same id gave both the same new id; each extra holder now gets one of its own.
+- **A shader blob could fail to read on a chance "LOMS" in its data.** Smolv.Programs looked for the next program from
+  just after the last one's magic, inside its data, and a size of 2 GB or more threw; the search now starts at the end
+  of the program decoded, a size past int's range is no program, and one the data left cannot hold is passed over
+  (Decode says it ends early).
+- **Mod models read by several threads at once could fail.** ModCatalogue.ModelOf read the kept JSON nodes, which
+  build themselves on first read, from the model loaders' threads and the UI's at once; the models are now read into
+  records once, when taken in.
+- **A pit arena's four corner columns never stood.** The ledges round the pit kept 1.3 m round each edge tile, so the
+  columns 2 m in from them never found room; the columns are now placed first (away from the doorways), then the
+  ledges.
+- **Some dungeon stones sank into their plinth or floated over it.** A shrine's memorial stone and dolmen were lifted
+  by the first prop's foot height whichever one was picked (a large memorial stone sank 0.13 m); the pick is now kept
+  and its own foot used.
+- **Dungeon columns could rise through the roof into the room above.** A column (and a post) took its last segment
+  however far it rose past the top, so wood logs in a tall room reached 13.3 m, 1.3 m into the room two levels up; the
+  last segment may now rise into the roof slab, never past it.
+- **Caged foes could walk out of a cell block's end cells.** The cells take 4 m each along the block, and the strip
+  left at each end had no front wall, so the first and last cells were open to the aisle; their fronts now run on to
+  the end walls.
+- **The game's-rooms dungeon was placed under another name than the panel showed.** The Generate panel's name followed
+  the chosen style, which only building-piece dungeons use, while a dungeon of the game's rooms is named after its
+  biome; the panel now does the same.
+- **A portal at a generated dungeon's arrival stood in the entrance's floor.** The arrival was 5 cm over the slab
+  whatever lay on it; it is now 5 cm over the entrance's floor finish (marble tiles, boards).
+- **Chosen foes and Respawn off were not kept in some dungeon rooms.** The elites were always the biome's, a swamp
+  burial chamber's foes were always sleeping draugr, and an ossuary's bone pile kept raising the dead with Respawn
+  off; chosen foes now stand in for the elites and the sleepers, and the bone pile is left out when foes are chosen or
+  nothing respawns.
+- **A dungeon of the game's rooms failed with a meaningless error when the game's data had none to join.** Without
+  DG_Cave, or with no joinable rooms left, MakeRooms hit a null or an empty list; it now says the game's data has no
+  rooms to join (a game update may have changed its dungeons).
+- **A throne room's war table could lie across the dais' steps or a doorway.** The long table was placed down the
+  middle with no check; it now stands only where every spot along it is free.
+- **A corridor gate could stand on a pilaster's band of wall.** The gate was put anywhere within a metre of the
+  corridor's middle without looking at the pilasters placed every 8 m; it now keeps off their bands.
+- **A Black Forest dungeon's sword-skeleton elite came back as an ordinary skeleton.** It was paired with
+  Spawner_Skeleton, which makes archers too; no spawner makes it alone, so it now stands once, as the creature.
+- **A dungeon blueprint whose name hashed to the lowest int failed to paste, and a negative seed gave portal tags like
+  "dg-123".** The portal pair's tag took Math.Abs of an int and the seed's remainder as it was; MainWindow.PortalTag
+  works in long and takes the size.
+- **Support was worked out wrong for scaled pieces.** Stability scaled a piece's colliders but not its centre of mass,
+  so its support distances and angles were taken from the wrong point; the centre of mass is now scaled too.
+- **Pointing the hammer from inside a capsule-shaped piece could place a piece at a NaN position.** A ray starting
+  inside the capsule (on its axis: no normal) gave a NaN normal; it now misses, as it does from inside a sphere or a
+  box.
+- **Damaged dungeon or location scan data could crash or hang placing rooms.** Dungeons.Replay walked up a part's
+  parents with no bounds or loop check; a node past the list now ends the walk, and so does a walk longer than the
+  list.
+- **A location scan with "teleports": null loaded no location prefab at all.** LocationPrefabs enumerated it without
+  checking it is a list; anything else now counts as none.
+- **A new world that failed halfway blocked another try in the same folder.** Its metadata, index and zone file were
+  written before the flat zone was looked for, so the next try found the folder "already holds a world"; what was
+  written is now taken away on any failure (and the folder, when it was made for it).
+- **Connecting with an odd address or a token holding a line break failed with an exception instead of a message.**
+  LiveBridge.Check took "httpsrv:5182" for an address of another scheme and let the header's FormatException through;
+  it now says the address is not valid (only http and https) or that the token cannot be sent.
+- **A PNG file with no header was refused as a "0-bit PNG".** Png.Read now says the header (IHDR) is missing; and
+  Png.WriteGray16 refuses what cannot make a valid picture (a filter past 4, which its own Read refused, too few
+  values, notes PNG cannot hold).
+- **Lifting ground could treat an object at a half metre as standing on another point than a disc centred on it.**
+  Uplift's Block.At rounded halves to even while Block.Disc rounded them up; both now round as the game's
+  Heightmap.WorldToVertex (halves up).
+- **The save's read-back check missed smoothing and paint changes in zones not edited.** Verify compared an untouched
+  zone's levels and modified flags only, so a write bug altering its smoothing or paint would pass and the old save be
+  deleted; it compares those too.
+- **Resetting the ground of a zone that held two terrain objects could refuse the save ("terrain zones were lost").**
+  The save check's last count allowed one terrain object lost per reset zone; it now allows the reset zones' own
+  terrain objects, however many.
+- **Saving a zone's ground with all its terrain objects deleted was refused.** The deleted objects were patched (the
+  deletion winning) while the zone counted as written, so the read-back check found it missing; deleted terrain
+  objects are now left out of those to patch, and the zone gets a new one.
+- **Refusing a world in an older save format named the wrong format.** The message gave the first chunk file's format
+  ("uses save format 41; the writer only supports 41"); it now names the first one that differs.
+- **A corridor gate's band of wall could fall in a stave or wood dungeon.** The band ran between the walls' faces, a
+  width no whole number of pieces fills in a thin material, and the gap left at one end let it fall; it now runs on
+  into the walls.
+- **The save message could count the objects a zone reset cleared wrong, even below zero.** It took the number of
+  deleted ids away from all removals, though an id in a reset zone, a repeated id or one past the list removes nothing
+  more; it now counts the objects the deletions removed.
+- **An object changed in the inspector lost the high flag bits it was saved with.** ZdoData kept only the bits 0x0F00
+  while ZdoBuilder kept them all; it now keeps the unused bits 0xC000 too and writes them back.
+- **A player whose pieces had all gone from the live game could still be named the world's top builder.** Their count
+  stayed in the list at zero; it is now taken out when it reaches zero.
+- **The ground around locations was grass where the game shows dirt, paving or cleared ground.** The terrain modifiers
+  of locations (and of the rocks that leave dirt) paint the ground, but the editor read their paint and never applied
+  it. Their paint now goes into the base paint mask with the game's falloff, so the ground's colour, Regrow's
+  vegetation rules and the paint Uplift puts back around locations match the game.
+- **After a ground disc was added or taken away, a zone could keep the ground of the old discs.** A zone still being
+  built with the old modifiers was added to the cache UseModifiers had just cleared; the modifiers and the zones built
+  with them are now swapped together.
+- **A location rule of no biome, or of a biome flag the map does not know, kept the seed's locations from being laid
+  out.** Drawing a point indexed an empty list (or the list at -1) and threw, which dropped the whole layout; such a
+  try now finds no zone and the next one is made.
+- **A heightmap picture imported into a selection sat about a metre off its outline, and its size was given one point
+  too wide on each side.** It was fitted to the box the selection's weights are worked out in, padded by a point all
+  round; it is now fitted to the selection's own grid box (AreaTool.GridBox).
+- **A selection whose outline crossed itself showed the wrong area (a figure eight about 0 m²), and Place scattered
+  too few or too many objects in it.** The area came from the shoelace formula, where crossed parts cancel; it is now
+  the area the selection picks (each part counted the even-odd way, as Inside does).
+- **A box selection dragged along one axis was kept though it had no area: actions then changed nothing, or edited a
+  line at half strength.** A box is now dropped when it is less than a metre across either way, not only when both
+  ends are within a metre.
+- **Area Replace replaced nothing when the kind's name held " (" (a mod's).** The kind was cut back out of the list's
+  entry at " ("; the list's own names are now kept beside it.
+- **A terrain modifier that smooths with a radius of 0 (odd mod data) made a NaN height at its middle.** The share of
+  the middle point was 0 / 0; such a modifier now smooths nothing.
+- **Claude's set_control could set a slider or number to NaN, and threw on a number too big for a decimal.** NaN and
+  the infinities are refused now, and a number box's value is held to its range before it becomes a decimal.
+- **Claude's remove_objects and select_objects counted a repeated id as one that was not an object.** The ids found
+  were compared with the list given, repeats included; they are now compared with the different ids given.
+- **Shields and banners Claude put in a chest always got the first style.** set_contents took the item's Variant but
+  never passed it on to the chest's contents.
+- **Claude's set_dungeon_door answered "Now pending" when no door was put in, and close_dungeon_ends could answer
+  nothing.** A joint whose opening has no door of the dungeon's kind was passed over silently, and both tools took any
+  return as a change; the Dungeon tool now says so, and the tools answer what it said (or "Nothing changed.") when no
+  step was made.
+- **Claude's read-only looks changed the user's view: support_check left the Workshop's Support switch on, and
+  screenshot (one view or four) left the camera where it had looked.** The support check is now worked out without the
+  switch, and the camera is put back once the picture is taken.
+- **Claude's forest failed with a confusing script error for a name ending in a backslash.** The names went into the
+  generated script with only their quotes taken out; they are now written as escaped string literals.
+- **On slopes, pieces Claude placed on the ground floated or sank by up to half a metre's slope against the height
+  ground_at gave.** Placing, moving and replacing took the nearest grid point's height; they now take the ground
+  between the grid points, as ground_at does.
+- **Claude tools given only one coordinate of a point went on without a word: list_objects dropped its "near" filter,
+  move_objects and copy_objects turned round the given x and the objects' middle z.** list_objects, move_objects,
+  copy_objects, search_world, list_locations, screenshot and add_blueprint now refuse a lone coordinate.
+- **Claude's replace_objects lost each object's size, and replacing a ship's root left its parts hanging on nothing.**
+  The new object now keeps the old one's scale, and a linked group's root takes its parts away with it, as the Area
+  tool's Replace does.
+- **Claude's build_roof gave a bare tool error, or ran on to a runaway piece count, when the roof piece had too few
+  snap points or none sloping one way in the game data read.** It now says why no roof was laid.
+- **Claude's blueprint tools kept using the Homestead folder found when the Blueprints panel last looked, so a
+  Homestead installed or moved since was not seen.** list_blueprints, open_workshop and add_blueprint now look for
+  Homestead again.
+- **Opening the Workshop threw when there were no pieces to build with (the game's data missing, or every piece hidden
+  by the mods' manifests).** It took the list's first piece without checking; it now chooses none and says so.
+- **Live, a dungeon laid out or gone in the game kept showing as it was until an unrelated edit.** The dungeon caches
+  were keyed on the edit version and the object count, which the game's changes leave alone; they now also follow the
+  session's generation, which those changes move.
+- **A formula mixing && and || worked out differently from the web editor: 1 || 0 && 0 gave 0.** Both were read left
+  to right at one level; && now binds tighter than ||, as in JavaScript.
+- **Formulas refused numbers written with a capital E (2E3), and sign() of a NaN failed at every point, so every point
+  counted as bad.** Exponents take e or E (also after a leading point, .5e1), and sign(NaN) is NaN, as in JavaScript.
+- **Erode made or destroyed ground at soft edges and locked points, and drops sped up going uphill.** A rain drop's
+  sediment changed by the full amount while the ground changed only by its weighted share, drops took what they
+  carried with them when they stopped, and the speed rule had its sign the wrong way round. Now a drop carries exactly
+  what the ground gives or takes, leaves its load along its way (or back where it took it) when it stops, never digs
+  below where it goes nor fills above where it is (so no runaway holes), and slows going uphill.
+- **The Area tool never said when its ground actions (Erode among them) reached the game's ±8 m limit, as strokes,
+  Shape and paths do.** AreaTool.Apply and Erosion.Area dropped what SetHeight reported; they now return it, and the
+  Area panel and Claude's shape_ground say so.
+- **The game's look banner said the editor works without the game's files, with plain colours, though no world, server
+  or Workshop opens without them.** Both hints (Valheim not found, its files not read) now say worlds need them.
+- **Claude's reset_zones with a huge rectangle could hang the editor or run out of memory.** Every zone of the
+  rectangle was listed on the window's thread before those outside the area were dropped; the range is now cut to the
+  area's zones first.
+- **In the Generate panel, with the biome's style, choosing another biome kept the old biome's decay.** The decay
+  followed only a change of Style; it now follows the biome too while Style is the biome's.
+- **Delete in the Dungeon tool could remove the wrong room after an undo.** The selection was a bare index into the
+  room list, so an undo that took a room away left it on another room. The selection now remembers the room's prefab
+  and place and finds it again, and is cleared when the room is gone.
+- **Copies pasted with a negative gap could land at another height than the preview showed.** Each copy read its
+  height from the ground after the copies before it had been pasted, so overlapping copies stood on their neighbour's
+  ground. Every copy's height is now read before any ground is shaped, as the preview reads it.
+- **After Discard, steps undone in another area could still be redone.** Discard dropped the open area's redo steps
+  but kept those set aside for other areas; it now drops them too, as a new edit does.
+- **Removing a change from the history could unmark ground a later step had modified.** The modified flag was worked
+  out from the level alone, so a later flatten back to the original height lost it; a flag a later step changed is now
+  kept.
+- **Copying an area with no objects reported success, and pasting it did nothing.** The ground is copied only with
+  buildings, so such a copy held nothing; Ctrl+C and Ctrl+X now say there is nothing to copy and keep what the
+  clipboard had.
+- **A blueprint of ground more than 327.67 m above or below its middle lost height.** Copies were written with heights
+  cut to the web editor's 16-bit range; they are now written as they are (every reader takes any whole number).
+- **Opening an area could fill it with removed objects nothing referred to.** Fitting the world's history to the area
+  added the things of every step, also of steps kept aside for other areas; only the things of steps kept in the area
+  are added now.
+- **A dungeon whose rooms failed to read in an unexpected way made the editor start the read again on every frame.**
+  The failure was lost and the stale cache sent each frame to a new worker; it is now logged and the rooms shown are
+  kept until the area changes.
+- **A brush stroke or drag could keep going after the 3D view lost the mouse.** When the release went elsewhere (a
+  dialog, another window taking the pointer), the stroke kept painting at the hovered point until the next click;
+  losing the pointer now ends it as a release where it last was.
+- **A late change from the previous area could break or clear the 3D view of the new one.** The view kept listening to
+  every area's session it had shown, so the old one's object indices were applied to the new scene (wrong objects, an
+  index error, the selection cleared); it now stops following the last session when another area is shown.
+- **On a strict OpenGL ES driver the game look's water depth and foam could come out wrong.** Its height texture was
+  read at the samplers' default low precision; the 3D view's shaders now read textures at high precision.
+- **After lowering the 3D resolution and setting it back to Sharp, the smaller picture kept its graphics memory, and
+  one the graphics card could not use went unnoticed.** It is now deleted when not used, and an incomplete one is
+  logged and the view drawn at full resolution.
+- **Objects scaled up (a rock at ten times its size) vanished from the 3D view far too close.** How far a kind of
+  object is drawn came from its model's size alone; it now takes the largest scale any of them is drawn at.
+- **Moving the area with its arrows or going to a player outside it could lose a drawn path, or switch areas during a
+  live apply.** Unlike resizing and Follow, they did not wait for unfinished work; they now refuse and say why, as
+  those do.
+- **After placing a mountain, why nothing grew on it was erased.** The status line always ended with "twice with what
+  grew", replacing the reason growing could not be done (no world generator, area too large); the reason now stays,
+  and the undo hint names one step when nothing grew.
+- **Applying an inspector change could end in an error dialog instead of a message.** When another area had been
+  opened meanwhile or the object's world file could no longer be read, Apply failed unhandled; it now says so and
+  changes nothing.
+- **The inspector blamed the game for objects the user had removed.** Applying a change to an object deleted, replaced
+  or undone since it was opened always said it was removed in the game, even offline; offline it now says what
+  happened, and live it names both.
+- **In the inspector, removing a container's items value could silently do nothing, and a value could be added
+  twice.** The contents edited above were written again on Apply, undoing the removal, and Add took keys already
+  there, setting one over the other. The items value cannot be removed while its contents are editable (empty them
+  instead), and a key already there is refused.
+- **The inspector could write NaN or infinite numbers into an object.** Values such as NaN, Infinity or a number too
+  large for the game were taken as typed; they are now refused like any other value that does not fit.
+- **The inspector's durability column said "%" and dropped fractions.** It edits the durability points the game saves,
+  rounded to whole numbers, so touching it lost a fraction; it is now labelled as points and keeps fractions, and a
+  stack has the same most (65535) in the details rows and in the picked slot.
+- **Taking back Claude's changes did not say that Ctrl+Z brings them back one at a time.** Each change is taken out as
+  a step of its own; the message now says so when there were several.
+- **A save could be reported as failed though the world was written, and a failed history write left a ".new" file
+  behind.** Keeping the history after a save let any error other than a disk one escape the finished save; every
+  failure there is now logged instead, and the half-written file is deleted.
+- **Ground tools could fail to say a point hit its limit.** Under No limit the ±400 m lift was never reported, and a
+  smoothed point stopped short by the level's own ±8 m went unnoticed; the check now compares where the point ended
+  with the height asked for.
+- **Reloading a live world from the map could end in an error dialog with the map not refreshed.** A refusal from the
+  game's bridge was not caught there as it is in the 3D editor's Reload; it is now said as "Could not reach the game",
+  and the busy veil always goes.
+- **Placing a dungeon could end in an error dialog.** When the world's files could not be read for the new objects'
+  data, or a dungeon came with no rooms, the failure escaped; it is now said in the status bar and nothing is placed.
+- **Pasting a dungeon blueprint with nothing this world can make placed an empty entrance, and one holding only its
+  portal got the wrong reason.** The check counted pieces before those the world cannot make were left out; it now
+  counts as placing does, and a portal-only blueprint is said to hold only its portal.
+- **Pressing / opened Help, though ? is the key it advertises.** The / and ? key is one key, and the check took it
+  without Shift; Help now opens on ? (Shift) or F3.
+- **A map close-up that failed to read was retried on every frame, with nothing logged.** The failure was lost and the
+  same close-up asked for again at once, keeping a core busy; it is now logged and not asked for again until the view,
+  the edits or the map change.
+- **Pieces deleted from the map could come back until the next refresh, and a failure to read them showed no buildings
+  silently.** Two reads of the buildings could run at once and the older finish last; only the latest is shown now,
+  and a failure is logged.
+- **The map's distance-from-the-centre filter silently ignored numbers it could not read.** "1,5" or "2 000" was taken
+  as no limit and "NaN" made nothing match; spaces between thousands and the computer's decimal mark are now read, and
+  anything else is said in the zone filter's line.
+- **The new-world page showed distances like "000 m" and "1000 m".** Distances were cut to hundreds of metres without
+  rounding first; they are now rounded to 100 m, shown as "< 100 m" when that close and in km from 1.0 km.
+- **Typing an invalid seed on the new-world page left the last seed's dungeon search running.** It kept a core busy
+  and its marks were still moved about; the search now stops, the marks go and the dungeon list empties.
+- **Leaving the new-world page during a seed search could end it with "The search failed".** The search's cancellation
+  was disposed while the search still read it; each one is now only cancelled when work stops, and disposed when that
+  work ends (replaced ones too, which were never disposed).
+- **A slope mask no longer lets steeper ground through on the area's border.** The slope at a point was the height
+  change between its two neighbours over 2 m, but on the border one neighbour is the point itself, 1 m away, so the
+  slope read about half. Each direction is now divided by its own step.
+- **Measure's lowest and highest heights now follow ground edits and include the two points.** They were worked out
+  only when the tape changed, so an edit made later left them stale, and a point's height could lie outside them. They
+  now count the two points and refresh after an edit and when Measure is chosen again.
+- **A double click on a Workshop button no longer opens the Workshop twice.** While the game's files were checked, a
+  second click started a second open, which could ask the same questions and show the plot twice. A second open while
+  one is under way is now refused with a message.
+- **A blueprint opened from Homestead's folder by another spelling of its path is saved back without asking.** The
+  folder was compared letter for letter, so a separator at the end, a link to the folder, or another letter case on
+  Windows made the editor treat the blueprint as one from elsewhere. The folders are now compared as one key
+  (Places.FolderKey).
+- **A click with a small Place brush now places an object.** The brush's layout held the density times the disc's area
+  rounded to the nearest whole number, so a 2 m brush at the default density held none: an empty preview and a click
+  that placed nothing, while dragging did place. The layout now holds one at least.
+- **Stacked layers can no longer take a line past 2,000 pieces.** The cap counted pieces along the line, not
+  placements, so 20 layers on a long end-to-end line made up to 40,000, worked out again on every change. The cap now
+  counts every placement.
+- **A script that changes the ground from several threads (Parallel.For) no longer loses changes or fails.** Only
+  Noise was safe to call from more than one thread; Set, Paint, Mountain, Remove, Place, Move and Print wrote shared
+  lists and dictionaries unguarded. They now take one lock.
+- **A script setting the ground at a point that is not a number no longer edits the area's west or south edge.** NaN
+  turned into grid column 0 (or row 0), so Ground.Set(float.NaN, z, h) changed the edge. Points that are not finite
+  numbers are now outside the area.
+- **A performance log that cannot be written no longer throws out of drawing every 2 s.** Only IOException was caught,
+  so a refused write (a read-only data folder) escaped the frame and the waiting lines piled up. Refused writes are
+  caught too, the first one is logged, and the lines are dropped either way.
+- **A --data folder that cannot be made now stops the start with a message instead of a crash.** Making the folder
+  could fail with an error the command-line check did not expect, so the editor crashed before its log started. It is
+  now said like any other option that cannot be used, and the editor exits with code 2.
+- **Saving a script under the name of another saved script now asks first, and one unreadable script no longer hides
+  the others.** Save wrote name.csx over any script of that name without a word, in place (a crash mid-write lost it),
+  and a single script that could not be read emptied the list of saved scripts. Saving over a script other than the
+  one picked asks, the file is written safely, and an unreadable script is left out of the list (and logged) on its
+  own.
+- **The script API's Objects.OfKind now lists every kind of object.** Its note named ten kinds, so Furniture, Remains,
+  Creatures, SpawnPoints, Nests, Dungeons and Effects could not be found by script authors or Claude.
+- **A save that cannot be read back no longer leaves its changes waiting to be written again.** After zone resets or
+  No limit ground the world is read again from what was written; when that read (or removing the earlier saves)
+  failed, the edits, history, resets and ground discs stayed pending, and the next save refused the session's own save
+  as one the game made. Removing earlier saves now only logs a failure, and a failed read starts the session over and
+  says to open the world again.
+- **Typing a place for a selection that holds a runestone now puts the other objects there.** The typed place was
+  measured from the middle of everything selected, runestones included, but runestones never move, so the objects
+  landed off from the typed values. The place is now the moved objects' own.
+- **The Noise brush's ragged edge is no longer cut straight where the noise dips lowest.** Where the noise is low the
+  brush reaches past 1.42 radii, but only points within 1.42 radii were looked at. The Noise shape now looks 1.5 radii
+  out, past the farthest it reaches in practice.
+- **A light first touch of paint no longer clears the generated dirt around it.** A point never painted started from
+  clear ground, not from the mask the world generator gave it (dirt around locations, biome colours), so even a 1%
+  soft edge snapped to clear and left a hard ring. Brushes, Path, Area and pasted paint now start from the generated
+  mask (Ground.StartPaint).
+- **A live world that fails to open no longer leaves its connection open.** When reading the mods, the world or the
+  kept history failed, the session never took the connection, so each failed attempt left an HTTP client behind. It is
+  now closed when opening fails.
+- **Leaving a live world while Apply live is still under way no longer loses the apply's outcome.** Leaving disposed
+  the apply lock, so when the apply ended its release threw ObjectDisposedException instead of giving the outcome. The
+  lock is no longer disposed (it holds nothing to free).
+- **A Discard that cannot read the world no longer makes the next save refuse the session's own save.** Discard forgot
+  the session's saves before reading the world again, so when the folder could not be read, the next Save took the
+  session's own save for one the game made since and refused. The world is now read first.
+- **Opening the saved-worlds page no longer freezes on a slow folder or stops half set on a broken one.** The first
+  look for worlds ran on the window's thread with no catch, unlike the later checks. It now runs as those do, away
+  from the window's thread.
+- **A crash while the loaded stamps are written can no longer lose them all.** stamps.json was written in place, and a
+  file cut short reads as no stamps at all. It is now written whole through a temporary file (SafeFile), and a failure
+  to write is logged.
+- **Settings that cannot be saved are now said, not shown as saved.** The Settings window closed as if saved when the
+  settings file could not be written (a read-only data folder), and the changes were gone at the next start.
+  AppSettings.Save now says why it did not save, and the window shows it and keeps the settings as they were.
+- **Saving from the 3D view worded the changes differently from the map.** The prompt cut "Unsaved: " out of the
+  status line's English text (it would read "Write Unsaved: …" once translated); both prompts now describe the pending
+  counts the same way.
+- **The tool rail mixed languages.** Most brush names were translated while Natural, Cultivate, Clear and the other
+  rail labels and captions stayed English, and the start page kept its own English copy of a tip; the rail and the
+  start page's titles now come from the language catalogue.
+- **A PlanBuild export lost chest contents and sign texts, and a name with a line break broke its header.** The export
+  repeated Homestead's writer without its rules; both now share one piece list (objects without a prefab left out),
+  the one-line header rule and the editor's data lines, so an exported .blueprint opens again with what its objects
+  hold.
+- **A power cut right after a save could leave an empty blueprint, preferences file or game cache.** These files were
+  moved into place from a temporary file that was never flushed to disk; they now go through the same durable write as
+  the settings.
+- **A game mesh with a short vertex buffer could stop all of the game's data from being read.** The catalogue's mesh
+  reader repeated the renderer's with a different stride rule and no bounds check; both now share one vertex layout
+  reader, and a vertex past the data is left at 0.
+- **The Workshop's library showed a description differently from a paste of the same file.** The library trimmed every
+  quote off it ("Big" house lost its first quote) and matched header names in any case, where a paste only unquoted a
+  fully quoted description; both now read headers with one rule.
+- **A crash right after making a new world could leave a save the game trusts with files missing.** The new world's
+  chunks, metadata and .ok marker were not flushed to disk, and its index writer was a copy of the save's; it now
+  shares the save's durable index writer and writes the marker last, after every file and their names are on disk.
+- **Searching blueprints found different ones in the Workshop's library and for Claude than in the Blueprints panel.**
+  Only the panel looked at the creator; all three lists now use one search rule (every word in the name, creator,
+  description or tags), and the library loads pictures through the panel's helper.
+- **Esc did not close message boxes.** Their only button, OK, was not the cancel button; it now is. The dialogs also
+  share one window factory and button row instead of three copies.
+- **A typed path starting with another user's ~name (`~bob/worlds`) became `<home>bob/worlds`.** The world folder box,
+  the settings' folders and the SSH key path each glued anything after a leading ~ onto the home folder; one
+  Places.ExpandHome now expands only ~ alone or before a separator.
+- **Claude's Workshop prompt said the user saves the blueprint, while Claude's instructions describe save_blueprint.**
+  The build_in_workshop prompt now tells Claude to save with save_blueprint when the user asks, and the server's own
+  summary says the Workshop's building is the one thing Claude can keep.
+- **The start page's bridge address went back to 127.0.0.1:5182 at every start.** The address last connected to was
+  saved but never read; the box now starts from it.
+
+### Changed
+- SPIRV-Cross's API is loaded once (TerrainShader.Shared) instead of on every terrain shader build, each load leaving
+  a native context.
+- Dungeon dressing draws each random count once: eight loops drew it again at every turn, which used extra draws (the
+  same seed now makes a slightly different dungeon).
+- A dungeon's throne is drawn once per seat (PickThrone): the ThronePiece property drew again on each read, so its
+  turn could be looked up for another throne than the one placed.
+- A dungeon wall's window is drawn from its place written in the invariant culture, so a seed makes the same windows
+  whatever the culture (the app runs invariant; the tests may not).
+- A copy at scale 1 no longer stores a scale of (1, 1, 1) (and drops the template's scale), as new blank objects do.
+- The world generator's Step and Smooth make a step, not NaN, when their two ends are the same (no caller passes such
+  ends today).
+- The world generator's dump check counts unknown Random calls and short lines as unreadable instead of replaying them
+  as insideUnitCircle (which moved the random state on) or throwing.
+- The world generator's constructor, PlaceRivers and PlaceStreams give the thread's Random state back in a finally, as
+  SeedLocations does, so a failure no longer leaves it reseeded.
+- The Claude server's host is disposed when it cannot start (its port taken), instead of being left behind at each
+  failed Apply.
+- Claude's select_objects and remove_objects read the area's objects under their lock, as the other Claude tools do.
+- The test driver's type, set and check commands answer with their usage when the "|" between their two parts is
+  missing.
+- A shader that fails to compile or link no longer leaves its shaders and program behind on the graphics card.
+- The 3D view's frame-rate measure (driver bench) waits for two frames before it finishes, so 0 seconds no longer
+  throws while drawing, and it refuses negative or NaN seconds.
+- The Mask panel now shows every setting of a mask changed elsewhere (biomes, slopes, paint), so writing the boxes
+  back can no longer undo it.
+- Location markers and the View panel's location count share one 40 m test, which no longer reaches 1 m too far east
+  and north.
+- The noise's documentation says it matches the web editor's to float precision, not exactly.
+- A planned cave is dug along the line it was planned on, not a line worked out again (latent: the two are the same
+  while digging stays synchronous).
+- The Path tool looks for points to change as far out as its natural look's ragged edge can reach (one bound for
+  both).
+- A seed map that was closed no longer samples and keeps a screen-sized close look when it is moved or resized
+  afterwards.
+- Window screenshots with a dialog open free the paint that dims the window behind it.
+- Choosing a builder no longer reads every character file (several MB each) again: a file is read again only when its
+  length or time written changed.
+- A crunched texture's header and CRCs are checked once per load, not twice: one Crunch.Unpack picks the level from
+  the header it read.
+- Building the ruins for a scene looks through the world's objects once, not twice.
+- Cut-out textures' colour bleed looks only at the edge it grows from, not the whole picture 16 times.
+- The game's logs are read for the location lists' order only when they changed since the location rules were kept:
+  the order is kept with the rules' cache, with the logs' sizes and times.
+- The log copies text written as character arrays, spans and empty WriteLine() whole, not a character at a time under
+  its lock, and no longer writes Windows line ends as lines of their own.
+- The start page asks every installed bridge at once with one shared client, so silent ports no longer add 1.5 s each.
+- A game's catalogue report gathers the items the mod costs take once, instead of walking every cost for each item.
+- Sorting objects into kinds remembers each prefab name's kind until the game data changes, instead of running the
+  name rules for every object every time.
+- Regrow's biome-at-a-point and the seed preview's landmass fill no longer allocate per spot or per cell.
+- Placing dungeon stairs tries each side of a room once instead of repeating the same search up to 40 times.
+- Fitting a two-floor dungeon room looks up only the tiles above its own cells instead of scanning the whole level
+  above.
+- Dressing a dungeon room works out its walls and corners once instead of on every furnishing pass.
+- Working out building stability box-tests only pieces near each other instead of every pair, and allocates less while
+  settling.
+- The pending counts in the save bar no longer copy every deleted and added object at each refresh.
+- Hammer snapping works out the ghost's own snap points once per move instead of once per pair with each nearby piece.
+- Saving new objects parses each one's bytes once for its builder, serving-tray mark and data fields instead of up to
+  three times.
+- Merging the game's live changes compares each known object's bytes in place instead of copying them first.
+- Restoring objects from a backup reads each of its chunk files once instead of opening the file again for every
+  object.
+- A save that reads the world again (No limit ground, zone resets) parses the new save once instead of three times.
+- Saving looks up each new object's chunk file and the saved zones by key instead of scanning lists for each one.
+- The world map's overview kept for opening the same world again (about 58 MB) no longer stays in memory once no map
+  uses it.
+- Building a zone's base ground skips the paint-mask colour blending when no mask is asked for, and works out its
+  blend weights once.
+- Laying out locations that want the greenest spots keeps a running best and average instead of going over every
+  earlier spot for each new one.
+- Area actions other than Smooth and Naturalize no longer copy every height of the area first, and those two copy only
+  the selection and the blur's reach.
+- Restoring objects from a backup matches each one only against current objects of its prefab within a metre, instead
+  of against every object in the selection.
+- A backup read for the Area tool's restore no longer stays in memory once its world is left or another world is
+  shown.
+- Typing in the blueprint searches no longer reads every blueprint file and decodes every picture again, and a
+  blueprint without a picture is drawn once even when shown twice.
+- Claude's area map no longer holds up the window while it reads the paint and sorts the objects: the kinds are worked
+  out in the background.
+- Claude's place_pieces looks only at objects near the pieces it puts down instead of every object in the area.
+- Shape formulas and hydraulic erosion no longer allocate at every function call or drop step.
+- Taking a step out of the history or marking a zone's ground for reset redraws only the ground it changed, not the
+  whole area.
+- Going back or forward several steps in the history refreshes the window and asks for a live apply once, not once per
+  step.
+- The 3D view looks up its shaders' settings once instead of asking the graphics driver by name for each of them every
+  frame.
+- Editing with no mod extension that cuts the ground no longer goes over the whole area's cut grid two or three times
+  per change.
+- Brush strokes send only the changed part of the ground to the graphics card, from buffers kept between steps,
+  instead of whole rows of the area each frame.
+- Loading an area or growing it with Follow no longer allocates and drops a copy of the area's empty ground (about 35
+  MB on 17x17).
+- Working out which zones a stroke touched no longer allocates for every point.
+- Painting or shaping the ground no longer makes the 3D view look for the area's locations again at every frame of the
+  stroke.
+- The save bar and the live players' name labels no longer make new brushes and controls at every update.
+- The world map no longer rebuilds its zone outlines and fills, nor recomputes its colours, at every frame while
+  nothing changes.
+- The Measure panel updates its values in place instead of making its rows again at every mouse move.
+- Ward and crafting-station ranges for the overlays are made once per catalogue instead of on every overlay build.
+- Hill and range mountains join their bumps in a plain loop instead of allocating a closure for every ground point.
+- Dragging a Place share slider or ticking kinds writes place.json once after a short pause instead of on every tick.
+- The smooth brush keeps its per-frame heights in a flat buffer, and brush frames that change nothing (locked or
+  masked ground) no longer redraw the ground.
+- The start page lists blueprints and decodes their pictures (at tile size) away from the window's thread and frees
+  old ones, and looks for Homestead only when the game's state changes instead of every 2.5 s.
+- Opening a world folder writes the settings file once instead of twice.
+- Drawing a selection zone copies its points only when one is added, and releasing it tests only the objects inside
+  the zone's bounding box.
+- Opening Settings reads and hashes the mods' extension files away from the window's thread.
+- Blueprint rotations use System.Numerics' quaternion product instead of a hand-written copy.
+- Copies rewritten by extensions read and set object values through the same helpers as the save (a value the save
+  takes is no longer seen as none).
+- The builder ("creator") data key is declared once instead of in four places.
+- Object data lookups by key share ZdoData.GetInt/TryGet, and the container items key is declared once.
+- The dungeon dresser places fallen pillars and picks broken or whole statues through one helper each.
+- Dungeon columns and posts are stacked by one helper.
+- The dungeon entrance locations, their names as entrances and the preferred ones are kept in one table.
+- Live bridge requests share one sender and body builder, and every answer is disposed so its connection goes back to
+  the pool at once.
+- The game scan's points and rotations are read by one pair of helpers instead of three copies.
+- The game's compact count format is read by one helper instead of two copies.
+- The ground height an edit shows is worked out by one helper instead of two copies.
+- The save format's object flags and scale keys are declared once.
+- The latest and the committed save numbers of a world folder are read by one scan with one parsing rule (plain
+  digits).
+- Every place that finds a point's 64 m zone uses one helper.
+- Building pieces are packed for the view by one helper, and each ruin's catalogue entry is looked up once.
+- The world's edge and the biome map's 12 m snap are each defined once.
+- EditGround, Shape and the brush stroke's history step go through Commit and AddChange instead of three copies of the
+  undo-list code.
+- The clipboard and Claude's copy_objects read a copy's source object and data through one EditSession.CopySourceOf.
+- The 3D view converts world and grid points to view space through one set of helpers instead of a copy in each draw
+  method.
+- The hovered object's box is drawn with the selection's box code; the box edge list is written once.
+- The 3D view sets its instance matrices and line shader up through one helper each instead of several copies.
+- The Place, Area, paste and lasso lines are cut along the ground by one helper, and the Path and Place point squares
+  drawn by another.
+- The camera's ground lookup and the sea and sky mesh upload are written once each.
+- The question asked before saving into the world files is written once.
+- The file and folder pickers go through one helper instead of six copies.
+- The open area's world origin (zone × 64 − 32) is one property instead of about fifty copies.
+- The panels' floating cards get their look from one Ui.AsCard instead of sixteen copies of the border style.
+- The tool panels build their labelled rows, sliders and grid columns with shared helpers instead of a copy each.
+- Biome names and the list of biomes the map filter and Mask offer come from one helper and one list.
+- The Path and Place tools share one curve and one line hit test, and the Place shape's turn is written once.
+- The start page's two Edit live buttons are built by one helper.
+- The dungeon planner's misplaced summary, a comment claiming a corner check that is not made, and a local function
+  hiding a method of the same name are put right.
+- Dungeon entrance yaws come back in one range, 0 up to 360.
+- BundleModels.Find's summary gives the order its ranking really uses.
+- A history step is keyed by itself, so marking it applied or removed can no longer lose it from the kept history's
+  lookups.
+- An always-true condition in the dungeon planner's doorway choice is gone.
+- Two dead assignments in the dungeon dresser's corridors are gone.
+- The bundled FastNoise library is trimmed to the 2D cellular and simplex noise the world generator uses (about 2,400
+  dead lines gone, same results).
+- Unused world generator members (normals, an overview size that ignored its setting, stand-ins for the game's biome
+  sector data and log) are gone.
+- Dead fields in the 3D view are gone and a misplaced summary is back on its method.
+- Unused bounds and needless null checks in the area loader are gone.
+
+## v1.45.108 — unreleased
+
+### Changed
+- **Saving new ground in many zones no longer reads the same chunk file again for each one.** Ground edited in a
+  zone that had none yet is saved as a copy of an existing ground object, and every such zone read that object's
+  whole chunk file (often several megabytes) to copy a few bytes out of it. The object alone is now read, once per
+  save.
+
+## v1.45.107 — unreleased
+
+### Changed
+- **A long live session no longer keeps every past read of the game in memory.** Each check of the game that found
+  objects changed kept the bytes it read for as long as the world stayed open, even after those objects were read
+  again: moving creatures and burning fires change at every check, so memory grew all session. Each read's bytes
+  now go with the last object still read from them.
+
+## v1.45.106 — unreleased
+
+### Changed
+- **Generating a deep dungeon is faster.** Adding the loops between rooms worked out, for every room of a level at
+  every try, how far each other room is, and every step of that search looked through all the dungeon's rooms for
+  stairs: with many levels, hundreds of millions of steps. The stairs are now found once per try, and a room's
+  distances only when it has a room to join. The dungeons made are the same.
+
+## v1.45.105 — unreleased
+
+### Changed
+- **Apply live after a big clear no longer reads every removed object first.** Looking for objects that only moved,
+  each Apply live read and decoded the saved data of every object deleted in the editor, then threw it away for any
+  that had no copy to move to: clearing 20,000 trees meant 20,000 reads and decodes for nothing, holding up the
+  live view meanwhile. An object's data is now read only when it may move: moved back, or copied somewhere.
+
+## v1.45.104 — unreleased
+
+### Changed
+- **Saving and Apply live no longer copy every edited zone to find the few they need.** Looking for No limit ground,
+  each save and each Apply live (with Auto apply, after every edit) copied the whole ground of every edited zone,
+  about 127 KB each, and kept only the lifted ones: with 2,000 edited zones, some 250 MB each time, even with
+  nothing lifted. A save also copied every zone twice, and Apply live copied the zones it sends twice. Only the zones
+  needed are copied now, once; the map's edited-zone list and the zone statistics likewise, and the map's
+  edited-zone marks, drawn ten times a second, copy none.
+
+## v1.45.103 — unreleased
+
+### Changed
+- **Following a live world no longer slows down after a big Apply live.** Each object the game reported that the
+  editor did not know was checked against every object the editor had made in the game, one by one: after a
+  3,000-piece paste went in, any change in those zones cost millions of comparisons in the editor's window at every
+  check of the game. The objects the editor made are now also kept by their game id, and found at once.
+
+## v1.45.102 — unreleased
+
+### Changed
+- **Opening an area takes about half as long to work out the generated ground.** Each zone's generated heights were
+  worked out in parallel, then worked out a second time, one zone after the other, only to get the game's base paint
+  of the zone, which comes out of the same pass. The paint is now kept from the first, parallel pass.
+
+## v1.45.101 — unreleased
+
+### Changed
+- **Dragging an Area selection no longer stutters on a big area.** Every mouse move while dragging the box counted
+  the objects inside (every object of the area, under its lock), rebuilt the kind and name lists and worked out the
+  cut and fill (a copy of the Mask's whole ground each time), the cut and fill even for actions that do not show
+  it, and twice when the action changed. The outline still follows the mouse at once; the counts and lists are now
+  worked out once the moves waiting are handled, and the cut and fill only for Flatten, Raise and Lower.
+
+## v1.45.100 — unreleased
+
+### Changed
+- **Regrowing nature in the Ashlands reads each zone once.** Working out what the game would grow, each zone made its
+  own list of the zones it had read (biomes, paint mask, sea depth at the corners), so a neighbour that the Ashlands'
+  wide groups reach into was read again for every zone next to it: about three times the reading over a 4 × 4 block.
+  The list is now made once for the whole area. The same spots are grown.
+
+## v1.45.99 — unreleased
+
+### Changed
+- **Apply live no longer waits for the history file to be written.** After each Apply live (with Auto apply, after
+  every edit) the whole history was written to disk in the editor's window: every object the steps need looked up in
+  the world with its data, every step's ground compressed again and the file written, longer as the history grew. Only
+  the steps and the edits' objects are taken at once now; the objects are looked up, their data read and the file
+  written in the background, one write after the other (a write a newer one replaced before it started is left out),
+  with the world as it was at the apply (what players change meanwhile is merged once the objects are read). Opening
+  the world again or closing the editor waits for the writes still to do.
+
+## v1.45.98 — unreleased
+
+### Changed
+- **Regrowing nature over a big area no longer stalls the editor.** Once the game's spots were worked out, each one
+  was checked against every object of the area, up to three times, in the editor's window: a Mountain with Grow over
+  49 zones meant thousands of spots times tens of thousands of objects, seconds of stall. Only the objects near the
+  spots are now taken, sorted by place, and the check runs in the background. The same spots are grown (Area Regrow,
+  Mountain Grow and Claude's regrow_nature).
+
+## v1.45.97 — unreleased
+
+### Changed
+- **Picking a big saved selection no longer freezes the editor.** Each object of the selection was compared with
+  every object of the area: 5,000 objects in a 300,000-object area made about 1.5 billion comparisons. The area's
+  objects are now sorted by kind and place once, and each saved object looks only where it can be. The same objects
+  are selected.
+
+## v1.45.96 — unreleased
+
+### Changed
+- **Long paths apply without freezing the editor.** Applying a Path action tested every grid point around the line
+  against every metre of it: a 1.5 km diagonal path in a 17 × 17 area made about 1.5 billion tests, and the editor
+  froze for seconds. Each metre of the line now looks only at the points near it, with the same result. A Cave also
+  checked every tree and rock against every metre of the line; it now looks only near each one.
+
+## v1.45.95 — unreleased
+
+### Changed
+- **Editing with the map zoomed in no longer piles up memory.** The map kept up to seven close-ups (about 59 MB each
+  at the largest), and every edit made the next one new while the old ones stayed until the seventh: up to about
+  400 MB for pictures never shown again. It now keeps the last two close-ups of the current edits only.
+
+## v1.45.94 — unreleased
+
+### Changed
+- **The map stays light with many search results.** Every frame, even with the map idle, made all the pins' shapes
+  (and the players') again, with a small array for each corner: with 2,000 results that was about 100,000 arrays a
+  frame. The shapes are now made only when the results, the chosen one, the zoom or the players change.
+
+## v1.45.93 — unreleased
+
+### Changed
+- **Switching between the map and the 3D editor no longer stalls the map's first frame.** Each time the map came
+  back it read the game's minimap material and decoded its eight textures again, inside the drawing. They are now
+  decoded once (again only when another Valheim folder is chosen) and only sent to the graphics card again.
+
+## v1.45.92 — unreleased
+
+### Changed
+- **Opening another area no longer reads the game's terrain look again.** Each area shown (another area, Follow
+  growing it, entering the Workshop) read the terrain shader and its textures (tens of MB) from Valheim's files again,
+  and the ground showed plain colours meanwhile. They do not depend on the area: they are now read once, and again
+  only when another Valheim folder is chosen.
+
+## v1.45.91 — unreleased
+
+### Changed
+- **Areas with many dungeon rooms or location parts draw faster.** Each frame worked out every room's and location
+  part's place again and sent them all to the graphics card anew, and drew them all, in view or not. They are now sent
+  once and kept there until the rooms or locations change (or a model they use is read), and only those in the parts
+  of the area in view are drawn, like objects (each part of the area's box holds the whole of the rooms and parts in it).
+
+## v1.45.90 — unreleased
+
+### Changed
+- **Showing spawn points or nests in a big area no longer costs every frame.** While either kind was shown, each frame
+  looked through every object of the area for them. They are now found once and looked for again only when the
+  objects change (placed, deleted, moved, read again); each frame only picks the ones near the camera.
+
+## v1.45.89 — unreleased
+
+### Changed
+- **Moving the mouse in the Select tool over a big area no longer bogs the window down.** The object under the
+  pointer (outlined before a click picks it) was looked for on every mouse move, each look trying every object's
+  box; a fast mouse sends many moves a frame. It is now looked for once for all the moves waiting.
+
+## v1.45.88 — unreleased
+
+### Changed
+- **Moving or dropping a big selection among many objects is much faster.** Each mouse move of a drag looked at every
+  snap point around for every snap point moved, and End (drop) tested five points of each selected object against
+  every object in the area. Both now look only at what is near: the snap points around are filed by metre, the
+  objects' boxes by 4 m cell. What snaps and where things land are unchanged.
+
+## v1.45.87 — unreleased
+
+### Changed
+- **Finding where locations go (new worlds, seed search) is faster.** The generator caches each zone corner's biome,
+  but corners west of the world's middle all fell into about 160 hash buckets (the corner's x was sign-extended over
+  its y), so half the lookups walked chains of hundreds of entries. Their hash now keeps both coordinates.
+
+## v1.45.86 — unreleased
+
+### Fixed
+- **Connecting to a server whose plugin did not answer could freeze the window for up to 15 seconds.** The check of
+  the server's Valheim folder that says why ran its SSH command on the window's thread. It now runs in the
+  background, as does the reading of the plugin's port from the server's settings.
+
+## v1.45.85 — unreleased
+
+### Fixed
+- **Pasting a hand-edited or older blueprint could stop half-way and leave No limit on for every later brush.** A
+  blueprint's ground lists were never checked against its size: one shorter than it said (or without its paint list)
+  stopped the paste part-way, with the ground partly changed and no step in the history, and the switch that lets a
+  paste go past the game's ±8 m stayed on, so every later brush ignored the limit. A blueprint whose lists do not
+  match its size, whose size is not a grid or with a nameless object is now refused with the reason (one without an
+  outline is pasted by its size), and every tool that turns that switch on for a moment (paste, clear the site,
+  Mountain, scripts) turns it back off even when it fails.
+
+## v1.45.84 — unreleased
+
+### Fixed
+- **Saving or applying ground lifted past the ±8 m limit in two far-apart places could run out of memory.** The
+  ground discs were worked out on one grid of every zone between the lifted ones: two lifts at opposite ends of the
+  world made a grid of billions of points, many times over. Lifts far apart are now each worked out on their own few
+  zones.
+
+## v1.45.83 — unreleased
+
+### Fixed
+- **The Place tool could lose its presets, favourites and weights, or fail to open.** place.json was written in place,
+  so a write cut short left it broken, and a broken or unreadable file gave an empty memory that the next save wrote
+  over. A hand-edited file with `"Chosen": null` or `"Weights": null` crashed the Place panel, and a preset with
+  `"Kinds": null` crashed when loaded. The file is now written through a temporary one; a broken one is first copied
+  aside as place.json.bad, and one that cannot be read is not written over. Nulls are taken as empty, and presets
+  without a name or kinds are left out.
+
+## v1.45.82 — unreleased
+
+### Fixed
+- **A crash while saving selections could lose every world's saved selections.** selections.json was written in
+  place, so a write cut short left it broken; a broken file then counted as none, and the next Keep or Forget wrote
+  over it. It is now written through a temporary file, a broken one is first copied aside as selections.json.bad, and
+  one that cannot be read (or kept aside) is never written over: Keep and Forget say they could not.
+
+## v1.45.81 — unreleased
+
+### Fixed
+- **A script could put objects at impossible places into the world.** `Objects.Place` took a place, turn or tilt that
+  was not a number (NaN, infinite), a negative size and a point outside the open area, and `Objects.Move` took
+  infinite values and places outside the area; the object went into the world like that (a piece snapped near the
+  edge could also end past it). These now stop the script
+  with an error saying what was wrong (NaN still means "on the ground" for `Place`'s `y` and "as it was" for `Move`).
+  The boulder and ring-of-trees examples keep their objects inside the area.
+
+## v1.45.80 — unreleased
+
+### Fixed
+- **Rooms of a generated dungeon with alcoves had their furnishings off to one side.** An alcove grew the room's box by
+  a tile on one side, and the dressing took that box for the room: its middle moved 1 m toward the alcove and its half
+  width grew 1 m, so a hall's colonnades, braziers and other paired pieces stood off the room's middle, one of each
+  pair against or in the wall, or missing. A side room's twin was mirrored across the grown box too, 2 m off. Both now
+  use the room's own walls, and an alcove is extra floor beyond them.
+
+## v1.45.79 — unreleased
+
+### Fixed
+- **The warning sign by a generated dungeon's locked boss gate was sunk in the wall.** It was placed 4 cm from the
+  doorway's middle, which lies on the wall's centre line, so it sat about half a metre deep in a stone wall (on the
+  arena's side). It now hangs on the antechamber's side, on the wall's inner face.
+
+## v1.45.78 — unreleased
+
+### Fixed
+- **The steps before the plinth of a generated burial chamber, chapel, shrine or tomb rose away from it.** A stone
+  stair climbs toward its back; these rooms turned their front steps the other way from the great hall's, arena's and
+  feast hall's, so the stairs faced the plinth and climbed toward the room. They are now turned like the others.
+
+## v1.45.77 — unreleased
+
+### Fixed
+- **A generated cell block's elite guards could stand locked inside the cells.** The cell block meant to keep only its
+  aisle free for what is placed after its cells, but kept a circle of no size, so its elites and their spawners were
+  put anywhere in the room, behind the grates. Both rows of cells are now kept, up to their grates.
+
+## v1.45.76 — unreleased
+
+### Fixed
+- **A generated dungeon could hold two kitchens, two forges or two feast halls.** A side room is sometimes mirrored
+  across the room it opens off, and the mirror did not check whether its kind comes only once, so a fortress, prison
+  or Dvergr hold could get its kitchen, forge or feast hall twice. Such rooms are no longer mirrored.
+
+## v1.45.75 — unreleased
+
+### Fixed
+- **A generated dungeon could hold extra antechambers that led nowhere.** The antechamber was placed before the boss's
+  arena was tried, and stayed when the arena did not fit; the next try added another, so a dungeon could have two or
+  three "unique" antechambers as dead ends, each with its elites and no gate, or one with no arena at all. The
+  antechamber is now taken back, with its corridor, whenever the arena does not fit beyond it.
+
+## v1.45.74 — unreleased
+
+### Fixed
+- **A generated dungeon's hidden cache could sit in the upper half of a tall room on the level below.** Tall rooms (a
+  great hall, chapel, throne room, arena) rise through the level above, which is laid out before them, but the hidden
+  caches are added last, to any level: one over a tall room floored its upper 4 m. No room or corridor is placed over
+  a tall room any more.
+
+## v1.45.73 — unreleased
+
+### Fixed
+- **A kind of object whose model failed to load was never drawn at all, and no other model got its textures.** When the
+  reading of a model failed outright (the memory running out on a texture), its things were neither drawn as boxes nor
+  pickable, their ghosts never showed, and the textures it had taken to read stayed taken, so every later model using
+  them came up without them until the models were let go. The failure is said as before, the kind's things get the
+  stand-in box, the textures read go up and the rest are let go for another model to read.
+
+## v1.45.72 — unreleased
+
+### Fixed
+- **In the Workshop, a wall crossing the cut height was picked and hovered instead of what stands inside.** The cut hides
+  everything drawn above it, but picking only passed over objects wholly above it: a wall's hidden top still took the
+  click meant for the chest behind it. Picking now meets an object's shape only below the cut, as drawn.
+
+## v1.45.71 — unreleased
+
+### Fixed
+- **Pictures of the 3D view and the map came out part-transparent under water, glass, ghosts and overlays.** Every
+  see-through surface was blended into the picture's alpha as well as its colour, lowering it, and `--shot`, the docs'
+  pictures and Claude's screenshots were see-through there (and the view could look washed out where the window shows
+  what is behind it). Blending now leaves the alpha opaque, as cleared, and the PNG written is always opaque.
+
+## v1.45.70 — unreleased
+
+### Fixed
+- **Typing in a text box moved the camera or changed how it moves, and so did keys on the start page and the map.**
+  The window took every key for the 3D view: an F typed in a search box switched the camera between orbiting, walking
+  and flying, W, A, S or D held while typing moved it, and Space on the start page was taken from the focused button.
+  The view now takes a key only when the 3D editor is shown and nothing is being typed in a box.
+
+## v1.45.69 — unreleased
+
+### Fixed
+- **A chest filled through the editor could hold a stack larger than the game allows.** The inspector's Contents and
+  Claude's `fill_object` took any count up to 65535; the game shows a stack's worth and the rest is lost. The game's
+  catalogue now carries each item's largest stack (read from the game's files, so the cached catalogue is read
+  again), and a larger stack is cut to it, with a note "Stone: stack of 70000 cut to 50 (the item's maximum)" in
+  the message.
+
+## v1.45.68 — unreleased
+
+### Fixed
+- **Claude could run scripts on your computer without your say.** `run_script` ran C# with your rights (your files
+  included), with nothing more than a sentence in a tip. Scripts from Claude now need your leave, given once:
+  **Settings → Claude → Claude may run scripts** (off by default). While off, `run_script` (dry runs too) and the
+  Script tool's Run through `set_control` are refused with a message that says where to allow them; Claude's other
+  tools and your own scripts work as before. The process a script runs in (v1.45.67) keeps a crash away from the
+  editor but is not a sandbox: a script still has your rights.
+
+## v1.45.67 — unreleased
+
+### Fixed
+- **Script: Stop could not end a script busy in one long call.** Stop and the 2-minute limit ended a script only at
+  the next turn of one of its loops; a single call with no loop around it (a LINQ query over a huge range,
+  `Thread.Sleep`, a recursion that never ends) ran on until the editor closed, burning a core. A script now runs in a
+  process of its own (the editor started again for it, the area's snapshot sent to it, its changes sent back); Stop
+  closes that process's input, which ends the script at its next loop turn, and kills the process a second later
+  when that was not enough. A script process that crashes is reported as an error. The process keeps a crash away
+  from the editor, but it is not a sandbox: a script still runs with your rights, like any program you run.
+
+## v1.45.66 — unreleased
+
+### Fixed
+- **Claude: a step made through `set_control` was not named "Claude: …".** A control Claude pressed (a button, a
+  toggle, a tool's Apply) ran the editor's own handler, which labelled the step as the user's; the history and
+  **Take back Claude's changes** could not tell it from the user's own work. While Claude sets a control, the steps
+  its handler makes, at once or after an await, now get the "Claude: " prefix like every other step of Claude's.
+
+## v1.45.65 — unreleased
+
+### Fixed
+- **New world: a name the game accepts on one system broke the world on another.** The name check followed the
+  system the editor ran on: on Linux and macOS "My:World?" went through (and the world could not be copied to
+  Windows), and on Windows "CON" or "COM1" went through and failed when the files were written. The check is now
+  the same everywhere: no / \ : * ? " < > |, no device name, nothing ending with a dot or a space.
+
+## v1.45.64 — unreleased
+
+### Fixed
+- **A blueprint file with terrain marks far apart, or with numbers that are not numbers, froze or failed the
+  import.** The ground grid of an imported .blueprint was sized from everything in the file, pieces included, with
+  no limit: pieces two kilometres apart meant millions of cells (the editor froze or ran out of memory), a huge
+  radius overflowed the grid, and "NaN" was taken as a position. A line with a number that is not finite is now
+  skipped like an unreadable one, the grid reaches only as far as the terrain marks, and marks that span more than
+  1200 m are refused with the reason, on an import and on a paste.
+
+## v1.45.63 — unreleased
+
+### Fixed
+- **A settings file held by another program for a moment was written over with the defaults.** When settings.json
+  could not be read at the start (a sync or antivirus program holding it, or no permission), the editor went on
+  with the defaults, and the next thing it remembered (a recent world, a toggle) saved them over the file: the game
+  folder, extra folders, allowed extensions and Claude's token were gone. A read that fails is now tried again, and
+  when it still fails the defaults are used for the session but never saved over the file, which the log says.
+
+## v1.45.62 — unreleased
+
+### Fixed
+- **One unusual bundle (a mod's, damaged, or laid out otherwise) left every mod model undrawn.** The index of prefabs
+  read at the start skipped a file that is not a bundle, but a bundle without an assets file first, or whose table
+  of contents could not be read, was an exception that ended the index, so every later lookup failed again and no
+  mod model was drawn. Such a bundle is now skipped and said in the log, closed like the others, and the rest are
+  indexed.
+
+## v1.45.61 — unreleased
+
+### Fixed
+- **The editor could fail to start, or miss pieces and models, depending on where the game's scripts are in its
+  bundles.** The bundles are read one by one at the start, and the few that hold the game's scripts are kept open
+  so each class is looked up once. When the pass reached a bundle already kept open, it opened it a second time and
+  closed it after its read; the game's file reader gives the same bundle both times, so the kept one was closed
+  too, and the next class looked up in it failed (an exception that stopped the start) or was not found. A bundle
+  open already is now given again and stays open until its last reader is done; a file handle leaked by each second
+  open goes with it.
+
+## v1.45.60 — unreleased
+
+### Fixed
+- **On Windows, a mod updated while the editor ran left its models missing until the editor was restarted.** The
+  mods' bundles are copied into the editor's data folder, and the old copies are deleted when a mod changes; the
+  reader of the old copies still held their files open, which Windows refuses to delete, so the copy failed and no
+  mod model was drawn for the rest of the session. The old reader now lets go of its files before the copies are
+  replaced.
+
+## v1.45.59 — unreleased
+
+### Fixed
+- **One damaged object ended a world search, and a damaged item stand broke the inspector.** Search world, the
+  inspector's chest and stand reads and Claude's get_object skipped an object only when its bytes were short; a bad
+  count or length prefix in them (what damaged saves have) was an exception that ended the whole search or the
+  inspector. Every reader of one object now skips what cannot be read, whichever way it is damaged, and goes on with
+  the rest.
+
+## v1.45.58 — unreleased
+
+### Fixed
+- **A chest could be given something that is not an item, which the game then threw away.** The inspector and
+  Claude's set_contents checked a container's items against every prefab of the game, so "Troll" or "piece_chest"
+  went into a chest and was saved; the game drops such an entry when it loads the chest. Only the game's items are
+  taken now; anything else is refused with its name.
+
+## v1.45.57 — unreleased
+
+### Fixed
+- **Exporting To Homestead, importing a blueprint or generating a dungeon with a long name could hang the editor.**
+  A blueprint's file name keeps 64 characters of its name, so for a name that long every "name (2)", "name (3)"…
+  tried when the name was taken already gave the same file, and the search for a free name never ended. The name is
+  now cut so that its number stays in the file name.
+
+## v1.45.56 — unreleased
+
+### Fixed
+- **Claude's set_control "click" on a switch, toggle or radio button changed nothing.** The click only raised the
+  Click event, which skips what a real press does first: the toggle itself (and a button's Command). So the switch kept
+  its value, its handlers ran against the old one and Claude was told it worked. A click now presses the control as a
+  pointer does: the toggle changes, then its handlers and Command run.
+
+## v1.45.55 — unreleased
+
+### Fixed
+- **Claude Desktop lost the editor's MCP server on a batch request or a tool that ran too long.** The --mcp-stdio
+  relay ended on a line of JSON that is not one message (a batch array, a bare value), on a method that is not a
+  string, and when the editor gave no answer within 5 minutes, so Claude Desktop showed the server disconnected. Such
+  a line is now answered with a JSON-RPC error (a request that timed out too) and the relay goes on until its input
+  ends.
+
+## v1.45.54 — unreleased
+
+### Fixed
+- **Claude's object ids could hit the wrong objects after another area was opened or the world read again.** The ids
+  Claude's tools give are indices into the open area's objects, and they were taken as they were once another area
+  was open, the same one opened again, or the world read again after a save: remove_objects, move_objects,
+  set_object_data and the others then changed whatever objects had those indices. The tools now remember which area's
+  objects the ids were given for and refuse ids from another, or from before the world was read again, until
+  objects are listed again.
+
+## v1.45.53 — unreleased
+
+### Fixed
+- **Claude could not open or add a blueprint whose file was not named after it.** list_blueprints gives each
+  blueprint's name from its #Name: header, but open_workshop and add_blueprint looked for a file named after that
+  name, so a numbered copy, a downloaded blueprint or one the game saved under another file name was "not in the
+  library". The name is now looked up among the library's entries first, the file name after.
+
+## v1.45.52 — unreleased
+
+### Fixed
+- **A dungeon Claude generated was not one of Claude's changes, and left a file in the blueprint Library.** Its step
+  was named "Dungeon: generated …" (in a world) or "Added …" (on the Workshop's plot), so Take back Claude's changes
+  kept it, and on the plot its blueprint was written into the user's Library, which Claude is not to write. The step
+  is now "Claude: generated dungeon …", and on the plot the dungeon is added straight from its blueprint's text,
+  with no file written.
+
+## v1.45.51 — unreleased
+
+### Fixed
+- **A blueprint Claude's add_blueprint refused, because a piece would leave the area, took the place of what the user
+  could redo.** The pieces were put down as a step and the step undone at once, which cleared the redo list (and
+  could drop the oldest undo step), and left the refused blueprint there for the next Ctrl+Y. What the blueprint
+  would add is now worked out first, and nothing is put down when it is refused.
+
+## v1.45.50 — unreleased
+
+### Fixed
+- **A piece dragged far did not snap to the building where it was dropped.** The snap points of the pieces around
+  were gathered once per move, within 60 m of where the move started, so a piece dragged more than about 60 m to
+  another building never snapped to it. They are now gathered again once the selection has moved more than 30 m
+  from where they were gathered.
+
+## v1.45.49 — unreleased
+
+### Fixed
+- **"Move there" moved the selection a little on every axis, even the ones left alone.** The X, Y, Z and Turn boxes
+  show where the selection is rounded to a centimetre and a tenth of a degree, and Move there took all four as the
+  place to reach, so changing only Y (or nothing) replaced every selected object by a copy shifted by up to 5 mm and
+  turned by up to 0.05° about the middle: a new undo step, new ids, and a destroy and create on a live server. Move
+  there now moves only along the axes whose box was changed, by the difference from the exact place (however
+  small); with nothing changed it does nothing.
+
+## v1.45.48 — unreleased
+
+### Fixed
+- **Replacing a ship or another linked group's root left its parts behind.** Replace (the Area tool's, and the
+  Select tool's "Replace the selection") removed only the objects given, unlike Remove, so replacing a vehicle's
+  root left its parts in the save with nothing to hang on. Replace now takes a root's parts away with it, in the
+  same undo step, and says how many went; a part replaced on its own still goes alone.
+
+## v1.45.47 — unreleased
+
+### Fixed
+- **A heightmap read but not yet put could land in another area.** The picture read by Import was fitted to the
+  selection and the area open at the time, as grid points of that ground, but it survived a change of selection or
+  the opening of another area, so "Put it into the ground" then wrote it into the wrong points of another ground.
+  The picture is now dropped when the selection changes, and refused (with a message) when another area is open.
+
+## v1.45.46 — unreleased
+
+### Fixed
+- **Replace's "with" list kept the first world's kinds after another world was opened.** The Area tool worked the
+  list out once per window, but the kinds a world can make include its own objects (its templates), so after opening
+  another world the list still offered the first world's modded kinds, which the other world cannot copy, and lacked
+  its own. The list is now worked out again for another world or when the game's data or the mods change, keeping
+  the chosen kind when the new world offers it too.
 
 ## v1.45.45 — unreleased
 

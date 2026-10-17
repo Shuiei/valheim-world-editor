@@ -42,12 +42,9 @@ public sealed class ModBundlesTests : IDisposable
             Environment.SetEnvironmentVariable(k, v);
         }
         LocalGame.SearchDefaultPlaces = _defaults;
-        try
+        if (Directory.Exists(_home))
         {
             Directory.Delete(_home, true);
-        }
-        catch (IOException)
-        {
         }
     }
 
@@ -148,6 +145,29 @@ public sealed class ModBundlesTests : IDisposable
         Assert.Empty(reader.Named(AssetClassID.Mesh, "old_plank"));
     }
 
+    // Different bundles whose copies would have had the same name (punctuation made "_", letter case ignored) are both
+    // copied and read (the older was dropped, its models never drawn).
+    [Fact]
+    public void BundlesWhoseNamesWouldMeetAreEachCopied()
+    {
+        string plugins = Plugins("Default");
+        Directory.CreateDirectory(Path.Combine(plugins, "One"));
+        Directory.CreateDirectory(Path.Combine(plugins, "Two"));
+        Directory.CreateDirectory(Path.Combine(plugins, "Three"));
+        File.WriteAllBytes(Path.Combine(plugins, "One", "Mod A.bundle"), Bundle("a", "space_plank"));
+        File.WriteAllBytes(Path.Combine(plugins, "Two", "Mod_A.bundle"), Bundle("b", "underscore_plank"));
+        File.WriteAllBytes(Path.Combine(plugins, "Three", "mod_a.bundle"), Bundle("c", "lower_plank"));
+
+        var sources = ModBundles.Find(Settings("Default"));
+        var reader = ModBundles.Reader(Settings("Default"))!;
+
+        Assert.Equal(3, sources.Select(s => s.Name.ToLowerInvariant()).Distinct().Count());
+        Assert.All(sources, s => Assert.StartsWith("Mod_A.bundle-", s.Name, StringComparison.OrdinalIgnoreCase));
+        Assert.Single(reader.Named(AssetClassID.Mesh, "space_plank"));
+        Assert.Single(reader.Named(AssetClassID.Mesh, "underscore_plank"));
+        Assert.Single(reader.Named(AssetClassID.Mesh, "lower_plank"));
+    }
+
     [Fact]
     public void TheCopiesAreKeptWhileTheModsAreUnchanged()
     {
@@ -157,20 +177,29 @@ public sealed class ModBundlesTests : IDisposable
         var first = ModBundles.Reader(settings)!;
         string marker = Path.Combine(ModBundles.Folder, "marker");
         File.WriteAllText(marker, "left by the test");
+        Assert.Equal(3, first.VertexCountOf(Assert.Single(first.Named(AssetClassID.Mesh, "fine_plank"))));
+        Assert.Equal(1, first.OpenBundles);
 
         // Asked again: the same reader.
         Assert.Same(first, ModBundles.Reader(settings));
-        // After another set of mods (none here, so nothing copied), the kept copies are read again, not copied.
+        // After another set of mods (none here, so nothing copied), the kept copies are read again, not copied; the
+        // reader of before let go of its files first (Windows refuses to delete a folder with an open file).
         Assert.Null(ModBundles.Reader(Settings()));
+        Assert.Equal(0, first.OpenBundles);
         var again = ModBundles.Reader(settings)!;
         Assert.NotSame(first, again);
         Assert.True(File.Exists(marker));
         Assert.True(File.Exists(Path.Combine(AppSettings.UserDataDir, "mod-bundles.json")));
-        // A mod changed: copied again, the folder emptied first.
+        // A mod changed while a reader holds its copy open: copied again, the folder emptied first, and the new
+        // copy's models read.
+        Assert.Equal(3, again.VertexCountOf(Assert.Single(again.Named(AssetClassID.Mesh, "fine_plank"))));
+        TestDll.Write(dll, [("FineMod.finebundle", Bundle("finebundle", "new_plank"))]);
         File.SetLastWriteTimeUtc(dll, DateTime.UtcNow.AddDays(-1));
-        Assert.NotNull(ModBundles.Reader(settings));
+        var changed = ModBundles.Reader(settings)!;
         Assert.False(File.Exists(marker));
         Assert.True(File.Exists(Path.Combine(ModBundles.Folder, "FineMod.FineMod.finebundle")));
+        Assert.Equal(3, changed.VertexCountOf(Assert.Single(changed.Named(AssetClassID.Mesh, "new_plank"))));
+        Assert.Empty(changed.Named(AssetClassID.Mesh, "fine_plank"));
     }
 
     [Fact]

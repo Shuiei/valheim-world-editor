@@ -12,7 +12,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The start page: connecting to a dedicated server through the form and from a saved server (the SSH tunnel replaced
 /// by one that leads to a stand-in game), each way it can fail, editing and forgetting a server, the saved worlds as cards, a world
-/// folder typed with ~, and "My game" when the plugin's settings cannot be read. Saved servers and settings go to the
+/// folder typed with ~, the bridge address last connected to, and "My game" when the plugin's settings cannot be read. Saved servers and settings go to the
 /// tests' own files; it runs alone.
 /// </summary>
 [Collection("DataDir")]
@@ -54,12 +54,9 @@ public class StartPageTests
         public void Dispose()
         {
             ServerConfig.PathOverride = _servers;
-            try
+            if (Directory.Exists(Temp))
             {
                 Directory.Delete(Temp, true);
-            }
-            catch
-            {
             }
         }
     }
@@ -77,6 +74,14 @@ public class StartPageTests
     /// Every text block's text under the control, joined with " | ", for asserting on what it shows.
     /// </summary>
     private static string Texts(Control c) => string.Join(" | ", c.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text));
+
+    [AvaloniaFact]
+    public void TheBridgeAddressLastConnectedToIsFilledIn()
+    {
+        using var r = new Run();
+        Assert.Equal("127.0.0.1:5182", r.P.LiveUrl.Text);
+        Assert.Equal("http://10.0.0.5:15182", new StartPage(new AppSettings { LiveUrl = "http://10.0.0.5:15182" }).LiveUrl.Text);
+    }
 
     [AvaloniaFact]
     public async Task TheServerFormConnectsRemembersTheServerAndOpensIt()
@@ -218,11 +223,12 @@ public class StartPageTests
     }
 
     [AvaloniaFact]
-    public void SavedWorldsAreCardsAndNoneIsSaid()
+    public async Task SavedWorldsAreCardsAndNoneIsSaid()
     {
         using var r = new Run();
         r.P.FindWorlds = _ => [];
         r.P.FillWorlds();
+        await r.P.WorldsCheck!;
         Assert.Contains("No worlds found on this computer", Texts(r.P.WorldCards));
         string dir = Fixtures.CopyFixture();
         try
@@ -233,6 +239,7 @@ public class StartPageTests
                 new Worlds.Info("Broken", "/nowhere", DateTime.Now, 0, "elsewhere", false, "No save files in it."),
             ];
             r.P.FillWorlds();
+            await r.P.WorldsCheck!;
             var cards = r.P.WorldCards.Children.OfType<Button>().ToList();
             Assert.Equal(2, cards.Count);
             Assert.False(cards[1].IsEnabled);
@@ -255,6 +262,7 @@ public class StartPageTests
         List<Worlds.Info> found = [];
         r.P.FindWorlds = _ => found;
         r.P.SetMode("offline");
+        await r.P.WorldsCheck!;
         Assert.Contains("No worlds found on this computer", Texts(r.P.WorldCards));
         // A world folder added while the page is open shows after Refresh, and goes once removed.
         found = [new Worlds.Info("Added", "/somewhere", DateTime.Now, 1, "a test folder", true, null)];
@@ -293,6 +301,7 @@ public class StartPageTests
         Assert.True(started.Wait(TimeSpan.FromSeconds(10)));
         slow = false;
         r.P.SetMode("offline");
+        await r.P.WorldsCheck!;
         Assert.Contains("Newer", Texts(r.P.WorldCards));
         // The slow look ends: its older worlds do not replace the newer list.
         release.Set();
@@ -302,12 +311,24 @@ public class StartPageTests
     }
 
     [AvaloniaFact]
+    public async Task AFolderThatCannotBeReadLeavesThePageWhole()
+    {
+        using var r = new Run();
+        r.P.FindWorlds = _ => throw new IOException("a drive that went away");
+        r.P.SetMode("offline");
+        await r.P.WorldsCheck!;
+        Assert.Equal("offline", r.P.Mode);
+        Assert.True(r.P.OfflinePanel.IsVisible);
+    }
+
+    [AvaloniaFact]
     public async Task AWorldAddedOrRemovedShowsByItself()
     {
         using var r = new Run();
         List<Worlds.Info> found = [new Worlds.Info("First", "/first", DateTime.Now, 1, "a test folder", true, null)];
         r.P.FindWorlds = _ => found;
         r.P.SetMode("offline");
+        await r.P.WorldsCheck!;
         var first = Assert.Single(r.P.WorldCards.Children.OfType<Button>());
         // Nothing changed: the cards stay as they are (no redraw under the mouse).
         await r.P.CheckWorlds();
@@ -388,7 +409,7 @@ public class StartPageTests
         using var r = new Run();
         ServerConfig.Remember(new ServerConfig.Server { Name = "Valhalla", Host = "203.0.113.10", SshPort = 22, User = "valheim", Password = "pw", Token = game.Token });
         r.Tunnel(game.Port, game.Token);
-        r.P.FillHome();
+        await r.P.FillHome();
         var tile = r.P.RecentTiles.Children.OfType<Button>().Single(b => Texts(b).Contains("Valhalla"));
         Assert.Contains("Server · connects in one click", Texts(tile));
         Click(tile);

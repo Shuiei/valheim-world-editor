@@ -35,35 +35,86 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     /// <inheritdoc/>
     public void Dispose() => _http.Dispose();
 
-    /// <summary>A GET request with the token.</summary>
+    /// <summary>
+    /// Sends a request with the token (and a binary body and call id when given); the answer, whatever its status, for
+    /// the caller to check and dispose.
+    /// </summary>
+    private async Task<HttpResponseMessage> Send(HttpMethod method, string path, byte[]? body = null, string? callId = null, CancellationToken cancel = default)
+    {
+        using HttpRequestMessage req = new(method, path);
+        if (body != null)
+        {
+            req.Content = new ByteArrayContent(body);
+        }
+        req.Headers.Add("X-Bridge-Token", token);
+        if (callId != null)
+        {
+            req.Headers.Add("X-Call-Id", callId);
+        }
+        return await _http.SendAsync(req, cancel);
+    }
+
+    /// <summary>A request body written with a binary writer (UTF-8 strings, as the plugin's ZPackage reads them).</summary>
+    private static byte[] Build(Action<BinaryWriter> write)
+    {
+        using MemoryStream ms = new();
+        using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+        {
+            write(w);
+        }
+        return ms.ToArray();
+    }
+
+    /// <summary>A point as three floats (x, y, z).</summary>
+    private static void Write(BinaryWriter w, System.Numerics.Vector3 v)
+    {
+        w.Write(v.X);
+        w.Write(v.Y);
+        w.Write(v.Z);
+    }
+
+    /// <summary>A GET request with the token; the caller disposes the answer.</summary>
     /// <exception cref="InvalidOperationException">The bridge answered with an error status.</exception>
     private async Task<HttpResponseMessage> Get(string path)
     {
-        using HttpRequestMessage req = new(HttpMethod.Get, path);
-        req.Headers.Add("X-Bridge-Token", token);
-        HttpResponseMessage res = await _http.SendAsync(req);
+        HttpResponseMessage res = await Send(HttpMethod.Get, path);
         if (!res.IsSuccessStatusCode)
         {
-            string body = await res.Content.ReadAsStringAsync();
-            throw new InvalidOperationException($"bridge {path}: {(int)res.StatusCode} {body}");
+            using (res)
+            {
+                string body = await res.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"bridge {path}: {(int)res.StatusCode} {body}");
+            }
         }
         return res;
+    }
+
+    /// <summary>A GET request's answer as text.</summary>
+    /// <exception cref="InvalidOperationException">The bridge answered with an error status.</exception>
+    private async Task<string> GetText(string path)
+    {
+        using var res = await Get(path);
+        return await res.Content.ReadAsStringAsync();
     }
 
     /// <summary>
     /// The whole persistent world as the running game has it (world info, zone data and every persistent object),
     /// gzip-compressed; <c>WorldSave.LoadLive</c> reads it.
     /// </summary>
-    public async Task<byte[]> Snapshot() => await (await Get("snapshot")).Content.ReadAsByteArrayAsync();
+    public async Task<byte[]> Snapshot()
+    {
+        using var res = await Get("snapshot");
+        return await res.Content.ReadAsByteArrayAsync();
+    }
 
     /// <summary>The connected players and their positions, as the plugin's JSON array.</summary>
-    public async Task<string> Players() => await (await Get("players")).Content.ReadAsStringAsync();
+    public Task<string> Players() => GetText("players");
 
     /// <summary>
     /// Every prefab the running game knows, mods' too, as the plugin's JSON (ModCatalogue reads it); a plugin older
     /// than 1.26.0 answers 404.
     /// </summary>
-    public async Task<string> Catalogue() => await (await Get("catalogue")).Content.ReadAsStringAsync();
+    public Task<string> Catalogue() => GetText("catalogue");
 
     /// <summary>
     /// What the game draws of these prefabs (mod prefabs: their meshes', materials' names and places), as the plugin's
@@ -76,7 +127,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     }
 
     /// <summary>Plugin and world info, as the plugin's JSON.</summary>
-    public async Task<string> Status() => await (await Get("status")).Content.ReadAsStringAsync();
+    public Task<string> Status() => GetText("status");
 
     /// <summary>
     /// A quick reachability check before opening a live world: null when the bridge answers, else a plain explanation
@@ -96,9 +147,21 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
         {
             return "That is not a valid address. Use host:port, for example 127.0.0.1:5182.";
         }
+        // "httpsrv:5182" reads as an address of the scheme "httpsrv", which nothing can ask.
+        if (uri.Scheme is not ("http" or "https"))
+        {
+            return "That is not a valid address. Use host:port, for example 127.0.0.1:5182.";
+        }
         using HttpClient http = new() { Timeout = timeout };
         using HttpRequestMessage req = new(HttpMethod.Get, uri);
-        req.Headers.Add("X-Bridge-Token", token);
+        try
+        {
+            req.Headers.Add("X-Bridge-Token", token);
+        }
+        catch (FormatException)
+        {
+            return "That token cannot be sent (it holds a line break or another character a request cannot carry). Copy the Token again from BepInEx/config/Tie.WorldEditorBridge.cfg on the server.";
+        }
         string tunnel = $"The bridge only listens on the server itself. Open an SSH tunnel on this computer (ssh -N -L {uri.Port}:127.0.0.1:{uri.Port} user@your-server) and connect to 127.0.0.1:{uri.Port}.";
         bool local = uri.IsLoopback;
         try
@@ -131,8 +194,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     /// <exception cref="BridgeAnswerException">The bridge answered with an error status.</exception>
     public async Task<string> ApplyTerrain(IReadOnlyList<(int X, int Z, byte[] Data)> zones)
     {
-        using MemoryStream ms = new();
-        using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+        using var res = await Send(HttpMethod.Post, "terrain", Build(w =>
         {
             w.Write(zones.Count);
             foreach (var (x, z, data) in zones)
@@ -142,10 +204,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
                 w.Write(data.Length);
                 w.Write(data);
             }
-        }
-        using HttpRequestMessage req = new(HttpMethod.Post, "terrain") { Content = new ByteArrayContent(ms.ToArray()) };
-        req.Headers.Add("X-Bridge-Token", token);
-        HttpResponseMessage res = await _http.SendAsync(req);
+        }));
         string body = await res.Content.ReadAsStringAsync();
         if (!res.IsSuccessStatusCode)
         {
@@ -154,71 +213,61 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
         return body;
     }
 
-    /// <summary>
-    /// Whether the plugin moves objects in place (<see cref="ApplyObjects"/>'s moves; 1.40.0 on, which lists "move"
-    /// among the features in its status). Asked once; a check that fails says no, and is asked again next time.
-    /// </summary>
-    public Task<bool> CanMove() => Has("move");
+    /// <summary>The plugin's run and what it can do, as its status says now.</summary>
+    /// <param name="Run">
+    /// This run of the plugin: a new id each time the game starts (1.45.3 on; "" before). A call whose answer was lost is
+    /// sent again under its id only to the run it went to: another run does not know what that one did.
+    /// </param>
+    /// <param name="Features">The features its status lists.</param>
+    public sealed record Abilities(string Run, IReadOnlySet<string> Features)
+    {
+        /// <summary>
+        /// Whether the plugin moves objects in place (<see cref="ApplyObjects"/>'s moves; 1.40.0 on, which lists "move").
+        /// </summary>
+        public bool CanMove => Features.Contains("move");
+
+        /// <summary>
+        /// Whether the plugin does an <see cref="ApplyObjects"/> call sent again under the same call id only once,
+        /// answering the second time with what it did the first (1.45.3 on, which lists "once").
+        /// </summary>
+        public bool CanCallOnce => Features.Contains("once");
+    }
 
     /// <summary>
-    /// Whether the plugin does an <see cref="ApplyObjects"/> call sent again under the same call id only once, answering
-    /// the second time with what it did the first (1.45.3 on, which lists "once" among the features in its status). Asked
-    /// once; a check that fails says no, and is asked again next time.
+    /// The plugin's run and what it can do, asked now (once per apply: a game started again with another plugin is
+    /// seen). A check that fails is an error, so a move is never sent as a destroy and a creation for want of an answer.
     /// </summary>
-    public Task<bool> CanCallOnce() => Has("once");
-
-    /// <summary>
-    /// This run of the plugin, asked now: a new id each time the game starts (1.45.3 on; "" before). A call whose answer
-    /// was lost is sent again under its id only to the run it went to: another run does not know what that one did.
-    /// </summary>
-    public async Task<string> Run()
+    /// <exception cref="HttpRequestException">The bridge could not be reached.</exception>
+    /// <exception cref="InvalidOperationException">The bridge answered with an error status.</exception>
+    /// <exception cref="JsonException">The status is not JSON.</exception>
+    public async Task<Abilities> Ask()
     {
         using var doc = JsonDocument.Parse(await Status());
-        return doc.RootElement.TryGetProperty("run", out var r) && r.ValueKind == JsonValueKind.String ? r.GetString()! : "";
+        JsonElement root = doc.RootElement;
+        string run = root.TryGetProperty("run", out var r) && r.ValueKind == JsonValueKind.String ? r.GetString()! : "";
+        HashSet<string> features = root.TryGetProperty("features", out var f) && f.ValueKind == JsonValueKind.Array
+            ? [.. f.EnumerateArray().Select(e => e.GetString() ?? "")]
+            : [];
+        return new Abilities(run, features);
     }
-
-    /// <summary>Whether the plugin's status lists this feature; asked once, a check that fails says no.</summary>
-    /// <param name="feature">The feature's name in the status.</param>
-    private async Task<bool> Has(string feature)
-    {
-        if (_features == null)
-        {
-            try
-            {
-                using var doc = JsonDocument.Parse(await Status());
-                _features = doc.RootElement.TryGetProperty("features", out var f) && f.ValueKind == JsonValueKind.Array
-                    ? [.. f.EnumerateArray().Select(e => e.GetString() ?? "")]
-                    : [];
-            }
-            catch (Exception e) when (e is HttpRequestException or InvalidOperationException or JsonException or TaskCanceledException)
-            {
-                return false;
-            }
-        }
-        return _features.Contains(feature);
-    }
-
-    /// <summary>The features the plugin's status lists, once asked.</summary>
-    private HashSet<string>? _features;
 
     /// <summary>
     /// Objects to destroy (live ZDOIDs) and to create (save-format bytes); returns the plugin's JSON. After them, each
     /// destroyed object's prefab and position: another mod may have made the object again under a new ZDOID
     /// (ServersideQoL does, for build pieces, plants, fires and more), and the plugin finds it by those. Plugins from
-    /// before 1.15.4 stop reading before them. Then the moves, only for a plugin that can (<see cref="CanMove"/>):
+    /// before 1.15.4 stop reading before them. Then the moves, only for a plugin that can (<see cref="Abilities.CanMove"/>):
     /// one that cannot would leave them out.
     /// </summary>
     /// <param name="destroy">The objects to destroy.</param>
     /// <param name="create">The objects to make, in the save format.</param>
     /// <param name="moves">The objects to move (none: the call older plugins take).</param>
     /// <param name="callId">
-    /// The call's id, for a plugin that can (<see cref="CanCallOnce"/>): the same call sent again under it after its
+    /// The call's id, for a plugin that can (<see cref="Abilities.CanCallOnce"/>): the same call sent again under it after its
     /// answer was lost is not done twice. Null: none sent.
     /// </param>
     public async Task<string> ApplyObjects(IReadOnlyList<LiveTarget> destroy, IReadOnlyList<byte[]> create, IReadOnlyList<LiveMove>? moves = null, string? callId = null)
     {
-        using MemoryStream ms = new();
-        using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+        byte[] call = Build(w =>
         {
             w.Write(destroy.Count);
             foreach (LiveTarget t in destroy)
@@ -235,9 +284,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
             foreach (LiveTarget t in destroy)
             {
                 w.Write(t.Prefab);
-                w.Write(t.Position.X);
-                w.Write(t.Position.Y);
-                w.Write(t.Position.Z);
+                Write(w, t.Position);
             }
             if (moves is { Count: > 0 })
             {
@@ -254,20 +301,8 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
                     w.Write(m.Fallback);
                 }
             }
-        }
-        static void Write(BinaryWriter w, System.Numerics.Vector3 v)
-        {
-            w.Write(v.X);
-            w.Write(v.Y);
-            w.Write(v.Z);
-        }
-        using HttpRequestMessage req = new(HttpMethod.Post, "objects") { Content = new ByteArrayContent(ms.ToArray()) };
-        req.Headers.Add("X-Bridge-Token", token);
-        if (callId != null)
-        {
-            req.Headers.Add("X-Call-Id", callId);
-        }
-        HttpResponseMessage res = await _http.SendAsync(req);
+        });
+        using var res = await Send(HttpMethod.Post, "objects", call, callId);
         string body = await res.Content.ReadAsStringAsync();
         if (!res.IsSuccessStatusCode)
         {
@@ -282,8 +317,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     /// </summary>
     public async Task<string> ResetZones(IReadOnlyList<Editing.ZoneReset> zones)
     {
-        using MemoryStream ms = new();
-        using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+        using var res = await Send(HttpMethod.Post, "zones/reset", Build(w =>
         {
             w.Write(zones.Count);
             foreach (var z in zones)
@@ -293,10 +327,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
                 w.Write(z.KeepBuildings);
                 w.Write(z.Ground);
             }
-        }
-        using HttpRequestMessage req = new(HttpMethod.Post, "zones/reset") { Content = new ByteArrayContent(ms.ToArray()) };
-        req.Headers.Add("X-Bridge-Token", token);
-        HttpResponseMessage res = await _http.SendAsync(req);
+        }));
         string body = await res.Content.ReadAsStringAsync();
         if (!res.IsSuccessStatusCode)
         {
@@ -308,20 +339,15 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     }
 
     /// <summary>The zones asked for as an int count, then int x, int z each.</summary>
-    private static byte[] ZoneList(IReadOnlyCollection<(int X, int Z)> zones)
+    private static byte[] ZoneList(IReadOnlyCollection<(int X, int Z)> zones) => Build(w =>
     {
-        using MemoryStream ms = new();
-        using (BinaryWriter w = new(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+        w.Write(zones.Count);
+        foreach (var (x, z) in zones)
         {
-            w.Write(zones.Count);
-            foreach (var (x, z) in zones)
-            {
-                w.Write(x);
-                w.Write(z);
-            }
+            w.Write(x);
+            w.Write(z);
         }
-        return ms.ToArray();
-    }
+    });
 
     /// <summary>
     /// The mods' plugins registered with the bridge (WorldEditorBridge.Api: routes to call, listeners told of changes),
@@ -329,9 +355,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     /// </summary>
     public async Task<(int Api, List<string> Mods)> Mods()
     {
-        using HttpRequestMessage req = new(HttpMethod.Get, "mods");
-        req.Headers.Add("X-Bridge-Token", token);
-        using HttpResponseMessage res = await _http.SendAsync(req);
+        using HttpResponseMessage res = await Send(HttpMethod.Get, "mods");
         if (res.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             return (0, []);
@@ -354,9 +378,7 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     /// <exception cref="InvalidOperationException">The bridge answered with an error status (its message given).</exception>
     public async Task<byte[]> Call(string modId, string name, byte[] body, CancellationToken cancel = default)
     {
-        using HttpRequestMessage req = new(HttpMethod.Post, $"mods/{Uri.EscapeDataString(modId)}/{Uri.EscapeDataString(name)}") { Content = new ByteArrayContent(body) };
-        req.Headers.Add("X-Bridge-Token", token);
-        using HttpResponseMessage res = await _http.SendAsync(req, cancel);
+        using HttpResponseMessage res = await Send(HttpMethod.Post, $"mods/{Uri.EscapeDataString(modId)}/{Uri.EscapeDataString(name)}", body, cancel: cancel);
         if (!res.IsSuccessStatusCode)
         {
             throw new InvalidOperationException($"bridge mods/{modId}/{name}: {(int)res.StatusCode} {await res.Content.ReadAsStringAsync(cancel)}");
@@ -364,21 +386,22 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
         return await res.Content.ReadAsByteArrayAsync(cancel);
     }
 
-    /// <summary>A POST request with the token and a binary body.</summary>
+    /// <summary>A POST request with the token and a binary body; the caller disposes the answer.</summary>
     /// <exception cref="InvalidOperationException">
     /// The bridge answered with an error status (404 means the plugin is too old for that endpoint).
     /// </exception>
     private async Task<HttpResponseMessage> Post(string path, byte[] body)
     {
-        using HttpRequestMessage req = new(HttpMethod.Post, path) { Content = new ByteArrayContent(body) };
-        req.Headers.Add("X-Bridge-Token", token);
-        HttpResponseMessage res = await _http.SendAsync(req);
+        HttpResponseMessage res = await Send(HttpMethod.Post, path, body);
         if (!res.IsSuccessStatusCode)
         {
-            string text = await res.Content.ReadAsStringAsync();
-            throw new InvalidOperationException(res.StatusCode == System.Net.HttpStatusCode.NotFound
-                ? $"the WorldEditorBridge plugin on the server is too old for {path}: update it"
-                : $"bridge {path}: {(int)res.StatusCode} {text}");
+            using (res)
+            {
+                string text = await res.Content.ReadAsStringAsync();
+                throw new InvalidOperationException(res.StatusCode == System.Net.HttpStatusCode.NotFound
+                    ? $"the WorldEditorBridge plugin on the server is too old for {path}: update it"
+                    : $"bridge {path}: {(int)res.StatusCode} {text}");
+            }
         }
         return res;
     }
@@ -399,15 +422,12 @@ public sealed class LiveBridge(string url, string token, TimeSpan? idle = null) 
     }
 
     /// <summary>The saved objects of the zones as the game has them now: ZDOID and save-format bytes.</summary>
+    /// <exception cref="InvalidDataException">The answer is damaged or unpacks to more than a world snapshot can.</exception>
     public async Task<List<(long User, uint Id, byte[] Bytes)>> ZoneObjects(IReadOnlyCollection<(int X, int Z)> zones)
     {
         using var res = await Post("zone", ZoneList(zones));
-        using var raw = new MemoryStream();
-        using (var gz = new System.IO.Compression.GZipStream(await res.Content.ReadAsStreamAsync(), System.IO.Compression.CompressionMode.Decompress))
-        {
-            await gz.CopyToAsync(raw);
-        }
-        raw.Position = 0;
+        // Some zones' objects: never more than the whole world's snapshot unpacks to.
+        using var raw = new MemoryStream(CheckedReads.Gunzip(await res.Content.ReadAsByteArrayAsync(), WorldSave.MaxSnapshot));
         using var r = new BinaryReader(raw);
         // Each: ZDOID (8 + 4), then the bytes' length (4).
         int count = r.CheckCount(r.ReadInt32(), 16);

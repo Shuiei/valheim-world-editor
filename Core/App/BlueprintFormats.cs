@@ -82,9 +82,9 @@ public static class BlueprintFormats
             {
                 continue;
             }
-            if (line.StartsWith("#Name:", StringComparison.Ordinal)) { name = line[6..].Trim() is { Length: > 0 } n ? n : name; continue; }
-            if (line.StartsWith("#Creator:", StringComparison.Ordinal)) { creator = line[9..].Trim(); continue; }
-            if (line.StartsWith("#Description:", StringComparison.Ordinal)) { description = Unquote(line[13..].Trim()); continue; }
+            if (HeaderValue(line, "#Name:") is { } named) { name = named.Length > 0 ? named : name; continue; }
+            if (HeaderValue(line, "#Creator:") is { } by) { creator = by; continue; }
+            if (HeaderValue(line, "#Description:") is { } about) { description = Unquote(about); continue; }
             if (line.StartsWith("#Category:", StringComparison.Ordinal)) { continue; }
             if (line == RuinHeader) { ruin = true; continue; }
             if (line.StartsWith(DataHeader, StringComparison.Ordinal))
@@ -151,9 +151,9 @@ public static class BlueprintFormats
             line = line.Replace(',', '.');
         }
         string[] p = line.Split(';');
-        var q = Quaternion.Normalize(new Quaternion(F(p[5]), F(p[6]), F(p[7]), F(p[8])));
+        var q = new Quaternion(F(p[5]), F(p[6]), F(p[7]), F(p[8]));
         float scale = p.Length > 12 ? F(p[10]) : 1f;
-        return new Piece(PrefabName(p[0]), new Vector3(F(p[2]), F(p[3]), F(p[4])), ToEuler(q), scale);
+        return new Piece(PrefabName(p[0]), new Vector3(Coord(p[2]), Coord(p[3]), Coord(p[4])), ToEuler(q), scale);
     }
 
     /// <summary>
@@ -166,18 +166,36 @@ public static class BlueprintFormats
             line = line.Replace(',', '.');
         }
         string[] p = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var q = Quaternion.Normalize(new Quaternion(F(p[1]), F(p[2]), F(p[3]), F(p[4])));
-        return new Piece(PrefabName(p[0]), new Vector3(F(p[5]), F(p[6]), F(p[7])), ToEuler(q), 1f);
+        var q = new Quaternion(F(p[1]), F(p[2]), F(p[3]), F(p[4]));
+        return new Piece(PrefabName(p[0]), new Vector3(Coord(p[5]), Coord(p[6]), Coord(p[7])), ToEuler(q), 1f);
     }
 
     /// <summary>
-    /// One PlanBuild "#Terrain" line: shape;x;y;z;radius;rotation;smooth;paint.
+    /// One PlanBuild "#Terrain" line: shape;x;y;z;radius;rotation;smooth;paint. A negative radius is a FormatException
+    /// (the line cannot be read).
     /// </summary>
     private static TerrainMod ParseTerrain(string line)
     {
         string[] p = line.Split(';');
-        return new TerrainMod(p[0].ToLowerInvariant(), new Vector3(F(p[1]), F(p[2]), F(p[3])), F(p[4]),
-            (int)MathF.Round(F(p[5])), p.Length > 7 ? p[7] : "");
+        float radius = F(p[4]);
+        return radius < 0
+            ? throw new FormatException($"{p[4].Trim()} is not a radius")
+            : new TerrainMod(p[0].ToLowerInvariant(), new Vector3(Coord(p[1]), Coord(p[2]), Coord(p[3])), radius, (int)MathF.Round(F(p[5])), p.Length > 7 ? p[7] : "");
+    }
+
+    /// <summary>
+    /// How far a position may be from a blueprint's origin: ten times a Valheim world's radius, further than any
+    /// piece can be placed, and far short of where floats lose their precision and sums of them overflow.
+    /// </summary>
+    private const float MaxCoordinate = 100_000f;
+
+    /// <summary>
+    /// A position's coordinate (<c>F</c>), within <c>MaxCoordinate</c> of the origin; a FormatException beyond.
+    /// </summary>
+    private static float Coord(string s)
+    {
+        float v = F(s);
+        return MathF.Abs(v) <= MaxCoordinate ? v : throw new FormatException($"{s.Trim()} is further than any world reaches");
     }
 
     /// <summary>
@@ -186,14 +204,31 @@ public static class BlueprintFormats
     private static string PrefabName(string s) => s.Split('(')[0].Trim();
 
     /// <summary>
-    /// Strips the surrounding quotes PlanBuild writes around a description and undoes its \" and \n escapes.
+    /// The value of a header line when it is that field's ("#Name:" for "#name: Hut" gives "Hut"), trimmed; the field is
+    /// matched ignoring case. Null for another line. One rule for every reader of blueprint headers (a paste and the
+    /// Workshop's library), so both show the same name and description.
     /// </summary>
-    private static string Unquote(string s) => s.Length >= 2 && s[0] == '"' && s[^1] == '"' ? s[1..^1].Replace("\\\"", "\"").Replace("\\n", "\n") : s;
+    internal static string? HeaderValue(string line, string field) =>
+        line.StartsWith(field, StringComparison.OrdinalIgnoreCase) ? line[field.Length..].Trim() : null;
 
     /// <summary>
-    /// A number in invariant culture; empty gives 0.
+    /// Strips the surrounding quotes PlanBuild writes around a description and undoes its \" and \n escapes.
     /// </summary>
-    private static float F(string s) => string.IsNullOrWhiteSpace(s) ? 0f : float.Parse(s.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture);
+    internal static string Unquote(string s) => s.Length >= 2 && s[0] == '"' && s[^1] == '"' ? s[1..^1].Replace("\\\"", "\"").Replace("\\n", "\n") : s;
+
+    /// <summary>
+    /// A number in invariant culture; empty gives 0. One that is not finite ("NaN", "Infinity") is a FormatException,
+    /// like text that is not a number: the line cannot be read.
+    /// </summary>
+    private static float F(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s))
+        {
+            return 0f;
+        }
+        float v = float.Parse(s.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture);
+        return float.IsFinite(v) ? v : throw new FormatException($"{s.Trim()} is not a finite number");
+    }
 
     /// <summary>
     /// A number as written to blueprint files: invariant culture, at most five decimals.
@@ -201,11 +236,17 @@ public static class BlueprintFormats
     private static string S(float f) => f.ToString("0.#####", CultureInfo.InvariantCulture);
 
     /// <summary>
-    /// Unity's Euler angles (degrees, applied z, then x, then y: R = Ry * Rx * Rz) of a quaternion.
+    /// Unity's Euler angles (degrees, applied z, then x, then y: R = Ry * Rx * Rz) of a quaternion, normalised first. One
+    /// with no length to normalise (all zero, as blank rotation fields read) or none that fits a float is no turn.
     /// </summary>
     public static Vector3 ToEuler(Quaternion q)
     {
-        q = Quaternion.Normalize(q);
+        float length = q.Length();
+        if (!float.IsFinite(length) || length < 1e-6f)
+        {
+            return Vector3.Zero;
+        }
+        q *= 1f / length;
         float m02 = 2f * (q.X * q.Z + q.W * q.Y), m22 = 1f - 2f * (q.X * q.X + q.Y * q.Y);
         float m12 = 2f * (q.Y * q.Z - q.W * q.X), m10 = 2f * (q.X * q.Y + q.W * q.Z), m11 = 1f - 2f * (q.X * q.X + q.Z * q.Z);
         float m00 = 1f - 2f * (q.Y * q.Y + q.Z * q.Z), m20 = 2f * (q.X * q.Z - q.W * q.Y);
@@ -235,26 +276,28 @@ public static class BlueprintFormats
         const float K = MathF.PI / 360f;
         Quaternion qx = new(MathF.Sin(e.X * K), 0, 0, MathF.Cos(e.X * K)), qy = new(0, MathF.Sin(e.Y * K), 0, MathF.Cos(e.Y * K)), qz = new(0, 0, MathF.Sin(e.Z * K), MathF.Cos(e.Z * K));
         // System.Numerics multiplies right to left like Unity: qy * qx * qz applies qz first.
-        return Mul(Mul(qy, qx), qz);
+        return qy * qx * qz;
     }
 
     /// <summary>
-    /// Hamilton product a * b written out (a applied after b).
+    /// The most metres the ground grid of a clip spans on a side: more than the editor's largest area (17 zones,
+    /// 1088 m). A blueprint whose terrain entries reach further is refused rather than given a grid that does not
+    /// fit in memory.
     /// </summary>
-    private static Quaternion Mul(Quaternion a, Quaternion b) => new(
-        a.W * b.X + a.X * b.W + a.Y * b.Z - a.Z * b.Y,
-        a.W * b.Y - a.X * b.Z + a.Y * b.W + a.Z * b.X,
-        a.W * b.Z + a.X * b.Y - a.Y * b.X + a.Z * b.W,
-        a.W * b.W - a.X * b.X - a.Y * b.Y - a.Z * b.Z);
+    public const int MaxGround = 1200;
 
     /// <summary>
     /// The editor's clipboard (as stored: heights in cm, -32768 = no ground; weights and paint in 1/255)
     /// from a parsed file. The lowest piece rests on the point where it is pasted; ground from terrain
-    /// entries is levelled to their height, relative to the same point.
+    /// entries is levelled to their height, relative to the same point. With terrain entries, that point is
+    /// the middle of the ground they reach (the grid is centred on it and as large as they reach); without,
+    /// the middle of the pieces.
     /// </summary>
     /// <param name="bp">The parsed file.</param>
     /// <param name="known">Whether a prefab name can be placed; pieces it rejects are left out.</param>
     /// <param name="unknown">The rejected prefab names, distinct and sorted.</param>
+    /// <exception cref="InvalidDataException">The terrain entries span more than <c>MaxGround</c> metres, or one has
+    /// a negative radius (<c>Parse</c> leaves such a line out).</exception>
     public static JsonObject ToClip(Parsed bp, Func<string, bool> known, out List<string> unknown)
     {
         var pieces = bp.Pieces.Where(p => known(p.Name)).ToList();
@@ -267,12 +310,25 @@ public static class BlueprintFormats
             Grow(p.Position.X, p.Position.Z);
         }
 
-        foreach (TerrainMod t in bp.Terrain) { Grow(t.Position.X - t.Radius, t.Position.Z - t.Radius); Grow(t.Position.X + t.Radius, t.Position.Z + t.Radius); }
+        // The terrain entries' own extents: the ground grid is centred on them, and the pieces placed from there.
+        float tx0 = float.MaxValue, tx1 = float.MinValue, tz0 = float.MaxValue, tz1 = float.MinValue;
+        foreach (TerrainMod t in bp.Terrain)
+        {
+            if (t.Radius < 0)
+            {
+                throw new InvalidDataException("a terrain mark has a negative radius");
+            }
+            float r = Reach(t);
+            tx0 = Math.Min(tx0, t.Position.X - r); tx1 = Math.Max(tx1, t.Position.X + r);
+            tz0 = Math.Min(tz0, t.Position.Z - r); tz1 = Math.Max(tz1, t.Position.Z + r);
+            Grow(t.Position.X - r, t.Position.Z - r); Grow(t.Position.X + r, t.Position.Z + r);
+        }
         if (x0 > x1)
         {
             x0 = x1 = z0 = z1 = 0f;
         }
-        float cx = (x0 + x1) / 2f, cz = (z0 + z1) / 2f;
+        // Midpoints as halves: a huge radius makes an extent too large to sum, and is refused below.
+        float cx = bp.Terrain.Count > 0 ? tx0 / 2f + tx1 / 2f : x0 / 2f + x1 / 2f, cz = bp.Terrain.Count > 0 ? tz0 / 2f + tz1 / 2f : z0 / 2f + z1 / 2f;
         JsonArray objects = [];
         foreach (Piece p in pieces)
         {
@@ -297,8 +353,15 @@ public static class BlueprintFormats
         int[] rel = [-32768], wt = [0], pnt = [-255, -255, -255, -255];
         if (bp.Terrain.Count > 0)
         {
-            w = (int)MathF.Ceiling(x1 - x0) + 1;
-            h = (int)MathF.Ceiling(z1 - z0) + 1;
+            // Only the ground the terrain entries reach is gridded, however far the pieces go. A whole span starts
+            // the grid on the marks' first edge, so marks a whole number of metres apart fall on its points.
+            float spanW = tx1 - tx0, spanH = tz1 - tz0;
+            if (spanW > MaxGround || spanH > MaxGround)
+            {
+                throw new InvalidDataException($"its ground marks span {spanW:F0} m by {spanH:F0} m, more than the editor's {MaxGround} m");
+            }
+            w = (int)MathF.Ceiling(spanW) + 1;
+            h = (int)MathF.Ceiling(spanH) + 1;
             rel = [.. Enumerable.Repeat(-32768, w * h)];
             wt = new int[w * h];
             pnt = [.. Enumerable.Repeat(-255, w * h * 4)];
@@ -362,6 +425,20 @@ public static class BlueprintFormats
         data is JsonArray a && a.Count > 0 ? [.. a.Select(n => Editing.ObjectField.Parse((string?)n ?? "")).OfType<Editing.ObjectField>()] : null;
 
     /// <summary>
+    /// How far a terrain entry reaches from its middle along x and z: its radius, or for a square turned by its
+    /// rotation, half its side times (|cos| + |sin|) of the turn (a corner, at 45° the half-diagonal).
+    /// </summary>
+    private static float Reach(TerrainMod t)
+    {
+        if (t.Shape != "square")
+        {
+            return t.Radius;
+        }
+        float a = t.Rotation * MathF.PI / 180f;
+        return t.Radius * (MathF.Abs(MathF.Cos(a)) + MathF.Abs(MathF.Sin(a)));
+    }
+
+    /// <summary>
     /// Whether a terrain entry covers the ground point (x, z): a circle, or a square turned by its rotation.
     /// </summary>
     private static bool Covers(TerrainMod t, float x, float z)
@@ -389,8 +466,9 @@ public static class BlueprintFormats
     };
 
     /// <summary>
-    /// The objects of a clipboard (blueprint file content) as a PlanBuild .blueprint or a .vbuild file.
-    /// Ground is not written: PlanBuild's terrain entries cannot describe free-form ground.
+    /// The objects of a clipboard (blueprint file content) as a PlanBuild .blueprint or a .vbuild file. The .blueprint
+    /// also gets the editor's lines for what objects hold (as Homestead's, read back when opened again); a .vbuild has
+    /// no place for them. Ground is not written: PlanBuild's terrain entries cannot describe free-form ground.
     /// </summary>
     /// <param name="clip">The clipboard: its "objects" are written.</param>
     /// <param name="format">"vbuild" for a .vbuild file, anything else for a PlanBuild .blueprint.</param>
@@ -398,15 +476,13 @@ public static class BlueprintFormats
     /// <param name="category">A prefab's piece category index (0 Misc, 1 Crafting...); out of range gives Misc.</param>
     public static string Write(JsonObject clip, string format, string name, Func<string, int> category)
     {
-        var objs = (clip["objects"] as JsonArray ?? []).OfType<JsonObject>().Select(o => (
-            Name: (string?)o["name"] ?? "", X: (float?)o["dx"] ?? 0, Y: (float?)o["dy"] ?? 0, Z: (float?)o["dz"] ?? 0,
-            Rot: FromEuler(new Vector3((float?)o["rx"] ?? 0, (float?)o["ry"] ?? 0, (float?)o["rz"] ?? 0)), Scale: (float?)o["scale"] ?? 0)).ToList();
+        var objs = Homestead.Pieces(clip);
         // PlanBuild measures from the lowest corner; ground level stays where the copy had it.
         float minX = objs.Count > 0 ? objs.Min(o => o.X) : 0, minZ = objs.Count > 0 ? objs.Min(o => o.Z) : 0;
         StringBuilder sb = new();
         if (format == "vbuild")
         {
-            foreach (var (prefab, x, y, z, rot, scale) in objs.OrderBy(o => o.Y))
+            foreach (var (prefab, x, y, z, rot, _, _) in objs)
             {
                 sb.Append(prefab).Append(' ').Append(S(rot.X)).Append(' ').Append(S(rot.Y)).Append(' ').Append(S(rot.Z)).Append(' ').Append(S(rot.W))
                     .Append(' ').Append(S(x - minX)).Append(' ').Append(S(y)).Append(' ').Append(S(z - minZ)).Append('\n');
@@ -414,16 +490,18 @@ public static class BlueprintFormats
             return sb.ToString();
         }
         string[] categories = ["Misc", "Crafting", "BuildingWorkbench", "BuildingStonecutter", "Furniture", "DeepNorth", "Feasts", "Food", "Meads"];
-        sb.Append("#Name:").Append(name).Append('\n');
+        sb.Append("#Name:").Append(Homestead.Header(name)).Append('\n');
         sb.Append("#Creator:Valheim World Editor\n");
         sb.Append("#Description:\"\"\n");
         sb.Append("#Category:Misc\n");
+        // The editor's own lines (what the pieces hold), read back when the file is opened again.
+        Homestead.DataLines(sb, objs);
         sb.Append("#Pieces\n");
-        foreach (var (prefab, x, y, z, rot, scale) in objs.OrderBy(o => o.Y).ThenBy(o => o.X).ThenBy(o => o.Z))
+        foreach (var (prefab, x, y, z, rot, scale, _) in objs)
         {
             int cat = category(prefab);
             float s = scale > 0 ? scale : 1f;
-            sb.Append(string.Join(";", prefab, cat >= 0 && cat < categories.Length ? categories[cat] : "Misc",
+            sb.Append(string.Join(";", Homestead.PieceName(prefab), cat >= 0 && cat < categories.Length ? categories[cat] : "Misc",
                 S(x - minX), S(y), S(z - minZ), S(rot.X), S(rot.Y), S(rot.Z), S(rot.W), "\"\"", S(s), S(s), S(s))).Append('\n');
         }
         return sb.ToString();

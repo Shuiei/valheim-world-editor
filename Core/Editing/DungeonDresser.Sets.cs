@@ -1,4 +1,3 @@
-using System.Numerics;
 using static TerrainEditor.Editing.DungeonKit;
 
 namespace TerrainEditor.Editing;
@@ -72,7 +71,7 @@ internal sealed partial class DungeonDresser
             }
         }
         // The deck's row is the room's first; its edge 2 m in from the near wall's tiles.
-        float edge = -f.S.Deep + 2;
+        float edge = -f.Deep + 2;
         int side = 0;
         foreach (int s in new[] { -1, 1 }.OrderBy(_ => _rnd.Next()))
         {
@@ -88,15 +87,15 @@ internal sealed partial class DungeonDresser
             return false;
         }
         // The deck, and the posts under its edge (none in front of a doorway).
-        for (int a = 0; a < f.S.Across; a++)
+        for (int a = 0; a < f.Across; a++)
         {
-            float u = 2 * a + 1 - f.S.Across;
+            float u = 2 * a + 1 - f.Across;
             _o.Add(Deck, f.W(u, edge - 1, f.F + 3.5f), f.Yaw(0));
             if (f.Free(u, edge - 0.5f, 0.6f))
             {
                 Post(f, u, edge - 0.5f, 3);
             }
-            if (a != (side < 0 ? 0 : f.S.Across - 1))
+            if (a != (side < 0 ? 0 : f.Across - 1))
             {
                 _o.Add("stone_fence", f.W(u, edge - 0.5f, f.F + 4 + Lift), f.Yaw(0));
             }
@@ -137,17 +136,16 @@ internal sealed partial class DungeonDresser
     /// </summary>
     private void Ledges(Frame f)
     {
-        bool In(int a, int b) => a >= 0 && b >= 0 && a < f.S.Across && b < f.S.Deep && f.S.Has(f.S.TileAt(a, b));
         var ledges = new List<(float U, float V)>();
-        for (int a = 0; a < f.S.Across; a++)
+        for (int a = f.A0; a <= f.A1; a++)
         {
-            for (int b = 0; b < f.S.Deep; b++)
+            for (int b = f.B0; b <= f.B1; b++)
             {
-                if (!In(a, b) || In(a - 1, b) && In(a + 1, b) && In(a, b - 1) && In(a, b + 1))
+                if (!f.Has(a, b) || f.Has(a - 1, b) && f.Has(a + 1, b) && f.Has(a, b - 1) && f.Has(a, b + 1))
                 {
                     continue;
                 }
-                float u = 2 * a + 1 - f.S.Across, v = 2 * b + 1 - f.S.Deep;
+                float u = 2 * a + 1 - f.Across, v = 2 * b + 1 - f.Deep;
                 if (f.NearDoor(u, v, 2.6f))
                 {
                     continue;
@@ -160,7 +158,7 @@ internal sealed partial class DungeonDresser
         // Braziers on the ledges' corners (the tiles with two free sides), skulls on some others.
         foreach (var (u, v) in ledges)
         {
-            bool corner = MathF.Abs(MathF.Abs(u) - (f.S.Across - 1)) < 0.1f && MathF.Abs(MathF.Abs(v) - (f.S.Deep - 1)) < 0.1f;
+            bool corner = MathF.Abs(MathF.Abs(u) - (f.Across - 1)) < 0.1f && MathF.Abs(MathF.Abs(v) - (f.Deep - 1)) < 0.1f;
             if (corner)
             {
                 _o.Add(_b.Brazier, f.W(u, v, f.F + 1 + Lift * 2 + DungeonProps.Foot(_b.Brazier)), f.Yaw(0));
@@ -529,8 +527,7 @@ internal sealed partial class DungeonDresser
         {
             kinds.Add(("trap", 0.8f));
         }
-        float total = kinds.Sum(k => k.Weight), pick = R(0, total);
-        string kind = kinds.First(k => (pick -= k.Weight) <= 0).Kind;
+        string kind = Weighted.Pick(kinds, k => k.Weight, _rnd.NextDouble()).Kind;
         switch (kind)
         {
             case "gate":
@@ -632,13 +629,17 @@ internal sealed partial class DungeonDresser
     private void CorridorGate(Frame f)
     {
         float v = R(-1, 1);
-        if (f.NearDoor(-f.HalfA, v, 3) || f.NearDoor(f.HalfA, v, 3))
+        // Not by a doorway, nor on a pilaster's band of wall (the door against its columns, the wall doubled).
+        if (f.NearDoor(-f.HalfA, v, 3) || f.NearDoor(f.HalfA, v, 3) || _bands.Any(b => MathF.Abs(b - v) < _mat.Thick + 0.5f))
         {
             return;
         }
         // A corridor is 3 m wide within its walls: no room for jambs beside a 2 m door, so the gate is the door alone
-        // under a band of wall from wall to wall (held by both; it may rise into the roof).
-        InnerWall(f, -f.HalfA, v, f.HalfA, v, 3, f.H);
+        // under a band of wall from wall to wall (held by both; it may rise into the roof). The band runs on into the
+        // walls to their middle: between their faces a thin material's width is no whole number of pieces, and the gap
+        // left at one end let it fall.
+        float into = f.HalfA + _mat.Thick / 2;
+        InnerWall(f, -into, v, into, v, 3, f.H);
         string door = _style.Name switch
         {
             "Fortress" or "Temple" => "dungeon_forestcrypt_door",
@@ -677,9 +678,7 @@ internal sealed partial class DungeonDresser
         Put(f, "Morkhalla_Rubble1", u - side * 0.6f, v - 1.5f, Rr(0, 360), 0.6f);
         if (_mat.Column[0].Prefab == "stone_pillar" && rnd.NextDouble() < 0.6)
         {
-            var q = DungeonOut.Yaw(f.Yaw(Rr(60, 120))) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 2);
-            _o.Add("stone_pillar", f.W(side * (f.HalfA - 2.1f), v - 0.4f, f.F + 0.55f), q);
-            f.Take(side * (f.HalfA - 2.1f), v - 0.4f, 1.3f);
+            FallenPillar(f, "stone_pillar", side * (f.HalfA - 2.1f), v - 0.4f, Rr(60, 120), 1.3f);
         }
         for (int i = 0; i < 3; i++)
         {

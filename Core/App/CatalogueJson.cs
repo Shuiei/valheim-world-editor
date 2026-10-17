@@ -64,6 +64,19 @@ internal static class CatalogueJson
         public bool ContainsKey(string key) => _values.ContainsKey(key);
 
         /// <summary>
+        /// Adds the key at the end unless it is there already; false, and nothing changed, when it is.
+        /// </summary>
+        public bool TryAdd(string key, object? value)
+        {
+            if (!_values.TryAdd(key, value))
+            {
+                return false;
+            }
+            _keys.Add(key);
+            return true;
+        }
+
+        /// <summary>
         /// The key's value, if it is there.
         /// </summary>
         public bool TryGetValue(string key, out object? value) => _values.TryGetValue(key, out value);

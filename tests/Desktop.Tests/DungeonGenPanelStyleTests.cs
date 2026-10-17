@@ -25,4 +25,23 @@ public class DungeonGenPanelStyleTests
         var style = DungeonKit.StyleOf(DungeonKit.BiomeOf((string?)p.Biome.SelectedItem).Style);
         Assert.Equal(Math.Round(style.Decay / 0.05) * 0.05, p.Decay.Value, 3);
     }
+
+    [AvaloniaFact]
+    public void TheBiomesStyleBringsItsDecayWhenTheBiomeChanges()
+    {
+        // With the biome's style, another biome is another style: its decay came only with a change of Style.
+        var p = new DungeonGenPanel();
+        p.Style.SelectedIndex = 0;
+        static double DecayOf(object? biome) => Math.Round(DungeonKit.StyleOf(DungeonKit.BiomeOf((string?)biome).Style).Decay / 0.05) * 0.05;
+        var biomes = p.Biome.Items.Cast<object?>().ToList();
+        int other = biomes.FindIndex(b => Math.Abs(DecayOf(b) - p.Decay.Value) > 0.01);
+        Assert.True(other >= 0);
+        p.Biome.SelectedIndex = other;
+        Assert.Equal(DecayOf(biomes[other]), p.Decay.Value, 3);
+        // A style of its own keeps its decay whatever the biome.
+        p.Style.SelectedIndex = 1;
+        double own = p.Decay.Value;
+        p.Biome.SelectedIndex = other == 0 ? 1 : 0;
+        Assert.Equal(own, p.Decay.Value, 3);
+    }
 }

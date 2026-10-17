@@ -106,4 +106,17 @@ public class StabilityTests
         Assert.Equal((1000f, 100f, 1f / 3f, 0.125f), Stability.Material(7));
         Assert.Equal((0f, 0f, 0f, 0f), Stability.Material(99));
     }
+
+    [Fact]
+    public void AScaledPiecesCentreOfMassIsScaledToo()
+    {
+        // The colliders were scaled but the centre of mass was not: a grausten wall twice the size had its centre at
+        // 1 m, not 2, which threw its support distances off.
+        var turned = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI / 2);
+
+        Assert.Equal(new Vector3(5, 2, 0), Stability.CentreOfMass(new("Piece_grausten_wall_1x2", new Vector3(5, 0, 0), Quaternion.Identity, 2)));
+        var lying = Stability.CentreOfMass(new("Piece_grausten_wall_1x2", Vector3.Zero, turned, 2))!.Value;
+        Assert.Equal(-2, lying.X, 0.001f);
+        Assert.Equal(new Vector3(0, 1, 0), Stability.CentreOfMass(new("Piece_grausten_wall_1x2", Vector3.Zero, Quaternion.Identity, 0)));
+    }
 }

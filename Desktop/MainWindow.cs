@@ -4,6 +4,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using TerrainEditor.App;
+using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
 
@@ -15,9 +16,13 @@ namespace TerrainEditor.Desktop;
 public sealed partial class MainWindow : Window
 {
     /// <summary>
-    /// The help card's frame rate, and what was loaded (newest first).
+    /// The help card's frame rate.
     /// </summary>
-    private readonly TextBlock _fps = new() { FontSize = 12.5, TextWrapping = TextWrapping.Wrap }, _info = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _fps = new() { FontSize = 12.5, TextWrapping = TextWrapping.Wrap };
+    /// <summary>
+    /// The help card's notes: how the area was loaded and the 3D view's status lines, newest first.
+    /// </summary>
+    internal TextBlock LoadedInfo { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap };
     /// <summary>
     /// Writes frame rates to a file while Record frame rates is on.
     /// </summary>
@@ -37,15 +42,15 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Opens the View panel.
     /// </summary>
-    internal Button ViewButton { get; } = new Button { Content = Icons.With("view", "View"), FontSize = 12.5 }.Classed("ghost");
+    internal Button ViewButton { get; } = new Button { Content = Icons.With("view", Lang.T("rail.label.view")), FontSize = 12.5 }.Classed("ghost");
     /// <summary>
     /// The top bar's names: the world, and the area open.
     /// </summary>
-    private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold, Text = "Valheim World Editor", TextTrimming = TextTrimming.CharacterEllipsis };
+    internal TextBlock TitleText { get; } = new() { FontSize = 14, FontWeight = FontWeight.SemiBold, Text = "Valheim World Editor", TextTrimming = TextTrimming.CharacterEllipsis };
     /// <summary>
     /// Under the title: the area open, or in the Workshop the building's cost.
     /// </summary>
-    private readonly TextBlock _subtitle = new() { FontSize = 12, Foreground = Ui.Muted, TextTrimming = TextTrimming.CharacterEllipsis };
+    internal TextBlock SubtitleText { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextTrimming = TextTrimming.CharacterEllipsis };
     /// <summary>
     /// The LIVE badge, shown while the world is the game's live one.
     /// </summary>
@@ -65,7 +70,7 @@ public sealed partial class MainWindow : Window
             Children =
             {
                 new Border { Width = 7, Height = 7, CornerRadius = new CornerRadius(4), Background = new SolidColorBrush(Color.Parse("#4be08a")), VerticalAlignment = VerticalAlignment.Center, BoxShadow = BoxShadows.Parse("0 0 6 0 #4be08a") },
-                new TextBlock { Text = "LIVE", FontSize = 11.5, FontWeight = FontWeight.Bold, LetterSpacing = 0.7, Foreground = new SolidColorBrush(Color.Parse("#8ff0b4")) },
+                new TextBlock { Text = Lang.T("top.live"), FontSize = 11.5, FontWeight = FontWeight.Bold, LetterSpacing = 0.7, Foreground = new SolidColorBrush(Color.Parse("#8ff0b4")) },
             },
         },
     };
@@ -183,11 +188,11 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Save to world, Apply live, or in the Workshop Save blueprint.
     /// </summary>
-    internal Button SaveButton { get; } = new Button { Content = "Save to world", FontSize = 12.5, IsEnabled = false }.Classed("primary");
+    internal Button SaveButton { get; } = new Button { Content = Lang.T("save.label.save"), FontSize = 12.5, IsEnabled = false }.Classed("primary");
     /// <summary>
     /// Opens the History panel.
     /// </summary>
-    internal Button HistoryButton { get; } = new Button { Content = Icons.With("history", "History"), FontSize = 12.5 }.Classed("ghost");
+    internal Button HistoryButton { get; } = new Button { Content = Icons.With("history", Lang.T("history.title")), FontSize = 12.5 }.Classed("ghost");
     /// <summary>
     /// The History panel: the edits so far, to go back to one.
     /// </summary>
@@ -195,7 +200,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Back to the map (in the Workshop: to the start page).
     /// </summary>
-    internal Button MapButton { get; } = new Button { Content = Icons.With("back", "Map"), FontSize = 12.5, IsVisible = false }.Classed("ghost");
+    internal Button MapButton { get; } = new Button { Content = Icons.With("back", Lang.T("top.label.map")), FontSize = 12.5, IsVisible = false }.Classed("ghost");
 
     // ---- Pages: the start page, the world map, and the 3D editor of an area.
     /// <summary>
@@ -240,10 +245,26 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// What is waiting to be saved, as a list for people ("3 zone(s) of ground, 2 deleted").
     /// </summary>
-    private static string Describe((int Zones, int Deleted, int Added, int Resets) p)
+    private static string Describe((int Zones, int Deleted, int Added, int Resets) p) =>
+        PendingList(p.Zones > 0 ? Lang.T("save.count.zones", p.Zones) : "", p.Deleted, p.Added, p.Resets);
+
+    /// <summary>
+    /// What is waiting, as a list for people: the zones of ground as the caller says them, then the objects deleted,
+    /// added and the zones reset; empty when nothing is.
+    /// </summary>
+    /// <param name="zones">The zones of ground changed, as text; empty when none.</param>
+    /// <param name="deleted">Objects deleted.</param>
+    /// <param name="added">Objects added.</param>
+    /// <param name="resets">Zones marked for reset.</param>
+    internal static string PendingList(string zones, int deleted, int added, int resets)
     {
-        var (z, d, a, r) = p;
-        return string.Join(", ", new[] { z > 0 ? $"{z} zone(s) of ground" : "", d > 0 ? $"{d} deleted" : "", a > 0 ? $"{a} added" : "", r > 0 ? $"{r} zone reset" : "" }.Where(x => x != ""));
+        return string.Join(", ", new[]
+        {
+            zones,
+            deleted > 0 ? Lang.T("save.count.deleted", deleted) : "",
+            added > 0 ? Lang.T("save.count.added", added) : "",
+            resets > 0 ? Lang.T("save.count.resets", resets) : "",
+        }.Where(x => x != ""));
     }
 
     /// <summary>
@@ -274,17 +295,17 @@ public sealed partial class MainWindow : Window
         var page = NewWorld = new NewWorldPage();
         page.BackRequested += () => { page.Dispose(); NewWorld = null; ShowStart(); };
         page.CreateRequested += async (folder, name, seed) => await CreateWorld(folder, name, seed);
-        Title = $"Valheim World Editor {BuildInfo.Version} · A new world";
+        Title = Lang.T("world.title.newWorld", BuildInfo.Version);
         _pages.Content = page.View;
     }
 
     /// <summary>
     /// Makes a world in <paramref name="folder"/> and opens it; on failure the New world page says why.
     /// </summary>
-    /// <returns>Null when made, else why it could not be.</returns>
+    /// <returns>Null when made, else why it could not be, in English (what Claude is told).</returns>
     internal async Task<string?> CreateWorld(string folder, string name, string seed)
     {
-        Busy($"Making the world {name}…");
+        Busy(Lang.T("newWorld.msg.making", name));
         try
         {
             await Task.Run(() => TerrainEditor.Save.WorldCreator.Create(folder, name, seed));
@@ -294,17 +315,18 @@ public sealed partial class MainWindow : Window
         {
             Console.WriteLine($"New world: could not make {name} (seed {seed}) in {folder}: {ex}");
             Busy(null);
+            var failed = Said.Of("newWorld.error.make", ex.Message);
             if (NewWorld is { } p)
             {
-                p.Problem.Text = $"Could not make the world: {ex.Message}";
+                p.Problem.Text = failed.Shown;
             }
-            return $"Could not make the world: {ex.Message}";
+            return failed.English;
         }
         Busy(null);
         NewWorld?.Dispose();
         NewWorld = null;
-        await OpenWorld(() => Task.Run(() => WorldSession.Open(folder)), $"Opening {name}…");
-        string made = $"Made {name} (seed {seed}). The game lays out its start, traders and dungeons the first time it loads it, and makes each place as players reach it: play it before reshaping an area here.";
+        await OpenWorld(() => Task.Run(() => WorldSession.Open(folder)), Lang.T("newWorld.msg.opening", name));
+        var made = Said.Of("newWorld.msg.made", name, seed);
         // Opened: on its map, where the status bar is not shown.
         if (World != null)
         {
@@ -312,7 +334,7 @@ public sealed partial class MainWindow : Window
         }
         else
         {
-            MessageText.Text = made;
+            Msg(made);
         }
         return null;
     }
@@ -341,17 +363,9 @@ public sealed partial class MainWindow : Window
                     await ClaudeServer.Apply(Settings, this);
                 }
             };
-            StartPage.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, "Yes");
-            StartPage.PickFolder = async title =>
-            {
-                var picked = await StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions { Title = title });
-                return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
-            };
-            StartPage.PickFile = async title =>
-            {
-                var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions { Title = title });
-                return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
-            };
+            StartPage.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, Lang.T("common.yes"));
+            StartPage.PickFolder = title => Pickers.Folder(StorageProvider, title);
+            StartPage.PickFile = title => Pickers.File(StorageProvider, title);
         }
         else
         {
@@ -377,7 +391,7 @@ public sealed partial class MainWindow : Window
         {
             Busy(null);
             Tunnel.Close();
-            ShowStart($"Could not open the world: {ex.Message}");
+            ShowStart(Lang.T("world.msg.openFailed", ex.Message));
             return;
         }
         finally
@@ -419,7 +433,7 @@ public sealed partial class MainWindow : Window
             MapPage.SaveRequested += async () => await SaveWorld();
             MapPage.DiscardRequested += async () => await DiscardWorld();
             MapPage.ReloadRequested += async () => await ReloadWorld();
-            MapPage.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, "Yes");
+            MapPage.Confirm = text => Dialogs.Ask(this, "Valheim World Editor", text, Lang.T("common.yes"));
             MapPage.Tell = text => Dialogs.Tell(this, "Valheim World Editor", text);
         }
         Title = $"{World.World.Name} · Valheim World Editor {BuildInfo.Version}";
@@ -488,7 +502,7 @@ public sealed partial class MainWindow : Window
     /// Whether the block was opened (no: the failure is said in the status bar; when this was the last area asked for
     /// and the 3D editor is left with no area open, the map is shown and the failure in a dialog).
     /// </returns>
-    internal async Task<bool> EditBlock(int x0, int z0, int zonesX, int zonesZ, (int X, int Z)? spot = null, string? context = null)
+    internal async Task<bool> EditBlock(int x0, int z0, int zonesX, int zonesZ, (int X, int Z)? spot = null, Said? context = null)
     {
         if (World is not { } world)
         {
@@ -497,8 +511,8 @@ public sealed partial class MainWindow : Window
         long navigation = ++_navigation;
         View.SelectTool.Commit();
         var left = KeepHistory();
-        Busy($"Loading {zonesX} × {zonesZ} zones…");
-        string failed;
+        Busy(Lang.T("world.msg.loadingZones", zonesX, zonesZ));
+        Said failed;
         try
         {
             await BeforeLoad();
@@ -510,31 +524,18 @@ public sealed partial class MainWindow : Window
                 {
                     world.Area = Session;
                 }
-                Report("That area was not opened: the map or another area was asked for while it loaded.");
+                Report(Said.Of("world.msg.areaDropped"));
                 return false;
             }
             // Shown: the world's area, even if a load dropped meanwhile had reset it.
             world.Area = scene.Session;
-            // Found by the map's search: selected, the camera on it (items and texts: in the inspector).
-            if (MapPage?.Target is var (id, inspect) && spot != null && MapPage.Spot == spot)
-            {
-                int i = scene.Things.FindIndex(t => t.Id == id && !t.Gone);
-                if (i >= 0)
-                {
-                    View.Focus(scene.Things[i].Position);
-                    View.Select([i]);
-                    if (inspect)
-                    {
-                        Inspect();
-                    }
-                }
-            }
+            FocusSearchTarget(scene, spot);
             return true;
         }
         catch (Exception ex)
         {
             Unleave(left, navigation);
-            failed = context + "Could not open that area: " + ex.Message;
+            failed = (context ?? Said.Empty) + Said.Of("world.msg.openAreaFailed", ex.Message);
             Report(failed);
         }
         finally
@@ -546,12 +547,12 @@ public sealed partial class MainWindow : Window
         if (navigation == _navigation && Session == null && _pages.Content == _editorPage)
         {
             ShowMap();
-            await Tell(failed);
+            await Tell(failed.Shown);
         }
         return false;
 
         // The world left meanwhile: only the status bar, no dialog about a world no longer open.
-        void Report(string text)
+        void Report(Said text)
         {
             if (World == world)
             {
@@ -559,8 +560,33 @@ public sealed partial class MainWindow : Window
             }
             else
             {
-                MessageText.Text = text;
+                Msg(text);
             }
+        }
+    }
+
+    /// <summary>
+    /// An object the map's search found, when the area was opened around its zone: selected, the camera on it (items
+    /// and texts: in the inspector).
+    /// </summary>
+    /// <param name="scene">The area just shown.</param>
+    /// <param name="spot">The map's chosen zone the area was opened around, if it was.</param>
+    private void FocusSearchTarget(WorldScene scene, (int X, int Z)? spot)
+    {
+        if (MapPage?.Target is not var (id, inspect) || spot == null || MapPage.Spot != spot)
+        {
+            return;
+        }
+        int i = scene.Things.FindIndex(t => t.Id == id && !t.Gone);
+        if (i < 0)
+        {
+            return;
+        }
+        View.Focus(scene.Things[i].Position);
+        View.Select([i]);
+        if (inspect)
+        {
+            Inspect();
         }
     }
 
@@ -595,15 +621,17 @@ public sealed partial class MainWindow : Window
         View.Tape.Clear();
         PlaceTool.ClearShape();
         Inspector.Close();
-        _info.Text = scene.LoadInfo + (_models == null ? "\nNo game models: Valheim was not found, boxes stand in (choose its folder on the start page)." : "");
+        LoadedInfo.Text = scene.LoadInfo + (_models == null ? "\n" + Lang.T("world.msg.noModels") : "");
         View.Show(scene, _models);
         if (scene.Session != null)
         {
             Edit(scene.Session);
         }
+        // The Area tool's lists follow the scene shown (its selection was cleared before, with the old one shown).
+        AreaPanel.Refresh();
         MapButton.IsVisible = scene.Owner != null && !Options.Direct;
-        _title.Text = scene.Name;
-        _subtitle.Text = $"{scene.ZonesX} × {scene.ZonesZ} zones, from zone {scene.X0}, {scene.Z0} to {scene.X0 + scene.ZonesX - 1}, {scene.Z0 + scene.ZonesZ - 1} · {scene.Things.Count(t => !t.Gone):N0} objects";
+        TitleText.Text = scene.Name;
+        SubtitleText.Text = Lang.T("world.areaInfo", scene.ZonesX, scene.ZonesZ, scene.X0, scene.Z0, scene.X0 + scene.ZonesX - 1, scene.Z0 + scene.ZonesZ - 1, scene.Things.Count(t => !t.Gone));
         Title = $"{scene.Name} · Valheim World Editor {BuildInfo.Version}";
         _pages.Content = _editorPage;
         EditorOpened(scene);
@@ -622,7 +650,7 @@ public sealed partial class MainWindow : Window
         }
         if (w.IsLive)
         {
-            Busy("Applying to the running game…");
+            Busy(Lang.T("save.msg.applying"));
             string message;
             try
             {
@@ -630,7 +658,7 @@ public sealed partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                message = "Could not apply live: " + ex.Message;
+                message = Lang.T("save.msg.couldNotApply", ex.Message);
             }
             finally
             {
@@ -641,15 +669,13 @@ public sealed partial class MainWindow : Window
         else
         {
             string what = Describe(w.Pending);
-            if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {Ui.Tilde(w.World.Directory)}\n\n"
-                + "• Like Apply live: the world stays open with its history; undo a step and save again to take it back. The save it was opened from is kept until you leave the world.\n"
-                + "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
-                + "• Test on a copy first: open it as a local world, or upload it to a test server."))
+            if (!await ConfirmSave(SaveConfirmText(what, w.World.Directory)))
             {
                 return;
             }
-            Busy("Saving…");
+            Busy(Lang.T("save.msg.saving"));
             string msg;
+            int? newer = null;
             try
             {
                 var o = await Task.Run(w.Save);
@@ -658,21 +684,117 @@ public sealed partial class MainWindow : Window
                 {
                     if (r.Skipped.Count > 0)
                     {
-                        msg += "\n\nNot saved:\n• " + string.Join("\n• ", r.Skipped);
+                        msg = Lang.T("save.msg.skipped", msg, string.Join("\n• ", r.Skipped));
                     }
                 }
+                newer = o.Done ? null : w.GameSaveSince();
             }
             catch (Exception ex)
             {
-                msg = "Could not save: " + ex.Message;
+                msg = Lang.T("save.msg.couldNotSave", ex.Message);
             }
             finally
             {
                 Busy(null);
             }
-            await Tell(msg);
+            if (newer is int game)
+            {
+                await OfferReplay(w, game, null);
+            }
+            else
+            {
+                await Tell(msg);
+            }
         }
         MapPage?.Show(w);
+    }
+
+    /// <summary>
+    /// A save refused because the game saved the world after the editor read it: offers to bring the pending changes
+    /// onto the game's save (WorldSession.Replay) instead of leaving them behind. Asked first; then, for each kind of
+    /// change the game made too, whose version stays. Nothing is written: the changes wait on the game's save, to be
+    /// checked and saved. The area open is read again.
+    /// </summary>
+    /// <param name="w">The world.</param>
+    /// <param name="newest">The game's save number.</param>
+    /// <param name="area">The area open in the 3D editor when Save was pressed there (null: from the map).</param>
+    internal async Task OfferReplay(WorldSession w, int newest, WorldScene? area)
+    {
+        if (!await Ask(Lang.T("replay.title"), Lang.T("replay.offer", newest), Lang.T("replay.bring"), Lang.T("replay.notNow")))
+        {
+            Say(Said.Of("replay.notNowSaid", newest));
+            return;
+        }
+        Busy(Lang.T("replay.reading"));
+        EditReplay? plan;
+        try
+        {
+            plan = await Task.Run(w.PrepareReplay);
+        }
+        catch (Exception ex)
+        {
+            Busy(null);
+            await Tell(Lang.T("replay.failed", ex.Message));
+            return;
+        }
+        Busy(null);
+        if (plan == null)
+        {
+            await Tell(Lang.T("replay.failed", Lang.T("replay.noNewer")));
+            return;
+        }
+        var keep = new Dictionary<ReplayClash, bool>();
+        foreach (var kind in Enum.GetValues<ReplayClash>())
+        {
+            var clashes = plan.Clashes.Where(c => c.Kind == kind).ToList();
+            if (clashes.Count > 0)
+            {
+                keep[kind] = await Ask(Lang.T("replay.clashTitle"), ClashText(kind, clashes), Lang.T("replay.keepMine"), Lang.T("replay.keepGame"));
+            }
+        }
+        Busy(Lang.T("replay.applying"));
+        WorldSession.Outcome o;
+        try
+        {
+            o = await Task.Run(() => w.Replay(plan, k => keep.GetValueOrDefault(k)));
+        }
+        catch (Exception ex)
+        {
+            Busy(null);
+            await Tell(Lang.T("replay.failed", ex.Message));
+            return;
+        }
+        Busy(null);
+        if (o.Reloaded && area != null && View.Scene == area && World == w)
+        {
+            await ReopenArea(area);
+        }
+        Msg(o.Report);
+        await Tell(o.Message);
+    }
+
+    /// <summary>The question for one kind of change the game made too: what it is, the first few of them, and the two ways.</summary>
+    /// <param name="kind">The kind.</param>
+    /// <param name="clashes">The changes of that kind.</param>
+    private string ClashText(ReplayClash kind, List<EditReplay.Clash> clashes)
+    {
+        const int Shown = 8;
+        var lines = clashes.Take(Shown).Select(c => c.Kind == ReplayClash.Ground
+            ? Lang.T("replay.zone", c.Zone.X, c.Zone.Z)
+            : Lang.T("replay.object", NameOfPrefab(c.Prefab) ?? c.Prefab.ToString(System.Globalization.CultureInfo.InvariantCulture), c.Position.X, c.Position.Z)).ToList();
+        if (clashes.Count > Shown)
+        {
+            lines.Add(Lang.T("replay.more", clashes.Count - Shown));
+        }
+        string list = "• " + string.Join("\n• ", lines);
+        string text = kind switch
+        {
+            ReplayClash.Ground => Lang.T("replay.clash.ground", clashes.Count, list),
+            ReplayClash.Changed => Lang.T("replay.clash.changed", clashes.Count, list),
+            _ => Lang.T("replay.clash.removed", clashes.Count, list),
+        };
+        int unsure = clashes.Count(c => c.Unsure);
+        return unsure > 0 ? text + "\n\n" + Lang.T("replay.unsure", unsure) : text;
     }
 
     /// <summary>
@@ -680,18 +802,19 @@ public sealed partial class MainWindow : Window
     /// </summary>
     internal async Task DiscardWorld()
     {
-        if (World is not { } w || !await Ask("Discard", $"Discard the unsaved changes ({Describe(w.Pending)})? The world is read again{(w.IsLive ? " from the game" : " from disk")}.", "Discard", "Keep them"))
+        if (World is not { } w
+            || !await Ask(Lang.T("common.discard"), w.IsLive ? Lang.T("save.ask.discardWorldLive.text", Describe(w.Pending)) : Lang.T("save.ask.discardWorld.text", Describe(w.Pending)), Lang.T("common.discard"), Lang.T("common.keepThem")))
         {
             return;
         }
-        Busy("Reading the world again…");
+        Busy(Lang.T("save.msg.reading"));
         try
         {
             await Task.Run(w.Discard);
         }
         catch (Exception ex)
         {
-            Say("Could not read the world again: " + ex.Message);
+            Say(Said.Of("save.msg.couldNotRead", ex.Message));
         }
         finally
         {
@@ -709,17 +832,34 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
-        Busy("Loading the world from the game…");
+        if (await ReloadFromGame(w) is { } failed)
+        {
+            Say(failed);
+        }
+        MapPage?.Show(w);
+    }
+
+    /// <summary>
+    /// Live: reads the world from the game again behind the busy veil (the map's Reload and the 3D editor's).
+    /// </summary>
+    /// <param name="w">The live world.</param>
+    /// <returns>Why the game could not be read (unreachable, or the bridge's answer: a refusal, broken JSON); null when read.</returns>
+    private async Task<Said?> ReloadFromGame(WorldSession w)
+    {
+        Busy(Lang.T("save.msg.loadingLive"));
         try
         {
             await w.Reload();
+            return null;
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException or System.Text.Json.JsonException)
         {
-            Say("Could not reach the game: " + ex.Message);
+            return Said.Of("save.msg.unreachable", ex.Message);
         }
-        Busy(null);
-        MapPage?.Show(w);
+        finally
+        {
+            Busy(null);
+        }
     }
 
     /// <summary>
@@ -728,7 +868,7 @@ public sealed partial class MainWindow : Window
     internal async Task LeaveWorld()
     {
         if (World is { } w && w.Pending is not (0, 0, 0, 0)
-            && !await Ask("Leave the world", $"{(w.IsLive ? "Not applied" : "Unsaved")}: {Describe(w.Pending)}. Leave the world without {(w.IsLive ? "applying" : "saving")} them?", "Leave anyway", "Stay"))
+            && !await Ask(Lang.T("save.ask.leave.title"), w.IsLive ? Lang.T("save.ask.leaveLive.text", Describe(w.Pending)) : Lang.T("save.ask.leave.text", Describe(w.Pending)), Lang.T("common.leaveAnyway"), Lang.T("common.stay")))
         {
             return;
         }
@@ -737,22 +877,52 @@ public sealed partial class MainWindow : Window
         World?.Dispose();
         World = null;
         Session = null;
+        // A backup read for the Area tool's restore is not kept for the next world.
+        AreaPanel.ForgetBackup();
         Tunnel.Close();
         ShowStart();
     }
     /// <summary>
-    /// Says something in the status bar and, away from the 3D editor (its status bar not shown), in a dialog too, not
-    /// waited for.
+    /// Says something in the status bar, in the user's language with its English kept for Claude (<c>Msg</c>), and,
+    /// away from the 3D editor, in a dialog too, not waited for.
     /// </summary>
-    /// <param name="text">What to say.</param>
-    private void Say(string text)
+    /// <param name="said">What to say, in both languages.</param>
+    private void Say(Said said)
     {
-        MessageText.Text = text;
+        Msg(said);
         if (_pages.Content != _editorPage)
         {
-            _ = Tell(text);
+            _ = Tell(said.Shown);
         }
     }
+
+    /// <summary>
+    /// Puts a message in the status bar: the text of <paramref name="key"/> in the user's language, its English kept for
+    /// Claude (<c>LastSaid</c>).
+    /// </summary>
+    /// <param name="key">The catalogue key, written in full.</param>
+    /// <param name="values">The values for its places.</param>
+    internal void Msg(string key, params object?[] values) => Msg(Said.Of(key, values));
+
+    /// <summary>Puts a message in the status bar, shown in the user's language, its English kept for Claude.</summary>
+    /// <param name="said">The message in both languages.</param>
+    internal void Msg(Said said)
+    {
+        KeptSaid = said;
+        MessageText.Text = said.Shown;
+    }
+
+    /// <summary>The last message put through <c>Msg</c>, in both languages.</summary>
+    private Said KeptSaid { get; set; } = Said.Empty;
+
+    /// <summary>
+    /// The status bar's message in both languages: the one <c>Msg</c> put there, or, when the text was set directly
+    /// (a text that is the same in every language, or not converted yet), that text on both sides.
+    /// </summary>
+    internal Said LastSaid => MessageText.Text is not { } shown ? Said.Empty : shown == KeptSaid.Shown ? KeptSaid : Said.Raw(shown);
+
+    /// <summary>The status bar's message in English: what Claude reads back, whatever language the window shows.</summary>
+    internal string LastMessageEn => LastSaid.English;
 
     /// <summary>
     /// An error no part of the window caught (App): said in the status bar, so the editor stays open with the changes
@@ -761,13 +931,13 @@ public sealed partial class MainWindow : Window
     internal void ShowError(Exception ex)
     {
         Busy(null);
-        string text = $"Something went wrong: {ex.Message} Your changes are still here. Details in the log (Open log, on the start page).";
-        MessageText.Text = text;
+        var said = Said.Of("save.msg.wentWrong", ex.Message);
+        Msg(said);
         // Away from the 3D editor (its status bar not shown): once in a dialog, not one per error.
         if (_pages.Content != _editorPage && !_errorShown)
         {
             _errorShown = true;
-            _ = Tell(text).ContinueWith(_ => _errorShown = false, TaskScheduler.FromCurrentSynchronizationContext());
+            _ = Tell(said.Shown).ContinueWith(_ => _errorShown = false, TaskScheduler.FromCurrentSynchronizationContext());
         }
     }
     /// <summary>
@@ -789,7 +959,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// What is waiting to be saved, in the save bar.
     /// </summary>
-    internal TextBlock PendingText { get; } = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = "All saved" };
+    internal TextBlock PendingText { get; } = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Text = Lang.T("save.pending.allSaved") };
     /// <summary>
     /// The status bar's last message.
     /// </summary>
@@ -798,6 +968,12 @@ public sealed partial class MainWindow : Window
     /// Asks before writing into the world (replaced by tests).
     /// </summary>
     internal Func<string, Task<bool>> ConfirmSave { get; set; }
+    /// <summary>
+    /// The question asked before saving into the world files, with what to keep in mind.
+    /// </summary>
+    /// <param name="what">What would be written, in words.</param>
+    /// <param name="directory">The world's folder.</param>
+    private static string SaveConfirmText(string what, string directory) => Lang.T("save.ask.save.text", what, Ui.Tilde(directory));
     /// <summary>
     /// A yes / no question (title, text, yes, no): Discard, Leave, Quit with unsaved changes. Tests answer it.
     /// </summary>
@@ -869,6 +1045,11 @@ public sealed partial class MainWindow : Window
             {
                 AreaPanel.RefreshVolume();
             }
+            // And the tape's lowest and highest ground.
+            if (Tools.Mode == ToolMode.Measure)
+            {
+                MeasurePanel.Refresh();
+            }
         });
         session.EditMade += () => Dispatcher.UIThread.Post(() => AutoApply(session));
         // Saved: the objects were read again, with new indices.
@@ -879,6 +1060,18 @@ public sealed partial class MainWindow : Window
         SelectPanel.ReplaceBox.ItemsSource = kinds.Select(p => NameOfPrefab(p)!).ToList();
         SelectPanel.FillSaved();
         UpdateSaveBar();
+    }
+
+    /// <summary>The save bar's pill while something waits: amber background, border and text.</summary>
+    private static readonly IImmutableSolidColorBrush PillWaiting = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.Parse("#2c2416")),
+        PillWaitingBorder = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.Parse("#7a5a2a")), PillWaitingText = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Color.Parse("#f3d29b"));
+
+    /// <summary>The save bar's pill: amber while something waits, grey when all is saved.</summary>
+    private void SetPendingPill(bool waiting)
+    {
+        _pendingPill.Background = waiting ? PillWaiting : Brushes.Transparent;
+        _pendingPill.BorderBrush = waiting ? PillWaitingBorder : Ui.Line;
+        PendingText.Foreground = waiting ? PillWaitingText : Ui.Muted;
     }
 
     /// <summary>
@@ -900,12 +1093,9 @@ public sealed partial class MainWindow : Window
         var (z, d, a, r) = s.Pending;
         bool dirty = z + d + a + r > 0;
         SaveButton.IsEnabled = dirty;
-        SaveButton.Content = s.IsLive ? "Apply live" : "Save to world";
+        SaveButton.Content = s.IsLive ? Lang.T("save.label.apply") : Lang.T("save.label.save");
         SaveButton.Tip(s.IsLive ? "top.apply" : "top.save");
-        // The pill: amber while something waits, grey when all is saved.
-        _pendingPill.Background = dirty ? new SolidColorBrush(Color.Parse("#2c2416")) : Brushes.Transparent;
-        _pendingPill.BorderBrush = dirty ? new SolidColorBrush(Color.Parse("#7a5a2a")) : Ui.Line;
-        PendingText.Foreground = dirty ? new SolidColorBrush(Color.Parse("#f3d29b")) : Ui.Muted;
+        SetPendingPill(dirty);
         _liveBadge.IsVisible = s.IsLive;
         UndoButton.IsEnabled = s.CanUndo;
         RedoButton.IsEnabled = s.CanRedo;
@@ -951,10 +1141,13 @@ public sealed partial class MainWindow : Window
         {
             return true;
         }
-        string since = w.IsLive ? "Players may have changed the world since." : "The world was saved again since (by the game, or another program).";
-        if (!await Ask("A step from an earlier session", $"This step was made in an earlier session of the editor (kept {w.Restored!.SavedAt:g}). {since} Undoing or redoing it puts the ground and the objects back as they were then, over what changed since.", "Go ahead", "Cancel"))
+        string kept = w.Restored!.SavedAt.ToString("g", System.Globalization.CultureInfo.CurrentCulture);
+        string question = w.Restored.Replayed ? Lang.T("history.replayedAsk", kept)
+            : w.IsLive ? Lang.T("history.ask.earlierLive.text", kept)
+            : Lang.T("history.ask.earlier.text", kept);
+        if (!await Ask(Lang.T("history.ask.earlier.title"), question, Lang.T("history.ask.earlier.yes"), Lang.T("common.cancel")))
         {
-            MessageText.Text = "Nothing changed.";
+            Msg("history.msg.nothingChanged");
             return false;
         }
         w.EarlierAllowed = true;
@@ -982,7 +1175,7 @@ public sealed partial class MainWindow : Window
         var (z, d, a, r) = s.Pending;
         if (z + d + a + r == 0)
         {
-            await Tell("There are no unsaved changes.");
+            await Tell(Lang.T("save.msg.noChanges"));
             return;
         }
         if (s.IsLive)
@@ -990,38 +1183,47 @@ public sealed partial class MainWindow : Window
             await ApplyNow();
             return;
         }
-        string what = s.PendingText.Replace("Unsaved: ", "");
-        if (!await ConfirmSave($"Write {what} into the world files?\n\nWorld folder: {Ui.Tilde(s.Scene.World.Directory)}\n\n"
-            + "• Like Apply live: the world stays open with its history; undo a step and save again to take it back. The save it was opened from is kept until you leave the world.\n"
-            + "• Valheim (server or game) must NOT be running with this world, or it will overwrite these changes when it saves.\n"
-            + "• Test on a copy first: open it as a local world, or upload it to a test server."))
+        string what = Describe(s.Pending);
+        if (!await ConfirmSave(SaveConfirmText(what, s.Scene.World.Directory)))
         {
             return;
         }
         SaveButton.IsEnabled = false;
-        MessageText.Text = "Saving…";
+        Msg("save.msg.saving");
         // The veil keeps the keys (Ctrl+S, Ctrl+Z), the mouse and Follow off the area while it is written.
-        Busy("Saving…");
+        Busy(Lang.T("save.msg.saving"));
+        int? newer = null;
         try
         {
-            var res = await Task.Run(s.Save);
-            string msg = res.Message;
+            var o = await Task.Run(s.SaveOutcome);
+            var res = o.Saved!;
+            string msg = o.Message;
             if (res.Skipped.Count > 0)
             {
-                msg += "\n\nNot saved:\n• " + string.Join("\n• ", res.Skipped);
+                msg = Lang.T("save.msg.skipped", msg, string.Join("\n• ", res.Skipped));
             }
-            MessageText.Text = res.Message;
-            Options.Say("Save: " + res.Message);
-            await Tell(msg);
+            Msg(o.Report);
+            // The log stays English.
+            Options.Say("Save: " + o.Report.English);
+            newer = res.Saved ? null : s.Scene.Owner?.GameSaveSince();
+            if (newer == null)
+            {
+                await Tell(msg);
+            }
         }
         catch (Exception ex)
         {
-            MessageText.Text = "Could not save: " + ex.Message;
+            Msg("save.msg.couldNotSave", ex.Message);
         }
         finally
         {
             // Down only once the result has been read: until then Follow and the keys still wait.
             Busy(null);
+        }
+        // The game saved the world since: the changes can go onto its save.
+        if (newer is int game && s.Scene.Owner is { } owner)
+        {
+            await OfferReplay(owner, game, s.Scene);
         }
         // Saved objects lose their green marks; after a failure the marks and the save bar show what is still unsaved
         // (and the Save button comes back).
@@ -1077,8 +1279,8 @@ public sealed partial class MainWindow : Window
     {
         if (CopyToClipboard() is { } clip)
         {
-            MessageText.Text = Tools.Mode == ToolMode.Select ? $"Copied {clip.Objects.Count} object(s). Ctrl+V to paste (R turns, F mirrors)."
-                : $"Copied {clip.W} × {clip.H} m and {clip.Objects.Count} object(s). Ctrl+V to paste, here or in another area.";
+            Msg(Tools.Mode == ToolMode.Select ? Said.Of("paste.msg.copiedObjects", clip.Objects.Count)
+                : Said.Of("paste.msg.copiedArea", clip.W, clip.H, clip.Objects.Count));
         }
     }
 
@@ -1095,7 +1297,7 @@ public sealed partial class MainWindow : Window
         // An area with nothing in it copies its ground only: nothing to take away, no undo step.
         if (clip.Taken.Count == 0)
         {
-            MessageText.Text = $"Copied {clip.W} × {clip.H} m of ground: no objects to cut here. Ctrl+V to paste it, here or in another area.";
+            Msg("paste.msg.copiedGround", clip.W, clip.H);
             return;
         }
         s.Delete(clip.Taken);
@@ -1103,8 +1305,7 @@ public sealed partial class MainWindow : Window
         {
             View.Select([]);
         }
-        MessageText.Text = $"Cut {clip.Objects.Count} object(s): gone from here (Ctrl+Z brings them back). Ctrl+V to paste them, here or in another area"
-            + (Tools.Mode == ToolMode.Select ? " (R turns, F mirrors)." : "; the ground stays as it is.");
+        Msg(Tools.Mode == ToolMode.Select ? Said.Of("paste.msg.cutObjects", clip.Objects.Count) : Said.Of("paste.msg.cutArea", clip.Objects.Count));
         UpdateSaveBar();
     }
 
@@ -1125,7 +1326,7 @@ public sealed partial class MainWindow : Window
             clip = CopyData.FromThings(s.Scene, [.. View.Selected], NameOfPrefab, View.GroundHeight);
             if (clip == null)
             {
-                MessageText.Text = "Select objects to copy first.";
+                Msg("paste.msg.copyFirst");
                 return null;
             }
         }
@@ -1136,7 +1337,14 @@ public sealed partial class MainWindow : Window
             clip = CopyData.FromArea(View.Area, s.Ground, s.Scene, inside, NameOfPrefab);
             if (clip == null)
             {
-                MessageText.Text = "Select an area first.";
+                Msg("paste.msg.areaFirst");
+                return null;
+            }
+            // No objects and so no ground (it goes with buildings only): nothing a paste would put down. The clipboard
+            // keeps what it had.
+            if (clip.Objects.Count == 0 && Array.TrueForAll(clip.Rel, float.IsNaN))
+            {
+                Msg("paste.msg.nothingToCopy");
                 return null;
             }
         }
@@ -1152,7 +1360,7 @@ public sealed partial class MainWindow : Window
     {
         if (View.Paste.Clip == null)
         {
-            MessageText.Text = "Copy an area first (Area tool, Ctrl+C).";
+            Msg("paste.msg.copyAreaFirst");
             return;
         }
         View.SelectTool.Commit();
@@ -1180,18 +1388,18 @@ public sealed partial class MainWindow : Window
         // on whatever is there, among the trees.
         if (!View.Paste.Fits(at, s.Ground.W, s.Ground.H))
         {
-            MessageText.Text = "Not pasted: it goes past the open area. Open a bigger area around the place (the map), then paste again.";
+            Msg("paste.msg.tooFar");
             return;
         }
         // The objects' heights come from the ground as the paste leaves it: the ground step fills the list,
         // which Commit reads after it (one undo step for both).
-        var add = new List<(Editing.NewObject, bool)>();
+        var add = new List<(NewObject, bool)>();
         // Clear the site: the trees, rocks and the like where the pasted building stands go too.
         var cleared = new List<int>();
         int touched = 0;
         var paste = View.Paste;
-        string label = paste.Count > 1 ? $"Paste ×{paste.Count}" : "Paste";
-        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+        string label = paste.Count > 1 ? Lang.T("paste.undo.copies", paste.Count) : Lang.T("paste.label.paste");
+        float ox = s.Scene.OriginX, oz = s.Scene.OriginZ;
         var linkIds = s.ReadLinks().Ids;
         s.Commit(label, g =>
         {
@@ -1214,8 +1422,11 @@ public sealed partial class MainWindow : Window
             }
             return (t, rect);
         }, cleared, add);
-        MessageText.Text = $"Pasted{(paste.Count > 1 ? $" {paste.Count} copies" : "")}{(touched > 0 ? " with the ground" : "")}{(add.Count > 0 ? $", {add.Count} object(s)" : "")}"
-            + $"{(cleared.Count > 0 ? $", {cleared.Count} tree(s), rock(s) and the like cleared from the site" : "")}. Click again to paste more, Esc when done.";
+        Msg(Said.Of("paste.msg.pasted", paste.Count > 1 ? Said.Of("paste.msg.pastedCopies", paste.Count) : Said.Empty,
+                touched > 0 ? Said.Of("paste.msg.pastedGround") : Said.Empty,
+                add.Count > 0 ? Said.Of("paste.msg.pastedObjects", add.Count) : Said.Empty,
+                cleared.Count > 0 ? Said.Of("paste.msg.pastedCleared", cleared.Count) : Said.Empty)
+            + Said.Of("paste.msg.pasteMore"));
         UpdateSaveBar();
     }
 
@@ -1234,7 +1445,7 @@ public sealed partial class MainWindow : Window
         BuilderIds.AddRange(players.Select(p => p.Id));
         BuilderIds.Add(-1);
         BuilderIds.Add(0);
-        BuilderBox.ItemsSource = players.Select(p => p.Label).Append("Other player id…").Append("Nobody (not player built)").ToList();
+        BuilderBox.ItemsSource = players.Select(p => p.Label).Append(Lang.T("select.builder.other")).Append(Lang.T("select.builder.nobody")).ToList();
         BuilderBox.SelectedIndex = BuilderIds.IndexOf(TerrainEditor.Save.WorldSave.Builder);
         _fillingBuilders = false;
     }
@@ -1261,7 +1472,7 @@ public sealed partial class MainWindow : Window
             {
                 if (!string.IsNullOrEmpty(text))
                 {
-                    MessageText.Text = "A player id is a whole number other than 0.";
+                    Msg("select.msg.badPlayerId");
                 }
                 FillBuilders();
                 return;
@@ -1271,8 +1482,9 @@ public sealed partial class MainWindow : Window
         PlacePanel.Memory.Builders[w.Name] = id;
         PlacePanel.Memory.Save();
         FillBuilders();
-        MessageText.Text = id == 0 ? "New pieces get no builder: the game takes them for parts of a ruin."
-            : $"New pieces are built by {Builders.Players(w).FirstOrDefault(p => p.Id == id)?.Label ?? $"player {id}"}.";
+        Msg(id == 0 ? Said.Of("select.msg.builtByNobody")
+            : Builders.Players(w).FirstOrDefault(p => p.Id == id)?.Words is { } who ? Said.Of("select.msg.builtBy", who)
+            : Said.Of("select.msg.builtByPlayer", id));
     }
 
     /// <summary>
@@ -1287,29 +1499,29 @@ public sealed partial class MainWindow : Window
         }
         if (TerrainEditor.Save.WorldSave.Builder == 0)
         {
-            MessageText.Text = "Built by is set to Nobody: choose a player first (View panel, Building).";
+            Msg("select.msg.claimNobody");
             return;
         }
         var sel = View.Selected.ToList();
         var remove = new List<int>();
-        var adds = new List<(Editing.NewObject, bool)>();
+        var adds = new List<(NewObject, bool)>();
         foreach (int i in sel)
         {
             var t = s.Scene.Things[i];
             if (ObjectData.Bytes(world, s.Edits, t.Id) is { } bytes && Builders.Claimed(bytes, TerrainEditor.Save.WorldSave.Builder) is { } z)
             {
                 remove.Add(i);
-                adds.Add((new Editing.NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), true));
+                adds.Add((new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), true));
             }
         }
         if (adds.Count == 0)
         {
-            MessageText.Text = "Nothing to change: the selected pieces already have a builder, or are not things players build.";
+            Msg("select.msg.claimNothing");
             return;
         }
-        var copies = s.Commit($"Made {adds.Count} piece(s) player built", null, remove, adds);
+        var copies = s.Commit(Lang.T("select.undo.claimed", adds.Count), null, remove, adds);
         View.Select(sel.Where(i => !remove.Contains(i)).Concat(copies));
-        MessageText.Text = $"{adds.Count} piece(s) are now player built ({sel.Count - adds.Count} left as they were). Save writes it.";
+        Msg("select.msg.claimed", adds.Count, sel.Count - adds.Count);
         UpdateSaveBar();
     }
 
@@ -1321,7 +1533,7 @@ public sealed partial class MainWindow : Window
         View.SelectTool.Commit();
         if (View.Selected.Count == 1 && Session?.Scene.Things[View.Selected.First()].Runestone == true)
         {
-            MessageText.Text = "A runestone holds no data of its own: the game builds it from its location. It can only be deleted.";
+            Msg("select.msg.runestoneData");
             return;
         }
         if (View.Selected.Count == 1 && Inspector.Open(View.Selected.First()))
@@ -1342,27 +1554,27 @@ public sealed partial class MainWindow : Window
         var path = View.Path;
         if (path.Points.Count < 2)
         {
-            MessageText.Text = "Draw a line with at least two points first.";
+            Msg("path.msg.noLine");
             return;
         }
         bool clamped = false;
         if (path.Act == PathTool.Action.Cave)
         {
-            MessageText.Text = ApplyCave(s, path, s.Brush, s.MaskNow());
+            Msg(ApplyCave(s, path, s.Brush, s.MaskNow()));
             PathPanel.Refresh();
             UpdateSaveBar();
             return;
         }
-        var touched = s.EditGround($"Path: {PathTool.Label(path.Act)}", g =>
+        var touched = s.EditGround(Lang.T("path.undo", PathTool.Label(path.Act).Shown), g =>
         {
             var (t, rect, c) = path.Apply(g, s.Brush, s.Scene.Water, s.MaskNow());
             clamped = c;
             return (t, rect);
         });
         float total = PathTool.Length(path.Curve());
-        MessageText.Text = touched.Count == 0 ? "Nothing changed along the line."
-            : clamped ? "Applied, but part of the path reached the game limit of ±8 m from the original ground (red points)."
-            : $"Applied “{PathTool.Label(path.Act)}” along {total:0} m. The line is kept, so you can apply another action (Clear to start over).";
+        Msg(touched.Count == 0 ? Said.Of("path.msg.nothing")
+            : clamped ? Said.Of("path.msg.limit")
+            : Said.Of("path.msg.applied", PathTool.Label(path.Act), total));
         PathPanel.Refresh();
         UpdateSaveBar();
     }
@@ -1375,12 +1587,12 @@ public sealed partial class MainWindow : Window
     /// <param name="brush">The brush whose noise roughens a natural line.</param>
     /// <param name="mask">Which ground may change (null: all of it).</param>
     /// <param name="label">The history's name for the step; null: "Cave along" and its length.</param>
-    /// <returns>What was done, for the status line.</returns>
-    internal static string ApplyCave(EditSession s, PathTool path, Brush brush, Func<int, float>? mask, string? label = null)
+    /// <returns>What was done, for the status line (in the language in use) and Claude (in English).</returns>
+    internal static Said ApplyCave(EditSession s, PathTool path, Brush brush, Func<int, float>? mask, string? label = null)
     {
         var scene = s.Scene;
         var cave = path.PlanCave(s.Ground);
-        float ox = scene.X0 * 64f - 32f, oz = scene.Z0 * 64f - 32f, water = scene.Water;
+        float ox = scene.OriginX, oz = scene.OriginZ, water = scene.Water;
         PathTool.CaveRock RockAt(float x, float z)
         {
             if (path.Rock != PathTool.CaveRock.Auto)
@@ -1400,33 +1612,24 @@ public sealed partial class MainWindow : Window
         var roof = built.Rocks
             .Select(r => (r.Prefab, Hash: TerrainEditor.Save.StableHash.Of(r.Prefab), r.Position, r.Rotation, r.Scale))
             .Where(r => scene.World?.CanCreate(r.Hash) != false)
-            .Select(r => (new Editing.NewObject(0, r.Hash, r.Position, r.Rotation, r.Scale), false)).ToList();
+            .Select(r => (new NewObject(0, r.Hash, r.Position, r.Rotation, r.Scale), false)).ToList();
         // Natural objects in the trench (deeper than half a metre there) would float or stand in the way.
-        float reach = path.Width / 2 + path.Soft;
+        var inTrench = PathTool.NearDeep(cave, path.Width / 2 + path.Soft);
         var remove = new List<int>();
         lock (scene.Things)
         {
             for (int i = 0; i < scene.Things.Count; i++)
             {
                 var t = scene.Things[i];
-                if (t.Gone || !EditSession.Natural(t))
+                if (!t.Gone && EditSession.Natural(t) && inTrench(new System.Numerics.Vector2(t.Position.X - ox, t.Position.Z - oz)))
                 {
-                    continue;
-                }
-                var at = new System.Numerics.Vector2(t.Position.X - ox, t.Position.Z - oz);
-                for (int k = 0; k < cave.Curve.Count; k++)
-                {
-                    if (cave.Depth[k] > 0.5f && System.Numerics.Vector2.Distance(cave.Curve[k].P, at) <= reach)
-                    {
-                        remove.Add(i);
-                        break;
-                    }
+                    remove.Add(i);
                 }
             }
         }
         bool clamped = false;
         int open = 0;
-        s.Commit(label ?? $"Cave along {PathTool.Length(cave.Curve):0} m", g =>
+        s.Commit(label ?? Lang.T("cave.undo", PathTool.Length(cave.Curve)), g =>
         {
             var (t, rect, c) = path.Apply(g, brush, water, mask, cave);
             clamped = c;
@@ -1445,13 +1648,33 @@ public sealed partial class MainWindow : Window
             }
             return (t, (rect.X0 - 4, rect.Z0 - 4, rect.X1 + 4, rect.Z1 + 4));
         }, remove, roof);
-        return built.Uncovered > 0 && roof.Count > 0
-            ? $"Dug a cave roofed with {roof.Count} boulder(s), but {built.Uncovered} point(s) of its floor stay open to the sky (at the area's edge?)."
-            : roof.Count == 0
-            ? "Dug the cave's trench, but it is nowhere deep enough for a roof: make Depth larger than Headroom by 1.5 m, or the line longer (its ends slope up to the ground)."
-            : $"Dug a cave {PathTool.Length(cave.Curve):0} m long, roofed with {roof.Count} boulder(s){(remove.Count > 0 ? $"; {remove.Count} tree(s) and rock(s) in the way taken away" : "")}."
-                + (open > 0 ? $" At {open} point(s) the walls could not rise to the rock (the game's ±8 m: No limit in the brush options lets them)." : "")
-                + (clamped ? " Part of it reached the game's ±8 m limit (switch on No limit in the brush options to dig deeper)." : " Ctrl+Z takes it back.");
+        return CaveOutcome(roof.Count, built.Uncovered, remove.Count, PathTool.Length(cave.Curve), open, clamped);
+    }
+
+    /// <summary>
+    /// What a dug cave says: roofed with some floor open to the sky, too shallow for a roof, or dug (with what was
+    /// taken away, walls that could not rise and the game's limit reached).
+    /// </summary>
+    /// <param name="boulders">How many boulders roof it.</param>
+    /// <param name="uncovered">Floor points left open to the sky.</param>
+    /// <param name="removed">Trees and rocks taken away from the trench.</param>
+    /// <param name="length">The cave's length (m).</param>
+    /// <param name="walls">Points where the walls could not rise to the rock.</param>
+    /// <param name="clamped">Whether part of it reached the game's ±8 m limit.</param>
+    /// <returns>The message, in the language in use and in English.</returns>
+    internal static Said CaveOutcome(int boulders, int uncovered, int removed, float length, int walls, bool clamped)
+    {
+        if (boulders == 0)
+        {
+            return Said.Of("cave.msg.noRoof");
+        }
+        if (uncovered > 0)
+        {
+            return Said.Of("cave.msg.uncovered", boulders, uncovered);
+        }
+        return (removed > 0 ? Said.Of("cave.msg.dugCleared", length, boulders, removed) : Said.Of("cave.msg.dug", length, boulders))
+            + (walls > 0 ? Said.Of("cave.msg.walls", walls) : Said.Empty)
+            + (clamped ? Said.Of("cave.msg.limit") : Said.Of("cave.msg.undo"));
     }
 
     /// <summary>
@@ -1468,14 +1691,14 @@ public sealed partial class MainWindow : Window
         var b = Tools.Brush;
         float amount = b.StampHeight * (Tools.Tool == BrushTool.Lower ? -1 : 1);
         bool clamped = false;
-        s.EditGround($"Stamp: {b.StampLabel}", g =>
+        s.EditGround(Lang.T("brush.shape.stamp", b.StampLabel), g =>
         {
             var (t, rect, c) = Sculpt.StampOnce(g, b, gx, gz, amount, s.MaskNow());
             clamped = c;
             return (t, rect);
         });
-        MessageText.Text = clamped ? "Stamped, but part of it reached the game limit of ±8 m from the original ground (red points)."
-            : $"Stamped {MathF.Abs(amount)} m {(amount >= 0 ? "up" : "down")}. Ctrl+Z undoes it.";
+        Msg(clamped ? Said.Of("brush.msg.stampLimit")
+            : amount >= 0 ? Said.Of("brush.msg.stampedUp", MathF.Abs(amount)) : Said.Of("brush.msg.stampedDown", MathF.Abs(amount)));
         UpdateSaveBar();
     }
 
@@ -1486,7 +1709,7 @@ public sealed partial class MainWindow : Window
     {
         if (Session == null)
         {
-            MessageText.Text = "Open an area first: a script works on the open area.";
+            Msg("script.msg.noArea");
             return;
         }
         if (_stopScript != null)
@@ -1494,13 +1717,13 @@ public sealed partial class MainWindow : Window
             return;
         }
         var panel = ScriptPanel;
-        string name = panel.ScriptBox.SelectedItem as string ?? "script";
+        string name = panel.ChosenName ?? Lang.T("script.unnamed");
         panel.Running(true);
         try
         {
-            var r = await RunScriptCode(panel.CodeBox.Text ?? "", $"Script: {name.Replace("Example: ", "", StringComparison.Ordinal)}", t => panel.Output.Text = t);
-            panel.Output.Text = r.Output;
-            MessageText.Text = r.Message;
+            var r = await RunScriptCode(panel.CodeBox.Text ?? "", Lang.T("script.undo", name), t => panel.Output.Text = t);
+            panel.Output.Text = r.Output.Shown;
+            Msg(r.Message);
         }
         finally
         {
@@ -1512,30 +1735,43 @@ public sealed partial class MainWindow : Window
     /// What a script gave.
     /// </summary>
     /// <param name="Changed">Whether its changes went in.</param>
-    /// <param name="Output">What it printed and what became of it.</param>
-    /// <param name="Message">The status bar's line.</param>
-    internal sealed record ScriptOutcome(bool Changed, string Output, string Message);
+    /// <param name="Output">What it printed and what became of it, the latter in both languages (Claude's in English).</param>
+    /// <param name="Message">The status bar's line, in both languages.</param>
+    internal sealed record ScriptOutcome(bool Changed, Said Output, Said Message);
 
     /// <summary>
-    /// A script on the open area (the Script tool's Run, Claude's run_script): compiled and run in the background on a
-    /// snapshot of the area, then what it changed goes in as one undo step, nothing when it fails, is stopped, runs 2
-    /// minutes, or the area changed meanwhile.
+    /// What a script printed, then what became of it (<paramref name="end"/>) in each language: the printed text is the
+    /// same in both.
+    /// </summary>
+    /// <param name="printed">What the script printed (empty for none).</param>
+    /// <param name="end">What became of it.</param>
+    private static Said Printed(System.Text.StringBuilder printed, Said end)
+    {
+        string text = printed.ToString();
+        return new(text + end.Shown, text + end.English);
+    }
+
+    /// <summary>
+    /// A script on the open area (the Script tool's Run, Claude's run_script): compiled in the background, run in a
+    /// process of its own on a snapshot of the area (ScriptHost.RunInChild: Stop and the 2-minute limit end that
+    /// process whatever the script is doing), then what it changed goes in as one undo step, nothing when it fails,
+    /// is stopped, runs 2 minutes, or the area changed meanwhile.
     /// </summary>
     /// <param name="code">The script's C# source.</param>
     /// <param name="label">The undo step's name.</param>
-    /// <param name="progress">Told "Compiling…", then "Running…".</param>
+    /// <param name="progress">Told "Compiling…", then "Running…" (in the language in use).</param>
     /// <param name="apply">False: a dry run, only what it would change is said.</param>
     internal async Task<ScriptOutcome> RunScriptCode(string code, string label, Action<string>? progress = null, bool apply = true)
     {
         if (Session is not { } s)
         {
-            return new(false, "", "Open an area first: a script works on the open area.");
+            return new(false, Said.Empty, Said.Of("script.msg.noArea"));
         }
         if (_stopScript != null)
         {
-            return new(false, "", "A script is already running: nothing changed.");
+            return new(false, Said.Empty, Said.Of("script.msg.busy"));
         }
-        progress?.Invoke("Compiling…");
+        progress?.Invoke(Lang.T("script.msg.compiling"));
         using var cancel = new CancellationTokenSource(TimeSpan.FromMinutes(2));
         _stopScript = cancel.Cancel;
         var snap = ScriptHost.Take(s, NameOfPrefab);
@@ -1546,72 +1782,73 @@ public sealed partial class MainWindow : Window
             var (image, pdb, errors) = await Task.Run(() => ScriptHost.Compile(code));
             if (image == null)
             {
-                return new(false, "The script has mistakes:\n" + string.Join("\n", errors), "The script has mistakes (see below it): nothing changed.");
+                return new(false, Said.Of("script.msg.mistakesBelow", string.Join("\n", errors)), Said.Of("script.msg.mistakes"));
             }
-            progress?.Invoke("Running…");
-            var ch = await Task.Run(() => ScriptHost.Run(image, pdb, snap, cancel.Token), cancel.Token);
+            progress?.Invoke(Lang.T("script.msg.running"));
+            var ch = await ScriptHost.RunInChild(image, pdb, snap, cancel.Token);
             if (Session != s)
             {
-                string gone = Session == null
-                    ? "The area was closed while the script ran: nothing changed."
-                    : "Another area was opened while the script ran: nothing changed.";
-                return new(false, ch.Output + gone, gone);
+                var gone = Session == null ? Said.Of("script.msg.closed") : Said.Of("script.msg.otherArea");
+                return new(false, Printed(ch.Output, gone), gone);
             }
             // Its heights and object numbers are those of the area when it started: changed since (a
             // stroke, an undo, a save that read the world again), they would undo that or hit other objects.
             if (s.Generation != generation)
             {
-                return new(false, ch.Output + "The area changed while the script ran: nothing changed. Run it again.", "The area changed while the script ran: nothing changed. Run it again.");
+                var changed = Said.Of("script.msg.areaChanged");
+                return new(false, Printed(ch.Output, changed), changed);
             }
             if (ch.Empty)
             {
-                return new(false, ch.Output + "The script ran and changed nothing.", "The script ran and changed nothing.");
+                var nothing = Said.Of("script.msg.nothing");
+                return new(false, Printed(ch.Output, nothing), nothing);
             }
-            var parts = new List<string>();
+            var parts = new List<Said>();
             if (ch.Heights.Count > 0)
             {
-                parts.Add($"{ch.Heights.Count:N0} ground point(s)");
+                parts.Add(Said.Of("script.count.points", ch.Heights.Count));
             }
 
             if (ch.Paint.Count > 0)
             {
-                parts.Add($"{ch.Paint.Count:N0} painted");
+                parts.Add(Said.Of("script.count.painted", ch.Paint.Count));
             }
 
             if (ch.Add.Count > 0)
             {
-                parts.Add($"{ch.Add.Count:N0} object(s) placed");
+                parts.Add(Said.Of("script.count.placed", ch.Add.Count));
             }
 
             int moves = ch.Moves.Keys.Count(i => !ch.Remove.Contains(i));
             if (moves > 0)
             {
-                parts.Add($"{moves:N0} moved");
+                parts.Add(Said.Of("script.count.moved", moves));
             }
 
             if (ch.Remove.Count > 0)
             {
-                parts.Add($"{ch.Remove.Count:N0} taken away");
+                parts.Add(Said.Of("script.count.removed", ch.Remove.Count));
             }
 
+            var counts = Said.Join(", ", parts);
             if (!apply)
             {
-                string would = $"Dry run: the script would change {string.Join(", ", parts)}; nothing changed.";
-                return new(false, ch.Output + would, would);
+                var would = Said.Of("script.msg.dryRun", counts);
+                return new(false, Printed(ch.Output, would), would);
             }
             int clamped = ScriptHost.Apply(s, ch, label);
-            string what = $"The script changed {string.Join(", ", parts)} in {watch.Elapsed.TotalSeconds:0.0} s; Ctrl+Z takes it all back."
-                + (clamped > 0 ? $" {clamped:N0} point(s) stopped at the game's ±8 m (Ground.NoLimit = true lets them go further)." : "");
+            var what = Said.Of("script.msg.changed", counts, watch.Elapsed.TotalSeconds)
+                + (clamped > 0 ? Said.Of("script.msg.clamped", clamped) : Said.Empty);
             UpdateSaveBar();
-            return new(true, ch.Output + what, what);
+            return new(true, Printed(ch.Output, what), what);
         }
         catch (OperationCanceledException)
         {
-            return new(false, "Stopped: nothing changed.", "The script was stopped (or ran 2 minutes): nothing changed.");
+            return new(false, Said.Of("script.msg.stoppedBelow"), Said.Of("script.msg.stopped"));
         }
         catch (Exception ex)
         {
-            return new(false, $"The script stopped with an error, nothing changed:\n{ScriptHost.Where(ex)}{ex.GetType().Name}: {ex.Message}", "The script stopped with an error (see below it): nothing changed.");
+            return new(false, Said.Of("script.msg.errorBelow", ScriptHost.Describe(ex)), Said.Of("script.msg.error"));
         }
         finally
         {
@@ -1630,43 +1867,79 @@ public sealed partial class MainWindow : Window
             return;
         }
         var m = MountainPanel.Spec;
-        string name = MountainPanel.Preset.Name;
-        if (s.Mountain(gx, gz, m, MountainPanel.Clear, $"Mountain: {name}") is not { } done)
+        var preset = MountainPanel.Preset;
+        if (s.Mountain(gx, gz, m, MountainPanel.Clear, Lang.T("mountain.undo.placed", preset.Shown)) is not { } done)
         {
-            MessageText.Text = $"The {name.ToLowerInvariant()} reaches {m.Reach:0} m around the click and does not fit in the open area: click nearer its middle, make it smaller, or open a bigger area.";
+            Msg(MountainTooBig(m.Kind, m.Reach));
             return;
         }
         UpdateSaveBar();
-        string placed = $"Placed a {name.ToLowerInvariant()}, {m.Height:0} m high{(done.Cleared > 0 ? $"; {done.Cleared} tree(s) and rock(s) it buried taken away" : "")}.";
-        MessageText.Text = placed;
+        var placed = MountainPlaced(m.Kind, m.Height, done.Cleared > 0 ? Said.Of("mountain.msg.buried", done.Cleared) : Said.Empty);
+        Msg(placed);
         if (!MountainPanel.Grow)
         {
-            MessageText.Text = placed + " Ctrl+Z takes it back; saving turns it into ground discs.";
+            Msg(placed + Said.Of("mountain.msg.undoDiscs"));
             return;
         }
         var shape = Mountain.Shape(m);
-        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f, wx = ox + gx, wz = oz + gz;
+        float ox = s.Scene.OriginX, oz = s.Scene.OriginZ, wx = ox + gx, wz = oz + gz;
         // The spots are judged on the area as it is now: what grows is only put in if it is still the same.
         int generation = s.Generation;
         // On the slopes it raised by more than a metre (not around its foot, where the old ones stand).
         var spots = await Growth.Spots(s, wx - m.Reach, wz - m.Reach, wx + m.Reach, wz + m.Reach, o => shape(o.X - wx, o.Z - wz) > 1,
-            NameOfPrefab, t => MessageText.Text = placed + " " + t, maxZones: 49);
+            NameOfPrefab, t => Msg(placed + t), maxZones: 49);
         if (Session != s || s.Generation != generation)
         {
             // Another area opened (Follow grew it), or the ground changed (an undo, a stroke, another mountain): the
             // trees would go to an area no longer shown, or float or be buried.
-            MessageText.Text = placed + " Nothing grew on it: the area changed while its trees were worked out.";
+            Msg(placed + Said.Of("mountain.msg.areaChanged"));
             UpdateSaveBar();
             return;
         }
         if (spots is { Count: > 0 })
         {
-            Growth.Commit(s, $"Mountain: grew {spots.Count} object(s)", spots);
-            placed += $" Grew {spots.Count} of the biome's trees and rocks on it.";
+            Growth.Commit(s, Lang.T("mountain.undo.grew", spots.Count), spots);
+            placed += Said.Of("mountain.msg.grew", spots.Count);
+            Msg(placed + Said.Of("mountain.msg.undoTwice"));
         }
-        MessageText.Text = placed + " Ctrl+Z takes it back (twice with what grew); saving turns it into ground discs.";
+        else
+        {
+            // Nothing grew: one step to take back. When growing could not be done, why (Spots said it) stays.
+            Msg((spots == null ? LastSaid : placed) + Said.Of("mountain.msg.undoDiscs"));
+        }
         UpdateSaveBar();
     }
+
+    /// <summary>The message for a mountain that does not fit in the open area: one whole sentence per kind.</summary>
+    /// <param name="kind">The mountain's kind.</param>
+    /// <param name="reach">How far it reaches around the click, in metres.</param>
+    /// <exception cref="ArgumentOutOfRangeException">An unknown kind.</exception>
+    private static Said MountainTooBig(MountainKind kind, float reach) => kind switch
+    {
+        MountainKind.Peak => Said.Of("mountain.msg.tooBig.peak", reach),
+        MountainKind.Ridge => Said.Of("mountain.msg.tooBig.ridge", reach),
+        MountainKind.Range => Said.Of("mountain.msg.tooBig.range", reach),
+        MountainKind.Mesa => Said.Of("mountain.msg.tooBig.mesa", reach),
+        MountainKind.Volcano => Said.Of("mountain.msg.tooBig.volcano", reach),
+        MountainKind.Hills => Said.Of("mountain.msg.tooBig.hills", reach),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "No such mountain kind."),
+    };
+
+    /// <summary>The message for a mountain put in: one whole sentence per kind.</summary>
+    /// <param name="kind">The mountain's kind.</param>
+    /// <param name="height">Its height, in metres.</param>
+    /// <param name="buried">The clause on the trees and rocks it buried, or <c>Said.Empty</c>.</param>
+    /// <exception cref="ArgumentOutOfRangeException">An unknown kind.</exception>
+    private static Said MountainPlaced(MountainKind kind, float height, Said buried) => kind switch
+    {
+        MountainKind.Peak => Said.Of("mountain.msg.placed.peak", height, buried),
+        MountainKind.Ridge => Said.Of("mountain.msg.placed.ridge", height, buried),
+        MountainKind.Range => Said.Of("mountain.msg.placed.range", height, buried),
+        MountainKind.Mesa => Said.Of("mountain.msg.placed.mesa", height, buried),
+        MountainKind.Volcano => Said.Of("mountain.msg.placed.volcano", height, buried),
+        MountainKind.Hills => Said.Of("mountain.msg.placed.hills", height, buried),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "No such mountain kind."),
+    };
 
     /// <summary>
     /// The Shape tool's click: the shape goes into the ground there (grid point).
@@ -1679,13 +1952,13 @@ public sealed partial class MainWindow : Window
         }
         if (ShapePanel.Function is not { } f)
         {
-            MessageText.Text = "Fix the formula first.";
+            Msg("shape.msg.fixFirst");
             return;
         }
         var (touched, clamped, bad) = s.Shape(gx, gz, f, ShapePanel.Radius, ShapePanel.Height, ShapePanel.Label);
-        MessageText.Text = touched == 0 ? "The formula gives 0 everywhere within the radius: nothing changed." + (bad > 0 ? $" ({bad} point(s) gave no number.)" : "")
-            : clamped ? "Placed, but part of the shape reached the game limit of ±8 m from the original ground (red points)."
-            : $"Placed the shape on {touched} point(s). Ctrl+Z undoes it.";
+        Msg(touched == 0 ? Said.Of("shape.msg.nothing") + (bad > 0 ? Said.Of("shape.msg.noNumber", bad) : Said.Empty)
+            : clamped ? Said.Of("shape.msg.clamped")
+            : Said.Of("shape.msg.placed", touched));
         UpdateSaveBar();
     }
 
@@ -1752,7 +2025,7 @@ public sealed partial class MainWindow : Window
         SaveButton.Tip("top.save");
         ToolTip.SetTip(_liveBadge, Lang.T("top.liveBadge"));
         _pendingPill.Child = PendingText;
-        var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { _title, _subtitle } };
+        var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { TitleText, SubtitleText } };
         var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto") };
         var left = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { MapButton, names, AreaNav } };
         var right = new StackPanel
@@ -1797,7 +2070,7 @@ public sealed partial class MainWindow : Window
     private Border StatusBar()
     {
         var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto,Auto"), ColumnSpacing = 18 };
-        var tips = new TextBlock { Text = "Right drag turns · Wheel zooms · Middle drag slides · ? help", FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
+        var tips = new TextBlock { Text = Lang.T("help.statusTips"), FontSize = 12, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center };
         _selection.VerticalAlignment = _eye.VerticalAlignment = VerticalAlignment.Center;
         _selection.TextWrapping = _eye.TextWrapping = TextWrapping.NoWrap;
         _selection.MaxWidth = 380;
@@ -1826,15 +2099,16 @@ public sealed partial class MainWindow : Window
         var list = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12, RowSpacing = 5 };
         var rows = new (string Keys, string What)[]
         {
-            ("Left drag", "Use the tool"), ("Right drag", "Turn the view"), ("Wheel", "Zoom"),
-            ("Middle drag", "Slide the view (also Space + left drag, Shift + right drag, the View tool)"), ("W A S D", "Move around"),
-            ("F", "Walk at eye height · fly (Space up, C down) · back to the usual view"), ("1–9, 0, O", "Sculpt and paint tools (O: Erode)"),
-            ("B / P / T / G", "Area, Path, Place, Shape"), ("E / M / H", "Select, Measure, View (Esc too)"), ("[  ]", "Brush size"),
-            ("Ctrl+C / Ctrl+X / Ctrl+V", "Copy or cut the area or selection / paste it (R turns 90°, , . turn 1°, F mirrors)"),
-            ("Alt + wheel", "Turn the selection, the paste or the Place preview (, . too; Shift: 15°)"), ("Place: R", "New layout"),
-            ("Alt + click", "Pick the ground height"), ("Del", "Delete the selected objects"), ("I", "Inspect the selected object"),
-            ("PgUp / PgDn / End", "Lift, lower or drop the selection"),
-            ("Ctrl+Z / Ctrl+Y", "Undo / redo"), ("Ctrl+S", "Save"), ("V / L / ?", "View panel / history / this help"),
+            (Lang.T("help.leftDrag.keys"), Lang.T("help.leftDrag.what")), (Lang.T("help.rightDrag.keys"), Lang.T("help.rightDrag.what")),
+            (Lang.T("help.wheel.keys"), Lang.T("help.wheel.what")), (Lang.T("help.middleDrag.keys"), Lang.T("help.middleDrag.what")),
+            (Lang.T("help.move.keys"), Lang.T("help.move.what")), (Lang.T("help.walk.keys"), Lang.T("help.walk.what")),
+            (Lang.T("help.sculpt.keys"), Lang.T("help.sculpt.what")), (Lang.T("help.tools.keys"), Lang.T("help.tools.what")),
+            (Lang.T("help.select.keys"), Lang.T("help.select.what")), (Lang.T("help.brushSize.keys"), Lang.T("help.brushSize.what")),
+            (Lang.T("help.copy.keys"), Lang.T("help.copy.what")), (Lang.T("help.turn.keys"), Lang.T("help.turn.what")),
+            (Lang.T("help.layout.keys"), Lang.T("help.layout.what")), (Lang.T("help.pickHeight.keys"), Lang.T("help.pickHeight.what")),
+            (Lang.T("help.delete.keys"), Lang.T("help.delete.what")), (Lang.T("help.inspect.keys"), Lang.T("help.inspect.what")),
+            (Lang.T("help.lift.keys"), Lang.T("help.lift.what")), (Lang.T("help.undo.keys"), Lang.T("help.undo.what")),
+            (Lang.T("help.save.keys"), Lang.T("common.save")), (Lang.T("help.panels.keys"), Lang.T("help.panels.what")),
         };
         for (int i = 0; i < rows.Length; i++)
         {
@@ -1849,7 +2123,7 @@ public sealed partial class MainWindow : Window
         }
         var close = new Button { Content = Icons.Make("close", 14), Padding = new Thickness(5) }.Classed("ghost").Tip("card.close");
         close.Click += (_, _) => ShowRight(null);
-        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = "Controls", FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center } } };
+        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Children = { new TextBlock { Text = Lang.T("help.head.controls"), FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center } } };
         Grid.SetColumn(close, 1);
         head.Children.Add(close);
         record.Classes.Add("switch");
@@ -1861,10 +2135,10 @@ public sealed partial class MainWindow : Window
                 Children =
                 {
                     head, list,
-                    Ui.Hint("Edits stay within the game's limit of ±8 m from the original ground; points at the limit turn red (View: Limit marks)."),
-                    Ui.Hint("The outer line of points is locked so the area always joins its neighbours seamlessly."),
-                    Ui.Heading("This computer"),
-                    _fps, _info, record,
+                    Ui.Hint(Lang.T("help.hint.limit")),
+                    Ui.Hint(Lang.T("help.hint.edges")),
+                    Ui.Heading(Lang.T("help.head.computer")),
+                    _fps, LoadedInfo, record,
                 },
             },
         });
@@ -1970,13 +2244,13 @@ public sealed partial class MainWindow : Window
     /// <param name="indices">The new objects' indices in it.</param>
     internal void ShowKindsOf(WorldScene scene, IReadOnlyList<int> indices)
     {
-        var turned = new List<string>();
+        var turned = new List<Said>();
         foreach (var k in indices.Where(i => i < scene.Things.Count).Select(i => ObjectKinds.Of(NameOfPrefab(scene.Things[i].Prefab), scene.Things[i].Piece, scene.Things[i].Tamed)).Distinct())
         {
             if (_kindBoxes.TryGetValue(k, out var box) && box.IsChecked != true)
             {
                 box.IsChecked = true;
-                turned.Add(ObjectKinds.Label(k));
+                turned.Add(ObjectKinds.Name(k));
             }
         }
         // (The Workshop has no View panel to say it in.)
@@ -1986,8 +2260,7 @@ public sealed partial class MainWindow : Window
         }
         Dispatcher.UIThread.Post(() =>
         {
-            string said = MessageText.Text ?? "";
-            MessageText.Text = $"{(said != "" ? said + " " : "")}Switched on {string.Join(", ", turned)} in View, so what you placed stays visible.";
+            Msg(LastSaid + Said.Of("view.msg.switchedOn", Said.Join(", ", turned)));
         }, DispatcherPriority.Background);
     }
 
@@ -2006,10 +2279,11 @@ public sealed partial class MainWindow : Window
             }
             else
             {
-                MessageText.Text = "Nothing picked: click right on an object (only things that are shown can be picked).";
+                Msg("view.msg.nothingPicked");
             }
         };
-        MessageText.Text = $"Click an object to pick its kind for {label}. Esc cancels.";
+        // The label as the panel shows it; Claude reads its English.
+        Msg(new Said(Lang.T("view.msg.pickKind", label), Lang.En("view.msg.pickKind", Lang.EnglishOf(label))));
     }
     /// <summary>
     /// , . turn the paste by 1° (Shift: 15°); . is clockwise seen from above, like the other tools.
@@ -2034,176 +2308,6 @@ public sealed partial class MainWindow : Window
         _ => false,
     };
 
-    /// <summary>
-    /// The 3D editor's keys (shortcuts for the tools, the panels, undo, save and the like); none while typing in a box
-    /// or away from the editor.
-    /// </summary>
-    private void OnKey(object? sender, Avalonia.Input.KeyEventArgs e)
-    {
-        // Typing in a box: its keys are its own. The keys below are the 3D editor's: on the start page or
-        // the map they would act on the area left open behind it (an undo pushed live, unseen); under the busy veil
-        // (saving, reading the world again) they would wait on it or do it twice.
-        if (e.Source is TextBox || _pages.Content != _editorPage || IsBusy)
-        {
-            return;
-        }
-        var mods = e.KeyModifiers;
-        bool ctrl = mods.HasFlag(Avalonia.Input.KeyModifiers.Control) || mods.HasFlag(Avalonia.Input.KeyModifiers.Meta);
-        if (!ctrl && e.Key == Avalonia.Input.Key.Escape && View.PickObjectOnce != null)
-        {
-            View.PickObjectOnce = null;
-            MessageText.Text = "Picking cancelled.";
-            e.Handled = true;
-            return;
-        }
-        // The right-hand panels, as in the web editor: V the View panel, L the history, ? (or F3) the help.
-        if (!ctrl && e.Key is Avalonia.Input.Key.F3 or Avalonia.Input.Key.OemQuestion || (!ctrl && mods.HasFlag(Avalonia.Input.KeyModifiers.Shift) && e.Key == Avalonia.Input.Key.Oem2))
-        {
-            ShowRight(HelpCard.IsVisible ? null : HelpCard);
-            e.Handled = true;
-            return;
-        }
-        if (!ctrl && mods == Avalonia.Input.KeyModifiers.None && e.Key == Avalonia.Input.Key.V)
-        {
-            ShowRight(ViewPanelCard.IsVisible ? null : ViewPanelCard);
-            e.Handled = true;
-            return;
-        }
-        if (!ctrl && mods == Avalonia.Input.KeyModifiers.None && e.Key == Avalonia.Input.Key.L)
-        {
-            ShowRight(History.Card.IsVisible ? null : History.Card);
-            e.Handled = true;
-            return;
-        }
-        if (ctrl && e.Key == Avalonia.Input.Key.Z)
-        {
-            _ = mods.HasFlag(Avalonia.Input.KeyModifiers.Shift) ? Redo() : Undo();
-            e.Handled = true;
-        }
-        else if (ctrl && e.Key == Avalonia.Input.Key.Y)
-        {
-            _ = Redo();
-            e.Handled = true;
-        }
-        else if (ctrl && e.Key == Avalonia.Input.Key.C && Tools.Mode is ToolMode.Area or ToolMode.Select)
-        {
-            Copy();
-            e.Handled = true;
-        }
-        else if (ctrl && e.Key == Avalonia.Input.Key.X && Tools.Mode is ToolMode.Area or ToolMode.Select)
-        {
-            Cut();
-            e.Handled = true;
-        }
-        else if (ctrl && e.Key == Avalonia.Input.Key.V)
-        {
-            StartPaste();
-            e.Handled = true;
-        }
-        else if (Tools.Mode == ToolMode.Paste && !ctrl && e.Key is Avalonia.Input.Key.R or Avalonia.Input.Key.F or Avalonia.Input.Key.OemComma or Avalonia.Input.Key.OemPeriod or Avalonia.Input.Key.Escape)
-        {
-            switch (e.Key)
-            {
-                case Avalonia.Input.Key.R: View.Paste.TurnBy(90); break;
-                case Avalonia.Input.Key.F: View.Paste.Mirror = !View.Paste.Mirror; View.Paste.Notify(); break;
-                case Avalonia.Input.Key.OemComma or Avalonia.Input.Key.OemPeriod: TurnPaste(e.Key, mods.HasFlag(Avalonia.Input.KeyModifiers.Shift)); break;
-                default: Tools.ChooseMode(ToolMode.Area); break;
-            }
-            e.Handled = true;
-        }
-        else if (ctrl && e.Key == Avalonia.Input.Key.S)
-        {
-            _ = Save();
-            e.Handled = true;
-        }
-        else if (!ctrl && e.Key is Avalonia.Input.Key.OemOpenBrackets or Avalonia.Input.Key.OemCloseBrackets)
-        {
-            Tools.ResizeBrush(e.Key == Avalonia.Input.Key.OemOpenBrackets ? -1 : 1);
-            e.Handled = true;
-        }
-        else if (!ctrl && e.Key == Avalonia.Input.Key.Escape && Inspector.IsOpen)
-        {
-            Inspector.Close();
-            e.Handled = true;
-        }
-        else if (!ctrl && e.Key == Avalonia.Input.Key.I && Tools.SelectMode && View.Selected.Count == 1)
-        {
-            Inspect();
-            e.Handled = true;
-        }
-        else if (Tools.Mode == ToolMode.Place && PlaceInput.Key(e.Key, mods.HasFlag(Avalonia.Input.KeyModifiers.Shift), ctrl))
-        {
-            e.Handled = true;
-        }
-        else if (Tools.SelectMode && View.SelectTool.Key(e.Key, mods.HasFlag(Avalonia.Input.KeyModifiers.Shift)))
-        {
-            e.Handled = true;
-        }
-        else if (Tools.Mode == ToolMode.Area && !ctrl && e.Key is Avalonia.Input.Key.Enter or Avalonia.Input.Key.Return)
-        {
-            if (!View.Area.CloseWithEnter())
-            {
-                _ = AreaPanel.Apply();
-            }
-            e.Handled = true;
-        }
-        else if (Tools.Mode == ToolMode.Area && !ctrl && e.Key == Avalonia.Input.Key.Back)
-        {
-            View.Area.RemoveLast();
-            e.Handled = true;
-        }
-        else if (Tools.Mode == ToolMode.Area && !ctrl && e.Key == Avalonia.Input.Key.Escape && View.Area.Points.Count > 0)
-        {
-            View.Area.Clear();
-            e.Handled = true;
-        }
-        else if (Tools.Mode == ToolMode.Path && !ctrl && e.Key is Avalonia.Input.Key.Enter or Avalonia.Input.Key.Return)
-        {
-            ApplyPath();
-            e.Handled = true;
-        }
-        else if (Tools.Mode == ToolMode.Path && !ctrl && e.Key == Avalonia.Input.Key.Back)
-        {
-            View.Path.RemoveLast();
-            e.Handled = true;
-        }
-        else if (Tools.Mode == ToolMode.Path && !ctrl && e.Key == Avalonia.Input.Key.Escape && View.Path.Points.Count > 0)
-        {
-            View.Path.Clear();
-            e.Handled = true;
-        }
-        else if (Tools.Mode == ToolMode.Dungeon && !ctrl && e.Key == Avalonia.Input.Key.Delete && View.Dungeon.Delete())
-        {
-            e.Handled = true;
-        }
-        else if (Tools.Mode == ToolMode.Dungeon && !ctrl && e.Key == Avalonia.Input.Key.R)
-        {
-            View.Dungeon.Turn();
-            e.Handled = true;
-        }
-        else if (Tools.Mode == ToolMode.Measure && !ctrl && e.Key == Avalonia.Input.Key.Escape && View.Tape.A != null)
-        {
-            View.Tape.Clear();
-            e.Handled = true;
-        }
-        else if (!ctrl && e.Key == Avalonia.Input.Key.Escape)
-        {
-            Tools.Key("Escape");
-        }
-        else if (!ctrl && e.Key is Avalonia.Input.Key.E or Avalonia.Input.Key.M or Avalonia.Input.Key.G or Avalonia.Input.Key.P or Avalonia.Input.Key.B or Avalonia.Input.Key.O or Avalonia.Input.Key.T or Avalonia.Input.Key.H)
-        {
-            Tools.Key(e.Key.ToString());
-        }
-        else if (!ctrl && e.Key >= Avalonia.Input.Key.D0 && e.Key <= Avalonia.Input.Key.D9)
-        {
-            Tools.Key((e.Key - Avalonia.Input.Key.D0).ToString());
-        }
-        else if (!ctrl && e.Key >= Avalonia.Input.Key.NumPad0 && e.Key <= Avalonia.Input.Key.NumPad9)
-        {
-            Tools.Key((e.Key - Avalonia.Input.Key.NumPad0).ToString());
-        }
-    }
-
     // The View panel (top right): which kinds of objects are drawn, with how many the area has, and the water.
     /// <summary>
     /// One switch per kind of object.
@@ -2216,15 +2320,15 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Draw the water.
     /// </summary>
-    internal CheckBox WaterBox { get; } = new() { Content = "Water", IsChecked = true, FontSize = 12 };
+    internal CheckBox WaterBox { get; } = new() { Content = Lang.T("view.label.water"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Mark what is not saved yet (new objects keep a green marker).
     /// </summary>
-    internal CheckBox UnsavedBox { get; } = new() { Content = "Unsaved marks", IsChecked = true, FontSize = 12 };
+    internal CheckBox UnsavedBox { get; } = new() { Content = Lang.T("view.label.unsaved"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Mark ground points at the game's ±8 m limit in red.
     /// </summary>
-    internal CheckBox LimitBox { get; } = new() { Content = "Limit marks", IsChecked = true, FontSize = 12 };
+    internal CheckBox LimitBox { get; } = new() { Content = Lang.T("view.label.limit"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// One switch per overlay layer.
     /// </summary>
@@ -2236,7 +2340,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Colour the ground by its slope.
     /// </summary>
-    internal CheckBox SlopeBox { get; } = new() { Content = "Slope colours", FontSize = 12 };
+    internal CheckBox SlopeBox { get; } = new() { Content = Lang.T("view.label.slope"), FontSize = 12 };
     /// <summary>
     /// Building: who new pieces are built by (the player ids: the list's entries).
     /// </summary>
@@ -2252,7 +2356,7 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// Draw height lines.
     /// </summary>
-    internal CheckBox ContourBox { get; } = new() { Content = "Height lines every", FontSize = 12 };
+    internal CheckBox ContourBox { get; } = new() { Content = Lang.T("view.label.contour"), FontSize = 12 };
     /// <summary>
     /// How far apart the height lines are, in metres.
     /// </summary>
@@ -2269,27 +2373,27 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// The game's look, or plain colours and boxes.
     /// </summary>
-    internal CheckBox GameLookBox { get; } = new() { Content = "Game look", IsChecked = true, FontSize = 12 };
+    internal CheckBox GameLookBox { get; } = new() { Content = Lang.T("view.label.gameLook"), IsChecked = true, FontSize = 12 };
     /// <summary>
     /// Draw buildings see-through.
     /// </summary>
-    internal CheckBox SeeThroughBox { get; } = new() { Content = "See-through buildings", FontSize = 12 };
+    internal CheckBox SeeThroughBox { get; } = new() { Content = Lang.T("view.label.seeThrough"), FontSize = 12 };
     /// <summary>
     /// The 3D view's resolution: the screen's, balanced, or fast.
     /// </summary>
-    internal ComboBox ResolutionBox { get; } = new() { ItemsSource = new[] { "Sharp (the screen's)", "Balanced", "Fast" }, SelectedIndex = 0, FontSize = 12, MinWidth = 150 };
+    internal ComboBox ResolutionBox { get; } = new() { ItemsSource = new[] { Lang.T("view.res.sharp"), Lang.T("view.res.balanced"), Lang.T("view.res.fast") }, SelectedIndex = 0, FontSize = 12, MinWidth = 150 };
     /// <summary>
     /// Every kind, the water and the overlays as they start.
     /// </summary>
-    internal Button DefaultsButton { get; } = new() { Content = "Defaults", FontSize = 12 };
+    internal Button DefaultsButton { get; } = new() { Content = Lang.T("view.label.defaults"), FontSize = 12 };
     /// <summary>
     /// Every kind, the water and the overlays on.
     /// </summary>
-    internal Button AllButton { get; } = new() { Content = "All", FontSize = 12 };
+    internal Button AllButton { get; } = new() { Content = Lang.T("view.label.all"), FontSize = 12 };
     /// <summary>
     /// Only the ground: every kind, the water and the overlays off.
     /// </summary>
-    internal Button GroundButton { get; } = new() { Content = "Ground", FontSize = 12 };
+    internal Button GroundButton { get; } = new() { Content = Lang.T("view.label.ground"), FontSize = 12 };
     /// <summary>
     /// Each preset switch and whether it starts on (the defaults).
     /// </summary>
@@ -2312,13 +2416,41 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Builds the View panel.
+    /// Builds the View panel and wires it to the 3D view.
     /// </summary>
     private Border ViewPanel()
     {
+        var card = BuildViewPanel();
+        WireViewPanel();
+        return card;
+    }
+
+    /// <summary>
+    /// The View panel's overlay switches, each with its tip, as the 3D view shows the overlays now.
+    /// </summary>
+    /// <param name="list">The panel's list they go into.</param>
+    private void AddOverlayBoxes(StackPanel list)
+    {
+        foreach (var (layer, label) in new[] { (Overlays.Layer.Borders, Lang.T("view.overlay.borders")), (Overlays.Layer.Markers, Lang.T("view.overlay.markers")),
+            (Overlays.Layer.Wards, Lang.T("view.overlay.wards")), (Overlays.Layer.Stations, Lang.T("view.overlay.stations")),
+            (Overlays.Layer.Flatten, Lang.T("view.overlay.flatten")) })
+        {
+            var box = new CheckBox { Content = label, IsChecked = View.IsOverlayShown(layer), FontSize = 12, Tag = label };
+            ToolTip.SetTip(box, Tips.Overlay(layer));
+            _overlayBoxes[layer] = box;
+            list.Children.Add(box);
+        }
+    }
+
+    /// <summary>
+    /// Lays out the View panel: its headings, switches, lists and preset buttons with their tips; the switches'
+    /// starting states are kept as the presets' defaults.
+    /// </summary>
+    private Border BuildViewPanel()
+    {
         var list = new StackPanel { Spacing = 2 };
-        list.Children.Add(Ui.Heading("View", 0));
-        list.Children.Add(Heading("LOOK"));
+        list.Children.Add(Ui.Heading(Lang.T("rail.label.view"), 0));
+        list.Children.Add(Heading(Lang.T("view.head.look")));
         GameLookBox.Tip("view.gameLook");
         WaterBox.Tip("view.water");
         SlopeBox.Tip("view.slope");
@@ -2326,42 +2458,22 @@ public sealed partial class MainWindow : Window
         ContourStepBox.Tip("view.contourStep");
         DefaultsButton.Tip("view.defaults");
         AllButton.Tip("view.all");
-        GameLookBox.IsCheckedChanged += (_, _) => View.GameLookOn = GameLookBox.IsChecked == true;
         SeeThroughBox.Tip("view.seeThrough");
-        SeeThroughBox.IsCheckedChanged += (_, _) => View.SeeThroughBuildings = SeeThroughBox.IsChecked == true;
         ResolutionBox.Tip("view.res3d");
-        ResolutionBox.SelectionChanged += (_, _) =>
-        {
-            View.Resolution3D = (GlView.Resolution)Math.Max(0, ResolutionBox.SelectedIndex);
-            var (w, h) = View.RenderSize();
-            MessageText.Text = $"3D resolution: {ResolutionBox.SelectedItem}, {w}×{h} pixels.";
-        };
         list.Children.Add(GameLookBox);
         list.Children.Add(SeeThroughBox);
-        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = "3D resolution", FontSize = 12 }, ResolutionBox } });
-        list.Children.Add(Heading("OBJECTS"));
+        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = Lang.T("view.label.res3d"), FontSize = 12 }, ResolutionBox } });
+        list.Children.Add(Heading(Lang.T("view.head.objects")));
         foreach (var k in ObjectKinds.All)
         {
             var box = new CheckBox { Content = ObjectKinds.Label(k), IsChecked = View.IsShown(k), FontSize = 12 };
             ToolTip.SetTip(box, Tips.Kind(k));
-            box.IsCheckedChanged += (_, _) => View.SetShown(k, box.IsChecked == true);
             _kindBoxes[k] = box;
             list.Children.Add(box);
         }
-        WaterBox.IsCheckedChanged += (_, _) => View.ShowWater = WaterBox.IsChecked == true;
-        UnsavedBox.IsCheckedChanged += (_, _) => View.ShowNewMarkers = UnsavedBox.IsChecked == true;
-        LimitBox.IsCheckedChanged += (_, _) => View.LimitMarks = LimitBox.IsChecked == true;
         list.Children.Add(WaterBox);
-        list.Children.Add(Heading("OVERLAYS"));
-        foreach (var (layer, label) in new[] { (Overlays.Layer.Borders, "Zone borders"), (Overlays.Layer.Markers, "Location markers"), (Overlays.Layer.Wards, "Ward areas"),
-            (Overlays.Layer.Stations, "Build ranges"), (Overlays.Layer.Flatten, "Location flattening") })
-        {
-            var box = new CheckBox { Content = label, IsChecked = View.IsOverlayShown(layer), FontSize = 12, Tag = label };
-            ToolTip.SetTip(box, Tips.Overlay(layer));
-            box.IsCheckedChanged += (_, _) => View.SetOverlay(layer, box.IsChecked == true);
-            _overlayBoxes[layer] = box;
-            list.Children.Add(box);
-        }
+        list.Children.Add(Heading(Lang.T("view.head.overlays")));
+        AddOverlayBoxes(list);
         UnsavedBox.Tip("view.unsaved");
         list.Children.Add(UnsavedBox);
         LimitBox.Tip("view.limit");
@@ -2371,37 +2483,14 @@ public sealed partial class MainWindow : Window
         {
             _viewDefaults[box] = box.IsChecked == true;
         }
-        DefaultsButton.Click += (_, _) => ShowPreset(ViewPreset.Defaults);
-        AllButton.Click += (_, _) => ShowPreset(ViewPreset.All);
-        GroundButton.Click += (_, _) => ShowPreset(ViewPreset.Ground);
         GroundButton.Tip("view.ground");
         list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 6, 0, 0), Children = { DefaultsButton, AllButton, GroundButton } });
-        View.OverlaysBuilt += o =>
-        {
-            void Count(Overlays.Layer l, int n) => _overlayBoxes[l].Content = Ui.Counted((string)_overlayBoxes[l].Tag!, n);
-            Count(Overlays.Layer.Markers, o.Locations);
-            Count(Overlays.Layer.Wards, o.Wards);
-            Count(Overlays.Layer.Stations, o.Stations);
-            Count(Overlays.Layer.Flatten, o.Flattened);
-        };
-        list.Children.Add(Heading("BUILDING"));
+        list.Children.Add(Heading(Lang.T("view.head.building")));
         BuilderBox.Tip("view.builder");
-        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = "Built by", FontSize = 12 }, BuilderBox } });
-        BuilderBox.SelectionChanged += async (_, _) => await BuilderChosen();
-        list.Children.Add(Heading("GROUND (game look)"));
-        SlopeBox.IsCheckedChanged += (_, _) => View.SlopeColours = SlopeBox.IsChecked == true;
-        void Contour() => View.ContourStep = ContourBox.IsChecked == true ? float.Parse((string)ContourStepBox.SelectedItem!) : 0;
-        ContourBox.IsCheckedChanged += (_, _) => Contour();
-        ContourStepBox.SelectionChanged += (_, _) => Contour();
+        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = Lang.T("view.label.builtBy"), FontSize = 12 }, BuilderBox } });
+        list.Children.Add(Heading(Lang.T("view.head.ground")));
         list.Children.Add(SlopeBox);
-        list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ContourBox, ContourStepBox, new TextBlock { Text = "m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } });
-        View.KindCounts += counts =>
-        {
-            foreach (var (k, box) in _kindBoxes)
-            {
-                box.Content = Ui.Counted(ObjectKinds.Label(k), counts.GetValueOrDefault(k));
-            }
-        };
+        list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ContourBox, ContourStepBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } });
         list.Children.Add(PlayersControl());
         // The web editor's switches.
         foreach (var box in Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(list).OfType<CheckBox>())
@@ -2410,21 +2499,75 @@ public sealed partial class MainWindow : Window
             box.FontSize = 12.5;
         }
         list.Width = 240;
-        return new Border
+        return Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             Margin = new Thickness(10),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top,
             // Scrolls when the window is too short for it (a bar only then).
             Child = new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, Content = list },
+        });
+    }
+
+    /// <summary>
+    /// Wires the View panel (built first) to the 3D view: each switch and list sets what is drawn, the presets set
+    /// the switches, and the view's counts go into the switches' labels.
+    /// </summary>
+    private void WireViewPanel()
+    {
+        GameLookBox.IsCheckedChanged += (_, _) => View.GameLookOn = GameLookBox.IsChecked == true;
+        SeeThroughBox.IsCheckedChanged += (_, _) => View.SeeThroughBuildings = SeeThroughBox.IsChecked == true;
+        ResolutionBox.SelectionChanged += (_, _) =>
+        {
+            View.Resolution3D = (GlView.Resolution)Math.Max(0, ResolutionBox.SelectedIndex);
+            var (w, h) = View.RenderSize();
+            var name = View.Resolution3D switch
+            {
+                GlView.Resolution.Sharp => Said.Of("view.res.sharp"),
+                GlView.Resolution.Balanced => Said.Of("view.res.balanced"),
+                _ => Said.Of("view.res.fast"),
+            };
+            Msg("view.msg.resolution", name, w, h);
+        };
+        foreach (var (k, box) in _kindBoxes)
+        {
+            box.IsCheckedChanged += (_, _) => View.SetShown(k, box.IsChecked == true);
+        }
+        WaterBox.IsCheckedChanged += (_, _) => View.ShowWater = WaterBox.IsChecked == true;
+        UnsavedBox.IsCheckedChanged += (_, _) => View.ShowNewMarkers = UnsavedBox.IsChecked == true;
+        LimitBox.IsCheckedChanged += (_, _) => View.LimitMarks = LimitBox.IsChecked == true;
+        foreach (var (layer, box) in _overlayBoxes)
+        {
+            box.IsCheckedChanged += (_, _) => View.SetOverlay(layer, box.IsChecked == true);
+        }
+        DefaultsButton.Click += (_, _) => ShowPreset(ViewPreset.Defaults);
+        AllButton.Click += (_, _) => ShowPreset(ViewPreset.All);
+        GroundButton.Click += (_, _) => ShowPreset(ViewPreset.Ground);
+        View.OverlaysBuilt += o =>
+        {
+            void Count(Overlays.Layer l, int n) => _overlayBoxes[l].Content = Ui.Counted((string)_overlayBoxes[l].Tag!, n);
+            Count(Overlays.Layer.Markers, o.Locations);
+            Count(Overlays.Layer.Wards, o.Wards);
+            Count(Overlays.Layer.Stations, o.Stations);
+            Count(Overlays.Layer.Flatten, o.Flattened);
+        };
+        BuilderBox.SelectionChanged += async (_, _) => await BuilderChosen();
+        SlopeBox.IsCheckedChanged += (_, _) => View.SlopeColours = SlopeBox.IsChecked == true;
+        ContourBox.IsCheckedChanged += (_, _) => ShowContours();
+        ContourStepBox.SelectionChanged += (_, _) => ShowContours();
+        View.KindCounts += counts =>
+        {
+            foreach (var (k, box) in _kindBoxes)
+            {
+                box.Content = Ui.Counted(ObjectKinds.Label(k), counts.GetValueOrDefault(k));
+            }
         };
     }
+
+    /// <summary>
+    /// Draws height lines at the chosen step, or none when they are off.
+    /// </summary>
+    private void ShowContours() => View.ContourStep = ContourBox.IsChecked == true ? float.Parse((string)ContourStepBox.SelectedItem!) : 0;
 
     /// <summary>
     /// What is remembered between runs (the tests' windows: in memory only, unless a test gives one).
@@ -2444,106 +2587,268 @@ public sealed partial class MainWindow : Window
         History = new HistoryPanel(() => Session);
         Inspector = new InspectorPanel(() => Session);
         Blueprints = new BlueprintsPanel(View.Paste, () => View.Scene);
-        Blueprints.Message += t => MessageText.Text = t;
+        WireBlueprints();
+        SetUpWorkshop();
+        WireInspector();
+        WireSelectPanel();
+        AskPlayerId = () => Dialogs.AskText(this, Lang.T("select.ask.playerId.title"), Lang.T("select.ask.playerId.text"));
+        History.Message += t => { Msg(t); UpdateSaveBar(); };
+        History.Allow = AllowEarlier;
+        MaskPanel = new MaskPanel(Mask);
+        WireGroundTools();
+        MeasurePanel = new MeasurePanel(View);
+        DungeonPanel = new DungeonPanel(View);
+        WireDungeonPanel();
+        PathPanel = new PathPanel(View, Tools.Brush);
+        PathPanel.ApplyAsked += ApplyPath;
+        AreaPanel = new AreaPanel(View, () => Session, prefab => _models?.NameOf(prefab) ?? Terrain.PrefabCatalog.DisplayName(prefab));
+        WireAreaPanel();
+        PastePanel = new PastePanel(View.Paste);
+        SetUpPlaceTool();
+        PlaceInput = new PlaceInput(View, PlaceTool) { Session = () => Session };
+        PlaceInput.Message += s => { Msg(s); UpdateSaveBar(); };
+        View.Place = PlaceInput;
+        PlacePanel = new PlacePanel(PlaceInput, () => View.Scene, NameOfPrefab);
+        BuildPanel = new BuildPanel(PlaceInput) { Models = () => _models };
+        SetUpLibrary();
+        WirePlacePanel();
+        PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
+        View.PasteClicked += PasteAt;
+        Title = $"Valheim World Editor {BuildInfo.Version}";
+        Icon = new WindowIcon(Avalonia.Platform.AssetLoader.Open(new Uri($"avares://{typeof(MainWindow).Assembly.GetName().Name}/Assets/icon.png")));
+        Width = Options.WindowWidth > 0 ? Options.WindowWidth : 1500;
+        Height = Options.WindowHeight > 0 ? Options.WindowHeight : 950;
+        Background = Ui.Bg;
+        HelpCard = Help(RecordBox());
+        ConfirmSave = text => Dialogs.Ask(this, Lang.T("save.ask.save.title"), text, Lang.T("common.save"));
+        Ask = (title, text, yes, no) => Dialogs.Ask(this, title, text, yes, no);
+        Tell = text => Dialogs.Tell(this, "Valheim World Editor", text);
+        var tools = BuildToolColumn();
+        WireShapePanels();
+        WireScriptPanel();
+        Tools.ToolChanged += OnToolChanged;
+        View.SelectTool.Message += (said, _) => Msg(said);
+        View.StrokeEnded += OnStrokeEnded;
+        WireKeys();
+        Closing += async (_, e) => await OnClosingAsync(e);
+        // Takes the mouse for the 3D view (see GlView.Attach).
+        var surface = new Border { Background = Brushes.Transparent };
+        Surface = surface;
+        SetUpDrops(surface);
+        SetUpEditorWorld();
+        ViewPanelCard = ViewPanel();
+        LayOutRightPanels();
+        _editorPage = new Grid { Children = { View, surface, PlayerLabels, tools, LocationNote, ViewPanelCard, History.Card, Inspector.Card, HelpCard, TopBar(), StatusBar() } };
+        _busy.Child = _busyText;
+        _pages.Content = _editorPage;
+        Content = new Grid { Children = { _pages, _busy } };
+        View.Attach(surface, this);
+        View.AltWheel = AltWheel;
+        View.CtrlWheel = CtrlWheel;
+        TrackCursor(surface);
+        View.Perf = _perf;
+        WireViewReports();
+        // Once really closed (Closing also comes when "Keep editing" keeps the window open).
+        Closed += (_, _) => { MapPage?.Dispose(); _perf.Flush(); Prefs.Flush(); PlacePanel.Memory.Flush(); };
+        RememberPrefs();
+        LoadedInfo.Text = Lang.T("world.msg.loading");
+        Opened += async (_, _) => await OnOpenedAsync(load);
+    }
+
+    /// <summary>
+    /// Wires the Blueprints panel to the window: its messages, pasting a blueprint, its dialogs and file picker.
+    /// </summary>
+    private void WireBlueprints()
+    {
+        Blueprints.Message += Msg;
         Blueprints.Pasting += () => { ViewPanelCard.IsVisible = true; StartPaste(); };
         Blueprints.AskDetails = (start, cost) => Dialogs.AskBlueprint(this, start, cost);
         Blueprints.Models = () => _models;
-        Blueprints.Confirm = text => Dialogs.Ask(this, "Blueprints", text, "Yes");
+        Blueprints.Confirm = text => Dialogs.Ask(this, Lang.T("rail.label.blueprints"), text, Lang.T("common.yes"));
         Blueprints.OpenUrl = Launcher.LaunchUriAsync;
-        SetUpWorkshop();
-        Blueprints.PickFile = async () =>
+        Blueprints.PickFile = () =>
         {
-            var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
-            {
-                Title = "Import a .blueprint (Homestead, PlanBuild) or .vbuild file",
-                FileTypeFilter = [new Avalonia.Platform.Storage.FilePickerFileType("Blueprints") { Patterns = BlueprintPatterns }],
-            });
-            return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
+            var (title, type) = ImportPicker();
+            return Pickers.File(StorageProvider, title, type);
         };
-        Inspector.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
+    }
+
+    /// <summary>
+    /// The import picker's title and file type, in the language in use (asked for each time it opens).
+    /// </summary>
+    internal static (string Title, Avalonia.Platform.Storage.FilePickerFileType Type) ImportPicker()
+    {
+        var type = new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("rail.label.blueprints")) { Patterns = BlueprintPatterns };
+        return (Lang.T("blueprints.pickTitle"), type);
+    }
+
+    /// <summary>
+    /// Wires the Inspector to the window: its messages, the object it replaced, its dialog, and the View panel back
+    /// when it closes.
+    /// </summary>
+    private void WireInspector()
+    {
+        Inspector.Message += said => { Msg(said); UpdateSaveBar(); };
         Inspector.Replaced += i => View.Select([i]);
-        Inspector.Confirm = text => Dialogs.Ask(this, "Contents", text, "Apply anyway");
+        Inspector.Confirm = (title, text, yes) => Dialogs.Ask(this, title, text, yes);
         Inspector.Closed += () => ViewPanelCard.IsVisible = true;
-        SelectPanel.Message += t => MessageText.Text = t;
+    }
+
+    /// <summary>
+    /// Wires the Select panel to the window and the 3D view: the selection and saved selections, picking a kind,
+    /// Inspect (also asked from the view), Claim and Replace.
+    /// </summary>
+    private void WireSelectPanel()
+    {
+        SelectPanel.Message += Msg;
         SelectPanel.PickKindAsked += PickKind;
         SelectPanel.NameOf = NameOfPrefab;
         SelectPanel.WorldName = () => World?.World.Name is { Length: > 0 } n ? n : View.Scene?.World?.Name is { Length: > 0 } m ? m : null;
         SelectPanel.Things = () => View.Scene?.Things;
         SelectPanel.SelectedIds = () => View.Selected;
         SelectPanel.SelectIds = ids => { Tools.ChooseSelect(); View.Select(ids); };
-        SelectPanel.AskName = initial => Dialogs.AskText(this, "Keep the selection", "Name of the selection:", initial);
-        SelectPanel.Confirm = text => Dialogs.Ask(this, "Saved selections", text, "Forget");
+        SelectPanel.AskName = initial => Dialogs.AskText(this, Lang.T("select.ask.keep.title"), Lang.T("select.ask.keep.text"), initial);
+        SelectPanel.Confirm = text => Dialogs.Ask(this, Lang.T("select.ask.forget.title"), text, Lang.T("select.label.forget"));
         SelectPanel.InspectButton.Click += (_, _) => Inspect();
         View.InspectAsked += () => { if (View.Selected.Count == 1) { Inspect(); } };
         SelectPanel.ClaimButton.Click += (_, _) => Claim();
-        AskPlayerId = () => Dialogs.AskText(this, "Built by", "Player id to write as the builder (the number Valheim keeps for a character):");
-        History.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
-        History.Allow = AllowEarlier;
-        SelectPanel.ReplaceAsked += prefab =>
+        SelectPanel.ReplaceAsked += ReplaceSelection;
+    }
+
+    /// <summary>
+    /// Replace (Select panel): the selected objects become the given kind.
+    /// </summary>
+    /// <param name="prefab">The kind they become.</param>
+    private void ReplaceSelection(int prefab)
+    {
+        View.SelectTool.Commit();
+        var sel = View.Selected.ToList();
+        if (Session is not { } s || sel.Count == 0)
         {
-            View.SelectTool.Commit();
-            var sel = View.Selected.ToList();
-            if (Session is not { } s || sel.Count == 0)
-            {
-                MessageText.Text = "Select objects to replace first.";
-                return;
-            }
-            AreaPanel!.Replace(s, sel, prefab);
-            View.Select([]);
-            UpdateSaveBar();
-        };
-        MaskPanel = new MaskPanel(Mask);
+            Msg("select.msg.replaceFirst");
+            return;
+        }
+        AreaPanel!.Replace(s, sel, prefab);
+        View.Select([]);
+        UpdateSaveBar();
+    }
+
+    /// <summary>
+    /// Wires the ground brushes: stamps, the tools' messages, No limit, loading a stamp picture and the brush's
+    /// Alt + click.
+    /// </summary>
+    private void WireGroundTools()
+    {
         View.StampClicked += StampAt;
-        Tools.Message += t => MessageText.Text = t;
-        Tools.NoLimitChanged += on =>
+        Tools.Message += Msg;
+        Tools.NoLimitChanged += OnNoLimitChanged;
+        Tools.LoadStampAsked += async () => await LoadStampAsync();
+        View.BrushAltClick += OnBrushAltClick;
+    }
+
+    /// <summary>
+    /// No limit switched (tool options): the session's ground and the Area panel's same switch follow.
+    /// </summary>
+    /// <param name="on">Whether the ground tools go past the game's ±8 m.</param>
+    private void OnNoLimitChanged(bool on)
+    {
+        Session?.Ground.NoLimit = on;
+        // The Area panel shows the same switch under Flatten, Raise and Lower.
+        if (AreaPanel != null)
         {
-            Session?.Ground.NoLimit = on;
-            // The Area panel shows the same switch under Flatten, Raise and Lower.
-            if (AreaPanel != null)
-            {
-                AreaPanel.NoLimitBox.IsChecked = on;
-                AreaPanel.RefreshVolume();
-            }
-            MessageText.Text = on ? "No limit: the ground tools go past the game's ±8 m. Saving turns that ground into ground discs every player's game counts as generated ground." : "The ground tools keep to the game's ±8 m.";
-        };
-        Tools.LoadStampAsked += async () =>
+            AreaPanel.NoLimitBox.IsChecked = on;
+            AreaPanel.RefreshVolume();
+        }
+        Msg(on ? Said.Of("brush.msg.noLimitOn") : Said.Of("brush.msg.noLimitOff"));
+    }
+
+    /// <summary>
+    /// Load stamp…: a grayscale picture chosen from the computer's files becomes a brush shape.
+    /// </summary>
+    private async Task LoadStampAsync()
+    {
+        if (await Pickers.File(StorageProvider, Lang.T("brush.pickStamp"),
+            new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("brush.pictures")) { Patterns = PicturePatterns }) is not string path)
         {
-            var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
-            {
-                Title = "Use a grayscale picture as the brush shape",
-                FileTypeFilter = [new Avalonia.Platform.Storage.FilePickerFileType("Pictures") { Patterns = PicturePatterns }],
-            });
-            if (picked.Count == 0 || !picked[0].Path.IsFile)
-            {
-                return;
-            }
-            string path = picked[0].Path.LocalPath;
-            if (Stamps.FromPicture(File.ReadAllBytes(path)) is { } data)
-            {
-                Tools.AddStamp(Path.GetFileNameWithoutExtension(path), data);
-            }
-            else
-            {
-                MessageText.Text = "That picture could not be read.";
-            }
-        };
-        View.BrushAltClick += (h, shift) =>
+            return;
+        }
+        LoadStamp(path);
+    }
+
+    /// <summary>
+    /// The picture at <paramref name="path"/> added to the brush's stamps and chosen, or said in the status bar that it
+    /// could not be read.
+    /// </summary>
+    /// <param name="path">The picture file.</param>
+    internal void LoadStamp(string path)
+    {
+        if (ReadStampFile(path) is { } bytes && Stamps.FromPicture(bytes) is { } data)
         {
-            if (shift)
+            Tools.AddStamp(Path.GetFileNameWithoutExtension(path), data);
+        }
+        else
+        {
+            Msg("brush.msg.unreadable");
+        }
+    }
+
+    /// <summary>
+    /// The stamp picture's contents, or null, logged without its path, when it cannot be opened (gone since it was
+    /// chosen, not allowed, a folder, in use) or is larger than <see cref="Stamps.MostPictureBytes"/>.
+    /// </summary>
+    /// <param name="path">The picture file.</param>
+    private static byte[]? ReadStampFile(string path)
+    {
+        try
+        {
+            using var file = File.OpenRead(path);
+            if (file.Length > Stamps.MostPictureBytes)
             {
-                Mask.PickHeight(h);
-                MessageText.Text = $"Mask: ground between {h - 2:0.0} and {h + 2:0.0} m.";
+                Console.Error.WriteLine($"Load stamp: the stamp picture is not read: {file.Length} bytes, more than {Stamps.MostPictureBytes}.");
+                return null;
             }
-            else
-            {
-                Tools.FlattenTo(h);
-                MessageText.Text = $"Flatten to {h:0.0} m.";
-            }
-        };
-        MeasurePanel = new MeasurePanel(View);
-        DungeonPanel = new DungeonPanel(View);
+            byte[] bytes = new byte[file.Length];
+            file.ReadExactly(bytes);
+            return bytes;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            // The path may hold the user's name: the log says "the stamp picture" instead (the message has it in full).
+            string full = Path.IsPathFullyQualified(path) ? path : Path.Join(Environment.CurrentDirectory, path);
+            string why = ex.Message.Replace(full, "the stamp picture", StringComparison.Ordinal)
+                .Replace(path, "the stamp picture", StringComparison.Ordinal);
+            Console.Error.WriteLine($"Load stamp: the stamp picture could not be read: {ex.GetType().Name}: {why}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Alt + click with a brush: the ground's height there becomes Flatten's target, or with Shift the mask's band.
+    /// </summary>
+    /// <param name="h">The ground's height clicked.</param>
+    /// <param name="shift">Shift held: the mask's band instead.</param>
+    private void OnBrushAltClick(float h, bool shift)
+    {
+        if (shift)
+        {
+            Mask.PickHeight(h);
+            Msg("brush.msg.maskBand", h - 2, h + 2);
+        }
+        else
+        {
+            Tools.FlattenTo(h);
+            Msg("brush.msg.flattenTo", h);
+        }
+    }
+
+    /// <summary>
+    /// Wires the Dungeon panel and its Generate part: building in the dungeon, placing a generated one, going to it
+    /// or its entrance, opening it in the Workshop, and the dungeon tool's messages.
+    /// </summary>
+    private void WireDungeonPanel()
+    {
         DungeonPanel.BuildAsked += () => BuildInDungeon(true);
-        DungeonPanel.Gen.PlaceAsked += PlaceGenerated;
+        DungeonPanel.Gen.PlaceAsked += (settings, result) => PlaceGenerated(settings, result);
         DungeonPanel.Gen.DungeonAsked += GoToDungeon;
         DungeonPanel.Gen.EntranceAsked += GoToEntrance;
         DungeonPanel.Gen.WorkshopAsked += async s =>
@@ -2554,14 +2859,19 @@ public sealed partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                MessageText.Text = $"Could not open the dungeon in the Workshop: {ex.Message}";
+                Msg("dungeon.msg.notOpened", ex.Message);
             }
         };
-        View.Dungeon.Message += t => MessageText.Text = t;
-        PathPanel = new PathPanel(View, Tools.Brush);
-        PathPanel.ApplyAsked += ApplyPath;
-        AreaPanel = new AreaPanel(View, () => Session, prefab => _models?.NameOf(prefab) ?? Terrain.PrefabCatalog.DisplayName(prefab));
-        AreaPanel.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
+        View.Dungeon.Message += Msg;
+    }
+
+    /// <summary>
+    /// Wires the Area panel: its messages, No limit, picking a kind, copy, cut, paste, blueprints and the library,
+    /// the clipboard's line, its dialog and its picture and backup pickers.
+    /// </summary>
+    private void WireAreaPanel()
+    {
+        AreaPanel.Message += s => { Msg(s); UpdateSaveBar(); };
         AreaPanel.NoLimitChanged += on => Tools.NoLimitBox.IsChecked = on;
         AreaPanel.PickKindAsked += PickKind;
         AreaPanel.SwitchToSelect += Tools.ChooseSelect;
@@ -2575,56 +2885,71 @@ public sealed partial class MainWindow : Window
         View.Paste.Changed += () =>
         {
             var c = View.Paste.Clip;
-            AreaPanel.ClipInfo.Text = c == null ? "Copies the shown objects inside the selection, with the ground under their buildings."
-                : $"Clipboard{(c.Name != null ? $" ({c.Name})" : "")}: {c.W} × {c.H} m, {c.Objects.Count} object(s).";
+            AreaPanel.ClipInfo.Text = c == null ? Lang.T("area.hint.clip")
+                : c.Name != null ? Lang.T("area.hint.clipboardNamed", c.Name, c.W, c.H, c.Objects.Count) : Lang.T("area.hint.clipboard", c.W, c.H, c.Objects.Count);
         };
-        AreaPanel.Confirm = text => Dialogs.Ask(this, "Reset zones", text, "Reset when saving");
-        AreaPanel.PickPicture = async () =>
+        AreaPanel.Confirm = text => Dialogs.Ask(this, Lang.T("area.action.reset"), text, Lang.T("area.ask.reset.yes"));
+        AreaPanel.PickPicture = () =>
         {
-            var picked = await StorageProvider.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
-            {
-                Title = "Import a heightmap (grayscale PNG)",
-                FileTypeFilter = [new Avalonia.Platform.Storage.FilePickerFileType("PNG pictures") { Patterns = PngPatterns }],
-            });
-            return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
+            var (title, type) = HeightmapPicker();
+            return Pickers.File(StorageProvider, title, type);
         };
-        AreaPanel.PickFolder = async () =>
-        {
-            var picked = await StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions
-            {
-                Title = "Choose a backup (or copy) of this world: the folder with _main.<n>.chunks",
-            });
-            return picked.Count > 0 && picked[0].Path.IsFile ? picked[0].Path.LocalPath : null;
-        };
-        PastePanel = new PastePanel(View.Paste);
+        AreaPanel.PickFolder = () => Pickers.Folder(StorageProvider, BackupPickerTitle());
+    }
+
+    /// <summary>
+    /// The Area tool's heightmap picker's title and file type, in the language in use (asked for each time it opens).
+    /// </summary>
+    internal static (string Title, Avalonia.Platform.Storage.FilePickerFileType Type) HeightmapPicker()
+    {
+        var type = new Avalonia.Platform.Storage.FilePickerFileType(Lang.T("area.pick.png")) { Patterns = PngPatterns };
+        return (Lang.T("area.pick.picture"), type);
+    }
+
+    /// <summary>
+    /// The Area tool's backup folder picker's title, in the language in use (asked for each time it opens).
+    /// </summary>
+    internal static string BackupPickerTitle() => Lang.T("area.pick.backup");
+
+    /// <summary>
+    /// Gives the Place tool what it reads from the window: the brush, the scene, the mask, names and model boxes.
+    /// </summary>
+    private void SetUpPlaceTool()
+    {
         PlaceTool.Brush = Tools.Brush;
         PlaceTool.Scene = () => View.Scene;
         PlaceTool.Mask = () => Session?.MaskNow();
         PlaceTool.NameOf = NameOfPrefab;
         PlaceTool.ModelBox = ModelBox;
-        PlaceInput = new PlaceInput(View, PlaceTool) { Session = () => Session };
-        PlaceInput.Message += t => { MessageText.Text = t; UpdateSaveBar(); };
-        View.Place = PlaceInput;
-        PlacePanel = new PlacePanel(PlaceInput, () => View.Scene, NameOfPrefab);
-        BuildPanel = new BuildPanel(PlaceInput) { Models = () => _models };
-        SetUpLibrary();
-        PlacePanel.Message += t => MessageText.Text = t;
-        PlacePanel.AskName = () => Dialogs.AskText(this, "Save as preset", "Name of the preset:");
-        PlacePanel.Confirm = text => Dialogs.Ask(this, "Delete the preset", text, "Delete");
-        PastePanel.Done += () => Tools.ChooseMode(ToolMode.Area);
-        View.PasteClicked += PasteAt;
-        Title = $"Valheim World Editor {BuildInfo.Version}";
-        Icon = new WindowIcon(Avalonia.Platform.AssetLoader.Open(new Uri($"avares://{typeof(MainWindow).Assembly.GetName().Name}/Assets/icon.png")));
-        Width = Options.WindowWidth > 0 ? Options.WindowWidth : 1500;
-        Height = Options.WindowHeight > 0 ? Options.WindowHeight : 950;
-        Background = Ui.Bg;
-        var record = new CheckBox { Content = "Record frame rates", FontSize = 12.5 };
+    }
+
+    /// <summary>
+    /// Wires the Place panel's messages and its preset dialogs.
+    /// </summary>
+    private void WirePlacePanel()
+    {
+        PlacePanel.Message += Msg;
+        PlacePanel.AskName = () => Dialogs.AskText(this, Lang.T("place.ask.savePreset.title"), Lang.T("place.ask.savePreset.text"));
+        PlacePanel.Confirm = text => Dialogs.Ask(this, Lang.T("place.ask.deletePreset.title"), text, Lang.T("common.delete"));
+    }
+
+    /// <summary>
+    /// The Help card's Record frame rates switch: frame rates written to the log file while on.
+    /// </summary>
+    private CheckBox RecordBox()
+    {
+        var record = new CheckBox { Content = Lang.T("help.label.record"), FontSize = 12.5 };
         record.IsCheckedChanged += (_, _) => { _perf.On = record.IsChecked == true; _perf.Restart(); if (!_perf.On) { _perf.Flush(); } };
         ToolTip.SetTip(record, Lang.T("view.perfFile", Tips.Of("view.perf"), Ui.Tilde(PerfLog.FilePath)));
-        HelpCard = Help(record);
-        ConfirmSave = text => Dialogs.Ask(this, "Save into the world", text, "Save");
-        Ask = (title, text, yes, no) => Dialogs.Ask(this, title, text, yes, no);
-        Tell = text => Dialogs.Tell(this, "Valheim World Editor", text);
+        return record;
+    }
+
+    /// <summary>
+    /// The column of tools on the left: the rail, the tool's options and every tool's panel, each scrolling when the
+    /// window is too short; the panels start hidden until their tool is chosen.
+    /// </summary>
+    private StackPanel BuildToolColumn()
+    {
         var tools = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -2645,140 +2970,197 @@ public sealed partial class MainWindow : Window
             }
         }
         SelectPanel.Card.IsVisible = MeasurePanel.Card.IsVisible = DungeonPanel.Card.IsVisible = ShapePanel.Card.IsVisible = MountainPanel.Card.IsVisible = ScriptPanel.Card.IsVisible = PathPanel.Card.IsVisible = AreaPanel.Card.IsVisible = PastePanel.Card.IsVisible = MaskPanel.Card.IsVisible = PlacePanel.Card.IsVisible = false;
+        Tools.Options.VerticalAlignment = VerticalAlignment.Top;
+        Tools.Rail.VerticalAlignment = VerticalAlignment.Top;
+        return tools;
+    }
+
+    /// <summary>
+    /// Wires the Shape and Mountain panels to the 3D view's preview and clicks, and the Path panel's cave to the rail.
+    /// </summary>
+    private void WireShapePanels()
+    {
         ShapePanel.Changed += () => View.ShapeRadius = ShapePanel.Radius;
-        MountainPanel.Changed += () =>
-        {
-            if (Tools.Mode == ToolMode.Mountain)
-            {
-                View.ShapeRadius = MountainPanel.Spec.Reach;
-                View.MountainPreview = Mountain.Shape(MountainPanel.Spec);
-            }
-        };
-        View.ShapeClicked += (x, z) =>
-        {
-            if (Tools.Mode == ToolMode.Mountain)
-            {
-                _ = PutMountain(x, z);
-            }
-            else
-            {
-                PutShape(x, z);
-            }
-        };
+        MountainPanel.Changed += OnMountainChanged;
+        View.ShapeClicked += OnShapeClicked;
         Tools.CaveChosen += () =>
         {
             PathPanel.ChooseCave();
             Tools.MarkCave(true);
         };
         PathPanel.ActionChanged += a => Tools.MarkCave(a == PathTool.Action.Cave);
+    }
+
+    /// <summary>
+    /// The Mountain panel changed: with the Mountain tool on, the preview follows.
+    /// </summary>
+    private void OnMountainChanged()
+    {
+        if (Tools.Mode == ToolMode.Mountain)
+        {
+            View.ShapeRadius = MountainPanel.Spec.Reach;
+            View.MountainPreview = Mountain.Shape(MountainPanel.Spec);
+        }
+    }
+
+    /// <summary>
+    /// A click with the Shape or Mountain tool: puts the shape, or the mountain, there.
+    /// </summary>
+    /// <param name="x">Where, east-west.</param>
+    /// <param name="z">Where, north-south.</param>
+    private void OnShapeClicked(float x, float z)
+    {
+        if (Tools.Mode == ToolMode.Mountain)
+        {
+            _ = PutMountain(x, z);
+        }
+        else
+        {
+            PutShape(x, z);
+        }
+    }
+
+    /// <summary>
+    /// Wires the Script panel's Run, Stop, messages and its dialog.
+    /// </summary>
+    private void WireScriptPanel()
+    {
         ScriptPanel.RunAsked += () => _ = RunScript();
         ScriptPanel.StopAsked += () => _stopScript?.Invoke();
-        ScriptPanel.Message += t => MessageText.Text = t;
-        Tools.Options.VerticalAlignment = VerticalAlignment.Top;
-        Tools.Rail.VerticalAlignment = VerticalAlignment.Top;
-        Tools.ToolChanged += t =>
+        ScriptPanel.Message += Msg;
+        ScriptPanel.Confirm = text => Dialogs.Ask(this, Lang.T("script.ask.replace.title"), text, Lang.T("script.ask.replace.yes"));
+    }
+
+    /// <summary>
+    /// Another tool chosen: the 3D view takes it, its panel shows and the others hide, and what the last tool left
+    /// (the dungeon's cut, building in the dungeon, the kinds chooser) is put away.
+    /// </summary>
+    /// <param name="t">The brush chosen, if the tool is a brush.</param>
+    private void OnToolChanged(BrushTool? t)
+    {
+        View.Tool = t;
+        View.Mode = Tools.Mode;
+        SelectPanel.Card.IsVisible = Tools.SelectMode;
+        MeasurePanel.Card.IsVisible = Tools.Mode == ToolMode.Measure;
+        if (Tools.Mode == ToolMode.Measure)
         {
-            View.Tool = t;
-            View.Mode = Tools.Mode;
-            SelectPanel.Card.IsVisible = Tools.SelectMode;
-            MeasurePanel.Card.IsVisible = Tools.Mode == ToolMode.Measure;
-            if (Tools.Mode == ToolMode.Dungeon)
+            // The ground may have changed since the tape was drawn.
+            MeasurePanel.Refresh();
+        }
+        if (Tools.Mode == ToolMode.Dungeon)
+        {
+            DungeonPanel.Reload();
+        }
+        else if (DungeonPanel.Card.IsVisible && !BuildingInDungeon)
+        {
+            // Not into Build here (it builds under the dungeon's cut): the cut off.
+            DungeonPanel.Leave();
+        }
+        DungeonPanel.Card.IsVisible = Tools.Mode == ToolMode.Dungeon;
+        ShapePanel.Card.IsVisible = Tools.Mode == ToolMode.Shape;
+        MountainPanel.Card.IsVisible = Tools.Mode == ToolMode.Mountain;
+        ScriptPanel.Card.IsVisible = Tools.Mode == ToolMode.Script;
+        if (Blueprints.Card.IsVisible != (Tools.Mode == ToolMode.Blueprints))
+        {
+            Blueprints.Toggle(Tools.Mode == ToolMode.Blueprints);
+        }
+        View.ShapeRadius = Tools.Mode == ToolMode.Mountain ? MountainPanel.Spec.Reach : ShapePanel.Radius;
+        View.MountainPreview = Tools.Mode == ToolMode.Mountain ? Mountain.Shape(MountainPanel.Spec) : null;
+        PathPanel.Card.IsVisible = Tools.Mode == ToolMode.Path;
+        if (Tools.Mode == ToolMode.Path)
+        {
+            Tools.MarkCave(View.Path.Act == PathTool.Action.Cave);
+        }
+        AreaPanel.Card.IsVisible = Tools.Mode == ToolMode.Area;
+        PastePanel.Card.IsVisible = Tools.Mode == ToolMode.Paste;
+        if (BuildingInDungeon && Tools.Mode != ToolMode.Place)
+        {
+            if (Tools.Mode != ToolMode.Dungeon)
             {
-                DungeonPanel.Reload();
-            }
-            else if (DungeonPanel.Card.IsVisible && !BuildingInDungeon)
-            {
-                // Not into Build here (it builds under the dungeon's cut): the cut off.
                 DungeonPanel.Leave();
             }
-            DungeonPanel.Card.IsVisible = Tools.Mode == ToolMode.Dungeon;
-            ShapePanel.Card.IsVisible = Tools.Mode == ToolMode.Shape;
-            MountainPanel.Card.IsVisible = Tools.Mode == ToolMode.Mountain;
-            ScriptPanel.Card.IsVisible = Tools.Mode == ToolMode.Script;
-            if (Blueprints.Card.IsVisible != (Tools.Mode == ToolMode.Blueprints))
-            {
-                Blueprints.Toggle(Tools.Mode == ToolMode.Blueprints);
-            }
-            View.ShapeRadius = Tools.Mode == ToolMode.Mountain ? MountainPanel.Spec.Reach : ShapePanel.Radius;
-            View.MountainPreview = Tools.Mode == ToolMode.Mountain ? Mountain.Shape(MountainPanel.Spec) : null;
-            PathPanel.Card.IsVisible = Tools.Mode == ToolMode.Path;
-            if (Tools.Mode == ToolMode.Path)
-            {
-                Tools.MarkCave(View.Path.Act == PathTool.Action.Cave);
-            }
-            AreaPanel.Card.IsVisible = Tools.Mode == ToolMode.Area;
-            PastePanel.Card.IsVisible = Tools.Mode == ToolMode.Paste;
-            if (BuildingInDungeon && Tools.Mode != ToolMode.Place)
-            {
-                if (Tools.Mode != ToolMode.Dungeon)
-                {
-                    DungeonPanel.Leave();
-                }
-                BuildInDungeon(false);
-            }
-            PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place && !InWorkshop && !BuildingInDungeon;
-            BuildPanel.Card.IsVisible = Tools.Mode == ToolMode.Place && (InWorkshop || BuildingInDungeon);
-            if (Tools.Mode != ToolMode.Place)
-            {
-                PlacePanel.Chooser.IsVisible = false;
-                PlacePanel.KindsButton.Content = PlacePanel.ChooseKindsText;
-            }
-            PlaceInput.Refresh();
-            MaskPanel.Card.IsVisible = !InWorkshop && Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape or ToolMode.Mountain or ToolMode.Place;
-            if (Tools.Mode == ToolMode.Area)
-            {
-                AreaPanel.Refresh();
-            }
-        };
-        View.SelectTool.Message += (text, _) => MessageText.Text = text;
-        View.StrokeEnded += msg =>
+            BuildInDungeon(false);
+        }
+        PlacePanel.Card.IsVisible = Tools.Mode == ToolMode.Place && !InWorkshop && !BuildingInDungeon;
+        BuildPanel.Card.IsVisible = Tools.Mode == ToolMode.Place && (InWorkshop || BuildingInDungeon);
+        if (Tools.Mode != ToolMode.Place)
         {
-            MessageText.Text = msg;
-            if (Tools.Tool == BrushTool.Flatten && Tools.Brush.TargetFromClick)
-            {
-                Tools.ShowTarget(Tools.Brush.Target);
-            }
-            UpdateSaveBar();
-        };
+            PlacePanel.Chooser.IsVisible = false;
+            PlacePanel.KindsButton.Content = PlacePanel.ChooseKindsText;
+        }
+        PlaceInput.Refresh();
+        MaskPanel.Card.IsVisible = !InWorkshop && Tools.Mode is ToolMode.Brush or ToolMode.Path or ToolMode.Area or ToolMode.Shape or ToolMode.Mountain or ToolMode.Place;
+        if (Tools.Mode == ToolMode.Area)
+        {
+            AreaPanel.Refresh();
+        }
+    }
+
+    /// <summary>
+    /// A stroke ended: its message, Flatten's target when it came from the click, and the save bar.
+    /// </summary>
+    /// <param name="msg">What the stroke did.</param>
+    private void OnStrokeEnded(Said msg)
+    {
+        Msg(msg);
+        if (Tools.Tool == BrushTool.Flatten && Tools.Brush.TargetFromClick)
+        {
+            Tools.ShowTarget(Tools.Brush.Target);
+        }
+        UpdateSaveBar();
+    }
+
+    /// <summary>
+    /// The editor's keys, and Shift held shown by the Place brush (a drag removes).
+    /// </summary>
+    private void WireKeys()
+    {
         KeyDown += OnKey;
         // Shift held: the Place brush shows that a drag removes.
         KeyDown += (_, e) => { if (e.Key is Avalonia.Input.Key.LeftShift or Avalonia.Input.Key.RightShift) { PlaceInput.ShiftHeld(true); } };
         KeyUp += (_, e) => { if (e.Key is Avalonia.Input.Key.LeftShift or Avalonia.Input.Key.RightShift) { PlaceInput.ShiftHeld(false); } };
-        Closing += async (_, e) =>
+    }
+
+    /// <summary>
+    /// The window is closing: unsaved changes (or an unsaved Workshop building) keep it open and ask first; quitting
+    /// anyway closes it again. Otherwise the tunnel to a live game is closed.
+    /// </summary>
+    /// <param name="e">The closing, cancelled to ask.</param>
+    private async Task OnClosingAsync(WindowClosingEventArgs e)
+    {
+        var pending = World?.Pending ?? Session?.Pending ?? (0, 0, 0, 0);
+        if (InWorkshop && !_closeAnyway)
         {
-            var pending = World?.Pending ?? Session?.Pending ?? (0, 0, 0, 0);
-            if (InWorkshop && !_closeAnyway)
+            if (WorkshopDirty)
             {
-                if (WorkshopDirty)
+                e.Cancel = true;
+                if (await Ask(Lang.T("save.ask.quitBuilding.title"), Lang.T("save.ask.quitBuilding.text"), Lang.T("save.ask.quit.yes"), Lang.T("common.keepBuilding")))
                 {
-                    e.Cancel = true;
-                    if (await Ask("Unsaved building", "The building in the Workshop is not saved as a blueprint. Quit without saving it?", "Quit anyway", "Keep building"))
-                    {
-                        _closeAnyway = true;
-                        Close();
-                    }
+                    _closeAnyway = true;
+                    Close();
                 }
-                return;
             }
-            if (_closeAnyway || pending is (0, 0, 0, 0))
-            {
-                Tunnel.Close();
-                return;
-            }
-            e.Cancel = true;
-            if (await Ask("Unsaved changes", $"{(World?.IsLive == true ? "Not applied" : "Unsaved")}: {Describe(pending)}. Quit without {(World?.IsLive == true ? "applying" : "saving")} them?", "Quit anyway", "Keep editing"))
-            {
-                _closeAnyway = true;
-                Close();
-            }
-        };
-        // Takes the mouse for the 3D view (see GlView.Attach).
-        var surface = new Border { Background = Brushes.Transparent };
-        Surface = surface;
-        SetUpDrops(surface);
-        SetUpEditorWorld();
-        ViewPanelCard = ViewPanel();
-        // The panels on the right: under the top bar, one at a time.
+            return;
+        }
+        if (_closeAnyway || pending is (0, 0, 0, 0))
+        {
+            Tunnel.Close();
+            return;
+        }
+        e.Cancel = true;
+        string question = World?.IsLive == true ? Lang.T("save.ask.quitLive.text", Describe(pending)) : Lang.T("save.ask.quit.text", Describe(pending));
+        if (await Ask(Lang.T("save.ask.quit.title"), question, Lang.T("save.ask.quit.yes"), Lang.T("save.ask.quit.no")))
+        {
+            _closeAnyway = true;
+            Close();
+        }
+    }
+
+    /// <summary>
+    /// The panels on the right: under the top bar, one at a time, the View panel shown first.
+    /// </summary>
+    private void LayOutRightPanels()
+    {
         foreach (var right in new[] { ViewPanelCard, History.Card, Inspector.Card, HelpCard })
         {
             right.Margin = new Thickness(10, 70, 10, 58);
@@ -2786,114 +3168,158 @@ public sealed partial class MainWindow : Window
             right.VerticalAlignment = VerticalAlignment.Top;
         }
         ViewButton.Classes.Add("on");
-        _editorPage = new Grid { Children = { View, surface, PlayerLabels, tools, LocationNote, ViewPanelCard, History.Card, Inspector.Card, HelpCard, TopBar(), StatusBar() } };
-        _busy.Child = _busyText;
-        _pages.Content = _editorPage;
-        Content = new Grid { Children = { _pages, _busy } };
-        View.Attach(surface, this);
-        View.AltWheel = AltWheel;
-        // Building (the Workshop): Ctrl + wheel lifts the piece.
-        View.CtrlWheel = (dir, shift) =>
+    }
+
+    /// <summary>
+    /// Ctrl + wheel: pasting, the paste is lowered (into a mountain: Clear the site digs it out) or raised; building
+    /// (the Workshop), the piece is lifted; otherwise (false) the wheel is not taken.
+    /// </summary>
+    /// <param name="dir">The wheel's direction: 1 up, -1 down.</param>
+    /// <param name="shift">Shift held: finer steps.</param>
+    /// <returns>Whether a tool took it.</returns>
+    private bool CtrlWheel(int dir, bool shift)
+    {
+        // Pasting: the paste lowered (into a mountain: Clear the site digs it out) or raised.
+        if (Tools.Mode == ToolMode.Paste)
         {
-            // Pasting: the paste lowered (into a mountain: Clear the site digs it out) or raised.
-            if (Tools.Mode == ToolMode.Paste)
-            {
-                PastePanel.OffsetBox.Value = Math.Round((PastePanel.OffsetBox.Value ?? 0) + dir * (shift ? 0.1m : 0.5m), 2);
-                MessageText.Text = $"Paste height: {PastePanel.OffsetBox.Value:+0.0#;-0.0#;0} m from the ground clicked (Ctrl + wheel; Shift: 0.1 m).";
-                return true;
-            }
-            if (Tools.Mode != ToolMode.Place || !PlaceTool.Building)
-            {
-                return false;
-            }
-            PlaceInput.Lift(dir * (shift ? 0.1f : 0.5f));
-            BuildPanel.ShowLift();
+            PastePanel.OffsetBox.Value = Math.Round((PastePanel.OffsetBox.Value ?? 0) + dir * (shift ? 0.1m : 0.5m), 2);
+            Msg("view.msg.pasteHeight", PastePanel.OffsetBox.Value);
             return true;
-        };
+        }
+        if (Tools.Mode != ToolMode.Place || !PlaceTool.Building)
+        {
+            return false;
+        }
+        PlaceInput.Lift(dir * (shift ? 0.1f : 0.5f));
+        BuildPanel.ShowLift();
+        return true;
+    }
+
+    /// <summary>
+    /// The status bar's cursor readout follows the mouse over the 3D view (and is read again after a stroke).
+    /// </summary>
+    /// <param name="surface">The control that takes the mouse for the 3D view.</param>
+    private void TrackCursor(Control surface)
+    {
         surface.PointerMoved += (_, e) => ShowCursor(e.GetPosition(surface));
         surface.PointerExited += (_, _) => ShowCursor(null);
         View.StrokeEnded += _ => ShowCursor(_cursorAt);
-        View.Perf = _perf;
-        View.StatsChanged += s => _fps.Text = $"{s.Fps} frames/s · {s.WorkMs:0.0} ms of work each · {s.Objects:N0} objects ({s.Instances:N0} model parts in {s.Batches:N0} draws){(s.PendingModels > 0 ? $" · {s.PendingModels} kinds loading" : "")}";
-        View.SelectionChanged += _ =>
-        {
-            SelectPanel.Refresh();
-            // Open: it follows the selection.
-            var sel = View.Selected;
-            if (Inspector.IsOpen && sel.Count == 1 && sel.First() != Inspector.Index)
-            {
-                Inspect();
-            }
-        };
+    }
+
+    /// <summary>
+    /// Shows the 3D view's report in the help card's frame rate line, in the language in use.
+    /// </summary>
+    /// <param name="s">The view's report: frames, work, objects, draws and the kinds still loading.</param>
+    internal void ShowStats(GlView.Stats s) => _fps.Text = Lang.T("help.fps", s.Fps, s.WorkMs, s.Objects, s.Instances, s.Batches)
+        + (s.PendingModels > 0 ? " " + Lang.T("help.fpsLoading", s.PendingModels) : "");
+
+    /// <summary>
+    /// What the 3D view reports, shown: frame rates, the selection (the Select panel, the Inspector and the status
+    /// line follow it), walking or flying, and its status lines.
+    /// </summary>
+    private void WireViewReports()
+    {
+        View.StatsChanged += ShowStats;
+        View.SelectionChanged += _ => FollowSelection();
         View.SelectionChanged += things => _selection.Text = things.Count == 0 ? "" : things.Count == 1
-            ? $"Selected: {ThingName(things[0])} at {things[0].Position.X:0.0}, {things[0].Position.Z:0.0} (height {things[0].Position.Y:0.0})"
-            : $"Selected: {things.Count} objects ({string.Join(", ", things.GroupBy(ThingName).OrderByDescending(g => g.Count()).Take(4).Select(g => $"{g.Key} ×{g.Count()}"))})";
+            ? Lang.T("view.selected.one", ThingName(things[0]), things[0].Position.X, things[0].Position.Z, things[0].Position.Y)
+            : Lang.T("view.selected.many", things.Count, string.Join(", ", things.GroupBy(ThingName).OrderByDescending(g => g.Count()).Take(4).Select(g => $"{g.Key} ×{g.Count()}")));
         View.EyeChanged += e => _eye.Text = e switch
         {
-            GlView.EyeMode.Walk => "Walking at eye height: WASD moves (Shift runs), right drag looks around · F flies",
-            GlView.EyeMode.Fly => "Flying: WASD moves, Space up, C down (Shift faster) · F back to the usual view",
+            GlView.EyeMode.Walk => Lang.T("view.eye.walk"),
+            GlView.EyeMode.Fly => Lang.T("view.eye.fly"),
             _ => "",
         };
-        View.Status += t => { Options.Say(t); Dispatcher.UIThread.Post(() => _info.Text = t + "\n" + _info.Text); };
-        // Once really closed (Closing also comes when "Keep editing" keeps the window open).
-        Closed += (_, _) => { MapPage?.Dispose(); _perf.Flush(); Prefs.Flush(); };
-        RememberPrefs();
-        _info.Text = "Loading the world…";
-        Opened += async (_, _) =>
+        View.Status += t => { Options.Say(t.English); Dispatcher.UIThread.Post(() => LoadedInfo.Text = t.Shown + "\n" + LoadedInfo.Text); };
+    }
+
+    /// <summary>
+    /// The selection changed: the Select panel shows it, and an open Inspector follows a single selected object.
+    /// </summary>
+    private void FollowSelection()
+    {
+        SelectPanel.Refresh();
+        // Open: it follows the selection.
+        var sel = View.Selected;
+        if (Inspector.IsOpen && sel.Count == 1 && sel.First() != Inspector.Index)
         {
-            if (!load)
+            Inspect();
+        }
+    }
+
+    /// <summary>
+    /// The world given on the command line (--world, --zone, --size) opened straight in the 3D editor; one that cannot be
+    /// opened is said where the editor shows how it loaded (in the language in use) and on the console (in English).
+    /// </summary>
+    /// <param name="world">The world's folder or name (null: the first one found).</param>
+    /// <param name="zoneX">The middle zone, x.</param>
+    /// <param name="zoneZ">The middle zone, z.</param>
+    /// <param name="size">The area, in zones each way.</param>
+    internal async Task OpenDirect(string? world, int zoneX, int zoneZ, int size)
+    {
+        try
+        {
+            var session = await Task.Run(() => WorldSession.Open(WorldScene.FindWorld(world)));
+            World = session;
+            var scene = await Task.Run(() => WorldScene.Load(session, zoneX, zoneZ, size));
+            await ShowEditor(scene);
+        }
+        catch (Exception ex)
+        {
+            LoadedInfo.Text = Lang.T("world.msg.openFailed", ex.Message);
+            Options.Say(Lang.En("world.msg.openFailed", ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// The window is open: with <paramref name="load"/>, the game's look is checked, Claude's connection applied and
+    /// the models read; then the world given on the command line opens (or the start page shows), and the test
+    /// driver starts when asked.
+    /// </summary>
+    /// <param name="load">False (tests): nothing is loaded.</param>
+    private async Task OnOpenedAsync(bool load)
+    {
+        if (!load)
+        {
+            return;
+        }
+        Options.Say("window open");
+        // The game's look: copied from the player's Valheim when missing or after a game update
+        // (when driven by the tests, only whether it is there: they never copy from the game).
+        GameLook.Check(Settings);
+        // Claude's connection, when chosen in Settings.
+        await ClaudeServer.Apply(Settings, this);
+        if (!Options.Driver)
+        {
+            // The copy older editors made of the game's look: nothing reads it any more.
+            _ = Task.Run(GameLook.DeleteOldCopy);
+            _modelsLoading = Task.Run(ModelStore.Open);
+        }
+        if (Options.Direct)
+        {
+            // --world (and --zone): that area in the 3D editor at once.
+            await OpenDirect(Options.World, Options.ZoneX, Options.ZoneZ, Options.Size);
+        }
+        else
+        {
+            ShowStart();
+            // A world folder or a live game given on the command line: as if chosen on the start page.
+            if (Options.LiveUrl is string url)
             {
-                return;
+                StartPage!.SetMode("server");
+                StartPage.LiveUrl.Text = url;
+                StartPage.LiveToken.Text = Options.LiveToken ?? "";
+                await StartPage.ConnectUrl();
             }
-            Options.Say("window open");
-            // The game's look: copied from the player's Valheim when missing or after a game update
-            // (when driven by the tests, only whether it is there: they never copy from the game).
-            GameLook.Check(Settings);
-            // Claude's connection, when chosen in Settings.
-            await ClaudeServer.Apply(Settings, this);
-            if (!Options.Driver)
+            else if (Options.Folder is string folder)
             {
-                // The copy older editors made of the game's look: nothing reads it any more.
-                _ = Task.Run(GameLook.DeleteOldCopy);
-                _modelsLoading = Task.Run(ModelStore.Open);
+                StartPage!.SetMode("offline");
+                StartPage.OpenFolder(folder);
             }
-            if (Options.Direct)
-            {
-                // --world (and --zone): that area in the 3D editor at once.
-                try
-                {
-                    var world = await Task.Run(() => WorldSession.Open(WorldScene.FindWorld(Options.World)));
-                    World = world;
-                    var scene = await Task.Run(() => WorldScene.Load(world, Options.ZoneX, Options.ZoneZ, Options.Size));
-                    await ShowEditor(scene);
-                }
-                catch (Exception ex)
-                {
-                    _info.Text = "Could not open the world: " + ex.Message;
-                    Options.Say(_info.Text);
-                }
-            }
-            else
-            {
-                ShowStart();
-                // A world folder or a live game given on the command line: as if chosen on the start page.
-                if (Options.LiveUrl is string url)
-                {
-                    StartPage!.SetMode("server");
-                    StartPage.LiveUrl.Text = url;
-                    StartPage.LiveToken.Text = Options.LiveToken ?? "";
-                    await StartPage.ConnectUrl();
-                }
-                else if (Options.Folder is string folder)
-                {
-                    StartPage!.SetMode("offline");
-                    StartPage.OpenFolder(folder);
-                }
-            }
-            if (Options.Driver)
-            {
-                Driver.Start(this);
-            }
-        };
+        }
+        if (Options.Driver)
+        {
+            Driver.Start(this);
+        }
     }
 }

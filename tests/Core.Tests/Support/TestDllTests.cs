@@ -17,12 +17,9 @@ public sealed class TestDllTests : IDisposable
 
     public void Dispose()
     {
-        try
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, true);
-        }
-        catch (IOException)
-        {
         }
     }
 

@@ -76,12 +76,9 @@ public class NewWorldPageTests
         public void Dispose()
         {
             P.Dispose();
-            try
+            if (Directory.Exists(Root))
             {
                 Directory.Delete(Root, true);
-            }
-            catch
-            {
             }
         }
     }
@@ -89,7 +86,7 @@ public class NewWorldPageTests
     /// <summary>
     /// The posted work run, and the window laid out and drawn (so the pointer can hit what is in it).
     /// </summary>
-    private static void Settle()
+    internal static void Settle()
     {
         Dispatcher.UIThread.RunJobs();
         AvaloniaHeadlessPlatform.ForceRenderTimerTick();
@@ -100,7 +97,7 @@ public class NewWorldPageTests
     /// Runs this on the window's thread as the app does (posted, so the page's background work comes back to the
     /// window's thread, not to the test's), with the posted work it starts.
     /// </summary>
-    private static void OnUi(Action action)
+    internal static void OnUi(Action action)
     {
         Dispatcher.UIThread.Post(action);
         Dispatcher.UIThread.RunJobs();
@@ -109,7 +106,7 @@ public class NewWorldPageTests
     /// <summary>
     /// Clicks the button (on the window's thread) and runs the posted work it starts.
     /// </summary>
-    private static void Click(Button b) => OnUi(() => b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)));
+    internal static void Click(Button b) => OnUi(() => b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)));
 
     /// <summary>
     /// Every text block's text under the control, joined with " | ", for asserting on what it shows.
@@ -307,6 +304,8 @@ public class NewWorldPageTests
             Assert.Null(r.P.Shown);
             Assert.False(r.P.Loading.IsVisible);
             Assert.Empty(r.P.Marks.Children);
+            // The last seed's dungeon search stopped with it.
+            Assert.False(r.P.FindingDungeons);
             Assert.Equal("The seed is 1 to 10 characters, as in the game.", Texts(r.P.Info));
         }
     }
@@ -375,6 +374,22 @@ public class NewWorldPageTests
         Assert.Same(shown, r.P.Shown);
     }
 
+    // Leaving the page while a search reads the location rules: its source was disposed under it, and the search
+    // failed with ObjectDisposedException on a page no longer shown.
+    [AvaloniaFact]
+    public async Task LeavingDuringASearchIsNoFailure()
+    {
+        using var r = new Run();
+        OnUi(() =>
+        {
+            r.P.StartSearch();
+            r.P.Dispose();
+        });
+        await TestWindows.Until(() => r.P.Pending.IsCompleted, SeedWait);
+        Settle();
+        Assert.DoesNotContain("The search failed", Texts(r.P.Found));
+    }
+
     [AvaloniaFact]
     public async Task ASeedWhoseLookWasDroppedCanBeGeneratedAgain()
     {
@@ -407,7 +422,8 @@ public class NewWorldPageTests
         File.WriteAllText(Path.Combine(root, "Hall.fwl"), "");
         try
         {
-            foreach (string bad in new[] { "", "a/b" })
+            // The same names on every system (Linux alone would take "My:World?" and "CON").
+            foreach (string bad in new[] { "", "a/b", "My:World?", "CON" })
             {
                 Assert.StartsWith("Give the world a name that can be a file name", NewWorldPage.Check(root, bad, "abc"));
             }
@@ -470,6 +486,10 @@ public class NewWorldPageTests
         Assert.Equal("none", NewWorldPage.Km(float.PositiveInfinity));
         Assert.Equal("400 m", NewWorldPage.Km(430));
         Assert.Equal("1.2 km", NewWorldPage.Km(1234));
+        // Both ends: under 50 m said so (it read "000 m"), 950 m and more in km (it read "1000 m").
+        Assert.Equal("< 100 m", NewWorldPage.Km(30));
+        Assert.Equal("100 m", NewWorldPage.Km(60));
+        Assert.Equal("1.0 km", NewWorldPage.Km(970));
         Assert.Equal("Black Forest", NewWorldPage.Name(Heightmap.Biome.BlackForest));
         Assert.Equal("Ashlands", NewWorldPage.Name(Heightmap.Biome.AshLands));
         Assert.Equal("Deep North", NewWorldPage.Name(Heightmap.Biome.DeepNorth));

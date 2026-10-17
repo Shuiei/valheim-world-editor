@@ -19,6 +19,10 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
     private readonly string? _home = Environment.GetEnvironmentVariable("HOME");
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-tunnel-" + Guid.NewGuid().ToString("N")[..8]);
     private readonly TcpListener _bridge = new(IPAddress.Loopback, 0);
+    /// <summary>Ends the stand-in plugin's wait for the next connection (Dispose).</summary>
+    private readonly CancellationTokenSource _stop = new();
+    /// <summary>The stand-in plugin's work: Dispose waits for it to end, and its errors fail the test.</summary>
+    private readonly Task _hello;
 
     public TunnelTests(LocalSshd ssh)
     {
@@ -30,20 +34,30 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         Environment.SetEnvironmentVariable("HOME", Path.Combine(_dir, "empty-home"));
         // The stand-in plugin: says hello to whoever comes through the tunnel.
         _bridge.Start();
-        _ = Task.Run(async () =>
+        _hello = Task.Run(SayHello);
+    }
+
+    /// <summary>
+    /// Says hello to each connection until Dispose stops it.
+    /// </summary>
+    private async Task SayHello()
+    {
+        while (true)
         {
+            TcpClient c;
             try
             {
-                while (true)
-                {
-                    using var c = await _bridge.AcceptTcpClientAsync();
-                    await c.GetStream().WriteAsync(Encoding.ASCII.GetBytes("hello from the plugin\n"));
-                }
+                c = await _bridge.AcceptTcpClientAsync(_stop.Token);
             }
-            catch
+            catch (OperationCanceledException) when (_stop.IsCancellationRequested)
             {
+                return;
             }
-        });
+            using (c)
+            {
+                await c.GetStream().WriteAsync(Encoding.ASCII.GetBytes("hello from the plugin\n"));
+            }
+        }
     }
 
     private int BridgePort => ((IPEndPoint)_bridge.LocalEndpoint).Port;
@@ -51,23 +65,23 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
     public void Dispose()
     {
         Tunnel.Close();
-        _bridge.Stop();
         ServerConfig.PathOverride = _servers;
         Environment.SetEnvironmentVariable("HOME", _home);
-        try
+        _stop.Cancel();
+        Assert.True(_hello.Wait(TimeSpan.FromSeconds(30)), "the stand-in plugin did not stop");
+        _stop.Dispose();
+        _bridge.Stop();
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, true);
-        }
-        catch
-        {
         }
     }
 
     /// <summary>
     /// A tunnel request to the local sshd as the test's user, with its key unless another is given.
     /// </summary>
-    private Tunnel.Request Req(string? key = null, string? token = "tok", int? bridge = null, string? password = null, bool savePassword = false, string? name = null, string? folder = null) =>
-        new("127.0.0.1", _ssh.Port, _ssh.User, password, key ?? _ssh.Key, null, token, bridge, savePassword, name, folder);
+    private Tunnel.Request Req(string? key = null, string? token = "tok", int? bridge = null, string? password = null, bool savePassword = false, string? name = null, string? folder = null, int? sshPort = null) =>
+        new("127.0.0.1", sshPort ?? _ssh.Port, _ssh.User, password, key ?? _ssh.Key, null, token, bridge, savePassword, name, folder);
 
     /// <summary>
     /// The first line a local port answers (10 s at most).
@@ -206,16 +220,27 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         Assert.Equal("Saved", r.Server.Name);
         Assert.Equal("/nowhere", r.Server.GameFolder);
         Assert.Equal("hello from the plugin", ReadThrough(r.LocalPort));
-        // Another key than the one remembered: refused, saying both.
+        // Another key than the one remembered: refused, saying both, and naming every entry that pins the old key.
+        ServerConfig.Remember(new ServerConfig.Server { Name = "Other account", Host = "127.0.0.1", SshPort = _ssh.Port, User = "someone-else", HostKey = "SHA256:somethingelse" });
         ServerConfig.Remember(new ServerConfig.Server { Name = "Saved", Host = "127.0.0.1", SshPort = _ssh.Port, User = _ssh.User, HostKey = "SHA256:somethingelse" });
         r = await Tunnel.Start(Req());
         Assert.StartsWith($"The server's identity changed (it was SHA256:somethingelse, now {_ssh.Fingerprint}).", r.Error);
+        Assert.Contains("empty the HostKey line of [Saved], [Other account] in", r.Error);
         Assert.False(Tunnel.Open);
         // Known under another account only: the same server, so still refused (it was trusted afresh).
         ServerConfig.Forget(id);
-        ServerConfig.Remember(new ServerConfig.Server { Name = "Other account", Host = "127.0.0.1", SshPort = _ssh.Port, User = "someone-else", HostKey = "SHA256:somethingelse" });
         r = await Tunnel.Start(Req());
         Assert.StartsWith("The server's identity changed (it was SHA256:somethingelse", r.Error);
+        Assert.Contains("empty the HostKey line of [Other account] in", r.Error);
+    }
+
+    [Fact]
+    public async Task ALineBreakInWhatIsSavedIsRefusedBeforeConnecting()
+    {
+        var r = await Tunnel.Start(Req(token: "tok\nHostKey = SHA256:other"));
+
+        Assert.Equal("The server's details cannot hold line breaks: enter each on one line.", r.Error);
+        Assert.False(Tunnel.Open);
     }
 
     [Fact]
@@ -235,7 +260,8 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         _ssh.Need();
         string game = Path.Combine(_dir, "it's a server");
         Directory.CreateDirectory(Path.Combine(game, "BepInEx", "config"));
-        File.WriteAllText(Path.Combine(game, "BepInEx", "config", config), $"[Bridge]\nToken = never read\n Port = {BridgePort}\n");
+        string file = Path.Combine(game, "BepInEx", "config", Path.GetFileName(config));
+        File.WriteAllText(file, $"[Bridge]\nToken = never read\n Port = {BridgePort}\n");
         var r = await Tunnel.Start(Req(folder: slash ? game + "/ " : game));
         Assert.Null(r.Error);
         Assert.Equal(BridgePort, r.Server!.BridgePort);
@@ -246,9 +272,22 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         r = await Tunnel.Start(Req(folder: game, bridge: 4321));
         Assert.Equal(4321, r.Server!.BridgePort);
         // No settings there: the usual port.
-        File.Delete(Path.Combine(game, "BepInEx", "config", config));
+        File.Delete(file);
         r = await Tunnel.Start(Req(folder: game));
         Assert.Equal(5182, r.Server!.BridgePort);
+        // A port no number of 1 to 65535 fits: the usual port too (it threw, leaving the connection open).
+        File.WriteAllText(file, "Port = 99999999999\n");
+        r = await Tunnel.Start(Req(folder: game));
+        Assert.Equal(5182, r.Server!.BridgePort);
+    }
+
+    // A port out of range given: said before connecting (it threw).
+    [Fact]
+    public async Task APortOutOfRangeIsRefused()
+    {
+        Assert.Equal("A port is a number from 1 to 65535.", (await Tunnel.Start(new Tunnel.Request("127.0.0.1", 70000, "u", "pw", null, null, "tok", null, false, null))).Error);
+        Assert.Equal("A port is a number from 1 to 65535.", (await Tunnel.Start(Req(bridge: 0))).Error);
+        Assert.False(Tunnel.Open);
     }
 
     [Fact]
@@ -257,18 +296,88 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         _ssh.Need();
         Assert.Null((await Tunnel.Start(Req(bridge: BridgePort))).Error);
         string game = Path.Combine(_dir, "valheim");
-        Assert.Null(Tunnel.Diagnose(" "));
-        Assert.Equal($"The folder {game} does not exist on the server: check the server's Valheim folder.", Tunnel.Diagnose(game + "/"));
+        Assert.Null(await Tunnel.Diagnose(" "));
+        Assert.Equal($"The folder {game} does not exist on the server: check the server's Valheim folder.", await Tunnel.Diagnose(game + "/"));
         Directory.CreateDirectory(game);
-        Assert.Equal($"BepInEx is not installed in {game} on the server: install BepInExPack for Valheim there.", Tunnel.Diagnose(game));
+        Assert.Equal($"BepInEx is not installed in {game} on the server: install BepInExPack for Valheim there.", await Tunnel.Diagnose(game));
         Directory.CreateDirectory(Path.Combine(game, "BepInEx", "plugins", "Tie-WorldEditorBridge"));
-        Assert.Equal($"The plugin is not in {game}/BepInEx/plugins on the server: copy WorldEditorBridge.dll there and restart the server.", Tunnel.Diagnose(game));
+        Assert.Equal($"The plugin is not in {game}/BepInEx/plugins on the server: copy WorldEditorBridge.dll there and restart the server.", await Tunnel.Diagnose(game));
         File.WriteAllText(Path.Combine(game, "BepInEx", "plugins", "Tie-WorldEditorBridge", "WorldEditorBridge.dll"), "");
-        Assert.Equal("The plugin is installed but has never run: restart the server with BepInEx.", Tunnel.Diagnose(game));
+        Assert.Equal("The plugin is installed but has never run: restart the server with BepInEx.", await Tunnel.Diagnose(game));
         Directory.CreateDirectory(Path.Combine(game, "BepInEx", "config"));
         File.WriteAllText(Path.Combine(game, "BepInEx", "config", LocalGame.OldConfigName), "");
-        Assert.StartsWith("The plugin is installed but does not answer", Tunnel.Diagnose(game));
+        Assert.StartsWith("The plugin is installed but does not answer", await Tunnel.Diagnose(game));
         File.Move(Path.Combine(game, "BepInEx", "config", LocalGame.OldConfigName), Path.Combine(game, "BepInEx", "config", LocalGame.ConfigName));
-        Assert.StartsWith("The plugin is installed but does not answer", Tunnel.Diagnose(game));
+        Assert.StartsWith("The plugin is installed but does not answer", await Tunnel.Diagnose(game));
+    }
+
+    // The check of the server's folder waits on the server (15 s at most): it runs off the caller's thread, so the
+    // window does not freeze; it held the UI thread for the whole command.
+    [Fact]
+    public async Task TheServerCheckDoesNotHoldTheCallersThread()
+    {
+        _ssh.Need();
+        // A relay in front of sshd that holds the server's answers while the test holds the gate: the check cannot
+        // finish before the test lets it, however fast the server answers.
+        using var relay = new TcpListener(IPAddress.Loopback, 0);
+        relay.Start();
+        var gate = new SemaphoreSlim(1, 1);
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        _ = Task.Run(async () =>
+        {
+            using TcpClient app = await relay.AcceptTcpClientAsync(ct);
+            using var server = new TcpClient();
+            await server.ConnectAsync(IPAddress.Loopback, _ssh.Port, ct);
+            NetworkStream toApp = app.GetStream();
+            NetworkStream toServer = server.GetStream();
+            Task up = toApp.CopyToAsync(toServer, ct);
+            byte[] buffer = new byte[65536];
+            int n;
+            while ((n = await toServer.ReadAsync(buffer, ct)) > 0)
+            {
+                await gate.WaitAsync(ct);
+                try
+                {
+                    await toApp.WriteAsync(buffer.AsMemory(0, n), ct);
+                }
+                finally
+                {
+                    gate.Release();
+                }
+            }
+            await up;
+        }, ct);
+        Assert.Null((await Tunnel.Start(Req(bridge: BridgePort, sshPort: ((IPEndPoint)relay.LocalEndpoint).Port))).Error);
+        await gate.WaitAsync(ct);
+        var check = Tunnel.Diagnose(Path.Combine(_dir, "valheim"));
+        Assert.False(check.IsCompleted);
+        gate.Release();
+        Assert.StartsWith("The folder ", await check);
+    }
+
+    // The stand-in plugin's wait for the next connection ending with an error (its listener stopped under it) fails
+    // the disposal instead of passing unseen.
+    [Fact]
+    public void AnErrorInTheStandInPluginFailsTheDisposal()
+    {
+        var other = new TunnelTests(_ssh);
+        try
+        {
+            other._bridge.Stop();
+            Assert.True(SpinWait.SpinUntil(() => other._hello.IsFaulted, TimeSpan.FromSeconds(30)), "the stand-in plugin did not fail");
+
+            var e = Assert.Throws<AggregateException>(other.Dispose);
+
+            Assert.NotNull(e.InnerException);
+        }
+        finally
+        {
+            // What the failed disposal left: its stop and its folder.
+            other._stop.Dispose();
+            if (Directory.Exists(other._dir))
+            {
+                Directory.Delete(other._dir, true);
+            }
+        }
     }
 }

@@ -47,4 +47,37 @@ public class PlaceMemoryTests
         await Task.Delay(10);
         Assert.Empty(p.Memory.Presets);
     }
+
+    [AvaloniaFact]
+    public void SaveLaterWritesOnceAfterAPause()
+    {
+        // Every share-slider tick wrote place.json on the UI thread; now a pause of 300 ms writes it once.
+        string? was = PlaceMemory.PathOverride;
+        string dir = Path.Combine(Path.GetTempPath(), "vwe-placelater-" + Guid.NewGuid().ToString("N")[..8]);
+        try
+        {
+            PlaceMemory.PathOverride = Path.Combine(dir, "place.json");
+            var m = new PlaceMemory();
+            for (int i = 1; i <= 20; i++)
+            {
+                m.Weights["Oak1"] = i;
+                m.SaveLater();
+            }
+            Assert.False(File.Exists(PlaceMemory.PathOverride));
+            m.Flush();
+            Assert.Equal(20, PlaceMemory.Load().Weights["Oak1"]);
+            // Nothing waits any more: a second flush writes nothing.
+            File.Delete(PlaceMemory.PathOverride);
+            m.Flush();
+            Assert.False(File.Exists(PlaceMemory.PathOverride));
+        }
+        finally
+        {
+            PlaceMemory.PathOverride = was;
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+    }
 }

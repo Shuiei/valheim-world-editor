@@ -50,7 +50,8 @@ public static class ClaudeGuide
 		To change objects already there: move_objects (a group, turned round its middle), set_transform
 		(exact place, turn, size), replace_objects (another kind), get_object and set_object_data (what an
 		object holds in the save: a portal's tag, a builder, health…), set_contents (chests, stands, signs).
-		Each change gives the objects new ids: use the ids its answer gives.
+		Each change gives the objects new ids: use the ids its answer gives. Ids belong to the area
+		listed: once another area is opened, or the world read again after a save, list again.
 
 		The game's dungeons (Frost Caves, crypts, mines), 5000 m above their entrances: list_dungeons,
 		dungeon_rooms, then add_dungeon_room, remove_dungeon_room, close_dungeon_ends, set_dungeon_door.
@@ -142,7 +143,8 @@ public sealed class ClaudePrompts
 
 		Steps: open_workshop (ask me first if it has unsaved work); plan the size on the 2 m grid; build_floor,
 		build_walls (with doors), build_roof; details with place_pieces; then support_check and screenshot
-		from a few sides, and fix what would fall or looks wrong. Tell me when it is ready: I save the blueprint.
+		from a few sides, and fix what would fall or looks wrong. Tell me when it is ready, and save it with
+		save_blueprint only when I ask (with the name and tags I give).
 		""";
 
     /// <summary>Shape an area of the open world: the shaping guide and the steps, with what to make.</summary>

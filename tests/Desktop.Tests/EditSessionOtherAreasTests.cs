@@ -134,6 +134,38 @@ public class EditSessionOtherAreasTests
     }
 
     [AvaloniaFact]
+    public void DiscardDropsTheRedoKeptAsideFromAnotherAreaToo()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            var first = WorldScene.Load(dir, 0, 0, 1);
+            var owner = first.Owner!;
+            Raise(first.Session!, "Raise here");
+            owner.History = first.Session!.Export();
+            var b = WorldScene.Load(owner, 3, 3, 1).Session!;
+            Raise(b, "Raise there");
+            // Back in the first area, its step undone; then in the other area it is kept aside as a redo.
+            owner.History = b.Export();
+            var a = WorldScene.Load(owner, 0, 0, 1).Session!;
+            Assert.True(a.Undo());
+            owner.History = a.Export();
+            var there = WorldScene.Load(owner, 3, 3, 1).Session!;
+            Assert.Equal(1, there.Shelved);
+            // Discard there undoes its own step and drops every redo, the one kept aside too.
+            Assert.Equal(1, there.UndoUnapplied());
+            Assert.Equal(0, there.Shelved);
+            owner.History = there.Export();
+            var again = WorldScene.Load(owner, 0, 0, 1).Session!;
+            Assert.Empty(again.RedoList);
+        }
+        finally
+        {
+            Done(dir);
+        }
+    }
+
+    [AvaloniaFact]
     public void SavingFromAnotherAreaMarksTheStepsKeptAsideAsSaved()
     {
         string dir = Fixtures.CopyFixture();
@@ -186,6 +218,39 @@ public class EditSessionOtherAreasTests
             var home = WorldScene.LoadBlock(owner, 0, 0, 2, 1).Session!;
             Assert.Equal(new[] { "Older", "Over the edge" }, home.UndoList.Select(c => c.Label).ToArray());
             Assert.Equal(0, home.Shelved);
+        }
+        finally
+        {
+            Done(dir);
+        }
+    }
+
+    // A step kept aside does not bring the things it took away into the area: nothing there shows or undoes them.
+    [AvaloniaFact]
+    public void AStepKeptAsideAddsNoThingsToTheArea()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            var owner = WorldScene.Load(dir, 0, 0, 1).Owner!;
+            // A block of zones: one step raising the ground of zone (1, 0) and deleting a thing of zone (0, 0) (the
+            // fixture's things are all there).
+            var block = WorldScene.LoadBlock(owner, 0, 0, 4, 4).Session!;
+            var world = block.Scene.World!;
+            int near = block.Scene.Things.FindIndex(t => !t.Gone && t.Id >= 0 && world.ObjectRefs[t.Id].Zone == (0, 0));
+            Assert.True(near >= 0);
+            int id = block.Scene.Things[near].Id;
+            block.Commit("Both zones", g =>
+            {
+                int p = 32 * g.W + 96;
+                g.SetHeight(p, g.HeightOf(p) + 2);
+                return ([p], (95, 31, 97, 33));
+            }, [near], []);
+            owner.History = block.Export();
+            // The thing's zone alone: the step is partly in, so kept aside, and the thing it deleted stays out.
+            var area = WorldScene.Load(owner, 0, 0, 1).Session!;
+            Assert.Equal(1, area.Shelved);
+            Assert.DoesNotContain(area.Scene.Things, t => t.Id == id);
         }
         finally
         {

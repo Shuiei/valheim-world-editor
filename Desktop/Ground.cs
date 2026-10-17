@@ -23,6 +23,10 @@ public sealed class Ground
     public int X0 { get; }
     /// <summary>The block's first zone (world zone Z).</summary>
     public int Z0 { get; }
+    /// <summary>World x of grid point 0 (the block's west edge), as WorldScene.OriginX.</summary>
+    public float OriginX => X0 * 64f - 32f;
+    /// <summary>World z of grid point 0 (the block's south edge).</summary>
+    public float OriginZ => Z0 * 64f - 32f;
     /// <summary>The block's size in zones, west to east.</summary>
     public int ZonesX { get; }
     /// <summary>The block's size in zones, south to north.</summary>
@@ -52,9 +56,10 @@ public sealed class Ground
     /// <summary>
     /// The values as loaded (or last saved), and each zone's own saved values: zones share their edge
     /// points, and saved zones do not always agree on them. A point unchanged since loading is given
-    /// back with the zone's own value, so an untouched zone stays identical to what is saved.
+    /// back with the zone's own value, so an untouched zone stays identical to what is saved. Null until edits are
+    /// taken (TakeEdits): the ground as made, every value 0.
     /// </summary>
-    private State _loaded;
+    private State? _loaded;
     /// <summary>Each zone's own saved edit (block-relative zone; null when it had none), see <c>_loaded</c>.</summary>
     private readonly Dictionary<(int, int), ZoneEdit?> _own = [];
 
@@ -82,7 +87,6 @@ public sealed class Ground
         PMod = new byte[n];
         Lift = new float[n];
         BaseMask = new float[n * 4];
-        _loaded = Snapshot();
     }
 
     /// <summary>An empty, unchanged ground of a square block of <paramref name="size"/> × <paramref name="size"/> zones.</summary>
@@ -180,7 +184,9 @@ public sealed class Ground
     public bool Locked(int gx, int gz) => gx == 0 || gz == 0 || gx == W - 1 || gz == H - 1;
 
     /// <summary>
-    /// Moves a point to a height (kept within the game's limit unless NoLimit); true when the limit stopped it.
+    /// Moves a point to a height (kept within the game's limit unless NoLimit); true when a limit stopped it: the
+    /// point ends more than a millimetre from the height (the game's ±8 m, the level part's own ±8 m beside the
+    /// smoothing, or No limit's lift).
     /// </summary>
     public bool SetHeight(int g, float h)
     {
@@ -195,18 +201,35 @@ public sealed class Ground
             // The edit keeps its level and smoothing; the lift takes the rest.
             float lift = Math.Clamp(h - Base[g] - Math.Clamp(Level[g] + Smooth[g], -EditStore.MaxLevel, EditStore.MaxLevel), -EditStore.MaxLift, EditStore.MaxLift);
             Lift[g] = MathF.Abs(lift) < 1e-3f ? 0 : lift;
-            return false;
         }
-        float o = Original(g), target = Math.Clamp(h, o - EditStore.MaxLevel, o + EditStore.MaxLevel);
-        // Keep the smoothing part and put the rest in the level part (itself limited to ± 8 m).
-        Level[g] = Math.Clamp(target - o - Smooth[g], -EditStore.MaxLevel, EditStore.MaxLevel);
-        return MathF.Abs(target - h) > 1e-4f;
+        else
+        {
+            float o = Original(g), target = Math.Clamp(h, o - EditStore.MaxLevel, o + EditStore.MaxLevel);
+            // Keep the smoothing part and put the rest in the level part (itself limited to ± 8 m).
+            Level[g] = Math.Clamp(target - o - Smooth[g], -EditStore.MaxLevel, EditStore.MaxLevel);
+        }
+        // Where it ended, whichever limit stopped it (a lift under a millimetre is dropped: not a stop).
+        return MathF.Abs(HeightOf(g) - h) > 2e-3f;
     }
 
     /// <summary>
     /// The paint mask the game's terrain shader reads: the paint where painted, the generated one otherwise.
     /// </summary>
     public float MaskOf(int g, int c) => PMod[g] != 0 ? Paint[g * 4 + c] : BaseMask[g * 4 + c];
+
+    /// <summary>
+    /// Marks a point's paint as changed, starting from what it shows: the generated mask when it was not painted yet
+    /// (dirt around a location stays dirt under a light first touch), else the paint it has.
+    /// </summary>
+    /// <param name="g">The ground point index.</param>
+    public void StartPaint(int g)
+    {
+        if (PMod[g] == 0)
+        {
+            Array.Copy(BaseMask, g * 4, Paint, g * 4, 4);
+            PMod[g] = 1;
+        }
+    }
 
     /// <summary>
     /// The editable arrays, for every point (Snapshot) or only some points (an undo step keeps just the ones it
@@ -221,19 +244,22 @@ public sealed class Ground
     public List<(int X, int Z)> ZonesOf(IEnumerable<int> points)
     {
         var set = new HashSet<(int, int)>();
+        void Add(int zx, int zz)
+        {
+            if (zx >= 0 && zx < ZonesX && zz >= 0 && zz < ZonesZ)
+            {
+                set.Add((zx, zz));
+            }
+        }
         foreach (int g in points)
         {
+            // The zone the point is in, and the one west (south) of it when the point is on their shared edge.
             int gx = g % W, gz = g / W;
-            foreach (int zx in new[] { gx / 64, (int)Math.Floor((gx - 1) / 64.0) })
-            {
-                foreach (int zz in new[] { gz / 64, (int)Math.Floor((gz - 1) / 64.0) })
-                {
-                    if (zx >= 0 && zx < ZonesX && zz >= 0 && zz < ZonesZ)
-                    {
-                        set.Add((zx, zz));
-                    }
-                }
-            }
+            int x1 = gx / 64, x2 = (int)Math.Floor((gx - 1) / 64.0), z1 = gz / 64, z2 = (int)Math.Floor((gz - 1) / 64.0);
+            Add(x1, z1);
+            Add(x1, z2);
+            Add(x2, z1);
+            Add(x2, z2);
         }
         return [.. set.OrderBy(z => z.Item2).ThenBy(z => z.Item1)];
     }
@@ -241,13 +267,19 @@ public sealed class Ground
     /// <summary>True when nothing at the point (height, paint, lift) changed since loading or the last save.</summary>
     private bool UnchangedSinceLoad(int g)
     {
-        if (Level[g] != _loaded.Level[g] || Smooth[g] != _loaded.Smooth[g] || Mod[g] != _loaded.Mod[g] || PMod[g] != _loaded.PMod[g] || Lift[g] != _loaded.Lift[g])
+        if (_loaded is not { } loaded)
+        {
+            // As made: everything 0.
+            return Level[g] == 0 && Smooth[g] == 0 && Mod[g] == 0 && PMod[g] == 0 && Lift[g] == 0
+                && Paint[g * 4] == 0 && Paint[g * 4 + 1] == 0 && Paint[g * 4 + 2] == 0 && Paint[g * 4 + 3] == 0;
+        }
+        if (Level[g] != loaded.Level[g] || Smooth[g] != loaded.Smooth[g] || Mod[g] != loaded.Mod[g] || PMod[g] != loaded.PMod[g] || Lift[g] != loaded.Lift[g])
         {
             return false;
         }
         for (int c = 0; c < 4; c++)
         {
-            if (Paint[g * 4 + c] != _loaded.Paint[g * 4 + c])
+            if (Paint[g * 4 + c] != loaded.Paint[g * 4 + c])
             {
                 return false;
             }

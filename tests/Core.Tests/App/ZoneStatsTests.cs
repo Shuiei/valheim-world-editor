@@ -1,3 +1,4 @@
+using System.Numerics;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
@@ -6,7 +7,8 @@ using Xunit;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// The map's zone filter: generated zones with their buildings, edits and distance to buildings.
+/// The map's zone filter: generated zones with their buildings, edits and distance to buildings, objects added in
+/// the session counted.
 /// </summary>
 public class ZoneStatsTests
 {
@@ -48,5 +50,27 @@ public class ZoneStatsTests
             int expected = world.Pieces.Select(p => { var (x, z) = world.ObjectRefs[p.Id].Zone; return Math.Max(Math.Abs(x - r[0]), Math.Abs(z - r[1])); }).Min();
             Assert.Equal(expected, r[6]);
         }
+    }
+
+    [Fact]
+    public void ObjectsAddedInTheSessionAreCounted()
+    {
+        using var w = new TempWorld();
+        WorldSave world = w.Load();
+        var edits = new EditStore(world);
+        // A fence (a piece players build), a tree, and a fence given no builder (a generated ruin's): zone (78, 78).
+        edits.AddObjects([
+            new NewObject(-1, Fixtures.Hash("wood_fence"), new Vector3(5000, 30, 5000), Vector3.Zero, 0f),
+            new NewObject(-2, Fixtures.Hash("Beech1"), new Vector3(5010, 30, 5000), Vector3.Zero, 0f),
+            new NewObject(-3, Fixtures.Hash("wood_fence"), new Vector3(5000, 30, 5010), Vector3.Zero, 0f, Data: [ObjectField.NoBuilder]),
+        ]);
+
+        int[] data = ZoneStats.Compute(world, edits, (x, z) => 1);
+
+        int[] row = Enumerable.Range(0, data.Length / ZoneStats.Stride).Select(i => data.Skip(i * ZoneStats.Stride).Take(ZoneStats.Stride).ToArray())
+            .Single(r => r[0] == 78 && r[1] == 78);
+        Assert.Equal(1, row[3]);
+        Assert.Equal(3, row[5]);
+        Assert.Equal(0, row[6]);
     }
 }

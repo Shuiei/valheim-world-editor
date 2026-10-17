@@ -14,12 +14,44 @@ public static class Stamps
     /// <summary>A stamp's width and height in pixels: every stamp is Size × Size weights.</summary>
     public const int Size = 128;
 
+    /// <summary>
+    /// The most memory a picture may take once decoded, in bytes (8192 × 8192 colours with opacity): a larger one is
+    /// not read, rather than asking for more memory than there may be. Also the largest picture file loaded.
+    /// </summary>
+    internal const long MostPictureBytes = 256L * 1024 * 1024;
+
     /// <summary>One stamp offered in the brush's shape list.</summary>
     /// <param name="Name">Its key (the built-in ones start with "stamp:").</param>
-    /// <param name="Label">The name shown in the shape list.</param>
+    /// <param name="Label">Its name in English (Claude asks for a stamp by it); a loaded one's is its picture's name.</param>
     /// <param name="Data">Size × Size weights, 0..1, row by row from the north.</param>
     /// <param name="Loaded">Loaded from a picture (kept in stamps.json and can be forgotten), not built in.</param>
-    public sealed record Stamp(string Name, string Label, float[] Data, bool Loaded = false);
+    public sealed record Stamp(string Name, string Label, float[] Data, bool Loaded = false)
+    {
+        /// <summary>Its name in the language in use (a loaded one's is its picture's name).</summary>
+        public string Shown => Name switch
+        {
+            "stamp:mountain" => Lang.T("brush.stamp.mountain"),
+            "stamp:mesa" => Lang.T("brush.stamp.mesa"),
+            "stamp:crater" => Lang.T("brush.stamp.crater"),
+            "stamp:dunes" => Lang.T("brush.stamp.dunes"),
+            "stamp:rocky" => Lang.T("brush.stamp.rocky"),
+            _ => Label,
+        };
+
+        /// <summary>
+        /// Its entry in the brush's Shape list. A built-in one's is a whole catalogue text, so the remembered choice
+        /// (Prefs, kept in English) comes back in any language.
+        /// </summary>
+        public string Item => Name switch
+        {
+            "stamp:mountain" => Lang.T("brush.shape.stampMountain"),
+            "stamp:mesa" => Lang.T("brush.shape.stampMesa"),
+            "stamp:crater" => Lang.T("brush.shape.stampCrater"),
+            "stamp:dunes" => Lang.T("brush.shape.stampDunes"),
+            "stamp:rocky" => Lang.T("brush.shape.stampRocky"),
+            _ => Lang.T("brush.shape.stamp", Label),
+        };
+    }
 
     /// <summary>The web editor's value noise (the same numbers, so the built-in stamps look the same).</summary>
     private static double Hash(double x, double y)
@@ -90,18 +122,21 @@ public static class Stamps
         return (At(x0, y0) * (1 - tx) + At(x0 + 1, y0) * tx) * (1 - ty) + (At(x0, y0 + 1) * (1 - tx) + At(x0 + 1, y0 + 1) * tx) * ty;
     }
 
-    /// <summary>A picture (any size) to Size × Size weights: brightness times opacity. Null when it cannot be read.</summary>
+    /// <summary>
+    /// A picture to Size × Size weights: brightness times opacity. Null when it cannot be read or would take more than
+    /// <see cref="MostPictureBytes"/> decoded.
+    /// </summary>
     /// <param name="bytes">The picture file's contents, in any format Skia decodes.</param>
     public static float[]? FromPicture(byte[] bytes)
     {
         // Not a picture: no codec (Decode would throw).
         using var stream = new SKMemoryStream(bytes);
         using var codec = SKCodec.Create(stream);
-        if (codec == null)
+        if (codec == null || codec.Info.BytesSize64 > MostPictureBytes)
         {
             return null;
         }
-        using var src = SKBitmap.Decode(codec);
+        using var src = Decoded(codec);
         if (src == null)
         {
             return null;
@@ -121,6 +156,24 @@ public static class Stamps
             }
         }
         return data;
+    }
+
+    /// <summary>
+    /// The codec's picture as SKBitmap.Decode makes it (premultiplied, no colour space), or null when its pixels cannot be
+    /// allocated or decoded: Decode throws when they cannot be allocated.
+    /// </summary>
+    /// <param name="codec">The picture's codec.</param>
+    private static SKBitmap? Decoded(SKCodec codec)
+    {
+        var info = codec.Info;
+        info = info.WithAlphaType(info.AlphaType == SKAlphaType.Unpremul ? SKAlphaType.Premul : info.AlphaType).WithColorSpace(null);
+        var bitmap = new SKBitmap();
+        if (bitmap.TryAllocPixels(info) && codec.GetPixels(info, bitmap.GetPixels()) is SKCodecResult.Success or SKCodecResult.IncompleteInput)
+        {
+            return bitmap;
+        }
+        bitmap.Dispose();
+        return null;
     }
 
     // ---- Loaded pictures, kept between runs (the weights themselves, 0..255 per pixel).
@@ -155,17 +208,20 @@ public static class Stamps
         }
     }
 
-    /// <summary>Writes the loaded stamps to stamps.json, replacing it; a failure to write is ignored.</summary>
+    /// <summary>
+    /// Writes the loaded stamps to stamps.json, replacing it whole (a write cut short leaves the old file); a failure
+    /// to write is logged, and the stamps stay loaded for this run.
+    /// </summary>
     public static void SaveKept(IEnumerable<Stamp> loaded)
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
             var list = loaded.Select(s => new Kept(s.Name, s.Label, Convert.ToBase64String(s.Data.Select(v => (byte)Math.Clamp((int)MathF.Round(v * 255), 0, 255)).ToArray()))).ToList();
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(list));
+            SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(list));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Console.Error.WriteLine($"Stamps not kept ({FilePath}): {ex.Message}");
         }
     }
 }

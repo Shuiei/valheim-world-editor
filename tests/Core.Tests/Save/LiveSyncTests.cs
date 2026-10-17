@@ -65,7 +65,7 @@ public class LiveSyncTests
     {
         using var t = new Live();
         var n = t.MoveTree(-1, new Vector3(4, 0, 2));
-        string said = await t.Sync.Apply(t.World, t.Edits, t.Game);
+        string said = (await t.Sync.Apply(t.World, t.Edits, t.Game)).Shown;
         Assert.Equal((0, 0), t.Bridge.ObjectCalls.Single());
         var (user, id, prefab, from, to, turn) = t.Bridge.Moves.Single();
         Assert.Equal(t.TreeZdo, (user, id));
@@ -84,6 +84,83 @@ public class LiveSyncTests
         Assert.Equal((0, 0), t.Sync.Pending(t.Edits));
         Assert.False(t.Sync.IsDestroyed(t.Tree.Id));
         Assert.False(t.Sync.IsLive(-1));
+    }
+
+    // What the plugin can do is asked at each apply: a check that fails refuses the apply (a move was sent as a destroy
+    // and a creation, the object getting a new id), and a plugin that can move since is used to.
+    [Fact]
+    public async Task WhatThePluginCanDoIsAskedAtEachApply()
+    {
+        using var t = new Live(canMove: false);
+        t.Bridge.StatusFails = true;
+        t.MoveTree(-1, new Vector3(4, 0, 2));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => t.Sync.Apply(t.World, t.Edits, t.Game));
+        Assert.Empty(t.Bridge.ObjectCalls);
+
+        t.Bridge.StatusFails = false;
+        t.Bridge.Features.Add("move");
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.Equal((0, 0), t.Bridge.ObjectCalls.Single());
+        Assert.Single(t.Bridge.Moves);
+    }
+
+    // Deleted objects with no copy are destroyed without their bytes being read: only the moved one is read.
+    [Fact]
+    public async Task OnlyObjectsThatMayMoveAreRead()
+    {
+        using var t = new Live();
+        int[] others = [.. t.World.Objects.Where(o => o.Id != t.Tree.Id && !t.World.Links.ContainsKey(o.Id)).Take(20).Select(o => o.Id)];
+        t.Edits.SetDeleted(others, true);
+        t.MoveTree(-1, new Vector3(4, 0, 2));
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.Equal((others.Length, 0), t.Bridge.ObjectCalls.Single());
+        Assert.Single(t.Bridge.Moves);
+        Assert.Equal(1, t.Sync.SourceReads);
+    }
+
+    // IsOurs follows the game objects the editor has: moved there, moved on (counted once), forgotten, and reset.
+    [Fact]
+    public async Task IsOursFollowsTheGameObjectsTheEditorHas()
+    {
+        using var t = new Live();
+        Assert.False(t.Sync.IsOurs(t.TreeZdo));
+        t.MoveTree(-1, new Vector3(4, 0, 2));
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.True(t.Sync.IsOurs(t.TreeZdo));
+        t.MoveTree(-2, new Vector3(9, 0, -3), from: -1);
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.True(t.Sync.IsOurs(t.TreeZdo));
+        t.Sync.Forget(-2);
+        Assert.False(t.Sync.IsOurs(t.TreeZdo));
+
+        using var u = new Live();
+        u.MoveTree(-1, new Vector3(4, 0, 2));
+        await u.Sync.Apply(u.World, u.Edits, u.Game);
+        Assert.True(u.Sync.IsOurs(u.TreeZdo));
+        u.Sync.Reset();
+        Assert.False(u.Sync.IsOurs(u.TreeZdo));
+    }
+
+    // Without moves, IsOurs follows what the game makes (a new object, then the deleted one made again) and what it
+    // destroys again (the new object on undo, the made-again one on a second delete).
+    [Fact]
+    public async Task IsOursFollowsWhatIsMadeAndDestroyed()
+    {
+        using var t = new Live(canMove: false);
+        t.MoveTree(-1, new Vector3(4, 0, 2));
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        var made = t.Sync.NewObjects().Single().Target;
+        Assert.True(t.Sync.IsOurs((made.User, made.Id)));
+        t.Edits.SetDeleted([-1], true);
+        t.Edits.SetDeleted([t.Tree.Id], false);
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.False(t.Sync.IsOurs((made.User, made.Id)));
+        // The tree made again: the bridge's next id.
+        (long, uint) again = (made.User, made.Id + 1);
+        Assert.True(t.Sync.IsOurs(again));
+        t.Edits.SetDeleted([t.Tree.Id], true);
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.False(t.Sync.IsOurs(again));
     }
 
     // Moved on from where it was moved to: the same game object moves again.
@@ -144,7 +221,7 @@ public class LiveSyncTests
         using var t = new Live();
         t.Bridge.MoveInPlace = false;
         t.MoveTree(-1, new Vector3(4, 0, 2));
-        string said = await t.Sync.Apply(t.World, t.Edits, t.Game);
+        string said = (await t.Sync.Apply(t.World, t.Edits, t.Game)).Shown;
         Assert.Contains("0 moved (1 more made again", said);
         Assert.True(t.Sync.IsLive(-1));
         var made = t.Sync.NewObjects().Single().Target;
@@ -189,13 +266,13 @@ public class LiveSyncTests
         Assert.Equal((1, 1), t.Bridge.ObjectCalls.Single());
         Assert.False(t.Sync.IsLive(-1));
 
-        string said = await t.Sync.Apply(t.World, t.Edits, t.Game);
+        string said = (await t.Sync.Apply(t.World, t.Edits, t.Game)).Shown;
         Assert.Equal("1 object(s) removed, 1 created", said);
         Assert.Single(t.Bridge.ObjectCalls);
         Assert.True(t.Sync.IsLive(-1));
         Assert.True(t.Sync.IsDestroyed(t.Tree.Id));
         Assert.Equal((0, 0), t.Sync.Pending(t.Edits));
-        Assert.Equal("", await t.Sync.Apply(t.World, t.Edits, t.Game));
+        Assert.Equal("", (await t.Sync.Apply(t.World, t.Edits, t.Game)).Shown);
         Assert.Single(t.Bridge.ObjectCalls);
     }
 

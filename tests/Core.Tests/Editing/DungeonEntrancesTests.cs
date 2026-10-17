@@ -31,9 +31,9 @@ public class DungeonEntrancesTests
         // Hildir's fortress is the Plains' only dungeon: no entrance serves there.
         Assert.Null(DungeonEntrances.ForBiome("Plains"));
         Assert.Null(DungeonEntrances.For("DG_NoSuchThing"));
-        Assert.Equal("burial chamber", DungeonEntrances.Describe(LocationPrefabs.Get("Crypt2")!));
-        Assert.Equal("Frost Cave", DungeonEntrances.Describe(LocationPrefabs.Get("MountainCave02")!));
-        Assert.Equal("StartTemple", DungeonEntrances.Describe(LocationPrefabs.Get("StartTemple")!));
+        Assert.Equal("burial chamber", DungeonEntrances.Describe(LocationPrefabs.Get("Crypt2")!).English);
+        Assert.Equal("Frost Cave", DungeonEntrances.Describe(LocationPrefabs.Get("MountainCave02")!).English);
+        Assert.Equal("StartTemple", DungeonEntrances.Describe(LocationPrefabs.Get("StartTemple")!).English);
         Assert.Equal("DG_ForestCrypt", DungeonEntrances.Dungeon(LocationPrefabs.Get("Crypt2")!)?.Prefab);
         Assert.Null(DungeonEntrances.Dungeon(LocationPrefabs.Get("StartTemple")!));
     }
@@ -57,6 +57,8 @@ public class DungeonEntrancesTests
         // A player arrives one metre ahead of the door, one down.
         Assert.True(Vector3.Distance(exit.Value.Position + Vector3.Transform(Vector3.UnitZ, turn) - Vector3.UnitY, DungeonEntrances.Landing(exit.Value)) < 0.001f);
         Assert.Equal(22.5f, DungeonEntrances.YawOf(exit.Value), 2);
+        // Turned the other way: as YawToFace gives it, from 0 up to 360.
+        Assert.Equal(337.5f, DungeonEntrances.YawOf(DungeonEntrances.ExitPose(crypt, at, Yaw(-22.5f))!.Value), 2);
     }
 
     [Fact]

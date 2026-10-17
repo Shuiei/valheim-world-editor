@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using Avalonia.Threading;
 using ModelContextProtocol.Server;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -32,6 +33,16 @@ public sealed partial class ClaudeTools
 
     /// <summary>Saves a picture of the world's map as a PNG file (the map's, drawn by OpenGL; tests give their own).</summary>
     internal Func<string, Task> MapPicture { get; set; }
+
+    /// <summary>The worlds folders create_world may make a world in (the game's that exist; tests give their own).</summary>
+    internal Func<List<string>> WorldFolders { get; set; } = NewWorldPage.Roots;
+
+    /// <summary>
+    /// The whole-world search search_world runs away from the window's thread (WorldSearch.Search; tests hold it to
+    /// change the world while it runs).
+    /// </summary>
+    internal Func<Save.WorldSave, Editing.EditStore, string, string, WorldSearch.Result> SearchFiles { get; set; } =
+        (world, edits, query, what) => WorldSearch.Search(world, edits, query, what);
 
     /// <summary>Compact JSON for the answers.</summary>
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
@@ -84,7 +95,7 @@ public sealed partial class ClaudeTools
     /// <summary>list_worlds: the start page's worlds.</summary>
     [McpServerTool(Name = "list_worlds", ReadOnly = true, Title = "Worlds on this computer")]
     [Description("The Valheim worlds on this computer (the start page's list): name, folder, last save. Open one with open_world.")]
-    public Task<string> ListWorlds() => OnUi(() => ToJson(TerrainEditor.App.Worlds.Find(_w.Settings)
+    public Task<string> ListWorlds() => OnUi(() => ToJson(Worlds.Find(_w.Settings)
         .Select(i => new { name = i.Name, folder = i.Path, saved = i.Saved, where = i.Where, usable = i.Usable, problem = i.Problem })));
 
     /// <summary>open_world: opens a world offline, refused while there are unsaved changes.</summary>
@@ -97,7 +108,7 @@ public sealed partial class ClaudeTools
             return why;
         }
         await _w.OpenWorld(() => Task.Run(() => WorldSession.Open(folder)), "Opening the world for Claude…");
-        return _w.World != null ? ToJson(StateOf(_w)) : "Could not open it: " + _w.MessageText.Text;
+        return _w.World != null ? ToJson(StateOf(_w)) : "Could not open it: " + _w.LastMessageEn;
     });
 
     /// <summary>open_area: opens the zones around a world point in 3D (size clamped to 1 to 17 zones).</summary>
@@ -112,7 +123,7 @@ public sealed partial class ClaudeTools
         {
             return "Open a world first (open_world).";
         }
-        int zx = (int)MathF.Floor((x + 32) / 64), zz = (int)MathF.Floor((z + 32) / 64);
+        var (zx, zz) = Save.ChunkMath.SectorOf(x, z);
         await _w.EditArea(zx, zz, Math.Clamp(size, 1, MainWindow.MaxFollowZones));
         return ToJson(StateOf(_w));
     });
@@ -144,8 +155,19 @@ public sealed partial class ClaudeTools
         });
     });
 
+    /// <summary>
+    /// The refusal when only one of a point's two coordinates is given (null: both or neither): the other was dropped
+    /// or mixed with a default without a word.
+    /// </summary>
+    /// <param name="x">The point's x, if given.</param>
+    /// <param name="z">The point's z, if given.</param>
+    /// <param name="xName">The x argument's name.</param>
+    /// <param name="zName">The z argument's name.</param>
+    internal static string? LoneCoordinate(float? x, float? z, string xName = "x", string zName = "z") =>
+        x.HasValue == z.HasValue ? null : $"Give {xName} and {zName} together, or neither: only {(x.HasValue ? xName : zName)} was given.";
+
     /// <summary>A thing's object kind, as describe_area and list_objects name it.</summary>
-    private string KindOf(WorldScene.Thing t) => TerrainEditor.App.ObjectKinds.Of(_w.NameOfPrefab(t.Prefab), t.Piece, t.Tamed).ToString();
+    private string KindOf(WorldScene.Thing t) => ObjectKinds.Of(_w.NameOfPrefab(t.Prefab), t.Piece, t.Tamed).ToString();
 
     /// <summary>list_objects: objects of the open area, filtered by kind, name and distance (limit clamped to 1 to 2000).</summary>
     [McpServerTool(Name = "list_objects", ReadOnly = true, Title = "List objects")]
@@ -162,9 +184,15 @@ public sealed partial class ClaudeTools
         {
             return "No area is open.";
         }
+        if (LoneCoordinate(x, z) is string lone)
+        {
+            return lone;
+        }
         List<object> found;
+        int reads;
         lock (scene.Things)
         {
+            reads = scene.Reads;
             var q = scene.Things.Select((t, i) => (t, i)).Where(p => !p.t.Gone);
             if (kind != null)
             {
@@ -181,6 +209,11 @@ public sealed partial class ClaudeTools
             }
             found = [.. q.Take(Math.Clamp(limit, 1, 2000)).Select(p => Describe(p.t, p.i))];
         }
+        // (A listing with nothing in it gives no id: ids given before stay refused.)
+        if (found.Count > 0)
+        {
+            GaveIds(scene, reads);
+        }
         return ToJson(found);
     });
 
@@ -193,10 +226,18 @@ public sealed partial class ClaudeTools
         {
             return "No area is open.";
         }
+        List<Dictionary<string, object?>> selected;
+        int reads;
         lock (scene.Things)
         {
-            return ToJson(_w.View.Selected.Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).Select(i => Describe(scene.Things[i], i)).ToList());
+            reads = scene.Reads;
+            selected = [.. _w.View.Selected.Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).Select(i => Describe(scene.Things[i], i))];
         }
+        if (selected.Count > 0)
+        {
+            GaveIds(scene, reads);
+        }
+        return ToJson(selected);
     });
 
     /// <summary>select_objects: selects objects by id and points the camera at them; changes nothing in the world.</summary>
@@ -210,15 +251,27 @@ public sealed partial class ClaudeTools
         {
             return "No area is open.";
         }
-        var ok = ids.Distinct().Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).ToList();
+        if (StaleIds(scene) is string stale)
+        {
+            return stale;
+        }
+        int[] asked = [.. ids.Distinct()];
+        List<int> ok;
+        List<System.Numerics.Vector3> at;
+        // Under the things' lock, as every other reader of them.
+        lock (scene.Things)
+        {
+            ok = [.. asked.Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone)];
+            at = [.. ok.Select(i => scene.Things[i].Position)];
+        }
         _w.View.Select(ok);
         if (focus && ok.Count > 0)
         {
-            var mid = ok.Select(i => scene.Things[i].Position).Aggregate(System.Numerics.Vector3.Zero, (a, b) => a + b) / ok.Count;
-            float spread = ok.Select(i => System.Numerics.Vector3.Distance(scene.Things[i].Position, mid)).DefaultIfEmpty(0).Max();
+            var mid = at.Aggregate(System.Numerics.Vector3.Zero, (a, b) => a + b) / ok.Count;
+            float spread = at.Select(p => System.Numerics.Vector3.Distance(p, mid)).DefaultIfEmpty(0).Max();
             _w.View.Focus(mid, MathF.Max(20, spread * 2.5f));
         }
-        return $"Selected {ok.Count}{(ok.Count < ids.Length ? $" ({ids.Length - ok.Count} id(s) were not objects of the area)" : "")}.";
+        return $"Selected {ok.Count}{(ok.Count < asked.Length ? $" ({asked.Length - ok.Count} id(s) were not objects of the area)" : "")}.";
     });
 
     /// <summary>
@@ -265,6 +318,10 @@ public sealed partial class ClaudeTools
         [Description("Height of the point looked at (optional: the ground's).")] float? height = null,
         [Description("4: four pictures in one (from above, and from the south-west, east and north-west, all at the point, or the area's middle), to see a building or a place from every side. 1: one picture (default).")] int views = 1)
     {
+        if (LoneCoordinate(x, z) is string lone)
+        {
+            return new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = lone } } };
+        }
         if (views >= 4)
         {
             return await FourViews(x, z, distance, height);
@@ -283,11 +340,20 @@ public sealed partial class ClaudeTools
                 {
                     return "Nothing to see: open a world's area (open_area) or the Workshop.";
                 }
-                if (x is float cx && z is float cz)
+                // A read-only look: the user's camera is put back once the picture is taken.
+                var kept = _w.View.WorldCamera;
+                try
                 {
-                    _w.View.Orbit(cx, cz, yaw, pitch, distance, height);
+                    if (x is float cx && z is float cz)
+                    {
+                        _w.View.Orbit(cx, cz, yaw, pitch, distance, height);
+                    }
+                    await ViewPicture(path).WaitAsync(TimeSpan.FromSeconds(60));
                 }
-                await ViewPicture(path).WaitAsync(TimeSpan.FromSeconds(60));
+                finally
+                {
+                    _w.View.WorldCamera = kept;
+                }
                 return null;
             });
             if (problem != null)
@@ -321,8 +387,16 @@ public sealed partial class ClaudeTools
                             return "Four views need an area or the Workshop open in 3D.";
                         }
                         float cx = x ?? scene.Cx, cz = z ?? scene.Cz;
-                        _w.View.Orbit(cx, cz, yaw, pitch, distance, height);
-                        await ViewPicture(path).WaitAsync(TimeSpan.FromSeconds(60));
+                        var kept = _w.View.WorldCamera;
+                        try
+                        {
+                            _w.View.Orbit(cx, cz, yaw, pitch, distance, height);
+                            await ViewPicture(path).WaitAsync(TimeSpan.FromSeconds(60));
+                        }
+                        finally
+                        {
+                            _w.View.WorldCamera = kept;
+                        }
                         return null;
                     });
                     if (problem != null)
@@ -377,21 +451,47 @@ public sealed partial class ClaudeTools
             {
                 return null;
             }
-            List<(float X, float Z, string Kind)> things;
+            // Only what is needed is taken here (the window's thread): the objects' kinds are worked out after.
+            List<(float X, float Z, int Prefab, bool Piece, bool Tamed)> things;
             lock (scene.Things)
             {
-                things = [.. scene.Things.Where(t => !t.Gone).Select(t => (t.Position.X, t.Position.Z, KindOf(t)))];
+                things = [.. scene.Things.Where(t => !t.Gone).Select(t => (t.Position.X, t.Position.Z, t.Prefab, t.Piece, t.Tamed))];
             }
-            // Paint (dirt, cultivated, paved) per ground point, as the ground has it now.
+            var names = new Dictionary<int, string?>();
+            foreach (int prefab in things.Select(t => t.Prefab))
+            {
+                if (!names.ContainsKey(prefab))
+                {
+                    names[prefab] = _w.NameOfPrefab(prefab);
+                }
+            }
+            // Paint (dirt, cultivated, paved) per ground point, as the ground has it now (Ground.MaskOf).
             var g = _w.Session.Ground;
-            float[]? paint = g.W == scene.W && g.H == scene.H ? [.. Enumerable.Range(0, scene.W * scene.H * 3).Select(k => g.MaskOf(k / 3, k % 3))] : null;
-            return new { scene.W, scene.H, scene.Cx, scene.Cz, scene.Water, Heights = (float[])scene.Heights.Clone(), Paint = paint, Things = things };
+            float[]? paint = null;
+            if (g.W == scene.W && g.H == scene.H)
+            {
+                paint = new float[scene.W * scene.H * 3];
+                for (int p = 0; p < scene.W * scene.H; p++)
+                {
+                    float[] from = g.PMod[p] != 0 ? g.Paint : g.BaseMask;
+                    paint[p * 3] = from[p * 4];
+                    paint[p * 3 + 1] = from[p * 4 + 1];
+                    paint[p * 3 + 2] = from[p * 4 + 2];
+                }
+            }
+            return new { scene.W, scene.H, scene.Cx, scene.Cz, scene.Water, Heights = (float[])scene.Heights.Clone(), Paint = paint, Things = things, Names = names };
         });
         if (data == null)
         {
             return new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = "No area is open." } } };
         }
-        byte[] jpeg = await Task.Run(() => DrawMap(data.W, data.H, data.Cx, data.Cz, data.Water, data.Heights, data.Paint, objects ? data.Things : [], MathF.Max(4, grid)));
+        byte[] jpeg = await Task.Run(() =>
+        {
+            List<(float X, float Z, string Kind)> things = objects
+                ? [.. data.Things.Select(t => (t.X, t.Z, ObjectKinds.Of(data.Names[t.Prefab], t.Piece, t.Tamed).ToString()))]
+                : [];
+            return DrawMap(data.W, data.H, data.Cx, data.Cz, data.Water, data.Heights, data.Paint, things, MathF.Max(4, grid));
+        });
         float minX = data.Cx - (data.W - 1) / 2f, minZ = data.Cz - (data.H - 1) / 2f;
         return new()
         {
@@ -525,8 +625,8 @@ public sealed partial class ClaudeTools
         var others = piecesOnly ? [] : Terrain.PrefabCatalog.Placeable
             .Where(i => Terrain.PieceCatalog.Get(Save.StableHash.Of(i.Name)) == null && (Match(i.Name) || Terrain.PrefabCatalog.SpawnOf(i.Name) is { } sp && Match(string.Join(" ", sp.Creatures))))
             .Select(i => Terrain.PrefabCatalog.SpawnOf(i.Name) is { } sp
-                ? (object)new { prefab = i.Name, kind = TerrainEditor.App.ObjectKinds.Of(i.Name, false).ToString(), spawns = sp.Summary() }
-                : new { prefab = i.Name, kind = TerrainEditor.App.ObjectKinds.Of(i.Name, false).ToString() });
+                ? (object)new { prefab = i.Name, kind = ObjectKinds.Of(i.Name, false).ToString(), spawns = sp.Summary(english: true) }
+                : new { prefab = i.Name, kind = ObjectKinds.Of(i.Name, false).ToString() });
         return ToJson(pieces.Concat(others).Take(Math.Clamp(limit, 1, 500)));
     });
 
@@ -590,21 +690,30 @@ public sealed partial class ClaudeTools
     /// <summary>Whether the open world is live with Auto on: every change would go to the game at once.</summary>
     private bool LiveWithAuto => _w.World is { IsLive: true } && _w.Settings.AutoApply;
 
+    /// <summary>Why Claude may not run a script now: the user has not allowed it (Settings); null when it may.</summary>
+    internal static string ScriptsRefused => "The user has not allowed Claude to run scripts (Settings → Claude → Claude may run scripts).";
+
     /// <summary>run_script: runs a C# script as the Script tool does, as one pending step (or only says what it would change).</summary>
     [McpServerTool(Name = "run_script", Title = "Run a script on the area")]
-    [Description("Runs a C# script on the open area (or the Workshop's plot), as the editor's Script tool does: the script's statements are the body of a program using the API script_reference gives (Area, Ground, Objects, Noise, Rnd, Print). What it changes (ground heights, paint, objects placed or taken away) goes in as one step of the history, pending until the user saves; nothing changes when it has mistakes or fails (the errors say which line). Returns what it printed and what it changed. Ground stays within the game's ±8 m of the original unless Ground.NoLimit = true.")]
+    [Description("Runs a C# script on the open area (or the Workshop's plot), as the editor's Script tool does: the script's statements are the body of a program using the API script_reference gives (Area, Ground, Objects, Noise, Rnd, Print). What it changes (ground heights, paint, objects placed or taken away) goes in as one step of the history, pending until the user saves; nothing changes when it has mistakes or fails (the errors say which line). Returns what it printed and what it changed. Ground stays within the game's ±8 m of the original unless Ground.NoLimit = true. Needs the user's leave, given once in Settings → Claude → Claude may run scripts (off by default: a script has the user's rights on their computer); refused otherwise, dry runs too.")]
     public Task<string> RunScript(
         [Description("The script: C# statements, e.g. \"Ground.Mountain(Area.CenterX, Area.CenterZ, height: 30, radius: 50);\"")] string code,
         [Description("A few words for the history (\"Claude: river valley\").")] string label = "Claude: script",
         [Description("true: only say what it would change (ground points, paint, objects placed and taken away), changing nothing. Use it before a large change.")] bool dryRun = false) => OnUi(async () =>
     {
+        // A dry run compiles and runs the code too: the same leave. Said first: the user's own setting, which no
+        // other change (opening an area, turning Auto off) would get round.
+        if (!_w.Settings.ClaudeScripts)
+        {
+            return ScriptsRefused;
+        }
         if (CannotEdit() is string why)
         {
             return why;
         }
-        var r = await _w.RunScriptCode(code, label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, apply: !dryRun);
-        _w.MessageText.Text = r.Message;
-        return r.Output;
+        var r = await _w.RunScriptCode(code, label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label), apply: !dryRun);
+        _w.Msg(r.Message);
+        return r.Output.English;
     });
 
     // ---- Common tasks, as scripts the Script tool runs (one pending step each).
@@ -615,16 +724,35 @@ public sealed partial class ClaudeTools
     /// <summary>The paints paint_area and road take.</summary>
     private static readonly HashSet<string> PaintKinds = new(StringComparer.OrdinalIgnoreCase) { "dirt", "cultivated", "paved", "clear" };
 
+    /// <summary>
+    /// A history label of Claude's: the "Claude: " mark, which stays the same in every language since Take back
+    /// Claude's changes finds Claude's steps by it (HistoryPanel.ByClaude), then what the step did.
+    /// </summary>
+    /// <param name="text">What the step did: in the user's language, or the words Claude gave.</param>
+    internal static string ClaudesStep(string text) => "Claude: " + text;
+
+    /// <summary>A paint's name in the history (paint_area, shape_ground's paint), in the user's language.</summary>
+    /// <param name="paint">The paint brush whose colour is put down.</param>
+    private static Said PaintStep(BrushTool paint) => paint switch
+    {
+        BrushTool.PaintDirt => Said.Of("claude.undo.paintDirt"),
+        BrushTool.PaintCultivated => Said.Of("claude.undo.paintCultivated"),
+        BrushTool.PaintPaved => Said.Of("claude.undo.paintPaved"),
+        _ => Said.Of("claude.undo.paintClear"),
+    };
+
     /// <summary>Runs a script written by a tool as one pending step labelled "Claude: label".</summary>
+    /// <param name="code">The script.</param>
+    /// <param name="label">What the step did, in the user's language (ClaudesStep puts the mark before it).</param>
     private Task<string> RunGenerated(string code, string label) => OnUi(async () =>
     {
         if (CannotEdit() is string why)
         {
             return why;
         }
-        var r = await _w.RunScriptCode(code, "Claude: " + label);
-        _w.MessageText.Text = r.Message;
-        return r.Output;
+        var r = await _w.RunScriptCode(code, ClaudesStep(label));
+        _w.Msg(r.Message);
+        return r.Output.English;
     });
 
     /// <summary>flatten: levels a rectangle to a height (default: its average), with a cosine soft edge outside it.</summary>
@@ -654,7 +782,7 @@ public sealed partial class ClaudeTools
 				Ground.Set(x, z, h + (target - h) * w);
 			}
 			Print($"levelled to {target:0.0} m");
-			""", "flatten");
+			""", Lang.T("claude.undo.flatten"));
 
     /// <summary>paint_area: paints a rectangle or a circle.</summary>
     [McpServerTool(Name = "paint_area", Title = "Paint the ground")]
@@ -683,7 +811,7 @@ public sealed partial class ClaudeTools
 			int n = 0;
 			foreach (var (x, z) in Area.Points()) if ({{inside}}) { Ground.Paint(x, z, "{{kind.ToLowerInvariant()}}"); n++; }
 			Print($"painted {n} points");
-			""", $"paint {kind.ToLowerInvariant()}");
+			""", PaintStep(Paints[kind]).Shown);
     }
 
     /// <summary>road: levels the ground along a line of points to a smooth slope, blends its edges (3 m) and paints it.</summary>
@@ -727,7 +855,7 @@ public sealed partial class ClaudeTools
 				if ({{(paint == "none" ? "false" : "true")}} && best <= half) Ground.Paint(x, z, "{{paint.ToLowerInvariant()}}");
 			}
 			Print($"road of {px.Length - 1} segment(s)");
-			""", "road");
+			""", Lang.T("claude.undo.road"));
     }
 
     /// <summary>forest: plants a mix of prefabs on a jittered grid, off water and away from buildings, trees and rocks.</summary>
@@ -744,7 +872,8 @@ public sealed partial class ClaudeTools
         {
             return Task.FromResult("Give at least one prefab name (find_prefabs).");
         }
-        string list = string.Join(", ", kinds.Select(k => "\"" + k.Replace("\"", "", StringComparison.Ordinal) + "\""));
+        // As C# string literals, escaped (a name ending in a backslash broke the script).
+        string list = string.Join(", ", kinds.Select(k => Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(k, quote: true)));
         return RunGenerated($$"""
 			string[] kinds = { {{list}} };
 			foreach (var k in kinds) if (!Objects.CanPlace(k)) { Print($"{k}: not an object this world can have"); return; }
@@ -761,7 +890,7 @@ public sealed partial class ClaudeTools
 					n++;
 				}
 			Print($"placed {n}");
-			""", "forest");
+			""", Lang.T("claude.undo.forest"));
     }
 
     /// <summary>undo: the last change of the area, anyone's, as Ctrl+Z.</summary>
@@ -855,16 +984,24 @@ public sealed partial class ClaudeTools
         }
         var session = _w.Session!;
         var scene = session.Scene;
-        float minX = scene.X0 * 64f - 32f, minZ = scene.Z0 * 64f - 32f, maxX = minX + scene.ZonesX * 64f, maxZ = minZ + scene.ZonesZ * 64f;
+        int reads = scene.Reads;
+        var (minX, minZ, maxX, maxZ) = Bounds(scene);
         var placed = new List<Editing.Hammer.Placed>();
+        // Only the pieces a new one could snap to: within the snap search (10 m beyond the longest piece's reach) of
+        // the pieces asked for. One whose place is not a number never snaps.
+        var asked = pieces.Where(p => float.IsFinite(p.X) && float.IsFinite(p.Z)).ToList();
+        float reach = Editing.Hammer.SnapRadius + Editing.Hammer.MaxRadius() + 1f;
+        (float lx, float hx, float lz, float hz) = asked.Count == 0 ? (0f, -1f, 0f, -1f)
+            : (asked.Min(p => p.X) - reach, asked.Max(p => p.X) + reach, asked.Min(p => p.Z) - reach, asked.Max(p => p.Z) + reach);
         lock (scene.Things)
         {
             for (int i = 0; i < scene.Things.Count; i++)
             {
                 var t = scene.Things[i];
-                if (!t.Gone && _w.NameOfPrefab(t.Prefab) is string n && Editing.Hammer.Get(n) != null)
+                if (!t.Gone && t.Position.X >= lx && t.Position.X <= hx && t.Position.Z >= lz && t.Position.Z <= hz
+                    && _w.NameOfPrefab(t.Prefab) is string n && Editing.Hammer.Get(n) != null)
                 {
-                    placed.Add(new(i, n, t.Position, TerrainEditor.App.BlueprintFormats.FromEuler(t.Rotation)));
+                    placed.Add(new(i, n, t.Position, BlueprintFormats.FromEuler(t.Rotation)));
                 }
             }
         }
@@ -886,7 +1023,7 @@ public sealed partial class ClaudeTools
                 continue;
             }
             var euler = new System.Numerics.Vector3(p.Pitch, p.Yaw, p.Roll);
-            var q = TerrainEditor.App.BlueprintFormats.FromEuler(euler);
+            var q = BlueprintFormats.FromEuler(euler);
             float y = p.Y ?? GroundAt(scene, p.X, p.Z) - Editing.Hammer.Bottom(p.Prefab, q);
             var pos = new System.Numerics.Vector3(p.X, y, p.Z);
             int? to = null;
@@ -902,8 +1039,9 @@ public sealed partial class ClaudeTools
         {
             return "Nothing put down: " + string.Join("; ", problems);
         }
-        var ids = session.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, [], adds);
-        _w.AfterClaudeEdit($"Claude put down {adds.Count} piece(s); Ctrl+Z takes them back.");
+        var ids = session.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label), null, [], adds);
+        _w.AfterClaudeEdit(Said.Of("claude.msg.putDown", adds.Count));
+        GaveIds(scene, reads);
         return ToJson(new { placed = report.Select((r, i) => new { id = i < ids.Count ? ids[i] : -1, piece = r }), problems, pending = Pending() });
     }
 
@@ -1054,12 +1192,16 @@ public sealed partial class ClaudeTools
             eave ?? HighestPieceTop(scene, x0, z0, x1, z1) ?? throw new ArgumentException("No walls under the roof: build the walls first, or give eave."),
             angle, material, gables), $"{material} roof");
 
-    /// <summary>The ground's height at a world point of the area (its nearest grid point, clamped to the area).</summary>
+    /// <summary>
+    /// The ground's height at a world point of the area, between the grid points as ground_at gives it (Picking.HeightAt),
+    /// the point held to the area's edge (a coordinate that is not a number: its west or south edge).
+    /// </summary>
     private static float GroundAt(WorldScene scene, float x, float z)
     {
-        int i = Math.Clamp((int)MathF.Round(x - scene.Cx + (scene.W - 1) / 2f), 0, scene.W - 1);
-        int j = Math.Clamp((int)MathF.Round(z - scene.Cz + (scene.H - 1) / 2f), 0, scene.H - 1);
-        return scene.Heights[j * scene.W + i];
+        float hx = (scene.W - 1) / 2f, hz = (scene.H - 1) / 2f, vx = x - scene.Cx, vz = z - scene.Cz;
+        vx = vx > -hx ? (vx < hx ? vx : hx) : -hx;
+        vz = vz > -hz ? (vz < hz ? vz : hz) : -hz;
+        return Picking.HeightAt(scene, vx, -vz);
     }
 
     /// <summary>remove_objects: takes objects away by id, as one pending step.</summary>
@@ -1072,17 +1214,26 @@ public sealed partial class ClaudeTools
             return why;
         }
         var session = _w.Session!;
+        if (StaleIds(session.Scene) is string stale)
+        {
+            return stale;
+        }
         var things = session.Scene.Things;
-        var given = ids.Distinct().Where(i => i >= 0 && i < things.Count && !things[i].Gone).ToList();
+        int[] asked = [.. ids.Distinct()];
+        List<int> given;
+        lock (things)
+        {
+            given = [.. asked.Where(i => i >= 0 && i < things.Count && !things[i].Gone)];
+        }
         if (given.Count == 0)
         {
             return "None of those ids is an object of the area.";
         }
         // A linked group's part never goes alone (ObjectLinks: a ship): the whole group does.
         var (ok, _, groups, noun) = session.WithLinked(given);
-        session.Commit($"Claude: took {ok.Count} away", null, ok, []);
-        _w.AfterClaudeEdit($"Claude took {ok.Count} object(s) away; Ctrl+Z puts them back.");
-        return $"Took {ok.Count} away{(given.Count < ids.Length ? $" ({ids.Length - given.Count} id(s) were not objects of the area)" : "")}"
+        session.Commit(ClaudesStep(Lang.T("claude.undo.tookAway", ok.Count)), null, ok, []);
+        _w.AfterClaudeEdit(Said.Of("claude.msg.tookAway", ok.Count));
+        return $"Took {ok.Count} away{(given.Count < asked.Length ? $" ({asked.Length - given.Count} id(s) were not objects of the area)" : "")}"
             + $"{(groups > 0 ? $", with {groups} whole {noun}(s)" : "")}. Now pending: {Pending()}";
     });
 
@@ -1095,13 +1246,15 @@ public sealed partial class ClaudeTools
         {
             return "The support check is the Workshop's: open_workshop first.";
         }
-        _w.SupportBox.IsChecked = true;
-        _w.RefreshSupport();
-        if (_w.LastSupport is not { } r || _w.Session?.Scene is not { } scene)
+        // The read the pieces' indices are of, taken before they are worked out.
+        int reads = _w.Session?.Scene.Reads ?? 0;
+        if (_w.Session is not { } session)
         {
             return "No building piece on the plot.";
         }
-        var things = _w.LastSupportThings;
+        // Worked out without turning the user's Support switch on (a read-only check).
+        var (r, things) = _w.SolveSupport(session);
+        var scene = session.Scene;
         object Piece(int k) => new
         {
             id = things[k],
@@ -1111,13 +1264,19 @@ public sealed partial class ClaudeTools
             z = MathF.Round(scene.Things[things[k]].Position.Z, 2),
             support = MathF.Round(r.Colour[k], 2),
         };
+        var falling = r.Falls.Take(60).Select(Piece).ToList();
+        // Support: 0 (red, about to fall) to 1 (green); pieces on the ground (light blue in the editor) hold best and are left out.
+        var weakest = Enumerable.Range(0, things.Count).Where(k => !r.Free[k] && !r.Breaks[k] && r.Colour[k] >= 0).OrderBy(k => r.Colour[k]).Take(10).Select(Piece).ToList();
+        if (falling.Count > 0 || weakest.Count > 0)
+        {
+            GaveIds(scene, reads);
+        }
         return ToJson(new
         {
             pieces = things.Count,
             wouldFall = r.Breaking,
-            falling = r.Falls.Take(60).Select(Piece),
-            // Support: 0 (red, about to fall) to 1 (green); pieces on the ground (light blue in the editor) hold best and are left out.
-            weakest = Enumerable.Range(0, things.Count).Where(k => !r.Free[k] && !r.Breaks[k] && r.Colour[k] >= 0).OrderBy(k => r.Colour[k]).Take(10).Select(Piece),
+            falling,
+            weakest,
             onTheGround = Enumerable.Range(0, things.Count).Count(k => r.Colour[k] < 0),
         });
     });
@@ -1161,6 +1320,10 @@ public sealed partial class ClaudeTools
             return why;
         }
         var s = _w.Session!;
+        if (StaleIds(s.Scene) is string stale)
+        {
+            return stale;
+        }
         var things = s.Scene.Things;
         if (id < 0 || id >= things.Count || things[id].Gone)
         {
@@ -1168,9 +1331,9 @@ public sealed partial class ClaudeTools
         }
         var t = things[id];
         var info = Terrain.PrefabCatalog.Details(t.Prefab);
-        var set = new List<TerrainEditor.App.FieldChange>();
-        List<TerrainEditor.App.ItemUpload>? inv = null;
-        bool itemStand = TerrainEditor.App.StandData.IsItemStand(t.Prefab), armourStand = TerrainEditor.App.StandData.IsArmourStand(t.Prefab);
+        var set = new List<FieldChange>();
+        List<ItemUpload>? inv = null;
+        bool itemStand = StandData.IsItemStand(t.Prefab), armourStand = StandData.IsArmourStand(t.Prefab);
         if ((orientation != null && !itemStand) || (pose != null && !armourStand))
         {
             return $"{_w.NameOfPrefab(t.Prefab)} is not {(orientation != null ? "an item stand: only item stands take an orientation" : "an armour stand: only armour stands take a pose")}.";
@@ -1185,8 +1348,8 @@ public sealed partial class ClaudeTools
                 }
                 if (items != null)
                 {
-                    var held = items.Length == 0 ? null : new TerrainEditor.App.StandData.Held(items[0].Item, items[0].Quality, items[0].Variant);
-                    set.AddRange(TerrainEditor.App.StandData.ForItemStand(t.Prefab, held, orientation ?? 0));
+                    var held = items.Length == 0 ? null : new StandData.Held(items[0].Item, items[0].Quality, items[0].Variant);
+                    set.AddRange(StandData.ForItemStand(t.Prefab, held, orientation ?? 0));
                 }
                 else
                 {
@@ -1198,7 +1361,7 @@ public sealed partial class ClaudeTools
             {
                 if (items != null)
                 {
-                    set.AddRange(TerrainEditor.App.StandData.ForArmourStand(t.Prefab, [.. items.Select(i => new TerrainEditor.App.StandData.Held(i.Item, i.Quality, i.Variant))], pose));
+                    set.AddRange(StandData.ForArmourStand(t.Prefab, [.. items.Select(i => new StandData.Held(i.Item, i.Quality, i.Variant))], pose));
                 }
                 else
                 {
@@ -1221,7 +1384,7 @@ public sealed partial class ClaudeTools
             {
                 return $"{_w.NameOfPrefab(t.Prefab)} has {box.ContainerW * box.ContainerH} slots, not {items.Length}.";
             }
-            inv = [.. items.Select((it, i) => new TerrainEditor.App.ItemUpload(it.Item, null, Math.Max(1, it.Stack), Math.Max(1, it.Quality), X: i % box.ContainerW, Y: i / box.ContainerW))];
+            inv = [.. items.Select((it, i) => new ItemUpload(it.Item, null, Math.Max(1, it.Stack), Math.Max(1, it.Quality), X: i % box.ContainerW, Y: i / box.ContainerW, Variant: Math.Max(0, it.Variant)))];
         }
         string kindName = _w.NameOfPrefab(t.Prefab) ?? "";
         if (text != null)
@@ -1245,19 +1408,21 @@ public sealed partial class ClaudeTools
             return "Nothing to change: give items, text, stars, an orientation or a pose.";
         }
         string name = _w.NameOfPrefab(t.Prefab) ?? "object";
-        var (copy, problem) = Rewrite(id, set, inv, $"Claude: filled {name}");
+        var notes = new List<string>();
+        var (copy, problem) = Rewrite(id, set, inv, ClaudesStep(Lang.T("claude.undo.filled", name)), notes);
         if (copy is not int newId)
         {
             return problem!;
         }
-        _w.AfterClaudeEdit($"Claude changed what {name} holds; Ctrl+Z puts it back.");
-        return $"Changed {name}; its id is now {newId}.";
+        _w.AfterClaudeEdit(Said.Of("claude.msg.filled", name));
+        return $"Changed {name}; its id is now {newId}." + string.Concat(notes.Select(n => " " + n + "."));
     });
 
     /// <summary>open_workshop: the blank plot, optionally with a library blueprint; refused while there are unsaved changes.</summary>
     [McpServerTool(Name = "open_workshop", Title = "Open the Workshop")]
     [Description("Opens the Workshop: a blank 192 m plot (ground at y = 34, its middle at x = 0, z = 0) to build a blueprint on, optionally with a blueprint of the library on it (list_blueprints): this is how a blueprint is loaded. Refused while a world or the Workshop has changes not saved (save_blueprint saves the Workshop's building).")]
-    public Task<string> OpenWorkshop([Description("A blueprint's name from list_blueprints (optional: an empty plot).")] string? blueprint = null) => OnUi(async () =>
+    public Task<string> OpenWorkshop([Description("A blueprint's name from list_blueprints (optional: an empty plot).")] string? blueprint = null) =>
+        WithLibraryFile(blueprint, found => OnUi(async () =>
     {
         if (Unsaved() is string why)
         {
@@ -1266,15 +1431,50 @@ public sealed partial class ClaudeTools
         string? path = null;
         if (!string.IsNullOrWhiteSpace(blueprint))
         {
-            path = Path.Combine(_w.Blueprints.Status.Folder, TerrainEditor.App.Homestead.FileName(blueprint));
-            if (!File.Exists(path))
+            path = found;
+            if (path == null)
             {
                 return $"No blueprint \"{blueprint}\" in the library (list_blueprints).";
             }
         }
         await _w.OpenWorkshop(path);
         return ToJson(StateOf(_w));
-    });
+    }));
+
+    /// <summary>
+    /// The library file of a blueprint named as list_blueprints names it (its #Name: header, or its file's name when
+    /// it has none), whatever its file is called (the game's own files, downloaded ones and numbered copies are not
+    /// named after their header): of the entries with that name, the one in the file named after it when there is
+    /// one (as the editor saves them: "Tower" is Tower.blueprint, not "Tower (2)"), else the first. With no entry
+    /// of that name, a file named after it. Null for none.
+    /// </summary>
+    /// <param name="folder">The library's folder.</param>
+    /// <param name="name">The blueprint's name.</param>
+    private static string? BlueprintPath(string folder, string name)
+    {
+        string file = Homestead.FileName(name);
+        var entries = Homestead.List(folder).Where(e => e.Name.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+        if ((entries.Find(e => string.Equals(Path.GetFileName(e.Path), file, StringComparison.OrdinalIgnoreCase)) ?? entries.FirstOrDefault()) is { } entry)
+        {
+            return entry.Path;
+        }
+        string path = Path.Combine(folder, file);
+        return File.Exists(path) ? path : null;
+    }
+
+    /// <summary>
+    /// Finds a library blueprint's file (<see cref="BlueprintPath"/>) away from the window's thread, as it reads every
+    /// blueprint of the library, then answers with <paramref name="then"/> given it (null: none, or no name given).
+    /// </summary>
+    /// <param name="name">The blueprint's name, or null or blank for none.</param>
+    /// <param name="then">The tool's work with the file found.</param>
+    private async Task<string> WithLibraryFile(string? name, Func<string?, Task<string>> then)
+    {
+        // Homestead looked for again: installed or moved since the panel last looked.
+        string folder = await OnUi(() => _w.Blueprints.LookAgain().Folder);
+        string? path = string.IsNullOrWhiteSpace(name) ? null : await Task.Run(() => BlueprintPath(folder, name));
+        return await then(path);
+    }
 
     /// <summary>save_blueprint: the Workshop's building saved as a blueprint of the library (MainWindow.SaveWorkshopAs).</summary>
     [McpServerTool(Name = "save_blueprint", Title = "Save the Workshop's building as a blueprint")]
@@ -1290,18 +1490,17 @@ public sealed partial class ClaudeTools
         {
             return "Give the blueprint a name.";
         }
-        var details = new TerrainEditor.App.Homestead.Details(name.Trim(), description.Trim(), [.. (tags ?? []).Select(t => t.Trim()).Where(t => t.Length > 0)]);
-        return _w.SaveWorkshopAs(details, overwrite, evenIfFalling) is string problem ? problem : _w.MessageText.Text + " " + ToJson(StateOf(_w));
+        var details = new Homestead.Details(name.Trim(), description.Trim(), [.. (tags ?? []).Select(t => t.Trim()).Where(t => t.Length > 0)]);
+        return _w.SaveWorkshopAs(details, overwrite, evenIfFalling) is string problem ? problem : _w.LastMessageEn + " " + ToJson(StateOf(_w));
     });
 
-    /// <summary>list_blueprints: Homestead's library, filtered by words of the name, description or tags.</summary>
+    /// <summary>list_blueprints: Homestead's library, filtered by words of the name, creator, description or tags.</summary>
     [McpServerTool(Name = "list_blueprints", ReadOnly = true, Title = "The blueprint library")]
     [Description("The user's blueprints (Homestead's library): name, pieces, cost, description, tags. Open one in the Workshop (open_workshop) or add it to the plot (add_blueprint).")]
-    public Task<string> ListBlueprints([Description("Words to find in the name, description or tags (optional).")] string? query = null) => OnUi(() =>
+    public Task<string> ListBlueprints([Description("Words to find in the name, creator, description or tags (optional).")] string? query = null) => OnUi(() =>
     {
-        string[] words = (query ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return ToJson(TerrainEditor.App.Homestead.List(_w.Blueprints.Status.Folder)
-            .Where(e => words.All(w => e.Name.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Description.Contains(w, StringComparison.OrdinalIgnoreCase) || e.Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase))))
+        return ToJson(Homestead.List(_w.Blueprints.LookAgain().Folder)
+            .Where(e => e.Matches(query))
             .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Terrain.PieceCost.Of(e.Kinds).Describe(4, english: true), description = e.Description, tags = e.Tags }));
     });
 
@@ -1316,57 +1515,64 @@ public sealed partial class ClaudeTools
         [Description("World x of its middle (optional).")] float? x = null,
         [Description("World z of its middle (optional).")] float? z = null,
         [Description("Degrees to turn it round its middle (default 0).")] float turn = 0,
-        [Description("In a world: the height of its lowest piece (optional: the ground at its middle).")] float? y = null) => OnUi(() =>
+        [Description("In a world: the height of its lowest piece (optional: the ground at its middle).")] float? y = null) =>
+        WithLibraryFile(blueprint, found => OnUi(() =>
     {
         if (CannotEdit() is string why)
         {
             return why;
         }
-        string path = Path.Combine(_w.Blueprints.Status.Folder, TerrainEditor.App.Homestead.FileName(blueprint));
-        if (!File.Exists(path))
+        if (found is not string path)
         {
             return $"No blueprint \"{blueprint}\" in the library (list_blueprints).";
         }
-        string label = $"Claude: added {blueprint}";
+        if (LoneCoordinate(x, z) is string lone)
+        {
+            return lone;
+        }
+        string label = ClaudesStep(Lang.T("claude.undo.added", blueprint));
         if (_w.InWorkshop)
         {
             _w.AddToWorkshop(path, x is float ax && z is float az ? new System.Numerics.Vector2(ax, az) : null, turn, label);
-            return _w.MessageText.Text + " Now pending: " + Pending();
+            return _w.LastMessageEn + " Now pending: " + Pending();
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        int reads = scene.Reads;
         float cx = x ?? scene.Cx, cz = z ?? scene.Cz;
         var (minX, minZ, maxX, maxZ) = Bounds(scene);
         if (cx < minX || cx > maxX || cz < minZ || cz > maxZ)
         {
             return $"({cx}, {cz}) is outside the open area (x {minX} to {maxX}, z {minZ} to {maxZ}): open_area there first.";
         }
-        int before = scene.Things.Count;
-        (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain) added;
+        // Worked out before anything is put down: a refusal leaves the history alone (a step committed and
+        // undone would clear what the user could redo and leave the refused blueprint there instead).
+        Workshop.Planned plan;
         try
         {
-            added = Workshop.Add(s, path, null, new System.Numerics.Vector2(cx, cz), turn, y ?? GroundAt(scene, cx, cz), label);
+            plan = Workshop.Plan(s, path, null, new System.Numerics.Vector2(cx, cz), turn, y ?? GroundAt(scene, cx, cz));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException or JsonException)
         {
             return "Could not read that blueprint: " + ex.Message;
         }
-        if (added.Placed == 0)
+        if (plan.Adds.Count == 0)
         {
             return "Nothing added: the blueprint has no piece this world can have.";
         }
-        var outside = Enumerable.Range(before, scene.Things.Count - before).Select(i => scene.Things[i].Position)
-            .Where(p => p.X < minX || p.X > maxX || p.Z < minZ || p.Z > maxZ).ToList();
-        if (outside.Count > 0)
+        int outside = plan.Adds.Count(a => a.Object.Position.X < minX || a.Object.Position.X > maxX || a.Object.Position.Z < minZ || a.Object.Position.Z > maxZ);
+        if (outside > 0)
         {
-            s.Undo();
-            return $"Nothing added: {outside.Count} piece(s) would be outside the area (x {minX} to {maxX}, z {minZ} to {maxZ}). Open a larger area (open_area) or put it further in.";
+            return $"Nothing added: {outside} piece(s) would be outside the area (x {minX} to {maxX}, z {minZ} to {maxZ}). Open a larger area (open_area) or put it further in.";
         }
-        _w.AfterClaudeEdit($"Claude added “{blueprint}”: {added.Placed} piece(s); Ctrl+Z takes it back.");
+        int before = scene.Things.Count;
+        var added = Workshop.Put(s, plan, label);
+        GaveIds(scene, reads);
+        _w.AfterClaudeEdit(Said.Of("claude.msg.blueprint", blueprint, added.Placed));
         return $"Added {added.Placed} piece(s) of \"{blueprint}\", ids {before} to {scene.Things.Count - 1}."
             + (added.Unknown.Count > 0 ? $" Left out (unknown kinds): {string.Join(", ", added.Unknown.Take(10))}." : "")
             + " Now pending: " + Pending();
-    });
+    }));
 
     /// <summary>
     /// generate_dungeon: a dungeon from the Dungeon panel's settings (clamped to their ranges), onto the Workshop's plot
@@ -1409,9 +1615,12 @@ public sealed partial class ClaudeTools
             {
                 return problem;
             }
+            // One of Claude's steps ("Claude:", as Take back Claude's changes finds them), and no file in the user's
+            // blueprint Library.
+            string label = ClaudesStep(Lang.T("claude.undo.dungeon", result.Name));
             if (_w.InWorkshop)
             {
-                await _w.GeneratedOntoPlot(settings, result, add: true);
+                _w.AddGeneratedToPlot(settings, result, label);
             }
             else
             {
@@ -1419,16 +1628,16 @@ public sealed partial class ClaudeTools
                 {
                     // Above a point of the open area (its ground is the area's).
                     var sc = opened.Scene;
-                    float minX = sc.X0 * 64f - 32f, minZ = sc.Z0 * 64f - 32f;
-                    if (px < minX || pz < minZ || px > minX + sc.ZonesX * 64f || pz > minZ + sc.ZonesZ * 64f)
+                    var (minX, minZ, maxX, maxZ) = Bounds(sc);
+                    if (px < minX || pz < minZ || px > maxX || pz > maxZ)
                     {
-                        return $"({px}, {pz}) is outside the open area (x {minX} to {minX + sc.ZonesX * 64f}, z {minZ} to {minZ + sc.ZonesZ * 64f}): open_area there first.";
+                        return $"({px}, {pz}) is outside the open area (x {minX} to {maxX}, z {minZ} to {maxZ}): open_area there first.";
                     }
                     _w.View.Orbit(px, pz, 45, 55, 120);
                 }
-                _w.PlaceGenerated(settings, result);
+                _w.PlaceGenerated(settings, result, label);
             }
-            return $"{string.Join(" ", result.Notes)} {_w.MessageText.Text} Now pending: {Pending()}";
+            return $"{Said.Join(" ", result.Notes).English} {_w.LastMessageEn} Now pending: {Pending()}";
         });
     }
 
@@ -1467,16 +1676,16 @@ public sealed partial class ClaudeTools
             area = scene == null ? null : new
             {
                 name = scene.Name,
-                minX = scene.X0 * 64f - 32f,
-                minZ = scene.Z0 * 64f - 32f,
-                maxX = scene.X0 * 64f - 32f + scene.ZonesX * 64f,
-                maxZ = scene.Z0 * 64f - 32f + scene.ZonesZ * 64f,
+                minX = scene.OriginX,
+                minZ = scene.OriginZ,
+                maxX = scene.OriginX + scene.ZonesX * 64f,
+                maxZ = scene.OriginZ + scene.ZonesZ * 64f,
                 water = scene.Water,
                 objects = scene.Things.Count(t => !t.Gone),
             },
             pending = w.World is { } pw ? new { zones = pw.Pending.Zones, added = pw.Pending.Added, deleted = pw.Pending.Deleted } : null,
             canUndo = s?.CanUndo ?? false,
-            message = w.MessageText.Text ?? "",
+            message = w.LastMessageEn,
         };
     }
 }

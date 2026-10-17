@@ -266,6 +266,23 @@ public class ClipboardTests
         Assert.Equal(Beech, prefab);
     }
 
+    // Copies overlapping (a negative gap) each stand where the ghost shows them: every copy's height is read from the
+    // ground before any copy shapes it, not from the ground the copy before it pasted.
+    [Fact]
+    public void OverlappingCopiesStandWhereTheGhostShowsThem()
+    {
+        var s = Walled();
+        var paste = new PasteTool { Clip = CopyData.FromArea(Box(32, 32, 48, 48), s.Ground, s.Scene, [0, 1], _ => "Beech1"), Copies = 2 };
+        var at = new Vector2(90, 90);
+        // A step of one metre: the second copy's middle on the first copy's ground.
+        paste.Gap = 1 - (paste.CopyAt(at, 1).At.X - paste.CopyAt(at, 0).At.X);
+        Assert.Equal(1f, paste.CopyAt(at, 1).At.X - paste.CopyAt(at, 0).At.X, 3);
+        float ox = s.Scene.X0 * 64f - 32f, oz = s.Scene.Z0 * 64f - 32f;
+        var ghosts = paste.Ghosts(at, g => H(s, (int)MathF.Round(g.X), (int)MathF.Round(g.Y)), ox, oz);
+        var (_, _, add) = paste.Apply(s.Ground, at);
+        Assert.Equal(ghosts.Select(g => g.Position), add.Select(a => a.Item1.Position));
+    }
+
     // Copied with the Select tool on a slope: building pieces keep the building's shape (each piece's
     // height from the others), trees and the like keep their height above the ground where they land.
     [Fact]
@@ -325,6 +342,26 @@ public class ClipboardTests
         Assert.Equal(H(s, 40, 40) - H(s, 38, 40), H(s, 90, 90) - H(s, 88, 90), 1);
         Assert.True(H(s, 90, 90) > 38.5f);
         Assert.False(s.Ground.NoLimit);
+    }
+
+    // A paste that fails part-way (a copy whose arrays are shorter than its size) leaves No limit as it was: it
+    // stayed on, and every later brush went past the game's ±8 m.
+    [Fact]
+    public void AFailedPasteLeavesNoLimitAsItWas()
+    {
+        var s = TestScenes.Flat();
+        var paste = new PasteTool { Clip = new CopyData { W = 3, H = 3, Rel = [0f], Wt = [1f], Pnt = [-1f, -1, -1, -1], Objects = [], Poly = [new(-1, -1), new(1, 1)] } };
+        Assert.Throws<IndexOutOfRangeException>(() => paste.Apply(s.Ground, new Vector2(40, 40)));
+        Assert.False(s.Ground.NoLimit);
+    }
+
+    // A copy without an outline (a blueprint that has none) is pasted and repeated by its grid's size: the step
+    // between copies took the outline's and threw on an empty one.
+    [Fact]
+    public void ACopyWithoutAnOutlineRepeatsByItsSize()
+    {
+        var paste = new PasteTool { Clip = new CopyData { W = 3, H = 2, Rel = [.. Enumerable.Repeat(0f, 6)], Wt = [.. Enumerable.Repeat(1f, 6)], Pnt = [.. Enumerable.Repeat(-1f, 24)], Objects = [], Poly = [] } };
+        Assert.Equal(paste.CopyAt(new Vector2(40, 40), 0).At + new Vector2(2 + paste.Gap, 0), paste.CopyAt(new Vector2(40, 40), 1).At);
     }
 
     // Clear the site leaves the copied ground alone (a wall set a metre into it stays so, no trench

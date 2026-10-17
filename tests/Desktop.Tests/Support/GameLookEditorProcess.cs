@@ -136,12 +136,9 @@ public sealed class GameLookEditorProcess() : EditorProcess([], Home())
     {
         base.Dispose();
         _game?.Dispose();
-        try
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir!, true);
-        }
-        catch
-        {
         }
     }
 }

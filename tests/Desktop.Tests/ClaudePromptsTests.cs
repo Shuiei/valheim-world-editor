@@ -14,7 +14,7 @@ public class ClaudePromptsTests
         Assert.StartsWith("In Valheim World Editor, build this in the Workshop: a longhouse", prompt);
         Assert.Contains(ClaudeGuide.Building, prompt);
         Assert.Contains("support_check", prompt);
-        Assert.Contains("I save the blueprint", prompt);
+        Assert.Contains("save_blueprint only when I ask", prompt);
     }
 
     [Fact]

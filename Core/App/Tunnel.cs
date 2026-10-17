@@ -146,16 +146,21 @@ public static class Tunnel
         {
             return Fail("Enter the server as user@address (the account you log in to the server with).");
         }
+        if (!ServerConfig.IsPort(port) || r.BridgePort is int given && !ServerConfig.IsPort(given))
+        {
+            return Fail("A port is a number from 1 to 65535.");
+        }
+        // Saved one per line in servers.cfg: a line break would add lines of its own there (another HostKey, say).
+        if (!new[] { host, user, r.Password, r.KeyPath, r.Token, r.Name, r.GameFolder }.All(ServerConfig.OneLine))
+        {
+            return Fail("The server's details cannot hold line breaks: enter each on one line.");
+        }
         var methods = new List<AuthenticationMethod>();
         try
         {
             if (!string.IsNullOrWhiteSpace(r.KeyPath))
             {
-                string key = r.KeyPath.Trim().Trim('"');
-                if (key.StartsWith('~'))
-                {
-                    key = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + key[1..];
-                }
+                string key = Places.ExpandHome(r.KeyPath);
                 keys.Add(string.IsNullOrEmpty(r.Passphrase) ? new PrivateKeyFile(key) : new PrivateKeyFile(key, r.Passphrase));
                 methods.Add(new PrivateKeyAuthenticationMethod(user, keys[^1]));
             }
@@ -197,15 +202,24 @@ public static class Tunnel
         {
             return Fail("Enter the password, or choose your SSH key file.");
         }
+        // The server's key as known for this address and port, whatever the account (logging in as
+        // another user is still the same server: a different key there is refused too). Not read: no connection, as
+        // the key it holds could not be checked.
+        List<ServerConfig.Server> savedServers;
+        try
+        {
+            savedServers = ServerConfig.Load();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return Fail($"The saved servers could not be read ({ex.Message}): {ServerConfig.FilePath}.");
+        }
         var info = new ConnectionInfo(host, port, user, [.. methods]) { Timeout = TimeSpan.FromSeconds(12) };
         var client = new SshClient(info) { KeepAliveInterval = TimeSpan.FromSeconds(30) };
         string id = $"{user}@{host}:{port}";
-        // The server's key as known for this address and port, whatever the account (logging in as
-        // another user is still the same server: a different key there is refused too).
-        var savedServers = ServerConfig.Load();
         ServerConfig.Server? saved = savedServers.FirstOrDefault(s => s.Id == id);
-        string? pinned = saved?.HostKey
-            ?? savedServers.FirstOrDefault(s => s.HostKey != null && s.SshPort == port && string.Equals(s.Host, host, StringComparison.OrdinalIgnoreCase))?.HostKey;
+        List<ServerConfig.Server> sameServer = [.. savedServers.Where(s => s.HostKey != null && s.SshPort == port && string.Equals(s.Host, host, StringComparison.OrdinalIgnoreCase))];
+        string? pinned = saved?.HostKey ?? sameServer.FirstOrDefault()?.HostKey;
         string? seen = null, changed = null;
         // Trust on first use: remember the server's key; refuse if it changes later.
         client.HostKeyReceived += (_, e) =>
@@ -228,7 +242,9 @@ public static class Tunnel
             client.Dispose();
             if (changed != null)
             {
-                return Fail($"The server's identity changed (it was {changed}, now {seen}). If you reinstalled the server this is expected: empty its HostKey line in {ServerConfig.FilePath}; otherwise do not connect.");
+                // Every entry for this server that still holds another key would refuse it again: name them all.
+                string entries = string.Join(", ", sameServer.Where(s => s.HostKey != seen).Select(s => $"[{ServerConfig.SectionName(s)}]"));
+                return Fail($"The server's identity changed (it was {changed}, now {seen}). If you reinstalled the server this is expected: empty the HostKey line of {entries} in {ServerConfig.FilePath}; otherwise do not connect.");
             }
             return Fail(ex switch
             {
@@ -237,46 +253,60 @@ public static class Tunnel
                 _ => "Could not connect: " + ex.Message,
             });
         }
-        // The token is always the user's to give (typed, or saved with the server): never looked up on the server.
-        string? gameFolder = string.IsNullOrWhiteSpace(r.GameFolder) ? saved?.GameFolder : r.GameFolder.Trim().TrimEnd('/');
-        // The plugin's port from its settings in the server's Valheim folder, when given (never the token).
-        int? folderPort = null;
-        if (gameFolder != null && r.BridgePort == null)
+        // Connected: whatever fails from here on (the server's answer, the local port taken meanwhile) closes the
+        // connection again and is said, rather than leaving it open and the start page waiting.
+        ForwardedPortLocal? forward = null;
+        int local, bridgePort;
+        string? gameFolder, token;
+        try
         {
-            string cfg = gameFolder + "/BepInEx/config/";
-            string text = Run(client, $"cat {Quote(cfg + LocalGame.ConfigName)} 2>/dev/null || cat {Quote(cfg + LocalGame.OldConfigName)} 2>/dev/null");
-            if (System.Text.RegularExpressions.Regex.Match(text, @"^\s*Port\s*=\s*(\d+)", System.Text.RegularExpressions.RegexOptions.Multiline) is { Success: true } pm)
+            // The token is always the user's to give (typed, or saved with the server): never looked up on the server.
+            gameFolder = string.IsNullOrWhiteSpace(r.GameFolder) ? saved?.GameFolder : r.GameFolder.Trim().TrimEnd('/');
+            // The plugin's port from its settings in the server's Valheim folder, when given (never the token).
+            int? folderPort = null;
+            if (gameFolder != null && r.BridgePort == null)
             {
-                folderPort = int.Parse(pm.Groups[1].Value);
+                string cfg = gameFolder + "/BepInEx/config/";
+                // Off the caller's thread whatever the connect did: the command waits on the server (15 s at most).
+                string text = await Task.Run(() => Run(client, $"cat {Quote(cfg + LocalGame.ConfigName)} 2>/dev/null || cat {Quote(cfg + LocalGame.OldConfigName)} 2>/dev/null")).ConfigureAwait(false);
+                if (System.Text.RegularExpressions.Regex.Match(text, @"^\s*Port\s*=\s*(\d+)", System.Text.RegularExpressions.RegexOptions.Multiline) is { Success: true } pm
+                    && int.TryParse(pm.Groups[1].Value, out int cfgPort) && ServerConfig.IsPort(cfgPort))
+                {
+                    folderPort = cfgPort;
+                }
+            }
+            bridgePort = r.BridgePort ?? folderPort ?? saved?.BridgePort ?? 5182;
+            token = string.IsNullOrWhiteSpace(r.Token) ? saved?.Token : r.Token.Trim();
+            if (token == null)
+            {
+                Shut(client, null);
+                return Fail("Enter the plugin's token: the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server.");
+            }
+            local = Places.FreePort(15182);
+            forward = new ForwardedPortLocal("127.0.0.1", (uint)local, "127.0.0.1", (uint)bridgePort);
+            client.AddForwardedPort(forward);
+            bool closed;
+            lock (Sync)
+            {
+                // Closed while connecting (the editor quit, or went back to Home): this tunnel is no longer wanted.
+                closed = _closes != closes;
+                if (!closed)
+                {
+                    forward.Start();
+                    _client = client;
+                    _forward = forward;
+                }
+            }
+            if (closed)
+            {
+                Shut(client, null);
+                return Fail("The connection was closed while it was being made.");
             }
         }
-        int bridgePort = r.BridgePort ?? folderPort ?? saved?.BridgePort ?? 5182;
-        string? token = string.IsNullOrWhiteSpace(r.Token) ? saved?.Token : r.Token.Trim();
-        if (token == null)
+        catch (Exception ex) when (ex is SshException or System.Net.Sockets.SocketException or IOException or ObjectDisposedException or InvalidOperationException)
         {
-            client.Disconnect();
-            client.Dispose();
-            return Fail("Enter the plugin's token: the Token line in BepInEx/config/Tie.WorldEditorBridge.cfg on the server.");
-        }
-        int local = Places.FreePort(15182);
-        var forward = new ForwardedPortLocal("127.0.0.1", (uint)local, "127.0.0.1", (uint)bridgePort);
-        client.AddForwardedPort(forward);
-        bool closed;
-        lock (Sync)
-        {
-            // Closed while connecting (the editor quit, or went back to Home): this tunnel is no longer wanted.
-            closed = _closes != closes;
-            if (!closed)
-            {
-                forward.Start();
-                _client = client;
-                _forward = forward;
-            }
-        }
-        if (closed)
-        {
-            Shut(client, null);
-            return Fail("The connection was closed while it was being made.");
+            Shut(client, forward);
+            return Fail("The tunnel could not be opened: " + ex.Message);
         }
         // What to remember for next time (the password only when asked to), saved once the plugin answers.
         var remember = new ServerConfig.Server
@@ -299,9 +329,10 @@ public static class Tunnel
 
     /// <summary>
     /// Why the plugin does not answer, from what the server's Valheim folder holds (while connected). Null
-    /// when not connected, no folder is given or the check did not answer.
+    /// when not connected, no folder is given or the check did not answer. The check runs off the caller's thread: it
+    /// waits on the server (15 s at most).
     /// </summary>
-    public static string? Diagnose(string? gameFolder)
+    public static async Task<string?> Diagnose(string? gameFolder)
     {
         SshClient? client = _client;
         if (client == null || string.IsNullOrWhiteSpace(gameFolder))
@@ -310,9 +341,10 @@ public static class Tunnel
         }
         string f = gameFolder.TrimEnd('/');
         string q = Quote(f);
-        string answer = Run(client, $"if [ ! -d {q} ]; then echo nofolder; elif [ ! -d {q}/BepInEx ]; then echo nobepinex; " +
+        string command = $"if [ ! -d {q} ]; then echo nofolder; elif [ ! -d {q}/BepInEx ]; then echo nobepinex; " +
             $"elif ! find {q}/BepInEx/plugins -name WorldEditorBridge.dll 2>/dev/null | grep -q .; then echo noplugin; " +
-            $"elif [ ! -f {q}/BepInEx/config/{LocalGame.ConfigName} ] && [ ! -f {q}/BepInEx/config/{LocalGame.OldConfigName} ]; then echo nocfg; else echo installed; fi").Trim();
+            $"elif [ ! -f {q}/BepInEx/config/{LocalGame.ConfigName} ] && [ ! -f {q}/BepInEx/config/{LocalGame.OldConfigName} ]; then echo nocfg; else echo installed; fi";
+        string answer = (await Task.Run(() => Run(client, command)).ConfigureAwait(false)).Trim();
         return answer switch
         {
             "nofolder" => $"The folder {f} does not exist on the server: check the server's Valheim folder.",

@@ -21,18 +21,28 @@ public static class ObjectData
     /// The saved bytes of an object of the world (id &gt;= 0) or of one added in this session (id &lt; 0); null
     /// when there is no such object.
     /// </summary>
-    public static byte[]? Bytes(WorldSave w, EditStore edits, int id)
+    public static byte[]? Bytes(WorldSave w, EditStore edits, int id) => Bytes(w, edits.FindAdded, id, WorldSave.Builder);
+
+    /// <summary>
+    /// <see cref="Bytes(WorldSave, EditStore, int)"/> from objects added taken earlier, with the builder taken with
+    /// them: what a reader on another thread writes as the world and edits were then.
+    /// </summary>
+    /// <param name="w">The world.</param>
+    /// <param name="findAdded">An object added in this session by id (null when there is none).</param>
+    /// <param name="id">The object.</param>
+    /// <param name="builder">The builder a new piece of a kind players build is given (0: none).</param>
+    public static byte[]? Bytes(WorldSave w, Func<int, NewObject?> findAdded, int id, long builder)
     {
         if (id >= 0)
         {
             return id < w.ObjectRefs.Count ? w.ObjectBytes(id) : null;
         }
-        NewObject? n = edits.FindAdded(id);
+        NewObject? n = findAdded(id);
         if (n == null)
         {
             return null;
         }
-        return w.NewObjectBytes(n, w.SourceReader());
+        return w.NewObjectBytes(n, w.SourceReader(), builder);
     }
 
     /// <summary>The keys of an object's own scale, which a copy takes from its own size instead.</summary>
@@ -68,21 +78,34 @@ public static class ObjectData
     /// A container's contents from a list of items, each value clamped to what the save holds (stack and
     /// quality 1..65535, slot and world level 0..255).
     /// </summary>
-    /// <exception cref="ArgumentException">An item is not one of the game's.</exception>
-    public static InventoryData BuildInventory(List<ItemUpload> list)
+    /// <exception cref="ArgumentException">
+    /// An entry is not an item of the game: unknown, or a prefab that is not an item (a creature, a piece), which the
+    /// game would drop from the container on load.
+    /// </exception>
+    /// <param name="list">The items.</param>
+    /// <param name="notes">Told "Wood: stack of 70 cut to 50 (the item's maximum)" for each stack cut, when given.</param>
+    public static InventoryData BuildInventory(List<ItemUpload> list, ICollection<string>? notes = null)
     {
         InventoryData inv = new();
         foreach (ItemUpload u in list)
         {
             int prefab = u.Prefab ?? StableHash.Of(u.Name ?? "");
-            if (PrefabCatalog.NameOf(prefab) == null)
+            if (PrefabCatalog.ItemKindOf(prefab) is not { } kind)
             {
                 throw new ArgumentException($"“{u.Name ?? prefab.ToString(CultureInfo.InvariantCulture)}” is not an item of the game.");
+            }
+            // The game keeps a stack's worth: a larger stack is cut to the item's largest (1: the item does not
+            // stack). The catalogue always knows it: each build of the editor scans the game again.
+            int stack = Math.Clamp(u.Stack, 1, 65535);
+            if (stack > kind.MaxStack)
+            {
+                notes?.Add($"{u.Name ?? PrefabCatalog.NameOf(prefab) ?? prefab.ToString(CultureInfo.InvariantCulture)}: stack of {stack} cut to {kind.MaxStack} (the item's maximum)");
+                stack = kind.MaxStack;
             }
             inv.Items.Add(new InventoryData.Item
             {
                 Prefab = prefab,
-                Stack = Math.Clamp(u.Stack, 1, 65535),
+                Stack = stack,
                 Quality = Math.Clamp(u.Quality, 1, 65535),
                 Durability = u.Durability,
                 X = Math.Clamp(u.X, 0, 255),
@@ -109,7 +132,8 @@ public static class ObjectData
     /// <param name="inventory">
     /// The container's new contents (also marked as having had its default loot); null leaves them as they are.
     /// </param>
-    public static ZdoData Edited(byte[] bytes, List<FieldChange>? set, List<ItemUpload>? inventory)
+    /// <param name="notes">Told of stacks cut to the item's maximum (BuildInventory), when given.</param>
+    public static ZdoData Edited(byte[] bytes, List<FieldChange>? set, List<ItemUpload>? inventory, ICollection<string>? notes = null)
     {
         var z = ZdoData.Parse(bytes);
         foreach (FieldChange f in set ?? [])
@@ -118,7 +142,7 @@ public static class ObjectData
         }
         if (inventory != null)
         {
-            z.SetBytes(ItemsKey, BuildInventory(inventory).Write());
+            z.SetBytes(ItemsKey, BuildInventory(inventory, notes).Write());
             // Told it has its default items already: a chest never opened fills itself with the game's
             // loot when it first loads (Container.Awake), over what was set here.
             z.Set("ints", AddedDefaultItemsKey, "1");

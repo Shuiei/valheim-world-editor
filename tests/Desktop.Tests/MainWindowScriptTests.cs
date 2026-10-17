@@ -34,7 +34,7 @@ public class MainWindowScriptTests
         w.Show();
         var r = await w.RunScriptCode(Raise, "Script: test");
         Assert.False(r.Changed);
-        Assert.Equal("Open an area first: a script works on the open area.", r.Message);
+        Assert.Equal("Open an area first: a script works on the open area.", r.Message.English);
     }
 
     [AvaloniaFact]
@@ -50,12 +50,12 @@ public class MainWindowScriptTests
             Objects.Place("rock4_forest", 20, 20);
             """, "Script: test", apply: false);
         Assert.False(r.Changed);
-        Assert.StartsWith("Dry run: the script would change ", r.Message);
-        Assert.Contains("ground point(s)", r.Message);
-        Assert.Contains("painted", r.Message);
-        Assert.Contains("object(s) placed", r.Message);
-        Assert.Contains("1 taken away", r.Message);
-        Assert.EndsWith("; nothing changed.", r.Message);
+        Assert.StartsWith("Dry run: the script would change ", r.Message.English);
+        Assert.Contains("ground point(s)", r.Message.English);
+        Assert.Contains("painted", r.Message.English);
+        Assert.Contains("object(s) placed", r.Message.English);
+        Assert.Contains("1 taken away", r.Message.English);
+        Assert.EndsWith("; nothing changed.", r.Message.English);
         Assert.Equal(steps, s.UndoList.Count);
         Assert.False(s.Scene.Things[0].Gone);
     }
@@ -70,7 +70,7 @@ public class MainWindowScriptTests
                 Objects.Move(o, y: o.Y + 1);
             """, "Script: test");
         Assert.True(r.Changed);
-        Assert.StartsWith("The script changed 1 moved in ", r.Message);
+        Assert.StartsWith("The script changed 1 moved in ", r.Message.English);
 
         var gone = await w.RunScriptCode("""
             foreach (var o in Objects.All)
@@ -79,7 +79,7 @@ public class MainWindowScriptTests
                 Objects.Remove(o);
             }
             """, "Script: test", apply: false);
-        Assert.Equal("Dry run: the script would change 1 taken away; nothing changed.", gone.Message);
+        Assert.Equal("Dry run: the script would change 1 taken away; nothing changed.", gone.Message.English);
     }
 
     [AvaloniaFact]
@@ -89,7 +89,7 @@ public class MainWindowScriptTests
         var first = w.RunScriptCode(Raise, "Script: first");
         // Another while it runs: refused, from the panel too.
         var second = await w.RunScriptCode(Raise, "Script: second");
-        Assert.Equal("A script is already running: nothing changed.", second.Message);
+        Assert.Equal("A script is already running: nothing changed.", second.Message.English);
         w.MessageText.Text = "";
         await w.RunScript();
         Assert.Equal("", w.MessageText.Text);
@@ -98,7 +98,7 @@ public class MainWindowScriptTests
         int steps = s.UndoList.Count;
         var done = await first;
         Assert.False(done.Changed);
-        Assert.Equal("The area changed while the script ran: nothing changed. Run it again.", done.Message);
+        Assert.Equal("The area changed while the script ran: nothing changed. Run it again.", done.Message.English);
         Assert.Equal(steps, s.UndoList.Count);
     }
 
@@ -112,7 +112,7 @@ public class MainWindowScriptTests
         w.Edit(other);
         var done = await first;
         Assert.False(done.Changed);
-        Assert.Equal("Another area was opened while the script ran: nothing changed.", done.Message);
+        Assert.Equal("Another area was opened while the script ran: nothing changed.", done.Message.English);
         Assert.Empty(s.UndoList);
         Assert.Empty(other.UndoList);
     }

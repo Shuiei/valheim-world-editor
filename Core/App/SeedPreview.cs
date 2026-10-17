@@ -23,6 +23,9 @@ public static class SeedPreview
         Heightmap.Biome.Plains, Heightmap.Biome.Mistlands, Heightmap.Biome.AshLands, Heightmap.Biome.DeepNorth,
     ];
 
+    /// <summary>A cell's four side neighbours, as column and row steps.</summary>
+    private static readonly (int Di, int Dj)[] Sides = [(1, 0), (-1, 0), (0, 1), (0, -1)];
+
     /// <summary>
     /// The places worth knowing about before playing: the start, the traders, the bosses' altars. Prefab is
     /// the game's location, Name what the player calls it, Kind "start", "trader" or "boss".
@@ -262,7 +265,7 @@ public static class SeedPreview
                 int c = queue.Dequeue();
                 n++;
                 int ci = c % size, cj = c / size;
-                foreach (var (di, dj) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                foreach (var (di, dj) in Sides)
                 {
                     int ni = ci + di, nj = cj + dj;
                     if (ni < 0 || nj < 0 || ni >= size || nj >= size)

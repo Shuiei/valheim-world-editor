@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.App;
 using TerrainEditor.Save;
 
 namespace TerrainEditor.Editing;
@@ -21,12 +22,41 @@ public static class DungeonEntrances
         public Vector3 Forward => Vector3.Transform(Vector3.UnitZ, Rotation);
     }
 
-    /// <summary>The entrances preferred for a dungeon kind, in this order, before any other location that holds it.</summary>
-    private static readonly string[] Preferred =
+    /// <summary>What a location is called as an entrance (<see cref="Describe"/>).</summary>
+    internal enum Called
+    {
+        /// <summary>Its own name: no other is shown.</summary>
+        OwnName,
+        /// <summary>A burial chamber.</summary>
+        BurialChamber,
+        /// <summary>A sunken crypt.</summary>
+        SunkenCrypt,
+        /// <summary>A Frost Cave.</summary>
+        FrostCave,
+        /// <summary>An infested mine.</summary>
+        InfestedMine,
+        /// <summary>A Morgen hole.</summary>
+        MorgenHole,
+    }
+
+    /// <summary>
+    /// The locations with a dungeon (the game lays it out 5000 m above them when a player first comes near), with what
+    /// each is called as an entrance (<see cref="Called.OwnName"/>: its name) and whether it is preferred as one; the
+    /// preferred come first for a dungeon kind, in this order. One table for <see cref="DungeonGen.DungeonLocations"/>,
+    /// <see cref="For"/> and <see cref="Describe"/>.
+    /// </summary>
+    internal static readonly (string Name, Called Description, bool Preferred)[] Locations =
     [
-        "Crypt2", "Crypt3", "Crypt4", "SunkenCrypt4", "MountainCave02", "Mistlands_DvergrTownEntrance1", "Mistlands_DvergrTownEntrance2",
-        "MorgenHole1", "MorgenHole2", "MorgenHole3",
+        ("Crypt2", Called.BurialChamber, true), ("Crypt3", Called.BurialChamber, true), ("Crypt4", Called.BurialChamber, true),
+        ("HalfBurried_ForestCrypt", Called.BurialChamber, false), ("SunkenCrypt4", Called.SunkenCrypt, true), ("MountainCave02", Called.FrostCave, true),
+        ("Hildir_crypt", Called.OwnName, false), ("Hildir_cave", Called.OwnName, false), ("Hildir_plainsfortress", Called.OwnName, false),
+        ("Mistlands_DvergrTownEntrance1", Called.InfestedMine, true), ("Mistlands_DvergrTownEntrance2", Called.InfestedMine, true),
+        ("Mistlands_DvergrBossEntrance1", Called.OwnName, false), ("MorgenHole1", Called.MorgenHole, true), ("MorgenHole2", Called.MorgenHole, true),
+        ("MorgenHole3", Called.MorgenHole, true), ("TheHole01", Called.OwnName, false), ("TheDarkestHole", Called.OwnName, false), ("CharredFortress", Called.OwnName, false),
     ];
+
+    /// <summary>The entrances preferred for a dungeon kind, in this order, before any other location that holds it.</summary>
+    private static readonly string[] Preferred = [.. Locations.Where(l => l.Preferred).Select(l => l.Name)];
 
     /// <summary>Locations that never serve as an entrance: a quest's or a boss's own places.</summary>
     private static readonly string[] Never = ["Hildir_", "Mistlands_DvergrBossEntrance"];
@@ -51,7 +81,11 @@ public static class DungeonEntrances
         p.Contents.FirstOrDefault(c => Dungeons.KindOf(StableHash.Of(c.Prefab)) != null || c.Prefab.StartsWith("DG_", StringComparison.Ordinal));
 
     /// <summary>The middle of the zone a point is in (ZoneSystem.GetZonePos), at height 0.</summary>
-    public static Vector3 ZoneCentre(Vector3 p) => new(MathF.Floor((p.X + 32f) / 64f) * 64f, 0f, MathF.Floor((p.Z + 32f) / 64f) * 64f);
+    public static Vector3 ZoneCentre(Vector3 p)
+    {
+        var (zx, zz) = ChunkMath.SectorOf(p.X, p.Z);
+        return new(zx * 64f, 0f, zz * 64f);
+    }
 
     /// <summary>
     /// Where the game puts the location's interior transform for an entrance at <paramref name="at"/>, whichever way it
@@ -112,8 +146,8 @@ public static class DungeonEntrances
     public static Vector3 Landing(Pose door) => door.Position + door.Forward - Vector3.UnitY;
 
     /// <summary>
-    /// The turn (degrees about the vertical) that makes the location's door into its interior face from
-    /// <paramref name="at"/> toward <paramref name="toward"/>; 0 when it has no such door or the two are one place.
+    /// The turn (degrees about the vertical, from 0 up to 360) that makes the location's door into its interior face
+    /// from <paramref name="at"/> toward <paramref name="toward"/>; 0 when it has no such door or the two are one place.
     /// </summary>
     public static float YawToFace(LocationPrefabs.Prefab p, Vector3 at, Vector3 toward)
     {
@@ -127,25 +161,30 @@ public static class DungeonEntrances
         {
             return 0f;
         }
-        float yaw = (MathF.Atan2(dx, dz) - MathF.Atan2(f.X, f.Z)) * 180f / MathF.PI;
-        return ((yaw % 360f) + 360f) % 360f;
+        return Wrapped((MathF.Atan2(dx, dz) - MathF.Atan2(f.X, f.Z)) * 180f / MathF.PI);
     }
 
-    /// <summary>The turn about the vertical a pose faces (degrees, 0 along +z).</summary>
+    /// <summary>The turn about the vertical a pose faces (degrees from 0 up to 360, 0 along +z), as YawToFace's.</summary>
     public static float YawOf(Pose pose)
     {
         var f = pose.Forward;
-        return MathF.Atan2(f.X, f.Z) * 180f / MathF.PI;
+        return Wrapped(MathF.Atan2(f.X, f.Z) * 180f / MathF.PI);
     }
 
-    /// <summary>What a location is called as an entrance: a burial chamber, a Frost Cave...</summary>
-    public static string Describe(LocationPrefabs.Prefab p) => p.Name switch
+    /// <summary>An angle in degrees brought into 0 up to 360.</summary>
+    private static float Wrapped(float degrees) => ((degrees % 360f) + 360f) % 360f;
+
+    /// <summary>
+    /// What a location is called as an entrance, in the language in use and in English: a burial chamber, a Frost
+    /// Cave... (its own name, the same in both, when it has no other).
+    /// </summary>
+    public static Said Describe(LocationPrefabs.Prefab p) => Array.Find(Locations, l => l.Name == p.Name).Description switch
     {
-        "Crypt2" or "Crypt3" or "Crypt4" or "HalfBurried_ForestCrypt" => "burial chamber",
-        "SunkenCrypt4" => "sunken crypt",
-        "MountainCave02" => "Frost Cave",
-        "Mistlands_DvergrTownEntrance1" or "Mistlands_DvergrTownEntrance2" => "infested mine",
-        "MorgenHole1" or "MorgenHole2" or "MorgenHole3" => "Morgen hole",
-        _ => p.Name,
+        Called.BurialChamber => Said.Of("dungeon.entrance.burialChamber"),
+        Called.SunkenCrypt => Said.Of("dungeon.entrance.sunkenCrypt"),
+        Called.FrostCave => Said.Of("dungeon.kind.frostCave"),
+        Called.InfestedMine => Said.Of("dungeon.entrance.infestedMine"),
+        Called.MorgenHole => Said.Of("dungeon.entrance.morgenHole"),
+        _ => Said.Raw(p.Name),
     };
 }

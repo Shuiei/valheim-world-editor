@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.Numerics;
@@ -153,6 +154,14 @@ public static class Homestead
         public Dictionary<string, int> Kinds { get; init; } = [];
         /// <summary>Its name, description and tags, as the player edits them.</summary>
         public Details Details => new(Name, Description, Tags);
+
+        /// <summary>
+        /// Whether every word of a search (split on spaces) is somewhere in its name, creator, description or tags,
+        /// ignoring case; an empty search matches every blueprint. The one filter of every blueprint list.
+        /// </summary>
+        public bool Matches(string? query) => (query ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).All(w =>
+            Name.Contains(w, StringComparison.OrdinalIgnoreCase) || (Creator ?? "").Contains(w, StringComparison.OrdinalIgnoreCase)
+            || Description.Contains(w, StringComparison.OrdinalIgnoreCase) || Tags.Any(t => t.Contains(w, StringComparison.OrdinalIgnoreCase)));
     }
 
     /// <summary>The readable blueprints of a folder, by name (empty when the folder does not exist).</summary>
@@ -192,17 +201,18 @@ public static class Homestead
         foreach (string raw in lines)
         {
             string line = raw.Trim();
-            if (line.StartsWith("#Name:", StringComparison.OrdinalIgnoreCase))
+            if (BlueprintFormats.HeaderValue(line, "#Name:") is { } named)
             {
-                name = line[6..].Trim();
+                name = named;
             }
-            else if (line.StartsWith("#Creator:", StringComparison.OrdinalIgnoreCase))
+            else if (BlueprintFormats.HeaderValue(line, "#Creator:") is { } by)
             {
-                creator = line[9..].Trim();
+                creator = by;
             }
-            else if (line.StartsWith("#Description:", StringComparison.OrdinalIgnoreCase))
+            else if (BlueprintFormats.HeaderValue(line, "#Description:") is { } about)
             {
-                description = line[13..].Trim().Trim('"');
+                // As a paste reads it: a quoted description loses its quotes, one only starting with a quote keeps it.
+                description = BlueprintFormats.Unquote(about);
             }
             else if (line.StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase))
             {
@@ -247,28 +257,67 @@ public static class Homestead
         {
             pieces = lines.Count;
         }
-        var head = lines.Take(pieces).Where(l => !(l.StartsWith("#Name:", StringComparison.OrdinalIgnoreCase) || l.StartsWith("#Description:", StringComparison.OrdinalIgnoreCase)
-            || l.StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase))).ToList();
+        // Matched as Read matches them, spaces before the # aside (a hand-edited " #Name: Old" stayed, and won).
+        var head = lines.Take(pieces).Where(l => !(l.TrimStart().StartsWith("#Name:", StringComparison.OrdinalIgnoreCase) || l.TrimStart().StartsWith("#Description:", StringComparison.OrdinalIgnoreCase)
+            || l.TrimStart().StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase))).ToList();
         var mine = new List<string> { "#Name:" + Header(details.Name), "#Description:" + Header(details.Description) };
         if (details.Tags.Count > 0)
         {
             mine.Add("#Tags:" + Header(string.Join(", ", details.Tags)));
         }
-        int creator = head.FindIndex(l => l.StartsWith("#Creator:", StringComparison.OrdinalIgnoreCase));
+        int creator = head.FindIndex(l => l.TrimStart().StartsWith("#Creator:", StringComparison.OrdinalIgnoreCase));
         head.InsertRange(0, mine.Take(1));
         head.InsertRange(creator < 0 ? 1 : creator + 2, mine.Skip(1));
         return string.Join("\n", head.Concat(lines.Skip(pieces)));
     }
 
+    /// <summary>Characters a blueprint's file name keeps before ".blueprint".</summary>
+    private const int FileNameLength = 64;
+
+    /// <summary>The characters a file name cannot hold on Windows or Linux.</summary>
+    private static readonly SearchValues<char> NotInFileNames = SearchValues.Create([.. Path.GetInvalidFileNameChars(), '<', '>', ':', '"', '/', '\\', '|', '?', '*']);
+
     /// <summary>
-    /// A file name for a blueprint name: what Windows and Linux both allow. Forbidden characters become _,
-    /// at most 64 characters before ".blueprint", "blueprint" when nothing is left.
+    /// A file name for a blueprint name: what Windows and Linux both allow. Forbidden characters become _, dots and
+    /// spaces at the ends are dropped (after the cut too: Windows drops a trailing dot itself, and the picture's name
+    /// would no longer match), at most 64 characters before ".blueprint", "blueprint" when nothing is left, and "_"
+    /// before a name Windows keeps for a device (CON, NUL…).
     /// </summary>
     public static string FileName(string name)
     {
-        string f = new([.. name.Trim().Select(c => Path.GetInvalidFileNameChars().Contains(c) || c is '<' or '>' or ':' or '"' or '/' or '\\' or '|' or '?' or '*' ? '_' : c)]);
-        f = f.Trim('.', ' ');
-        return (f.Length == 0 ? "blueprint" : f.Length > 64 ? f[..64] : f) + ".blueprint";
+        string f = new string([.. name.Trim().Select(c => NotInFileNames.Contains(c) ? '_' : c)]).Trim('.', ' ');
+        f = (f.Length > FileNameLength ? f[..FileNameLength] : f).TrimEnd('.', ' ');
+        if (f.Length == 0)
+        {
+            f = "blueprint";
+        }
+        return (SafeFile.IsDeviceName(f) ? "_" + f : f) + ".blueprint";
+    }
+
+    /// <summary>
+    /// The name itself when <paramref name="taken"/> says it is free, else the first "name (n)" (n from 2) that is.
+    /// A long name is cut so that the number survives <see cref="FileName"/>'s 64-character cut: without that, every
+    /// numbered name of a 64-character blueprint would give the same file and the search would never end.
+    /// </summary>
+    /// <param name="name">The wanted name.</param>
+    /// <param name="taken">Whether a blueprint of that name exists already.</param>
+    public static string FreeName(string name, Func<string, bool> taken)
+    {
+        name = name.Trim();
+        if (!taken(name))
+        {
+            return name;
+        }
+        for (int n = 2; ; n++)
+        {
+            string suffix = $" ({n})";
+            string stem = name.Length + suffix.Length > FileNameLength ? name[..(FileNameLength - suffix.Length)].TrimEnd() : name;
+            string numbered = stem + suffix;
+            if (!taken(numbered))
+            {
+                return numbered;
+            }
+        }
     }
 
     /// <summary>
@@ -285,14 +334,8 @@ public static class Homestead
     /// <returns>The .blueprint file's text, pieces ordered by height then x then z.</returns>
     public static string Write(JsonObject clip, string name, string creator, string? world, DateTime saved, string description = "", IReadOnlyCollection<string>? tags = null)
     {
-        var objs = (clip["objects"] as JsonArray ?? []).OfType<JsonObject>().Select(o => (
-            Name: (string?)o["name"] ?? "", X: F(o["dx"]), Y: F(o["dy"]), Z: F(o["dz"]),
-            Rot: BlueprintFormats.FromEuler(new Vector3(F(o["rx"]), F(o["ry"]), F(o["rz"]))), Scale: F(o["scale"]),
-            Data: BlueprintFormats.DataOf(o["data"]) ?? [])).Where(o => o.Name.Length > 0).ToList();
-        // Written as a ruin when every object is (no builder): one line for all, not one each.
-        bool ruin = objs.Count > 0 && objs.All(o => o.Data.Contains(Editing.ObjectField.NoBuilder));
-        var ordered = objs.OrderBy(o => o.Y).ThenBy(o => o.X).ThenBy(o => o.Z).ToList();
-        float radius = objs.Count == 0 ? 0 : MathF.Sqrt(objs.Max(o => o.X * o.X + o.Z * o.Z)) + 1f;
+        var ordered = Pieces(clip);
+        float radius = ordered.Count == 0 ? 0 : MathF.Sqrt(ordered.Max(o => o.X * o.X + o.Z * o.Z)) + 1f;
         StringBuilder sb = new();
         sb.Append("#Name:").Append(Header(name)).Append('\n');
         sb.Append("#Creator:").Append(Header(creator)).Append('\n');
@@ -306,34 +349,79 @@ public static class Homestead
         sb.Append("#HomesteadWorld:").Append(Header(world ?? "")).Append('\n');
         sb.Append("#HomesteadSavedAt:").Append(new DateTimeOffset(saved).ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture)).Append('\n');
         sb.Append("#HomesteadRadius:").Append(S(radius)).Append('\n');
-        // The editor's own: what objects hold (a chest's contents, a sign's text...), by their line below.
-        if (ruin)
-        {
-            sb.Append(BlueprintFormats.RuinHeader).Append('\n');
-        }
-        for (int k = 0; k < ordered.Count; k++)
-        {
-            foreach (var f in ordered[k].Data.Where(f => !(ruin && f == Editing.ObjectField.NoBuilder)))
-            {
-                sb.Append(BlueprintFormats.DataHeader).Append(k.ToString(CultureInfo.InvariantCulture)).Append(';').Append(f.ToString()).Append('\n');
-            }
-        }
+        DataLines(sb, ordered);
         sb.Append("#Pieces\n");
-        foreach (var (prefab, x, y, z, rot, scale, data) in ordered)
+        foreach (var (prefab, x, y, z, rot, scale, _) in ordered)
         {
             float s = scale > 0 ? scale : 1f;
-            sb.Append(string.Join(";", Header(prefab).Replace(";", "", StringComparison.Ordinal), "Building", S(x), S(y), S(z),
+            sb.Append(string.Join(";", PieceName(prefab), "Building", S(x), S(y), S(z),
                 S(rot.X), S(rot.Y), S(rot.Z), S(rot.W), "\"\"", S(s), S(s), S(s))).Append('\n');
         }
         return sb.ToString();
     }
 
-    /// <summary>A JSON number as a float, 0 when missing.</summary>
-    private static float F(JsonNode? n) => n == null ? 0 : float.Parse(n.ToJsonString(), CultureInfo.InvariantCulture);
+    /// <summary>
+    /// An object of a copy as the blueprint writers take it (Homestead's and PlanBuild's).
+    /// </summary>
+    /// <param name="Name">Its prefab name.</param>
+    /// <param name="X">Metres from the copy's middle along x.</param>
+    /// <param name="Y">Metres from the copy's ground.</param>
+    /// <param name="Z">Metres from the copy's middle along z.</param>
+    /// <param name="Rot">Its rotation.</param>
+    /// <param name="Scale">Its scale; 0 when the copy has none.</param>
+    /// <param name="Data">What it holds (a chest's contents, a sign's text...).</param>
+    internal readonly record struct Piece(string Name, float X, float Y, float Z, Quaternion Rot, float Scale, List<Editing.ObjectField> Data);
+
+    /// <summary>
+    /// A copy's objects for a blueprint file, ordered by height then x then z (a data line's number is its piece's place
+    /// in this order); objects without a prefab name are left out.
+    /// </summary>
+    internal static List<Piece> Pieces(JsonObject clip) =>
+    [
+        .. (clip["objects"] as JsonArray ?? []).OfType<JsonObject>()
+            .Select(o => new Piece((string?)o["name"] ?? "", F(o["dx"]), F(o["dy"]), F(o["dz"]),
+                BlueprintFormats.FromEuler(new Vector3(F(o["rx"]), F(o["ry"]), F(o["rz"]))), F(o["scale"]), BlueprintFormats.DataOf(o["data"]) ?? []))
+            .Where(o => o.Name.Length > 0).OrderBy(o => o.Y).ThenBy(o => o.X).ThenBy(o => o.Z),
+    ];
+
+    /// <summary>
+    /// The editor's own header lines: what the pieces hold, each by its number in <paramref name="pieces"/>, and one line
+    /// for all when every piece is a ruin's (no builder) instead of one each.
+    /// </summary>
+    internal static void DataLines(StringBuilder sb, List<Piece> pieces)
+    {
+        bool ruin = pieces.Count > 0 && pieces.All(o => o.Data.Contains(Editing.ObjectField.NoBuilder));
+        if (ruin)
+        {
+            sb.Append(BlueprintFormats.RuinHeader).Append('\n');
+        }
+        for (int k = 0; k < pieces.Count; k++)
+        {
+            foreach (var f in pieces[k].Data.Where(f => !(ruin && f == Editing.ObjectField.NoBuilder)))
+            {
+                sb.Append(BlueprintFormats.DataHeader).Append(k.ToString(CultureInfo.InvariantCulture)).Append(';').Append(f.ToString()).Append('\n');
+            }
+        }
+    }
+
+    /// <summary>A prefab name as a piece line takes it: one line, without the field separator.</summary>
+    internal static string PieceName(string prefab) => Header(prefab).Replace(";", "", StringComparison.Ordinal);
+
+    /// <summary>
+    /// A JSON number as a float, 0 when missing; a number written as a string ("1.5") is read too. Read in place, not
+    /// through its JSON text, but for numbers no float holds as they are (FormatException for what is no number).
+    /// </summary>
+    private static float F(JsonNode? n) => n switch
+    {
+        null => 0,
+        JsonValue v when v.TryGetValue(out float f) => f,
+        JsonValue v when v.TryGetValue(out string? text) => float.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture),
+        _ => float.Parse(n.ToJsonString(), CultureInfo.InvariantCulture),
+    };
 
     /// <summary>Homestead writes numbers with three decimals at most.</summary>
     private static string S(float v) => v.ToString("0.###", CultureInfo.InvariantCulture);
 
     /// <summary>A value made one header line: line breaks become spaces, trimmed.</summary>
-    private static string Header(string v) => v.Replace('\r', ' ').Replace('\n', ' ').Trim();
+    internal static string Header(string v) => v.Replace('\r', ' ').Replace('\n', ' ').Trim();
 }

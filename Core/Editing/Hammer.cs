@@ -106,6 +106,9 @@ public static class Hammer
     /// <summary>A piece's data, or null when the scan has no such piece.</summary>
     public static Data? Get(string prefab) => _all.GetValueOrDefault(prefab);
 
+    /// <summary>The longest reach (<see cref="Data.Radius"/>) of any piece the scan has (0 for none).</summary>
+    public static float MaxRadius() => _all.Values.Select(d => d.Radius).DefaultIfEmpty(0).Max();
+
     /// <summary>
     /// The points of a piece's colliders (box corners, mesh vertices, the bottoms and sides of spheres
     /// and capsules), turned and scaled, from its origin; none for a piece the game gives no collider.
@@ -210,13 +213,13 @@ public static class Hammer
             var ghost = point + normal * 50f;
             Vector3? nearest = null;
             float nd = float.MaxValue;
+            var lp = Vector3.Transform(point - ghost, Quaternion.Inverse(rotation));
             foreach (var shape in data.Colliders)
             {
                 if (shape is Mesh { Convex: false })
                 {
                     continue;
                 }
-                var lp = Vector3.Transform(point - ghost, Quaternion.Inverse(rotation));
                 var c = ghost + Vector3.Transform(Closest(shape, lp), rotation);
                 float dist = Vector3.Distance(c, point);
                 if (dist < nd)
@@ -246,6 +249,12 @@ public static class Hammer
         float bestD = SnapDistance;
         Vector3? move = null;
         int? to = null;
+        // The piece's own snap points in the world, worked out once for every piece near.
+        var own = new Vector3[data.Snaps.Length];
+        for (int k = 0; k < own.Length; k++)
+        {
+            own[k] = pos + Vector3.Transform(data.Snaps[k], rotation);
+        }
         foreach (var p in pieces)
         {
             if (Get(p.Prefab) is not { Snaps.Length: > 0 } other || Vector3.Distance(p.Position, pos) - other.Radius > SnapRadius)
@@ -255,9 +264,8 @@ public static class Hammer
             foreach (var b in other.Snaps)
             {
                 var bw = p.Position + Vector3.Transform(b, p.Rotation);
-                foreach (var a in data.Snaps)
+                foreach (var aw in own)
                 {
-                    var aw = pos + Vector3.Transform(a, rotation);
                     float dist = Vector3.Distance(aw, bw);
                     if (dist <= bestD)
                     {
@@ -457,7 +465,10 @@ public static class Hammer
         return (t, Vector3.Normalize(o + d * t - c));
     }
 
-    /// <summary>A ray against a capsule, marched up to 64 steps or 1000 m; null when it misses.</summary>
+    /// <summary>
+    /// A ray against a capsule, marched up to 64 steps or 1000 m; null when it misses, starts inside (as for a sphere
+    /// or a box) or reaches a capsule of no width on its axis (no normal there).
+    /// </summary>
     private static (float, Vector3)? RayCapsule(Vector3 o, Vector3 d, Capsule c)
     {
         // Marched: close enough for a cursor, and capsules are rare among pieces.
@@ -469,7 +480,7 @@ public static class Hammer
             float dist = Vector3.Distance(p, q) - c.R;
             if (dist < 1e-3f)
             {
-                return (t, Vector3.Normalize(p - q));
+                return i == 0 && dist < 0 || (p - q).LengthSquared() < 1e-12f ? null : (t, Vector3.Normalize(p - q));
             }
             t += dist;
         }

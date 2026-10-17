@@ -66,6 +66,15 @@ public class PlaceToolTests
     }
 
     [Fact]
+    public void ASmallBrushStillPlacesOne()
+    {
+        var (t, _) = Tool();
+        t.Brush.Radius = 2;
+        t.Density = 3;
+        Assert.Single(t.Preview(new Vector2(64, 64)));
+    }
+
+    [Fact]
     public void SingleIsExactlyAtTheCursorAndStaysAwayFromOthers()
     {
         var (t, _) = Tool(new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(32, 30, 32), Vector3.Zero, 1, false));
@@ -119,6 +128,23 @@ public class PlaceToolTests
         var two = t.Preview(null);
         Assert.Equal(2 * n, two.Count);
         Assert.Equal(e.H, two[1].Position.Y - two[0].Position.Y, 2);
+    }
+
+    [Fact]
+    public void LayersStopAtTheShapesCap()
+    {
+        var (t, _) = Tool();
+        t.Chosen.Clear();
+        t.Chosen.Add(Wall);
+        t.AutoSnap();
+        t.Mode = PlaceTool.Modes.Line;
+        // A zigzag of about 130 walls, 20 high: some 2600 placements.
+        foreach (var (x, z) in new[] { (2, 2), (126, 2), (126, 10), (2, 10), (2, 20) })
+        {
+            t.Points.Add(new Vector2(x, z));
+        }
+        t.Layers = 20;
+        Assert.Equal(PlaceTool.MaxShape, t.Preview(null).Count);
     }
 
     [Fact]
@@ -185,7 +211,7 @@ public class PlaceToolTests
         t.Elevation = PlaceTool.Elevations.Above;
         t.Elev = 2;
         Assert.Equal(31.95f, t.Preview(new Vector2(50, 50))[0].Position.Y, 3);
-        Assert.Equal("Elevation: above the ground by 2.5 m.", t.NudgeElevation(0.5f));
+        Assert.Equal("Elevation: above the ground by 2.5 m.", t.NudgeElevation(0.5f).Shown);
         // Under water nothing grows (sea level is 30 in this test area: lower it there).
         t.Elevation = PlaceTool.Elevations.Ground;
         s.Shape(50, 50, Formula.Compile("-3", []), 3, 0, "pond");
@@ -202,13 +228,13 @@ public class PlaceToolTests
         t.AutoSnap();
         var e = t.EndsOf(Wall)!;
         var p = Assert.Single(t.Preview(new Vector2(64 + e.Len + 0.3f, 64.2f)));
-        Assert.StartsWith("beside", t.SnappedTo);
+        Assert.Equal(PlaceTool.SnapWays.Beside, t.Snapped?.Way);
         // End to end with it: one wall length along.
         Assert.Equal(e.Len, Vector2.Distance(p.G, new Vector2(64, 64)), 2);
         Assert.Equal(30, p.Position.Y, 2);
         t.OnTop = true;
         var top = Assert.Single(t.Preview(new Vector2(64.2f, 64)));
-        Assert.StartsWith("on top", t.SnappedTo);
+        Assert.Equal(PlaceTool.SnapWays.OnTop, t.Snapped?.Way);
         // Its bottom on the top of the one below: one wall higher.
         Assert.Equal(30 + e.H, top.Position.Y, 2);
     }
@@ -217,12 +243,12 @@ public class PlaceToolTests
     public void PresetsLoadTheKindsTheWorldCanMake()
     {
         var t = new PlaceTool();
-        string msg = t.Load(PlaceTool.BuiltIn[0], n => n != "Oak1");
+        string msg = t.Load(PlaceTool.BuiltIn[0], n => n != "Oak1").Shown;
         Assert.DoesNotContain("Oak1", t.Chosen);
         Assert.Equal(4, t.WeightOf("Beech1"));
         Assert.Contains("1 kind(s) this world cannot place left out", msg);
         Assert.Equal(50, t.Clump);
-        Assert.StartsWith("None of the kinds", t.Load(PlaceTool.BuiltIn[0], _ => false));
+        Assert.StartsWith("None of the kinds", t.Load(PlaceTool.BuiltIn[0], _ => false).Shown);
     }
 
     /// <summary>

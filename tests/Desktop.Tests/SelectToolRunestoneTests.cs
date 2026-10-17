@@ -25,7 +25,7 @@ public class SelectToolRunestoneTests
         w.Tools.ChooseSelect();
         w.View.Select([0]);
         var said = new List<(string Text, bool Warn)>();
-        w.View.SelectTool.Message += (t, warn) => said.Add((t, warn));
+        w.View.SelectTool.Message += (t, warn) => said.Add((t.Shown, warn));
         w.View.SelectTool.PlaceAt(5, 0, 5, 0, by: true);
         Assert.Contains(("Runestones cannot be moved or turned, only deleted (the game builds them from their location).", true), said);
         Assert.False(w.View.SelectTool.Moving);
@@ -34,6 +34,30 @@ public class SelectToolRunestoneTests
         // Deleted, it can be.
         s.Delete([0]);
         Assert.True(s.Scene.Things[0].Gone);
+    }
+
+    [AvaloniaFact]
+    public void ATypedPlaceIsTheMovedObjectsNotTheRunestones()
+    {
+        var stone = new WorldScene.Thing(4, StableHash.Of("Runestone_Meadows"), new Vector3(0, 30, 0), Vector3.Zero, 1, false);
+        var tree = new WorldScene.Thing(5, StableHash.Of("Beech1"), new Vector3(10, 30, 10), Vector3.Zero, 1, false);
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        w.Show();
+        var s = TestScenes.Flat(1, stone, tree);
+        w.View.Show(s.Scene, null);
+        w.Edit(s);
+        w.Tools.ChooseSelect();
+        w.View.Select([0, 1]);
+        var (x, _, z, _, count) = w.View.SelectTool.Where()!.Value;
+        Assert.Equal((10f, 10f, 1), (x, z, count));
+        w.View.SelectTool.PlaceAt(20, 30, 20, 0, by: false);
+        // The tree's moved copy (a move adds one at the end), and the stone where it was.
+        var moved = Assert.Single(s.Scene.Things.Skip(2));
+        Assert.Equal(tree.Prefab, moved.Prefab);
+        Assert.Equal(20, moved.Position.X, 3);
+        Assert.Equal(20, moved.Position.Z, 3);
+        Assert.Equal(new Vector3(0, 30, 0), s.Scene.Things[0].Position);
+        Assert.False(s.Scene.Things[0].Gone);
     }
 
     [AvaloniaFact]

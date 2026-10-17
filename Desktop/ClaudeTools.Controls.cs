@@ -1,9 +1,9 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
-using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using ModelContextProtocol.Server;
 using TerrainEditor.App;
@@ -64,6 +64,12 @@ public sealed partial class ClaudeTools
         if (Tips.KeyOf(c.Control) == null && c.Kind == "button" && BlockedLabel().IsMatch(Lang.EnglishOf(c.Label)))
         {
             return "it saves, discards or writes or deletes the user's files: the user's to do";
+        }
+        // The Script tool's Run is run_script by another door: the same leave, said first (as run_script does), since
+        // turning Auto off would not be enough.
+        if (Tips.KeyOf(c.Control) == "script.run" && !_w.Settings.ClaudeScripts)
+        {
+            return "the user has not allowed Claude to run scripts (Settings → Claude → Claude may run scripts)";
         }
         // Like every other editing tool (CannotEdit): a tool's Apply, an Area action or a script run would go to the
         // game at once. Only the View panel's controls, which change nothing in the world, stay.
@@ -192,6 +198,21 @@ public sealed partial class ClaudeTools
     });
 
     /// <summary>
+    /// Presses a button as a pointer would, through its automation peer: a toggle changes first (so its handlers see
+    /// the new value), then its Click handlers and its Command run. Raising the Click event alone would skip the
+    /// toggle and the Command.
+    /// </summary>
+    private static void Press(Button b) => new ButtonAutomationPeer(b).Invoke();
+
+    /// <summary>
+    /// True while Claude is setting a control (Set): the steps the control's handlers make, at once or after an
+    /// await, are labelled "Claude: …" by EditSession, as every other tool's are, so History and Take back Claude's
+    /// changes know them. It flows with the execution context, so a handler's continuations inherit it and the
+    /// user's own actions meanwhile do not.
+    /// </summary>
+    internal static readonly AsyncLocal<bool> Acting = new();
+
+    /// <summary>
     /// Sets a control as the user would (on the window's thread, so its handlers run): a switch on or off, a dropdown's
     /// option, a slider's or number's value, a text, a button pressed. Null when done, else why not.
     /// </summary>
@@ -205,12 +226,29 @@ public sealed partial class ClaudeTools
         {
             return $"{c.Id} is greyed out now (the editor does not allow it in this state).";
         }
+        // Put back as it was, not cleared: a control set while one already is keeps the outer one Claude's.
+        bool was = Acting.Value;
+        Acting.Value = true;
+        try
+        {
+            return Invoke(c, value, enter);
+        }
+        finally
+        {
+            Acting.Value = was;
+        }
+    }
+
+    /// <summary>Sets the control itself (Set, with Acting on): null when done, else why not.</summary>
+    private static string? Invoke(Ctl c, string value, bool enter)
+    {
         static bool? Bool(string v) => v.Trim().ToLowerInvariant() switch { "true" or "on" or "yes" or "1" or "checked" => true, "false" or "off" or "no" or "0" or "unchecked" => false, _ => null };
-        static double? Num(string v) => double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out double d) ? d : null;
+        // NaN and the infinities parse too, but are no value to set.
+        static double? Num(string v) => double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out double d) && double.IsFinite(d) ? d : null;
         switch (c.Control)
         {
             case ToggleButton t when value.Trim().Equals("click", StringComparison.OrdinalIgnoreCase):
-                t.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Press(t);
                 return null;
             case ToggleButton t:
                 if (Bool(value) is not bool on)
@@ -224,7 +262,7 @@ public sealed partial class ClaudeTools
                 {
                     return $"{c.Id} is a button: give click.";
                 }
-                b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Press(b);
                 return null;
             case ComboBox box:
             {
@@ -257,7 +295,8 @@ public sealed partial class ClaudeTools
                 {
                     return $"{c.Id} takes a number from {u.Minimum} to {u.Maximum}.";
                 }
-                u.Value = Math.Clamp((decimal)d, u.Minimum, u.Maximum);
+                // Held to the range before it becomes a decimal, which cannot hold every double (1e30 threw).
+                u.Value = d >= (double)u.Maximum ? u.Maximum : d <= (double)u.Minimum ? u.Minimum : (decimal)d;
                 return null;
             case TextBox t:
                 t.Text = value;
@@ -288,6 +327,6 @@ public sealed partial class ClaudeTools
         {
             return problem;
         }
-        return ToJson(new { id = c.Id, value = ValueOf(c.Control), shown = c.Control.IsEffectivelyVisible, message = _w.MessageText.Text ?? "" });
+        return ToJson(new { id = c.Id, value = ValueOf(c.Control), shown = c.Control.IsEffectivelyVisible, message = _w.LastMessageEn });
     });
 }

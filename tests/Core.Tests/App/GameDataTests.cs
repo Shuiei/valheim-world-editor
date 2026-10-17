@@ -46,12 +46,9 @@ public sealed class GameDataTests : IDisposable
         AppSettings.PathOverride = _settings;
         AppSettings.DataDirOverride = _dataDir;
         GameLook.SearchOutsideHome = _outside;
-        try
+        if (Directory.Exists(_home))
         {
             Directory.Delete(_home, true);
-        }
-        catch (IOException)
-        {
         }
     }
 
@@ -144,7 +141,7 @@ public sealed class GameDataTests : IDisposable
         Directory.CreateDirectory(file);
         Assert.False(GameData.KeepCache(file, "lost"));
         Assert.True(Directory.Exists(file));
-        Assert.False(File.Exists(file + ".part"));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(file)!, Path.GetFileName(file) + ".*.tmp"));
     }
 
     [Fact]

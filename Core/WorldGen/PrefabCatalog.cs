@@ -1,4 +1,5 @@
 using System.Text.Json;
+using TerrainEditor.App;
 using TerrainEditor.Save;
 
 namespace TerrainEditor.Terrain;
@@ -53,17 +54,43 @@ public static class PrefabCatalog
     /// <param name="Spawns">See <see cref="SpawnOf(int)"/>.</param>
     private sealed record Data(Dictionary<int, Info> ByHash, Dictionary<int, string> AllNames, List<string> ItemNames, Dictionary<int, Info> Extra, HashSet<int> Creatures,
         Dictionary<string, (float Radius, string Sapling)> GrownFrom, Dictionary<int, ItemKind> ItemKinds, Dictionary<int, StandRule> ItemStands, Dictionary<int, int[][]> ArmourStands,
-        Dictionary<string, (float Radius, bool Cultivated)> Grow, Dictionary<int, SpawnKind> Spawns);
+        Dictionary<string, (float Radius, bool Cultivated)> Grow, Dictionary<int, SpawnKind> Spawns)
+    {
+        /// <summary>
+        /// See <see cref="Ranges"/>: made once per catalogue, at first use (Use fills ByHash after making the record);
+        /// of two first uses at once, the first table kept is the one both get.
+        /// </summary>
+        public Dictionary<string, (float WardRadius, float BuildRange)> Ranges
+        {
+            get
+            {
+                if (field is { } made)
+                {
+                    return made;
+                }
+                made = ByHash.Values.Where(p => p.WardRadius > 0 || p.BuildRange > 0).ToDictionary(p => p.Name, p => (p.WardRadius, p.BuildRange));
+                return Interlocked.CompareExchange(ref field, made, null) ?? made;
+            }
+        }
+    }
 
     /// <summary>
     /// Whether a prefab (by hash) is a creature.
     /// </summary>
     public static bool IsCreature(int prefab) => _catalogue.Creatures.Contains(prefab);
 
+    /// <summary>The creatures' prefab hashes (see <see cref="IsCreature"/>).</summary>
+    public static IEnumerable<int> Creatures => _catalogue.Creatures;
+
     /// <summary>
     /// Kinds the editor offers to place: saved objects (persistent), not creatures, item drops or ragdolls.
     /// </summary>
     public static IEnumerable<Info> Placeable => _catalogue.ByHash.Values;
+
+    /// <summary>
+    /// The placeable kinds with a ward radius or a build range (wards and crafting stations), by prefab name.
+    /// </summary>
+    public static IReadOnlyDictionary<string, (float WardRadius, float BuildRange)> Ranges => _catalogue.Ranges;
 
     /// <summary>
     /// A placeable kind by prefab hash; null for anything not offered for placing (see <see cref="Details"/>).
@@ -136,7 +163,8 @@ public static class PrefabCatalog
     /// <param name="Durability">For items that wear, their durability when new at quality 1 (0 for items that do
     /// not wear).</param>
     /// <param name="DurabilityPerLevel">What each further quality level adds to it.</param>
-    public sealed record ItemKind(int Type, int AttachOverride, int Variants, bool Attach, bool AttachSkin, float Durability = 0, float DurabilityPerLevel = 0)
+    /// <param name="MaxStack">The largest stack of the item (1 for items that do not stack).</param>
+    public sealed record ItemKind(int Type, int AttachOverride, int Variants, bool Attach, bool AttachSkin, float Durability = 0, float DurabilityPerLevel = 0, int MaxStack = 1)
     {
         /// <summary>
         /// A new item's durability at this quality (ItemDrop.ItemData.GetMaxDurability); 100 for items that do not
@@ -199,27 +227,32 @@ public static class PrefabCatalog
 
         /// <summary>
         /// One line on what it spawns: "Boar · 0–2 ★ · spawns once", "Draugr · 0–2 ★ · back 60 min after it dies ·
-        /// by night only", "Greydwarf, Greydwarf_Elite · up to 3 around, within 5 m".
+        /// by night only", "Greydwarf, Greydwarf_Elite · up to 3 around, within 5 m". In the language in use, or in
+        /// English for Claude.
         /// </summary>
-        public string Summary()
+        /// <param name="english">In English whatever the language in use (for Claude).</param>
+        public string Summary(bool english = false)
         {
-            var parts = new List<string> { string.Join(", ", Creatures) };
+            var parts = new List<Said> { Said.Raw(string.Join(", ", Creatures)) };
             if (Nest)
             {
-                parts.Add(MaxNear > 0 ? FormattableString.Invariant($"up to {MaxNear} around, within {Radius:0.#} m") : FormattableString.Invariant($"within {Radius:0.#} m"));
-                return string.Join(" · ", parts);
+                parts.Add(MaxNear > 0 ? Said.Of("place.spawn.upTo", MaxNear, Radius) : Said.Of("place.spawn.within", Radius));
             }
-            var (lo, hi) = Levels;
-            if (hi > 1)
+            else
             {
-                parts.Add(lo == hi ? $"{lo - 1} ★" : $"{lo - 1}–{hi - 1} ★");
+                var (lo, hi) = Levels;
+                if (hi > 1)
+                {
+                    parts.Add(Said.Raw(lo == hi ? $"{lo - 1} ★" : $"{lo - 1}–{hi - 1} ★"));
+                }
+                parts.Add(Trigger ? Said.Of("place.spawn.wakes") : Respawns ? Said.Of("place.spawn.back", RespawnMinutes) : Said.Of("place.spawn.once"));
+                if (Day != Night)
+                {
+                    parts.Add(Night ? Said.Of("place.spawn.nightOnly") : Said.Of("place.spawn.dayOnly"));
+                }
             }
-            parts.Add(Trigger ? "when an event wakes it" : Respawns ? FormattableString.Invariant($"back {RespawnMinutes:0.#} min after it dies") : "spawns once");
-            if (Day != Night)
-            {
-                parts.Add(Night ? "by night only" : "by day only");
-            }
-            return string.Join(" · ", parts);
+            var said = Said.Join(" · ", parts);
+            return english ? said.English : said.Shown;
         }
     }
 
@@ -266,6 +299,8 @@ public static class PrefabCatalog
     /// <param name="ats">Has an "attach_skin" child.</param>
     /// <param name="dur">Durability when new at quality 1.</param>
     /// <param name="durl">Durability added per quality level.</param>
+    /// <param name="ms">Item: the largest stack (absent: 1, it does not stack). The catalogue is scanned again by each
+    /// build of the editor (GameData's cache stamp), so none lacks it.</param>
     /// <param name="is">Item stand: item types it takes.</param>
     /// <param name="isi">Item stand: items it takes whatever their type.</param>
     /// <param name="isu">Item stand: items it refuses.</param>
@@ -280,7 +315,7 @@ public static class PrefabCatalog
     /// <param name="sr">Nest: radius it spawns in.</param>
     /// <param name="max">Nest: how many it keeps around.</param>
     private sealed record Entry(int p, int d, int t, int c = 0, int i = 0, double gr = 0, int cult = 0, int cw = 0, int ch = 0, double ward = 0, double build = 0, string[]? grows = null,
-        int it = -1, int ao = 0, int var = 0, int at = 0, int ats = 0, double dur = 0, double durl = 0, int[]? @is = null, string[]? isi = null, string[]? isu = null, int[][]? @as = null,
+        int it = -1, int ao = 0, int var = 0, int at = 0, int ats = 0, double dur = 0, double durl = 0, int ms = 1, int[]? @is = null, string[]? isi = null, string[]? isu = null, int[][]? @as = null,
         string[]? cs = null, string[]? sa = null, int trig = 0, double rt = 0, int[]? lv = null, int day = 1, int night = 1, double sr = 0, int max = 0);
 #pragma warning restore IDE1006
 
@@ -305,7 +340,7 @@ public static class PrefabCatalog
             }
             if (e.it >= 0)
             {
-                d.ItemKinds[hash] = new ItemKind(e.it, e.ao, e.var, e.at != 0, e.ats != 0, (float)e.dur, (float)e.durl);
+                d.ItemKinds[hash] = new ItemKind(e.it, e.ao, e.var, e.at != 0, e.ats != 0, (float)e.dur, (float)e.durl, Math.Max(1, e.ms));
             }
             if (e.@is != null)
             {

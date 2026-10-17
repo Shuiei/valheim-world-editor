@@ -42,12 +42,9 @@ public sealed class ModKeysTests : IDisposable
             Environment.SetEnvironmentVariable(k, v);
         }
         LocalGame.SearchDefaultPlaces = _defaults;
-        try
+        if (Directory.Exists(_home))
         {
             Directory.Delete(_home, true);
-        }
-        catch (IOException)
-        {
         }
     }
 

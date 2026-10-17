@@ -39,6 +39,50 @@ public class ScriptHostTests
     }
 
     [Fact]
+    public void AScriptMayChangeTheGroundFromSeveralThreads()
+    {
+        var s = TestScenes.Flat(2);
+        var ch = Run(s, """
+			System.Threading.Tasks.Parallel.For(0, 100, i =>
+			{
+			    for (int j = 0; j < 100; j++)
+			    {
+			        Ground.Set(Area.MinX + 2 + i, Area.MinZ + 2 + j, 40);
+			        Ground.Paint(Area.MinX + 2 + i, Area.MinZ + 2 + j, "dirt");
+			    }
+			    Print("row");
+			});
+			""");
+        Assert.Equal(10000, ch.Heights.Count);
+        Assert.Equal(10000, ch.Paint.Count);
+        Assert.Equal(100, ch.Output.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries).Length);
+    }
+
+    [Fact]
+    public void ANonNumberIsNoPoint()
+    {
+        var ch = Run(TestScenes.Flat(2), """
+			Ground.Set(float.NaN, 10, 40);
+			Ground.Set(10, float.PositiveInfinity, 40);
+			Ground.Paint(float.NaN, float.NaN, "dirt");
+			Print(Ground.Biome(float.NaN, 10));
+			""");
+        Assert.Empty(ch.Heights);
+        Assert.Empty(ch.Paint);
+        Assert.Equal("None", ch.Output.ToString().Trim());
+    }
+
+    [Fact]
+    public void TheApiNamesEveryKindOfObject()
+    {
+        using var stream = typeof(ScriptHost).Assembly.GetManifestResourceStream("TerrainEditor.ScriptApi.csx")!;
+        string api = new StreamReader(stream).ReadToEnd();
+        int at = api.IndexOf("// Kinds: ", StringComparison.Ordinal);
+        string kinds = api[at..api.IndexOf("public static IEnumerable<Obj> OfKind", at, StringComparison.Ordinal)];
+        Assert.All(Enum.GetNames<TerrainEditor.App.ObjectKind>(), k => Assert.Contains($" {k}", kinds));
+    }
+
+    [Fact]
     public void AScriptsChangesAreOneUndoStepAndGoPastTheLimit()
     {
         var s = TestScenes.Flat(2);
@@ -95,6 +139,18 @@ public class ScriptHostTests
         var ch = Run(s, "Ground.NoLimit = false; Ground.Raise(45, 45, 20);");
         Assert.Equal(1, ScriptHost.Apply(s, ch, "Script: test"));
         Assert.Equal(38, At(s, 45, 45), 3);
+    }
+
+    // Changes that fail part-way (a height for a point outside the area) leave the area's No limit as it was: it
+    // stayed as the script set it, and every later brush went past the game's ±8 m.
+    [Fact]
+    public void FailedChangesLeaveNoLimitAsItWas()
+    {
+        var s = TestScenes.Flat(2);
+        var ch = new ScriptHost.Changes();
+        ch.Heights[-1] = 5;
+        Assert.Throws<IndexOutOfRangeException>(() => ScriptHost.Apply(s, ch, "Script: test"));
+        Assert.False(s.Ground.NoLimit);
     }
 
     [Fact]
@@ -311,8 +367,58 @@ public class ScriptHostTests
         Assert.Throws<ArgumentException>(() => ScriptHost.Move(snap, ch, 0, 0, 0, 0, 0, 0, 0, 0));
     }
 
+    // Place and Move took NaN or infinite places and turns, negative sizes and points outside the area, and wrote them
+    // into the world. They are refused; NaN still means "on the ground" for Place's y and "as it was" for Move.
+    [Fact]
+    public void NonNumbersSizesBelowZeroAndPlacesOutsideTheAreaAreRefused()
+    {
+        var snap = ScriptHost.Take(Wall(), Terrain.PrefabCatalog.NameOf);
+        var ch = new ScriptHost.Changes();
+        void Place(float x, float z, float yaw = 0, float scale = 0, float y = float.NaN, float pitch = 0, float roll = 0) =>
+            ScriptHost.Place(snap, ch, "rock4_forest", x, z, yaw, scale, y, pitch, roll, false);
+        void Move(float x = float.NaN, float z = float.NaN, float y = float.NaN, float yaw = float.NaN, float pitch = float.NaN, float roll = float.NaN) =>
+            ScriptHost.Move(snap, ch, 0, x, z, y, yaw, pitch, roll, float.NaN);
+        Assert.Throws<ArgumentException>(() => Place(float.NaN, 0));
+        Assert.Throws<ArgumentException>(() => Place(0, float.PositiveInfinity));
+        Assert.Throws<ArgumentException>(() => Place(0, 0, y: float.NegativeInfinity));
+        Assert.Throws<ArgumentException>(() => Place(0, 0, yaw: float.NaN));
+        Assert.Throws<ArgumentException>(() => Place(0, 0, pitch: float.PositiveInfinity));
+        Assert.Throws<ArgumentException>(() => Place(0, 0, roll: float.NaN));
+        Assert.Throws<ArgumentException>(() => Place(0, 0, scale: -1));
+        Assert.Throws<ArgumentException>(() => Place(0, 0, scale: float.NaN));
+        Assert.Throws<ArgumentException>(() => Place(32.5f, 0));
+        Assert.Throws<ArgumentException>(() => Place(0, -40));
+        Assert.Throws<ArgumentException>(() => Move(x: float.PositiveInfinity));
+        Assert.Throws<ArgumentException>(() => Move(y: float.NegativeInfinity));
+        Assert.Throws<ArgumentException>(() => Move(yaw: float.PositiveInfinity));
+        Assert.Throws<ArgumentException>(() => Move(z: 100));
+        Assert.Empty(ch.Add);
+        Assert.Empty(ch.Moves);
+        // The area's edges count; NaN y is the ground's, 0 the prefab's size.
+        Place(-32, 32);
+        Place(32, -32, scale: 2, y: 40);
+        Move(x: -32, yaw: 90);
+        Assert.Equal(2, ch.Add.Count);
+        Assert.True(float.IsNaN(ch.Add[0].Position.Y));
+        Assert.Equal(new Vector3(-32, 31, 20), ch.Moves[0].Position);
+    }
+
+    // A piece placed inside the area near its edge, snapped 0.4 m to a wall standing beyond the edge, would end outside
+    // it: refused.
+    [Fact]
+    public void APieceSnappedOutsideTheAreaIsRefused()
+    {
+        var s = TestScenes.Flat(1, new WorldScene.Thing(7, StableHash.Of("woodwall"), new Vector3(34.2f, 31, 20), Vector3.Zero, 0, true));
+        var snap = ScriptHost.Take(s, Terrain.PrefabCatalog.NameOf);
+        var ch = new ScriptHost.Changes();
+        ch.Add.Add((StableHash.Of("woodwall"), "woodwall", new Vector3(31.8f, 31, 20), Vector3.Zero, 0, true));
+        var ex = Assert.Throws<ArgumentException>(() => ScriptHost.SnapPieces(snap, ch, TestContext.Current.CancellationToken));
+        Assert.Contains("snaps to", ex.Message);
+        Assert.Equal(31.8f, ch.Add[0].Position.X);
+    }
+
     // SnapPieces: a wall placed with snap 0.3 m off meets the one standing; without snap it stays; a wall the script
-    // took away is not snapped to.
+    // took away is not snapped to; Stop ends the snapping.
     [Fact]
     public void NewPiecesSnapToThePiecesStanding()
     {
@@ -321,14 +427,19 @@ public class ScriptHostTests
         var ch = new ScriptHost.Changes();
         ch.Add.Add((wall, "woodwall", new Vector3(22.3f, 31, 20), Vector3.Zero, 0, true));
         ch.Add.Add((wall, "woodwall", new Vector3(17.7f, 31, 20), Vector3.Zero, 0, false));
-        ScriptHost.SnapPieces(snap, ch);
+        ScriptHost.SnapPieces(snap, ch, TestContext.Current.CancellationToken);
         Assert.Equal(22, ch.Add[0].Position.X, 3);
         Assert.Equal(17.7f, ch.Add[1].Position.X, 3);
 
         var gone = new ScriptHost.Changes();
         gone.Remove.Add(0);
         gone.Add.Add((wall, "woodwall", new Vector3(22.3f, 31, 20), Vector3.Zero, 0, true));
-        ScriptHost.SnapPieces(snap, gone);
+        ScriptHost.SnapPieces(snap, gone, TestContext.Current.CancellationToken);
         Assert.Equal(22.3f, gone.Add[0].Position.X, 3);
+
+        var stopped = new ScriptHost.Changes();
+        stopped.Add.Add((wall, "woodwall", new Vector3(22.3f, 31, 20), Vector3.Zero, 0, true));
+        Assert.Throws<OperationCanceledException>(() => ScriptHost.SnapPieces(snap, stopped, new CancellationToken(canceled: true)));
+        Assert.Equal(22.3f, stopped.Add[0].Position.X, 3);
     }
 }

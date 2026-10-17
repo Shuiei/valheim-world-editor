@@ -35,7 +35,7 @@ public partial class MainWindow
     /// <summary>
     /// Turns the support check on or off; shown in the Workshop.
     /// </summary>
-    internal CheckBox SupportBox { get; } = new CheckBox { Content = "Support check", FontSize = 12, IsVisible = false, IsChecked = true, VerticalAlignment = VerticalAlignment.Center }.Classed("switch");
+    internal CheckBox SupportBox { get; } = new CheckBox { Content = Lang.T("workshop.label.support"), FontSize = 12, IsVisible = false, IsChecked = true, VerticalAlignment = VerticalAlignment.Center }.Classed("switch");
 
     /// <summary>
     /// The building's name (null: not named yet, "My building" when saved).
@@ -99,7 +99,7 @@ public partial class MainWindow
                 SetCut((float)CutSlider.Value);
             }
         };
-        CutText.Text = "Cut: off";
+        CutText.Text = Lang.T("workshop.cutOff");
         SupportBox.IsCheckedChanged += (_, _) => RefreshSupport();
         Blueprints.EditAsked += async path => await OpenWorkshop(path);
     }
@@ -113,17 +113,7 @@ public partial class MainWindow
         BuildPanel.Folder = () => Blueprints.Status.Folder;
         BuildPanel.OpenAsked += async path => await OpenWorkshop(path);
         BuildPanel.AddAsked += path => AddToWorkshop(path, null);
-        BuildPanel.Dungeon.PlotAsked += async (settings, result, add) =>
-        {
-            try
-            {
-                await GeneratedOntoPlot(settings, result, add);
-            }
-            catch (Exception ex)
-            {
-                MessageText.Text = $"Could not put the dungeon on the plot: {ex.Message}";
-            }
-        };
+        BuildPanel.Dungeon.PlotAsked += async (settings, result, add) => await PlotDungeon(settings, result, add);
         BuildPanel.ImportAsked += async () =>
         {
             if (await Blueprints.PickFile() is string file && Blueprints.Import(file) != null)
@@ -131,6 +121,24 @@ public partial class MainWindow
                 BuildPanel.RenderLibrary();
             }
         };
+    }
+
+    /// <summary>
+    /// The Dungeon panel's generated dungeon onto the plot, alone or added to what is there; what goes wrong is said.
+    /// </summary>
+    /// <param name="settings">What it was made from.</param>
+    /// <param name="result">The dungeon.</param>
+    /// <param name="add">Added to the plot (true), or alone on a new one.</param>
+    internal async Task PlotDungeon(DungeonGen.Settings settings, DungeonGen.Result result, bool add)
+    {
+        try
+        {
+            await GeneratedOntoPlot(settings, result, add);
+        }
+        catch (Exception ex)
+        {
+            Msg("workshop.msg.dungeonFailed", ex.Message);
+        }
     }
 
     /// <summary>
@@ -166,7 +174,7 @@ public partial class MainWindow
         Vector2? world = null;
         if (Session is { } s && View.GridAt(at, size) is { } g)
         {
-            world = new Vector2(s.Scene.X0 * 64f - 32f + g.X, s.Scene.Z0 * 64f - 32f + g.Y);
+            world = new Vector2(s.Scene.OriginX + g.X, s.Scene.OriginZ + g.Y);
         }
         var paths = new List<string>();
         if (blueprint != null)
@@ -182,7 +190,7 @@ public partial class MainWindow
         }
         if (files.Count > 0 && paths.Count == (blueprint != null ? 1 : 0))
         {
-            MessageText.Text = "Drop .blueprint (Homestead, PlanBuild) or .vbuild files.";
+            Msg("workshop.msg.dropFiles");
             return;
         }
         BuildPanel.RenderLibrary();
@@ -200,7 +208,12 @@ public partial class MainWindow
     /// A blueprint added to the building on the plot (at a world point x, z; null: the middle), turned by degrees,
     /// as one step named label (null: "Added" and its name). Only in the Workshop.
     /// </summary>
-    internal void AddToWorkshop(string path, Vector2? at, float turn = 0, string? label = null)
+    /// <param name="path">The blueprint file (its name picks the format).</param>
+    /// <param name="at">Where its anchor goes (world x, z); null for the plot's middle.</param>
+    /// <param name="turn">Degrees it is turned round its anchor.</param>
+    /// <param name="label">The history's name for the step; null: "Added" and its name.</param>
+    /// <param name="text">The blueprint's text when it is not a file of the Library; null reads <paramref name="path"/>.</param>
+    internal void AddToWorkshop(string path, Vector2? at, float turn = 0, string? label = null, string? text = null)
     {
         if (!InWorkshop || Session is not { } s)
         {
@@ -208,17 +221,18 @@ public partial class MainWindow
         }
         try
         {
-            var (placed, unknown, _, terrain) = Workshop.Add(s, path, null, at, turn, label: label);
+            var (placed, unknown, _, terrain) = Workshop.Add(s, path, text, at, turn, label: label);
             foreach (var (cell, y) in terrain)
             {
                 _workshopTerrain[cell] = _workshopTerrain.TryGetValue(cell, out float was) ? MathF.Min(was, y) : y;
             }
             RefreshSupport();
-            MessageText.Text = $"Added “{Homestead.Read(path)?.Name ?? Path.GetFileNameWithoutExtension(path)}”: {placed} piece(s).{(unknown.Count > 0 ? $" {unknown.Count} kind(s) the game does not know were left out (mods?): {string.Join(", ", unknown.Take(5))}." : "")} Ctrl+Z takes it back.";
+            string name = (text == null ? Homestead.Read(path) : Homestead.Read(path, text.Split('\n')))?.Name ?? Path.GetFileNameWithoutExtension(path);
+            Msg(Said.Of("workshop.msg.added", name, placed) + UnknownLeftOut(unknown) + Said.Of("workshop.msg.undoHint"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            MessageText.Text = "Could not add that blueprint: " + ex.Message;
+            Msg("workshop.msg.addFailed", ex.Message);
         }
         UpdateSaveBar();
     }
@@ -230,14 +244,108 @@ public partial class MainWindow
     /// <param name="path">The blueprint to open, or null for a blank plot.</param>
     internal async Task OpenWorkshop(string? path)
     {
-        // The game's files are needed here too (its pieces, and how ground discs shape the plot).
+        // A second open while one is under way (a double click while the game's files are read) would ask and show
+        // the plot twice.
+        if (_openingWorkshop)
+        {
+            Msg("workshop.msg.alreadyOpening");
+            return;
+        }
+        _openingWorkshop = true;
+        try
+        {
+            await OpenWorkshopOnce(path);
+        }
+        finally
+        {
+            _openingWorkshop = false;
+        }
+    }
+
+    /// <summary>
+    /// True while <see cref="OpenWorkshop"/> runs.
+    /// </summary>
+    private bool _openingWorkshop;
+
+    /// <summary>
+    /// <see cref="OpenWorkshop"/>'s work, once no other open is under way.
+    /// </summary>
+    /// <param name="path">The blueprint to open, or null for a blank plot.</param>
+    private async Task OpenWorkshopOnce(string? path)
+    {
+        if (!await WorkshopGameDataReady() || !await MayLeaveForWorkshop())
+        {
+            return;
+        }
+        string? name = null, text = null;
+        Homestead.Details? details = null;
+        if (path != null)
+        {
+            if (await ReadForWorkshop(path) is not { } read)
+            {
+                return;
+            }
+            (name, text, details) = read;
+        }
+        // Left only once the blueprint could be read.
+        if (World is { } open)
+        {
+            // An area still loading in it is not opened, nor the one left open again.
+            _navigation++;
+            open.Dispose();
+            World = null;
+            Session = null;
+            Tunnel.Close();
+        }
+        // The area's name stays English: Claude reads it (editor_state); the title shows it in the user's language.
+        var scene = Workshop.Create(name != null ? $"Workshop · {name}" : "Workshop");
+        await ShowEditor(scene);
+        TitleText.Text = name != null ? Lang.T("workshop.title", name) : Lang.T("workshop.name");
+        InWorkshop = true;
+        _workshopName = name;
+        _workshopLift = 0;
+        _workshopTerrain = [];
+        _workshopDetails = details;
+        // Only Homestead's own folder is saved back to without asking (however its path is written: a separator at the
+        // end, a link, Windows' letter case), and then by the path the editor saves under.
+        _workshopFile = path != null && Path.GetDirectoryName(Path.GetFullPath(path)) is { } dir
+            && Places.FolderKey(dir) == Places.FolderKey(Blueprints.Status.Folder)
+            ? Path.Combine(Blueprints.Status.Folder, Path.GetFileName(path)) : null;
+        var msg = Said.Of("workshop.msg.welcome");
+        if (path != null)
+        {
+            var (placed, unknown, lift, terrain) = Workshop.Open(scene.Session!, path, text);
+            _workshopLift = lift;
+            _workshopTerrain = terrain;
+            msg = Said.Of("workshop.msg.opened", name, placed) + UnknownLeftOut(unknown) + Said.Of("workshop.msg.changeIt");
+        }
+        _workshopSaved = scene.Session!.Edits.Version;
+        EnterBuilding();
+        MapButton.Content = Icons.With("back", Lang.T("workshop.label.start"));
+        MapButton.IsVisible = true;
+        SupportBox.IsVisible = true;
+        DiscardButton.IsVisible = false;
+        ShowWorkshopCost();
+        Tools.ChooseMode(ToolMode.Place);
+        BuildPanel.Card.IsVisible = true;
+        RefreshSupport();
+        UpdateSaveBar();
+        Msg(msg);
+    }
+
+    /// <summary>
+    /// Reads the game's files the Workshop needs (its pieces, and how ground discs shape the plot) and the player's
+    /// mods' data names and manifests (their pieces' groups, the ones not offered). False when the game is missing,
+    /// said on the start page when nothing is open, else in the status bar.
+    /// </summary>
+    private async Task<bool> WorkshopGameDataReady()
+    {
         bool ready = await Task.Run(() =>
         {
             if (!GameData.Ensure(GameLook.Bundles))
             {
                 return false;
             }
-            // The player's mods' data names and manifests (their pieces' groups, the ones not offered).
             WorldSession.ReadModFiles();
             return true;
         });
@@ -251,75 +359,57 @@ public partial class MainWindow
             {
                 MessageText.Text = GameData.Missing;
             }
-            return;
         }
-        if (World is { } w && w.Pending is not (0, 0, 0, 0)
-            && !await Ask("Leave the world", $"{(w.IsLive ? "Not applied" : "Unsaved")}: {Describe(w.Pending)}. Leave the world for the Workshop without {(w.IsLive ? "applying" : "saving")} them?", "Leave anyway", "Stay"))
-        {
-            return;
-        }
-        if (WorkshopDirty && !await Ask("Workshop", "The building on the plot is not saved as a blueprint. Open another anyway?", "Open anyway", "Stay"))
-        {
-            return;
-        }
-        string? name = null, text = null;
-        Homestead.Details? details = null;
-        if (path != null)
-        {
-            try
-            {
-                text = await File.ReadAllTextAsync(path);
-                var parsed = BlueprintFormats.Parse(path, text);
-                name = parsed.Name;
-                details = Homestead.Read(path)?.Details is { } d ? d with { Name = name } : new Homestead.Details(name, parsed.Description ?? "", []);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                // The world stays open as it was.
-                MessageText.Text = "Could not open that blueprint: " + ex.Message;
-                return;
-            }
-        }
-        // Left only once the blueprint could be read.
-        if (World is { } open)
-        {
-            // An area still loading in it is not opened, nor the one left open again.
-            _navigation++;
-            open.Dispose();
-            World = null;
-            Session = null;
-            Tunnel.Close();
-        }
-        var scene = Workshop.Create(name != null ? $"Workshop · {name}" : "Workshop");
-        await ShowEditor(scene);
-        InWorkshop = true;
-        _workshopName = name;
-        _workshopLift = 0;
-        _workshopTerrain = [];
-        _workshopDetails = details;
-        // Only Homestead's own folder is saved back to without asking.
-        _workshopFile = path != null && string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), Path.GetFullPath(Blueprints.Status.Folder), StringComparison.Ordinal) ? path : null;
-        string msg = "The Workshop: pick a piece in Build and click to put it down (it snaps like the game's hammer); Select (E) moves, turns and deletes; then Save blueprint.";
-        if (path != null)
-        {
-            var (placed, unknown, lift, terrain) = Workshop.Open(scene.Session!, path, text);
-            _workshopLift = lift;
-            _workshopTerrain = terrain;
-            msg = $"Opened “{name}”: {placed} piece(s).{(unknown.Count > 0 ? $" {unknown.Count} kind(s) the game does not know were left out (mods?): {string.Join(", ", unknown.Take(5))}." : "")} Change it, then Save blueprint.";
-        }
-        _workshopSaved = scene.Session!.Edits.Version;
-        EnterBuilding();
-        MapButton.Content = Icons.With("back", "Start");
-        MapButton.IsVisible = true;
-        SupportBox.IsVisible = true;
-        DiscardButton.IsVisible = false;
-        ShowWorkshopCost();
-        Tools.ChooseMode(ToolMode.Place);
-        BuildPanel.Card.IsVisible = true;
-        RefreshSupport();
-        UpdateSaveBar();
-        MessageText.Text = msg;
+        return ready;
     }
+
+    /// <summary>
+    /// Asks before the Workshop replaces what is open: a world with changes not saved (or not applied), or a building
+    /// not saved. False when the user stays.
+    /// </summary>
+    private async Task<bool> MayLeaveForWorkshop()
+    {
+        if (World is { } w && w.Pending is not (0, 0, 0, 0))
+        {
+            string what = Describe(w.Pending);
+            string text = w.IsLive ? Lang.T("workshop.ask.leaveWorld.textLive", what) : Lang.T("workshop.ask.leaveWorld.text", what);
+            if (!await Ask(Lang.T("save.ask.leave.title"), text, Lang.T("common.leaveAnyway"), Lang.T("common.stay")))
+            {
+                return false;
+            }
+        }
+        return !WorkshopDirty || await Ask(Lang.T("workshop.name"), Lang.T("workshop.ask.openAnother.text"), Lang.T("workshop.ask.openAnother.yes"), Lang.T("common.stay"));
+    }
+
+    /// <summary>
+    /// Reads a blueprint to open in the Workshop: its name, its text and its details. Null when it cannot be read,
+    /// with the reason in the status bar (the world stays open as it was).
+    /// </summary>
+    /// <param name="path">The blueprint's file.</param>
+    private async Task<(string Name, string Text, Homestead.Details Details)?> ReadForWorkshop(string path)
+    {
+        try
+        {
+            string text = await File.ReadAllTextAsync(path);
+            var parsed = BlueprintFormats.Parse(path, text);
+            string name = parsed.Name;
+            var details = Homestead.Read(path)?.Details is { } d ? d with { Name = name } : new Homestead.Details(name, parsed.Description ?? "", []);
+            return (name, text, details);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Msg("workshop.msg.openFailed", ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The sentence naming the kinds the game does not know that a blueprint put on the plot left out (the first five),
+    /// empty when there are none.
+    /// </summary>
+    /// <param name="unknown">The kinds left out (game data, the same in every language).</param>
+    private static Said UnknownLeftOut(List<string> unknown) =>
+        unknown.Count > 0 ? Said.Of("blueprints.msg.unknownImported", unknown.Count, string.Join(", ", unknown.Take(5))) : Said.Empty;
 
     /// <summary>
     /// Leaving an area: no Workshop any more (ShowEditor calls it for every area).
@@ -328,8 +418,8 @@ public partial class MainWindow
     {
         LeaveBuilding();
         InWorkshop = false;
-        ToolTip.SetTip(_subtitle, null);
-        MapButton.Content = Icons.With("back", "Map");
+        ToolTip.SetTip(SubtitleText, null);
+        MapButton.Content = Icons.With("back", Lang.T("top.label.map"));
         SupportBox.IsVisible = false;
         DiscardButton.IsVisible = true;
         LastSupport = null;
@@ -341,7 +431,7 @@ public partial class MainWindow
     /// </summary>
     internal async Task LeaveWorkshop()
     {
-        if (WorkshopDirty && !await Ask("Leave the Workshop", "The building on the plot is not saved as a blueprint. Leave without saving it?", "Leave anyway", "Stay"))
+        if (WorkshopDirty && !await Ask(Lang.T("workshop.ask.leave.title"), Lang.T("workshop.ask.leave.text"), Lang.T("common.leaveAnyway"), Lang.T("common.stay")))
         {
             return;
         }
@@ -363,17 +453,18 @@ public partial class MainWindow
         View.SelectTool.Commit();
         if (Workshop.Pieces(s.Scene) == 0)
         {
-            await Tell("There is no building piece on the plot yet: place some first (Place tool).");
+            await Tell(Lang.T("workshop.noPiecesToSave"));
             return;
         }
         RefreshSupport();
         if (LastSupport is { Breaking: > 0 } r
-            && !await Ask("Save blueprint", $"{r.Breaking} piece(s) would fall in game: nothing holds them up enough (pink outlines). Save the blueprint anyway?", "Save anyway", "Keep building"))
+            && !await Ask(Lang.T("workshop.label.saveBlueprint"), Lang.T("workshop.ask.falling.text", r.Breaking), Lang.T("workshop.ask.falling.yes"), Lang.T("common.keepBuilding")))
         {
             return;
         }
-        var clip = Workshop.Building(s.Scene, _workshopName ?? "My building", _workshopLift);
-        if (await Blueprints.SaveBuilding(clip, _workshopDetails ?? new Homestead.Details(_workshopName ?? "My building", "", []), _workshopFile) is { } details)
+        string name = _workshopName ?? Lang.T("workshop.defaultName");
+        var clip = Workshop.Building(s.Scene, name, _workshopLift);
+        if (await Blueprints.SaveBuilding(clip, _workshopDetails ?? new Homestead.Details(name, "", []), _workshopFile) is { } details)
         {
             WorkshopSavedAs(s, details);
         }
@@ -387,7 +478,7 @@ public partial class MainWindow
         _workshopFile = Path.Combine(Blueprints.Status.Folder, Homestead.FileName(details.Name));
         BuildPanel.RenderLibrary();
         _workshopSaved = s.Edits.Version;
-        _title.Text = $"Workshop · {details.Name}";
+        TitleText.Text = Lang.T("workshop.title", details.Name);
         UpdateSaveBar();
     }
 
@@ -417,7 +508,7 @@ public partial class MainWindow
         // The library's folder as it is now (Homestead may have been installed or moved since).
         Blueprints.Refresh();
         string path = Path.Combine(Blueprints.Status.Folder, Homestead.FileName(details.Name));
-        if (File.Exists(path) && !overwrite && !string.Equals(path, _workshopFile, StringComparison.Ordinal))
+        if (File.Exists(path) && !overwrite && !string.Equals(path, _workshopFile, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
         {
             return $"There is a blueprint called {details.Name} already: ask the user before replacing it (overwrite), or choose another name.";
         }
@@ -460,7 +551,7 @@ public partial class MainWindow
     /// The support check over the plot's building pieces (Stability), whether or not its colours are shown.
     /// </summary>
     /// <returns>The result, and the scene's index of each piece it was worked out for.</returns>
-    private (Stability.Result Result, List<int> Index) SolveSupport(EditSession s)
+    internal (Stability.Result Result, List<int> Index) SolveSupport(EditSession s)
     {
         var index = new List<int>();
         var pieces = new List<Stability.Piece>();
@@ -498,8 +589,8 @@ public partial class MainWindow
         }
         var cost = PieceCost.Of(Workshop.Kinds(s.Scene));
         WorkshopCost = cost.Describe(5);
-        _subtitle.Text = Workshop.Pieces(s.Scene) == 0 ? "A blank plot: only the building is kept in the blueprint" : "Cost: " + WorkshopCost;
-        ToolTip.SetTip(_subtitle, cost.Materials.Count == 0 ? null
+        SubtitleText.Text = Workshop.Pieces(s.Scene) == 0 ? Lang.T("workshop.blankPlot") : Lang.T("blueprints.cost", WorkshopCost);
+        ToolTip.SetTip(SubtitleText, cost.Materials.Count == 0 ? null
             : string.Join("\n", cost.Materials.Select(m => $"{m.Name}: {m.Amount}")) + (cost.Stations.Count > 0 ? "\n" + Lang.T("workshop.near", string.Join(", ", cost.Stations)) : "")
                 + (cost.Unknown.Count > 0 ? "\n" + Lang.T("workshop.noRecipe", string.Join(", ", cost.Unknown.Keys.Take(5))) : ""));
     }
@@ -512,25 +603,26 @@ public partial class MainWindow
         ShowWorkshopCost();
         int n = Workshop.Pieces(s.Scene);
         bool dirty = WorkshopDirty;
-        string falls = LastSupport is { Breaking: > 0 } r ? $" · {r.Breaking} would fall" : "";
-        PendingText.Text = n == 0 ? "No pieces yet" : $"{n} piece(s){falls}{(dirty ? " · not saved as a blueprint" : " · saved")}";
+        string? falls = LastSupport is { Breaking: > 0 } r ? Lang.T("workshop.bar.falling", r.Breaking) : null;
+        PendingText.Text = n == 0 ? Lang.T("workshop.bar.none")
+            : string.Join(" · ", new[] { Lang.T("workshop.bar.pieces", n), falls, dirty ? Lang.T("workshop.bar.notSaved") : Lang.T("workshop.bar.saved") }.OfType<string>());
         SaveButton.IsEnabled = n > 0;
-        SaveButton.Content = "Save blueprint";
+        SaveButton.Content = Lang.T("workshop.label.saveBlueprint");
         SaveButton.Tip("top.saveBlueprint");
-        _pendingPill.Background = dirty ? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#2c2416")) : Avalonia.Media.Brushes.Transparent;
-        _pendingPill.BorderBrush = dirty ? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#7a5a2a")) : Ui.Line;
-        PendingText.Foreground = dirty ? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#f3d29b")) : Ui.Muted;
+        SetPendingPill(dirty);
         _liveBadge.IsVisible = false;
         UndoButton.IsEnabled = s.CanUndo;
         RedoButton.IsEnabled = s.CanRedo;
     }
 
     /// <summary>
-    /// After a change Claude made (ClaudeTools): the save bar, the support check, the message.
+    /// After a change Claude made (ClaudeTools): the save bar, the support check, the message (in the user's language,
+    /// its English kept for Claude).
     /// </summary>
-    internal void AfterClaudeEdit(string message)
+    /// <param name="message">What the status bar says.</param>
+    internal void AfterClaudeEdit(Said message)
     {
-        MessageText.Text = message;
+        Msg(message);
         UpdateSaveBar();
         QueueSupport();
     }
@@ -668,7 +760,7 @@ public partial class MainWindow
         float? y = metres < CutOff ? Workshop.Ground + metres : null;
         View.CutY = y;
         PlaceTool.CutY = y;
-        CutText.Text = metres < CutOff ? $"Cut at {metres:0} m" : "Cut: off";
+        CutText.Text = metres < CutOff ? Lang.T("workshop.cutAt", metres) : Lang.T("workshop.cutOff");
         PlaceInput.Refresh();
     }
 }

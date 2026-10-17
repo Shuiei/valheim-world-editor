@@ -136,4 +136,18 @@ public class ObjectLinksRemapTests
         var copy = new List<NewObject> { new(0, Floor, Vector3.One, Vector3.Zero, 0), Made(Vector3.Zero, Int(StableHash.Of("tamed"), 1)) };
         Assert.Equal(copy, ObjectLinks.Remap(copy, new HashSet<int>()));
     }
+
+    [Fact]
+    public void TwoObjectsHoldingOneIdEachGetOneOfTheirOwn()
+    {
+        // Damaged data: a second root holding the ship's id. The parts follow the first.
+        var copy = new List<NewObject> { Made(new Vector3(50, 30, 50), Int(IdKey, Root)), Made(new Vector3(40, 30, 50), Int(IdKey, Root)), Part(new Vector3(51, 30, 50), 1) };
+
+        var made = ObjectLinks.Remap(copy, new HashSet<int> { Root }, random: new Random(1));
+
+        int first = IntOf(made[0], IdKey)!.Value, second = IntOf(made[1], IdKey)!.Value;
+        Assert.NotEqual(first, second);
+        Assert.DoesNotContain(Root, new[] { first, second });
+        Assert.Equal(first, IntOf(made[2], ParentKey));
+    }
 }

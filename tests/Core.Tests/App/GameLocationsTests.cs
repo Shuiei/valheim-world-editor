@@ -33,6 +33,18 @@ public class GameLocationsTests
     }
 
     [Fact]
+    public void TheOrderIsKeptWhileTheLogsAreUnchanged()
+    {
+        (int, int)[] order = [(3, 0), (27, 25)];
+        string line = GameLocations.OrderLine("Player.log:10:5", order);
+        Assert.Equal(order, GameLocations.KeptOrder(line, "Player.log:10:5"));
+        // The game ran since: read again.
+        Assert.Null(GameLocations.KeptOrder(line, "Player.log:11:6"));
+        Assert.Null(GameLocations.KeptOrder(null, ""));
+        Assert.Null(GameLocations.KeptOrder("x\tnot/an/order", "x"));
+    }
+
+    [Fact]
     public void TheRulesAreReadFromTheMainSceneAndKept()
     {
         var order = GameLocations.ListOrder().Order;

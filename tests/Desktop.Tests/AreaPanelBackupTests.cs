@@ -117,6 +117,30 @@ public class AreaPanelBackupTests
     }
 
     [AvaloniaFact]
+    public async Task ABackupReadIsKeptForItsWorldOnly()
+    {
+        var (w, s, dir) = Open();
+        string backup = dir.TrimEnd(Path.DirectorySeparatorChar) + "_kept";
+        try
+        {
+            TempWorld.CopyDir(dir, backup);
+            var p = w.AreaPanel;
+            var first = await p.OpenBackup(backup, s.Scene.World);
+            Assert.Same(first!.Value.World, (await p.OpenBackup(backup, s.Scene.World))!.Value.World);
+            // Still the same world shown: kept.
+            p.Refresh();
+            Assert.Same(first.Value.World, (await p.OpenBackup(backup, s.Scene.World))!.Value.World);
+            // Its world left: read again next time.
+            p.ForgetBackup();
+            Assert.NotSame(first.Value.World, (await p.OpenBackup(backup, s.Scene.World))!.Value.World);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
     public void TheEyedropperPutsAKindTheGameCanMakeInTheWithList()
     {
         var (w, s, dir) = Open();

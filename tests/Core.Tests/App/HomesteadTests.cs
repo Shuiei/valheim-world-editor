@@ -105,6 +105,31 @@ public class HomesteadTests : IDisposable
         Assert.Equal("a_b.blueprint", Homestead.FileName("a/b"));
     }
 
+    // Names Windows keeps for devices get a "_" (saving "con" failed there), and a cut ending in a dot drops it (Windows
+    // drops it itself, so the picture's name no longer matched).
+    [Fact]
+    public void FileNamesAvoidWindowsDeviceNamesAndATrailingDot()
+    {
+        Assert.Equal("_con.blueprint", Homestead.FileName("con"));
+        Assert.Equal("_LPT1.old.blueprint", Homestead.FileName("LPT1.old"));
+        Assert.Equal("console.blueprint", Homestead.FileName("console"));
+        Assert.Equal(new string('h', 63) + ".blueprint", Homestead.FileName(new string('h', 63) + ".more"));
+    }
+
+    // FreeName: the name when free, else numbered from 2; a name at the file-name limit is cut so the number stays
+    // in the file name (every numbered name mapped to the same file before, and the search never ended).
+    [Fact]
+    public void FreeNamesAreNumberedWithinTheFileNameLimit()
+    {
+        Assert.Equal("Hut", Homestead.FreeName("Hut ", _ => false));
+        Assert.Equal("Hut (3)", Homestead.FreeName("Hut", n => n is "Hut" or "Hut (2)"));
+        string longName = new('h', 64);
+        var files = new HashSet<string> { Homestead.FileName(longName), Homestead.FileName(longName[..60] + " (2)") };
+        string free = Homestead.FreeName(longName, n => files.Contains(Homestead.FileName(n)));
+        Assert.Equal(longName[..60] + " (3)", free);
+        Assert.Equal(64 + ".blueprint".Length, Homestead.FileName(free).Length);
+    }
+
     [Fact]
     public void DescriptionAndTagsAreWrittenReadAndChangedBeforeThePieces()
     {
@@ -125,6 +150,33 @@ public class HomesteadTests : IDisposable
         Assert.Equal(new[] { "house", "Viking", "stone" }, Homestead.Details.ParseTags("house, Viking,stone ,HOUSE;; "));
     }
 
+    // A hand-edited header with spaces before its lines: the old name, description and tags go, as Read reads them
+    // (the old lines stayed, and Read kept the last name: the rename showed the old one).
+    [Fact]
+    public void ChangedDetailsReplaceIndentedHeaderLines()
+    {
+        string text = "  #Name:Old\n #Creator:Tester\n\t#Description:Old one\n #Tags:old\n#Pieces\nwood_floor;Misc;0;0;0;0;0;0;1;\"\";1;1;1\n";
+
+        string changed = Homestead.WithDetails(text, new Homestead.Details("New", "New one", ["new"]));
+
+        var e = Homestead.Read("x.blueprint", changed.Split('\n'));
+        Assert.Equal(("New", "New one"), (e.Name, e.Description));
+        Assert.Equal(["new"], e.Tags);
+        Assert.StartsWith("#Name:New\n #Creator:Tester\n#Description:New one\n#Tags:new\n#Pieces", changed);
+    }
+
+    // A copy's numbers written as strings are read as numbers (they threw).
+    [Fact]
+    public void NumbersWrittenAsStringsAreRead()
+    {
+        var clip = Clip(("wood_floor", 0, 0, 0, 0));
+        clip["objects"]![0]!["dx"] = "1.5";
+
+        string text = Homestead.Write(clip, "Hut", "Tester", null, DateTime.Now);
+
+        Assert.Contains("\nwood_floor;Building;1.5;0;0;", text);
+    }
+
     [Fact]
     public void TheDungeonTagIsReadInAnyCaseSetOnceAndTakenAway()
     {
@@ -136,5 +188,33 @@ public class HomesteadTests : IDisposable
         Assert.Same(crypt, crypt.WithDungeon(true));
         Assert.True(new Homestead.Details("Crypt", "", ["DUNGEON"]).Dungeon);
         Assert.Equal(["house"], new Homestead.Details("Crypt", "", ["Dungeon", "house"]).WithDungeon(false).Tags);
+    }
+
+    [Fact]
+    public void TheLibraryReadsHeadersAsAPasteDoes()
+    {
+        // The list trimmed every quote off a description (and a paste only whole surrounding ones, undoing \" and \n),
+        // and matched field names ignoring case where a paste did not: the two showed the same file differently.
+        string[] lines = ["#name:Hut", "#Description:\"Big\" house", "#Pieces", "wood_floor;Building;0;0;0;0;0;0;1;\"\";1;1;1"];
+        var listed = Homestead.Read("hut.blueprint", lines);
+        var pasted = BlueprintFormats.Parse("hut.blueprint", string.Join('\n', lines));
+        Assert.Equal(("Hut", "\"Big\" house"), (listed.Name, listed.Description));
+        Assert.Equal((listed.Name, listed.Description), (pasted.Name, pasted.Description));
+        string[] quoted = ["#Description:\"Say \\\"hi\\\"\"", "#Pieces"];
+        Assert.Equal("Say \"hi\"", Homestead.Read("x.blueprint", quoted).Description);
+        Assert.Equal("Say \"hi\"", BlueprintFormats.Parse("x.blueprint", string.Join('\n', quoted)).Description);
+    }
+
+    [Fact]
+    public void ASearchFindsEveryWordInNameCreatorDescriptionOrTags()
+    {
+        // The Blueprints panel, the Workshop's library and Claude's list each filtered their own way (only one
+        // looked at the creator).
+        var e = new Homestead.Entry("hut.blueprint", "Small hut", "Astrid", null, 3, null, default) { Description = "By the lake", Tags = ["viking", "wood"] };
+        Assert.True(e.Matches(null));
+        Assert.True(e.Matches("  "));
+        Assert.True(e.Matches("HUT astrid"));
+        Assert.True(e.Matches("lake Vik"));
+        Assert.False(e.Matches("hut stone"));
     }
 }

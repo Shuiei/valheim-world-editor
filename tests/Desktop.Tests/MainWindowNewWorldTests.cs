@@ -11,6 +11,17 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class MainWindowNewWorldTests
 {
+    /// <summary>
+    /// A window shown on its New world page (closed by the caller).
+    /// </summary>
+    internal static MainWindow OnNewWorldPage()
+    {
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        w.Show();
+        w.ShowNewWorld();
+        return w;
+    }
+
     [AvaloniaFact]
     public async Task ANewWorldIsMadeAndOpened()
     {
@@ -51,11 +62,9 @@ public class MainWindowNewWorldTests
     public async Task AFolderHoldingAWorldIsNeverWrittenOver()
     {
         string dir = Fixtures.CopyFixture();
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        var w = OnNewWorldPage();
         try
         {
-            w.Show();
-            w.ShowNewWorld();
             var page = w.NewWorld!;
             Assert.StartsWith("Could not make the world:", await w.CreateWorld(dir, "CITest", "abc"));
             Assert.Same(page, w.NewWorld);

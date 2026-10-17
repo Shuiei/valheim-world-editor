@@ -6,8 +6,8 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The --mcp-stdio relay (ClaudeRelay) at its edges: a message that is JSON null or has no method, an answer with no
-/// content type, an initialize answered without a protocol version before the one with it; and the editor's program
+/// The --mcp-stdio relay (ClaudeRelay) at its edges: a message that is JSON null (no message) or has no method, an
+/// answer with no content type, an initialize answered without a protocol version before the one with it; and the editor's program
 /// started as the relay, on its own standard input and output.
 /// </summary>
 public class ClaudeRelayEdgeTests
@@ -18,8 +18,8 @@ public class ClaudeRelayEdgeTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromResult(answer(request));
     }
 
-    // null is passed on (its empty answer writes nothing); a message with no method is answered as it comes, with no
-    // content type; of initialize's answers only the one with a protocol version sets it for the next request.
+    // null is no message (an error, not sent); a message with no method is answered as it comes, with no content
+    // type; of initialize's answers only the one with a protocol version sets it for the next request.
     [Fact]
     public async Task OddMessagesAndAnswers()
     {
@@ -31,10 +31,6 @@ public class ClaudeRelayEdgeTests
             if (req.Headers.TryGetValues("MCP-Protocol-Version", out var v))
             {
                 versions.AddRange(v);
-            }
-            if (body == "null")
-            {
-                return new HttpResponseMessage(HttpStatusCode.Accepted) { Content = new StringContent("") };
             }
             if (body.Contains("initialize", StringComparison.Ordinal))
             {
@@ -53,11 +49,12 @@ public class ClaudeRelayEdgeTests
         const string Input = "null\n{\"jsonrpc\":\"2.0\",\"id\":9,\"result\":{}}\n{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\"}\n{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}\n";
         await ClaudeRelay.RunAsync(new StringReader(Input), output, () => settings, new Answer(Reply));
         string[] lines = output.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        Assert.Equal(6, lines.Length);
-        Assert.Equal("{\"jsonrpc\":\"2.0\",\"id\":9,\"seen\":true}", lines[0]);
-        Assert.Equal("null", lines[1]);
-        Assert.Contains("protocolVersion", lines[4]);
-        Assert.Equal("{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{}}", lines[5]);
+        Assert.Equal(7, lines.Length);
+        Assert.Contains("\"code\":-32600", lines[0]);
+        Assert.Equal("{\"jsonrpc\":\"2.0\",\"id\":9,\"seen\":true}", lines[1]);
+        Assert.Equal("null", lines[2]);
+        Assert.Contains("protocolVersion", lines[5]);
+        Assert.Equal("{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{}}", lines[6]);
         Assert.Equal(["2025-06-18"], versions);
     }
 
@@ -91,12 +88,9 @@ public class ClaudeRelayEdgeTests
         }
         finally
         {
-            try
+            if (Directory.Exists(home))
             {
                 Directory.Delete(home, true);
-            }
-            catch (IOException)
-            {
             }
         }
     }

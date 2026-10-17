@@ -70,6 +70,19 @@ public sealed class PerfLogTests : IDisposable
     }
 
     [Fact]
+    public void AFileThatCannotBeWrittenLosesItsLinesQuietly()
+    {
+        // A folder where the file should be: opening it for writing is refused.
+        Directory.CreateDirectory(PerfLog.FilePath);
+        var log = new PerfLog { On = true };
+        Frames(log, 1000, 1400, moved: true);
+        log.Flush();
+        Directory.Delete(PerfLog.FilePath);
+        log.Flush();
+        Assert.Empty(Lines());
+    }
+
+    [Fact]
     public void ABigLogIsRolledOver()
     {
         File.WriteAllBytes(PerfLog.FilePath, new byte[5_000_001]);
