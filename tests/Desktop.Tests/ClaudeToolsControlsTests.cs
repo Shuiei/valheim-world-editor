@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.LogicalTree;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -118,6 +119,41 @@ public class ClaudeToolsControlsTests
         Assert.Null(t.Blocked(C("blueprints.paste", new Button { Content = "Coller" }.Tip("blueprints.paste"))));
         Assert.Null(t.Blocked(C("~go", button)));
         Assert.StartsWith("save is not Claude's to use", t.Set(C("save", w.SaveButton), "click", false));
+        w.CloseWithoutAsking();
+    }
+
+    // A step made by a control Claude sets is Claude's, "Claude: …" in the history, also when the handler makes it
+    // after an await; the user's click of the same control makes a step without the prefix.
+    [AvaloniaFact]
+    public async Task StepsMadeByAControlClaudeSetsAreClaudes()
+    {
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        w.Show();
+        var t = new ClaudeTools(w);
+        var s = TestScenes.Flat(1);
+        w.View.Show(s.Scene, null);
+        w.Edit(s);
+        var done = new TaskCompletionSource();
+        bool keep = false;
+        var button = new Button { Content = "Hill later" };
+        button.Click += async (_, _) =>
+        {
+            await Task.Yield();
+            s.Shape(32, 32, _ => 1, 3, 0, "a hill");
+            // Marked another way each time, so each click is a step.
+            keep = !keep;
+            s.MarkResets([(0, 0)], keepBuildings: keep, ground: false, "Claude: a reset");
+            done.TrySetResult();
+        };
+        w.GetLogicalDescendants().OfType<Panel>().First().Children.Add(button);
+        Assert.Equal("~hill-later", ClaudeRun.J(await t.SetControl("~hill-later", "click")).GetProperty("id").GetString());
+        await done.Task;
+        // The ground step gets the prefix; the one that has it already is kept as it is.
+        Assert.Equal(["Claude: a hill", "Claude: a reset"], s.UndoList.Select(c => c.Label));
+        done = new TaskCompletionSource();
+        button.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        await done.Task;
+        Assert.Equal(["a hill", "Claude: a reset"], s.UndoList.Skip(2).Select(c => c.Label));
         w.CloseWithoutAsking();
     }
 

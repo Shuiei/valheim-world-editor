@@ -95,6 +95,11 @@ public sealed class SelectTool
         public float Cx, Cz, Dx, Dz, Dy, Turn, Sx, Sy, Sz, Block;
         /// <summary>Dropped with End (each item keeps the height it dropped to); typed exactly (no snapping).</summary>
         public bool Dropped, NoSnap;
+        /// <summary>
+        /// Whether Claude started the move (setting a control: ClaudeTools.Acting): its step is Claude's whenever it
+        /// is committed, and a move the user started is the user's even when a control Claude sets commits it.
+        /// </summary>
+        public bool ByClaude;
         /// <summary>The name of the piece the selection snapped to, for the message; null when not snapped.</summary>
         public string? Snapped;
         /// <summary>
@@ -168,7 +173,7 @@ public sealed class SelectTool
             }
             return null;
         }
-        return _move = new Move { Items = items, Cx = items.Average(it => it.Thing.Position.X), Cz = items.Average(it => it.Thing.Position.Z), Groups = groups, Noun = noun };
+        return _move = new Move { Items = items, Cx = items.Average(it => it.Thing.Position.X), Cz = items.Average(it => it.Thing.Position.Z), Groups = groups, Noun = noun, ByClaude = ClaudeTools.Acting.Value };
     }
 
     /// <summary>
@@ -337,7 +342,19 @@ public sealed class SelectTool
         GroundBlock(m);
         Snap(m);
         var moves = m.Items.Select(it => (it.Index, Target(m, it), it.Thing.Rotation + new Vector3(0, m.Turn, 0))).ToList();
-        var copies = session.Move(moves, $"Moved {moves.Count}");
+        // The step is whoever started the move's: a key move of the user's committed by a control Claude sets (the
+        // Select panel's Apply) stays the user's, and one Claude started stays Claude's when the timer commits it.
+        bool acting = ClaudeTools.Acting.Value;
+        ClaudeTools.Acting.Value = m.ByClaude;
+        List<int> copies;
+        try
+        {
+            copies = session.Move(moves, $"Moved {moves.Count}");
+        }
+        finally
+        {
+            ClaudeTools.Acting.Value = acting;
+        }
         _view.Select(copies);
         Message?.Invoke($"Moved {copies.Count} object(s){WholeGroups(m.Groups, m.Noun)}. Ctrl+Z puts them back.", false);
     }

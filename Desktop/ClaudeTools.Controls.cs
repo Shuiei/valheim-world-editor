@@ -199,6 +199,14 @@ public sealed partial class ClaudeTools
     private static void Press(Button b) => new ButtonAutomationPeer(b).Invoke();
 
     /// <summary>
+    /// True while Claude is setting a control (Set): the steps the control's handlers make, at once or after an
+    /// await, are labelled "Claude: …" by EditSession, as every other tool's are, so History and Take back Claude's
+    /// changes know them. It flows with the execution context, so a handler's continuations inherit it and the
+    /// user's own actions meanwhile do not.
+    /// </summary>
+    internal static readonly AsyncLocal<bool> Acting = new();
+
+    /// <summary>
     /// Sets a control as the user would (on the window's thread, so its handlers run): a switch on or off, a dropdown's
     /// option, a slider's or number's value, a text, a button pressed. Null when done, else why not.
     /// </summary>
@@ -212,6 +220,22 @@ public sealed partial class ClaudeTools
         {
             return $"{c.Id} is greyed out now (the editor does not allow it in this state).";
         }
+        // Put back as it was, not cleared: a control set while one already is keeps the outer one Claude's.
+        bool was = Acting.Value;
+        Acting.Value = true;
+        try
+        {
+            return Invoke(c, value, enter);
+        }
+        finally
+        {
+            Acting.Value = was;
+        }
+    }
+
+    /// <summary>Sets the control itself (Set, with Acting on): null when done, else why not.</summary>
+    private static string? Invoke(Ctl c, string value, bool enter)
+    {
         static bool? Bool(string v) => v.Trim().ToLowerInvariant() switch { "true" or "on" or "yes" or "1" or "checked" => true, "false" or "off" or "no" or "0" or "unchecked" => false, _ => null };
         static double? Num(string v) => double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out double d) ? d : null;
         switch (c.Control)

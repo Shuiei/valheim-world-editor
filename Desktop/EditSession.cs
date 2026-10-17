@@ -669,7 +669,7 @@ public sealed class EditSession
         Interlocked.Increment(ref _generation);
         int[] pts = [.. touched.Distinct().Order()];
         var now = Ground.Snapshot();
-        _undo.Add(new Change(label, pts, Pick(start, pts), Pick(now, pts), zones));
+        _undo.Add(new Change(Labelled(label), pts, Pick(start, pts), Pick(now, pts), zones));
         if (_undo.Count > HistoryLength)
         {
             _undo.RemoveAt(0);
@@ -826,10 +826,22 @@ public sealed class EditSession
     }
 
     /// <summary>
+    /// The label of a new step: "Claude: " in front while Claude is setting a control (ClaudeTools.Acting) and the
+    /// label lacks it, so a step made by a control Claude pressed is named like every other step of Claude's.
+    /// </summary>
+    private static string Labelled(string label) =>
+        ClaudeTools.Acting.Value && !label.StartsWith("Claude:", StringComparison.Ordinal) ? "Claude: " + label : label;
+
+    /// <summary>
     /// Puts a change on the undo list (dropping the oldest past HistoryLength) and clears the redo list.
     /// </summary>
     private void AddChange(Change c)
     {
+        string label = Labelled(c.Label);
+        if (label != c.Label)
+        {
+            c = c with { Label = label };
+        }
         Interlocked.Increment(ref _generation);
         lock (_lock)
         {
