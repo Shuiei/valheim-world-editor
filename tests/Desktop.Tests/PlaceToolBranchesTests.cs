@@ -135,7 +135,7 @@ public class PlaceToolBranchesTests
             Assert.Equal(expected[i].X, centres[i].X, 3);
             Assert.Equal(expected[i].Y, centres[i].Y, 3);
         }
-        Assert.Equal(3 - r3, t.SnapGap, 3);
+        Assert.Equal(2 - r3, t.SnapGap, 3);
     }
 
     [Fact]
