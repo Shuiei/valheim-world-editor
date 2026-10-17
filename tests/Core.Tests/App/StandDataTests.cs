@@ -28,6 +28,11 @@ public class StandDataTests
     }
 
     /// <summary>
+    /// A number as invariant text, as a saved value is set.
+    /// </summary>
+    private static string I(int v) => v.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>
     /// Reads one item from its base64 bytes (a version byte, then the item), asserting every byte is used.
     /// </summary>
     private static InventoryData.Item ItemOf(string base64)
@@ -82,6 +87,26 @@ public class StandDataTests
         var damaged = With(set);
         damaged.SetBytes(StableHash.Of("itemData"), [InventoryData.Version, 0, 0, 0, 0, 0, 0, 0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
         Assert.Equal((new StandData.Held("SwordIron", 3, 0), 1), StandData.ReadItemStand(damaged));
+    }
+
+    // No item data, or too little to hold an item (2 bytes or fewer): nothing is read, the stand's own quality and
+    // variant are kept (an armour stand's slot has no quality of its own: 1).
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void WithoutItemDataAStandKeepsItsOwnQualityAndVariant(int length)
+    {
+        var item = With([new("ints", "item", I(StableHash.Of("SwordIron"))), new("ints", "quality", "3"), new("ints", "variant", "2"), new("ints", "type", "1")]);
+        var armour = With([new("ints", "0_item", I(StableHash.Of("ShieldWood"))), new("ints", "0_variant", "2")]);
+        if (length >= 0)
+        {
+            item.SetBytes(StableHash.Of("itemData"), new byte[length]);
+            armour.SetBytes(StableHash.Of("0_itemData"), new byte[length]);
+        }
+        Assert.Equal((new StandData.Held("SwordIron", 3, 2), 1), StandData.ReadItemStand(item));
+        Assert.Equal(new StandData.Held("ShieldWood", 1, 2), StandData.ReadArmourStand(armour, 1).Slots[0]);
     }
 
     [Fact]

@@ -48,7 +48,7 @@ public sealed partial class WorldGenerator
     /// </summary>
     /// <param name="at">Where.</param>
     /// <param name="width">How wide, metres: the ground reads it as the point's radius.</param>
-    private readonly struct RiverPoint(Vector2 at, float width) : IEquatable<RiverPoint>
+    internal readonly struct RiverPoint(Vector2 at, float width) : IEquatable<RiverPoint>
     {
         /// <summary>
         /// Where.
