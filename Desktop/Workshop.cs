@@ -44,7 +44,7 @@ public static class Workshop
             Limit = new float[w * w],
             Cx = 0,
             Cz = 0,
-            LoadInfo = "The Workshop: a blank plot to build on. Save blueprint keeps the building pieces as a Homestead blueprint.",
+            LoadInfo = Lang.T("workshop.loadInfo"),
         };
         var ground = new Ground(w, w, scene.X0, scene.Z0, Zones);
         Array.Fill(ground.Base, Ground);
@@ -188,7 +188,7 @@ public static class Workshop
         {
             s.Scene.Ruin = plan.Ruin;
         }
-        s.Commit(label ?? $"{(plan.AtMiddle ? "Opened" : "Added")} {plan.Name}", null, [], plan.Adds);
+        s.Commit(label ?? (plan.AtMiddle ? Lang.T("workshop.undo.opened", plan.Name) : Lang.T("workshop.undo.added", plan.Name)), null, [], plan.Adds);
         return (plan.Adds.Count, plan.Unknown, plan.Lift, plan.Terrain);
     }
 

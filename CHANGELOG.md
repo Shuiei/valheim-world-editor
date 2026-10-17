@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.16 — unreleased
+
+### Changed
+- **The Workshop and its Build panel come from the language catalogue.** The Build panel's tabs, search, snap, grid,
+  turn and lift rows, its Library and their messages, the Workshop's title, cost line, save bar, support switch and
+  cut, its questions before leaving a building or a world not saved, and its status messages and undo steps show in
+  the language chosen in Settings; Claude is still told in English. In English nothing changes.
+
 ## v1.47.15 — unreleased
 
 ### Changed

@@ -24,13 +24,13 @@ public sealed class BuildPanel
     /// <summary>The panel itself, hidden until the Workshop opens.</summary>
     public Control Card { get; }
     /// <summary>Searches all pieces by English name or prefab (every word must match), across the tabs.</summary>
-    internal TextBox Search { get; } = new() { PlaceholderText = "Search pieces", FontSize = 12 };
+    internal TextBox Search { get; } = new() { PlaceholderText = Lang.T("build.hint.search"), FontSize = 12 };
     /// <summary>The piece tiles of the tab or search, with a heading per station.</summary>
     internal WrapPanel Tiles { get; } = new() { ItemSpacing = 4, LineSpacing = 4 };
     /// <summary>Snap to the snap points of the pieces already there.</summary>
-    internal CheckBox SnapBox { get; } = new CheckBox { Content = "Snap to pieces", FontSize = 12, IsChecked = true }.Classed("switch");
+    internal CheckBox SnapBox { get; } = new CheckBox { Content = Lang.T("build.label.snap"), FontSize = 12, IsChecked = true }.Classed("switch");
     /// <summary>The grid step for pieces not snapped (Off, 0.5, 1 or 2 m).</summary>
-    internal ComboBox GridBox { get; } = new() { ItemsSource = new[] { "Off", "0.5 m", "1 m", "2 m" }, SelectedIndex = 0, FontSize = 12 };
+    internal ComboBox GridBox { get; } = new() { ItemsSource = new[] { Lang.T("build.grid.off"), "0.5 m", "1 m", "2 m" }, SelectedIndex = 0, FontSize = 12 };
     /// <summary>The step , and . turn the piece by. The game turns the hammer's piece by 22.5° a step.</summary>
     internal ComboBox TurnBox { get; } = new() { ItemsSource = new[] { "1°", "15°", "22.5°", "45°", "90°" }, SelectedIndex = 2, FontSize = 12 };
     /// <summary>The chosen piece's English name.</summary>
@@ -40,7 +40,7 @@ public sealed class BuildPanel
     /// <summary>The lift Ctrl + wheel gives (see <see cref="ShowLift"/>).</summary>
     internal TextBlock LiftText { get; } = new() { FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
     /// <summary>Takes the lift back to none.</summary>
-    internal Button LiftReset { get; } = new() { Content = "Reset", FontSize = 11, Padding = new Thickness(6, 1) };
+    internal Button LiftReset { get; } = new() { Content = Lang.T("build.label.reset"), FontSize = 11, Padding = new Thickness(6, 1) };
     /// <summary>The game's models, for the pictures (null: each piece's boxes).</summary>
     internal Func<ModelStore?> Models { get; set; } = () => null;
 
@@ -51,12 +51,25 @@ public sealed class BuildPanel
     internal const int Plants = 100, Feasts = 101, Mods = 102;
     /// <summary>
     /// The hammer's tabs (Piece.PieceCategory), in its order, then the cultivator's and the serving
-    /// tray's pieces (plants, feasts), then the mods' (shown when the game has some).
+    /// tray's pieces (plants, feasts), then the mods' (shown when the game has some). Named by <see cref="TabName"/>.
     /// </summary>
-    internal static readonly (int Category, string Name)[] Tabs =
-    [
-        (2, "Building"), (3, "Heavy building"), (4, "Furniture"), (1, "Crafting"), (0, "Misc"), (5, "More"), (Plants, "Plants"), (Feasts, "Feasts"), (Mods, "Mods"),
-    ];
+    internal static readonly int[] Tabs = [2, 3, 4, 1, 0, 5, Plants, Feasts, Mods];
+
+    /// <summary>A tab's name, in the language in use.</summary>
+    /// <param name="category">The tab (one of <see cref="Tabs"/>).</param>
+    internal static string TabName(int category) => category switch
+    {
+        2 => Lang.T("build.tabs.building"),
+        3 => Lang.T("build.tabs.heavyBuilding"),
+        4 => Lang.T("build.tabs.furniture"),
+        1 => Lang.T("build.tabs.crafting"),
+        0 => Lang.T("build.tabs.misc"),
+        5 => Lang.T("build.tabs.more"),
+        Plants => Lang.T("build.tabs.plants"),
+        Feasts => Lang.T("build.tabs.feasts"),
+        Mods => Lang.T("build.tabs.mods"),
+        _ => throw new ArgumentOutOfRangeException(nameof(category), category, "Not one of the Build panel's tabs."),
+    };
 
     /// <summary>The grid steps behind <see cref="GridBox"/>'s entries, in metres (0: off).</summary>
     private static readonly float[] Grids = [0, 0.5f, 1, 2];
@@ -118,7 +131,7 @@ public sealed class BuildPanel
     /// The mod a piece of the Mods tab is listed under ("Other mods" when the game did not say); empty for the game's
     /// own pieces. A mod that adds many (PlanBuild's plans of every piece) does not bury the others.
     /// </summary>
-    internal static string ModGroup(string prefab) => ModCatalogue.IsModded(prefab) ? ModCatalogue.ModOf(prefab) ?? "Other mods" : "";
+    internal static string ModGroup(string prefab) => ModCatalogue.IsModded(prefab) ? ModCatalogue.ModOf(prefab) ?? Lang.T("build.otherMods") : "";
 
     /// <summary>
     /// The group a mod's manifest puts a mod piece in (the Mods tab's heading in place of its station); null for the
@@ -147,8 +160,9 @@ public sealed class BuildPanel
     public BuildPanel(PlaceInput input)
     {
         _input = input;
-        foreach (var (cat, name) in Tabs)
+        foreach (int cat in Tabs)
         {
+            string name = TabName(cat);
             var b = new Button { Content = name, FontSize = 11, Padding = new Thickness(7, 2), Tag = cat };
             ToolTip.SetTip(b, cat switch
             {
@@ -199,7 +213,7 @@ public sealed class BuildPanel
                 new ScrollViewer { MaxHeight = 530, Content = LibraryList },
                 new TextBlock
                 {
-                    Text = "Drag a blueprint onto the plot to add it there (or drop a .blueprint or .vbuild file from your files). Open puts it alone on the plot; Add puts it in the middle with what is there.",
+                    Text = Lang.T("build.hint.library"),
                     FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
                 },
             },
@@ -210,7 +224,7 @@ public sealed class BuildPanel
             IsVisible = false,
             Children =
             {
-                new DockPanel { Children = { BackToLibrary, new TextBlock { Text = "Generate a dungeon", FontSize = 13, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) } } },
+                new DockPanel { Children = { BackToLibrary, new TextBlock { Text = Lang.T("build.head.generate"), FontSize = 13, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) } } },
                 new ScrollViewer { MaxHeight = 560, Content = Dungeon.View },
                 Dungeon.Actions,
             },
@@ -228,12 +242,12 @@ public sealed class BuildPanel
                 Chosen,
                 Cost,
                 SnapBox,
-                Row("Grid", GridBox),
-                Row("Turn by", TurnBox),
-                Row("Lift", new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { LiftText, LiftReset } }),
+                Row(Lang.T("build.label.grid"), GridBox),
+                Row(Lang.T("build.label.turnBy"), TurnBox),
+                Row(Lang.T("build.label.lift"), new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { LiftText, LiftReset } }),
                 new TextBlock
                 {
-                    Text = "As the game's hammer: point at the ground or a piece, the piece touches it and snaps to the snap points within half a metre. Click to put it down. , and . turn it (Alt + wheel too; Shift: 1°); Ctrl + wheel lifts it (Shift: 0.1 m). Select (E) moves, turns and deletes pieces; Ctrl+Z undoes.",
+                    Text = Lang.T("build.hint.hammer"),
                     FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
                 },
             },
@@ -248,7 +262,7 @@ public sealed class BuildPanel
                 {
                     ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"),
                     ColumnSpacing = 4,
-                    Children = { new TextBlock { Text = "Build", FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PiecesTab, 1), Ui.Col(LibraryTab, 2) },
+                    Children = { new TextBlock { Text = Lang.T("rail.label.build"), FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PiecesTab, 1), Ui.Col(LibraryTab, 2) },
                 },
                 _pieces,
                 _library,
@@ -261,19 +275,19 @@ public sealed class BuildPanel
 
     // ---- The Library tab: Homestead's blueprints, opened on the plot, added to it, or dragged onto it.
     /// <summary>Shows the pieces.</summary>
-    internal Button PiecesTab { get; } = new() { Content = "Pieces", FontSize = 12, Padding = new Thickness(8, 2) };
+    internal Button PiecesTab { get; } = new() { Content = Lang.T("build.label.pieces"), FontSize = 12, Padding = new Thickness(8, 2) };
     /// <summary>Shows the Library: the blueprints.</summary>
-    internal Button LibraryTab { get; } = new() { Content = "Library", FontSize = 12, Padding = new Thickness(8, 2) };
+    internal Button LibraryTab { get; } = new() { Content = Lang.T("build.label.library"), FontSize = 12, Padding = new Thickness(8, 2) };
     /// <summary>Searches the blueprints by name, description and tags (every word must match).</summary>
-    internal TextBox LibrarySearch { get; } = new() { PlaceholderText = "Search blueprints", FontSize = 12 };
+    internal TextBox LibrarySearch { get; } = BlueprintsPanel.SearchBox();
     /// <summary>Imports another mod's blueprint file (the window handles it).</summary>
-    internal Button ImportButton { get; } = new() { Content = "Import file…", FontSize = 12 };
+    internal Button ImportButton { get; } = BlueprintsPanel.ImportFileButton();
     /// <summary>The blueprint rows.</summary>
     internal StackPanel LibraryList { get; } = new() { Spacing = 4 };
     /// <summary>Generate dungeon: the Dungeon panel's generator, made of building pieces, onto the plot.</summary>
-    internal Button GenerateButton { get; } = new() { Content = "Generate dungeon…", FontSize = 12 };
+    internal Button GenerateButton { get; } = new() { Content = Lang.T("build.label.generate"), FontSize = 12 };
     /// <summary>From the generator back to the Library.</summary>
-    internal Button BackToLibrary { get; } = new() { Content = "← Library", FontSize = 12 };
+    internal Button BackToLibrary { get; } = new() { Content = Lang.T("build.label.backToLibrary"), FontSize = 12 };
     /// <summary>The dungeon generator, in its Workshop form.</summary>
     internal DungeonGenPanel Dungeon { get; } = new(inWorkshop: true);
     /// <summary>The Pieces, Library and generator views, one shown at a time.</summary>
@@ -335,7 +349,7 @@ public sealed class BuildPanel
         {
             LibraryList.Children.Add(new TextBlock
             {
-                Text = all.Count == 0 ? "No blueprints yet: build one and Save blueprint, import a file, or drop one here." : "Nothing matches.",
+                Text = all.Count == 0 ? Lang.T("build.libraryEmpty") : Lang.T("blueprints.noMatch"),
                 FontSize = 11,
                 Foreground = Ui.Muted,
                 TextWrapping = TextWrapping.Wrap,
@@ -355,8 +369,8 @@ public sealed class BuildPanel
     private Border LibraryRow(Homestead.Entry e)
     {
         Bitmap? pic = BlueprintPictures.File(e.Picture);
-        var open = new Button { Content = "Open", FontSize = 11, Padding = new Thickness(6, 1) }.Tip("build.open");
-        var add = new Button { Content = "Add", FontSize = 11, Padding = new Thickness(6, 1) }.Tip("build.add");
+        var open = new Button { Content = Lang.T("common.open"), FontSize = 11, Padding = new Thickness(6, 1) }.Tip("build.open");
+        var add = new Button { Content = Lang.T("common.add"), FontSize = 11, Padding = new Thickness(6, 1) }.Tip("build.add");
         open.Click += (_, _) => OpenAsked?.Invoke(e.Path);
         add.Click += (_, _) => AddAsked?.Invoke(e.Path);
         var image = new Image { Source = pic, Width = 60, Height = 60, VerticalAlignment = VerticalAlignment.Top };
@@ -384,7 +398,7 @@ public sealed class BuildPanel
                         Children =
                         {
                             new TextBlock { Text = e.Name, FontSize = 12, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis },
-                            new TextBlock { Text = $"{e.Pieces} piece(s) · {PieceCost.Of(e.Kinds).Describe(3)}", FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
+                            new TextBlock { Text = Lang.T("build.libraryRow", e.Pieces, PieceCost.Of(e.Kinds).Describe(3)), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { open, add } },
                         },
                     }, 1),
@@ -456,7 +470,7 @@ public sealed class BuildPanel
     /// <summary>Shows the lift Ctrl + wheel gives.</summary>
     public void ShowLift()
     {
-        LiftText.Text = Tool.HeightNudge == 0 ? "none (Ctrl + wheel)" : $"{Tool.HeightNudge:+0.0#;-0.0#} m";
+        LiftText.Text = Tool.HeightNudge == 0 ? Lang.T("build.liftNone") : $"{Tool.HeightNudge:+0.0#;-0.0#} m";
         LiftReset.IsEnabled = Tool.HeightNudge != 0;
     }
 
@@ -468,7 +482,7 @@ public sealed class BuildPanel
         Tool.Chosen.Add(prefab);
         Tool.Notify();
         Chosen.Text = PieceCost.PieceName(prefab);
-        Cost.Text = "Costs " + PieceCost.Of([prefab]).Describe(6);
+        Cost.Text = Lang.T("build.costs", PieceCost.Of([prefab]).Describe(6));
         foreach (var b in Tiles.Children.OfType<Button>())
         {
             b.Classes.Set("on", b.Tag as string == prefab);
@@ -528,7 +542,7 @@ public sealed class BuildPanel
         _waiting.Clear();
         if (list.Count == 0)
         {
-            Tiles.Children.Add(new TextBlock { Text = "No piece matches.", FontSize = 11, Foreground = Ui.Muted });
+            Tiles.Children.Add(new TextBlock { Text = Lang.T("build.noMatch"), FontSize = 11, Foreground = Ui.Muted });
             return;
         }
         int all = list.Count;
@@ -540,7 +554,7 @@ public sealed class BuildPanel
             // A heading where the station changes (on the Mods tab, the mod or the station).
             string? station = PieceCost.Get(prefab)?.Station;
             string mod = ModGroup(prefab);
-            string heading = (mod.Length > 0 ? mod + " · " : "") + (PieceGroup(prefab) ?? station ?? "No station needed");
+            string heading = (mod.Length > 0 ? mod + " · " : "") + (PieceGroup(prefab) ?? station ?? Lang.T("build.noStation"));
             if (heading != group)
             {
                 group = heading;
@@ -576,7 +590,7 @@ public sealed class BuildPanel
         }
         if (all > list.Count)
         {
-            Tiles.Children.Add(new TextBlock { Text = $"Showing {list.Count} of {all}: search to find the others.", Width = 320, FontSize = 11, Foreground = Ui.Muted, Margin = new Thickness(2, 4, 0, 0), TextWrapping = TextWrapping.Wrap });
+            Tiles.Children.Add(new TextBlock { Text = Lang.T("build.showing", list.Count, all), Width = 320, FontSize = 11, Foreground = Ui.Muted, Margin = new Thickness(2, 4, 0, 0), TextWrapping = TextWrapping.Wrap });
         }
     }
 

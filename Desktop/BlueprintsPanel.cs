@@ -29,9 +29,9 @@ public sealed class BlueprintsPanel
     /// <summary>Whether Homestead is installed, and its blueprint folder (tests give their own).</summary>
     internal Func<Homestead.Status> FindHomestead { get; set; } = () => Homestead.Find(AppSettings.Load());
     /// <summary>Filters the list: every word somewhere in a blueprint's name, creator, description or tags.</summary>
-    internal TextBox Search { get; } = new() { PlaceholderText = Lang.T("blueprints.hint.search"), FontSize = 12 };
+    internal TextBox Search { get; } = SearchBox();
     /// <summary>Imports another mod's blueprint file (see <see cref="Import"/>).</summary>
-    internal Button ImportButton { get; } = new() { Content = Lang.T("blueprints.label.import"), FontSize = 12 };
+    internal Button ImportButton { get; } = ImportFileButton();
     /// <summary>Opens an empty Workshop to build a new blueprint in.</summary>
     internal Button NewButton { get; } = new() { Content = Lang.T("blueprints.label.new"), FontSize = 12 };
     /// <summary>Edit (a blueprint file) or New in Workshop (null): the window opens the Workshop.</summary>
@@ -658,6 +658,18 @@ public sealed class BlueprintsPanel
             Message?.Invoke(Said.Of("blueprints.msg.folderFailed", ex.Message));
             return false;
         }
+    }
+
+    /// <summary>A box searching blueprints (here and in the Workshop's Library).</summary>
+    internal static TextBox SearchBox()
+    {
+        return new TextBox { PlaceholderText = Lang.T("blueprints.hint.search"), FontSize = 12 };
+    }
+
+    /// <summary>Import file… (here and in the Workshop's Library).</summary>
+    internal static Button ImportFileButton()
+    {
+        return new Button { Content = Lang.T("blueprints.label.import"), FontSize = 12 };
     }
 
     /// <summary>The first five names, separated by commas, with "…" after them when there are more.</summary>

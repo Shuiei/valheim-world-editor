@@ -46,11 +46,11 @@ public sealed partial class MainWindow : Window
     /// <summary>
     /// The top bar's names: the world, and the area open.
     /// </summary>
-    private readonly TextBlock _title = new() { FontSize = 14, FontWeight = FontWeight.SemiBold, Text = "Valheim World Editor", TextTrimming = TextTrimming.CharacterEllipsis };
+    internal TextBlock TitleText { get; } = new() { FontSize = 14, FontWeight = FontWeight.SemiBold, Text = "Valheim World Editor", TextTrimming = TextTrimming.CharacterEllipsis };
     /// <summary>
     /// Under the title: the area open, or in the Workshop the building's cost.
     /// </summary>
-    private readonly TextBlock _subtitle = new() { FontSize = 12, Foreground = Ui.Muted, TextTrimming = TextTrimming.CharacterEllipsis };
+    internal TextBlock SubtitleText { get; } = new() { FontSize = 12, Foreground = Ui.Muted, TextTrimming = TextTrimming.CharacterEllipsis };
     /// <summary>
     /// The LIVE badge, shown while the world is the game's live one.
     /// </summary>
@@ -619,8 +619,8 @@ public sealed partial class MainWindow : Window
         // The Area tool's lists follow the scene shown (its selection was cleared before, with the old one shown).
         AreaPanel.Refresh();
         MapButton.IsVisible = scene.Owner != null && !Options.Direct;
-        _title.Text = scene.Name;
-        _subtitle.Text = Lang.T("world.areaInfo", scene.ZonesX, scene.ZonesZ, scene.X0, scene.Z0, scene.X0 + scene.ZonesX - 1, scene.Z0 + scene.ZonesZ - 1, scene.Things.Count(t => !t.Gone));
+        TitleText.Text = scene.Name;
+        SubtitleText.Text = Lang.T("world.areaInfo", scene.ZonesX, scene.ZonesZ, scene.X0, scene.Z0, scene.X0 + scene.ZonesX - 1, scene.Z0 + scene.ZonesZ - 1, scene.Things.Count(t => !t.Gone));
         Title = $"{scene.Name} · Valheim World Editor {BuildInfo.Version}";
         _pages.Content = _editorPage;
         EditorOpened(scene);
@@ -2021,7 +2021,7 @@ public sealed partial class MainWindow : Window
         SaveButton.Tip("top.save");
         ToolTip.SetTip(_liveBadge, Lang.T("top.liveBadge"));
         _pendingPill.Child = PendingText;
-        var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { _title, _subtitle } };
+        var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { TitleText, SubtitleText } };
         var bar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto") };
         var left = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { MapButton, names, AreaNav } };
         var right = new StackPanel
