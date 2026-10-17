@@ -1,5 +1,4 @@
 using System.Numerics;
-using TerrainEditor.Save;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -18,9 +17,7 @@ public sealed class EditSessionLangTests
     public void ItsTextsAreTranslatedAndItsMessagesKeepTheirEnglish()
     {
         using var pseudo = new PseudoLang();
-        var s = TestScenes.Flat(2,
-            new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(0, 30, 0), Vector3.Zero, 1, false),
-            new WorldScene.Thing(2, StableHash.Of("Beech1"), new Vector3(8, 30, 8), Vector3.Zero, 1, false));
+        var s = TestScenes.Flat(2, TestScenes.Beech(1, new Vector3(0, 30, 0)), TestScenes.Beech(2, new Vector3(8, 30, 8)));
         Assert.Equal(PseudoLang.Wrap("All saved"), s.PendingText);
 
         s.Shape(30, 30, Two, 3, 0, "raise");

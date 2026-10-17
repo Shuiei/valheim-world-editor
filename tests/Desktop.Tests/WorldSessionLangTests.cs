@@ -1,4 +1,3 @@
-using TerrainEditor.Save;
 using WorldEditor.Tests;
 using Xunit;
 
@@ -26,8 +25,7 @@ public sealed class WorldSessionLangTests
     /// <summary>A live world with a raise and an object deleted, waiting to be applied.</summary>
     private static async Task<(WorldSession World, EditSession Area)> Changed(FakeGame game)
     {
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
-        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        var (world, s) = await TestScenes.LiveArea(game);
         s.Shape(10, 10, Two, 3, 0, "raise");
         s.Delete([s.Scene.Things.FindIndex(t => t.Id >= 0 && !t.Gone)]);
         return (world, s);

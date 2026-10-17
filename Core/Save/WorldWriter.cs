@@ -61,7 +61,10 @@ public static class WorldWriter
     /// <summary>A save refused or failed: nothing written, why in both languages.</summary>
     /// <param name="why">Why nothing was saved.</param>
     /// <param name="skipped">The edits that could not be saved so far.</param>
-    private static Result Refused(Said why, List<string> skipped) => new(false, why.Shown, null, 0, 0, skipped) { Report = why };
+    private static Result Refused(Said why, List<string> skipped)
+    {
+        return new Result(false, why.Shown, null, 0, 0, skipped) { Report = why };
+    }
 
     /// <summary>How a save treats the files around it.</summary>
     /// <param name="KeepBase">The save it is made from stays (an open world saves again from it).</param>
