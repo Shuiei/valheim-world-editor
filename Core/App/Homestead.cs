@@ -119,6 +119,8 @@ public static class Homestead
         /// </summary>
         public const string DungeonTag = "dungeon";
 
+        private static readonly char[] TagSeparators = [',', ';'];
+
         /// <summary>Whether the blueprint is a dungeon (it carries <see cref="DungeonTag"/>, in any case).</summary>
         public bool Dungeon => Tags.Any(t => t.Equals(DungeonTag, StringComparison.OrdinalIgnoreCase));
 
@@ -131,7 +133,7 @@ public static class Homestead
         /// "house, Viking,stone ,house" → house, Viking, stone. Split on commas or semicolons, duplicates
         /// dropped ignoring case, 12 at most.
         /// </summary>
-        public static List<string> ParseTags(string? text) => [.. (text ?? "").Split([',', ';']).Select(t => t.Trim()).Where(t => t.Length > 0)
+        public static List<string> ParseTags(string? text) => [.. (text ?? "").Split(TagSeparators).Select(t => t.Trim()).Where(t => t.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(12)];
     }
 
