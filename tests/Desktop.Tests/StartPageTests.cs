@@ -54,12 +54,9 @@ public class StartPageTests
         public void Dispose()
         {
             ServerConfig.PathOverride = _servers;
-            try
+            if (Directory.Exists(Temp))
             {
                 Directory.Delete(Temp, true);
-            }
-            catch
-            {
             }
         }
     }

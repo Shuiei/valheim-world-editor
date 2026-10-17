@@ -23,12 +23,9 @@ public sealed class WorldCreatorTests : IDisposable
     /// </summary>
     public void Dispose()
     {
-        try
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, true);
-        }
-        catch
-        {
         }
     }
 

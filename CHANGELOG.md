@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.5 — unreleased
+
+### Changed
+- The tests' clean-up no longer hides its errors: a temporary folder is deleted only when it is there, and a failure
+  to delete it fails the test instead of being caught and ignored. The stand-in game, plugin and SSH server, and the
+  editor the visual tests drive, are waited for until they have stopped before their folders go, and an error in the
+  stand-ins' answering fails the test instead of silently ending it. Nothing in the editor changes.
+
 ## v1.47.4 — unreleased
 
 ### Fixed

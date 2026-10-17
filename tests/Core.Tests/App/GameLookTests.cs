@@ -42,12 +42,9 @@ public sealed class GameLookTests : IDisposable
         }
         AppSettings.PathOverride = _settings;
         GameLook.SearchOutsideHome = _outside;
-        try
+        if (Directory.Exists(_home))
         {
             Directory.Delete(_home, true);
-        }
-        catch (IOException)
-        {
         }
     }
 

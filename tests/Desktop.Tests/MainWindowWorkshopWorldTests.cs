@@ -41,12 +41,10 @@ public class MainWindowWorkshopWorldTests
         }
         finally
         {
-            try
+            string folder = Path.GetDirectoryName(dir)!;
+            if (Directory.Exists(folder))
             {
-                Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
-            }
-            catch (IOException)
-            {
+                Directory.Delete(folder, recursive: true);
             }
         }
     }

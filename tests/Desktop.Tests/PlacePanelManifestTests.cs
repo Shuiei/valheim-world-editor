@@ -36,12 +36,9 @@ public sealed class PlacePanelManifestTests : IDisposable
         AppSettings.DataDirOverride = _dataDir;
         foreach (string dir in (string[])[_dir, Path.GetDirectoryName(_world)!])
         {
-            try
+            if (Directory.Exists(dir))
             {
                 Directory.Delete(dir, true);
-            }
-            catch (IOException)
-            {
             }
         }
     }

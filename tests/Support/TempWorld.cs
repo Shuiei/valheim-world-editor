@@ -26,12 +26,10 @@ public sealed class TempWorld : IDisposable
 
     public void Dispose()
     {
-        try
+        string folder = Path.GetDirectoryName(Dir)!;
+        if (Directory.Exists(folder))
         {
-            Directory.Delete(Path.GetDirectoryName(Dir)!, recursive: true);
-        }
-        catch
-        {
+            Directory.Delete(folder, recursive: true);
         }
     }
 

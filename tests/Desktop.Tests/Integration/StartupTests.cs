@@ -27,12 +27,9 @@ public sealed class StartupTests : IDisposable
         AppSettings.DataDirOverride = _data;
         Environment.SetEnvironmentVariable("WORLD_BRIDGE_TOKEN", _token);
         Options.Parse([]);
-        try
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, true);
-        }
-        catch
-        {
         }
     }
 

@@ -76,12 +76,9 @@ public class NewWorldPageTests
         public void Dispose()
         {
             P.Dispose();
-            try
+            if (Directory.Exists(Root))
             {
                 Directory.Delete(Root, true);
-            }
-            catch
-            {
             }
         }
     }

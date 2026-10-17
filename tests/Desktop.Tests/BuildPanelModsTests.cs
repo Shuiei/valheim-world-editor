@@ -38,12 +38,9 @@ public sealed class BuildPanelModsTests : IDisposable
         ModManifests.Forget();
         GameData.UseCopies(Fixtures.Root);
         AppSettings.DataDirOverride = _dataDir;
-        try
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, true);
-        }
-        catch (IOException)
-        {
         }
     }
 

@@ -46,12 +46,9 @@ public sealed class GameDataTests : IDisposable
         AppSettings.PathOverride = _settings;
         AppSettings.DataDirOverride = _dataDir;
         GameLook.SearchOutsideHome = _outside;
-        try
+        if (Directory.Exists(_home))
         {
             Directory.Delete(_home, true);
-        }
-        catch (IOException)
-        {
         }
     }
 

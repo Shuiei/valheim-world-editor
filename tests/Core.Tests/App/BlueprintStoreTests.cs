@@ -16,12 +16,9 @@ public sealed class BlueprintStoreTests : IDisposable
     /// </summary>
     public void Dispose()
     {
-        try
+        if (Directory.Exists(_dir))
         {
             Directory.Delete(_dir, recursive: true);
-        }
-        catch
-        {
         }
     }
 

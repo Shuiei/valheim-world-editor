@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
+using Xunit;
 
 namespace WorldEditor.Tests;
 
@@ -11,8 +12,13 @@ namespace WorldEditor.Tests;
 public sealed class FakeBridge : IDisposable
 {
     private readonly HttpListener _listener = new();
+    /// <summary>Answering the requests: Dispose waits for it to end, and its errors fail the test.</summary>
+    private readonly Task _serving;
 
     public int Port { get; }
+
+    /// <summary>Whether answering ended with an error (Dispose then throws it).</summary>
+    public bool Broken => _serving.IsFaulted;
 
     public string Token { get; } = "test-token";
 
@@ -64,7 +70,7 @@ public sealed class FakeBridge : IDisposable
         Port = FreePort();
         _listener.Prefixes.Add($"http://127.0.0.1:{Port}/");
         _listener.Start();
-        _ = Task.Run(Serve);
+        _serving = Task.Run(Serve);
     }
 
     private async Task Serve()
@@ -76,8 +82,9 @@ public sealed class FakeBridge : IDisposable
             {
                 ctx = await _listener.GetContextAsync();
             }
-            catch
+            catch (Exception) when (!_listener.IsListening)
             {
+                // Closed (Dispose): the wait for the next request ends with an error, and so does the serving.
                 return;
             }
             Connections.Add(ctx.Request.RemoteEndPoint.Port);
@@ -188,6 +195,10 @@ public sealed class FakeBridge : IDisposable
         return p;
     }
 
-    /// <inheritdoc/>
-    public void Dispose() => _listener.Close();
+    /// <summary>Stops answering and waits until the answering has ended; an error in it fails the test.</summary>
+    public void Dispose()
+    {
+        _listener.Close();
+        Assert.True(_serving.Wait(TimeSpan.FromSeconds(30)), "the stand-in plugin did not stop answering");
+    }
 }

@@ -44,13 +44,9 @@ public sealed class LogTests
         }
         finally
         {
-            try
+            if (Directory.Exists(dir))
             {
                 Directory.Delete(dir, recursive: true);
-            }
-            catch (IOException)
-            {
-                // The log stays open for writing on Windows: left in the temporary folder.
             }
         }
     }
