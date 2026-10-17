@@ -14,6 +14,22 @@ public class EditSessionOtherAreasTests
     /// <summary>Deletes the copy of the test world (its temporary parent folder).</summary>
     private static void Done(string dir) => Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
 
+    /// <summary>
+    /// Runs the test on its own copy of the test world, which is deleted after.
+    /// </summary>
+    private static void WithCopy(Action<string> test)
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            test(dir);
+        }
+        finally
+        {
+            Done(dir);
+        }
+    }
+
     /// <summary>Raises the ground 3 m in a 4 m circle at grid point (32, 32) of the area, as one step with this label.</summary>
     private static void Raise(EditSession s, string label) => s.Shape(32, 32, Formula.Compile("3", []), 4, 0, label);
 
@@ -23,8 +39,7 @@ public class EditSessionOtherAreasTests
     [AvaloniaFact]
     public void StepsMadeInAnotherAreaAreKeptAsideAndComeBackThere()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
             var first = WorldScene.Load(dir, 0, 0, 1);
             var owner = first.Owner!;
@@ -59,18 +74,13 @@ public class EditSessionOtherAreasTests
             Assert.Equal(0, both.Shelved);
             Assert.Equal("Raise there", Assert.Single(both.UndoList).Label);
             Assert.Equal("Raise here", Assert.Single(both.RedoList).Label);
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 
     [AvaloniaFact]
     public void StepsKeptAsideAndThisAreasGoBackInTheOrderTheyWereMade()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
             var first = WorldScene.Load(dir, 0, 0, 1);
             var owner = first.Owner!;
@@ -95,18 +105,13 @@ public class EditSessionOtherAreasTests
             Assert.True(both.Undo());
             Assert.Equal("Raise there", Assert.Single(both.RedoList).Label);
             Assert.Equal(near, both.Scene.Heights[32 * both.Scene.W + 32], 3);
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 
     [AvaloniaFact]
     public void ANewEditDropsTheRedoKeptAsideFromAnotherAreaToo()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
             var first = WorldScene.Load(dir, 0, 0, 1);
             var owner = first.Owner!;
@@ -126,18 +131,13 @@ public class EditSessionOtherAreasTests
             Assert.Empty(again.RedoList);
             Assert.False(again.CanRedo);
             Assert.Equal(1, again.Shelved);
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 
     [AvaloniaFact]
     public void DiscardDropsTheRedoKeptAsideFromAnotherAreaToo()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
             var first = WorldScene.Load(dir, 0, 0, 1);
             var owner = first.Owner!;
@@ -158,18 +158,13 @@ public class EditSessionOtherAreasTests
             owner.History = there.Export();
             var again = WorldScene.Load(owner, 0, 0, 1).Session!;
             Assert.Empty(again.RedoList);
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 
     [AvaloniaFact]
     public void SavingFromAnotherAreaMarksTheStepsKeptAsideAsSaved()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
             var first = WorldScene.Load(dir, 0, 0, 1);
             var owner = first.Owner!;
@@ -188,18 +183,13 @@ public class EditSessionOtherAreasTests
             Assert.True(Assert.Single(again.UndoList).Applied);
             Assert.Equal(0, again.UnappliedSteps);
             Assert.Equal(0, again.UndoUnapplied());
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 
     [AvaloniaFact]
     public void AStepPartlyInTheAreaStillKeepsTheOlderOnesFromBeingUndoneThere()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
             var owner = WorldScene.Load(dir, 0, 0, 1).Owner!;
             // Two zones wide: a raise wholly in the west zone, then one astride the two.
@@ -218,19 +208,14 @@ public class EditSessionOtherAreasTests
             var home = WorldScene.LoadBlock(owner, 0, 0, 2, 1).Session!;
             Assert.Equal(new[] { "Older", "Over the edge" }, home.UndoList.Select(c => c.Label).ToArray());
             Assert.Equal(0, home.Shelved);
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 
     // A step kept aside does not bring the things it took away into the area: nothing there shows or undoes them.
     [AvaloniaFact]
     public void AStepKeptAsideAddsNoThingsToTheArea()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
             var owner = WorldScene.Load(dir, 0, 0, 1).Owner!;
             // A block of zones: one step raising the ground of zone (1, 0) and deleting a thing of zone (0, 0) (the
@@ -251,18 +236,13 @@ public class EditSessionOtherAreasTests
             var area = WorldScene.Load(owner, 0, 0, 1).Session!;
             Assert.Equal(1, area.Shelved);
             Assert.DoesNotContain(area.Scene.Things, t => t.Id == id);
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 
     [AvaloniaFact]
     public void TheHistoryFileKeepsStepsOfSeveralAreasEachWhereItWasMade()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        WithCopy(dir =>
         {
             var first = WorldScene.Load(dir, 0, 0, 1);
             var owner = first.Owner!;
@@ -284,10 +264,6 @@ public class EditSessionOtherAreasTests
             float near = both.Scene.Heights[32 * both.Scene.W + 32];
             Assert.True(both.Undo());
             Assert.Equal(near, both.Scene.Heights[32 * both.Scene.W + 32], 3);
-        }
-        finally
-        {
-            Done(dir);
-        }
+        });
     }
 }

@@ -5,8 +5,9 @@ using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using TerrainEditor.Save;
-using WorldEditor.Tests;
 using Xunit;
+using static TerrainEditor.Desktop.Tests.SharedButtons;
+using static TerrainEditor.Desktop.Tests.SharedInspectorRun;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -19,59 +20,10 @@ namespace TerrainEditor.Desktop.Tests;
 [Collection("World files")]
 public class InspectorPanelTests
 {
-    private static readonly int Chest = StableHash.Of("piece_chest_wood");
-
-    /// <summary>
-    /// A main window on its own copy of the test world, opened on the zone with the chest; deleted when disposed.
-    /// </summary>
-    private sealed class Run : IDisposable
-    {
-        public MainWindow W { get; } = new(load: false) { Width = 1600, Height = 1000 };
-        public string Dir { get; } = Fixtures.CopyFixture();
-        public WorldScene Scene { get; }
-        public InspectorPanel I => W.Inspector;
-        public string? Said;
-
-        public Run()
-        {
-            var world = WorldSave.Load(Dir);
-            var at = world.Objects.First(o => o.Prefab == Chest).Position;
-            Scene = WorldScene.Load(Dir, (int)MathF.Floor((at.X + 32) / 64), (int)MathF.Floor((at.Z + 32) / 64), 1);
-            W.Show();
-            W.View.Show(Scene, null);
-            W.Edit(Scene.Session!);
-            I.Message += t => Said = t.Shown;
-        }
-
-        public int ChestIndex => Scene.Things.FindLastIndex(t => t.Prefab == Chest && !t.Gone);
-
-        /// <inheritdoc/>
-        public void Dispose() => Directory.Delete(Path.GetDirectoryName(Dir)!, recursive: true);
-    }
-
-    /// <summary>
-    /// Clicks the button and runs the posted work it starts.
-    /// </summary>
-    private static void Click(Button b)
-    {
-        b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        Dispatcher.UIThread.RunJobs();
-    }
-
-    /// <summary>
-    /// The first button with this label under the control.
-    /// </summary>
-    private static Button Labelled(Control c, string label) => c.GetLogicalDescendants().OfType<Button>().First(b => b.Content as string == label);
-
-    /// <summary>
-    /// Every text block's text under the control, joined with " | ", for asserting on what it shows.
-    /// </summary>
-    private static string Texts(Control c) => string.Join(" | ", c.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text));
-
     /// <summary>
     /// Gives the chest a value of each kind the panel shows (through Apply), and reopens it.
     /// </summary>
-    private static async Task<int> WithValues(Run r)
+    private static async Task<int> WithValues(SharedInspectorRun r)
     {
         Assert.True(r.I.Open(r.ChestIndex));
         r.I.Added.Add(("strings", "text", "Hello"));
@@ -87,7 +39,7 @@ public class InspectorPanelTests
     [AvaloniaFact]
     public void APickedItemGoesInItsSlotOnce()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         Assert.True(r.I.Open(r.ChestIndex));
         var grid = r.I.ItemsBox.Children.OfType<Grid>().First(g => g.RowDefinitions.Count > 0);
         var (x, y) = r.I.FreeSlot()!.Value;
@@ -107,7 +59,7 @@ public class InspectorPanelTests
     [AvaloniaFact]
     public async Task TypingAValueEnablesApplyAndRevertPutsItBack()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         await WithValues(r);
         var text = r.I.FieldList.Single(f => f.Name == "text");
         var box = r.I.Fields.GetLogicalDescendants().OfType<TextBox>().First(b => b.Text == "Hello");
@@ -125,7 +77,7 @@ public class InspectorPanelTests
     [AvaloniaFact]
     public async Task AValueIsRemovedAndKeptAgainWithItsButton()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         await WithValues(r);
         var health = r.I.FieldList.Single(f => f.Name == "health");
         int rows = r.I.Fields.Children.Count;
@@ -142,7 +94,7 @@ public class InspectorPanelTests
     [AvaloniaFact]
     public void AddNeedsANameAndANewValueCanBeTakenBack()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         Assert.True(r.I.Open(r.ChestIndex));
         r.I.AddKey.Text = "  ";
         Click(r.I.AddButton);
@@ -165,7 +117,7 @@ public class InspectorPanelTests
     [AvaloniaFact]
     public async Task TheContentsTableAddsTidiesAndTakesOutItems()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         Assert.True(r.I.Open(r.ChestIndex));
         Assert.NotNull(r.I.Items);
         Assert.Contains("CONTENTS", Texts(r.I.ItemsBox));
@@ -200,7 +152,7 @@ public class InspectorPanelTests
     [AvaloniaFact]
     public async Task AnItemOutsideTheSlotsIsAskedAbout()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         Assert.True(r.I.Open(r.ChestIndex));
         Click(Labelled(r.I.ItemsBox, "Add item"));
         r.I.Items![^1].X = 99;
@@ -227,7 +179,7 @@ public class InspectorPanelTests
         byte[] badPrefix = [108, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
         foreach (byte[] items in new[] { older, badPrefix })
         {
-            using var r = new Run();
+            using var r = new SharedInspectorRun();
             Assert.True(r.I.Open(r.ChestIndex));
             r.I.Added.Add(("bytes", "items", Convert.ToBase64String(items)));
             await r.I.Apply();
@@ -239,7 +191,7 @@ public class InspectorPanelTests
     [AvaloniaFact]
     public void AnObjectWithNoDataAndOneThatCannotBeRead()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         int tree = r.Scene.Things.FindIndex(t => !t.Piece && ZdoData.Parse(r.Scene.World.ObjectBytes(t.Id)) is { FloatList.Count: 0, IntList.Count: 0, LongList.Count: 0, StringList.Count: 0, ByteList.Count: 0, Vec3List.Count: 0, QuatList.Count: 0 });
         Assert.True(tree >= 0);
         Assert.True(r.I.Open(tree));
@@ -256,7 +208,7 @@ public class InspectorPanelTests
     {
         var lone = new InspectorPanel(() => null);
         Assert.False(lone.Open(0));
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         bool closed = false;
         r.I.Closed += () => closed = true;
         Assert.True(r.I.Open(r.ChestIndex));
@@ -269,7 +221,7 @@ public class InspectorPanelTests
     [AvaloniaFact]
     public async Task AStackTooLargeIsCutAndSaid()
     {
-        using var r = new Run();
+        using var r = new SharedInspectorRun();
         Assert.True(r.I.Open(r.ChestIndex));
         var (x, y) = r.I.FreeSlot()!.Value;
         r.I.Items!.Add(new InspectorPanel.ItemRow { Name = "Resin", Stack = 70, X = x, Y = y });

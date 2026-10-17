@@ -46,28 +46,50 @@ public class HistoryFileTests
     }
 
     /// <summary>
-    /// A history file's contents, unzipped, with the time it was written blanked (it differs from one write to the
-    /// next), and how many objects it holds.
+    /// A history file's unzipped contents.
     /// </summary>
-    private static (byte[] Raw, int Objects) Contents(string path)
+    private static byte[] Unzip(string path)
     {
-        byte[] raw;
-        using (var gz = new System.IO.Compression.GZipStream(File.OpenRead(path), System.IO.Compression.CompressionMode.Decompress))
-        using (var ms = new MemoryStream())
-        {
-            gz.CopyTo(ms);
-            raw = ms.ToArray();
-        }
-        // Header: magic, version, key, has stamp, stamp, saved at; then the object count.
+        using var gz = new System.IO.Compression.GZipStream(File.OpenRead(path), System.IO.Compression.CompressionMode.Decompress);
+        using var ms = new MemoryStream();
+        gz.CopyTo(ms);
+        return ms.ToArray();
+    }
+
+    /// <summary>
+    /// Writes a history file's contents, zipped, in place of the file at <paramref name="path"/>.
+    /// </summary>
+    private static void Zip(string path, byte[] raw)
+    {
+        using var gz = new System.IO.Compression.GZipStream(File.Create(path), System.IO.Compression.CompressionLevel.Fastest);
+        gz.Write(raw);
+    }
+
+    /// <summary>
+    /// The offset of the object count in unzipped history contents: after the header (magic, version, key, has stamp,
+    /// stamp, saved at).
+    /// </summary>
+    private static int CountOffset(byte[] raw)
+    {
         using var r = new BinaryReader(new MemoryStream(raw), System.Text.Encoding.UTF8);
         r.ReadInt32();
         r.ReadInt32();
         r.ReadString();
         r.ReadBoolean();
         r.ReadString();
-        int at = (int)r.BaseStream.Position;
         r.ReadInt64();
-        int objects = r.ReadInt32();
+        return (int)r.BaseStream.Position;
+    }
+
+    /// <summary>
+    /// A history file's contents, unzipped, with the time it was written blanked (it differs from one write to the
+    /// next), and how many objects it holds.
+    /// </summary>
+    private static (byte[] Raw, int Objects) Contents(string path)
+    {
+        byte[] raw = Unzip(path);
+        int at = CountOffset(raw) - sizeof(long);
+        int objects = BitConverter.ToInt32(raw, at + sizeof(long));
         Array.Clear(raw, at, sizeof(long));
         return (raw, objects);
     }
@@ -112,30 +134,9 @@ public class HistoryFileTests
             var probe = WorldSession.Open(dir);
             string path = HistoryFile.PathOf(HistoryFile.KeyOf(probe));
             probe.Dispose();
-            byte[] raw;
-            using (var gz = new System.IO.Compression.GZipStream(File.OpenRead(path), System.IO.Compression.CompressionMode.Decompress))
-            using (var ms = new MemoryStream())
-            {
-                gz.CopyTo(ms);
-                raw = ms.ToArray();
-            }
-            // Header: magic, version, key, has stamp, stamp, saved at; then the object count.
-            long at;
-            using (var r = new BinaryReader(new MemoryStream(raw), System.Text.Encoding.UTF8))
-            {
-                r.ReadInt32();
-                r.ReadInt32();
-                r.ReadString();
-                r.ReadBoolean();
-                r.ReadString();
-                r.ReadInt64();
-                at = r.BaseStream.Position;
-            }
-            BitConverter.GetBytes(-5).CopyTo(raw, at);
-            using (var gz = new System.IO.Compression.GZipStream(File.Create(path), System.IO.Compression.CompressionLevel.Fastest))
-            {
-                gz.Write(raw);
-            }
+            byte[] raw = Unzip(path);
+            BitConverter.GetBytes(-5).CopyTo(raw, CountOffset(raw));
+            Zip(path, raw);
             using var world = WorldSession.Open(dir);
             Assert.Null(world.Restored);
         }
@@ -156,30 +157,9 @@ public class HistoryFileTests
             EditAndSave(dir);
             using var world = WorldSession.Open(dir);
             string path = HistoryFile.PathOf(HistoryFile.KeyOf(world));
-            byte[] raw;
-            using (var gz = new System.IO.Compression.GZipStream(File.OpenRead(path), System.IO.Compression.CompressionMode.Decompress))
-            using (var ms = new MemoryStream())
-            {
-                gz.CopyTo(ms);
-                raw = ms.ToArray();
-            }
-            // Header: magic, version, key, has stamp, stamp, saved at; then the object count.
-            long at;
-            using (var r = new BinaryReader(new MemoryStream(raw), System.Text.Encoding.UTF8))
-            {
-                r.ReadInt32();
-                r.ReadInt32();
-                r.ReadString();
-                r.ReadBoolean();
-                r.ReadString();
-                r.ReadInt64();
-                at = r.BaseStream.Position;
-            }
-            BitConverter.GetBytes(200_000_000).CopyTo(raw, at);
-            using (var gz = new System.IO.Compression.GZipStream(File.Create(path), System.IO.Compression.CompressionLevel.Fastest))
-            {
-                gz.Write(raw);
-            }
+            byte[] raw = Unzip(path);
+            BitConverter.GetBytes(200_000_000).CopyTo(raw, CountOffset(raw));
+            Zip(path, raw);
             long before = GC.GetAllocatedBytesForCurrentThread();
             Assert.Null(HistoryFile.Read(world));
             Assert.InRange(GC.GetAllocatedBytesForCurrentThread() - before, 0, 64 << 20);
