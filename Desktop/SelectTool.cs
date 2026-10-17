@@ -335,6 +335,11 @@ public sealed class SelectTool
     /// <summary>The metre cell (x, z) a snap point is in, for <see cref="Move.OthersAt"/>.</summary>
     private static (int X, int Z) SnapCell(Vector3 p) => ((int)MathF.Floor(p.X), (int)MathF.Floor(p.Z));
 
+    /// <summary>A turn smaller than this (degrees) is none: float residue, not a move, and not said.</summary>
+    private const float NoTurn = 0.001f;
+    /// <summary>A lift smaller than this (metres) is none: float residue, not a move, and not said.</summary>
+    private const float NoLift = 0.001f;
+
     /// <summary>Shows the move in progress in the view (as previews) and says how far it went.</summary>
     /// <param name="m">The move in progress.</param>
     private void Preview(Move m)
@@ -349,8 +354,8 @@ public sealed class SelectTool
         _view.SetPreviews(shown);
         float moved = MathF.Sqrt(m.Dx * m.Dx + m.Dz * m.Dz);
         Message?.Invoke(Said.Of("select.msg.moving", m.Items.Count, WholeGroups(m.Groups, m.Noun, deleted: false), moved,
-            m.Turn != 0 ? Said.Of("select.msg.turned", m.Turn) : Said.Empty,
-            m.Dy != 0 ? Said.Of("select.msg.lifted", m.Dy) : Said.Empty,
+            MathF.Abs(m.Turn) >= NoTurn ? Said.Of("select.msg.turned", m.Turn) : Said.Empty,
+            MathF.Abs(m.Dy) >= NoLift ? Said.Of("select.msg.lifted", m.Dy) : Said.Empty,
             m.Snapped != null ? Said.Of("select.msg.snapped", m.Snapped) : Said.Empty), false);
     }
 
@@ -370,7 +375,7 @@ public sealed class SelectTool
             return;
         }
         _view.SetPreviews(null);
-        if (!m.NoSnap && MathF.Abs(m.Dx) + MathF.Abs(m.Dz) < 0.01f && MathF.Abs(m.Turn) < 0.001f && MathF.Abs(m.Dy) < 0.001f && !m.Dropped || Session is not { } session)
+        if (!m.NoSnap && MathF.Abs(m.Dx) + MathF.Abs(m.Dz) < 0.01f && MathF.Abs(m.Turn) < NoTurn && MathF.Abs(m.Dy) < NoLift && !m.Dropped || Session is not { } session)
         {
             return;
         }

@@ -1,6 +1,8 @@
+using System.Numerics;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
+using TerrainEditor.Editing;
 using TerrainEditor.Terrain;
 using WorldEditor.Tests;
 using Xunit;
@@ -10,7 +12,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The Workshop in the window in another language (the made-up one: PseudoLang): its title, cost line, save bar,
 /// support switch, cut and back button show only catalogue texts, blank and with a blueprint opened; a message is shown
-/// in the language while Claude reads it in English; and every question it asks (nothing to save, pieces that would
+/// in the language while Claude reads it in English, as is each of its other messages (added, failures, a drop of other
+/// files, a second open, a dungeon that could not be put down) and its History steps; and every question it asks (nothing to save, pieces that would
 /// fall, another blueprint or the start page over a building not saved, a world with changes left) is in the language.
 /// </summary>
 [Collection("DataDir")]
@@ -37,10 +40,7 @@ public sealed class MainWindowWorkshopLangTests
     {
         using var pseudo = new PseudoLang();
         using var r = new BlueprintsPanelRun();
-        var w = r.W;
-        w.Ask = (_, _, _, _) => Task.FromResult(true);
-        w.Tell = _ => Task.CompletedTask;
-        await w.OpenWorkshop(null);
+        var w = await r.OpenWorkshop();
         Assert.Empty(Untranslated(w, Data));
 
         await w.OpenWorkshop(BlueprintFiles.Hut(r.Homestead));
@@ -62,13 +62,59 @@ public sealed class MainWindowWorkshopLangTests
     {
         using var pseudo = new PseudoLang();
         using var r = new BlueprintsPanelRun();
-        var w = r.W;
-        w.Ask = (_, _, _, _) => Task.FromResult(true);
-        await w.OpenWorkshop(BlueprintFiles.Hut(r.Homestead));
+        var w = await r.OpenWorkshop(BlueprintFiles.Hut(r.Homestead));
         Assert.StartsWith(PseudoLang.Wrap("Opened “Hut”: 3 piece(s)."), w.StatusMessage);
         Assert.Equal(
             "Opened “Hut”: 3 piece(s). 1 kind(s) the game does not know were left out (mods?): no_such_piece_xyz. Change it, then Save blueprint.",
             w.LastMessageEn);
+    }
+
+    /// <summary>
+    /// The window's last message: shown in the language (every sentence, values inside), read by Claude in English.
+    /// </summary>
+    /// <param name="w">The window.</param>
+    /// <param name="english">How the English starts.</param>
+    private static void SaidInTheLanguage(MainWindow w, string english)
+    {
+        Assert.True(PseudoLang.Translated(w.StatusMessage, Data), w.StatusMessage);
+        Assert.StartsWith(english, w.LastMessageEn);
+        Assert.DoesNotContain(PseudoLang.Open, w.LastMessageEn);
+    }
+
+    [AvaloniaFact]
+    public async Task TheWorkshopsOtherMessagesAndStepsAreInTheLanguage()
+    {
+        using var pseudo = new PseudoLang();
+        using var r = new BlueprintsPanelRun();
+        string hut = BlueprintFiles.Hut(r.Homestead);
+        var w = await r.OpenWorkshop(hut);
+        var s = w.Session!;
+        Assert.Equal(PseudoLang.Wrap("Opened Hut"), s.UndoList[^1].Label);
+        // Added beside it: its own step.
+        var anchor = Workshop.Anchor(s.Scene);
+        w.AddToWorkshop(hut, new Vector2(anchor.X + 10, anchor.Z));
+        SaidInTheLanguage(w, "Added “Hut”: ");
+        Assert.Equal(PseudoLang.Wrap("Added Hut"), s.UndoList[^1].Label);
+        // A blueprint that is not there, added or opened.
+        string missing = Path.Combine(r.Dir, "missing.blueprint");
+        w.AddToWorkshop(missing, null);
+        SaidInTheLanguage(w, "Could not add that blueprint: ");
+        await w.OpenWorkshop(missing);
+        SaidInTheLanguage(w, "Could not open that blueprint: ");
+        // Other files dropped on the view.
+        w.Drop(null, [Path.Combine(r.Dir, "notes.txt")], new Avalonia.Point(0, 0), new Avalonia.Size(0, 0));
+        SaidInTheLanguage(w, "Drop .blueprint (Homestead, PlanBuild) or .vbuild files.");
+        // A second open while one waits on its question (the building is not saved).
+        var answer = new TaskCompletionSource<bool>();
+        w.Ask = (_, _, _, _) => answer.Task;
+        var first = w.OpenWorkshop(null);
+        await w.OpenWorkshop(null);
+        SaidInTheLanguage(w, "The Workshop is already opening.");
+        answer.SetResult(false);
+        await first;
+        // A dungeon that cannot be written (it has no objects list).
+        await w.PlotDungeon(new DungeonGen.Settings(), new DungeonGen.Result(null!, Vector3.Zero, null, null, [], "Broken"), add: true);
+        SaidInTheLanguage(w, "Could not put the dungeon on the plot: ");
     }
 
     [AvaloniaFact]
@@ -102,14 +148,9 @@ public sealed class MainWindowWorkshopLangTests
         try
         {
             using var pseudo = new PseudoLang();
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
+            var w = await TestWindows.ChangedWorld(dir);
             var asked = new List<string>();
             w.Ask = (title, text, yes, no) => { asked.AddRange([title, text, yes, no]); return Task.FromResult(false); };
-            w.Tell = _ => Task.CompletedTask;
-            await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
-            await w.EditArea(0, 0, 1);
-            w.Session!.Shape(32, 32, Formula.Compile("2", []), 3, 0, "raise");
             await w.OpenWorkshop(null);
             Assert.False(w.InWorkshop);
             Assert.Equal(4, asked.Count);
