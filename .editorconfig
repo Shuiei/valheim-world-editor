@@ -259,7 +259,7 @@ dotnet_naming_style.underscore_camel_case.capitalization = camel_case
 # Random.state...) so its formulas keep Unity's operations and precision and stay bit-exact with the
 # game (verified by WorldCheck); their public fields, Unity's names and its operators stay as Unity
 # has them.
-[Core/WorldGen/{UnityShim,UnityNative}.cs]
+[Core/WorldGen/{UnityNative,UnityNative.Random,Vector2,Vector2.Equality,Vector3,Vector3.Equality,Vector2i,Vector2s,Color,Mathf,Mathf.Clamp,Utils,Heightmap,World}.cs]
 dotnet_diagnostic.CA1051.severity = none
 dotnet_diagnostic.CA1708.severity = none
 dotnet_diagnostic.CA2231.severity = none

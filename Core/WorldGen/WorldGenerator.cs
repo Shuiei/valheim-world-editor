@@ -23,61 +23,6 @@ namespace ValheimGen;
 public sealed partial class WorldGenerator
 {
     /// <summary>
-    /// The world's radius (metres); past it, the sea deepens to the edge at 10500 m.
-    /// </summary>
-    public const float WorldSize = 10000f;
-
-    /// <summary>
-    /// The edge of the world (metres from the middle): past it the ground is a flat -400 m.
-    /// </summary>
-    private const float EdgeOfWorld = 10500f;
-
-    /// <summary>
-    /// Metres a unit of the generator's heights.
-    /// </summary>
-    private const float HeightScale = 200f;
-
-    /// <summary>
-    /// The world being made: seed, generator version, menu flag.
-    /// </summary>
-    private readonly World _world;
-
-    /// <summary>
-    /// Where the noise fields sit for this seed (drawn from it): the continents' (A, B, which also place
-    /// swamps and plains), the forests', the ground's small detail and the mists'.
-    /// </summary>
-    private readonly float _offsetA, _offsetB, _offsetForest, _offsetDetail, _offsetMist;
-
-    /// <summary>
-    /// Older worlds (the game's generator versions 0 and 1) keep their settings: the radius around the
-    /// middle kept free of mountains, the mists' noise threshold and the swamps' greatest distance (metres).
-    /// </summary>
-    private readonly float _mountainFreeRadius = 1000f, _mistMinNoise = 0.4f, _swampMaxDistance = 6000f;
-
-    /// <summary>
-    /// The Ashlands' cellular and simplex noise (one for all worlds: it only holds settings).
-    /// </summary>
-    private static readonly FastNoise Cells = MakeCells();
-
-    /// <summary>
-    /// The Ashlands' noise settings: Euclidean cellular distance, two octaves.
-    /// </summary>
-    private static FastNoise MakeCells()
-    {
-        var n = new FastNoise(0);
-        n.SetCellularDistanceFunction(FastNoise.CellularDistanceFunction.Euclidean);
-        n.SetCellularReturnType(FastNoise.CellularReturnType.Distance);
-        n.SetFractalOctaves(2);
-        return n;
-    }
-
-    /// <summary>
-    /// A generator for a world. Each caller keeps its own (the game has one, static): the editor can have
-    /// several worlds at once.
-    /// </summary>
-    public static WorldGenerator Create(World world) => new(world);
-
-    /// <summary>
     /// Draws the seed's offsets and lays out the water (not for the menu world), leaving this thread's Random
     /// state as it was.
     /// </summary>
@@ -117,17 +62,29 @@ public sealed partial class WorldGenerator
     }
 
     /// <summary>
+    /// A generator for a world. Each caller keeps its own (the game has one, static): the editor can have
+    /// several worlds at once.
+    /// </summary>
+    public static WorldGenerator Create(World world) => new(world);
+
+    /// <summary>
+    /// The Ashlands' noise settings: Euclidean cellular distance, two octaves.
+    /// </summary>
+    private static FastNoise MakeCells()
+    {
+        var n = new FastNoise(0);
+        n.SetCellularDistanceFunction(FastNoise.CellularDistanceFunction.Euclidean);
+        n.SetCellularReturnType(FastNoise.CellularReturnType.Distance);
+        n.SetFractalOctaves(2);
+        return n;
+    }
+
+    /// <summary>
     /// The world's seed.
     /// </summary>
     public int GetSeed() => _world.m_seed;
 
-    /// <summary>
-    /// What the generator's ground depends on: two generators with the same make the same world.
-    /// </summary>
-    internal (int Seed, int Version, bool Menu) Identity => (_world.m_seed, _world.m_worldGenVersion, _world.m_menu);
-
     // ---- Heights.
-
     /// <summary>
     /// The generated ground's height (metres) at a world position's x and z.
     /// </summary>
@@ -149,91 +106,9 @@ public sealed partial class WorldGenerator
     public float GetHeight(float x, float z, out Color mask) => GetBiomeHeight(GetBiome(x, z), x, z, out mask);
 
     /// <summary>
-    /// The height the game uses while it lays out its streams (before the Ashlands' and Deep North's
-    /// own shapes; riverPreGen: the Deep North as it is for rivers).
-    /// </summary>
-    public float GetPregenerationHeight(float x, float z, bool riverPreGen) =>
-        GetBiomeHeight(GetBiome(x, z), x, z, out _, preGeneration: true, riverPreGen);
-
-    /// <summary>
-    /// The ground's height (metres) in a given biome, and its mask (the ground's colour channels, as
-    /// the game's heightmap keeps them; black for biomes without one).
-    /// </summary>
-    /// <param name="biome">The biome whose shape to use (zone edges blend the shapes of the corners' biomes).</param>
-    /// <param name="x">World x.</param>
-    /// <param name="z">World z.</param>
-    /// <param name="mask">The ground's mask.</param>
-    /// <param name="preGeneration">The rough shapes the game uses while laying out water: no edge gaps, no
-    /// Mistlands, Ashlands or Deep North detail.</param>
-    /// <param name="riverPreDN">With <paramref name="preGeneration"/>: the Deep North as it is for rivers.</param>
-    public float GetBiomeHeight(Heightmap.Biome biome, float x, float z, out Color mask, bool preGeneration = false, bool riverPreDN = true)
-    {
-        // The ground flattens towards the sea along the Ashlands' and Deep North's edges.
-        float scale = preGeneration ? HeightScale : (float)(HeightScale * AshlandsGap(x, z) * CreateDeepNorthGap(x, z));
-        mask = Color.black;
-        if (_world.m_menu)
-        {
-            float shape = biome == Heightmap.Biome.Mountain ? MountainShape(x, z, menu: true) : MenuShape(x, z);
-            return Scaled(shape, scale);
-        }
-        if (GenMath.Length(x, z) > EdgeOfWorld)
-        {
-            return -2f * HeightScale;
-        }
-        return biome switch
-        {
-            Heightmap.Biome.Meadows => Scaled(MeadowsShape(x, z), scale),
-            Heightmap.Biome.BlackForest => Scaled(ForestShape(x, z), scale),
-            Heightmap.Biome.Swamp => Scaled(SwampShape(x, z), scale),
-            Heightmap.Biome.Mountain => Scaled(MountainShape(x, z, menu: false), scale),
-            Heightmap.Biome.Plains => Scaled(PlainsShape(x, z), scale),
-            Heightmap.Biome.Mistlands => Scaled(preGeneration ? ForestShape(x, z) : MistlandsShape(x, z, out mask), scale),
-            Heightmap.Biome.AshLands => Scaled(preGeneration ? AshlandsRoughShape(x, z) : GetAshlandsHeight(x, z, out mask), scale),
-            Heightmap.Biome.DeepNorth => Scaled(preGeneration ? DeepNorthRoughShape(x, z, riverPreDN) : DeepNorthShape(x, z, out mask), scale),
-            Heightmap.Biome.Ocean => Scaled(Continent(x, z), scale),
-            _ => 0f,
-        };
-    }
-
-    /// <summary>
     /// A shape in metres (the + 0.0 turns a negative zero to a positive one, as the game's sum does).
     /// </summary>
     private static float Scaled(float shape, float scale) => (float)((double)shape * scale + 0.0);
-
-    // ---- The ground around a point.
-
-    /// <summary>
-    /// The rise across a circle (the highest minus the lowest of ten random points in it) and the way
-    /// down, as the game samples it (from Unity's random sequence).
-    /// </summary>
-    /// <param name="center">The circle's middle.</param>
-    /// <param name="radius">Its radius, metres.</param>
-    /// <param name="delta">The highest point's height minus the lowest's.</param>
-    /// <param name="slopeDirection">From the highest point to the lowest, unit length (zero when they are the
-    /// same).</param>
-    public void GetTerrainDelta(Vector3 center, float radius, out float delta, out Vector3 slopeDirection)
-    {
-        float highest = -999999f, lowest = 999999f;
-        Vector3 high = center, low = center;
-        for (int i = 0; i < 10; i++)
-        {
-            var offset = Rnd.insideUnitCircle * radius;
-            var p = center + new Vector3(offset.x, 0f, offset.y);
-            float h = GetHeight(p.x, p.z);
-            if (h < lowest)
-            {
-                lowest = h;
-                low = p;
-            }
-            if (h > highest)
-            {
-                highest = h;
-                high = p;
-            }
-        }
-        delta = (float)((double)highest - lowest);
-        slopeDirection = Vector3.Normalize(low - high);
-    }
 
     /// <summary>
     /// How much of a forest the game would grow here (lower: denser; under 1.15 counts as forest).
@@ -244,4 +119,46 @@ public sealed partial class WorldGenerator
     /// Whether the game counts a point as forest (<see cref="GetForestFactor"/> under 1.15).
     /// </summary>
     public static bool InForest(Vector3 pos) => GetForestFactor(pos) < 1.15f;
+
+    /// <summary>
+    /// The world's radius (metres); past it, the sea deepens to the edge at 10500 m.
+    /// </summary>
+    public const float WorldSize = 10000f;
+
+    /// <summary>
+    /// The edge of the world (metres from the middle): past it the ground is a flat -400 m.
+    /// </summary>
+    private const float EdgeOfWorld = 10500f;
+
+    /// <summary>
+    /// Metres a unit of the generator's heights.
+    /// </summary>
+    private const float HeightScale = 200f;
+
+    /// <summary>
+    /// The world being made: seed, generator version, menu flag.
+    /// </summary>
+    private readonly World _world;
+
+    /// <summary>
+    /// Older worlds (the game's generator versions 0 and 1) keep their settings: the radius around the
+    /// middle kept free of mountains, the mists' noise threshold and the swamps' greatest distance (metres).
+    /// </summary>
+    private readonly float _mountainFreeRadius = 1000f, _mistMinNoise = 0.4f, _swampMaxDistance = 6000f;
+
+    /// <summary>
+    /// The Ashlands' cellular and simplex noise (one for all worlds: it only holds settings).
+    /// </summary>
+    private static readonly FastNoise Cells = MakeCells();
+
+    /// <summary>
+    /// What the generator's ground depends on: two generators with the same make the same world.
+    /// </summary>
+    internal (int Seed, int Version, bool Menu) Identity => (_world.m_seed, _world.m_worldGenVersion, _world.m_menu);
+
+    /// <summary>
+    /// Where the noise fields sit for this seed (drawn from it): the continents' (A, B, which also place
+    /// swamps and plains), the forests', the ground's small detail and the mists'.
+    /// </summary>
+    private readonly float _offsetA, _offsetB, _offsetForest, _offsetDetail, _offsetMist;
 }
