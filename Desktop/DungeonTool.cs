@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text;
 using System.Text.RegularExpressions;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
@@ -424,7 +425,7 @@ public sealed partial class DungeonTool
         var rooms = d.Rooms.ToList();
         rooms.Add(p);
         var made = ContentsOf(d, [p]);
-        string with = made.Count > 0 ? $" with {made.Count} object(s)" : "";
+        var with = new StringBuilder(made.Count > 0 ? $" with {made.Count} object(s)" : "");
         // Its door, as the game rolls one where a room joins (on the opening it took).
         if (WithDoors)
         {
@@ -432,7 +433,7 @@ public sealed partial class DungeonTool
             {
                 if (Dungeons.RollDoor(d.Kind, j, Random) is string door)
                 {
-                    with += with.Length == 0 ? " with a door" : " and a door";
+                    with.Append(with.Length == 0 ? " with a door" : " and a door");
                     made.Add((new NewObject(0, StableHash.Of(door), j.Position, BlueprintFormats.ToEuler(j.Rotation), 0), false));
                 }
             }

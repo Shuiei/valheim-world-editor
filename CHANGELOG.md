@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.29 — unreleased
+
+### Fixed
+- **Codacy's medium findings, fixed where they are not false positives.** The screenshot tool's and the tests' helpers
+  return nothing now (no caller used their value; the compiler checked that). The Crunch decoder moves its index in the
+  loop header and writes three entries a step, as before. Parameters that were reassigned are copied to locals
+  (`StandData`, `PlaceTool`), the dungeon room's text is built with a `StringBuilder`, and the test of identical
+  operands uses named values. The structs compared in the generator and the bridge's view now implement
+  `IEquatable<T>` with each field compared by its own `Equals`, the same as the default equality, so NaN and negative
+  zero compare as before. No behaviour changes.
+
 ## v1.45.48 — unreleased
 
 ### Fixed

@@ -22,7 +22,8 @@ public class UnityShimTests
         Assert.Equal(new Vector2(-2, 3), -new Vector2(2, -3));
         Assert.Equal(new Vector2(4, 6), 2f * new Vector2(2, 3));
         Assert.True(new Vector2(1, 2) != new Vector2(1, 3));
-        Assert.False(new Vector2(1, 2) != new Vector2(1, 2));
+        var same = new Vector2(1, 2);
+        Assert.False(same != new Vector2(1, 2));
         Assert.True(new Vector2(1, 2).Equals(new Vector2(1, 2)));
         Assert.False(new Vector2(1, 2).Equals("not a vector"));
         Assert.Equal(new Vector2(1, 2).GetHashCode(), new Vector2(1, 2).GetHashCode());
@@ -49,7 +50,8 @@ public class UnityShimTests
     [Fact]
     public void IntegerVectors()
     {
-        Assert.True(new Vector2i(1, 2) == new Vector2i(1, 2));
+        var cell = new Vector2i(1, 2);
+        Assert.True(cell == new Vector2i(1, 2));
         Assert.True(new Vector2i(1, 2) != new Vector2i(2, 1));
         Assert.True(new Vector2i(1, 2).Equals((object)new Vector2i(1, 2)));
         Assert.False(new Vector2i(1, 2).Equals(7));

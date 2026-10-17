@@ -202,21 +202,22 @@ public static class StandData
     /// </summary>
     private static Held HeldOf(int hash, int quality, int variant, byte[]? itemData)
     {
+        int q = quality, v = variant;
         if (itemData is { Length: > 2 })
         {
             try
             {
                 using BinaryReader r = new(new MemoryStream(itemData), Encoding.UTF8);
                 var it = InventoryData.ReadItem(r, r.ReadByte());
-                quality = it.Quality;
-                variant = it.Variant;
+                q = it.Quality;
+                v = it.Variant;
             }
             catch (Exception ex) when (ex is EndOfStreamException or IOException)
             {
                 // Kept as the stand's own values say.
             }
         }
-        return new Held(PrefabCatalog.NameOf(hash) ?? I(hash), quality, variant);
+        return new Held(PrefabCatalog.NameOf(hash) ?? I(hash), q, v);
     }
 
     /// <summary>The variant clamped to the item's variants; 0 for an item without any.</summary>

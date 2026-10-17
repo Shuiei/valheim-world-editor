@@ -112,7 +112,7 @@ namespace ValheimGen
             /// <summary>
             /// The generator's four state words, as Random.state saves and restores them.
             /// </summary>
-            public struct State
+            public struct State : IEquatable<State>
             {
                 /// <summary>
                 /// First state word.
@@ -133,6 +133,15 @@ namespace ValheimGen
                 /// Fourth state word.
                 /// </summary>
                 internal uint s3;
+
+                /// <summary>Equal when the four state words are equal.</summary>
+                public readonly bool Equals(State other) => s0 == other.s0 && s1 == other.s1 && s2 == other.s2 && s3 == other.s3;
+
+                /// <summary>Equal to another state with the same four words.</summary>
+                public override readonly bool Equals(object? obj) => obj is State v && Equals(v);
+
+                /// <summary>A hash of the four words, equal for equal states.</summary>
+                public override readonly int GetHashCode() => HashCode.Combine(s0, s1, s2, s3);
             }
 
             /// <summary>

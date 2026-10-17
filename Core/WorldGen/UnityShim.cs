@@ -7,7 +7,7 @@ namespace ValheimGen;
 /// <summary>
 /// Unity's Vector2: a 2D point or direction in single precision.
 /// </summary>
-public struct Vector2
+public struct Vector2 : IEquatable<Vector2>
 {
     /// <summary>
     /// The x component (world x, for map points).
@@ -134,6 +134,10 @@ public struct Vector2
     /// <summary>
     /// Exact equality of both components, unlike ==.
     /// </summary>
+    /// <summary>Equal when both components are equal, the same as the default equality (float.Equals each).</summary>
+    public readonly bool Equals(Vector2 other) => x.Equals(other.x) && y.Equals(other.y);
+
+    /// <summary>Equal to another vector with the same components.</summary>
     public override readonly bool Equals(object obj) => obj is Vector2 v && x.Equals(v.x) && y.Equals(v.y);
 
     /// <inheritdoc/>
@@ -143,7 +147,7 @@ public struct Vector2
 /// <summary>
 /// Unity's Vector3: a 3D point or direction in single precision (y up).
 /// </summary>
-public struct Vector3
+public struct Vector3 : IEquatable<Vector3>
 {
     /// <summary>
     /// The x component (east).
@@ -213,6 +217,15 @@ public struct Vector3
     /// Divided by d.
     /// </summary>
     public static Vector3 operator /(Vector3 a, float d) => new(a.x / d, a.y / d, a.z / d);
+
+    /// <summary>Equal when each component is equal, the same as the default equality (float.Equals each).</summary>
+    public readonly bool Equals(Vector3 other) => x.Equals(other.x) && y.Equals(other.y) && z.Equals(other.z);
+
+    /// <summary>Equal to another vector with the same components.</summary>
+    public override readonly bool Equals(object obj) => obj is Vector3 v && Equals(v);
+
+    /// <summary>A hash of the components, equal for equal vectors.</summary>
+    public override readonly int GetHashCode() => HashCode.Combine(x, y, z);
 }
 
 /// <summary>
@@ -303,7 +316,7 @@ public struct Vector2s : IEquatable<Vector2s>
 /// <summary>
 /// Unity's Color: four 0..1 floats; the generator uses it for the base paint mask.
 /// </summary>
-public struct Color
+public struct Color : IEquatable<Color>
 {
     /// <summary>
     /// Red.
@@ -340,6 +353,15 @@ public struct Color
     /// Opaque black (0, 0, 0, 1): no base paint.
     /// </summary>
     public static Color black => new(0f, 0f, 0f, 1f);
+
+    /// <summary>Equal when each component is equal, the same as the default equality (float.Equals each).</summary>
+    public readonly bool Equals(Color other) => r.Equals(other.r) && g.Equals(other.g) && b.Equals(other.b) && a.Equals(other.a);
+
+    /// <summary>Equal to another colour with the same channels.</summary>
+    public override readonly bool Equals(object obj) => obj is Color c && Equals(c);
+
+    /// <summary>A hash of the channels, equal for equal colours.</summary>
+    public override readonly int GetHashCode() => HashCode.Combine(r, g, b, a);
 }
 
 /// <summary>

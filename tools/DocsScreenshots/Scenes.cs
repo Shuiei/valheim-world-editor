@@ -153,14 +153,14 @@ public sealed partial class Scenes
     }
 
     /// <summary>The pointer moved over a ground point, with the modifier keys held.</summary>
-    private static JsonElement Move(Editor e, (double X, double Z) p, string mods = "")
+    private static void Move(Editor e, (double X, double Z) p, string mods = "")
     {
-        return e.Send(Cmd($"mouse move {p.X} {p.Z} left {mods}"));
+        e.Send(Cmd($"mouse move {p.X} {p.Z} left {mods}"));
     }
 
     /// <summary>A mouse drag on the ground from a to b (release false: the button stays down).</summary>
     /// <returns>The state after the release; null when the button stays down.</returns>
-    private static JsonElement? Drag(Editor e, (double X, double Z) a, (double X, double Z) b, int steps = 4, string button = "left", string mods = "", int hold = 30, bool release = true)
+    private static void Drag(Editor e, (double X, double Z) a, (double X, double Z) b, int steps = 4, string button = "left", string mods = "", int hold = 30, bool release = true)
     {
         Move(e, a, mods);
         e.Send(Cmd($"mouse down {a.X} {a.Z} {button} {mods}"));
@@ -171,12 +171,15 @@ public sealed partial class Scenes
             e.Send(Cmd($"mouse move {x} {z} {button} {mods}"));
             e.Send($"wait {hold}");
         }
-        return release ? e.Send(Cmd($"mouse up {b.X} {b.Z} {button} {mods}")) : null;
+        if (release)
+        {
+            e.Send(Cmd($"mouse up {b.X} {b.Z} {button} {mods}"));
+        }
     }
 
     /// <summary>A drag through several points (a brush stroke along them).</summary>
     /// <returns>The state after the release; null when the button stays down.</returns>
-    private static JsonElement? Path(Editor e, (double X, double Z)[] points, int steps = 3, int hold = 60, string button = "left", string mods = "", bool release = true)
+    private static void Path(Editor e, (double X, double Z)[] points, int steps = 3, int hold = 60, string button = "left", string mods = "", bool release = true)
     {
         Move(e, points[0], mods);
         e.Send(Cmd($"mouse down {points[0].X} {points[0].Z} {button} {mods}"));
@@ -192,15 +195,18 @@ public sealed partial class Scenes
             }
         }
         var (endX, endZ) = points[^1];
-        return release ? e.Send(Cmd($"mouse up {endX} {endZ} {button} {mods}")) : null;
+        if (release)
+        {
+            e.Send(Cmd($"mouse up {endX} {endZ} {button} {mods}"));
+        }
     }
 
     /// <summary>A left click at a ground point.</summary>
-    private static JsonElement Click(Editor e, (double X, double Z) p, string mods = "")
+    private static void Click(Editor e, (double X, double Z) p, string mods = "")
     {
         Move(e, p, mods);
         e.Send(Cmd($"mouse down {p.X} {p.Z} left {mods}"));
-        return e.Send(Cmd($"mouse up {p.X} {p.Z} left {mods}"));
+        e.Send(Cmd($"mouse up {p.X} {p.Z} left {mods}"));
     }
 
     /// <summary>The button held still at a point for a while (a brush: raise a mound, dig a hole).</summary>
@@ -235,13 +241,13 @@ public sealed partial class Scenes
     /// <param name="b">The opposite corner.</param>
     /// <param name="action">The action to choose, by its name in the panel.</param>
     /// <param name="apply">Press Enter; false leaves the action chosen but not done.</param>
-    private static JsonElement AreaAction(Editor e, (double X, double Z) a, (double X, double Z) b, string action, bool apply = true)
+    private static void AreaAction(Editor e, (double X, double Z) a, (double X, double Z) b, string action, bool apply = true)
     {
         e.Send("key B");
         e.Send("click Box");
         Drag(e, a, b);
         e.Send($"choose {action}");
-        return apply ? e.Send("key Return") : e.Send("state");
+        e.Send(apply ? "key Return" : "state");
     }
 
     /// <summary>The Place tool's kinds: exactly these.</summary>
