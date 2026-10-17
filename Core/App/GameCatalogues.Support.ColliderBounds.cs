@@ -10,7 +10,7 @@ public static partial class GameCatalogues
     /// <summary>
     /// The support scan of the build pieces; this part gives each collider kind its bounds.
     /// </summary>
-    private sealed partial class SupportScan
+    internal sealed partial class SupportScan
     {
         /// <summary>
         /// The bounds of one collider: its centre, its half size and the aabb flag (0 for a box, 1 for a collider whose
@@ -19,7 +19,7 @@ public static partial class GameCatalogues
         /// <param name="t">The collider's component type.</param>
         /// <param name="cm">The collider component.</param>
         /// <param name="meshes">The mesh ids to read first, or null.</param>
-        private (V3 C, V3 H, long Aabb)? ColliderBounds(int t, AssetTypeValueField cm, List<long>? meshes)
+        internal (V3 C, V3 H, long Aabb)? ColliderBounds(int t, AssetTypeValueField cm, List<long>? meshes)
         {
             if (t == BoxColliderType)
             {
@@ -41,7 +41,7 @@ public static partial class GameCatalogues
         /// A box collider's bounds: its centre and half its size, as the aabb flag 0.
         /// </summary>
         /// <param name="cm">The BoxCollider component.</param>
-        private static (V3 C, V3 H, long Aabb) BoxBounds(AssetTypeValueField cm)
+        internal static (V3 C, V3 H, long Aabb) BoxBounds(AssetTypeValueField cm)
         {
             var (x, y, z) = Vec(cm["m_Size"]);
             return (Vec(cm["m_Center"]), (x / 2, y / 2, z / 2), 0L);
@@ -53,7 +53,7 @@ public static partial class GameCatalogues
         /// </summary>
         /// <param name="cm">The MeshCollider component.</param>
         /// <param name="meshes">The mesh ids to read first, or null.</param>
-        private (V3 C, V3 H, long Aabb)? MeshBounds(AssetTypeValueField cm, List<long>? meshes)
+        internal (V3 C, V3 H, long Aabb)? MeshBounds(AssetTypeValueField cm, List<long>? meshes)
         {
             var mesh = cm["m_Mesh"];
             if (mesh.IsDummy || mesh["m_FileID"].AsInt != 0)
@@ -73,7 +73,7 @@ public static partial class GameCatalogues
         /// aabb flag 1.
         /// </summary>
         /// <param name="cm">The CapsuleCollider component.</param>
-        private static (V3 C, V3 H, long Aabb) CapsuleBounds(AssetTypeValueField cm)
+        internal static (V3 C, V3 H, long Aabb) CapsuleBounds(AssetTypeValueField cm)
         {
             double rr = cm["m_Radius"].AsFloat;
             double hh = Max(cm["m_Height"].AsFloat / 2.0, rr);

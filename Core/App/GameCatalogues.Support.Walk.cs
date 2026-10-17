@@ -9,7 +9,7 @@ public static partial class GameCatalogues
     /// <summary>
     /// The support scan of the build pieces; this part walks a piece's objects and writes their colliders as boxes.
     /// </summary>
-    private sealed partial class SupportScan
+    internal sealed partial class SupportScan
     {
         /// <summary>
         /// A piece's colliders as boxes; or (meshes) the meshes its mesh colliders need, to read first.
@@ -50,7 +50,7 @@ public static partial class GameCatalogues
         /// <param name="frame">The frame of the object the collider sits on.</param>
         /// <param name="layer">The object's layer.</param>
         /// <param name="boxes">The boxes written so far, or null.</param>
-        private static void AddBox((V3 C, V3 H, long Aabb) bounds, ColliderFrame frame, object? layer, List<object?>? boxes)
+        internal static void AddBox((V3 C, V3 H, long Aabb) bounds, ColliderFrame frame, object? layer, List<object?>? boxes)
         {
             var (cx, cy, cz) = frame.Point(bounds.C);
             var (hx, hy, hz) = bounds.H;

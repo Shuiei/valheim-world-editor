@@ -23,7 +23,7 @@ public static partial class GameLocations
     /// <param name="Zone">ZoneSystem's locations, or null when none was found.</param>
     /// <param name="Alts">The alt biomes list, or null when none was found.</param>
     /// <param name="Lists">Every list of a pair, in the scene's order, by (locations, vegetations).</param>
-    private sealed record SceneFields(AssetTypeValueField? Zone, AssetTypeValueField? Alts, Dictionary<(int, int), List<AssetTypeValueField>> Lists);
+    internal sealed record SceneFields(AssetTypeValueField? Zone, AssetTypeValueField? Alts, Dictionary<(int, int), List<AssetTypeValueField>> Lists);
 
     /// <summary>
     /// Scans the scene's bundles for ZoneSystem's locations, the alt biomes and the LocationLists that the order names.
@@ -31,7 +31,7 @@ public static partial class GameLocations
     /// <param name="bundles">The game's bundles.</param>
     /// <param name="scanned">The scene's bundles, the main one first among the ones it needs.</param>
     /// <param name="order">The lists' order: the lists it names are kept.</param>
-    private static SceneFields FindScene(GameBundles bundles, List<string> scanned, (int Locations, int Vegetation)[] order)
+    internal static SceneFields FindScene(GameBundles bundles, List<string> scanned, (int Locations, int Vegetation)[] order)
     {
         AssetTypeValueField? zone = null, alts = null;
         // Every list of a pair, in the scene's order: two lists of the same counts are two lists (the second was taken

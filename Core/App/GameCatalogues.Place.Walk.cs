@@ -10,7 +10,7 @@ public static partial class GameCatalogues
     /// <summary>
     /// The placement scan of the build pieces; this part walks a piece's objects and writes their colliders.
     /// </summary>
-    private sealed partial class PlaceScan
+    internal sealed partial class PlaceScan
     {
         /// <summary>
         /// A piece's colliders; or (meshes) the meshes its mesh colliders need, to read first.
@@ -47,7 +47,7 @@ public static partial class GameCatalogues
         /// <param name="frame">The frame the object sits in, within the piece.</param>
         /// <param name="cols">The colliders written so far, or null when only the meshes are wanted.</param>
         /// <param name="meshes">The mesh ids to read first, or null.</param>
-        private void AddColliders(Bundle b, List<(int Type, AssetTypeValueField F)> colliders, ColliderFrame frame, List<object?>? cols, List<long>? meshes)
+        internal void AddColliders(Bundle b, List<(int Type, AssetTypeValueField F)> colliders, ColliderFrame frame, List<object?>? cols, List<long>? meshes)
         {
             foreach (var (t, c) in colliders)
             {

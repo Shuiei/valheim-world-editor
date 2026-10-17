@@ -13,7 +13,7 @@ public static partial class GameCatalogues
     /// <param name="Origin">The object's origin in the piece's frame.</param>
     /// <param name="Rotation">The object's rotation within the piece.</param>
     /// <param name="Scaling">The object's scale, as its parents multiply it.</param>
-    private readonly record struct ColliderFrame(V3 Origin, Quat Rotation, V3 Scaling)
+    internal readonly record struct ColliderFrame(V3 Origin, Quat Rotation, V3 Scaling)
     {
         /// <summary>
         /// A point of the object's own frame, in the piece's frame.

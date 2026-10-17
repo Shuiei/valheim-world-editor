@@ -194,7 +194,7 @@ public static partial class GameLook
     /// <param name="game">The reader the reading was about.</param>
     /// <param name="state">The state it ended in.</param>
     /// <param name="message">Its message, or null.</param>
-    private static void FinishReading(GameBundles game, string state, string? message)
+    internal static void FinishReading(GameBundles game, string state, string? message)
     {
         lock (Lock)
         {

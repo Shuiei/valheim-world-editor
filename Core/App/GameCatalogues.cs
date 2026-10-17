@@ -849,7 +849,7 @@ public static partial class GameCatalogues
     /// <param name="Z">The z part.</param>
     /// <param name="W">The w part.</param>
     /// <param name="Whole">The root's identity in whole numbers, written as such (see the summary).</param>
-    private readonly record struct Quat(double X, double Y, double Z, double W, bool Whole = false)
+    internal readonly record struct Quat(double X, double Y, double Z, double W, bool Whole = false)
     {
         /// <summary>
         /// The prefab root's frame: the identity, in whole numbers.

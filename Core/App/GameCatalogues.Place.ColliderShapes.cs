@@ -9,7 +9,7 @@ public static partial class GameCatalogues
     /// <summary>
     /// The placement scan of the build pieces; this part writes each collider kind into a piece's colliders.
     /// </summary>
-    private sealed partial class PlaceScan
+    internal sealed partial class PlaceScan
     {
         /// <summary>
         /// Writes a box collider: its centre and half size in the piece's frame, and the rotation.
@@ -17,7 +17,7 @@ public static partial class GameCatalogues
         /// <param name="c">The BoxCollider component.</param>
         /// <param name="frame">The frame of the object the collider sits on.</param>
         /// <param name="cols">The colliders written so far, or null.</param>
-        private static void AddBox(AssetTypeValueField c, ColliderFrame frame, List<object?>? cols)
+        internal static void AddBox(AssetTypeValueField c, ColliderFrame frame, List<object?>? cols)
         {
             var (cx, cy, cz) = frame.Point(Vec(c["m_Center"]));
             var (sizeX, sizeY, sizeZ) = Vec(c["m_Size"]);
@@ -31,7 +31,7 @@ public static partial class GameCatalogues
         /// <param name="c">The SphereCollider component.</param>
         /// <param name="frame">The frame of the object the collider sits on.</param>
         /// <param name="cols">The colliders written so far, or null.</param>
-        private static void AddSphere(AssetTypeValueField c, ColliderFrame frame, List<object?>? cols)
+        internal static void AddSphere(AssetTypeValueField c, ColliderFrame frame, List<object?>? cols)
         {
             var (x, y, z) = frame.Point(Vec(c["m_Center"]));
             var (sx, sy, sz) = frame.Scaling;
@@ -44,7 +44,7 @@ public static partial class GameCatalogues
         /// <param name="c">The CapsuleCollider component.</param>
         /// <param name="frame">The frame of the object the collider sits on.</param>
         /// <param name="cols">The colliders written so far, or null.</param>
-        private static void AddCapsule(AssetTypeValueField c, ColliderFrame frame, List<object?>? cols)
+        internal static void AddCapsule(AssetTypeValueField c, ColliderFrame frame, List<object?>? cols)
         {
             var (x, y, z) = Vec(c["m_Center"]);
             int d = (int)Int(Get(c, "m_Direction", 1L));
@@ -68,7 +68,7 @@ public static partial class GameCatalogues
         /// <param name="frame">The frame of the object the collider sits on.</param>
         /// <param name="cols">The colliders written so far, or null when only the meshes are wanted.</param>
         /// <param name="meshes">The mesh ids to read first, or null.</param>
-        private void AddMesh(AssetTypeValueField c, AssetTypeValueField mesh, ColliderFrame frame, List<object?>? cols, List<long>? meshes)
+        internal void AddMesh(AssetTypeValueField c, AssetTypeValueField mesh, ColliderFrame frame, List<object?>? cols, List<long>? meshes)
         {
             long id = mesh["m_PathID"].AsLong;
             meshes?.Add(id);

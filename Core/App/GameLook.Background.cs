@@ -29,7 +29,7 @@ public static partial class GameLook
     /// Indexes the game's bundles, then makes the game data ready, in the background, telling the reading's progress.
     /// </summary>
     /// <param name="game">The reader to index.</param>
-    private static void IndexBundles(GameBundles game)
+    internal static void IndexBundles(GameBundles game)
     {
         string state, message;
         // The bar: the bundles' index first (a tenth: its table of contents only), then the game data.

@@ -28,7 +28,7 @@ public static partial class GameLocations
     /// <param name="scene">The scene's parts, all found.</param>
     /// <param name="manifest">The manifest, for the prefabs' names.</param>
     /// <param name="order">The lists' order.</param>
-    private static SeedLocations.RuleSet RuleSetOf(SceneFields scene, Manifest manifest, (int Locations, int Vegetation)[] order)
+    internal static SeedLocations.RuleSet RuleSetOf(SceneFields scene, Manifest manifest, (int Locations, int Vegetation)[] order)
     {
         var rules = new SeedLocations.RuleSet();
         rules.locations.AddRange(Items(scene.Zone!).Select(l => Location(l, manifest, null)));

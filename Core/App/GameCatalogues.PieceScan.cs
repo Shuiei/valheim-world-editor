@@ -15,7 +15,7 @@ public static partial class GameCatalogues
     /// a player places one. Menu entries that are not networked prefabs (repair, remove, the hoe's ground
     /// tools) are left out.
     /// </summary>
-    private sealed partial class PieceScan : IStartScan
+    internal sealed partial class PieceScan : IStartScan
     {
         /// <summary>
         /// The build tools' PieceTable objects, by name, and the tool each stands for.

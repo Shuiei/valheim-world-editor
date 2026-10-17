@@ -15,7 +15,7 @@ public static partial class GameCatalogues
     /// box, a mesh collider's as its mesh's box). Colliders of every child count, inactive ones too;
     /// triggers and snap points do not. The pieces with a WearNTear (told by its class) on their root.
     /// </summary>
-    private sealed partial class SupportScan : IStartScan
+    internal sealed partial class SupportScan : IStartScan
     {
         /// <summary>
         /// The entries, by piece prefab name.

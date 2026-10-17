@@ -20,7 +20,7 @@ public static partial class GameCatalogues
     /// ["s", centre, r] a sphere; ["c", a, b, r] a capsule (its segment); ["m", convex, [x,y,z...], [i,j,k...]] a mesh
     /// (triangles).
     /// </summary>
-    private sealed partial class PlaceScan : IStartScan
+    internal sealed partial class PlaceScan : IStartScan
     {
         /// <summary>
         /// The placement flags written ("f": key -&gt; 1 when the Piece field is set).

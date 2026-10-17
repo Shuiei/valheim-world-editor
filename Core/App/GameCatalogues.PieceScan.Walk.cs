@@ -8,7 +8,7 @@ public static partial class GameCatalogues
     /// <summary>
     /// The build pieces' walk: see <c>Walk</c>.
     /// </summary>
-    private sealed partial class PieceScan
+    internal sealed partial class PieceScan
     {
         /// <summary>
         /// Walks a piece's tree: the corners of its active, solid box colliders into <c>pts</c> and its snap points
@@ -50,7 +50,7 @@ public static partial class GameCatalogues
         /// </summary>
         /// <param name="b">The bundle the object is in.</param>
         /// <param name="g">The game object.</param>
-        private static (AssetTypeValueField? Transform, List<AssetTypeValueField> Boxes) TransformAndBoxes(Bundle b, AssetTypeValueField g)
+        internal static (AssetTypeValueField? Transform, List<AssetTypeValueField> Boxes) TransformAndBoxes(Bundle b, AssetTypeValueField g)
         {
             AssetTypeValueField? tr = null;
             var boxes = new List<AssetTypeValueField>();
@@ -76,7 +76,7 @@ public static partial class GameCatalogues
         /// <param name="r">The object's rotation.</param>
         /// <param name="s">The object's scale.</param>
         /// <param name="pts">The corners written so far.</param>
-        private static void AddBoxCorners(List<AssetTypeValueField> boxes, V3 p, Quat r, V3 s, List<V3> pts)
+        internal static void AddBoxCorners(List<AssetTypeValueField> boxes, V3 p, Quat r, V3 s, List<V3> pts)
         {
             foreach (var box in boxes)
             {

@@ -8,7 +8,7 @@ public static partial class GameLocations
     /// The SoftRef manifest beside the bundles folder: each asset's file name by its ID, and each
     /// bundle's dependencies.
     /// </summary>
-    private sealed class Manifest
+    internal sealed class Manifest
     {
         /// <summary>
         /// Each asset's file name (without extension) by its asset ID.
