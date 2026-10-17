@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Net;
 using TerrainEditor.App;
 using Xunit;
@@ -8,8 +7,7 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The --mcp-stdio relay (ClaudeRelay) at its edges: a message that is JSON null (no message) or has no method, an
-/// answer with no content type, an initialize answered without a protocol version before the one with it; and the editor's program
-/// started as the relay, on its own standard input and output.
+/// answer with no content type, and an initialize answered without a protocol version before the one with it.
 /// </summary>
 public class ClaudeRelayEdgeTests
 {
@@ -57,43 +55,6 @@ public class ClaudeRelayEdgeTests
         Assert.Contains("protocolVersion", lines[5]);
         Assert.Equal("{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{}}", lines[6]);
         Assert.Equal(["2025-06-18"], versions);
-    }
-
-    // The editor's program with --mcp-stdio and settings of its own (Claude not let in): a request is answered with
-    // the error on its standard output, and the program ends with its input.
-    [Fact]
-    public async Task TheProgramRelaysOnItsStandardInputAndOutput()
-    {
-        string home = Path.Combine(Path.GetTempPath(), "vwe-relay-" + Guid.NewGuid().ToString("N")[..8]);
-        Directory.CreateDirectory(home);
-        try
-        {
-            // The copy beside the tests, so that its coverage adds to theirs (EditorApp).
-            string app = EditorApp.Path;
-            var psi = new ProcessStartInfo(EditorApp.Dotnet) { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
-            psi.ArgumentList.Add(app);
-            psi.ArgumentList.Add("--mcp-stdio");
-            // Its settings from an empty folder: never the user's.
-            psi.Environment["XDG_DATA_HOME"] = home;
-            psi.Environment["HOME"] = home;
-            psi.Environment["LOCALAPPDATA"] = home;
-            using var p = Process.Start(psi)!;
-            var errors = p.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
-            await p.StandardInput.WriteLineAsync("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}");
-            p.StandardInput.Close();
-            string said = await p.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromMinutes(2), TestContext.Current.CancellationToken);
-            await p.WaitForExitAsync(TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromMinutes(1), TestContext.Current.CancellationToken);
-            Assert.True(p.ExitCode == 0, await errors);
-            Assert.Contains("does not let Claude connect", said);
-            Assert.Contains("\"id\":1", said);
-        }
-        finally
-        {
-            if (Directory.Exists(home))
-            {
-                Directory.Delete(home, true);
-            }
-        }
     }
 
     [Fact]

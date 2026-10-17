@@ -10,28 +10,22 @@ namespace TerrainEditor.Desktop.Tests;
 /// live world that cannot be opened is disconnected, and an apply that is left during a game save still gives its outcome.
 /// </summary>
 [Collection("World files")]
-public sealed class WorldSessionTests : IDisposable
+public sealed class WorldSessionTests : WorldsFolder
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-session-" + Guid.NewGuid().ToString("N")[..8]);
-
     // The test world's seed (tests/fixtures/CITest).
     private const string Seed = "GbXfypqU3G";
 
     /// <summary>
-    /// Deletes the temporary folder.
+    /// A test's own folder for its worlds.
     /// </summary>
-    public void Dispose()
+    public WorldSessionTests() : base("vwe-session-")
     {
-        if (Directory.Exists(_dir))
-        {
-            Directory.Delete(_dir, true);
-        }
     }
 
     /// <summary>
     /// A folder inside the temporary folder.
     /// </summary>
-    private string Folder(string name) => Path.Combine(_dir, name);
+    private string Folder(string name) => Path.Combine(Dir, name);
 
     [Fact]
     public void TheNativeAppOpensIt()

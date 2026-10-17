@@ -28,6 +28,39 @@ public class PathToolApplyRunTests
             return (new List<int>(), (0, 0, 0, 0));
         });
 
+    /// <summary>
+    /// Runs a body with the path's apply run on the ground of the scene's area, prepared as the edit does it, at the
+    /// centre grid point of the test lines (15, 10), given with its height before the change.
+    /// </summary>
+    private static void OnCentrePoint(PathTool tool, EditSession s, Action<PathTool.ApplyRun, Ground, int, float> body) =>
+        OnGround(s, g =>
+        {
+            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, null, tool.Curve());
+            run.Prepare();
+            int p = 10 * g.W + 15;
+            body(run, g, p, g.HeightOf(p));
+        });
+
+    /// <summary>
+    /// Digs a cave line's floor at its centre point to 20 m on a flat ground, with the game's limit on or off, and gives
+    /// the game's lowest depth there and the height after the dig.
+    /// </summary>
+    /// <param name="noLimit">Whether the ground's no-limit setting is on.</param>
+    private static (float Limit, float After) DigCaveFloorAtCentre(bool noLimit)
+    {
+        var s = TestScenes.Flat(2);
+        var tool = Line(PathTool.Action.Cave, (10, 10), (20, 10));
+        (float Limit, float After) result = default;
+        OnCentrePoint(tool, s, (run, g, p, h) =>
+        {
+            g.NoLimit = noLimit;
+            float limit = g.Original(p) - Editing.EditStore.MaxLevel + 0.1f;
+            run.DigCave(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 20f, 0, 0));
+            result = (limit, g.HeightOf(p));
+        });
+        return result;
+    }
+
     [Fact]
     public void PrepareReachesTheWidthAndTheSoftEdgeBeyondTheLine()
     {
@@ -51,12 +84,8 @@ public class PathToolApplyRunTests
         var s = TestScenes.Flat(2);
         var tool = Line(PathTool.Action.Raise, (10, 10), (20, 10));
         tool.Amount = 2;
-        OnGround(s, g =>
+        OnCentrePoint(tool, s, (run, g, p, h) =>
         {
-            int p = 10 * g.W + 15;
-            float h = g.HeightOf(p);
-            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, null, tool.Curve());
-            run.Prepare();
             run.ActOn(new PathTool.ApplyRun.PointSample(15, 10, p, h, 0.5f, 0, 0.25f, 0, 0, 0));
             Assert.Equal(h + (2 + 0.25f) * 0.5f, g.HeightOf(p), 2);
         });
@@ -68,12 +97,8 @@ public class PathToolApplyRunTests
         var s = TestScenes.Flat(2);
         var tool = Line(PathTool.Action.Lower, (10, 10), (20, 10));
         tool.Amount = 2;
-        OnGround(s, g =>
+        OnCentrePoint(tool, s, (run, g, p, h) =>
         {
-            int p = 10 * g.W + 15;
-            float h = g.HeightOf(p);
-            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, null, tool.Curve());
-            run.Prepare();
             run.ActOn(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 0, 0, 0));
             Assert.Equal(h - 2, g.HeightOf(p), 2);
         });
@@ -85,12 +110,8 @@ public class PathToolApplyRunTests
         var s = TestScenes.Flat(2);
         var tool = Line(PathTool.Action.Flatten, (10, 10), (20, 10));
         tool.Height = 30;
-        OnGround(s, g =>
+        OnCentrePoint(tool, s, (run, g, p, h) =>
         {
-            int p = 10 * g.W + 15;
-            float h = g.HeightOf(p);
-            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, null, tool.Curve());
-            run.Prepare();
             run.ActOn(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 0, 0, 0));
             Assert.Equal(30f, g.HeightOf(p), 2);
         });
@@ -122,36 +143,16 @@ public class PathToolApplyRunTests
     [Fact]
     public void ACaveFloorIsNotDugBelowTheGamesLimitUnlessNoLimitIsOn()
     {
-        var s = TestScenes.Flat(2);
-        var tool = Line(PathTool.Action.Cave, (10, 10), (20, 10));
-        OnGround(s, g =>
-        {
-            int p = 10 * g.W + 15;
-            float h = g.HeightOf(p);
-            float limit = g.Original(p) - Editing.EditStore.MaxLevel + 0.1f;
-            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, null, tool.Curve());
-            run.Prepare();
-            // The floor asked for is 20 m, but the game's limit (8 m below the ground) is higher, so the limit is the floor.
-            run.DigCave(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 20f, 0, 0));
-            Assert.Equal(Math.Max(20f, limit), g.HeightOf(p), 2);
-        });
+        var (limit, after) = DigCaveFloorAtCentre(noLimit: false);
+        // The floor asked for is 20 m, but the game's limit (8 m below the ground) is higher, so the limit is the floor.
+        Assert.Equal(Math.Max(20f, limit), after, 2);
     }
 
     [Fact]
     public void ACaveFloorWithNoLimitGoesStraightToItsFloor()
     {
-        var s = TestScenes.Flat(2);
-        var tool = Line(PathTool.Action.Cave, (10, 10), (20, 10));
-        OnGround(s, g =>
-        {
-            g.NoLimit = true;
-            int p = 10 * g.W + 15;
-            float h = g.HeightOf(p);
-            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, null, tool.Curve());
-            run.Prepare();
-            run.DigCave(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 20f, 0, 0));
-            Assert.Equal(20f, g.HeightOf(p), 2);
-        });
+        var (_, after) = DigCaveFloorAtCentre(noLimit: true);
+        Assert.Equal(20f, after, 2);
     }
 
     [Fact]
@@ -177,12 +178,9 @@ public class PathToolApplyRunTests
     {
         var s = TestScenes.Flat(2);
         var tool = Line(PathTool.Action.PaintDirt, (10, 10), (20, 10));
-        OnGround(s, g =>
+        OnCentrePoint(tool, s, (run, g, p, h) =>
         {
-            int p = 10 * g.W + 15;
-            var run = new PathTool.ApplyRun(tool, g, s.Brush, 0, null, null, tool.Curve());
-            run.Prepare();
-            run.Paint(new PathTool.ApplyRun.PointSample(15, 10, p, g.HeightOf(p), 1f, 0, 0, 0, 0, 0));
+            run.Paint(new PathTool.ApplyRun.PointSample(15, 10, p, h, 1f, 0, 0, 0, 0, 0));
             float[] colour = Brush.PaintOf(BrushTool.PaintDirt)!;
             for (int c = 0; c < 4; c++)
             {

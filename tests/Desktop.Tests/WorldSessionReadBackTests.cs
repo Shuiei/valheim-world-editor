@@ -9,28 +9,22 @@ namespace TerrainEditor.Desktop.Tests;
 /// none was handed over the world is read from its folder again.
 /// </summary>
 [Collection("World files")]
-public sealed class WorldSessionReadBackTests : IDisposable
+public sealed class WorldSessionReadBackTests : WorldsFolder
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-readback-" + Guid.NewGuid().ToString("N")[..8]);
-
     // The test world's seed (tests/fixtures/CITest).
     private const string Seed = "GbXfypqU3G";
 
     /// <summary>
-    /// Deletes the temporary folder.
+    /// A test's own folder for its worlds.
     /// </summary>
-    public void Dispose()
+    public WorldSessionReadBackTests() : base("vwe-readback-")
     {
-        if (Directory.Exists(_dir))
-        {
-            Directory.Delete(_dir, true);
-        }
     }
 
     [Fact]
     public void TheSaveReadBackBecomesTheWorld()
     {
-        string folder = Path.Combine(_dir, "Given");
+        string folder = Path.Combine(Dir, "Given");
         WorldCreator.Create(folder, "Given", Seed, radius: 1);
         using var world = WorldSession.Open(folder);
         var read = WorldSave.Load(folder);
@@ -42,7 +36,7 @@ public sealed class WorldSessionReadBackTests : IDisposable
     [Fact]
     public void WithoutASaveReadBackTheWorldIsReadFromItsFolderAgain()
     {
-        string folder = Path.Combine(_dir, "Again");
+        string folder = Path.Combine(Dir, "Again");
         WorldCreator.Create(folder, "Again", Seed, radius: 1);
         using var world = WorldSession.Open(folder);
         var before = world.World;
