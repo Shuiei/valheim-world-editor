@@ -262,7 +262,7 @@ public sealed class BuildPanel
                 {
                     ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"),
                     ColumnSpacing = 4,
-                    Children = { new TextBlock { Text = Lang.T("build.title"), FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PiecesTab, 1), Ui.Col(LibraryTab, 2) },
+                    Children = { new TextBlock { Text = Lang.T("rail.label.build"), FontSize = 14, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(PiecesTab, 1), Ui.Col(LibraryTab, 2) },
                 },
                 _pieces,
                 _library,

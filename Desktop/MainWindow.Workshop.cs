@@ -289,7 +289,7 @@ public partial class MainWindow
             return;
         }
         if (World is { } w && w.Pending is not (0, 0, 0, 0)
-            && !await Ask(Lang.T("workshop.ask.leaveWorld.title"),
+            && !await Ask(Lang.T("save.ask.leave.title"),
                 w.IsLive ? Lang.T("workshop.ask.leaveWorld.textLive", Describe(w.Pending)) : Lang.T("workshop.ask.leaveWorld.text", Describe(w.Pending)),
                 Lang.T("common.leaveAnyway"), Lang.T("common.stay")))
         {
@@ -379,7 +379,7 @@ public partial class MainWindow
         LeaveBuilding();
         InWorkshop = false;
         ToolTip.SetTip(SubtitleText, null);
-        MapButton.Content = Icons.With("back", Lang.T("workshop.label.map"));
+        MapButton.Content = Icons.With("back", Lang.T("top.label.map"));
         SupportBox.IsVisible = false;
         DiscardButton.IsVisible = true;
         LastSupport = null;
