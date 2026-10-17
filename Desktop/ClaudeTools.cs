@@ -163,8 +163,10 @@ public sealed partial class ClaudeTools
             return "No area is open.";
         }
         List<object> found;
+        int reads;
         lock (scene.Things)
         {
+            reads = scene.Reads;
             var q = scene.Things.Select((t, i) => (t, i)).Where(p => !p.t.Gone);
             if (kind != null)
             {
@@ -181,6 +183,11 @@ public sealed partial class ClaudeTools
             }
             found = [.. q.Take(Math.Clamp(limit, 1, 2000)).Select(p => Describe(p.t, p.i))];
         }
+        // (A listing with nothing in it gives no id: ids given before stay refused.)
+        if (found.Count > 0)
+        {
+            GaveIds(scene, reads);
+        }
         return ToJson(found);
     });
 
@@ -193,10 +200,18 @@ public sealed partial class ClaudeTools
         {
             return "No area is open.";
         }
+        List<Dictionary<string, object?>> selected;
+        int reads;
         lock (scene.Things)
         {
-            return ToJson(_w.View.Selected.Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).Select(i => Describe(scene.Things[i], i)).ToList());
+            reads = scene.Reads;
+            selected = [.. _w.View.Selected.Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).Select(i => Describe(scene.Things[i], i))];
         }
+        if (selected.Count > 0)
+        {
+            GaveIds(scene, reads);
+        }
+        return ToJson(selected);
     });
 
     /// <summary>select_objects: selects objects by id and points the camera at them; changes nothing in the world.</summary>
@@ -209,6 +224,10 @@ public sealed partial class ClaudeTools
         if (_w.Session?.Scene is not { } scene)
         {
             return "No area is open.";
+        }
+        if (StaleIds(scene) is string stale)
+        {
+            return stale;
         }
         var ok = ids.Distinct().Where(i => i >= 0 && i < scene.Things.Count && !scene.Things[i].Gone).ToList();
         _w.View.Select(ok);
@@ -855,6 +874,7 @@ public sealed partial class ClaudeTools
         }
         var session = _w.Session!;
         var scene = session.Scene;
+        int reads = scene.Reads;
         float minX = scene.X0 * 64f - 32f, minZ = scene.Z0 * 64f - 32f, maxX = minX + scene.ZonesX * 64f, maxZ = minZ + scene.ZonesZ * 64f;
         var placed = new List<Editing.Hammer.Placed>();
         lock (scene.Things)
@@ -904,6 +924,7 @@ public sealed partial class ClaudeTools
         }
         var ids = session.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, [], adds);
         _w.AfterClaudeEdit($"Claude put down {adds.Count} piece(s); Ctrl+Z takes them back.");
+        GaveIds(scene, reads);
         return ToJson(new { placed = report.Select((r, i) => new { id = i < ids.Count ? ids[i] : -1, piece = r }), problems, pending = Pending() });
     }
 
@@ -1072,6 +1093,10 @@ public sealed partial class ClaudeTools
             return why;
         }
         var session = _w.Session!;
+        if (StaleIds(session.Scene) is string stale)
+        {
+            return stale;
+        }
         var things = session.Scene.Things;
         var given = ids.Distinct().Where(i => i >= 0 && i < things.Count && !things[i].Gone).ToList();
         if (given.Count == 0)
@@ -1095,6 +1120,8 @@ public sealed partial class ClaudeTools
         {
             return "The support check is the Workshop's: open_workshop first.";
         }
+        // The read the pieces' indices are of, taken before they are worked out.
+        int reads = _w.Session?.Scene.Reads ?? 0;
         _w.SupportBox.IsChecked = true;
         _w.RefreshSupport();
         if (_w.LastSupport is not { } r || _w.Session?.Scene is not { } scene)
@@ -1111,13 +1138,19 @@ public sealed partial class ClaudeTools
             z = MathF.Round(scene.Things[things[k]].Position.Z, 2),
             support = MathF.Round(r.Colour[k], 2),
         };
+        var falling = r.Falls.Take(60).Select(Piece).ToList();
+        // Support: 0 (red, about to fall) to 1 (green); pieces on the ground (light blue in the editor) hold best and are left out.
+        var weakest = Enumerable.Range(0, things.Count).Where(k => !r.Free[k] && !r.Breaks[k] && r.Colour[k] >= 0).OrderBy(k => r.Colour[k]).Take(10).Select(Piece).ToList();
+        if (falling.Count > 0 || weakest.Count > 0)
+        {
+            GaveIds(scene, reads);
+        }
         return ToJson(new
         {
             pieces = things.Count,
             wouldFall = r.Breaking,
-            falling = r.Falls.Take(60).Select(Piece),
-            // Support: 0 (red, about to fall) to 1 (green); pieces on the ground (light blue in the editor) hold best and are left out.
-            weakest = Enumerable.Range(0, things.Count).Where(k => !r.Free[k] && !r.Breaks[k] && r.Colour[k] >= 0).OrderBy(k => r.Colour[k]).Take(10).Select(Piece),
+            falling,
+            weakest,
             onTheGround = Enumerable.Range(0, things.Count).Count(k => r.Colour[k] < 0),
         });
     });
@@ -1161,6 +1194,10 @@ public sealed partial class ClaudeTools
             return why;
         }
         var s = _w.Session!;
+        if (StaleIds(s.Scene) is string stale)
+        {
+            return stale;
+        }
         var things = s.Scene.Things;
         if (id < 0 || id >= things.Count || things[id].Gone)
         {
@@ -1370,6 +1407,7 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        int reads = scene.Reads;
         float cx = x ?? scene.Cx, cz = z ?? scene.Cz;
         var (minX, minZ, maxX, maxZ) = Bounds(scene);
         if (cx < minX || cx > maxX || cz < minZ || cz > maxZ)
@@ -1398,6 +1436,7 @@ public sealed partial class ClaudeTools
         }
         int before = scene.Things.Count;
         var added = Workshop.Put(s, plan, label);
+        GaveIds(scene, reads);
         _w.AfterClaudeEdit($"Claude added “{blueprint}”: {added.Placed} piece(s); Ctrl+Z takes it back.");
         return $"Added {added.Placed} piece(s) of \"{blueprint}\", ids {before} to {scene.Things.Count - 1}."
             + (added.Unknown.Count > 0 ? $" Left out (unknown kinds): {string.Join(", ", added.Unknown.Take(10))}." : "")

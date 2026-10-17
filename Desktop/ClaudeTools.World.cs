@@ -30,7 +30,12 @@ public sealed partial class ClaudeTools
         {
             return "what is kinds, items or texts.";
         }
-        var world = await OnUi(() => _w.World);
+        // The open area and how often its world was read, to tell after the search whether its ids still fit.
+        var (world, scene, reads) = await OnUi(() =>
+        {
+            var open = _w.InWorkshop ? null : _w.Session?.Scene;
+            return (_w.World, open, open?.Reads ?? 0);
+        });
         if (world == null)
         {
             return "Open a world first (open_world).";
@@ -46,9 +51,21 @@ public sealed partial class ClaudeTools
         }
         return await OnUi(() =>
         {
+            // Another world opened while it was searched: its hits are the old world's, and the area's ids would be
+            // given to objects of the new one with the same saved ids.
+            if (_w.World != world)
+            {
+                return "The world changed while it was searched: search again.";
+            }
+            // Another area opened, or the world read again after a save (the objects added before it have saved ids
+            // now, and new ones take the added ids again): the hits' ids would be given to other objects.
+            if ((_w.InWorkshop ? null : _w.Session?.Scene) != scene || scene != null && scene.Reads != reads)
+            {
+                return "The open area changed while it was searched (another area, or the world saved): search again.";
+            }
             // The open area's things by world id, to give the hits there their ids.
             var inArea = new Dictionary<int, int>();
-            if (_w.Session?.Scene is { } scene && !_w.InWorkshop)
+            if (scene != null)
             {
                 lock (scene.Things)
                 {
@@ -66,19 +83,25 @@ public sealed partial class ClaudeTools
             {
                 hits = hits.OrderBy(h => (h.X - px) * (h.X - px) + (h.Z - pz) * (h.Z - pz));
             }
+            var given = hits.Take(Math.Clamp(limit, 1, MostHits)).Select(h => new
+            {
+                name = h.Name,
+                x = MathF.Round(h.X, 1),
+                y = MathF.Round(h.Y, 1),
+                z = MathF.Round(h.Z, 1),
+                match = h.Match,
+                areaId = inArea.TryGetValue(h.Id, out int i) ? i : (int?)null,
+            }).ToList();
+            // Ids of the area given: the ids are its (a search with no hit in it gives none, and says nothing of them).
+            if (scene != null && given.Any(h => h.areaId != null))
+            {
+                GaveIds(scene, reads);
+            }
             return ToJson(new
             {
                 found = res.Total,
                 byName = res.Counts.OrderByDescending(c => c.Value).Take(40).Select(c => new { name = c.Key, count = c.Value }),
-                hits = hits.Take(Math.Clamp(limit, 1, MostHits)).Select(h => new
-                {
-                    name = h.Name,
-                    x = MathF.Round(h.X, 1),
-                    y = MathF.Round(h.Y, 1),
-                    z = MathF.Round(h.Z, 1),
-                    match = h.Match,
-                    areaId = inArea.TryGetValue(h.Id, out int i) ? i : (int?)null,
-                }),
+                hits = given,
                 note = res.Truncated ? $"Only the first {res.Hits.Count} hits were kept: ask for something narrower." : null,
             });
         });
@@ -361,6 +384,11 @@ public sealed partial class ClaudeTools
         }
         var s = _w.Session!;
         var scene = s.Scene;
+        int reads = scene.Reads;
+        if (StaleIds(scene) is string stale)
+        {
+            return stale;
+        }
         var (usable, problems) = Usable(scene, ids);
         if (usable.Count == 0)
         {
@@ -409,6 +437,7 @@ public sealed partial class ClaudeTools
         }
         var made = s.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : "Claude: " + label, null, [], adds);
         _w.AfterClaudeEdit($"Claude made {made.Count} cop{(made.Count == 1 ? "y" : "ies")}; Ctrl+Z takes them back.");
+        GaveIds(scene, reads);
         return ToJson(new { copied = made.Select((c, k) => Moved(scene, from[k], c)), problems, pending = Pending() });
     });
 }

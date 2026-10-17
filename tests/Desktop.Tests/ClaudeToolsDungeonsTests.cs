@@ -66,6 +66,12 @@ public class ClaudeToolsDungeonsTests
         var can = rooms.GetProperty("canTake").EnumerateArray().Select(c => c.GetProperty("name").GetString()).ToList();
         Assert.Contains("cave_new_corridor03", can);
         Assert.DoesNotContain(can, n => n!.StartsWith("sunkencrypt", StringComparison.Ordinal));
+        // Its id is one of the area's: list_dungeons gives it as list_objects does, even when the ids given before are
+        // out of date.
+        Assert.NotEqual("[]", await r.T.ListObjects());
+        r.W.Session!.Scene.Reads++;
+        Assert.StartsWith("The ids are from before the world was read again", await r.T.GetObject(0));
+        Assert.Equal(System.Text.Json.JsonValueKind.Object, ClaudeRun.J(await r.T.GetObject(await Id(r))).ValueKind);
     }
 
     // A wrong end or room is said; a corridor added (no contents, no door) gives the dungeon a new id and 2 rooms;

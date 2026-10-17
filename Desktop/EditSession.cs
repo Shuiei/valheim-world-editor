@@ -1807,6 +1807,7 @@ public sealed class EditSession
         {
             Scene.Things.Clear();
             Scene.Things.AddRange(things);
+            Scene.Reads++;
         }
         _nextId = -1;
     }

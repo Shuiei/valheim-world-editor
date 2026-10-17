@@ -107,6 +107,38 @@ public class ClaudeToolsTests
         Assert.Contains("No blueprint", await r.T.AddBlueprint("Nothing like this"));
     }
 
+    // The ids support_check gives (the pieces falling, the weakest) are the plot's: usable at once, even when the
+    // ids given before were another area's.
+    [AvaloniaFact]
+    public async Task SupportCheckGivesTheIdsOfThePlot()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "wood_pole2", X = 3, Z = 3 }]);
+        await r.T.Undo();
+        // A floor on the ground and a post 6 m above it, held by nothing: it falls.
+        static System.Text.Json.Nodes.JsonNode Piece(string prefab, float dy) => new System.Text.Json.Nodes.JsonObject
+        {
+            ["name"] = prefab,
+            ["dx"] = 0,
+            ["dy"] = dy,
+            ["dz"] = 0,
+            ["rx"] = 0,
+            ["ry"] = 0,
+            ["rz"] = 0,
+            ["scale"] = 0,
+        };
+        var clip = new System.Text.Json.Nodes.JsonObject { ["objects"] = new System.Text.Json.Nodes.JsonArray(Piece("wood_floor", 0), Piece("wood_pole2", 6)) };
+        Directory.CreateDirectory(r.Homestead);
+        File.WriteAllText(Path.Combine(r.Homestead, TerrainEditor.App.Homestead.FileName("Floating")), TerrainEditor.App.Homestead.Write(clip, "Floating", "Tester", null, DateTime.Now));
+        Assert.Equal("workshop", J(await r.T.OpenWorkshop("Floating")).GetProperty("page").GetString());
+        Assert.StartsWith("The ids are from another area", await r.T.RemoveObjects([0]));
+        var support = J(await r.T.SupportCheck());
+        Assert.Equal(1, support.GetProperty("wouldFall").GetInt32());
+        int post = support.GetProperty("falling")[0].GetProperty("id").GetInt32();
+        Assert.StartsWith("Took 1 away", await r.T.RemoveObjects([post]));
+    }
+
     // Floors, walls and roofs over a rectangle, from the game's pieces: an 8 x 6 m house is 12 floor tiles,
     // 28 wall pieces with its door, 18 roof pieces with its gables (the 2 m under the ridge closed), and
     // it stands.
