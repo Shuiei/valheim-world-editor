@@ -27,7 +27,6 @@ public sealed class TempWorld : IDisposable
     public void Dispose()
     {
         string folder = Path.GetDirectoryName(Dir)!;
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
         if (Directory.Exists(folder))
         {
             Directory.Delete(folder, recursive: true);

@@ -134,7 +134,6 @@ public sealed class LocalSshd : IDisposable
         {
             _p.Kill(entireProcessTree: true);
             Assert.True(_p.WaitForExit(5000), "sshd did not end within 5 s of being killed");
-            // The process may have exited already; the test is over either way.
         }
         if (Directory.Exists(Dir))
         {
@@ -142,4 +141,3 @@ public sealed class LocalSshd : IDisposable
         }
     }
 }
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.

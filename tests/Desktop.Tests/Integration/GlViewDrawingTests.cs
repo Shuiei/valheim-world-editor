@@ -24,7 +24,6 @@ public sealed class GlViewDrawingTests(EditorProcess editor) : IDisposable
         }
     }
 
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
     /// <summary>
     /// A fresh copy of the test world, opened, its area around zone 0, 0 in the 3D view (3 zones across), the camera
     /// over the world's middle.

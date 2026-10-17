@@ -82,7 +82,6 @@ public class NewWorldPageTests
             }
         }
     }
-                // Best effort: a folder that cannot be deleted is left for the OS to clean up.
 
     /// <summary>
     /// The posted work run, and the window laid out and drawn (so the pointer can hit what is in it).

@@ -157,7 +157,6 @@ public class EditorProcess : IDisposable
             // An editor that ended before being told to quit failed: telling it then throws, and fails the clean-up.
             _p.StandardInput.WriteLine("quit");
             _p.StandardInput.Flush();
-                // The process may have exited already; the test is over either way.
             if (!_p.WaitForExit(QuitWait))
             {
                 // Ended before its data folder is deleted, which it may still be writing.
@@ -166,7 +165,6 @@ public class EditorProcess : IDisposable
             }
         }
         if (Directory.Exists(Data))
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
         {
             Directory.Delete(Data, true);
         }

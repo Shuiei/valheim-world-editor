@@ -24,7 +24,6 @@ public sealed class VisualTests(EditorProcess editor) : IDisposable
         }
     }
 
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
     /// <summary>
     /// A fresh copy of the test world, opened (its map shown, the whole world in view).
     /// </summary>

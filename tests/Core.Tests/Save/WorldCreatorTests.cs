@@ -29,7 +29,6 @@ public sealed class WorldCreatorTests : IDisposable
         }
     }
 
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
     /// <summary>
     /// A file of the test world in tests/fixtures/CITest.
     /// </summary>

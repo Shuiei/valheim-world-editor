@@ -28,7 +28,6 @@ public sealed class ScriptPanelTests : IDisposable
         }
     }
 
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
     // A script saved under a name (characters a file cannot have replaced), then listed after the examples and
     // picked: its code and name back. An example picked leaves the name empty; no name is said. The panel opens with
     // the first example chosen.

@@ -42,7 +42,6 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
     /// </summary>
     private async Task SayHello()
     {
-                // The accept loop ends when the test disposes the listener; the test has finished by then.
         while (true)
         {
             TcpClient c;
@@ -61,7 +60,6 @@ public sealed class TunnelTests : IClassFixture<LocalSshd>, IDisposable
         }
     }
 
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
     private int BridgePort => ((IPEndPoint)_bridge.LocalEndpoint).Port;
 
     public void Dispose()

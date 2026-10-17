@@ -52,7 +52,6 @@ public class SettingsDialogTests
             }
         }
     }
-                // Best effort: a folder that cannot be deleted is left for the OS to clean up.
 
     /// <summary>
     /// A shown 900 × 700 window to own the Settings window.

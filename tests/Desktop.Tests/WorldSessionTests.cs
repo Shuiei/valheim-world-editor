@@ -28,7 +28,6 @@ public sealed class WorldSessionTests : IDisposable
             Directory.Delete(_dir, true);
         }
     }
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
 
     /// <summary>
     /// A folder inside the temporary folder.

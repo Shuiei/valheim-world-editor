@@ -60,7 +60,6 @@ public class StartPageTests
             }
         }
     }
-                // Best effort: a folder that cannot be deleted is left for the OS to clean up.
 
     /// <summary>
     /// Clicks the button and runs the posted work it starts.

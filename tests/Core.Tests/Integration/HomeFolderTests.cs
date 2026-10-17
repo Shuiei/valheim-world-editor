@@ -86,7 +86,6 @@ public sealed class HomeFolderTests : IDisposable
         }
     }
 
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
     /// <summary>
     /// A path inside the pretend home.
     /// </summary>

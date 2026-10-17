@@ -22,7 +22,6 @@ public sealed class BlueprintStoreTests : IDisposable
         }
     }
 
-            // Best effort: a folder that cannot be deleted is left for the OS to clean up.
     /// <summary>
     /// A 3 × 2 clipboard copy holding this many beeches, with ground in one cell or none.
     /// </summary>
