@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.45.60 — unreleased
+
+### Fixed
+- **On Windows, a mod updated while the editor ran left its models missing until the editor was restarted.** The
+  mods' bundles are copied into the editor's data folder, and the old copies are deleted when a mod changes; the
+  reader of the old copies still held their files open, which Windows refuses to delete, so the copy failed and no
+  mod model was drawn for the rest of the session. The old reader now lets go of its files before the copies are
+  replaced.
+
 ## v1.45.59 — unreleased
 
 ### Fixed

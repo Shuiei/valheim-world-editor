@@ -157,20 +157,29 @@ public sealed class ModBundlesTests : IDisposable
         var first = ModBundles.Reader(settings)!;
         string marker = Path.Combine(ModBundles.Folder, "marker");
         File.WriteAllText(marker, "left by the test");
+        Assert.Equal(3, first.VertexCountOf(Assert.Single(first.Named(AssetClassID.Mesh, "fine_plank"))));
+        Assert.Equal(1, first.OpenBundles);
 
         // Asked again: the same reader.
         Assert.Same(first, ModBundles.Reader(settings));
-        // After another set of mods (none here, so nothing copied), the kept copies are read again, not copied.
+        // After another set of mods (none here, so nothing copied), the kept copies are read again, not copied; the
+        // reader of before let go of its files first (Windows refuses to delete a folder with an open file).
         Assert.Null(ModBundles.Reader(Settings()));
+        Assert.Equal(0, first.OpenBundles);
         var again = ModBundles.Reader(settings)!;
         Assert.NotSame(first, again);
         Assert.True(File.Exists(marker));
         Assert.True(File.Exists(Path.Combine(AppSettings.UserDataDir, "mod-bundles.json")));
-        // A mod changed: copied again, the folder emptied first.
+        // A mod changed while a reader holds its copy open: copied again, the folder emptied first, and the new
+        // copy's models read.
+        Assert.Equal(3, again.VertexCountOf(Assert.Single(again.Named(AssetClassID.Mesh, "fine_plank"))));
+        TestDll.Write(dll, [("FineMod.finebundle", Bundle("finebundle", "new_plank"))]);
         File.SetLastWriteTimeUtc(dll, DateTime.UtcNow.AddDays(-1));
-        Assert.NotNull(ModBundles.Reader(settings));
+        var changed = ModBundles.Reader(settings)!;
         Assert.False(File.Exists(marker));
         Assert.True(File.Exists(Path.Combine(ModBundles.Folder, "FineMod.FineMod.finebundle")));
+        Assert.Equal(3, changed.VertexCountOf(Assert.Single(changed.Named(AssetClassID.Mesh, "new_plank"))));
+        Assert.Empty(changed.Named(AssetClassID.Mesh, "fine_plank"));
     }
 
     [Fact]

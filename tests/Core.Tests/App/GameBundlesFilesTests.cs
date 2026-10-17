@@ -169,6 +169,12 @@ public class GameBundlesFilesTests
         Assert.Equal(4, bundles.VertexCountOf(new("a_mod", quad)));
         Assert.Equal(3, bundles.VertexCountOf(new("a_mod", triangle)));
         Assert.Equal(-1, bundles.VertexCountOf(new("a_mod", 4242)));
+        // A bundle read is kept open until Close; read again after that, it is opened again.
+        Assert.Equal(1, bundles.OpenBundles);
+        bundles.Close();
+        Assert.Equal(0, bundles.OpenBundles);
+        Assert.Equal(4, bundles.VertexCountOf(new("a_mod", quad)));
+        Assert.Equal(1, bundles.OpenBundles);
         Assert.Equal(new[] { 1f, 2f, 3f, 0.5f, 1f, 1.5f }, bundles.BoundsOf(new("a_mod", triangle)));
         Assert.Null(bundles.BoundsOf(new("a_mod", 4242)));
     }

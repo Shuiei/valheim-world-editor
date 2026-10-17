@@ -63,6 +63,10 @@ public static class ModBundles
             {
                 return _made.Reader;
             }
+            // The mods changed: the reader of the last copies lets go of them first, else deleting the folder is
+            // refused on Windows (its bundle files are open) and the mods' models stay missing for the session.
+            _made.Reader?.Close();
+            _made = ("", null);
             GameBundles? reader = null;
             try
             {
