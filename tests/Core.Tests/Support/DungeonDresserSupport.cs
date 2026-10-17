@@ -38,6 +38,22 @@ internal static class DungeonDresserSupport
         throw new InvalidOperationException($"No clear room in the {style} style in 60 seeds.");
     }
 
+    /// <summary>Dresses a room as the hall variant named (see <c>DungeonDresser.DressHallAs</c>) and returns the pieces placed.</summary>
+    public static DungeonOut DressHall(DressingRoom room, string variant)
+    {
+        var o = new DungeonOut();
+        DungeonDresser.DressHallAs(room.Frame, variant, room.Material, room.Biome, room.Style, room.Settings, new Random(1), o);
+        return o;
+    }
+
+    /// <summary>Dresses the middle of a room as the cluster kind named (see <c>DungeonDresser.DressClusterAs</c>) and returns the pieces placed.</summary>
+    public static DungeonOut DressCluster(DressingRoom room, string kind)
+    {
+        var o = new DungeonOut();
+        DungeonDresser.DressClusterAs(room.Frame, kind, room.Material, room.Biome, room.Style, room.Settings, new Random(1), o);
+        return o;
+    }
+
     /// <summary>The pieces placed at a world point (x and z within a centimetre of it).</summary>
     public static IEnumerable<DungeonGen.Item> At(DungeonOut o, Vector3 p) =>
         o.Items.Where(i => Vector2.Distance(new(i.Position.X, i.Position.Z), new(p.X, p.Z)) < 0.01f);

@@ -41,6 +41,15 @@ internal sealed partial class DungeonDresser
         }
     }
 
+    /// <summary>The spots either side of a cluster's anchor along the wall: the left (-1.1 m) and the right (+1.1 m).</summary>
+    private static (float LU, float LV, float RU, float RV) ClusterSides(float u, float v, float yaw)
+    {
+        var at = (u, v, yaw);
+        var (lu, lv) = Beside(at, -1.1f);
+        var (ru, rv) = Beside(at, 1.1f);
+        return (lu, lv, ru, rv);
+    }
+
     /// <summary>
     /// Up to n clusters in the room's corners (the convex ones, away from doorways), each a kind from the list in
     /// turn: the secondary groups that make a room read as lived in, beside its one main feature.

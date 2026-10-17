@@ -5,9 +5,8 @@ internal sealed partial class DungeonDresser
     /// <summary>A camp: a bedroll, a fire in its pit, and a stack of wood or a barrel beside it.</summary>
     private void ClusterCamp(Frame f, float u, float v, float yaw)
     {
-        var at = (u, v, yaw);
-        var (fu, fv) = In(at, 1.5f);
-        var (ru, rv) = Beside(at, 1.1f);
+        var (fu, fv) = In((u, v, yaw), 1.5f);
+        var (_, _, ru, rv) = ClusterSides(u, v, yaw);
         Put(f, One("Morkhalla_Bedroll1", "Morkhalla_Bedroll2"), u, v, yaw + 90 + R(-10, 10), 0.8f);
         Put(f, One("Morkhalla_firepit", "fire_pit"), fu, fv, R(0, 360), 1.0f);
         Put(f, One("prop_wood_stack", "piece_pot3_cracked", "barrell"), ru, rv, R(0, 360), 0.5f);
@@ -63,9 +62,7 @@ internal sealed partial class DungeonDresser
     /// <summary>A workshop: a bench with a tool beside it and a stack of wood or a pickaxe on the other side.</summary>
     private void ClusterWorkshop(Frame f, float u, float v, float yaw)
     {
-        var at = (u, v, yaw);
-        var (lu, lv) = Beside(at, -1.1f);
-        var (ru, rv) = Beside(at, 1.1f);
+        var (lu, lv, ru, rv) = ClusterSides(u, v, yaw);
         if (Put(f, _mat.Name == "Dvergr" ? "dvergrprops_table" : "piece_workbench", u, v, yaw + 90, 1.0f))
         {
             Put(f, One("prop_piece_workbench_ext1", "prop_piece_workbench_ext2"), lu, lv, yaw, 0.6f);
