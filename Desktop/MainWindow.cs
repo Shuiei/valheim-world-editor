@@ -2394,6 +2394,23 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
+    /// The View panel's overlay switches, each with its tip, as the 3D view shows the overlays now.
+    /// </summary>
+    /// <param name="list">The panel's list they go into.</param>
+    private void AddOverlayBoxes(StackPanel list)
+    {
+        foreach (var (layer, label) in new[] { (Overlays.Layer.Borders, Lang.T("view.overlay.borders")), (Overlays.Layer.Markers, Lang.T("view.overlay.markers")),
+            (Overlays.Layer.Wards, Lang.T("view.overlay.wards")), (Overlays.Layer.Stations, Lang.T("view.overlay.stations")),
+            (Overlays.Layer.Flatten, Lang.T("view.overlay.flatten")) })
+        {
+            var box = new CheckBox { Content = label, IsChecked = View.IsOverlayShown(layer), FontSize = 12, Tag = label };
+            ToolTip.SetTip(box, Tips.Overlay(layer));
+            _overlayBoxes[layer] = box;
+            list.Children.Add(box);
+        }
+    }
+
+    /// <summary>
     /// Lays out the View panel: its headings, switches, lists and preset buttons with their tips; the switches'
     /// starting states are kept as the presets' defaults.
     /// </summary>
@@ -2424,15 +2441,7 @@ public sealed partial class MainWindow : Window
         }
         list.Children.Add(WaterBox);
         list.Children.Add(Heading(Lang.T("view.head.overlays")));
-        foreach (var (layer, label) in new[] { (Overlays.Layer.Borders, Lang.T("view.overlay.borders")), (Overlays.Layer.Markers, Lang.T("view.overlay.markers")),
-            (Overlays.Layer.Wards, Lang.T("view.overlay.wards")), (Overlays.Layer.Stations, Lang.T("view.overlay.stations")),
-            (Overlays.Layer.Flatten, Lang.T("view.overlay.flatten")) })
-        {
-            var box = new CheckBox { Content = label, IsChecked = View.IsOverlayShown(layer), FontSize = 12, Tag = label };
-            ToolTip.SetTip(box, Tips.Overlay(layer));
-            _overlayBoxes[layer] = box;
-            list.Children.Add(box);
-        }
+        AddOverlayBoxes(list);
         UnsavedBox.Tip("view.unsaved");
         list.Children.Add(UnsavedBox);
         LimitBox.Tip("view.limit");
