@@ -62,4 +62,41 @@ public sealed class WorldWriterLangTests
             Shown(WorldWriter.Save(world, [Raised(world.TerrainZones[0])]), "Saving failed (");
         }
     }
+
+    // The other refusals (zones to reset without the world's zone list, nothing that could be saved, a save that did not
+    // read back the same) and a save of a deleted object, a new one and a reset zone: each said in the language in use,
+    // its English kept.
+    [Fact]
+    public void TheOtherRefusalsAndEveryPartOfASaveAreTranslatedWithTheirEnglishKept()
+    {
+        using var pseudo = new PseudoLang();
+        using (var w = new TempWorld())
+        {
+            File.Delete(Path.Combine(w.Dir, $"_main.{WorldWriter.LatestNumber(w.Dir)}.db2"));
+            var world = w.Load();
+            var t = world.TerrainZones[0];
+            Shown(WorldWriter.Save(world, [], resets: [new ZoneReset(t.ZoneX, t.ZoneZ, true, false)]), "Zones can't be reset: ");
+        }
+        using (var w = new TempWorld())
+        {
+            var world = w.Load();
+            // An id past the world's objects takes out none.
+            Shown(WorldWriter.Save(world, [], [world.ObjectRefs.Count + 5]), "Nothing could be saved.");
+
+            // Not a number never equals itself: the read-back check finds the zone different.
+            var nan = Raised(world.TerrainZones[0]);
+            nan.Level[500] = float.NaN;
+            Shown(WorldWriter.Save(world, [nan]), "The saved world did not read back correctly (");
+
+            var (id, prefab, position, _, _) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
+            // A zone away from the tree's, where the new tree goes too.
+            var treeZone = ChunkMath.SectorOf(position.X, position.Z);
+            var t = world.TerrainZones.First(z => (z.ZoneX, z.ZoneZ) != treeZone);
+            var saved = WorldWriter.Save(world, [], [id],
+                [new NewObject(-1, prefab, position + new System.Numerics.Vector3(3, 0, 3), System.Numerics.Vector3.Zero, 1f)],
+                [new ZoneReset(t.ZoneX, t.ZoneZ, true, false)]);
+            Assert.True(saved.Saved, saved.Message);
+            Shown(saved, "Saved 1 deleted object(s), 1 new object(s), 1 reset zone(s) (");
+        }
+    }
 }

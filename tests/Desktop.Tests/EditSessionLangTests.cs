@@ -48,4 +48,50 @@ public sealed class EditSessionLangTests
         Assert.StartsWith(PseudoLang.Open.ToString(), limit.Shown);
         Assert.StartsWith("Reached the game limit", limit.English);
     }
+
+    // What the first test does not reach: a step over two zones, a move's new copy, a zone reset (the step and the save
+    // bar), a step a later one took from, a step no longer in the history, a stroke the Mask stops, and a live area's
+    // save bar. Each a catalogue text, the messages with their English kept.
+    [Fact]
+    public async Task TheOtherTextsAndRefusalsAreTranslatedToo()
+    {
+        using var pseudo = new PseudoLang();
+        var s = TestScenes.Flat(2, new WorldScene.Thing(1, Save.StableHash.Of("Beech1"), new Vector3(0, 30, 0), Vector3.Zero, 1, false));
+        s.Shape(64, 30, Two, 3, 0, "raise");
+        Assert.Equal(PseudoLang.Wrap("2 zones"), s.UndoList[^1].Describe());
+        int copy = Assert.Single(s.Move([(0, new Vector3(4, 30, 4), Vector3.Zero)]));
+        Assert.Equal(PseudoLang.Wrap("1 new") + " · " + PseudoLang.Wrap("1 removed"), s.UndoList[^1].Describe());
+        s.MarkResets([(1, 1)], true, false, "reset");
+        Assert.Equal(PseudoLang.Wrap("1 zone reset"), s.UndoList[^1].Describe());
+        Assert.True(PseudoLang.Translated(s.PendingText, []), s.PendingText);
+        Assert.Contains(PseudoLang.Wrap("2 zones"), s.PendingText);
+        Assert.Contains(PseudoLang.Wrap("1 reset"), s.PendingText);
+
+        // The move's copy moved again: the first move cannot be taken out.
+        s.Move([(copy, new Vector3(8, 30, 8), Vector3.Zero)]);
+        var taken = s.RemoveChange(s.UndoList[1]);
+        Assert.Equal(PseudoLang.Wrap("That change cannot be removed: a later step moved or deleted what it added. Undo back to it instead."), taken.Shown);
+        Assert.Equal("That change cannot be removed: a later step moved or deleted what it added. Undo back to it instead.", taken.English);
+        var last = s.UndoList[^1];
+        Assert.True(s.Undo());
+        var gone = s.RemoveChange(last);
+        Assert.Equal(PseudoLang.Wrap("That change is no longer in the history to undo: nothing was removed."), gone.Shown);
+        Assert.Equal("That change is no longer in the history to undo: nothing was removed.", gone.English);
+
+        s.Mask.On = true;
+        s.Mask.HeightMin = 100;
+        s.BeginStroke(BrushTool.Raise, 64, 64);
+        s.StrokeStep(64, 64, 0.1f);
+        var masked = s.EndStroke();
+        Assert.StartsWith(PseudoLang.Open + "Nothing changed: the Mask", masked.Shown);
+        Assert.StartsWith("Nothing changed: the Mask", masked.English);
+
+        using var game = new WorldEditor.Tests.FakeGame();
+        using var world = await WorldSession.OpenLive(new Save.LiveBridge(game.Url, game.Token), WorldEditor.Tests.FakeGame.Label());
+        var live = WorldScene.Load(world, 0, 0, 1).Session!;
+        Assert.Equal(PseudoLang.Wrap("All applied"), live.PendingText);
+        live.Shape(10, 10, Two, 3, 0, "raise");
+        Assert.StartsWith(PseudoLang.Open + "Not applied: ", live.PendingText);
+        Assert.True(PseudoLang.Translated(live.PendingText, []), live.PendingText);
+    }
 }
