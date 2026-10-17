@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -83,8 +84,8 @@ public sealed class PathPanel
     private static Slider Slide(double min, double max, double step, double value, TextBlock shown, string unit, Action<float> set) =>
         Ui.Slide(min, max, step, value, shown, v => $"{v:0.#} {unit}", v => set((float)v));
 
-    /// <summary>A " m" unit label.</summary>
-    private static TextBlock M() => new() { Text = Lang.T("brush.unit.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>An "m" unit label, a little apart from its box.</summary>
+    private static TextBlock M() => new() { Text = Lang.T("common.metres"), Margin = new Thickness(3, 0, 0, 0), FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
 
     /// <summary>Builds the panel for the view's Path tool.</summary>
     /// <param name="view">The view whose Path tool the panel drives.</param>
