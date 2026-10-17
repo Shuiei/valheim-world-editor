@@ -407,7 +407,8 @@ public class NewWorldPageTests
         File.WriteAllText(Path.Combine(root, "Hall.fwl"), "");
         try
         {
-            foreach (string bad in new[] { "", "a/b" })
+            // The same names on every system (Linux alone would take "My:World?" and "CON").
+            foreach (string bad in new[] { "", "a/b", "My:World?", "CON" })
             {
                 Assert.StartsWith("Give the world a name that can be a file name", NewWorldPage.Check(root, bad, "abc"));
             }

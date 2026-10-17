@@ -318,9 +318,38 @@ public sealed class WorldCreatorTests : IDisposable
     }
 
     [Theory]
+    [InlineData("Home", true)]
+    [InlineData("Ünïcode wörld", true)]
+    [InlineData("COM10", true)]
+    [InlineData("Console", true)]
+    [InlineData("", false)]
+    [InlineData("a/b", false)]
+    [InlineData("My:World?", false)]
+    [InlineData("a\\b", false)]
+    [InlineData("tab\there", false)]
+    [InlineData("CON", false)]
+    [InlineData("nul.txt", false)]
+    [InlineData("com1", false)]
+    [InlineData("Lpt9", false)]
+    [InlineData("COM¹", false)]
+    [InlineData("lpt².txt", false)]
+    [InlineData("CONIN$", false)]
+    [InlineData("conout$.db", false)]
+    [InlineData("Name.", false)]
+    [InlineData("Name ", false)]
+    public void AWorldNameIsAFileNameOnEverySystem(string name, bool ok)
+    {
+        // Windows' rules, whatever the system here: / \ : * ? " < > |, control characters, device names (CON, COM1,
+        // CONIN$, with any extension), a dot or a space at the end.
+        Assert.Equal(ok, WorldCreator.IsWorldName(name));
+    }
+
+    [Theory]
     [InlineData("", Seed, 0)]
     [InlineData("  ", Seed, 0)]
     [InlineData("a/b", Seed, 0)]
+    [InlineData("My:World?", Seed, 0)]
+    [InlineData("CON", Seed, 0)]
     [InlineData("Name", "", 0)]
     [InlineData("Name", "ElevenChars", 0)]
     [InlineData("Name", Seed, -1)]

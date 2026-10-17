@@ -93,9 +93,42 @@ public static class WorldCreator
     /// </summary>
     private static readonly byte[] EmptyListBlock = [0x0f, 0, 0, 0, 0x0b, 0x05, 0x80, (byte)'{', (byte)'"', (byte)'l', (byte)'i', (byte)'s', (byte)'t', (byte)'"', (byte)':', (byte)'[', (byte)']', (byte)'}', 0x03];
 
+    /// <summary>
+    /// The characters no file name may hold on Windows (Linux and macOS forbid only / and NUL, but a world is copied
+    /// between systems).
+    /// </summary>
+    private static readonly char[] ForbiddenInNames = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+
+    /// <summary>
+    /// The names Windows keeps for devices, which no file may have, with any extension (the superscript digits
+    /// count as digits there too, and the console's input and output have their own).
+    /// </summary>
+    private static readonly string[] DeviceNames =
+    [
+        "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "COM¹", "COM²", "COM³",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9", "LPT¹", "LPT²", "LPT³",
+    ];
+
+    /// <summary>
+    /// Whether a world name can be a file name on every system the world may be copied to, the same on each of
+    /// them: not empty, none of / \ : * ? " &lt; &gt; | or a control character, not ending with a dot or a space, and
+    /// not one of Windows' device names (CON, NUL, CONIN$, COM1…, COM¹…) with or without an extension. The game names the
+    /// world's files after it.
+    /// </summary>
+    /// <param name="name">The name, as typed (not trimmed).</param>
+    public static bool IsWorldName(string name)
+    {
+        if (name.Length == 0 || name[^1] is '.' or ' ' || name.Any(c => c < ' ' || c == '\x7f' || ForbiddenInNames.Contains(c)))
+        {
+            return false;
+        }
+        return !DeviceNames.Contains(name.Split('.')[0], StringComparer.OrdinalIgnoreCase);
+    }
+
     /// <summary>Writes a new world into a folder that holds none yet.</summary>
     /// <param name="folder">The folder to write into; created when missing.</param>
-    /// <param name="name">The world's name, which must also be a valid file name.</param>
+    /// <param name="name">The world's name, which must also be a file name on every system (<c>IsWorldName</c>).</param>
     /// <param name="seedName">The seed, 1 to 10 characters as in the game.</param>
     /// <param name="radius">
     /// How many zones from the middle (0 to <c>MaxRadius</c>) are generated with vegetation; 0 leaves every zone to the
@@ -115,9 +148,9 @@ public static class WorldCreator
     {
         name = name.Trim();
         seedName = seedName.Trim();
-        if (name.Length == 0 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        if (!IsWorldName(name))
         {
-            throw new ArgumentException("The world needs a name that can be a file name.", nameof(name));
+            throw new ArgumentException("The world needs a name that can be a file name on every system.", nameof(name));
         }
         if (seedName.Length is 0 or > 10)
         {
