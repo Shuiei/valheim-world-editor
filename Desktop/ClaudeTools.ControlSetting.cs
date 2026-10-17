@@ -37,12 +37,12 @@ public sealed partial class ClaudeTools
     private static bool IsClick(string value) => value.Trim().Equals("click", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>A switch's value from its words (true, on, yes, 1, checked, and their opposites), or null when it is none.</summary>
-    private static bool? BoolOf(string v) => v.Trim().ToLowerInvariant() switch { "true" or "on" or "yes" or "1" or "checked" => true, "false" or "off" or "no" or "0" or "unchecked" => false, _ => null };
+    internal static bool? BoolOf(string v) => v.Trim().ToLowerInvariant() switch { "true" or "on" or "yes" or "1" or "checked" => true, "false" or "off" or "no" or "0" or "unchecked" => false, _ => null };
 
     /// <summary>A number from its text, or null when it is none (NaN and the infinities parse too, but are no value to set).</summary>
-    private static double? NumberOf(string v) => double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out double d) && double.IsFinite(d) ? d : null;
+    internal static double? NumberOf(string v) => double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out double d) && double.IsFinite(d) ? d : null;
     /// <summary>Sets the control itself (Set, with Acting on): null when done, else why not.</summary>
-    private static string? Invoke(Ctl c, string value, bool enter)
+    internal static string? Invoke(Ctl c, string value, bool enter)
     {
         switch (c.Control)
         {

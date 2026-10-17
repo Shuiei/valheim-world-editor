@@ -107,12 +107,7 @@ public class ClipboardBranchesTests
     public void EachObjectOfACopyIsAddedAsANewObject()
     {
         var g = new Ground(129, 129, 0, 0, 2);
-        var objects = new List<CopyData.Obj>
-        {
-            new(StableHash.Of("editor_test_nothing"), "a", 0, 0, 0, Vector3.Zero, 1, null),
-            new(StableHash.Of("editor_test_nothing"), "b", 1, 0, 0, Vector3.Zero, 1, null),
-        };
-        var c = new CopyData { W = 1, H = 1, Rel = [], Wt = [], Pnt = [], Objects = objects, Poly = [] };
+        var c = CopyWith(Thing("a"), Thing("b", 1));
         var add = new List<(NewObject, bool)>();
         new PasteTool { Clip = c }.AddObjects(g, c, new Vector2(10, 10), 0f, 30f, add);
         Assert.Equal(2, add.Count);
@@ -122,8 +117,7 @@ public class ClipboardBranchesTests
     public void AnObjectThatIsNotAPieceIsNotAddedAsOne()
     {
         var g = new Ground(129, 129, 0, 0, 2);
-        var objects = new List<CopyData.Obj> { new(StableHash.Of("editor_test_nothing"), "a", 0, 0, 0, Vector3.Zero, 1, null) };
-        var c = new CopyData { W = 1, H = 1, Rel = [], Wt = [], Pnt = [], Objects = objects, Poly = [] };
+        var c = CopyWith(Thing("a"));
         var add = new List<(NewObject, bool)>();
         new PasteTool { Clip = c }.AddObjects(g, c, new Vector2(10, 10), 0f, 30f, add);
         Assert.All(add, a => Assert.False(a.Item2));
@@ -140,14 +134,17 @@ public class ClipboardBranchesTests
     [Fact]
     public void ACopysSpotsAreOneCopyWithEachObjectPlaced()
     {
-        var objects = new List<CopyData.Obj>
-        {
-            new(StableHash.Of("editor_test_nothing"), "a", 0, 0, 0, Vector3.Zero, 1, null),
-            new(StableHash.Of("editor_test_nothing"), "b", 1, 0, 0, Vector3.Zero, 1, null),
-        };
-        var p = new PasteTool { Clip = new CopyData { W = 1, H = 1, Rel = [], Wt = [], Pnt = [], Objects = objects, Poly = [] } };
+        var p = new PasteTool { Clip = CopyWith(Thing("a"), Thing("b", 1)) };
         var copies = p.CopySpots(p.Clip!, new Vector2(10, 10), _ => 0f).ToList();
         var (_, spots) = Assert.Single(copies);
         Assert.Equal(2, spots.Count());
     }
+
+    // An object of the editor's test prefab, a metre along x from the origin of its copy when dx is 1.
+    private static CopyData.Obj Thing(string name, float dx = 0) =>
+        new(StableHash.Of("editor_test_nothing"), name, dx, 0, 0, Vector3.Zero, 1, null);
+
+    // A copy of one tile holding the given objects (no ground, no paint, no outline).
+    private static CopyData CopyWith(params CopyData.Obj[] objects) =>
+        new() { W = 1, H = 1, Rel = [], Wt = [], Pnt = [], Objects = [.. objects], Poly = [] };
 }

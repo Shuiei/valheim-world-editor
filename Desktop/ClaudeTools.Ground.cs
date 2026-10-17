@@ -84,7 +84,7 @@ public sealed partial class ClaudeTools
     /// <param name="bumpSize">How wide the bumps are, metres.</param>
     /// <param name="restAngle">The slope ground settles to, degrees.</param>
     /// <param name="seed">The pattern's seed.</param>
-    private static Brush SmoothBrush(float bumps, float bumpSize, float restAngle, int seed) => new()
+    internal static Brush SmoothBrush(float bumps, float bumpSize, float restAngle, int seed) => new()
     {
         NoiseAmp = Math.Clamp(bumps, 0, 20),
         NoiseSize = Math.Clamp(bumpSize, 2, 200),

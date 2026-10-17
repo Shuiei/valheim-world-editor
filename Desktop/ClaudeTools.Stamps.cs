@@ -12,7 +12,7 @@ public sealed partial class ClaudeTools
     /// <summary>The picture of a stamp Claude named: a stamp's name or label, or the path of a PNG picture; or why there is none.</summary>
     /// <param name="stamp">The stamp's name, label or picture path.</param>
     /// <returns>The stamp's heights, or null with why.</returns>
-    private static (float[]? Data, string? Problem) StampDataOf(string stamp)
+    internal static (float[]? Data, string? Problem) StampDataOf(string stamp)
     {
         float[]? data = StampsOffered().FirstOrDefault(st => st.Label.StartsWith(stamp, StringComparison.OrdinalIgnoreCase) || st.Name.Equals(stamp, StringComparison.OrdinalIgnoreCase))?.Data;
         if (data == null && File.Exists(stamp))

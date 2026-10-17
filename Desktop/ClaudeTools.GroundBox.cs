@@ -37,6 +37,6 @@ public sealed partial class ClaudeTools
     /// <param name="act">The action.</param>
     /// <param name="count">The ground points changed.</param>
     /// <param name="clamped">Whether part of the change reached the game's ±8 m limit.</param>
-    private string GroundAnswer(AreaTool.GroundAction act, int count, bool clamped) =>
+    internal string GroundAnswer(AreaTool.GroundAction act, int count, bool clamped) =>
         count == 0 ? "Nothing changed." : $"{AreaTool.Label(act, english: true)}: {count} ground point(s) changed.{(clamped ? " Part of it reached the game's ±8 m limit." : "")} Now pending: {Pending()}";
 }

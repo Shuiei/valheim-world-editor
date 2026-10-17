@@ -12,7 +12,7 @@ public sealed partial class ClaudeTools
     /// <param name="scene">The open area.</param>
     /// <param name="o">The object's new values.</param>
     /// <param name="area">The area's bounds in world metres.</param>
-    private ((int Index, Vector3 Position, Vector3 Rotation, float Scale)? Move, string? Problem) PlanTransform(WorldScene scene, TransformSpec o, (float MinX, float MinZ, float MaxX, float MaxZ) area)
+    internal ((int Index, Vector3 Position, Vector3 Rotation, float Scale)? Move, string? Problem) PlanTransform(WorldScene scene, TransformSpec o, (float MinX, float MinZ, float MaxX, float MaxZ) area)
     {
         var t = scene.Things[o.Id];
         float x = o.X ?? t.Position.X, z = o.Z ?? t.Position.Z;

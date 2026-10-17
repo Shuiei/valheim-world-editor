@@ -54,7 +54,7 @@ public sealed partial class ClaudeTools
     /// <param name="path">The PNG picture's path.</param>
     /// <param name="w">The points across.</param>
     /// <param name="h">The points down.</param>
-    private static (Heightmaps.Picture? Picture, string? Problem) PictureOf(string path, int w, int h)
+    internal static (Heightmaps.Picture? Picture, string? Problem) PictureOf(string path, int w, int h)
     {
         try
         {

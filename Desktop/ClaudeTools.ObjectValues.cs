@@ -45,7 +45,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>An object's values as get_object gives them: the byte values by size (contents are given as items), the others by value, with what a number names.</summary>
     /// <param name="values">The values, as <see cref="Values"/> reads them.</param>
-    private static List<object> DataOf(List<(string Section, int Key, string Value)> values)
+    internal static List<object> DataOf(List<(string Section, int Key, string Value)> values)
     {
         var data = new List<object>();
         foreach (var (section, key, value) in values)

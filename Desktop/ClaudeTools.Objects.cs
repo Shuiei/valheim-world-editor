@@ -53,7 +53,7 @@ public sealed partial class ClaudeTools
     /// <param name="pivotZ">The pivot's z, or null.</param>
     /// <param name="nothing">How the answer begins when nothing can change ("Nothing moved").</param>
     /// <returns>The start, or why there is none.</returns>
-    private (ObjectsStart? Start, string? Problem) StartObjectsChange(IEnumerable<int> ids, float? pivotX, float? pivotZ, string nothing)
+    internal (ObjectsStart? Start, string? Problem) StartObjectsChange(IEnumerable<int> ids, float? pivotX, float? pivotZ, string nothing)
     {
         if (EditStart() is string why)
         {

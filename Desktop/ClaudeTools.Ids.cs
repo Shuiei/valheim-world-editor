@@ -57,7 +57,7 @@ public sealed partial class ClaudeTools
     /// Why the object with that id cannot be read or changed on this scene: the ids given before no longer fit it
     /// (<see cref="StaleIds"/>), or there is no such object (out of range, or taken away); null when it is one.
     /// </summary>
-    private string? ObjectProblem(WorldScene scene, int id) =>
+    internal string? ObjectProblem(WorldScene scene, int id) =>
         StaleIds(scene) ?? (id < 0 || id >= scene.Things.Count || scene.Things[id].Gone ? "No object with that id in the area." : null);
 
     /// <summary>

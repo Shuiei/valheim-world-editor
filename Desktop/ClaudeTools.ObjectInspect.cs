@@ -49,7 +49,7 @@ public sealed partial class ClaudeTools
     /// <summary>An object's head as get_object gives it first: its id, names, kind, place, turn, size and whether a player built it.</summary>
     /// <param name="id">The object's id.</param>
     /// <param name="t">The object.</param>
-    private Dictionary<string, object?> HeadOf(int id, WorldScene.Thing t) => new()
+    internal Dictionary<string, object?> HeadOf(int id, WorldScene.Thing t) => new()
     {
         ["id"] = id,
         ["name"] = _w.NameOfPrefab(t.Prefab),

@@ -18,7 +18,7 @@ public sealed partial class ClaudeTools
     /// <param name="Dz">Metres north.</param>
     /// <param name="Turn">Degrees each copy is turned from the one before.</param>
     /// <param name="Ground">Whether each keeps its height above the ground.</param>
-    private readonly record struct CopyStep(float PivotX, float PivotZ, float Dx, float Dy, float Dz, float Turn, bool Ground);
+    internal readonly record struct CopyStep(float PivotX, float PivotZ, float Dx, float Dy, float Dz, float Turn, bool Ground);
 
     /// <summary>
     /// The copies of the objects, each a step further (see <see cref="CopyStep"/>): the new objects with whether each is a
@@ -30,7 +30,7 @@ public sealed partial class ClaudeTools
     /// <param name="copies">How many copies.</param>
     /// <param name="step">How each copy sits from the one before.</param>
     /// <param name="area">The area's bounds in world metres.</param>
-    private (List<(Editing.NewObject O, bool Piece)>? Adds, List<int>? From, string? Problem) PlanCopies(EditSession s, WorldScene scene, List<int> ok, int copies, CopyStep step, (float MinX, float MinZ, float MaxX, float MaxZ) area)
+    internal (List<(Editing.NewObject O, bool Piece)>? Adds, List<int>? From, string? Problem) PlanCopies(EditSession s, WorldScene scene, List<int> ok, int copies, CopyStep step, (float MinX, float MinZ, float MaxX, float MaxZ) area)
     {
         var linkIds = s.ReadLinks().Ids;
         var adds = new List<(Editing.NewObject, bool)>();

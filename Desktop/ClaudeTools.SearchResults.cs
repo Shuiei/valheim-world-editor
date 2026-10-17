@@ -60,7 +60,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>The open area's things by their world id, each with its index into the area (none without an area).</summary>
     /// <param name="scene">The open area, or null.</param>
-    private static Dictionary<int, int> AreaIdsOf(WorldScene? scene)
+    internal static Dictionary<int, int> AreaIdsOf(WorldScene? scene)
     {
         var inArea = new Dictionary<int, int>();
         if (scene != null)
