@@ -2815,6 +2815,11 @@ public sealed class GlView : OpenGlControlBase
             {
                 _selectDown = false;
                 SelectTool.Up(at, surface.Bounds.Size, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || Ctrl(e.KeyModifiers));
+                // A look queued by a move just before the press was dropped while the button was down. The handle
+                // under the pointer is found again first: the drag's moves did not look for it, and over a handle no
+                // object is outlined.
+                SelectTool.Hover(at, surface.Bounds.Size);
+                QueueHoverPick();
             }
             else if (_brushDown)
             {
@@ -2860,8 +2865,9 @@ public sealed class GlView : OpenGlControlBase
             else if (SelectMode && Tool == null)
             {
                 SelectTool.Hover(_pointer.Value, _surfaceSize);
-                // The object a click would pick (none over a move handle).
-                SetHoverObject(SelectTool.OverHandle ? null : ObjectAt(_pointer.Value, _surfaceSize));
+                // The object a click would pick (none over a move handle), looked for once the moves waiting are
+                // taken: a fast mouse sends many a frame, and each look tries every object's box.
+                QueueHoverPick();
             }
             else if (Mode == ToolMode.Dungeon && WorldRay(_pointer.Value, _surfaceSize) is { } ray)
             {
@@ -4923,17 +4929,50 @@ public sealed class GlView : OpenGlControlBase
     /// <summary>The selection's box lines, made again when it changes.</summary>
     private float[] _selectionSegs = [];
 
-    /// <summary>The Select tool: the object under the pointer, outlined faintly before a click picks it.</summary>
-    private int? _hoverObject;
+    /// <summary>
+    /// The Select tool: the object under the pointer, outlined faintly before a click picks it; null when none.
+    /// </summary>
+    internal int? HoverObject { get; private set; }
     /// <summary>The hovered object's box lines on the graphics card.</summary>
     private uint _hoverBoxVao, _hoverBoxVbo;
+
+    /// <summary>A look for the object under the pointer is waiting (<see cref="PickHover"/>).</summary>
+    private bool _hoverQueued;
+
+    /// <summary>Tests: how many times the object under the pointer was looked for.</summary>
+    internal int HoverPicks { get; private set; }
+
+    /// <summary>Queues a look for the object under the pointer, unless one is waiting.</summary>
+    private void QueueHoverPick()
+    {
+        if (!_hoverQueued)
+        {
+            _hoverQueued = true;
+            Dispatcher.UIThread.Post(PickHover, DispatcherPriority.Background);
+        }
+    }
+
+    /// <summary>
+    /// The object under the pointer as it is now, looked for once for all the pointer's moves since the last look
+    /// (Select mode, no button down: as the move that queued it would have).
+    /// </summary>
+    private void PickHover()
+    {
+        _hoverQueued = false;
+        if (!SelectMode || Tool != null || _selectDown || _pointer is not Point p)
+        {
+            return;
+        }
+        HoverPicks++;
+        SetHoverObject(SelectTool.OverHandle ? null : ObjectAt(p, _surfaceSize));
+    }
 
     /// <summary>Sets the object under the pointer (null: none).</summary>
     private void SetHoverObject(int? i)
     {
-        if (i != _hoverObject)
+        if (i != HoverObject)
         {
-            _hoverObject = i;
+            HoverObject = i;
             Wake();
         }
     }
@@ -4942,7 +4981,7 @@ public sealed class GlView : OpenGlControlBase
     private void DrawHoverObject(Matrix4x4 vp)
     {
         // Only what a click can pick: drawn and not deleted (a deleted object stays under the pointer).
-        if (!SelectMode || Tool != null || _hoverObject is not int i || i >= _bounds.Length || _selection.Contains(i)
+        if (!SelectMode || Tool != null || HoverObject is not int i || i >= _bounds.Length || _selection.Contains(i)
             || !_known[i] || !_shown[(int)_kinds[i]] || Scene is not { } sc || i >= sc.Things.Count || sc.Things[i].Gone)
         {
             return;
