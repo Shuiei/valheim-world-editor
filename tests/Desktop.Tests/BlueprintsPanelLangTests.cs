@@ -11,7 +11,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The Blueprints panel in another language (the made-up one: PseudoLang): its list empty, filled with a Homestead
 /// blueprint and an older one, searched for nothing, and with Homestead not installed shows only catalogue texts; a
-/// message is shown in the language while Claude reads it in English; the questions it asks are in the language; and a
+/// message is shown in the language while Claude reads it in English; so is each message of importing, pasting,
+/// exporting and making a Homestead blueprint, and the import picker; the questions it asks are in the language; and a
 /// building that cannot be saved is told to Claude (save_blueprint) in English.
 /// </summary>
 [Collection("DataDir")]
@@ -60,6 +61,74 @@ public sealed class BlueprintsPanelLangTests
         Assert.StartsWith("Written to ", r.W.LastMessageEn);
         Assert.EndsWith(".vbuild. Only the objects are written, not the ground.", r.W.LastMessageEn);
         Assert.DoesNotContain("⟦", r.W.LastMessageEn);
+    }
+
+    /// <summary>
+    /// The panel's last message: shown in the language (every sentence, values inside), read by Claude in English.
+    /// </summary>
+    /// <param name="r">The run.</param>
+    /// <param name="english">How the English starts.</param>
+    private static void SaidInTheLanguage(BlueprintsPanelRun r, string english)
+    {
+        Assert.True(PseudoLang.Translated(r.Said!, []), r.Said);
+        Assert.StartsWith(english, r.SaidEn);
+        Assert.DoesNotContain(PseudoLang.Open, r.SaidEn!);
+        r.Said = r.SaidEn = null;
+    }
+
+    [AvaloniaFact]
+    public void ImportPasteExportAndHomesteadMessagesAreInTheLanguage()
+    {
+        using var pseudo = new PseudoLang();
+        using var r = new BlueprintsPanelRun { Installed = false };
+        Directory.CreateDirectory(r.Dir);
+        // Imported, with all it says it left out, and the reminder that Homestead is not installed.
+        string file = Path.Combine(r.Dir, "Hall.blueprint");
+        File.WriteAllText(file, "#Terrain\nsquare;0;0;0;2;0;0;dirt\n#Pieces\nwoodwall;Misc;0;0;0;0;0;0;1;\"\";1;1;1\nbroken\n"
+            + "NoSuch_0;Misc;0;0;0;0;0;0;1;\"\";1;1;1\n");
+        Assert.NotNull(r.B.Import(file));
+        Assert.Contains("Its terrain marks are not kept", r.SaidEn);
+        Assert.Contains("1 kind(s) the game does not know were left out (mods?): NoSuch_0.", r.SaidEn);
+        Assert.Contains("1 unreadable line(s) skipped.", r.SaidEn);
+        Assert.Contains(PseudoLang.Wrap(Lang.En("blueprints.msg.notInstalledYet")), r.Said);
+        SaidInTheLanguage(r, "Imported “Hall” as a Homestead blueprint: ");
+        Assert.Null(r.B.Import(Path.Combine(r.Dir, "missing.vbuild")));
+        SaidInTheLanguage(r, "Could not import that file: ");
+        string empty = Path.Combine(r.Dir, "empty.vbuild");
+        File.WriteAllText(empty, "nothing useful here");
+        Assert.Null(r.B.Import(empty));
+        SaidInTheLanguage(r, "Could not import that file: no pieces found in it");
+        string wide = Path.Combine(r.Dir, "wide.blueprint");
+        File.WriteAllText(wide, "#Terrain\ncircle;0;0;0;1;0;0;dirt\ncircle;2000;0;0;1;0;0;dirt");
+        Assert.Null(r.B.Import(wide));
+        SaidInTheLanguage(r, "Could not import that file: its ground marks span ");
+
+        // Pasted; exported, or not when it cannot be read; an older one made a Homestead blueprint.
+        string odd = r.B.Store.Save("Odd", null, null, CopyFormat.ToJson(BlueprintsPanelRun.Clip("Odd", "woodwall", "NoSuch_a")));
+        r.B.Paste(odd);
+        SaidInTheLanguage(r, "“Odd” is on the clipboard");
+        Assert.NotNull(r.B.Export(odd, "blueprint"));
+        SaidInTheLanguage(r, "Written to ");
+        Assert.Null(r.B.Export("no-such-blueprint", "vbuild"));
+        SaidInTheLanguage(r, "Could not export that blueprint.");
+        Assert.NotNull(r.B.ToHomestead(odd));
+        SaidInTheLanguage(r, "“Odd” is now a Homestead blueprint");
+
+        // A folder that cannot be written.
+        Directory.Delete(r.Homestead, recursive: true);
+        File.WriteAllText(r.Homestead, "not a folder");
+        Assert.Null(r.B.ToHomestead(odd));
+        SaidInTheLanguage(r, "Could not write in the blueprints folder: ");
+    }
+
+    [AvaloniaFact]
+    public void TheImportPickerIsInTheLanguage()
+    {
+        using var pseudo = new PseudoLang();
+        var (title, type) = MainWindow.ImportPicker();
+        Assert.True(PseudoLang.Translated(title, []), title);
+        Assert.True(PseudoLang.Translated(type.Name, []), type.Name);
+        Assert.Equal(["*.blueprint", "*.vbuild"], type.Patterns);
     }
 
     [AvaloniaFact]

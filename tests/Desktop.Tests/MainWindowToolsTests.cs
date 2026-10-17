@@ -208,6 +208,8 @@ public class MainWindowToolsTests
         Assert.StartsWith("The script changed", w.MessageText.Text);
         Assert.Contains("The script changed", w.ScriptPanel.Output.Text);
         Assert.Equal(steps + 1, s.UndoList.Count);
+        // The example shown when the panel opens is the one chosen: the step is named after it.
+        Assert.Equal("Script: " + ScriptExamples.All[0].Name, s.UndoLabel);
         Assert.True(s.Ground.HeightOf(64 * s.Ground.W + 64) > 30);
     }
 }

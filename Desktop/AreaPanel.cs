@@ -381,7 +381,7 @@ public sealed class AreaPanel
         PutButton.Click += (_, _) => PutPicture();
         UnresetButton.Click += (_, _) => CancelReset();
         ToPickButton.Tip("area.pick");
-        ToPickButton.Click += (_, _) => PickKindAsked?.Invoke(Lang.T("area.label.replace"), UsePicked);
+        ToPickButton.Click += (_, _) => PickKindAsked?.Invoke(Lang.T("common.replace"), UsePicked);
         Area.Changed += AreaChanged;
         Area.Changed += DropPicture;
         NoLimitBox.Tip("brush.noLimit");
@@ -432,7 +432,7 @@ public sealed class AreaPanel
                     For(Help(Lang.T("area.hint.restore")), Act.Restore),
                     For(Help(Lang.T("area.hint.erode")), Act.Erode),
                     For(kinds, Act.Remove, Act.Select, Act.Replace, Act.Regrow, Act.Backup),
-                    For(Row(Lang.T("area.label.replace"), FromBox), Act.Replace),
+                    For(Row(Lang.T("common.replace"), FromBox), Act.Replace),
                     For(Row(Lang.T("area.label.with"), ToBox, ToPickButton), Act.Replace),
                     For(Help(Lang.T("area.hint.regrow")), Act.Regrow),
                     For(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { CopyButton, CutButton, PasteButton } }, Act.Copy),

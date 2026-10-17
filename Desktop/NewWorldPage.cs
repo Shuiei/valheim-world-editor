@@ -1268,10 +1268,33 @@ public sealed class NewWorldPage : IDisposable
     /// <param name="english">In English (what Claude is told) rather than the language in use (the page's).</param>
     internal static string? Check(string root, string name, string seed, bool english = false)
     {
-        Said? problem = !WorldCreator.IsWorldName(name) ? Said.Of("newWorld.error.name")
-            : seed.Length is 0 or > 10 ? Said.Of("newWorld.error.seedLength")
-            : Directory.Exists(Path.Combine(root, name)) || File.Exists(Path.Combine(root, name + ".fwl")) ? Said.Of("newWorld.error.exists", name, Ui.Tilde(root))
-            : null;
-        return english ? problem?.English : problem?.Shown;
+        if (WhyNot(root, name, seed) is not { } problem)
+        {
+            return null;
+        }
+        return english ? problem.English : problem.Shown;
+    }
+
+    /// <summary>
+    /// Why a world cannot be made with this name and seed in the worlds folder, in both languages; null when it can.
+    /// </summary>
+    /// <param name="root">The worlds folder.</param>
+    /// <param name="name">The world's name, trimmed.</param>
+    /// <param name="seed">The seed, trimmed.</param>
+    private static Said? WhyNot(string root, string name, string seed)
+    {
+        if (!WorldCreator.IsWorldName(name))
+        {
+            return Said.Of("newWorld.error.name");
+        }
+        if (seed.Length is 0 or > 10)
+        {
+            return Said.Of("newWorld.error.seedLength");
+        }
+        if (Directory.Exists(Path.Combine(root, name)) || File.Exists(Path.Combine(root, name + ".fwl")))
+        {
+            return Said.Of("newWorld.error.exists", name, Ui.Tilde(root));
+        }
+        return null;
     }
 }
