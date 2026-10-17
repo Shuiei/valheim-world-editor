@@ -3,7 +3,6 @@ using System.Text.RegularExpressions;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using TerrainEditor.Save;
-using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -76,49 +75,40 @@ public sealed class MountainPanelLangTests
     [AvaloniaFact]
     public async Task GrowingOnAMountainIsSaidInTheLanguageAndClaudeReadsEnglish()
     {
-        string dir = Fixtures.CopyFixture();
-        try
+        using var pseudo = new PseudoLang();
+        using var run = new WorldWindowRun();
+        await run.Open(size: 3);
+        var w = run.W;
+        var s = w.Session!;
+        w.MountainPanel.RadiusSlider.Value = 25;
+        w.MountainPanel.GrowBox.IsChecked = true;
+        float gx = (s.Ground.W - 1) / 2f, gz = (s.Ground.H - 1) / 2f;
+        int steps = s.UndoList.Count;
+
+        // What grew: said in the language, its History step too.
+        await w.PutMountain(gx, gz);
+        Assert.Empty(PseudoLang.Untranslated(w.MessageText));
+        var grew = Regex.Match(w.LastMessageEn, @" Grew (\d+) of the biome's trees and rocks on it\. Ctrl\+Z takes it back \(twice with what grew\); saving turns it into ground discs\.$");
+        Assert.True(grew.Success, w.LastMessageEn);
+        Assert.Equal(steps + 2, s.UndoList.Count);
+        Assert.Equal(PseudoLang.Wrap("Mountain: grew {0} object(s)").Replace("{0}", grew.Groups[1].Value, StringComparison.Ordinal), s.UndoLabel);
+        Assert.True(s.Undo());
+        Assert.True(s.Undo());
+
+        // Ctrl+Z while the trees are worked out: nothing grows, and that is said in the language.
+        bool undone = false;
+        w.MessageText.PropertyChanged += (_, e) =>
         {
-            using var pseudo = new PseudoLang();
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
-            await w.EditArea(0, 0, 3);
-            var s = w.Session!;
-            w.MountainPanel.RadiusSlider.Value = 25;
-            w.MountainPanel.GrowBox.IsChecked = true;
-            float gx = (s.Ground.W - 1) / 2f, gz = (s.Ground.H - 1) / 2f;
-            int steps = s.UndoList.Count;
-
-            // What grew: said in the language, its History step too.
-            await w.PutMountain(gx, gz);
-            Assert.Empty(PseudoLang.Untranslated(w.MessageText));
-            var grew = Regex.Match(w.LastMessageEn, @" Grew (\d+) of the biome's trees and rocks on it\. Ctrl\+Z takes it back \(twice with what grew\); saving turns it into ground discs\.$");
-            Assert.True(grew.Success, w.LastMessageEn);
-            Assert.Equal(steps + 2, s.UndoList.Count);
-            Assert.Equal(PseudoLang.Wrap("Mountain: grew {0} object(s)").Replace("{0}", grew.Groups[1].Value, StringComparison.Ordinal), s.UndoLabel);
-            Assert.True(s.Undo());
-            Assert.True(s.Undo());
-
-            // Ctrl+Z while the trees are worked out: nothing grows, and that is said in the language.
-            bool undone = false;
-            w.MessageText.PropertyChanged += (_, e) =>
+            if (e.Property == TextBlock.TextProperty && !undone && w.LastMessageEn.EndsWith("Working out what the game grows here…", StringComparison.Ordinal))
             {
-                if (e.Property == TextBlock.TextProperty && !undone && w.LastMessageEn.EndsWith("Working out what the game grows here…", StringComparison.Ordinal))
-                {
-                    undone = true;
-                    s.Undo();
-                }
-            };
-            await w.PutMountain(gx, gz);
-            Assert.True(undone);
-            Assert.Empty(PseudoLang.Untranslated(w.MessageText));
-            Assert.EndsWith(" Nothing grew on it: the area changed while its trees were worked out.", w.LastMessageEn, StringComparison.Ordinal);
-            Assert.Equal(steps, s.UndoList.Count);
-        }
-        finally
-        {
-            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
-        }
+                undone = true;
+                s.Undo();
+            }
+        };
+        await w.PutMountain(gx, gz);
+        Assert.True(undone);
+        Assert.Empty(PseudoLang.Untranslated(w.MessageText));
+        Assert.EndsWith(" Nothing grew on it: the area changed while its trees were worked out.", w.LastMessageEn, StringComparison.Ordinal);
+        Assert.Equal(steps, s.UndoList.Count);
     }
 }
