@@ -146,7 +146,7 @@ public sealed class SelectPanel
         YBox.Tip("select.y");
         ZBox.Tip("select.z");
         TurnBox.Tip("select.turn");
-        ReplacePickButton.Click += (_, _) => PickKindAsked?.Invoke("Replace", UsePicked);
+        ReplacePickButton.Click += (_, _) => PickKindAsked?.Invoke(Lang.T("common.replace"), UsePicked);
         BuildingButton.Click += (_, _) => tool.WholeBuilding();
         SameButton.Click += (_, _) => tool.SameKind();
         InvertButton.Click += (_, _) => tool.Invert();
