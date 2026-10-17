@@ -100,7 +100,8 @@ flowchart LR
    `ZoneEdit`s (`Core/Editing/EditStore.cs`). Objects are pending too: deleted ids, `NewObject`s
    (negative ids from `WorldSession.NextId`) and `ZoneReset`s. Nothing is written yet.
 5. **Save.** `WorldSession.Save` refuses at once when the game saved the world since it was read
-   (`WorldWriter.Newer`), turns No limit ground into ground discs (`Core/Editing/Uplift.cs`), then
+   (`WorldWriter.Newer`; the window then offers `WorldSession.PrepareReplay` / `Replay`, below), turns No limit
+   ground into ground discs (`Core/Editing/Uplift.cs`), then
    calls `WorldWriter.Save` (`Core/Save/WorldWriter.cs`), which writes the next save and reads it
    back (below). After zone resets or new discs the world is read again and the history starts over;
    otherwise the world stays open, the changes are marked applied and the history goes to disk
@@ -345,7 +346,18 @@ either breaks it, the user's own scripts and the docs.
   from it with every change since, and the session's previous save is dropped (`Options.Drop`). Only
   on leaving is the folder pruned to the latest save.
 - A newer committed save than the one the editor knows (the game saved meanwhile) blocks the save
-  before anything changes (`WorldWriter.Newer`, `SaveSafetyTests`).
+  before anything changes (`WorldWriter.Newer`, `SaveSafetyTests`). The pending edits can then be
+  brought onto that save (`Core/Editing/EditReplay.cs`): `Prepare` reads it and finds the edits'
+  objects again by kind and place (`Core/Save/ObjectPlaces.cs`, which `HistoryFile` uses too),
+  comparing their data as the editor writes it to find what the game changed too (`Clashes`, by
+  `ReplayClash` kind); `Apply` restarts the `EditStore` from the game's save and puts every change
+  back, a clash as the user chose (a zone both changed: the editor's changed points over the game's).
+  Moves whose source is found take the game's object as source; otherwise the data as read (from the
+  save read, while its chunk files are still there). `WorldSession.Replay` then makes the game's save
+  the world (no save of the session's own to prune) and fits the history to it (`Refit`: ids
+  mapped, the rest kept as gone objects, steps touching a dropped change cut with every step before
+  them, the rest asked about before undo through `HistoryFile.Restored.Replayed`). Nothing is
+  written to disk until the next save.
 - A zone reset never clears players' tombstones (`WorldWriter.TombstonePrefab`).
 - The writer makes no backup folder. `Core/App/Backups.cs` only finds the game's (`_backup_auto-…`)
   and older editors' backups, to restore an area from one.

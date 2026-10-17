@@ -484,7 +484,14 @@ public static class HistoryFile
     /// <param name="Steps">How many steps were kept.</param>
     /// <param name="Changed">The world may differ from when they were kept (live, or a save made since).</param>
     /// <param name="SavedAt">When the history was written, local time.</param>
-    public sealed record Restored(EditSession.Kept Kept, int Steps, bool Changed, DateTime SavedAt);
+    public sealed record Restored(EditSession.Kept Kept, int Steps, bool Changed, DateTime SavedAt)
+    {
+        /// <summary>
+        /// Not read from a file: the open world's history, fitted to a save the game made since, when the pending
+        /// changes were brought onto it (WorldSession.Replay).
+        /// </summary>
+        public bool Replayed { get; init; }
+    }
 
     /// <summary>The history kept for the world.</summary>
     /// <returns>Null when nothing was kept (or the file cannot be read).</returns>
@@ -529,24 +536,14 @@ public static class HistoryFile
         var savedAt = new DateTime(i.ReadInt64(), DateTimeKind.Utc);
         bool changed = !hasStamp || stamp != Stamp(w);
         // The world's objects by kind and place (to the centimetre: a save keeps them exactly).
-        static (int, long, long, long) Place(int prefab, Vector3 p) => (prefab, (long)MathF.Round(p.X * 100), (long)MathF.Round(p.Y * 100), (long)MathF.Round(p.Z * 100));
-        var world = new Dictionary<(int, long, long, long), Queue<int>>();
-        void Add(int id, int prefab, Vector3 p)
-        {
-            var key = Place(prefab, p);
-            if (!world.TryGetValue(key, out var q))
-            {
-                world[key] = q = new Queue<int>();
-            }
-            q.Enqueue(id);
-        }
+        var world = new ObjectPlaces();
         foreach (var (id, prefab, p, _, _) in w.World.Objects)
         {
-            Add(id, prefab, p);
+            world.Add(id, prefab, p);
         }
         foreach (var (id, prefab, p, _) in w.World.Pieces)
         {
-            Add(id, prefab, p);
+            world.Add(id, prefab, p);
         }
         int count = ReadCount(i);
         var ids = new List<int>(Capacity(count));
@@ -560,9 +557,9 @@ public static class HistoryFile
             float scale = i.ReadSingle();
             int length = i.ReadInt32();
             byte[]? bytes = length >= 0 ? i.ReadExactBytes(length) : null;
-            if (world.TryGetValue(Place(prefab, position), out var q) && q.Count > 0)
+            if (world.Take(prefab, position) is int found)
             {
-                ids.Add(q.Dequeue());
+                ids.Add(found);
             }
             else
             {

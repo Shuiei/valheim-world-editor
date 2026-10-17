@@ -128,6 +128,75 @@ public sealed class WorldSessionTests : IDisposable
         Assert.Equal([true, false], s.UndoList.Select(c => c.Applied));
     }
 
+    // The game saved the world after the editor read it: the changes go onto the game's save, with their history, and
+    // nothing is written until the next save, which is made from the game's save.
+    [Fact]
+    public void TheChangesGoOntoASaveTheGameMadeSinceWithTheirHistory()
+    {
+        using var w = new TempWorld();
+        using var world = WorldSession.Open(w.Dir);
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.Shape(32, 32, Formula.Compile("2", []), 3, 0, "raise");
+        int index = s.Scene.Things.FindIndex(t => t.Id >= 0 && !t.Gone);
+        int deleted = s.Scene.Things[index].Id;
+        s.Delete([index]);
+        // The game saves, an object of its own removed.
+        int other = world.World.Objects.First(o => o.Id != deleted && MathF.Abs(o.Position.X) < 200 && MathF.Abs(o.Position.Z) < 200).Id;
+        Assert.True(WorldWriter.Save(WorldSave.Load(w.Dir), [], [other], options: new WorldWriter.Options(KeepBase: true)).Saved);
+        int game = world.World.SaveNumber + 1;
+        Assert.False(world.Save().Done);
+        Assert.Equal(game, world.GameSaveSince());
+        var files = Directory.GetFiles(w.Dir).ToDictionary(f => f, File.ReadAllBytes);
+
+        var plan = world.PrepareReplay();
+        Assert.NotNull(plan);
+        Assert.Empty(plan.Clashes);
+        var o = world.Replay(plan, _ => throw new InvalidOperationException("nothing clashes"));
+        Assert.True(o.Done && o.Reloaded, o.Message);
+        Assert.StartsWith($"Your changes are on the game's save #{game} now", o.Message);
+        Assert.Contains("History: 2 step(s) kept", o.Message);
+        Assert.Equal(files.Keys.Order(), Directory.GetFiles(w.Dir).Order());
+        Assert.All(files, f => Assert.True(f.Value.AsSpan().SequenceEqual(File.ReadAllBytes(f.Key)), f.Key));
+        Assert.Equal(game, world.World.SaveNumber);
+        Assert.Null(world.GameSaveSince());
+        Assert.Equal((1, 1, 0, 0), world.Pending);
+        Assert.True(world.Restored!.Replayed);
+        Assert.True(world.EarlierMayDiffer);
+        // The area opened again has the steps, fitted to the game's save: undoing the deletion keeps the object.
+        var again = WorldScene.Load(world, 0, 0, 1).Session!;
+        Assert.Equal(2, again.UndoList.Count);
+        Assert.All(again.UndoList, c => Assert.True(c.Earlier));
+        Assert.True(again.Undo());
+        Assert.Equal((1, 0, 0, 0), world.Pending);
+        // Saved from the game's save.
+        var saved = world.Save();
+        Assert.True(saved.Done, saved.Message);
+        Assert.Equal(game + 1, WorldSave.Load(w.Dir).SaveNumber);
+    }
+
+    // The game removed an object the editor moved: left to the game, the move's step cannot be undone any more, and
+    // neither can the steps before it.
+    [Fact]
+    public void StepsTouchingWhatIsLeftToTheGameAreDropped()
+    {
+        using var w = new TempWorld();
+        using var world = WorldSession.Open(w.Dir);
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.Shape(32, 32, Formula.Compile("2", []), 3, 0, "raise");
+        int index = s.Scene.Things.FindIndex(t => t.Id >= 0 && !t.Gone);
+        var thing = s.Scene.Things[index];
+        s.Move([(index, thing.Position + new System.Numerics.Vector3(3, 0, 3), thing.Rotation)]);
+        Assert.True(WorldWriter.Save(WorldSave.Load(w.Dir), [], [thing.Id], options: new WorldWriter.Options(KeepBase: true)).Saved);
+
+        var plan = world.PrepareReplay()!;
+        Assert.Equal(Editing.ReplayClash.Removed, Assert.Single(plan.Clashes).Kind);
+        var o = world.Replay(plan, _ => false);
+        Assert.True(o.Done, o.Message);
+        Assert.Contains("History: 0 step(s) kept, 2 dropped", o.Message);
+        Assert.Null(world.History);
+        Assert.Equal((1, 0, 0, 0), world.Pending);
+    }
+
     // A zone reset marked and then unmarked has nothing left to send, while another zone's reset still waits: after a
     // partial Apply live the first zone's steps are applied, and so is the ground after them that went in.
     [Fact]

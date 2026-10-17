@@ -4,6 +4,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using TerrainEditor.App;
+using TerrainEditor.Editing;
 
 namespace TerrainEditor.Desktop;
 
@@ -641,6 +642,7 @@ public sealed partial class MainWindow : Window
             }
             Busy("Saving…");
             string msg;
+            int? newer = null;
             try
             {
                 var o = await Task.Run(w.Save);
@@ -652,6 +654,7 @@ public sealed partial class MainWindow : Window
                         msg += "\n\nNot saved:\n• " + string.Join("\n• ", r.Skipped);
                     }
                 }
+                newer = o.Done ? null : w.GameSaveSince();
             }
             catch (Exception ex)
             {
@@ -661,9 +664,104 @@ public sealed partial class MainWindow : Window
             {
                 Busy(null);
             }
-            await Tell(msg);
+            if (newer is int game)
+            {
+                await OfferReplay(w, game, null);
+            }
+            else
+            {
+                await Tell(msg);
+            }
         }
         MapPage?.Show(w);
+    }
+
+    /// <summary>
+    /// A save refused because the game saved the world after the editor read it: offers to bring the pending changes
+    /// onto the game's save (WorldSession.Replay) instead of leaving them behind. Asked first; then, for each kind of
+    /// change the game made too, whose version stays. Nothing is written: the changes wait on the game's save, to be
+    /// checked and saved. The area open is read again.
+    /// </summary>
+    /// <param name="w">The world.</param>
+    /// <param name="newest">The game's save number.</param>
+    /// <param name="area">The area open in the 3D editor when Save was pressed there (null: from the map).</param>
+    internal async Task OfferReplay(WorldSession w, int newest, WorldScene? area)
+    {
+        if (!await Ask(Lang.T("replay.title"), Lang.T("replay.offer", newest), Lang.T("replay.bring"), Lang.T("replay.notNow")))
+        {
+            Say(Lang.T("replay.notNowSaid", newest));
+            return;
+        }
+        Busy(Lang.T("replay.reading"));
+        EditReplay? plan;
+        try
+        {
+            plan = await Task.Run(w.PrepareReplay);
+        }
+        catch (Exception ex)
+        {
+            Busy(null);
+            await Tell(Lang.T("replay.failed", ex.Message));
+            return;
+        }
+        Busy(null);
+        if (plan == null)
+        {
+            await Tell(Lang.T("replay.failed", Lang.T("replay.noNewer")));
+            return;
+        }
+        var keep = new Dictionary<ReplayClash, bool>();
+        foreach (var kind in Enum.GetValues<ReplayClash>())
+        {
+            var clashes = plan.Clashes.Where(c => c.Kind == kind).ToList();
+            if (clashes.Count > 0)
+            {
+                keep[kind] = await Ask(Lang.T("replay.clashTitle"), ClashText(kind, clashes), Lang.T("replay.keepMine"), Lang.T("replay.keepGame"));
+            }
+        }
+        Busy(Lang.T("replay.applying"));
+        WorldSession.Outcome o;
+        try
+        {
+            o = await Task.Run(() => w.Replay(plan, k => keep.GetValueOrDefault(k)));
+        }
+        catch (Exception ex)
+        {
+            Busy(null);
+            await Tell(Lang.T("replay.failed", ex.Message));
+            return;
+        }
+        Busy(null);
+        if (o.Reloaded && area != null && View.Scene == area && World == w)
+        {
+            await ReopenArea(area);
+        }
+        MessageText.Text = o.Message;
+        await Tell(o.Message);
+    }
+
+    /// <summary>The question for one kind of change the game made too: what it is, the first few of them, and the two ways.</summary>
+    /// <param name="kind">The kind.</param>
+    /// <param name="clashes">The changes of that kind.</param>
+    private string ClashText(ReplayClash kind, List<EditReplay.Clash> clashes)
+    {
+        const int Shown = 8;
+        var lines = clashes.Take(Shown).Select(c => c.Kind == ReplayClash.Ground
+            ? Lang.T("replay.zone", c.Zone.X, c.Zone.Z)
+            : Lang.T("replay.object", NameOfPrefab(c.Prefab) ?? c.Prefab.ToString(System.Globalization.CultureInfo.InvariantCulture), c.Position.X, c.Position.Z)).ToList();
+        if (clashes.Count > Shown)
+        {
+            lines.Add(Lang.T("replay.more", clashes.Count - Shown));
+        }
+        string list = "• " + string.Join("\n• ", lines);
+        string text = kind switch
+        {
+            ReplayClash.Ground => Lang.T("replay.clash.ground", clashes.Count, list),
+            ReplayClash.Changed => Lang.T("replay.clash.changed", clashes.Count, list),
+            _ => Lang.T("replay.clash.removed", clashes.Count, list),
+        };
+        int unsure = clashes.Count(c => c.Unsure);
+        return unsure > 0 ? text + "\n\n" + Lang.T("replay.unsure", unsure) : text;
     }
 
     /// <summary>
@@ -973,7 +1071,10 @@ public sealed partial class MainWindow : Window
             return true;
         }
         string since = w.IsLive ? "Players may have changed the world since." : "The world was saved again since (by the game, or another program).";
-        if (!await Ask("A step from an earlier session", $"This step was made in an earlier session of the editor (kept {w.Restored!.SavedAt:g}). {since} Undoing or redoing it puts the ground and the objects back as they were then, over what changed since.", "Go ahead", "Cancel"))
+        string question = w.Restored!.Replayed
+            ? Lang.T("history.replayedAsk", w.Restored.SavedAt.ToString("g", System.Globalization.CultureInfo.CurrentCulture))
+            : $"This step was made in an earlier session of the editor (kept {w.Restored.SavedAt:g}). {since} Undoing or redoing it puts the ground and the objects back as they were then, over what changed since.";
+        if (!await Ask("A step from an earlier session", question, "Go ahead", "Cancel"))
         {
             MessageText.Text = "Nothing changed.";
             return false;
@@ -1020,6 +1121,7 @@ public sealed partial class MainWindow : Window
         MessageText.Text = "Saving…";
         // The veil keeps the keys (Ctrl+S, Ctrl+Z), the mouse and Follow off the area while it is written.
         Busy("Saving…");
+        int? newer = null;
         try
         {
             var res = await Task.Run(s.Save);
@@ -1030,7 +1132,11 @@ public sealed partial class MainWindow : Window
             }
             MessageText.Text = res.Message;
             Options.Say("Save: " + res.Message);
-            await Tell(msg);
+            newer = res.Saved ? null : s.Scene.Owner?.GameSaveSince();
+            if (newer == null)
+            {
+                await Tell(msg);
+            }
         }
         catch (Exception ex)
         {
@@ -1040,6 +1146,11 @@ public sealed partial class MainWindow : Window
         {
             // Down only once the result has been read: until then Follow and the keys still wait.
             Busy(null);
+        }
+        // The game saved the world since: the changes can go onto its save.
+        if (newer is int game && s.Scene.Owner is { } owner)
+        {
+            await OfferReplay(owner, game, s.Scene);
         }
         // Saved objects lose their green marks; after a failure the marks and the save bar show what is still unsaved
         // (and the Save button comes back).
@@ -1210,7 +1321,7 @@ public sealed partial class MainWindow : Window
         }
         // The objects' heights come from the ground as the paste leaves it: the ground step fills the list,
         // which Commit reads after it (one undo step for both).
-        var add = new List<(Editing.NewObject, bool)>();
+        var add = new List<(NewObject, bool)>();
         // Clear the site: the trees, rocks and the like where the pasted building stands go too.
         var cleared = new List<int>();
         int touched = 0;
@@ -1317,14 +1428,14 @@ public sealed partial class MainWindow : Window
         }
         var sel = View.Selected.ToList();
         var remove = new List<int>();
-        var adds = new List<(Editing.NewObject, bool)>();
+        var adds = new List<(NewObject, bool)>();
         foreach (int i in sel)
         {
             var t = s.Scene.Things[i];
             if (ObjectData.Bytes(world, s.Edits, t.Id) is { } bytes && Builders.Claimed(bytes, TerrainEditor.Save.WorldSave.Builder) is { } z)
             {
                 remove.Add(i);
-                adds.Add((new Editing.NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), true));
+                adds.Add((new NewObject(0, z.Prefab, z.Position, z.Rotation, 0, null, false, z.Serialize()), true));
             }
         }
         if (adds.Count == 0)
@@ -1425,7 +1536,7 @@ public sealed partial class MainWindow : Window
         var roof = built.Rocks
             .Select(r => (r.Prefab, Hash: TerrainEditor.Save.StableHash.Of(r.Prefab), r.Position, r.Rotation, r.Scale))
             .Where(r => scene.World?.CanCreate(r.Hash) != false)
-            .Select(r => (new Editing.NewObject(0, r.Hash, r.Position, r.Rotation, r.Scale), false)).ToList();
+            .Select(r => (new NewObject(0, r.Hash, r.Position, r.Rotation, r.Scale), false)).ToList();
         // Natural objects in the trench (deeper than half a metre there) would float or stand in the way.
         var inTrench = PathTool.NearDeep(cave, path.Width / 2 + path.Soft);
         var remove = new List<int>();
