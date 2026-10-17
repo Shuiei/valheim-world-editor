@@ -315,7 +315,7 @@ public class KeysAndMouseTests
     {
         var t = new ToolPanel();
         string? said = null;
-        t.Message += m => said = m;
+        t.Message += m => said = m.Shown;
         t.NewPattern(1234);
         Assert.Equal(1234, t.Brush.Noise.Seed);
         Assert.Equal("New natural pattern. The next Naturalize stroke or natural path uses it.", said);

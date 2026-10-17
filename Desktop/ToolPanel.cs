@@ -48,8 +48,9 @@ public enum ToolMode
 /// </summary>
 public sealed class ToolPanel
 {
-    /// <summary>The brush shapes before the stamps, in BrushShape's order.</summary>
-    private static readonly string[] BuiltInShapes = ["Circle", "Square", "Ring", "Ragged (noise)"];
+    /// <summary>The brush shapes before the stamps, in BrushShape's order, in the language in use.</summary>
+    private static string[] BuiltInShapes() =>
+        [Lang.T("brush.shape.circle"), Lang.T("brush.shape.square"), Lang.T("brush.shape.ring"), Lang.T("brush.shape.ragged")];
 
     /// <summary>The brush settings the options change (size, strength, shape, falloff, each tool's own).</summary>
     public Brush Brush { get; } = new();
@@ -94,32 +95,32 @@ public sealed class ToolPanel
     /// <summary>The stamps in the Shape list after the four shapes: the built-in ones, then loaded pictures.</summary>
     internal List<Stamps.Stamp> StampList { get; } = [.. Stamps.BuiltIn, .. Stamps.LoadKept()];
     /// <summary>Load stamp…: asks the window for a picture (<c>LoadStampAsked</c>).</summary>
-    internal Button LoadStampButton { get; } = new() { Content = "Load stamp…", FontSize = 12 };
+    internal Button LoadStampButton { get; } = new() { Content = Lang.T("brush.label.loadStamp"), FontSize = 12 };
     /// <summary>Forget stamp: drops the loaded picture chosen as Shape (built-in stamps stay).</summary>
-    internal Button ForgetStampButton { get; } = new() { Content = "Forget stamp", FontSize = 12 };
+    internal Button ForgetStampButton { get; } = new() { Content = Lang.T("brush.label.forgetStamp"), FontSize = 12 };
     /// <summary>Stamp once: a click of Raise or Lower puts the whole stamp in.</summary>
-    internal CheckBox StampOnceBox { get; } = new() { Content = "Stamp once: a click puts the whole stamp in", FontSize = 12 };
+    internal CheckBox StampOnceBox { get; } = new() { Content = Lang.T("brush.label.stampOnce"), FontSize = 12 };
     /// <summary>How high, in metres, Stamp once puts the stamp in.</summary>
     internal NumericUpDown StampHeightBox { get; } = new() { Value = 4, Increment = 0.5m, FormatString = "0.0#", FontSize = 12 };
     /// <summary>Load stamp…: the window picks the picture (and calls <c>AddStamp</c>).</summary>
     public event Action? LoadStampAsked;
-    /// <summary>A line for the window's message bar.</summary>
-    public event Action<string>? Message;
+    /// <summary>A line for the window's message bar, in both languages.</summary>
+    public event Action<Said>? Message;
     /// <summary>No limit: the ground tools go past the game's ±8 m (Ground.NoLimit); off at every start.</summary>
-    internal CheckBox NoLimitBox { get; } = new() { Content = "No limit: past the game's ±8 m", FontSize = 12 };
+    internal CheckBox NoLimitBox { get; } = new() { Content = Lang.T("brush.label.noLimit"), FontSize = 12 };
     /// <summary>No limit was switched (on: true).</summary>
     public event Action<bool>? NoLimitChanged;
     /// <summary>Erode's Thermal mode: slopes steeper than the rest angle slide down.</summary>
-    internal Button ThermalButton { get; } = new() { Content = "Thermal", FontSize = 12 };
+    internal Button ThermalButton { get; } = new() { Content = Lang.T("brush.label.thermal"), FontSize = 12 };
     /// <summary>Erode's Water mode (the rest angle does not apply).</summary>
-    internal Button WaterButton { get; } = new() { Content = "Water", FontSize = 12 };
+    internal Button WaterButton { get; } = new() { Content = Lang.T("brush.label.water"), FontSize = 12 };
     /// <summary>Thermal erosion's rest angle, in degrees (10..60).</summary>
     internal Slider RestSlider { get; }
 
     /// <summary>The brush radius in metres (1..30). For tests too.</summary>
     internal Slider SizeSlider { get; }
     /// <summary>Naturalize: a new noise pattern for the next stroke (and natural paths).</summary>
-    internal Button NewPatternButton { get; } = new() { Content = "New pattern", FontSize = 12 };
+    internal Button NewPatternButton { get; } = new() { Content = Lang.T("brush.label.newPattern"), FontSize = 12 };
     /// <summary>The brush strength (0.05..1).</summary>
     internal Slider StrengthSlider { get; }
     /// <summary>The brush shape: the four shapes, then the stamps.</summary>
@@ -274,10 +275,10 @@ public sealed class ToolPanel
         StrengthSlider = Ui.Slide(0.05, 1, 0.05, Brush.Strength, strengthV, v => $"{v:0.00}", v => Brush.Strength = (float)v);
         ShapeBox = new ComboBox { SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12, MaxDropDownHeight = 400 };
         FillShapes();
-        FalloffBox = new ComboBox { ItemsSource = new[] { "Smooth", "Linear", "Dome", "Flat top", "Peak", "Sharp edge (pickaxe)" }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
+        FalloffBox = new ComboBox { ItemsSource = new[] { Lang.T("brush.falloff.smooth"), Lang.T("brush.falloff.linear"), Lang.T("brush.falloff.dome"), Lang.T("brush.falloff.flatTop"), Lang.T("brush.falloff.peak"), Lang.T("brush.falloff.sharpEdge") }, SelectedIndex = 0, HorizontalAlignment = HorizontalAlignment.Stretch, FontSize = 12 };
         var turnV = new TextBlock();
         var turn = Ui.Slide(-180, 180, 1, 0, turnV, v => $"{v:0}°", v => Brush.Turn = (float)v);
-        _turnRow = Ui.Row("Turn", turn.Tip("brush.turn"), turnV);
+        _turnRow = Ui.Row(Lang.T("brush.label.turn"), turn.Tip("brush.turn"), turnV);
         ShapeBox.SelectionChanged += (_, _) => ShapeChosen();
         LoadStampButton.Tip("brush.loadStamp");
         ForgetStampButton.Tip("brush.forgetStamp");
@@ -293,7 +294,7 @@ public sealed class ToolPanel
             int i = ShapeBox.SelectedIndex - 4;
             if (i < 0 || i >= StampList.Count || !StampList[i].Loaded)
             {
-                Message?.Invoke("Choose a loaded picture as Shape first (built-in stamps stay).");
+                Message?.Invoke(Said.Of("brush.msg.notLoaded"));
                 return;
             }
             StampList.RemoveAt(i);
@@ -303,17 +304,17 @@ public sealed class ToolPanel
         };
         StampOnceBox.IsCheckedChanged += (_, _) => { Brush.StampOnce = StampOnceBox.IsChecked == true; SyncStamp(); };
         StampHeightBox.ValueChanged += (_, e) => Brush.StampHeight = (float)(e.NewValue ?? 0);
-        _stampHeightRow = Ui.Row("Height", StampHeightBox, new TextBlock { Text = " m", FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+        _stampHeightRow = Ui.Row(Lang.T("brush.label.height"), StampHeightBox, new TextBlock { Text = Lang.T("brush.unit.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
         _stampOnceRows = new StackPanel { Spacing = 4, Children = { StampOnceBox, _stampHeightRow } };
         FalloffBox.SelectionChanged += (_, _) => Brush.Falloff = (Falloff)Math.Max(0, FalloffBox.SelectedIndex);
         _turnRow.IsVisible = false;
 
-        TargetFromClickBox = new CheckBox { Content = "Level to the height where the stroke starts", IsChecked = Brush.TargetFromClick, FontSize = 12 };
+        TargetFromClickBox = new CheckBox { Content = Lang.T("brush.label.targetFromClick"), IsChecked = Brush.TargetFromClick, FontSize = 12 };
         TargetBox = new NumericUpDown { Value = (decimal)Brush.Target, Increment = 0.1m, FormatString = "0.0", FontSize = 12, IsEnabled = !Brush.TargetFromClick }.Tip("brush.target");
         TargetFromClickBox.Tip("brush.targetFromClick");
         TargetFromClickBox.IsCheckedChanged += (_, _) => { Brush.TargetFromClick = TargetFromClickBox.IsChecked == true; TargetBox.IsEnabled = !Brush.TargetFromClick; };
         TargetBox.ValueChanged += (_, e) => Brush.Target = (float)(e.NewValue ?? 0);
-        _flattenRows = new StackPanel { Spacing = 4, Children = { TargetFromClickBox, Ui.Row("Height (m)", TargetBox) } };
+        _flattenRows = new StackPanel { Spacing = 4, Children = { TargetFromClickBox, Ui.Row(Lang.T("brush.label.heightMetres"), TargetBox) } };
 
         var ampV = new TextBlock();
         var noiseV = new TextBlock();
@@ -322,8 +323,8 @@ public sealed class ToolPanel
             Spacing = 4,
             Children =
             {
-                Ui.Row("Bumps", Ui.Slide(0.2, 4, 0.1, Brush.NoiseAmp, ampV, v => $"{v:0.0} m", v => Brush.NoiseAmp = (float)v).Tip("natural.amp"), ampV),
-                Ui.Row("Bump size", Ui.Slide(4, 60, 1, Brush.NoiseSize, noiseV, v => $"{v:0} m", v => Brush.NoiseSize = (float)v).Tip("natural.size"), noiseV),
+                Ui.Row(Lang.T("brush.label.bumps"), Ui.Slide(0.2, 4, 0.1, Brush.NoiseAmp, ampV, v => $"{v:0.0} m", v => Brush.NoiseAmp = (float)v).Tip("natural.amp"), ampV),
+                Ui.Row(Lang.T("brush.label.bumpSize"), Ui.Slide(4, 60, 1, Brush.NoiseSize, noiseV, v => $"{v:0} m", v => Brush.NoiseSize = (float)v).Tip("natural.size"), noiseV),
                 NewPatternButton,
             },
         };
@@ -332,7 +333,7 @@ public sealed class ToolPanel
 
         var restV = new TextBlock();
         RestSlider = Ui.Slide(10, 60, 1, Brush.RestAngle, restV, v => $"{v:0}°", v => Brush.RestAngle = (float)v).Tip("erode.rest");
-        var restRow = Ui.Row("Rest angle", RestSlider, restV);
+        var restRow = Ui.Row(Lang.T("brush.label.restAngle"), RestSlider, restV);
         void Mode(bool water)
         {
             Brush.ErodeWater = water;
@@ -355,10 +356,10 @@ public sealed class ToolPanel
             Children =
             {
                 _title, _help,
-                Ui.Row("Size", SizeSlider, sizeV),
-                Ui.Row("Strength", StrengthSlider, strengthV),
-                Ui.Row("Shape", ShapeBox),
-                (_falloffRow = Ui.Row("Falloff", FalloffBox)),
+                Ui.Row(Lang.T("brush.label.size"), SizeSlider, sizeV),
+                Ui.Row(Lang.T("brush.label.strength"), StrengthSlider, strengthV),
+                Ui.Row(Lang.T("brush.label.shape"), ShapeBox),
+                (_falloffRow = Ui.Row(Lang.T("brush.label.falloff"), FalloffBox)),
                 _turnRow,
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { LoadStampButton, ForgetStampButton } },
                 _stampOnceRows,
@@ -394,7 +395,7 @@ public sealed class ToolPanel
             c.IsVisible = !on || c == _placeButton || c == SelectButton || c == _viewButton;
         }
         var label = ((_placeButton.Content as Grid)!.Children[0] as StackPanel)!.Children[1] as TextBlock;
-        label!.Text = on ? "Build" : "Place";
+        label!.Text = on ? Lang.T("rail.label.build") : Lang.T("rail.label.place");
         ToolTip.SetTip(_placeButton, Lang.T(on ? "rail.tip.build" : "rail.tip.place"));
         if (on && (Tool != null || Mode is not (ToolMode.View or ToolMode.Place or ToolMode.Select)))
         {
@@ -445,7 +446,7 @@ public sealed class ToolPanel
     internal void NewPattern(int? seed = null)
     {
         Brush.Noise = new Noise(seed ?? Random.Shared.Next());
-        Message?.Invoke("New natural pattern. The next Naturalize stroke or natural path uses it.");
+        Message?.Invoke(Said.Of("brush.msg.newPattern"));
     }
 
     /// <summary>[ and ]: the brush one metre smaller or bigger (within the Size slider's range).</summary>
@@ -501,7 +502,7 @@ public sealed class ToolPanel
     }
 
     /// <summary>Fills the Shape list: the built-in shapes, then every stamp.</summary>
-    private void FillShapes() => ShapeBox.ItemsSource = BuiltInShapes.Concat(StampList.Select(s => $"Stamp: {s.Label}")).ToList();
+    private void FillShapes() => ShapeBox.ItemsSource = BuiltInShapes().Concat(StampList.Select(s => s.Item)).ToList();
 
     /// <summary>The Shape list's choice into the brush (a stamp's weights and name too).</summary>
     private void ShapeChosen()
@@ -511,7 +512,7 @@ public sealed class ToolPanel
         {
             Brush.Shape = BrushShape.Stamp;
             Brush.StampData = StampList[i - 4].Data;
-            Brush.StampLabel = StampList[i - 4].Label;
+            Brush.StampLabel = StampList[i - 4].Shown;
         }
         else
         {
@@ -545,7 +546,7 @@ public sealed class ToolPanel
         Stamps.SaveKept(StampList.Where(s => s.Loaded));
         FillShapes();
         ShapeBox.SelectedIndex = 4 + StampList.Count - 1;
-        Message?.Invoke($"Loaded the stamp “{label}”: white parts work fully, black parts not at all.");
+        Message?.Invoke(Said.Of("brush.msg.stampLoaded", label));
     }
 
     /// <summary>The flatten height follows the ground where a stroke started (shown rounded to 0.1 m).</summary>
