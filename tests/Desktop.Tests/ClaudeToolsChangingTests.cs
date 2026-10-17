@@ -104,6 +104,8 @@ public class ClaudeToolsChangingTests
         string made = await r.T.GenerateDungeon(biome: "Meadows", size: 9, levels: 0, monsters: 5, loot: -1, light: 7, decor: -2, seed: 3, name: "Test hold", x: 5, z: 5);
         Assert.Contains("Now pending:", made);
         Assert.True(r.W.World.Pending.Added > 0, made);
+        // One of Claude's steps, as Take back Claude's changes finds them.
+        Assert.Equal("Claude: generated dungeon Test hold", r.W.Session!.UndoLabel);
     }
 
     // Another area opened while the dungeon is generated: it is not put in that one.

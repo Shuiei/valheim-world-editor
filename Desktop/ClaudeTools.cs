@@ -1410,9 +1410,12 @@ public sealed partial class ClaudeTools
             {
                 return problem;
             }
+            // One of Claude's steps ("Claude:", as Take back Claude's changes finds them), and no file in the user's
+            // blueprint Library.
+            string label = $"Claude: generated dungeon {result.Name}";
             if (_w.InWorkshop)
             {
-                await _w.GeneratedOntoPlot(settings, result, add: true);
+                _w.AddGeneratedToPlot(settings, result, label);
             }
             else
             {
@@ -1427,7 +1430,7 @@ public sealed partial class ClaudeTools
                     }
                     _w.View.Orbit(px, pz, 45, 55, 120);
                 }
-                _w.PlaceGenerated(settings, result);
+                _w.PlaceGenerated(settings, result, label);
             }
             return $"{string.Join(" ", result.Notes)} {_w.MessageText.Text} Now pending: {Pending()}";
         });

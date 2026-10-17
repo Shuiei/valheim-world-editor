@@ -74,7 +74,8 @@ public class ClaudeToolsWorkshopTests
         Assert.Contains(chestData, f => f.Key == StableHash.Of("items"));
     }
 
-    // A dungeon on the plot, with what is there: one step, its notes said.
+    // A dungeon on the plot, with what is there: one step of Claude's (Take back Claude's changes finds it), its notes
+    // said, and no file written into the user's blueprint Library.
     [AvaloniaFact]
     public async Task ADungeonGoesOnThePlot()
     {
@@ -83,6 +84,8 @@ public class ClaudeToolsWorkshopTests
         string made = await r.T.GenerateDungeon(size: 1, levels: 1, seed: 7);
         Assert.Contains("building piece(s) on the plot", made);
         Assert.True(ClaudeRun.J(await r.T.EditorState()).GetProperty("area").GetProperty("objects").GetInt32() > 0, made);
+        Assert.StartsWith("Claude: generated dungeon ", r.W.Session!.UndoLabel);
+        Assert.Empty(Directory.Exists(r.Homestead) ? Directory.GetFiles(r.Homestead) : []);
     }
 
     // save_blueprint: outside the Workshop, with no name or no piece: said. Saved, the Workshop holds nothing unsaved
