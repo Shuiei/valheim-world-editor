@@ -47,6 +47,35 @@ public sealed class InspectorPanelLangTests
         "key", "data", "slot",
     ];
 
+    /// <summary>
+    /// The test world's chest area open in an editing window, with an armour stand and an item stand put next to the
+    /// chest: the window, the area, and the chest's and stands' indexes.
+    /// </summary>
+    private static (MainWindow W, WorldScene Scene, int Chest, int[] Stands) Opened(string dir)
+    {
+        var world = WorldSave.Load(dir);
+        var at = world.Objects.First(o => o.Prefab == Chest).Position;
+        var scene = WorldScene.Load(dir, (int)MathF.Floor((at.X + 32) / 64), (int)MathF.Floor((at.Z + 32) / 64), 1);
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        w.Show();
+        w.View.Show(scene, null);
+        w.Edit(scene.Session!);
+        int chest = scene.Things.FindLastIndex(t => t.Prefab == Chest && !t.Gone);
+        var near = scene.Things[chest].Position + new Vector3(2, 0, 2);
+        int[] stands = [.. scene.Session!.Commit("Stands", null, [], [
+            (new NewObject(0, StableHash.Of("ArmorStand"), near, Vector3.Zero, 0), true),
+            (new NewObject(0, StableHash.Of("itemstand"), near + new Vector3(2, 0, 0), Vector3.Zero, 0), true),
+        ])];
+        return (w, scene, chest, stands);
+    }
+
+    /// <summary>The status bar's last message shows in the made-up language and its English for Claude is plain.</summary>
+    private static void AssertSaidInTheLanguage(MainWindow w)
+    {
+        Assert.StartsWith("⟦", w.MessageText.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("⟦", w.LastMessageEn, StringComparison.Ordinal);
+    }
+
     [AvaloniaFact]
     public async Task InspectorPanelShowsOnlyCatalogueTexts()
     {
@@ -54,21 +83,8 @@ public sealed class InspectorPanelLangTests
         try
         {
             using var pseudo = new PseudoLang();
-            var world = WorldSave.Load(dir);
-            var at = world.Objects.First(o => o.Prefab == Chest).Position;
-            var scene = WorldScene.Load(dir, (int)MathF.Floor((at.X + 32) / 64), (int)MathF.Floor((at.Z + 32) / 64), 1);
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            w.View.Show(scene, null);
-            w.Edit(scene.Session!);
-            var s = scene.Session!;
+            var (w, scene, chest, stands) = Opened(dir);
             var ins = w.Inspector;
-            int chest = scene.Things.FindLastIndex(t => t.Prefab == Chest && !t.Gone);
-            var near = scene.Things[chest].Position + new Vector3(2, 0, 2);
-            int[] stands = [.. s.Commit("Stands", null, [], [
-                (new NewObject(0, StableHash.Of("ArmorStand"), near, Vector3.Zero, 0), true),
-                (new NewObject(0, StableHash.Of("itemstand"), near + new Vector3(2, 0, 0), Vector3.Zero, 0), true),
-            ])];
 
             // The chest: a value added, an item in a picked slot, every item's details.
             Assert.True(ins.Open(chest));
@@ -91,18 +107,16 @@ public sealed class InspectorPanelLangTests
             Assert.True(ins.Open(stands[0]));
             ins.Stand!.First(r => r.Name == "").Name = "CookedMeat";
             await ins.Apply();
-            Assert.StartsWith("⟦", w.MessageText.Text, StringComparison.Ordinal);
+            AssertSaidInTheLanguage(w);
             Assert.Contains(PseudoLang.Wrap("food or potion"), w.MessageText.Text, StringComparison.Ordinal);
             Assert.Contains("CookedMeat (a food or potion)", w.LastMessageEn, StringComparison.Ordinal);
-            Assert.DoesNotContain("⟦", w.LastMessageEn, StringComparison.Ordinal);
 
             // Applying the chest's added value: said in the language, its English kept for Claude.
             Assert.True(ins.Open(chest));
             ins.Added.Add(("strings", "text", "Hello"));
             await ins.Apply();
-            Assert.StartsWith("⟦", w.MessageText.Text, StringComparison.Ordinal);
+            AssertSaidInTheLanguage(w);
             Assert.StartsWith("Changed ", w.LastMessageEn, StringComparison.Ordinal);
-            Assert.DoesNotContain("⟦", w.LastMessageEn, StringComparison.Ordinal);
 
             // An item outside the slots: the question, its title and its button in the language.
             var asked = new List<string>();

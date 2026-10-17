@@ -451,6 +451,32 @@ public sealed class InspectorPanel
         return ModExtensions.Decode(f.Key, view, bytes);
     }
 
+    /// <summary>
+    /// The lines under the card's title: the object's id, place and turn (and whether it has a connection), what it
+    /// spawns when it is a spawn point or a nest, and the mod it comes from.
+    /// </summary>
+    /// <param name="z">The object's data.</param>
+    /// <param name="id">The object's id in the area (0: none).</param>
+    /// <param name="name">Its name as the game shows it, null when the catalogue has none.</param>
+    private static string Where(ZdoData z, int id, string? name)
+    {
+        var lines = new List<string>
+        {
+            z.Connection != null
+                ? Lang.T("inspect.whereConnected", id, z.Position.X, z.Position.Y, z.Position.Z, z.Rotation.Y)
+                : Lang.T("inspect.where", id, z.Position.X, z.Position.Y, z.Position.Z, z.Rotation.Y),
+        };
+        if (PrefabCatalog.SpawnOf(z.Prefab) is { } spawn)
+        {
+            lines.Add(spawn.Nest ? Lang.T("inspect.nest", spawn.Summary()) : Lang.T("inspect.spawnPoint", spawn.Summary()));
+        }
+        if (name != null && ModCatalogue.IsModded(name))
+        {
+            lines.Add(ModCatalogue.ModOf(name) is string mod ? Lang.T("inspect.fromMod", mod) : Lang.T("inspect.fromAMod"));
+        }
+        return string.Join("\n", lines);
+    }
+
     /// <summary>Builds the whole card again from what is shown and changed.</summary>
     private void Render()
     {
@@ -459,17 +485,7 @@ public sealed class InspectorPanel
         string? name = PrefabCatalog.DisplayName(z.Prefab);
         _title.Text = name ?? Lang.T("inspect.prefab", z.Prefab);
         int id = Index is int ix && s != null && ix < s.Scene.Things.Count ? s.Scene.Things[ix].Id : 0;
-        _where.Text = z.Connection != null
-            ? Lang.T("inspect.whereConnected", id, z.Position.X, z.Position.Y, z.Position.Z, z.Rotation.Y)
-            : Lang.T("inspect.where", id, z.Position.X, z.Position.Y, z.Position.Z, z.Rotation.Y);
-        if (PrefabCatalog.SpawnOf(z.Prefab) is { } spawn)
-        {
-            _where.Text += "\n" + (spawn.Nest ? Lang.T("inspect.nest", spawn.Summary()) : Lang.T("inspect.spawnPoint", spawn.Summary()));
-        }
-        if (name != null && ModCatalogue.IsModded(name))
-        {
-            _where.Text += "\n" + (ModCatalogue.ModOf(name) is string mod ? Lang.T("inspect.fromMod", mod) : Lang.T("inspect.fromAMod"));
-        }
+        _where.Text = Where(z, id, name);
         RenderItems();
         RenderStand();
         Fields.Children.Clear();
@@ -557,16 +573,7 @@ public sealed class InspectorPanel
             Padding = new Thickness(0),
         }.Tip("inspect.details");
         ItemsBox.Children.Add(details);
-        rows.Children.Add(new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("*,54,44,50,40,40,26"),
-            ColumnSpacing = 3,
-            Children =
-            {
-                Head(Lang.T("inspect.data.item"), 0), Head(Lang.T("inspect.head.stack"), 1), Head(Lang.T("inspect.head.quality"), 2),
-                Head(Lang.T("inspect.head.durability"), 3), Head(Lang.T("inspect.head.x"), 4), Head(Lang.T("inspect.head.y"), 5),
-            },
-        });
+        rows.Children.Add(ItemHeads());
         foreach (var it in Items.ToList())
         {
             var name = new AutoCompleteBox { Text = it.Name, ItemsSource = PrefabCatalog.Items, FilterMode = AutoCompleteFilterMode.ContainsOrdinal, FontSize = 11, MinimumPrefixLength = 2 }.Tip("inspect.item");
@@ -887,6 +894,21 @@ public sealed class InspectorPanel
             Dirty();
         };
         return n;
+    }
+
+    /// <summary>The column heads of every item's details: item, stack, quality, durability, X and Y.</summary>
+    private static Grid ItemHeads()
+    {
+        return new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,54,44,50,40,40,26"),
+            ColumnSpacing = 3,
+            Children =
+            {
+                Head(Lang.T("inspect.data.item"), 0), Head(Lang.T("inspect.head.stack"), 1), Head(Lang.T("inspect.head.quality"), 2),
+                Head(Lang.T("inspect.head.durability"), 3), Head(Lang.T("inspect.head.x"), 4), Head(Lang.T("inspect.head.y"), 5),
+            },
+        };
     }
 
     /// <summary>A column heading.</summary>
