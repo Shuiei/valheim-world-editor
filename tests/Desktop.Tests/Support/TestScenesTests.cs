@@ -20,7 +20,9 @@ public sealed class TestScenesTests
         var before = WorldSave.Load(w.Dir);
 
         var thing = TestScenes.MovedThenRemovedByTheGame(s, w.Dir);
-        Assert.Equal(thing.Position + new Vector3(3, 0, 3), s.Scene.Things.Single(t => t.Id == thing.Id).Position);
+        // A move stands a copy in its place.
+        Assert.True(s.Scene.Things.Single(t => t.Id == thing.Id).Gone);
+        Assert.Contains(s.Scene.Things, t => !t.Gone && t.Prefab == thing.Prefab && t.Position == thing.Position + new Vector3(3, 0, 3));
         var game = WorldSave.Load(w.Dir);
         Assert.Equal(before.SaveNumber + 1, game.SaveNumber);
         Assert.Equal(before.ObjectCount - 1, game.ObjectCount);
