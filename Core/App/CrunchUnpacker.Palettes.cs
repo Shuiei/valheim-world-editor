@@ -128,17 +128,22 @@ internal sealed partial class CrunchUnpacker
     /// <param name="colorSelector">The colour selectors' index.</param>
     /// <param name="alpha">The alpha endpoint's index (DXT5 only).</param>
     /// <param name="alphaSelector">The alpha selectors' index (DXT5 only).</param>
-    private void WriteBlock(Span<byte> block, bool dxt5, int color, int colorSelector, int alpha, int alphaSelector)
+    /// <param name="colorEndpoints">The colour endpoints, by index.</param>
+    /// <param name="colorSelectors">The colour selectors, by index.</param>
+    /// <param name="alphaEndpoints">The alpha endpoints, by index (DXT5 only).</param>
+    /// <param name="alphaSelectors">The alpha selectors, three numbers each (DXT5 only).</param>
+    internal static void WriteBlock(Span<byte> block, bool dxt5, int color, int colorSelector, int alpha, int alphaSelector,
+        uint[] colorEndpoints, uint[] colorSelectors, ushort[] alphaEndpoints, ushort[] alphaSelectors)
     {
         if (dxt5)
         {
             int s = alphaSelector * 3;
-            BinaryPrimitives.WriteUInt32LittleEndian(block, _alphaEndpoints[alpha] | ((uint)_alphaSelectors[s] << 16));
-            BinaryPrimitives.WriteUInt32LittleEndian(block[4..], _alphaSelectors[s + 1] | ((uint)_alphaSelectors[s + 2] << 16));
+            BinaryPrimitives.WriteUInt32LittleEndian(block, alphaEndpoints[alpha] | ((uint)alphaSelectors[s] << 16));
+            BinaryPrimitives.WriteUInt32LittleEndian(block[4..], alphaSelectors[s + 1] | ((uint)alphaSelectors[s + 2] << 16));
             block = block[8..];
         }
-        BinaryPrimitives.WriteUInt32LittleEndian(block, _colorEndpoints[color]);
-        BinaryPrimitives.WriteUInt32LittleEndian(block[4..], _colorSelectors[colorSelector]);
+        BinaryPrimitives.WriteUInt32LittleEndian(block, colorEndpoints[color]);
+        BinaryPrimitives.WriteUInt32LittleEndian(block[4..], colorSelectors[colorSelector]);
     }
 
     /// <summary>An endpoint index plus a step, wrapping around the palette once.</summary>

@@ -119,7 +119,8 @@ internal sealed partial class CrunchUnpacker
                 {
                     continue;
                 }
-                WriteBlock(output.AsSpan((y * blocksX + x) * blockBytes, blockBytes), dxt5, color, colorSelector, alpha, alphaSelector);
+                WriteBlock(output.AsSpan((y * blocksX + x) * blockBytes, blockBytes), dxt5, color, colorSelector, alpha, alphaSelector,
+                    _colorEndpoints, _colorSelectors, _alphaEndpoints, _alphaSelectors);
             }
         }
         return output;

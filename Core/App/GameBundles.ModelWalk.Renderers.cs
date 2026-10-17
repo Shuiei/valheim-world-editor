@@ -8,7 +8,7 @@ namespace TerrainEditor.App;
 /// </summary>
 public sealed partial class GameBundles
 {
-    private sealed partial class ModelWalk
+    internal sealed partial class ModelWalk
     {
         /// <summary>
         /// Places the submeshes of an object's renderer (its mesh filter's mesh, or a skinned renderer's) as parts at

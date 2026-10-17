@@ -11,62 +11,12 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class CrunchTests
 {
-    /// <summary>A fixture's bytes.</summary>
-    private static byte[] Fixture(string name) => File.ReadAllBytes(Path.Combine(Fixtures.Root, name));
-
-    /// <summary>
-    /// crunch's CRC-16 (a copy of the decoder's, so that the tests can change a file's header or data and keep its
-    /// checks right).
-    /// </summary>
-    private static ushort Crc16(ReadOnlySpan<byte> data)
-    {
-        ushort crc = 0xFFFF;
-        foreach (byte b in data)
-        {
-            ushort q = (ushort)(b ^ (crc >> 8));
-            crc <<= 8;
-            ushort r = (ushort)((q >> 4) ^ q);
-            crc ^= r;
-            r <<= 5;
-            crc ^= r;
-            r <<= 7;
-            crc ^= r;
-        }
-        return (ushort)~crc;
-    }
-
-    /// <summary>A copy of a file, changed as given.</summary>
-    private static byte[] Copy(byte[] crn, Action<byte[]> change)
-    {
-        byte[] copy = (byte[])crn.Clone();
-        change(copy);
-        return copy;
-    }
-
-    /// <summary>The file with its data's and header's CRCs made right again (when its sizes are inside it).</summary>
-    private static byte[] Recheck(byte[] crn)
-    {
-        int headerSize = (crn[2] << 8) | crn[3];
-        long dataSize = ((long)crn[6] << 24) | ((long)crn[7] << 16) | ((long)crn[8] << 8) | crn[9];
-        if (headerSize < 12 || dataSize < headerSize || dataSize > crn.Length)
-        {
-            return crn;
-        }
-        ushort data = Crc16(crn.AsSpan(headerSize, (int)dataSize - headerSize));
-        crn[10] = (byte)(data >> 8);
-        crn[11] = (byte)data;
-        ushort header = Crc16(crn.AsSpan(6, headerSize - 6));
-        crn[4] = (byte)(header >> 8);
-        crn[5] = (byte)header;
-        return crn;
-    }
-
     [Fact]
     public void EveryLevelUnpacksToTheReferenceBlocks()
     {
         foreach (var (name, format, size) in new[] { ("crunch-dxt1", 10, (64, 64, 7)), ("crunch-dxt5", 12, (48, 20, 6)) })
         {
-            byte[] crn = Fixture(name + ".crn"), dds = Fixture(name + ".dds");
+            byte[] crn = CrnFiles.Fixture(name + ".crn"), dds = CrnFiles.Fixture(name + ".dds");
             var info = Crunch.Read(crn)!;
             Assert.Equal(size, (info.Width, info.Height, info.Levels));
             Assert.Equal(format == 12, info.Dxt5);
@@ -89,7 +39,7 @@ public class CrunchTests
     [Fact]
     public void ALevelPickedFromTheHeaderComesWithIt()
     {
-        byte[] crn = Fixture("crunch-dxt5.crn");
+        byte[] crn = CrnFiles.Fixture("crunch-dxt5.crn");
         var (info, level, blocks) = Crunch.Unpack(crn, t => t.Levels - 1)!.Value;
         Assert.Equal(Crunch.Read(crn), info);
         Assert.Equal(5, level);
@@ -100,14 +50,14 @@ public class CrunchTests
     [Fact]
     public void BrokenFilesGiveNull()
     {
-        byte[] crn = Fixture("crunch-dxt5.crn");
+        byte[] crn = CrnFiles.Fixture("crunch-dxt5.crn");
         byte[] garbage = new byte[crn.Length];
         new Random(5).NextBytes(garbage);
-        byte[] header = Copy(crn, c => c[13] ^= 1);
-        byte[] data = Copy(crn, c => c[^1] ^= 1);
-        byte[] dxn = Copy(crn, c => c[18] = 7);
-        byte[] cube = Copy(crn, c => c[17] = 6);
-        foreach (byte[] broken in new[] { [], garbage, crn[..(crn.Length / 2)], crn[..40], header, data, Recheck(dxn), Recheck(cube) })
+        byte[] header = CrnFiles.Copy(crn, c => c[13] ^= 1);
+        byte[] data = CrnFiles.Copy(crn, c => c[^1] ^= 1);
+        byte[] dxn = CrnFiles.Copy(crn, c => c[18] = 7);
+        byte[] cube = CrnFiles.Copy(crn, c => c[17] = 6);
+        foreach (byte[] broken in new[] { [], garbage, crn[..(crn.Length / 2)], crn[..40], header, data, CrnFiles.Recheck(dxn), CrnFiles.Recheck(cube) })
         {
             Assert.Null(Crunch.Read(broken));
             Assert.Null(Crunch.Unpack(broken, 0));
@@ -120,7 +70,7 @@ public class CrunchTests
         // Every byte changed, its checks made right (as a made-up file would have them): unpacked or null, whole blocks.
         foreach (string name in new[] { "crunch-dxt1.crn", "crunch-dxt5.crn" })
         {
-            byte[] crn = Fixture(name);
+            byte[] crn = CrnFiles.Fixture(name);
             var info = Crunch.Read(crn)!;
             for (int i = 6; i < crn.Length; i++)
             {
@@ -132,7 +82,7 @@ public class CrunchTests
                 {
                     byte[] changed = (byte[])crn.Clone();
                     changed[i] ^= change;
-                    Recheck(changed);
+                    CrnFiles.Recheck(changed);
                     for (int level = 0; level < info.Levels; level++)
                     {
                         if (Crunch.Unpack(changed, level) is { } blocks)

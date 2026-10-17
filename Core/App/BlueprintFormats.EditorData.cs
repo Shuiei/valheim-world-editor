@@ -15,7 +15,7 @@ public static partial class BlueprintFormats
     /// </summary>
     /// <param name="line">The whole line.</param>
     /// <param name="data">The fields by piece line, added to.</param>
-    private static void ReadDataLine(string line, Dictionary<int, List<Editing.ObjectField>> data)
+    internal static void ReadDataLine(string line, Dictionary<int, List<Editing.ObjectField>> data)
     {
         string rest = line[DataHeader.Length..];
         int bar = rest.IndexOf(';');
@@ -33,7 +33,7 @@ public static partial class BlueprintFormats
     /// <param name="lines">Each piece's line among the pieces, in the same order.</param>
     /// <param name="data">The fields by that line.</param>
     /// <param name="ruin">Whether the file is a ruin.</param>
-    private static void AttachData(List<Piece> pieces, List<int> lines, Dictionary<int, List<Editing.ObjectField>> data, bool ruin)
+    internal static void AttachData(List<Piece> pieces, List<int> lines, Dictionary<int, List<Editing.ObjectField>> data, bool ruin)
     {
         if (data.Count > 0 || ruin)
         {

@@ -8,7 +8,7 @@ namespace TerrainEditor.App;
 /// </summary>
 public sealed partial class GameBundles
 {
-    private sealed partial class ModelWalk
+    internal sealed partial class ModelWalk
     {
         internal void RoomSkips(long goPid, bool isRoot)
         {

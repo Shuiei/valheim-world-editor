@@ -86,17 +86,17 @@ public static partial class GameCatalogues
     /// <summary>
     /// Rounded to n decimals: floats only (an int stays one).
     /// </summary>
-    private static object? Round(object? v, int n) => v is double d ? CatalogueJson.Round(d, n) : v;
+    internal static object? Round(object? v, int n) => v is double d ? CatalogueJson.Round(d, n) : v;
 
     /// <summary>
     /// Rounded half to even at n decimals, as Python's round.
     /// </summary>
-    private static double R(double v, int n) => CatalogueJson.Round(v, n);
+    internal static double R(double v, int n) => CatalogueJson.Round(v, n);
 
     /// <summary>
     /// The larger, the first when they are equal (as Python's max: -0.0 before 0 stays -0.0).
     /// </summary>
-    private static double Max(double a, double b) => b > a ? b : a;
+    internal static double Max(double a, double b) => b > a ? b : a;
 
     /// <summary>
     /// Whether a MonoBehaviour's fields are a Piece's (m_category, m_resources, m_craftingStation).

@@ -8,7 +8,7 @@ namespace TerrainEditor.App;
 /// </summary>
 public sealed partial class GameBundles
 {
-    private sealed partial class ModelWalk
+    internal sealed partial class ModelWalk
     {
         /// <summary>
         /// The reader of the game's bundles, for the objects' fields and the references between them.

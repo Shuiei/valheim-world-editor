@@ -8,7 +8,7 @@ public static partial class GameCatalogues
     /// <summary>
     /// A value read by <c>Py</c> as a double (a bool as 0 or 1); throws InvalidDataException for anything else.
     /// </summary>
-    private static double Num(object? v) => v switch
+    internal static double Num(object? v) => v switch
     {
         long l => l,
         double d => d,
@@ -19,7 +19,7 @@ public static partial class GameCatalogues
     /// <summary>
     /// As Python's int(): floats cut toward zero.
     /// </summary>
-    private static long Int(object? v) => v switch
+    internal static long Int(object? v) => v switch
     {
         long l => l,
         double d => (long)d,
@@ -30,7 +30,7 @@ public static partial class GameCatalogues
     /// <summary>
     /// Whether a value is true as Python sees it (0, empty strings and empty collections are not).
     /// </summary>
-    private static bool Truthy(object? v) => v switch
+    internal static bool Truthy(object? v) => v switch
     {
         null => false,
         bool b => b,

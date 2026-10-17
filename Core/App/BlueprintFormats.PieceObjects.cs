@@ -17,7 +17,7 @@ public static partial class BlueprintFormats
     /// <param name="cx">The copy's centre, on x.</param>
     /// <param name="cz">The copy's centre, on z.</param>
     /// <param name="minY">The height the copy's pieces rest on.</param>
-    private static JsonArray PieceObjects(List<Piece> pieces, float cx, float cz, float minY)
+    internal static JsonArray PieceObjects(List<Piece> pieces, float cx, float cz, float minY)
     {
         JsonArray objects = [];
         foreach (Piece p in pieces)

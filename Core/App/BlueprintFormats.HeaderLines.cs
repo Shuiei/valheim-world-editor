@@ -23,7 +23,7 @@ public static partial class BlueprintFormats
     /// mod's section (InfinityHammer's #TerrainHeight...) as "skip", which is left out like PlanBuild does.
     /// </summary>
     /// <param name="line">The "#" line.</param>
-    private static string SectionAfter(string line) => line switch
+    internal static string SectionAfter(string line) => line switch
     {
         "#SnapPoints" => "snap",
         "#Terrain" => "terrain",

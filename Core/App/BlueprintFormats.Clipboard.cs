@@ -83,7 +83,7 @@ public static partial class BlueprintFormats
     /// </summary>
     /// <returns>The grid's width and height in points, the heights in cm (-32768: none), the weights and the paint (1/255 each).</returns>
     /// <exception cref="InvalidDataException">The entries span more than <c>MaxGround</c> metres.</exception>
-    private static (int W, int H, int[] Rel, int[] Wt, int[] Pnt) TerrainGrid(Parsed bp, float cx, float cz, float minY, float spanW, float spanH)
+    internal static (int W, int H, int[] Rel, int[] Wt, int[] Pnt) TerrainGrid(Parsed bp, float cx, float cz, float minY, float spanW, float spanH)
     {
         if (spanW > MaxGround || spanH > MaxGround)
         {
