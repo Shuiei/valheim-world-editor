@@ -482,7 +482,10 @@ internal sealed partial class DungeonDresser
         f.Take(u, v, MathF.Sqrt(w * w + d * d) / 2 + 0.3f);
     }
 
-    /// <summary>Steps up a platform's side: a row of stone stairs w metres wide at (u, v), rising toward yaw.</summary>
+    /// <summary>
+    /// Steps up a platform's side: a row of stone stairs w metres wide at (u, v), turned to yaw. A stone stair climbs
+    /// toward its back, so they rise away from yaw: steps before a platform at +v are turned 180.
+    /// </summary>
     private void Steps(Frame f, float u, float v, float yaw, float w)
     {
         for (float du = -w / 2 + 1; du < w / 2; du += 2)
@@ -1545,7 +1548,7 @@ internal sealed partial class DungeonDresser
             case 1:
                 Plinth(f, 0, 0.5f, 4, 4);
                 _o.Add("crypt_skeleton_chest", f.W(0, 0.5f, f.F + 1 + Lift * 2), f.Yaw(90));
-                Steps(f, 0, -2.5f, 0, 2);
+                Steps(f, 0, -2.5f, 180, 2);
                 foreach (var (du, dv) in new[] { (-2.6f, -2.6f), (2.6f, -2.6f), (-2.6f, 3.6f), (2.6f, 3.6f) })
                 {
                     Put(f, "skull_pile", du, dv, R(0, 360), 0.5f);
@@ -1674,7 +1677,7 @@ internal sealed partial class DungeonDresser
             case 1:
                 Plinth(f, 0, 0.5f, 4, 4);
                 _o.Add(altar, f.W(0, 0.5f, f.F + 1 + Lift * 2), f.Yaw(180));
-                Steps(f, 0, -2.5f, 0, 2);
+                Steps(f, 0, -2.5f, 180, 2);
                 float r = Math.Min(f.HalfA, f.HalfD) - 1.4f;
                 for (int i = 0; i < 6; i++)
                 {
@@ -1769,7 +1772,7 @@ internal sealed partial class DungeonDresser
                 // A memorial stone on a plinth, snow lanterns before it.
                 Plinth(f, 0, 0.5f, 2, 2);
                 _o.Add(One("MemorialStone_Medium", "MemorialStone_Large"), f.W(0, 0.5f, f.F + 1 + Lift * 2 + DungeonProps.Foot("MemorialStone_Medium")), f.Yaw(180));
-                Steps(f, 0, -1.5f, 0, 2);
+                Steps(f, 0, -1.5f, 180, 2);
                 Put(f, "piece_snowlantern", -1.6f, -1.6f, 0, 0.3f);
                 Put(f, "piece_snowlantern", 1.6f, -1.6f, 0, 0.3f);
                 Pilasters(f, 4);
@@ -1784,7 +1787,7 @@ internal sealed partial class DungeonDresser
             case 1:
                 Plinth(f, 0, 0, 4, 4);
                 _o.Add(One("RockDolmen_1", "RockDolmen_2", "RockDolmen_3"), f.W(0, 0, f.F + 1 + Lift * 2 + DungeonProps.Foot("RockDolmen_1")), f.Yaw(R(0, 360)));
-                Steps(f, 0, -3, 0, 2);
+                Steps(f, 0, -3, 180, 2);
                 Brazier(f, -(f.HalfA - 1.1f), -(f.HalfD - 1.1f));
                 Brazier(f, f.HalfA - 1.1f, -(f.HalfD - 1.1f));
                 Pilasters(f, 4);
@@ -1829,7 +1832,7 @@ internal sealed partial class DungeonDresser
         {
             Plinth(f, 0, 1, 4, 4);
             _o.Add("crypt_skeleton_chest", f.W(0, 1, f.F + 1 + Lift * 2), f.Yaw(90));
-            Steps(f, 0, -2, 0, 2);
+            Steps(f, 0, -2, 180, 2);
             string[] statues = _decay > 0.4f ? ["StatueFreya_broken_left", "StatueThor_broken_top"] : ["StatueFreya", "StatueThor"];
             Put(f, statues[0], -(f.HalfA - 1), f.HalfD - 1, 180, 0.6f);
             Put(f, statues[1], f.HalfA - 1, f.HalfD - 1, 180, 0.6f);
