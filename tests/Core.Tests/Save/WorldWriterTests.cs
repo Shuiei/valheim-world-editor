@@ -1,74 +1,18 @@
-using System.Numerics;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
 
+using static WorldEditor.Tests.WorldWriterTestHelpers;
+
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// The world writer's remaining edges: a world with no terrain object to copy for new ground, a chunk file name already
-/// taken, the save formats it keeps (41, 42 and a world the game migrated) and those it refuses, terrain templates in an
-/// unexpected layout, a template that cannot be read, and a value that cannot read back the same (the read-back check
-/// restores the backup).
+/// The world writer's ground: a zone the game never edited gets its ground, a new ground needs a terrain object to copy
+/// (and reads it once), a terrain object in another layout is copied past, an unreadable template is a result, and an edited
+/// zone whose terrain objects are deleted gets a new one.
 /// </summary>
 public class WorldWriterTests
 {
-    /// <summary>
-    /// Every file of the folder, by name.
-    /// </summary>
-    private static Dictionary<string, byte[]> Files(string dir) => Directory.GetFiles(dir).ToDictionary(f => Path.GetFileName(f), File.ReadAllBytes);
-
-    /// <summary>
-    /// Asserts the folder holds the same files with the same bytes as before.
-    /// </summary>
-    private static void AssertSame(Dictionary<string, byte[]> before, string dir)
-    {
-        var after = Files(dir);
-        Assert.Equal(before.Keys.Order(), after.Keys.Order());
-        foreach (var (name, bytes) in before)
-        {
-            Assert.True(bytes.AsSpan().SequenceEqual(after[name]), $"{name} changed");
-        }
-    }
-
-    /// <summary>
-    /// A zone that has world data (a chunk file) but no ground edits yet.
-    /// </summary>
-    private static (int X, int Z) FreshZone(WorldSave world) => FreshZones(world).First();
-
-    /// <summary>
-    /// Zones that have world data (a chunk file) but no ground edits yet, nearest the first edited zone first.
-    /// </summary>
-    private static IEnumerable<(int X, int Z)> FreshZones(WorldSave world)
-    {
-        var t = world.TerrainZones[0];
-        for (int r = 1; r < 6; r++)
-        {
-            for (int dz = -r; dz <= r; dz++)
-            {
-                for (int dx = -r; dx <= r; dx++)
-                {
-                    int x = t.ZoneX + dx, z = t.ZoneZ + dz;
-                    if (Math.Max(Math.Abs(dx), Math.Abs(dz)) == r && ChunkMath.Find(world.Chunks, x, z) != null && world.TerrainZones.All(q => q.ZoneX != x || q.ZoneZ != z))
-                    {
-                        yield return (x, z);
-                    }
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// A ground edit of this zone raising one point by this many metres.
-    /// </summary>
-    private static ZoneEdit Raised(int zx, int zz, float by, int point)
-    {
-        var e = new ZoneEdit(zx, zz);
-        e.Modified[point] = true;
-        e.Level[point] = by;
-        return e;
-    }
-
     [Fact]
     public void NewGroundNeedsATerrainObjectToCopy()
     {
@@ -85,20 +29,29 @@ public class WorldWriterTests
     }
 
     [Fact]
-    public void ATakenChunkFileNameIsSkipped()
+    public void GroundInAZoneTheGameNeverEditedIsCreated()
     {
         using var w = new TempWorld();
-        var world = w.Load();
-        var t = world.TerrainZones[0];
-        var file = t.Source!.File;
-        // Something already uses the next version's name (a crashed save, say): the writer goes past it.
-        string taken = Path.Combine(w.Dir, ChunkFile.NameFor(file.Chunk, file.Size, file.Version + 1));
-        File.WriteAllText(taken, "not ours");
-        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 1.5f, 500)]);
+        WorldSave world = w.Load();
+        var (x, z) = FreshZone(world);
+        var edit = Raised(x, z, 2.5f, 100, 101, 2000);
+        edit.PaintModified[300] = true;
+        edit.Paint[300 * 4] = 1f;
+        var r = WorldWriter.Save(world, [edit]);
         Assert.True(r.Saved, r.Message);
-        Assert.True(File.Exists(Path.Combine(w.Dir, ChunkFile.NameFor(file.Chunk, file.Size, file.Version + 2))));
-        Assert.Equal("not ours", File.ReadAllText(taken));
-        Assert.Equal(1.5f, WorldSave.Load(w.Dir).TerrainZones.Single(q => q.ZoneX == t.ZoneX && q.ZoneZ == t.ZoneZ).LevelDelta[500], 4);
+        Assert.Equal(0, r.ZonesWritten);
+        Assert.Equal(1, r.ZonesCreated);
+        var again = WorldSave.Load(w.Dir);
+        Assert.Equal(world.ObjectCount + 1, again.ObjectCount);
+        var t = again.TerrainZones.Single(q => q.ZoneX == x && q.ZoneZ == z);
+        Assert.True(t.ModifiedHeight[100] && t.ModifiedHeight[2000]);
+        Assert.Equal(2.5f, t.LevelDelta[2000], 4);
+        Assert.False(t.ModifiedHeight[102]);
+        Assert.True(t.ModifiedPaint[300]);
+        Assert.Equal(1f, t.Paint[300].X, 3);
+        // The zone that had ground before is as it was.
+        var old = world.TerrainZones[0];
+        Assert.Equal(old.LevelDelta, again.TerrainZones.Single(q => q.ZoneX == old.ZoneX && q.ZoneZ == old.ZoneZ).LevelDelta);
     }
 
     [Fact]
@@ -116,125 +69,6 @@ public class WorldWriterTests
 
         Assert.True(r.Saved, r.Message);
         Assert.Equal(1.5f, WorldSave.Load(w.Dir).TerrainZones.Single(q => q.ZoneX == t.ZoneX && q.ZoneZ == t.ZoneZ).LevelDelta[500], 4);
-    }
-
-    [Fact]
-    public void TheMessageCountsOnlyWhatTheResetCleared()
-    {
-        // The message took the deleted ids' count from the reset's: an id in the reset zone, a repeated id or one past
-        // the list made "objects cleared" too low, or negative.
-        using var w = new TempWorld();
-        var world = w.Load();
-        var t = world.TerrainZones[0];
-        int[] inZone = [.. Enumerable.Range(0, world.ObjectRefs.Count).Where(i => world.ObjectRefs[i].Zone == (t.ZoneX, t.ZoneZ) && world.ObjectRefs[i].Prefab != WorldWriter.TombstonePrefab)];
-        Assert.True(inZone.Length > 1);
-
-        var r = WorldWriter.Save(world, [], deleted: [inZone[0], inZone[0], world.ObjectRefs.Count + 5], resets: [new ZoneReset(t.ZoneX, t.ZoneZ, false, true)]);
-
-        Assert.True(r.Saved, r.Message);
-        Assert.Contains("1 deleted object(s)", r.Message);
-        Assert.Contains($"({inZone.Length - 1} objects cleared)", r.Message);
-    }
-
-    /// <summary>
-    /// The save format a file of a save names: a short at the head of chunk files and the index, an int at the head of
-    /// the zone file and the marker, and after the length in the metadata.
-    /// </summary>
-    private static int Format(string path)
-    {
-        byte[] b = File.ReadAllBytes(path);
-        return Path.GetExtension(path) switch
-        {
-            ".chunk" or ".chunks" => BitConverter.ToInt16(b),
-            ".fwl2" => BitConverter.ToInt32(b, 4),
-            _ => BitConverter.ToInt32(b),
-        };
-    }
-
-    [Theory]
-    [InlineData("CITest", 41)]
-    [InlineData("CITest42", 42)]
-    public void AWorldIsSavedInTheFormatItWasReadIn(string fixture, int format)
-    {
-        // The writer took only format 41 (Valheim 1.0.20 saves 42) and wrote 41 into the index and the marker.
-        using var w = new TempWorld(fixture);
-        var world = w.Load();
-        var t = world.TerrainZones[0];
-        var (id, prefab, position, _, _) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
-        var tree = new NewObject(-1, prefab, position + new Vector3(2, 0, 2), Vector3.Zero, 0f);
-
-        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 1.5f, 500)], deleted: [id], added: [tree]);
-
-        Assert.True(r.Saved, r.Message);
-        Assert.All(r.Files, f => Assert.Equal(format, Format(f)));
-        var again = WorldSave.Load(w.Dir);
-        Assert.Equal((format, world.SaveNumber + 1), (again.SaveVersion, again.SaveNumber));
-        Assert.All(again.Chunks, c => Assert.Equal(format, c.WorldVersion));
-        Assert.Equal(1.5f, again.TerrainZones.Single(q => q.ZoneX == t.ZoneX && q.ZoneZ == t.ZoneZ).LevelDelta[500], 4);
-        Assert.DoesNotContain(again.Objects, o => o.Prefab == prefab && Vector3.Distance(o.Position, position) < 0.01f);
-        Assert.Contains(again.Objects, o => o.Prefab == prefab && Vector3.Distance(o.Position, tree.Position) < 0.01f);
-    }
-
-    [Fact]
-    public void EachChunkFileKeepsItsFormatInAWorldTheGameMigrated()
-    {
-        // Valheim 1.0.20 saves a format 41 world with a 42 index and leaves the chunk files it does not write again in
-        // 41: here the test world's ground chunk as the game left it, the rest as it wrote it.
-        using var w = new TempWorld("CITest42");
-        ChunkFile ground = w.Load().TerrainZones[0].Source!.File;
-        File.Copy(Path.Combine(Fixtures.World, "20_20__1_1.chunk"), Path.Combine(w.Dir, ground.FileName), overwrite: true);
-        var world = w.Load();
-        var t = world.TerrainZones[0];
-        Assert.Equal(41, t.Source!.File.WorldVersion);
-
-        var r = WorldWriter.Save(world, [Raised(t.ZoneX, t.ZoneZ, 1.5f, 500)]);
-
-        Assert.True(r.Saved, r.Message);
-        var again = WorldSave.Load(w.Dir);
-        Assert.Equal(42, again.SaveVersion);
-        Assert.Equal(41, again.TerrainZones[0].Source!.File.WorldVersion);
-        Assert.All(again.Chunks.Where(c => c.Chunk != ground.Chunk), c => Assert.Equal(42, c.WorldVersion));
-        Assert.Equal(1.5f, again.TerrainZones[0].LevelDelta[500], 4);
-    }
-
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void ASaveFormatNewerThanTheEditorKnowsIsRefused(bool inTheIndex)
-    {
-        // In the index, or in one chunk file only (a newer game wrote that one again).
-        using var w = new TempWorld("CITest42");
-        var world = w.Load();
-        if (inTheIndex)
-        {
-            world.SaveVersion = WorldVersion.Latest + 1;
-        }
-        else
-        {
-            world.Chunks[^1].WorldVersion = WorldVersion.Latest + 1;
-        }
-        var before = Files(w.Dir);
-
-        var r = WorldWriter.Save(world, [Raised(world.TerrainZones[0].ZoneX, world.TerrainZones[0].ZoneZ, 1, 100)]);
-
-        Assert.False(r.Saved);
-        Assert.Equal("This world uses save format 43; the editor saves only formats 41 to 42.", r.Message);
-        AssertSame(before, w.Dir);
-    }
-
-    [Fact]
-    public void AnOlderSaveFormatIsNamedFromTheChunkThatHasIt()
-    {
-        // It named the first chunk file's format: "uses save format 41; the writer only supports 41".
-        using var w = new TempWorld();
-        var world = w.Load();
-        Assert.True(world.Chunks.Count > 1);
-        world.Chunks[^1].WorldVersion = 39;
-
-        var r = WorldWriter.Save(world, [Raised(world.TerrainZones[0].ZoneX, world.TerrainZones[0].ZoneZ, 1, 100)]);
-
-        Assert.False(r.Saved);
-        Assert.StartsWith("This world uses save format 39;", r.Message);
     }
 
     [Fact]
@@ -309,41 +143,6 @@ public class WorldWriterTests
         var r = WorldWriter.Save(world, [Raised(x, z, 1, 100)]);
         Assert.False(r.Saved);
         Assert.StartsWith("Saving failed", r.Message);
-        AssertSame(before, w.Dir);
-    }
-
-    [Fact]
-    public void AValueThatDoesNotReadBackTheSameRestoresTheBackup()
-    {
-        using var w = new TempWorld();
-        var world = w.Load();
-        var t = world.TerrainZones[0];
-        var e = new EditStore(world).Get(t.ZoneX, t.ZoneZ)!.Clone();
-        // Not a number never equals itself: the read-back check finds the zone different.
-        e.Modified[500] = true;
-        e.Level[500] = float.NaN;
-        var before = Files(w.Dir);
-        var r = WorldWriter.Save(world, [e]);
-        Assert.False(r.Saved);
-        Assert.StartsWith("The saved world did not read back correctly (zone", r.Message);
-        Assert.Contains("differs at point 500", r.Message);
-        Assert.Contains("Nothing changed", r.Message);
-        AssertSame(before, w.Dir);
-    }
-
-    [Fact]
-    public void PaintThatDoesNotReadBackTheSameRestoresTheBackup()
-    {
-        using var w = new TempWorld();
-        var world = w.Load();
-        var t = world.TerrainZones[0];
-        var e = new EditStore(world).Get(t.ZoneX, t.ZoneZ)!.Clone();
-        e.PaintModified[600] = true;
-        e.Paint[600 * 4] = float.NaN;
-        var before = Files(w.Dir);
-        var r = WorldWriter.Save(world, [e]);
-        Assert.False(r.Saved);
-        Assert.Contains("paint differs at point 600", r.Message);
         AssertSame(before, w.Dir);
     }
 }

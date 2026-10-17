@@ -74,14 +74,22 @@ public class ObjectDataTests
         Assert.Equal(bytes, back.Write());
     }
 
+    /// <summary>
+    /// The first wooden chest of the test world: its id and its object data.
+    /// </summary>
+    private static (int Id, ZdoData Data) FirstChest(WorldSave world)
+    {
+        int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
+        return (chest, ZdoData.Parse(world.ObjectBytes(chest)));
+    }
+
     [Fact]
     public void AnEditedChestAndSignAreSavedWithTheirNewData()
     {
         using var w = new TempWorld();
         WorldSave world = w.Load();
         var edits = new EditStore(world);
-        int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
-        var z = ZdoData.Parse(world.ObjectBytes(chest));
+        var (chest, z) = FirstChest(world);
         var inv = new InventoryData();
         inv.Items.Add(new InventoryData.Item { Prefab = Fixtures.Hash("Wood"), Stack = 42 });
         z.SetBytes(StableHash.Of("items"), inv.Write());
@@ -109,8 +117,7 @@ public class ObjectDataTests
     {
         using var w = new TempWorld();
         WorldSave world = w.Load();
-        int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
-        var z = ZdoData.Parse(world.ObjectBytes(chest));
+        var (_, z) = FirstChest(world);
         z.Set("strings", StableHash.Of("text"), "Hello");
         z.Set("vec3", StableHash.Of("scale"), "2 2 2");
         z.Set("longs", ObjectField.CreatorKey, "123");
@@ -131,8 +138,7 @@ public class ObjectDataTests
     {
         using var w = new TempWorld();
         WorldSave world = w.Load();
-        int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
-        var z = ZdoData.Parse(world.ObjectBytes(chest));
+        var (_, z) = FirstChest(world);
         z.Set("strings", StableHash.Of("text"), "Moved");
         var moved = new NewObject(-2, z.Prefab, z.Position + new Vector3(3, 0, 0), new Vector3(0, 90, 0), 0f, null, false, z.Serialize());
         var m = ZdoData.Parse(world.NewObjectBytes(moved, _ => throw new InvalidOperationException("no source needed"))!);

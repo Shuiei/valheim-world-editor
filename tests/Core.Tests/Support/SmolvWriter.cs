@@ -5,9 +5,10 @@ namespace WorldEditor.Tests;
 /// instruction's length and op as one varint, its type and result ids as varints (results as deltas from the last),
 /// decorations' targets as deltas, the ids SMOL-V takes as deltas from the result, the rest as varints or words. Only
 /// the ops the tests' programs use are known here (SMOL-V's data for them); member decorations of one structure in a
-/// row are merged, and vector shuffles of small components written compact, as SMOL-V does.
+/// row are merged, and vector shuffles of small components written compact, as SMOL-V does. The member decorations and
+/// the compact shuffles are in SmolvWriter.Members.cs.
 /// </summary>
-public static class SmolvWriter
+public static partial class SmolvWriter
 {
     /// <summary>
     /// SMOL-V's data for the ops used: has a result id, has a type id, how many ids after them are deltas from the
@@ -56,28 +57,22 @@ public static class SmolvWriter
     private static int Known(int version) => version == 0 ? 331 : 367;
 
     /// <summary>
+    /// Zigzag: a signed delta as an unsigned number, small ones small.
+    /// </summary>
+    private static uint Zig(uint delta) => (uint)(((int)delta << 1) ^ ((int)delta >> 31));
+
+    /// <summary>
     /// A SPIR-V module (words) as SMOL-V of this encoding version (0 or 1).
     /// </summary>
     public static byte[] Encode(uint[] spirv, int version = 1)
     {
-        var o = new List<byte>();
-        void Word(uint v) => o.AddRange(BitConverter.GetBytes(v));
-        void Varint(uint v)
-        {
-            while (v >= 128)
-            {
-                o.Add((byte)(v | 128));
-                v >>= 7;
-            }
-            o.Add((byte)v);
-        }
-        static uint Zig(uint delta) => (uint)(((int)delta << 1) ^ ((int)delta >> 31));
-        o.AddRange("LOMS"u8.ToArray());
-        Word((spirv[1] & 0xFFFFFF) | ((uint)version << 24));
-        Word(spirv[2]);
-        Word(spirv[3]);
-        Word(spirv[4]);
-        Word((uint)spirv.Length * 4);
+        var o = new SmolvBuffer();
+        o.AddBytes("LOMS"u8.ToArray());
+        o.Word((spirv[1] & 0xFFFFFF) | ((uint)version << 24));
+        o.Word(spirv[2]);
+        o.Word(spirv[3]);
+        o.Word(spirv[4]);
+        o.Word((uint)spirv.Length * 4);
         uint prevResult = 0, prevDecorate = 0;
         int i = 5;
         while (i < spirv.Length)
@@ -85,91 +80,41 @@ public static class SmolvWriter
             int len = (int)(spirv[i] >> 16), op = (int)(spirv[i] & 0xFFFF);
             // A shuffle of components 0 to 3 only, of at most four: compact (its components in one byte).
             bool compact = op == 79 && len <= 9 && Enumerable.Range(5, len - 5).All(k => spirv[i + k] < 4);
-            int extra = op switch
-            {
-                79 => 4,
-                71 => 2,
-                61 or 65 => 3,
-                _ => 0,
-            };
+            int extra = ExtraWords(op);
             int raw = compact ? 13 : Swap.GetValueOrDefault(op, op);
             uint l = (uint)(len - 1 - extra);
-            Varint(((l >> 4) << 20) | (((uint)raw & 0xFFF0) << 4) | ((l & 0xF) << 4) | ((uint)raw & 0xF));
+            o.Varint(((l >> 4) << 20) | (((uint)raw & 0xFFF0) << 4) | ((l & 0xF) << 4) | ((uint)raw & 0xF));
             var info = op < Known(version) ? Ops[op] : (Result: false, Type: false, Deltas: 0, Varints: false);
             int k = 1;
             if (info.Type)
             {
-                Varint(spirv[i + k++]);
+                o.Varint(spirv[i + k++]);
             }
             if (info.Result)
             {
                 uint result = spirv[i + k++];
-                Varint(Zig(result - prevResult));
+                o.Varint(Zig(result - prevResult));
                 prevResult = result;
             }
             uint target = 0;
             if (op is 71 or 72)
             {
                 target = spirv[i + k++];
-                Varint(Zig(target - prevDecorate));
+                o.Varint(Zig(target - prevDecorate));
                 prevDecorate = target;
             }
             if (op == 72)
             {
-                // The member decorations of this structure in a row, each: index (delta), decoration, its literals
-                // (an offset as a delta from the last).
-                var members = new List<int> { i };
-                int next = i + len;
-                while (next < spirv.Length && (spirv[next] & 0xFFFF) == 72 && spirv[next + 1] == target)
-                {
-                    members.Add(next);
-                    next += (int)(spirv[next] >> 16);
-                }
-                o.Add((byte)members.Count);
-                uint prevIndex = 0, prevOffset = 0;
-                foreach (int m in members)
-                {
-                    int mlen = (int)(spirv[m] >> 16);
-                    uint index = spirv[m + 2], dec = spirv[m + 3];
-                    Varint(index - prevIndex);
-                    prevIndex = index;
-                    Varint(dec);
-                    int known = dec is 0 or (>= 2 and <= 5) ? 0 : dec is >= 29 and <= 37 ? 1 : -1;
-                    if (known < 0)
-                    {
-                        Varint((uint)(mlen - 4));
-                    }
-                    if (dec == 35)
-                    {
-                        Varint(spirv[m + 4] - prevOffset);
-                        prevOffset = spirv[m + 4];
-                    }
-                    else
-                    {
-                        for (int w = 4; w < mlen; w++)
-                        {
-                            Varint(spirv[m + w]);
-                        }
-                    }
-                }
-                i = next;
+                i = MemberDecorations(o, spirv, i, len, target);
                 continue;
             }
             for (int d = 0; d < info.Deltas && k < len; d++, k++)
             {
-                Varint(Zig(prevResult - spirv[i + k]));
+                o.Varint(Zig(prevResult - spirv[i + k]));
             }
             if (compact)
             {
-                byte s = 0;
-                foreach (var (at, shift) in new[] { (5, 6), (6, 4), (7, 2), (8, 0) })
-                {
-                    if (len > at)
-                    {
-                        s |= (byte)(spirv[i + at] << shift);
-                    }
-                }
-                o.Add(s);
+                o.Add(CompactComponents(spirv, i, len));
             }
             else
             {
@@ -177,16 +122,16 @@ public static class SmolvWriter
                 {
                     if (info.Varints)
                     {
-                        Varint(spirv[i + k]);
+                        o.Varint(spirv[i + k]);
                     }
                     else
                     {
-                        Word(spirv[i + k]);
+                        o.Word(spirv[i + k]);
                     }
                 }
             }
             i += len;
         }
-        return [.. o];
+        return o.ToArray();
     }
 }

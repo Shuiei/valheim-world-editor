@@ -9,60 +9,12 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// The mods' asset bundles (ModBundles) found in the BepInEx plugins folders of the settings, as files of their own or
 /// embedded in a mod's DLL, copied into the data folder (the newest of the same one in several folders) and read from
-/// there; copied again only when the mods change; an LZMA bundle packed again as LZ4. Runs alone, in a pretend home
-/// (the data folder's environment variables point at a temporary folder, put back afterwards), without the player's
-/// own Valheim and profiles.
+/// there; copied again only when the mods change; an LZMA bundle packed again as LZ4. Runs alone, without the player's own
+/// Valheim and profiles.
 /// </summary>
 [Collection("DataDir")]
-public sealed class ModBundlesTests : IDisposable
+public sealed class ModBundlesTests : PretendHomeTestBase
 {
-    private static readonly string[] Vars = ["HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "LOCALAPPDATA"];
-    private readonly Dictionary<string, string?> _old = Vars.ToDictionary(v => v, Environment.GetEnvironmentVariable);
-    private readonly bool _defaults = LocalGame.SearchDefaultPlaces;
-    private readonly string _home = Path.Combine(Path.GetTempPath(), "vwe-modbundles-" + Guid.NewGuid().ToString("N")[..8]);
-
-    public ModBundlesTests()
-    {
-        Directory.CreateDirectory(_home);
-        Environment.SetEnvironmentVariable("HOME", _home);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(_home, ".config"));
-        Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(_home, ".local", "share"));
-        Environment.SetEnvironmentVariable("LOCALAPPDATA", Path.Combine(_home, "AppData", "Local"));
-        // Only the folders a test gives.
-        LocalGame.SearchDefaultPlaces = false;
-    }
-
-    /// <summary>
-    /// Puts the environment and the default places' search back, and deletes the pretend home.
-    /// </summary>
-    public void Dispose()
-    {
-        foreach (var (k, v) in _old)
-        {
-            Environment.SetEnvironmentVariable(k, v);
-        }
-        LocalGame.SearchDefaultPlaces = _defaults;
-        if (Directory.Exists(_home))
-        {
-            Directory.Delete(_home, true);
-        }
-    }
-
-    /// <summary>
-    /// A profile's BepInEx plugins folder in the pretend home (made).
-    /// </summary>
-    private string Plugins(string profile)
-    {
-        string plugins = Path.Combine(_home, profile, "BepInEx", "plugins");
-        Directory.CreateDirectory(plugins);
-        return plugins;
-    }
-
-    /// <summary>
-    /// Settings that name these profiles' BepInEx folders.
-    /// </summary>
-    private AppSettings Settings(params string[] profiles) => new() { BepInExFolders = [.. profiles.Select(p => Path.Combine(_home, p, "BepInEx"))] };
-
     /// <summary>
     /// A bundle (LZ4 unless stored) with one mesh of this name.
     /// </summary>
@@ -98,7 +50,7 @@ public sealed class ModBundlesTests : IDisposable
         var reader = ModBundles.Reader(Settings("Default"))!;
 
         Assert.Equal(ModBundles.Folder, reader.Folder);
-        Assert.StartsWith(_home, ModBundles.Folder, StringComparison.Ordinal);
+        Assert.StartsWith(Home, ModBundles.Folder, StringComparison.Ordinal);
         Assert.Equal(["FineMod.FineMod.Assets.finebundle", "loose_bundle"], Directory.GetFiles(ModBundles.Folder).Select(Path.GetFileName).Order(StringComparer.Ordinal));
         Assert.Equal(own, File.ReadAllBytes(Path.Combine(ModBundles.Folder, "FineMod.FineMod.Assets.finebundle")));
         Assert.Equal(loose, File.ReadAllBytes(Path.Combine(ModBundles.Folder, "loose_bundle")));
@@ -119,7 +71,7 @@ public sealed class ModBundlesTests : IDisposable
         Assert.Empty(ModBundles.Find(Settings("Plain")));
         Assert.Null(ModBundles.Reader(Settings("Plain")));
         // No plugins folder at all.
-        Directory.CreateDirectory(Path.Combine(_home, "Empty", "BepInEx"));
+        Directory.CreateDirectory(Path.Combine(Home, "Empty", "BepInEx"));
         Assert.Null(ModBundles.Reader(Settings("Empty")));
     }
 
@@ -218,7 +170,7 @@ public sealed class ModBundlesTests : IDisposable
 
         Assert.Equal(AssetBundleCompressionType.LZ4, CompressionOf(lz4));
         // It reads as the same bundle.
-        string dir = Path.Combine(_home, "bundles");
+        string dir = Path.Combine(Home, "bundles");
         Directory.CreateDirectory(dir);
         File.WriteAllBytes(Path.Combine(dir, "lzma"), lz4);
         var bundles = new GameBundles(dir, null);

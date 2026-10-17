@@ -35,6 +35,14 @@ public class CrunchTests
         return (ushort)~crc;
     }
 
+    /// <summary>A copy of a file, changed as given.</summary>
+    private static byte[] Copy(byte[] crn, Action<byte[]> change)
+    {
+        byte[] copy = (byte[])crn.Clone();
+        change(copy);
+        return copy;
+    }
+
     /// <summary>The file with its data's and header's CRCs made right again (when its sizes are inside it).</summary>
     private static byte[] Recheck(byte[] crn)
     {
@@ -95,14 +103,10 @@ public class CrunchTests
         byte[] crn = Fixture("crunch-dxt5.crn");
         byte[] garbage = new byte[crn.Length];
         new Random(5).NextBytes(garbage);
-        byte[] header = (byte[])crn.Clone();
-        header[13] ^= 1;
-        byte[] data = (byte[])crn.Clone();
-        data[^1] ^= 1;
-        byte[] dxn = (byte[])crn.Clone();
-        dxn[18] = 7;
-        byte[] cube = (byte[])crn.Clone();
-        cube[17] = 6;
+        byte[] header = Copy(crn, c => c[13] ^= 1);
+        byte[] data = Copy(crn, c => c[^1] ^= 1);
+        byte[] dxn = Copy(crn, c => c[18] = 7);
+        byte[] cube = Copy(crn, c => c[17] = 6);
         foreach (byte[] broken in new[] { [], garbage, crn[..(crn.Length / 2)], crn[..40], header, data, Recheck(dxn), Recheck(cube) })
         {
             Assert.Null(Crunch.Read(broken));

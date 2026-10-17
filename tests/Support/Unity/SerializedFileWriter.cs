@@ -1,5 +1,4 @@
 using System.Buffers.Binary;
-using System.Collections;
 using System.Text;
 
 namespace WorldEditor.Tests.Unity;
@@ -135,7 +134,7 @@ public sealed class SerializedFileWriter
     {
         using var ms = new MemoryStream();
         using var w = new BinaryWriter(ms);
-        Value(w, tree, values);
+        SerializedFileValues.Value(w, tree, values);
         return ms.ToArray();
     }
 
@@ -199,12 +198,12 @@ public sealed class SerializedFileWriter
             w.Write(new byte[16]); // the type's hash
             if (TypeTrees)
             {
-                TypeTree(w, t.Tree);
+                SerializedFileTypeTree.Write(w, t.Tree);
                 w.Write(0); // no type dependencies
             }
         }
         w.Write(_objects.Count);
-        Pad(w);
+        SerializedFileValues.Pad(w);
         for (int i = 0; i < _objects.Count; i++)
         {
             var o = _objects[i];
@@ -217,7 +216,7 @@ public sealed class SerializedFileWriter
         foreach (var (fileId, pathId) in _scripts)
         {
             w.Write(fileId);
-            Pad(w);
+            SerializedFileValues.Pad(w);
             w.Write(pathId);
         }
         w.Write(_externals.Count);
@@ -234,171 +233,12 @@ public sealed class SerializedFileWriter
     }
 
     /// <summary>
-    /// A type tree blob: its nodes depth first (32 bytes each), then their names in a local string buffer.
-    /// </summary>
-    private static void TypeTree(BinaryWriter w, UnityField root)
-    {
-        var strings = new MemoryStream();
-        var offsets = new Dictionary<string, uint>(StringComparer.Ordinal);
-        uint Offset(string s)
-        {
-            if (!offsets.TryGetValue(s, out uint o))
-            {
-                offsets[s] = o = (uint)strings.Length;
-                strings.Write(Encoding.UTF8.GetBytes(s + "\0"));
-            }
-            return o;
-        }
-        var nodes = new List<(UnityField Field, int Level)>();
-        void Walk(UnityField f, int level)
-        {
-            nodes.Add((f, level));
-            foreach (var c in f.Children)
-            {
-                Walk(c, level + 1);
-            }
-        }
-        Walk(root, 0);
-        using var nodeBytes = new MemoryStream();
-        using (var nw = new BinaryWriter(nodeBytes, Encoding.UTF8, leaveOpen: true))
-        {
-            for (int i = 0; i < nodes.Count; i++)
-            {
-                var (f, level) = nodes[i];
-                nw.Write((ushort)1);
-                nw.Write((byte)level);
-                nw.Write((byte)(f.IsArray ? 1 : 0));
-                nw.Write(Offset(f.Type));
-                nw.Write(Offset(f.Name));
-                nw.Write(f.Size > 0 ? f.Size : -1);
-                nw.Write(i);
-                nw.Write(f.Align ? 0x4000u : 0u);
-                nw.Write(0UL); // no reference type hash
-            }
-        }
-        w.Write(nodes.Count);
-        w.Write((int)strings.Length);
-        w.Write(nodeBytes.ToArray());
-        w.Write(strings.ToArray());
-    }
-
-    /// <summary>
-    /// One value laid out as its field says: a structure field after field (missing ones as zeros), a list or text as
-    /// its count then its items, a number in its size; padded after a field marked so.
-    /// </summary>
-    private static void Value(BinaryWriter w, UnityField f, object? v)
-    {
-        if (f.Type == "string")
-        {
-            byte[] b = Encoding.UTF8.GetBytes(v as string ?? "");
-            w.Write(b.Length);
-            w.Write(b);
-            if (f.Children.Count > 0 && f.Children[0].Align)
-            {
-                Pad(w);
-            }
-        }
-        else if (f.IsArray)
-        {
-            var item = f.Children[1];
-            if (v is byte[] bytes)
-            {
-                w.Write(bytes.Length);
-                w.Write(bytes);
-            }
-            else
-            {
-                var items = v as IList ?? (v is IEnumerable e and not string ? e.Cast<object?>().ToList() : []);
-                w.Write(items.Count);
-                foreach (object? it in items)
-                {
-                    Value(w, item, it);
-                }
-            }
-        }
-        else if (f.Children.Count > 0)
-        {
-            var d = v as Fields;
-            foreach (var c in f.Children)
-            {
-                // A list's array node takes the list's own value.
-                Value(w, c, c.IsArray && f.Children.Count == 1 ? v : d?.GetValueOrDefault(c.Name));
-            }
-        }
-        else
-        {
-            Number(w, f.Type, v);
-        }
-        if (f.Align)
-        {
-            Pad(w);
-        }
-    }
-
-    /// <summary>
-    /// A number of a Unity type (null: 0).
-    /// </summary>
-    private static void Number(BinaryWriter w, string type, object? v)
-    {
-        var c = System.Globalization.CultureInfo.InvariantCulture;
-        switch (type)
-        {
-            case "bool":
-                w.Write(Convert.ToBoolean(v ?? false, c));
-                break;
-            case "UInt8" or "char":
-                w.Write(Convert.ToByte(v ?? 0, c));
-                break;
-            case "SInt8":
-                w.Write(Convert.ToSByte(v ?? 0, c));
-                break;
-            case "UInt16" or "unsigned short":
-                w.Write(Convert.ToUInt16(v ?? 0, c));
-                break;
-            case "SInt16" or "short":
-                w.Write(Convert.ToInt16(v ?? 0, c));
-                break;
-            case "int" or "SInt32":
-                w.Write(Convert.ToInt32(v ?? 0, c));
-                break;
-            case "unsigned int" or "UInt32":
-                w.Write(Convert.ToUInt32(v ?? 0, c));
-                break;
-            case "SInt64" or "long long":
-                w.Write(Convert.ToInt64(v ?? 0, c));
-                break;
-            case "UInt64" or "FileSize":
-                w.Write(Convert.ToUInt64(v ?? 0, c));
-                break;
-            case "float":
-                w.Write(Convert.ToSingle(v ?? 0f, c));
-                break;
-            case "double":
-                w.Write(Convert.ToDouble(v ?? 0.0, c));
-                break;
-            default:
-                throw new ArgumentException($"no number type {type}");
-        }
-    }
-
-    /// <summary>
     /// A nul-terminated UTF-8 text.
     /// </summary>
     private static void CString(BinaryWriter w, string s)
     {
         w.Write(Encoding.UTF8.GetBytes(s));
         w.Write((byte)0);
-    }
-
-    /// <summary>
-    /// Zeros up to the next multiple of 4 bytes.
-    /// </summary>
-    private static void Pad(BinaryWriter w)
-    {
-        while (w.BaseStream.Position % 4 != 0)
-        {
-            w.Write((byte)0);
-        }
     }
 
     /// <summary>

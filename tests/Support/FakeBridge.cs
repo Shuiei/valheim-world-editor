@@ -7,9 +7,10 @@ using Xunit;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// Live mode without a game: a stand-in for the WorldEditorBridge plugin answers like it does.
+/// Live mode without a game: a stand-in for the WorldEditorBridge plugin answers like it does. The objects call is in
+/// FakeBridge.Objects.cs.
 /// </summary>
-public sealed class FakeBridge : IDisposable
+public sealed partial class FakeBridge : IDisposable
 {
     private readonly HttpListener _listener = new();
     /// <summary>Answering the requests: Dispose waits for it to end, and its errors fail the test.</summary>
@@ -88,99 +89,61 @@ public sealed class FakeBridge : IDisposable
                 return;
             }
             Connections.Add(ctx.Request.RemoteEndPoint.Port);
-            string body = "";
-            int status = ctx.Request.Headers["X-Bridge-Token"] == Token ? Status : 401;
-            if (StatusFails && ctx.Request.Url!.AbsolutePath == "/status")
-            {
-                status = 500;
-            }
-            if (status == 200 && ctx.Request.Url!.AbsolutePath == "/status")
-            {
-                body = "{\"plugin\":\"0.3.0\",\"world\":\"CITest\",\"players\":0,\"features\":[" + string.Join(",", Features.Select(f => $"\"{f}\"")) + "],\"run\":\"" + Run + "\"}";
-            }
-            else if (status == 200 && ctx.Request.Url!.AbsolutePath == "/objects" && ctx.Request.Headers["X-Call-Id"] is { } done && _answers.TryGetValue(done, out string? again))
-            {
-                await ctx.Request.InputStream.CopyToAsync(Stream.Null);
-                body = again;
-            }
-            else if (status == 200 && ctx.Request.Url!.AbsolutePath == "/objects")
-            {
-                using var all = new MemoryStream();
-                await ctx.Request.InputStream.CopyToAsync(all);
-                all.Position = 0;
-                using var r = new BinaryReader(all);
-                int destroy = r.ReadInt32();
-                for (int i = 0; i < destroy; i++)
-                {
-                    Destroyed.Add((r.ReadInt64(), r.ReadUInt32()));
-                }
-                int create = r.ReadInt32();
-                var ids = new List<string>();
-                for (int i = 0; i < create; i++)
-                {
-                    r.ReadBytes(r.ReadInt32());
-                    ids.Add($"77:{_next++}");
-                }
-                // What each destroyed object is and where (the editor adds it after the creations).
-                for (int i = 0; i < destroy; i++)
-                {
-                    Places.Add((r.ReadInt32(), new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle())));
-                }
-                // The moves, last: each object moved in place keeps its id, one made again gets a new one.
-                var moved = new List<string>();
-                if (all.Position < all.Length)
-                {
-                    int n = r.ReadInt32();
-                    for (int i = 0; i < n; i++)
-                    {
-                        long user = r.ReadInt64();
-                        uint id = r.ReadUInt32();
-                        int prefab = r.ReadInt32();
-                        Vector3 V() => new(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
-                        Vector3 from = V(), to = V(), turn = V();
-                        r.ReadBytes(r.ReadInt32());
-                        Moves.Add((user, id, prefab, from, to, turn));
-                        moved.Add(MoveInPlace ? $"{{\"id\":\"{user}:{id}\",\"inPlace\":true}}" : $"{{\"id\":\"77:{_next++}\",\"inPlace\":false}}");
-                    }
-                }
-                lock (ObjectCalls)
-                {
-                    ObjectCalls.Add((destroy, create));
-                }
-                body = $"{{\"destroyed\":{destroy},\"missing\":0,\"refound\":{Refound},\"created\":[{string.Join(",", ids.Select(i => $"\"{i}\""))}],\"moves\":[{string.Join(",", moved)}]}}";
-                if (ctx.Request.Headers["X-Call-Id"] is { } call)
-                {
-                    _answers[call] = body;
-                }
-                if (LoseNextAnswer)
-                {
-                    // Done, but only half the answer gets through before the connection breaks.
-                    LoseNextAnswer = false;
-                    byte[] half = Encoding.UTF8.GetBytes(body);
-                    ctx.Response.ContentLength64 = half.Length;
-                    await ctx.Response.OutputStream.WriteAsync(half.AsMemory(0, half.Length / 2));
-                    ctx.Response.Abort();
-                    continue;
-                }
-            }
-            else if (status == 200 && ctx.Request.Url!.AbsolutePath == "/zones/reset")
-            {
-                using var r = new BinaryReader(ctx.Request.InputStream);
-                int n = r.ReadInt32();
-                for (int i = 0; i < n; i++)
-                {
-                    Resets.Add((r.ReadInt32(), r.ReadInt32(), r.ReadBoolean(), r.ReadBoolean()));
-                }
-                body = $"{{\"zones\":{n},\"destroyed\":0,\"locations\":0}}";
-            }
-            byte[] bytes = Encoding.UTF8.GetBytes(body);
-            ctx.Response.StatusCode = status;
-            ctx.Response.ContentType = "application/json";
-            // With its length, as the plugin sends it: the connection stays open for the next request.
-            ctx.Response.ContentLength64 = bytes.Length;
-            await ctx.Response.OutputStream.WriteAsync(bytes);
-            ctx.Response.Close();
+            await Answer(ctx);
         }
+    }
+
+    /// <summary>
+    /// Answers one request as the plugin would, and sends the answer (or cuts it off, when LoseNextAnswer is set).
+    /// </summary>
+    private async Task Answer(HttpListenerContext ctx)
+    {
+        string body = "";
+        int status = ctx.Request.Headers["X-Bridge-Token"] == Token ? Status : 401;
+        if (StatusFails && ctx.Request.Url!.AbsolutePath == "/status")
+        {
+            status = 500;
+        }
+        if (status == 200 && ctx.Request.Url!.AbsolutePath == "/status")
+        {
+            body = "{\"plugin\":\"0.3.0\",\"world\":\"CITest\",\"players\":0,\"features\":[" + string.Join(",", Features.Select(f => $"\"{f}\"")) + "],\"run\":\"" + Run + "\"}";
+        }
+        else if (status == 200 && ctx.Request.Url!.AbsolutePath == "/objects" && ctx.Request.Headers["X-Call-Id"] is { } done && _answers.TryGetValue(done, out string? again))
+        {
+            await ctx.Request.InputStream.CopyToAsync(Stream.Null);
+            body = again;
+        }
+        else if (status == 200 && ctx.Request.Url!.AbsolutePath == "/objects")
+        {
+            body = await ServeObjects(ctx);
+            if (LoseNextAnswer)
+            {
+                // Done, but only half the answer gets through before the connection breaks.
+                LoseNextAnswer = false;
+                byte[] half = Encoding.UTF8.GetBytes(body);
+                ctx.Response.ContentLength64 = half.Length;
+                await ctx.Response.OutputStream.WriteAsync(half.AsMemory(0, half.Length / 2));
+                ctx.Response.Abort();
+                return;
+            }
+        }
+        else if (status == 200 && ctx.Request.Url!.AbsolutePath == "/zones/reset")
+        {
+            using var r = new BinaryReader(ctx.Request.InputStream);
+            int n = r.ReadInt32();
+            for (int i = 0; i < n; i++)
+            {
+                Resets.Add((r.ReadInt32(), r.ReadInt32(), r.ReadBoolean(), r.ReadBoolean()));
+            }
+            body = $"{{\"zones\":{n},\"destroyed\":0,\"locations\":0}}";
+        }
+        byte[] bytes = Encoding.UTF8.GetBytes(body);
+        ctx.Response.StatusCode = status;
+        ctx.Response.ContentType = "application/json";
+        // With its length, as the plugin sends it: the connection stays open for the next request.
+        ctx.Response.ContentLength64 = bytes.Length;
+        await ctx.Response.OutputStream.WriteAsync(bytes);
+        ctx.Response.Close();
     }
 
     /// <summary>
