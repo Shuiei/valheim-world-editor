@@ -30,7 +30,7 @@ public class PlaceInputTests
         public EditSession S { get; }
         public PlaceTool T { get; }
         public PlaceInput In { get; }
-        public Avalonia.Size Size { get; } = new(1600, 1000);
+        public Avalonia.Size Size { get; } = SharedPlaceWindow.Size;
         public List<string> Said { get; } = [];
         /// <summary>What was said, in both languages.</summary>
         public List<TerrainEditor.App.Said> Told { get; } = [];
@@ -39,13 +39,7 @@ public class PlaceInputTests
 
         public Rig(PlaceTool.Modes mode, bool listen = true, params WorldScene.Thing[] things)
         {
-            W = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            W.Show();
-            S = TestScenes.Flat(2, things);
-            W.View.Show(S.Scene, null);
-            W.Edit(S);
-            W.Tools.ChooseMode(ToolMode.Place);
-            W.View.SetCamera(new Vector3(0, 150, 1), Vector3.Zero, 1.6f);
+            (W, S) = SharedPlaceWindow.Open(things);
             var scene = S.Scene;
             T = new PlaceTool { Scene = () => scene, Brush = S.Brush, Mode = mode, Tilt = 0, NameOf = h => h == StableHash.Of(Wall) ? Wall : null };
             T.Chosen.Clear();
@@ -68,11 +62,7 @@ public class PlaceInputTests
         public string? Last => Said.Count > 0 ? Said[^1] : null;
 
         /// <summary>Grid point (gx, gz) on the view (the ground is at 30 m).</summary>
-        public Avalonia.Point At(float gx, float gz)
-        {
-            var q = Vector4.Transform(new Vector4(gx - 64, 30, -(gz - 64), 1), W.View.ViewProj);
-            return new Avalonia.Point((q.X / q.W + 1) / 2 * Size.Width, (1 - q.Y / q.W) / 2 * Size.Height);
-        }
+        public Avalonia.Point At(float gx, float gz) => SharedPlaceWindow.At(W, gx, gz);
 
         /// <summary>A grid point on the view.</summary>
         public Avalonia.Point At(Vector2 g) => At(g.X, g.Y);

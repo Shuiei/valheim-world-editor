@@ -1,6 +1,5 @@
 using System.Text;
 using TerrainEditor.App;
-using WorldEditor.Tests;
 using WorldEditor.Tests.Unity;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -80,13 +79,8 @@ public sealed class GameLookEditorProcess() : EditorProcess([], Home())
     /// </summary>
     private static Dictionary<string, string> Home()
     {
-        _dir = Path.Combine(Path.GetTempPath(), "vwe-visual-look-" + Guid.NewGuid().ToString("N")[..8]);
-        string world = Path.Combine(_dir, "CITest"), home = Path.Combine(_dir, "home");
-        Directory.CreateDirectory(world);
-        foreach (string f in Directory.GetFiles(Path.Combine(Fixtures.Root, "CITest")))
-        {
-            File.Copy(f, Path.Combine(world, Path.GetFileName(f)));
-        }
+        _dir = TestWorldCopy.Make("vwe-visual-look-");
+        string home = Path.Combine(_dir, "home");
         _game = MadeUpGame();
         // Steam's library in the home, as on Linux (elsewhere the game is not looked for in the home: the tests skip).
         string common = Path.Combine(home, ".steam", "steam", "steamapps", "common");
@@ -136,9 +130,6 @@ public sealed class GameLookEditorProcess() : EditorProcess([], Home())
     {
         base.Dispose();
         _game?.Dispose();
-        if (Directory.Exists(_dir))
-        {
-            Directory.Delete(_dir!, true);
-        }
+        TestWorldCopy.Remove(_dir);
     }
 }
