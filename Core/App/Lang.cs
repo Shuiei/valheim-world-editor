@@ -40,7 +40,7 @@ public static partial class Lang
 
     /// <summary>A text's places for values: {0}, {1:0.0}…</summary>
     [GeneratedRegex(@"(?<!\{)\{(\d+)[^{}]*\}")]
-    private static partial Regex Places();
+    internal static partial Regex Places();
 
     /// <summary>The text of <paramref name="key"/> in the language in use.</summary>
     /// <exception cref="KeyNotFoundException">No English text has that key (a mistake in the code).</exception>

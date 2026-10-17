@@ -327,6 +327,6 @@ public sealed partial class ClaudeTools
         {
             return problem;
         }
-        return ToJson(new { id = c.Id, value = ValueOf(c.Control), shown = c.Control.IsEffectivelyVisible, message = _w.MessageText.Text ?? "" });
+        return ToJson(new { id = c.Id, value = ValueOf(c.Control), shown = c.Control.IsEffectivelyVisible, message = _w.LastMessageEn });
     });
 }

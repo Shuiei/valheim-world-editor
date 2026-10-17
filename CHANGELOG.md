@@ -4,6 +4,19 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.6 — unreleased
+
+### Changed
+- **The small dialogs and the words they share come from the language catalogue.** Questions, messages, the line
+  of text and a blueprint's details, their OK, Yes, Cancel, Stay, Keep them, Leave anyway, Keep building and Discard
+  buttons, and the file tooltip of a mod's extension in Settings show in the language chosen in Settings. In English
+  nothing changes.
+- The status bar keeps an English copy of its message, and Claude reads that one back in its answers, so it is
+  told in English whatever language the window shows.
+- A remembered list choice (the brush's shape and falloff, the Area action, the Shape preset, the 3D resolution) is
+  kept in English, so it still comes back once those lists are translated and the language is changed. Choices kept
+  so far are already English.
+
 ## v1.47.5 — unreleased
 
 ### Changed

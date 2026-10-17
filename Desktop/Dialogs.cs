@@ -14,19 +14,20 @@ public static class Dialogs
     /// <param name="title">The dialog's title.</param>
     /// <param name="text">The question (selectable, to copy).</param>
     /// <param name="yes">The first button (Enter).</param>
-    /// <param name="no">The second button (Esc); null: none, and Esc presses the first.</param>
-    public static async Task<bool> Ask(Window owner, string title, string text, string yes, string? no = "Cancel")
+    /// <param name="no">The second button (Esc); null: Cancel.</param>
+    /// <param name="alone">No second button: Esc presses the first.</param>
+    public static async Task<bool> Ask(Window owner, string title, string text, string yes, string? no = null, bool alone = false)
     {
         bool result = false;
         var dialog = Modal(title, 560);
         // A lone button answers Esc too, so a message closes with it.
-        var ok = new Button { Content = yes, IsDefault = true, IsCancel = no == null };
+        var ok = new Button { Content = yes, IsDefault = true, IsCancel = alone };
         ToolTip.SetTip(ok, Lang.T("dialog.okEnter", yes));
         ok.Click += (_, _) => { result = true; dialog.Close(); };
         var buttons = ButtonRow(ok);
-        if (no != null)
+        if (!alone)
         {
-            var cancel = new Button { Content = no, IsCancel = true }.Tip("dialog.cancel");
+            var cancel = new Button { Content = no ?? Lang.T("common.cancel"), IsCancel = true }.Tip("dialog.cancel");
             cancel.Click += (_, _) => dialog.Close();
             buttons.Children.Add(cancel);
         }
@@ -41,7 +42,7 @@ public static class Dialogs
     }
 
     /// <summary>A message with an OK button.</summary>
-    public static Task Tell(Window owner, string title, string text) => Ask(owner, title, text, "OK", null);
+    public static Task Tell(Window owner, string title, string text) => Ask(owner, title, text, Lang.T("common.ok"), alone: true);
 
     /// <summary>A line of text (null: cancelled).</summary>
     /// <param name="owner">The window it is modal to.</param>
@@ -53,10 +54,10 @@ public static class Dialogs
         string? result = null;
         var dialog = Modal(title, 420);
         var box = new TextBox { Text = initial }.Tip("dialog.text");
-        var ok = new Button { Content = "OK", IsDefault = true };
+        var ok = new Button { Content = Lang.T("common.ok"), IsDefault = true };
         ToolTip.SetTip(ok, Lang.T("dialog.useAnswer"));
         ok.Click += (_, _) => { result = box.Text; dialog.Close(); };
-        var cancel = new Button { Content = "Cancel", IsCancel = true }.Tip("dialog.cancel");
+        var cancel = new Button { Content = Lang.T("common.cancel"), IsCancel = true }.Tip("dialog.cancel");
         cancel.Click += (_, _) => dialog.Close();
         dialog.Content = new StackPanel
         {
@@ -80,12 +81,12 @@ public static class Dialogs
     public static async Task<Homestead.Details?> AskBlueprint(Window owner, Homestead.Details start, string cost)
     {
         Homestead.Details? result = null;
-        var dialog = Modal("Blueprint", 460);
+        var dialog = Modal(Lang.T("dialog.blueprint"), 460);
         var name = new TextBox { Text = start.Name }.Tip("dialog.blueprintName");
-        var description = new TextBox { Text = start.Description, AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, MinHeight = 54, PlaceholderText = "What it is, how to build it…" }.Tip("dialog.blueprintDescription");
-        var tags = new TextBox { Text = string.Join(", ", start.Tags), PlaceholderText = "house, viking, stone" }.Tip("dialog.blueprintTags");
-        var dungeon = new CheckBox { Content = "A dungeon: pasted into a world, it goes 5000 m up behind an entrance on the ground", IsChecked = start.Dungeon, FontSize = 12 }.Tip("dialog.blueprintDungeon");
-        var ok = new Button { Content = "Save", IsDefault = true };
+        var description = new TextBox { Text = start.Description, AcceptsReturn = false, TextWrapping = TextWrapping.Wrap, MinHeight = 54, PlaceholderText = Lang.T("dialog.hint.description") }.Tip("dialog.blueprintDescription");
+        var tags = new TextBox { Text = string.Join(", ", start.Tags), PlaceholderText = Lang.T("dialog.hint.tags") }.Tip("dialog.blueprintTags");
+        var dungeon = new CheckBox { Content = Lang.T("dialog.label.dungeon"), IsChecked = start.Dungeon, FontSize = 12 }.Tip("dialog.blueprintDungeon");
+        var ok = new Button { Content = Lang.T("common.save"), IsDefault = true };
         ToolTip.SetTip(ok, Lang.T("dialog.keepDetails"));
         ok.Click += (_, _) =>
         {
@@ -93,7 +94,7 @@ public static class Dialogs
                 .WithDungeon(dungeon.IsChecked == true);
             dialog.Close();
         };
-        var cancel = new Button { Content = "Cancel", IsCancel = true }.Tip("dialog.cancel");
+        var cancel = new Button { Content = Lang.T("common.cancel"), IsCancel = true }.Tip("dialog.cancel");
         cancel.Click += (_, _) => dialog.Close();
         var row = ButtonRow(ok, cancel);
         row.Margin = new Thickness(0, 8, 0, 0);
@@ -104,11 +105,11 @@ public static class Dialogs
             Spacing = 6,
             Children =
             {
-                Label("Name"), name,
-                Label("Description"), description,
-                Label("Tags (separated by commas)"), tags,
+                Label(Lang.T("dialog.label.name")), name,
+                Label(Lang.T("dialog.label.description")), description,
+                Label(Lang.T("dialog.label.tags")), tags,
                 dungeon,
-                new TextBlock { Text = "Cost in game: " + cost, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) },
+                new TextBlock { Text = Lang.T("dialog.label.cost", cost), FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) },
                 row,
             },
         };

@@ -24,7 +24,7 @@ public sealed partial class MainWindow
     /// <summary>Turns Follow on or off (the area moves by itself near its edge).</summary>
     internal Button FollowButton { get; } = new Button { Content = "Follow", FontSize = 12.5 }.Classed("ghost");
     /// <summary>Discard: undoes what is not saved or applied yet; enabled while something is.</summary>
-    internal Button DiscardButton { get; } = new Button { Content = "Discard", FontSize = 12.5, IsEnabled = false }.Classed("ghost");
+    internal Button DiscardButton { get; } = new Button { Content = Lang.T("common.discard"), FontSize = 12.5, IsEnabled = false }.Classed("ghost");
     /// <summary>Live: loads the world again from the game; shown for live worlds only.</summary>
     internal Button ReloadButton { get; } = new Button { Content = Icons.With("reload", "Reload"), FontSize = 12.5, IsVisible = false }.Classed("ghost");
     /// <summary>Live: Auto apply, every change sent to the game at once; shown for live worlds only.</summary>
@@ -413,7 +413,7 @@ public sealed partial class MainWindow
             return;
         }
         int steps = s.UnappliedSteps;
-        if (!await Ask("Discard", $"Discard the {(s.IsLive ? "changes not applied yet" : "unsaved changes")} ({Describe(s.Pending)})?{(steps > 0 ? $" The last {steps} step(s) in History are undone." : "")}", "Discard", "Keep them"))
+        if (!await Ask("Discard", $"Discard the {(s.IsLive ? "changes not applied yet" : "unsaved changes")} ({Describe(s.Pending)})?{(steps > 0 ? $" The last {steps} step(s) in History are undone." : "")}", Lang.T("common.discard"), Lang.T("common.keepThem")))
         {
             return;
         }
@@ -425,7 +425,7 @@ public sealed partial class MainWindow
             MessageText.Text = "Discarded. Everything else is kept.";
             return;
         }
-        if (s.Scene.Owner is not { } w || !await Ask("Discard", "Some of the changes waiting have no step in this area's history (made in another area, or earlier), so they can only be discarded by reading the world again. Read it again now?", "Read it again", "Keep them"))
+        if (s.Scene.Owner is not { } w || !await Ask("Discard", "Some of the changes waiting have no step in this area's history (made in another area, or earlier), so they can only be discarded by reading the world again. Read it again now?", "Read it again", Lang.T("common.keepThem")))
         {
             return;
         }
@@ -454,7 +454,7 @@ public sealed partial class MainWindow
         {
             return;
         }
-        if (s.Pending is not (0, 0, 0, 0) && !await Ask("Reload", "Reload the world from the game? Your changes not applied yet are dropped.", "Reload", "Keep them"))
+        if (s.Pending is not (0, 0, 0, 0) && !await Ask("Reload", "Reload the world from the game? Your changes not applied yet are dropped.", "Reload", Lang.T("common.keepThem")))
         {
             return;
         }

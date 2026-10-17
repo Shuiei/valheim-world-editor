@@ -397,7 +397,7 @@ public sealed partial class ClaudeTools
         {
             return failed;
         }
-        return _w.World?.World.Name == name ? $"{_w.MessageText.Text} {ToJson(StateOf(_w))}" : $"Made {name}, but it could not be opened: {_w.MessageText.Text}";
+        return _w.World?.World.Name == name ? $"{_w.LastMessageEn} {ToJson(StateOf(_w))}" : $"Made {name}, but it could not be opened: {_w.LastMessageEn}";
     });
 
     // ---- Copies.
