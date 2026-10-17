@@ -86,6 +86,20 @@ public class LiveSyncTests
         Assert.False(t.Sync.IsLive(-1));
     }
 
+    // Deleted objects with no copy are destroyed without their bytes being read: only the moved one is read.
+    [Fact]
+    public async Task OnlyObjectsThatMayMoveAreRead()
+    {
+        using var t = new Live();
+        int[] others = [.. t.World.Objects.Where(o => o.Id != t.Tree.Id && !t.World.Links.ContainsKey(o.Id)).Take(20).Select(o => o.Id)];
+        t.Edits.SetDeleted(others, true);
+        t.MoveTree(-1, new Vector3(4, 0, 2));
+        await t.Sync.Apply(t.World, t.Edits, t.Game);
+        Assert.Equal((others.Length, 0), t.Bridge.ObjectCalls.Single());
+        Assert.Single(t.Bridge.Moves);
+        Assert.Equal(1, t.Sync.SourceReads);
+    }
+
     // IsOurs follows the game objects the editor has: moved there, moved on (counted once), forgotten, and reset.
     [Fact]
     public async Task IsOursFollowsTheGameObjectsTheEditorHas()

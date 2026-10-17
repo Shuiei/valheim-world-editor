@@ -85,6 +85,12 @@ public sealed class LiveSync
     /// </summary>
     private readonly Dictionary<int, int> _movedTo = [];
 
+    /// <summary>
+    /// How many snapshot objects' bytes the move search read and parsed, over this sync's life (a test seam: only an
+    /// object that may move is read).
+    /// </summary>
+    internal int SourceReads { get; private set; }
+
     /// <summary>Forgets everything applied, once the world was read again or its pending changes dropped.</summary>
     public void Reset()
     {
@@ -502,17 +508,21 @@ public sealed class LiveSync
                 continue;
             }
             ObjectRef o = world.ObjectRefs[source];
-            byte[] own = world.ObjectBytes(source);
-            var original = ZdoData.Parse(own, o.File.WorldVersion);
             LiveTarget at = from == source ? liveId(source) : _liveIds[from];
-            if (!deleted.Contains(source))
+            // Still deleted with no copy to move to: nothing moves, so its bytes are not read. Not deleted any more
+            // (list stays null): it moves back.
+            List<NewObject>? list = null;
+            if (deleted.Contains(source) && !copies.TryGetValue(source, out list))
+            {
+                continue;
+            }
+            byte[] own = world.ObjectBytes(source);
+            SourceReads++;
+            var original = ZdoData.Parse(own, o.File.WorldVersion);
+            if (list == null)
             {
                 moves.Add(new LiveMove(at, o.Position, original.Rotation, own));
                 moveFor.Add((source, from, source));
-                continue;
-            }
-            if (!copies.TryGetValue(source, out var list))
-            {
                 continue;
             }
             foreach (NewObject n in list)
