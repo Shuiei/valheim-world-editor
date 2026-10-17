@@ -61,7 +61,10 @@ public static partial class ScriptHost
             return (exe, ["--script-host"]);
         }
         string host = dotnet ? exe! : Path.GetFullPath(Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), "..", "..", "..", OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet"));
-        return (host, [typeof(ScriptHost).Assembly.Location, "--script-host"]);
+        // The assembly's file beside the app (Assembly.Location is empty in a single-file app, which the analyzer refuses
+        // at publish even though that app takes the branch above).
+        string assembly = Path.Combine(AppContext.BaseDirectory, typeof(ScriptHost).Assembly.GetName().Name + ".dll");
+        return (host, [assembly, "--script-host"]);
     }
 
     /// <summary>
