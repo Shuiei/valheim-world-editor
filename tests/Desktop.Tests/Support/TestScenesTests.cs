@@ -27,4 +27,17 @@ public sealed class TestScenesTests
         Assert.Equal(before.SaveNumber + 1, game.SaveNumber);
         Assert.Equal(before.ObjectCount - 1, game.ObjectCount);
     }
+
+    [Fact]
+    public void ZoneHoldingIsTheOneZoneSceneWithTheObjectInIt()
+    {
+        using var w = new TempWorld();
+        int chest = StableHash.Of("piece_chest_wood");
+
+        var scene = TestScenes.ZoneHolding(w.Dir, chest);
+
+        Assert.Equal(1, scene.ZonesX);
+        Assert.Equal(1, scene.ZonesZ);
+        Assert.Contains(scene.Things, t => t.Prefab == chest && !t.Gone);
+    }
 }

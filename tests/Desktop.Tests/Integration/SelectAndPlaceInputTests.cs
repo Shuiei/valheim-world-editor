@@ -86,16 +86,29 @@ public class SelectAndPlaceInputTests
         Assert.Empty(w.View.Selected);
     }
 
+    /// <summary>
+    /// A shown window editing a flat 2 × 2 zone area, in the Place tool with the camera looking down on it; and the
+    /// screen point of a grid point of the area (grid x = world x + 64, grid z = 64 - world z).
+    /// </summary>
+    private static (MainWindow W, EditSession S, Func<float, float, Avalonia.Point> At) PlaceToolOnFlatArea()
+    {
+        var s = TestScenes.Flat(2);
+        var w = TestWindows.Editing(s);
+        w.Tools.ChooseMode(ToolMode.Place);
+        w.View.SetCamera(new Vector3(0, 150, 1), Vector3.Zero, 1.6f);
+        var size = new Avalonia.Size(1600, 1000);
+        Avalonia.Point At(float gx, float gz)
+        {
+            var q = Vector4.Transform(new Vector4(gx - 64, 30, -(gz - 64), 1), w.View.ViewProj);
+            return new Avalonia.Point((q.X / q.W + 1) / 2 * size.Width, (1 - q.Y / q.W) / 2 * size.Height);
+        }
+        return (w, s, At);
+    }
+
     [AvaloniaFact]
     public void TheBrushPaintsWhileDraggedAndShiftShowsTheEraser()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
-        w.Tools.ChooseMode(ToolMode.Place);
-        w.View.SetCamera(new Vector3(0, 150, 1), Vector3.Zero, 1.6f);
+        var (w, s, At) = PlaceToolOnFlatArea();
         w.PlaceTool.Chosen.Clear();
         w.PlaceTool.Chosen.Add("Beech1");
         // The window's Place panel took the kinds remembered by earlier tests (pieces from the Workshop turn
@@ -104,11 +117,6 @@ public class SelectAndPlaceInputTests
         w.PlaceTool.Brush.Radius = 12;
         w.PlaceTool.Density = 5;
         var size = new Avalonia.Size(1600, 1000);
-        Avalonia.Point At(float gx, float gz)
-        {
-            var q = Vector4.Transform(new Vector4(gx - 64, 30, -(gz - 64), 1), w.View.ViewProj);
-            return new Avalonia.Point((q.X / q.W + 1) / 2 * size.Width, (1 - q.Y / q.W) / 2 * size.Height);
-        }
         var input = w.PlaceInput;
         input.Moved(At(64, 64), size);
         Assert.NotEmpty(input.Shown);
@@ -140,20 +148,9 @@ public class SelectAndPlaceInputTests
     [AvaloniaFact]
     public void AClickOnAZonesEdgeAddsAPoint()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
-        w.Tools.ChooseMode(ToolMode.Place);
-        w.View.SetCamera(new Vector3(0, 150, 1), Vector3.Zero, 1.6f);
+        var (w, s, At) = PlaceToolOnFlatArea();
         w.PlaceTool.Mode = PlaceTool.Modes.Zone;
         var size = new Avalonia.Size(1600, 1000);
-        Avalonia.Point At(float gx, float gz)
-        {
-            var q = Vector4.Transform(new Vector4(gx - 64, 30, -(gz - 64), 1), w.View.ViewProj);
-            return new Avalonia.Point((q.X / q.W + 1) / 2 * size.Width, (1 - q.Y / q.W) / 2 * size.Height);
-        }
         var input = w.PlaceInput;
         foreach (var (x, z) in new[] { (40f, 40f), (90f, 40f), (90f, 90f) })
         {

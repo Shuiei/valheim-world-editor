@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
+using WorldEditor.Tests;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -20,6 +21,57 @@ internal static class TestWindows
         w.View.Show(s.Scene, null);
         w.Edit(s);
         return w;
+    }
+
+    /// <summary>
+    /// A shown 1600 × 1000 main window editing a flat 2 × 2 zone area (ground at 30 m) with these objects, and the area's
+    /// edit session.
+    /// </summary>
+    internal static (MainWindow W, EditSession S) EditingFlat(params WorldScene.Thing[] things)
+    {
+        var s = TestScenes.Flat(2, things);
+        return (Editing(s), s);
+    }
+
+    /// <summary>
+    /// A shown 1600 × 1000 main window with the world at <paramref name="dir"/> (a copy of the test world) open, and no
+    /// area edited.
+    /// </summary>
+    /// <param name="dir">The world's folder.</param>
+    internal static async Task<MainWindow> OpenedWorld(string dir)
+    {
+        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
+        w.Show();
+        await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
+        return w;
+    }
+
+    /// <summary>
+    /// A shown 1600 × 1000 main window with the world at <paramref name="dir"/> (a copy of the test world) open and its
+    /// area of <paramref name="size"/> zones across, from zone (<paramref name="x"/>, <paramref name="z"/>), edited.
+    /// </summary>
+    /// <param name="dir">The world's folder.</param>
+    /// <param name="x">The zone the area starts at, across.</param>
+    /// <param name="z">The zone the area starts at, down.</param>
+    /// <param name="size">The area's size in zones.</param>
+    internal static async Task<MainWindow> EditingWorld(string dir, int x = 0, int z = 0, int size = 1)
+    {
+        var w = await OpenedWorld(dir);
+        await w.EditArea(x, z, size);
+        return w;
+    }
+
+    /// <summary>
+    /// A shown window on zone 0, 0 of a copy of the test world, in the Area tool; with the copy's folder, and the zone's
+    /// edit session.
+    /// </summary>
+    internal static (MainWindow W, EditSession S, string Dir) AreaToolOnWorldCopy()
+    {
+        string dir = Fixtures.CopyFixture();
+        var scene = WorldScene.Load(dir, 0, 0, 1);
+        var w = Editing(scene.Session!);
+        w.Tools.ChooseMode(ToolMode.Area);
+        return (w, scene.Session!, dir);
     }
 
     /// <summary>

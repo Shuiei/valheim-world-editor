@@ -134,11 +134,8 @@ public class AreaPanelTests
     public async Task RegrowNeedsTheGeneratorAndASmallEnoughArea()
     {
         // An area with no world generator behind it.
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
         var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = TestWindows.Editing(s);
         w.Tools.ChooseMode(ToolMode.Area);
         w.View.Area.Points.Add(new Vector2(2, 2));
         w.View.Area.Points.Add(new Vector2(60, 60));

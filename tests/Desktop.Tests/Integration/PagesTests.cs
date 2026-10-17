@@ -143,10 +143,7 @@ public class PagesTests
         string dir = Fixtures.CopyFixture();
         try
         {
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
-            await w.EditArea(0, 0, 3);
+            var w = await TestWindows.EditingWorld(dir, 0, 0, 3);
             var s = w.Session!;
             s.Shape(96, 96, Formula.Compile("2", []), 4, 0, "x");
             Assert.Single(s.UndoList);

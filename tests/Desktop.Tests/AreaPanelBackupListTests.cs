@@ -70,21 +70,7 @@ public class AreaPanelBackupListTests
         float was = r.H(32, 32), wasEdge = r.H(12, 32), wasOut = r.H(6, 32);
         // Raised and painted everywhere, saved: the backup is the world before.
         r.S.Shape(32, 32, Formula.Compile("3", []), 40, 0, "x");
-        r.S.EditGround("paint", g =>
-        {
-            var touched = new List<int>();
-            for (int z = 5; z < 60; z++)
-            {
-                for (int x = 5; x < 60; x++)
-                {
-                    int p = z * g.W + x;
-                    g.PMod[p] = 1;
-                    Array.Copy(Brush.PaintOf(BrushTool.PaintDirt)!, 0, g.Paint, p * 4, 4);
-                    touched.Add(p);
-                }
-            }
-            return (touched, (4, 4, 61, 61));
-        });
+        DirtPaint.Set(r.S, true);
         // The game's backup from before, then saved.
         TempWorld.CopyDir(r.Dir, r.Dir.TrimEnd(Path.DirectorySeparatorChar) + "_backup_auto-20261001100000");
         Assert.True(r.S.Save().Saved);

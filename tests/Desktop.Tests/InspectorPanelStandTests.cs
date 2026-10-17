@@ -21,10 +21,7 @@ public class InspectorPanelStandTests
     private static (MainWindow W, EditSession S, int Stand) Open(string dir, string stand)
     {
         var scene = WorldScene.Load(dir, 0, 0, 1);
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        w.View.Show(scene, null);
-        w.Edit(scene.Session!);
+        var w = TestWindows.Editing(scene.Session!);
         var s = scene.Session!;
         int i = s.Commit("Stand", null, [], [(new NewObject(0, StableHash.Of(stand), new Vector3(3, scene.Heights[32 * scene.W + 32], 3), Vector3.Zero, 0), true)])[0];
         return (w, s, i);

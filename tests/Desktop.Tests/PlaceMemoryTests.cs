@@ -13,11 +13,8 @@ public class PlaceMemoryTests
     [AvaloniaFact]
     public async Task PresetsFavouritesAndRecentAreKept()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
         var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = TestWindows.Editing(s);
         var p = w.PlacePanel;
         // From an empty memory: the tests before it in the run may have left favourites and recent kinds.
         p.Memory.Presets.Clear();
