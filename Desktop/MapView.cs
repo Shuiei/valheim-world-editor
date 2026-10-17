@@ -219,7 +219,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
         _detailShown = null;
         _detailFailed = null;
         ReadPieces();
-        Status?.Invoke("Building the world map (same as the game does)…");
+        Status?.Invoke(Lang.T("map.msg.building"));
         var data = _data;
         // On a thread of its own (LongRunning), not one of the pool's: the build keeps all the cores but one
         // busy, and the pool keeps the rest for everything else.
@@ -242,7 +242,7 @@ public sealed class MapView : OpenGlControlBase, IDisposable
                 {
                     if (_data == data)
                     {
-                        Status?.Invoke($"Could not build the world map: {ex.Message}");
+                        Status?.Invoke(Lang.T("map.msg.buildFailed", ex.Message));
                     }
                 });
                 return;

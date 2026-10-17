@@ -1,4 +1,5 @@
 using Avalonia.Headless.XUnit;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
@@ -9,7 +10,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The map page's edges on the test world: nothing happens without a world, the players' line when the game errors or
 /// sends garbage (or is slow, while another world is shown, or shown again), the biomes' names, the cursor's line when the mouse is over the map, an empty search and one that
-/// fails, the zone filter's messages and questions (kept with their world when another is shown), and Show ruins.
+/// fails, the zone filter's messages and questions (kept with their world when another is shown), Show ruins, the
+/// pending line for each count and for a live world, and the found line for each kind of search.
 /// </summary>
 [Collection("World files")]
 public class MapPageTests
@@ -332,5 +334,34 @@ public class MapPageTests
         await r.M.UnmarkAll();
         Assert.Equal(0, r.W.World.Pending.Resets);
         Assert.Equal("Everything is saved.", r.M.Pending.Text);
+    }
+
+    // The pending line: all saved or applied, else what waits, one zone or several.
+    [Theory]
+    [InlineData(0, 0, 0, 0, false, "Everything is saved.")]
+    [InlineData(0, 0, 0, 0, true, "Everything is applied.")]
+    [InlineData(1, 0, 0, 0, false, "Not saved yet: 1 zone of ground.")]
+    [InlineData(3, 2, 1, 1, true, "Not applied yet: 3 zones of ground, 2 deleted, 1 added, 1 zone reset.")]
+    [InlineData(0, 0, 4, 0, false, "Not saved yet: 4 added.")]
+    public void ThePendingLineSaysWhatWaits(int zones, int deleted, int added, int resets, bool live, string said) =>
+        Assert.Equal(said, MapPage.PendingText((zones, deleted, added, resets), live));
+
+    // The found line: the counts (twelve at most, then how many more), and how many found, in all for items, with
+    // how many are pinned when the search kept only the first.
+    [Theory]
+    [InlineData("kinds", false, 2, "2 Beech · 1 Kind1\n3 found. Click one to go there.")]
+    [InlineData("kinds", true, 2, "2 Beech · 1 Kind1\n3 found, the first 2 pinned. Click one to go there.")]
+    [InlineData("items", false, 2, "2 Beech · 1 Kind1\n3 found in all. Click one to go there.")]
+    [InlineData("items", true, 2, "2 Beech · 1 Kind1\n3 found in all, the first 2 pinned. Click one to go there.")]
+    [InlineData("texts", false, 14, "2 Beech · 1 Kind1 · 1 Kind2 · 1 Kind3 · 1 Kind4 · 1 Kind5 · 1 Kind6 · 1 Kind7 · 1 Kind8 · 1 Kind9 · 1 Kind10 · 1 Kind11 · +2 more\n15 found. Click one to go there.")]
+    public void TheFoundLineSaysWhatWasFound(string what, bool truncated, int kinds, string said)
+    {
+        var counts = new Dictionary<string, int> { ["Beech"] = 2 };
+        for (int i = 1; i < kinds; i++)
+        {
+            counts[$"Kind{i}"] = 1;
+        }
+        var hits = new List<WorldSearch.Hit> { new(1, "Beech", 0, 0, 0, null), new(2, "Beech", 1, 0, 1, null) };
+        Assert.Equal(said, MapPage.Found(new WorldSearch.Result(hits, counts, counts.Values.Sum(), truncated), what));
     }
 }
