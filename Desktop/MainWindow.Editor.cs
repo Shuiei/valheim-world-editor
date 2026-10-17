@@ -461,18 +461,11 @@ public sealed partial class MainWindow
         {
             return;
         }
-        Busy(Lang.T("save.msg.loadingLive"));
-        try
+        if (await ReloadFromGame(w) is { } failed)
         {
-            await w.Reload();
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException or System.Text.Json.JsonException)
-        {
-            Busy(null);
-            Msg("save.msg.unreachable", ex.Message);
+            Msg(failed);
             return;
         }
-        Busy(null);
         if (await ReopenArea(s.Scene))
         {
             Msg("top.msg.reloaded");

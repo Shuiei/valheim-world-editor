@@ -518,20 +518,7 @@ public sealed partial class MainWindow : Window
             }
             // Shown: the world's area, even if a load dropped meanwhile had reset it.
             world.Area = scene.Session;
-            // Found by the map's search: selected, the camera on it (items and texts: in the inspector).
-            if (MapPage?.Target is var (id, inspect) && spot != null && MapPage.Spot == spot)
-            {
-                int i = scene.Things.FindIndex(t => t.Id == id && !t.Gone);
-                if (i >= 0)
-                {
-                    View.Focus(scene.Things[i].Position);
-                    View.Select([i]);
-                    if (inspect)
-                    {
-                        Inspect();
-                    }
-                }
-            }
+            FocusSearchTarget(scene, spot);
             return true;
         }
         catch (Exception ex)
@@ -564,6 +551,31 @@ public sealed partial class MainWindow : Window
             {
                 Msg(text);
             }
+        }
+    }
+
+    /// <summary>
+    /// An object the map's search found, when the area was opened around its zone: selected, the camera on it (items
+    /// and texts: in the inspector).
+    /// </summary>
+    /// <param name="scene">The area just shown.</param>
+    /// <param name="spot">The map's chosen zone the area was opened around, if it was.</param>
+    private void FocusSearchTarget(WorldScene scene, (int X, int Z)? spot)
+    {
+        if (MapPage?.Target is not var (id, inspect) || spot == null || MapPage.Spot != spot)
+        {
+            return;
+        }
+        int i = scene.Things.FindIndex(t => t.Id == id && !t.Gone);
+        if (i < 0)
+        {
+            return;
+        }
+        View.Focus(scene.Things[i].Position);
+        View.Select([i]);
+        if (inspect)
+        {
+            Inspect();
         }
     }
 
@@ -809,21 +821,34 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+        if (await ReloadFromGame(w) is { } failed)
+        {
+            Say(failed);
+        }
+        MapPage?.Show(w);
+    }
+
+    /// <summary>
+    /// Live: reads the world from the game again behind the busy veil (the map's Reload and the 3D editor's).
+    /// </summary>
+    /// <param name="w">The live world.</param>
+    /// <returns>Why the game could not be read (unreachable, or the bridge's answer: a refusal, broken JSON); null when read.</returns>
+    private async Task<Said?> ReloadFromGame(WorldSession w)
+    {
         Busy(Lang.T("save.msg.loadingLive"));
         try
         {
             await w.Reload();
+            return null;
         }
-        // As ReloadHere: the bridge's answers (a refusal, broken JSON) too.
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or InvalidOperationException or System.Text.Json.JsonException)
         {
-            Say(Said.Of("save.msg.unreachable", ex.Message));
+            return Said.Of("save.msg.unreachable", ex.Message);
         }
         finally
         {
             Busy(null);
         }
-        MapPage?.Show(w);
     }
 
     /// <summary>
@@ -2382,6 +2407,23 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
+    /// The View panel's overlay switches, each with its tip, as the 3D view shows the overlays now.
+    /// </summary>
+    /// <param name="list">The panel's list they go into.</param>
+    private void AddOverlayBoxes(StackPanel list)
+    {
+        foreach (var (layer, label) in new[] { (Overlays.Layer.Borders, Lang.T("view.overlay.borders")), (Overlays.Layer.Markers, Lang.T("view.overlay.markers")),
+            (Overlays.Layer.Wards, Lang.T("view.overlay.wards")), (Overlays.Layer.Stations, Lang.T("view.overlay.stations")),
+            (Overlays.Layer.Flatten, Lang.T("view.overlay.flatten")) })
+        {
+            var box = new CheckBox { Content = label, IsChecked = View.IsOverlayShown(layer), FontSize = 12, Tag = label };
+            ToolTip.SetTip(box, Tips.Overlay(layer));
+            _overlayBoxes[layer] = box;
+            list.Children.Add(box);
+        }
+    }
+
+    /// <summary>
     /// Lays out the View panel: its headings, switches, lists and preset buttons with their tips; the switches'
     /// starting states are kept as the presets' defaults.
     /// </summary>
@@ -2412,15 +2454,7 @@ public sealed partial class MainWindow : Window
         }
         list.Children.Add(WaterBox);
         list.Children.Add(Heading(Lang.T("view.head.overlays")));
-        foreach (var (layer, label) in new[] { (Overlays.Layer.Borders, Lang.T("view.overlay.borders")), (Overlays.Layer.Markers, Lang.T("view.overlay.markers")),
-            (Overlays.Layer.Wards, Lang.T("view.overlay.wards")), (Overlays.Layer.Stations, Lang.T("view.overlay.stations")),
-            (Overlays.Layer.Flatten, Lang.T("view.overlay.flatten")) })
-        {
-            var box = new CheckBox { Content = label, IsChecked = View.IsOverlayShown(layer), FontSize = 12, Tag = label };
-            ToolTip.SetTip(box, Tips.Overlay(layer));
-            _overlayBoxes[layer] = box;
-            list.Children.Add(box);
-        }
+        AddOverlayBoxes(list);
         UnsavedBox.Tip("view.unsaved");
         list.Children.Add(UnsavedBox);
         LimitBox.Tip("view.limit");
@@ -2434,7 +2468,7 @@ public sealed partial class MainWindow : Window
         list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 6, 0, 0), Children = { DefaultsButton, AllButton, GroundButton } });
         list.Children.Add(Heading(Lang.T("view.head.building")));
         BuilderBox.Tip("view.builder");
-        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = Lang.T("select.ask.playerId.title"), FontSize = 12 }, BuilderBox } });
+        list.Children.Add(new StackPanel { Spacing = 2, Children = { new TextBlock { Text = Lang.T("view.label.builtBy"), FontSize = 12 }, BuilderBox } });
         list.Children.Add(Heading(Lang.T("view.head.ground")));
         list.Children.Add(SlopeBox);
         list.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { ContourBox, ContourStepBox, new TextBlock { Text = Lang.T("common.metres"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center } } });
