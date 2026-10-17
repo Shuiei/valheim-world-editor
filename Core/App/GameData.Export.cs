@@ -45,7 +45,8 @@ public static partial class GameData
             Console.Error.WriteLine("Valheim was not found.");
             return 1;
         }
-        if (Kinds.Select(k => Path.Combine(folder, k.Name + ".json")).FirstOrDefault(p => !File.Exists(p)) is string missing)
+        string root = Path.GetFullPath(folder);
+        if (Kinds.Select(k => KindPath(root, k.Name)).FirstOrDefault(p => !File.Exists(p)) is string missing)
         {
             Console.Error.WriteLine($"{missing} is missing.");
             return 1;
@@ -57,11 +58,14 @@ public static partial class GameData
         }
         foreach (var kind in Kinds)
         {
-            string path = Path.Combine(folder, kind.Name + ".json");
+            string path = KindPath(root, kind.Name);
             var (text, kept, now) = Trim(kind.Name, read[kind.Name], File.ReadAllText(path));
             File.WriteAllText(path, text);
             Console.WriteLine($"{path}: {now.Count} of {kept.Count} entries" + (now.Count < kept.Count ? $" (not in the game any more: {string.Join(", ", kept.Except(now))})" : ""));
         }
         return 0;
     }
+
+    /// <summary>The copy of one kind inside the resolved export folder: &lt;root&gt;/&lt;kind&gt;.json.</summary>
+    private static string KindPath(string root, string kindName) => Path.Combine(root, kindName + ".json");
 }
