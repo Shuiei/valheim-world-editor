@@ -57,4 +57,32 @@ public class DungeonDresserFixturesTests
         Assert.Contains(bases, b => b.Prefab == "MemorialStone_Large");
         Assert.All(bases, b => Assert.Equal(bases[0].Base, b.Base, 0.001f));
     }
+
+    [Fact]
+    public void ADolmenIsInItsRoomAboveTheFloor()
+    {
+        // The dolmen (a shrine on a dais, outside the mountain and the mistlands) stands in a room, above its floor.
+        int dolmens = 0;
+        foreach (string biome in new[] { "Black Forest", "Plains", "Swamp" })
+        {
+            foreach (string style in new[] { "Temple", "Crypt" })
+            {
+                for (int size = 2; size <= 3; size++)
+                {
+                    for (int seed = 1; seed <= 20; seed++)
+                    {
+                        var r = DungeonGen.Make(new DungeonGen.Settings(Biome: biome, Style: style, Size: size, Levels: 1, Seed: seed));
+                        foreach (var i in r.Items.Where(i => i.Prefab.StartsWith("RockDolmen_", StringComparison.Ordinal)))
+                        {
+                            dolmens++;
+                            var room = r.Map!.SingleOrDefault(m => i.Position.X > m.X0 && i.Position.X < m.X1 && i.Position.Z > m.Z0 && i.Position.Z < m.Z1);
+                            Assert.True(room != null, $"{biome} {style} {size} {seed}: the dolmen at {i.Position} is in no room");
+                            Assert.True(i.Position.Y > room!.Y, $"{biome} {style} {size} {seed}: the dolmen at {i.Position} is not above its room's floor {room.Y}");
+                        }
+                    }
+                }
+            }
+        }
+        Assert.True(dolmens > 0, "no dolmen was made in any of the dungeons tried");
+    }
 }
