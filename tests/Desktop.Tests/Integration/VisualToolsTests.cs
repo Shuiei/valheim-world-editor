@@ -43,9 +43,16 @@ public sealed class VisualToolsTests : VisualEditorPictures
     public void PlacePreviewsAndPlacesTrees()
     {
         Open();
-        Do("area 0 0 3", "key T", "mouse move 5 5");
+        // The Place tool keeps the mode it had: an earlier test in this editor may have left Zone, where a click starts
+        // a zone instead of placing. So the Brush is chosen here.
+        Do("area 0 0 3", "key T", "click Brush", "mouse move 5 5");
         ShowsSomething(Picture("place-preview"));
         var s = Do("mouse down 5 5", "mouse up 5 5");
+        // The Brush places on the stroke's timer: the count may come a moment after the click.
+        for (int i = 0; i < 20 && s.GetProperty("added").GetInt32() == 0; i++)
+        {
+            s = Editor.Send("wait 100");
+        }
         Assert.True(s.GetProperty("added").GetInt32() > 0, s.ToString());
         ShowsSomething(Picture("placed"));
         Clean();
