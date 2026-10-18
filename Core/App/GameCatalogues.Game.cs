@@ -60,7 +60,7 @@ public static partial class GameCatalogues
             BundleFileInstance? file = null;
             try
             {
-                file = _am.LoadBundleFile(Path.Combine(_dir, name), false);
+                file = Load(name);
                 var b = new Bundle(_am, file, () => _open.Remove(name));
                 foreach (var f in b.Files)
                 {
@@ -96,18 +96,47 @@ public static partial class GameCatalogues
             {
                 try
                 {
-                    var b = _am.LoadBundleFile(Path.Combine(_dir, name), false);
-                    foreach (var d in b.file.BlockAndDirInfo.DirectoryInfos)
+                    var b = Load(name);
+                    // Unloaded whatever its headers hold: a bundle whose list of files cannot be read is let go of too.
+                    try
                     {
-                        CabBundle[d.Name.ToLowerInvariant()] = name;
+                        foreach (var d in b.file.BlockAndDirInfo.DirectoryInfos)
+                        {
+                            CabBundle[d.Name.ToLowerInvariant()] = name;
+                        }
                     }
-                    _am.UnloadBundleFile(b);
+                    finally
+                    {
+                        _am.UnloadBundleFile(b);
+                    }
                 }
                 catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
                 {
                     // Not a bundle.
                     Log.CaughtBrief(e, $"listing the files in {name} (not a bundle: passed over)");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Loads a bundle file of the folder, read in place. A file that is not a bundle fails to load, and its stream
+        /// is closed before the error goes on: AssetsTools leaves it open, and Windows then refuses to delete or
+        /// replace the folder (as GameBundles does for the same reason).
+        /// </summary>
+        /// <param name="name">The bundle's file name.</param>
+        private BundleFileInstance Load(string name)
+        {
+            string path = Path.GetFullPath(Path.Combine(_dir, name));
+            var stream = File.OpenRead(path);
+            try
+            {
+                return _am.LoadBundleFile(stream, path, false);
+            }
+            catch
+            {
+                // Not a bundle (said by the caller): the file is let go of.
+                stream.Dispose();
+                throw;
             }
         }
 
