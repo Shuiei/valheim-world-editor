@@ -62,6 +62,25 @@ public sealed class GameDataTests : IDisposable
         Assert.Equal(keys, GameData.Load(bundles, cache: true)?["zdo-keys"]);
     }
 
+    // A kind read in the one pass over the bundles (pieces) whose cache is missing: read from the game's bundles (none
+    // here, so nothing in it) in that pass, and kept.
+    [Fact]
+    public void AKindOfThePassOverTheBundlesIsReadWhenItsCacheIsMissing()
+    {
+        var (valheim, bundles) = _sandbox.Game("Valheim", code: false);
+        GameHome.Caches(valheim, bundles, "pieces", "piece-support");
+        var told = new List<string>();
+
+        var read = GameData.Load(bundles, cache: true, (_, step) => told.Add(step))!;
+
+        Assert.Equal("{}", read["pieces"]);
+        Assert.Equal("{}", read["piece-support"]);
+        Assert.Equal(GameHome.Copy("prefabs"), read["prefabs"]);
+        Assert.Contains(told, s => s.StartsWith("Reading the game's bundles", StringComparison.Ordinal));
+        Assert.True(File.Exists(GameData.CacheFile("pieces")));
+        Assert.Equal("{}", GameData.Load(bundles, cache: true)!["pieces"]);
+    }
+
     [Fact]
     public void ACacheThatCannotBeWrittenIsOnlyLogged()
     {
