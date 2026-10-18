@@ -5,9 +5,10 @@ namespace TerrainEditor.App;
 public static partial class GameLook
 {
     /// <summary>
-    /// Steam's system-wide folders on Linux (looked at only with <c>SearchOutsideHome</c>).
+    /// Steam's system-wide folders on Linux (looked at only with <c>SearchOutsideHome</c>). Settable so the tests can
+    /// stand them in with folders of their own; put back afterwards.
     /// </summary>
-    private static readonly string[] SystemSteamRoots = ["/opt/Steam", "/usr/share/steam"];
+    internal static IReadOnlyList<string> SystemSteamRoots { get; set; } = ["/opt/Steam", "/usr/share/steam"];
 
     /// <summary>
     /// Steam's folders on this computer, before the libraries they list are added: the registry and default places on
