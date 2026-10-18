@@ -1,4 +1,5 @@
 using TerrainEditor.App;
+using WorldEditor.Tests.Unity;
 using Xunit;
 
 namespace WorldEditor.Tests;
@@ -226,5 +227,35 @@ public sealed class GameLookTests : IDisposable
         GameLook.IndexBundles(game);
         Assert.True(game.Indexed);
         Assert.Empty(game.Index);
+    }
+
+    // A game whose files hold a model but whose data can be had neither from the caches nor from the game (no game
+    // code): indexed with its model, and the reading ends without the data (the state then says it failed).
+    [Fact]
+    public void AGameWithModelsWhoseDataCannotBeHadIsIndexedAllTheSame()
+    {
+        using var made = new TestGame();
+        var b = made.Bundle("models");
+        long square = new TestMesh { Name = "square", Positions = [-1.5f, 0, 0, 1.5f, 0, 0, 1.5f, 3, 0], Submeshes = [[0, 1, 2]] }.Add(b);
+        long plain = TestAssets.Material(b, "rock_plain", colors: [("_Color", 0.5, 0.5, 0.5, 1.0)]);
+        b.Prefab("Rock_4", r =>
+        {
+            r.Mono("ZNetView", new Fields { ["m_persistent"] = true });
+            r.Child("body", c => c.Renderer(Fields.Ref(square), [Fields.Ref(plain)]));
+        });
+        made.Save();
+        var game = made.Bundles();
+        try
+        {
+            GameData.Forget();
+            GameLook.IndexBundles(game);
+            Assert.True(game.Indexed);
+            Assert.Contains("Rock_4", game.Index.Keys);
+            Assert.False(GameData.Ensure(game));
+        }
+        finally
+        {
+            GameData.UseCopies(Fixtures.Root);
+        }
     }
 }
