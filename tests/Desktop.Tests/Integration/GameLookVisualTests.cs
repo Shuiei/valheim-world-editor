@@ -110,6 +110,16 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
         Assert.StartsWith("@@ ok ", placed);
         editor.Send("camera 0 0 0 45 80 5000");
         AssertDrawn(Picture("rooms"));
+        // Pointed at and clicked where the dungeon went (5000 m over the view's middle): a room under the pointer is
+        // marked, then picked; deleted, it leaves open ends, marked in their turn.
+        editor.Send("mouse3 move 0 5000 0");
+        AssertDrawn(Picture("rooms-hover"));
+        editor.Send("mouse3 down 0 5000 0");
+        editor.Send("mouse3 up 0 5000 0");
+        AssertDrawn(Picture("rooms-picked"));
+        editor.Send("key Delete");
+        editor.Send("mouse3 move 0 5000 0");
+        AssertDrawn(Picture("rooms-open-ends"));
         Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
         editor.Send("key Escape");
         BackToStart(editor);
