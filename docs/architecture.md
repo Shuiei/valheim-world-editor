@@ -242,6 +242,28 @@ the game's. So:
 
 CodeRabbit is told the same for `Core/WorldGen/**` (`.coderabbit.yaml`).
 
+### What a world generation mod changes: `WorldRules`
+
+Expand World (Size and Rivers) patches the game's generator through Harmony: it replaces literals (the
+radius 10000, the edge 10500, the distance bands, the stream heights...) and adds a few transforms
+(altitude, water depth, forest). The editor carries those as `WorldRules` (`Core/WorldGen/WorldRules.cs`),
+on the generator's `World`; `WorldGenerator.Rules.cs` turns them into the values the formulas use, each
+**in the floating-point type of the literal it stands in for, computed as the mod computes it**: at the
+game's own values (`WorldRules.Vanilla`) every one is the literal to the bit, so the reference tests hold
+unchanged. Where the mod only patches when a setting is set (the altitude and depth postfixes, the forest
+divisor), the generator branches the same way, since the formula would round differently at the default.
+Rules for a new setting go in the same way: the mod's expression and type, a comment naming the game's
+method and literal, and a test that the vanilla value is the old one.
+
+Three things to keep apart: the water level the rules move (`WorldRules.WaterLevel`, which the generator's
+lakes and streams and the editor's own water follow), the **literal 30** the game's zone system keeps for its
+vegetation, locations, biome points and map mask (`WorldGenerator.LiteralWaterLevel`: neither mod changes
+it), and the generator's stretched coordinates (`WorldGenerator.Stretched`: the mod divides a point on the
+way into `GetBiome`, `GetBiomeHeight` and the map's mask, and multiplies it back for the rivers). The
+reader of the mods' files is `Core/App/ExpandWorld.cs`; the rules apply only with the Expand World switch
+in Settings on (`AppSettings.ExpandWorld`), else every world is generated as the game does. The design
+and the steps still to come are in `.claude/docs/expand-world-design.md`.
+
 ## Live mode
 
 The editor and the game talk over HTTP on the game's computer, `127.0.0.1:5182` by default, with a

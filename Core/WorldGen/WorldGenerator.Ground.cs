@@ -11,7 +11,8 @@ public sealed partial class WorldGenerator
     /// <summary>
     /// The continents' height: products of wide noise fields, flattened in rings round the middle (no
     /// mountains near the start) and sunk past the world's edge. A point's biome and then its height
-    /// both need it: the last one is kept on the thread (by generator and the point's exact bits).
+    /// both need it: the last one is kept on the thread (by generator and the point's exact bits). The
+    /// point is in the generator's coordinates (<see cref="Stretched"/>).
     /// </summary>
     private float Continent(float x, float z)
     {
@@ -48,14 +49,24 @@ public sealed partial class WorldGenerator
     private readonly int _number = Interlocked.Increment(ref _generators);
 
     /// <summary>
-    /// The continents' height, worked out (Continent keeps the last one).
+    /// The continents' height, worked out (Continent keeps the last one), with the rules' altitude transform
+    /// (Expand World Size's postfix on the game's GetBaseHeight, applied only when its delta or multiplier is set).
     /// </summary>
     private float WorkOutContinent(float x, float z)
     {
+        float h = ContinentShape(x, z);
+        return _v.AltitudeOn ? _v.BaseWater + (h - _v.BaseWater) * _v.AltitudeMultiplier + _v.BaseAltitudeDelta : h;
+    }
+
+    /// <summary>
+    /// The continents' height as the game's GetBaseHeight works it out (the world's, not the menu's).
+    /// </summary>
+    private float ContinentShape(float x, float z)
+    {
         float fromMiddle = GenMath.Length(x, z);
         double cx = x, cz = z;
-        cx += 100000.0 + _offsetA;
-        cz += 100000.0 + _offsetB;
+        cx += 100000.0 + _continentA;
+        cz += 100000.0 + _continentB;
         float h = Swells(cx, cz);
         // Ridges where two fields cross, kept out of the middle 744 to 1000 m.
         float r1 = GenMath.Noise(cx * (double)0.002f * 0.25 + (double)0.123f, cz * (double)0.002f * 0.25 + (double)0.15123f);
@@ -63,13 +74,13 @@ public sealed partial class WorldGenerator
         float flat = (float)(1.0 - (double)GenMath.Step(0.02f, 0.12f, Mathf.Abs((float)((double)r1 - r2))));
         flat = (float)((double)flat * GenMath.Smooth(744f, 1000f, fromMiddle));
         h = (float)((double)h * (1.0 - flat));
-        if (fromMiddle > WorldSize)
+        if (fromMiddle > _v.WorldSize)
         {
             // Past the world: down to the sea floor, then the edge.
-            h = GenMath.Lerp(h, -0.2f, GenMath.Step(WorldSize, EdgeOfWorld, fromMiddle));
-            if (fromMiddle > 10490f)
+            h = GenMath.Lerp(h, -0.2f, GenMath.Step(_v.WorldSize, _v.EdgeOfWorld, fromMiddle));
+            if (fromMiddle > _v.EdgeInner)
             {
-                h = GenMath.Lerp(h, -2f, Utils.LerpStep(10490f, EdgeOfWorld, fromMiddle));
+                h = GenMath.Lerp(h, -2f, Utils.LerpStep(_v.EdgeInner, _v.EdgeOfWorld, fromMiddle));
             }
             return h * 1f + 0f;
         }
@@ -122,6 +133,11 @@ public sealed partial class WorldGenerator
     private float DetailPoint(float v) => (float)((double)v + 100000.0 + _offsetDetail);
 
     /// <summary>
+    /// The same for the x coordinate of the seven biome heights the rules' height seed applies to (<see cref="_detailX"/>).
+    /// </summary>
+    private float SeededDetailPoint(float v) => (float)((double)v + 100000.0 + _detailX);
+
+    /// <summary>
     /// Rolling hills: two products of noise, the finer weighed by the coarser.
     /// </summary>
     private static float Hills(double dx, double dz)
@@ -155,13 +171,14 @@ public sealed partial class WorldGenerator
     /// </summary>
     /// <param name="x">World x.</param>
     /// <param name="z">World z.</param>
+    /// <param name="seeded">Whether the rules' height seed applies (the game's biome heights, not its pregeneration ones).</param>
     /// <param name="land">The continents' height at the point.</param>
     /// <param name="dx">The detail point of x.</param>
     /// <param name="dz">The detail point of z.</param>
-    private float Hilled(float x, float z, out float land, out double dx, out double dz)
+    private float Hilled(float x, float z, bool seeded, out float land, out double dx, out double dz)
     {
         land = Continent(x, z);
-        dx = DetailPoint(x);
+        dx = seeded ? SeededDetailPoint(x) : DetailPoint(x);
         dz = DetailPoint(z);
         return (float)((double)land + (double)Hills(dx, dz) * (double)0.1f);
     }

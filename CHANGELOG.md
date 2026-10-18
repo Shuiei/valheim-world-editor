@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.49.0 — unreleased
+
+### Added
+- **Worlds made with Expand World Size and Expand World Rivers are generated as those mods make them** (the first
+  step of the editor's Expand World support), once the **Expand World** switch in Settings is on. The world's
+  radius and edge, its stretch, altitude and water depth settings, the Ashlands' limits and gaps, the forest
+  amount, the seeds the mods replace, the water level and every lake, river and stream setting come from the
+  world file (Expand World Size keeps its settings in it) and the mods' settings files in the BepInEx folder.
+  With the switch off, as before, every world is generated as the game itself does. Not yet: Expand World Data's
+  biomes, locations and vegetation, worlds wider than the game's save grid, and the map's size.
+
 ## v1.48.1 — unreleased
 
 ### Fixed

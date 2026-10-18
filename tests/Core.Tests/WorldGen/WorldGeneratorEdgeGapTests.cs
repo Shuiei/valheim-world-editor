@@ -5,10 +5,17 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// The world's edges: the wave the edge circles ride on (the sine of twenty times the angle), and the gap the ground
-/// takes at the Ashlands' and the Deep North's edge (0 on the edge, 1 from 400 m past it, eased in between).
+/// takes at the Ashlands' and the Deep North's edge (0 on the edge, 1 from 400 m past it, eased in between); with the
+/// rules, the edge circles scale with the radius and the gaps can be turned off.
 /// </summary>
 public class WorldGeneratorEdgeGapTests
 {
+    private static WorldGenerator Generator(WorldRules? rules = null) =>
+        WorldGenerator.Create(new World { Seed = 12345, WorldGenVersion = 2, Rules = rules ?? WorldRules.Vanilla });
+
+    private static double AshlandsGap(WorldGenerator g, float x, float z) =>
+        PrivateMember.Call<double>(typeof(WorldGenerator), "AshlandsGap", g, x, z);
+
     [Fact]
     public void WorldAngleIsTheSineOfTwentyTimesTheAngleFromTheZAxis()
     {
@@ -27,20 +34,21 @@ public class WorldGeneratorEdgeGapTests
     public void TheDeepNorthGapIsZeroOnItsEdge()
     {
         // The point is 12 000 m (the edge radius) from the circle's middle, where the wave is 0.
-        Assert.Equal(0.0, WorldGenerator.CreateDeepNorthGap(0f, 8000f), 6);
+        Assert.Equal(0.0, Generator().CreateDeepNorthGap(0f, 8000f), 6);
     }
 
     [Fact]
     public void TheDeepNorthGapIsOneFrom400MPastItsEdge()
     {
-        Assert.Equal(1.0, WorldGenerator.CreateDeepNorthGap(0f, 8400f), 6);
+        Assert.Equal(1.0, Generator().CreateDeepNorthGap(0f, 8400f), 6);
     }
 
     [Fact]
     public void TheDeepNorthGapIsTheSameShortOfAndPastTheEdgeByTheSameDistance()
     {
-        double short200 = WorldGenerator.CreateDeepNorthGap(0f, 7800f);
-        double past200 = WorldGenerator.CreateDeepNorthGap(0f, 8200f);
+        var g = Generator();
+        double short200 = g.CreateDeepNorthGap(0f, 7800f);
+        double past200 = g.CreateDeepNorthGap(0f, 8200f);
         Assert.Equal(past200, short200, 9);
         Assert.True(past200 is > 0.0 and < 1.0);
     }
@@ -49,14 +57,36 @@ public class WorldGeneratorEdgeGapTests
     public void TheAshlandsGapIsZeroOnItsEdge()
     {
         // The point is 12 000 m (the edge radius) from the Ashlands' circle's middle, where the wave is 0.
-        double gap = PrivateMember.Call<double>(typeof(WorldGenerator), "AshlandsGap", null, 0f, -8000f);
-        Assert.Equal(0.0, gap, 6);
+        Assert.Equal(0.0, AshlandsGap(Generator(), 0f, -8000f), 6);
     }
 
     [Fact]
     public void TheAshlandsGapIsOneFrom400MPastItsEdge()
     {
-        double gap = PrivateMember.Call<double>(typeof(WorldGenerator), "AshlandsGap", null, 0f, -8400f);
-        Assert.Equal(1.0, gap, 6);
+        Assert.Equal(1.0, AshlandsGap(Generator(), 0f, -8400f), 6);
+    }
+
+    [Fact]
+    public void TheEdgeCirclesScaleWithTheRadius()
+    {
+        // Twice the radius: the Deep North's edge is 24 000 m from a middle 8 000 m north, so 16 000 m up the axis.
+        var g = Generator(new WorldRules { Radius = 20000f });
+        Assert.Equal(0.0, g.CreateDeepNorthGap(0f, 16000f), 6);
+        Assert.Equal(1.0, g.CreateDeepNorthGap(0f, 16800f), 6);
+        Assert.Equal(0.0, AshlandsGap(g, 0f, -16000f), 6);
+        Assert.True(g.IsDeepnorth(0f, 16100f));
+        Assert.False(g.IsDeepnorth(0f, 15900f));
+        Assert.True(g.IsAshlands(0f, -16100f));
+        Assert.False(g.IsAshlands(0f, -15900f));
+    }
+
+    [Fact]
+    public void TheGapsCanBeTurnedOff()
+    {
+        var g = Generator(new WorldRules { AshlandsGap = false, DeepNorthGap = false });
+        Assert.Equal(1.0, g.CreateDeepNorthGap(0f, 8000f));
+        Assert.Equal(1.0, AshlandsGap(g, 0f, -8000f));
+        // The edge itself is where it was: only the ground stops sinking along it.
+        Assert.True(g.IsDeepnorth(0f, 8100f));
     }
 }

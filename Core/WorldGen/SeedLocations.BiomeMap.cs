@@ -75,13 +75,15 @@ public static partial class SeedLocations
                 {
                     float wx = MapToWorld(j);
                     int k = j + i * Size;
-                    if (wx * wx + wy * wy > TerrainService.MapRadius * TerrainService.MapRadius)
+                    float edge = gen.Rules.TotalRadius;
+                    if (wx * wx + wy * wy > edge * edge)
                     {
                         _cell[k] = Sea;
                         continue;
                     }
                     Heightmap.Biome b = gen.GetBiome(wx, wy);
-                    _cell[k] = (byte)(Index(b) | (gen.GetBiomeHeight(b, wx, wy, out _) >= 30f ? Above : 0));
+                    // "Above the sea" is the game's literal 30, whatever the rules put the water at.
+                    _cell[k] = (byte)(Index(b) | (gen.GetBiomeHeight(b, wx, wy, out _) >= WorldGenerator.LiteralWaterLevel ? Above : 0));
                 }
             });
         }

@@ -38,7 +38,7 @@ public sealed partial class TerrainService
             {
                 int i = row * size + col;
                 float h = heights[i];
-                (float r, float g, float b) = BiomeColor(biomes[i], h);
+                (float r, float g, float b) = BiomeColor(biomes[i], h, WaterLevel);
                 if (h >= WaterLevel)
                 {
                     // Simple hill shading from the north-west.
@@ -59,13 +59,14 @@ public sealed partial class TerrainService
     }
 
     /// <summary>
-    /// The overview's colour (0..255 per channel) for a biome at a height: blue, darker with depth, below sea level.
+    /// The overview's colour (0..255 per channel) for a biome at a height: blue, darker with depth, below the water
+    /// level given.
     /// </summary>
-    internal static (float, float, float) BiomeColor(Heightmap.Biome biome, float h)
+    internal static (float, float, float) BiomeColor(Heightmap.Biome biome, float h, float water)
     {
-        if (h < WaterLevel)
+        if (h < water)
         {
-            float depth = Math.Clamp((WaterLevel - h) / 60f, 0f, 1f);
+            float depth = Math.Clamp((water - h) / 60f, 0f, 1f);
             return (40 - 25 * depth, 95 - 55 * depth, 140 - 50 * depth);
         }
         return biome switch

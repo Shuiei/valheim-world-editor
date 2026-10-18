@@ -25,9 +25,13 @@ public sealed partial class WorldGenerator
         {
             return MenuContinent(x, z) >= 0.4f ? Heightmap.Biome.Mountain : Heightmap.Biome.BlackForest;
         }
+        // Expand World Size: the world stretched (its prefix on the game's GetBiome divides the point).
+        x = Stretched(x);
+        z = Stretched(z);
         float fromMiddle = GenMath.Length(x, z);
         float land = Continent(x, z);
         float wave = (float)((double)WorldAngle(x, z) * 100.0);
+        // The game's GetHeight, given the point as it is here: it stretches it again on its own way in.
         if (waterAlwaysOcean && GetHeight(x, z) <= oceanLevel)
         {
             return Heightmap.Biome.Ocean;
@@ -52,26 +56,22 @@ public sealed partial class WorldGenerator
     }
 
     /// <summary>
-    /// A biome's noise field: wide blobs, a kilometre or so across, placed by the seed.
+    /// A biome's noise field: wide blobs, a kilometre or so across, placed by the seed (the rules' biome stretch
+    /// spreads them: Expand World Size divides the field's point, offset and all, by it).
     /// </summary>
-    private static float Field(float offset, float x, float z) =>
-        GenMath.Noise((double)(float)((double)offset + x) * (double)0.001f, (double)(float)((double)offset + z) * (double)0.001f);
+    private float Field(float offset, float x, float z) =>
+        GenMath.Noise((double)(float)(((double)offset + x) / _v.BiomeStretch) * (double)0.001f, (double)(float)(((double)offset + z) / _v.BiomeStretch) * (double)0.001f);
 
     /// <summary>
-    /// Whether (x, z) is past the Ashlands' edge (south).
+    /// Whether (x, z) is past the Ashlands' edge (south). In the generator's coordinates (<see cref="Stretched"/>).
     /// </summary>
-    public static bool IsAshlands(float x, float z) =>
-        (double)GenMath.Length(x, (float)((double)z + AshlandsShift)) > EdgeRadius + (double)WorldAngle(x, z) * 100.0;
+    public bool IsAshlands(float x, float z) =>
+        (double)GenMath.Length(x, (float)((double)z + (double)_v.AshlandsYOffset)) > (double)_v.AshlandsMinDistance + (double)WorldAngle(x, z) * 100.0;
 
     /// <summary>
-    /// Whether (x, z) is past the Deep North's edge (north).
+    /// Whether (x, z) is past the Deep North's edge (north). In the generator's coordinates, but for the rivers'
+    /// drawing, which asks with world metres as the game does.
     /// </summary>
-    public static bool IsDeepnorth(float x, float z) =>
-        GenMath.Length(x, (float)((double)z + DeepNorthShift)) > (float)(EdgeRadius + (double)(float)((double)WorldAngle(x, z) * 100.0));
-
-    /// <summary>
-    /// The Ashlands' and the Deep North's edges: circles 12 km round a point 4 km south (Ashlands) or
-    /// north (Deep North) of the middle, waved by the world's angle.
-    /// </summary>
-    private const float EdgeRadius = 12000f, AshlandsShift = -4000f, DeepNorthShift = 4000f;
+    public bool IsDeepnorth(float x, float z) =>
+        GenMath.Length(x, (float)((double)z + _v.DeepNorthShift)) > (float)(_v.DeepNorthRadius + (double)(float)((double)WorldAngle(x, z) * 100.0));
 }

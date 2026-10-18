@@ -96,6 +96,6 @@ public class RegrowTests
         Assert.NotEmpty(all);
         var rocks = all.Where(s => s.Name == "rock4_coast").ToList();
         // Coast rocks stand between 2 m and 0.5 m below the sea.
-        Assert.All(rocks, r => Assert.InRange(r.Y - ValheimGen.TerrainService.WaterLevel, -2.01f, -0.49f));
+        Assert.All(rocks, r => Assert.InRange(r.Y - ValheimGen.WorldGenerator.LiteralWaterLevel, -2.01f, -0.49f));
     }
 }

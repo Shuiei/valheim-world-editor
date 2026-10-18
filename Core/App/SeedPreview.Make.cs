@@ -71,7 +71,7 @@ public static partial class SeedPreview
                 // Swamp, whose pools are part of it). The game names much of the shallow sea after the land
                 // biome near it (and the southern sea Ashlands): deeper than that, it is sea here.
                 bool swamp = b == Heightmap.Biome.Swamp;
-                biome[k] = index < 0 || ground < TerrainService.WaterLevel - (swamp ? 3 : 1) ? Ocean : (byte)index;
+                biome[k] = index < 0 || ground < gen.Rules.WaterLevel - (swamp ? 3 : 1) ? Ocean : (byte)index;
             }
         });
         return (biome, height);

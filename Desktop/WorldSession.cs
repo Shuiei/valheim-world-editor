@@ -123,6 +123,7 @@ public sealed partial class WorldSession : IDisposable
     {
         NeedGame();
         var world = WorldSave.Load(dir);
+        world.Rules = ExpandWorld.Resolve(world, AppSettings.Load());
         WorldSave.Builder = Builders.Default(world);
         return From(world, null, world.Name);
     }

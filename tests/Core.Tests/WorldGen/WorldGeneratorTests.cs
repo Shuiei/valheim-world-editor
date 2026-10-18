@@ -78,9 +78,82 @@ public class WorldGeneratorTests
     {
         Assert.Equal(0, WorldGenerator.DeepNorthWaveFade(0, 0));
         Assert.Equal(1, WorldGenerator.DeepNorthWaveFade(0, 10000));
-        float g = WorldGenerator.GetAshlandsOceanGradient(10, -9000);
+        var gen = Generator();
+        float g = gen.GetAshlandsOceanGradient(10, -9000);
         Assert.True(g > 1);
-        Assert.Equal(g, WorldGenerator.GetAshlandsOceanGradient(new Vector2(10, -9000)));
-        Assert.Equal(g, WorldGenerator.GetAshlandsOceanGradient(new Vector3(10, 7, -9000)));
+        Assert.Equal(g, gen.GetAshlandsOceanGradient(new Vector2(10, -9000)));
+        Assert.Equal(g, gen.GetAshlandsOceanGradient(new Vector3(10, 7, -9000)));
+    }
+
+    [Fact]
+    public void TheRulesAreTheGeneratorsAndTellGeneratorsApart()
+    {
+        var plain = Generator();
+        Assert.Same(WorldRules.Vanilla, plain.Rules);
+        Assert.Equal(10000f, plain.WorldSize);
+        Assert.Equal("", plain.Identity.Rules);
+        var rules = new WorldRules { Radius = 20000f, Stretch = 2f };
+        var big = WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = 2, Rules = rules });
+        Assert.Equal(10000f, big.WorldSize);
+        Assert.Equal(1000f, big.Stretched(2000f));
+        Assert.NotEqual(plain.Identity, big.Identity);
+        Assert.Equal(big.Identity, WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = 2, Rules = rules with { } }).Identity);
+    }
+
+    [Fact]
+    public void AStretchedWorldTwiceAsWideHasTheBiomesOfThePlainOneAtHalfTheDistance()
+    {
+        // Radius 20 000 m stretched by 2: every formula sees the plain world's coordinates, so the biome at (2x, 2z)
+        // is the plain world's at (x, z) (the ground differs: the lakes are scanned over the wider world).
+        var plain = Generator();
+        var stretched = WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = 2, Rules = new WorldRules { Radius = 20000f, Stretch = 2f } });
+        var points = Rings(200, 9800, 400, 36).ToList();
+        Assert.All(points, p => Assert.Equal(plain.GetBiome(p.X, p.Z), stretched.GetBiome(2 * p.X, 2 * p.Z)));
+        Assert.Contains(points, p => plain.GetBiome(p.X, p.Z) == Heightmap.Biome.Plains);
+    }
+
+    [Fact]
+    public void AWiderWorldKeepsLandPastTheGamesEdge()
+    {
+        var plain = Generator();
+        var wide = WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = 2, Rules = new WorldRules { Radius = 20000f } });
+        // Past 10 500 m the plain world is the flat edge, -400 m; the wide one still has ground there.
+        Assert.Equal(-400f, plain.GetHeight(0, 12000));
+        Assert.NotEqual(-400f, wide.GetHeight(0, 12000));
+        Assert.Equal(-400f, wide.GetHeight(0, 21000));
+        Assert.Equal(20000f, wide.WorldSize);
+    }
+
+    [Fact]
+    public void TheAltitudeAndDepthSettingsMoveTheGround()
+    {
+        var plain = Generator();
+        var raised = WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = 2, Rules = new WorldRules { AltitudeDelta = 10f } });
+        var deeper = WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = 2, Rules = new WorldRules { WaterDepthMultiplier = 2f } });
+        // The sea's shape is the continents' height itself (no hills, no rivers): the altitude delta shows there whole.
+        static float Sea(WorldGenerator g, float x, float z) => g.GetBiomeHeight(Heightmap.Biome.Ocean, x, z, out _);
+        var (x, z) = Rings(500, 3000, 500, 8).First(p => Sea(plain, p.X, p.Z) is > 35f and < 60f);
+        float h = Sea(plain, x, z);
+        Assert.Equal(h + 10f, Sea(raised, x, z), 2);
+        // The depth multiplier leaves ground above the water alone and doubles the depth of ground under it.
+        Assert.Equal(h, Sea(deeper, x, z));
+        var (sx, sz) = Rings(500, 3000, 500, 8).First(p => Sea(plain, p.X, p.Z) is > 10f and < 28f);
+        float under = Sea(plain, sx, sz);
+        Assert.Equal((under - 30f) * 2f + 30f, Sea(deeper, sx, sz), 3);
+    }
+
+    [Fact]
+    public void TheWaterLevelMovesTheStreamsWindow()
+    {
+        // The streams' start and end windows follow the water level: with the water 10 m lower (and nothing else
+        // changed) other streams are laid out than at 30 m.
+        var plain = Generator();
+        var low = WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = 2, Rules = new WorldRules { WaterLevel = 20f } });
+        Assert.NotEmpty(plain.GetStreams());
+        Assert.NotEqual(plain.GetStreams().Select(s => s.P0), low.GetStreams().Select(s => s.P0));
+        var none = WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = 2, Rules = new WorldRules { Rivers = false, Streams = false } });
+        Assert.Empty(none.GetRivers());
+        Assert.Empty(none.GetStreams());
+        Assert.NotEmpty(plain.GetRivers());
     }
 }

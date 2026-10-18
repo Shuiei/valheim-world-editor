@@ -49,7 +49,8 @@ public static partial class WorldCreator
                     continue;
                 }
                 int hash = StableHash.Of(p.Rule.Prefab);
-                var position = new Vector3(p.X, p.Rule.SnapToWater != 0 ? ValheimGen.TerrainService.WaterLevel : p.Y, p.Z);
+                // Snapped to the game's literal 30 (ZoneSystem.PlaceLocations), whatever the rules put the water at.
+                var position = new Vector3(p.X, p.Rule.SnapToWater != 0 ? ValheimGen.WorldGenerator.LiteralWaterLevel : p.Y, p.Z);
                 if (LocationPrefabs.Get(p.Rule.Prefab) is not { Interior: false } prefab)
                 {
                     sites.Add(new Site(zone, p.Rule.Prefab, hash, position, 0f, null));

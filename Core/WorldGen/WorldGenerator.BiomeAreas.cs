@@ -5,23 +5,24 @@ namespace ValheimGen;
 public sealed partial class WorldGenerator
 {
     /// <summary>
-    /// How far past the Ashlands' edge (in 300 m), for the sea's colour there; negative short of the edge.
+    /// How far past the Ashlands' edge (in 300 m), for the sea's colour there; negative short of the edge. The point
+    /// is in the generator's coordinates (<see cref="Stretched"/>: the game's map asks with it stretched).
     /// </summary>
-    public static float GetAshlandsOceanGradient(float x, float z)
+    public float GetAshlandsOceanGradient(float x, float z)
     {
-        float shifted = z + AshlandsShift;
-        return (float)(((double)GenMath.Length(x, shifted) - (EdgeRadius + (double)WorldAngle(x, shifted) * 100.0)) / 300.0);
+        float shifted = z + _v.AshlandsYOffset;
+        return (float)(((double)GenMath.Length(x, shifted) - ((double)_v.AshlandsMinDistance + (double)WorldAngle(x, shifted) * 100.0)) / 300.0);
     }
 
     /// <summary>
-    /// The same at a map point (y is world z).
+    /// The same at a map point (y is world z), in the generator's coordinates.
     /// </summary>
-    internal static float GetAshlandsOceanGradient(Vector2 pos) => GetAshlandsOceanGradient(pos.X, pos.Y);
+    internal float GetAshlandsOceanGradient(Vector2 pos) => GetAshlandsOceanGradient(pos.X, pos.Y);
 
     /// <summary>
-    /// The same at a world position's x and z.
+    /// The same at a world position's x and z (a world position: the game stretches this one itself).
     /// </summary>
-    internal static float GetAshlandsOceanGradient(Vector3 pos) => GetAshlandsOceanGradient(pos.X, pos.Z);
+    internal float GetAshlandsOceanGradient(Vector3 pos) => GetAshlandsOceanGradient(Stretched(pos.X), Stretched(pos.Z));
 
     /// <summary>
     /// The wave of the Ashlands' and the Deep North's edges: twenty swings round the world, -1 to 1.
@@ -111,31 +112,36 @@ public sealed partial class WorldGenerator
     private readonly ConcurrentDictionary<Vector2s, Heightmap.BiomeArea> _cornerAreas = new();
 
     /// <summary>
-    /// 0 on the Ashlands' edge, rising to 1 within 400 m: the ground sinks to the sea along it.
+    /// 0 on the Ashlands' edge, rising to 1 within 400 m: the ground sinks to the sea along it (1 everywhere when
+    /// the rules turn the gap off). In the generator's coordinates.
     /// </summary>
-    private static double AshlandsGap(float x, float z) => EdgeGap(x, z + AshlandsShift, x, z);
+    private double AshlandsGap(float x, float z) =>
+        _v.AshlandsGap ? EdgeGap(x, z + _v.AshlandsYOffset, x, z, _v.AshlandsMinDistance, _v.AshlandsGapWidth) : 1.0;
 
     /// <summary>
-    /// The same for the Deep North's edge.
+    /// The same for the Deep North's edge (the game's CreateDeepNorthGap).
     /// </summary>
-    public static double CreateDeepNorthGap(float x, float z) => EdgeGap(x, z + DeepNorthShift, x, z);
+    public double CreateDeepNorthGap(float x, float z) =>
+        _v.DeepNorthGap ? EdgeGap(x, z + _v.DeepNorthGapShift, x, z, _v.DeepNorthGapRadius, _v.DeepNorthGapWidth) : 1.0;
 
     /// <summary>
-    /// 0 on an edge circle, rising (eased) to 1 within 400 m to either side.
+    /// 0 on an edge circle, rising (eased) to 1 within <paramref name="width"/> m to either side.
     /// </summary>
     /// <param name="sx">x from the circle's middle.</param>
     /// <param name="sz">z from the circle's middle.</param>
     /// <param name="x">World x, for the edge's wave.</param>
     /// <param name="z">World z, for the edge's wave.</param>
-    private static double EdgeGap(float sx, float sz, float x, float z)
+    /// <param name="radius">The circle's radius.</param>
+    /// <param name="width">How far from the circle the gap reaches.</param>
+    private static double EdgeGap(float sx, float sz, float x, float z, double radius, double width)
     {
-        double past = (double)GenMath.Length(sx, sz) - (EdgeRadius + (double)WorldAngle(x, z) * 100.0);
-        return GenMath.SmoothBlend(0.0, 1.0, (float)GenMath.Clamp01(Math.Abs(past) / 400.0));
+        double past = (double)GenMath.Length(sx, sz) - (radius + (double)WorldAngle(x, z) * 100.0);
+        return GenMath.SmoothBlend(0.0, 1.0, (float)GenMath.Clamp01(Math.Abs(past) / width));
     }
 
     /// <summary>
-    /// 0 at the Deep North's edge to 1 200 m past it.
+    /// 0 at the Deep North's edge to 1 200 m past it (the game's literals: no mod changes this one).
     /// </summary>
     public static double DeepNorthWaveFade(float x, float z) =>
-        GenMath.Clamp01(((double)GenMath.Length(x, z + DeepNorthShift) - (EdgeRadius + (double)WorldAngle(x, z) * 100.0)) / 200.0);
+        GenMath.Clamp01(((double)GenMath.Length(x, z + 4000f) - (12000.0 + (double)WorldAngle(x, z) * 100.0)) / 200.0);
 }

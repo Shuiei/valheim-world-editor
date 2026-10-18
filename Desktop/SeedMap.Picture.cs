@@ -28,7 +28,8 @@ public sealed partial class SeedMap : Control, IDisposable
             int j = h - 1 - y;
             for (int i = 0; i < w; i++)
             {
-                var (r, g, b) = Shade(biome[j * w + i], height[j * w + i]);
+                // The seed preview makes worlds of the game's own rules.
+                var (r, g, b) = Shade(biome[j * w + i], height[j * w + i], WorldRules.Vanilla.WaterLevel);
                 row[i * 4] = b;
                 row[i * 4 + 1] = g;
                 row[i * 4 + 2] = r;
@@ -39,8 +40,8 @@ public sealed partial class SeedMap : Control, IDisposable
         return bmp;
     }
 
-    /// <summary>One cell's colour (outside the world: the background).</summary>
-    public static (byte R, byte G, byte B) Shade(byte biome, float height)
+    /// <summary>One cell's colour (outside the world: the background), with the water at <paramref name="water"/> m.</summary>
+    public static (byte R, byte G, byte B) Shade(byte biome, float height, float water)
     {
         if (biome == SeedPreview.Ocean)
         {
@@ -48,16 +49,16 @@ public sealed partial class SeedMap : Control, IDisposable
             {
                 return (18, 22, 28);
             }
-            float d = Math.Clamp((TerrainService.WaterLevel - height) / 60f, 0, 1);
+            float d = Math.Clamp((water - height) / 60f, 0, 1);
             return ((byte)(48 - 28 * d), (byte)(98 - 50 * d), (byte)(150 - 50 * d));
         }
         var (br, bg, bb) = MapData.PixelColor(SeedPreview.Biomes[biome]);
-        if (height < TerrainService.WaterLevel)
+        if (height < water)
         {
             // Water on land (swamp pools, rivers, lakes): the biome under a blue tint.
             return ((byte)((br + 2 * 48) / 3), (byte)((bg + 2 * 98) / 3), (byte)((bb + 2 * 150) / 3));
         }
-        float lift = Math.Clamp((height - TerrainService.WaterLevel) / 120f, 0, 1) * 0.35f;
+        float lift = Math.Clamp((height - water) / 120f, 0, 1) * 0.35f;
         return ((byte)(br + (255 - br) * lift), (byte)(bg + (255 - bg) * lift), (byte)(bb + (255 - bb) * lift));
     }
 }

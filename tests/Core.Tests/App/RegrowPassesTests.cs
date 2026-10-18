@@ -45,7 +45,7 @@ public class RegrowPassesTests
         object rule = RegrowFixtures.OpenRule();
         PrivateMember.Set(rule, "minAltitude", 0f);
         PrivateMember.Set(rule, "maxAltitude", 10f);
-        Assert.True(RegrowFixtures.Check("PassesAltitude", rule, TerrainService.WaterLevel + 5f));
+        Assert.True(RegrowFixtures.Check("PassesAltitude", rule, WorldGenerator.LiteralWaterLevel + 5f));
     }
 
     [Theory]
@@ -56,7 +56,7 @@ public class RegrowPassesTests
         object rule = RegrowFixtures.OpenRule();
         PrivateMember.Set(rule, "minAltitude", 0f);
         PrivateMember.Set(rule, "maxAltitude", 3f);
-        Assert.False(RegrowFixtures.Check("PassesAltitude", rule, TerrainService.WaterLevel + offset));
+        Assert.False(RegrowFixtures.Check("PassesAltitude", rule, WorldGenerator.LiteralWaterLevel + offset));
     }
 
     [Fact]
@@ -154,7 +154,7 @@ public class RegrowPassesTests
         object rule = RegrowFixtures.OpenRule();
         object zone = RegrowFixtures.FlatZone(biome: 4);
         PrivateMember.Set(rule, "biome", 4);
-        Assert.True(RegrowFixtures.Check("PassesSurfaceChecks", rule, RegrowFixtures.FlatGround(), zone, 0f, TerrainService.WaterLevel + 5f, 0f, Vector3.UnitY));
+        Assert.True(RegrowFixtures.Check("PassesSurfaceChecks", rule, RegrowFixtures.FlatGround(), zone, 0f, WorldGenerator.LiteralWaterLevel + 5f, 0f, Vector3.UnitY));
     }
 
     [Fact]
@@ -164,6 +164,6 @@ public class RegrowPassesTests
         object zone = RegrowFixtures.FlatZone(biome: 4);
         PrivateMember.Set(rule, "biome", 4);
         PrivateMember.Set(rule, "maxAltitude", 1f);
-        Assert.False(RegrowFixtures.Check("PassesSurfaceChecks", rule, RegrowFixtures.FlatGround(), zone, 0f, TerrainService.WaterLevel + 5f, 0f, Vector3.UnitY));
+        Assert.False(RegrowFixtures.Check("PassesSurfaceChecks", rule, RegrowFixtures.FlatGround(), zone, 0f, WorldGenerator.LiteralWaterLevel + 5f, 0f, Vector3.UnitY));
     }
 }

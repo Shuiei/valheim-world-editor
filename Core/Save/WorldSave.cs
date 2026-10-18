@@ -62,6 +62,18 @@ public sealed partial class WorldSave
     public int WorldGenVersion { get; private set; }
 
     /// <summary>
+    /// World.m_startingGlobalKeys from the metadata (empty before version 32, and for a live world): the keys a new
+    /// world starts with, and where Expand World Size keeps its settings ("ews_&lt;setting&gt; &lt;value&gt;").
+    /// </summary>
+    public List<string> StartingGlobalKeys { get; } = [];
+
+    /// <summary>
+    /// What a world generation mod changed about this world's generation (the game's own values until the opener
+    /// works them out: <c>ExpandWorld.Resolve</c>); the terrain service's generator is made with them.
+    /// </summary>
+    public ValheimGen.WorldRules Rules { get; set; } = ValheimGen.WorldRules.Vanilla;
+
+    /// <summary>
     /// The save format at the head of the index (_main.&lt;n&gt;.chunks): the game's when it last saved the world (0 for a
     /// live world). Chunk files the game did not write again keep the format they were written in (see
     /// <see cref="ChunkFile.WorldVersion"/>): a world of format 41 saved by Valheim 1.0.20 has a 42 index and 41 chunk

@@ -22,7 +22,7 @@ internal static class LookCheck
                 }
                 string b = gen.GetBiome(x, z).ToString();
                 shares[b] = shares.GetValueOrDefault(b) + 1;
-                water += gen.GetHeight(new ValheimGen.Vector2(x, z)) < ValheimGen.TerrainService.WaterLevel ? 1 : 0;
+                water += gen.GetHeight(new ValheimGen.Vector2(x, z)) < gen.Rules.WaterLevel ? 1 : 0;
                 n++;
             }
         }

@@ -26,4 +26,9 @@ internal sealed class World
     /// The main menu's background world: simpler terrain and no rivers.
     /// </summary>
     public bool Menu;
+
+    /// <summary>
+    /// What a world generation mod changed about the world (the game's own values by default).
+    /// </summary>
+    public WorldRules Rules = WorldRules.Vanilla;
 }

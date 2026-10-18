@@ -5,11 +5,13 @@ public sealed partial class WorldGenerator
 {
     // ---- Rivers in the ground.
     /// <summary>
-    /// Lowered to the river's bed where a river runs (wider rivers a little deeper).
+    /// Lowered to the river's bed where a river runs (wider rivers a little deeper). The point is in the generator's
+    /// coordinates; the rivers lie in world metres (Expand World Size's prefix on the game's AddRivers multiplies the
+    /// point back by the stretch).
     /// </summary>
     private float CutRivers(float x, float z, float h)
     {
-        RiverAt(x, z, out float weight, out float width);
+        RiverAt(x * _v.Stretch, z * _v.Stretch, out float weight, out float width);
         if (weight <= 0f)
         {
             return h;
@@ -30,7 +32,7 @@ public sealed partial class WorldGenerator
 
     /// <summary>
     /// The Ashlands: lava fields and crags from cellular noise near the edge, high ground blended with
-    /// it, lava (mask alpha) in the cracks.
+    /// it, lava (mask alpha) in the cracks. The point is in the generator's coordinates (<see cref="Stretched"/>).
     /// </summary>
     /// <param name="x">World x.</param>
     /// <param name="z">World z.</param>
@@ -42,12 +44,12 @@ public sealed partial class WorldGenerator
         double px = x, pz = z;
         double land = Continent((float)px, (float)pz);
         // Near the edge (within 1 km, waved), and towards the middle line (east-west within 7.5 km).
-        double nearEdge = GenMath.Length(px, pz + AshlandsShift - AshlandsShift * 0.3) - (EdgeRadius + (double)WorldAngle((float)px, (float)pz) * 100.0);
-        nearEdge = GenMath.SmoothBlend(0.1, 1.0, 1.0 - GenMath.Clamp01(Math.Abs(nearEdge) / 1000.0));
-        nearEdge *= 1.0 - GenMath.Clamp01(Math.Abs(px) / 7500.0);
+        double nearEdge = GenMath.Length(px, pz + (double)_v.AshlandsYOffset - (double)_v.AshlandsYOffset * 0.3) - ((double)_v.AshlandsMinDistance + (double)WorldAngle((float)px, (float)pz) * 100.0);
+        nearEdge = GenMath.SmoothBlend(0.1, 1.0, 1.0 - GenMath.Clamp01(Math.Abs(nearEdge) / _v.AshlandsLength));
+        nearEdge *= 1.0 - GenMath.Clamp01(Math.Abs(px) / _v.AshlandsWidth);
         // Down to the sea floor at the world's edge.
-        double inside = 1.0 - GenMath.Clamp01((GenMath.Length(px, pz) - 10150.0) / 600.0);
-        px += (double)(100000f + _offsetDetail);
+        double inside = 1.0 - GenMath.Clamp01((GenMath.Length(px, pz) - _v.AshlandsSink) / 600.0);
+        px += (double)(100000f + _detailX);
         pz += (double)(100000f + _offsetDetail);
         double cells = 0.0, weight = 1.0, freq = (double)0.33f;
         for (int i = 0, n = cheap ? 2 : 5; i < n; i++)

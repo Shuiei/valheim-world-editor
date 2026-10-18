@@ -26,6 +26,8 @@ public static partial class SettingsDialog
                 ItemsSource = _languages.Select(l => l.Name).Prepend(Lang.T("settings.languageSystem")).ToList(),
                 SelectedIndex = _settings.Language is string chosen && _languages.ToList().FindIndex(l => l.Code == chosen) is int i and >= 0 ? i + 1 : 0,
             }.Tip("settings.language");
+            // Expand World: the mods' world generation, for the worlds opened from now on.
+            _expandWorld = new CheckBox { Content = Lang.T("settings.expandWorldSwitch"), IsChecked = _settings.ExpandWorld }.Classed("switch").Tip("settings.expandWorld");
             // What draws (Windows): taken at the next start.
             _driverGl = new CheckBox { Content = Lang.T("settings.driverGl"), IsChecked = _settings.DriverOpenGl }.Classed("switch").Tip("settings.driverGl");
             var drawing = new StackPanel
@@ -73,6 +75,9 @@ public static partial class SettingsDialog
                         H2(Lang.T("settings.extensions")),
                         Hint(Lang.T("settings.extensionsHint")),
                         _extensions,
+                        H2(Lang.T("settings.expandWorld")),
+                        _expandWorld,
+                        Hint(Lang.T("settings.expandWorldHint")),
                         drawing,
                         _error,
                         new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0), Children = { cancel, save } },
