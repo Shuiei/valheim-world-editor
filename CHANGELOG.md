@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.34 — unreleased
+
+### Fixed
+- **A file in the game's or a mod's bundles folder that is not a bundle is no longer kept open.** The editor passed
+  such a file over but kept it open; on Windows that stopped the mods' copies from being replaced when a mod changed.
+
 ## v1.47.33 — unreleased
 
 ### Fixed
