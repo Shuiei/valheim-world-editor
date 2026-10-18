@@ -7,7 +7,7 @@ public sealed partial class ClaudeTools
     /// <summary>An Area tool action as Claude's history step and status bar name it ("smooth", "paint dirt").</summary>
     /// <param name="act">The action.</param>
     /// <param name="paint">The paint brush, for Paint.</param>
-    private static Said GroundStep(AreaTool.GroundAction act, BrushTool paint) => act switch
+    internal static Said GroundStep(AreaTool.GroundAction act, BrushTool paint) => act switch
     {
         AreaTool.GroundAction.Flatten => Said.Of("claude.undo.flatten"),
         AreaTool.GroundAction.Raise => Said.Of("claude.undo.raise"),
@@ -21,7 +21,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>A Path tool action along Claude's line, as its history step names it, in the user's language.</summary>
     /// <param name="act">The action (one of PathActions).</param>
-    private static string PathStep(PathTool.Action act) => act switch
+    internal static string PathStep(PathTool.Action act) => act switch
     {
         PathTool.Action.River => Lang.T("claude.undo.riverLine"),
         PathTool.Action.Cave => Lang.T("claude.undo.caveLine"),
