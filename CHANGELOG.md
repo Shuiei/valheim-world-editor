@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.36 — unreleased
+
+### Fixed
+- **Apply live no longer fails now and then with "An error occurred while sending the request".** After about ten
+  seconds without talking to the game, the editor could still send on a connection the game was closing at that
+  moment; it now always opens a new one by then.
+
 ## v1.47.35 — unreleased
 
 ### Fixed
