@@ -18,11 +18,19 @@ public class ClaudeToolsObjectValuesTests
         int id = ClaudeRun.J(await r.T.ListObjects())[0].GetProperty("id").GetInt32();
         var thing = r.W.Session!.Scene.Things[id];
         var world = r.W.World!.World;
-        File.Delete(Path.Combine(world.Directory, world.ObjectRefs[thing.Id].File.FileName));
+        string file = Path.Combine(world.Directory, world.ObjectRefs[thing.Id].File.FileName);
+        // Taken away, not deleted: back in place afterwards, however the test ends.
+        File.Move(file, file + "-away");
+        try
+        {
+            var got = ClaudeRun.J(await r.T.GetObject(id));
 
-        var got = ClaudeRun.J(await r.T.GetObject(id));
-
-        Assert.Equal("Its values cannot be read.", got.GetProperty("note").GetString());
-        Assert.False(got.TryGetProperty("values", out _));
+            Assert.Equal("Its values cannot be read.", got.GetProperty("note").GetString());
+            Assert.False(got.TryGetProperty("values", out _));
+        }
+        finally
+        {
+            File.Move(file + "-away", file);
+        }
     }
 }
