@@ -13,6 +13,11 @@ public sealed partial class FakeBridge : IDisposable
     private readonly HttpListener _listener = new();
     /// <summary>Answering the requests: Dispose waits for it to end, and its errors fail the test.</summary>
     private readonly Task _serving;
+    /// <summary>
+    /// Set by Dispose before the listener is closed: on Windows the wait for a request can fail before the listener
+    /// says it has stopped.
+    /// </summary>
+    private volatile bool _closing;
 
     public int Port { get; }
 
@@ -81,7 +86,7 @@ public sealed partial class FakeBridge : IDisposable
             {
                 ctx = await _listener.GetContextAsync();
             }
-            catch (Exception) when (!_listener.IsListening)
+            catch (Exception) when (_closing || !_listener.IsListening)
             {
                 // Closed (Dispose): the wait for the next request ends with an error, and so does the serving.
                 return;
@@ -105,6 +110,7 @@ public sealed partial class FakeBridge : IDisposable
     /// <summary>Stops answering and waits until the answering has ended; an error in it fails the test.</summary>
     public void Dispose()
     {
+        _closing = true;
         _listener.Close();
         Assert.True(_serving.Wait(TimeSpan.FromSeconds(30)), "the stand-in plugin did not stop answering");
     }

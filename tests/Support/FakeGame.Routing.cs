@@ -18,7 +18,7 @@ public sealed partial class FakeGame
             {
                 ctx = await _listener.GetContextAsync();
             }
-            catch (Exception) when (!_listener.IsListening)
+            catch (Exception) when (_closing || !_listener.IsListening)
             {
                 // Closed (Dispose): the wait for the next request ends with an error, and so does the serving.
                 return;
