@@ -32,8 +32,9 @@ public sealed class GameDataTests : IDisposable
         var read = GameData.Load(bundles, cache: true)!;
         Assert.Equal(GameData.KindNames.Order(), read.Keys.Order());
         Assert.All(GameData.KindNames, k => Assert.Equal(GameHome.Copy(k), read[k]));
-        // The caches live in the user's data folder.
-        Assert.StartsWith(Path.Combine(_sandbox.Folder, ".local", "share"), GameData.CacheFile("prefabs"));
+        // The caches live in the user's data folder (XDG_DATA_HOME, or LOCALAPPDATA on Windows).
+        string data = OperatingSystem.IsWindows() ? Path.Combine(_sandbox.Folder, "AppData", "Local") : Path.Combine(_sandbox.Folder, ".local", "share");
+        Assert.StartsWith(data, GameData.CacheFile("prefabs"));
     }
 
     [Fact]

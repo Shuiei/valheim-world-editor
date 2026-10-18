@@ -15,13 +15,32 @@ public sealed partial class GameBundles
     {
         if (!_open.TryGetValue(bundle, out var o))
         {
-            // Read in place: LZ4 blocks are unpacked as they are read (unpacking all of it is no faster;
-            // the time goes into reading objects' fields).
-            var b = _am.LoadBundleFile(_files[bundle], false);
+            var b = LoadBundle(_files[bundle]);
             o = (b, _am.LoadAssetsFileFromBundle(b, 0, false));
             _open[bundle] = o;
         }
         return o;
+    }
+
+    /// <summary>
+    /// Loads a bundle file, read in place: LZ4 blocks are unpacked as they are read (unpacking all of it is no faster;
+    /// the time goes into reading objects' fields). A file that is not a bundle fails to load, and its stream is closed
+    /// before the error goes on: AssetsTools leaves it open, and Windows then refuses to delete or replace the folder.
+    /// </summary>
+    /// <param name="path">The bundle file.</param>
+    private BundleFileInstance LoadBundle(string path)
+    {
+        var stream = File.OpenRead(path);
+        try
+        {
+            return _am.LoadBundleFile(stream, Path.GetFullPath(path), false);
+        }
+        catch
+        {
+            // Not a bundle (said by the caller): the file is let go of.
+            stream.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -47,7 +66,7 @@ public sealed partial class GameBundles
                 // A file that is not a bundle is passed over, as the index does.
                 try
                 {
-                    b = _am.LoadBundleFile(path, false);
+                    b = LoadBundle(path);
                 }
                 catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException)
                 {

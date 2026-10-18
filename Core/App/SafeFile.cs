@@ -72,21 +72,27 @@ public static class SafeFile
     /// <summary>
     /// Moves the written file over the old one. On Windows the move can be refused for a moment while another program
     /// holds the old file (an antivirus scanning it, another writer replacing it at the same time): it is tried again,
-    /// up to ten times over half a second, before the refusal goes on to the caller. Not when the file must not be
-    /// replaced (a file there is the answer), and not on the other systems, where the move takes the file over at once.
+    /// up to ten times over half a second. The refusals are said in one line once the move goes through; when it never
+    /// does, the last refusal goes on to the caller (who says it). Not when the file must not be replaced (a file there
+    /// is the answer), and not on the other systems, where the move takes the file over at once.
     /// </summary>
     private static void Move(string temp, string path, bool overwrite)
     {
+        Exception? refused = null;
         for (int attempt = 1; ; attempt++)
         {
             try
             {
                 File.Move(temp, path, overwrite);
+                if (refused != null)
+                {
+                    Log.CaughtBrief(refused, $"moving a written file over the old one (held by another program; went through at try {attempt})");
+                }
                 return;
             }
             catch (Exception ex) when (overwrite && attempt < 10 && OperatingSystem.IsWindows() && RefusedForNow(ex))
             {
-                Log.CaughtBrief(ex, $"moving a written file over the old one (held by another program: tried again, {attempt})");
+                refused = ex;
                 Thread.Sleep(10 * attempt);
             }
         }

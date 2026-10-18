@@ -21,7 +21,7 @@ public sealed partial class GameBundles
         {
             try
             {
-                b = _am.LoadBundleFile(_files[bundle], false);
+                b = LoadBundle(_files[bundle]);
             }
             catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException)
             {
