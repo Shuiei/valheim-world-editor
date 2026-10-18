@@ -19,10 +19,7 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
     [Fact]
     public void TheGamesLookIsReadFromItsFilesAndDrawn()
     {
-        Assert.SkipUnless(editor.Available, editor.Why ?? "");
-        Assert.SkipUnless(OperatingSystem.IsLinux(), "the made-up game is found in the home's Steam library only on Linux");
-        Directory.CreateDirectory(Dir);
-        BackToStart(editor);
+        StartWithTheMadeUpGame();
         OpenMapThenArea();
         WaitForGameLook(editor);
         editor.Send("camera 32 32 30 35 120");
@@ -77,6 +74,28 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
     }
 
     /// <summary>
+    /// The editor on the start page, ready for a test of the made-up game's look (skipped without the editor, or off
+    /// Linux, where the made-up game is not found).
+    /// </summary>
+    private void StartWithTheMadeUpGame()
+    {
+        Assert.SkipUnless(editor.Available, editor.Why ?? "");
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "the made-up game is found in the home's Steam library only on Linux");
+        Directory.CreateDirectory(Dir);
+        BackToStart(editor);
+    }
+
+    /// <summary>
+    /// The area three zones across around the middle open from the start page, drawn with the made-up game's look.
+    /// </summary>
+    private void OpenAreaWithTheGamesLook()
+    {
+        StartWithTheMadeUpGame();
+        OpenArea(editor, 3);
+        WaitForGameLook(editor);
+    }
+
+    /// <summary>
     /// The world's map first, drawn with the game's map textures (the made-up game's one-pixel ones), then the area two
     /// zones across around the middle, with the 2100 fir trees in it.
     /// </summary>
@@ -114,12 +133,7 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
     [Fact]
     public void TheGamesRoomsAreDrawnWithTheirModels()
     {
-        Assert.SkipUnless(editor.Available, editor.Why ?? "");
-        Assert.SkipUnless(OperatingSystem.IsLinux(), "the made-up game is found in the home's Steam library only on Linux");
-        Directory.CreateDirectory(Dir);
-        BackToStart(editor);
-        OpenArea(editor, 3);
-        WaitForGameLook(editor);
+        OpenAreaWithTheGamesLook();
         editor.Send("camera 0 0 0 60 120");
         editor.Send("click Dungeon");
         // No dungeon in the area (the world copy is fresh, and leaving drops what the other test left): Generate is open,
@@ -155,12 +169,7 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
     [Fact]
     public void TheTreesAreDrawnByTheCellsInView()
     {
-        Assert.SkipUnless(editor.Available, editor.Why ?? "");
-        Assert.SkipUnless(OperatingSystem.IsLinux(), "the made-up game is found in the home's Steam library only on Linux");
-        Directory.CreateDirectory(Dir);
-        BackToStart(editor);
-        OpenArea(editor, 3);
-        WaitForGameLook(editor);
+        OpenAreaWithTheGamesLook();
         // Over the whole area: every tree.
         editor.Send("camera 0 12 0 50 90");
         AssertDrawn(Picture("cells-both"));
