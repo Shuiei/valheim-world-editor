@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -28,7 +29,7 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
         AssertDrawn(Picture("look"));
         // A picture that cannot be saved (its folder is not there): the error comes back to the driver.
         Assert.StartsWith("@@ error ", editor.Answer($"picture {Path.Combine(Dir, "nowhere", "x.png")}"));
-        // The 2100 fir trees north of the middle: more than one model draws at once, so drawn by the cells in view.
+        // The 2100 fir trees north of the middle: more than one model draws at once, all in one of the area's cells.
         editor.Send("camera 0 12 0 50 90");
         AssertDrawn(Picture("trees"));
         // The Place tool, with the chest chosen: its model's box is worked out for the panel's fit hint.
@@ -133,19 +134,62 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
         Assert.StartsWith("@@ ok ", placed);
         editor.Send("camera 0 0 0 45 80 5000");
         AssertDrawn(Picture("rooms"));
-        // Pointed at and clicked where the dungeon went (5000 m over the view's middle): a room under the pointer is
-        // marked, then picked; deleted, it leaves open ends, marked in their turn.
+        // Pointed at where the dungeon went (5000 m over the view's middle): the joint between two rooms there is
+        // marked; clicked, it gets a door (drawn in the colour of a joint with one).
         editor.Send("mouse3 move 0 5000 0");
         AssertDrawn(Picture("rooms-hover"));
         editor.Send("mouse3 down 0 5000 0");
-        editor.Send("mouse3 up 0 5000 0");
+        Assert.StartsWith("Added a door", editor.Send("mouse3 up 0 5000 0").GetProperty("message").GetString());
+        // The burial chamber west of it (the dungeon of seed 1 is the same each time): picked, then deleted, which
+        // leaves the opening where it met the room east of it free, marked, then pointed at.
+        editor.Send("mouse3 move -20 5000 -8");
+        editor.Send("mouse3 down -20 5000 -8");
+        Assert.Equal("forestcrypt_new_BurialChamber01: Delete removes it.", editor.Send("mouse3 up -20 5000 -8").GetProperty("message").GetString());
         AssertDrawn(Picture("rooms-picked"));
-        editor.Send("key Delete");
-        editor.Send("mouse3 move 0 5000 0");
+        Assert.StartsWith("Removed forestcrypt_new_BurialChamber01", editor.Send("key Delete").GetProperty("message").GetString());
+        editor.Send("mouse3 move -20 5000 -8");
         AssertDrawn(Picture("rooms-open-ends"));
+        editor.Send("mouse3 move -16 5000 -12");
+        AssertDrawn(Picture("rooms-open-end-hover"));
         Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
         editor.Send("key Escape");
         BackToStart(editor);
+    }
+
+    // The fir trees in two of the cells of an area three zones across (2160 of one model, more than are drawn at once):
+    // only the cells in view are drawn, the two next to each other at once when both show.
+    [Fact]
+    public void TheTreesAreDrawnByTheCellsInView()
+    {
+        Assert.SkipUnless(editor.Available, editor.Why ?? "");
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "the made-up game is found in the home's Steam library only on Linux");
+        Directory.CreateDirectory(Dir);
+        BackToStart(editor);
+        OpenArea(editor, 3);
+        WaitForGameLook(editor);
+        // Over the whole area: every tree.
+        editor.Send("camera 0 12 0 50 90");
+        AssertDrawn(Picture("cells-both"));
+        var (both, all) = DrawnInstances();
+        Assert.True(both >= 2160, $"{both} of {all} instances drawn");
+        // From east of the row 60 m east, looking further east: the other cell's 2100 trees are out of view, left out.
+        editor.Send("camera 70 0 270 15 25");
+        Picture("cells-east");
+        var (east, _) = DrawnInstances();
+        Assert.True(east > 0 && east < both - 2000, $"{east} of {all} instances drawn");
+        BackToStart(editor);
+    }
+
+    /// <summary>
+    /// How many object instances the last frame drew, and how many there are (from a benchmark of no time).
+    /// </summary>
+    private (int Drawn, int All) DrawnInstances()
+    {
+        string bench = editor.Send("bench 0").GetProperty("bench").GetString()!;
+        var m = Regex.Match(bench, @"(\S+) of (\S+) instances drawn");
+        Assert.True(m.Success, bench);
+        static int Count(string n) => int.Parse(new string([.. n.Where(char.IsAsciiDigit)]), System.Globalization.CultureInfo.InvariantCulture);
+        return (Count(m.Groups[1].Value), Count(m.Groups[2].Value));
     }
 
     /// <summary>
