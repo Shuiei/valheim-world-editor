@@ -50,7 +50,7 @@ public class GameLocationsTests
         var order = GameLocations.ListOrder().Order;
         using var game = SceneGame.Make(order);
         game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = game.Bundles();
         string cache = Path.Combine(game.Root, "cache", "rules.json");
 
         var rules = GameLocations.Load(bundles, cache)!;
@@ -84,13 +84,13 @@ public class GameLocationsTests
         // A list of the order missing (none with these counts), or no main scene at all: no rules, no error.
         using var game = SceneGame.Make([(1, 0)]);
         game.Save();
-        Assert.Null(GameLocations.Load(new GameBundles(game.BundlesDir, null), null));
+        Assert.Null(GameLocations.Load(game.Bundles(), null));
         using var empty = new TestGame();
         empty.Save();
-        Assert.Null(GameLocations.Load(new GameBundles(empty.BundlesDir, null), null));
+        Assert.Null(GameLocations.Load(empty.Bundles(), null));
         // No manifest: whatever fails, none.
         using var bare = new TestGame();
-        Assert.Null(GameLocations.Load(new GameBundles(bare.BundlesDir, null), null));
+        Assert.Null(GameLocations.Load(bare.Bundles(), null));
         Assert.True(GameLocations.UseGameRules(null).IsCompletedSuccessfully);
         Assert.Equal(2, GameLocations.Export(null));
     }

@@ -66,7 +66,7 @@ public class GameLookDataTests
     public void TheTerrainComesFromItsMaterialShaderAndArrays()
     {
         using var game = Game(new Terrain());
-        var t = GameLookData.ReadTerrain(new GameBundles(game.BundlesDir, null));
+        var t = GameLookData.ReadTerrain(game.Bundles());
         Assert.Contains("void valheimGBuffer()", t.Fragment);
         Assert.Equal(GameLookData.TerrainTextures.Values.Order(StringComparer.Ordinal), t.Textures.Keys.Order(StringComparer.Ordinal));
         // As stored: bottom row first.
@@ -82,10 +82,10 @@ public class GameLookDataTests
     {
         // The made-up program is not the terrain shader: SPIRV-Cross reads it, and that it changed is said.
         using var game = Game(new Terrain());
-        var e = Assert.Throws<InvalidDataException>(() => GameLookData.ReadTerrain(new GameBundles(game.BundlesDir, null), vulkan: true));
+        var e = Assert.Throws<InvalidDataException>(() => GameLookData.ReadTerrain(game.Bundles(), vulkan: true));
         Assert.Contains("The terrain shader changed", e.Message);
         using var windows = Game(new Terrain(OpenGl: false));
-        Assert.Throws<InvalidDataException>(() => GameLookData.ReadTerrain(new GameBundles(windows.BundlesDir, null)));
+        Assert.Throws<InvalidDataException>(() => GameLookData.ReadTerrain(windows.Bundles()));
     }
 
     [Fact]
@@ -94,7 +94,7 @@ public class GameLookDataTests
         static string Fails(Terrain t)
         {
             using var game = Game(t);
-            return Assert.Throws<InvalidDataException>(() => GameLookData.ReadTerrain(new GameBundles(game.BundlesDir, null))).Message;
+            return Assert.Throws<InvalidDataException>(() => GameLookData.ReadTerrain(game.Bundles())).Message;
         }
         Assert.Contains("no terrain material", Fails(new Terrain(Material: false)));
         Assert.Contains("_RockNormal", Fails(new Terrain(MissingTexture: "_RockNormal")));
@@ -107,12 +107,12 @@ public class GameLookDataTests
     public void TheMapsTexturesAreThoseThatCanBeRead()
     {
         using var game = Game(new Terrain());
-        var map = GameLookData.ReadMap(new GameBundles(game.BundlesDir, null));
+        var map = GameLookData.ReadMap(game.Bundles());
         // Three readable (a format not read left out), rows turned top first.
         Assert.Equal(3, map.Count);
         Assert.Equal([5, 6, 7, 8, 1, 2, 3, 4], map["background"].Rgba);
         using var none = new TestGame();
         none.Save();
-        Assert.Empty(GameLookData.ReadMap(new GameBundles(none.BundlesDir, null)));
+        Assert.Empty(GameLookData.ReadMap(none.Bundles()));
     }
 }

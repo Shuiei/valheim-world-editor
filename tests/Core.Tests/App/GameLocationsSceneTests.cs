@@ -21,7 +21,7 @@ public class GameLocationsSceneTests
         // The main ZoneSystem has two locations, the shared one (in the other bundle) one.
         using var game = SceneGame.Make([]);
         game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = game.Bundles();
         Assert.Equal(2, GameLocations.FindScene(bundles, Scanned, []).Zone!["Array"].Children.Count);
         Assert.Equal(2, GameLocations.FindScene(bundles, [SceneGame.Shared, SceneGame.Main], []).Zone!["Array"].Children.Count);
     }
@@ -32,7 +32,7 @@ public class GameLocationsSceneTests
         // Two lists of one pair of counts are both kept, as two lists.
         using var game = SceneGame.Make([(2, 1), (2, 1)]);
         game.Save();
-        var scene = GameLocations.FindScene(new GameBundles(game.BundlesDir, null), Scanned, [(2, 1)]);
+        var scene = GameLocations.FindScene(game.Bundles(), Scanned, [(2, 1)]);
         Assert.Equal(2, scene.Lists[(2, 1)].Count);
     }
 
@@ -42,7 +42,7 @@ public class GameLocationsSceneTests
         // A list of (3, 0) locations, with the order naming only (2, 1): not kept.
         using var game = SceneGame.Make([(3, 0)]);
         game.Save();
-        var scene = GameLocations.FindScene(new GameBundles(game.BundlesDir, null), Scanned, [(2, 1)]);
+        var scene = GameLocations.FindScene(game.Bundles(), Scanned, [(2, 1)]);
         Assert.False(scene.Lists.ContainsKey((3, 0)));
     }
 
@@ -51,7 +51,7 @@ public class GameLocationsSceneTests
     {
         using var game = SceneGame.Make([]);
         game.Save();
-        var scene = GameLocations.FindScene(new GameBundles(game.BundlesDir, null), Scanned, []);
+        var scene = GameLocations.FindScene(game.Bundles(), Scanned, []);
         var alt = Assert.Single(scene.Alts!["Array"].Children);
         Assert.Equal("DeepNorth_Ice", alt["m_name"].AsString);
     }
@@ -63,7 +63,7 @@ public class GameLocationsSceneTests
         var order = new[] { (2, 1), (1, 0) };
         using var game = SceneGame.Make([(1, 0), (2, 1)]);
         game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = game.Bundles();
         var rules = GameLocations.RuleSetOf(GameLocations.FindScene(bundles, Scanned, order), GameLocations.Manifest.Read(bundles.Folder), order);
         Assert.Equal(6, rules.Locations.Count);
         Assert.Equal(["StartTemple", "Crypt_old"], rules.Locations.Take(2).Select(l => l.Prefab));

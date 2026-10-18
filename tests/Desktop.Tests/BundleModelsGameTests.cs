@@ -1,5 +1,4 @@
 using System.Numerics;
-using TerrainEditor.App;
 using TerrainEditor.Save;
 using WorldEditor.Tests.Unity;
 using Xunit;
@@ -77,7 +76,7 @@ public class BundleModelsGameTests
     public void SavedObjectsWithAModelOfTheirOwnAreNamed()
     {
         using var game = Game(out _, out _, out _);
-        var models = BundleModels.For(new GameBundles(game.BundlesDir, null))!;
+        var models = BundleModels.For(game.Bundles())!;
         string? Name(string prefab) => models.ObjectName(StableHash.Of(prefab));
         Assert.Equal("vwe_test_barrel", Name("vwe_test_barrel"));
         // Creatures, items and ragdolls are not, but tameable creatures and runestones are.
@@ -99,7 +98,7 @@ public class BundleModelsGameTests
     public void AModelsPartsMeshesMaterialsAndTexturesAreReadyForTheView()
     {
         using var game = Game(out long mesh, out long material, out long texture);
-        var models = BundleModels.For(new GameBundles(game.BundlesDir, null))!;
+        var models = BundleModels.For(game.Bundles())!;
 
         var model = models.Model("vwe_test_barrel")!;
         var part = Assert.Single(model.Parts);
@@ -141,6 +140,6 @@ public class BundleModelsGameTests
         Assert.Null(BundleModels.For(null));
         using var empty = new TestGame();
         empty.Save();
-        Assert.Null(BundleModels.For(new GameBundles(empty.BundlesDir, null)));
+        Assert.Null(BundleModels.For(empty.Bundles()));
     }
 }
