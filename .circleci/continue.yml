@@ -408,6 +408,13 @@ jobs:
     shell: powershell.exe -ExecutionPolicy Bypass
     steps:
       - checkout
+      # Windows checks files out with CRLF line ends; the repository's .editorconfig asks for LF, and the build's
+      # formatting analysis (warnings as errors) would fail on every file. So the checkout is redone with LF.
+      - run:
+          name: Line ends as the repository has them (LF)
+          command: |
+            git config core.autocrlf false
+            git reset --hard HEAD
       - run:
           name: Windows-only specs
           no_output_timeout: 20m
