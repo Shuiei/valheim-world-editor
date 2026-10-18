@@ -65,4 +65,23 @@ public sealed class WorldSessionReadBackTests : WorldsFolder
         Assert.Same(before, world.World);
         Assert.Null(world.GameSaveSince());
     }
+
+    // The save read back, but the folder gone before the earlier saves are removed (a sync tool): the save is the
+    // session's world all the same, and the saves left are said in the log only.
+    [Fact]
+    public void EarlierSavesThatCannotBeRemovedAreOnlyLogged()
+    {
+        string folder = Path.Combine(Dir, "Kept");
+        WorldCreator.Create(folder, "Kept", Seed, radius: 1);
+        using var world = WorldSession.Open(folder);
+        var read = WorldSave.Load(folder);
+        Directory.Delete(folder, true);
+        using var log = Log.Listen();
+
+        var unread = world.ReadBackSave(new WorldWriter.Result(true, "saved", null, 0, 0, []) { Read = read });
+
+        Assert.True(unread == Said.Empty);
+        Assert.Same(read, world.World);
+        Assert.Contains(log.Lines, l => l.Contains("removing the world's earlier saves after saving", StringComparison.Ordinal));
+    }
 }

@@ -74,7 +74,7 @@ public sealed partial class MainWindow
     /// <summary>The question for one kind of change the game made too: what it is, the first few of them, and the two ways.</summary>
     /// <param name="kind">The kind.</param>
     /// <param name="clashes">The changes of that kind.</param>
-    private string ClashText(ReplayClash kind, List<EditReplay.Clash> clashes)
+    internal string ClashText(ReplayClash kind, List<EditReplay.Clash> clashes)
     {
         const int Shown = 8;
         var lines = clashes.Take(Shown).Select(c => c.Kind == ReplayClash.Ground
