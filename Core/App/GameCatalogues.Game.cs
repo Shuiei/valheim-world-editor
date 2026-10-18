@@ -97,11 +97,18 @@ public static partial class GameCatalogues
                 try
                 {
                     var b = Load(name);
-                    foreach (var d in b.file.BlockAndDirInfo.DirectoryInfos)
+                    // Unloaded whatever its headers hold: a bundle whose list of files cannot be read is let go of too.
+                    try
                     {
-                        CabBundle[d.Name.ToLowerInvariant()] = name;
+                        foreach (var d in b.file.BlockAndDirInfo.DirectoryInfos)
+                        {
+                            CabBundle[d.Name.ToLowerInvariant()] = name;
+                        }
                     }
-                    _am.UnloadBundleFile(b);
+                    finally
+                    {
+                        _am.UnloadBundleFile(b);
+                    }
                 }
                 catch (Exception e) when (e is IOException or InvalidDataException or NotImplementedException or NotSupportedException or IndexOutOfRangeException or ArgumentException)
                 {
