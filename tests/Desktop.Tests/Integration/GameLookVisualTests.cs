@@ -7,7 +7,9 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The game look drawn by the real editor from a made-up Valheim's files (GameLookEditorProcess): the terrain shader
 /// linked with the view's lighting, its textures, the sky and the water; the View panel's slope colours and limit marks
-/// on it, a brush stroke sending the changed rows again, and another area setting it up anew.
+/// on it, a brush stroke sending the changed rows again, and another area setting it up anew. And the game's models drawn
+/// for the objects that have one (a see-through chest, a cut-out tree, a plain rock), the object under the pointer picked
+/// by its mesh, the models' boxes and a benchmark run through the driver.
 /// </summary>
 [Collection("Visual game look")]
 [Trait("Category", "Visual")]
@@ -24,6 +26,27 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
         WaitForGameLook(editor);
         editor.Send("camera 32 32 30 35 120");
         AssertDrawn(Picture("look"));
+        // The models of the game's files: drawn (the picture waits for them), the chest see-through over what is behind
+        // it, in the usual view and with the buildings see-through; the chest picked by its mesh under the pointer.
+        Assert.True(editor.Send("state").GetProperty("models").GetBoolean());
+        // The camera on the chest's ground point, 30 m off and 45° down; the pointer 1.5 m up the chest's square.
+        editor.Send("camera -11.5 -23.5 0 45 30");
+        AssertDrawn(Picture("models"));
+        editor.Send("look seethrough on");
+        AssertDrawn(Picture("models-seethrough"));
+        editor.Send("look seethrough off");
+        editor.Send("key E");
+        editor.Send("mouse3 move -11.5 1.5 -23.5");
+        AssertDrawn(Picture("models-hover"));
+        editor.Send("key Escape");
+        // The models' boxes, by their meshes: the square's 3 m, none for a kind without a model.
+        JsonElement boxes = editor.Send("bounds piece_chest_wood Nothing");
+        float[] chest = [.. boxes.GetProperty("piece_chest_wood").EnumerateArray().Select(v => v.GetSingle())];
+        Assert.Equal([-1.5f, 0f, 0f, 1.5f, 3f, 0f], chest);
+        Assert.Equal(JsonValueKind.Null, boxes.GetProperty("Nothing").ValueKind);
+        // A short benchmark: frames drawn for a second, reported.
+        Assert.False(string.IsNullOrWhiteSpace(editor.Send("bench 1").GetProperty("bench").GetString()));
+        editor.Send("camera 32 32 30 35 120");
         // The View panel's slope colours on, the limit marks off, then back.
         editor.Send("panel view");
         editor.Send("check Slope colours|on");

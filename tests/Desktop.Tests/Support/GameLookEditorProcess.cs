@@ -106,8 +106,8 @@ public sealed class GameLookEditorProcess() : EditorProcess([], Home())
     }
 
     /// <summary>
-    /// A game with the terrain material (its shader's OpenGL program and its textures) and the terrain's texture
-    /// arrays.
+    /// A game with the terrain material (its shader's OpenGL program and its textures), the terrain's texture arrays,
+    /// and models for three kinds of object the test world's first zone holds (<see cref="Models"/>).
     /// </summary>
     private static TestGame MadeUpGame()
     {
@@ -121,8 +121,33 @@ public sealed class GameLookEditorProcess() : EditorProcess([], Home())
         b.Contents("assets/terrain/Heightmap_basematerial.mat", TestAssets.Material(b, "Heightmap_basematerial", Fields.Ref(shader), textures));
         b.Contents("assets/terrain/terrain_d_array.texture2darray", TestAssets.TextureArray(b, "terrain_d_array", 1, 1, Rgba8, 3, [.. Enumerable.Range(0, 12).Select(i => (byte)(60 + (i * 15)))]));
         b.Contents("assets/terrain/terrain_n_array.texture2darray", TestAssets.TextureArray(b, "terrain_n_array", 1, 1, Rgba8, 2, [128, 128, 255, 255, 128, 128, 255, 255]));
+        Models(game.Bundle("models"));
         game.Save();
         return game;
+    }
+
+    /// <summary>
+    /// Models for three kinds of saved object in the test world's first zone, so the editor draws them from the game's
+    /// files (and picks them by their meshes): a chest drawn see-through (glass), a fir tree with a cut-out texture, a
+    /// rock plain. Each is one upright 3 m square standing on the ground.
+    /// </summary>
+    /// <param name="b">The bundle the models go into.</param>
+    private static void Models(TestBundle b)
+    {
+        long square = new TestMesh { Name = "square", Positions = [-1.5f, 0, 0, 1.5f, 0, 0, 1.5f, 3, 0, -1.5f, 3, 0], Submeshes = [[0, 1, 2, 0, 2, 3]] }.Add(b);
+        // 2 x 1: an opaque green pixel and a transparent one, cut out.
+        long bark = TestAssets.Texture(b, "bark", 2, 1, Rgba32, 1, [60, 120, 40, 255, 0, 0, 0, 0]);
+        long glass = TestAssets.Material(b, "chest_glass", floats: [("_Mode", 3)], colors: [("_Color", 0.6, 0.8, 1.0, 0.5)]);
+        long cutOut = TestAssets.Material(b, "fir_cutout", textures: [("_MainTex", Fields.Ref(bark), (1, 1), (0, 0))], floats: [("_Mode", 1), ("_Cutoff", 0.4)]);
+        long plain = TestAssets.Material(b, "rock_plain", colors: [("_Color", 0.5, 0.5, 0.5, 1.0)]);
+        foreach (var (prefab, material) in new[] { ("piece_chest_wood", glass), ("FirTree", cutOut), ("Rock_4", plain) })
+        {
+            b.Prefab(prefab, r =>
+            {
+                r.Mono("ZNetView", new Fields { ["m_persistent"] = true });
+                r.Child("body", c => c.Renderer(Fields.Ref(square), [Fields.Ref(material)]));
+            });
+        }
     }
 
     /// <inheritdoc/>
