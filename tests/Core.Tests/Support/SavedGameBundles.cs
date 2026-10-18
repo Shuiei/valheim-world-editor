@@ -16,6 +16,6 @@ public static class SavedGameBundles
     public static GameBundles Of(TestGame game)
     {
         game.Save();
-        return new GameBundles(game.BundlesDir, null);
+        return game.Bundles();
     }
 }

@@ -35,7 +35,7 @@ public class GameBundlesIndexTests
         File.WriteAllBytes(Path.Combine(game.BundlesDir, "empty"), []);
         string cache = Path.Combine(game.Root, "index.json");
 
-        var bundles = GameBundles.ForGame(game.Root, cache)!;
+        using var bundles = GameBundles.ForGame(game.Root, cache)!;
         Assert.Equal(game.BundlesDir, bundles.Folder);
         Assert.Equal(4, bundles.BundleCount);
         Assert.True(bundles.HasBundle("a_models"));
@@ -56,15 +56,15 @@ public class GameBundlesIndexTests
         // Read again from the kept file: what it says is taken (here a name only it has).
         string kept = File.ReadAllText(cache).Replace("\"Rock\":", "\"FromTheFile\":\"a_models:3\",\"Rock\":", StringComparison.Ordinal);
         File.WriteAllText(cache, kept);
-        var again = new GameBundles(game.BundlesDir, cache);
+        var again = game.Bundles(cache);
         Assert.Contains("FromTheFile", again.Index.Keys);
         Assert.Equal("a_models", again.Asset("Heightmap_basematerial.mat")!.Bundle);
         // A bundle changed: built again.
         File.SetLastWriteTimeUtc(Path.Combine(game.BundlesDir, "a_models"), DateTime.UtcNow.AddDays(-3));
-        Assert.DoesNotContain("FromTheFile", new GameBundles(game.BundlesDir, cache).Index.Keys);
+        Assert.DoesNotContain("FromTheFile", game.Bundles(cache).Index.Keys);
         // A kept file that cannot be read: built again.
         File.WriteAllText(cache, "{ not json");
-        Assert.Equal(3, new GameBundles(game.BundlesDir, cache).Index.Count);
+        Assert.Equal(3, game.Bundles(cache).Index.Count);
         // No folder of bundles: no reader.
         Assert.Null(GameBundles.ForGame(null, null));
         Assert.Null(GameBundles.ForGame(Path.Combine(game.Root, "valheim_Data"), null));
@@ -93,11 +93,11 @@ public class GameBundlesIndexTests
         File.WriteAllText(Path.Combine(game.BundlesDir, "readme.txt"), "not a bundle");
         string cache = Path.Combine(game.Root, "index.json");
 
-        var bundles = new GameBundles(game.BundlesDir, cache);
+        var bundles = game.Bundles(cache);
         Assert.Equal(["Rock"], bundles.Index.Keys);
         Assert.Equal("c_models", bundles.Index["Rock"].Bundle);
         // The index read from its kept file: a reference into another bundle is followed over the same files.
-        var again = new GameBundles(game.BundlesDir, cache);
+        var again = game.Bundles(cache);
         Assert.Equal(new GameBundles.Where("d_materials", stone), again.LoadModel("Rock", room: false)!.Parts[0].Material);
     }
 
@@ -112,7 +112,7 @@ public class GameBundlesIndexTests
         var older = game.Bundle("older_mod");
         long other = new TestMesh { Name = "plank", AnotherVersion = true, Positions = [0, 0, 0, 2, 0, 0, 0, 2, 0, 2, 2, 0], Submeshes = [[0, 1, 2, 1, 3, 2]] }.Add(older);
         game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null, mixedVersions: true);
+        var bundles = game.Bundles(mixedVersions: true);
         GameBundles.Where a = new("plain_mod", mesh), b = new("older_mod", other);
 
         // Either read first, each with its own bundle's layout.

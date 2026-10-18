@@ -11,7 +11,7 @@ namespace TerrainEditor.App;
 /// contents (its AssetBundle's m_Container): read once (a few seconds), kept in a file, read again when
 /// the game's bundles change. Thread-safe: one reader at a time.
 /// </summary>
-public sealed partial class GameBundles
+public sealed partial class GameBundles : IDisposable
 {
     /// <summary>
     /// The lock all readers take: one reader at a time.

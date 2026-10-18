@@ -21,6 +21,11 @@ public sealed class TestGame : IDisposable
     /// The manifest's bundles with the bundles each needs.
     /// </summary>
     private readonly List<(string Bundle, string[] Needs)> _needs = [];
+    /// <summary>
+    /// The readers opened on this game by <see cref="Bundles"/>, closed before the folder is deleted: Windows refuses to
+    /// delete a file a reader still has open.
+    /// </summary>
+    private readonly List<TerrainEditor.App.GameBundles> _readers = [];
 
     /// <summary>
     /// An empty game folder in the temporary folder.
@@ -131,10 +136,28 @@ public sealed class TestGame : IDisposable
     }
 
     /// <summary>
-    /// Deletes the folder.
+    /// A reader of this game's bundles, as the editor opens them (<c>new GameBundles(BundlesDir, …)</c>), closed with the
+    /// game: every test's reader goes through here, so none is left holding a file when the folder is deleted.
+    /// </summary>
+    /// <param name="cacheFile">Where the reader keeps its index (null: not kept).</param>
+    /// <param name="mixedVersions">Whether the bundles may come from different Unity versions (a mod's).</param>
+    public TerrainEditor.App.GameBundles Bundles(string? cacheFile = null, bool mixedVersions = false)
+    {
+        var reader = new TerrainEditor.App.GameBundles(BundlesDir, cacheFile, mixedVersions);
+        _readers.Add(reader);
+        return reader;
+    }
+
+    /// <summary>
+    /// Closes the readers, then deletes the folder.
     /// </summary>
     public void Dispose()
     {
+        foreach (var reader in _readers)
+        {
+            reader.Dispose();
+        }
+        _readers.Clear();
         if (Directory.Exists(Root))
         {
             Directory.Delete(Root, recursive: true);
