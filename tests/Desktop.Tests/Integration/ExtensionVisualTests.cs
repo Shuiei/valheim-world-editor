@@ -26,6 +26,14 @@ public sealed class ExtensionVisualTests(ExtensionEditorProcess editor) : Visual
         // The ground raised under them: the area's things are sent again, and the shapes with them.
         Assert.True(editor.Send("stroke raise 32 32 5").GetProperty("pending").GetInt32() >= 1);
         Picture("shapes-again");
+        // The sail deleted (selected through the driver, in the Select tool): the shapes are made again without it, the
+        // pit's cut cleared from the ground first and marked anew.
+        int before = editor.Send("state").GetProperty("objects").GetInt32();
+        Assert.Equal(1, editor.Send("inspect example_sail").GetProperty("selected").GetInt32());
+        editor.Send("key Delete");
+        Assert.Equal(before - 1, editor.Send("wait 100").GetProperty("objects").GetInt32());
+        Picture("shapes-fewer");
+        editor.Send("key Escape");
         Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
         editor.Send("map");
     }

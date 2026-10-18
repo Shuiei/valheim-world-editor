@@ -66,7 +66,8 @@ public sealed class ExtensionEditorProcess() : EditorProcess([], null, Prepared(
         static void Int(ZdoData z, string key, int value) => z.IntList.Add((StableHash.Of(key), value));
         NewObject[] added =
         [
-            Thing("example_sail", new Vector3(4, 31, 4), z =>
+            // At about the ground's height there (the test world's first zone lies around 45 m).
+            Thing("example_sail", new Vector3(4, 46, 4), z =>
             {
                 Int(z, "ExampleVehicles_Corners", 4);
                 Vector3[] corners = [Vector3.Zero, new(0, 4, 0), new(3, 4, 0), new(3, 0, 0)];
@@ -76,9 +77,9 @@ public sealed class ExtensionEditorProcess() : EditorProcess([], null, Prepared(
                 }
                 z.ByteList.Add((StableHash.Of("ExampleVehicles_Colour"), [255, 0, 0, 255]));
             }),
-            Thing("example_post", new Vector3(-6, 31, 2), z => Int(z, "ExampleVehicles_Target", FarPost)),
-            Thing("example_post", new Vector3(-6, 31, 10), z => Int(z, "ExampleVehicles_Id", FarPost)),
-            Thing("example_pit", new Vector3(8, 31, -6), z => z.FloatList.Add((StableHash.Of("ExampleVehicles_Radius"), 1.5f))),
+            Thing("example_post", new Vector3(-6, 46, 2), z => Int(z, "ExampleVehicles_Target", FarPost)),
+            Thing("example_post", new Vector3(-6, 46, 10), z => Int(z, "ExampleVehicles_Id", FarPost)),
+            Thing("example_pit", new Vector3(8, 46, -6), z => z.FloatList.Add((StableHash.Of("ExampleVehicles_Radius"), 1.5f))),
         ];
         var result = WorldWriter.Save(WorldSave.Load(world), [], added: added);
         if (!result.Saved)
