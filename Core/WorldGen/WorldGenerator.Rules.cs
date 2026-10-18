@@ -101,29 +101,9 @@ public sealed partial class WorldGenerator
             WaterDepthOn = r.WaterDepthMultiplier != 1f;
             ForestMultiplier = r.ForestMultiplier == 0f ? 1f : r.ForestMultiplier;
             ForestOn = ForestMultiplier != 1f;
-            // The seed's draws the rules replace: the continents' offsets, the detail offset on x, the water's seeds.
-            ContinentA = r.OffsetX ?? offsetA;
-            ContinentB = r.OffsetY ?? offsetB;
-            DetailX = r.HeightSeed ?? offsetDetail;
-            RiverSeed = r.RiverSeed ?? riverSeed;
-            StreamSeed = r.StreamSeed ?? streamSeed;
+            SetSeeds(r, offsetA, offsetB, offsetDetail, riverSeed, streamSeed);
             SetWater(r);
         }
-
-        /// <summary>
-        /// The continents' height with the rules' altitude transform (Expand World Size's postfix on the game's
-        /// GetBaseHeight, applied only when its delta or multiplier is set).
-        /// </summary>
-        public float Altitude(float h) => AltitudeOn ? BaseWater + (h - BaseWater) * AltitudeMultiplier + BaseAltitudeDelta : h;
-
-        /// <summary>
-        /// A biome's height with the rules' water depth multiplier (Expand World Size's postfix on the game's
-        /// GetBiomeHeight, applied only when set): the ground under the water level, deeper or shallower.
-        /// </summary>
-        public float Depth(float h) => WaterDepthOn && !(h > WaterLevel) ? (h - WaterLevel) * WaterDepth + WaterLevel : h;
-
-        /// <summary>The forest factor divided by the rules' forest multiplier (applied only when set).</summary>
-        public float Forest(float factor) => ForestOn ? factor / ForestMultiplier : factor;
 
         /// <summary>The world's radius in world metres (the lakes and streams are laid out over it).</summary>
         public float Radius { get; }
@@ -197,22 +177,5 @@ public sealed partial class WorldGenerator
         public float ForestMultiplier { get; }
         /// <summary>Whether the forest factor is divided (the multiplier is set).</summary>
         public bool ForestOn { get; }
-        /// <summary>
-        /// The continents' first offset as the continents' height reads it: the seed's, or the rules' Offset X (which
-        /// replaces it there, and only there: the swamps' field keeps the seed's).
-        /// </summary>
-        public float ContinentA { get; }
-        /// <summary>The continents' second offset as the continents' height reads it: the seed's, or the rules' Offset Y.</summary>
-        public float ContinentB { get; }
-        /// <summary>
-        /// The detail offset as the biomes' heights read it on their x coordinate: the seed's, or the rules' height
-        /// seed (which replaces the first use in each of the game's seven biome heights, the x coordinate's; z keeps
-        /// the seed's).
-        /// </summary>
-        public float DetailX { get; }
-        /// <summary>The rivers' seed: the seed's, or the rules'.</summary>
-        public int RiverSeed { get; }
-        /// <summary>The streams' seed: the seed's, or the rules'.</summary>
-        public int StreamSeed { get; }
     }
 }

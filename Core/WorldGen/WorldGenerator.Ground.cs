@@ -21,7 +21,8 @@ public sealed partial class WorldGenerator
         {
             return _continent;
         }
-        float h = WorkOutContinent(x, z);
+        // Expand World Size's altitude transform (its postfix on the game's GetBaseHeight) lies over the shape.
+        float h = _v.Altitude(WorkOutContinent(x, z));
         (_continentOf, _continentX, _continentZ, _continent) = (_number, bx, bz, h);
         return h;
     }
@@ -49,15 +50,10 @@ public sealed partial class WorldGenerator
     private readonly int _number = Interlocked.Increment(ref _generators);
 
     /// <summary>
-    /// The continents' height, worked out (Continent keeps the last one), with the rules' altitude transform
-    /// (Expand World Size's postfix on the game's GetBaseHeight, applied only when its delta or multiplier is set).
+    /// The continents' height as the game's GetBaseHeight works it out (the world's, not the menu's; Continent keeps
+    /// the last one).
     /// </summary>
-    private float WorkOutContinent(float x, float z) => _v.Altitude(ContinentShape(x, z));
-
-    /// <summary>
-    /// The continents' height as the game's GetBaseHeight works it out (the world's, not the menu's).
-    /// </summary>
-    private float ContinentShape(float x, float z)
+    private float WorkOutContinent(float x, float z)
     {
         float fromMiddle = GenMath.Length(x, z);
         double cx = x, cz = z;
@@ -124,14 +120,15 @@ public sealed partial class WorldGenerator
 
     // ---- What the biomes add.
     /// <summary>
-    /// Where the small detail is read: the point moved by the seed (and far from the noise's origin).
+    /// Where the small detail is read: the point moved by the seed's detail offset (and far from the noise's origin).
     /// </summary>
-    private float DetailPoint(float v) => (float)((double)v + 100000.0 + _offsetDetail);
+    private float DetailPoint(float v) => DetailPoint(v, _offsetDetail);
 
     /// <summary>
-    /// The same for the x coordinate of the seven biome heights the rules' height seed applies to (RuleValues.DetailX).
+    /// Where the small detail is read, moved by an offset: the seed's, or on the x coordinate of the seven biome
+    /// heights the rules' height seed applies to, that seed (RuleValues.DetailX).
     /// </summary>
-    private float SeededDetailPoint(float v) => (float)((double)v + 100000.0 + _v.DetailX);
+    private static float DetailPoint(float v, float offset) => (float)((double)v + 100000.0 + offset);
 
     /// <summary>
     /// Rolling hills: two products of noise, the finer weighed by the coarser.
@@ -167,14 +164,15 @@ public sealed partial class WorldGenerator
     /// </summary>
     /// <param name="x">World x.</param>
     /// <param name="z">World z.</param>
-    /// <param name="seeded">Whether the rules' height seed applies (the game's biome heights, not its pregeneration ones).</param>
+    /// <param name="offsetX">The detail offset on x: the rules' height seed for the game's biome heights, the seed's for its
+    /// pregeneration ones.</param>
     /// <param name="land">The continents' height at the point.</param>
     /// <param name="dx">The detail point of x.</param>
     /// <param name="dz">The detail point of z.</param>
-    private float Hilled(float x, float z, bool seeded, out float land, out double dx, out double dz)
+    private float Hilled(float x, float z, float offsetX, out float land, out double dx, out double dz)
     {
         land = Continent(x, z);
-        dx = seeded ? SeededDetailPoint(x) : DetailPoint(x);
+        dx = DetailPoint(x, offsetX);
         dz = DetailPoint(z);
         return (float)((double)land + (double)Hills(dx, dz) * (double)0.1f);
     }

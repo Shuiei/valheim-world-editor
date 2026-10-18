@@ -11,15 +11,18 @@ public static partial class ExpandWorld
     public static Dictionary<string, string> ReadCfg(string text)
     {
         Dictionary<string, string> values = [];
-        foreach (string[] pair in text.Split('\n').Select(l => l.Trim()).Where(IsSetting).Select(l => l.Split('=', 2)))
+        foreach (string[] pair in text.Split('\n').Select(l => l.Trim().Split('=', 2)).Where(IsSetting))
         {
             values[pair[0].Trim()] = pair[1].Trim();
         }
         return values;
     }
 
-    /// <summary>Whether a trimmed line is a "Key = value" setting (not blank, a comment or a section heading).</summary>
-    private static bool IsSetting(string line) => line.Length > 0 && line[0] is not ('#' or '[') && line.IndexOf('=') > 0;
+    /// <summary>
+    /// Whether a trimmed line, split at its first "=", is a "Key = value" setting: a key before the "=" (not blank, a
+    /// comment or a section heading) and a value after it.
+    /// </summary>
+    private static bool IsSetting(string[] pair) => pair.Length == 2 && pair[0].Length > 0 && pair[0][0] is not ('#' or '[');
 
     /// <summary>
     /// <see cref="ReadCfg"/> of a file; nothing when there is no file or it cannot be read (said in the log: its settings
