@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.47.33 — unreleased
+
+### Fixed
+- **A save on Windows no longer fails while another program holds the file for a moment.** The settings, saved
+  servers, blueprints and caches are written beside the old file and moved over it; when Windows refused the move for
+  an instant (an antivirus scanning the file, two saves at once), the save failed with "Access to the path is denied",
+  and it is now tried again for up to half a second.
+
 ## v1.47.32 — unreleased
 
 ### Fixed
