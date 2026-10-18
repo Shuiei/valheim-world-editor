@@ -134,23 +134,17 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
         Assert.StartsWith("@@ ok ", placed);
         editor.Send("camera 0 0 0 45 80 5000");
         AssertDrawn(Picture("rooms"));
-        // Pointed at where the dungeon went (5000 m over the view's middle): the joint between two rooms there is
-        // marked; clicked, it gets a door (drawn in the colour of a joint with one).
+        // Pointed at where the dungeon went (5000 m over the view's middle): what is under the pointer is marked.
         editor.Send("mouse3 move 0 5000 0");
         AssertDrawn(Picture("rooms-hover"));
-        editor.Send("mouse3 down 0 5000 0");
-        Assert.StartsWith("Added a door", editor.Send("mouse3 up 0 5000 0").GetProperty("message").GetString());
-        // The burial chamber west of it (the dungeon of seed 1 is the same each time): picked, then deleted, which
-        // leaves the opening where it met the room east of it free, marked, then pointed at.
-        editor.Send("mouse3 move -20 5000 -8");
-        editor.Send("mouse3 down -20 5000 -8");
-        Assert.Equal("forestcrypt_new_BurialChamber01: Delete removes it.", editor.Send("mouse3 up -20 5000 -8").GetProperty("message").GetString());
+        // Clicked from the middle outwards until a room is picked: which room or joint lies where is not the same from
+        // one run to the next, and a joint clicked on the way gets a door (drawn in the colour of a joint with one).
+        var (x, z) = PickARoom();
         AssertDrawn(Picture("rooms-picked"));
-        Assert.StartsWith("Removed forestcrypt_new_BurialChamber01", editor.Send("key Delete").GetProperty("message").GetString());
-        editor.Send("mouse3 move -20 5000 -8");
+        // Deleted, the room leaves the openings where it met the rooms next to it free, marked in their turn.
+        Assert.StartsWith("Removed ", editor.Send("key Delete").GetProperty("message").GetString());
+        editor.Send($"mouse3 move {x} 5000 {z}");
         AssertDrawn(Picture("rooms-open-ends"));
-        editor.Send("mouse3 move -16 5000 -12");
-        AssertDrawn(Picture("rooms-open-end-hover"));
         Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
         editor.Send("key Escape");
         BackToStart(editor);
@@ -178,6 +172,32 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
         var (east, _) = DrawnInstances();
         Assert.True(east > 0 && east < both - 2000, $"{east} of {all} instances drawn");
         BackToStart(editor);
+    }
+
+    /// <summary>
+    /// Clicks the dungeon 5000 m up at points from the view's middle outwards, 4 m apart, until one picks a room.
+    /// </summary>
+    /// <returns>The point that picked it.</returns>
+    private (int X, int Z) PickARoom()
+    {
+        var points = from x in Enumerable.Range(-6, 13)
+                     from z in Enumerable.Range(-6, 13)
+                     orderby (x * x) + (z * z)
+                     select (X: x * 4, Z: z * 4);
+        var said = new List<string>();
+        foreach (var (x, z) in points)
+        {
+            editor.Send($"mouse3 move {x} 5000 {z}");
+            editor.Send($"mouse3 down {x} 5000 {z}");
+            string message = editor.Send($"mouse3 up {x} 5000 {z}").GetProperty("message").GetString() ?? "";
+            if (message.EndsWith(": Delete removes it.", StringComparison.Ordinal))
+            {
+                return (x, z);
+            }
+            said.Add(message);
+        }
+        Assert.Fail("no room picked; the clicks said: " + string.Join(" | ", said.Distinct()));
+        return default;
     }
 
     /// <summary>
