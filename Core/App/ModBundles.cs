@@ -85,6 +85,19 @@ public static partial class ModBundles
     }
 
     /// <summary>
+    /// Tests: closes the reader made last and forgets it, so the copies' folder can be deleted (Windows refuses while
+    /// a bundle file in it is open) and the next test starts without it.
+    /// </summary>
+    internal static void Forget()
+    {
+        lock (Lock)
+        {
+            _made.Reader?.Close();
+            _made = ("", null);
+        }
+    }
+
+    /// <summary>
     /// A bundle as GameBundles reads it in place: an LZMA one (read only whole) unpacked and packed again with LZ4
     /// blocks; any other as it is.
     /// </summary>

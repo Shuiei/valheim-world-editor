@@ -15,6 +15,9 @@ namespace WorldEditor.Tests;
 [Collection("DataDir")]
 public sealed class ModBundlesTests : PretendHomeTestBase
 {
+    /// <summary>The reader made last holds its copies open: closed before the pretend home is deleted.</summary>
+    protected override void ForgetMods() => ModBundles.Forget();
+
     /// <summary>
     /// A bundle (LZ4 unless stored) with one mesh of this name.
     /// </summary>
