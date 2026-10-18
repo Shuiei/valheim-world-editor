@@ -32,7 +32,8 @@ public class GameCataloguesPrefabScanComponentsTests
         b.Prefab("Spawner_Boar", r =>
         {
             Net(r);
-            // The scripts the made-up game does not know: their fields given with them.
+            // The scripts the made-up game does not know: their fields given with them, in every width of whole number
+            // and both floating-point widths a script may use (each read as a number).
             r.Mono("CreatureSpawner", new Fields
             {
                 ["m_creaturePrefab"] = Fields.Ref(boar.Go),
@@ -40,8 +41,8 @@ public class GameCataloguesPrefabScanComponentsTests
                 ["m_minLevel"] = 1,
                 ["m_maxLevel"] = 3,
                 ["m_spawnAtDay"] = true,
-                ["m_spawnAtNight"] = false,
-            }, fields: [Ref("m_creaturePrefab"), Of("float", "m_respawnTimeMinuts"), Of("int", "m_minLevel"), Of("int", "m_maxLevel"), Of("bool", "m_spawnAtDay"), Of("bool", "m_spawnAtNight", align: true)]);
+                ["m_spawnAtNight"] = 0,
+            }, fields: [Ref("m_creaturePrefab"), Of("float", "m_respawnTimeMinuts"), Of("SInt16", "m_minLevel"), Of("UInt16", "m_maxLevel"), Of("bool", "m_spawnAtDay"), Of("SInt8", "m_spawnAtNight", align: true)]);
         });
         b.Prefab("Trigger_Pack", r =>
         {
@@ -52,7 +53,7 @@ public class GameCataloguesPrefabScanComponentsTests
                 ["m_spawnChance"] = 50.0,
                 ["m_minLevel"] = 2,
                 ["m_maxLevel"] = 2,
-            }, fields: [List("m_creaturePrefabs", Ref("data")), Of("float", "m_spawnChance"), Of("int", "m_minLevel"), Of("int", "m_maxLevel")]);
+            }, fields: [List("m_creaturePrefabs", Ref("data")), Of("float", "m_spawnChance"), Of("SInt64", "m_minLevel"), Of("UInt64", "m_maxLevel")]);
         });
         b.Prefab("Nest_Neck", r =>
         {
@@ -63,7 +64,7 @@ public class GameCataloguesPrefabScanComponentsTests
                 ["m_spawnIntervalSec"] = 10.0,
                 ["m_spawnRadius"] = 4.0,
                 ["m_maxNear"] = 3,
-            }, fields: [List("m_prefabs", Struct("SpawnData", "data", Ref("m_prefab"), Of("float", "m_weight"))), Of("float", "m_spawnIntervalSec"), Of("float", "m_spawnRadius"), Of("int", "m_maxNear")]);
+            }, fields: [List("m_prefabs", Struct("SpawnData", "data", Ref("m_prefab"), Of("float", "m_weight"))), Of("float", "m_spawnIntervalSec"), Of("double", "m_spawnRadius"), Of("UInt8", "m_maxNear", align: true)]);
         });
         game.Save();
 
