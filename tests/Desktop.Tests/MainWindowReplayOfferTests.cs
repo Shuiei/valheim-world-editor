@@ -1,4 +1,7 @@
+using System.Numerics;
 using Avalonia.Headless.XUnit;
+using TerrainEditor.App;
+using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
 using Xunit;
@@ -126,5 +129,45 @@ public sealed class MainWindowReplayOfferTests
         Assert.StartsWith("Could not bring your changes onto the game's save:", Assert.Single(told));
         Assert.Equal(game, w.World!.GameSaveSince());
         Assert.Equal(1, w.World.Pending.Zones);
+    }
+
+    // Save from the map when the game saved the world since: the save is refused, and the offer to bring the changes
+    // onto the game's save is made (declined here: the changes stay pending).
+    [AvaloniaFact]
+    public async Task SavingFromTheMapOffersTheReplayWhenTheGameSavedSince()
+    {
+        using var tw = new TempWorld();
+        var (w, game) = await ChangedUnderTheGame(tw.Dir);
+        var asked = new List<string>();
+        w.ConfirmSave = _ => Task.FromResult(true);
+        w.Ask = (title, _, _, _) => { asked.Add(title); return Task.FromResult(false); };
+        w.Tell = _ => Task.CompletedTask;
+
+        await w.SaveWorld();
+
+        Assert.Equal([Lang.T("replay.title")], asked);
+        Assert.Equal(game, w.World!.GameSaveSince());
+        Assert.Equal(1, w.World.Pending.Zones);
+    }
+
+    // The question for one kind of clash: how many, the first eight of them and how many more, and how many the editor
+    // cannot tell about (the save it read is gone).
+    [AvaloniaFact]
+    public void TheClashQuestionNamesTheKindTheFirstFewAndHowManyMore()
+    {
+        var w = new MainWindow(load: false);
+        var ground = Enumerable.Range(0, 9).Select(i => new EditReplay.Clash(ReplayClash.Ground, 0, new Vector3(64f * i, 0, 64f), false)).ToList();
+
+        string text = w.ClashText(ReplayClash.Ground, ground);
+
+        Assert.StartsWith("The game changed the ground of 9 zone(s) where you changed it too:", text);
+        Assert.Contains("• " + Lang.T("replay.zone", 7, 1), text);
+        Assert.DoesNotContain(Lang.T("replay.zone", 8, 1), text);
+        Assert.Contains("… and 1 more", text);
+
+        string changed = w.ClashText(ReplayClash.Changed, [new EditReplay.Clash(ReplayClash.Changed, 7, new Vector3(1, 0, 2), true)]);
+
+        Assert.StartsWith("The game changed 1 object(s) you deleted, moved or edited", changed);
+        Assert.EndsWith(Lang.T("replay.unsure", 1), changed);
     }
 }

@@ -8,6 +8,59 @@ namespace WorldEditor.Tests;
 /// </summary>
 public sealed partial class FakeGame
 {
+    /// <summary>The plugin's report of the game's prefabs (GET /catalogue); null: a plugin too old to have it (404).</summary>
+    public string? Catalogue { get; set; }
+
+    /// <summary>The answer to POST /models (what the game draws of the prefabs asked for): a JSON object, empty by default.</summary>
+    public string Models { get; set; } = "{}";
+
+    /// <summary>
+    /// Answers the mods' paths: the registered mods and their routes, the catalogue of prefabs and the models asked for.
+    /// </summary>
+    private async Task RouteMods(HttpListenerContext ctx, string path, Reply reply)
+    {
+        switch (path)
+        {
+            case "/mods":
+                ServeMods(reply);
+                break;
+            case "/catalogue":
+                ServeCatalogue(reply);
+                break;
+            case "/models":
+                await ServeModels(ctx, reply);
+                break;
+            default:
+                await ServeModRoute(ctx, path, reply);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// The catalogue report; a plugin without one (Catalogue null) answers 404.
+    /// </summary>
+    private void ServeCatalogue(Reply reply)
+    {
+        if (Catalogue == null)
+        {
+            reply.Status = 404;
+            reply.Type = "text/plain";
+            reply.Body = Encoding.UTF8.GetBytes("unknown path");
+        }
+        else
+        {
+            reply.Body = Encoding.UTF8.GetBytes(Catalogue);
+        }
+    }
+
+    /// <summary>The models of the prefabs asked for (the names in the body are read and left aside).</summary>
+    private async Task ServeModels(HttpListenerContext ctx, Reply reply)
+    {
+        using var ms = new MemoryStream();
+        await ctx.Request.InputStream.CopyToAsync(ms);
+        reply.Body = Encoding.UTF8.GetBytes(Models);
+    }
+
     /// <summary>
     /// The registered mods; a plugin without the list (Mods null) answers 404.
     /// </summary>
