@@ -146,7 +146,8 @@ public class GameLookEditorProcess : EditorProcess
 
     /// <summary>
     /// Puts 2100 fir trees into the world's first zone, a metre apart north of the middle (clear of the chest the tests
-    /// point at): more instances of one model than are drawn at once, so the view draws them by the cells in view.
+    /// point at), and a row of 60 more in the next zone east: more instances of one model than are drawn at once, in two
+    /// of the cells of an area three zones across, so the view draws them by the cells in view.
     /// </summary>
     /// <param name="world">The world's folder.</param>
     private static void AddTrees(string world)
@@ -160,6 +161,8 @@ public class GameLookEditorProcess : EditorProcess
                 // At about the ground's height there (the test world's first zone lies around 45 m).
                 added.Add(new NewObject(0, fir, new Vector3(-29.5f + i, 46f, -5f + j), Vector3.Zero, 1f));
             }
+            // The row 60 m east, past the cell edge of an area three zones across (32 m east of the middle).
+            added.Add(new NewObject(0, fir, new Vector3(60f, 46f, -29.5f + i), Vector3.Zero, 1f));
         }
         var result = WorldWriter.Save(WorldSave.Load(world), [], added: added);
         if (!result.Saved)
