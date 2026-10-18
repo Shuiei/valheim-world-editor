@@ -116,16 +116,17 @@ public sealed partial class WorldGenerator
     /// the rules turn the gap off). In the generator's coordinates.
     /// </summary>
     private double AshlandsGap(float x, float z) =>
-        _v.AshlandsGap ? EdgeGap(x, z + _v.AshlandsYOffset, x, z, _v.AshlandsMinDistance, _v.AshlandsGapWidth) : 1.0;
+        EdgeGap(x, z + _v.AshlandsYOffset, x, z, _v.AshlandsMinDistance, _v.AshlandsGapWidth, _v.AshlandsGap);
 
     /// <summary>
     /// The same for the Deep North's edge (the game's CreateDeepNorthGap).
     /// </summary>
     public double CreateDeepNorthGap(float x, float z) =>
-        _v.DeepNorthGap ? EdgeGap(x, z + _v.DeepNorthGapShift, x, z, _v.DeepNorthGapRadius, _v.DeepNorthGapWidth) : 1.0;
+        EdgeGap(x, z + _v.DeepNorthGapShift, x, z, _v.DeepNorthGapRadius, _v.DeepNorthGapWidth, _v.DeepNorthGap);
 
     /// <summary>
-    /// 0 on an edge circle, rising (eased) to 1 within <paramref name="width"/> m to either side.
+    /// 0 on an edge circle, rising (eased) to 1 within <paramref name="width"/> m to either side; 1 everywhere when
+    /// the gap is off (the rules').
     /// </summary>
     /// <param name="sx">x from the circle's middle.</param>
     /// <param name="sz">z from the circle's middle.</param>
@@ -133,8 +134,13 @@ public sealed partial class WorldGenerator
     /// <param name="z">World z, for the edge's wave.</param>
     /// <param name="radius">The circle's radius.</param>
     /// <param name="width">How far from the circle the gap reaches.</param>
-    private static double EdgeGap(float sx, float sz, float x, float z, double radius, double width)
+    /// <param name="on">Whether the gap is there at all.</param>
+    private static double EdgeGap(float sx, float sz, float x, float z, double radius, double width, bool on)
     {
+        if (!on)
+        {
+            return 1.0;
+        }
         double past = (double)GenMath.Length(sx, sz) - (radius + (double)WorldAngle(x, z) * 100.0);
         return GenMath.SmoothBlend(0.0, 1.0, (float)GenMath.Clamp01(Math.Abs(past) / width));
     }

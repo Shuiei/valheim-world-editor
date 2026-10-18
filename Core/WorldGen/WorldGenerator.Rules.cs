@@ -17,14 +17,47 @@ public sealed partial class WorldGenerator
     private readonly RuleValues _v;
 
     /// <summary>
-    /// The rules as the formulas take them. Where the mod leaves the game's code alone at a setting's default and
-    /// its formula would round differently from the literal, a switch (AltitudeOn, WaterDepthOn, ForestOn) says
-    /// whether it is applied at all, as the mod only applies it when the setting is set.
+    /// The world's radius in the generator's coordinates (metres; the game's 10000, or the rules' radius over
+    /// their stretch): past it, the sea deepens to the edge of the world.
     /// </summary>
-    private sealed class RuleValues
+    public float WorldSize => _v.WorldSize;
+
+    /// <summary>
+    /// A world coordinate as the generator's formulas take it: divided by the rules' stretch (Expand World
+    /// Size's prefix on the game's GetBiome, GetBiomeHeight and the map's mask colour). The same coordinate
+    /// with the game's own rules.
+    /// </summary>
+    internal float Stretched(float v) => v / _v.Stretch;
+
+    /// <summary>
+    /// How much of a forest the game would grow here (lower: denser; under 1.15 counts as forest). Given the
+    /// point as the game's callers give it: its zone system asks with the world position as it is, its map with
+    /// the point stretched (<see cref="Stretched"/>). Expand World Size's forest multiplier divides it (its
+    /// postfix, applied only when set).
+    /// </summary>
+    internal float GetForestFactor(Vector3 pos) => _v.Forest(GenMath.Layers(pos * 0.01f * 0.4f, 3, 1.6f, 0.7f));
+
+    /// <summary>
+    /// Whether the game counts a point as forest (<see cref="GetForestFactor"/> under 1.15).
+    /// </summary>
+    internal bool InForest(Vector3 pos) => GetForestFactor(pos) < 1.15f;
+
+    /// <summary>
+    /// The rules as the formulas take them, and the seed's draws the rules replace. Where the mod leaves the game's
+    /// code alone at a setting's default and its formula would round differently from the literal, a switch
+    /// (AltitudeOn, WaterDepthOn, ForestOn) says whether it is applied at all, as the mod only applies it when the
+    /// setting is set.
+    /// </summary>
+    private sealed partial class RuleValues
     {
         /// <summary>The values for a world's rules.</summary>
-        public RuleValues(WorldRules r)
+        /// <param name="r">The rules.</param>
+        /// <param name="offsetA">The seed's first continent offset.</param>
+        /// <param name="offsetB">The seed's second continent offset.</param>
+        /// <param name="offsetDetail">The seed's detail offset.</param>
+        /// <param name="riverSeed">The seed's river seed.</param>
+        /// <param name="streamSeed">The seed's stream seed.</param>
+        public RuleValues(WorldRules r, float offsetA, float offsetB, float offsetDetail, int riverSeed, int streamSeed)
         {
             float sr = r.StretchedRadius;
             Radius = r.Radius;
@@ -68,31 +101,29 @@ public sealed partial class WorldGenerator
             WaterDepthOn = r.WaterDepthMultiplier != 1f;
             ForestMultiplier = r.ForestMultiplier == 0f ? 1f : r.ForestMultiplier;
             ForestOn = ForestMultiplier != 1f;
-            LakeStep = r.LakeSearchInterval;
-            LakeDepth = r.AltitudeToBaseHeight(r.LakeDepth);
-            LakeMerge = r.LakeMergeRadius;
-            RiversOn = r.Rivers;
-            RiverReach1 = r.LakeMaxDistance1;
-            RiverReach2 = r.LakeMaxDistance2;
-            RiverLimit = r.AltitudeToBaseHeight(r.RiverMaxAltitude);
-            RiverStep = r.RiverCheckInterval;
-            RiverWidthMin = r.RiverMinWidth;
-            RiverWidthMax = r.RiverMaxWidth;
-            RiverCurveWidth = r.RiverCurveWidth;
-            RiverCurveWaveLength = r.RiverCurveWaveLength;
-            StreamsOn = r.Streams;
-            StreamTries = r.StreamMaxAmount;
-            StreamIterations = r.StreamSearchIterations;
-            StreamStartMin = r.AltitudeToHeight(r.StreamStartMinAltitude);
-            StreamStartMax = r.AltitudeToHeight(r.StreamStartMaxAltitude);
-            StreamEndMin = r.AltitudeToHeight(r.StreamEndMinAltitude);
-            StreamEndMax = r.AltitudeToHeight(r.StreamEndMaxAltitude);
-            StreamMinLength = r.StreamMinLength;
-            StreamMaxLength = r.StreamMaxLength;
-            StreamWidthMax = r.StreamMaxWidth;
-            StreamCurveWidth = r.StreamCurveWidth;
-            StreamCurveWaveLength = r.StreamCurveWaveLength;
+            // The seed's draws the rules replace: the continents' offsets, the detail offset on x, the water's seeds.
+            ContinentA = r.OffsetX ?? offsetA;
+            ContinentB = r.OffsetY ?? offsetB;
+            DetailX = r.HeightSeed ?? offsetDetail;
+            RiverSeed = r.RiverSeed ?? riverSeed;
+            StreamSeed = r.StreamSeed ?? streamSeed;
+            SetWater(r);
         }
+
+        /// <summary>
+        /// The continents' height with the rules' altitude transform (Expand World Size's postfix on the game's
+        /// GetBaseHeight, applied only when its delta or multiplier is set).
+        /// </summary>
+        public float Altitude(float h) => AltitudeOn ? BaseWater + (h - BaseWater) * AltitudeMultiplier + BaseAltitudeDelta : h;
+
+        /// <summary>
+        /// A biome's height with the rules' water depth multiplier (Expand World Size's postfix on the game's
+        /// GetBiomeHeight, applied only when set): the ground under the water level, deeper or shallower.
+        /// </summary>
+        public float Depth(float h) => WaterDepthOn && !(h > WaterLevel) ? (h - WaterLevel) * WaterDepth + WaterLevel : h;
+
+        /// <summary>The forest factor divided by the rules' forest multiplier (applied only when set).</summary>
+        public float Forest(float factor) => ForestOn ? factor / ForestMultiplier : factor;
 
         /// <summary>The world's radius in world metres (the lakes and streams are laid out over it).</summary>
         public float Radius { get; }
@@ -166,53 +197,22 @@ public sealed partial class WorldGenerator
         public float ForestMultiplier { get; }
         /// <summary>Whether the forest factor is divided (the multiplier is set).</summary>
         public bool ForestOn { get; }
-        /// <summary>How far apart the lake scan's points are (128.0).</summary>
-        public double LakeStep { get; }
-        /// <summary>The continents' height under which a point is a lake (0.05f).</summary>
-        public float LakeDepth { get; }
-        /// <summary>Lake points within this distance merge (800f).</summary>
-        public float LakeMerge { get; }
-        /// <summary>Whether rivers are laid out.</summary>
-        public bool RiversOn { get; }
-        /// <summary>How far a lake looks for a river's other end (2000f).</summary>
-        public float RiverReach1 { get; }
-        /// <summary>How far a lake without a river looks (5000f).</summary>
-        public float RiverReach2 { get; }
-        /// <summary>The continents' height a river never crosses (0.4f).</summary>
-        public float RiverLimit { get; }
-        /// <summary>How far apart a river's way is checked (128f).</summary>
-        public float RiverStep { get; }
-        /// <summary>A river's narrowest width draw's floor (60f).</summary>
-        public float RiverWidthMin { get; }
-        /// <summary>A river's widest width draw's ceiling (100f).</summary>
-        public float RiverWidthMax { get; }
-        /// <summary>A river's waves' width, as a share of its length (15.0).</summary>
-        public double RiverCurveWidth { get; }
-        /// <summary>A river's waves' length, as a share of its length (20.0).</summary>
-        public double RiverCurveWaveLength { get; }
-        /// <summary>Whether streams are laid out.</summary>
-        public bool StreamsOn { get; }
-        /// <summary>How many streams are tried (3000).</summary>
-        public int StreamTries { get; }
-        /// <summary>How many points are tried for a stream's start, and for its end (100).</summary>
-        public int StreamIterations { get; }
-        /// <summary>A stream's start is above this height, metres (26f).</summary>
-        public float StreamStartMin { get; }
-        /// <summary>A stream's start is below this height (31f).</summary>
-        public float StreamStartMax { get; }
-        /// <summary>A stream's end is above this height (36f).</summary>
-        public float StreamEndMin { get; }
-        /// <summary>A stream's end is below this height (44f).</summary>
-        public float StreamEndMax { get; }
-        /// <summary>The shortest a stream is tried at (80f).</summary>
-        public float StreamMinLength { get; }
-        /// <summary>The longest a stream is tried at (200f).</summary>
-        public float StreamMaxLength { get; }
-        /// <summary>A stream's widest point (20f; the mod replaces this literal only, the narrowest stays 20).</summary>
-        public float StreamWidthMax { get; }
-        /// <summary>A stream's waves' width, as a share of its length (15.0).</summary>
-        public double StreamCurveWidth { get; }
-        /// <summary>A stream's waves' length, as a share of its length (20.0).</summary>
-        public double StreamCurveWaveLength { get; }
+        /// <summary>
+        /// The continents' first offset as the continents' height reads it: the seed's, or the rules' Offset X (which
+        /// replaces it there, and only there: the swamps' field keeps the seed's).
+        /// </summary>
+        public float ContinentA { get; }
+        /// <summary>The continents' second offset as the continents' height reads it: the seed's, or the rules' Offset Y.</summary>
+        public float ContinentB { get; }
+        /// <summary>
+        /// The detail offset as the biomes' heights read it on their x coordinate: the seed's, or the rules' height
+        /// seed (which replaces the first use in each of the game's seven biome heights, the x coordinate's; z keeps
+        /// the seed's).
+        /// </summary>
+        public float DetailX { get; }
+        /// <summary>The rivers' seed: the seed's, or the rules'.</summary>
+        public int RiverSeed { get; }
+        /// <summary>The streams' seed: the seed's, or the rules'.</summary>
+        public int StreamSeed { get; }
     }
 }

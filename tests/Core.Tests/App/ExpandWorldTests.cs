@@ -52,24 +52,25 @@ public class ExpandWorldTests : AppSettingsTestBase
     }
 
     [Theory]
-    [InlineData(0, 10500f, 512)]
-    [InlineData(0, 16384f, 512)]
-    [InlineData(0, 16385f, 576)]
-    [InlineData(0, 20500f, 704)]
-    [InlineData(0, 70000f, 2048)]
-    [InlineData(4, 10500f, 512)]
-    [InlineData(16, 10500f, 1024)]
-    [InlineData(100, 10500f, 2048)]
-    public void TheSaveGridFollowsTheModsRule(int saveSystemSize, float total, int expected)
+    [InlineData(true, 0, 10500f, 512)]
+    [InlineData(true, 0, 16384f, 512)]
+    [InlineData(true, 0, 16385f, 576)]
+    [InlineData(true, 0, 20500f, 704)]
+    [InlineData(true, 0, 70000f, 2048)]
+    [InlineData(true, 4, 10500f, 512)]
+    [InlineData(true, 16, 10500f, 1024)]
+    [InlineData(true, 100, 10500f, 2048)]
+    [InlineData(false, 16, 70000f, 512)]
+    public void TheSaveGridFollowsTheModsRule(bool sizeInstalled, int saveSystemSize, float total, int expected)
     {
-        Assert.Equal(expected, ExpandWorld.GridWidthFor(saveSystemSize, total));
+        Assert.Equal(expected, ExpandWorld.GridWidthFor(sizeInstalled, saveSystemSize, total));
     }
 
     [Fact]
     public void RulesFromTheWorldFilesKeysTakeTheDefaultsForWhatIsNotKept()
     {
         var keys = ExpandWorld.Keys(["ews_world_radius 20000", "ews_altitude_delta 10", "ews_offset_x -500", "ews_ashlands_gap false", "ews_gridwidth 1024"]);
-        var r = ExpandWorld.Rules(keys, null);
+        var r = ExpandWorld.Rules(keys, ExpandWorld.Found.None);
         Assert.Equal(20000f, r.Radius);
         Assert.Equal(500f, r.EdgeSize);
         Assert.Equal(10f, r.AltitudeDelta);
@@ -121,7 +122,7 @@ public class ExpandWorldTests : AppSettingsTestBase
     [Fact]
     public void AStretchOfZeroIsTakenAsOne()
     {
-        var r = ExpandWorld.Rules(ExpandWorld.Keys(["ews_stretch_world 0", "ews_stretch_biomes -1"]), null);
+        var r = ExpandWorld.Rules(ExpandWorld.Keys(["ews_stretch_world 0", "ews_stretch_biomes -1"]), ExpandWorld.Found.None);
         Assert.Equal(1f, r.Stretch);
         Assert.Equal(1f, r.BiomeStretch);
     }
@@ -134,8 +135,10 @@ public class ExpandWorldTests : AppSettingsTestBase
         Directory.CreateDirectory(Path.Combine(bep, "plugins"));
         var found = ExpandWorld.Look(bep, "test");
         Assert.False(found.Any);
-        Assert.Null(ExpandWorld.Find(new AppSettings { BepInExFolders = { bep } }));
-        Assert.True(ExpandWorld.Rules(new Dictionary<string, string>(), null).IsVanilla);
+        Assert.False(ExpandWorld.Find(new AppSettings { BepInExFolders = { bep } }).Any);
+        // A folder that is not there holds none either.
+        Assert.False(ExpandWorld.Look(Path.Combine(Data, "nowhere"), "test").Any);
+        Assert.True(ExpandWorld.Rules(new Dictionary<string, string>(), ExpandWorld.Found.None).IsVanilla);
     }
 
     [Fact]

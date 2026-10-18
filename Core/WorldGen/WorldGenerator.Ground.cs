@@ -52,11 +52,7 @@ public sealed partial class WorldGenerator
     /// The continents' height, worked out (Continent keeps the last one), with the rules' altitude transform
     /// (Expand World Size's postfix on the game's GetBaseHeight, applied only when its delta or multiplier is set).
     /// </summary>
-    private float WorkOutContinent(float x, float z)
-    {
-        float h = ContinentShape(x, z);
-        return _v.AltitudeOn ? _v.BaseWater + (h - _v.BaseWater) * _v.AltitudeMultiplier + _v.BaseAltitudeDelta : h;
-    }
+    private float WorkOutContinent(float x, float z) => _v.Altitude(ContinentShape(x, z));
 
     /// <summary>
     /// The continents' height as the game's GetBaseHeight works it out (the world's, not the menu's).
@@ -65,8 +61,8 @@ public sealed partial class WorldGenerator
     {
         float fromMiddle = GenMath.Length(x, z);
         double cx = x, cz = z;
-        cx += 100000.0 + _continentA;
-        cz += 100000.0 + _continentB;
+        cx += 100000.0 + _v.ContinentA;
+        cz += 100000.0 + _v.ContinentB;
         float h = Swells(cx, cz);
         // Ridges where two fields cross, kept out of the middle 744 to 1000 m.
         float r1 = GenMath.Noise(cx * (double)0.002f * 0.25 + (double)0.123f, cz * (double)0.002f * 0.25 + (double)0.15123f);
@@ -133,9 +129,9 @@ public sealed partial class WorldGenerator
     private float DetailPoint(float v) => (float)((double)v + 100000.0 + _offsetDetail);
 
     /// <summary>
-    /// The same for the x coordinate of the seven biome heights the rules' height seed applies to (<see cref="_detailX"/>).
+    /// The same for the x coordinate of the seven biome heights the rules' height seed applies to (RuleValues.DetailX).
     /// </summary>
-    private float SeededDetailPoint(float v) => (float)((double)v + 100000.0 + _detailX);
+    private float SeededDetailPoint(float v) => (float)((double)v + 100000.0 + _v.DetailX);
 
     /// <summary>
     /// Rolling hills: two products of noise, the finer weighed by the coarser.

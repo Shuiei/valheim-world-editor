@@ -31,7 +31,6 @@ public sealed partial class WorldGenerator
     {
         _world = world;
         Rules = world.Rules;
-        _v = new RuleValues(Rules);
         if (world.WorldGenVersion <= 0)
         {
             _mountainFreeRadius = 1500f;
@@ -55,12 +54,10 @@ public sealed partial class WorldGenerator
             _riverSeed = Rnd.Range(int.MinValue, int.MaxValue);
             _streamSeed = Rnd.Range(int.MinValue, int.MaxValue);
             _offsetMist = Rnd.Range(-10000, 10000);
-            // Expand World Size and Rivers replace some of the seed's draws with settings.
-            _continentA = Rules.OffsetX ?? _offsetA;
-            _continentB = Rules.OffsetY ?? _offsetB;
-            _detailX = Rules.HeightSeed ?? _offsetDetail;
-            _riverSeed = Rules.RiverSeed ?? _riverSeed;
-            _streamSeed = Rules.StreamSeed ?? _streamSeed;
+            // The rules' values, and the seed's draws they replace (Expand World Size and Rivers).
+            _v = new RuleValues(Rules, _offsetA, _offsetB, _offsetDetail, _riverSeed, _streamSeed);
+            _riverSeed = _v.RiverSeed;
+            _streamSeed = _v.StreamSeed;
             if (!world.Menu)
             {
                 LayOutWater();
@@ -122,36 +119,6 @@ public sealed partial class WorldGenerator
     private static float Scaled(float shape, float scale) => (float)((double)shape * scale + 0.0);
 
     /// <summary>
-    /// How much of a forest the game would grow here (lower: denser; under 1.15 counts as forest). Given the
-    /// point as the game's callers give it: its zone system asks with the world position as it is, its map with
-    /// the point stretched (<see cref="Stretched"/>).
-    /// </summary>
-    internal float GetForestFactor(Vector3 pos)
-    {
-        float f = GenMath.Layers(pos * 0.01f * 0.4f, 3, 1.6f, 0.7f);
-        // Expand World Size's forest multiplier (its postfix, applied only when set).
-        return _v.ForestOn ? f / _v.ForestMultiplier : f;
-    }
-
-    /// <summary>
-    /// Whether the game counts a point as forest (<see cref="GetForestFactor"/> under 1.15).
-    /// </summary>
-    internal bool InForest(Vector3 pos) => GetForestFactor(pos) < 1.15f;
-
-    /// <summary>
-    /// The world's radius in the generator's coordinates (metres; the game's 10000, or the rules' radius over
-    /// their stretch): past it, the sea deepens to the edge of the world.
-    /// </summary>
-    public float WorldSize => _v.WorldSize;
-
-    /// <summary>
-    /// A world coordinate as the generator's formulas take it: divided by the rules' stretch (Expand World
-    /// Size's prefix on the game's GetBiome, GetBiomeHeight and the map's mask colour). The same coordinate
-    /// with the game's own rules.
-    /// </summary>
-    internal float Stretched(float v) => v / _v.Stretch;
-
-    /// <summary>
     /// Metres a unit of the generator's heights.
     /// </summary>
     private const float HeightScale = 200f;
@@ -189,17 +156,4 @@ public sealed partial class WorldGenerator
     /// swamps and plains), the forests', the ground's small detail and the mists'.
     /// </summary>
     private readonly float _offsetA, _offsetB, _offsetForest, _offsetDetail, _offsetMist;
-
-    /// <summary>
-    /// The continents' offsets as the continents' height reads them: the seed's, or the rules' (Expand World Size's
-    /// Offset X and Y replace them there, and only there: the swamps' and plains' fields keep the seed's).
-    /// </summary>
-    private readonly float _continentA, _continentB;
-
-    /// <summary>
-    /// The detail offset as the biomes' heights read it on their x coordinate: the seed's, or the rules' height seed
-    /// (which replaces the first use in each of the game's seven biome heights, the x coordinate's; z keeps the
-    /// seed's).
-    /// </summary>
-    private readonly float _detailX;
 }

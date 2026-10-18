@@ -56,9 +56,7 @@ public sealed partial class WorldGenerator
                 _ => 0f,
             };
         }
-        // Expand World Size's water depth multiplier (its postfix, applied only when set): the ground under the
-        // water level, deeper or shallower.
-        return _v.WaterDepthOn && !(h > _v.WaterLevel) ? (h - _v.WaterLevel) * _v.WaterDepth + _v.WaterLevel : h;
+        return _v.Depth(h);
     }
 
     // ---- The ground around a point.
