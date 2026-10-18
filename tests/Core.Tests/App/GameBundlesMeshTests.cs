@@ -1,4 +1,3 @@
-using TerrainEditor.App;
 using WorldEditor.Tests.Unity;
 using Xunit;
 
@@ -21,7 +20,7 @@ public class GameBundlesMeshTests
         long quad = Quad("quad").Add(a);
         long triangle = new TestMesh { Name = "triangle", Positions = [0, 0, 0, 1, 0, 0, 0, 1, 0], Submeshes = [[0, 1, 2]], Bounds = ((1, 2, 3), (0.5, 1, 1.5)) }.Add(a);
         game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = game.Bundles();
 
         Assert.Equal(4, bundles.VertexCountOf(new("a_mod", quad)));
         Assert.Equal(3, bundles.VertexCountOf(new("a_mod", triangle)));
@@ -66,7 +65,7 @@ public class GameBundlesMeshTests
         // Kept in the bundle's resource file.
         long streamed = new TestMesh { Name = "streamed", Positions = pos, Submeshes = [[2, 1, 0]], Streamed = true }.Add(b);
         game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = game.Bundles();
 
         var m = bundles.LoadMesh(new("meshes", plain))!;
         Assert.Equal("plain", m.Name);
@@ -115,7 +114,7 @@ public class GameBundlesMeshTests
         long narrow = new TestMesh { Name = "narrow", Positions = pos, Normals = normals, Uv = uv, Submeshes = [[0, 1, 2, 0, 2, 3], [0, 1, 2, 0]], BaseVertex = [0, 1], Compressed = true }.Add(b);
         long wide = new TestMesh { Name = "wide", Positions = pos, Submeshes = [[3, 2, 1], [0, 1, 2]], Wide = true, Compressed = true }.Add(b);
         game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = game.Bundles();
 
         var m = bundles.LoadMesh(new("meshes", narrow))!;
         Assert.Equal(("narrow", 4), (m.Name, m.VertexCount));

@@ -15,7 +15,7 @@ public class GameBundlesModelWalkTests
 {
     private static readonly int[] Expected1 = [0, 1];
     /// <summary>A walk over the prefab's bundle, which holds it.</summary>
-    private static GameBundles.ModelWalk Walk(TestGame game) => new(new GameBundles(game.BundlesDir, null), "b_house");
+    private static GameBundles.ModelWalk Walk(TestGame game) => new(game.Bundles(), "b_house");
 
     /// <summary>
     /// The house bundle of a game: one quad mesh, and one material of its own (as a reference a renderer can hold).

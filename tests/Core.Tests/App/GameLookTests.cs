@@ -16,10 +16,17 @@ public sealed class GameLookTests : IDisposable
 
     /// <summary>
     /// Leaves the game missing again (no pretend game kept in use), puts the environment and settings back, and
-    /// deletes the pretend home.
+    /// deletes the pretend home. A reading the test started is waited for first, and the home is deleted before the
+    /// check: with a pretend game still in it, the check would find it and start reading it in the background, into
+    /// the folder being deleted and on into the next test.
     /// </summary>
     public void Dispose()
     {
+        Settled().GetAwaiter().GetResult();
+        if (Directory.Exists(_sandbox.Folder))
+        {
+            Directory.Delete(_sandbox.Folder, true);
+        }
         GameLook.Check(new AppSettings());
         _sandbox.Dispose();
     }
@@ -199,7 +206,8 @@ public sealed class GameLookTests : IDisposable
         // Only the game in use takes the reading's state: another game's reading (a folder never set) changes nothing.
         string state = GameLook.State;
         string? message = GameLook.Message;
-        GameLook.FinishReading(new GameBundles(_sandbox.Folder, null), "failed", "not this game");
+        using var other = new GameBundles(_sandbox.Folder, null);
+        GameLook.FinishReading(other, "failed", "not this game");
         Assert.Equal(state, GameLook.State);
         Assert.Equal(message, GameLook.Message);
     }
@@ -209,7 +217,7 @@ public sealed class GameLookTests : IDisposable
     {
         // The index of a folder of bundles holding no model: indexed, and empty (the state then says so).
         string valheim = FakeValheim(Path.Combine(_sandbox.Folder, "Valheim"));
-        var game = new GameBundles(GameLook.BundlesDir(valheim)!, null);
+        using var game = new GameBundles(GameLook.BundlesDir(valheim)!, null);
         GameLook.IndexBundles(game);
         Assert.True(game.Indexed);
         Assert.Empty(game.Index);

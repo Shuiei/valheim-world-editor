@@ -96,8 +96,8 @@ public sealed class BundleModelsModsTests : IDisposable
     /// </summary>
     private BundleModels Models(bool mods = true)
     {
-        var game = new GameBundles(_game.BundlesDir, null);
-        var modBundles = mods ? new GameBundles(_mods.BundlesDir, null) : null;
+        var game = _game.Bundles();
+        var modBundles = mods ? _mods.Bundles() : null;
         return new BundleModels(game, () => modBundles);
     }
 

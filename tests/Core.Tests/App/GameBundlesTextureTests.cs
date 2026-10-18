@@ -28,7 +28,7 @@ public class GameBundlesTextureTests
         long odd = TestAssets.Material(b, "odd", Fields.Ref(tex));
         long none = TestAssets.Material(b, "none");
         game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = game.Bundles();
 
         var m = bundles.LoadMaterial(new("b_mats", mat))!;
         Assert.Equal("wood_mat", m.Name);
@@ -61,7 +61,7 @@ public class GameBundlesTextureTests
         long tooShort = TestAssets.Texture(b, "short", 4, 4, Rgba32, 1, new byte[10]);
         long mat = TestAssets.Material(b, "not a texture");
         game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = game.Bundles();
 
         var top = bundles.LoadTexture(new("textures", kept), 1024)!;
         Assert.Equal(("levels", Alpha8, 4, 2), (top.Name, top.Format, top.Width, top.Height));
@@ -94,7 +94,7 @@ public class GameBundlesTextureTests
         long streamed = TestAssets.Texture(b, "streamed", 64, 64, 28, 1, dxt1, streamed: true);
         long broken = TestAssets.Texture(b, "broken", 64, 64, 28, 7, dxt1[..500]);
         game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = game.Bundles();
 
         var top = bundles.LoadTexture(new("crunched", kept), 1024)!;
         Assert.Equal(("kept", 12, 48, 20), (top.Name, top.Format, top.Width, top.Height));

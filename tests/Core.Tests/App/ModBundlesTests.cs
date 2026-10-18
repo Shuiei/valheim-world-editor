@@ -173,7 +173,7 @@ public sealed class ModBundlesTests : PretendHomeTestBase
         string dir = Path.Combine(Home, "bundles");
         Directory.CreateDirectory(dir);
         File.WriteAllBytes(Path.Combine(dir, "lzma"), lz4);
-        var bundles = new GameBundles(dir, null);
+        using var bundles = new GameBundles(dir, null);
         var mesh = Assert.Single(bundles.Named(AssetClassID.Mesh, "packed_plank"));
         Assert.Equal(3, bundles.VertexCountOf(mesh));
     }

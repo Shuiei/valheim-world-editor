@@ -83,4 +83,10 @@ public sealed partial class GameBundles
             _fields.Clear();
         }
     }
+
+    /// <summary>
+    /// <see cref="Close"/>: the bundles' files are let go of when the reader is done with (a <c>using</c>), so the
+    /// folder they are in can be deleted or replaced, on Windows too.
+    /// </summary>
+    public void Dispose() => Close();
 }

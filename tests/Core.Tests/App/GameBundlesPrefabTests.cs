@@ -39,10 +39,10 @@ public class GameBundlesPrefabTests
         game.Save();
         // An index kept from before names a prefab in it: what its root has is not known either.
         string cache = Path.Combine(game.Root, "index.json");
-        var bundles = new GameBundles(game.BundlesDir, cache);
+        var bundles = game.Bundles(cache);
         Assert.DoesNotContain("Bare", bundles.Index.Keys);
         File.WriteAllText(cache, File.ReadAllText(cache).Replace("\"Prefabs\":{", "\"Prefabs\":{\"Kept\":\"bare:1\",", StringComparison.Ordinal));
-        Assert.Equal(new GameBundles.Kind(false, false, false), new GameBundles(game.BundlesDir, cache).KindOf("Kept"));
+        Assert.Equal(new GameBundles.Kind(false, false, false), game.Bundles(cache).KindOf("Kept"));
 
         Assert.Equal(new GameBundles.Kind(true, true, false), bundles.KindOf("Wolf"));
         Assert.Equal(new GameBundles.Kind(true, false, true), bundles.KindOf("Coin"));

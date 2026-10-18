@@ -17,7 +17,7 @@ public class GameFilesTests
     {
         string? valheim = GameLook.FindValheim(null);
         Assert.SkipUnless(valheim != null, "needs Valheim");
-        var game = GameBundles.ForGame(valheim, GameLook.IndexFile)!;
+        using var game = GameBundles.ForGame(valheim, GameLook.IndexFile)!;
         var vulkan = GameLookData.ReadTerrain(game, vulkan: true);
         Assert.Contains("void valheimGBuffer()", vulkan.Fragment);
         Assert.Equal(256, vulkan.DiffuseArray.Width);
