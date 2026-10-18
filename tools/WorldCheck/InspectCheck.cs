@@ -12,7 +12,7 @@ internal static class InspectCheck
         foreach (TerrainZone z in world.TerrainZones)
         {
             var (sx, sz) = ChunkMath.SectorOf(z.Center.X, z.Center.Z);
-            ChunkFile? expected = ChunkMath.Find(world.Chunks, sx, sz);
+            ChunkFile? expected = ChunkMath.Find(world.Chunks, sx, sz, world.GridWidth);
             if (expected == z.Source!.File)
             {
                 ok++;

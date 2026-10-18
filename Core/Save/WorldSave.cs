@@ -74,6 +74,13 @@ public sealed partial class WorldSave
     public ValheimGen.WorldRules Rules { get; set; } = ValheimGen.WorldRules.Vanilla;
 
     /// <summary>
+    /// The zone grid the chunk files on disk are laid out on, sectors a side (<see cref="ChunkMath"/>): the game's 512,
+    /// or what Expand World Size wrote in the world file ("ews_gridwidth"), whatever the Settings switch says: the
+    /// files are what they are, and the editor reads and writes them as they lie. A live world has the game's.
+    /// </summary>
+    public int GridWidth { get; private set; } = ChunkMath.VanillaWidth;
+
+    /// <summary>
     /// The save format at the head of the index (_main.&lt;n&gt;.chunks): the game's when it last saved the world (0 for a
     /// live world). Chunk files the game did not write again keep the format they were written in (see
     /// <see cref="ChunkFile.WorldVersion"/>): a world of format 41 saved by Valheim 1.0.20 has a 42 index and 41 chunk

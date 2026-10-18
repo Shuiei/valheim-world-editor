@@ -45,7 +45,7 @@ public static class WorldWriterTestHelpers
                 for (int dx = -r; dx <= r; dx++)
                 {
                     int x = t.ZoneX + dx, z = t.ZoneZ + dz;
-                    if (Math.Max(Math.Abs(dx), Math.Abs(dz)) == r && ChunkMath.Find(world.Chunks, x, z) != null && world.TerrainZones.All(q => q.ZoneX != x || q.ZoneZ != z))
+                    if (Math.Max(Math.Abs(dx), Math.Abs(dz)) == r && ChunkMath.Find(world.Chunks, x, z, world.GridWidth) != null && world.TerrainZones.All(q => q.ZoneX != x || q.ZoneZ != z))
                     {
                         yield return (x, z);
                     }

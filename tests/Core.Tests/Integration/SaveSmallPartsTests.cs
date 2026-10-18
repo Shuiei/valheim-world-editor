@@ -28,6 +28,35 @@ public class SaveSmallPartsTests
         Assert.Throws<ArgumentOutOfRangeException>(() => ChunkMath.BaseChunk(0, -257));
     }
 
+    [Theory]
+    [InlineData(1024, -512, -512, 0)]
+    [InlineData(1024, 511, 511, 127 + (127 << 8))]
+    [InlineData(1024, 300, -300, 101 + (26 << 8))]
+    [InlineData(2048, -1024, -1024, 0)]
+    [InlineData(2048, 1023, 1023, 255 + (255 << 8))]
+    public void AWiderGridNamesItsChunksTheSameWay(int width, int sx, int sz, int chunk)
+    {
+        // Expand World Size's grids (up to 2048 zones): the sectors shift by half the width, a chunk is 8 x 8 sectors.
+        Assert.Equal((ushort)chunk, ChunkMath.BaseChunk(sx, sz, width));
+        Assert.True(ChunkMath.InWorld(sx, sz, width));
+        // The same sector is outside the game's grid when it lies past 256 zones.
+        Assert.Equal(Math.Abs(sx) <= 256 && Math.Abs(sz) <= 256 && sx < 256 && sz < 256, ChunkMath.InWorld(sx, sz));
+    }
+
+    [Fact]
+    public void AWiderGridsEdgeIsChecked()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => ChunkMath.BaseChunk(512, 0, 1024));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ChunkMath.BaseChunk(0, -513, 1024));
+        Assert.False(ChunkMath.InWorld(1024, 0, 2048));
+        // A chunk file found by a grid's own key: a sector at 20 km lies in chunk (0x7f, 0x7f) of a 1024 grid, and nowhere
+        // in the game's.
+        var far = new ChunkFile { Chunk = 103 + (103 << 8), Size = 0, Version = 1 };
+        Assert.Same(far, ChunkMath.Find([far], 312, 312, 1024));
+        Assert.Null(ChunkMath.Find([far], 312, 312));
+        Assert.Same(far, ChunkMath.Finder([far], 1024)(312, 312));
+    }
+
     [Fact]
     public void TheFinderGivesEachSectorTheChunkFileFindGives()
     {

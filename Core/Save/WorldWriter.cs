@@ -109,7 +109,7 @@ public static partial class WorldWriter
 
         // Plan: which chunk files change, and how. Reading the template and the models can fail (a chunk file gone,
         // data that does not parse): nothing is written yet, and the caller gets a result, not an exception.
-        Func<int, int, ChunkFile?> findChunk = ChunkMath.Finder(world.Chunks);
+        Func<int, int, ChunkFile?> findChunk = ChunkMath.Finder(world.Chunks, world.GridWidth);
         try
         {
             PlanTerrainEdits(world, plan, existing, findChunk);

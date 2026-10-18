@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.50.0 — unreleased
+
+### Added
+- **Worlds saved on a wider zone grid open and save as they lie.** Expand World Size lays a world wider than 16 km
+  out on a bigger grid of chunk files (up to 2048 zones a side, about 65 km) and notes the grid in the world file;
+  the editor now reads that note and files every object and zone under the right chunk, whether or not the Expand
+  World switch is on. Before, anything past 16 km was taken for outside the world. See
+  [Expand World](docs/architecture.md#what-a-world-generation-mod-changes-worldrules).
+
 ## v1.49.0 — unreleased
 
 ### Added

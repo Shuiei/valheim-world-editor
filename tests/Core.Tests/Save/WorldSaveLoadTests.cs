@@ -52,9 +52,24 @@ public class WorldSaveLoadTests
         Assert.Equal(["defeated_eikthyr", "ews_world_radius 20000"], world.StartingGlobalKeys);
         Assert.Equal(("CITest", "GbXfypqU3G", 2), (world.Name, world.SeedName, world.WorldGenVersion));
         Assert.True(world.Rules.IsVanilla);
+        Assert.Equal(512, world.GridWidth);
         // Before version 32 the keys were not in the file (and before 30 nor the database flag).
         WriteMetadata(Path.Combine(w.Dir, "_main.2.fwl2"), 31, []);
         Assert.Empty(w.Load().StartingGlobalKeys);
+    }
+
+    [Fact]
+    public void TheSaveGridComesFromTheWorldFileWhateverTheSettings()
+    {
+        using var w = new TempWorld();
+        // Expand World Size writes the grid its chunk files lie on; the editor reads them on it, switch or no switch.
+        WriteMetadata(Path.Combine(w.Dir, "_main.2.fwl2"), 42, ["ews_world_radius 20000", "ews_gridwidth 1024"]);
+        Assert.Equal(1024, w.Load().GridWidth);
+        // A width no save can have is read as the game's.
+        WriteMetadata(Path.Combine(w.Dir, "_main.2.fwl2"), 42, ["ews_gridwidth 4096"]);
+        Assert.Equal(512, w.Load().GridWidth);
+        WriteMetadata(Path.Combine(w.Dir, "_main.2.fwl2"), 42, ["ews_gridwidth"]);
+        Assert.Equal(512, w.Load().GridWidth);
     }
 
     /// <summary>Writes a world file as the game does: the version, names, seed, uid, generator version, database flag (30 and later), keys (32 and later), players (none).</summary>

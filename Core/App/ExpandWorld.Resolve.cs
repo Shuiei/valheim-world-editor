@@ -28,7 +28,20 @@ public static partial class ExpandWorld
         {
             Console.WriteLine("Expand World: the world was made with Expand World Size, but no BepInEx folder the editor knows has the mod: its Rivers and Data settings are unknown (add the folder in Settings).");
         }
+        NoteGrid(save, rules);
         return rules;
+    }
+
+    /// <summary>
+    /// Notes a save whose chunk files lie on another grid than the settings ask for: the game lays them out again at
+    /// its next load; until then the editor reads and writes them as they lie.
+    /// </summary>
+    private static void NoteGrid(WorldSave save, WorldRules rules)
+    {
+        if (rules.GridWidth != save.GridWidth)
+        {
+            Console.WriteLine($"Expand World: {save.Name}'s chunk files are laid out on a {save.GridWidth} zone grid and the settings ask for {rules.GridWidth}: the game converts the save at its next load; the editor keeps the files' grid.");
+        }
     }
 
     /// <summary>Notes a world made with Expand World Size that opens with the game's own generation.</summary>

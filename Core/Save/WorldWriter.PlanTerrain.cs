@@ -35,7 +35,7 @@ public static partial class WorldWriter
             ChunkFile? target = findChunk(edit.ZoneX, edit.ZoneZ);
             if (target == null)
             {
-                plan.Skipped.Add(ChunkMath.InWorld(edit.ZoneX, edit.ZoneZ) ? $"zone {edit.ZoneX}, {edit.ZoneZ}: not generated yet (no world data there; visit it in game first)" : $"zone {edit.ZoneX}, {edit.ZoneZ}: outside the world");
+                plan.Skipped.Add(ChunkMath.InWorld(edit.ZoneX, edit.ZoneZ, world.GridWidth) ? $"zone {edit.ZoneX}, {edit.ZoneZ}: not generated yet (no world data there; visit it in game first)" : $"zone {edit.ZoneX}, {edit.ZoneZ}: outside the world");
                 plan.NotSaved.Add((edit.ZoneX, edit.ZoneZ));
                 continue;
             }
