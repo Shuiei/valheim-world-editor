@@ -124,14 +124,17 @@ public sealed partial class AppSettings
     public static string? DataDirOverride { get; set; }
 
     /// <summary>
-    /// The user's own data folder (created if missing): LocalApplicationData/ValheimWorldEditor, or ~/.local/share when
-    /// that is not set.
+    /// The user's own data folder (created if missing): %LOCALAPPDATA%\ValheimWorldEditor on Windows (the variable, as
+    /// the tests' pretend homes set it; .NET's LocalApplicationData comes from the shell and ignores it), else
+    /// LocalApplicationData/ValheimWorldEditor, or ~/.local/share when that is not set.
     /// </summary>
     public static string UserDataDir
     {
         get
         {
-            string root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify);
+            string root = OperatingSystem.IsWindows() && Environment.GetEnvironmentVariable("LOCALAPPDATA") is { Length: > 0 } local
+                ? local
+                : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify);
             if (string.IsNullOrEmpty(root))
             {
                 root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share");
