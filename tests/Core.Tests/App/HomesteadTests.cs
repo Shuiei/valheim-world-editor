@@ -49,6 +49,49 @@ public class HomesteadTests : IDisposable
         Assert.Equal(Homestead.FolderOverride, found.Folder);
     }
 
+    // A manifest without a version number: the DLL's own (none in an empty file); a manifest that is not JSON: unknown.
+    [Fact]
+    public void TheVersionFallsBackToTheDllsAndIsUnknownWhenTheManifestCannotBeRead()
+    {
+        var settings = new AppSettings();
+        string bep = Path.Combine(_dir, "BepInEx");
+        string mod = Path.Combine(bep, "plugins", "Homestead");
+        Directory.CreateDirectory(mod);
+        settings.BepInExFolders.Add(bep);
+        File.WriteAllText(Path.Combine(mod, "Homestead.dll"), "");
+        File.WriteAllText(Path.Combine(mod, "manifest.json"), """{ "name": "Homestead" }""");
+        var found = Homestead.Find(settings);
+        Assert.True(found.Installed);
+        Assert.Null(found.Version);
+        File.WriteAllText(Path.Combine(mod, "manifest.json"), "{ not json");
+        Assert.Null(Homestead.Find(settings).Version);
+    }
+
+    // A plugins folder that cannot be read is passed over: Homestead is not found there, and nothing throws.
+    [Fact]
+    public void APluginsFolderThatCannotBeReadIsPassedOver()
+    {
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            return;
+        }
+        var settings = new AppSettings();
+        string bep = Path.Combine(_dir, "BepInEx");
+        string plugins = Path.Combine(bep, "plugins");
+        Directory.CreateDirectory(Path.Combine(plugins, "sighsorry-Homestead"));
+        File.WriteAllText(Path.Combine(plugins, "sighsorry-Homestead", "Homestead.dll"), "");
+        settings.BepInExFolders.Add(bep);
+        File.SetUnixFileMode(plugins, UnixFileMode.None);
+        try
+        {
+            Assert.False(Homestead.Find(settings).Installed);
+        }
+        finally
+        {
+            File.SetUnixFileMode(plugins, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+    }
+
     /// <summary>
     /// A one-cell clipboard copy with no ground holding these pieces (name, position and yaw).
     /// </summary>
