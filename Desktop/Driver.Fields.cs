@@ -25,5 +25,9 @@ public static partial class Driver
         fields["modelsLoading"] = w.View.LastStats?.PendingModels ?? 0;
         // The start page's game look banner: "running" while the game's files are read.
         fields["look"] = w.StartPage?.LookBanner.Shown ?? "";
+        // The Place tool at the last press: what is chosen, its mode, and what that press did.
+        fields["placeChosen"] = w.View.Place is { } place ? string.Join(",", place.Tool.Chosen) : "";
+        fields["placeMode"] = w.View.Place?.Tool.Mode.ToString() ?? "";
+        fields["placePress"] = w.View.Place?.LastPress ?? "";
     }
 }
