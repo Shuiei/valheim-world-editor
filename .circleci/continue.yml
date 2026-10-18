@@ -424,7 +424,9 @@ jobs:
               & $env:TEMP\dotnet-install.ps1 -Channel 10.0 -InstallDir C:\dotnet
               $env:PATH = "C:\dotnet;$env:PATH"
             }
-            dotnet build tests\Core.Tests\Core.Tests.csproj -c Release -warnaserror
+            # The code style is checked by formatting on Linux, with the SDK the build containers use. This image's
+            # latest SDK reports the style differently, so its style analyzers are left out here.
+            dotnet build tests\Core.Tests\Core.Tests.csproj -c Release -warnaserror -p:EnforceCodeStyleInBuild=false
             dotnet test --project tests\Core.Tests\Core.Tests.csproj -c Release --no-build --no-ansi --no-progress
 
   # The GitHub release, made from the packages packages made and windows-smoke tested (the workspace). The
