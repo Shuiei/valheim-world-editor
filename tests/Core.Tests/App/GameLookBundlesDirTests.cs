@@ -34,7 +34,8 @@ public sealed class GameLookBundlesDirTests : IDisposable
     {
         string bundles = Path.Combine(_valheim, "Valheim_Data", "StreamingAssets", "SoftRef", "Bundles");
         Directory.CreateDirectory(bundles);
-        Assert.Equal(bundles, GameLook.BundlesDir(_valheim));
+        // On Windows either spelling is the same folder, and the one found first is given.
+        Assert.Equal(bundles, GameLook.BundlesDir(_valheim), ignoreCase: OperatingSystem.IsWindows());
     }
 
     [Fact]

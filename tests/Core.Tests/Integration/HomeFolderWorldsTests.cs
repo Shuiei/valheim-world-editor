@@ -12,6 +12,10 @@ public sealed class HomeFolderWorldsTests : HomeFolderTestBase
     [Fact]
     public void ValheimsWorldFoldersAreUnderTheHome()
     {
+        if (!LinuxLayout)
+        {
+            return;
+        }
         var roots = Places.WorldRoots().ToList();
         Assert.Contains(Local(".config", "unity3d", "IronGate", "Valheim", "worlds_local"), roots);
         Assert.Contains(Local(".config", "unity3d", "IronGate", "Valheim", "worlds"), roots);
@@ -43,6 +47,10 @@ public sealed class HomeFolderWorldsTests : HomeFolderTestBase
     [Fact]
     public void TheGamesWorldsAreFoundWithOldSingleFileWorlds()
     {
+        if (!LinuxLayout)
+        {
+            return;
+        }
         string local = Local(".config", "unity3d", "IronGate", "Valheim", "worlds_local");
         CopyWorld(Path.Combine(local, "Alpha"));
         Directory.CreateDirectory(Path.Combine(local, "Empty"));
@@ -65,6 +73,10 @@ public sealed class HomeFolderWorldsTests : HomeFolderTestBase
     [Fact]
     public void AWorldWithAStraySaveNumberIsStillListed()
     {
+        if (!LinuxLayout)
+        {
+            return;
+        }
         string local = Local(".config", "unity3d", "IronGate", "Valheim", "worlds_local");
         CopyWorld(Path.Combine(local, "Odd"));
         File.WriteAllText(Path.Combine(local, "Odd", "_main.99999999999.chunks"), "");

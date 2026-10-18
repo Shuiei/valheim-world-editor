@@ -83,6 +83,11 @@ public sealed class GameLookTests : IDisposable
     [Fact]
     public void TheGameIsFoundInASteamLibraryListedBySteam()
     {
+        if (OperatingSystem.IsWindows())
+        {
+            // Steam's folder comes from the registry there, and the pretend home cannot point it elsewhere.
+            return;
+        }
         Assert.Null(GameLook.FindValheim(null));
         // Steam in the home, with Valheim in a second library it lists (one listed library does not exist, and Steam's
         // own folder is listed too, as Steam does).

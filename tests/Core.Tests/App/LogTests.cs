@@ -101,13 +101,14 @@ public sealed class LogTests
 
     // Paths (quoted, bare, under a home folder or not), web addresses, user@host, IP addresses but the local one and
     // host names before a port are taken out; versions and words with a slash are not paths. (Names of their own: other
-    // tests give theirs to Log.Private, which is for the whole run, so the home folder is one of its own too: the real
-    // one's user name may be given as private by a tunnel test.)
+    // tests give theirs to Log.Private, which is for the whole run, so the home folder is one of its own too, at the
+    // drive's root and not under the temporary folder: the real user name may be given as private by a tunnel test, and
+    // on Windows the temporary folder is under the real profile.)
     [Fact]
     public void PersonalDataIsTakenOut()
     {
         string id = Guid.NewGuid().ToString("N")[..8];
-        string home = Path.Combine(Path.GetTempPath(), "vwe-home-" + id);
+        string home = Path.Combine(Path.GetPathRoot(Path.GetTempPath())!, "vwe-home-" + id);
         string text = $"Could not find file '{Path.Combine(home, "My Worlds", "a.db")}'. Also {Path.Combine(home, "x")}, /srv/games/w.fwl and " +
             $@"C:\Games\w.db; see https://w{id}.example/a?q{id}=1 or u{id}@h{id}.example; from 203.0.113.7 and [2001:db8::1], not " +
             $"127.0.0.1 or [::1]; Connection refused (h{id}.example:22), (localhost:5182); Version=1.0.0.0, and/or 1/2.";
