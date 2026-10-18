@@ -400,7 +400,8 @@ jobs:
 
   # The Windows-only specs: the tests of the code paths only Windows takes (the home folder, file locks, the folder
   # flush that Windows does not need). They skip on Linux, so this runs the whole test project on a Windows machine,
-  # on main only, next to windows-smoke. The SDK is installed when the image has none (dot.net's install script).
+  # on main and on the branches whose name has "windows" in it (a Windows fix can be checked before it is merged),
+  # next to windows-smoke. The SDK is installed when the image has none (dot.net's install script).
   windows-tests:
     machine:
       image: windows-server-2022-gui:current
@@ -543,8 +544,8 @@ jobs:
 workflows:
   # Side by side; windows-smoke waits for the Windows package that packages makes, and coverage for
   # both test jobs to pass. Branches and pull requests run code-analysis, formatting and the two test
-  # jobs: packages, windows-smoke, windows-tests and coverage are main's. Main's ruleset requires those four checks
-  # of a pull request, and no other: it must stay in step with this list.
+  # jobs: packages, windows-smoke and coverage are main's, and windows-tests main's and the "windows" branches'.
+  # Main's ruleset requires those four checks of a pull request, and no other: it must stay in step with this list.
   test:
     when:
       not: << pipeline.parameters.release >>
@@ -566,7 +567,9 @@ workflows:
       - windows-tests:
           filters:
             branches:
-              only: main
+              only:
+                - main
+                - /.*windows.*/
       - coverage:
           requires:
             - core-tests
