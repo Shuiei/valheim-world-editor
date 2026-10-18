@@ -190,4 +190,32 @@ public sealed class ModBundlesTests : PretendHomeTestBase
         Assert.Same(lz4, ModBundles.Lz4(lz4));
         Assert.Same(stored, ModBundles.Lz4(stored));
     }
+
+    // A bundle that cannot be copied (it starts like one but is damaged) is left out and noted; asked again in a new run
+    // with the mods unchanged, only it is tried again; once the mod is fixed everything is copied and the note goes.
+    [Fact]
+    public void ABundleThatCannotBeCopiedIsLeftOutAndTriedAgainNextTime()
+    {
+        string dll = Path.Combine(Plugins("Default"), "BrokenMod.dll");
+        // Starts like a bundle and ends at once: reading it as one fails.
+        byte[] broken = [.. "UnityFS"u8, 0];
+        TestDll.Write(dll, [("BrokenMod.broken", broken), ("BrokenMod.fine", Bundle("fine", "fine_plank"))]);
+        var settings = Settings("Default");
+        string failedFile = Path.Combine(AppSettings.UserDataDir, "mod-bundles-failed.json");
+
+        var reader = ModBundles.Reader(settings)!;
+
+        Assert.Single(reader.Named(AssetClassID.Mesh, "fine_plank"));
+        Assert.Contains("BrokenMod.BrokenMod.broken", File.ReadAllText(failedFile));
+        // A new run, the mods unchanged: the broken one alone is tried again, and fails again.
+        ModBundles.Forget();
+        Assert.NotNull(ModBundles.Reader(settings));
+        Assert.Contains("BrokenMod.BrokenMod.broken", File.ReadAllText(failedFile));
+        // The mod fixed: copied again whole, nothing left out.
+        TestDll.Write(dll, [("BrokenMod.broken", Bundle("broken", "broken_plank")), ("BrokenMod.fine", Bundle("fine", "fine_plank"))]);
+        File.SetLastWriteTimeUtc(dll, DateTime.UtcNow.AddMinutes(1));
+        var whole = ModBundles.Reader(settings)!;
+        Assert.Single(whole.Named(AssetClassID.Mesh, "broken_plank"));
+        Assert.False(File.Exists(failedFile));
+    }
 }
