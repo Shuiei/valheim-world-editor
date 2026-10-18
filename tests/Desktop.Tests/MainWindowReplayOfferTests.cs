@@ -31,6 +31,18 @@ public sealed class MainWindowReplayOfferTests
         return (w, game);
     }
 
+    /// <summary>
+    /// The window's questions answered Yes, and what it tells kept.
+    /// </summary>
+    /// <returns>What the window tells, in order.</returns>
+    private static List<string> AcceptedAndTold(MainWindow w)
+    {
+        var told = new List<string>();
+        w.Ask = (_, _, _, _) => Task.FromResult(true);
+        w.Tell = t => { told.Add(t); return Task.CompletedTask; };
+        return told;
+    }
+
     [AvaloniaFact]
     public async Task DeclinedTheChangesStayPendingAndTheStatusLineSaysSo()
     {
@@ -54,9 +66,7 @@ public sealed class MainWindowReplayOfferTests
         using var tw = new TempWorld();
         var (w, game) = await ChangedUnderTheGame(tw.Dir);
         var before = w.View.Scene;
-        var told = new List<string>();
-        w.Ask = (_, _, _, _) => Task.FromResult(true);
-        w.Tell = t => { told.Add(t); return Task.CompletedTask; };
+        var told = AcceptedAndTold(w);
 
         await w.OfferReplay(w.World!, game, before);
 
@@ -94,9 +104,7 @@ public sealed class MainWindowReplayOfferTests
     {
         using var tw = new TempWorld();
         var w = await TestWindows.EditingWorld(tw.Dir);
-        var told = new List<string>();
-        w.Ask = (_, _, _, _) => Task.FromResult(true);
-        w.Tell = t => { told.Add(t); return Task.CompletedTask; };
+        var told = AcceptedAndTold(w);
 
         await w.OfferReplay(w.World!, w.World!.World.SaveNumber + 1, w.View.Scene);
 
@@ -111,9 +119,7 @@ public sealed class MainWindowReplayOfferTests
         using var tw = new TempWorld();
         var (w, game) = await ChangedUnderTheGame(tw.Dir);
         File.WriteAllBytes(Path.Combine(tw.Dir, $"_main.{game}.fwl2"), [1, 2, 3]);
-        var told = new List<string>();
-        w.Ask = (_, _, _, _) => Task.FromResult(true);
-        w.Tell = t => { told.Add(t); return Task.CompletedTask; };
+        var told = AcceptedAndTold(w);
 
         await w.OfferReplay(w.World!, game, w.View.Scene);
 
