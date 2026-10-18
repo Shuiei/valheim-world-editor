@@ -22,10 +22,18 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
         Assert.SkipUnless(OperatingSystem.IsLinux(), "the made-up game is found in the home's Steam library only on Linux");
         Directory.CreateDirectory(Dir);
         BackToStart(editor);
-        OpenArea(editor, 2);
+        OpenMapThenArea();
         WaitForGameLook(editor);
         editor.Send("camera 32 32 30 35 120");
         AssertDrawn(Picture("look"));
+        // A picture that cannot be saved (its folder is not there): the error comes back to the driver.
+        Assert.StartsWith("@@ error ", editor.Answer($"picture {Path.Combine(Dir, "nowhere", "x.png")}"));
+        // The 2100 fir trees north of the middle: more than one model draws at once, so drawn by the cells in view.
+        editor.Send("camera 0 12 0 50 90");
+        AssertDrawn(Picture("trees"));
+        // The Place tool, with the chest chosen: its model's box is worked out for the panel's fit hint.
+        Assert.Equal("Place", editor.Send("click Place").GetProperty("mode").GetString());
+        editor.Send("key Escape");
         // The models of the game's files: drawn (the picture waits for them), the chest see-through over what is behind
         // it, in the usual view and with the buildings see-through; the chest picked by its mesh under the pointer.
         Assert.True(editor.Send("state").GetProperty("models").GetBoolean());
@@ -65,6 +73,21 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
         Assert.Contains("Game look loaded.", Log(editor));
         editor.Send("panel none");
         BackToStart(editor);
+    }
+
+    /// <summary>
+    /// The world's map first, drawn with the game's map textures (the made-up game's one-pixel ones), then the area two
+    /// zones across around the middle, with the 2100 fir trees in it.
+    /// </summary>
+    private void OpenMapThenArea()
+    {
+        editor.Send($"world {editor.World}");
+        string map = Path.Combine(Dir, "map.png");
+        Assert.Equal("map", editor.Send($"picture {map}").GetProperty("page").GetString());
+        Assert.True(File.Exists(map));
+        JsonElement opened = editor.Send("area 0 0 2");
+        Assert.Equal("editor", opened.GetProperty("page").GetString());
+        Assert.True(opened.GetProperty("objects").GetInt32() >= 2100, "the fir trees are in the area");
     }
 
     /// <summary>
