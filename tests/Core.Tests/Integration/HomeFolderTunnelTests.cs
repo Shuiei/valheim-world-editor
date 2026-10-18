@@ -29,8 +29,12 @@ public sealed class HomeFolderTunnelTests : HomeFolderTestBase
     [Fact]
     public async Task TheTunnelNeedsAPasswordOrAKeyItCanRead()
     {
-        // No key given and none in this home's .ssh: a password or a key is needed.
-        Assert.StartsWith("Enter the password, or choose your SSH key file", (await Tunnel.Start(Req("server.example", 22))).Error);
+        // No key given and none in this home's .ssh: a password or a key is needed. (On Windows the usual keys are the
+        // real profile's, which the pretend home cannot point elsewhere: what is missing depends on the computer.)
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.StartsWith("Enter the password, or choose your SSH key file", (await Tunnel.Start(Req("server.example", 22))).Error);
+        }
         // Keys that cannot be read: missing (also through ~), not a key, locked with another passphrase.
         Assert.StartsWith("The key file could not be read", (await Tunnel.Start(Req("server.example", 22, key: Local("missing")))).Error);
         Assert.StartsWith("The key file could not be read", (await Tunnel.Start(Req("server.example", 22, key: "~/missing"))).Error);

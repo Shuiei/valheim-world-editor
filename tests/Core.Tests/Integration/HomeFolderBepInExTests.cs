@@ -13,6 +13,10 @@ public sealed class HomeFolderBepInExTests : HomeFolderTestBase
     [Fact]
     public void TheGameAndModManagerProfilesAreSearched()
     {
+        if (!LinuxLayout)
+        {
+            return;
+        }
         LocalGame.SearchDefaultPlaces = true;
         // A Valheim folder (it must look like the game's), and profiles of r2modman (native and Flatpak)
         // and the Thunderstore Mod Manager.

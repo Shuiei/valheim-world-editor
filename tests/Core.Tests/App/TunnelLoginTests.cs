@@ -99,9 +99,13 @@ public sealed class TunnelLoginTests : TunnelTestBase, IClassFixture<LocalSshd>
         {
             File.WriteAllText(key, text);
             Assert.StartsWith("The key file could not be read", (await Tunnel.Start(Req(key: key))).Error);
-            // One of the usual keys: skipped, so only a password is missing.
-            File.WriteAllText(Path.Combine(home, "id_ecdsa"), text);
-            Assert.StartsWith("Enter the password, or choose your SSH key file", (await Tunnel.Start(Req(key: ""))).Error);
+            // One of the usual keys: skipped, so only a password is missing. (On Windows the usual keys are the real
+            // profile's, which HOME does not point elsewhere: what is missing depends on the computer.)
+            if (!OperatingSystem.IsWindows())
+            {
+                File.WriteAllText(Path.Combine(home, "id_ecdsa"), text);
+                Assert.StartsWith("Enter the password, or choose your SSH key file", (await Tunnel.Start(Req(key: ""))).Error);
+            }
         }
         Assert.False(Tunnel.Open);
     }
