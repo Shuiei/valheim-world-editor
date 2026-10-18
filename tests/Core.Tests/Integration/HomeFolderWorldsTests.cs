@@ -12,6 +12,10 @@ public sealed class HomeFolderWorldsTests : HomeFolderTestBase
     [Fact]
     public void ValheimsWorldFoldersAreUnderTheHome()
     {
+        if (!LinuxLayout)
+        {
+            return;
+        }
         var roots = Places.WorldRoots().ToList();
         Assert.Contains(Local(".config", "unity3d", "IronGate", "Valheim", "worlds_local"), roots);
         Assert.Contains(Local(".config", "unity3d", "IronGate", "Valheim", "worlds"), roots);
@@ -43,6 +47,10 @@ public sealed class HomeFolderWorldsTests : HomeFolderTestBase
     [Fact]
     public void TheGamesWorldsAreFoundWithOldSingleFileWorlds()
     {
+        if (!LinuxLayout)
+        {
+            return;
+        }
         string local = Local(".config", "unity3d", "IronGate", "Valheim", "worlds_local");
         CopyWorld(Path.Combine(local, "Alpha"));
         Directory.CreateDirectory(Path.Combine(local, "Empty"));
@@ -65,6 +73,10 @@ public sealed class HomeFolderWorldsTests : HomeFolderTestBase
     [Fact]
     public void AWorldWithAStraySaveNumberIsStillListed()
     {
+        if (!LinuxLayout)
+        {
+            return;
+        }
         string local = Local(".config", "unity3d", "IronGate", "Valheim", "worlds_local");
         CopyWorld(Path.Combine(local, "Odd"));
         File.WriteAllText(Path.Combine(local, "Odd", "_main.99999999999.chunks"), "");
@@ -82,6 +94,8 @@ public sealed class HomeFolderWorldsTests : HomeFolderTestBase
         var s = new AppSettings { WorldFolders = { direct, Local("no such folder") } };
         s.Recent.Add(new AppSettings.RecentWorld(Local("gone"), "Gone", DateTime.Now));
         s.Recent.Add(new AppSettings.RecentWorld(mine, "Mine", DateTime.Now));
+        // A stored path that is no path (a hand-edited settings file): left out, the rest still listed.
+        s.Recent.Add(new AppSettings.RecentWorld("bad\0path", "Bad", DateTime.Now));
         // Listed once, as recent, though it is also in a world folder.
         s.WorldFolders.Add(Local("saves"));
         var found = Worlds.Find(s);
@@ -90,6 +104,7 @@ public sealed class HomeFolderWorldsTests : HomeFolderTestBase
         Assert.Single(found, w => w.Path == mine);
         Assert.Contains(found, w => w.Path == direct && w.Where == "yours");
         Assert.DoesNotContain(found, w => w.Name == "Gone");
+        Assert.DoesNotContain(found, w => w.Name == "Bad");
     }
 
     [Fact]
@@ -124,6 +139,11 @@ public sealed class HomeFolderWorldsTests : HomeFolderTestBase
             // the list is still made (it threw, and the start page listed no world at all).
             s.WorldFolders.Add(Home);
             Assert.DoesNotContain(Worlds.Find(s), w => w.Path == locked);
+            // The folder of worlds itself cannot be read: passed over, the recent world still listed.
+            s.WorldFolders.Add(locked);
+            s.Recent.Add(new AppSettings.RecentWorld(Local("saves", "Mine"), "Mine", DateTime.Now));
+            CopyWorld(Local("saves", "Mine"));
+            Assert.Single(Worlds.Find(s), w => w.Name == "Mine");
         }
         finally
         {

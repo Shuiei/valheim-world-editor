@@ -32,8 +32,9 @@ public sealed class GameDataTests : IDisposable
         var read = GameData.Load(bundles, cache: true)!;
         Assert.Equal(GameData.KindNames.Order(), read.Keys.Order());
         Assert.All(GameData.KindNames, k => Assert.Equal(GameHome.Copy(k), read[k]));
-        // The caches live in the user's data folder.
-        Assert.StartsWith(Path.Combine(_sandbox.Folder, ".local", "share"), GameData.CacheFile("prefabs"));
+        // The caches live in the user's data folder (XDG_DATA_HOME, or LOCALAPPDATA on Windows).
+        string data = OperatingSystem.IsWindows() ? Path.Combine(_sandbox.Folder, "AppData", "Local") : Path.Combine(_sandbox.Folder, ".local", "share");
+        Assert.StartsWith(data, GameData.CacheFile("prefabs"));
     }
 
     [Fact]
@@ -59,6 +60,25 @@ public sealed class GameDataTests : IDisposable
         File.Delete(file);
         Directory.CreateDirectory(file);
         Assert.Equal(keys, GameData.Load(bundles, cache: true)?["zdo-keys"]);
+    }
+
+    // A kind read in the one pass over the bundles (pieces) whose cache is missing: read from the game's bundles (none
+    // here, so nothing in it) in that pass, and kept.
+    [Fact]
+    public void AKindOfThePassOverTheBundlesIsReadWhenItsCacheIsMissing()
+    {
+        var (valheim, bundles) = _sandbox.Game("Valheim", code: false);
+        GameHome.Caches(valheim, bundles, "pieces", "piece-support");
+        var told = new List<string>();
+
+        var read = GameData.Load(bundles, cache: true, (_, step) => told.Add(step))!;
+
+        Assert.Equal("{}", read["pieces"]);
+        Assert.Equal("{}", read["piece-support"]);
+        Assert.Equal(GameHome.Copy("prefabs"), read["prefabs"]);
+        Assert.Contains(told, s => s.StartsWith("Reading the game's bundles", StringComparison.Ordinal));
+        Assert.True(File.Exists(GameData.CacheFile("pieces")));
+        Assert.Equal("{}", GameData.Load(bundles, cache: true)!["pieces"]);
     }
 
     [Fact]

@@ -14,7 +14,9 @@ public sealed class HomeFolderSettingsTests : HomeFolderTestBase
     [Fact]
     public void SettingsLiveInTheDataFolderAndSurviveARoundTrip()
     {
-        Assert.Equal(Local(".local", "share", "ValheimWorldEditor"), AppSettings.DataDir);
+        // The pretend home's data folder: XDG_DATA_HOME, or LOCALAPPDATA on Windows.
+        string data = OperatingSystem.IsWindows() ? Local("AppData", "Local", "ValheimWorldEditor") : Local(".local", "share", "ValheimWorldEditor");
+        Assert.Equal(data, AppSettings.DataDir);
         Assert.True(Directory.Exists(AppSettings.DataDir));
         var s = new AppSettings { ValheimPath = "/games/valheim", LiveUrl = "http://x:1", LastMode = "server", WorldFolders = { "/w" }, BepInExFolders = { "/b" } };
         s.Save();

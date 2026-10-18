@@ -45,7 +45,7 @@ public class GameCataloguesTests
     {
         using var game = CatalogueGame.Make();
         game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = game.Bundles();
         var kinds = GameCatalogues.ReadAtStart(bundles, [.. Expected.Keys]);
         // Prefabs: networked roots only (the location and the prop are not), creatures, items with what stands need
         // (attach children, durability, variants), stands with the items named across bundles, a sapling with what it
@@ -67,7 +67,7 @@ public class GameCataloguesTests
     {
         using var game = CatalogueGame.Make();
         game.Save();
-        var json = JsonNode.Parse(GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["terrain-modifiers"])["terrain-modifiers"])!;
+        var json = JsonNode.Parse(GameCatalogues.ReadAtStart(game.Bundles(), ["terrain-modifiers"])["terrain-modifiers"])!;
         // The prop is neither a location nor networked: not kept.
         Assert.Equal(["Village", "Kiln"], json.AsObject().Select(kv => kv.Key));
         var village = json["Village"]!;
@@ -90,7 +90,7 @@ public class GameCataloguesTests
     {
         using var game = new TestGame();
         game.Save();
-        Assert.Throws<ArgumentException>(() => GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["vegetation"]));
+        Assert.Throws<ArgumentException>(() => GameCatalogues.ReadAtStart(game.Bundles(), ["vegetation"]));
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class GameCataloguesTests
             r.Box((0, 0, 0), (1, 1, 1));
         });
         game.Save();
-        var kinds = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), [.. GameCatalogues.AtStart.Where(k => k != "piece-cost")]);
+        var kinds = GameCatalogues.ReadAtStart(game.Bundles(), [.. GameCatalogues.AtStart.Where(k => k != "piece-cost")]);
         Assert.Equal("{}", kinds["prefabs"]);
         Assert.Equal("{}", kinds["piece-place"]);
     }
@@ -134,7 +134,7 @@ public class GameCataloguesTests
             r.Box((0, 0, 0), (1, 0.2, 1));
         });
         game.Save();
-        var kinds = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["pieces", "piece-support"]);
+        var kinds = GameCatalogues.ReadAtStart(game.Bundles(), ["pieces", "piece-support"]);
         Assert.Equal(["first_floor", "last_floor"], JsonNode.Parse(kinds["pieces"])!.AsObject().Select(kv => kv.Key));
         Assert.Equal(["last_floor"], JsonNode.Parse(kinds["piece-support"])!.AsObject().Select(kv => kv.Key));
     }
@@ -183,7 +183,7 @@ public class GameCataloguesTests
         }
         game.Save();
 
-        var kinds = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["pieces"]);
+        var kinds = GameCatalogues.ReadAtStart(game.Bundles(), ["pieces"]);
 
         Assert.Equal(2, JsonNode.Parse(kinds["pieces"])!["floor"]!["cat"]!.GetValue<int>());
     }
@@ -207,7 +207,7 @@ public class GameCataloguesTests
         }, pathId: go);
         b.Assets.Add(UnityClass.Transform, transform, new Fields { ["m_GameObject"] = Fields.Ref(go), ["m_Father"] = Fields.Ref(4321) }, pathId: tr);
         game.Save();
-        var e = Assert.Throws<InvalidDataException>(() => GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["pieces"]));
+        var e = Assert.Throws<InvalidDataException>(() => GameCatalogues.ReadAtStart(game.Bundles(), ["pieces"]));
         Assert.Contains("not laid out", e.Message);
     }
 
@@ -217,7 +217,7 @@ public class GameCataloguesTests
         var order = GameLocations.ListOrder().Order;
         using var game = SceneGame.Make(order);
         game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = game.Bundles();
         Assert.Equal([SceneGame.Main, SceneGame.Shared], GameLocations.MainSceneBundles(bundles));
         var rules = JsonNode.Parse(GameCatalogues.VegetationJson(bundles))!.AsArray();
         // ZoneSystem's own first (the rule whose prefab is not found left out), then the lists by sort order.
@@ -239,7 +239,7 @@ public class GameCataloguesTests
         game.Bundle("scene").WithContents = false;
         game.Manifest("00000000000000000000000000000001", "scene", "Assets/Scenes/main.unity");
         game.Save();
-        Assert.Throws<InvalidDataException>(() => GameCatalogues.VegetationJson(new GameBundles(game.BundlesDir, null)));
+        Assert.Throws<InvalidDataException>(() => GameCatalogues.VegetationJson(game.Bundles()));
     }
 
     [Fact]
@@ -252,7 +252,7 @@ public class GameCataloguesTests
         new TestMesh { Name = "Rock4", Positions = [1, 2, 3, 0.5f, 0, 0, 0, 0, -0.25f], Submeshes = [[0, 1, 2]] }.Add(b);
         new TestMesh { Name = "Rock3", Positions = [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0], Submeshes = [[0, 1, 2], [1, 3, 2]], Wide = true }.Add(b);
         game.Save();
-        var json = JsonNode.Parse(GameCatalogues.CaveRocksJson(new GameBundles(game.BundlesDir, null)))!;
+        var json = JsonNode.Parse(GameCatalogues.CaveRocksJson(game.Bundles()))!;
         // Scaled 4 times; triangles wound the other way (as through an OBJ file).
         Assert.Equal("[[4.0,8.0,12.0],[2.0,0.0,0.0],[0.0,0.0,-1.0]]", json["rock4_forest"]!["v"]!.ToJsonString());
         Assert.Equal("[2,1,0]", json["rock4_forest"]!["t"]!.ToJsonString());
@@ -266,11 +266,11 @@ public class GameCataloguesTests
         var b = game.Bundle("rocks");
         b.Prefab("rock4_forest");
         game.Save();
-        var e = Assert.Throws<InvalidDataException>(() => GameCatalogues.CaveRocksJson(new GameBundles(game.BundlesDir, null)));
+        var e = Assert.Throws<InvalidDataException>(() => GameCatalogues.CaveRocksJson(game.Bundles()));
         Assert.Contains("Rock4", e.Message);
         using var none = new TestGame();
         none.Save();
-        Assert.Throws<InvalidDataException>(() => GameCatalogues.CaveRocksJson(new GameBundles(none.BundlesDir, null)));
+        Assert.Throws<InvalidDataException>(() => GameCatalogues.CaveRocksJson(none.Bundles()));
     }
 
     /// <summary>
@@ -303,7 +303,7 @@ public class GameCataloguesTests
         using var game = CatalogueGame.Make();
         game.Resources([("localization_english", "item_wood,Timber\npiece_woodwall,\"Wall\nof wood\"\npiece_workbench,Bench\n,blank key\n")], typeTrees: false);
         game.Save();
-        string cost = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["piece-cost"])["piece-cost"];
+        string cost = GameCatalogues.ReadAtStart(game.Bundles(), ["piece-cost"])["piece-cost"];
         Assert.Contains("\"Wood\":\"Timber\"", cost);
         Assert.Contains("\"n\":\"Wall\\nof wood\"", cost);
         Assert.Contains("\"st\":\"Bench\"", cost);
@@ -317,7 +317,7 @@ public class GameCataloguesTests
         using var game = CatalogueGame.Make();
         game.Resources([("localization_english", "item_wood,Ti\rpiece_workbench,Bench\n")]);
         game.Save();
-        string cost = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["piece-cost"])["piece-cost"];
+        string cost = GameCatalogues.ReadAtStart(game.Bundles(), ["piece-cost"])["piece-cost"];
         Assert.Contains("\"Wood\":\"Ti\"", cost);
         Assert.Contains("\"st\":\"Bench\"", cost);
     }
@@ -343,7 +343,7 @@ public class GameCataloguesTests
         });
         game.Save();
 
-        string json = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["dungeon-rooms"])["dungeon-rooms"];
+        string json = GameCatalogues.ReadAtStart(game.Bundles(), ["dungeon-rooms"])["dungeon-rooms"];
 
         var crypt = JsonNode.Parse(json)!["locations"]!["Crypt"]!;
         var door = Assert.Single(crypt["teleports"]!.AsArray())!;

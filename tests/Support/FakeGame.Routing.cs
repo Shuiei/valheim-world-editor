@@ -18,7 +18,7 @@ public sealed partial class FakeGame
             {
                 ctx = await _listener.GetContextAsync();
             }
-            catch (Exception) when (!_listener.IsListening)
+            catch (Exception) when (_closing || !_listener.IsListening)
             {
                 // Closed (Dispose): the wait for the next request ends with an error, and so does the serving.
                 return;
@@ -105,13 +105,9 @@ public sealed partial class FakeGame
         {
             ServeZones(ctx, path, reply);
         }
-        else if (path == "/mods")
+        else if (path is "/mods" or "/catalogue" or "/models" || path.StartsWith("/mods/", StringComparison.Ordinal))
         {
-            ServeMods(reply);
-        }
-        else if (path.StartsWith("/mods/", StringComparison.Ordinal))
-        {
-            await ServeModRoute(ctx, path, reply);
+            await RouteMods(ctx, path, reply);
         }
         else if (path == "/zones/reset")
         {

@@ -344,7 +344,8 @@ same world as Valheim 1.0.20 saves it, in save format 42 (its dedicated server l
 file was moved and moved back live so that the game wrote every file again, then it saved).
 
 CircleCI (`.circleci/continue.yml`) runs on every push and pull request (`packages` and
-`windows-smoke` on main only: they are slow, and the packaging they check seldom changes):
+`windows-smoke` on main only: they are slow, and the packaging they check seldom changes; `windows-tests` on main
+and on the branches whose name has `windows` in it, so a Windows fix is checked before it is merged):
 
 | Job | What it checks |
 |---|---|
@@ -353,6 +354,7 @@ CircleCI (`.circleci/continue.yml`) runs on every push and pull request (`packag
 | `core-tests` | `tests/Core.Tests`, with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers (the world generator's tests run several times slower under coverage). |
 | `app-tests` | `tests/Desktop.Tests` on six containers, the visual tests included: they draw on a virtual screen (Xvfb, Mesa's software OpenGL), so CI checks the shapes they draw but not the game's look (CI has no Valheim: its editor draws plain colours). Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, each class a `--filter-class`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. A test stuck 5 minutes is dumped and stopped (`tests/testconfig.json`); a crashed or stopped test process shows as one failed test of its class. |
 | `packages` | On main only: the release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
+| `windows-tests` | `tests/Core.Tests` on a Windows machine (the newest .NET 10 SDK, the style analyzers off: the formatting is checked on Linux), for the code paths only Windows takes: the profile folders, file locks, the paths' letter case. Its results are stored, so CircleCI names the failing tests. |
 
 Not covered by CI: the game's look in the visual tests, building the plugin and reading the game's data
 (both need Valheim's own files: the tests use their copies in `tests/fixtures`), and live mode

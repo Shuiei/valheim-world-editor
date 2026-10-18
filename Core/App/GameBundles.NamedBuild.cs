@@ -49,7 +49,7 @@ public sealed partial class GameBundles
             AssetsFileInstance? a = null;
             try
             {
-                b = _am.LoadBundleFile(_files[bundle], false);
+                b = LoadBundle(_files[bundle]);
                 a = _am.LoadAssetsFileFromBundle(b, 0, false);
                 var reader = a.file.Reader;
                 foreach (var info in a.file.AssetInfos)

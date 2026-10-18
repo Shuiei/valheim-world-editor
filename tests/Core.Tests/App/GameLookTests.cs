@@ -1,4 +1,5 @@
 using TerrainEditor.App;
+using WorldEditor.Tests.Unity;
 using Xunit;
 
 namespace WorldEditor.Tests;
@@ -16,10 +17,17 @@ public sealed class GameLookTests : IDisposable
 
     /// <summary>
     /// Leaves the game missing again (no pretend game kept in use), puts the environment and settings back, and
-    /// deletes the pretend home.
+    /// deletes the pretend home. A reading the test started is waited for first, and the home is deleted before the
+    /// check: with a pretend game still in it, the check would find it and start reading it in the background, into
+    /// the folder being deleted and on into the next test.
     /// </summary>
     public void Dispose()
     {
+        Settled().GetAwaiter().GetResult();
+        if (Directory.Exists(_sandbox.Folder))
+        {
+            Directory.Delete(_sandbox.Folder, true);
+        }
         GameLook.Check(new AppSettings());
         _sandbox.Dispose();
     }
@@ -76,6 +84,11 @@ public sealed class GameLookTests : IDisposable
     [Fact]
     public void TheGameIsFoundInASteamLibraryListedBySteam()
     {
+        if (OperatingSystem.IsWindows())
+        {
+            // Steam's folder comes from the registry there, and the pretend home cannot point it elsewhere.
+            return;
+        }
         Assert.Null(GameLook.FindValheim(null));
         // Steam in the home, with Valheim in a second library it lists (one listed library does not exist, and Steam's
         // own folder is listed too, as Steam does).
@@ -199,7 +212,8 @@ public sealed class GameLookTests : IDisposable
         // Only the game in use takes the reading's state: another game's reading (a folder never set) changes nothing.
         string state = GameLook.State;
         string? message = GameLook.Message;
-        GameLook.FinishReading(new GameBundles(_sandbox.Folder, null), "failed", "not this game");
+        using var other = new GameBundles(_sandbox.Folder, null);
+        GameLook.FinishReading(other, "failed", "not this game");
         Assert.Equal(state, GameLook.State);
         Assert.Equal(message, GameLook.Message);
     }
@@ -209,9 +223,39 @@ public sealed class GameLookTests : IDisposable
     {
         // The index of a folder of bundles holding no model: indexed, and empty (the state then says so).
         string valheim = FakeValheim(Path.Combine(_sandbox.Folder, "Valheim"));
-        var game = new GameBundles(GameLook.BundlesDir(valheim)!, null);
+        using var game = new GameBundles(GameLook.BundlesDir(valheim)!, null);
         GameLook.IndexBundles(game);
         Assert.True(game.Indexed);
         Assert.Empty(game.Index);
+    }
+
+    // A game whose files hold a model but whose data can be had neither from the caches nor from the game (no game
+    // code): indexed with its model, and the reading ends without the data (the state then says it failed).
+    [Fact]
+    public void AGameWithModelsWhoseDataCannotBeHadIsIndexedAllTheSame()
+    {
+        using var made = new TestGame();
+        var b = made.Bundle("models");
+        long square = new TestMesh { Name = "square", Positions = [-1.5f, 0, 0, 1.5f, 0, 0, 1.5f, 3, 0], Submeshes = [[0, 1, 2]] }.Add(b);
+        long plain = TestAssets.Material(b, "rock_plain", colors: [("_Color", 0.5, 0.5, 0.5, 1.0)]);
+        b.Prefab("Rock_4", r =>
+        {
+            r.Mono("ZNetView", new Fields { ["m_persistent"] = true });
+            r.Child("body", c => c.Renderer(Fields.Ref(square), [Fields.Ref(plain)]));
+        });
+        made.Save();
+        var game = made.Bundles();
+        try
+        {
+            GameData.Forget();
+            GameLook.IndexBundles(game);
+            Assert.True(game.Indexed);
+            Assert.Contains("Rock_4", game.Index.Keys);
+            Assert.False(GameData.Ensure(game));
+        }
+        finally
+        {
+            GameData.UseCopies(Fixtures.Root);
+        }
     }
 }

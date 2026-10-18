@@ -11,10 +11,44 @@ the plugin is unchanged in versions without that part.
   once, ready to move or turn it, without pressing `E` and clicking it again. Only a plain double click on an object
   does it: with `Ctrl` or `Shift` held, or on empty ground, View stays. See [Select](docs/select.md#how-to-use-it).
 
+## v1.47.36 — unreleased
+
+### Fixed
+- **Apply live no longer fails now and then with "An error occurred while sending the request".** After about ten
+  seconds without talking to the game, the editor could still send on a connection the game was closing at that
+  moment; it now always opens a new one by then.
+
+## v1.47.35 — unreleased
+
+### Fixed
+- **The game data's reading no longer keeps open a file in the bundles folder that is not a bundle.** The pass over
+  the game's bundles at the editor's start passed such a file over but kept it open, as the model reading did before.
+
+## v1.47.34 — unreleased
+
+### Fixed
+- **A file in the game's or a mod's bundles folder that is not a bundle is no longer kept open.** The editor passed
+  such a file over but kept it open; on Windows that stopped the mods' copies from being replaced when a mod changed.
+
+## v1.47.33 — unreleased
+
+### Fixed
+- **A save on Windows no longer fails while another program holds the file for a moment.** The settings, saved
+  servers, blueprints and caches are written beside the old file and moved over it; when Windows refused the move for
+  an instant (an antivirus scanning the file, two saves at once), the save failed with "Access to the path is denied",
+  and it is now tried again for up to half a second.
+
 ## v1.47.32 — unreleased
 
 ### Fixed
 - Internal code cleanup; no change for users.
+
+## v1.47.31 — 2026-10-17
+
+### Fixed
+- **The Dungeon panel no longer fails at the editor's start.** It made its first dungeon a moment after the window
+  opened, before the game's data was read, so no item was known yet and the key chest failed ("“CryptKey” is not an
+  item of the game"). It now says it waits for the game's data and makes the dungeon once the data is in use.
 
 ## v1.47.30 — unreleased
 

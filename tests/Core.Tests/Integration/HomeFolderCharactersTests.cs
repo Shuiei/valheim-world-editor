@@ -32,6 +32,10 @@ public sealed class HomeFolderCharactersTests : HomeFolderTestBase
     [Fact]
     public void CharactersAreReadFromTheGamesFolders()
     {
+        if (!LinuxLayout)
+        {
+            return;
+        }
         string chars = Local(".config", "unity3d", "IronGate", "Valheim", "characters_local");
         Directory.CreateDirectory(chars);
         File.WriteAllBytes(Path.Combine(chars, "ragnar.fch"), Fch("Ragnar", 1234567890123));
@@ -62,6 +66,10 @@ public sealed class HomeFolderCharactersTests : HomeFolderTestBase
     [Fact]
     public void ACharacterFileIsReadAgainOnlyWhenItChanged()
     {
+        if (!LinuxLayout)
+        {
+            return;
+        }
         string file = WriteRagnarCharacter(5);
         Assert.Equal(5, Assert.Single(Characters.Local()).Id);
         int reads = Characters.FileReads;
@@ -77,6 +85,10 @@ public sealed class HomeFolderCharactersTests : HomeFolderTestBase
     [Fact]
     public void EachThreadCountsOnlyTheCharacterFilesItRead()
     {
+        if (!LinuxLayout)
+        {
+            return;
+        }
         // The count is the thread's own (the tests read characters on other threads at the same time).
         string file = WriteRagnarCharacter(5);
         Assert.Equal(5, Assert.Single(Characters.Local()).Id);
@@ -138,6 +150,10 @@ public sealed class HomeFolderCharactersTests : HomeFolderTestBase
     [Fact]
     public void TheDefaultBuilderIsThisComputersCharacterWhenTheWorldHasNone()
     {
+        if (!LinuxLayout)
+        {
+            return;
+        }
         using var w = new TempWorld();
         WorldSave world = w.Load();
         if (world.TopBuilder != 0)

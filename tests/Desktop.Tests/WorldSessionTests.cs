@@ -1,3 +1,4 @@
+using TerrainEditor.App;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
 using Xunit;
@@ -77,5 +78,27 @@ public sealed class WorldSessionTests : WorldsFolder
         s.Shape(20, 20, Formula.Compile("2", []), 3, 0, "raise");
         var o = world.Save();
         Assert.True(o.Done, o.Message);
+    }
+
+    // Leaving a world after saving it, with its latest save unreadable by then (another program writing it): the save
+    // it was opened from is left, said in the log only.
+    [Fact]
+    public void EarlierSavesThatCannotBeRemovedOnLeavingAreOnlyLogged()
+    {
+        WorldCreator.Create(Folder("Leave"), "Leave", Seed, radius: 1);
+        using var world = WorldSession.Open(Folder("Leave"));
+        int opened = world.World.SaveNumber;
+        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        s.Shape(10, 10, Formula.Compile("2", []), 3, 0, "raise");
+        Assert.True(world.Save().Done);
+        int latest = WorldWriter.LatestNumber(Folder("Leave"));
+        Assert.Equal(opened + 1, latest);
+        File.WriteAllBytes(Path.Combine(Folder("Leave"), $"_main.{latest}.chunks"), [1, 2, 3]);
+        using var log = Log.Listen();
+
+        world.Dispose();
+
+        Assert.Contains(log.Lines, l => l.Contains("removing the world's earlier saves on leaving it", StringComparison.Ordinal));
+        Assert.True(File.Exists(Path.Combine(Folder("Leave"), $"_main.{opened}.fwl2")));
     }
 }

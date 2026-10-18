@@ -28,7 +28,7 @@ public class GameBundlesNamesTests
         // A prefab's GameObject is not one of the kinds found.
         b.Prefab("Bench");
         game.Save();
-        var bundles = new GameBundles(game.BundlesDir, null);
+        var bundles = game.Bundles();
 
         Assert.Equal([new GameBundles.Where("a_mod", plank), new GameBundles.Where("a_mod", plankAgain), new GameBundles.Where("b_mod", plankThere)], bundles.Named(AssetClassID.Mesh, "plank"));
         Assert.Equal([new GameBundles.Where("a_mod", wood)], bundles.Named(AssetClassID.Material, "wood"));
@@ -50,23 +50,23 @@ public class GameBundlesNamesTests
         string names = Path.Combine(game.Root, "index-names.json");
 
         // Nothing kept without an index file.
-        new GameBundles(game.BundlesDir, null).EnsureNamesRead();
+        game.Bundles().EnsureNamesRead();
         Assert.False(File.Exists(names));
-        new GameBundles(game.BundlesDir, cache).EnsureNamesRead();
+        game.Bundles(cache).EnsureNamesRead();
         Assert.True(File.Exists(names));
 
         // Read again from the kept file: what it says is taken (here a name only it has).
         string kept = File.ReadAllText(names).Replace("\"Names\":{", $"\"Names\":{{\"{(int)AssetClassID.Mesh}:FromTheFile\":[\"a_mod:{plank}\"],", StringComparison.Ordinal);
         File.WriteAllText(names, kept);
-        var again = new GameBundles(game.BundlesDir, cache);
+        var again = game.Bundles(cache);
         Assert.Equal([new GameBundles.Where("a_mod", plank)], again.Named(AssetClassID.Mesh, "FromTheFile"));
         Assert.Single(again.Named(AssetClassID.Mesh, "plank"));
         // A bundle changed: read again.
         File.SetLastWriteTimeUtc(Path.Combine(game.BundlesDir, "a_mod"), DateTime.UtcNow.AddDays(-3));
-        Assert.Empty(new GameBundles(game.BundlesDir, cache).Named(AssetClassID.Mesh, "FromTheFile"));
+        Assert.Empty(game.Bundles(cache).Named(AssetClassID.Mesh, "FromTheFile"));
         // A kept file that cannot be read: read again, and kept anew.
         File.WriteAllText(names, "{ not json");
-        Assert.Single(new GameBundles(game.BundlesDir, cache).Named(AssetClassID.Mesh, "plank"));
+        Assert.Single(game.Bundles(cache).Named(AssetClassID.Mesh, "plank"));
         Assert.StartsWith("{\"Bundles\":", File.ReadAllText(names), StringComparison.Ordinal);
     }
 

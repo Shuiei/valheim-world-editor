@@ -7,7 +7,9 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The game look drawn by the real editor from a made-up Valheim's files (GameLookEditorProcess): the terrain shader
 /// linked with the view's lighting, its textures, the sky and the water; the View panel's slope colours and limit marks
-/// on it, a brush stroke sending the changed rows again, and another area setting it up anew.
+/// on it, a brush stroke sending the changed rows again, and another area setting it up anew. And the game's models drawn
+/// for the objects that have one (a see-through chest, a cut-out tree, a plain rock), the object under the pointer picked
+/// by its mesh, the models' boxes and a benchmark run through the driver.
 /// </summary>
 [Collection("Visual game look")]
 [Trait("Category", "Visual")]
@@ -20,10 +22,39 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
         Assert.SkipUnless(OperatingSystem.IsLinux(), "the made-up game is found in the home's Steam library only on Linux");
         Directory.CreateDirectory(Dir);
         BackToStart(editor);
-        OpenArea(editor, 2);
+        OpenMapThenArea();
         WaitForGameLook(editor);
         editor.Send("camera 32 32 30 35 120");
         AssertDrawn(Picture("look"));
+        // A picture that cannot be saved (its folder is not there): the error comes back to the driver.
+        Assert.StartsWith("@@ error ", editor.Answer($"picture {Path.Combine(Dir, "nowhere", "x.png")}"));
+        // The 2100 fir trees north of the middle: more than one model draws at once, so drawn by the cells in view.
+        editor.Send("camera 0 12 0 50 90");
+        AssertDrawn(Picture("trees"));
+        // The Place tool, with the chest chosen: its model's box is worked out for the panel's fit hint.
+        Assert.Equal("Place", editor.Send("click Place").GetProperty("mode").GetString());
+        editor.Send("key Escape");
+        // The models of the game's files: drawn (the picture waits for them), the chest see-through over what is behind
+        // it, in the usual view and with the buildings see-through; the chest picked by its mesh under the pointer.
+        Assert.True(editor.Send("state").GetProperty("models").GetBoolean());
+        // The camera on the chest's ground point, 30 m off and 45° down; the pointer 1.5 m up the chest's square.
+        editor.Send("camera -11.5 -23.5 0 45 30");
+        AssertDrawn(Picture("models"));
+        editor.Send("look seethrough on");
+        AssertDrawn(Picture("models-seethrough"));
+        editor.Send("look seethrough off");
+        editor.Send("key E");
+        editor.Send("mouse3 move -11.5 1.5 -23.5");
+        AssertDrawn(Picture("models-hover"));
+        editor.Send("key Escape");
+        // The models' boxes, by their meshes: the square's 3 m, none for a kind without a model.
+        JsonElement boxes = editor.Send("bounds piece_chest_wood Nothing");
+        float[] chest = [.. boxes.GetProperty("piece_chest_wood").EnumerateArray().Select(v => v.GetSingle())];
+        Assert.Equal([-1.5f, 0f, 0f, 1.5f, 3f, 0f], chest);
+        Assert.Equal(JsonValueKind.Null, boxes.GetProperty("Nothing").ValueKind);
+        // A short benchmark: frames drawn for a second, reported.
+        Assert.False(string.IsNullOrWhiteSpace(editor.Send("bench 1").GetProperty("bench").GetString()));
+        editor.Send("camera 32 32 30 35 120");
         // The View panel's slope colours on, the limit marks off, then back.
         editor.Send("panel view");
         editor.Send("check Slope colours|on");
@@ -45,6 +76,21 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
     }
 
     /// <summary>
+    /// The world's map first, drawn with the game's map textures (the made-up game's one-pixel ones), then the area two
+    /// zones across around the middle, with the 2100 fir trees in it.
+    /// </summary>
+    private void OpenMapThenArea()
+    {
+        editor.Send($"world {editor.World}");
+        string map = Path.Combine(Dir, "map.png");
+        Assert.Equal("map", editor.Send($"picture {map}").GetProperty("page").GetString());
+        Assert.True(File.Exists(map));
+        JsonElement opened = editor.Send("area 0 0 2");
+        Assert.Equal("editor", opened.GetProperty("page").GetString());
+        Assert.True(opened.GetProperty("objects").GetInt32() >= 2100, "the fir trees are in the area");
+    }
+
+    /// <summary>
     /// Back on the start page from wherever the last test left the editor (the edits left pending are dropped).
     /// </summary>
     internal static void BackToStart(EditorProcess editor)
@@ -62,12 +108,52 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
         DirectVisualTests.WaitForPage(editor, "start");
     }
 
+    // A dungeon of the game's own rooms generated into the area: each room has a model in the made-up game, so they are
+    // drawn solid (as the locations' parts are), 5000 m up where the dungeon goes.
+    [Fact]
+    public void TheGamesRoomsAreDrawnWithTheirModels()
+    {
+        Assert.SkipUnless(editor.Available, editor.Why ?? "");
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "the made-up game is found in the home's Steam library only on Linux");
+        Directory.CreateDirectory(Dir);
+        BackToStart(editor);
+        OpenArea(editor, 3);
+        WaitForGameLook(editor);
+        editor.Send("camera 0 0 0 60 120");
+        editor.Send("click Dungeon");
+        // No dungeon in the area (the world copy is fresh, and leaving drops what the other test left): Generate is open,
+        // the game's rooms chosen. Place in the world waits for the dungeon to be made (the button is off until then).
+        Assert.StartsWith("@@ ok ", editor.Answer("choose The game's own rooms"));
+        string placed = "";
+        for (int i = 0; i < 600 && !placed.StartsWith("@@ ok ", StringComparison.Ordinal); i++)
+        {
+            Thread.Sleep(100);
+            placed = editor.Answer("click Place in the world");
+        }
+        Assert.StartsWith("@@ ok ", placed);
+        editor.Send("camera 0 0 0 45 80 5000");
+        AssertDrawn(Picture("rooms"));
+        // Pointed at and clicked where the dungeon went (5000 m over the view's middle): a room under the pointer is
+        // marked, then picked; deleted, it leaves open ends, marked in their turn.
+        editor.Send("mouse3 move 0 5000 0");
+        AssertDrawn(Picture("rooms-hover"));
+        editor.Send("mouse3 down 0 5000 0");
+        editor.Send("mouse3 up 0 5000 0");
+        AssertDrawn(Picture("rooms-picked"));
+        editor.Send("key Delete");
+        editor.Send("mouse3 move 0 5000 0");
+        AssertDrawn(Picture("rooms-open-ends"));
+        Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
+        editor.Send("key Escape");
+        BackToStart(editor);
+    }
+
     /// <summary>
     /// The copy of the test world opened, and its area at zone 0, 0 this many zones across in the 3D view.
     /// </summary>
-    internal static void OpenArea(EditorProcess editor, int size)
+    internal static void OpenArea(GameLookEditorProcess editor, int size)
     {
-        editor.Send($"world {GameLookEditorProcess.World}");
+        editor.Send($"world {editor.World}");
         Assert.Equal("editor", editor.Send($"area 0 0 {size}").GetProperty("page").GetString());
     }
 

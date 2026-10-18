@@ -1276,6 +1276,7 @@
   "dungeon.label.waysNone": "Ways round: none (a tree)",
   "dungeon.label.ways": "Ways round: × {0:0.##}",
   "dungeon.hint.making": "Making it…",
+  "dungeon.hint.waitingForGame": "Waiting for the game's data (read once at the editor's start)…",
   "dungeon.hint.notMade": "Could not make it: {0}",
   "dungeon.label.level": "Level {0}",
   "dungeon.msg.noStairs": "no room for stairs down from level {0}; the levels below are left out",

@@ -398,6 +398,42 @@ jobs:
             Expand-Archive (Get-Item C:\dist\ValheimWorldEditor-*-win-x64.zip).FullName -DestinationPath C:\smoke
             tools\smoke-test.ps1 C:\smoke\ValheimWorldEditor\ValheimWorldEditor.exe tests\fixtures\CITest
 
+  # The Windows-only specs: the tests of the code paths only Windows takes (the home folder, file locks, the folder
+  # flush that Windows does not need). They skip on Linux, so this runs the whole test project on a Windows machine,
+  # on main and on the branches whose name has "windows" in it (a Windows fix can be checked before it is merged),
+  # next to windows-smoke. The SDK is installed when the image has none (dot.net's install script).
+  windows-tests:
+    machine:
+      image: windows-server-2022-gui:current
+    resource_class: windows.medium
+    shell: powershell.exe -ExecutionPolicy Bypass
+    steps:
+      - checkout
+      # Windows checks files out with CRLF line ends; the repository's .editorconfig asks for LF, and the build's
+      # formatting analysis (warnings as errors) would fail on every file. So the checkout is redone with LF.
+      - run:
+          name: Line ends as the repository has them (LF)
+          command: |
+            git config core.autocrlf false
+            git reset --hard HEAD
+      - run:
+          name: Windows-only specs
+          no_output_timeout: 20m
+          command: |
+            if (-not ((dotnet --list-sdks 2> $null) -match '^10\.')) {
+              Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile $env:TEMP\dotnet-install.ps1
+              & $env:TEMP\dotnet-install.ps1 -Channel 10.0 -InstallDir C:\dotnet
+              $env:PATH = "C:\dotnet;$env:PATH"
+            }
+            # The code style is checked by formatting on Linux, with the SDK the build containers use. This image's
+            # latest SDK reports the style differently, so its style analyzers are left out here.
+            dotnet build tests\Core.Tests\Core.Tests.csproj -c Release -warnaserror -p:EnforceCodeStyleInBuild=false
+            # The results as JUnit, so CircleCI lists each failing test (as the Linux test jobs do).
+            New-Item -ItemType Directory -Force C:\test-results | Out-Null
+            dotnet test --project tests\Core.Tests\Core.Tests.csproj -c Release --no-build --no-ansi --no-progress --report-spekt-junit --report-spekt-junit-filename C:\test-results\windows-core.xml
+      - store_test_results:
+          path: C:\test-results
+
   # The GitHub release, made from the packages packages made and windows-smoke tested (the workspace). The
   # plugin builds here against the game's own DLLs: a Valheim dedicated server (free, anonymous SteamCMD)
   # and the BepInExPack_Valheim the plugin's manifest depends on; nothing of them is kept. The release
@@ -508,8 +544,8 @@ jobs:
 workflows:
   # Side by side; windows-smoke waits for the Windows package that packages makes, and coverage for
   # both test jobs to pass. Branches and pull requests run code-analysis, formatting and the two test
-  # jobs: packages, windows-smoke and coverage are main's. Main's ruleset requires those four checks
-  # of a pull request, and no other: it must stay in step with this list.
+  # jobs: packages, windows-smoke and coverage are main's, and windows-tests main's and the "windows" branches'.
+  # Main's ruleset requires those four checks of a pull request, and no other: it must stay in step with this list.
   test:
     when:
       not: << pipeline.parameters.release >>
@@ -528,6 +564,12 @@ workflows:
           filters:
             branches:
               only: main
+      - windows-tests:
+          filters:
+            branches:
+              only:
+                - main
+                - /.*windows.*/
       - coverage:
           requires:
             - core-tests

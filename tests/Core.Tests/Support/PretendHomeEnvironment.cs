@@ -2,7 +2,8 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// The environment variables of a pretend home, set for one test and put back when disposed: HOME and the XDG folders
-/// point inside the home, and LOCALAPPDATA is set as given.
+/// point inside the home, and so does LOCALAPPDATA (the editor's data folder on Windows: AppData\Local in the home, so
+/// nothing a test writes lands in the real profile there).
 /// </summary>
 public sealed class PretendHomeEnvironment : IDisposable
 {
@@ -13,14 +14,13 @@ public sealed class PretendHomeEnvironment : IDisposable
     /// Makes the pretend home's folder and points the variables into it.
     /// </summary>
     /// <param name="home">The pretend home's folder (made).</param>
-    /// <param name="localAppData">What LOCALAPPDATA is set to (null clears it).</param>
-    public PretendHomeEnvironment(string home, string? localAppData)
+    public PretendHomeEnvironment(string home)
     {
         Directory.CreateDirectory(home);
         Environment.SetEnvironmentVariable("HOME", home);
         Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(home, ".config"));
         Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(home, ".local", "share"));
-        Environment.SetEnvironmentVariable("LOCALAPPDATA", localAppData);
+        Environment.SetEnvironmentVariable("LOCALAPPDATA", Path.Combine(home, "AppData", "Local"));
     }
 
     /// <summary>

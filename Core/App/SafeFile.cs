@@ -52,7 +52,7 @@ public static class SafeFile
                 writer.Flush();
                 stream.Flush(flushToDisk: true);
             }
-            File.Move(temp, path, overwrite);
+            Move(temp, path, overwrite);
         }
         catch
         {
@@ -62,4 +62,42 @@ public static class SafeFile
             throw;
         }
     }
+
+    /// <summary>Windows' "the process cannot access the file because it is being used by another process".</summary>
+    private const int SharingViolation = unchecked((int)0x80070020);
+
+    /// <summary>Windows' "the process cannot access the file because another process has locked a portion of the file".</summary>
+    private const int LockViolation = unchecked((int)0x80070021);
+
+    /// <summary>
+    /// Moves the written file over the old one. On Windows the move can be refused for a moment while another program
+    /// holds the old file (an antivirus scanning it, another writer replacing it at the same time): it is tried again,
+    /// up to ten times over half a second. The refusals are said in one line once the move goes through; when it never
+    /// does, the last refusal goes on to the caller (who says it). Not when the file must not be replaced (a file there
+    /// is the answer), and not on the other systems, where the move takes the file over at once.
+    /// </summary>
+    private static void Move(string temp, string path, bool overwrite)
+    {
+        Exception? refused = null;
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                File.Move(temp, path, overwrite);
+                if (refused != null)
+                {
+                    Log.CaughtBrief(refused, $"moving a written file over the old one (held by another program; went through at try {attempt})");
+                }
+                return;
+            }
+            catch (Exception ex) when (overwrite && attempt < 10 && OperatingSystem.IsWindows() && RefusedForNow(ex))
+            {
+                refused = ex;
+                Thread.Sleep(10 * attempt);
+            }
+        }
+    }
+
+    /// <summary>Whether Windows refused the move because another program holds the old file right now.</summary>
+    private static bool RefusedForNow(Exception ex) => ex is UnauthorizedAccessException || (ex is IOException && ex.HResult is SharingViolation or LockViolation);
 }

@@ -17,7 +17,7 @@ public sealed partial class InspectorPanel
     /// are).
     /// </summary>
     /// <param name="name">The data name (its key's name).</param>
-    private static string? PlainLabel(string name) => name switch
+    internal static string? PlainLabel(string name) => name switch
     {
         "text" => Lang.T("inspect.data.text"),
         "tag" => Lang.T("inspect.data.tag"),
@@ -55,7 +55,7 @@ public sealed partial class InspectorPanel
 
     /// <summary>What a section of the object data holds, in the user's language ("data" for bytes).</summary>
     /// <param name="section">The section, as ObjectData names it.</param>
-    private static string SectionName(string section) => section switch
+    internal static string SectionName(string section) => section switch
     {
         "strings" => Lang.T("inspect.section.strings"),
         "ints" => Lang.T("inspect.section.ints"),

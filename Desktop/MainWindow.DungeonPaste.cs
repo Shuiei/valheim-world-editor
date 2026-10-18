@@ -50,7 +50,7 @@ public partial class MainWindow
     private static bool CanMake(WorldSave world, int prefab) => world.ModelFor(prefab, null) != null || Terrain.PrefabCatalog.Details(prefab) != null;
 
     /// <summary>The biome's name as the dungeon generator knows it (the Black Forest's for none, or the sea's).</summary>
-    private static string BiomeName(ValheimGen.Heightmap.Biome? biome) => biome switch
+    internal static string BiomeName(ValheimGen.Heightmap.Biome? biome) => biome switch
     {
         ValheimGen.Heightmap.Biome.Meadows => "Meadows",
         ValheimGen.Heightmap.Biome.Swamp => "Swamp",

@@ -5,8 +5,9 @@ using TerrainEditor.App;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// The pretend home shared by the HomeFolder test classes: HOME and the XDG folders point at a temporary folder, put
-/// back afterwards. Nothing here reads the real home, ~/.ssh or the real settings.
+/// The pretend home shared by the HomeFolder test classes: HOME, the XDG folders and LOCALAPPDATA point at a temporary
+/// folder, put back afterwards. Nothing here reads the real home, ~/.ssh or the real settings; the tests of what lies
+/// under the home on Linux return at once on Windows (<see cref="LinuxLayout"/>), where the profile stays the real one.
 /// </summary>
 public abstract class HomeFolderTestBase : IDisposable
 {
@@ -15,9 +16,17 @@ public abstract class HomeFolderTestBase : IDisposable
     private readonly bool _defaults = LocalGame.SearchDefaultPlaces;
     protected string Home { get; } = Path.Combine(Path.GetTempPath(), "vwe-home-" + Guid.NewGuid().ToString("N")[..8]);
 
+    /// <summary>
+    /// Whether the game's and the mod managers' folders are laid out as on Linux (.config/unity3d, .steam,
+    /// .config/r2modmanPlus-local), which the pretend home stands in for through HOME and the XDG variables. On Windows
+    /// they are under the profile (AppData), which no environment variable points elsewhere: the tests of that layout
+    /// return at once there rather than read the real profile.
+    /// </summary>
+    protected static bool LinuxLayout => OperatingSystem.IsLinux();
+
     protected HomeFolderTestBase()
     {
-        _environment = new PretendHomeEnvironment(Home, localAppData: null);
+        _environment = new PretendHomeEnvironment(Home);
         AppSettings.PathOverride = null;
         AppSettings.DataDirOverride = null;
         ServerConfig.PathOverride = Path.Combine(Home, "servers.cfg");

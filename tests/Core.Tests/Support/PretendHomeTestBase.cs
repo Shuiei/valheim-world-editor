@@ -19,7 +19,7 @@ public abstract class PretendHomeTestBase : IDisposable
     /// </summary>
     protected PretendHomeTestBase()
     {
-        _environment = new PretendHomeEnvironment(Home, Path.Combine(Home, "AppData", "Local"));
+        _environment = new PretendHomeEnvironment(Home);
         // Only the folders a test gives.
         LocalGame.SearchDefaultPlaces = false;
     }
