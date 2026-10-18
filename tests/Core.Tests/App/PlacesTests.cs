@@ -35,6 +35,24 @@ public class PlacesTests
         Assert.False(Places.HasWorld(locked));
     }
 
+    // A file where a folder is expected (a world folder listed in the settings that was replaced by a file): read as a
+    // folder it fails, which is passed over as a folder that cannot be read is.
+    [Fact]
+    public void AFileWhereAFolderIsExpectedHasNoSubfoldersAndNoWorld()
+    {
+        string file = Path.Combine(Path.GetTempPath(), "vwe-places-" + Guid.NewGuid().ToString("N")[..8]);
+        File.WriteAllText(file, "not a folder");
+        try
+        {
+            Assert.Empty(Places.Subfolders(file));
+            Assert.False(Places.HasWorld(file));
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
     [Fact]
     public void OnlyTheOwnHomeIsExpanded()
     {

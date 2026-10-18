@@ -167,7 +167,9 @@ public class GameLookEditorProcess : EditorProcess
         long square = new TestMesh { Name = "square", Positions = [-1.5f, 0, 0, 1.5f, 0, 0, 1.5f, 3, 0, -1.5f, 3, 0], Submeshes = [[0, 1, 2, 0, 2, 3]] }.Add(b);
         // 2 x 1: an opaque green pixel and a transparent one, cut out.
         long bark = TestAssets.Texture(b, "bark", 2, 1, Rgba32, 1, [60, 120, 40, 255, 0, 0, 0, 0]);
-        long glass = TestAssets.Material(b, "chest_glass", floats: [("_Mode", 3)], colors: [("_Color", 0.6, 0.8, 1.0, 0.5)]);
+        // Unity's Standard shader in its transparent mode: drawn as glass (any other shader in that mode cuts out at half).
+        long standard = TestAssets.Shader(b, "Standard", new Dictionary<int, byte[]>());
+        long glass = TestAssets.Material(b, "chest_glass", Fields.Ref(standard), floats: [("_Mode", 3)], colors: [("_Color", 0.6, 0.8, 1.0, 0.5)]);
         long cutOut = TestAssets.Material(b, "fir_cutout", textures: [("_MainTex", Fields.Ref(bark), (1, 1), (0, 0))], floats: [("_Mode", 1), ("_Cutoff", 0.4)]);
         long plain = TestAssets.Material(b, "rock_plain", colors: [("_Color", 0.5, 0.5, 0.5, 1.0)]);
         foreach (var (prefab, material) in new[] { ("piece_chest_wood", glass), ("FirTree", cutOut), ("Rock_4", plain) })

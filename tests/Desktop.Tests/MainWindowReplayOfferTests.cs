@@ -102,4 +102,23 @@ public sealed class MainWindowReplayOfferTests
 
         Assert.Contains("the game's save is not there any more", Assert.Single(told));
     }
+
+    // The game's save cannot be read (damaged, or being written): said with what failed, nothing changed, the changes
+    // still pending on the editor's world.
+    [AvaloniaFact]
+    public async Task AGamesSaveThatCannotBeReadIsSaidAndNothingChanges()
+    {
+        using var tw = new TempWorld();
+        var (w, game) = await ChangedUnderTheGame(tw.Dir);
+        File.WriteAllBytes(Path.Combine(tw.Dir, $"_main.{game}.fwl2"), [1, 2, 3]);
+        var told = new List<string>();
+        w.Ask = (_, _, _, _) => Task.FromResult(true);
+        w.Tell = t => { told.Add(t); return Task.CompletedTask; };
+
+        await w.OfferReplay(w.World!, game, w.View.Scene);
+
+        Assert.StartsWith("Could not bring your changes onto the game's save:", Assert.Single(told));
+        Assert.Equal(game, w.World!.GameSaveSince());
+        Assert.Equal(1, w.World.Pending.Zones);
+    }
 }
