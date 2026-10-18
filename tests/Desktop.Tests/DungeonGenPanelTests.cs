@@ -1,5 +1,6 @@
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 using Xunit;
 
@@ -39,6 +40,25 @@ public class DungeonGenPanelTests
         await Settled(p);
         Assert.True(p.Place.IsEnabled);
         Assert.StartsWith(DungeonGen.NameFor(123, null, "Black Forest"), p.Summary.Text);
+    }
+
+    [AvaloniaFact]
+    public async Task NoDungeonIsMadeBeforeTheGamesDataIsInUse()
+    {
+        // At the editor's start the catalogues are empty: making it then failed on the key chest ("CryptKey" is not
+        // an item of the game). The panel waits instead, and makes it once the data is in use.
+        bool ready = false;
+        var p = new DungeonGenPanel { GameDataReady = () => ready };
+        await Task.Delay(400);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(Lang.T("dungeon.hint.waitingForGame"), p.Summary.Text);
+        Assert.False(p.Failed);
+        Assert.False(p.Place.IsEnabled);
+
+        ready = true;
+        await Settled(p);
+
+        Assert.True(p.Place.IsEnabled);
     }
 
     [AvaloniaFact]
