@@ -27,4 +27,20 @@ public sealed partial class GlView
     /// <summary>Whether Shift without Ctrl is held: a pick selects the row from the last object picked to this one.</summary>
     /// <param name="mods">The keys held.</param>
     private static bool IsRangeSelect(KeyModifiers mods) => mods.HasFlag(KeyModifiers.Shift) && !Ctrl(mods);
+
+    /// <summary>
+    /// A click in the View tool: picks the object under the pointer; a plain double click on one asks for the Select
+    /// tool, to move it with the handles.
+    /// </summary>
+    /// <param name="at">Where the pointer is, on the surface.</param>
+    /// <param name="size">The surface's size.</param>
+    /// <param name="mods">The keys held.</param>
+    private void ViewClick(Point at, Size size, KeyModifiers mods)
+    {
+        bool add = AddsToSelection(mods);
+        if (Pick(at, size, add, IsRangeSelect(mods)) != null && _pressClicks == 2 && !add)
+        {
+            SelectToolAsked?.Invoke();
+        }
+    }
 }

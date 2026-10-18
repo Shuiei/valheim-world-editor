@@ -19,6 +19,7 @@ public sealed partial class GlView
         surface.Focus(NavigationMethod.Pointer);
         var p = e.GetCurrentPoint(surface);
         _pressAt = p.Position;
+        _pressClicks = e.ClickCount;
         _dragFrom = p.Position;
         _dragButton = p.Properties.PointerUpdateKind;
         _pointer = _heldAt = p.Position;

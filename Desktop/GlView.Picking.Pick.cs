@@ -9,7 +9,8 @@ public sealed partial class GlView
     /// A click on an object: it alone, or (add) added or taken out; range (Shift): every shown object in
     /// a row from the last one clicked to this one (w1, Shift + click w3: w1, w2 and w3).
     /// </summary>
-    internal void Pick(Point at, Size size, bool add, bool range = false)
+    /// <returns>The object clicked, null when the click was beside every object.</returns>
+    internal int? Pick(Point at, Size size, bool add, bool range = false)
     {
         int? i = ObjectAt(at, size);
         var s = Scene;
@@ -36,6 +37,7 @@ public sealed partial class GlView
             }
         }
         SelectionDone();
+        return i;
     }
 
     /// <summary>

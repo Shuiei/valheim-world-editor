@@ -21,6 +21,7 @@ public sealed partial class MainWindow
         SelectPanel.Confirm = text => Dialogs.Ask(this, Lang.T("select.ask.forget.title"), text, Lang.T("select.label.forget"));
         SelectPanel.InspectButton.Click += (_, _) => Inspect();
         View.InspectAsked += () => { if (View.Selected.Count == 1) { Inspect(); } };
+        View.SelectToolAsked += Tools.ChooseSelect;
         SelectPanel.ClaimButton.Click += (_, _) => Claim();
         SelectPanel.ReplaceAsked += ReplaceSelection;
     }

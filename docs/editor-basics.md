@@ -66,7 +66,7 @@ formula), Select's options, which Place categories are open, the right-hand pane
 | **EDIT** | **Area** (`B`), **Path** (`P`), **Place** (`T`) | [Area](area.md) (box or polygon actions, copy and paste), [Path](path.md) (roads, ramps, rivers, caves), [Place](place.md) (trees, rocks, pieces, spawn points). |
 | **PAINT** | **Dirt** (`6`), **Cultivate** (`7`), **Paved** (`8`), **Clear** (`9`) | The paint brushes. **Clear** opens the panel titled **Clear paint**. See [sculpting and painting](terrain.md). |
 | **CREATE** | **Shape** (`G`), **Mountain**, **Cave**, **Dungeon**, **Script**, **Blueprints** | Shape and Mountain (see [sculpting](terrain.md)), Cave (the Path tool with its Cave action, see [Path](path.md)), [Dungeon](dungeons.md), [Script](scripting.md), and the blueprint library to paste one (see [the Workshop](workshop.md)). Only Shape has a key. |
-| **TOOLS** | **Select** (`E`), **Measure** (`M`), **View** (`Esc`, also `H`) | [Select](select.md) (move, turn, delete and inspect objects), [Measure](measure.md), and View: look around; a left drag slides the view and a click picks an object. |
+| **TOOLS** | **Select** (`E`), **Measure** (`M`), **View** (`Esc`, also `H`) | [Select](select.md) (move, turn, delete and inspect objects), [Measure](measure.md), and View: look around; a left drag slides the view, a click picks an object and a double click on one switches to Select with it selected. |
 
 The rail scrolls when the window is too short for it. In the [Workshop](#the-workshops-top-bar) it keeps only
 **Build** (the Place tool for building pieces, `T`), **Select** and **View**.

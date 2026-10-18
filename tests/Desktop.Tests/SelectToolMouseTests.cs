@@ -1,5 +1,7 @@
 using System.Numerics;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Xunit;
 using static TerrainEditor.Desktop.Tests.SelectToolRun;
 
@@ -105,5 +107,23 @@ public class SelectToolMouseTests
         Assert.NotNull(v.Tool.Lasso);
         Assert.True(v.Tool.Key(Avalonia.Input.Key.Escape, false));
         Assert.Null(v.Tool.Lasso);
+    }
+
+    [AvaloniaFact]
+    public void ADoubleClickOnAnObjectInTheViewToolChoosesTheSelectToolWithItSelected()
+    {
+        var v = Open(T(1, Wall, 40, 30, 40), T(2, Wall, 42, 30, 40));
+        v.W.Tools.ChooseMode(ToolMode.View);
+        Assert.False(v.W.SelectPanel.Card.IsVisible);
+        var p = v.At(40, 30, 40);
+        for (int i = 0; i < 2; i++)
+        {
+            v.W.MouseDown(p, MouseButton.Left);
+            v.W.MouseUp(p, MouseButton.Left);
+        }
+        Assert.Equal(ToolMode.Select, v.W.Tools.Mode);
+        Assert.True(v.W.SelectPanel.Card.IsVisible);
+        // The piece alone, not its building.
+        Assert.Equal([0], v.Selected);
     }
 }

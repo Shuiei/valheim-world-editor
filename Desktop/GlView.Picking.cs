@@ -28,6 +28,8 @@ public sealed partial class GlView
 
     /// <summary>A double click in Select mode.</summary>
     public event Action? InspectAsked;
+    /// <summary>A double click on an object in the View tool: the Select tool wanted, the object picked.</summary>
+    public event Action? SelectToolAsked;
     /// <summary>The objects picked, as indices into the scene's things (a copy).</summary>
     internal IReadOnlyCollection<int> Selected { get { lock (_selection) { return [.. _selection]; } } }
 

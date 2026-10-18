@@ -15,7 +15,8 @@ deleting one removes that location for good (with the small levelling of the gro
 
 ## How to use it
 
-1. Press `E` (or **Select** in the rail's TOOLS section).
+1. Press `E` (or **Select** in the rail's TOOLS section). From the **View** tool, a double click on an object
+   also switches to Select with that object selected, its arrows and ring ready.
 2. Click an object, `Ctrl` + click more, or drag on empty ground around them.
 3. Drag a selected object, an arrow or the ring to move or turn the selection; or use the keys, the
    **EXACT PLACE** fields, or the panel's buttons.

@@ -32,6 +32,8 @@ public sealed partial class GlView
 
     /// <summary>Where the mouse button went down, to tell a click from a drag.</summary>
     private Point? _pressAt;
+    /// <summary>The press's click count (2: a double click).</summary>
+    private int _pressClicks;
 
     /// <summary>The drag slides the view (Space + left, Shift + right).</summary>
     internal bool Panning { get; private set; }

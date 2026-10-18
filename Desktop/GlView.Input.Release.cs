@@ -48,7 +48,7 @@ public sealed partial class GlView
         }
         else if (click && IsClickInView(at))
         {
-            Pick(at, size, AddsToSelection(mods), IsRangeSelect(mods));
+            ViewClick(at, size, mods);
         }
     }
 
