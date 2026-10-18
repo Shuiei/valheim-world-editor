@@ -14,6 +14,12 @@ public sealed partial class DungeonGenPanel
     private void Make()
     {
         _wait.Stop();
+        if (!GameDataReady())
+        {
+            Summary.Text = Lang.T("dungeon.hint.waitingForGame");
+            _wait.Start();
+            return;
+        }
         var s = Settings();
         int generation = ++_generation;
         Summary.Text = Lang.T("dungeon.hint.making");

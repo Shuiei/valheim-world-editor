@@ -45,6 +45,11 @@ public sealed partial class DungeonGenPanel
     /// <summary>Counts the changes, so that only the newest dungeon made is shown.</summary>
     private int _generation;
 
+    /// <summary>
+    /// Whether the game's data is in use: until it is (the editor's start, while the game's files are read), no
+    /// dungeon is made, its chests' items and its pieces not known yet; the panel waits and tries again.
+    /// </summary>
+    internal Func<bool> GameDataReady { get; set; } = () => GameData.InUse;
     /// <summary>The dungeon being made for the settings shown (tests wait for it).</summary>
     internal Task Pending { get; private set; } = Task.CompletedTask;
     /// <summary>The level shown on the plan (from 0).</summary>
