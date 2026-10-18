@@ -15,6 +15,11 @@ public sealed partial class FakeGame : IDisposable
     private readonly Task _serving;
     /// <summary>The requests answered on their own (Answer): Dispose waits for them, and their errors fail the test.</summary>
     private readonly List<Task> _answering = [];
+    /// <summary>
+    /// Set by Dispose before the listener is closed: on Windows the wait for a request can fail before the listener
+    /// says it has stopped.
+    /// </summary>
+    private volatile bool _closing;
     private readonly byte[] _snapshot;
 
     public int Port { get; }
@@ -112,6 +117,7 @@ public sealed partial class FakeGame : IDisposable
     /// </summary>
     public void Dispose()
     {
+        _closing = true;
         _listener.Close();
         HoldPlayers?.TrySetResult();
         HoldTerrain?.TrySetResult();
