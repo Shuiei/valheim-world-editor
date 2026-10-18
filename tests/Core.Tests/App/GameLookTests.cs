@@ -16,10 +16,17 @@ public sealed class GameLookTests : IDisposable
 
     /// <summary>
     /// Leaves the game missing again (no pretend game kept in use), puts the environment and settings back, and
-    /// deletes the pretend home.
+    /// deletes the pretend home. A reading the test started is waited for first, and the home is deleted before the
+    /// check: with a pretend game still in it, the check would find it and start reading it in the background, into
+    /// the folder being deleted and on into the next test.
     /// </summary>
     public void Dispose()
     {
+        Settled().GetAwaiter().GetResult();
+        if (Directory.Exists(_sandbox.Folder))
+        {
+            Directory.Delete(_sandbox.Folder, true);
+        }
         GameLook.Check(new AppSettings());
         _sandbox.Dispose();
     }
