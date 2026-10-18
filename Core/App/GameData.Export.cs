@@ -39,7 +39,8 @@ public static partial class GameData
             Console.Error.WriteLine("--export-test-data needs the folder of the tests' copies (tests/fixtures).");
             return 2;
         }
-        var bundles = GameBundles.ForGame(GameLook.FindValheim(AppSettings.Load().ValheimPath), null);
+        // Closed when done: the game's files are not left open (Windows would refuse to touch them meanwhile).
+        using var bundles = GameBundles.ForGame(GameLook.FindValheim(AppSettings.Load().ValheimPath), null);
         if (bundles == null)
         {
             Console.Error.WriteLine("Valheim was not found.");
