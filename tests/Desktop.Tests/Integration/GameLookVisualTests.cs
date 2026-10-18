@@ -85,12 +85,42 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
         DirectVisualTests.WaitForPage(editor, "start");
     }
 
+    // A dungeon of the game's own rooms generated into the area: each room has a model in the made-up game, so they are
+    // drawn solid (as the locations' parts are), 5000 m up where the dungeon goes.
+    [Fact]
+    public void TheGamesRoomsAreDrawnWithTheirModels()
+    {
+        Assert.SkipUnless(editor.Available, editor.Why ?? "");
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "the made-up game is found in the home's Steam library only on Linux");
+        Directory.CreateDirectory(Dir);
+        BackToStart(editor);
+        OpenArea(editor, 3);
+        WaitForGameLook(editor);
+        editor.Send("camera 0 0 0 60 120");
+        editor.Send("click Dungeon");
+        // No dungeon in the area (the world copy is fresh, and leaving drops what the other test left): Generate is open,
+        // the game's rooms chosen. Place in the world waits for the dungeon to be made (the button is off until then).
+        Assert.StartsWith("@@ ok ", editor.Answer("choose The game's own rooms"));
+        string placed = "";
+        for (int i = 0; i < 600 && !placed.StartsWith("@@ ok ", StringComparison.Ordinal); i++)
+        {
+            Thread.Sleep(100);
+            placed = editor.Answer("click Place in the world");
+        }
+        Assert.StartsWith("@@ ok ", placed);
+        editor.Send("camera 0 0 0 45 80 5000");
+        AssertDrawn(Picture("rooms"));
+        Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
+        editor.Send("key Escape");
+        BackToStart(editor);
+    }
+
     /// <summary>
     /// The copy of the test world opened, and its area at zone 0, 0 this many zones across in the 3D view.
     /// </summary>
-    internal static void OpenArea(EditorProcess editor, int size)
+    internal static void OpenArea(GameLookEditorProcess editor, int size)
     {
-        editor.Send($"world {GameLookEditorProcess.World}");
+        editor.Send($"world {editor.World}");
         Assert.Equal("editor", editor.Send($"area 0 0 {size}").GetProperty("page").GetString());
     }
 
