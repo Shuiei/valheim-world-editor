@@ -45,4 +45,24 @@ public sealed class WorldSessionReadBackTests : WorldsFolder
         Assert.NotSame(before, world.World);
         Assert.Equal(folder, world.World.Directory);
     }
+
+    // The save was written, but the world's folder is gone before it is read back (a sync tool, the game deleting the
+    // world): said, the session starts over from the world as it was, and that save counts as its own, not as one the
+    // game made since.
+    [Fact]
+    public void ASaveThatCannotBeReadBackIsSaidAndTheSessionStartsOver()
+    {
+        string folder = Path.Combine(Dir, "Gone");
+        WorldCreator.Create(folder, "Gone", Seed, radius: 1);
+        using var world = WorldSession.Open(folder);
+        var before = world.World;
+        Directory.Delete(folder, true);
+
+        var unread = world.ReadBackSave(new WorldWriter.Result(true, "saved", null, 0, 0, []) { Number = before.SaveNumber + 1 });
+
+        Assert.NotEqual(Said.Empty, unread);
+        Assert.Contains("could not be read", unread.English);
+        Assert.Same(before, world.World);
+        Assert.Null(world.GameSaveSince());
+    }
 }

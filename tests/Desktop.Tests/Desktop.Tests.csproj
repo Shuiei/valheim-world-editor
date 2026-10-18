@@ -33,5 +33,11 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../Desktop/ValheimWorldEditor.Desktop.csproj" />
+    <!-- The SDK's sample extension, run by the real editor in the visual tests (ExtensionEditorProcess). -->
+    <ProjectReference Include="../../samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The sample's manifest, put beside its DLL in the plugins folder the visual tests make. -->
+    <Content Include="../../samples/ExampleVehicles.WorldEditor/worldeditor.json" Link="Samples/worldeditor.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

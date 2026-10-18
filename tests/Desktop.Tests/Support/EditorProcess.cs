@@ -38,7 +38,7 @@ public partial class EditorProcess : IDisposable
     public int? ExitCode => _p is { HasExited: true } ? _p.ExitCode : null;
     public bool Available => _p != null;
     // The editor's data folder (--data): its settings, log...
-    public string Data { get; } = Path.Combine(Path.GetTempPath(), "vwe-visual-" + Guid.NewGuid().ToString("N")[..8]);
+    public string Data { get; }
 
     public EditorProcess()
         : this([])
@@ -46,10 +46,12 @@ public partial class EditorProcess : IDisposable
     }
 
     /// <summary>
-    /// Started with more options (the world to open at once, for example), and environment variables.
+    /// Started with more options (the world to open at once, for example), environment variables, and a data folder
+    /// made ready beforehand (its settings.json written), else a new empty one.
     /// </summary>
-    protected EditorProcess(string[] extra, IReadOnlyDictionary<string, string>? env = null)
+    protected EditorProcess(string[] extra, IReadOnlyDictionary<string, string>? env = null, string? data = null)
     {
+        Data = data ?? Path.Combine(Path.GetTempPath(), "vwe-visual-" + Guid.NewGuid().ToString("N")[..8]);
         if (OperatingSystem.IsLinux() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")))
         {
             Why = "no display to open the editor on";
