@@ -53,6 +53,34 @@ public class PlacesTests
         }
     }
 
+    // A folder reached through a link that cannot be followed (two links pointing at each other): its key is the path as
+    // written from there on, and the failure is said in the log.
+    [Fact]
+    public void AFolderLinkThatCannotBeFollowedLeavesThePathAsWritten()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+        string dir = Path.Combine(Path.GetTempPath(), "vwe-folderkey-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.CreateSymbolicLink(Path.Combine(dir, "a"), Path.Combine(dir, "b"));
+            File.CreateSymbolicLink(Path.Combine(dir, "b"), Path.Combine(dir, "a"));
+            using var log = Log.Listen();
+
+            string key = Places.FolderKey(Path.Combine(dir, "a", "worlds"));
+
+            Assert.Equal(Path.Combine(Path.GetFullPath(dir), "a", "worlds"), key);
+            Assert.Contains(log.Lines, l => l.Contains("following a folder's link", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
     [Fact]
     public void OnlyTheOwnHomeIsExpanded()
     {
