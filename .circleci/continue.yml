@@ -334,6 +334,10 @@ jobs:
             mkdir -p /tmp/upload
             # Prints the merged total, as Codecov should show it (lines run with every branch taken, of lines measured).
             dotnet run --project tools/MergeCoverage -c Release -- /tmp/upload/coverage.cobertura.xml "${reports[@]}"
+      # The merged report itself, kept with the build: its line-by-line hits show which lines Codecov misses.
+      - store_artifacts:
+          path: /tmp/upload
+          destination: coverage
       - codecov/upload:
           dir: /tmp/upload
           plugins: noop

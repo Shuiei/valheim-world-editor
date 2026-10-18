@@ -11,6 +11,11 @@ the plugin is unchanged in versions without that part.
   once, ready to move or turn it, without pressing `E` and clicking it again. Only a plain double click on an object
   does it: with `Ctrl` or `Shift` held, or on empty ground, View stays. See [Select](docs/select.md#how-to-use-it).
 
+## v1.47.32 — unreleased
+
+### Fixed
+- Internal code cleanup; no change for users.
+
 ## v1.47.30 — unreleased
 
 ### Fixed
