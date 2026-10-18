@@ -26,6 +26,12 @@ internal static class RegrowFixtures
     public static bool Check(string name, params object?[] args) =>
         PrivateMember.Call<bool>(typeof(Regrow), name, null, args);
 
+    /// <summary>The test world's terrain (its generator, for the checks that read the forest factor), made once.</summary>
+    public static ValheimGen.TerrainService Terrain => LazyTerrain.Value;
+
+    /// <summary>The terrain, made on first use.</summary>
+    private static readonly Lazy<ValheimGen.TerrainService> LazyTerrain = new(() => new ValheimGen.TerrainService(TerrainEditor.Save.WorldSave.Load(Fixtures.World)));
+
     /// <summary>
     /// A rule that passes every check at any spot: every biome and area, no altitude, mask, ocean, slope or distance
     /// limit, one object per group, placed once.

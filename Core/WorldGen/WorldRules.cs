@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace ValheimGen;
 
 /// <summary>
@@ -191,6 +194,7 @@ public sealed record WorldRules
 
     // ---- Derived.
     /// <summary>Whether these are the game's own values (nothing of the generator changes).</summary>
+    [JsonIgnore]
     public bool IsVanilla => Equals(Vanilla);
 
     /// <summary>
@@ -205,7 +209,15 @@ public sealed record WorldRules
     internal float AltitudeToBaseHeight(float altitude) => ToBaseHeight(AltitudeToHeight(altitude));
 
     /// <summary>
-    /// What tells these rules from others, for caches keyed by a world's generator: empty for the game's own values.
+    /// What tells these rules from others, for caches keyed by a world's generator: empty for the game's own values,
+    /// else every setting as JSON (not the record's own text, which would name this very property).
     /// </summary>
-    public string Stamp => IsVanilla ? "" : ToString();
+    [JsonIgnore]
+    public string Stamp => IsVanilla ? "" : JsonSerializer.Serialize(this, StampOptions);
+
+    /// <summary>The settings as text: the game's own values, or the stamp.</summary>
+    public override string ToString() => IsVanilla ? "WorldRules (the game's own values)" : "WorldRules " + Stamp;
+
+    /// <summary>How the stamp is written: the settings in their declared order, nothing else.</summary>
+    private static readonly JsonSerializerOptions StampOptions = new() { DefaultIgnoreCondition = JsonIgnoreCondition.Never };
 }

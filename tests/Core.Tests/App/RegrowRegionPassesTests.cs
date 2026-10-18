@@ -37,7 +37,7 @@ public class RegrowRegionPassesTests
     {
         object rule = RegrowFixtures.OpenRule();
         PrivateMember.Set(rule, "forestTresholdMin", 100f);
-        Assert.True(RegrowFixtures.Check("PassesForest", rule, 0f, 0f, 0f));
+        Assert.True(RegrowFixtures.Check("PassesForest", RegrowFixtures.Terrain, rule, 0f, 0f, 0f));
     }
 
     [Fact]
@@ -48,18 +48,18 @@ public class RegrowRegionPassesTests
         PrivateMember.Set(rule, "inForest", 1);
         PrivateMember.Set(rule, "forestTresholdMin", -10f);
         PrivateMember.Set(rule, "forestTresholdMax", 10f);
-        Assert.True(RegrowFixtures.Check("PassesForest", rule, 0f, 0f, 0f));
+        Assert.True(RegrowFixtures.Check("PassesForest", RegrowFixtures.Terrain, rule, 0f, 0f, 0f));
         PrivateMember.Set(rule, "forestTresholdMin", 100f);
         PrivateMember.Set(rule, "forestTresholdMax", 200f);
-        Assert.False(RegrowFixtures.Check("PassesForest", rule, 0f, 0f, 0f));
+        Assert.False(RegrowFixtures.Check("PassesForest", RegrowFixtures.Terrain, rule, 0f, 0f, 0f));
     }
 
     [Fact]
     public void RegionChecksFailWhenEitherPartFails()
     {
         object rule = RegrowFixtures.OpenRule();
-        Assert.True(RegrowFixtures.Check("PassesRegionChecks", rule, 3f, 0f, 4f));
+        Assert.True(RegrowFixtures.Check("PassesRegionChecks", RegrowFixtures.Terrain, rule, 3f, 0f, 4f));
         PrivateMember.Set(rule, "minDistanceFromCenter", 10f);
-        Assert.False(RegrowFixtures.Check("PassesRegionChecks", rule, 3f, 0f, 4f));
+        Assert.False(RegrowFixtures.Check("PassesRegionChecks", RegrowFixtures.Terrain, rule, 3f, 0f, 4f));
     }
 }
