@@ -8,63 +8,16 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// The data names the player's mods keep on objects (ModKeys): found among the string literals of the DLLs in the
-/// settings' plugins folders, given to ZdoKeys (the game's own names still first, a ZDOID's "_u" and "_i" too), kept
-/// in the data folder until a DLL changes. Runs alone, in a pretend home (the data folder's environment variables point
-/// at a temporary folder, put back afterwards), without the player's own Valheim and profiles.
+/// settings' plugins folders, given to ZdoKeys (the game's own names still first, a ZDOID's "_u" and "_i" too), kept in the
+/// data folder until a DLL changes.
 /// </summary>
 [Collection("DataDir")]
-public sealed class ModKeysTests : IDisposable
+public sealed class ModKeysTests : PretendHomeTestBase
 {
-    private static readonly string[] Vars = ["HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "LOCALAPPDATA"];
-    private readonly Dictionary<string, string?> _old = Vars.ToDictionary(v => v, Environment.GetEnvironmentVariable);
-    private readonly bool _defaults = LocalGame.SearchDefaultPlaces;
-    private readonly string _home = Path.Combine(Path.GetTempPath(), "vwe-modkeys-" + Guid.NewGuid().ToString("N")[..8]);
-
-    public ModKeysTests()
-    {
-        Directory.CreateDirectory(_home);
-        Environment.SetEnvironmentVariable("HOME", _home);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(_home, ".config"));
-        Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(_home, ".local", "share"));
-        Environment.SetEnvironmentVariable("LOCALAPPDATA", Path.Combine(_home, "AppData", "Local"));
-        // Only the folders a test gives.
-        LocalGame.SearchDefaultPlaces = false;
-    }
-
     /// <summary>
-    /// Forgets the mods' names, puts the environment and the default places' search back, and deletes the pretend home.
+    /// Forgets the mods' names given to ZdoKeys, before the environment is put back.
     /// </summary>
-    public void Dispose()
-    {
-        ZdoKeys.UseMods(new Dictionary<int, string>());
-        foreach (var (k, v) in _old)
-        {
-            Environment.SetEnvironmentVariable(k, v);
-        }
-        LocalGame.SearchDefaultPlaces = _defaults;
-        try
-        {
-            Directory.Delete(_home, true);
-        }
-        catch (IOException)
-        {
-        }
-    }
-
-    /// <summary>
-    /// A profile's BepInEx plugins folder in the pretend home (made).
-    /// </summary>
-    private string Plugins(string profile)
-    {
-        string plugins = Path.Combine(_home, profile, "BepInEx", "plugins");
-        Directory.CreateDirectory(plugins);
-        return plugins;
-    }
-
-    /// <summary>
-    /// Settings that name these profiles' BepInEx folders.
-    /// </summary>
-    private AppSettings Settings(params string[] profiles) => new() { BepInExFolders = [.. profiles.Select(p => Path.Combine(_home, p, "BepInEx"))] };
+    protected override void ForgetMods() => ZdoKeys.UseMods(new Dictionary<int, string>());
 
     /// <summary>The kept file.</summary>
     private static string Kept => Path.Combine(AppSettings.UserDataDir, "mod-zdo-keys.json");

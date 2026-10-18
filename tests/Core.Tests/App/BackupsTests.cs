@@ -23,13 +23,34 @@ public class BackupsTests
         Assert.Equal("editor", b.Kind);
     }
 
+    // The folder beside the world cannot be read: no backups (it threw).
+    [Fact]
+    public void AFolderThatCannotBeReadHasNoBackups()
+    {
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            return;
+        }
+        string parent = Path.Combine(Path.GetTempPath(), "vwe-backups-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(Path.Combine(parent, "World1"));
+        File.SetUnixFileMode(parent, UnixFileMode.UserWrite);
+        try
+        {
+            Assert.Empty(TerrainEditor.App.Backups.Find(Path.Combine(parent, "World1") + "/"));
+        }
+        finally
+        {
+            File.SetUnixFileMode(parent, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            Directory.Delete(parent, true);
+        }
+    }
+
     [Fact]
     public void ADeletedObjectComesBackFromTheBackupWithItsData()
     {
         using var w = new TempWorld();
-        WorldSave world = w.Load();
+        var (world, (id, prefab, position, rotation, scale)) = TestWorldTree.Open(w);
         var edits = new EditStore(world);
-        var (id, prefab, position, rotation, scale) = world.Objects.First(o => o.Prefab == Fixtures.Hash("Beech1"));
         byte[] original = world.ObjectBytes(id);
         edits.SetDeleted([id], true);
         string copy = w.Dir.TrimEnd(Path.DirectorySeparatorChar) + "_backup_auto-20261001100000";

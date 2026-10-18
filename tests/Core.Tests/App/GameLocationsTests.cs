@@ -33,6 +33,18 @@ public class GameLocationsTests
     }
 
     [Fact]
+    public void TheOrderIsKeptWhileTheLogsAreUnchanged()
+    {
+        (int, int)[] order = [(3, 0), (27, 25)];
+        string line = GameLocations.OrderLine("Player.log:10:5", order);
+        Assert.Equal(order, GameLocations.KeptOrder(line, "Player.log:10:5"));
+        // The game ran since: read again.
+        Assert.Null(GameLocations.KeptOrder(line, "Player.log:11:6"));
+        Assert.Null(GameLocations.KeptOrder(null, ""));
+        Assert.Null(GameLocations.KeptOrder("x\tnot/an/order", "x"));
+    }
+
+    [Fact]
     public void TheRulesAreReadFromTheMainSceneAndKept()
     {
         var order = GameLocations.ListOrder().Order;
@@ -43,18 +55,18 @@ public class GameLocationsTests
 
         var rules = GameLocations.Load(bundles, cache)!;
         // ZoneSystem's own (the one with most locations), the lists in the order the game adds them, the alt biome's.
-        Assert.Equal(2 + order.Sum(o => o.Locations) + 1, rules.locations.Count);
-        var temple = rules.locations[0];
+        Assert.Equal(2 + order.Sum(o => o.Locations) + 1, rules.Locations.Count);
+        var temple = rules.Locations[0];
         // Named by the manifest from its asset id; the other by m_prefabName.
-        Assert.Equal("StartTemple", temple.prefab);
-        Assert.Equal("Crypt_old", rules.locations[1].prefab);
-        Assert.Equal((1, 1, 1, 12.5f, "g"), (temple.prioritized, temple.enable, temple.quantity, temple.exteriorRadius, temple.group));
-        Assert.Equal($"L{order[0].Locations}x{order[0].Vegetation}_0", rules.locations[2].name);
-        var ice = rules.locations[^1];
-        Assert.Equal(("IceCave", "DeepNorth_Ice"), (ice.name, ice.altBiome));
-        Assert.Null(temple.altBiome);
-        var alt = Assert.Single(rules.altBiomes);
-        Assert.Equal(["Crypt"], alt.blockLocationNames);
+        Assert.Equal("StartTemple", temple.Prefab);
+        Assert.Equal("Crypt_old", rules.Locations[1].Prefab);
+        Assert.Equal((1, 1, 1, 12.5f, "g"), (temple.Prioritized, temple.Enable, temple.Quantity, temple.ExteriorRadius, temple.Group));
+        Assert.Equal($"L{order[0].Locations}x{order[0].Vegetation}_0", rules.Locations[2].Name);
+        var ice = rules.Locations[^1];
+        Assert.Equal(("IceCave", "DeepNorth_Ice"), (ice.Name, ice.AltBiome));
+        Assert.Null(temple.AltBiome);
+        var alt = Assert.Single(rules.AltBiomes);
+        Assert.Equal(["Crypt"], alt.BlockLocationNames);
         Assert.True(File.Exists(cache));
 
         // Read again: from the kept file, the same rules.
@@ -63,7 +75,7 @@ public class GameLocationsTests
         File.WriteAllText(cache, "other\n{}");
         Assert.Equal(rules.ToJson(), GameLocations.Load(bundles, cache)!.ToJson());
         // Not kept when no file is given.
-        Assert.Equal(rules.locations.Count, GameLocations.Load(bundles, null)!.locations.Count);
+        Assert.Equal(rules.Locations.Count, GameLocations.Load(bundles, null)!.Locations.Count);
     }
 
     [Fact]

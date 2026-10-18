@@ -44,8 +44,8 @@ public class DungeonRoomsReadingTests
         Assert.Equal(entrance.Hash, Assert.Single(read.Rooms).Hash);
         var bad = all.Single(d => d.Thing.Position == damaged);
         Assert.Empty(bad.Rooms);
-        Assert.StartsWith("The dungeon's room list is damaged", bad.Problem);
-        Assert.Equal(NotLaidOut, all.Single(d => d.Thing.Position == lost).Problem);
+        Assert.StartsWith("The dungeon's room list is damaged", bad.Problem?.English);
+        Assert.Equal(NotLaidOut, all.Single(d => d.Thing.Position == lost).Problem?.English);
     }
 
     [AvaloniaFact]
@@ -53,7 +53,7 @@ public class DungeonRoomsReadingTests
     {
         // A new object, not in the world: nothing to read.
         var made = TestScenes.FlatScene(new WorldScene.Thing(-1, Cave, new Vector3(0, 5000, 0), Vector3.Zero, 1, false));
-        Assert.Equal(NotLaidOut, Assert.Single(DungeonRooms.Of(made)).Problem);
+        Assert.Equal(NotLaidOut, Assert.Single(DungeonRooms.Of(made)).Problem?.English);
         // The world's first object taken for a dungeon: its data has no room list.
         string dir = Fixtures.CopyFixture();
         try
@@ -64,7 +64,7 @@ public class DungeonRoomsReadingTests
             {
                 scene.Things.Add(new WorldScene.Thing(0, Cave, new Vector3(0, 5000, 0), Vector3.Zero, 1, false));
             }
-            Assert.Equal(NotLaidOut, Assert.Single(DungeonRooms.Of(scene)).Problem);
+            Assert.Equal(NotLaidOut, Assert.Single(DungeonRooms.Of(scene)).Problem?.English);
         }
         finally
         {

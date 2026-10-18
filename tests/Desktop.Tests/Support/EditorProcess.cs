@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.Json;
 using WorldEditor.Tests;
 using Xunit;
 
@@ -11,7 +10,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// renderer); without one the tests skip. Its settings and memory go to a test folder (--data), never the user's. Run
 /// only these: --filter-trait Category=Visual; skip them: --filter-not-trait Category=Visual.
 /// </summary>
-public class EditorProcess : IDisposable
+public partial class EditorProcess : IDisposable
 {
     private readonly Process? _p;
     private readonly Lock _sendLock = new();
@@ -31,6 +30,12 @@ public class EditorProcess : IDisposable
     private static readonly TimeSpan PictureWait = TimeSpan.FromMinutes(Environment.GetEnvironmentVariable("VWE_COVERAGE") == "1" ? 8 : 3);
 
     public string? Why { get; }
+
+    /// <summary>How long Dispose waits for the editor to quit before killing it.</summary>
+    public TimeSpan QuitWait { get; init; } = TimeSpan.FromSeconds(15);
+
+    /// <summary>The editor's exit code once it has ended (137 when killed), else null.</summary>
+    public int? ExitCode => _p is { HasExited: true } ? _p.ExitCode : null;
     public bool Available => _p != null;
     // The editor's data folder (--data): its settings, log...
     public string Data { get; } = Path.Combine(Path.GetTempPath(), "vwe-visual-" + Guid.NewGuid().ToString("N")[..8]);
@@ -71,73 +76,10 @@ public class EditorProcess : IDisposable
         if (first != "@@ ready")
         {
             Why = "the editor did not start: " + first;
-            _p.Kill();
+            // Ended before its data folder is deleted (Dispose), which it may still be writing.
+            _p.Kill(entireProcessTree: true);
+            Assert.True(_p.WaitForExit(15000), "the editor did not end within 15 s of being killed");
             _p = null;
-        }
-    }
-
-    /// <summary>
-    /// The next answer line ("@@ ..."), skipping the editor's other output.
-    /// </summary>
-    private string? Next(TimeSpan timeout)
-    {
-        var watch = Stopwatch.StartNew();
-        while (watch.Elapsed < timeout)
-        {
-            var read = _reading ??= _p!.StandardOutput.ReadLineAsync();
-            if (!read.Wait(timeout - watch.Elapsed))
-            {
-                return null;
-            }
-            _reading = null;
-            if (read.Result == null)
-            {
-                return null;
-            }
-            if (read.Result.StartsWith("@@ ", StringComparison.Ordinal))
-            {
-                return read.Result;
-            }
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Sends a command; its answer's JSON (an error fails the test).
-    /// </summary>
-    public JsonElement Send(string command)
-    {
-        string answer = Answer(command);
-        Assert.True(answer.StartsWith("@@ ok ", StringComparison.Ordinal), $"{command}: {answer}");
-        return JsonDocument.Parse(answer["@@ ok ".Length..]).RootElement.Clone();
-    }
-
-    /// <summary>
-    /// Sends a command; its answer line, "@@ ok ..." or the editor's error (only no answer at all fails the test).
-    /// </summary>
-    public string Answer(string command)
-    {
-        lock (_sendLock)
-        {
-            Assert.False(_stuck, $"{command}: the editor stopped answering (an earlier command's answer never came)");
-            for (; _owed > 0; _owed--)
-            {
-                if (Next(PictureWait + TimeSpan.FromMinutes(1)) == null)
-                {
-                    _stuck = true;
-                    Assert.Fail($"{command}: the editor stopped answering (an earlier command's answer never came)");
-                }
-            }
-            _p!.StandardInput.WriteLine(command);
-            _p.StandardInput.Flush();
-            // Longer than the editor's own wait for a picture (Driver.PictureWait), so its error comes back.
-            string? answer = Next(PictureWait + TimeSpan.FromMinutes(1));
-            if (answer == null)
-            {
-                _owed++;
-            }
-            Assert.True(answer != null, $"{command}: no answer from the editor");
-            return answer!;
         }
     }
 
@@ -146,25 +88,19 @@ public class EditorProcess : IDisposable
     {
         if (_p != null)
         {
-            try
+            // An editor that ended before being told to quit failed: telling it then throws, and fails the clean-up.
+            _p.StandardInput.WriteLine("quit");
+            _p.StandardInput.Flush();
+            if (!_p.WaitForExit(QuitWait))
             {
-                _p.StandardInput.WriteLine("quit");
-                _p.StandardInput.Flush();
-                if (!_p.WaitForExit(15000))
-                {
-                    _p.Kill();
-                }
-            }
-            catch
-            {
+                // Ended before its data folder is deleted, which it may still be writing.
+                _p.Kill(entireProcessTree: true);
+                Assert.True(_p.WaitForExit(15000), "the editor did not end within 15 s of being killed");
             }
         }
-        try
+        if (Directory.Exists(Data))
         {
             Directory.Delete(Data, true);
-        }
-        catch
-        {
         }
         GC.SuppressFinalize(this);
     }

@@ -170,6 +170,23 @@ public class ObjectLinksTests
         Assert.Equal([Root, Swivel], ship.Ids.Order());
     }
 
+    [Fact]
+    public void AnIdUnderAnotherRulesKeyIsNotWhatAPartHangsOn()
+    {
+        // Another mod's rule whose objects happen to hold the ship's id under their own key.
+        var other = ExampleMod.Rule with { Name = "cart", IdKey = StableHash.Of("OtherMod_Id") };
+        var ship = Ship(new LinkIndex.Member(7, Vector3.Zero, Vector3.Zero, new ObjectLink(other, Root, [0, 0], Vector3.Zero, null, null)),
+            new LinkIndex.Member(8, Vector3.Zero, Vector3.Zero, new ObjectLink(other, 0, [0, Swivel], Vector3.One, null, null)));
+
+        Assert.Equal(1, ship.RootOf(2));
+        Assert.Equal(1, ship.Holder(ExampleMod.Rule.IdKey, Root)!.Id);
+        Assert.Equal(7, ship.Holder(other.IdKey, Root)!.Id);
+        // The cart's part names an id only the ship's rule holds: it hangs on nothing, and stays where it is stored.
+        Assert.Equal(8, ship.RootOf(8));
+        Assert.Equal((Vector3.Zero, Vector3.Zero), ship.Pose(8));
+        Assert.Equal([1, 2, 3, 4, 5, 6], ship.Group(1).Order());
+    }
+
     // Over a world: the saved parts (not the deleted ones, whose ids stay taken) and the session's, a moved root
     // drawing its parts where it went.
     [Fact]

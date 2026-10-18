@@ -6,7 +6,7 @@ namespace TerrainEditor.Desktop;
 /// Finding what is under the mouse: a ray from the camera through the pointer, against the objects' boxes and the
 /// ground. All in view space (see WorldScene).
 /// </summary>
-public static class Picking
+public static partial class Picking
 {
     /// <summary>
     /// The ray through a point of the view (nx, ny from -1 to 1, y up) for the camera's view × projection.
@@ -29,13 +29,18 @@ public static class Picking
     /// <param name="d">The ray's direction.</param>
     /// <param name="min">The box's lowest corner.</param>
     /// <param name="max">The box's highest corner.</param>
-    public static float? HitBox(Vector3 o, Vector3 d, Vector3 min, Vector3 max)
+    /// <param name="maxY">
+    /// The height above which the box is cut away, as the Workshop's cut hides what is drawn there: a ray entering
+    /// above it does not meet the box (the cut leaves it open, with no face at the cut, and its inside faces are not
+    /// drawn).
+    /// </param>
+    public static float? HitBox(Vector3 o, Vector3 d, Vector3 min, Vector3 max, float maxY = float.MaxValue)
     {
         float t0 = 0, t1 = float.MaxValue;
         for (int a = 0; a < 3; a++)
         {
-            float oa = a == 0 ? o.X : a == 1 ? o.Y : o.Z, da = a == 0 ? d.X : a == 1 ? d.Y : d.Z;
-            float lo = a == 0 ? min.X : a == 1 ? min.Y : min.Z, hi = a == 0 ? max.X : a == 1 ? max.Y : max.Z;
+            float oa = Component(o, a), da = Component(d, a);
+            float lo = Component(min, a), hi = Component(max, a);
             if (MathF.Abs(da) < 1e-9f)
             {
                 if (oa < lo || oa > hi)
@@ -56,77 +61,11 @@ public static class Picking
                 return null;
             }
         }
-        return t0;
+        return o.Y + d.Y * t0 > maxY ? null : t0;
     }
 
-    /// <summary>
-    /// Where the ray meets a triangle (distance along it, at least 0.1 mm), or null; Möller–Trumbore, both sides
-    /// (meshes are picked from whichever side they are seen, and the game's rooms from inside and out).
-    /// </summary>
-    public static float? HitTriangle(Vector3 o, Vector3 d, Vector3 a, Vector3 b, Vector3 c)
-    {
-        Vector3 e1 = b - a, e2 = c - a, p = Vector3.Cross(d, e2);
-        float det = Vector3.Dot(e1, p);
-        if (MathF.Abs(det) < 1e-9f)
-        {
-            return null;
-        }
-        float inv = 1f / det;
-        Vector3 s = o - a;
-        float u = Vector3.Dot(s, p) * inv;
-        if (u is < 0 or > 1)
-        {
-            return null;
-        }
-        var q = Vector3.Cross(s, e1);
-        float v = Vector3.Dot(d, q) * inv;
-        if (v < 0 || u + v > 1)
-        {
-            return null;
-        }
-        float t = Vector3.Dot(e2, q) * inv;
-        return t > 1e-4f ? t : null;
-    }
-
-    /// <summary>
-    /// How far along the ray (d normalised) a mesh placed by a matrix is first met, or null: the ray is taken into
-    /// the mesh's own frame, tried against its box, then against every triangle.
-    /// </summary>
-    /// <param name="o">The ray's origin.</param>
-    /// <param name="d">The ray's direction, normalised.</param>
-    /// <param name="positions">The mesh's vertex positions, three floats each.</param>
-    /// <param name="indices">The triangles to try, three vertex indices each.</param>
-    /// <param name="bounds">The mesh's box, in its own frame.</param>
-    /// <param name="m">Where the mesh is placed (its frame into the ray's).</param>
-    public static float? HitMesh(Vector3 o, Vector3 d, float[] positions, uint[] indices, (Vector3 Min, Vector3 Max) bounds, Matrix4x4 m)
-    {
-        if (!Matrix4x4.Invert(m, out var inv))
-        {
-            return null;
-        }
-        var lo = Vector3.Transform(o, inv);
-        var ld = Vector3.TransformNormal(d, inv);
-        if (HitBox(lo, ld, bounds.Min - new Vector3(0.01f), bounds.Max + new Vector3(0.01f)) == null)
-        {
-            return null;
-        }
-        float best = float.MaxValue;
-        for (int i = 0; i + 2 < indices.Length; i += 3)
-        {
-            if (HitTriangle(lo, ld, At(indices[i]), At(indices[i + 1]), At(indices[i + 2])) is float t && t < best)
-            {
-                best = t;
-            }
-        }
-        if (best == float.MaxValue)
-        {
-            return null;
-        }
-        // Back in the ray's frame: the distance there (the mesh's frame may be scaled).
-        return Vector3.Distance(o, Vector3.Transform(lo + ld * best, m));
-
-        Vector3 At(uint i) => new(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-    }
+    /// <summary>One axis of a vector: 0 for X, 1 for Y, anything else for Z.</summary>
+    internal static float Component(Vector3 v, int axis) => axis == 0 ? v.X : axis == 1 ? v.Y : v.Z;
 
     /// <summary>The box around a box moved by a matrix (its eight corners).</summary>
     public static (Vector3 Min, Vector3 Max) Transform(Vector3 min, Vector3 max, Matrix4x4 m)
@@ -139,104 +78,5 @@ public static class Picking
             hi = Vector3.Max(hi, c);
         }
         return (lo, hi);
-    }
-
-    /// <summary>
-    /// Where the ray meets the ground (distance), stepping half a metre then narrowing down, or null. Only the area's
-    /// ground: outside it, where HeightAt is very low, the ray never hits (it hit 1000 m down past the edge, a point
-    /// the tools then took).
-    /// </summary>
-    /// <param name="s">The scene whose ground to test.</param>
-    /// <param name="o">The ray's origin (view space).</param>
-    /// <param name="d">The ray's unit direction.</param>
-    /// <param name="maxDist">How far along the ray to look, in metres.</param>
-    public static float? HitGround(WorldScene s, Vector3 o, Vector3 d, float maxDist = 4000)
-    {
-        // The height map is crossed wherever it is; where a mod's extension cuts the ground away, the crossing is
-        // no hit (the ray goes on, into the hole), and the next crossing counts.
-        float Below(float t)
-        {
-            var p = o + d * t;
-            return Inside(s, p.X, p.Z) ? p.Y - HeightAt(s, p.X, p.Z) : float.PositiveInfinity;
-        }
-        float prev = 0;
-        float above = Below(0);
-        for (float t = 0.5f; t <= maxDist; t += 0.5f)
-        {
-            float b = Below(t);
-            if (b <= 0 && above > 0)
-            {
-                float lo = prev, hi = t;
-                for (int i = 0; i < 20; i++)
-                {
-                    float mid = (lo + hi) / 2;
-                    if (Below(mid) > 0)
-                    {
-                        lo = mid;
-                    }
-                    else
-                    {
-                        hi = mid;
-                    }
-                }
-                float hit = (lo + hi) / 2;
-                var at = o + d * hit;
-                if (!CutAt(s, at.X, at.Z))
-                {
-                    return hit;
-                }
-            }
-            prev = t;
-            above = b;
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Whether the ground is cut away (left undrawn by a mod's extension) under a view-space point (x, z): the cut
-    /// values blended over the terrain's triangle there (each grid cell is two, split from its east to its south
-    /// point, as BuildTerrain makes them), past a half, as the terrain shader leaves them out.
-    /// </summary>
-    public static bool CutAt(WorldScene s, float x, float z)
-    {
-        if (s.Cut.Length != s.W * s.H)
-        {
-            return false;
-        }
-        float gx = x + (s.W - 1) / 2f, gz = -z + (s.H - 1) / 2f;
-        if (gx < 0 || gz < 0 || gx > s.W - 1 || gz > s.H - 1)
-        {
-            return false;
-        }
-        int x0 = Math.Min((int)gx, s.W - 2), z0 = Math.Min((int)gz, s.H - 2);
-        float tx = gx - x0, tz = gz - z0;
-        float C(int a, int b) => s.Cut[b * s.W + a];
-        float value = tx + tz <= 1
-            ? C(x0, z0) * (1 - tx - tz) + C(x0 + 1, z0) * tx + C(x0, z0 + 1) * tz
-            : C(x0 + 1, z0 + 1) * (tx + tz - 1) + C(x0 + 1, z0) * (1 - tz) + C(x0, z0 + 1) * (1 - tx);
-        return value > 0.5f;
-    }
-
-    /// <summary>Whether a view-space point (x, z) is over the area's ground.</summary>
-    public static bool Inside(WorldScene s, float x, float z)
-    {
-        float gx = x + (s.W - 1) / 2f, gz = -z + (s.H - 1) / 2f;
-        return gx >= 0 && gz >= 0 && gx <= s.W - 1 && gz <= s.H - 1;
-    }
-
-    /// <summary>
-    /// The ground's height under a view-space point (between the grid points), or -1000 outside the area.
-    /// </summary>
-    public static float HeightAt(WorldScene s, float x, float z)
-    {
-        float gx = x + (s.W - 1) / 2f, gz = -z + (s.H - 1) / 2f;
-        if (gx < 0 || gz < 0 || gx > s.W - 1 || gz > s.H - 1)
-        {
-            return -1000;
-        }
-        int x0 = Math.Min((int)gx, s.W - 2), z0 = Math.Min((int)gz, s.H - 2);
-        float tx = gx - x0, tz = gz - z0;
-        float H(int a, int b) => s.Heights[b * s.W + a];
-        return (H(x0, z0) * (1 - tx) + H(x0 + 1, z0) * tx) * (1 - tz) + (H(x0, z0 + 1) * (1 - tx) + H(x0 + 1, z0 + 1) * tx) * tz;
     }
 }

@@ -41,7 +41,7 @@ public class MaskTests
         {
             s.StrokeStep(64, 64, 0.1f);
         }
-        Assert.Equal("", s.EndStroke());
+        Assert.Equal("", s.EndStroke().Shown);
         Assert.True(H(s, 67, 64) > 30);
         Assert.Equal(30, H(s, 61, 64), 4);
     }
@@ -71,7 +71,7 @@ public class MaskTests
         s.Mask.HeightMin = 100;
         s.BeginStroke(BrushTool.Raise, 64, 64);
         s.StrokeStep(64, 64, 0.1f);
-        Assert.StartsWith("Nothing changed: the Mask", s.EndStroke());
+        Assert.StartsWith("Nothing changed: the Mask", s.EndStroke().Shown);
     }
 
     [Fact]
@@ -97,6 +97,21 @@ public class MaskTests
     }
 
     [Fact]
+    public void TheBorderSlopeIsMeasuredOverItsOwnStep()
+    {
+        // A 45° ramp west to east: the border points have one neighbour 1 m away, not 2 m.
+        var g = new Ground(129, 129, 0, 0, 2);
+        for (int p = 0; p < g.Base.Length; p++)
+        {
+            g.Base[p] = p % g.W;
+        }
+        var f = new Mask { On = true, SlopeMin = 40 }.For(g, new int[g.Base.Length])!;
+        Assert.Equal(1, f(64 * g.W));
+        Assert.Equal(1, f(64 * g.W + 64));
+        Assert.Equal(1, f(65 * g.W - 1));
+    }
+
+    [Fact]
     public void ShapesPathsAndAreasFollowTheMaskToo()
     {
         var s = Area();
@@ -108,7 +123,11 @@ public class MaskTests
         var a = new AreaTool { Soft = 0 };
         a.Points.Add(new Vector2(50, 50));
         a.Points.Add(new Vector2(80, 80));
-        s.EditGround("a", g => a.Apply(g, s.Brush, AreaTool.GroundAction.Raise, 0, 1, new float[4], s.MaskNow()));
+        s.EditGround("a", g =>
+        {
+            var (t, rect, _) = a.Apply(g, s.Brush, AreaTool.GroundAction.Raise, 0, 1, new float[4], s.MaskNow());
+            return (t, rect);
+        });
         Assert.Equal(31, H(s, 60, 60), 3);
         Assert.Equal(30, H(s, 70, 60), 3);
     }

@@ -5,8 +5,8 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// The world generator's rules for older worlds (version 0: mountains kept further from the middle; version 1: swamps
-/// further out), the main menu's world (mountains and black forest only), and its small helpers: heights and normals
-/// at a point given every way the game gives it, and the edges' gradients.
+/// further out), the main menu's world (mountains and black forest only), and its small helpers: heights at a point
+/// given every way the game gives it, and the edges' gradients.
 /// </summary>
 public class WorldGeneratorTests
 {
@@ -16,7 +16,7 @@ public class WorldGeneratorTests
     /// A generator for the seed, of a world generator version, or the main menu's world.
     /// </summary>
     private static WorldGenerator Generator(int version = 2, bool menu = false) =>
-        WorldGenerator.Create(new World { m_seed = Seed, m_worldGenVersion = version, m_menu = menu });
+        WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = version, Menu = menu });
 
     /// <summary>
     /// Points on rings round the world's middle, from r0 up to r1 (step metres apart), at n angles.
@@ -63,26 +63,14 @@ public class WorldGeneratorTests
     }
 
     [Fact]
-    public void HeightsAndNormalsAreTheSameHoweverThePointIsGiven()
+    public void HeightsAreTheSameHoweverThePointIsGiven()
     {
         var g = Generator();
         float h = g.GetHeight(523, -311);
         Assert.Equal(h, g.GetHeight(new Vector3(523, 5, -311)));
         Assert.Equal(h, g.GetHeight(new Vector2(523, -311)));
-        var p = new Vector2(523, -311);
-        var n = g.GetNormal(p);
-        Assert.Equal(1, MathF.Sqrt(n.x * n.x + n.y * n.y + n.z * n.z), 4);
-        Assert.True(n.y > 0.9f);
-        Assert.Equal(n, g.GetNormal(523, -311));
-        // GetNormal ignores its radius (as the game's does), so the average over rings is the same normal.
-        Assert.Equal(n, g.GetAverageNormal(p, 1));
-        var avg = g.GetAverageNormal(p, 6);
-        Assert.Equal(n.x, avg.x, 5);
-        Assert.Equal(n.y, avg.y, 5);
-        Assert.Equal(n.z, avg.z, 5);
         // A biome the generator has no shape for: flat at 0.
         Assert.Equal(0, g.GetBiomeHeight(Heightmap.Biome.None, 100, 100, out _));
-        Assert.Equal(Heightmap.BiomeArea.Median, g.GetBiomeArea(new Vector3(1, 2, 3)));
     }
 
     [Fact]

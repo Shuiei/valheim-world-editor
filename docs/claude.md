@@ -29,6 +29,7 @@ In **Settings** (on the start page), section **Claude**:
 | Control | What it does |
 |---|---|
 | **Allow Claude to connect** | On: the editor takes Claude's requests, on this computer only, from callers with the token. Off: nothing can connect. |
+| **Claude may run scripts** | On: Claude may run scripts (`run_script`, the Script tool's Run). A script is a program with your rights on this computer, your files included, as any program you run; the process it runs in is not a sandbox. Off (the default): scripts from Claude are refused; its other tools still work. |
 | **Port** | The port Claude connects to on `127.0.0.1` (5731 at first; 1024 to 65535). Change it if another program uses 5731. |
 | **New token** | Makes another token. Once you **Save**, the old one stops working: add the editor to Claude again with the new command. |
 | Claude Code command + **Copy** | The command that adds the editor to Claude Code. It holds the token: keep it to yourself. |
@@ -84,7 +85,7 @@ The editor must be running for Claude to reach it.
 
 | Changing | |
 |---|---|
-| `run_script` | A C# script on the area, as the [Script tool](scripting.md) runs it (`script_reference` gives Claude the API): ground, paint, objects; a dry run says what it would change |
+| `run_script` | A C# script on the area, as the [Script tool](scripting.md) runs it (`script_reference` gives Claude the API): ground, paint, objects; a dry run says what it would change. Needs your leave, once: **Settings → Claude → Claude may run scripts** (off by default) |
 | `flatten`, `paint_area`, `road`, `forest` | Level a rectangle, paint ground, lay a road through points, plant trees or rocks |
 | `shape_ground` | The Area tool's ground actions over a rectangle: smooth, naturalize, erode, restore, raise, lower, paint |
 | `stamp`, `import_heightmap` | Press a stamp (Mountain, Mesa, Crater rim, Dunes, Rocky ground, your own) into the ground; put a heightmap picture into a rectangle |
@@ -109,8 +110,8 @@ The editor must be running for Claude to reach it.
 
 Each of these changes is one step of the history, and it stays pending: nothing reaches the world's files or the
 game until you **Save to world** or **Apply live**, and the Workshop's building becomes a blueprint when you
-**Save blueprint**. (A dungeon generated on the plot is also kept in your library as its own blueprint, as the
-Workshop's **Generate dungeon** does.)
+**Save blueprint**. (A dungeon Claude generates on the plot is not kept in your library: it is part of the plot's
+building, pending like the rest. The Workshop's own **Generate dungeon** also keeps one as its own blueprint.)
 
 ## How it works
 
@@ -135,6 +136,12 @@ Workshop's **Generate dungeon** does.)
 - **Pending only.** Claude never saves, applies live, discards, reloads, writes or deletes your files, or
   connects to a live game: those controls are refused to `set_control`, and no tool does them. `open_world` is
   refused while the open world or the Workshop has changes not saved.
+- **Scripts need your leave.** A script is a program with your rights on this computer, your files included,
+  like any program you run; the process it runs in is not a sandbox. `run_script` (dry runs too) and the Script
+  tool's Run through `set_control` are refused until you turn on **Settings → Claude → Claude may run scripts**,
+  a decision you take once, as for a document's macros. Claude's other tools (`flatten`, `road`, `forest`…) run
+  the editor's own scripts and need no leave. A script you load into the Script tool from a file is your own
+  choice, as before.
 - **Live with Auto on: nothing.** While the open world is live with **Auto** on, Claude changes nothing (each
   change would reach the game at once) and tells you to turn Auto off; Claude's changes then wait for **Apply
   live**.

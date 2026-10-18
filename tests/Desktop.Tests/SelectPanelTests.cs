@@ -12,25 +12,59 @@ namespace TerrainEditor.Desktop.Tests;
 /// eyedropper and the saved selections with nobody told, and a selection that cannot be kept said so.
 /// </summary>
 [Collection("Saved selections")]
-public sealed class SelectPanelTests : IDisposable
+public sealed class SelectPanelTests : SavedSelectionsFolder
 {
-    private readonly string? _old = SavedSelections.PathOverride;
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-panel-" + Guid.NewGuid().ToString("N")[..8]);
-
-    public SelectPanelTests()
-    {
-        Directory.CreateDirectory(_dir);
-        SavedSelections.PathOverride = Path.Combine(_dir, "selections.json");
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        SavedSelections.PathOverride = _old;
-        Directory.Delete(_dir, true);
-    }
-
     private static readonly int Beech = StableHash.Of("Beech1"), Wall = StableHash.Of("wood_wall_half");
+
+    [AvaloniaFact]
+    public void MoveThereMovesOnlyAlongTheAxesChanged()
+    {
+        // A tree on the ground whose place and turn the boxes cannot show exactly (a centimetre, a tenth of a degree).
+        var w = new MainWindow(load: false) { Width = 1200, Height = 800 };
+        w.Show();
+        var at = new Vector3(20.004f, 30, 40.006f);
+        var s = TestScenes.Flat(2, new WorldScene.Thing(10, Beech, at, new Vector3(0, 33.33f, 0), 1, false));
+        w.View.Show(s.Scene, null);
+        w.Edit(s);
+        w.Tools.ChooseSelect();
+        w.View.Select([0]);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        var p = w.SelectPanel;
+        Assert.Equal(20m, p.XBox.Value);
+        Assert.Equal(33.3m, p.TurnBox.Value);
+        // Nothing changed: Move there is not a move.
+        p.ApplyButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Assert.False(s.CanUndo);
+        Assert.Single(s.Scene.Things);
+        // Only Y changed: the tree is lifted, its exact place and turn kept.
+        p.YBox.Value = 32;
+        p.ApplyButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Assert.True(s.CanUndo);
+        var moved = s.Scene.Things[^1];
+        Assert.Equal(20.004f, moved.Position.X, 4);
+        Assert.Equal(32, moved.Position.Y, 4);
+        Assert.Equal(40.006f, moved.Position.Z, 4);
+        Assert.Equal(33.33f, moved.Rotation.Y, 3);
+        // A typed place is reached exactly.
+        p.XBox.Value = 25.5m;
+        p.ApplyButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        moved = s.Scene.Things[^1];
+        Assert.Equal(25.5f, moved.Position.X, 4);
+        Assert.Equal(32, moved.Position.Y, 4);
+        Assert.Equal(40.006f, moved.Position.Z, 4);
+        // A lift from the keys not committed yet when Y is typed: the typed height is reached, not the lift plus the
+        // difference from the height shown before it.
+        w.View.SelectTool.Lift(1);
+        Assert.True(w.View.SelectTool.Moving);
+        p.YBox.Value = 40;
+        p.ApplyButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Assert.False(w.View.SelectTool.Moving);
+        moved = s.Scene.Things[^1];
+        Assert.Equal(25.5f, moved.Position.X, 4);
+        Assert.Equal(40, moved.Position.Y, 4);
+        Assert.Equal(40.006f, moved.Position.Z, 4);
+        w.CloseWithoutAsking();
+    }
 
     /// <summary>
     /// A panel for a view of its own, given two trees and a wall, the first two selected, in world "Here"; nobody
@@ -126,8 +160,8 @@ public sealed class SelectPanelTests : IDisposable
         await p.Keep();
         Assert.Equal(0, p.SavedBox.ItemCount);
         var messages = new List<string>();
-        p.Message += messages.Add;
+        p.Message += m => messages.Add(m.Shown);
         await p.Keep();
-        Assert.Equal("Could not keep the selection: the editor's data folder cannot be written.", Assert.Single(messages));
+        Assert.Equal("Could not keep the selection: selections.json in the editor's data folder cannot be read or written.", Assert.Single(messages));
     }
 }

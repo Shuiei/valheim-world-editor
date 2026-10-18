@@ -90,12 +90,7 @@ public class LogicEdgeTests
             var f = new Mask { On = true, Paint = rule }.For(g, biomes)!;
             return [.. new[] { dirt, fields, paved, faint, bare }.Select(p => f(p) > 0)];
         }
-        Assert.Equal(new[] { true, true, true, true, true }, Pass(Mask.PaintRule.Any));
-        Assert.Equal(new[] { false, false, false, true, true }, Pass(Mask.PaintRule.Unpainted));
-        Assert.Equal(new[] { true, true, true, false, false }, Pass(Mask.PaintRule.Painted));
-        Assert.Equal(new[] { true, false, false, false, false }, Pass(Mask.PaintRule.Dirt));
-        Assert.Equal(new[] { false, true, false, false, false }, Pass(Mask.PaintRule.Cultivated));
-        Assert.Equal(new[] { false, false, true, false, false }, Pass(Mask.PaintRule.Paved));
+        PaintRuleChecks.AssertFivePointsPassEachRule(Pass);
     }
 
     [Fact]

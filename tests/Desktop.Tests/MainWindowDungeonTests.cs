@@ -26,16 +26,24 @@ public class MainWindowDungeonTests
     private static (MainWindow W, EditSession S) Open(string dir)
     {
         var scene = WorldScene.Load(dir, 0, 0, 1);
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        w.View.Show(scene, null);
-        w.Edit(scene.Session!);
+        var w = TestWindows.Editing(scene.Session!);
         return (w, scene.Session!);
     }
 
     /// <summary>The location proxies added in the session, by location.</summary>
     private static List<int> Proxies(EditSession s) => [.. s.Edits.Added.Where(n => n.Prefab == WorldSave.LocationProxyPrefab && n.Raw != null)
         .Select(n => ZdoData.Parse(n.Raw!).IntList.First(i => i.Key == WorldSave.LocationKey).Value)];
+
+    [Theory]
+    [InlineData(123L, "dg123")]
+    [InlineData(1234567L, "dg34567")]
+    // A negative seed gave "dg-123"; a name hashing to int.MinValue failed to paste (Math.Abs of an int overflowed).
+    [InlineData(-123L, "dg123")]
+    [InlineData((long)int.MinValue, "dg83648")]
+    public void APortalPairsTagIsFiveDigits(long n, string tag)
+    {
+        Assert.Equal(tag, MainWindow.PortalTag(n));
+    }
 
     [AvaloniaFact]
     public void WithoutAnAreaTheDungeonGoesNowhere()
@@ -63,6 +71,8 @@ public class MainWindowDungeonTests
             Assert.StartsWith($"Generated {r.Name}:", w.MessageText.Text);
             Assert.Contains("Its burial chamber entrance stands here, facing you.", w.MessageText.Text);
             Assert.Equal(steps + 1, s.UndoList.Count);
+            // The Dungeon panel's own name for the step (Claude's generate_dungeon gives its own).
+            Assert.Equal($"Dungeon: generated {r.Name}", s.UndoLabel);
             var added = s.Scene.Things.Skip(things).ToList();
             Assert.NotEmpty(added);
             // No portals: the entrance's doors lead in and out. The pieces are high up; the entrance's own objects
@@ -173,6 +183,33 @@ public class MainWindowDungeonTests
             Assert.True(w.View.Camera.Target.Y < 3000);
             Assert.Null(w.View.CutY);
             Assert.Equal(w.LastPlaced.Entrance.X, w.View.Camera.Target.X + s.Scene.Cx, 0.01f);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
+
+    // A dungeon blueprint with nothing this world can place says so: only its portal (no piece), or only pieces the
+    // world cannot make (they were counted before they were left out, and the paste went on with nothing).
+    [AvaloniaFact]
+    public void ADungeonBlueprintWithNothingToPlaceSaysWhy()
+    {
+        string dir = Fixtures.CopyFixture();
+        try
+        {
+            var (w, s) = Open(dir);
+            int steps = s.UndoList.Count;
+            var portalOnly = BlueprintsPanelRun.Clip("Door only", "portal_wood");
+            portalOnly.Dungeon = true;
+            w.PasteDungeon(portalOnly, new Vector2(40, 40));
+            Assert.Equal("Nothing to paste: the blueprint holds only its portal (where players arrive), no piece.", w.MessageText.Text);
+            var unknown = BlueprintsPanelRun.Clip("Strange", "zz_no_such_piece", "portal_wood");
+            unknown.Dungeon = true;
+            w.PasteDungeon(unknown, new Vector2(40, 40));
+            Assert.Equal("Nothing to paste: the blueprint has no piece this world can have.", w.MessageText.Text);
+            Assert.Equal(steps, s.UndoList.Count);
+            Assert.Null(w.LastPlaced);
         }
         finally
         {

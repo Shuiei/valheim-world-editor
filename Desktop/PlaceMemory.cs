@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Avalonia.Threading;
 using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
@@ -7,7 +8,7 @@ namespace TerrainEditor.Desktop;
 /// What the Place tool remembers between runs (the web editor keeps it in the browser), in place.json in the data
 /// folder: your own presets, favourite and recently placed kinds, the chosen kinds and their weights.
 /// </summary>
-public sealed class PlaceMemory
+public sealed partial class PlaceMemory
 {
     /// <summary>Writes place.json indented, to read by hand.</summary>
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
@@ -32,29 +33,58 @@ public sealed class PlaceMemory
     /// <summary>The file in use: the override, or place.json in the data folder.</summary>
     private static string Where => PathOverride ?? FilePath;
 
-    /// <summary>Reads the file; a missing or unreadable file gives an empty memory.</summary>
-    public static PlaceMemory Load()
-    {
-        try
-        {
-            return File.Exists(Where) ? JsonSerializer.Deserialize<PlaceMemory>(File.ReadAllText(Where)) ?? new() : new();
-        }
-        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
-        {
-            return new();
-        }
-    }
-
-    /// <summary>Writes the file (errors are ignored: the memory is a convenience).</summary>
+    /// <summary>
+    /// Whether the file could not be read (or, broken, kept aside) when this was loaded: what is in it is not
+    /// written over.
+    /// </summary>
+    private bool _unread;
+    /// <summary>
+    /// Writes the file through a temporary one, so a write cut short leaves the old file whole. A failure is logged,
+    /// not shown: the memory is a convenience, and stays as it is in this run. Nothing is written over a file that
+    /// could not be read.
+    /// </summary>
     public void Save()
     {
+        _later?.Stop();
+        if (_unread)
+        {
+            Console.WriteLine($"Place memory: not saved, {Where} could not be read when the editor started.");
+            return;
+        }
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(Where)!);
-            File.WriteAllText(Where, JsonSerializer.Serialize(this, Indented));
+            SafeFile.WriteAllText(Where, JsonSerializer.Serialize(this, Indented));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Caught(ex, "writing place.json");
+        }
+    }
+
+    /// <summary>The timer of a save asked for with <see cref="SaveLater"/>; null until the first one.</summary>
+    private DispatcherTimer? _later;
+
+    /// <summary>
+    /// Saves 300 ms from now (again from now when asked again), on the UI thread: a slider dragged or kinds ticked in a
+    /// row write the file once. <see cref="Flush"/> writes a save still waiting.
+    /// </summary>
+    public void SaveLater()
+    {
+        if (_later == null)
+        {
+            _later = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+            _later.Tick += (_, _) => Save();
+        }
+        _later.Stop();
+        _later.Start();
+    }
+
+    /// <summary>Writes now a save asked for with <see cref="SaveLater"/> and still waiting (the editor is closing).</summary>
+    public void Flush()
+    {
+        if (_later?.IsEnabled == true)
+        {
+            Save();
         }
     }
 

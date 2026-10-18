@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace TerrainEditor.Save;
 
 /// <summary>
@@ -7,7 +5,7 @@ namespace TerrainEditor.Save;
 /// item format 108: int version, ushort count, then per item ItemDrop.ItemData.Save. Older formats cannot be read by
 /// the editor (Read throws NotSupportedException).
 /// </summary>
-public sealed class InventoryData
+public sealed partial class InventoryData
 {
     /// <summary>The item format version Write and WriteItem produce.</summary>
     public const int Version = 109;
@@ -62,123 +60,4 @@ public sealed class InventoryData
 
     /// <summary>The items in save order.</summary>
     public List<Item> Items { get; } = [];
-
-    /// <summary>Parses an inventory byte array.</summary>
-    /// <exception cref="NotSupportedException">The item format is older than 108.</exception>
-    public static InventoryData Read(byte[] bytes)
-    {
-        using BinaryReader r = new(new MemoryStream(bytes), Encoding.UTF8);
-        int version = r.ReadInt32();
-        if (version < 108)
-        {
-            throw new NotSupportedException($"item format {version} is older than the editor reads (108)");
-        }
-        InventoryData inv = new();
-        int count = r.ReadUInt16();
-        for (int i = 0; i < count; i++)
-        {
-            inv.Items.Add(ReadItem(r, version));
-        }
-        return inv;
-    }
-
-    /// <summary>
-    /// One item as ItemDrop.ItemData.Save writes it (in an inventory, or alone after a version byte in an item stand's
-    /// or armour stand slot's "itemData"), in that item format version.
-    /// </summary>
-    /// <param name="r">Reader positioned at the item.</param>
-    /// <param name="version">The item format version the bytes were written in.</param>
-    public static Item ReadItem(BinaryReader r, int version)
-    {
-        Item it = new() { Durability = r.ReadInt32() * 0.01f, X = r.ReadByte(), Y = r.ReadByte(), WorldLevel = r.ReadByte() };
-        byte b = r.ReadByte();
-        it.PickedUp = (b & 1) != 0;
-        it.Equipped = (b & 2) != 0;
-        it.Quality = (b & 4) != 0 ? r.ReadUInt16() : 1;
-        it.Stack = (b & 8) != 0 ? r.ReadUInt16() : 1;
-        it.Variant = (b & 0x10) != 0 ? r.ReadInt32() : 0;
-        if ((b & 0x20) != 0)
-        {
-            it.CrafterId = r.ReadInt64();
-            it.CrafterName = r.ReadCheckedString();
-        }
-        it.Prefab = (b & 0x40) != 0 ? r.ReadInt32() : 0;
-        int custom = (b & 0x80) != 0 ? ReadNumItems(r) : 0;
-        for (int c = 0; c < custom; c++)
-        {
-            it.CustomData[r.ReadCheckedString()] = r.ReadCheckedString();
-        }
-        if (version is >= 109 or 107)
-        {
-            it.Cheated = (r.ReadByte() & 1) != 0;
-        }
-        return it;
-    }
-
-    /// <summary>The inventory as a byte array in the current item format (<c>Version</c>).</summary>
-    public byte[] Write()
-    {
-        using MemoryStream ms = new();
-        using BinaryWriter w = new(ms, Encoding.UTF8);
-        w.Write(Version);
-        w.Write((ushort)Items.Count);
-        foreach (Item it in Items)
-        {
-            WriteItem(w, it);
-        }
-        w.Flush();
-        return ms.ToArray();
-    }
-
-    /// <summary>One item as ItemDrop.ItemData.Save writes it, in the current item format (Version).</summary>
-    public static void WriteItem(BinaryWriter w, Item it)
-    {
-        int flags = (it.PickedUp ? 1 : 0) | (it.Equipped ? 2 : 0) | (it.Quality != 1 ? 4 : 0) | (it.Stack != 1 ? 8 : 0)
-            | (it.Variant != 0 ? 0x10 : 0) | (it.CrafterId != 0 ? 0x20 : 0) | (it.Prefab != 0 ? 0x40 : 0) | (it.CustomData.Count != 0 ? 0x80 : 0);
-        w.Write((int)(it.Durability * 100f));
-        w.Write((byte)it.X);
-        w.Write((byte)it.Y);
-        w.Write((byte)it.WorldLevel);
-        w.Write((byte)flags);
-        if ((flags & 4) != 0)
-        {
-            w.Write((ushort)it.Quality);
-        }
-
-        if ((flags & 8) != 0)
-        {
-            w.Write((ushort)it.Stack);
-        }
-
-        if ((flags & 0x10) != 0)
-        {
-            w.Write(it.Variant);
-        }
-
-        if ((flags & 0x20) != 0) { w.Write(it.CrafterId); w.Write(it.CrafterName); }
-        if ((flags & 0x40) != 0)
-        {
-            w.Write(it.Prefab);
-        }
-
-        if ((flags & 0x80) != 0)
-        {
-            ZdoBuilder.WriteNumItems(w, it.CustomData.Count);
-            foreach (var (k, v) in it.CustomData)
-            {
-                w.Write(k);
-                w.Write(v);
-            }
-        }
-        w.Write((byte)(it.Cheated ? 1 : 0));
-    }
-
-    /// <summary>
-    /// A count in the game's compact form: one byte below 128, else two bytes, the first with its high bit set.
-    /// </summary>
-    private static int ReadNumItems(BinaryReader r)
-    {
-        int n = r.ReadByte();
-        return (n & 0x80) != 0 ? ((n & 0x7F) << 8) | r.ReadByte() : n;
-    }
 }

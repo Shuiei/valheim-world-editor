@@ -19,13 +19,31 @@ public class MainWindowToolsTests
     /// A shown window editing a flat 2 × 2 zone area (ground at 30 m) with these objects.
     /// </summary>
     private static (MainWindow W, EditSession S) Open(params WorldScene.Thing[] things)
+        => TestWindows.EditingFlat(things);
+
+    /// <summary>
+    /// The window from Open with the Path tool's line drawn across the area, from (20, 64) to (108, 64),
+    /// and the tool, with the window and its edit session.
+    /// </summary>
+    private static (MainWindow W, EditSession S, PathTool Path) OpenWithPathAcross()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2, things);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
-        return (w, s);
+        var (w, s) = Open();
+        var path = w.View.Path;
+        path.Points.AddRange([new Vector2(20, 64), new Vector2(108, 64)]);
+        return (w, s, path);
+    }
+
+    /// <summary>
+    /// A window editing the world at <paramref name="dir"/>'s zones 0, 0 to 2, 0 across, with the Mountain tool set to
+    /// grow what the game grows on a mountain of radius 25 m.
+    /// </summary>
+    /// <param name="dir">The world's folder.</param>
+    private static async Task<MainWindow> EditingWithGrowingMountain(string dir)
+    {
+        var w = await TestWindows.EditingWorld(dir, 0, 0, 3);
+        w.MountainPanel.RadiusSlider.Value = 25;
+        w.MountainPanel.GrowBox.IsChecked = true;
+        return w;
     }
 
     /// <summary>
@@ -63,9 +81,7 @@ public class MainWindowToolsTests
     [AvaloniaFact]
     public void ACaveWithChosenRocksAndOneTooShallowForARoof()
     {
-        var (w, s) = Open();
-        var path = w.View.Path;
-        path.Points.AddRange([new Vector2(20, 64), new Vector2(108, 64)]);
+        var (w, s, path) = OpenWithPathAcross();
         path.Act = PathTool.Action.Cave;
         // Chosen rather than by biome (the tests' copy of the game's data has the forest's boulder alone).
         path.Rock = PathTool.CaveRock.Forest;
@@ -80,6 +96,27 @@ public class MainWindowToolsTests
         w.ApplyPath();
         Assert.StartsWith("Dug the cave's trench, but it is nowhere deep enough for a roof", w.MessageText.Text);
         Assert.Equal(things, s.Scene.Things.Count);
+    }
+
+    // A path the Mask keeps off all the ground changes nothing and says so; one raised past the game's ±8 m says it
+    // reached the limit; both word for word as before the catalogue, the step named after its action.
+    [AvaloniaFact]
+    public void APathThatChangesNothingOrReachesTheLimitSaysSo()
+    {
+        var (w, s, path) = OpenWithPathAcross();
+        path.Act = PathTool.Action.Raise;
+        s.Mask = new Mask { On = true, HeightMin = 100 };
+        int steps = s.UndoList.Count;
+        w.ApplyPath();
+        Assert.Equal("Nothing changed along the line.", w.MessageText.Text);
+        Assert.Equal(steps, s.UndoList.Count);
+
+        s.Mask = new Mask();
+        path.Amount = 12;
+        w.ApplyPath();
+        Assert.Equal("Applied, but part of the path reached the game limit of ±8 m from the original ground (red points).", w.MessageText.Text);
+        Assert.Equal("Path: Raise by", s.UndoLabel);
+        Assert.Equal(steps + 1, s.UndoList.Count);
     }
 
     [AvaloniaFact]
@@ -100,11 +137,13 @@ public class MainWindowToolsTests
         Assert.EndsWith("Ctrl+Z takes it back; saving turns it into ground discs.", w.MessageText.Text);
         Assert.Equal(steps + 1, s.UndoList.Count);
         Assert.True(s.Ground.HeightOf(64 * s.Ground.W + 64) > 30 + 1);
-        // Growing, where there is no world generator: the mountain is placed, nothing grows.
+        // Growing, where there is no world generator: the mountain is placed, nothing grows, and why stays said (one
+        // step to take back, not two).
         m.GrowBox.IsChecked = true;
         s.Undo();
         await w.PutMountain(64, 64);
-        Assert.EndsWith("Ctrl+Z takes it back (twice with what grew); saving turns it into ground discs.", w.MessageText.Text);
+        Assert.Contains("Regrow needs the world's generator", w.MessageText.Text);
+        Assert.EndsWith("Ctrl+Z takes it back; saving turns it into ground discs.", w.MessageText.Text);
         Assert.DoesNotContain("Grew", w.MessageText.Text);
     }
 
@@ -114,13 +153,8 @@ public class MainWindowToolsTests
         string dir = Fixtures.CopyFixture();
         try
         {
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
-            await w.EditArea(0, 0, 3);
+            var w = await EditingWithGrowingMountain(dir);
             var s = w.Session!;
-            w.MountainPanel.RadiusSlider.Value = 25;
-            w.MountainPanel.GrowBox.IsChecked = true;
             int steps = s.UndoList.Count;
             await w.PutMountain((s.Ground.W - 1) / 2f, (s.Ground.H - 1) / 2f);
             Assert.Contains("Grew ", w.MessageText.Text);
@@ -139,13 +173,8 @@ public class MainWindowToolsTests
         string dir = Fixtures.CopyFixture();
         try
         {
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            await w.OpenWorld(() => Task.Run(() => WorldSession.Open(dir)), "Opening…");
-            await w.EditArea(0, 0, 3);
+            var w = await EditingWithGrowingMountain(dir);
             var s = w.Session!;
-            w.MountainPanel.RadiusSlider.Value = 25;
-            w.MountainPanel.GrowBox.IsChecked = true;
             int steps = s.UndoList.Count;
             // Ctrl+Z while the game's trees are worked out (as soon as it says so, whenever the work ends): they would
             // grow in the air where the mountain was.
@@ -206,6 +235,8 @@ public class MainWindowToolsTests
         Assert.StartsWith("The script changed", w.MessageText.Text);
         Assert.Contains("The script changed", w.ScriptPanel.Output.Text);
         Assert.Equal(steps + 1, s.UndoList.Count);
+        // The example shown when the panel opens is the one chosen: the step is named after it.
+        Assert.Equal("Script: " + ScriptExamples.All[0].Name, s.UndoLabel);
         Assert.True(s.Ground.HeightOf(64 * s.Ground.W + 64) > 30);
     }
 }

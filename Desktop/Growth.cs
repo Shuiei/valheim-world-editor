@@ -1,6 +1,4 @@
-using System.Numerics;
 using TerrainEditor.App;
-using TerrainEditor.Editing;
 using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
@@ -10,7 +8,7 @@ namespace TerrainEditor.Desktop;
 /// over a rectangle of the world, for the Area tool's Regrow and the Mountain tool: the spots kept by
 /// keep, not where something already stands (a tree still there is not doubled) or near buildings.
 /// </summary>
-public static class Growth
+public static partial class Growth
 {
     /// <summary>
     /// The spots the game would grow in the rectangle, less those near what already stands (anything within 1 m,
@@ -23,39 +21,35 @@ public static class Growth
     /// <param name="z1">Its highest Z, world metres.</param>
     /// <param name="keep">Which spots to keep (the tool's own shape, for example).</param>
     /// <param name="nameOf">The prefab name of a prefab hash, null when unknown.</param>
-    /// <param name="message">Shows a status line (progress, or why it cannot be done).</param>
+    /// <param name="message">Shows a status line (progress, or why it cannot be done), in both languages.</param>
     /// <param name="maxZones">The most zones the rectangle may cover (the work grows with them).</param>
     /// <returns>Null when it cannot be done (a message says why).</returns>
-    public static async Task<List<Regrow.Spot>?> Spots(EditSession session, float x0, float z0, float x1, float z1, Func<Regrow.Spot, bool> keep, Func<int, string?> nameOf, Action<string> message, int maxZones = 16)
+    public static async Task<List<Regrow.Spot>?> Spots(EditSession session, float x0, float z0, float x1, float z1, Func<Regrow.Spot, bool> keep, Func<int, string?> nameOf, Action<Said> message, int maxZones = 16)
     {
         var s = session.Scene;
         if (s.Terrain is not { } terrain || s.World == null)
         {
-            message("Regrow needs the world's generator (not available here).");
+            message(Said.Of("regrow.msg.noGenerator"));
             return null;
         }
-        static int Zone(float v) => (int)MathF.Floor((v + 32) / 64);
-        int zx0 = Zone(x0), zx1 = Zone(x1), zz0 = Zone(z0), zz1 = Zone(z1);
+        var (zx0, zz0) = ChunkMath.SectorOf(x0, z0);
+        var (zx1, zz1) = ChunkMath.SectorOf(x1, z1);
         if ((zx1 - zx0 + 1) * (zz1 - zz0 + 1) > maxZones)
         {
             int side = (int)Math.Sqrt(maxZones);
-            message($"Choose a smaller area: regrow works on up to {maxZones} zones ({side * 64} x {side * 64} m) at once.");
+            message(Said.Of("regrow.msg.tooBig", maxZones, side * 64));
             return null;
         }
-        message("Working out what the game grows here…");
+        message(Said.Of("regrow.msg.working"));
         var world = s.World;
         var spots = await Task.Run(() => Regrow.Zones(terrain, session.Edits, world.Seed, zx0, zz0, zx1, zz1).Where(p => world.CanCreate(StableHash.Of(p.Name))).ToList());
-        List<(float X, float Z, string? Name, ObjectKind Kind)> standing;
-        lock (s.Things)
+        // The tool's own test first, here (it may read the window's state); the rest away from the window.
+        var kept = spots.Where(keep).ToList();
+        if (kept.Count == 0)
         {
-            standing = [.. s.Things.Where(t => !t.Gone).Select(t => (t.Position.X, t.Position.Z, nameOf(t.Prefab), ObjectKinds.Of(nameOf(t.Prefab), t.Piece, t.Tamed)))];
+            return kept;
         }
-        bool Near(Regrow.Spot o, float d, Func<string?, ObjectKind, bool> test) =>
-            standing.Any(t => MathF.Abs(t.X - o.X) < d && MathF.Abs(t.Z - o.Z) < d && MathF.Sqrt((t.X - o.X) * (t.X - o.X) + (t.Z - o.Z) * (t.Z - o.Z)) < d && test(t.Name, t.Kind));
-        return [.. spots.Where(o => keep(o) && !Near(o, 1, (_, _) => true) && !Near(o, 3, (n, _) => n == o.Name) && !Near(o, 4, (_, k) => k == ObjectKind.Buildings))];
+        var standing = StandingNear(s, kept, nameOf);
+        return await Task.Run(() => Unobstructed(kept, standing));
     }
-
-    /// <summary>The spots as new objects, in one undo step.</summary>
-    public static void Commit(EditSession session, string label, IEnumerable<Regrow.Spot> spots) =>
-        session.Commit(label, null, [], spots.Select(o => (new NewObject(0, StableHash.Of(o.Name), new Vector3(o.X, o.Y, o.Z), new Vector3(o.Rx, o.Ry, o.Rz), MathF.Abs(o.Scale - 1) < 1e-4f ? 0 : o.Scale), false)).ToList());
 }

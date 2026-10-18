@@ -28,6 +28,11 @@ public class StandDataTests
     }
 
     /// <summary>
+    /// A number as invariant text, as a saved value is set.
+    /// </summary>
+    private static string I(int v) => v.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>
     /// Reads one item from its base64 bytes (a version byte, then the item), asserting every byte is used.
     /// </summary>
     private static InventoryData.Item ItemOf(string base64)
@@ -50,12 +55,12 @@ public class StandDataTests
         Assert.Null(StandData.ItemStandRefusal(Wall, "SwordIron"));
         Assert.Null(StandData.ItemStandRefusal(Wall, "TrophyDeer"));
         Assert.Null(StandData.ItemStandRefusal(Wall, "SurtlingCore")); // a material, but on the stand's own list
-        Assert.Contains("does not take", StandData.ItemStandRefusal(Wall, "CookedMeat")); // food: only lying flat
+        Assert.Contains("does not take", StandData.ItemStandRefusal(Wall, "CookedMeat")?.English); // food: only lying flat
         Assert.Null(StandData.ItemStandRefusal(Flat, "CookedMeat"));
-        Assert.Contains("refuses", StandData.ItemStandRefusal(Wall, "MeadTasty"));
-        Assert.Contains("cannot hang", StandData.ItemStandRefusal(Flat, "Wood")); // no attach point
-        Assert.Contains("not an item of the game", StandData.ItemStandRefusal(Wall, "NoSuchThing"));
-        Assert.Contains("not an item stand", StandData.ItemStandRefusal(Armour, "SwordIron"));
+        Assert.Contains("refuses", StandData.ItemStandRefusal(Wall, "MeadTasty")?.English);
+        Assert.Contains("cannot hang", StandData.ItemStandRefusal(Flat, "Wood")?.English); // no attach point
+        Assert.Contains("not an item of the game", StandData.ItemStandRefusal(Wall, "NoSuchThing")?.English);
+        Assert.Contains("not an item stand", StandData.ItemStandRefusal(Armour, "SwordIron")?.English);
     }
 
     [Fact]
@@ -76,7 +81,32 @@ public class StandDataTests
         var empty = With(StandData.ForItemStand(Wall, null, 0));
         Assert.Equal((null, 0), StandData.ReadItemStand(empty));
         Assert.Null(empty.GetBytes(StableHash.Of("itemData")));
-        Assert.Throws<ArgumentException>(() => StandData.ForItemStand(Wall, new StandData.Held("Wood"), 0));
+        Assert.Throws<StandRefusalException>(() => StandData.ForItemStand(Wall, new StandData.Held("Wood"), 0));
+        // Item data with a bad length prefix (a FormatException, not only a short read): the stand's own values are
+        // kept instead of the read ending the inspector.
+        var damaged = With(set);
+        damaged.SetBytes(StableHash.Of("itemData"), [InventoryData.Version, 0, 0, 0, 0, 0, 0, 0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+        Assert.Equal((new StandData.Held("SwordIron", 3, 0), 1), StandData.ReadItemStand(damaged));
+    }
+
+    // No item data, or too little to hold an item (2 bytes or fewer): nothing is read, the stand's own quality and
+    // variant are kept (an armour stand's slot has no quality of its own: 1).
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void WithoutItemDataAStandKeepsItsOwnQualityAndVariant(int length)
+    {
+        var item = With([new("ints", "item", I(StableHash.Of("SwordIron"))), new("ints", "quality", "3"), new("ints", "variant", "2"), new("ints", "type", "1")]);
+        var armour = With([new("ints", "0_item", I(StableHash.Of("ShieldWood"))), new("ints", "0_variant", "2")]);
+        if (length >= 0)
+        {
+            item.SetBytes(StableHash.Of("itemData"), new byte[length]);
+            armour.SetBytes(StableHash.Of("0_itemData"), new byte[length]);
+        }
+        Assert.Equal((new StandData.Held("SwordIron", 3, 2), 1), StandData.ReadItemStand(item));
+        Assert.Equal(new StandData.Held("ShieldWood", 1, 2), StandData.ReadArmourStand(armour, 1).Slots[0]);
     }
 
     [Fact]
@@ -96,9 +126,9 @@ public class StandDataTests
             Assert.Equal(h.Quality, worn[slot]!.Quality);
             Assert.Equal(h.Variant, worn[slot]!.Variant);
         }
-        Assert.Throws<ArgumentException>(() => StandData.ForArmourStand(Armour, [new StandData.Held("CookedMeat")], null));
+        Assert.Throws<StandRefusalException>(() => StandData.ForArmourStand(Armour, [new StandData.Held("CookedMeat")], null));
         // ArmorStand has two helmet slots: a third helmet fits nowhere.
-        Assert.Contains("no free slot", Assert.Throws<ArgumentException>(() => StandData.ForArmourStand(Armour, [.. Enumerable.Repeat(new StandData.Held("HelmetBronze"), 3)], null)).Message);
+        Assert.Contains("no free slot", Assert.Throws<StandRefusalException>(() => StandData.ForArmourStand(Armour, [.. Enumerable.Repeat(new StandData.Held("HelmetBronze"), 3)], null)).Message);
         // Wearing less empties the other slots.
         var after = With(StandData.ForArmourStand(Armour, [new StandData.Held("HelmetBronze")], null));
         Assert.Single(StandData.ReadArmourStand(after, slots.Length).Slots, h => h != null);

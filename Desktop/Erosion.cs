@@ -7,158 +7,8 @@ namespace TerrainEditor.Desktop;
 /// carry where they slow down (gullies, fans, smooth valleys). Both work on a local copy of the heights, written back
 /// through SetHeight (so the ±8 m limit applies).
 /// </summary>
-public static class Erosion
+public static partial class Erosion
 {
-    /// <summary>
-    /// The eight neighbours of a grid point.
-    /// </summary>
-    private static readonly (int Dx, int Dz)[] N8 = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)];
-
-    /// <summary>
-    /// Thermal erosion: where the ground is steeper than its resting angle, material slides down to its lower
-    /// neighbours. The window's edge points only take material, they never give it.
-    /// </summary>
-    /// <param name="h">Heights of a w × d window (row by row), changed in place.</param>
-    /// <param name="wt">How much each point may change (0..1; 0 leaves it alone).</param>
-    /// <param name="w">The window's width in points.</param>
-    /// <param name="d">Its depth in points.</param>
-    /// <param name="talus">Steepest slope (rise per metre) that stays put; see Talus.</param>
-    /// <param name="amount">Share of the excess moved per pass.</param>
-    /// <param name="passes">How many times it runs over the window.</param>
-    public static void Thermal(float[] h, float[] wt, int w, int d, float talus, float amount, int passes)
-    {
-        float[] delta = new float[h.Length];
-        var ds = new List<(int J, float Diff)>(8);
-        for (int p = 0; p < passes; p++)
-        {
-            Array.Clear(delta);
-            for (int z = 1; z < d - 1; z++)
-            {
-                for (int x = 1; x < w - 1; x++)
-                {
-                    int i = z * w + x;
-                    float k = wt[i];
-                    if (k <= 0)
-                    {
-                        continue;
-                    }
-                    float total = 0, maxD = 0;
-                    ds.Clear();
-                    foreach (var (dx, dz) in N8)
-                    {
-                        int j = (z + dz) * w + x + dx;
-                        float dist = dx != 0 && dz != 0 ? MathF.Sqrt(2) : 1, diff = h[i] - h[j] - talus * dist;
-                        if (diff > 0 && wt[j] > 0)
-                        {
-                            ds.Add((j, diff));
-                            total += diff;
-                            maxD = MathF.Max(maxD, diff);
-                        }
-                    }
-                    if (total == 0)
-                    {
-                        continue;
-                    }
-                    // Move half of the largest excess (so the slope settles instead of swinging), shared out.
-                    float move = maxD * 0.5f * amount * k;
-                    delta[i] -= move;
-                    foreach (var (j, diff) in ds)
-                    {
-                        delta[j] += move * diff / total;
-                    }
-                }
-            }
-            for (int i = 0; i < h.Length; i++)
-            {
-                h[i] += delta[i];
-            }
-        }
-    }
-
-    /// <summary>
-    /// Water erosion with rain drops (after Hans Theobald Beyer's "Implementation of a method for hydraulic erosion"):
-    /// each drop runs downhill for up to 40 steps, digging where it speeds up and leaving what it carries where it
-    /// slows down or goes uphill.
-    /// </summary>
-    /// <param name="h">Heights of a w × d window (row by row), changed in place.</param>
-    /// <param name="wt">How much each point may change (0..1; 0 leaves it alone).</param>
-    /// <param name="w">The window's width in points.</param>
-    /// <param name="d">Its depth in points.</param>
-    /// <param name="drops">How many drops fall, at random points of the window (those on points that may not change are
-    /// skipped).</param>
-    /// <param name="strength">Scales how much a drop digs (1: the Area tool's).</param>
-    /// <param name="rand">Where the drops fall.</param>
-    public static void Hydraulic(float[] h, float[] wt, int w, int d, int drops, float strength, Random rand)
-    {
-        const float Inertia = 0.05f, CapacityK = 4, Deposit = 0.3f, Evaporate = 0.02f, Gravity = 4, MinSlope = 0.01f;
-        const int Life = 40;
-        float erode = 0.3f * strength;
-        float At(int x, int z) => h[z * w + x];
-        (float Gx, float Gz, float H) Gradient(float px, float pz)
-        {
-            int x = (int)MathF.Floor(px), z = (int)MathF.Floor(pz);
-            float u = px - x, v = pz - z;
-            float a = At(x, z), b = At(x + 1, z), c = At(x, z + 1), e = At(x + 1, z + 1);
-            return ((b - a) * (1 - v) + (e - c) * v, (c - a) * (1 - u) + (e - b) * u, a * (1 - u) * (1 - v) + b * u * (1 - v) + c * (1 - u) * v + e * u * v);
-        }
-        void Change(float px, float pz, float amount)
-        {
-            int x = (int)MathF.Floor(px), z = (int)MathF.Floor(pz);
-            float u = px - x, v = pz - z;
-            foreach (var (dx, dz, f) in new[] { (0, 0, (1 - u) * (1 - v)), (1, 0, u * (1 - v)), (0, 1, (1 - u) * v), (1, 1, u * v) })
-            {
-                int i = (z + dz) * w + x + dx;
-                h[i] += amount * f * wt[i];
-            }
-        }
-        for (int n = 0; n < drops; n++)
-        {
-            float px = 1 + (float)rand.NextDouble() * (w - 3), pz = 1 + (float)rand.NextDouble() * (d - 3);
-            if (wt[(int)MathF.Floor(pz) * w + (int)MathF.Floor(px)] <= 0)
-            {
-                continue;
-            }
-            float dirX = 0, dirZ = 0, speed = 1, water = 1, sediment = 0;
-            for (int step = 0; step < Life; step++)
-            {
-                var (gx, gz, height) = Gradient(px, pz);
-                dirX = dirX * Inertia - gx * (1 - Inertia);
-                dirZ = dirZ * Inertia - gz * (1 - Inertia);
-                float len = MathF.Sqrt(dirX * dirX + dirZ * dirZ);
-                if (len < 1e-6f)
-                {
-                    break;
-                }
-                dirX /= len;
-                dirZ /= len;
-                float nx = px + dirX, nz = pz + dirZ;
-                if (nx < 1 || nz < 1 || nx >= w - 2 || nz >= d - 2)
-                {
-                    break;
-                }
-                float dh = Gradient(nx, nz).H - height;
-                float capacity = MathF.Max(-dh, MinSlope) * speed * water * CapacityK;
-                if (sediment > capacity || dh > 0)
-                {
-                    // Uphill or full: drop sediment (enough to fill a pit going uphill).
-                    float amount = dh > 0 ? MathF.Min(dh, sediment) : (sediment - capacity) * Deposit;
-                    sediment -= amount;
-                    Change(px, pz, amount);
-                }
-                else
-                {
-                    float amount = MathF.Min((capacity - sediment) * erode, -dh);
-                    sediment += amount;
-                    Change(px, pz, -amount);
-                }
-                speed = MathF.Sqrt(MathF.Max(0, speed * speed + dh * Gravity));
-                water *= 1 - Evaporate;
-                px = nx;
-                pz = nz;
-            }
-        }
-    }
-
     /// <summary>
     /// Copies the heights of a window of the ground, runs fn on them, and writes back what changed through SetHeight
     /// (so the ±8 m limit applies).
@@ -226,17 +76,21 @@ public static class Erosion
     /// <param name="restAngle">The resting angle in degrees.</param>
     /// <param name="rand">Where the drops fall.</param>
     /// <param name="touched">Gets the indices of the points changed.</param>
-    /// <returns>The grid rectangle worked on (the selection and one point around it).</returns>
-    public static (int X0, int Z0, int X1, int Z1) Area(Ground g, AreaTool.Weights a, float restAngle, Random rand, ICollection<int> touched)
+    /// <returns>
+    /// The grid rectangle worked on (the selection and one point around it), and whether a point reached the game's
+    /// ±8 m limit.
+    /// </returns>
+    public static ((int X0, int Z0, int X1, int Z1) Rect, bool Clamped) Area(Ground g, AreaTool.Weights a, float restAngle, Random rand, ICollection<int> touched)
     {
         var weights = a.Cells.ToDictionary(c => c.G, c => c.W);
         bool clamped = false;
         float talus = Talus(restAngle);
-        return Run(g, a.X0 - 1, a.Z0 - 1, a.X1 + 1, a.Z1 + 1, (_, _, p) => weights.GetValueOrDefault(p), (h, wt, w, d) =>
+        var rect = Run(g, a.X0 - 1, a.Z0 - 1, a.X1 + 1, a.Z1 + 1, (_, _, p) => weights.GetValueOrDefault(p), (h, wt, w, d) =>
         {
             Thermal(h, wt, w, d, talus, 0.8f, 12);
             Hydraulic(h, wt, w, d, (int)MathF.Ceiling(w * d * 0.6f), 1, rand);
             Thermal(h, wt, w, d, talus, 0.5f, 4);
         }, touched, ref clamped);
+        return (rect, clamped);
     }
 }

@@ -19,7 +19,7 @@ public static class ZoneStats
 
     /// <summary>
     /// The zones' stats, <see cref="Stride"/> ints each, zones ordered by z then x; only zones inside the
-    /// world. Deleted objects are left out. Empty when the save has no zone list. Runs under the world's lock.
+    /// world. Deleted objects are left out, objects added in the session counted. Empty when the save has no zone list. Runs under the world's lock.
     /// </summary>
     /// <param name="world">The world.</param>
     /// <param name="edits">The session's edits (deleted objects, ground edits).</param>
@@ -33,6 +33,7 @@ public static class ZoneStats
     }
 
     /// <summary><see cref="Compute"/>'s work, with the world's lock held.</summary>
+    /// <summary><see cref="Compute"/>'s work, with the world's lock held.</summary>
     private static int[] ComputeIn(WorldSave world, EditStore edits, Func<int, int, int> biomeOf)
     {
         if (world.Zones == null)
@@ -40,59 +41,9 @@ public static class ZoneStats
             return [];
         }
         int maxZone = (int)Math.Ceiling(ValheimGen.TerrainService.MapRadius / 64f) + 1;
-        HashSet<int> deleted = edits.Deleted;
-        Dictionary<(int, int), int> pieces = [], objects = [];
-        for (int id = 0; id < world.ObjectRefs.Count; id++)
-        {
-            ObjectRef o = world.ObjectRefs[id];
-            if (deleted.Contains(id) || world.Vanished.Contains(id) || o.IsTerrain)
-            {
-                continue;
-            }
-            var key = o.Zone;
-            objects[key] = objects.GetValueOrDefault(key) + 1;
-            if (o.IsPiece)
-            {
-                pieces[key] = pieces.GetValueOrDefault(key) + 1;
-            }
-        }
-        HashSet<(int, int)> edited = [.. edits.All().Where(e => e.HeightCount + e.PaintCount > 0).Select(e => (e.ZoneX, e.ZoneZ))];
-        // Distance to buildings: a breadth-first walk out from every zone with pieces (8 neighbours, so
-        // the distance is the larger of the x and z steps).
-        int size = maxZone * 2 + 1;
-        int[] dist = new int[size * size];
-        Array.Fill(dist, -1);
-        Queue<(int, int)> queue = new();
-        foreach (var (x, z) in pieces.Keys)
-        {
-            if (Math.Abs(x) <= maxZone && Math.Abs(z) <= maxZone)
-            {
-                dist[(z + maxZone) * size + x + maxZone] = 0;
-                queue.Enqueue((x, z));
-            }
-        }
-        while (queue.Count > 0)
-        {
-            var (x, z) = queue.Dequeue();
-            int d = dist[(z + maxZone) * size + x + maxZone];
-            for (int dz = -1; dz <= 1; dz++)
-            {
-                for (int dx = -1; dx <= 1; dx++)
-                {
-                    int nx = x + dx, nz = z + dz;
-                    if (Math.Abs(nx) > maxZone || Math.Abs(nz) > maxZone)
-                    {
-                        continue;
-                    }
-                    int i = (nz + maxZone) * size + nx + maxZone;
-                    if (dist[i] < 0)
-                    {
-                        dist[i] = d + 1;
-                        queue.Enqueue((nx, nz));
-                    }
-                }
-            }
-        }
+        var (pieces, objects) = ZoneCensus.Count(world, edits);
+        HashSet<(int, int)> edited = [.. edits.Copies(e => e.HeightCount + e.PaintCount > 0).Select(e => (e.ZoneX, e.ZoneZ))];
+        var distance = new ZoneDistance(pieces.Keys, maxZone);
         var generated = world.Zones.Generated.Select(g => ((int)g.X, (int)g.Z)).ToHashSet();
         List<(int X, int Z)> zones = [.. generated.Union(objects.Keys).Union(edited)
             // Only zones in the world: an empty server also generates zones around a far-away point.
@@ -111,7 +62,7 @@ public static class ZoneStats
             result[o + 3] = pieces.GetValueOrDefault((x, z));
             result[o + 4] = edited.Contains((x, z)) ? 1 : 0;
             result[o + 5] = objects.GetValueOrDefault((x, z));
-            result[o + 6] = dist[(z + maxZone) * size + x + maxZone];
+            result[o + 6] = distance.Of(x, z);
             result[o + 7] = generated.Contains((x, z)) ? 1 : 0;
         }
         return result;

@@ -39,16 +39,7 @@ public sealed class PlacePanelModHelpersTests : IDisposable
         GameData.UseCopies(Fixtures.Root);
         LocalGame.SearchDefaultPlaces = _defaults;
         AppSettings.DataDirOverride = _dataDir;
-        foreach (string dir in (string[])[_dir, Path.GetDirectoryName(_world)!])
-        {
-            try
-            {
-                Directory.Delete(dir, true);
-            }
-            catch (IOException)
-            {
-            }
-        }
+        TestFolderCleanup.DeleteIfExists(_dir, Path.GetDirectoryName(_world)!);
     }
 
     /// <summary>A model as the game reports it (POST /models): no parts, or one.</summary>
@@ -58,10 +49,7 @@ public sealed class PlacePanelModHelpersTests : IDisposable
     [AvaloniaFact]
     public void AModsPrefabTheGameDrawsNothingOfIsNotOffered()
     {
-        var w = new MainWindow(load: false);
-        var scene = WorldScene.Load(_world, 0, 0, 1);
-        var input = new PlaceInput(w.View, new PlaceTool { Scene = () => scene });
-        var p = new PlacePanel(input, () => scene, PrefabCatalog.NameOf, new PlaceMemory());
+        var (w, scene, input, p) = PlacePanelOnWorld.Open(_world);
         var others = p.Creatable().Where(c => c.Kind != ObjectKind.Pickables && PrefabCatalog.ItemKindOf(StableHash.Of(c.Name)) == null).Select(c => c.Name).ToList();
         string helper = others[0], drawn = others[1], pickable = p.Creatable().First(c => c.Kind == ObjectKind.Pickables).Name;
         input.Tool.Chosen.Add(helper);

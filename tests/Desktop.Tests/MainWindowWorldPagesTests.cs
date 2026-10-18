@@ -101,8 +101,7 @@ public class MainWindowWorldPagesTests
     {
         using var r = new WorldWindowRun();
         await r.Open();
-        var scene = r.W.View.Scene!;
-        var load = r.W.EditBlock(scene.X0, scene.Z0, scene.ZonesX, scene.ZonesZ);
+        var (scene, load) = ViewAreaReload.Start(r);
         r.W.ShowMap();
         await load;
         Assert.Equal("That area was not opened: the map or another area was asked for while it loaded.", r.Said);
@@ -136,8 +135,7 @@ public class MainWindowWorldPagesTests
     {
         using var r = new WorldWindowRun();
         await r.Open();
-        var scene = r.W.View.Scene!;
-        var load = r.W.EditBlock(scene.X0, scene.Z0, scene.ZonesX, scene.ZonesZ);
+        var (scene, load) = ViewAreaReload.Start(r);
         await r.W.LeaveWorld();
         await load;
         Assert.Null(r.W.World);
@@ -169,7 +167,7 @@ public class MainWindowWorldPagesTests
         var outcome = await run;
         Assert.False(outcome.Changed);
         // It compiled and ran, and only then found its area closed.
-        Assert.Equal("The area was closed while the script ran: nothing changed.", outcome.Message);
+        Assert.Equal("The area was closed while the script ran: nothing changed.", outcome.Message.English);
         Assert.Empty(s.UndoList);
         Assert.Equal((0, 0, 0, 0), r.W.World.Pending);
     }
@@ -246,6 +244,12 @@ public class MainWindowWorldPagesTests
         int snapshots = r.Game.Snapshots;
         await r.W.ReloadWorld();
         Assert.True(r.Game.Snapshots > snapshots);
+        // The bridge refusing (an error status) is said the same way, and the busy veil goes.
+        r.Game.Fail["/snapshot"] = 500;
+        await r.W.ReloadWorld();
+        Assert.Equal("Could not reach the game: bridge snapshot: 500 broken", r.Said);
+        Assert.False(r.W.IsBusy);
+        r.Game.Fail.Remove("/snapshot");
         r.StopGame();
         await r.W.ReloadWorld();
         Assert.StartsWith("Could not reach the game: ", r.Said);

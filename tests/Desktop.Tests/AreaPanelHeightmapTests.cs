@@ -14,33 +14,15 @@ public class AreaPanelHeightmapTests
     /// </summary>
     private static float H(EditSession s, int x, int z) => s.Scene.Heights[z * s.Scene.W + x];
 
-    [AvaloniaFact]
-    public void AnExportedAreaComesBackAsItWas()
+    /// <summary>
+    /// Runs the test with a new, empty folder for the picture (<paramref name="test"/> gets its path), deleted after.
+    /// </summary>
+    private static void WithPictureFolder(Action<string> test)
     {
         string dir = Path.Combine(Path.GetTempPath(), "vwe-hm-" + Guid.NewGuid().ToString("N")[..8]);
         try
         {
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            var s = TestScenes.Flat(2);
-            w.View.Show(s.Scene, null);
-            w.Edit(s);
-            s.Shape(64, 64, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 20, 6, "hill");
-            float top = H(s, 64, 64);
-            var p = w.AreaPanel;
-            string said = p.ExportHeightmap(dir)!;
-            Assert.StartsWith("Heightmap written to", said);
-            string file = Directory.GetFiles(dir).Single();
-            // The hill goes away, then the picture brings it back (the whole area: nothing is selected).
-            s.Undo();
-            Assert.Equal(30, H(s, 64, 64), 3);
-            p.LoadPicture(file);
-            Assert.Equal(30, (double)p.LowestBox.Value!, 2);
-            Assert.Equal(top, (double)p.HighestBox.Value!, 2);
-            Assert.Contains("with the heights it was exported with", p.PictureInfo.Text);
-            p.PutPicture();
-            Assert.Equal(top, H(s, 64, 64), 2);
-            Assert.Equal("Heightmap import", s.UndoLabel);
+            test(dir);
         }
         finally
         {
@@ -52,41 +34,52 @@ public class AreaPanelHeightmapTests
     }
 
     [AvaloniaFact]
-    public void APictureFitsTheSelectionWithTheChosenHeights()
+    public void AnExportedAreaComesBackAsItWas() => WithPictureFolder(dir =>
     {
-        string dir = Path.Combine(Path.GetTempPath(), "vwe-hm-" + Guid.NewGuid().ToString("N")[..8]);
-        try
-        {
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            var s = TestScenes.Flat(2);
-            w.View.Show(s.Scene, null);
-            w.Edit(s);
-            s.Shape(64, 64, Formula.Compile("x > 0 ? 4 : 0", ["x"]), 60, 0, "step");
-            var p = w.AreaPanel;
-            p.ExportHeightmap(dir);
-            s.Undo();
-            var a = w.View.Area;
-            a.Soft = 0;
-            a.Points.Add(new Vector2(20, 20));
-            a.Points.Add(new Vector2(100, 100));
-            p.LoadPicture(Directory.GetFiles(dir).Single());
-            p.LowestBox.Value = 31;
-            p.HighestBox.Value = 33;
-            p.PutPicture();
-            // Inside the selection: black is 31, white 33; outside it nothing changed.
-            Assert.Equal(31, H(s, 30, 60), 1);
-            Assert.Equal(33, H(s, 90, 60), 1);
-            Assert.Equal(30, H(s, 110, 60), 3);
-        }
-        finally
-        {
-            if (Directory.Exists(dir))
-            {
-                Directory.Delete(dir, recursive: true);
-            }
-        }
-    }
+        var s = TestScenes.Flat(2);
+        var w = TestWindows.Editing(s);
+        s.Shape(64, 64, Formula.Compile("h * smooth(1 - d / r)", ["d", "r", "h"]), 20, 6, "hill");
+        float top = H(s, 64, 64);
+        var p = w.AreaPanel;
+        string said = p.ExportHeightmap(dir)!.Shown;
+        Assert.StartsWith("Heightmap written to", said);
+        string file = Directory.GetFiles(dir).Single();
+        // The hill goes away, then the picture brings it back (the whole area: nothing is selected).
+        s.Undo();
+        Assert.Equal(30, H(s, 64, 64), 3);
+        p.LoadPicture(file);
+        Assert.Equal(30, (double)p.LowestBox.Value!, 2);
+        Assert.Equal(top, (double)p.HighestBox.Value!, 2);
+        Assert.Contains("with the heights it was exported with", p.PictureInfo.Text);
+        p.PutPicture();
+        Assert.Equal(top, H(s, 64, 64), 2);
+        Assert.Equal("Heightmap import", s.UndoLabel);
+    });
+
+    [AvaloniaFact]
+    public void APictureFitsTheSelectionWithTheChosenHeights() => WithPictureFolder(dir =>
+    {
+        var s = TestScenes.Flat(2);
+        var w = TestWindows.Editing(s);
+        s.Shape(64, 64, Formula.Compile("x > 0 ? 4 : 0", ["x"]), 60, 0, "step");
+        var p = w.AreaPanel;
+        p.ExportHeightmap(dir);
+        s.Undo();
+        var a = w.View.Area;
+        a.Soft = 0;
+        a.Points.Add(new Vector2(20, 20));
+        a.Points.Add(new Vector2(100, 100));
+        p.LoadPicture(Directory.GetFiles(dir).Single());
+        // The selection's own box (20 to 100), not the weights' one point wider all round.
+        Assert.Contains("fitted to 81 × 81 m", p.PictureInfo.Text);
+        p.LowestBox.Value = 31;
+        p.HighestBox.Value = 33;
+        p.PutPicture();
+        // Inside the selection: black is 31, white 33; outside it nothing changed.
+        Assert.Equal(31, H(s, 30, 60), 1);
+        Assert.Equal(33, H(s, 90, 60), 1);
+        Assert.Equal(30, H(s, 110, 60), 3);
+    });
 
     // PutHeights: black at lo, white at hi, faded by each point's weight; points outside the picture left alone; the
     // game's ±8 m holds, and fully weighted points it stops are counted.

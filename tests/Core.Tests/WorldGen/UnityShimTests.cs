@@ -5,7 +5,8 @@ using Rnd = ValheimGen.UnityEngine.Random;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// The small stand-ins the generator uses for Unity: vectors and their operators, Mathf, the random number generator at
+/// The small stand-ins the generator uses for Unity: vectors and their operators, the equality of vectors and colours
+/// (NaN and -0 included), Mathf, the random number generator at
 /// its edges (backwards ranges, the unit circle), GenMath's remapping, and the piece catalogue's footprints for the
 /// map.
 /// </summary>
@@ -15,41 +16,88 @@ public class UnityShimTests
     [Fact]
     public void TwoDimensionalVectors()
     {
-        Assert.Equal(new Vector2(0, 1), Vector2.up);
-        Assert.Equal(new Vector2(0, -1), Vector2.down);
-        Assert.Equal(new Vector2(-1, 0), Vector2.left);
-        Assert.Equal(new Vector2(1, 0), Vector2.right);
+        Assert.Equal(new Vector2(0, 1), Vector2.Up);
+        Assert.Equal(new Vector2(0, -1), Vector2.Down);
+        Assert.Equal(new Vector2(-1, 0), Vector2.Left);
+        Assert.Equal(new Vector2(1, 0), Vector2.Right);
         Assert.Equal(new Vector2(-2, 3), -new Vector2(2, -3));
         Assert.Equal(new Vector2(4, 6), 2f * new Vector2(2, 3));
         Assert.True(new Vector2(1, 2) != new Vector2(1, 3));
-        Assert.False(new Vector2(1, 2) != new Vector2(1, 2));
+        var same = new Vector2(1, 2);
+        Assert.False(same != new Vector2(1, 2));
         Assert.True(new Vector2(1, 2).Equals(new Vector2(1, 2)));
         Assert.False(new Vector2(1, 2).Equals("not a vector"));
         Assert.Equal(new Vector2(1, 2).GetHashCode(), new Vector2(1, 2).GetHashCode());
+    }
+
+    // Equals is float.Equals on each component: NaN equals NaN and -0 equals 0, with equal hashes. Vector2's == is
+    // Unity's approximate one instead, false for NaN.
+    [Theory]
+    [InlineData(float.NaN, float.NaN)]
+    [InlineData(-0f, 0f)]
+    public void VectorsAndColoursEqualTheirTwinWithNaNOrNegativeZero(float odd, float twin)
+    {
+        var v = new Vector2(odd, odd);
+        var w = new Vector2(twin, twin);
+        EqualityAsserts.Same(v, w);
+        Assert.Equal(!float.IsNaN(odd), v == w);
+        EqualityAsserts.Same(new Vector3(odd, odd, odd), new Vector3(twin, twin, twin));
+        EqualityAsserts.Same(new Color(odd, odd, odd, odd), new Color(twin, twin, twin, twin));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void VectorsAndColoursDifferingInOneComponentAreNotEqual(int which)
+    {
+        float[] c = [1, 2, 3, 4];
+        float[] d = [1, 2, 3, 4];
+        d[which] += 0.5f;
+        EqualityAsserts.Differ(new Color(c[0], c[1], c[2], c[3]), new Color(d[0], d[1], d[2], d[3]));
+        if (which < 3)
+        {
+            EqualityAsserts.Differ(new Vector3(c[0], c[1], c[2]), new Vector3(d[0], d[1], d[2]));
+        }
+        if (which < 2)
+        {
+            EqualityAsserts.Differ(new Vector2(c[0], c[1]), new Vector2(d[0], d[1]));
+        }
+    }
+
+    [Fact]
+    public void TwoDimensionalVectorsAFractionApartAreApproximatelyButNotExactlyEqual()
+    {
+        var v = new Vector2(1, 2);
+        var w = new Vector2(1, 2.000001f);
+        Assert.True(v == w);
+        EqualityAsserts.Differ(v, w);
     }
 
     [Fact]
     public void ThreeDimensionalVectors()
     {
         var v = new Vector3(3, 0, 4);
-        Assert.Equal(5f, v.magnitude);
-        var n = v.normalized;
-        Assert.Equal(0.6f, n.x, 5);
-        Assert.Equal(0.8f, n.z, 5);
+        Assert.Equal(5f, v.Magnitude);
+        var n = v.Normalized;
+        Assert.Equal(0.6f, n.X, 5);
+        Assert.Equal(0.8f, n.Z, 5);
         // A vector too short to have a direction normalizes to zero.
-        var z = new Vector3(0, 1e-6f, 0).normalized;
-        Assert.Equal(0f, z.x + z.y + z.z);
-        Assert.Equal(0f, Vector3.zero.magnitude);
+        var z = new Vector3(0, 1e-6f, 0).Normalized;
+        Assert.Equal(0f, z.X + z.Y + z.Z);
+        Assert.Equal(0f, Vector3.Zero.Magnitude);
         var s = new Vector3(1, 2, 3) + new Vector3(1, 1, 1) - new Vector3(0, 1, 0);
-        Assert.Equal((2f, 2f, 4f), (s.x, s.y, s.z));
+        Assert.Equal((2f, 2f, 4f), (s.X, s.Y, s.Z));
         var d = new Vector3(2, 4, 6) / 2f;
-        Assert.Equal((1f, 2f, 3f), (d.x, d.y, d.z));
+        Assert.Equal((1f, 2f, 3f), (d.X, d.Y, d.Z));
     }
 
     [Fact]
     public void IntegerVectors()
     {
-        Assert.True(new Vector2i(1, 2) == new Vector2i(1, 2));
+        var cell = new Vector2i(1, 2);
+        Assert.True(cell == new Vector2i(1, 2));
         Assert.True(new Vector2i(1, 2) != new Vector2i(2, 1));
         Assert.True(new Vector2i(1, 2).Equals((object)new Vector2i(1, 2)));
         Assert.False(new Vector2i(1, 2).Equals(7));
@@ -59,6 +107,16 @@ public class UnityShimTests
         Assert.True(a.Equals((object)new Vector2s(5, 7)));
         Assert.False(a.Equals((object)b));
         Assert.NotEqual(a.GetHashCode(), b.GetHashCode());
+    }
+
+    // Corners west of the middle (x < 0) keep y in their hash: x was sign-extended over it, so every corner of
+    // half the world shared ~160 hashes and the generator's corner caches became long chains.
+    [Fact]
+    public void ShortVectorsWestOfTheMiddleHashTheirY()
+    {
+        var hashes = Enumerable.Range(-160, 321).Select(y => new Vector2s(-64, y * 64).GetHashCode()).ToHashSet();
+        Assert.Equal(321, hashes.Count);
+        Assert.Equal(new Vector2s(-64, 128).GetHashCode(), new Vector2s(-64, 128).GetHashCode());
     }
 
     [Fact]
@@ -89,8 +147,8 @@ public class UnityShimTests
         Assert.Equal(4, Rnd.Range(4, 4));
         for (int i = 0; i < 200; i++)
         {
-            var c = Rnd.insideUnitCircle;
-            Assert.True(c.x * c.x + c.y * c.y <= 1.0001f);
+            var c = Rnd.InsideUnitCircle;
+            Assert.True(c.X * c.X + c.Y * c.Y <= 1.0001f);
         }
         // The same seed, the same numbers.
         Rnd.InitState(7);
@@ -154,19 +212,5 @@ public class UnityShimTests
         // Ocean ground above the water line (a shore) and no biome at all have no colour of their own.
         Assert.Equal((150f, 150f, 150f), TerrainService.BiomeColor(Heightmap.Biome.Ocean, 31));
         Assert.Equal((150f, 150f, 150f), TerrainService.BiomeColor(Heightmap.Biome.None, 31));
-    }
-
-    [Fact]
-    public void TheAlternateBiomeMapIsNeverReady()
-    {
-        // The port has no alternate biome map: the generator asking for a sector gets the empty answer.
-        var data = new AltBiomeWorldData();
-        Assert.False(data.IsReady);
-        Assert.Null(data.PointSectors);
-        Assert.Equal(0, AltBiomeWorldData.WorldSpaceToMapSpace(1234.5f));
-        Assert.Equal(Heightmap.Biome.BlackForest, BiomeSector.EmptyBlackForest.Biome);
-        Assert.Equal(Heightmap.Biome.Meadows, BiomeSector.EmptyMeadows.Biome);
-        // The game's log: nothing written offline.
-        ZLog.Log("ignored");
     }
 }

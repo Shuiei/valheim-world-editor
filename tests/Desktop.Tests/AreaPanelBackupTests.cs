@@ -18,38 +18,13 @@ public class AreaPanelBackupTests
     /// </summary>
     private static (MainWindow W, EditSession S, string Dir) Open()
     {
-        string dir = Fixtures.CopyFixture();
-        var scene = WorldScene.Load(dir, 0, 0, 1);
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        w.View.Show(scene, null);
-        w.Edit(scene.Session!);
-        w.Tools.ChooseMode(ToolMode.Area);
+        var (w, s, dir) = TestWindows.AreaToolOnWorldCopy();
         w.AreaPanel.SoftSlider.Value = 10;
         w.View.Area.Points.Add(new Vector2(10, 10));
         w.View.Area.Points.Add(new Vector2(54, 54));
         w.View.Area.Notify();
-        return (w, scene.Session!, dir);
+        return (w, s, dir);
     }
-
-    /// <summary>
-    /// Sets or clears dirt paint over grid (5, 5) to (59, 59).
-    /// </summary>
-    private static void Paint(EditSession s, bool on) => s.EditGround("paint", g =>
-    {
-        var touched = new List<int>();
-        for (int z = 5; z < 60; z++)
-        {
-            for (int x = 5; x < 60; x++)
-            {
-                int p = z * g.W + x;
-                g.PMod[p] = (byte)(on ? 1 : 0);
-                Array.Copy(on ? Brush.PaintOf(BrushTool.PaintDirt)! : new float[4], 0, g.Paint, p * 4, 4);
-                touched.Add(p);
-            }
-        }
-        return (touched, (4, 4, 61, 61));
-    });
 
     [AvaloniaFact]
     public async Task PaintComesBackFromABackupFadingAtTheSoftEdge()
@@ -59,10 +34,10 @@ public class AreaPanelBackupTests
         try
         {
             // Painted and saved: the backup; then the paint cleared (not saved).
-            Paint(s, true);
+            DirtPaint.Set(s, true);
             Assert.True(s.Save().Saved);
             TempWorld.CopyDir(dir, backup);
-            Paint(s, false);
+            DirtPaint.Set(s, false);
             var p = w.AreaPanel;
             foreach (var b in p.KindButtons.Values)
             {
@@ -109,6 +84,30 @@ public class AreaPanelBackupTests
             await p.RestoreBackup(s, poly, backup);
             Assert.Equal("Nothing to restore: the selection is as it was in the backup.", w.MessageText.Text);
             Assert.Equal(things, s.Scene.Things.Count);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task ABackupReadIsKeptForItsWorldOnly()
+    {
+        var (w, s, dir) = Open();
+        string backup = dir.TrimEnd(Path.DirectorySeparatorChar) + "_kept";
+        try
+        {
+            TempWorld.CopyDir(dir, backup);
+            var p = w.AreaPanel;
+            var first = await p.OpenBackup(backup, s.Scene.World);
+            Assert.Same(first!.Value.World, (await p.OpenBackup(backup, s.Scene.World))!.Value.World);
+            // Still the same world shown: kept.
+            p.Refresh();
+            Assert.Same(first.Value.World, (await p.OpenBackup(backup, s.Scene.World))!.Value.World);
+            // Its world left: read again next time.
+            p.ForgetBackup();
+            Assert.NotSame(first.Value.World, (await p.OpenBackup(backup, s.Scene.World))!.Value.World);
         }
         finally
         {

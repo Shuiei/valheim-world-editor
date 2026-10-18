@@ -1,7 +1,3 @@
-using System.Numerics;
-using Avalonia.Headless;
-using Avalonia.Headless.XUnit;
-using Avalonia.Input;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -67,45 +63,46 @@ public class ErosionTests
         Assert.True(upper < 0, $"the upper slope should lose ground: {upper}");
     }
 
-    [Fact]
-    public void TheErodeBrushIsOneStroke()
+    /// <summary>
+    /// A 30 × 30 valley: a floor at x = 3, a steep wall to the west, a 2 m-per-point slope to the east. The points up to
+    /// x = 5 may change fully; east of that they may change by 0.01, or (soft) by a share falling over 8 points to 0.01,
+    /// with a locked block on the slope.
+    /// </summary>
+    private static (float[] H, float[] Wt) Valley(bool soft)
     {
-        var s = TestScenes.Flat(2);
-        s.Shape(64, 64, Formula.Compile("d < 4 ? 6 : 0", ["d"]), 4, 0, "tower");
-        float top = s.Scene.Heights[64 * s.Scene.W + 64];
-        s.Brush.Radius = 10;
-        s.Brush.Strength = 1;
-        s.BeginStroke(BrushTool.Erode, 64, 64);
-        for (int i = 0; i < 30; i++)
+        float[] h = new float[900];
+        float[] wt = new float[900];
+        for (int i = 0; i < 900; i++)
         {
-            s.StrokeStep(64, 64, 0.1f);
+            int x = i % 30, z = i / 30;
+            h[i] = x >= 3 ? (x - 3) * 2f : (3 - x) * 3f;
+            wt[i] = x <= 5 ? 1 : soft ? MathF.Max(0.01f, 1 - (x - 5) / 8f) : 0.01f;
+            if (soft && z is > 12 and < 17 && x is > 6 and < 11)
+            {
+                wt[i] = 0;
+            }
         }
-        s.EndStroke();
-        Assert.True(s.Scene.Heights[64 * s.Scene.W + 64] < top - 0.5f);
-        Assert.True(s.Scene.Heights[64 * s.Scene.W + 69] > 30.1f);
-        Assert.Equal("Erode", s.UndoLabel);
+        return (h, wt);
     }
 
-    [AvaloniaFact]
-    public async Task TheKeyAndTheAreaAction()
+    [Fact]
+    public void RainNeitherMakesNorLosesGroundAtSoftEdgesAndLockedPoints()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2);
-        s.Shape(64, 64, Formula.Compile("d < 4 ? 6 : 0", ["d"]), 4, 0, "tower");
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
-        w.KeyPress(Key.O, RawInputModifiers.None, PhysicalKey.O, "o");
-        Assert.Equal(BrushTool.Erode, w.Tools.Tool);
-        w.Tools.WaterButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
-        Assert.True(w.Tools.Brush.ErodeWater);
-        Assert.False(w.Tools.RestSlider.IsEffectivelyVisible);
-        w.Tools.ChooseMode(ToolMode.Area);
-        w.View.Area.Points.Add(new Vector2(50, 50));
-        w.View.Area.Points.Add(new Vector2(78, 78));
-        w.AreaPanel.Choose(AreaPanel.Act.Erode);
-        await w.AreaPanel.Apply();
-        Assert.True(s.Scene.Heights[64 * s.Scene.W + 64] < 36);
-        Assert.Equal("Area: Erode", s.UndoLabel);
+        var (h, wt) = Valley(soft: true);
+        float[] before = (float[])h.Clone();
+        Erosion.Hydraulic(h, wt, 30, 30, 3000, 1, new Random(3));
+        Assert.Contains(Enumerable.Range(0, 900), i => MathF.Abs(h[i] - before[i]) > 0.1f);
+        Assert.Equal(before.Sum(v => (double)v), h.Sum(v => (double)v), 0.01);
+        Assert.All(Enumerable.Range(0, 900).Where(i => wt[i] == 0), i => Assert.Equal(before[i], h[i]));
+    }
+
+    [Fact]
+    public void HeavyRainNextToNearlyLockedGroundDigsNoRunawayHoles()
+    {
+        var (h, wt) = Valley(soft: false);
+        float[] before = (float[])h.Clone();
+        Erosion.Hydraulic(h, wt, 30, 30, 10000, 1, new Random(0));
+        float most = Enumerable.Range(0, 900).Max(i => MathF.Abs(h[i] - before[i]));
+        Assert.True(most < 20, $"{most}");
     }
 }

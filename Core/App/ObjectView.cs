@@ -10,38 +10,11 @@ namespace TerrainEditor.App;
 /// <param name="rotation">Its turn as drawn, Unity Euler degrees.</param>
 /// <param name="data">Its data.</param>
 /// <param name="scale">Its size (0 or 1: the prefab's own).</param>
-public sealed class ObjectView(string prefab, Vector3 position, Vector3 rotation, ZdoData data, float scale = 1) : IObjectView
+public sealed class ObjectView(string prefab, Vector3 position, Vector3 rotation, ZdoData data, float scale = 1) : PlacedView(prefab, position, rotation, scale), IObjectView
 {
-    /// <inheritdoc/>
-    public string Prefab => prefab;
-
-    /// <inheritdoc/>
-    public Vector3 Position => position;
-
-    /// <inheritdoc/>
-    public Vector3 Rotation => rotation;
-
-    /// <inheritdoc/>
-    public Quaternion Orientation => BlueprintFormats.FromEuler(rotation);
-
-    /// <inheritdoc/>
-    public float Scale => scale > 0 ? scale : 1;
 
     /// <summary>The first value of a key in a list of values.</summary>
-    private static bool Find<T>(List<(int Key, T Value)> list, string key, out T value)
-    {
-        int h = StableHash.Of(key);
-        foreach (var (k, v) in list)
-        {
-            if (k == h)
-            {
-                value = v;
-                return true;
-            }
-        }
-        value = default!;
-        return false;
-    }
+    private static bool Find<T>(List<(int Key, T Value)> list, string key, out T value) => ZdoData.TryGet(list, StableHash.Of(key), out value);
 
     /// <inheritdoc/>
     public bool TryGetInt(string key, out int value) => Find(data.IntList, key, out value);

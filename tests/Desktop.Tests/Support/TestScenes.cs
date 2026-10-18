@@ -2,6 +2,7 @@ using System.Numerics;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using WorldEditor.Tests;
+using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
 
@@ -44,6 +45,16 @@ internal static class TestScenes
     }
 
     /// <summary>
+    /// The one-zone scene of the zone that holds the first object of this kind in the world at <paramref name="dir"/>,
+    /// its edit session made.
+    /// </summary>
+    internal static WorldScene ZoneHolding(string dir, int prefab)
+    {
+        var at = WorldSave.Load(dir).Objects.First(o => o.Prefab == prefab).Position;
+        return WorldScene.Load(dir, (int)MathF.Floor((at.X + 32) / 64), (int)MathF.Floor((at.Z + 32) / 64), 1);
+    }
+
+    /// <summary>
     /// A flat 1 × 1 zone area at 35 m, with the given objects.
     /// </summary>
     internal static WorldScene FlatScene(params WorldScene.Thing[] things) => new()
@@ -64,6 +75,34 @@ internal static class TestScenes
         OceanDepth = new float[65 * 65],
         Limit = new float[65 * 65],
     };
+
+    /// <summary>
+    /// A beech (Beech1) standing upright at full size at the point given, not yet saved in the world.
+    /// </summary>
+    internal static WorldScene.Thing Beech(int id, Vector3 at) => new(id, StableHash.Of("Beech1"), at, Vector3.Zero, 1, false);
+
+    /// <summary>
+    /// The game given opened live, and its area of radius 1 around zone (0, 0) with its edit session.
+    /// </summary>
+    internal static async Task<(WorldSession World, EditSession Area)> LiveArea(FakeGame game)
+    {
+        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
+        return (world, WorldScene.Load(world, 0, 0, 1).Session!);
+    }
+
+    /// <summary>
+    /// The area's first saved object moved 3 m, then left out of a save the game makes meanwhile (on the world's save in
+    /// <paramref name="dir"/>, the editor's base kept): the clash bringing the changes over finds.
+    /// </summary>
+    /// <returns>The object, as it was before the move.</returns>
+    internal static WorldScene.Thing MovedThenRemovedByTheGame(EditSession s, string dir)
+    {
+        int index = s.Scene.Things.FindIndex(t => t.Id >= 0 && !t.Gone);
+        var thing = s.Scene.Things[index];
+        s.Move([(index, thing.Position + new Vector3(3, 0, 3), thing.Rotation)]);
+        Assert.True(WorldWriter.Save(WorldSave.Load(dir), [], [thing.Id], options: new WorldWriter.Options(KeepBase: true)).Saved);
+        return thing;
+    }
 
     /// <summary>The ship's root's id (AddShip).</summary>
     internal const int ShipId = 500;

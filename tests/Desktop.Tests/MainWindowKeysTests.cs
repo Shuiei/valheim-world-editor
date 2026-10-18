@@ -12,7 +12,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The 3D editor's keys in the window: V and L for the right-hand panels, the Paste tool's F, Esc and Ctrl + wheel, the
 /// Area tool's Enter and Backspace, the Dungeon tool's R and Delete, Esc for the Measure tool's tape, I and Esc for the
-/// inspector; the walking and flying eyes; and Inspect on a runestone or on more than one object.
+/// inspector; the walking and flying eyes; Inspect on a runestone or on more than one object; and the key table's
+/// order and which keys it marks handled.
 /// </summary>
 [Collection("World files")]
 public class MainWindowKeysTests
@@ -21,14 +22,7 @@ public class MainWindowKeysTests
     /// A shown window editing a flat 2 × 2 zone area (ground at 30 m) with these objects.
     /// </summary>
     private static (MainWindow W, EditSession S) Open(params WorldScene.Thing[] things)
-    {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2, things);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
-        return (w, s);
-    }
+        => TestWindows.EditingFlat(things);
 
     /// <summary>
     /// Presses a key (with these modifiers) on the window.
@@ -37,6 +31,17 @@ public class MainWindowKeysTests
     {
         w.KeyPress(key, mods, physical, text);
         Dispatcher.UIThread.RunJobs();
+    }
+
+    /// <summary>
+    /// Presses a key (with these modifiers) on the window; whether the window marked it handled.
+    /// </summary>
+    private static bool Handled(MainWindow w, Key key, KeyModifiers mods = KeyModifiers.None)
+    {
+        var e = new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key, KeyModifiers = mods, Source = w };
+        w.RaiseEvent(e);
+        Dispatcher.UIThread.RunJobs();
+        return e.Handled;
     }
 
     [AvaloniaFact]
@@ -116,6 +121,32 @@ public class MainWindowKeysTests
     }
 
     [AvaloniaFact]
+    public void TheKeyTableKeepsItsOrderAndWhatItMarksHandled()
+    {
+        var (w, _) = Open();
+        // The rail's keys act and stay unhandled; a panel's key is taken.
+        Assert.False(Handled(w, Key.D1));
+        Assert.False(Handled(w, Key.Escape));
+        Assert.True(Handled(w, Key.L));
+        Assert.True(w.History.Card.IsVisible);
+        // Picking a kind comes before the Paste tool's Esc: Esc cancels the pick and the paste goes on.
+        w.View.Paste.Clip = BlueprintsPanelRun.Clip("Hut", "Beech1");
+        Assert.True(Handled(w, Key.V, KeyModifiers.Control));
+        Assert.Equal(ToolMode.Paste, w.Tools.Mode);
+        w.PickKind("the test", _ => { });
+        Assert.True(Handled(w, Key.Escape));
+        Assert.Null(w.View.PickObjectOnce);
+        Assert.Equal("Picking cancelled.", w.MessageText.Text);
+        Assert.Equal(ToolMode.Paste, w.Tools.Mode);
+        // The Paste tool's F is taken, so the view's F (walk) never sees it.
+        Assert.True(Handled(w, Key.F));
+        Assert.Equal(GlView.EyeMode.Orbit, w.View.Eye);
+        // The Dungeon tool turns Delete down with no room chosen, and no later rule takes it.
+        w.Tools.ChooseMode(ToolMode.Dungeon);
+        Assert.False(Handled(w, Key.Delete));
+    }
+
+    [AvaloniaFact]
     public void CtrlXCutsTheSelectionToTheClipboardAndCtrlZBringsItBack()
     {
         var stone = new WorldScene.Thing(4, StableHash.Of("Runestone_Meadows"), new Vector3(0, 30, 0), Vector3.Zero, 1, false);
@@ -138,18 +169,22 @@ public class MainWindowKeysTests
     }
 
     [AvaloniaFact]
-    public void CtrlXOnAnEmptyAreaCopiesTheGroundAndCutsNothing()
+    public void CtrlXAndCtrlCOnAnEmptyAreaCopyAndCutNothing()
     {
         var (w, s) = Open();
         w.Tools.ChooseMode(ToolMode.Area);
         w.View.Area.Points.Add(new Vector2(32, 32));
         w.View.Area.Points.Add(new Vector2(48, 48));
         Press(w, Key.X, PhysicalKey.X, "x", RawInputModifiers.Control);
-        Assert.Empty(w.View.Paste.Clip!.Objects);
-        Assert.Empty(w.View.Paste.Clip.Taken);
-        Assert.Contains("no objects to cut here", w.MessageText.Text);
+        // No objects, so no ground either: nothing goes on the clipboard, and it is said.
+        Assert.Null(w.View.Paste.Clip);
+        Assert.StartsWith("Nothing to copy here", w.MessageText.Text);
         // Nothing was taken away, so there is nothing to undo.
         Assert.False(s.CanUndo);
+        w.MessageText.Text = "";
+        Press(w, Key.C, PhysicalKey.C, "c", RawInputModifiers.Control);
+        Assert.Null(w.View.Paste.Clip);
+        Assert.StartsWith("Nothing to copy here", w.MessageText.Text);
     }
 
     [AvaloniaFact]
@@ -176,13 +211,8 @@ public class MainWindowKeysTests
         try
         {
             int chestKind = StableHash.Of("piece_chest_wood");
-            var world = WorldSave.Load(dir);
-            var at = world.Objects.First(o => o.Prefab == chestKind).Position;
-            var scene = WorldScene.Load(dir, (int)MathF.Floor((at.X + 32) / 64), (int)MathF.Floor((at.Z + 32) / 64), 1);
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            w.View.Show(scene, null);
-            w.Edit(scene.Session!);
+            var scene = TestScenes.ZoneHolding(dir, chestKind);
+            var w = TestWindows.Editing(scene.Session!);
             w.Tools.ChooseSelect();
             int chest = scene.Things.FindIndex(t => t.Prefab == chestKind);
             w.View.Select([chest]);

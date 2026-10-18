@@ -32,14 +32,22 @@ public class WorldSearchTests
         Assert.NotEmpty(WorldSearch.Search(world, edits, "_zonectrl", "kinds").Hits);
     }
 
+    /// <summary>
+    /// An edit store over the world, and the id and parsed object data of its first wooden chest.
+    /// </summary>
+    private static (EditStore Edits, int Chest, ZdoData Z) WoodenChestOf(WorldSave world)
+    {
+        var edits = new EditStore(world);
+        int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
+        return (edits, chest, ZdoData.Parse(world.ObjectBytes(chest)));
+    }
+
     [Fact]
     public void FindsItemsInContainersAndTexts()
     {
         using var w = new TempWorld();
         WorldSave world = w.Load();
-        var edits = new EditStore(world);
-        int chest = world.Objects.First(o => o.Prefab == Fixtures.Hash("piece_chest_wood")).Id;
-        var z = ZdoData.Parse(world.ObjectBytes(chest));
+        var (edits, chest, z) = WoodenChestOf(world);
         var inv = new InventoryData();
         inv.Items.Add(new InventoryData.Item { Prefab = Fixtures.Hash("Wood"), Stack = 30 });
         inv.Items.Add(new InventoryData.Item { Prefab = Fixtures.Hash("Wood"), Stack = 12, X = 1 });
@@ -54,5 +62,37 @@ public class WorldSearchTests
         var texts = WorldSearch.Search(world, edits, "odin", "texts");
         Assert.Equal("text: Odin's stash", Assert.Single(texts.Hits).Match);
         Assert.Empty(WorldSearch.Search(world, edits, "", "kinds").Hits);
+    }
+
+    // One damaged object (a byte array with a negative length) or one chest whose items bytes have a bad length prefix
+    // is skipped, and the search goes on with the rest instead of ending with an exception.
+    [Fact]
+    public void ADamagedObjectIsSkippedAndTheRestFound()
+    {
+        using var w = new TempWorld();
+        WorldSave world = w.Load();
+        var (edits, chest, z) = WoodenChestOf(world);
+        z.SetBytes(StableHash.Of("damaged"), []);
+        byte[] broken = z.Serialize();
+        broken.AsSpan(^4).Fill(0xFF); // the (last) byte array's length: -1
+        Assert.Throws<InvalidDataException>(() => ZdoData.Parse(broken));
+        // Item format 108, one item with a crafter whose name's length prefix never ends.
+        byte[] badItems = [108, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+        Assert.Throws<FormatException>(() => InventoryData.Read(badItems));
+        var unreadable = ZdoData.Parse(world.ObjectBytes(chest));
+        unreadable.SetBytes(StableHash.Of("items"), badItems);
+        var good = ZdoData.Parse(world.ObjectBytes(chest));
+        var inv = new InventoryData();
+        inv.Items.Add(new InventoryData.Item { Prefab = Fixtures.Hash("Wood"), Stack = 5 });
+        good.SetBytes(StableHash.Of("items"), inv.Write());
+        good.Set("strings", StableHash.Of("text"), "still here");
+        edits.AddObjects(
+        [
+            new NewObject(-1, z.Prefab, z.Position, z.Rotation, 0f, null, false, broken),
+            new NewObject(-2, z.Prefab, z.Position, z.Rotation, 0f, null, false, unreadable.Serialize()),
+            new NewObject(-3, z.Prefab, z.Position, z.Rotation, 0f, null, false, good.Serialize()),
+        ]);
+        Assert.Equal(-3, Assert.Single(WorldSearch.Search(world, edits, "wood", "items").Hits).Id);
+        Assert.Equal(-3, Assert.Single(WorldSearch.Search(world, edits, "still", "texts").Hits).Id);
     }
 }

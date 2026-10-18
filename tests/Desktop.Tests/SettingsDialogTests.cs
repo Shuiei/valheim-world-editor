@@ -1,100 +1,21 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
-using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
-using Avalonia.Threading;
 using TerrainEditor.App;
 using Xunit;
+using static TerrainEditor.Desktop.Tests.SettingsDialogRun;
+using static TerrainEditor.Desktop.Tests.SharedButtons;
 
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The Settings window: what it shows from the settings, Browse (the folder picker), Automatic, adding and taking out
-/// folders, a wrong choice explained without closing, Save keeping the choices, Cancel keeping nothing, "~" in a path,
-/// what draws on Windows, and the language. It saves to the tests' settings file, so it runs alone.
+/// The Settings window's folders: what it shows from the settings, Browse (the folder picker), Automatic, adding and
+/// taking out folders, a wrong choice explained without closing, Cancel keeping nothing, and a folder that cannot be
+/// saved. It saves to the tests' settings file, so it runs alone.
 /// </summary>
 [Collection("DataDir")]
 public class SettingsDialogTests
 {
-    /// <summary>
-    /// A temporary folder for the folders the Settings window is given; deleted when disposed.
-    /// </summary>
-    private sealed class Temp : IDisposable
-    {
-        public string Root { get; } = Path.Combine(Path.GetTempPath(), "vwe-settings-ui-" + Guid.NewGuid().ToString("N")[..8]);
-
-        /// <summary>
-        /// A new folder of this name in the temporary folder.
-        /// </summary>
-        public string Dir(string name)
-        {
-            string d = Path.Combine(Root, name);
-            Directory.CreateDirectory(d);
-            return d;
-        }
-
-        /// <summary>
-        /// A folder that looks like the game's (valheim_Data/StreamingAssets/SoftRef/Bundles).
-        /// </summary>
-        public string Game()
-        {
-            string g = Dir("Valheim");
-            Directory.CreateDirectory(Path.Combine(g, "valheim_Data", "StreamingAssets", "SoftRef", "Bundles"));
-            return g;
-        }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            try
-            {
-                Directory.Delete(Root, true);
-            }
-            catch
-            {
-            }
-        }
-    }
-
-    /// <summary>
-    /// A shown 900 × 700 window to own the Settings window.
-    /// </summary>
-    private static Window Owner()
-    {
-        var w = new Window { Width = 900, Height = 700 };
-        w.Show();
-        return w;
-    }
-
-    /// <summary>
-    /// The folders' boxes (not Claude's port and command).
-    /// </summary>
-    private static List<TextBox> Boxes(Window d) => [.. d.GetLogicalDescendants().OfType<TextBox>().Where(b => b.Name?.StartsWith("Claude", StringComparison.Ordinal) != true)];
-
-    /// <summary>
-    /// The text box with this name.
-    /// </summary>
-    private static TextBox Named(Window d, string name) => d.GetLogicalDescendants().OfType<TextBox>().Single(b => b.Name == name);
-
-    /// <summary>
-    /// The buttons with this label.
-    /// </summary>
-    private static List<Button> Buttons(Window d, string label) => [.. d.GetLogicalDescendants().OfType<Button>().Where(b => b.Content as string == label)];
-
-    /// <summary>
-    /// Clicks the button and runs the posted work it starts.
-    /// </summary>
-    private static void Click(Button b)
-    {
-        b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        Dispatcher.UIThread.RunJobs();
-    }
-
-    /// <summary>
-    /// Every text block's text in the window, joined with " | ".
-    /// </summary>
-    private static string Texts(Window d) => string.Join(" | ", d.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text));
-
     [AvaloniaFact]
     public async Task ItShowsTheSettingsAndSavesTheChoices()
     {
@@ -113,112 +34,7 @@ public class SettingsDialogTests
         Click(Buttons(d, "Save").Single());
         Assert.True(await shown);
         Assert.Empty(owner.OwnedWindows);
-        var kept = AppSettings.Load();
-        Assert.Equal(game, kept.ValheimPath);
-        Assert.Equal(new[] { bep }, kept.BepInExFolders);
-        Assert.Equal(new[] { worlds }, kept.WorldFolders);
-    }
-
-    // Claude's connection: off at first (its details hidden); on, the port and the command to add the editor
-    // to Claude Code (with the token); a port that is not one is refused; saved with the token.
-    [AvaloniaFact]
-    public async Task ClaudesConnectionIsChosenWithItsPortAndToken()
-    {
-        using var t = new Temp();
-        var settings = new AppSettings();
-        var owner = Owner();
-        var shown = SettingsDialog.Show(owner, settings);
-        var d = TestWindows.Shown(owner);
-        var allow = d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == "Allow Claude to connect");
-        var port = Named(d, "ClaudePort");
-        var command = Named(d, "ClaudeCommand");
-        Assert.False(allow.IsChecked);
-        Assert.False(port.IsEffectivelyVisible);
-        allow.IsChecked = true;
-        Dispatcher.UIThread.RunJobs();
-        Assert.True(port.IsEffectivelyVisible);
-        Assert.StartsWith("claude mcp add --transport http valheim-editor http://127.0.0.1:5731/mcp --header \"Authorization: Bearer ", command.Text);
-        port.Text = "80";
-        Click(Buttons(d, "Save").Single());
-        Assert.Contains(Texts(d).Split(" | "), x => x.Contains("1024 to 65535"));
-        port.Text = "6000";
-        Dispatcher.UIThread.RunJobs();
-        Assert.Contains("127.0.0.1:6000/mcp", command.Text);
-        string token = command.Text!.Split("Bearer ")[1].TrimEnd('"');
-        Click(Buttons(d, "Save").Single());
-        Assert.True(await shown);
-        var kept = AppSettings.Load();
-        Assert.True(kept.ClaudeConnect);
-        Assert.Equal(6000, kept.ClaudePort);
-        Assert.Equal(token, kept.ClaudeToken);
-    }
-
-    // Drawing: only on Windows; the driver's OpenGL off at first, saved when chosen.
-    [AvaloniaFact]
-    public async Task WindowsChoosesWhatDraws()
-    {
-        using var t = new Temp();
-        bool was = SettingsDialog.OnWindows;
-        try
-        {
-            static CheckBox DriverGl(Window d) => d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == "Draw with the graphics driver's OpenGL");
-            var owner = Owner();
-            SettingsDialog.OnWindows = false;
-            var shown = SettingsDialog.Show(owner, new AppSettings());
-            var d = TestWindows.Shown(owner);
-            Assert.False(DriverGl(d).IsEffectivelyVisible);
-            Click(Buttons(d, "Cancel").Single());
-            Assert.False(await shown);
-            SettingsDialog.OnWindows = true;
-            shown = SettingsDialog.Show(owner, new AppSettings());
-            d = TestWindows.Shown(owner);
-            Assert.True(DriverGl(d).IsEffectivelyVisible);
-            Assert.False(DriverGl(d).IsChecked);
-            DriverGl(d).IsChecked = true;
-            Click(Buttons(d, "Save").Single());
-            Assert.True(await shown);
-            Assert.True(AppSettings.Load().DriverOpenGl);
-        }
-        finally
-        {
-            SettingsDialog.OnWindows = was;
-        }
-    }
-
-    // Language: the computer's at first, then English and the catalogues there are (one dropped in the lang folder
-    // listed by its own name); the one chosen saved by its code, and shown chosen again.
-    [AvaloniaFact]
-    public async Task TheLanguageIsChosenAmongTheCatalogues()
-    {
-        using var t = new Temp();
-        string? was = Lang.FolderOverride;
-        Lang.FolderOverride = t.Dir("lang");
-        try
-        {
-            File.WriteAllText(Path.Combine(Lang.Folder, "xx.json"), """{ "lang.name": "Testish" }""");
-            static ComboBox Language(Window d) => d.GetLogicalDescendants().OfType<ComboBox>().Single(c => c.Name == "Language");
-            var owner = Owner();
-            var settings = new AppSettings();
-            var shown = SettingsDialog.Show(owner, settings);
-            var d = TestWindows.Shown(owner);
-            Assert.Equal(["The computer's language", "English", "Testish"], Language(d).Items.Cast<string>());
-            Assert.Equal(0, Language(d).SelectedIndex);
-            Language(d).SelectedIndex = 2;
-            Click(Buttons(d, "Save").Single());
-            Assert.True(await shown);
-            Assert.Equal("xx", AppSettings.Load().Language);
-            shown = SettingsDialog.Show(owner, settings);
-            d = TestWindows.Shown(owner);
-            Assert.Equal(2, Language(d).SelectedIndex);
-            Language(d).SelectedIndex = 0;
-            Click(Buttons(d, "Save").Single());
-            Assert.True(await shown);
-            Assert.Null(AppSettings.Load().Language);
-        }
-        finally
-        {
-            Lang.FolderOverride = was;
-        }
+        SettingsChecks.AssertKept(game, bep, worlds);
     }
 
     [AvaloniaFact]
@@ -292,54 +108,32 @@ public class SettingsDialogTests
     }
 
     [AvaloniaFact]
+    public void SettingsThatCannotBeSavedAreSaidAndNotKept()
+    {
+        using var t = new Temp();
+        string? was = AppSettings.PathOverride;
+        // A folder where the file should be: it cannot be written.
+        AppSettings.PathOverride = t.Dir("settings.json");
+        try
+        {
+            var settings = new AppSettings();
+            string worlds = t.Dir("Worlds");
+            string? problem = SettingsDialog.Apply(settings, null, [], [worlds]);
+            Assert.StartsWith("The settings could not be saved: ", problem);
+            Assert.Empty(settings.WorldFolders);
+        }
+        finally
+        {
+            AppSettings.PathOverride = was;
+        }
+    }
+
+    [AvaloniaFact]
     public void AHomePathAndQuotesAreUnderstood()
     {
         var settings = new AppSettings();
         string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         string? problem = SettingsDialog.Apply(settings, null, ["\"~/no-such-folder-for-vwe-tests\""], []);
         Assert.Contains(Path.Combine(home, "no-such-folder-for-vwe-tests"), problem);
-    }
-
-    // A mod in a BepInEx folder offering an extension (here a file that is no DLL): listed off, turned on and saved
-    // with its file's hash, then shown as not running, with why.
-    [AvaloniaFact]
-    public async Task AModsExtensionIsTurnedOnAndSavedWithItsFile()
-    {
-        using var t = new Temp();
-        bool defaults = LocalGame.SearchDefaultPlaces;
-        LocalGame.SearchDefaultPlaces = false;
-        try
-        {
-            string mod = t.Dir("BepInEx/plugins/SomeMod");
-            File.WriteAllText(Path.Combine(mod, ModManifests.FileName), """{ "version": 1, "extension": "SomeMod.WorldEditor.dll" }""");
-            string dll = Path.Combine(mod, "SomeMod.WorldEditor.dll");
-            File.WriteAllText(dll, "not a DLL");
-            var settings = new AppSettings { BepInExFolders = { Path.Combine(t.Root, "BepInEx") } };
-            var owner = Owner();
-            var shown = SettingsDialog.Show(owner, settings);
-            var d = TestWindows.Shown(owner);
-            var box = d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == "SomeMod · SomeMod.WorldEditor.dll");
-            Assert.False(box.IsChecked);
-
-            box.IsChecked = true;
-            Click(Buttons(d, "Save").Single());
-
-            Assert.True(await shown);
-            Assert.Equal(ModExtensions.Sha256Of(dll), AppSettings.Load().Extensions[dll]);
-            Assert.Equal(ModExtensions.Status.Failed, Assert.Single(ModExtensions.Offered).State);
-            // Shown again: on, and why it does not run.
-            shown = SettingsDialog.Show(owner, settings);
-            d = TestWindows.Shown(owner);
-            Assert.True(d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == "SomeMod · SomeMod.WorldEditor.dll").IsChecked);
-            Assert.Contains("Not running: ", Texts(d));
-            Click(Buttons(d, "Cancel").Single());
-            Assert.False(await shown);
-        }
-        finally
-        {
-            LocalGame.SearchDefaultPlaces = defaults;
-            ModExtensions.Forget();
-            ModManifests.Forget();
-        }
     }
 }

@@ -13,6 +13,8 @@ namespace WorldEditor.Tests;
 /// </summary>
 public sealed class LocalSshd : IDisposable
 {
+    private static readonly string[] Expected2 = ["/usr/sbin/sshd", "/usr/bin/sshd", "/sbin/sshd"];
+    private static readonly string[] Expected1 = ["/usr/bin/ssh-keygen", "/usr/sbin/ssh-keygen", "/bin/ssh-keygen"];
     private readonly Process? _p;
     public string Dir { get; } = Path.Combine(Path.GetTempPath(), "vwe-sshd-" + Guid.NewGuid().ToString("N")[..8]);
     public int Port { get; }
@@ -26,8 +28,8 @@ public sealed class LocalSshd : IDisposable
 
     public LocalSshd()
     {
-        string? sshd = new[] { "/usr/sbin/sshd", "/usr/bin/sshd", "/sbin/sshd" }.FirstOrDefault(File.Exists);
-        string? keygen = new[] { "/usr/bin/ssh-keygen", "/usr/sbin/ssh-keygen", "/bin/ssh-keygen" }.FirstOrDefault(File.Exists);
+        string? sshd = Expected2.FirstOrDefault(File.Exists);
+        string? keygen = Expected1.FirstOrDefault(File.Exists);
         if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS() || sshd == null || keygen == null)
         {
             Why = "OpenSSH's sshd and ssh-keygen are needed";
@@ -94,6 +96,9 @@ public sealed class LocalSshd : IDisposable
 
     public bool Available => _p != null;
 
+    /// <summary>The sshd process's id (its sessions are its children).</summary>
+    internal int ProcessId => _p!.Id;
+
     /// <summary>
     /// Skips the test without sshd (fails instead when CI asks for it).
     /// </summary>
@@ -122,25 +127,19 @@ public sealed class LocalSshd : IDisposable
         return output;
     }
 
+    /// <summary>
+    /// Stops sshd (with the sessions it started) and waits for it to end, then deletes its folder.
+    /// </summary>
     public void Dispose()
     {
-        try
+        if (_p is { HasExited: false })
         {
-            if (_p is { HasExited: false })
-            {
-                _p.Kill();
-                _p.WaitForExit(5000);
-            }
+            _p.Kill(entireProcessTree: true);
+            Assert.True(_p.WaitForExit(5000), "sshd did not end within 5 s of being killed");
         }
-        catch
-        {
-        }
-        try
+        if (Directory.Exists(Dir))
         {
             Directory.Delete(Dir, true);
-        }
-        catch
-        {
         }
     }
 }

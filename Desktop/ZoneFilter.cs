@@ -14,48 +14,42 @@ namespace TerrainEditor.Desktop;
 /// <param name="OnlyGenerated">Keep only zones the game has generated.</param>
 /// <param name="MinRadius">The least distance from the world's middle, in metres; null for no limit.</param>
 /// <param name="MaxRadius">The greatest distance from the world's middle, in metres; null for no limit.</param>
-public sealed record ZoneFilter(IReadOnlySet<int> Biomes, bool NoBuildings, int Distance, bool NoEdits, bool OnlyGenerated, float? MinRadius, float? MaxRadius)
+public sealed partial record ZoneFilter(IReadOnlySet<int> Biomes, bool NoBuildings, int Distance, bool NoEdits, bool OnlyGenerated, float? MinRadius, float? MaxRadius)
 {
-    /// <summary>The biomes offered (Heightmap.Biome values), in the web editor's order.</summary>
-    public static readonly (int Value, string Name)[] BiomeChoices =
+    /// <summary>
+    /// The biomes offered (the map's filter, the Mask), in the web editor's order.
+    /// </summary>
+    private static readonly ValheimGen.Heightmap.Biome[] Offered =
     [
-        (1, "Meadows"), (8, "Black Forest"), (2, "Swamp"), (4, "Mountain"), (16, "Plains"), (512, "Mistlands"), (32, "Ashlands"), (64, "Deep North"), (256, "Ocean"),
+        ValheimGen.Heightmap.Biome.Meadows, ValheimGen.Heightmap.Biome.BlackForest, ValheimGen.Heightmap.Biome.Swamp, ValheimGen.Heightmap.Biome.Mountain,
+        ValheimGen.Heightmap.Biome.Plains, ValheimGen.Heightmap.Biome.Mistlands, ValheimGen.Heightmap.Biome.AshLands, ValheimGen.Heightmap.Biome.DeepNorth,
+        ValheimGen.Heightmap.Biome.Ocean,
     ];
 
     /// <summary>
-    /// Picks the zones matching the filter out of <c>ZoneStats.Compute</c>'s rows. A zone with pieces never
-    /// matches: buildings are never reset from here.
+    /// The biomes offered (the map's filter, the Mask): their Heightmap.Biome values and names as the game shows them,
+    /// in the web editor's order.
     /// </summary>
-    /// <param name="stats">ZoneStats' flat rows, <c>ZoneStats.Stride</c> ints per zone.</param>
-    /// <returns>The matching zones' coordinates and how many objects they hold in all.</returns>
-    public (List<(int X, int Z)> Zones, int Objects) Match(int[] stats)
+    /// <param name="english">The English names (what Claude is told and names biomes by) rather than the language in
+    /// use.</param>
+    public static (int Value, string Name)[] BiomeChoices(bool english = false) =>
+        [.. Offered.Select(b => ((int)b, english ? BiomeName(b).English : BiomeName(b).Shown))];
+
+    /// <summary>
+    /// A biome's name as the game shows it, in both languages (the type's own name for one not offered).
+    /// </summary>
+    /// <param name="b">The biome.</param>
+    public static Said BiomeName(ValheimGen.Heightmap.Biome b) => b switch
     {
-        var zones = new List<(int, int)>();
-        int objects = 0;
-        for (int i = 0; i + ZoneStats.Stride <= stats.Length; i += ZoneStats.Stride)
-        {
-            int x = stats[i], z = stats[i + 1], biome = stats[i + 2], pieces = stats[i + 3], edited = stats[i + 4], objs = stats[i + 5], d = stats[i + 6], gen = stats[i + 7];
-            if (Biomes.Count > 0 && !Biomes.Contains(biome))
-            {
-                continue;
-            }
-            // Buildings are never reset from here: a zone with pieces never matches.
-            if (pieces > 0 || (NoBuildings && d != -1 && d <= Distance))
-            {
-                continue;
-            }
-            if ((NoEdits && edited != 0) || (OnlyGenerated && gen == 0))
-            {
-                continue;
-            }
-            float r = MathF.Sqrt(x * x + z * z) * 64;
-            if ((MinRadius is float lo && r < lo) || (MaxRadius is float hi && r > hi))
-            {
-                continue;
-            }
-            zones.Add((x, z));
-            objects += objs;
-        }
-        return (zones, objects);
-    }
+        ValheimGen.Heightmap.Biome.Meadows => Said.Of("biome.meadows"),
+        ValheimGen.Heightmap.Biome.BlackForest => Said.Of("biome.blackForest"),
+        ValheimGen.Heightmap.Biome.Swamp => Said.Of("biome.swamp"),
+        ValheimGen.Heightmap.Biome.Mountain => Said.Of("biome.mountain"),
+        ValheimGen.Heightmap.Biome.Plains => Said.Of("biome.plains"),
+        ValheimGen.Heightmap.Biome.Mistlands => Said.Of("biome.mistlands"),
+        ValheimGen.Heightmap.Biome.AshLands => Said.Of("biome.ashlands"),
+        ValheimGen.Heightmap.Biome.DeepNorth => Said.Of("biome.deepNorth"),
+        ValheimGen.Heightmap.Biome.Ocean => Said.Of("biome.ocean"),
+        _ => Said.Raw(b.ToString()),
+    };
 }

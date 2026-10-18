@@ -1,3 +1,5 @@
+using TerrainEditor.App;
+
 namespace TerrainEditor.Desktop;
 
 /// <summary>
@@ -7,15 +9,6 @@ namespace TerrainEditor.Desktop;
 /// </summary>
 public sealed class Mask
 {
-    /// <summary>
-    /// The biomes the Mask panel offers, in its order: the game's biome flag and its display name.
-    /// </summary>
-    public static readonly (int Biome, string Name)[] BiomeNames =
-    [
-        (1, "Meadows"), (8, "Black Forest"), (2, "Swamp"), (4, "Mountain"), (16, "Plains"),
-        (512, "Mistlands"), (32, "Ashlands"), (64, "Deep North"), (256, "Ocean"),
-    ];
-
     /// <summary>
     /// Which ground passes by its paint. Dirt, Cultivated and Paved need painted ground with that colour channel (red,
     /// green, blue) at least half.
@@ -76,23 +69,25 @@ public sealed class Mask
     /// <summary>
     /// Settings that let (almost) nothing through.
     /// </summary>
+    /// <param name="english">In English (what Claude is told) rather than the language in use (the Mask panel).</param>
     /// <returns>The warnings joined in one line, or empty when the settings are fine.</returns>
-    public string Warning()
+    public string Warning(bool english = false)
     {
-        var w = new List<string>();
+        var w = new List<Said>();
         if (SlopeMax is <= 0)
         {
-            w.Add($"Slope max {SlopeMax}° only lets perfectly flat ground through: empty the box for no limit.");
+            w.Add(Said.Of("mask.error.flatOnly", SlopeMax));
         }
         if (SlopeMin is float a && SlopeMax is float b && a > b)
         {
-            w.Add("Slope min is above max: nothing matches.");
+            w.Add(Said.Of("mask.error.slopeRange"));
         }
         if (HeightMin is float c && HeightMax is float d && c > d)
         {
-            w.Add("Height min is above max: nothing matches.");
+            w.Add(Said.Of("mask.error.heightRange"));
         }
-        return string.Join(" ", w);
+        var said = Said.Join(" ", w);
+        return english ? said.English : said.Shown;
     }
 
     /// <summary>
@@ -110,76 +105,13 @@ public sealed class Mask
         {
             return null;
         }
-        var set = Biomes.Count > 0 ? new HashSet<int>(Biomes) : null;
-        float? hmin = HeightMin, hmax = HeightMax, smin = SlopeMin, smax = SlopeMax;
-        var paint = Paint;
-        int w = g.W, h = g.H;
-        float[]? heights = null;
-        if (hmin != null || hmax != null || smin != null || smax != null)
-        {
-            heights = new float[w * h];
-            for (int p = 0; p < heights.Length; p++)
-            {
-                heights[p] = g.HeightOf(p);
-            }
-        }
-        byte[]? pmod = paint != PaintRule.Any ? (byte[])g.PMod.Clone() : null;
-        float[]? colours = paint != PaintRule.Any ? (float[])g.Paint.Clone() : null;
-        float Slope(int p)
-        {
-            int gx = p % w, gz = p / w;
-            float hx = heights![gz * w + Math.Min(w - 1, gx + 1)] - heights[gz * w + Math.Max(0, gx - 1)];
-            float hz = heights[Math.Min(h - 1, gz + 1) * w + gx] - heights[Math.Max(0, gz - 1) * w + gx];
-            return MathF.Atan(MathF.Sqrt(hx * hx + hz * hz) / 2) * 180 / MathF.PI;
-        }
-        bool PaintOk(int p)
-        {
-            if (paint == PaintRule.Any)
-            {
-                return true;
-            }
-            bool painted = pmod![p] != 0;
-            float r = colours![p * 4], gr = colours[p * 4 + 1], b = colours[p * 4 + 2];
-            return paint switch
-            {
-                PaintRule.Unpainted => !painted || r + gr + b < 0.3f,
-                _ when !painted => false,
-                PaintRule.Painted => r + gr + b >= 0.3f,
-                PaintRule.Dirt => r >= 0.5f,
-                PaintRule.Cultivated => gr >= 0.5f,
-                _ => b >= 0.5f,
-            };
-        }
-        float Test(int p)
-        {
-            if (set != null && (p >= biomes.Length || !set.Contains(biomes[p])))
-            {
-                return 0;
-            }
-            if (hmin != null || hmax != null)
-            {
-                float at = heights![p];
-                if (at < hmin || at > hmax)
-                {
-                    return 0;
-                }
-            }
-            if (smin != null || smax != null)
-            {
-                float s = Slope(p);
-                if (s < smin || s > smax)
-                {
-                    return 0;
-                }
-            }
-            return PaintOk(p) ? 1 : 0;
-        }
+        var judge = new MaskJudge(this, g, biomes);
         if (!frozen)
         {
-            return Test;
+            return judge.Test;
         }
         var seen = new Dictionary<int, float>();
-        return p => seen.TryGetValue(p, out float v) ? v : seen[p] = Test(p);
+        return p => seen.TryGetValue(p, out float v) ? v : seen[p] = judge.Test(p);
     }
 
     /// <summary>

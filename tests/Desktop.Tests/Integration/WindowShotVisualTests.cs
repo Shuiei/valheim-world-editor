@@ -8,29 +8,15 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 [Collection("Visual game look")]
 [Trait("Category", "Visual")]
-public sealed class WindowShotVisualTests(GameLookEditorProcess editor) : IDisposable
+public sealed class WindowShotVisualTests(GameLookEditorProcess editor) : VisualPicturesTestBase("shot")
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "vwe-visual-shot-" + Guid.NewGuid().ToString("N")[..8]);
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        try
-        {
-            Directory.Delete(_dir, true);
-        }
-        catch
-        {
-        }
-    }
-
     [Fact]
     public void AnOpenDialogIsDrawnOverTheDimmedWindow()
     {
         Assert.SkipUnless(editor.Available, editor.Why ?? "");
-        Directory.CreateDirectory(_dir);
+        Directory.CreateDirectory(Dir);
         GameLookVisualTests.BackToStart(editor);
-        string alone = Path.Combine(_dir, "alone.png"), withDialog = Path.Combine(_dir, "dialog.png");
+        string alone = Path.Combine(Dir, "alone.png"), withDialog = Path.Combine(Dir, "dialog.png");
         editor.Send($"shot {alone}");
         editor.Send("click Settings");
         // Shown, and drawn once.

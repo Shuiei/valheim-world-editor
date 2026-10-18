@@ -7,9 +7,9 @@ using Xunit;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// The writer's read-back check catching each kind of damage (a zone still marked generated after a reset, objects lost
-/// or gained, a saved zone missing, another zone altered), an object in the format saved before chunk files (world
-/// version 39), and the player who built the most.
+/// The writer's read-back check catching each kind of damage (the index in another save format, a zone still marked
+/// generated after a reset, objects lost or gained, a saved zone missing, another zone altered), an object in the format
+/// saved before chunk files (world version 39), and the player who built the most.
 /// </summary>
 [Collection("World files")]
 public class WorldWriterCheckTests
@@ -26,16 +26,14 @@ public class WorldWriterCheckTests
     }
 
     /// <summary>
-    /// Deletes a copy of the test world, quietly.
+    /// Deletes a copy of the test world, if it is still there; a failure to delete it fails the test.
     /// </summary>
     private static void Delete(string dir)
     {
-        try
+        string folder = Path.GetDirectoryName(dir)!;
+        if (Directory.Exists(folder))
         {
-            Directory.Delete(Path.GetDirectoryName(dir)!, true);
-        }
-        catch (IOException)
-        {
+            Directory.Delete(folder, true);
         }
     }
 
@@ -46,6 +44,21 @@ public class WorldWriterCheckTests
         try
         {
             Assert.Null(WorldWriter.Verify(dir, before, [], 0, 0, NoReset, []));
+        }
+        finally
+        {
+            Delete(dir);
+        }
+    }
+
+    [Fact]
+    public void TheReadBackCheckCatchesAnotherSaveFormat()
+    {
+        var (dir, before) = Copy();
+        try
+        {
+            before.SaveVersion = 42;
+            Assert.Equal("the index is in save format 41, not the world's 42", WorldWriter.Verify(dir, before, [], 0, 0, NoReset, []));
         }
         finally
         {
@@ -112,6 +125,60 @@ public class WorldWriterCheckTests
             Assert.Equal($"unchanged zone {t.ZoneX}, {t.ZoneZ} was altered", WorldWriter.Verify(dir, before, [], 0, 0, NoReset, []));
             // A zone whose ground was reset may change.
             Assert.Null(WorldWriter.Verify(dir, before, [], 0, 0, [(t.ZoneX, t.ZoneZ)], []));
+        }
+        finally
+        {
+            Delete(dir);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheReadBackCheckCatchesAnotherZonesSmoothingOrPaintAltered(bool paint)
+    {
+        // Only the levels and the modified flags were compared: a write bug changing these passed, and the old save
+        // was deleted.
+        var (dir, before) = Copy();
+        try
+        {
+            var t = before.TerrainZones[0];
+            if (paint)
+            {
+                t.Paint[100] += Vector4.One;
+            }
+            else
+            {
+                t.SmoothDelta[100] += 1;
+            }
+            Assert.Equal($"unchanged zone {t.ZoneX}, {t.ZoneZ} was altered", WorldWriter.Verify(dir, before, [], 0, 0, NoReset, []));
+        }
+        finally
+        {
+            Delete(dir);
+        }
+    }
+
+    [Fact]
+    public void AResetZonesTerrainObjectsMayAllGo()
+    {
+        // The last count allowed one terrain object lost per reset zone, though a zone holds one or two: a reset zone
+        // with two was taken for terrain lost. Two objects of a zone the file does not have, as if the reset took them.
+        var (dir, before) = Copy();
+        try
+        {
+            static TerrainZone Gone() => new()
+            {
+                Center = new Vector3(500 * 64, 0, 500 * 64),
+                ModifiedHeight = new bool[4225],
+                LevelDelta = new float[4225],
+                SmoothDelta = new float[4225],
+                ModifiedPaint = new bool[4225],
+                Paint = new Vector4[4225],
+            };
+            before.TerrainZones.AddRange([Gone(), Gone()]);
+
+            Assert.Null(WorldWriter.Verify(dir, before, [], 0, 0, [(500, 500)], []));
         }
         finally
         {

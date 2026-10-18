@@ -7,9 +7,8 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// Edge cases of the edit session and the brushes: the history's length limit, calls outside a stroke, saving during a
-/// stroke or from an area opened on its own, an Apply live coming back during a stroke, taking out a change that marked zones for reset; every falloff's profile,
-/// the ragged and turned brushes and their outlines, and erosion by rain.
+/// Edge cases of the edit session: the history's length limit, calls outside a stroke, saving during a stroke or from an
+/// area opened on its own, an Apply live coming back during a stroke, and taking out a change that marked zones for reset.
 /// </summary>
 [Collection("World files")]
 public class EditSessionEdgeTests
@@ -43,13 +42,13 @@ public class EditSessionEdgeTests
         var s = TestScenes.Flat(2);
         Assert.False(s.Stroking);
         Assert.False(s.StrokeStep(64, 64, 0.1f));
-        Assert.Equal("", s.EndStroke());
+        Assert.Equal("", s.EndStroke().Shown);
         // During a stroke: undo, removing a change and saving wait for it to end.
         s.Shape(64, 64, Two, 3, 0, "raise");
         s.BeginStroke(BrushTool.Raise, 64, 64);
         Assert.True(s.Stroking);
         Assert.False(s.Undo());
-        Assert.Equal("", s.RemoveChange(s.UndoList[0]));
+        Assert.Equal("", s.RemoveChange(s.UndoList[0]).Shown);
         Assert.Throws<InvalidOperationException>(s.Save);
         s.EndStroke();
         Assert.True(s.Undo());
@@ -87,8 +86,7 @@ public class EditSessionEdgeTests
     public async Task AppliedZoneResetsReadTheAreaAgain()
     {
         using var game = new FakeGame();
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
-        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        var (world, s) = await TestScenes.LiveArea(game);
         s.Shape(32, 32, Two, 3, 0, "raise");
         world.Edits.SetReset(new ZoneReset(5, 5, true, false), true);
         bool reset = false;
@@ -106,8 +104,7 @@ public class EditSessionEdgeTests
     /// <returns>The session, the stroke's point and its height before the stroke, and the Apply's outcome.</returns>
     private static async Task<(EditSession S, int P, float Before, WorldSession.Outcome O)> ApplyDuringAStroke(FakeGame game, bool reset)
     {
-        var world = await WorldSession.OpenLive(new LiveBridge(game.Url, game.Token), FakeGame.Label());
-        var s = WorldScene.Load(world, 0, 0, 1).Session!;
+        var (world, s) = await TestScenes.LiveArea(game);
         s.Shape(32, 32, Two, 3, 0, "raise");
         if (reset)
         {
@@ -142,7 +139,7 @@ public class EditSessionEdgeTests
         float raised = s.Ground.HeightOf(p);
         Assert.NotEqual(before, raised);
         Assert.True(s.StrokeStep(40, 40, 0.1f));
-        Assert.Equal("", s.EndStroke());
+        Assert.Equal("", s.EndStroke().Shown);
         Assert.True(s.Ground.HeightOf(p) > raised);
         Assert.Equal(2, s.UndoList.Count);
         Assert.True(s.Undo());
@@ -159,9 +156,9 @@ public class EditSessionEdgeTests
         Assert.False(s.Stroking);
         Assert.Equal(before, s.Ground.HeightOf(p), 3);
         Assert.False(s.StrokeStep(40, 40, 0.1f));
-        Assert.Contains("stroke was dropped", s.EndStroke());
+        Assert.Contains("stroke was dropped", s.EndStroke().Shown);
         Assert.Empty(s.UndoList);
-        Assert.Equal("", s.EndStroke());
+        Assert.Equal("", s.EndStroke().Shown);
     }
 
     [Fact]
@@ -171,96 +168,9 @@ public class EditSessionEdgeTests
         var reset = new ZoneReset(0, 0, true, false);
         s.Commit("Area: Reset", null, [], [], [(reset, false, true)]);
         Assert.Equal(1, s.Pending.Resets);
-        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[0]));
+        Assert.StartsWith("Removed", s.RemoveChange(s.UndoList[0]).Shown);
         Assert.Equal(0, s.Pending.Resets);
         s.Undo();
         Assert.Equal(1, s.Pending.Resets);
-    }
-
-    [Theory]
-    [InlineData(Falloff.Smooth)]
-    [InlineData(Falloff.Linear)]
-    [InlineData(Falloff.Dome)]
-    [InlineData(Falloff.Flat)]
-    [InlineData(Falloff.Peak)]
-    [InlineData(Falloff.Sharp)]
-    public void EveryFalloffIsFullInTheMiddleAndNothingAtTheEdge(Falloff f)
-    {
-        Assert.Equal(1, Brush.Fade(f, 1), 4);
-        Assert.Equal(0, Brush.Fade(f, 0), 4);
-        // Never weaker nearer the middle.
-        float last = 0;
-        for (int i = 0; i <= 20; i++)
-        {
-            float v = Brush.Fade(f, i / 20f);
-            Assert.True(v >= last - 1e-5f, $"{f} drops at {i / 20f}");
-            last = v;
-        }
-    }
-
-    [Fact]
-    public void TheFalloffsDifferWhereTheyShould()
-    {
-        Assert.Equal(0.5f, Brush.Fade(Falloff.Linear, 0.5f), 4);
-        Assert.True(Brush.Fade(Falloff.Dome, 0.5f) > 0.8f);
-        Assert.Equal(1, Brush.Fade(Falloff.Flat, 0.3f), 4);
-        Assert.Equal(0.125f, Brush.Fade(Falloff.Peak, 0.5f), 4);
-        Assert.Equal(1, Brush.Fade(Falloff.Sharp, 0.01f), 4);
-    }
-
-    [Fact]
-    public void TheRaggedBrushWavesAroundTheCircle()
-    {
-        var b = new Brush { Radius = 10, Shape = BrushShape.Noise };
-        Assert.Equal(10 * 1.42f, b.Reach, 3);
-        // Along the edge, some points are in and some out: the edge is ragged.
-        var w = Enumerable.Range(0, 64).Select(i => b.Weight(9.5f * MathF.Cos(i * MathF.Tau / 64), 9.5f * MathF.Sin(i * MathF.Tau / 64), 300 + 9.5f * MathF.Cos(i * MathF.Tau / 64), 200 + 9.5f * MathF.Sin(i * MathF.Tau / 64))).ToList();
-        Assert.Contains(w, v => v > 0.01f);
-        Assert.Contains(w, v => v == 0);
-    }
-
-    [Fact]
-    public void ATurnedSquareReachesItsCornersAndItsOutlineTurns()
-    {
-        var b = new Brush { Radius = 10, Shape = BrushShape.Square, Turn = 45 };
-        Assert.Equal(14.2f, b.Reach, 1);
-        // Turned 45°: the corner now points along x, past the radius.
-        Assert.True(b.Weight(13, 0) > 0);
-        Assert.Equal(0, b.Weight(9, 9));
-        var outline = b.Outline(8);
-        Assert.Equal(8, outline.Count);
-        Assert.Contains(outline, p => MathF.Abs(MathF.Abs(p.X) - 14.14f) < 0.1f && MathF.Abs(p.Z) < 0.1f);
-    }
-
-    [Fact]
-    public void RainErodesTheGround()
-    {
-        var s = TestScenes.Flat(2);
-        s.Shape(64, 64, Formula.Compile("8 * (1 - d / r)", ["x", "z", "d", "r", "h"]), 12, 0, "cone");
-        float[] before = (float[])s.Scene.Heights.Clone();
-        s.Brush.ErodeWater = true;
-        s.Brush.Radius = 12;
-        s.Brush.Strength = 1;
-        s.BeginStroke(BrushTool.Erode, 64, 64);
-        for (int i = 0; i < 20; i++)
-        {
-            s.StrokeStep(64, 64, 0.1f);
-        }
-        s.EndStroke();
-        Assert.Equal("Erode", s.UndoLabel);
-        Assert.Contains(Enumerable.Range(0, before.Length), p => MathF.Abs(before[p] - s.Scene.Heights[p]) > 0.01f);
-        // Far from the brush, untouched.
-        Assert.Equal(before[10 * s.Scene.W + 10], s.Scene.Heights[10 * s.Scene.W + 10]);
-    }
-
-    [Fact]
-    public void ABrushEntirelyOutsideTheAreaDoesNothing()
-    {
-        var s = TestScenes.Flat(2);
-        s.Brush.Radius = 3;
-        s.BeginStroke(BrushTool.Raise, -50, -50);
-        Assert.False(s.StrokeStep(-50, -50, 0.1f));
-        Assert.Equal("", s.EndStroke());
-        Assert.False(s.CanUndo);
     }
 }

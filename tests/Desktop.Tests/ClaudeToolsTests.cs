@@ -1,27 +1,18 @@
-using System.Net;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
 using Avalonia.Headless.XUnit;
 using TerrainEditor.Save;
 using Xunit;
+using static TerrainEditor.Desktop.Tests.ClaudePieces;
+using static TerrainEditor.Desktop.Tests.ClaudeRun;
 
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// Claude's connection (ClaudeServer, ClaudeTools): looking at a world and shaping it with scripts (one pending step
-/// each, nothing on mistakes, undo), never over unsaved changes, never while live with Auto on; building in the
-/// Workshop (pieces snapped as the hammer does, the support check naming what would fall); and the server only
-/// answering 127.0.0.1 callers with the token.
+/// The Claude tools over the editor: a world looked at and shaped with pending steps, scripts that need the user's leave,
+/// live mode changing nothing, pieces snapping, the support check, a house built from rectangles, and the ready tasks.
 /// </summary>
 [Collection("World files")]
 public class ClaudeToolsTests
 {
-    /// <summary>
-    /// A tool's JSON answer, parsed.
-    /// </summary>
-    private static JsonElement J(string json) => JsonDocument.Parse(json).RootElement;
-
     [AvaloniaFact]
     public async Task AWorldIsLookedAtAndShapedWithPendingSteps()
     {
@@ -54,6 +45,25 @@ public class ClaudeToolsTests
         Assert.StartsWith("Redone.", await r.T.Redo());
     }
 
+    // Scripts run with the user's rights: without the user's leave (Settings → Claude → Claude may run scripts, off by
+    // default) run_script is refused, dry runs too, and so is the Script tool's Run through set_control; with it,
+    // they run. The other tools do not need it.
+    [AvaloniaFact]
+    public async Task ScriptsNeedTheUsersLeave()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        r.W.Settings.ClaudeScripts = false;
+        Assert.Equal(ClaudeTools.ScriptsRefused, await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+        Assert.Equal(ClaudeTools.ScriptsRefused, await r.T.RunScript("Ground.Raise(0, 0, 3);", dryRun: true));
+        Assert.Contains("not allowed Claude to run scripts", await r.T.SetControl("script.run", "click"));
+        Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+        Assert.Contains("ground point", await r.T.Flatten(-10, -10, 10, 10, 31));
+        r.W.Settings.ClaudeScripts = true;
+        Assert.StartsWith("Dry run:", await r.T.RunScript("Ground.Raise(0, 0, 3);", dryRun: true));
+        Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+    }
+
     [AvaloniaFact]
     public async Task LiveWithAutoOnClaudeChangesNothing()
     {
@@ -64,6 +74,11 @@ public class ClaudeToolsTests
         Assert.Contains("Auto on", await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "woodwall", X = 0, Z = 0 }]));
         Assert.Contains("Auto on", await r.T.RemoveObjects([0]));
         Assert.Equal((0, 0, 0, 0), r.W.World!.Pending);
+        // Scripts not allowed either: that is what is said, since turning Auto off would not be enough.
+        r.W.Settings.ClaudeScripts = false;
+        Assert.Equal(ClaudeTools.ScriptsRefused, await r.T.RunScript("Ground.Raise(0, 0, 3);"));
+        Assert.Contains("not allowed Claude to run scripts", await r.T.SetControl("script.run", "click"));
+        r.W.Settings.ClaudeScripts = true;
         // Auto off: Claude's change waits for Apply live.
         r.W.Settings.AutoApply = false;
         Assert.Contains("ground point", await r.T.RunScript("Ground.Raise(0, 0, 3);"));
@@ -105,6 +120,27 @@ public class ClaudeToolsTests
         // The plot is not saved as a blueprint: no world is opened over it.
         Assert.Contains("blueprint", await r.T.OpenWorld(r.Dir));
         Assert.Contains("No blueprint", await r.T.AddBlueprint("Nothing like this"));
+    }
+
+    // The ids support_check gives (the pieces falling, the weakest) are the plot's: usable at once, even when the
+    // ids given before were another area's.
+    [AvaloniaFact]
+    public async Task SupportCheckGivesTheIdsOfThePlot()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "wood_pole2", X = 3, Z = 3 }]);
+        await r.T.Undo();
+        // A floor on the ground and a post 6 m above it, held by nothing: it falls.
+        var clip = new System.Text.Json.Nodes.JsonObject { ["objects"] = new System.Text.Json.Nodes.JsonArray(Piece("wood_floor", 0, 0), Piece("wood_pole2", 0, 6)) };
+        Directory.CreateDirectory(r.Homestead);
+        File.WriteAllText(Path.Combine(r.Homestead, TerrainEditor.App.Homestead.FileName("Floating")), TerrainEditor.App.Homestead.Write(clip, "Floating", "Tester", null, DateTime.Now));
+        Assert.Equal("workshop", J(await r.T.OpenWorkshop("Floating")).GetProperty("page").GetString());
+        Assert.StartsWith("The ids are from another area", await r.T.RemoveObjects([0]));
+        var support = J(await r.T.SupportCheck());
+        Assert.Equal(1, support.GetProperty("wouldFall").GetInt32());
+        int post = support.GetProperty("falling")[0].GetProperty("id").GetInt32();
+        Assert.StartsWith("Took 1 away", await r.T.RemoveObjects([post]));
     }
 
     // Floors, walls and roofs over a rectangle, from the game's pieces: an 8 x 6 m house is 12 floor tiles,
@@ -159,6 +195,9 @@ public class ClaudeToolsTests
         Assert.Contains("The paint is", await r.T.PaintArea("lava", x: 0, z: 0, radius: 3));
         Assert.Contains("object(s) placed", await r.T.Forest(5, -30, 30, -5, ["Birch1"], spacing: 7));
         Assert.Contains("not an object", await r.T.Forest(5, -30, 30, -5, ["NoSuchTree"]));
+        // Names go into the script escaped: one ending in a backslash, or holding a quote, is just not an object.
+        Assert.Contains("Odd\\: not an object", await r.T.Forest(5, -30, 30, -5, ["Odd\\", "Birch1"]));
+        Assert.Contains("Quote\"d: not an object", await r.T.Forest(5, -30, 30, -5, ["Quote\"d"]));
         await r.T.SelectObjects([1, 2], focus: false);
         Assert.Equal(2, J(await r.T.GetSelection()).GetArrayLength());
         int chest = J(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "piece_chest_wood", X = -10, Z = -10 }])).GetProperty("placed")[0].GetProperty("id").GetInt32();
@@ -191,123 +230,5 @@ public class ClaudeToolsTests
         Assert.Contains(s.UndoList, c => c.Label == "mine too" && !c.Removed);
         Assert.False(r.W.History.TakeBackClaude.IsVisible);
         Assert.True(s.UndoList.Count >= before);
-    }
-
-    // --mcp-stdio: messages relayed with the token, the protocol remembered; refused clearly when the
-    // switch is off or the editor does not answer.
-    [Fact]
-    public async Task TheRelayPassesMessagesWithTheToken()
-    {
-        var seen = new List<HttpRequestMessage>();
-        var handler = new Answer(req =>
-        {
-            seen.Add(req);
-            string body = req.Content!.ReadAsStringAsync().Result;
-            var res = new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(body.Contains("initialize") ? "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":\"2025-06-18\"}}\n\n" : "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{}}\n\n"),
-            };
-            res.Content.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
-            return res;
-        });
-        var on = new TerrainEditor.App.AppSettings { ClaudeConnect = true, ClaudeToken = "tok", ClaudePort = 5799 };
-        var output = new StringWriter();
-        await ClaudeRelay.RunAsync(new StringReader("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\"}\n\n{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}\n"), output, () => on, handler);
-        string[] lines = output.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        Assert.Equal(2, lines.Length);
-        Assert.Contains("\"protocolVersion\":\"2025-06-18\"", lines[0]);
-        Assert.Equal("Bearer tok", seen[0].Headers.Authorization!.ToString());
-        Assert.Equal("http://127.0.0.1:5799/mcp", seen[0].RequestUri!.ToString());
-        Assert.False(seen[0].Headers.Contains("MCP-Protocol-Version"));
-        Assert.Equal("2025-06-18", seen[1].Headers.GetValues("MCP-Protocol-Version").Single());
-        var off = new StringWriter();
-        await ClaudeRelay.RunAsync(new StringReader("{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/list\"}\n{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n"), off, () => new TerrainEditor.App.AppSettings(), handler);
-        string[] refused = off.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        Assert.Single(refused);
-        Assert.Contains("Allow Claude to connect", refused[0]);
-        Assert.Contains("\"id\":7", refused[0]);
-        var down = new StringWriter();
-        await ClaudeRelay.RunAsync(new StringReader("{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/list\"}\n"), down, () => on, new Answer(_ => throw new HttpRequestException("refused")));
-        Assert.Contains("not running", down.ToString());
-    }
-
-    /// <summary>
-    /// An HTTP handler answering every request with the given function, without a network.
-    /// </summary>
-    private sealed class Answer(Func<HttpRequestMessage, HttpResponseMessage> answer) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromResult(answer(request));
-    }
-
-    // The server: only for callers with the token, only under this computer's address; then MCP.
-    [AvaloniaFact]
-    public async Task TheServerAnswersOnlyWithTheTokenOnThisComputer()
-    {
-        using var r = new ClaudeRun();
-        var probe = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
-        probe.Start();
-        int port = ((IPEndPoint)probe.LocalEndpoint).Port;
-        probe.Stop();
-        var server = await ClaudeServer.Start(port, "secret", r.T);
-        try
-        {
-            using var http = new HttpClient();
-            string url = ClaudeServer.Url(port);
-            HttpRequestMessage Rpc(string method, string? token, string? host = null)
-            {
-                var m = new HttpRequestMessage(HttpMethod.Post, url)
-                {
-                    Content = new StringContent($"{{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"{method}\",\"params\":{(method == "initialize" ? "{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},\"clientInfo\":{\"name\":\"test\",\"version\":\"1\"}}" : "{}")}}}", Encoding.UTF8, "application/json"),
-                };
-                m.Headers.Accept.ParseAdd("application/json");
-                m.Headers.Accept.ParseAdd("text/event-stream");
-                if (token != null)
-                {
-                    m.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                }
-                if (host != null)
-                {
-                    m.Headers.Host = host;
-                }
-                return m;
-            }
-            var ct = TestContext.Current.CancellationToken;
-            Assert.Equal(HttpStatusCode.Unauthorized, (await http.SendAsync(Rpc("initialize", null), ct)).StatusCode);
-            Assert.Equal(HttpStatusCode.Unauthorized, (await http.SendAsync(Rpc("initialize", "wrong"), ct)).StatusCode);
-            Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Rpc("initialize", "secret", $"evil.example:{port}"), ct)).StatusCode);
-            var init = await http.SendAsync(Rpc("initialize", "secret"), ct);
-            Assert.Equal(HttpStatusCode.OK, init.StatusCode);
-            string initialized = await init.Content.ReadAsStringAsync(ct);
-            Assert.Contains("valheim-world-editor", initialized);
-            Assert.Contains("You are connected to Valheim World Editor", initialized);
-            var prompts = Rpc("prompts/list", "secret");
-            prompts.Headers.Add("MCP-Protocol-Version", "2025-06-18");
-            string promptList = await (await http.SendAsync(prompts, ct)).Content.ReadAsStringAsync(ct);
-            Assert.Contains("build_in_workshop", promptList);
-            Assert.Contains("shape_area", promptList);
-            var tools = Rpc("tools/list", "secret");
-            tools.Headers.Add("MCP-Protocol-Version", "2025-06-18");
-            string listed = await (await http.SendAsync(tools, ct)).Content.ReadAsStringAsync(ct);
-            foreach (string name in new[] { "editor_state", "open_world", "open_area", "screenshot", "area_map", "run_script", "place_pieces", "support_check", "generate_dungeon",
-                "building_guide", "get_selection", "select_objects", "flatten", "paint_area", "road", "forest", "set_contents", "build_floor", "build_walls", "build_roof",
-                "move_objects", "set_transform", "replace_objects", "get_object", "set_object_data",
-                "search_world", "list_locations", "copy_objects", "add_blueprint", "shape_ground", "regrow_nature", "ground_at",
-                "dig_path", "reset_zones", "preview_seed", "create_world", "stamp", "import_heightmap",
-                "list_dungeons", "dungeon_rooms", "add_dungeon_room", "remove_dungeon_room", "close_dungeon_ends", "set_dungeon_door",
-                "list_controls", "set_control", "save_blueprint" })
-            {
-                Assert.Contains($"\"{name}\"", listed);
-            }
-            // No tool saves a world or applies live; saving a blueprint is a tool.
-            Assert.DoesNotContain("\"save_world", listed);
-            Assert.DoesNotContain("apply_live", listed);
-            Assert.Contains("\"save_blueprint\"", listed);
-        }
-        finally
-        {
-            await server.Stop();
-        }
-        Assert.Contains("--header \"Authorization: Bearer abc\"", ClaudeServer.ClaudeCodeCommand(5731, "abc"));
-        Assert.Equal(48, ClaudeServer.NewToken().Length);
     }
 }

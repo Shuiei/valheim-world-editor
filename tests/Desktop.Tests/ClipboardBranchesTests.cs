@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
 
@@ -65,4 +66,85 @@ public class ClipboardBranchesTests
         Assert.True(before > foot + 2);
         Assert.Equal(foot, s.Ground.HeightOf(60 * s.Ground.W + 60), 2);
     }
+
+    [Fact]
+    public void AGroundBoxWithoutPiecesIsEmpty()
+    {
+        var none = new List<(float X0, float Z0, float X1, float Z1, float Bottom)>();
+        Assert.Equal((0, 0, 0, 0), CopyData.GroundBox(none, 4f));
+    }
+
+    [Fact]
+    public void AGroundBoxReachesWholeMetresPastThePieces()
+    {
+        var one = new List<(float X0, float Z0, float X1, float Z1, float Bottom)> { (1.5f, 2.2f, 3.4f, 5.1f, 0f) };
+        Assert.Equal((0, 5, 1, 7), CopyData.GroundBox(one, 1f));
+    }
+
+    [Fact]
+    public void AShapedPointTakesTheCopyAndIsRecordedAsShaped()
+    {
+        var g = new Ground(129, 129, 0, 0, 2);
+        var c = new CopyData { W = 1, H = 1, Rel = [0.5f], Wt = [1f], Pnt = [-1f], Objects = [], Poly = [] };
+        var shaped = new HashSet<int>();
+        var touched = new List<int>();
+        new PasteTool { Clip = c }.ShapeCell(g, c, new Vector2(10, 10), 30f, 10, 10, null, shaped, touched);
+        Assert.Equal(new[] { 10 * 129 + 10 }, touched);
+        Assert.Contains(10 * 129 + 10, shaped);
+    }
+
+    [Fact]
+    public void AShapedRectangleTouchesEveryPointTheCopyCovers()
+    {
+        var g = new Ground(129, 129, 0, 0, 2);
+        var c = new CopyData { W = 3, H = 3, Rel = [.. Enumerable.Repeat(0.5f, 9)], Wt = [.. Enumerable.Repeat(1f, 9)], Pnt = [.. Enumerable.Repeat(-1f, 36)], Objects = [], Poly = [] };
+        var touched = new List<int>();
+        new PasteTool { Clip = c }.ShapeGround(g, c, new Vector2(10, 10), 30f, 9, 11, 9, 11, null, [], touched);
+        Assert.Equal(9, touched.Count);
+    }
+
+    [Fact]
+    public void EachObjectOfACopyIsAddedAsANewObject()
+    {
+        var g = new Ground(129, 129, 0, 0, 2);
+        var c = CopyWith(Thing("a"), Thing("b", 1));
+        var add = new List<(NewObject, bool)>();
+        new PasteTool { Clip = c }.AddObjects(g, c, new Vector2(10, 10), 0f, 30f, add);
+        Assert.Equal(2, add.Count);
+    }
+
+    [Fact]
+    public void AnObjectThatIsNotAPieceIsNotAddedAsOne()
+    {
+        var g = new Ground(129, 129, 0, 0, 2);
+        var c = CopyWith(Thing("a"));
+        var add = new List<(NewObject, bool)>();
+        new PasteTool { Clip = c }.AddObjects(g, c, new Vector2(10, 10), 0f, 30f, add);
+        Assert.All(add, a => Assert.False(a.Item2));
+    }
+
+    [Fact]
+    public void AnObjectThatIsNotABuildablePieceDigsNothing()
+    {
+        var g = new Ground(129, 129, 0, 0, 2);
+        var placed = new List<(NewObject O, bool Piece)> { (new NewObject(0, StableHash.Of("editor_test_nothing"), Vector3.Zero, Vector3.Zero, 1), true) };
+        Assert.Empty(PasteTool.Digs(g, placed));
+    }
+
+    [Fact]
+    public void ACopysSpotsAreOneCopyWithEachObjectPlaced()
+    {
+        var p = new PasteTool { Clip = CopyWith(Thing("a"), Thing("b", 1)) };
+        var copies = p.CopySpots(p.Clip!, new Vector2(10, 10), _ => 0f).ToList();
+        var (_, spots) = Assert.Single(copies);
+        Assert.Equal(2, spots.Count());
+    }
+
+    // An object of the editor's test prefab, a metre along x from the origin of its copy when dx is 1.
+    private static CopyData.Obj Thing(string name, float dx = 0) =>
+        new(StableHash.Of("editor_test_nothing"), name, dx, 0, 0, Vector3.Zero, 1, null);
+
+    // A copy of one tile holding the given objects (no ground, no paint, no outline).
+    private static CopyData CopyWith(params CopyData.Obj[] objects) =>
+        new() { W = 1, H = 1, Rel = [], Wt = [], Pnt = [], Objects = [.. objects], Poly = [] };
 }

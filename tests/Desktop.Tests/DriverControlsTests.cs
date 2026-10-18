@@ -17,6 +17,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// </summary>
 public class DriverControlsTests
 {
+    private static readonly string[] Expected1 = ["Red"];
     /// <summary>
     /// A shown main window that tells and asks nothing.
     /// </summary>
@@ -104,9 +105,28 @@ public class DriverControlsTests
         var w = Window();
         try
         {
-            var d = Dialog(w, Row("Delta", new Button { Content = "Go" }));
+            var d = Dialog(w, Row("Delta", new Button { Content = "Go" }), Row("Epsilon", new ComboBox { ItemsSource = Expected1 }));
             Assert.Equal("nothing to set beside \"Delta\"", (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "set Delta|1"))).Message);
+            // A list without the value asked for: nothing set.
+            Assert.Equal("nothing to set beside \"Epsilon\"", (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "set Epsilon|purple"))).Message);
             d.Close();
+        }
+        finally
+        {
+            w.CloseWithoutAsking();
+        }
+    }
+
+    // type, set and check without the '|' between their two parts give their usage, not a slicing error.
+    [AvaloniaFact]
+    public async Task ACommandWithoutItsBarGivesItsUsage()
+    {
+        var w = Window();
+        try
+        {
+            Assert.Equal("usage: type <hint>|<text>", (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "type Name"))).Message);
+            Assert.Equal("usage: set <label>|<value>", (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "set Delta"))).Message);
+            Assert.Equal("usage: check <label>|on|off", (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "check"))).Message);
         }
         finally
         {

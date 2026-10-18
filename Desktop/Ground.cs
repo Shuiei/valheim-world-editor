@@ -11,7 +11,7 @@ namespace TerrainEditor.Desktop;
 /// Lift: height beyond the game's ±8 m (No limit), which saving turns into ground discs (Uplift): the
 /// ground the ±8 m applies to is then the generated one plus the lift.
 /// </summary>
-public sealed class Ground
+public sealed partial class Ground
 {
     /// <summary>
     /// Grid points across (ZonesX × 64 + 1 when read from zones: neighbouring zones share their edge points).
@@ -23,6 +23,10 @@ public sealed class Ground
     public int X0 { get; }
     /// <summary>The block's first zone (world zone Z).</summary>
     public int Z0 { get; }
+    /// <summary>World x of grid point 0 (the block's west edge), as WorldScene.OriginX.</summary>
+    public float OriginX => X0 * 64f - 32f;
+    /// <summary>World z of grid point 0 (the block's south edge).</summary>
+    public float OriginZ => Z0 * 64f - 32f;
     /// <summary>The block's size in zones, west to east.</summary>
     public int ZonesX { get; }
     /// <summary>The block's size in zones, south to north.</summary>
@@ -52,9 +56,10 @@ public sealed class Ground
     /// <summary>
     /// The values as loaded (or last saved), and each zone's own saved values: zones share their edge
     /// points, and saved zones do not always agree on them. A point unchanged since loading is given
-    /// back with the zone's own value, so an untouched zone stays identical to what is saved.
+    /// back with the zone's own value, so an untouched zone stays identical to what is saved. Null until edits are
+    /// taken (TakeEdits): the ground as made, every value 0.
     /// </summary>
-    private State _loaded;
+    private State? _loaded;
     /// <summary>Each zone's own saved edit (block-relative zone; null when it had none), see <c>_loaded</c>.</summary>
     private readonly Dictionary<(int, int), ZoneEdit?> _own = [];
 
@@ -82,7 +87,6 @@ public sealed class Ground
         PMod = new byte[n];
         Lift = new float[n];
         BaseMask = new float[n * 4];
-        _loaded = Snapshot();
     }
 
     /// <summary>An empty, unchanged ground of a square block of <paramref name="size"/> × <paramref name="size"/> zones.</summary>
@@ -117,142 +121,32 @@ public sealed class Ground
             {
                 float[] b = terrain.BaseZone(X0 + zx, Z0 + zz);
                 float[] m = terrain.BaseMask(X0 + zx, Z0 + zz);
-                for (int k = 0; k < EditStore.Grid; k++)
+                foreach (var (i, p) in ZoneGridPoints(zz, zx))
                 {
-                    for (int l = 0; l < EditStore.Grid; l++)
+                    Base[p] = b[i];
+                    for (int c = 0; c < 4; c++)
                     {
-                        int i = k * EditStore.Grid + l, p = (zz * 64 + k) * W + zx * 64 + l;
-                        Base[p] = b[i];
-                        for (int c = 0; c < 4; c++)
-                        {
-                            BaseMask[p * 4 + c] = m[i * 4 + c];
-                        }
+                        BaseMask[p * 4 + c] = m[i * 4 + c];
                     }
                 }
             }
         }
     }
 
-    /// <summary>Starts over from the edits (when loaded, and after saving).</summary>
-    public void TakeEdits(EditStore edits)
+    /// <summary>
+    /// Each grid point of one zone: its index inside the zone's arrays and its index in the whole ground's.
+    /// </summary>
+    /// <param name="zz">The zone's row.</param>
+    /// <param name="zx">The zone's column.</param>
+    internal IEnumerable<(int I, int P)> ZoneGridPoints(int zz, int zx)
     {
-        _own.Clear();
-        for (int zz = 0; zz < ZonesZ; zz++)
+        for (int k = 0; k < EditStore.Grid; k++)
         {
-            for (int zx = 0; zx < ZonesX; zx++)
+            for (int l = 0; l < EditStore.Grid; l++)
             {
-                var e = edits.Get(X0 + zx, Z0 + zz);
-                _own[(zx, zz)] = e;
-                for (int k = 0; k < EditStore.Grid; k++)
-                {
-                    for (int l = 0; l < EditStore.Grid; l++)
-                    {
-                        int i = k * EditStore.Grid + l, p = (zz * 64 + k) * W + zx * 64 + l;
-                        Mod[p] = (byte)(e != null && e.Modified[i] ? 1 : 0);
-                        Level[p] = e?.Level[i] ?? 0;
-                        Smooth[p] = e?.Smooth[i] ?? 0;
-                        PMod[p] = (byte)(e != null && e.PaintModified[i] ? 1 : 0);
-                        Lift[p] = e?.Lift[i] ?? 0;
-                        for (int c = 0; c < 4; c++)
-                        {
-                            Paint[p * 4 + c] = e?.Paint[i * 4 + c] ?? 0;
-                        }
-                    }
-                }
+                yield return (k * EditStore.Grid + l, (zz * 64 + k) * W + zx * 64 + l);
             }
         }
-        _loaded = Snapshot();
-    }
-
-    /// <summary>
-    /// Same as TerrainComp.ApplyToHeightmap: the edited height never leaves the original ground ± 8 m
-    /// (the original ground including the lift).
-    /// </summary>
-    public float HeightOf(int g) => Base[g] + Lift[g] + (Mod[g] != 0 ? Math.Clamp(Level[g] + Smooth[g], -EditStore.MaxLevel, EditStore.MaxLevel) : 0);
-
-    /// <summary>The ground the game's ±8 m applies to: the generated one plus the lift.</summary>
-    public float Original(int g) => Base[g] + Lift[g];
-
-    /// <summary>True when the point's change is at (within 5 cm of) the game's ±8 m.</summary>
-    public bool AtLimit(int g) => Mod[g] != 0 && MathF.Abs(Level[g] + Smooth[g]) >= EditStore.MaxLevel - 0.05f;
-
-    /// <summary>The outer line of points stays as it is, so the block always joins its neighbours.</summary>
-    public bool Locked(int gx, int gz) => gx == 0 || gz == 0 || gx == W - 1 || gz == H - 1;
-
-    /// <summary>
-    /// Moves a point to a height (kept within the game's limit unless NoLimit); true when the limit stopped it.
-    /// </summary>
-    public bool SetHeight(int g, float h)
-    {
-        if (Mod[g] == 0)
-        {
-            Smooth[g] = 0;
-            Level[g] = 0;
-            Mod[g] = 1;
-        }
-        if (NoLimit)
-        {
-            // The edit keeps its level and smoothing; the lift takes the rest.
-            float lift = Math.Clamp(h - Base[g] - Math.Clamp(Level[g] + Smooth[g], -EditStore.MaxLevel, EditStore.MaxLevel), -EditStore.MaxLift, EditStore.MaxLift);
-            Lift[g] = MathF.Abs(lift) < 1e-3f ? 0 : lift;
-            return false;
-        }
-        float o = Original(g), target = Math.Clamp(h, o - EditStore.MaxLevel, o + EditStore.MaxLevel);
-        // Keep the smoothing part and put the rest in the level part (itself limited to ± 8 m).
-        Level[g] = Math.Clamp(target - o - Smooth[g], -EditStore.MaxLevel, EditStore.MaxLevel);
-        return MathF.Abs(target - h) > 1e-4f;
-    }
-
-    /// <summary>
-    /// The paint mask the game's terrain shader reads: the paint where painted, the generated one otherwise.
-    /// </summary>
-    public float MaskOf(int g, int c) => PMod[g] != 0 ? Paint[g * 4 + c] : BaseMask[g * 4 + c];
-
-    /// <summary>
-    /// The editable arrays, for every point (Snapshot) or only some points (an undo step keeps just the ones it
-    /// touched).
-    /// </summary>
-    public sealed record State(float[] Level, float[] Smooth, byte[] Mod, float[] Paint, byte[] PMod, float[] Lift);
-
-    /// <summary>A copy of the editable arrays as they are now.</summary>
-    public State Snapshot() => new((float[])Level.Clone(), (float[])Smooth.Clone(), (byte[])Mod.Clone(), (float[])Paint.Clone(), (byte[])PMod.Clone(), (float[])Lift.Clone());
-
-    /// <summary>Every zone (block-relative) holding one of the points (edge points belong to two or four zones).</summary>
-    public List<(int X, int Z)> ZonesOf(IEnumerable<int> points)
-    {
-        var set = new HashSet<(int, int)>();
-        foreach (int g in points)
-        {
-            int gx = g % W, gz = g / W;
-            foreach (int zx in new[] { gx / 64, (int)Math.Floor((gx - 1) / 64.0) })
-            {
-                foreach (int zz in new[] { gz / 64, (int)Math.Floor((gz - 1) / 64.0) })
-                {
-                    if (zx >= 0 && zx < ZonesX && zz >= 0 && zz < ZonesZ)
-                    {
-                        set.Add((zx, zz));
-                    }
-                }
-            }
-        }
-        return [.. set.OrderBy(z => z.Item2).ThenBy(z => z.Item1)];
-    }
-
-    /// <summary>True when nothing at the point (height, paint, lift) changed since loading or the last save.</summary>
-    private bool UnchangedSinceLoad(int g)
-    {
-        if (Level[g] != _loaded.Level[g] || Smooth[g] != _loaded.Smooth[g] || Mod[g] != _loaded.Mod[g] || PMod[g] != _loaded.PMod[g] || Lift[g] != _loaded.Lift[g])
-        {
-            return false;
-        }
-        for (int c = 0; c < 4; c++)
-        {
-            if (Paint[g * 4 + c] != _loaded.Paint[g * 4 + c])
-            {
-                return false;
-            }
-        }
-        return true;
     }
 
     /// <summary>A zone (block-relative) as the EditStore keeps it, in world zone coordinates.</summary>

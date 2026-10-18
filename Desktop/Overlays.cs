@@ -55,15 +55,20 @@ public static class Overlays
     /// The locations (villages, the trader, dungeon entrances...) in the area or within 40 m of it, as the Location
     /// markers show them.
     /// </summary>
-    public static int LocationsNear(WorldScene s)
+    public static int LocationsNear(WorldScene s) => RealLocations(s).Count(l => Near(s, l.Position));
+
+    /// <summary>
+    /// Whether world point <paramref name="p"/> lies in the area or within 40 m of it (the area's last grid point is
+    /// W - 1 m east of its first, and H - 1 m north).
+    /// </summary>
+    internal static bool Near(WorldScene s, Vector3 p)
     {
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
-        float minX = ox - 40, maxX = ox + s.W + 40, minZ = oz - 40, maxZ = oz + s.H + 40;
-        return RealLocations(s).Count(l => l.Position.X >= minX && l.Position.X <= maxX && l.Position.Z >= minZ && l.Position.Z <= maxZ);
+        float ox = s.OriginX, oz = s.OriginZ;
+        return p.X >= ox - 40 && p.X <= ox + s.W - 1 + 40 && p.Z >= oz - 40 && p.Z <= oz + s.H - 1 + 40;
     }
 
     /// <summary>The world's locations without the invisible ground discs of No limit (not places to show).</summary>
-    private static IEnumerable<(Vector3 Position, int Location)> RealLocations(WorldScene s) =>
+    internal static IEnumerable<(Vector3 Position, int Location)> RealLocations(WorldScene s) =>
         (s.World?.Locations ?? []).Where(l => !Editing.Uplift.IsDisc(l.Location));
 
     /// <summary>Builds every layer's lines for the scene, following the ground height.</summary>
@@ -72,144 +77,11 @@ public static class Overlays
     /// <param name="names">Each thing's prefab name by index in the scene's things (null when unknown).</param>
     public static Built Build(WorldScene s, TerrainModifiers? modifiers, Func<int, string?> names)
     {
-        var lines = All.ToDictionary(l => l, _ => new List<float>());
-        // (Outside the area: the height at its nearest edge. Rings crossing the edge plunged 1000 m.)
-        Vector3 OnGround(float gx, float gz, float lift)
-        {
-            float x = gx - (s.W - 1) / 2f, z = -(gz - (s.H - 1) / 2f);
-            float cx = Math.Clamp(gx, 0, s.W - 1) - (s.W - 1) / 2f, cz = -(Math.Clamp(gz, 0, s.H - 1) - (s.H - 1) / 2f);
-            return new Vector3(x, Picking.HeightAt(s, cx, cz) + lift, z);
-        }
-        void Strip(Layer l, IReadOnlyList<Vector3> pts)
-        {
-            for (int i = 1; i < pts.Count; i++)
-            {
-                lines[l].AddRange([pts[i - 1].X, pts[i - 1].Y, pts[i - 1].Z, pts[i].X, pts[i].Y, pts[i].Z]);
-            }
-        }
-        float ox = s.X0 * 64f - 32f, oz = s.Z0 * 64f - 32f;
-        // A ring (or square) around a world point, following the ground.
-        void Ring(Layer l, float wx, float wz, float r, bool square = false)
-        {
-            float gx = wx - ox, gz = wz - oz;
-            var pts = new List<Vector3>();
-            if (square)
-            {
-                int n = Math.Max(1, (int)MathF.Ceiling(2 * r));
-                foreach (var (ax, az, bx, bz) in new[] { (-r, -r, r, -r), (r, -r, r, r), (r, r, -r, r), (-r, r, -r, -r) })
-                {
-                    for (int k = 0; k <= n; k++)
-                    {
-                        pts.Add(OnGround(gx + ax + (bx - ax) * k / n, gz + az + (bz - az) * k / n, 0.4f));
-                    }
-                }
-            }
-            else
-            {
-                int n = Math.Max(24, (int)MathF.Ceiling(2 * MathF.PI * r));
-                for (int k = 0; k <= n; k++)
-                {
-                    float a = k / (float)n * MathF.Tau;
-                    pts.Add(OnGround(gx + MathF.Cos(a) * r, gz + MathF.Sin(a) * r, 0.4f));
-                }
-            }
-            Strip(l, pts);
-        }
-
-        // Zone borders, every 2 m along each zone edge, just above the ground.
-        for (int i = 0; i <= Math.Max(s.ZonesX, s.ZonesZ); i++)
-        {
-            foreach (bool vertical in new[] { true, false })
-            {
-                if (i > (vertical ? s.ZonesX : s.ZonesZ))
-                {
-                    continue;
-                }
-                var pts = new List<Vector3>();
-                for (int t = 0; t < (vertical ? s.H : s.W); t += 2)
-                {
-                    int gx = vertical ? i * 64 : t, gz = vertical ? t : i * 64;
-                    if (gx < s.W && gz < s.H)
-                    {
-                        pts.Add(OnGround(gx, gz, 0.15f));
-                    }
-                }
-                Strip(Layer.Borders, pts);
-            }
-        }
-
-        // Location markers: a post 14 m tall at each location in or near the area.
-        float minX = ox - 40, maxX = ox + s.W + 40, minZ = oz - 40, maxZ = oz + s.H + 40;
-        int locations = 0;
-        foreach (var (p, _) in RealLocations(s))
-        {
-            if (p.X < minX || p.X > maxX || p.Z < minZ || p.Z > maxZ)
-            {
-                continue;
-            }
-            locations++;
-            var b = OnGround(p.X - ox, p.Z - oz, 0);
-            foreach (var (dx, dz) in new[] { (0.8f, 0f), (-0.8f, 0f), (0f, 0.8f), (0f, -0.8f), (0f, 0f) })
-            {
-                lines[Layer.Markers].AddRange([b.X + dx, b.Y, b.Z + dz, b.X + dx, b.Y + 14, b.Z + dz]);
-            }
-        }
-
-        // Wards and crafting stations: the kinds with a ward radius or a build range.
-        var ranges = PrefabCatalog.Placeable.Where(p => p.WardRadius > 0 || p.BuildRange > 0).ToDictionary(p => p.Name, p => (p.WardRadius, p.BuildRange));
-        int wards = 0, stations = 0;
-        for (int i = 0; i < s.Things.Count; i++)
-        {
-            if (names(i) is not string n || !ranges.TryGetValue(n, out var r))
-            {
-                continue;
-            }
-            var t = s.Things[i];
-            if (t.Gone)
-            {
-                continue;
-            }
-            if (r.WardRadius > 0)
-            {
-                Ring(Layer.Wards, t.Position.X, t.Position.Z, r.WardRadius);
-                wards++;
-            }
-            if (r.BuildRange > 0)
-            {
-                Ring(Layer.Stations, t.Position.X, t.Position.Z, r.BuildRange);
-                stations++;
-            }
-        }
-
-        // Ground that locations flatten: the flat part, and fainter where it blends into the land (not the
-        // editor's own ground discs for No limit ground: hundreds of them, they are just the ground).
-        int flattened = 0;
-        if (modifiers != null)
-        {
-            var seen = new HashSet<TerrainModifiers.Modifier>();
-            for (int zz = s.Z0; zz < s.Z0 + s.ZonesZ; zz++)
-            {
-                for (int zx = s.X0; zx < s.X0 + s.ZonesX; zx++)
-                {
-                    foreach (var m in modifiers.InZone(zx, zz).Where(m => !m.Player && !m.Disc && (m.Level || m.Smooth)))
-                    {
-                        if (!seen.Add(m))
-                        {
-                            continue;
-                        }
-                        flattened++;
-                        if (m.Level && m.LevelRadius > 0)
-                        {
-                            Ring(Layer.Flatten, m.Position.X, m.Position.Z, m.LevelRadius, m.Square);
-                        }
-                        if (m.Smooth && m.SmoothRadius > 0)
-                        {
-                            Ring(Layer.FlattenEdge, m.Position.X, m.Position.Z, m.SmoothRadius, m.Square);
-                        }
-                    }
-                }
-            }
-        }
-        return new Built(lines.ToDictionary(kv => kv.Key, kv => kv.Value.ToArray()), wards, stations, flattened, locations);
+        var builder = new OverlayBuilder(s);
+        builder.AddZoneBorders();
+        int locations = builder.AddLocationMarkers();
+        var (wards, stations) = builder.AddWardsAndStations(names);
+        int flattened = builder.AddFlatten(modifiers);
+        return new Built(builder.Finish(), wards, stations, flattened, locations);
     }
 }

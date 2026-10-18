@@ -27,7 +27,7 @@ replaced. Tests from that time check that what it did still works (`KeysAndMouse
 | `tools/DocsScreenshots/` | `TerrainEditor.DocsScreenshots` | The pictures in `docs/images`, taken through the app's `--driver`. |
 
 `Core/WorldGen/` has two namespaces: `ValheimGen` for the generator itself (`WorldGenerator*.cs`,
-`GenMath.cs`, `UnityShim.cs`, `UnityNative.cs`, `FastNoise.cs`, `TerrainService.cs`, `MapData.cs`,
+`GenMath.cs`, `Vector2.cs`, `Vector3.cs`, `Mathf.cs`, `UnityNative.cs`, `FastNoise.cs`, `TerrainService.cs`, `MapData.cs`,
 `SeedLocations.cs`, `DumpVerifier.cs`), and `TerrainEditor.Terrain` for what it is given from the
 game's data (`TerrainModifiers`, `PrefabCatalog`, `PieceCatalog`, `PieceCost`, `CaveRocks`,
 `ZdoKeys`). Core gives its internals to the app and the tests (`InternalsVisibleTo` in the csproj).
@@ -37,7 +37,12 @@ game's data (`TerrainModifiers`, `PrefabCatalog`, `PieceCatalog`, `PieceCost`, `
 A world is a folder in Valheim's chunked save format (world version 40 and up, the Deep North save):
 `_main.<n>.chunks` (the index of chunk files), `XX_YY__<size>_<version>.chunk` (the objects, ZDOs),
 `_main.<n>.db2` (generated zones, locations), `_main.<n>.fwl2` (name, seed) and `_main.<n>.ok`, the
-marker the game writes last. The current save is the highest `<n>` that has its `.ok`; in a folder
+marker the game writes last. Each file names its save format at its head: 41 up to Valheim 1.0.17, 42 since 1.0.20, laid
+out the same (only the number differs). The game writes the index, `.db2`, `.fwl2` and `.ok` in its own format at
+every save but only the chunk files whose objects changed, so a world it migrated holds a 42 index with 41 chunk
+files; `WorldWriter` keeps each file's format (`WorldSave.SaveVersion` for the index and the marker,
+`ChunkFile.WorldVersion` per chunk file, `.db2` and `.fwl2` as read) and saves formats 41 to 42 (`WorldVersion`);
+`WorldCreator` makes new worlds in 42. The current save is the highest `<n>` that has its `.ok`; in a folder
 where no save has one, the highest `<n>` with an index (`WorldSave.CommittedSave`). There is no reader for the older `.db`/`.fwl` worlds: `WorldSave.Load`
 refuses a folder without a `_main.<n>.chunks`.
 
@@ -77,7 +82,7 @@ flowchart LR
    `WorldSave` is read-only: it keeps each object's prefab, position and where its bytes are
    (`ObjectRef`), the terrain data (`TCData`) of each zone, the locations and the zone list. The
    session then makes the `EditStore` (empty pending changes), the `TerrainModifiers` (how the
-   world's locations flatten the ground) and the `TerrainService` (the generated ground). Live,
+   world's locations flatten and paint the ground) and the `TerrainService` (the generated ground). Live,
    `WorldSession.OpenLive` does the same from the plugin's snapshot (`WorldSave.LoadLive`).
 2. **The map.** `Desktop/MapPage.cs` and `Desktop/MapView.cs` draw the world with the game's map
    shader from `Core/WorldGen/MapData.cs` (biomes, heights, the edits).
@@ -85,7 +90,7 @@ flowchart LR
    generated ground of a square of zones in parallel (`TerrainService.BaseZone`), lays the saved and
    pending edits over it (`Core/Editing/HeightGrid.cs`), reads the objects in it (`ReadThings`) and
    makes the `EditSession` with a `Ground` (`Desktop/Ground.cs`: the arrays the game's `TerrainComp`
-   keeps, over the whole block). `GlView` (`Desktop/GlView.cs`) draws it; `ModelStore` and
+   keeps, over the whole block). `GlView` (`Desktop/GlView.cs` and its `GlView.*.cs` partials) draws it; `ModelStore` and
    `BundleModels` read the models from the game on worker threads. Besides the objects it draws
    what the save keeps no object for: dungeon rooms (`DungeonRooms`, from their dungeon's data)
    and the parts of locations the game makes again from a location proxy (`LocationParts`).
@@ -95,7 +100,8 @@ flowchart LR
    `ZoneEdit`s (`Core/Editing/EditStore.cs`). Objects are pending too: deleted ids, `NewObject`s
    (negative ids from `WorldSession.NextId`) and `ZoneReset`s. Nothing is written yet.
 5. **Save.** `WorldSession.Save` refuses at once when the game saved the world since it was read
-   (`WorldWriter.Newer`), turns No limit ground into ground discs (`Core/Editing/Uplift.cs`), then
+   (`WorldWriter.Newer`; the window then offers `WorldSession.PrepareReplay` / `Replay`, below), turns No limit
+   ground into ground discs (`Core/Editing/Uplift.cs`), then
    calls `WorldWriter.Save` (`Core/Save/WorldWriter.cs`), which writes the next save and reads it
    back (below). After zone resets or new discs the world is read again and the history starts over;
    otherwise the world stays open, the changes are marked applied and the history goes to disk
@@ -111,11 +117,11 @@ plot that is no world: it has nothing to save; its building becomes a Homestead 
 
 | Area | Types | Notes |
 |---|---|---|
-| Start and pages | `Program`, `Options`, `App` (`Desktop/Program.cs`), `MainWindow` (+ `.Editor`, `.Workshop`, `.Dungeon` partials), `StartPage`, `MapPage`, `NewWorldPage`, `SettingsDialog` | `MainWindow` holds the pages and the 3D editor: top bar, tool rail (`ToolPanel`, `ToolMode`), the right-hand panels, keys. |
-| 3D view | `GlView`, `GlObjects`, `Shaders`, `GameLookGl`, `ModelStore`, `BundleModels`, `LocationParts`, `Picking`, `Overlays`, `Gizmo` | OpenGL 3.3 or ES 3.0; objects drawn instanced. The view mirrors z (Unity is left-handed): see the comment at the top of `WorldScene`. |
+| Start and pages | `Program`, `Options`, `App` (`Desktop/Program.cs`), `MainWindow` (+ `.Editor`, `.Workshop`, `.Dungeon` partials), `StartPage`, `MapPage` (+ `.Zones` partial), `NewWorldPage`, `SettingsDialog` | `MainWindow` holds the pages and the 3D editor: top bar, tool rail (`ToolPanel`, `ToolMode`), the right-hand panels, keys. |
+| 3D view | `GlView` (one partial file per concern: `.Camera`, `.Input`, `.Tools`, `.Render`, `.Terrain`, `.Models`, `.Objects`, `.Cells`, `.Shapes`, `.Picking`, `.Overlays`, and `.Overlays.<tool>` for each tool's marks), `GlObjects`, `Shaders`, `GameLookGl`, `ModelStore`, `BundleModels`, `LocationParts`, `Picking`, `Overlays`, `Gizmo` | OpenGL 3.3 or ES 3.0; objects drawn instanced. The view mirrors z (Unity is left-handed): see the comment at the top of `WorldScene`. |
 | Open world | `WorldSession`, `WorldScene`, `EditSession`, `Ground`, `HistoryFile` | One `WorldSession` per open world, one `WorldScene` + `EditSession` per open area. |
 | Tools | `Sculpt`, `Erosion`, `Mountain`, `PathTool`, `AreaTool`, `PlaceTool`, `SelectTool`, `MeasureTool`, `DungeonTool`, `Mask`, `Formula`, each with its `*Panel` | A tool works on the `EditSession`; its panel is a card next to the rail. |
-| Save | `WorldSave`, `ValheimReader`, `WorldWriter`, `WorldCreator`, `ZdoTools`, `ZdoData`, `InventoryData`, `ChunkMath` (`Core/Save/`) | Byte formats follow the game's `ZPackage`. |
+| Save | `WorldSave`, `ValheimReader`, `WorldWriter`, `WorldCreator`, `ZdoReader`, `ZdoTools`, `ZdoData`, `InventoryData`, `ChunkMath` (`Core/Save/`) | Byte formats follow the game's `ZPackage`. |
 | Pending changes | `EditStore`, `ZoneEdit`, `NewObject`, `ObjectField`, `ZoneReset`, `HeightGrid`, `Uplift` (`Core/Editing/`) | `EditStore` takes its own lock: strokes and buttons use it from different threads. |
 | Building, dungeons | `Hammer`, `Stability`, `Dungeons`, `DungeonGen`, `DungeonPlan`, `DungeonDresser`, `LocationPrefabs` (`Core/Editing/`) | The hammer's snapping, the support check and the room joining, from the game's data; what the game makes of a location it spawns (for new worlds). |
 | Mods' objects | `ObjectLinks`, `LinkRule`, `LinkSet`, `ObjectLink`, `LinkIndex` (`Core/App/ObjectLinks.cs`), `ModKeys`, `ModManifests`, `ModCatalogue`, `ModExtensions`, `ObjectView`, `CopyView`, `GroundCuts` (`Core/App/`) | Objects mods link into one, mods' extensions (below); mods' data names, manifests and prefabs. |
@@ -130,9 +136,9 @@ plot that is no world: it has nothing to save; its building becomes a Homestead 
   window's thread only" (`EditSession`). `ClaudeTools` runs every call there (`OnUi`), as a click.
 - **The drawing thread** (`GlView`) runs brush strokes: `EditSession` takes its lock for everything,
   and `EditStore` has its own.
-- **Workers** read models (`ModelStore`), generate ground (`Parallel.ForEach` in `WorldScene.Load`),
-  run scripts (`ScriptHost.Run`) and talk to the network. Their results come back to the window's
-  thread before they touch the scene.
+- **Workers** read models (`ModelStore`), generate ground (`Parallel.ForEach` in `WorldScene.Load`)
+  and talk to the network; scripts run in a process of their own (`ScriptHost.RunInChild`). Their
+  results come back to the window's thread before they touch the scene.
 
 ## Game data comes from the player's Valheim
 
@@ -213,13 +219,13 @@ the game's. So:
 
 - **Keep the arithmetic as it is.** Where the game works in float or double, where it rounds back
   to float, the `+ 0.0` that turns `-0` into `0`, the order of operations: each is there on purpose
-  (`GenMath.cs`, `UnityShim.cs`, `UnityNative.cs`: Unity's `Random` (Xorshift128) and
+  (`GenMath.cs`, `Mathf.cs`, `UnityNative.cs`: Unity's `Random` (Xorshift128) and
   `Mathf.PerlinNoise` written to match the engine's machine code). A "simplification" that the
   compiler takes as the same maths may not give the same bits.
 - **Keep the order of random draws.** One draw added, removed or moved changes every river.
 - **The analyzers' fixes count.** A code-style fix in `Core/WorldGen/` is a change to the maths:
   `.editorconfig` already turns off the rules (CA1051, CA1708, CA2231) that would change the Unity
-  stand-ins' public fields, names and operators in `UnityShim.cs` and `UnityNative.cs`.
+  stand-ins' public fields, names and operators in `Vector2.cs`, `Vector3.cs`, `Mathf.cs` and `UnityNative.cs`.
 - **Check.** `WorldGeneratorReferenceTests` compares Unity's random numbers, Perlin noise, 3000 heights and
   biomes, eight whole zones and the water's count with values recorded in the game
   (`tests/fixtures/worldgen-reference.txt`, seed `5DCcdIcuYJ`); any change that moves away from the
@@ -292,9 +298,14 @@ at a local BepInEx and the game's `Managed` folder; CI does not build it.
 
 **Scripts** (`Desktop/ScriptHost.cs`, user docs in [scripting.md](scripting.md)): the user's C#
 (top-level statements) is compiled in the app with Roslyn against the API in `Desktop/ScriptApi.csx`
-(`Area`, `Ground`, `Objects`, `Noise`, `Rnd`, `Print`), run on a worker over a snapshot of the area,
-and its changes go in afterwards as one undo step, on the window's thread. A script that fails
-changes nothing. It is not a sandbox: a script runs with the editor's rights, like any program the
+(`Area`, `Ground`, `Objects`, `Noise`, `Rnd`, `Print`), run over a snapshot of the area in a process
+of its own (`Desktop/ScriptHost.Child.cs`: the editor started again with `--script-host`, the script
+and the snapshot on its stdin, the changes or the error on its stdout, in the editor's own unversioned
+binary format since both ends are the same build), and its changes go in afterwards as one undo step,
+on the window's thread. Stop and the 2-minute limit close the process's stdin (its loops' `Check`s end
+the script) and kill the process tree a second later when that was not enough; a process that dies
+is an error, never a hang. A script that fails changes nothing. The process limits what a crash can
+take down, but it is not a sandbox: a script runs with the editor's rights, like any program the
 user runs.
 
 **Claude** (`Desktop/ClaudeServer.cs`, `Desktop/ClaudeTools.cs`, user docs in [claude.md](claude.md)):
@@ -335,7 +346,18 @@ either breaks it, the user's own scripts and the docs.
   from it with every change since, and the session's previous save is dropped (`Options.Drop`). Only
   on leaving is the folder pruned to the latest save.
 - A newer committed save than the one the editor knows (the game saved meanwhile) blocks the save
-  before anything changes (`WorldWriter.Newer`, `SaveSafetyTests`).
+  before anything changes (`WorldWriter.Newer`, `SaveSafetyTests`). The pending edits can then be
+  brought onto that save (`Core/Editing/EditReplay.cs`): `Prepare` reads it and finds the edits'
+  objects again by kind and place (`Core/Save/ObjectPlaces.cs`, which `HistoryFile` uses too),
+  comparing their data as the editor writes it to find what the game changed too (`Clashes`, by
+  `ReplayClash` kind); `Apply` restarts the `EditStore` from the game's save and puts every change
+  back, a clash as the user chose (a zone both changed: the editor's changed points over the game's).
+  Moves whose source is found take the game's object as source; otherwise the data as read (from the
+  save read, while its chunk files are still there). `WorldSession.Replay` then makes the game's save
+  the world (no save of the session's own to prune) and fits the history to it (`Refit`: ids
+  mapped, the rest kept as gone objects, steps touching a dropped change cut with every step before
+  them, the rest asked about before undo through `HistoryFile.Restored.Replayed`). Nothing is
+  written to disk until the next save.
 - A zone reset never clears players' tombstones (`WorldWriter.TombstonePrefab`).
 - The writer makes no backup folder. `Core/App/Backups.cs` only finds the game's (`_backup_auto-…`)
   and older editors' backups, to restore an area from one.
@@ -415,7 +437,7 @@ after it. `VersionTests` checks `CHANGELOG.md` has its section. Steps in
 | A kind of game data | A reader in `Core/App/GameCatalogues*.cs` (an `IStartScan` in the one pass when it is in the bundles, listed in `AtStart`), a `Kind` line in `GameData.Kinds` with its `Use` and trim, and the type that takes it (often in `Core/WorldGen/`, namespace `TerrainEditor.Terrain`). | `--export-test-data tests/fixtures` for its copy; `NOTICE.md`; the list in `docs/development.md`; a test in `tests/Core.Tests` reading the copy. |
 | A value of an object (a chest, a sign) | `ObjectField` on `NewObject`, read and written through `ZdoData` (`Core/Save/ZdoData.cs`) and `ObjectData` (`Core/App/ObjectData.cs`); item formats in `InventoryData`, `StandData`. | `ObjectDataTests`, `ZdoDataTests`; check the bytes against the game's with `WorldCheck objects`. |
 | Something saved with the world | `WorldWriter.Save` writes it, and `WorldWriter.Verify` must check it read back; `WorldSave` reads it. Live, the same change needs its endpoint in the plugin. | `WorldWriterTests`, `WorldWriterCheckTests`, `WorldSaveIntegrityTests`, `SaveSafetyTests`; `WorldCheck selftest-save` on a copy. |
-| A text the user sees | A key in `Core/Lang/en.json`, asked for with `Lang.T("key")` (`Core/App/Lang.cs`); a hover tip is a `tip.` key given with `.Tip("key")`. Texts for Claude, the log and the command line stay in English. | `LangTests` (every key asked for is there and the other way round); [translating.md](translating.md). |
+| A text the user sees | A key in `Core/Lang/en.json`, asked for with `Lang.T("key")` (`Core/App/Lang.cs`); a hover tip is a `tip.` key given with `.Tip("key")`. Texts for Claude, the log and the command line stay in English; a status-bar message goes through `MainWindow.Msg` with a `Said` (`Core/App/Said.cs`), which keeps its English for Claude. | `LangTests` (every key asked for is there and the other way round); a `<Window>LangTests` under the tests' made-up language (`PseudoLang`); [translating.md](translating.md). |
 | A remembered choice | A `Prefs` bind where the control is made; a setting in `AppSettings` (with the Settings dialog). | `PrefsTests`, `SettingsDialogTests`. |
 
 ### Which tests cover what

@@ -12,22 +12,7 @@ namespace WorldEditor.Tests;
 [Collection("DataDir")]
 public sealed class GameLookTests : IDisposable
 {
-    private static readonly string[] Vars = ["HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "LOCALAPPDATA"];
-    private readonly Dictionary<string, string?> _old = Vars.ToDictionary(v => v, Environment.GetEnvironmentVariable);
-    private readonly string? _settings = AppSettings.PathOverride;
-    private readonly bool _outside = GameLook.SearchOutsideHome;
-    private readonly string _home = Path.Combine(Path.GetTempPath(), "vwe-gamelook-" + Guid.NewGuid().ToString("N")[..8]);
-
-    public GameLookTests()
-    {
-        Directory.CreateDirectory(_home);
-        Environment.SetEnvironmentVariable("HOME", _home);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(_home, ".config"));
-        Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(_home, ".local", "share"));
-        Environment.SetEnvironmentVariable("LOCALAPPDATA", Path.Combine(_home, "AppData", "Local"));
-        AppSettings.PathOverride = Path.Combine(_home, "settings.json");
-        GameLook.SearchOutsideHome = false;
-    }
+    private readonly GameHome _sandbox = new("vwe-gamelook-");
 
     /// <summary>
     /// Leaves the game missing again (no pretend game kept in use), puts the environment and settings back, and
@@ -36,19 +21,7 @@ public sealed class GameLookTests : IDisposable
     public void Dispose()
     {
         GameLook.Check(new AppSettings());
-        foreach (var (k, v) in _old)
-        {
-            Environment.SetEnvironmentVariable(k, v);
-        }
-        AppSettings.PathOverride = _settings;
-        GameLook.SearchOutsideHome = _outside;
-        try
-        {
-            Directory.Delete(_home, true);
-        }
-        catch (IOException)
-        {
-        }
+        _sandbox.Dispose();
     }
 
     /// <summary>
@@ -76,7 +49,7 @@ public sealed class GameLookTests : IDisposable
     public void AMacGameIsFoundByItsAppBundle()
     {
         // As Steam installs it on a Mac: the game's data inside valheim.app, next to BepInEx.
-        string valheim = Path.Combine(_home, "Library", "Application Support", "Steam", "steamapps", "common", "Valheim");
+        string valheim = Path.Combine(_sandbox.Folder, "Library", "Application Support", "Steam", "steamapps", "common", "Valheim");
         string app = Path.Combine(valheim, "valheim.app");
         string data = Path.Combine(app, "Contents", "Resources", "Data");
         Directory.CreateDirectory(Path.Combine(data, "StreamingAssets", "SoftRef", "Bundles"));
@@ -91,12 +64,12 @@ public sealed class GameLookTests : IDisposable
             Assert.Equal(valheim, GameLook.GameFolder(chosen));
         }
         // An app without the game's bundles is not the game.
-        string other = Path.Combine(_home, "Other");
+        string other = Path.Combine(_sandbox.Folder, "Other");
         Directory.CreateDirectory(Path.Combine(other, "Other.app", "Contents", "Resources", "Data"));
         Assert.Null(GameLook.DataDir(other));
         Assert.Null(GameLook.GameFolder(Path.Combine(other, "Other.app")));
         // On Windows and Linux the data folder's game is the folder above it.
-        string linux = FakeValheim(Path.Combine(_home, "Valheim"));
+        string linux = FakeValheim(Path.Combine(_sandbox.Folder, "Valheim"));
         Assert.Equal(linux, GameLook.GameOfData(Path.Combine(linux, "valheim_Data")));
     }
 
@@ -106,35 +79,51 @@ public sealed class GameLookTests : IDisposable
         Assert.Null(GameLook.FindValheim(null));
         // Steam in the home, with Valheim in a second library it lists (one listed library does not exist, and Steam's
         // own folder is listed too, as Steam does).
-        string steam = Path.Combine(_home, ".steam", "steam");
-        string library = Path.Combine(_home, "Games", "SteamLibrary");
+        string steam = Path.Combine(_sandbox.Folder, ".steam", "steam");
+        string library = Path.Combine(_sandbox.Folder, "Games", "SteamLibrary");
         string valheim = FakeValheim(Path.Combine(library, "steamapps", "common", "Valheim"));
         Directory.CreateDirectory(Path.Combine(steam, "steamapps"));
         File.WriteAllText(Path.Combine(steam, "steamapps", "libraryfolders.vdf"), $$"""
             "libraryfolders"
             {
                 "0" { "path"		"{{steam}}" }
-                "1" { "path"		"{{Path.Combine(_home, "Gone")}}" }
+                "1" { "path"		"{{Path.Combine(_sandbox.Folder, "Gone")}}" }
                 "2" { "path"		"{{library}}" }
             }
             """);
         Assert.Equal(valheim, GameLook.FindValheim(null));
         // A folder set in the settings comes first, when it is the game's; else the search goes on.
-        string chosen = FakeValheim(Path.Combine(_home, "Valheim"));
+        string chosen = FakeValheim(Path.Combine(_sandbox.Folder, "Valheim"));
         Assert.Equal(chosen, GameLook.FindValheim(chosen));
-        Assert.Equal(valheim, GameLook.FindValheim(Path.Combine(_home, "nowhere")));
+        Assert.Equal(valheim, GameLook.FindValheim(Path.Combine(_sandbox.Folder, "nowhere")));
+    }
+
+    // Steam's library list that cannot be read (being rewritten, no access): the search goes on without it (it threw).
+    [Fact]
+    public void ASteamLibraryListThatCannotBeReadIsPassedOver()
+    {
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root")
+        {
+            return;
+        }
+        string vdf = Path.Combine(_sandbox.Folder, ".steam", "steam", "steamapps", "libraryfolders.vdf");
+        Directory.CreateDirectory(Path.GetDirectoryName(vdf)!);
+        File.WriteAllText(vdf, "\"libraryfolders\" { }");
+        File.SetUnixFileMode(vdf, UnixFileMode.None);
+
+        Assert.Null(GameLook.FindValheim(null));
     }
 
     [Fact]
     public async Task AChosenFolderIsTakenOnlyWhenItHoldsTheGame()
     {
         var settings = new AppSettings();
-        string? refused = GameLook.Start(Path.Combine(_home, "nowhere"), settings);
+        string? refused = GameLook.Start(Path.Combine(_sandbox.Folder, "nowhere"), settings);
         Assert.Contains("not Valheim's game folder", refused);
         Assert.Null(settings.ValheimPath);
         // Steam's common folder chosen, quoted as a file manager copies it: the game inside it is taken and kept.
-        string valheim = FakeValheim(Path.Combine(_home, "common", "Valheim"));
-        Assert.Null(GameLook.Start($"  \"{Path.Combine(_home, "common")}\" ", settings));
+        string valheim = FakeValheim(Path.Combine(_sandbox.Folder, "common", "Valheim"));
+        Assert.Null(GameLook.Start($"  \"{Path.Combine(_sandbox.Folder, "common")}\" ", settings));
         Assert.Equal(valheim, settings.ValheimPath);
         Assert.Equal(valheim, AppSettings.Load().ValheimPath);
         Assert.Equal(valheim, GameLook.ValheimPath);
@@ -153,7 +142,7 @@ public sealed class GameLookTests : IDisposable
         Assert.Null(GameLook.Bundles);
         Assert.Null(GameLook.ValheimPath);
         Assert.Equal("missing", GameLook.Now().State);
-        var settings = new AppSettings { ValheimPath = FakeValheim(Path.Combine(_home, "Valheim")) };
+        var settings = new AppSettings { ValheimPath = FakeValheim(Path.Combine(_sandbox.Folder, "Valheim")) };
         GameLook.Check(settings);
         var bundles = GameLook.Bundles;
         Assert.NotNull(bundles);
@@ -170,7 +159,7 @@ public sealed class GameLookTests : IDisposable
     [Fact]
     public async Task AReadGameWhoseDataCannotBeHadEndsFailed()
     {
-        var settings = new AppSettings { ValheimPath = FakeValheim(Path.Combine(_home, "Valheim")) };
+        var settings = new AppSettings { ValheimPath = FakeValheim(Path.Combine(_sandbox.Folder, "Valheim")) };
         GameLook.Check(settings);
         Assert.Equal("failed", await Settled());
         try
@@ -203,4 +192,26 @@ public sealed class GameLookTests : IDisposable
 
     [Fact]
     public void AFolderNameThatCannotBeAPathIsNotTheGames() => Assert.Null(GameLook.GameFolder("bad\0name"));
+
+    [Fact]
+    public void AReadingOfAnotherGameLeavesTheStateAsItIs()
+    {
+        // Only the game in use takes the reading's state: another game's reading (a folder never set) changes nothing.
+        string state = GameLook.State;
+        string? message = GameLook.Message;
+        GameLook.FinishReading(new GameBundles(_sandbox.Folder, null), "failed", "not this game");
+        Assert.Equal(state, GameLook.State);
+        Assert.Equal(message, GameLook.Message);
+    }
+
+    [Fact]
+    public void AGameWithNoModelsIsIndexedWithNoEntries()
+    {
+        // The index of a folder of bundles holding no model: indexed, and empty (the state then says so).
+        string valheim = FakeValheim(Path.Combine(_sandbox.Folder, "Valheim"));
+        var game = new GameBundles(GameLook.BundlesDir(valheim)!, null);
+        GameLook.IndexBundles(game);
+        Assert.True(game.Indexed);
+        Assert.Empty(game.Index);
+    }
 }

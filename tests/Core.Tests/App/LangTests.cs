@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using TerrainEditor.App;
 using Xunit;
 
@@ -8,32 +7,11 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// The app's texts by language (Lang): the English catalogue carried inside, a text with values put in, a language
 /// taken from the user's lang folder over English (its broken texts left out), Claude's texts kept in English, a shown
-/// text's English found, the computer's language picked, and the catalogues checked against the code: every key the
-/// code asks for is in English, every English text is asked for, every translation matches the English. It changes the
-/// language in use, so it runs alone.
+/// text's English found, and the computer's language picked. It changes the language in use, so it runs alone.
 /// </summary>
 [Collection("DataDir")]
-public sealed partial class LangTests : IDisposable
+public sealed class LangTests : LangTestBase
 {
-    private readonly string _folder = Path.Combine(Path.GetTempPath(), "vwe-lang-" + Guid.NewGuid().ToString("N")[..8]);
-
-    public LangTests()
-    {
-        Directory.CreateDirectory(_folder);
-        Lang.FolderOverride = _folder;
-    }
-
-    public void Dispose()
-    {
-        Lang.FolderOverride = null;
-        Lang.Use(Lang.Source);
-        Directory.Delete(_folder, true);
-    }
-
-    /// <summary>Writes a catalogue of <paramref name="code"/> in the user's lang folder.</summary>
-    private void Write(string code, Dictionary<string, string> texts) =>
-        File.WriteAllText(Path.Combine(_folder, code + ".json"), JsonSerializer.Serialize(texts));
-
     [Fact]
     public void EnglishIsCarriedAndAnUnknownKeyIsAMistake()
     {
@@ -99,7 +77,7 @@ public sealed partial class LangTests : IDisposable
     {
         Assert.Equal(Lang.Source, Lang.Use("xx"));
         Assert.Equal("Cancel", Lang.T("common.cancel"));
-        File.WriteAllText(Path.Combine(_folder, "de.json"), "{ not json");
+        File.WriteAllText(Path.Combine(Folder, "de.json"), "{ not json");
         Assert.Equal(Lang.Source, Lang.Use("de"));
         Assert.Contains(new Lang.Language("de", "de"), Lang.Available());
     }
@@ -110,8 +88,8 @@ public sealed partial class LangTests : IDisposable
     [Fact]
     public void AFileThatIsNotOneObjectOrRepeatsAKeyDoesNotCrashTheStart()
     {
-        File.WriteAllText(Path.Combine(_folder, "it.json"), "[]");
-        File.WriteAllText(Path.Combine(_folder, "fr.json"), """{ "lang.name": "Français", "common.cancel": "Annuler", "common.cancel": "Abandonner" }""");
+        File.WriteAllText(Path.Combine(Folder, "it.json"), "[]");
+        File.WriteAllText(Path.Combine(Folder, "fr.json"), """{ "lang.name": "Français", "common.cancel": "Annuler", "common.cancel": "Abandonner" }""");
         Assert.Equal(Lang.Source, Lang.Use("it"));
         Assert.Contains(new Lang.Language("it", "it"), Lang.Available());
         Assert.Equal("fr", Lang.Use("fr"));
@@ -161,6 +139,7 @@ public sealed partial class LangTests : IDisposable
         Assert.Equal(["fr-FR", "de", "en-GB"], Lang.FromLocales("fr_FR.UTF-8:de:en_GB@euro"));
         Assert.Empty(Lang.FromLocales("C"));
         Assert.Empty(Lang.FromLocales(null));
+        Assert.Equal(["en-GB", "fr-FR"], Lang.FromMultiString("en-GB\0fr-FR\0\0"));
         string[] have = ["en", "fr", "pt-PT"];
         Assert.Equal("fr", Lang.Pick(["fr-CA"], have));
         Assert.Equal("pt-PT", Lang.Pick(["pt-BR"], have));
@@ -174,34 +153,5 @@ public sealed partial class LangTests : IDisposable
         Assert.True(Lang.SamePlaces("{0} of {1:0.0} m", "{1:0.##} m sur {0}"));
         Assert.False(Lang.SamePlaces("{0} of {1}", "{0}"));
         Assert.True(Lang.SamePlaces("a {{literal}}", "un {{littéral}}"));
-    }
-
-    /// <summary>A key asked for in the code: Lang.T("key"…).</summary>
-    [GeneratedRegex("""Lang\.T\("([^"]+)"[,)]""")]
-    private static partial Regex Asked();
-
-    [Fact]
-    public void TheCataloguesMatchTheCodeAndTheEnglish()
-    {
-        string repo = Path.Combine(Fixtures.Root, "..", "..");
-        string code = string.Join("\n", new[] { "Core", "Desktop" }
-            .SelectMany(d => Directory.GetFiles(Path.Combine(repo, d), "*.cs", SearchOption.AllDirectories))
-            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-            .Select(File.ReadAllText));
-        var missing = Asked().Matches(code).Select(m => m.Groups[1].Value).Distinct().Where(k => !Lang.English.ContainsKey(k)).ToList();
-        Assert.True(missing.Count == 0, "Texts the code asks for that are not in en.json: " + string.Join(", ", missing));
-        // The tips are asked for by their key alone (Tips.cs, checked by TipsTests), the rest by their full key (some
-        // through a variable: the key is still written in the code).
-        var unused = Lang.English.Keys.Where(k => !k.StartsWith("tip.", StringComparison.Ordinal) && k != Lang.NameKey && !code.Contains($"\"{k}\"", StringComparison.Ordinal)).ToList();
-        Assert.True(unused.Count == 0, "Texts in en.json no code asks for: " + string.Join(", ", unused));
-        Assert.All(Lang.English, kv => Assert.False(string.IsNullOrWhiteSpace(kv.Value), kv.Key));
-        // Each carried translation: only English keys, the same places for values.
-        foreach (string file in Directory.GetFiles(Path.Combine(repo, "Core", "Lang"), "*.json"))
-        {
-            using var s = File.OpenRead(file);
-            var texts = Lang.Parse(s);
-            Assert.True(texts.ContainsKey(Lang.NameKey), file);
-            Assert.All(texts, kv => Assert.True(Lang.English.TryGetValue(kv.Key, out string? en) && Lang.SamePlaces(en, kv.Value), $"{Path.GetFileName(file)}: {kv.Key}"));
-        }
     }
 }

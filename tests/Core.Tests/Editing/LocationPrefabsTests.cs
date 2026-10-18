@@ -59,9 +59,9 @@ public class LocationPrefabsTests
             Assert.Contains(made, m => m.Prefab == c.Prefab && Vector3.Distance(at + Vector3.Transform(c.Position, turn), m.Position) < 0.001f);
         }
         // The Unity random is left as it was.
-        var state = ValheimGen.UnityEngine.Random.state;
+        var state = ValheimGen.UnityEngine.Random.State;
         LocationPrefabs.Made(temple, at, turn, 99);
-        Assert.Equal(state, ValheimGen.UnityEngine.Random.state);
+        Assert.Equal(state, ValheimGen.UnityEngine.Random.State);
     }
 
     [Fact]
@@ -73,6 +73,24 @@ public class LocationPrefabsTests
             LocationPrefabs.Use("""{"dungeons":{},"rooms":{}}""");
             Assert.Null(LocationPrefabs.Get("StartTemple"));
             Assert.Empty(LocationPrefabs.All);
+        }
+        finally
+        {
+            LocationPrefabs.Use(json);
+        }
+    }
+
+    [Fact]
+    public void TeleportsThatAreNoListAreNone()
+    {
+        // "teleports": null threw from Use, and no location prefab loaded at all.
+        string json = File.ReadAllText(Path.Combine(Fixtures.Root, "dungeon-rooms.json"));
+        try
+        {
+            LocationPrefabs.Use("""
+                {"dungeons":{},"rooms":{},"locations":{"Odd":{"clearArea":0,"randomDamage":0,"interior":0,"contents":[],"spawns":[],"picks":[],"nodes":[],"teleports":null}}}
+                """);
+            Assert.Empty(LocationPrefabs.Get("Odd")!.Doors);
         }
         finally
         {

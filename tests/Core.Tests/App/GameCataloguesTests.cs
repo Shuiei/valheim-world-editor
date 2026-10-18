@@ -10,8 +10,8 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// What the editor reads of the game's files at its start (GameCatalogues), on a made-up game (CatalogueGame,
 /// SceneGame): each kind read in the one pass over the bundles, the vegetation rules of the main scene, the cave rocks,
-/// the names of object data from the game's code, the English texts; and what is said when the files are not as
-/// expected.
+/// the names of object data from the game's code, the English texts, a location's door; and what is said when the files
+/// are not as expected.
 /// </summary>
 public class GameCataloguesTests
 {
@@ -109,6 +109,83 @@ public class GameCataloguesTests
         var kinds = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), [.. GameCatalogues.AtStart.Where(k => k != "piece-cost")]);
         Assert.Equal("{}", kinds["prefabs"]);
         Assert.Equal("{}", kinds["piece-place"]);
+    }
+
+    [Fact]
+    public void AScriptsBundleReadInThePassStaysOpenForLaterScripts()
+    {
+        // The scripts' bundle is kept open from the first piece on, and is one of the pass's bundles too: read there
+        // (AssetsTools gives the same instance again) and let go, it must stay open for the last piece's classes.
+        using var game = new TestGame();
+        var scripts = game.Bundle("m_scripts");
+        var first = game.Bundle("a_pieces");
+        first.ScriptsFrom = scripts;
+        first.Prefab("first_floor", r =>
+        {
+            r.Mono("Piece", new Fields { ["m_category"] = 0, ["m_resources"] = new List<Fields>() });
+            r.Box((0, 0, 0), (1, 0.2, 1));
+        });
+        var last = game.Bundle("z_pieces");
+        last.ScriptsFrom = scripts;
+        last.Prefab("last_floor", r =>
+        {
+            r.Mono("Piece", new Fields { ["m_category"] = 0, ["m_resources"] = new List<Fields>() });
+            r.Mono("WearNTear", new Fields { ["m_materialType"] = 1, ["m_supports"] = false });
+            r.Box((0, 0, 0), (1, 0.2, 1));
+        });
+        game.Save();
+        var kinds = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["pieces", "piece-support"]);
+        Assert.Equal(["first_floor", "last_floor"], JsonNode.Parse(kinds["pieces"])!.AsObject().Select(kv => kv.Key));
+        Assert.Equal(["last_floor"], JsonNode.Parse(kinds["piece-support"])!.AsObject().Select(kv => kv.Key));
+    }
+
+    // A bundle opened while open is the same one, shared: it stays readable until its last user disposes it, is opened
+    // anew after that, and a dispose too many neither closes it again nor forgets the newer one.
+    [Fact]
+    public void ABundleOpenTwiceIsSharedUntilItsLastUserIsDone()
+    {
+        using var game = new TestGame();
+        game.Bundle("a_pieces").Prefab("floor", r => r.Box((0, 0, 0), (1, 0.2, 1)));
+        game.Save();
+        using var g = new GameCatalogues.Game(game.BundlesDir);
+        var a = g.Open("a_pieces")!;
+        Assert.Same(a, g.Open("a_pieces"));
+        var (file, info) = a.Objects.First();
+        a.Dispose();
+        Assert.NotNull(a.Read(file, info.PathId));
+        Assert.Same(a, g.Open("a_pieces"));
+        a.Dispose();
+        a.Dispose();
+        var b = g.Open("a_pieces")!;
+        Assert.NotSame(a, b);
+        a.Dispose();
+        Assert.Same(b, g.Open("a_pieces"));
+        var (bFile, bInfo) = b.Objects.First();
+        Assert.NotNull(b.Read(bFile, bInfo.PathId));
+    }
+
+    // A piece's name in two bundles: the first is taken, as the prefabs catalogue takes it (the last was, so "prefabs"
+    // and "pieces" could describe two objects).
+    [Fact]
+    public void ThePieceOfANameInTwoBundlesIsTheFirst()
+    {
+        using var game = new TestGame();
+        var scripts = game.Bundle("m_scripts");
+        foreach (var (bundle, category) in (ReadOnlySpan<(string, int)>)[("a_pieces", 2), ("z_pieces", 1)])
+        {
+            var b = game.Bundle(bundle);
+            b.ScriptsFrom = scripts;
+            b.Prefab("floor", r =>
+            {
+                r.Mono("Piece", new Fields { ["m_category"] = category, ["m_resources"] = new List<Fields>() });
+                r.Box((0, 0, 0), (1, 0.2, 1));
+            });
+        }
+        game.Save();
+
+        var kinds = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["pieces"]);
+
+        Assert.Equal(2, JsonNode.Parse(kinds["pieces"])!["floor"]!["cat"]!.GetValue<int>());
     }
 
     [Fact]
@@ -232,13 +309,46 @@ public class GameCataloguesTests
         Assert.Contains("\"st\":\"Bench\"", cost);
     }
 
+    // A carriage return inside an unquoted field ends the row, as a line break does: Python's csv refuses it, and the
+    // whole game data pass failed, so no world opened.
     [Fact]
-    public void ALineBreakInAnUnquotedTextIsSaid()
+    public void ALoneCarriageReturnInAnUnquotedTextEndsItsRow()
     {
-        // As Python's csv reads them: a carriage return inside an unquoted field.
         using var game = CatalogueGame.Make();
-        game.Resources([("localization_english", "item_wood,Ti\rmber\n")]);
+        game.Resources([("localization_english", "item_wood,Ti\rpiece_workbench,Bench\n")]);
         game.Save();
-        Assert.Throws<InvalidDataException>(() => GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["piece-cost"]));
+        string cost = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["piece-cost"])["piece-cost"];
+        Assert.Contains("\"Wood\":\"Ti\"", cost);
+        Assert.Contains("\"st\":\"Bench\"", cost);
+    }
+
+    // A location's door into its interior (a Teleport) is kept where it stands; a script below its root of a kind no
+    // part of a location is (its interior's dungeon generator) is passed over.
+    [Fact]
+    public void ALocationsDoorIsReadAndItsGeneratorPassedOver()
+    {
+        using var game = new TestGame();
+        var scripts = game.Bundle("m_scripts");
+        var b = game.Bundle("e_locations");
+        b.ScriptsFrom = scripts;
+        b.Prefab("Crypt", r =>
+        {
+            r.Mono("Location", new Fields { ["m_exteriorRadius"] = 12.0, ["m_clearArea"] = true, ["m_applyRandomDamage"] = false, ["m_hasInterior"] = true });
+            r.Child("Interior", c => c.Mono("DungeonGenerator", new Fields { ["m_algorithm"] = 1, ["m_maxRooms"] = 4, ["m_minRooms"] = 1, ["m_themes"] = 2 }));
+            r.Child("Door", c =>
+            {
+                c.Position = (0, 0, 6);
+                c.Mono("Teleport", new Fields { ["m_targetPoint"] = Fields.Ref(0), ["m_enterText"] = "Enter" }, fields: [Ref("m_targetPoint"), Text("m_enterText")]);
+            });
+        });
+        game.Save();
+
+        string json = GameCatalogues.ReadAtStart(new GameBundles(game.BundlesDir, null), ["dungeon-rooms"])["dungeon-rooms"];
+
+        var crypt = JsonNode.Parse(json)!["locations"]!["Crypt"]!;
+        var door = Assert.Single(crypt["teleports"]!.AsArray())!;
+        Assert.Equal([0.0, 0.0, 6.0, 0.0, 0.0, 0.0, 1.0], door.AsArray().Select(v => v!.GetValue<double>()));
+        Assert.Equal(1, crypt["interior"]!.GetValue<int>());
+        Assert.All(["contents", "spawns", "picks", "nodes"], k => Assert.Empty(crypt[k]!.AsArray()));
     }
 }

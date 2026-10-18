@@ -339,7 +339,9 @@ the stand-in game `FakeGame`, the `DataDir` collection), compiled into both proj
 
 The **test world** is `tests/fixtures/CITest`: a brand-new world made by a dedicated server and
 filled live through the editor (ground edits, trees, rocks, bushes, pickables, a crop, floors, walls,
-chests). `tests/fixtures/CITest.snapshot` is the same world as the plugin sends it.
+chests). `tests/fixtures/CITest.snapshot` is the same world as the plugin sends it, and `tests/fixtures/CITest42` the
+same world as Valheim 1.0.20 saves it, in save format 42 (its dedicated server loaded CITest, one object of each chunk
+file was moved and moved back live so that the game wrote every file again, then it saved).
 
 CircleCI (`.circleci/continue.yml`) runs on every push and pull request (`packages` and
 `windows-smoke` on main only: they are slow, and the packaging they check seldom changes):

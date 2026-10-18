@@ -36,6 +36,31 @@ public class GameBundlesTests
         Assert.Equal(3 * 5 * 2, GameBundles.LevelSize(3, 5, 2));
     }
 
+    // A range from a broken file is read only when it lies inside the resource file: a skip past the size, or a range
+    // running past the end into the next file, is not (it threw, or read the next file's bytes).
+    [Theory]
+    [InlineData(100, 0, 100, true)]
+    [InlineData(100, 40, 60, true)]
+    [InlineData(100, 40, 61, false)]
+    [InlineData(100, -1, 10, false)]
+    [InlineData(100, 10, -5, false)]
+    [InlineData(100, long.MaxValue, 10, false)]
+    [InlineData(long.MaxValue, 0, 3_000_000_000, false)]
+    public void StreamedDataIsReadOnlyInsideItsResourceFile(long length, long offset, long size, bool read)
+    {
+        Assert.Equal(read, GameBundles.InResource(length, offset, size));
+    }
+
+    // A triangle with a corner that is not one of the mesh's vertices is left out (drawing it threw); a part triangle
+    // at the end too.
+    [Fact]
+    public void TrianglesWithCornersOutsideTheMeshAreLeftOut()
+    {
+        long[] corners = [0, 1, 2, 2, 3, 4, 1, 2, -1, 3, 2, 1, 0];
+
+        Assert.Equal([0, 1, 2, 3, 2, 1], GameBundles.Triangles(corners.Length, 4, k => corners[k]));
+    }
+
     [Fact]
     public void CutOutTexturesTakeTheColourOfTheirOpaquePixels()
     {

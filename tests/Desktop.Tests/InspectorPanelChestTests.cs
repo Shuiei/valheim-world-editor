@@ -22,14 +22,8 @@ public class InspectorPanelChestTests
         string dir = Fixtures.CopyFixture();
         try
         {
-            var world = WorldSave.Load(dir);
-            var at = world.Objects.First(o => o.Prefab == Chest).Position;
-            int zx = (int)MathF.Floor((at.X + 32) / 64), zz = (int)MathF.Floor((at.Z + 32) / 64);
-            var scene = WorldScene.Load(dir, zx, zz, 1);
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            w.View.Show(scene, null);
-            w.Edit(scene.Session!);
+            var scene = TestScenes.ZoneHolding(dir, Chest);
+            var w = TestWindows.Editing(scene.Session!);
             w.Tools.ChooseSelect();
             int chest = scene.Things.FindIndex(t => t.Prefab == Chest);
             w.View.Select([chest]);
@@ -75,13 +69,8 @@ public class InspectorPanelChestTests
         string dir = Fixtures.CopyFixture();
         try
         {
-            var world = WorldSave.Load(dir);
-            var at = world.Objects.First(o => o.Prefab == Chest).Position;
-            var scene = WorldScene.Load(dir, (int)MathF.Floor((at.X + 32) / 64), (int)MathF.Floor((at.Z + 32) / 64), 1);
-            var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-            w.Show();
-            w.View.Show(scene, null);
-            w.Edit(scene.Session!);
+            var scene = TestScenes.ZoneHolding(dir, Chest);
+            var w = TestWindows.Editing(scene.Session!);
             var ins = w.Inspector;
             int chest = scene.Things.FindIndex(t => t.Prefab == Chest);
             Assert.True(ins.Open(chest));

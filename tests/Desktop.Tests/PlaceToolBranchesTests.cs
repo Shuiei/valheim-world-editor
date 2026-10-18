@@ -7,9 +7,9 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The Place tool's remaining branches, on a flat 2 × 2 zone area: ends from a model box along either axis, end to end
 /// with no known length, at one height, above the ground, masked or off the edge, flat pieces never stacked, the
-/// leftover past several points, repeated points, facings along the line, the most a shape places, single pieces with
-/// nothing near or nothing meeting, zone turns, figures without end to end, short loops, and heights picked with no
-/// area, off a piece, or off a piece of no known name.
+/// leftover past several points, a piece spanning a bend, repeated points, facings along the line, the most a shape
+/// places, single pieces with nothing near or nothing meeting, zone turns, figures without end to end, short loops,
+/// and heights picked with no area, off a piece, or off a piece of no known name.
 /// </summary>
 public class PlaceToolBranchesTests
 {
@@ -21,24 +21,16 @@ public class PlaceToolBranchesTests
     /// </summary>
     private static (PlaceTool T, EditSession S) Tool(params WorldScene.Thing[] things)
     {
-        var s = TestScenes.Flat(2, things);
-        var t = new PlaceTool
+        var (t, s) = SharedPlaceTool.Tool(things);
+        SharedPlaceTool.NameWallAndBeech(t);
+        t.ModelBox = n => n switch
         {
-            Scene = () => s.Scene,
-            Brush = s.Brush,
-            NameOf = h => h == StableHash.Of(Wall) ? Wall : h == StableHash.Of("Beech1") ? "Beech1" : null,
-            ModelBox = n => n switch
-            {
-                "Deep" => (new Vector3(-0.2f, 0, -1), new Vector3(0.2f, 2, 1)),
-                "Speck" => (Vector3.Zero, new Vector3(0.01f, 0.01f, 0.01f)),
-                "Slab" => (new Vector3(-1, 0, -0.2f), new Vector3(1, 0.05f, 0.2f)),
-                "Post" => (new Vector3(-1, 0, -0.2f), new Vector3(1, 2, 0.2f)),
-                _ => null,
-            },
+            "Deep" => (new Vector3(-0.2f, 0, -1), new Vector3(0.2f, 2, 1)),
+            "Speck" => (Vector3.Zero, new Vector3(0.01f, 0.01f, 0.01f)),
+            "Slab" => (new Vector3(-1, 0, -0.2f), new Vector3(1, 0.05f, 0.2f)),
+            "Post" => (new Vector3(-1, 0, -0.2f), new Vector3(1, 2, 0.2f)),
+            _ => null,
         };
-        t.Chosen.Clear();
-        t.Chosen.Add("Beech1");
-        t.Tilt = 0;
         return (t, s);
     }
 
@@ -118,6 +110,26 @@ public class PlaceToolBranchesTests
         Assert.Equal(0.5f, t.SnapGap, 3);
     }
 
+    // A corner 3 m along: the second 2 m post reaches past it, so it ends on the second stretch, 2 m from its start
+    // ((42, 64) to (43, 64 + √3)), and the run goes on from there; none turns back before the corner.
+    [Fact]
+    public void APieceSpanningABendEndsOnTheNextStretch()
+    {
+        var (t, _) = Tool();
+        Run(t, "Post", new(40, 64), new(43, 64), new(43, 70));
+        t.SnapTo = false;
+        float r3 = MathF.Sqrt(3);
+        var centres = t.Preview(null).Select(o => o.G).ToList();
+        Vector2[] expected = [new(41, 64), new(42.5f, 64 + r3 / 2), new(43, 65 + r3), new(43, 67 + r3)];
+        Assert.Equal(expected.Length, centres.Count);
+        for (int i = 0; i < expected.Length; i++)
+        {
+            Assert.Equal(expected[i].X, centres[i].X, 3);
+            Assert.Equal(expected[i].Y, centres[i].Y, 3);
+        }
+        Assert.Equal(2 - r3, t.SnapGap, 3);
+    }
+
     [Fact]
     public void RepeatedPointsAndFacingsAlongTheLine()
     {
@@ -170,14 +182,14 @@ public class PlaceToolBranchesTests
         t.Chosen.Add(Wall);
         t.AutoSnap();
         Assert.Equal(new Vector2(64, 64), Assert.Single(t.Preview(new Vector2(64, 64))).G);
-        Assert.Null(t.SnappedTo);
+        Assert.Null(t.Snapped);
         // A wall 8 m away: near, but no snap points meet.
         var (u, _) = Tool(new WorldScene.Thing(1, StableHash.Of(Wall), new Vector3(72 - 32, 30, 64 - 32), Vector3.Zero, 0, true));
         u.Chosen.Clear();
         u.Chosen.Add(Wall);
         u.AutoSnap();
         Assert.Equal(new Vector2(64, 64), Assert.Single(u.Preview(new Vector2(64, 64))).G);
-        Assert.Null(u.SnappedTo);
+        Assert.Null(u.Snapped);
         // Snapping off: no pieces looked at.
         u.SnapTo = false;
         Assert.Equal(new Vector2(64, 64), Assert.Single(u.Preview(new Vector2(64, 64))).G);
@@ -231,14 +243,14 @@ public class PlaceToolBranchesTests
     public void HeightsArePickedAndNudged()
     {
         var none = new PlaceTool();
-        Assert.Contains("(the ground there)", none.PickElevation(0, 12.3f));
+        Assert.Contains("(the ground there)", none.PickElevation(0, 12.3f).Shown);
         Assert.Equal(12.3f, none.Elev, 3);
         // A tree is no piece: the ground; a wall without a name known: its own.
         var wall = new WorldScene.Thing(2, StableHash.Of(Wall), new Vector3(0, 31, 0), Vector3.Zero, 0, true);
         var (t, _) = Tool(new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(0, 30, 0), Vector3.Zero, 1, false), wall);
-        Assert.Contains("(the ground there)", t.PickElevation(0, 30));
+        Assert.Contains("(the ground there)", t.PickElevation(0, 30).Shown);
         t.NameOf = _ => null;
-        Assert.Contains("(the top of ", t.PickElevation(1, 30));
+        Assert.Contains("(the top of ", t.PickElevation(1, 30).Shown);
         Assert.Equal(PlaceTool.Elevations.At, t.Elevation);
     }
 }

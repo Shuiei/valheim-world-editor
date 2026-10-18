@@ -1,9 +1,7 @@
-using System.Text.RegularExpressions;
-
 namespace TerrainEditor.App;
 
 /// <summary>The worlds on this computer: recent ones, folders added in Settings, and Valheim's own world folders.</summary>
-public static class Worlds
+public static partial class Worlds
 {
     /// <summary>One world found.</summary>
     /// <param name="Name">The world's name (its folder's).</param>
@@ -25,7 +23,8 @@ public static class Worlds
             try
             {
                 string full = Path.GetFullPath(dir);
-                if (!Directory.Exists(full) || !seen.Add(full))
+                // Once, however it is reached (a link to it, a separator at the end, another letter case on Windows).
+                if (!Directory.Exists(full) || !seen.Add(Places.FolderKey(full)))
                 {
                     return;
                 }
@@ -33,8 +32,10 @@ public static class Worlds
                 (int n, DateTime t) = LatestSave(full);
                 list.Add(new Info(WorldName(full), full, t, n, where, problem == null, problem));
             }
-            catch
+            // A folder that cannot be read, or a stored path that is no path: left out, and said in the log.
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
             {
+                Log.Caught(ex, "listing a world folder (left out of the list)");
             }
         }
         foreach (var r in settings.Recent)
@@ -73,12 +74,13 @@ public static class Worlds
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
             {
+                Log.CaughtBrief(ex, "looking for old single-file worlds in a worlds folder (passed over)");
                 continue;
             }
             foreach (string db in dbs)
             {
                 string name = Path.GetFileNameWithoutExtension(db);
-                if (!Directory.Exists(Path.Combine(root, name)) && seen.Add(db))
+                if (!Directory.Exists(Path.Combine(root, name)) && seen.Add(Places.FolderKey(db)))
                 {
                     list.Add(new Info(name, db, File.GetLastWriteTime(db), 0, "local", false, "Old save format: load this world in Valheim once, then it can be edited here."));
                 }
@@ -87,60 +89,10 @@ public static class Worlds
         return [.. list.OrderByDescending(w => w.Where == "recent").ThenByDescending(w => w.Saved)];
     }
 
-    /// <summary>Why a folder cannot be opened as a world, or null when it can.</summary>
-    public static string? Check(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return "Enter the world's folder.";
-        }
-        if (File.Exists(path) && path.EndsWith(".db", StringComparison.OrdinalIgnoreCase))
-        {
-            return "That is an old single-file world: load it in Valheim once, then open its folder here.";
-        }
-        if (!Directory.Exists(path))
-        {
-            return "That folder does not exist.";
-        }
-        if (Places.HasWorld(path))
-        {
-            return null;
-        }
-        try
-        {
-            // A worlds_local folder with one world in it: point at the world instead.
-            string[] inside = [.. Directory.GetDirectories(path).Where(Places.HasWorld)];
-            return inside.Length > 0
-                ? $"That folder holds worlds; pick one of them ({string.Join(", ", inside.Select(Path.GetFileName).Take(4))})."
-                : "No Valheim world in that folder (a world folder holds _main.<n>.chunks and *.chunk files).";
-        }
-        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
-        {
-            return $"That folder cannot be read: {ex.Message}";
-        }
-    }
-
     /// <summary>A world's name: its folder's name.</summary>
     public static string WorldName(string path)
     {
         // The name is in _main.<n>.fwl2; the folder is named after the world anyway.
         return Path.GetFileName(Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-    }
-
-    /// <summary>The highest n of the folder's _main.&lt;n&gt;.chunks and its write time; (0, MinValue) when none.</summary>
-    private static (int, DateTime) LatestSave(string dir)
-    {
-        int best = 0;
-        DateTime t = DateTime.MinValue;
-        foreach (string f in Directory.GetFiles(dir, "_main.*.chunks"))
-        {
-            Match m = Regex.Match(Path.GetFileName(f), @"_main\.(\d+)\.chunks");
-            if (m.Success && int.Parse(m.Groups[1].Value) >= best)
-            {
-                best = int.Parse(m.Groups[1].Value);
-                t = File.GetLastWriteTime(f);
-            }
-        }
-        return (best, t);
     }
 }

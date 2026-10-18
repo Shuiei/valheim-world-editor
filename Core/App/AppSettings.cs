@@ -1,4 +1,4 @@
-using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace TerrainEditor.App;
 
@@ -6,7 +6,7 @@ namespace TerrainEditor.App;
 /// What the app remembers between runs, per user: settings.json in the app's data folder
 /// (~/.local/share/ValheimWorldEditor on Linux, %LOCALAPPDATA%\ValheimWorldEditor on Windows).
 /// </summary>
-public sealed class AppSettings
+public sealed partial class AppSettings
 {
     /// <summary>
     /// The Valheim game folder chosen in Settings (null: found automatically in the Steam libraries).
@@ -69,6 +69,12 @@ public sealed class AppSettings
     /// send <c>ClaudeToken</c>. Off unless chosen.
     /// </summary>
     public bool ClaudeConnect { get; set; }
+
+    /// <summary>
+    /// Whether Claude may run scripts (run_script, the Script tool's Run): a script has the editor's rights on this
+    /// computer, like any program the user runs, so it takes the user's leave once (Settings). Off unless chosen.
+    /// </summary>
+    public bool ClaudeScripts { get; set; }
 
     /// <summary>
     /// Windows: draw with the graphics driver's own OpenGL first instead of Direct3D (ANGLE); taken when the editor
@@ -152,75 +158,62 @@ public sealed class AppSettings
     private static readonly Lock Lock = new();
 
     /// <summary>
-    /// Reads the settings file. A missing or unreadable file gives the defaults; one that is not valid JSON is first
-    /// copied aside as settings.json.bad.
+    /// Whether the settings file was there but could not be read (locked by another program, no permission): these
+    /// are the defaults for now, and <c>Save</c> leaves the file as it is rather than writing them over the user's
+    /// settings.
     /// </summary>
-    public static AppSettings Load()
+    [JsonIgnore]
+    public bool FileUnread { get; private init; }
+
+    /// <summary>
+    /// Whether there was no settings file when these were loaded: a file there when <c>Save</c> writes was put there
+    /// by another program since (a sync program putting the user's back), and is left as it is. Cleared once these
+    /// are written.
+    /// </summary>
+    private bool _fileMissing;
+
+    /// <summary>
+    /// These settings with lists the file gave as null ("Recent": null), or entries of them null, made empty or left
+    /// out: the rest of the app reads them as lists.
+    /// </summary>
+    private AppSettings WithoutNulls()
     {
-        lock (Lock)
-        {
-            try
-            {
-                return File.Exists(FilePath) ? JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) ?? new AppSettings() : new AppSettings();
-            }
-            catch (JsonException ex)
-            {
-                // Not readable: kept aside as settings.json.bad (the next save would write over it).
-                Console.WriteLine($"Settings: {FilePath} could not be read ({ex.Message}); kept as {FilePath}.bad, starting from the defaults.");
-                try
-                {
-                    File.Copy(FilePath, FilePath + ".bad", overwrite: true);
-                }
-                catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
-                {
-                }
-                return new AppSettings();
-            }
-            catch
-            {
-                return new AppSettings();
-            }
-        }
+        BepInExFolders = [.. (BepInExFolders ?? []).Where(f => f != null)];
+        WorldFolders = [.. (WorldFolders ?? []).Where(f => f != null)];
+        Extensions ??= [];
+        Recent = [.. (Recent ?? []).Where(r => r is { Path: not null, Name: not null })];
+        return this;
     }
 
     /// <summary>
-    /// JSON options for writing the settings file, indented so it stays readable by hand.
-    /// </summary>
-    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
-
-    /// <summary>
-    /// A file that cannot be written (locked, read-only) is left as it was: the settings stay in memory.
-    /// </summary>
-    public void Save()
-    {
-        lock (Lock)
-        {
-            try
-            {
-                // Only the user can read it, from the start: it holds Claude's token.
-                SafeFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, Indented), UnixFileMode.UserRead | UnixFileMode.UserWrite);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                Console.WriteLine($"Settings: could not write {FilePath}: {ex.Message}");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Puts a world at the top of the recent list (dropping an older entry for the same full path), keeps the 12 newest
-    /// and saves.
+    /// Puts a world at the top of the recent list (dropping an older entry for the same folder: its full path, without
+    /// a separator at the end, case ignored on Windows), keeps the 12 newest and saves.
     /// </summary>
     /// <param name="path">The world's path.</param>
     /// <param name="name">The name to show for it.</param>
     public void AddRecent(string path, string name)
     {
-        Recent.RemoveAll(r => string.Equals(Path.GetFullPath(r.Path), Path.GetFullPath(path), StringComparison.Ordinal));
+        string full = FullPath(path);
+        Recent.RemoveAll(r => string.Equals(FullPath(r.Path), full, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
         Recent.Insert(0, new RecentWorld(path, name, DateTime.Now));
         if (Recent.Count > 12)
         {
             Recent.RemoveRange(12, Recent.Count - 12);
         }
         Save();
+    }
+
+    /// <summary>A path as its full path without a separator at the end; as it is when it is not a valid path.</summary>
+    private static string FullPath(string path)
+    {
+        try
+        {
+            return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            Log.CaughtBrief(ex, "making a recent world's path full (compared as it is)");
+            return path;
+        }
     }
 }

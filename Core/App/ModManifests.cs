@@ -1,6 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using TerrainEditor.Save;
 
 namespace TerrainEditor.App;
 
@@ -14,7 +11,7 @@ namespace TerrainEditor.App;
 /// same name, the newest file's wins. A file that is not a manifest is skipped. The editor ships none for any mod:
 /// supporting a mod is its author's to do.
 /// </summary>
-public static class ModManifests
+public static partial class ModManifests
 {
     /// <summary>The manifest's file name.</summary>
     public const string FileName = "worldeditor.json";
@@ -71,7 +68,7 @@ public static class ModManifests
             field = value;
             _baseNotes = null;
             _notes = BaseNotes();
-            _generation++;
+            Interlocked.Increment(ref _generation);
         }
     } = [];
 
@@ -121,190 +118,10 @@ public static class ModManifests
         return notes;
     }
 
-    /// <summary>
-    /// Reads every manifest in the plugins folders and uses what they say (nothing when there is none). Never throws.
-    /// </summary>
-    /// <returns>How many manifests were read.</returns>
-    public static int Refresh(AppSettings settings)
-    {
-        var files = new List<(FileInfo File, string Plugins)>();
-        foreach (var (dir, _) in LocalGame.BepInExFolders(settings))
-        {
-            string plugins = Path.Combine(dir, "plugins");
-            try
-            {
-                if (Directory.Exists(plugins))
-                {
-                    files.AddRange(Directory.EnumerateFiles(plugins, FileName, SearchOption.AllDirectories).Select(f => (new FileInfo(f), plugins)));
-                }
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-            {
-                // A folder that cannot be listed: its manifests are not read.
-            }
-        }
-        var notes = BaseNotes();
-        int read = 0;
-        // Oldest first: a newer file's notes replace an older one's.
-        foreach (var (file, plugins) in files.DistinctBy(f => f.File.FullName).OrderBy(f => f.File.LastWriteTimeUtc))
-        {
-            try
-            {
-                // The mod: its folder right under plugins (the manifest's own when it lies there).
-                string folder = file.DirectoryName!;
-                string relative = Path.GetRelativePath(plugins, folder);
-                string mod = relative == "." ? Path.GetFileName(folder) : relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
-                if (file.Length <= MaxFile && Read(File.ReadAllText(file.FullName), notes, (folder, mod)))
-                {
-                    read++;
-                }
-                else
-                {
-                    Console.WriteLine($"mod manifest {file.FullName}: not a worldeditor.json this editor reads, skipped.");
-                }
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
-            {
-                Console.WriteLine($"mod manifest {file.FullName}: not read ({e.Message}).");
-            }
-        }
-        notes.LinkSet = new LinkSet([.. notes.Links.Values]);
-        _notes = notes;
-        _generation++;
-        return read;
-    }
-
     /// <summary>Only <see cref="Base"/> in use (the tests).</summary>
     internal static void Forget()
     {
         _notes = BaseNotes();
-        _generation++;
-    }
-
-    /// <summary>
-    /// Adds what a manifest says to <paramref name="notes"/>; false (nothing added) when it is not a manifest of a
-    /// version this editor reads. Entries not in the expected form are left out.
-    /// </summary>
-    /// <param name="json">The manifest's text.</param>
-    /// <param name="notes">What is added to.</param>
-    /// <param name="from">The manifest's folder and its mod (null for one given in code, which offers no extension).</param>
-    /// <exception cref="JsonException">Not JSON.</exception>
-    private static bool Read(string json, Notes notes, (string Folder, string Mod)? from)
-    {
-        if (JsonNode.Parse(json, documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }) is not JsonObject root
-            || root["version"] is not JsonValue v || !v.TryGetValue(out int version) || version < 1 || version > Version)
-        {
-            return false;
-        }
-        if (root["data"] is JsonObject data)
-        {
-            foreach (var (key, e) in data)
-            {
-                if (e is JsonObject o && Text(o["label"], out string? label) && Flag(o["readOnly"], out bool readOnly) && Text(o["help"], out string? help))
-                {
-                    notes.Data[key] = new DataNote(label, readOnly, help);
-                }
-            }
-        }
-        if (root["prefabs"] is JsonObject prefabs)
-        {
-            foreach (var (name, e) in prefabs)
-            {
-                if (e is JsonObject o && Flag(o["hidden"], out bool hidden) && Text(o["group"], out string? group))
-                {
-                    notes.Prefabs[name] = new PrefabNote(hidden, group);
-                }
-            }
-        }
-        if (from is var (folder, mod) && Text(root["extension"], out string? dll) && dll != null)
-        {
-            // A DLL inside the mod's own folder only.
-            string path = Path.GetFullPath(Path.Combine(folder, dll));
-            if (path.StartsWith(Path.GetFullPath(folder) + Path.DirectorySeparatorChar, StringComparison.Ordinal)
-                && path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-            {
-                notes.Extensions[path] = new Offered(path, mod);
-            }
-        }
-        if (root["links"] is JsonArray links)
-        {
-            foreach (var e in links)
-            {
-                if (e is JsonObject o && Link(o) is var (id, rule))
-                {
-                    // In place of one of the same id, where it stood: the first rule an object matches wins.
-                    notes.Links[id] = rule;
-                }
-            }
-        }
-        return true;
-    }
-
-    /// <summary>
-    /// A link rule (ObjectLinks) and the name of its id key; null when it is not in the expected form: "id", "parents"
-    /// (at least one) and "offset" given; "rotation", "rotationQuaternion", "references", "dropOnCopy", "name" and
-    /// "storedAt" ("root", the default, or "own") optional.
-    /// </summary>
-    private static (string Id, LinkRule Rule)? Link(JsonObject o)
-    {
-        if (!Text(o["id"], out string? id) || id == null || !Names(o["parents"], out string[] parents) || parents.Length == 0
-            || !Text(o["offset"], out string? offset) || offset == null || !Text(o["rotation"], out string? euler)
-            || !Text(o["rotationQuaternion"], out string? quat) || !Names(o["references"], out string[] references)
-            || !Names(o["dropOnCopy"], out string[] drops) || !Text(o["name"], out string? name) || !Text(o["storedAt"], out string? stored)
-            || stored is not (null or "root" or "own"))
-        {
-            return null;
-        }
-        static int Key(string? n) => n == null ? 0 : StableHash.Of(n);
-        return (id, new LinkRule(name ?? LinkRule.DefaultName, Key(id), [.. parents.Select(Key)], Key(offset), Key(euler), Key(quat),
-            [.. references.Select(Key)], [.. drops.Select(Key)], stored != "own"));
-    }
-
-    /// <summary>An optional list of names: absent (empty) or an array of at most 32 texts.</summary>
-    private static bool Names(JsonNode? n, out string[] names)
-    {
-        names = [];
-        if (n is null)
-        {
-            return true;
-        }
-        if (n is not JsonArray a || a.Count > 32)
-        {
-            return false;
-        }
-        var list = new List<string>();
-        foreach (var e in a)
-        {
-            if (!Text(e, out string? s) || s == null)
-            {
-                return false;
-            }
-            list.Add(s);
-        }
-        names = [.. list];
-        return true;
-    }
-
-    /// <summary>An optional string: absent (null) or a non-empty string of at most 200 characters.</summary>
-    private static bool Text(JsonNode? n, out string? text)
-    {
-        text = null;
-        if (n is null)
-        {
-            return true;
-        }
-        if (n is JsonValue v && v.TryGetValue(out string? s) && s.Trim().Length is > 0 and <= 200)
-        {
-            text = s.Trim();
-            return true;
-        }
-        return false;
-    }
-
-    /// <summary>An optional true or false: absent (false) or a boolean.</summary>
-    private static bool Flag(JsonNode? n, out bool flag)
-    {
-        flag = false;
-        return n is null || n is JsonValue v && v.TryGetValue(out flag);
+        Interlocked.Increment(ref _generation);
     }
 }

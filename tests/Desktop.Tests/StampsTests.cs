@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+using System.IO.Compression;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -42,6 +44,62 @@ public class StampsTests
         Assert.Null(Stamps.FromPicture([1, 2, 3]));
     }
 
+    // A picture whose pixels would take more memory than can be had (a PNG of 400 000 × 400 000): not read, rather
+    // than Skia throwing when it cannot allocate them.
+    [Fact]
+    public void APictureTooLargeToDecodeIsNotRead()
+    {
+        Assert.Null(Stamps.FromPicture(HugePng(400_000)));
+    }
+
+    /// <summary>
+    /// A PNG of <paramref name="side"/> × <paramref name="side"/> colours with opacity whose data stops after one byte.
+    /// </summary>
+    /// <param name="side">Its width and height in pixels.</param>
+    private static byte[] HugePng(int side)
+    {
+        using var png = new MemoryStream();
+        png.Write([137, 80, 78, 71, 13, 10, 26, 10]);
+        byte[] header = new byte[13];
+        BinaryPrimitives.WriteInt32BigEndian(header, side);
+        BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(4), side);
+        // 8 bits a channel, colours with opacity.
+        (header[8], header[9]) = (8, 6);
+        Chunk(png, "IHDR", header);
+        using var data = new MemoryStream();
+        using (var z = new ZLibStream(data, CompressionLevel.Fastest, leaveOpen: true))
+        {
+            z.WriteByte(0);
+        }
+        Chunk(png, "IDAT", data.ToArray());
+        Chunk(png, "IEND", []);
+        return png.ToArray();
+    }
+
+    /// <summary>Writes one PNG chunk: its length, type, data and the CRC-32 of its type and data.</summary>
+    /// <param name="png">The file being written.</param>
+    /// <param name="type">The chunk's four-letter type.</param>
+    /// <param name="data">Its data.</param>
+    private static void Chunk(MemoryStream png, string type, byte[] data)
+    {
+        byte[] typed = [.. System.Text.Encoding.ASCII.GetBytes(type), .. data];
+        byte[] number = new byte[4];
+        BinaryPrimitives.WriteInt32BigEndian(number, data.Length);
+        png.Write(number);
+        png.Write(typed);
+        uint crc = uint.MaxValue;
+        foreach (byte b in typed)
+        {
+            crc ^= b;
+            for (int k = 0; k < 8; k++)
+            {
+                crc = (crc & 1) != 0 ? 0xEDB88320 ^ (crc >> 1) : crc >> 1;
+            }
+        }
+        BinaryPrimitives.WriteUInt32BigEndian(number, ~crc);
+        png.Write(number);
+    }
+
     [Fact]
     public void StampOnceRaisesByThePicture()
     {
@@ -59,11 +117,8 @@ public class StampsTests
     [AvaloniaFact]
     public void ThePanelChoosesStampsAndLoadsPictures()
     {
-        var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
-        w.Show();
         var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var w = TestWindows.Editing(s);
         w.KeyPress(Key.D1, RawInputModifiers.None, PhysicalKey.Digit1, "1");
         var t = w.Tools;
         t.ShapeBox.SelectedIndex = 4;

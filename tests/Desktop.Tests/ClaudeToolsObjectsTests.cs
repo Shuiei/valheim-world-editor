@@ -24,6 +24,44 @@ public class ClaudeToolsObjectsTests
         return int.Parse(said[at..].Split('.')[0], System.Globalization.CultureInfo.InvariantCulture);
     }
 
+    // Ids are indices into the things of the area they were given for: once another area is opened (or the same one
+    // again), or the world was read again after a save, they would hit whatever objects have those indices now, so
+    // every tool taking ids refuses them until objects are listed again.
+    [AvaloniaFact]
+    public async Task IdsOfAnotherAreaAreRefusedUntilListedAgain()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        int post = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "wood_pole2", X = 3, Z = 3 }]));
+        var other = TestScenes.Flat();
+        r.W.View.Show(other.Scene, null);
+        r.W.Edit(other);
+        const string Stale = "The ids are from another area: list_objects (or get_selection) again for this one.";
+        Assert.Equal(Stale, await r.T.RemoveObjects([post]));
+        Assert.Equal(Stale, await r.T.GetObject(post));
+        Assert.Equal(Stale, await r.T.MoveObjects([post], dx: 1));
+        Assert.Equal(Stale, await r.T.SetTransform([new ClaudeTools.TransformSpec { Id = post, X = 1 }]));
+        Assert.Equal(Stale, await r.T.ReplaceObjects([post], "Birch1"));
+        Assert.Equal(Stale, await r.T.CopyObjects([post], dx: 2));
+        Assert.Equal(Stale, await r.T.SetContents(post, text: "hello"));
+        Assert.Equal(Stale, await r.T.SetObjectData(post, [new ClaudeTools.FieldSpec { Section = "strings", Key = "text", Value = "hello" }]));
+        Assert.Equal(Stale, await r.T.SelectObjects([post], focus: false));
+        Assert.Equal(0, other.Scene.Things.Count(t => t.Gone));
+        // A listing or a selection with nothing in it gives no id: the old ones stay refused.
+        Assert.Equal("[]", await r.T.ListObjects(name: "nothing is called this"));
+        Assert.Equal("[]", await r.T.GetSelection());
+        Assert.Equal(Stale, await r.T.GetObject(post));
+        // Ids given for this area are taken.
+        int here = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "wood_pole2", X = 3, Z = 3 }]));
+        Assert.Equal("wood_pole2", ClaudeRun.J(await r.T.GetObject(here)).GetProperty("name").GetString());
+        // The world read again (after a save): its things are listed anew, the ids given before are refused until a
+        // listing gives this area's.
+        other.Scene.Reads++;
+        Assert.Equal("The ids are from before the world was read again: list_objects (or get_selection) again for this one.", await r.T.GetObject(here));
+        Assert.NotEqual("[]", await r.T.ListObjects(name: "wood_pole2"));
+        Assert.Equal("wood_pole2", ClaudeRun.J(await r.T.GetObject(here)).GetProperty("name").GetString());
+    }
+
     /// <summary>A value of get_object's answer by key, or null.</summary>
     private static JsonElement? Value(JsonElement o, string key) =>
         o.GetProperty("values").EnumerateArray().Cast<JsonElement?>().FirstOrDefault(v => v!.Value.GetProperty("key").GetString() == key);
@@ -35,8 +73,8 @@ public class ClaudeToolsObjectsTests
     {
         using var r = new ClaudeRun();
         await r.OpenArea();
-        int chest = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "piece_chest_wood", X = -4, Z = 0, Snap = false }]));
-        int sign = Placed(await r.T.PlacePieces([new ClaudeTools.PieceSpec { Prefab = "sign", X = 4, Z = 0, Snap = false }]));
+        int chest = await r.PlaceUnsnapped("piece_chest_wood", -4);
+        int sign = await r.PlaceUnsnapped("sign", 4);
         chest = NewId(await r.T.SetContents(chest, [new ClaudeTools.ItemSpec { Item = "Coins", Stack = 25 }]));
 
         Assert.Equal("Nothing to do: give dx, dy, dz, turn or ground.", await r.T.MoveObjects([chest, sign]));
@@ -57,6 +95,23 @@ public class ClaudeToolsObjectsTests
         Assert.Equal("Coins", o.GetProperty("contents")[0].GetProperty("item").GetString());
         Assert.Equal(25, o.GetProperty("contents")[0].GetProperty("stack").GetInt32());
         Assert.Equal("No object with that id in the area.", await r.T.GetObject(chest));
+    }
+
+    // A chest whose contents are in an item format older than the editor reads: get_object says they cannot be read
+    // and still answers with the rest.
+    [AvaloniaFact]
+    public async Task ContentsInAnOlderItemFormatCannotBeRead()
+    {
+        using var r = new ClaudeRun();
+        await r.OpenArea();
+        int chest = await r.PlaceUnsnapped("piece_chest_wood", -4);
+        Assert.True(r.W.Inspector.Open(chest));
+        r.W.Inspector.Added.Add(("bytes", "items", Convert.ToBase64String(new byte[] { 100, 0, 0, 0, 0, 0 })));
+        await r.W.Inspector.Apply();
+        int changed = r.W.Session!.Scene.Things.FindLastIndex(t => t.Prefab == Save.StableHash.Of("piece_chest_wood") && !t.Gone);
+        var o = ClaudeRun.J(await r.T.GetObject(changed));
+        Assert.Equal("cannot be read", o.GetProperty("contents").GetString());
+        Assert.Equal("piece_chest_wood", o.GetProperty("name").GetString());
     }
 
     // Exact places, turns and sizes, each object its own; what is left out stays; a size out of range and a place
@@ -115,6 +170,11 @@ public class ClaudeToolsObjectsTests
         Assert.Equal(5, replaced.GetProperty("x").GetSingle(), 2);
         Assert.Equal(30, replaced.GetProperty("yaw").GetSingle(), 1);
         Assert.Equal("Claude: replaced 1 with Birch1", r.W.Session!.UndoLabel);
+        // The new one keeps the old one's size (it got none: the prefab's own).
+        var s = r.W.Session!;
+        int big = s.Commit("big", null, [], [(new Editing.NewObject(0, Save.StableHash.Of("Beech1"), new Vector3(8, 30, 8), Vector3.Zero, 2f), false)])[0];
+        int grown = ClaudeRun.J(await r.T.ReplaceObjects([big], "Birch1")).GetProperty("replaced")[0].GetProperty("id").GetInt32();
+        Assert.Equal(2f, s.Scene.Things[grown].Scale);
     }
 
     // A world's object: values set (a portal's tag), changed (taken away) and read back by name; wrong kinds and

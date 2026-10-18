@@ -1,5 +1,3 @@
-using WorldEditor.Tests;
-
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
@@ -15,26 +13,14 @@ public sealed class TinyBudgetEditorProcess() : EditorProcess(Start(), new Dicti
     /// </summary>
     private static string[] Start()
     {
-        _copy = Path.Combine(Path.GetTempPath(), "vwe-visual-budget-" + Guid.NewGuid().ToString("N")[..8]);
-        string world = Path.Combine(_copy, "CITest");
-        Directory.CreateDirectory(world);
-        foreach (string f in Directory.GetFiles(Path.Combine(Fixtures.Root, "CITest")))
-        {
-            File.Copy(f, Path.Combine(world, Path.GetFileName(f)));
-        }
-        return ["--world", world, "--zone", "0,0", "--size", "2"];
+        _copy = TestWorldCopy.Make("vwe-visual-budget-");
+        return ["--world", Path.Combine(_copy, "CITest"), "--zone", "0,0", "--size", "2"];
     }
 
     /// <inheritdoc/>
     public override void Dispose()
     {
         base.Dispose();
-        try
-        {
-            Directory.Delete(_copy!, true);
-        }
-        catch
-        {
-        }
+        TestWorldCopy.Remove(_copy);
     }
 }

@@ -1,4 +1,6 @@
 using System.Numerics;
+using Avalonia.Controls;
+using Avalonia.LogicalTree;
 using TerrainEditor.App;
 using TerrainEditor.Save;
 
@@ -16,6 +18,8 @@ internal sealed class BlueprintsPanelRun : IDisposable
     public string Homestead => Path.Combine(Dir, "homestead");
     public BlueprintsPanel B => W.Blueprints;
     public string? Said;
+    /// <summary>The panel's last message in English (what Claude reads).</summary>
+    public string? SaidEn;
     public bool Installed { get; set; } = true;
 
     public BlueprintsPanelRun(EditSession? s = null)
@@ -26,7 +30,11 @@ internal sealed class BlueprintsPanelRun : IDisposable
         W.Edit(s);
         B.Store = new BlueprintStore(Path.Combine(Dir, "older"));
         B.FindHomestead = () => new Homestead.Status(Installed, Installed ? "1.3.2" : null, Installed ? new() { "test profile" } : new(), Homestead);
-        B.Message += t => Said = t;
+        B.Message += t =>
+        {
+            Said = t.Shown;
+            SaidEn = t.English;
+        };
         // Its questions answered Yes, not asked in a dialog: headless, nobody would answer it and the test would wait
         // for ever (a test that wants No says so).
         B.Confirm = _ => Task.FromResult(true);
@@ -41,7 +49,36 @@ internal sealed class BlueprintsPanelRun : IDisposable
         File.WriteAllText(Path.Combine(Homestead, TerrainEditor.App.Homestead.FileName(name)), TerrainEditor.App.Homestead.Write(CopyFormat.ToJson(Clip(name, kinds)), name, "test", null, DateTime.Now));
     }
 
+    /// <summary>
+    /// The window's Workshop opened, blank or with the blueprint at <paramref name="path"/>; the window's questions
+    /// answered Yes and what it tells let go, like the panel's.
+    /// </summary>
+    /// <param name="path">The blueprint to open, or null for a blank plot.</param>
+    public async Task<MainWindow> OpenWorkshop(string? path = null)
+    {
+        W.Ask = (_, _, _, _) => Task.FromResult(true);
+        W.Tell = _ => Task.CompletedTask;
+        await W.OpenWorkshop(path);
+        return W;
+    }
+
+    /// <summary>
+    /// The window's questions answered No, each one's title recorded in the list returned (for a test that leaves a
+    /// building unsaved).
+    /// </summary>
+    public List<string> AnswerNo()
+    {
+        var asked = new List<string>();
+        W.Ask = (title, _, _, _) => { asked.Add(title); return Task.FromResult(false); };
+        return asked;
+    }
+
     public List<Homestead.Entry> Listed => TerrainEditor.App.Homestead.List(Homestead);
+
+    /// <summary>
+    /// The buttons with this label in the panel's list (one per row that has it).
+    /// </summary>
+    public List<Button> RowButtons(string label) => [.. B.List.GetLogicalDescendants().OfType<Button>().Where(b => b.Content as string == label)];
 
     /// <inheritdoc/>
     public void Dispose()

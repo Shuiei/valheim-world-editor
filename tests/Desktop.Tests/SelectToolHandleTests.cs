@@ -32,11 +32,7 @@ public class SelectToolHandleTests
         /// <summary>
         /// Where a point in view space is on screen.
         /// </summary>
-        public Avalonia.Point Screen(Vector3 p)
-        {
-            var q = Vector4.Transform(new Vector4(p, 1), W.View.ViewProj);
-            return new Avalonia.Point((q.X / q.W + 1) / 2 * Size.Width, (1 - q.Y / q.W) / 2 * Size.Height);
-        }
+        public Avalonia.Point Screen(Vector3 p) => ShownEditor.ScreenPoint(W, Size, p);
 
         /// <summary>
         /// The handles' scale for the camera set last.
@@ -50,30 +46,12 @@ public class SelectToolHandleTests
     }
 
     /// <summary>
-    /// A box around a thing in view space: a piece's own box, or 1 × 5 × 1 m otherwise.
-    /// </summary>
-    private static (int, Vector3, Vector3) Box(WorldScene s, int i)
-    {
-        var t = s.Things[i];
-        var info = PieceCatalog.Get(t.Prefab);
-        var (x0, x1, z0, z1, y0, y1) = info != null ? (info.MinX, info.MaxX, info.MinZ, info.MaxZ, info.MinY, info.MaxY) : (-0.5f, 0.5f, -0.5f, 0.5f, 0f, 5f);
-        var p = t.Position;
-        return (i, new Vector3(p.X + x0 - s.Cx, p.Y + y0, -(p.Z + z1 - s.Cz)), new Vector3(p.X + x1 - s.Cx, p.Y + y1, -(p.Z + z0 - s.Cz)));
-    }
-
-    /// <summary>
     /// A shown main window in the Select tool on a flat 2 × 2 zone area with these objects (given their boxes), the
     /// first one at (40, 30, 40) selected, looked at from above.
     /// </summary>
     private static View Open(params WorldScene.Thing[] things)
     {
-        var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2, things);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
-        w.Tools.ChooseSelect();
-        w.View.SetBoxes(Enumerable.Range(0, things.Length).Select(i => Box(s.Scene, i)));
+        var (w, s) = SelectToolRun.OpenInSelectTool(things);
         w.View.Select([0]);
         var v = new View(w, s, w.View.Bounds.Size);
         v.Look(new Vector3(0, 30, 3));
@@ -200,11 +178,10 @@ public class SelectToolHandleTests
     public void ShiftPageDownLowersByAMetre()
     {
         var v = Open(T(1, Beech, 40, 30, 40, false));
-        string? said = null;
-        v.Tool.Message += (t, _) => said = t;
+        var said = SelectToolRun.MessageReader(v.Tool);
         v.Tool.OnGround = false;
         Assert.True(v.Tool.Key(Key.PageDown, true));
-        Assert.Equal("Moving 1 object(s): 0.0 m, -1.00 m", said);
+        Assert.Equal("Moving 1 object(s): 0.0 m, -1.00 m", said());
         v.Tool.Commit();
         Assert.Equal(29, v.S.Scene.Things[^1].Position.Y, 2);
     }

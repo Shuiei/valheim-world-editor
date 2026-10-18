@@ -338,7 +338,9 @@ every player:
 - `WorldEditorBridge: applied terrain to N zone(s) (C new)`: the ground. *New* counts zones that had no ground
   changes before, for which the plugin made the game's ground object.
 - `WorldEditorBridge: reset N zone(s): D object(s) removed, L location(s) to place again`: zone resets.
-- `WorldEditorBridge request /… failed: …`: a request the plugin could not do, with the reason.
+- `WorldEditorBridge: caught at <file>:<line> (<member>) while <doing>: <error type>: <message>`: an error the
+  plugin handled, such as a request it could not do (`while answering the request /…`), followed by its stack trace
+  unless it is an expected one (a client that went away). The server's home folder is written `~`.
 
 ## Limits
 

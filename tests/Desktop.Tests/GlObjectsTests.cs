@@ -20,4 +20,15 @@ public class GlObjectsTests
         own.DeleteRenderbuffer(5);
         own.DeleteAll();
     }
+
+    [Fact]
+    public void DeleteHeldDeletesOnlyTheNamesTheSetHolds()
+    {
+        var held = new HashSet<uint> { 7 };
+        int deletes = 0;
+        GlObjects.DeleteHeld(held, 7, () => deletes++);
+        GlObjects.DeleteHeld(held, 8, () => deletes++);
+        Assert.Equal(1, deletes);
+        Assert.Empty(held);
+    }
 }

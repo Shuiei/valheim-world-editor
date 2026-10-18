@@ -1,7 +1,9 @@
 using System.Numerics;
+using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Threading;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -36,6 +38,17 @@ public class MeasureToolTests
     }
 
     [Fact]
+    public void TheClickedHeightsCountForLowestAndHighest()
+    {
+        var m = new MeasureTool();
+        m.Down(new Vector3(0, 40, 0));
+        m.Down(new Vector3(10, 20, 0));
+        var r = m.Measure((_, _) => 30, water: 0)!;
+        Assert.Equal(20, r.Lowest, 3);
+        Assert.Equal(40, r.Highest, 3);
+    }
+
+    [Fact]
     public void UnderTheSeaTheDepthIsShown()
     {
         var m = new MeasureTool();
@@ -49,11 +62,7 @@ public class MeasureToolTests
     [AvaloniaFact]
     public void ClickingTwicePutsTheValuesInThePanel()
     {
-        var w = new MainWindow(load: false) { Width = 1000, Height = 1000 };
-        w.Show();
-        var s = TestScenes.Flat(2);
-        w.View.Show(s.Scene, null);
-        w.Edit(s);
+        var (w, s, _) = ShownEditor.Open();
         w.KeyPress(Key.M, RawInputModifiers.None, PhysicalKey.M, "m");
         Assert.Equal(ToolMode.Measure, w.View.Mode);
         Assert.True(w.MeasurePanel.Card.IsVisible);
@@ -72,6 +81,17 @@ public class MeasureToolTests
         Assert.True(w.View.Tape.Fixed);
         Assert.Equal("20.0 m", w.MeasurePanel.Shown["Distance"]);
         Assert.Equal("30.0 → 30.0 m (+0.0)", w.MeasurePanel.Shown["Height A → B"]);
+        // An edit under the tape: the panel follows.
+        s.Shape(64, 64, Formula.Compile("d < 3 ? 6 : 0", ["d"]), 3, 0, "step");
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal("30.0 / 36.0 m", w.MeasurePanel.Shown["Lowest / highest"]);
+        // Shown again (the tape changes at the mouse's pace): the same rows, their text set again.
+        // The window puts the card's content in a scroll viewer.
+        var content = ((Border)w.MeasurePanel.Card).Child;
+        var rows = (Grid)((StackPanel)(content is ScrollViewer sv ? sv.Content! : content!)).Children[2];
+        var made = rows.Children.ToList();
+        w.MeasurePanel.Refresh();
+        Assert.Equal(made, rows.Children);
         w.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
         Assert.Null(w.View.Tape.A);
         Assert.Empty(w.MeasurePanel.Shown);

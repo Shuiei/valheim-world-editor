@@ -1,4 +1,3 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -11,7 +10,7 @@ namespace TerrainEditor.Desktop;
 /// start from, the scripts saved in the data folder (scripts/*.csx), Run and Stop, and what the script printed or got
 /// wrong. The window runs it (it has the edit session).
 /// </summary>
-public sealed class ScriptPanel
+public sealed partial class ScriptPanel
 {
     /// <summary>The panel itself, shown over the view while the Script tool is on.</summary>
     public Control Card { get; }
@@ -34,24 +33,29 @@ public sealed class ScriptPanel
         Width = 520,
     };
     /// <summary>The name to save the script as (filled with a saved script's name, empty for an example).</summary>
-    internal TextBox NameBox { get; } = new() { PlaceholderText = "name to save it as", FontSize = 12, Width = 180 };
+    internal TextBox NameBox { get; } = new() { PlaceholderText = Lang.T("script.hint.name"), FontSize = 12, Width = 180 };
     /// <summary>Saves the code as name.csx in <see cref="Folder"/>.</summary>
-    internal Button SaveButton { get; } = new() { Content = "Save", FontSize = 12 };
+    internal Button SaveButton { get; } = new() { Content = Lang.T("common.save"), FontSize = 12 };
     /// <summary>Runs the script.</summary>
-    internal Button RunButton { get; } = new Button { Content = "Run (Ctrl+Enter)", FontSize = 12 }.Classed("primary");
+    internal Button RunButton { get; } = new Button { Content = Lang.T("script.label.run"), FontSize = 12 }.Classed("primary");
     /// <summary>Stops the running script.</summary>
-    internal Button StopButton { get; } = new() { Content = "Stop", FontSize = 12, IsEnabled = false };
+    internal Button StopButton { get; } = new() { Content = Lang.T("script.label.stop"), FontSize = 12, IsEnabled = false };
     /// <summary>What the script printed or got wrong.</summary>
     internal SelectableTextBlock Output { get; } = new() { FontFamily = new FontFamily("monospace"), FontSize = 11.5, TextWrapping = TextWrapping.Wrap };
-    /// <summary>The list's entries: the examples ("Example: " and their name), then the saved scripts.</summary>
-    private List<(string Name, string Code)> _entries = [];
+    /// <summary>
+    /// The list's entries: the examples (shown as "Example: " and their name), then the saved scripts; each with its own
+    /// name (an example's without "Example: ") and whether it is an example.
+    /// </summary>
+    private List<(string Name, string Code, bool Example)> _entries = [];
     /// <summary>Set while the list is filled, so choosing the selection does not replace the code.</summary>
     private bool _filling;
+    /// <summary>Asks a yes-or-no question (replacing another saved script); yes when nothing is set.</summary>
+    internal Func<string, Task<bool>> Confirm { get; set; } = _ => Task.FromResult(true);
 
     /// <summary>The folder saved scripts go in.</summary>
     public static string Folder => Path.Combine(AppSettings.DataDir, "scripts");
 
-    /// <summary>Builds the panel, starting with the first example's code.</summary>
+    /// <summary>Builds the panel, starting with the first example chosen.</summary>
     public ScriptPanel()
     {
         ScriptBox = new ComboBox { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch, MaxDropDownHeight = 420 };
@@ -62,13 +66,13 @@ public sealed class ScriptPanel
             {
                 return;
             }
-            var (name, code) = _entries[ScriptBox.SelectedIndex];
+            var (name, code, example) = _entries[ScriptBox.SelectedIndex];
             CodeBox.Text = code;
-            NameBox.Text = name.StartsWith("Example: ", StringComparison.Ordinal) ? "" : name;
+            NameBox.Text = example ? "" : name;
         };
         RunButton.Click += (_, _) => RunAsked?.Invoke();
         StopButton.Click += (_, _) => StopAsked?.Invoke();
-        SaveButton.Click += (_, _) => Save();
+        SaveButton.Click += async (_, _) => await Save();
         // On the way down (tunnel), before the text box takes Enter for a new line.
         CodeBox.AddHandler(Avalonia.Input.InputElement.KeyDownEvent, (_, e) =>
         {
@@ -84,15 +88,10 @@ public sealed class ScriptPanel
         SaveButton.Tip("script.save");
         RunButton.Tip("script.run");
         StopButton.Tip("script.stop");
-        CodeBox.Text = ScriptExamples.All[0].Code;
-        Card = new Border
+        // The first example chosen, so its code is shown and a Run is named after it.
+        ScriptBox.SelectedIndex = 0;
+        Card = Ui.AsCard(new Border
         {
-            Background = Ui.Panel,
-            BorderBrush = Ui.Line,
-            BoxShadow = BoxShadows.Parse("0 6 24 0 #59000000"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = Ui.Pad,
             VerticalAlignment = VerticalAlignment.Top,
             Child = new StackPanel
             {
@@ -100,75 +99,58 @@ public sealed class ScriptPanel
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = "Script", FontSize = 14, FontWeight = FontWeight.SemiBold },
+                    new TextBlock { Text = Lang.T("rail.label.script"), FontSize = 14, FontWeight = FontWeight.SemiBold },
                     ScriptBox,
                     CodeBox,
                     new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { RunButton, StopButton, NameBox, SaveButton } },
                     new ScrollViewer { MaxHeight = 150, Content = Output },
                     new TextBlock
                     {
-                        Text = "C#, run on the open area: Area (its corners, Points(), Water), Ground (Height, Original, Set, Raise, Lower, Paint, Biome, Shape, Mountain; "
-                            + "NoLimit is on), Objects (All, OfKind, Near, Place, Move, Remove, CanPlace), Noise.At, Rnd (Seed, Range, Chance, Pick), Print. "
-                            + "Coordinates are world metres. Everything the script changes is one undo step. "
-                            + "Scripts are programs: they can do anything a program can on this computer, so run only ones you trust.",
+                        Text = Lang.T("script.hint.api"),
                         FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap,
                     },
                 },
             },
-        };
+        });
     }
 
     /// <summary>
-    /// Fills the list: the examples, then the saved scripts (newest first); selects the entry of that name if given,
-    /// else none.
+    /// The chosen entry's own name (an example's without "Example: "), the undo step's name when it runs; null when
+    /// none is chosen.
     /// </summary>
-    public void Fill(string? select = null)
-    {
-        _filling = true;
-        _entries = [.. ScriptExamples.All.Select(e => ("Example: " + e.Name, e.Code))];
-        try
-        {
-            if (Directory.Exists(Folder))
-            {
-                _entries.AddRange(new DirectoryInfo(Folder).GetFiles("*.csx").OrderByDescending(f => f.LastWriteTimeUtc)
-                    .Select(f => (Path.GetFileNameWithoutExtension(f.Name), File.ReadAllText(f.FullName))));
-            }
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-        ScriptBox.ItemsSource = _entries.Select(e => e.Name).ToList();
-        ScriptBox.SelectedIndex = select != null ? _entries.FindIndex(e => e.Name == select) : -1;
-        _filling = false;
-    }
+    internal string? ChosenName => ScriptBox.SelectedIndex >= 0 && ScriptBox.SelectedIndex < _entries.Count ? _entries[ScriptBox.SelectedIndex].Name : null;
 
-    /// <summary>A line for the status bar.</summary>
-    public event Action<string>? Message;
+    /// <summary>A line for the status bar, in both languages.</summary>
+    public event Action<Said>? Message;
 
     /// <summary>
-    /// Saves the code under the typed name (characters a file name cannot have become _), and selects it.
+    /// Saves the code under the typed name (characters a file name cannot have become _), and selects it. Another saved
+    /// script of that name (not the one chosen in the list) is replaced only when the person says so.
     /// </summary>
-    private void Save()
+    internal async Task Save()
     {
         string name = string.Concat((NameBox.Text ?? "").Trim().Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
         if (name.Length == 0)
         {
-            Message?.Invoke("Type a name to save the script as.");
+            Message?.Invoke(Said.Of("script.msg.noName"));
+            return;
+        }
+        string path = Path.Combine(Folder, name + ".csx");
+        bool chosen = ScriptBox.SelectedIndex >= 0 && ScriptBox.SelectedIndex < _entries.Count && _entries[ScriptBox.SelectedIndex] is { Example: false } e && e.Name == name;
+        if (File.Exists(path) && !chosen && !await Confirm(Lang.T("script.ask.replace.text", name)))
+        {
             return;
         }
         try
         {
-            Directory.CreateDirectory(Folder);
-            File.WriteAllText(Path.Combine(Folder, name + ".csx"), CodeBox.Text ?? "");
+            SafeFile.WriteAllText(path, CodeBox.Text ?? "");
             Fill(name);
-            Message?.Invoke($"Saved the script “{name}” (in {Folder}).");
+            Message?.Invoke(Said.Of("script.msg.saved", name, Folder));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Message?.Invoke("Could not save the script: " + ex.Message);
+            Log.Caught(ex, "saving a script");
+            Message?.Invoke(Said.Of("script.msg.notSaved", ex.Message));
         }
     }
 

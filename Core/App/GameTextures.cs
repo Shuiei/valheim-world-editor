@@ -7,7 +7,7 @@ namespace TerrainEditor.App;
 /// The game's textures as pixels: one mip level (GameBundles.LoadTexture) made RGBA, rows bottom first
 /// as Unity keeps them. Block-compressed ones (DXT1, DXT5, BC7...) are decoded with BCnEncoder.Net.
 /// </summary>
-public static class GameTextures
+public static partial class GameTextures
 {
     /// <summary>
     /// RGBA bytes of a level, or null for a format not read here. Read: Unity's Alpha8, RGB24, RGBA32, ARGB32,
@@ -79,91 +79,6 @@ public static class GameTextures
                 return rgba;
             default:
                 return null;
-        }
-    }
-
-    /// <summary>
-    /// Cut-out textures: transparent pixels take the colour of nearby opaque ones (up to 16 pixels away,
-    /// wrapping around: textures tile), the rest the average opaque colour, so that filtering and mipmaps
-    /// do not bleed the hidden colour (often beige) into leaf edges. Alpha is kept. Opaque means alpha of
-    /// 128 or more; fully opaque or fully transparent textures are left alone. Works in place.
-    /// </summary>
-    public static void Bleed(byte[] rgba, int w, int h)
-    {
-        int n = w * h;
-        bool[] filled = new bool[n];
-        int opaque = 0;
-        long sr = 0, sg = 0, sb = 0;
-        for (int i = 0; i < n; i++)
-        {
-            if (rgba[i * 4 + 3] >= 128)
-            {
-                filled[i] = true;
-                opaque++;
-                sr += rgba[i * 4];
-                sg += rgba[i * 4 + 1];
-                sb += rgba[i * 4 + 2];
-            }
-        }
-        if (opaque == 0 || opaque == n)
-        {
-            return;
-        }
-        var next = new List<(int I, byte R, byte G, byte B)>();
-        for (int it = 0; it < 16; it++)
-        {
-            next.Clear();
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    int i = y * w + x;
-                    if (filled[i])
-                    {
-                        continue;
-                    }
-                    int c = 0, r = 0, g = 0, b = 0;
-                    for (int dy = -1; dy <= 1; dy++)
-                    {
-                        for (int dx = -1; dx <= 1; dx++)
-                        {
-                            int j = ((y + dy + h) % h) * w + (x + dx + w) % w;
-                            if (filled[j])
-                            {
-                                c++;
-                                r += rgba[j * 4];
-                                g += rgba[j * 4 + 1];
-                                b += rgba[j * 4 + 2];
-                            }
-                        }
-                    }
-                    if (c > 0)
-                    {
-                        next.Add((i, (byte)((r + c / 2) / c), (byte)((g + c / 2) / c), (byte)((b + c / 2) / c)));
-                    }
-                }
-            }
-            if (next.Count == 0)
-            {
-                break;
-            }
-            foreach (var (i, r, g, b) in next)
-            {
-                rgba[i * 4] = r;
-                rgba[i * 4 + 1] = g;
-                rgba[i * 4 + 2] = b;
-                filled[i] = true;
-            }
-        }
-        byte mr = (byte)(sr / opaque), mg = (byte)(sg / opaque), mb = (byte)(sb / opaque);
-        for (int i = 0; i < n; i++)
-        {
-            if (!filled[i])
-            {
-                rgba[i * 4] = mr;
-                rgba[i * 4 + 1] = mg;
-                rgba[i * 4 + 2] = mb;
-            }
         }
     }
 }

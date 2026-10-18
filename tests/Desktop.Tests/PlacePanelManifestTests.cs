@@ -34,16 +34,7 @@ public sealed class PlacePanelManifestTests : IDisposable
         ModManifests.Forget();
         LocalGame.SearchDefaultPlaces = _defaults;
         AppSettings.DataDirOverride = _dataDir;
-        foreach (string dir in (string[])[_dir, Path.GetDirectoryName(_world)!])
-        {
-            try
-            {
-                Directory.Delete(dir, true);
-            }
-            catch (IOException)
-            {
-            }
-        }
+        TestFolderCleanup.DeleteIfExists(_dir, Path.GetDirectoryName(_world)!);
     }
 
     /// <summary>Writes a manifest hiding these prefabs and reads the manifests again.</summary>
@@ -59,10 +50,7 @@ public sealed class PlacePanelManifestTests : IDisposable
     [AvaloniaFact]
     public void AHiddenPrefabIsNeitherOfferedNorChosen()
     {
-        var w = new MainWindow(load: false);
-        var scene = WorldScene.Load(_world, 0, 0, 1);
-        var input = new PlaceInput(w.View, new PlaceTool { Scene = () => scene });
-        var p = new PlacePanel(input, () => scene, PrefabCatalog.NameOf, new PlaceMemory());
+        var (w, scene, input, p) = PlacePanelOnWorld.Open(_world);
         string kind = p.Creatable().First().Name;
         input.Tool.Chosen.Add(kind);
 

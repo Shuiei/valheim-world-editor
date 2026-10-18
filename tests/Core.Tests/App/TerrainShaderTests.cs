@@ -29,6 +29,14 @@ public class TerrainShaderTests
     }
 
     [Fact]
+    public void SpirvCrossIsLoadedOnce()
+    {
+        TerrainShader.SelfTest();
+
+        Assert.Same(TerrainShader.Shared(), TerrainShader.Shared());
+    }
+
+    [Fact]
     public void SomethingElseIsNotTakenForSpirv()
     {
         Assert.Throws<InvalidDataException>(() => TerrainShader.FromSpirv([1, 2, 3]));

@@ -7,7 +7,7 @@ namespace ValheimGen;
 /// Compares the offline generator with ground truth recorded in the real game by the TerrainDump
 /// client plugin (BepInEx/TerrainDump.txt). Every value is compared bit-for-bit.
 /// </summary>
-public static class DumpVerifier
+public static partial class DumpVerifier
 {
     /// <summary>
     /// What was compared and how much matched.
@@ -35,9 +35,15 @@ public static class DumpVerifier
         public double ZoneMaxDiff { get; init; }
 
         /// <summary>
+        /// Lines of a known kind that could not be read (too short, an unknown Random call, a number that does not
+        /// parse); each is also an error.
+        /// </summary>
+        public int Unreadable { get; init; }
+
+        /// <summary>
         /// Whether nothing was wrong.
         /// </summary>
-        public bool AllMatch => RandomWrong + PerlinWrong + HeightsWrong + BiomesWrong + ZonesWrong + WaterWrong == 0;
+        public bool AllMatch => RandomWrong + PerlinWrong + HeightsWrong + BiomesWrong + ZonesWrong + WaterWrong + Unreadable == 0;
     }
 
     /// <summary>
@@ -50,256 +56,79 @@ public static class DumpVerifier
     /// </summary>
     private static string State()
     {
-        var s = Rnd.state;
-        return $"{s.s0:x8} {s.s1:x8} {s.s2:x8} {s.s3:x8}";
+        var s = Rnd.State;
+        return $"{s.S0:x8} {s.S1:x8} {s.S2:x8} {s.S3:x8}";
     }
 
     /// <summary>
     /// Replays a dump file and compares each line, printing a summary to the console. Lines: "R" Random calls with
     /// the state after, "P" Perlin samples, "W" lake, river and stream counts, "H" point biome and height, "Z" a
-    /// zone's base heights; others are skipped.
+    /// zone's base heights; others are skipped. A line of these kinds that cannot be read (too short, an unknown
+    /// Random call) is counted as unreadable and leaves the random state as it was.
     /// </summary>
     /// <param name="path">The dump file.</param>
     /// <param name="seedName">The world's seed name, for the lines that need a generator.</param>
     public static Result Run(string path, string seedName)
     {
         string[] lines = File.ReadAllLines(path);
-        int rOk = 0, rBad = 0, pOk = 0, pBad = 0, hOk = 0, hBad = 0, bBad = 0, zOk = 0, zBad = 0, wBad = 0;
-        double pMax = 0, hMax = 0, zMax = 0;
-        List<string> firstErrors = [];
-        void Error(string msg)
+        var tally = new Tally();
+        for (int n = 0; n < lines.Length; n++)
         {
-            if (firstErrors.Count < 25)
-            {
-                firstErrors.Add(msg);
-            }
-        }
-        WorldGenerator? gen = null;
-        foreach (string line in lines)
-        {
+            string line = lines[n];
             string[] p = line.Split(' ');
-            switch (p[0])
+            if (!Readable(p))
             {
-                case "R":
-                {
-                    int bar = Array.IndexOf(p, "|");
-                    string expectedState = string.Join(" ", p.Skip(bar + 1));
-                    string got;
-                    string expected = string.Join(" ", p.Skip(1).Take(bar - 1));
-                    if (p[1] == "init")
-                    {
-                        Rnd.InitState(int.Parse(p[2], CultureInfo.InvariantCulture));
-                        got = expected;
-                    }
-                    else if (p[1] == "rangei")
-                    {
-                        got = $"rangei {p[2]} {p[3]} {Rnd.Range(int.Parse(p[2], CultureInfo.InvariantCulture), int.Parse(p[3], CultureInfo.InvariantCulture)).ToString(CultureInfo.InvariantCulture)}";
-                    }
-                    else if (p[1] == "rangef")
-                    {
-                        got = $"rangef {p[2]} {p[3]} {BitConverter.SingleToInt32Bits(Rnd.Range(float.Parse(p[2], CultureInfo.InvariantCulture), float.Parse(p[3], CultureInfo.InvariantCulture))):x8}";
-                    }
-                    else if (p[1] == "value")
-                    {
-                        got = $"value {BitConverter.SingleToInt32Bits(Rnd.value):x8}";
-                    }
-                    else
-                    {
-                        Vector2 v = Rnd.insideUnitCircle;
-                        got = $"circle {BitConverter.SingleToInt32Bits(v.x):x8} {BitConverter.SingleToInt32Bits(v.y):x8}";
-                    }
-                    string gotState = State();
-                    if (got == expected && gotState == expectedState)
-                    {
-                        rOk++;
-                    }
-                    else
-                    {
-                        rBad++;
-                        Error($"Random: expected [{expected} | {expectedState}] got [{got} | {gotState}]");
-                    }
-                    break;
-                }
-                case "P":
-                {
-                    float x = F(p[1]), y = F(p[2]), want = F(p[3]);
-                    float got = UnityPerlin.Noise(x, y);
-                    if (BitConverter.SingleToInt32Bits(got) == BitConverter.SingleToInt32Bits(want))
-                    {
-                        pOk++;
-                    }
-                    else
-                    {
-                        pBad++;
-                        pMax = Math.Max(pMax, Math.Abs(got - want));
-                        Error($"Perlin({x}, {y}): expected {want:R} got {got:R}");
-                    }
-                    break;
-                }
-                case "W":
-                {
-                    gen ??= Init(seedName);
-                    string offline = $"W lakes {gen.GetLakes().Count} rivers {gen.GetRivers().Count} streams {gen.GetStreams().Count}";
-                    Console.WriteLine($"  game:    {line}");
-                    Console.WriteLine($"  offline: {offline}");
-                    if (offline != line.Trim())
-                    {
-                        wBad++;
-                        Error($"Water: expected [{line.Trim()}] got [{offline}]");
-                    }
-                    break;
-                }
-                case "H":
-                {
-                    gen ??= Init(seedName);
-                    float x = F(p[1]), z = F(p[2]), want = F(p[4]);
-                    var biome = gen.GetBiome(x, z);
-                    float got = gen.GetBiomeHeight(biome, x, z, out _);
-                    if ((int)biome != int.Parse(p[3], CultureInfo.InvariantCulture))
-                    {
-                        bBad++;
-                        Error($"Biome at ({x}, {z}): expected {(Heightmap.Biome)int.Parse(p[3], CultureInfo.InvariantCulture)} got {biome}");
-                    }
-                    if (BitConverter.SingleToInt32Bits(got) == BitConverter.SingleToInt32Bits(want))
-                    {
-                        hOk++;
-                    }
-                    else
-                    {
-                        hBad++;
-                        hMax = Math.Max(hMax, Math.Abs(got - want));
-                        Error($"Height at ({x}, {z}): expected {want:R} got {got:R}");
-                    }
-                    break;
-                }
-                case "Z":
-                {
-                    gen ??= Init(seedName);
-                    int zx = int.Parse(p[1], CultureInfo.InvariantCulture), zz = int.Parse(p[2], CultureInfo.InvariantCulture);
-                    float[] got = BaseTerrain.BuildZone(gen, zx, zz);
-                    int bad = 0;
-                    for (int i = 0; i < got.Length; i++)
-                    {
-                        float want = F(p[3 + i]);
-                        if (BitConverter.SingleToInt32Bits(got[i]) != BitConverter.SingleToInt32Bits(want))
-                        {
-                            bad++;
-                            zMax = Math.Max(zMax, Math.Abs(got[i] - want));
-                        }
-                    }
-                    if (bad == 0)
-                    {
-                        zOk++;
-                    }
-                    else
-                    {
-                        zBad++;
-                        Error($"Zone ({zx}, {zz}): {bad} of {got.Length} heights differ");
-                    }
-                    break;
-                }
+                tally.Unreadable++;
+                tally.Error($"Line {n + 1} not read: {line}");
+                continue;
+            }
+            try
+            {
+                Compare(p, line, tally, seedName);
+            }
+            catch (Exception e) when (e is FormatException or OverflowException)
+            {
+                tally.Unreadable++;
+                tally.Error($"Line {n + 1} not read ({e.Message}): {line}");
             }
         }
-        Console.WriteLine($"Random:  {rOk} ok, {rBad} wrong");
-        Console.WriteLine($"Perlin:  {pOk} ok, {pBad} wrong (max diff {pMax:G4})");
-        Console.WriteLine($"Heights: {hOk} ok, {hBad} wrong (max diff {hMax:G4} m), biome mismatches {bBad}");
-        Console.WriteLine($"Zones:   {zOk} exact, {zBad} differ (max diff {zMax:G4} m)");
-        foreach (string e in firstErrors)
+        PrintSummary(tally);
+        return new Result(tally.RandomOk, tally.RandomWrong, tally.PerlinOk, tally.PerlinWrong, tally.HeightsOk, tally.HeightsWrong, tally.BiomesWrong, tally.ZonesOk, tally.ZonesWrong, tally.WaterWrong, tally.Errors)
+        {
+            HeightMaxDiff = tally.HeightMax,
+            ZoneMaxDiff = tally.ZoneMax,
+            Unreadable = tally.Unreadable,
+        };
+    }
+
+    /// <summary>
+    /// Prints the counts of each kind of line and the first mismatches to the console.
+    /// </summary>
+    private static void PrintSummary(Tally t)
+    {
+        Console.WriteLine($"Random:  {t.RandomOk} ok, {t.RandomWrong} wrong");
+        if (t.Unreadable > 0)
+        {
+            Console.WriteLine($"Unreadable lines: {t.Unreadable}");
+        }
+        Console.WriteLine($"Perlin:  {t.PerlinOk} ok, {t.PerlinWrong} wrong (max diff {t.PerlinMax:G4})");
+        Console.WriteLine($"Heights: {t.HeightsOk} ok, {t.HeightsWrong} wrong (max diff {t.HeightMax:G4} m), biome mismatches {t.BiomesWrong}");
+        Console.WriteLine($"Zones:   {t.ZonesOk} exact, {t.ZonesWrong} differ (max diff {t.ZoneMax:G4} m)");
+        foreach (string e in t.Errors)
         {
             Console.WriteLine("  " + e);
         }
-        return new Result(rOk, rBad, pOk, pBad, hOk, hBad, bBad, zOk, zBad, wBad, firstErrors) { HeightMaxDiff = hMax, ZoneMaxDiff = zMax };
     }
 
     /// <summary>
     /// A generator for a seed name (world gen version 2), timed on the console.
     /// </summary>
-    private static WorldGenerator Init(string seedName)
+    internal static WorldGenerator Init(string seedName)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        World world = new() { m_seedName = seedName, m_seed = TerrainEditor.Save.StableHash.Of(seedName), m_worldGenVersion = 2 };
+        World world = new() { SeedName = seedName, Seed = TerrainEditor.Save.StableHash.Of(seedName), WorldGenVersion = 2 };
         var gen = WorldGenerator.Create(world);
-        Console.WriteLine($"  offline worldgen init {watch.ElapsedMilliseconds} ms, seed {world.m_seed}");
+        Console.WriteLine($"  offline worldgen init {watch.ElapsedMilliseconds} ms, seed {world.Seed}");
         return gen;
-    }
-}
-
-/// <summary>
-/// Base (unmodified) terrain heights for one zone, exactly as HeightmapBuilder.Build computes them.
-/// </summary>
-public static class BaseTerrain
-{
-    /// <summary>
-    /// Metres per zone side; a zone has Width + 1 vertices per side.
-    /// </summary>
-    public const int Width = 64;
-
-    /// <summary>
-    /// The 65x65 vertex heights of zone (zx, zz), row by row (row is z), starting at the zone's corner (its
-    /// centre less 32 m on each axis).
-    /// </summary>
-    public static float[] BuildZone(WorldGenerator gen, int zx, int zz) => BuildZone(gen, zx, zz, null);
-
-    /// <summary>
-    /// The same, also filling a base paint mask.
-    /// </summary>
-    /// <param name="gen">The world's generator.</param>
-    /// <param name="zx">Zone x.</param>
-    /// <param name="zz">Zone z.</param>
-    /// <param name="mask">Optional 65x65 RGBA base paint mask (Heightmap m_baseMask), as GetBiomeHeight reports it,
-    /// filled in place (4 floats per vertex).</param>
-    public static float[] BuildZone(WorldGenerator gen, int zx, int zz, float[]? mask)
-    {
-        const float Scale = 1f;
-        int num = Width + 1;
-        float[] heights = new float[num * num];
-        float vx = zx * 64f + Width * Scale * -0.5f;
-        float vz = zz * 64f + Width * Scale * -0.5f;
-        float far = (float)((double)Width * Scale);
-        Heightmap.Biome b1 = gen.GetBiome(vx, vz);
-        Heightmap.Biome b2 = gen.GetBiome((float)((double)vx + far), vz);
-        Heightmap.Biome b3 = gen.GetBiome(vx, (float)((double)vz + far));
-        Heightmap.Biome b4 = gen.GetBiome((float)((double)vx + far), (float)((double)vz + far));
-        for (int k = 0; k < num; k++)
-        {
-            float wy = (float)((double)vz + k * (double)Scale);
-            float t = GenMath.Smooth(0f, 1f, (float)((double)k / Width));
-            for (int l = 0; l < num; l++)
-            {
-                float wx = (float)((double)vx + l * (double)Scale);
-                float t2 = GenMath.Smooth(0f, 1f, (float)((double)l / Width));
-                float h;
-                Color m;
-                if (b3 == b1 && b2 == b1 && b4 == b1)
-                {
-                    h = gen.GetBiomeHeight(b1, wx, wy, out m);
-                }
-                else
-                {
-                    float h1 = gen.GetBiomeHeight(b1, wx, wy, out Color m1);
-                    float h2 = gen.GetBiomeHeight(b2, wx, wy, out Color m2);
-                    float h3 = gen.GetBiomeHeight(b3, wx, wy, out Color m3);
-                    float h4 = gen.GetBiomeHeight(b4, wx, wy, out Color m4);
-                    h = GenMath.Lerp(GenMath.Lerp(h1, h2, t2), GenMath.Lerp(h3, h4, t2), t);
-                    m = Lerp(Lerp(m1, m2, t2), Lerp(m3, m4, t2), t);
-                }
-                heights[k * num + l] = h;
-                if (mask != null)
-                {
-                    int o = (k * num + l) * 4;
-                    mask[o] = m.r; mask[o + 1] = m.g; mask[o + 2] = m.b; mask[o + 3] = m.a;
-                }
-            }
-        }
-        return heights;
-    }
-
-    /// <summary>
-    /// a to b by t, held to 0..1, per channel.
-    /// </summary>
-    private static Color Lerp(Color a, Color b, float t)
-    {
-        t = Math.Clamp(t, 0f, 1f);
-        return new Color(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, a.a + (b.a - a.a) * t);
     }
 }

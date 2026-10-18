@@ -1,7 +1,9 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -67,6 +69,78 @@ public class GlViewInputTests
         Assert.Contains(Key.W, v.KeysHeld);
         w.KeyRelease(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
         Assert.DoesNotContain(Key.W, v.KeysHeld);
+    }
+
+    /// <summary>
+    /// A key going down or up at a control, as the keyboard sends it to the one with the focus.
+    /// </summary>
+    private static void KeyAt(Control at, Key key, bool down) =>
+        at.RaiseEvent(new KeyEventArgs { RoutedEvent = down ? InputElement.KeyDownEvent : InputElement.KeyUpEvent, Key = key, KeyModifiers = KeyModifiers.None });
+
+    [AvaloniaFact]
+    public void TypingInABoxOrAwayFromTheEditorLeavesTheCameraAlone()
+    {
+        var (w, v) = Open();
+        // The blueprints panel (hidden until its tool is chosen) shown, so its search box is in the window.
+        w.Blueprints.Toggle(true);
+        var box = w.Blueprints.Search;
+        // A key held when a box takes the focus is let go: its release will be the box's.
+        w.KeyPress(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
+        Assert.Contains(Key.W, v.KeysHeld);
+        box.RaiseEvent(new FocusChangedEventArgs(InputElement.GotFocusEvent));
+        Assert.Empty(v.KeysHeld);
+        w.KeyRelease(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
+        // Typing in a box: F and W are letters there, Space a space, none of them the camera's.
+        foreach (var key in new[] { Key.F, Key.W, Key.Space })
+        {
+            KeyAt(box, key, true);
+            Assert.Equal(GlView.EyeMode.Orbit, v.Eye);
+            Assert.Empty(v.KeysHeld);
+            KeyAt(box, key, false);
+        }
+        // On the start page (the 3D editor is not shown): the same keys at its first button, as after a click on it.
+        w.ShowStart();
+        var button = w.GetVisualDescendants().OfType<Button>().First(b => b.IsEffectivelyVisible);
+        foreach (var key in new[] { Key.F, Key.W, Key.Space })
+        {
+            KeyAt(button, key, true);
+            Assert.Equal(GlView.EyeMode.Orbit, v.Eye);
+            Assert.Empty(v.KeysHeld);
+            KeyAt(button, key, false);
+        }
+    }
+
+    [AvaloniaFact]
+    public void AClickOnTheViewAfterTypingGivesTheKeysBackToTheCamera()
+    {
+        var (w, v) = Open();
+        // Another control focused (a box will not take the focus under the headless host; a button does): a click on
+        // the view takes the focus to it, so the keys come from the view, not from a box typed in before.
+        var other = w.GetVisualDescendants().OfType<Button>().First(b => b.IsEffectivelyVisible && b.Focusable);
+        Assert.True(other.Focus());
+        // A middle click in the view (as the drags above, it reaches the view; it does nothing else without a move).
+        w.MouseDown(new Point(400, 300), MouseButton.Middle);
+        w.MouseUp(new Point(400, 300), MouseButton.Middle);
+        Assert.True(w.Surface.IsFocused);
+        Assert.False(other.IsFocused);
+        w.KeyPress(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
+        Assert.Contains(Key.W, v.KeysHeld);
+        w.KeyRelease(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
+        w.KeyPress(Key.F, RawInputModifiers.None, PhysicalKey.F, "f");
+        Assert.Equal(GlView.EyeMode.Walk, v.Eye);
+    }
+
+    [AvaloniaFact]
+    public void KeysHeldWhenTheEditorIsHiddenAreLetGo()
+    {
+        var (w, v) = Open();
+        w.KeyPress(Key.W, RawInputModifiers.None, PhysicalKey.W, "w");
+        w.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.Space, " ");
+        Assert.Contains(Key.W, v.KeysHeld);
+        Assert.Contains(Key.Space, v.KeysHeld);
+        // Their releases come on the start page, where the view takes no key.
+        w.ShowStart();
+        Assert.Empty(v.KeysHeld);
     }
 
     [AvaloniaFact]

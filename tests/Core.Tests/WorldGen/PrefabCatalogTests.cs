@@ -21,6 +21,16 @@ public class PrefabCatalogTests
     }
 
     [Fact]
+    public void RangesHoldWardsAndStationsOnce()
+    {
+        Assert.Equal((32f, 0f), PrefabCatalog.Ranges["guard_stone"]);
+        Assert.Equal((0f, 20f), PrefabCatalog.Ranges["piece_workbench"]);
+        Assert.False(PrefabCatalog.Ranges.ContainsKey("Beech1"));
+        // Made once per catalogue, not on every overlay build.
+        Assert.Same(PrefabCatalog.Ranges, PrefabCatalog.Ranges);
+    }
+
+    [Fact]
     public void SaplingsKnowTheirGrowRadius()
     {
         var turnip = PrefabCatalog.Get(Fixtures.Hash("sapling_turnip"))!;
