@@ -88,4 +88,23 @@ public sealed class ModKeysTests : PretendHomeTestBase
         File.WriteAllText(Kept, "{ broken");
         Assert.Equal(3, ModKeys.Refresh(Settings("profile")));
     }
+
+    [Fact]
+    public void AKeptFileThatCannotBeWrittenGivesNoNames()
+    {
+        TestDll.Write(Path.Combine(Plugins("profile"), "Mod.dll"), strings: ["MBParentId"]);
+        // A folder where the kept file goes: nothing can be written there, so no names are in use.
+        Directory.CreateDirectory(Kept);
+        Assert.Equal(0, ModKeys.Refresh(Settings("profile")));
+    }
+
+    [Fact]
+    public void ABrokenLinkInAPluginsFolderIsPassedOver()
+    {
+        Assert.SkipWhen(OperatingSystem.IsWindows(), "a symbolic link needs rights on Windows");
+        string plugins = Plugins("profile");
+        // A link to a file that is not there: its size cannot be read, so the folder's DLLs are not read.
+        File.CreateSymbolicLink(Path.Combine(plugins, "Broken.dll"), Path.Combine(plugins, "gone.dll"));
+        Assert.Equal(0, ModKeys.Refresh(Settings("profile")));
+    }
 }
