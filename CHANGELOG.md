@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.48.1 — unreleased
+
+### Fixed
+- **The `--export-locations` and `--export-test-data` commands close the game's files when they are done.** They
+  kept them open until the editor ended, which on Windows stopped anything else from touching the game's folder
+  meanwhile.
+
 ## v1.48.0 — 2026-10-17
 
 ### Added

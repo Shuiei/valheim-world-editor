@@ -18,7 +18,8 @@ public static partial class GameLocations
             Console.Error.WriteLine("--export-locations needs the file to write.");
             return 2;
         }
-        var bundles = GameBundles.ForGame(GameLook.FindValheim(AppSettings.Load().ValheimPath), null);
+        // Closed when done: the game's files are not left open (Windows would refuse to touch them meanwhile).
+        using var bundles = GameBundles.ForGame(GameLook.FindValheim(AppSettings.Load().ValheimPath), null);
         var rules = bundles == null ? null : Load(bundles, null);
         if (rules == null)
         {
