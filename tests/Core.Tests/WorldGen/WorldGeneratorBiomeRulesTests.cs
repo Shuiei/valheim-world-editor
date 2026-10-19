@@ -48,14 +48,18 @@ public class WorldGeneratorBiomeRulesTests
     }
 
     [Fact]
-    public void TheModsDefaultRulesAreNotTheGamesLayout()
+    public void TheModsDefaultRulesGiveTheGamesLayout()
     {
+        // The mod's default rules say the game's own layout in its words (the same circles, waves, bands, noise
+        // fields and thresholds, in the same order): the biomes come out the same, but for a point on an exact edge.
         var (rules, sectors) = TerrainEditor.App.ExpandWorld.WorldOf(TerrainEditor.App.ExpandWorld.DefaultWorld, BiomeTable.Vanilla, 10000f, TerrainEditor.App.ExpandWorld.Wiggles.Default, []);
         var g = Generator(new WorldRules { DataInstalled = true, World = rules, CheckSectors = sectors });
         var plain = Generator();
         Assert.False(sectors);
         var points = GeneratorPoints.Rings(200, 9800, 400, 24).ToList();
-        Assert.Contains(points, p => plain.GetBiome(p.X, p.Z) != g.GetBiome(p.X, p.Z));
+        Assert.All(points, p => Assert.Equal(plain.GetBiome(p.X, p.Z), g.GetBiome(p.X, p.Z)));
+        Assert.Contains(points, p => g.GetBiome(p.X, p.Z) == Heightmap.Biome.Mountain);
+        Assert.Contains(points, p => g.GetBiome(p.X, p.Z) == Heightmap.Biome.Swamp);
         // The Ashlands' rule: 12 000 to 16 000 m from a middle 4 000 m north, first in the list.
         Assert.Equal(Heightmap.Biome.AshLands, g.GetBiome(0f, -8500f));
         Assert.True(g.IsAshlands(0f, -8500f));
@@ -167,7 +171,9 @@ public class WorldGeneratorBiomeRulesTests
     {
         var plain = Generator();
         var waved = Generator(new WorldRules { WiggleFrequency = 40f });
-        var edge = GeneratorPoints.Rings(7900, 8300, 50, 24).Select(p => (p.X, Z: p.Z + 0f)).ToList();
+        // Points on the Deep North's edge circle (12 000 m round a middle 4 000 m south), 7 degrees apart: twenty and
+        // forty swings differ at most of them (at multiples of 15 degrees they happen to agree).
+        var edge = Enumerable.Range(-5, 11).Select(k => k * 7.0 * Math.PI / 180.0).Select(a => (X: (float)(12000.0 * Math.Sin(a)), Z: (float)(-4000.0 + 12000.0 * Math.Cos(a)))).ToList();
         Assert.Contains(edge, p => plain.CreateDeepNorthGap(p.X, p.Z) != waved.CreateDeepNorthGap(p.X, p.Z));
         Assert.Contains(edge, p => plain.IsDeepnorth(p.X, p.Z) != waved.IsDeepnorth(p.X, p.Z));
         // The game's twenty swings: the static wave and the generator's are one.

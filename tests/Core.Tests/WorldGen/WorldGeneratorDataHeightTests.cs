@@ -63,7 +63,7 @@ public class WorldGeneratorDataHeightTests
         var thin = new BiomeInfo { Value = Custom, Id = "Embers", Terrain = Heightmap.Biome.AshLands, Nature = Heightmap.Biome.AshLands, Lava = true, HasData = true, LavaAmount = 0.5f };
         var g = WithBiomes(thin);
         var plain = Generator();
-        var points = GeneratorPoints.Rings(8600, 9800, 300, 12).Where(p => p.Z < -8000f).ToList();
+        var points = GeneratorPoints.Rings(8600, 9800, 50, 72).Where(p => p.Z < -8000f).ToList();
         Assert.NotEmpty(points);
         foreach (var (x, z) in points)
         {
