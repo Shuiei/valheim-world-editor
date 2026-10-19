@@ -1,8 +1,8 @@
 namespace TerrainEditor.App;
 
 /// <summary>
-/// Reading a blueprint's header lines (name, creator, description, tags, world and the piece counts), and changing
-/// them again in its text.
+/// Reading a blueprint's header lines (name, creator, description, tags, world, the editor's marks and the piece
+/// counts), and changing them again in its text.
 /// </summary>
 public static partial class Homestead
 {
@@ -11,52 +11,99 @@ public static partial class Homestead
     /// <param name="lines">The file's lines.</param>
     public static Entry Read(string file, IEnumerable<string> lines)
     {
-        string? name = null, creator = null, world = null, description = null, tags = null;
+        var head = new Headers();
         int pieces = 0;
         var kinds = new Dictionary<string, int>();
         bool inPieces = false;
         foreach (string raw in lines)
         {
             string line = raw.Trim();
-            if (BlueprintFormats.HeaderValue(line, "#Name:") is { } named)
+            if (head.Take(line))
             {
-                name = named;
+                continue;
             }
-            else if (BlueprintFormats.HeaderValue(line, "#Creator:") is { } by)
-            {
-                creator = by;
-            }
-            else if (BlueprintFormats.HeaderValue(line, "#Description:") is { } about)
-            {
-                // As a paste reads it: a quoted description loses its quotes, one only starting with a quote keeps it.
-                description = BlueprintFormats.Unquote(about);
-            }
-            else if (line.StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase))
-            {
-                tags = line[6..];
-            }
-            else if (line.StartsWith("#HomesteadWorld:", StringComparison.OrdinalIgnoreCase))
-            {
-                world = line[16..].Trim();
-            }
-            else if (line.StartsWith('#'))
+            if (line.StartsWith('#'))
             {
                 inPieces = line.Equals("#Pieces", StringComparison.OrdinalIgnoreCase);
             }
             else if (inPieces && line.Length > 0)
             {
-                pieces++;
-                string kind = line.Split(';')[0].Trim();
-                kinds[kind] = kinds.GetValueOrDefault(kind) + 1;
+                // A marked piece (the hammer skips it) is counted, not costed; marks in a file without the header are not its.
+                int index = pieces++;
+                if (!head.HasMarks || !head.Marked.Contains(index))
+                {
+                    string kind = line.Split(';')[0].Trim();
+                    kinds[kind] = kinds.GetValueOrDefault(kind) + 1;
+                }
             }
         }
-        return new Entry(file, string.IsNullOrWhiteSpace(name) ? Path.GetFileNameWithoutExtension(file) : name, creator,
-            string.IsNullOrWhiteSpace(world) ? null : world, pieces, null, default)
+        return new Entry(file, string.IsNullOrWhiteSpace(head.Name) ? Path.GetFileNameWithoutExtension(file) : head.Name, head.Creator,
+            string.IsNullOrWhiteSpace(head.World) ? null : head.World, pieces, null, default)
         {
-            Description = description ?? "",
-            Tags = Details.ParseTags(tags),
+            Description = head.Description ?? "",
+            Tags = Details.ParseTags(head.Tags),
             Kinds = kinds,
+            EditorOnly = head.HasMarks ? head.Marked.Count : null,
         };
+    }
+
+    /// <summary>The header lines of a blueprint as <see cref="Read(string, IEnumerable{string})"/> gathers them, one at a time.</summary>
+    private sealed class Headers
+    {
+        /// <summary>The #Name: value; null when there is none.</summary>
+        public string? Name { get; private set; }
+        /// <summary>The #Creator: value; null when there is none.</summary>
+        public string? Creator { get; private set; }
+        /// <summary>The #HomesteadWorld: value; null when there is none.</summary>
+        public string? World { get; private set; }
+        /// <summary>The #Description: value, unquoted; null when there is none.</summary>
+        public string? Description { get; private set; }
+        /// <summary>The #Tags: value, as written; null when there is none.</summary>
+        public string? Tags { get; private set; }
+        /// <summary>Whether the file carries the editor's marks (<c>BlueprintFormats.MarkedHeader</c>).</summary>
+        public bool HasMarks { get; private set; }
+        /// <summary>The lines (among the pieces, from 0) of the pieces marked as the editor's alone.</summary>
+        public HashSet<int> Marked { get; } = [];
+
+        /// <summary>Takes a header line this gathers; false for any other line.</summary>
+        /// <param name="line">The line, trimmed.</param>
+        public bool Take(string line)
+        {
+            if (BlueprintFormats.HeaderValue(line, "#Name:") is { } named)
+            {
+                Name = named;
+            }
+            else if (BlueprintFormats.HeaderValue(line, "#Creator:") is { } by)
+            {
+                Creator = by;
+            }
+            else if (BlueprintFormats.HeaderValue(line, "#Description:") is { } about)
+            {
+                // As a paste reads it: a quoted description loses its quotes, one only starting with a quote keeps it.
+                Description = BlueprintFormats.Unquote(about);
+            }
+            else if (line.StartsWith("#Tags:", StringComparison.OrdinalIgnoreCase))
+            {
+                Tags = line[6..];
+            }
+            else if (line.StartsWith("#HomesteadWorld:", StringComparison.OrdinalIgnoreCase))
+            {
+                World = line[16..].Trim();
+            }
+            else if (line == BlueprintFormats.MarkedHeader)
+            {
+                HasMarks = true;
+            }
+            else if (BlueprintFormats.MarkedLine(line) is int at)
+            {
+                Marked.Add(at);
+            }
+            else
+            {
+                return false;
+            }
+            return true;
+        }
     }
 
     /// <summary>

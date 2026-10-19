@@ -810,6 +810,7 @@
   "blueprints.meta.pieces": "{0} piece(s)",
   "blueprints.meta.by": "by {0}",
   "blueprints.meta.from": "from {0}",
+  "blueprints.meta.editorOnly": "{0} of {1} piece(s) only the editor can place",
   "blueprints.label.edit": "Edit",
   "blueprints.label.details": "Details",
   "blueprints.cost": "Cost: {0}",

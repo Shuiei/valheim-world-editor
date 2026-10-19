@@ -55,8 +55,22 @@ public static partial class Homestead
         public string Description { get; init; } = "";
         /// <summary>Its #Tags:.</summary>
         public List<string> Tags { get; init; } = [];
-        /// <summary>How many pieces of each prefab it has.</summary>
+        /// <summary>
+        /// How many pieces of each prefab the hammer places (for its cost): the pieces the file marks as the editor's
+        /// alone (<see cref="EditorOnly"/>) are left out.
+        /// </summary>
         public Dictionary<string, int> Kinds { get; init; } = [];
+        /// <summary>
+        /// How many of its pieces only the editor can place (Homestead's hammer skips them: statues, ships, creatures;
+        /// see <see cref="HammerPlaces"/>), from the file's marks; null when the file carries none (an older editor's,
+        /// or Homestead's own), so nothing is said rather than a wrong zero.
+        /// </summary>
+        public int? EditorOnly { get; init; }
+        /// <summary>
+        /// "2 of 40 piece(s) only the editor can place", in the language in use and in English; null when the file does
+        /// not say (<see cref="EditorOnly"/>).
+        /// </summary>
+        public Said? EditorOnlyNote => EditorOnly is int n ? Said.Of("blueprints.meta.editorOnly", n, Pieces) : null;
         /// <summary>Its name, description and tags, as the player edits them.</summary>
         public Details Details => new(Name, Description, Tags);
 

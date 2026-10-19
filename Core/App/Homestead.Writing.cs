@@ -75,8 +75,10 @@ public static partial class Homestead
     ];
 
     /// <summary>
-    /// The editor's own header lines: what the pieces hold, each by its number in <paramref name="pieces"/>, and one line
-    /// for all when every piece is a ruin's (no builder) instead of one each.
+    /// The editor's own header lines: what the pieces hold, each by its number in <paramref name="pieces"/>, one line
+    /// for all when every piece is a ruin's (no builder) instead of one each, and the marks of the pieces only the
+    /// editor can place (<see cref="HammerPlaces"/>, worked out from the game's data here, whatever a file read in
+    /// said), after the header that says the file carries them.
     /// </summary>
     internal static void DataLines(StringBuilder sb, List<Piece> pieces)
     {
@@ -85,8 +87,13 @@ public static partial class Homestead
         {
             sb.Append(BlueprintFormats.RuinHeader).Append('\n');
         }
+        sb.Append(BlueprintFormats.MarkedHeader).Append('\n');
         for (int k = 0; k < pieces.Count; k++)
         {
+            if (!HammerPlaces(pieces[k].Name))
+            {
+                sb.Append(BlueprintFormats.DataHeader).Append(k.ToString(CultureInfo.InvariantCulture)).Append(';').Append(BlueprintFormats.OnlyMark).Append('\n');
+            }
             foreach (var f in pieces[k].Data.Where(f => !(ruin && f == Editing.ObjectField.NoBuilder)))
             {
                 sb.Append(BlueprintFormats.DataHeader).Append(k.ToString(CultureInfo.InvariantCulture)).Append(';').Append(f.ToString()).Append('\n');
