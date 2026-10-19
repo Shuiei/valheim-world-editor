@@ -18,10 +18,10 @@ public sealed partial class WorldEditorBridgePlugin
     private static readonly List<ZDOID> Discs = [];
 
     /// <summary>The ZDOMan the discs were found in: a new one is a new world.</summary>
-    private static ZDOMan _discsOf;
+    private ZDOMan _discsOf;
 
     /// <summary>When the discs are next looked at (Time.realtimeSinceStartup).</summary>
-    private static float _discsDue;
+    private float _discsDue;
 
     /// <summary>Whether an object is one of the editor's ground discs.</summary>
     private static bool IsDisc(ZDO zdo) => zdo.GetPrefab() == LocationProxyPrefab && zdo.GetInt(ZDOVars.s_location) == DiscLocation;
