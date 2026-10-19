@@ -81,6 +81,18 @@ public sealed partial class MapPage
     public void Stop() => _players.Stop();
 
     /// <summary>
+    /// The world shown was closed: its players are no longer asked for (its connection is gone), and the next world
+    /// shown starts afresh.
+    /// </summary>
+    public void Forget()
+    {
+        Stop();
+        _session = null;
+        Map.Players = [];
+        PlaceLabels();
+    }
+
+    /// <summary>
     /// Leaving the map for good (the window closed): what runs is stopped.
     /// </summary>
     public void Dispose()

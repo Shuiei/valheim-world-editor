@@ -25,14 +25,9 @@ public partial class MainWindow
             (name, text, details) = read;
         }
         // Left only once the blueprint could be read.
-        if (World is { } open)
+        if (World != null)
         {
-            // An area still loading in it is not opened, nor the one left open again.
-            _navigation++;
-            open.Dispose();
-            World = null;
-            Session = null;
-            Tunnel.Close();
+            CloseWorld();
         }
         // The area's name stays English: Claude reads it (editor_state); the title shows it in the user's language.
         var scene = Workshop.Create(name != null ? $"Workshop · {name}" : "Workshop");
