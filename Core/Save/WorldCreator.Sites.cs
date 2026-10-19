@@ -12,12 +12,11 @@ public static partial class WorldCreator
     /// <param name="Name">Its kind's prefab name.</param>
     /// <param name="Hash">The name's stable hash: its proxy's location, the zone file's entry.</param>
     /// <param name="Position">Where it stands, world metres (the water's level when its kind snaps to the water).</param>
-    /// <param name="Clear">How far around it the vegetation is cleared (0: not cleared).</param>
     /// <param name="Objects">
     /// What is written for it (its networked objects, then its proxy), each with where it is; null when its zone is left
     /// to the game.
     /// </param>
-    internal sealed record Site((int X, int Z) Zone, string Name, int Hash, Vector3 Position, float Clear, List<(Vector3 At, byte[] Zdo)>? Objects);
+    internal sealed record Site((int X, int Z) Zone, string Name, int Hash, Vector3 Position, List<(Vector3 At, byte[] Zdo)>? Objects);
 
     /// <summary>
     /// The seed's locations within <paramref name="radius"/> zones of the middle, as the game would spawn them when it
@@ -30,7 +29,8 @@ public static partial class WorldCreator
     /// <param name="terrain">The new world's terrain (its generator).</param>
     /// <param name="seed">The world's seed number.</param>
     /// <param name="radius">How far from the middle the zones are generated.</param>
-    internal static List<Site> Sites(ValheimGen.TerrainService terrain, int seed, int radius)
+    /// <param name="placed">The seed's laid out locations, when the caller has them; else laid out here.</param>
+    internal static List<Site> Sites(ValheimGen.TerrainService terrain, int seed, int radius, List<ValheimGen.SeedLocations.Placed>? placed = null)
     {
         var sites = new List<Site>();
         if (!ValheimGen.SeedLocations.AvailableFor(terrain.Generator))
@@ -41,7 +41,7 @@ public static partial class WorldCreator
         Rnd.RandomState was = Rnd.State;
         try
         {
-            foreach (var p in ValheimGen.SeedLocations.Place(terrain.Generator, ValheimGen.SeedLocations.Which.All))
+            foreach (var p in placed ?? ValheimGen.SeedLocations.Place(terrain.Generator, ValheimGen.SeedLocations.Which.All))
             {
                 var zone = ChunkMath.SectorOf(p.X, p.Z);
                 if (Math.Abs(zone.X) > radius || Math.Abs(zone.Z) > radius)
@@ -56,7 +56,7 @@ public static partial class WorldCreator
                 bool unknown = p.Rule.Blueprint == true || p.Rule.Custom == true || terrain.Generator.Rules.RandomLocations;
                 if (unknown || LocationPrefabs.Get(p.Rule.Base) is not { Interior: false } prefab)
                 {
-                    sites.Add(new Site(zone, p.Rule.Prefab, hash, position, 0f, null));
+                    sites.Add(new Site(zone, p.Rule.Prefab, hash, position, null));
                     continue;
                 }
                 int zoneSeed = LocationPrefabs.ZoneSeed(seed, zone.X, zone.Z);
@@ -71,7 +71,7 @@ public static partial class WorldCreator
                     }
                 }
                 objects.Add((position, ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, proxyFlags, position, new Vector3(0f, yaw, 0f), 0f, [(WorldSave.LocationKey, hash), (SeedKey, zoneSeed)])));
-                sites.Add(new Site(zone, p.Rule.Prefab, hash, position, prefab.ClearArea ? p.Rule.ExteriorRadius : 0f, objects));
+                sites.Add(new Site(zone, p.Rule.Prefab, hash, position, objects));
             }
         }
         finally

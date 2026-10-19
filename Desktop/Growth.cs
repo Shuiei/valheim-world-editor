@@ -42,7 +42,8 @@ public static partial class Growth
         }
         message(Said.Of("regrow.msg.working"));
         var world = s.World;
-        var spots = await Task.Run(() => Regrow.Zones(terrain, session.Edits, world.Seed, zx0, zz0, zx1, zz1).Where(p => world.CanCreate(StableHash.Of(p.Name))).ToList());
+        var spots = await Task.Run(() => Regrow.Zones(terrain, session.Edits, world.Seed, zx0, zz0, zx1, zz1, Regrow.ClearAreas.Of(world, terrain.Generator))
+            .Where(p => world.CanCreate(StableHash.Of(p.Name))).ToList());
         // The tool's own test first, here (it may read the window's state); the rest away from the window.
         var kept = spots.Where(keep).ToList();
         if (kept.Count == 0)

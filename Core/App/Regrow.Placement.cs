@@ -19,15 +19,15 @@ public static partial class Regrow
 
     /// <summary>
     /// ZoneSystem.PlaceVegetation for one zone: every enabled rule of its biomes, the same draws in the same
-    /// order, adding what passes the checks to <paramref name="spots"/>. <paramref name="zones"/> holds the zones
-    /// read so far, shared by every zone of one <see cref="Zones"/> call.
+    /// order, adding what passes the checks to <paramref name="spots"/>; the zone starts with its locations' clear areas.
+    /// <paramref name="pass"/> holds the zones read so far, shared by every zone of one <see cref="Zones"/> call.
     /// </summary>
-    private static void PlaceZone(TerrainService terrain, Ground ground, Dictionary<(int, int), Zone> zones, (IReadOnlyList<Rule> Rules, AltCheck Alts) by, int seed, int zx, int zz, List<Spot> spots)
+    private static void PlaceZone(Pass pass, int seed, int zx, int zz, List<Spot> spots)
     {
-        var (rules, alts) = by;
-        Zone hmap = ZoneAt(terrain, ground, zones, zx * 64f, zz * 64f);
+        Zone hmap = pass.ZoneAt(zx * 64f, zz * 64f);
         float cx = zx * 64f, cz = zz * 64f;
-        foreach (Rule veg in rules)
+        pass.StartZone(zx, zz);
+        foreach (Rule veg in pass.Rules)
         {
             if (veg.enable == 0 || !hmap.HaveBiome(veg.biome))
             {
@@ -36,7 +36,7 @@ public static partial class Regrow
             Rnd.InitState(seed + zx * 4271 + zz * 9187 + Save.StableHash.Of(veg.prefab));
             if (TryRollGroupCount(veg, out int count))
             {
-                PlaceRule(terrain, ground, zones, (veg, alts), cx, cz, count, spots);
+                PlaceRule(pass, veg, cx, cz, count, spots);
             }
         }
     }
@@ -48,15 +48,15 @@ public static partial class Regrow
     /// draws for a scale by axis (its replacement of the game's scaling, made only when the game would scale: the
     /// uniform draw is not 1).
     /// </summary>
-    private static bool TryPlaceSpot(TerrainService terrain, Ground ground, Dictionary<(int, int), Zone> zones, Rule veg, float px, float pz, SpotDraw draw, List<Spot> spots)
+    private static bool TryPlaceSpot(Pass pass, Rule veg, float px, float pz, SpotDraw draw, List<Spot> spots)
     {
-        if (!ground.Inside(px, pz))
+        if (!pass.Ground.Inside(px, pz))
         {
             return false;
         }
-        float py = ground.Height(px, pz, out NVector3 normal);
-        Zone hm = ZoneAt(terrain, ground, zones, px, pz);
-        if (!PassesSurfaceChecks(veg, ground, hm, px, py, pz, normal) || !PassesRegionChecks(terrain, veg, px, py, pz) || !PassesOwnDistance(veg, px, py, pz))
+        float py = pass.Ground.Height(px, pz, out NVector3 normal);
+        Zone hm = pass.ZoneAt(px, pz);
+        if (!PassesSurfaceChecks(veg, pass.Ground, hm, px, py, pz, normal) || !PassesRegionChecks(pass.Terrain, veg, px, py, pz) || !PassesClearAreas(pass, veg, px, py, pz))
         {
             return false;
         }
@@ -67,6 +67,7 @@ public static partial class Regrow
         }
         py += veg.groundOffset;
         NVector3 euler = SpotRotation(veg, normal, draw);
+        pass.KeepClear(veg, px, pz);
         (string name, int draws) = veg.prefabs == null ? (veg.prefab, veg.draws) : DrawPrefab(veg);
         // The components' draws come as the object wakes, before the mod scales it.
         for (int k = draws; k > 0; k--)

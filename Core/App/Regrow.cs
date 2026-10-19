@@ -12,8 +12,9 @@ namespace TerrainEditor.App;
 /// GameData; the tests use tests/fixtures/vegetation.json) and the same random draws
 /// (ZoneSystem.PlaceVegetation, Unity's Random seeded per zone and rule), on the ground as it is now. What
 /// the editor cannot know is skipped: the physics checks against objects already standing (IsBlocked,
-/// snapping onto rocks) and clear areas around locations; the alt biomes are laid out as the game lays them out
-/// (SeedLocations.AltBiomeLayout), their own rules growing in their areas only. The page drops spots
+/// snapping onto rocks); the clear ground round locations is kept when the caller gives the world's locations
+/// (ClearAreas), and the alt biomes are laid out as the game lays them out (SeedLocations.AltBiomeLayout), their own
+/// rules growing in their areas only. The page drops spots
 /// taken by objects that are there and keeps those in the selection. A world whose rules carry Expand World Data's
 /// vegetation (<see cref="WorldRules.Vegetation"/>) is regrown by those rules instead of the game's.
 /// </summary>
@@ -69,16 +70,15 @@ public static partial class Regrow
     /// <param name="z0">First zone row.</param>
     /// <param name="x1">Last zone column (inclusive).</param>
     /// <param name="z1">Last zone row (inclusive).</param>
-    public static List<Spot> Zones(TerrainService terrain, EditStore edits, int seed, int x0, int z0, int x1, int z1)
+    /// <param name="areas">The clear areas of the world's locations; none by default.</param>
+    public static List<Spot> Zones(TerrainService terrain, EditStore edits, int seed, int x0, int z0, int x1, int z1, ClearAreas? areas = null)
     {
         // The ground one zone around too: groups reach up to 20 m past their zone.
         var (w, h, heights) = HeightGrid.Read(terrain, edits, x0 - 1, z0 - 1, x1 + 1, z1 + 1);
         Ground ground = new(heights, w, h, (x0 - 1) * 64f - 32f, (z0 - 1) * 64f - 32f);
         List<Spot> spots = [];
-        // Each zone's biomes, paint mask and ocean depths, made once for the whole call: groups reach into neighbours.
-        Dictionary<(int, int), Zone> zones = [];
-        IReadOnlyList<Rule> rules = RulesFor(terrain);
-        var alts = new AltCheck(terrain);
+        // Each zone's biomes, paint mask and ocean depths are read once for the whole call: groups reach into neighbours.
+        var pass = new Pass(terrain, ground, RulesFor(terrain), areas);
         // Unity's Random has one state per thread: put back what this thread had.
         Rnd.RandomState saved = Rnd.State;
         try
@@ -87,7 +87,7 @@ public static partial class Regrow
             {
                 for (int zx = x0; zx <= x1; zx++)
                 {
-                    PlaceZone(terrain, ground, zones, (rules, alts), seed, zx, zz, spots);
+                    PlaceZone(pass, seed, zx, zz, spots);
                 }
             }
         }

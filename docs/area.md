@@ -126,8 +126,10 @@ It follows the **alt biomes** (Dark Meadows, Rock Black Forest...): the areas th
 gives it, from the seed. There, what the alt biome adds grows (mushrooms, fireflies, ruined walls...), and
 what it keeps out does not.
 
-What it cannot know, and leaves out: the game's physics checks against objects already standing, and the
-clear ground that the game keeps round its locations (villages, dungeon entrances...).
+It keeps the ground clear round the world's locations (villages, dungeon entrances...) as the game does when it
+first makes a zone: nothing grows in the square round a location whose kind clears its ground.
+
+What it cannot know, and leaves out: the game's physics checks against objects already standing.
 
 It works on up to 16 zones at once (256 × 256 m): choose a smaller selection for more. The result is
 one undo step; **Save** writes it.

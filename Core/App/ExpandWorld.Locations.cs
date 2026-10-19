@@ -57,10 +57,19 @@ public static partial class ExpandWorld
                 notes.Add($"expand_locations: location prefab {baseName} not found (left out)");
                 continue;
             }
-            rules.Add(LocationOf(f, prefab, baseName, interior, exterior, blueprint, biomes, radius, ref virtualGroups, notes));
+            var rule = LocationOf(f, prefab, baseName, interior, exterior, blueprint, biomes, radius, ref virtualGroups, notes);
+            rule.ClearArea = ClearAreaOf(f, own, blueprint);
+            rules.Add(rule);
         }
         return rules;
     }
+
+    /// <summary>
+    /// Whether a kind clears its area: the file's "clearArea" only with a radius of the file's own (or for a blueprint),
+    /// else the game's prefab's, as the mod applies it.
+    /// </summary>
+    private static int ClearAreaOf(Fields f, SeedLocations.Rule? own, bool blueprint) =>
+        f.F("exteriorRadius", 0f) != 0f || blueprint ? Flag(f, "clearArea") : own?.ClearArea ?? 0;
 
     /// <summary>One kind from its entry.</summary>
     private static SeedLocations.Rule LocationOf(Fields f, string prefab, string baseName, float interior, float exterior, bool blueprint, BiomeTable biomes, float radius, ref int virtualGroups, List<string> notes)
