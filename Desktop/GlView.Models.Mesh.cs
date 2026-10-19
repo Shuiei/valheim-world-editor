@@ -44,6 +44,15 @@ public sealed partial class GlView
         {
             _bothWays.Add(id);
         }
+        _pickMeshes[id] = PickMeshOf(md);
+        Models?.Forget(id);
+        return _meshGl[id] = (vbo, ebos, counts);
+    }
+
+    /// <summary>A mesh in the small form a click is tried against: its positions alone, its submeshes and its box.</summary>
+    /// <param name="md">The mesh.</param>
+    private static PickMesh PickMeshOf(ModelStore.MeshData md)
+    {
         float[] positions = new float[md.Vertices.Length / 8 * 3];
         for (int v = 0; v < positions.Length / 3; v++)
         {
@@ -51,9 +60,7 @@ public sealed partial class GlView
             positions[v * 3 + 1] = md.Vertices[v * 8 + 1];
             positions[v * 3 + 2] = md.Vertices[v * 8 + 2];
         }
-        _pickMeshes[id] = new PickMesh(positions, md.Submeshes, md.Bounds);
-        Models?.Forget(id);
-        return _meshGl[id] = (vbo, ebos, counts);
+        return new PickMesh(positions, md.Submeshes, md.Bounds);
     }
 
     /// <summary>The stand-in box's mesh: a unit cube centred on 0, flat normals per face.</summary>

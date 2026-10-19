@@ -5,8 +5,10 @@ namespace TerrainEditor.Desktop;
 public sealed partial class WorldSession
 {
     /// <summary>
-    /// The zones that changed since they were last merged, read from the game (null: none, or not live). The
-    /// plugin's errors and an unreachable game are the caller's to show.
+    /// The zones that changed since they were last merged, read from the game (null: none, or not live): whole where
+    /// something that stays put was made, removed or changed; only the kinds that move or tick on their own
+    /// (creatures, ships, items, fires...) where only those did, so a creature walking does not have its zone read
+    /// whole at every look. The plugin's errors and an unreachable game are the caller's to show.
     /// </summary>
     public async Task<Fetched?> FetchGame(IReadOnlyCollection<(int X, int Z)> zones)
     {
@@ -17,12 +19,39 @@ public sealed partial class WorldSession
         var world = World;
         int applies = Volatile.Read(ref _applies);
         var now = await live.Watch(zones);
-        var changed = now.Where(kv => !_digests.TryGetValue(kv.Key, out ulong d) || d != kv.Value).Select(kv => kv.Key).ToList();
-        if (changed.Count == 0)
+        var (changed, moving) = ChangedSince(now);
+        if (changed.Count == 0 && moving.Count == 0)
         {
             return null;
         }
-        return new Fetched(world, now, changed, await live.ZoneObjects(changed), applies);
+        var objects = changed.Count > 0 ? await live.ZoneObjects(changed) : [];
+        if (moving.Count > 0)
+        {
+            objects.AddRange(await live.MovingObjects(moving));
+        }
+        return new Fetched(world, now, changed, objects, applies) { Moving = moving };
+    }
+
+    /// <summary>
+    /// The zones whose digests changed since they were last merged: those to read whole (the first digest changed, or
+    /// never merged), and those whose kinds that move on their own are read alone (only the second did).
+    /// </summary>
+    /// <param name="now">Each zone's digests as the game gives them now.</param>
+    private (List<(int X, int Z)> Changed, List<(int X, int Z)> Moving) ChangedSince(Dictionary<(int X, int Z), LiveBridge.Digests> now)
+    {
+        List<(int X, int Z)> changed = [], moving = [];
+        foreach (var (zone, digests) in now)
+        {
+            if (!_digests.TryGetValue(zone, out LiveBridge.Digests had) || had.Still != digests.Still)
+            {
+                changed.Add(zone);
+            }
+            else if (had.Moving != digests.Moving)
+            {
+                moving.Add(zone);
+            }
+        }
+        return (changed, moving);
     }
 
     /// <summary>

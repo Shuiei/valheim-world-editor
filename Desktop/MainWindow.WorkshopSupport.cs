@@ -21,6 +21,7 @@ public partial class MainWindow
         var (r, index) = SolveSupport(s);
         LastSupport = r;
         LastSupportThings = index;
+        LastSunk = CreatureStand.Sunk(s.Scene);
         var show = new Dictionary<int, float>();
         for (int k = 0; k < index.Count; k++)
         {
@@ -57,6 +58,12 @@ public partial class MainWindow
         var terrain = _workshopTerrain;
         return (Stability.Solve(pieces, (x, z) => Workshop.GroundAt(terrain, x, z)), index);
     }
+
+    /// <summary>
+    /// The creatures sunk into a piece on the plot when the support check last ran (indices into the scene's things):
+    /// the editor's own placing stands them on top, a blueprint from another tool can leave them inside.
+    /// </summary>
+    internal List<int> LastSunk { get; private set; } = [];
 
     /// <summary>
     /// What the building on the plot costs to build in game, under the title (all of it in the tip).

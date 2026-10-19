@@ -41,7 +41,7 @@ public class WorkshopRuinTests
                 "Vault", "test", null, DateTime.Now));
 
             var scene = Workshop.Create("Workshop");
-            var (_, _, lift, _) = Workshop.Open(scene.Session!, hut);
+            var (_, _, lift, _, _) = Workshop.Open(scene.Session!, hut);
             Workshop.Add(scene.Session!, vault, null, new System.Numerics.Vector2(10, 0));
             Assert.False(scene.Ruin);
 

@@ -1,14 +1,14 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
 using TerrainEditor.App;
-using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
 public partial class MainWindow
 {
     /// <summary>
-    /// Shows the building's cost under the title, the full list of materials and stations in its tip.
+    /// Shows the building's cost under the title, the full list of materials and stations in its tip. What only the editor
+    /// can place (Homestead's hammer skips it) is not counted.
     /// </summary>
     private void ShowWorkshopCost()
     {
@@ -16,7 +16,7 @@ public partial class MainWindow
         {
             return;
         }
-        var cost = PieceCost.Of(Workshop.Kinds(s.Scene));
+        var cost = Homestead.Cost(Workshop.Kinds(s.Scene));
         WorkshopCost = cost.Describe(5);
         SubtitleText.Text = Workshop.Pieces(s.Scene) == 0 ? Lang.T("workshop.blankPlot") : Lang.T("blueprints.cost", WorkshopCost);
         ToolTip.SetTip(SubtitleText, cost.Materials.Count == 0 ? null
@@ -25,7 +25,8 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// The save bar in the Workshop: the piece count, how many would fall, whether it is saved, and Save blueprint.
+    /// The save bar in the Workshop: the piece count, how many would fall, the creatures sunk into a piece, whether it is
+    /// saved, and Save blueprint.
     /// </summary>
     private void WorkshopSaveBar(EditSession s)
     {
@@ -34,7 +35,7 @@ public partial class MainWindow
         bool dirty = WorkshopDirty;
         string? falls = LastSupport is { Breaking: > 0 } r ? Lang.T("workshop.bar.falling", r.Breaking) : null;
         PendingText.Text = n == 0 ? Lang.T("workshop.bar.none")
-            : string.Join(" · ", new[] { Lang.T("workshop.bar.pieces", n), falls, dirty ? Lang.T("workshop.bar.notSaved") : Lang.T("workshop.bar.saved") }.OfType<string>());
+            : string.Join(" · ", new[] { Lang.T("workshop.bar.pieces", n), falls, SunkText, dirty ? Lang.T("workshop.bar.notSaved") : Lang.T("workshop.bar.saved") }.OfType<string>());
         SaveButton.IsEnabled = n > 0;
         SaveButton.Content = Lang.T("workshop.label.saveBlueprint");
         SaveButton.Tip("top.saveBlueprint");
@@ -43,6 +44,9 @@ public partial class MainWindow
         UndoButton.IsEnabled = s.CanUndo;
         RedoButton.IsEnabled = s.CanRedo;
     }
+
+    /// <summary>The bar's count of creatures sunk into a piece (the last support check's); null when none or unchecked.</summary>
+    private string? SunkText => LastSupport != null && LastSunk.Count > 0 ? Lang.T("workshop.bar.sunk", LastSunk.Count) : null;
 
     /// <summary>
     /// After a change Claude made (ClaudeTools): the save bar, the support check, the message (in the user's language,

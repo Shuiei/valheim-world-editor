@@ -49,7 +49,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>set_transform: exact places, turns and sizes, each object its own (see <see cref="TransformSpec"/>).</summary>
     [McpServerTool(Name = "set_transform", Title = "Place, turn or size objects exactly")]
-    [Description("Puts objects of the open area (by id) exactly where given: position, yaw, pitch, roll and size, each object its own; what is left out stays as it is. A part of a group a mod links into one (a ship and the pieces built on it) takes its whole group along (its root first when both are given). Each keeps what it holds but gets a new id (the answer gives them). Objects that would leave the area are left out and named. One pending step.")]
+    [Description("Puts objects of the open area (by id) exactly where given: position, yaw, pitch, roll and size, each object its own; what is left out stays as it is. A part of a group a mod links into one (a ship and the pieces built on it) takes its whole group along (its root first when both are given). A creature whose origin would be inside a building piece is stood on top of it (stood says how many; the answer gives the final y). Each keeps what it holds but gets a new id (the answer gives them). Objects that would leave the area are left out and named. One pending step.")]
     public Task<string> SetTransform(
         [Description("The objects and their new values.")] TransformSpec[] objects,
         [Description("A few words for the history.")] string label = "Claude: placed exactly") => OnUi(() =>
@@ -78,10 +78,11 @@ public sealed partial class ClaudeTools
         {
             return "Nothing changed: " + string.Join("; ", problems);
         }
+        int stood = CreatureStand.Apply(scene, null, moves);
         var copies = s.Transform(moves, ClaudesLabel(label));
-        _w.AfterClaudeEdit(Said.Of("claude.msg.placed", copies.Count));
+        _w.AfterClaudeEdit(Said.Of("claude.msg.placed", copies.Count) + CreatureStand.Note(stood));
         // Then come the other parts of the linked groups moved (ObjectLinks), which went along.
         GaveIds(scene, reads);
-        return ToJson(new { placed = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), alongWithGroups = copies.Count - moves.Count, problems, pending = Pending() });
+        return ToJson(new { placed = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), stood, alongWithGroups = copies.Count - moves.Count, problems, pending = Pending() });
     });
 }

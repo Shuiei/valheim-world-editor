@@ -81,6 +81,8 @@ public static partial class Workshop
                 }
             }
         }
-        return new Planned(parsed.Name, at == null, parsed.Ruin, adds, unknown, shift.Y, terrain);
+        // A creature inside one of the pieces (its own, or those on the plot) stands on top of it.
+        int stood = CreatureStand.Apply(s.Scene, adds);
+        return new Planned(parsed.Name, at == null, parsed.Ruin, adds, unknown, shift.Y, terrain, stood);
     }
 }

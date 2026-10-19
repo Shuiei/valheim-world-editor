@@ -30,7 +30,10 @@ public sealed partial class SelectTool
 
     /// <summary>What to tell the user, in both languages (the flag (warn): shown as a problem).</summary>
     public event Action<Said, bool>? Message;
-    /// <summary>Put each moved object on the ground where it ends up (pieces as one block: see GroundBlock).</summary>
+    /// <summary>
+    /// Put each moved object on what is under it where it ends up: a floor, a table, another object, else the ground
+    /// (see Landed; pieces as one block: see GroundBlock).
+    /// </summary>
     public bool OnGround { get; set; } = true;
     /// <summary>Snap moved building pieces to the pieces around.</summary>
     public bool SnapToPieces { get; set; } = true;
@@ -101,6 +104,8 @@ public sealed partial class SelectTool
         public int Groups;
         /// <summary>What such a group is called ("vehicle").</summary>
         public string Noun = LinkRule.DefaultName;
+        /// <summary>The boxes of the drawn objects the moved ones can land on (not the moved ones), gathered at the first landing.</summary>
+        public DropBoxes? Under;
     }
 
     /// <summary>The move in progress, if any.</summary>
@@ -119,7 +124,7 @@ public sealed partial class SelectTool
     /// The boxes (view space) of the drawn objects a drop can land on, by the 4 m cell (x, z) they cover, so each point
     /// of a drop looks only at the boxes over it.
     /// </summary>
-    private sealed class DropBoxes
+    internal sealed class DropBoxes
     {
         /// <summary>The cell size, in metres.</summary>
         private const float Cell = 4;

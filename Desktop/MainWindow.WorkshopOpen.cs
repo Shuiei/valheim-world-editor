@@ -25,14 +25,9 @@ public partial class MainWindow
             (name, text, details) = read;
         }
         // Left only once the blueprint could be read.
-        if (World is { } open)
+        if (World != null)
         {
-            // An area still loading in it is not opened, nor the one left open again.
-            _navigation++;
-            open.Dispose();
-            World = null;
-            Session = null;
-            Tunnel.Close();
+            CloseWorld();
         }
         // The area's name stays English: Claude reads it (editor_state); the title shows it in the user's language.
         var scene = Workshop.Create(name != null ? $"Workshop · {name}" : "Workshop");
@@ -51,10 +46,10 @@ public partial class MainWindow
         var msg = Said.Of("workshop.msg.welcome");
         if (path != null)
         {
-            var (placed, unknown, lift, terrain) = Workshop.Open(scene.Session!, path, text);
+            var (placed, unknown, lift, terrain, stood) = Workshop.Open(scene.Session!, path, text);
             _workshopLift = lift;
             _workshopTerrain = terrain;
-            msg = Said.Of("workshop.msg.opened", name, placed) + UnknownLeftOut(unknown) + Said.Of("workshop.msg.changeIt");
+            msg = Said.Of("workshop.msg.opened", name, placed) + UnknownLeftOut(unknown) + CreatureStand.Note(stood) + Said.Of("workshop.msg.changeIt");
         }
         _workshopSaved = scene.Session!.Edits.Version;
         EnterBuilding();

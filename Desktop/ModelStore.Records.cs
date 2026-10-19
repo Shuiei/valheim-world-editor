@@ -67,7 +67,9 @@ public sealed partial class ModelStore
     /// <param name="UvTransform">Texture scale (x, y) then offset (z, w), applied as uv * scale + offset.</param>
     /// <param name="Transparent">See-through (glass, water): blended with what is behind it by its alpha (the colour's
     /// times the texture's), after the opaque objects; false: opaque, or cut out at <paramref name="Cutoff"/>.</param>
-    public sealed record MaterialData(Vector4 Color, string? Map, float Cutoff, bool DoubleSided, Vector4 UvTransform, bool Transparent = false);
+    /// <param name="Foliage">Drawn with the game's vegetation or grass shaders (leaves, bushes, grass, cloth that sways like them):
+    /// a click counts it only where nothing solid is behind it along the ray.</param>
+    public sealed record MaterialData(Vector4 Color, string? Map, float Cutoff, bool DoubleSided, Vector4 UvTransform, bool Transparent = false, bool Foliage = false);
     /// <summary>
     /// A texture's pixels.
     /// </summary>

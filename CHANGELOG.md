@@ -4,6 +4,70 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.60.0 — unreleased
+
+### Changed
+- **Moved objects land on what is under them, not only on the ground.** With the Select tool's **Put each object on
+  the ground when moving** on, a chair, a chest, a creature or any other object you move now ends up on the top of
+  the floor, stair, table or other object under it where you let go, and on the ground only when nothing is under
+  it, as `End` has always dropped it. Each object is carried at the height above the ground it had, so a top higher
+  than the object itself (a roof, a wall) does not count: it goes under. A building still moves as one block that
+  keeps its shape, its bottom layer put on the floor or platform under it, else on the ground. Before, every moved
+  object was set onto the ground, through the floor it was moved onto.
+  
+## v1.59.0 — unreleased
+
+### Added
+- **Creatures are never sunk into building pieces.** A creature put down, moved, copied, pasted, placed by a script or
+  brought by a blueprint with its feet inside a floor, a wall or any other building piece now stands on top of the
+  highest piece under it instead; the ground is left as it was (a creature stands on it as placed). The message of
+  each step says how many were lifted (`2 creature(s) stood on the piece under them.`), and Claude's answers give
+  their final height. The Workshop's support check also counts the creatures still inside a piece (a blueprint from
+  another tool can have them) in its bar and in Claude's `support_check`.
+
+## v1.58.0 — unreleased
+
+### Added
+- **Blueprints say which pieces only the editor can place, and cost only what the hammer builds.** Homestead's
+  hammer builds the real build pieces of a blueprint and silently skips the rest (statues, ships, creatures, the
+  T.W.I.G.); only the editor places those, into a world or live. A blueprint the editor saves now marks them in its
+  file (lines Homestead skips), the library and Claude's `list_blueprints` say how many (`2 of 40 piece(s) only the
+  editor can place`), and the cost shown for a blueprint (library, Build panel, the Workshop's title and save dialog,
+  `list_blueprints`) leaves them out, so it is what a hammer user pays. Blueprints from before, or Homestead's own,
+  carry no marks and say nothing rather than a wrong zero.
+
+## v1.57.5 — unreleased
+
+### Fixed
+- **A bed on a floor can be clicked again.** A click on a bed, a hide rug or any other piece drawn with a cut-out
+  material went through it to the floor piece under it, as it does through a tree's leaves. Only leaves, bushes and
+  grass are looked through now; a cut-out piece is picked where its shape is, like any other.
+
+## v1.57.4 — unreleased
+
+### Fixed
+- **Opening the Workshop while a live world is open no longer leaves the map asking the game for its players.** The
+  world's connection was closed with the world, but the map kept asking it every few seconds, and the log filled with
+  "Cannot access a disposed object" lines until the editor was closed or another world opened.
+
+## v1.57.3 — unreleased
+
+### Fixed
+- **Live, the editor shows every object where the game really has it, its own included.** An object you placed and
+  applied kept the place and data the editor sent: the game had since set the object up (a creature's health, its
+  spawn point and look) and physics had settled it, and the editor, Claude's `get_object` and `list_objects` still
+  showed the editor's copy. Creatures and other things that move on their own, and objects another mod changes, were
+  followed only when they appeared or went. Now, once applied, your objects take the place, turn and data the game
+  gives them (under the same id: undo still takes them away, and a copy is made from the game's version), and
+  creatures, ships, carts, items, fires and the like are followed as they move or change, read alone so a creature
+  walking does not have its whole zone read at every look. Needs WorldEditorBridge 1.57.3 for the moves; with an
+  older plugin, your applied objects still take the game's data when something else in their zone changes.
+
+### WorldEditorBridge
+- `POST /watch` gives a second number per zone, which changes when a kind that moves or ticks on its own (creatures,
+  ships, carts, items, fires, smelters...) moves or changes its data; the first number is as before.
+- `POST /zone/movers` serves only those kinds of the zones asked for, in `/zone`'s format.
+
 ## v1.57.2 — unreleased
 
 ### Fixed

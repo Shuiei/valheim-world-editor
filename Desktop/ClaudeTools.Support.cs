@@ -10,7 +10,7 @@ public sealed partial class ClaudeTools
 {
     /// <summary>support_check: the Workshop's support check, the pieces that would fall and the weakest still standing.</summary>
     [McpServerTool(Name = "support_check", ReadOnly = true, Title = "Would it stand?")]
-    [Description("The Workshop's support check, as the game computes it: for the building pieces on the plot, which would fall (nothing holds them up enough) and the weakest ones still standing (support 0 about to fall, 1 strong). Pieces on the ground hold best; support drops with each piece away from it (wood less far than stone, iron further).")]
+    [Description("The Workshop's support check, as the game computes it: for the building pieces on the plot, which would fall (nothing holds them up enough) and the weakest ones still standing (support 0 about to fall, 1 strong). Pieces on the ground hold best; support drops with each piece away from it (wood less far than stone, iron further). Also the creatures sunk into a piece (creaturesInPieces: their ids), which the editor's own placing never leaves but a blueprint from another tool can.")]
     public Task<string> SupportCheck() => OnUi(() =>
     {
         if (!_w.InWorkshop)
@@ -38,7 +38,8 @@ public sealed partial class ClaudeTools
         var falling = r.Falls.Take(60).Select(Piece).ToList();
         // Support: 0 (red, about to fall) to 1 (green); pieces on the ground (light blue in the editor) hold best and are left out.
         var weakest = Enumerable.Range(0, things.Count).Where(k => !r.Free[k] && !r.Breaks[k] && r.Colour[k] >= 0).OrderBy(k => r.Colour[k]).Take(10).Select(Piece).ToList();
-        if (falling.Count > 0 || weakest.Count > 0)
+        var sunk = CreatureStand.Sunk(scene);
+        if (falling.Count > 0 || weakest.Count > 0 || sunk.Count > 0)
         {
             GaveIds(scene, reads);
         }
@@ -49,6 +50,7 @@ public sealed partial class ClaudeTools
             falling,
             weakest,
             onTheGround = Enumerable.Range(0, things.Count).Count(k => r.Colour[k] < 0),
+            creaturesInPieces = sunk,
         });
     });
 }

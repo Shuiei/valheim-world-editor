@@ -85,7 +85,7 @@ public class ScriptHostTests
 			""");
         Assert.Equal("top 55", ch.Output.ToString().Trim());
         Assert.Equal(121, ch.Heights.Count);
-        Assert.Equal(0, ScriptHost.Apply(s, ch, "Script: test"));
+        Assert.Equal(0, ScriptHost.Apply(s, ch, "Script: test").Clamped);
         Assert.Equal(55, At(s, 45, 45), 3);
         // Past the ±8 m: the rest is lift, saved as ground discs.
         Assert.True(s.Ground.Lift[(45 + 32) * s.Ground.W + 45 + 32] > 16);
@@ -128,7 +128,7 @@ public class ScriptHostTests
     {
         var s = TestScenes.Flat(2);
         var ch = Run(s, "Ground.NoLimit = false; Ground.Raise(45, 45, 20);");
-        Assert.Equal(1, ScriptHost.Apply(s, ch, "Script: test"));
+        Assert.Equal(1, ScriptHost.Apply(s, ch, "Script: test").Clamped);
         Assert.Equal(38, At(s, 45, 45), 3);
     }
 

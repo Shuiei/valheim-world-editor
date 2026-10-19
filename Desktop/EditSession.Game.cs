@@ -9,8 +9,9 @@ public sealed partial class EditSession
     /// <summary>
     /// Live: what the game changed (WorldSession.MergeGame), taken into the area without an undo step: objects removed
     /// in the game go, changed ones are shown as they are now (same thing, same place in the history), new ones come,
-    /// and the ground of the zones given is read again. Taking the same changes twice changes nothing (an area opened
-    /// meanwhile may already have them). Not during a stroke (false: given again next time).
+    /// the editor's own objects the game moved or gave data to are shown as the game has them, and the ground of the
+    /// zones given is read again. Taking the same changes twice changes nothing (an area opened meanwhile may already
+    /// have them). Not during a stroke (false: given again next time).
     /// </summary>
     /// <returns>False during a stroke: given again next time.</returns>
     public bool TakeGameChanges(WorldSession.Followed f)
@@ -24,7 +25,7 @@ public sealed partial class EditSession
                 return false;
             }
             var gone = f.Merged.Vanished.Concat(f.Ours).ToHashSet();
-            var update = f.Merged.Updated.Concat(f.Merged.Added).ToHashSet();
+            var update = f.Merged.Updated.Concat(f.Merged.Added).Concat(f.Refreshed).ToHashSet();
             // The objects as the world has them now, by id (those changed or new).
             var now = WorldScene.FindThings(Scene.World, Edits, update);
             TakeThingChanges(gone, now, changed);
