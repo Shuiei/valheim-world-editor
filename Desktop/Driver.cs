@@ -20,6 +20,7 @@ namespace TerrainEditor.Desktop;
 ///                                   the View panel's Look switches
 ///    camera &lt;x&gt; &lt;z&gt; &lt;yaw°&gt; &lt;pitch°&gt; &lt;distance&gt; [y]  the 3D view's camera on world x, z (at height y:
 ///                                               inside a dungeon)
+///    camera reset                   the camera's mode, turn, tilt and distance as the editor starts with them
 ///    click &lt;text&gt;                   the visible button, switch or box labelled so, or whose words
 ///                                   begin so (windows and dialogs)
 ///    choose &lt;text&gt;                  the entry so named in whichever visible list has it
