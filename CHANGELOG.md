@@ -25,6 +25,13 @@ the plugin is unchanged in versions without that part.
   `list_blueprints`) leaves them out, so it is what a hammer user pays. Blueprints from before, or Homestead's own,
   carry no marks and say nothing rather than a wrong zero.
 
+## v1.57.5 — unreleased
+
+### Fixed
+- **A bed on a floor can be clicked again.** A click on a bed, a hide rug or any other piece drawn with a cut-out
+  material went through it to the floor piece under it, as it does through a tree's leaves. Only leaves, bushes and
+  grass are looked through now; a cut-out piece is picked where its shape is, like any other.
+
 ## v1.57.4 — unreleased
 
 ### Fixed

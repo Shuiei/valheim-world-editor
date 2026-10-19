@@ -50,8 +50,9 @@ the selection is.*
 - A click finds an object by its **drawn shape**, not by the box round it. The boxes only say which
   objects to try; then each one's model decides. A chest or a stone under a tree's branches can be
   clicked between the branches.
-- Leaves, bushes, grass and other cut-out foliage count only where nothing solid is behind them along
-  the line of the click. Clicking through a bush onto a rock picks the rock.
+- Leaves, bushes and grass count only where nothing solid is behind them along the line of the click.
+  Clicking through a bush onto a rock picks the rock. A piece drawn with a cut-out material (a bed's
+  fur, a hide rug) is not looked through: a bed on a floor is picked, not the floor.
 - When the ground is hit first (with half a metre of slack), nothing is picked: the click is on the
   ground.
 - A standing tree is outlined by a column round its trunk (a tenth of its crown's width across, 0.5 to
