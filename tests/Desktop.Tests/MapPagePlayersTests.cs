@@ -38,6 +38,29 @@ public class MapPagePlayersTests
         }
     }
 
+    // The Workshop opened over a live world closes the world: the map no longer asks the closed connection for its
+    // players (it did, every few seconds: the players line then said the game did not answer, and the log got a
+    // disposed-client line each time).
+    [AvaloniaFact]
+    public async Task TheWorkshopOpenedOverALiveWorldEndsItsPlayersPolling()
+    {
+        using var game = new FakeGame();
+        var w = await ConnectingTo(game);
+        var m = w.MapPage!;
+        await TestWindows.Until(() => m.LiveText.Text == "Live world · 2 player(s) online: Ada, Bjorn");
+        w.Ask = (_, _, _, _) => Task.FromResult(true);
+        w.Tell = _ => Task.CompletedTask;
+        await w.OpenWorkshop(null);
+        Assert.True(w.InWorkshop);
+        Assert.Null(w.World);
+        int asked = game.PlayerReads;
+        await m.PollPlayers();
+        Assert.Equal(asked, game.PlayerReads);
+        Assert.Equal("Live world · 2 player(s) online: Ada, Bjorn", m.LiveText.Text);
+        Assert.Empty(m.Map.Players);
+        w.CloseWithoutAsking();
+    }
+
     // A game slow to answer gets one players question at a time, and its answer, come after another world is
     // shown, does not put its players on that world's map.
     [AvaloniaFact]

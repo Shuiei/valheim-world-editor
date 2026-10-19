@@ -17,6 +17,16 @@ public sealed partial class MainWindow
         {
             return;
         }
+        CloseWorld();
+        ShowStart();
+    }
+
+    /// <summary>
+    /// Closes the world open (for the start page, or the Workshop): its live connection ends with it, the map stops
+    /// asking the game for its players, and nothing of it is kept for the next world.
+    /// </summary>
+    private void CloseWorld()
+    {
         // An area still loading in it is not opened, nor the one left open again.
         _navigation++;
         World?.Dispose();
@@ -25,7 +35,7 @@ public sealed partial class MainWindow
         // A backup read for the Area tool's restore is not kept for the next world.
         AreaPanel.ForgetBackup();
         Tunnel.Close();
-        ShowStart();
+        MapPage?.Forget();
     }
 
     /// <summary>
