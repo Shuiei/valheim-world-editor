@@ -25,8 +25,8 @@ internal static class SharedPlaceTool
     /// </summary>
     internal static void NameWallAndBeech(PlaceTool t)
     {
-        const string wall = "woodwall";
-        t.NameOf = h => h == StableHash.Of(wall) ? wall : h == StableHash.Of("Beech1") ? "Beech1" : null;
+        const string Wall = "woodwall";
+        t.NameOf = h => h == StableHash.Of(Wall) ? Wall : h == StableHash.Of("Beech1") ? "Beech1" : null;
     }
 
     /// <summary>

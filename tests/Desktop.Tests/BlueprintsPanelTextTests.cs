@@ -28,9 +28,9 @@ public class BlueprintsPanelTextTests
     [Fact]
     public void TheTagsLineGivesWhatFollowsItsMarker()
     {
-        const string text = "name\n#Tags: wood, stone\nbody";
+        const string Text = "name\n#Tags: wood, stone\nbody";
 
-        Assert.Equal(" wood, stone", PrivateMember.Call<string>(typeof(BlueprintsPanel), "TagsOf", null, text));
+        Assert.Equal(" wood, stone", PrivateMember.Call<string>(typeof(BlueprintsPanel), "TagsOf", null, Text));
     }
 
     [Fact]

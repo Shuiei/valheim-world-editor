@@ -32,7 +32,7 @@ public class EditSessionMovedCopyTests
         // A thing of the world: itself; one added from it: the same; one put new: none.
         int copied = s.Commit("Put", null, [], [(new Editing.NewObject(0, StableHash.Of("Rock_4"), new Vector3(20, 30, 20), Vector3.Zero, 0, 3, false), false)])[0];
         int put = s.Commit("Put", null, [], [(new Editing.NewObject(0, StableHash.Of("Rock_4"), new Vector3(25, 30, 20), Vector3.Zero, 0, null, true), false)])[0];
-        Assert.Equal<int?>([3, 3, null], [.. new[] { 0, copied, put }.Select(i => s.CopySourceOf(s.Scene.Things[i]).SourceId)]);
+        Assert.Equal([3, 3, null], [.. new[] { 0, copied, put }.Select(i => s.CopySourceOf(s.Scene.Things[i]).SourceId)]);
     }
 
     [Fact]

@@ -160,8 +160,8 @@ public sealed class AreaPanelLangTests
         // Backups: none chosen, another world and this one read, nothing to restore.
         r.P.Choose(AreaPanel.Act.Backup);
         await r.P.Apply();
-        var other = TerrainEditor.Save.WorldSave.Load(r.Dir);
-        typeof(TerrainEditor.Save.WorldSave).GetProperty(nameof(TerrainEditor.Save.WorldSave.Seed))!.SetValue(other, other.Seed + 1);
+        var other = Save.WorldSave.Load(r.Dir);
+        typeof(Save.WorldSave).GetProperty(nameof(Save.WorldSave.Seed))!.SetValue(other, other.Seed + 1);
         Assert.Null(await r.P.OpenBackup(r.Dir, other));
         Assert.StartsWith(PseudoLang.Wrap("That is another world (seed ")[..^1], r.P.BackupInfo.Text);
         Assert.NotNull(await r.P.OpenBackup(r.Dir, r.S.Scene.World));

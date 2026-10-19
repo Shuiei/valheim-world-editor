@@ -36,7 +36,7 @@ public class AreaPanelReplaceTests
     {
         // The kind was cut out of the list's entry at " (", so a mod's "Beech1 (mod)" matched nothing: 0 replaced.
         using var r = new SharedAreaPanelRun();
-        var p = new AreaPanel(r.W.View, () => r.S, k => (TerrainEditor.Terrain.PrefabCatalog.DisplayName(k) ?? k.ToString(CultureInfo.InvariantCulture)) + " (mod)");
+        var p = new AreaPanel(r.W.View, () => r.S, k => (Terrain.PrefabCatalog.DisplayName(k) ?? k.ToString(CultureInfo.InvariantCulture)) + " (mod)");
         string said = "";
         p.Message += m => said = m.Shown;
         p.Choose(AreaPanel.Act.Replace);

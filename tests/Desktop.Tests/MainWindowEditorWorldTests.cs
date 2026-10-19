@@ -58,7 +58,7 @@ public class MainWindowEditorWorldTests
         await r.Open();
         r.Raise();
         var area = r.W.Session;
-        int n = TerrainEditor.Save.WorldWriter.LatestNumber(r.Dir);
+        int n = Save.WorldWriter.LatestNumber(r.Dir);
         foreach (string ext in new[] { ".chunks", ".db2", ".fwl2", ".ok" })
         {
             File.Copy(Path.Combine(r.Dir, $"_main.{n}{ext}"), Path.Combine(r.Dir, $"_main.{n + 1}{ext}"));
@@ -82,7 +82,7 @@ public class MainWindowEditorWorldTests
 
         await r.W.Save();
         Assert.Equal((0, 0, 0, 0), r.W.World.Pending);
-        Assert.Equal(n + 2, TerrainEditor.Save.WorldWriter.LatestNumber(r.Dir));
+        Assert.Equal(n + 2, Save.WorldWriter.LatestNumber(r.Dir));
     }
 
     [AvaloniaFact]

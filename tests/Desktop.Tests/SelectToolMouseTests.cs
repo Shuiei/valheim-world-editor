@@ -105,7 +105,7 @@ public class SelectToolMouseTests
         v.Tool.Moved(v.At(46, 30, 36), v.Size);
         v.Tool.Moved(v.At(46, 30, 44), v.Size);
         Assert.NotNull(v.Tool.Lasso);
-        Assert.True(v.Tool.Key(Avalonia.Input.Key.Escape, false));
+        Assert.True(v.Tool.Key(Key.Escape, false));
         Assert.Null(v.Tool.Lasso);
     }
 
