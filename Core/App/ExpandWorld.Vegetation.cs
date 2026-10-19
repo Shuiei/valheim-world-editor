@@ -70,8 +70,8 @@ public static partial class ExpandWorld
         bool enabled = f.B("enabled", true);
         if (enabled)
         {
-            var required = f.Rows("requiredGlobalKey").Select(SplitList).Where(row => row.Length > 0).ToList();
-            var forbidden = f.Rows("forbiddenGlobalKey").Select(SplitList).Where(row => row.Length > 0).ToList();
+            var required = KeyRows(f, "requiredGlobalKeys", "requiredGlobalKey");
+            var forbidden = KeyRows(f, "forbiddenGlobalKeys", "forbiddenGlobalKey");
             bool Has(string key) => globalKeys.Contains(key.Trim().ToLowerInvariant());
             enabled = (required.Count == 0 || required.All(row => row.Any(Has))) && !(forbidden.Count > 0 && forbidden.All(row => row.Any(Has)));
         }
@@ -123,6 +123,13 @@ public static partial class ExpandWorld
             distance = ownCentre && (minDistance != 0f || maxDistance != 0f) ? [minDistance, maxDistance] : null,
         };
     }
+
+    /// <summary>
+    /// A rule's global key rows: the field's name since Data 1.79 (plural; the mod renames the old one in its files),
+    /// else the older name a file written before it still has.
+    /// </summary>
+    private static List<string[]> KeyRows(Fields f, string key, string older) =>
+        [.. f.Rows(f.Has(key) ? key : older).Select(SplitList).Where(row => row.Length > 0)];
 
     /// <summary>
     /// A scale as the mod parses one ("1", or "x, z, y"): the game's x, y, z; a missing or unreadable number 0, then 0

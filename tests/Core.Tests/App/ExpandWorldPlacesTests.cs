@@ -218,6 +218,24 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
     }
 
     [Fact]
+    public void TheGlobalKeyFieldsAreReadByTheirNamesSinceData179()
+    {
+        List<string> notes = [];
+        var game = Regrow.GameRules;
+        string known = game[0].prefab;
+        var keys = new HashSet<string> { "defeated_eikthyr" };
+        var rules = ExpandWorld.VegetationOf(
+        [
+            E(("prefab", known), ("requiredGlobalKeys", "defeated_bonemass")),
+            E(("prefab", known), ("requiredGlobalKeys", "defeated_eikthyr")),
+            E(("prefab", known), ("forbiddenGlobalKeys", "defeated_eikthyr")),
+            // The new name wins over the old one when a file has both.
+            E(("prefab", known), ("requiredGlobalKeys", "defeated_eikthyr"), ("requiredGlobalKey", "defeated_bonemass")),
+        ], game, BiomeTable.Vanilla, 10000f, keys, notes);
+        Assert.Equal([0, 1, 0, 1], rules.Select(r => r.enable));
+    }
+
+    [Fact]
     public void AScaleIsReadAsTheModReadsOne()
     {
         Assert.Equal([1f, 1f, 1f], ExpandWorld.ScaleOf("0"));
@@ -253,7 +271,7 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         YamlStandIn.Install(bep);
         File.WriteAllText(Path.Combine(bep, "config", "expand_world_data.cfg"), "[1. General]\nZone spawners = false\nRandom locations = true\n[3. Data]\nLocation data = true\nVegetation data = true\nAlt biome data = true\n");
         File.WriteAllText(Path.Combine(data, "expand_locations.yaml"), "- prefab: StartTemple:Copy\n  quantity: 2\n- prefab: StartTemple\n  quantity: 1\n");
-        File.WriteAllText(Path.Combine(data, "expand_vegetation.yaml"), $"- prefab: {Regrow.GameRules[0].prefab}\n  requiredGlobalKey: defeated_eikthyr\n");
+        File.WriteAllText(Path.Combine(data, "expand_vegetation.yaml"), $"- prefab: {Regrow.GameRules[0].prefab}\n  requiredGlobalKeys: defeated_eikthyr\n");
         File.WriteAllText(Path.Combine(data, "expand_altbiomes.yaml"), "- name: DarkMeadows\n  blockLocationNames:\n  - StartTemple\n");
         var found = ExpandWorld.Look(bep, "test");
         var rules = ExpandWorld.Rules(new Dictionary<string, string>(), found, ExpandWorld.ReadData(found), ["defeated_eikthyr 1"]);
