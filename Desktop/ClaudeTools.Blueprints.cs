@@ -87,11 +87,11 @@ public sealed partial class ClaudeTools
 
     /// <summary>list_blueprints: Homestead's library, filtered by words of the name, creator, description or tags.</summary>
     [McpServerTool(Name = "list_blueprints", ReadOnly = true, Title = "The blueprint library")]
-    [Description("The user's blueprints (Homestead's library): name, pieces, cost, description, tags. Open one in the Workshop (open_workshop) or add it to the plot (add_blueprint).")]
+    [Description("The user's blueprints (Homestead's library): name, pieces, cost (what Homestead's hammer takes: pieces only the editor can place, such as statues, ships and creatures, cost nothing), how many pieces only the editor can place (editorOnly; null when the file does not say), description, tags. Open one in the Workshop (open_workshop) or add it to the plot (add_blueprint).")]
     public Task<string> ListBlueprints([Description("Words to find in the name, creator, description or tags (optional).")] string? query = null) => OnUi(() =>
     {
         return ToJson(Homestead.List(_w.Blueprints.LookAgain().Folder)
             .Where(e => e.Matches(query))
-            .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Terrain.PieceCost.Of(e.Kinds).Describe(4, english: true), description = e.Description, tags = e.Tags }));
+            .Select(e => new { name = e.Name, pieces = e.Pieces, cost = Homestead.Cost(e.Kinds).Describe(4, english: true), editorOnly = e.EditorOnlyNote?.English, description = e.Description, tags = e.Tags }));
     });
 }
