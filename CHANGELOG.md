@@ -15,6 +15,13 @@ the plugin is unchanged in versions without that part.
   `list_blueprints`) leaves them out, so it is what a hammer user pays. Blueprints from before, or Homestead's own,
   carry no marks and say nothing rather than a wrong zero.
 
+## v1.57.4 — unreleased
+
+### Fixed
+- **Opening the Workshop while a live world is open no longer leaves the map asking the game for its players.** The
+  world's connection was closed with the world, but the map kept asking it every few seconds, and the log filled with
+  "Cannot access a disposed object" lines until the editor was closed or another world opened.
+
 ## v1.57.3 — unreleased
 
 ### Fixed
