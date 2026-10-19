@@ -256,7 +256,7 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         File.WriteAllText(Path.Combine(bep, "config", "expand_world_data.cfg"), "[1. General]\nZone spawners = false\nRandom locations = true\n[3. Data]\nLocation data = true\nVegetation data = true\nAlt biome data = true\n");
         File.WriteAllText(Path.Combine(data, "expand_locations.yaml"), "- prefab: StartTemple:Copy\n  quantity: 2\n- prefab: StartTemple\n  quantity: 1\n");
         File.WriteAllText(Path.Combine(data, "expand_vegetation.yaml"), $"- prefab: {Regrow.GameRules[0].prefab}\n  requiredGlobalKey: defeated_eikthyr\n");
-        File.WriteAllText(Path.Combine(data, "expand_altbiomes.yaml"), "- name: DarkMeadows\n  blockLocationNames:\n  - StartTemple:Copy\n");
+        File.WriteAllText(Path.Combine(data, "expand_altbiomes.yaml"), "- name: DarkMeadows\n  blockLocationNames:\n  - StartTemple\n");
         var found = ExpandWorld.Look(bep, "test");
         var rules = ExpandWorld.Rules(new Dictionary<string, string>(), found, ExpandWorld.ReadData(found), ["defeated_eikthyr 1"]);
         Assert.NotNull(rules.Locations);
@@ -272,10 +272,11 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         Assert.Contains("random locations", text);
         // The rules tell generators apart by their places too.
         Assert.NotEqual(rules.Stamp, (rules with { Vegetation = null }).Stamp);
-        // The layout takes the world's own kinds: the clone is laid out, as the start.
+        // The layout takes the world's own kinds: the clone is laid out first (the alt biome blocks the other kind).
         var gen = WorldGenerator.Create(new World { Seed = 1, WorldGenVersion = 2, Rules = rules });
         Assert.True(SeedLocations.AvailableFor(gen));
-        var placed = SeedLocations.Place(gen, SeedLocations.Which.Start, cancel: TestContext.Current.CancellationToken);
-        Assert.Equal("StartTemple:Copy", Assert.Single(placed).Rule.Prefab);
+        var placed = SeedLocations.Place(gen, SeedLocations.Which.All, cancel: TestContext.Current.CancellationToken);
+        Assert.NotEmpty(placed);
+        Assert.All(placed, p => Assert.Equal("StartTemple:Copy", p.Rule.Prefab));
     }
 }

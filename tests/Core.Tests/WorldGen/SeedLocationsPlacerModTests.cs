@@ -34,6 +34,7 @@ public class SeedLocationsPlacerModTests
             MinAltitude = -1000f,
             MaxAltitude = 1000f,
             MaxTerrainDelta = 1000f,
+            MaximumVegetation = 1f,
         };
         set?.Invoke(rule);
         return rule;
@@ -118,18 +119,18 @@ public class SeedLocationsPlacerModTests
     public void AltitudeLimitsAreScaledByTheBiomesTransformWhenAsked()
     {
         var plainGen = Gen(false);
-        // A Meadows spot between 10 and 20 m above the sea.
-        var (x, z) = GeneratorPoints.Rings(300, 3000, 100, 24).First(p => plainGen.GetBiome(p.X, p.Z) == Heightmap.Biome.Meadows && plainGen.GetHeight(p.X, p.Z) - 30f is > 10f and < 20f);
-        var rule = Open("Hut", set: r => { r.MinAltitude = 10f; r.MaxAltitude = 1000f; });
+        // A Meadows spot between 10 and 14 m above the sea, for a kind that wants no more than 15 m.
+        var (x, z) = GeneratorPoints.Rings(300, 3000, 100, 24).First(p => plainGen.GetBiome(p.X, p.Z) == Heightmap.Biome.Meadows && plainGen.GetHeight(p.X, p.Z) - 30f is > 10f and < 14f);
+        var rule = Open("Hut", set: r => r.MaxAltitude = 15f);
         var spot = new Vector3(x, 0f, z);
         Assert.True(Placer(plainGen).OnRightGround(rule, Heightmap.Biome.All, ref spot, out _));
-        // Meadows doubled: the limit of 10 m becomes 20 m, past the spot.
+        // Meadows doubled: the ground rises to 20..28 m; the limit scaled with it (30 m) still holds the spot, the
+        // limit as written (15 m) no longer does.
         var meadows = BiomeTable.Vanilla.Of(Heightmap.Biome.Meadows)! with { HasData = true, Height = new HeightTransform { Multiplier = 2f } };
         var table = new BiomeTable([.. BiomeTable.Vanilla.Biomes.Select(b => b.Value == Heightmap.Biome.Meadows ? meadows : b)]);
         var scaledGen = WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = 2, Rules = new WorldRules { DataInstalled = true, BiomeData = true, Biomes = table, ScaleLocationAltitude = true } });
-        Assert.False(Placer(scaledGen).OnRightGround(rule, Heightmap.Biome.All, ref spot, out _));
-        // Not asked, or the biome file off: the limit as written.
+        Assert.True(Placer(scaledGen).OnRightGround(rule, Heightmap.Biome.All, ref spot, out _));
         var unscaled = WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = 2, Rules = new WorldRules { DataInstalled = true, BiomeData = true, Biomes = table } });
-        Assert.True(Placer(unscaled).OnRightGround(rule, Heightmap.Biome.All, ref spot, out _));
+        Assert.False(Placer(unscaled).OnRightGround(rule, Heightmap.Biome.All, ref spot, out _));
     }
 }

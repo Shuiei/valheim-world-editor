@@ -9,8 +9,21 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class WorldCreatorZoneControlTests
 {
-    private static int PlaceZoneControls(ZoneDb db, WorldCreator.ChunkBatch batch, HashSet<(int X, int Z)> left, int radius) =>
-        (int)PrivateCall.Static(typeof(WorldCreator), "PlaceZoneControls", db, batch, left, radius)!;
+    private static int PlaceZoneControls(ZoneDb db, WorldCreator.ChunkBatch batch, HashSet<(int X, int Z)> left, int radius, bool spawners = true) =>
+        (int)PrivateCall.Static(typeof(WorldCreator), "PlaceZoneControls", db, batch, left, radius, spawners)!;
+
+    [Fact]
+    public void WithoutSpawnersTheZonesAreGeneratedButGetNoControl()
+    {
+        var db = new ZoneDb();
+        var batch = new WorldCreator.ChunkBatch();
+        int zones = PlaceZoneControls(db, batch, [], 1, spawners: false);
+        Assert.Equal(9, zones);
+        Assert.Equal(9, db.Generated.Count);
+        Assert.Equal(0, batch.Objects);
+        PlaceZoneControls(db, batch, [], 1);
+        Assert.Equal(9, batch.Objects);
+    }
 
     [Fact]
     public void EveryZoneInTheRadiusIsGeneratedWhenNoneIsLeftToTheGame()
