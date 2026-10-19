@@ -9,10 +9,11 @@ namespace TerrainEditor.Editing;
 /// boxes, grown by 0.3 m, touch), less the material's loss for the distance between their centres of
 /// mass and the angle (horizontal loses more than vertical); two supports on opposite sides average.
 /// Repeated until nothing changes; pieces below their material's minimum break, then the rest is worked
-/// out again (the collapse spreading). The pieces' colliders, materials and centres are read from the
-/// player's own Valheim (GameData; the tests use tests/fixtures/piece-support.json). Not counted: other
-/// objects (rocks, trees) the game would also take as full support, and mesh colliders' exact shapes
-/// (their boxes).
+/// out again (the collapse spreading). Colliders on a Rigidbody (a ship's, a door's swinging leaf) take no
+/// part, as in the game. The pieces' colliders, materials and centres are read from the player's own
+/// Valheim (GameData; the tests use tests/fixtures/piece-support.json). Not counted: other objects
+/// (rocks, trees) the game would also take as full support, and mesh colliders' exact shapes (their
+/// boxes).
 /// </summary>
 public static partial class Stability
 {
@@ -22,7 +23,11 @@ public static partial class Stability
     /// <param name="Q">Its rotation.</param>
     /// <param name="Aabb">A non-box collider (its axis-aligned bounds count).</param>
     /// <param name="Counts">On a layer the game's support check looks at.</param>
-    internal sealed record Box(Vector3 C, Vector3 H, Quaternion Q, bool Aabb, bool Counts);
+    /// <param name="Body">
+    /// On a Rigidbody (a ship's hull, a door's swinging leaf): the game's support check leaves it out both ways, so it
+    /// neither holds the pieces resting on it nor looks for support itself.
+    /// </param>
+    internal sealed record Box(Vector3 C, Vector3 H, Quaternion Q, bool Aabb, bool Counts, bool Body = false);
 
     /// <summary>What support needs of a piece.</summary>
     /// <param name="Material">Its WearNTear material (0 wood, 1 stone, 2 iron...; see Stability.Material).</param>

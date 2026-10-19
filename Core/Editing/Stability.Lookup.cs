@@ -16,7 +16,7 @@ public static partial class Stability
             var boxes = p.Value.GetProperty("b").EnumerateArray().Select(b =>
             {
                 float F(int i) => b[i].GetSingle();
-                return new Box(new Vector3(F(0), F(1), F(2)), new Vector3(F(3), F(4), F(5)), new Quaternion(F(6), F(7), F(8), F(9)), b[10].GetInt32() != 0, SupportLayers.Contains(b[11].GetInt32()));
+                return new Box(new Vector3(F(0), F(1), F(2)), new Vector3(F(3), F(4), F(5)), new Quaternion(F(6), F(7), F(8), F(9)), b[10].GetInt32() != 0, SupportLayers.Contains(b[11].GetInt32()), b[12].GetInt32() != 0);
             }).ToArray();
             result[p.Name] = new Data(p.Value.GetProperty("m").GetInt32(), p.Value.GetProperty("s").GetInt32() != 0,
                 new Vector3(c[0].GetSingle(), c[1].GetSingle(), c[2].GetSingle()), boxes, p.Value.TryGetProperty("f", out var f) && f.GetInt32() != 0);

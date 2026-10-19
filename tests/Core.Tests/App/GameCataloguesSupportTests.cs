@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using AssetsTools.NET.Extra;
 using TerrainEditor.App;
 using WorldEditor.Tests.Unity;
@@ -7,7 +8,8 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// The support scan's collider bounds (SupportScan): a box's, a sphere's, a capsule's and a mesh's centre and half size
-/// in their own frame, the aabb flag, and a box written with its layer. Made-up colliders (TestGame), hand-picked numbers.
+/// in their own frame, the aabb flag, a box written with its layer and body flag, and the colliders on a Rigidbody marked.
+/// Made-up colliders (TestGame), hand-picked numbers.
 /// </summary>
 public class GameCataloguesSupportTests
 {
@@ -106,11 +108,40 @@ public class GameCataloguesSupportTests
     }
 
     [Fact]
-    public void ABoxIsWrittenWithItsBoundsInTheFrameThenItsAabbAndLayer()
+    public void ABoxIsWrittenWithItsBoundsInTheFrameThenItsAabbLayerAndBody()
     {
-        // Bounds as a box is given (centre (1, 2, 3), half sizes (2, 3, 4), aabb 0) in an unturned frame, on layer 10.
+        // Bounds as a box is given (centre (1, 2, 3), half sizes (2, 3, 4), aabb 0) in an unturned frame, on layer 10:
+        // off a Rigidbody, then on one.
         var boxes = new List<object?>();
-        GameCatalogues.SupportScan.AddBox(((1.0, 2.0, 3.0), (2.0, 3.0, 4.0), 0L), ColliderTestGame.Unturned, 10L, boxes);
-        Assert.Equal("[[1.0,2.0,3.0,2.0,3.0,4.0,0,0,0,1,0,10]]", CatalogueJson.Write(boxes, new CatalogueJson.Style(",", ":")));
+        GameCatalogues.SupportScan.AddBox(((1.0, 2.0, 3.0), (2.0, 3.0, 4.0), 0L), ColliderTestGame.Unturned, 10L, false, boxes);
+        GameCatalogues.SupportScan.AddBox(((1.0, 2.0, 3.0), (2.0, 3.0, 4.0), 0L), ColliderTestGame.Unturned, 10L, true, boxes);
+        Assert.Equal("[[1.0,2.0,3.0,2.0,3.0,4.0,0,0,0,1,0,10,0],[1.0,2.0,3.0,2.0,3.0,4.0,0,0,0,1,0,10,1]]", CatalogueJson.Write(boxes, new CatalogueJson.Style(",", ":")));
+    }
+
+    [Fact]
+    public void TheCollidersOnARigidbodyAndBelowItAreMarkedAndTheOthersNot()
+    {
+        // A door: its frame's box on the root, its leaf a child with a Rigidbody and a box, the leaf's handle a child
+        // of the leaf with a box. The game's support check leaves out every collider with a Rigidbody on its object
+        // or above it: the leaf's and the handle's, not the frame's.
+        using var game = new TestGame();
+        var b = game.Bundle("p_pieces");
+        using var g = ColliderTestGame.Piece(game, b, r =>
+        {
+            r.Mono("Piece", new Fields { ["m_category"] = 2, ["m_resources"] = new List<Fields>() });
+            r.Mono("WearNTear", new Fields { ["m_materialType"] = 0, ["m_supports"] = true });
+            r.Child("leaf", leaf =>
+            {
+                leaf.Rigidbody();
+                leaf.Box((0, 1, 0), (1, 2, 0.1));
+                leaf.Child("handle", handle => handle.Box((0.4, 1, 0.1), (0.1, 0.1, 0.1)));
+            });
+            return r.Box((0, 0, 0), (2, 0.1, 0.5));
+        }, out _);
+        var scan = new GameCatalogues.SupportScan();
+        scan.Read(g.Open("p_pieces")!, g);
+        var boxes = JsonNode.Parse(scan.Json())!["piece"]!["b"]!.AsArray();
+        // The root's own colliders first, then its children's, as the walk goes down.
+        Assert.Equal([0L, 1L, 1L], boxes.Select(x => x!.AsArray()[12]!.GetValue<long>()));
     }
 }

@@ -11,8 +11,9 @@ public static partial class GameCatalogues
     /// What the game's support check needs of each piece, read at the editor's start (GameData), for the
     /// editor's stability check: its material, centre of mass offset, whether it supports other pieces,
     /// whether the game checks its support at all ("f": never), and its colliders as boxes in its own
-    /// frame: [centre, half size, rotation, aabb, layer] (aabb 1: the bounds of a collider that is not a
-    /// box, a mesh collider's as its mesh's box). Colliders of every child count, inactive ones too;
+    /// frame: [centre, half size, rotation, aabb, layer, body] (aabb 1: the bounds of a collider that is not a
+    /// box, a mesh collider's as its mesh's box; body 1: a collider on a Rigidbody, which the game's support
+    /// check leaves out). Colliders of every child count, inactive ones too;
     /// triggers and snap points do not. The pieces with a WearNTear (told by its class) on their root.
     /// </summary>
     internal sealed partial class SupportScan : IStartScan
@@ -46,14 +47,14 @@ public static partial class GameCatalogues
             var meshes = new List<long>();
             foreach (var (pid, _, _) in pieces)
             {
-                Walk(b, pid, default, Quat.Root, (1, 1, 1), true, null, meshes);
+                Walk(b, pid, default, Quat.Root, (1, 1, 1), true, false, null, meshes);
             }
             b.ReadInOrder(meshes, (pid, m) => _meshes[pid] = (Vec(m["m_LocalAABB.m_Center"]), Vec(m["m_LocalAABB.m_Extent"])));
             foreach (var (pid, go, wntPid) in pieces)
             {
                 var wnt = b.Field(wntPid)!;
                 var boxes = new List<object?>();
-                Walk(b, pid, default, Quat.Root, (1, 1, 1), true, boxes, null);
+                Walk(b, pid, default, Quat.Root, (1, 1, 1), true, false, boxes, null);
                 var (x, y, z) = Has(wnt, "m_comOffset") ? Vec(wnt["m_comOffset"]) : default;
                 var entry = new Dict
                 {

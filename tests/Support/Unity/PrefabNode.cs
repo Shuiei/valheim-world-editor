@@ -118,6 +118,12 @@ public sealed partial class PrefabNode
         Component(UnityClass.BoxCollider, UnityTypes.BoxCollider, new Fields { ["m_Enabled"] = enabled, ["m_IsTrigger"] = trigger, ["m_Center"] = Fields.Vector3(center.X, center.Y, center.Z), ["m_Size"] = Fields.Vector3(size.X, size.Y, size.Z) });
 
     /// <summary>
+    /// Adds a rigidbody (kinematic, as a door's leaf is).
+    /// </summary>
+    public long Rigidbody() =>
+        Component(UnityClass.Rigidbody, UnityTypes.Rigidbody, new Fields { ["m_Mass"] = 1.0, ["m_IsKinematic"] = true });
+
+    /// <summary>
     /// Adds a sphere collider.
     /// </summary>
     public long Sphere((double X, double Y, double Z) center, double radius) =>

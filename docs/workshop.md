@@ -173,7 +173,10 @@ material and centre of mass):
   from two sides at least 100° apart (seen from above), it gets the average of the two when that is better.
 - This is repeated until nothing changes. Pieces below their material's minimum break; then everything is worked
   out again without them, so a collapse spreads the way it would in game.
-- Pieces the game never checks for support (black marble floor slabs, for one) stay up wherever they are.
+- Pieces the game never checks for support (black marble floor slabs, ward stones, ships and carts) stay up
+  wherever they are; a slab gives its material's full support to what rests on it.
+- The parts that move on their own (a door's or a gate's swinging leaf, a ship's hull) count for nothing, as in
+  game: nothing rests on them, and their own piece gets no support through them.
 
 That is why stone stands tall but cannot reach out (one metre sideways takes all its support), and why wood
 reaches further out than stone but not as high.

@@ -19,6 +19,8 @@ public static class UnityClass
     public const int MeshFilter = 33;
     /// <summary>A Mesh.</summary>
     public const int Mesh = 43;
+    /// <summary>A Rigidbody.</summary>
+    public const int Rigidbody = 54;
     /// <summary>A Shader.</summary>
     public const int Shader = 48;
     /// <summary>A TextAsset.</summary>

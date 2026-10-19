@@ -223,6 +223,11 @@ public static class UnityTypes
     public static readonly UnityField MeshCollider = Component("MeshCollider", Collider(Of("bool", "m_Convex", align: true), Ref("m_Mesh")));
 
     /// <summary>
+    /// A rigidbody: its mass and whether it is kinematic.
+    /// </summary>
+    public static readonly UnityField Rigidbody = Component("Rigidbody", Of("float", "m_Mass"), Of("bool", "m_IsKinematic", align: true));
+
+    /// <summary>
     /// A mesh filter: its mesh.
     /// </summary>
     public static readonly UnityField MeshFilter = Component("MeshFilter", Ref("m_Mesh"));

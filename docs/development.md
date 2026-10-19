@@ -244,10 +244,11 @@ time and after a game update). The kinds:
   found from each `Piece` script up to its prefab; what is below the prefab is read a level at a time,
   in the order of the bundle's file (its objects are far apart in the largest bundle).
 - `piece-support`: each piece's material, centre of mass, whether it holds others and its colliders as
-  boxes, for the Workshop's stability check (and Claude's `support_check`) and the blueprint pictures'
-  stand-in shapes; the pieces with a `WearNTear` script on their root. The trees below the pieces are
-  read once for `pieces`, `piece-support` and `piece-place` together (inactive branches and every
-  collider kind too); of the mesh colliders' meshes only the bounds are kept here.
+  boxes (those on a Rigidbody marked, as the game's support check leaves them out), for the Workshop's
+  stability check (and Claude's `support_check`) and the blueprint pictures' stand-in shapes; the pieces
+  with a `WearNTear` script on their root. The trees below the pieces are read once for `pieces`,
+  `piece-support` and `piece-place` together (inactive branches and every collider kind too); of the
+  mesh colliders' meshes only the bounds are kept here.
 - `piece-place`: how the game's hammer places each piece, for the Workshop's Build (and Claude's
   `place_pieces`): its placement flags, snap points and the colliders the build ray meets (mesh
   colliders as their triangles: each mesh read once, its vertices and triangles kept, not its fields).

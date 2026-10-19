@@ -25,8 +25,9 @@ public static partial class Stability
                 grown[i] = seen[i] = [];
                 continue;
             }
-            grown[i] = [.. d.Boxes.Select(b => World(b, pieces[i], 0.15f))];
-            seen[i] = [.. d.Boxes.Where(b => b.Counts).Select(b => World(b, pieces[i], 0f))];
+            // The colliders on a Rigidbody are left out of both, as the game's check does.
+            grown[i] = [.. d.Boxes.Where(b => !b.Body).Select(b => World(b, pieces[i], 0.15f))];
+            seen[i] = [.. d.Boxes.Where(b => b.Counts && !b.Body).Select(b => World(b, pieces[i], 0f))];
             com[i] = Com(d, pieces[i]);
             // Touching the terrain: a grown box reaching the ground anywhere under it.
             grounded[i] = d.Free || grown[i].Any(g => g.Corners().Append(g.C).Any(c => c.Y <= groundAt(c.X, c.Z)));

@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.56.1 — unreleased
+
+### Fixed
+- **The Workshop's support check no longer counts the parts of a piece that move on their own.** The swinging leaf
+  of a door, a gate, a drawbridge or a window's shutter, and the hulls of two ships, held up whatever rested on
+  them, where the game takes no support from them: a pole leaning on a door's leaf now falls, as it would in game.
+
 ## v1.56.0 — unreleased
 
 ### Added
