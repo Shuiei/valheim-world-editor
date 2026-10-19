@@ -44,7 +44,7 @@ public sealed partial class WorldGenerator
         double px = x, pz = z;
         double land = Continent((float)px, (float)pz);
         // Near the edge (within 1 km, waved), and towards the middle line (east-west within 7.5 km).
-        double nearEdge = GenMath.Length(px, pz + (double)_v.AshlandsYOffset - (double)_v.AshlandsYOffset * 0.3) - ((double)_v.AshlandsMinDistance + (double)WorldAngle((float)px, (float)pz) * 100.0);
+        double nearEdge = GenMath.Length(px, pz + (double)_v.AshlandsYOffset - (double)_v.AshlandsYOffset * 0.3) - ((double)_v.AshlandsMinDistance + (double)Wave((float)px, (float)pz) * 100.0);
         nearEdge = GenMath.SmoothBlend(0.1, 1.0, 1.0 - GenMath.Clamp01(Math.Abs(nearEdge) / _v.AshlandsLength));
         nearEdge *= 1.0 - GenMath.Clamp01(Math.Abs(px) / _v.AshlandsWidth);
         // Down to the sea floor at the world's edge.

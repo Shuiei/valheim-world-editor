@@ -17,8 +17,9 @@ namespace ValheimGen;
 /// <para>
 /// The parts: this file (making a world, heights and slopes asked from outside), WorldGenerator.Biomes
 /// (which biome a point is in), WorldGenerator.Ground (each biome's shape), WorldGenerator.Water
-/// (lakes, rivers and streams) and WorldGenerator.Rules (what a world generation mod changed: the
-/// world's <see cref="World.Rules"/>, the game's own values for a world without one).
+/// (lakes, rivers and streams), WorldGenerator.Rules (what a world generation mod changed: the
+/// world's <see cref="World.Rules"/>, the game's own values for a world without one) and
+/// WorldGenerator.BiomeRules (Expand World Data's world rules, when the world has them).
 /// </para>
 /// </remarks>
 public sealed partial class WorldGenerator
@@ -54,6 +55,14 @@ public sealed partial class WorldGenerator
             _riverSeed = Rnd.Range(int.MinValue, int.MaxValue);
             _streamSeed = Rnd.Range(int.MinValue, int.MaxValue);
             _offsetMist = Rnd.Range(-10000, 10000);
+            if (Rules.DataInstalled)
+            {
+                // Expand World Data's four draws before the water is laid out (its Pregenerate prefix).
+                _offsetAsh = Rnd.Range(-10000, 10000);
+                _offsetNorth = Rnd.Range(-10000, 10000);
+                _offsetMountain = Rnd.Range(-10000, 10000);
+                _offsetOcean = Rnd.Range(-10000, 10000);
+            }
             // The rules' values, and the seed's draws they replace (Expand World Size and Rivers).
             _v = new RuleValues(Rules, _offsetA, _offsetB, _offsetDetail, _riverSeed, _streamSeed);
             _riverSeed = _v.RiverSeed;

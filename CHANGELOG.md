@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.51.0 — unreleased
+
+### Added
+- **Worlds made with Expand World Data's biomes are generated as the mod makes them**, with the Expand World switch
+  in Settings on: the biome file (new biomes and changed ones, their ground, colours, lava and height transforms),
+  the world file (the rules that lay the biomes out, including the older "legacy" evaluation, sectors, rectangles and
+  the boiling sea) and the territory file. The editor reads the mod's files through the YamlDotNet library the mod
+  installs under the BepInEx plugins folder; it ships no copy of its own. The location, vegetation and alt biome
+  files come in a later step. See [Expand World](docs/architecture.md#what-a-world-generation-mod-changes-worldrules).
+
 ## v1.50.0 — unreleased
 
 ### Added

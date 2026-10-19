@@ -26,6 +26,10 @@ them from the player's own Valheim install, on their computer.
 
 ## Third-party code
 
+- The editor reads Expand World Data's YAML files through [YamlDotNet](https://github.com/aaubry/YamlDotNet)
+  (MIT), the library that mod depends on: the copy found under the player's BepInEx plugins folder is loaded at run
+  time (`Core/App/YamlReader.cs`); the editor ships none and its tests use the NuGet package.
+
 - `Core/WorldGen/FastNoise.cs`: FastNoise, trimmed to the 2D cellular and simplex noise the world
   generator uses, MIT License, Copyright (c) 2017 Jordan Peck (its notice is kept in the file).
 - `Core/App/Smolv.cs`: a C# port of the decoder in [SMOL-V](https://github.com/aras-p/smol-v),

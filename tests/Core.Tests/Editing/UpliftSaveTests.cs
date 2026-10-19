@@ -37,7 +37,7 @@ public class UpliftSaveTests
     public void AHillPastTheLimitIsSavedAsGroundDiscsAndComesOutAsAsked()
     {
         using var w = new TempWorld();
-        var o = UpliftWorld.Of(w.Load());
+        var o = Of(w.Load());
         // Within the test world's saved zones (0 to 15 both ways), over the edge of its trees.
         const float Cx = 40, Cz = 30;
         var hill = Bell(Cx, Cz, 30, 60);
@@ -58,7 +58,7 @@ public class UpliftSaveTests
         Assert.True(plan.Discs > 20, plan.Describe().English);
         Assert.Equal(0, plan.OldDiscs);
 
-        var after = UpliftWorld.Of(w.Load());
+        var after = Of(w.Load());
         Assert.Equal(plan.Discs, after.World.Discs.Count);
         // No lift is left to save: it is all ground discs and edits now.
         Assert.DoesNotContain(after.Edits.All(), e => e.HasLift);
@@ -79,26 +79,26 @@ public class UpliftSaveTests
     public void LiftingAgainReplacesTheDiscsAndLoweringItAllBackTakesThemAway()
     {
         using var w = new TempWorld();
-        var o = UpliftWorld.Of(w.Load());
+        var o = Of(w.Load());
         const float Cx = 300, Cz = 300;
         float start = o.Height(Cx, Cz);
         o.Lift(Cx, Cz, Bell(Cx, Cz, 25, 50));
         o.Save();
 
         // Higher: the old discs are worked out again with new ones.
-        var again = UpliftWorld.Of(w.Load());
+        var again = Of(w.Load());
         int discs = again.World.Discs.Count;
         again.Lift(Cx, Cz, Bell(Cx, Cz, 15, 50));
         var plan = again.Save();
         Assert.True(plan.OldDiscs > 0);
-        var third = UpliftWorld.Of(w.Load());
+        var third = Of(w.Load());
         Assert.InRange(third.Height(Cx, Cz) - start, 38, 42);
         Assert.True(third.World.Discs.Count >= discs / 2);
 
         // All the way back down: no ground disc is needed any more.
         third.Lift(Cx, Cz, Bell(Cx, Cz, -40, 50));
         third.Save();
-        var back = UpliftWorld.Of(w.Load());
+        var back = Of(w.Load());
         Assert.Empty(back.World.Discs);
         Assert.InRange(back.Height(Cx, Cz) - start, -1, 1);
     }
@@ -107,13 +107,13 @@ public class UpliftSaveTests
     public void TheGroundCanGoDownPastTheLimitToo()
     {
         using var w = new TempWorld();
-        var o = UpliftWorld.Of(w.Load());
+        var o = Of(w.Load());
         const float Cx = 400, Cz = 200;
         float start = o.Height(Cx, Cz);
         o.Lift(Cx, Cz, Bell(Cx, Cz, -25, 50));
         var plan = o.Save();
         Assert.True(plan.Discs > 0);
-        var after = UpliftWorld.Of(w.Load());
+        var after = Of(w.Load());
         Assert.InRange(after.Height(Cx, Cz) - start, -26, -24);
     }
 
@@ -121,7 +121,7 @@ public class UpliftSaveTests
     public void WithoutLiftThereIsNothingToDo()
     {
         using var w = new TempWorld();
-        var o = UpliftWorld.Of(w.Load());
+        var o = Of(w.Load());
         Assert.Null(Uplift.Make(o.World, o.Terrain, o.Edits, o.NextId));
     }
 }

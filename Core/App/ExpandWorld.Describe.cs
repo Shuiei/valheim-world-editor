@@ -16,6 +16,9 @@ public static partial class ExpandWorld
         AddUnless(parts, r.Stretch == 1f && r.BiomeStretch == 1f, $"stretch {r.Stretch:0.##} (biomes {r.BiomeStretch:0.##})");
         AddUnless(parts, r.AltitudeMultiplier == 1f && r.AltitudeDelta == 0f && r.WaterDepthMultiplier == 1f, $"altitude x{r.AltitudeMultiplier:0.##} {r.AltitudeDelta:+0.#;-0.#;+0} m, depth x{r.WaterDepthMultiplier:0.##}");
         AddUnless(parts, r.Rivers && r.Streams, $"rivers {OnOff(r.Rivers)}, streams {OnOff(r.Streams)}");
+        AddUnless(parts, !r.BiomeData, $"biome data ({r.Biomes.Biomes.Count} biomes)");
+        AddUnless(parts, r.World == null, $"world rules ({r.World?.Count ?? 0}{(r.LegacyGeneration ? ", legacy" : "")})");
+        AddUnless(parts, r.Territories.Count == 0, $"territories ({r.Territories.Count})");
         return string.Join(", ", parts);
     }
 

@@ -154,7 +154,7 @@ public sealed partial class MapData
                 float wx = (j - half) * pix + pix / 2f;
                 Heightmap.Biome biome = Generator.GetBiome(wx, wy);
                 float h = Generator.GetBiomeHeight(biome, wx, wy, out _);
-                layers.Set(i * n + j, h, PixelColor(biome), MaskColor(wx, wy, h, biome), null);
+                layers.Set(i * n + j, MapHeight(h, biome), Pixel(biome, wx, wy), MaskColor(wx, wy, h, biome), null);
             }
         });
         return layers;

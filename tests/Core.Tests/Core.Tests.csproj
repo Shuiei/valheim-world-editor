@@ -27,6 +27,9 @@
     <PackageReference Include="Microsoft.TestPlatform.ObjectModel" Version="18.10.1" />
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
     <PackageReference Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.1" />
+    <!-- A copy of YamlDotNet to stand in for the one a BepInEx folder has (YamlReaderTests, ExpandWorldDataTests): the
+         editor itself ships none and loads the player's. -->
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
     <!-- The map's overview picture decoded with its transparency (MapDataTests). -->
     <PackageReference Include="SkiaSharp" Version="4.153.1" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.153.1" />

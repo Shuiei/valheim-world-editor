@@ -255,6 +255,16 @@ divisor), the generator branches the same way, since the formula would round dif
 Rules for a new setting go in the same way: the mod's expression and type, a comment naming the game's
 method and literal, and a test that the vanilla value is the old one.
 
+Expand World Data's files add a third layer: the biome table (`BiomeTable`: the game's nine biomes plus the
+biome file's, each with its terrain biome, colours, lava and `HeightTransform`), the world rules (`BiomeRule`,
+evaluated by `WorldGenerator.BiomeRules.cs` in place of the game's biome layout, boiling included) and the
+territories (`Territory`). Every table keyed by the biome enum goes through `BiomeTable` (names, map colours,
+the point map's indices), so a biome the game does not have is drawn and placed like the others. The files are
+read by `Core/App/ExpandWorld.Data.cs` through `YamlReader`, which loads the YamlDotNet library found under the
+BepInEx plugins folder (the mod depends on it; the editor ships none) into its own load context and drives it by
+reflection into plain lists and maps. The mod's own conversions (fractions of the radius to metres, the defaults
+it fills in, the files it refuses) live in `ExpandWorld.Biomes/World/Territories.cs`.
+
 Three things to keep apart: the water level the rules move (`WorldRules.WaterLevel`, which the generator's
 lakes and streams and the editor's own water follow), the **literal 30** the game's zone system keeps for its
 vegetation, locations, biome points and map mask (`WorldGenerator.LiteralWaterLevel`: neither mod changes

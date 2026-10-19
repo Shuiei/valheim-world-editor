@@ -33,6 +33,8 @@ public sealed partial class WorldGenerator
         // Expand World Size: the world stretched (its prefix on the game's GetBiomeHeight divides the point).
         x = Stretched(x);
         z = Stretched(z);
+        // Expand World Data: a biome's ground is its terrain biome's (its prefix, with the biome or territory file).
+        Heightmap.Biome ground = _v.AnyBiomeData ? _v.Biomes.Terrain(biome) : biome;
         // The ground flattens towards the sea along the Ashlands' and Deep North's edges.
         float scale = preGeneration ? HeightScale : (float)(HeightScale * AshlandsGap(x, z) * CreateDeepNorthGap(x, z));
         float h;
@@ -42,7 +44,7 @@ public sealed partial class WorldGenerator
         }
         else
         {
-            h = biome switch
+            h = ground switch
             {
                 Heightmap.Biome.Meadows => Scaled(MeadowsShape(x, z), scale),
                 Heightmap.Biome.BlackForest => Scaled(ForestShape(x, z), scale),
@@ -56,7 +58,9 @@ public sealed partial class WorldGenerator
                 _ => 0f,
             };
         }
-        return _v.Depth(h);
+        h = _v.Depth(h);
+        // Expand World Data's postfix (taken to run after Expand World Size's depth, patched earlier).
+        return _v.AnyBiomeData ? DataHeight(biome, ground, x, z, h, ref mask) : h;
     }
 
     // ---- The ground around a point.

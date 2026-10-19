@@ -8,7 +8,7 @@ public static partial class ExpandWorld
 {
     /// <summary>
     /// A world's rules: the game's own values while the Expand World switch is off (a world made with Expand World Size
-    /// is noted in the log), else from the world file's keys and the mods' settings files (<see cref="Rules"/>), said
+    /// is noted in the log), else from the world file's keys and the mods' settings files (<see cref="Rules(IReadOnlyDictionary{string, string}, Found)"/>), said
     /// in the log.
     /// </summary>
     /// <param name="save">The world (its name and starting global keys).</param>
@@ -22,8 +22,10 @@ public static partial class ExpandWorld
             return WorldRules.Vanilla;
         }
         var found = Find(settings);
-        var rules = Rules(keys, found);
+        var data = ReadData(found);
+        var rules = Rules(keys, found, data);
         Console.WriteLine($"Expand World: {save.Name}: {SizeSource(keys.Count, found)}; {FolderText(found)}; {Describe(rules)}.");
+        NoteData(data, rules);
         if (keys.Count > 0 && !found.Any)
         {
             Console.WriteLine("Expand World: the world was made with Expand World Size, but no BepInEx folder the editor knows has the mod: its Rivers and Data settings are unknown (add the folder in Settings).");
@@ -41,6 +43,22 @@ public static partial class ExpandWorld
         if (rules.GridWidth != save.GridWidth)
         {
             Console.WriteLine($"Expand World: {save.Name}'s chunk files are laid out on a {save.GridWidth} zone grid and the settings ask for {rules.GridWidth}: the game converts the save at its next load; the editor keeps the files' grid.");
+        }
+    }
+
+    /// <summary>Says what was read of Expand World Data's files, and what the reading had to say.</summary>
+    private static void NoteData(DataFiles data, WorldRules rules)
+    {
+        if (data.Any)
+        {
+            string biomes = data.Biomes == null ? "off" : $"{data.Biomes.Count} entries ({rules.Biomes.Biomes.Count - BiomeTable.GamesBiomes.Count} new biomes)";
+            string world = data.World == null ? "off" : data.World.Count == 0 ? "the mod's default rules (no file)" : $"{rules.World?.Count ?? 0} rules";
+            string territories = data.Territories == null ? "off" : $"{rules.Territories.Count}";
+            Console.WriteLine($"Expand World Data: biomes {biomes}; world {world}{(rules.LegacyGeneration ? " (legacy generation)" : "")}; territories {territories}.");
+        }
+        foreach (string note in data.Notes)
+        {
+            Console.WriteLine("Expand World Data: " + note);
         }
     }
 
