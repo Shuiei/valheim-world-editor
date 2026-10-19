@@ -82,7 +82,7 @@ public static partial class WorldCreator
             int prefab = StableHash.Of(s.Name);
             if (Terrain.PrefabCatalog.Get(prefab) is { } info)
             {
-                batch.Add(s.X, s.Z, ZdoBuilder.Blank(prefab, info.Flags, new Vector3(s.X, s.Y, s.Z), new Vector3(s.Rx, s.Ry, s.Rz), s.Scale));
+                batch.Add(s.X, s.Z, ZdoBuilder.Blank(prefab, info.Flags, new Vector3(s.X, s.Y, s.Z), new Vector3(s.Rx, s.Ry, s.Rz), s.Scale3));
             }
         }
     }

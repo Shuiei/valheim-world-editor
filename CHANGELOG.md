@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.60.2 — 2026-10-19
+
+### Fixed
+- **Expand World vegetation scaled by axis keeps its shape.** Trees and rocks that Expand World Data stretches by axis
+  were saved with the same scale on every axis by Regrow nature and New world; each axis now keeps its own.
+
 ## v1.60.1 — 2026-10-19
 
 ### Fixed
