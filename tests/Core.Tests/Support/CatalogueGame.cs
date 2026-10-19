@@ -202,7 +202,7 @@ public static class CatalogueGame
             r.Mono("ItemStand", new Fields
             {
                 ["m_supportedTypes"] = new List<object> { 3, 1, 3 },
-                ["m_attachOther"] = true,
+                ["m_attachOther"] = Fields.Ref(0),
                 ["m_supportedItems"] = new List<Fields> { Fields.Ref(wood, b.Assets.External("archive:/CAB-c_pieces/CAB-c_pieces")) },
                 ["m_unsupportedItems"] = new List<Fields> { Fields.Ref(sword, b.Assets.External("archive:/CAB-b_items/CAB-b_items")) },
             });

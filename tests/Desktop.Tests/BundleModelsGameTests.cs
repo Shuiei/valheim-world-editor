@@ -52,6 +52,16 @@ public class BundleModelsGameTests
         {
             Net(r);
             r.Mono("ItemDrop");
+            // What a stand draws of it: its attach child.
+            r.Child("attach", c =>
+            {
+                c.Position = (0, 0.2, 0);
+                c.Child("model", part =>
+                {
+                    part.Position = (0, 0.3, 0);
+                    part.Renderer(Fields.Ref(m), [Fields.Ref(mat)]);
+                });
+            });
         });
         b.Prefab("vwe_test_ragdoll", Net);
         b.Prefab("Runestone_vwe_test");
@@ -92,6 +102,23 @@ public class BundleModelsGameTests
         Assert.Null(Name("vwe_test_nothing"));
         // Asked again: the same.
         Assert.Equal("vwe_test_barrel", Name("vwe_test_barrel"));
+    }
+
+    [Fact]
+    public void AHeldModelIsWhatAStandDrawsOfAnItem()
+    {
+        using var game = Game(out _, out _, out _);
+        var models = BundleModels.For(game.Bundles())!;
+        var held = models.Model("vwe_test_coin/stand")!;
+        Assert.Equal("vwe_test_coin/stand", held.Name);
+        // The part relative to the attach child, in the view's space.
+        var part = Assert.Single(held.Parts);
+        Assert.Equal(new Vector3(0, 0.3f, 0), part.Matrix.Translation);
+        Assert.Equal(Vector3.One, held.RootScale);
+        // No attach_skin: nothing on a body; the item's own model is still its whole prefab.
+        Assert.Null(models.Model("vwe_test_coin/body"));
+        Assert.Null(models.Model("vwe_test_rock/stand"));
+        Assert.Equal(new Vector3(0, 0.5f, 0), Assert.Single(models.Model("vwe_test_coin")!.Parts).Matrix.Translation);
     }
 
     [Fact]

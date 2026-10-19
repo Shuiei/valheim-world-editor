@@ -42,17 +42,45 @@ public sealed partial class GlView
         }
     }
 
+    /// <summary>
+    /// Where a model is drawn solid: a kind's model at an object's place, turn and size (0: the model's own), after
+    /// <paramref name="Pre"/> (what the model is at, relative to that object: identity for a room or a location's
+    /// parts, an item's place on its stand).
+    /// </summary>
+    /// <param name="Prefab">The kind drawn (its model's key).</param>
+    /// <param name="Position">Where the object is, in world metres.</param>
+    /// <param name="Rotation">The object's turn, Euler degrees.</param>
+    /// <param name="Scale">The object's size (0: the model's own).</param>
+    /// <param name="Pre">The model's own placement relative to the object, in the view's space.</param>
+    private readonly record struct SolidPlace(int Prefab, Vector3 Position, Vector3 Rotation, float Scale, Matrix4x4 Pre)
+    {
+        /// <summary>A kind's model at an object's place and turn, as it is.</summary>
+        public static SolidPlace At(int prefab, Vector3 position, Vector3 rotation) => new(prefab, position, rotation, 0f, Matrix4x4.Identity);
+    }
+
     /// <summary>The dungeon rooms' instances (DrawRooms).</summary>
     private readonly Solid _roomsMade = new();
     /// <summary>The locations' parts' instances (DrawLocations).</summary>
     private readonly Solid _locationsMade = new();
+    /// <summary>The stands' items' instances (DrawStandItems).</summary>
+    private readonly Solid _standsMade = new();
+    /// <summary>The stands' items drawn last, with the kinds shown then (either changing makes their instances again).</summary>
+    private StandsShown _standsShown = new([], 0);
+
+    /// <summary>
+    /// What DrawStandItems draws from: one object kept while the items and the kinds shown stay the same, so the
+    /// instances made from it are kept too (DrawSolid tells a change by the object).
+    /// </summary>
+    /// <param name="Items">The stands' items read last.</param>
+    /// <param name="Kinds">The kinds shown, a bit each.</param>
+    private sealed record StandsShown(IReadOnlyList<StandItems.Held> Items, int Kinds);
 
     /// <summary>
     /// Makes the instances of <c>DrawSolid</c> again: one buffer of matrices per model part of each kind whose model is
     /// read, the buffers made before used again. Each instance's placed model box grows the box of the area cell it
     /// stands in, so the cell shows whenever any of it is in view.
     /// </summary>
-    private unsafe void MakeSolid(WorldScene s, object source, IEnumerable<(int Prefab, Vector3 Position, Vector3 Rotation)> shown, Solid made)
+    private unsafe void MakeSolid(WorldScene s, object source, IEnumerable<SolidPlace> shown, Solid made)
     {
         made.Source = source;
         made.Scene = s;
@@ -70,7 +98,7 @@ public sealed partial class GlView
             {
                 continue;
             }
-            var placements = byKind.Select(o => Placement(s, new WorldScene.Thing(0, prefab, o.Position, o.Rotation, 0f, piece), g.RootScale)).ToList();
+            var placements = byKind.Select(o => o.Pre * Placement(s, new WorldScene.Thing(0, prefab, o.Position, o.Rotation, o.Scale, piece), g.RootScale)).ToList();
             (Vector3 Min, Vector3 Max)? box;
             lock (_groups)
             {
@@ -112,7 +140,7 @@ public sealed partial class GlView
     private void DrawRooms(WorldScene s)
     {
         var dungeons = DungeonRooms.Shown(s, Wake);
-        DrawSolid(s, dungeons, () => dungeons.SelectMany(d => d.Rooms).Select(r => (r.Hash, r.Position, BlueprintFormats.ToEuler(r.Rotation))), _roomsMade);
+        DrawSolid(s, dungeons, () => dungeons.SelectMany(d => d.Rooms).Select(r => SolidPlace.At(r.Hash, r.Position, BlueprintFormats.ToEuler(r.Rotation))), _roomsMade);
     }
 
     /// <summary>
@@ -122,7 +150,28 @@ public sealed partial class GlView
     private void DrawLocations(WorldScene s)
     {
         var shown = LocationParts.Of(s);
-        DrawSolid(s, shown, () => shown.Select(l => (l.Location, l.Position, l.Rotation)), _locationsMade);
+        DrawSolid(s, shown, () => shown.Select(l => SolidPlace.At(l.Location, l.Position, l.Rotation)), _locationsMade);
+    }
+
+    /// <summary>
+    /// The items the area's stands hold (see StandItems), drawn like objects at their place on the stand, each with
+    /// its stand's kind (hidden with it); they cannot be picked. Their instances are made again when the stands' data
+    /// was read again or the kinds shown changed.
+    /// </summary>
+    private void DrawStandItems(WorldScene s)
+    {
+        var items = StandItems.Shown(s, Wake);
+        int kinds = 0;
+        for (int k = 0; k < _shown.Length; k++)
+        {
+            kinds |= _shown[k] ? 1 << k : 0;
+        }
+        if (!ReferenceEquals(_standsShown.Items, items) || _standsShown.Kinds != kinds)
+        {
+            _standsShown = new StandsShown(items, kinds);
+        }
+        var source = _standsShown;
+        DrawSolid(s, source, () => source.Items.Where(h => (source.Kinds & 1 << (int)h.Kind) != 0).Select(h => new SolidPlace(h.Model, h.Position, h.Rotation, h.Scale, h.Pre)), _standsMade);
     }
 
     /// <summary>

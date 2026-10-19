@@ -332,6 +332,7 @@ can be picked or selected, so hiding a kind also keeps it safe from a click.
 | | **3D resolution** | How many pixels the 3D view draws: **Sharp (the screen's)** (every pixel of the screen), **Balanced** (one per screen point: fewer on a high-resolution screen with scaling) or **Fast** (fewer still). Fewer pixels give more frames per second on slow computers; the status bar says the size. |
 | OBJECTS | **Your buildings**, **Ruins & structures**, **Furniture & props**, **Trees & logs**, **Rocks**, **Ore & deposits**, **Bushes & shrubs**, **Pickables**, **Bones & remains**, **Tamed animals**, **Creatures & NPCs**, **Spawn points**, **Creature nests**, **Runestones**, **Dungeon rooms**, **Effects & markers**, **Other objects** | Show or hide each kind. Only **Your buildings**, **Trees & logs**, **Rocks**, **Tamed animals**, **Runestones** and **Dungeon rooms** are on at first, so the editor does not spoil what is still to be found. See the notes below. |
 | | **Water** | The sea and lake surface. |
+| | | What item stands and armour stands hold (a shield on the wall, food on a table, a suit of armour) is drawn with the stand, shown and hidden with its kind, in Game look. Shields and capes are drawn in their first style, an armour stand in its resting pose; the items cannot be picked, pick the stand. |
 | OVERLAYS | **Zone borders** | The 64 m zone lines (on at first). |
 | | **Location markers** | A post on every location (villages, the trader, dungeon entrances…). |
 | | **Ward areas** | Rings on the ground where each ward protects (32 m). |
