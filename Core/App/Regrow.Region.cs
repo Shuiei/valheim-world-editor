@@ -40,6 +40,7 @@ public static partial class Regrow
         float dx = px - veg.center[0], dy = py - veg.center[1], dz = pz;
         float d = (float)Math.Sqrt((double)dx * dx + (double)dy * dy + (double)dz * dz);
         float least = veg.distance[0], most = veg.distance[1];
+        // Exactly 0 is the mod's sentinel for no farthest distance.
         return most == 0f ? least <= d : least <= d && d <= most;
     }
 

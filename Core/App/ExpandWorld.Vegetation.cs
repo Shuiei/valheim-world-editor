@@ -61,12 +61,10 @@ public static partial class ExpandWorld
     /// <summary>One rule from its entry.</summary>
     private static VegetationRule VegetationOf(Fields f, string[] prefabs, BiomeTable biomes, float radius, IReadOnlySet<string> globalKeys, Func<string, int> drawsOf, List<string> notes)
     {
-        float Dist(float fraction) => (float)((double)fraction * radius);
         float[] scaleMin = ScaleOf(f.Str("scaleMin", "1")), scaleMax = ScaleOf(f.Str("scaleMax", "1"));
-        bool scaled = !scaleMin.SequenceEqual(scaleMax);
-        float minDistance = f.F("minDistance", 0f), maxDistance = f.F("maxDistance", 0f);
-        minDistance = minDistance > 0f ? Dist(minDistance) : minDistance;
-        maxDistance = maxDistance > 0f ? Dist(maxDistance) : maxDistance;
+        (float[]? axesMin, float[]? axesMax) = scaleMin.SequenceEqual(scaleMax) ? (null, null) : (scaleMin, scaleMax);
+        float minDistance = DistWhenPositive(f.F("minDistance", 0f), radius), maxDistance = DistWhenPositive(f.F("maxDistance", 0f), radius);
+        (string[]? several, int[]? severalDraws) = prefabs.Length > 1 ? (prefabs, prefabs.Select(drawsOf).ToArray()) : (null, null);
         float centerX = f.F("centerX", 0f), centerY = f.F("centerY", 0f);
         bool ownCentre = centerX != 0f || centerY != 0f;
         bool enabled = f.B("enabled", true);
@@ -81,8 +79,8 @@ public static partial class ExpandWorld
         {
             prefab = prefabs[0],
             name = f.Str("prefab"),
-            prefabs = prefabs.Length > 1 ? prefabs : null,
-            prefabDraws = prefabs.Length > 1 ? [.. prefabs.Select(drawsOf)] : null,
+            prefabs = several,
+            prefabDraws = severalDraws,
             draws = drawsOf(prefabs[0]),
             enable = enabled ? 1 : 0,
             min = f.F("min", 1f),
@@ -90,14 +88,14 @@ public static partial class ExpandWorld
             forcePlacement = Flag(f, "forcePlacement"),
             scaleMin = scaleMin[0],
             scaleMax = scaleMax[0],
-            scaleMinAxes = scaled ? scaleMin : null,
-            scaleMaxAxes = scaled ? scaleMax : null,
-            scaleUniform = f.B("scaleUniform", true) ? 1 : 0,
+            scaleMinAxes = axesMin,
+            scaleMaxAxes = axesMax,
+            scaleUniform = Bit(f, "scaleUniform", true),
             randTilt = f.F("randTilt", 0f),
             chanceToUseGroundTilt = f.F("chanceToUseGroundTilt", 0f),
             biome = (int)biomes.Parse(f.Str("biome"), name => notes.Add($"expand_vegetation: {name} is no biome (left out)")),
             biomeArea = AreasOf(f, "biomeArea", notes),
-            blockCheck = f.B("blockCheck", true) ? 1 : 0,
+            blockCheck = Bit(f, "blockCheck", true),
             snapToStaticSolid = Flag(f, "snapToStaticSolid"),
             minAltitude = f.F("minAltitude", 0f),
             maxAltitude = f.F("maxAltitude", 10000f),
@@ -121,7 +119,7 @@ public static partial class ExpandWorld
             // The game's own check from the middle, unless the rule has a centre: then the mod's check instead.
             minDistanceFromCenter = ownCentre ? 0f : minDistance,
             maxDistanceFromCenter = ownCentre ? 0f : maxDistance,
-            center = ownCentre ? [Dist(centerX), Dist(centerY)] : null,
+            center = ownCentre ? [Dist(centerX, radius), Dist(centerY, radius)] : null,
             distance = ownCentre && (minDistance != 0f || maxDistance != 0f) ? [minDistance, maxDistance] : null,
         };
     }
@@ -135,6 +133,7 @@ public static partial class ExpandWorld
     {
         string[] parts = text.Split(',');
         float x = Channel(parts, 0, 0f), z = Channel(parts, 1, 0f), y = Channel(parts, 2, 0f);
+        // Exactly 0 is the mod's sentinel for an axis not given.
         x = x == 0f ? 1f : x;
         return [x, y == 0f ? x : y, z == 0f ? x : z];
     }

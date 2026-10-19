@@ -22,9 +22,7 @@ public class ExpandWorldLiveTests : AppSettingsTestBase
     {
         string bep = Path.Combine(Data, "local", "BepInEx");
         Directory.CreateDirectory(Path.Combine(bep, "config"));
-        string package = Path.Combine(bep, "plugins", "ValheimModding-YamlDotNet");
-        Directory.CreateDirectory(package);
-        File.Copy(typeof(YamlDotNet.Serialization.Deserializer).Assembly.Location, Path.Combine(package, YamlReader.DllName));
+        YamlStandIn.Install(bep);
         File.WriteAllText(Path.Combine(bep, "config", "expand_world_size.cfg"), sizeCfg);
         return bep;
     }

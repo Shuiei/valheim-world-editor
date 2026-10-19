@@ -65,7 +65,6 @@ public static partial class ExpandWorld
     /// <summary>One kind from its entry.</summary>
     private static SeedLocations.Rule LocationOf(Fields f, string prefab, string baseName, float interior, float exterior, bool blueprint, BiomeTable biomes, float radius, ref int virtualGroups, List<string> notes)
     {
-        float Dist(float fraction) => (float)((double)fraction * radius);
         string group = f.Str("group"), groupMax = f.Str("groupMax"), altBiome = f.Str("altBiome");
         // The groups the kind belongs to, with its own group names as the file gives them (before any made-up one).
         List<string> groups = [.. SplitList(f.Str("groups"))];
@@ -103,7 +102,7 @@ public static partial class ExpandWorld
             Prefab = prefab,
             Name = prefab,
             BasePrefab = baseName == prefab ? null : baseName,
-            Enable = f.B("enabled", true) ? 1 : 0,
+            Enable = Bit(f, "enabled", true),
             Biome = (int)biomes.Parse(f.Str("biome"), name => notes.Add($"expand_locations: {name} is no biome (left out)")),
             BiomeArea = AreasOf(f, "biomeArea", notes),
             Quantity = Int(f.Str("quantity")) ?? 0,
@@ -127,8 +126,8 @@ public static partial class ExpandWorld
             InForest = Flag(f, "inForest"),
             ForestTresholdMin = f.F("forestTresholdMin", 0f),
             ForestTresholdMax = f.F("forestTresholdMax", 1f),
-            MinDistance = Dist(f.F("minDistance", 0f)),
-            MaxDistance = Dist(f.F("maxDistance", 0f)),
+            MinDistance = Dist(f.F("minDistance", 0f), radius),
+            MaxDistance = Dist(f.F("maxDistance", 0f), radius),
             MinAltitude = f.F("minAltitude", -1000f),
             MaxAltitude = f.F("maxAltitude", 10000f),
             SlopeRotation = Flag(f, "slopeRotation"),
@@ -138,151 +137,8 @@ public static partial class ExpandWorld
             Groups = groups.Count > 0 ? groups : null,
             AwayFrom = awayFrom,
             CloseTo = closeTo,
-            Blueprint = blueprint ? true : null,
-            Custom = CustomFields.Any(f.Has) || f.Str("levelArea") is not ("" or "false") ? true : null,
+            Blueprint = OrNull(blueprint),
+            Custom = OrNull(CustomFields.Any(f.Has) || f.Str("levelArea") is not ("" or "false")),
         };
-    }
-
-    /// <summary>The entry fields that change what a location spawns (its contents cannot be known then).</summary>
-    private static readonly string[] CustomFields = ["dungeon", "randomSeed", "data", "objectData", "objectSwap", "dungeonObjectData", "dungeonObjectSwap", "locationObjectData", "locationObjectSwap", "objects", "commands", "paint", "offset", "groundOffset", "scaleMin", "scaleMax", "randomCardinal", "randomDamage"];
-
-    /// <summary>A true-or-false field as the rules keep one (1 or 0).</summary>
-    private static int Flag(Fields f, string key) => f.B(key, false) ? 1 : 0;
-
-    /// <summary>
-    /// A biome area list as the mod reads one ("edge", "median", a comma list of them; empty: both); a name that is
-    /// neither is noted and passed over.
-    /// </summary>
-    private static int AreasOf(Fields f, string key, List<string> notes)
-    {
-        string text = f.Str(key);
-        if (text == "")
-        {
-            return (int)Heightmap.BiomeArea.Everything;
-        }
-        int areas = 0;
-        foreach (string name in SplitList(text))
-        {
-            if (Enum.TryParse<Heightmap.BiomeArea>(name, true, out var area) && area != Heightmap.BiomeArea.Everything)
-            {
-                areas |= (int)area;
-            }
-            else
-            {
-                notes.Add($"expand_{f.Kind}: {name} is no biome area (left out)");
-            }
-        }
-        return areas;
-    }
-
-    /// <summary>
-    /// The mod's distance rules of a field ("awayFrom", "closeTo"): a text or a list of texts, each a row of names
-    /// followed by the distance that applies to them ("Name, Group, 500, Other, 1000"); a distance without names, or
-    /// names without a distance, are noted and left out. Null when the field is missing or gives no rule.
-    /// </summary>
-    private static List<List<SeedLocations.DistanceRule>>? DistanceRows(Fields f, string key, List<string> notes)
-    {
-        List<List<SeedLocations.DistanceRule>> rows = [];
-        foreach (string item in f.Rows(key))
-        {
-            List<SeedLocations.DistanceRule> row = [];
-            List<string> names = [];
-            foreach (string token in SplitList(item))
-            {
-                if (Float(token) is { } distance)
-                {
-                    if (names.Count == 0)
-                    {
-                        notes.Add($"expand_locations: {key} \"{item}\": the distance {token} has no names (left out)");
-                    }
-                    row.AddRange(names.Select(n => new SeedLocations.DistanceRule(n, distance)));
-                    names.Clear();
-                }
-                else
-                {
-                    names.Add(token);
-                }
-            }
-            if (names.Count > 0)
-            {
-                notes.Add($"expand_locations: {key} \"{item}\": no distance for {string.Join(", ", names)} (left out)");
-            }
-            if (row.Count > 0)
-            {
-                rows.Add(row);
-            }
-        }
-        return rows.Count == 0 ? null : rows;
-    }
-
-    /// <summary>
-    /// The radius of a blueprint location: half the diagonal of its pieces' bounds on the ground, as the mod measures
-    /// it, from the blueprint file named by the prefab (with .blueprint or .vbuild) in the blueprint folder; null when
-    /// there is no such file, or it cannot be read (noted).
-    /// </summary>
-    internal static float? BlueprintRadius(string? folder, string prefab, List<string> notes)
-    {
-        if (folder == null || !Directory.Exists(folder))
-        {
-            return null;
-        }
-        string? file = BlueprintExtensions.Select(ext => Path.Combine(folder, prefab + ext)).FirstOrDefault(File.Exists);
-        if (file == null)
-        {
-            return null;
-        }
-        try
-        {
-            var parsed = BlueprintFormats.Parse(Path.GetFileName(file), File.ReadAllText(file));
-            if (parsed.Pieces.Count == 0)
-            {
-                return 0f;
-            }
-            float minX = parsed.Pieces.Min(p => p.Position.X), maxX = parsed.Pieces.Max(p => p.Position.X);
-            float minZ = parsed.Pieces.Min(p => p.Position.Z), maxZ = parsed.Pieces.Max(p => p.Position.Z);
-            float ex = (maxX - minX) / 2f, ez = (maxZ - minZ) / 2f;
-            return (float)Math.Sqrt((double)ex * ex + (double)ez * ez);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or FormatException)
-        {
-            Log.Caught(ex, $"reading the blueprint {file} for its radius (the location is left out)");
-            notes.Add($"expand_locations: the blueprint {Path.GetFileName(file)} could not be read: {ex.Message}");
-            return null;
-        }
-    }
-
-    /// <summary>The file name extensions of the blueprint files the mod reads.</summary>
-    private static readonly string[] BlueprintExtensions = [".blueprint", ".vbuild"];
-
-    /// <summary>
-    /// The game's own kinds as Expand World Size changes them, when it does: each enabled kind's quantity (but the
-    /// start's) times its locations multiplier, rounded, at least 1 (0 for a multiplier of 0); and, without Expand
-    /// World Data, their distances from the middle scaled with the radius. The kinds as given when nothing changes.
-    /// </summary>
-    /// <param name="rules">The kinds.</param>
-    /// <param name="r">The world's rules.</param>
-    internal static List<SeedLocations.Rule> SizedLocations(IReadOnlyList<SeedLocations.Rule> rules, WorldRules r)
-    {
-        bool quantities = r.LocationsMultiplier != 1f, distances = !r.DataInstalled && r.Radius != 10000f;
-        if (!quantities && !distances)
-        {
-            return [.. rules];
-        }
-        List<SeedLocations.Rule> sized = [];
-        foreach (var rule in rules)
-        {
-            var copy = SeedLocations.RuleSet.FromJson("{\"locations\":[" + System.Text.Json.JsonSerializer.Serialize(rule) + "]}").Locations[0];
-            if (quantities && copy.Quantity != 0 && copy.Enable != 0 && copy.Prefab != StartLocation)
-            {
-                copy.Quantity = r.LocationsMultiplier == 0f ? 0 : Math.Max(1, (int)Math.Round((double)copy.Quantity * r.LocationsMultiplier, MidpointRounding.ToEven));
-            }
-            if (distances)
-            {
-                copy.MinDistance = (float)((double)copy.MinDistance * (r.Radius / 10000f));
-                copy.MaxDistance = (float)((double)copy.MaxDistance * (r.Radius / 10000f));
-            }
-            sized.Add(copy);
-        }
-        return sized;
     }
 }

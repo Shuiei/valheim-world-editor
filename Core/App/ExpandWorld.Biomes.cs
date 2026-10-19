@@ -62,15 +62,7 @@ public static partial class ExpandWorld
         var terrain = names.TryGetValue(f.Str("terrain"), out var t) ? t : biome;
         var nature = names.TryGetValue(f.Str("nature"), out var n) ? n : terrain;
         Rgba? terrainColour = f.Colour("colorTerrain"), mapColour = f.Colour("colorMap");
-        var height = new HeightTransform
-        {
-            Multiplier = f.F("altitudeMultiplier", 1f),
-            Delta = f.F("altitudeDelta", 0f),
-            DepthMultiplier = f.F("waterDepthMultiplier", 1f),
-            Minimum = f.F("minimumAltitude", -1000f),
-            Maximum = f.F("maximumAltitude", 10000f),
-            ExcessFactor = f.F("excessFactor", 0.5f),
-        };
+        var height = HeightOf(f);
         float forest = f.F("forestMultiplier", 1f), mapMultiplier = f.F("mapColorMultiplier", 1f), lavaAmount = f.F("lavaAmount", 1f);
         string lava = f.Str("lava");
         var colour = terrainColour ?? new Rgba(0f, 0f, 0f, 0f);

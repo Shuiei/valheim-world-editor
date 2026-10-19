@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.55.1 — unreleased
+
+### Fixed
+- **Expand World Data's alt biome file counts even without a location file.** What each alt biome keeps out was
+  only used when the location file was in use or Expand World Size changed the game's kinds; now the game's own
+  kinds take it into account too.
+
 ## v1.55.0 — unreleased
 
 ### Added

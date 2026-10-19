@@ -123,6 +123,11 @@ public static partial class GameCatalogues
                     case QuoteInQuotes:
                         OnQuoteInQuotes(c);
                         break;
+                    case AfterLineBreak:
+                        // The line feed of a CRLF pair, or a carriage return on its own: still after the break.
+                        break;
+                    default:
+                        throw new InvalidOperationException($"the CSV scanner is in no state ({_state})");
                 }
             }
 

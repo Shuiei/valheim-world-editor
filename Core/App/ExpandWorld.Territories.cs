@@ -23,15 +23,7 @@ public static partial class ExpandWorld
             {
                 continue;
             }
-            var height = new HeightTransform
-            {
-                Multiplier = f.F("altitudeMultiplier", 1f),
-                Delta = f.F("altitudeDelta", 0f),
-                DepthMultiplier = f.F("waterDepthMultiplier", 1f),
-                Minimum = f.F("minimumAltitude", -1000f),
-                Maximum = f.F("maximumAltitude", 10000f),
-                ExcessFactor = f.F("excessFactor", 0.5f),
-            };
+            var height = HeightOf(f);
             var territory = new Territory
             {
                 Name = name,

@@ -52,7 +52,6 @@ public static partial class ExpandWorld
     /// <summary>One rule from its entry.</summary>
     private static BiomeRule RuleOf(Fields f, BiomeTable biomes, float radius, Wiggles wiggles, List<string> notes)
     {
-        float Dist(float fraction) => (float)((double)fraction * radius);
         string biomeText = f.Str("biome");
         var biome = biomeText == "" ? Heightmap.Biome.None : biomes.Parse(biomeText, name => notes.Add($"expand_world: {name} is no biome (left out)"));
         var seedBiome = biomes.Terrain(biome);
@@ -71,23 +70,23 @@ public static partial class ExpandWorld
             AltBiomes = SplitList(f.Str("altBiome")),
             MaxAltitude = f.F("maxAltitude", 10000f),
             MinAltitude = f.F("minAltitude", -1000f),
-            MaxDistance = Dist(f.F("maxDistance", 1f)),
-            MinDistance = Dist(f.F("minDistance", 0f)),
+            MaxDistance = Dist(f.F("maxDistance", 1f), radius),
+            MinDistance = Dist(f.F("minDistance", 0f), radius),
             MaxSector = maxSector > 1f ? maxSector - 1f : maxSector,
             MinSector = minSector < 0f ? minSector + 1f : minSector,
-            CenterX = Dist(f.F("centerX", 0f)),
-            CenterY = Dist(f.F("centerY", 0f)),
+            CenterX = Dist(f.F("centerX", 0f), radius),
+            CenterY = Dist(f.F("centerY", 0f), radius),
             Amount = f.F("amount", 1f),
             Stretch = f.F("stretch", 1f),
             SeedBiome = seedBiome,
             Seed = seed,
             WiggleDistanceLength = f.FOpt("wiggleDistanceLength") ?? wiggles.Frequency,
-            WiggleDistanceWidth = f.FOpt("wiggleDistanceWidth") ?? (f.B("wiggleDistance", true) ? wiggles.Width : 0f),
+            WiggleDistanceWidth = WiggleWidth(f, "wiggleDistanceWidth", "wiggleDistance", wiggles.Width),
             WiggleSectorLength = f.FOpt("wiggleSectorLength") ?? wiggles.DistanceLength,
-            WiggleSectorWidth = f.FOpt("wiggleSectorWidth") ?? (f.B("wiggleSector", true) ? wiggles.DistanceWidth : 0f),
+            WiggleSectorWidth = WiggleWidth(f, "wiggleSectorWidth", "wiggleSector", wiggles.DistanceWidth),
             HasRectangle = sizeX.HasValue || sizeY.HasValue,
-            HalfSizeX = sizeX is { } sx ? (float)((double)Dist(sx) / 2.0) : float.PositiveInfinity,
-            HalfSizeY = sizeY is { } sy ? (float)((double)Dist(sy) / 2.0) : float.PositiveInfinity,
+            HalfSizeX = HalfOf(sizeX, radius),
+            HalfSizeY = HalfOf(sizeY, radius),
             RotationCos = Mathf.Cos(radians),
             RotationSin = Mathf.Sin(radians),
             WiggleRectangleLength = f.FOpt("wiggleRectangleLength") ?? wiggles.DistanceLength,
