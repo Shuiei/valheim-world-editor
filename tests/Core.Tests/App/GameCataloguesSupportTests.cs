@@ -93,12 +93,7 @@ public class GameCataloguesSupportTests
         using var game = new TestGame();
         var b = game.Bundle("p_pieces");
         long mesh = new TestMesh { Name = "wall", Positions = [0, 0, 0, 1, 0, 0, 0, 1, 0], Submeshes = [[0, 1, 2]], Bounds = ((0.5, 0.5, 0), (0.5, 0.5, 0)) }.Add(b);
-        using var g = ColliderTestGame.Piece(game, b, r =>
-        {
-            r.Mono("Piece", new Fields { ["m_category"] = 2, ["m_resources"] = new List<Fields>() });
-            r.Mono("WearNTear", new Fields { ["m_materialType"] = 0, ["m_supports"] = true });
-            return r.MeshCollider(mesh, convex: true);
-        }, out long collider);
+        using var g = ColliderTestGame.WoodPiece(game, b, r => r.MeshCollider(mesh, convex: true), out long collider);
         var bundle = g.Open("p_pieces")!;
         var scan = new GameCatalogues.SupportScan();
         scan.Read(bundle, g);
@@ -113,8 +108,10 @@ public class GameCataloguesSupportTests
         // Bounds as a box is given (centre (1, 2, 3), half sizes (2, 3, 4), aabb 0) in an unturned frame, on layer 10:
         // off a Rigidbody, then on one.
         var boxes = new List<object?>();
-        GameCatalogues.SupportScan.AddBox(((1.0, 2.0, 3.0), (2.0, 3.0, 4.0), 0L), ColliderTestGame.Unturned, 10L, false, boxes);
-        GameCatalogues.SupportScan.AddBox(((1.0, 2.0, 3.0), (2.0, 3.0, 4.0), 0L), ColliderTestGame.Unturned, 10L, true, boxes);
+        foreach (bool body in new[] { false, true })
+        {
+            GameCatalogues.SupportScan.AddBox(((1.0, 2.0, 3.0), (2.0, 3.0, 4.0), 0L), ColliderTestGame.Unturned, 10L, body, boxes);
+        }
         Assert.Equal("[[1.0,2.0,3.0,2.0,3.0,4.0,0,0,0,1,0,10,0],[1.0,2.0,3.0,2.0,3.0,4.0,0,0,0,1,0,10,1]]", CatalogueJson.Write(boxes, new CatalogueJson.Style(",", ":")));
     }
 
@@ -126,10 +123,8 @@ public class GameCataloguesSupportTests
         // or above it: the leaf's and the handle's, not the frame's.
         using var game = new TestGame();
         var b = game.Bundle("p_pieces");
-        using var g = ColliderTestGame.Piece(game, b, r =>
+        using var g = ColliderTestGame.WoodPiece(game, b, r =>
         {
-            r.Mono("Piece", new Fields { ["m_category"] = 2, ["m_resources"] = new List<Fields>() });
-            r.Mono("WearNTear", new Fields { ["m_materialType"] = 0, ["m_supports"] = true });
             r.Child("leaf", leaf =>
             {
                 leaf.Rigidbody();
