@@ -55,7 +55,8 @@ public class SeedPreviewColorsTests
                 float d = MathF.Sqrt(x * x + z * z);
                 if (p.Biome[k] == meadows && d < 1800f)
                 {
-                    Assert.Equal(((byte)217, (byte)77, (byte)51), p.CellColor(k));
+                    // 0.3 × 255 = 76.5: rounded to even, as the map's bytes are.
+                    Assert.Equal(((byte)217, (byte)76, (byte)51), p.CellColor(k));
                     red = true;
                 }
                 else if (p.Biome[k] == mountain && d > 3200f && d < 5800f)
