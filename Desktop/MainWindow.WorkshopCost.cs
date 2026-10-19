@@ -1,14 +1,14 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
 using TerrainEditor.App;
-using TerrainEditor.Terrain;
 
 namespace TerrainEditor.Desktop;
 
 public partial class MainWindow
 {
     /// <summary>
-    /// Shows the building's cost under the title, the full list of materials and stations in its tip.
+    /// Shows the building's cost under the title, the full list of materials and stations in its tip. What only the editor
+    /// can place (Homestead's hammer skips it) is not counted.
     /// </summary>
     private void ShowWorkshopCost()
     {
@@ -16,7 +16,7 @@ public partial class MainWindow
         {
             return;
         }
-        var cost = PieceCost.Of(Workshop.Kinds(s.Scene));
+        var cost = Homestead.Cost(Workshop.Kinds(s.Scene));
         WorkshopCost = cost.Describe(5);
         SubtitleText.Text = Workshop.Pieces(s.Scene) == 0 ? Lang.T("workshop.blankPlot") : Lang.T("blueprints.cost", WorkshopCost);
         ToolTip.SetTip(SubtitleText, cost.Materials.Count == 0 ? null
