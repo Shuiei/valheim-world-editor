@@ -1,4 +1,5 @@
 using System.Numerics;
+using Avalonia.Threading;
 
 namespace TerrainEditor.Desktop;
 
@@ -72,6 +73,26 @@ public sealed partial class GlView
         }
     }
 
+    /// <summary>
+    /// The camera as the editor starts with it: turning around its target, at the start's turn, tilt and distance (the
+    /// driver's tests, which share one editor, each start from it). The target stays: each area sets its own.
+    /// </summary>
+    internal void ResetCamera()
+    {
+        bool eyeChanged;
+        lock (_camLock)
+        {
+            eyeChanged = _eye != EyeMode.Orbit;
+            _eye = EyeMode.Orbit;
+            (_yaw, _pitch, _distance) = (StartYaw, StartPitch, StartDistance);
+        }
+        if (eyeChanged)
+        {
+            Dispatcher.UIThread.Post(() => EyeChanged?.Invoke(EyeMode.Orbit));
+        }
+        Wake();
+    }
+
     /// <summary>For tests (nothing is drawn headless): the camera the mouse is read with.</summary>
     internal void SetCamera(Vector3 eye, Vector3 target, float aspect)
     {
@@ -81,4 +102,23 @@ public sealed partial class GlView
 
     /// <summary>The camera's view × projection of the last frame (or <c>SetCamera</c>).</summary>
     internal Matrix4x4 ViewProj => _lastViewProj;
+
+    /// <summary>
+    /// The camera in words, in world metres, for the driver's errors: how it moves, its target, turn, tilt and
+    /// distance now, where the eye was at the last frame (what the mouse is read with) and when that frame ended.
+    /// </summary>
+    internal string CameraSays()
+    {
+        if (Scene is not { } s)
+        {
+            return "no area";
+        }
+        long last = Interlocked.Read(ref _lastFrameAt);
+        string frame = last < 0 ? "no frame drawn yet" : $"the last frame ended {_clock.ElapsedMilliseconds - last} ms ago";
+        lock (_camLock)
+        {
+            return FormattableString.Invariant(
+                $"{_eye}, target {_target.X + s.Cx:0.#} {_target.Y:0.#} {-_target.Z + s.Cz:0.#}, yaw {_yaw * 180 / MathF.PI:0.#}°, pitch {_pitch * 180 / MathF.PI:0.#}°, distance {_distance:0.#} m; eye at the last frame {_lastEye.X + s.Cx:0.#} {_lastEye.Y:0.#} {-_lastEye.Z + s.Cz:0.#}; {frame}");
+        }
+    }
 }
