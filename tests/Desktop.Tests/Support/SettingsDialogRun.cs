@@ -57,9 +57,9 @@ internal static class SettingsDialogRun
     }
 
     /// <summary>
-    /// The folders' boxes (not Claude's port and command).
+    /// The folders' boxes (not Claude's port and command, nor the history's steps).
     /// </summary>
-    internal static List<TextBox> Boxes(Window d) => [.. d.GetLogicalDescendants().OfType<TextBox>().Where(b => b.Name?.StartsWith("Claude", StringComparison.Ordinal) != true)];
+    internal static List<TextBox> Boxes(Window d) => [.. d.GetLogicalDescendants().OfType<TextBox>().Where(b => b.Name?.StartsWith("Claude", StringComparison.Ordinal) != true && b.Name != "HistorySteps")];
 
     /// <summary>
     /// The text box with this name.
