@@ -15,6 +15,36 @@ the plugin is unchanged in versions without that part.
   `list_blueprints`) leaves them out, so it is what a hammer user pays. Blueprints from before, or Homestead's own,
   carry no marks and say nothing rather than a wrong zero.
 
+## v1.57.2 — unreleased
+
+### Fixed
+- **No limit ground loads before the buildings on it, not disc by disc among them.** A player's game spawns a
+  zone's objects a few per frame, nearest first, and every ground disc rebuilt the zone's ground as it came in: on
+  a big build the ground climbed for ten seconds or more at every visit, with the game stuttering. Discs are now
+  saved as objects of the Terrain kind, which the game spawns before everything else, so the ground is finished in
+  the first frames and the pieces then come in on top of it. Discs saved before this version are changed by the
+  WorldEditorBridge plugin (below) or when their ground is lifted again.
+
+### WorldEditorBridge
+- **Ground discs are kept first in line.** The game puts a disc back to the Solid kind when the player who owns it
+  spawns it; the plugin looks at the world's discs every few seconds, puts them back to Terrain, and changes the
+  discs of older editor versions at the first look. The log says how many discs the world has and when any were
+  put back.
+
+## v1.57.1 — unreleased
+
+### Fixed
+- **A live world's settings from Expand World are read again.** The editor asks the game's WorldEditorBridge for
+  the world's file (the mod keeps the world's size there), and the plugin looked for it where older games saved it
+  (`worlds/name.fwl`): the game now saves `worlds/name/_main.n.fwl2`, so the plugin failed, and the editor then
+  read nothing through the bridge and fell back to the BepInEx folders on this computer. The plugin now serves the
+  file the game saves (or the older one for a world not saved by this game yet), and the editor still reads the
+  mods' files through the bridge when only the world's file cannot be served.
+
+### WorldEditorBridge
+- `GET /world/meta` serves the world file the game saves (`_main.n.fwl2`), else the older `.fwl`; 404 when the
+  game has neither.
+
 ## v1.57.0 — unreleased
 
 ### Added

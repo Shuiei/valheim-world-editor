@@ -38,10 +38,15 @@ public static partial class Uplift
     /// <summary>A disc at a place, as a placed location for TerrainModifiers.</summary>
     private static PlacedObject DiscAt(Vector3 p) => new(WorldSave.LocationProxyPrefab, Disc, p, Vector3.Zero, 0);
 
-    /// <summary>The disc as a saved object: a location proxy (persistent, solid, like the game's own).</summary>
+    /// <summary>
+    /// The disc as a saved object: a location proxy, persistent, of the Terrain kind (the game's own proxies are Solid).
+    /// A player's game makes a zone's objects a few per frame, the Terrain kind first and then the nearest first, and
+    /// every disc rebuilds the zone's ground when it spawns: as Terrain the discs all spawn in the first frames and the
+    /// ground is finished before the pieces and trees come in, instead of being rebuilt disc by disc among them.
+    /// </summary>
     public static byte[] DiscBytes(Vector3 position)
     {
-        var z = ZdoData.Parse(ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, 0x100 | (2 << 10), position, Vector3.Zero, 0f));
+        var z = ZdoData.Parse(ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, 0x100 | (3 << 10), position, Vector3.Zero, 0f));
         z.Set("ints", LocationKey, Disc.ToString(System.Globalization.CultureInfo.InvariantCulture));
         z.Set("ints", SeedKey, "0");
         return z.Serialize();

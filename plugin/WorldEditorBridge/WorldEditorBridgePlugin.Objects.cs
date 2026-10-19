@@ -100,6 +100,7 @@ public sealed partial class WorldEditorBridgePlugin
             }
             ids.Append('"').Append(zdo.m_uid.UserID.ToString(CultureInfo.InvariantCulture)).Append(':').Append(zdo.m_uid.ID.ToString(CultureInfo.InvariantCulture)).Append('"');
         }
+        NoteDiscs(made);
         // The game drops a destroyed object on its next update, so the count after is the one before plus what was
         // created; the check a second later says whether the destroyed ones went.
         string movedText = moves.Count > 0 ? $", moved {inPlace} in place and {moves.Count - inPlace} by making it again (a player had both places loaded, or it was gone)" : "";
