@@ -107,13 +107,13 @@ public class UpliftSaveTests
     public void TheGroundCanGoDownPastTheLimitToo()
     {
         using var w = new TempWorld();
-        var o = UpliftWorld.Of(w.Load());
+        var o = Of(w.Load());
         const float Cx = 400, Cz = 200;
         float start = o.Height(Cx, Cz);
         o.Lift(Cx, Cz, Bell(Cx, Cz, -25, 50));
         var plan = o.Save();
         Assert.True(plan.Discs > 0);
-        var after = UpliftWorld.Of(w.Load());
+        var after = Of(w.Load());
         Assert.InRange(after.Height(Cx, Cz) - start, -26, -24);
     }
 

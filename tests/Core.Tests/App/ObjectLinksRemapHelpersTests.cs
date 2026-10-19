@@ -61,7 +61,7 @@ public class ObjectLinksRemapHelpersTests
     public void AMirroredPartHasItsOffsetAndTurnsMirroredInItsParentsFrame()
     {
         var rule = new LinkRule("group", 1, [2], 11, 12, 13, [], [], true);
-        var link = new ObjectLink(rule, 7, [], new Vector3(1f, 2f, 3f), new Vector3(4f, 5f, 6f), new System.Numerics.Quaternion(0.1f, 0.2f, 0.3f, 0.4f));
+        var link = new ObjectLink(rule, 7, [], new Vector3(1f, 2f, 3f), new Vector3(4f, 5f, 6f), new Quaternion(0.1f, 0.2f, 0.3f, 0.4f));
         var data = new List<ObjectField>();
         PrivateMember.Call(typeof(ObjectLinks), "MirrorPlacement", null, data, rule, link);
         Assert.Equal("-1 2 3", data.Find(f => f.Section == "vec3" && f.Key == 11)!.Value);
