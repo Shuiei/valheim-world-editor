@@ -44,7 +44,7 @@ public class SeedMapTests
     {
         byte[] biome = new byte[6];
         float[] height = [.. Enumerable.Repeat(WorldRules.Vanilla.WaterLevel, 6)];
-        using var bmp = SeedMap.Picture(biome, height, 3, 2);
+        using var bmp = SeedMap.Picture(biome, height, 3, 2, null, 30f);
         Assert.Equal(new PixelSize(3, 2), bmp.PixelSize);
     }
 

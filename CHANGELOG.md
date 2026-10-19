@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.55.0 — unreleased
+
+### Added
+- **The New world page's map shows the Expand World mods' own colours** (with the Expand World switch in Settings on):
+  a biome of Expand World Data's biome file is drawn in the map colour the file gives it rather than in the colour of
+  the ground it borrows, a territory in its own, and the water line on that map follows Expand World Rivers' sea
+  level. The same holds for the closer look when zoomed in and for the seed pictures Claude's tools give.
+
 ## v1.54.0 — unreleased
 
 ### Added

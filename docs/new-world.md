@@ -181,4 +181,5 @@ Until then the map shows the seed's land with nothing on it.
   page's side menu) says why.
 - With the **Expand World** switch in Settings on, the seeds looked at and the world made follow the mods' settings
   and data files (the page says so above Create): a wider world, other biomes and places. See
-  [Expand World](expand-world.md).
+  [Expand World](expand-world.md). A biome the mods' biome file adds and a territory show on the map in their own
+  colours, and the water line is the mods' sea level.

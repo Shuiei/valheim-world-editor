@@ -15,7 +15,8 @@ public static partial class SeedPreview
         var gen = Generator(seedName, rules);
         float radius = gen.Rules.Radius;
         float cell = 2 * radius / size;
-        var (biome, height) = Sample(gen, -radius, -radius, cell, size, size, parallel, cancel);
+        var cells = SampleCells(gen, -radius, -radius, cell, size, size, parallel, cancel);
+        var (biome, height) = (cells.Biome, cells.Height);
         var layout = new SeedLocations.Layout(gen, parallel);
         var placed = layout.Place(landmarks ? SeedLocations.Which.Prioritized : SeedLocations.Which.Start, cancel);
         var marks = new List<Landmark>();
@@ -39,21 +40,39 @@ public static partial class SeedPreview
                     .DefaultIfEmpty(float.PositiveInfinity).Min()),
             };
         }
-        return new Preview(seedName, size, cell, biome, height, stats, landmarks ? marks : null, gen, layout, radius);
+        return new Preview(seedName, size, cell, biome, height, stats, landmarks ? marks : null, gen, layout, radius, cells.Color, gen.Rules.WaterLevel);
     }
+
+    /// <summary>The generator sampled on cells: each cell's biome and height (<see cref="SampleCells"/>).</summary>
+    public static (byte[] Biome, float[] Height) Sample(WorldGenerator gen, float x0, float z0, float cell, int w, int h, bool parallel, CancellationToken cancel = default)
+    {
+        var cells = SampleCells(gen, x0, z0, cell, w, h, parallel, cancel);
+        return (cells.Biome, cells.Height);
+    }
+
+    /// <summary>Cells sampled from a generator (<see cref="SampleCells"/>).</summary>
+    /// <param name="Biome">Each cell's biome: index in <see cref="Biomes"/>, <see cref="Ocean"/> for the sea and outside the world.</param>
+    /// <param name="Height">Each cell's ground height (<see cref="Outside"/> past the world's edge).</param>
+    /// <param name="Color">
+    /// Each land cell's colour on the world's map, three bytes (red, green, blue) per cell, when the rules colour the
+    /// map their own way (a biome of Expand World Data's file, a territory); null when the game's own colours apply.
+    /// </param>
+    public sealed record Cells(byte[] Biome, float[] Height, byte[]? Color);
 
     /// <summary>
     /// The generator sampled on w x h cells of cell metres from (x0, z0) (row 0 the south): each cell's
     /// biome (index in Biomes, Ocean for the sea and outside the world's radius; a biome the game does not have
-    /// counts as the one whose ground it borrows) and ground height (Outside past the world's edge; the deepest sea
-    /// floor is at 0). parallel: rows on every core but one (a search runs seeds side by side instead).
+    /// counts as the one whose ground it borrows), ground height (Outside past the world's edge; the deepest sea
+    /// floor is at 0) and, with a world generation mod's biome or territory colours, its colour on the map. parallel:
+    /// rows on every core but one (a search runs seeds side by side instead).
     /// </summary>
-    public static (byte[] Biome, float[] Height) Sample(WorldGenerator gen, float x0, float z0, float cell, int w, int h, bool parallel, CancellationToken cancel = default)
+    public static Cells SampleCells(WorldGenerator gen, float x0, float z0, float cell, int w, int h, bool parallel, CancellationToken cancel = default)
     {
         byte[] biome = new byte[w * h];
         float[] height = new float[w * h];
         float radius = gen.Rules.Radius;
         var table = gen.Rules.Biomes;
+        byte[]? color = gen.Rules.BiomeData || gen.Rules.Territories.Count > 0 ? new byte[w * h * 3] : null;
         var options = new ParallelOptions { CancellationToken = cancel, MaxDegreeOfParallelism = parallel ? Math.Max(1, Environment.ProcessorCount - 1) : 1 };
         Parallel.For(0, h, options, j =>
         {
@@ -67,7 +86,8 @@ public static partial class SeedPreview
                     height[k] = Outside;
                     continue;
                 }
-                var b = table.Terrain(gen.GetBiome(x, z));
+                var real = gen.GetBiome(x, z);
+                var b = table.Terrain(real);
                 float ground = gen.GetBiomeHeight(b, x, z, out _);
                 height[k] = ground;
                 int index = Array.IndexOf(Biomes, b);
@@ -76,8 +96,12 @@ public static partial class SeedPreview
                 // biome near it (and the southern sea Ashlands): deeper than that, it is sea here.
                 bool swamp = b == Heightmap.Biome.Swamp;
                 biome[k] = index < 0 || ground < gen.Rules.WaterLevel - (swamp ? 3 : 1) ? Ocean : (byte)index;
+                if (color != null && biome[k] != Ocean)
+                {
+                    (color[3 * k], color[3 * k + 1], color[3 * k + 2]) = MapData.PixelColor(gen, real, x, z);
+                }
             }
         });
-        return (biome, height);
+        return new Cells(biome, height, color);
     }
 }

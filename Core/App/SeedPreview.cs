@@ -128,8 +128,16 @@ public static partial class SeedPreview
     /// <param name="Generator">The seed's, for a closer look at a part (Sample); null in search results.</param>
     /// <param name="Layout">Its locations laid out so far, to go on from (FindDungeons); null in search results.</param>
     /// <param name="Radius">The world's radius, metres (its rules'; the game's 10 km): the cells cover -Radius..Radius.</param>
-    public sealed record Preview(string Seed, int Size, float Cell, byte[] Biome, float[] Height, Stats Stats, IReadOnlyList<Landmark>? Landmarks = null, WorldGenerator? Generator = null, SeedLocations.Layout? Layout = null, float Radius = Radius)
+    /// <param name="Color">
+    /// Each land cell's colour on the world's map, three bytes per cell, when a world generation mod colours the map its
+    /// own way (a biome of Expand World Data's file, a territory); null when the game's own colours apply.
+    /// </param>
+    /// <param name="Water">The sea level, metres (the rules'; the game's 30).</param>
+    public sealed record Preview(string Seed, int Size, float Cell, byte[] Biome, float[] Height, Stats Stats, IReadOnlyList<Landmark>? Landmarks = null, WorldGenerator? Generator = null, SeedLocations.Layout? Layout = null, float Radius = Radius, byte[]? Color = null, float Water = 30f)
     {
+        /// <summary>Cell k's colour on the map when the rules give one (<see cref="Color"/>), else null (the game's own).</summary>
+        public (byte R, byte G, byte B)? CellColor(int k) => Color == null ? null : (Color[3 * k], Color[3 * k + 1], Color[3 * k + 2]);
+
         /// <summary>The world position of cell (i, j)'s middle.</summary>
         public (float X, float Z) CellCenter(int i, int j) => (-Radius + (i + 0.5f) * Cell, -Radius + (j + 0.5f) * Cell);
     }
