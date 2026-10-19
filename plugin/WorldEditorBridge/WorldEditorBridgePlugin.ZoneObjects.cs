@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -59,7 +60,16 @@ public sealed partial class WorldEditorBridgePlugin
     /// POST /zone: the saved objects of the zones asked for, in the snapshot's format: int count, then for each its
     /// ZDOID (long, uint) and its bytes (int length, bytes). The HTTP thread gzips it.
     /// </summary>
-    private static byte[] ZoneObjects(byte[] body)
+    private static byte[] ZoneObjects(byte[] body) => ZoneObjects(body, _ => true);
+
+    /// <summary>
+    /// POST /zone/movers (1.57.3 on): of the zones' saved objects, only those of the kinds that change on their own
+    /// (<see cref="Moves"/>), in /zone's format. The editor reads them when a zone's second watch number changed.
+    /// </summary>
+    private static byte[] MovingObjects(byte[] body) => ZoneObjects(body, Moves);
+
+    /// <summary>The zones' saved objects whose prefab <paramref name="take"/> accepts, in /zone's format.</summary>
+    private static byte[] ZoneObjects(byte[] body, Func<int, bool> take)
     {
         var links = SnapshotLinks();
         List<(ZDOID Id, byte[] Bytes)> found = [];
@@ -67,6 +77,10 @@ public sealed partial class WorldEditorBridgePlugin
         {
             foreach (ZDO zdo in ZoneZdos(zone))
             {
+                if (!take(zdo.GetPrefab()))
+                {
+                    continue;
+                }
                 ZPackage one = new();
                 WriteZdo(one, zdo, links);
                 found.Add((zdo.m_uid, one.GetArray()));

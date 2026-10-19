@@ -16,10 +16,12 @@ public sealed partial class WorldSession
         {
             return null;
         }
-        foreach (var key in f.Changed)
+        foreach (var key in f.Changed.Concat(f.Moving))
         {
             _digests[key] = f.Digests[key];
         }
+        // The editor's own objects as the game has them now: its copies take the game's place, turn and data.
+        var refreshed = TakeMade(merged.Made);
         // Gone from the game while deleted in the editor, not applied yet: nothing left to delete.
         Edits.SetDeleted([.. merged.Vanished.Where(deleted.Contains)], false);
         // The editor's new objects the game no longer has in the zones read.
@@ -50,8 +52,48 @@ public sealed partial class WorldSession
             // (With the editor's ground discs: those it applied are its own, not merged.)
             UseModifiers(new TerrainModifiers(Uplift.PlacedNow(World, Edits)));
         }
-        return new Followed(merged, ours, ground, kept);
+        return new Followed(merged, ours, ground, kept) { Refreshed = refreshed };
     }
+
+    /// <summary>
+    /// Gives the editor's own new objects the place, turn and data the game has for them (the game moved them, or gave
+    /// them data once made): their copies in the edits, under the same ids, and where the live sync looks for them.
+    /// </summary>
+    /// <param name="made">The editor's objects as the game sends them, by ZDOID.</param>
+    /// <returns>The ids of the objects that changed.</returns>
+    private List<int> TakeMade(List<(long User, uint Id, byte[] Bytes)> made)
+    {
+        var refreshed = new List<int>();
+        if (made.Count == 0)
+        {
+            return refreshed;
+        }
+        var byZdo = new Dictionary<(long, uint), int>();
+        foreach (var (id, target) in LiveSync.NewObjects())
+        {
+            byZdo[(target.User, target.Id)] = id;
+        }
+        var reader = World.SourceReader();
+        foreach (var (user, zid, bytes) in made)
+        {
+            if (byZdo.TryGetValue((user, zid), out int id) && !AsSent(id, bytes, reader) && Edits.TakeFromGame(id, bytes))
+            {
+                LiveSync.Moved(id, Edits.FindAdded(id)!.Position);
+                refreshed.Add(id);
+            }
+        }
+        return refreshed;
+    }
+
+    /// <summary>
+    /// Whether the game has one of the editor's objects exactly as the editor writes it (the first read after an apply,
+    /// before the game set the object up): nothing to take then.
+    /// </summary>
+    /// <param name="id">The object's id.</param>
+    /// <param name="bytes">The object as the game has it.</param>
+    /// <param name="reader">Reads the bytes a model object lives in.</param>
+    private bool AsSent(int id, byte[] bytes, Func<ObjectRef, byte[]> reader) =>
+        Edits.FindAdded(id) is { } n && World.NewObjectBytes(n, reader) is { } sent && sent.AsSpan().SequenceEqual(bytes);
 
     /// <summary>Zones whose changes of the editor's were undone since the game changed their ground: theirs now.</summary>
     public List<(int X, int Z)> TakeWaitingGround() => Edits.TakeWaitingGround();

@@ -69,6 +69,13 @@ public sealed partial class FakeGame : IDisposable
     public Dictionary<(int X, int Z), (ulong Digest, List<(long User, uint Id, byte[] Bytes)> Objects)> Zones { get; } = [];
     private int _zoneReads;
     public int ZoneReads => _zoneReads;
+    // The kinds that move or tick on their own in each zone, for /watch's second number and /zone/movers: the zone's
+    // second number and those objects (which /zone gives with the zone's others). A zone not set has 0 and none.
+    public Dictionary<(int X, int Z), (ulong Digest, List<(long User, uint Id, byte[] Bytes)> Objects)> Movers { get; } = [];
+    private int _moverReads;
+    public int MoverReads => _moverReads;
+    // False: a plugin from before 1.57.3, whose /watch gives one number per zone and has no /zone/movers (404).
+    public bool FollowsMovers { get; set; } = true;
     // Objects the game no longer had when asked to destroy them.
     public int Missing { get; set; }
 

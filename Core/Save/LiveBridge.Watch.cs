@@ -4,26 +4,53 @@ namespace TerrainEditor.Save;
 
 public sealed partial class LiveBridge : IDisposable
 {
+    /// <summary>A zone's two watch numbers, as the plugin gives them.</summary>
+    /// <param name="Still">
+    /// Changes when an object of the zone is made or removed, or one that stays put changes its data or place: the
+    /// zone is read whole again (<see cref="ZoneObjects"/>).
+    /// </param>
+    /// <param name="Moving">
+    /// Changes when an object of a kind that moves or ticks on its own (a creature, a ship, an item, a fire...) moves
+    /// or changes its data: those objects are read alone (<see cref="MovingObjects"/>). Plugins from before 1.57.3
+    /// give none: 0, never changing.
+    /// </param>
+    public readonly record struct Digests(ulong Still, ulong Moving);
+
     /// <summary>
-    /// One number per zone that changes when an object there changes (a plugin from this version on).
+    /// The watch numbers of each zone (a plugin from 1.17.0 on; the second number from 1.57.3 on, 0 before).
     /// </summary>
-    public async Task<Dictionary<(int X, int Z), ulong>> Watch(IReadOnlyCollection<(int X, int Z)> zones)
+    public async Task<Dictionary<(int X, int Z), Digests>> Watch(IReadOnlyCollection<(int X, int Z)> zones)
     {
         using var res = await Post("watch", ZoneList(zones));
         using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
-        var digests = new Dictionary<(int, int), ulong>();
+        var digests = new Dictionary<(int, int), Digests>();
         foreach (var z in doc.RootElement.GetProperty("zones").EnumerateArray())
         {
-            digests[(z[0].GetInt32(), z[1].GetInt32())] = ulong.Parse(z[2].GetString()!, System.Globalization.CultureInfo.InvariantCulture);
+            ulong moving = z.GetArrayLength() > 3 ? Number(z[3]) : 0;
+            digests[(z[0].GetInt32(), z[1].GetInt32())] = new Digests(Number(z[2]), moving);
         }
         return digests;
     }
 
+    /// <summary>A watch number: a 64-bit unsigned the plugin writes as a string.</summary>
+    private static ulong Number(JsonElement e) => ulong.Parse(e.GetString()!, System.Globalization.CultureInfo.InvariantCulture);
+
     /// <summary>The saved objects of the zones as the game has them now: ZDOID and save-format bytes.</summary>
     /// <exception cref="InvalidDataException">The answer is damaged or unpacks to more than a world snapshot can.</exception>
-    public async Task<List<(long User, uint Id, byte[] Bytes)>> ZoneObjects(IReadOnlyCollection<(int X, int Z)> zones)
+    public async Task<List<(long User, uint Id, byte[] Bytes)>> ZoneObjects(IReadOnlyCollection<(int X, int Z)> zones) => await Objects("zone", zones);
+
+    /// <summary>
+    /// Of the zones' saved objects, only those of the kinds that move or tick on their own, as the game has them now
+    /// (a plugin from 1.57.3 on; older ones answer 404, "too old": the editor asks only once a zone's second watch
+    /// number changed, which theirs never does).
+    /// </summary>
+    /// <exception cref="InvalidDataException">The answer is damaged or unpacks to more than a world snapshot can.</exception>
+    public async Task<List<(long User, uint Id, byte[] Bytes)>> MovingObjects(IReadOnlyCollection<(int X, int Z)> zones) => await Objects("zone/movers", zones);
+
+    /// <summary>Objects of the zones as a zone endpoint sends them: ZDOID and save-format bytes, gzip-compressed.</summary>
+    private async Task<List<(long User, uint Id, byte[] Bytes)>> Objects(string path, IReadOnlyCollection<(int X, int Z)> zones)
     {
-        using var res = await Post("zone", ZoneList(zones));
+        using var res = await Post(path, ZoneList(zones));
         // Some zones' objects: never more than the whole world's snapshot unpacks to.
         using var raw = new MemoryStream(CheckedReads.Gunzip(await res.Content.ReadAsByteArrayAsync(), WorldSave.MaxSnapshot));
         using var r = new BinaryReader(raw);
