@@ -26,16 +26,23 @@ public sealed partial class MapData
     /// <summary>
     /// A biome's colour on this world's map (Minimap.GetPixelColor with Expand World Data's prefix): the territory's
     /// map colour at the point when it has one, else the biome file's for a biome it gives settings to, else the
-    /// game's (<see cref="PixelColor"/>; a biome the file gives a transparent colour, or none, shows the game's colour
+    /// game's (<see cref="PixelColor(Heightmap.Biome)"/>; a biome the file gives a transparent colour, or none, shows the game's colour
     /// here rather than nothing).
     /// </summary>
     /// <param name="biome">The biome.</param>
     /// <param name="wx">World x.</param>
     /// <param name="wy">World z.</param>
-    internal (byte, byte, byte) Pixel(Heightmap.Biome biome, float wx, float wy)
+    internal (byte, byte, byte) Pixel(Heightmap.Biome biome, float wx, float wy) => PixelColor(Generator, biome, wx, wy);
+
+    /// <summary>The same for any generator (the seed preview's cells too).</summary>
+    /// <param name="gen">The world's generator (its rules and territories).</param>
+    /// <param name="biome">The biome.</param>
+    /// <param name="wx">World x.</param>
+    /// <param name="wy">World z.</param>
+    public static (byte, byte, byte) PixelColor(WorldGenerator gen, Heightmap.Biome biome, float wx, float wy)
     {
-        var rules = Generator.Rules;
-        if (rules.Territories.Count > 0 && Generator.TerritoryAt(Generator.Stretched(wx), Generator.Stretched(wy))?.MapColor is { } territory)
+        var rules = gen.Rules;
+        if (rules.Territories.Count > 0 && gen.TerritoryAt(gen.Stretched(wx), gen.Stretched(wy))?.MapColor is { } territory)
         {
             return territory.Bytes();
         }

@@ -40,8 +40,10 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   the radius, the stretch, the altitude and water depth, the water level, the lakes, rivers and streams,
   the biome layout (the world rules, in the mod's current or legacy evaluation), every biome's ground
   shape, colour, lava and height transform, the territories.
-- **The biomes**: a biome the file adds is drawn on the map with its colour (or the colour of the biome
-  whose ground it borrows), named as the file names it, and its ground drawn as the ground it borrows.
+- **The biomes**: a biome the file adds is drawn on the map and on the New world page's seed map with the
+  map colour the file gives it (white without one, as the game draws a biome it does not know), named as
+  the file names it, and its ground drawn as the ground it borrows. A territory is drawn in its own map
+  colour on both.
 - **The predictions** (the New world page, Regrow nature, a new world's generated zones): the location
   kinds of the location file (clones, blueprints, groups, "away from" and "close to" rules, a location
   wider than a zone at its zone's middle, the start temple forced into the middle zone), the vegetation

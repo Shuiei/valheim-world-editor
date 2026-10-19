@@ -18,7 +18,9 @@ public sealed partial class SeedMap : Control, IDisposable
     /// <param name="height">Each cell's height (negative infinity with the ocean biome: outside the world).</param>
     /// <param name="w">Cells across.</param>
     /// <param name="h">Cells deep.</param>
-    public static WriteableBitmap Picture(byte[] biome, float[] height, int w, int h)
+    /// <param name="color">Each land cell's colour on the map, three bytes per cell, when the rules give one; null for the game's own.</param>
+    /// <param name="water">The sea level, metres.</param>
+    public static WriteableBitmap Picture(byte[] biome, float[] height, int w, int h, byte[]? color, float water)
     {
         var bmp = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
         using var fb = bmp.Lock();
@@ -28,8 +30,8 @@ public sealed partial class SeedMap : Control, IDisposable
             int j = h - 1 - y;
             for (int i = 0; i < w; i++)
             {
-                // The seed preview makes worlds of the game's own rules.
-                var (r, g, b) = Shade(biome[j * w + i], height[j * w + i], WorldRules.Vanilla.WaterLevel);
+                int k = j * w + i;
+                var (r, g, b) = Shade(biome[k], height[k], water, color == null ? null : (color[3 * k], color[3 * k + 1], color[3 * k + 2]));
                 row[i * 4] = b;
                 row[i * 4 + 1] = g;
                 row[i * 4 + 2] = r;
@@ -41,7 +43,17 @@ public sealed partial class SeedMap : Control, IDisposable
     }
 
     /// <summary>One cell's colour (outside the world: the background), with the water at <paramref name="water"/> m.</summary>
-    public static (byte R, byte G, byte B) Shade(byte biome, float height, float water)
+    public static (byte R, byte G, byte B) Shade(byte biome, float height, float water) => Shade(biome, height, water, null);
+
+    /// <summary>
+    /// The same, with the cell's own map colour when the rules give one (a biome of Expand World Data's file, a
+    /// territory) instead of the game's colour for its biome.
+    /// </summary>
+    /// <param name="biome">The cell's biome (an index into the preview's biomes, or the ocean).</param>
+    /// <param name="height">The cell's ground height.</param>
+    /// <param name="water">The sea level, metres.</param>
+    /// <param name="colour">The cell's map colour; null for the game's own.</param>
+    public static (byte R, byte G, byte B) Shade(byte biome, float height, float water, (byte R, byte G, byte B)? colour)
     {
         if (biome == SeedPreview.Ocean)
         {
@@ -52,7 +64,7 @@ public sealed partial class SeedMap : Control, IDisposable
             float d = Math.Clamp((water - height) / 60f, 0, 1);
             return ((byte)(48 - 28 * d), (byte)(98 - 50 * d), (byte)(150 - 50 * d));
         }
-        var (br, bg, bb) = MapData.PixelColor(SeedPreview.Biomes[biome]);
+        var (br, bg, bb) = colour ?? MapData.PixelColor(SeedPreview.Biomes[biome]);
         if (height < water)
         {
             // Water on land (swamp pools, rivers, lakes): the biome under a blue tint.

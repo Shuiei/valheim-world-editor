@@ -117,7 +117,7 @@ public sealed partial class SeedMap : Control, IDisposable
     public void Show(SeedPreview.Preview p, bool keepView = false)
     {
         _preview = p;
-        Replace(ref _world, Picture(p.Biome, p.Height, p.Size, p.Size));
+        Replace(ref _world, Picture(p.Biome, p.Height, p.Size, p.Size, p.Color, p.Water));
         DropClose();
         if (!keepView)
         {

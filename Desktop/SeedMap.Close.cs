@@ -37,14 +37,14 @@ public sealed partial class SeedMap : Control, IDisposable
         int w = (int)Math.Ceiling((x1 - x0) / cell), h = (int)Math.Ceiling((z1 - z0) / cell);
         var preview = _preview;
         var work = _closeWork = new CancellationTokenSource();
-        Task.Run(() => SeedPreview.Sample(gen, x0, z0, cell, w, h, parallel: true, work.Token), work.Token).ContinueWith(t =>
+        Task.Run(() => SeedPreview.SampleCells(gen, x0, z0, cell, w, h, parallel: true, work.Token), work.Token).ContinueWith(t =>
         {
             if (_disposed || work.IsCancellationRequested || t.Status != TaskStatus.RanToCompletion || preview != _preview)
             {
                 return;
             }
             DropClose();
-            _close = (Picture(t.Result.Biome, t.Result.Height, w, h), x0, z0, x0 + w * cell, z0 + h * cell);
+            _close = (Picture(t.Result.Biome, t.Result.Height, w, h, t.Result.Color, gen.Rules.WaterLevel), x0, z0, x0 + w * cell, z0 + h * cell);
             InvalidateVisual();
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
