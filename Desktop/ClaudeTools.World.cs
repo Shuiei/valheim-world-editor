@@ -32,7 +32,7 @@ public sealed partial class ClaudeTools
         string root;
         if (folder == null)
         {
-            root = roots.FirstOrDefault() ?? Places.WorldRoots().First();
+            root = roots.FirstOrDefault() ?? Places.GameWorldRoot(AppSettings.Load());
         }
         else if (roots.FirstOrDefault(r => SameFolder(r, folder)) is string known)
         {

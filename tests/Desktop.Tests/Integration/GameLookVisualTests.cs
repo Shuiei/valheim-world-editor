@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -18,17 +19,14 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
     [Fact]
     public void TheGamesLookIsReadFromItsFilesAndDrawn()
     {
-        Assert.SkipUnless(editor.Available, editor.Why ?? "");
-        Assert.SkipUnless(OperatingSystem.IsLinux(), "the made-up game is found in the home's Steam library only on Linux");
-        Directory.CreateDirectory(Dir);
-        BackToStart(editor);
+        StartWithTheMadeUpGame();
         OpenMapThenArea();
         WaitForGameLook(editor);
         editor.Send("camera 32 32 30 35 120");
         AssertDrawn(Picture("look"));
         // A picture that cannot be saved (its folder is not there): the error comes back to the driver.
         Assert.StartsWith("@@ error ", editor.Answer($"picture {Path.Combine(Dir, "nowhere", "x.png")}"));
-        // The 2100 fir trees north of the middle: more than one model draws at once, so drawn by the cells in view.
+        // The 2100 fir trees north of the middle: more than one model draws at once, all in one of the area's cells.
         editor.Send("camera 0 12 0 50 90");
         AssertDrawn(Picture("trees"));
         // The Place tool, with the chest chosen: its model's box is worked out for the panel's fit hint.
@@ -76,6 +74,28 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
     }
 
     /// <summary>
+    /// The editor on the start page, ready for a test of the made-up game's look (skipped without the editor, or off
+    /// Linux, where the made-up game is not found).
+    /// </summary>
+    private void StartWithTheMadeUpGame()
+    {
+        Assert.SkipUnless(editor.Available, editor.Why ?? "");
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "the made-up game is found in the home's Steam library only on Linux");
+        Directory.CreateDirectory(Dir);
+        BackToStart(editor);
+    }
+
+    /// <summary>
+    /// The area three zones across around the middle open from the start page, drawn with the made-up game's look.
+    /// </summary>
+    private void OpenAreaWithTheGamesLook()
+    {
+        StartWithTheMadeUpGame();
+        OpenArea(editor, 3);
+        WaitForGameLook(editor);
+    }
+
+    /// <summary>
     /// The world's map first, drawn with the game's map textures (the made-up game's one-pixel ones), then the area two
     /// zones across around the middle, with the 2100 fir trees in it.
     /// </summary>
@@ -113,12 +133,7 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
     [Fact]
     public void TheGamesRoomsAreDrawnWithTheirModels()
     {
-        Assert.SkipUnless(editor.Available, editor.Why ?? "");
-        Assert.SkipUnless(OperatingSystem.IsLinux(), "the made-up game is found in the home's Steam library only on Linux");
-        Directory.CreateDirectory(Dir);
-        BackToStart(editor);
-        OpenArea(editor, 3);
-        WaitForGameLook(editor);
+        OpenAreaWithTheGamesLook();
         editor.Send("camera 0 0 0 60 120");
         editor.Send("click Dungeon");
         // No dungeon in the area (the world copy is fresh, and leaving drops what the other test left): Generate is open,
@@ -133,19 +148,77 @@ public sealed class GameLookVisualTests(GameLookEditorProcess editor) : VisualPi
         Assert.StartsWith("@@ ok ", placed);
         editor.Send("camera 0 0 0 45 80 5000");
         AssertDrawn(Picture("rooms"));
-        // Pointed at and clicked where the dungeon went (5000 m over the view's middle): a room under the pointer is
-        // marked, then picked; deleted, it leaves open ends, marked in their turn.
+        // Pointed at where the dungeon went (5000 m over the view's middle): what is under the pointer is marked.
         editor.Send("mouse3 move 0 5000 0");
         AssertDrawn(Picture("rooms-hover"));
-        editor.Send("mouse3 down 0 5000 0");
-        editor.Send("mouse3 up 0 5000 0");
+        // Clicked from the middle outwards until a room is picked: which room or joint lies where is not the same from
+        // one run to the next, and a joint clicked on the way gets a door (drawn in the colour of a joint with one).
+        var (x, z) = PickARoom();
         AssertDrawn(Picture("rooms-picked"));
-        editor.Send("key Delete");
-        editor.Send("mouse3 move 0 5000 0");
+        // Deleted, the room leaves the openings where it met the rooms next to it free, marked in their turn.
+        Assert.StartsWith("Removed ", editor.Send("key Delete").GetProperty("message").GetString());
+        editor.Send($"mouse3 move {x} 5000 {z}");
         AssertDrawn(Picture("rooms-open-ends"));
         Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
         editor.Send("key Escape");
         BackToStart(editor);
+    }
+
+    // The fir trees in two of the cells of an area three zones across (2160 of one model, more than are drawn at once):
+    // only the cells in view are drawn, the two next to each other at once when both show.
+    [Fact]
+    public void TheTreesAreDrawnByTheCellsInView()
+    {
+        OpenAreaWithTheGamesLook();
+        // Over the whole area: every tree.
+        editor.Send("camera 0 12 0 50 90");
+        AssertDrawn(Picture("cells-both"));
+        var (both, all) = DrawnInstances();
+        Assert.True(both >= 2160, $"{both} of {all} instances drawn");
+        // From east of the row 60 m east, looking further east: the other cell's 2100 trees are out of view, left out.
+        editor.Send("camera 70 0 270 15 25");
+        Picture("cells-east");
+        var (east, _) = DrawnInstances();
+        Assert.True(east > 0 && east < both - 2000, $"{east} of {all} instances drawn");
+        BackToStart(editor);
+    }
+
+    /// <summary>
+    /// Clicks the dungeon 5000 m up at points from the view's middle outwards, 4 m apart, until one picks a room.
+    /// </summary>
+    /// <returns>The point that picked it.</returns>
+    private (int X, int Z) PickARoom()
+    {
+        var points = from x in Enumerable.Range(-6, 13)
+                     from z in Enumerable.Range(-6, 13)
+                     orderby (x * x) + (z * z)
+                     select (X: x * 4, Z: z * 4);
+        var said = new List<string>();
+        foreach (var (x, z) in points)
+        {
+            editor.Send($"mouse3 move {x} 5000 {z}");
+            editor.Send($"mouse3 down {x} 5000 {z}");
+            string message = editor.Send($"mouse3 up {x} 5000 {z}").GetProperty("message").GetString() ?? "";
+            if (message.EndsWith(": Delete removes it.", StringComparison.Ordinal))
+            {
+                return (x, z);
+            }
+            said.Add(message);
+        }
+        Assert.Fail("no room picked; the clicks said: " + string.Join(" | ", said.Distinct()));
+        return default;
+    }
+
+    /// <summary>
+    /// How many object instances the last frame drew, and how many there are (from a benchmark of no time).
+    /// </summary>
+    private (int Drawn, int All) DrawnInstances()
+    {
+        string bench = editor.Send("bench 0").GetProperty("bench").GetString()!;
+        var m = Regex.Match(bench, @"(\S+) of (\S+) instances drawn");
+        Assert.True(m.Success, bench);
+        static int Count(string n) => int.Parse(new string([.. n.Where(char.IsAsciiDigit)]), System.Globalization.CultureInfo.InvariantCulture);
+        return (Count(m.Groups[1].Value), Count(m.Groups[2].Value));
     }
 
     /// <summary>
