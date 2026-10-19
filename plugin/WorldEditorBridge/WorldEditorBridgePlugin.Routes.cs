@@ -89,6 +89,9 @@ public sealed partial class WorldEditorBridgePlugin
             case "/zone":
                 PostGzip(ctx, ZoneObjects);
                 break;
+            case "/zone/movers":
+                PostGzip(ctx, MovingObjects);
+                break;
             case "/snapshot":
                 ReplyGzip(res, Snapshot, 120000);
                 break;

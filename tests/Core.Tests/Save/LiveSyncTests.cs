@@ -144,7 +144,8 @@ public class LiveSyncTests
         Assert.Equal((made.User, made.Id), t.World.ObjectRefs[t.Tree.Id].LiveId);
     }
 
-    // The moved object's game object is the editor's now: a zone read again does not take it back in as the saved one.
+    // The moved object's game object is the editor's now: a zone read again does not take it back in as the saved one,
+    // but gives it back as the game has it, for the editor's copy to take.
     [Fact]
     public async Task AMovedObjectIsNotReadBackInAsTheSavedOne()
     {
@@ -158,5 +159,27 @@ public class LiveSyncTests
         Assert.DoesNotContain(t.Tree.Id, merged.Updated);
         Assert.Empty(merged.Added);
         Assert.Equal(t.Tree.Position, t.World.ObjectRefs[t.Tree.Id].Position);
+        var (madeUser, madeId, madeBytes) = Assert.Single(merged.Made);
+        Assert.Equal((user, id), (madeUser, madeId));
+        Assert.Equal(z.Serialize(), madeBytes);
+    }
+
+    // Where the game has one of the editor's objects is followed (physics, a creature walking), for the object to be
+    // found again by its place and counted in the right zone; an object the game does not have is left alone.
+    [Fact]
+    public async Task WhereTheGameMovedAnObjectIsFollowed()
+    {
+        using var t = new LiveSyncRig();
+        var n = t.MoveTree(-1, new Vector3(4, 0, 2));
+        await t.Apply();
+        var there = n.Position + new Vector3(0.5f, -0.1f, 0);
+
+        t.Sync.Moved(-1, there);
+        t.Sync.Moved(-2, there);
+
+        var (id, target) = Assert.Single(t.Sync.NewObjects());
+        Assert.Equal((-1, there, t.TreeZdo), (id, target.Position, (target.User, target.Id)));
+        Assert.True(t.Sync.IsOurs(t.TreeZdo));
+        Assert.False(t.Sync.IsLive(-2));
     }
 }

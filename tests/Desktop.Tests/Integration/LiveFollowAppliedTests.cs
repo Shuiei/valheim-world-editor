@@ -26,7 +26,8 @@ public class LiveFollowAppliedTests
         var placed = s.Commit("Place", null, [], [(new NewObject(0, tree.Prefab, tree.Position + new Vector3(2, 0, 2), Vector3.Zero, 0f), false)]);
         Assert.True((await world.ApplyLive()).Done);
         var objects = AsRead(w, (0, 0));
-        objects.Add((77, 1000, w.ObjectBytes(tree.Id)));
+        // The game has it as it was sent.
+        objects.Add((77, 1000, w.NewObjectBytes(world.Edits.FindAdded(s.Scene.Things[placed[0]].Id)!, w.SourceReader())!));
         game.Zones[(0, 0)] = (1, objects);
         var f = await Follow(world, (0, 0));
         Assert.True(f == null || !f.Any);
@@ -36,6 +37,50 @@ public class LiveFollowAppliedTests
         s.TakeGameChanges(f);
         Assert.True(s.Scene.Things[placed[0]].Gone);
         Assert.Equal((0, 0, 0, 0), world.Pending);
+    }
+
+    // An object the editor placed and applied is read from the game afterwards: the game's place, turn and data
+    // (what it gave the object once made, where physics put it) replace the editor's copy under the same id, in the
+    // edits, the scene and where the live sync looks for it; undo still takes the game's object away.
+    [Fact]
+    public async Task TheEditorsOwnObjectsTakeTheGamesPlaceAndData()
+    {
+        var (game, world, s) = await Open();
+        using var _ = game;
+        var w = world.World;
+        var tree = s.Scene.Things[Tree(s)];
+        var placed = s.Commit("Place", null, [], [(new NewObject(0, tree.Prefab, tree.Position + new Vector3(2, 0, 2), Vector3.Zero, 0f), false)]);
+        int id = s.Scene.Things[placed[0]].Id;
+        Assert.True((await world.ApplyLive()).Done);
+        var target = Assert.Single(world.LiveSync.NewObjects()).Target;
+        // The game has it, settled 0.5 m away with data of its own.
+        var z = ZdoData.Parse(w.NewObjectBytes(world.Edits.FindAdded(id)!, w.SourceReader())!);
+        z.Position += new Vector3(0.5f, -0.1f, 0);
+        z.Rotation = new Vector3(0, 45, 0);
+        z.FloatList.Add((StableHash.Of("max_health"), 10f));
+        byte[] settled = z.Serialize();
+        var objects = AsRead(w, (0, 0));
+        objects.Add((target.User, target.Id, settled));
+        game.Zones[(0, 0)] = (1, objects);
+        var f = (await Follow(world, (0, 0)))!;
+        Assert.Equal([id], f.Refreshed);
+        Assert.Empty(f.Merged.Added);
+        Assert.Empty(f.Ours);
+        Assert.True(s.TakeGameChanges(f));
+        Assert.Equal(z.Position, s.Scene.Things[placed[0]].Position);
+        Assert.Equal(45f, s.Scene.Things[placed[0]].Rotation.Y);
+        Assert.Equal(settled, world.Edits.FindAdded(id)!.Raw);
+        Assert.Equal(z.Position, Assert.Single(world.LiveSync.NewObjects()).Target.Position);
+        Assert.Equal((0, 0, 0, 0), world.Pending);
+        // The same read again changes nothing.
+        game.Zones[(0, 0)] = (2, objects);
+        f = (await Follow(world, (0, 0)))!;
+        Assert.False(f.Any);
+        // Undone, the game's object is destroyed: nothing is left of it.
+        s.Undo();
+        Assert.True((await world.ApplyLive()).Done);
+        Assert.Equal((1, 0), game.ObjectCalls[^1]);
+        Assert.Empty(world.LiveSync.NewObjects());
     }
 
     // A read of the game taken before an Apply live and merged after it lacks what the apply sent: it is
