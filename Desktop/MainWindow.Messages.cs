@@ -29,13 +29,15 @@ public sealed partial class MainWindow
     {
         // An area still loading in it is not opened, nor the one left open again.
         _navigation++;
+        // The map lets go of the world before its connection ends: no question is asked of it any more, and the
+        // answer to one still waiting is dropped.
+        MapPage?.Forget();
         World?.Dispose();
         World = null;
         Session = null;
         // A backup read for the Area tool's restore is not kept for the next world.
         AreaPanel.ForgetBackup();
         Tunnel.Close();
-        MapPage?.Forget();
     }
 
     /// <summary>
