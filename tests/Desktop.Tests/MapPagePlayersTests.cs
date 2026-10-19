@@ -38,6 +38,56 @@ public class MapPagePlayersTests
         }
     }
 
+    // The Workshop opened over a live world closes the world: the map no longer asks the closed connection for its
+    // players (it did, every few seconds: the players line then said the game did not answer, and the log got a
+    // disposed-client line each time).
+    [AvaloniaFact]
+    public async Task TheWorkshopOpenedOverALiveWorldEndsItsPlayersPolling()
+    {
+        using var game = new FakeGame();
+        var w = await ConnectingTo(game);
+        var m = w.MapPage!;
+        await TestWindows.Until(() => m.LiveText.Text == "Live world · 2 player(s) online: Ada, Bjorn");
+        w.Ask = (_, _, _, _) => Task.FromResult(true);
+        w.Tell = _ => Task.CompletedTask;
+        await w.OpenWorkshop(null);
+        Assert.True(w.InWorkshop);
+        Assert.Null(w.World);
+        int asked = game.PlayerReads;
+        await m.PollPlayers();
+        Assert.Equal(asked, game.PlayerReads);
+        Assert.Equal("Live world · 2 player(s) online: Ada, Bjorn", m.LiveText.Text);
+        Assert.Empty(m.Map.Players);
+        w.CloseWithoutAsking();
+    }
+
+    // A players question still waiting when the Workshop closes the world ends with its connection, and changes
+    // nothing on the map: not its players line, nor any player put on it.
+    [AvaloniaFact]
+    public async Task AQuestionWaitingWhenTheWorldClosesChangesNothing()
+    {
+        using var game = new FakeGame();
+        var w = await ConnectingTo(game);
+        var m = w.MapPage!;
+        await TestWindows.Until(() => m.LiveText.Text == "Live world · 2 player(s) online: Ada, Bjorn");
+        // The map's own asking stopped: the question left waiting is this test's, awaited below.
+        m.Stop();
+        game.HoldPlayers = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int asked = game.PlayerReads;
+        Task asking = m.PollPlayers();
+        await TestWindows.Until(() => game.PlayerReads == asked + 1);
+        Assert.False(asking.IsCompleted);
+        w.Ask = (_, _, _, _) => Task.FromResult(true);
+        w.Tell = _ => Task.CompletedTask;
+        await w.OpenWorkshop(null);
+        Assert.Null(w.World);
+        game.HoldPlayers.SetResult();
+        await asking;
+        Assert.Equal("Live world · 2 player(s) online: Ada, Bjorn", m.LiveText.Text);
+        Assert.Empty(m.Map.Players);
+        w.CloseWithoutAsking();
+    }
+
     // A game slow to answer gets one players question at a time, and its answer, come after another world is
     // shown, does not put its players on that world's map.
     [AvaloniaFact]

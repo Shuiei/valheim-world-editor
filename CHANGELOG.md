@@ -14,6 +14,13 @@ the plugin is unchanged in versions without that part.
   their final height. The Workshop's support check also counts the creatures still inside a piece (a blueprint from
   another tool can have them) in its bar and in Claude's `support_check`.
 
+## v1.57.4 — unreleased
+
+### Fixed
+- **Opening the Workshop while a live world is open no longer leaves the map asking the game for its players.** The
+  world's connection was closed with the world, but the map kept asking it every few seconds, and the log filled with
+  "Cannot access a disposed object" lines until the editor was closed or another world opened.
+
 ## v1.57.3 — unreleased
 
 ### Fixed
