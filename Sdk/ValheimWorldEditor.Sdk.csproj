@@ -16,6 +16,6 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Vector3 and Quaternion, which netstandard2.0 does not hold; the game and .NET both have them. -->
-    <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
+    <PackageReference Include="System.Numerics.Vectors" Version="4.6.1" />
   </ItemGroup>
 </Project>
