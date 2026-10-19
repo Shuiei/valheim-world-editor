@@ -63,6 +63,7 @@ public sealed partial class WorldSave
                 StartingGlobalKeys.Add(pkg.ReadString());
             }
         }
+        GridWidth = ExpandWorld.SavedGridWidth(StartingGlobalKeys, Name);
     }
 
     /// <summary>The save number to load, as <c>CommittedSave</c> picks it.</summary>

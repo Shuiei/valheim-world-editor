@@ -48,7 +48,7 @@ public static partial class Uplift
     }
 
     /// <summary>A zone the save has room for (a chunk file: what WorldWriter needs); the running game takes any.</summary>
-    public static bool Generated(WorldSave world, int zx, int zz) => world.IsLive || ChunkMath.Find(world.Chunks, zx, zz) != null;
+    public static bool Generated(WorldSave world, int zx, int zz) => world.IsLive || ChunkMath.Find(world.Chunks, zx, zz, world.GridWidth) != null;
 
     /// <summary>How many zones beyond a lifted one its discs and their ground can reach: the margin of its block.</summary>
     private static readonly int ReachZones = (int)MathF.Ceiling((Spacing + DiscRadius + DiscReach + 8f) / 64f);

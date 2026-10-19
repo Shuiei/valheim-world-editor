@@ -79,7 +79,7 @@ public static partial class WorldWriter
             ChunkFile? target = findChunk(zx, zz);
             if (target == null)
             {
-                plan.Skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: zone {zx}, {zz} {(ChunkMath.InWorld(zx, zz) ? "is not generated yet" : "is outside the world")}");
+                plan.Skipped.Add($"a new object at {n.Position.X:F0}, {n.Position.Z:F0}: zone {zx}, {zz} {(ChunkMath.InWorld(zx, zz, world.GridWidth) ? "is not generated yet" : "is outside the world")}");
                 continue;
             }
             byte[]? bytes = world.NewObjectBytes(n, source);

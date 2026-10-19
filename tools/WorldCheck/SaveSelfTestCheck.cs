@@ -62,7 +62,7 @@ internal static class SaveSelfTestCheck
         return (from z in Enumerable.Range(-6, 13)
                 from x in Enumerable.Range(-6, 13)
                 let k = (x, z)
-                where !world.TerrainZones.Any(t => t.ZoneX == k.x && t.ZoneZ == k.z) && ChunkMath.Find(world.Chunks, k.x, k.z) != null
+                where !world.TerrainZones.Any(t => t.ZoneX == k.x && t.ZoneZ == k.z) && ChunkMath.Find(world.Chunks, k.x, k.z, world.GridWidth) != null
                 select k).First();
     }
 

@@ -26,6 +26,17 @@ public class ExpandWorldTests : AppSettingsTestBase
     }
 
     [Fact]
+    public void TheSavedGridIsReadFromTheKeysWithinWhatAChunkIdCanName()
+    {
+        Assert.Equal(512, ExpandWorld.SavedGridWidth([], "w"));
+        Assert.Equal(1024, ExpandWorld.SavedGridWidth(["ews_gridwidth 1024"], "w"));
+        Assert.Equal(2048, ExpandWorld.SavedGridWidth(["ews_gridwidth 2048"], "w"));
+        Assert.Equal(512, ExpandWorld.SavedGridWidth(["ews_gridwidth 256"], "w"));
+        Assert.Equal(512, ExpandWorld.SavedGridWidth(["ews_gridwidth 4096"], "w"));
+        Assert.Equal(512, ExpandWorld.SavedGridWidth(["ews_gridwidth wide"], "w"));
+    }
+
+    [Fact]
     public void ASettingsFileIsReadBySettingName()
     {
         var cfg = ExpandWorld.ReadCfg("## Settings file was created by plugin\n\n[1. General]\n\n## Radius of the world.\n# Setting type: String\nWorld radius = 20000\nStretch world = 2\n\n[2. Poles]\nAshlands gap = false\nBroken line\n= nothing\nWorld radius = 30000\n");
