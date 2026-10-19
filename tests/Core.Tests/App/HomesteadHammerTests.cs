@@ -88,6 +88,20 @@ public sealed class HomesteadHammerTests : IDisposable
         Assert.Equal("2 of 4 piece(s) only the editor can place", entry.EditorOnlyNote?.English);
     }
 
+    // Marks with no piece at their line (a file cut short or edited by hand) are not counted: only the marks the
+    // pieces have, which are also the ones left out of the cost.
+    [Fact]
+    public void AMarkPastTheLastPieceIsNotCounted()
+    {
+        var entry = Homestead.Read("Cut.blueprint", ["#Name:Cut", BlueprintFormats.MarkedHeader, $"{BlueprintFormats.DataHeader}1;{BlueprintFormats.OnlyMark}",
+            $"{BlueprintFormats.DataHeader}2;{BlueprintFormats.OnlyMark}", $"{BlueprintFormats.DataHeader}9;{BlueprintFormats.OnlyMark}",
+            "#Pieces", $"{Wall};Building;0;0;0;0;0;0;1;\"\";1;1;1", $"{Prop};Building;1;0;0;0;0;0;1;\"\";1;1;1"]);
+        Assert.Equal(2, entry.Pieces);
+        Assert.Equal(1, entry.EditorOnly);
+        Assert.Equal(new Dictionary<string, int> { [Wall] = 1 }, entry.Kinds);
+        Assert.Equal("1 of 2 piece(s) only the editor can place", entry.EditorOnlyNote?.English);
+    }
+
     // An older editor's file, or Homestead's own: no marks, so nothing is said rather than a wrong zero.
     [Fact]
     public void AFileWithoutMarksDoesNotKnow()

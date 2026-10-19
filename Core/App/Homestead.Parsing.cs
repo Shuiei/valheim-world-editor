@@ -12,7 +12,7 @@ public static partial class Homestead
     public static Entry Read(string file, IEnumerable<string> lines)
     {
         var head = new Headers();
-        int pieces = 0;
+        int pieces = 0, marked = 0;
         var kinds = new Dictionary<string, int>();
         bool inPieces = false;
         foreach (string raw in lines)
@@ -28,9 +28,14 @@ public static partial class Homestead
             }
             else if (inPieces && line.Length > 0)
             {
-                // A marked piece (the hammer skips it) is counted, not costed; marks in a file without the header are not its.
+                // A marked piece (the hammer skips it) is counted, not costed; marks in a file without the header are not its,
+                // and a mark with no piece at its line (a file cut short or edited by hand) marks nothing.
                 int index = pieces++;
-                if (!head.HasMarks || !head.Marked.Contains(index))
+                if (head.HasMarks && head.Marked.Contains(index))
+                {
+                    marked++;
+                }
+                else
                 {
                     string kind = line.Split(';')[0].Trim();
                     kinds[kind] = kinds.GetValueOrDefault(kind) + 1;
@@ -43,7 +48,7 @@ public static partial class Homestead
             Description = head.Description ?? "",
             Tags = Details.ParseTags(head.Tags),
             Kinds = kinds,
-            EditorOnly = head.HasMarks ? head.Marked.Count : null,
+            EditorOnly = head.HasMarks ? marked : null,
         };
     }
 
