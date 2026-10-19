@@ -5,13 +5,14 @@ using System.Text;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// The stand-in game's answers to the zone requests: which zones changed (/watch), their objects (/zone) and the
-/// zones reset.
+/// The stand-in game's answers to the zone requests: which zones changed (/watch), their objects (/zone), the objects
+/// of theirs that move or tick on their own (/zone/movers) and the zones reset.
 /// </summary>
 public sealed partial class FakeGame
 {
     /// <summary>
-    /// The zones asked for: /watch gives their digests, /zone their objects (gzipped).
+    /// The zones asked for: /watch gives their digests (both, or one as an older plugin does), /zone their objects
+    /// (the movers among them) and /zone/movers their movers alone (gzipped).
     /// </summary>
     private void ServeZones(HttpListenerContext ctx, string path, Reply reply)
     {
@@ -28,12 +29,18 @@ public sealed partial class FakeGame
             {
                 // Zones not set are left out (as the plugin leaves out zones outside the world):
                 // the editor then has nothing to read again there.
-                reply.Body = Encoding.UTF8.GetBytes("{\"zones\":[" + string.Join(",", asked.Where(Zones.ContainsKey).Select(z => $"[{z.Item1},{z.Item2},\"{Zones[z].Digest}\"]")) + "]}");
+                reply.Body = Encoding.UTF8.GetBytes("{\"zones\":[" + string.Join(",", asked.Where(Zones.ContainsKey).Select(z => $"[{z.Item1},{z.Item2},\"{Zones[z].Digest}\"{MovingDigest(z)}]")) + "]}");
             }
             else
             {
-                Interlocked.Increment(ref _zoneReads);
-                var all = asked.SelectMany(z => Zones.TryGetValue(z, out var e) ? e.Objects : []).ToList();
+                // /zone gives a zone's objects whole, its movers among them; /zone/movers its movers alone.
+                bool movers = path == "/zone/movers";
+                Interlocked.Increment(ref movers ? ref _moverReads : ref _zoneReads);
+                var all = asked.SelectMany(z => Movers.TryGetValue(z, out var m) ? m.Objects : []).ToList();
+                if (!movers)
+                {
+                    all.AddRange(asked.SelectMany(z => Zones.TryGetValue(z, out var e) ? e.Objects : []));
+                }
                 using var raw = new MemoryStream();
                 using (var w = new BinaryWriter(raw, Encoding.UTF8, leaveOpen: true))
                 {
@@ -56,6 +63,12 @@ public sealed partial class FakeGame
             }
         }
     }
+
+    /// <summary>
+    /// A zone's second watch number as /watch writes it after the first (", number"): its movers' digest (0 with
+    /// none), or nothing from a plugin from before 1.57.2.
+    /// </summary>
+    private string MovingDigest((int X, int Z) zone) => FollowsMovers ? $",\"{(Movers.TryGetValue(zone, out var m) ? m.Digest : 0)}\"" : "";
 
     /// <summary>
     /// The zones reset: each one asked for is recorded with its keep and ground flags.

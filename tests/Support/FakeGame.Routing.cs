@@ -101,7 +101,7 @@ public sealed partial class FakeGame
         {
             ServeObjects(ctx, reply);
         }
-        else if (path is "/watch" or "/zone")
+        else if (path is "/watch" or "/zone" || (path == "/zone/movers" && FollowsMovers))
         {
             ServeZones(ctx, path, reply);
         }

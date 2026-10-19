@@ -32,8 +32,11 @@ namespace WorldEditorBridge;
 ///                   again under the same X-Call-Id header is answered again, not done twice
 ///   POST /zones/reset  int n + n x (int x, int z, bool keep buildings, bool reset ground): the zones'
 ///                   objects are removed and the zones are generated again (at once where players are)
-///   POST /watch     int n + n x (int x, int z): one change number per zone (JSON)
+///   POST /watch     int n + n x (int x, int z): two change numbers per zone (JSON): one for what stays put
+///                   (made, removed, changed), one for the kinds that move or tick on their own
 ///   POST /zone      the same zone list: those zones' saved objects, gzip-compressed
+///   POST /zone/movers  the same zone list: only those zones' objects of the kinds that move or tick on their
+///                   own (creatures, ships, carts, items, fires, smelters...), gzip-compressed
 ///   GET /catalogue  every prefab the game knows, mods' too (JSON, see WorldEditorBridgePlugin.Catalogue.cs)
 ///   POST /models    prefab names, one per line: what the game draws of each (JSON, see
 ///                   WorldEditorBridgePlugin.Models.cs)
