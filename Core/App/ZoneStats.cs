@@ -40,14 +40,15 @@ public static class ZoneStats
         {
             return [];
         }
-        int maxZone = (int)Math.Ceiling(ValheimGen.TerrainService.MapRadius / 64f) + 1;
+        float edge = world.Rules.TotalRadius;
+        int maxZone = (int)Math.Ceiling(edge / 64f) + 1;
         var (pieces, objects) = ZoneCensus.Count(world, edits);
         HashSet<(int, int)> edited = [.. edits.Copies(e => e.HeightCount + e.PaintCount > 0).Select(e => (e.ZoneX, e.ZoneZ))];
         var distance = new ZoneDistance(pieces.Keys, maxZone);
         var generated = world.Zones.Generated.Select(g => ((int)g.X, (int)g.Z)).ToHashSet();
         List<(int X, int Z)> zones = [.. generated.Union(objects.Keys).Union(edited)
             // Only zones in the world: an empty server also generates zones around a far-away point.
-            .Where(g => Math.Abs(g.Item1) <= maxZone && Math.Abs(g.Item2) <= maxZone && MathF.Sqrt(g.Item1 * g.Item1 + g.Item2 * g.Item2) * 64f <= ValheimGen.TerrainService.MapRadius + 64f)
+            .Where(g => Math.Abs(g.Item1) <= maxZone && Math.Abs(g.Item2) <= maxZone && MathF.Sqrt(g.Item1 * g.Item1 + g.Item2 * g.Item2) * 64f <= edge + 64f)
             .OrderBy(g => g.Item2).ThenBy(g => g.Item1)];
         int[] biomes = new int[zones.Count];
         Parallel.For(0, zones.Count, i => biomes[i] = biomeOf(zones[i].X, zones[i].Z));

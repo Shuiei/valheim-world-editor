@@ -48,7 +48,8 @@ public static partial class Regrow
             return zone;
         }
         float cx = zx * 64f, cz = zz * 64f;
-        float Depth(float px, float pz) => MathF.Max(0f, TerrainService.WaterLevel - ground.Height(px, pz));
+        // The game's literal 30 (Heightmap's ocean depth), whatever the rules put the water at.
+        float Depth(float px, float pz) => MathF.Max(0f, WorldGenerator.LiteralWaterLevel - ground.Height(px, pz));
         zone = new Zone
         {
             Corners = terrain.CornerBiomes(zx, zz),

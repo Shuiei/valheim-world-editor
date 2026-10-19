@@ -83,6 +83,13 @@ public sealed partial class AppSettings
     public bool DriverOpenGl { get; set; }
 
     /// <summary>
+    /// Expand World (Settings): worlds are generated as the Expand World mods make them, from the settings the world
+    /// file keeps and the mods' files in the BepInEx folder. Off unless chosen: every world is generated as the
+    /// game itself does, whatever the world was made with.
+    /// </summary>
+    public bool ExpandWorld { get; set; }
+
+    /// <summary>
     /// The local port the MCP server for Claude listens on.
     /// </summary>
     public int ClaudePort { get; set; } = 5731;

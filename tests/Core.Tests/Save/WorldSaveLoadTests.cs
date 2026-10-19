@@ -42,6 +42,51 @@ public class WorldSaveLoadTests
     }
 
     [Fact]
+    public void TheStartingGlobalKeysAreReadFromTheMetadata()
+    {
+        using var w = new TempWorld();
+        // The test world starts with no keys; a world file with keys (as Expand World Size writes its settings) gives them.
+        Assert.Empty(w.Load().StartingGlobalKeys);
+        WriteMetadata(Path.Combine(w.Dir, "_main.2.fwl2"), 42, ["defeated_eikthyr", "ews_world_radius 20000"]);
+        WorldSave world = w.Load();
+        Assert.Equal(["defeated_eikthyr", "ews_world_radius 20000"], world.StartingGlobalKeys);
+        Assert.Equal(("CITest", "GbXfypqU3G", 2), (world.Name, world.SeedName, world.WorldGenVersion));
+        Assert.True(world.Rules.IsVanilla);
+        // Before version 32 the keys were not in the file (and before 30 nor the database flag).
+        WriteMetadata(Path.Combine(w.Dir, "_main.2.fwl2"), 31, []);
+        Assert.Empty(w.Load().StartingGlobalKeys);
+    }
+
+    /// <summary>Writes a world file as the game does: the version, names, seed, uid, generator version, database flag (30 and later), keys (32 and later), players (none).</summary>
+    private static void WriteMetadata(string path, int version, string[] keys)
+    {
+        using MemoryStream pkg = new();
+        using (BinaryWriter p = new(pkg, System.Text.Encoding.UTF8, leaveOpen: true))
+        {
+            p.Write(version);
+            p.Write("CITest");
+            p.Write("GbXfypqU3G");
+            p.Write(StableHash.Of("GbXfypqU3G"));
+            p.Write(123456789L);
+            p.Write(2);
+            if (version >= 30)
+            {
+                p.Write(true);
+            }
+            if (version >= 32)
+            {
+                p.Write(keys.Length);
+                foreach (string k in keys)
+                {
+                    p.Write(k);
+                }
+            }
+            p.Write(0);
+        }
+        File.WriteAllBytes(path, [.. BitConverter.GetBytes((int)pkg.Length), .. pkg.ToArray()]);
+    }
+
+    [Fact]
     public void SourceReaderReadsEachChunkFileOnce()
     {
         using var w = new TempWorld();

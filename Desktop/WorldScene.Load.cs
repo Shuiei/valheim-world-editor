@@ -78,12 +78,13 @@ public sealed partial class WorldScene
                 }
             }
         }
-        // Heightmap.UpdateCornerDepths: each zone gets max(0, 30 - height) at its corners, blended across it.
+        // Heightmap.UpdateCornerDepths: each zone gets max(0, 30 - height) at its corners, blended across it (the
+        // game's literal 30, whatever the rules put the water at).
         for (int zz2 = 0; zz2 < zonesZ; zz2++)
         {
             for (int zx2 = 0; zx2 < zonesX; zx2++)
             {
-                float D(int gx, int gz) => MathF.Max(0, 30 - heights[gz * w + gx]);
+                float D(int gx, int gz) => MathF.Max(0, ValheimGen.WorldGenerator.LiteralWaterLevel - heights[gz * w + gx]);
                 int ax = zx2 * 64, az = zz2 * 64;
                 float d00 = D(ax, az), d10 = D(ax + 64, az), d01 = D(ax, az + 64), d11 = D(ax + 64, az + 64);
                 for (int k = 0; k <= 64; k++)
@@ -112,6 +113,7 @@ public sealed partial class WorldScene
             Biomes = biomes,
             Cx = minX + (w - 1) / 2f,
             Cz = minZ + (h - 1) / 2f,
+            Water = terrain.WaterLevel,
             Things = things,
             BiomeColor = biomeCol,
             Mask = mask,

@@ -9,14 +9,15 @@ namespace ValheimGen;
 public sealed partial class TerrainService
 {
     /// <summary>
-    /// Sea level, metres.
+    /// Sea level, metres: the game's 30, or where the world's rules put the water (<see cref="WorldRules.WaterLevel"/>).
     /// </summary>
-    public const float WaterLevel = 30f;
+    public float WaterLevel => Generator.Rules.WaterLevel;
 
     /// <summary>
-    /// The edge of the world, metres from the middle: the overview's reach, ocean beyond it.
+    /// The edge of the world, metres from the middle: the overview's reach, ocean beyond it (the game's 10500, or the
+    /// world's rules' total radius).
     /// </summary>
-    public const float MapRadius = 10500f;
+    public float MapRadius => Generator.Rules.TotalRadius;
 
     /// <summary>
     /// This world's generator (the map reads biomes and rivers from it).
@@ -55,7 +56,8 @@ public sealed partial class TerrainService
     }
 
     /// <summary>
-    /// The terrain of a saved world: its generator is made from the save's seed and world gen version.
+    /// The terrain of a saved world: its generator is made from the save's seed, world gen version and rules
+    /// (<see cref="WorldSave.Rules"/>: what a world generation mod changed, the game's own values by default).
     /// </summary>
     /// <param name="save">The world.</param>
     /// <param name="modifiers">Runtime modifiers to lay over BaseZone's ground; null for none.</param>
@@ -63,7 +65,7 @@ public sealed partial class TerrainService
     public TerrainService(WorldSave save, TerrainEditor.Terrain.TerrainModifiers? modifiers = null, int overviewSize = 1024)
     {
         _ground = new Modified(modifiers);
-        World world = new() { Seed = save.Seed, SeedName = save.SeedName, WorldGenVersion = save.WorldGenVersion };
+        World world = new() { Seed = save.Seed, SeedName = save.SeedName, WorldGenVersion = save.WorldGenVersion, Rules = save.Rules };
         Generator = WorldGenerator.Create(world);
         _overviewPng = new Lazy<byte[]>(() => RenderOverview(overviewSize), LazyThreadSafetyMode.ExecutionAndPublication);
     }

@@ -24,31 +24,39 @@ public sealed partial class WorldGenerator
     /// <param name="riverPreDN">With <paramref name="preGeneration"/>: the Deep North as it is for rivers.</param>
     internal float GetBiomeHeight(Heightmap.Biome biome, float x, float z, out Color mask, bool preGeneration = false, bool riverPreDN = true)
     {
-        // The ground flattens towards the sea along the Ashlands' and Deep North's edges.
-        float scale = preGeneration ? HeightScale : (float)(HeightScale * AshlandsGap(x, z) * CreateDeepNorthGap(x, z));
         mask = Color.Black;
         if (_world.Menu)
         {
             float shape = biome == Heightmap.Biome.Mountain ? MountainShape(x, z, menu: true) : MenuShape(x, z);
-            return Scaled(shape, scale);
+            return Scaled(shape, preGeneration ? HeightScale : (float)(HeightScale * AshlandsGap(x, z) * CreateDeepNorthGap(x, z)));
         }
-        if (GenMath.Length(x, z) > EdgeOfWorld)
+        // Expand World Size: the world stretched (its prefix on the game's GetBiomeHeight divides the point).
+        x = Stretched(x);
+        z = Stretched(z);
+        // The ground flattens towards the sea along the Ashlands' and Deep North's edges.
+        float scale = preGeneration ? HeightScale : (float)(HeightScale * AshlandsGap(x, z) * CreateDeepNorthGap(x, z));
+        float h;
+        if (GenMath.Length(x, z) > _v.EdgeOfWorld)
         {
-            return -2f * HeightScale;
+            h = -2f * HeightScale;
         }
-        return biome switch
+        else
         {
-            Heightmap.Biome.Meadows => Scaled(MeadowsShape(x, z), scale),
-            Heightmap.Biome.BlackForest => Scaled(ForestShape(x, z), scale),
-            Heightmap.Biome.Swamp => Scaled(SwampShape(x, z), scale),
-            Heightmap.Biome.Mountain => Scaled(MountainShape(x, z, menu: false), scale),
-            Heightmap.Biome.Plains => Scaled(PlainsShape(x, z), scale),
-            Heightmap.Biome.Mistlands => Scaled(preGeneration ? ForestShape(x, z) : MistlandsShape(x, z, out mask), scale),
-            Heightmap.Biome.AshLands => Scaled(preGeneration ? AshlandsRoughShape(x, z) : GetAshlandsHeight(x, z, out mask), scale),
-            Heightmap.Biome.DeepNorth => Scaled(preGeneration ? DeepNorthRoughShape(x, z, riverPreDN) : DeepNorthShape(x, z, out mask), scale),
-            Heightmap.Biome.Ocean => Scaled(Continent(x, z), scale),
-            _ => 0f,
-        };
+            h = biome switch
+            {
+                Heightmap.Biome.Meadows => Scaled(MeadowsShape(x, z), scale),
+                Heightmap.Biome.BlackForest => Scaled(ForestShape(x, z), scale),
+                Heightmap.Biome.Swamp => Scaled(SwampShape(x, z), scale),
+                Heightmap.Biome.Mountain => Scaled(MountainShape(x, z, menu: false), scale),
+                Heightmap.Biome.Plains => Scaled(PlainsShape(x, z), scale),
+                Heightmap.Biome.Mistlands => Scaled(preGeneration ? ForestShape(x, z) : MistlandsShape(x, z, out mask), scale),
+                Heightmap.Biome.AshLands => Scaled(preGeneration ? AshlandsRoughShape(x, z) : GetAshlandsHeight(x, z, out mask), scale),
+                Heightmap.Biome.DeepNorth => Scaled(preGeneration ? DeepNorthRoughShape(x, z, riverPreDN) : DeepNorthShape(x, z, out mask), scale),
+                Heightmap.Biome.Ocean => Scaled(Continent(x, z), scale),
+                _ => 0f,
+            };
+        }
+        return _v.Depth(h);
     }
 
     // ---- The ground around a point.

@@ -49,7 +49,7 @@ public sealed partial class ClaudeTools
         {
             for (int i = 0; i < p.Size; i++)
             {
-                var (r, g, b) = SeedMap.Shade(p.Biome[j * p.Size + i], p.Height[j * p.Size + i]);
+                var (r, g, b) = SeedMap.Shade(p.Biome[j * p.Size + i], p.Height[j * p.Size + i], ValheimGen.WorldRules.Vanilla.WaterLevel);
                 // Row 0 is the south: drawn at the bottom.
                 cells.SetPixel(i, p.Size - 1 - j, new SkiaSharp.SKColor(r, g, b));
             }

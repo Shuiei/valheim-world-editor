@@ -22,24 +22,25 @@ public sealed partial class WorldGenerator
     }
 
     /// <summary>
-    /// Along the way (every 128 m, ends left out): never over 0.4, and out of the water (over 0.05) at
-    /// least once.
+    /// Along the way (every 128 m, the rules' interval, ends left out): never over 0.4 (the rules' river limit),
+    /// and out of the water (over the rules' lake depth) at least once. The lakes are world metres; the continents'
+    /// height is read at the stretched point.
     /// </summary>
     private bool RiverCanRun(Vector2 a, Vector2 b)
     {
-        const float Step = 128f;
+        float step = _v.RiverStep;
         float length = Vector2.Distance(a, b);
         var dir = (b - a).Normalized;
         bool allWater = true;
-        for (float s = Step; s <= (float)((double)length - Step); s = (float)((double)s + Step))
+        for (float s = step; s <= (float)((double)length - step); s = (float)((double)s + step))
         {
             var q = a + dir * s;
-            float land = Continent(q.X, q.Y);
-            if (land > 0.4f)
+            float land = Continent(Stretched(q.X), Stretched(q.Y));
+            if (land > _v.RiverLimit)
             {
                 return false;
             }
-            allWater &= !(land > 0.05f);
+            allWater &= !(land > _v.LakeDepth);
         }
         return !allWater;
     }

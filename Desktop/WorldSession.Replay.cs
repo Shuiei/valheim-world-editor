@@ -12,9 +12,16 @@ public sealed partial class WorldSession
     /// works out how the pending changes go onto it, and what the game changed too (<see cref="EditReplay.Clashes"/>).
     /// Nothing changes yet; <see cref="Replay"/> does it. Null when the game made no newer save.
     /// </summary>
-    public EditReplay? PrepareReplay() => GameSaveSince() == null
-        ? null
-        : EditReplay.Prepare(World, Edits, new EditReplay.Saved(_savedZones, _savedDeleted, _savedAdded), WorldSave.Load(World.Directory));
+    public EditReplay? PrepareReplay()
+    {
+        if (GameSaveSince() == null)
+        {
+            return null;
+        }
+        var newer = WorldSave.Load(World.Directory);
+        newer.Rules = World.Rules;
+        return EditReplay.Prepare(World, Edits, new EditReplay.Saved(_savedZones, _savedDeleted, _savedAdded), newer);
+    }
 
     /// <summary>
     /// Brings the pending changes onto the game's save (<see cref="PrepareReplay"/>): the world is that save from now

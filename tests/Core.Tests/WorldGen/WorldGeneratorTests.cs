@@ -18,20 +18,12 @@ public class WorldGeneratorTests
     private static WorldGenerator Generator(int version = 2, bool menu = false) =>
         WorldGenerator.Create(new World { Seed = Seed, WorldGenVersion = version, Menu = menu });
 
-    /// <summary>
-    /// Points on rings round the world's middle, from r0 up to r1 (step metres apart), at n angles.
-    /// </summary>
-    private static IEnumerable<(float X, float Z)> Rings(float r0, float r1, float step, int n) =>
-        from a in Enumerable.Range(0, n)
-        from r in Enumerable.Range(0, (int)((r1 - r0) / step)).Select(i => r0 + i * step)
-        select (r * MathF.Cos(a * 2 * MathF.PI / n), r * MathF.Sin(a * 2 * MathF.PI / n));
-
     [Fact]
     public void VersionOneWorldsHaveSwampsFurtherOut()
     {
         var older = Generator(1);
         var now = Generator();
-        var ring = Rings(6200, 8000, 150, 720).ToList();
+        var ring = GeneratorPoints.Rings(6200, 8000, 150, 720).ToList();
         // Since version 2 no swamp lies past 6 km; before, up to 8 km.
         Assert.DoesNotContain(ring, p => now.GetBiome(p.X, p.Z) == Heightmap.Biome.Swamp);
         Assert.Contains(ring, p => older.GetBiome(p.X, p.Z) == Heightmap.Biome.Swamp);
@@ -42,7 +34,7 @@ public class WorldGeneratorTests
     {
         var older = Generator(0);
         var now = Generator();
-        var ring = Rings(1000, 1400, 50, 720).ToList();
+        var ring = GeneratorPoints.Rings(1000, 1400, 50, 720).ToList();
         int Mountains(WorldGenerator g) => ring.Count(p => g.GetBiome(p.X, p.Z) == Heightmap.Biome.Mountain);
         // Within 1.5 km (1 km since version 1) the ground is held below the mountains' height.
         Assert.True(Mountains(older) < Mountains(now), $"{Mountains(older)} >= {Mountains(now)}");
@@ -78,9 +70,10 @@ public class WorldGeneratorTests
     {
         Assert.Equal(0, WorldGenerator.DeepNorthWaveFade(0, 0));
         Assert.Equal(1, WorldGenerator.DeepNorthWaveFade(0, 10000));
-        float g = WorldGenerator.GetAshlandsOceanGradient(10, -9000);
+        var gen = Generator();
+        float g = gen.GetAshlandsOceanGradient(10, -9000);
         Assert.True(g > 1);
-        Assert.Equal(g, WorldGenerator.GetAshlandsOceanGradient(new Vector2(10, -9000)));
-        Assert.Equal(g, WorldGenerator.GetAshlandsOceanGradient(new Vector3(10, 7, -9000)));
+        Assert.Equal(g, gen.GetAshlandsOceanGradient(new Vector2(10, -9000)));
+        Assert.Equal(g, gen.GetAshlandsOceanGradient(new Vector3(10, 7, -9000)));
     }
 }

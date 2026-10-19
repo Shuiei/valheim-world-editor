@@ -80,6 +80,7 @@ public sealed partial class WorldSession
         {
             // Read first: a folder that cannot be read leaves the session as it was, its own saves still known.
             var saved = WorldSave.Load(World.Directory);
+            saved.Rules = World.Rules;
             PruneSaves();
             World = saved;
         }

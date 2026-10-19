@@ -29,7 +29,7 @@ public sealed partial class NewWorldPage : IDisposable
             for (int x = 0; x < px; x++)
             {
                 int i = x * p.Size / px, k = j * p.Size + i;
-                var (r, g, b) = SeedMap.Shade(p.Biome[k], p.Height[k]);
+                var (r, g, b) = SeedMap.Shade(p.Biome[k], p.Height[k], ValheimGen.WorldRules.Vanilla.WaterLevel);
                 if (startDot && Math.Abs(i - startI) <= Math.Max(1, p.Size / 100) && Math.Abs(j - startJ) <= Math.Max(1, p.Size / 100))
                 {
                     (r, g, b) = (230, 40, 40);

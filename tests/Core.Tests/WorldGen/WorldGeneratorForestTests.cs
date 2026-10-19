@@ -16,7 +16,8 @@ public class WorldGeneratorForestTests
     [InlineData(7000f, 7000f)]
     public void APointIsForestExactlyWhenItsForestFactorIsUnder115(float x, float z)
     {
+        var g = WorldGenerator.Create(new World { Seed = 12345, WorldGenVersion = 2 });
         var pos = new Vector3(x, 0f, z);
-        Assert.Equal(WorldGenerator.GetForestFactor(pos) < 1.15f, WorldGenerator.InForest(pos));
+        Assert.Equal(g.GetForestFactor(pos) < 1.15f, g.InForest(pos));
     }
 }

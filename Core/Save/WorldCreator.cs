@@ -66,7 +66,7 @@ public static partial class WorldCreator
                 }
                 float[] h = terrain.BaseZone(x, z);
                 float lo = h.Min(), hi = h.Max();
-                if (lo < ValheimGen.TerrainService.WaterLevel + 1.5f || best is { } b && hi - lo >= b.Item3)
+                if (lo < terrain.WaterLevel + 1.5f || best is { } b && hi - lo >= b.Item3)
                 {
                     continue;
                 }

@@ -51,13 +51,14 @@ public static partial class Regrow
         }
         float py = ground.Height(px, pz, out NVector3 normal);
         Zone hm = ZoneAt(terrain, ground, zones, px, pz);
-        if (!PassesSurfaceChecks(veg, ground, hm, px, py, pz, normal) || !PassesRegionChecks(veg, px, py, pz))
+        if (!PassesSurfaceChecks(veg, ground, hm, px, py, pz, normal) || !PassesRegionChecks(terrain, veg, px, py, pz))
         {
             return false;
         }
         if (veg.snapToWater != 0)
         {
-            py = TerrainService.WaterLevel;
+            // The game's literal 30 (ZoneSystem.PlaceVegetation), whatever the rules put the water at.
+            py = WorldGenerator.LiteralWaterLevel;
         }
         py += veg.groundOffset;
         NVector3 euler = SpotRotation(veg, normal, draw);

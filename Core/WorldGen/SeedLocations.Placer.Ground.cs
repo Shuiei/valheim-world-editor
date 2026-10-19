@@ -28,14 +28,15 @@ public static partial class SeedLocations
             }
             spot.Y = _gen.GetBiomeHeight(biome, spot.X, spot.Z, out Color mask);
             vegetation = mask.A;
-            float aboveSea = (float)(spot.Y - 30.0);
+            // The game's literal 30, whatever the rules put the water at.
+            float aboveSea = (float)(spot.Y - (double)WorldGenerator.LiteralWaterLevel);
             if (aboveSea < rule.MinAltitude || aboveSea > rule.MaxAltitude)
             {
                 return false;
             }
             if (rule.InForest != 0)
             {
-                float forest = WorldGenerator.GetForestFactor(spot);
+                float forest = _gen.GetForestFactor(spot);
                 if (forest < rule.ForestTresholdMin || forest > rule.ForestTresholdMax)
                 {
                     return false;

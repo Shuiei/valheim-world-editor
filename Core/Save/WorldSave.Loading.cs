@@ -34,7 +34,11 @@ public sealed partial class WorldSave
         return save;
     }
 
-    /// <summary>Mirrors World.LoadWorld: an int length prefix, then a ZPackage with version, names and seed.</summary>
+    /// <summary>
+    /// Mirrors World.LoadWorld: an int length prefix, then a ZPackage with version, names, seed, the generator version
+    /// (26 and later), whether the world needs its database (30 and later) and the starting global keys (32 and
+    /// later; what comes after them, the players seen, is not read).
+    /// </summary>
     private void LoadMetadata()
     {
         string path = Path.Combine(Directory, $"_main.{SaveNumber}.fwl2");
@@ -47,6 +51,18 @@ public sealed partial class WorldSave
         Seed = pkg.ReadInt();
         pkg.ReadLong();
         WorldGenVersion = version >= 26 ? pkg.ReadInt() : 0;
+        if (version >= 30)
+        {
+            pkg.ReadBool();
+        }
+        if (version >= 32)
+        {
+            int keys = pkg.ReadCount(1);
+            for (int i = 0; i < keys; i++)
+            {
+                StartingGlobalKeys.Add(pkg.ReadString());
+            }
+        }
     }
 
     /// <summary>The save number to load, as <c>CommittedSave</c> picks it.</summary>

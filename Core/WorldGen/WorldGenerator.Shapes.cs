@@ -1,6 +1,9 @@
 
 namespace ValheimGen;
 
+// Each biome's shape, at a point in the generator's coordinates (Stretched). The seven the game seeds with its
+// detail offset read the rules' height seed on x (DetailPoint with RuleValues.DetailX); the pregeneration and
+// menu shapes keep the seed's offset.
 public sealed partial class WorldGenerator
 {
     /// <summary>
@@ -8,7 +11,7 @@ public sealed partial class WorldGenerator
     /// </summary>
     private float MeadowsShape(float x, float z)
     {
-        float h = Hilled(x, z, out float land, out double dx, out double dz);
+        float h = Hilled(x, z, _v.DetailX, out float land, out double dx, out double dz);
         h = CutRivers(x, z, Pressed(h, land));
         return Grain(h, dx, dz);
     }
@@ -19,7 +22,7 @@ public sealed partial class WorldGenerator
     /// </summary>
     private float ForestShape(float x, float z)
     {
-        float h = Hilled(x, z, out _, out double dx, out double dz);
+        float h = Hilled(x, z, _v.DetailX, out _, out double dx, out double dz);
         return Grain(CutRivers(x, z, h), dx, dz);
     }
 
@@ -28,7 +31,7 @@ public sealed partial class WorldGenerator
     /// </summary>
     private float PlainsShape(float x, float z)
     {
-        float h = Hilled(x, z, out float land, out double dx, out double dz);
+        float h = Hilled(x, z, _v.DetailX, out float land, out double dx, out double dz);
         float over = h - 0.15f;
         float lift = (float)GenMath.Clamp01((double)land / (double)0.4f);
         if (over > 0f)
@@ -60,7 +63,7 @@ public sealed partial class WorldGenerator
     {
         float land = menu ? MenuContinent(x, z) : Continent(x, z);
         float steep = ContinentTilt(x, z);
-        double dx = DetailPoint(x), dz = DetailPoint(z);
+        double dx = DetailPoint(x, _v.DetailX), dz = DetailPoint(z);
         float h = (float)((double)land + (double)(float)((double)land - (double)0.4f));
         h = (float)((double)h + (double)Hills(dx, dz) * (double)0.2f);
         h = Grain(CutRivers(x, z, h), dx, dz);
@@ -74,7 +77,7 @@ public sealed partial class WorldGenerator
     private float MistlandsShape(float x, float z, out Color mask)
     {
         float land = Continent(x, z);
-        double dx = DetailPoint(x), dz = DetailPoint(z);
+        double dx = DetailPoint(x, _v.DetailX), dz = DetailPoint(z);
         double s = (double)0.7f;
         float peaks = GenMath.Noise(dx * (double)0.02f * s, dz * (double)0.02f * s) * GenMath.Noise(dx * (double)0.04f * s, dz * (double)0.04f * s);
         peaks = (float)((double)peaks + (double)GenMath.Noise(dx * (double)0.03f * s, dz * (double)0.03f * s) * GenMath.Noise(dx * (double)0.05f * s, dz * (double)0.05f * s) * peaks * 0.5);
@@ -111,7 +114,7 @@ public sealed partial class WorldGenerator
     private float DeepNorthShape(float x, float z, out Color mask)
     {
         float land = Continent(x, z) + 0.1f;
-        double dx = DetailPoint(x), dz = DetailPoint(z);
+        double dx = DetailPoint(x, _v.DetailX), dz = DetailPoint(z);
         float h = (float)((double)land + (double)Hills(dx, dz) * (double)0.1f);
         h = Grain(CutRivers(x, z, Pressed(h, land)), dx, dz);
         float snow = (float)GenMath.Layers(new Vector2((float)(dx * (double)0.01f), (float)(dz * (double)0.01f)), 3, 2.0, 0.5);
@@ -146,7 +149,7 @@ public sealed partial class WorldGenerator
     /// </summary>
     private float AshlandsRoughShape(float x, float z)
     {
-        float h = Hilled(x, z, out _, out double dx, out double dz);
+        float h = Hilled(x, z, _offsetDetail, out _, out double dx, out double dz);
         h = (float)((double)h + (double)0.1f);
         return CutRivers(x, z, Grain(h, dx, dz));
     }

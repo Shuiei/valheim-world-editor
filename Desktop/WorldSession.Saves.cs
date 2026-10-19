@@ -19,8 +19,11 @@ public sealed partial class WorldSession
         // twice). Not read back, the session starts over from the world as it was and says to open it again.
         try
         {
-            // The save as read back to check it: not read a third time.
-            World = result.Read ?? WorldSave.Load(World.Directory);
+            // The save as read back to check it: not read a third time. The world's rules stay what they were worked
+            // out to be when it was opened.
+            var read = result.Read ?? WorldSave.Load(World.Directory);
+            read.Rules = World.Rules;
+            World = read;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {

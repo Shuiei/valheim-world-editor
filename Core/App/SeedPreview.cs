@@ -13,8 +13,11 @@ namespace TerrainEditor.App;
 /// </summary>
 public static partial class SeedPreview
 {
-    /// <summary>The world's radius in metres (10 km): the preview covers -Radius..Radius on both axes.</summary>
-    public const float Radius = WorldGenerator.WorldSize;
+    /// <summary>
+    /// The world's radius in metres (10 km): the preview covers -Radius..Radius on both axes. The preview makes
+    /// worlds of the game's own rules.
+    /// </summary>
+    public const float Radius = 10000f;
 
     /// <summary>The biomes counted, in the order players meet them. A cell's biome byte is an index in it.</summary>
     public static readonly Heightmap.Biome[] Biomes =

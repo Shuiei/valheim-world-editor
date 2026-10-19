@@ -20,10 +20,13 @@ public static partial class Regrow
     private static bool PassesBiome(Rule veg, Zone hm, float px, float pz) =>
         (veg.biome & hm.Biome(px, pz)) != 0 && (veg.biomeArea & hm.Area) != 0;
 
-    /// <summary>Whether the spot's height above the water is within the rule's altitude range.</summary>
+    /// <summary>
+    /// Whether the spot's height above the water is within the rule's altitude range (the game's literal 30, whatever
+    /// the rules put the water at).
+    /// </summary>
     private static bool PassesAltitude(Rule veg, float py)
     {
-        float altitude = py - TerrainService.WaterLevel;
+        float altitude = py - WorldGenerator.LiteralWaterLevel;
         return !(altitude < veg.minAltitude || altitude > veg.maxAltitude);
     }
 

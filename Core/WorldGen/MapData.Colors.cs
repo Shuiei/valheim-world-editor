@@ -24,26 +24,29 @@ public sealed partial class MapData
     }
 
     /// <summary>
-    /// The mask texel at a world point (r forest, g mist, b ashlands lava/ocean). Mirrors Minimap.GetMaskColor.
+    /// The mask texel at a world point (r forest, g mist, b ashlands lava/ocean). Mirrors Minimap.GetMaskColor: the
+    /// water is its literal 30 whatever the rules say, and the point goes in stretched (Expand World Size's prefix).
     /// </summary>
     internal (byte, byte, byte) MaskColor(float wx, float wy, float height, Heightmap.Biome biome)
     {
-        if (height < 30f)
+        wx = Generator.Stretched(wx);
+        wy = Generator.Stretched(wy);
+        if (height < WorldGenerator.LiteralWaterLevel)
         {
-            return (0, 0, Byte(Math.Clamp(WorldGenerator.GetAshlandsOceanGradient(wx, wy), 0f, 1f)));
+            return (0, 0, Byte(Math.Clamp(Generator.GetAshlandsOceanGradient(wx, wy), 0f, 1f)));
         }
         Vector3 p = new(wx, 0f, wy);
         switch (biome)
         {
             case Heightmap.Biome.Meadows:
-                return WorldGenerator.InForest(p) ? ((byte)255, (byte)0, (byte)0) : ((byte)0, (byte)0, (byte)0);
+                return Generator.InForest(p) ? ((byte)255, (byte)0, (byte)0) : ((byte)0, (byte)0, (byte)0);
             case Heightmap.Biome.Plains:
-                return WorldGenerator.GetForestFactor(p) < 0.8f ? ((byte)255, (byte)0, (byte)0) : ((byte)0, (byte)0, (byte)0);
+                return Generator.GetForestFactor(p) < 0.8f ? ((byte)255, (byte)0, (byte)0) : ((byte)0, (byte)0, (byte)0);
             case Heightmap.Biome.BlackForest:
                 return (255, 0, 0);
             case Heightmap.Biome.Mistlands:
             {
-                float f = WorldGenerator.GetForestFactor(p);
+                float f = Generator.GetForestFactor(p);
                 float t = Math.Clamp((f - 1.1f) / 0.2f, 0f, 1f);
                 return (0, Byte(1f - t * t * (3f - 2f * t)), 0);
             }

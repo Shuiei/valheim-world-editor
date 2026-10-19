@@ -9,6 +9,11 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class WorldGeneratorEdgeGapTests
 {
+    private static WorldGenerator Generator() => WorldGenerator.Create(new World { Seed = 12345, WorldGenVersion = 2 });
+
+    private static double AshlandsGap(float x, float z) =>
+        PrivateMember.Call<double>(typeof(WorldGenerator), "AshlandsGap", Generator(), x, z);
+
     [Fact]
     public void WorldAngleIsTheSineOfTwentyTimesTheAngleFromTheZAxis()
     {
@@ -27,20 +32,21 @@ public class WorldGeneratorEdgeGapTests
     public void TheDeepNorthGapIsZeroOnItsEdge()
     {
         // The point is 12 000 m (the edge radius) from the circle's middle, where the wave is 0.
-        Assert.Equal(0.0, WorldGenerator.CreateDeepNorthGap(0f, 8000f), 6);
+        Assert.Equal(0.0, Generator().CreateDeepNorthGap(0f, 8000f), 6);
     }
 
     [Fact]
     public void TheDeepNorthGapIsOneFrom400MPastItsEdge()
     {
-        Assert.Equal(1.0, WorldGenerator.CreateDeepNorthGap(0f, 8400f), 6);
+        Assert.Equal(1.0, Generator().CreateDeepNorthGap(0f, 8400f), 6);
     }
 
     [Fact]
     public void TheDeepNorthGapIsTheSameShortOfAndPastTheEdgeByTheSameDistance()
     {
-        double short200 = WorldGenerator.CreateDeepNorthGap(0f, 7800f);
-        double past200 = WorldGenerator.CreateDeepNorthGap(0f, 8200f);
+        var g = Generator();
+        double short200 = g.CreateDeepNorthGap(0f, 7800f);
+        double past200 = g.CreateDeepNorthGap(0f, 8200f);
         Assert.Equal(past200, short200, 9);
         Assert.True(past200 is > 0.0 and < 1.0);
     }
@@ -49,14 +55,12 @@ public class WorldGeneratorEdgeGapTests
     public void TheAshlandsGapIsZeroOnItsEdge()
     {
         // The point is 12 000 m (the edge radius) from the Ashlands' circle's middle, where the wave is 0.
-        double gap = PrivateMember.Call<double>(typeof(WorldGenerator), "AshlandsGap", null, 0f, -8000f);
-        Assert.Equal(0.0, gap, 6);
+        Assert.Equal(0.0, AshlandsGap(0f, -8000f), 6);
     }
 
     [Fact]
     public void TheAshlandsGapIsOneFrom400MPastItsEdge()
     {
-        double gap = PrivateMember.Call<double>(typeof(WorldGenerator), "AshlandsGap", null, 0f, -8400f);
-        Assert.Equal(1.0, gap, 6);
+        Assert.Equal(1.0, AshlandsGap(0f, -8400f), 6);
     }
 }

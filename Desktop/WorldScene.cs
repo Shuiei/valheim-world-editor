@@ -50,8 +50,8 @@ public sealed partial class WorldScene
     public float Cx { get; init; }
     /// <summary>World z of the block's middle, in metres.</summary>
     public float Cz { get; init; }
-    /// <summary>The sea level in metres.</summary>
-    public float Water { get; init; } = TerrainService.WaterLevel;
+    /// <summary>The sea level in metres: the world's rules' (the game's 30 by default).</summary>
+    public float Water { get; init; } = ValheimGen.WorldRules.Vanilla.WaterLevel;
     /// <summary>
     /// The objects and building pieces in the block; only ever added to until the world is read again (see
     /// <see cref="Thing"/>). Lock it to read.

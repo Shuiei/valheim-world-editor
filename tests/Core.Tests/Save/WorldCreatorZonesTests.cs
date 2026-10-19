@@ -24,7 +24,7 @@ public sealed class WorldCreatorZonesTests : WorldCreatorTestBase
         Assert.InRange(fx, -3, 3);
         Assert.InRange(fz, -3, 3);
         float[] h = terrain.BaseZone(fx, fz);
-        Assert.True(h.Min() >= ValheimGen.TerrainService.WaterLevel + 1.5f, $"lowest {h.Min()}");
+        Assert.True(h.Min() >= terrain.WaterLevel + 1.5f, $"lowest {h.Min()}");
         Assert.Equal(h.Max() - h.Min(), made.FlatSpan, 3);
         Assert.Equal(ValheimGen.Heightmap.Biome.Meadows, terrain.BiomeAt(fx * 64, fz * 64));
         // The most even such zone holding no location.

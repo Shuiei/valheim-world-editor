@@ -5,22 +5,24 @@ public sealed partial class WorldGenerator
 {
     // ---- Lakes: every 128 m where the continents are under 0.05, nearby ones merged.
     /// <summary>
-    /// Every 128 m where the continents are under 0.05, within 800 m of each other merged.
+    /// Every 128 m (the rules' interval) over the world's radius in world metres where the continents are under 0.05
+    /// (the rules' lake depth), within 800 m of each other merged. The scan's points are world metres (Expand World
+    /// Size leaves the loop alone and stretches the point only for the continents' height).
     /// </summary>
     private List<Vector2> FindLakes()
     {
         var low = new List<Vector2>();
-        for (float z = -WorldSize; z <= WorldSize; z = (float)((double)z + 128.0))
+        for (float z = -_v.Radius; z <= _v.Radius; z = (float)((double)z + _v.LakeStep))
         {
-            for (float x = -WorldSize; x <= WorldSize; x = (float)((double)x + 128.0))
+            for (float x = -_v.Radius; x <= _v.Radius; x = (float)((double)x + _v.LakeStep))
             {
-                if (!(GenMath.Length(x, z) > WorldSize) && Continent(x, z) < 0.05f)
+                if (!(GenMath.Length(x, z) > _v.Radius) && Continent(Stretched(x), Stretched(z)) < _v.LakeDepth)
                 {
                     low.Add(new Vector2(x, z));
                 }
             }
         }
-        return Merge(low, 800f);
+        return Merge(low, _v.LakeMerge);
     }
 
     /// <summary>

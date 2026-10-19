@@ -16,31 +16,34 @@ public class SeedMapTests
     [AvaloniaFact]
     public void EachCellIsShadedByBiomeHeightAndDepth()
     {
-        float water = TerrainService.WaterLevel;
+        float water = WorldRules.Vanilla.WaterLevel;
         // Outside the world: the background.
-        Assert.Equal(((byte)18, (byte)22, (byte)28), SeedMap.Shade(SeedPreview.Ocean, float.NegativeInfinity));
+        Assert.Equal(((byte)18, (byte)22, (byte)28), SeedMap.Shade(SeedPreview.Ocean, float.NegativeInfinity, water));
         // The sea: darker the deeper, down to 60 m.
-        var shallow = SeedMap.Shade(SeedPreview.Ocean, water);
-        var deep = SeedMap.Shade(SeedPreview.Ocean, water - 60);
+        var shallow = SeedMap.Shade(SeedPreview.Ocean, water, water);
+        var deep = SeedMap.Shade(SeedPreview.Ocean, water - 60, water);
         Assert.Equal(((byte)48, (byte)98, (byte)150), shallow);
         Assert.Equal(((byte)20, (byte)48, (byte)100), deep);
-        Assert.Equal(deep, SeedMap.Shade(SeedPreview.Ocean, water - 500));
+        Assert.Equal(deep, SeedMap.Shade(SeedPreview.Ocean, water - 500, water));
         // Land at the water's level: the game map's colour; higher, lighter (up to 120 m above).
         byte meadows = (byte)Array.IndexOf(SeedPreview.Biomes, Heightmap.Biome.Meadows);
         var (r, g, b) = MapData.PixelColor(Heightmap.Biome.Meadows);
-        Assert.Equal((r, g, b), SeedMap.Shade(meadows, water));
-        var (hr, hg, hb) = SeedMap.Shade(meadows, water + 60);
+        Assert.Equal((r, g, b), SeedMap.Shade(meadows, water, water));
+        var (hr, hg, hb) = SeedMap.Shade(meadows, water + 60, water);
         Assert.True(hr > r && hg > g && hb > b);
-        Assert.Equal(SeedMap.Shade(meadows, water + 120), SeedMap.Shade(meadows, water + 1000));
+        Assert.Equal(SeedMap.Shade(meadows, water + 120, water), SeedMap.Shade(meadows, water + 1000, water));
         // Water on land (a pool, a river): the biome under a blue tint.
-        Assert.Equal(((byte)((r + 96) / 3), (byte)((g + 196) / 3), (byte)((b + 300) / 3)), SeedMap.Shade(meadows, water - 1));
+        Assert.Equal(((byte)((r + 96) / 3), (byte)((g + 196) / 3), (byte)((b + 300) / 3)), SeedMap.Shade(meadows, water - 1, water));
+        // The water line is the one given: with the water at 20 m, 25 m of Meadows is land.
+        Assert.Equal((r, g, b), SeedMap.Shade(meadows, 20, 20));
+        Assert.Equal(shallow, SeedMap.Shade(SeedPreview.Ocean, 20, 20));
     }
 
     [AvaloniaFact]
     public void APictureHasACellAPixel()
     {
         byte[] biome = new byte[6];
-        float[] height = [.. Enumerable.Repeat(TerrainService.WaterLevel, 6)];
+        float[] height = [.. Enumerable.Repeat(WorldRules.Vanilla.WaterLevel, 6)];
         using var bmp = SeedMap.Picture(biome, height, 3, 2);
         Assert.Equal(new PixelSize(3, 2), bmp.PixelSize);
     }
