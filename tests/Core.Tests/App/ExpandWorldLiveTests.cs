@@ -105,6 +105,21 @@ public class ExpandWorldLiveTests : AppSettingsTestBase
     }
 
     [Fact]
+    public async Task AWorldFileTheBridgeCannotServeLeavesTheKeysButNotTheFiles()
+    {
+        using var w = new TempWorld();
+        var save = w.Load();
+        using var game = new FakeGame { Plugins = [("expand_world_size", "Expand World Size", "1.45.0")] };
+        game.AddConfig("expand_world_size.cfg", "[1. General]\nWorld radius = 20000\n");
+        game.Fail["/world/meta"] = 500;
+        using var live = new LiveBridge(game.Url, game.Token);
+        var rules = await ExpandWorld.ResolveLive(save, new AppSettings { ExpandWorld = true, ExpandWorldFolder = Local(LocalCfg) }, live);
+        // The keys stay as the game loaded them (none here); the settings file is still the game's, not the local one.
+        Assert.Equal(20000f, rules.Radius);
+        Assert.True(File.Exists(Path.Combine(ExpandWorld.LiveFolder, "config", "expand_world_size.cfg")));
+    }
+
+    [Fact]
     public async Task ABridgeThatFailsLeavesTheLocalFolders()
     {
         using var w = new TempWorld();

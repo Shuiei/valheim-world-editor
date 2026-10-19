@@ -4,6 +4,20 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.56.2 — unreleased
+
+### Fixed
+- **A live world's settings from Expand World are read again.** The editor asks the game's WorldEditorBridge for
+  the world's file (the mod keeps the world's size there), and the plugin looked for it where older games saved it
+  (`worlds/name.fwl`): the game now saves `worlds/name/_main.n.fwl2`, so the plugin failed, and the editor then
+  read nothing through the bridge and fell back to the BepInEx folders on this computer. The plugin now serves the
+  file the game saves (or the older one for a world not saved by this game yet), and the editor still reads the
+  mods' files through the bridge when only the world's file cannot be served.
+
+### WorldEditorBridge
+- `GET /world/meta` serves the world file the game saves (`_main.n.fwl2`), else the older `.fwl`; 404 when the
+  game has neither.
+
 ## v1.56.1 — unreleased
 
 ### Fixed
