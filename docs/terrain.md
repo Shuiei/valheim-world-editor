@@ -259,6 +259,9 @@ What this means for you:
   40 tree(s)/rock(s) taken away; some ground is up to 2.5 m off (too steep)".
 - **History restarts.** After saving No limit ground, the area is read again from the new world and the history is
   cleared, because the ground under it is not the same any more. Check the shape before you save.
+- **Discs load first.** A player's game spawns the discs before the pieces and trees around them, so the ground is
+  finished in the first frames of a visit and nothing is rebuilt disc by disc. On a server, the WorldEditorBridge
+  plugin keeps it that way (the game would put a disc back among the pieces once a player owns it).
 - **The new ground counts as generated.** After saving, the status bar's "original" height is the disc ground. The
   game's hoe and pickaxe work ±8 m from it, and so do the editor's tools. **Restore** brings ground back to the disc
   ground, not to the world's first ground. To take a saved shape away, work it down again with No limit on: discs

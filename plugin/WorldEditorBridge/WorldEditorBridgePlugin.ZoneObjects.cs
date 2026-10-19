@@ -63,7 +63,7 @@ public sealed partial class WorldEditorBridgePlugin
     private static byte[] ZoneObjects(byte[] body) => ZoneObjects(body, _ => true);
 
     /// <summary>
-    /// POST /zone/movers (1.57.2 on): of the zones' saved objects, only those of the kinds that change on their own
+    /// POST /zone/movers (1.57.3 on): of the zones' saved objects, only those of the kinds that change on their own
     /// (<see cref="Moves"/>), in /zone's format. The editor reads them when a zone's second watch number changed.
     /// </summary>
     private static byte[] MovingObjects(byte[] body) => ZoneObjects(body, Moves);

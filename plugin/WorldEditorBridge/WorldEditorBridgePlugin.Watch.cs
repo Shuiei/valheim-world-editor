@@ -35,8 +35,8 @@ public sealed partial class WorldEditorBridgePlugin
     /// POST /watch: two numbers per zone. The first changes when an object there is made or removed, or one that stays
     /// put changes (its data or place): the editor reads the zone whole again. The second changes when a kind that
     /// changes on its own (<see cref="Moves"/>) moves or changes its data: the editor reads those objects alone
-    /// (/zone/movers). The first number is what every plugin before 1.57.2 gave (movers counted when made or removed
-    /// only): editors from before 1.57.2 read it alone, as before.
+    /// (/zone/movers). The first number is what every plugin before 1.57.3 gave (movers counted when made or removed
+    /// only): editors from before 1.57.3 read it alone, as before.
     /// </summary>
     /// <returns>JSON <c>{"zones":[[x,z,"number","number"],...]}</c>, the numbers as strings (they are 64-bit unsigned).</returns>
     private static byte[] Watch(byte[] body)

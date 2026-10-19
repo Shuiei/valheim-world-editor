@@ -31,7 +31,7 @@ public sealed class LiveBridgeWatchTests
         Assert.Equal(2, (await live.ZoneObjects([(10, 10)])).Count);
     }
 
-    // A plugin from before 1.57.2 gives one number per zone: the second is 0, and the movers are never asked for.
+    // A plugin from before 1.57.3 gives one number per zone: the second is 0, and the movers are never asked for.
     [Fact]
     public async Task AnOlderPluginGivesOneNumberAndNoMovers()
     {

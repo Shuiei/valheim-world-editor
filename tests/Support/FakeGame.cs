@@ -74,7 +74,7 @@ public sealed partial class FakeGame : IDisposable
     public Dictionary<(int X, int Z), (ulong Digest, List<(long User, uint Id, byte[] Bytes)> Objects)> Movers { get; } = [];
     private int _moverReads;
     public int MoverReads => _moverReads;
-    // False: a plugin from before 1.57.2, whose /watch gives one number per zone and has no /zone/movers (404).
+    // False: a plugin from before 1.57.3, whose /watch gives one number per zone and has no /zone/movers (404).
     public bool FollowsMovers { get; set; } = true;
     // Objects the game no longer had when asked to destroy them.
     public int Missing { get; set; }

@@ -66,7 +66,7 @@ public sealed partial class FakeGame
 
     /// <summary>
     /// A zone's second watch number as /watch writes it after the first (", number"): its movers' digest (0 with
-    /// none), or nothing from a plugin from before 1.57.2.
+    /// none), or nothing from a plugin from before 1.57.3.
     /// </summary>
     private string MovingDigest((int X, int Z) zone) => FollowsMovers ? $",\"{(Movers.TryGetValue(zone, out var m) ? m.Digest : 0)}\"" : "";
 

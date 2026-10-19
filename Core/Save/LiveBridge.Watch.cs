@@ -11,13 +11,13 @@ public sealed partial class LiveBridge : IDisposable
     /// </param>
     /// <param name="Moving">
     /// Changes when an object of a kind that moves or ticks on its own (a creature, a ship, an item, a fire...) moves
-    /// or changes its data: those objects are read alone (<see cref="MovingObjects"/>). Plugins from before 1.57.2
+    /// or changes its data: those objects are read alone (<see cref="MovingObjects"/>). Plugins from before 1.57.3
     /// give none: 0, never changing.
     /// </param>
     public readonly record struct Digests(ulong Still, ulong Moving);
 
     /// <summary>
-    /// The watch numbers of each zone (a plugin from 1.17.0 on; the second number from 1.57.2 on, 0 before).
+    /// The watch numbers of each zone (a plugin from 1.17.0 on; the second number from 1.57.3 on, 0 before).
     /// </summary>
     public async Task<Dictionary<(int X, int Z), Digests>> Watch(IReadOnlyCollection<(int X, int Z)> zones)
     {
@@ -41,7 +41,7 @@ public sealed partial class LiveBridge : IDisposable
 
     /// <summary>
     /// Of the zones' saved objects, only those of the kinds that move or tick on their own, as the game has them now
-    /// (a plugin from 1.57.2 on; older ones answer 404, "too old": the editor asks only once a zone's second watch
+    /// (a plugin from 1.57.3 on; older ones answer 404, "too old": the editor asks only once a zone's second watch
     /// number changed, which theirs never does).
     /// </summary>
     /// <exception cref="InvalidDataException">The answer is damaged or unpacks to more than a world snapshot can.</exception>

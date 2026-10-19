@@ -240,7 +240,7 @@ the zone does, and only the zones whose number changed are read again.
 - **Things that move or change on their own** (creatures, ships, carts, items lying about; fires, smelters,
   beehives and the like, which change their own data all the time) are followed as they move or change, and read
   on their own: a creature walking does not have its whole zone read at every look. This needs WorldEditorBridge
-  1.57.2 or newer; with an older plugin they are followed when they appear or go, and when something else in
+  1.57.3 or newer; with an older plugin they are followed when they appear or go, and when something else in
   their zone changes.
 - **Ground** dug, flattened, paved or cultivated in the game comes in where you have no changes of your own in
   that zone. Where you have changes not applied yet, yours are kept and the status bar says so. **Apply live**
