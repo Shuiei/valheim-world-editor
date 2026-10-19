@@ -50,6 +50,15 @@ public sealed partial class WorldEditorBridgePlugin
             case "/mods":
                 Reply(res, 200, "application/json", Encoding.UTF8.GetBytes(Mods()));
                 break;
+            case "/plugins":
+                Reply(res, 200, "application/json", Plugins());
+                break;
+            case "/config":
+                ServeConfig(ctx);
+                break;
+            case "/world/meta":
+                ReplyBytesOr404(res, WorldMeta);
+                break;
             case "/status":
                 ReplyJson(res, Status);
                 break;

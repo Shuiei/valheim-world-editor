@@ -18,8 +18,8 @@ public sealed partial class WorldSession
             await LearnMods(live);
             mods = await BridgeMods(live);
             var world = await live.LoadWorld();
-            // A live world has no world file to keep Expand World Size's settings: the mods' settings files only.
-            world.Rules = ExpandWorld.Resolve(world, AppSettings.Load());
+            // The mods' settings and data files as the game has them, through its bridge (an older one: the local folders).
+            world.Rules = await ExpandWorld.ResolveLive(world, AppSettings.Load(), live);
             WorldSave.Builder = Builders.Default(world);
             session = From(world, live, label);
         }

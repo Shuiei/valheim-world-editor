@@ -14,12 +14,13 @@ namespace TerrainEditor.App;
 /// <remarks>
 /// Followed: Expand World Size 1.45 (expand_world_size.cfg; WorldSettings: the keys), Expand World Rivers 1.11
 /// (expand_world_rivers.cfg), Expand World Data 1.79 (expand_world_data.cfg and the expand_world folder: the biome,
-/// world and territory files so far; the location, vegetation and alt biome files are not read yet). The parts: this
-/// file (the mods in a BepInEx folder), ExpandWorld.Resolve (a world's rules and the log), ExpandWorld.Rules (the
-/// rules from the keys and files), ExpandWorld.Describe, ExpandWorld.Keys, ExpandWorld.Cfg and ExpandWorld.Values
-/// (reading what the mods write), ExpandWorld.Data (the data files, through <see cref="YamlReader"/>),
-/// ExpandWorld.Fields (an entry's values), ExpandWorld.Biomes, ExpandWorld.World and ExpandWorld.Territories (the
-/// files' entries as the rules' biome table, world rules and territories).
+/// world, territory, location, vegetation and alt biome files). The parts: this file (the mods in a BepInEx folder),
+/// ExpandWorld.Resolve (a world's rules and the log), ExpandWorld.Live (a live world's, the files through the game's
+/// bridge), ExpandWorld.Rules (the rules from the keys and files), ExpandWorld.Describe, ExpandWorld.Keys,
+/// ExpandWorld.Cfg and ExpandWorld.Values (reading what the mods write), ExpandWorld.Data (the data files, through
+/// <see cref="YamlReader"/>), ExpandWorld.Fields (an entry's values), ExpandWorld.Biomes, ExpandWorld.World,
+/// ExpandWorld.Territories, ExpandWorld.Locations, ExpandWorld.Vegetation and ExpandWorld.AltBiomes (the files'
+/// entries as the rules).
 /// </remarks>
 public static partial class ExpandWorld
 {
@@ -55,6 +56,16 @@ public static partial class ExpandWorld
 
         /// <summary>Any of the mods is there.</summary>
         public bool Any => Size || Data || Rivers;
+
+        /// <summary>
+        /// Where the YamlDotNet library Expand World Data installs is looked for, when not under the folder's own
+        /// plugins: a live game's files are copied to a folder without plugins, and the library is taken from a local
+        /// BepInEx folder (<see cref="ResolveLive"/>).
+        /// </summary>
+        public string? PluginsFolder { get; init; }
+
+        /// <summary>The plugins folder the library is looked for in: <see cref="PluginsFolder"/>, else the folder's own.</summary>
+        public string Plugins => PluginsFolder ?? Path.Combine(Folder, "plugins");
     }
 
     /// <summary>

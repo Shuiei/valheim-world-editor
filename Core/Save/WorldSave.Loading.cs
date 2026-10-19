@@ -34,7 +34,7 @@ public sealed partial class WorldSave
         return save;
     }
 
-    /// <summary>The world file's head (the .fwl2), as <see cref="ReadMetadata"/> reads it.</summary>
+    /// <summary>The world file's head (the .fwl2), as <see cref="ReadMetadata(string)"/> reads it.</summary>
     /// <param name="Name">The world's name.</param>
     /// <param name="SeedName">The seed as typed.</param>
     /// <param name="Seed">The seed number.</param>
@@ -50,7 +50,15 @@ public sealed partial class WorldSave
     /// <param name="path">The world file (_main.n.fwl2).</param>
     public static Metadata ReadMetadata(string path)
     {
-        using ValheimReader file = new(File.OpenRead(path));
+        using FileStream file = File.OpenRead(path);
+        return ReadMetadata(file);
+    }
+
+    /// <summary>The same, from the world file's bytes (a live game's, served by its bridge).</summary>
+    /// <param name="stream">The world file's contents, from its start.</param>
+    public static Metadata ReadMetadata(Stream stream)
+    {
+        using ValheimReader file = new(stream);
         int length = file.ReadInt();
         using ValheimReader pkg = new(new MemoryStream(file.ReadBytes(length)));
         int version = pkg.ReadInt();
@@ -75,7 +83,7 @@ public sealed partial class WorldSave
         return new Metadata(name, seedName, seed, worldGenVersion, keys);
     }
 
-    /// <summary>Reads the world file's head into this save (<see cref="ReadMetadata"/>).</summary>
+    /// <summary>Reads the world file's head into this save (<see cref="ReadMetadata(string)"/>).</summary>
     private void LoadMetadata()
     {
         var meta = ReadMetadata(Path.Combine(Directory, $"_main.{SaveNumber}.fwl2"));
@@ -83,6 +91,17 @@ public sealed partial class WorldSave
         SeedName = meta.SeedName;
         Seed = meta.Seed;
         WorldGenVersion = meta.WorldGenVersion;
+        TakeKeys(meta);
+    }
+
+    /// <summary>
+    /// Takes the world file's starting global keys (and the save grid they name) from its head: a live world's, read
+    /// from the game's own file, which keeps what a mod takes out of the loaded list.
+    /// </summary>
+    /// <param name="meta">The world file's head.</param>
+    public void TakeKeys(Metadata meta)
+    {
+        StartingGlobalKeys.Clear();
         StartingGlobalKeys.AddRange(meta.StartingGlobalKeys);
         GridWidth = ExpandWorld.SavedGridWidth(StartingGlobalKeys, Name);
     }
