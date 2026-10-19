@@ -66,9 +66,7 @@ public static partial class Regrow
         }
         py += veg.groundOffset;
         NVector3 euler = SpotRotation(veg, normal, draw);
-        int which = veg.prefabs == null ? -1 : Rnd.Range(0, veg.prefabs.Length);
-        string name = which < 0 ? veg.prefab : veg.prefabs![which];
-        int draws = which < 0 ? veg.draws : veg.prefabDraws?[which] ?? 0;
+        (string name, int draws) = veg.prefabs == null ? (veg.prefab, veg.draws) : DrawPrefab(veg);
         // The components' draws come as the object wakes, before the mod scales it.
         for (int k = draws; k > 0; k--)
         {
@@ -77,6 +75,13 @@ public static partial class Regrow
         float[]? axes = veg.scaleMinAxes != null && veg.scaleMaxAxes != null && draw.Scale != 1f ? ScaleByAxes(veg) : null;
         spots.Add(new Spot(name, px, py, pz, euler.X, euler.Y, euler.Z, axes?[0] ?? draw.Scale, axes));
         return true;
+    }
+
+    /// <summary>The mod's draw of one of a rule's several prefabs: its name and its object's own draws (none when unknown).</summary>
+    private static (string Name, int Draws) DrawPrefab(Rule veg)
+    {
+        int which = Rnd.Range(0, veg.prefabs!.Length);
+        return (veg.prefabs[which], veg.prefabDraws?[which] ?? 0);
     }
 
     /// <summary>

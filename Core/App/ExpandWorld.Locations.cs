@@ -65,7 +65,6 @@ public static partial class ExpandWorld
     /// <summary>One kind from its entry.</summary>
     private static SeedLocations.Rule LocationOf(Fields f, string prefab, string baseName, float interior, float exterior, bool blueprint, BiomeTable biomes, float radius, ref int virtualGroups, List<string> notes)
     {
-        float Dist(float fraction) => (float)((double)fraction * radius);
         string group = f.Str("group"), groupMax = f.Str("groupMax"), altBiome = f.Str("altBiome");
         // The groups the kind belongs to, with its own group names as the file gives them (before any made-up one).
         List<string> groups = [.. SplitList(f.Str("groups"))];
@@ -103,7 +102,7 @@ public static partial class ExpandWorld
             Prefab = prefab,
             Name = prefab,
             BasePrefab = baseName == prefab ? null : baseName,
-            Enable = f.B("enabled", true) ? 1 : 0,
+            Enable = Bit(f, "enabled", true),
             Biome = (int)biomes.Parse(f.Str("biome"), name => notes.Add($"expand_locations: {name} is no biome (left out)")),
             BiomeArea = AreasOf(f, "biomeArea", notes),
             Quantity = Int(f.Str("quantity")) ?? 0,
@@ -127,8 +126,8 @@ public static partial class ExpandWorld
             InForest = Flag(f, "inForest"),
             ForestTresholdMin = f.F("forestTresholdMin", 0f),
             ForestTresholdMax = f.F("forestTresholdMax", 1f),
-            MinDistance = Dist(f.F("minDistance", 0f)),
-            MaxDistance = Dist(f.F("maxDistance", 0f)),
+            MinDistance = Dist(f.F("minDistance", 0f), radius),
+            MaxDistance = Dist(f.F("maxDistance", 0f), radius),
             MinAltitude = f.F("minAltitude", -1000f),
             MaxAltitude = f.F("maxAltitude", 10000f),
             SlopeRotation = Flag(f, "slopeRotation"),
@@ -138,8 +137,8 @@ public static partial class ExpandWorld
             Groups = groups.Count > 0 ? groups : null,
             AwayFrom = awayFrom,
             CloseTo = closeTo,
-            Blueprint = blueprint ? true : null,
-            Custom = CustomFields.Any(f.Has) || f.Str("levelArea") is not ("" or "false") ? true : null,
+            Blueprint = OrNull(blueprint),
+            Custom = OrNull(CustomFields.Any(f.Has) || f.Str("levelArea") is not ("" or "false")),
         };
     }
 }

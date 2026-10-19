@@ -60,12 +60,12 @@ public static partial class ExpandWorld
     {
         if (data.Any)
         {
-            string biomes = data.Biomes == null ? "off" : $"{data.Biomes.Count} entries ({rules.Biomes.Biomes.Count - BiomeTable.GamesBiomes.Count} new biomes)";
-            string world = data.World == null ? "off" : data.World.Count == 0 ? "the mod's default rules (no file)" : $"{rules.World?.Count ?? 0} rules";
-            string territories = data.Territories == null ? "off" : $"{rules.Territories.Count}";
-            string locations = data.Locations == null ? "off" : data.Locations.Count == 0 ? "the game's (no file)" : $"{rules.Locations?.Locations.Count ?? 0} kinds";
-            string vegetation = data.Vegetation == null ? "off" : data.Vegetation.Count == 0 ? "the game's (no file)" : $"{rules.Vegetation?.Count ?? 0} rules";
-            string alts = data.AltBiomes == null ? "off" : data.AltBiomes.Count == 0 ? "the game's (no file)" : $"{rules.Locations?.AltBiomes.Count ?? 0}";
+            string biomes = Kind(data.Biomes, "", $"{data.Biomes?.Count ?? 0} entries ({rules.Biomes.Biomes.Count - BiomeTable.GamesBiomes.Count} new biomes)");
+            string world = Kind(data.World, "the mod's default rules (no file)", $"{rules.World?.Count ?? 0} rules");
+            string territories = Kind(data.Territories, "", $"{rules.Territories.Count}");
+            string locations = Kind(data.Locations, "the game's (no file)", $"{rules.Locations?.Locations.Count ?? 0} kinds");
+            string vegetation = Kind(data.Vegetation, "the game's (no file)", $"{rules.Vegetation?.Count ?? 0} rules");
+            string alts = Kind(data.AltBiomes, "the game's (no file)", $"{rules.Locations?.AltBiomes.Count ?? 0}");
             Console.WriteLine($"Expand World Data: biomes {biomes}; world {world}{(rules.LegacyGeneration ? " (legacy generation)" : "")}; territories {territories}; locations {locations}; vegetation {vegetation}; alt biomes {alts}.");
         }
         foreach (string note in data.Notes)
@@ -73,6 +73,12 @@ public static partial class ExpandWorld
             Console.WriteLine("Expand World Data: " + note);
         }
     }
+
+    /// <summary>
+    /// One kind of data for the log: "off" when its switch is off, <paramref name="noFile"/> when it is on without a
+    /// file (unless empty: the count then), else what was read of it.
+    /// </summary>
+    private static string Kind(IReadOnlyList<Entry>? entries, string noFile, string read) => entries == null ? "off" : entries.Count == 0 && noFile != "" ? noFile : read;
 
     /// <summary>Notes a world made with Expand World Size that opens with the game's own generation.</summary>
     private static void NoteSwitchOff(string world, int keys)
