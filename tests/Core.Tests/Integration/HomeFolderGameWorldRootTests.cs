@@ -67,13 +67,15 @@ public sealed class HomeFolderGameWorldRootTests : HomeFolderTestBase
         Directory.CreateDirectory(Local("Games"));
         Directory.CreateSymbolicLink(Local("Games", "Valheim"), valheim);
         Assert.Equal(Prefix, Places.GameWorldRoot(Local("Games", "Valheim")));
-        // A Windows build kept outside any library: a Steam prefix on this computer when one exists, else the home's.
+        // A Windows build kept outside any library: the game's Proton prefix in a Steam folder on this computer when
+        // there is one (its worlds folder need not exist yet), else the home's folder.
         string elsewhere = Local("Elsewhere", "Valheim");
         Directory.CreateDirectory(elsewhere);
         File.WriteAllText(Path.Combine(elsewhere, "valheim.exe"), "");
         Assert.Equal(Native, Places.GameWorldRoot(elsewhere));
-        Directory.CreateDirectory(Prefix);
+        Directory.CreateDirectory(Local(".local", "share", "Steam", "steamapps", "compatdata", "892970", "pfx"));
         Assert.Equal(Prefix, Places.GameWorldRoot(elsewhere));
+        Assert.False(Directory.Exists(Prefix));
     }
 
     [Fact]
