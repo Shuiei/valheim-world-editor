@@ -9,7 +9,8 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The history panel: back to a change, redo to one, and taking out one change only.
+/// The history panel: back to a change, redo to one, taking out one change only, and a long history shown a page at
+/// a time.
 /// </summary>
 [Collection("World files")]
 public class HistoryPanelTests
@@ -89,6 +90,34 @@ public class HistoryPanelTests
         Assert.Equal("Redo to here", buttons.Single().Content);
         buttons[0].RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
         Assert.Equal(2, s.UndoList.Count);
+    }
+
+    // A long history: the newest page of rows, then Show older with how many are left, which adds a page; shown
+    // again, the newest page only.
+    [AvaloniaFact]
+    public void ALongHistoryShowsItsNewestPageFirst()
+    {
+        var s = TestScenes.Flat(2);
+        s.KeepSteps = 0;
+        var w = TestWindows.Editing(s);
+        for (int i = 0; i < HistoryPanel.Page + 5; i++)
+        {
+            s.Shape(10 + i % 100, 64, Two, 1, 0, $"change {i}");
+        }
+        s.Undo();
+        w.History.Toggle();
+        var rows = w.History.Rows.Children;
+        Assert.Equal(HistoryPanel.Page + 1, rows.Count);
+        // The undone change on top, the oldest ones left out.
+        Assert.Equal(0.5, rows[0].Opacity);
+        var older = Assert.IsType<Avalonia.Controls.Button>(rows[^1]);
+        Assert.Equal("Show older (5)", older.Content);
+        older.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
+        Assert.Equal(HistoryPanel.Page + 5, rows.Count);
+        Assert.DoesNotContain(rows, r => r is Avalonia.Controls.Button);
+        w.History.Toggle();
+        w.History.Toggle();
+        Assert.Equal(HistoryPanel.Page + 1, w.History.Rows.Children.Count);
     }
 
     [AvaloniaFact]

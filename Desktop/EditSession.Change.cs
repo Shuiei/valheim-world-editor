@@ -49,6 +49,12 @@ public sealed partial class EditSession
         public bool Earlier { get; init; }
 
         /// <summary>
+        /// About how much memory it holds: 64 bytes a ground point (its index, and six values before and after), a
+        /// few for each thing, zone and reset (<see cref="KeepBytes"/>).
+        /// </summary>
+        public long Bytes => 64L * Points.Length + 8L * Things.Length + 8L * Zones.Count + 16L * Resets.Length;
+
+        /// <summary>
         /// Whether it is this very change: a change is itself, not its values, since Removed and Applied are set after
         /// it is made while it keys the kept history's ids and frames (HistoryFile, Kept).
         /// </summary>

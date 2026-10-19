@@ -101,9 +101,34 @@ public sealed partial class EditSession
     }
 
     /// <summary>
-    /// How many steps the undo list keeps; the oldest go first.
+    /// How many steps the undo lists keep, from their next change on (Settings,
+    /// <see cref="TerrainEditor.App.AppSettings.HistorySteps"/>); 0 or less: no limit.
     /// </summary>
-    public const int HistoryLength = 200;
+    public static int StepLimit { get; set; }
+
+    /// <summary>
+    /// How much memory an undo list may take (about; <see cref="Change.Bytes"/>), whatever the steps' limit: 2 GB.
+    /// </summary>
+    public const long HistoryBytes = 2L << 30;
+
+    /// <summary>
+    /// How many steps this session's undo list keeps: <see cref="StepLimit"/> as it is now, unless set (tests); 0 or
+    /// less: no limit. The oldest go first, at the next change.
+    /// </summary>
+    internal int KeepSteps
+    {
+        get => _keepSteps ?? StepLimit;
+        set => _keepSteps = value;
+    }
+
+    /// <summary>The steps this session keeps whatever Settings say; null: Settings' (<see cref="KeepSteps"/>).</summary>
+    private int? _keepSteps;
+
+    /// <summary>
+    /// How much memory this session's undo list may take (<see cref="HistoryBytes"/>; tests set less): past it, the
+    /// oldest steps go first, at the next change. The newest step always stays.
+    /// </summary>
+    internal long KeepBytes { get; set; } = HistoryBytes;
 
     /// <summary>
     /// The brush stroke going on; null between strokes (during one, undo and redo do nothing and saving throws).

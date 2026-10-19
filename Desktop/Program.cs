@@ -76,6 +76,8 @@ public static class Program
         var settings = TerrainEditor.App.AppSettings.Load();
         // The language the windows are built in (Settings; the computer's by default).
         Options.Say($"language: {TerrainEditor.App.Lang.Use(settings.Language)}");
+        // How many steps the history keeps (Settings).
+        EditSession.StepLimit = settings.HistorySteps;
         AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace(Avalonia.Logging.LogEventLevel.Warning)
             .With(new Win32PlatformOptions { RenderingMode = WindowsRendering(settings.DriverOpenGl) })
             // Linux: Avalonia turns OpenGL off for software renderers (Mesa's llvmpipe, VMware's

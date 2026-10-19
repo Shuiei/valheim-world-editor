@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.56.2 — unreleased
+## v1.57.1 — unreleased
 
 ### Fixed
 - **A live world's settings from Expand World are read again.** The editor asks the game's WorldEditorBridge for
@@ -17,6 +17,14 @@ the plugin is unchanged in versions without that part.
 ### WorldEditorBridge
 - `GET /world/meta` serves the world file the game saves (`_main.n.fwl2`), else the older `.fwl`; 404 when the
   game has neither.
+
+## v1.57.0 — unreleased
+
+### Added
+- **The history keeps every change by default, and you choose how many in Settings.** It used to keep the last 200
+  changes only. **Settings > History > Steps kept** sets a number; empty or 0 keeps them all, as long as they take
+  less than 2 GB of memory (past that, the oldest go first). The History panel shows the newest 200 changes, and
+  **Show older** adds 200 more each time.
 
 ## v1.56.1 — unreleased
 
