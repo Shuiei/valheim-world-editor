@@ -29,7 +29,14 @@ public static partial class Driver
     {
         MainWindow w = call.W;
         string[] args = call.Args;
-        w.View.Orbit(call.F(0), call.F(1), call.F(2), call.F(3), call.F(4), args.Length > 5 ? call.F(5) : null);
+        if (args is ["reset"])
+        {
+            w.View.ResetCamera();
+        }
+        else
+        {
+            w.View.Orbit(call.F(0), call.F(1), call.F(2), call.F(3), call.F(4), args.Length > 5 ? call.F(5) : null);
+        }
         return Task.FromResult(State(w));
     }
 

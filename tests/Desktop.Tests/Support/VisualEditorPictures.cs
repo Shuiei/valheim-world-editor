@@ -36,6 +36,9 @@ public abstract class VisualEditorPictures(EditorProcess editor) : IDisposable
         var opened = editor.Send($"world {world}");
         // A world opens where the map was last looked at: the last test's view (a close-up when it failed zoomed in).
         editor.Send(FormattableString.Invariant($"mapview 0 0 {WholeWorld}"));
+        // An area opens with the 3D camera's last turn, tilt and distance: the last test's (the Dungeon tool leaves it
+        // 40 m from its entrance, where the far corners of an area are behind it).
+        editor.Send("camera reset");
         return opened;
     }
 
