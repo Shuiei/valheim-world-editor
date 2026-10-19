@@ -533,21 +533,30 @@ should not: it is a conversion, not a bundle scan).
 
 ### 4.8 Live mode: the bridge serves the files
 
-Two routes on the bridge, both generic (any plugin's files or settings, read only, so they are not
-Expand-World-shaped even though Expand World is their first user):
+Done (v1.54.0, `WorldEditorBridgePlugin.Files.cs`, `LiveBridge.Files.cs`, `ExpandWorld.Live.cs`). Three
+routes on the bridge, all generic (any plugin's files or settings, read only, so they are not
+Expand-World-shaped even though Expand World is their first user); the status lists the feature `files`:
 
 - `GET /plugins`: the loaded plugins' GUID, name and version (from the chainloader): the editor's
-  "installed" flags, and in time the mods list on the Mods tab.
-- `GET /config?path=<relative>`: a file or a folder under `BepInEx/config` only (no `..`, no
-  links; a folder lists names, sizes and mtimes; a file returns its bytes, 4 MB cap). The editor
-  fetches the three cfg files and `expand_world/` (recursively) through it and reads them as it
-  reads local ones. The `ews_` keys in live mode: the bridge's `/status` reports the world's
-  starting global keys **as read from the world file on disk** (the mod removes them from the
-  loaded list), when the host has one; a client-only game has no file and the editor falls back
-  to the cfg values the bridge serves.
+  "installed" flags (a mod's cfg is fetched only when its plugin is loaded), and in time the mods
+  list on the Mods tab.
+- `GET /config?path=<relative>`: a file or a folder under `BepInEx/config` only (no absolute path, no
+  `..`, no link along the way: 400; a folder lists names, sizes and mtimes as JSON; a file returns
+  its bytes, 4 MB cap: 413). The editor copies the loaded mods' cfg files, `expand_world/` (the yaml
+  files, recursively) and the blueprint files the location file names (from the "Blueprint folder")
+  into `live-bepinex` in the data folder, laid out as a BepInEx folder, and reads that with the
+  local reader (`Look` + `ReadData`, the installed flags from the plugin list). YamlDotNet cannot
+  come through `/config` (it is under `plugins`): `Found.PluginsFolder` points at the first local
+  BepInEx folder that has it (the Settings folder first), so the note names a real place.
+- `GET /world/meta`: the world's meta file **as it lies on disk** (`World.GetMetaPath` by reflection,
+  it is not public, read through the game's `FileReader` so a cloud save works too), parsed by the
+  editor's own `WorldSave.ReadMetadata(Stream)`: the `ews_` keys the mod takes out of the loaded
+  list, taken into the save by `WorldSave.TakeKeys` (grid width too), whatever the switch. Chosen
+  over keys in `/status` so the plugin holds no file-format knowledge. A game without a world file
+  answers 404 and the snapshot's keys stay (none).
 
-Bridge version bump (minor); an older bridge: the local folders, with the usual "needs bridge x"
-note in the log. The bridge API (`WorldEditorBridge.Api`) does not change.
+An older bridge (404 on `/plugins`), or one that fails: the local folders, said in the log
+(`ExpandWorld.BridgeFilesVersion`). The bridge API (`WorldEditorBridge.Api`) does not change.
 
 ### 4.9 Settings, docs and messages
 
@@ -573,7 +582,7 @@ Sizes are rough and include tests and docs.
 | 3 | `feature/expand-world-biomes` | Done (v1.51.0): `YamlReader` (the mod's YamlDotNet, loaded from `plugins/`); `BiomeTable`, `BiomeInfo`, `HeightTransform`, `BiomeRule`, `Territory`; `expand_biomes`, `expand_world` (the mod's default list when the switch is on and no file exists) and `expand_territories` read, with the Data cfg (legacy generation, wiggle frequency and defaults, the Poles settings combined with Size's); the rule evaluation (both modes, `WorldGenerator.BiomeRules.cs`), the terrain prefix and the height postfix (paint, lava amount, territory colour, the transforms; taken to run after Size's depth postfix, to confirm in PR 7), the four extra draws, boiling for `IsAshlands` and the ocean gradient, `WorldAngle` with the wiggle frequency; the point map's indices by the mod's mapping and its uniform draw; the map's pixel colour, mask and height multiplier, the overview's colours through `BiomeTable`. `WorldRules` compares as JSON. Not in it: `expand_altbiomes` (to PR 4, where the alt biomes matter), the point map's size (the mod does not change it), the Desktop's biome names and 3D ground colours for new biomes (PR 5). | large |
 | 4 | `feature/expand-world-places` | Done (v1.52.0): `expand_locations` (clones by base prefab, blueprint radius from the pieces, groups, `awayFrom`/`closeTo` as the mod's virtual groups, `Custom` for changed contents), `expand_vegetation` (`VegetationRule`, public, replaces Regrow's private rule: several prefabs, scale by axis, own centre, global keys from the save's zone database) and `expand_altbiomes` (names and blocked kinds) read with the Data cfg (zone spawners, random locations, scaled altitudes, blueprint folder); `WorldRules.Locations`/`Vegetation`; the layout and Regrow take the world's own rules; `Placer`: wide kinds at the zone's middle, forced start, mod spacing (base prefab, group membership, rows), scaled altitude limits; `Regrow`: prefab draw, axis scale draws, own distance; Size's multiplier and distance scaling; `WorldCreator` leaves blueprint, custom and random-seed sites to the game and skips zone controls when off. Not in it: clear areas of vegetation (Regrow does not model clear areas), alt biome vegetation, `pregenerate`, icons. | large |
 | 5 | `feature/expand-world-map` | Done (v1.53.0): `MapData.TexelMeters` (12 m × total radius / 10500, 2048 texels: the game's map sizing), `MapView.MapMeters` instance, the map's zoom default and radius placeholder from the rules; `SeedPreview.Preview.Radius`, `Make`/`Search`/`Generator` with rules, the preview counts a custom biome as its terrain's; `WorldCreator.Create(rules:)`; the New world page's `Rules` (`ExpandWorld.ForNewWorld`: the folder's rules when the switch is on) with a line above Create, Claude's preview and create too; Settings: **Expand World folder** (`AppSettings.ExpandWorldFolder`, global, not per world: simpler, looked at first by `Find`); the start page's "Expand World" tag (`Worlds.Info.ExpandWorld`, `WorldSave.ReadMetadata`); `ZoneFilter.BiomeName(b, table)`, `WorldScene.GroundBiomes/GroundTints` (3D ground as the terrain biome, tinted by the file's map colour), `BiomeRgba(b, table)` (the file's ground colour); user docs `docs/expand-world.md`, README. Not in it: the map's info panel radius/water line (the map's meta line has the seed; the log says the rules). | medium |
-| 6 | `feature/expand-world-live` | Bridge `/plugins`, `/config`, `/status` keys; the editor's live source. | medium |
+| 6 | `feature/expand-world-live` | Done (v1.54.0): bridge `/plugins`, `/config`, `/world/meta` (feature `files`); `ExpandWorld.ResolveLive` copies the loaded mods' files into `live-bepinex` and reads them as a local folder, keys from the world file on the game's disk; the local folders with an older bridge. Untested against a real game (CI's stand-in only): to try on the local test server in PR 7. | medium |
 | 7 | `feature/expand-world-verify` | Reference fixtures from dumps of a modded game (§6) and the reference tests that compare the editor's modded generator with them; `WorldCheck verify` with a rules file. | medium |
 
 PRs 1 and 2 are the data-safety ones. After PR 3 a modded world looks right; after 4 it predicts

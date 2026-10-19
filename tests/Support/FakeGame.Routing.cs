@@ -5,7 +5,7 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// Takes each request on its own and answers it by its path: the status, the requests held or broken, and the routes
-/// the answers are read from (FakeGame.Requests.cs, FakeGame.Zones.cs, FakeGame.Mods.cs).
+/// the answers are read from (FakeGame.Requests.cs, FakeGame.Zones.cs, FakeGame.Mods.cs, FakeGame.Files.cs).
 /// </summary>
 public sealed partial class FakeGame
 {
@@ -112,6 +112,10 @@ public sealed partial class FakeGame
         else if (path == "/zones/reset")
         {
             ServeZoneReset(ctx, reply);
+        }
+        else if (path is "/plugins" or "/config" or "/world/meta")
+        {
+            RouteFiles(ctx, path, reply);
         }
         else
         {

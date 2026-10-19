@@ -117,7 +117,7 @@ public static partial class ExpandWorld
     {
         var game = SeedLocations.Current;
         bool gameRead = SeedLocations.Available;
-        string? blueprints = found.Data ? Path.Combine(found.Folder, "config", data.Cfg.GetValueOrDefault("Blueprint folder") is { Length: > 0 } folder ? folder : "PlanBuild") : null;
+        string? blueprints = found.Data ? Path.Combine(found.Folder, "config", BlueprintFolderOf(data.Cfg)) : null;
         List<SeedLocations.Rule>? kinds = null;
         if (data.Locations is { Count: > 0 } entries)
         {
@@ -168,4 +168,8 @@ public static partial class ExpandWorld
 
     /// <summary>A stretch of 0 or less would divide every coordinate by nothing: taken as 1.</summary>
     private static float Positive(float v) => v > 0f ? v : 1f;
+
+    /// <summary>The folder under BepInEx/config Expand World Data reads blueprint files from: its "Blueprint folder" setting, PlanBuild by default.</summary>
+    /// <param name="dataCfg">Expand World Data's settings file's values.</param>
+    private static string BlueprintFolderOf(IReadOnlyDictionary<string, string> dataCfg) => dataCfg.GetValueOrDefault("Blueprint folder") is { Length: > 0 } folder ? folder : "PlanBuild";
 }

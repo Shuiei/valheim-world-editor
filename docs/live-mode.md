@@ -302,6 +302,17 @@ can also ask that plugin for what only the running game knows. The editor's log 
 names the mods registered when a game is opened; a mod that fails on what was applied is named in the game's
 `BepInEx/LogOutput.log`, and the apply itself still goes through. Needs WorldEditorBridge 1.35.0 or newer.
 
+### The Expand World mods
+
+With **Generate worlds as the Expand World mods make them** on in Settings, a live world follows the mods the
+game itself runs: the editor reads their settings and data files from the game's own `BepInEx` folder through
+the plugin (WorldEditorBridge 1.54.0 or newer), and the world's own settings from its file on the game's disk,
+so a server's world is drawn and predicted as that server makes it, whatever is installed on this computer.
+Only the YamlDotNet library the data files need is still taken from a local BepInEx folder (the Expand World
+folder in Settings first). The log says what was read; the files are copied under `live-bepinex` in the
+editor's data folder. With an older plugin, the local folders answer, as for a world opened from its files. See
+[Expand World](expand-world.md).
+
 ## Undo after applying
 
 Applied changes can still be undone: undo (or **Remove** in History) and apply again.
@@ -350,8 +361,8 @@ every player:
 - **Zone resets** need WorldEditorBridge 0.10.0 or newer on the server. The game generates a reset zone again at
   once when a player is near it, otherwise the next time someone comes. A reset cannot be undone once applied.
 - Versions: following the game needs the plugin 1.17.0 or newer, mods' objects 1.26.0, their models 1.27.0,
-  mods' own plugins 1.35.0, moves under the same id 1.40.0, and an apply whose answer was lost (a dropped tunnel)
-  not making objects twice when applied again 1.45.3.
+  mods' own plugins 1.35.0, moves under the same id 1.40.0, an apply whose answer was lost (a dropped tunnel)
+  not making objects twice when applied again 1.45.3, and the Expand World mods' files from the game 1.54.0.
 - Objects placed live are created by the server; players see them like objects someone just built or planted.
 - Big changes (thousands of objects at once) are applied in one go and can make the server hitch for a moment.
   Reading the whole world when you connect takes a while on a big world (up to a few minutes).

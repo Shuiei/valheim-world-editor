@@ -72,5 +72,13 @@ adds a setting or a field is read with its defaults until the editor follows it.
 
 ## Live mode
 
-Not yet: a live world (your game, a dedicated server) uses the local BepInEx folders. The bridge will
-serve the mods' files in a later version.
+A live world (your game, a dedicated server) follows the mods the game itself runs: with the switch on, the
+editor asks the game's WorldEditorBridge (1.54.0 or newer) which plugins it loaded and reads the mods' settings
+and data files from the game's own `BepInEx/config` through it, with the world's settings from its file on the
+game's disk. The files are copied under `live-bepinex` in the editor's data folder and read as a local folder
+would be; the log says how many came. The YamlDotNet library the data files need cannot come that way: it is
+taken from a local BepInEx folder (the Expand World folder in Settings first, then the folders the editor
+knows). Blueprint locations' files are copied too, those the location file names.
+
+With an older plugin, or when the bridge cannot be read, the local folders answer as for a world opened from
+its files, and the log says so.

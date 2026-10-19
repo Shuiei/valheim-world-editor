@@ -22,7 +22,16 @@ public static partial class ExpandWorld
             return WorldRules.Vanilla;
         }
         var found = Find(settings);
-        var data = ReadData(found);
+        return Resolve(save, keys, found, ReadData(found));
+    }
+
+    /// <summary>The rules from a world's keys and a folder's files read already, said in the log.</summary>
+    /// <param name="save">The world.</param>
+    /// <param name="keys">The world's Expand World Size keys.</param>
+    /// <param name="found">The folder's mods and files.</param>
+    /// <param name="data">Expand World Data's settings and files from it.</param>
+    private static WorldRules Resolve(WorldSave save, Dictionary<string, string> keys, Found found, DataFiles data)
+    {
         var rules = Rules(keys, found, data, save.Zones?.GlobalKeys);
         Console.WriteLine($"Expand World: {save.Name}: {SizeSource(keys.Count, found)}; {FolderText(found)}; {Describe(rules)}.");
         NoteData(data, rules);

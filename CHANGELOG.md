@@ -4,6 +4,21 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.54.0 — unreleased
+
+### Added
+- **A live world follows the Expand World mods the game itself runs** (with the Expand World switch in Settings on):
+  the editor reads the mods' settings and data files from the game's own BepInEx folder through WorldEditorBridge,
+  along with the world's own settings from its file on the game's disk, instead of the BepInEx folders on this
+  computer. The YamlDotNet library the data files need is still taken from a local BepInEx folder. An older plugin
+  leaves the local folders in use, said in the log. See [Expand World](docs/expand-world.md#live-mode).
+
+### WorldEditorBridge
+- Three read-only routes for the editor: `GET /plugins` lists the plugins BepInEx loaded (id, name, version),
+  `GET /config?path=` serves a file under `BepInEx/config` or lists a folder there (nothing outside it, 4 MB at most
+  per file), and `GET /world/meta` serves the world's meta file as it lies on disk. The status lists the feature
+  "files".
+
 ## v1.53.0 — unreleased
 
 ### Added

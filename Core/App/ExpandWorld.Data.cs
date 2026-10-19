@@ -61,10 +61,10 @@ public static partial class ExpandWorld
         {
             return new DataFiles(cfg, null, null, null, null, null, null, notes);
         }
-        var yaml = YamlReader.Find(Path.Combine(found.Folder, "plugins"));
+        var yaml = YamlReader.Find(found.Plugins);
         if (yaml == null)
         {
-            notes.Add($"no {YamlReader.DllName} under {Path.Combine(found.Folder, "plugins")} (Expand World Data needs it): its data files were not read");
+            notes.Add($"no {YamlReader.DllName} under {found.Plugins} (Expand World Data needs it): its data files were not read");
         }
         IReadOnlyList<Entry>?[] kinds = [.. Kinds.Select((k, i) => on[i] ? ReadKind(found.DataFiles, k.Kind, yaml, notes) : null)];
         return new DataFiles(cfg, kinds[0], kinds[1], kinds[2], kinds[3], kinds[4], kinds[5], notes);

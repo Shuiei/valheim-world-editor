@@ -40,6 +40,9 @@ namespace WorldEditorBridge;
 ///   GET /mods       the mods' plugins registered with the bridge (WorldEditorBridge.Api; JSON, see
 ///                   WorldEditorBridgePlugin.Mods.cs)
 ///   POST /mods/&lt;id&gt;/&lt;name&gt;  a call to one of a mod's own routes, answered by its plugin
+///   GET /plugins    every plugin BepInEx loaded: GUID, name, version (JSON, see WorldEditorBridgePlugin.Files.cs)
+///   GET /config?path=  a file under BepInEx/config (its bytes) or a folder there (JSON: its entries); read only
+///   GET /world/meta the world's meta file as it lies on disk (its starting global keys as written there)
 /// </code>
 /// Game objects are only read on Unity's main thread; the HTTP thread waits for the answer.
 /// </summary>
