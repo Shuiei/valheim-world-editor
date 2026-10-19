@@ -231,9 +231,17 @@ the zone does, and only the zones whose number changed are read again.
   History, the selection and the inspector stay with it; the inspector does not apply over a version the game
   changed meanwhile (it shows the new one to change again). An object you deleted and applied stays deleted
   (undo brings it back); one the game removed is gone for good: undo and redo leave it alone, and a deletion of
-  it not applied yet is dropped. Objects you placed that players then picked or destroyed go too. Creatures and
-  other things that move by themselves, and fires, smelters, beehives and the like (which change their own data
-  all the time), are followed when they appear or go, not for every move or tick; portals are followed too.
+  it not applied yet is dropped. Objects you placed that players then picked or destroyed go too; portals are
+  followed too.
+- **Your own objects, once applied,** are followed the same way: the editor shows them where the game really has
+  them and with the data the game gave them (a creature's health and spawn point, a piece settled by physics),
+  not where and how you sent them. They stay the same objects in History: undo still takes them away, and a copy
+  or a blueprint of them is made from the game's version.
+- **Things that move or change on their own** (creatures, ships, carts, items lying about; fires, smelters,
+  beehives and the like, which change their own data all the time) are followed as they move or change, and read
+  on their own: a creature walking does not have its whole zone read at every look. This needs WorldEditorBridge
+  1.57.3 or newer; with an older plugin they are followed when they appear or go, and when something else in
+  their zone changes.
 - **Ground** dug, flattened, paved or cultivated in the game comes in where you have no changes of your own in
   that zone. Where you have changes not applied yet, yours are kept and the status bar says so. **Apply live**
   (and **Auto**) then asks first ("Apply over the game's changes"): applying writes your ground over that zone,

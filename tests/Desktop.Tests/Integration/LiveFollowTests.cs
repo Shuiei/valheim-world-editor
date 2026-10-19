@@ -1,5 +1,6 @@
 using System.Numerics;
 using TerrainEditor.Save;
+using WorldEditor.Tests;
 using Xunit;
 using static TerrainEditor.Desktop.Tests.LiveFollowSetup;
 
@@ -76,6 +77,36 @@ public class LiveFollowTests
         Assert.Equal(z.Position.X, s.Scene.Things[tree].Position.X, 3);
         Assert.False(s.Scene.Things[tree].Gone);
         Assert.Single(s.Scene.Things, t => t.Id == other);
+    }
+
+    // A creature walking (or anything that moves or ticks on its own) changes its zone's second number only: those
+    // objects are read alone, not the zone whole, and nothing else of the zone vanishes for not being among them.
+    [Fact]
+    public async Task AMoverThatMovedIsReadAloneAndTheRestOfItsZoneStays()
+    {
+        var (game, world, s, tree, id) = await OpenWithTree();
+        using var _ = game;
+        var w = world.World;
+        game.Zones[(0, 0)] = (1, AsRead(w, (0, 0)));
+        byte[] deer = MadeObjects.Zdo("Deer", s.Scene.Things[tree].Position + new Vector3(3, 0, 3));
+        game.Movers[(0, 0)] = (1, [(4242, 1, deer)]);
+        var f = (await Follow(world, (0, 0)))!;
+        int came = Assert.Single(f.Merged.Added);
+        Assert.True(s.TakeGameChanges(f));
+        int reads = game.ZoneReads, moverReads = game.MoverReads;
+        // The deer walks: its zone's second number changes.
+        var walked = ZdoData.Parse(deer);
+        walked.Position += new Vector3(2, 0, 0);
+        game.Movers[(0, 0)] = (2, [(4242, 1, walked.Serialize())]);
+        f = (await Follow(world, (0, 0)))!;
+        Assert.Equal((reads, moverReads + 1), (game.ZoneReads, game.MoverReads));
+        Assert.Equal([came], f.Merged.Updated);
+        Assert.Empty(f.Merged.Vanished);
+        Assert.True(s.TakeGameChanges(f));
+        Assert.Equal(walked.Position.X, Assert.Single(s.Scene.Things, t => t.Id == came).Position.X, 3);
+        Assert.False(s.Scene.Things[tree].Gone);
+        // Nothing more: not read again.
+        Assert.Null(await Follow(world, (0, 0)));
     }
 
     // The editor's applied deletions stand whatever the game did; an object the game removed is gone for
