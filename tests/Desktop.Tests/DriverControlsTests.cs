@@ -167,6 +167,12 @@ public class DriverControlsTests
             // The camera on a spot at a height (inside a dungeon), then without one.
             var state = await Send(w, "camera 40 40 30 50 70 12");
             Assert.Equal(70, state.GetProperty("distance").GetSingle(), 0.01f);
+            // Reset: the camera the editor starts with, back from walking (the area's middle still its target).
+            w.View.CycleEye();
+            state = await Send(w, "camera reset");
+            Assert.Equal(GlView.EyeMode.Orbit, w.View.Eye);
+            Assert.Equal(140, state.GetProperty("distance").GetSingle(), 0.01f);
+            Assert.Equal(0.8f, state.GetProperty("yaw").GetSingle(), 0.001f);
             await Send(w, "camera 40 40 30 50 60");
             // Headless windows draw no frame: the camera's matrix the mouse commands use is set as a frame would.
             var c = new Vector3(40 - s.Scene.Cx, 30, -(40 - s.Scene.Cz));

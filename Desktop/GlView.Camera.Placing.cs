@@ -1,4 +1,5 @@
 using System.Numerics;
+using Avalonia.Threading;
 
 namespace TerrainEditor.Desktop;
 
@@ -70,6 +71,26 @@ public sealed partial class GlView
             }
             Wake();
         }
+    }
+
+    /// <summary>
+    /// The camera as the editor starts with it: turning around its target, at the start's turn, tilt and distance (the
+    /// driver's tests, which share one editor, each start from it). The target stays: each area sets its own.
+    /// </summary>
+    internal void ResetCamera()
+    {
+        bool eyeChanged;
+        lock (_camLock)
+        {
+            eyeChanged = _eye != EyeMode.Orbit;
+            _eye = EyeMode.Orbit;
+            (_yaw, _pitch, _distance) = (StartYaw, StartPitch, StartDistance);
+        }
+        if (eyeChanged)
+        {
+            Dispatcher.UIThread.Post(() => EyeChanged?.Invoke(EyeMode.Orbit));
+        }
+        Wake();
     }
 
     /// <summary>For tests (nothing is drawn headless): the camera the mouse is read with.</summary>
