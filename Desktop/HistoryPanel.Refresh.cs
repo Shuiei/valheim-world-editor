@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using TerrainEditor.App;
@@ -6,6 +7,24 @@ namespace TerrainEditor.Desktop;
 
 public sealed partial class HistoryPanel
 {
+    /// <summary>How many rows the card shows at first, and how many more each Show older adds.</summary>
+    internal const int Page = 200;
+
+    /// <summary>How many rows the card shows (the newest; Show older adds a page, Toggle goes back to one).</summary>
+    private int _shown = Page;
+
+    /// <summary>The Show older button, with how many changes are not shown.</summary>
+    private Button Older(int hidden)
+    {
+        var b = new Button { Content = Lang.T("history.older", hidden), FontSize = 11, Padding = new Thickness(6, 1) }.Tip("history.older");
+        b.Click += (_, _) =>
+        {
+            _shown += Page;
+            Refresh();
+        };
+        return b;
+    }
+
     /// <summary>Rebuilds the rows from the session's undo and redo lists (only while the card is shown).</summary>
     public void Refresh()
     {
@@ -25,14 +44,16 @@ public sealed partial class HistoryPanel
         }
         else
         {
-            // Undone changes on top (the next redo just above the current change).
-            foreach (var c in redo)
+            // Undone changes on top (the next redo just above the current change), then the newest _shown in all.
+            var rows = redo.Select(c => (Change: c, Undone: true)).Concat(Enumerable.Reverse(undo).Select(c => (Change: c, Undone: false))).ToList();
+            // The current change is the first after the undone ones.
+            foreach (var ((c, undone), i) in rows.Take(_shown).Select((r, i) => (r, i)))
             {
-                Rows.Children.Add(Row(s, c, undone: true, current: false));
+                Rows.Children.Add(Row(s, c, undone, current: i == redo.Count));
             }
-            for (int i = undo.Count - 1; i >= 0; i--)
+            if (rows.Count > _shown)
             {
-                Rows.Children.Add(Row(s, undo[i], undone: false, current: i == undo.Count - 1));
+                Rows.Children.Add(Older(rows.Count - _shown));
             }
         }
         // Steps made in other areas: not undoable here, kept for where they were made.

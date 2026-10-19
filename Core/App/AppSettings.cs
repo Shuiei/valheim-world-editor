@@ -96,6 +96,11 @@ public sealed partial class AppSettings
     public string? ExpandWorldFolder { get; set; }
 
     /// <summary>
+    /// How many steps the editor's history keeps (Settings); 0 or less: no limit (only a memory budget).
+    /// </summary>
+    public int HistorySteps { get; set; }
+
+    /// <summary>
     /// The local port the MCP server for Claude listens on.
     /// </summary>
     public int ClaudePort { get; set; } = 5731;
