@@ -26,7 +26,7 @@ public sealed class WorkshopBranchesTests : IDisposable
             + "Placeable_Stone;Misc;10;3;10;0;0;0;1;\"\";1;1;1\n"
             + "Placeable_Stone;Misc;14;5;10;0;0;0;1;\"\";1;1;1\n");
         var scene = Workshop.Create("W");
-        var (placed, unknown, _, terrain) = Workshop.Open(scene.Session!, f);
+        var (placed, unknown, _, terrain, _) = Workshop.Open(scene.Session!, f);
         Assert.Equal(2, placed);
         Assert.Empty(unknown);
         // Centred across (not Homestead's), and nothing built: no ground contacts.
@@ -45,7 +45,7 @@ public sealed class WorkshopBranchesTests : IDisposable
             + "woodwall;Misc;0;1;0;0;0;0;1;\"\";0;0;0\n"
             + "woodwall;Misc;4;1;0;0;0;0;1;\"\";0;0;0\n");
         var scene = Workshop.Create("W");
-        var (placed, _, lift, terrain) = Workshop.Open(scene.Session!, f);
+        var (placed, _, lift, terrain, _) = Workshop.Open(scene.Session!, f);
         Assert.Equal(2, placed);
         // The walls' bottoms (1 m below their middles, at their own size) on the ground.
         Assert.All(scene.Things.Where(t => !t.Gone), t => Assert.Equal(Workshop.Ground + 1, t.Position.Y, 3));

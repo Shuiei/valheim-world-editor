@@ -57,7 +57,7 @@ public static partial class Workshop
     /// A blueprint file's pieces onto the plot (one undo step), its anchor at the plot's middle; the plot takes the
     /// blueprint's ruin flag. Returns what <c>Add</c> does.
     /// </summary>
-    public static (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain) Open(EditSession s, string path, string? text = null) => Add(s, path, text, null);
+    public static (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain, int Stood) Open(EditSession s, string path, string? text = null) => Add(s, path, text, null);
 
     /// <summary>
     /// A blueprint file's pieces added to what is on the plot (one undo step), its anchor at world point
@@ -74,10 +74,10 @@ public static partial class Workshop
     /// <param name="label">The history's name for the step; null: "Opened" or "Added" and the blueprint's name.</param>
     /// <returns>
     /// How many were put, the kinds the editor cannot make, how far it was lifted (saving it back
-    /// takes that off: Homestead's anchor keeps its height), and the ground it stood on (GroundAt), lowest height
-    /// per whole metre (x, z).
+    /// takes that off: Homestead's anchor keeps its height), the ground it stood on (GroundAt), lowest height
+    /// per whole metre (x, z), and how many of its creatures were stood on the piece under them (CreatureStand).
     /// </returns>
-    public static (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain) Add(EditSession s, string path, string? text, Vector2? at,
+    public static (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain, int Stood) Add(EditSession s, string path, string? text, Vector2? at,
         float turn = 0, float? ground = null, string? label = null) => Put(s, Plan(s, path, text, at, turn, ground), label);
 
     /// <summary>
@@ -92,6 +92,7 @@ public static partial class Workshop
     /// <param name="Unknown">The kinds the editor cannot make, each once, sorted.</param>
     /// <param name="Lift">How far it was lifted.</param>
     /// <param name="Terrain">The ground it stood on, lowest height per whole metre (x, z).</param>
+    /// <param name="Stood">How many of its creatures were stood on the piece under them (CreatureStand).</param>
     public sealed record Planned(string Name, bool AtMiddle, bool Ruin, List<(NewObject Object, bool Piece)> Adds, List<string> Unknown, float Lift,
-        Dictionary<(int, int), float> Terrain);
+        Dictionary<(int, int), float> Terrain, int Stood);
 }

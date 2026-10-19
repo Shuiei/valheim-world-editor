@@ -132,6 +132,13 @@ height and the building stands as before when Homestead builds it.
 Pieces the game does not know (from mods you do not have) are left out, and the message lists them. A blueprint
 opened from outside Homestead's folder asks before saving over a library blueprint of the same name.
 
+**Creatures stand on the pieces.** A creature of the blueprint (a dungeon's boss, a tamed boar in its pen) whose
+origin lies inside a building piece is stood on top of the highest piece under it, and the message says how many
+were (`1 creature(s) stood on the piece under them.`). The same holds wherever the editor positions objects: the
+Select tool's moves, pastes, scripts, and Claude's tools. The ground is not a piece: a creature stands
+on it as placed. The support check counts the creatures still inside a piece (a blueprint from another tool can
+have them) in the bar (`1 creature(s) in a piece`).
+
 ## Support check
 
 The **Support check** (on by default) tints each building piece in the colours the game's build mode gives its

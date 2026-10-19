@@ -99,7 +99,7 @@ The editor must be running for Claude to reach it.
 | `move_objects`, `set_transform` | Move and turn objects as one group (a building keeps its shape, optionally following the ground), or put each exactly: place, turn, tilt, size. They keep what they hold. A part of a group a mod links into one (a ship and the pieces on it) brings its whole group (also for copies and taking away) |
 | `replace_objects` | Swap objects for another kind where they stand (a birch for a beech, stone walls for wooden ones) |
 | `get_object`, `set_object_data` | Everything an object is and holds, as the inspector shows it; change its values: a portal's tag (to link two portals), a builder, a ward's permitted players, health, fuel, a creature's level or tamed state |
-| `support_check` | The Workshop's support check: which pieces would fall |
+| `support_check` | The Workshop's support check: which pieces would fall, and the creatures sunk into a piece |
 | `save_blueprint` | Save the Workshop's building as a blueprint of your library (with its picture); it never replaces one unless told to |
 | `open_workshop`, `add_blueprint` | The Workshop, empty or with a blueprint; add a blueprint of your library to the plot or to a world's area, turned as asked |
 | `copy_objects` | Copies of objects, once or in a row or a ring (a row of houses, a fence, pillars round a hall) |

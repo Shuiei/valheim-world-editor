@@ -51,10 +51,10 @@ public partial class MainWindow
         var msg = Said.Of("workshop.msg.welcome");
         if (path != null)
         {
-            var (placed, unknown, lift, terrain) = Workshop.Open(scene.Session!, path, text);
+            var (placed, unknown, lift, terrain, stood) = Workshop.Open(scene.Session!, path, text);
             _workshopLift = lift;
             _workshopTerrain = terrain;
-            msg = Said.Of("workshop.msg.opened", name, placed) + UnknownLeftOut(unknown) + Said.Of("workshop.msg.changeIt");
+            msg = Said.Of("workshop.msg.opened", name, placed) + UnknownLeftOut(unknown) + CreatureStand.Note(stood) + Said.Of("workshop.msg.changeIt");
         }
         _workshopSaved = scene.Session!.Edits.Version;
         EnterBuilding();

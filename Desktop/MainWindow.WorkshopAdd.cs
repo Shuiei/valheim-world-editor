@@ -22,14 +22,14 @@ public partial class MainWindow
         }
         try
         {
-            var (placed, unknown, _, terrain) = Workshop.Add(s, path, text, at, turn, label: label);
+            var (placed, unknown, _, terrain, stood) = Workshop.Add(s, path, text, at, turn, label: label);
             foreach (var (cell, y) in terrain)
             {
                 _workshopTerrain[cell] = _workshopTerrain.TryGetValue(cell, out float was) ? MathF.Min(was, y) : y;
             }
             RefreshSupport();
             string name = (text == null ? Homestead.Read(path) : Homestead.Read(path, text.Split('\n')))?.Name ?? Path.GetFileNameWithoutExtension(path);
-            Msg(Said.Of("workshop.msg.added", name, placed) + UnknownLeftOut(unknown) + Said.Of("workshop.msg.undoHint"));
+            Msg(Said.Of("workshop.msg.added", name, placed) + UnknownLeftOut(unknown) + CreatureStand.Note(stood) + Said.Of("workshop.msg.undoHint"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
