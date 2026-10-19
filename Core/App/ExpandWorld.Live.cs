@@ -53,23 +53,23 @@ public static partial class ExpandWorld
 
     /// <summary>
     /// Takes the world's starting global keys from its file on the game's disk (GET /world/meta): the loaded list the
-    /// snapshot carries has none of Expand World Size's, which the mod takes out. An older bridge, or a game without a
-    /// world file, leaves the snapshot's.
+    /// snapshot carries has none of Expand World Size's, which the mod takes out. An older bridge, a game without a
+    /// world file, or a bridge that cannot serve it (an error status, said in the log) leaves the snapshot's: the mods'
+    /// files are still read through the bridge.
     /// </summary>
     private static async Task TakeLiveKeys(WorldSave save, LiveBridge live)
     {
-        byte[]? meta = await live.WorldMeta();
-        if (meta == null)
-        {
-            return;
-        }
         try
         {
-            save.TakeKeys(WorldSave.ReadMetadata(new MemoryStream(meta)));
+            byte[]? meta = await live.WorldMeta();
+            if (meta != null)
+            {
+                save.TakeKeys(WorldSave.ReadMetadata(new MemoryStream(meta)));
+            }
         }
-        catch (Exception e) when (e is EndOfStreamException or InvalidDataException or IOException)
+        catch (Exception e) when (e is InvalidOperationException or EndOfStreamException or InvalidDataException or IOException)
         {
-            Log.Caught(e, "reading the world file the game's bridge served (its keys are left as the game loaded them)");
+            Log.Caught(e, "reading the world file through the game's bridge (its keys are left as the game loaded them)");
         }
     }
 

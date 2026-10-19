@@ -45,6 +45,8 @@ namespace WorldEditorBridge;
 ///   GET /world/meta the world's meta file as it lies on disk (its starting global keys as written there)
 /// </code>
 /// Game objects are only read on Unity's main thread; the HTTP thread waits for the answer.
+/// On its own, the plugin keeps the editor's ground discs (No limit ground) spawning before everything else
+/// (WorldEditorBridgePlugin.Discs.cs).
 /// </summary>
 [BepInPlugin(PluginGuid, "WorldEditorBridge", Version)]
 [BepInDependency(JotunnGuid, BepInDependency.DependencyFlags.SoftDependency)]
@@ -205,6 +207,7 @@ public sealed partial class WorldEditorBridgePlugin : BaseUnityPlugin
     [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Unity calls it by name.")]
     private void Update()
     {
+        KeepDiscsFirst();
         if (_destroyChecks.Count > 0 && Time.realtimeSinceStartup >= _destroyChecks.Peek().Due)
         {
             var (_, gone, made) = _destroyChecks.Dequeue();
