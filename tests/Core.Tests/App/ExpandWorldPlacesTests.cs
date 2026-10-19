@@ -250,9 +250,7 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         string bep = Path.Combine(Data, "bep");
         string data = Path.Combine(bep, "config", "expand_world");
         Directory.CreateDirectory(data);
-        string package = Path.Combine(bep, "plugins", "ValheimModding-YamlDotNet");
-        Directory.CreateDirectory(package);
-        File.Copy(typeof(YamlDotNet.Serialization.Deserializer).Assembly.Location, Path.Combine(package, YamlReader.DllName));
+        YamlStandIn.Install(bep);
         File.WriteAllText(Path.Combine(bep, "config", "expand_world_data.cfg"), "[1. General]\nZone spawners = false\nRandom locations = true\n[3. Data]\nLocation data = true\nVegetation data = true\nAlt biome data = true\n");
         File.WriteAllText(Path.Combine(data, "expand_locations.yaml"), "- prefab: StartTemple:Copy\n  quantity: 2\n- prefab: StartTemple\n  quantity: 1\n");
         File.WriteAllText(Path.Combine(data, "expand_vegetation.yaml"), $"- prefab: {Regrow.GameRules[0].prefab}\n  requiredGlobalKey: defeated_eikthyr\n");

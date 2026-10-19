@@ -63,6 +63,9 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   New world page's generated zones, as dungeons are. With **Random locations** on, every location is.
 - **Clear areas** of vegetation, the vegetation of **alt biomes**, `pregenerate` and the map icons: not
   modelled (Regrow nature does not model clear areas at all).
+- **Status effects** of biomes and territories, and their **water colours**: the editor neither applies nor
+  draws them. As in the mod, a biome's status effects and a territory's status effects and water colours still
+  count towards whether its settings are in use; a biome's water colours do not.
 - **The game's map shader** keeps the game's own water line.
 - **The zone system's water**: the game's own vegetation and location checks use the sea at 30 m whatever
   Expand World Rivers puts the water at, and neither mod changes that, so the editor keeps it too.

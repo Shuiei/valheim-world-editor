@@ -36,9 +36,7 @@ public sealed class NewWorldPageRefreshRulesTests : IDisposable
     {
         string bep = Path.Combine(_dir, "bep", "BepInEx");
         Directory.CreateDirectory(Path.Combine(bep, "config", "expand_world"));
-        string package = Path.Combine(bep, "plugins", "ValheimModding-YamlDotNet");
-        Directory.CreateDirectory(package);
-        File.Copy(typeof(YamlDotNet.Serialization.Deserializer).Assembly.Location, Path.Combine(package, YamlReader.DllName));
+        YamlStandIn.Install(bep);
         File.WriteAllText(Path.Combine(bep, "config", "expand_world_data.cfg"), "[3. Data]\nLocation data = true\n");
         File.WriteAllText(Path.Combine(bep, "config", "expand_world", "expand_locations.yaml"), "- prefab: StartTemple:Twice\n  biome: Meadows\n  quantity: 2\n");
         var settings = AppSettings.Load();

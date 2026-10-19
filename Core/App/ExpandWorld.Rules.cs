@@ -26,10 +26,8 @@ public static partial class ExpandWorld
     public static WorldRules Rules(IReadOnlyDictionary<string, string> keys, Found found, DataFiles data, IEnumerable<string>? globalKeys = null)
     {
         var size = CfgOf(found.SizeCfg);
-        var rivers = CfgOf(found.RiversCfg);
         bool fromKeys = keys.Count > 0;
         string? S(string name) => fromKeys ? keys.GetValueOrDefault(KeyOf(name)) : size.GetValueOrDefault(name);
-        string? R(string name) => rivers.GetValueOrDefault(name);
         string? D(string name) => data.Cfg.GetValueOrDefault(name);
         var v = WorldRules.Vanilla;
         bool sizeInstalled = found.Size || fromKeys;
@@ -42,7 +40,7 @@ public static partial class ExpandWorld
         (List<BiomeRule> Rules, bool CheckSectors)? world = data.World == null ? null : WorldOf(data.World.Count > 0 ? data.World : DefaultWorld, table, radius, Wiggles.Of(data.Cfg), data.Notes);
         var sizing = new WorldRules { SizeInstalled = sizeInstalled, DataInstalled = found.Data, Radius = radius, LocationsMultiplier = Float(S("Locations"), v.LocationsMultiplier) };
         var (locations, vegetation) = Places(data, found, table, sizing, globalKeys);
-        return new WorldRules
+        var rules = new WorldRules
         {
             SizeInstalled = sizeInstalled,
             DataInstalled = found.Data,
@@ -65,33 +63,6 @@ public static partial class ExpandWorld
             AshlandsGap = Bool(S("Ashlands gap"), v.AshlandsGap) && Bool(D("Ashlands gap"), v.AshlandsGap),
             DeepNorthGap = Bool(S("Deep North gap"), v.DeepNorthGap) && Bool(D("Deep North gap"), v.DeepNorthGap),
             GridWidth = Int(keys.GetValueOrDefault(GridWidthKey), GridWidthFor(sizeInstalled, Int(S("Save system size"), 0), radius + edge)),
-            WaterLevel = Float(R("Water level"), v.WaterLevel),
-            LakeSearchInterval = Float(R("Lake search interval"), v.LakeSearchInterval),
-            LakeDepth = Float(R("Lake depth"), v.LakeDepth),
-            LakeMergeRadius = Float(R("Lake merge radius"), v.LakeMergeRadius),
-            LakeMaxDistance1 = Float(R("Lake max distance 1"), v.LakeMaxDistance1),
-            LakeMaxDistance2 = Float(R("Lake max distance 2"), v.LakeMaxDistance2),
-            Rivers = Bool(R("Rivers"), v.Rivers),
-            RiverCheckInterval = Float(R("River check interval"), v.RiverCheckInterval),
-            RiverMaxAltitude = Float(R("River max altitude"), v.RiverMaxAltitude),
-            RiverMinWidth = Float(R("River min width"), v.RiverMinWidth),
-            RiverMaxWidth = Float(R("River max width"), v.RiverMaxWidth),
-            RiverCurveWidth = Float(R("River curve width"), v.RiverCurveWidth),
-            RiverCurveWaveLength = Float(R("River curve wave length"), v.RiverCurveWaveLength),
-            RiverSeed = Int(R("River seed")),
-            Streams = Bool(R("Streams"), v.Streams),
-            StreamSeed = Int(R("Stream seed")),
-            StreamMaxAmount = Int(R("Stream max amount"), v.StreamMaxAmount),
-            StreamSearchIterations = Int(R("Stream search iterations"), v.StreamSearchIterations),
-            StreamStartMinAltitude = Float(R("Stream start min altitude"), v.StreamStartMinAltitude),
-            StreamStartMaxAltitude = Float(R("Stream start max altitude"), v.StreamStartMaxAltitude),
-            StreamEndMinAltitude = Float(R("Stream end min altitude"), v.StreamEndMinAltitude),
-            StreamEndMaxAltitude = Float(R("Stream end max altitude"), v.StreamEndMaxAltitude),
-            StreamMaxWidth = Float(R("Stream max width"), v.StreamMaxWidth),
-            StreamMinLength = Float(R("Stream min length"), v.StreamMinLength),
-            StreamMaxLength = Float(R("Stream max length"), v.StreamMaxLength),
-            StreamCurveWidth = Float(R("Stream curve width"), v.StreamCurveWidth),
-            StreamCurveWaveLength = Float(R("Stream curve wave length"), v.StreamCurveWaveLength),
             LegacyGeneration = Bool(D("Legacy generation"), v.LegacyGeneration),
             WiggleFrequency = Float(D("Wiggle frequency"), v.WiggleFrequency),
             Biomes = biomes ?? BiomeTable.Vanilla,
@@ -105,6 +76,7 @@ public static partial class ExpandWorld
             RandomLocations = Bool(D("Random locations"), v.RandomLocations),
             ScaleLocationAltitude = Bool(D("Scale location altitude requirement"), v.ScaleLocationAltitude),
         };
+        return WithRivers(rules, CfgOf(found.RiversCfg));
     }
 
     /// <summary>
@@ -133,6 +105,11 @@ public static partial class ExpandWorld
         else if (gameRead && (size.LocationsMultiplier != 1f || (!size.DataInstalled && size.Radius != 10000f)))
         {
             kinds = SizedLocations(game.Locations, size);
+        }
+        else if (gameRead && data.AltBiomes is { Count: > 0 })
+        {
+            // The game's kinds as they are, so that the alt biome file still says what each keeps out.
+            kinds = [.. game.Locations];
         }
         SeedLocations.RuleSet? locations = kinds == null ? null : new SeedLocations.RuleSet
         {

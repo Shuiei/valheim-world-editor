@@ -135,6 +135,7 @@ public static partial class ExpandWorld
     {
         string[] parts = text.Split(',');
         float x = Channel(parts, 0, 0f), z = Channel(parts, 1, 0f), y = Channel(parts, 2, 0f);
+        // Exactly 0 is the mod's sentinel for an axis not given.
         x = x == 0f ? 1f : x;
         return [x, y == 0f ? x : y, z == 0f ? x : z];
     }

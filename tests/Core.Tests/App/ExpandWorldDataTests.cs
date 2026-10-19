@@ -34,9 +34,7 @@ public class ExpandWorldDataTests : AppSettingsTestBase
         File.WriteAllText(Path.Combine(bep, "config", "expand_world_data.cfg"), cfg);
         if (library)
         {
-            string package = Path.Combine(bep, "plugins", "ValheimModding-YamlDotNet");
-            Directory.CreateDirectory(package);
-            File.Copy(typeof(YamlDotNet.Serialization.Deserializer).Assembly.Location, Path.Combine(package, YamlReader.DllName));
+            YamlStandIn.Install(bep);
         }
         foreach (var (name, text) in files)
         {
