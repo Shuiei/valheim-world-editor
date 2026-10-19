@@ -155,10 +155,11 @@ with) is: ashlands (centerY 0.4, minDistance 1.2, maxDistance 1.6, boiling), oce
 -26), deepnorth (centerY -0.4, 1.2..1.6), mountain (minAltitude 50), swamp (no distance wiggle,
 0.2..0.6, altitude -20..20, amount 0.4), mistlands (minDistance 0.6, amount 0.6), plains
 (0.3..0.8, amount 0.6), blackforest (0.06..0.6, amount 0.6), blackforest (minDistance 0.5),
-meadows. **This default list is not the vanilla algorithm**: with `World data` on and the default
-file, the world already differs from vanilla (no `WorldAngle` wave on the Ashlands/Deep North
-edges, the mountains by altitude instead of continent height, etc.). The editor must evaluate
-the rules whenever the switch is on, never assume "default file = vanilla".
+meadows. This default list says the vanilla algorithm in the mod's words: the same circles (with
+the edge wave, since `wiggleDistance` is on), the same bands, noise fields, thresholds (altitude
+-26 m is continent height 0.02, 50 m is 0.4) and order, so the biomes come out the same but for a
+point on an exact edge (PR 3's `TheModsDefaultRulesGiveTheGamesLayout` checks 576 points). The
+editor still evaluates the rules whenever the switch is on: a file may change any of them.
 
 A rule's fields: `biome`, `territory`, `altBiome`, `minAltitude`/`maxAltitude` (metres from the
 water level; **exclusive** bounds in the current evaluation, inclusive in legacy),
