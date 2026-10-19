@@ -50,12 +50,13 @@ public class SeedLocationsPlacerModTests
         var at = placer.Instances[(3, 2)];
         Assert.Equal(192f, at.X);
         Assert.Equal(128f, at.Z);
-        // The game's own layout draws the spot (the draws are made either way: the next draw is the same).
+        float afterMod = ValheimGen.UnityEngine.Random.Value;
+        // The game's own layout draws the spot; the draws are made either way, so the sequence goes on the same.
         ValheimGen.UnityEngine.Random.InitState(1);
         var plain = Placer(Gen(false, wide));
         Assert.True(plain.TrySpot(wide, Heightmap.Biome.All, (3, 2), 40f));
         Assert.NotEqual(192f, plain.Instances[(3, 2)].X);
-        Assert.Equal(ValheimGen.UnityEngine.Random.Value, ValheimGen.UnityEngine.Random.Value);
+        Assert.Equal(afterMod, ValheimGen.UnityEngine.Random.Value);
     }
 
     [Fact]
