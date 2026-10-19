@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -17,7 +16,7 @@ public sealed partial class SeedMap : Control, IDisposable
         {
             return;
         }
-        Draw(context, _world, -SeedPreview.Radius, -SeedPreview.Radius, SeedPreview.Radius, SeedPreview.Radius);
+        Draw(context, _world, -Radius, -Radius, Radius, Radius);
         if (_close is { } c)
         {
             Draw(context, c.Picture, c.X0, c.Z0, c.X1, c.Z1);

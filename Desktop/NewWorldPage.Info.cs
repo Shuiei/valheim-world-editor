@@ -32,7 +32,7 @@ public sealed partial class NewWorldPage : IDisposable
             string nearest = b == Heightmap.Biome.Meadows ? ""
                 : s.SameLand[b] || float.IsPositiveInfinity(s.Distance[b]) ? Km(s.Distance[b])
                 : Lang.T("newWorld.distanceBySea", Km(s.Distance[b]));
-            return Item(swatch, Name(b), nearest, Lang.T("newWorld.ofLand", s.Shares[b] * 100));
+            return Item(swatch, Name(b, Rules.Biomes), nearest, Lang.T("newWorld.ofLand", s.Shares[b] * 100));
         }).ToArray();
         Info.Children.Add(Section(Lang.T("newWorld.head.biomes"), biomes));
         if (p.Landmarks is not { } marks)

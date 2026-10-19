@@ -10,8 +10,9 @@ internal static class SeedStart
     /// <param name="biome">Each cell's biome byte.</param>
     /// <param name="size">Cells on a side.</param>
     /// <param name="cell">A cell's side in metres.</param>
+    /// <param name="radius">The world's radius, metres (the cells cover -radius..radius); the game's 10 km by default.</param>
     /// <returns>The start's cell (-1 when there is no Meadows cell, with the origin as position).</returns>
-    internal static (int Cell, (float X, float Z) Position) MiddleCell(byte[] biome, int size, float cell)
+    internal static (int Cell, (float X, float Z) Position) MiddleCell(byte[] biome, int size, float cell, float radius = Radius)
     {
         int meadows = Array.IndexOf(Biomes, Heightmap.Biome.Meadows);
         int startCell = -1;
@@ -22,14 +23,14 @@ internal static class SeedStart
             {
                 continue;
             }
-            float x = -Radius + (k % size + 0.5f) * cell, z = -Radius + (k / size + 0.5f) * cell, d = x * x + z * z;
+            float x = -radius + (k % size + 0.5f) * cell, z = -radius + (k / size + 0.5f) * cell, d = x * x + z * z;
             if (d < best)
             {
                 best = d;
                 startCell = k;
             }
         }
-        var start = startCell < 0 ? (0f, 0f) : (-Radius + (startCell % size + 0.5f) * cell, -Radius + (startCell / size + 0.5f) * cell);
+        var start = startCell < 0 ? (0f, 0f) : (-radius + (startCell % size + 0.5f) * cell, -radius + (startCell / size + 0.5f) * cell);
         return (startCell, start);
     }
 
@@ -38,8 +39,9 @@ internal static class SeedStart
     /// <param name="size">Cells on a side.</param>
     /// <param name="cell">A cell's side in metres.</param>
     /// <param name="at">The temple's position.</param>
+    /// <param name="radius">The world's radius, metres; the game's 10 km by default.</param>
     /// <returns>The nearest land cell (-1 when there is none), with the temple as position.</returns>
-    internal static (int Cell, (float X, float Z) Position) TempleCell(byte[] biome, int size, float cell, (float X, float Z) at)
+    internal static (int Cell, (float X, float Z) Position) TempleCell(byte[] biome, int size, float cell, (float X, float Z) at, float radius = Radius)
     {
         int startCell = -1;
         float best = float.MaxValue;
@@ -49,7 +51,7 @@ internal static class SeedStart
             {
                 continue;
             }
-            float dx = -Radius + (k % size + 0.5f) * cell - at.X, dz = -Radius + (k / size + 0.5f) * cell - at.Z, d = dx * dx + dz * dz;
+            float dx = -radius + (k % size + 0.5f) * cell - at.X, dz = -radius + (k / size + 0.5f) * cell - at.Z, d = dx * dx + dz * dz;
             if (d < best)
             {
                 best = d;
@@ -66,15 +68,16 @@ internal static class SeedStart
     /// <param name="start">The start's position.</param>
     /// <param name="mass">Each cell's landmass number (see <see cref="SeedLandmasses.Find"/>).</param>
     /// <param name="startMass">The start's landmass number (-1: none).</param>
+    /// <param name="radius">The world's radius, metres; the game's 10 km by default.</param>
     /// <returns>The cells within 400 m of the start, the land ones among them, and per biome the nearest distance and whether it is on the start's landmass.</returns>
-    internal static (int Near, int NearLand, Dictionary<Heightmap.Biome, float> Distance, Dictionary<Heightmap.Biome, bool> Same) Distances(byte[] biome, int size, float cell, (float X, float Z) start, int[] mass, int startMass)
+    internal static (int Near, int NearLand, Dictionary<Heightmap.Biome, float> Distance, Dictionary<Heightmap.Biome, bool> Same) Distances(byte[] biome, int size, float cell, (float X, float Z) start, int[] mass, int startMass, float radius = Radius)
     {
         int near = 0, nearLand = 0;
         var distance = Biomes.ToDictionary(b => b, _ => float.PositiveInfinity);
         var same = Biomes.ToDictionary(b => b, _ => false);
         for (int k = 0; k < biome.Length; k++)
         {
-            float x = -Radius + (k % size + 0.5f) * cell, z = -Radius + (k / size + 0.5f) * cell;
+            float x = -radius + (k % size + 0.5f) * cell, z = -radius + (k / size + 0.5f) * cell;
             float d = MathF.Sqrt((x - start.X) * (x - start.X) + (z - start.Z) * (z - start.Z));
             if (d <= 400 + cell / 2)
             {

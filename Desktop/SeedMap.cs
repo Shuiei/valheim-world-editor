@@ -17,6 +17,9 @@ public sealed partial class SeedMap : Control, IDisposable
 {
     /// <summary>The seed's preview shown, or null.</summary>
     private SeedPreview.Preview? _preview;
+
+    /// <summary>The world's radius, metres: the preview's (its world's rules'), the game's 10 km when none is shown.</summary>
+    internal float Radius => _preview?.Radius ?? SeedPreview.Radius;
     /// <summary>The whole world's picture, from the preview.</summary>
     private WriteableBitmap? _world;
     /// <summary>The close look: the part in view sampled again, with the world rectangle it covers.</summary>

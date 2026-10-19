@@ -11,7 +11,8 @@ public static partial class Worlds
     /// <param name="Where">"recent", "yours" (a folder added in Settings) or "local" (the game's folders).</param>
     /// <param name="Usable">Whether the editor can open it.</param>
     /// <param name="Problem">Why it cannot, for the player; null when it can.</param>
-    public sealed record Info(string Name, string Path, DateTime Saved, int SaveNumber, string Where, bool Usable, string? Problem);
+    /// <param name="ExpandWorld">Whether the world was made with Expand World Size (its world file keeps the mod's settings).</param>
+    public sealed record Info(string Name, string Path, DateTime Saved, int SaveNumber, string Where, bool Usable, string? Problem, bool ExpandWorld = false);
 
     /// <summary>Every world found, each once: recent ones first, then the newest saves first.</summary>
     public static List<Info> Find(AppSettings settings)
@@ -30,7 +31,7 @@ public static partial class Worlds
                 }
                 string? problem = Check(full);
                 (int n, DateTime t) = LatestSave(full);
-                list.Add(new Info(WorldName(full), full, t, n, where, problem == null, problem));
+                list.Add(new Info(WorldName(full), full, t, n, where, problem == null, problem, problem == null && MadeWithExpandWorld(full, n)));
             }
             // A folder that cannot be read, or a stored path that is no path: left out, and said in the log.
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
@@ -87,6 +88,25 @@ public static partial class Worlds
             }
         }
         return [.. list.OrderByDescending(w => w.Where == "recent").ThenByDescending(w => w.Saved)];
+    }
+
+    /// <summary>
+    /// Whether a world's file keeps Expand World Size's settings (the world was made with the mod); false when the
+    /// file cannot be read (said in the log; the world opens, or not, as Check said).
+    /// </summary>
+    /// <param name="folder">The world's folder.</param>
+    /// <param name="saveNumber">The save to look at.</param>
+    private static bool MadeWithExpandWorld(string folder, int saveNumber)
+    {
+        try
+        {
+            return ExpandWorld.Keys(Save.WorldSave.ReadMetadata(Path.Combine(folder, $"_main.{saveNumber}.fwl2")).StartingGlobalKeys).Count > 0;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or EndOfStreamException)
+        {
+            Log.CaughtBrief(ex, "reading a world file's head for Expand World's keys (taken as none)");
+            return false;
+        }
     }
 
     /// <summary>A world's name: its folder's name.</summary>

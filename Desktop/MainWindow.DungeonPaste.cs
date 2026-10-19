@@ -40,7 +40,8 @@ public partial class MainWindow
             Msg(pieces.Count == 0 && marker != null ? Said.Of("dungeon.msg.onlyPortal") : Said.Of("dungeon.msg.noPiece"));
             return;
         }
-        string biome = BiomeName(scene.Terrain?.BiomeAt(ground.X, ground.Z));
+        // A biome the game does not have: the dungeon generator knows the one whose ground it borrows.
+        string biome = BiomeName(scene.Terrain is { } terrain ? terrain.Rules.Biomes.Terrain(terrain.BiomeAt(ground.X, ground.Z)) : null);
         string name = clip.Name ?? "dungeon";
         PlaceDungeon(scene, s, ground, new DungeonToPlace(name, true, biome, PortalTag(StableHash.Of(name)), pieces,
             marker == null ? Vector3.Zero : Place(marker), marker == null ? 0f : paste.Rotated(marker.Rotation).Y, null));

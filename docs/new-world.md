@@ -177,3 +177,6 @@ Until then the map shows the seed's land with nothing on it.
 - If the bosses and traders cannot be read from your game's files, the page says so: the map still shows the
   biomes, but the marks are missing and the search cannot look for them. The log (**Open log** at the bottom of the start
   page's side menu) says why.
+- With the **Expand World** switch in Settings on, the seeds looked at and the world made follow the mods' settings
+  and data files (the page says so above Create): a wider world, other biomes and places. See
+  [Expand World](expand-world.md).

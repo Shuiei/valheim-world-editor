@@ -24,6 +24,9 @@ public sealed partial class TerrainService
     /// </summary>
     internal WorldGenerator Generator { get; }
 
+    /// <summary>What a world generation mod changed about this world (the game's own values by default).</summary>
+    public WorldRules Rules => Generator.Rules;
+
     /// <summary>
     /// The runtime modifiers laid over generated terrain, with BaseZone's heights and BaseMask's paint by zone built
     /// with them (on first use). Swapped whole by UseModifiers, so a zone a build with the old modifiers finishes goes

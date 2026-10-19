@@ -49,6 +49,9 @@ public sealed partial class WorldScene
         Parallel.ForEach(keys, k => terrain.Warm(k.x, k.z));
         var (w, h, heights) = HeightGrid.Read(terrain, edits, x0, z0, x1, z1);
         int[] biomes = new int[w * h];
+        var table = terrain.Rules.Biomes;
+        bool borrowed = table.HasTerrainOverrides;
+        int[]? groundBiomes = borrowed ? new int[w * h] : null;
         byte[] biomeCol = new byte[w * h * 4], mask = new byte[w * h * 4];
         float[] limit = new float[w * h], ocean = new float[w * h];
         static float Smooth01(float t) => t * t * (3 - 2 * t);
@@ -56,7 +59,7 @@ public sealed partial class WorldScene
         {
             int[] b = terrain.VertexBiomes(x, z);
             float[] baseMask = terrain.BaseMask(x, z);
-            byte[][] corners = [.. terrain.CornerBiomes(x, z).Select(BiomeRgba)];
+            byte[][] corners = [.. terrain.CornerBiomes(x, z).Select(c => BiomeRgba(c, table))];
             var e = edits.Get(x, z);
             int ox = (x - x0) * 64, oz = (z - z0) * 64;
             for (int k = 0; k < 65; k++)
@@ -65,6 +68,7 @@ public sealed partial class WorldScene
                 {
                     int i = k * 65 + l, g = (oz + k) * w + ox + l;
                     biomes[g] = b[i];
+                    groundBiomes?[g] = (int)table.Terrain((ValheimGen.Heightmap.Biome)b[i]);
                     float ix = Smooth01(l / 64f), iy = Smooth01(k / 64f);
                     for (int c = 0; c < 4; c++)
                     {
@@ -111,6 +115,9 @@ public sealed partial class WorldScene
             H = h,
             Heights = heights,
             Biomes = biomes,
+            GroundBiomes = groundBiomes,
+            GroundTints = table.Biomes.Where(i => i.HasData && i.MapColor is { A: > 0f } && !ValheimGen.BiomeTable.GamesBiomes.Any(g => g.Value == i.Value))
+                .ToDictionary(i => (int)i.Value, i => Shaders.Linear(i.MapColor!.Value.R, i.MapColor.Value.G, i.MapColor.Value.B)),
             Cx = minX + (w - 1) / 2f,
             Cz = minZ + (h - 1) / 2f,
             Water = terrain.WaterLevel,

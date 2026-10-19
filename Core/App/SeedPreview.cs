@@ -14,8 +14,8 @@ namespace TerrainEditor.App;
 public static partial class SeedPreview
 {
     /// <summary>
-    /// The world's radius in metres (10 km): the preview covers -Radius..Radius on both axes. The preview makes
-    /// worlds of the game's own rules.
+    /// The game's world radius in metres (10 km): a preview of a world with the game's own rules covers -Radius..Radius
+    /// on both axes (a preview's own <see cref="Preview.Radius"/> is its world's rules').
     /// </summary>
     public const float Radius = 10000f;
 
@@ -127,7 +127,8 @@ public static partial class SeedPreview
     /// <param name="Landmarks">Where the start, bosses and traders will be; null when not looked for.</param>
     /// <param name="Generator">The seed's, for a closer look at a part (Sample); null in search results.</param>
     /// <param name="Layout">Its locations laid out so far, to go on from (FindDungeons); null in search results.</param>
-    public sealed record Preview(string Seed, int Size, float Cell, byte[] Biome, float[] Height, Stats Stats, IReadOnlyList<Landmark>? Landmarks = null, WorldGenerator? Generator = null, SeedLocations.Layout? Layout = null)
+    /// <param name="Radius">The world's radius, metres (its rules'; the game's 10 km): the cells cover -Radius..Radius.</param>
+    public sealed record Preview(string Seed, int Size, float Cell, byte[] Biome, float[] Height, Stats Stats, IReadOnlyList<Landmark>? Landmarks = null, WorldGenerator? Generator = null, SeedLocations.Layout? Layout = null, float Radius = Radius)
     {
         /// <summary>The world position of cell (i, j)'s middle.</summary>
         public (float X, float Z) CellCenter(int i, int j) => (-Radius + (i + 0.5f) * Cell, -Radius + (j + 0.5f) * Cell);
@@ -139,12 +140,18 @@ public static partial class SeedPreview
     /// <summary>The height of a cell past the world's edge.</summary>
     public const float Outside = float.NegativeInfinity;
 
-    /// <summary>The game's world generator for a seed name, at the current world generation version.</summary>
-    public static WorldGenerator Generator(string seedName) => WorldGenerator.Create(new World
+    /// <summary>
+    /// The game's world generator for a seed name, at the current world generation version, with a world generation
+    /// mod's rules when given (the game's own otherwise).
+    /// </summary>
+    /// <param name="seedName">The seed.</param>
+    /// <param name="rules">What a world generation mod changes; null for the game's own values.</param>
+    public static WorldGenerator Generator(string seedName, WorldRules? rules = null) => WorldGenerator.Create(new World
     {
         SeedName = seedName,
         Seed = WorldCreator.SeedOf(seedName),
         WorldGenVersion = WorldCreator.WorldGenVersion,
+        Rules = rules ?? WorldRules.Vanilla,
     });
 
     /// <summary>A random seed name as the game makes them: 10 letters and digits.</summary>

@@ -86,13 +86,14 @@ public class SettingsDialogTests
             Click(Buttons(d, "Browse…")[1]);
             Assert.Equal(bep, Boxes(d)[1].Text);
             Click(adds[1]);
-            Assert.Equal(3, Boxes(d).Count);
+            // The Valheim folder, the two rows, and the Expand World folder's box.
+            Assert.Equal(4, Boxes(d).Count);
             // A cancelled picker leaves the box as it was.
             Boxes(d)[2].Text = extra;
             Click(Buttons(d, "Browse…")[2]);
             Assert.Equal(extra, Boxes(d)[2].Text);
             Click(Buttons(d, "✕")[1]);
-            Assert.Equal(2, Boxes(d).Count);
+            Assert.Equal(3, Boxes(d).Count);
             Click(Buttons(d, "Save").Single());
             Assert.True(await shown);
             Assert.Null(settings.ValheimPath);
@@ -135,5 +136,41 @@ public class SettingsDialogTests
         string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         string? problem = SettingsDialog.Apply(settings, null, ["\"~/no-such-folder-for-vwe-tests\""], []);
         Assert.Contains(Path.Combine(home, "no-such-folder-for-vwe-tests"), problem);
+    }
+    [AvaloniaFact]
+    public async Task TheExpandWorldFolderIsKeptAndBrowsedFor()
+    {
+        using var t = new Temp();
+        string bep = t.Dir("ew");
+        var settings = new AppSettings { ExpandWorld = true };
+        var owner = Owner();
+        var picks = new Queue<string?>([bep]);
+        SettingsDialog.PickFolder = _ => Task.FromResult(picks.Dequeue());
+        try
+        {
+            var shown = SettingsDialog.Show(owner, settings);
+            var d = TestWindows.Shown(owner);
+            var box = Named(d, "ExpandWorldFolder");
+            Assert.Equal("", box.Text);
+            // Its Browse button is the last one; the picked folder lands in its box.
+            Click(Buttons(d, "Browse…")[^1]);
+            Assert.Equal(bep, box.Text);
+            Click(Buttons(d, "Save").Single());
+            Assert.True(await shown);
+            Assert.Equal(bep, settings.ExpandWorldFolder);
+            Assert.True(settings.ExpandWorld);
+            // Emptied: none.
+            shown = SettingsDialog.Show(owner, settings);
+            d = TestWindows.Shown(owner);
+            Assert.Equal(bep, Named(d, "ExpandWorldFolder").Text);
+            Named(d, "ExpandWorldFolder").Text = "  ";
+            Click(Buttons(d, "Save").Single());
+            Assert.True(await shown);
+            Assert.Null(settings.ExpandWorldFolder);
+        }
+        finally
+        {
+            SettingsDialog.PickFolder = null;
+        }
     }
 }

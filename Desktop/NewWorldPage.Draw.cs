@@ -22,7 +22,7 @@ public sealed partial class NewWorldPage : IDisposable
         var bmp = new WriteableBitmap(new PixelSize(px, px), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
         using var fb = bmp.Lock();
         byte[] row = new byte[px * 4];
-        int startI = (int)((p.Stats.Start.X + SeedPreview.Radius) / p.Cell), startJ = (int)((p.Stats.Start.Z + SeedPreview.Radius) / p.Cell);
+        int startI = (int)((p.Stats.Start.X + p.Radius) / p.Cell), startJ = (int)((p.Stats.Start.Z + p.Radius) / p.Cell);
         for (int y = 0; y < px; y++)
         {
             int j = p.Size - 1 - y * p.Size / px;

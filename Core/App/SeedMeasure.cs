@@ -13,17 +13,18 @@ internal static class SeedMeasure
     /// <param name="size">Cells on a side.</param>
     /// <param name="cell">A cell's side in metres.</param>
     /// <param name="startAt">Where the game puts its start temple (null: the Meadows cell nearest the middle).</param>
-    internal static Stats Measure(byte[] biome, int size, float cell, (float X, float Z)? startAt = null)
+    /// <param name="radius">The world's radius, metres (the cells cover -radius..radius); the game's 10 km by default.</param>
+    internal static Stats Measure(byte[] biome, int size, float cell, (float X, float Z)? startAt = null, float radius = Radius)
     {
-        var (inside, land, counts) = CountLand(biome, size, cell);
+        var (inside, land, counts) = CountLand(biome, size, cell, radius);
         var (mass, sizes) = SeedLandmasses.Find(biome, size);
-        var (startCell, start) = SeedStart.MiddleCell(biome, size, cell);
+        var (startCell, start) = SeedStart.MiddleCell(biome, size, cell, radius);
         if (startAt is { } at)
         {
-            (startCell, start) = SeedStart.TempleCell(biome, size, cell, at);
+            (startCell, start) = SeedStart.TempleCell(biome, size, cell, at, radius);
         }
         int startMass = startCell < 0 ? -1 : mass[startCell];
-        var (near, nearLand, distance, same) = SeedStart.Distances(biome, size, cell, start, mass, startMass);
+        var (near, nearLand, distance, same) = SeedStart.Distances(biome, size, cell, start, mass, startMass, radius);
         return new Stats(
             inside == 0 ? 0 : (float)land / inside,
             Biomes.Select((b, i) => (b, i)).ToDictionary(p => p.b, p => land == 0 ? 0f : (float)counts[p.i] / land),
@@ -37,7 +38,7 @@ internal static class SeedMeasure
 
     /// <summary>Counts the cells inside the world's circle, and the land ones, and the land of each biome.</summary>
     /// <returns>The cells inside the world, the land cells inside it, and the land cells of each biome (index in Biomes).</returns>
-    private static (int Inside, int Land, int[] Counts) CountLand(byte[] biome, int size, float cell)
+    private static (int Inside, int Land, int[] Counts) CountLand(byte[] biome, int size, float cell, float radius)
     {
         int inside = 0, land = 0;
         int[] counts = new int[Biomes.Length];
@@ -45,8 +46,8 @@ internal static class SeedMeasure
         {
             for (int i = 0; i < size; i++)
             {
-                float x = -Radius + (i + 0.5f) * cell, z = -Radius + (j + 0.5f) * cell;
-                if (x * x + z * z > Radius * Radius)
+                float x = -radius + (i + 0.5f) * cell, z = -radius + (j + 0.5f) * cell;
+                if (x * x + z * z > radius * radius)
                 {
                     continue;
                 }

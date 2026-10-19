@@ -17,11 +17,16 @@ public static partial class WorldCreator
     /// their whole ±8 m on it): a clean square to show them on (the documentation's pictures). Needs a radius of 2 or
     /// more.
     /// </param>
+    /// <param name="rules">
+    /// What a world generation mod changes (the generated zones' ground, vegetation and locations follow it); null for
+    /// the game's own values. The world file gets no settings of the mod's: Expand World Size writes its own on the
+    /// first save.
+    /// </param>
     /// <exception cref="ArgumentException">A bad name, seed, radius or flat request.</exception>
     /// <exception cref="InvalidOperationException">
     /// The folder already holds a world, or no zone is fit to be the flat one.
     /// </exception>
-    public static Created Create(string folder, string name, string seedName, int radius = 0, long? uid = null, bool flat = false)
+    public static Created Create(string folder, string name, string seedName, int radius = 0, long? uid = null, bool flat = false, ValheimGen.WorldRules? rules = null)
     {
         name = name.Trim();
         seedName = seedName.Trim();
@@ -42,7 +47,7 @@ public static partial class WorldCreator
             var db = ZoneDb.Empty(SaveFileVersion, LocationVersion, Tail());
             db.Save(main + ".db2");
 
-            var growth = radius > 0 ? GrowVegetation(folder, main, db, written, seed, radius, flat) : new Growth(0, 0, 0, null);
+            var growth = radius > 0 ? GrowVegetation(folder, main, db, written, seed, radius, flat, rules ?? ValheimGen.WorldRules.Vanilla) : new Growth(0, 0, 0, null);
             // Written last, like the game: only then is the save complete. Every file and its name are on disk before it
             // (a crash must not leave a marker vouching for files that are not), the marker's name after it.
             written.Add(main + ".ok");

@@ -73,7 +73,7 @@ public class WorldSaveLoadTests
     }
 
     /// <summary>Writes a world file as the game does: the version, names, seed, uid, generator version, database flag (30 and later), keys (32 and later), players (none).</summary>
-    private static void WriteMetadata(string path, int version, string[] keys)
+    internal static void WriteMetadata(string path, int version, string[] keys)
     {
         using MemoryStream pkg = new();
         using (BinaryWriter p = new(pkg, System.Text.Encoding.UTF8, leaveOpen: true))

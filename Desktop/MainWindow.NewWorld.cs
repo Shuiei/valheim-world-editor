@@ -50,7 +50,7 @@ public sealed partial class MainWindow
     {
         var page = NewWorld = new NewWorldPage();
         page.BackRequested += () => { page.Dispose(); NewWorld = null; ShowStart(); };
-        page.CreateRequested += async (folder, name, seed) => await CreateWorld(folder, name, seed);
+        page.CreateRequested += async (folder, name, seed) => await CreateWorld(folder, name, seed, page.Rules);
         Title = Lang.T("world.title.newWorld", BuildInfo.Version);
         _pages.Content = page.View;
     }
@@ -58,13 +58,18 @@ public sealed partial class MainWindow
     /// <summary>
     /// Makes a world in <paramref name="folder"/> and opens it; on failure the New world page says why.
     /// </summary>
+    /// <param name="folder">The world's folder.</param>
+    /// <param name="name">The world's name.</param>
+    /// <param name="seed">The seed.</param>
+    /// <param name="rules">What the world follows (Expand World's rules, or the game's); null: as the New world page would.</param>
     /// <returns>Null when made, else why it could not be, in English (what Claude is told).</returns>
-    internal async Task<string?> CreateWorld(string folder, string name, string seed)
+    internal async Task<string?> CreateWorld(string folder, string name, string seed, ValheimGen.WorldRules? rules = null)
     {
         Busy(Lang.T("newWorld.msg.making", name));
         try
         {
-            await Task.Run(() => TerrainEditor.Save.WorldCreator.Create(folder, name, seed));
+            var with = rules ?? ExpandWorld.ForNewWorld(AppSettings.Load());
+            await Task.Run(() => TerrainEditor.Save.WorldCreator.Create(folder, name, seed, rules: with));
             Console.WriteLine($"New world: made {name} (seed {seed}) in {folder}.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)

@@ -20,7 +20,7 @@ public static partial class SettingsDialog
             }
             // Set before Apply, which saves them with the folders; taken back when the folders are refused, so a
             // Cancel after that keeps nothing.
-            var before = (_settings.ClaudeConnect, _settings.ClaudeScripts, _settings.ClaudePort, _settings.ClaudeToken, _settings.DriverOpenGl, _settings.Language, _settings.ExpandWorld);
+            var before = (_settings.ClaudeConnect, _settings.ClaudeScripts, _settings.ClaudePort, _settings.ClaudeToken, _settings.DriverOpenGl, _settings.Language, _settings.ExpandWorld, _settings.ExpandWorldFolder);
             var allowedBefore = new Dictionary<string, string>(_settings.Extensions);
             foreach (var (box, x) in _extensionBoxes)
             {
@@ -32,10 +32,11 @@ public static partial class SettingsDialog
             _settings.ClaudeToken = _token;
             _settings.DriverOpenGl = _driverGl.IsChecked == true;
             _settings.ExpandWorld = _expandWorld.IsChecked == true;
+            _settings.ExpandWorldFolder = string.IsNullOrWhiteSpace(_expandWorldFolder.Text) ? null : _expandWorldFolder.Text.Trim();
             _settings.Language = _language.SelectedIndex > 0 ? _languages[_language.SelectedIndex - 1].Code : null;
             if (Apply(_settings, _valheim.Text, _readBep(), _readWorlds()) is string problem)
             {
-                (_settings.ClaudeConnect, _settings.ClaudeScripts, _settings.ClaudePort, _settings.ClaudeToken, _settings.DriverOpenGl, _settings.Language, _settings.ExpandWorld) = before;
+                (_settings.ClaudeConnect, _settings.ClaudeScripts, _settings.ClaudePort, _settings.ClaudeToken, _settings.DriverOpenGl, _settings.Language, _settings.ExpandWorld, _settings.ExpandWorldFolder) = before;
                 _settings.Extensions = allowedBefore;
                 _error.Text = problem;
                 return;

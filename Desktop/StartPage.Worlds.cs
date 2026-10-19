@@ -43,7 +43,7 @@ public sealed partial class StartPage
 
     /// <summary>What a list of worlds shows (every detail on a card), to compare one look with the last.</summary>
     private static string WorldsKey(List<Worlds.Info> worlds) =>
-        string.Join('\n', worlds.Select(w => $"{w.Path}|{w.Name}|{w.Where}|{w.SaveNumber}|{w.Saved.Ticks}|{w.Usable}|{w.Problem}"));
+        string.Join('\n', worlds.Select(w => $"{w.Path}|{w.Name}|{w.Where}|{w.SaveNumber}|{w.Saved.Ticks}|{w.Usable}|{w.Problem}|{w.ExpandWorld}"));
 
     /// <summary>
     /// Where a world was found (<see cref="Worlds.Info.Where"/>: "recent", "yours", "local") as the user reads it; another
@@ -83,7 +83,7 @@ public sealed partial class StartPage
                     {
                         new TextBlock { Text = w.Name, FontSize = 15, FontWeight = FontWeight.SemiBold },
                         new TextBlock { Text = w.Usable ? Lang.T("start.world.saved", w.Saved, w.SaveNumber) : w.Problem ?? "", FontSize = 12, Foreground = w.Usable ? Muted : Brushes.Orange, TextWrapping = TextWrapping.Wrap },
-                        new TextBlock { Text = WhereName(w.Where), FontSize = 11, Foreground = Muted, TextTrimming = TextTrimming.CharacterEllipsis },
+                        new TextBlock { Text = w.ExpandWorld ? Lang.T("start.world.expandWorld", WhereName(w.Where)) : WhereName(w.Where), FontSize = 11, Foreground = Muted, TextTrimming = TextTrimming.CharacterEllipsis },
                     },
                 },
             };

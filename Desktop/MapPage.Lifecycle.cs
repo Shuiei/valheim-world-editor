@@ -45,8 +45,9 @@ public sealed partial class MapPage
             }
             else
             {
-                Map.LookAt(0, 0, 10500 * 2 / 900f);
+                Map.LookAt(0, 0, session.World.Rules.TotalRadius * 2 / 900f);
             }
+            RMaxBox.PlaceholderText = session.World.Rules.TotalRadius.ToString("0", System.Globalization.CultureInfo.InvariantCulture);
         }
         else
         {

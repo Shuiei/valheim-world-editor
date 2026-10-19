@@ -7,6 +7,8 @@
 Opening a world shows a map of the whole world. It is drawn the way the game draws its own map, from the
 world's own data, so it looks like the in-game map with everything revealed. From here you pick the place to
 edit in 3D, search the whole world, reset zones anywhere at once, and save (or apply live) what is waiting.
+A world made wider with Expand World Size is shown whole too, once the switch in Settings is on (see
+[Expand World](expand-world.md)).
 
 ## How to use it
 

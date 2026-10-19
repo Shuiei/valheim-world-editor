@@ -48,11 +48,13 @@ public sealed partial class NewWorldPage : IDisposable
     }
 
     /// <summary>
-    /// A biome's name as the game shows it, in the language in use (ZoneFilter.BiomeName's catalogue text).
+    /// A biome's name as the game shows it, in the language in use (ZoneFilter.BiomeName's catalogue text); a biome of
+    /// Expand World Data's by the name its file gives when the world's biomes are given.
     /// </summary>
     /// <param name="b">The biome.</param>
-    internal static string Name(Heightmap.Biome b)
+    /// <param name="biomes">The world's biomes; null for the game's.</param>
+    internal static string Name(Heightmap.Biome b, BiomeTable? biomes = null)
     {
-        return ZoneFilter.BiomeName(b).Shown;
+        return ZoneFilter.BiomeName(b, biomes).Shown;
     }
 }

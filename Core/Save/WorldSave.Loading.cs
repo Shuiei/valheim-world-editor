@@ -34,35 +34,56 @@ public sealed partial class WorldSave
         return save;
     }
 
+    /// <summary>The world file's head (the .fwl2), as <see cref="ReadMetadata"/> reads it.</summary>
+    /// <param name="Name">The world's name.</param>
+    /// <param name="SeedName">The seed as typed.</param>
+    /// <param name="Seed">The seed number.</param>
+    /// <param name="WorldGenVersion">The game's world generator version the world was made with (0 before version 26).</param>
+    /// <param name="StartingGlobalKeys">The starting global keys (none before version 32).</param>
+    public sealed record Metadata(string Name, string SeedName, int Seed, int WorldGenVersion, List<string> StartingGlobalKeys);
+
     /// <summary>
     /// Mirrors World.LoadWorld: an int length prefix, then a ZPackage with version, names, seed, the generator version
     /// (26 and later), whether the world needs its database (30 and later) and the starting global keys (32 and
     /// later; what comes after them, the players seen, is not read).
     /// </summary>
-    private void LoadMetadata()
+    /// <param name="path">The world file (_main.n.fwl2).</param>
+    public static Metadata ReadMetadata(string path)
     {
-        string path = Path.Combine(Directory, $"_main.{SaveNumber}.fwl2");
         using ValheimReader file = new(File.OpenRead(path));
         int length = file.ReadInt();
         using ValheimReader pkg = new(new MemoryStream(file.ReadBytes(length)));
         int version = pkg.ReadInt();
-        Name = pkg.ReadString();
-        SeedName = pkg.ReadString();
-        Seed = pkg.ReadInt();
+        string name = pkg.ReadString();
+        string seedName = pkg.ReadString();
+        int seed = pkg.ReadInt();
         pkg.ReadLong();
-        WorldGenVersion = version >= 26 ? pkg.ReadInt() : 0;
+        int worldGenVersion = version >= 26 ? pkg.ReadInt() : 0;
         if (version >= 30)
         {
             pkg.ReadBool();
         }
+        List<string> keys = [];
         if (version >= 32)
         {
-            int keys = pkg.ReadCount(1);
-            for (int i = 0; i < keys; i++)
+            int count = pkg.ReadCount(1);
+            for (int i = 0; i < count; i++)
             {
-                StartingGlobalKeys.Add(pkg.ReadString());
+                keys.Add(pkg.ReadString());
             }
         }
+        return new Metadata(name, seedName, seed, worldGenVersion, keys);
+    }
+
+    /// <summary>Reads the world file's head into this save (<see cref="ReadMetadata"/>).</summary>
+    private void LoadMetadata()
+    {
+        var meta = ReadMetadata(Path.Combine(Directory, $"_main.{SaveNumber}.fwl2"));
+        Name = meta.Name;
+        SeedName = meta.SeedName;
+        Seed = meta.Seed;
+        WorldGenVersion = meta.WorldGenVersion;
+        StartingGlobalKeys.AddRange(meta.StartingGlobalKeys);
         GridWidth = ExpandWorld.SavedGridWidth(StartingGlobalKeys, Name);
     }
 

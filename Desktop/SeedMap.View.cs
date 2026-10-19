@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -13,7 +12,7 @@ public sealed partial class SeedMap : Control, IDisposable
         _fit = true;
         CenterX = CenterZ = 0;
         double side = Math.Min(Bounds.Width, Bounds.Height);
-        MetersPerPixel = side > 0 ? (float)(2 * SeedPreview.Radius / side) : 40;
+        MetersPerPixel = side > 0 ? (float)(2 * Radius / side) : 40;
         Changed();
     }
 
@@ -47,7 +46,7 @@ public sealed partial class SeedMap : Control, IDisposable
     private const float MinMpp = 0.5f;
 
     /// <summary>The farthest zoom: the world a little smaller than the view.</summary>
-    private float MaxMpp => (float)(2.5 * SeedPreview.Radius / Math.Max(1, Math.Min(Bounds.Width, Bounds.Height)));
+    private float MaxMpp => (float)(2.5 * Radius / Math.Max(1, Math.Min(Bounds.Width, Bounds.Height)));
 
     /// <summary>Where a world point (x, z) is on the map, in pixels.</summary>
     public Point ScreenOf(float x, float z) => new(Bounds.Width / 2 + (x - CenterX) / MetersPerPixel, Bounds.Height / 2 - (z - CenterZ) / MetersPerPixel);
@@ -59,8 +58,8 @@ public sealed partial class SeedMap : Control, IDisposable
     private void Changed()
     {
         // The world stays in view.
-        CenterX = Math.Clamp(CenterX, -SeedPreview.Radius, SeedPreview.Radius);
-        CenterZ = Math.Clamp(CenterZ, -SeedPreview.Radius, SeedPreview.Radius);
+        CenterX = Math.Clamp(CenterX, -Radius, Radius);
+        CenterZ = Math.Clamp(CenterZ, -Radius, Radius);
         InvalidateVisual();
         ViewChanged?.Invoke();
         _closeWait.Stop();
