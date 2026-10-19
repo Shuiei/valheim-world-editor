@@ -11,10 +11,10 @@ namespace WorldEditor.Tests;
 [Collection("DataDir")]
 public class ExpandWorldFolderTests : AppSettingsTestBase
 {
-    /// <summary>A BepInEx folder with Expand World Size's settings file.</summary>
+    /// <summary>A profile's BepInEx folder with Expand World Size's settings file (a folder added in Settings must be one).</summary>
     private string Bep(string name, string cfg)
     {
-        string bep = Path.Combine(Data, name);
+        string bep = Path.Combine(Data, name, "BepInEx");
         Directory.CreateDirectory(Path.Combine(bep, "config"));
         Directory.CreateDirectory(Path.Combine(bep, "plugins"));
         File.WriteAllText(Path.Combine(bep, "config", "expand_world_size.cfg"), cfg);

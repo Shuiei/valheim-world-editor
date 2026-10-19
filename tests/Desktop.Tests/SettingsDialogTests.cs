@@ -27,8 +27,8 @@ public class SettingsDialogTests
         var d = TestWindows.Shown(owner);
         Assert.Equal("Settings: folders on this computer", d.Title);
         var boxes = Boxes(d);
-        // The Valheim folder (empty: automatic), then one row per folder.
-        Assert.Equal([null, bep, worlds], boxes.Select(b => b.Text));
+        // The Valheim folder (empty: automatic), then one row per folder, then the Expand World folder (empty: automatic).
+        Assert.Equal([null, bep, worlds, ""], boxes.Select(b => b.Text));
         Assert.Matches("^(Found automatically: |Not found automatically: choose the folder.)", Texts(d).Split(" | ").First(x => x.Contains("automatically")));
         boxes[0].Text = game;
         Click(Buttons(d, "Save").Single());
