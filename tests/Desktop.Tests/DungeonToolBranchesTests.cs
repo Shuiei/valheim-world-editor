@@ -9,7 +9,8 @@ namespace TerrainEditor.Desktop.Tests;
 /// <summary>
 /// The Dungeon tool's other ways, on a made-up flat area holding a dungeon object: nothing open, a room that cannot
 /// join, one that would overlap or go past the dungeon's space, a door rolled and toggled, an undo that leaves the
-/// hovered opening behind, end caps missing for an opening's kind, and the objects a room holds.
+/// hovered opening behind, end caps missing for an opening's kind, the objects a room holds, a dungeon whose data cannot
+/// be read, a selection found again after another tool's change, two doors at one joint, and a tool nobody listens to.
 /// </summary>
 public class DungeonToolBranchesTests
 {
@@ -26,12 +27,25 @@ public class DungeonToolBranchesTests
         public List<string> Said { get; } = [];
         public int Changes { get; private set; }
 
-        public Run(string kind, params Dungeons.Placed[] rooms)
+        public Run(string kind, params Dungeons.Placed[] rooms) : this(kind, true, rooms)
+        {
+        }
+
+        /// <summary>
+        /// The dungeon of these rooms at At, open in the tool.
+        /// </summary>
+        /// <param name="kind">The dungeon's prefab.</param>
+        /// <param name="listen">False: nothing listens to the tool's Message and Changed (Said and Changes stay empty).</param>
+        /// <param name="rooms">Its rooms.</param>
+        public Run(string kind, bool listen, params Dungeons.Placed[] rooms)
         {
             S.Commit("A dungeon", null, [], [(new NewObject(0, StableHash.Of(kind), At, Vector3.Zero, 0, null, false, MadeObjects.Dungeon(kind, At, rooms)), false)]);
             T = new DungeonTool { Scene = S.Scene, Random = () => 1f };
-            T.Message += m => Said.Add(m.Shown);
-            T.Changed += () => Changes++;
+            if (listen)
+            {
+                T.Message += m => Said.Add(m.Shown);
+                T.Changed += () => Changes++;
+            }
             T.Open(Assert.Single(T.All));
         }
 
@@ -67,6 +81,7 @@ public class DungeonToolBranchesTests
         Assert.Null(t.Problem(room));
         Assert.Empty(t.Inside(room, []));
         Assert.Equal(0, t.CloseOpenEnds());
+        Assert.False(t.Add(room));
         Assert.False(t.Delete());
         // Over nothing: no change to tell.
         t.Hover(At + new Vector3(0, 30, 0), -Vector3.UnitY);
@@ -189,6 +204,99 @@ public class DungeonToolBranchesTests
         Assert.Empty(r.T.FreeEnds);
         r.T.ToggleDoor(d, new Dungeons.Joint(0, 1, At, Quaternion.Identity, "", true));
         Assert.Equal(changes + 1, r.Changes);
+        // Nor is a room added.
+        int said = r.Said.Count;
+        r.T.Add(Room("cave_new_corridor03", At));
+        Assert.Equal(steps, r.S.UndoList.Count);
+        Assert.Equal(said, r.Said.Count);
+        Assert.Equal(changes + 1, r.Changes);
+    }
+
+    // A dungeon listed in the area whose object is in neither the world nor the session: its data cannot be read, so a
+    // room is not added and that is said.
+    [Fact]
+    public void ADungeonWhoseDataCannotBeReadTakesNoRoom()
+    {
+        var s = TestScenes.Flat(1);
+        s.Scene.Things.Add(new WorldScene.Thing(-999, StableHash.Of("DG_Cave"), At, Vector3.Zero, 1, false));
+        var t = new DungeonTool { Scene = s.Scene };
+        var said = new List<string>();
+        t.Message += m => said.Add(m.Shown);
+        t.Open(Assert.Single(t.All));
+        int steps = s.UndoList.Count;
+        t.Add(Entrance());
+        Assert.Equal("The dungeon's data could not be read.", Assert.Single(said));
+        Assert.Equal(steps, s.UndoList.Count);
+    }
+
+    // Another tool on the same area (Claude's, while the panel's is open) takes away a room before the selected one: the
+    // selection follows that room to its new place in the list.
+    [Fact]
+    public void TheSelectedRoomIsFoundAgainWhenARoomBeforeItGoes()
+    {
+        var r = new Run("DG_Cave", Entrance(), Room("cave_new_corridor03", At + new Vector3(0, 0, 40)));
+        var far = Room("cave_new_corridor03", At + new Vector3(0, 0, 80));
+        Assert.True(r.T.Add(far));
+        Assert.Equal(2, r.T.Selected);
+        var other = new DungeonTool { Scene = r.S.Scene };
+        other.Open(Assert.Single(other.All));
+        Assert.True(other.Remove(1));
+        Assert.Equal(1, r.T.Selected);
+        Assert.Equal(far.Position, r.T.Dungeon!.Rooms[1].Position);
+    }
+
+    // Two doors at one joint (one rolled, one put there by hand): clicking the joint takes both away.
+    [Fact]
+    public void TwoDoorsAtOneJointAreTakenAwayTogether()
+    {
+        var r = new Run("DG_Cave", Entrance());
+        r.T.Random = () => 0f;
+        r.T.Choose("cave_new_crossroads01_ice");
+        r.PointAt(r.T.FreeEnds[0]);
+        Assert.True(r.T.Click());
+        var joint = Assert.Single(r.T.DoorJoints);
+        int door = r.S.Scene.Things[Assert.Single(r.T.DoorsAt(joint))].Prefab;
+        r.S.Commit("Another door", null, [], [(new NewObject(0, door, joint.Position, Vector3.Zero, 0), false)]);
+        Assert.Equal(2, r.T.DoorsAt(joint).Count);
+        r.T.ToggleDoor(r.T.Dungeon!, joint);
+        Assert.Empty(r.T.DoorsAt(joint));
+        Assert.StartsWith("Removed the door.", r.Said[^1]);
+    }
+
+    // Nothing listening to the tool (no panel shown): each change is still made, with nothing to tell it to.
+    [Fact]
+    public void AToolNobodyListensToStillMakesItsChanges()
+    {
+        var r = new Run("DG_Cave", false, Entrance());
+        var d = r.T.Dungeon!;
+        r.T.Open(null);
+        Assert.Null(r.T.Dungeon);
+        r.T.Open(d);
+        // A room selected, then one added at an opening (turned, then back to its first join).
+        r.T.Hover(At + new Vector3(0, 40, 0), -Vector3.UnitY);
+        Assert.True(r.T.Click());
+        Assert.Equal(0, r.T.Selected);
+        r.T.Random = () => 0f;
+        r.T.Choose("cave_new_crossroads01_ice");
+        r.T.Turn();
+        Assert.Equal(1, r.T.Join);
+        r.T.Choose("cave_new_crossroads01_ice");
+        r.PointAt(r.T.FreeEnds[0]);
+        Assert.True(r.T.Click());
+        Assert.Equal(2, r.T.Dungeon!.Rooms.Count);
+        // Its door taken away and put back, and a joint of a kind with no door.
+        var joint = Assert.Single(r.T.DoorJoints);
+        r.T.ToggleDoor(r.T.Dungeon!, joint);
+        Assert.Empty(r.T.DoorsAt(joint));
+        r.T.ToggleDoor(r.T.Dungeon!, joint);
+        Assert.Single(r.T.DoorsAt(joint));
+        int steps = r.S.UndoList.Count;
+        r.T.ToggleDoor(r.T.Dungeon!, new Dungeons.Joint(0, 1, At, Quaternion.Identity, "nosuchkind", true));
+        Assert.Equal(steps, r.S.UndoList.Count);
+        // An opening with no end cap of its kind stays open.
+        Assert.Equal(0, new Run("DG_DvergrTown", false, Room("dvergr_divider01", At)).T.CloseOpenEnds());
+        Assert.Empty(r.Said);
+        Assert.Equal(0, r.Changes);
     }
 
     [Fact]
