@@ -26,6 +26,7 @@ public sealed partial class NewWorldPage : IDisposable
         Pending = Task.Run(async () =>
         {
             await rules.ConfigureAwait(false);
+            RefreshRules();
             return SeedPreview.Search(wishes, count, 12, 96, (done, total) => Dispatcher.UIThread.Post(() => Progress.Value = (double)done / total), Rules, token);
         })
             .ContinueWith(t =>
