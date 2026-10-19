@@ -29,6 +29,22 @@ public static class TestApp
         SavedSelections.PathOverride ??= Path.Combine(Path.GetTempPath(), $"vwe-selections-{Environment.ProcessId}.json");
         // A changed game folder never starts a copy of the game's look.
         SettingsDialog.CheckGameLook = _ => { };
+        KeepThreadsForShortWork();
+    }
+
+    /// <summary>
+    /// Threads at once for short work (an HTTP answer, a timer) while other tests' seed searches and map builds run:
+    /// each loop takes all the cores but one, several run together, and the pool added threads too slowly for the
+    /// rest (on main, under coverage, a stand-in game's answer waited 16 s in the queue).
+    /// </summary>
+    private static void KeepThreadsForShortWork()
+    {
+        ThreadPool.GetMinThreads(out int workers, out int io);
+        // Refused (a maximum below 64): said, and the tests still run, on the pool as it was.
+        if (!ThreadPool.SetMinThreads(Math.Max(workers, 64), Math.Max(io, 64)))
+        {
+            Console.Error.WriteLine($"The thread pool kept its minimum of {workers} worker and {io} I/O threads (64 asked).");
+        }
     }
 
     /// <summary>

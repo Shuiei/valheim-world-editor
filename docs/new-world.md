@@ -16,7 +16,9 @@ game's own rules from its seed: everyone can join it without any mod, console pl
    press **Roll** for another random one. Or let **Find a seed** look for you (below).
 3. Look at the map and the facts beside it. Switch on the kinds of dungeon you care about.
 4. When you like the seed, give the world a **Name**, choose where it is **Saved in**, and press **Create
-   world**. The editor writes the world and opens its map.
+   world**. The editor writes the world and opens its map. The folder offered first is the one the installed
+   game saves to (on Linux, the Windows build run through Proton keeps its worlds inside its Steam prefix),
+   so the game lists the world; the other world folders found come after it.
 
 **Start** (top left) goes back to the start page; nothing is made.
 

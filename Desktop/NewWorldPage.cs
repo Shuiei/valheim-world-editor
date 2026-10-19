@@ -57,9 +57,10 @@ public sealed partial class NewWorldPage : IDisposable
     /// </summary>
     internal ValheimGen.WorldRules Rules { get; }
     /// <summary>
-    /// The game's world folders (that exist, the local ones first), for Where.
+    /// The game's world folders for Where: the installed game's own first (a Windows build run through Proton saves
+    /// inside its Steam prefix, not under ~/.config), then the others that exist.
     /// </summary>
-    internal static List<string> Roots() => [.. Places.WorldRoots().Where(Directory.Exists).Distinct()];
+    internal static List<string> Roots() => Places.WorldRootsForNew(AppSettings.Load());
     /// <summary>
     /// Builds the page and starts looking at a random seed.
     /// </summary>
@@ -77,7 +78,7 @@ public sealed partial class NewWorldPage : IDisposable
         var where = (roots ?? Roots()).ToList();
         if (where.Count == 0)
         {
-            where.Add(Places.WorldRoots().First());
+            where.Add(Places.GameWorldRoot(AppSettings.Load()));
         }
         Where.ItemsSource = where.Select(Ui.Tilde).ToList();
         Where.Tag = where;
