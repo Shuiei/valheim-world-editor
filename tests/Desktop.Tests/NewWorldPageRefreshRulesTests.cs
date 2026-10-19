@@ -40,7 +40,7 @@ public sealed class NewWorldPageRefreshRulesTests : IDisposable
         Directory.CreateDirectory(package);
         File.Copy(typeof(YamlDotNet.Serialization.Deserializer).Assembly.Location, Path.Combine(package, YamlReader.DllName));
         File.WriteAllText(Path.Combine(bep, "config", "expand_world_data.cfg"), "[3. Data]\nLocation data = true\n");
-        File.WriteAllText(Path.Combine(bep, "config", "expand_world", "expand_locations.yaml"), "- prefab: WoodHouse1:Twice\n  biome: Meadows\n  quantity: 5\n");
+        File.WriteAllText(Path.Combine(bep, "config", "expand_world", "expand_locations.yaml"), "- prefab: StartTemple:Twice\n  biome: Meadows\n  quantity: 2\n");
         var settings = AppSettings.Load();
         settings.ExpandWorld = true;
         settings.ExpandWorldFolder = bep;
@@ -64,7 +64,7 @@ public sealed class NewWorldPageRefreshRulesTests : IDisposable
         Fixtures.UseLocations();
         page.RefreshRules();
         Assert.NotNull(page.Rules.Locations);
-        Assert.Contains(page.Rules.Locations.Locations, l => l.Prefab == "WoodHouse1:Twice");
+        Assert.Contains(page.Rules.Locations.Locations, l => l.Prefab == "StartTemple:Twice");
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
         Assert.Contains("locations (", page.Generation.Text);
     }
