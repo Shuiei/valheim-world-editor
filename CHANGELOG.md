@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.55.2 — unreleased
+
+### Fixed
+- **On Windows the editor no longer holds on to the YamlDotNet library in your BepInEx plugins folder.** The file was
+  kept open as long as the editor ran, so a mod manager could not update it; now the editor reads it once and lets
+  it go.
+
 ## v1.55.1 — unreleased
 
 ### Fixed

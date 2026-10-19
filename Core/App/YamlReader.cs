@@ -87,16 +87,22 @@ public sealed class YamlReader
     /// </summary>
     /// <param name="dllPath">The library file.</param>
     /// <exception cref="FileNotFoundException">There is no such file.</exception>
+    /// <exception cref="IOException">The file cannot be read.</exception>
     /// <exception cref="BadImageFormatException">The file is not a .NET library.</exception>
     /// <exception cref="TypeLoadException">The library has not the types the reader drives.</exception>
     /// <exception cref="MissingMemberException">The library's deserializer has not the method the reader drives.</exception>
     public static YamlReader Load(string dllPath) => Loaded.GetOrAdd(System.IO.Path.GetFullPath(dllPath), LoadNew);
 
-    /// <summary>Loads a library file into a new load context and finds the deserializer in it.</summary>
+    /// <summary>
+    /// Loads a library file into a new load context and finds the deserializer in it. The file's bytes are loaded,
+    /// not the file itself: loaded from its path, the file stays mapped and locked as long as the editor runs, which
+    /// on Windows keeps a mod manager from updating the player's library (and a test from deleting its copy).
+    /// </summary>
     private static YamlReader LoadNew(string fullPath)
     {
         var context = new AssemblyLoadContext("YamlDotNet from " + fullPath);
-        Assembly asm = context.LoadFromAssemblyPath(fullPath);
+        using var bytes = new MemoryStream(File.ReadAllBytes(fullPath));
+        Assembly asm = context.LoadFromStream(bytes);
         Type builder = asm.GetType("YamlDotNet.Serialization.DeserializerBuilder", throwOnError: true)!;
         Type deserializer = asm.GetType("YamlDotNet.Serialization.IDeserializer", throwOnError: true)!;
         MethodInfo build = builder.GetMethod("Build", Type.EmptyTypes) ?? throw new MissingMethodException(builder.FullName, "Build");
