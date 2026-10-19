@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using WorldEditorBridge.Api;
 
 namespace WorldEditorBridge;
 
@@ -14,8 +15,11 @@ public sealed partial class WorldEditorBridgePlugin
     /// <summary>How often (seconds) the discs are looked at.</summary>
     private const float DiscsEvery = 5f;
 
-    /// <summary>The ground discs of the loaded world, found once per world and kept up to date by the bridge's own creates.</summary>
-    private static readonly List<ZDOID> Discs = [];
+    /// <summary>
+    /// The ground discs of the loaded world, found once per world and kept up to date by the bridge's own creates;
+    /// a disc that is gone leaves it at the next look.
+    /// </summary>
+    private readonly HashSet<ZDOID> _discs = [];
 
     /// <summary>The ZDOMan the discs were found in: a new one is a new world.</summary>
     private ZDOMan _discsOf;
@@ -26,12 +30,19 @@ public sealed partial class WorldEditorBridgePlugin
     /// <summary>Whether an object is one of the editor's ground discs.</summary>
     private static bool IsDisc(ZDO zdo) => zdo.GetPrefab() == LocationProxyPrefab && zdo.GetInt(ZDOVars.s_location) == DiscLocation;
 
-    /// <summary>Remembers a disc the bridge just made, so that <see cref="KeepDiscsFirst"/> watches it too.</summary>
-    private static void NoteDisc(ZDO zdo)
+    /// <summary>Remembers the discs among the objects an apply just made, so that <see cref="KeepDiscsFirst"/> watches them too.</summary>
+    private void NoteDiscs(List<AppliedObject> made)
     {
-        if (IsDisc(zdo))
+        foreach (AppliedObject o in made)
         {
-            Discs.Add(zdo.m_uid);
+            if (o.Prefab == LocationProxyPrefab)
+            {
+                ZDO zdo = ZDOMan.instance.GetZDO(new ZDOID(o.User, o.Id));
+                if (zdo != null && IsDisc(zdo))
+                {
+                    _discs.Add(zdo.m_uid);
+                }
+            }
         }
     }
 
@@ -60,21 +71,25 @@ public sealed partial class WorldEditorBridgePlugin
             {
                 return;
             }
-            Discs.Clear();
+            _discs.Clear();
             foreach (ZDO zdo in all.Values)
             {
-                NoteDisc(zdo);
+                if (IsDisc(zdo))
+                {
+                    _discs.Add(zdo.m_uid);
+                }
             }
             _discsOf = ZDOMan.instance;
-            Logger.LogInfo($"WorldEditorBridge: {Discs.Count} ground disc(s) in the world, kept first in line");
+            Logger.LogInfo($"WorldEditorBridge: {_discs.Count} ground disc(s) in the world, kept first in line");
         }
         int changed = 0;
-        for (int i = Discs.Count - 1; i >= 0; i--)
+        List<ZDOID> gone = [];
+        foreach (ZDOID id in _discs)
         {
-            ZDO zdo = ZDOMan.instance.GetZDO(Discs[i]);
+            ZDO zdo = ZDOMan.instance.GetZDO(id);
             if (zdo == null)
             {
-                Discs.RemoveAt(i);
+                gone.Add(id);
             }
             else if (zdo.Type != ZDO.ObjectType.Terrain)
             {
@@ -82,6 +97,7 @@ public sealed partial class WorldEditorBridgePlugin
                 changed++;
             }
         }
+        _discs.ExceptWith(gone);
         if (changed > 0)
         {
             Logger.LogInfo($"WorldEditorBridge: {changed} ground disc(s) put back first in line");
