@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.60.0 — unreleased
+
+### Changed
+- **Moved objects land on what is under them, not only on the ground.** With the Select tool's **Put each object on
+  the ground when moving** on, a chair, a chest, a creature or any other object you move now ends up on the top of
+  the floor, stair, table or other object under it where you let go, and on the ground only when nothing is under
+  it, as `End` has always dropped it. Each object is carried at the height above the ground it had, so a top higher
+  than the object itself (a roof, a wall) does not count: it goes under. A building still moves as one block that
+  keeps its shape, its bottom layer put on the floor or platform under it, else on the ground. Before, every moved
+  object was set onto the ground, through the floor it was moved onto.
+
 ## v1.57.4 — unreleased
 
 ### Fixed
