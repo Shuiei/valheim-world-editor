@@ -110,9 +110,59 @@ public static class Places
             // keeps its own in its sandbox).
             foreach (string steam in new[] { Path.Combine(home, ".steam", "steam"), Path.Combine(home, ".local", "share", "Steam"), Path.Combine(home, ".var", "app", "com.valvesoftware.Steam", ".local", "share", "Steam") })
             {
-                yield return Path.Combine(steam, "steamapps", "compatdata", GameLook.ValheimAppId.ToString(), "pfx", "drive_c", "users", "steamuser", "AppData", "LocalLow", "IronGate", "Valheim", "worlds_local");
+                yield return PrefixWorldRoot(Path.Combine(steam, "steamapps"));
             }
         }
+    }
+
+    /// <summary>The worlds folder inside the Proton prefix of a Steam library's steamapps folder.</summary>
+    private static string PrefixWorldRoot(string steamapps) =>
+        Path.Combine(steamapps, "compatdata", GameLook.ValheimAppId.ToString(), "pfx", "drive_c", "users", "steamuser", "AppData", "LocalLow", "IronGate", "Valheim", "worlds_local");
+
+    /// <summary>
+    /// The worlds folder the installed game saves to, where a new world must go for the game to list it. On Linux, a
+    /// Windows build of the game run through Proton (valheim.exe in its folder and no Linux build) saves inside its
+    /// Steam library's prefix, the native build under ~/.config; elsewhere, and without a game, the first of
+    /// <see cref="WorldRoots"/>. The folder may not exist yet: the game makes it on its first save.
+    /// </summary>
+    /// <param name="valheim">The game's folder (<see cref="GameLook.FindValheim"/>); null for none found.</param>
+    public static string GameWorldRoot(string? valheim)
+    {
+        if (OperatingSystem.IsLinux() && valheim != null && File.Exists(Path.Combine(valheim, "valheim.exe")) && !File.Exists(Path.Combine(valheim, "valheim.x86_64")))
+        {
+            // <library>/steamapps/common/Valheim (links followed): the prefix is beside common, under compatdata. A
+            // Windows build kept elsewhere: the prefix of a Steam folder on this computer, when one exists.
+            string real = FolderKey(valheim);
+            string? common = Path.GetDirectoryName(real), steamapps = common == null ? null : Path.GetDirectoryName(common);
+            if (steamapps != null && Path.GetFileName(common) == "common" && Path.GetFileName(steamapps) == "steamapps")
+            {
+                return PrefixWorldRoot(steamapps);
+            }
+            if (WorldRoots().FirstOrDefault(r => r.Contains(Path.DirectorySeparatorChar + "compatdata" + Path.DirectorySeparatorChar, StringComparison.Ordinal) && Directory.Exists(r)) is string prefix)
+            {
+                return prefix;
+            }
+        }
+        return WorldRoots().First();
+    }
+
+    /// <summary>The same, for the game the settings name (or the one found in Steam's libraries).</summary>
+    /// <param name="settings">The editor's settings (the Valheim folder).</param>
+    public static string GameWorldRoot(AppSettings settings) => GameWorldRoot(GameLook.FindValheim(settings.ValheimPath));
+
+    /// <summary>
+    /// The world folders to offer for a new world: the installed game's first, whether it exists yet or not, then the
+    /// other folders the game may keep worlds in that exist, each once.
+    /// </summary>
+    /// <param name="settings">The editor's settings (the Valheim folder).</param>
+    public static List<string> WorldRootsForNew(AppSettings settings)
+    {
+        string game = GameWorldRoot(settings);
+        List<string> roots = [game];
+        // Each folder once whichever way it is reached (~/.steam/steam is a link to ~/.local/share/Steam).
+        HashSet<string> seen = [FolderKey(game)];
+        roots.AddRange(WorldRoots().Where(r => Directory.Exists(r) && seen.Add(FolderKey(r))));
+        return roots;
     }
 
     /// <summary>
