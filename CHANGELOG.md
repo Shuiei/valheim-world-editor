@@ -4,6 +4,24 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.57.3 — unreleased
+
+### Fixed
+- **Live, the editor shows every object where the game really has it, its own included.** An object you placed and
+  applied kept the place and data the editor sent: the game had since set the object up (a creature's health, its
+  spawn point and look) and physics had settled it, and the editor, Claude's `get_object` and `list_objects` still
+  showed the editor's copy. Creatures and other things that move on their own, and objects another mod changes, were
+  followed only when they appeared or went. Now, once applied, your objects take the place, turn and data the game
+  gives them (under the same id: undo still takes them away, and a copy is made from the game's version), and
+  creatures, ships, carts, items, fires and the like are followed as they move or change, read alone so a creature
+  walking does not have its whole zone read at every look. Needs WorldEditorBridge 1.57.3 for the moves; with an
+  older plugin, your applied objects still take the game's data when something else in their zone changes.
+
+### WorldEditorBridge
+- `POST /watch` gives a second number per zone, which changes when a kind that moves or ticks on its own (creatures,
+  ships, carts, items, fires, smelters...) moves or changes its data; the first number is as before.
+- `POST /zone/movers` serves only those kinds of the zones asked for, in `/zone`'s format.
+
 ## v1.57.2 — unreleased
 
 ### Fixed

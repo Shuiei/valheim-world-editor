@@ -230,21 +230,30 @@ public sealed partial class WorldSession : IDisposable
         // lost to an ObjectDisposedException), and it holds nothing to free (its wait handle is never asked for).
     }
 
-    // ---- Live: following the game. The zones shown are asked about every few seconds (one number each,
-    // cheap); those that changed are read again (FetchGame, on the network) and merged in (MergeGame, at
-    // once on the window's thread): objects made, removed or changed in the game appear as they are, and
-    // ground changed there replaces the editor's where it has no changes of its own (where it has, they
-    // are kept, and applying them asks first: Edits.PendingOverGame).
-    /// <summary>Each zone's digest as last merged (the game's one number per zone); cleared when the world is read again.</summary>
-    private readonly Dictionary<(int, int), ulong> _digests = [];
+    // ---- Live: following the game. The zones shown are asked about every few seconds (two numbers each,
+    // cheap); those that changed are read again (FetchGame, on the network: whole when something that stays
+    // put changed, only the kinds that move or tick on their own when only those did) and merged in
+    // (MergeGame, at once on the window's thread): objects made, removed or changed in the game appear as
+    // they are, the editor's own objects take the place and data the game gives them, and ground changed
+    // there replaces the editor's where it has no changes of its own (where it has, they are kept, and
+    // applying them asks first: Edits.PendingOverGame).
+    /// <summary>Each zone's digests as last merged (the game's two numbers per zone); cleared when the world is read again.</summary>
+    private readonly Dictionary<(int, int), LiveBridge.Digests> _digests = [];
 
     /// <summary>What <c>FetchGame</c> read from the game, for <c>MergeGame</c>.</summary>
     /// <param name="World">The world it was read for (dropped if the world was read again since).</param>
-    /// <param name="Digests">Every zone asked about, with its digest now.</param>
-    /// <param name="Changed">The zones whose digest changed.</param>
-    /// <param name="Objects">The changed zones' objects, as the game sends them (owner, id, data).</param>
+    /// <param name="Digests">Every zone asked about, with its digests now.</param>
+    /// <param name="Changed">The zones read whole (their first digest changed): objects of them the game lacks vanish.</param>
+    /// <param name="Objects">The objects read, as the game sends them (owner, id, data): the changed zones' and the moving ones.</param>
     /// <param name="Applies">Apply live's count when the read began (dropped if an apply began or ended since).</param>
-    public sealed record Fetched(WorldSave World, Dictionary<(int X, int Z), ulong> Digests, List<(int X, int Z)> Changed, List<(long User, uint Id, byte[] Bytes)> Objects, int Applies);
+    public sealed record Fetched(WorldSave World, Dictionary<(int X, int Z), LiveBridge.Digests> Digests, List<(int X, int Z)> Changed, List<(long User, uint Id, byte[] Bytes)> Objects, int Applies)
+    {
+        /// <summary>
+        /// The zones whose kinds that move or tick on their own were read alone (only their second digest changed):
+        /// their objects are in <see cref="Objects"/> too, and nothing of them vanishes.
+        /// </summary>
+        public List<(int X, int Z)> Moving { get; init; } = [];
+    }
 
     /// <summary>What a merge of the game's changes did.</summary>
     /// <param name="Merged">The objects added, updated and vanished in the world.</param>
@@ -253,7 +262,13 @@ public sealed partial class WorldSession : IDisposable
     /// <param name="Kept">Zones whose ground the game changed under the editor's changes.</param>
     public sealed record Followed(WorldSave.Merged Merged, List<int> Ours, List<(int X, int Z)> Ground, List<(int X, int Z)> Kept)
     {
+        /// <summary>
+        /// The editor's own new objects that took the game's place, turn or data (the game moved them, or gave
+        /// them data once made).
+        /// </summary>
+        public List<int> Refreshed { get; init; } = [];
+
         /// <summary>Anything changed at all.</summary>
-        public bool Any => Merged.Added.Count + Merged.Updated.Count + Merged.Vanished.Count + Ours.Count + Ground.Count + Kept.Count > 0;
+        public bool Any => Merged.Added.Count + Merged.Updated.Count + Merged.Vanished.Count + Ours.Count + Refreshed.Count + Ground.Count + Kept.Count > 0;
     }
 }

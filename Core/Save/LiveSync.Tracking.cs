@@ -42,6 +42,24 @@ public sealed partial class LiveSync
     /// </summary>
     internal int SourceReads { get; private set; }
 
+    /// <summary>
+    /// The game moved one of the editor's objects (physics, a creature walking): where it stands now, to find it again
+    /// by its place and for the zone it is counted in. Nothing changes for an object the game does not have.
+    /// </summary>
+    /// <param name="id">The object's id.</param>
+    /// <param name="position">Where the game has it now.</param>
+    public void Moved(int id, System.Numerics.Vector3 position)
+    {
+        lock (_lock)
+        {
+            if (_liveIds.TryGetValue(id, out LiveTarget target))
+            {
+                // The same ZDOID: _ours stays as it is.
+                _liveIds[id] = target with { Position = position };
+            }
+        }
+    }
+
     /// <summary>Forgets everything applied, once the world was read again or its pending changes dropped.</summary>
     public void Reset()
     {
