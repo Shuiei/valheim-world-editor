@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.56.2 — unreleased
+## v1.57.1 — unreleased
 
 ### Fixed
 - **No limit ground loads before the buildings on it, not disc by disc among them.** A player's game spawns a
@@ -19,6 +19,14 @@ the plugin is unchanged in versions without that part.
   spawns it; the plugin looks at the world's discs every few seconds, puts them back to Terrain, and changes the
   discs of older editor versions at the first look. The log says how many discs the world has and when any were
   put back.
+
+## v1.57.0 — unreleased
+
+### Added
+- **The history keeps every change by default, and you choose how many in Settings.** It used to keep the last 200
+  changes only. **Settings > History > Steps kept** sets a number; empty or 0 keeps them all, as long as they take
+  less than 2 GB of memory (past that, the oldest go first). The History panel shows the newest 200 changes, and
+  **Show older** adds 200 more each time.
 
 ## v1.56.1 — unreleased
 

@@ -257,7 +257,9 @@ files (or from the game, live), which drops every pending change of the whole wo
 **History** (`L`) lists every change of the session, newest first. Each row shows the step's name (the tool or
 action, e.g. "Raise", "Paste ×3", "Removed: Place"), the time (with the day for older ones) and what it touched,
 e.g. "3 zones · 12 new · 2 removed · 1 zone reset". The current step, the one `Ctrl+Z` undoes next, is outlined.
-The heading counts the changes. History keeps the last 200 steps; the oldest go first.
+The heading counts the changes. History keeps every step by default, as long as they take less than 2 GB of
+memory (past that, the oldest go first); **Settings > History > Steps kept** keeps only that many instead. The panel
+shows the newest 200 rows; **Show older (N)** at the bottom adds 200 more.
 
 Tags on a row:
 

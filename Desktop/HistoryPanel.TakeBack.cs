@@ -30,10 +30,11 @@ public sealed partial class HistoryPanel
         Refresh();
     }
 
-    /// <summary>Shows or hides the card.</summary>
+    /// <summary>Shows or hides the card (shown again: the newest page of rows).</summary>
     public void Toggle()
     {
         Card.IsVisible = !Card.IsVisible;
+        _shown = Page;
         Refresh();
     }
 }

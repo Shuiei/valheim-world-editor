@@ -7,7 +7,7 @@ namespace TerrainEditor.Desktop;
 public sealed partial class EditSession
 {
     /// <summary>
-    /// Puts a change on the undo list (dropping the oldest past HistoryLength) and clears the redo list.
+    /// Puts a change on the undo list (dropping the oldest past KeepSteps or KeepBytes) and clears the redo list.
     /// </summary>
     private void AddChange(Change c)
     {
@@ -20,13 +20,27 @@ public sealed partial class EditSession
         lock (_lock)
         {
             _undo.Add(c);
-            if (_undo.Count > HistoryLength)
-            {
-                _undo.RemoveAt(0);
-            }
+            DropOldest();
             _redo.Clear();
             _shelvedRedo.Clear();
         }
+    }
+
+    /// <summary>
+    /// Drops the oldest steps of the undo list while there are more than KeepSteps (when set) or they take more than
+    /// KeepBytes; the newest stays. Called inside the lock.
+    /// </summary>
+    private void DropOldest()
+    {
+        long bytes = _undo.Sum(u => u.Bytes);
+        int drop = 0;
+        while (_undo.Count - drop > 1 && ((KeepSteps > 0 && _undo.Count - drop > KeepSteps) || bytes > KeepBytes))
+        {
+            bytes -= _undo[drop].Bytes;
+            _order.Remove(_undo[drop]);
+            drop++;
+        }
+        _undo.RemoveRange(0, drop);
     }
 
     /// <summary>
