@@ -69,14 +69,14 @@ public class RegrowClearAreasTests
     [Fact]
     public void WithTheModAWideNeighbourClearsToo()
     {
-        var gen = TerrainEditor.App.SeedPreview.Generator("5DCcdIcuYJ", Rules([Kind("Wide", 40f), Kind("Small", 20f)], data: true));
+        var gen = SeedPreview.Generator("5DCcdIcuYJ", Rules([Kind("Wide", 40f), Kind("Small", 20f)], data: true));
         var areas = new Regrow.ClearAreas(gen, [(StableHash.Of("Wide"), 70f, 0f), (StableHash.Of("Small"), 0f, 70f)]);
         Assert.Equal([new Regrow.ClearArea(70f, 0f, 40f)], areas.For(0, 0));
         Assert.Equal([new Regrow.ClearArea(70f, 0f, 40f)], areas.For(1, 0));
         // Its own, then the wide one in the zone across the corner.
         Assert.Equal([new Regrow.ClearArea(0f, 70f, 20f), new Regrow.ClearArea(70f, 0f, 40f)], areas.For(0, 1));
         // Without the mod, only the zone's own location.
-        var game = new Regrow.ClearAreas(TerrainEditor.App.SeedPreview.Generator("5DCcdIcuYJ", Rules([Kind("Wide", 40f)])), [(StableHash.Of("Wide"), 70f, 0f)]);
+        var game = new Regrow.ClearAreas(SeedPreview.Generator("5DCcdIcuYJ", Rules([Kind("Wide", 40f)])), [(StableHash.Of("Wide"), 70f, 0f)]);
         Assert.Empty(game.For(0, 0));
         Assert.Single(game.For(1, 0));
     }
