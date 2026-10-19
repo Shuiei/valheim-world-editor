@@ -79,7 +79,7 @@ public class StandLookTests
         // position left out.
         float[] hand = StandLook.OnArmourStand(stand, held, 0, 5)!;
         Assert.Equal((0.3f, 1.1f, 0f, 2f), (hand[3], hand[7], hand[11], hand[0]));
-        Assert.Equal(1.8f, StandLook.OnArmourStand(stand, held, 1, 6)![7]);
+        Assert.Equal(1.8f, StandLook.OnArmourStand(stand, held, 1, 6)![7], 4);
         // On the back: by the item's type (a shield), and nothing for a type with no back joint.
         Assert.Equal(-0.2f, StandLook.OnArmourStand(stand, held, 2, 5)![11]);
         Assert.Null(StandLook.OnArmourStand(stand, held, 2, 13));
@@ -95,7 +95,8 @@ public class StandLookTests
     [Fact]
     public void EulerAnglesTurnAsUnityDoes()
     {
-        // 90° about y takes x to -z; 90° about x takes y to z; z then x then y: (90, 90, 0) takes z to x... as y, x in turn.
+        // 90° about y takes x to -z; 90° about x takes y to z; 90° about z takes x to y. Applied z, then x, then y:
+        // (0, 90, 90) takes y to -x (about z), then -x to z (about y).
         static float[] Turned(float[] q, float x, float y, float z)
         {
             float[] m = StandLook.Trs(Zero, q, One);
@@ -104,7 +105,7 @@ public class StandLookTests
         AssertNear([0, 0, -1], Turned(StandLook.Euler([0, 90, 0]), 1, 0, 0));
         AssertNear([0, 0, 1], Turned(StandLook.Euler([90, 0, 0]), 0, 1, 0));
         AssertNear([0, 1, 0], Turned(StandLook.Euler([0, 0, 90]), 1, 0, 0));
-        AssertNear([1, 0, 0], Turned(StandLook.Euler([0, 90, 90]), 0, 1, 0));
+        AssertNear([0, 0, 1], Turned(StandLook.Euler([0, 90, 90]), 0, 1, 0));
         // The scale taken out of a matrix leaves its turn and place.
         float[] unscaled = StandLook.Unscaled(Matrix.Trs(1, 2, 3, 0, 0.7071068f, 0, 0.7071068f, 3, 3, 3));
         AssertNear([0, 0, -1], [unscaled[0], unscaled[4], unscaled[8]]);

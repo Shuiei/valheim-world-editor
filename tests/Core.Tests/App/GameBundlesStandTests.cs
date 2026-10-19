@@ -180,7 +180,7 @@ public class GameBundlesStandTests
         // The hand's place down the chain: 0.1 + 0.5 * 100 * 0.01, and its scale 0.5 * 100 * 0.01.
         float[] hand = armour.Joints["leftHand"];
         Assert.Equal(0.6f, hand[7], 4);
-        Assert.Equal(0.005f, hand[0], 4);
+        Assert.Equal(0.5f, hand[0], 4);
         // The body: the renderer's parent (Visual), with its scale.
         float[] body = armour.Joints["body"];
         Assert.Equal((0.5f, 0.1f), (body[0], body[7]));
