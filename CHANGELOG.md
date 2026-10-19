@@ -4,12 +4,28 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.57.2 — unreleased
+## v1.57.3 — unreleased
 
 ### Fixed
 - **Opening the Workshop while a live world is open no longer leaves the map asking the game for its players.** The
   world's connection was closed with the world, but the map kept asking it every few seconds, and the log filled with
   "Cannot access a disposed object" lines until the editor was closed or another world opened.
+
+## v1.57.2 — unreleased
+
+### Fixed
+- **No limit ground loads before the buildings on it, not disc by disc among them.** A player's game spawns a
+  zone's objects a few per frame, nearest first, and every ground disc rebuilt the zone's ground as it came in: on
+  a big build the ground climbed for ten seconds or more at every visit, with the game stuttering. Discs are now
+  saved as objects of the Terrain kind, which the game spawns before everything else, so the ground is finished in
+  the first frames and the pieces then come in on top of it. Discs saved before this version are changed by the
+  WorldEditorBridge plugin (below) or when their ground is lifted again.
+
+### WorldEditorBridge
+- **Ground discs are kept first in line.** The game puts a disc back to the Solid kind when the player who owns it
+  spawns it; the plugin looks at the world's discs every few seconds, puts them back to Terrain, and changes the
+  discs of older editor versions at the first look. The log says how many discs the world has and when any were
+  put back.
 
 ## v1.57.1 — unreleased
 

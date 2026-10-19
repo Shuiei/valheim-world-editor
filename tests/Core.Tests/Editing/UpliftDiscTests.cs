@@ -20,8 +20,8 @@ public class UpliftDiscTests
         Assert.Equal(55, z.Position.Y, 0.001f);
         Assert.Contains(z.IntList, i => i.Key == StableHash.Of("location") && i.Value == StableHash.Of("DevGround1"));
         Assert.Contains(z.IntList, i => i.Key == StableHash.Of("seed"));
-        // Persistent (kept in the save), a solid object like the game's own proxies.
-        Assert.Equal(0x100 | (2 << 10), z.BaseFlags & 0xFF00 & ~0x1000 & ~0x2000);
+        // Persistent (kept in the save) and of the Terrain kind, so that the game spawns the discs before the pieces.
+        Assert.Equal(0x100 | (3 << 10), z.BaseFlags & 0xFF00 & ~0x1000 & ~0x2000);
     }
 
     [Theory]
