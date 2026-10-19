@@ -22,6 +22,13 @@ public class RegrowSpotsTests
     private static object Draw(float rx = 0f, float ry = 0f, float rz = 0f, float scale = 1f) =>
         PrivateMember.New(DrawType, rx, ry, rz, scale);
 
+    /// <summary>A rule with the world's alt biome check, as PlaceRule takes them.</summary>
+    private static object WithAlts(ValheimGen.TerrainService terrain, object rule)
+    {
+        var altType = PrivateMember.Nested(typeof(Regrow), "AltCheck");
+        return Activator.CreateInstance(typeof(ValueTuple<,>).MakeGenericType(rule.GetType(), altType), rule, PrivateMember.New(altType, terrain))!;
+    }
+
     [Fact]
     public void NoGroupsAreTriedWhenTheChanceOfAnyMisses()
     {
@@ -126,7 +133,8 @@ public class RegrowSpotsTests
     {
         using var w = new TempWorld();
         var spots = new List<Regrow.Spot>();
-        PrivateMember.Call(typeof(Regrow), "PlaceRule", null, Terrain(w), RegrowFixtures.FlatGround(), NewZones(), RegrowFixtures.OpenRule(), 0f, 0f, 0, spots);
+        var terrain = Terrain(w);
+        PrivateMember.Call(typeof(Regrow), "PlaceRule", null, terrain, RegrowFixtures.FlatGround(), NewZones(), WithAlts(terrain, RegrowFixtures.OpenRule()), 0f, 0f, 0, spots);
         Assert.Empty(spots);
     }
 
@@ -135,7 +143,8 @@ public class RegrowSpotsTests
     {
         using var w = new TempWorld();
         var spots = new List<Regrow.Spot>();
-        PrivateMember.Call(typeof(Regrow), "PlaceRule", null, Terrain(w), RegrowFixtures.FlatGround(), NewZones(), RegrowFixtures.OpenRule(), 0f, 0f, 1, spots);
+        var terrain = Terrain(w);
+        PrivateMember.Call(typeof(Regrow), "PlaceRule", null, terrain, RegrowFixtures.FlatGround(), NewZones(), WithAlts(terrain, RegrowFixtures.OpenRule()), 0f, 0f, 1, spots);
         Assert.Single(spots);
     }
 }
