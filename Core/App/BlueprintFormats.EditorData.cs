@@ -26,6 +26,21 @@ public static partial class BlueprintFormats
     }
 
     /// <summary>
+    /// The piece line (from 0) an editor data line marks as the editor's alone ("#EditorData:n;editor;only;1"); null
+    /// for any other line. <see cref="ReadDataLine"/> leaves such a line out, as its field is no object field.
+    /// </summary>
+    /// <param name="line">The whole line, trimmed.</param>
+    internal static int? MarkedLine(string line)
+    {
+        if (!line.StartsWith(DataHeader, StringComparison.Ordinal) || !line.EndsWith(";" + OnlyMark, StringComparison.Ordinal))
+        {
+            return null;
+        }
+        string number = line[DataHeader.Length..^(OnlyMark.Length + 1)];
+        return int.TryParse(number, NumberStyles.Integer, CultureInfo.InvariantCulture, out int at) && at >= 0 ? at : null;
+    }
+
+    /// <summary>
     /// Gives each piece the #EditorData fields written for it (by its line among the pieces), and the no-builder field
     /// when the file is a ruin. A piece with neither keeps its data as it was.
     /// </summary>

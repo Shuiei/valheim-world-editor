@@ -14,6 +14,34 @@ the plugin is unchanged in versions without that part.
   than the object itself (a roof, a wall) does not count: it goes under. A building still moves as one block that
   keeps its shape, its bottom layer put on the floor or platform under it, else on the ground. Before, every moved
   object was set onto the ground, through the floor it was moved onto.
+  
+## v1.59.0 — unreleased
+
+### Added
+- **Creatures are never sunk into building pieces.** A creature put down, moved, copied, pasted, placed by a script or
+  brought by a blueprint with its feet inside a floor, a wall or any other building piece now stands on top of the
+  highest piece under it instead; the ground is left as it was (a creature stands on it as placed). The message of
+  each step says how many were lifted (`2 creature(s) stood on the piece under them.`), and Claude's answers give
+  their final height. The Workshop's support check also counts the creatures still inside a piece (a blueprint from
+  another tool can have them) in its bar and in Claude's `support_check`.
+
+## v1.58.0 — unreleased
+
+### Added
+- **Blueprints say which pieces only the editor can place, and cost only what the hammer builds.** Homestead's
+  hammer builds the real build pieces of a blueprint and silently skips the rest (statues, ships, creatures, the
+  T.W.I.G.); only the editor places those, into a world or live. A blueprint the editor saves now marks them in its
+  file (lines Homestead skips), the library and Claude's `list_blueprints` say how many (`2 of 40 piece(s) only the
+  editor can place`), and the cost shown for a blueprint (library, Build panel, the Workshop's title and save dialog,
+  `list_blueprints`) leaves them out, so it is what a hammer user pays. Blueprints from before, or Homestead's own,
+  carry no marks and say nothing rather than a wrong zero.
+
+## v1.57.5 — unreleased
+
+### Fixed
+- **A bed on a floor can be clicked again.** A click on a bed, a hide rug or any other piece drawn with a cut-out
+  material went through it to the floor piece under it, as it does through a tree's leaves. Only leaves, bushes and
+  grass are looked through now; a cut-out piece is picked where its shape is, like any other.
 
 ## v1.57.4 — unreleased
 

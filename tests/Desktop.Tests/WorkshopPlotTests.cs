@@ -21,7 +21,7 @@ public class WorkshopPlotTests
         {
             var scene = Workshop.Create("Workshop");
             var s = scene.Session!;
-            var (placed, unknown, lift, _) = Workshop.Open(s, BlueprintFiles.Hut(dir));
+            var (placed, unknown, lift, _, _) = Workshop.Open(s, BlueprintFiles.Hut(dir));
             Assert.Equal(3, placed);
             // Its lowest point (the floor's collider, a little below its origin) on the ground.
             Assert.Equal(-Hammer.Bottom("wood_floor", Quaternion.Identity), lift, 3);
@@ -71,7 +71,7 @@ public class WorkshopPlotTests
                 + "woodwall;Misc;0;3;0;0;0;0;1;\"\";1;1;1\n"
                 + "woodwall;Misc;6;3;0;0;0;0;1;\"\";1;1;1\n");
             var scene = Workshop.Create("W");
-            var (_, _, lift, terrain) = Workshop.Open(scene.Session!, f);
+            var (_, _, lift, terrain, _) = Workshop.Open(scene.Session!, f);
             // The lowest wall's bottom (0) on the ground; the rock (lower) left where it was in the building.
             Assert.Equal(0, lift, 3);
             var walls = scene.Things.Where(t => !t.Gone && PrefabCatalog.NameOf(t.Prefab) == "woodwall").OrderBy(t => t.Position.X).ThenBy(t => t.Position.Y).ToList();

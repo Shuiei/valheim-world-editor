@@ -106,6 +106,29 @@ public sealed partial class GlView
         }
     }
 
+    /// <summary>
+    /// Tests (headless, so nothing is drawn): a thing's model as parts, each a mesh and its material, placed as the
+    /// thing is; its kind's group is made if need be. Every thing of the kind then has this model.
+    /// </summary>
+    /// <param name="i">The thing's index.</param>
+    /// <param name="parts">The parts: a mesh (its first submesh is drawn) and the material it is drawn with.</param>
+    internal void SetModel(int i, params (ModelStore.MeshData Mesh, ModelStore.MaterialData Material)[] parts)
+    {
+        lock (_groups)
+        {
+            var g = GroupOf(Scene!, i, start: false);
+            g.Batches.Clear();
+            for (int n = 0; n < parts.Length; n++)
+            {
+                string id = $"\0test:{g.Key.Prefab}:{n}";
+                _pickMeshes[id] = PickMeshOf(parts[n].Mesh);
+                g.Batches.Add((new Batch { Kind = g.Kind, Material = parts[n].Material, MeshId = id }, Matrix4x4.Identity));
+            }
+            g.HasModel = true;
+            g.Ready = true;
+        }
+    }
+
     /// <summary>Whether a thing is drawn (not gone, its kind shown, its model known): only those can be picked.</summary>
     internal bool IsPickable(int i)
     {

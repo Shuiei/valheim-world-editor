@@ -34,17 +34,19 @@ public sealed partial class GlView
     }
 
     /// <summary>
-    /// The ray's hit on each part of a model: the solid parts' nearest and the cut-out parts' nearest, and whether
-    /// any part of the model could be tested.
+    /// The ray's hit on each part of a model: the solid parts' nearest and the foliage parts' nearest, and whether
+    /// any part of the model could be tested. Foliage is what the game draws with its vegetation and grass shaders
+    /// (<see cref="ModelStore.MaterialData.Foliage"/>); every other part is solid, cut out or not: a bed's fur or a hide
+    /// rug is met where its triangles are, like the floor under it.
     /// </summary>
     /// <param name="o">The ray's origin (view space).</param>
     /// <param name="d">The ray's direction, normalised.</param>
     /// <param name="batches">The model's batches, with each one's placement in the group.</param>
     /// <param name="m">The thing's placement.</param>
     /// <param name="cutY">The cut's height (null: none).</param>
-    private (float? Solid, float? CutOut, bool Any) PartHits(Vector3 o, Vector3 d, (Batch Batch, Matrix4x4 Pre)[] batches, Matrix4x4 m, float? cutY)
+    private (float? Solid, float? Foliage, bool Any) PartHits(Vector3 o, Vector3 d, (Batch Batch, Matrix4x4 Pre)[] batches, Matrix4x4 m, float? cutY)
     {
-        float? solid = null, cutOut = null;
+        float? solid = null, foliage = null;
         bool any = false;
         foreach (var (b, pre) in batches)
         {
@@ -57,15 +59,15 @@ public sealed partial class GlView
             {
                 continue;
             }
-            if (b.Material.Cutoff > 0)
+            if (b.Material.Foliage)
             {
-                cutOut = cutOut is float c && c < h ? c : h;
+                foliage = foliage is float c && c < h ? c : h;
             }
             else
             {
                 solid = solid is float a && a < h ? a : h;
             }
         }
-        return (solid, cutOut, any);
+        return (solid, foliage, any);
     }
 }

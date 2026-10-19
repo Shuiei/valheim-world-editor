@@ -78,6 +78,8 @@ public static class ClaudeGuide
 		  1 m thick).
 		- A wall's origin is its middle (woodwall reaches 1 m below and above it); a floor's origin is its
 		  top surface. A wall standing on a floor whose top is at y: its origin at y + 1.
+		- A creature is never left inside a piece: placed or moved with its origin inside a floor or a wall,
+		  it is stood on top of the highest piece under it (the answer says how many were, and the final y).
 		- Yaw turns round the vertical: 0 = the piece's front faces north (+z), 90 east, 180 south, 270 west.
 		  A wall along x (an east-west wall) has yaw 0; along z, yaw 90.
 		- Pieces snap: put a piece where it should join (within 0.5 m) and its snap points meet those of

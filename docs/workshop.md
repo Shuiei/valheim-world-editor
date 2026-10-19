@@ -132,6 +132,13 @@ height and the building stands as before when Homestead builds it.
 Pieces the game does not know (from mods you do not have) are left out, and the message lists them. A blueprint
 opened from outside Homestead's folder asks before saving over a library blueprint of the same name.
 
+**Creatures stand on the pieces.** A creature of the blueprint (a dungeon's boss, a tamed boar in its pen) whose
+origin lies inside a building piece is stood on top of the highest piece under it, and the message says how many
+were (`1 creature(s) stood on the piece under them.`). The same holds wherever the editor positions objects: the
+Select tool's moves, pastes, scripts, and Claude's tools. The ground is not a piece: a creature stands
+on it as placed. The support check counts the creatures still inside a piece (a blueprint from another tool can
+have them) in the bar (`1 creature(s) in a piece`).
+
 ## Support check
 
 The **Support check** (on by default) tints each building piece in the colours the game's build mode gives its
@@ -222,6 +229,12 @@ What is kept:
   slots as in game. See [Inspecting and changing an object's data](select.md#inspecting-and-changing-an-objects-data).
 - **Whether it is a ruin**: pieces with no builder, as the game's own ruins and generated dungeons have. No builder
   is ever written for the rest: whoever builds it in game becomes its builder.
+- **Which pieces only the editor can place.** Homestead's hammer builds the real build pieces of a blueprint (a piece
+  with a WearNTear and a cost, in a build tool's menu) and silently skips the rest: statues and other world props,
+  ships, creatures, the T.W.I.G. The editor marks those in the file (lines Homestead skips), worked out again from the
+  game's data at each save. The library says how many (`2 of 40 piece(s) only the editor can place`), and the cost
+  shown for a blueprint leaves them out, so it is what a hammer user pays. Pasting the blueprint from the editor, or
+  adding it live, places them all. Files from before, and Homestead's own, carry no marks and say nothing.
 
 A picture is drawn and saved beside the file (see [Pictures](#pictures)).
 
@@ -240,7 +253,9 @@ Each blueprint shows:
 
 - its **picture**;
 - its number of pieces, who made it (`by Valheim World Editor` for the editor's) and the world it came from;
-- its **cost** in game: materials, most first, and the crafting stations it needs nearby;
+- its **cost** in game: materials, most first, and the crafting stations it needs nearby; pieces only the editor can
+  place are not counted, and their number is in the line above when the file says (see [Saving a
+  blueprint](#saving-a-blueprint));
 - its **description** (up to three lines) and its **tags**.
 
 **Search blueprints** keeps the blueprints with every word you type somewhere in their name, creator,

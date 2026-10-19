@@ -5,7 +5,6 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using TerrainEditor.App;
-using TerrainEditor.Terrain;
 namespace TerrainEditor.Desktop;
 
 public sealed partial class BuildPanel
@@ -38,6 +37,16 @@ public sealed partial class BuildPanel
         {
             LibraryList.Children.Add(LibraryRow(e));
         }
+    }
+
+    /// <summary>
+    /// A Library row's second line: the pieces and the cost, and how many pieces only the editor can place when the file
+    /// says.
+    /// </summary>
+    private static string LibraryRowText(Homestead.Entry e)
+    {
+        string text = Lang.T("build.libraryRow", e.Pieces, Homestead.Cost(e.Kinds).Describe(3));
+        return e.EditorOnlyNote is { } note ? text + " · " + note.Shown : text;
     }
 
     /// <summary>
@@ -76,7 +85,7 @@ public sealed partial class BuildPanel
                         Children =
                         {
                             new TextBlock { Text = e.Name, FontSize = 12, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis },
-                            new TextBlock { Text = Lang.T("build.libraryRow", e.Pieces, PieceCost.Of(e.Kinds).Describe(3)), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
+                            new TextBlock { Text = LibraryRowText(e), FontSize = 11, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
                             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { open, add } },
                         },
                     }, 1),

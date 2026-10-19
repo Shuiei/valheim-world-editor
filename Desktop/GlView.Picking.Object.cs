@@ -10,8 +10,9 @@ public sealed partial class GlView
     /// The shown object under a point of the view (null: the ground or nothing is nearer): the nearest one
     /// whose drawn shape the ray meets, unless the ground is hit first (half a metre of slack). The boxes say
     /// which objects to try; then the triangles of each one's model decide, so a click between a tree's
-    /// branches finds the chest under them. Cut-out parts (leaves, bushes, grass) count only when nothing
-    /// solid is met along the ray; an object without its model yet is its stand-in box.
+    /// branches finds the chest under them. Foliage (leaves, bushes, grass) counts only when nothing solid is
+    /// met along the ray; a cut-out piece (a bed's fur) is solid, so a bed on a floor is picked before the floor;
+    /// an object without its model yet is its stand-in box.
     /// </summary>
     internal int? ObjectAt(Point at, Size size)
     {

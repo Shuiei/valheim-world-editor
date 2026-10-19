@@ -10,7 +10,7 @@ public sealed partial class BlueprintsPanel
     /// <param name="keep">The file name being saved over on purpose (the one the building was opened from): no question for it.</param>
     private async Task<Homestead.Details?> Ask(Homestead.Details start, JsonObject clip, string? keep = null)
     {
-        var cost = Terrain.PieceCost.Of(BuildingPicture.FromClip(clip).Select(p => p.Name));
+        var cost = Homestead.Cost(BuildingPicture.FromClip(clip).Select(p => p.Name));
         var d = await AskDetails(start, cost.Describe(8));
         if (d == null || string.IsNullOrWhiteSpace(d.Name))
         {
@@ -32,7 +32,7 @@ public sealed partial class BlueprintsPanel
     /// <returns>Whether the details were saved.</returns>
     public async Task<bool> EditDetails(Homestead.Entry e)
     {
-        var d = await AskDetails(e.Details, Terrain.PieceCost.Of(e.Kinds).Describe(8));
+        var d = await AskDetails(e.Details, Homestead.Cost(e.Kinds).Describe(8));
         if (d == null || string.IsNullOrWhiteSpace(d.Name))
         {
             return false;

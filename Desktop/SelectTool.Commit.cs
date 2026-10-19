@@ -27,7 +27,9 @@ public sealed partial class SelectTool
         }
         GroundBlock(m);
         Snap(m);
-        var moves = m.Items.Select(it => (it.Index, Target(m, it), it.Thing.Rotation + new Vector3(0, m.Turn, 0))).ToList();
+        var moves = m.Items.Select(it => (it.Index, Target(m, it), it.Thing.Rotation + new Vector3(0, m.Turn, 0), it.Thing.Scale)).ToList();
+        // A creature moved into a piece stands on top of it.
+        int stood = CreatureStand.Apply(session.Scene, null, moves);
         // The step is whoever started the move's: a key move of the user's committed by a control Claude sets (the
         // Select panel's Apply) stays the user's, and one Claude started stays Claude's when the timer commits it.
         bool acting = ClaudeTools.Acting.Value;
@@ -35,14 +37,14 @@ public sealed partial class SelectTool
         List<int> copies;
         try
         {
-            copies = session.Move(moves, Lang.T("history.undo.moved", moves.Count));
+            copies = session.Transform(moves, Lang.T("history.undo.moved", moves.Count));
         }
         finally
         {
             ClaudeTools.Acting.Value = acting;
         }
         _view.Select(copies);
-        Message?.Invoke(Said.Of("select.msg.moved", copies.Count, WholeGroups(m.Groups, m.Noun, deleted: false)), false);
+        Message?.Invoke(Said.Of("select.msg.moved", copies.Count, WholeGroups(m.Groups, m.Noun, deleted: false)) + CreatureStand.Note(stood), false);
     }
 
     /// <summary>What a message adds when whole linked groups go along (empty when none): one clause per case.</summary>
