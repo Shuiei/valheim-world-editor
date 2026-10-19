@@ -4,7 +4,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// Pictures of the tools drawing in the real editor (OpenGL): a zone or box or path drawn, the place and brush previews,
-/// a copied area while pasting, a stroke pending, and the look switching.
+/// a copied area while pasting, a polygon being drawn and zones marked for reset, a stroke pending, and the look
+/// switching.
 /// </summary>
 [Collection("Visual")]
 [Trait("Category", "Visual")]
@@ -92,6 +93,35 @@ public sealed class VisualToolsTests : VisualEditorPictures
         ShowsSomething(Picture("paste"));
         var s = Do("mouse down 10 10", "mouse up 10 10");
         Assert.True(s.GetProperty("added").GetInt32() > 0, s.ToString());
+        Clean();
+    }
+
+    // The Area tool's polygon with two corners (a line along the ground until a third closes it), zones marked for reset
+    // (outlined red), and the whole area copied into a zone far off: past that area (red), its objects marked by posts
+    // while their models, new to that area, are read.
+    [Fact]
+    public void APolygonZonesToResetAndAPasteElsewhereAreDrawn()
+    {
+        Open();
+        Assert.Equal("Area", Do("area 0 0 3", "key B", "click Polygon", "mouse down -20 -20", "mouse up -20 -20", "mouse down 20 -20", "mouse up 20 -20", "mouse move 0 20").GetProperty("mode").GetString());
+        ShowsSomething(Picture("polygon-line"));
+        // A box over the middle zone, marked for reset when saving (asked first).
+        Do("click Box", "mouse down -20 -20", "mouse move 0 0", "mouse move 20 20", "mouse up 20 20", "choose Reset zones", "click Reset zones…", "click Reset when saving");
+        // The answer is taken a moment after the click.
+        var s = Editor.Send("state");
+        for (int i = 0; i < 20 && !s.GetProperty("message").GetString()!.StartsWith("1 zone(s) marked", StringComparison.Ordinal); i++)
+        {
+            s = Editor.Send("wait 100");
+        }
+        Assert.StartsWith("1 zone(s) marked", s.GetProperty("message").GetString());
+        ShowsSomething(Picture("reset-zones"));
+        s = Do("click Box", "mouse down -90 -90", "mouse move 0 0", "mouse move 90 90", "mouse up 90 90", "key C ctrl");
+        Assert.StartsWith("Copied ", s.GetProperty("message").GetString());
+        Assert.Equal(0, Editor.Send("area 2 2 1").GetProperty("objects").GetInt32());
+        Assert.Equal("Paste", Do("key V ctrl", "mouse move 128 128").GetProperty("mode").GetString());
+        ShowsSomething(Picture("paste-elsewhere"));
+        // The editor is shared: out of the Paste tool for the other tests.
+        Editor.Send("key Escape");
         Clean();
     }
 

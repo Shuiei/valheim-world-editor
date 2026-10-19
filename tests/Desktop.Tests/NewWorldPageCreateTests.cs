@@ -70,11 +70,11 @@ public class NewWorldPageCreateTests
     }
 
     [AvaloniaFact]
-    public void WithoutWorldFoldersTheGamesFirstIsOffered()
+    public void WithoutWorldFoldersTheInstalledGamesIsOffered()
     {
         using var page = new NewWorldPage([], previewSize: 32);
         var roots = (List<string>)page.Where.Tag!;
-        Assert.Equal(Places.WorldRoots().First(), Assert.Single(roots));
+        Assert.Equal(Places.GameWorldRoot(AppSettings.Load()), Assert.Single(roots));
         Assert.Equal(0, page.Where.SelectedIndex);
         Assert.Equal(10, page.SeedBox.Text!.Length);
     }
