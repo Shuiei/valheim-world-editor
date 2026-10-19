@@ -172,7 +172,8 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         [
             E(("prefab", $"{known}, {known2}, Nowhere"), ("min", "2"), ("max", "5"), ("forcePlacement", "true"), ("scaleMin", "0.5"), ("scaleMax", "2"), ("scaleUniform", "false"),
               ("biome", "meadows"), ("biomeArea", "median"), ("minDistance", "0.1"), ("maxDistance", "0.5"), ("groupSizeMin", "2"), ("groupSizeMax", "4"), ("maxAltitude", "50")),
-            E(("prefab", known), ("centerX", "0.2"), ("centerY", "-0.1"), ("minDistance", "0.05"), ("scaleMin", "1,2,3"), ("scaleMax", "1,2,3"), ("clearArea", "true"), ("clearRadius", "3")),
+            E(("prefab", known), ("centerX", "0.2"), ("centerY", "-0.1"), ("minDistance", "0.05"), ("scaleMin", "1,2,3"), ("scaleMax", "1,2,3"), ("clearArea", "true"), ("clearRadius", "3"),
+              ("surroundCheckVegetation", "true"), ("surroundCheckDistance", "25"), ("surroundCheckLayers", "3"), ("surroundBetterThanAverage", "0.5")),
             E(("prefab", known), ("altBiome", "DarkMeadows")),
             E(("prefab", "")),
         ], game, BiomeTable.Vanilla, 20000f, new HashSet<string>(), notes);
@@ -211,6 +212,8 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         Assert.Null(centred.scaleMinAxes);
         Assert.Equal(1f, centred.scaleMin);
         Assert.Equal((1, 3f), (centred.clearArea, centred.clearRadius));
+        Assert.Equal((1, 25f, 3, 0.5f), (centred.surroundCheckVegetation, centred.surroundCheckDistance, centred.surroundCheckLayers, centred.surroundBetterThanAverage));
+        Assert.Equal((0, 20f, 2), (several.surroundCheckVegetation, several.surroundCheckDistance, several.surroundCheckLayers));
         Assert.Contains(notes, n => n.Contains("Nowhere"));
         // A rule of an alt biome is kept, to grow in that alt biome's areas.
         Assert.Equal("DarkMeadows", rules[2].altBiome);

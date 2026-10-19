@@ -82,6 +82,14 @@ public sealed class VegetationRule
     public float forestTresholdMin { get; set; }
     /// <summary>Highest forest factor, with <see cref="inForest"/>.</summary>
     public float forestTresholdMax { get; set; } = 1f;
+    /// <summary>1: only spots whose surrounding vegetation (rings round them) is good enough against the zone's others.</summary>
+    public int surroundCheckVegetation { get; set; }
+    /// <summary>The outer ring's radius of the surround check, metres.</summary>
+    public float surroundCheckDistance { get; set; } = 20f;
+    /// <summary>How many rings the surround check reads.</summary>
+    public int surroundCheckLayers { get; set; } = 2;
+    /// <summary>The share of the way from the average sum to the best a spot must reach (0: the average).</summary>
+    public float surroundBetterThanAverage { get; set; }
     /// <summary>
     /// Random draws the object's components make when the game creates it (Awake): they move the
     /// sequence on for the rest of the rule.
