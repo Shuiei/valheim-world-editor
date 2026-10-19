@@ -1,6 +1,5 @@
-using Rnd = ValheimGen.UnityEngine.Random;
-
 using System.Globalization;
+using Rnd = ValheimGen.UnityEngine.Random;
 
 namespace ValheimGen;
 

@@ -322,11 +322,12 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         Assert.Contains("random locations", text);
         // The rules tell generators apart by their places too.
         Assert.NotEqual(rules.Stamp, (rules with { Vegetation = null }).Stamp);
-        // The layout takes the world's own kinds: the clone is laid out first (the alt biome blocks the other kind).
+        // The layout takes the world's own kinds, the clone first. The file's alt biome, with no field saying where it
+        // goes, is given to no area (as the mod reads it), so it blocks the other kind nowhere.
         var gen = WorldGenerator.Create(new World { Seed = 1, WorldGenVersion = 2, Rules = rules });
         Assert.True(SeedLocations.AvailableFor(gen));
         var placed = SeedLocations.Place(gen, SeedLocations.Which.All, cancel: TestContext.Current.CancellationToken);
-        Assert.NotEmpty(placed);
-        Assert.All(placed, p => Assert.Equal("StartTemple:Copy", p.Rule.Prefab));
+        Assert.Contains(placed, p => p.Rule.Prefab == "StartTemple:Copy");
+        Assert.Contains(placed, p => p.Rule.Prefab == "StartTemple");
     }
 }
