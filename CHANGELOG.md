@@ -4,7 +4,7 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
-## v1.60.0 — unreleased
+## v1.60.0 — 2026-10-19
 
 ### Changed
 - **Moved objects land on what is under them, not only on the ground.** With the Select tool's **Put each object on
@@ -15,7 +15,7 @@ the plugin is unchanged in versions without that part.
   keeps its shape, its bottom layer put on the floor or platform under it, else on the ground. Before, every moved
   object was set onto the ground, through the floor it was moved onto.
   
-## v1.59.0 — unreleased
+## v1.59.0 — 2026-10-19
 
 ### Added
 - **Creatures are never sunk into building pieces.** A creature put down, moved, copied, pasted, placed by a script or
@@ -25,7 +25,7 @@ the plugin is unchanged in versions without that part.
   their final height. The Workshop's support check also counts the creatures still inside a piece (a blueprint from
   another tool can have them) in its bar and in Claude's `support_check`.
 
-## v1.58.0 — unreleased
+## v1.58.0 — 2026-10-19
 
 ### Added
 - **Blueprints say which pieces only the editor can place, and cost only what the hammer builds.** Homestead's
@@ -36,21 +36,21 @@ the plugin is unchanged in versions without that part.
   `list_blueprints`) leaves them out, so it is what a hammer user pays. Blueprints from before, or Homestead's own,
   carry no marks and say nothing rather than a wrong zero.
 
-## v1.57.5 — unreleased
+## v1.57.5 — 2026-10-19
 
 ### Fixed
 - **A bed on a floor can be clicked again.** A click on a bed, a hide rug or any other piece drawn with a cut-out
   material went through it to the floor piece under it, as it does through a tree's leaves. Only leaves, bushes and
   grass are looked through now; a cut-out piece is picked where its shape is, like any other.
 
-## v1.57.4 — unreleased
+## v1.57.4 — 2026-10-19
 
 ### Fixed
 - **Opening the Workshop while a live world is open no longer leaves the map asking the game for its players.** The
   world's connection was closed with the world, but the map kept asking it every few seconds, and the log filled with
   "Cannot access a disposed object" lines until the editor was closed or another world opened.
 
-## v1.57.3 — unreleased
+## v1.57.3 — 2026-10-19
 
 ### Fixed
 - **Live, the editor shows every object where the game really has it, its own included.** An object you placed and
@@ -68,7 +68,7 @@ the plugin is unchanged in versions without that part.
   ships, carts, items, fires, smelters...) moves or changes its data; the first number is as before.
 - `POST /zone/movers` serves only those kinds of the zones asked for, in `/zone`'s format.
 
-## v1.57.2 — unreleased
+## v1.57.2 — 2026-10-19
 
 ### Fixed
 - **No limit ground loads before the buildings on it, not disc by disc among them.** A player's game spawns a
@@ -84,7 +84,7 @@ the plugin is unchanged in versions without that part.
   discs of older editor versions at the first look. The log says how many discs the world has and when any were
   put back.
 
-## v1.57.1 — unreleased
+## v1.57.1 — 2026-10-19
 
 ### Fixed
 - **A live world's settings from Expand World are read again.** The editor asks the game's WorldEditorBridge for
@@ -98,7 +98,7 @@ the plugin is unchanged in versions without that part.
 - `GET /world/meta` serves the world file the game saves (`_main.n.fwl2`), else the older `.fwl`; 404 when the
   game has neither.
 
-## v1.57.0 — unreleased
+## v1.57.0 — 2026-10-19
 
 ### Added
 - **The history keeps every change by default, and you choose how many in Settings.** It used to keep the last 200
@@ -106,14 +106,14 @@ the plugin is unchanged in versions without that part.
   less than 2 GB of memory (past that, the oldest go first). The History panel shows the newest 200 changes, and
   **Show older** adds 200 more each time.
 
-## v1.56.1 — unreleased
+## v1.56.1 — 2026-10-19
 
 ### Fixed
 - **The Workshop's support check no longer counts the parts of a piece that move on their own.** The swinging leaf
   of a door, a gate, a drawbridge or a window's shutter, and the hulls of two ships, held up whatever rested on
   them, where the game takes no support from them: a pole leaning on a door's leaf now falls, as it would in game.
 
-## v1.56.0 — unreleased
+## v1.56.0 — 2026-10-19
 
 ### Added
 - **The 3D view draws what item stands and armour stands hold.** An item stand shows its item hanging or lying as
@@ -122,21 +122,21 @@ the plugin is unchanged in versions without that part.
   and change at once when the inspector or Claude changes what the stand holds. Shields and capes are drawn in
   their first style, and an armour stand in its resting pose. Items on stands cannot be picked: pick the stand.
 
-## v1.55.2 — unreleased
+## v1.55.2 — 2026-10-19
 
 ### Fixed
 - **On Windows the editor no longer holds on to the YamlDotNet library in your BepInEx plugins folder.** The file was
   kept open as long as the editor ran, so a mod manager could not update it; now the editor reads it once and lets
   it go.
 
-## v1.55.1 — unreleased
+## v1.55.1 — 2026-10-19
 
 ### Fixed
 - **Expand World Data's alt biome file counts even without a location file.** What each alt biome keeps out was
   only used when the location file was in use or Expand World Size changed the game's kinds; now the game's own
   kinds take it into account too.
 
-## v1.55.0 — unreleased
+## v1.55.0 — 2026-10-19
 
 ### Added
 - **The New world page's map shows the Expand World mods' own colours** (with the Expand World switch in Settings on):
@@ -144,7 +144,7 @@ the plugin is unchanged in versions without that part.
   the ground it borrows, a territory in its own, and the water line on that map follows Expand World Rivers' sea
   level. The same holds for the closer look when zoomed in and for the seed pictures Claude's tools give.
 
-## v1.54.0 — unreleased
+## v1.54.0 — 2026-10-19
 
 ### Added
 - **A live world follows the Expand World mods the game itself runs** (with the Expand World switch in Settings on):
@@ -159,7 +159,7 @@ the plugin is unchanged in versions without that part.
   per file), and `GET /world/meta` serves the world's meta file as it lies on disk. The status lists the feature
   "files".
 
-## v1.53.0 — unreleased
+## v1.53.0 — 2026-10-19
 
 ### Added
 - **The map, the New world page and the 3D view follow the Expand World mods** (with the Expand World switch in
@@ -169,7 +169,7 @@ the plugin is unchanged in versions without that part.
   Settings gets a folder for the mods' files, for a server world opened from its files. See
   [Expand World](docs/expand-world.md).
 
-## v1.52.0 — unreleased
+## v1.52.0 — 2026-10-19
 
 ### Added
 - **Worlds made with Expand World Data's locations and vegetation are laid out as the mod lays them out**, with the
@@ -180,7 +180,7 @@ the plugin is unchanged in versions without that part.
   Expand World Size's locations multiplier. Zone spawners can be left out and a random-seed location is left to the
   game. See [Expand World](docs/architecture.md#what-a-world-generation-mod-changes-worldrules).
 
-## v1.51.0 — unreleased
+## v1.51.0 — 2026-10-19
 
 ### Added
 - **Worlds made with Expand World Data's biomes are generated as the mod makes them**, with the Expand World switch
@@ -190,7 +190,7 @@ the plugin is unchanged in versions without that part.
   installs under the BepInEx plugins folder; it ships no copy of its own. The location, vegetation and alt biome
   files come in a later step. See [Expand World](docs/architecture.md#what-a-world-generation-mod-changes-worldrules).
 
-## v1.50.0 — unreleased
+## v1.50.0 — 2026-10-19
 
 ### Added
 - **Worlds saved on a wider zone grid open and save as they lie.** Expand World Size lays a world wider than 16 km
@@ -199,7 +199,7 @@ the plugin is unchanged in versions without that part.
   World switch is on. Before, anything past 16 km was taken for outside the world. See
   [Expand World](docs/architecture.md#what-a-world-generation-mod-changes-worldrules).
 
-## v1.49.0 — unreleased
+## v1.49.0 — 2026-10-19
 
 ### Added
 - **Worlds made with Expand World Size and Expand World Rivers are generated as those mods make them** (the first
@@ -209,7 +209,7 @@ the plugin is unchanged in versions without that part.
   world file (Expand World Size keeps its settings in it) and the mods' settings files in the BepInEx folder.
   With the switch off, as before, every world is generated as the game itself does. Not yet: Expand World Data's
   biomes, locations and vegetation, worlds wider than the game's save grid, and the map's size.
-## v1.48.2 — unreleased
+## v1.48.2 — 2026-10-19
 
 ### Fixed
 - **A new world is saved where the installed game looks for it.** On Linux, the New world page offered the native
@@ -217,7 +217,7 @@ the plugin is unchanged in versions without that part.
   Steam prefix: a world made there never showed in the game. The installed game's own folder now comes first in
   **Saved in** (and is the one Claude's tools use), the others after it.
 
-## v1.48.1 — unreleased
+## v1.48.1 — 2026-10-19
 
 ### Fixed
 - **The `--export-locations` and `--export-test-data` commands close the game's files when they are done.** They
@@ -231,26 +231,26 @@ the plugin is unchanged in versions without that part.
   once, ready to move or turn it, without pressing `E` and clicking it again. Only a plain double click on an object
   does it: with `Ctrl` or `Shift` held, or on empty ground, View stays. See [Select](docs/select.md#how-to-use-it).
 
-## v1.47.36 — unreleased
+## v1.47.36 — 2026-10-19
 
 ### Fixed
 - **Apply live no longer fails now and then with "An error occurred while sending the request".** After about ten
   seconds without talking to the game, the editor could still send on a connection the game was closing at that
   moment; it now always opens a new one by then.
 
-## v1.47.35 — unreleased
+## v1.47.35 — 2026-10-19
 
 ### Fixed
 - **The game data's reading no longer keeps open a file in the bundles folder that is not a bundle.** The pass over
   the game's bundles at the editor's start passed such a file over but kept it open, as the model reading did before.
 
-## v1.47.34 — unreleased
+## v1.47.34 — 2026-10-19
 
 ### Fixed
 - **A file in the game's or a mod's bundles folder that is not a bundle is no longer kept open.** The editor passed
   such a file over but kept it open; on Windows that stopped the mods' copies from being replaced when a mod changed.
 
-## v1.47.33 — unreleased
+## v1.47.33 — 2026-10-19
 
 ### Fixed
 - **A save on Windows no longer fails while another program holds the file for a moment.** The settings, saved
@@ -258,7 +258,7 @@ the plugin is unchanged in versions without that part.
   an instant (an antivirus scanning the file, two saves at once), the save failed with "Access to the path is denied",
   and it is now tried again for up to half a second.
 
-## v1.47.32 — unreleased
+## v1.47.32 — 2026-10-19
 
 ### Fixed
 - Internal code cleanup; no change for users.
@@ -270,7 +270,7 @@ the plugin is unchanged in versions without that part.
   opened, before the game's data was read, so no item was known yet and the key chest failed ("“CryptKey” is not an
   item of the game"). It now says it waits for the game's data and makes the dungeon once the data is in use.
 
-## v1.47.30 — unreleased
+## v1.47.30 — 2026-10-19
 
 ### Fixed
 - Internal code cleanup; no change for users.
