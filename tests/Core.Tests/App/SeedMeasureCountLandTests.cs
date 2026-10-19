@@ -12,7 +12,7 @@ public class SeedMeasureCountLandTests
 {
     /// <summary>The cells inside the world, the land cells inside it, and the land cells of each biome.</summary>
     private static (int Inside, int Land, int[] Counts) CountLand(byte[] biome, int size, float cell) =>
-        ((int Inside, int Land, int[] Counts))PrivateCall.Static(typeof(SeedMeasure), "CountLand", biome, size, cell, SeedPreview.Radius)!;
+        ((int Inside, int Land, int[] Counts))PrivateCall.Static(typeof(SeedMeasure), "CountLand", biome, size, cell, Radius)!;
 
     [Fact]
     public void OnlyCellsWhoseCentresLieInsideTheWorldCircleAreCounted()
