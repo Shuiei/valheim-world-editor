@@ -31,8 +31,8 @@ public sealed class NewWorldPageRefreshRulesTests : IDisposable
         }
     }
 
-    /// <summary>A BepInEx folder with Expand World Data's settings, the library and a location file, named in the saved settings.</summary>
-    private string Bep()
+    /// <summary>Makes a BepInEx folder with Expand World Data's settings, the library and a location file, and names it in the saved settings.</summary>
+    private void Bep()
     {
         string bep = Path.Combine(_dir, "bep", "BepInEx");
         Directory.CreateDirectory(Path.Combine(bep, "config", "expand_world"));
@@ -45,7 +45,6 @@ public sealed class NewWorldPageRefreshRulesTests : IDisposable
         settings.ExpandWorld = true;
         settings.ExpandWorldFolder = bep;
         Assert.Null(settings.Save());
-        return bep;
     }
 
     [AvaloniaFact]
