@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.53.0 — unreleased
+
+### Added
+- **The map, the New world page and the 3D view follow the Expand World mods** (with the Expand World switch in
+  Settings on): the overview covers a wider world, the map opens on all of it, a seed is looked at and a new world
+  made with the mods' settings and data (the page says so above Create), biomes the mods add are named and coloured
+  as their files say, and a world made with Expand World Size shows "Expand World" on its card on the start page.
+  Settings gets a folder for the mods' files, for a server world opened from its files. See
+  [Expand World](docs/expand-world.md).
+
 ## v1.52.0 — unreleased
 
 ### Added

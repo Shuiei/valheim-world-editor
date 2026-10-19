@@ -40,6 +40,10 @@ public sealed partial class NewWorldPage : IDisposable
     /// </summary>
     internal TextBlock Problem { get; } = new() { Foreground = new SolidColorBrush(Color.FromRgb(224, 96, 75)), TextWrapping = TextWrapping.Wrap, FontSize = 12 };
     /// <summary>
+    /// What the worlds follow when it is not the game itself: Expand World's rules, in a few words; hidden otherwise.
+    /// </summary>
+    internal TextBlock Generation { get; } = new() { Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap, FontSize = 12, IsVisible = false };
+    /// <summary>
     /// The seed's map, the landmarks over it, and which kinds show (switches over the map's corner, as the editor's
     /// View panel).
     /// </summary>

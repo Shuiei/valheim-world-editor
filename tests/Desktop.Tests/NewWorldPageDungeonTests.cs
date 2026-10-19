@@ -37,7 +37,7 @@ public class NewWorldPageDungeonTests
         Assert.True(r.P.ShowDungeons["Infested mines"].IsChecked);
         Assert.Equal(4, r.P.Map.MetersPerPixel);
         Assert.NotEmpty(r.P.Map.Dots);
-        Assert.All(r.P.Map.Dots, d => Assert.Equal(((ISolidColorBrush)d.Fill).Color, Avalonia.Media.Color.FromRgb(104, 120, 255)));
+        Assert.All(r.P.Map.Dots, d => Assert.Equal(((ISolidColorBrush)d.Fill).Color, Color.FromRgb(104, 120, 255)));
     }
 
     [AvaloniaFact]

@@ -25,10 +25,12 @@ public static partial class WorldCreator
     /// <param name="seed">The seed.</param>
     /// <param name="radius">The generated radius in zones.</param>
     /// <param name="flat">Whether one zone is left bare.</param>
+    /// <param name="rules">What a world generation mod changes about the world.</param>
     /// <returns>What was made.</returns>
-    private static Growth GrowVegetation(string folder, string main, ZoneDb db, List<string> written, int seed, int radius, bool flat)
+    private static Growth GrowVegetation(string folder, string main, ZoneDb db, List<string> written, int seed, int radius, bool flat, ValheimGen.WorldRules rules)
     {
         var empty = WorldSave.Load(folder);
+        empty.Rules = rules;
         var terrain = new ValheimGen.TerrainService(empty);
         var sites = Sites(terrain, seed, radius);
         var left = sites.Where(s => s.Objects == null).Select(s => s.Zone).ToHashSet();

@@ -1,9 +1,11 @@
+using ValheimGen;
+
 namespace TerrainEditor.App;
 
 /// <summary>
 /// Expand World, the world generation mods (Expand World Size, Data and Rivers, by JereKuusela), as the editor reads
 /// them: which of them a BepInEx folder has, their settings files, and what a world was made with. It gives a world's
-/// <see cref="ValheimGen.WorldRules"/>: the game's own values unless the Expand World switch in Settings is on
+/// <see cref="WorldRules"/>: the game's own values unless the Expand World switch in Settings is on
 /// (<see cref="AppSettings.ExpandWorld"/>); then the Size settings the world file keeps (every non-default one, as
 /// "ews_&lt;setting&gt; &lt;value&gt;" among the starting global keys; a world without any uses the Size settings
 /// file), the Rivers settings file, and the Data settings file and data files, all from the first BepInEx folder the
@@ -56,12 +58,22 @@ public static partial class ExpandWorld
     }
 
     /// <summary>
-    /// The first BepInEx folder the editor knows (<see cref="LocalGame.BepInExFolders"/>) that has any of the mods;
+    /// The BepInEx folder with the mods: the one named in Settings (<see cref="AppSettings.ExpandWorldFolder"/>) when it
+    /// has any of them, else the first folder the editor knows (<see cref="LocalGame.BepInExFolders"/>) that has any;
     /// <see cref="Found.None"/> when none has.
     /// </summary>
-    /// <param name="settings">The editor's settings (Valheim path, added BepInEx folders).</param>
+    /// <param name="settings">The editor's settings (the Expand World folder, the Valheim path, added BepInEx folders).</param>
     public static Found Find(AppSettings settings)
     {
+        if (!string.IsNullOrWhiteSpace(settings.ExpandWorldFolder))
+        {
+            var chosen = Look(settings.ExpandWorldFolder, "the Expand World folder in Settings");
+            if (chosen.Any)
+            {
+                return chosen;
+            }
+            Console.WriteLine($"Expand World: the folder in Settings, {settings.ExpandWorldFolder}, has none of the mods: the other BepInEx folders are looked at.");
+        }
         foreach (var (dir, where) in LocalGame.BepInExFolders(settings))
         {
             var found = Look(dir, where);
@@ -71,6 +83,30 @@ public static partial class ExpandWorld
             }
         }
         return Found.None;
+    }
+
+    /// <summary>
+    /// The rules a new world is made and looked at with (the New world page): the game's own values while the Expand
+    /// World switch is off, else the mods' settings files and data files of the folder found (a new world has no world
+    /// file yet, so no keys); said in the log.
+    /// </summary>
+    /// <param name="settings">The editor's settings.</param>
+    public static WorldRules ForNewWorld(AppSettings settings)
+    {
+        if (!settings.ExpandWorld)
+        {
+            return WorldRules.Vanilla;
+        }
+        var found = Find(settings);
+        if (!found.Any)
+        {
+            return WorldRules.Vanilla;
+        }
+        var data = ReadData(found);
+        var rules = Rules(new Dictionary<string, string>(), found, data);
+        Console.WriteLine($"Expand World: a new world: {FolderText(found)}; {Describe(rules)}.");
+        NoteData(data, rules);
+        return rules;
     }
 
     /// <summary>What one BepInEx folder holds of the mods (a folder that does not exist holds none).</summary>

@@ -113,7 +113,7 @@ The open area.
 | `Area.CenterX`, `Area.CenterZ` | Its middle. |
 | `Area.Points()` | Every ground point the script can change (the outer row left out), as `(x, z)`, row by row from the south: `foreach (var (x, z) in Area.Points()) { ... }`. `Area.Points(step: 4)` takes every 4th metre, for scattering things; a step of 0 or less, or one too small to move along the area, stops the script with an error. |
 | `Area.Inside(x, z)` | Whether a point is inside the area (not on its edge). |
-| `Area.Water` | Sea level (30 m). |
+| `Area.Water` | Sea level (30 m, or where the world's Expand World Rivers settings put it). |
 | `Area.WorldSeed`, `Area.World` | The world's seed (a number) and its name. |
 
 ### Ground

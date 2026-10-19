@@ -36,10 +36,12 @@ public sealed partial record ZoneFilter(IReadOnlySet<int> Biomes, bool NoBuildin
         [.. Offered.Select(b => ((int)b, english ? BiomeName(b).English : BiomeName(b).Shown))];
 
     /// <summary>
-    /// A biome's name as the game shows it, in both languages (the type's own name for one not offered).
+    /// A biome's name as the game shows it, in both languages; for a biome Expand World Data's file adds, the name the
+    /// file gives it (its "name", else its id) when the world's biomes are given, else the type's own name.
     /// </summary>
     /// <param name="b">The biome.</param>
-    public static Said BiomeName(ValheimGen.Heightmap.Biome b) => b switch
+    /// <param name="biomes">The world's biomes; null for the game's.</param>
+    public static Said BiomeName(ValheimGen.Heightmap.Biome b, ValheimGen.BiomeTable? biomes = null) => b switch
     {
         ValheimGen.Heightmap.Biome.Meadows => Said.Of("biome.meadows"),
         ValheimGen.Heightmap.Biome.BlackForest => Said.Of("biome.blackForest"),
@@ -50,6 +52,6 @@ public sealed partial record ZoneFilter(IReadOnlySet<int> Biomes, bool NoBuildin
         ValheimGen.Heightmap.Biome.AshLands => Said.Of("biome.ashlands"),
         ValheimGen.Heightmap.Biome.DeepNorth => Said.Of("biome.deepNorth"),
         ValheimGen.Heightmap.Biome.Ocean => Said.Of("biome.ocean"),
-        _ => Said.Raw(b.ToString()),
+        _ => Said.Raw(biomes?.Of(b) is { } info ? (info.Name != "" ? info.Name : info.Id) : b.ToString()),
     };
 }

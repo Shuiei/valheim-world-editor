@@ -7,13 +7,15 @@ public static partial class SeedPreview
     /// <summary>
     /// The seed's preview on size x size cells (128: a quick look, 256: a clearer one); landmarks: where the
     /// bosses and traders will be too (a fraction of a second more, a few seconds on one core). Landmarks
-    /// stay null when SeedLocations has no location rules.
+    /// stay null when SeedLocations has no location rules. With a world generation mod's rules, the world is the mod's
+    /// (its radius, biomes and places).
     /// </summary>
-    public static Preview Make(string seedName, int size = 160, bool parallel = false, bool landmarks = false, CancellationToken cancel = default)
+    public static Preview Make(string seedName, int size = 160, bool parallel = false, bool landmarks = false, WorldRules? rules = null, CancellationToken cancel = default)
     {
-        var gen = Generator(seedName);
-        float cell = 2 * Radius / size;
-        var (biome, height) = Sample(gen, -Radius, -Radius, cell, size, size, parallel, cancel);
+        var gen = Generator(seedName, rules);
+        float radius = gen.Rules.Radius;
+        float cell = 2 * radius / size;
+        var (biome, height) = Sample(gen, -radius, -radius, cell, size, size, parallel, cancel);
         var layout = new SeedLocations.Layout(gen, parallel);
         var placed = layout.Place(landmarks ? SeedLocations.Which.Prioritized : SeedLocations.Which.Start, cancel);
         var marks = new List<Landmark>();
@@ -26,8 +28,8 @@ public static partial class SeedPreview
             }
         }
         var start = marks.FirstOrDefault(m => m.Kind == "start");
-        var stats = SeedMeasure.Measure(biome, size, cell, start is null ? null : (start.X, start.Z)) with { TempleStart = start != null };
-        landmarks &= SeedLocations.Available;
+        var stats = SeedMeasure.Measure(biome, size, cell, start is null ? null : (start.X, start.Z), radius) with { TempleStart = start != null };
+        landmarks &= SeedLocations.AvailableFor(gen);
         if (landmarks)
         {
             stats = stats with
@@ -37,19 +39,21 @@ public static partial class SeedPreview
                     .DefaultIfEmpty(float.PositiveInfinity).Min()),
             };
         }
-        return new Preview(seedName, size, cell, biome, height, stats, landmarks ? marks : null, gen, layout);
+        return new Preview(seedName, size, cell, biome, height, stats, landmarks ? marks : null, gen, layout, radius);
     }
 
     /// <summary>
     /// The generator sampled on w x h cells of cell metres from (x0, z0) (row 0 the south): each cell's
-    /// biome (index in Biomes, Ocean for the sea and outside the world) and ground height (Outside past the
-    /// world's edge; the deepest sea floor is at 0). parallel: rows on every core but one (a search runs
-    /// seeds side by side instead).
+    /// biome (index in Biomes, Ocean for the sea and outside the world's radius; a biome the game does not have
+    /// counts as the one whose ground it borrows) and ground height (Outside past the world's edge; the deepest sea
+    /// floor is at 0). parallel: rows on every core but one (a search runs seeds side by side instead).
     /// </summary>
     public static (byte[] Biome, float[] Height) Sample(WorldGenerator gen, float x0, float z0, float cell, int w, int h, bool parallel, CancellationToken cancel = default)
     {
         byte[] biome = new byte[w * h];
         float[] height = new float[w * h];
+        float radius = gen.Rules.Radius;
+        var table = gen.Rules.Biomes;
         var options = new ParallelOptions { CancellationToken = cancel, MaxDegreeOfParallelism = parallel ? Math.Max(1, Environment.ProcessorCount - 1) : 1 };
         Parallel.For(0, h, options, j =>
         {
@@ -57,13 +61,13 @@ public static partial class SeedPreview
             {
                 float x = x0 + (i + 0.5f) * cell, z = z0 + (j + 0.5f) * cell;
                 int k = j * w + i;
-                if (x * x + z * z > Radius * Radius)
+                if (x * x + z * z > radius * radius)
                 {
                     biome[k] = Ocean;
                     height[k] = Outside;
                     continue;
                 }
-                var b = gen.GetBiome(x, z);
+                var b = table.Terrain(gen.GetBiome(x, z));
                 float ground = gen.GetBiomeHeight(b, x, z, out _);
                 height[k] = ground;
                 int index = Array.IndexOf(Biomes, b);

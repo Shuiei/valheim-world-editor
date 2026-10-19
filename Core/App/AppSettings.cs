@@ -90,6 +90,12 @@ public sealed partial class AppSettings
     public bool ExpandWorld { get; set; }
 
     /// <summary>
+    /// The BepInEx folder Expand World's settings and data files are read from (Settings), looked at before the
+    /// folders the editor knows; null or empty for none (the first folder that has the mods is used).
+    /// </summary>
+    public string? ExpandWorldFolder { get; set; }
+
+    /// <summary>
     /// The local port the MCP server for Claude listens on.
     /// </summary>
     public int ClaudePort { get; set; } = 5731;

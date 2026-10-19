@@ -108,7 +108,7 @@ public class SelectAndPlaceInputTests
     [AvaloniaFact]
     public void TheBrushPaintsWhileDraggedAndShiftShowsTheEraser()
     {
-        var (w, s, At) = PlaceToolOnFlatArea();
+        var (w, s, at) = PlaceToolOnFlatArea();
         w.PlaceTool.Chosen.Clear();
         w.PlaceTool.Chosen.Add("Beech1");
         // The window's Place panel took the kinds remembered by earlier tests (pieces from the Workshop turn
@@ -118,7 +118,7 @@ public class SelectAndPlaceInputTests
         w.PlaceTool.Density = 5;
         var size = new Avalonia.Size(1600, 1000);
         var input = w.PlaceInput;
-        input.Moved(At(64, 64), size);
+        input.Moved(at(64, 64), size);
         Assert.NotEmpty(input.Shown);
         // Shift held: the preview goes (a drag would remove instead).
         input.ShiftHeld(true);
@@ -126,15 +126,15 @@ public class SelectAndPlaceInputTests
         input.ShiftHeld(false);
         Assert.NotEmpty(input.Shown);
         int stamp = input.Shown.Length;
-        input.Down(At(64, 64), size, false, false, false, 1);
+        input.Down(at(64, 64), size, false, false, false, 1);
         var paint = typeof(PlaceInput).GetMethod("Paint", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
         foreach (float x in new[] { 70f, 76f, 82f })
         {
-            input.Moved(At(x, 64), size);
+            input.Moved(at(x, 64), size);
             Thread.Sleep(60);
             paint.Invoke(input, null);
         }
-        input.Up(At(82, 64), size);
+        input.Up(at(82, 64), size);
         // The click's own layout and more along the drag, in one step.
         Assert.True(s.Pending.Added > stamp, $"{s.Pending.Added} placed, {stamp} at the click");
         Assert.StartsWith("Placed", s.UndoLabel);
@@ -148,19 +148,19 @@ public class SelectAndPlaceInputTests
     [AvaloniaFact]
     public void AClickOnAZonesEdgeAddsAPoint()
     {
-        var (w, s, At) = PlaceToolOnFlatArea();
+        var (w, s, at) = PlaceToolOnFlatArea();
         w.PlaceTool.Mode = PlaceTool.Modes.Zone;
         var size = new Avalonia.Size(1600, 1000);
         var input = w.PlaceInput;
         foreach (var (x, z) in new[] { (40f, 40f), (90f, 40f), (90f, 90f) })
         {
-            input.Down(At(x, z), size, false, false, false, 1);
-            input.Up(At(x, z), size);
+            input.Down(at(x, z), size, false, false, false, 1);
+            input.Up(at(x, z), size);
         }
         Assert.Equal(3, w.PlaceTool.Points.Count);
         // On the edge from the first point to the second.
-        input.Down(At(65, 40), size, false, false, false, 1);
-        input.Up(At(65, 40), size);
+        input.Down(at(65, 40), size, false, false, false, 1);
+        input.Up(at(65, 40), size);
         Assert.Equal(4, w.PlaceTool.Points.Count);
         Assert.Equal(65, w.PlaceTool.Points[1].X, 0);
     }

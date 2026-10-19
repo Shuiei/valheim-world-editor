@@ -28,7 +28,7 @@ panel says what the next click does.
 | **Height A → B** | The ground height at both points and the difference, for example `35.0 → 42.5 m (+7.5)`. |
 | **Slope** | The average slope from A to B: the height difference divided by the distance, in % and in degrees. A 100% slope is 45°. |
 | **Lowest / highest** | The lowest and highest ground along the line, read every metre: a bump or dip between the points shows here even when A and B are level. |
-| **Water depth** | How deep the lower of the two points is under the sea (the sea is at 30 m), or "above sea". |
+| **Water depth** | How deep the lower of the two points is under the sea (the sea is at 30 m, unless the world's Expand World Rivers settings move it), or "above sea". |
 
 Heights are the game's (the same as in the status bar). You can select the values in the panel and copy them.
 

@@ -14,7 +14,7 @@ public sealed partial class MapPage
     {
         Spot = (zx, zz);
         Target = null;
-        string biome = _session != null ? ZoneFilter.BiomeName(_session.Terrain.BiomeAt(zx * 64f, zz * 64f)).Shown : "";
+        string biome = _session != null ? ZoneFilter.BiomeName(_session.Terrain.BiomeAt(zx * 64f, zz * 64f), _session.Terrain.Rules.Biomes).Shown : "";
         PickTitle.Text = Lang.T("map.label.zone", zx, zz, biome);
         _pickBox.IsVisible = true;
         ShowChosen();
@@ -42,6 +42,6 @@ public sealed partial class MapPage
             return;
         }
         var (zx, zz) = Save.ChunkMath.SectorOf(x, z);
-        Cursor.Text = Lang.T("map.label.cursor", x, z, zx, zz, ZoneFilter.BiomeName(_session.Terrain.BiomeAt(x, z)).Shown);
+        Cursor.Text = Lang.T("map.label.cursor", x, z, zx, zz, ZoneFilter.BiomeName(_session.Terrain.BiomeAt(x, z), _session.Terrain.Rules.Biomes).Shown);
     }
 }

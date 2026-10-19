@@ -52,6 +52,34 @@ public sealed partial class NewWorldPage : IDisposable
     /// </summary>
     private readonly int _previewSize;
     /// <summary>
+    /// What the worlds looked at and made here follow: Expand World's rules from the folder found when the switch in
+    /// Settings is on, else the game's own values. Read again once the game's own location rules are read
+    /// (<see cref="RefreshRules"/>): the location file converts against them.
+    /// </summary>
+    internal ValheimGen.WorldRules Rules { get; private set; }
+    /// <summary>The rules were given (tests): never read again.</summary>
+    private readonly bool _rulesGiven;
+
+    /// <summary>
+    /// Reads Expand World's rules again when the location file could not convert before (the game's own location
+    /// rules were not read yet when the page opened: GameLocations.UseGameRules reads them in the background) and
+    /// they are read now. Any thread; the hint is updated on the window's thread.
+    /// </summary>
+    internal void RefreshRules()
+    {
+        if (_rulesGiven || !Rules.DataInstalled || Rules.Locations != null || !ValheimGen.SeedLocations.Available)
+        {
+            return;
+        }
+        var rules = ExpandWorld.ForNewWorld(AppSettings.Load());
+        if (rules.Locations == null)
+        {
+            return;
+        }
+        Rules = rules;
+        Avalonia.Threading.Dispatcher.UIThread.Post(() => Generation.Text = Lang.T("newWorld.hint.expandWorld", ExpandWorld.Describe(rules)));
+    }
+    /// <summary>
     /// The game's world folders for Where: the installed game's own first (a Windows build run through Proton saves
     /// inside its Steam prefix, not under ~/.config), then the others that exist.
     /// </summary>
@@ -62,9 +90,14 @@ public sealed partial class NewWorldPage : IDisposable
     /// <param name="roots">The world folders to offer (tests); null for the game's own. With none, the first the game
     /// would use.</param>
     /// <param name="previewSize">The seed's map, in cells on a side (tests: smaller is quicker).</param>
-    public NewWorldPage(IReadOnlyList<string>? roots = null, int previewSize = 512)
+    /// <param name="rules">What the worlds follow (tests); null: Expand World's rules when its switch is on, else the game's.</param>
+    public NewWorldPage(IReadOnlyList<string>? roots = null, int previewSize = 512, ValheimGen.WorldRules? rules = null)
     {
         _previewSize = previewSize;
+        _rulesGiven = rules != null;
+        Rules = rules ?? ExpandWorld.ForNewWorld(AppSettings.Load());
+        Generation.Text = Rules.IsVanilla ? "" : Lang.T("newWorld.hint.expandWorld", ExpandWorld.Describe(Rules));
+        Generation.IsVisible = !Rules.IsVanilla;
         Loading = BuildLoadingSign();
         var where = (roots ?? Roots()).ToList();
         if (where.Count == 0)

@@ -149,6 +149,12 @@ public static class Shaders
 		void main() { frag = vec4(0.16, 0.36, 0.52, 0.72); }
 		""";
 
+    /// <summary>A colour's channels (0..1, as shown) as the linear values the ground shader takes.</summary>
+    /// <param name="r">Red.</param>
+    /// <param name="g">Green.</param>
+    /// <param name="b">Blue.</param>
+    public static Vector3 Linear(float r, float g, float b) => new(MathF.Pow(r, 2.2f), MathF.Pow(g, 2.2f), MathF.Pow(b, 2.2f));
+
     /// <summary>A biome's ground colour (linear), close to the game's map colours; grey for an unknown biome.</summary>
     /// <param name="biome">A Heightmap.Biome value.</param>
     public static Vector3 BiomeColor(int biome)

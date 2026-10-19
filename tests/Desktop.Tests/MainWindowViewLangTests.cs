@@ -84,14 +84,14 @@ public sealed class MainWindowViewLangTests
         Assert.EndsWith("Switched on Pickables in View, so what you placed stays visible.", w.LastMessageEn);
 
         // Picking a kind (for the panels' Replace): asked, nothing picked, cancelled.
-        const string label = "Replace";
-        w.PickKind(label, _ => { });
+        const string Label = "Replace";
+        w.PickKind(Label, _ => { });
         Assert.Equal(PseudoLang.Wrap("Click an object to pick its kind for Replace. Esc cancels."), w.MessageText.Text);
         Assert.Equal("Click an object to pick its kind for Replace. Esc cancels.", w.LastMessageEn);
         w.View.PickObjectOnce!(null);
         Assert.Equal(PseudoLang.Wrap("Nothing picked: click right on an object (only things that are shown can be picked)."), w.MessageText.Text);
         Assert.Equal("Nothing picked: click right on an object (only things that are shown can be picked).", w.LastMessageEn);
-        w.PickKind(label, _ => { });
+        w.PickKind(Label, _ => { });
         w.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
         Assert.Equal(PseudoLang.Wrap("Picking cancelled."), w.MessageText.Text);
         Assert.Equal("Picking cancelled.", w.LastMessageEn);

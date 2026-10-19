@@ -96,7 +96,7 @@ curves included, so a winding ramp has the same slope all along.
 ![A river dug across the zone with River / canal, the water shown](images/path-river.jpg)
 *A river dug across the zone with **River / canal (water)**: the sea fills it.*
 
-The bed has a U shape: **Depth** below sea level (30 m) in the middle, rising to the waterline at the path's
+The bed has a U shape: **Depth** below sea level (30 m, or the world's own) in the middle, rising to the waterline at the path's
 **Width**. The **Soft edge** then makes the banks up to the ground. It only digs: ground already lower than the bed
 stays as it is, so a river can run into a lake or the sea.
 

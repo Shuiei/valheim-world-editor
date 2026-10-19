@@ -70,17 +70,17 @@ public class ClaudeRelayEdgeTests
     [Fact]
     public async Task AnInitializeAnswersAgreedProtocolVersionIsKept()
     {
-        const string body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":\"2025-06-18\"}}";
-        var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") };
-        Assert.Equal("2025-06-18", await ClaudeRelay.WriteAnswers(response, body, "initialize", new StringWriter(), null));
+        const string Body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":\"2025-06-18\"}}";
+        var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(Body, System.Text.Encoding.UTF8, "application/json") };
+        Assert.Equal("2025-06-18", await ClaudeRelay.WriteAnswers(response, Body, "initialize", new StringWriter(), null));
     }
 
     [Fact]
     public async Task AnAnswerToAnotherMethodLeavesTheProtocolVersionAsItWas()
     {
-        const string body = "{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"protocolVersion\":\"2025-06-18\"}}";
-        var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") };
-        Assert.Equal("2024-11-05", await ClaudeRelay.WriteAnswers(response, body, "tools/list", new StringWriter(), "2024-11-05"));
+        const string Body = "{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"protocolVersion\":\"2025-06-18\"}}";
+        var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(Body, System.Text.Encoding.UTF8, "application/json") };
+        Assert.Equal("2024-11-05", await ClaudeRelay.WriteAnswers(response, Body, "tools/list", new StringWriter(), "2024-11-05"));
     }
 
     [Fact]

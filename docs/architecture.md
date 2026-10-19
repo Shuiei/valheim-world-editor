@@ -275,6 +275,12 @@ patches (the zone's middle for wide kinds, the forced start temple, its distance
 choice or a scale by axis) are branches on the rules in `SeedLocations.Placer` and `Regrow`, each mirrored as the
 mod does it, quirks included (`.claude/docs/expand-world-design.md` §2.4 lists them).
 
+The pages follow: the seed preview covers the rules' radius (`SeedPreview.Preview.Radius`), a new world is made with
+the rules (`WorldCreator.Create`'s `rules`), the overview's texel grows with the world (`MapData.TexelMeters`), and
+the Desktop names and colours a biome of the biome file through the table (`ZoneFilter.BiomeName`,
+`WorldScene.GroundColor`). The rules a new world follows come from the folder in Settings or the first with the mods
+(`ExpandWorld.ForNewWorld`); users' side of it is in [expand-world.md](expand-world.md).
+
 Three things to keep apart: the water level the rules move (`WorldRules.WaterLevel`, which the generator's
 lakes and streams and the editor's own water follow), the **literal 30** the game's zone system keeps for its
 vegetation, locations, biome points and map mask (`WorldGenerator.LiteralWaterLevel`: neither mod changes

@@ -176,9 +176,10 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
     /// </summary>
     public bool Ready => _global != null;
     /// <summary>
-    /// The world map's side in metres.
+    /// The world map's side in metres: the overview's 2048 texels at this world's texel size (the game's 12 m, more
+    /// for a wider world); the game's 24 576 m before a world is shown.
     /// </summary>
-    public static float MapMeters => MapData.GlobalSize * MapData.GlobalPixel;
+    public float MapMeters => MapData.GlobalSize * (_data?.TexelMeters ?? MapData.GlobalPixel);
     /// <summary>
     /// A map that redraws ten times a second while it is in the window (for the shader's moving water and clouds).
     /// </summary>

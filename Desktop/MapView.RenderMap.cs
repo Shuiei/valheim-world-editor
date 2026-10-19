@@ -69,7 +69,7 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
         _gl.Uniform1(U("_zoom"), w * mpp / mapMeters);
         // The game quantizes to ~3.5 m map "pixels"; the close-up goes down to 1 m.
         _gl.Uniform1(U("_quant"), d != null && mpp < 3.5f ? mapMeters : 7000f);
-        _gl.Uniform1(U("normalWidthM"), d != null && mpp < 6 ? MathF.Max(1, mpp) : MapData.GlobalPixel * 2.048f);
+        _gl.Uniform1(U("normalWidthM"), d != null && mpp < 6 ? MathF.Max(1, mpp) : (_data?.TexelMeters ?? MapData.GlobalPixel) * 2.048f);
         _gl.Uniform3(U("_mapCenter"), Center.X, 0, Center.Y);
         _gl.Uniform3(U("_CloudOffset"), time * 0.0015f, 0, time * 0.001f);
         _gl.Uniform2(U("viewCenter"), Center.X, Center.Y);

@@ -18,7 +18,8 @@ public sealed partial class ClaudeTools
             return new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = "The seed is 1 to 10 characters, as in the game." } } };
         }
         await GameRules();
-        var p = await Task.Run(() => SeedPreview.Make(seed, 160, parallel: true, landmarks: true));
+        var rules = ExpandWorld.ForNewWorld(AppSettings.Load());
+        var p = await Task.Run(() => SeedPreview.Make(seed, 160, parallel: true, landmarks: true, rules: rules));
         var st = p.Stats;
         string text = ToJson(new
         {
@@ -61,13 +62,13 @@ public sealed partial class ClaudeTools
             {
                 canvas.DrawImage(image, SkiaSharp.SKRect.Create(0, 0, Side, Side), new SkiaSharp.SKSamplingOptions(SkiaSharp.SKFilterMode.Nearest));
             }
-            float k = Side / (2 * SeedPreview.Radius);
+            float k = Side / (2 * p.Radius);
             using var dot = new SkiaSharp.SKPaint { IsAntialias = true };
             using var rim = new SkiaSharp.SKPaint { IsAntialias = true, Color = SkiaSharp.SKColors.Black, Style = SkiaSharp.SKPaintStyle.Stroke, StrokeWidth = 1 };
             foreach (var l in p.Landmarks ?? [])
             {
                 dot.Color = l.Kind switch { "start" => SkiaSharp.SKColors.White, "trader" => SkiaSharp.SKColors.Gold, _ => SkiaSharp.SKColors.Red };
-                float x = (l.X + SeedPreview.Radius) * k, y = Side - (l.Z + SeedPreview.Radius) * k;
+                float x = (l.X + p.Radius) * k, y = Side - (l.Z + p.Radius) * k;
                 canvas.DrawCircle(x, y, 4, dot);
                 canvas.DrawCircle(x, y, 4, rim);
             }

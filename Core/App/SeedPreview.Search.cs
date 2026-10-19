@@ -1,3 +1,4 @@
+using ValheimGen;
 
 namespace TerrainEditor.App;
 
@@ -9,7 +10,7 @@ public static partial class SeedPreview
     /// returns what was found so far; the previews come without their generator and layout (kept light).
     /// </summary>
     /// <returns>The best previews, best first.</returns>
-    public static List<(Preview Preview, float Score)> Search(Wishes wishes, int count, int keep, int size = 96, Action<int, int>? progress = null, CancellationToken cancel = default)
+    public static List<(Preview Preview, float Score)> Search(Wishes wishes, int count, int keep, int size = 96, Action<int, int>? progress = null, WorldRules? rules = null, CancellationToken cancel = default)
     {
         var found = new List<(Preview, float)>();
         int done = 0;
@@ -18,7 +19,7 @@ public static partial class SeedPreview
         {
             Parallel.For(0, count, options, _ =>
             {
-                var made = Make(RandomSeed(), size, landmarks: wishes.NeedsLandmarks, cancel: cancel);
+                var made = Make(RandomSeed(), size, landmarks: wishes.NeedsLandmarks, rules: rules, cancel: cancel);
                 float score = Score(made.Stats, wishes);
                 // Kept light: the generator and its layout (the biome map: tens of MB) are made again when
                 // a result is looked at.

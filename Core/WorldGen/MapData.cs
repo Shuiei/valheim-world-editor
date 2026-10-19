@@ -15,9 +15,15 @@ public sealed partial class MapData
     public const int GlobalSize = 2048;
 
     /// <summary>
-    /// Metres per overview texel.
+    /// Metres per overview texel of the game's own world.
     /// </summary>
     public const float GlobalPixel = 12f;
+
+    /// <summary>
+    /// Metres per overview texel of this world: the game's 12 m, grown with the world's edge (Expand World Size sizes
+    /// the game's map the same way), so the 2048 texels cover the whole world.
+    /// </summary>
+    public float TexelMeters => GlobalPixel * Generator.Rules.TotalRadius / 10500f;
 
     /// <summary>
     /// Colours from the Minimap component in the game's assets (Mistlands keeps its code default).
@@ -142,7 +148,7 @@ public sealed partial class MapData
         int n = GlobalSize;
         Layers layers = new(n, n);
         int half = n / 2;
-        float pix = GlobalPixel;
+        float pix = TexelMeters;
         // Same sample positions as Minimap.GenerateWorldMap; row i is world z. All the cores but one: unbounded,
         // the loop took every thread of the pool for as long as it ran (seconds), so nothing else that needs
         // one ran meanwhile (an HTTP answer from the game, a timer).

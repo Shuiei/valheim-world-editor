@@ -42,6 +42,17 @@ public sealed partial class WorldScene
     public required float[] Heights { get; init; }
     /// <summary>The biome (Heightmap.Biome value) per grid point, laid out like Heights.</summary>
     public required int[] Biomes { get; init; }
+    /// <summary>
+    /// The biome whose ground each grid point is drawn as: a biome of Expand World Data's file borrows another's
+    /// ground; null when every biome is its own (<see cref="Biomes"/> then).
+    /// </summary>
+    public int[]? GroundBiomes { get; init; }
+    /// <summary>The ground colour (linear) of biomes Expand World Data's file gives a map colour, by biome value.</summary>
+    public IReadOnlyDictionary<int, Vector3> GroundTints { get; init; } = new Dictionary<int, Vector3>();
+
+    /// <summary>The ground colour (linear) a grid point is drawn with: its biome's tint from the file, else the palette's for the ground it borrows.</summary>
+    /// <param name="g">The grid point.</param>
+    public Vector3 GroundColor(int g) => GroundTints.TryGetValue(Biomes[g], out var tint) ? tint : Shaders.BiomeColor((GroundBiomes ?? Biomes)[g]);
     /// <summary>World x of grid point 0 (the block's west edge: half a zone west of its first zone's middle).</summary>
     public float OriginX => X0 * 64f - 32f;
     /// <summary>World z of grid point 0 (the block's south edge).</summary>
@@ -136,6 +147,23 @@ public sealed partial class WorldScene
 
     /// <summary>A new object is tamed when it is a moved tamed creature (a move keeps the object's own data).</summary>
     public static bool TamedOf(WorldSave world, NewObject n) => !n.Fresh && n.SourceId is int s && world.Tamed.Contains(s);
+
+    /// <summary>
+    /// The game's biome colour for a biome with Expand World Data's biome file (its prefix on Heightmap.GetBiomeColor):
+    /// the file's ground colour for a biome it gives settings to (black, the Meadows' look, when it gives no colour),
+    /// else the game's own.
+    /// </summary>
+    /// <param name="biome">The biome.</param>
+    /// <param name="biomes">The world's biomes.</param>
+    internal static byte[] BiomeRgba(int biome, ValheimGen.BiomeTable biomes)
+    {
+        if (biomes.Of((ValheimGen.Heightmap.Biome)biome) is { HasData: true } info)
+        {
+            var c = info.TerrainColor ?? new ValheimGen.Rgba(0f, 0f, 0f, 0f);
+            return [ValheimGen.MapData.Byte(c.R), ValheimGen.MapData.Byte(c.G), ValheimGen.MapData.Byte(c.B), ValheimGen.MapData.Byte(c.A)];
+        }
+        return BiomeRgba(biome);
+    }
 
     /// <summary>The game's biome colour for a biome (Heightmap.GetBiomeColor): which terrain textures it blends, as RGBA bytes.</summary>
     internal static byte[] BiomeRgba(int biome) => biome switch

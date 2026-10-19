@@ -31,7 +31,7 @@ public sealed partial class SeedMap : Control, IDisposable
         }
         var (vx0, vz1) = WorldAt(new Point(0, 0));
         var (vx1, vz0) = WorldAt(new Point(Bounds.Width, Bounds.Height));
-        float r = SeedPreview.Radius, cell = MetersPerPixel;
+        float r = Radius, cell = MetersPerPixel;
         float x0 = Math.Max(vx0, -r), z0 = Math.Max(vz0, -r), x1 = Math.Min(vx1, r), z1 = Math.Min(vz1, r);
         // The middle is kept in the world (Changed) and the view is 2 pixels or more: at least a cell each way.
         int w = (int)Math.Ceiling((x1 - x0) / cell), h = (int)Math.Ceiling((z1 - z0) / cell);

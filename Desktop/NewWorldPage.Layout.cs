@@ -38,6 +38,7 @@ public sealed partial class NewWorldPage : IDisposable
                 seedRow,
                 Row(Lang.T("newWorld.label.savedIn"), Where),
                 Ui.Hint(Lang.T("newWorld.hint.normalWorld")),
+                Generation,
                 Create,
                 Problem,
             },
