@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.58.0 — unreleased
+
+### Added
+- **Blueprints say which pieces only the editor can place, and cost only what the hammer builds.** Homestead's
+  hammer builds the real build pieces of a blueprint and silently skips the rest (statues, ships, creatures, the
+  T.W.I.G.); only the editor places those, into a world or live. A blueprint the editor saves now marks them in its
+  file (lines Homestead skips), the library and Claude's `list_blueprints` say how many (`2 of 40 piece(s) only the
+  editor can place`), and the cost shown for a blueprint (library, Build panel, the Workshop's title and save dialog,
+  `list_blueprints`) leaves them out, so it is what a hammer user pays. Blueprints from before, or Homestead's own,
+  carry no marks and say nothing rather than a wrong zero.
+
 ## v1.57.4 — unreleased
 
 ### Fixed

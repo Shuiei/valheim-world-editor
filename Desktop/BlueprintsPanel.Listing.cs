@@ -46,6 +46,16 @@ public sealed partial class BlueprintsPanel
     /// <returns>What was found, now <see cref="Status"/>.</returns>
     internal Homestead.Status LookAgain() => Status = FindHomestead();
 
+    /// <summary>
+    /// A library blueprint's line under its name: its pieces, who made it, the world it came from, and how many of its
+    /// pieces only the editor can place when its file says.
+    /// </summary>
+    private static string HomesteadMeta(Homestead.Entry e) => Meta(
+        Lang.T("blueprints.meta.pieces", e.Pieces),
+        e.Creator is { Length: > 0 } c ? Lang.T("blueprints.meta.by", c) : null,
+        e.World != null ? Lang.T("blueprints.meta.from", e.World) : null,
+        e.EditorOnlyNote?.Shown);
+
     /// <summary>Fills the list with the blueprints that match the search: Homestead's first, then the older ones.</summary>
     private void Render()
     {
@@ -68,11 +78,8 @@ public sealed partial class BlueprintsPanel
         foreach (var e in homestead)
         {
             string id = HomesteadId + Path.GetFileName(e.Path);
-            string meta = Meta(
-                Lang.T("blueprints.meta.pieces", e.Pieces),
-                e.Creator is { Length: > 0 } c ? Lang.T("blueprints.meta.by", c) : null,
-                e.World != null ? Lang.T("blueprints.meta.from", e.World) : null);
-            var cost = Terrain.PieceCost.Of(e.Kinds);
+            string meta = HomesteadMeta(e);
+            var cost = Homestead.Cost(e.Kinds);
             List.Children.Add(Row(BlueprintPictures.File(e.Picture), e.Name, meta, act =>
             {
                 act(Lang.T("paste.label.paste"), "blueprints.paste", () => Paste(id));
