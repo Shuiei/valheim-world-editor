@@ -13,6 +13,13 @@ the plugin is unchanged in versions without that part.
   and change at once when the inspector or Claude changes what the stand holds. Shields and capes are drawn in
   their first style, and an armour stand in its resting pose. Items on stands cannot be picked: pick the stand.
 
+## v1.55.2 — unreleased
+
+### Fixed
+- **On Windows the editor no longer holds on to the YamlDotNet library in your BepInEx plugins folder.** The file was
+  kept open as long as the editor ran, so a mod manager could not update it; now the editor reads it once and lets
+  it go.
+
 ## v1.55.1 — unreleased
 
 ### Fixed
