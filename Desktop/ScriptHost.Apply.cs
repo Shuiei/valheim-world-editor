@@ -47,15 +47,17 @@ public static partial class ScriptHost
     }
 
     /// <summary>
-    /// The script's changes into the area, one undo step. Returns how many points the game's ±8 m stopped.
+    /// The script's changes into the area, one undo step: how many points the game's ±8 m stopped, and how many
+    /// creatures were stood on the piece under them (CreatureStand: a creature the script put or moved into a piece).
     /// </summary>
-    public static int Apply(EditSession s, Changes ch, string label)
+    public static (int Clamped, int Stood) Apply(EditSession s, Changes ch, string label)
     {
         int clamped = 0;
         var adds = ch.Add.Select(a => (new NewObject(0, a.Prefab, a.Position, a.Rotation, a.Scale), PieceCatalog.Get(a.Prefab)?.Tool != null)).ToList();
         // Moved things: replaced by copies where they go (those also taken away are only taken away).
         var moved = ch.Moves.Where(m => !ch.Remove.Contains(m.Key) && m.Key >= 0 && m.Key < s.Scene.Things.Count && !s.Scene.Things[m.Key].Gone).ToList();
         adds.AddRange(moved.Select(m => s.MovedCopy(m.Key, m.Value.Position, m.Value.Rotation, m.Value.Scale)));
+        int stood = CreatureStand.Apply(s.Scene, adds, null, [.. ch.Remove, .. moved.Select(m => m.Key)]);
         s.Commit(label, g =>
         {
             var touched = new List<int>();
@@ -84,6 +86,6 @@ public static partial class ScriptHost
             }
             return (touched, touched.Count == 0 ? (0, 0, 0, 0) : (touched.Min(p => p % g.W) - 1, touched.Min(p => p / g.W) - 1, touched.Max(p => p % g.W) + 1, touched.Max(p => p / g.W) + 1));
         }, [.. ch.Remove, .. moved.Select(m => m.Key)], adds);
-        return clamped;
+        return (clamped, stood);
     }
 }

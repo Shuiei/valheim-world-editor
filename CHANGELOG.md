@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.59.0 — unreleased
+
+### Added
+- **Creatures are never sunk into building pieces.** A creature put down, moved, copied, pasted, placed by a script or
+  brought by a blueprint with its feet inside a floor, a wall or any other building piece now stands on top of the
+  highest piece under it instead; the ground is left as it was (a creature stands on it as placed). The message of
+  each step says how many were lifted (`2 creature(s) stood on the piece under them.`), and Claude's answers give
+  their final height. The Workshop's support check also counts the creatures still inside a piece (a blueprint from
+  another tool can have them) in its bar and in Claude's `support_check`.
+
 ## v1.58.0 — unreleased
 
 ### Added

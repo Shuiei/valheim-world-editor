@@ -33,7 +33,7 @@ public sealed partial class MainWindow
         var add = new List<(NewObject, bool)>();
         // Clear the site: the trees, rocks and the like where the pasted building stands go too.
         var cleared = new List<int>();
-        int touched = 0;
+        int touched = 0, stood = 0;
         var paste = View.Paste;
         string label = paste.Count > 1 ? Lang.T("paste.undo.copies", paste.Count) : Lang.T("paste.label.paste");
         float ox = s.Scene.OriginX, oz = s.Scene.OriginZ;
@@ -42,6 +42,7 @@ public sealed partial class MainWindow
         {
             var (t, rect, a) = paste.Apply(g, at, s.MaskNow(), linkIds);
             add.AddRange(a);
+            stood = CreatureStand.Apply(s.Scene, add);
             touched = t.Count;
             if (paste.Site.Count > 0)
             {
@@ -63,7 +64,7 @@ public sealed partial class MainWindow
                 touched > 0 ? Said.Of("paste.msg.pastedGround") : Said.Empty,
                 add.Count > 0 ? Said.Of("paste.msg.pastedObjects", add.Count) : Said.Empty,
                 cleared.Count > 0 ? Said.Of("paste.msg.pastedCleared", cleared.Count) : Said.Empty)
-            + Said.Of("paste.msg.pasteMore"));
+            + CreatureStand.Note(stood) + Said.Of("paste.msg.pasteMore"));
         UpdateSaveBar();
     }
 }
