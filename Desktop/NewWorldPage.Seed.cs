@@ -43,6 +43,7 @@ public sealed partial class NewWorldPage : IDisposable
         Pending = Task.Run(async () =>
         {
             await rules.ConfigureAwait(false);
+            RefreshRules();
             return SeedPreview.Make(seed, _previewSize, parallel: true, landmarks: true, Rules, token);
         }, token).ContinueWith(t =>
         {
