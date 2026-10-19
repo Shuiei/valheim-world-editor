@@ -86,4 +86,5 @@ taken from a local BepInEx folder (the Expand World folder in Settings first, th
 knows). Blueprint locations' files are copied too, those the location file names.
 
 With an older plugin, or when the bridge cannot be read, the local folders answer as for a world opened from
-its files, and the log says so.
+its files, and the log says so. When only the world's file cannot be served (the game has none yet), the
+world's settings are those the game loaded, and the mods' files are still read through the bridge.

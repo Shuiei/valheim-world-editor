@@ -159,9 +159,11 @@ public sealed partial class WorldEditorBridgePlugin
     }
 
     /// <summary>
-    /// GET /world/meta: the world's meta file (.fwl) as it lies on disk, read the way the game reads its saves (so from
-    /// the cloud too), for the starting global keys as written there; null (404) when the game has no world. Main
-    /// thread: the world is the game's.
+    /// GET /world/meta: the world's meta file as it lies on disk, read the way the game reads its saves (so from the
+    /// cloud too), for the starting global keys as written there; null (404) when the game has no world, or no file
+    /// of it. The file is the one the game saves (<c>worlds/name/_main.n.fwl2</c>, which a world made or saved by this
+    /// game has whether it was loaded chunked or not), else the one the game loaded (<c>worlds/name.fwl</c>, a world
+    /// saved by an older game). Main thread: the world is the game's.
     /// </summary>
     private static byte[] WorldMeta()
     {
@@ -170,7 +172,16 @@ public sealed partial class WorldEditorBridgePlugin
         {
             return null;
         }
-        string path = (string)MetaPath.Invoke(w, null);
+        string path = w.GetSaveFWLPath();
+        if (!FileHelpers.Exists(path, w.m_fileSource))
+        {
+            // A game without the older method, or without the older file: nothing to serve.
+            path = MetaPath == null ? null : (string)MetaPath.Invoke(w, null);
+            if (path == null || !FileHelpers.Exists(path, w.m_fileSource))
+            {
+                return null;
+            }
+        }
         FileReader reader = new(path, w.m_fileSource, FileHelpers.FileHelperType.Binary);
         using (reader.m_binary)
         {
