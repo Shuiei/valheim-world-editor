@@ -27,7 +27,8 @@ public sealed partial class NewWorldPage : IDisposable
             Item(Mark("start"), Lang.T("newWorld.label.start"), $"{s.Start.X:0}, {s.Start.Z:0}", s.TempleStart ? Lang.T("newWorld.hint.temple") : Lang.T("newWorld.hint.startLikely"), () => Map.LookAt(s.Start.X, s.Start.Z))));
         var biomes = SeedPreview.Biomes.Where(b => s.Shares[b] > 0.0005f || b == Heightmap.Biome.Meadows).Select(b =>
         {
-            var (r, g, bl) = MapData.PixelColor(b);
+            // The biome file's colour for a biome it colours, as the map draws it.
+            var (r, g, bl) = Rules.Biomes.Of(b) is { HasData: true, MapColor: { A: > 0f } colour } ? colour.Bytes() : MapData.PixelColor(b);
             var swatch = new Border { Width = 10, Height = 10, CornerRadius = new CornerRadius(2), Background = new SolidColorBrush(Avalonia.Media.Color.FromRgb(r, g, bl)) };
             string nearest = b == Heightmap.Biome.Meadows ? ""
                 : s.SameLand[b] || float.IsPositiveInfinity(s.Distance[b]) ? Km(s.Distance[b])
