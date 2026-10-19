@@ -22,7 +22,10 @@ public static partial class ExpandWorld
     /// <summary>True as a flag kept only when set (null otherwise), as the rules keep their rare flags.</summary>
     private static bool? OrNull(bool flag) => flag ? true : null;
 
-    /// <summary>A setting both Expand World Size and Data patch: Data's when it is away from the game's value, else Size's.</summary>
+    /// <summary>
+    /// A setting both Expand World Size and Data patch: Data's when it is away from the game's value, else Size's. The
+    /// comparison is exact on purpose: the mod decides the same way, and a value a hair from the game's is a change.
+    /// </summary>
     private static float Overriding(float data, float game, float size) => data != game ? data : size;
 
     /// <summary>A switch both Expand World Size and Data patch: on only when neither turns it off.</summary>

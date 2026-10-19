@@ -77,7 +77,10 @@ public static partial class Regrow
         return true;
     }
 
-    /// <summary>The mod's draw of one of a rule's several prefabs: its name and its object's own draws (none when unknown).</summary>
+    /// <summary>
+    /// The mod's draw of one of a rule's several prefabs: its name and its object's own draws (none when unknown). The
+    /// draw is the game's seeded generator's, so the pick is the mod's; nothing here is security-sensitive.
+    /// </summary>
     private static (string Name, int Draws) DrawPrefab(Rule veg)
     {
         int which = Rnd.Range(0, veg.prefabs!.Length);
