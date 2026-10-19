@@ -23,6 +23,11 @@ public class ExpandWorldDataTests : AppSettingsTestBase
     private string Bep(string cfg, bool library = true, params (string Name, string Text)[] files)
     {
         string bep = Path.Combine(Data, "bep");
+        // A test may make the folder twice: the second one starts afresh.
+        if (Directory.Exists(bep))
+        {
+            Directory.Delete(bep, true);
+        }
         string data = Path.Combine(bep, "config", "expand_world");
         Directory.CreateDirectory(data);
         Directory.CreateDirectory(Path.Combine(bep, "plugins"));

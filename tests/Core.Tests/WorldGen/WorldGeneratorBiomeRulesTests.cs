@@ -128,7 +128,8 @@ public class WorldGeneratorBiomeRulesTests
         Assert.Contains(points, p => a.GetBiome(p.X, p.Z) != b.GetBiome(p.X, p.Z));
         Assert.Contains(points, p => a.GetBiome(p.X, p.Z) != c.GetBiome(p.X, p.Z));
         // An amount of 1 passes everywhere, seed or no seed.
-        Assert.All(points, p => Assert.Equal(Heightmap.Biome.Swamp, WithRules(false, false, some with { Amount = 1f }).GetBiome(p.X, p.Z)));
+        var all = WithRules(false, false, some with { Amount = 1f });
+        Assert.All(points, p => Assert.Equal(Heightmap.Biome.Swamp, all.GetBiome(p.X, p.Z)));
     }
 
     [Fact]
