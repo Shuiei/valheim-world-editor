@@ -265,6 +265,16 @@ BepInEx plugins folder (the mod depends on it; the editor ships none) into its o
 reflection into plain lists and maps. The mod's own conversions (fractions of the radius to metres, the defaults
 it fills in, the files it refuses) live in `ExpandWorld.Biomes/World/Territories.cs`.
 
+The places follow the same way: `WorldRules.Locations` carries the location kinds (a `SeedLocations.RuleSet`
+made by `ExpandWorld.Locations.cs` from the mod's file against the game's own kinds, with the mod's clones, blueprints,
+groups and distance rules as extra fields of `SeedLocations.Rule`; or the game's kinds with Expand World Size's
+multiplier), and `WorldRules.Vegetation` the vegetation rules (`VegetationRule`, which Regrow now reads for every
+world, made by `ExpandWorld.Vegetation.cs`). A layout (`SeedLocations.Layout`) and Regrow take the world's own rules
+when it has them, else the game's, so the same code lays out vanilla and modded worlds; the mod's own placement
+patches (the zone's middle for wide kinds, the forced start temple, its distance checks, the extra draws for a prefab
+choice or a scale by axis) are branches on the rules in `SeedLocations.Placer` and `Regrow`, each mirrored as the
+mod does it, quirks included (`.claude/docs/expand-world-design.md` §2.4 lists them).
+
 Three things to keep apart: the water level the rules move (`WorldRules.WaterLevel`, which the generator's
 lakes and streams and the editor's own water follow), the **literal 30** the game's zone system keeps for its
 vegetation, locations, biome points and map mask (`WorldGenerator.LiteralWaterLevel`: neither mod changes

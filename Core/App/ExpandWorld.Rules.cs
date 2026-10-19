@@ -15,11 +15,15 @@ public static partial class ExpandWorld
     /// <param name="found">The folder's mods and files (<see cref="Found.None"/> for none).</param>
     public static WorldRules Rules(IReadOnlyDictionary<string, string> keys, Found found) => Rules(keys, found, ReadData(found));
 
-    /// <summary>The same, with Expand World Data's files read already (their notes get those of the conversion).</summary>
+    /// <summary>
+    /// The same, with Expand World Data's files read already (their notes get those of the conversion), and the
+    /// world's global keys (the vegetation file's rules may need or forbid some).
+    /// </summary>
     /// <param name="keys">The world's Expand World Size keys.</param>
     /// <param name="found">The folder's mods and files.</param>
     /// <param name="data">Expand World Data's settings and files.</param>
-    public static WorldRules Rules(IReadOnlyDictionary<string, string> keys, Found found, DataFiles data)
+    /// <param name="globalKeys">The world's global keys as the save keeps them ("name" or "name value"); none by default.</param>
+    public static WorldRules Rules(IReadOnlyDictionary<string, string> keys, Found found, DataFiles data, IEnumerable<string>? globalKeys = null)
     {
         var size = CfgOf(found.SizeCfg);
         var rivers = CfgOf(found.RiversCfg);
@@ -34,7 +38,10 @@ public static partial class ExpandWorld
         // a limit Data sets away from the game's wins, a gap is off when either turns it off.
         float dataWidth = Float(D("Ashlands width restriction"), v.AshlandsWidthRestriction), dataLength = Float(D("Ashlands length restriction"), v.AshlandsLengthRestriction);
         var biomes = data.Biomes is { Count: > 0 } biomeEntries ? BiomesOf(biomeEntries, data.Notes) : null;
-        (List<BiomeRule> Rules, bool CheckSectors)? world = data.World == null ? null : WorldOf(data.World.Count > 0 ? data.World : DefaultWorld, biomes ?? BiomeTable.Vanilla, radius, Wiggles.Of(data.Cfg), data.Notes);
+        var table = biomes ?? BiomeTable.Vanilla;
+        (List<BiomeRule> Rules, bool CheckSectors)? world = data.World == null ? null : WorldOf(data.World.Count > 0 ? data.World : DefaultWorld, table, radius, Wiggles.Of(data.Cfg), data.Notes);
+        var sizing = new WorldRules { SizeInstalled = sizeInstalled, DataInstalled = found.Data, Radius = radius, LocationsMultiplier = Float(S("Locations"), v.LocationsMultiplier) };
+        var (locations, vegetation) = Places(data, found, table, sizing, globalKeys);
         return new WorldRules
         {
             SizeInstalled = sizeInstalled,
@@ -92,7 +99,53 @@ public static partial class ExpandWorld
             World = world?.Rules,
             CheckSectors = world?.CheckSectors ?? false,
             Territories = data.Territories == null ? [] : TerritoriesOf(data.Territories, data.Notes),
+            Locations = locations,
+            Vegetation = vegetation,
+            ZoneSpawners = Bool(D("Zone spawners"), v.ZoneSpawners),
+            RandomLocations = Bool(D("Random locations"), v.RandomLocations),
+            ScaleLocationAltitude = Bool(D("Scale location altitude requirement"), v.ScaleLocationAltitude),
         };
+    }
+
+    /// <summary>
+    /// The location kinds and vegetation rules a world is laid out with: the location file's (when in use, with the
+    /// alt biome file's alt biomes when in use) and the vegetation file's, each converted against the game's own
+    /// rules; without a location file, the game's kinds as Expand World Size changes them (null when it changes
+    /// nothing). The game's rules not read yet: the files cannot be converted, noted.
+    /// </summary>
+    private static (SeedLocations.RuleSet? Locations, IReadOnlyList<VegetationRule>? Vegetation) Places(DataFiles data, Found found, BiomeTable table, WorldRules size, IEnumerable<string>? globalKeys)
+    {
+        var game = SeedLocations.Current;
+        bool gameRead = SeedLocations.Available;
+        string? blueprints = found.Data ? Path.Combine(found.Folder, "config", data.Cfg.GetValueOrDefault("Blueprint folder") is { Length: > 0 } folder ? folder : "PlanBuild") : null;
+        List<SeedLocations.Rule>? kinds = null;
+        if (data.Locations is { Count: > 0 } entries)
+        {
+            if (gameRead)
+            {
+                kinds = SizedLocations(LocationsOf(entries, game.Locations, table, size.Radius, blueprints, data.Notes), size);
+            }
+            else
+            {
+                data.Notes.Add("the game's location rules are not read yet: expand_locations is not used");
+            }
+        }
+        else if (gameRead && (size.LocationsMultiplier != 1f || (!size.DataInstalled && size.Radius != 10000f)))
+        {
+            kinds = SizedLocations(game.Locations, size);
+        }
+        SeedLocations.RuleSet? locations = kinds == null ? null : new SeedLocations.RuleSet
+        {
+            Locations = kinds,
+            AltBiomes = data.AltBiomes is { Count: > 0 } alts ? AltBiomesOf(alts, data.Notes) : [.. game.AltBiomes],
+        };
+        IReadOnlyList<VegetationRule>? vegetation = null;
+        if (data.Vegetation is { Count: > 0 } vegEntries)
+        {
+            var keys = (globalKeys ?? []).Select(k => k.Split(' ', 2)[0].Trim().ToLowerInvariant()).Where(k => k != "").ToHashSet();
+            vegetation = VegetationOf(vegEntries, Regrow.GameRules, table, size.Radius, keys, data.Notes);
+        }
+        return (locations, vegetation);
     }
 
     /// <summary>

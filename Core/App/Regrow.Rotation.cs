@@ -1,6 +1,7 @@
 using NQuaternion = System.Numerics.Quaternion;
 using NVector3 = System.Numerics.Vector3;
 using Rnd = ValheimGen.UnityEngine.Random;
+using Rule = ValheimGen.VegetationRule;
 
 namespace TerrainEditor.App;
 

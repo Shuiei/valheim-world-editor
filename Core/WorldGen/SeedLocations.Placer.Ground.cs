@@ -30,7 +30,7 @@ public static partial class SeedLocations
             vegetation = mask.A;
             // The game's literal 30, whatever the rules put the water at.
             float aboveSea = (float)(spot.Y - (double)WorldGenerator.LiteralWaterLevel);
-            if (aboveSea < rule.MinAltitude || aboveSea > rule.MaxAltitude)
+            if (aboveSea < ScaledAltitude(rule.MinAltitude, biome) || aboveSea > ScaledAltitude(rule.MaxAltitude, biome))
             {
                 return false;
             }
@@ -48,6 +48,23 @@ public static partial class SeedLocations
             }
             float flat = MathF.Sqrt(spot.X * spot.X + spot.Z * spot.Z);
             return !(rule.MinDistanceFromCenter > 0f && flat < rule.MinDistanceFromCenter) && !(rule.MaxDistanceFromCenter > 0f && flat > rule.MaxDistanceFromCenter);
+        }
+
+        /// <summary>
+        /// A kind's altitude limit scaled by the biome's height transform (Expand World Data's "Scale location altitude
+        /// requirement", with the biome file in use, for a biome the file gives settings to): the multiplier, the delta,
+        /// then the depth multiplier under the water. The limit itself otherwise.
+        /// </summary>
+        private float ScaledAltitude(float limit, Heightmap.Biome biome)
+        {
+            var rules = _gen.Rules;
+            if (!rules.ScaleLocationAltitude || !rules.BiomeData || rules.Biomes.Of(biome) is not { HasData: true } info)
+            {
+                return limit;
+            }
+            float h = (float)((double)limit * info.Height.Multiplier);
+            h = (float)((double)h + info.Height.Delta);
+            return h < 0f ? (float)((double)h * info.Height.DepthMultiplier) : h;
         }
 
         /// <summary>

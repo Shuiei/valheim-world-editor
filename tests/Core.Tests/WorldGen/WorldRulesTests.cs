@@ -55,6 +55,13 @@ public class WorldRulesTests
         // An infinite half size (no rectangle limit) is written by name.
         Assert.Contains("Infinity", new WorldRules { World = [new BiomeRule()] }.Stamp);
         Assert.Contains("Lava Fields", new WorldRules { Biomes = new BiomeTable([.. BiomeTable.Vanilla.Biomes, new BiomeInfo { Value = (Heightmap.Biome)0x400, Id = "Lava Fields" }]) }.Stamp);
+        // The places too: the location kinds (a clone's game prefab among them) and the vegetation rules.
+        var places = new WorldRules { Locations = new SeedLocations.RuleSet { Locations = [new SeedLocations.Rule { Prefab = "Crypt2:Deep", BasePrefab = "Crypt2" }] }, Vegetation = [new VegetationRule { prefab = "Pine", prefabs = ["Pine", "Fir"] }] };
+        Assert.Contains("Crypt2:Deep", places.Stamp);
+        Assert.Contains("\"basePrefab\":\"Crypt2\"", places.Stamp);
+        Assert.Contains("Fir", places.Stamp);
+        Assert.False(places.IsVanilla);
+        Assert.Equal(places, places with { });
     }
 
     [Fact]

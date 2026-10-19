@@ -238,6 +238,24 @@ public sealed record WorldRules
     /// <summary>The territories the world rules can name, by their names; none by default.</summary>
     public IReadOnlyList<Territory> Territories { get; init; } = [];
 
+    /// <summary>
+    /// The location kinds laid out in place of the game's (Expand World Data's location file, converted; or the game's
+    /// own with Expand World Size's locations multiplier and distance scaling), or null for the game's as they are.
+    /// </summary>
+    public SeedLocations.RuleSet? Locations { get; init; }
+
+    /// <summary>The vegetation rules in place of the game's (Expand World Data's vegetation file), or null for the game's.</summary>
+    public IReadOnlyList<VegetationRule>? Vegetation { get; init; }
+
+    /// <summary>Whether a generated zone gets its spawner (the mod's "Zone spawners"; true: as the game).</summary>
+    public bool ZoneSpawners { get; init; } = true;
+
+    /// <summary>Whether locations spawn with a random seed (the mod's "Random locations"): their contents cannot be known then.</summary>
+    public bool RandomLocations { get; init; }
+
+    /// <summary>Whether a location's altitude limits are scaled by its biome's height transform (the mod's "Scale location altitude requirement").</summary>
+    public bool ScaleLocationAltitude { get; init; }
+
     // ---- Derived.
     /// <summary>Whether these are the game's own values (nothing of the generator changes).</summary>
     [JsonIgnore]

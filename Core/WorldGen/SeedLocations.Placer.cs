@@ -43,6 +43,20 @@ public static partial class SeedLocations
         /// </summary>
         private readonly Neighbours _byPrefab = new(), _byGroup = new(), _byGroupMax = new();
         /// <summary>
+        /// The same by the game's prefab (clones of one prefab together) and by every group a kind belongs to, for
+        /// Expand World Data's distance checks (<see cref="ModSpacing"/>).
+        /// </summary>
+        private readonly Neighbours _byBase = new(), _byGroups = new();
+
+        /// <summary>
+        /// Whether the world's rules are Expand World Data's location file: its distance checks replace the game's
+        /// (clones count as their prefab, groups by membership, its "awayFrom" and "closeTo").
+        /// </summary>
+        private bool ModSpacing => _gen.Rules.Locations != null;
+
+        /// <summary>The start temple's prefab, which the mod places at the middle when the layout placed none.</summary>
+        internal const string StartPrefab = "StartTemple";
+        /// <summary>
         /// How many of the kind's spots so far had their vegetation summed (the "stands out" check), the total of
         /// those sums (in double, as an average of them is taken) and the best of them.
         /// </summary>
@@ -101,6 +115,13 @@ public static partial class SeedLocations
                         break;
                     }
                 }
+            }
+            if (have == 0 && rule.Prefab == StartPrefab && _gen.Rules.DataInstalled)
+            {
+                // Expand World Data puts the start temple in the middle zone when the layout placed none (its
+                // GuaranteeLocations, once the world has loaded): at the zone's middle, give or take the few metres its
+                // unseeded draw moves it by.
+                Register(rule, new Vector3(0f, _gen.GetHeight(0f, 0f), 0f));
             }
         }
     }

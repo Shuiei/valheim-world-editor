@@ -20,9 +20,10 @@ public static partial class SeedLocations
         /// </summary>
         private readonly bool _parallel;
         /// <summary>
-        /// The rules in use when the layout began, kept even if Use swaps them.
+        /// The world's own rules (Expand World Data's), else the rules in use when the layout began, kept even if Use
+        /// swaps them.
         /// </summary>
-        private readonly State _state = SeedLocations._state;
+        private readonly State _state;
         /// <summary>
         /// Lets one caller at a time go on with the layout.
         /// </summary>
@@ -53,6 +54,7 @@ public static partial class SeedLocations
         {
             _gen = gen;
             _parallel = parallel;
+            _state = StateFor(gen);
             _placer = NewPlacer();
         }
 

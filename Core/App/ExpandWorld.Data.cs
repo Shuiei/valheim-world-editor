@@ -19,20 +19,28 @@ public static partial class ExpandWorld
     /// <param name="Biomes">The biome files' entries; null for off.</param>
     /// <param name="World">The world files' entries; null for off; empty for no file (the mod then makes its default one).</param>
     /// <param name="Territories">The territory files' entries; null for off.</param>
+    /// <param name="Locations">The location files' entries; null for off; empty for no file (the mod then writes the game's).</param>
+    /// <param name="Vegetation">The vegetation files' entries; null for off; empty for no file.</param>
+    /// <param name="AltBiomes">The alt biome files' entries; null for off; empty for no file.</param>
     /// <param name="Notes">What the reading had to say (a file passed over, a value not understood), for the log.</param>
-    public sealed record DataFiles(IReadOnlyDictionary<string, string> Cfg, IReadOnlyList<Entry>? Biomes, IReadOnlyList<Entry>? World, IReadOnlyList<Entry>? Territories, List<string> Notes)
+    public sealed record DataFiles(IReadOnlyDictionary<string, string> Cfg, IReadOnlyList<Entry>? Biomes, IReadOnlyList<Entry>? World, IReadOnlyList<Entry>? Territories,
+        IReadOnlyList<Entry>? Locations, IReadOnlyList<Entry>? Vegetation, IReadOnlyList<Entry>? AltBiomes, List<string> Notes)
     {
         /// <summary>No settings, no data (the mod is not there, or every switch is off).</summary>
-        public static DataFiles None => new(new Dictionary<string, string>(), null, null, null, []);
+        public static DataFiles None => new(new Dictionary<string, string>(), null, null, null, null, null, null, []);
 
         /// <summary>Whether any kind of data is on.</summary>
-        public bool Any => Biomes != null || World != null || Territories != null;
+        public bool Any => Biomes != null || World != null || Territories != null || Locations != null || Vegetation != null || AltBiomes != null;
     }
 
     /// <summary>
     /// The data kinds this version of the editor reads, and the switch of each in the settings file.
     /// </summary>
-    private static readonly (string Kind, string Switch)[] Kinds = [("biomes", "Biome data"), ("world", "World data"), ("territories", "Territory data")];
+    private static readonly (string Kind, string Switch)[] Kinds =
+    [
+        ("biomes", "Biome data"), ("world", "World data"), ("territories", "Territory data"),
+        ("locations", "Location data"), ("vegetation", "Vegetation data"), ("altbiomes", "Alt biome data"),
+    ];
 
     /// <summary>
     /// Expand World Data's files from a BepInEx folder: the settings file, and the data files of each kind whose
@@ -51,7 +59,7 @@ public static partial class ExpandWorld
         bool[] on = [.. Kinds.Select(k => Bool(cfg.GetValueOrDefault(k.Switch), false))];
         if (!on.Any(b => b))
         {
-            return new DataFiles(cfg, null, null, null, notes);
+            return new DataFiles(cfg, null, null, null, null, null, null, notes);
         }
         var yaml = YamlReader.Find(Path.Combine(found.Folder, "plugins"));
         if (yaml == null)
@@ -59,7 +67,7 @@ public static partial class ExpandWorld
             notes.Add($"no {YamlReader.DllName} under {Path.Combine(found.Folder, "plugins")} (Expand World Data needs it): its data files were not read");
         }
         IReadOnlyList<Entry>?[] kinds = [.. Kinds.Select((k, i) => on[i] ? ReadKind(found.DataFiles, k.Kind, yaml, notes) : null)];
-        return new DataFiles(cfg, kinds[0], kinds[1], kinds[2], notes);
+        return new DataFiles(cfg, kinds[0], kinds[1], kinds[2], kinds[3], kinds[4], kinds[5], notes);
     }
 
     /// <summary>
