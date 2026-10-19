@@ -53,10 +53,10 @@ internal static class RegrowFixtures
     /// <summary>A flat ground of 81 × 81 metres at <paramref name="height"/>, from (-40, -40) to (40, 40).</summary>
     public static object FlatGround(float height = 0f)
     {
-        const int size = 81;
-        float[] heights = new float[size * size];
+        const int Size = 81;
+        float[] heights = new float[Size * Size];
         Array.Fill(heights, height);
-        return PrivateMember.New(GroundType, heights, size, size, -40f, -40f);
+        return PrivateMember.New(GroundType, heights, Size, Size, -40f, -40f);
     }
 
     /// <summary>
@@ -65,16 +65,16 @@ internal static class RegrowFixtures
     /// </summary>
     public static object SlopedGround(float slope)
     {
-        const int size = 20;
-        float[] heights = new float[size * size];
-        for (int z = 0; z < size; z++)
+        const int Size = 20;
+        float[] heights = new float[Size * Size];
+        for (int z = 0; z < Size; z++)
         {
-            for (int x = 0; x < size; x++)
+            for (int x = 0; x < Size; x++)
             {
-                heights[z * size + x] = x * slope;
+                heights[z * Size + x] = x * slope;
             }
         }
-        return PrivateMember.New(GroundType, heights, size, size, -10f, -10f);
+        return PrivateMember.New(GroundType, heights, Size, Size, -10f, -10f);
     }
 
     /// <summary>

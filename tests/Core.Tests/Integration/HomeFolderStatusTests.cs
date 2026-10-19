@@ -16,7 +16,7 @@ public sealed class HomeFolderStatusTests : HomeFolderTestBase
     {
         // Not a status an HTTP answer can have: setting it throws.
         var broken = new HomeFolderStatusServer(42, "").Start();
-        using var http = new System.Net.Http.HttpClient();
+        using var http = new HttpClient();
         _ = http.GetAsync($"http://127.0.0.1:{broken.Port}/status", TestContext.Current.CancellationToken);
 
         Assert.True(SpinWait.SpinUntil(() => broken.Broken, TimeSpan.FromSeconds(30)), "the request was never answered");

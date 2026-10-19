@@ -51,9 +51,9 @@ public class DungeonGenRoomsStepTests
     {
         // The first room is the entrance the seed's first draw picks, placed at the origin.
         var (entrances, normal, _, kind) = RoomsOf("DG_ForestCrypt");
-        const int seed = 5;
-        var rooms = Join(kind, new DungeonGen.Settings(Size: 1, Seed: seed), seed, entrances, normal);
-        var expected = entrances[new Random(seed).Next(entrances.Count)];
+        const int Seed = 5;
+        var rooms = Join(kind, new DungeonGen.Settings(Size: 1, Seed: Seed), Seed, entrances, normal);
+        var expected = entrances[new Random(Seed).Next(entrances.Count)];
         Assert.Equal(expected.Hash, rooms[0].Hash);
         Assert.InRange(rooms.Count, 1, 8);
     }

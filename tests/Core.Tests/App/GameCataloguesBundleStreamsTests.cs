@@ -31,8 +31,8 @@ public class GameCataloguesBundleStreamsTests
 
         var place = JsonNode.Parse(GameCatalogues.ReadAtStart(game.Bundles(), ["piece-place"])["piece-place"])!.AsObject();
 
-        string FromResource = place["wall_streamed"]!["c"]!.ToJsonString();
-        Assert.Contains("\"m\"", FromResource);
-        Assert.Equal(place["wall_in_object"]!["c"]!.ToJsonString(), FromResource);
+        string fromResource = place["wall_streamed"]!["c"]!.ToJsonString();
+        Assert.Contains("\"m\"", fromResource);
+        Assert.Equal(place["wall_in_object"]!["c"]!.ToJsonString(), fromResource);
     }
 }

@@ -16,7 +16,7 @@ public class UpliftPlanTests
     public void LiftInZonesTheGameHasNotGeneratedIsDropped()
     {
         using var w = new TempWorld();
-        var o = UpliftWorld.Of(w.Load());
+        var o = Of(w.Load());
         // On the edge of the saved zones: zone 15 is generated, 16 is not.
         const float Cx = 15 * 64 + 32, Cz = 300;
         o.Lift(Cx, Cz, Bell(Cx, Cz, 20, 40));
@@ -32,7 +32,7 @@ public class UpliftPlanTests
     {
         // Three hills along a diagonal of the test world, three zones apart: one group, worked only near the hills.
         using var w = new TempWorld();
-        var o = UpliftWorld.Of(w.Load());
+        var o = Of(w.Load());
         var hills = new[] { (X: 2 * 64f, Z: 2 * 64f), (X: 5 * 64f, Z: 5 * 64f), (X: 8 * 64f, Z: 8 * 64f) };
         foreach (var (x, z) in hills)
         {
@@ -52,14 +52,14 @@ public class UpliftPlanTests
     {
         using var w = new TempWorld();
         var (a, b) = ((X: 40f, Z: 30f), (X: 13 * 64f, Z: 13 * 64f));
-        var both = UpliftWorld.Of(w.Load());
+        var both = Of(w.Load());
         both.Lift(a.X, a.Z, Bell(a.X, a.Z, 20, 40));
         both.Lift(b.X, b.Z, Bell(b.X, b.Z, 20, 40));
         var plan = Uplift.Make(both.World, both.Terrain, both.Edits, both.NextId)!;
         var alone = new List<Uplift.Plan>();
         foreach (var (x, z) in new[] { a, b })
         {
-            var o = UpliftWorld.Of(w.Load());
+            var o = Of(w.Load());
             o.Lift(x, z, Bell(x, z, 20, 40));
             alone.Add(Uplift.Make(o.World, o.Terrain, o.Edits, o.NextId)!);
         }

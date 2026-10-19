@@ -15,7 +15,7 @@ public abstract class TunnelTestBase : IDisposable
     /// <summary>The local sshd the tests log in to.</summary>
     protected LocalSshd Ssh { get; }
     private readonly string? _servers = ServerConfig.PathOverride;
-    private readonly string? Home = Environment.GetEnvironmentVariable("HOME");
+    private readonly string? _home = Environment.GetEnvironmentVariable("HOME");
     /// <summary>The test's own folder (its home, its server settings), deleted after.</summary>
     protected string Dir { get; } = Path.Combine(Path.GetTempPath(), "vwe-tunnel-" + Guid.NewGuid().ToString("N")[..8]);
     /// <summary>The stand-in plugin's listener, behind the tunnel.</summary>
@@ -71,7 +71,7 @@ public abstract class TunnelTestBase : IDisposable
     {
         Tunnel.Close();
         ServerConfig.PathOverride = _servers;
-        Environment.SetEnvironmentVariable("HOME", Home);
+        Environment.SetEnvironmentVariable("HOME", _home);
         Stop.Cancel();
         Assert.True(Hello.Wait(TimeSpan.FromSeconds(30)), "the stand-in plugin did not stop");
         Stop.Dispose();

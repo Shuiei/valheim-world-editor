@@ -24,15 +24,15 @@ public class BuildersPlayerTests
     [Fact]
     public void OnlyAPieceWithoutABuilderIsClaimed()
     {
-        const long builder = 1234567890123L;
+        const long Builder = 1234567890123L;
         byte[] wall = ZdoBuilder.Blank(StableHash.Of("woodwall"), 0, Vector3.Zero, Vector3.Zero, 1f);
 
-        var claimed = Builders.Claimed(wall, builder);
+        var claimed = Builders.Claimed(wall, Builder);
 
         Assert.NotNull(claimed);
-        Assert.Equal(builder, claimed.LongList.Single(l => l.Key == ObjectField.CreatorKey).Value);
+        Assert.Equal(Builder, claimed.LongList.Single(l => l.Key == ObjectField.CreatorKey).Value);
         // Claimed already, or not a kind players build: nothing.
         Assert.Null(Builders.Claimed(claimed.Serialize(), 5));
-        Assert.Null(Builders.Claimed(ZdoBuilder.Blank(StableHash.Of("Beech1"), 0, Vector3.Zero, Vector3.Zero, 1f), builder));
+        Assert.Null(Builders.Claimed(ZdoBuilder.Blank(StableHash.Of("Beech1"), 0, Vector3.Zero, Vector3.Zero, 1f), Builder));
     }
 }

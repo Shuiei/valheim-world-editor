@@ -29,7 +29,7 @@ public class SeedLocationsPlacerGenerateTests
     {
         var placer = Placer(Seed());
         var rule = new SeedLocations.Rule { Prefab = "Temple", CenterFirst = 1, Quantity = 1, Unique = 1 };
-        placer.Register(rule, new ValheimGen.Vector3(10, 0, 0));
+        placer.Register(rule, new Vector3(10, 0, 0));
 
         placer.Generate(rule);
 
