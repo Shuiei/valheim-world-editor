@@ -101,7 +101,7 @@ public sealed partial class EditSession
     }
 
     /// <summary>
-    /// How many steps the undo list of the sessions made from now on keeps (Settings,
+    /// How many steps the undo lists keep, from their next change on (Settings,
     /// <see cref="TerrainEditor.App.AppSettings.HistorySteps"/>); 0 or less: no limit.
     /// </summary>
     public static int StepLimit { get; set; }
@@ -112,10 +112,17 @@ public sealed partial class EditSession
     public const long HistoryBytes = 2L << 30;
 
     /// <summary>
-    /// How many steps this session's undo list keeps (<see cref="StepLimit"/> when it was made); 0 or less: no limit.
-    /// The oldest go first, at the next change.
+    /// How many steps this session's undo list keeps: <see cref="StepLimit"/> as it is now, unless set (tests); 0 or
+    /// less: no limit. The oldest go first, at the next change.
     /// </summary>
-    internal int KeepSteps { get; set; } = StepLimit;
+    internal int KeepSteps
+    {
+        get => _keepSteps ?? StepLimit;
+        set => _keepSteps = value;
+    }
+
+    /// <summary>The steps this session keeps whatever Settings say; null: Settings' (<see cref="KeepSteps"/>).</summary>
+    private int? _keepSteps;
 
     /// <summary>
     /// How much memory this session's undo list may take (<see cref="HistoryBytes"/>; tests set less): past it, the

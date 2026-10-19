@@ -55,6 +55,23 @@ public class EditSessionEdgeTests
         Assert.Equal("change 0", s.UndoList[0].Label);
     }
 
+    // A dropped step leaves the steps' order too: asked for again, it is a step never seen, after the newest.
+    [Fact]
+    public void ADroppedStepLeavesTheOrder()
+    {
+        var s = TestScenes.Flat(2);
+        s.KeepSteps = 2;
+        s.Shape(30, 30, Two, 3, 0, "one");
+        s.Shape(60, 60, Two, 3, 0, "two");
+        var one = s.UndoList[0];
+        long first = s.OrderOf(one);
+        s.Shape(90, 90, Two, 3, 0, "three");
+        Assert.DoesNotContain(one, s.UndoList);
+        long two = s.OrderOf(s.UndoList[0]), three = s.OrderOf(s.UndoList[1]);
+        Assert.True(s.OrderOf(one) > Math.Max(Math.Max(first, two), three));
+        Assert.DoesNotContain(s.Export().Undo, c => ReferenceEquals(c, one));
+    }
+
     [Fact]
     public void PastTheMemoryBudgetTheOldestGoButTheNewestStays()
     {

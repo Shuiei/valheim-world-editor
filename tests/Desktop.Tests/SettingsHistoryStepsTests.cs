@@ -8,7 +8,7 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The Settings window's History section: how many steps the history keeps, empty (no limit) at first, a number that
-/// is not one refused, and the one saved taken by the sessions made after. It saves to the tests' settings file, so it
+/// is not one refused (a sign, a fraction, words), and the one saved taken by the sessions already open. It saves to the tests' settings file, so it
 /// runs alone.
 /// </summary>
 [Collection("DataDir")]
@@ -22,6 +22,8 @@ public class SettingsHistoryStepsTests
         try
         {
             var settings = new AppSettings();
+            // A session open before: it follows the setting from its next change on.
+            var open = TestScenes.Flat(1);
             var owner = Owner();
             var shown = SettingsDialog.Show(owner, settings);
             var d = TestWindows.Shown(owner);
@@ -40,7 +42,7 @@ public class SettingsHistoryStepsTests
             Assert.True(await shown);
             Assert.Equal(5000, AppSettings.Load().HistorySteps);
             Assert.Equal(5000, EditSession.StepLimit);
-            Assert.Equal(5000, TestScenes.Flat(1).KeepSteps);
+            Assert.Equal(5000, open.KeepSteps);
             // Shown again: the number; emptied, no limit.
             shown = SettingsDialog.Show(owner, settings);
             d = TestWindows.Shown(owner);
@@ -51,6 +53,7 @@ public class SettingsHistoryStepsTests
             Assert.True(await shown);
             Assert.Equal(0, AppSettings.Load().HistorySteps);
             Assert.Equal(0, EditSession.StepLimit);
+            Assert.Equal(0, open.KeepSteps);
         }
         finally
         {
