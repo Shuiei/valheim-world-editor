@@ -156,7 +156,8 @@ public class MainWindowToolsTests
             var w = await EditingWithGrowingMountain(dir);
             var s = w.Session!;
             int steps = s.UndoList.Count;
-            await w.PutMountain((s.Ground.W - 1) / 2f, (s.Ground.H - 1) / 2f);
+            // In the zone east of the middle: the start temple keeps its own zone's ground clear.
+            await w.PutMountain((s.Ground.W - 1) / 2f + 64f, (s.Ground.H - 1) / 2f);
             Assert.Contains("Grew ", w.MessageText.Text);
             // The mountain, then what grew on it: two undo steps.
             Assert.Equal(steps + 2, s.UndoList.Count);
