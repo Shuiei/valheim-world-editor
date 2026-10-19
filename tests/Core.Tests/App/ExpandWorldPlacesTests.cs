@@ -162,7 +162,7 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
             E(("prefab", known), ("altBiome", "DarkMeadows")),
             E(("prefab", "")),
         ], game, BiomeTable.Vanilla, 20000f, new HashSet<string>(), notes);
-        Assert.Equal(2, rules.Count);
+        Assert.Equal(3, rules.Count);
         var several = rules[0];
         Assert.Equal(known, several.prefab);
         Assert.Equal([known, known2, "Nowhere"], several.prefabs!);
@@ -186,6 +186,7 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         Assert.Equal(50f, several.maxAltitude);
         Assert.Equal(0f, several.minAltitude);
         Assert.Equal(1, several.enable);
+        Assert.Null(several.altBiome);
         // A centre of its own: the mod's check in place of the game's; a scale the same at both ends is no scale by axis.
         var centred = rules[1];
         Assert.Null(centred.prefabs);
@@ -195,7 +196,9 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         Assert.Null(centred.scaleMinAxes);
         Assert.Equal(1f, centred.scaleMin);
         Assert.Contains(notes, n => n.Contains("Nowhere"));
-        Assert.Contains(notes, n => n.Contains("alt biomes"));
+        // A rule of an alt biome is kept, to grow in that alt biome's areas.
+        Assert.Equal("DarkMeadows", rules[2].altBiome);
+        Assert.DoesNotContain(notes, n => n.Contains("alt biomes"));
     }
 
     [Fact]
@@ -246,19 +249,34 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
     }
 
     [Fact]
-    public void AltBiomesKeepTheirNamesAndWhatTheyBlock()
+    public void AltBiomesKeepEveryFieldTheLayoutReads()
     {
         List<string> notes = [];
         var alts = ExpandWorld.AltBiomesOf(
         [
-            E(("name", "DarkMeadows"), ("blockLocationNames", new List<object?> { "Crypt2", "StartTemple:Copy" })),
+            E(("name", "DarkMeadows"), ("biome", "Meadows, BlackForest"), ("chance", "0.5"), ("minAmountSpawned", "2"), ("maxAmountSpawned", "5"),
+              ("minDistanceFromCenter", "1900"), ("minEdgeSize", "66"), ("maxEdgeSize", "299"), ("minAvgHeight", "30"), ("maxAvgHeight", "10000"),
+              ("aboveWorldX", "-100"), ("belowWorldY", "250"), ("requireNeighbor", "Swamp"), ("notNeighbor", "Ocean"),
+              ("incompatibleAltBiomes", new List<object?> { "Bones" }), ("blockVegetationNames", "beech1_meadows"),
+              ("blockLocationNames", new List<object?> { "Crypt2", "StartTemple:Copy" })),
             E(("name", "Off"), ("enabled", "false")),
-            E(("name", "Plain")),
-            E(("biome", "Meadows")),
-        ], notes);
-        Assert.Equal(["DarkMeadows", "Plain"], alts.Select(a => a.Name));
-        Assert.Equal(["Crypt2", "StartTemple:Copy"], alts[0].BlockLocationNames);
-        Assert.Empty(alts[1].BlockLocationNames);
+            E(("name", "Plain"), ("biome", "Nowhere")),
+        ], BiomeTable.Vanilla, notes);
+        Assert.Equal(["DarkMeadows", "Off", "Plain"], alts.Select(a => a.Name));
+        var dark = alts[0];
+        Assert.Equal((int)(Heightmap.Biome.Meadows | Heightmap.Biome.BlackForest), dark.Biome);
+        Assert.Equal((0.5f, 2, 5, 1900f), (dark.Chance, dark.MinAmountSpawned, dark.MaxAmountSpawned, dark.MinDistanceFromCenter));
+        Assert.Equal((66, 299, 30f, 10000f), (dark.MinEdgeSize, dark.MaxEdgeSize, dark.MinAvgHeight, dark.MaxAvgHeight));
+        Assert.Equal((-100f, 0f, 250f, 0f), (dark.AboveWorldX, dark.BelowWorldX, dark.BelowWorldY, dark.AboveWorldY));
+        Assert.Equal(((int)Heightmap.Biome.Swamp, (int)Heightmap.Biome.Ocean), (dark.RequireNeighbor, dark.NotNeighbor));
+        Assert.Equal(["Bones"], dark.IncompatibleAltBiomes);
+        Assert.Equal(["beech1_meadows"], dark.BlockVegetationNames);
+        Assert.Equal(["Crypt2", "StartTemple:Copy"], dark.BlockLocationNames);
+        // A field left out is 0 or none (the mod's, not the game's defaults); "enabled" is kept as written.
+        Assert.False(alts[1].Enabled);
+        var plain = alts[2];
+        Assert.Equal((0f, 0, 0, 0, 0), (plain.Chance, plain.MaxAmountSpawned, plain.MaxEdgeSize, plain.RequireNeighbor, plain.Biome));
+        Assert.Contains(notes, n => n.Contains("Nowhere"));
     }
 
     [Fact]

@@ -72,5 +72,12 @@ public class GameLocationsSceneTests
         var alt = Assert.Single(rules.AltBiomes);
         Assert.Equal("DeepNorth_Ice", alt.Name);
         Assert.Equal(["Crypt"], alt.BlockLocationNames);
+        // Every field the layout reads, by its name in the game; one the asset lacks keeps the game's default.
+        Assert.True(alt.Enabled);
+        Assert.Equal((int)ValheimGen.Heightmap.Biome.DeepNorth, alt.Biome);
+        Assert.Equal((2000f, 2, 5, 0.25f), (alt.MinDistanceFromCenter, alt.MinAmountSpawned, alt.MaxAmountSpawned, alt.Chance));
+        Assert.Equal(["Bones"], alt.IncompatibleAltBiomes);
+        Assert.Equal(["Bushes"], alt.BlockVegetationNames);
+        Assert.Equal((50, 1500, 30f), (alt.MinEdgeSize, alt.MaxEdgeSize, alt.MinAvgHeight));
     }
 }

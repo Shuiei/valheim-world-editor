@@ -61,11 +61,10 @@ public static partial class SeedLocations
         /// <summary>
         /// A placer with no instances, sharing this layout's biome map.
         /// </summary>
-        private Placer NewPlacer() => new(_gen, () => _map ??= new BiomeMap(_gen, _parallel, _cancel));
+        private Placer NewPlacer() => new(_gen, () => _map ??= new BiomeMap(_gen, _parallel, _cancel), _state.Rules.AltBiomes);
 
         /// <summary>
-        /// The instances so far, laid out at least as far as <paramref name="which"/> says, the uncertain kinds
-        /// left out.
+        /// The instances so far, laid out at least as far as <paramref name="which"/> says.
         /// </summary>
         public List<Placed> Place(Which which, CancellationToken cancel = default)
         {
@@ -75,17 +74,16 @@ public static partial class SeedLocations
                 Which.Prioritized => _state.Ordered.Count(r => r.Prioritized != 0),
                 _ => _state.Ordered.Count,
             };
-            return [.. Until(count, cancel).Where(p => !Uncertain(_state, p.Rule))];
+            return Until(count, cancel);
         }
 
         /// <summary>
-        /// The instances of these kinds (prefab names), laid out as far as the last of them; kinds an alt biome
-        /// adds left out.
+        /// The instances of these kinds (prefab names), laid out as far as the last of them.
         /// </summary>
         public List<Placed> PlaceKinds(IReadOnlyCollection<string> prefabs, CancellationToken cancel = default)
         {
             int count = _state.Ordered.FindLastIndex(r => prefabs.Contains(r.Prefab)) + 1;
-            return [.. Until(count, cancel).Where(p => prefabs.Contains(p.Rule.Prefab) && p.Rule.AltBiome == null)];
+            return [.. Until(count, cancel).Where(p => prefabs.Contains(p.Rule.Prefab))];
         }
 
         /// <summary>

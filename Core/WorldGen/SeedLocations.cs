@@ -12,10 +12,10 @@ namespace ValheimGen;
 /// The game picks each try's zone from a biome map of the world (AltBiomeWorldData: 2048 x 2048 points
 /// 12 m apart, each biome's points listed in the order its flood fill met them), then checks the spot
 /// as ZoneSystem does. Each location kind starts Unity's Random afresh from the seed and its name, so
-/// the result is the game's, with one exception: alt biomes (Dark Meadows, Lox Plains...) are given to
-/// biome areas in an order the game shuffles with an unseeded random, different at each load. The few
-/// kinds an alt biome adds or blocks cannot be known (Uncertain), and are left out; the prioritized
-/// kinds (start, bosses, traders...) come first and never depend on them.
+/// the result is the game's. The kinds an alt biome (Dark Meadows, Lox Plains...) adds or blocks are
+/// checked against the alt biomes laid out as the game lays them out (AltBiomeLayout), the first time
+/// such a kind is tried; the prioritized kinds (start, bosses, traders...) come first and never depend
+/// on them.
 /// </remarks>
 public static partial class SeedLocations
 {
@@ -38,10 +38,6 @@ public static partial class SeedLocations
         /// The game's order: prioritized kinds first, otherwise as listed; disabled and empty kinds left out.
         /// </summary>
         public List<Rule> Ordered { get; } = [.. rules.Locations.OrderByDescending(l => l.Prioritized != 0).Where(l => l.Enable != 0 && l.Quantity != 0)];
-        /// <summary>
-        /// Names of the kinds some alt biome blocks.
-        /// </summary>
-        public HashSet<string> Blocked { get; } = [.. rules.AltBiomes.SelectMany(a => a.BlockLocationNames)];
     }
 
     /// <summary>
@@ -90,11 +86,6 @@ public static partial class SeedLocations
     public sealed record Placed(Rule Rule, float X, float Y, float Z);
 
     /// <summary>
-    /// The kinds whose spots depend on the alt biomes (added by one, or blocked by one somewhere).
-    /// </summary>
-    public static bool Uncertain(Rule r) => Uncertain(_state, r);
-
-    /// <summary>
     /// The game's order: prioritized kinds first, otherwise as listed; disabled and empty kinds left out.
     /// </summary>
     public static IReadOnlyList<Rule> Ordered => _state.Ordered;
@@ -119,8 +110,21 @@ public static partial class SeedLocations
     }
 
     /// <summary>
-    /// The seed's location instances, the uncertain kinds left out (a kind's instances are the same
-    /// whichever is asked).
+    /// A world's alt biomes: its own (Expand World Data's location rules), else the game's.
+    /// </summary>
+    internal static IReadOnlyList<AltBiomeRule> AltBiomeRulesFor(WorldGenerator gen) => StateFor(gen).Rules.AltBiomes;
+
+    /// <summary>
+    /// A world's alt biome layout, made the first time it is asked for (on a biome point map of its own, on every core
+    /// but one) and kept while the generator lives.
+    /// </summary>
+    /// <param name="gen">The world's generator.</param>
+    /// <param name="cancel">Stops the layout (throws; nothing is kept then).</param>
+    internal static AltBiomeLayout AltBiomesOf(WorldGenerator gen, CancellationToken cancel = default) =>
+        AltBiomeLayout.Of(gen, AltBiomeRulesFor(gen), () => new BiomeMap(gen, parallel: true, cancel), cancel);
+
+    /// <summary>
+    /// The seed's location instances (a kind's instances are the same whichever is asked).
     /// </summary>
     /// <param name="gen">The seed's generator.</param>
     /// <param name="which">How far to lay out.</param>
@@ -131,14 +135,8 @@ public static partial class SeedLocations
 
     /// <summary>
     /// The instances of these kinds (prefab names), the game's kinds before them laid out too (a few
-    /// seconds when it goes past the prioritized ones). A kind an alt biome blocks somewhere is given
-    /// everywhere (close to the game: an alt biome covers a few areas only).
+    /// seconds when it goes past the prioritized ones).
     /// </summary>
     public static List<Placed> PlaceKinds(WorldGenerator gen, IReadOnlyCollection<string> prefabs, bool parallel = false, CancellationToken cancel = default) =>
         new Layout(gen, parallel).PlaceKinds(prefabs, cancel);
-
-    /// <summary>
-    /// Whether a kind depends on the alt biomes under these rules.
-    /// </summary>
-    private static bool Uncertain(State state, Rule r) => r.AltBiome != null || state.Blocked.Contains(r.Name);
 }

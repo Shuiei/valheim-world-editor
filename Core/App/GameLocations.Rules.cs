@@ -51,4 +51,33 @@ public static partial class GameLocations
         rule.Prefab = manifest.Names.GetValueOrDefault(hex) ?? l["m_prefabName"].AsString;
         return rule;
     }
+
+    /// <summary>
+    /// One AltBiome: each rule property from the game's field its JSON name gives (m_ before it); a field the asset
+    /// lacks keeps the game's default.
+    /// </summary>
+    private static SeedLocations.AltBiomeRule AltBiome(AssetTypeValueField a)
+    {
+        var alt = new SeedLocations.AltBiomeRule();
+        foreach (var prop in typeof(SeedLocations.AltBiomeRule).GetProperties())
+        {
+            string key = prop.GetCustomAttributes(typeof(System.Text.Json.Serialization.JsonPropertyNameAttribute), false)
+                .OfType<System.Text.Json.Serialization.JsonPropertyNameAttribute>().Single().Name;
+            var f = a["m_" + key];
+            if (f.IsDummy)
+            {
+                continue;
+            }
+            object? value = prop.PropertyType switch
+            {
+                var t when t == typeof(bool) => f.Value.ValueType == AssetValueType.Bool ? f.AsBool : f.AsInt != 0,
+                var t when t == typeof(int) => f.AsInt,
+                var t when t == typeof(float) => f.AsFloat,
+                var t when t == typeof(string) => f.AsString,
+                _ => Items(f).Select(s => s.AsString).ToList(),
+            };
+            prop.SetValue(alt, value);
+        }
+        return alt;
+    }
 }

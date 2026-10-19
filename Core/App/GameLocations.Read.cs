@@ -43,7 +43,7 @@ public static partial class GameLocations
         foreach (var a in Items(scene.Alts!))
         {
             string name = a["m_name"].AsString;
-            rules.AltBiomes.Add(new SeedLocations.AltBiomeRule { Name = name, BlockLocationNames = [.. Items(a["m_blockLocationNames"]).Select(s => s.AsString)] });
+            rules.AltBiomes.Add(AltBiome(a));
             rules.Locations.AddRange(Items(a["m_addLocations"]).Select(l => Location(l, manifest, name)));
         }
         return rules;

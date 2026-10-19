@@ -126,5 +126,5 @@ public static partial class GameLocations
     /// <summary>
     /// What the cache was written by: rules read by another editor build are read again.
     /// </summary>
-    private static readonly string CacheVersion = "rules-1 " + typeof(GameLocations).Assembly.ManifestModule.ModuleVersionId;
+    private static readonly string CacheVersion = "rules-2 " + typeof(GameLocations).Assembly.ManifestModule.ModuleVersionId;
 }

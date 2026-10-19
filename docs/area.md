@@ -122,9 +122,12 @@ How it decides what grows:
   stands within 3 m (a tree still there is not doubled), and within 4 m of a building piece.
 - Kinds the world cannot make are left out.
 
-What it cannot know, and leaves out: the game's physics checks against objects already standing, the
-clear ground that the game keeps round its locations (villages, dungeon entrances...), and the Deep
-North's other biomes.
+It follows the **alt biomes** (Dark Meadows, Rock Black Forest...): the areas that get one are those the game
+gives it, from the seed. There, what the alt biome adds grows (mushrooms, fireflies, ruined walls...), and
+what it keeps out does not.
+
+What it cannot know, and leaves out: the game's physics checks against objects already standing, and the
+clear ground that the game keeps round its locations (villages, dungeon entrances...).
 
 It works on up to 16 zones at once (256 × 256 m): choose a smaller selection for more. The result is
 one undo step; **Save** writes it.

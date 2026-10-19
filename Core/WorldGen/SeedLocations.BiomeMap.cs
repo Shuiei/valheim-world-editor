@@ -41,6 +41,11 @@ public static partial class SeedLocations
         private readonly bool _data;
 
         /// <summary>
+        /// The seed's generator (the heights of the points the alt biome layout reads again).
+        /// </summary>
+        private readonly WorldGenerator _gen;
+
+        /// <summary>
         /// A map coordinate to world metres (the point's middle).
         /// </summary>
         public float MapToWorld(float x) => Grid.MapToWorld(x);
@@ -70,6 +75,7 @@ public static partial class SeedLocations
         /// <param name="cancel">Stops the reading (throws).</param>
         public BiomeMap(WorldGenerator gen, bool parallel, CancellationToken cancel)
         {
+            _gen = gen;
             _data = gen.Rules.DataInstalled;
             Grid = BiomeGrid.Of(gen.Rules);
             _cell = new byte[Size * Size];
@@ -81,8 +87,7 @@ public static partial class SeedLocations
                 {
                     float wx = MapToWorld(j);
                     int k = j + i * Size;
-                    float edge = gen.Rules.TotalRadius;
-                    if (wx * wx + wy * wy > edge * edge)
+                    if (Beyond(wx, wy))
                     {
                         _cell[k] = Sea;
                         continue;
@@ -92,6 +97,34 @@ public static partial class SeedLocations
                     _cell[k] = (byte)((IndexOf(b) & BiomeBits) | (gen.GetBiomeHeight(b, wx, wy, out _) >= WorldGenerator.LiteralWaterLevel ? Above : 0));
                 }
             });
+        }
+
+        /// <summary>
+        /// Whether a point is past the world's edge (the game's 10500 m, Expand World Size's total radius): ocean then.
+        /// </summary>
+        private bool Beyond(float wx, float wy)
+        {
+            float edge = _gen.Rules.TotalRadius;
+            return wx * wx + wy * wy > edge * edge;
+        }
+
+        /// <summary>
+        /// A point's biome index (k = x + y * Size).
+        /// </summary>
+        internal int IndexAt(int k) => _cell[k] & BiomeBits;
+
+        /// <summary>
+        /// A point's biome (the flag of its index).
+        /// </summary>
+        internal Heightmap.Biome BiomeAt(int k) => BiomeTable.AtIndex(IndexAt(k), _data);
+
+        /// <summary>
+        /// A point's height as the game keeps it (PointHeights): the biome's height there, -1000 past the world's edge.
+        /// </summary>
+        internal float HeightAt(int x, int y)
+        {
+            float wx = MapToWorld(x), wy = MapToWorld(y);
+            return Beyond(wx, wy) ? -1000f : _gen.GetBiomeHeight(BiomeAt(x + y * Size), wx, wy, out _);
         }
 
         /// <summary>

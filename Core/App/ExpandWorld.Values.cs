@@ -19,6 +19,9 @@ public static partial class ExpandWorld
     internal static int? Int(string? value) =>
         int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int i) ? i : null;
 
+    /// <summary>A text as the mod keeps a name it may leave blank: null when blank, else without spaces around.</summary>
+    internal static string? NonBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
     /// <summary>A setting's true or false; the default when missing or neither.</summary>
     internal static bool Bool(string? value, bool fallback) => bool.TryParse(value, out bool b) ? b : fallback;
 }

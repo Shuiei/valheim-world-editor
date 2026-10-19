@@ -282,6 +282,15 @@ patches (the zone's middle for wide kinds, the forced start temple, its distance
 choice or a scale by axis) are branches on the rules in `SeedLocations.Placer` and `Regrow`, each mirrored as the
 mod does it, quirks included (`.claude/docs/expand-world-design.md` §2.4 lists them).
 
+The alt biomes (Dark Meadows, Rock Black Forest...) are laid out as the game lays them out each time a world
+loads, all from the seed: `SeedLocations.AltBiomeLayout` cuts the biome point map (`BiomeGrid`: the game's 2048
+points of 12 m, or the grid Expand World Size sizes to the world) into areas, measures each along its edge, then
+gives each alt biome to areas with the game's shuffle and draws, Expand World Data's forced areas and Expand World
+Size's stretch included. It is made once per generator (`AltBiomeLayout.Of`) and asked only for a kind or rule that
+depends on an alt biome (one it adds, or one in a block list), so the start, bosses and traders never wait for it.
+`WorldCheck altbiomes`, `locations` and `regrow` compare the layout, every location and Regrow with what the game
+made (development.md).
+
 The pages follow: the seed preview covers the rules' radius (`SeedPreview.Preview.Radius`), a new world is made with
 the rules (`WorldCreator.Create`'s `rules`), the overview's texel grows with the world (`MapData.TexelMeters`), and
 the Desktop names and colours a biome of the biome file through the table (`ZoneFilter.BiomeName`,

@@ -9,8 +9,8 @@ public static partial class GameCatalogues
     /// The game's vegetation rules, ZoneSystem's m_vegetation then the LocationLists' (by m_sortOrder), as
     /// the game merges them; "Regrow nature" places by these rules. Read at the editor's start (GameData):
     /// only the main scene's bundles, where ZoneSystem and the lists are (as for GameLocations), then the
-    /// prefabs' and scripts' bundles. Alt biomes' extra vegetation (Deep North parts the editor's generator
-    /// does not model) is left out. "draws":
+    /// prefabs' and scripts' bundles. The alt biomes' added vegetation comes last, in the alt biomes' order, each
+    /// rule with its alt biome's name ("altBiome": it grows only in that alt biome's areas). "draws":
     /// the random draws the prefab's components make in Awake when the game creates it (they shift the
     /// generator's sequence for the rest of the rule): LodFadeInOut (with a LODGroup: the camera is more
     /// than 20 m away while zones generate around a player), MineRock5, Floating, LightFlicker, Fish one
@@ -61,6 +61,10 @@ public static partial class GameCatalogues
         /// </summary>
         private readonly Dictionary<(long Order, string First, int Count), List<(Dict Rule, Ref Prefab)>> _lists = [];
         /// <summary>
+        /// The alt biomes' added rules (each with "altBiome"), null until the alt biome list is found.
+        /// </summary>
+        private List<(Dict Rule, Ref Prefab)>? _alts;
+        /// <summary>
         /// Whether each script has vegetation (by its file and script index), for the bundle being read.
         /// </summary>
         private readonly Dictionary<(Bundle.Inner, ushort), bool> _byScript = [];
@@ -99,16 +103,27 @@ public static partial class GameCatalogues
             ushort index = info.GetScriptIndex(f.Assets.file);
             if (!_byScript.TryGetValue((f, index), out bool has))
             {
-                _byScript[(f, index)] = has = b.FieldNames(f, info).Contains("m_vegetation");
+                var fields = b.FieldNames(f, info);
+                _byScript[(f, index)] = has = fields.Contains("m_vegetation") || fields.Contains("m_alts");
             }
             return has;
         }
 
         /// <summary>
-        /// Takes the rules of a ZoneSystem (the first one found) or of a LocationList (each sort order once).
+        /// Takes the rules of a ZoneSystem (the first one found), of a LocationList (each sort order once) or of the
+        /// alt biome list (the first one found).
         /// </summary>
         private void TakeList(Bundle.Inner f, AssetTypeValueField d)
         {
+            if (Has(d, "m_alts"))
+            {
+                _alts ??= [.. d["m_alts.Array"].Children.SelectMany(a => Rules(f, a["m_addVegetation.Array"].Children).Select(r =>
+                {
+                    r.Rule["altBiome"] = a["m_name"].AsString;
+                    return r;
+                }))];
+                return;
+            }
             var vegs = d["m_vegetation.Array"].Children;
             if (Has(d, "m_zoneSize"))
             {
@@ -123,7 +138,7 @@ public static partial class GameCatalogues
         /// <summary>
         /// The rules of a vegetation list (fields of <c>Keep</c>) with their prefabs.
         /// </summary>
-        private static List<(Dict, Ref)> Rules(Bundle.Inner f, List<AssetTypeValueField> vegs) => [.. vegs.Select(v =>
+        private static List<(Dict Rule, Ref Prefab)> Rules(Bundle.Inner f, List<AssetTypeValueField> vegs) => [.. vegs.Select(v =>
         {
             var rule = new Dict();
             foreach (string k in Keep.Where(k => Has(v, k)))

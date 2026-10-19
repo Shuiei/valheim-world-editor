@@ -228,8 +228,12 @@ public class GameCataloguesTests
         // Pickable that respawns, not its child's.
         Assert.Equal([3L, 1L, 1L], rules.Take(3).Select(r => r!["draws"]!.GetValue<long>()));
         Assert.Equal(1.0, rules[0]!["min"]!.GetValue<double>());
-        Assert.Equal(3 + order.Sum(o => o.Vegetation) + 1, rules.Count);
-        Assert.Equal("Extra", rules[^1]!["name"]!.GetValue<string>());
+        Assert.Equal(3 + order.Sum(o => o.Vegetation) + 2, rules.Count);
+        Assert.Equal("Extra", rules[^2]!["name"]!.GetValue<string>());
+        Assert.Null(rules[^2]!["altBiome"]);
+        // The alt biomes' own rules last, each with its alt biome.
+        Assert.Equal("IceShards", rules[^1]!["name"]!.GetValue<string>());
+        Assert.Equal("DeepNorth_Ice", rules[^1]!["altBiome"]!.GetValue<string>());
     }
 
     [Fact]

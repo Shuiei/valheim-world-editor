@@ -33,6 +33,20 @@ public sealed partial class WorldGenerator
     }
 
     /// <summary>
+    /// The alt biomes the world rules force onto a biome area whose middle is at this point (the mod's
+    /// GetAltBiomeEntry): those of the first rule naming alt biomes the point passes; null for none, and without
+    /// such rules. The point is the area's middle as the game keeps it, in world metres, read as the mod reads it (in
+    /// the generator's coordinates, stretched once more).
+    /// </summary>
+    internal IReadOnlyList<string>? ForcedAltBiomesAt(float x, float z) =>
+        _v.AltBiomeRules.Count == 0 ? null : RuleAt(_v.AltBiomeRules, x, z, Mathf.Atan2(x, z), legacy: false)?.AltBiomes;
+
+    /// <summary>
+    /// Whether any world rule forces alt biomes (the mod's patches of the alt biome layout apply only then).
+    /// </summary>
+    internal bool ForcesAltBiomes => _v.AltBiomeRules.Count > 0;
+
+    /// <summary>
     /// How hot the sea is at a point under the world rules (the mod's GetBoiling, which stands in for the game's
     /// "is Ashlands" and its ocean gradient): the rule's boiling times the metres past its inner edge (or its
     /// rectangle's) over 300; -1 where the rule the point passes does not boil, or none does.

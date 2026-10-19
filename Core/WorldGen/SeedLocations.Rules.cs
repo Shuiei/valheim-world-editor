@@ -240,23 +240,6 @@ public static partial class SeedLocations
     public sealed record DistanceRule([property: JsonPropertyName("name")] string Name, [property: JsonPropertyName("distance")] float Distance);
 
     /// <summary>
-    /// An alt biome (Dark Meadows, Lox Plains...) and the location kinds it keeps out of its areas.
-    /// </summary>
-    public sealed class AltBiomeRule
-    {
-        /// <summary>
-        /// The alt biome's name.
-        /// </summary>
-        [JsonPropertyName("name")]
-        public string Name { get; set; } = "";
-        /// <summary>
-        /// Names (Rule.name) of the location kinds it blocks.
-        /// </summary>
-        [JsonPropertyName("blockLocationNames")]
-        public List<string> BlockLocationNames { get; set; } = [];
-    }
-
-    /// <summary>
     /// The game's rules: its locations in its order (ZoneSystem's list, the location lists, the alt
     /// biomes' additions) and the alt biomes.
     /// </summary>

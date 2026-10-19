@@ -58,7 +58,7 @@ public class SeedLocationsPlacementTests
         Assert.Equal(10, placed.Count(p => p.Rule.Prefab == "BogWitch_Camp"));
         Assert.Equal(10, placed.Count(p => p.Rule.Prefab == "Vendor_BlackForest"));
         // Only the kinds laid out first, none an alt biome decides.
-        Assert.All(placed, p => Assert.True(p.Rule.Prioritized != 0 && !SeedLocations.Uncertain(p.Rule), p.Rule.Prefab));
+        Assert.All(placed, p => Assert.True(p.Rule.Prioritized != 0, p.Rule.Prefab));
         // Unity's Random is put back as it was.
         ValheimGen.UnityEngine.Random.InitState(42);
         float before = ValheimGen.UnityEngine.Random.Value;

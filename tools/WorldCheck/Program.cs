@@ -15,9 +15,18 @@ using TerrainEditor.Save;
 //   objects <world> [prefab]      the most common kinds of saved objects; with a prefab (name or
 //                                 hash), each of its objects with its saved bytes, to check them
 //                                 byte by byte (ObjectsCheck)
+//   altbiomes <dump> <seed> [valheim folder]
+//                                 the biome areas and alt biomes against those the game made
+//                                 (the AltDump test plugin's file) (AltBiomesCheck)
+//   locations <dump> <seed> [valheim folder]
+//                                 every location against those the game laid out (the
+//                                 AltDump test plugin's location file) (LocationsCheck)
+//   regrow <world> <zones> [--no-alts] [--all-kinds]
+//                                 Regrow nature on zones the game generated against what it
+//                                 put there (the AltDump test plugin's zone file) (RegrowCheck)
 if (args.Length < 2)
 {
-    Console.Error.WriteLine("usage: WorldCheck verify <dump> [seed] | verify-ingame <world> <file> | selftest-save <world copy> | inspect <world> | summary <world> | create <folder> <name> <seed> [radius] [--flat] | look <seed> [metres] | objects <world> [prefab]");
+    Console.Error.WriteLine("usage: WorldCheck verify <dump> [seed] | verify-ingame <world> <file> | selftest-save <world copy> | inspect <world> | summary <world> | create <folder> <name> <seed> [radius] [--flat] | look <seed> [metres] | objects <world> [prefab] | altbiomes <dump> <seed> [valheim folder] | locations <dump> <seed> [valheim folder] | regrow <world> <zones> [--no-alts] [--all-kinds]");
     return 2;
 }
 if (args[0] == "create")
@@ -27,6 +36,14 @@ if (args[0] == "create")
 if (args[0] == "look")
 {
     return LookCheck.Run(args);
+}
+if (args[0] == "altbiomes")
+{
+    return AltBiomesCheck.Run(args);
+}
+if (args[0] == "locations")
+{
+    return LocationsCheck.Run(args);
 }
 if (args[0] == "verify")
 {
@@ -66,6 +83,8 @@ switch (args[0])
         return SummaryCheck.Run(world, terrain, stopwatch);
     case "objects":
         return ObjectsCheck.Run(args, world);
+    case "regrow":
+        return RegrowCheck.Run(args, world, terrain);
     default:
         Console.Error.WriteLine("unknown check " + args[0]);
         return 2;
