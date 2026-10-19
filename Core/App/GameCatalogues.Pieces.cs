@@ -27,6 +27,10 @@ public static partial class GameCatalogues
     /// Unity's class id of a Mesh.
     /// </summary>
     private const int MeshType = (int)AssetClassID.Mesh;
+    /// <summary>
+    /// Unity's class id of a Rigidbody.
+    /// </summary>
+    private const int RigidbodyType = (int)AssetClassID.Rigidbody;
 
     /// <summary>
     /// Whether a Unity class id is one of the colliders read here (box, mesh, sphere, capsule).

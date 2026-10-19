@@ -99,6 +99,25 @@ public class StabilityTests
     }
 
     [Fact]
+    public void APoleAgainstADoorsFrameHoldsAndAgainstItsLeafFalls()
+    {
+        // A wood door standing on the ground (its threshold at the ground), and two 2 m poles off the ground beside it:
+        // one against its post, one against the face of its leaf. The leaf swings on a Rigidbody, which the game's
+        // support check leaves out: it holds nothing.
+        var pieces = new List<Stability.Piece>
+        {
+            new("wood_door", new Vector3(0, Ground + 1.0091f, 0), Quaternion.Identity),
+            new("wood_pole2", new Vector3(1.3f, Ground + 1.5f, 0), Quaternion.Identity),
+            new("wood_pole2", new Vector3(0, Ground + 1.5f, 0.35f), Quaternion.Identity),
+        };
+        var r = Stability.Solve(pieces, Flat);
+        Assert.Equal(100, r.Support[0], 1);
+        Assert.DoesNotContain(1, r.Falls);
+        Assert.InRange(r.Support[1], 10, 100);
+        Assert.Equal(2, Assert.Single(r.Falls));
+    }
+
+    [Fact]
     public void EveryMaterialHasTheGamesSupport()
     {
         // Ancient and ice, the strongest and a stone-like one; an unknown material gives no support at all.

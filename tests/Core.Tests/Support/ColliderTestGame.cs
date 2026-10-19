@@ -53,4 +53,21 @@ internal static class ColliderTestGame
         game.Save();
         return new GameCatalogues.Game(game.BundlesDir);
     }
+
+    /// <summary>
+    /// <see cref="Piece"/> for a building piece the support scan reads: its root has a Piece and a wood WearNTear that
+    /// supports, then what <paramref name="colliders"/> adds.
+    /// </summary>
+    /// <param name="game">The game the bundle is in (disposed by the caller).</param>
+    /// <param name="b">The bundle the piece is built in.</param>
+    /// <param name="colliders">Adds the piece's colliders to its root; returns the path id of the object the test reads.</param>
+    /// <param name="pid">The path id <paramref name="colliders"/> returned.</param>
+    /// <returns>The saved game, read back: open its bundles by name.</returns>
+    public static GameCatalogues.Game WoodPiece(TestGame game, TestBundle b, Func<PrefabNode, long> colliders, out long pid) =>
+        Piece(game, b, r =>
+        {
+            r.Mono("Piece", new Fields { ["m_category"] = 2, ["m_resources"] = new List<Fields>() });
+            r.Mono("WearNTear", new Fields { ["m_materialType"] = 0, ["m_supports"] = true });
+            return colliders(r);
+        }, out pid);
 }
