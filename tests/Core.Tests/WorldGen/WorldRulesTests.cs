@@ -39,6 +39,25 @@ public class WorldRulesTests
     }
 
     [Fact]
+    public void RulesWithListsCompareByTheirContents()
+    {
+        var rule = new BiomeRule { Biome = Heightmap.Biome.Swamp, MaxDistance = 3000f };
+        var a = new WorldRules { World = [rule], Territories = [new Territory { Name = "t" }] };
+        var b = new WorldRules { World = [rule with { }], Territories = [new Territory { Name = "t" }] };
+        Assert.Equal(a, b);
+        Assert.Equal(a.GetHashCode(), b.GetHashCode());
+        Assert.Equal(a.Stamp, b.Stamp);
+        Assert.False(a.IsVanilla);
+        Assert.NotEqual(a, new WorldRules { World = [rule with { MaxDistance = 4000f }] });
+        // A copy with a change is told apart: nothing of the stamp is kept across "with".
+        Assert.NotEqual(a, a with { Radius = 20000f });
+        Assert.Contains("\"MaxDistance\":3000", a.Stamp);
+        // An infinite half size (no rectangle limit) is written by name.
+        Assert.Contains("Infinity", new WorldRules { World = [new BiomeRule()] }.Stamp);
+        Assert.Contains("Lava Fields", new WorldRules { Biomes = new BiomeTable([.. BiomeTable.Vanilla.Biomes, new BiomeInfo { Value = (Heightmap.Biome)0x400, Id = "Lava Fields" }]) }.Stamp);
+    }
+
+    [Fact]
     public void HeightsConvertAsTheModConvertsThem()
     {
         // 200 m a generator unit; altitudes are from the water level.

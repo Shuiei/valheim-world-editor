@@ -6,14 +6,18 @@ namespace TerrainEditor.App;
 /// <see cref="ValheimGen.WorldRules"/>: the game's own values unless the Expand World switch in Settings is on
 /// (<see cref="AppSettings.ExpandWorld"/>); then the Size settings the world file keeps (every non-default one, as
 /// "ews_&lt;setting&gt; &lt;value&gt;" among the starting global keys; a world without any uses the Size settings
-/// file), and the Rivers settings file, both from the first BepInEx folder the editor knows that has any of the mods.
+/// file), the Rivers settings file, and the Data settings file and data files, all from the first BepInEx folder the
+/// editor knows that has any of the mods.
 /// </summary>
 /// <remarks>
 /// Followed: Expand World Size 1.45 (expand_world_size.cfg; WorldSettings: the keys), Expand World Rivers 1.11
-/// (expand_world_rivers.cfg), Expand World Data 1.79 (expand_world_data.cfg and the expand_world folder, whose data
-/// the editor does not read yet: only that the mod is there). The parts: this file (the mods in a BepInEx folder),
-/// ExpandWorld.Resolve (a world's rules and the log), ExpandWorld.Rules (the rules from the keys and files),
-/// ExpandWorld.Describe, ExpandWorld.Keys, ExpandWorld.Cfg and ExpandWorld.Values (reading what the mods write).
+/// (expand_world_rivers.cfg), Expand World Data 1.79 (expand_world_data.cfg and the expand_world folder: the biome,
+/// world and territory files so far; the location, vegetation and alt biome files are not read yet). The parts: this
+/// file (the mods in a BepInEx folder), ExpandWorld.Resolve (a world's rules and the log), ExpandWorld.Rules (the
+/// rules from the keys and files), ExpandWorld.Describe, ExpandWorld.Keys, ExpandWorld.Cfg and ExpandWorld.Values
+/// (reading what the mods write), ExpandWorld.Data (the data files, through <see cref="YamlReader"/>),
+/// ExpandWorld.Fields (an entry's values), ExpandWorld.Biomes, ExpandWorld.World and ExpandWorld.Territories (the
+/// files' entries as the rules' biome table, world rules and territories).
 /// </remarks>
 public static partial class ExpandWorld
 {

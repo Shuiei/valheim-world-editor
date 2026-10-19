@@ -5,22 +5,32 @@ namespace ValheimGen;
 
 /// <summary>
 /// What a world generation mod can change about how a world is made: the Expand World Size settings (radius,
-/// stretch, altitude) and the Expand World Rivers settings (water level, lakes, rivers, streams). The generator
-/// reads every value the game has as a literal from here; <see cref="Vanilla"/> gives the game's own, and with
-/// it every formula collapses to the literal it replaces (a generator with <see cref="Vanilla"/> is the game's
-/// to the bit, see WorldGeneratorReferenceTests). The editor reads them from the world file and the mods' settings
-/// files (TerrainEditor.App.ExpandWorld).
+/// stretch, altitude), the Expand World Rivers settings (water level, lakes, rivers, streams) and Expand World Data's
+/// biomes, world rules and territories. The generator reads every value the game has as a literal from here;
+/// <see cref="Vanilla"/> gives the game's own, and with it every formula collapses to the literal it replaces (a
+/// generator with <see cref="Vanilla"/> is the game's to the bit, see WorldGeneratorReferenceTests). The editor reads
+/// them from the world file and the mods' settings and data files (TerrainEditor.App.ExpandWorld).
 /// </summary>
 /// <remarks>
 /// Each value is named after the mod's setting and keeps its unit: metres, or a multiplier. Where the mod puts a
 /// value in the game's code in a particular floating-point type (a float where the game had 10000f, a double
 /// where it had 6000.0), the generator computes it in that type at the place of use, so this record only
-/// carries the settings themselves.
+/// carries the settings themselves. Two rules are the same when every setting is (<see cref="Equals(WorldRules)"/>
+/// compares them as JSON, lists and tables included).
 /// </remarks>
 public sealed record WorldRules
 {
+    /// <summary>
+    /// How the stamp is written: the settings in their declared order, nothing else (infinite distances by name).
+    /// Declared first: <see cref="Vanilla"/>'s JSON needs it.
+    /// </summary>
+    private static readonly JsonSerializerOptions StampOptions = new() { DefaultIgnoreCondition = JsonIgnoreCondition.Never, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
+
     /// <summary>The game's own values.</summary>
     public static WorldRules Vanilla { get; } = new();
+
+    /// <summary>The game's own values as JSON, what <see cref="IsVanilla"/> compares with.</summary>
+    private static readonly string VanillaJson = Vanilla.Json;
 
     // ---- Which mods are installed: a few of their patches apply even at their default settings.
     /// <summary>
@@ -192,10 +202,56 @@ public sealed record WorldRules
     /// <summary>A stream's waves are a this-th of its length long (the game's 20).</summary>
     public float StreamCurveWaveLength { get; init; } = 20f;
 
+    // ---- Expand World Data.
+    /// <summary>
+    /// The older evaluation of the world rules (the mod's "Legacy generation", for worlds made before it changed):
+    /// altitude limits inclusive, a point on a rule's outer edge inside it, no rectangles, the noise test strict.
+    /// </summary>
+    public bool LegacyGeneration { get; init; }
+
+    /// <summary>
+    /// How many waves the Ashlands' and the Deep North's edges (and every rule's distance limits) make round the world
+    /// (the mod's "Wiggle frequency"; the game's 20).
+    /// </summary>
+    public float WiggleFrequency { get; init; } = 20f;
+
+    /// <summary>The world's biomes: the game's nine, or those and the biome file's (<see cref="BiomeTable.Vanilla"/> by default).</summary>
+    public BiomeTable Biomes { get; init; } = BiomeTable.Vanilla;
+
+    /// <summary>
+    /// Whether the biome file is in use (it has entries and its switch is on): then a biome's ground is its terrain
+    /// biome's, the map's mask follows the terrain biome too, and every height passes the mod's postfix, which takes the
+    /// water level off and puts it back (a rounding the game's own heights do not have).
+    /// </summary>
+    public bool BiomeData { get; init; }
+
+    /// <summary>
+    /// The world rules (the world file, in order), or null for the game's own biome layout (the file's switch off, or
+    /// no entries). With rules, the first one a point passes names its biome, none the ocean; "is Ashlands" and the
+    /// sea's heat come from the rules' boiling.
+    /// </summary>
+    public IReadOnlyList<BiomeRule>? World { get; init; }
+
+    /// <summary>Whether any world rule limits its sector (then each point's angle is worked out, as the mod does only then).</summary>
+    public bool CheckSectors { get; init; }
+
+    /// <summary>The territories the world rules can name, by their names; none by default.</summary>
+    public IReadOnlyList<Territory> Territories { get; init; } = [];
+
     // ---- Derived.
     /// <summary>Whether these are the game's own values (nothing of the generator changes).</summary>
     [JsonIgnore]
-    public bool IsVanilla => Equals(Vanilla);
+    public bool IsVanilla => ReferenceEquals(this, Vanilla) || Json == VanillaJson;
+
+    /// <summary>Whether every setting is the same as another's (as JSON: the lists and tables by their contents).</summary>
+    /// <param name="other">The other rules.</param>
+    public bool Equals(WorldRules? other) => other is not null && (ReferenceEquals(this, other) || Json == other.Json);
+
+    /// <summary>A hash of the settings (of their JSON).</summary>
+    public override int GetHashCode() => Json.GetHashCode(StringComparison.Ordinal);
+
+    /// <summary>Every setting as JSON (worked out each time: a record copied with "with" must not carry a stale one).</summary>
+    private string Json => JsonSerializer.Serialize(this, StampOptions);
 
     /// <summary>
     /// A height in metres as the generator's units (metres over 200): the mod's conversion, in float.
@@ -213,11 +269,8 @@ public sealed record WorldRules
     /// else every setting as JSON (not the record's own text, which would name this very property).
     /// </summary>
     [JsonIgnore]
-    public string Stamp => IsVanilla ? "" : JsonSerializer.Serialize(this, StampOptions);
+    public string Stamp => IsVanilla ? "" : Json;
 
     /// <summary>The settings as text: the game's own values, or the stamp.</summary>
     public override string ToString() => IsVanilla ? "WorldRules (the game's own values)" : "WorldRules " + Stamp;
-
-    /// <summary>How the stamp is written: the settings in their declared order, nothing else.</summary>
-    private static readonly JsonSerializerOptions StampOptions = new() { DefaultIgnoreCondition = JsonIgnoreCondition.Never };
 }

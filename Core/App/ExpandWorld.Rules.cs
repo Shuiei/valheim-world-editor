@@ -6,22 +6,35 @@ namespace TerrainEditor.App;
 public static partial class ExpandWorld
 {
     /// <summary>
-    /// The rules from a world's keys and a folder's settings files: the Size settings from the keys when the world has
-    /// any (a key absent is that setting's default, as the mod keeps only the non-default ones), else from the Size
-    /// settings file; the Rivers settings from their file; which mods are installed from the folder.
+    /// The rules from a world's keys and a folder's settings and data files: the Size settings from the keys when the
+    /// world has any (a key absent is that setting's default, as the mod keeps only the non-default ones), else from
+    /// the Size settings file; the Rivers settings from their file; the Data settings and data files
+    /// (<see cref="ReadData"/>); which mods are installed from the folder.
     /// </summary>
     /// <param name="keys">The world's Expand World Size keys (<see cref="Keys"/>).</param>
     /// <param name="found">The folder's mods and files (<see cref="Found.None"/> for none).</param>
-    public static WorldRules Rules(IReadOnlyDictionary<string, string> keys, Found found)
+    public static WorldRules Rules(IReadOnlyDictionary<string, string> keys, Found found) => Rules(keys, found, ReadData(found));
+
+    /// <summary>The same, with Expand World Data's files read already (their notes get those of the conversion).</summary>
+    /// <param name="keys">The world's Expand World Size keys.</param>
+    /// <param name="found">The folder's mods and files.</param>
+    /// <param name="data">Expand World Data's settings and files.</param>
+    public static WorldRules Rules(IReadOnlyDictionary<string, string> keys, Found found, DataFiles data)
     {
         var size = CfgOf(found.SizeCfg);
         var rivers = CfgOf(found.RiversCfg);
         bool fromKeys = keys.Count > 0;
         string? S(string name) => fromKeys ? keys.GetValueOrDefault(KeyOf(name)) : size.GetValueOrDefault(name);
         string? R(string name) => rivers.GetValueOrDefault(name);
+        string? D(string name) => data.Cfg.GetValueOrDefault(name);
         var v = WorldRules.Vanilla;
         bool sizeInstalled = found.Size || fromKeys;
         float radius = Float(S("World radius"), v.Radius), edge = Float(S("World edge size"), v.EdgeSize);
+        // The Ashlands' limits and the gaps: both Size and Data patch them (the mod's docs say to set them in one);
+        // a limit Data sets away from the game's wins, a gap is off when either turns it off.
+        float dataWidth = Float(D("Ashlands width restriction"), v.AshlandsWidthRestriction), dataLength = Float(D("Ashlands length restriction"), v.AshlandsLengthRestriction);
+        var biomes = data.Biomes is { Count: > 0 } biomeEntries ? BiomesOf(biomeEntries, data.Notes) : null;
+        (List<BiomeRule> Rules, bool CheckSectors)? world = data.World == null ? null : WorldOf(data.World.Count > 0 ? data.World : DefaultWorld, biomes ?? BiomeTable.Vanilla, radius, Wiggles.Of(data.Cfg), data.Notes);
         return new WorldRules
         {
             SizeInstalled = sizeInstalled,
@@ -39,11 +52,11 @@ public static partial class ExpandWorld
             OffsetX = Float(S("Offset X")),
             OffsetY = Float(S("Offset Y")),
             HeightSeed = Float(S("Height variation seed")),
-            RestrictAshlands = Bool(S("Restrict Ashlands position"), v.RestrictAshlands),
-            AshlandsWidthRestriction = Float(S("Ashlands width restriction"), v.AshlandsWidthRestriction),
-            AshlandsLengthRestriction = Float(S("Ashlands length restriction"), v.AshlandsLengthRestriction),
-            AshlandsGap = Bool(S("Ashlands gap"), v.AshlandsGap),
-            DeepNorthGap = Bool(S("Deep North gap"), v.DeepNorthGap),
+            RestrictAshlands = Bool(S("Restrict Ashlands position"), v.RestrictAshlands) && Bool(D("Restrict Ashlands position"), v.RestrictAshlands),
+            AshlandsWidthRestriction = dataWidth != v.AshlandsWidthRestriction ? dataWidth : Float(S("Ashlands width restriction"), v.AshlandsWidthRestriction),
+            AshlandsLengthRestriction = dataLength != v.AshlandsLengthRestriction ? dataLength : Float(S("Ashlands length restriction"), v.AshlandsLengthRestriction),
+            AshlandsGap = Bool(S("Ashlands gap"), v.AshlandsGap) && Bool(D("Ashlands gap"), v.AshlandsGap),
+            DeepNorthGap = Bool(S("Deep North gap"), v.DeepNorthGap) && Bool(D("Deep North gap"), v.DeepNorthGap),
             GridWidth = Int(keys.GetValueOrDefault(GridWidthKey), GridWidthFor(sizeInstalled, Int(S("Save system size"), 0), radius + edge)),
             WaterLevel = Float(R("Water level"), v.WaterLevel),
             LakeSearchInterval = Float(R("Lake search interval"), v.LakeSearchInterval),
@@ -72,6 +85,13 @@ public static partial class ExpandWorld
             StreamMaxLength = Float(R("Stream max length"), v.StreamMaxLength),
             StreamCurveWidth = Float(R("Stream curve width"), v.StreamCurveWidth),
             StreamCurveWaveLength = Float(R("Stream curve wave length"), v.StreamCurveWaveLength),
+            LegacyGeneration = Bool(D("Legacy generation"), v.LegacyGeneration),
+            WiggleFrequency = Float(D("Wiggle frequency"), v.WiggleFrequency),
+            Biomes = biomes ?? BiomeTable.Vanilla,
+            BiomeData = biomes != null,
+            World = world?.Rules,
+            CheckSectors = world?.CheckSectors ?? false,
+            Territories = data.Territories == null ? [] : TerritoriesOf(data.Territories, data.Notes),
         };
     }
 

@@ -10,8 +10,13 @@ public sealed partial class WorldGenerator
     /// </summary>
     public float GetAshlandsOceanGradient(float x, float z)
     {
+        if (_v.World != null)
+        {
+            // Expand World Data's prefix: the heat of the sea past the boiling rule's edge.
+            return Boiling(x, z);
+        }
         float shifted = z + _v.AshlandsYOffset;
-        return (float)(((double)GenMath.Length(x, shifted) - ((double)_v.AshlandsMinDistance + (double)WorldAngle(x, shifted) * 100.0)) / 300.0);
+        return (float)(((double)GenMath.Length(x, shifted) - ((double)_v.AshlandsMinDistance + (double)Wave(x, shifted) * 100.0)) / 300.0);
     }
 
     /// <summary>
@@ -25,19 +30,28 @@ public sealed partial class WorldGenerator
     internal float GetAshlandsOceanGradient(Vector3 pos) => GetAshlandsOceanGradient(Stretched(pos.X), Stretched(pos.Z));
 
     /// <summary>
-    /// The wave of the Ashlands' and the Deep North's edges: twenty swings round the world, -1 to 1.
-    /// A point's height asks for it several times: the last one is kept on the thread (by the exact
+    /// The wave of the Ashlands' and the Deep North's edges: twenty swings round the world, -1 to 1 (the game's
+    /// WorldAngle). A point's height asks for it several times: the last one is kept on the thread (by the exact
     /// bits of the point, so the answer is the one worked out again).
     /// </summary>
-    public static float WorldAngle(float x, float z)
+    public static float WorldAngle(float x, float z) => Wave(x, z, 20f);
+
+    /// <summary>
+    /// The edges' wave with this world's number of swings: the game's twenty, or Expand World Data's wiggle frequency
+    /// (its prefix on WorldAngle, applied when the frequency is not 20).
+    /// </summary>
+    private float Wave(float x, float z) => Wave(x, z, _v.WiggleFrequency);
+
+    /// <summary>The sine of a number of times the angle of (x, z) from the z axis, as the mod's prefix computes it.</summary>
+    private static float Wave(float x, float z, float frequency)
     {
-        int bx = BitConverter.SingleToInt32Bits(x), bz = BitConverter.SingleToInt32Bits(z);
-        if (_angleKnown && _angleX == bx && _angleZ == bz)
+        int bx = BitConverter.SingleToInt32Bits(x), bz = BitConverter.SingleToInt32Bits(z), bf = BitConverter.SingleToInt32Bits(frequency);
+        if (_angleKnown && _angleX == bx && _angleZ == bz && _angleF == bf)
         {
             return _angle;
         }
-        float angle = (float)Math.Sin((float)((double)(float)Math.Atan2(x, z) * 20.0));
-        (_angleX, _angleZ, _angle, _angleKnown) = (bx, bz, angle, true);
+        float angle = (float)Math.Sin((float)((double)(float)Math.Atan2(x, z) * frequency));
+        (_angleX, _angleZ, _angleF, _angle, _angleKnown) = (bx, bz, bf, angle, true);
         return angle;
     }
 
@@ -54,10 +68,10 @@ public sealed partial class WorldGenerator
     private static bool _angleKnown;
 
     /// <summary>
-    /// The bits of the point WorldAngle last worked out on this thread.
+    /// The bits of the point and the frequency Wave last worked out on this thread.
     /// </summary>
     [ThreadStatic]
-    private static int _angleX, _angleZ;
+    private static int _angleX, _angleZ, _angleF;
 
     /// <summary>
     /// A zone's area by its corner (zone x, z times 64): on a biome's edge when the corner and the
@@ -116,13 +130,13 @@ public sealed partial class WorldGenerator
     /// the rules turn the gap off). In the generator's coordinates.
     /// </summary>
     private double AshlandsGap(float x, float z) =>
-        EdgeGap(x, z + _v.AshlandsYOffset, x, z, _v.AshlandsMinDistance, _v.AshlandsGapWidth, _v.AshlandsGap);
+        EdgeGap(x, z + _v.AshlandsYOffset, Wave(x, z), _v.AshlandsMinDistance, _v.AshlandsGapWidth, _v.AshlandsGap);
 
     /// <summary>
     /// The same for the Deep North's edge (the game's CreateDeepNorthGap).
     /// </summary>
     public double CreateDeepNorthGap(float x, float z) =>
-        EdgeGap(x, z + _v.DeepNorthGapShift, x, z, _v.DeepNorthGapRadius, _v.DeepNorthGapWidth, _v.DeepNorthGap);
+        EdgeGap(x, z + _v.DeepNorthGapShift, Wave(x, z), _v.DeepNorthGapRadius, _v.DeepNorthGapWidth, _v.DeepNorthGap);
 
     /// <summary>
     /// 0 on an edge circle, rising (eased) to 1 within <paramref name="width"/> m to either side; 1 everywhere when
@@ -130,18 +144,17 @@ public sealed partial class WorldGenerator
     /// </summary>
     /// <param name="sx">x from the circle's middle.</param>
     /// <param name="sz">z from the circle's middle.</param>
-    /// <param name="x">World x, for the edge's wave.</param>
-    /// <param name="z">World z, for the edge's wave.</param>
+    /// <param name="wave">The edge's wave at the point (<see cref="Wave(float, float)"/>).</param>
     /// <param name="radius">The circle's radius.</param>
     /// <param name="width">How far from the circle the gap reaches.</param>
     /// <param name="on">Whether the gap is there at all.</param>
-    private static double EdgeGap(float sx, float sz, float x, float z, double radius, double width, bool on)
+    private static double EdgeGap(float sx, float sz, float wave, double radius, double width, bool on)
     {
         if (!on)
         {
             return 1.0;
         }
-        double past = (double)GenMath.Length(sx, sz) - (radius + (double)WorldAngle(x, z) * 100.0);
+        double past = (double)GenMath.Length(sx, sz) - (radius + (double)wave * 100.0);
         return GenMath.SmoothBlend(0.0, 1.0, (float)GenMath.Clamp01(Math.Abs(past) / width));
     }
 

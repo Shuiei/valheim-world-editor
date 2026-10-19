@@ -16,27 +16,24 @@ public static partial class SeedLocations
         public const int Size = 2048;
 
         /// <summary>
-        /// Heightmap.BiomeIndex order.
+        /// The Ashlands', Deep North's and ocean's biome indices (the same under both mappings, see <see cref="IndexOf"/>),
+        /// and the bits of a point's byte (see _cell): the index in the low six, then at or above the sea, then visited.
         /// </summary>
-        private static readonly Heightmap.Biome[] ByIndex =
-        [
-            Heightmap.Biome.None, Heightmap.Biome.Meadows, Heightmap.Biome.Swamp, Heightmap.Biome.Mountain, Heightmap.Biome.BlackForest,
-            Heightmap.Biome.Plains, Heightmap.Biome.AshLands, Heightmap.Biome.DeepNorth, Heightmap.Biome.Ocean, Heightmap.Biome.Mistlands,
-        ];
-
-        /// <summary>
-        /// The Ashlands', Deep North's and ocean's biome indices, and the bits of a point's byte (see _cell).
-        /// </summary>
-        private const byte Ash = 6, North = 7, Sea = 8, BiomeBits = 0x0F, Above = 0x10, Visited = 0x20;
+        private const byte Ash = 6, North = 7, Sea = 8, BiomeBits = 0x3F, Above = 0x40, Visited = 0x80;
 
         /// <summary>
         /// Per biome index: points as x | y &lt;&lt; 16, in the game's order (null until listed).
         /// </summary>
-        public readonly int[][] All = new int[ByIndex.Length][];
+        public readonly int[][] All = new int[BiomeTable.IndexCount][];
         /// <summary>
         /// The same, only the points at or above sea level.
         /// </summary>
-        public readonly int[][] AboveSea = new int[ByIndex.Length][];
+        public readonly int[][] AboveSea = new int[BiomeTable.IndexCount][];
+
+        /// <summary>
+        /// Whether Expand World Data is installed: its biome indices and its uniform draw apply (data files or not).
+        /// </summary>
+        private readonly bool _data;
 
         /// <summary>
         /// A map coordinate to world metres (the point's middle).
@@ -50,9 +47,16 @@ public static partial class SeedLocations
         public static int WorldToMap(float v) => (int)((v - 6f) / 12f + 1024f);
 
         /// <summary>
-        /// A single biome's index (Heightmap.BiomeIndex); -1 for combined flags.
+        /// A single biome's index (Heightmap.BiomeIndex) in the game's own mapping; -1 for combined flags and for biomes the
+        /// game does not have.
         /// </summary>
-        public static int Index(Heightmap.Biome b) => Array.IndexOf(ByIndex, b);
+        public static int Index(Heightmap.Biome b) => BiomeTable.IndexOf(b, dataInstalled: false);
+
+        /// <summary>
+        /// A single biome's index in this map: the game's mapping, or Expand World Data's when it is installed (every flag
+        /// has one then); -1 for combined flags.
+        /// </summary>
+        public int IndexOf(Heightmap.Biome b) => BiomeTable.IndexOf(b, _data);
 
         /// <summary>
         /// One byte a point: the biome index, at or above sea level, met by the fill.
@@ -67,6 +71,7 @@ public static partial class SeedLocations
         /// <param name="cancel">Stops the reading (throws).</param>
         public BiomeMap(WorldGenerator gen, bool parallel, CancellationToken cancel)
         {
+            _data = gen.Rules.DataInstalled;
             var options = new ParallelOptions { CancellationToken = cancel, MaxDegreeOfParallelism = parallel ? Math.Max(1, Environment.ProcessorCount - 1) : 1 };
             Parallel.For(0, Size, options, i =>
             {
@@ -83,7 +88,7 @@ public static partial class SeedLocations
                     }
                     Heightmap.Biome b = gen.GetBiome(wx, wy);
                     // "Above the sea" is the game's literal 30, whatever the rules put the water at.
-                    _cell[k] = (byte)(Index(b) | (gen.GetBiomeHeight(b, wx, wy, out _) >= WorldGenerator.LiteralWaterLevel ? Above : 0));
+                    _cell[k] = (byte)((IndexOf(b) & BiomeBits) | (gen.GetBiomeHeight(b, wx, wy, out _) >= WorldGenerator.LiteralWaterLevel ? Above : 0));
                 }
             });
         }
@@ -108,9 +113,38 @@ public static partial class SeedLocations
         ];
 
         /// <summary>
-        /// The biomes counted for the draw's range (every one but None).
+        /// The biomes counted for the draw's range (every one of the game's but None).
         /// </summary>
-        private static readonly Heightmap.Biome[] Counted = [.. ByIndex.Skip(1)];
+        private static readonly Heightmap.Biome[] Counted = [.. BiomeTable.GamesBiomes.Select(b => b.Value)];
+
+        /// <summary>
+        /// The biome a point is drawn from for a set of biomes: by the game's walk, or uniformly among the set's flags
+        /// (one draw of their count, the n-th lowest flag) as Expand World Data's RandomBiomeFromBiomes draws whenever
+        /// the mod is installed; one draw unless the set is a single biome or none.
+        /// </summary>
+        /// <param name="set">The biomes.</param>
+        /// <param name="uniform">The uniform draw (Expand World Data installed) rather than the game's walk.</param>
+        public static Heightmap.Biome RandomBiome(Heightmap.Biome set, bool uniform)
+        {
+            if (!uniform)
+            {
+                return RandomBiome(set);
+            }
+            uint flags = (uint)set;
+            if (flags == 0 || System.Numerics.BitOperations.IsPow2(flags))
+            {
+                return set;
+            }
+            int selected = Rnd.Range(0, System.Numerics.BitOperations.PopCount(flags));
+            for (uint rest = flags; ; rest &= rest - 1)
+            {
+                uint flag = rest & (0u - rest);
+                if (selected-- == 0)
+                {
+                    return (Heightmap.Biome)flag;
+                }
+            }
+        }
 
         /// <summary>
         /// The biome the game draws a point from for a set of biomes (see Walk); one draw unless the set is a
@@ -147,7 +181,7 @@ public static partial class SeedLocations
         /// has no point of it.</returns>
         public (float X, float Z)? RandomPoint(Heightmap.Biome biomes, bool aboveSea)
         {
-            int b = Index(RandomBiome(biomes));
+            int b = IndexOf(RandomBiome(biomes, _data));
             if (b < 0)
             {
                 return null;

@@ -92,7 +92,7 @@ public sealed partial class MapData
                     }
                 }
                 Heightmap.Biome biome = Generator.GetBiome(wx, wz);
-                layers.Set(row * size + col, h, PixelColor(biome), MaskColor(wx, wz, h, biome), paint);
+                layers.Set(row * size + col, MapHeight(h, biome), Pixel(biome, wx, wz), MaskColor(wx, wz, h, biome), paint);
             }
         });
         return layers;

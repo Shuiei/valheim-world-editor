@@ -103,6 +103,7 @@ public sealed partial class WorldGenerator
             ForestOn = ForestMultiplier != 1f;
             SetSeeds(r, offsetA, offsetB, offsetDetail, riverSeed, streamSeed);
             SetWater(r);
+            SetBiomes(r);
         }
 
         /// <summary>The world's radius in world metres (the lakes and streams are laid out over it).</summary>

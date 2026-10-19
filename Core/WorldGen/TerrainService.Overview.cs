@@ -38,7 +38,7 @@ public sealed partial class TerrainService
             {
                 int i = row * size + col;
                 float h = heights[i];
-                (float r, float g, float b) = BiomeColor(biomes[i], h, WaterLevel);
+                (float r, float g, float b) = BiomeColor(biomes[i], h, WaterLevel, Generator.Rules.Biomes);
                 if (h >= WaterLevel)
                 {
                     // Simple hill shading from the north-west.
@@ -59,15 +59,36 @@ public sealed partial class TerrainService
     }
 
     /// <summary>
-    /// The overview's colour (0..255 per channel) for a biome at a height: blue, darker with depth, below the water
-    /// level given.
+    /// The overview's colour (0..255 per channel) for one of the game's biomes at a height: blue, darker with depth,
+    /// below the water level given.
     /// </summary>
-    internal static (float, float, float) BiomeColor(Heightmap.Biome biome, float h, float water)
+    internal static (float, float, float) BiomeColor(Heightmap.Biome biome, float h, float water) => BiomeColor(biome, h, water, BiomeTable.Vanilla);
+
+    /// <summary>
+    /// The same for a world's biomes: a biome the biome file gives a map colour (with other settings, as the mod reads
+    /// it) takes that colour; a biome the game does not have takes the colour of the biome whose ground it borrows.
+    /// </summary>
+    /// <param name="biome">The biome.</param>
+    /// <param name="h">The height, metres.</param>
+    /// <param name="water">The water level, metres.</param>
+    /// <param name="table">The world's biomes.</param>
+    internal static (float, float, float) BiomeColor(Heightmap.Biome biome, float h, float water, BiomeTable table)
     {
         if (h < water)
         {
             float depth = Math.Clamp((water - h) / 60f, 0f, 1f);
             return (40 - 25 * depth, 95 - 55 * depth, 140 - 50 * depth);
+        }
+        if (table.Of(biome) is { } info)
+        {
+            if (info.HasData && info.MapColor is { A: > 0f } c)
+            {
+                return (c.R * 255f, c.G * 255f, c.B * 255f);
+            }
+            if (!BiomeTable.GamesBiomes.Any(g => g.Value == biome))
+            {
+                biome = info.Terrain;
+            }
         }
         return biome switch
         {

@@ -4,7 +4,8 @@ namespace ValheimGen;
 // Which biome a point is in: the sea where the continents dip, the Ashlands and the Deep North past
 // their curved edges (south and north), mountains where the continents rise, then swamps, mists,
 // plains and forests where their noise fields are high enough, at their distances from the middle,
-// and the Meadows elsewhere.
+// and the Meadows elsewhere. With Expand World Data's world rules, the rules instead
+// (WorldGenerator.BiomeRules).
 public sealed partial class WorldGenerator
 {
     /// <summary>
@@ -28,9 +29,14 @@ public sealed partial class WorldGenerator
         // Expand World Size: the world stretched (its prefix on the game's GetBiome divides the point).
         x = Stretched(x);
         z = Stretched(z);
+        if (_v.World != null)
+        {
+            // Expand World Data's prefix: the rules in place of the game's layout.
+            return RulesBiome(x, z, oceanLevel, waterAlwaysOcean);
+        }
         float fromMiddle = GenMath.Length(x, z);
         float land = Continent(x, z);
-        float wave = (float)((double)WorldAngle(x, z) * 100.0);
+        float wave = (float)((double)Wave(x, z) * 100.0);
         // The game's GetHeight, given the point as it is here: it stretches it again on its own way in.
         if (waterAlwaysOcean && GetHeight(x, z) <= oceanLevel)
         {
@@ -63,15 +69,17 @@ public sealed partial class WorldGenerator
         GenMath.Noise((double)(float)(((double)offset + x) / _v.BiomeStretch) * (double)0.001f, (double)(float)(((double)offset + z) / _v.BiomeStretch) * (double)0.001f);
 
     /// <summary>
-    /// Whether (x, z) is past the Ashlands' edge (south). In the generator's coordinates (<see cref="Stretched"/>).
+    /// Whether (x, z) is past the Ashlands' edge (south); with Expand World Data's world rules, whether the sea boils
+    /// there (the rule the point passes boils). In the generator's coordinates (<see cref="Stretched"/>).
     /// </summary>
     public bool IsAshlands(float x, float z) =>
-        (double)GenMath.Length(x, (float)((double)z + (double)_v.AshlandsYOffset)) > (double)_v.AshlandsMinDistance + (double)WorldAngle(x, z) * 100.0;
+        _v.World != null ? Boiling(x, z) > 0f
+        : (double)GenMath.Length(x, (float)((double)z + (double)_v.AshlandsYOffset)) > (double)_v.AshlandsMinDistance + (double)Wave(x, z) * 100.0;
 
     /// <summary>
     /// Whether (x, z) is past the Deep North's edge (north). In the generator's coordinates, but for the rivers'
     /// drawing, which asks with world metres as the game does.
     /// </summary>
     public bool IsDeepnorth(float x, float z) =>
-        GenMath.Length(x, (float)((double)z + _v.DeepNorthShift)) > (float)(_v.DeepNorthRadius + (double)(float)((double)WorldAngle(x, z) * 100.0));
+        GenMath.Length(x, (float)((double)z + _v.DeepNorthShift)) > (float)(_v.DeepNorthRadius + (double)(float)((double)Wave(x, z) * 100.0));
 }
