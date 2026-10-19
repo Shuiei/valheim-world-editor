@@ -25,7 +25,7 @@ internal sealed partial class BundleModels
         float alpha = Alpha(col[3], shader, seeThrough);
         var color = new Vector4(ModelStore.Linear(col[0]), ModelStore.Linear(col[1]), ModelStore.Linear(col[2]), alpha);
         var (map, uv) = MainTexture(m, cut || seeThrough || halfCut);
-        return new ModelStore.MaterialData(color, map, cutoff, doubleSided, uv, seeThrough);
+        return new ModelStore.MaterialData(color, map, cutoff, doubleSided, uv, seeThrough, Foliage(shader));
     }
 
     /// <summary>The main texture's name and its uv transform (scale, then offset), the first of <see cref="MainTextures"/> that the material has.</summary>

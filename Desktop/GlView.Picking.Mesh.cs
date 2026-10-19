@@ -6,7 +6,7 @@ namespace TerrainEditor.Desktop;
 public sealed partial class GlView
 {
     /// <summary>
-    /// How far along the ray a thing's drawn shape is met: by its solid parts, and by its cut-out parts
+    /// How far along the ray a thing's drawn shape is met: by its solid parts, and by its foliage parts
     /// (leaves, bushes, grass), null each where the ray misses them. Without its model (the stand-in
     /// box), its box's distance counts as solid. What the Workshop's cut hides (above <see cref="CutY"/>)
     /// is not met, as it is not drawn: a wall crossing the cut is met below it or not at all.
@@ -16,7 +16,7 @@ public sealed partial class GlView
     /// <param name="o">The ray's origin (view space).</param>
     /// <param name="d">The ray's direction, normalised.</param>
     /// <param name="box">Where the ray enters the thing's box.</param>
-    private (float? Solid, float? CutOut) MeshHit(WorldScene s, int i, Vector3 o, Vector3 d, float box)
+    private (float? Solid, float? Foliage) MeshHit(WorldScene s, int i, Vector3 o, Vector3 d, float box)
     {
         float? cutY = CutY;
         var (t, batches, rootScale) = ModelParts(s, i);
@@ -24,8 +24,8 @@ public sealed partial class GlView
         {
             return (BoxUnderCut(i, o, d, box, cutY), null);
         }
-        var (solid, cutOut, any) = PartHits(o, d, batches, Placement(s, thing, rootScale), cutY);
-        return any ? (solid, cutOut) : (BoxUnderCut(i, o, d, box, cutY), null);
+        var (solid, foliage, any) = PartHits(o, d, batches, Placement(s, thing, rootScale), cutY);
+        return any ? (solid, foliage) : (BoxUnderCut(i, o, d, box, cutY), null);
     }
 
     /// <summary>
@@ -47,8 +47,8 @@ public sealed partial class GlView
     }
 
     /// <summary>
-    /// The first object whose mesh the ray meets, solid parts before cut-out ones: the nearest solid hit, else the
-    /// nearest cut-out hit. Stops at the first box entered past the nearest solid hit.
+    /// The first object whose mesh the ray meets, solid parts before foliage: the nearest solid hit, else the
+    /// nearest foliage hit. Stops at the first box entered past the nearest solid hit.
     /// </summary>
     /// <param name="s">The scene.</param>
     /// <param name="o">The ray's origin (view space).</param>
@@ -57,8 +57,8 @@ public sealed partial class GlView
     /// <returns>The object hit (null: none), and how far along the ray it is met.</returns>
     internal (int? Hit, float Best) NearestMeshHit(WorldScene s, Vector3 o, Vector3 d, List<(float T, int I)> boxes)
     {
-        float bestSolid = float.MaxValue, bestCut = float.MaxValue;
-        int? solid = null, cutOut = null;
+        float bestSolid = float.MaxValue, bestFoliage = float.MaxValue;
+        int? solid = null, foliage = null;
         foreach (var (t, i) in boxes)
         {
             if (t > bestSolid)
@@ -66,20 +66,20 @@ public sealed partial class GlView
                 // Its box is entered past the nearest solid hit: nothing of it can be nearer.
                 break;
             }
-            var (so, cu) = MeshHit(s, i, o, d, t);
+            var (so, fo) = MeshHit(s, i, o, d, t);
             if (so is float a && a < bestSolid)
             {
                 bestSolid = a;
                 solid = i;
             }
-            if (cu is float c && c < bestCut)
+            if (fo is float c && c < bestFoliage)
             {
-                bestCut = c;
-                cutOut = i;
+                bestFoliage = c;
+                foliage = i;
             }
         }
-        int? hit = solid ?? cutOut;
-        float best = solid != null ? bestSolid : bestCut;
+        int? hit = solid ?? foliage;
+        float best = solid != null ? bestSolid : bestFoliage;
         return (hit, best);
     }
 }

@@ -192,6 +192,8 @@ no data tables. Everything is read at run time from the player's install:
 - Materials (`BundleModels.ViewMaterial`, the game's and the mods'): the main texture is `_MainTex`, else
   the first of `_Albedo`, `_BaseMap`, `_BaseColorMap`, `_MainTexture`, `_Diffuse`, `_BaseTexture` the
   material has. Cut out: Standard's `_Mode` 1, cut-out shaders, vegetation and grass (at `_Cutoff`).
+  Foliage (`MaterialData.Foliage`): vegetation and grass, which a click counts only where nothing solid is
+  behind it along the ray (`GlView.PartHits`); a cut-out piece is picked like an opaque one.
   See-through (`MaterialData.Transparent`): Standard's `_Mode` 2 and 3 (fade, transparent) and
   transparent, glass and particle shaders, no cutoff, their alpha at least `BundleModels.LeastAlpha`
   (glass the game draws all but clear still shows as a tint; refracting glass is drawn at that). A `_Mode`
