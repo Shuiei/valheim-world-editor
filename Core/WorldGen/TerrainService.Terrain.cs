@@ -45,12 +45,13 @@ public sealed partial class TerrainService
 
     /// <summary>
     /// Heightmap.m_cornerBiomes: the biome sector at each zone corner. Sectors sample GetBiome on the
-    /// 12 m grid of AltBiomeWorldData (WorldSpaceToMapSpace / MapSpaceToWorldSpace).
+    /// grid of AltBiomeWorldData (WorldSpaceToMapSpace / MapSpaceToWorldSpace; Expand World Size's for its worlds).
     /// </summary>
     /// <returns>Four biomes: corners (-x, -z), (+x, -z), (-x, +z), (+x, +z); Ocean beyond the world's edge.</returns>
     public int[] CornerBiomes(int zx, int zz)
     {
-        static float Snap(float v) => SeedLocations.BiomeMap.MapToWorld(SeedLocations.BiomeMap.WorldToMap(v));
+        var grid = BiomeGrid.Of(Generator.Rules);
+        float Snap(float v) => grid.MapToWorld(grid.WorldToMap(v));
         float x0 = zx * 64f - 32f, z0 = zz * 64f - 32f;
         return [.. new[] { (x0, z0), (x0 + 64f, z0), (x0, z0 + 64f), (x0 + 64f, z0 + 64f) }.Select(c => { float sx = Snap(c.Item1), sz = Snap(c.Item2); return sx * sx + sz * sz > MapRadius * MapRadius ? (int)Heightmap.Biome.Ocean : (int)Generator.GetBiome(sx, sz); })];
     }
