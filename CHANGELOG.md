@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.48.2 — unreleased
+
+### Fixed
+- **A new world is saved where the installed game looks for it.** On Linux, the New world page offered the native
+  game's folder first even when Valheim is the Windows build run through Proton, which keeps its worlds inside its
+  Steam prefix: a world made there never showed in the game. The installed game's own folder now comes first in
+  **Saved in** (and is the one Claude's tools use), the others after it.
+
 ## v1.48.1 — unreleased
 
 ### Fixed
