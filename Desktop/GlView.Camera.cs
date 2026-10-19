@@ -12,8 +12,10 @@ public sealed partial class GlView
     private readonly Lock _camLock = new();
     /// <summary>The point the orbit camera turns around, in view space.</summary>
     private Vector3 _target;
+    /// <summary>The orbit camera's distance (metres), turn and tilt (radians) when the editor starts.</summary>
+    private const float StartDistance = 140, StartYaw = 0.8f, StartPitch = 0.9f;
     /// <summary>The orbit camera's distance (metres), turn and tilt (radians).</summary>
-    private float _distance = 140, _yaw = 0.8f, _pitch = 0.9f;
+    private float _distance = StartDistance, _yaw = StartYaw, _pitch = StartPitch;
     /// <summary>Walk and Fly (F): the camera itself at _eyePos, looking along yaw and pitch (positive: down).</summary>
     public enum EyeMode
     {

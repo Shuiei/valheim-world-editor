@@ -21,7 +21,8 @@ public sealed class GlViewDrawingTests(EditorProcess editor) : WorldsFolder("vwe
     {
         Assert.SkipUnless(editor.Available, editor.Why ?? "");
         editor.Send($"world {TestWorldCopy.CopyInto(Dir)}");
-        Do("area 0 0 3", "key Escape", "camera 0 0 0 60 120");
+        // Walking or flying when the last test ended: back to turning around the area (camera does not change it).
+        Do("camera reset", "area 0 0 3", "key Escape", "camera 0 0 0 60 120");
     }
 
     /// <summary>

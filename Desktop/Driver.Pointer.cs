@@ -22,7 +22,7 @@ public static partial class Driver
     {
         var s = w.View.Scene ?? throw new InvalidOperationException("no area open");
         var g = new System.Numerics.Vector2(x - s.OriginX, z - s.OriginZ);
-        return w.View.ScreenOfGrid(g, 0) ?? throw new InvalidOperationException($"{x}, {z} is not in view");
+        return w.View.ScreenOfGrid(g, 0) ?? throw new InvalidOperationException($"{x}, {z} is not in view (camera: {w.View.CameraSays()})");
     }
 
     /// <summary>The one mouse pointer the driver's events come from.</summary>
@@ -79,7 +79,7 @@ public static partial class Driver
         // A point in the air: world x, height above the ground, z (pieces, for the Workshop).
         var sc = w.View.Scene ?? throw new InvalidOperationException("no area open");
         var g = new System.Numerics.Vector2(call.F(1) - sc.OriginX, call.F(3) - sc.OriginZ);
-        var p = w.View.ScreenOfGrid(g, call.F(2)) ?? throw new InvalidOperationException("not in view");
+        var p = w.View.ScreenOfGrid(g, call.F(2)) ?? throw new InvalidOperationException($"not in view (camera: {w.View.CameraSays()})");
         Mouse(w, args[0], p, args.Length > 4 ? args[4] : "left", Mods(args.Skip(5)));
         return Task.FromResult(State(w));
     }
