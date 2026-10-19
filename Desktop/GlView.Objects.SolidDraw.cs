@@ -1,4 +1,3 @@
-using System.Numerics;
 using Silk.NET.OpenGL;
 
 namespace TerrainEditor.Desktop;
@@ -19,7 +18,7 @@ public sealed partial class GlView
     /// <param name="source">The list the places come from, the same object until they change.</param>
     /// <param name="shown">The places, taken from <paramref name="source"/> only when the instances are made again.</param>
     /// <param name="made">The instances made last from this kind of list.</param>
-    private void DrawSolid(WorldScene s, object source, Func<IEnumerable<(int Prefab, Vector3 Position, Vector3 Rotation)>> shown, Solid made)
+    private void DrawSolid(WorldScene s, object source, Func<IEnumerable<SolidPlace>> shown, Solid made)
     {
         EnsureCells(s);
         bool stale = made.Source != source || made.Scene != s || made.Cells != _cellsMade;

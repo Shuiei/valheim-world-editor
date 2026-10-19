@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.56.0 — unreleased
+
+### Added
+- **The 3D view draws what item stands and armour stands hold.** An item stand shows its item hanging or lying as
+  the game shows it (a shield on the wall, a trophy, food on a table), an armour stand its armour, helmet, cape and
+  the weapons in its hands and on its back. They follow the stand (shown and hidden with its kind, moved with it)
+  and change at once when the inspector or Claude changes what the stand holds. Shields and capes are drawn in
+  their first style, and an armour stand in its resting pose. Items on stands cannot be picked: pick the stand.
+
 ## v1.55.2 — unreleased
 
 ### Fixed

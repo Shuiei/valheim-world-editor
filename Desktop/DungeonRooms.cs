@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
 
@@ -22,38 +21,15 @@ public static partial class DungeonRooms
     /// </param>
     public sealed record Dungeon(int Index, WorldScene.Thing Thing, Dungeons.Kind Kind, List<Dungeons.Placed> Rooms, Said? Problem);
 
-    /// <summary>The dungeons read for a scene, with the state they were read at (see <see cref="Now"/>).</summary>
-    private sealed record Cache((int Version, int Generation, int Count) At, IReadOnlyList<Dungeon> Dungeons);
-
-    /// <summary>What was read last, per scene.</summary>
-    private static readonly ConditionalWeakTable<WorldScene, Cache> Caches = [];
-
-    /// <summary>Scenes whose dungeons are being read again for the view.</summary>
-    private static readonly ConditionalWeakTable<WorldScene, object> Reading = [];
-
-    /// <summary>
-    /// The scene's edit version, its session's generation and its object count: when any changes, the dungeons are read
-    /// again. The generation moves when the live game changes things in place (TakeGameChanges: a dungeon laid out or
-    /// gone in game), which touches neither the edits nor the count.
-    /// </summary>
-    private static (int Version, int Generation, int Count) Now(WorldScene s)
-    {
-        lock (s.Things)
-        {
-            return s.Session is { } session
-                ? (session.Edits.Version, session.Generation, s.Things.Count)
-                : (0, 0, s.Things.Count);
-        }
-    }
+    /// <summary>The dungeons of each scene, read again after each change (see SceneReads).</summary>
+    private static readonly SceneReads<IReadOnlyList<Dungeon>> Reads = new(Read, [], "reading the dungeons' rooms (what was shown is kept)");
 
     /// <summary>The scene's dungeons as they are now, read when the cache is out of date (on the caller's thread).</summary>
-    public static IReadOnlyList<Dungeon> Of(WorldScene s)
+    public static IReadOnlyList<Dungeon> Of(WorldScene s) => Reads.Of(s);
+
+    /// <summary>The scene's dungeons read anew: every dungeon object's rooms from its data.</summary>
+    private static List<Dungeon> Read(WorldScene s)
     {
-        var now = Now(s);
-        if (Caches.TryGetValue(s, out var c) && c.At == now)
-        {
-            return c.Dungeons;
-        }
         var list = new List<Dungeon>();
         WorldScene.Thing[] things;
         lock (s.Things)
@@ -69,7 +45,6 @@ public static partial class DungeonRooms
             }
             list.Add(ReadDungeon(s, i, t, kind));
         }
-        Caches.AddOrUpdate(s, new Cache(now, list));
         return list;
     }
 
@@ -111,7 +86,7 @@ public static partial class DungeonRooms
     /// <param name="t">The dungeon object.</param>
     private static byte[]? RoomData(WorldScene s, WorldScene.Thing t)
     {
-        byte[]? bytes = s.Session != null ? ObjectData.Bytes(s.World, s.Session.Edits, t.Id) : t.Id >= 0 ? s.World.ObjectBytes(t.Id) : null;
+        byte[]? bytes = s.ObjectBytes(t);
         return bytes == null ? null : Save.ZdoData.Parse(bytes).GetBytes(Dungeons.RoomDataKey);
     }
 }

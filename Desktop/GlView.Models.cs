@@ -134,8 +134,8 @@ public sealed partial class GlView
     private int _pending;
 
     // ---- Objects: read each kind's model on worker threads; the drawing thread uploads them.
-    /// <summary>A prefab's name: the model store's, else the catalogue's display name; null when unknown.</summary>
-    private string? NameOf(int prefab) => Models?.NameOf(prefab) ?? Terrain.PrefabCatalog.DisplayName(prefab);
+    /// <summary>A prefab's name: the model store's, else the catalogue's display name, else a held model's; null when unknown.</summary>
+    private string? NameOf(int prefab) => Models?.NameOf(prefab) ?? Terrain.PrefabCatalog.DisplayName(prefab) ?? StandLook.NameOf(prefab);
 
     /// <summary>
     /// Tests (headless, so nothing is drawn): the shown area's models read on worker threads now, as the first frame

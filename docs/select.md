@@ -218,7 +218,7 @@ what it spawns ("Spawn point: Boar · 0–2 ★ · spawns once"); for a mod's ob
 - Changed contents are marked as the chest's own. A chest never opened would otherwise fill itself with
   the game's loot when it first loads, over them.
 - An item on a stand is saved whole, as the game saves it (new, at full durability for its quality), so a
-  player taking it gets it as set here.
+  player taking it gets it as set here. The 3D view draws it on the stand as soon as it is set (in Game look).
 
 The names of the values come from the game's code (read from your Valheim) and from your mods' code
 (the DLLs in your Valheim folder and mod manager profiles, read, never run), so a mod's values show by

@@ -93,9 +93,9 @@ public sealed partial class ModelStore
 
     /// <summary>
     /// A world object's model name, else a dungeon room's (their models are under the room's prefab name, like pieces),
-    /// else the prefab's.
+    /// else the prefab's, else a held model's (an item on a stand, see StandLook).
     /// </summary>
-    public string? NameOf(int prefab) => _source.ObjectName(prefab) ?? Editing.Dungeons.RoomOf(prefab)?.Name ?? PrefabCatalog.DisplayName(prefab);
+    public string? NameOf(int prefab) => _source.ObjectName(prefab) ?? Editing.Dungeons.RoomOf(prefab)?.Name ?? PrefabCatalog.DisplayName(prefab) ?? StandLook.NameOf(prefab);
 
     /// <summary>
     /// A model by name, read once and kept; null when there is none, it has no parts or it could not be read.

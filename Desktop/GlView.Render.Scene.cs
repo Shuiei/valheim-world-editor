@@ -8,8 +8,8 @@ namespace TerrainEditor.Desktop;
 public sealed partial class GlView
 {
     /// <summary>
-    /// Draws the area: the ground, the objects (opaque, then see-through buildings, then glass), the dungeon rooms and
-    /// ruins, the water, and the tools' marks.
+    /// Draws the area: the ground, the objects (opaque, then see-through buildings, then glass), the dungeon rooms,
+    /// ruins and the stands' items, the water, and the tools' marks.
     /// </summary>
     /// <param name="s">The area shown.</param>
     /// <param name="vp">The camera's view × projection of the frame.</param>
@@ -32,6 +32,7 @@ public sealed partial class GlView
         {
             DrawLocations(s);
         }
+        DrawStandItems(s);
         _drawnInstances = drawn + DrawGlass(u, seeThrough);
         DrawWater(vp, eye, time, look);
         _ghostsDrawn = DrawGhosts(s);

@@ -8,15 +8,26 @@ internal sealed partial class BundleModels
 {
     /// <summary>
     /// A prefab's model, its parts placed in the view's space; dungeon rooms and locations are read as rooms (without
-    /// their saved objects, drawn as objects of their own). Null: none.
+    /// their saved objects, drawn as objects of their own); a held model's name (StandLook: "item/stand"...) gives
+    /// what a stand draws of the item. Null: none.
     /// </summary>
     public ModelStore.Model? Model(string name)
     {
+        if (StandLook.Parse(name) is var (item, use) && item != null)
+        {
+            return _game.LoadHeld(item, use) is { } held ? ViewModel(name, held.Model) : null;
+        }
         bool room = Editing.Dungeons.RoomOf(name) != null || _game.KindOf(name) is { Location: true };
         if (_game.LoadModel(name, room) is not { } m)
         {
             return ModCatalogue.ModelOf(name) is { } reported ? ModModel(name, reported) : null;
         }
+        return ViewModel(name, m);
+    }
+
+    /// <summary>A game model's parts placed in the view's space.</summary>
+    private static ModelStore.Model ViewModel(string name, GameBundles.Model m)
+    {
         var parts = m.Parts.Select(p => new ModelStore.Part(p.Mesh.Key, p.Sub, p.Material?.Key ?? "", ViewMatrix(p.Matrix))).ToList();
         return new ModelStore.Model(name, parts, new Vector3(m.RootScale[0], m.RootScale[1], m.RootScale[2]));
     }

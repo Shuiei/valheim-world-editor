@@ -49,6 +49,9 @@ public sealed class ModelStoreTests : IDisposable
     {
         var store = new ModelStore(_dir);
         Assert.Equal("Thing", store.NameOf(123));
+        // A held model (an item on a stand) by the key the view draws it under.
+        Assert.Equal("Sword/stand", store.NameOf(TerrainEditor.App.StandLook.KeyOf("Sword/stand")));
+        Assert.Null(store.NameOf(456));
         var m = store.LoadModel("Thing")!;
         var part = Assert.Single(m.Parts);
         Assert.Equal("m1", part.Mesh);

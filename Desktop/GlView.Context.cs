@@ -38,6 +38,7 @@ public sealed partial class GlView
         _ghostVbo = 0;
         _roomsMade.Forget();
         _locationsMade.Forget();
+        _standsMade.Forget();
         _pathVao = _pathVbo = _pathEdgeVao = _pathEdgeVbo = _pathDotVao = _pathDotVbo = 0;
         _placeRingVao = _placeRingVbo = _hoverBoxVao = _hoverBoxVbo = _previewVao = _previewVbo = 0;
         _dungeonVao = _dungeonVbo = _dungeonPickVao = _dungeonPickVbo = _dungeonAddVao = _dungeonAddVbo = 0;

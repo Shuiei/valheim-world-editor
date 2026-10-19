@@ -101,6 +101,12 @@ public sealed partial class WorldScene
     public string LoadInfo { get; init; } = "";
     /// <summary>Editing the ground (null in tests that only draw).</summary>
     public EditSession? Session { get; set; }
+
+    /// <summary>
+    /// A thing's saved data: an object of the world's, or one added in this session (through the session; without
+    /// one, only the world's). Null when there is none.
+    /// </summary>
+    public byte[]? ObjectBytes(Thing t) => Session != null ? ObjectData.Bytes(World, Session.Edits, t.Id) : t.Id >= 0 ? World.ObjectBytes(t.Id) : null;
     /// <summary>The open world this area belongs to (shared by every area opened from the map); null in the Workshop.</summary>
     public WorldSession? Owner { get; init; }
 
