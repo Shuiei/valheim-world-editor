@@ -50,23 +50,24 @@ public sealed partial class WorldEditorBridgePlugin
     {
         HttpListenerResponse res = ctx.Response;
         string root = Path.GetFullPath(Paths.ConfigPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        string full = ConfigPathOf(root, ctx.Request.QueryString["path"] ?? "");
-        if (full == null)
+        string[] parts = ConfigPartsOf(ctx.Request.QueryString["path"] ?? "");
+        string full = parts == null ? null : parts.Length == 0 ? root : Path.GetFullPath(Path.Combine(root, string.Join(Path.DirectorySeparatorChar.ToString(), parts)));
+        if (full == null || (full != root && !full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal)))
         {
             Reply(res, 400, "text/plain", Encoding.UTF8.GetBytes("the path must name a file or folder inside BepInEx/config"));
         }
         else if (Directory.Exists(full))
         {
+            if (Linked(root, parts))
+            {
+                Reply(res, 400, "text/plain", Encoding.UTF8.GetBytes("the path must name a file or folder inside BepInEx/config"));
+                return;
+            }
             Reply(res, 200, "application/json", Encoding.UTF8.GetBytes(FolderJson(full)));
         }
         else if (File.Exists(full))
         {
-            if (new FileInfo(full).Length > MaxConfigFile)
-            {
-                Reply(res, 413, "text/plain", Encoding.UTF8.GetBytes("the file is larger than 4 MB"));
-                return;
-            }
-            Reply(res, 200, "application/octet-stream", File.ReadAllBytes(full));
+            ServeFile(res, root, parts, full);
         }
         else
         {
@@ -75,43 +76,67 @@ public sealed partial class WorldEditorBridgePlugin
     }
 
     /// <summary>
-    /// The full path of a file or folder asked for under the config folder; null when the path would lead out of it
-    /// (an absolute path, a ".." part, a link anywhere along it).
+    /// A file under the config folder: opened first, then checked for a link along its path, so that what is read is
+    /// what was checked (a link put there after the check cannot change the file already open); refused when linked
+    /// (400) or over 4 MB (413).
     /// </summary>
-    /// <param name="root">The config folder, full, without a trailing separator.</param>
-    /// <param name="wanted">The path asked for, relative to it ("/" or "\" between parts).</param>
-    private static string ConfigPathOf(string root, string wanted)
+    private static void ServeFile(HttpListenerResponse res, string root, string[] parts, string full)
     {
-        string relative = wanted.Replace('\\', '/').Trim('/');
-        if (relative.Length == 0)
+        using FileStream file = new(full, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (Linked(root, parts))
         {
-            return root;
+            Reply(res, 400, "text/plain", Encoding.UTF8.GetBytes("the path must name a file or folder inside BepInEx/config"));
+            return;
         }
-        string[] parts = relative.Split('/');
-        if (Path.IsPathRooted(relative) || Array.Exists(parts, p => p is "" or "." or ".."))
+        if (file.Length > MaxConfigFile)
+        {
+            Reply(res, 413, "text/plain", Encoding.UTF8.GetBytes("the file is larger than 4 MB"));
+            return;
+        }
+        using MemoryStream ms = new();
+        file.CopyTo(ms);
+        Reply(res, 200, "application/octet-stream", ms.ToArray());
+    }
+
+    /// <summary>
+    /// The parts of a path asked for under the config folder (empty for the folder itself); null when it is absolute
+    /// (a drive, a leading separator) or has an empty, "." or ".." part.
+    /// </summary>
+    /// <param name="wanted">The path asked for, relative to the config folder ("/" or "\" between parts).</param>
+    private static string[] ConfigPartsOf(string wanted)
+    {
+        if (wanted.Length == 0)
+        {
+            return [];
+        }
+        if (wanted[0] is '/' or '\\' || Path.IsPathRooted(wanted))
         {
             return null;
         }
-        string full = Path.GetFullPath(Path.Combine(root, relative));
-        if (!full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal))
-        {
-            return null;
-        }
-        // No link along the way: a link out of the folder would serve what is not under it.
+        string[] parts = wanted.Replace('\\', '/').TrimEnd('/').Split('/');
+        return Array.Exists(parts, p => p is "" or "." or "..") ? null : parts;
+    }
+
+    /// <summary>
+    /// Whether a link stands anywhere along a path under the config folder (a link out of the folder would serve what
+    /// is not under it). A part that does not exist ends the walk: nothing is linked past it.
+    /// </summary>
+    private static bool Linked(string root, string[] parts)
+    {
         string walked = root;
         foreach (string part in parts)
         {
             walked = Path.Combine(walked, part);
             if (!File.Exists(walked) && !Directory.Exists(walked))
             {
-                break;
+                return false;
             }
             if ((File.GetAttributes(walked) & FileAttributes.ReparsePoint) != 0)
             {
-                return null;
+                return true;
             }
         }
-        return full;
+        return false;
     }
 
     /// <summary>A folder's entries as JSON: each one's name, whether it is a folder, its size and when it was last written (UTC).</summary>
