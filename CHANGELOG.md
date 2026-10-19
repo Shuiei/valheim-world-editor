@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.57.5 — unreleased
+
+### Fixed
+- **A bed on a floor can be clicked again.** A click on a bed, a hide rug or any other piece drawn with a cut-out
+  material went through it to the floor piece under it, as it does through a tree's leaves. Only leaves, bushes and
+  grass are looked through now; a cut-out piece is picked where its shape is, like any other.
+
 ## v1.57.4 — unreleased
 
 ### Fixed

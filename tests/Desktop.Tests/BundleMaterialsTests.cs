@@ -68,6 +68,20 @@ public class BundleMaterialsTests
     }
 
     [Theory]
+    [InlineData("Custom/Vegetation", null, true)]
+    [InlineData("Custom/Grass", null, true)]
+    [InlineData("Custom/Piece", 1f, false)]
+    [InlineData("Custom/Rug", 1f, false)]
+    public void FoliageIsTheVegetationAndGrassShadersNotACutOutPiece(string shader, float? mode, bool foliage)
+    {
+        // All four are cut out; only the plants are foliage, which a click looks through: a bed's fur or a hide rug is not.
+        var m = BundleModels.ViewMaterial(Mat(shader, mode));
+
+        Assert.True(m.Cutoff > 0);
+        Assert.Equal(foliage, m.Foliage);
+    }
+
+    [Theory]
     [InlineData("Standard", 3f, 0.02f, BundleModels.LeastAlpha)]
     [InlineData("Standard", 2f, 0.6f, 0.6f)]
     [InlineData("FX/Glass/Stained BumpDistort", 2f, 0.9f, BundleModels.LeastAlpha)]
