@@ -49,7 +49,7 @@ public class WorkshopTests
             Assert.Contains(parsed.Pieces, p => p.Name == "Draugr_Elite" && p.Data!.Contains(new ObjectField("ints", StableHash.Of("level"), "3")));
 
             var scene = Workshop.Create("Workshop");
-            var (placed, unknown, lift, _) = Workshop.Open(scene.Session!, path);
+            var (placed, unknown, lift, _, _) = Workshop.Open(scene.Session!, path);
             Assert.Equal(3, placed);
             Assert.Empty(unknown);
             ZdoData Held(string name)

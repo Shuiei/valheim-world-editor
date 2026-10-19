@@ -89,9 +89,9 @@ public sealed partial class MainWindow
                 var would = Said.Of("script.msg.dryRun", counts);
                 return new(false, Printed(ch.Output, would), would);
             }
-            int clamped = ScriptHost.Apply(s, ch, label);
+            var (clamped, stood) = ScriptHost.Apply(s, ch, label);
             var what = Said.Of("script.msg.changed", counts, watch.Elapsed.TotalSeconds)
-                + (clamped > 0 ? Said.Of("script.msg.clamped", clamped) : Said.Empty);
+                + (clamped > 0 ? Said.Of("script.msg.clamped", clamped) : Said.Empty) + CreatureStand.Note(stood);
             UpdateSaveBar();
             return new(true, Printed(ch.Output, what), what);
         }

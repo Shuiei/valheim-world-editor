@@ -1,7 +1,7 @@
 
 namespace TerrainEditor.Desktop;
 
-/// <summary>How a material is drawn (BundleModels.Modes.cs): the cut-out, see-through and half-cut modes, the cut-out threshold and the alpha.</summary>
+/// <summary>How a material is drawn (BundleModels.Modes.cs): the cut-out, see-through and half-cut modes, and what is foliage.</summary>
 internal sealed partial class BundleModels
 {
     /// <summary>
@@ -22,4 +22,13 @@ internal sealed partial class BundleModels
         bool halfCut = !cut && !seeThrough && mode is 2 or 3;
         return (cut, seeThrough, halfCut);
     }
+
+    /// <summary>
+    /// Whether a material is foliage: drawn with the game's vegetation or grass shaders (leaves, bushes, grass; hanging
+    /// cloth too), which a click counts only where nothing solid is behind it. A cut-out piece (a bed's fur, a hide rug)
+    /// is not.
+    /// </summary>
+    /// <param name="shader">The shader's name.</param>
+    internal static bool Foliage(string shader) =>
+        shader.Contains("Vegetation", StringComparison.Ordinal) || shader.Contains("Grass", StringComparison.Ordinal);
 }

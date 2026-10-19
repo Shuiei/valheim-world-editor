@@ -12,7 +12,7 @@ public sealed partial class ClaudeTools
     /// keeping each the same height above the ground.
     /// </summary>
     [McpServerTool(Name = "move_objects", Title = "Move and turn objects")]
-    [Description("Moves objects of the open area (by id) together, as the Select tool does: shifted by dx, dy, dz metres and turned by turn degrees round the vertical (as yaw turns: 90 = a quarter turn clockwise seen from above), all round one point (default: their middle), so that a building moved whole keeps its shape. ground: true keeps each one as high above the ground as it was (the ground where it ends up). A part of a group a mod links into one (a ship and the pieces built on it) brings its whole group. Each object keeps what it holds (chest contents, builder…) but gets a new id: the answer gives them. Refused when one would leave the area. One pending step.")]
+    [Description("Moves objects of the open area (by id) together, as the Select tool does: shifted by dx, dy, dz metres and turned by turn degrees round the vertical (as yaw turns: 90 = a quarter turn clockwise seen from above), all round one point (default: their middle), so that a building moved whole keeps its shape. ground: true keeps each one as high above the ground as it was (the ground where it ends up). A creature whose origin would be inside a building piece is stood on top of it (stood says how many; the answer gives the final y). A part of a group a mod links into one (a ship and the pieces built on it) brings its whole group. Each object keeps what it holds (chest contents, builder…) but gets a new id: the answer gives them. Refused when one would leave the area. One pending step.")]
     public Task<string> MoveObjects(
         [Description("Their ids (list_objects, get_selection).")] int[] ids,
         [Description("Metres east (negative: west).")] float dx = 0,
@@ -52,9 +52,10 @@ public sealed partial class ClaudeTools
             float y = t.Position.Y + dy + (ground ? GroundAt(scene, x, z) - GroundAt(scene, t.Position.X, t.Position.Z) : 0);
             moves.Add((i, new Vector3(x, y, z), Wrapped(t.Rotation + new Vector3(0, turn, 0)), t.Scale));
         }
+        int stood = CreatureStand.Apply(scene, null, moves);
         var copies = s.Transform(moves, ClaudesLabel(label));
-        _w.AfterClaudeEdit(Said.Of("claude.msg.moved", copies.Count));
+        _w.AfterClaudeEdit(Said.Of("claude.msg.moved", copies.Count) + CreatureStand.Note(stood));
         GaveIds(scene, reads);
-        return ToJson(new { moved = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), wholeGroups = groups, problems, pending = Pending() });
+        return ToJson(new { moved = copies.Take(moves.Count).Select((c, k) => Moved(scene, moves[k].Index, c)), stood, wholeGroups = groups, problems, pending = Pending() });
     });
 }

@@ -47,7 +47,7 @@ public sealed partial class ClaudeTools
 
     /// <summary>place_pieces: puts down pieces and objects as one pending step (see <see cref="Place"/>).</summary>
     [McpServerTool(Name = "place_pieces", Title = "Put down pieces and objects")]
-    [Description("Puts down building pieces (and any other objects: trees, rocks…) in the open area or on the Workshop's plot, all as one step of the history (pending). Pieces snap to the snap points of pieces already there within 0.5 m, as the game's hammer does, so place them where they should join and let the snap make them meet; piece_info gives sizes and snap points. Returns where each went (after snapping) and its id. Check the result with support_check (Workshop) and screenshot.")]
+    [Description("Puts down building pieces (and any other objects: trees, rocks, creatures…) in the open area or on the Workshop's plot, all as one step of the history (pending). Pieces snap to the snap points of pieces already there within 0.5 m, as the game's hammer does, so place them where they should join and let the snap make them meet; piece_info gives sizes and snap points. A creature whose origin would be inside a building piece is stood on top of it (the answer says how many were, and gives the final y). Returns where each went (after snapping) and its id. Check the result with support_check (Workshop) and screenshot.")]
     public Task<string> PlacePieces(
         [Description("The pieces, in the order they are put down.")] PieceSpec[] pieces,
         [Description("A few words for the history.")] string label = "Claude: building") => OnUi(() => Place(pieces, label));
@@ -67,14 +67,14 @@ public sealed partial class ClaudeTools
         int reads = scene.Reads;
         var (minX, minZ, maxX, maxZ) = Bounds(scene);
         var placed = PlacedNear(scene, pieces);
-        var adds = new List<(Editing.NewObject, bool)>();
-        var report = new List<object>();
+        var adds = new List<(Editing.NewObject Object, bool Piece)>();
+        var snapped = new List<bool>();
         var problems = new List<string>();
         foreach (var (p, k) in pieces.Select((p, k) => (p, k)))
         {
             int hash = Save.StableHash.Of(p.Prefab);
             var piece = Terrain.PieceCatalog.Get(hash);
-            if (piece == null && Terrain.PrefabCatalog.Get(hash) == null)
+            if (!scene.World.CanCreate(hash))
             {
                 problems.Add($"#{k} {p.Prefab}: not an object the game has (find_prefabs)");
                 continue;
@@ -95,15 +95,17 @@ public sealed partial class ClaudeTools
             }
             placed.Add(new(-1 - k, p.Prefab, pos, q));
             adds.Add((new Editing.NewObject(0, hash, pos, euler, 0), piece?.Tool != null));
-            report.Add(new { prefab = p.Prefab, x = MathF.Round(pos.X, 3), y = MathF.Round(pos.Y, 3), z = MathF.Round(pos.Z, 3), snapped = to != null });
+            snapped.Add(to != null);
         }
         if (adds.Count == 0)
         {
             return "Nothing put down: " + string.Join("; ", problems);
         }
+        int stood = CreatureStand.Apply(scene, adds);
         var ids = session.Commit(label.StartsWith("Claude", StringComparison.Ordinal) ? label : ClaudesStep(label), null, [], adds);
-        _w.AfterClaudeEdit(Said.Of("claude.msg.putDown", adds.Count));
+        _w.AfterClaudeEdit(Said.Of("claude.msg.putDown", adds.Count) + CreatureStand.Note(stood));
         GaveIds(scene, reads);
-        return ToJson(new { placed = report.Select((r, i) => new { id = i < ids.Count ? ids[i] : -1, piece = r }), problems, pending = Pending() });
+        var report = adds.Select((a, i) => new { id = i < ids.Count ? ids[i] : -1, piece = new { prefab = _w.NameOfPrefab(a.Object.Prefab), x = MathF.Round(a.Object.Position.X, 3), y = MathF.Round(a.Object.Position.Y, 3), z = MathF.Round(a.Object.Position.Z, 3), snapped = snapped[i] } });
+        return ToJson(new { placed = report, stood, problems, pending = Pending() });
     }
 }

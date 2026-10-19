@@ -28,14 +28,14 @@ public static partial class Workshop
     /// <param name="s">The edit session <c>Plan</c> was given.</param>
     /// <param name="plan">What to put down.</param>
     /// <param name="label">The history's name for the step; null: "Opened" or "Added" and the blueprint's name.</param>
-    public static (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain) Put(EditSession s, Planned plan, string? label = null)
+    public static (int Placed, List<string> Unknown, float Lift, Dictionary<(int, int), float> Terrain, int Stood) Put(EditSession s, Planned plan, string? label = null)
     {
         if (plan.AtMiddle)
         {
             s.Scene.Ruin = plan.Ruin;
         }
         s.Commit(label ?? (plan.AtMiddle ? Lang.T("workshop.undo.opened", plan.Name) : Lang.T("workshop.undo.added", plan.Name)), null, [], plan.Adds);
-        return (plan.Adds.Count, plan.Unknown, plan.Lift, plan.Terrain);
+        return (plan.Adds.Count, plan.Unknown, plan.Lift, plan.Terrain, plan.Stood);
     }
 
     /// <summary>Pieces players build: the hammer's, the cultivator's, the serving tray's (not the hoe's rocks).</summary>

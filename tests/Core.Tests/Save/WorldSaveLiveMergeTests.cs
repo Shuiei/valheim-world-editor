@@ -129,6 +129,45 @@ public class WorldSaveLiveMergeTests
         Assert.Empty(world.Links);
     }
 
+    // The editor's own objects (those it made in the game) are not the world's: they are given back as the game has
+    // them, for the editor's copies to take, and never come in as new objects.
+    [Fact]
+    public void LiveTheEditorsOwnObjectsAreGivenBackAsTheGameHasThem()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        var at = new Vector3(640, 30, 640);
+        byte[] moved = MadeObjects.Zdo("Deer", at + new Vector3(0.5f, 0, 0), z => z.FloatList.Add((StableHash.Of("max_health"), 10f)));
+        int count = world.ObjectRefs.Count;
+
+        var merged = world.MergeLive([(10, 10)], [(4242, 1, moved), (4242, 2, MadeObjects.Zdo("woodwall", at))], _ => false, zdo => zdo == (4242, 1))!;
+
+        var (user, id, bytes) = Assert.Single(merged.Made);
+        Assert.Equal((4242L, 1u), (user, id));
+        Assert.Equal(moved, bytes);
+        Assert.Single(merged.Added);
+        Assert.Empty(merged.Updated);
+        Assert.Equal(count + 1, world.ObjectRefs.Count);
+    }
+
+    // The kinds that move on their own are read alone when only they changed: their zone is not among those read whole,
+    // so what the read leaves out does not vanish, while what it brings comes in or changes.
+    [Fact]
+    public void LiveObjectsOfAZoneNotReadWholeDoNotVanish()
+    {
+        var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "live");
+        var at = new Vector3(640, 30, 640);
+        var came = world.MergeLive([(10, 10)], [(4242, 1, MadeObjects.Zdo("woodwall", at)), (4242, 2, MadeObjects.Zdo("Deer", at))], _ => false, _ => false)!;
+        int wall = came.Added[0], deer = came.Added[1];
+
+        var walked = world.MergeLive([], [(4242, 2, MadeObjects.Zdo("Deer", at + new Vector3(3, 0, 0))), (4242, 3, MadeObjects.Zdo("Boar", at))], _ => false, _ => false)!;
+
+        Assert.Empty(walked.Vanished);
+        Assert.Equal([deer], walked.Updated);
+        Assert.Single(walked.Added);
+        Assert.Equal(at + new Vector3(3, 0, 0), world.ObjectRefs[deer].Position);
+        Assert.DoesNotContain(wall, world.Vanished);
+    }
+
     [Fact]
     public void LiveANewObjectIsBuiltFromTheBytesOfAModelReadSinceTheSnapshot()
     {

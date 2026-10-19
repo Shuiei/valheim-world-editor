@@ -50,8 +50,9 @@ the selection is.*
 - A click finds an object by its **drawn shape**, not by the box round it. The boxes only say which
   objects to try; then each one's model decides. A chest or a stone under a tree's branches can be
   clicked between the branches.
-- Leaves, bushes, grass and other cut-out foliage count only where nothing solid is behind them along
-  the line of the click. Clicking through a bush onto a rock picks the rock.
+- Leaves, bushes and grass count only where nothing solid is behind them along the line of the click.
+  Clicking through a bush onto a rock picks the rock. A piece drawn with a cut-out material (a bed's
+  fur, a hide rug) is not looked through: a bed on a floor is picked, not the floor.
 - When the ground is hit first (with half a metre of slack), nothing is picked: the click is on the
   ground.
 - A standing tree is outlined by a column round its trunk (a tenth of its crown's width across, 0.5 to
@@ -108,7 +109,7 @@ says how many.
 | `PgUp` / `PgDn` | Lifts or lowers by 0.25 m (`Shift`: 1 m). |
 | `End` | **Drops** each object onto what is below it (below). |
 | `Esc` | Cancels a move that is still in progress. |
-| **Put each object on the ground when moving** | See below. On at first; remembered. |
+| **Put each object on the ground when moving** | Each object lands on what is under it where it ends up (a floor, a table...), else on the ground; see below. On at first; remembered. |
 | **Snap to other pieces when moving** | See below. On at first; remembered. |
 
 The arrows and the ring sit at the middle of the selection and keep their size on screen. The one under
@@ -117,17 +118,24 @@ turned 15°, +0.25 m · snapped to woodwall".
 
 ### How a move lands
 
-- **Put each object on the ground when moving** on: trees, rocks and other objects each land on the
-  ground where they end up. Building pieces move together and keep their shape: the whole building goes
-  up or down until its bottom layer sits on the ground. On a slope part of it sinks into the hill rather
-  than float, since pieces need the ground to carry what stands on them.
+- **Put each object on the ground when moving** on: trees, rocks and other objects each land on what is
+  under them where they end up: the top of a floor, a stair, a table, a rock or any other shown object,
+  as `End` drops them (below), and on the ground when nothing is under them. Each is carried at the height
+  above the ground it had and let down from there, so only a top no higher than the object itself counts:
+  a chair moved into a house lands on its floor, not on its roof, and a tree moved under an eave goes under
+  it. Building pieces move together and keep their shape: the whole building goes up or down until its
+  bottom layer sits on what is under it, a floor or a platform no higher than the building, else the
+  ground. On a slope, or half on a platform, part of it sinks in rather than float, since pieces need
+  something to carry what stands on them.
 - Off: each object keeps its height above the ground under it.
 - **Snap to other pieces when moving** on: while you move, the closest pair of snap points (one of a
   moved piece, one of a piece around, within 0.75 m) locks together, and the whole selection shifts so
   they meet. Walls, floors, beams and fences join exactly, like with the hammer. Off: free moves.
-- `End` drops each object straight down onto the highest top of another shown object under it (a floor,
-  a table, a rock), or onto the ground when there is none. Selected objects do not count as surfaces.
-  The status bar says how many landed on objects and how many on the ground.
+- `End` drops each object straight down from where it is onto the highest top of another shown object
+  under it (a floor, a table, a rock), or onto the ground when there is none. Selected objects do not
+  count as surfaces, for a drop or a move. The status bar says how many landed on objects and how many on
+  the ground. A move with the switch on lands the same way; `End` is for an object you lifted first
+  (`PgUp`), or one moved with the switch off.
 
 Moves are combined: keys pressed within a moment of each other (0.7 s) become one undo step.
 

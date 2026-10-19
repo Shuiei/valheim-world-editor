@@ -15,7 +15,7 @@ public sealed partial class ClaudeTools
     /// world, its lowest piece on the ground at its middle (or at y); taken back when a piece would leave the area.
     /// </summary>
     [McpServerTool(Name = "add_blueprint", Title = "Add a blueprint")]
-    [Description("Adds a blueprint of the library (list_blueprints) to the Workshop's plot or to the open area of a world, with what is there: centred on x, z (default: the plot's or the area's middle), turned by turn degrees (as yaw: 90 turns north to east), its lowest piece at height y (default: the ground at its middle; level the ground first with flatten for a building on a slope). One pending step; refused when a piece would be outside the area. Kinds the game does not know (mods) are left out and named.")]
+    [Description("Adds a blueprint of the library (list_blueprints) to the Workshop's plot or to the open area of a world, with what is there: centred on x, z (default: the plot's or the area's middle), turned by turn degrees (as yaw: 90 turns north to east), its lowest piece at height y (default: the ground at its middle; level the ground first with flatten for a building on a slope). One pending step; refused when a piece would be outside the area. Kinds the game does not know (mods) are left out and named. A creature of the blueprint whose origin would be inside a building piece is stood on top of it, and the answer says how many were.")]
     public Task<string> AddBlueprint(
         [Description("The blueprint's name (list_blueprints).")] string blueprint,
         [Description("World x of its middle (optional).")] float? x = null,
@@ -78,6 +78,7 @@ public sealed partial class ClaudeTools
         _w.AfterClaudeEdit(Said.Of("claude.msg.blueprint", blueprint, added.Placed));
         return $"Added {added.Placed} piece(s) of \"{blueprint}\", ids {before} to {scene.Things.Count - 1}."
             + (added.Unknown.Count > 0 ? $" Left out (unknown kinds): {string.Join(", ", added.Unknown.Take(10))}." : "")
+            + (added.Stood > 0 ? " " + CreatureStand.Note(added.Stood).English : "")
             + " Now pending: " + Pending();
     }));
 }

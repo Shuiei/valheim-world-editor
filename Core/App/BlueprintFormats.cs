@@ -54,6 +54,15 @@ public static partial class BlueprintFormats
     public const string DataHeader = "#EditorData:", RuinHeader = "#EditorRuin:1";
 
     /// <summary>
+    /// The editor's marks for the pieces only it can place (<c>Homestead.HammerPlaces</c>): a header saying the file
+    /// carries them (written with every blueprint the editor saves) and, for each such piece, a data line whose field is
+    /// <see cref="OnlyMark"/> ("#EditorData:n;editor;only;1"), which no object field reads (its section is none of a
+    /// save's). Homestead and PlanBuild skip them with the other header lines. A file without the header is an older
+    /// editor's or another tool's: how many of its pieces the hammer skips is not known.
+    /// </summary>
+    public const string MarkedHeader = "#EditorMarked:1", OnlyMark = "editor;only;1";
+
+    /// <summary>
     /// The most metres the ground grid of a clip spans on a side: more than the editor's largest area (17 zones,
     /// 1088 m). A blueprint whose terrain entries reach further is refused rather than given a grid that does not
     /// fit in memory.
