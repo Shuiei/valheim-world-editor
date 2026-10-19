@@ -68,6 +68,7 @@ public sealed partial class WorldEditorBridgePlugin
             {
                 set(zdo);
             }
+            NoteDisc(zdo);
             if (linkType != ZDOExtraData.ConnectionType.None)
             {
                 Relink(zdo, linkType, linkHash);

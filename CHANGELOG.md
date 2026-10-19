@@ -4,6 +4,22 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.56.2 — unreleased
+
+### Fixed
+- **No limit ground loads before the buildings on it, not disc by disc among them.** A player's game spawns a
+  zone's objects a few per frame, nearest first, and every ground disc rebuilt the zone's ground as it came in: on
+  a big build the ground climbed for ten seconds or more at every visit, with the game stuttering. Discs are now
+  saved as objects of the Terrain kind, which the game spawns before everything else, so the ground is finished in
+  the first frames and the pieces then come in on top of it. Discs saved before this version are changed by the
+  WorldEditorBridge plugin (below) or when their ground is lifted again.
+
+### WorldEditorBridge
+- **Ground discs are kept first in line.** The game puts a disc back to the Solid kind when the player who owns it
+  spawns it; the plugin looks at the world's discs every few seconds, puts them back to Terrain, and changes the
+  discs of older editor versions at the first look. The log says how many discs the world has and when any were
+  put back.
+
 ## v1.56.1 — unreleased
 
 ### Fixed
