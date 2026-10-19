@@ -176,7 +176,8 @@ public class WorldGeneratorBiomeRulesTests
         var edge = Enumerable.Range(-5, 11).Select(k => k * 7.0 * Math.PI / 180.0).Select(a => (X: (float)(12000.0 * Math.Sin(a)), Z: (float)(-4000.0 + 12000.0 * Math.Cos(a)))).ToList();
         Assert.Contains(edge, p => plain.CreateDeepNorthGap(p.X, p.Z) != waved.CreateDeepNorthGap(p.X, p.Z));
         Assert.Contains(edge, p => plain.IsDeepnorth(p.X, p.Z) != waved.IsDeepnorth(p.X, p.Z));
-        // The game's twenty swings: the static wave and the generator's are one.
-        Assert.Equal(WorldGenerator.WorldAngle(123f, 456f), PrivateMember.Call<float>(typeof(WorldGenerator), "Wave", plain, 123f, 456f));
+        // Twenty swings asked for are the game's own.
+        var twenty = Generator(new WorldRules { WiggleFrequency = 20f });
+        Assert.All(edge, p => Assert.Equal(plain.CreateDeepNorthGap(p.X, p.Z), twenty.CreateDeepNorthGap(p.X, p.Z)));
     }
 }
