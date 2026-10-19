@@ -161,6 +161,7 @@ public class DriverControlsTests
         try
         {
             var s = TestScenes.Flat(2, new WorldScene.Thing(1, StableHash.Of("Beech1"), new Vector3(40, 30, 40), Vector3.Zero, 1, false));
+            Assert.Equal("no area", w.View.CameraSays());
             w.View.Show(s.Scene, null);
             w.Edit(s);
             // The camera on a spot at a height (inside a dungeon), then without one.
@@ -174,8 +175,14 @@ public class DriverControlsTests
             await Send(w, "mouse3 up 40 5 40 right");
             // 2 m up, looking up into the sky: the ground and a point a metre over it are behind the camera.
             w.View.SetCamera(c + new Vector3(0, 2, 0), c + new Vector3(0, 12, 0.1f), 1.5f);
-            Assert.Equal("40, 40 is not in view", (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "mouse move 40 40"))).Message);
-            Assert.Equal("not in view", (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "mouse3 move 40 1 40"))).Message);
+            // The error says where the camera is (world metres): the orbit's, and the eye the mouse was read with.
+            const string Camera = "yaw 30°, pitch 50°, distance 60 m; eye at the last frame 40 32 40; no frame drawn yet)";
+            string flat = (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "mouse move 40 40"))).Message;
+            Assert.StartsWith("40, 40 is not in view (camera: Orbit, target 40 ", flat);
+            Assert.EndsWith(Camera, flat);
+            string air = (await Assert.ThrowsAsync<InvalidOperationException>(() => Send(w, "mouse3 move 40 1 40"))).Message;
+            Assert.StartsWith("not in view (camera: Orbit, target 40 ", air);
+            Assert.EndsWith(Camera, air);
         }
         finally
         {
