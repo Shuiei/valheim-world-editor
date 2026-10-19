@@ -1,6 +1,8 @@
 using ValheimGen;
 using NVector3 = System.Numerics.Vector3;
 
+using Rule = ValheimGen.VegetationRule;
+
 namespace TerrainEditor.App;
 
 /// <summary>

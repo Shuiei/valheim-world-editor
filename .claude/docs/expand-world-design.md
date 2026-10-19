@@ -311,6 +311,20 @@ dumps of §6:
   mask), so a call from inside one of them into another divides again (`GetBiome` with
   `waterAlwaysOcean` calls `GetHeight`): mirrored. The rivers' drawing asks `IsDeepnorth` with
   world metres, unstretched, as the game does.
+- **A vegetation rule's own centre** (PR 4): the mod turns its `(centerX, centerY)` into a Unity
+  `Vector3` through the implicit `Vector2` conversion, which puts `centerY` in the **height** and 0
+  in z, and measures a 3D distance from it with the spot at the ground's height: mirrored
+  (`Regrow.PassesOwnDistance`), the file's `centerY` is in effect a height.
+- **A vegetation rule's scale** (PR 4): the mod replaces the game's scaling whenever `scaleMin` and
+  `scaleMax` differ at all (its `IsMultiAxis` compares a normalized vector with `Vector3.one`, which
+  never matches), so every such rule gets an extra draw (one for a uniform range, three by axis)
+  after the object's own draws, and only when the game's uniform draw was not 1 (the replaced call
+  sits inside that check). Mirrored.
+- **The forced start temple** (PR 4): the mod registers it at a random point of the middle zone with
+  an unseeded draw (within 7 m of the middle for the temple's radius) and a height of 0; the editor
+  puts it at the zone's middle on the ground, so its exact spot is not predicted.
+- **Size without Data** scales the game's kinds' distances by the radius over 10000; with Data the
+  file's fractions do it. The locations multiplier applies either way (not to the start, at least 1).
 
 ## 3. What the editor assumes today
 
@@ -555,7 +569,7 @@ Sizes are rough and include tests and docs.
 | 1 | `feature/expand-world-rules` | Done (v1.49.0): `WorldRules` + `World.Rules`; every Size and Rivers literal of the generator from the rules with vanilla defaults; `WaterLevel`/`MapRadius` instance (the map shader keeps the game's 29.5: it is the game's own map); `LoadMetadata` reads the starting global keys; `ExpandWorld` reader for the `ews_` keys and the Size and Rivers cfg files; the folder lookup and the log lines; the Settings switch. `WorldCheck look` and `verify` identical before and after. | large |
 | 2 | `feature/expand-world-grid` | Done (v1.50.0): `ChunkMath` takes the grid width (512 to 2048, the chunk id formula unchanged); `WorldSave.GridWidth` from `ews_gridwidth`, whatever the switch (the files' layout is a fact); the writer, the uplift check and the WorldCheck tools pass it; a mismatch with the settings' width is noted in the log (the game converts). Tests on the chunk maths at 1024 and 2048 and on the loader. | medium |
 | 3 | `feature/expand-world-biomes` | Done (v1.51.0): `YamlReader` (the mod's YamlDotNet, loaded from `plugins/`); `BiomeTable`, `BiomeInfo`, `HeightTransform`, `BiomeRule`, `Territory`; `expand_biomes`, `expand_world` (the mod's default list when the switch is on and no file exists) and `expand_territories` read, with the Data cfg (legacy generation, wiggle frequency and defaults, the Poles settings combined with Size's); the rule evaluation (both modes, `WorldGenerator.BiomeRules.cs`), the terrain prefix and the height postfix (paint, lava amount, territory colour, the transforms; taken to run after Size's depth postfix, to confirm in PR 7), the four extra draws, boiling for `IsAshlands` and the ocean gradient, `WorldAngle` with the wiggle frequency; the point map's indices by the mod's mapping and its uniform draw; the map's pixel colour, mask and height multiplier, the overview's colours through `BiomeTable`. `WorldRules` compares as JSON. Not in it: `expand_altbiomes` (to PR 4, where the alt biomes matter), the point map's size (the mod does not change it), the Desktop's biome names and 3D ground colours for new biomes (PR 5). | large |
-| 4 | `feature/expand-world-places` | `expand_locations`, `expand_vegetation` and `expand_altbiomes` to the layout and Regrow; the mod's placement checks; clones, blueprints, the forced start; Data-installed draw changes. | large |
+| 4 | `feature/expand-world-places` | Done (v1.52.0): `expand_locations` (clones by base prefab, blueprint radius from the pieces, groups, `awayFrom`/`closeTo` as the mod's virtual groups, `Custom` for changed contents), `expand_vegetation` (`VegetationRule`, public, replaces Regrow's private rule: several prefabs, scale by axis, own centre, global keys from the save's zone database) and `expand_altbiomes` (names and blocked kinds) read with the Data cfg (zone spawners, random locations, scaled altitudes, blueprint folder); `WorldRules.Locations`/`Vegetation`; the layout and Regrow take the world's own rules; `Placer`: wide kinds at the zone's middle, forced start, mod spacing (base prefab, group membership, rows), scaled altitude limits; `Regrow`: prefab draw, axis scale draws, own distance; Size's multiplier and distance scaling; `WorldCreator` leaves blueprint, custom and random-seed sites to the game and skips zone controls when off. Not in it: clear areas of vegetation (Regrow does not model clear areas), alt biome vegetation, `pregenerate`, icons. | large |
 | 5 | `feature/expand-world-map` | Map pixel, overview, zone stats, seed map clamps, zoom defaults, the New world page with the folder's rules, `WorldCreator` with the rules, Settings entry, Open page tag, user docs. | medium |
 | 6 | `feature/expand-world-live` | Bridge `/plugins`, `/config`, `/status` keys; the editor's live source. | medium |
 | 7 | `feature/expand-world-verify` | Reference fixtures from dumps of a modded game (§6) and the reference tests that compare the editor's modded generator with them; `WorldCheck verify` with a rules file. | medium |

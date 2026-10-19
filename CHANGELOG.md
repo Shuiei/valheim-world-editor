@@ -4,6 +4,17 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.52.0 — unreleased
+
+### Added
+- **Worlds made with Expand World Data's locations and vegetation are laid out as the mod lays them out**, with the
+  Expand World switch in Settings on: the location file (clones of the game's locations, blueprint locations, groups,
+  "away from" and "close to" rules, a location wider than a zone put at the zone's middle, the start temple forced into
+  the middle zone when none was placed), the vegetation file (several prefabs drawn one at a time, a scale by axis, a
+  centre of its own, rules turned on or off by the world's global keys), the alt biome file (what each keeps out), and
+  Expand World Size's locations multiplier. Zone spawners can be left out and a random-seed location is left to the
+  game. See [Expand World](docs/architecture.md#what-a-world-generation-mod-changes-worldrules).
+
 ## v1.51.0 — unreleased
 
 ### Added

@@ -16,6 +16,27 @@ public static partial class ExpandWorld
     /// <param name="notes">Where a value not understood is noted.</param>
     private sealed class Fields(Entry entry, string kind, List<string> notes)
     {
+        /// <summary>The file kind the entry is from ("world", "locations"...).</summary>
+        public string Kind => kind;
+
+        /// <summary>
+        /// A field the mod reads as a list of texts (its StringList): a text is one item, a list its items (each a
+        /// text; blank ones left out); none when the field is missing.
+        /// </summary>
+        public IReadOnlyList<string> Rows(string key)
+        {
+            if (!entry.Fields.TryGetValue(key, out object? v) || v == null)
+            {
+                return [];
+            }
+            return v switch
+            {
+                string s => string.IsNullOrWhiteSpace(s) ? [] : [s],
+                List<object?> list => [.. list.OfType<string>().Where(s => !string.IsNullOrWhiteSpace(s))],
+                _ => [],
+            };
+        }
+
         /// <summary>Whether the entry has the field, with a value.</summary>
         public bool Has(string key) => entry.Fields.TryGetValue(key, out object? v) && v != null;
 

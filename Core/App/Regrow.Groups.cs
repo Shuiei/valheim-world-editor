@@ -1,5 +1,6 @@
 using ValheimGen;
 using Rnd = ValheimGen.UnityEngine.Random;
+using Rule = ValheimGen.VegetationRule;
 
 namespace TerrainEditor.App;
 

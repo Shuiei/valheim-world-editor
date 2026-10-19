@@ -9,11 +9,11 @@ namespace WorldEditor.Tests;
 /// </summary>
 internal static class RegrowFixtures
 {
-    private static Type RuleType { get; } = PrivateMember.Nested(typeof(Regrow), "Rule");
+    private static Type RuleType { get; } = typeof(ValheimGen.VegetationRule);
     private static Type GroundType { get; } = PrivateMember.Nested(typeof(Regrow), "Ground");
     private static Type ZoneType { get; } = PrivateMember.Nested(typeof(Regrow), "Zone");
 
-    /// <summary>The private rule type, for the tests that name it.</summary>
+    /// <summary>The rule type (ValheimGen.VegetationRule), for the tests that name it.</summary>
     public static Type Rule => RuleType;
 
     /// <summary>The private zone type, for the tests that build dictionaries of zones.</summary>

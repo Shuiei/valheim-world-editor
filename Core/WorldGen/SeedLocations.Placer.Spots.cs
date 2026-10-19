@@ -13,6 +13,11 @@ public static partial class SeedLocations
         internal bool TrySpot(Rule rule, Heightmap.Biome biomes, (int X, int Y) zone, float margin)
         {
             var spot = new Vector3(zone.X * 64f + Rnd.Range(-32f + margin, 32f - margin), 0f, zone.Y * 64f + Rnd.Range(-32f + margin, 32f - margin));
+            if (margin >= 32f && _gen.Rules.DataInstalled)
+            {
+                // Expand World Data puts a kind wider than a zone at the zone's middle (the draws are made all the same).
+                spot = new Vector3(zone.X * 64f, 0f, zone.Y * 64f);
+            }
             if (!AtRightDistance(rule, spot) || !OnRightGround(rule, biomes, ref spot, out float vegetation) || !FlatEnough(rule, spot))
             {
                 return false;
@@ -39,6 +44,11 @@ public static partial class SeedLocations
             _byPrefab.Add(rule.Prefab, placed);
             _byGroup.Add(rule.Group, placed);
             _byGroupMax.Add(rule.GroupMax, placed);
+            _byBase.Add(rule.Base, placed);
+            foreach (string group in rule.Groups ?? [])
+            {
+                _byGroups.Add(group, placed);
+            }
         }
     }
 }

@@ -59,6 +59,13 @@ public static partial class SeedLocations
     /// </summary>
     public static bool Available => _state.Rules.Locations.Count > 0;
 
+    /// <summary>Whether there are rules to lay out a world with: its own (<see cref="WorldRules.Locations"/>), else the game's.</summary>
+    /// <param name="gen">The world's generator.</param>
+    public static bool AvailableFor(WorldGenerator gen) => gen.Rules.Locations is { } own ? own.Locations.Count > 0 : Available;
+
+    /// <summary>The rules a world is laid out with: its own, else the ones in use.</summary>
+    private static State StateFor(WorldGenerator gen) => gen.Rules.Locations is { } own ? new State(own) : _state;
+
     /// <summary>
     /// The kinds laid out first (start, bosses, traders...), as the tests' copy keeps them: what the
     /// editor shows, and all they need.

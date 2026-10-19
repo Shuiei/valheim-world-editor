@@ -23,7 +23,7 @@ public static partial class ExpandWorld
         }
         var found = Find(settings);
         var data = ReadData(found);
-        var rules = Rules(keys, found, data);
+        var rules = Rules(keys, found, data, save.Zones?.GlobalKeys);
         Console.WriteLine($"Expand World: {save.Name}: {SizeSource(keys.Count, found)}; {FolderText(found)}; {Describe(rules)}.");
         NoteData(data, rules);
         if (keys.Count > 0 && !found.Any)
@@ -54,7 +54,10 @@ public static partial class ExpandWorld
             string biomes = data.Biomes == null ? "off" : $"{data.Biomes.Count} entries ({rules.Biomes.Biomes.Count - BiomeTable.GamesBiomes.Count} new biomes)";
             string world = data.World == null ? "off" : data.World.Count == 0 ? "the mod's default rules (no file)" : $"{rules.World?.Count ?? 0} rules";
             string territories = data.Territories == null ? "off" : $"{rules.Territories.Count}";
-            Console.WriteLine($"Expand World Data: biomes {biomes}; world {world}{(rules.LegacyGeneration ? " (legacy generation)" : "")}; territories {territories}.");
+            string locations = data.Locations == null ? "off" : data.Locations.Count == 0 ? "the game's (no file)" : $"{rules.Locations?.Locations.Count ?? 0} kinds";
+            string vegetation = data.Vegetation == null ? "off" : data.Vegetation.Count == 0 ? "the game's (no file)" : $"{rules.Vegetation?.Count ?? 0} rules";
+            string alts = data.AltBiomes == null ? "off" : data.AltBiomes.Count == 0 ? "the game's (no file)" : $"{rules.Locations?.AltBiomes.Count ?? 0}";
+            Console.WriteLine($"Expand World Data: biomes {biomes}; world {world}{(rules.LegacyGeneration ? " (legacy generation)" : "")}; territories {territories}; locations {locations}; vegetation {vegetation}; alt biomes {alts}.");
         }
         foreach (string note in data.Notes)
         {

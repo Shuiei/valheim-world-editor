@@ -192,7 +192,52 @@ public static partial class SeedLocations
         /// </summary>
         [JsonPropertyName("altBiome")]
         public string? AltBiome { get; set; }
+
+        // ---- Expand World Data's location file.
+        /// <summary>
+        /// The game's prefab a clone ("Name:Tag" in the mod's file) is made of; null when the prefab is the game's own
+        /// (<see cref="Prefab"/>). The mod counts clones of one prefab as the same kind for the distance checks.
+        /// </summary>
+        [JsonPropertyName("basePrefab")]
+        public string? BasePrefab { get; set; }
+        /// <summary>
+        /// The groups the kind belongs to for the mod's distance checks (its "groups", "group" and "groupMax"); null
+        /// for the game's own kinds.
+        /// </summary>
+        [JsonPropertyName("groups")]
+        public List<string>? Groups { get; set; }
+        /// <summary>
+        /// The mod's "awayFrom": the kind stays this far from any instance of these kinds or groups (then
+        /// <see cref="Group"/> is a made-up name and <see cref="MinDistanceFromSimilar"/> 1, as the mod sets them); null
+        /// for none.
+        /// </summary>
+        [JsonPropertyName("awayFrom")]
+        public List<DistanceRule>? AwayFrom { get; set; }
+        /// <summary>
+        /// The mod's "closeTo": the kind needs an instance within reach for every row (any of a row's kinds or groups);
+        /// null for none.
+        /// </summary>
+        [JsonPropertyName("closeTo")]
+        public List<List<DistanceRule>>? CloseTo { get; set; }
+        /// <summary>True for a location the mod builds from a blueprint file (no prefab: predicted, not drawn); null otherwise.</summary>
+        [JsonPropertyName("blueprint")]
+        public bool? Blueprint { get; set; }
+        /// <summary>
+        /// True when the mod changes what the location spawns (swapped or added objects, data, commands, a random seed,
+        /// a dungeon, terrain changes): its contents cannot be known; null otherwise.
+        /// </summary>
+        [JsonPropertyName("custom")]
+        public bool? Custom { get; set; }
+
+        /// <summary>The game's prefab the kind is made of (<see cref="BasePrefab"/>, else <see cref="Prefab"/>).</summary>
+        [JsonIgnore]
+        public string Base => BasePrefab ?? Prefab;
     }
+
+    /// <summary>One of the mod's distance rules: a kind or group, and how far (metres).</summary>
+    /// <param name="Name">The kind's prefab name or a group's name.</param>
+    /// <param name="Distance">The distance, metres.</param>
+    public sealed record DistanceRule([property: JsonPropertyName("name")] string Name, [property: JsonPropertyName("distance")] float Distance);
 
     /// <summary>
     /// An alt biome (Dark Meadows, Lox Plains...) and the location kinds it keeps out of its areas.

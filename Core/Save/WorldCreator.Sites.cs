@@ -33,7 +33,7 @@ public static partial class WorldCreator
     internal static List<Site> Sites(ValheimGen.TerrainService terrain, int seed, int radius)
     {
         var sites = new List<Site>();
-        if (!ValheimGen.SeedLocations.Available)
+        if (!ValheimGen.SeedLocations.AvailableFor(terrain.Generator))
         {
             return sites;
         }
@@ -51,7 +51,10 @@ public static partial class WorldCreator
                 int hash = StableHash.Of(p.Rule.Prefab);
                 // Snapped to the game's literal 30 (ZoneSystem.PlaceLocations), whatever the rules put the water at.
                 var position = new Vector3(p.X, p.Rule.SnapToWater != 0 ? ValheimGen.WorldGenerator.LiteralWaterLevel : p.Y, p.Z);
-                if (LocationPrefabs.Get(p.Rule.Prefab) is not { Interior: false } prefab)
+                // A blueprint location, one whose contents Expand World Data changes, or one spawned with a random seed:
+                // its zone is left to the game, like a dungeon's.
+                bool unknown = p.Rule.Blueprint == true || p.Rule.Custom == true || terrain.Generator.Rules.RandomLocations;
+                if (unknown || LocationPrefabs.Get(p.Rule.Base) is not { Interior: false } prefab)
                 {
                     sites.Add(new Site(zone, p.Rule.Prefab, hash, position, 0f, null));
                     continue;

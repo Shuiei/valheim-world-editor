@@ -19,6 +19,10 @@ public static partial class ExpandWorld
         AddUnless(parts, !r.BiomeData, $"biome data ({r.Biomes.Biomes.Count} biomes)");
         AddUnless(parts, r.World == null, $"world rules ({r.World?.Count ?? 0}{(r.LegacyGeneration ? ", legacy" : "")})");
         AddUnless(parts, r.Territories.Count == 0, $"territories ({r.Territories.Count})");
+        AddUnless(parts, r.Locations == null, $"locations ({r.Locations?.Locations.Count ?? 0} kinds)");
+        AddUnless(parts, r.Vegetation == null, $"vegetation ({r.Vegetation?.Count ?? 0} rules)");
+        AddUnless(parts, r.ZoneSpawners, "no zone spawners");
+        AddUnless(parts, !r.RandomLocations, "random locations");
         return string.Join(", ", parts);
     }
 

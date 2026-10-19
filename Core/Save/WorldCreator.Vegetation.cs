@@ -62,7 +62,7 @@ public static partial class WorldCreator
                 placed++;
             }
         }
-        int zones = PlaceZoneControls(db, batch, left, radius);
+        int zones = PlaceZoneControls(db, batch, left, radius, terrain.Generator.Rules.ZoneSpawners);
         // The middle zone's terrain compiler object (no edit, written with the first chunk of the middle zone).
         batch.Put(ChunkMath.BaseChunk(0, 0), EmptyTerrainObject());
         batch.Objects++;
@@ -86,15 +86,16 @@ public static partial class WorldCreator
     }
 
     /// <summary>
-    /// The game's own objects of a generated zone: a zone control in each (its creatures spawn from it), and marks the
-    /// zone generated. Zones left to the game get neither.
+    /// The game's own objects of a generated zone: a zone control in each (its creatures spawn from it; none when the
+    /// world's rules turn the spawners off), and marks the zone generated. Zones left to the game get neither.
     /// </summary>
     /// <param name="db">The world's database (the generated zones).</param>
     /// <param name="batch">The chunk batch receiving the zone controls.</param>
     /// <param name="left">The zones left to the game.</param>
     /// <param name="radius">The generated radius in zones.</param>
+    /// <param name="spawners">Whether each zone gets its zone control (Expand World Data's "Zone spawners").</param>
     /// <returns>How many zones were generated.</returns>
-    private static int PlaceZoneControls(ZoneDb db, ChunkBatch batch, HashSet<(int X, int Z)> left, int radius)
+    private static int PlaceZoneControls(ZoneDb db, ChunkBatch batch, HashSet<(int X, int Z)> left, int radius, bool spawners = true)
     {
         int zones = 0;
         ushort ctrlFlags = Terrain.PrefabCatalog.Get(ZoneCtrl)?.Flags ?? 0x0100;
@@ -106,7 +107,10 @@ public static partial class WorldCreator
                 {
                     continue;
                 }
-                batch.Add(x * 64f, z * 64f, ZdoBuilder.Blank(ZoneCtrl, ctrlFlags, new Vector3(x * 64f, 0f, z * 64f), Vector3.Zero, 0f));
+                if (spawners)
+                {
+                    batch.Add(x * 64f, z * 64f, ZdoBuilder.Blank(ZoneCtrl, ctrlFlags, new Vector3(x * 64f, 0f, z * 64f), Vector3.Zero, 0f));
+                }
                 db.Generated.Add(((short)x, (short)z));
                 zones++;
             }
