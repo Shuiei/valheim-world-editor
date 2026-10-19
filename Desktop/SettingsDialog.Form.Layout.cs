@@ -12,7 +12,8 @@ public static partial class SettingsDialog
     {
         /// <summary>
         /// Builds the rest of the window once the extensions are found: their list, the language and what draws (both
-        /// taken at the next start), the error line, Save and Cancel, and the content laid out in order.
+        /// taken at the next start), the history's length, the error line, Save and Cancel, and the content laid out in
+        /// order.
         /// </summary>
         public void Build()
         {
@@ -83,6 +84,7 @@ public static partial class SettingsDialog
                         Hint(Lang.T("settings.expandWorldHint")),
                         new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { _expandWorldFolder, Ui.Col(_expandWorldBrowse, 1) } },
                         Hint(Lang.T("settings.expandWorldFolderHint")),
+                        BuildHistory(),
                         drawing,
                         _error,
                         new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0), Children = { cancel, save } },

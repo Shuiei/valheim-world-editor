@@ -100,9 +100,10 @@ flowchart LR
    `SceneReads`, read again in the background when the edits, the live game or the object count change.
 4. **Edit.** Tools call `EditSession` (`Desktop/EditSession.cs`): `BeginStroke` / `StrokeStep` /
    `EndStroke` for brushes, `EditGround`, `Commit`, `Delete`, `Move`. Each makes one `Change` on the
-   undo list (at most `HistoryLength`, 200) and sends the touched zones to the `EditStore` as
-   `ZoneEdit`s (`Core/Editing/EditStore.cs`). Objects are pending too: deleted ids, `NewObject`s
-   (negative ids from `WorldSession.NextId`) and `ZoneReset`s. Nothing is written yet.
+   undo list (at most `KeepSteps` steps, from Settings, 0 = no limit, and `KeepBytes`, 2 GB) and
+   sends the touched zones to the `EditStore` as `ZoneEdit`s (`Core/Editing/EditStore.cs`). Objects
+   are pending too: deleted ids, `NewObject`s (negative ids from `WorldSession.NextId`) and
+   `ZoneReset`s. Nothing is written yet.
 5. **Save.** `WorldSession.Save` refuses at once when the game saved the world since it was read
    (`WorldWriter.Newer`; the window then offers `WorldSession.PrepareReplay` / `Replay`, below), turns No limit
    ground into ground discs (`Core/Editing/Uplift.cs`), then

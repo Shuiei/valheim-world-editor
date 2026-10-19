@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.57.0 — unreleased
+
+### Added
+- **The history keeps every change by default, and you choose how many in Settings.** It used to keep the last 200
+  changes only. **Settings > History > Steps kept** sets a number; empty or 0 keeps them all, as long as they take
+  less than 2 GB of memory (past that, the oldest go first). The History panel shows the newest 200 changes, and
+  **Show older** adds 200 more each time.
+
 ## v1.56.1 — unreleased
 
 ### Fixed
