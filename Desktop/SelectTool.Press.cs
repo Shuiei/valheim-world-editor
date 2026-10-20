@@ -68,6 +68,8 @@ public sealed partial class SelectTool
     /// <param name="shift">Shift held: add to the selection.</param>
     private bool StartZone(Point at, Vector3? ground, bool shift)
     {
+        // A zone or a box left over (its release lost with the focus) never drives this one.
+        StopZones();
         if (!ZoneOnGround)
         {
             _box = (at, at, shift, false);
