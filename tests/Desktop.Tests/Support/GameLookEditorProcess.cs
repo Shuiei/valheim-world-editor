@@ -64,8 +64,9 @@ public class GameLookEditorProcess : EditorProcess
     }
 
     /// <summary>
-    /// The terrain's fragment program as the game has it for OpenGL (Unity's names, the per-zone ocean depth block,
-    /// the paint mask read at vs_TEXCOORD0), small: what GameShader adapts and the view links with its own main.
+    /// A made-up terrain fragment program shaped as Unity writes one for OpenGL (Unity's names: the zone corners' ocean
+    /// depths, the paint mask read at vs_TEXCOORD0), with a small body of its own: what GameShader adapts and the view
+    /// links with its own main.
     /// </summary>
     protected static readonly string Fragment = string.Join(
         "\n",
@@ -84,21 +85,15 @@ public class GameLookEditorProcess : EditorProcess
         "layout(location = 1) out vec4 SV_Target1;",
         "layout(location = 2) out vec4 SV_Target2;",
         "layout(location = 3) out vec4 SV_Target3;",
-        "float u_xlat66;",
-        "float u_xlat68;",
         "void main()",
         "{",
-        "    u_xlat66 = _depth[2] + (-_depth[3]);",
-        "    u_xlat66 = vs_TEXCOORD0.x * u_xlat66 + _depth[3];",
-        "    u_xlat68 = (-_depth[0]) + _depth[1];",
-        "    u_xlat68 = vs_TEXCOORD0.x * u_xlat68 + _depth[0];",
-        "    u_xlat68 = (-u_xlat66) + u_xlat68;",
-        "    u_xlat66 = vs_TEXCOORD0.y * u_xlat68 + u_xlat66;",
-        "    SV_Target0 = texture(_ClearedMaskTex, vs_TEXCOORD0.xy);",
-        "    SV_Target0.rgb = SV_Target0.rgb * 0.5 + texture(_DiffuseArrayTex, vec3(vs_TEXCOORD1.w * 0.1, vs_TEXCOORD3.w * 0.1, 0.0)).rgb * 0.5;",
+        "    vec4 mask = texture(_ClearedMaskTex, vs_TEXCOORD0);",
+        "    vec3 ground = texture(_DiffuseArrayTex, vec3(vs_TEXCOORD1.w, vs_TEXCOORD3.w, 0.0) * 0.1).rgb;",
+        "    float depth = (_depth[0] + _depth[1] + _depth[2] + _depth[3]) * 0.25;",
+        "    SV_Target0 = vec4(mix(mask.rgb, ground, 0.5), 1.0);",
         "    SV_Target1 = vec4(0.04, 0.04, 0.04, 0.2);",
         "    SV_Target2 = vec4(vs_TEXCOORD1.z, vs_TEXCOORD2.z, vs_TEXCOORD3.z, 0.0) * 0.5 + 0.5;",
-        "    SV_Target3 = vec4(vec3(0.6 + u_xlat66 * 0.0), 1.0);",
+        "    SV_Target3 = vec4(vec3(0.6) + depth * 0.0, 1.0);",
         "}",
         "#endif",
         "");

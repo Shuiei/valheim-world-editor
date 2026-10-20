@@ -5,7 +5,7 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// The deferred pass's fragment variants in the shader text (GameShader.FragmentVariants): each is keyed by its prefix,
-/// whether it samples the full paint mask, its distinct G-buffer target count and whether it has fog, and the first
+/// whether it declares the full paint mask, its distinct G-buffer target count and whether it has fog, and the first
 /// variant with a key is the one kept.
 /// </summary>
 public class GameShaderFragmentVariantTests
@@ -47,9 +47,9 @@ public class GameShaderFragmentVariantTests
     }
 
     [Fact]
-    public void AVariantThatSamplesTheFullPaintMaskIsKeyedAsSuch()
+    public void AVariantThatDeclaresTheFullPaintMaskIsKeyedAsSuch()
     {
-        var keep = Variants(Variant("SV_Target0 = texture(_ClearedMaskTex, vs_TEXCOORD0.xy);"));
+        var keep = Variants(Variant("SV_Target0 = a;", extra: "UNITY_LOCATION(1) uniform  sampler2D _ClearedMaskTex;\n"));
         Assert.Contains(("vs", true, 1, false), keep.Keys);
     }
 

@@ -15,9 +15,9 @@ public static partial class TerrainShader
     /// <summary>The header put before the adapted shader: what it is and the precisions (all highp).</summary>
     private const string Header = """
 		// Valheim's terrain shader (Custom/Heightmap, deferred G-buffer pass), compiled by Unity for
-		// Vulkan, turned into GLSL by SPIRV-Cross and adapted like the OpenGL one: the four G-buffer
-		// targets become globals that main() lights, the per-zone ocean depth and the paint mask arrive
-		// as varyings. Generated; do not edit by hand.
+		// Vulkan, turned into GLSL by SPIRV-Cross, its declarations adapted like the OpenGL one's: the
+		// four G-buffer targets and the zone corners' ocean depths become globals the editor's main()
+		// sets and lights. Generated; do not edit by hand.
 		precision highp float;
 		precision highp int;
 		precision highp sampler2D;
