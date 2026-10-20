@@ -36,6 +36,7 @@ namespace TerrainEditor.Desktop;
 ///    key &lt;name&gt; [shift|ctrl|alt ...] a key pressed in the window (Avalonia key names: E, Escape, Enter, D1...)
 ///    mapview &lt;x&gt; &lt;z&gt; &lt;m per pixel&gt;  the map looking there
 ///    mappick &lt;zone x&gt; &lt;zone z&gt;      the map's zone picked (as a click on it)
+///    maphover &lt;x&gt; &lt;z&gt;               the mouse over a world point of the map: {"cursor": the line it shows}
 ///    search &lt;text&gt;                  the map's search (objects by kind)
 ///    hit &lt;n&gt;                        the search's result n (from 0) picked, as a click in its list
 ///    zones                          the map's zone filter: show the matching zones
@@ -85,6 +86,7 @@ public static partial class Driver
         ["key"] = CmdKey,
         ["mapview"] = CmdMapview,
         ["mappick"] = CmdMappick,
+        ["maphover"] = CmdMaphover,
         ["search"] = CmdSearch,
         ["hit"] = CmdHit,
         ["zones"] = CmdZones,

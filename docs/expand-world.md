@@ -45,6 +45,8 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   the biome layout (the world rules, in the mod's current or legacy evaluation), every biome's ground
   shape, colour, lava and height transform, the territories. The map draws the sea at the world's real water level
   (the game's own map keeps its 29.5 m whatever Expand World Rivers sets).
+- **The map's pointer box**: the territory a player at the point is in and the status effects the mod puts on
+  them there (the territory's when it gives any, else the biome's), as the mod finds them for the player.
 - **The water's colours**: with the mod's "Custom water color" on, the 3D view's water takes the colours the
   biome under the camera gives (when the biome file gives it other settings, as the mod needs), the territory's
   over them, as the game colours all its water by the player's place. The editor's water is its own drawing, so
@@ -98,9 +100,10 @@ A world made with Expand World Size shows "Expand World" on its card on the star
 - `pregenerate`: not modelled. The map's location icons follow the location file's "iconAlways" and "iconPlaced"
   (an icon's size included), for icons the game's minimap has (the start, the traders); an icon named after a pin
   type, an item or a status effect is not drawn, and one the game makes pulse is drawn still.
-- **Status effects** of biomes and territories: the editor neither applies nor draws them. As in the mod, they
-  still count towards whether a biome's or a territory's settings are in use, as a territory's water colours do;
-  a biome's water colours do not.
+- **Status effects** of biomes and territories: the map names those a player gets at the point under the pointer
+  (by day, by night), but not the world and player keys that can turn one off, its duration or its damage. As in
+  the mod, they count towards whether a biome's or a territory's settings are in use, as a territory's water
+  colours do; a biome's water colours do not.
 - **The zone system's water**: the game's own vegetation and location checks use the sea at 30 m whatever
   Expand World Rivers puts the water at, and neither mod changes that, so the editor keeps it too.
 - **The mods' quirks** are mirrored as they are (a few are listed in the architecture notes), so that

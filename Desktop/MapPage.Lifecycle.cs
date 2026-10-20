@@ -25,6 +25,7 @@ public sealed partial class MapPage
         if (!same)
         {
             Map.Show(session);
+            _hovered = null;
             Spot = null;
             Target = null;
             Map.Chosen = null;
@@ -81,12 +82,16 @@ public sealed partial class MapPage
     public void Stop() => _players.Stop();
 
     /// <summary>
-    /// The world shown was closed: its players are no longer asked for (its connection is gone), and the next world
-    /// shown starts afresh.
+    /// The world shown was closed: its players are no longer asked for (its connection is gone), its alt biomes no
+    /// longer worked out, and the next world shown starts afresh.
     /// </summary>
     public void Forget()
     {
         Stop();
+        StopAltBiomes();
+        _altsAsked = null;
+        _alts = null;
+        _hovered = null;
         _session = null;
         Map.Players = [];
         PlaceLabels();
@@ -98,6 +103,7 @@ public sealed partial class MapPage
     public void Dispose()
     {
         Stop();
+        StopAltBiomes();
         Map.Dispose();
     }
 }

@@ -1,3 +1,4 @@
+using System.Text.Json;
 
 namespace TerrainEditor.Desktop;
 
@@ -22,6 +23,14 @@ public static partial class Driver
         MainWindow w = call.W;
         w.MapPage!.Pick((int)call.F(0), (int)call.F(1));
         return Task.FromResult(State(w));
+    }
+
+    /// <summary>The 'maphover' command (see the class summary): the cursor line it shows.</summary>
+    /// <param name="call">The command as given.</param>
+    private static Task<string> CmdMaphover(Call call)
+    {
+        MainWindow w = call.W;
+        return Task.FromResult(JsonSerializer.Serialize(new { cursor = w.MapPage!.HoverAt(call.F(0), call.F(1)) }));
     }
 
     /// <summary>The 'search' command (see the class summary).</summary>

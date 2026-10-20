@@ -25,6 +25,7 @@ public static partial class ExpandWorld
             }
             var height = HeightOf(f);
             var water = WaterOf(f);
+            var effects = StatusEffectsOf(f);
             var territory = new Territory
             {
                 Name = name,
@@ -33,6 +34,7 @@ public static partial class ExpandWorld
                 TerrainColor = f.Colour("colorTerrain"),
                 MapColor = f.Colour("colorMap"),
                 Water = water,
+                StatusEffects = effects,
                 NoBuild = f.B("noBuild", false),
             };
             bool valid = territory.NoBuild || f.Count("statusEffects") > 0 || !height.IsIdentity || territory.MapColor != null || territory.TerrainColor != null

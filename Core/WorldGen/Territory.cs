@@ -25,6 +25,9 @@ public sealed record Territory
     /// <summary>Its water colours, over its biome's.</summary>
     public WaterColours Water { get; init; } = WaterColours.None;
 
+    /// <summary>The status effects it puts on players, in place of its biome's when it has any.</summary>
+    public IReadOnlyList<StatusEffect> StatusEffects { get; init; } = [];
+
     /// <summary>Whether building is forbidden in it.</summary>
     public bool NoBuild { get; init; }
 }

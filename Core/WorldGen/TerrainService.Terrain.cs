@@ -80,7 +80,30 @@ public sealed partial class TerrainService
             return WaterColours.None;
         }
         var biome = Rules.Biomes.Of(BiomeAt(x, z)) is { HasData: true } b ? b.Water : WaterColours.None;
-        // The mod reads the territory at the player's place as it is, not stretched as the biome is.
-        return biome.Under(Generator.TerritoryAt(x, z)?.Water);
+        return biome.Under(TerritoryAt(x, z)?.Water);
+    }
+
+    /// <summary>
+    /// The territory a player at a world point is in, as Expand World Data finds it for the player's water and status
+    /// effects (BiomeCalculator.GetTerritory: the point as it is, where the map's colours stretch it as the biomes);
+    /// null for none.
+    /// </summary>
+    /// <param name="x">World x.</param>
+    /// <param name="z">World z.</param>
+    public Territory? TerritoryAt(float x, float z) => Generator.TerritoryAt(x, z);
+
+    /// <summary>
+    /// The status effects Expand World Data puts on a player at a world point (its StatusEffectManager): the
+    /// territory's when it gives any, else the biome's when the biome file keeps data of it; none otherwise.
+    /// </summary>
+    /// <param name="x">World x.</param>
+    /// <param name="z">World z.</param>
+    public IReadOnlyList<StatusEffect> StatusEffectsAt(float x, float z)
+    {
+        if (TerritoryAt(x, z) is { StatusEffects.Count: > 0 } territory)
+        {
+            return territory.StatusEffects;
+        }
+        return Rules.Biomes.Of(BiomeAt(x, z)) is { HasData: true } biome ? biome.StatusEffects : [];
     }
 }

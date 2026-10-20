@@ -86,6 +86,8 @@ public class DriverTests
         Assert.True(state.GetProperty("matches").GetInt32() > 0);
         await r.Send("mappick 0 0");
         Assert.Equal((0, 0), r.W.MapPage.Spot!.Value);
+        // The mouse over a point: the cursor line it shows.
+        Assert.StartsWith("x 10, z 20 · zone 0, 0 · ", (await r.Send("maphover 10 20")).GetProperty("cursor").GetString());
         // The status bar's message, then none.
         Assert.Equal("hello there", (await r.Send("message hello there")).GetProperty("message").GetString());
         Assert.Equal("", (await r.Send("message")).GetProperty("message").GetString());
