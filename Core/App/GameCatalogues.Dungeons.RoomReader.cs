@@ -68,8 +68,18 @@ public static partial class GameCatalogues
                     ["picks"] = _picks,
                     ["nodes"] = _nodes,
                 };
+                AddPlaceOrder(info, room);
                 Walk(_root, default, Quat.Root, true);
                 return info;
+            }
+
+            /// <summary>The room's place order (m_minPlaceOrder), kept only when it is not 0.</summary>
+            private static void AddPlaceOrder(Dict info, AssetTypeValueField room)
+            {
+                if (Int(Get(room, "m_minPlaceOrder", 0L)) is var order and not 0)
+                {
+                    info["minPlaceOrder"] = order;
+                }
             }
 
             /// <summary>

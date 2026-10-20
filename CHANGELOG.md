@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.78.0 — 2026-10-20
+
+### Added
+- **The Dungeon tool joins each room only as far from the entrance as the game allows.** The game's rooms (and Expand
+  World Data's room file) say how many rooms from the entrance a room may appear at the fewest; shrines, treasure
+  rooms and deep halls no longer turn up right at the way in.
+
 ## v1.77.0 — 2026-10-20
 
 ### Added

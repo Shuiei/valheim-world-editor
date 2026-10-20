@@ -15,17 +15,18 @@ public static partial class DungeonGen
     }
 
     /// <summary>
-    /// A room to join to an open end of this type: of the rooms whose openings fit and the kind's limits allow, those
-    /// still needed first, weighted as the game weighs its rooms (Room.m_weight); null when none fits.
+    /// A room to join to an open end: of the rooms whose openings fit, that may join that far from the entrance and that
+    /// the kind's limits allow, those still needed first, weighted as the game weighs its rooms (Room.m_weight); null
+    /// when none fits.
     /// </summary>
     /// <param name="normal">The kind's ordinary rooms.</param>
-    /// <param name="type">The open end's type.</param>
+    /// <param name="end">The open end's type, and how many rooms its room is from the entrance.</param>
     /// <param name="kind">The kind of dungeon.</param>
     /// <param name="counts">How many of each game room are placed.</param>
     /// <param name="rnd">The stream of the dungeon's own random numbers.</param>
-    private static Dungeons.Room? PickRoom(List<Dungeons.Room> normal, string type, Dungeons.Kind kind, Dictionary<string, int> counts, Random rnd)
+    private static Dungeons.Room? PickRoom(List<Dungeons.Room> normal, (string Type, int Order) end, Dungeons.Kind kind, Dictionary<string, int> counts, Random rnd)
     {
-        var fits = Allowed([.. normal.Where(r => Dungeons.Matching(r, type).Any())], kind, counts);
+        var fits = Allowed([.. normal.Where(r => Joins(r, end))], kind, counts);
         if (fits.Count == 0)
         {
             return null;
@@ -35,6 +36,9 @@ public static partial class DungeonGen
         return Weighted.Pick(needed.Count > 0 ? needed : fits, r => r.Weight, rnd.NextDouble());
 #pragma warning restore S2245
     }
+
+    /// <summary>Whether a room can join an open end: an opening of it fits, and the end's room is far enough from the entrance.</summary>
+    private static bool Joins(Dungeons.Room room, (string Type, int Order) end) => room.MinPlaceOrder <= end.Order && Dungeons.Matching(room, end.Type).Any();
 
     /// <summary>Whether to join more rooms: fewer than the target, or a room the kind requires still missing.</summary>
     private static bool Wanting(int placed, int target, Dungeons.Kind kind, Dictionary<string, int> counts) => placed < target || Missing(kind, counts);

@@ -32,6 +32,9 @@ public sealed record DungeonRules
 public sealed record RoomEntry(string Name, string Theme, bool Enabled, bool Entrance, bool EndCap, bool Divider, int EndCapPriority, float Weight, bool Perimeter,
     string Size, IReadOnlyList<RoomConnection> Connections, IReadOnlyList<ContentObject> Objects)
 {
+    /// <summary>How many rooms from the entrance it may join at the fewest ("minPlaceOrder").</summary>
+    public int MinPlaceOrder { get; init; }
+
     /// <summary>Its objects' swaps ("objectSwap"), by prefab: what each may become, with its weight; an empty name removes it.</summary>
     public IReadOnlyDictionary<string, IReadOnlyList<Weighted<string>>> Swaps { get; init; } = new Dictionary<string, IReadOnlyList<Weighted<string>>>();
 

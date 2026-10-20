@@ -83,6 +83,29 @@ public class DungeonsModTests
     }
 
     [Fact]
+    public void TheGameRoomsKeepTheirPlaceOrder()
+    {
+        // From the game's data: most cave rooms join one room from the entrance at the fewest; a crossroads anywhere.
+        Assert.Equal(1, Dungeons.RoomOf("cave_new_corridor01")!.MinPlaceOrder);
+        Assert.Equal(0, Dungeons.RoomOf("cave_new_crossroads02")!.MinPlaceOrder);
+        using var _ = Dungeons.Scope(new DungeonRules { Rooms = [Room("cave_new_corridor01") with { MinPlaceOrder = 3 }] });
+        Assert.Equal(3, Dungeons.RoomOf("cave_new_corridor01")!.MinPlaceOrder);
+    }
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(2, false)]
+    public void ARoomJoinsOnlyFarEnoughFromTheEntrance(int order, bool joins)
+    {
+        // The entrance room counts 1, as the game joins it to its own way in: a room of place order 2 cannot join it.
+        var entrance = Room("cave_new_entrance02") with { Entrance = true, Size = "24,12,18" };
+        using var _ = Dungeons.Scope(new DungeonRules { Rooms = [entrance, Room("cave_new_corridor01") with { MinPlaceOrder = order }] });
+        var r = DungeonGen.Make(new DungeonGen.Settings(Made: DungeonGen.Made.Rooms, Kind: "DG_Cave", Size: 1, Seed: 11));
+        Assert.Equal("cave_new_entrance02", r.Rooms![0].Room!.Game);
+        Assert.Equal(joins, r.Rooms.Any(p => p.Room!.Game == "cave_new_corridor01"));
+    }
+
+    [Fact]
     public void TheFilesOpeningsChangeTheGameRoomsAddToThemAndCanBeExitOnly()
     {
         RoomConnection[] connections =

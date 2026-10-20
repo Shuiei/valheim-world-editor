@@ -12,7 +12,8 @@ public static partial class GameCatalogues
     /// themes, the box its rooms must stay in (m_zoneSize, around the zone centre at the dungeon's
     /// height), its door types ([prefab, opening type, chance (0: the dungeon's doorChance)]) and baseSeed
     /// (its seed is added to each room's roll). For each room prefab (a root with a Room component):
-    ///   theme, size, endCap, entrance, divider, endCapPrio, weight, perimeter, enabled;
+    ///   theme, size, endCap, entrance, divider, endCapPrio, weight, perimeter, enabled; minPlaceOrder when not 0
+    ///     (how many rooms from the entrance it may join at the fewest);
     ///   openings (RoomConnection children): [type, entrance, allowDoor, onlyIfOtherAllowsDoor, x, y, z, qx,
     ///     qy, qz, qw] in the room's frame (the game joins two rooms where openings meet, the new room
     ///     turned so its opening faces the other);

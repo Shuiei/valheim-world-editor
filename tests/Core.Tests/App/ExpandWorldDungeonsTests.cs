@@ -28,9 +28,11 @@ public class ExpandWorldDungeonsTests
                     ("connections", new List<object?> { Map(("position", "6,0,-3,90,0,0"), ("type", "lit"), ("exitOnly", "true"), ("door", "other")), "not a map" }),
                     ("objects", new List<object?> { "GlowingMushroom, 1, 2, 0.5, 0, 0, 0, 1, 1, 1, 0.5", "NoSuchThing, 0, 0, 0" })),
                 E(("name", "cave_new_corridor01")),
+                E(("name", "cave_new_corridor03"), ("minPlaceOrder", "2")),
             ],
         };
         var rooms = ExpandWorld.DungeonsOf(data)!.Rooms!;
+        Assert.Equal((0, 2), (rooms[1].MinPlaceOrder, rooms[2].MinPlaceOrder));
         var copy = rooms[0];
         Assert.Equal(("cave_new_corridor01:Lit", "Cave, Glow", 3f, "12,12,8"), (copy.Name, copy.Theme, copy.Weight, copy.Size));
         Assert.Equal(new RoomConnection("6,0,-3,90,0,0", "lit", false, true, "other"), Assert.Single(copy.Connections));

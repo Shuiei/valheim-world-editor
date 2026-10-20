@@ -9,7 +9,9 @@ public static partial class DungeonGen
     /// Lays the dungeon's rooms out from the first one (the entrance room, at the dungeon object when there is one) and
     /// joins more of the kind's ordinary rooms to the open ends, while they fit inside the kind's bounds: as many as the
     /// size asks (within the kind's fewest and most), and on while a room the kind requires is missing, the rooms it
-    /// needs picked first and none past its most.
+    /// needs picked first and none past its most. A room joins only an open end of a room as far from the entrance as
+    /// its fewest steps (Room.MinPlaceOrder: the first room is 1, as the game joins it to its own way in; each room joined
+    /// one more than the room it joins).
     /// </summary>
     /// <param name="s">The settings (the size asks for the room count).</param>
     /// <param name="kind">The kind of dungeon.</param>
@@ -28,6 +30,7 @@ public static partial class DungeonGen
         var first = entrances.Count > 0 ? entrances[rnd.Next(entrances.Count)] : normal[rnd.Next(normal.Count)];
         rooms.Add(dungeon is { } at ? Dungeons.PlaceStart(first, at.Position, at.Rotation) : new Dungeons.Placed(first.Hash, origin, Quaternion.Identity));
         var counts = new Dictionary<string, int>(StringComparer.Ordinal) { [first.Game] = 1 };
+        List<int> orders = [1];
         int target = RoomTarget(s, kind);
         for (int tries = 0; Wanting(rooms.Count, target, kind, counts) && tries < target * 40; tries++)
         {
@@ -37,7 +40,7 @@ public static partial class DungeonGen
                 break;
             }
             var end = ends[rnd.Next(ends.Count)];
-            if (PickRoom(normal, end.Type, kind, counts, rnd) is not { } room)
+            if (PickRoom(normal, (end.Type, orders[end.Room]), kind, counts, rnd) is not { } room)
             {
                 continue;
             }
@@ -46,6 +49,7 @@ public static partial class DungeonGen
             if (Dungeons.Overlaps(rooms, p).Count == 0 && Dungeons.Inside(kind, origin, p))
             {
                 rooms.Add(p);
+                orders.Add(orders[end.Room] + 1);
                 counts[room.Game] = counts.GetValueOrDefault(room.Game) + 1;
             }
         }

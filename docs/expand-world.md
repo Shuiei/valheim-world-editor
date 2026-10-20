@@ -69,7 +69,8 @@ A world made with Expand World Size shows "Expand World" on its card on the star
 - **The Dungeon tool** (its generator from the game's rooms, the rooms it adds, the rooms drawn): the room file's
   rooms in place of the game's (a game room the file leaves out is still drawn in the dungeons that have it, but
   no longer added), each with the file's themes (a new theme name taking the next flag, as the mod gives it), its
-  entrance, end cap and divider, end cap priority, weight, size, enabled, and its openings (type, place and turn,
+  entrance, end cap and divider, end cap priority, weight, size, enabled, its place order ("minPlaceOrder": how
+  many rooms from the entrance it joins at the fewest, as the game's own rooms say too), and its openings (type, place and turn,
   way in, doors, "exitOnly"); a copy of a game room ("name:suffix") as a room of its own, built as its game room
   with the objects the file adds (each by its chance, with its data) and saved as its game room, as the mod saves it.
   The room and dungeon files' "objectSwap" and "objectData" change the rooms' objects (the dungeon's first, then
@@ -121,8 +122,10 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   the mod, they count towards whether a biome's or a territory's settings are in use, as a territory's water
   colours do; a biome's water colours do not.
 - **The Dungeon tool and the room and dungeon files' rest**: a blueprint room (no game room of its name) is not
-  built (the log says which); a swap to a blueprint, "minPlaceOrder", "faceCenter", a room limit's "min" and "maxRetries", "randomSeed", and the camps'
-  settings are not followed; the generator joins rooms its own way, not the game's draw for draw.
+  built (the log says which); a swap to a blueprint, "faceCenter", "randomSeed", and the camps'
+  settings are not followed; the generator joins rooms its own way, not the game's draw for draw. A room limit's
+  "min" counts as rooms the dungeon must have: the Dungeon tool joins the rooms a dungeon needs first, so it has no
+  tries to count ("maxRetries").
 - **The zone system's water**: the game's own vegetation and location checks use the sea at 30 m whatever
   Expand World Rivers puts the water at, and neither mod changes that, so the editor keeps it too.
 - **The mods' quirks** are mirrored as they are (a few are listed in the architecture notes), so that
