@@ -33,6 +33,7 @@ until you **Save** (or **Apply live**).
 | `Shift` + click | Selects the row from the last object clicked to this one: click wall 1, then `Shift` + click wall 3, and walls 1, 2 and 3 are selected (the objects on the line between them). |
 | **Drag on empty ground** | Draws a box on the screen; when you let go, the objects **seen** inside it are selected, not those hidden behind others or behind the ground. Look at a building from the side or from above to pick one floor, one wall or its roof. Dragged any way round. |
 | `Alt` + drag | Draws the box even when you start over an object (over a building, or in woods where trees cover the ground). |
+| **Select through** (Select panel) / `Alt` + `Z` | The box also takes what is hidden behind others inside it: the furniture inside a house, the wall behind another. Like Blender's X-ray. |
 | **A drag draws: A zone on the ground** (Select panel) | Drags draw an outline on the ground instead, and everything shown above it is selected, from the ground up, hidden or not. |
 | | A zone, **Same kind**, **Invert** and **Whole building** leave out anything more than 10 m under the ground: objects a mod hides there (crafting stations 10 km under a house) are not part of what stands above. |
 | `Shift` + drag or `Ctrl` + drag | Adds what is inside the zone to the selection. |

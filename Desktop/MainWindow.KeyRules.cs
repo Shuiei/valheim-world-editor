@@ -42,6 +42,8 @@ public partial class MainWindow
             Take([Key.OemOpenBrackets, Key.OemCloseBrackets], KeyMods.NoCtrl, null, p => Tools.ResizeBrush(p.Key == Key.OemOpenBrackets ? -1 : 1)),
             Take([Key.Escape], KeyMods.NoCtrl, _ => Inspector.IsOpen, _ => Inspector.Close()),
             Take([Key.I], KeyMods.NoCtrl, _ => Tools.SelectMode && View.Selected.Count == 1, _ => Inspect()),
+            // Alt + Z: Select through on or off, as Blender's X-ray.
+            Take([Key.Z], KeyMods.NoCtrl, p => Tools.SelectMode && p.Mods.HasFlag(KeyModifiers.Alt), _ => SelectPanel.ThroughBox.IsChecked = SelectPanel.ThroughBox.IsChecked != true),
             // The Place and Select tools' own keys (any modifiers): what they turn down goes on.
             Offer(null, KeyMods.Any, _ => InMode(ToolMode.Place), p => PlaceInput.Key(p.Key, p.Shift, p.Ctrl)),
             Offer(null, KeyMods.Any, _ => Tools.SelectMode, p => View.SelectTool.Key(p.Key, p.Shift)),

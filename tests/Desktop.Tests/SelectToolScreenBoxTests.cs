@@ -1,3 +1,4 @@
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Xunit;
@@ -74,6 +75,48 @@ public class SelectToolScreenBoxTests
         Assert.Null(v.Tool.ScreenBox);
         v.Tool.Up(to, v.Size, false);
         Assert.Empty(v.Selected);
+    }
+
+    // Select through (Alt + Z, like Blender's X-ray): the box also takes the floor hidden under the other.
+    [AvaloniaFact]
+    public void SelectThroughAlsoTakesWhatIsHidden()
+    {
+        var v = TwoFloorsAndATree();
+        v.W.KeyPress(Key.Z, RawInputModifiers.Alt, PhysicalKey.Z, "z");
+        Assert.True(v.W.SelectPanel.ThroughBox.IsChecked);
+        Assert.True(v.Tool.SelectThrough);
+        Box(v, (36, 36), (46, 46));
+        Assert.Equal([0, 1, 2], v.Selected);
+        v.W.KeyPress(Key.Z, RawInputModifiers.Alt, PhysicalKey.Z, "z");
+        Assert.False(v.Tool.SelectThrough);
+    }
+
+    // With Select through, a thin box across the upper floor that misses its middle and its corners pulled in (x 40
+    // and 40 ± 0.67 m; ground points under a camera 40 m over the ground, so the floor 4 m up is 10% further out) still
+    // takes the floor it sees there.
+    [AvaloniaFact]
+    public void SelectThroughStillTakesWhatIsSeenInAThinBox()
+    {
+        var v = TwoFloorsAndATree();
+        v.Tool.SelectThrough = true;
+        Box(v, (40.12f, 39.4f), (40.34f, 40.6f));
+        Assert.Contains(1, v.Selected);
+    }
+
+    // Inside a box with Select through: nothing without an area or a view size; a box's points tried are its middle
+    // and its corners pulled a third of the way in.
+    [AvaloniaFact]
+    public void InsideTheBoxIsNothingWithoutAnAreaOrASizeAndTriesNinePoints()
+    {
+        var r = new Avalonia.Rect(0, 0, 100, 100);
+        Assert.Empty(new GlView().InsideRect(r, new Avalonia.Size(800, 600)));
+        var v = TwoFloorsAndATree();
+        Assert.Empty(v.W.View.InsideRect(r, new Avalonia.Size(0, 0)));
+        var points = GlView.SamplesOf((new System.Numerics.Vector3(0, 0, 0), new System.Numerics.Vector3(3, 6, 9))).ToList();
+        Assert.Equal(9, points.Count);
+        Assert.Equal(new System.Numerics.Vector3(1.5f, 3, 4.5f), points[0]);
+        Assert.Equal(new System.Numerics.Vector3(0.5f, 1, 1.5f), points[1]);
+        Assert.Equal(new System.Numerics.Vector3(2.5f, 5, 7.5f), points[8]);
     }
 
     // A plain drag on empty ground (no Alt) draws the box too.

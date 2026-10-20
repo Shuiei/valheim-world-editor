@@ -36,6 +36,9 @@ public sealed partial class SelectPanel
     /// </summary>
     internal ComboBox ZoneBox { get; }
 
+    /// <summary>A box on the screen also takes what is hidden behind others (Alt + Z).</summary>
+    internal CheckBox ThroughBox { get; }
+
     /// <summary>The exact place's X (east), in metres.</summary>
     internal NumericUpDown XBox { get; } = Num(0.1m);
 
