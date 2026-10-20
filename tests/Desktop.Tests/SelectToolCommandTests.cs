@@ -67,7 +67,7 @@ public class SelectToolCommandTests
         var v = Open(T(1, Beech, 40, 36, 40, false), T(2, Floor, 50, 31, 50), T(3, Beech, 50, 40, 50, false));
         var said = MessageReader(v.Tool);
         v.W.View.Select([0, 2]);
-        Assert.True(v.Tool.Key(Avalonia.Input.Key.End, false));
+        Assert.True(v.Tool.Key(Key.End, false));
         Assert.Equal("Dropped 2 object(s): 1 onto other objects, 1 onto the ground.", said());
         v.Tool.Commit();
         var trees = v.S.Scene.Things.Where(t => !t.Gone && t.Prefab == Beech).OrderBy(t => t.Position.X).ToList();
@@ -81,12 +81,12 @@ public class SelectToolCommandTests
         var v = Open(T(1, Beech, 40, 30, 40, false));
         v.W.View.Select([0]);
         v.Tool.OnGround = false;
-        Assert.True(v.Tool.Key(Avalonia.Input.Key.PageUp, false));
-        Assert.True(v.Tool.Key(Avalonia.Input.Key.PageUp, true));
-        Assert.True(v.Tool.Key(Avalonia.Input.Key.PageDown, false));
-        Assert.True(v.Tool.Key(Avalonia.Input.Key.OemPeriod, false));
-        Assert.True(v.Tool.Key(Avalonia.Input.Key.OemComma, true));
-        Assert.False(v.Tool.Key(Avalonia.Input.Key.Q, false));
+        Assert.True(v.Tool.Key(Key.PageUp, false));
+        Assert.True(v.Tool.Key(Key.PageUp, true));
+        Assert.True(v.Tool.Key(Key.PageDown, false));
+        Assert.True(v.Tool.Key(Key.OemPeriod, false));
+        Assert.True(v.Tool.Key(Key.OemComma, true));
+        Assert.False(v.Tool.Key(Key.Q, false));
         v.Tool.Commit();
         // +0.25 + 1 - 0.25 = +1 m; +1° then -15°.
         Assert.Equal(31, v.Last.Position.Y, 2);
