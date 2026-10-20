@@ -115,9 +115,7 @@ public static partial class ExpandWorld
         }
         try
         {
-            string[] rows = File.ReadAllLines(file);
-            var read = Path.GetExtension(file) == ".vbuild" ? new PlanBuild(BuildShareParts(rows, data, why), DefaultCenterPiece, null, null) : PlanBuildParts(rows, data, why);
-            return Centred(read);
+            return Centred(FileParts(file, data, why));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException or OverflowException)
         {
@@ -126,6 +124,19 @@ public static partial class ExpandWorld
             return null;
         }
     }
+
+    /// <summary>
+    /// A blueprint file's contents by its extension, as the mod tells them (Blueprints.GetBluePrint, exactly as written):
+    /// ".vbuild" a BuildShare file, ".blueprint" a PlanBuild one; any other spelling the mod finds (case does not matter
+    /// when Windows lists the files) it refuses, and so does this.
+    /// </summary>
+    /// <exception cref="FormatException">The extension is neither, or a row cannot be read.</exception>
+    private static PlanBuild FileParts(string file, DataTable data, List<string> why) => Path.GetExtension(file) switch
+    {
+        ".vbuild" => new PlanBuild(BuildShareParts(File.ReadAllLines(file), data, why), DefaultCenterPiece, null, null),
+        ".blueprint" => PlanBuildParts(File.ReadAllLines(file), data, why),
+        _ => throw new FormatException($"the mod reads only \".blueprint\" and \".vbuild\" files, written so, not \"{Path.GetExtension(file)}\""),
+    };
 
     /// <summary>What a blueprint file holds before it is centred.</summary>
     /// <param name="Parts">Its pieces as the file has them.</param>
