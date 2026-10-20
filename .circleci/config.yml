@@ -1,8 +1,11 @@
 # The pipeline's start (a setup workflow, CircleCI's dynamic configuration): says whether a release is
 # due, then runs .circleci/continue.yml, where the tests, the packages and the release are.
-# A release is due on main when VERSION's CHANGELOG heading has its date (not "unreleased") and VERSION
-# is not tagged yet: the release workflow then runs the tests and waits for an approval
-# (docs/development.md#releasing).
+# A release is due on main when the commit is a release pull request's ("Release v<VERSION>", as main's
+# squash merges title it), VERSION's CHANGELOG heading has its date (not "unreleased") and VERSION is
+# not tagged yet: the release workflow then waits for an approval (docs/development.md#releasing).
+# Other pull requests date their headings too: merging one is no release. The title only picks the
+# workflow: nothing is released until the maintainer approves hold-release (the restricted mod-token
+# context), and only pull requests main's ruleset accepted reach main.
 version: 2.1
 setup: true
 
@@ -20,11 +23,14 @@ jobs:
           command: |
             release=false
             version=$(tr -d '[:space:]' < VERSION)
-            if [ "$CIRCLE_BRANCH" = main ] && grep -q "^## v$version — [0-9]" CHANGELOG.md \
+            # The commit's title: a release pull request's is "Release v<VERSION>", squash merges add " (#<number>)".
+            subject=$(git log -1 --format=%s)
+            if [ "$CIRCLE_BRANCH" = main ] && printf '%s\n' "$subject" | grep -Eq "^Release v${version//./\\.}( \(#[0-9]+\))?$" \
+              && grep -q "^## v$version — [0-9]" CHANGELOG.md \
               && [ -z "$(git ls-remote --tags origin "refs/tags/v$version")" ]; then
               release=true
             fi
-            echo "Release of v$version due: $release"
+            echo "Release of v$version due: $release (commit: $subject)"
             echo "{\"release\": $release}" > /tmp/parameters.json
       - continuation/continue:
           configuration_path: .circleci/continue.yml
