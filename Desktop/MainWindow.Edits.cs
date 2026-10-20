@@ -27,6 +27,8 @@ public sealed partial class MainWindow
         }
         LastPlaced = null;
         Session = session;
+        // The Dungeon tool's rooms and dungeons: the game's, or as this world's Expand World Data files make them.
+        Editing.Dungeons.UseMod(session.Scene.Terrain?.Rules.Dungeons);
         session.Brush = Tools.Brush;
         MountainPanel.FitTo(session.Ground.W);
         if (MountainPanel.Spec.Radius * 1.15f > (session.Ground.W - 1) / 2f - 2)

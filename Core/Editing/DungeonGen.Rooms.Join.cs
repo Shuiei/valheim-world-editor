@@ -7,7 +7,9 @@ public static partial class DungeonGen
 {
     /// <summary>
     /// Lays the dungeon's rooms out from the first one (the entrance room, at the dungeon object when there is one) and
-    /// joins more of the kind's ordinary rooms to the open ends, while they fit inside the kind's bounds.
+    /// joins more of the kind's ordinary rooms to the open ends, while they fit inside the kind's bounds: as many as the
+    /// size asks (within the kind's fewest and most), and on while a room the kind requires is missing, the rooms it
+    /// needs picked first and none past its most.
     /// </summary>
     /// <param name="s">The settings (the size asks for the room count).</param>
     /// <param name="kind">The kind of dungeon.</param>
@@ -25,8 +27,9 @@ public static partial class DungeonGen
         // first room at the origin, facing +z.
         var first = entrances.Count > 0 ? entrances[rnd.Next(entrances.Count)] : normal[rnd.Next(normal.Count)];
         rooms.Add(dungeon is { } at ? Dungeons.PlaceStart(first, at.Position, at.Rotation) : new Dungeons.Placed(first.Hash, origin, Quaternion.Identity));
-        int target = 2 + 6 * Math.Clamp(s.Size, 1, 4);
-        for (int tries = 0; rooms.Count < target && tries < target * 40; tries++)
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal) { [first.Game] = 1 };
+        int target = RoomTarget(s, kind);
+        for (int tries = 0; Wanting(rooms.Count, target, kind, counts) && tries < target * 40; tries++)
         {
             var ends = Dungeons.Openings(rooms, freeOnly: true);
             if (ends.Count == 0)
@@ -34,20 +37,16 @@ public static partial class DungeonGen
                 break;
             }
             var end = ends[rnd.Next(ends.Count)];
-            var fits = normal.Where(r => Dungeons.Matching(r, end.Type).Any()).ToList();
-            if (fits.Count == 0)
+            if (PickRoom(normal, end.Type, kind, counts, rnd) is not { } room)
             {
                 continue;
             }
-            // Weighted as the game weighs its rooms (Room.m_weight).
-#pragma warning disable S2245 // A dungeon must come out the same from its seed; nothing here is a secret.
-            var room = Weighted.Pick(fits, r => r.Weight, rnd.NextDouble());
-#pragma warning restore S2245
             var mine = Dungeons.Matching(room, end.Type).ToList();
             var p = Dungeons.Attach(room, mine[rnd.Next(mine.Count)], end.Position, end.Rotation);
             if (Dungeons.Overlaps(rooms, p).Count == 0 && Dungeons.Inside(kind, origin, p))
             {
                 rooms.Add(p);
+                counts[room.Game] = counts.GetValueOrDefault(room.Game) + 1;
             }
         }
         return rooms;

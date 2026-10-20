@@ -272,6 +272,21 @@ public class ExpandWorldDataTests : AppSettingsTestBase
     }
 
     [Fact]
+    public void TheRoomAndDungeonFilesAreReadWithTheirSwitches()
+    {
+        string bep = Bep("[3. Data]\nRoom data = true\nDungeon data = true\n", true,
+            ("expand_rooms.yaml", "- name: cave_new_corridor01:Lit\n  theme: Cave\n  connections:\n  - position: 1,2,3\n    type: lit\n"),
+            ("expand_dungeons.yaml", "- name: DG_Cave\n  algorithm: Dungeon\n  roomLimits:\n    cave_new_corridor05: max 2\n"));
+        var rules = ExpandWorld.Rules(new Dictionary<string, string>(), ExpandWorld.Look(bep, "test"));
+        var room = Assert.Single(rules.Dungeons!.Rooms!);
+        Assert.Equal(("cave_new_corridor01:Lit", "lit"), (room.Name, Assert.Single(room.Connections).Type));
+        Assert.Equal(new RoomLimit("cave_new_corridor05", 0, 2, 0), Assert.Single(Assert.Single(rules.Dungeons.Dungeons).Limits));
+        Assert.Contains("rooms (1), dungeons (1)", ExpandWorld.Describe(rules));
+        // The switches off: the game's.
+        Assert.Null(ExpandWorld.Rules(new Dictionary<string, string>(), ExpandWorld.Look(Bep("[3. Data]\nRoom data = false\n", true, ("expand_rooms.yaml", "- name: x\n")), "test")).Dungeons);
+    }
+
+    [Fact]
     public void StatusEffectsAreReadAsTheModReadsThem()
     {
         List<string> notes = [];

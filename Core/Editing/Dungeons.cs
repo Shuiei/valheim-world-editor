@@ -27,7 +27,15 @@ public static partial class Dungeons
     /// <param name="Position">Where it is in the room's frame.</param>
     /// <param name="Rotation">Which way it faces in the room's frame.</param>
     /// <param name="OnlyIfOther">A door only when the other room's opening allows one too.</param>
-    public sealed record Opening(string Type, bool Entrance, bool AllowDoor, Vector3 Position, Quaternion Rotation, bool OnlyIfOther = false);
+    /// <param name="ExitOnly">
+    /// Only other rooms join it once its room is placed; its room is never joined by it (Expand World Data's "exitOnly").
+    /// </param>
+    public sealed record Opening(string Type, bool Entrance, bool AllowDoor, Vector3 Position, Quaternion Rotation, bool OnlyIfOther = false, bool ExitOnly = false)
+    {
+        /// <summary>Whether its room can join an open opening of this type by it: of the type, not the way in nor exit-only.</summary>
+        /// <param name="type">The open opening's type.</param>
+        public bool Joins(string type) => !Entrance && !ExitOnly && Type == type;
+    }
 
     /// <summary>A networked object the game makes with a room when it first generates it.</summary>
     /// <param name="Prefab">The object's prefab name.</param>
@@ -74,7 +82,20 @@ public static partial class Dungeons
     /// <param name="Picks">Its RandomObject parts, rolled after the spawns.</param>
     /// <param name="Nodes">Each random part's parent node (-1: the room itself).</param>
     public sealed record Room(string Name, int Hash, int Theme, Vector3 Size, bool EndCap, bool Entrance, bool Divider, int EndCapPrio,
-        float Weight, bool Perimeter, bool Enabled, Opening[] Openings, Content[] Contents, Spawn[] Spawns, Pick[] Picks, int[] Nodes);
+        float Weight, bool Perimeter, bool Enabled, Opening[] Openings, Content[] Contents, Spawn[] Spawns, Pick[] Picks, int[] Nodes)
+    {
+        /// <summary>
+        /// The game room it is (its own name; a copy's game room, Expand World Data's "name:suffix"): what a room list
+        /// keeps of it, its model, and the name the dungeons' room rules give.
+        /// </summary>
+        public string Game { get; init; } = Name;
+
+        /// <summary>The hash a room list keeps of it: its game room's.</summary>
+        public int Saved => Game == Name ? Hash : StableHash.Of(Game);
+
+        /// <summary>The objects Expand World Data's room file adds with it, each by its chance.</summary>
+        public IReadOnlyList<ValheimGen.ContentObject> Added { get; init; } = [];
+    }
 
     /// <summary>A kind of dungeon (the DG_ prefab).</summary>
     /// <param name="Name">The DG_ prefab's name.</param>
@@ -89,6 +110,22 @@ public static partial class Dungeons
     /// <param name="BaseSeed">The dungeon's seed is added to each room's roll (m_addBaseSeedToRandomSpawn).</param>
     public sealed record Kind(string Name, int Hash, int Themes, bool Interior, Vector3 ZoneSize, bool CustomInterior = false, bool BaseSeed = false)
     {
+        /// <summary>Its fewest and most rooms (Expand World Data's dungeon file); null: as the Dungeon tool's size asks.</summary>
+        public (int Min, int Max)? Rooms { get; init; }
+
+        /// <summary>The game rooms it must have (Expand World Data's "requiredRooms").</summary>
+        public IReadOnlyList<string> Required { get; init; } = [];
+
+        /// <summary>The game rooms it never takes (Expand World Data's "excludedRooms").</summary>
+        public IReadOnlySet<string> Excluded { get; init; } = new HashSet<string>();
+
+        /// <summary>Its limits on game rooms (Expand World Data's "roomLimits").</summary>
+        public IReadOnlyList<ValheimGen.RoomLimit> Limits { get; init; } = [];
+
+        /// <summary>Whether it can hold a room: enabled, of one of its themes, not excluded.</summary>
+        /// <param name="room">The room.</param>
+        public bool Takes(Room room) => room.Enabled && (room.Theme & Themes) != 0 && !Excluded.Contains(room.Game);
+
         /// <summary>Its door types (prefab, opening type, chance; 0 takes DoorChance).</summary>
         public (string Prefab, string Type, float Chance)[] Doors { get; init; } = [];
 
@@ -99,32 +136,40 @@ public static partial class Dungeons
     /// <summary>The rooms and dungeon kinds read, by name hash.</summary>
     private sealed record Catalog(Dictionary<int, Room> Rooms, Dictionary<int, Kind> Kinds);
 
-    /// <summary>None until Use: no world opens before then (GameData).</summary>
+    /// <summary>The game's, read: none until Use (no world opens before then: GameData).</summary>
+    private static volatile Catalog _game = new([], []);
+
+    /// <summary>The catalogue in use: the game's, with the open world's Expand World Data files laid over it (UseMod).</summary>
     private static volatile Catalog _all = new([], []);
 
     /// <summary>Takes the dungeons and rooms as GameCatalogues' DungeonScan writes them, in place of any before.</summary>
-    public static void Use(string json) => _all = Load(json);
+    public static void Use(string json)
+    {
+        _game = Load(json);
+        Refresh();
+    }
 
     /// <summary>The room of this name hash, or null when it is not known.</summary>
-    public static Room? RoomOf(int hash) => _all.Rooms.GetValueOrDefault(hash);
+    public static Room? RoomOf(int hash) => Current.Rooms.GetValueOrDefault(hash);
 
     /// <summary>The room of this prefab name, or null when it is not known.</summary>
     public static Room? RoomOf(string name) => RoomOf(StableHash.Of(name));
 
     /// <summary>The dungeon kind of an object's prefab hash, or null when it is not a dungeon.</summary>
-    public static Kind? KindOf(int prefab) => _all.Kinds.GetValueOrDefault(prefab);
+    public static Kind? KindOf(int prefab) => Current.Kinds.GetValueOrDefault(prefab);
 
     /// <summary>Every dungeon kind, by name.</summary>
-    public static IEnumerable<Kind> Kinds => _all.Kinds.Values.OrderBy(k => k.Name, StringComparer.Ordinal);
+    public static IEnumerable<Kind> Kinds => Current.Kinds.Values.OrderBy(k => k.Name, StringComparer.Ordinal);
 
     /// <summary>Every room, by name.</summary>
-    public static IEnumerable<Room> AllRooms => _all.Rooms.Values.OrderBy(r => r.Name, StringComparer.Ordinal);
+    public static IEnumerable<Room> AllRooms => Current.Rooms.Values.OrderBy(r => r.Name, StringComparer.Ordinal);
 
     /// <summary>
     /// The rooms a dungeon of this kind can hold: those of its themes, the game's way
-    /// (DungeonGenerator.SetupAvailableRooms: enabled rooms whose theme shares a flag with the dungeon's).
+    /// (DungeonGenerator.SetupAvailableRooms: enabled rooms whose theme shares a flag with the dungeon's), but those it
+    /// excludes.
     /// </summary>
-    public static IEnumerable<Room> RoomsFor(Kind kind) => AllRooms.Where(r => r.Enabled && (r.Theme & kind.Themes) != 0);
+    public static IEnumerable<Room> RoomsFor(Kind kind) => AllRooms.Where(kind.Takes);
 
     /// <summary>Three numbers of a scan's JSON array from <paramref name="i"/> on, as a point.</summary>
     internal static Vector3 V(JsonElement a, int i) => new(a[i].GetSingle(), a[i + 1].GetSingle(), a[i + 2].GetSingle());

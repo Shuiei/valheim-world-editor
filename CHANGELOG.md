@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.73.0 — 2026-10-20
+
+### Added
+- **The Dungeon tool follows Expand World Data's room and dungeon files.** Rooms turned off, changed or copied
+  under a new name, and each dungeon's themes, size, room counts, required and excluded rooms, room limits and
+  doors, are used when it makes a dungeon from the game's rooms and in its list of rooms to add.
+
 ## v1.72.0 — 2026-10-20
 
 ### Added

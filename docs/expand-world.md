@@ -30,7 +30,7 @@ The setting is taken when a world is opened or made.
 | Expand World Size's settings (radius, edge, stretch, altitude, water depth, forest, offsets, height seed, the Ashlands' limits, the gaps, the save grid) | With the mod installed: the world's own file keeps every setting that was changed when the world was made (the mod writes them on the first save); a world without any uses `BepInEx/config/expand_world_size.cfg`. |
 | Expand World Rivers' settings (the water level, lakes, rivers, streams) | `BepInEx/config/expand_world_rivers.cfg`. |
 | Expand World Data's switches (legacy generation, wiggles, zone spawners, random locations, scaled altitudes, the Ashlands' limits and gaps, the blueprint folder) | `BepInEx/config/expand_world_data.cfg`. |
-| The biomes, the world rules, the territories, the locations, the vegetation, the alt biomes | `BepInEx/config/expand_world/expand_<kind>*.yaml`, each kind only when its switch in the settings file is on, every file of a kind at any depth, in the order the mod reads them. A kind whose switch is on without a file is the mod's default (the game's own, except the world rules, which the mod writes as its own list). |
+| The biomes, the world rules, the territories, the locations, the vegetation, the alt biomes, the rooms, the dungeons | `BepInEx/config/expand_world/expand_<kind>*.yaml`, each kind only when its switch in the settings file is on, every file of a kind at any depth, in the order the mod reads them. A kind whose switch is on without a file is the mod's default (the game's own, except the world rules, which the mod writes as its own list). |
 
 The files are read through the **YamlDotNet** library the mod installs under `BepInEx/plugins` (the
 `ValheimModding-YamlDotNet` package); the editor ships no copy of its own. Without it the data files are
@@ -66,6 +66,16 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   the blueprints it nests), the location file's clear areas, the clear
   ground of a wide location in the next zone, Expand World Size's locations multiplier, no zone spawner when the
   mod says so.
+- **The Dungeon tool** (its generator from the game's rooms, the rooms it adds, the rooms drawn): the room file's
+  rooms in place of the game's (a game room the file leaves out is still drawn in the dungeons that have it, but
+  no longer added), each with the file's themes (a new theme name taking the next flag, as the mod gives it), its
+  entrance, end cap and divider, end cap priority, weight, size, enabled, and its openings (type, place and turn,
+  way in, doors, "exitOnly"); a copy of a game room ("name:suffix") as a room of its own, built as its game room
+  with the objects the file adds (each by its chance) and saved as its game room, as the mod saves it. The dungeon
+  file's generators: themes, box ("bounds"), the fewest and most rooms (the Dungeon tool's size within them), the
+  required and excluded rooms, the room limits (the most, and how many it must have), doors and their chance, and
+  the rooms' rolls ("interiorTransform", "addBaseSeedToRandomSpawn"). The dungeons of a world the game made with the
+  mod need nothing more: the mod saves copies as their game rooms and a blueprint room's parts as objects.
 - **The alt biomes**: the alt biome file's (every field that says where an alt biome goes, a field left out
   being 0 as in the mod), the areas the world file's rules force alt biomes onto, Expand World Size's stretch
   of their distances, and the biome map Expand World Size sizes to the world. Locations and vegetation of an
@@ -104,6 +114,10 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   (by day, by night), but not the world and player keys that can turn one off, its duration or its damage. As in
   the mod, they count towards whether a biome's or a territory's settings are in use, as a territory's water
   colours do; a biome's water colours do not.
+- **The Dungeon tool and the room and dungeon files' rest**: a blueprint room (no game room of its name) is not
+  built (the log says which); the rooms' and dungeons' "objectSwap" and "objectData", the data of a room's added
+  objects, "minPlaceOrder", "faceCenter", a room limit's "min" and "maxRetries", "randomSeed", and the camps'
+  settings are not followed; the generator joins rooms its own way, not the game's draw for draw.
 - **The zone system's water**: the game's own vegetation and location checks use the sea at 30 m whatever
   Expand World Rivers puts the water at, and neither mod changes that, so the editor keeps it too.
 - **The mods' quirks** are mirrored as they are (a few are listed in the architecture notes), so that

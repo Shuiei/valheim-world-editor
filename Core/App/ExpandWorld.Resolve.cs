@@ -66,7 +66,9 @@ public static partial class ExpandWorld
             string locations = Kind(data.Locations, "the game's (no file)", $"{rules.Locations?.Locations.Count ?? 0} kinds");
             string vegetation = Kind(data.Vegetation, "the game's (no file)", $"{rules.Vegetation?.Count ?? 0} rules");
             string alts = Kind(data.AltBiomes, "the game's (no file)", $"{rules.Locations?.AltBiomes.Count ?? 0}");
-            Console.WriteLine($"Expand World Data: biomes {biomes}; world {world}{(rules.LegacyGeneration ? " (legacy generation)" : "")}; territories {territories}; locations {locations}; vegetation {vegetation}; alt biomes {alts}.");
+            string rooms = Kind(data.Rooms, "the game's (no file)", $"{rules.Dungeons?.Rooms?.Count ?? 0}");
+            string dungeons = Kind(data.Dungeons, "the game's (no file)", $"{rules.Dungeons?.Dungeons.Count ?? 0}");
+            Console.WriteLine($"Expand World Data: biomes {biomes}; world {world}{(rules.LegacyGeneration ? " (legacy generation)" : "")}; territories {territories}; locations {locations}; vegetation {vegetation}; alt biomes {alts}; rooms {rooms}; dungeons {dungeons}.");
         }
         foreach (string note in data.Notes)
         {

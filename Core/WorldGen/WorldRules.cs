@@ -247,6 +247,12 @@ public sealed record WorldRules
     /// <summary>The vegetation rules in place of the game's (Expand World Data's vegetation file), or null for the game's.</summary>
     public IReadOnlyList<VegetationRule>? Vegetation { get; init; }
 
+    /// <summary>
+    /// The room and dungeon files the Dungeon tool takes in place of the game's rooms and generators (Expand World
+    /// Data's), or null for the game's.
+    /// </summary>
+    public DungeonRules? Dungeons { get; init; }
+
     /// <summary>Whether a generated zone gets its spawner (the mod's "Zone spawners"; true: as the game).</summary>
     public bool ZoneSpawners { get; init; } = true;
 

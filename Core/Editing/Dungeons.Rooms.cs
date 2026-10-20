@@ -15,6 +15,9 @@ public static partial class Dungeons
         /// <summary>The room, or null when the hash is not a known room.</summary>
         public Room? Room => RoomOf(Hash);
 
+        /// <summary>The hash a room list keeps of it: its room's game room's (<see cref="Room.Saved"/>), or its own.</summary>
+        public int Saved => Room?.Saved ?? Hash;
+
         /// <summary>The room's name, or its hash when it is not known.</summary>
         public string Name => Room?.Name ?? Hash.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
@@ -49,7 +52,10 @@ public static partial class Dungeons
         return list;
     }
 
-    /// <summary>Writes a room list the way the game saves it (see <see cref="Read"/>).</summary>
+    /// <summary>
+    /// Writes a room list the way the game saves it (see <see cref="Read"/>): a copy of a game room (Expand World Data's
+    /// "name:suffix") as its game room, as the mod saves it.
+    /// </summary>
     public static byte[] Write(IReadOnlyList<Placed> rooms)
     {
         var ms = new MemoryStream(4 + rooms.Count * 28);
@@ -59,7 +65,7 @@ public static partial class Dungeons
             foreach (Placed p in rooms)
             {
                 Vector3 e = BlueprintFormats.ToEuler(p.Rotation);
-                w.Write(p.Hash);
+                w.Write(p.Saved);
                 w.Write(p.Position.X);
                 w.Write(p.Position.Y);
                 w.Write(p.Position.Z);
@@ -105,7 +111,7 @@ public static partial class Dungeons
 
     /// <summary>
     /// The openings a room can join an open one of this type with: those of the same type (an end cap's
-    /// only opening too), never the entrance's way in.
+    /// only opening too), never the entrance's way in nor an exit-only one.
     /// </summary>
-    public static IEnumerable<Opening> Matching(Room room, string type) => room.Openings.Where(o => !o.Entrance && o.Type == type);
+    public static IEnumerable<Opening> Matching(Room room, string type) => room.Openings.Where(o => o.Joins(type));
 }
