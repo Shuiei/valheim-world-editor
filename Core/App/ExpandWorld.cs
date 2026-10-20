@@ -37,8 +37,9 @@ public static partial class ExpandWorld
     public const string DataFolder = "expand_world";
 
     /// <summary>
-    /// What a BepInEx folder holds of the mods: each one installed (its plugin DLL under plugins, or its settings
-    /// file), and the settings files that exist.
+    /// What a BepInEx folder holds of the mods: each one installed and on (its plugin DLL under plugins, by its own
+    /// name: a mod manager turns a mod off by renaming it), and the settings files that exist (a mod's are read only
+    /// while it is installed: BepInEx leaves them behind).
     /// </summary>
     /// <param name="Folder">The BepInEx folder.</param>
     /// <param name="Where">Where it is, for the player ("Valheim folder", "r2modman profile "x""...).</param>
@@ -130,9 +131,9 @@ public static partial class ExpandWorld
         string? dataCfg = Existing(Path.Combine(config, DataGuid + ".cfg"));
         string? riversCfg = Existing(Path.Combine(config, RiversGuid + ".cfg"));
         string? dataFiles = Directory.Exists(Path.Combine(config, DataFolder)) ? Path.Combine(config, DataFolder) : null;
-        bool size = sizeCfg != null || HasPlugin(plugins, "ExpandWorldSize.dll");
-        bool data = dataCfg != null || dataFiles != null || HasPlugin(plugins, "ExpandWorldData.dll");
-        bool rivers = riversCfg != null || HasPlugin(plugins, "ExpandWorldRivers.dll");
+        bool size = HasPlugin(plugins, "ExpandWorldSize.dll");
+        bool data = HasPlugin(plugins, "ExpandWorldData.dll");
+        bool rivers = HasPlugin(plugins, "ExpandWorldRivers.dll");
         return new Found(dir, where, size, data, rivers, sizeCfg, dataCfg, riversCfg, dataFiles);
     }
 
@@ -140,14 +141,16 @@ public static partial class ExpandWorld
     private static string? Existing(string path) => File.Exists(path) ? path : null;
 
     /// <summary>
-    /// Whether a plugin's DLL is somewhere in a plugins folder. Subfolders that cannot be read are passed over (another
-    /// mod's, without access); a folder that cannot be searched at all is said in the log and has none.
+    /// Whether a plugin's DLL is somewhere in a plugins folder under its own name (not a mod manager's ".old" of a mod
+    /// turned off). Subfolders that cannot be read are passed over (another mod's, without access); a folder that
+    /// cannot be searched at all is said in the log and has none.
     /// </summary>
     private static bool HasPlugin(string plugins, string dll)
     {
         try
         {
-            return Directory.Exists(plugins) && Directory.EnumerateFiles(plugins, dll, new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0 }).Any();
+            return Directory.Exists(plugins) && Directory.EnumerateFiles(plugins, dll, new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0, MatchCasing = MatchCasing.CaseInsensitive })
+                .Any(f => string.Equals(Path.GetFileName(f), dll, StringComparison.OrdinalIgnoreCase));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

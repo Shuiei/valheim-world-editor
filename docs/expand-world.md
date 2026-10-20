@@ -6,12 +6,16 @@ The editor can generate, draw and predict a world the way JereKuusela's **Expand
 file, the world file that lays the biomes out, territories, locations, vegetation and alt biomes).
 
 Nothing of this is on unless you ask for it: with the switch off, every world is generated as the game
-itself does, whatever it was made with.
+itself does, whatever it was made with. With the switch on, each mod counts only where it is installed and on
+(its plugin under `BepInEx/plugins`; a mod a mod manager turned off does not count, nor do the settings and data
+files a removed mod leaves behind): a world is generated as the game generates it without the mods the folder
+lacks, even one made with Expand World Size (the game without the mod passes over the settings its world file
+keeps).
 
 ## Turning it on
 
 1. Open **Settings** and turn on **Generate worlds as the Expand World mods make them**.
-2. Leave the **folder** empty to use the first BepInEx folder the editor knows that has the mods (the Valheim
+2. Leave the **folder** empty to use the first BepInEx folder the editor knows that has the mods installed (the Valheim
    folder, the editor's own profile, the folders added above, r2modman's and Thunderstore Mod Manager's
    profiles), or point it at another BepInEx folder: a copy of a server's, say, for a server world opened from
    its files.
@@ -23,7 +27,7 @@ The setting is taken when a world is opened or made.
 
 | What | Where it comes from |
 |---|---|
-| Expand World Size's settings (radius, edge, stretch, altitude, water depth, forest, offsets, height seed, the Ashlands' limits, the gaps, the save grid) | The world's own file keeps every setting that was changed when the world was made (the mod writes them on the first save); a world without any uses `BepInEx/config/expand_world_size.cfg`. |
+| Expand World Size's settings (radius, edge, stretch, altitude, water depth, forest, offsets, height seed, the Ashlands' limits, the gaps, the save grid) | With the mod installed: the world's own file keeps every setting that was changed when the world was made (the mod writes them on the first save); a world without any uses `BepInEx/config/expand_world_size.cfg`. |
 | Expand World Rivers' settings (the water level, lakes, rivers, streams) | `BepInEx/config/expand_world_rivers.cfg`. |
 | Expand World Data's switches (legacy generation, wiggles, zone spawners, random locations, scaled altitudes, the Ashlands' limits and gaps, the blueprint folder) | `BepInEx/config/expand_world_data.cfg`. |
 | The biomes, the world rules, the territories, the locations, the vegetation, the alt biomes | `BepInEx/config/expand_world/expand_<kind>*.yaml`, each kind only when its switch in the settings file is on, every file of a kind at any depth, in the order the mod reads them. A kind whose switch is on without a file is the mod's default (the game's own, except the world rules, which the mod writes as its own list). |

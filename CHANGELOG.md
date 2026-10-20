@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.67.1 — 2026-10-19
+
+### Fixed
+- **Expand World changes the worlds only where the mods are installed and on.** With the switch on, a mod that was
+  removed or turned off in a mod manager no longer counts because its settings files were left behind, and a world
+  made with Expand World Size is generated as the game generates it when no folder has the mod.
+
 ## v1.67.0 — 2026-10-19
 
 ### Added

@@ -305,6 +305,7 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         string data = Path.Combine(bep, "config", "expand_world");
         Directory.CreateDirectory(data);
         YamlStandIn.Install(bep);
+        TestMods.Install(bep, TestMods.Data);
         File.WriteAllText(Path.Combine(bep, "config", "expand_world_data.cfg"), "[1. General]\nZone spawners = false\nRandom locations = true\n[3. Data]\nLocation data = true\nVegetation data = true\nAlt biome data = true\n");
         File.WriteAllText(Path.Combine(data, "expand_locations.yaml"), "- prefab: StartTemple:Copy\n  quantity: 2\n- prefab: StartTemple\n  quantity: 1\n");
         File.WriteAllText(Path.Combine(data, "expand_vegetation.yaml"), $"- prefab: {Regrow.GameRules[0].prefab}\n  requiredGlobalKeys: defeated_eikthyr\n");

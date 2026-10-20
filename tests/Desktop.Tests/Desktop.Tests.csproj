@@ -43,4 +43,6 @@
     <!-- The sample's manifest, put beside its DLL in the plugins folder the visual tests make. -->
     <Content Include="../../samples/ExampleVehicles.WorldEditor/worldeditor.json" Link="Samples/worldeditor.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <!-- The game mods the tests install, downloaded when the build starts. -->
+  <Import Project="../TestMods.targets" />
 </Project>

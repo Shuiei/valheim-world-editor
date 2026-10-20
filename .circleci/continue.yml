@@ -123,6 +123,9 @@ commands:
           no_output_timeout: 11m
           environment:
             VWE_NEED_SSHD: "1"
+            # The mods the build downloaded (tests/TestMods.targets) are kept through the test processes of
+            # this run (the list is read, then run, in separate processes); the step after deletes them.
+            VWE_KEEP_TEST_MODS: "1"
           command: |
             # A test stuck 5 minutes ends the run with a dump (tests/testconfig.json). On main only, the
             # coverage of this container's share, kept for the coverage job: it makes the tests several
@@ -190,6 +193,11 @@ commands:
               </testsuite>
             </testsuites>
             EOF
+      # The mods the build downloaded for the tests, deleted once every test process has run.
+      - run:
+          name: Delete the tests' downloaded mods
+          when: always
+          command: rm -rf "${TMPDIR:-/tmp}/vwe-test-mods"
       # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
       - when:
           condition:

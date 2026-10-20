@@ -35,9 +35,9 @@ public static partial class ExpandWorld
         var rules = Rules(keys, found, data, save.Zones?.GlobalKeys);
         Console.WriteLine($"Expand World: {save.Name}: {SizeSource(keys.Count, found)}; {FolderText(found)}; {Describe(rules)}.");
         NoteData(data, rules);
-        if (keys.Count > 0 && !found.Any)
+        if (keys.Count > 0 && !found.Size)
         {
-            Console.WriteLine("Expand World: the world was made with Expand World Size, but no BepInEx folder the editor knows has the mod: its Rivers and Data settings are unknown (add the folder in Settings).");
+            Console.WriteLine("Expand World: the world was made with Expand World Size, but no BepInEx folder the editor knows has the mod installed and on: it is shown as the game makes it without the mod (add the mod's folder in Settings).");
         }
         NoteGrid(save, rules);
         return rules;
@@ -90,7 +90,7 @@ public static partial class ExpandWorld
     }
 
     /// <summary>Where the Size settings came from, for the log.</summary>
-    private static string SizeSource(int keys, Found found) => keys > 0 ? $"Size settings from the world file ({keys})" : found.SizeCfg != null ? "Size settings from " + found.SizeCfg : "no Size settings";
+    private static string SizeSource(int keys, Found found) => !found.Size ? "no Size" : keys > 0 ? $"Size settings from the world file ({keys})" : found.SizeCfg != null ? "Size settings from " + found.SizeCfg : "no Size settings";
 
     /// <summary>The folder and the mods it has, for the log.</summary>
     private static string FolderText(Found found) => found.Any ? $"{found.Folder} ({found.Where}): Size {YesNo(found.Size)}, Data {YesNo(found.Data)}, Rivers {YesNo(found.Rivers)}" : "no BepInEx folder has Expand World";

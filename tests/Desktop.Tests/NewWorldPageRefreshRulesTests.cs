@@ -31,12 +31,13 @@ public sealed class NewWorldPageRefreshRulesTests : IDisposable
         }
     }
 
-    /// <summary>Makes a BepInEx folder with Expand World Data's settings, the library and a location file, and names it in the saved settings.</summary>
+    /// <summary>Makes a BepInEx folder with Expand World Data installed, its settings, the library and a location file, and names it in the saved settings.</summary>
     private void Bep()
     {
         string bep = Path.Combine(_dir, "bep", "BepInEx");
         Directory.CreateDirectory(Path.Combine(bep, "config", "expand_world"));
         YamlStandIn.Install(bep);
+        TestMods.Install(bep, TestMods.Data);
         File.WriteAllText(Path.Combine(bep, "config", "expand_world_data.cfg"), "[3. Data]\nLocation data = true\n");
         File.WriteAllText(Path.Combine(bep, "config", "expand_world", "expand_locations.yaml"), "- prefab: StartTemple:Twice\n  biome: Meadows\n  quantity: 2\n");
         var settings = AppSettings.Load();

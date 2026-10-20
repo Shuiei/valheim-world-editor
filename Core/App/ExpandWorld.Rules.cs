@@ -25,12 +25,11 @@ public static partial class ExpandWorld
     /// <param name="globalKeys">The world's global keys as the save keeps them ("name" or "name value"); none by default.</param>
     public static WorldRules Rules(IReadOnlyDictionary<string, string> keys, Found found, DataFiles data, IEnumerable<string>? globalKeys = null)
     {
-        var size = CfgOf(found.SizeCfg);
-        bool fromKeys = keys.Count > 0;
-        string? S(string name) => fromKeys ? keys.GetValueOrDefault(KeyOf(name)) : size.GetValueOrDefault(name);
+        var size = SizeSettings(keys, found);
+        string? S(string name) => size(name);
         string? D(string name) => data.Cfg.GetValueOrDefault(name);
         var v = WorldRules.Vanilla;
-        bool sizeInstalled = found.Size || fromKeys;
+        bool sizeInstalled = found.Size;
         float radius = Float(S("World radius"), v.Radius), edge = Float(S("World edge size"), v.EdgeSize);
         // The Ashlands' limits and the gaps: both Size and Data patch them (the mod's docs say to set them in one);
         // a limit Data sets away from the game's wins, a gap is off when either turns it off.
@@ -62,7 +61,8 @@ public static partial class ExpandWorld
             AshlandsLengthRestriction = Overriding(dataLength, v.AshlandsLengthRestriction, Float(S("Ashlands length restriction"), v.AshlandsLengthRestriction)),
             AshlandsGap = BothOn(S("Ashlands gap"), D("Ashlands gap"), v.AshlandsGap),
             DeepNorthGap = BothOn(S("Deep North gap"), D("Deep North gap"), v.DeepNorthGap),
-            GridWidth = Int(keys.GetValueOrDefault(GridWidthKey), GridWidthFor(sizeInstalled, Int(S("Save system size"), 0), radius + edge)),
+            // The world's keys only ("ews_gridwidth"): the settings file has no such setting.
+            GridWidth = Int(S("GridWidth"), GridWidthFor(sizeInstalled, Int(S("Save system size"), 0), radius + edge)),
             LegacyGeneration = Bool(D("Legacy generation"), v.LegacyGeneration),
             WiggleFrequency = Float(D("Wiggle frequency"), v.WiggleFrequency),
             Biomes = table,
@@ -76,7 +76,25 @@ public static partial class ExpandWorld
             RandomLocations = Bool(D("Random locations"), v.RandomLocations),
             ScaleLocationAltitude = Bool(D("Scale location altitude requirement"), v.ScaleLocationAltitude),
         };
-        return WithRivers(rules, CfgOf(found.RiversCfg));
+        return WithRivers(rules, found.Rivers ? CfgOf(found.RiversCfg) : []);
+    }
+
+    /// <summary>
+    /// Expand World Size's settings in use, by setting name: none without the mod (the game without it passes over
+    /// the keys it keeps in the world file); else the world file's keys when it keeps some; else the settings file.
+    /// </summary>
+    private static Func<string, string?> SizeSettings(IReadOnlyDictionary<string, string> keys, Found found)
+    {
+        if (!found.Size)
+        {
+            return _ => null;
+        }
+        if (keys.Count > 0)
+        {
+            return name => keys.GetValueOrDefault(KeyOf(name));
+        }
+        var cfg = CfgOf(found.SizeCfg);
+        return cfg.GetValueOrDefault;
     }
 
     /// <summary>

@@ -81,7 +81,7 @@ public class ExpandWorldTests : AppSettingsTestBase
     public void RulesFromTheWorldFilesKeysTakeTheDefaultsForWhatIsNotKept()
     {
         var keys = ExpandWorld.Keys(["ews_world_radius 20000", "ews_altitude_delta 10", "ews_offset_x -500", "ews_ashlands_gap false", "ews_gridwidth 1024"]);
-        var r = ExpandWorld.Rules(keys, ExpandWorld.Found.None);
+        var r = ExpandWorld.Rules(keys, SizeOnly);
         Assert.Equal(20000f, r.Radius);
         Assert.Equal(500f, r.EdgeSize);
         Assert.Equal(10f, r.AltitudeDelta);
@@ -89,11 +89,45 @@ public class ExpandWorldTests : AppSettingsTestBase
         Assert.Null(r.OffsetY);
         Assert.False(r.AshlandsGap);
         Assert.Equal(1024, r.GridWidth);
-        // A world with the keys was made with Expand World Size, folder or no folder.
         Assert.True(r.SizeInstalled);
         Assert.False(r.RiversInstalled);
         Assert.Equal(30f, r.WaterLevel);
         Assert.False(r.IsVanilla);
+    }
+
+    /// <summary>A folder with Expand World Size installed, and nothing else.</summary>
+    private static readonly ExpandWorld.Found SizeOnly = ExpandWorld.Found.None with { Size = true };
+
+    [Fact]
+    public void WithoutExpandWorldSizeTheWorldFilesKeysAreTheGamesOwn()
+    {
+        // The game without the mod passes over its keys: so does the editor.
+        var r = ExpandWorld.Rules(ExpandWorld.Keys(["ews_world_radius 20000", "ews_gridwidth 1024"]), ExpandWorld.Found.None);
+        Assert.True(r.IsVanilla);
+        Assert.False(r.SizeInstalled);
+    }
+
+    [Fact]
+    public void AModIsInstalledOnlyByItsPluginUnderItsOwnName()
+    {
+        string bep = Path.Combine(Data, "left");
+        Directory.CreateDirectory(Path.Combine(bep, "config", "expand_world"));
+        // Settings files and data files BepInEx left behind after the mods went: none installed, none read.
+        File.WriteAllText(Path.Combine(bep, "config", "expand_world_size.cfg"), "[1. General]\nWorld radius = 15000\n");
+        File.WriteAllText(Path.Combine(bep, "config", "expand_world_data.cfg"), "[3. Data]\nLocation data = true\n");
+        File.WriteAllText(Path.Combine(bep, "config", "expand_world_rivers.cfg"), "[1. General]\nWater level = 25\n");
+        Assert.False(ExpandWorld.Look(bep, "test").Any);
+        Assert.True(ExpandWorld.Rules(new Dictionary<string, string>(), ExpandWorld.Look(bep, "test")).IsVanilla);
+        // A mod a mod manager turned off (its plugin renamed): not installed either.
+        string size = TestMods.Install(bep, TestMods.Size);
+        File.Move(size, size + ".old");
+        Assert.False(ExpandWorld.Look(bep, "test").Size);
+        File.Move(size + ".old", size);
+        var found = ExpandWorld.Look(bep, "test");
+        Assert.True(found.Size);
+        Assert.Equal(15000f, ExpandWorld.Rules(new Dictionary<string, string>(), found).Radius);
+        // Rivers' settings file without Rivers: the game's water.
+        Assert.Equal(30f, ExpandWorld.Rules(new Dictionary<string, string>(), found).WaterLevel);
     }
 
     [Fact]
@@ -102,8 +136,8 @@ public class ExpandWorldTests : AppSettingsTestBase
         string bep = Path.Combine(Data, "bep");
         string cfg = Path.Combine(bep, "config");
         Directory.CreateDirectory(cfg);
-        Directory.CreateDirectory(Path.Combine(bep, "plugins", "JereKuusela-Expand_World_Size"));
-        File.WriteAllText(Path.Combine(bep, "plugins", "JereKuusela-Expand_World_Size", "ExpandWorldSize.dll"), "");
+        TestMods.Install(bep, TestMods.Size);
+        TestMods.Install(bep, TestMods.Rivers);
         File.WriteAllText(Path.Combine(cfg, "expand_world_size.cfg"), "[1. General]\nWorld radius = 15000\nStretch world = 1.5\nSave system size = 0\n");
         File.WriteAllText(Path.Combine(cfg, "expand_world_rivers.cfg"), "[1. General]\nWater level = 25\nStreams = false\nStream max amount = 100\nRiver seed = 42\n");
         var found = ExpandWorld.Look(bep, "test");
@@ -133,7 +167,7 @@ public class ExpandWorldTests : AppSettingsTestBase
     [Fact]
     public void AStretchOfZeroIsTakenAsOne()
     {
-        var r = ExpandWorld.Rules(ExpandWorld.Keys(["ews_stretch_world 0", "ews_stretch_biomes -1"]), ExpandWorld.Found.None);
+        var r = ExpandWorld.Rules(ExpandWorld.Keys(["ews_stretch_world 0", "ews_stretch_biomes -1"]), SizeOnly);
         Assert.Equal(1f, r.Stretch);
         Assert.Equal(1f, r.BiomeStretch);
     }
@@ -158,10 +192,14 @@ public class ExpandWorldTests : AppSettingsTestBase
         using var w = new TempWorld();
         var world = w.Load();
         world.StartingGlobalKeys.Add("ews_world_radius 20000");
-        Assert.True(ExpandWorld.Resolve(world, new AppSettings()).IsVanilla);
-        var on = ExpandWorld.Resolve(world, new AppSettings { ExpandWorld = true });
+        string bep = Path.Combine(Data, "sized");
+        TestMods.Install(bep, TestMods.Size);
+        Assert.True(ExpandWorld.Resolve(world, new AppSettings { BepInExFolders = { bep } }).IsVanilla);
+        var on = ExpandWorld.Resolve(world, new AppSettings { ExpandWorld = true, BepInExFolders = { bep } });
         Assert.Equal(20000f, on.Radius);
         Assert.False(on.IsVanilla);
+        // Switch on, but no folder has the mod: the game without it ignores the keys, the editor too.
+        Assert.True(ExpandWorld.Resolve(world, new AppSettings { ExpandWorld = true }).IsVanilla);
         // A world with no keys and no folder: the game's own values, switch or no switch.
         world.StartingGlobalKeys.Clear();
         Assert.True(ExpandWorld.Resolve(world, new AppSettings { ExpandWorld = true }).IsVanilla);
