@@ -44,6 +44,7 @@ public static partial class ExpandWorld
                 AboveWorldY = f.F("aboveWorldY", 0f),
                 BlockVegetationNames = [.. f.Rows("blockVegetationNames")],
                 BlockLocationNames = [.. f.Rows("blockLocationNames")],
+                TerrainTextureOverride = Biomes("terrainTextureOverride", "None"),
             });
         }
         return alts;

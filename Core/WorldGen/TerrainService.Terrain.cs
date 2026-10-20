@@ -48,12 +48,43 @@ public sealed partial class TerrainService
     /// grid of AltBiomeWorldData (WorldSpaceToMapSpace / MapSpaceToWorldSpace; Expand World Size's for its worlds).
     /// </summary>
     /// <returns>Four biomes: corners (-x, -z), (+x, -z), (-x, +z), (+x, +z); Ocean beyond the world's edge.</returns>
-    public int[] CornerBiomes(int zx, int zz)
+    public int[] CornerBiomes(int zx, int zz) =>
+        [.. CornerPoints(zx, zz).Select(c => c.X * c.X + c.Z * c.Z > MapRadius * MapRadius ? (int)Heightmap.Biome.Ocean : (int)Generator.GetBiome(c.X, c.Z))];
+
+    /// <summary>A zone's corners where their biome sectors are sampled (on the biome grid), in <see cref="CornerBiomes"/>' order.</summary>
+    private (float X, float Z)[] CornerPoints(int zx, int zz)
     {
         var grid = BiomeGrid.Of(Generator.Rules);
         float Snap(float v) => grid.MapToWorld(grid.WorldToMap(v));
         float x0 = zx * 64f - 32f, z0 = zz * 64f - 32f;
-        return [.. new[] { (x0, z0), (x0 + 64f, z0), (x0, z0 + 64f), (x0 + 64f, z0 + 64f) }.Select(c => { float sx = Snap(c.Item1), sz = Snap(c.Item2); return sx * sx + sz * sz > MapRadius * MapRadius ? (int)Heightmap.Biome.Ocean : (int)Generator.GetBiome(sx, sz); })];
+        return [.. new[] { (x0, z0), (x0 + 64f, z0), (x0, z0 + 64f), (x0 + 64f, z0 + 64f) }.Select(c => (Snap(c.Item1), Snap(c.Item2)))];
+    }
+
+    /// <summary>
+    /// The biome whose ground look each zone corner takes (Heightmap.GetBiomeColor of its biome sector): the terrain
+    /// texture override of the first of its area's alt biomes that has one, else its biome (<see cref="CornerBiomes"/>).
+    /// The world's alt biomes are laid out for it only when one of them has such an override (none of the game's do).
+    /// </summary>
+    /// <param name="zx">The zone's column.</param>
+    /// <param name="zz">The zone's row.</param>
+    public int[] CornerLooks(int zx, int zz)
+    {
+        int[] biomes = CornerBiomes(zx, zz);
+        if (!SeedLocations.AltBiomeRulesFor(Generator).Any(a => a.TerrainTextureOverride != 0))
+        {
+            return biomes;
+        }
+        var layout = SeedLocations.AltBiomesOf(Generator);
+        var points = CornerPoints(zx, zz);
+        for (int i = 0; i < 4; i++)
+        {
+            var (x, z) = points[i];
+            if (x * x + z * z <= MapRadius * MapRadius && layout.At(x, z).FirstOrDefault(a => a.TerrainTextureOverride != 0) is { } alt)
+            {
+                biomes[i] = alt.TerrainTextureOverride;
+            }
+        }
+        return biomes;
     }
 
     /// <summary>

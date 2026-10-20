@@ -79,7 +79,8 @@ A world made with Expand World Size shows "Expand World" on its card on the star
 - **The alt biomes**: the alt biome file's (every field that says where an alt biome goes, a field left out
   being 0 as in the mod), the areas the world file's rules force alt biomes onto, Expand World Size's stretch
   of their distances, and the biome map Expand World Size sizes to the world. Locations and vegetation of an
-  alt biome stand in its areas only, and what an alt biome keeps out stays out of them.
+  alt biome stand in its areas only, and what an alt biome keeps out stays out of them. An alt biome's
+  "terrainTextureOverride" gives its areas that biome's ground look in the 3D view, as the game draws it.
 - **The save grid**: a world wider than 16 km lies on a bigger grid of chunk files; the editor reads and
   writes it as it lies, switch or no switch.
 - **A new world** (the New world page): the seeds looked at, the search and the world made follow the
