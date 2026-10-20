@@ -120,24 +120,24 @@ public static class WakeDraws
                 case PartKind.Melt:
                     Skip(how.DeepNorth ? 1 : 0);
                     break;
-                case PartKind.Loot when !how.Looted:
-                    DrawLoot(s.Loot!);
+                case PartKind.Loot:
+                    DrawLoot(s.Loot!, how.Looted);
                     break;
                 default:
-                    // A container whose data says its items were added draws nothing.
-                    break;
+                    throw new InvalidDataException($"unknown wake draw {s.Kind}");
             }
         }
     }
 
     /// <summary>
-    /// The draws of a container's default items: whether there are any (by the chance), how many picks, then for each
+    /// The draws of a container's default items (none when its data says they were added): whether there are any (by
+    /// the chance), how many picks, then for each
     /// pick a roll over the weights and, when it gives an item, its stack. An item picked once at most leaves the
     /// rolls after it; a roll beyond every weight gives the first item left.
     /// </summary>
-    private static void DrawLoot(Loot loot)
+    private static void DrawLoot(Loot loot, bool looted)
     {
-        if (Rnd.Value > loot.Chance)
+        if (looted || Rnd.Value > loot.Chance)
         {
             return;
         }

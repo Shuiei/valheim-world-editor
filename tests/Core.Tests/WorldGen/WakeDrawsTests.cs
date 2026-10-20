@@ -81,6 +81,10 @@ public class WakeDrawsTests
     }
 
     [Fact]
+    public void APartOfNoKnownKindIsRefused() =>
+        Assert.Throws<InvalidDataException>(() => WakeDraws.Wake([new WakeDraws.Part((WakeDraws.PartKind)99)], Piece));
+
+    [Fact]
     public void DataSaysWhenTheDefaultItemsWereAdded()
     {
         int key = TerrainEditor.Save.StableHash.Of("addedDefaultItems");
