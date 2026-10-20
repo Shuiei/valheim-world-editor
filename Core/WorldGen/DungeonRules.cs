@@ -30,7 +30,11 @@ public sealed record DungeonRules
 /// <param name="Connections">Its openings, by index over the game room's.</param>
 /// <param name="Objects">The objects added with it.</param>
 public sealed record RoomEntry(string Name, string Theme, bool Enabled, bool Entrance, bool EndCap, bool Divider, int EndCapPriority, float Weight, bool Perimeter,
-    string Size, IReadOnlyList<RoomConnection> Connections, IReadOnlyList<ContentObject> Objects);
+    string Size, IReadOnlyList<RoomConnection> Connections, IReadOnlyList<ContentObject> Objects)
+{
+    /// <summary>Its objects' swaps and data ("objectSwap", "objectData").</summary>
+    public ObjectChanges Changes { get; init; } = ObjectChanges.None;
+}
 
 /// <summary>One opening of a room of the room file (the mod's RoomConnectionYaml).</summary>
 /// <param name="Position">Its place and turn, "x, z, y, turn y, turn x, turn z" in the room's frame; empty: the game room's.</param>
@@ -55,7 +59,11 @@ public sealed record RoomConnection(string Position, string Type, bool Entrance,
 /// <param name="InteriorTransform">Rooms rolled by their place from the dungeon's (m_useCustomInteriorTransform).</param>
 /// <param name="AddBaseSeed">The dungeon's seed added to its rooms' rolls.</param>
 public sealed record DungeonEntry(string Name, string Algorithm, string Bounds, string Themes, int MinRooms, int MaxRooms, IReadOnlyList<string> Required,
-    IReadOnlyList<string> Excluded, IReadOnlyList<RoomLimit> Limits, IReadOnlyList<DoorEntry> Doors, float DoorChance, bool InteriorTransform, bool AddBaseSeed);
+    IReadOnlyList<string> Excluded, IReadOnlyList<RoomLimit> Limits, IReadOnlyList<DoorEntry> Doors, float DoorChance, bool InteriorTransform, bool AddBaseSeed)
+{
+    /// <summary>Its objects' swaps and data ("objectSwap", "objectData").</summary>
+    public ObjectChanges Changes { get; init; } = ObjectChanges.None;
+}
 
 /// <summary>A dungeon's limits on one room (the mod's DungeonRoomLimit).</summary>
 /// <param name="Room">The room's name.</param>
@@ -69,3 +77,19 @@ public sealed record RoomLimit(string Room, int Min, int Max, int Required);
 /// <param name="Type">The connection type it stands in.</param>
 /// <param name="Chance">Its chance (0: the dungeon's door chance).</param>
 public sealed record DoorEntry(string Prefab, string Type, float Chance);
+
+/// <summary>How Expand World Data's file changes the objects of a room or a dungeon ("objectSwap", "objectData").</summary>
+public sealed record ObjectChanges
+{
+    /// <summary>No change.</summary>
+    public static readonly ObjectChanges None = new();
+
+    /// <summary>The swaps, by prefab: what each may become, with its weight; an empty name removes it.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<Weighted<string>>> Swaps { get; init; } = new Dictionary<string, IReadOnlyList<Weighted<string>>>();
+
+    /// <summary>The data, by prefab or "all": the data each may get, with its weight.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<Weighted<IReadOnlyList<ContentField>?>>> Data { get; init; } = new Dictionary<string, IReadOnlyList<Weighted<IReadOnlyList<ContentField>?>>>();
+
+    /// <summary>Whether it changes anything.</summary>
+    public bool Any => Swaps.Count > 0 || Data.Count > 0;
+}

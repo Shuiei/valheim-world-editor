@@ -8,7 +8,7 @@ public static partial class ExpandWorld
     /// <summary>
     /// The room and dungeon files' entries as the Dungeon tool takes them; null when both switches are off (the rooms
     /// the game's when the room file has none). A room that is no game room nor a copy of one (a blueprint room: the editor does not build those) is left out and
-    /// noted, as is an added object that is no prefab of the game.
+    /// noted, as are an added object that is no prefab of the game and a swap or data that cannot be written ahead.
     /// </summary>
     /// <param name="data">Expand World Data's files.</param>
     internal static DungeonRules? DungeonsOf(DataFiles data)
@@ -22,7 +22,7 @@ public static partial class ExpandWorld
         {
             // No file: the game's rooms (the mod writes them as its file).
             Rooms = data.Rooms is { Count: > 0 } rooms ? [.. rooms.Select(e => RoomOf(new Fields(e, "rooms", data.Notes), table, data.Notes)).OfType<RoomEntry>()] : null,
-            Dungeons = data.Dungeons is { } dungeons ? [.. dungeons.Select(e => DungeonOf(new Fields(e, "dungeons", data.Notes)))] : [],
+            Dungeons = data.Dungeons is { } dungeons ? [.. dungeons.Select(e => DungeonOf(new Fields(e, "dungeons", data.Notes), table, data.Notes))] : [],
         };
     }
 
@@ -38,6 +38,8 @@ public static partial class ExpandWorld
         }
         List<string> why = [];
         var objects = Objects(f.Rows("objects"), table, why);
+        var swaps = Swaps(f.Rows("objectSwap"), why);
+        var objectData = DataChoices(f.Rows("objectData"), table, why);
         notes.AddRange(why.Select(w => $"expand_rooms: {name}: {w} is left out"));
         List<RoomConnection> connections = [];
         if (f.Raw("connections") is List<object?> items)
@@ -48,12 +50,17 @@ public static partial class ExpandWorld
             }
         }
         return new RoomEntry(name, f.Str("theme"), f.B("enabled", true), f.B("entrance", false), f.B("endCap", false), f.B("divider", false),
-            f.I("endCapPriority", 0), f.F("weight", 1f), f.B("perimeter", false), f.Str("size"), connections, objects);
+            f.I("endCapPriority", 0), f.F("weight", 1f), f.B("perimeter", false), f.Str("size"), connections, objects)
+        { Changes = new ObjectChanges { Swaps = swaps, Data = objectData } };
     }
 
-    /// <summary>One generator of the dungeon file, with the mod's defaults (DungeonYaml).</summary>
-    private static DungeonEntry DungeonOf(Fields f)
+    /// <summary>One generator of the dungeon file, with the mod's defaults (DungeonYaml); a swap or data it cannot write left out, noted.</summary>
+    private static DungeonEntry DungeonOf(Fields f, DataTable table, List<string> notes)
     {
+        List<string> why = [];
+        var swaps = Swaps(f.Rows("objectSwap"), why);
+        var objectData = DataChoices(f.Rows("objectData"), table, why);
+        notes.AddRange(why.Select(w => $"expand_dungeons: {f.Str("name")}: {w} is left out"));
         List<DoorEntry> doors = [];
         if (f.Raw("doorTypes") is List<object?> items)
         {
@@ -69,7 +76,8 @@ public static partial class ExpandWorld
         }
         return new DungeonEntry(f.Str("name"), f.Str("algorithm"), f.Str("bounds"), f.Str("themes"), f.I("minRooms", 1), f.I("maxRooms", 1),
             NameList(f.Str("requiredRooms")), NameList(f.Str("excludedRooms")), limits, doors, f.F("doorChance", 0f), f.B("interiorTransform", false),
-            f.B("addBaseSeedToRandomSpawn", false));
+            f.B("addBaseSeedToRandomSpawn", false))
+        { Changes = new ObjectChanges { Swaps = swaps, Data = objectData } };
     }
 
     /// <summary>

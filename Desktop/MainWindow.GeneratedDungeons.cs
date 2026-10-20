@@ -1,7 +1,6 @@
 using System.Numerics;
 using TerrainEditor.App;
 using TerrainEditor.Editing;
-using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop;
 
@@ -104,8 +103,7 @@ public partial class MainWindow
         foreach (var it in items)
         {
             var e = BlueprintFormats.ToEuler(it.Rotation);
-            var data = (it.Data ?? [])
-                .Select(d => new ObjectField(d.Section, StableHash.Of(d.Key), d.Value)).Append(ObjectField.NoBuilder);
+            var data = it.Values().Append(ObjectField.NoBuilder);
             objects.Add(new System.Text.Json.Nodes.JsonObject
             {
                 ["name"] = it.Prefab,

@@ -59,6 +59,38 @@ public class DungeonsModTests
     }
 
     [Fact]
+    public void TheFilesSwapAndGiveDataToARoomsObjects()
+    {
+        List<ContentField> marked = [new("ints", StableHash.Of("mark"), "1")], own = [new("ints", StableHash.Of("own"), "2")];
+        var placed = new Dungeons.Placed(StableHash.Of("cave_new_corridor01"), new Vector3(100, 5000, 40), Quaternion.Identity);
+        // The same dungeon settings without the lists (the file's dungeon adds its seed to the rooms' rolls).
+        List<Dungeons.Made> plain;
+        using (Dungeons.Scope(new DungeonRules { Rooms = [Room("cave_new_corridor01")], Dungeons = [Dungeon()] }))
+        {
+            plain = Dungeons.Contents(placed, Dungeons.KindOf(Cave.Hash)!, placed.Position, 1);
+        }
+        var room = Room("cave_new_corridor01", objects: [new ContentObject("GlowingMushroom", new Vector3(1, 0, 2), Vector3.Zero, Vector3.One, own, 1f, false)]) with
+        {
+            // The room's swaps come after the dungeon's: stalagmites become stalactites, then rocks; crystals go.
+            Changes = new ObjectChanges
+            {
+                Swaps = new Dictionary<string, IReadOnlyList<Weighted<string>>> { ["caverock_ice_stalagtite"] = [new(1f, "Rock_3")], ["Pickable_MountainCaveCrystal"] = [new(1f, "")] },
+                Data = new Dictionary<string, IReadOnlyList<Weighted<IReadOnlyList<ContentField>?>>> { ["all"] = [new(1f, marked)] },
+            },
+        };
+        var dungeon = Dungeon() with { Changes = new ObjectChanges { Swaps = new Dictionary<string, IReadOnlyList<Weighted<string>>> { ["caverock_ice_stalagmite"] = [new(1f, "caverock_ice_stalagtite")] } } };
+        using var _ = Dungeons.Scope(new DungeonRules { Rooms = [room], Dungeons = [dungeon] });
+        var made = Dungeons.Contents(placed, Dungeons.KindOf(Cave.Hash)!, placed.Position, 1);
+        var rocks = plain.Where(m => m.Prefab != "Pickable_MountainCaveCrystal").ToList();
+        Assert.NotEmpty(rocks);
+        Assert.Equal(rocks.Select(m => ("Rock_3", m.Position)), made.SkipLast(1).Select(m => (m.Prefab, m.Position)));
+        Assert.All(made.SkipLast(1), m => Assert.Equal(marked, m.Data!));
+        // The added object: the file's data for all, then its own.
+        Assert.Equal("GlowingMushroom", made[^1].Prefab);
+        Assert.Equal([.. marked, .. own], made[^1].Data!);
+    }
+
+    [Fact]
     public void TheFilesOpeningsChangeTheGameRoomsAddToThemAndCanBeExitOnly()
     {
         RoomConnection[] connections =

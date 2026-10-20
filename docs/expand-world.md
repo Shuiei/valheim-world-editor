@@ -71,7 +71,9 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   no longer added), each with the file's themes (a new theme name taking the next flag, as the mod gives it), its
   entrance, end cap and divider, end cap priority, weight, size, enabled, and its openings (type, place and turn,
   way in, doors, "exitOnly"); a copy of a game room ("name:suffix") as a room of its own, built as its game room
-  with the objects the file adds (each by its chance) and saved as its game room, as the mod saves it. The dungeon
+  with the objects the file adds (each by its chance, with its data) and saved as its game room, as the mod saves it.
+  The room and dungeon files' "objectSwap" and "objectData" change the rooms' objects (the dungeon's first, then
+  the room's), drawing as the mod draws. The dungeon
   file's generators: themes, box ("bounds"), the fewest and most rooms (the Dungeon tool's size within them), the
   required and excluded rooms, the room limits (the most, and how many it must have), doors and their chance, and
   the rooms' rolls ("interiorTransform", "addBaseSeedToRandomSpawn"). The dungeons of a world the game made with the
@@ -119,8 +121,7 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   the mod, they count towards whether a biome's or a territory's settings are in use, as a territory's water
   colours do; a biome's water colours do not.
 - **The Dungeon tool and the room and dungeon files' rest**: a blueprint room (no game room of its name) is not
-  built (the log says which); the rooms' and dungeons' "objectSwap" and "objectData", the data of a room's added
-  objects, "minPlaceOrder", "faceCenter", a room limit's "min" and "maxRetries", "randomSeed", and the camps'
+  built (the log says which); a swap to a blueprint, "minPlaceOrder", "faceCenter", a room limit's "min" and "maxRetries", "randomSeed", and the camps'
   settings are not followed; the generator joins rooms its own way, not the game's draw for draw.
 - **The zone system's water**: the game's own vegetation and location checks use the sea at 30 m whatever
   Expand World Rivers puts the water at, and neither mod changes that, so the editor keeps it too.

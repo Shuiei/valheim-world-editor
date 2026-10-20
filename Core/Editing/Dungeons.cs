@@ -98,6 +98,9 @@ public static partial class Dungeons
 
         /// <summary>The objects Expand World Data's room file adds with it, each by its chance.</summary>
         public IReadOnlyList<ValheimGen.ContentObject> Added { get; init; } = [];
+
+        /// <summary>How Expand World Data's files change its objects ("objectSwap", "objectData").</summary>
+        public ValheimGen.ObjectChanges Changes { get; init; } = ValheimGen.ObjectChanges.None;
     }
 
     /// <summary>A kind of dungeon (the DG_ prefab).</summary>
@@ -134,6 +137,9 @@ public static partial class Dungeons
 
         /// <summary>The chance (0 to 1) of a door whose type gives none.</summary>
         public float DoorChance { get; init; } = 0.5f;
+
+        /// <summary>How Expand World Data's files change its objects ("objectSwap", "objectData").</summary>
+        public ValheimGen.ObjectChanges Changes { get; init; } = ValheimGen.ObjectChanges.None;
     }
 
     /// <summary>The rooms and dungeon kinds read, by name hash.</summary>

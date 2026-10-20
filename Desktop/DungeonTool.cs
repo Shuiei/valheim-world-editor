@@ -643,7 +643,8 @@ public sealed partial class DungeonTool
             foreach (var m in Dungeons.Contents(r, d.Kind, d.Thing.Position, Scene.World.Seed))
             {
                 int prefab = StableHash.Of(m.Prefab);
-                list.Add((new NewObject(0, prefab, m.Position, BlueprintFormats.ToEuler(m.Rotation), 0), Terrain.PieceCatalog.Get(prefab)?.Tool != null));
+                var data = m.Data?.Select(f => new ObjectField(f.Section, f.Key, f.Value)).ToList();
+                list.Add((new NewObject(0, prefab, m.Position, BlueprintFormats.ToEuler(m.Rotation), 0, Data: data), Terrain.PieceCatalog.Get(prefab)?.Tool != null));
             }
         }
         return list;

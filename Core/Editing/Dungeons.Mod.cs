@@ -113,6 +113,7 @@ public static partial class Dungeons
                 Openings = OpeningsOf(original.Openings, e.Connections),
                 Game = original.Name,
                 Added = e.Objects,
+                Changes = e.Changes,
             };
             rooms[room.Hash] = room;
         }
@@ -173,6 +174,7 @@ public static partial class Dungeons
             Required = [.. d.Required.Select(Fix)],
             Excluded = d.Excluded.Select(Fix).ToHashSet(StringComparer.Ordinal),
             Limits = [.. d.Limits.Select(l => l with { Room = Fix(l.Room) })],
+            Changes = d.Changes,
         };
     }
 

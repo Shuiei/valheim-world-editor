@@ -38,7 +38,34 @@ public class ExpandWorldDungeonsTests
         Assert.Equal(("GlowingMushroom", 0.5f), (mushroom.Prefab, mushroom.Chance));
         Assert.Contains(data.Notes, n => n.Contains("NoSuchThing", StringComparison.Ordinal));
         // Every value left out is the mod's default (RoomYaml).
-        Assert.Equal(new RoomEntry("cave_new_corridor01", "", true, false, false, false, 0, 1f, false, "", [], []), rooms[1] with { Connections = [], Objects = [] });
+        var plain = new RoomEntry("cave_new_corridor01", "", true, false, false, false, 0, 1f, false, "", [], []);
+        Assert.Equal(plain, rooms[1] with { Connections = [], Objects = [], Changes = plain.Changes });
+        Assert.False(rooms[1].Changes.Any);
+    }
+
+    [Fact]
+    public void SwapsAndDataOfARoomAndADungeonAreRead()
+    {
+        var data = ExpandWorld.DataFiles.None with
+        {
+            DataEntries = [E(("name", "marked"), ("ints", "mark, 1"))],
+            Rooms =
+            [
+                E(("name", "cave_new_corridor01"), ("objectSwap", new List<object?> { "caverock_ice_stalagtite, Rock_3:3, :1", "NoSuchThing, Rock_3" }),
+                    ("objectData", new List<object?> { "all, marked" })),
+            ],
+            Dungeons = [E(("name", "DG_Cave"), ("objectSwap", new List<object?> { "Rock_3, GlowingMushroom" }), ("objectData", new List<object?> { "Rock_3, marked:1, :1" }))],
+        };
+        var rules = ExpandWorld.DungeonsOf(data)!;
+        var room = Assert.Single(rules.Rooms!);
+        Assert.Equal([new(0.75f, "Rock_3"), new(0.25f, "")], room.Changes.Swaps["caverock_ice_stalagtite"]);
+        Assert.Equal([new ContentField("ints", TerrainEditor.Save.StableHash.Of("mark"), "1")], Assert.Single(room.Changes.Data["all"]).Value!);
+        // A source that is no prefab of the game cannot be followed: left out, noted.
+        Assert.False(room.Changes.Swaps.ContainsKey("NoSuchThing"));
+        Assert.Contains(data.Notes, n => n.Contains("expand_rooms: cave_new_corridor01", StringComparison.Ordinal) && n.Contains("NoSuchThing", StringComparison.Ordinal));
+        var cave = Assert.Single(rules.Dungeons);
+        Assert.Equal([new(1f, "GlowingMushroom")], cave.Changes.Swaps["Rock_3"]);
+        Assert.Equal([0.5f, 0.5f], cave.Changes.Data["Rock_3"].Select(w => w.Weight));
     }
 
     [Fact]

@@ -18,7 +18,7 @@ public static partial class DungeonGen
         {
             foreach (var m in Dungeons.Contents(r, kind, origin, worldSeed))
             {
-                items.Add(new Item(m.Prefab, m.Position, m.Rotation));
+                items.Add(new Item(m.Prefab, m.Position, m.Rotation, Fields: m.Data));
             }
         }
         foreach (var j in Dungeons.Joints(rooms))
