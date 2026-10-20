@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.79.2 — 2026-10-20
+
+### Fixed
+- **Objects a mod hides deep under the ground are no longer picked with what stands above them.** A zone drawn over a
+  house took the crafting stations a mod keeps 10 km under it, and moving the house with "Put each object on the
+  ground when moving" on then lifted it 10 km to put them on the ground. Zones, Same kind, Invert, Whole building and
+  the Area tool now leave out anything more than 10 m under the ground.
+
 ## v1.79.1 — 2026-10-20
 
 ### Fixed

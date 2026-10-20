@@ -33,6 +33,7 @@ until you **Save** (or **Apply live**).
 | `Shift` + click | Selects the row from the last object clicked to this one: click wall 1, then `Shift` + click wall 3, and walls 1, 2 and 3 are selected (the objects on the line between them). |
 | **Drag on empty ground** | Draws a zone; everything shown inside it is selected when you let go. |
 | `Alt` + drag | Draws a zone even when you start over an object (useful in woods, where trees cover the ground). |
+| | A zone, **Same kind**, **Invert** and **Whole building** leave out anything more than 10 m under the ground: objects a mod hides there (crafting stations 10 km under a house) are not part of what stands above. |
 | `Shift` + drag or `Ctrl` + drag | Adds what is inside the zone to the selection. |
 | **Click on empty ground** / `Esc` | Clears the selection (`Esc` first cancels a zone being drawn or a move in progress). |
 | **Double-click a building piece** | Selects the whole building (see **Whole building** below). A chest (any container) is the exception: a double click selects it alone and opens it in the [Inspector](#inspecting-and-changing-an-objects-data). |
