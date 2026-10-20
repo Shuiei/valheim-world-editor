@@ -76,7 +76,8 @@ public sealed partial class SelectTool
         /// <summary>
         /// The selection's middle when the move began (Cx, Cz: turns go around it); how far it moved (Dx, Dz) and was
         /// lifted (Dy), in metres; the turn in degrees (-180..180); the snap's shift (Sx, Sy, Sz); how far the
-        /// pieces' block goes up or down to sit on the ground (Block).
+        /// pieces' block goes up or down to sit on the ground, or the whole selection to follow the ground under its
+        /// middle when it is not put on the ground (Block).
         /// </summary>
         public float Cx, Cz, Dx, Dz, Dy, Turn, Sx, Sy, Sz, Block;
         /// <summary>Dropped with End (each item keeps the height it dropped to); typed exactly (no snapping).</summary>

@@ -6,10 +6,10 @@ public sealed partial class SelectTool
 {
     /// <summary>
     /// Where an item ends up: turned around the selection's middle (clockwise from above, like Unity's
-    /// yaw), moved, and put on what is under it there (Landed: a floor, a table, else the ground; or as high above the
-    /// ground as before). Pieces put on the ground move as one block (see GroundBlock), those past the area's edge too,
-    /// so a building across it keeps its shape. Anything else past the edge, where there is no ground, keeps its own
-    /// height.
+    /// yaw), moved, and put on what is under it there (Landed: a floor, a table, else the ground). Pieces put on the
+    /// ground move as one block (see GroundBlock), those past the area's edge too, so a building across it keeps its
+    /// shape; not put on the ground, the whole selection moves as one block. Anything else past the edge, where there
+    /// is no ground, keeps its own height. Dropped with End, each item is as high above the ground as it dropped to.
     /// </summary>
     /// <param name="m">The move.</param>
     /// <param name="it">The item.</param>
@@ -24,7 +24,7 @@ public sealed partial class SelectTool
         {
             return new Vector3(x, it.Thing.Position.Y + m.Dy + sy, z);
         }
-        if (it.Piece && OnGround && !m.Dropped)
+        if (!m.Dropped && (it.Piece || !OnGround))
         {
             return new Vector3(x, it.Thing.Position.Y + (block ? m.Block : 0) + m.Dy + sy, z);
         }
@@ -32,6 +32,6 @@ public sealed partial class SelectTool
         {
             return new Vector3(x, it.Thing.Position.Y + m.Dy + sy, z);
         }
-        return new Vector3(x, (m.Dropped || !OnGround ? ground + it.Lift : Landed(m, it, x, z, ground)) + m.Dy + sy, z);
+        return new Vector3(x, (m.Dropped ? ground + it.Lift : Landed(m, it, x, z, ground)) + m.Dy + sy, z);
     }
 }
