@@ -118,4 +118,35 @@ public class SelectToolScreenBoxTests
         Assert.Equal(new System.Numerics.Vector3(0.5f, 1, 1.5f), points[1]);
         Assert.Equal(new System.Numerics.Vector3(2.5f, 5, 7.5f), points[8]);
     }
+
+    // A plain drag on empty ground (no Alt) draws the box too.
+    [AvaloniaFact]
+    public void APlainDragOnEmptyGroundDrawsTheBox()
+    {
+        var v = TwoFloorsAndATree();
+        var from = v.At(30, 30, 30);
+        v.Tool.Down(from, v.Size, false, false, 1);
+        var to = v.At(36, 30, 36);
+        v.Tool.Moved(to, v.Size);
+        Assert.Equal(SelectTool.Spanning(from, to), v.Tool.ScreenBox);
+        Assert.Null(v.Tool.Lasso);
+        v.Tool.Up(to, v.Size, false);
+        Assert.Empty(v.Selected);
+    }
+
+    // The box between two corners, whichever way round; a view point's place on the screen, none behind the camera.
+    [AvaloniaFact]
+    public void TheBoxAndTheScreenPlacesAreFoundEitherWayRound()
+    {
+        Assert.Equal(new Avalonia.Rect(10, 20, 30, 40), SelectTool.Spanning(new Avalonia.Point(40, 60), new Avalonia.Point(10, 20)));
+        Assert.Equal(new Avalonia.Rect(10, 20, 30, 40), SelectTool.Spanning(new Avalonia.Point(10, 60), new Avalonia.Point(40, 20)));
+        var v = TwoFloorsAndATree();
+        var c = v.S.Scene;
+        var at = v.W.View.ScreenOf(new System.Numerics.Vector3(44 - c.Cx, 30, -(44 - c.Cz)), v.Size)!.Value;
+        var want = v.At(44, 30, 44);
+        Assert.Equal(want.X, at.X, 1);
+        Assert.Equal(want.Y, at.Y, 1);
+        // Above the camera (40 m over the ground, looking down): behind it.
+        Assert.Null(v.W.View.ScreenOf(new System.Numerics.Vector3(40 - c.Cx, 200, -(40 - c.Cz)), v.Size));
+    }
 }
