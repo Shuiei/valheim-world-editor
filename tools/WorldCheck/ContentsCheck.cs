@@ -123,7 +123,7 @@ internal static class ContentsCheck
             // The world keeps proxies apart from its objects (a runestone's shows as the stone).
             if (ZdoData.Parse(zdo).IntList.Where(v => v.Key == WorldSave.LocationKey).Select(v => (int?)v.Value).FirstOrDefault() is not { } location)
             {
-                tally.Say($"{site.Name} at ({site.Position.X:0.0}, {site.Position.Z:0.0}): its proxy names no location");
+                BlueprintProxy(world, site, at, zdo, tally);
                 return;
             }
             var proxy = world.Placed.FirstOrDefault(p => p.Location == location && Flat(p.Position, at) < 0.05f);
@@ -158,6 +158,33 @@ internal static class ContentsCheck
         else
         {
             tally.Say($"{site.Name}: {PrefabCatalog.NameOf(prefab)} values differ\n    editor: {mine}\n    game:   {game}");
+        }
+    }
+
+    /// <summary>
+    /// A blueprint location's proxy, which names no location (the world keeps it as an object): a proxy of the world
+    /// within 5 cm on the ground, with the same "locationreference".
+    /// </summary>
+    private static void BlueprintProxy(WorldSave world, WorldCreator.Site site, Vector3 at, byte[] zdo, Tally tally)
+    {
+        int reference = StableHash.Of("locationreference");
+        int? mine = ZdoData.Parse(zdo).IntList.Where(v => v.Key == reference).Select(v => (int?)v.Value).FirstOrDefault();
+        int id = world.ObjectRefs.FindIndex(o => o.Prefab == WorldSave.LocationProxyPrefab && Flat(o.Position, at) < 0.05f);
+        if (id < 0)
+        {
+            tally.Say($"{site.Name} at ({site.Position.X:0.0}, {site.Position.Z:0.0}): no proxy");
+            return;
+        }
+        tally.Placed++;
+        tally.Heights.Add(world.ObjectRefs[id].Position.Y - at.Y);
+        int? game = ZdoData.Parse(world.ObjectBytes(id)).IntList.Where(v => v.Key == reference).Select(v => (int?)v.Value).FirstOrDefault();
+        if (mine == game)
+        {
+            tally.Valued++;
+        }
+        else
+        {
+            tally.Say($"{site.Name}: its proxy's reference is {game}, the editor's {mine}");
         }
     }
 

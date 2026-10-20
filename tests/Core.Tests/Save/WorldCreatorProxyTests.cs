@@ -23,4 +23,14 @@ public class WorldCreatorProxyTests
         Assert.Equal(
             [(StableHash.Of("locationreference"), StableHash.Of("StartTemple:Copy")), (WorldSave.LocationKey, StableHash.Of("StartTemple")), (StableHash.Of("seed"), 77)],
             Ints("StartTemple:Copy", "StartTemple", true));
+
+    [Fact]
+    public void ABlueprintLocationsProxyIsTheModsOwn()
+    {
+        var rule = new SeedLocations.Rule { Prefab = "MyHut", Contents = new LocationContents { Blueprint = "MyHut", ProxyData = [new ContentField("ints", 5, "1")] } };
+        var z = ZdoData.Parse(PrivateMember.Call<byte[]>(typeof(WorldCreator), "Proxy", null, rule, (ushort)0x0B00, new System.Numerics.Vector3(1, 2, 3), 90f, 77, true));
+        // Unturned, with only its name as its reference: no location of the game, no seed, no data.
+        Assert.Equal([(StableHash.Of("locationreference"), StableHash.Of("MyHut"))], z.IntList);
+        Assert.Equal(System.Numerics.Vector3.Zero, z.Rotation);
+    }
 }

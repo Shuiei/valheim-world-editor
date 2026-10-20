@@ -47,6 +47,15 @@ public sealed record LocationContents
     /// <summary>The location turned to a random cardinal direction, drawn from its seed, in place of its usual turn.</summary>
     public bool RandomCardinal { get; init; }
 
+    /// <summary>The blueprint the location is made of, when it is a blueprint location; else null.</summary>
+    public string? Blueprint { get; init; }
+
+    /// <summary>
+    /// The parts of <see cref="Blueprint"/> and of the blueprints it holds, by blueprint name; null for a location that
+    /// is no blueprint.
+    /// </summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<BlueprintPart>>? Blueprints { get; init; }
+
     /// <summary>The ground of its zone levelled to its spot ("levelArea"), when it is; else null.</summary>
     public LevelArea? Level { get; init; }
 

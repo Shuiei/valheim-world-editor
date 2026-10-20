@@ -163,4 +163,35 @@ public class WorldCreatorContentsTests
         byte[] zdo = Assert.Single(Assert.Single(batch.Chunks).Objects);
         Assert.Contains((mark, 4), ZdoData.Parse(zdo).IntList);
     }
+
+    [Fact]
+    public void ABlueprintLocationIsMadeOfItsParts()
+    {
+        using var w = new TempWorld();
+        int mark = StableHash.Of("mark");
+        var contents = new LocationContents
+        {
+            Blueprint = "Hut",
+            Blueprints = new Dictionary<string, IReadOnlyList<BlueprintPart>>
+            {
+                ["Hut"] =
+                [
+                    new("Bush01", new Vector3(2, 0, 0), Quaternion.Identity, new Vector3(2), [new ContentField("ints", mark, "2")], 1f),
+                    new("Pickable_Stone", Vector3.Zero, Quaternion.Identity, Vector3.One, null, 0f),
+                    new("Inner", new Vector3(0, 0, 3), Quaternion.Identity, Vector3.One, null, 1f),
+                ],
+                ["Inner"] = [new("wood_fence", new Vector3(1, 0, 0), Quaternion.Identity, Vector3.One, null, 1f)],
+            },
+            Data = new Dictionary<string, IReadOnlyList<Weighted<IReadOnlyList<ContentField>?>>> { ["all"] = [new(1f, [new ContentField("ints", mark, "1")])] },
+            Offset = 1f,
+        };
+        // No location prefab: only the parts, raised by the offset; a part of chance 0 never comes; a blueprint part spawns its own.
+        var built = PrivateMember.Call<List<(Vector3 At, byte[] Zdo)>>(typeof(WorldCreator), "Built", null, null, contents, new WorldCreator.Placing(new Vector3(100, 30, 200), Quaternion.Identity, 7, WorldCreator.Damage.None), new TerrainService(w.Load(), null));
+        Assert.Equal([("Bush01", new Vector3(102, 31, 200)), ("wood_fence", new Vector3(101, 31, 203))],
+            built.Select(o => (TerrainEditor.Terrain.PrefabCatalog.NameOf(BitConverter.ToInt32(o.Zdo, 14))!, o.At)));
+        // The file's data for all, the part's own over it; the bush keeps its scale.
+        var bush = ZdoData.Parse(built[0].Zdo);
+        Assert.Contains((mark, 2), bush.IntList);
+        Assert.Equal(new Vector3(2), Assert.Single(bush.Vec3List).Value);
+    }
 }
