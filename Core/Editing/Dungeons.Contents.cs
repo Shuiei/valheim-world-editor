@@ -84,7 +84,7 @@ public static partial class Dungeons
     /// </summary>
     private static List<Made> Spawned(List<Made> made, Room room, Kind kind, Rnd.RandomState rolled)
     {
-        if (!kind.Changes && !room.Changes)
+        if (!kind.Changes.Any && !room.Changes.Any)
         {
             return made;
         }
@@ -108,14 +108,14 @@ public static partial class Dungeons
     /// </summary>
     private static Made? ModSpawn(Made m, IReadOnlyList<ValheimGen.ContentField>? own, Room room, Kind kind)
     {
-        string name = ValheimGen.ModObjects.Swapped(ValheimGen.ModObjects.Swapped(m.Prefab, kind.Swaps), room.Swaps);
+        string name = ValheimGen.ModObjects.Swapped(ValheimGen.ModObjects.Swapped(m.Prefab, kind.Changes.Swaps), room.Changes.Swaps);
         if (name == "" || name != m.Prefab && Terrain.PrefabCatalog.Get(StableHash.Of(name)) == null)
         {
             return null;
         }
         List<ValheimGen.ContentField> fields = [];
-        ValheimGen.ModObjects.AddData(fields, kind.Data, name);
-        ValheimGen.ModObjects.AddData(fields, room.Data, name);
+        ValheimGen.ModObjects.AddData(fields, kind.Changes.Data, name);
+        ValheimGen.ModObjects.AddData(fields, room.Changes.Data, name);
         fields.AddRange(own ?? []);
         Terrain.WakeDraws.Wake(name, new(() => Terrain.WakeDraws.Skip(2), Looted: Terrain.WakeDraws.Looted(fields)));
         return m with { Prefab = name, Snap = name == m.Prefab ? m.Snap : null, Data = fields.Count > 0 ? fields : null };
