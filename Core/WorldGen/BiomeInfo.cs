@@ -58,6 +58,9 @@ public sealed record BiomeInfo
     /// <summary>Its water colours (used only when <see cref="HasData"/>: the mod keeps no data of a biome without).</summary>
     public WaterColours Water { get; init; } = WaterColours.None;
 
+    /// <summary>The status effects it puts on players (used only when <see cref="HasData"/>, as its water colours).</summary>
+    public IReadOnlyList<StatusEffect> StatusEffects { get; init; } = [];
+
     /// <summary>How stretched the lava noise is ("lavaStretch", 1: as the game); the generator divides 0.01 by it.</summary>
     public float LavaStretch { get; init; } = 1f;
 

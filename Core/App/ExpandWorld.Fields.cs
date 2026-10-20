@@ -37,6 +37,10 @@ public static partial class ExpandWorld
             };
         }
 
+        /// <summary>A map within the entry (an item of a list of maps) read as its fields, noted as the entry's.</summary>
+        /// <param name="map">The map.</param>
+        public Fields Of(Dictionary<string, object?> map) => new(new Entry(map), kind, notes);
+
         /// <summary>A field as written (text, list or map); null when missing.</summary>
         public object? Raw(string key) => entry.Fields.GetValueOrDefault(key);
 

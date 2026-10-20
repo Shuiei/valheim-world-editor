@@ -22,7 +22,9 @@ A world made wider with Expand World Size is shown whole too, once the switch in
    clicked.
 
 At the bottom of the map, a box shows the point under the pointer: its coordinates, its zone and its biome
-("x 812, z -260 · zone 13, -4 · Meadows").
+("x 812, z -260 · zone 13, -4 · Meadows"), then, when the point has them, its area's alt biome ("alt biome Dark
+Meadows", shown once the world's alt biomes are worked out, a few seconds after the first point), and with Expand
+World Data its territory and the status effects a player gets there ("territory frost · effects Freezing (night)").
 
 The top of the side panel gives the world's name, seed, save number and how many objects it holds (live: the
 connection instead of the save number). **Worlds** goes back to the start page.

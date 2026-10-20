@@ -272,6 +272,27 @@ public class ExpandWorldDataTests : AppSettingsTestBase
     }
 
     [Fact]
+    public void StatusEffectsAreReadAsTheModReadsThem()
+    {
+        List<string> notes = [];
+        List<object?> effects =
+        [
+            new Dictionary<string, object?> { ["name"] = "Freezing", ["night"] = "true" },
+            new Dictionary<string, object?> { ["name"] = "Wet" },
+            "not a map",
+        ];
+        var entry = new ExpandWorld.Entry(new Dictionary<string, object?> { ["territory"] = "Cold", ["statusEffects"] = effects });
+        var territory = Assert.Single(ExpandWorld.TerritoriesOf([entry], notes));
+        // Neither day nor night said: both.
+        Assert.Equal([new StatusEffect("Freezing", false, true), new StatusEffect("Wet", true, true)], territory.StatusEffects);
+        var biome = new ExpandWorld.Entry(new Dictionary<string, object?> { ["biome"] = "Meadows", ["statusEffects"] = new List<object?> { new Dictionary<string, object?> { ["name"] = "Rested", ["day"] = "yes" } } });
+        var meadows = ExpandWorld.BiomesOf([biome], notes)!.Of(Heightmap.Biome.Meadows)!;
+        Assert.True(meadows.HasData);
+        Assert.Equal([new StatusEffect("Rested", true, false)], meadows.StatusEffects);
+        Assert.Empty(notes);
+    }
+
+    [Fact]
     public void WaterColoursAloneKeepATerritoryButGiveABiomeNoSettings()
     {
         List<string> notes = [];

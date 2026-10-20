@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.72.0 — 2026-10-20
+
+### Added
+- **The map's pointer box tells more.** It names the alt biome of the area under the pointer (Dark Meadows, Bog
+  Swamp...), and with Expand World Data its territory and the status effects a player gets there.
+
 ## v1.71.0 — 2026-10-20
 
 ### Added
