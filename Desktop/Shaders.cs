@@ -59,7 +59,8 @@ public static class Shaders
     /// <summary>
     /// The objects' fragment shader. Lit like the game look's day (sun, flat ambient, fog), in view space (the
     /// sun's z mirrored); also draws see-through materials (glass) by their alpha, the Place tool's ghosts, see-through
-    /// buildings, the Workshop's cut and the support check's tint.
+    /// buildings, the Workshop's cut and the support check's tint; or one flat colour (uFlat, its alpha not zero), the
+    /// selection's outline mask (GlView.Outline).
     /// </summary>
     public const string ObjectFs = GameLookGl.Common + """
 		in vec3 vNor; in vec2 vUv; in vec3 vPos; in vec3 vTint;
@@ -73,6 +74,8 @@ public static class Shaders
 		uniform float uBlend;
 		// The Workshop's cut: x on (1), y the height above which nothing is drawn (not the ghosts).
 		uniform vec2 uCut;
+		// The selection's outline mask: this flat colour where the object is drawn (alpha zero: off).
+		uniform vec4 uFlat;
 		uniform vec3 uSun, uSunColor, uAmbient, uEye;
 		out vec4 frag;
 		void main() {
@@ -80,6 +83,7 @@ public static class Shaders
 			vec4 c = uColor;
 			if (uHasMap == 1) c *= texture(uMap, vUv * uUv.xy + uUv.zw);
 			if (c.a < uCutoff) discard;
+			if (uFlat.a > 0.0) { frag = uFlat; return; }
 			vec3 n = normalize(vNor);
 			if (!gl_FrontFacing) n = -n;
 			// The support check, in the game's build-mode colours (WearNTear.Highlight): the colour tinted,
@@ -93,6 +97,40 @@ public static class Shaders
 			vec3 v = normalize(toCam);
 			col += vec3(0.15, 0.25, 0.35) * uGhost;
 			frag = vec4(toSRGB(applyFogDir(col, length(toCam), -vec3(v.x, v.y, -v.z), vec3(uSun.x, uSun.y, -uSun.z))), (uBlend > 0.5 ? c.a : 1.0) * (1.0 - 0.5 * uGhost) * (1.0 - 0.6 * uSeeThrough));
+		}
+		""";
+
+    /// <summary>The selection's outline over the view: one triangle covering it, from the vertex number alone.</summary>
+    public const string OutlineVs = """
+		void main() {
+			vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+			gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+		}
+		""";
+
+    /// <summary>
+    /// The selection's outline: a pixel outside the selected objects' shape (the mask's red) within uWidth pixels of
+    /// it takes the outline's colour, the active object's (the mask's green) when that one is the nearby shape.
+    /// </summary>
+    public const string OutlineFs = """
+		uniform sampler2D uMask;
+		uniform int uWidth;
+		uniform vec4 uColor, uActive;
+		out vec4 frag;
+		void main() {
+			ivec2 size = textureSize(uMask, 0);
+			ivec2 p = ivec2(gl_FragCoord.xy);
+			if (texelFetch(uMask, p, 0).r > 0.5) discard;
+			float sel = 0.0, act = 0.0;
+			for (int dy = -uWidth; dy <= uWidth; dy++) {
+				for (int dx = -uWidth; dx <= uWidth; dx++) {
+					vec4 m = texelFetch(uMask, clamp(p + ivec2(dx, dy), ivec2(0), size - 1), 0);
+					sel = max(sel, m.r);
+					act = max(act, m.g);
+				}
+			}
+			if (sel < 0.5) discard;
+			frag = act > 0.5 ? uActive : uColor;
 		}
 		""";
 

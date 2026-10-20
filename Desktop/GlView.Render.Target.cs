@@ -73,7 +73,9 @@ public sealed partial class GlView
     /// <param name="rh">The picture's height in pixels.</param>
     private void BeginPicture(int fb, bool low, int rw, int rh)
     {
-        _gl.BindFramebuffer(FramebufferTarget.Framebuffer, low ? _lowFbo : (uint)fb);
+        // Kept for the passes that draw elsewhere and come back (the selection's outline).
+        (_frameFbo, _frameW, _frameH) = (low ? _lowFbo : (uint)fb, rw, rh);
+        _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _frameFbo);
         _gl.Viewport(0, 0, (uint)rw, (uint)rh);
         _gl.ClearColor(0.42f, 0.58f, 0.74f, 1);
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);

@@ -4,10 +4,10 @@ using Xunit;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// How much a picture shows: average brightness, its spread, distinct colours (5 bits a channel) and share of
-/// near-black.
+/// How much a picture shows: average brightness, its spread, distinct colours (5 bits a channel), share of near-black,
+/// and share of the selection's orange (its outline).
 /// </summary>
-public sealed record PictureLook(double Mean, double Spread, int Colours, double Dark)
+public sealed record PictureLook(double Mean, double Spread, int Colours, double Dark, double Orange)
 {
     /// <summary>
     /// Measures a saved picture, every third pixel each way.
@@ -18,7 +18,7 @@ public sealed record PictureLook(double Mean, double Spread, int Colours, double
         Assert.NotNull(bmp);
         var colours = new HashSet<uint>();
         double sum = 0, sq = 0;
-        int dark = 0, n = 0;
+        int dark = 0, orange = 0, n = 0;
         for (int y = 0; y < bmp.Height; y += 3)
         {
             for (int x = 0; x < bmp.Width; x += 3)
@@ -28,11 +28,12 @@ public sealed record PictureLook(double Mean, double Spread, int Colours, double
                 sum += l;
                 sq += l * l;
                 dark += l < 12 ? 1 : 0;
+                orange += c.Red > 220 && c.Green is > 120 and < 180 && c.Blue < 80 ? 1 : 0;
                 colours.Add((uint)(c.Red >> 3 << 10 | c.Green >> 3 << 5 | c.Blue >> 3));
                 n++;
             }
         }
         double mean = sum / n;
-        return new PictureLook(mean, Math.Sqrt(sq / n - mean * mean), colours.Count, dark / (double)n);
+        return new PictureLook(mean, Math.Sqrt(sq / n - mean * mean), colours.Count, dark / (double)n, orange / (double)n);
     }
 }

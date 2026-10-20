@@ -43,12 +43,8 @@ public sealed partial class GlView
     /// part. Kinds whose model is not read yet, or that have none, are skipped (and left out of
     /// <paramref name="drawn"/>).
     /// </summary>
-    private unsafe void DrawGhostInstances(WorldScene s, IEnumerable<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> shown, HashSet<int>? drawn = null)
+    private void DrawGhostInstances(WorldScene s, IEnumerable<(int Prefab, Vector3 Position, Vector3 Rotation, float Scale)> shown, HashSet<int>? drawn = null)
     {
-        if (_ghostVbo == 0)
-        {
-            _ghostVbo = _own.Buffer();
-        }
         _gl.UseProgram(_objectProg);
         _gl.Uniform1(_u.At(_objectProg, "uGhost"), 1f);
         var u = MaterialUniforms.Of(_u, _objectProg);
@@ -67,19 +63,34 @@ public sealed partial class GlView
             var placements = byKind.Select(o => Placement(s, new WorldScene.Thing(0, prefab, o.Position, o.Rotation, o.Scale, piece), g.RootScale)).ToList();
             foreach (var (b, pre) in g.Batches)
             {
-                var data = placements.Select(m => pre * m).ToArray();
-                _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _ghostVbo);
-                fixed (Matrix4x4* p = data)
-                {
-                    _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 64), p, BufferUsageARB.DynamicDraw);
-                }
-                DrawFrom(b, _ghostVbo, data.Length, null, u);
+                DrawPlaced(b, [.. placements.Select(m => pre * m)], u);
             }
         }
         _gl.Uniform1(_u.At(_objectProg, "uGhost"), 0f);
         _gl.DepthMask(true);
         _gl.Disable(EnableCap.Blend);
         _gl.BindVertexArray(0);
+    }
+
+    /// <summary>
+    /// A model part drawn at these placements (not things of the scene: the ghosts, the selection's mask), through the
+    /// ghosts' buffer, made at first use.
+    /// </summary>
+    /// <param name="b">The model part.</param>
+    /// <param name="data">Its placements.</param>
+    /// <param name="u">The object shader's material uniforms.</param>
+    private unsafe void DrawPlaced(Batch b, Matrix4x4[] data, MaterialUniforms u)
+    {
+        if (_ghostVbo == 0)
+        {
+            _ghostVbo = _own.Buffer();
+        }
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _ghostVbo);
+        fixed (Matrix4x4* p = data)
+        {
+            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 64), p, BufferUsageARB.DynamicDraw);
+        }
+        DrawFrom(b, _ghostVbo, data.Length, null, u);
     }
 
     /// <summary>

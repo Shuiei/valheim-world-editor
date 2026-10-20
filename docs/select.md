@@ -1,7 +1,7 @@
 # Select (`E`)
 
 ![A selected rock with its arrows and ring](images/select-arrows.jpg)
-*A rock selected: its yellow box, the red X, green Y and blue Z arrows to move it along one axis, and the
+*A rock selected: its outline, the red X, green Y and blue Z arrows to move it along one axis, and the
 orange ring to turn it. The Select panel is on the left.*
 
 Pick objects (trees, rocks, building pieces, anything shown), then move, turn, lift, drop, copy, replace
@@ -28,7 +28,7 @@ until you **Save** (or **Apply live**).
 
 | Action | What it does |
 |---|---|
-| **Click** an object | Selects it, and only it. A thin yellow box marks the selection; a blue box shows what is under the cursor. |
+| **Click** an object | Selects it, and only it. An orange line round their shapes marks the selected objects, the last one clicked (the active one) in a lighter yellow, as in Blender; a blue box shows what is under the cursor. |
 | `Ctrl` + click | Adds an object to the selection, or takes it out when it is selected already. Dragging any selected object then moves them all together. |
 | `Shift` + click | Takes an object out of the selection. |
 | `Ctrl` + `Shift` + click | Adds the row from the last object clicked to this one: click wall 1, then `Ctrl` + `Shift` + click wall 3, and walls 1, 2 and 3 are selected (the objects on the line between them). |
@@ -73,10 +73,12 @@ A zone on the ground selects the objects whose position (their origin, where the
 the screen selects what a click would find at its points (every 3 pixels, more apart in a big box), so an object
 counts as soon as a part of it is seen inside.
 
-### Several objects
+### How the selection shows
 
-With more than one object selected, one yellow box marks them all instead of a box each: a box each over a
-building makes a tangle of lines that hides it. Everything still works on each object.
+An orange line follows the outer shape of the selected objects, seen through whatever is in front of them: a
+selected building is one clean outline, not a tangle of boxes, and a part of it (a floor, a wall) shows its own
+shape. The active object, the last one clicked while it stays selected, is outlined in a lighter yellow. An object
+whose model is still being read is marked by a thin box until it is drawn.
 
 ### Panel buttons
 

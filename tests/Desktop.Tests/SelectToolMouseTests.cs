@@ -70,6 +70,33 @@ public class SelectToolMouseTests
         Assert.Equal([0, 1, 2, 3, 4], v.Selected);
     }
 
+    // The active object (outlined brighter, as Blender's) is the last one clicked while it stays selected. (The
+    // second wall stands far off: the turn ring round the selection's middle never lies under a Ctrl + click.)
+    [AvaloniaFact]
+    public void TheActiveObjectIsTheLastOneClickedWhileSelected()
+    {
+        var v = Open(T(1, Wall, 40, 30, 40), T(2, Wall, 58, 30, 58));
+        Assert.Null(v.W.View.ActiveObject);
+        v.Click(40, 40);
+        Assert.Equal(0, v.W.View.ActiveObject);
+        v.Click(58, 58, KeyModifiers.Control);
+        Assert.Equal(1, v.W.View.ActiveObject);
+        v.Click(58, 58, KeyModifiers.Control);
+        Assert.Null(v.W.View.ActiveObject);
+        v.Click(30, 30);
+        Assert.Null(v.W.View.ActiveObject);
+    }
+
+    // Selected objects with no model drawn yet (the tests read none) are boxed instead of outlined: all of them here.
+    [AvaloniaFact]
+    public void SelectedObjectsWithNoModelDrawnAreBoxed()
+    {
+        var v = Open(T(1, Wall, 40, 30, 40), T(2, Wall, 58, 30, 58));
+        v.W.View.Select([0, 1]);
+        var boxed = (List<int>)PrivateMethods.Call(typeof(GlView), "MakeOutlineParts", v.W.View, v.S.Scene)!;
+        Assert.Equal([0, 1], boxed.Order());
+    }
+
     [AvaloniaFact]
     public void AClickPicksAndAClickOnEmptyGroundDeselects()
     {
