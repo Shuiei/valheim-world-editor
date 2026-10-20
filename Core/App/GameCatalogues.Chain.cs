@@ -4,14 +4,17 @@ namespace TerrainEditor.App;
 
 public static partial class GameCatalogues
 {
-    private sealed partial class ModifierScan
+    /// <summary>
+    /// Walks up a prefab, for the scans that go from a script up to its prefab rather than down every prefab's objects.
+    /// </summary>
+    private static class Chain
     {
         /// <summary>
         /// From an object up to its prefab root: the root, the Transforms from below the root down to the
         /// object, whether all of them are active (the root too), and the child index at each step. Null
         /// when something on the way cannot be read.
         /// </summary>
-        private static (long Root, List<AssetTypeValueField> Chain, bool Active, List<int> Index)? Up(Bundle b, long goPid)
+        public static (long Root, List<AssetTypeValueField> Chain, bool Active, List<int> Index)? Up(Bundle b, long goPid)
         {
             var chain = new List<AssetTypeValueField>();
             var index = new List<int>();
@@ -57,7 +60,7 @@ public static partial class GameCatalogues
         /// <summary>
         /// The order of two walks down a prefab (their child indices, the shorter first when one is the start of the other).
         /// </summary>
-        private static int Order(List<int> a, List<int> c)
+        public static int Order(List<int> a, List<int> c)
         {
             for (int i = 0; i < Math.Min(a.Count, c.Count); i++)
             {

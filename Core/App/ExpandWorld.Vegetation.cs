@@ -8,13 +8,13 @@ public static partial class ExpandWorld
     /// <summary>
     /// The vegetation rules from the vegetation files' entries, in file order, as the mod's FromData makes them: a
     /// rule may name several prefabs (one drawn an object), scale by axis, measure its distance from a centre of its
-    /// own, and be on or off by the world's global keys. The draws an object's components make come from the game's
-    /// rule of the same prefab (none known for a prefab the game's list has not: noted). A rule of an alt biome grows
+    /// own, and be on or off by the world's global keys (the draws an object's scripts make as it wakes come from the
+    /// game, WakeDraws; none for a prefab the game has not: noted). A rule of an alt biome grows
     /// in that alt biome's areas only. Its objects get the entry's data ("data", then "drops"); a rule whose prefab is a
     /// blueprint grows the blueprint's parts. What cannot be written ahead of the game is left out, noted.
     /// </summary>
     /// <param name="entries">The entries.</param>
-    /// <param name="game">The game's rules (for the components' draws).</param>
+    /// <param name="game">The game's rules (their prefabs are the game's, networked or not).</param>
     /// <param name="biomes">The world's biomes (for the names).</param>
     /// <param name="radius">The world's radius, metres.</param>
     /// <param name="globalKeys">The world's global keys (a key's name, lower-cased).</param>
@@ -24,11 +24,7 @@ public static partial class ExpandWorld
     internal static List<VegetationRule> VegetationOf(IReadOnlyList<Entry> entries, IReadOnlyList<VegetationRule> game, BiomeTable biomes, float radius, IReadOnlySet<string> globalKeys, List<string> notes, DataTable? data = null, string? blueprints = null)
     {
         List<VegetationRule> rules = [];
-        var draws = new Dictionary<string, int>(StringComparer.Ordinal);
-        foreach (var g in game)
-        {
-            draws.TryAdd(g.prefab, g.draws);
-        }
+        var grown = game.Select(g => g.prefab).ToHashSet(StringComparer.Ordinal);
         HashSet<string> unknown = [];
         foreach (var entry in entries)
         {
@@ -38,17 +34,14 @@ public static partial class ExpandWorld
             {
                 continue;
             }
-            var rule = VegetationOf(f, prefabs, biomes, radius, globalKeys, p => draws.GetValueOrDefault(p), notes);
+            var rule = VegetationOf(f, prefabs, biomes, radius, globalKeys, notes);
             AddModContents(rule, f, data ?? DataTable.Empty, blueprints, notes);
-            foreach (string p in prefabs.Where(p => !draws.ContainsKey(p) && rule.blueprints?.ContainsKey(p) != true))
-            {
-                unknown.Add(p);
-            }
+            unknown.UnionWith(prefabs.Where(p => !grown.Contains(p) && !Known(p) && rule.blueprints?.ContainsKey(p) != true));
             rules.Add(rule);
         }
         if (unknown.Count > 0)
         {
-            notes.Add($"expand_vegetation: the game's list has no rule for {string.Join(", ", unknown.Order(StringComparer.Ordinal))}: their objects' own draws are taken as none");
+            notes.Add($"expand_vegetation: the game has no prefab {string.Join(", ", unknown.Order(StringComparer.Ordinal))}: their objects' draws as they wake are taken as none");
         }
         return rules;
     }
@@ -87,12 +80,12 @@ public static partial class ExpandWorld
     private static readonly int DropsKey = Save.StableHash.Of("ews_drops");
 
     /// <summary>One rule from its entry.</summary>
-    private static VegetationRule VegetationOf(Fields f, string[] prefabs, BiomeTable biomes, float radius, IReadOnlySet<string> globalKeys, Func<string, int> drawsOf, List<string> notes)
+    private static VegetationRule VegetationOf(Fields f, string[] prefabs, BiomeTable biomes, float radius, IReadOnlySet<string> globalKeys, List<string> notes)
     {
         float[] scaleMin = ScaleOf(f.Str("scaleMin", "1")), scaleMax = ScaleOf(f.Str("scaleMax", "1"));
         (float[]? axesMin, float[]? axesMax) = scaleMin.SequenceEqual(scaleMax) ? (null, null) : (scaleMin, scaleMax);
         float minDistance = DistWhenPositive(f.F("minDistance", 0f), radius), maxDistance = DistWhenPositive(f.F("maxDistance", 0f), radius);
-        (string[]? several, int[]? severalDraws) = prefabs.Length > 1 ? (prefabs, prefabs.Select(drawsOf).ToArray()) : (null, null);
+        string[]? several = prefabs.Length > 1 ? prefabs : null;
         float centerX = f.F("centerX", 0f), centerY = f.F("centerY", 0f);
         bool ownCentre = centerX != 0f || centerY != 0f;
         bool enabled = f.B("enabled", true);
@@ -108,8 +101,6 @@ public static partial class ExpandWorld
             prefab = prefabs[0],
             name = f.Str("prefab"),
             prefabs = several,
-            prefabDraws = severalDraws,
-            draws = drawsOf(prefabs[0]),
             altBiome = NonBlank(f.Str("altBiome")),
             enable = enabled ? 1 : 0,
             min = f.F("min", 1f),

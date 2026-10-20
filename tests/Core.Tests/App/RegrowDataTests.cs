@@ -28,7 +28,6 @@ public class RegrowDataTests
         maxTerrainDelta = 1000f,
         scaleMin = 1f,
         scaleMax = 1f,
-        draws = 2,
     };
 
     /// <summary>The spots Regrow places in the middle zone under these rules (null: the game's).</summary>
@@ -59,7 +58,6 @@ public class RegrowDataTests
         using var w = new TempWorld();
         var several = Open("Pine");
         several.prefabs = ["Pine", "Beech1", "Birch1"];
-        several.prefabDraws = [2, 0, 5];
         var spots = Spots(w, [several]);
         Assert.Equal(["Beech1", "Birch1", "Pine"], spots.Select(s => s.Name).Distinct().Order(StringComparer.Ordinal));
         // The draw moves the sequence on: the objects after the first stand elsewhere than with one prefab.

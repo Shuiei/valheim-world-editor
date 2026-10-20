@@ -260,9 +260,9 @@ time and after a game update). The kinds:
   Workshop's Build, found from each `Piece` script up to its prefab, with the English texts of
   `resources.assets`. Its test copy keeps the pieces it has and the items they take.
 - `vegetation`: the game's vegetation rules for Regrow nature (and new worlds' generated middle),
-  ZoneSystem's and the location lists', with the random draws each kind makes when it is created,
-  from the main scene's bundles only (found with the SoftRef manifest, as the location rules; only
-  the scripts with vegetation read), then the prefabs' and their scripts' bundles (about 1 s). Its
+  ZoneSystem's and the location lists', from the main scene's bundles only (found with the SoftRef
+  manifest, as the location rules; only the scripts with vegetation read), then the prefabs' bundles
+  for their names (about 1 s). Its
   test copy is a list: it keeps the rules it has, by name and prefab (all of them: Regrow's tests go
   over every biome).
 - `dungeon-rooms`: the Dungeon tool's dungeons and rooms: each dungeon kind's themes, space and doors,
@@ -273,6 +273,12 @@ time and after a game update). The kinds:
   are read the same way, for what the game makes of one it spawns (new worlds' generated zones). Its
   test copy keeps every dungeon kind, the rooms it has (those of the kinds the tests generate: the
   biomes' own and the Frost Caves) and the locations it has (the start temple, a crypt's entrance).
+- `wake-draws`: the random draws a new object of each prefab makes as it wakes (its scripts' `Awake`, and
+  `OnEnable` for an enabled one), in the order they wake, for Regrow nature and New world's location contents:
+  a run of draws, a building piece, a LOD fade, a snow melter, a container's default items. Found from each
+  drawing script (told by its class) up to its prefab, the tree read raw a level at a time (about 2 s);
+  locations, rooms and dungeons are left out (their objects are listed alone). Its test copy keeps the prefabs
+  it has.
 
 The tests use trimmed copies, `tests/fixtures/<kind>.json` (what they meet; the driver's
 `gamedata <folder>` gives them to the smoke tests). After a game update, make them again with

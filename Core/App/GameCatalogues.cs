@@ -13,7 +13,7 @@ public static partial class GameCatalogues
     /// once and given to each kind's reader, in the order of their file names: the order entries come in,
     /// and which one wins when a name is found twice.
     /// </summary>
-    public static readonly string[] AtStart = ["terrain-modifiers", "prefabs", "pieces", "piece-support", "piece-place", "piece-cost", "dungeon-rooms"];
+    public static readonly string[] AtStart = ["terrain-modifiers", "prefabs", "pieces", "piece-support", "piece-place", "piece-cost", "dungeon-rooms", "wake-draws"];
 
     /// <summary>
     /// The kinds named (of AtStart), as their JSON. Throws ArgumentException for a kind not in <c>AtStart</c>.
@@ -33,6 +33,7 @@ public static partial class GameCatalogues
             "piece-place" => new PlaceScan(),
             "piece-cost" => new CostScan(Localization.English(bundles.Folder)),
             "dungeon-rooms" => new DungeonScan(),
+            "wake-draws" => new WakeScan(),
             _ => throw new ArgumentException($"no kind {k} is read at the start"),
         })).ToList();
         using var game = new Game(bundles.Folder);

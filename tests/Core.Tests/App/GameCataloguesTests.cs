@@ -35,6 +35,9 @@ public class GameCataloguesTests
         ["piece-cost"] = """
             {"items":{"Wood":"Wood"},"pieces":{"piece_workbench":{"n":"Workbench","r":[["Wood",10,true]]},"stone_floor":{"n":"","r":[]},"wood_wall":{"n":"Wood wall, sturdy","r":[["Wood",4,true]],"st":"Workbench"}}}
             """,
+        ["wake-draws"] = """
+            {"Sword":[1],"Wood":[1],"stone_floor":["wear"],"wood_wall":["wear"]}
+            """,
         ["dungeon-rooms"] = """
             {"dungeons":{"DG_Test":{"algorithm":1,"themes":2,"maxRooms":10,"minRooms":3,"tileWidth":8.0,"zoneSize":[64.0,64.0,64.0],"customInterior":0,"baseSeed":0,"doorChance":0.5,"doors":[["dungeon_door","crypt_door",0.0]]}},"rooms":{"crypt_room":{"theme":2,"size":[8,4,8],"endCap":0,"entrance":0,"divider":0,"endCapPrio":0,"weight":2.0,"perimeter":0,"enabled":1,"openings":[["crypt_door",1,1,0,0.0,0.0,4.0,0.0,0.0,0.0,1.0]],"contents":[["Chest",1.0,0.0,1.0,0.0,0.7071,0.0,0.7071,0],["Torch",0.0,0.0,0.0,0.0,0.0,0.0,1.0,3]],"spawns":[[1,50.0,0,2,-10000.0,10000.0]],"picks":[[6,0,[[4,1.0],[5,3.0]],-10000.0,10000.0]],"nodes":[-1,-1,-1,1,-1,-1,-1]}},"locations":{"Village":{"clearArea":1,"randomDamage":0,"interior":0,"customInterior":0,"contents":[["Shrine",0.0,0.0,-3.0,0.0,0.0,0.0,1.0,0]],"spawns":[],"picks":[],"nodes":[-1],"teleports":[],"interiorAt":null}}}
             """,
@@ -55,7 +58,8 @@ public class GameCataloguesTests
         // Place: colliders on the build ray's layers (the "ghost" child's layer is not). Cost: English names, the
         // station, resources without an item or an amount left out. Rooms: the opening, what the room makes (names
         // cut at " (", the disabled one left out), the random spawn with its node instead, the pick of two. Locations:
-        // the Location's flags and what it makes (its networked child), as a room's.
+        // the Location's flags and what it makes (its networked child), as a room's. Wake draws: the items' drops, the
+        // pieces' WearNTear.
         foreach (var (kind, json) in Expected)
         {
             Assert.Equal(json, kinds[kind]);
@@ -223,10 +227,7 @@ public class GameCataloguesTests
         // ZoneSystem's own first (the rule whose prefab is not found left out), then the lists by sort order.
         Assert.Equal(["Bushes", "Rocks", "Berries"], rules.Take(3).Select(r => r!["name"]!.GetValue<string>()));
         Assert.Equal(["Bush", "Rock", "Berries"], rules.Take(3).Select(r => r!["prefab"]!.GetValue<string>()));
-        // The draws when they wake: Bush a LodFadeInOut with its LODGroup and a bird's two (the inactive child's rock
-        // sleeps); Rock its MineRock5 (inactive, but the root wakes; its LodFadeInOut has no LODGroup); Berries the
-        // Pickable that respawns, not its child's.
-        Assert.Equal([3L, 1L, 1L], rules.Take(3).Select(r => r!["draws"]!.GetValue<long>()));
+        Assert.Null(rules[0]!["draws"]);
         Assert.Equal(1.0, rules[0]!["min"]!.GetValue<double>());
         Assert.Equal(3 + order.Sum(o => o.Vegetation) + 2, rules.Count);
         Assert.Equal("Extra", rules[^2]!["name"]!.GetValue<string>());

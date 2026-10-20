@@ -6,11 +6,11 @@ using Xunit;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// The walk from a terrain modifier up to its prefab (GameCatalogues.ModifierScan.Up and Order): a modifier whose objects
+/// The walk from a terrain modifier up to its prefab (GameCatalogues.Chain.Up and Order): a modifier whose objects
 /// cannot be followed up to a prefab root is left out, the others still read; a modifier on an object comes before one on
 /// its child.
 /// </summary>
-public class GameCataloguesModifierScanChainTests
+public class GameCataloguesChainTests
 {
     [Fact]
     public void AModifierWhoseObjectsCannotBeFollowedUpIsLeftOut()

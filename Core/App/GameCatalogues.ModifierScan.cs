@@ -48,7 +48,7 @@ public static partial class GameCatalogues
             foreach (var (f, info) in b.Objects)
             {
                 if (info.TypeId != MonoBehaviourType || game.ScriptClass(b, f, info) != "TerrainModifier" || b.Field(f, info.PathId) is not { } m
-                    || Up(b, m["m_GameObject.m_PathID"].AsLong) is not var (root, chain, active, index))
+                    || Chain.Up(b, m["m_GameObject.m_PathID"].AsLong) is not var (root, chain, active, index))
                 {
                     continue;
                 }
@@ -86,7 +86,7 @@ public static partial class GameCatalogues
                 {
                     continue;
                 }
-                mods.Sort((x, y) => Order(x.Path, y.Path) is var c and not 0 ? c : x.Index.CompareTo(y.Index));
+                mods.Sort((x, y) => Chain.Order(x.Path, y.Path) is var c and not 0 ? c : x.Index.CompareTo(y.Index));
                 // The first of a name, as every scan takes it.
                 Entries.TryAdd(go["m_Name"].AsString, new Dict { ["location"] = kinds.Contains("Location"), ["modifiers"] = mods.Select(x => (object?)x.Entry).ToList() });
             }
