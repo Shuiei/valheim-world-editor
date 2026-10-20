@@ -60,7 +60,11 @@ public static class LocationIcons
         _ => field,
     };
 
-    /// <summary>An icon from its text "name[, size[, moves]]" (the mod's MinimapIcon: a size of 0 or less is the game's).</summary>
+    /// <summary>
+    /// An icon from its text "name[, size[, animate]]" (the mod's MinimapIcon: a size of 0 or less is the game's). Any
+    /// third field makes the game's icon pulse (its pin's m_animate); the editor's map is a still picture, so it is
+    /// drawn at its size without it.
+    /// </summary>
     private static Icon Parsed(NVector3 at, string text)
     {
         string[] parts = [.. text.Split(',').Select(p => p.Trim()).Where(p => p != "")];
