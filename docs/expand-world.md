@@ -43,7 +43,8 @@ A world made with Expand World Size shows "Expand World" on its card on the star
 - **The ground** of zones the game has not made yet, the overview, the map, the water and the 3D view:
   the radius, the stretch, the altitude and water depth, the water level, the lakes, rivers and streams,
   the biome layout (the world rules, in the mod's current or legacy evaluation), every biome's ground
-  shape, colour, lava and height transform, the territories.
+  shape, colour, lava and height transform, the territories. The map draws the sea at the world's real water level
+  (the game's own map keeps its 29.5 m whatever Expand World Rivers sets).
 - **The biomes**: a biome the file adds is drawn on the map and on the New world page's seed map with the
   map colour the file gives it (white without one, as the game draws a biome it does not know), named as
   the file names it, and its ground drawn as the ground it borrows. A territory is drawn in its own map
@@ -92,7 +93,6 @@ A world made with Expand World Size shows "Expand World" on its card on the star
 - **Status effects** of biomes and territories, and their **water colours**: the editor neither applies nor
   draws them. As in the mod, a biome's status effects and a territory's status effects and water colours still
   count towards whether its settings are in use; a biome's water colours do not.
-- **The game's map shader** keeps the game's own water line.
 - **The zone system's water**: the game's own vegetation and location checks use the sea at 30 m whatever
   Expand World Rivers puts the water at, and neither mod changes that, so the editor keeps it too.
 - **The mods' quirks** are mirrored as they are (a few are listed in the architecture notes), so that
