@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.60.1 — 2026-10-19
+
+### Fixed
+- **Expand World vegetation rules that need a global key follow the world's keys again.** Expand World Data 1.79
+  renamed the vegetation file's global key fields, so such rules were always grown; both names are now read.
+
 ## v1.60.0 — 2026-10-19
 
 ### Changed
