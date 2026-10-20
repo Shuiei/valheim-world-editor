@@ -102,4 +102,20 @@ public class SelectToolScreenBoxTests
         Box(v, (40.12f, 39.4f), (40.34f, 40.6f));
         Assert.Contains(1, v.Selected);
     }
+
+    // Inside a box with Select through: nothing without an area or a view size; a box's points tried are its middle
+    // and its corners pulled a third of the way in.
+    [AvaloniaFact]
+    public void InsideTheBoxIsNothingWithoutAnAreaOrASizeAndTriesNinePoints()
+    {
+        var r = new Avalonia.Rect(0, 0, 100, 100);
+        Assert.Empty(new GlView().InsideRect(r, new Avalonia.Size(800, 600)));
+        var v = TwoFloorsAndATree();
+        Assert.Empty(v.W.View.InsideRect(r, new Avalonia.Size(0, 0)));
+        var points = GlView.SamplesOf((new System.Numerics.Vector3(0, 0, 0), new System.Numerics.Vector3(3, 6, 9))).ToList();
+        Assert.Equal(9, points.Count);
+        Assert.Equal(new System.Numerics.Vector3(1.5f, 3, 4.5f), points[0]);
+        Assert.Equal(new System.Numerics.Vector3(0.5f, 1, 1.5f), points[1]);
+        Assert.Equal(new System.Numerics.Vector3(2.5f, 5, 7.5f), points[8]);
+    }
 }
