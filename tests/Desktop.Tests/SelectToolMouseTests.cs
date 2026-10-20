@@ -69,6 +69,7 @@ public class SelectToolMouseTests
     public void AZoneDrawnOnTheGroundSelectsWhatIsInside()
     {
         var v = Open(T(1, Wall, 40, 30, 40), T(2, Wall, 42, 30, 40), T(3, Wall, 55, 30, 55));
+        v.Tool.ZoneOnGround = true;
         v.Drag(false, (36, 36), (46, 36), (46, 44), (36, 44), (36, 37));
         Assert.Equal([0, 1], v.Selected);
         Assert.Null(v.Tool.Lasso);
@@ -87,6 +88,7 @@ public class SelectToolMouseTests
     {
         // Every pointer move copied all the zone's points; a move that adds none now keeps the view's copy.
         var v = Open(T(1, Wall, 40, 30, 40));
+        v.Tool.ZoneOnGround = true;
         v.Tool.Down(v.At(36, 30, 36), v.Size, false, false, 1);
         v.Tool.Moved(v.At(46, 30, 36), v.Size);
         var drawn = v.Tool.Lasso;
@@ -101,6 +103,7 @@ public class SelectToolMouseTests
     public void EscapeCancelsAZoneBeingDrawn()
     {
         var v = Open(T(1, Wall, 40, 30, 40));
+        v.Tool.ZoneOnGround = true;
         v.Tool.Down(v.At(36, 30, 36), v.Size, false, false, 1);
         v.Tool.Moved(v.At(46, 30, 36), v.Size);
         v.Tool.Moved(v.At(46, 30, 44), v.Size);

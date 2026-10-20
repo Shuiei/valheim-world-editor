@@ -7,9 +7,10 @@ the plugin is unchanged in versions without that part.
 ## v1.81.0 — 2026-10-20
 
 ### Added
-- **Pick only what is seen.** With the new Select panel switch on, a drag draws a rectangle on the screen and selects
-  only the objects seen inside it, not those behind others, so you can take one floor, one wall or a roof of a
-  building instead of everything from the ground up.
+- **A drag selects what is seen inside a box on the screen.** Like in Blender or a map editor, a drag on empty ground
+  (or Alt + drag over a building) draws a box and selects only the objects seen inside it, not those behind others,
+  so you can take one floor, one wall or a roof instead of everything from the ground up. The Select panel's "A drag
+  draws" brings back the zone on the ground.
 
 ## v1.80.0 — 2026-10-20
 

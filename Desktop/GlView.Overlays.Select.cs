@@ -124,7 +124,7 @@ public sealed partial class GlView
     private uint _screenBoxVao, _screenBoxVbo;
 
     /// <summary>
-    /// The rectangle being drawn on the screen with the Select tool (SeenOnly): its four edges a metre in front of
+    /// The rectangle being drawn on the screen with the Select tool: its four edges a metre in front of
     /// the camera, so they lie flat on the view, in the lasso's colour.
     /// </summary>
     private void DrawScreenBox(Matrix4x4 vp)

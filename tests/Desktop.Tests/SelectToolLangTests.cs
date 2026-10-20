@@ -71,7 +71,8 @@ public sealed class SelectToolLangTests
         v.Tool.Commit();
         Check("Moved 1 object(s). Ctrl+Z puts them back.");
 
-        // Zones: the wall alone, the runestone added, then nothing.
+        // Zones on the ground: the wall alone, the runestone added, then nothing.
+        v.Tool.ZoneOnGround = true;
         v.Drag(false, (26, 46), (34, 46), (34, 54), (26, 54), (26, 47));
         Check("Selected 1 object(s) inside the zone.");
         v.Drag(true, (23, 27), (29, 27), (29, 33), (23, 33));
