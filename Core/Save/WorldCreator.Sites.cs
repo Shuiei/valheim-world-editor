@@ -18,7 +18,8 @@ public static partial class WorldCreator
     /// What is written for it (its networked objects, then its proxy), each with where it is; null when its zone is left
     /// to the game.
     /// </param>
-    internal sealed record Site((int X, int Z) Zone, string Name, int Hash, Vector3 Position, List<(Vector3 At, byte[] Zdo)>? Objects);
+    /// <param name="Ground">Its zone's ground as Expand World Data levels and paints it round the location; null for none.</param>
+    internal sealed record Site((int X, int Z) Zone, string Name, int Hash, Vector3 Position, List<(Vector3 At, byte[] Zdo)>? Objects, ZoneEdit? Ground = null);
 
     /// <summary>
     /// The seed's locations within <paramref name="radius"/> zones of the middle, as the game would spawn them when it
@@ -64,12 +65,15 @@ public static partial class WorldCreator
                 int zoneSeed = LocationPrefabs.ZoneSeed(seed, zone.X, zone.Z);
                 var spawn = p.Rule.SnapToWater != 0 ? position : position with { Y = GroundHeight(terrain, position) };
                 float yaw = contents.RandomCardinal ? CardinalYaw(zoneSeed) : Yaw(p.Rule, terrain, spawn, zoneSeed);
-                var objects = Built(prefab, contents, new Placing(spawn, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw * MathF.PI / 180f), zoneSeed, DamageOf(p.Rule, prefab)), terrain);
-                // Expand World Data's offset raises the spot before the game makes the proxy too.
+                // Expand World Data's offset raises the spot before the game makes the location and its proxy.
                 var spot = spawn with { Y = spawn.Y + contents.Offset };
+                // The mod changes the ground before it spawns the file's objects.
+                var ground = GroundOf(contents, spawn, zone, terrain.Generator);
+                var levelled = LevelledOf(ground, terrain, StableHash.Of(p.Rule.Base), spot, yaw);
+                var objects = Built(prefab, contents, new Placing(spawn, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw * MathF.PI / 180f), zoneSeed, DamageOf(p.Rule, prefab), levelled), terrain);
                 byte[] proxy = ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, proxyFlags, spot, new Vector3(0f, yaw, 0f), 0f, ProxyInts(p.Rule, zoneSeed, terrain.Generator.Rules.DataInstalled));
                 objects.Add((spot, WithFields(proxy, contents.ProxyData)));
-                sites.Add(new Site(zone, p.Rule.Prefab, hash, position, objects));
+                sites.Add(new Site(zone, p.Rule.Prefab, hash, position, objects, ground));
             }
         }
         finally

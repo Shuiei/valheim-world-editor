@@ -37,7 +37,14 @@ public static partial class WorldCreator
         var left = sites.Where(s => s.Objects == null).Select(s => s.Zone).ToHashSet();
         // Every location of the seed, inside the generated zones or not: one beside them may clear ground in them.
         var clear = new Regrow.ClearAreas(terrain.Generator, laidOut.Select(p => (StableHash.Of(p.Rule.Prefab), p.X, p.Z)));
-        var spots = Regrow.Zones(terrain, new EditStore(empty), seed, -radius, -radius, radius, radius, clear);
+        // The ground Expand World Data changes round locations, which the vegetation grows on.
+        var grounds = sites.Select(s => s.Ground).OfType<ZoneEdit>().ToList();
+        var edits = new EditStore(empty);
+        foreach (var g in grounds)
+        {
+            edits.Put(g.Clone());
+        }
+        var spots = Regrow.Zones(terrain, edits, seed, -radius, -radius, radius, radius, clear);
         (int X, int Z)? bare = null;
         (int X, int Z, float Span)? flatZone = null;
         if (flat)
@@ -67,9 +74,17 @@ public static partial class WorldCreator
             }
         }
         int zones = PlaceZoneControls(db, batch, left, radius, terrain.Generator.Rules.ZoneSpawners);
-        // The middle zone's terrain compiler object (no edit, written with the first chunk of the middle zone).
-        batch.Put(ChunkMath.BaseChunk(0, 0), EmptyTerrainObject());
-        batch.Objects++;
+        // The changed zones' terrain compilers, and the middle zone's (no edit, written with its first chunk).
+        foreach (var g in grounds)
+        {
+            batch.Put(ChunkMath.BaseChunk(g.ZoneX, g.ZoneZ), TerrainObject(g));
+            batch.Objects++;
+        }
+        if (!grounds.Any(g => g.ZoneX == 0 && g.ZoneZ == 0))
+        {
+            batch.Put(ChunkMath.BaseChunk(0, 0), EmptyTerrainObject());
+            batch.Objects++;
+        }
         WriteChunks(folder, main, db, batch, written);
         return new Growth(batch.Objects, zones, placed, flatZone);
     }

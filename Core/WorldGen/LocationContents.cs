@@ -47,9 +47,33 @@ public sealed record LocationContents
     /// <summary>The location turned to a random cardinal direction, drawn from its seed, in place of its usual turn.</summary>
     public bool RandomCardinal { get; init; }
 
+    /// <summary>The ground of its zone levelled to its spot ("levelArea"), when it is; else null.</summary>
+    public LevelArea? Level { get; init; }
+
+    /// <summary>The ground of its zone painted round its spot ("paint"), when it is; else null.</summary>
+    public PaintArea? Paint { get; init; }
+
     /// <summary>Why the game must make the location's zone itself; null when the editor can build it.</summary>
     public string? LeftToGame { get; init; }
 }
+
+/// <summary>
+/// Ground Expand World Data levels to a location's spot before it spawns (its Terrain.Level): fully within the radius,
+/// less and less over the border beyond it.
+/// </summary>
+/// <param name="Radius">Metres levelled fully.</param>
+/// <param name="Border">Metres of blend beyond.</param>
+public sealed record LevelArea(float Radius, float Border);
+
+/// <summary>
+/// Ground Expand World Data paints round a location's spot before it spawns (its Terrain.Paint): this colour of the
+/// paint mask (r dirt, g cultivated, b paved, a vegetation allowed) fully within the radius, blended over the border.
+/// </summary>
+/// <param name="Radius">Metres painted fully.</param>
+/// <param name="Border">Metres of blend beyond.</param>
+/// <param name="Color">The paint's r, g and b.</param>
+/// <param name="Alpha">The paint's a.</param>
+public sealed record PaintArea(float Radius, float Border, NVector3 Color, float Alpha);
 
 /// <summary>An object a location's file adds ("objects": prefab, position, turn, scale, chance, data).</summary>
 /// <param name="Prefab">The prefab (or a swap's source name).</param>

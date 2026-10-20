@@ -1,4 +1,3 @@
-using System.Numerics;
 using TerrainEditor.Editing;
 
 namespace TerrainEditor.Save;
@@ -9,14 +8,7 @@ public static partial class WorldCreator
     /// The game's terrain compiler object of zone 0, 0 with nothing edited: its position in the short form, the
     /// prefab's object flags, and the TCData the writer encodes for an untouched zone.
     /// </summary>
-    internal static byte[] EmptyTerrainObject()
-    {
-        ushort flags = Terrain.PrefabCatalog.Get(TerrainCompiler)?.Flags ?? 0x0D00;
-        var z = ZdoData.Parse(ZdoBuilder.Blank(TerrainCompiler, flags, Vector3.Zero, Vector3.Zero, 0f));
-        z.SmallPosition = true;
-        z.SetBytes(StableHash.Of("TCData"), WorldWriter.EncodeTerrain(new ZoneEdit(0, 0)));
-        return z.Serialize();
-    }
+    internal static byte[] EmptyTerrainObject() => TerrainObject(new ZoneEdit(0, 0));
 
     /// <summary>
     /// World.SaveWorldMetaData: a length, then the package (version, name, seed name, seed, unique id, generator

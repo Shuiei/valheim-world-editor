@@ -68,10 +68,50 @@ internal static class ContentsCheck
                 Compare(world, site, near, at, zdo, tally);
             }
         }
+        int grounds = Grounds(world, sites, tally);
         var h = tally.Heights;
         Console.WriteLine($"Heights of the matched objects, game minus editor: {(h.Count == 0 ? "none" : $"{h.Min():0.000} .. {h.Max():0.000}, {h.Count(d => MathF.Abs(d) > 0.01f)} off by more than 1 cm")}");
         Console.WriteLine($"{sites.Count} sites ({tally.Left} left to the game): {tally.Expected} objects built, {tally.Placed} where the game put one, {tally.Valued} of those with the game's values.");
-        return tally.Placed == tally.Expected && tally.Valued == tally.Expected && tally.Left == 0 ? 0 : 1;
+        return tally.Placed == tally.Expected && tally.Valued == tally.Expected && tally.Left == 0 && grounds == 0 ? 0 : 1;
+    }
+
+    /// <summary>
+    /// The zones whose ground the file levels or paints: the editor's against the game's terrain data of the zone,
+    /// each height and paint cell; prints the count and returns how many zones differ.
+    /// </summary>
+    private static int Grounds(WorldSave world, List<WorldCreator.Site> sites, Tally tally)
+    {
+        int zones = 0, differ = 0;
+        foreach (var site in sites.Where(s => s.Ground != null))
+        {
+            zones++;
+            if (world.TerrainZones.FirstOrDefault(t => t.ZoneX == site.Zone.X && t.ZoneZ == site.Zone.Z) is not { } game)
+            {
+                differ++;
+                tally.Say($"{site.Name} at {At(site.Position)}: the game's zone has no terrain data");
+                continue;
+            }
+            int cells = Enumerable.Range(0, TerrainEditor.Editing.EditStore.Cells).Count(i => !SameCell(site.Ground!, game, i));
+            if (cells > 0)
+            {
+                differ++;
+                tally.Say($"{site.Name} at {At(site.Position)}: {cells} cells of its ground differ");
+            }
+        }
+        Console.WriteLine($"Ground of {zones} zones levelled or painted: {zones - differ} as the game's.");
+        return differ;
+    }
+
+    /// <summary>
+    /// Whether a point of the editor's ground is the game's: its height change, and its paint (a 64 × 64 paint grid
+    /// read as the game reads it, the last row and column repeated).
+    /// </summary>
+    private static bool SameCell(TerrainEditor.Editing.ZoneEdit mine, TerrainZone game, int i)
+    {
+        int w = game.PaintWidth, row = Math.Min(i / 65, w - 1), col = Math.Min(i % 65, w - 1), p = row * w + col;
+        bool height = mine.Modified[i] == game.ModifiedHeight[i] && (!mine.Modified[i] || MathF.Abs(mine.Level[i] - game.LevelDelta[i]) < 1e-4f);
+        var paint = new Vector4(mine.Paint[i * 4], mine.Paint[i * 4 + 1], mine.Paint[i * 4 + 2], mine.Paint[i * 4 + 3]);
+        return height && mine.PaintModified[i] == game.ModifiedPaint[p] && (!mine.PaintModified[i] || Vector4.Distance(paint, game.Paint[p]) < 1e-4f);
     }
 
     /// <summary>One built object against the world: the same prefab within 5 cm on the ground, then its values.</summary>
