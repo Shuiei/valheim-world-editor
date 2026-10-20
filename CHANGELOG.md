@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.79.1 — 2026-10-20
+
+### Fixed
+- **A building moved with "Put each object on the ground when moving" off keeps its shape.** Each object kept its own
+  height above the ground under it, so on uneven ground the pieces went up and down apart and the building came out
+  crooked. The whole selection now moves as one block, up or down with the ground under its middle.
+
 ## v1.79.0 — 2026-10-20
 
 ### Added

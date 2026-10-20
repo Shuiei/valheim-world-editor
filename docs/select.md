@@ -127,7 +127,7 @@ turned 15°, +0.25 m · snapped to woodwall".
   bottom layer sits on what is under it, a floor or a platform no higher than the building, else the
   ground. On a slope, or half on a platform, part of it sinks in rather than float, since pieces need
   something to carry what stands on them.
-- Off: each object keeps its height above the ground under it.
+- Off: the whole selection moves as one block that keeps its shape: it goes up or down with the ground under its middle, so a building stays straight on uneven ground.
 - **Snap to other pieces when moving** on: while you move, the closest pair of snap points (one of a
   moved piece, one of a piece around, within 0.75 m) locks together, and the whole selection shifts so
   they meet. Walls, floors, beams and fences join exactly, like with the hammer. Off: free moves.

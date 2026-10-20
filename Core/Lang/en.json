@@ -1908,7 +1908,7 @@
   "tip.select.building": "Add every building piece connected to the selected ones, through pieces that touch (double-clicking a piece does it too).",
   "tip.select.same": "Select every shown object in the area of the kinds that are selected now (all the beeches, all the chests...).",
   "tip.select.invert": "Select every shown object in the area that is not selected now, and only those.",
-  "tip.select.ground": "On: trees, rocks and other objects each land on what is under them where they end up (a floor, a table, a rock no taller than themselves), else on the ground; building pieces move as one block that keeps its shape, with its bottom layer on what is under it. Off: each object keeps its height above the ground.",
+  "tip.select.ground": "On: trees, rocks and other objects each land on what is under them where they end up (a floor, a table, a rock no taller than themselves), else on the ground; building pieces move as one block that keeps its shape, with its bottom layer on what is under it. Off: the whole selection moves as one block that keeps its shape, as high above the ground under its middle as it was.",
   "tip.select.snap": "While moving, a piece's snap point locks onto the nearest snap point of a piece around it (within 0.75 m), so walls, floors and fences join like with the hammer.",
   "tip.select.x": "World position east-west (m) of the selection's middle (or of the one object).",
   "tip.select.y": "Height (m) of the lowest selected object.",
