@@ -23,7 +23,8 @@ public sealed class VisualToolsTests : VisualEditorPictures
     public void DrawingAZoneSelectsAndShowsTheHandles()
     {
         Open();
-        Do("area 0 0 3", "key E");
+        // A zone on the ground (a drag draws a box on the screen by default).
+        Do("area 0 0 3", "key E", "choose A zone on the ground (all above it)");
         Do("mouse down -40 -40", "mouse move 40 -40", "mouse move 40 40", "mouse move -40 40");
         // The zone being drawn.
         ShowsSomething(Picture("lasso"));
