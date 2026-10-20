@@ -55,6 +55,9 @@ public sealed record BiomeInfo
     /// <summary>How much of the lava the mask keeps (1: all of it, as the game).</summary>
     public float LavaAmount { get; init; } = 1f;
 
+    /// <summary>Its water colours (used only when <see cref="HasData"/>: the mod keeps no data of a biome without).</summary>
+    public WaterColours Water { get; init; } = WaterColours.None;
+
     /// <summary>How stretched the lava noise is ("lavaStretch", 1: as the game); the generator divides 0.01 by it.</summary>
     public float LavaStretch { get; init; } = 1f;
 

@@ -186,14 +186,17 @@ public sealed partial class GameLookGl
 		""";
 
     /// <summary>
-    /// The water's fragment shader: moving waves, colour by depth over the area's ground (uHeight), sky reflection, sun
-    /// glints, shore foam and fog. Beyond the area the water is deep and opaque.
+    /// The water's fragment shader: moving waves, colour by depth over the area's ground (uHeight) between its shallow
+    /// and deep colours (WaterTint), a tint near the shore, sky reflection (tinted), sun glints, shore foam and fog.
+    /// Beyond the area the water is deep and opaque.
     /// </summary>
     private const string WaterFs = """
 		uniform sampler2D uHeight;
 		uniform vec4 uRegion;
 		uniform float uWater;
 		uniform vec3 uTop, uHorizon, uSunDir, uSunColor, _WorldSpaceCameraPos;
+		uniform vec3 uShallow, uDeep, uSurface;
+		uniform vec4 uShore;
 		uniform vec4 _Time;
 		in vec3 vWorld;
 		out vec4 fragColor;
@@ -212,11 +215,11 @@ public sealed partial class GameLookGl
 		  float depth = max(uWater - ground, 0.0);
 		  // Light travels down and back up: shallow water shows the bottom, deep water is dark blue.
 		  float viewDepth = depth / max(v.y, 0.15);
-		  vec3 shallow = vec3(0.23, 0.42, 0.36), deep = vec3(0.012, 0.055, 0.085);
-		  vec3 body = mix(shallow, deep, 1.0 - exp(-viewDepth * 0.16));
+		  vec3 body = mix(uShallow, uDeep, 1.0 - exp(-viewDepth * 0.16));
+		  body = mix(body, uShore.rgb, uShore.a * (1.0 - smoothstep(0.0, 2.5, viewDepth)));
 		  body *= 0.55 + 0.45 * max(dot(n, uSunDir), 0.0);
 		  vec3 r = reflect(-v, n); r.y = abs(r.y);
-		  vec3 skyCol = mix(uHorizon, uTop, pow(max(r.y, 0.0), 0.55));
+		  vec3 skyCol = mix(uHorizon, uTop, pow(max(r.y, 0.0), 0.55)) * uSurface;
 		  float fres = 0.02 + 0.98 * pow(1.0 - max(dot(n, v), 0.0), 5.0);
 		  vec3 col = mix(body, skyCol, fres);
 		  vec3 h = normalize(uSunDir + v);

@@ -45,6 +45,12 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   the biome layout (the world rules, in the mod's current or legacy evaluation), every biome's ground
   shape, colour, lava and height transform, the territories. The map draws the sea at the world's real water level
   (the game's own map keeps its 29.5 m whatever Expand World Rivers sets).
+- **The water's colours**: with the mod's "Custom water color" on, the 3D view's water takes the colours the
+  biome under the camera gives (when the biome file gives it other settings, as the mod needs), the territory's
+  over them, as the game colours all its water by the player's place. The editor's water is its own drawing, so
+  they are laid on it as close as it goes: the top colour is the shallows', the bottom colour the deep water's,
+  the shallow colour tints the water near the shore and the surface colour tints the sky's reflection. The
+  colours change at once where the game fades them over ten seconds.
 - **The biomes**: a biome the file adds is drawn on the map and on the New world page's seed map with the
   map colour the file gives it (white without one, as the game draws a biome it does not know), named as
   the file names it, and its ground drawn as the ground it borrows. A territory is drawn in its own map
@@ -92,9 +98,9 @@ A world made with Expand World Size shows "Expand World" on its card on the star
 - `pregenerate`: not modelled. The map's location icons follow the location file's "iconAlways" and "iconPlaced"
   (an icon's size included), for icons the game's minimap has (the start, the traders); an icon named after a pin
   type, an item or a status effect is not drawn, and one the game makes pulse is drawn still.
-- **Status effects** of biomes and territories, and their **water colours**: the editor neither applies nor
-  draws them. As in the mod, a biome's status effects and a territory's status effects and water colours still
-  count towards whether its settings are in use; a biome's water colours do not.
+- **Status effects** of biomes and territories: the editor neither applies nor draws them. As in the mod, they
+  still count towards whether a biome's or a territory's settings are in use, as a territory's water colours do;
+  a biome's water colours do not.
 - **The zone system's water**: the game's own vegetation and location checks use the sea at 30 m whatever
   Expand World Rivers puts the water at, and neither mod changes that, so the editor keeps it too.
 - **The mods' quirks** are mirrored as they are (a few are listed in the architecture notes), so that

@@ -22,6 +22,9 @@ public sealed record Territory
     /// <summary>Its colour on the map, when the file gives one.</summary>
     public Rgba? MapColor { get; init; }
 
+    /// <summary>Its water colours, over its biome's.</summary>
+    public WaterColours Water { get; init; } = WaterColours.None;
+
     /// <summary>Whether building is forbidden in it.</summary>
     public bool NoBuild { get; init; }
 }

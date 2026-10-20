@@ -229,6 +229,11 @@ public sealed partial class GameLookGl
         _gl.Uniform1(_u.At(_water, "uHeight"), 0);
         _gl.Uniform4(_u.At(_water, "uRegion"), _scene.OriginX, _scene.OriginZ, _scene.W, _scene.H);
         _gl.Uniform1(_u.At(_water, "uWater"), _scene.Water);
+        var tint = WaterTintAt(eye);
+        _gl.Uniform3(_u.At(_water, "uShallow"), tint.Shallow);
+        _gl.Uniform3(_u.At(_water, "uDeep"), tint.Deep);
+        _gl.Uniform4(_u.At(_water, "uShore"), tint.Shore);
+        _gl.Uniform3(_u.At(_water, "uSurface"), tint.Surface);
         _gl.Disable(EnableCap.CullFace);
         GlBlend.Over(_gl);
         _gl.DepthMask(false);
@@ -236,5 +241,29 @@ public sealed partial class GameLookGl
         _gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
         _gl.DepthMask(true);
         _gl.Disable(EnableCap.Blend);
+    }
+
+    /// <summary>The water's colours last worked out, and the 4 m square of the camera they are for.</summary>
+    private (int X, int Z, WaterTint Tint)? _tint;
+
+    /// <summary>
+    /// The water's colours with the camera here (<see cref="ValheimGen.TerrainService.WaterAt"/>, where the game takes the
+    /// player's place), worked out again only when it moves to another 4 m square; the editor's own without a world.
+    /// </summary>
+    /// <param name="eye">The camera in view space.</param>
+    private WaterTint WaterTintAt(Vector3 eye)
+    {
+        if (_scene.Terrain is not { } terrain)
+        {
+            return WaterTint.Own;
+        }
+        float x = eye.X + _scene.Cx, z = _scene.Cz - eye.Z;
+        int sx = (int)MathF.Floor(x / 4f), sz = (int)MathF.Floor(z / 4f);
+        if (_tint is not { } t || t.X != sx || t.Z != sz)
+        {
+            t = (sx, sz, WaterTint.Of(terrain.WaterAt(x, z)));
+            _tint = t;
+        }
+        return t.Tint;
     }
 }

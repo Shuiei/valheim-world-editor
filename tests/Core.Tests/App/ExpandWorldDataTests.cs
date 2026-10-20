@@ -235,11 +235,11 @@ public class ExpandWorldDataTests : AppSettingsTestBase
     [Fact]
     public void AFolderWithTheFilesGivesRulesWithThem()
     {
-        string cfg = AllOn + "[1. General]\nLegacy generation = true\n[2. Features]\nWiggle frequency = 25\n[4. Poles]\nAshlands gap = false\nAshlands width restriction = 5000\n";
+        string cfg = AllOn + "[1. General]\nLegacy generation = true\n[2. Features]\nWiggle frequency = 25\nCustom water color = true\n[4. Poles]\nAshlands gap = false\nAshlands width restriction = 5000\n";
         string bep = Bep(cfg, true,
-            ("expand_biomes.yaml", "- biome: Highlands\n  terrain: mountain\n  altitudeMultiplier: 1.5\n"),
+            ("expand_biomes.yaml", "- biome: Highlands\n  terrain: mountain\n  altitudeMultiplier: 1.5\n  colorWaterTop: 1, 0, 0, 1\n"),
             ("expand_world.yaml", "- biome: highlands\n  maxDistance: 0.1\n  territory: top\n- biome: meadows\n"),
-            ("expand_territories.yaml", "- territory: top\n  altitudeDelta: 3\n"));
+            ("expand_territories.yaml", "- territory: top\n  altitudeDelta: 3\n  colorWaterSurface: 0, 0, 1, 1\n"));
         var found = ExpandWorld.Look(bep, "test");
         Assert.True(found.Data);
         var rules = ExpandWorld.Rules(new Dictionary<string, string>(), found);
@@ -265,5 +265,22 @@ public class ExpandWorldDataTests : AppSettingsTestBase
         Assert.Equal(First, gen.GetBiome(100f, 100f));
         Assert.Equal(Heightmap.Biome.Meadows, gen.GetBiome(3000f, 0f));
         Assert.Equal("top", gen.TerritoryAt(100f, 100f)!.Name);
+        // The water colours, with the switch on.
+        Assert.True(rules.CustomWaterColor);
+        Assert.Equal(new WaterColours(Top: new Rgba(1f, 0f, 0f, 1f)), rules.Biomes.Of(First)!.Water);
+        Assert.Equal(new WaterColours(Surface: new Rgba(0f, 0f, 1f, 1f)), rules.Territories[0].Water);
+    }
+
+    [Fact]
+    public void WaterColoursAloneKeepATerritoryButGiveABiomeNoSettings()
+    {
+        List<string> notes = [];
+        var territory = Assert.Single(ExpandWorld.TerritoriesOf([E(("territory", "Sea"), ("colorWaterShallow", "0,1,0"))], notes));
+        Assert.Equal(new WaterColours(Shallow: new Rgba(0f, 1f, 0f, 1f)), territory.Water);
+        var table = ExpandWorld.BiomesOf([E(("biome", "Meadows"), ("colorWaterBottom", "0,0,1"))], notes)!;
+        var meadows = table.Of(Heightmap.Biome.Meadows)!;
+        Assert.False(meadows.HasData);
+        Assert.Equal(new WaterColours(Bottom: new Rgba(0f, 0f, 1f, 1f)), meadows.Water);
+        Assert.Empty(notes);
     }
 }

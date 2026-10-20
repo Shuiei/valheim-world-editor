@@ -65,4 +65,22 @@ public sealed partial class TerrainService
     /// The biome at a world point.
     /// </summary>
     public Heightmap.Biome BiomeAt(float x, float z) => Generator.GetBiome(x, z);
+
+    /// <summary>
+    /// The water's colours with the player at a world point, as Expand World Data gives them with its "Custom water
+    /// color" on (WaterColor.StartTransition): the point's biome's (when the biome file keeps data of it), the
+    /// territory's there over them; none with the switch off.
+    /// </summary>
+    /// <param name="x">World x.</param>
+    /// <param name="z">World z.</param>
+    public WaterColours WaterAt(float x, float z)
+    {
+        if (!Rules.CustomWaterColor)
+        {
+            return WaterColours.None;
+        }
+        var biome = Rules.Biomes.Of(BiomeAt(x, z)) is { HasData: true } b ? b.Water : WaterColours.None;
+        // The mod reads the territory at the player's place as it is, not stretched as the biome is.
+        return biome.Under(Generator.TerritoryAt(x, z)?.Water);
+    }
 }

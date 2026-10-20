@@ -79,6 +79,7 @@ public static partial class ExpandWorld
             MapColorMultiplier = mapMultiplier,
             MapColor = mapColour,
             TerrainColor = terrainColour,
+            Water = WaterOf(f),
             Paint = f.Str("paint") is { Length: > 0 } paint ? ParsePaint(paint) : null,
             Lava = lava == "" ? colour.A > 0.929f && colour.R > 0.929f : lava == "true",
             LavaAmount = lavaAmount,
