@@ -1,5 +1,6 @@
 using System.Numerics;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Xunit;
 using static TerrainEditor.Desktop.Tests.SelectToolRun;
 
@@ -17,7 +18,7 @@ public class SelectToolDragTests
     {
         var v = Open(T(1, Beech, 40, 30, 40, false));
         v.Click(40, 40);
-        v.Drag(false, (40, 40), (42, 40), (44, 41));
+        v.Drag(KeyModifiers.None, (40, 40), (42, 40), (44, 41));
         Assert.True(v.S.Scene.Things[0].Gone);
         Assert.Equal(44, v.Last.Position.X, 1);
         Assert.Equal(41, v.Last.Position.Z, 1);
@@ -33,7 +34,7 @@ public class SelectToolDragTests
         var v = Open(T(1, Wall, 40, 30, 40), T(2, Wall, 50, 30, 40));
         v.Click(50, 40);
         // Its west end brought 0.4 m from the other wall's east end: it closes the gap.
-        v.Drag(false, (50, 40), (46, 40), (42.4f, 40.2f));
+        v.Drag(KeyModifiers.None, (50, 40), (46, 40), (42.4f, 40.2f));
         var moved = v.Last;
         Assert.Equal(42, moved.Position.X, 2);
         Assert.Equal(40, moved.Position.Z, 2);
@@ -42,7 +43,7 @@ public class SelectToolDragTests
         v.S.Undo();
         v.Tool.SnapToPieces = false;
         v.Click(50, 40);
-        v.Drag(false, (50, 40), (46, 40), (42.4f, 40.2f));
+        v.Drag(KeyModifiers.None, (50, 40), (46, 40), (42.4f, 40.2f));
         Assert.Equal(42.4f, v.Last.Position.X, 1);
     }
 
@@ -57,7 +58,7 @@ public class SelectToolDragTests
         Assert.Equal([0], v.Selected);
         // The first step of the drag gathers the pieces within 60 m (none); its east end is then brought 0.4 m
         // from the other wall's west end, 80 m away: it closes the gap.
-        v.Drag(false, (0, 40), (4, 40), (77.6f, 40.2f));
+        v.Drag(KeyModifiers.None, (0, 40), (4, 40), (77.6f, 40.2f));
         var moved = v.Last;
         Assert.Equal(78, moved.Position.X, 2);
         Assert.Equal(40, moved.Position.Z, 2);

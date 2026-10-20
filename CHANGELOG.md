@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.83.0 — 2026-10-20
+
+### Changed
+- **Selection keys like Blender or a map editor.** Ctrl + click adds an object, or takes it out when it is selected;
+  Shift + click takes it out; Ctrl + drag adds what the box takes, Shift + drag takes it out. The row from the last
+  object clicked is now Ctrl + Shift + click.
+
 ## v1.82.0 — 2026-10-20
 
 ### Added

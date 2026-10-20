@@ -78,10 +78,8 @@ public sealed partial class GlView
         }
         _dragFrom = null;
         _selectDown = true;
-        // Ctrl + click (or Shift, Ctrl + zone): added to what is selected; Shift + click: the row
-        // from the last object clicked.
-        SelectTool.Range = e.KeyModifiers.HasFlag(KeyModifiers.Shift) && !Ctrl(e.KeyModifiers);
-        SelectTool.Down(at, _surfaceSize, e.KeyModifiers.HasFlag(KeyModifiers.Shift) || Ctrl(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.ClickCount);
+        // The keys say what a click or a zone does to the selection (SelectHow).
+        SelectTool.Down(at, _surfaceSize, e.KeyModifiers, e.ClickCount);
         if (e.ClickCount == 2)
         {
             // A double click on an object: its inspector (a chest's contents, a sign's text...).

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using TerrainEditor.Save;
 using Xunit;
 using static TerrainEditor.Desktop.Tests.SelectToolRun;
@@ -56,7 +57,7 @@ public class SelectToolBuildingTests
         Assert.Equal("Nothing to drop: a vehicle keeps its height.", said);
         v.Tool.Cancel();
         Assert.All(ship, i => Assert.False(v.S.Scene.Things[i].Gone));
-        v.Drag(false, (40, 38), (43, 38), (45, 38));
+        v.Drag(KeyModifiers.None, (40, 38), (43, 38), (45, 38));
         Assert.All(ship, i => Assert.True(v.S.Scene.Things[i].Gone));
         Assert.StartsWith("Moved 5 object(s) (a whole vehicle", said);
         var copies = Enumerable.Range(ship[^1] + 1, 5).ToList();

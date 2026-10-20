@@ -1,4 +1,5 @@
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Xunit;
 using static TerrainEditor.Desktop.Tests.SelectToolRun;
 
@@ -26,7 +27,7 @@ public class SelectToolBlockTests
         v.Tool.OnGround = false;
         v.Tool.SnapToPieces = false;
         v.W.View.Select([0, 1, 2]);
-        v.Drag(false, (40, 40), (50, 40), (60, 40));
+        v.Drag(KeyModifiers.None, (40, 40), (50, 40), (60, 40));
         var moved = s.Things.Where(t => !t.Gone).OrderBy(t => t.Position.X).ToList();
         Assert.Equal([59f, 60f, 64f], moved.Select(t => MathF.Round(t.Position.X, 1)));
         Assert.Equal([37f, 34f, 35f], moved.Select(t => MathF.Round(t.Position.Y, 2)));

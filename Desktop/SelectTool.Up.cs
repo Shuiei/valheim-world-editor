@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Input;
 
 namespace TerrainEditor.Desktop;
 
@@ -8,7 +9,10 @@ public sealed partial class SelectTool
     /// The left button came up: ends a handle drag or a move, selects what is inside the zone drawn, or (a plain
     /// click on a selected object) picks that one.
     /// </summary>
-    public void Up(Point at, Size size, bool shift)
+    /// <param name="at">The point in the view.</param>
+    /// <param name="size">The view's size.</param>
+    /// <param name="keys">The keys held.</param>
+    public void Up(Point at, Size size, KeyModifiers keys)
     {
         if (_handleDrag != null)
         {
@@ -26,7 +30,7 @@ public sealed partial class SelectTool
             StopZones();
             if (!l.Drawing || l.Points.Count < 3)
             {
-                ClickedEmpty(l.Add);
+                ClickedEmpty(l.How);
                 return;
             }
             var s = Scene!;
@@ -41,7 +45,7 @@ public sealed partial class SelectTool
                 var pos = s.Things[i].Position;
                 return pos.X >= minX && pos.X <= maxX && pos.Z >= minZ && pos.Z <= maxZ && Inside(l.Points, pos.X, pos.Z);
             }).ToList();
-            ZoneSelected(ids, l.Add);
+            ZoneSelected(ids, l.How);
             return;
         }
         var d = _drag;
@@ -57,7 +61,7 @@ public sealed partial class SelectTool
         else
         {
             // A plain click on a selected object: that one only.
-            _view.Pick(at, size, shift, Range);
+            _view.Pick(at, size, SelectHow.Pick(keys));
         }
     }
 }

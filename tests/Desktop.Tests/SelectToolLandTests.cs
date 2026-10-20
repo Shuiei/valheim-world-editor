@@ -1,5 +1,6 @@
 using System.Numerics;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using TerrainEditor.Terrain;
 using Xunit;
 using static TerrainEditor.Desktop.Tests.SelectToolRun;
@@ -20,7 +21,7 @@ public class SelectToolLandTests
         var v = Open(T(1, Beech, 40, 30, 40, false), T(2, Floor, 50, 31, 50));
         v.Tool.OnGround = true;
         v.Click(40, 40);
-        v.Drag(false, (40, 40), (45, 45), (50, 50));
+        v.Drag(KeyModifiers.None, (40, 40), (45, 45), (50, 50));
         Assert.Equal(50, v.Last.Position.X, 1);
         Assert.Equal(50, v.Last.Position.Z, 1);
         Assert.Equal(31 + PieceCatalog.Get(Floor)!.MaxY, v.Last.Position.Y, 2);
@@ -37,11 +38,11 @@ public class SelectToolLandTests
         v.W.View.SetBoxes([(1, new Vector3(59 - c.Cx, 30, -(61 - c.Cz)), new Vector3(61 - c.Cx, 38, -(59 - c.Cz)))]);
         v.Tool.OnGround = true;
         v.Click(40, 40);
-        v.Drag(false, (40, 40), (45, 45), (50, 50));
+        v.Drag(KeyModifiers.None, (40, 40), (45, 45), (50, 50));
         Assert.Equal(30, v.Last.Position.Y, 2);
         // The copy is drawn (given its box) so it can be dragged on.
         v.W.View.SetBoxes([Box(c, c.Things.Count - 1)]);
-        v.Drag(false, (50, 50), (55, 55), (60, 60));
+        v.Drag(KeyModifiers.None, (50, 50), (55, 55), (60, 60));
         Assert.Equal(60, v.Last.Position.X, 1);
         Assert.Equal(30, v.Last.Position.Y, 2);
     }
@@ -59,7 +60,7 @@ public class SelectToolLandTests
         v.Tool.OnGround = true;
         v.Tool.SnapToPieces = false;
         v.W.View.Select([0, 1, 2]);
-        v.Drag(false, (40, 40), (50, 50), (60, 60));
+        v.Drag(KeyModifiers.None, (40, 40), (50, 50), (60, 60));
         var moved = v.S.Scene.Things.Where(t => !t.Gone && t.Prefab != Beech).OrderBy(t => t.Position.X).ToList();
         Assert.Equal(3, moved.Count);
         Assert.Equal([30.8f, 30.3f, 30.8f], moved.Select(t => MathF.Round(t.Position.Y, 2)));
@@ -67,7 +68,7 @@ public class SelectToolLandTests
         // The copies are drawn (given their boxes) so they can be dragged on: the floor, wide enough for the pointer's
         // ray to meet it where it stands raised.
         v.W.View.SetBoxes(v.Selected.Select(i => Box(c, i)));
-        v.Drag(false, (61, 61.2f), (51, 51.2f), (41, 31.2f));
+        v.Drag(KeyModifiers.None, (61, 61.2f), (51, 51.2f), (41, 31.2f));
         moved = [.. v.S.Scene.Things.Where(t => !t.Gone && t.Prefab != Beech).OrderBy(t => t.Position.X)];
         Assert.Equal([30.5f, 30f, 30.5f], moved.Select(t => MathF.Round(t.Position.Y, 2)));
     }
@@ -82,7 +83,7 @@ public class SelectToolLandTests
         v.Tool.OnGround = true;
         v.Tool.SnapToPieces = false;
         v.W.View.Select([0, 1, 2, 3]);
-        v.Drag(false, (40, 40), (45, 40), (50, 40));
+        v.Drag(KeyModifiers.None, (40, 40), (45, 40), (50, 40));
         var moved = v.S.Scene.Things.Where(t => !t.Gone).OrderBy(t => t.Position.Y).ToList();
         Assert.Equal([-9961.5f, 30f, 30.5f, 30.5f], moved.Select(t => MathF.Round(t.Position.Y, 2)));
     }

@@ -191,20 +191,18 @@ public sealed partial class SelectTool
     /// <summary>That press moved far enough (5 px) to be a move, not a click.</summary>
     private bool _dragMoving;
     /// <summary>
-    /// A press on empty ground: where on screen, the zone's ground points (x, z), whether it adds to the selection
-    /// (Shift), and whether it is being drawn (moved past 6 px) rather than a click.
+    /// A press on empty ground: where on screen, the zone's ground points (x, z), what it does to the selection (the
+    /// keys held), and whether it is being drawn (moved past 6 px) rather than a click.
     /// </summary>
-    private (Point At, List<Vector2> Points, bool Add, bool Drawing)? _lasso;
+    private (Point At, List<Vector2> Points, ZoneHow How, bool Drawing)? _lasso;
     /// <summary>A copy of the zone's points for the drawing thread.</summary>
     public Vector2[]? Lasso { get; private set; }
     /// <summary>
     /// A press that draws a rectangle on the screen (<see cref="ZoneOnGround"/> off): where it began, where the pointer is,
-    /// whether it adds to the selection (Shift), and whether it is being drawn (moved past 6 px) rather than a click.
+    /// what it does to the selection (the keys held), and whether it is being drawn (moved past 6 px) rather than a
+    /// click.
     /// </summary>
-    private (Point From, Point To, bool Add, bool Drawing)? _box;
+    private (Point From, Point To, ZoneHow How, bool Drawing)? _box;
     /// <summary>The rectangle being drawn on the screen, for the drawing thread; null when none is.</summary>
     public Rect? ScreenBox { get; private set; }
-
-    /// <summary>Shift (not Ctrl) held: a click takes the row from the last object clicked (GlView.Pick).</summary>
-    public bool Range { get; set; }
 }

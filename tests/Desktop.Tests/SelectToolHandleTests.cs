@@ -70,10 +70,10 @@ public class SelectToolHandleTests
         float scale = v.Scale;
         var from = v.Screen(v.Centre + new Vector3(0, 0, -0.7f * scale));
         var to = v.Screen(v.Centre + new Vector3(0, 0, -0.7f * scale - 3.2f));
-        v.Tool.Down(from, v.Size, false, false, 1);
+        v.Tool.Down(from, v.Size, KeyModifiers.None, 1);
         Assert.Equal(Gizmo.Handle.Z, v.Tool.HotHandle);
         v.Tool.Moved(to, v.Size, ctrl: true);
-        v.Tool.Up(to, v.Size, false);
+        v.Tool.Up(to, v.Size, KeyModifiers.None);
         var moved = v.S.Scene.Things[^1];
         Assert.True(v.S.Scene.Things[0].Gone);
         Assert.Equal(40, moved.Position.X, 1);
@@ -87,14 +87,14 @@ public class SelectToolHandleTests
         // From the side, level with it.
         v.Look(new Vector3(0, 1, 30));
         float scale = v.Scale;
-        v.Tool.Down(v.Screen(v.Centre + new Vector3(0, 0.7f * scale, 0)), v.Size, false, false, 1);
+        v.Tool.Down(v.Screen(v.Centre + new Vector3(0, 0.7f * scale, 0)), v.Size, KeyModifiers.None, 1);
         Assert.Equal(Gizmo.Handle.Y, v.Tool.HotHandle);
         v.Tool.Moved(v.Screen(v.Centre + new Vector3(0, 0.7f * scale + 2, 0)), v.Size);
         // Looking straight down the arrow: no point along it, the lift kept.
         v.Look(new Vector3(0, 30, 0.01f));
         var down = v.Screen(v.Centre);
         v.Tool.Moved(down, v.Size);
-        v.Tool.Up(down, v.Size, false);
+        v.Tool.Up(down, v.Size, KeyModifiers.None);
         float[][]? snaps = PieceCatalog.Get(Wall)?.Snaps;
         float bottom = snaps is { Length: > 0 } ? snaps.Min(p => p[1]) : 0;
         Assert.Equal(32 - bottom, v.S.Scene.Things[^1].Position.Y, 1);
@@ -106,13 +106,13 @@ public class SelectToolHandleTests
         var v = Open(T(1, Wall, 40, 30, 40));
         float r = Gizmo.RingRadius * v.Scale;
         var from = v.Screen(v.Centre + new Vector3(0, 0, -r));
-        v.Tool.Down(from, v.Size, false, false, 1);
+        v.Tool.Down(from, v.Size, KeyModifiers.None, 1);
         Assert.Equal(Gizmo.Handle.Ring, v.Tool.HotHandle);
         // Level with the ground, the pointer above it: the ray never meets the ground's plane.
         v.Look(new Vector3(0, 0, 30));
         var up = v.Screen(v.Centre + new Vector3(0, 5, 0));
         v.Tool.Moved(up, v.Size, ctrl: true);
-        v.Tool.Up(up, v.Size, false);
+        v.Tool.Up(up, v.Size, KeyModifiers.None);
         Assert.Single(v.S.Scene.Things);
         Assert.False(v.S.CanUndo);
     }
@@ -123,21 +123,21 @@ public class SelectToolHandleTests
         var stone = Open(new WorldScene.Thing(4, StableHash.Of("Runestone_Meadows"), new Vector3(40, 30, 40), Vector3.Zero, 1, false));
         float scale = stone.Scale;
         var east = stone.Screen(stone.Centre + new Vector3(0.7f * scale, 0, 0));
-        stone.Tool.Down(east, stone.Size, false, false, 1);
+        stone.Tool.Down(east, stone.Size, KeyModifiers.None, 1);
         Assert.False(stone.Tool.Moving);
         Assert.Null(stone.Tool.HotHandle);
 
         var v = Open(T(1, Wall, 40, 30, 40));
         scale = v.Scale;
         east = v.Screen(v.Centre + new Vector3(0.7f * scale, 0, 0));
-        v.Tool.Down(east, v.Size, false, false, 1);
+        v.Tool.Down(east, v.Size, KeyModifiers.None, 1);
         Assert.True(v.Tool.Moving);
         // Committed (as the keys' timer does) while the handle is held: the drag has no move left.
         v.Tool.Commit();
         var further = v.Screen(v.Centre + new Vector3(0.7f * scale + 3, 0, 0));
         v.Tool.Moved(further, v.Size);
         Assert.False(v.Tool.Moving);
-        v.Tool.Up(further, v.Size, false);
+        v.Tool.Up(further, v.Size, KeyModifiers.None);
         Assert.Single(v.S.Scene.Things);
     }
 
@@ -149,8 +149,8 @@ public class SelectToolHandleTests
         v.Look(new Vector3(0, 40, 0.01f));
         v.W.View.Select([0, 1]);
         var tree = v.Screen(v.Centre + new Vector3(-4, 0, 0));
-        v.Tool.Down(tree, v.Size, false, false, 1);
-        v.Tool.Up(tree, v.Size, false);
+        v.Tool.Down(tree, v.Size, KeyModifiers.None, 1);
+        v.Tool.Up(tree, v.Size, KeyModifiers.None);
         Assert.Equal([1], v.W.View.Selected);
         Assert.False(v.Tool.Moving);
     }
@@ -163,14 +163,14 @@ public class SelectToolHandleTests
         v.W.View.Select([]);
         // A tree is not a building: it is just picked.
         var tree = v.Screen(v.Centre);
-        v.Tool.Down(tree, v.Size, false, false, 2);
-        v.Tool.Up(tree, v.Size, false);
+        v.Tool.Down(tree, v.Size, KeyModifiers.None, 2);
+        v.Tool.Up(tree, v.Size, KeyModifiers.None);
         Assert.Equal([0], v.W.View.Selected);
         // A piece the catalogues do not know (no container): its building, which is itself.
         var piece = v.Screen(v.Centre + new Vector3(6, 0.5f, 0));
         v.W.View.Select([]);
-        v.Tool.Down(piece, v.Size, false, false, 2);
-        v.Tool.Up(piece, v.Size, false);
+        v.Tool.Down(piece, v.Size, KeyModifiers.None, 2);
+        v.Tool.Up(piece, v.Size, KeyModifiers.None);
         Assert.Equal([1], v.W.View.Selected);
     }
 

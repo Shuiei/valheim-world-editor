@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using TerrainEditor.App;
 using TerrainEditor.Save;
 using Xunit;
@@ -73,11 +74,11 @@ public sealed class SelectToolLangTests
 
         // Zones on the ground: the wall alone, the runestone added, then nothing.
         v.Tool.ZoneOnGround = true;
-        v.Drag(false, (26, 46), (34, 46), (34, 54), (26, 54), (26, 47));
+        v.Drag(KeyModifiers.None, (26, 46), (34, 46), (34, 54), (26, 54), (26, 47));
         Check("Selected 1 object(s) inside the zone.");
-        v.Drag(true, (23, 27), (29, 27), (29, 33), (23, 33));
+        v.Drag(KeyModifiers.Control, (23, 27), (29, 27), (29, 33), (23, 33));
         Check("Selected 1 object(s) inside the zone (2 in all).");
-        v.Drag(true, (20, 20), (24, 20), (24, 24), (20, 24));
+        v.Drag(KeyModifiers.Control, (20, 20), (24, 20), (24, 24), (20, 24));
         Check("Nothing shown inside the zone.");
 
         // The ship, a group a mod links: selected whole, kept at its height, moved whole, deleted whole.
@@ -86,7 +87,7 @@ public sealed class SelectToolLangTests
         v.Tool.Drop();
         Check("Nothing to drop: a vehicle keeps its height.");
         v.Tool.Cancel();
-        v.Drag(false, (40, 38), (43, 38), (45, 38));
+        v.Drag(KeyModifiers.None, (40, 38), (43, 38), (45, 38));
         Assert.Contains(said, s => s.English.StartsWith("Moving 5 object(s) (a whole vehicle: a vehicle's parts never move alone)", StringComparison.Ordinal));
         Check("Moved 5 object(s) (a whole vehicle: a vehicle's parts never move alone). Ctrl+Z puts them back.");
         v.Tool.Delete();

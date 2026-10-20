@@ -1,3 +1,4 @@
+using Avalonia.Input;
 using System.Numerics;
 using TerrainEditor.Save;
 using TerrainEditor.Terrain;
@@ -27,26 +28,26 @@ internal static class SelectToolRun
             ShownEditor.ScreenPoint(W, Size, new Vector3(x - S.Scene.Cx, y, -(z - S.Scene.Cz)));
 
         /// <summary>
-        /// A click at world point (x, z) on the ground, with Shift held and as many clicks as given.
+        /// A click at world point (x, z) on the ground, with these keys held and as many clicks as given.
         /// </summary>
-        public void Click(float x, float z, bool shift = false, int clicks = 1)
+        public void Click(float x, float z, KeyModifiers keys = KeyModifiers.None, int clicks = 1)
         {
             var p = At(x, 30, z);
-            Tool.Down(p, Size, shift, false, clicks);
-            Tool.Up(p, Size, shift);
+            Tool.Down(p, Size, keys, clicks);
+            Tool.Up(p, Size, keys);
         }
 
         /// <summary>
-        /// A drag along these world points on the ground, with Shift held or not.
+        /// A drag along these world points on the ground, with these keys held.
         /// </summary>
-        public void Drag(bool shift, params (float X, float Z)[] path)
+        public void Drag(KeyModifiers keys, params (float X, float Z)[] path)
         {
-            Tool.Down(At(path[0].X, 30, path[0].Z), Size, shift, false, 1);
+            Tool.Down(At(path[0].X, 30, path[0].Z), Size, keys, 1);
             foreach (var (x, z) in path.Skip(1))
             {
                 Tool.Moved(At(x, 30, z), Size);
             }
-            Tool.Up(At(path[^1].X, 30, path[^1].Z), Size, shift);
+            Tool.Up(At(path[^1].X, 30, path[^1].Z), Size, keys);
         }
 
         public HashSet<int> Selected => [.. W.View.Selected];

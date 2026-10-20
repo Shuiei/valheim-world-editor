@@ -1,5 +1,6 @@
 using System.Numerics;
 using Avalonia;
+using Avalonia.Input;
 using TerrainEditor.App;
 using TerrainEditor.Terrain;
 
@@ -13,21 +14,23 @@ public sealed partial class SelectTool
     /// </summary>
     /// <param name="at">The point in the view.</param>
     /// <param name="size">The view's size.</param>
-    /// <param name="shift">Shift held: add to the selection.</param>
-    /// <param name="alt">Alt held: objects are not hit (the ground only).</param>
+    /// <param name="keys">
+    /// The keys held: what a click or a zone does to the selection (SelectHow), and Alt: objects are not hit (the
+    /// ground only).
+    /// </param>
     /// <param name="clicks">The click count (2 or more on a building piece other than a chest: the whole building).</param>
-    public void Down(Point at, Size size, bool shift, bool alt, int clicks)
+    public void Down(Point at, Size size, KeyModifiers keys, int clicks)
     {
         var s = Scene;
         if (s == null)
         {
             return;
         }
-        if (PressHandle(at, size))
+        if (PressHandle(at, size, keys))
         {
             return;
         }
-        int? hit = alt ? null : _view.ObjectAt(at, size);
+        int? hit = keys.HasFlag(KeyModifiers.Alt) ? null : _view.ObjectAt(at, size);
         var ground = _view.WorldAt(at, size);
         // A double click on a linked group's part (a ship): the whole group; on a building piece: the whole building;
         // on a chest, the chest alone (its inspector opens: GlView.InspectAsked).
@@ -45,18 +48,18 @@ public sealed partial class SelectTool
                 return;
             }
         }
-        if (hit is int h && _view.Selected.Contains(h) && !shift && ground is { } g)
+        if (hit is int h && _view.Selected.Contains(h) && SelectHow.Pick(keys) == PickHow.Only && ground is { } g)
         {
             _drag = (at, g);
             _dragMoving = false;
             return;
         }
         Commit();
-        if (hit == null && StartZone(at, ground, shift))
+        if (hit == null && StartZone(at, ground, SelectHow.Zone(keys)))
         {
             return;
         }
-        _view.Pick(at, size, shift, Range);
+        _view.Pick(at, size, SelectHow.Pick(keys));
     }
 
     /// <summary>
@@ -65,21 +68,21 @@ public sealed partial class SelectTool
     /// </summary>
     /// <param name="at">The point in the view.</param>
     /// <param name="ground">The ground under it (world), or null.</param>
-    /// <param name="shift">Shift held: add to the selection.</param>
-    private bool StartZone(Point at, Vector3? ground, bool shift)
+    /// <param name="how">What it does to the selection.</param>
+    private bool StartZone(Point at, Vector3? ground, ZoneHow how)
     {
         // A zone or a box left over (its release lost with the focus) never drives this one.
         StopZones();
         if (!ZoneOnGround)
         {
-            _box = (at, at, shift, false);
+            _box = (at, at, how, false);
             return true;
         }
         if (ground is not { } g)
         {
             return false;
         }
-        _lasso = (at, new List<Vector2> { new(g.X, g.Z) }, shift, false);
+        _lasso = (at, new List<Vector2> { new(g.X, g.Z) }, how, false);
         return true;
     }
 }

@@ -4,7 +4,7 @@ using Avalonia.Input;
 namespace TerrainEditor.Desktop;
 
 // What a release counts as a click (the left button, a pointer that moved less than 5 pixels from the press), and the
-// keys that make a click add to the selection or select a range.
+// View tool's click.
 public sealed partial class GlView
 {
     /// <summary>
@@ -20,14 +20,6 @@ public sealed partial class GlView
     private bool IsSmallLeftPress(Point at) =>
         _dragButton == PointerUpdateKind.LeftButtonPressed && _pressAt is Point from && Point.Distance(from, at) < 5;
 
-    /// <summary>Whether Shift or Ctrl is held: a pick adds the object to the selection, or takes it out.</summary>
-    /// <param name="mods">The keys held.</param>
-    private static bool AddsToSelection(KeyModifiers mods) => mods.HasFlag(KeyModifiers.Shift) || Ctrl(mods);
-
-    /// <summary>Whether Shift without Ctrl is held: a pick selects the row from the last object picked to this one.</summary>
-    /// <param name="mods">The keys held.</param>
-    private static bool IsRangeSelect(KeyModifiers mods) => mods.HasFlag(KeyModifiers.Shift) && !Ctrl(mods);
-
     /// <summary>
     /// A click in the View tool: picks the object under the pointer; a plain double click on one asks for the Select
     /// tool, to move it with the handles.
@@ -37,8 +29,8 @@ public sealed partial class GlView
     /// <param name="mods">The keys held.</param>
     private void ViewClick(Point at, Size size, KeyModifiers mods)
     {
-        bool add = AddsToSelection(mods);
-        if (Pick(at, size, add, IsRangeSelect(mods)) != null && _pressClicks == 2 && !add)
+        var how = SelectHow.Pick(mods);
+        if (Pick(at, size, how) != null && _pressClicks == 2 && how == PickHow.Only)
         {
             SelectToolAsked?.Invoke();
         }

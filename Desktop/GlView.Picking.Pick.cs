@@ -2,38 +2,33 @@ using Avalonia;
 
 namespace TerrainEditor.Desktop;
 
-// The click that picks: one object, added or taken out, or the row a Shift + click makes.
+// The click that picks: one object, added or taken out, or the row a Ctrl + Shift + click makes.
 public sealed partial class GlView
 {
     /// <summary>
-    /// A click on an object: it alone, or (add) added or taken out; range (Shift): every shown object in
-    /// a row from the last one clicked to this one (w1, Shift + click w3: w1, w2 and w3).
+    /// A click on an object, by the keys held (<see cref="SelectHow.Pick"/>): it alone; added, or taken out when it
+    /// was selected (Ctrl); taken out (Shift); or every shown object in a row from the last one clicked to this one
+    /// added (Ctrl + Shift: w1, then Ctrl + Shift + click w3: w1, w2 and w3).
     /// </summary>
+    /// <param name="at">Where the click is, on the view.</param>
+    /// <param name="size">The view's size.</param>
+    /// <param name="how">What the click does.</param>
     /// <returns>The object clicked, null when the click was beside every object.</returns>
-    internal int? Pick(Point at, Size size, bool add, bool range = false)
+    internal int? Pick(Point at, Size size, PickHow how)
     {
         int? i = ObjectAt(at, size);
         var s = Scene;
         lock (_selection)
         {
-            if (range && s != null && RangeEnds(s, i) is (int a, int k))
+            if (how == PickHow.Row && s != null && RangeEnds(s, i) is (int a, int k))
             {
-                foreach (int j in Between(s, a, k))
-                {
-                    _selection.Add(j);
-                }
+                _selection.UnionWith(Between(s, a, k));
+                // The next row goes on from where this one ended.
+                _anchor = k;
             }
             else
             {
-                if (!add)
-                {
-                    _selection.Clear();
-                }
-                if (i is int k2 && !_selection.Remove(k2))
-                {
-                    _selection.Add(k2);
-                }
-                _anchor = i;
+                PickOne(i, how);
             }
         }
         SelectionDone();
@@ -41,7 +36,37 @@ public sealed partial class GlView
     }
 
     /// <summary>
-    /// The row a Shift + click makes: from the object the last click picked to this one, when both are things in
+    /// A click's object (null: none) into the selection, under its lock: alone, toggled (a row without its first
+    /// object toggles too), or taken out; the next row starts from it when it is selected after the click, and from
+    /// none when it was the start and is taken out.
+    /// </summary>
+    /// <param name="i">The object clicked, or null.</param>
+    /// <param name="how">What the click does.</param>
+    private void PickOne(int? i, PickHow how)
+    {
+        if (how == PickHow.Only)
+        {
+            _selection.Clear();
+        }
+        if (i is not int k)
+        {
+            return;
+        }
+        if (how != PickHow.Remove && (_selection.Add(k) || how == PickHow.Only))
+        {
+            _anchor = k;
+            return;
+        }
+        // Taken out: a row no longer starts from it.
+        _selection.Remove(k);
+        if (_anchor == k)
+        {
+            _anchor = null;
+        }
+    }
+
+    /// <summary>
+    /// The row a Ctrl + Shift + click makes: from the object the last click picked to this one, when both are things in
     /// the scene and not gone; null otherwise.
     /// </summary>
     /// <param name="s">The scene (null: none).</param>
@@ -56,6 +81,6 @@ public sealed partial class GlView
         return null;
     }
 
-    /// <summary>The object a Shift + click's row starts from: the last one clicked.</summary>
+    /// <summary>The object a Ctrl + Shift + click's row starts from: the last one clicked.</summary>
     private int? _anchor;
 }
