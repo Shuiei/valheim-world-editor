@@ -18,12 +18,13 @@ public class ExpandWorldLiveTests : AppSettingsTestBase
         AppSettings.DataDirOverride = Path.Combine(Data, "editor");
     }
 
-    /// <summary>A local BepInEx folder with Expand World Size's settings file and the YamlDotNet library under plugins.</summary>
+    /// <summary>A local BepInEx folder with Expand World Size installed, its settings file and the YamlDotNet library under plugins.</summary>
     private string Local(string sizeCfg)
     {
         string bep = Path.Combine(Data, "local", "BepInEx");
         Directory.CreateDirectory(Path.Combine(bep, "config"));
         YamlStandIn.Install(bep);
+        TestMods.Install(bep, TestMods.Size);
         File.WriteAllText(Path.Combine(bep, "config", "expand_world_size.cfg"), sizeCfg);
         return bep;
     }

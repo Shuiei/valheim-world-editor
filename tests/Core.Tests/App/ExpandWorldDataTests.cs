@@ -17,7 +17,7 @@ public class ExpandWorldDataTests : AppSettingsTestBase
     private static ExpandWorld.Entry E(params (string Key, string Value)[] fields) => new(fields.ToDictionary(f => f.Key, f => (object?)f.Value));
 
     /// <summary>
-    /// A BepInEx folder with Expand World Data: its settings file with the switches given, the library under plugins
+    /// A BepInEx folder with Expand World Data installed: its settings file with the switches given, the library under plugins
     /// (unless told not to), and the data files given under config/expand_world.
     /// </summary>
     private string Bep(string cfg, bool library = true, params (string Name, string Text)[] files)
@@ -32,6 +32,7 @@ public class ExpandWorldDataTests : AppSettingsTestBase
         Directory.CreateDirectory(data);
         Directory.CreateDirectory(Path.Combine(bep, "plugins"));
         File.WriteAllText(Path.Combine(bep, "config", "expand_world_data.cfg"), cfg);
+        TestMods.Install(bep, TestMods.Data);
         if (library)
         {
             YamlStandIn.Install(bep);
