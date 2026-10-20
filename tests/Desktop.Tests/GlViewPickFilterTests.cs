@@ -36,10 +36,11 @@ public class GlViewPickFilterTests
     public void BuiltPiecesOnlyTakesTheWallThroughTheTree()
     {
         var v = WallUnderATree();
-        Box(v, (37, 37), (43, 43));
+        // From well off the tree: with it selected, its turn ring lies 4 m round it, and a press there turns it.
+        Box(v, (33, 33), (46, 46));
         Assert.Equal([1], v.Selected);
         v.Tool.Picks = GlView.PickKinds.Built;
-        Box(v, (37, 37), (43, 43));
+        Box(v, (33, 33), (46, 46));
         Assert.Equal([0], v.Selected);
         v.Tool.SelectAll();
         Assert.Equal([0], v.Selected);
