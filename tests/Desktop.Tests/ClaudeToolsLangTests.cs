@@ -118,7 +118,8 @@ public sealed class ClaudeToolsLangTests
         int[] trees = [.. ClaudeRun.J(await r.T.ListObjects(kind: "Trees", limit: 2000)).EnumerateArray().Select(t => t.GetProperty("id").GetInt32())];
         Assert.NotEmpty(trees);
         await r.T.RemoveObjects(trees);
-        string regrew = await r.T.RegrowNature(-25, -25, 0, 0, ["trees"]);
+        // West of the ground the start temple keeps clear.
+        string regrew = await r.T.RegrowNature(-32, -32, -23, 0, ["trees"]);
         int grown = int.Parse(r.W.LastMessageEn.Split(' ')[2], System.Globalization.CultureInfo.InvariantCulture);
         Shown(r, regrew, "Claude regrew ", Step($"regrew {grown} object(s)"));
         Shown(r, await r.T.ResetZones(0, 0, 10, 10), "Claude marked 1 zone(s) for reset", Step("reset 1 zone(s)"));
