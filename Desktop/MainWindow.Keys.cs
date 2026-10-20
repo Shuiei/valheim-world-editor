@@ -33,6 +33,9 @@ public partial class MainWindow
 
         /// <summary>Shift held.</summary>
         public bool Shift => Mods.HasFlag(KeyModifiers.Shift);
+
+        /// <summary>Alt held.</summary>
+        public bool Alt => Mods.HasFlag(KeyModifiers.Alt);
     }
 
     /// <summary>

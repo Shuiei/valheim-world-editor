@@ -144,12 +144,15 @@ public sealed partial class GlView
         }
     }
 
-    /// <summary>Whether a thing is drawn (not gone, its kind shown, its model known): only those can be picked.</summary>
+    /// <summary>
+    /// Whether a thing is drawn (not gone, its kind shown, its model known, not hidden: GlView.Hide): only those can be
+    /// picked.
+    /// </summary>
     internal bool IsPickable(int i)
     {
         lock (_objLock)
         {
-            return i < _known.Length && _known[i] && _shown[(int)_kinds[i]];
+            return i < _known.Length && _known[i] && _shown[(int)_kinds[i]] && !_hidden.Contains(i);
         }
     }
 

@@ -24,6 +24,15 @@ public sealed partial class SelectPanel
     /// <summary>Selects the shown objects that are not selected, and only those.</summary>
     internal Button InvertButton { get; }
 
+    /// <summary>Selects every shown object (Ctrl + A).</summary>
+    internal Button AllButton { get; }
+
+    /// <summary>Hides the selected objects in the view (Ctrl + H).</summary>
+    internal Button HideButton { get; }
+
+    /// <summary>Shows the hidden objects again (Alt + H).</summary>
+    internal Button UnhideButton { get; }
+
     /// <summary>Puts each object on the ground when moving.</summary>
     internal CheckBox GroundBox { get; }
 

@@ -13,6 +13,7 @@ public sealed partial class GlView
         var list = new List<(int Cell, Matrix4x4 M, Vector3 Tint)>();
         var support = _support;
         var previews = _previews;
+        var hidden = _hidden;
         // The largest scale an instance is drawn at (its own, or the model's when it has none): culling reaches as
         // far as the largest one needs.
         float rootMost = MathF.Max(g.RootScale.X, MathF.Max(g.RootScale.Y, g.RootScale.Z)), most = 0;
@@ -23,6 +24,8 @@ public sealed partial class GlView
                 foreach (int i in g.Things)
                 {
                     var t = previews.TryGetValue(i, out var p) ? p : s.Things[i];
+                    // A hidden object is drawn and picked as a gone one (GlView.Hide).
+                    bool gone = t.Gone || hidden.Contains(i);
                     var m = Placement(s, t, g.RootScale);
                     // Without its model's box yet: a metre around it (the stand-in box).
                     var bounds = PlacedBox(g.Box, m);
@@ -31,11 +34,11 @@ public sealed partial class GlView
                         _bounds[i] = bounds;
                         _boundsAt[i] = t.Position;
                     }
-                    bool known = !t.Gone && g.Box != null;
+                    bool known = !gone && g.Box != null;
                     // A box known for the first time: the selection's outline (which left it out) is made again.
                     _selectionDirty |= known && !_known[i];
                     _known[i] = known;
-                    if (!t.Gone)
+                    if (!gone)
                     {
                         int cell = CellOf(s, m.Translation);
                         Grow(_cellBounds, cell, bounds);

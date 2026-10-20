@@ -75,6 +75,8 @@ public sealed partial class GlView
     {
         var list = new List<Vector3>();
         var selected = Selected.ToHashSet();
+        // Hidden objects (GlView.Hide) have none either.
+        selected.UnionWith(_hidden);
         lock (s.Things)
         {
             lock (_objLock)

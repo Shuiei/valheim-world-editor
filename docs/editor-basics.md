@@ -485,6 +485,10 @@ The digits of the numeric keypad work too. In the Workshop only `T` (Build), `E`
 | | `I` | Inspect the selected object (one object) |
 | | `Esc` | Cancel a move under way, or a selection zone being drawn |
 | | `Alt` + `Z` | Select through on or off: a box also takes what is hidden behind others |
+| | `Ctrl` + `A` / `Alt` + `A` | Select every shown object / clear the selection |
+| | `Ctrl` + `I` | Invert the selection |
+| | `Ctrl` + `H` / `Alt` + `H` | Hide the selected objects in the view / show them again |
+| | `Shift` + `F`, Numpad `.` | Frame the selection |
 | Dungeon | `R` | Turn the room to add |
 | | `Del` | Delete the selected room |
 | Measure | `Esc` | Clear the measure |

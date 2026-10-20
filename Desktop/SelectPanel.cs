@@ -55,6 +55,12 @@ public sealed partial class SelectPanel
         BuildingButton = Act(Lang.T("select.label.building"), Tips.Of("select.building"));
         SameButton = Act(Lang.T("select.label.same"), Tips.Of("select.same"));
         InvertButton = Act(Lang.T("select.label.invert"), Tips.Of("select.invert"));
+        AllButton = Act(Lang.T("select.label.all"), Tips.Of("select.all"));
+        HideButton = Act(Lang.T("select.label.hide"), Tips.Of("select.hide"));
+        UnhideButton = Act(Lang.T("select.label.unhide"), Tips.Of("select.unhide"));
+        AllButton.Click += (_, _) => tool.SelectAll();
+        HideButton.Click += (_, _) => tool.HideSelected();
+        UnhideButton.Click += (_, _) => tool.ShowHidden();
         DeleteButton.Click += (_, _) => tool.Delete();
         ReplaceButton.Click += (_, _) =>
         {
@@ -140,7 +146,7 @@ public sealed partial class SelectPanel
                 {
                     new TextBlock { Text = Lang.T("rail.label.select"), FontSize = 14, FontWeight = FontWeight.SemiBold },
                     new TextBlock { Text = Lang.T("select.hint.click"), FontSize = 12, Foreground = Ui.Muted, TextWrapping = TextWrapping.Wrap },
-                    new WrapPanel { Children = { DeleteButton, BuildingButton, SameButton, InvertButton, InspectButton, ClaimButton }, ItemSpacing = 4, LineSpacing = 4 },
+                    new WrapPanel { Children = { DeleteButton, AllButton, BuildingButton, SameButton, InvertButton, HideButton, UnhideButton, InspectButton, ClaimButton }, ItemSpacing = 4, LineSpacing = 4 },
                     new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 6, Children = { new TextBlock { Text = Lang.T("select.label.replaceWith"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(ReplaceBox, 1), Ui.Col(ReplacePickButton, 2) } },
                     ReplaceButton,
                     new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 6, Children = { new TextBlock { Text = Lang.T("select.label.zone"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center }, Ui.Col(ZoneBox, 1) } },

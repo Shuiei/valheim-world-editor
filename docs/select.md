@@ -39,6 +39,9 @@ until you **Save** (or **Apply live**).
 | | A zone, **Same kind**, **Invert** and **Whole building** leave out anything more than 10 m under the ground: objects a mod hides there (crafting stations 10 km under a house) are not part of what stands above. |
 | `Ctrl` + drag | Adds what the box or the zone takes to the selection. |
 | `Shift` + drag | Takes what the box or the zone takes out of the selection. |
+| `Ctrl` + `A` / `Alt` + `A` / `Ctrl` + `I` (or **All**, **Invert**) | Selects every shown object / clears the selection / inverts it. |
+| `Ctrl` + `H` / `Alt` + `H` (or **Hide**, **Show hidden**) | Hides the selected objects in the view, to reach what they cover (inside a house: hide the roof); they are not drawn, picked or boxed, and nothing changes in the world. `Alt` + `H` shows them all again. |
+| `Shift` + `F` or Numpad `.` | Turns the camera onto the selection, close enough to see all of it (`F` alone switches the eye). |
 | **Click on empty ground** / `Esc` | Clears the selection (`Esc` first cancels a zone being drawn or a move in progress); with `Ctrl` or `Shift` held, a click on the ground keeps it. |
 | **Double-click a building piece** | Selects the whole building (see **Whole building** below). A chest (any container) is the exception: a double click selects it alone and opens it in the [Inspector](#inspecting-and-changing-an-objects-data). |
 | **Double-click a linked object's part** | Selects its whole [group](#linked-objects-ships-and-other-mods-groups) (a ship mod's vessel): its root and every part on it. |

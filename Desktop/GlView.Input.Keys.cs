@@ -32,12 +32,15 @@ public sealed partial class GlView
         Wake();
     }
 
-    /// <summary>A key pressed in the window: F cycles the eye, any other is held for the camera.</summary>
+    /// <summary>
+    /// A key pressed in the window: F cycles the eye, any other is held for the camera; none with Ctrl or Alt held
+    /// (Ctrl + A, Alt + H… are shortcuts, not moves).
+    /// </summary>
     /// <param name="surface">The view's surface, which tells whether the view is on screen.</param>
     /// <param name="e">The key event.</param>
     private void OnWindowKeyDown(Control surface, KeyEventArgs e)
     {
-        if (!TakesKey(surface, e))
+        if (!TakesKey(surface, e) || Ctrl(e.KeyModifiers) || e.KeyModifiers.HasFlag(KeyModifiers.Alt))
         {
             return;
         }
