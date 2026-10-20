@@ -24,9 +24,12 @@ using TerrainEditor.Save;
 //   regrow <world> <zones> [--no-alts] [--all-kinds]
 //                                 Regrow nature on zones the game generated against what it
 //                                 put there (the AltDump test plugin's zone file) (RegrowCheck)
+//   contents <world> <bepinex folder> <name part>
+//                                 New world's build of locations whose contents Expand World
+//                                 Data changes, against those the game made (ContentsCheck)
 if (args.Length < 2)
 {
-    Console.Error.WriteLine("usage: WorldCheck verify <dump> [seed] | verify-ingame <world> <file> | selftest-save <world copy> | inspect <world> | summary <world> | create <folder> <name> <seed> [radius] [--flat] | look <seed> [metres] | objects <world> [prefab] | altbiomes <dump> <seed> [valheim folder] | locations <dump> <seed> [valheim folder] | regrow <world> <zones> [--no-alts] [--all-kinds]");
+    Console.Error.WriteLine("usage: WorldCheck verify <dump> [seed] | verify-ingame <world> <file> | selftest-save <world copy> | inspect <world> | summary <world> | create <folder> <name> <seed> [radius] [--flat] | look <seed> [metres] | objects <world> [prefab] | altbiomes <dump> <seed> [valheim folder] | locations <dump> <seed> [valheim folder] | regrow <world> <zones> [--no-alts] [--all-kinds] | contents <world> <bepinex folder> <name part>");
     return 2;
 }
 if (args[0] == "create")
@@ -85,6 +88,8 @@ switch (args[0])
         return ObjectsCheck.Run(args, world);
     case "regrow":
         return RegrowCheck.Run(args, world, terrain);
+    case "contents":
+        return ContentsCheck.Run(args, world);
     default:
         Console.Error.WriteLine("unknown check " + args[0]);
         return 2;

@@ -85,7 +85,19 @@ public static class LocationPrefabs
     /// <param name="rotation">Its turn.</param>
     /// <param name="seed">The zone's seed (ZoneSeed).</param>
     public static List<Dungeons.Made> Made(Prefab prefab, Vector3 position, Quaternion rotation, int seed) =>
-        Dungeons.Replay(prefab.Contents, prefab.Spawns, prefab.Picks, prefab.Nodes, -1, position.Y, seed, position, rotation);
+        Made(prefab, position, rotation, seed, out _);
+
+    /// <summary>
+    /// <see cref="Made(Prefab, Vector3, Quaternion, int)"/>, with the random state its rolls leave (what the game draws
+    /// next from as it makes the objects: Expand World Data's swaps and data).
+    /// </summary>
+    /// <param name="prefab">The location's prefab.</param>
+    /// <param name="position">Where it stands, world metres.</param>
+    /// <param name="rotation">Its turn.</param>
+    /// <param name="seed">The zone's seed (ZoneSeed).</param>
+    /// <param name="rolled">The random state after the rolls.</param>
+    public static List<Dungeons.Made> Made(Prefab prefab, Vector3 position, Quaternion rotation, int seed, out ValheimGen.UnityEngine.Random.RandomState rolled) =>
+        Dungeons.Replay(prefab.Contents, prefab.Spawns, prefab.Picks, prefab.Nodes, -1, position.Y, seed, position, rotation, out rolled);
 
     /// <summary>Reads the "locations" of the scan's JSON (by prefab name); none when the JSON has no such part.</summary>
     private static Dictionary<string, Prefab> Load(string json)

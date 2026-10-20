@@ -58,14 +58,23 @@ A world made with Expand World Size shows "Expand World" on its card on the star
 - **The save grid**: a world wider than 16 km lies on a bigger grid of chunk files; the editor reads and
   writes it as it lies, switch or no switch.
 - **A new world** (the New world page): the seeds looked at, the search and the world made follow the
-  folder's rules; the page says so above Create. The world file gets no settings of the mod's: the game
+  folder's rules; the page says so above Create. A location whose contents the location file changes is built
+  in the generated zones as the mod spawns it: objects added ("objects", with their chance, scale, place on the
+  ground and data), its own objects swapped, removed or given data ("objectSwap", "objectData" and their
+  "location..." forms), the location's own "data", "scaleMin"/"scaleMax", "offset"/"groundOffset" and
+  "randomCardinal". Data comes from the data entries (`BepInEx/config/data/*.yaml` and
+  `expand_world/expand_data*.yaml`), by name, as the "type, key, value" shorthand or written in place. The world file gets no settings of the mod's: the game
   writes them on the first save.
 
 ## What does not
 
-- **Locations whose contents the mod changes** (swapped or added objects, data, commands, a random seed,
-  blueprint locations) are placed where the mod places them, but their zones are left to the game by the
-  New world page's generated zones, as dungeons are. With **Random locations** on, every location is.
+- **Locations the editor cannot build ahead of the game** are placed where the mod places them, but their
+  zones are left to the game by the New world page's generated zones, as dungeons are: blueprint locations,
+  "commands", "randomSeed", another "dungeon", levelled or painted ground ("levelArea", "paint"),
+  "randomDamage", and data the mod works out as it spawns an object (a choice of values, a range, a function,
+  an inventory, a component's field) or a name it gives that is no prefab (a value group, a blueprint). With
+  **Random locations** on, every location is. A location's random turn ("randomRotation", the game's own
+  included) is drawn from whatever the game drew before it, so no tool can know it; New world draws one.
 - `pregenerate` and the map icons: not modelled.
 - **Status effects** of biomes and territories, and their **water colours**: the editor neither applies nor
   draws them. As in the mod, a biome's status effects and a territory's status effects and water colours still

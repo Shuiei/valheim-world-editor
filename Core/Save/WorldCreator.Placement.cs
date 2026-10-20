@@ -26,6 +26,16 @@ public static partial class WorldCreator
         return 0f;
     }
 
+    /// <summary>
+    /// Expand World Data's turn to a random cardinal direction, in place of the location's own: a quarter turn drawn
+    /// from the zone's seed. Rolled on the shared Unity random, which the caller puts back.
+    /// </summary>
+    private static float CardinalYaw(int zoneSeed)
+    {
+        Rnd.InitState(zoneSeed);
+        return Rnd.Range(0, 4) * 90f;
+    }
+
     /// <summary>The ground's normal at a world point, from the generator's heights a metre apart around it.</summary>
     private static Vector3 Normal(ValheimGen.TerrainService terrain, float x, float z)
     {

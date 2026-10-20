@@ -29,6 +29,12 @@ public static partial class ExpandWorld
         /// <summary>No settings, no data (the mod is not there, or every switch is off).</summary>
         public static DataFiles None => new(new Dictionary<string, string>(), null, null, null, null, null, null, []);
 
+        /// <summary>
+        /// The data entries the location file's "data" fields name (BepInEx/config/data/*.yaml, then
+        /// expand_world/expand_data*.yaml); read only with the location file on.
+        /// </summary>
+        public IReadOnlyList<Entry> DataEntries { get; init; } = [];
+
         /// <summary>Whether any kind of data is on.</summary>
         public bool Any => Biomes != null || World != null || Territories != null || Locations != null || Vegetation != null || AltBiomes != null;
     }
@@ -67,7 +73,22 @@ public static partial class ExpandWorld
             notes.Add($"no {YamlReader.DllName} under {found.Plugins} (Expand World Data needs it): its data files were not read");
         }
         IReadOnlyList<Entry>?[] kinds = [.. Kinds.Select((k, i) => on[i] ? ReadKind(found.DataFiles, k.Kind, yaml, notes) : null)];
-        return new DataFiles(cfg, kinds[0], kinds[1], kinds[2], kinds[3], kinds[4], kinds[5], notes);
+        return new DataFiles(cfg, kinds[0], kinds[1], kinds[2], kinds[3], kinds[4], kinds[5], notes)
+        {
+            DataEntries = kinds[3] != null ? ReadDataEntries(found, yaml, notes) : [],
+        };
+    }
+
+    /// <summary>
+    /// The data entries (DataLoading.LoadEntries): every yaml file under BepInEx/config/data, then expand_data*.yaml
+    /// under the data folder; none without a reader.
+    /// </summary>
+    private static List<Entry> ReadDataEntries(Found found, YamlReader? yaml, List<string> notes)
+    {
+        string data = Path.Combine(found.Folder, "config", "data");
+        List<Entry> entries = [.. ReadFiles(Directory.Exists(data) ? FilesOf(data, "*.yaml", notes).Order(StringComparer.Ordinal) : [], yaml, notes)];
+        entries.AddRange(ReadKind(found.DataFiles, "data", yaml, notes) ?? []);
+        return entries;
     }
 
     /// <summary>
@@ -90,7 +111,17 @@ public static partial class ExpandWorld
         {
             return null;
         }
+        return ReadFiles(files, yaml, notes);
+    }
+
+    /// <summary>The entries of these files, in order; a file that cannot be read is passed over and noted.</summary>
+    private static List<Entry> ReadFiles(IEnumerable<string> files, YamlReader? yaml, List<string> notes)
+    {
         List<Entry> entries = [];
+        if (yaml == null)
+        {
+            return entries;
+        }
         foreach (string file in files)
         {
             try
@@ -107,21 +138,20 @@ public static partial class ExpandWorld
     }
 
     /// <summary>The files of a kind in the order the mod reads them (reverse alphabetical by full path).</summary>
-    private static List<string> DataFilesOf(string? folder, string kind, List<string> notes)
+    private static List<string> DataFilesOf(string? folder, string kind, List<string> notes) =>
+        folder == null || !Directory.Exists(folder) ? [] : [.. FilesOf(folder, $"expand_{kind}*.yaml", notes).OrderByDescending(p => p, StringComparer.Ordinal)];
+
+    /// <summary>The files of a folder that match a pattern, at any depth; none (noted) when it cannot be searched.</summary>
+    private static List<string> FilesOf(string folder, string pattern, List<string> notes)
     {
-        if (folder == null || !Directory.Exists(folder))
-        {
-            return [];
-        }
         try
         {
-            return [.. Directory.EnumerateFiles(folder, $"expand_{kind}*.yaml", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0 })
-                .OrderByDescending(p => p, StringComparer.Ordinal)];
+            return [.. Directory.EnumerateFiles(folder, pattern, new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0 })];
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Log.Caught(ex, $"listing {folder} for expand_{kind}*.yaml (taken as none)");
-            notes.Add($"{folder} could not be searched for expand_{kind}*.yaml: {ex.Message}");
+            Log.Caught(ex, $"listing {folder} for {pattern} (taken as none)");
+            notes.Add($"{folder} could not be searched for {pattern}: {ex.Message}");
             return [];
         }
     }

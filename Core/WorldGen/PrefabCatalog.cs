@@ -26,7 +26,11 @@ public static partial class PrefabCatalog
     /// <param name="ContainerH">Rows of a container's grid (0 likewise).</param>
     /// <param name="WardRadius">Area a ward protects.</param>
     /// <param name="BuildRange">Radius a crafting station lets players build in.</param>
-    public sealed record Info(string Name, ushort Flags, float GrowRadius, bool NeedsCultivated, int ContainerW = 0, int ContainerH = 0, float WardRadius = 0, float BuildRange = 0);
+    public sealed record Info(string Name, ushort Flags, float GrowRadius, bool NeedsCultivated, int ContainerW = 0, int ContainerH = 0, float WardRadius = 0, float BuildRange = 0)
+    {
+        /// <summary>Its ZNetView keeps its first scale (m_syncInitialScale): the game writes the scale of a new one.</summary>
+        public bool SyncScale { get; init; }
+    }
 
     /// <summary>
     /// None until Use: no world or Workshop opens before then (GameData).

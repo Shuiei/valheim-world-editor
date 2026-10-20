@@ -22,7 +22,8 @@ public static partial class ExpandWorld
     /// <param name="radius">The world's radius, metres.</param>
     /// <param name="blueprints">The folder the mod reads blueprint files from; null for none.</param>
     /// <param name="notes">Where an entry passed over or a value not understood is noted.</param>
-    internal static List<SeedLocations.Rule> LocationsOf(IReadOnlyList<Entry> entries, IReadOnlyList<SeedLocations.Rule> game, BiomeTable biomes, float radius, string? blueprints, List<string> notes)
+    /// <param name="data">The world's data entries (what the contents' "data" fields name); none by default.</param>
+    internal static List<SeedLocations.Rule> LocationsOf(IReadOnlyList<Entry> entries, IReadOnlyList<SeedLocations.Rule> game, BiomeTable biomes, float radius, string? blueprints, List<string> notes, DataTable? data = null)
     {
         List<SeedLocations.Rule> rules = [];
         var byPrefab = new Dictionary<string, SeedLocations.Rule>(StringComparer.Ordinal);
@@ -59,6 +60,7 @@ public static partial class ExpandWorld
             }
             var rule = LocationOf(f, prefab, baseName, interior, exterior, blueprint, biomes, radius, ref virtualGroups, notes);
             rule.ClearArea = ClearAreaOf(f, own, blueprint);
+            rule.Contents = rule.Custom == true || blueprint ? ContentsOf(f, data ?? DataTable.Empty, blueprint) : null;
             rules.Add(rule);
         }
         return rules;

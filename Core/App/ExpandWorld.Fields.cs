@@ -37,6 +37,9 @@ public static partial class ExpandWorld
             };
         }
 
+        /// <summary>A field as written (text, list or map); null when missing.</summary>
+        public object? Raw(string key) => entry.Fields.GetValueOrDefault(key);
+
         /// <summary>Whether the entry has the field, with a value.</summary>
         public bool Has(string key) => entry.Fields.TryGetValue(key, out object? v) && v != null;
 

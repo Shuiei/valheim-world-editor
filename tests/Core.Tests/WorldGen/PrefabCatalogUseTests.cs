@@ -17,5 +17,8 @@ public class PrefabCatalogUseTests
         Assert.NotNull(PrefabCatalog.Get(Fixtures.Hash("sapling_turnip")));
         Assert.Null(PrefabCatalog.Get(Fixtures.Hash("Boar")));
         Assert.True(PrefabCatalog.Placeable.Count() > 500);
+        // Whether its network view keeps its first scale.
+        Assert.True(PrefabCatalog.Get(Fixtures.Hash("Bush01"))!.SyncScale);
+        Assert.False(PrefabCatalog.Get(Fixtures.Hash("Pickable_Stone"))!.SyncScale);
     }
 }

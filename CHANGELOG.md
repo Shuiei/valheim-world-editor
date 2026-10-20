@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.64.0 — 2026-10-19
+
+### Added
+- **New world builds the Expand World locations whose contents the mod changes.** Objects the location file adds,
+  objects it swaps, removes or gives data, and a location's own data, scale, height and cardinal turn are now made
+  in the generated zones as the mod makes them, instead of those zones being left to the game. Locations the editor
+  cannot build ahead of the game (commands, levelled ground, random damage, data worked out as the game spawns) are
+  still left to it.
+
 ## v1.63.0 — 2026-10-19
 
 ### Added

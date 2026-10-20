@@ -19,13 +19,26 @@ public static partial class Dungeons
     /// <param name="seed">What the rolls start from.</param>
     /// <param name="position">Where it stands, world metres.</param>
     /// <param name="rotation">Its turn.</param>
-    internal static List<Made> Replay(Content[] contents, Spawn[] spawns, Pick[] picks, int[] nodes, int themes, float y, int seed, Vector3 position, Quaternion rotation)
+    internal static List<Made> Replay(Content[] contents, Spawn[] spawns, Pick[] picks, int[] nodes, int themes, float y, int seed, Vector3 position, Quaternion rotation) =>
+        Replay(contents, spawns, picks, nodes, themes, y, seed, position, rotation, out _);
+
+    /// <summary>
+    /// <see cref="Replay(Content[], Spawn[], Pick[], int[], int, float, int, Vector3, Quaternion)"/>, with the random
+    /// state the rolls leave (what the game draws next from, as it spawns the objects).
+    /// </summary>
+    /// <param name="contents">Its networked objects, in its frame.</param>
+    /// <param name="spawns">Its RandomSpawn parts, in the order the game rolls them.</param>
+    /// <param name="picks">Its RandomObject parts, rolled after the spawns.</param>
+    /// <param name="nodes">Each random part's parent node (-1: the prefab itself).</param>
+    /// <param name="themes">The dungeon's themes a part may require (every bit set: none is checked, as for a location).</param>
+    /// <param name="y">The elevation the parts' limits are checked against.</param>
+    /// <param name="seed">What the rolls start from.</param>
+    /// <param name="position">Where it stands, world metres.</param>
+    /// <param name="rotation">Its turn.</param>
+    /// <param name="rolled">The random state after the rolls.</param>
+    internal static List<Made> Replay(Content[] contents, Spawn[] spawns, Pick[] picks, int[] nodes, int themes, float y, int seed, Vector3 position, Quaternion rotation, out Rnd.RandomState rolled)
     {
         var made = new List<Made>();
-        if (contents.Length == 0)
-        {
-            return made;
-        }
         bool[] off = new bool[nodes.Length];
         var was = Rnd.State;
         try
@@ -33,6 +46,7 @@ public static partial class Dungeons
             Rnd.InitState(seed);
             RollSpawns(spawns, themes, y, off);
             RollPicks(picks, themes, y, off);
+            rolled = Rnd.State;
         }
         finally
         {

@@ -304,6 +304,7 @@ after an update.
 | `objects <world> [prefab]` | The most common kinds of saved objects; with a prefab (name or hash), each of its objects and its saved bytes in hex, to check them byte by byte. |
 | `altbiomes <dump> <seed> [valheim folder]` | The biome areas and the alt biomes the editor lays out for a seed, line by line against those the game made (the AltDump plugin's `AltDump.txt`). |
 | `locations <dump> <seed> [valheim folder]` | Every location the editor lays out for a seed against those the game laid out (`LocDump.txt`). |
+| `contents <world> <BepInEx folder> <name part>` | New world's build of the locations whose contents Expand World Data changes (kinds whose name holds the part) against a world where the game made them: each object's prefab, place on the ground and data. |
 | `regrow <world> <zones> [--no-alts] [--all-kinds]` | Regrow nature on zones the game generated (`Zones.txt`) against what the game put there: in alt biome areas and elsewhere, and per kind an alt biome adds or blocks (every kind with `--all-kinds`; `--no-alts` as if there were no alt biomes). |
 
 The last three take their files from the AltDump test plugin (`_src/AltDump` in the workspace, next to TerrainCheck
@@ -311,7 +312,9 @@ and TerrainDump), run on a local dedicated server, never a live one: copy its dl
 `BepInEx/plugins`, start the server with a new world in a scratch save folder and `-altdump-quit`
 (`-savedir <scratch> -world AltTest -altdump-quit`), and it writes `AltDump.txt` when the game has laid out the
 alt biomes, `LocDump.txt` when it has laid out the locations, then generates zones in alt biome areas and others
-(`Zones.txt`), saves the world and stops. The seed's name is in the dump's first line.
+(`Zones.txt`), saves the world and stops. The seed's name is in the dump's first line. With `-altdump-loc <name
+part>` it generates only the zones of the locations whose names hold the part (for `contents`, with Expand World
+Data and a test location file in the server's BepInEx).
 
 ## Tests
 
