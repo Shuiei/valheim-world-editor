@@ -45,9 +45,8 @@ public static partial class Regrow
     /// <summary>
     /// Adds one object at a world point when it passes every check of its rule (the surface, then the region, then
     /// Expand World Data's own distance check), with its rotation; the prefab drawn among the rule's when it has several
-    /// (the mod's draw, before the object is made), then the game's draws for the object's components, then the mod's
-    /// draws for a scale by axis (its replacement of the game's scaling, made only when the game would scale: the
-    /// uniform draw is not 1).
+    /// (the mod's draw, before the object is made), then what grows there (<see cref="Grow"/>: the mod's scale by axis
+    /// replaces the game's scaling, drawn only when the game would scale, the uniform draw not 1).
     /// </summary>
     private static bool TryPlaceSpot(Pass pass, Rule veg, float px, float pz, SpotDraw draw, List<Spot> spots)
     {
@@ -70,14 +69,28 @@ public static partial class Regrow
         NVector3 euler = SpotRotation(veg, normal, draw);
         pass.KeepClear(veg, px, pz);
         (string name, int draws) = veg.prefabs == null ? (veg.prefab, veg.draws) : DrawPrefab(veg);
+        Grow(veg, name, draws, new NVector3(px, py, pz), euler, draw.Scale, spots);
+        return true;
+    }
+
+    /// <summary>
+    /// What grows at a spot that passed: a blueprint's parts when the prefab is the rule's blueprint, else the object
+    /// with the game's draws for its components (as it wakes), then the mod's draws for a scale by axis.
+    /// </summary>
+    private static void Grow(Rule veg, string name, int draws, NVector3 at, NVector3 euler, float scale, List<Spot> spots)
+    {
+        if (veg.blueprints?.GetValueOrDefault(name) is { } parts)
+        {
+            PlaceBlueprint(veg, parts, at, BlueprintFormats.FromEuler(euler), spots);
+            return;
+        }
         // The components' draws come as the object wakes, before the mod scales it.
         for (int k = draws; k > 0; k--)
         {
             Rnd.NextUInt();
         }
-        float[]? axes = veg.scaleMinAxes != null && veg.scaleMaxAxes != null && draw.Scale != 1f ? ScaleByAxes(veg) : null;
-        spots.Add(new Spot(name, px, py, pz, euler.X, euler.Y, euler.Z, axes?[0] ?? draw.Scale, axes));
-        return true;
+        float[]? axes = veg.scaleMinAxes != null && veg.scaleMaxAxes != null && scale != 1f ? ScaleByAxes(veg) : null;
+        spots.Add(new Spot(name, at.X, at.Y, at.Z, euler.X, euler.Y, euler.Z, axes?[0] ?? scale, axes, veg.data));
     }
 
     /// <summary>

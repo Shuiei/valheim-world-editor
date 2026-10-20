@@ -90,12 +90,13 @@ public static partial class ExpandWorld
         var game = SeedLocations.Current;
         bool gameRead = SeedLocations.Available;
         string? blueprints = found.Data ? Path.Combine(found.Folder, "config", BlueprintFolderOf(data.Cfg)) : null;
+        var dataTable = new DataTable(data.DataEntries);
         List<SeedLocations.Rule>? kinds = null;
         if (data.Locations is { Count: > 0 } entries)
         {
             if (gameRead)
             {
-                kinds = SizedLocations(LocationsOf(entries, game.Locations, table, size.Radius, blueprints, data.Notes, new DataTable(data.DataEntries)), size);
+                kinds = SizedLocations(LocationsOf(entries, game.Locations, table, size.Radius, blueprints, data.Notes, dataTable), size);
             }
             else
             {
@@ -120,7 +121,7 @@ public static partial class ExpandWorld
         if (data.Vegetation is { Count: > 0 } vegEntries)
         {
             var keys = (globalKeys ?? []).Select(k => k.Split(' ', 2)[0].Trim().ToLowerInvariant()).Where(k => k != "").ToHashSet();
-            vegetation = VegetationOf(vegEntries, Regrow.GameRules, table, size.Radius, keys, data.Notes);
+            vegetation = VegetationOf(vegEntries, Regrow.GameRules, table, size.Radius, keys, data.Notes, dataTable, blueprints);
         }
         return (locations, vegetation);
     }

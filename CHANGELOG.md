@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.66.0 — 2026-10-19
+
+### Added
+- **Expand World vegetation with data and blueprints grows as the mod grows it.** Regrow nature and New world's
+  generated zones now give each object its rule's "data" and "drops", and grow a blueprint named as a rule's prefab
+  as its pieces, each made by chance, turned and scaled as the mod does it.
+
 ## v1.65.0 — 2026-10-19
 
 ### Added

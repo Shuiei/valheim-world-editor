@@ -27,9 +27,12 @@ using TerrainEditor.Save;
 //   contents <world> <bepinex folder> <name part>
 //                                 New world's build of locations whose contents Expand World
 //                                 Data changes, against those the game made (ContentsCheck)
+//   vegetation <world> <bepinex folder> <zone file> <rules>
+//                                 Regrow with the first rules of Expand World Data's vegetation
+//                                 file (blueprints, data), against the game's (VegetationCheck)
 if (args.Length < 2)
 {
-    Console.Error.WriteLine("usage: WorldCheck verify <dump> [seed] | verify-ingame <world> <file> | selftest-save <world copy> | inspect <world> | summary <world> | create <folder> <name> <seed> [radius] [--flat] | look <seed> [metres] | objects <world> [prefab] | altbiomes <dump> <seed> [valheim folder] | locations <dump> <seed> [valheim folder] | regrow <world> <zones> [--no-alts] [--all-kinds] | contents <world> <bepinex folder> <name part>");
+    Console.Error.WriteLine("usage: WorldCheck verify <dump> [seed] | verify-ingame <world> <file> | selftest-save <world copy> | inspect <world> | summary <world> | create <folder> <name> <seed> [radius] [--flat] | look <seed> [metres] | objects <world> [prefab] | altbiomes <dump> <seed> [valheim folder] | locations <dump> <seed> [valheim folder] | regrow <world> <zones> [--no-alts] [--all-kinds] | contents <world> <bepinex folder> <name part> | vegetation <world> <bepinex folder> <zone file> <rules>");
     return 2;
 }
 if (args[0] == "create")
@@ -90,6 +93,8 @@ switch (args[0])
         return RegrowCheck.Run(args, world, terrain);
     case "contents":
         return ContentsCheck.Run(args, world);
+    case "vegetation":
+        return VegetationCheck.Run(args, world);
     default:
         Console.Error.WriteLine("unknown check " + args[0]);
         return 2;

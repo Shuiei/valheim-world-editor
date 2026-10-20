@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace ValheimGen;
 
 #pragma warning disable IDE1006 // named as the JSON keys they are read from (the game's vegetation list, GameCatalogues.VegetationJson)
@@ -133,5 +135,17 @@ public sealed class VegetationRule
     /// for this rule.
     /// </summary>
     public float clearRadius { get; set; }
+    /// <summary>
+    /// The data each object is given (the file's "data", then its "drops"), as far as it can be written; null for none.
+    /// Not kept in vegetation.json (the files are read again).
+    /// </summary>
+    [JsonIgnore]
+    public IReadOnlyList<ContentField>? data { get; set; }
+    /// <summary>
+    /// When <see cref="prefab"/> is a blueprint of the mod's blueprint folder: its parts, and those of the blueprints it
+    /// nests, by blueprint name; null for a prefab. Not kept in vegetation.json.
+    /// </summary>
+    [JsonIgnore]
+    public IReadOnlyDictionary<string, IReadOnlyList<BlueprintPart>>? blueprints { get; set; }
 }
 #pragma warning restore IDE1006

@@ -106,7 +106,7 @@ internal static class ContentsCheck
         near.RemoveAt(match);
         tally.Placed++;
         tally.Heights.Add(position.Y - at.Y);
-        string mine = Values(ZdoData.Parse(zdo)), game = Values(ZdoData.Parse(world.ObjectBytes(id)));
+        string mine = Values(ZdoData.Parse(zdo), Keys), game = Values(ZdoData.Parse(world.ObjectBytes(id)), Keys);
         if (mine == game)
         {
             tally.Valued++;
@@ -137,10 +137,10 @@ internal static class ContentsCheck
     /// <summary>A point as text.</summary>
     private static string At(Vector3 p) => string.Create(CultureInfo.InvariantCulture, $"({p.X:0.00}, {p.Y:0.00}, {p.Z:0.00})");
 
-    /// <summary>The values compared, as text.</summary>
-    private static string Values(ZdoData z) => string.Join("; ", z.IntList.Where(v => Keys.Contains(v.Key)).Select(v => $"i{v.Key}={v.Value}")
-        .Concat(z.FloatList.Where(v => Keys.Contains(v.Key)).Select(v => $"f{v.Key}={v.Value.ToString(CultureInfo.InvariantCulture)}"))
-        .Concat(z.StringList.Where(v => Keys.Contains(v.Key)).Select(v => $"s{v.Key}={v.Value}"))
-        .Concat(z.Vec3List.Where(v => Keys.Contains(v.Key)).Select(v => $"v{v.Key}={v.Value.X:0.###},{v.Value.Y:0.###},{v.Value.Z:0.###}"))
+    /// <summary>The values of these keys, as text.</summary>
+    internal static string Values(ZdoData z, HashSet<int> keys) => string.Join("; ", z.IntList.Where(v => keys.Contains(v.Key)).Select(v => $"i{v.Key}={v.Value}")
+        .Concat(z.FloatList.Where(v => keys.Contains(v.Key)).Select(v => $"f{v.Key}={v.Value.ToString(CultureInfo.InvariantCulture)}"))
+        .Concat(z.StringList.Where(v => keys.Contains(v.Key)).Select(v => $"s{v.Key}={v.Value}"))
+        .Concat(z.Vec3List.Where(v => keys.Contains(v.Key)).Select(v => $"v{v.Key}={v.Value.X:0.###},{v.Value.Y:0.###},{v.Value.Z:0.###}"))
         .Order(StringComparer.Ordinal));
 }

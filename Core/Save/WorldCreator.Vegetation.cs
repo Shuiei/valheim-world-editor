@@ -74,7 +74,7 @@ public static partial class WorldCreator
         return new Growth(batch.Objects, zones, placed, flatZone);
     }
 
-    /// <summary>Places the vegetation of the spots that may grow, each as the prefab's blank object.</summary>
+    /// <summary>Places the vegetation of the spots that may grow, each as the prefab's blank object with its data.</summary>
     /// <param name="spots">The spots that may grow.</param>
     /// <param name="batch">The chunk batch receiving the objects.</param>
     private static void PlaceSpots(IEnumerable<Regrow.Spot> spots, ChunkBatch batch)
@@ -84,7 +84,7 @@ public static partial class WorldCreator
             int prefab = StableHash.Of(s.Name);
             if (Terrain.PrefabCatalog.Get(prefab) is { } info)
             {
-                batch.Add(s.X, s.Z, ZdoBuilder.Blank(prefab, info.Flags, new Vector3(s.X, s.Y, s.Z), new Vector3(s.Rx, s.Ry, s.Rz), s.Scale3));
+                batch.Add(s.X, s.Z, WithFields(ZdoBuilder.Blank(prefab, info.Flags, new Vector3(s.X, s.Y, s.Z), new Vector3(s.Rx, s.Ry, s.Rz), s.Scale3), s.Data));
             }
         }
     }
