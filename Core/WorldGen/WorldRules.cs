@@ -256,6 +256,12 @@ public sealed record WorldRules
     /// <summary>Whether a location's altitude limits are scaled by its biome's height transform (the mod's "Scale location altitude requirement").</summary>
     public bool ScaleLocationAltitude { get; init; }
 
+    /// <summary>
+    /// Whether the water takes the biomes' and territories' water colours where the player is (the mod's "Custom water
+    /// color").
+    /// </summary>
+    public bool CustomWaterColor { get; init; }
+
     // ---- Derived.
     /// <summary>Whether these are the game's own values (nothing of the generator changes).</summary>
     [JsonIgnore]

@@ -24,6 +24,7 @@ public static partial class ExpandWorld
                 continue;
             }
             var height = HeightOf(f);
+            var water = WaterOf(f);
             var territory = new Territory
             {
                 Name = name,
@@ -31,10 +32,11 @@ public static partial class ExpandWorld
                 ForestMultiplier = f.F("forestMultiplier", 1f),
                 TerrainColor = f.Colour("colorTerrain"),
                 MapColor = f.Colour("colorMap"),
+                Water = water,
                 NoBuild = f.B("noBuild", false),
             };
             bool valid = territory.NoBuild || f.Count("statusEffects") > 0 || !height.IsIdentity || territory.MapColor != null || territory.TerrainColor != null
-                || f.Has("colorWaterTop") || f.Has("colorWaterBottom") || f.Has("colorWaterShallow") || f.Has("colorWaterSurface") || territory.ForestMultiplier != 1f;
+                || !water.IsNone || territory.ForestMultiplier != 1f;
             if (valid)
             {
                 territories[name] = territory;
@@ -42,4 +44,8 @@ public static partial class ExpandWorld
         }
         return [.. territories.Values];
     }
+
+    /// <summary>A biome's or a territory's water colours, those its entry gives.</summary>
+    private static WaterColours WaterOf(Fields f) =>
+        new(f.Colour("colorWaterTop"), f.Colour("colorWaterBottom"), f.Colour("colorWaterShallow"), f.Colour("colorWaterSurface"));
 }

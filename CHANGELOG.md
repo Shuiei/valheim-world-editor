@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.71.0 — 2026-10-20
+
+### Added
+- **Expand World Data's water colours.** With its "Custom water color" setting on, the 3D view's water takes the
+  colours the biome or the territory under the camera gives, as the game colours the water where the player is.
+
 ## v1.70.0 — 2026-10-20
 
 ### Added

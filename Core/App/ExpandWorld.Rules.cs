@@ -75,6 +75,7 @@ public static partial class ExpandWorld
             ZoneSpawners = Bool(D("Zone spawners"), v.ZoneSpawners),
             RandomLocations = Bool(D("Random locations"), v.RandomLocations),
             ScaleLocationAltitude = Bool(D("Scale location altitude requirement"), v.ScaleLocationAltitude),
+            CustomWaterColor = Bool(D("Custom water color"), v.CustomWaterColor),
         };
         return WithRivers(rules, found.Rivers ? CfgOf(found.RiversCfg) : []);
     }
