@@ -74,7 +74,6 @@ public class ExpandWorldContentsTests
     [InlineData("dungeon", "DG_Cave")]
     [InlineData("levelArea", "true")]
     [InlineData("paint", "grass")]
-    [InlineData("randomDamage", "true")]
     [InlineData("data", "rolled")]
     [InlineData("objects", "Nothing_Like_It, 1, 1, 1")]
     [InlineData("objectSwap", "Pickable_Stone, Nothing_Like_It")]
@@ -82,6 +81,15 @@ public class ExpandWorldContentsTests
     [InlineData("objectData", "Pickable_Stone, rolled")]
     public void WhatTheEditorCannotBuildIsLeftToTheGame(string key, string value) =>
         Assert.NotNull(Contents((key, value)).LeftToGame);
+
+    [Fact]
+    public void RandomDamageIsBuiltWithTheFilesWord()
+    {
+        Fixtures.UseLocations();
+        var rule = Assert.Single(ExpandWorld.LocationsOf([E(("prefab", "StartTemple:Changed"), ("randomDamage", "all"))], SeedLocations.Current.Locations, BiomeTable.Vanilla, 10000f, null, [], Data));
+        Assert.Null(rule.Contents!.LeftToGame);
+        Assert.Equal("all", rule.RandomDamage);
+    }
 
     [Fact]
     public void AKindWithoutChangedContentsHasNone()
