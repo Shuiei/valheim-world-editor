@@ -21,6 +21,11 @@ public sealed partial class SelectTool
             DrawLasso(l, at, size);
             return;
         }
+        if (_box is { } b)
+        {
+            DrawBox(b, at);
+            return;
+        }
         if (_drag is not { } d)
         {
             return;

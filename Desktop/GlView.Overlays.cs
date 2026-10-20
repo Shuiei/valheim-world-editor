@@ -48,6 +48,12 @@ public sealed partial class GlView
     /// <summary>A box's twelve edges, as pairs of corners (corner k: bit 0 x, bit 1 y, bit 2 z, set: the high side).</summary>
     private static readonly (int A, int B)[] BoxEdges = [(0, 1), (2, 3), (4, 5), (6, 7), (0, 2), (1, 3), (4, 6), (5, 7), (0, 4), (1, 5), (2, 6), (3, 7)];
 
+    /// <summary>A box's corner k (bit 0 x, bit 1 y, bit 2 z, set: the high side), as <see cref="BoxEdges"/> numbers them.</summary>
+    /// <param name="b">The box.</param>
+    /// <param name="k">The corner, 0 to 7.</param>
+    internal static Vector3 Corner((Vector3 Min, Vector3 Max) b, int k) =>
+        new((k & 1) == 0 ? b.Min.X : b.Max.X, (k & 2) == 0 ? b.Min.Y : b.Max.Y, (k & 4) == 0 ? b.Min.Z : b.Max.Z);
+
     /// <summary>Half a tool line's width per metre from the eye (set each frame from the view's size).</summary>
     private float _linePx = 0.0015f;
 

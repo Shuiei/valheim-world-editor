@@ -119,4 +119,33 @@ public sealed partial class GlView
 
     /// <summary>The lasso's lines, made again when it changes (<c>LassoChanged</c>).</summary>
     private float[] _lassoSegs = [];
+
+    /// <summary>The screen rectangle's lines on the graphics card.</summary>
+    private uint _screenBoxVao, _screenBoxVbo;
+
+    /// <summary>
+    /// The rectangle being drawn on the screen with the Select tool (SeenOnly): its four edges a metre in front of
+    /// the camera, so they lie flat on the view, in the lasso's colour.
+    /// </summary>
+    private void DrawScreenBox(Matrix4x4 vp)
+    {
+        var size = _surfaceSize.Width > 0 ? _surfaceSize : Bounds.Size;
+        if (SelectTool.ScreenBox is not { } r || size.Width <= 0)
+        {
+            return;
+        }
+        Vector3 At(Avalonia.Point p)
+        {
+            var (o, d) = RayAt(p, size);
+            return o + Vector3.Normalize(d);
+        }
+        Vector3[] c = [At(r.TopLeft), At(r.TopRight), At(r.BottomRight), At(r.BottomLeft)];
+        var segs = new List<float>();
+        for (int k = 0; k < 4; k++)
+        {
+            var (a, b) = (c[k], c[(k + 1) % 4]);
+            segs.AddRange([a.X, a.Y, a.Z, b.X, b.Y, b.Z]);
+        }
+        DrawLines(ref _screenBoxVao, ref _screenBoxVbo, [.. segs], vp, new Vector4(1, 0.76f, 0.29f, 1), width: SelectionWidth);
+    }
 }

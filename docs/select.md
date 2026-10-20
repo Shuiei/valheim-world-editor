@@ -35,6 +35,7 @@ until you **Save** (or **Apply live**).
 | `Alt` + drag | Draws a zone even when you start over an object (useful in woods, where trees cover the ground). |
 | | A zone, **Same kind**, **Invert** and **Whole building** leave out anything more than 10 m under the ground: objects a mod hides there (crafting stations 10 km under a house) are not part of what stands above. |
 | `Shift` + drag or `Ctrl` + drag | Adds what is inside the zone to the selection. |
+| **Pick only what is seen (screen box)** on | A drag on empty ground, or `Alt` + drag over a building, draws a rectangle on the screen instead of a zone on the ground, and picks only the objects seen inside it: not those hidden behind others or behind the ground. Look at a building from the side or from above to pick one floor, one wall or its roof instead of the whole building from the ground up. `Shift` adds, a click clears the selection, `Esc` drops the rectangle. |
 | **Click on empty ground** / `Esc` | Clears the selection (`Esc` first cancels a zone being drawn or a move in progress). |
 | **Double-click a building piece** | Selects the whole building (see **Whole building** below). A chest (any container) is the exception: a double click selects it alone and opens it in the [Inspector](#inspecting-and-changing-an-objects-data). |
 | **Double-click a linked object's part** | Selects its whole [group](#linked-objects-ships-and-other-mods-groups) (a ship mod's vessel): its root and every part on it. |

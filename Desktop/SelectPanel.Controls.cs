@@ -30,6 +30,9 @@ public sealed partial class SelectPanel
     /// <summary>Snaps moved pieces to other pieces.</summary>
     internal CheckBox SnapBox { get; }
 
+    /// <summary>A drag on empty ground draws a rectangle on the screen that picks only what is seen inside it.</summary>
+    internal CheckBox SeenBox { get; }
+
     /// <summary>The exact place's X (east), in metres.</summary>
     internal NumericUpDown XBox { get; } = Num(0.1m);
 

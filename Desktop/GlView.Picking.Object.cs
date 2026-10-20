@@ -35,17 +35,21 @@ public sealed partial class GlView
     /// </summary>
     /// <param name="o">The ray's origin (view space).</param>
     /// <param name="d">The ray's direction, normalised.</param>
-    internal List<(float T, int I)> BoxesHitBy(Vector3 o, Vector3 d)
+    internal List<(float T, int I)> BoxesHitBy(Vector3 o, Vector3 d) => BoxesHitBy(o, d, Enumerable.Range(0, _bounds.Length));
+
+    /// <summary>
+    /// <see cref="BoxesHitBy(Vector3, Vector3)"/> among some objects only (those that can stand in front of
+    /// what is looked for).
+    /// </summary>
+    /// <param name="o">The ray's origin (view space).</param>
+    /// <param name="d">The ray's direction, normalised.</param>
+    /// <param name="among">The objects to try.</param>
+    private List<(float T, int I)> BoxesHitBy(Vector3 o, Vector3 d, IEnumerable<int> among)
     {
         var boxes = new List<(float T, int I)>();
-        for (int i = 0; i < _bounds.Length; i++)
+        foreach (int i in among)
         {
-            // Not what the cut hides (whole above it).
-            if (!_known[i] || !_shown[(int)_kinds[i]] || CutY is float cut && _bounds[i].Min.Y > cut)
-            {
-                continue;
-            }
-            if (Picking.HitBox(o, d, _bounds[i].Min, _bounds[i].Max) is float t)
+            if (Hittable(i) && Picking.HitBox(o, d, _bounds[i].Min, _bounds[i].Max) is float t)
             {
                 boxes.Add((t, i));
             }
@@ -53,6 +57,13 @@ public sealed partial class GlView
         boxes.Sort((a, b) => a.T.CompareTo(b.T));
         return boxes;
     }
+
+    /// <summary>
+    /// Whether an object can be met by a ray: its box is known, its kind shown, and the cut does not hide it (whole
+    /// above it).
+    /// </summary>
+    /// <param name="i">The object.</param>
+    private bool Hittable(int i) => _known[i] && _shown[(int)_kinds[i]] && !(CutY is float cut && _bounds[i].Min.Y > cut);
 
     /// <summary>
     /// The objects in a row on the line from object a to object b (their middles within 0.75 m of it), both

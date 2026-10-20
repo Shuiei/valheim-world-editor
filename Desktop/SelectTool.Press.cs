@@ -52,6 +52,12 @@ public sealed partial class SelectTool
             return;
         }
         Commit();
+        if (hit == null && SeenOnly)
+        {
+            // Empty ground, or Alt held: a click deselects, a drag draws a rectangle on the screen.
+            _box = (at, at, shift, false);
+            return;
+        }
         if (hit == null && ground is { } g2)
         {
             // Empty ground: a click deselects, a drag draws a zone to select.

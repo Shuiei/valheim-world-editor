@@ -16,12 +16,7 @@ public sealed partial class GlView
         {
             return null;
         }
-        var q = Vector4.Transform(new Vector4(OnGround(s, g.X, g.Y, lift), 1), _lastViewProj);
-        if (q.W <= 0)
-        {
-            return null;
-        }
-        return new Point((q.X / q.W + 1) / 2 * size.Width, (1 - q.Y / q.W) / 2 * size.Height);
+        return ScreenOf(OnGround(s, g.X, g.Y, lift), size);
     }
 
     /// <summary>The grid point of the ground under a point of the view (null: none).</summary>

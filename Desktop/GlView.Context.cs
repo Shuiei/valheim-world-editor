@@ -52,7 +52,7 @@ public sealed partial class GlView
         _marksDirty = true;
         _placeVao = _placeVbo = _placeShapeVao = _placeShapeVbo = 0;
         _areaVao = _areaVbo = _resetVao = _resetVbo = 0;
-        _measureVao = _measureVbo = _lassoVao = _lassoVbo = _ringVao = _ringVbo = _lineVao = _lineVbo = 0;
+        _measureVao = _measureVbo = _lassoVao = _lassoVbo = _ringVao = _ringVbo = _lineVao = _lineVbo = _screenBoxVao = _screenBoxVbo = 0;
         _playersVao = _playersVbo = 0;
         _lowFbo = _lowColor = _lowDepth = 0;
         _lowW = _lowH = 0;
