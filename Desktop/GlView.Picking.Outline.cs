@@ -84,16 +84,22 @@ public sealed partial class GlView
     }
 
     /// <summary>
-    /// The selection's box, orange, thin, seen through what is in front of it (one box round several objects,
-    /// <see cref="SelectionBoxes"/>).
+    /// The selection, seen through what is in front of it: an outline round the selected objects' shapes
+    /// (GlView.Outline), and a thin box (one round several, <see cref="SelectionBoxes"/>) for those with no model drawn
+    /// yet, or for all of them when the outline cannot be drawn.
     /// </summary>
     private unsafe void DrawSelection(Matrix4x4 vp)
     {
         if (_selectionDirty && Scene is { } s)
         {
             _selectionDirty = false;
+            var boxed = _outlineFailed ? [.. Selected] : MakeOutlineParts(s);
             // Only things whose box is known: one without its model yet has no box to draw (it is drawn once it has).
-            _selectionSegs = SelectionBoxes([.. Selected.Where(i => i < _bounds.Length && _known[i]).Select(i => OutlineBoxOf(s, i))]);
+            _selectionSegs = SelectionBoxes([.. boxed.Where(i => i < _bounds.Length && _known[i]).Select(i => OutlineBoxOf(s, i))]);
+        }
+        if (!_outlineFailed)
+        {
+            DrawOutline();
         }
         // Seen through what is in front of it, like the web editor's selection.
         DrawLines(ref _lineVao, ref _lineVbo, _selectionSegs, vp, new Vector4(1, 0.66f, 0.2f, 1), width: SelectionWidth);

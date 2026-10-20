@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.85.0 — 2026-10-20
+
+### Changed
+- **The selection is outlined like in Blender.** An orange line follows the shape of the selected objects, seen
+  through what is in front of them, instead of boxes; the last object clicked is outlined in a lighter yellow.
+
 ## v1.84.0 — 2026-10-20
 
 ### Added

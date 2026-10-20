@@ -62,6 +62,8 @@ public sealed partial class GlView
         {
             Rebuild(s, g);
         }
+        // A selected object of this model, boxed while it had none, is outlined now.
+        _selectionDirty |= Selected.Count > 0;
         Interlocked.Decrement(ref _pending);
     }
 }

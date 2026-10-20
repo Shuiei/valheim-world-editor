@@ -69,6 +69,22 @@ public class SelectToolMouseTests
         Assert.Equal([0, 1, 2, 3, 4], v.Selected);
     }
 
+    // The active object (outlined brighter, as Blender's) is the last one clicked while it stays selected.
+    [AvaloniaFact]
+    public void TheActiveObjectIsTheLastOneClickedWhileSelected()
+    {
+        var v = Open(T(1, Wall, 40, 30, 40), T(2, Wall, 46, 30, 46));
+        Assert.Null(v.W.View.ActiveObject);
+        v.Click(40, 40);
+        Assert.Equal(0, v.W.View.ActiveObject);
+        v.Click(46, 46, KeyModifiers.Control);
+        Assert.Equal(1, v.W.View.ActiveObject);
+        v.Click(46, 46, KeyModifiers.Control);
+        Assert.Null(v.W.View.ActiveObject);
+        v.Click(30, 30);
+        Assert.Null(v.W.View.ActiveObject);
+    }
+
     [AvaloniaFact]
     public void AClickPicksAndAClickOnEmptyGroundDeselects()
     {

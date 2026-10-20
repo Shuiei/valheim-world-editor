@@ -81,6 +81,21 @@ public sealed partial class GlView
         return null;
     }
 
+    /// <summary>
+    /// The active object, as Blender's: the last one clicked, while it is selected (its outline is brighter); null when
+    /// none is.
+    /// </summary>
+    internal int? ActiveObject
+    {
+        get
+        {
+            lock (_selection)
+            {
+                return _anchor is int a && _selection.Contains(a) ? a : null;
+            }
+        }
+    }
+
     /// <summary>The object a Ctrl + Shift + click's row starts from: the last one clicked.</summary>
     private int? _anchor;
 }

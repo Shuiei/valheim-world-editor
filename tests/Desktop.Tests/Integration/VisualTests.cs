@@ -122,6 +122,21 @@ public sealed class VisualTests : VisualEditorPictures
         Assert.True(Math.Abs(after.Dark - before.Dark) < 0.15, $"black {before.Dark:P0} before, {after.Dark:P0} after");
     }
 
+    // The selection is outlined in orange round its objects' shapes: Ctrl + A in the Select tool adds orange to the
+    // picture.
+    [Fact]
+    public void TheSelectionIsOutlinedInOrange()
+    {
+        Open();
+        Do("area 0 0 2", "key E");
+        var before = Picture("outline-none");
+        Do("key A ctrl");
+        Assert.True(Editor.Send("state").GetProperty("selected").GetInt32() > 0);
+        var after = Picture("outline-all");
+        Assert.True(after.Orange > before.Orange + 0.001, $"orange {before.Orange:P2} before, {after.Orange:P2} with everything selected");
+        Clean();
+    }
+
     // An object found by the map's search, opened with Edit in 3D: still selected once the area is
     // drawn (the first frame dropped the selection made as the area opened).
     [Fact]
