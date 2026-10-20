@@ -70,14 +70,15 @@ public class KeysAndMouseTests
     [AvaloniaFact]
     public void SpaceAndLeftDragSlideTheViewInsteadOfUsingTheTool()
     {
-        var (w, s, screen) = Open(Wall());
+        // The wall right of the view's middle, clear of the Select panel on the left (a press there is the panel's).
+        var (w, s, screen) = Open(WallAt(80, 64));
         w.Tools.ChooseSelect();
         var (yaw, pitch, distance, target) = w.View.Camera;
         w.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.Space, " ");
-        w.MouseDown(screen(40, 40), MouseButton.Left);
+        w.MouseDown(screen(80, 64), MouseButton.Left);
         Assert.True(w.View.Panning);
-        w.MouseMove(screen(60, 70));
-        w.MouseUp(screen(60, 70), MouseButton.Left);
+        w.MouseMove(screen(100, 90));
+        w.MouseUp(screen(100, 90), MouseButton.Left);
         Assert.False(w.View.Panning);
         Assert.NotEqual(target, w.View.Camera.Target);
         Assert.Equal(yaw, w.View.Camera.Yaw);
@@ -85,9 +86,9 @@ public class KeysAndMouseTests
         Assert.Empty(w.View.Selected);
         // Let go of Space: the left button is the tool's again.
         w.KeyRelease(Key.Space, RawInputModifiers.None, PhysicalKey.Space, " ");
-        w.MouseDown(screen(40, 40), MouseButton.Left);
+        w.MouseDown(screen(80, 64), MouseButton.Left);
         Assert.False(w.View.Panning);
-        w.MouseUp(screen(40, 40), MouseButton.Left);
+        w.MouseUp(screen(80, 64), MouseButton.Left);
     }
 
     [AvaloniaFact]

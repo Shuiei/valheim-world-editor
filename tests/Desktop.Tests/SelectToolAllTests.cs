@@ -59,6 +59,9 @@ public class SelectToolAllTests
         Assert.Empty(v.Selected);
         v.Tool.SelectAll();
         Assert.Equal([1], v.Selected);
+        // Only the shown one has a dot, once it is not selected (selected objects have none).
+        Assert.Empty(v.W.View.NewMarkers(v.S.Scene));
+        v.W.View.Select([]);
         Assert.Single(v.W.View.NewMarkers(v.S.Scene));
         // Nor selected by a list of objects (a saved selection).
         v.W.View.Select([0, 1]);
