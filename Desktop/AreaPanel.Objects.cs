@@ -6,11 +6,14 @@ namespace TerrainEditor.Desktop;
 public sealed partial class AreaPanel
 {
     /// <summary>
-    /// The things inside the selection (indices), not deleted, of shown kinds (or added in this session).
+    /// The things inside the selection (indices), not deleted, of shown kinds (or added in this session), and not
+    /// buried deep under the ground (Picking.Buried: a mod put them there).
     /// </summary>
     /// <param name="poly">The selection, in metres from the scene's corner.</param>
     /// <param name="chosenKindsOnly">Only the kinds toggled on, and only where the Mask lets the ground through.</param>
-    /// <param name="includeHidden">Also kinds switched off in View (a backup restore compares with everything there).</param>
+    /// <param name="includeHidden">
+    /// Also kinds switched off in View and things buried deep (a backup restore compares with everything there).
+    /// </param>
     /// <param name="maskAt">The Mask test to use (one the caller already took), or null to take it here.</param>
     internal List<int> ThingsInside(List<Vector2> poly, bool chosenKindsOnly, bool includeHidden = false, Func<float, float, bool>? maskAt = null)
     {
@@ -27,7 +30,7 @@ public sealed partial class AreaPanel
             for (int i = 0; i < s.Things.Count; i++)
             {
                 var t = s.Things[i];
-                if (t.Gone || !AreaTool.Inside(poly, t.Position.X - ox, t.Position.Z - oz))
+                if (t.Gone || !AreaTool.Inside(poly, t.Position.X - ox, t.Position.Z - oz) || (!includeHidden && Picking.Buried(s, t.Position)))
                 {
                     continue;
                 }

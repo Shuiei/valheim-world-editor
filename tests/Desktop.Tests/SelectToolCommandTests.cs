@@ -30,6 +30,18 @@ public class SelectToolCommandTests
         Assert.Equal([2], v.Selected);
     }
 
+    // A tree a mod hid 10 km under the ground is not picked with the others of its kind, nor by inverting.
+    [AvaloniaFact]
+    public void ObjectsBuriedDeepUnderTheGroundAreNotPicked()
+    {
+        var v = Open(T(1, Beech, 40, 30, 40, false), T(2, Beech, 50, -9962, 50, false), T(3, Wall, 45, 30, 45));
+        v.W.View.Select([0]);
+        v.Tool.SameKind();
+        Assert.Equal([0], v.Selected);
+        v.Tool.Invert();
+        Assert.Equal([2], v.Selected);
+    }
+
     [AvaloniaFact]
     public void DropPutsObjectsOnTheGroundOrOnWhatIsUnderThem()
     {

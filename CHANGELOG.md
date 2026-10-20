@@ -7,9 +7,10 @@ the plugin is unchanged in versions without that part.
 ## v1.79.2 — 2026-10-20
 
 ### Fixed
-- **A building moved with "Put each object on the ground when moving" on stays on the ground when pieces are hidden
-  deep under it.** Pieces a mod keeps far underground, caught by a zone drawn over the house, were taken as its
-  bottom, so the whole building went 10 km up and only its furniture landed.
+- **Objects a mod hides deep under the ground are no longer picked with what stands above them.** A zone drawn over a
+  house took the crafting stations a mod keeps 10 km under it, and moving the house with "Put each object on the
+  ground when moving" on then lifted it 10 km to put them on the ground. Zones, Same kind, Invert, Whole building and
+  the Area tool now leave out anything more than 10 m under the ground.
 
 ## v1.79.1 — 2026-10-20
 

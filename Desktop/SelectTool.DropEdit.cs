@@ -20,13 +20,16 @@ public sealed partial class SelectTool
         Message?.Invoke(Said.Of("select.msg.deleted", sel.Count, WholeGroups(groups, noun, deleted: true)), false);
     }
 
-    /// <summary>The indices of the objects drawn and pickable now (not gone, not hidden by View).</summary>
+    /// <summary>
+    /// The indices of the objects drawn and pickable now (not gone, not hidden by View), but those buried deep under
+    /// the ground (Picking.Buried), which a mod put there.
+    /// </summary>
     private IEnumerable<int> Shown()
     {
         var s = Scene!;
         for (int i = 0; i < s.Things.Count; i++)
         {
-            if (!s.Things[i].Gone && _view.IsPickable(i))
+            if (!s.Things[i].Gone && _view.IsPickable(i) && !Picking.Buried(s, s.Things[i].Position))
             {
                 yield return i;
             }

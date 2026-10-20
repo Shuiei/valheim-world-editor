@@ -47,23 +47,16 @@ public sealed partial class SelectTool
     }
 
     /// <summary>
-    /// The pieces that stand on the ground: all but those whose bottom was more than <see cref="Buried"/> under it
-    /// (a mod's crafting stations hidden 10 km under a house, caught by a zone drawn over it), which would otherwise be
-    /// the bottom layer and lift the whole building that far to put them on the ground. All of them when every one is
-    /// that deep.
+    /// The pieces that stand on the ground: all but those whose bottom was more than Picking.BuriedDepth under it (a
+    /// mod's crafting stations hidden 10 km under a house), which would otherwise be the bottom layer and lift the
+    /// whole building that far to put them on the ground. All of them when every one is that deep.
     /// </summary>
     /// <param name="pieces">The moved pieces.</param>
     private static List<Item> Standing(List<Item> pieces)
     {
-        var standing = pieces.Where(it => it.Lift + it.Bottom > -Buried).ToList();
+        var standing = pieces.Where(it => it.Lift + it.Bottom > -Picking.BuriedDepth).ToList();
         return standing.Count > 0 ? standing : pieces;
     }
-
-    /// <summary>
-    /// How deep under the ground (metres) a piece's bottom may be and still stand on it: a slope sinks a building's
-    /// lowest pieces a few metres at most.
-    /// </summary>
-    private const float Buried = 10;
 
     /// <summary>The ground's height at a world point, as drawn; null outside the area, where there is no ground.</summary>
     private float? GroundAt(float wx, float wz)

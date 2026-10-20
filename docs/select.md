@@ -33,6 +33,7 @@ until you **Save** (or **Apply live**).
 | `Shift` + click | Selects the row from the last object clicked to this one: click wall 1, then `Shift` + click wall 3, and walls 1, 2 and 3 are selected (the objects on the line between them). |
 | **Drag on empty ground** | Draws a zone; everything shown inside it is selected when you let go. |
 | `Alt` + drag | Draws a zone even when you start over an object (useful in woods, where trees cover the ground). |
+| | A zone, **Same kind**, **Invert** and **Whole building** leave out anything more than 10 m under the ground: objects a mod hides there (crafting stations 10 km under a house) are not part of what stands above. |
 | `Shift` + drag or `Ctrl` + drag | Adds what is inside the zone to the selection. |
 | **Click on empty ground** / `Esc` | Clears the selection (`Esc` first cancels a zone being drawn or a move in progress). |
 | **Double-click a building piece** | Selects the whole building (see **Whole building** below). A chest (any container) is the exception: a double click selects it alone and opens it in the [Inspector](#inspecting-and-changing-an-objects-data). |
@@ -126,8 +127,7 @@ turned 15°, +0.25 m · snapped to woodwall".
   it. Building pieces move together and keep their shape: the whole building goes up or down until its
   bottom layer sits on what is under it, a floor or a platform no higher than the building, else the
   ground. On a slope, or half on a platform, part of it sinks in rather than float, since pieces need
-  something to carry what stands on them. Pieces buried more than 10 m under the ground (a mod's hidden
-  crafting stations, caught by a zone drawn over the house) do not count as its bottom: they go along.
+  something to carry what stands on them.
 - Off: the whole selection moves as one block that keeps its shape: it goes up or down with the ground under its middle, so a building stays straight on uneven ground.
 - **Snap to other pieces when moving** on: while you move, the closest pair of snap points (one of a
   moved piece, one of a piece around, within 0.75 m) locks together, and the whole selection shifts so
