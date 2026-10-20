@@ -113,4 +113,30 @@ public class ExpandWorldBlueprintsTests : AppSettingsTestBase
         Assert.Equal(["Inner", "Bush01"], found["Outer"].Select(p => p.Prefab));
         Assert.Contains(why, w => w.Contains("Inner holding Outer", StringComparison.Ordinal));
     }
+
+    /// <summary>A height snapshot's rows: <paramref name="side"/> rows of as many nodes, each with a height.</summary>
+    private static string Heights(int side) => string.Concat(Enumerable.Repeat(string.Join(';', Enumerable.Repeat("0", side)) + "\n", side));
+
+    [Fact]
+    public void ABlueprintLocationsRadiusIsTheModsMeasure()
+    {
+        // Half the diagonal of the pieces' bounds, which hold the origin: from (0, 0) to (20, 30).
+        string folder = Write("My Hut.vbuild", "woodwall 0 0 0 1 10 0 10\nwood_floor 0 0 0 1 20 0 30\n");
+        Assert.Equal(MathF.Sqrt(325f), ExpandWorld.BlueprintRadius(folder, "My_Hut", [])!.Value, 3);
+        // A height snapshot reaching farther: 21 × 21 nodes a metre apart round the centre, its corners 14.1 m out.
+        Write("Plot.blueprint", "#Pieces\npiece_bpcenterpoint;;0;0;0;0;0;0;1\nwoodwall;;1;0;1;0;0;0;1\n#TerrainHeight:0,0,0;0;1\n" + Heights(21));
+        Assert.Equal(MathF.Sqrt(200f), ExpandWorld.BlueprintRadius(folder, "Plot", [])!.Value, 3);
+        // One reaching beyond what the mod applies (3.5 zones) is dropped: the pieces' radius.
+        Write("Field.blueprint", "#Pieces\npiece_bpcenterpoint;;0;0;0;0;0;0;1\nwoodwall;;1;0;1;0;0;0;1\n#TerrainHeight:0,0,0;0;1\n" + Heights(501));
+        Assert.Equal(MathF.Sqrt(0.5f), ExpandWorld.BlueprintRadius(folder, "Field", [])!.Value, 3);
+    }
+
+    [Fact]
+    public void ASnapshotRowOfAnotherWidthFailsTheBlueprint()
+    {
+        string folder = Write("Bad.blueprint", "#Pieces\nwoodwall;;1;0;1;0;0;0;1\n#TerrainHeight:0,0,0;0;1\n0;0\n0;0;0\n");
+        List<string> notes = [];
+        Assert.Null(ExpandWorld.BlueprintRadius(folder, "Bad", notes));
+        Assert.Contains(notes, n => n.Contains("Bad.blueprint", StringComparison.Ordinal));
+    }
 }

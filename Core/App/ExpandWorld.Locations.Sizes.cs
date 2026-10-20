@@ -6,43 +6,13 @@ namespace TerrainEditor.App;
 public static partial class ExpandWorld
 {
     /// <summary>
-    /// The radius of a blueprint location: half the diagonal of its pieces' bounds on the ground, as the mod measures
-    /// it, from the blueprint file named by the prefab (with .blueprint or .vbuild) in the blueprint folder; null when
-    /// there is no such file, or it cannot be read (noted).
+    /// The radius of a blueprint location as the mod measures it (Blueprint.Radius): half the diagonal on the ground of
+    /// its pieces' bounds (holding the file's origin), or its terrain snapshots' reach when wider, from the blueprint file
+    /// of that name in the blueprint folder (found as the mod finds it); null when there is no such file, or it cannot
+    /// be read (noted).
     /// </summary>
-    internal static float? BlueprintRadius(string? folder, string prefab, List<string> notes)
-    {
-        if (folder == null || !Directory.Exists(folder))
-        {
-            return null;
-        }
-        string? file = BlueprintExtensions.Select(ext => Path.Combine(folder, prefab + ext)).FirstOrDefault(File.Exists);
-        if (file == null)
-        {
-            return null;
-        }
-        try
-        {
-            var parsed = BlueprintFormats.Parse(Path.GetFileName(file), File.ReadAllText(file));
-            if (parsed.Pieces.Count == 0)
-            {
-                return 0f;
-            }
-            float minX = parsed.Pieces.Min(p => p.Position.X), maxX = parsed.Pieces.Max(p => p.Position.X);
-            float minZ = parsed.Pieces.Min(p => p.Position.Z), maxZ = parsed.Pieces.Max(p => p.Position.Z);
-            float ex = (maxX - minX) / 2f, ez = (maxZ - minZ) / 2f;
-            return (float)Math.Sqrt((double)ex * ex + (double)ez * ez);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or FormatException)
-        {
-            Log.Caught(ex, $"reading the blueprint {file} for its radius (the location is left out)");
-            notes.Add($"expand_locations: the blueprint {Path.GetFileName(file)} could not be read: {ex.Message}");
-            return null;
-        }
-    }
-
-    /// <summary>The file name extensions of the blueprint files the mod reads.</summary>
-    private static readonly string[] BlueprintExtensions = [".blueprint", ".vbuild"];
+    internal static float? BlueprintRadius(string? folder, string prefab, List<string> notes) =>
+        ReadBlueprint(BlueprintFiles(folder), prefab, DataTable.Empty, [], notes)?.Radius;
 
     /// <summary>
     /// The game's own kinds as Expand World Size changes them, when it does: each enabled kind's quantity (but the

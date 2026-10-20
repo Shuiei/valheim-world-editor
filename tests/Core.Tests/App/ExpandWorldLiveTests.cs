@@ -93,6 +93,10 @@ public class ExpandWorldLiveTests : AppSettingsTestBase
         game.AddConfig("expand_world/more/expand_locations.yaml", "- prefab: MyHut\n  biome: Meadows\n  quantity: 5\n");
         game.AddConfig("Prints/MyHut.vbuild", "woodwall 0 0 0 1 10 0 -10\nwood_floor 0 0 0 1 -10 3 10\n");
         game.AddConfig("Prints/Other.vbuild", "woodwall 0 0 0 1 0 0 0\n");
+        game.AddConfig("Prints/deep/Nested.blueprint", "#Pieces\nwoodwall;;0;0;0;0;0;0;1\n");
+        game.AddConfig("Prints/readme.txt", "not a blueprint\n");
+        game.AddConfig("Prints/Huge.vbuild", "woodwall 0 0 0 1 0 0 0\n");
+        game.RefusedConfigFiles.Add("Prints/Huge.vbuild");
         var rules = await Resolve(save, game);
         // The world's keys win over the settings file, as for a world opened from its files.
         Assert.Equal(25000f, rules.Radius);
@@ -105,13 +109,17 @@ public class ExpandWorldLiveTests : AppSettingsTestBase
         Assert.Contains(rules.Biomes.Biomes, b => b.Id == "Highlands");
         Assert.NotNull(rules.Locations);
         Assert.True(Assert.Single(rules.Locations.Locations, l => l.Prefab == "MyHut").Blueprint);
-        // Copied as a BepInEx folder: the loaded mods' settings, the yaml files, the blueprint named (not the other).
+        // Copied as a BepInEx folder: the loaded mods' settings, the yaml files, every blueprint at any depth (a
+        // blueprint may name others); one the bridge refuses is left out and noted, the rest still copied.
         string config = Path.Combine(ExpandWorld.LiveFolder, "config");
         Assert.True(File.Exists(Path.Combine(config, "expand_world_size.cfg")));
         Assert.False(File.Exists(Path.Combine(config, "expand_world_rivers.cfg")));
         Assert.True(File.Exists(Path.Combine(config, "expand_world", "more", "expand_locations.yaml")));
         Assert.True(File.Exists(Path.Combine(config, "Prints", "MyHut.vbuild")));
-        Assert.False(File.Exists(Path.Combine(config, "Prints", "Other.vbuild")));
+        Assert.True(File.Exists(Path.Combine(config, "Prints", "Other.vbuild")));
+        Assert.True(File.Exists(Path.Combine(config, "Prints", "deep", "Nested.blueprint")));
+        Assert.False(File.Exists(Path.Combine(config, "Prints", "readme.txt")));
+        Assert.False(File.Exists(Path.Combine(config, "Prints", "Huge.vbuild")));
     }
 
     [Fact]

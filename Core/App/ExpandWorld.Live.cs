@@ -113,10 +113,11 @@ public static partial class ExpandWorld
 
     /// <summary>
     /// Copies a folder under the game's BepInEx/config, with its subfolders, keeping the files <paramref name="keep"/>
-    /// says; nothing when the game has no such folder.
+    /// says; nothing when the game has no such folder. A file the bridge refuses goes to <paramref name="refused"/>
+    /// when given (the others are still copied), else fails the copy.
     /// </summary>
     /// <returns>How many files were copied, and their bytes.</returns>
-    private static async Task<(int Files, long Bytes)> CopyFolder(LiveBridge live, string path, string into, Func<string, bool> keep)
+    private static async Task<(int Files, long Bytes)> CopyFolder(LiveBridge live, string path, string into, Func<string, bool> keep, Action<string, InvalidOperationException>? refused = null)
     {
         var entries = await live.ConfigFolder(path);
         if (entries == null)
@@ -131,11 +132,11 @@ public static partial class ExpandWorld
             string entryPath = path + "/" + entry.Name;
             if (entry.Folder)
             {
-                (int n, long b) = await CopyFolder(live, entryPath, Path.Combine(into, entry.Name), keep);
+                (int n, long b) = await CopyFolder(live, entryPath, Path.Combine(into, entry.Name), keep, refused);
                 files += n;
                 bytes += b;
             }
-            else if (keep(entry.Name) && await live.ConfigFile(entryPath) is { } content)
+            else if (keep(entry.Name) && await ConfigFileOr(live, entryPath, refused) is { } content)
             {
                 await File.WriteAllBytesAsync(Path.Combine(into, entry.Name), content);
                 files++;
@@ -146,40 +147,40 @@ public static partial class ExpandWorld
     }
 
     /// <summary>
-    /// Copies the blueprint files the location file names (a location whose prefab is a blueprint's name) from the
-    /// game's blueprint folder, so their radius can be measured as the mod measures it; one that cannot be copied is
-    /// noted and left out, as a missing one is.
+    /// Copies the game's blueprint files (every .blueprint and .vbuild at any depth of its blueprint folder, where the
+    /// mod looks for them) when the location or vegetation file is in use: a location's or a rule's prefab may name
+    /// one, and a blueprint may hold others. One the bridge refuses (too large) is noted and left out, as the mod
+    /// leaves out a blueprint it cannot read.
     /// </summary>
     private static async Task FetchBlueprints(LiveBridge live, Found found, DataFiles data)
     {
-        if (data.Locations is not { Count: > 0 } entries)
+        if (data.Locations is not { Count: > 0 } && data.Vegetation is not { Count: > 0 })
         {
             return;
         }
-        var names = entries.Select(e => e.Fields.GetValueOrDefault("prefab") as string).OfType<string>().ToHashSet(StringComparer.Ordinal);
         string folder = BlueprintFolderOf(data.Cfg);
-        var listed = await live.ConfigFolder(folder);
-        if (listed == null)
+        await CopyFolder(live, folder, Path.Combine(found.Folder, "config", folder), name => BlueprintExtensions.Contains(Path.GetExtension(name), StringComparer.OrdinalIgnoreCase), (path, e) =>
         {
-            return;
+            Log.Caught(e, $"copying the blueprint {path} from the game (left out)");
+            data.Notes.Add($"the blueprint {path} could not be read from the game: {e.Message}");
+        });
+    }
+
+    /// <summary>A file under the game's BepInEx/config; null when <paramref name="refused"/> takes the bridge's refusal of it.</summary>
+    private static async Task<byte[]?> ConfigFileOr(LiveBridge live, string path, Action<string, InvalidOperationException>? refused)
+    {
+        if (refused == null)
+        {
+            return await live.ConfigFile(path);
         }
-        string into = Path.Combine(found.Folder, "config", folder);
-        Directory.CreateDirectory(into);
-        foreach (var entry in listed.Where(e => !e.Folder && names.Contains(Path.GetFileNameWithoutExtension(e.Name)) && BlueprintExtensions.Contains(Path.GetExtension(e.Name))))
+        try
         {
-            try
-            {
-                if (await live.ConfigFile(folder + "/" + entry.Name) is { } content)
-                {
-                    await File.WriteAllBytesAsync(Path.Combine(into, entry.Name), content);
-                }
-            }
-            catch (InvalidOperationException e)
-            {
-                // Refused (too large): the location is left out, as the mod leaves out a blueprint it cannot read.
-                Log.Caught(e, $"copying the blueprint {entry.Name} from the game (the location is left out)");
-                data.Notes.Add($"expand_locations: the blueprint {entry.Name} could not be read from the game: {e.Message}");
-            }
+            return await live.ConfigFile(path);
+        }
+        catch (InvalidOperationException e)
+        {
+            refused(path, e);
+            return null;
         }
     }
 
