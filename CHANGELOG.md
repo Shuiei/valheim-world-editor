@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.67.0 — 2026-10-19
+
+### Added
+- **New world builds Expand World locations that level or paint their ground.** The ground round such a location
+  is now levelled and painted in the generated zones as the mod does it, and its objects and the vegetation stand
+  on it, instead of the zone being left to the game.
+
 ## v1.66.2 — 2026-10-19
 
 ### Fixed

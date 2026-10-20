@@ -60,7 +60,7 @@ public static partial class ExpandWorld
             }
             var rule = LocationOf(f, prefab, baseName, interior, exterior, blueprint, biomes, radius, ref virtualGroups, notes);
             rule.ClearArea = ClearAreaOf(f, own, blueprint);
-            rule.Contents = rule.Custom == true || blueprint ? ContentsOf(f, data ?? DataTable.Empty, blueprint) : null;
+            rule.Contents = rule.Custom == true || blueprint ? ContentsOf(f, data ?? DataTable.Empty, blueprint, rule.ExteriorRadius) : null;
             rules.Add(rule);
         }
         return rules;

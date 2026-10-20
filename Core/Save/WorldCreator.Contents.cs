@@ -26,7 +26,7 @@ public static partial class WorldCreator
     /// <returns>Each object with where it stands.</returns>
     private static List<(Vector3 At, byte[] Zdo)> Built(LocationPrefabs.Prefab prefab, LocationContents contents, Placing at, TerrainService terrain)
     {
-        var (position, rotation, zoneSeed, damage) = at;
+        var (position, rotation, zoneSeed, damage, ground) = at;
         var raised = position with { Y = position.Y + contents.Offset };
         var objects = new List<(Vector3 At, byte[] Zdo)>();
         Rnd.RandomState was = Rnd.State;
@@ -49,7 +49,7 @@ public static partial class WorldCreator
                 var spot = raised + Vector3.Transform(o.Position, rotation);
                 if (o.Snap)
                 {
-                    spot.Y = GroundHeight(terrain, spot);
+                    spot.Y = SnapHeight(ground, terrain, spot);
                 }
                 Add(objects, contents, damage, new(o.Prefab, spot, Quaternion.Normalize(rotation * BlueprintFormats.FromEuler(o.Euler)), scale * o.Scale), o.Data);
             }
@@ -66,7 +66,8 @@ public static partial class WorldCreator
     /// <param name="Rotation">Its turn.</param>
     /// <param name="ZoneSeed">The zone's seed.</param>
     /// <param name="Damage">The random initial damage of its pieces.</param>
-    internal readonly record struct Placing(Vector3 Position, Quaternion Rotation, int ZoneSeed, Damage Damage);
+    /// <param name="Ground">Its zone as the file levels it, when it does (what added objects snap to).</param>
+    internal readonly record struct Placing(Vector3 Position, Quaternion Rotation, int ZoneSeed, Damage Damage, LevelledZone? Ground = null);
 
     /// <summary>The random initial damage a location's building pieces wake with (WearNTear.m_randomInitialDamage).</summary>
     internal enum Damage

@@ -11,13 +11,15 @@ public static partial class ExpandWorld
     /// <summary>
     /// A location's contents as the file changes them (the mod's LocationExtraInfo): the added objects, the swaps and
     /// the data of its objects (the location's own lists over the shared ones), its own data, the scale, offset and
-    /// cardinal turn; with why the game must make it instead, when the editor cannot (a blueprint, levelling or paint,
-    /// commands, a time-based seed, another dungeon, data or names worked out when the game spawns it).
+    /// cardinal turn, the ground levelled and painted round it; with why the game must make it instead, when the
+    /// editor cannot (a blueprint, commands, a time-based seed, another dungeon, data or names worked out when the game
+    /// spawns it).
     /// </summary>
     /// <param name="f">The entry's fields.</param>
     /// <param name="data">The world's data entries.</param>
     /// <param name="blueprint">Whether the kind is a blueprint.</param>
-    private static LocationContents ContentsOf(Fields f, DataTable data, bool blueprint)
+    /// <param name="exterior">The kind's exterior radius (what the ground changes are measured by).</param>
+    private static LocationContents ContentsOf(Fields f, DataTable data, bool blueprint, float exterior)
     {
         var why = new List<string>();
         void Cannot(bool when, string what)
@@ -31,7 +33,6 @@ public static partial class ExpandWorld
         Cannot(f.Has("commands"), "commands");
         Cannot(f.B("randomSeed", false), "a random seed");
         Cannot(f.Str("dungeon") != "", "another dungeon");
-        Cannot(f.Str("levelArea") is not ("" or "false") || f.Str("paint") != "", "levelled or painted ground");
         var proxy = data.Resolve(f.Raw("data"));
         Cannot(proxy.Why != null, proxy.Why ?? "");
         var swaps = Merged(Swaps(f.Rows("objectSwap"), why), Swaps(f.Rows("locationObjectSwap"), why));
@@ -50,8 +51,61 @@ public static partial class ExpandWorld
             ScaleUniform = f.B("scaleUniform", true),
             Offset = f.FOpt("offset") ?? f.F("groundOffset", 0f),
             RandomCardinal = f.B("randomCardinal", false),
+            Level = LevelOf(f, blueprint, exterior),
+            Paint = PaintOf(f, exterior),
             LeftToGame = why.Count > 0 ? string.Join(", ", why.Distinct()) : null,
         };
+    }
+
+    /// <summary>
+    /// The ground levelled round the spot (LocationSpawning.HandleTerrain): "levelArea" empty levels a blueprint only,
+    /// "false" never, anything else always; "levelRadius" and "levelBorder", else the exterior radius split by
+    /// "levelArea" as a fraction (0.5 when it is no number). Null when nothing is levelled.
+    /// </summary>
+    private static LevelArea? LevelOf(Fields f, bool blueprint, float exterior)
+    {
+        string area = f.Str("levelArea");
+        if (area == "" ? !blueprint : area == "false")
+        {
+            return null;
+        }
+        float radius = f.F("levelRadius", 0f), border = f.F("levelBorder", 0f);
+        if (radius == 0f && border == 0f)
+        {
+            float part = float.TryParse(area, NumberStyles.Float, CultureInfo.InvariantCulture, out float v) ? v : 0.5f;
+            (radius, border) = (part * exterior, (1f - part) * exterior);
+        }
+        return new LevelArea(radius, border);
+    }
+
+    /// <summary>The paint names the mod knows (Terrain.Paints), as the paint mask's r, g, b, a.</summary>
+    private static readonly Dictionary<string, float[]> PaintNames = new(StringComparer.Ordinal)
+    {
+        ["grass"] = [0f, 0f, 0f, 1f],
+        ["patches"] = [0f, 0.75f, 0f, 1f],
+        ["grass_dark"] = [0.6f, 0.5f, 0f, 1f],
+        ["dirt"] = [1f, 0f, 0f, 1f],
+        ["cultivated"] = [0f, 1f, 0f, 1f],
+        ["paved"] = [0f, 0f, 1f, 1f],
+        ["paved_moss"] = [0f, 0f, 0.5f, 1f],
+        ["paved_dirt"] = [1f, 0f, 0.5f, 1f],
+        ["paved_dark"] = [0f, 1f, 0.5f, 1f],
+    };
+
+    /// <summary>
+    /// The ground painted round the spot: "paint" a name of the mod's, else "r, g, b[, a]" (a missing or unreadable
+    /// number 0, a 1), over "paintRadius" (the exterior radius) and "paintBorder" (5 m). Null without paint.
+    /// </summary>
+    private static PaintArea? PaintOf(Fields f, float exterior)
+    {
+        string paint = f.Str("paint");
+        if (paint == "")
+        {
+            return null;
+        }
+        string[] s = [.. paint.Split(',').Select(p => p.Trim()).Where(p => p != "")];
+        float[] c = s.Length < 3 && PaintNames.TryGetValue(paint, out float[]? named) ? named : [Number(s, 0, 0f), Number(s, 1, 0f), Number(s, 2, 0f), Number(s, 3)];
+        return new PaintArea(f.FOpt("paintRadius") ?? exterior, f.FOpt("paintBorder") ?? 5f, new NVector3(c[0], c[1], c[2]), c[3]);
     }
 
     /// <summary>The shared list's choices with the location's own over them, by source.</summary>

@@ -72,8 +72,6 @@ public class ExpandWorldContentsTests
     [InlineData("commands", "say hi")]
     [InlineData("randomSeed", "true")]
     [InlineData("dungeon", "DG_Cave")]
-    [InlineData("levelArea", "true")]
-    [InlineData("paint", "grass")]
     [InlineData("data", "rolled")]
     [InlineData("objects", "Nothing_Like_It, 1, 1, 1")]
     [InlineData("objectSwap", "Pickable_Stone, Nothing_Like_It")]
@@ -81,6 +79,26 @@ public class ExpandWorldContentsTests
     [InlineData("objectData", "Pickable_Stone, rolled")]
     public void WhatTheEditorCannotBuildIsLeftToTheGame(string key, string value) =>
         Assert.NotNull(Contents((key, value)).LeftToGame);
+
+    [Fact]
+    public void TheGroundIsLevelledAndPaintedAsTheFileSays()
+    {
+        float exterior = SeedLocations.Current.Locations.First(r => r.Prefab == "StartTemple").ExteriorRadius;
+        // A fraction of the exterior radius levelled fully, the rest blended; a named paint over the exterior radius and 5 m.
+        var c = Contents(("levelArea", "0.6"), ("paint", "dirt"));
+        Assert.Equal(new LevelArea(0.6f * exterior, (1f - 0.6f) * exterior), c.Level);
+        Assert.Equal(new PaintArea(exterior, 5f, new Vector3(1f, 0f, 0f), 1f), c.Paint);
+        Assert.Null(c.LeftToGame);
+        // Its own radius and border; a paint given as numbers (a missing one 0, a 1).
+        c = Contents(("levelArea", "true"), ("levelRadius", "4"), ("levelBorder", "6"), ("paint", "0.2, 0.5"), ("paintRadius", "7"), ("paintBorder", "1"));
+        Assert.Equal(new LevelArea(4f, 6f), c.Level);
+        Assert.Equal(new PaintArea(7f, 1f, new Vector3(0.2f, 0.5f, 0f), 1f), c.Paint);
+        // Not a number: half and half.
+        Assert.Equal(new LevelArea(0.5f * exterior, 0.5f * exterior), Contents(("levelArea", "yes")).Level);
+        // "false", or nothing for a location that is no blueprint: no levelling.
+        Assert.Null(Contents(("levelArea", "false"), ("paint", "grass")).Level);
+        Assert.Null(Contents(("data", "marked")).Level);
+    }
 
     [Fact]
     public void RandomDamageIsBuiltWithTheFilesWord()
