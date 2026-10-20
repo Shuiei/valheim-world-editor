@@ -247,6 +247,11 @@ public sealed class TerrainZone
                 paint[i] = new Vector4(pkg.ReadSingle(), pkg.ReadSingle(), pkg.ReadSingle(), pkg.ReadSingle());
             }
         }
+        int side = (int)Math.Round(Math.Sqrt(heights));
+        if (side > 1 && paints == (side - 1) * (side - 1))
+        {
+            (painted, paint) = Widened(painted, paint, side);
+        }
         return new TerrainZone
         {
             Center = center,
@@ -258,6 +263,25 @@ public sealed class TerrainZone
             ModifiedPaint = painted,
             Paint = paint
         };
+    }
+
+    /// <summary>
+    /// An older paint grid one point narrower than the heights' (64 × 64: Expand World Data writes one for a zone it
+    /// paints first, as older saves had them) on the heights' grid, as the game reads it: each point takes the one at
+    /// its row and column, the last row and column repeated.
+    /// </summary>
+    private static (bool[] Painted, Vector4[] Paint) Widened(bool[] painted, Vector4[] paint, int side)
+    {
+        int old = side - 1;
+        bool[] wide = new bool[side * side];
+        var widePaint = new Vector4[side * side];
+        for (int i = 0; i < wide.Length; i++)
+        {
+            int from = Math.Min(i / side, old - 1) * old + Math.Min(i % side, old - 1);
+            wide[i] = painted[from];
+            widePaint[i] = paint[from];
+        }
+        return (wide, widePaint);
     }
 
     /// <summary>A grid's point count, checked against <see cref="MaxPoints"/>.</summary>
