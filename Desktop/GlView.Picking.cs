@@ -65,7 +65,7 @@ public sealed partial class GlView
         SelectionDone();
     }
 
-    /// <summary>Selects these things (add: to what is selected).</summary>
+    /// <summary>Selects these things (add: to what is selected); gone or hidden ones (GlView.Hide) are left out.</summary>
     internal void Select(IEnumerable<int> things, bool add = false)
     {
         var s = Scene;
@@ -77,7 +77,7 @@ public sealed partial class GlView
             }
             foreach (int i in things)
             {
-                if (s != null && i < s.Things.Count && !s.Things[i].Gone)
+                if (s != null && i < s.Things.Count && !s.Things[i].Gone && !_hidden.Contains(i))
                 {
                     _selection.Add(i);
                 }

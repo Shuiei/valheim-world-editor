@@ -36,6 +36,11 @@ public class SelectToolAllTests
         Assert.Equal([0, 2], v.Selected);
         // Neither moved the camera (A is a movement key alone).
         Assert.Equal(Vector3.Zero, v.W.View.HeldKeys().Direction);
+        // A held, then Ctrl: the camera stops.
+        Press(v, Key.A, RawInputModifiers.None, PhysicalKey.A);
+        Assert.NotEqual(Vector3.Zero, v.W.View.HeldKeys().Direction);
+        Press(v, Key.LeftCtrl, RawInputModifiers.Control, PhysicalKey.ControlLeft);
+        Assert.Equal(Vector3.Zero, v.W.View.HeldKeys().Direction);
     }
 
     [AvaloniaFact]
@@ -55,6 +60,9 @@ public class SelectToolAllTests
         v.Tool.SelectAll();
         Assert.Equal([1], v.Selected);
         Assert.Single(v.W.View.NewMarkers(v.S.Scene));
+        // Nor selected by a list of objects (a saved selection).
+        v.W.View.Select([0, 1]);
+        Assert.Equal([1], v.Selected);
         // Alt + H: back.
         Press(v, Key.H, RawInputModifiers.Alt, PhysicalKey.H);
         Assert.Equal("Showed 2 hidden object(s) again.", said());
