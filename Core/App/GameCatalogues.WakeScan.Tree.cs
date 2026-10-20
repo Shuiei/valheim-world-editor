@@ -41,28 +41,16 @@ public static partial class GameCatalogues
             }
         }
 
-        /// <summary>
-        /// Takes a GameObject or a Transform read raw. A GameObject has its components (a count, then each a file id and
-        /// a path id), its layer, its name, its tag (two bytes) then whether it is active; a Transform its GameObject,
-        /// rotation, position and scale, its children, then its parent.
-        /// </summary>
+        /// <summary>Takes a GameObject or a Transform read raw (Layout.GameObjectOf, Layout.TransformOf).</summary>
         private void Take(Bundle.Inner f, long pid, int type, Layout.Bytes d)
         {
             if (type == GameObjectType)
             {
-                var comps = new (int, long)[d.I32(0)];
-                for (int i = 0; i < comps.Length; i++)
-                {
-                    comps[i] = (d.I32(4 + 12 * i), d.I64(8 + 12 * i));
-                }
-                int name = 8 + 12 * comps.Length, tag = name + 4 + ((d.I32(name) + 3) & ~3);
-                _gos[(f, pid)] = (d.Text(name), d.U8(tag + 2) != 0, comps);
+                _gos[(f, pid)] = Layout.GameObjectOf(d);
             }
             else if (type == TransformType)
             {
-                long[] children = d.ChildIds(52);
-                int father = 56 + 12 * children.Length;
-                _transforms[(f, pid)] = (d.I64(4), d.I32(father) != 0 ? null : d.I64(father + 4), children);
+                _transforms[(f, pid)] = Layout.TransformOf(d);
             }
         }
 

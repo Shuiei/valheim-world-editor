@@ -123,6 +123,9 @@ public static class WakeDraws
                 case PartKind.Loot when !how.Looted:
                     DrawLoot(s.Loot!);
                     break;
+                default:
+                    // A container whose data says its items were added draws nothing.
+                    break;
             }
         }
     }
