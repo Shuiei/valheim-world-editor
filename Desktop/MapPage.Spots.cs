@@ -40,6 +40,7 @@ public sealed partial class MapPage
     {
         if (_session is { } session)
         {
+            _hovered = (x, z);
             Cursor.Text = HoverText(session, x, z);
         }
     }

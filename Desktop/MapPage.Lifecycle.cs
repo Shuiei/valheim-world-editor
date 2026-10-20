@@ -25,6 +25,7 @@ public sealed partial class MapPage
         if (!same)
         {
             Map.Show(session);
+            _hovered = null;
             Spot = null;
             Target = null;
             Map.Chosen = null;
@@ -90,6 +91,7 @@ public sealed partial class MapPage
         StopAltBiomes();
         _altsAsked = null;
         _alts = null;
+        _hovered = null;
         _session = null;
         Map.Players = [];
         PlaceLabels();

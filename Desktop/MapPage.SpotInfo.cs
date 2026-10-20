@@ -16,6 +16,9 @@ public sealed partial class MapPage
     /// <summary>The generator whose alt biome layout is being worked out (or was), so that it is asked for once.</summary>
     private WorldGenerator? _altsAsked;
 
+    /// <summary>The last point the pointer was over, null before any.</summary>
+    private (float X, float Z)? _hovered;
+
     /// <summary>Stops the alt biome layout being worked out (another world's asked for, or the page left).</summary>
     private CancellationTokenSource? _altsCancel;
 
@@ -104,6 +107,11 @@ public sealed partial class MapPage
                 if (!cancel.IsCancellationRequested && _altsAsked == gen)
                 {
                     _alts = (gen, layout);
+                    // The line under the pointer now has its alt biomes.
+                    if (_hovered is var (x, z))
+                    {
+                        Hover(x, z);
+                    }
                 }
             });
         }
