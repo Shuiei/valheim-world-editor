@@ -44,7 +44,10 @@ public class TerrainShaderTests
         Assert.Contains("SPIRV-Cross could not read the terrain shader", e.Message);
     }
 
-    // What SPIRV-Cross makes of the game's program, cut down to the parts that change.
+    /// <summary>
+    /// A made-up shader shaped as SPIRV-Cross writes the terrain's: the declarations the editor adapts (by their names),
+    /// and a body of its own.
+    /// </summary>
     private const string CrossOutput = """
 		#version 300 es
 		precision highp float;
@@ -69,20 +72,12 @@ public class TerrainShaderTests
 		layout(location = 3) out vec4 SV_Target3;
 		layout(location = 0) out vec4 SV_Target0;
 		layout(location = 2) out vec4 SV_Target2;
-		float _64;
-		float _72;
-		vec4 _236;
 
 		void main()
 		{
-		    _64 = _Globals._depth[2] + (-_Globals._depth[3]);
-		    _64 = (vs_TEXCOORD0.x * _64) + _Globals._depth[3];
-		    _72 = (-_Globals._depth[0]) + _Globals._depth[1];
-		    _72 = (vs_TEXCOORD0.x * _72) + _Globals._depth[0];
-		    _72 = (-_64) + _72;
-		    _64 = (vs_TEXCOORD0.y * _72) + _64;
-		    _236 = texture(_ClearedMaskTex, vs_TEXCOORD0);
-		    SV_Target0 = vec4(_64) * _Globals._Time + _236 * _Globals._Wet;
+		    float deepest = max(max(_Globals._depth[0], _Globals._depth[1]), max(_Globals._depth[2], _Globals._depth[3]));
+		    vec4 painted = texture(_ClearedMaskTex, vs_TEXCOORD0 * 0.5);
+		    SV_Target0 = vec4(deepest) * _Globals._Time + painted * _Globals._Wet;
 		}
 
 		""";
@@ -96,12 +91,11 @@ public class TerrainShaderTests
         Assert.DoesNotContain("struct _32", g);
         Assert.Contains("uniform vec4 _Time;\nuniform vec3 _WorldSpaceCameraPos;\n", g);
         Assert.Contains("uniform float _Wet;", g);
-        // The ocean depth: a varying, through the shader's own blend of the zone corners.
-        Assert.Contains("const float _depth[4] = float[4](1.0, 1.0, 0.0, 0.0);", g);
-        Assert.Contains("in float vs_depth;\nin vec2 vs_maskUV;", g);
-        Assert.Contains("texture(_ClearedMaskTex, vs_maskUV)", g);
-        Assert.Contains("(vec2(0.0, vs_depth).y * _72)", g);
-        Assert.DoesNotContain("vs_TEXCOORD0", g);
+        // The zone corners' ocean depths: a global the editor's main sets; the statements left as they are.
+        Assert.Contains("\nfloat _depth[4];\n", g);
+        Assert.Contains("float deepest = max(max(_depth[0], _depth[1]), max(_depth[2], _depth[3]));", g);
+        Assert.Contains("vec4 painted = texture(_ClearedMaskTex, vs_TEXCOORD0 * 0.5);", g);
+        Assert.Contains("in vec2 vs_TEXCOORD0;", g);
         // Fragment inputs link by name; the targets are globals; main is the editor's.
         Assert.Contains("in vec4 vs_COLOR0;", g);
         Assert.DoesNotContain("layout(location", g);
@@ -115,7 +109,8 @@ public class TerrainShaderTests
     }
 
     [Theory]
-    [InlineData("texture(_ClearedMaskTex, vs_TEXCOORD0)", "texture(_ClearedMaskTex, vs_TEXCOORD5)", "paint mask")]
+    [InlineData("uniform highp sampler2D _ClearedMaskTex;", "uniform highp sampler2D _OtherMask;", "paint mask")]
+    [InlineData("in vec2 vs_TEXCOORD0;", "in vec2 vs_TEXCOORD5;", "texcoords")]
     [InlineData("float _depth[4];", "float _depthB[4];", "ocean depth")]
     [InlineData("uniform _32 _Globals;", "uniform _32 _Other;", "its uniforms")]
     [InlineData("layout(location = 2) out vec4 SV_Target2;", "layout(location = 2) out vec4 Target2;", "G-buffer targets")]

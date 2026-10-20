@@ -33,8 +33,9 @@ public sealed partial class GameLookGl
 		""";
 
     /// <summary>
-    /// The terrain's vertex shader: hands the game's fragment shader its inputs as Unity names them (tangent frame and
-    /// world position in vs_TEXCOORD1..3, biome colour, ocean depth).
+    /// The terrain's vertex shader: hands the game's fragment shader its inputs as Unity names them (the paint mask's
+    /// coordinates in vs_TEXCOORD0, tangent frame and world position in vs_TEXCOORD1..3, biome colour), and the ocean
+    /// depth for the main to put in the shader's <c>_depth</c>.
     /// </summary>
     private const string TerrainVs = """
 		layout(location = 0) in vec3 position;
@@ -48,7 +49,7 @@ public sealed partial class GameLookGl
 		uniform vec3 uOffset;
 		uniform vec3 _WorldSpaceCameraPos;
 		out float vs_depth;
-		out vec2 vs_maskUV;
+		out vec2 vs_TEXCOORD0;
 		out vec4 vs_TEXCOORD1;
 		out vec4 vs_TEXCOORD2;
 		out vec4 vs_TEXCOORD3;
@@ -70,7 +71,7 @@ public sealed partial class GameLookGl
 		  vs_TEXCOORD6 = vec3(0.0);
 		  vs_COLOR0 = biomeColor;
 		  vs_depth = oceanDepth;
-		  vs_maskUV = maskUV;
+		  vs_TEXCOORD0 = maskUV;
 		  vLimit = limitTint;
 		  vCut = cutAway;
 		  gl_Position = uViewProj * vec4(position, 1.0);
@@ -90,10 +91,14 @@ public sealed partial class GameLookGl
 		uniform float uLimit;
 		in float vLimit;
 		in float vCut;
+		in float vs_depth;
 		out vec4 fragColor;
 		void main() {
 		  // Where a mod's extension cuts the ground (GroundCuts): nothing.
 		  if (vCut > 0.5) discard;
+		  // The shader blends its zone's four corner depths across the zone; the area is drawn as one mesh, so each
+		  // corner is given this point's depth, and any blend of them is that depth.
+		  for (int i = 0; i < 4; i++) { _depth[i] = vs_depth; }
 		  valheimGBuffer();
 		  vec3 albedo = SV_Target0.rgb;
 		  vec3 specColor = SV_Target1.rgb;

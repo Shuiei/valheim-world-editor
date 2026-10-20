@@ -6,8 +6,9 @@ namespace TerrainEditor.App;
 public static partial class TerrainShader
 {
     /// <summary>
-    /// The SPIRV-Cross output made into what GameLookGl links with the editor's vertex shader. Throws
-    /// InvalidDataException when an expected piece is missing (the game's shader changed).
+    /// The SPIRV-Cross output made into what GameLookGl links with the editor's vertex shader, by its declarations only
+    /// (the shader's own statements are left as they are). Throws InvalidDataException when an expected declaration is
+    /// missing (the game's shader changed).
     /// </summary>
     internal static string Adapt(string src)
     {
@@ -30,17 +31,14 @@ public static partial class TerrainShader
         var plain = new StringBuilder();
         foreach (string line in block.Groups["members"].Value.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            // The ocean depth arrives as a varying (vs_depth): _depth = (1, 1, 0, 0) makes the shader's
-            // blend of the zone corners' depths, by vs_TEXCOORD0 = (0, depth), the depth itself.
-            plain.Append(line == "float _depth[4];" ? "const float _depth[4] = float[4](1.0, 1.0, 0.0, 0.0);\n" : "uniform " + line + "\n");
+            // The zone corners' ocean depths: a global the editor's main sets (the area is one mesh, not a zone).
+            plain.Append(line == "float _depth[4];" ? "float _depth[4];\n" : "uniform " + line + "\n");
         }
         body = body.Remove(block.Index, block.Length).Insert(block.Index, plain.ToString());
         body = Need(body, "_Globals.", "uniform names").Replace("_Globals.", "");
-        Need(body, "const float _depth[4]", "ocean depth");
-        // The paint mask's coordinates, then the depth, in place of the shader's vs_TEXCOORD0.
-        body = Need(body, "texture(_ClearedMaskTex, vs_TEXCOORD0)", "paint mask").Replace("texture(_ClearedMaskTex, vs_TEXCOORD0)", "texture(_ClearedMaskTex, vs_maskUV)");
-        body = Need(body, "in vec2 vs_TEXCOORD0;", "texcoords").Replace("in vec2 vs_TEXCOORD0;", "in float vs_depth;\nin vec2 vs_maskUV;");
-        body = Regex.Replace(body, @"\bvs_TEXCOORD0\b", "vec2(0.0, vs_depth)");
+        Need(body, "\nfloat _depth[4];", "ocean depth");
+        Need(body, "sampler2D _ClearedMaskTex;", "paint mask");
+        Need(body, "in vec2 vs_TEXCOORD0;", "texcoords");
         // The G-buffer targets as globals for the editor's main() to light.
         body = Outputs().Replace(body, "vec4 $1;");
         for (int i = 0; i < 4; i++)

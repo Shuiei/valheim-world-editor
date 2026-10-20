@@ -51,7 +51,8 @@ public static partial class GameShader
                 continue;
             }
             string pref = f.Contains("ds_TEXCOORD0", StringComparison.Ordinal) ? "ds" : "vs";
-            bool full = f.Contains($"texture(_ClearedMaskTex, {pref}_TEXCOORD0.xy);", StringComparison.Ordinal);
+            // The full paint mask is sampled where the variant declares it (the compiler drops what a variant does not use).
+            bool full = MaskSampler().IsMatch(f);
             int outs = Targets().Matches(f).Select(m => m.Groups[1].Value).Distinct().Count();
             keep.TryAdd((pref, full, outs, f.Contains("unity_FogParams", StringComparison.Ordinal)), f);
         }
@@ -61,27 +62,14 @@ public static partial class GameShader
     /// <summary>The header put before the adapted fragment shader: what it is and WebGL 2 precisions.</summary>
     private const string GlHeader = """
 		// Valheim's terrain shader (Custom/Heightmap, deferred G-buffer pass), compiled by Unity for
-		// OpenGL core and adapted to WebGL 2: the four G-buffer targets become globals that main() lights,
-		// the per-zone ocean depth and the paint mask arrive as varyings. Generated; do not edit by hand.
+		// OpenGL core, its declarations adapted to WebGL 2: the four G-buffer targets and the zone corners'
+		// ocean depths become globals the editor's main() sets and lights. Generated; do not edit by hand.
 		precision highp float;
 		precision highp int;
 		precision highp sampler2D;
 		precision highp sampler3D;
 		precision highp sampler2DArray;
 
-		""";
-
-    /// <summary>
-    /// The game's per-zone ocean depth interpolation from the <c>_depth</c> uniform, replaced by the
-    /// <c>vs_depth</c> varying.
-    /// </summary>
-    private const string DepthBlock = """
-		    u_xlat66 = _depth[2] + (-_depth[3]);
-		    u_xlat66 = vs_TEXCOORD0.x * u_xlat66 + _depth[3];
-		    u_xlat68 = (-_depth[0]) + _depth[1];
-		    u_xlat68 = vs_TEXCOORD0.x * u_xlat68 + _depth[0];
-		    u_xlat68 = (-u_xlat66) + u_xlat68;
-		    u_xlat66 = vs_TEXCOORD0.y * u_xlat68 + u_xlat66;
 		""";
 
     /// <summary>Assignments to a G-buffer target; group 1 is its number.</summary>
@@ -99,4 +87,20 @@ public static partial class GameShader
     /// <summary>A G-buffer output declaration; group 1 is its name.</summary>
     [GeneratedRegex(@"layout\(location = \d\) out vec4 (SV_Target\d);")]
     private static partial Regex Output();
+
+    /// <summary>The first uniform declaration (with or without Unity's location qualifier): where the kept part starts.</summary>
+    [GeneratedRegex(@"^(UNITY_LOCATION\(\d+\) )?uniform\b", RegexOptions.Multiline)]
+    private static partial Regex FirstUniform();
+
+    /// <summary>The declaration of the zone corners' ocean depths, the uniform <c>_depth</c>.</summary>
+    [GeneratedRegex(@"uniform\s+float\s+_depth\[4\];")]
+    private static partial Regex DepthUniform();
+
+    /// <summary>The declaration of the paint mask sampler, <c>_ClearedMaskTex</c>.</summary>
+    [GeneratedRegex(@"uniform\s+(\w+\s+)?sampler2D\s+_ClearedMaskTex;")]
+    private static partial Regex MaskSampler();
+
+    /// <summary>The declaration of the paint mask's coordinates, the input <c>vs_TEXCOORD0</c>.</summary>
+    [GeneratedRegex(@"\bin\s+vec2\s+vs_TEXCOORD0;")]
+    private static partial Regex MaskCoordinates();
 }

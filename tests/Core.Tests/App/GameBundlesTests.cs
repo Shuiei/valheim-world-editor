@@ -81,6 +81,10 @@ public class GameBundlesTests
         Assert.Equal(new byte[] { 10, 20, 30, 0 }, none);
     }
 
+    /// <summary>
+    /// A made-up terrain fragment variant shaped as Unity writes one for OpenGL core: the declarations the editor adapts
+    /// (by their names), and a body of its own.
+    /// </summary>
     internal const string Fragment = """
 		#ifdef FRAGMENT
 		#version 150
@@ -93,18 +97,14 @@ public class GameBundlesTests
 		layout(location = 1) out vec4 SV_Target1;
 		layout(location = 2) out vec4 SV_Target2;
 		layout(location = 3) out vec4 SV_Target3;
-		float u_xlat66;
-		float u_xlat68;
+		float depthHere;
 		void main()
 		{
-		    u_xlat66 = _depth[2] + (-_depth[3]);
-		    u_xlat66 = vs_TEXCOORD0.x * u_xlat66 + _depth[3];
-		    u_xlat68 = (-_depth[0]) + _depth[1];
-		    u_xlat68 = vs_TEXCOORD0.x * u_xlat68 + _depth[0];
-		    u_xlat68 = (-u_xlat66) + u_xlat68;
-		    u_xlat66 = vs_TEXCOORD0.y * u_xlat68 + u_xlat66;
-		    SV_Target0 = texture(_ClearedMaskTex, vs_TEXCOORD0.xy);
-		    SV_Target1 = vec4(u_xlat66);
+		    vec2 uv = vs_TEXCOORD0;
+		    depthHere = mix(mix(_depth[0], _depth[1], uv.x), mix(_depth[3], _depth[2], uv.x), uv.y);
+		    vec4 mask = texture(_ClearedMaskTex, uv);
+		    SV_Target0 = mask;
+		    SV_Target1 = vec4(depthHere);
 		    SV_Target2 = vec4(0.0);
 		    SV_Target3 = vec4(1.0);
 		}
@@ -119,19 +119,22 @@ public class GameBundlesTests
         string program = "#ifdef FRAGMENT\nvoid main() { }\n#endif\n" + Fragment.Replace("\r\n", "\n");
         string glsl = GameShader.FromOpenGl(System.Text.Encoding.Latin1.GetBytes(program));
         Assert.StartsWith("// Valheim's terrain shader", glsl);
-        Assert.Contains("    u_xlat66 = vs_depth;", glsl);
-        Assert.Contains("texture(_ClearedMaskTex, vs_maskUV)", glsl);
-        Assert.Contains("in  float vs_depth;\nin  vec2 vs_maskUV;", glsl);
+        // Its declarations adapted: the corners' depths a global the editor's main sets, the outputs globals.
+        Assert.Contains("\nfloat _depth[4];", glsl);
+        Assert.DoesNotContain("uniform \tfloat _depth", glsl);
         Assert.Contains("vec4 SV_Target3;", glsl);
         Assert.Contains("uniform  sampler2DArray _DiffuseArrayTex;", glsl);
         Assert.Contains("void valheimGBuffer()", glsl);
-        Assert.DoesNotContain("_depth[4]", glsl);
-        Assert.DoesNotContain("vs_TEXCOORD0", glsl);
         Assert.DoesNotContain("UNITY_LOCATION", glsl);
+        // Its statements left as they are, the paint mask's coordinates still its own input.
+        Assert.Contains("in  vec2 vs_TEXCOORD0;", glsl);
+        Assert.Contains("    vec4 mask = texture(_ClearedMaskTex, uv);\n    SV_Target0 = mask;", glsl);
         // A game update that changed the shader: said, not drawn broken.
-        string changed = program.Replace("    u_xlat66 = vs_TEXCOORD0.y * u_xlat68 + u_xlat66;\n", "", StringComparison.Ordinal);
+        string changed = program.Replace("uniform \tfloat _depth[4];\n", "", StringComparison.Ordinal);
         var e = Assert.Throws<InvalidDataException>(() => GameShader.FromOpenGl(System.Text.Encoding.Latin1.GetBytes(changed)));
-        Assert.Contains("depth block", e.Message);
+        Assert.Contains("ocean depth", e.Message);
+        string noMask = program.Replace("in  vec2 vs_TEXCOORD0;\n", "", StringComparison.Ordinal);
+        Assert.Contains("texcoords", Assert.Throws<InvalidDataException>(() => GameShader.FromOpenGl(System.Text.Encoding.Latin1.GetBytes(noMask))).Message);
         Assert.Throws<InvalidDataException>(() => GameShader.FromOpenGl("#ifdef FRAGMENT\nvoid main() { }\n#endif\n"u8.ToArray()));
     }
 
