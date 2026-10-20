@@ -80,9 +80,12 @@ public sealed class WorldCreatorZonesTests : WorldCreatorTestBase
         // boss stones are objects of their own around it, and the zone file lists it as placed, the rest of the
         // seed's locations left for the game to lay out.
         var start = Assert.Single(ValheimGen.SeedLocations.Place(terrain.Generator, ValheimGen.SeedLocations.Which.Start, cancel: TestContext.Current.CancellationToken));
+        // The zone file has it where it was laid out; its proxy stands where it spawned, on the ground under that spot.
+        var laidOut = new System.Numerics.Vector3(start.X, start.Y, start.Z);
         var (templeAt, templeHash) = Assert.Single(w.Locations, l => l.Location == StableHash.Of("StartTemple"));
-        Assert.Equal(new System.Numerics.Vector3(start.X, start.Y, start.Z), templeAt);
-        Assert.Contains(w.Zones!.Locations, l => l.Hash == templeHash && l.Position == templeAt && l.Placed);
+        Assert.Equal((laidOut.X, laidOut.Z), (templeAt.X, templeAt.Z));
+        Assert.InRange(templeAt.Y - laidOut.Y, -0.5f, 0.5f);
+        Assert.Contains(w.Zones!.Locations, l => l.Hash == templeHash && l.Position == laidOut && l.Placed);
         Assert.False(w.Zones.LocationsGenerated);
         Assert.True(made.Locations >= 1, $"{made.Locations} locations");
         var (_, _, stoneAt, _, _) = Assert.Single(w.Objects, o => o.Prefab == StableHash.Of("BossStone_Eikthyr"));
