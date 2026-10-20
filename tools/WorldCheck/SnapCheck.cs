@@ -19,6 +19,11 @@ internal static class SnapCheck
     /// <param name="world">The world.</param>
     internal static int Run(string[] args, WorldSave world)
     {
+        if (args.Length < 3)
+        {
+            Console.Error.WriteLine("usage: WorldCheck snap <world> <name part>");
+            return 2;
+        }
         if (GameRules.Use(null) is null)
         {
             return 1;
