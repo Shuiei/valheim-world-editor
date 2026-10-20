@@ -56,7 +56,7 @@ public static partial class Dungeons
         {
             if (IsShown(c.Node, nodes, off))
             {
-                made.Add(new Made(c.Prefab, position + Vector3.Transform(c.Position, rotation), Quaternion.Normalize(rotation * c.Rotation)));
+                made.Add(new Made(c.Prefab, position + Vector3.Transform(c.Position, rotation), Quaternion.Normalize(rotation * c.Rotation), c.Snap));
             }
         }
         return made;

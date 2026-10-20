@@ -34,7 +34,7 @@ public static partial class WorldCreator
         {
             if (prefab != null)
             {
-                AddOwn(objects, contents, prefab, at with { Position = raised });
+                AddOwn(objects, contents, prefab, at with { Position = raised }, terrain);
             }
             Rnd.InitState(at.ZoneSeed);
             Vector3 scale = DrawScale(contents);
@@ -53,17 +53,25 @@ public static partial class WorldCreator
 
     /// <summary>
     /// The location's own objects, rolled from the zone's seed as the game rolls them, each swapped and given data as
-    /// the file says (drawing on from the rolls).
+    /// the file says (drawing on from the rolls); one with a SnapToGround, not swapped, on the ground it snaps to.
     /// </summary>
-    private static void AddOwn(List<(Vector3 At, byte[] Zdo)> objects, LocationContents contents, LocationPrefabs.Prefab prefab, Placing at)
+    private static void AddOwn(List<(Vector3 At, byte[] Zdo)> objects, LocationContents contents, LocationPrefabs.Prefab prefab, Placing at, TerrainService terrain)
     {
         var made = LocationPrefabs.Made(prefab, at.Position, at.Rotation, at.ZoneSeed, out var rolled);
         Rnd.State = rolled;
+        var ground = new SnapGround(terrain, prefab.Hash, at.Position, at.Rotation);
         foreach (var m in made)
         {
-            Add(objects, contents, at.Damage, new(m.Prefab, m.Position, m.Rotation, Vector3.One), null);
+            Add(objects, contents, at.Damage, new(m.Prefab, OnGround(m, contents, ground), m.Rotation, Vector3.One), null);
         }
     }
+
+    /// <summary>
+    /// Where one of the location's own objects ends up: on the ground at its offset when it has a SnapToGround and the
+    /// file does not swap it (another prefab may not snap), else where the location puts it.
+    /// </summary>
+    private static Vector3 OnGround(Dungeons.Made m, LocationContents contents, SnapGround ground) =>
+        m.Snap is { } offset && !contents.Swaps.ContainsKey(m.Prefab) ? m.Position with { Y = ground.HeightAt(m.Position) + offset } : m.Position;
 
     /// <summary>
     /// The objects the file adds (LocationSpawning.CustomObjects): each by its chance, at its place from the location's

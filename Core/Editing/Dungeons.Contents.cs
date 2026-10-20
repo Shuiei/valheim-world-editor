@@ -42,7 +42,8 @@ public static partial class Dungeons
     /// <param name="Prefab">The object's prefab name.</param>
     /// <param name="Position">World space.</param>
     /// <param name="Rotation">World space.</param>
-    public sealed record Made(string Prefab, Vector3 Position, Quaternion Rotation);
+    /// <param name="Snap">The height above the ground its SnapToGround puts it at; null for none.</param>
+    public sealed record Made(string Prefab, Vector3 Position, Quaternion Rotation, float? Snap = null);
 
     /// <summary>The dungeon's seed (DungeonGenerator.GetSeed): the world's seed and the dungeon's zone and place.</summary>
     public static int Seed(int worldSeed, Vector3 dungeonPosition)

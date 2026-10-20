@@ -34,13 +34,16 @@ public static partial class Dungeons
         return new Catalog(rooms, kinds);
     }
 
+    /// <summary>A content's snap-to-ground offset, after its node; null when it has none.</summary>
+    private static float? SnapOf(JsonElement c) => c.GetArrayLength() > 9 ? c[9].GetSingle() : null;
+
     /// <summary>
     /// The contents, spawns, picks and nodes of a room's or a location's JSON entry (what the scan writes of a
     /// prefab's tree).
     /// </summary>
     internal static (Content[] Contents, Spawn[] Spawns, Pick[] Picks, int[] Nodes) Parts(JsonElement r)
     {
-        return ([.. r.GetProperty("contents").EnumerateArray().Select(c => new Content(c[0].GetString() ?? "", V(c, 1), Q(c, 4), c[8].GetInt32()))],
+        return ([.. r.GetProperty("contents").EnumerateArray().Select(c => new Content(c[0].GetString() ?? "", V(c, 1), Q(c, 4), c[8].GetInt32(), SnapOf(c)))],
             [.. r.GetProperty("spawns").EnumerateArray().Select(x => new Spawn(x[0].GetInt32(), x[1].GetSingle(), x[2].GetInt32(), x[3].GetInt32(), x[4].GetInt32(), x[5].GetInt32()))],
             [.. r.GetProperty("picks").EnumerateArray().Select(x => new Pick(x[0].GetInt32(), x[1].GetInt32(),
                 [.. x[2].EnumerateArray().Select(c => (c[0].GetInt32(), c[1].GetSingle()))], x[3].GetInt32(), x[4].GetInt32()))],
