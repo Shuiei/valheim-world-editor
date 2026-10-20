@@ -98,6 +98,16 @@ public static partial class Dungeons
 
         /// <summary>The objects Expand World Data's room file adds with it, each by its chance.</summary>
         public IReadOnlyList<ValheimGen.ContentObject> Added { get; init; } = [];
+
+        /// <summary>Its objects' swaps (Expand World Data's "objectSwap"), by prefab.</summary>
+        public IReadOnlyDictionary<string, IReadOnlyList<ValheimGen.Weighted<string>>> Swaps { get; init; } = new Dictionary<string, IReadOnlyList<ValheimGen.Weighted<string>>>();
+
+        /// <summary>Its objects' data (Expand World Data's "objectData"), by prefab or "all".</summary>
+        public IReadOnlyDictionary<string, IReadOnlyList<ValheimGen.Weighted<IReadOnlyList<ValheimGen.ContentField>?>>> Data { get; init; } =
+            new Dictionary<string, IReadOnlyList<ValheimGen.Weighted<IReadOnlyList<ValheimGen.ContentField>?>>>();
+
+        /// <summary>Whether it swaps or gives data to its objects.</summary>
+        public bool Changes => Swaps.Count > 0 || Data.Count > 0;
     }
 
     /// <summary>A kind of dungeon (the DG_ prefab).</summary>
@@ -134,6 +144,16 @@ public static partial class Dungeons
 
         /// <summary>The chance (0 to 1) of a door whose type gives none.</summary>
         public float DoorChance { get; init; } = 0.5f;
+
+        /// <summary>Its objects' swaps (Expand World Data's "objectSwap"), by prefab.</summary>
+        public IReadOnlyDictionary<string, IReadOnlyList<ValheimGen.Weighted<string>>> Swaps { get; init; } = new Dictionary<string, IReadOnlyList<ValheimGen.Weighted<string>>>();
+
+        /// <summary>Its objects' data (Expand World Data's "objectData"), by prefab or "all".</summary>
+        public IReadOnlyDictionary<string, IReadOnlyList<ValheimGen.Weighted<IReadOnlyList<ValheimGen.ContentField>?>>> Data { get; init; } =
+            new Dictionary<string, IReadOnlyList<ValheimGen.Weighted<IReadOnlyList<ValheimGen.ContentField>?>>>();
+
+        /// <summary>Whether it swaps or gives data to its objects.</summary>
+        public bool Changes => Swaps.Count > 0 || Data.Count > 0;
     }
 
     /// <summary>The rooms and dungeon kinds read, by name hash.</summary>

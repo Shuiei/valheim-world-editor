@@ -68,7 +68,14 @@ public static partial class DungeonGen
     /// <param name="Position">Metres from the dungeon's origin.</param>
     /// <param name="Rotation">Its rotation.</param>
     /// <param name="Data">Values of its object data (section, key, value as text; see ZdoData.Set).</param>
-    public sealed record Item(string Prefab, Vector3 Position, Quaternion Rotation, IReadOnlyList<(string Section, string Key, string Value)>? Data = null);
+    /// <param name="Fields">Values of its object data by key hash (Expand World Data's files give these); after <paramref name="Data"/>.</param>
+    public sealed record Item(string Prefab, Vector3 Position, Quaternion Rotation, IReadOnlyList<(string Section, string Key, string Value)>? Data = null,
+        IReadOnlyList<ValheimGen.ContentField>? Fields = null)
+    {
+        /// <summary>Its object data, <see cref="Data"/> then <see cref="Fields"/>.</summary>
+        public IEnumerable<ObjectField> Values() =>
+            (Data ?? []).Select(d => new ObjectField(d.Section, Save.StableHash.Of(d.Key), d.Value)).Concat((Fields ?? []).Select(f => new ObjectField(f.Section, f.Key, f.Value)));
+    }
 
     /// <summary>A room of the plan (metres, its level's floor at Y), for a map.</summary>
     /// <param name="Name">What the room is, as shown.</param>

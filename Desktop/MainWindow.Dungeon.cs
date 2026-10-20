@@ -140,7 +140,7 @@ public partial class MainWindow
     private static List<DungeonPiece> ToPieces(IEnumerable<DungeonGen.Item> items) => [.. items.Select(it =>
     {
         int prefab = StableHash.Of(it.Prefab);
-        var data = (it.Data ?? []).Select(d => new ObjectField(d.Section, StableHash.Of(d.Key), d.Value)).Append(ObjectField.NoBuilder).ToList();
+        var data = it.Values().Append(ObjectField.NoBuilder).ToList();
         return new DungeonPiece(prefab, it.Position, it.Rotation, 0f, data, Terrain.PieceCatalog.Get(prefab)?.Tool != null);
     })];
 

@@ -43,7 +43,8 @@ public static partial class Dungeons
     /// <param name="Position">World space.</param>
     /// <param name="Rotation">World space.</param>
     /// <param name="Snap">The height above the ground its SnapToGround puts it at; null for none.</param>
-    public sealed record Made(string Prefab, Vector3 Position, Quaternion Rotation, float? Snap = null);
+    /// <param name="Data">The data Expand World Data's files give it; null for none.</param>
+    public sealed record Made(string Prefab, Vector3 Position, Quaternion Rotation, float? Snap = null, IReadOnlyList<ValheimGen.ContentField>? Data = null);
 
     /// <summary>The dungeon's seed (DungeonGenerator.GetSeed): the world's seed and the dungeon's zone and place.</summary>
     public static int Seed(int worldSeed, Vector3 dungeonPosition)
@@ -56,7 +57,9 @@ public static partial class Dungeons
     /// What the game makes with a room when it generates it (DungeonGenerator.PlaceRoom, SpawnMode Full): its
     /// networked objects, those its random parts keep, rolled from the room's place the game's way
     /// (Random.InitState, then each RandomSpawn's chance, then each RandomObject's pick, in order). The
-    /// random parts' own heights are taken as the room's. The shared Unity random state is put back after.
+    /// random parts' own heights are taken as the room's. With Expand World Data's files, each is then spawned as the mod
+    /// spawns it (<see cref="ModSpawn"/>), drawing on from the rolls, and the room file's objects are added. The shared
+    /// Unity random state is put back after.
     /// </summary>
     public static List<Made> Contents(Placed p, Kind kind, Vector3 dungeonPosition, int worldSeed)
     {
@@ -69,24 +72,67 @@ public static partial class Dungeons
         {
             Vector3 v = kind.CustomInterior ? p.Position - dungeonPosition : p.Position;
             int seed = unchecked((int)v.X * 4271 + (int)v.Y * 9187 + (int)v.Z * 2134 + (kind.BaseSeed ? Seed(worldSeed, dungeonPosition) : 0));
-            made = Replay(room.Contents, room.Spawns, room.Picks, room.Nodes, kind.Themes, p.Position.Y, seed, p.Position, p.Rotation);
+            made = Spawned(Replay(room.Contents, room.Spawns, room.Picks, room.Nodes, kind.Themes, p.Position.Y, seed, p.Position, p.Rotation, out var rolled), room, kind, rolled);
         }
-        made.AddRange(Added(room, p));
+        made.AddRange(Added(room, kind, p));
         return made;
     }
 
     /// <summary>
-    /// The objects Expand World Data's room file adds with a room (its PlaceRoom postfix): each by its chance, drawn from
-    /// the room's place (the same roll whatever the dungeon), at its place in the room's frame and turned with it. Their
-    /// data is not given here.
+    /// The room's own objects spawned as the mod spawns them, in order, drawing from the rolls' random state; as they are
+    /// when neither file changes them.
     /// </summary>
-    private static List<Made> Added(Room room, Placed p)
+    private static List<Made> Spawned(List<Made> made, Room room, Kind kind, Rnd.RandomState rolled)
+    {
+        if (!kind.Changes && !room.Changes)
+        {
+            return made;
+        }
+        var was = Rnd.State;
+        try
+        {
+            Rnd.State = rolled;
+            return [.. made.Select(m => ModSpawn(m, null, room, kind)).OfType<Made>()];
+        }
+        finally
+        {
+            Rnd.State = was;
+        }
+    }
+
+    /// <summary>
+    /// One object spawned as Expand World Data spawns a room's (its CustomObject, Create.BPO): swapped by the dungeon
+    /// file's swaps, then the room file's (a draw each when there are several choices); given the dungeon's data, then the
+    /// room's, then its own; then it wakes (its scripts' draws, <see cref="Terrain.WakeDraws"/>). Null when a swap removes
+    /// it or turns it into what the editor does not know (a blueprint is not built); a swapped object no longer snaps.
+    /// </summary>
+    private static Made? ModSpawn(Made m, IReadOnlyList<ValheimGen.ContentField>? own, Room room, Kind kind)
+    {
+        string name = ValheimGen.ModObjects.Swapped(ValheimGen.ModObjects.Swapped(m.Prefab, kind.Swaps), room.Swaps);
+        if (name == "" || name != m.Prefab && Terrain.PrefabCatalog.Get(StableHash.Of(name)) == null)
+        {
+            return null;
+        }
+        List<ValheimGen.ContentField> fields = [];
+        ValheimGen.ModObjects.AddData(fields, kind.Data, name);
+        ValheimGen.ModObjects.AddData(fields, room.Data, name);
+        fields.AddRange(own ?? []);
+        Terrain.WakeDraws.Wake(name, new(() => Terrain.WakeDraws.Skip(2), Looted: Terrain.WakeDraws.Looted(fields)));
+        return m with { Prefab = name, Snap = name == m.Prefab ? m.Snap : null, Data = fields.Count > 0 ? fields : null };
+    }
+
+    /// <summary>
+    /// The objects Expand World Data's room file adds with a room (its PlaceRoom postfix): each by its chance, drawn from
+    /// the room's place (the same roll whatever the dungeon), at its place in the room's frame and turned with it, then
+    /// spawned as the room's own objects are (<see cref="ModSpawn"/>, its own data last).
+    /// </summary>
+    private static List<Made> Added(Room room, Kind kind, Placed p)
     {
         if (room.Added.Count == 0)
         {
             return [];
         }
-        List<Made> made = [];
+        List<Made?> made = [];
         var was = Rnd.State;
         try
         {
@@ -97,13 +143,13 @@ public static partial class Dungeons
                 {
                     continue;
                 }
-                made.Add(new Made(o.Prefab, p.ToWorld(o.Position), Quaternion.Normalize(p.Rotation * App.BlueprintFormats.FromEuler(o.Euler))));
+                made.Add(ModSpawn(new Made(o.Prefab, p.ToWorld(o.Position), Quaternion.Normalize(p.Rotation * App.BlueprintFormats.FromEuler(o.Euler))), o.Data, room, kind));
             }
         }
         finally
         {
             Rnd.State = was;
         }
-        return made;
+        return [.. made.OfType<Made>()];
     }
 }

@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.77.0 — 2026-10-20
+
+### Added
+- **The Dungeon tool follows Expand World Data's object swaps and data for rooms and dungeons.** A room's objects are
+  swapped, removed or given data as the room and dungeon files say, and the objects a room file adds keep their data.
+
 ## v1.76.0 — 2026-10-20
 
 ### Changed

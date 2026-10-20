@@ -157,7 +157,7 @@ public static partial class WorldCreator
     private static void Add(List<(Vector3 At, byte[] Zdo)> objects, LocationContents contents, Waker waker, Made made, IReadOnlyList<ContentField>? own)
     {
         var (prefab, at, rotation, scale) = made;
-        string name = contents.Swaps.TryGetValue(prefab, out var swaps) ? Pick(swaps) ?? "" : prefab;
+        string name = ModObjects.Swapped(prefab, contents.Swaps);
         int hash = StableHash.Of(name);
         if (name == "" || Terrain.PrefabCatalog.Get(hash) is not { } info)
         {
@@ -168,13 +168,7 @@ public static partial class WorldCreator
             return;
         }
         List<ContentField> fields = [];
-        foreach (string key in new[] { "all", name })
-        {
-            if (contents.Data.TryGetValue(key, out var choices) && Pick(choices) is { } data)
-            {
-                fields.AddRange(data);
-            }
-        }
+        ModObjects.AddData(fields, contents.Data, name);
         fields.AddRange(own ?? []);
         // "all": no object keeps a health of its data (the mod's Create.IgnoreHealth).
         if (waker.Damage == Damage.RandomOverData)
@@ -227,33 +221,6 @@ public static partial class WorldCreator
             z.Set(f.Section, f.Key, f.Value);
         }
         return z.Serialize();
-    }
-
-    /// <summary>
-    /// A weighted choice as the mod draws it (Create.RandomizeSwap / RandomizeData): the only one without a draw, else
-    /// one draw taken down by each weight until it reaches 0, the last when it never does.
-    /// </summary>
-    private static T? Pick<T>(IReadOnlyList<Weighted<T>> choices)
-    {
-        if (choices.Count == 0)
-        {
-            // A source with no choice: the mod's empty pick (nothing for a swap: the object is removed).
-            return typeof(T) == typeof(string) ? (T)(object)"" : default;
-        }
-        if (choices.Count == 1)
-        {
-            return choices[0].Value;
-        }
-        float roll = Rnd.Value;
-        foreach (var c in choices)
-        {
-            roll = (float)((double)roll - c.Weight);
-            if (roll <= 0f)
-            {
-                return c.Value;
-            }
-        }
-        return choices[^1].Value;
     }
 
     /// <summary>
