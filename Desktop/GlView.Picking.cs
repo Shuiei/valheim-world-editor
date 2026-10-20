@@ -54,6 +54,17 @@ public sealed partial class GlView
     /// <summary>The eyedropper's click was taken: its release is swallowed.</summary>
     private bool _pickSwallow;
 
+    /// <summary>Takes these things out of the selection.</summary>
+    /// <param name="things">The things to take out.</param>
+    internal void Unselect(IEnumerable<int> things)
+    {
+        lock (_selection)
+        {
+            _selection.ExceptWith(things);
+        }
+        SelectionDone();
+    }
+
     /// <summary>Selects these things (add: to what is selected).</summary>
     internal void Select(IEnumerable<int> things, bool add = false)
     {

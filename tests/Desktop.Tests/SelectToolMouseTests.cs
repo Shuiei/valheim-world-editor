@@ -29,22 +29,23 @@ public class SelectToolMouseTests
     /// </summary>
     internal static (int, Vector3, Vector3) Box(WorldScene s, int i) => SelectToolRun.Box(s, i);
 
-    // Shift + click: the row from the last object clicked (w1, Shift + click w3: w1, w2, w3), not what
-    // stands off it; Ctrl + click adds one.
+    // Ctrl + Shift + click: the row from the last object clicked (w1, Ctrl + Shift + click w3: w1, w2, w3), not what
+    // stands off it; Ctrl + click adds one; Shift + click takes one out.
     [AvaloniaFact]
-    public void ShiftClickTakesTheRowAndCtrlClickAddsOne()
+    public void CtrlShiftClickTakesTheRowCtrlClickAddsAndShiftClickTakesOut()
     {
         var v = Open(T(1, Wall, 36, 30, 40), T(2, Wall, 38, 30, 40), T(3, Wall, 40, 30, 40), T(4, Wall, 38, 30, 33), T(5, Wall, 46, 30, 46));
         // From the east end (the move arrows point east and north of the first one, not over the others).
         v.Click(40, 40);
         Assert.Equal([2], v.Selected);
-        v.Tool.Range = true;
-        v.Click(36, 40, shift: true);
-        v.Tool.Range = false;
+        v.Click(36, 40, KeyModifiers.Control | KeyModifiers.Shift);
         Assert.Equal([0, 1, 2], v.Selected);
         // Ctrl (add, no row): one more.
-        v.Click(38, 33, shift: true);
+        v.Click(38, 33, KeyModifiers.Control);
         Assert.Equal([0, 1, 2, 3], v.Selected);
+        // Shift: the middle one taken out (Shift never grabs a move handle).
+        v.Click(38, 40, KeyModifiers.Shift);
+        Assert.Equal([0, 2, 3], v.Selected);
         // A plain click: that one alone.
         v.Click(46, 46);
         Assert.Equal([4], v.Selected);
@@ -56,10 +57,20 @@ public class SelectToolMouseTests
         var v = Open(T(1, Wall, 40, 30, 40), T(2, Beech, 50, 30, 50, false));
         v.Click(40, 40);
         Assert.Equal([0], v.Selected);
-        v.Click(50, 50, shift: true);
+        v.Click(50, 50, KeyModifiers.Control);
         Assert.Equal([0, 1], v.Selected);
-        // Shift + click on a selected one takes it out.
-        v.Click(50, 50, shift: true);
+        // Ctrl + click on a selected one takes it out, and puts it back.
+        v.Click(50, 50, KeyModifiers.Control);
+        Assert.Equal([0], v.Selected);
+        v.Click(50, 50, KeyModifiers.Control);
+        Assert.Equal([0, 1], v.Selected);
+        // Shift + click takes it out; on one not selected, it does nothing.
+        v.Click(50, 50, KeyModifiers.Shift);
+        Assert.Equal([0], v.Selected);
+        v.Click(50, 50, KeyModifiers.Shift);
+        Assert.Equal([0], v.Selected);
+        // With a key held, a click on the ground keeps the selection; without, it clears it.
+        v.Click(30, 30, KeyModifiers.Shift);
         Assert.Equal([0], v.Selected);
         v.Click(30, 30);
         Assert.Empty(v.Selected);
@@ -70,17 +81,20 @@ public class SelectToolMouseTests
     {
         var v = Open(T(1, Wall, 40, 30, 40), T(2, Wall, 42, 30, 40), T(3, Wall, 55, 30, 55));
         v.Tool.ZoneOnGround = true;
-        v.Drag(false, (36, 36), (46, 36), (46, 44), (36, 44), (36, 37));
+        v.Drag(KeyModifiers.None, (36, 36), (46, 36), (46, 44), (36, 44), (36, 37));
         Assert.Equal([0, 1], v.Selected);
         Assert.Null(v.Tool.Lasso);
         // Shift: added to what is selected.
-        v.Drag(true, (52, 52), (58, 52), (58, 58), (52, 58));
+        v.Drag(KeyModifiers.Control, (52, 52), (58, 52), (58, 58), (52, 58));
         Assert.Equal([0, 1, 2], v.Selected);
-        // A zone with nothing in it, with Shift, keeps the selection; a plain click on the ground clears it.
-        v.Drag(true, (20, 20), (24, 20), (24, 24), (20, 24));
+        // A zone with nothing in it, with Ctrl, keeps the selection; so does a click on the ground with Ctrl.
+        v.Drag(KeyModifiers.Control, (20, 20), (24, 20), (24, 24), (20, 24));
         Assert.Equal(3, v.Selected.Count);
-        v.Click(25, 25, shift: true);
+        v.Click(25, 25, KeyModifiers.Control);
         Assert.Equal(3, v.Selected.Count);
+        // Shift: what is inside taken out.
+        v.Drag(KeyModifiers.Shift, (36, 36), (46, 36), (46, 44), (36, 44), (36, 37));
+        Assert.Equal([2], v.Selected);
     }
 
     [AvaloniaFact]
@@ -89,7 +103,7 @@ public class SelectToolMouseTests
         // Every pointer move copied all the zone's points; a move that adds none now keeps the view's copy.
         var v = Open(T(1, Wall, 40, 30, 40));
         v.Tool.ZoneOnGround = true;
-        v.Tool.Down(v.At(36, 30, 36), v.Size, false, false, 1);
+        v.Tool.Down(v.At(36, 30, 36), v.Size, KeyModifiers.None, 1);
         v.Tool.Moved(v.At(46, 30, 36), v.Size);
         var drawn = v.Tool.Lasso;
         Assert.Equal(2, drawn!.Length);
@@ -104,7 +118,7 @@ public class SelectToolMouseTests
     {
         var v = Open(T(1, Wall, 40, 30, 40));
         v.Tool.ZoneOnGround = true;
-        v.Tool.Down(v.At(36, 30, 36), v.Size, false, false, 1);
+        v.Tool.Down(v.At(36, 30, 36), v.Size, KeyModifiers.None, 1);
         v.Tool.Moved(v.At(46, 30, 36), v.Size);
         v.Tool.Moved(v.At(46, 30, 44), v.Size);
         Assert.NotNull(v.Tool.Lasso);

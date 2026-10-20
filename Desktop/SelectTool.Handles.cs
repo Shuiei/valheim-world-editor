@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Input;
 
 namespace TerrainEditor.Desktop;
 
@@ -27,15 +28,16 @@ public sealed partial class SelectTool
     }
 
     /// <summary>
-    /// A press on a handle starts dragging it along its axis, or around the ring. Not for a Shift + click's row: the pieces
-    /// in the row may lie under the handles.
+    /// A press on a handle starts dragging it along its axis, or around the ring. Not with Shift held (taking objects
+    /// out, or a Ctrl + Shift + click's row): those objects may lie under the handles.
     /// </summary>
     /// <param name="at">The point in the view.</param>
     /// <param name="size">The view's size.</param>
+    /// <param name="keys">The keys held.</param>
     /// <returns>True when the press was on a handle, which then takes it.</returns>
-    private bool PressHandle(Point at, Size size)
+    private bool PressHandle(Point at, Size size, KeyModifiers keys)
     {
-        if (!Range && HandleAt(at, size) is { } handle && _view.GizmoAt() is var (c, _))
+        if (!keys.HasFlag(KeyModifiers.Shift) && HandleAt(at, size) is { } handle && _view.GizmoAt() is var (c, _))
         {
             _commitTimer.Stop();
             if (Begin() is not { } mv)

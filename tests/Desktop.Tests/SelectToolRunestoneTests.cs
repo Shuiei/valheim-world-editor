@@ -1,6 +1,7 @@
 using System.Numerics;
 using Avalonia;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using TerrainEditor.Save;
 using Xunit;
 
@@ -66,7 +67,7 @@ public class SelectToolRunestoneTests
         var w = new MainWindow(load: false) { Width = 1600, Height = 1000 };
         w.Show();
         var tool = w.View.SelectTool;
-        tool.Down(new Point(10, 10), new Size(100, 100), shift: false, alt: false, clicks: 1);
+        tool.Down(new Point(10, 10), new Size(100, 100), KeyModifiers.None, 1);
         Assert.False(tool.Moving);
         var s = TestScenes.Flat(1);
         w.View.Show(s.Scene, null);

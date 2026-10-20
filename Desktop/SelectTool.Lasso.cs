@@ -12,7 +12,7 @@ public sealed partial class SelectTool
     /// <param name="l">The zone as it stands.</param>
     /// <param name="at">The point in the view.</param>
     /// <param name="size">The view's size.</param>
-    private void DrawLasso((Point At, List<Vector2> Points, bool Add, bool Drawing) l, Point at, Size size)
+    private void DrawLasso((Point At, List<Vector2> Points, ZoneHow How, bool Drawing) l, Point at, Size size)
     {
         bool drawing = l.Drawing || Point.Distance(at, l.At) > 6;
         bool added = false;

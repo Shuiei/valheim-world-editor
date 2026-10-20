@@ -8,8 +8,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The Select tool's rectangle on the screen (a drag's default): it picks the objects seen inside it, not those behind
-/// others, whichever way it is dragged; a click deselects, Shift adds, Esc drops it, and it is shown once dragged past
-/// 6 px.
+/// others, whichever way it is dragged; a click deselects, Ctrl adds, Shift takes out, Esc drops it, and it is shown
+/// once dragged past 6 px.
 /// </summary>
 [Collection("World files")]
 public class SelectToolScreenBoxTests
@@ -22,12 +22,12 @@ public class SelectToolScreenBoxTests
         return Open(T(1, Floor, 40, 30, 40), T(2, Floor, 40, 34, 40), T(3, Beech, 44, 30, 44, false));
     }
 
-    /// <summary>A drag with Alt held (over objects) from one world point on the ground to another.</summary>
-    private static void Box(View v, (float X, float Z) from, (float X, float Z) to, bool shift = false)
+    /// <summary>A drag with Alt held (over objects), and these keys, from one world point on the ground to another.</summary>
+    private static void Box(View v, (float X, float Z) from, (float X, float Z) to, KeyModifiers keys = KeyModifiers.None)
     {
-        v.Tool.Down(v.At(from.X, 30, from.Z), v.Size, shift, true, 1);
+        v.Tool.Down(v.At(from.X, 30, from.Z), v.Size, keys | KeyModifiers.Alt, 1);
         v.Tool.Moved(v.At(to.X, 30, to.Z), v.Size);
-        v.Tool.Up(v.At(to.X, 30, to.Z), v.Size, shift);
+        v.Tool.Up(v.At(to.X, 30, to.Z), v.Size, keys);
     }
 
     [AvaloniaFact]
@@ -46,17 +46,22 @@ public class SelectToolScreenBoxTests
     }
 
     [AvaloniaFact]
-    public void AClickDeselectsAndShiftAdds()
+    public void AClickDeselectsCtrlAddsAndShiftTakesOut()
     {
         var v = TwoFloorsAndATree();
         v.W.View.Select([0]);
         var p = v.At(48, 30, 48);
-        v.Tool.Down(p, v.Size, false, true, 1);
-        v.Tool.Up(p, v.Size, false);
+        v.Tool.Down(p, v.Size, KeyModifiers.Alt, 1);
+        v.Tool.Up(p, v.Size, KeyModifiers.None);
         Assert.Empty(v.Selected);
         v.W.View.Select([2]);
-        Box(v, (38, 38), (42, 42), shift: true);
+        Box(v, (38, 38), (42, 42), KeyModifiers.Control);
         Assert.Equal([1, 2], v.Selected);
+        // Shift: what is seen inside taken out.
+        var said = MessageReader(v.Tool);
+        Box(v, (38, 38), (42, 42), KeyModifiers.Shift);
+        Assert.Equal([2], v.Selected);
+        Assert.Equal("Took 1 object(s) inside the zone out of the selection (1 left).", said());
     }
 
     [AvaloniaFact]
@@ -64,7 +69,7 @@ public class SelectToolScreenBoxTests
     {
         var v = TwoFloorsAndATree();
         var from = v.At(36, 30, 36);
-        v.Tool.Down(from, v.Size, false, true, 1);
+        v.Tool.Down(from, v.Size, KeyModifiers.Alt, 1);
         v.Tool.Moved(new Avalonia.Point(from.X + 3, from.Y), v.Size);
         Assert.Null(v.Tool.ScreenBox);
         var to = v.At(46, 30, 46);
@@ -73,7 +78,7 @@ public class SelectToolScreenBoxTests
         Assert.True(v.Tool.ScreenBox!.Value.Width > 0 && v.Tool.ScreenBox.Value.Height > 0);
         Assert.True(v.Tool.Key(Key.Escape, false));
         Assert.Null(v.Tool.ScreenBox);
-        v.Tool.Up(to, v.Size, false);
+        v.Tool.Up(to, v.Size, KeyModifiers.None);
         Assert.Empty(v.Selected);
     }
 

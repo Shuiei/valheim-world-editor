@@ -89,7 +89,7 @@ public sealed partial class GlView
     private void EndSelectDrag(Point at, Size size, KeyModifiers mods)
     {
         _selectDown = false;
-        SelectTool.Up(at, size, AddsToSelection(mods));
+        SelectTool.Up(at, size, mods);
         // A look queued by a move just before the press was dropped while the button was down. The handle
         // under the pointer is found again first: the drag's moves did not look for it, and over a handle no
         // object is outlined.
