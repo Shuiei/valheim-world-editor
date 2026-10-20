@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.67.2 — 2026-10-19
+
+### Fixed
+- **Odd Expand World files no longer stop the editor.** A world too large or stretched too far for a biome map is
+  refused with a message, a blueprint holding the blueprint it is in is left out instead of being grown without end,
+  and choices whose weights add to nothing, or a vegetation check with no rings, are handled as the mod handles them.
+
 ## v1.67.1 — 2026-10-19
 
 ### Fixed

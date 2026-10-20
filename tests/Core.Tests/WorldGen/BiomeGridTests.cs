@@ -75,4 +75,12 @@ public class BiomeGridTests
         Assert.Equal(grid.Middle, grid.WorldToMap(grid.Half));
         Assert.Equal(grid.Half, grid.MapToWorld(grid.Middle));
     }
+
+    [Fact]
+    public void AMapTooBigToHoldIsRefused()
+    {
+        Assert.Throws<InvalidDataException>(() => BiomeGrid.Of(new WorldRules { Radius = 1e7f }));
+        Assert.Throws<InvalidDataException>(() => BiomeGrid.Of(new WorldRules { Radius = 16000f, Stretch = 1e-4f }));
+        Assert.Throws<InvalidDataException>(() => BiomeGrid.Of(new WorldRules { Radius = 16000f, Stretch = float.MaxValue }));
+    }
 }

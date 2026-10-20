@@ -20,15 +20,26 @@ public readonly record struct BiomeGrid(int Size, float Middle, float Pixel)
     /// The grid a world's rules give: the game's, or the one Expand World Size makes for its radius and stretch
     /// (the same as the game's at the game's radius without a stretch).
     /// </summary>
+    /// <exception cref="InvalidDataException">The radius and stretch make a map of no points, more than the editor can hold, or points of no finite size.</exception>
     public static BiomeGrid Of(WorldRules rules)
     {
         if (rules.TotalRadius == 10500f && rules.Stretch == 1f)
         {
             return Game;
         }
-        int size = (int)MathF.Ceiling((float)(2048.0 * rules.TotalRadius / 10500.0 / rules.Stretch));
+        double side = Math.Ceiling((float)(2048.0 * rules.TotalRadius / 10500.0 / rules.Stretch));
+        // Its points are kept a byte each: more than a GiB of them is no world the editor can lay out; nor are points
+        // of no finite size.
+        if (!double.IsFinite(side) || side < 1 || side * side > MaxPoints || !float.IsFinite(12f * rules.Stretch))
+        {
+            throw new InvalidDataException($"a radius of {rules.TotalRadius} m stretched {rules.Stretch} times makes a biome map {side} points a side, which the editor cannot hold");
+        }
+        int size = (int)side;
         return new BiomeGrid(size, size / 2f, 12f * rules.Stretch);
     }
+
+    /// <summary>The most points a biome map may have (a GiB: 32768 a side).</summary>
+    private const long MaxPoints = 1L << 30;
 
     /// <summary>A map coordinate to world metres (the point's middle; MapSpaceToWorldSpace).</summary>
     public float MapToWorld(float x) => (x - Middle) * Pixel + Half;

@@ -15,7 +15,8 @@ public static partial class ExpandWorld
     /// <summary>
     /// A blueprint and the blueprints it nests, by name, each as its parts (BlueprintManager.Load); null when there is
     /// no blueprint of that name or it cannot be read (noted). A part that is neither a prefab of the game nor a
-    /// blueprint cannot be made (why).
+    /// blueprint cannot be made (why), nor one that is a blueprint holding the one it is in (the game would spawn it
+    /// without end): it is left out.
     /// </summary>
     /// <param name="folder">The folder the mod reads blueprint files from; null for none.</param>
     /// <param name="name">The blueprint's name.</param>
@@ -26,6 +27,7 @@ public static partial class ExpandWorld
     {
         string[] files = BlueprintFiles(folder);
         var found = new Dictionary<string, IReadOnlyList<BlueprintPart>>(StringComparer.Ordinal);
+        var loading = new HashSet<string>(StringComparer.Ordinal);
         return Load(name) ? found : null;
 
         bool Load(string bp)
@@ -39,13 +41,21 @@ public static partial class ExpandWorld
                 return false;
             }
             found[bp] = parts;
-            foreach (var part in parts.Where(p => p.Chance != 0f && !Known(p.Prefab)))
+            loading.Add(bp);
+            var holding = parts.Select(p => p.Prefab).Where(loading.Contains).ToHashSet(StringComparer.Ordinal);
+            foreach (string inner in holding)
+            {
+                why.Add($"blueprint {bp} holding {inner}, which holds it");
+            }
+            foreach (var part in parts.Where(p => p.Chance > 0f && !holding.Contains(p.Prefab) && !Known(p.Prefab)))
             {
                 if (!Load(part.Prefab))
                 {
                     why.Add($"a {part.Prefab} in blueprint {bp} (no prefab of the game)");
                 }
             }
+            loading.Remove(bp);
+            found[bp] = holding.Count == 0 ? parts : [.. parts.Where(p => !holding.Contains(p.Prefab))];
             return true;
         }
     }

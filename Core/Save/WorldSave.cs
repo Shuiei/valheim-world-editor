@@ -247,8 +247,8 @@ public sealed class TerrainZone
                 paint[i] = new Vector4(pkg.ReadSingle(), pkg.ReadSingle(), pkg.ReadSingle(), pkg.ReadSingle());
             }
         }
-        int side = (int)Math.Round(Math.Sqrt(heights));
-        if (side > 1 && paints == (side - 1) * (side - 1))
+        int side = (int)Math.Sqrt(heights);
+        if (side > 1 && side * side == heights && paints == (side - 1) * (side - 1))
         {
             (painted, paint) = Widened(painted, paint, side);
         }

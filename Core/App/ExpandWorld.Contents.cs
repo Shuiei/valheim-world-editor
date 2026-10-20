@@ -169,8 +169,10 @@ public static partial class ExpandWorld
         }
         return lists.ToDictionary(kv => kv.Key, kv =>
         {
+            // Weights adding to nothing: the mod's are then all NaN and its draw ends on the last choice; here they are
+            // all 0, which ends there too.
             float total = kv.Value.Sum(w => w.Weight);
-            return (IReadOnlyList<Weighted<T>>)[.. kv.Value.Select(w => w with { Weight = w.Weight / total })];
+            return (IReadOnlyList<Weighted<T>>)[.. kv.Value.Select(w => w with { Weight = Math.Abs(total) > 0f ? w.Weight / total : 0f })];
         });
     }
 
