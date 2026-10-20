@@ -39,9 +39,8 @@ public class ExpandWorldDungeonsTests
         Assert.Contains(data.Notes, n => n.Contains("NoSuchThing", StringComparison.Ordinal));
         // Every value left out is the mod's default (RoomYaml).
         var plain = new RoomEntry("cave_new_corridor01", "", true, false, false, false, 0, 1f, false, "", [], []);
-        Assert.Equal(plain, rooms[1] with { Connections = [], Objects = [], Swaps = plain.Swaps, Data = plain.Data });
-        Assert.Empty(rooms[1].Swaps);
-        Assert.Empty(rooms[1].Data);
+        Assert.Equal(plain, rooms[1] with { Connections = [], Objects = [], Changes = plain.Changes });
+        Assert.False(rooms[1].Changes.Any);
     }
 
     [Fact]
@@ -59,14 +58,14 @@ public class ExpandWorldDungeonsTests
         };
         var rules = ExpandWorld.DungeonsOf(data)!;
         var room = Assert.Single(rules.Rooms!);
-        Assert.Equal([new(0.75f, "Rock_3"), new(0.25f, "")], room.Swaps["caverock_ice_stalagtite"]);
-        Assert.Equal([new ContentField("ints", TerrainEditor.Save.StableHash.Of("mark"), "1")], Assert.Single(room.Data["all"]).Value!);
+        Assert.Equal([new(0.75f, "Rock_3"), new(0.25f, "")], room.Changes.Swaps["caverock_ice_stalagtite"]);
+        Assert.Equal([new ContentField("ints", TerrainEditor.Save.StableHash.Of("mark"), "1")], Assert.Single(room.Changes.Data["all"]).Value!);
         // A source that is no prefab of the game cannot be followed: left out, noted.
-        Assert.False(room.Swaps.ContainsKey("NoSuchThing"));
+        Assert.False(room.Changes.Swaps.ContainsKey("NoSuchThing"));
         Assert.Contains(data.Notes, n => n.Contains("expand_rooms: cave_new_corridor01", StringComparison.Ordinal) && n.Contains("NoSuchThing", StringComparison.Ordinal));
         var cave = Assert.Single(rules.Dungeons);
-        Assert.Equal([new(1f, "GlowingMushroom")], cave.Swaps["Rock_3"]);
-        Assert.Equal([0.5f, 0.5f], cave.Data["Rock_3"].Select(w => w.Weight));
+        Assert.Equal([new(1f, "GlowingMushroom")], cave.Changes.Swaps["Rock_3"]);
+        Assert.Equal([0.5f, 0.5f], cave.Changes.Data["Rock_3"].Select(w => w.Weight));
     }
 
     [Fact]

@@ -51,7 +51,7 @@ public static partial class ExpandWorld
         }
         return new RoomEntry(name, f.Str("theme"), f.B("enabled", true), f.B("entrance", false), f.B("endCap", false), f.B("divider", false),
             f.I("endCapPriority", 0), f.F("weight", 1f), f.B("perimeter", false), f.Str("size"), connections, objects)
-        { Swaps = swaps, Data = objectData };
+        { Changes = new ObjectChanges { Swaps = swaps, Data = objectData } };
     }
 
     /// <summary>One generator of the dungeon file, with the mod's defaults (DungeonYaml); a swap or data it cannot write left out, noted.</summary>
@@ -77,7 +77,7 @@ public static partial class ExpandWorld
         return new DungeonEntry(f.Str("name"), f.Str("algorithm"), f.Str("bounds"), f.Str("themes"), f.I("minRooms", 1), f.I("maxRooms", 1),
             NameList(f.Str("requiredRooms")), NameList(f.Str("excludedRooms")), limits, doors, f.F("doorChance", 0f), f.B("interiorTransform", false),
             f.B("addBaseSeedToRandomSpawn", false))
-        { Swaps = swaps, Data = objectData };
+        { Changes = new ObjectChanges { Swaps = swaps, Data = objectData } };
     }
 
     /// <summary>
