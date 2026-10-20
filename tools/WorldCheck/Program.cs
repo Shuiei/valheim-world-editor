@@ -30,9 +30,11 @@ using TerrainEditor.Save;
 //   vegetation <world> <bepinex folder> <zone file> <rules>
 //                                 Regrow with the first rules of Expand World Data's vegetation
 //                                 file (blueprints, data), against the game's (VegetationCheck)
+//   snap <world> <name part>      the ground New world puts locations' SnapToGround objects on,
+//                                 against where the game put them (SnapCheck)
 if (args.Length < 2)
 {
-    Console.Error.WriteLine("usage: WorldCheck verify <dump> [seed] | verify-ingame <world> <file> | selftest-save <world copy> | inspect <world> | summary <world> | create <folder> <name> <seed> [radius] [--flat] | look <seed> [metres] | objects <world> [prefab] | altbiomes <dump> <seed> [valheim folder] | locations <dump> <seed> [valheim folder] | regrow <world> <zones> [--no-alts] [--all-kinds] | contents <world> <bepinex folder> <name part> | vegetation <world> <bepinex folder> <zone file> <rules>");
+    Console.Error.WriteLine("usage: WorldCheck verify <dump> [seed] | verify-ingame <world> <file> | selftest-save <world copy> | inspect <world> | summary <world> | create <folder> <name> <seed> [radius] [--flat] | look <seed> [metres] | objects <world> [prefab] | altbiomes <dump> <seed> [valheim folder] | locations <dump> <seed> [valheim folder] | regrow <world> <zones> [--no-alts] [--all-kinds] | contents <world> <bepinex folder> <name part> | vegetation <world> <bepinex folder> <zone file> <rules> | snap <world> <name part>");
     return 2;
 }
 if (args[0] == "create")
@@ -95,6 +97,8 @@ switch (args[0])
         return ContentsCheck.Run(args, world);
     case "vegetation":
         return VegetationCheck.Run(args, world);
+    case "snap":
+        return SnapCheck.Run(args, world);
     default:
         Console.Error.WriteLine("unknown check " + args[0]);
         return 2;

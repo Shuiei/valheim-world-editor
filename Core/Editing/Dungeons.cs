@@ -42,7 +42,10 @@ public static partial class Dungeons
     /// <param name="Position">In the room's frame.</param>
     /// <param name="Rotation">In the room's frame.</param>
     /// <param name="Node">Where it sits in the room's tree of random parts (-1: on the room itself).</param>
-    public sealed record Content(string Prefab, Vector3 Position, Quaternion Rotation, int Node);
+    /// <param name="Snap">
+    /// The height above the ground its SnapToGround puts it at as its location spawns; null for an object without one.
+    /// </param>
+    public sealed record Content(string Prefab, Vector3 Position, Quaternion Rotation, int Node, float? Snap = null);
 
     /// <summary>
     /// RandomSpawn: the node is there with this chance (%) when the dungeon has the theme (0: any) and it

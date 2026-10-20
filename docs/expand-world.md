@@ -88,7 +88,8 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   in the generated zones as the mod spawns it: objects added ("objects", with their chance, scale, place on the
   ground and data), its own objects swapped, removed or given data ("objectSwap", "objectData" and their
   "location..." forms), the location's own "data", "scaleMin"/"scaleMax", "offset"/"groundOffset",
-  "randomCardinal" and "randomDamage" (its building pieces worn as the game wears them, "all" over their data too),
+  "randomCardinal" and "randomDamage" (its building pieces worn as the game wears them, "all" over their data too;
+  its objects the game drops onto the ground as it spawns them, its SnapToGround ones, on the ground first),
   and the ground of its zone levelled and painted round it ("levelArea", "levelRadius", "levelBorder", "paint",
   "paintRadius", "paintBorder"), written as the mod writes it. A blueprint location is built of its blueprint's
   pieces (made by chance, swapped and given data as the file says, the blueprints it holds in their places) on

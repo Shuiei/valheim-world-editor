@@ -31,6 +31,7 @@ public static partial class GameCatalogues
                 {
                     _interior = Placement(pos, rot, root);
                 }
+                _snap = SnapOf(g.Behaviours);
                 foreach (var (k, pid) in g.Behaviours)
                 {
                     AddBehaviour(gid, g.Name, k, pid, pos, rot, root);
@@ -40,6 +41,16 @@ public static partial class GameCatalogues
                     Walk(child, pos, rot, false);
                 }
             }
+
+            /// <summary>The snap-to-ground offset of the object being walked, when it has a SnapToGround.</summary>
+            private double? _snap;
+
+            /// <summary>
+            /// The offset above the ground an object's SnapToGround puts it at, when it has one (the game snaps it as it
+            /// wakes, enabled or not); null without.
+            /// </summary>
+            private double? SnapOf(List<(string Kind, long Pid)> behaviours) =>
+                behaviours.FirstOrDefault(b => b.Kind == "snap") is { Pid: not 0 } snap && _open.B.Field(snap.Pid) is { } f ? R(f["m_offset"].AsFloat, 4) : null;
 
             /// <summary>
             /// Where an object stands: the root's origin (whole numbers) and its rotation, or the position and rotation in

@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.75.1 — 2026-10-20
+
+### Fixed
+- **Location objects the game drops onto the ground stand on it in the zones the editor generates.** The start
+  temple's stones and branches, the tar pits' lox ribs, the ship settings' rocks and treasure, the traders and
+  others were left at their height in the location instead of on the ground beneath.
+
 ## v1.75.0 — 2026-10-20
 
 ### Added

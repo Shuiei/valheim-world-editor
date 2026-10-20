@@ -10,8 +10,9 @@ public static partial class GameCatalogues
         private sealed partial class RoomReader
         {
             /// <summary>
-            /// Adds one MonoBehaviour of a walked object: a ZNetView when enabled, a RandomSpawn, or what the other kinds
-            /// say of their fields (only the room's openings count on its root).
+            /// Adds one MonoBehaviour of a walked object: a ZNetView when enabled (with the object's snap-to-ground offset
+            /// when it has one), a RandomSpawn, or what the other kinds say of their fields (only the room's openings count
+            /// on its root).
             /// </summary>
             /// <param name="gid">The GameObject.</param>
             /// <param name="name">Its name.</param>
@@ -31,7 +32,7 @@ public static partial class GameCatalogues
                 {
                     if (_open.Enabled(pid))
                     {
-                        _contents.Add(new List<object?> { PrefabName(name) }.Concat(Placement(pos, rot, root)).Append(Node(gid)).ToList());
+                        _contents.Add(ContentEntry(gid, name, pos, rot, root));
                     }
                     return;
                 }
@@ -48,6 +49,13 @@ public static partial class GameCatalogues
                     AddComponent(gid, kind, b, pos, rot, root);
                 }
             }
+
+            /// <summary>
+            /// A networked object's entry: its prefab, place and turn and its node, then its snap-to-ground offset when it
+            /// has a SnapToGround (the game snaps it to the ground as the location spawns).
+            /// </summary>
+            private List<object?> ContentEntry(long gid, string name, V3 pos, Quat rot, bool root) =>
+                [PrefabName(name), .. Placement(pos, rot, root), Node(gid), .. _snap is { } snap ? [snap] : Array.Empty<object?>()];
 
             /// <summary>
             /// Adds an enabled component of a walked object by its kind: an opening, a teleport, a spawn or a pick.

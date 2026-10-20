@@ -29,9 +29,14 @@ public class WorldCreatorContentsTests
     public void WithoutChangesTheLocationIsTheGames()
     {
         using var w = new TempWorld();
-        // The objects of kinds the world can make, as the game rolls them.
-        var own = LocationPrefabs.Made(Temple, new Vector3(100, 30, 200), Quaternion.Identity, 7).Where(m => TerrainEditor.Terrain.PrefabCatalog.Get(StableHash.Of(m.Prefab)) != null);
-        Assert.Equal(own.Select(m => (m.Prefab, m.Position)), Built(w, LocationContents.None).Select(o => (o.Prefab, o.At)));
+        // The objects of kinds the world can make, as the game rolls them; those with a SnapToGround (the temple's
+        // stones and branches) on the ground the location leaves, at their offset.
+        var at = new Vector3(100, 30, 200);
+        var ground = new WorldCreator.SnapGround(new TerrainService(w.Load(), null), Temple.Hash, at, Quaternion.Identity);
+        var own = LocationPrefabs.Made(Temple, at, Quaternion.Identity, 7).Where(m => TerrainEditor.Terrain.PrefabCatalog.Get(StableHash.Of(m.Prefab)) != null).ToList();
+        Assert.Contains(own, m => m.Snap != null);
+        var expected = own.Select(m => (m.Prefab, m.Snap is { } offset ? m.Position with { Y = ground.HeightAt(m.Position) + offset } : m.Position));
+        Assert.Equal(expected, Built(w, LocationContents.None).Select(o => (o.Prefab, o.At)));
     }
 
     [Fact]
@@ -49,7 +54,9 @@ public class WorldCreatorContentsTests
         });
         Assert.DoesNotContain(changed, o => o.Prefab == first || o.Prefab == own[^1].Prefab);
         Assert.Equal(own.Count(o => o.Prefab == first || o.Prefab == "Pickable_Stone"), changed.Count(o => o.Prefab == "Pickable_Stone"));
-        Assert.All(changed, o => Assert.Contains(own, m => Vector3.Distance(m.At + new Vector3(0, 2, 0), o.At) < 1e-3f));
+        // Raised with the location: all but those that snap to the ground (the swapped stone is one of them by name).
+        var snapping = Temple.Contents.Where(c => c.Snap != null).Select(c => c.Prefab).ToHashSet();
+        Assert.All(changed.Where(o => !snapping.Contains(o.Prefab)), o => Assert.Contains(own, m => Vector3.Distance(m.At + new Vector3(0, 2, 0), o.At) < 1e-3f));
         Assert.All(changed, o => Assert.Contains((mark, 5), ZdoData.Parse(o.Zdo).IntList));
     }
 
