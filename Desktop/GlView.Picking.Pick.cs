@@ -6,7 +6,8 @@ namespace TerrainEditor.Desktop;
 public sealed partial class GlView
 {
     /// <summary>
-    /// A click on an object, by the keys held (<see cref="SelectHow.Pick"/>): it alone; added, or taken out when it
+    /// A click on an object, by the keys held (<see cref="SelectHow.Pick"/>): it alone (clicked again at the same spot,
+    /// the next one behind); added, or taken out when it
     /// was selected (Ctrl); taken out (Shift); or every shown object in a row from the last one clicked to this one
     /// added (Ctrl + Shift: w1, then Ctrl + Shift + click w3: w1, w2 and w3).
     /// </summary>
@@ -16,7 +17,13 @@ public sealed partial class GlView
     /// <returns>The object clicked, null when the click was beside every object.</returns>
     internal int? Pick(Point at, Size size, PickHow how)
     {
-        int? i = ObjectAt(at, size);
+        // A plain click again at the same spot takes the next object behind (GlView.Picking.Cycle); a click with a key
+        // held starts the round again.
+        if (how != PickHow.Only)
+        {
+            _cycle = null;
+        }
+        int? i = how == PickHow.Only ? CycledAt(at, size) : ObjectAt(at, size);
         var s = Scene;
         lock (_selection)
         {
