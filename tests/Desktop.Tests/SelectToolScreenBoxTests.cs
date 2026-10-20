@@ -57,11 +57,12 @@ public class SelectToolScreenBoxTests
         v.W.View.Select([2]);
         Box(v, (38, 38), (42, 42), KeyModifiers.Control);
         Assert.Equal([1, 2], v.Selected);
-        // Shift: what is seen inside taken out.
+        // Shift: what is seen inside taken out; the tree, inside too but not selected, is not counted.
         var said = MessageReader(v.Tool);
-        Box(v, (38, 38), (42, 42), KeyModifiers.Shift);
-        Assert.Equal([2], v.Selected);
-        Assert.Equal("Took 1 object(s) inside the zone out of the selection (1 left).", said());
+        v.W.View.Select([1]);
+        Box(v, (38, 38), (46, 46), KeyModifiers.Shift);
+        Assert.Empty(v.Selected);
+        Assert.Equal("Took 1 object(s) inside the zone out of the selection (0 left).", said());
     }
 
     [AvaloniaFact]

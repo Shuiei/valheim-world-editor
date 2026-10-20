@@ -23,6 +23,8 @@ public sealed partial class GlView
             if (how == PickHow.Row && s != null && RangeEnds(s, i) is (int a, int k))
             {
                 _selection.UnionWith(Between(s, a, k));
+                // The next row goes on from where this one ended.
+                _anchor = k;
             }
             else
             {
@@ -35,7 +37,8 @@ public sealed partial class GlView
 
     /// <summary>
     /// A click's object (null: none) into the selection, under its lock: alone, toggled (a row without its first
-    /// object toggles too), or taken out; the next row starts from it, unless it was taken out.
+    /// object toggles too), or taken out; the next row starts from it when it is selected after the click, and from
+    /// none when it was the start and is taken out.
     /// </summary>
     /// <param name="i">The object clicked, or null.</param>
     /// <param name="how">What the click does.</param>
@@ -49,16 +52,17 @@ public sealed partial class GlView
         {
             return;
         }
-        if (how == PickHow.Remove)
+        if (how != PickHow.Remove && (_selection.Add(k) || how == PickHow.Only))
         {
-            _selection.Remove(k);
+            _anchor = k;
             return;
         }
-        if (!_selection.Add(k) && how != PickHow.Only)
+        // Taken out: a row no longer starts from it.
+        _selection.Remove(k);
+        if (_anchor == k)
         {
-            _selection.Remove(k);
+            _anchor = null;
         }
-        _anchor = i;
     }
 
     /// <summary>

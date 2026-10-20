@@ -61,6 +61,9 @@ public sealed partial class SelectTool
     {
         if (how == ZoneHow.Remove)
         {
+            // Only those selected are taken out, and said.
+            var selected = _view.Selected.ToHashSet();
+            ids = [.. ids.Where(selected.Contains)];
             _view.Unselect(ids);
         }
         else

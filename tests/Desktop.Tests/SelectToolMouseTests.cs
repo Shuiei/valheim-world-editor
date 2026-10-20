@@ -51,6 +51,24 @@ public class SelectToolMouseTests
         Assert.Equal([4], v.Selected);
     }
 
+    // A row starts from the last object clicked that stays selected: one taken out again (Ctrl + click twice) starts
+    // none, so Ctrl + Shift + click then adds just the one clicked; after a row, the next goes on from its end.
+    [AvaloniaFact]
+    public void ARowStartsFromTheLastObjectClickedThatStaysSelected()
+    {
+        var v = Open(T(1, Wall, 36, 30, 40), T(2, Wall, 38, 30, 40), T(3, Wall, 40, 30, 40), T(4, Wall, 42, 30, 40), T(5, Wall, 46, 30, 46));
+        v.Click(46, 46);
+        v.Click(40, 40, KeyModifiers.Control);
+        v.Click(40, 40, KeyModifiers.Control);
+        Assert.Equal([4], v.Selected);
+        v.Click(38, 40, KeyModifiers.Control | KeyModifiers.Shift);
+        Assert.Equal([1, 4], v.Selected);
+        v.Click(36, 40, KeyModifiers.Control | KeyModifiers.Shift);
+        Assert.Equal([0, 1, 4], v.Selected);
+        v.Click(42, 40, KeyModifiers.Control | KeyModifiers.Shift);
+        Assert.Equal([0, 1, 2, 3, 4], v.Selected);
+    }
+
     [AvaloniaFact]
     public void AClickPicksAndAClickOnEmptyGroundDeselects()
     {
