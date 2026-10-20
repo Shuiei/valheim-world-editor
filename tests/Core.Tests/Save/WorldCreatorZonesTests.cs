@@ -80,9 +80,12 @@ public sealed class WorldCreatorZonesTests : WorldCreatorTestBase
         // boss stones are objects of their own around it, and the zone file lists it as placed, the rest of the
         // seed's locations left for the game to lay out.
         var start = Assert.Single(ValheimGen.SeedLocations.Place(terrain.Generator, ValheimGen.SeedLocations.Which.Start, cancel: TestContext.Current.CancellationToken));
+        // The zone file has it where it was laid out; its proxy stands where it spawned, on the ground under that spot.
+        var laidOut = new System.Numerics.Vector3(start.X, start.Y, start.Z);
         var (templeAt, templeHash) = Assert.Single(w.Locations, l => l.Location == StableHash.Of("StartTemple"));
-        Assert.Equal(new System.Numerics.Vector3(start.X, start.Y, start.Z), templeAt);
-        Assert.Contains(w.Zones!.Locations, l => l.Hash == templeHash && l.Position == templeAt && l.Placed);
+        Assert.Equal((laidOut.X, laidOut.Z), (templeAt.X, templeAt.Z));
+        Assert.InRange(templeAt.Y - laidOut.Y, -0.5f, 0.5f);
+        Assert.Contains(w.Zones!.Locations, l => l.Hash == templeHash && l.Position == laidOut && l.Placed);
         Assert.False(w.Zones.LocationsGenerated);
         Assert.True(made.Locations >= 1, $"{made.Locations} locations");
         var (_, _, stoneAt, _, _) = Assert.Single(w.Objects, o => o.Prefab == StableHash.Of("BossStone_Eikthyr"));
@@ -104,10 +107,23 @@ public sealed class WorldCreatorZonesTests : WorldCreatorTestBase
             Assert.Equal(prefab is { Interior: false }, site.Objects != null);
             if (site.Objects is { } objects)
             {
-                // Its proxy last, where it stands.
-                Assert.Equal(site.Position, objects[^1].At);
+                // Its proxy last, where it spawns: on the ground under the zone file's spot.
+                Assert.Equal((site.Position.X, site.Position.Z), (objects[^1].At.X, objects[^1].At.Z));
+                Assert.InRange(objects[^1].At.Y - site.Position.Y, -0.5f, 0.5f);
                 Assert.Equal(WorldSave.LocationProxyPrefab, BitConverter.ToInt32(objects[^1].Zdo, 14));
             }
         }
+    }
+
+    [Fact]
+    public void ALocationSpawnsOnTheTerrainMeshUnderItsSpot()
+    {
+        using var w = new TempWorld();
+        var terrain = new ValheimGen.TerrainService(w.Load(), null);
+        float[] zone = terrain.BaseZone(0, 0);
+        float At(float x, float z) => PrivateMember.Call<float>(typeof(WorldCreator), "GroundHeight", null, terrain, new System.Numerics.Vector3(x, 0f, z));
+        // On a point of the terrain, its height; half way along an edge of the mesh, the middle of its two points.
+        Assert.Equal(zone[(20 + 32) * 65 + 10 + 32], At(10f, 20f));
+        Assert.Equal((zone[(20 + 32) * 65 + 10 + 32] + zone[(20 + 32) * 65 + 11 + 32]) / 2f, At(10.5f, 20f), 4);
     }
 }

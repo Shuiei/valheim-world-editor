@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.66.1 — 2026-10-19
+
+### Fixed
+- **New world's locations stand on the ground as the game spawns them.** A location in the generated zones now
+  stands on the terrain under its spot, as the game puts it, instead of slightly above or below it, so its objects
+  are at the game's heights.
+
 ## v1.66.0 — 2026-10-19
 
 ### Added
