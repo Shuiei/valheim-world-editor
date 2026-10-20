@@ -32,6 +32,7 @@ public static partial class ExpandWorld
     /// <param name="data">Expand World Data's settings and files from it.</param>
     private static WorldRules Resolve(WorldSave save, Dictionary<string, string> keys, Found found, DataFiles data)
     {
+        NeedGameRules(data);
         var rules = Rules(keys, found, data, save.Zones?.GlobalKeys);
         Console.WriteLine($"Expand World: {save.Name}: {SizeSource(keys.Count, found)}; {FolderText(found)}; {Describe(rules)}.");
         NoteData(data, rules);
@@ -41,6 +42,29 @@ public static partial class ExpandWorld
         }
         NoteGrid(save, rules);
         return rules;
+    }
+
+    /// <summary>
+    /// The game's location rules read before a world's rules are worked out when its location or alt biome file needs
+    /// them (they are converted against the game's): a world opens before anything else has asked for them. Waits for
+    /// them (the world is opened away from the window); without them the files are not used, as the notes say.
+    /// </summary>
+    /// <param name="data">Expand World Data's files.</param>
+    private static void NeedGameRules(DataFiles data)
+    {
+        if (SeedLocations.Available || (data.Locations is not { Count: > 0 } && data.AltBiomes is not { Count: > 0 }))
+        {
+            return;
+        }
+        try
+        {
+            GameLocations.UseGameRules(GameLook.Bundles).GetAwaiter().GetResult();
+        }
+        catch (Exception e)
+        {
+            // Run away from the caller's code: whatever reading them throws ends here, in the log.
+            Log.Caught(e, "reading the game's location rules for the world's location and alt biome files (the files are not used)");
+        }
     }
 
     /// <summary>
