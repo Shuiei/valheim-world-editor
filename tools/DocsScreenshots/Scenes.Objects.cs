@@ -251,15 +251,89 @@ public sealed partial class Scenes
         e.Shot(Out("select-building.jpg"), keepMessage: true);
     }
 
+    /// <summary>A hut with a chest and a fire pit inside, seen from above at an angle: the Select tool on.</summary>
+    private void HutInView(Editor e)
+    {
+        Bare(e, unsaved: false);
+        Level(e);
+        Hut(e, P(-6, -4), P(6, 4));
+        // On the floor: placed after it (Place puts them on what is under them), between its pieces' middles (One
+        // at a time keeps 0.3 m from any object).
+        Pieces(e);
+        Kinds(e, "piece_chest_wood");
+        Single(e, P(-4, 2));
+        Kinds(e, "fire_pit");
+        Single(e, P(-2, -2));
+        e.Send("check One at a time, exactly at the cursor|off");
+        e.Send("key E");
+        Camera(e, 6, 0, 200, 40, 30);
+        // A frame drawn with this camera: the mouse's points are read with the last frame's.
+        e.Send("wait 300");
+    }
+
     /// <summary>
-    /// select-zone-drawing.jpg and select-zone.jpg: a selection ring drawn with Alt around rocks and bushes, then the
-    /// selection it made.
+    /// select-box-drawing.jpg and select-box.jpg: a box drawn on the screen over the west half of the hut, then what it
+    /// took: the pieces seen inside it, the hut's other half left.
+    /// </summary>
+    private void SelectBox(Editor e)
+    {
+        HutInView(e);
+        // At this turn east is on the picture's left: the box goes from the hut's middle over its west half.
+        Drag(e, P(0, -8), P(-9, 8), mods: "alt", release: false);
+        e.Shot(Out("select-box-drawing.jpg"));
+        e.Send($"mouse up {P(-9, 8).X} {P(-9, 8).Z} left alt");
+        e.Send("wait 300");
+        e.Shot(Out("select-box.jpg"), keepMessage: true);
+    }
+
+    /// <summary>select-through.jpg: the same box with Select through on: what is behind the walls is taken too.</summary>
+    private void SelectThrough(Editor e)
+    {
+        HutInView(e);
+        e.Send("check Select through (Alt + Z)|on");
+        Drag(e, P(0, -8), P(-9, 8), mods: "alt");
+        e.Send("wait 300");
+        e.Shot(Out("select-through.jpg"), keepMessage: true);
+    }
+
+    /// <summary>
+    /// select-pick.jpg: Pick Built pieces only, a box over a hut among rocks, bushes and young trees: the hut alone.
+    /// </summary>
+    private void SelectPick(Editor e)
+    {
+        Bare(e, unsaved: false);
+        Level(e);
+        Trees(e, P(-14, -9), P(14, 9), density: 3, kinds: ["Rock_3", "Bush01", "Beech_small1"]);
+        Hut(e, P(-6, -4), P(6, 4));
+        e.Send("key E");
+        e.Send("choose Built pieces only");
+        Camera(e, 6, 0, 200, 55, 34);
+        e.Send("wait 300");
+        Drag(e, P(12, -10), P(-12, 10), mods: "alt");
+        e.Send("wait 300");
+        e.Shot(Out("select-pick.jpg"), keepMessage: true);
+    }
+
+    /// <summary>select-hide.jpg: the hut's west half boxed and hidden (Ctrl + H): the chest and fire pit inside show.</summary>
+    private void SelectHide(Editor e)
+    {
+        HutInView(e);
+        Drag(e, P(0, -8), P(-9, 8), mods: "alt");
+        e.Send("key H ctrl");
+        e.Send("wait 300");
+        e.Shot(Out("select-hide.jpg"), keepMessage: true);
+    }
+
+    /// <summary>
+    /// select-zone-drawing.jpg and select-zone.jpg: with "A drag draws: A zone on the ground", a selection ring drawn
+    /// with Alt around rocks and bushes, then the selection it made.
     /// </summary>
     private void SelectZone(Editor e)
     {
         Bare(e, unsaved: false);
         Trees(e, P(-20, -8), P(20, 8), density: 6, kinds: ["Rock_3", "Bush01", "Beech_small1", "RaspberryBush"]);
         e.Send("key E");
+        e.Send("choose A zone on the ground (all above it)");
         (double X, double Z)[] ring = [P(-12, -10), P(6, -12), P(14, -2), P(10, 10), P(-6, 12), P(-14, 2), P(-12, -9)];
         Path(e, ring, steps: 2, hold: 30, mods: "alt", release: false);
         Camera(e, 8, 0, 200, 48, 40);

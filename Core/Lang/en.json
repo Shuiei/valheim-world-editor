@@ -221,7 +221,7 @@
   "select.hint.click": "Click objects (Ctrl adds or takes out, Shift takes out, Ctrl + Shift takes the row from the last one), or drag a box around them (Ctrl adds, Shift takes out). Drag a selected object to move the selection.",
   "select.label.replaceWith": "Replace with",
   "select.head.saved": "SAVED SELECTIONS",
-  "select.hint.keys": ", . turn (Shift: 15°) · PgUp PgDn lift (Shift: 1 m) · End drops onto what is under · Del deletes · Esc cancels a move · Alt + drag draws a zone over objects",
+  "select.hint.keys": ", . turn (Shift: 15°) · PgUp PgDn lift (Shift: 1 m) · End drops onto what is under · Del deletes · Esc cancels a move · Alt + drag draws a box over objects · Ctrl+A all · Ctrl+H hides · Shift+F frames",
   "select.msg.cannotPlace": "{0} cannot be placed: the game has no such kind to copy.",
   "select.msg.replaceWith": "Replace with {0}.",
   "select.savedEntry": "{0} ({1})",

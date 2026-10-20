@@ -5,8 +5,9 @@
 orange ring to turn it. The Select panel is on the left.*
 
 Pick objects (trees, rocks, building pieces, anything shown), then move, turn, lift, drop, copy, replace
-or delete them, or open one in the Inspector to see and change what it holds in the save. The object
-under the cursor is outlined faintly: that is the one a click picks.
+or delete them, or open one in the Inspector to see and change what it holds in the save. Selecting works
+like in Blender or a map editor: click, `Ctrl` + click to add, `Shift` + click to take out, or drag a box on the
+screen round what you see. The object under the cursor has a faint box: that is the one a click picks.
 
 Only objects that are shown can be picked: switch kinds on in the
 [View panel](editor-basics.md#view-panel) first. Runestones can be picked and deleted, but not moved,
@@ -17,7 +18,7 @@ deleting one removes that location for good (with the small levelling of the gro
 
 1. Press `E` (or **Select** in the rail's TOOLS section). From the **View** tool, a double click on an object
    also switches to Select with that object selected, its arrows and ring ready.
-2. Click an object, `Ctrl` + click more, or drag on empty ground around them.
+2. Click an object, `Ctrl` + click more, or drag a box on the screen around them.
 3. Drag a selected object, an arrow or the ring to move or turn the selection; or use the keys, the
    **EXACT PLACE** fields, or the panel's buttons.
 
@@ -26,35 +27,76 @@ until you **Save** (or **Apply live**).
 
 ## Selecting
 
+### Clicking
+
 | Action | What it does |
 |---|---|
-| **Click** an object | Selects it, and only it. An orange line round their shapes marks the selected objects, the last one clicked (the active one) in a lighter yellow, as in Blender; a blue box shows what is under the cursor. |
+| **Click** an object | Selects it, and only it. |
 | **Click again** at the same spot | Selects the next object behind the one selected there, then the next, and round again (a chest on a floor, the floor under it, the beam below), as in Unity. |
 | `Ctrl` + click | Adds an object to the selection, or takes it out when it is selected already. Dragging any selected object then moves them all together. |
 | `Shift` + click | Takes an object out of the selection. |
 | `Ctrl` + `Shift` + click | Adds the row from the last object clicked to this one: click wall 1, then `Ctrl` + `Shift` + click wall 3, and walls 1, 2 and 3 are selected (the objects on the line between them). |
-| **Drag on empty ground** | Draws a box on the screen; when you let go, the objects **seen** inside it are selected, not those hidden behind others or behind the ground. Look at a building from the side or from above to pick one floor, one wall or its roof. Dragged any way round. |
-| `Alt` + drag | Draws the box even when you start over an object (over a building, or in woods where trees cover the ground). |
-| **Pick** (Select panel) | What clicks, boxes and zones take: **Everything shown**, **Built pieces only** (a box over a house leaves its trees and rocks, and takes the walls behind a tree) or **Nature only** (trees, rocks, ore, bushes, pickables, remains). What is left out is still drawn. It applies to the Select tool and to the View tool's clicks; the other tools (the Place tool's **On top**, the eyedropper) pick every kind. |
-| **Select through** (Select panel) / `Alt` + `Z` | The box also takes what is hidden behind others inside it: the furniture inside a house, the wall behind another. Like Blender's X-ray. |
-| **A drag draws: A zone on the ground** (Select panel) | Drags draw an outline on the ground instead, and everything shown above it is selected, from the ground up, hidden or not. |
-| | A zone, **Same kind**, **Invert** and **Whole building** leave out anything more than 10 m under the ground: objects a mod hides there (crafting stations 10 km under a house) are not part of what stands above. |
-| `Ctrl` + drag | Adds what the box or the zone takes to the selection. |
-| `Shift` + drag | Takes what the box or the zone takes out of the selection. |
-| `Ctrl` + `A` / `Alt` + `A` / `Ctrl` + `I` (or **All**, **Invert**) | Selects every shown object / clears the selection / inverts it. |
-| `Ctrl` + `H` / `Alt` + `H` (or **Hide**, **Show hidden**) | Hides the selected objects in the view, to reach what they cover (inside a house: hide the roof); they are not drawn, picked or boxed, and nothing changes in the world. `Alt` + `H` shows them all again. |
-| `Shift` + `F` or Numpad `.` | Turns the camera onto the selection, close enough to see all of it (`F` alone switches the eye). |
-| **Click on empty ground** / `Esc` | Clears the selection (`Esc` first cancels a zone being drawn or a move in progress); with `Ctrl` or `Shift` held, a click on the ground keeps it. |
+| **Click on empty ground** / `Esc` | Clears the selection (`Esc` first cancels a box or zone being drawn, or a move in progress). With `Ctrl` or `Shift` held, a click on the ground keeps it. |
 | **Double-click a building piece** | Selects the whole building (see **Whole building** below). A chest (any container) is the exception: a double click selects it alone and opens it in the [Inspector](#inspecting-and-changing-an-objects-data). |
 | **Double-click a linked object's part** | Selects its whole [group](#linked-objects-ships-and-other-mods-groups) (a ship mod's vessel): its root and every part on it. |
 
+### A box on the screen
+
+A drag on empty ground draws a box on the screen. When you let go, the objects **seen** inside it are selected:
+not those hidden behind others or behind the ground. Turn the camera to choose what you take: from above, a
+building's floor and the tops of its walls; from the side, one wall; from the side and high, one storey.
+
+| Action | What it does |
+|---|---|
+| **Drag on empty ground** | Draws the box (any way round); what is seen inside it becomes the selection. |
+| `Alt` + drag | Draws the box even when you start over an object: over a building, or in woods where trees cover the ground. |
+| `Ctrl` + drag | Adds what the box takes to the selection. |
+| `Shift` + drag | Takes what the box takes out of the selection. |
+| **Select through** (Select panel) / `Alt` + `Z` | The box also takes what is hidden behind others inside it: the furniture inside a house, the wall behind another. Like Blender's X-ray. |
+| **Pick** (Select panel) | What clicks, boxes and zones take: **Everything shown**, **Built pieces only** (the pieces players built) or **Nature only** (trees, rocks, ore, bushes, pickables, remains). What is left out is still drawn, but neither taken nor in the way: with **Built pieces only**, a box takes the wall behind a tree. It applies to the Select tool and to the View tool's clicks; the other tools (the Place tool's **On top**, the eyedropper) pick every kind. |
+
+![Drawing a box over half a hut](images/select-box-drawing.jpg)
+*`Alt` + drag from the middle of a hut over its right half: the box is drawn on the screen.*
+
+![What the box took](images/select-box.jpg)
+*When you let go, what is seen inside the box is selected: 27 pieces, the walls, the floor showing between them
+and the fire pit. The floor and the chest hidden behind the near wall are left out.*
+
+![The same box with Select through](images/select-through.jpg)
+*The same box with **Select through** on: 33 pieces, the floor and the chest behind the near wall too.*
+
+![A box over a hut with Built pieces only](images/select-pick.jpg)
+***Pick: Built pieces only**, and a box over the whole hut among rocks, bushes and young trees: the hut's 58 pieces
+alone, none of what grows around it.*
+
+### A zone on the ground
+
+With **A drag draws: A zone on the ground** chosen in the Select panel, a drag draws an outline on the ground
+instead, and everything shown above it is selected, from the ground up, hidden or not: the objects whose position
+(their origin, where they stand) is inside it. `Alt`, `Ctrl` and `Shift` work as for the box.
+
 ![Drawing a selection zone with Alt + drag](images/select-zone-drawing.jpg)
-*With **A drag draws: A zone on the ground**, `Alt` + drag round rocks and bushes: the zone is drawn even though the
-drag started on a bush.*
+*`Alt` + drag round rocks and bushes: the zone is drawn even though the drag started on a bush.*
 
 ![The selection the zone made](images/select-zone.jpg)
-*When you let go, everything shown inside is selected, with one box round it all, and **EXACT PLACE** shows where
-the selection is.*
+*When you let go, everything shown inside is selected, and **EXACT PLACE** shows where the selection is.*
+
+Boxes, zones, **All**, **Same kind**, **Invert** and **Whole building** leave out anything more than 10 m under
+the ground: objects a mod hides there (crafting stations 10 km under a house) are not part of what stands above.
+
+### Keys, hiding and framing
+
+| Keys (or button) | What it does |
+|---|---|
+| `Ctrl` + `A` (**All**) | Selects every shown object. |
+| `Alt` + `A` | Clears the selection. |
+| `Ctrl` + `I` (**Invert**) | Selects every shown object that is not selected, and only those. |
+| `Ctrl` + `H` (**Hide**) | Hides the selected objects in the view, to reach what they cover. They are not drawn, picked or selected, and nothing changes in the world. |
+| `Alt` + `H` (**Show hidden**) | Shows every hidden object again. Opening another area forgets what was hidden. |
+| `Shift` + `F` or Numpad `.` | Turns the camera onto the selection, close enough to see all of it (`F` alone switches the eye). |
+
+![Half a hut hidden](images/select-hide.jpg)
+*The hut's right half boxed, then `Ctrl` + `H`: the chest inside shows. `Alt` + `H` brings the walls back.*
 
 ### How a click finds an object
 
@@ -71,16 +113,16 @@ the selection is.*
   Logs and stumps keep their box.
 - An object whose model is not loaded yet is picked by its box.
 
-A zone on the ground selects the objects whose position (their origin, where they stand) is inside it. A box on
-the screen selects what a click would find at its points (every 3 pixels, more apart in a big box), so an object
-counts as soon as a part of it is seen inside.
+A box on the screen selects what a click would find at its points (every 3 pixels, more apart in a big box), so
+an object counts as soon as a part of it is seen inside.
 
 ### How the selection shows
 
 An orange line follows the outer shape of the selected objects, seen through whatever is in front of them: a
 selected building is one clean outline, not a tangle of boxes, and a part of it (a floor, a wall) shows its own
-shape. The active object, the last one clicked while it stays selected, is outlined in a lighter yellow. An object
-whose model is still being read is marked by a thin box until it is drawn.
+shape. The active object, the last one clicked while it stays selected, is outlined in a lighter yellow (the rock
+at the top of this page). Selected objects lose their green unsaved dot while they are selected. An object whose
+model is still being read is marked by a thin box until it is drawn.
 
 ### Panel buttons
 
@@ -88,8 +130,10 @@ whose model is still being read is marked by a thin box until it is drawn.
 |---|---|
 | **Delete** (`Del`) | Removes the selected objects. `Ctrl+Z` brings them back; they leave the world when it is saved. |
 | **Whole building** | Adds every building piece connected to the selected pieces through pieces that touch: walls, floors, roofs, beams... Each piece's box is grown by 15 cm; boxes that overlap are connected. Pieces standing apart are not taken. |
+| **All** (`Ctrl` + `A`) | Selects every shown object in the area. |
 | **Same kind** | Selects every shown object in the area of the kinds selected now (select one beech, then all the beeches). |
-| **Invert** | Selects every shown object in the area that is not selected now, and only those. |
+| **Invert** (`Ctrl` + `I`) | Selects every shown object in the area that is not selected now, and only those. |
+| **Hide** (`Ctrl` + `H`) / **Show hidden** (`Alt` + `H`) | Hides the selected objects in the view / shows them again (see [Keys, hiding and framing](#keys-hiding-and-framing)). |
 | **Inspect data (I)** | Opens the [Inspector](#inspecting-and-changing-an-objects-data) on the one selected object. |
 | **Make player built** | See [Other actions](#other-actions). |
 
