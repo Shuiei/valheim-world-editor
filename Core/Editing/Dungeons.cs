@@ -96,6 +96,12 @@ public static partial class Dungeons
         /// <summary>The hash a room list keeps of it: its game room's.</summary>
         public int Saved => Game == Name ? Hash : StableHash.Of(Game);
 
+        /// <summary>
+        /// How far from the entrance it may join at the fewest (Room.m_minPlaceOrder): only to an opening of a room that
+        /// many rooms or more from the entrance (the entrance room is 1).
+        /// </summary>
+        public int MinPlaceOrder { get; init; }
+
         /// <summary>The objects Expand World Data's room file adds with it, each by its chance.</summary>
         public IReadOnlyList<ValheimGen.ContentObject> Added { get; init; } = [];
 

@@ -109,6 +109,7 @@ public static partial class Dungeons
                 EndCapPrio = e.EndCapPriority,
                 Weight = e.Weight,
                 Perimeter = e.Perimeter,
+                MinPlaceOrder = e.MinPlaceOrder,
                 Enabled = e.Enabled,
                 Openings = OpeningsOf(original.Openings, e.Connections),
                 Game = original.Name,

@@ -18,7 +18,10 @@ public static partial class Dungeons
             rooms[StableHash.Of(p.Name)] = new Room(p.Name, StableHash.Of(p.Name), r.GetProperty("theme").GetInt32(), V(r.GetProperty("size"), 0),
                 B("endCap"), B("entrance"), B("divider"), r.GetProperty("endCapPrio").GetInt32(), r.GetProperty("weight").GetSingle(), B("perimeter"), B("enabled"),
                 [.. r.GetProperty("openings").EnumerateArray().Select(o => new Opening(o[0].GetString() ?? "", o[1].GetInt32() != 0, o[2].GetInt32() != 0, V(o, 4), Q(o, 7), o[3].GetInt32() != 0))],
-                contents, spawns, picks, nodes);
+                contents, spawns, picks, nodes)
+            {
+                MinPlaceOrder = OptionalInt(r, "minPlaceOrder"),
+            };
         }
         var kinds = new Dictionary<int, Kind>();
         foreach (JsonProperty p in doc.RootElement.GetProperty("dungeons").EnumerateObject())
@@ -49,4 +52,7 @@ public static partial class Dungeons
                 [.. x[2].EnumerateArray().Select(c => (c[0].GetInt32(), c[1].GetSingle()))], x[3].GetInt32(), x[4].GetInt32()))],
             [.. r.GetProperty("nodes").EnumerateArray().Select(n => n.GetInt32())]);
     }
+
+    /// <summary>An int the JSON may leave out (0 then).</summary>
+    private static int OptionalInt(JsonElement e, string key) => e.TryGetProperty(key, out var v) ? v.GetInt32() : 0;
 }
