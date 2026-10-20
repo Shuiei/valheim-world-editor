@@ -106,6 +106,7 @@ public sealed partial class GlView
         DrawHoverObject(vp);
         DrawBrush(s, vp);
         DrawLasso(s, vp);
+        DrawScreenBox(vp);
         DrawGizmo(s, vp);
         DrawMeasure(s, vp);
         DrawPlayers(s, vp);

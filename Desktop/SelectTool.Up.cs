@@ -1,5 +1,4 @@
 using Avalonia;
-using TerrainEditor.App;
 
 namespace TerrainEditor.Desktop;
 
@@ -17,17 +16,17 @@ public sealed partial class SelectTool
             Commit();
             return;
         }
+        if (_box is { } b)
+        {
+            EndBox(b, size);
+            return;
+        }
         if (_lasso is { } l)
         {
-            _lasso = null;
-            Lasso = null;
-            _view.LassoChanged();
+            StopZones();
             if (!l.Drawing || l.Points.Count < 3)
             {
-                if (!l.Add)
-                {
-                    _view.Select([]);
-                }
+                ClickedEmpty(l.Add);
                 return;
             }
             var s = Scene!;
@@ -42,10 +41,7 @@ public sealed partial class SelectTool
                 var pos = s.Things[i].Position;
                 return pos.X >= minX && pos.X <= maxX && pos.Z >= minZ && pos.Z <= maxZ && Inside(l.Points, pos.X, pos.Z);
             }).ToList();
-            _view.Select(ids, l.Add);
-            Message?.Invoke(ids.Count == 0 ? Said.Of("select.msg.zoneEmpty")
-                : l.Add ? Said.Of("select.msg.zoneAdded", ids.Count, _view.Selected.Count)
-                : Said.Of("select.msg.zone", ids.Count), false);
+            ZoneSelected(ids, l.Add);
             return;
         }
         var d = _drag;

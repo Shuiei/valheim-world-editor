@@ -52,12 +52,34 @@ public sealed partial class SelectTool
             return;
         }
         Commit();
-        if (hit == null && ground is { } g2)
+        if (hit == null && StartZone(at, ground, shift))
         {
-            // Empty ground: a click deselects, a drag draws a zone to select.
-            _lasso = (at, new List<Vector2> { new(g2.X, g2.Z) }, shift, false);
             return;
         }
         _view.Pick(at, size, shift, Range);
+    }
+
+    /// <summary>
+    /// A press on empty ground (or with Alt held): a click deselects, a drag draws a rectangle on the screen, or a zone
+    /// on the ground (<see cref="ZoneOnGround"/>). False when there is no ground under the pointer for a zone.
+    /// </summary>
+    /// <param name="at">The point in the view.</param>
+    /// <param name="ground">The ground under it (world), or null.</param>
+    /// <param name="shift">Shift held: add to the selection.</param>
+    private bool StartZone(Point at, Vector3? ground, bool shift)
+    {
+        // A zone or a box left over (its release lost with the focus) never drives this one.
+        StopZones();
+        if (!ZoneOnGround)
+        {
+            _box = (at, at, shift, false);
+            return true;
+        }
+        if (ground is not { } g)
+        {
+            return false;
+        }
+        _lasso = (at, new List<Vector2> { new(g.X, g.Z) }, shift, false);
+        return true;
     }
 }

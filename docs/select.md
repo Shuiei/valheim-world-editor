@@ -31,8 +31,9 @@ until you **Save** (or **Apply live**).
 | **Click** an object | Selects it, and only it. A thin yellow box marks the selection; a blue box shows what is under the cursor. |
 | `Ctrl` + click | Adds an object to the selection, or takes it out. Dragging any selected object then moves them all together. |
 | `Shift` + click | Selects the row from the last object clicked to this one: click wall 1, then `Shift` + click wall 3, and walls 1, 2 and 3 are selected (the objects on the line between them). |
-| **Drag on empty ground** | Draws a zone; everything shown inside it is selected when you let go. |
-| `Alt` + drag | Draws a zone even when you start over an object (useful in woods, where trees cover the ground). |
+| **Drag on empty ground** | Draws a box on the screen; when you let go, the objects **seen** inside it are selected, not those hidden behind others or behind the ground. Look at a building from the side or from above to pick one floor, one wall or its roof. Dragged any way round. |
+| `Alt` + drag | Draws the box even when you start over an object (over a building, or in woods where trees cover the ground). |
+| **A drag draws: A zone on the ground** (Select panel) | Drags draw an outline on the ground instead, and everything shown above it is selected, from the ground up, hidden or not. |
 | | A zone, **Same kind**, **Invert** and **Whole building** leave out anything more than 10 m under the ground: objects a mod hides there (crafting stations 10 km under a house) are not part of what stands above. |
 | `Shift` + drag or `Ctrl` + drag | Adds what is inside the zone to the selection. |
 | **Click on empty ground** / `Esc` | Clears the selection (`Esc` first cancels a zone being drawn or a move in progress). |
@@ -40,7 +41,8 @@ until you **Save** (or **Apply live**).
 | **Double-click a linked object's part** | Selects its whole [group](#linked-objects-ships-and-other-mods-groups) (a ship mod's vessel): its root and every part on it. |
 
 ![Drawing a selection zone with Alt + drag](images/select-zone-drawing.jpg)
-*`Alt` + drag round rocks and bushes: the zone is drawn even though the drag started on a bush.*
+*With **A drag draws: A zone on the ground**, `Alt` + drag round rocks and bushes: the zone is drawn even though the
+drag started on a bush.*
 
 ![The selection the zone made](images/select-zone.jpg)
 *When you let go, everything shown inside is selected, with one box round it all, and **EXACT PLACE** shows where
@@ -61,7 +63,9 @@ the selection is.*
   Logs and stumps keep their box.
 - An object whose model is not loaded yet is picked by its box.
 
-A zone selects the objects whose position (their origin, where they stand) is inside it.
+A zone on the ground selects the objects whose position (their origin, where they stand) is inside it. A box on
+the screen selects what a click would find at its points (every 3 pixels, more apart in a big box), so an object
+counts as soon as a part of it is seen inside.
 
 ### Several objects
 

@@ -37,6 +37,11 @@ public sealed partial class SelectTool
     public bool OnGround { get; set; } = true;
     /// <summary>Snap moved building pieces to the pieces around.</summary>
     public bool SnapToPieces { get; set; } = true;
+    /// <summary>
+    /// A drag on empty ground draws an outline on the ground that picks everything above it, from the ground up; off
+    /// (the default), a rectangle on the screen that picks only what is seen inside it (see ScreenBox).
+    /// </summary>
+    public bool ZoneOnGround { get; set; }
 
     /// <summary>The view's open scene.</summary>
     private WorldScene? Scene => _view.Scene;
@@ -187,6 +192,13 @@ public sealed partial class SelectTool
     private (Point At, List<Vector2> Points, bool Add, bool Drawing)? _lasso;
     /// <summary>A copy of the zone's points for the drawing thread.</summary>
     public Vector2[]? Lasso { get; private set; }
+    /// <summary>
+    /// A press that draws a rectangle on the screen (<see cref="ZoneOnGround"/> off): where it began, where the pointer is,
+    /// whether it adds to the selection (Shift), and whether it is being drawn (moved past 6 px) rather than a click.
+    /// </summary>
+    private (Point From, Point To, bool Add, bool Drawing)? _box;
+    /// <summary>The rectangle being drawn on the screen, for the drawing thread; null when none is.</summary>
+    public Rect? ScreenBox { get; private set; }
 
     /// <summary>Shift (not Ctrl) held: a click takes the row from the last object clicked (GlView.Pick).</summary>
     public bool Range { get; set; }

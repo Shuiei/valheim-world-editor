@@ -51,6 +51,7 @@ public class SelectToolCommandTests
         var v = Open(T(1, Wall, 40, 30, 40), T(2, Wall, 41, -9962, 40));
         var c = v.S.Scene;
         v.W.View.SetBoxes([(1, new Vector3(40 - c.Cx, -9962, -(41 - c.Cz)), new Vector3(42 - c.Cx, 30.5f, -(39 - c.Cz)))]);
+        v.Tool.ZoneOnGround = true;
         v.Drag(false, (36, 36), (46, 36), (46, 44), (36, 44), (36, 37));
         Assert.Equal([0], v.Selected);
         v.W.View.Select([]);

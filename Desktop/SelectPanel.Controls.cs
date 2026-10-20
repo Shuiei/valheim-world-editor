@@ -30,6 +30,12 @@ public sealed partial class SelectPanel
     /// <summary>Snaps moved pieces to other pieces.</summary>
     internal CheckBox SnapBox { get; }
 
+    /// <summary>
+    /// What a drag on empty ground draws: a rectangle on the screen (what is seen inside it) or an outline on the
+    /// ground (everything above it).
+    /// </summary>
+    internal ComboBox ZoneBox { get; }
+
     /// <summary>The exact place's X (east), in metres.</summary>
     internal NumericUpDown XBox { get; } = Num(0.1m);
 
