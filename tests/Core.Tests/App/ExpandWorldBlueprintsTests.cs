@@ -114,6 +114,15 @@ public class ExpandWorldBlueprintsTests : AppSettingsTestBase
         Assert.Contains(why, w => w.Contains("Inner holding Outer", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void AFileOfAnotherExtensionSpellingIsRefusedAsTheModRefusesIt()
+    {
+        // Only Windows lists "Hut.Blueprint" for "*.blueprint"; the mod then refuses it ("Unknown file format").
+        string folder = Write("Hut.Blueprint", "#Pieces\nwoodwall;;1;0;1;0;0;0;1\n");
+        string file = Path.Combine(folder, "sub", "Hut.Blueprint");
+        Assert.Throws<FormatException>(() => PrivateCall.Static(typeof(ExpandWorld), "FileParts", file, Entries, new List<string>()));
+    }
+
     /// <summary>A height snapshot's rows: <paramref name="side"/> rows of as many nodes, each with a height.</summary>
     private static string Heights(int side) => string.Concat(Enumerable.Repeat(string.Join(';', Enumerable.Repeat("0", side)) + "\n", side));
 
