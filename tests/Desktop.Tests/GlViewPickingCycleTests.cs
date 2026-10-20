@@ -29,9 +29,13 @@ public class GlViewPickingCycleTests
         Assert.Equal([2], v.Selected);
         v.Click(40, 40);
         Assert.Equal([1], v.Selected);
-        // With a key held, no cycling: Ctrl toggles the nearest.
+        // With a key held, no cycling: Ctrl toggles the nearest, and the next plain click starts from the nearest.
+        v.Click(40, 40);
+        Assert.Equal([0], v.Selected);
         v.Click(40, 40, KeyModifiers.Control);
-        Assert.Empty(v.Selected);
+        Assert.Equal([0, 1], v.Selected);
+        v.Click(40, 40);
+        Assert.Equal([1], v.Selected);
     }
 
     [AvaloniaFact]

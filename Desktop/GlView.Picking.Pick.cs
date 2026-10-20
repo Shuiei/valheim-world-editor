@@ -17,7 +17,12 @@ public sealed partial class GlView
     /// <returns>The object clicked, null when the click was beside every object.</returns>
     internal int? Pick(Point at, Size size, PickHow how)
     {
-        // A plain click again at the same spot takes the next object behind (GlView.Picking.Cycle).
+        // A plain click again at the same spot takes the next object behind (GlView.Picking.Cycle); a click with a key
+        // held starts the round again.
+        if (how != PickHow.Only)
+        {
+            _cycle = null;
+        }
         int? i = how == PickHow.Only ? CycledAt(at, size) : ObjectAt(at, size);
         var s = Scene;
         lock (_selection)
