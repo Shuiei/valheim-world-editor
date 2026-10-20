@@ -117,6 +117,32 @@ public class GlViewPointerTests
         Assert.Empty(b.V.Selected);
     }
 
+    // The View tool's clicks follow the Select tool's keys: Ctrl adds or takes out, Shift takes out, Ctrl + Shift adds
+    // the row from the last object clicked.
+    [AvaloniaFact]
+    public void TheViewToolsClicksFollowTheSelectionKeys()
+    {
+        // Three building pieces in a row at world x 35, 37 and 39, z 37: view x 3, 5 and 7, z -5, boxes 1 × 2 × 1.
+        int wall = StableHash.Of("wood_wall_half");
+        var s = TestScenes.Flat(2,
+            new WorldScene.Thing(1, wall, new Vector3(35, 30, 37), Vector3.Zero, 0, true),
+            new WorldScene.Thing(2, wall, new Vector3(37, 30, 37), Vector3.Zero, 0, true),
+            new WorldScene.Thing(3, wall, new Vector3(39, 30, 37), Vector3.Zero, 0, true));
+        var b = new BareGlView(s);
+        b.V.SetBoxes([
+            (0, new Vector3(2.5f, 30, -5.5f), new Vector3(3.5f, 32, -4.5f)),
+            (1, new Vector3(4.5f, 30, -5.5f), new Vector3(5.5f, 32, -4.5f)),
+            (2, new Vector3(6.5f, 30, -5.5f), new Vector3(7.5f, 32, -4.5f))]);
+        Avalonia.Point On(float x) => b.At(x, 31.9f, -5);
+        b.Click(On(3));
+        b.Click(On(7), RawInputModifiers.Control);
+        Assert.Equal([0, 2], b.V.Selected);
+        b.Click(On(3), RawInputModifiers.Shift);
+        Assert.Equal([2], b.V.Selected);
+        b.Click(On(3), RawInputModifiers.Control | RawInputModifiers.Shift);
+        Assert.Equal([0, 1, 2], b.V.Selected);
+    }
+
     [AvaloniaFact]
     public void APlainDoubleClickOnAnObjectInTheViewToolAsksForTheSelectTool()
     {

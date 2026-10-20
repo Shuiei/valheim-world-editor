@@ -88,4 +88,49 @@ public class SelectToolAllTests
         Assert.Equal(50, world.Z, 1);
         Assert.True(distance >= 10);
     }
+
+    // F alone still switches the eye: it does not frame the selection.
+    [AvaloniaFact]
+    public void FAloneSwitchesTheEyeAndDoesNotFrame()
+    {
+        var v = ThreeThings();
+        v.W.View.Select([2]);
+        var eye = v.W.View.Eye;
+        var target = v.W.View.Camera.Target;
+        Press(v, Key.F, RawInputModifiers.None, PhysicalKey.F);
+        Assert.NotEqual(eye, v.W.View.Eye);
+        Assert.Equal(target, v.W.View.Camera.Target);
+    }
+
+    // The panel's All, Hide and Show hidden do what Ctrl + A, Ctrl + H and Alt + H do; hiding changes nothing in the
+    // world (no step, nothing pending, nothing gone), and hidden objects are forgotten when the area opens again or its
+    // objects are read again (their indices change).
+    [AvaloniaFact]
+    public void ThePanelsButtonsHideInTheViewOnlyUntilTheAreaIsReadAgain()
+    {
+        var v = ThreeThings();
+        var p = v.W.SelectPanel;
+        SharedButtons.Click(p.AllButton);
+        Assert.Equal([0, 1, 2], v.Selected);
+        v.W.View.Select([0]);
+        var pending = v.S.Pending;
+        bool undo = v.S.CanUndo;
+        SharedButtons.Click(p.HideButton);
+        Assert.Equal(1, v.W.View.HiddenCount);
+        Assert.Equal(pending, v.S.Pending);
+        Assert.Equal(undo, v.S.CanUndo);
+        Assert.False(v.S.Scene.Things[0].Gone);
+        SharedButtons.Click(p.UnhideButton);
+        Assert.Equal(0, v.W.View.HiddenCount);
+        v.Tool.HideSelected();
+        v.W.View.Select([1]);
+        v.Tool.HideSelected();
+        Assert.Equal(1, v.W.View.HiddenCount);
+        PrivateMethods.Call(typeof(GlView), "OnThingsReset", v.W.View);
+        Assert.Equal(0, v.W.View.HiddenCount);
+        v.W.View.Select([1]);
+        v.Tool.HideSelected();
+        v.W.View.Show(v.S.Scene, null);
+        Assert.Equal(0, v.W.View.HiddenCount);
+    }
 }
