@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.63.0 — 2026-10-19
+
+### Added
+- **Expand World vegetation that wants the greenest spots grows where the game grows it.** A vegetation rule of the
+  mod's file that checks the vegetation round each spot now does so in Regrow nature and New world as the game
+  does: the first spots of a zone set the bar, and only spots that reach it grow.
+
 ## v1.62.0 — 2026-10-19
 
 ### Changed

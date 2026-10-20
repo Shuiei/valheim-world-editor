@@ -34,6 +34,7 @@ public static partial class Regrow
                 continue;
             }
             Rnd.InitState(seed + zx * 4271 + zz * 9187 + Save.StableHash.Of(veg.prefab));
+            pass.Sums.Clear();
             if (TryRollGroupCount(veg, out int count))
             {
                 PlaceRule(pass, veg, cx, cz, count, spots);
@@ -56,7 +57,7 @@ public static partial class Regrow
         }
         float py = pass.Ground.Height(px, pz, out NVector3 normal);
         Zone hm = pass.ZoneAt(px, pz);
-        if (!PassesSurfaceChecks(veg, pass.Ground, hm, px, py, pz, normal) || !PassesRegionChecks(pass.Terrain, veg, px, py, pz) || !PassesClearAreas(pass, veg, px, py, pz))
+        if (!PassesSurfaceChecks(veg, pass.Ground, hm, px, py, pz, normal) || !PassesRegionChecks(pass.Terrain, veg, px, py, pz) || !PassesLastChecks(pass, veg, hm, new(px, py, pz)))
         {
             return false;
         }

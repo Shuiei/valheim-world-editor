@@ -38,6 +38,9 @@ public static partial class Regrow
         /// </summary>
         public bool Circles { get; } = terrain.Generator.Rules.DataInstalled && terrain.Generator.Rules.Vegetation != null;
 
+        /// <summary>The surround check's sums of the rule being placed in the zone, in the order made.</summary>
+        public List<float> Sums { get; } = [];
+
         /// <summary>The clear areas of the zone being placed.</summary>
         public List<ClearArea> Clear { get; } = [];
 

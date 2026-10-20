@@ -48,7 +48,7 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   kinds of the location file (clones, blueprints, groups, "away from" and "close to" rules, a location
   wider than a zone at its zone's middle, the start temple forced into the middle zone), the vegetation
   file's rules (several prefabs, a scale by axis, a centre of the rule's own, the world's global keys, the
-  ground an object keeps clear and the rule's wider clear areas), the location file's clear areas, the clear
+  ground an object keeps clear and the rule's wider clear areas, the check of the vegetation round a spot), the location file's clear areas, the clear
   ground of a wide location in the next zone, Expand World Size's locations multiplier, no zone spawner when the
   mod says so.
 - **The alt biomes**: the alt biome file's (every field that says where an alt biome goes, a field left out

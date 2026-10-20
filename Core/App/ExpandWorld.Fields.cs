@@ -43,6 +43,9 @@ public static partial class ExpandWorld
         /// <summary>A text field; the default when missing or not a scalar.</summary>
         public string Str(string key, string fallback = "") => entry.Fields.TryGetValue(key, out object? v) && v is string s ? s : fallback;
 
+        /// <summary>A whole number field; the default when missing or not a whole number.</summary>
+        public int I(string key, int fallback) => Int(Str(key)) ?? fallback;
+
         /// <summary>A number field; the default when missing (or not a number: noted).</summary>
         public float F(string key, float fallback) => FOpt(key) ?? fallback;
 
