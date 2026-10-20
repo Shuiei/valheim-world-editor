@@ -87,4 +87,18 @@ public class SelectToolLandTests
         var moved = v.S.Scene.Things.Where(t => !t.Gone).OrderBy(t => t.Position.Y).ToList();
         Assert.Equal([-9961.5f, 30f, 30.5f, 30.5f], moved.Select(t => MathF.Round(t.Position.Y, 2)));
     }
+
+    // Pieces buried deep selected alone (none stands on the ground) are the bottom layer: put on the ground, they land
+    // on it as any piece would, here when turned.
+    [AvaloniaFact]
+    public void PiecesBuriedDeepSelectedAloneLandOnTheGround()
+    {
+        var v = Open(T(1, Wall, 40, 30, 40), T(2, Wall, 41, -9962, 40));
+        v.Tool.OnGround = true;
+        v.Tool.SnapToPieces = false;
+        v.W.View.Select([1]);
+        v.Tool.Turn(10);
+        v.Tool.Commit();
+        Assert.InRange(v.Last.Position.Y, 29, 31);
+    }
 }

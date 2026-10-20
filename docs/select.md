@@ -53,7 +53,7 @@ building's floor and the tops of its walls; from the side, one wall; from the si
 | `Ctrl` + drag | Adds what the box takes to the selection. |
 | `Shift` + drag | Takes what the box takes out of the selection. |
 | **Select through** (Select panel) / `Alt` + `Z` | The box also takes what is hidden behind others inside it: the furniture inside a house, the wall behind another. Like Blender's X-ray. |
-| **Pick** (Select panel) | What clicks, boxes and zones take: **Everything shown**, **Built pieces only** (the pieces players built) or **Nature only** (trees, rocks, ore, bushes, pickables, remains). What is left out is still drawn, but neither taken nor in the way: with **Built pieces only**, a box takes the wall behind a tree. Other tools are not affected. |
+| **Pick** (Select panel) | What clicks, boxes and zones take: **Everything shown**, **Built pieces only** (the pieces players built) or **Nature only** (trees, rocks, ore, bushes, pickables, remains). What is left out is still drawn, but neither taken nor in the way: with **Built pieces only**, a box takes the wall behind a tree. It applies to the Select tool and to the View tool's clicks; the other tools (the Place tool's **On top**, the eyedropper) pick every kind. |
 
 ![Drawing a box over half a hut](images/select-box-drawing.jpg)
 *`Alt` + drag from the middle of a hut over its right half: the box is drawn on the screen.*
