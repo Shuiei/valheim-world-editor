@@ -49,9 +49,35 @@ public class RegrowSurroundTests
     public void AShareOfTheWayToTheBestRaisesTheBar()
     {
         using var w = new TempWorld();
-        var average = Spots(w, Checked(40, 0f));
-        var best = Spots(w, Checked(40, 1f));
-        Assert.True(best.Count < average.Count);
-        Assert.All(best, s => Assert.Contains(s, average));
+        // Nine spots across a zone whose vegetation grows from west to east set the bar; a tenth halfway to one end
+        // passes at the average only on the side the sums grow, and never when the bar is the best so far.
+        bool[] atAverage = [Passes(w, 0f, -4f), Passes(w, 0f, 4f)];
+        Assert.Equal(1, atAverage.Count(p => p));
+        Assert.False(Passes(w, 1f, -4f));
+        Assert.False(Passes(w, 1f, 4f));
+    }
+
+    /// <summary>
+    /// Whether a tenth spot at this x passes the check of a rule with this share, after nine at x = -8, -6... 8 on a
+    /// zone whose mask's vegetation is x / 64 (the nine only set the bar).
+    /// </summary>
+    private static bool Passes(TempWorld w, float better, float x)
+    {
+        object zone = RegrowFixtures.FlatZone();
+        float[] mask = new float[65 * 65 * 4];
+        for (int i = 0; i < 65 * 65; i++)
+        {
+            mask[i * 4 + 3] = i % 65 / 64f;
+        }
+        PrivateMember.Set(zone, "Mask", mask);
+        var rule = Checked(1, better);
+        rule.surroundCheckDistance = 4f;
+        object pass = PrivateMember.New(PrivateMember.Nested(typeof(Regrow), "Pass"), new TerrainService(w.Load(), null), RegrowFixtures.FlatGround(), new List<VegetationRule>(), null);
+        bool Check(float px) => PrivateMember.Call<bool>(typeof(Regrow), "PassesSurround", null, pass, rule, zone, px, 0f);
+        for (float px = -8f; px <= 8f; px += 2f)
+        {
+            Assert.False(Check(px));
+        }
+        return Check(x);
     }
 }
