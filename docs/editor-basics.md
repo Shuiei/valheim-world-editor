@@ -484,6 +484,7 @@ The digits of the numeric keypad work too. In the Workshop only `T` (Build), `E`
 | | `Del` | Delete the selected objects |
 | | `I` | Inspect the selected object (one object) |
 | | `Esc` | Cancel a move under way, or a selection zone being drawn |
+| | `Alt` + `Z` | Select through on or off: a box also takes what is hidden behind others |
 | Dungeon | `R` | Turn the room to add |
 | | `Del` | Delete the selected room |
 | Measure | `Esc` | Clear the measure |

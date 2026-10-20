@@ -90,4 +90,16 @@ public class SelectToolScreenBoxTests
         v.W.KeyPress(Key.Z, RawInputModifiers.Alt, PhysicalKey.Z, "z");
         Assert.False(v.Tool.SelectThrough);
     }
+
+    // With Select through, a thin box across the upper floor that misses its middle and its corners pulled in (x 40
+    // and 40 ± 0.67 m; ground points under a camera 40 m over the ground, so the floor 4 m up is 10% further out) still
+    // takes the floor it sees there.
+    [AvaloniaFact]
+    public void SelectThroughStillTakesWhatIsSeenInAThinBox()
+    {
+        var v = TwoFloorsAndATree();
+        v.Tool.SelectThrough = true;
+        Box(v, (40.12f, 39.4f), (40.34f, 40.6f));
+        Assert.Contains(1, v.Selected);
+    }
 }

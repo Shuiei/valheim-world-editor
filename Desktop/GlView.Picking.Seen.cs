@@ -104,17 +104,17 @@ public sealed partial class GlView
 
     /// <summary>
     /// The shown objects inside a rectangle of the view, seen or hidden behind others (Select through, like Blender's
-    /// X-ray): those of which a point (the middle of the box, or a corner of it pulled a third of the way in) is
-    /// inside it.
+    /// X-ray): all those seen there (<see cref="SeenIn"/>, however thin a part of them crosses it), and those of which
+    /// a point (the middle of the box, or a corner of it pulled a third of the way in) is inside it.
     /// </summary>
     /// <param name="r">The rectangle, in the view's points.</param>
     /// <param name="size">The view's size.</param>
     internal List<int> InsideRect(Rect r, Size size)
     {
-        var inside = new List<int>();
+        var inside = SeenIn(r, size).ToHashSet();
         if (Scene == null || size.Width <= 0)
         {
-            return inside;
+            return [.. inside];
         }
         for (int i = 0; i < _bounds.Length; i++)
         {
@@ -123,7 +123,7 @@ public sealed partial class GlView
                 inside.Add(i);
             }
         }
-        return inside;
+        return [.. inside.Order()];
     }
 
     /// <summary>
