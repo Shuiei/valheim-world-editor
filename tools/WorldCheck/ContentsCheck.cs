@@ -46,7 +46,11 @@ internal static class ContentsCheck
         var found = ExpandWorld.Look(args[2], "check");
         world.Rules = ExpandWorld.Rules(new Dictionary<string, string>(), found, ExpandWorld.ReadData(found), world.StartingGlobalKeys);
         var terrain = new ValheimGen.TerrainService(world, null);
-        var sites = WorldCreator.Sites(terrain, world.Seed, 160).Where(s => s.Name.Contains(args[3], StringComparison.Ordinal)).ToList();
+        // The named kinds' locations only, and every zone whose ground they change (a blueprint's snapshots reach
+        // the zones round its own).
+        var laid = ValheimGen.SeedLocations.Place(terrain.Generator, ValheimGen.SeedLocations.Which.All).Where(p => p.Rule.Prefab.Contains(args[3], StringComparison.Ordinal)).ToList();
+        var changed = new Dictionary<(int X, int Z), TerrainEditor.Editing.ZoneEdit>();
+        var sites = WorldCreator.Sites(terrain, world.Seed, 160, laid, changed);
         var objects = world.Objects.ToList();
         int detail = int.TryParse(Environment.GetEnvironmentVariable("CONTENTS_DETAIL"), out int n) ? n : 0;
         var tally = new Tally();
@@ -68,7 +72,7 @@ internal static class ContentsCheck
                 Compare(world, site, near, at, zdo, tally);
             }
         }
-        int grounds = Grounds(world, sites, tally);
+        int grounds = Grounds(world, changed, tally);
         var h = tally.Heights;
         Console.WriteLine($"Heights of the matched objects, game minus editor: {(h.Count == 0 ? "none" : $"{h.Min():0.000} .. {h.Max():0.000}, {h.Count(d => MathF.Abs(d) > 0.01f)} off by more than 1 cm")}");
         Console.WriteLine($"{sites.Count} sites ({tally.Left} left to the game): {tally.Expected} objects built, {tally.Placed} where the game put one, {tally.Valued} of those with the game's values.");
@@ -76,29 +80,29 @@ internal static class ContentsCheck
     }
 
     /// <summary>
-    /// The zones whose ground the file levels or paints: the editor's against the game's terrain data of the zone,
-    /// each height and paint cell; prints the count and returns how many zones differ.
+    /// The zones whose ground the locations change (the file's levelling and paint, a blueprint's snapshots): the
+    /// editor's against the game's terrain data of the zone, each height and paint cell; prints the count and returns
+    /// how many zones differ.
     /// </summary>
-    private static int Grounds(WorldSave world, List<WorldCreator.Site> sites, Tally tally)
+    private static int Grounds(WorldSave world, Dictionary<(int X, int Z), TerrainEditor.Editing.ZoneEdit> changed, Tally tally)
     {
-        int zones = 0, differ = 0;
-        foreach (var site in sites.Where(s => s.Ground != null))
+        int differ = 0;
+        foreach (var ((x, z), mine) in changed)
         {
-            zones++;
-            if (world.TerrainZones.FirstOrDefault(t => t.ZoneX == site.Zone.X && t.ZoneZ == site.Zone.Z) is not { } game)
+            if (world.TerrainZones.FirstOrDefault(t => t.ZoneX == x && t.ZoneZ == z) is not { } game)
             {
                 differ++;
-                tally.Say($"{site.Name} at {At(site.Position)}: the game's zone has no terrain data");
+                tally.Say($"zone {x}, {z}: the game's zone has no terrain data");
                 continue;
             }
-            int cells = Enumerable.Range(0, TerrainEditor.Editing.EditStore.Cells).Count(i => !SameCell(site.Ground!, game, i));
+            int cells = Enumerable.Range(0, TerrainEditor.Editing.EditStore.Cells).Count(i => !SameCell(mine, game, i));
             if (cells > 0)
             {
                 differ++;
-                tally.Say($"{site.Name} at {At(site.Position)}: {cells} cells of its ground differ");
+                tally.Say($"zone {x}, {z}: {cells} cells of its ground differ");
             }
         }
-        Console.WriteLine($"Ground of {zones} zones levelled or painted: {zones - differ} as the game's.");
+        Console.WriteLine($"Ground of {changed.Count} zones the locations change: {changed.Count - differ} as the game's.");
         return differ;
     }
 

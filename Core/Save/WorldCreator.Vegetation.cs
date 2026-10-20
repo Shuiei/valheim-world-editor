@@ -33,12 +33,13 @@ public static partial class WorldCreator
         empty.Rules = rules;
         var terrain = new ValheimGen.TerrainService(empty);
         var laidOut = ValheimGen.SeedLocations.AvailableFor(terrain.Generator) ? ValheimGen.SeedLocations.Place(terrain.Generator, ValheimGen.SeedLocations.Which.All) : [];
-        var sites = Sites(terrain, seed, radius, laidOut);
+        var changedGround = new Dictionary<(int X, int Z), ZoneEdit>();
+        var sites = Sites(terrain, seed, radius, laidOut, changedGround);
         var left = sites.Where(s => s.Objects == null).Select(s => s.Zone).ToHashSet();
         // Every location of the seed, inside the generated zones or not: one beside them may clear ground in them.
         var clear = new Regrow.ClearAreas(terrain.Generator, laidOut.Select(p => (StableHash.Of(p.Rule.Prefab), p.X, p.Z)));
         // The ground Expand World Data changes round locations, which the vegetation grows on.
-        var grounds = sites.Select(s => s.Ground).OfType<ZoneEdit>().ToList();
+        var grounds = changedGround.Values.ToList();
         var edits = new EditStore(empty);
         foreach (var g in grounds)
         {

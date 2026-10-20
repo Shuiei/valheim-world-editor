@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.74.0 — 2026-10-20
+
+### Added
+- **New world builds blueprint locations with a terrain snapshot.** Their ground takes the heights and paint the
+  blueprint captured, in every zone the snapshot reaches, as Expand World Data does, where such a location used to be
+  left for the game to build.
+
 ## v1.73.0 — 2026-10-20
 
 ### Added
