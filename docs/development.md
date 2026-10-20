@@ -143,9 +143,10 @@ CircleCI makes the release once you approve it (`.circleci/config.yml`, `.circle
    release.
 2. Merge it (squash: main's commit is then `Release v<version> (#<number>)`). On main, that commit,
    with a dated heading for `VERSION` and no `v<version>` tag yet, makes the pipeline a release one:
-   **hold-release** waits at once, before anything runs. Merging any other pull request runs the
-   usual pipeline, even when it bumps `VERSION` and dates its heading: only a release pull request
-   releases. The tests are not run again:
+   **hold-release** waits at once, before anything runs. Merging any other pull request, even one
+   that bumps `VERSION` and dates its heading, runs main's full pipeline instead: the tests, code
+   analysis and formatting, **coverage**, **packages**, **windows-smoke** and **windows-tests**. Only
+   a release pull request releases. The tests are not run again:
    they ran on the pull request, on the same tree (main's ruleset keeps a pull request up to date
    with main before it merges).
 3. In CircleCI, open that pipeline's workflow (`release`) and approve **hold-release**. Then
