@@ -14,51 +14,98 @@ public static partial class WorldCreator
     /// <summary>
     /// The objects of a location as the game makes them with Expand World Data's file (its SpawnLocation patches): raised
     /// by the file's offset; the location's own objects (rolled as the game rolls them) each swapped and given data as
-    /// the file says, drawing on from the rolls; then, from the zone's seed again, the added objects' scale, and each
-    /// added object (its chance, its swap and data, its place on the ground when it snaps). Each building piece wakes
+    /// the file says, drawing on from the rolls; then, from the zone's seed again, the added objects' scale, a blueprint
+    /// location's parts (<see cref="AddParts"/>), and each added object (its chance, its swap and data, its place on the
+    /// ground when it snaps). Each building piece wakes
     /// as the game's WearNTear does: its random initial damage when the location gives one, then its two timers; the
     /// draws other components make as they wake are not counted, so a later draw can differ from the game's after one.
     /// </summary>
-    /// <param name="prefab">The location's prefab.</param>
+    /// <param name="prefab">The location's prefab; null for a blueprint location (it has none).</param>
     /// <param name="contents">What the file changes.</param>
     /// <param name="at">Where and how it is placed.</param>
     /// <param name="terrain">The world's terrain (the ground an added object snaps to).</param>
     /// <returns>Each object with where it stands.</returns>
-    private static List<(Vector3 At, byte[] Zdo)> Built(LocationPrefabs.Prefab prefab, LocationContents contents, Placing at, TerrainService terrain)
+    private static List<(Vector3 At, byte[] Zdo)> Built(LocationPrefabs.Prefab? prefab, LocationContents contents, Placing at, TerrainService terrain)
     {
-        var (position, rotation, zoneSeed, damage, ground) = at;
-        var raised = position with { Y = position.Y + contents.Offset };
+        var raised = at.Position with { Y = at.Position.Y + contents.Offset };
         var objects = new List<(Vector3 At, byte[] Zdo)>();
         Rnd.RandomState was = Rnd.State;
         try
         {
-            var made = LocationPrefabs.Made(prefab, raised, rotation, zoneSeed, out var rolled);
-            Rnd.State = rolled;
-            foreach (var m in made)
+            if (prefab != null)
             {
-                Add(objects, contents, damage, new(m.Prefab, m.Position, m.Rotation, Vector3.One), null);
+                AddOwn(objects, contents, prefab, at with { Position = raised });
             }
-            Rnd.InitState(zoneSeed);
+            Rnd.InitState(at.ZoneSeed);
             Vector3 scale = DrawScale(contents);
-            foreach (var o in contents.Objects)
+            if (contents.Blueprint is { } blueprint)
             {
-                if (o.Chance < 1f && Rnd.Value > o.Chance)
-                {
-                    continue;
-                }
-                var spot = raised + Vector3.Transform(o.Position, rotation);
-                if (o.Snap)
-                {
-                    spot.Y = SnapHeight(ground, terrain, spot);
-                }
-                Add(objects, contents, damage, new(o.Prefab, spot, Quaternion.Normalize(rotation * BlueprintFormats.FromEuler(o.Euler)), scale * o.Scale), o.Data);
+                AddParts(objects, contents, at.Damage, contents.Blueprints![blueprint], new(blueprint, raised, at.Rotation, scale));
             }
+            AddObjects(objects, contents, at with { Position = raised }, scale, terrain);
         }
         finally
         {
             Rnd.State = was;
         }
         return objects;
+    }
+
+    /// <summary>
+    /// The location's own objects, rolled from the zone's seed as the game rolls them, each swapped and given data as
+    /// the file says (drawing on from the rolls).
+    /// </summary>
+    private static void AddOwn(List<(Vector3 At, byte[] Zdo)> objects, LocationContents contents, LocationPrefabs.Prefab prefab, Placing at)
+    {
+        var made = LocationPrefabs.Made(prefab, at.Position, at.Rotation, at.ZoneSeed, out var rolled);
+        Rnd.State = rolled;
+        foreach (var m in made)
+        {
+            Add(objects, contents, at.Damage, new(m.Prefab, m.Position, m.Rotation, Vector3.One), null);
+        }
+    }
+
+    /// <summary>
+    /// The objects the file adds (LocationSpawning.CustomObjects): each by its chance, at its place from the location's
+    /// (on the ground when it snaps), turned with it and scaled by the drawn scale times its own.
+    /// </summary>
+    private static void AddObjects(List<(Vector3 At, byte[] Zdo)> objects, LocationContents contents, Placing at, Vector3 scale, TerrainService terrain)
+    {
+        foreach (var o in contents.Objects)
+        {
+            if (o.Chance < 1f && Rnd.Value > o.Chance)
+            {
+                continue;
+            }
+            var spot = at.Position + Vector3.Transform(o.Position, at.Rotation);
+            if (o.Snap)
+            {
+                spot.Y = SnapHeight(at.Ground, terrain, spot);
+            }
+            Add(objects, contents, at.Damage, new(o.Prefab, spot, Quaternion.Normalize(at.Rotation * BlueprintFormats.FromEuler(o.Euler)), scale * o.Scale), o.Data);
+        }
+    }
+
+    /// <summary>
+    /// A blueprint's parts as the mod spawns them (Create.Blueprint, Create.SharedBPO): each by its chance, at its place
+    /// from the blueprint's turned with it, turned and scaled with it, swapped and given data as the location's own
+    /// objects are (<see cref="Add"/>, where a blueprint in a part's place spawns its parts in turn).
+    /// </summary>
+    /// <param name="objects">Where the objects made go.</param>
+    /// <param name="contents">What the file changes.</param>
+    /// <param name="damage">The damage its pieces wake with.</param>
+    /// <param name="parts">The blueprint's parts.</param>
+    /// <param name="at">The blueprint's place, turn and scale (its name as the prefab).</param>
+    private static void AddParts(List<(Vector3 At, byte[] Zdo)> objects, LocationContents contents, Damage damage, IReadOnlyList<BlueprintPart> parts, Made at)
+    {
+        foreach (var part in parts)
+        {
+            if (part.Chance < 1f && Rnd.Value > part.Chance)
+            {
+                continue;
+            }
+            Add(objects, contents, damage, new(part.Prefab, at.At + Vector3.Transform(part.Position, at.Rotation), at.Rotation * part.Rotation, at.Scale * part.Scale), part.Data);
+        }
     }
 
     /// <summary>How a location is placed: its spot, its turn, the zone's seed and the damage its pieces wake with.</summary>
@@ -89,15 +136,21 @@ public static partial class WorldCreator
 
     /// <summary>
     /// One object as the mod makes it (Create.SharedBPO): its prefab swapped (one draw when there are several choices;
-    /// none for "remove"), then given the file's data for "all" and for its prefab (a draw each when there are several
-    /// choices), its own data over them; then it wakes (<see cref="Wake"/>).
+    /// none for "remove"); a name of no prefab spawns the blueprint of that name in its place, or nothing; then given
+    /// the file's data for "all" and for its prefab (a draw each when there are several choices), its own data over
+    /// them; then it wakes (<see cref="Wake"/>).
     /// </summary>
     private static void Add(List<(Vector3 At, byte[] Zdo)> objects, LocationContents contents, Damage damage, Made made, IReadOnlyList<ContentField>? own)
     {
         var (prefab, at, rotation, scale) = made;
         string name = contents.Swaps.TryGetValue(prefab, out var swaps) ? Pick(swaps) ?? "" : prefab;
-        if (name == "")
+        int hash = StableHash.Of(name);
+        if (name == "" || Terrain.PrefabCatalog.Get(hash) is not { } info)
         {
+            if (contents.Blueprints?.GetValueOrDefault(name) is { } inner)
+            {
+                AddParts(objects, contents, damage, inner, made with { Prefab = name });
+            }
             return;
         }
         List<ContentField> fields = [];
@@ -113,11 +166,6 @@ public static partial class WorldCreator
         if (damage == Damage.RandomOverData)
         {
             fields.RemoveAll(IsHealth);
-        }
-        int hash = StableHash.Of(name);
-        if (Terrain.PrefabCatalog.Get(hash) is not { } info)
-        {
-            return;
         }
         Wake(info.WearHealth, fields, damage);
         // The mod writes the scale only for an object whose network view keeps it (DataHelper.Init).

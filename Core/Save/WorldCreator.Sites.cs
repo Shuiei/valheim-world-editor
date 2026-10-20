@@ -54,10 +54,10 @@ public static partial class WorldCreator
                 int hash = StableHash.Of(p.Rule.Prefab);
                 // Snapped to the game's literal 30 (ZoneSystem.PlaceLocations), whatever the rules put the water at.
                 var position = new Vector3(p.X, p.Rule.SnapToWater != 0 ? ValheimGen.WorldGenerator.LiteralWaterLevel : p.Y, p.Z);
-                // A blueprint location, one whose changed contents the editor cannot build, or one spawned with a random
-                // seed: its zone is left to the game, like a dungeon's.
+                // One whose changed contents (a blueprint location's included) the editor cannot build, or one spawned with
+                // a random seed: its zone is left to the game, like a dungeon's.
                 var contents = p.Rule.Contents ?? ValheimGen.LocationContents.None;
-                if (LeftToGame(p.Rule, terrain) || LocationPrefabs.Get(p.Rule.Base) is not { Interior: false } prefab)
+                if (!Builds(p.Rule, contents, terrain, out var prefab))
                 {
                     sites.Add(new Site(zone, p.Rule.Prefab, hash, position, null));
                     continue;
@@ -71,8 +71,7 @@ public static partial class WorldCreator
                 var ground = GroundOf(contents, spawn, zone, terrain.Generator);
                 var levelled = LevelledOf(ground, terrain, StableHash.Of(p.Rule.Base), spot, yaw);
                 var objects = Built(prefab, contents, new Placing(spawn, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw * MathF.PI / 180f), zoneSeed, DamageOf(p.Rule, prefab), levelled), terrain);
-                byte[] proxy = ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, proxyFlags, spot, new Vector3(0f, yaw, 0f), 0f, ProxyInts(p.Rule, zoneSeed, terrain.Generator.Rules.DataInstalled));
-                objects.Add((spot, WithFields(proxy, contents.ProxyData)));
+                objects.Add((spot, Proxy(p.Rule, proxyFlags, spot, yaw, zoneSeed, terrain.Generator.Rules.DataInstalled)));
                 sites.Add(new Site(zone, p.Rule.Prefab, hash, position, objects, ground));
             }
         }
@@ -95,11 +94,37 @@ public static partial class WorldCreator
     }
 
     /// <summary>
-    /// Whether a kind's zone is left to the game: a blueprint location, one whose changed contents the editor cannot
-    /// build, or any location when Expand World Data spawns them with a random seed.
+    /// Whether New world builds a kind's locations, with the location prefab it is made of (null for a blueprint
+    /// location, made of its blueprint): not when its zone is left to the game, nor for a location with an interior or
+    /// one the game's files do not describe.
+    /// </summary>
+    private static bool Builds(ValheimGen.SeedLocations.Rule rule, ValheimGen.LocationContents contents, ValheimGen.TerrainService terrain, out LocationPrefabs.Prefab? prefab)
+    {
+        prefab = contents.Blueprint == null ? LocationPrefabs.Get(rule.Base) : null;
+        return !LeftToGame(rule, terrain) && (contents.Blueprint != null || prefab is { Interior: false });
+    }
+
+    /// <summary>
+    /// Whether a kind's zone is left to the game: one whose changed contents (a blueprint location's included) the
+    /// editor cannot build, or any location when Expand World Data spawns them with a random seed.
     /// </summary>
     private static bool LeftToGame(ValheimGen.SeedLocations.Rule rule, ValheimGen.TerrainService terrain) =>
-        rule.Blueprint == true || (rule.Custom == true && rule.Contents is not { LeftToGame: null }) || terrain.Generator.Rules.RandomLocations;
+        ((rule.Blueprint == true || rule.Custom == true) && rule.Contents is not { LeftToGame: null }) || terrain.Generator.Rules.RandomLocations;
+
+    /// <summary>
+    /// A location's proxy, turned with it, with its ints and the file's data for it (<see cref="ProxyInts"/>). A blueprint
+    /// location's is the mod's own (CreateBlueprintProxy): unturned, with only its name as its "locationreference" (the
+    /// game has no location of it) and no data.
+    /// </summary>
+    private static byte[] Proxy(ValheimGen.SeedLocations.Rule rule, ushort flags, Vector3 spot, float yaw, int zoneSeed, bool dataInstalled)
+    {
+        if (rule.Contents?.Blueprint != null)
+        {
+            return ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, flags, spot, Vector3.Zero, 0f, [(LocationReferenceKey, StableHash.Of(rule.Prefab))]);
+        }
+        byte[] proxy = ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, flags, spot, new Vector3(0f, yaw, 0f), 0f, ProxyInts(rule, zoneSeed, dataInstalled));
+        return WithFields(proxy, rule.Contents?.ProxyData);
+    }
 
     /// <summary>
     /// A location proxy's ints: the location it spawns and the zone's seed. With Expand World Data, the location is the
@@ -118,9 +143,9 @@ public static partial class WorldCreator
     /// The random initial damage a kind's pieces wake with: Expand World Data's file says ("true", "all"; anything
     /// else none), else the prefab's own (Location.m_applyRandomDamage).
     /// </summary>
-    private static Damage DamageOf(ValheimGen.SeedLocations.Rule rule, LocationPrefabs.Prefab prefab) => rule.RandomDamage switch
+    private static Damage DamageOf(ValheimGen.SeedLocations.Rule rule, LocationPrefabs.Prefab? prefab) => rule.RandomDamage switch
     {
-        null => prefab.RandomDamage ? Damage.Random : Damage.None,
+        null => prefab?.RandomDamage == true ? Damage.Random : Damage.None,
         "true" => Damage.Random,
         "all" => Damage.RandomOverData,
         _ => Damage.None,

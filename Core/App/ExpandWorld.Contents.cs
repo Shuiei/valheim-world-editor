@@ -11,15 +11,16 @@ public static partial class ExpandWorld
     /// <summary>
     /// A location's contents as the file changes them (the mod's LocationExtraInfo): the added objects, the swaps and
     /// the data of its objects (the location's own lists over the shared ones), its own data, the scale, offset and
-    /// cardinal turn, the ground levelled and painted round it; with why the game must make it instead, when the
-    /// editor cannot (a blueprint, commands, a time-based seed, another dungeon, data or names worked out when the game
-    /// spawns it).
+    /// cardinal turn, the ground levelled and painted round it, and a blueprint location's blueprint; with why the game
+    /// must make it instead, when the editor cannot (a blueprint with a terrain snapshot, commands, a time-based seed,
+    /// another dungeon, data or names worked out when the game spawns it).
     /// </summary>
     /// <param name="f">The entry's fields.</param>
     /// <param name="data">The world's data entries.</param>
     /// <param name="blueprint">Whether the kind is a blueprint.</param>
     /// <param name="exterior">The kind's exterior radius (what the ground changes are measured by).</param>
-    private static LocationContents ContentsOf(Fields f, DataTable data, bool blueprint, float exterior)
+    /// <param name="blueprints">The folder the mod reads blueprint files from; null for none.</param>
+    private static LocationContents ContentsOf(Fields f, DataTable data, bool blueprint, float exterior, string? blueprints)
     {
         var why = new List<string>();
         void Cannot(bool when, string what)
@@ -29,7 +30,6 @@ public static partial class ExpandWorld
                 why.Add(what);
             }
         }
-        Cannot(blueprint, "a blueprint location");
         Cannot(f.Has("commands"), "commands");
         Cannot(f.B("randomSeed", false), "a random seed");
         Cannot(f.Str("dungeon") != "", "another dungeon");
@@ -40,8 +40,11 @@ public static partial class ExpandWorld
         var objects = Objects(f.Rows("objects"), data, why);
         float[] min = ScaleOf(f.Str("scaleMin", "1")), max = ScaleOf(f.Str("scaleMax", "1"));
         bool scaled = !min.SequenceEqual(max);
+        var parts = blueprint ? BlueprintOfLocation(f.Str("prefab"), blueprints, data, why) : null;
         return new LocationContents
         {
+            Blueprint = parts == null ? null : f.Str("prefab"),
+            Blueprints = parts,
             Objects = objects,
             Swaps = swaps,
             Data = objectData,
@@ -55,6 +58,19 @@ public static partial class ExpandWorld
             Paint = PaintOf(f, exterior),
             LeftToGame = why.Count > 0 ? string.Join(", ", why.Distinct()) : null,
         };
+    }
+
+    /// <summary>A blueprint location's blueprint and those it holds; null (why) when it cannot be read.</summary>
+    private static Dictionary<string, IReadOnlyList<BlueprintPart>>? BlueprintOfLocation(string name, string? folder, DataTable data, List<string> why)
+    {
+        List<string> unread = [];
+        var parts = BlueprintsOf(folder, name, data, why, unread, location: true);
+        why.AddRange(unread);
+        if (parts == null)
+        {
+            why.Add($"the blueprint {name}, which cannot be read");
+        }
+        return parts;
     }
 
     /// <summary>

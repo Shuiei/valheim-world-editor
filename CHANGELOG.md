@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.68.0 — 2026-10-19
+
+### Added
+- **New world builds Expand World's blueprint locations.** A location made of a blueprint is now built in the
+  generated zones as the mod spawns it, with its pieces, the blueprints it holds, the file's swaps and data, and its
+  levelled ground, instead of its zone being left to the game. Blueprints with a terrain snapshot are still left to it.
+
 ## v1.67.3 — 2026-10-19
 
 ### Fixed

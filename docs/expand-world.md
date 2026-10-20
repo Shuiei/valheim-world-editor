@@ -70,15 +70,17 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   "location..." forms), the location's own "data", "scaleMin"/"scaleMax", "offset"/"groundOffset",
   "randomCardinal" and "randomDamage" (its building pieces worn as the game wears them, "all" over their data too),
   and the ground of its zone levelled and painted round it ("levelArea", "levelRadius", "levelBorder", "paint",
-  "paintRadius", "paintBorder"), written as the mod writes it. Data comes from the data entries (`BepInEx/config/data/*.yaml` and
+  "paintRadius", "paintBorder"), written as the mod writes it. A blueprint location is built of its blueprint's
+  pieces (made by chance, swapped and given data as the file says, the blueprints it holds in their places) on
+  ground it levels unless the file says not to. Data comes from the data entries (`BepInEx/config/data/*.yaml` and
   `expand_world/expand_data*.yaml`), by name, as the "type, key, value" shorthand or written in place. The world file gets no settings of the mod's: the game
   writes them on the first save.
 
 ## What does not
 
 - **Locations the editor cannot build ahead of the game** are placed where the mod places them, but their
-  zones are left to the game by the New world page's generated zones, as dungeons are: blueprint locations,
-  "commands", "randomSeed", another "dungeon", and data the mod works out as it spawns an object (a choice of values, a range, a function,
+  zones are left to the game by the New world page's generated zones, as dungeons are: a blueprint location
+  whose blueprint has a terrain snapshot, "commands", "randomSeed", another "dungeon", and data the mod works out as it spawns an object (a choice of values, a range, a function,
   an inventory, a component's field) or a name it gives that is no prefab (a value group, a blueprint). With
   **Random locations** on, every location is. A location's random turn ("randomRotation", the game's own
   included) is drawn from whatever the game drew before it, so no tool can know it; New world draws one.

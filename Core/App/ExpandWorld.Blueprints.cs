@@ -23,7 +23,11 @@ public static partial class ExpandWorld
     /// <param name="data">The world's data entries (what the parts' data names).</param>
     /// <param name="why">Where what cannot be made is said.</param>
     /// <param name="notes">Where a file that cannot be read is noted.</param>
-    internal static Dictionary<string, IReadOnlyList<BlueprintPart>>? BlueprintsOf(string? folder, string name, DataTable data, List<string> why, List<string> notes)
+    /// <param name="location">
+    /// Whether it is a location's blueprint: its terrain snapshots, which the mod applies to a location's ground, cannot
+    /// be made (why).
+    /// </param>
+    internal static Dictionary<string, IReadOnlyList<BlueprintPart>>? BlueprintsOf(string? folder, string name, DataTable data, List<string> why, List<string> notes, bool location = false)
     {
         string[] files = BlueprintFiles(folder);
         var found = new Dictionary<string, IReadOnlyList<BlueprintPart>>(StringComparer.Ordinal);
@@ -36,17 +40,15 @@ public static partial class ExpandWorld
             {
                 return true;
             }
-            if (ReadBlueprint(files, bp, data, why, notes)?.Parts is not { } parts)
+            if (ReadBlueprint(files, bp, data, why, notes) is not { } file)
             {
                 return false;
             }
+            NoteSnapshot(file, location && bp == name, why);
+            var parts = file.Parts;
             found[bp] = parts;
             loading.Add(bp);
-            var holding = parts.Select(p => p.Prefab).Where(loading.Contains).ToHashSet(StringComparer.Ordinal);
-            foreach (string inner in holding)
-            {
-                why.Add($"blueprint {bp} holding {inner}, which holds it");
-            }
+            var holding = Holding(parts, bp, loading, why);
             foreach (var part in parts.Where(p => p.Chance > 0f && !holding.Contains(p.Prefab) && !Known(p.Prefab)))
             {
                 if (!Load(part.Prefab))
@@ -58,6 +60,23 @@ public static partial class ExpandWorld
             found[bp] = holding.Count == 0 ? parts : [.. parts.Where(p => !holding.Contains(p.Prefab))];
             return true;
         }
+    }
+
+    /// <summary>A location's blueprint with a terrain snapshot, which the mod applies to its ground: it cannot be made (why).</summary>
+    private static void NoteSnapshot(BlueprintFile file, bool locations, List<string> why)
+    {
+        if (locations && (file.Heights || file.Paints))
+        {
+            why.Add("a blueprint with a terrain snapshot");
+        }
+    }
+
+    /// <summary>The parts of a blueprint naming one it is held in (being loaded): each said, to be left out.</summary>
+    private static HashSet<string> Holding(List<BlueprintPart> parts, string bp, HashSet<string> loading, List<string> why)
+    {
+        var holding = parts.Select(p => p.Prefab).Where(loading.Contains).ToHashSet(StringComparer.Ordinal);
+        why.AddRange(holding.Select(inner => $"blueprint {bp} holding {inner}, which holds it"));
+        return holding;
     }
 
     /// <summary>The file name extensions of the blueprint files the mod reads.</summary>

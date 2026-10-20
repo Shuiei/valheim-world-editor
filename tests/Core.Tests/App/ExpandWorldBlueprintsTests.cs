@@ -139,4 +139,22 @@ public class ExpandWorldBlueprintsTests : AppSettingsTestBase
         Assert.Null(ExpandWorld.BlueprintRadius(folder, "Bad", notes));
         Assert.Contains(notes, n => n.Contains("Bad.blueprint", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void ABlueprintLocationCarriesItsBlueprintAndLevelsByDefault()
+    {
+        Fixtures.UseLocations();
+        string folder = Write("Hut.vbuild", "woodwall 0 0 0 1 4 0 0\nInner 0 0 0 1 0 0 2\n");
+        Write("Inner.vbuild", "Bush01 0 0 0 1 0 0 0\n");
+        Write("Plot.blueprint", "#Pieces\nwoodwall;;1;0;1;0;0;0;1\n#TerrainHeight:0,0,0;0;1\n0;0\n0;0\n");
+        var rules = ExpandWorld.LocationsOf([E(("prefab", "Hut"), ("quantity", "2")), E(("prefab", "Plot"), ("quantity", "2"))], SeedLocations.Current.Locations, BiomeTable.Vanilla, 10000f, folder, [], Entries);
+        var hut = rules[0];
+        Assert.Equal("Hut", hut.Contents!.Blueprint);
+        Assert.Equal(["Hut", "Inner"], hut.Contents.Blueprints!.Keys.Order(StringComparer.Ordinal));
+        Assert.Null(hut.Contents.LeftToGame);
+        // A blueprint levels its ground unless the file says not to: half its radius fully, half blended.
+        Assert.Equal(new LevelArea(0.5f * hut.ExteriorRadius, 0.5f * hut.ExteriorRadius), hut.Contents.Level);
+        // One with a terrain snapshot is left to the game.
+        Assert.Contains("terrain snapshot", rules[1].Contents!.LeftToGame, StringComparison.Ordinal);
+    }
 }
