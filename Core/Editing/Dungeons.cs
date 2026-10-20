@@ -102,6 +102,9 @@ public static partial class Dungeons
         /// </summary>
         public int MinPlaceOrder { get; init; }
 
+        /// <summary>The blueprint it is built of (Expand World Data's blueprint room); null for a game room or a copy of one.</summary>
+        public ValheimGen.RoomBlueprint? Blueprint { get; init; }
+
         /// <summary>The objects Expand World Data's room file adds with it, each by its chance.</summary>
         public IReadOnlyList<ValheimGen.ContentObject> Added { get; init; } = [];
 
@@ -169,6 +172,9 @@ public static partial class Dungeons
 
     /// <summary>The room of this prefab name, or null when it is not known.</summary>
     public static Room? RoomOf(string name) => RoomOf(StableHash.Of(name));
+
+    /// <summary>Whether the game has a room of this name (its own catalogue, whatever files are laid over it).</summary>
+    public static bool IsGameRoom(string name) => _game.Rooms.ContainsKey(StableHash.Of(name));
 
     /// <summary>The dungeon kind of an object's prefab hash, or null when it is not a dungeon.</summary>
     public static Kind? KindOf(int prefab) => Current.Kinds.GetValueOrDefault(prefab);

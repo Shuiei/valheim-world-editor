@@ -74,8 +74,64 @@ public static partial class Dungeons
             int seed = unchecked((int)v.X * 4271 + (int)v.Y * 9187 + (int)v.Z * 2134 + (kind.BaseSeed ? Seed(worldSeed, dungeonPosition) : 0));
             made = Spawned(Replay(room.Contents, room.Spawns, room.Picks, room.Nodes, kind.Themes, p.Position.Y, seed, p.Position, p.Rotation, out var rolled), room, kind, rolled);
         }
+        made.AddRange(BlueprintMade(room, kind, p));
         made.AddRange(Added(room, kind, p));
         return made;
+    }
+
+    /// <summary>The seed Expand World Data draws a room's added objects from: the room's place (its PlaceRoom postfix).</summary>
+    private static int PlaceSeed(Vector3 at) => unchecked((int)at.X * 4271 + (int)at.Y * 9187 + (int)at.Z * 2134);
+
+    /// <summary>
+    /// The parts of a blueprint room's blueprint (Expand World Data's SpawnBlueprintRoom: Create.Blueprint at the room's
+    /// place and turn): each by its chance, a blueprint it nests spawning its own parts in its place, each spawned as the
+    /// room's objects are (<see cref="ModSpawn"/>). The game draws their chances from the dungeon generator's numbers,
+    /// which the Dungeon tool does not follow: they are drawn from the room's place here.
+    /// </summary>
+    private static List<Made> BlueprintMade(Room room, Kind kind, Placed p)
+    {
+        if (room.Blueprint is not { } bp)
+        {
+            return [];
+        }
+        List<Made?> made = [];
+        var was = Rnd.State;
+        try
+        {
+            Rnd.InitState(PlaceSeed(p.Position));
+            AddParts(made, new PartsOf(bp, room, kind), bp.Name, p.Position, p.Rotation);
+        }
+        finally
+        {
+            Rnd.State = was;
+        }
+        return [.. made.OfType<Made>()];
+    }
+
+    /// <summary>The blueprint a blueprint room's parts come from, with the room and dungeon they are spawned for.</summary>
+    /// <param name="Blueprint">The blueprint.</param>
+    /// <param name="Room">The room.</param>
+    /// <param name="Kind">The dungeon kind.</param>
+    private readonly record struct PartsOf(ValheimGen.RoomBlueprint Blueprint, Room Room, Kind Kind);
+
+    /// <summary>One blueprint's parts at a place and turn (see <see cref="BlueprintMade"/>).</summary>
+    private static void AddParts(List<Made?> made, PartsOf of, string name, Vector3 at, Quaternion turn)
+    {
+        foreach (var part in of.Blueprint.Blueprints[name])
+        {
+            if (part.Chance < 1f && Rnd.Value > part.Chance)
+            {
+                continue;
+            }
+            var position = at + Vector3.Transform(part.Position, turn);
+            var rotation = Quaternion.Normalize(turn * part.Rotation);
+            if (part.Prefab != name && of.Blueprint.Blueprints.ContainsKey(part.Prefab))
+            {
+                AddParts(made, of, part.Prefab, position, rotation);
+                continue;
+            }
+            made.Add(ModSpawn(new Made(part.Prefab, position, rotation), part.Data, of.Room, of.Kind));
+        }
     }
 
     /// <summary>
@@ -136,7 +192,7 @@ public static partial class Dungeons
         var was = Rnd.State;
         try
         {
-            Rnd.InitState(unchecked((int)p.Position.X * 4271 + (int)p.Position.Y * 9187 + (int)p.Position.Z * 2134));
+            Rnd.InitState(PlaceSeed(p.Position));
             foreach (var o in room.Added)
             {
                 if (o.Chance < 1f && Rnd.Value > o.Chance)

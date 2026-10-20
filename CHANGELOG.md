@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.79.0 — 2026-10-20
+
+### Added
+- **The Dungeon tool builds Expand World Data's blueprint rooms.** A room of the room file made of a blueprint joins
+  dungeons with its openings where the blueprint's snap points are, and brings the blueprint's pieces with it.
+
 ## v1.78.0 — 2026-10-20
 
 ### Added

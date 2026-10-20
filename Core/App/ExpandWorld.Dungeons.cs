@@ -11,7 +11,8 @@ public static partial class ExpandWorld
     /// noted, as are an added object that is no prefab of the game and a swap or data that cannot be written ahead.
     /// </summary>
     /// <param name="data">Expand World Data's files.</param>
-    internal static DungeonRules? DungeonsOf(DataFiles data)
+    /// <param name="blueprints">The folder the mod reads blueprint files from (blueprint rooms); null for none.</param>
+    internal static DungeonRules? DungeonsOf(DataFiles data, string? blueprints = null)
     {
         if (data.Rooms == null && data.Dungeons == null)
         {
@@ -21,22 +22,26 @@ public static partial class ExpandWorld
         return new DungeonRules
         {
             // No file: the game's rooms (the mod writes them as its file).
-            Rooms = data.Rooms is { Count: > 0 } rooms ? [.. rooms.Select(e => RoomOf(new Fields(e, "rooms", data.Notes), table, data.Notes)).OfType<RoomEntry>()] : null,
+            Rooms = data.Rooms is { Count: > 0 } rooms ? [.. rooms.Select(e => RoomOf(new Fields(e, "rooms", data.Notes), table, blueprints, data.Notes)).OfType<RoomEntry>()] : null,
             Dungeons = data.Dungeons is { } dungeons ? [.. dungeons.Select(e => DungeonOf(new Fields(e, "dungeons", data.Notes), table, data.Notes))] : [],
         };
     }
 
-    /// <summary>One room of the room file, with the mod's defaults (RoomYaml); null for a blueprint room, noted.</summary>
-    private static RoomEntry? RoomOf(Fields f, DataTable table, List<string> notes)
+    /// <summary>
+    /// One room of the room file, with the mod's defaults (RoomYaml): a copy of a game room, or a blueprint room (no game
+    /// room of its name: the blueprint of that name, <see cref="RoomBlueprintOf"/>); null when it is neither, noted.
+    /// </summary>
+    private static RoomEntry? RoomOf(Fields f, DataTable table, string? blueprints, List<string> notes)
     {
         string name = f.Str("name");
         string game = name.Split(':')[0];
-        if (Editing.Dungeons.RoomOf(game) == null)
+        List<string> why = [];
+        var (known, blueprint) = Source(f, game, new BlueprintSource(table, blueprints, why, notes));
+        if (!known)
         {
-            notes.Add($"expand_rooms: {name} is a blueprint room (no game room of that name): the Dungeon tool does not build it");
+            notes.Add($"expand_rooms: {name} is no game room and no blueprint: the Dungeon tool does not build it");
             return null;
         }
-        List<string> why = [];
         var objects = Objects(f.Rows("objects"), table, why);
         var swaps = Swaps(f.Rows("objectSwap"), why);
         var objectData = DataChoices(f.Rows("objectData"), table, why);
@@ -51,8 +56,30 @@ public static partial class ExpandWorld
         }
         return new RoomEntry(name, f.Str("theme"), f.B("enabled", true), f.B("entrance", false), f.B("endCap", false), f.B("divider", false),
             f.I("endCapPriority", 0), f.F("weight", 1f), f.B("perimeter", false), f.Str("size"), connections, objects)
-        { Changes = new ObjectChanges { Swaps = swaps, Data = objectData }, MinPlaceOrder = f.I("minPlaceOrder", 0) };
+        { Changes = new ObjectChanges { Swaps = swaps, Data = objectData }, MinPlaceOrder = f.I("minPlaceOrder", 0), Blueprint = blueprint };
     }
+
+    /// <summary>Where blueprint rooms' blueprints are read from, with what the reading says.</summary>
+    /// <param name="Table">The world's data entries.</param>
+    /// <param name="Folder">The folder the mod reads blueprint files from; null for none.</param>
+    /// <param name="Why">Where what cannot be made is said.</param>
+    /// <param name="Notes">Where a file that cannot be read is noted.</param>
+    private sealed record BlueprintSource(DataTable Table, string? Folder, List<string> Why, List<string> Notes);
+
+    /// <summary>What a room of the file is made of: a game room (no blueprint), or the blueprint of its name; not known when neither.</summary>
+    private static (bool Known, RoomBlueprint? Blueprint) Source(Fields f, string game, BlueprintSource from)
+    {
+        if (Editing.Dungeons.IsGameRoom(game))
+        {
+            return (true, null);
+        }
+        var blueprint = RoomBlueprintOf(from.Folder, game, ConnectionPlaces(f), from.Table, from.Why, from.Notes);
+        return (blueprint != null, blueprint);
+    }
+
+    /// <summary>The room's connections' positions, in order (what a blueprint room's snap points are taken from).</summary>
+    private static List<string> ConnectionPlaces(Fields f) =>
+        f.Raw("connections") is List<object?> items ? [.. items.OfType<Dictionary<string, object?>>().Select(c => f.Of(c).Str("position"))] : [];
 
     /// <summary>One generator of the dungeon file, with the mod's defaults (DungeonYaml); a swap or data it cannot write left out, noted.</summary>
     private static DungeonEntry DungeonOf(Fields f, DataTable table, List<string> notes)
