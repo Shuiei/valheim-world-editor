@@ -44,6 +44,9 @@ public sealed class WorldCreatorZonesTests : WorldCreatorTestBase
     [Fact]
     public void TheMiddleIsGeneratedWithTheGamesVegetation()
     {
+        // The game's location rules, installed here too: they are process-wide, and another class installing them
+        // between the two worlds below made the second one hold the locations the first did not.
+        Fixtures.UseLocations();
         var made = WorldCreator.Create(Folder("Grown"), "Grown", Seed, radius: 1);
         Assert.Equal(9, made.Zones);
         Assert.True(made.Objects > 50, $"{made.Objects} objects");
