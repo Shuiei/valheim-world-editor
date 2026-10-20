@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.60.3 — 2026-10-19
+
+### Fixed
+- **Locations are predicted where Expand World Size puts them on a bigger or stretched world.** The mod sizes the
+  game's biome map to the world, and locations are drawn from that map; the editor kept the game's map, so the New
+  world page, the dungeon entrances and New world's zones put locations in the wrong places on such worlds.
+
 ## v1.60.2 — 2026-10-19
 
 ### Fixed

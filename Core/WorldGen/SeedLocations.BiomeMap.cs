@@ -11,9 +11,14 @@ public static partial class SeedLocations
     internal sealed partial class BiomeMap
     {
         /// <summary>
-        /// Points per side, 12 m apart.
+        /// The grid: the game's 2048 points a side 12 m apart, or Expand World Size's for the world's radius and stretch.
         /// </summary>
-        public const int Size = 2048;
+        public BiomeGrid Grid { get; }
+
+        /// <summary>
+        /// Points per side.
+        /// </summary>
+        public int Size => Grid.Size;
 
         /// <summary>
         /// The Ashlands', Deep North's and ocean's biome indices (the same under both mappings, see <see cref="IndexOf"/>),
@@ -38,13 +43,7 @@ public static partial class SeedLocations
         /// <summary>
         /// A map coordinate to world metres (the point's middle).
         /// </summary>
-        public static float MapToWorld(float x) => (x - 1024f) * 12f + 6f;
-
-        /// <summary>
-        /// World metres to the map coordinate of the 12 m cell holding them (WorldSpaceToMapSpace, cut toward zero as
-        /// the game casts it); <see cref="MapToWorld"/> of it snaps a point to its cell's middle.
-        /// </summary>
-        public static int WorldToMap(float v) => (int)((v - 6f) / 12f + 1024f);
+        public float MapToWorld(float x) => Grid.MapToWorld(x);
 
         /// <summary>
         /// A single biome's index (Heightmap.BiomeIndex) in the game's own mapping; -1 for combined flags and for biomes the
@@ -61,7 +60,7 @@ public static partial class SeedLocations
         /// <summary>
         /// One byte a point: the biome index, at or above sea level, met by the fill.
         /// </summary>
-        private readonly byte[] _cell = new byte[Size * Size];
+        private readonly byte[] _cell;
 
         /// <summary>
         /// Reads every point's biome and whether it is at or above sea level (ocean beyond the world's edge).
@@ -72,6 +71,8 @@ public static partial class SeedLocations
         public BiomeMap(WorldGenerator gen, bool parallel, CancellationToken cancel)
         {
             _data = gen.Rules.DataInstalled;
+            Grid = BiomeGrid.Of(gen.Rules);
+            _cell = new byte[Size * Size];
             var options = new ParallelOptions { CancellationToken = cancel, MaxDegreeOfParallelism = parallel ? Math.Max(1, Environment.ProcessorCount - 1) : 1 };
             Parallel.For(0, Size, options, i =>
             {
