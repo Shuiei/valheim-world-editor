@@ -27,7 +27,8 @@
 #   windows-smoke  on main only: the Windows package does the same on a Windows machine
 #                  (tools/smoke-test.ps1). Both are slow and what they check (tools/release.sh, the
 #                  packaging) seldom changes, so branches and pull requests run the tests only.
-# When a release is due (main, VERSION's CHANGELOG heading dated, no tag for it yet), the release
+# When a release is due (main, a release pull request's commit "Release v<VERSION>", VERSION's CHANGELOG
+# heading dated, no tag for it yet), the release
 # workflow runs instead, and nothing in it runs before the approval (the tests ran on the pull request,
 # which main's ruleset keeps up to date with main, so the merged commit's tree is the one they tested):
 #   hold-release   waits for someone to approve it in CircleCI (the mod-token context is restricted)

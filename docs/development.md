@@ -136,11 +136,16 @@ dependency in `tools/thunderstore/*/manifest.json` current.
 
 CircleCI makes the release once you approve it (`.circleci/config.yml`, `.circleci/continue.yml`):
 
-1. In a pull request, date the `CHANGELOG.md` headings to release (`## v1.25.1 — 2026-10-12` instead
-   of `— unreleased`). Optionally, write the GitHub release's notes in `docs/releases/v<version>.md`;
-   without it the notes are the CHANGELOG's sections since the last release.
-2. Merge it. On main, a dated heading for `VERSION` with no `v<version>` tag yet makes the pipeline
-   a release one: **hold-release** waits at once, before anything runs. The tests are not run again:
+1. Open a release pull request titled **`Release v<version>`** (`VERSION`'s version): it dates the
+   `CHANGELOG.md` headings to release (`## v1.25.1 — 2026-10-12` instead of `— unreleased`), when
+   they are not dated yet. Optionally, write the GitHub release's notes in
+   `docs/releases/v<version>.md`; without it the notes are the CHANGELOG's sections since the last
+   release.
+2. Merge it (squash: main's commit is then `Release v<version> (#<number>)`). On main, that commit,
+   with a dated heading for `VERSION` and no `v<version>` tag yet, makes the pipeline a release one:
+   **hold-release** waits at once, before anything runs. Merging any other pull request runs the
+   usual pipeline, even when it bumps `VERSION` and dates its heading: only a release pull request
+   releases. The tests are not run again:
    they ran on the pull request, on the same tree (main's ruleset keeps a pull request up to date
    with main before it merges).
 3. In CircleCI, open that pipeline's workflow (`release`) and approve **hold-release**. Then
