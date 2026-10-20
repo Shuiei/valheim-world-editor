@@ -1,5 +1,6 @@
 # Valheim World Editor: tests and build checks on every push and pull request, and the release on main.
-# The pipeline starts in .circleci/config.yml, which says whether a release is due (the release parameter).
+# The pipeline starts in .circleci/config.yml, which says whether a release is due (the release parameter), and
+# whether the branch is a release pull request's (release_pr: its required checks report at once, no tests).
 #   code-analysis  the editor (Core, Desktop, Sdk) and the plugin's API build with no .NET analyzer
 #                  warning (warnings are errors); every XML file of the repository (projects, coverage
 #                  settings) is well formed (xmllint)
@@ -50,6 +51,11 @@ version: 2.1
 parameters:
   # Set by .circleci/config.yml: true on main when VERSION is ready to be released and not tagged yet.
   release:
+    type: boolean
+    default: false
+  # Set by .circleci/config.yml: true on a release pull request's branch (release/v<VERSION>) that changes only
+  # CHANGELOG.md and docs/releases/: no tests (main's code, tested as each pull request merged).
+  release_pr:
     type: boolean
     default: false
 
@@ -533,6 +539,16 @@ jobs:
             - WorldEditorBridge-*.zip
             - notes.md
 
+  # A required check of a release pull request, reported at once: its code is main's, tested already.
+  tested-on-main:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - run:
+          name: Tested on main
+          command: echo "A release pull request changes only CHANGELOG.md and docs/releases/; its code was tested on main."
+
   # The plugin on one mod site, or the plugin and the editor on Nexus Mods (tools/release/publish.cs).
   publish:
     executor: dotnet
@@ -557,7 +573,9 @@ workflows:
   # Main's ruleset requires those four checks of a pull request, and no other: it must stay in step with this list.
   test:
     when:
-      not: << pipeline.parameters.release >>
+      and:
+        - not: << pipeline.parameters.release >>
+        - not: << pipeline.parameters.release_pr >>
     jobs:
       - packages:
           filters:
@@ -586,6 +604,19 @@ workflows:
           filters:
             branches:
               only: main
+
+  # A release pull request: the four checks main's ruleset requires, reported at once (no tests: main's code).
+  release-pr:
+    when: << pipeline.parameters.release_pr >>
+    jobs:
+      - tested-on-main:
+          name: code-analysis
+      - tested-on-main:
+          name: formatting
+      - tested-on-main:
+          name: core-tests
+      - tested-on-main:
+          name: app-tests
 
   # The approval first, so nothing runs for a release nobody approves; then only what the release needs:
   # the packages (the tests ran on the pull request, on the same tree) and the Windows smoke test, then
