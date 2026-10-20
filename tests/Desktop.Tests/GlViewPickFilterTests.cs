@@ -69,4 +69,21 @@ public class GlViewPickFilterTests
         v.W.Tools.ChooseMode(ToolMode.Place);
         Assert.True(v.W.View.IsPickable(2));
     }
+
+    // The View tool's clicks and a zone on the ground follow the filter too.
+    [AvaloniaFact]
+    public void TheViewToolAndAZoneOnTheGroundFollowIt()
+    {
+        var v = WallUnderATree();
+        v.Tool.Picks = GlView.PickKinds.Nature;
+        v.Tool.ZoneOnGround = true;
+        v.Drag(KeyModifiers.Alt, (33, 33), (47, 33), (47, 47), (33, 47), (33, 34));
+        Assert.Equal([1], v.Selected);
+        // The View tool: the tree beside them is picked with Nature only, nothing with Built pieces only.
+        v.W.Tools.ChooseMode(ToolMode.View);
+        Assert.Equal(2, v.W.View.Pick(v.At(48, 30, 48), v.Size, PickHow.Only));
+        v.Tool.Picks = GlView.PickKinds.Built;
+        Assert.Null(v.W.View.Pick(v.At(48, 30, 48), v.Size, PickHow.Only));
+        Assert.Empty(v.Selected);
+    }
 }
