@@ -87,4 +87,18 @@ public class MapDataBiomeColorsTests
         Assert.Equal((112f, 158f, 72f), TerrainService.BiomeColor(Heightmap.Biome.Meadows, 50f, 30f, Table(meadows with { HasData = false })));
         Assert.Equal((150f, 150f, 150f), TerrainService.BiomeColor((Heightmap.Biome)0x800, 50f, 30f, Table(violet)));
     }
+
+    [Fact]
+    public void TheMapDrawsTheSeaAtTheWorldsRealWaterLevel()
+    {
+        using var w = new TempWorld();
+        var vanilla = Map(w, WorldRules.Vanilla);
+        var lower = Map(w, WorldRules.Vanilla with { WaterLevel = 27f });
+        // The sea's line half a metre under the water, as the game's map draws its own at 29.5 m.
+        Assert.Equal(29.5f, vanilla.SeaLine);
+        Assert.Equal(26.5f, lower.SeaLine);
+        // Ground at 28 m: under the game's sea, above a sea Expand World Rivers lowers to 27 m (its forest shows).
+        Assert.Equal((byte)0, vanilla.MaskColor(0f, 0f, 28f, Heightmap.Biome.BlackForest).Item1);
+        Assert.Equal(((byte)255, (byte)0, (byte)0), lower.MaskColor(0f, 0f, 28f, Heightmap.Biome.BlackForest));
+    }
 }

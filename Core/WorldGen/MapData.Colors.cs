@@ -67,15 +67,16 @@ public sealed partial class MapData
     }
 
     /// <summary>
-    /// The mask texel at a world point (r forest, g mist, b ashlands lava/ocean). Mirrors Minimap.GetMaskColor: the
-    /// water is its literal 30 whatever the rules say, the point goes in stretched (Expand World Size's prefix) and a
-    /// biome of the biome file is masked as its terrain biome (Expand World Data's prefix).
+    /// The mask texel at a world point (r forest, g mist, b ashlands lava/ocean). Mirrors Minimap.GetMaskColor, but with
+    /// the world's real water level where the game's map keeps its literal 30 (the editor's map draws the real sea);
+    /// the point goes in stretched (Expand World Size's prefix) and a biome of the biome file is masked as its terrain
+    /// biome (Expand World Data's prefix).
     /// </summary>
     internal (byte, byte, byte) MaskColor(float wx, float wy, float height, Heightmap.Biome biome)
     {
         wx = Generator.Stretched(wx);
         wy = Generator.Stretched(wy);
-        if (height < WorldGenerator.LiteralWaterLevel)
+        if (height < Generator.Rules.WaterLevel)
         {
             return (0, 0, Byte(Math.Clamp(Generator.GetAshlandsOceanGradient(wx, wy), 0f, 1f)));
         }

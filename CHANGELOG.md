@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.69.0 — 2026-10-19
+
+### Added
+- **The map draws the sea at the world's real water level.** With Expand World Rivers moving the water, the coast
+  on the map now follows it, instead of the game map's fixed line.
+
 ## v1.68.0 — 2026-10-19
 
 ### Added

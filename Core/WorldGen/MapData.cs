@@ -26,6 +26,12 @@ public sealed partial class MapData
     public float TexelMeters => GlobalPixel * Generator.Rules.TotalRadius / 10500f;
 
     /// <summary>
+    /// The height the map draws the sea below: the world's real water level (Expand World Rivers' when it moves it),
+    /// half a metre under it as the game's map draws its own (29.5 m for its 30).
+    /// </summary>
+    public float SeaLine => Generator.Rules.WaterLevel - 0.5f;
+
+    /// <summary>
     /// Colours from the Minimap component in the game's assets (Mistlands keeps its code default).
     /// </summary>
     private static readonly (Heightmap.Biome Biome, byte R, byte G, byte B)[] BiomeColors =
