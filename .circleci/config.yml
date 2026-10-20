@@ -3,7 +3,9 @@
 # A release is due on main when the commit is a release pull request's ("Release v<VERSION>", as main's
 # squash merges title it), VERSION's CHANGELOG heading has its date (not "unreleased") and VERSION is
 # not tagged yet: the release workflow then waits for an approval (docs/development.md#releasing).
-# Other pull requests date their headings too: merging one is no release.
+# Other pull requests date their headings too: merging one is no release. The title only picks the
+# workflow: nothing is released until the maintainer approves hold-release (the restricted mod-token
+# context), and only pull requests main's ruleset accepted reach main.
 version: 2.1
 setup: true
 
