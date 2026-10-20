@@ -192,7 +192,7 @@ public class ExpandWorldTests : AppSettingsTestBase
         using var w = new TempWorld();
         var world = w.Load();
         world.StartingGlobalKeys.Add("ews_world_radius 20000");
-        string bep = Path.Combine(Data, "sized");
+        string bep = Path.Combine(Data, "sized", "BepInEx");
         TestMods.Install(bep, TestMods.Size);
         Assert.True(ExpandWorld.Resolve(world, new AppSettings { BepInExFolders = { bep } }).IsVanilla);
         var on = ExpandWorld.Resolve(world, new AppSettings { ExpandWorld = true, BepInExFolders = { bep } });
