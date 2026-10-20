@@ -13,7 +13,13 @@ public static partial class ExpandWorld
     /// </summary>
     /// <param name="save">The world (its name and starting global keys).</param>
     /// <param name="settings">The editor's settings.</param>
-    public static WorldRules Resolve(WorldSave save, AppSettings settings)
+    // Called away from the window (WorldSession.Open runs on a worker): waiting for the game's rules holds no one up.
+    public static WorldRules Resolve(WorldSave save, AppSettings settings) => ResolveLocal(save, settings).GetAwaiter().GetResult();
+
+    /// <summary><see cref="Resolve(WorldSave, AppSettings)"/>, waiting for the game's location rules without holding a thread.</summary>
+    /// <param name="save">The world (its name and starting global keys).</param>
+    /// <param name="settings">The editor's settings.</param>
+    private static async Task<WorldRules> ResolveLocal(WorldSave save, AppSettings settings)
     {
         var keys = Keys(save.StartingGlobalKeys);
         if (!settings.ExpandWorld)
@@ -22,7 +28,9 @@ public static partial class ExpandWorld
             return WorldRules.Vanilla;
         }
         var found = Find(settings);
-        return Resolve(save, keys, found, ReadData(found));
+        var data = ReadData(found);
+        await NeedGameRules(data).ConfigureAwait(false);
+        return Resolve(save, keys, found, data);
     }
 
     /// <summary>The rules from a world's keys and a folder's files read already, said in the log.</summary>
@@ -41,6 +49,29 @@ public static partial class ExpandWorld
         }
         NoteGrid(save, rules);
         return rules;
+    }
+
+    /// <summary>
+    /// The game's location rules read before a world's rules are worked out when its location or alt biome file needs
+    /// them (they are converted against the game's): a world opens before anything else has asked for them. Done at once
+    /// when they are read or not needed; when they cannot be read, the files are not used, as the notes say.
+    /// </summary>
+    /// <param name="data">Expand World Data's files.</param>
+    internal static async Task NeedGameRules(DataFiles data)
+    {
+        if (SeedLocations.Available || (data.Locations is not { Count: > 0 } && data.AltBiomes is not { Count: > 0 }))
+        {
+            return;
+        }
+        try
+        {
+            await GameLocations.UseGameRules(GameLook.Bundles).ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            // Run away from the caller's code: whatever reading them throws ends here, in the log.
+            Log.Caught(e, "reading the game's location rules for the world's location and alt biome files (the files are not used)");
+        }
     }
 
     /// <summary>

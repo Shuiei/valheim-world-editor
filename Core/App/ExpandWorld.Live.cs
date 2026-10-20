@@ -31,23 +31,24 @@ public static partial class ExpandWorld
             await TakeLiveKeys(save, live);
             if (!settings.ExpandWorld)
             {
-                return Resolve(save, settings);
+                return await ResolveLocal(save, settings);
             }
             var plugins = await live.Plugins();
             if (plugins == null)
             {
                 Console.WriteLine($"Expand World: the game's WorldEditorBridge does not serve its files (needs {BridgeFilesVersion} or newer): the local BepInEx folders are used.");
-                return Resolve(save, settings);
+                return await ResolveLocal(save, settings);
             }
             var found = await FetchLive(live, plugins, settings);
             var data = ReadData(found);
             await FetchBlueprints(live, found, data);
+            await NeedGameRules(data);
             return Resolve(save, Keys(save.StartingGlobalKeys), found, data);
         }
         catch (Exception e) when (e is HttpRequestException or InvalidOperationException or TaskCanceledException or JsonException or IOException or UnauthorizedAccessException)
         {
             Log.Caught(e, "reading the mods' files through the game's bridge (the local BepInEx folders are used)");
-            return Resolve(save, settings);
+            return await ResolveLocal(save, settings);
         }
     }
 

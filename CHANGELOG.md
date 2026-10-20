@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.74.1 — 2026-10-20
+
+### Fixed
+- **Expand World Data's location and alt biome files are used for a world opened in the editor.** They were skipped
+  when the world opened before the game's own location rules had been read, so the map and the 3D view showed the
+  game's locations and alt biomes.
+
 ## v1.74.0 — 2026-10-20
 
 ### Added
