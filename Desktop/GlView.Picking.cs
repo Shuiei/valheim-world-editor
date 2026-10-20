@@ -145,16 +145,20 @@ public sealed partial class GlView
     }
 
     /// <summary>
-    /// Whether a thing is drawn (not gone, its kind shown, its model known, not hidden: GlView.Hide): only those can be
-    /// picked.
+    /// Whether a thing can be picked: drawn (not gone, its kind shown, its model known, not hidden: GlView.Hide), and of
+    /// a kind the pick filter lets through (GlView.PickFilter).
     /// </summary>
     internal bool IsPickable(int i)
     {
         lock (_objLock)
         {
-            return i < _known.Length && _known[i] && _shown[(int)_kinds[i]] && !_hidden.Contains(i);
+            return i < _known.Length && Pickable(i);
         }
     }
+
+    /// <summary><see cref="IsPickable"/> for an index in range, without the lock (the picking loops, every object).</summary>
+    /// <param name="i">The object.</param>
+    private bool Pickable(int i) => _known[i] && _shown[(int)_kinds[i]] && !_hidden.Contains(i) && PickFilterLets(_kinds[i]);
 
     /// <summary>A thing's box (view space) and the position it was made at (world coordinates).</summary>
     internal (Vector3 Min, Vector3 Max, Vector3 At) BoxOf(int i)

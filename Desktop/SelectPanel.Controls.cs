@@ -48,6 +48,9 @@ public sealed partial class SelectPanel
     /// <summary>A box on the screen also takes what is hidden behind others (Alt + Z).</summary>
     internal CheckBox ThroughBox { get; }
 
+    /// <summary>What clicks, boxes and zones pick: everything shown, the pieces players built, or nature.</summary>
+    internal ComboBox PickBox { get; }
+
     /// <summary>The exact place's X (east), in metres.</summary>
     internal NumericUpDown XBox { get; } = Num(0.1m);
 

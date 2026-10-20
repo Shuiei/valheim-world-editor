@@ -47,6 +47,10 @@ public sealed partial class SelectTool
     /// off, only what is seen (GlView.SeenIn).
     /// </summary>
     public bool SelectThrough { get; set; }
+    /// <summary>
+    /// What clicks, boxes and zones pick (GlView.PickFilter): everything shown, the pieces players built, or nature.
+    /// </summary>
+    internal GlView.PickKinds Picks { get => _view.Picks; set => _view.Picks = value; }
 
     /// <summary>The view's open scene.</summary>
     private WorldScene? Scene => _view.Scene;
