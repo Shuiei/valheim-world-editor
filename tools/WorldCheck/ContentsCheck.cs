@@ -121,12 +121,12 @@ internal static class ContentsCheck
         if (prefab == WorldSave.LocationProxyPrefab)
         {
             // The world keeps proxies apart from its objects (a runestone's shows as the stone).
-            if (ZdoData.Parse(zdo).IntList.FirstOrDefault(v => v.Key == WorldSave.LocationKey) is not { Key: not 0 } location)
+            if (ZdoData.Parse(zdo).IntList.Where(v => v.Key == WorldSave.LocationKey).Select(v => (int?)v.Value).FirstOrDefault() is not { } location)
             {
                 tally.Say($"{site.Name} at ({site.Position.X:0.0}, {site.Position.Z:0.0}): its proxy names no location");
                 return;
             }
-            var proxy = world.Placed.FirstOrDefault(p => p.Location == location.Value && Flat(p.Position, at) < 0.05f);
+            var proxy = world.Placed.FirstOrDefault(p => p.Location == location && Flat(p.Position, at) < 0.05f);
             if (proxy == null)
             {
                 tally.Say($"{site.Name} at ({site.Position.X:0.0}, {site.Position.Z:0.0}): no proxy");
