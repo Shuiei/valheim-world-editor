@@ -22,7 +22,14 @@ internal static class KeysAndMouseSetup
     /// <summary>
     /// A half wood wall at grid (40, 40).
     /// </summary>
-    internal static WorldScene.Thing Wall() => new(11, StableHash.Of("wood_wall_half"), new Vector3(40 - 32, 30, 40 - 32), Vector3.Zero, 0, true);
+    internal static WorldScene.Thing Wall() => WallAt(40, 40);
+
+    /// <summary>
+    /// A half wood wall at a grid point.
+    /// </summary>
+    /// <param name="gx">Its grid x.</param>
+    /// <param name="gz">Its grid z.</param>
+    internal static WorldScene.Thing WallAt(float gx, float gz) => new(11, StableHash.Of("wood_wall_half"), new Vector3(gx - 32, 30, gz - 32), Vector3.Zero, 0, true);
 
     // ---- [ ] brush size.
 }

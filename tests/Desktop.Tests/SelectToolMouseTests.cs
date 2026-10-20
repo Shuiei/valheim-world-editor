@@ -52,12 +52,13 @@ public class SelectToolMouseTests
     }
 
     // A row starts from the last object clicked that stays selected: one taken out again (Ctrl + click twice) starts
-    // none, so Ctrl + Shift + click then adds just the one clicked; after a row, the next goes on from its end.
+    // none, so Ctrl + Shift + click then adds just the one clicked; after a row, the next goes on from its end. (The
+    // fifth wall stands far off: the turn ring round the selection's middle never lies under a Ctrl + click.)
     [AvaloniaFact]
     public void ARowStartsFromTheLastObjectClickedThatStaysSelected()
     {
-        var v = Open(T(1, Wall, 36, 30, 40), T(2, Wall, 38, 30, 40), T(3, Wall, 40, 30, 40), T(4, Wall, 42, 30, 40), T(5, Wall, 46, 30, 46));
-        v.Click(46, 46);
+        var v = Open(T(1, Wall, 36, 30, 40), T(2, Wall, 38, 30, 40), T(3, Wall, 40, 30, 40), T(4, Wall, 42, 30, 40), T(5, Wall, 58, 30, 58));
+        v.Click(58, 58);
         v.Click(40, 40, KeyModifiers.Control);
         v.Click(40, 40, KeyModifiers.Control);
         Assert.Equal([4], v.Selected);
