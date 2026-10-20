@@ -87,16 +87,17 @@ public class ExpandWorldBlueprintsTests : AppSettingsTestBase
         var rules = ExpandWorld.VegetationOf(
         [
             E(("prefab", "Hut"), ("data", "marked"), ("drops", "MyDrops")),
-            E(("prefab", "Hut, Bush01")),
             E(("prefab", "Bush01"), ("data", "rolled")),
         ], Regrow.GameRules, BiomeTable.Vanilla, 10000f, new HashSet<string>(), notes, Entries, folder);
         Assert.Equal([new ContentField("ints", StableHash.Of("mark"), "1"), new ContentField("ints", StableHash.Of("ews_drops"), StableHash.Of("MyDrops").ToString(System.Globalization.CultureInfo.InvariantCulture))], rules[0].data!);
         Assert.Equal(["Hut"], rules[0].blueprints!.Keys);
-        // The mod looks a list up whole: never a blueprint.
-        Assert.Null(rules[1].blueprints);
+        // A blueprint is no prefab the game's list lacks.
+        Assert.DoesNotContain(notes, n => n.Contains("no rule for", StringComparison.Ordinal));
         // Data the game works out as it spawns is left out, noted.
-        Assert.Null(rules[2].data);
+        Assert.Null(rules[1].data);
         Assert.Contains(notes, n => n.Contains("Bush01 grows without", StringComparison.Ordinal));
-        Assert.DoesNotContain(notes, n => n.Contains("no rule for Hut", StringComparison.Ordinal));
+        // The mod looks a list up whole: never a blueprint.
+        var list = Assert.Single(ExpandWorld.VegetationOf([E(("prefab", "Hut, Bush01"))], Regrow.GameRules, BiomeTable.Vanilla, 10000f, new HashSet<string>(), notes, Entries, folder));
+        Assert.Null(list.blueprints);
     }
 }
