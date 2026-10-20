@@ -29,6 +29,7 @@ until you **Save** (or **Apply live**).
 | Action | What it does |
 |---|---|
 | **Click** an object | Selects it, and only it. An orange line round their shapes marks the selected objects, the last one clicked (the active one) in a lighter yellow, as in Blender; a blue box shows what is under the cursor. |
+| **Click again** at the same spot | Selects the next object behind the one selected there, then the next, and round again (a chest on a floor, the floor under it, the beam below), as in Unity. |
 | `Ctrl` + click | Adds an object to the selection, or takes it out when it is selected already. Dragging any selected object then moves them all together. |
 | `Shift` + click | Takes an object out of the selection. |
 | `Ctrl` + `Shift` + click | Adds the row from the last object clicked to this one: click wall 1, then `Ctrl` + `Shift` + click wall 3, and walls 1, 2 and 3 are selected (the objects on the line between them). |

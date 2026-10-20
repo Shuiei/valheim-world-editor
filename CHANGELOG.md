@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.86.0 — 2026-10-20
+
+### Added
+- **Click again to reach what is behind.** A second click at the same spot selects the next object behind the one
+  selected there (a chest, then the floor under it, then the beam below), and round again, as in Unity.
+
 ## v1.85.0 — 2026-10-20
 
 ### Changed
