@@ -46,6 +46,7 @@ public static partial class GameData
             Editing.Dungeons.Use(json);
             Editing.LocationPrefabs.Use(json);
         }, TrimDungeons),
+        new("wake-draws", null, WakeDraws.Use),
     ];
 
     /// <summary>

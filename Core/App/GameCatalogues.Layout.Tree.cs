@@ -32,21 +32,41 @@ public static partial class GameCatalogues
             {
                 if (type == GameObjectType)
                 {
-                    var comps = new (int, long)[d.I32(0)];
-                    for (int i = 0; i < comps.Length; i++)
-                    {
-                        comps[i] = (d.I32(4 + 12 * i), d.I64(8 + 12 * i));
-                    }
-                    int name = 8 + 12 * comps.Length;
-                    GameObjects[(f, pid)] = (d.Text(name), comps);
+                    var (name, _, comps) = GameObjectOf(d);
+                    GameObjects[(f, pid)] = (name, comps);
                 }
                 else if (type == TransformType)
                 {
-                    long[] children = d.ChildIds(52);
-                    int father = 56 + 12 * children.Length;
-                    Transforms[(f, pid)] = (d.I64(4), d.I32(father) == 0 && d.I64(father + 4) == 0, children);
+                    var (go, father, children) = TransformOf(d);
+                    Transforms[(f, pid)] = (go, father == 0, children);
                 }
             }
+        }
+
+        /// <summary>
+        /// A GameObject's numbers from its bytes: its components first (a count, then each a file id and a path id), then
+        /// its layer, its name, its tag (two bytes) and whether it is active.
+        /// </summary>
+        public static (string Name, bool Active, (int File, long Pid)[] Components) GameObjectOf(Bytes d)
+        {
+            var comps = new (int, long)[d.I32(0)];
+            for (int i = 0; i < comps.Length; i++)
+            {
+                comps[i] = (d.I32(4 + 12 * i), d.I64(8 + 12 * i));
+            }
+            int name = 8 + 12 * comps.Length, tag = name + 4 + ((d.I32(name) + 3) & ~3);
+            return (d.Text(name), d.U8(tag + 2) != 0, comps);
+        }
+
+        /// <summary>
+        /// A Transform's numbers from its bytes: its GameObject, then (after its rotation, position and scale) its children
+        /// and its parent (0: none; null: in another file).
+        /// </summary>
+        public static (long Go, long? Father, long[] Children) TransformOf(Bytes d)
+        {
+            long[] children = d.ChildIds(52);
+            int father = 56 + 12 * children.Length;
+            return (d.I64(4), d.I32(father) != 0 ? null : d.I64(father + 4), children);
         }
 
         /// <summary>

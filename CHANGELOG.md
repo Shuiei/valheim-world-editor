@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.76.0 — 2026-10-20
+
+### Changed
+- **New world and Regrow nature follow the game's random draws more closely.** Objects that make random choices as
+  the game creates them (chests filling with loot, beehives, fires, creatures, ruins and others) are now taken into
+  account, so Expand World Data's swaps, data and added objects, and the vegetation after such objects, come out as
+  the game makes them.
+
 ## v1.75.1 — 2026-10-20
 
 ### Fixed

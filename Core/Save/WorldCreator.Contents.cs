@@ -16,9 +16,8 @@ public static partial class WorldCreator
     /// by the file's offset; the location's own objects (rolled as the game rolls them) each swapped and given data as
     /// the file says, drawing on from the rolls; then, from the zone's seed again, the added objects' scale, a blueprint
     /// location's parts (<see cref="AddParts"/>), and each added object (its chance, its swap and data, its place on the
-    /// ground when it snaps). Each building piece wakes
-    /// as the game's WearNTear does: its random initial damage when the location gives one, then its two timers; the
-    /// draws other components make as they wake are not counted, so a later draw can differ from the game's after one.
+    /// ground when it snaps). Each object makes the draws its scripts make as it wakes (<see cref="Terrain.WakeDraws"/>), a
+    /// building piece's as the game's WearNTear does (<see cref="Wake"/>).
     /// </summary>
     /// <param name="prefab">The location's prefab; null for a blueprint location (it has none).</param>
     /// <param name="contents">What the file changes.</param>
@@ -40,7 +39,7 @@ public static partial class WorldCreator
             Vector3 scale = DrawScale(contents);
             if (contents.Blueprint is { } blueprint)
             {
-                AddParts(objects, contents, at.Damage, contents.Blueprints![blueprint], new(blueprint, raised, at.Rotation, scale));
+                AddParts(objects, contents, new Waker(at.Damage, terrain), contents.Blueprints![blueprint], new(blueprint, raised, at.Rotation, scale));
             }
             AddObjects(objects, contents, at with { Position = raised }, scale, terrain);
         }
@@ -60,9 +59,10 @@ public static partial class WorldCreator
         var made = LocationPrefabs.Made(prefab, at.Position, at.Rotation, at.ZoneSeed, out var rolled);
         Rnd.State = rolled;
         var ground = new SnapGround(terrain, prefab.Hash, at.Position, at.Rotation);
+        var waker = new Waker(at.Damage, terrain);
         foreach (var m in made)
         {
-            Add(objects, contents, at.Damage, new(m.Prefab, OnGround(m, contents, ground), m.Rotation, Vector3.One), null);
+            Add(objects, contents, waker, new(m.Prefab, OnGround(m, contents, ground), m.Rotation, Vector3.One), null);
         }
     }
 
@@ -79,6 +79,7 @@ public static partial class WorldCreator
     /// </summary>
     private static void AddObjects(List<(Vector3 At, byte[] Zdo)> objects, LocationContents contents, Placing at, Vector3 scale, TerrainService terrain)
     {
+        var waker = new Waker(at.Damage, terrain);
         foreach (var o in contents.Objects)
         {
             if (o.Chance < 1f && Rnd.Value > o.Chance)
@@ -90,7 +91,7 @@ public static partial class WorldCreator
             {
                 spot.Y = SnapHeight(at.Ground, terrain, spot);
             }
-            Add(objects, contents, at.Damage, new(o.Prefab, spot, Quaternion.Normalize(at.Rotation * BlueprintFormats.FromEuler(o.Euler)), scale * o.Scale), o.Data);
+            Add(objects, contents, waker, new(o.Prefab, spot, Quaternion.Normalize(at.Rotation * BlueprintFormats.FromEuler(o.Euler)), scale * o.Scale), o.Data);
         }
     }
 
@@ -101,10 +102,10 @@ public static partial class WorldCreator
     /// </summary>
     /// <param name="objects">Where the objects made go.</param>
     /// <param name="contents">What the file changes.</param>
-    /// <param name="damage">The damage its pieces wake with.</param>
+    /// <param name="waker">How its objects wake.</param>
     /// <param name="parts">The blueprint's parts.</param>
     /// <param name="at">The blueprint's place, turn and scale (its name as the prefab).</param>
-    private static void AddParts(List<(Vector3 At, byte[] Zdo)> objects, LocationContents contents, Damage damage, IReadOnlyList<BlueprintPart> parts, Made at)
+    private static void AddParts(List<(Vector3 At, byte[] Zdo)> objects, LocationContents contents, Waker waker, IReadOnlyList<BlueprintPart> parts, Made at)
     {
         foreach (var part in parts)
         {
@@ -112,7 +113,7 @@ public static partial class WorldCreator
             {
                 continue;
             }
-            Add(objects, contents, damage, new(part.Prefab, at.At + Vector3.Transform(part.Position, at.Rotation), at.Rotation * part.Rotation, at.Scale * part.Scale), part.Data);
+            Add(objects, contents, waker, new(part.Prefab, at.At + Vector3.Transform(part.Position, at.Rotation), at.Rotation * part.Rotation, at.Scale * part.Scale), part.Data);
         }
     }
 
@@ -135,6 +136,11 @@ public static partial class WorldCreator
         RandomOverData,
     }
 
+    /// <summary>How a location's objects wake: the damage its pieces wake with, and the world (a snow-melting fire draws in the Deep North).</summary>
+    /// <param name="Damage">The random initial damage of its pieces.</param>
+    /// <param name="Terrain">The world's terrain.</param>
+    private readonly record struct Waker(Damage Damage, TerrainService Terrain);
+
     /// <summary>One object to make: its prefab, place, turn and scale.</summary>
     /// <param name="Prefab">Its prefab (before any swap).</param>
     /// <param name="At">Where it stands.</param>
@@ -146,9 +152,9 @@ public static partial class WorldCreator
     /// One object as the mod makes it (Create.SharedBPO): its prefab swapped (one draw when there are several choices;
     /// none for "remove"); a name of no prefab spawns the blueprint of that name in its place, or nothing; then given
     /// the file's data for "all" and for its prefab (a draw each when there are several choices), its own data over
-    /// them; then it wakes (<see cref="Wake"/>).
+    /// them; then it wakes (<see cref="Terrain.WakeDraws"/>, a building piece as <see cref="Wake"/> says).
     /// </summary>
-    private static void Add(List<(Vector3 At, byte[] Zdo)> objects, LocationContents contents, Damage damage, Made made, IReadOnlyList<ContentField>? own)
+    private static void Add(List<(Vector3 At, byte[] Zdo)> objects, LocationContents contents, Waker waker, Made made, IReadOnlyList<ContentField>? own)
     {
         var (prefab, at, rotation, scale) = made;
         string name = contents.Swaps.TryGetValue(prefab, out var swaps) ? Pick(swaps) ?? "" : prefab;
@@ -157,7 +163,7 @@ public static partial class WorldCreator
         {
             if (contents.Blueprints?.GetValueOrDefault(name) is { } inner)
             {
-                AddParts(objects, contents, damage, inner, made with { Prefab = name });
+                AddParts(objects, contents, waker, inner, made with { Prefab = name });
             }
             return;
         }
@@ -171,11 +177,11 @@ public static partial class WorldCreator
         }
         fields.AddRange(own ?? []);
         // "all": no object keeps a health of its data (the mod's Create.IgnoreHealth).
-        if (damage == Damage.RandomOverData)
+        if (waker.Damage == Damage.RandomOverData)
         {
             fields.RemoveAll(IsHealth);
         }
-        Wake(info.WearHealth, fields, damage);
+        Terrain.WakeDraws.Wake(name, new(() => Wake(info.WearHealth, fields, waker.Damage), waker.Terrain.BiomeAt(at.X, at.Z) == Heightmap.Biome.DeepNorth, Terrain.WakeDraws.Looted(fields)));
         // The mod writes the scale only for an object whose network view keeps it (DataHelper.Init).
         byte[] zdo = ZdoBuilder.Blank(hash, info.Flags, at, BlueprintFormats.ToEuler(rotation), info.SyncScale ? scale : Vector3.One);
         objects.Add((at, WithFields(zdo, fields)));
@@ -188,15 +194,10 @@ public static partial class WorldCreator
     /// What a building piece (an object with a WearNTear, of this full health) draws as it wakes (WearNTear.Awake):
     /// with random initial damage and a health at full (no health in its data, or its full health), a health
     /// between 10% and 60% of full, kept in its data; then its cover timer and its snow damage timer, in every case.
-    /// Nothing for other objects (a full health of 0).
     /// </summary>
     private static void Wake(float full, List<ContentField> fields, Damage damage)
     {
-        if (full <= 0f)
-        {
-            return;
-        }
-        if (damage != Damage.None && AtFull(fields, full))
+        if (damage != Damage.None && full > 0f && AtFull(fields, full))
         {
             float rolled = Rnd.Range(0.1f * full, full * 0.6f);
             fields.Add(new ContentField("floats", HealthKey, rolled.ToString("R", CultureInfo.InvariantCulture)));

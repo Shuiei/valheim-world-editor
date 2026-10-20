@@ -68,40 +68,41 @@ public static partial class Regrow
         py += veg.groundOffset;
         NVector3 euler = SpotRotation(veg, normal, draw);
         pass.KeepClear(veg, px, pz);
-        (string name, int draws) = veg.prefabs == null ? (veg.prefab, veg.draws) : DrawPrefab(veg);
-        Grow(veg, name, draws, new NVector3(px, py, pz), euler, draw.Scale, spots);
+        string name = veg.prefabs == null ? veg.prefab : DrawPrefab(veg);
+        Grow(veg, name, new NVector3(px, py, pz), euler, draw.Scale, hm.Biome(px, pz), spots);
         return true;
     }
 
     /// <summary>
     /// What grows at a spot that passed: a blueprint's parts when the prefab is the rule's blueprint, else the object
-    /// with the game's draws for its components (as it wakes), then the mod's draws for a scale by axis.
+    /// with the draws its scripts make as it wakes (<see cref="Wake"/>), then the mod's draws for a scale by axis.
     /// </summary>
-    private static void Grow(Rule veg, string name, int draws, NVector3 at, NVector3 euler, float scale, List<Spot> spots)
+    private static void Grow(Rule veg, string name, NVector3 at, NVector3 euler, float scale, int biome, List<Spot> spots)
     {
         if (veg.blueprints?.GetValueOrDefault(name) is { } parts)
         {
-            PlaceBlueprint(veg, parts, at, BlueprintFormats.FromEuler(euler), spots);
+            PlaceBlueprint(veg, parts, at, BlueprintFormats.FromEuler(euler), biome, spots);
             return;
         }
-        // The components' draws come as the object wakes, before the mod scales it.
-        for (int k = draws; k > 0; k--)
-        {
-            Rnd.NextUInt();
-        }
+        // The scripts' draws come as the object wakes, before the mod scales it.
+        Wake(name, biome, veg.data);
         float[]? axes = veg.scaleMinAxes != null && veg.scaleMaxAxes != null && scale != 1f ? ScaleByAxes(veg) : null;
         spots.Add(new Spot(name, at.X, at.Y, at.Z, euler.X, euler.Y, euler.Z, axes?[0] ?? scale, axes, veg.data));
     }
 
     /// <summary>
-    /// The mod's draw of one of a rule's several prefabs: its name and its object's own draws (none when unknown). The
-    /// draw is the game's seeded generator's, so the pick is the mod's; nothing here is security-sensitive.
+    /// The mod's draw of one of a rule's several prefabs. The draw is the game's seeded generator's, so the pick is the
+    /// mod's; nothing here is security-sensitive.
     /// </summary>
-    private static (string Name, int Draws) DrawPrefab(Rule veg)
-    {
-        int which = Rnd.Range(0, veg.prefabs!.Length);
-        return (veg.prefabs[which], veg.prefabDraws?[which] ?? 0);
-    }
+    private static string DrawPrefab(Rule veg) => veg.prefabs![Rnd.Range(0, veg.prefabs.Length)];
+
+    /// <summary>
+    /// The draws an object of this prefab makes as it wakes where it grows (in a biome), with the data it is given: its
+    /// scripts' (<see cref="Terrain.WakeDraws"/>), a building piece's two timers (WearNTear without damage: only
+    /// locations damage their pieces).
+    /// </summary>
+    private static void Wake(string prefab, int biome, IReadOnlyList<ContentField>? data) =>
+        Terrain.WakeDraws.Wake(prefab, new(() => Terrain.WakeDraws.Skip(2), biome == (int)Heightmap.Biome.DeepNorth, Terrain.WakeDraws.Looted(data)));
 
     /// <summary>
     /// The mod's scale by axis (its RandomValue): one draw of 0..1 for all three axes when uniform, else one draw an

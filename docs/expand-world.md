@@ -109,8 +109,8 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   included) is drawn from whatever the game drew before it, so no tool can know it; New world draws one.
 - **Vegetation the editor cannot write ahead of the game**: data the mod works out as it spawns an object, and a
   blueprint's part that is no prefab of the game, are left out of what Regrow nature and New world grow; the log
-  says which rule. A blueprint's objects wake as the game's vegetation list counts them (and a building piece's
-  timers); other objects' own draws are not known, so the draws after one can differ from the game's.
+  says which rule. A prefab the game does not have (a mod's) is taken as drawing nothing as it wakes, so the draws
+  after one can differ from the game's (the log names it).
 - **The map's location icons** follow the location file's "iconAlways" and "iconPlaced"
   (an icon's size included), for icons the game's minimap has (the start, the traders); an icon named after a pin
   type, an item or a status effect is not drawn, and one the game makes pulse is drawn still.

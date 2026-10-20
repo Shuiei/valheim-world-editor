@@ -10,13 +10,8 @@ public static partial class GameCatalogues
     /// the game merges them; "Regrow nature" places by these rules. Read at the editor's start (GameData):
     /// only the main scene's bundles, where ZoneSystem and the lists are (as for GameLocations), then the
     /// prefabs' and scripts' bundles. The alt biomes' added vegetation comes last, in the alt biomes' order, each
-    /// rule with its alt biome's name ("altBiome": it grows only in that alt biome's areas). "draws":
-    /// the random draws the prefab's components make in Awake when the game creates it (they shift the
-    /// generator's sequence for the rest of the rule): LodFadeInOut (with a LODGroup: the camera is more
-    /// than 20 m away while zones generate around a player), MineRock5, Floating, LightFlicker, Fish one
-    /// each, RandomFlyingBird two, Pickable one when it respawns (m_respawnTimeMinutes &gt; 0). Checked
-    /// against a played world: with these, the generated spots match the saved ones. Components of
-    /// inactive children do not wake.
+    /// rule with its alt biome's name ("altBiome": it grows only in that alt biome's areas). The draws a prefab's
+    /// scripts make as it wakes are the "wake-draws" kind's (WakeScan).
     /// </summary>
     public static string VegetationJson(GameBundles bundles)
     {
@@ -37,7 +32,7 @@ public static partial class GameCatalogues
     }
 
     /// <summary>
-    /// Gathers the vegetation rules of the main scene's bundles, then names their prefabs and counts their draws.
+    /// Gathers the vegetation rules of the main scene's bundles, then names their prefabs.
     /// </summary>
     private sealed partial class VegetationScan
     {
@@ -45,12 +40,6 @@ public static partial class GameCatalogues
         /// The VegetationSpawner fields kept, written without their "m_".
         /// </summary>
         private static readonly string[] Keep = ["m_name", "m_enable", "m_min", "m_max", "m_forcePlacement", "m_scaleMin", "m_scaleMax", "m_randTilt", "m_chanceToUseGroundTilt", "m_biome", "m_biomeArea", "m_blockCheck", "m_snapToStaticSolid", "m_minAltitude", "m_maxAltitude", "m_minVegetation", "m_maxVegetation", "m_surroundCheckVegetation", "m_surroundCheckDistance", "m_surroundCheckLayers", "m_surroundBetterThanAverage", "m_minOceanDepth", "m_maxOceanDepth", "m_minTilt", "m_maxTilt", "m_terrainDeltaRadius", "m_maxTerrainDelta", "m_minTerrainDelta", "m_snapToWater", "m_groundOffset", "m_groupSizeMin", "m_groupSizeMax", "m_groupRadius", "m_minDistanceFromCenter", "m_maxDistanceFromCenter", "m_inForest", "m_forestTresholdMin", "m_forestTresholdMax"];
-
-        /// <summary>
-        /// Random draws made in Awake by these scripts (LodFadeInOut only with a LODGroup, Pickable only when it
-        /// respawns: in <c>Finish</c>).
-        /// </summary>
-        private static readonly Dictionary<string, int> Draws = new() { ["LodFadeInOut"] = 1, ["MineRock5"] = 1, ["Floating"] = 1, ["LightFlicker"] = 1, ["Fish"] = 1, ["RandomFlyingBird"] = 2 };
 
         /// <summary>
         /// ZoneSystem's own rules with their prefabs, null until found.

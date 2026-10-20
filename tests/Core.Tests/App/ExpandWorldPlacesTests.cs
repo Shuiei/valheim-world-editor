@@ -166,7 +166,7 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         List<string> notes = [];
         var game = Regrow.GameRules;
         Assert.True(game.Count > 0);
-        string known = game[0].prefab, known2 = game.Skip(1).First(r => r.draws != game[0].draws).prefab;
+        string known = game[0].prefab, known2 = game.First(r => r.prefab != known).prefab;
         var rules = ExpandWorld.VegetationOf(
         [
             E(("prefab", $"{known}, {known2}, Nowhere"), ("min", "2"), ("max", "5"), ("forcePlacement", "true"), ("scaleMin", "0.5"), ("scaleMax", "2"), ("scaleUniform", "false"),
@@ -180,8 +180,6 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         var several = rules[0];
         Assert.Equal(known, several.prefab);
         Assert.Equal([known, known2, "Nowhere"], several.prefabs!);
-        Assert.Equal([game[0].draws, game.First(r => r.prefab == known2).draws, 0], several.prefabDraws!);
-        Assert.Equal(game[0].draws, several.draws);
         Assert.Equal(2f, several.min);
         Assert.Equal(5f, several.max);
         Assert.Equal(1, several.forcePlacement);

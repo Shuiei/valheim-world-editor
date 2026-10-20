@@ -7,7 +7,7 @@ namespace ValheimGen;
 /// One vegetation rule (a ZoneVegetation of the game): what the game places in a zone of its biomes and how, as
 /// Regrow replays it. Read from the game's own list (the editor's vegetation.json), or made from Expand World Data's
 /// vegetation file, whose rules may draw one of several prefabs, scale each axis apart, and measure their distance from
-/// a centre of their own (the fields after <see cref="draws"/>). Booleans are 0 or 1; distances in metres, tilts in
+/// a centre of their own (the fields after <see cref="altBiome"/>). Booleans are 0 or 1; distances in metres, tilts in
 /// degrees.
 /// </summary>
 public sealed class VegetationRule
@@ -93,11 +93,6 @@ public sealed class VegetationRule
     /// <summary>The share of the way from the average sum to the best a spot must reach (0: the average).</summary>
     public float surroundBetterThanAverage { get; set; }
     /// <summary>
-    /// Random draws the object's components make when the game creates it (Awake): they move the
-    /// sequence on for the rest of the rule.
-    /// </summary>
-    public int draws { get; set; }
-    /// <summary>
     /// The alt biome that adds the rule (it grows only in that alt biome's areas); null for a rule of every area of
     /// its biomes.
     /// </summary>
@@ -109,8 +104,6 @@ public sealed class VegetationRule
     /// before the object is made); null for the one <see cref="prefab"/>.
     /// </summary>
     public string[]? prefabs { get; set; }
-    /// <summary>The <see cref="draws"/> of each of <see cref="prefabs"/>.</summary>
-    public int[]? prefabDraws { get; set; }
     /// <summary>
     /// The smallest scale on each axis (x, z, y as the mod writes them: the game's x, y, z here), when the mod scales
     /// an object again after the game's own draw: a range with different ends, drawn once more (one draw for a uniform

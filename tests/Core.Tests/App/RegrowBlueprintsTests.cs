@@ -37,7 +37,7 @@ public class RegrowBlueprintsTests
         List<Regrow.Spot> spots = [];
         Rnd.InitState(5);
         // Turned a quarter about y: the blueprint's x becomes the world's -z.
-        PrivateMember.Call(typeof(Regrow), "PlaceBlueprint", null, veg, veg.blueprints["Hut"], new Vector3(100, 10, 200), Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2), spots);
+        PrivateMember.Call(typeof(Regrow), "PlaceBlueprint", null, veg, veg.blueprints["Hut"], new Vector3(100, 10, 200), Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2), (int)Heightmap.Biome.Meadows, spots);
         Assert.Equal(["Bush01", "wood_fence"], spots.Select(s => s.Name));
         Assert.True(Vector3.Distance(new Vector3(100, 10, 198), new Vector3(spots[0].X, spots[0].Y, spots[0].Z)) < 1e-4f);
         Assert.True(Vector3.Distance(new Vector3(103, 10, 199), new Vector3(spots[1].X, spots[1].Y, spots[1].Z)) < 1e-4f);
@@ -45,10 +45,11 @@ public class RegrowBlueprintsTests
         Assert.Equal(new Vector3(2), spots[0].Scale3);
         Assert.Equal([new ContentField("ints", mark, "1"), new ContentField("ints", own, "2"), new ContentField("ints", mark, "3")], spots[0].Data!);
         Assert.Equal(Vector3.One, spots[1].Scale3);
-        // The draws: the stone's chance, the bush's components, the fence's two timers.
+        // The draws: the stone's chance, the bush's scripts (none draw), the fence's two timers (a building piece).
+        Assert.Empty(TerrainEditor.Terrain.WakeDraws.Of("Bush01"));
         var after = Rnd.State;
         Rnd.InitState(5);
-        int draws = 1 + (Regrow.GameRules.FirstOrDefault(r => r.prefab == "Bush01")?.draws ?? 0) + 2;
+        int draws = 1 + 2;
         for (int i = 0; i < draws; i++)
         {
             Rnd.NextUInt();
