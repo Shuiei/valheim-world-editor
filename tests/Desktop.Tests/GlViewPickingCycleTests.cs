@@ -74,4 +74,20 @@ public class GlViewPickingCycleTests
         v.W.View.Pick(at, v.Size, PickHow.Only);
         Assert.Equal([0], v.Selected);
     }
+
+    // An object shown again between two clicks at the same spot: what is under it changed, so the round starts again
+    // from the nearest instead of going on.
+    [AvaloniaFact]
+    public void TheRoundStartsAgainOnceWhatIsUnderItChanged()
+    {
+        var v = Open(T(1, Floor, 40, 30, 40), T(2, Floor, 40, 34, 40), T(3, Floor, 40, 32, 40));
+        v.W.View.Hide([2]);
+        v.Click(40, 40);
+        v.Click(40, 40);
+        Assert.Equal([0], v.Selected);
+        v.W.View.ShowHidden();
+        Assert.Equal([1, 2, 0], v.W.View.ObjectsAt(v.At(40, 30, 40), v.Size));
+        v.Click(40, 40);
+        Assert.Equal([1], v.Selected);
+    }
 }
