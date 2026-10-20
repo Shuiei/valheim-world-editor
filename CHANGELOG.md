@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.66.2 — 2026-10-19
+
+### Fixed
+- **Ground painted by Expand World Data shows and edits in the editor.** Terrain the mod levels or paints round a
+  location was skipped as damaged, so those zones showed as never edited; they are now read as the game reads them.
+
 ## v1.66.1 — 2026-10-19
 
 ### Fixed
