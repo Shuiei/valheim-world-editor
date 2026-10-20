@@ -28,8 +28,9 @@ public class GlViewSelectionBoxesTests
         Assert.Equal(Floats, segs.Length);
         Assert.Equal(-2, segs.Min());
         Assert.Equal([0, -2, 0, 3, -2, 0], segs[..6]);
-        Assert.Equal(3, segs.Where((_, i) => i % 3 == 0).Max());
-        Assert.Equal(3, segs.Where((_, i) => i % 3 == 2).Max());
+        // Each point's x and z: the box reaches 3 east and 3 north.
+        Assert.Equal(3, Enumerable.Range(0, segs.Length / 3).Max(k => segs[k * 3]));
+        Assert.Equal(3, Enumerable.Range(0, segs.Length / 3).Max(k => segs[k * 3 + 2]));
     }
 
     [Fact]
