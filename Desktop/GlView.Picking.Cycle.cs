@@ -1,3 +1,4 @@
+using System.Numerics;
 using Avalonia;
 
 namespace TerrainEditor.Desktop;
@@ -6,14 +7,15 @@ namespace TerrainEditor.Desktop;
 public sealed partial class GlView
 {
     /// <summary>
-    /// The last plain click: where on the view, the objects under it nearest first, and which of them it took.
+    /// The last plain click: where on the view, the camera it was made with, the objects under it nearest first, and
+    /// which of them it took.
     /// </summary>
-    private (Point At, List<int> Hits, int Index)? _cycle;
+    private (Point At, Matrix4x4 Camera, List<int> Hits, int Index)? _cycle;
 
     /// <summary>
     /// The object a plain click takes: the nearest one under the pointer, or, clicked again at the same spot (within 4
-    /// pixels) with the same objects under it, the next one behind the one the last click took (round again past the
-    /// last one). Null when nothing is under it.
+    /// pixels), with the camera where it was and the same objects under it, the next one behind the one the last click
+    /// took (round again past the last one). Null when nothing is under it.
     /// </summary>
     /// <param name="at">Where the click is, on the view.</param>
     /// <param name="size">The view's size.</param>
@@ -25,9 +27,9 @@ public sealed partial class GlView
             _cycle = null;
             return null;
         }
-        bool again = _cycle is { } c && Point.Distance(c.At, at) < 4 && c.Hits.SequenceEqual(hits);
+        bool again = _cycle is { } c && Point.Distance(c.At, at) < 4 && c.Camera == _lastViewProj && c.Hits.SequenceEqual(hits);
         int next = again ? (_cycle!.Value.Index + 1) % hits.Count : 0;
-        _cycle = (at, hits, next);
+        _cycle = (at, _lastViewProj, hits, next);
         return hits[next];
     }
 

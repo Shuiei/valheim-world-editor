@@ -55,6 +55,8 @@ public sealed partial class GlView
         _measureVao = _measureVbo = _lassoVao = _lassoVbo = _ringVao = _ringVbo = _lineVao = _lineVbo = _screenBoxVao = _screenBoxVbo = 0;
         _outlineFbo = _outlineTex = _outlineProg = _outlineVao = 0;
         _outlineW = _outlineH = 0;
+        // A new context may take the mask's picture: tried again.
+        _outlineFailed = false;
         _playersVao = _playersVbo = 0;
         _lowFbo = _lowColor = _lowDepth = 0;
         _lowW = _lowH = 0;
