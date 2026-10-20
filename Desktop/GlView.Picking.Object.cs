@@ -59,12 +59,11 @@ public sealed partial class GlView
     }
 
     /// <summary>
-    /// Whether an object can be met by a ray: its box is known, its kind shown, it is not hidden (GlView.Hide), and the
-    /// cut does not hide it (whole above it).
+    /// Whether an object can be met by a ray: its box is known, its kind shown and picked (GlView.PickFilter), it is not
+    /// hidden (GlView.Hide), and the cut does not hide it (whole above it).
     /// </summary>
     /// <param name="i">The object.</param>
-    private bool Hittable(int i) =>
-        _known[i] && _shown[(int)_kinds[i]] && !_hidden.Contains(i) && !(CutY is float cut && _bounds[i].Min.Y > cut);
+    private bool Hittable(int i) => Pickable(i) && !(CutY is float cut && _bounds[i].Min.Y > cut);
 
     /// <summary>
     /// The objects in a row on the line from object a to object b (their middles within 0.75 m of it), both

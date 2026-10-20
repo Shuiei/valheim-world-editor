@@ -39,6 +39,7 @@ public sealed partial class MainWindow
         p.Bind(SelectPanel.SnapBox, "select.snap");
         p.Bind(SelectPanel.ZoneBox, "select.zone");
         p.Bind(SelectPanel.ThroughBox, "select.through");
+        p.Bind(SelectPanel.PickBox, "select.picks");
         // Shape: the preset, and the formula when it is one's own.
         p.Bind(ShapePanel.PresetBox, "shape.preset");
         bool Own() => ShapePanel.PresetBox.SelectedIndex == ShapePanel.Presets.Length;

@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.87.0 — 2026-10-20
+
+### Added
+- **Pick only built pieces, or only nature.** The Select panel's Pick choice makes clicks, boxes and zones take only
+  the pieces players built (a box over a house leaves its trees and rocks) or only trees, rocks and the like; what is
+  left out is not in the way of what is behind it.
+
 ## v1.86.0 — 2026-10-20
 
 ### Added

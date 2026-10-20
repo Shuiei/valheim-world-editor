@@ -59,6 +59,7 @@ public sealed class PrefsWindowTests : PrefsFolder
         w.SelectPanel.SnapBox.IsChecked = false;
         w.SelectPanel.ZoneBox.SelectedIndex = 1;
         w.SelectPanel.ThroughBox.IsChecked = true;
+        w.SelectPanel.PickBox.SelectedIndex = 1;
         w.ShapePanel.PresetBox.SelectedIndex = 1;
         w.ShowRight(w.HelpCard);
         w.Prefs.Flush();
@@ -82,6 +83,7 @@ public sealed class PrefsWindowTests : PrefsFolder
         Assert.False(v.View.SelectTool.SnapToPieces);
         Assert.True(v.View.SelectTool.ZoneOnGround);
         Assert.True(v.View.SelectTool.SelectThrough);
+        Assert.Equal(GlView.PickKinds.Built, v.View.SelectTool.Picks);
         Assert.Equal(1, v.ShapePanel.PresetBox.SelectedIndex);
         Assert.Equal(ShapePanel.Presets[1].Formula, v.ShapePanel.FormulaBox.Text);
         Assert.True(v.HelpCard.IsVisible);
