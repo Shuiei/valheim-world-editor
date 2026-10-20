@@ -36,7 +36,7 @@ public static partial class ExpandWorld
             {
                 return true;
             }
-            if (ReadBlueprint(files, bp, data, why, notes) is not { } parts)
+            if (ReadBlueprint(files, bp, data, why, notes)?.Parts is not { } parts)
             {
                 return false;
             }
@@ -60,6 +60,9 @@ public static partial class ExpandWorld
         }
     }
 
+    /// <summary>The file name extensions of the blueprint files the mod reads.</summary>
+    private static readonly string[] BlueprintExtensions = [".blueprint", ".vbuild"];
+
     /// <summary>
     /// The blueprint files the mod looks in (Blueprints.Files): every .blueprint and .vbuild at any depth of the
     /// folder, in name order; none without the folder.
@@ -69,10 +72,21 @@ public static partial class ExpandWorld
         [.. Directory.EnumerateFiles(folder, "*.blueprint", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(folder, "*.vbuild", SearchOption.AllDirectories)).Distinct().Order(StringComparer.Ordinal)];
 
     /// <summary>
-    /// One blueprint's parts as the mod reads and centres them (Blueprints.GetBluePrint, Blueprint.Center): the first
-    /// file whose name, spaces as underscores, is the name; null when none is, or it cannot be read (noted).
+    /// A blueprint file as the mod reads it (Blueprint): its parts centred, how far it reaches from its centre on the
+    /// ground (its pieces' bounds, or its terrain snapshots' when wider), and whether it has a height snapshot with
+    /// values (it then levels its ground itself) or a paint one.
     /// </summary>
-    private static List<BlueprintPart>? ReadBlueprint(string[] files, string name, DataTable data, List<string> why, List<string> notes)
+    /// <param name="Parts">Its parts, centred.</param>
+    /// <param name="Radius">Metres it reaches from its centre on the ground.</param>
+    /// <param name="Heights">It has a height snapshot with values.</param>
+    /// <param name="Paints">It has a paint snapshot with values.</param>
+    internal sealed record BlueprintFile(List<BlueprintPart> Parts, float Radius, bool Heights, bool Paints);
+
+    /// <summary>
+    /// One blueprint as the mod reads and centres it (Blueprints.GetBluePrint, Blueprint.Center): the first file whose
+    /// name, spaces as underscores, is the name; null when none is, or it cannot be read (noted).
+    /// </summary>
+    private static BlueprintFile? ReadBlueprint(string[] files, string name, DataTable data, List<string> why, List<string> notes)
     {
         string wanted = name.Replace(' ', '_');
         string? file = files.FirstOrDefault(f => Path.GetFileNameWithoutExtension(f).Replace(' ', '_') == wanted);
@@ -82,9 +96,7 @@ public static partial class ExpandWorld
         }
         try
         {
-            string[] rows = File.ReadAllLines(file);
-            var (parts, center) = Path.GetExtension(file) == ".vbuild" ? (BuildShareParts(rows, data, why), DefaultCenterPiece) : PlanBuildParts(rows, data, why);
-            return Centred(parts, center);
+            return Centred(FileParts(file, data, why));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException or OverflowException)
         {
@@ -95,35 +107,99 @@ public static partial class ExpandWorld
     }
 
     /// <summary>
-    /// A PlanBuild file's pieces (Blueprints.GetPlanBuild): the rows of its "#Pieces" part (the rows before any header
-    /// too), "name;category;x;y;z;rx;ry;rz;rw;info;sx;sy;sz;data;chance"; and the piece it is centred on ("#Center").
+    /// A blueprint file's contents by its extension, as the mod tells them (Blueprints.GetBluePrint, exactly as written):
+    /// ".vbuild" a BuildShare file, ".blueprint" a PlanBuild one; any other spelling the mod finds (case does not matter
+    /// when Windows lists the files) it refuses, and so does this.
     /// </summary>
-    private static (List<BlueprintPart> Parts, string Center) PlanBuildParts(string[] rows, DataTable data, List<string> why)
+    /// <exception cref="FormatException">The extension is neither, or a row cannot be read.</exception>
+    private static PlanBuild FileParts(string file, DataTable data, List<string> why) => Path.GetExtension(file) switch
     {
-        List<BlueprintPart> parts = [];
-        string center = DefaultCenterPiece;
-        bool pieces = true;
+        ".vbuild" => new PlanBuild(BuildShareParts(File.ReadAllLines(file), data, why), DefaultCenterPiece, null, null),
+        ".blueprint" => PlanBuildParts(File.ReadAllLines(file), data, why),
+        _ => throw new FormatException($"the mod reads only \".blueprint\" and \".vbuild\" files, written so, not \"{Path.GetExtension(file)}\""),
+    };
+
+    /// <summary>What a blueprint file holds before it is centred.</summary>
+    /// <param name="Parts">Its pieces as the file has them.</param>
+    /// <param name="Center">The piece it is centred on.</param>
+    /// <param name="Heights">Its height snapshot, when it has one.</param>
+    /// <param name="Paints">Its paint snapshot, when it has one.</param>
+    private sealed record PlanBuild(List<BlueprintPart> Parts, string Center, Snapshot? Heights, Snapshot? Paints);
+
+    /// <summary>
+    /// A PlanBuild file (Blueprints.GetPlanBuild): the rows of its "#Pieces" part (the rows before any header too),
+    /// "name;category;x;y;z;rx;ry;rz;rw;info;sx;sy;sz;data;chance"; the piece it is centred on ("#Center"); its terrain
+    /// snapshots ("#TerrainHeight", "#TerrainPaint"; one whose header the mod cannot read is passed over).
+    /// </summary>
+    private static PlanBuild PlanBuildParts(string[] rows, DataTable data, List<string> why)
+    {
+        var reading = new PlanBuildReading(data, why);
         foreach (string row in rows)
+        {
+            reading.Read(row);
+        }
+        return new PlanBuild(reading.Parts, reading.Center, reading.Heights, reading.Paints);
+    }
+
+    /// <summary>A PlanBuild file read row by row: the part each row is in, and what the parts gave so far.</summary>
+    /// <param name="data">The world's data entries (what the pieces' data names).</param>
+    /// <param name="why">Where data that cannot be written is said.</param>
+    private sealed class PlanBuildReading(DataTable data, List<string> why)
+    {
+        /// <summary>The section rows are in: the pieces (the first), a snapshot's, or one passed over.</summary>
+        private bool _pieces = true, _paint;
+
+        /// <summary>The snapshot the rows fill, when they are one's.</summary>
+        private Snapshot? _section;
+
+        /// <summary>The pieces read.</summary>
+        public List<BlueprintPart> Parts { get; } = [];
+
+        /// <summary>The piece the blueprint is centred on.</summary>
+        public string Center { get; private set; } = DefaultCenterPiece;
+
+        /// <summary>Its height snapshot, when it has one.</summary>
+        public Snapshot? Heights { get; private set; }
+
+        /// <summary>Its paint snapshot, when it has one.</summary>
+        public Snapshot? Paints { get; private set; }
+
+        /// <summary>Takes a row: a header starts a section, any other row belongs to the current one.</summary>
+        public void Read(string row)
         {
             if (row.StartsWith('#'))
             {
-                int colon = row.IndexOf(':', StringComparison.Ordinal);
-                string header = (colon < 0 ? row : row[..colon]).Trim();
-                pieces = header.Equals("#pieces", StringComparison.OrdinalIgnoreCase);
-                if (header.Equals("#center", StringComparison.OrdinalIgnoreCase))
-                {
-                    center = colon < 0 ? throw new FormatException("#Center names no piece") : row[(colon + 1)..];
-                }
-                continue;
+                Header(row);
             }
-            if (pieces)
+            else if (_pieces)
             {
                 string[] s = row.Replace(',', '.').Split(';');
-                parts.Add(Part(s[0], new NVector3(Num(s, 2), Num(s, 3), Num(s, 4)), new Quaternion(Num(s, 5), Num(s, 6), Num(s, 7), Num(s, 8)),
+                Parts.Add(Part(s[0], new NVector3(Num(s, 2), Num(s, 3), Num(s, 4)), new Quaternion(Num(s, 5), Num(s, 6), Num(s, 7), Num(s, 8)),
                     new NVector3(Num(s, 10, 1f), Num(s, 11, 1f), Num(s, 12, 1f)), s.Length > 13 ? s[13] : "", Num(s, 14, 1f), data, why));
             }
+            else
+            {
+                _section?.Add(SnapshotRow(row, _paint));
+            }
         }
-        return (parts, center);
+
+        /// <summary>A header (ReadPlanBuildHeader): the section it starts; "#Center" names the centre piece.</summary>
+        private void Header(string row)
+        {
+            int colon = row.IndexOf(':', StringComparison.Ordinal);
+            string header = (colon < 0 ? row : row[..colon]).Trim().ToLowerInvariant();
+            _pieces = header == "#pieces";
+            _paint = header == "#terrainpaint";
+            _section = header is "#terrainheight" or "#terrainpaint" ? SnapshotOf(row, colon) : null;
+            if (_section != null)
+            {
+                (Heights, Paints) = _paint ? (Heights, _section) : (_section, Paints);
+            }
+            if (header == "#center")
+            {
+                Center = colon < 0 ? throw new FormatException("#Center names no piece") : row[(colon + 1)..];
+            }
+        }
     }
 
     /// <summary>A BuildShare file's objects (Blueprints.GetBuildShare): one a row, "name rx ry rz rw x y z data chance".</summary>
@@ -154,21 +230,22 @@ public static partial class ExpandWorld
         index >= s.Length || string.IsNullOrEmpty(s[index]) ? fallback : float.Parse(s[index], NumberStyles.Any, NumberFormatInfo.InvariantInfo);
 
     /// <summary>
-    /// The parts centred as the mod centres a blueprint (Blueprint.Center): on its centre piece when it has one (that
-    /// piece then never made, the others turned by its turn taken back), else on the middle of their bounds on the
-    /// ground (bounds that hold the file's origin too, as Unity's start from it) at 5 cm above the lowest.
+    /// A blueprint centred as the mod centres it (Blueprint.Center): on its centre piece when it has one (that piece
+    /// then never made, the others turned by its turn taken back), else on the middle of their bounds on the ground
+    /// (bounds that hold the file's origin too, as Unity's start from it) at 5 cm above the lowest; its radius half the
+    /// diagonal of those bounds on the ground, or its snapshots' reach when wider (a snapshot reaching too far, or two
+    /// reaching too far together, dropped as the mod drops them).
     /// </summary>
-    private static List<BlueprintPart> Centred(List<BlueprintPart> parts, string centerPiece)
+    private static BlueprintFile Centred(PlanBuild read)
     {
-        if (parts.Count == 0)
-        {
-            return parts;
-        }
-        var min = NVector3.Min(NVector3.Zero, parts.Aggregate(parts[0].Position, (m, p) => NVector3.Min(m, p.Position)));
-        var max = NVector3.Max(NVector3.Zero, parts.Aggregate(parts[0].Position, (m, p) => NVector3.Max(m, p.Position)));
-        var center = new NVector3((min.X + max.X) * 0.5f, parts.Min(p => p.Position.Y) + 0.05f, (min.Z + max.Z) * 0.5f);
+        var parts = read.Parts;
+        var min = parts.Aggregate(NVector3.Zero, (m, p) => NVector3.Min(m, p.Position));
+        var max = parts.Aggregate(NVector3.Zero, (m, p) => NVector3.Max(m, p.Position));
+        float ex = (max.X - min.X) * 0.5f, ez = (max.Z - min.Z) * 0.5f;
+        float radius = (float)Math.Sqrt((double)ex * ex + (double)ez * ez);
+        var center = parts.Count == 0 ? NVector3.Zero : new NVector3((min.X + max.X) * 0.5f, parts.Min(p => p.Position.Y) + 0.05f, (min.Z + max.Z) * 0.5f);
         var turn = Quaternion.Identity;
-        int at = parts.FindIndex(p => p.Prefab == centerPiece);
+        int at = parts.FindIndex(p => p.Prefab == read.Center);
         if (at >= 0)
         {
             center = parts[at].Position;
@@ -177,8 +254,35 @@ public static partial class ExpandWorld
         }
         // Unity's != on rotations: the same unless their dot product is below 0.999999.
         bool turned = Quaternion.Dot(turn, Quaternion.Identity) <= 0.999999f;
-        return [.. parts.Select(p => turned
+        List<BlueprintPart> centred = [.. parts.Select(p => turned
             ? p with { Position = NVector3.Transform(p.Position - center, turn), Rotation = turn * p.Rotation }
             : p with { Position = p.Position - center })];
+        var (heights, paints, reach) = Reaches(read.Heights, read.Paints, center);
+        return new BlueprintFile(centred, MathF.Max(radius, reach), heights, paints);
+    }
+
+    /// <summary>
+    /// The snapshots moved with the blueprint's centre: whether each one kept has values, and how far the farther
+    /// reaches. One reaching too far is dropped; both are when, with values, they reach too far together.
+    /// </summary>
+    private static (bool Heights, bool Paints, float Reach) Reaches(Snapshot? heights, Snapshot? paints, NVector3 center)
+    {
+        var (h, p) = (Kept(heights, center), Kept(paints, center));
+        float reach = MathF.Max(h.Reach, p.Reach), margin = MathF.Max(1f, MathF.Max(h.Spacing, p.Spacing));
+        return h.Values && p.Values && reach + margin > MaxSnapshotReach ? (false, false, 0f) : (h.Values, p.Values, reach);
+    }
+
+    /// <summary>
+    /// A snapshot moved with the blueprint's centre: whether it has values, how far it reaches, and its node spacing
+    /// when it has values (what the reach of both is measured with); nothing for none, or one reaching too far.
+    /// </summary>
+    private static (bool Values, float Reach, float Spacing) Kept(Snapshot? snapshot, NVector3 center)
+    {
+        if (snapshot == null)
+        {
+            return default;
+        }
+        snapshot.MoveBy(center);
+        return snapshot.Reach() is { } reach ? (snapshot.HasValues, reach, snapshot.HasValues ? snapshot.Spacing : 0f) : default;
     }
 }

@@ -20,6 +20,9 @@ public sealed partial class FakeGame
     /// </summary>
     public Dictionary<string, byte[]> ConfigFiles { get; } = [];
 
+    /// <summary>Files under BepInEx/config the bridge refuses (413, as for one over its size limit).</summary>
+    public HashSet<string> RefusedConfigFiles { get; } = [];
+
     /// <summary>The world's meta file on the game's disk (GET /world/meta); null: none, or an older plugin (404).</summary>
     public byte[]? WorldMeta { get; set; }
 
@@ -62,6 +65,12 @@ public sealed partial class FakeGame
             reply.Status = 400;
             reply.Type = "text/plain";
             reply.Body = Encoding.UTF8.GetBytes("the path must name a file or folder inside BepInEx/config");
+        }
+        else if (RefusedConfigFiles.Contains(path))
+        {
+            reply.Status = 413;
+            reply.Type = "text/plain";
+            reply.Body = Encoding.UTF8.GetBytes("the file is larger than the bridge serves");
         }
         else if (ConfigFiles.TryGetValue(path, out byte[]? bytes))
         {

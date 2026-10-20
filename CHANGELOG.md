@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.67.3 — 2026-10-19
+
+### Fixed
+- **Expand World blueprint locations are laid out at the mod's size.** The room a blueprint location needs is now
+  measured as the mod measures it (a blueprint in a subfolder or with spaces in its name is found, and its terrain
+  snapshot counts), and live mode reads every blueprint of the game's folder, so the predicted places match the game's.
+
 ## v1.67.2 — 2026-10-19
 
 ### Fixed
