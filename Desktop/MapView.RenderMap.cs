@@ -76,6 +76,8 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
         _gl.Uniform2(U("canvasSize"), (float)w, h);
         _gl.Uniform1(U("metersPerPixel"), mpp);
         _gl.Uniform1(U("mapMeters"), mapMeters);
+        // The sea's level on the map: the game's map draws it at 29.5 m.
+        _gl.Uniform1(U("waterLevel"), 29.5f);
         // Floats (a vec4): whole numbers would pick glUniform4i, which a float uniform refuses.
         _gl.Uniform4(U("detailRect"), d?.X0 ?? 0, d?.Z0 ?? 0, d?.Size ?? 1, d != null ? 1f : 0f);
         _gl.Uniform1(U("showPaint"), ShowPaint ? 1f : 0f);

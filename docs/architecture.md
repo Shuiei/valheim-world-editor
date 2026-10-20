@@ -84,8 +84,9 @@ flowchart LR
    session then makes the `EditStore` (empty pending changes), the `TerrainModifiers` (how the
    world's locations flatten and paint the ground) and the `TerrainService` (the generated ground). Live,
    `WorldSession.OpenLive` does the same from the plugin's snapshot (`WorldSave.LoadLive`).
-2. **The map.** `Desktop/MapPage.cs` and `Desktop/MapView.cs` draw the world with the game's map
-   shader from `Core/WorldGen/MapData.cs` (biomes, heights, the edits).
+2. **The map.** `Desktop/MapPage.cs` and `Desktop/MapView.cs` draw the world from `Core/WorldGen/MapData.cs`
+   (biomes, heights, the edits) with the editor's own map shader (`Desktop/MapShader.cs`), which gives it the game's
+   look from the game's map textures and material values.
 3. **An area.** `WorldScene.Load(owner, zx, zz, size)` (`Desktop/WorldScene.cs`) works out the
    generated ground of a square of zones in parallel (`TerrainService.BaseZone`), lays the saved and
    pending edits over it (`Core/Editing/HeightGrid.cs`), reads the objects in it (`ReadThings`) and
