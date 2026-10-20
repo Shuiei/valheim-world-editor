@@ -81,11 +81,12 @@ public class ClaudeToolsGroundTests
         await w.T.RemoveObjects(trees);
         int before = w.W.Session!.Scene.Things.Count;
 
-        Assert.StartsWith("Regrew ", await w.T.RegrowNature(-25, -25, 0, 0, ["trees"]));
+        // West of the ground the start temple keeps clear.
+        Assert.StartsWith("Regrew ", await w.T.RegrowNature(-32, -32, -23, 0, ["trees"]));
         var grown = w.W.Session.Scene.Things.Skip(before).ToList();
         Assert.NotEmpty(grown);
         Assert.All(grown, t => Assert.Equal(TerrainEditor.App.ObjectKind.Trees, TerrainEditor.App.ObjectKinds.Of(Terrain.PrefabCatalog.DisplayName(t.Prefab), false)));
-        Assert.All(grown, t => Assert.True(t.Position.X is >= -25 and <= 0 && t.Position.Z is >= -25 and <= 0));
+        Assert.All(grown, t => Assert.True(t.Position.X is >= -32 and <= -23 && t.Position.Z is >= -32 and <= 0));
         Assert.StartsWith("Claude: regrew", w.W.Session.UndoLabel);
     }
 
