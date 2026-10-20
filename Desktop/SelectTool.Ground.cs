@@ -22,11 +22,12 @@ public sealed partial class SelectTool
     /// Put on the ground, the selected building pieces keep their shape: the whole block goes up or down until its
     /// bottom layer sits on what is under it (Landed: a floor or a platform no higher than the block, else the ground),
     /// sinking into a slope or a platform's edge rather than floating. Pieces past the area's edge have no ground to
-    /// sit on: the others decide, or none, and the block keeps its height (0).
+    /// sit on: the others decide, or none, and the block keeps its height (0). Pieces buried deep under the ground do
+    /// not stand on it and go along with the block (see Standing).
     /// </summary>
     private float OnGroundBlock(Move m)
     {
-        var pieces = m.Items.Where(it => it.Piece && !it.Linked).ToList();
+        var pieces = Standing([.. m.Items.Where(it => it.Piece && !it.Linked)]);
         if (pieces.Count == 0)
         {
             return 0;
@@ -44,6 +45,25 @@ public sealed partial class SelectTool
         }
         return float.IsFinite(need) ? need : 0;
     }
+
+    /// <summary>
+    /// The pieces that stand on the ground: all but those whose bottom was more than <see cref="Buried"/> under it
+    /// (a mod's crafting stations hidden 10 km under a house, caught by a zone drawn over it), which would otherwise be
+    /// the bottom layer and lift the whole building that far to put them on the ground. All of them when every one is
+    /// that deep.
+    /// </summary>
+    /// <param name="pieces">The moved pieces.</param>
+    private static List<Item> Standing(List<Item> pieces)
+    {
+        var standing = pieces.Where(it => it.Lift + it.Bottom > -Buried).ToList();
+        return standing.Count > 0 ? standing : pieces;
+    }
+
+    /// <summary>
+    /// How deep under the ground (metres) a piece's bottom may be and still stand on it: a slope sinks a building's
+    /// lowest pieces a few metres at most.
+    /// </summary>
+    private const float Buried = 10;
 
     /// <summary>The ground's height at a world point, as drawn; null outside the area, where there is no ground.</summary>
     private float? GroundAt(float wx, float wz)

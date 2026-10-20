@@ -126,7 +126,8 @@ turned 15°, +0.25 m · snapped to woodwall".
   it. Building pieces move together and keep their shape: the whole building goes up or down until its
   bottom layer sits on what is under it, a floor or a platform no higher than the building, else the
   ground. On a slope, or half on a platform, part of it sinks in rather than float, since pieces need
-  something to carry what stands on them.
+  something to carry what stands on them. Pieces buried more than 10 m under the ground (a mod's hidden
+  crafting stations, caught by a zone drawn over the house) do not count as its bottom: they go along.
 - Off: the whole selection moves as one block that keeps its shape: it goes up or down with the ground under its middle, so a building stays straight on uneven ground.
 - **Snap to other pieces when moving** on: while you move, the closest pair of snap points (one of a
   moved piece, one of a piece around, within 0.75 m) locks together, and the whole selection shifts so

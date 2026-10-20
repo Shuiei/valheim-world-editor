@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.79.2 — 2026-10-20
+
+### Fixed
+- **A building moved with "Put each object on the ground when moving" on stays on the ground when pieces are hidden
+  deep under it.** Pieces a mod keeps far underground, caught by a zone drawn over the house, were taken as its
+  bottom, so the whole building went 10 km up and only its furniture landed.
+
 ## v1.79.1 — 2026-10-20
 
 ### Fixed
