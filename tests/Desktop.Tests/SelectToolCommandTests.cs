@@ -1,3 +1,4 @@
+using System.Numerics;
 using Avalonia.Headless.XUnit;
 using TerrainEditor.App;
 using TerrainEditor.Terrain;
@@ -40,6 +41,21 @@ public class SelectToolCommandTests
         Assert.Equal([0], v.Selected);
         v.Tool.Invert();
         Assert.Equal([2], v.Selected);
+    }
+
+    // Nor by a zone drawn round where it lies, nor by Whole building, even when its box reaches up to the wall above
+    // it (touching it).
+    [AvaloniaFact]
+    public void ObjectsBuriedDeepUnderTheGroundAreNotTakenByAZoneOrWholeBuilding()
+    {
+        var v = Open(T(1, Wall, 40, 30, 40), T(2, Wall, 41, -9962, 40));
+        var c = v.S.Scene;
+        v.W.View.SetBoxes([(1, new Vector3(40 - c.Cx, -9962, -(41 - c.Cz)), new Vector3(42 - c.Cx, 30.5f, -(39 - c.Cz)))]);
+        v.Drag(false, (36, 36), (46, 36), (46, 44), (36, 44), (36, 37));
+        Assert.Equal([0], v.Selected);
+        v.W.View.Select([]);
+        v.Tool.WholeBuilding([0]);
+        Assert.Equal([0], v.Selected);
     }
 
     [AvaloniaFact]
