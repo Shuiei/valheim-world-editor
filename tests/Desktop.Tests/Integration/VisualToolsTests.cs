@@ -36,8 +36,10 @@ public sealed class VisualToolsTests : VisualEditorPictures
         }
         Assert.True(s.GetProperty("selected").GetInt32() > 0, s.ToString());
         Assert.True(s.GetProperty("mode").GetString() == "Select", s.ToString());
-        // The selection's boxes and the handles.
+        // The selection's outline and the handles.
         ShowsSomething(Picture("selected"));
+        // The box again, for the next tests in this editor.
+        Do("choose A box on the screen (what is seen)");
         Clean();
     }
 
