@@ -95,6 +95,9 @@ public static partial class ExpandWorld
                 case "required":
                     required = n;
                     break;
+                default:
+                    // Another word: the mod passes it over.
+                    break;
             }
             required = Math.Max(required, min);
         }
