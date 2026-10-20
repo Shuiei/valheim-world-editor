@@ -11,7 +11,7 @@ public sealed partial class SelectTool
     private void DrawBox((Point From, Point To, bool Add, bool Drawing) b, Point at)
     {
         _box = b with { To = at, Drawing = b.Drawing || Point.Distance(at, b.From) > 6 };
-        ScreenBox = _box.Value.Drawing ? new Rect(b.From, at) : null;
+        ScreenBox = _box.Value.Drawing ? Spanning(b.From, at) : null;
         _view.LassoChanged();
     }
 
@@ -30,8 +30,14 @@ public sealed partial class SelectTool
             return;
         }
         var shown = Shown().ToHashSet();
-        ZoneSelected([.. _view.SeenIn(new Rect(b.From, b.To), size).Where(shown.Contains)], b.Add);
+        ZoneSelected([.. _view.SeenIn(Spanning(b.From, b.To), size).Where(shown.Contains)], b.Add);
     }
+
+    /// <summary>The rectangle between two corners, whichever way it was dragged (left or up too).</summary>
+    /// <param name="a">One corner.</param>
+    /// <param name="b">The opposite corner.</param>
+    internal static Rect Spanning(Point a, Point b) =>
+        new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(a.X - b.X), Math.Abs(a.Y - b.Y));
 
     /// <summary>A click on empty ground (a zone or a rectangle not drawn): deselects, unless it adds (Shift).</summary>
     /// <param name="add">Shift held.</param>

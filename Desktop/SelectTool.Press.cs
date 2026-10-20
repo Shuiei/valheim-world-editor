@@ -60,15 +60,15 @@ public sealed partial class SelectTool
     }
 
     /// <summary>
-    /// A press on empty ground (or with Alt held): a click deselects, a drag draws a rectangle on the screen
-    /// (<see cref="SeenOnly"/>) or a zone on the ground. False when there is no ground under the pointer for a zone.
+    /// A press on empty ground (or with Alt held): a click deselects, a drag draws a rectangle on the screen, or a zone
+    /// on the ground (<see cref="ZoneOnGround"/>). False when there is no ground under the pointer for a zone.
     /// </summary>
     /// <param name="at">The point in the view.</param>
     /// <param name="ground">The ground under it (world), or null.</param>
     /// <param name="shift">Shift held: add to the selection.</param>
     private bool StartZone(Point at, Vector3? ground, bool shift)
     {
-        if (SeenOnly)
+        if (!ZoneOnGround)
         {
             _box = (at, at, shift, false);
             return true;

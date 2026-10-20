@@ -38,10 +38,10 @@ public sealed partial class SelectTool
     /// <summary>Snap moved building pieces to the pieces around.</summary>
     public bool SnapToPieces { get; set; } = true;
     /// <summary>
-    /// A zone is a rectangle on the screen that picks only what is seen inside it (see ScreenBox), not an outline on
-    /// the ground that picks everything above it.
+    /// A drag on empty ground draws an outline on the ground that picks everything above it, from the ground up; off
+    /// (the default), a rectangle on the screen that picks only what is seen inside it (see ScreenBox).
     /// </summary>
-    public bool SeenOnly { get; set; }
+    public bool ZoneOnGround { get; set; }
 
     /// <summary>The view's open scene.</summary>
     private WorldScene? Scene => _view.Scene;
@@ -193,7 +193,7 @@ public sealed partial class SelectTool
     /// <summary>A copy of the zone's points for the drawing thread.</summary>
     public Vector2[]? Lasso { get; private set; }
     /// <summary>
-    /// A press that draws a rectangle on the screen (<see cref="SeenOnly"/>): where it began, where the pointer is,
+    /// A press that draws a rectangle on the screen (<see cref="ZoneOnGround"/> off): where it began, where the pointer is,
     /// whether it adds to the selection (Shift), and whether it is being drawn (moved past 6 px) rather than a click.
     /// </summary>
     private (Point From, Point To, bool Add, bool Drawing)? _box;

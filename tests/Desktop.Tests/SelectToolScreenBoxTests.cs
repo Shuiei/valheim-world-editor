@@ -6,8 +6,9 @@ using static TerrainEditor.Desktop.Tests.SelectToolRun;
 namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
-/// The Select tool's rectangle on the screen (Pick only what is seen): it picks the objects seen inside it, not those
-/// behind others; a click deselects, Shift adds, Esc drops it, and it is shown once dragged past 6 px.
+/// The Select tool's rectangle on the screen (a drag's default): it picks the objects seen inside it, not those behind
+/// others, whichever way it is dragged; a click deselects, Shift adds, Esc drops it, and it is shown once dragged past
+/// 6 px.
 /// </summary>
 [Collection("World files")]
 public class SelectToolScreenBoxTests
@@ -17,9 +18,7 @@ public class SelectToolScreenBoxTests
     /// </summary>
     private static View TwoFloorsAndATree()
     {
-        var v = Open(T(1, Floor, 40, 30, 40), T(2, Floor, 40, 34, 40), T(3, Beech, 44, 30, 44, false));
-        v.Tool.SeenOnly = true;
-        return v;
+        return Open(T(1, Floor, 40, 30, 40), T(2, Floor, 40, 34, 40), T(3, Beech, 44, 30, 44, false));
     }
 
     /// <summary>A drag with Alt held (over objects) from one world point on the ground to another.</summary>
@@ -39,6 +38,10 @@ public class SelectToolScreenBoxTests
         Assert.Equal([1, 2], v.Selected);
         Assert.Equal("Selected 2 object(s) inside the zone.", said());
         Assert.Null(v.Tool.ScreenBox);
+        // Dragged the other way round (up and left on the screen): the same.
+        v.W.View.Select([]);
+        Box(v, (46, 46), (36, 36));
+        Assert.Equal([1, 2], v.Selected);
     }
 
     [AvaloniaFact]
@@ -65,7 +68,8 @@ public class SelectToolScreenBoxTests
         Assert.Null(v.Tool.ScreenBox);
         var to = v.At(46, 30, 46);
         v.Tool.Moved(to, v.Size);
-        Assert.Equal(new Avalonia.Rect(from, to), v.Tool.ScreenBox);
+        Assert.Equal(SelectTool.Spanning(from, to), v.Tool.ScreenBox);
+        Assert.True(v.Tool.ScreenBox!.Value.Width > 0 && v.Tool.ScreenBox.Value.Height > 0);
         Assert.True(v.Tool.Key(Key.Escape, false));
         Assert.Null(v.Tool.ScreenBox);
         v.Tool.Up(to, v.Size, false);

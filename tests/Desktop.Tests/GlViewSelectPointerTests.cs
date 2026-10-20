@@ -87,6 +87,7 @@ public class GlViewSelectPointerTests
             new WorldScene.Thing(1, StableHash.Of("wood_wall_half"), new Vector3(37, 30, 37), Vector3.Zero, 0, true),
             new WorldScene.Thing(2, StableHash.Of("Beech1"), new Vector3(20, 30, 20), Vector3.Zero, 1, false)));
         b.V.Mode = ToolMode.Select;
+        b.V.SelectTool.ZoneOnGround = true;
         b.V.Select([0]);
         var (c, scale) = b.V.GizmoAt()!.Value;
         // The tree's box (whatever its place) right under the east arrow.
