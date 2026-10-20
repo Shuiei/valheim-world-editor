@@ -87,6 +87,16 @@ public class SelectToolMouseTests
         Assert.Null(v.W.View.ActiveObject);
     }
 
+    // Selected objects with no model drawn yet (the tests read none) are boxed instead of outlined: all of them here.
+    [AvaloniaFact]
+    public void SelectedObjectsWithNoModelDrawnAreBoxed()
+    {
+        var v = Open(T(1, Wall, 40, 30, 40), T(2, Wall, 58, 30, 58));
+        v.W.View.Select([0, 1]);
+        var boxed = (List<int>)PrivateMethods.Call(typeof(GlView), "MakeOutlineParts", v.W.View, v.S.Scene)!;
+        Assert.Equal([0, 1], boxed.Order());
+    }
+
     [AvaloniaFact]
     public void AClickPicksAndAClickOnEmptyGroundDeselects()
     {

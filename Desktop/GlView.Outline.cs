@@ -72,7 +72,7 @@ public sealed partial class GlView
     /// The outline round the selected objects, over everything (seen through what is in front, as the boxes were):
     /// the mask drawn, then the line, two pixels wide at 1080 lines (one to four).
     /// </summary>
-    private unsafe void DrawOutline()
+    private void DrawOutline()
     {
         var parts = _outlineParts;
         if (parts.Count == 0 || !OutlineTarget(_frameW, _frameH))
@@ -86,19 +86,10 @@ public sealed partial class GlView
         _gl.UseProgram(_objectProg);
         var u = MaterialUniforms.Of(_u, _objectProg);
         int uFlat = _u.At(_objectProg, "uFlat");
-        if (_ghostVbo == 0)
-        {
-            _ghostVbo = _own.Buffer();
-        }
         foreach (var (b, data, active) in parts)
         {
             _gl.Uniform4(uFlat, 1f, active ? 1f : 0f, 0f, 1f);
-            _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _ghostVbo);
-            fixed (Matrix4x4* p = data)
-            {
-                _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Length * 64), p, BufferUsageARB.DynamicDraw);
-            }
-            DrawFrom(b, _ghostVbo, data.Length, null, u);
+            DrawPlaced(b, data, u);
         }
         _gl.Uniform4(uFlat, 0f, 0f, 0f, 0f);
         _gl.Disable(EnableCap.Blend);
