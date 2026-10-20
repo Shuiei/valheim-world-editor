@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.81.0 — 2026-10-20
+
+### Added
+- **Pick only what is seen.** With the new Select panel switch on, a drag draws a rectangle on the screen and selects
+  only the objects seen inside it, not those behind others, so you can take one floor, one wall or a roof of a
+  building instead of everything from the ground up.
+
 ## v1.80.0 — 2026-10-20
 
 ### Changed

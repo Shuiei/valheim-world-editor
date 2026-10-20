@@ -11,10 +11,8 @@ public sealed partial class SelectTool
     {
         switch (key)
         {
-            case Avalonia.Input.Key.Escape when _lasso != null:
-                _lasso = null;
-                Lasso = null;
-                _view.LassoChanged();
+            case Avalonia.Input.Key.Escape when _lasso != null || _box != null:
+                StopZones();
                 return true;
             case Avalonia.Input.Key.Escape:
                 return Cancel();

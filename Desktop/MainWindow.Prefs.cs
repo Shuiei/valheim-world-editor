@@ -37,6 +37,7 @@ public sealed partial class MainWindow
         p.Bind(AreaPanel.ActionBox, "area.action");
         p.Bind(SelectPanel.GroundBox, "select.onGround");
         p.Bind(SelectPanel.SnapBox, "select.snap");
+        p.Bind(SelectPanel.SeenBox, "select.seen");
         // Shape: the preset, and the formula when it is one's own.
         p.Bind(ShapePanel.PresetBox, "shape.preset");
         bool Own() => ShapePanel.PresetBox.SelectedIndex == ShapePanel.Presets.Length;

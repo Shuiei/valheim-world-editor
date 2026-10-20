@@ -57,10 +57,9 @@ public sealed partial class GlView
         var v = new List<float>();
         void Box(Vector3 lo, Vector3 hi)
         {
-            Vector3 C(int k) => new((k & 1) == 0 ? lo.X : hi.X, (k & 2) == 0 ? lo.Y : hi.Y, (k & 4) == 0 ? lo.Z : hi.Z);
             foreach (var (a, b) in BoxEdges)
             {
-                var p = C(a); var q = C(b);
+                var p = Corner((lo, hi), a); var q = Corner((lo, hi), b);
                 v.AddRange([p.X, p.Y, p.Z, q.X, q.Y, q.Z]);
             }
         }

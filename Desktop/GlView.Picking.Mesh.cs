@@ -53,7 +53,7 @@ public sealed partial class GlView
     /// <param name="s">The scene.</param>
     /// <param name="o">The ray's origin (view space).</param>
     /// <param name="d">The ray's direction, normalised.</param>
-    /// <param name="boxes">The objects whose boxes the ray enters, nearest first (<see cref="BoxesHitBy"/>).</param>
+    /// <param name="boxes">The objects whose boxes the ray enters, nearest first (<see cref="BoxesHitBy(Vector3, Vector3)"/>).</param>
     /// <returns>The object hit (null: none), and how far along the ray it is met.</returns>
     internal (int? Hit, float Best) NearestMeshHit(WorldScene s, Vector3 o, Vector3 d, List<(float T, int I)> boxes)
     {
