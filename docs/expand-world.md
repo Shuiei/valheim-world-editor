@@ -89,7 +89,9 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   blueprint's part that is no prefab of the game, are left out of what Regrow nature and New world grow; the log
   says which rule. A blueprint's objects wake as the game's vegetation list counts them (and a building piece's
   timers); other objects' own draws are not known, so the draws after one can differ from the game's.
-- `pregenerate` and the map icons: not modelled.
+- `pregenerate`: not modelled. The map's location icons follow the location file's "iconAlways" and "iconPlaced"
+  (an icon's size included), for icons the game's minimap has (the start, the traders); an icon named after a pin
+  type, an item or a status effect is not drawn.
 - **Status effects** of biomes and territories, and their **water colours**: the editor neither applies nor
   draws them. As in the mod, a biome's status effects and a territory's status effects and water colours still
   count towards whether its settings are in use; a biome's water colours do not.

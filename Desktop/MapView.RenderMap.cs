@@ -42,6 +42,7 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
         DrawZoneFills();
         DrawLines(w, h, mpp);
         _gl.Enable(EnableCap.Blend);
+        DrawIcons(w, h, mpp);
         _gl.UseProgram(_fillProg);
         DrawPins();
         _gl.Disable(EnableCap.Blend);

@@ -151,6 +151,8 @@ public static partial class ExpandWorld
             Blueprint = OrNull(blueprint),
             Custom = OrNull(CustomFields.Any(f.Has) || f.Str("levelArea") is not ("" or "false")),
             RandomDamage = f.Str("randomDamage"),
+            IconAlwaysName = f.Str("iconAlways"),
+            IconPlacedName = f.Str("iconPlaced"),
         };
     }
 }

@@ -61,6 +61,7 @@ public class GameLocationsTests
         Assert.Equal("StartTemple", temple.Prefab);
         Assert.Equal("Crypt_old", rules.Locations[1].Prefab);
         Assert.Equal((1, 1, 1, 12.5f, "g"), (temple.Prioritized, temple.Enable, temple.Quantity, temple.ExteriorRadius, temple.Group));
+        Assert.Equal((1, 0), (temple.IconAlways, rules.Locations[1].IconAlways));
         Assert.Equal($"L{order[0].Locations}x{order[0].Vegetation}_0", rules.Locations[2].Name);
         var ice = rules.Locations[^1];
         Assert.Equal(("IceCave", "DeepNorth_Ice"), (ice.Name, ice.AltBiome));

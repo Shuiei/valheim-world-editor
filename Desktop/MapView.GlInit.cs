@@ -46,6 +46,7 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
         {
             _gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 12, (void*)0);
         }
+        InitIcons();
         _fillProg = Program(FillVs, FillFs);
         _fillVao = _own.VertexArray();
         _fillVbo = _own.Buffer();

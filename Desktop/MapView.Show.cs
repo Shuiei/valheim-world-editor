@@ -20,6 +20,7 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
         StopBuild();
         var build = _build = new CancellationTokenSource();
         _data = new MapData(session.Terrain, session.Edits, build.Token);
+        ShowIcons(session);
         _global = null;
         _globalShown = false;
         _detail = null;

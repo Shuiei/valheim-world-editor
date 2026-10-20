@@ -35,6 +35,7 @@ public static class GameScripts
         Of("int", "m_biome"),
         Of("int", "m_quantity"),
         Bool("m_prioritized"),
+        Bool("m_iconAlways"),
         Bool("m_unique"),
         Text("m_group"),
         Of("float", "m_minDistanceFromSimilar"),

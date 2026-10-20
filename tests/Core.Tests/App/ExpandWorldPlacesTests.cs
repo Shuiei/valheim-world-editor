@@ -333,4 +333,13 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         Assert.Contains(placed, p => p.Rule.Prefab == "StartTemple:Copy");
         Assert.Contains(placed, p => p.Rule.Prefab == "StartTemple");
     }
+
+    [Fact]
+    public void AKindsIconsAreTheFilesWords()
+    {
+        var rules = ExpandWorld.LocationsOf([E(("prefab", "StartTemple"), ("iconAlways", "true"), ("iconPlaced", "Hildir_camp, 2")), E(("prefab", "StartTemple:Copy"))], Game(), BiomeTable.Vanilla, 10000f, null, []);
+        Assert.Equal(("true", "Hildir_camp, 2"), (rules[0].IconAlwaysName, rules[0].IconPlacedName));
+        // Not given: no icon (the mod's default), not the game's.
+        Assert.Equal(("", ""), (rules[1].IconAlwaysName, rules[1].IconPlacedName));
+    }
 }

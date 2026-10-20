@@ -193,6 +193,12 @@ public static partial class SeedLocations
         /// </summary>
         [JsonPropertyName("snapToWater")]
         public int SnapToWater { get; set; }
+        /// <summary>1: its icon shows on the map wherever it is laid out (ZoneLocation.m_iconAlways).</summary>
+        [JsonPropertyName("iconAlways")]
+        public int IconAlways { get; set; }
+        /// <summary>1: its icon shows on the map once its zone is made (ZoneLocation.m_iconPlaced).</summary>
+        [JsonPropertyName("iconPlaced")]
+        public int IconPlaced { get; set; }
         /// <summary>
         /// The alt biome that adds it; null for the game's own kinds.
         /// </summary>
@@ -240,6 +246,15 @@ public static partial class SeedLocations
         /// </summary>
         [JsonPropertyName("randomDamage")]
         public string? RandomDamage { get; set; }
+        /// <summary>
+        /// Expand World Data's "iconAlways" for the kind: "true" (its own name's icon), an icon's name (with its size and
+        /// whether it moves after commas), or empty / "false" for none; null for a game kind (<see cref="IconAlways"/>).
+        /// </summary>
+        [JsonPropertyName("iconAlwaysName")]
+        public string? IconAlwaysName { get; set; }
+        /// <summary>Expand World Data's "iconPlaced" for the kind, as <see cref="IconAlwaysName"/>; null for a game kind.</summary>
+        [JsonPropertyName("iconPlacedName")]
+        public string? IconPlacedName { get; set; }
         /// <summary>
         /// What Expand World Data's location file changes about its contents, when it changes any (with <see cref="Custom"/>
         /// or <see cref="Blueprint"/>); null for none. Not kept in locations.json (the files are read again).
