@@ -54,6 +54,6 @@ public sealed partial class GlView
         {
             return;
         }
-        DrawLines(ref _hoverBoxVao, ref _hoverBoxVbo, SelectionBoxes([OutlineBoxOf(sc, i)]), vp, new Vector4(1, 0.85f, 0.55f, 0.6f), blend: true, width: 0.8f);
+        DrawLines(ref _hoverBoxVao, ref _hoverBoxVbo, SelectionBoxes([OutlineBoxOf(sc, i)]), vp, new Vector4(1, 0.85f, 0.55f, 0.6f), blend: true, width: SelectionWidth);
     }
 }

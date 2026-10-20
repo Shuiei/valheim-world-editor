@@ -42,13 +42,13 @@ public sealed partial class GlView
     private uint _lineProg, _lineVao, _lineVbo;
 
     /// <summary>
-    /// Over this many selected objects, one box round them all instead of a box each: thousands of boxes
-    /// over a stacked structure make a solid blob that hides it.
+    /// Over this many selected objects, one box round them all instead of a box each: a box each over a building
+    /// makes a tangle of lines that hides it.
     /// </summary>
-    internal const int BoxEachUpTo = 500;
+    internal const int BoxEachUpTo = 1;
 
     /// <summary>
-    /// The selection's box lines: a box round each object (12 edges, two points each), or, past
+    /// The selection's box lines: the object's box (12 edges, two points each), or, past
     /// <see cref="BoxEachUpTo"/> objects, one box round all of them.
     /// </summary>
     /// <param name="bounds">The selected objects' boxes.</param>
@@ -85,8 +85,8 @@ public sealed partial class GlView
     }
 
     /// <summary>
-    /// The selected objects' boxes, orange, seen through what is in front of them (one box round a large
-    /// selection, <see cref="SelectionBoxes"/>).
+    /// The selection's box, orange, thin, seen through what is in front of it (one box round several objects,
+    /// <see cref="SelectionBoxes"/>).
     /// </summary>
     private unsafe void DrawSelection(Matrix4x4 vp)
     {
@@ -97,8 +97,14 @@ public sealed partial class GlView
             _selectionSegs = SelectionBoxes([.. Selected.Where(i => i < _bounds.Length && _known[i]).Select(i => OutlineBoxOf(s, i))]);
         }
         // Seen through what is in front of it, like the web editor's selection.
-        DrawLines(ref _lineVao, ref _lineVbo, _selectionSegs, vp, new Vector4(1, 0.66f, 0.2f, 1));
+        DrawLines(ref _lineVao, ref _lineVbo, _selectionSegs, vp, new Vector4(1, 0.66f, 0.2f, 1), width: SelectionWidth);
     }
+
+    /// <summary>
+    /// The selection's and the hovered object's lines, times a tool line's width: about 1.5 pixels, the thinnest that
+    /// stays whole when the 3D view is drawn at a lower resolution and scaled up.
+    /// </summary>
+    internal const float SelectionWidth = 0.6f;
 
     /// <summary>The selection's box lines, made again when it changes.</summary>
     private float[] _selectionSegs = [];

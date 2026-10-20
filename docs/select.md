@@ -28,7 +28,7 @@ until you **Save** (or **Apply live**).
 
 | Action | What it does |
 |---|---|
-| **Click** an object | Selects it, and only it. A yellow box marks each selected object; a blue box shows what is under the cursor. |
+| **Click** an object | Selects it, and only it. A thin yellow box marks the selection; a blue box shows what is under the cursor. |
 | `Ctrl` + click | Adds an object to the selection, or takes it out. Dragging any selected object then moves them all together. |
 | `Shift` + click | Selects the row from the last object clicked to this one: click wall 1, then `Shift` + click wall 3, and walls 1, 2 and 3 are selected (the objects on the line between them). |
 | **Drag on empty ground** | Draws a zone; everything shown inside it is selected when you let go. |
@@ -43,7 +43,7 @@ until you **Save** (or **Apply live**).
 *`Alt` + drag round rocks and bushes: the zone is drawn even though the drag started on a bush.*
 
 ![The selection the zone made](images/select-zone.jpg)
-*When you let go, everything shown inside is selected, each with its box, and **EXACT PLACE** shows where
+*When you let go, everything shown inside is selected, with one box round it all, and **EXACT PLACE** shows where
 the selection is.*
 
 ### How a click finds an object
@@ -63,10 +63,10 @@ the selection is.*
 
 A zone selects the objects whose position (their origin, where they stand) is inside it.
 
-### Big selections
+### Several objects
 
-Past 500 selected objects, one yellow box marks them all instead of a box each: thousands of boxes over
-a stacked structure would make a solid blob that hides it. Everything still works on each object.
+With more than one object selected, one yellow box marks them all instead of a box each: a box each over a
+building makes a tangle of lines that hides it. Everything still works on each object.
 
 ### Panel buttons
 
