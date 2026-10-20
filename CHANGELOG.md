@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.75.0 — 2026-10-20
+
+### Added
+- **Alt biomes' ground look.** An Expand World Data alt biome that gives its areas another biome's ground texture
+  ("terrainTextureOverride") is drawn that way in the 3D view, as the game draws it.
+
 ## v1.74.1 — 2026-10-20
 
 ### Fixed

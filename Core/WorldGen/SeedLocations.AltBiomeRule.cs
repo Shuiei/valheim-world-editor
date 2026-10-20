@@ -90,5 +90,12 @@ public static partial class SeedLocations
         /// <summary>Names (Rule.name) of the location kinds it keeps out of its areas.</summary>
         [JsonPropertyName("blockLocationNames")]
         public List<string> BlockLocationNames { get; set; } = [];
+
+        /// <summary>
+        /// The biome whose ground look its areas take (AltBiome.m_terrainTextureOverride: the ground mask's colour of that
+        /// biome); 0 (None) keeps the area's own.
+        /// </summary>
+        [JsonPropertyName("terrainTextureOverride")]
+        public int TerrainTextureOverride { get; set; }
     }
 }

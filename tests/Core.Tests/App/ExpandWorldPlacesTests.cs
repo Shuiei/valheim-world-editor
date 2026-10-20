@@ -276,7 +276,7 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
               ("minDistanceFromCenter", "1900"), ("minEdgeSize", "66"), ("maxEdgeSize", "299"), ("minAvgHeight", "30"), ("maxAvgHeight", "10000"),
               ("aboveWorldX", "-100"), ("belowWorldY", "250"), ("requireNeighbor", "Swamp"), ("notNeighbor", "Ocean"),
               ("incompatibleAltBiomes", new List<object?> { "Bones" }), ("blockVegetationNames", "beech1_meadows"),
-              ("blockLocationNames", new List<object?> { "Crypt2", "StartTemple:Copy" })),
+              ("blockLocationNames", new List<object?> { "Crypt2", "StartTemple:Copy" }), ("terrainTextureOverride", "AshLands")),
             E(("name", "Off"), ("enabled", "false")),
             E(("name", "Plain"), ("biome", "Nowhere")),
         ], BiomeTable.Vanilla, notes);
@@ -290,10 +290,11 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         Assert.Equal(["Bones"], dark.IncompatibleAltBiomes);
         Assert.Equal(["beech1_meadows"], dark.BlockVegetationNames);
         Assert.Equal(["Crypt2", "StartTemple:Copy"], dark.BlockLocationNames);
+        Assert.Equal((int)Heightmap.Biome.AshLands, dark.TerrainTextureOverride);
         // A field left out is 0 or none (the mod's, not the game's defaults); "enabled" is kept as written.
         Assert.False(alts[1].Enabled);
         var plain = alts[2];
-        Assert.Equal((0f, 0, 0, 0, 0), (plain.Chance, plain.MaxAmountSpawned, plain.MaxEdgeSize, plain.RequireNeighbor, plain.Biome));
+        Assert.Equal((0f, 0, 0, 0, 0, 0), (plain.Chance, plain.MaxAmountSpawned, plain.MaxEdgeSize, plain.RequireNeighbor, plain.Biome, plain.TerrainTextureOverride));
         Assert.Contains(notes, n => n.Contains("Nowhere"));
     }
 

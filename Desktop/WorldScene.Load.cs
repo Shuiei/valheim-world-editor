@@ -59,7 +59,7 @@ public sealed partial class WorldScene
         {
             int[] b = terrain.VertexBiomes(x, z);
             float[] baseMask = terrain.BaseMask(x, z);
-            byte[][] corners = [.. terrain.CornerBiomes(x, z).Select(c => BiomeRgba(c, table))];
+            byte[][] corners = [.. terrain.CornerLooks(x, z).Select(c => BiomeRgba(c, table))];
             var e = edits.Get(x, z);
             int ox = (x - x0) * 64, oz = (z - z0) * 64;
             for (int k = 0; k < 65; k++)
