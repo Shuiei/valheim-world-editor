@@ -8,8 +8,8 @@ the plugin is unchanged in versions without that part.
 
 ### Changed
 - **One thin box marks a selection of several objects.** The 3D view drew a box round each selected object, a tangle
-  of lines over a building; it now draws one box round them all, and the selection's and hovered object's lines are
-  thinner.
+  of lines over a building; it now draws one box round them all, with thinner lines, and selected objects lose their
+  unsaved green dot until you select something else.
 
 ## v1.79.2 — 2026-10-20
 

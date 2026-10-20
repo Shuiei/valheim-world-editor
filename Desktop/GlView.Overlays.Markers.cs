@@ -68,11 +68,13 @@ public sealed partial class GlView
 
     /// <summary>
     /// The new objects not saved (or applied) yet, as the web editor marked them: a green dot of the same
-    /// size on screen just above each, drawn over everything, for the kinds shown.
+    /// size on screen just above each, drawn over everything, for the kinds shown. Selected objects have none: the
+    /// selection's box marks them, and their dots come back once they are no longer selected.
     /// </summary>
     internal List<Vector3> NewMarkers(WorldScene s)
     {
         var list = new List<Vector3>();
+        var selected = Selected.ToHashSet();
         lock (s.Things)
         {
             lock (_objLock)
@@ -80,7 +82,7 @@ public sealed partial class GlView
                 for (int i = 0; i < s.Things.Count; i++)
                 {
                     var t = s.Things[i];
-                    if (t.Id < 0 && !t.Gone && i < _kinds.Length && _shown[(int)_kinds[i]] && !InGame(t.Id))
+                    if (t.Id < 0 && !t.Gone && i < _kinds.Length && _shown[(int)_kinds[i]] && !InGame(t.Id) && !selected.Contains(i))
                     {
                         list.Add(ToView(s, t.Position + new Vector3(0, 0.4f, 0)));
                     }

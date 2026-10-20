@@ -75,10 +75,14 @@ public sealed partial class GlView
         SelectionDone();
     }
 
-    /// <summary>The selection changed: its boxes made again, and <c>SelectionChanged</c> raised on the UI thread.</summary>
+    /// <summary>
+    /// The selection changed: its boxes and the new objects' dots (none on selected ones) made again, and
+    /// <c>SelectionChanged</c> raised on the UI thread.
+    /// </summary>
     private void SelectionDone()
     {
         _selectionDirty = true;
+        _marksDirty = true;
         var s = Scene;
         if (s != null)
         {

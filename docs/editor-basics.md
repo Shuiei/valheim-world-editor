@@ -153,7 +153,8 @@ Once you saved, the counts are what differs from that save: an undo after a save
 ![New trees on levelled ground, each with a green dot](images/unsaved.jpg)
 *Each new tree carries a green dot until it is saved; the status bar says what the last action did.*
 
-In the view, every new object not saved (or applied) yet carries a **green dot**. **View → Unsaved marks** hides
+In the view, every new object not saved (or applied) yet carries a **green dot**, except while it is selected: the
+selection's box marks it then, and its dot comes back once you select something else. **View → Unsaved marks** hides
 the dots (the objects stay).
 
 ## Saving and discarding
