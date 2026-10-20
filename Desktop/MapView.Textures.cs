@@ -95,6 +95,7 @@ public sealed partial class MapView : OpenGlControlBase, IDisposable
                 MipmapFilters.GenerateRepeating(_gl);
             });
         }
+        LoadIconTexture();
         // Placeholders until a close-up is loaded.
         Upload("d", new MapData.Layers(16, 16));
     }

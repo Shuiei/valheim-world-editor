@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.70.0 — 2026-10-20
+
+### Added
+- **The map shows the locations' icons.** The start and the traders are marked on the world map with the game's own
+  icons, as in the game; with Expand World Data, the icons its location file gives.
+
 ## v1.69.0 — 2026-10-19
 
 ### Added

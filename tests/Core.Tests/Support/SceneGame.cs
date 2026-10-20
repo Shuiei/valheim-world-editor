@@ -31,6 +31,8 @@ public static class SceneGame
         ["m_biome"] = 1,
         ["m_quantity"] = quantity,
         ["m_prioritized"] = prioritized,
+        // The start is the one with its icon always on the map.
+        ["m_iconAlways"] = prioritized,
         ["m_group"] = "g",
         ["m_minDistanceFromSimilar"] = 128.0,
         ["m_exteriorRadius"] = 12.5,
