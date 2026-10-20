@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.80.0 — 2026-10-20
+
+### Changed
+- **One thin box marks a selection of several objects.** The 3D view drew a box round each selected object, a tangle
+  of lines over a building; it now draws one box round them all, and the selection's and hovered object's lines are
+  thinner.
+
 ## v1.79.2 — 2026-10-20
 
 ### Fixed
