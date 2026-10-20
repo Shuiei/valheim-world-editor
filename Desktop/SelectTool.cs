@@ -42,6 +42,11 @@ public sealed partial class SelectTool
     /// (the default), a rectangle on the screen that picks only what is seen inside it (see ScreenBox).
     /// </summary>
     public bool ZoneOnGround { get; set; }
+    /// <summary>
+    /// A box on the screen also takes what is hidden behind others inside it (GlView.InsideRect), like Blender's X-ray;
+    /// off, only what is seen (GlView.SeenIn).
+    /// </summary>
+    public bool SelectThrough { get; set; }
 
     /// <summary>The view's open scene.</summary>
     private WorldScene? Scene => _view.Scene;

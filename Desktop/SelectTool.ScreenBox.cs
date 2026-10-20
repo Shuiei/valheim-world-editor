@@ -16,8 +16,9 @@ public sealed partial class SelectTool
     }
 
     /// <summary>
-    /// The rectangle let go: selects the objects seen inside it (GlView.SeenIn: not those behind others), among the
-    /// shown ones; a click without a drag deselects, unless it adds (Shift).
+    /// The rectangle let go: selects the objects seen inside it (GlView.SeenIn: not those behind others), or all those
+    /// inside it with <see cref="SelectThrough"/>, among the shown ones; a click without a drag deselects, unless it
+    /// adds (Shift).
     /// </summary>
     /// <param name="b">The rectangle as it stands.</param>
     /// <param name="size">The view's size.</param>
@@ -30,7 +31,8 @@ public sealed partial class SelectTool
             return;
         }
         var shown = Shown().ToHashSet();
-        ZoneSelected([.. _view.SeenIn(Spanning(b.From, b.To), size).Where(shown.Contains)], b.Add);
+        var r = Spanning(b.From, b.To);
+        ZoneSelected([.. (SelectThrough ? _view.InsideRect(r, size) : _view.SeenIn(r, size)).Where(shown.Contains)], b.Add);
     }
 
     /// <summary>The rectangle between two corners, whichever way it was dragged (left or up too).</summary>

@@ -1,3 +1,4 @@
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Xunit;
@@ -74,5 +75,19 @@ public class SelectToolScreenBoxTests
         Assert.Null(v.Tool.ScreenBox);
         v.Tool.Up(to, v.Size, false);
         Assert.Empty(v.Selected);
+    }
+
+    // Select through (Alt + Z, like Blender's X-ray): the box also takes the floor hidden under the other.
+    [AvaloniaFact]
+    public void SelectThroughAlsoTakesWhatIsHidden()
+    {
+        var v = TwoFloorsAndATree();
+        v.W.KeyPress(Key.Z, RawInputModifiers.Alt, PhysicalKey.Z, "z");
+        Assert.True(v.W.SelectPanel.ThroughBox.IsChecked);
+        Assert.True(v.Tool.SelectThrough);
+        Box(v, (36, 36), (46, 46));
+        Assert.Equal([0, 1, 2], v.Selected);
+        v.W.KeyPress(Key.Z, RawInputModifiers.Alt, PhysicalKey.Z, "z");
+        Assert.False(v.Tool.SelectThrough);
     }
 }

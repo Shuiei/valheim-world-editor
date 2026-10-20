@@ -102,6 +102,45 @@ public sealed partial class GlView
         return new Rect(x0, y0, x1 - x0, y1 - y0);
     }
 
+    /// <summary>
+    /// The shown objects inside a rectangle of the view, seen or hidden behind others (Select through, like Blender's
+    /// X-ray): those of which a point (the middle of the box, or a corner of it pulled a third of the way in) is
+    /// inside it.
+    /// </summary>
+    /// <param name="r">The rectangle, in the view's points.</param>
+    /// <param name="size">The view's size.</param>
+    internal List<int> InsideRect(Rect r, Size size)
+    {
+        var inside = new List<int>();
+        if (Scene == null || size.Width <= 0)
+        {
+            return inside;
+        }
+        for (int i = 0; i < _bounds.Length; i++)
+        {
+            if (Hittable(i) && SamplesOf(_bounds[i]).Any(p => ScreenOf(p, size) is { } at && r.Contains(at)))
+            {
+                inside.Add(i);
+            }
+        }
+        return inside;
+    }
+
+    /// <summary>
+    /// The points of a box tried for being inside a rectangle: its middle, and its eight corners pulled a third of the
+    /// way in.
+    /// </summary>
+    /// <param name="b">The box (view space).</param>
+    internal static IEnumerable<Vector3> SamplesOf((Vector3 Min, Vector3 Max) b)
+    {
+        var c = (b.Min + b.Max) / 2;
+        yield return c;
+        for (int k = 0; k < 8; k++)
+        {
+            yield return c + (Corner(b, k) - c) * (2f / 3);
+        }
+    }
+
     /// <summary>Where a view-space point is on the view, or null behind the camera.</summary>
     internal Point? ScreenOf(Vector3 p, Size size)
     {

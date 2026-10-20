@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.82.0 — 2026-10-20
+
+### Added
+- **Select through.** A new Select panel switch (Alt + Z) makes the box on the screen also take what is hidden behind
+  others inside it, like Blender's X-ray: the furniture inside a house, the wall behind another.
+
 ## v1.81.0 — 2026-10-20
 
 ### Added
