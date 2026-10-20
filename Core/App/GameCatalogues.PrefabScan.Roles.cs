@@ -68,12 +68,16 @@ public static partial class GameCatalogues
             /// A SpawnArea (m_prefabs, m_spawnIntervalSec): a nest or pile that spawns creatures around it.
             /// </summary>
             Nest = 4096,
+            /// <summary>
+            /// A WearNTear (m_noRoofWear, m_noSupportWear, m_health): a building piece, or a ruin's.
+            /// </summary>
+            Wear = 8192,
         }
 
         /// <summary>
         /// Read whole on a prefab's root.
         /// </summary>
-        private const Role OnRoot = Role.Net | Role.Plant | Role.Container | Role.Ward | Role.Station | Role.Spawner | Role.Trigger | Role.Nest;
+        private const Role OnRoot = Role.Net | Role.Plant | Role.Container | Role.Ward | Role.Station | Role.Spawner | Role.Trigger | Role.Nest | Role.Wear;
 
         /// <summary>
         /// Read whole wherever they are.
@@ -98,6 +102,7 @@ public static partial class GameCatalogues
             (Role.Spawner, ["m_creaturePrefab", "m_respawnTimeMinuts"]),
             (Role.Trigger, ["m_creaturePrefabs", "m_spawnChance"]),
             (Role.Nest, ["m_prefabs", "m_spawnIntervalSec"]),
+            (Role.Wear, ["m_noRoofWear", "m_noSupportWear", "m_health"]),
         ];
 
         /// <summary>

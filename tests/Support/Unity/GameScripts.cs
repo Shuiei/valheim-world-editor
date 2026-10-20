@@ -74,7 +74,7 @@ public static class GameScripts
             Ref("m_craftingStation"),
             List("m_resources", Struct("Requirement", "data", Ref("m_resItem"), Of("int", "m_amount"), Bool("m_recover"))),
         ],
-        ["WearNTear"] = [Ref("m_new"), Ref("m_worn"), Ref("m_broken"), Bool("m_noSupportWear"), Bool("m_supports"), Vector3("m_comOffset"), Of("int", "m_materialType")],
+        ["WearNTear"] = [Ref("m_new"), Ref("m_worn"), Ref("m_broken"), Bool("m_noSupportWear"), Bool("m_noRoofWear"), Of("float", "m_health"), Bool("m_supports"), Vector3("m_comOffset"), Of("int", "m_materialType")],
         ["PieceTable"] = [Refs("m_pieces")],
         ["ItemDrop"] =
         [

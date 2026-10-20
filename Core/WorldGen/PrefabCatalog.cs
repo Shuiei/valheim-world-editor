@@ -30,6 +30,9 @@ public static partial class PrefabCatalog
     {
         /// <summary>Its ZNetView keeps its first scale (m_syncInitialScale): the game writes the scale of a new one.</summary>
         public bool SyncScale { get; init; }
+
+        /// <summary>A building piece's full health (WearNTear.m_health); 0 for an object without a WearNTear.</summary>
+        public float WearHealth { get; init; }
     }
 
     /// <summary>

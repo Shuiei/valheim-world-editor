@@ -20,5 +20,8 @@ public class PrefabCatalogUseTests
         // Whether its network view keeps its first scale.
         Assert.True(PrefabCatalog.Get(Fixtures.Hash("Bush01"))!.SyncScale);
         Assert.False(PrefabCatalog.Get(Fixtures.Hash("Pickable_Stone"))!.SyncScale);
+        // A building piece's full health; 0 for anything else.
+        Assert.Equal(400f, PrefabCatalog.Get(Fixtures.Hash("wood_fence"))!.WearHealth);
+        Assert.Equal(0f, PrefabCatalog.Get(Fixtures.Hash("Bush01"))!.WearHealth);
     }
 }

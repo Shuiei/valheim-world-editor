@@ -60,7 +60,7 @@ public static partial class WorldCreator
                 }
                 int zoneSeed = LocationPrefabs.ZoneSeed(seed, zone.X, zone.Z);
                 float yaw = contents.RandomCardinal ? CardinalYaw(zoneSeed) : Yaw(p.Rule, terrain, position, zoneSeed);
-                var objects = Built(prefab, contents, position, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw * MathF.PI / 180f), zoneSeed, terrain);
+                var objects = Built(prefab, contents, new Placing(position, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw * MathF.PI / 180f), zoneSeed, DamageOf(p.Rule, prefab)), terrain);
                 // Expand World Data's offset raises the spot before the game makes the proxy too.
                 var spot = position with { Y = position.Y + contents.Offset };
                 byte[] proxy = ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, proxyFlags, spot, new Vector3(0f, yaw, 0f), 0f, ProxyInts(p.Rule, zoneSeed, terrain.Generator.Rules.DataInstalled));
@@ -94,4 +94,16 @@ public static partial class WorldCreator
 
     /// <summary>The data key Expand World Data keeps a proxy's own location name under.</summary>
     private static readonly int LocationReferenceKey = StableHash.Of("locationreference");
+
+    /// <summary>
+    /// The random initial damage a kind's pieces wake with: Expand World Data's file says ("true", "all"; anything
+    /// else none), else the prefab's own (Location.m_applyRandomDamage).
+    /// </summary>
+    private static Damage DamageOf(ValheimGen.SeedLocations.Rule rule, LocationPrefabs.Prefab prefab) => rule.RandomDamage switch
+    {
+        null => prefab.RandomDamage ? Damage.Random : Damage.None,
+        "true" => Damage.Random,
+        "all" => Damage.RandomOverData,
+        _ => Damage.None,
+    };
 }

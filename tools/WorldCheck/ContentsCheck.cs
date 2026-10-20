@@ -12,8 +12,8 @@ using TerrainEditor.Terrain;
 /// </summary>
 internal static class ContentsCheck
 {
-    /// <summary>The keys compared: the test's own (named vwe_…) and the scale.</summary>
-    private static readonly HashSet<int> Keys = [.. new[] { "vwe_label", "vwe_count", "vwe_all", "vwe_bush", "vwe_own", "vwe_vines", "scale" }.Select(StableHash.Of)];
+    /// <summary>The keys compared: the test's own (named vwe_…), the scale and the health.</summary>
+    private static readonly HashSet<int> Keys = [.. new[] { "vwe_label", "vwe_count", "vwe_all", "vwe_bush", "vwe_own", "vwe_vines", "scale", "health" }.Select(StableHash.Of)];
 
     /// <summary>What the comparison counted.</summary>
     private sealed class Tally
@@ -93,7 +93,9 @@ internal static class ContentsCheck
             tally.Heights.Add(proxy.Position.Y - at.Y);
             return;
         }
-        int match = near.FindIndex(o => o.Prefab == prefab && Flat(o.Position, at) < 0.05f);
+        // Of those on the spot, the nearest in height (stacked pieces share a spot).
+        int match = near.Select((o, i) => (o, i)).Where(c => c.o.Prefab == prefab && Flat(c.o.Position, at) < 0.05f)
+            .OrderBy(c => MathF.Abs(c.o.Position.Y - at.Y)).Select(c => c.i).DefaultIfEmpty(-1).First();
         if (match < 0)
         {
             var nearest = near.Where(o => o.Prefab == prefab).OrderBy(o => Flat(o.Position, at)).Select(o => o.Position).Cast<Vector3?>().FirstOrDefault();

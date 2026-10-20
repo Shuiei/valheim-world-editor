@@ -12,7 +12,7 @@ public static partial class GameCatalogues
     /// radius ("gr", the free space they need to grow), whether they need cultivated ground ("cult") and
     /// what they grow into ("grows": Plant's m_grownPrefabs). Containers get their grid size ("cw" x
     /// "ch"), wards their protected radius ("ward"), crafting stations the radius they allow building in
-    /// ("build").
+    /// ("build"), building pieces (WearNTear) their full health ("wnt").
     /// What stands hold: items get their type ("it"), their attach override ("ao", when set), their
     /// number of variants ("var", when they have some), whether they have an "attach" child ("at": without
     /// one no item stand takes them) or an "attach_skin" one ("ats": armour stands take either, or a chest

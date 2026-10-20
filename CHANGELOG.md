@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.65.0 — 2026-10-19
+
+### Added
+- **New world wears damaged locations as the game does.** Building pieces of ruins and houses the game spawns worn
+  now get the game's random health in the generated zones, and Expand World locations with "randomDamage" are built
+  by the editor instead of being left to the game.
+
 ## v1.64.1 — 2026-10-19
 
 ### Fixed

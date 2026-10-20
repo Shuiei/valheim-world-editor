@@ -660,6 +660,7 @@ Facts that changed the plan:
 | 5 | clear areas | Regrow and New world: the locations' clear areas (and the location file's `clearArea`), the vegetation file's `clearArea`/`clearRadius`, checked before the object's draws as the game does. |
 | 6 | surround check | Vegetation `surroundCheck*` (one vanilla rule, the files'). |
 | 7 | location contents | New world builds blueprint locations, `objects`, swaps, data, scale, offsets, `randomCardinal`, `randomDamage`, levelling and paint, and `pregenerate` zones. |
+| 7b | wake draws (`feature/wake-draws`, v1.65.0) | Building pieces wake as WearNTear.Awake: random initial damage (health 10-60% of the prefab catalogue's new `wnt`, every prefab with a WearNTear, vines and ruin parts included), then the cover and snow damage timer draws; `randomDamage: all` takes the data health of every object (Create.IgnoreHealth); vanilla `m_applyRandomDamage` ruins too. Checked against the game (WorldCheck `contents`, randomCardinal houses): 1216/1237 with `all`. Not counted: other components' Awake draws (a beehive's sound, chests' default loot), so the draws after one differ. |
 | 8 | vegetation blueprints and data | Blueprint vegetation and vegetation `data`. |
 | 9 | map | Location icons (the game's and the files' `iconAlways`/`iconPlaced`), the start temple icon, the real water line. |
 | 10 | water and info | Biome and territory water colours in 3D; status effects, territories and alt biomes named in the map's info. |

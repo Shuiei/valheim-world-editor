@@ -69,8 +69,8 @@ public static partial class GameCatalogues
         }
 
         /// <summary>
-        /// The container's grid size ("cw" x "ch"), the ward's radius ("ward") and the crafting station's build range
-        /// ("build") of a component, as its role says.
+        /// The container's grid size ("cw" x "ch"), the ward's radius ("ward"), the crafting station's build range
+        /// ("build") and the building piece's full health ("wnt") of a component, as its role says.
         /// </summary>
         private static void ReadSettings(Role r, AssetTypeValueField c, Dict extra)
         {
@@ -86,6 +86,11 @@ public static partial class GameCatalogues
             if ((r & Role.Station) != 0)
             {
                 extra["build"] = R(Num(Py(c["m_rangeBuild"])), 2);
+            }
+            // A health of 0 is no building piece's: none written.
+            if ((r & Role.Wear) != 0 && Num(Py(c["m_health"])) > 0)
+            {
+                extra["wnt"] = Num(Py(c["m_health"]));
             }
         }
 

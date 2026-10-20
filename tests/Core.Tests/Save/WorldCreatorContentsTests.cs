@@ -17,9 +17,12 @@ public class WorldCreatorContentsTests
     /// <summary>The start temple's prefab of the test data.</summary>
     private static LocationPrefabs.Prefab Temple => LocationPrefabs.Get("StartTemple")!;
 
-    /// <summary>Its objects built with these contents at (100, 30, 200), unturned, from seed 7, as (prefab, place, bytes).</summary>
-    private static List<(string Prefab, Vector3 At, byte[] Zdo)> Built(TempWorld w, LocationContents contents) =>
-        [.. PrivateMember.Call<List<(Vector3 At, byte[] Zdo)>>(typeof(WorldCreator), "Built", null, Temple, contents, new Vector3(100, 30, 200), Quaternion.Identity, 7, new TerrainService(w.Load(), null))
+    /// <summary>
+    /// Its objects built with these contents at (100, 30, 200), unturned, from seed 7, its pieces woken with this damage,
+    /// as (prefab, place, bytes).
+    /// </summary>
+    private static List<(string Prefab, Vector3 At, byte[] Zdo)> Built(TempWorld w, LocationContents contents, WorldCreator.Damage damage = WorldCreator.Damage.None) =>
+        [.. PrivateMember.Call<List<(Vector3 At, byte[] Zdo)>>(typeof(WorldCreator), "Built", null, Temple, contents, new WorldCreator.Placing(new Vector3(100, 30, 200), Quaternion.Identity, 7, damage), new TerrainService(w.Load(), null))
             .Select(o => (TerrainEditor.Terrain.PrefabCatalog.NameOf(BitConverter.ToInt32(o.Zdo, 14))!, o.At, o.Zdo))];
 
     [Fact]
@@ -92,4 +95,62 @@ public class WorldCreatorContentsTests
         // The same draws every time.
         Assert.Equal(drawn.Select(o => o.Prefab), Built(w, new LocationContents { Swaps = new Dictionary<string, IReadOnlyList<Weighted<string>>> { [own[0].Prefab] = [new(0.5f, "Pickable_Stone"), new(0.5f, "Bush01")], [own[1].Prefab] = [] } }).Select(o => o.Prefab));
     }
+
+    /// <summary>Two fences added to the start temple, the second with a health of 50 in its data.</summary>
+    private static readonly LocationContents Fences = new()
+    {
+        Objects =
+        [
+            new ContentObject("wood_fence", new Vector3(1, 0, 2), Vector3.Zero, Vector3.One, null, 1f, false),
+            new ContentObject("wood_fence", new Vector3(-3, 0, 0), Vector3.Zero, Vector3.One, [new ContentField("floats", StableHash.Of("health"), "50")], 1f, false),
+        ],
+    };
+
+    /// <summary>The healths the two added fences were built with (null: none in their data).</summary>
+    private static float?[] FenceHealths(TempWorld w, WorldCreator.Damage damage) =>
+        [.. Built(w, Fences, damage).Where(o => o.Prefab == "wood_fence").Select(o => ZdoData.Parse(o.Zdo).FloatList.Where(v => v.Key == StableHash.Of("health")).Select(v => (float?)v.Value).FirstOrDefault())];
+
+    [Fact]
+    public void PiecesWakeAtARandomHealthWhenTheLocationDamagesThem()
+    {
+        using var w = new TempWorld();
+        // No damage: the first at full health (none in its data), the second as its data says.
+        Assert.Equal([null, 50f], FenceHealths(w, WorldCreator.Damage.None));
+        // Damage: the first between 10% and 60% of its 400; the second keeps its data's.
+        float?[] damaged = FenceHealths(w, WorldCreator.Damage.Random);
+        Assert.InRange(damaged[0]!.Value, 40f, 240f);
+        Assert.Equal(50f, damaged[1]);
+        // Damage over data ("all"): both drawn, the same draws every time.
+        float?[] all = FenceHealths(w, WorldCreator.Damage.RandomOverData);
+        Assert.All(all, h => Assert.InRange(h!.Value, 40f, 240f));
+        Assert.Equal(all, FenceHealths(w, WorldCreator.Damage.RandomOverData));
+    }
+
+    [Fact]
+    public void APieceAtFullHealthInItsDataIsDamagedToo()
+    {
+        using var w = new TempWorld();
+        var full = Fences with { Objects = [Fences.Objects[0] with { Data = [new ContentField("floats", StableHash.Of("health"), "400")] }] };
+        var (_, _, zdo) = Assert.Single(Built(w, full, WorldCreator.Damage.Random), o => o.Prefab == "wood_fence");
+        Assert.InRange(ZdoData.Parse(zdo).FloatList.Single(v => v.Key == StableHash.Of("health")).Value, 40f, 240f);
+    }
+
+    [Fact]
+    public void DamageOverDataTakesTheHealthOfEveryObjectsData()
+    {
+        using var w = new TempWorld();
+        var bush = new LocationContents { Objects = [new ContentObject("Bush01", new Vector3(2, 0, 2), Vector3.Zero, Vector3.One, [new ContentField("floats", StableHash.Of("health"), "50")], 1f, false)] };
+        // A bush wears nothing, but "all" takes its data's health as it does a piece's.
+        Assert.Contains(StableHash.Of("health"), ZdoData.Parse(Built(w, bush, WorldCreator.Damage.Random)[^1].Zdo).FloatList.Select(v => v.Key));
+        Assert.DoesNotContain(StableHash.Of("health"), ZdoData.Parse(Built(w, bush, WorldCreator.Damage.RandomOverData)[^1].Zdo).FloatList.Select(v => v.Key));
+    }
+
+    [Theory]
+    [InlineData(null, false, "None")]
+    [InlineData(null, true, "Random")]
+    [InlineData("true", false, "Random")]
+    [InlineData("all", false, "RandomOverData")]
+    [InlineData("false", true, "None")]
+    public void TheDamageIsTheFilesElseThePrefabsOwn(string? file, bool prefab, string expected) =>
+        Assert.Equal(Enum.Parse<WorldCreator.Damage>(expected), PrivateMember.Call<WorldCreator.Damage>(typeof(WorldCreator), "DamageOf", null, new SeedLocations.Rule { RandomDamage = file }, Temple with { RandomDamage = prefab }));
 }

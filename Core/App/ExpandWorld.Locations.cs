@@ -150,6 +150,7 @@ public static partial class ExpandWorld
             CloseTo = closeTo,
             Blueprint = OrNull(blueprint),
             Custom = OrNull(CustomFields.Any(f.Has) || f.Str("levelArea") is not ("" or "false")),
+            RandomDamage = f.Str("randomDamage"),
         };
     }
 }
