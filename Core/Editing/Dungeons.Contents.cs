@@ -1,5 +1,6 @@
 using System.Numerics;
 using TerrainEditor.Save;
+using Rnd = ValheimGen.UnityEngine.Random;
 
 namespace TerrainEditor.Editing;
 
@@ -58,12 +59,50 @@ public static partial class Dungeons
     /// </summary>
     public static List<Made> Contents(Placed p, Kind kind, Vector3 dungeonPosition, int worldSeed)
     {
-        if (p.Room is not { } room || room.Contents.Length == 0)
+        if (p.Room is not { } room)
         {
             return [];
         }
-        Vector3 v = kind.CustomInterior ? p.Position - dungeonPosition : p.Position;
-        int seed = unchecked((int)v.X * 4271 + (int)v.Y * 9187 + (int)v.Z * 2134 + (kind.BaseSeed ? Seed(worldSeed, dungeonPosition) : 0));
-        return Replay(room.Contents, room.Spawns, room.Picks, room.Nodes, kind.Themes, p.Position.Y, seed, p.Position, p.Rotation);
+        List<Made> made = [];
+        if (room.Contents.Length > 0)
+        {
+            Vector3 v = kind.CustomInterior ? p.Position - dungeonPosition : p.Position;
+            int seed = unchecked((int)v.X * 4271 + (int)v.Y * 9187 + (int)v.Z * 2134 + (kind.BaseSeed ? Seed(worldSeed, dungeonPosition) : 0));
+            made = Replay(room.Contents, room.Spawns, room.Picks, room.Nodes, kind.Themes, p.Position.Y, seed, p.Position, p.Rotation);
+        }
+        made.AddRange(Added(room, p));
+        return made;
+    }
+
+    /// <summary>
+    /// The objects Expand World Data's room file adds with a room (its PlaceRoom postfix): each by its chance, drawn from
+    /// the room's place (the same roll whatever the dungeon), at its place in the room's frame and turned with it. Their
+    /// data is not given here.
+    /// </summary>
+    private static List<Made> Added(Room room, Placed p)
+    {
+        if (room.Added.Count == 0)
+        {
+            return [];
+        }
+        List<Made> made = [];
+        var was = Rnd.State;
+        try
+        {
+            Rnd.InitState(unchecked((int)p.Position.X * 4271 + (int)p.Position.Y * 9187 + (int)p.Position.Z * 2134));
+            foreach (var o in room.Added)
+            {
+                if (o.Chance < 1f && Rnd.Value > o.Chance)
+                {
+                    continue;
+                }
+                made.Add(new Made(o.Prefab, p.ToWorld(o.Position), Quaternion.Normalize(p.Rotation * App.BlueprintFormats.FromEuler(o.Euler))));
+            }
+        }
+        finally
+        {
+            Rnd.State = was;
+        }
+        return made;
     }
 }

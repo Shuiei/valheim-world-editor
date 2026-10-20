@@ -21,10 +21,15 @@ public static partial class ExpandWorld
         AddUnless(parts, r.Territories.Count == 0, $"territories ({r.Territories.Count})");
         AddUnless(parts, r.Locations == null, $"locations ({r.Locations?.Locations.Count ?? 0} kinds)");
         AddUnless(parts, r.Vegetation == null, $"vegetation ({r.Vegetation?.Count ?? 0} rules)");
+        AddUnless(parts, r.Dungeons == null, DungeonsText(r.Dungeons));
         AddUnless(parts, r.ZoneSpawners, "no zone spawners");
         AddUnless(parts, !r.RandomLocations, "random locations");
         return string.Join(", ", parts);
     }
+
+    /// <summary>The room and dungeon files in a few words ("rooms (40), dungeons (12)"); empty for none.</summary>
+    private static string DungeonsText(DungeonRules? d) => d == null ? ""
+        : $"rooms ({(d.Rooms == null ? "the game's" : d.Rooms.Count.ToString(System.Globalization.CultureInfo.InvariantCulture))}), dungeons ({d.Dungeons.Count})";
 
     /// <summary>Adds a part to the description unless the settings it describes are the game's own.</summary>
     private static void AddUnless(List<string> parts, bool plain, string part)

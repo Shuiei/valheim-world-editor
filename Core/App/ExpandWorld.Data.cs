@@ -35,8 +35,14 @@ public static partial class ExpandWorld
         /// </summary>
         public IReadOnlyList<Entry> DataEntries { get; init; } = [];
 
+        /// <summary>The room files' entries; null for off; empty for no file.</summary>
+        public IReadOnlyList<Entry>? Rooms { get; init; }
+
+        /// <summary>The dungeon files' entries; null for off; empty for no file.</summary>
+        public IReadOnlyList<Entry>? Dungeons { get; init; }
+
         /// <summary>Whether any kind of data is on.</summary>
-        public bool Any => Biomes != null || World != null || Territories != null || Locations != null || Vegetation != null || AltBiomes != null;
+        public bool Any => Biomes != null || World != null || Territories != null || Locations != null || Vegetation != null || AltBiomes != null || Rooms != null || Dungeons != null;
     }
 
     /// <summary>
@@ -46,7 +52,12 @@ public static partial class ExpandWorld
     [
         ("biomes", "Biome data"), ("world", "World data"), ("territories", "Territory data"),
         ("locations", "Location data"), ("vegetation", "Vegetation data"), ("altbiomes", "Alt biome data"),
+        ("rooms", "Room data"), ("dungeons", "Dungeon data"),
     ];
+
+    /// <summary>Whether the kinds read can name data entries: the location and room files' objects do.</summary>
+    /// <param name="kinds">Each kind's entries (<see cref="Kinds"/>' order), null for off.</param>
+    private static bool NamesData(IReadOnlyList<Entry>?[] kinds) => kinds[3] != null || kinds[6] != null;
 
     /// <summary>
     /// Expand World Data's files from a BepInEx folder: the settings file, and the data files of each kind whose
@@ -75,7 +86,9 @@ public static partial class ExpandWorld
         IReadOnlyList<Entry>?[] kinds = [.. Kinds.Select((k, i) => on[i] ? ReadKind(found.DataFiles, k.Kind, yaml, notes) : null)];
         return new DataFiles(cfg, kinds[0], kinds[1], kinds[2], kinds[3], kinds[4], kinds[5], notes)
         {
-            DataEntries = kinds[3] != null ? ReadDataEntries(found, yaml, notes) : [],
+            Rooms = kinds[6],
+            Dungeons = kinds[7],
+            DataEntries = NamesData(kinds) ? ReadDataEntries(found, yaml, notes) : [],
         };
     }
 

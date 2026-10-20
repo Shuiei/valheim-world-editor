@@ -72,6 +72,8 @@ has one.
 
 With **The game's own rooms**, only **Biome**, **Size**, **Monsters** and the seed are used: the other rows are
 hidden, and **Monsters come back** changes nothing (the game's rooms always bring spawners).
+With Expand World Data's room and dungeon files on (see [Expand World](expand-world.md)), the game's rooms and
+dungeons are taken as the files change them, in the generator, the room list to add from and the rooms drawn.
 
 What each biome brings when nothing else is picked:
 
