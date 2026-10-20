@@ -31,6 +31,7 @@ public sealed partial class GlView
             _selection.Clear();
         }
         SelectionDone();
+        _hidden = [];
         _sceneDirty = true;
         _marksDirty = true;
         _spawnsDirty = true;
@@ -91,6 +92,8 @@ public sealed partial class GlView
             _selection.Clear();
         }
         SelectionDone();
+        // Hidden ones too: their indices were the old ones.
+        _hidden = [];
         _thingsReset = true;
         Wake();
     }

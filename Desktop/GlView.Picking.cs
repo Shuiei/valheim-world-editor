@@ -65,7 +65,7 @@ public sealed partial class GlView
         SelectionDone();
     }
 
-    /// <summary>Selects these things (add: to what is selected).</summary>
+    /// <summary>Selects these things (add: to what is selected); gone or hidden ones (GlView.Hide) are left out.</summary>
     internal void Select(IEnumerable<int> things, bool add = false)
     {
         var s = Scene;
@@ -77,7 +77,7 @@ public sealed partial class GlView
             }
             foreach (int i in things)
             {
-                if (s != null && i < s.Things.Count && !s.Things[i].Gone)
+                if (s != null && i < s.Things.Count && !s.Things[i].Gone && !_hidden.Contains(i))
                 {
                     _selection.Add(i);
                 }
@@ -144,12 +144,15 @@ public sealed partial class GlView
         }
     }
 
-    /// <summary>Whether a thing is drawn (not gone, its kind shown, its model known): only those can be picked.</summary>
+    /// <summary>
+    /// Whether a thing is drawn (not gone, its kind shown, its model known, not hidden: GlView.Hide): only those can be
+    /// picked.
+    /// </summary>
     internal bool IsPickable(int i)
     {
         lock (_objLock)
         {
-            return i < _known.Length && _known[i] && _shown[(int)_kinds[i]];
+            return i < _known.Length && _known[i] && _shown[(int)_kinds[i]] && !_hidden.Contains(i);
         }
     }
 

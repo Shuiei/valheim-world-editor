@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.84.0 — 2026-10-20
+
+### Added
+- **Selection keys from Blender.** Ctrl + A selects every shown object, Alt + A clears the selection, Ctrl + I
+  inverts it, Ctrl + H hides the selected objects in the view to reach what they cover (Alt + H shows them again;
+  nothing changes in the world), and Shift + F or Numpad . turns the camera onto the selection. The Select panel has
+  All, Hide and Show hidden buttons. The camera no longer moves when Ctrl or Alt is held with a movement key.
+
 ## v1.83.0 — 2026-10-20
 
 ### Changed

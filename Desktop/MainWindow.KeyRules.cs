@@ -42,8 +42,7 @@ public partial class MainWindow
             Take([Key.OemOpenBrackets, Key.OemCloseBrackets], KeyMods.NoCtrl, null, p => Tools.ResizeBrush(p.Key == Key.OemOpenBrackets ? -1 : 1)),
             Take([Key.Escape], KeyMods.NoCtrl, _ => Inspector.IsOpen, _ => Inspector.Close()),
             Take([Key.I], KeyMods.NoCtrl, _ => Tools.SelectMode && View.Selected.Count == 1, _ => Inspect()),
-            // Alt + Z: Select through on or off, as Blender's X-ray.
-            Take([Key.Z], KeyMods.NoCtrl, p => Tools.SelectMode && p.Mods.HasFlag(KeyModifiers.Alt), _ => SelectPanel.ThroughBox.IsChecked = SelectPanel.ThroughBox.IsChecked != true),
+            .. SelectKeyRules(),
             // The Place and Select tools' own keys (any modifiers): what they turn down goes on.
             Offer(null, KeyMods.Any, _ => InMode(ToolMode.Place), p => PlaceInput.Key(p.Key, p.Shift, p.Ctrl)),
             Offer(null, KeyMods.Any, _ => Tools.SelectMode, p => View.SelectTool.Key(p.Key, p.Shift)),
@@ -69,4 +68,20 @@ public partial class MainWindow
             Pass(Digits(Key.NumPad0), KeyMods.NoCtrl, null, p => Tools.Key((p.Key - Key.NumPad0).ToString())),
         ];
     }
+
+    /// <summary>
+    /// The Select tool's selection keys, as Blender's, tried where <see cref="KeyRules"/> lists them: Alt + Z Select
+    /// through, Ctrl + A all, Alt + A none, Ctrl + I invert, Ctrl + H hide, Alt + H show again, Shift + F or Numpad .
+    /// frame (F alone turns the eye).
+    /// </summary>
+    private KeyRule[] SelectKeyRules() =>
+    [
+        Take([Key.Z], KeyMods.NoCtrl, p => Tools.SelectMode && p.Alt, _ => SelectPanel.ThroughBox.IsChecked = SelectPanel.ThroughBox.IsChecked != true),
+        Take([Key.A], KeyMods.Ctrl, _ => Tools.SelectMode, _ => View.SelectTool.SelectAll()),
+        Take([Key.A], KeyMods.NoCtrl, p => Tools.SelectMode && p.Alt, _ => View.SelectTool.SelectNone()),
+        Take([Key.I], KeyMods.Ctrl, _ => Tools.SelectMode, _ => View.SelectTool.Invert()),
+        Take([Key.H], KeyMods.Ctrl, _ => Tools.SelectMode, _ => View.SelectTool.HideSelected()),
+        Take([Key.H], KeyMods.NoCtrl, p => Tools.SelectMode && p.Alt, _ => View.SelectTool.ShowHidden()),
+        Take([Key.F, Key.Decimal], KeyMods.NoCtrl, p => Tools.SelectMode && (p.Shift || p.Key == Key.Decimal), _ => View.SelectTool.Frame()),
+    ];
 }
