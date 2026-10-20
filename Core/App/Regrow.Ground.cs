@@ -14,6 +14,13 @@ public static partial class Regrow
     /// The ground the editor has now: heights every metre, triangles split like the game's terrain
     /// mesh (from (x + 1, z) to (x, z + 1)). wx0, wz0 are the world position of the first height.
     /// </summary>
+    /// <summary>
+    /// The height at a world point of a grid of heights every metre (row = z, the first at <paramref name="wx0"/>,
+    /// <paramref name="wz0"/>), between its points as the game's terrain mesh is.
+    /// </summary>
+    internal static float GridHeight(float[] heights, int width, float wx0, float wz0, float x, float z) =>
+        new Ground(heights, width, heights.Length / width, wx0, wz0).Height(x, z);
+
     private sealed class Ground(float[] heights, int w, int h, float wx0, float wz0)
     {
         /// <summary>Whether the world point is on the grid.</summary>
