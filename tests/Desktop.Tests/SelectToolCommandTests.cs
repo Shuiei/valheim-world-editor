@@ -1,5 +1,6 @@
 using System.Numerics;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using TerrainEditor.App;
 using TerrainEditor.Terrain;
 using Xunit;
@@ -52,7 +53,7 @@ public class SelectToolCommandTests
         var c = v.S.Scene;
         v.W.View.SetBoxes([(1, new Vector3(40 - c.Cx, -9962, -(41 - c.Cz)), new Vector3(42 - c.Cx, 30.5f, -(39 - c.Cz)))]);
         v.Tool.ZoneOnGround = true;
-        v.Drag(false, (36, 36), (46, 36), (46, 44), (36, 44), (36, 37));
+        v.Drag(KeyModifiers.None, (36, 36), (46, 36), (46, 44), (36, 44), (36, 37));
         Assert.Equal([0], v.Selected);
         v.W.View.Select([]);
         v.Tool.WholeBuilding([0]);

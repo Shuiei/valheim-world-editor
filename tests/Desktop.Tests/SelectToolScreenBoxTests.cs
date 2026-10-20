@@ -131,12 +131,12 @@ public class SelectToolScreenBoxTests
     {
         var v = TwoFloorsAndATree();
         var from = v.At(30, 30, 30);
-        v.Tool.Down(from, v.Size, false, false, 1);
+        v.Tool.Down(from, v.Size, KeyModifiers.None, 1);
         var to = v.At(36, 30, 36);
         v.Tool.Moved(to, v.Size);
         Assert.Equal(SelectTool.Spanning(from, to), v.Tool.ScreenBox);
         Assert.Null(v.Tool.Lasso);
-        v.Tool.Up(to, v.Size, false);
+        v.Tool.Up(to, v.Size, KeyModifiers.None);
         Assert.Empty(v.Selected);
     }
 
