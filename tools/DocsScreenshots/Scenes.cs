@@ -78,6 +78,10 @@ public sealed partial class Scenes
             // Select (select.md).
             ("select-arrows", SelectArrows),
             ("select-building", SelectBuilding),
+            ("select-box", SelectBox),
+            ("select-through", SelectThrough),
+            ("select-pick", SelectPick),
+            ("select-hide", SelectHide),
             ("select-zone", SelectZone),
             ("inspector", Inspector),
             // Dungeons (dungeons.md).
