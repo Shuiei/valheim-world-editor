@@ -53,7 +53,8 @@ public static partial class Regrow
     /// <param name="Rz">Rotation about z (degrees).</param>
     /// <param name="Scale">Uniform scale (the x scale when the object is scaled by axis).</param>
     /// <param name="Axes">The scale on each axis (x, y, z) when Expand World Data scales the object by axis; null otherwise.</param>
-    public sealed record Spot(string Name, float X, float Y, float Z, float Rx, float Ry, float Rz, float Scale, float[]? Axes = null)
+    /// <param name="Data">The data Expand World Data gives the object (its rule's, a blueprint part's); null for none.</param>
+    public sealed record Spot(string Name, float X, float Y, float Z, float Rx, float Ry, float Rz, float Scale, float[]? Axes = null, IReadOnlyList<ContentField>? Data = null)
     {
         /// <summary>The scale on each axis (x, y, z): the axes' when the rule scales by axis, else the uniform scale on all three.</summary>
         public System.Numerics.Vector3 Scale3 => Axes is { Length: 3 } a ? new(a[0], a[1], a[2]) : new(Scale, Scale, Scale);

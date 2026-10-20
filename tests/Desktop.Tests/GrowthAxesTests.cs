@@ -18,4 +18,13 @@ public class GrowthAxesTests
     [Fact]
     public void AUniformSpotGetsNoData() =>
         Assert.Null(Growth.AxesData(new Regrow.Spot("Pine", 0, 0, 0, 0, 0, 0, 1.25f)));
+
+    [Fact]
+    public void ASpotsDataComesAfterItsScale()
+    {
+        int mark = StableHash.Of("mark");
+        var data = Growth.DataOf(new Regrow.Spot("Pine", 0, 0, 0, 0, 0, 0, 1.5f, [1.5f, 2f, 0.75f], [new ValheimGen.ContentField("ints", mark, "1")]));
+        Assert.Equal([("vec3", ZdoData.ScaleKey), ("ints", mark)], data!.Select(f => (f.Section, f.Key)));
+        Assert.Null(Growth.DataOf(new Regrow.Spot("Pine", 0, 0, 0, 0, 0, 0, 1.25f)));
+    }
 }

@@ -153,4 +153,14 @@ public class WorldCreatorContentsTests
     [InlineData("false", true, "None")]
     public void TheDamageIsTheFilesElseThePrefabsOwn(string? file, bool prefab, string expected) =>
         Assert.Equal(Enum.Parse<WorldCreator.Damage>(expected), PrivateMember.Call<WorldCreator.Damage>(typeof(WorldCreator), "DamageOf", null, new SeedLocations.Rule { RandomDamage = file }, Temple with { RandomDamage = prefab }));
+
+    [Fact]
+    public void AGrownSpotKeepsItsData()
+    {
+        int mark = StableHash.Of("mark");
+        var batch = new WorldCreator.ChunkBatch();
+        PrivateMember.Call(typeof(WorldCreator), "PlaceSpots", null, new List<TerrainEditor.App.Regrow.Spot> { new("Bush01", 10, 30, 20, 0, 90, 0, 1f, null, [new ContentField("ints", mark, "4")]) }, batch);
+        byte[] zdo = Assert.Single(Assert.Single(batch.Chunks).Objects);
+        Assert.Contains((mark, 4), ZdoData.Parse(zdo).IntList);
+    }
 }

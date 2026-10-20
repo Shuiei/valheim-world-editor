@@ -10,7 +10,8 @@ public static partial class ExpandWorld
     /// rule may name several prefabs (one drawn an object), scale by axis, measure its distance from a centre of its
     /// own, and be on or off by the world's global keys. The draws an object's components make come from the game's
     /// rule of the same prefab (none known for a prefab the game's list has not: noted). A rule of an alt biome grows
-    /// in that alt biome's areas only.
+    /// in that alt biome's areas only. Its objects get the entry's data ("data", then "drops"); a rule whose prefab is a
+    /// blueprint grows the blueprint's parts. What cannot be written ahead of the game is left out, noted.
     /// </summary>
     /// <param name="entries">The entries.</param>
     /// <param name="game">The game's rules (for the components' draws).</param>
@@ -18,7 +19,9 @@ public static partial class ExpandWorld
     /// <param name="radius">The world's radius, metres.</param>
     /// <param name="globalKeys">The world's global keys (a key's name, lower-cased).</param>
     /// <param name="notes">Where a rule passed over or a value not understood is noted.</param>
-    internal static List<VegetationRule> VegetationOf(IReadOnlyList<Entry> entries, IReadOnlyList<VegetationRule> game, BiomeTable biomes, float radius, IReadOnlySet<string> globalKeys, List<string> notes)
+    /// <param name="data">The world's data entries (what "data" names); none by default.</param>
+    /// <param name="blueprints">The folder the mod reads blueprint files from; null for none.</param>
+    internal static List<VegetationRule> VegetationOf(IReadOnlyList<Entry> entries, IReadOnlyList<VegetationRule> game, BiomeTable biomes, float radius, IReadOnlySet<string> globalKeys, List<string> notes, DataTable? data = null, string? blueprints = null)
     {
         List<VegetationRule> rules = [];
         var draws = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -35,11 +38,13 @@ public static partial class ExpandWorld
             {
                 continue;
             }
-            foreach (string p in prefabs.Where(p => !draws.ContainsKey(p)))
+            var rule = VegetationOf(f, prefabs, biomes, radius, globalKeys, p => draws.GetValueOrDefault(p), notes);
+            AddModContents(rule, f, data ?? DataTable.Empty, blueprints, notes);
+            foreach (string p in prefabs.Where(p => !draws.ContainsKey(p) && rule.blueprints?.ContainsKey(p) != true))
             {
                 unknown.Add(p);
             }
-            rules.Add(VegetationOf(f, prefabs, biomes, radius, globalKeys, p => draws.GetValueOrDefault(p), notes));
+            rules.Add(rule);
         }
         if (unknown.Count > 0)
         {
@@ -47,6 +52,39 @@ public static partial class ExpandWorld
         }
         return rules;
     }
+
+    /// <summary>
+    /// What the mod gives a rule's objects (VegetationConvert): the entry's data, then its "drops" (the drop table the
+    /// object's drops are taken from, by name's hash); and, when its one prefab is no prefab of the game, the blueprint of
+    /// that name (the mod looks the prefab field up whole, so a list is never a blueprint). Data or parts that cannot be
+    /// written ahead of the game are left out, noted.
+    /// </summary>
+    private static void AddModContents(VegetationRule rule, Fields f, DataTable data, string? blueprints, List<string> notes)
+    {
+        var why = new List<string>();
+        var values = data.Resolve(f.Raw("data"));
+        if (values.Why != null)
+        {
+            why.Add(values.Why);
+        }
+        List<ContentField> fields = [.. values.Fields];
+        if (f.Str("drops") is { Length: > 0 } drops)
+        {
+            fields.Add(new ContentField("ints", DropsKey, Save.StableHash.Of(drops).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+        rule.data = fields.Count > 0 ? fields : null;
+        if (rule.prefabs == null && !Known(rule.prefab))
+        {
+            rule.blueprints = BlueprintsOf(blueprints, f.Str("prefab"), data, why, notes);
+        }
+        if (why.Count > 0)
+        {
+            notes.Add($"expand_vegetation: {f.Str("prefab")} grows without what cannot be written ahead of the game: {string.Join(", ", why.Distinct())}");
+        }
+    }
+
+    /// <summary>The data key of the drop table Expand World Data gives an object ("ews_drops").</summary>
+    private static readonly int DropsKey = Save.StableHash.Of("ews_drops");
 
     /// <summary>One rule from its entry.</summary>
     private static VegetationRule VegetationOf(Fields f, string[] prefabs, BiomeTable biomes, float radius, IReadOnlySet<string> globalKeys, Func<string, int> drawsOf, List<string> notes)
