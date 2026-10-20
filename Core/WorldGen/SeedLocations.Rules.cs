@@ -86,6 +86,12 @@ public static partial class SeedLocations
         [JsonPropertyName("exteriorRadius")]
         public float ExteriorRadius { get; set; }
         /// <summary>
+        /// 1: no vegetation grows within its exterior radius of it in its zone (the game's square round it, a circle
+        /// with Expand World Data's vegetation file).
+        /// </summary>
+        [JsonPropertyName("clearArea")]
+        public int ClearArea { get; set; }
+        /// <summary>
         /// The least rise across its size, metres.
         /// </summary>
         [JsonPropertyName("minTerrainDelta")]

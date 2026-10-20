@@ -16,18 +16,12 @@ public class RegrowSpotsTests
 
     private static ValheimGen.TerrainService Terrain(TempWorld w) => new(w.Load(), null);
 
-    private static object NewZones() =>
-        Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(typeof(ValueTuple<int, int>), RegrowFixtures.Zone))!;
-
     private static object Draw(float rx = 0f, float ry = 0f, float rz = 0f, float scale = 1f) =>
         PrivateMember.New(DrawType, rx, ry, rz, scale);
 
-    /// <summary>A rule with the world's alt biome check, as PlaceRule takes them.</summary>
-    private static object WithAlts(ValheimGen.TerrainService terrain, object rule)
-    {
-        var altType = PrivateMember.Nested(typeof(Regrow), "AltCheck");
-        return Activator.CreateInstance(typeof(ValueTuple<,>).MakeGenericType(rule.GetType(), altType), rule, PrivateMember.New(altType, terrain))!;
-    }
+    /// <summary>One Regrow call over the flat test ground of a world's terrain, no rules and no clear areas.</summary>
+    private static object NewPass(ValheimGen.TerrainService terrain) =>
+        PrivateMember.New(PrivateMember.Nested(typeof(Regrow), "Pass"), terrain, RegrowFixtures.FlatGround(), new List<ValheimGen.VegetationRule>(), null);
 
     [Fact]
     public void NoGroupsAreTriedWhenTheChanceOfAnyMisses()
@@ -78,7 +72,7 @@ public class RegrowSpotsTests
         var terrain = Terrain(w);
         object rule = RegrowFixtures.OpenRule("Pine");
         var spots = new List<Regrow.Spot>();
-        bool placed = (bool)PrivateMember.Call(typeof(Regrow), "TryPlaceSpot", null, terrain, RegrowFixtures.FlatGround(), NewZones(), rule, 0f, 0f, Draw(scale: 2f), spots)!;
+        bool placed = (bool)PrivateMember.Call(typeof(Regrow), "TryPlaceSpot", null, NewPass(terrain), rule, 0f, 0f, Draw(scale: 2f), spots)!;
         Assert.True(placed);
         Regrow.Spot spot = Assert.Single(spots);
         Assert.Equal("Pine", spot.Name);
@@ -91,7 +85,7 @@ public class RegrowSpotsTests
     {
         using var w = new TempWorld();
         var spots = new List<Regrow.Spot>();
-        bool placed = (bool)PrivateMember.Call(typeof(Regrow), "TryPlaceSpot", null, Terrain(w), RegrowFixtures.FlatGround(), NewZones(), RegrowFixtures.OpenRule(), 100f, 0f, Draw(), spots)!;
+        bool placed = (bool)PrivateMember.Call(typeof(Regrow), "TryPlaceSpot", null, NewPass(Terrain(w)), RegrowFixtures.OpenRule(), 100f, 0f, Draw(), spots)!;
         Assert.False(placed);
         Assert.Empty(spots);
     }
@@ -103,7 +97,7 @@ public class RegrowSpotsTests
         object rule = RegrowFixtures.OpenRule();
         PrivateMember.Set(rule, "biome", 0);
         var spots = new List<Regrow.Spot>();
-        bool placed = (bool)PrivateMember.Call(typeof(Regrow), "TryPlaceSpot", null, Terrain(w), RegrowFixtures.FlatGround(), NewZones(), rule, 0f, 0f, Draw(), spots)!;
+        bool placed = (bool)PrivateMember.Call(typeof(Regrow), "TryPlaceSpot", null, NewPass(Terrain(w)), rule, 0f, 0f, Draw(), spots)!;
         Assert.False(placed);
         Assert.Empty(spots);
     }
@@ -113,7 +107,7 @@ public class RegrowSpotsTests
     {
         using var w = new TempWorld();
         var spots = new List<Regrow.Spot>();
-        bool placed = (bool)PrivateMember.Call(typeof(Regrow), "PlaceGroup", null, Terrain(w), RegrowFixtures.FlatGround(), NewZones(), RegrowFixtures.OpenRule(), 0f, 0f, 0, spots)!;
+        bool placed = (bool)PrivateMember.Call(typeof(Regrow), "PlaceGroup", null, NewPass(Terrain(w)), RegrowFixtures.OpenRule(), 0f, 0f, 0, spots)!;
         Assert.False(placed);
         Assert.Empty(spots);
     }
@@ -123,7 +117,7 @@ public class RegrowSpotsTests
     {
         using var w = new TempWorld();
         var spots = new List<Regrow.Spot>();
-        bool placed = (bool)PrivateMember.Call(typeof(Regrow), "PlaceGroup", null, Terrain(w), RegrowFixtures.FlatGround(), NewZones(), RegrowFixtures.OpenRule(), 0f, 0f, 1, spots)!;
+        bool placed = (bool)PrivateMember.Call(typeof(Regrow), "PlaceGroup", null, NewPass(Terrain(w)), RegrowFixtures.OpenRule(), 0f, 0f, 1, spots)!;
         Assert.True(placed);
         Assert.Single(spots);
     }
@@ -134,7 +128,7 @@ public class RegrowSpotsTests
         using var w = new TempWorld();
         var spots = new List<Regrow.Spot>();
         var terrain = Terrain(w);
-        PrivateMember.Call(typeof(Regrow), "PlaceRule", null, terrain, RegrowFixtures.FlatGround(), NewZones(), WithAlts(terrain, RegrowFixtures.OpenRule()), 0f, 0f, 0, spots);
+        PrivateMember.Call(typeof(Regrow), "PlaceRule", null, NewPass(terrain), RegrowFixtures.OpenRule(), 0f, 0f, 0, spots);
         Assert.Empty(spots);
     }
 
@@ -144,7 +138,7 @@ public class RegrowSpotsTests
         using var w = new TempWorld();
         var spots = new List<Regrow.Spot>();
         var terrain = Terrain(w);
-        PrivateMember.Call(typeof(Regrow), "PlaceRule", null, terrain, RegrowFixtures.FlatGround(), NewZones(), WithAlts(terrain, RegrowFixtures.OpenRule()), 0f, 0f, 1, spots);
+        PrivateMember.Call(typeof(Regrow), "PlaceRule", null, NewPass(terrain), RegrowFixtures.OpenRule(), 0f, 0f, 1, spots);
         Assert.Single(spots);
     }
 }

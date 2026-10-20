@@ -49,6 +49,7 @@ internal static class RegrowCheck
         var vegetation = Regrow.GameRules.Select(r => r.prefab).ToHashSet();
         var byZone = world.Objects.GroupBy(o => (ZoneOf(o.Position.X), ZoneOf(o.Position.Z))).ToDictionary(g => g.Key, g => g.ToList());
         var edits = new EditStore(world);
+        var areas = Regrow.ClearAreas.Of(world, terrain.Generator);
         var groups = new Dictionary<string, int[]>();
         void Add(bool alt, string name, int column, int n)
         {
@@ -59,7 +60,7 @@ internal static class RegrowCheck
         }
         foreach (var (zx, zz, alt) in zones)
         {
-            var spots = Regrow.Zones(terrain, edits, world.Seed, zx, zz, zx, zz);
+            var spots = Regrow.Zones(terrain, edits, world.Seed, zx, zz, zx, zz, areas);
             foreach (var (_, prefab, position, _, _) in byZone.GetValueOrDefault((zx, zz)) ?? [])
             {
                 if (PrefabCatalog.NameOf(prefab) is { } name && vegetation.Contains(name))

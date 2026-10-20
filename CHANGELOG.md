@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.62.0 — 2026-10-19
+
+### Changed
+- **Regrow nature and New world keep the ground clear round locations as the game does.** Nothing grows in the
+  square the game keeps clear round a village, a dungeon entrance or any place whose kind clears its ground, and
+  the trees and rocks after it fall where the game puts them. With Expand World, the location file's clear areas,
+  a wide place in the next zone and the vegetation file's clear areas are followed too.
+
 ## v1.61.0 — 2026-10-19
 
 ### Added

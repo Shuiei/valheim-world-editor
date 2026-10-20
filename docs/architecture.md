@@ -291,6 +291,11 @@ depends on an alt biome (one it adds, or one in a block list), so the start, bos
 `WorldCheck altbiomes`, `locations` and `regrow` compare the layout, every location and Regrow with what the game
 made (development.md).
 
+Regrow keeps the ground clear round locations as `PlaceVegetation` does, before an object's own draws: the caller
+gives the world's location instances (`Regrow.ClearAreas`: the world's zone file, or New world's laid out
+locations), and each zone starts with its own location's square (with Expand World Data: its neighbours' wide
+ones too, as circles widened by the rule's clear radius, and the areas the mod's vegetation adds as it grows).
+
 The pages follow: the seed preview covers the rules' radius (`SeedPreview.Preview.Radius`), a new world is made with
 the rules (`WorldCreator.Create`'s `rules`), the overview's texel grows with the world (`MapData.TexelMeters`), and
 the Desktop names and colours a biome of the biome file through the table (`ZoneFilter.BiomeName`,

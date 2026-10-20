@@ -1,4 +1,3 @@
-using ValheimGen;
 using Rnd = ValheimGen.UnityEngine.Random;
 using Rule = ValheimGen.VegetationRule;
 
@@ -27,21 +26,20 @@ public static partial class Regrow
     }
 
     /// <summary>Tries the rule's groups in its zone until <paramref name="count"/> of them are placed (or the tries run out).</summary>
-    private static void PlaceRule(TerrainService terrain, Ground ground, Dictionary<(int, int), Zone> zones, (Rule Veg, AltCheck Alts) by, float cx, float cz, int count, List<Spot> spots)
+    private static void PlaceRule(Pass pass, Rule veg, float cx, float cz, int count, List<Spot> spots)
     {
-        var (veg, alts) = by;
         float reach = 32f - veg.groupRadius;
         int tries = veg.forcePlacement != 0 ? count * 50 : count, placedGroups = 0;
         for (int i = 0; i < tries; i++)
         {
             float vx = Rnd.Range(cx - reach, cx + reach), vz = Rnd.Range(cz - reach, cz + reach);
-            if (!alts.Lets(veg, vx, vz))
+            if (!pass.Alts.Lets(veg, vx, vz))
             {
                 // The try is spent (the group's size is not drawn).
                 continue;
             }
             int groupSize = Rnd.Range(veg.groupSizeMin, veg.groupSizeMax + 1);
-            if (PlaceGroup(terrain, ground, zones, veg, vx, vz, groupSize, spots))
+            if (PlaceGroup(pass, veg, vx, vz, groupSize, spots))
             {
                 placedGroups++;
             }
@@ -53,7 +51,7 @@ public static partial class Regrow
     }
 
     /// <summary>Places one group around its first object's spot; true when at least one of its objects was placed.</summary>
-    private static bool PlaceGroup(TerrainService terrain, Ground ground, Dictionary<(int, int), Zone> zones, Rule veg, float vx, float vz, int groupSize, List<Spot> spots)
+    private static bool PlaceGroup(Pass pass, Rule veg, float vx, float vz, int groupSize, List<Spot> spots)
     {
         bool placed = false;
         for (int j = 0; j < groupSize; j++)
@@ -68,7 +66,7 @@ public static partial class Regrow
             float ry = Rnd.Range(0, 360);
             float scale = Rnd.Range(veg.scaleMin, veg.scaleMax);
             float rx = Rnd.Range(-veg.randTilt, veg.randTilt), rz = Rnd.Range(-veg.randTilt, veg.randTilt);
-            if (TryPlaceSpot(terrain, ground, zones, veg, px, pz, new SpotDraw(rx, ry, rz, scale), spots))
+            if (TryPlaceSpot(pass, veg, px, pz, new SpotDraw(rx, ry, rz, scale), spots))
             {
                 placed = true;
             }

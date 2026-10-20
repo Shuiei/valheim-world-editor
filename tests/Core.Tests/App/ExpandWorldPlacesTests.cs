@@ -68,6 +68,20 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
     }
 
     [Fact]
+    public void AKindClearsItsAreaAsTheFileSaysOnlyWithARadiusOfItsOwn()
+    {
+        List<string> notes = [];
+        var rules = ExpandWorld.LocationsOf(
+        [
+            E(("prefab", "StartTemple"), ("clearArea", "false")),
+            E(("prefab", "StartTemple:Copy"), ("exteriorRadius", "40")),
+            E(("prefab", "StartTemple:Kept"), ("exteriorRadius", "40"), ("clearArea", "true")),
+        ], Game(), BiomeTable.Vanilla, 10000f, null, notes);
+        Assert.Equal(1, Game().First(r => r.Prefab == "StartTemple").ClearArea);
+        Assert.Equal([1, 0, 1], rules.Select(r => r.ClearArea));
+    }
+
+    [Fact]
     public void DistanceRulesMakeAMadeUpGroupAsTheModDoes()
     {
         List<string> notes = [];
@@ -158,7 +172,7 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         [
             E(("prefab", $"{known}, {known2}, Nowhere"), ("min", "2"), ("max", "5"), ("forcePlacement", "true"), ("scaleMin", "0.5"), ("scaleMax", "2"), ("scaleUniform", "false"),
               ("biome", "meadows"), ("biomeArea", "median"), ("minDistance", "0.1"), ("maxDistance", "0.5"), ("groupSizeMin", "2"), ("groupSizeMax", "4"), ("maxAltitude", "50")),
-            E(("prefab", known), ("centerX", "0.2"), ("centerY", "-0.1"), ("minDistance", "0.05"), ("scaleMin", "1,2,3"), ("scaleMax", "1,2,3")),
+            E(("prefab", known), ("centerX", "0.2"), ("centerY", "-0.1"), ("minDistance", "0.05"), ("scaleMin", "1,2,3"), ("scaleMax", "1,2,3"), ("clearArea", "true"), ("clearRadius", "3")),
             E(("prefab", known), ("altBiome", "DarkMeadows")),
             E(("prefab", "")),
         ], game, BiomeTable.Vanilla, 20000f, new HashSet<string>(), notes);
@@ -187,6 +201,7 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         Assert.Equal(0f, several.minAltitude);
         Assert.Equal(1, several.enable);
         Assert.Null(several.altBiome);
+        Assert.Equal((0, 0f), (several.clearArea, several.clearRadius));
         // A centre of its own: the mod's check in place of the game's; a scale the same at both ends is no scale by axis.
         var centred = rules[1];
         Assert.Null(centred.prefabs);
@@ -195,6 +210,7 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         Assert.Equal([1000f, 0f], centred.distance!);
         Assert.Null(centred.scaleMinAxes);
         Assert.Equal(1f, centred.scaleMin);
+        Assert.Equal((1, 3f), (centred.clearArea, centred.clearRadius));
         Assert.Contains(notes, n => n.Contains("Nowhere"));
         // A rule of an alt biome is kept, to grow in that alt biome's areas.
         Assert.Equal("DarkMeadows", rules[2].altBiome);

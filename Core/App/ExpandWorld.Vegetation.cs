@@ -112,6 +112,8 @@ public static partial class ExpandWorld
             maxDistanceFromCenter = ownCentre ? 0f : maxDistance,
             center = ownCentre ? [Dist(centerX, radius), Dist(centerY, radius)] : null,
             distance = ownCentre && (minDistance != 0f || maxDistance != 0f) ? [minDistance, maxDistance] : null,
+            clearArea = Flag(f, "clearArea"),
+            clearRadius = f.F("clearRadius", 0f),
         };
     }
 

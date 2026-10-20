@@ -118,5 +118,12 @@ public sealed class VegetationRule
     public float[]? center { get; set; }
     /// <summary>The least and most distance from <see cref="center"/>, metres (most 0: no limit); null: no check.</summary>
     public float[]? distance { get; set; }
+    /// <summary>1: each object keeps the ground within <see cref="clearRadius"/> of it clear of the vegetation placed after it in its zone.</summary>
+    public int clearArea { get; set; }
+    /// <summary>
+    /// Metres: the radius an object clears (<see cref="clearArea"/>), and how much wider every clear area of its zone is
+    /// for this rule.
+    /// </summary>
+    public float clearRadius { get; set; }
 }
 #pragma warning restore IDE1006

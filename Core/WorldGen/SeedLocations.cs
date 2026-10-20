@@ -112,7 +112,13 @@ public static partial class SeedLocations
     /// <summary>
     /// A world's alt biomes: its own (Expand World Data's location rules), else the game's.
     /// </summary>
-    internal static IReadOnlyList<AltBiomeRule> AltBiomeRulesFor(WorldGenerator gen) => StateFor(gen).Rules.AltBiomes;
+    internal static IReadOnlyList<AltBiomeRule> AltBiomeRulesFor(WorldGenerator gen) => RulesFor(gen).AltBiomes;
+
+    /// <summary>
+    /// A world's location rules: its own (Expand World Data's location file, or the game's changed by Expand World
+    /// Size), else the game's.
+    /// </summary>
+    internal static RuleSet RulesFor(WorldGenerator gen) => StateFor(gen).Rules;
 
     /// <summary>
     /// A world's alt biome layout, made the first time it is asked for (on a biome point map of its own, on every core

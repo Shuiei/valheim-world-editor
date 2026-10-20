@@ -83,7 +83,8 @@ public sealed class MountainPanelLangTests
         var s = w.Session!;
         w.MountainPanel.RadiusSlider.Value = 25;
         w.MountainPanel.GrowBox.IsChecked = true;
-        float gx = (s.Ground.W - 1) / 2f, gz = (s.Ground.H - 1) / 2f;
+        // In the zone east of the middle: the start temple keeps its own zone's ground clear.
+        float gx = (s.Ground.W - 1) / 2f + 64f, gz = (s.Ground.H - 1) / 2f;
         int steps = s.UndoList.Count;
 
         // What grew: said in the language, its History step too.

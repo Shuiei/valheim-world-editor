@@ -32,9 +32,12 @@ public static partial class WorldCreator
         var empty = WorldSave.Load(folder);
         empty.Rules = rules;
         var terrain = new ValheimGen.TerrainService(empty);
-        var sites = Sites(terrain, seed, radius);
+        var laidOut = ValheimGen.SeedLocations.AvailableFor(terrain.Generator) ? ValheimGen.SeedLocations.Place(terrain.Generator, ValheimGen.SeedLocations.Which.All) : [];
+        var sites = Sites(terrain, seed, radius, laidOut);
         var left = sites.Where(s => s.Objects == null).Select(s => s.Zone).ToHashSet();
-        var spots = Regrow.Zones(terrain, new EditStore(empty), seed, -radius, -radius, radius, radius);
+        // Every location of the seed, inside the generated zones or not: one beside them may clear ground in them.
+        var clear = new Regrow.ClearAreas(terrain.Generator, laidOut.Select(p => (StableHash.Of(p.Rule.Prefab), p.X, p.Z)));
+        var spots = Regrow.Zones(terrain, new EditStore(empty), seed, -radius, -radius, radius, radius, clear);
         (int X, int Z)? bare = null;
         (int X, int Z, float Span)? flatZone = null;
         if (flat)
@@ -42,12 +45,11 @@ public static partial class WorldCreator
             flatZone = FlattestZone(terrain, radius, sites.Select(s => s.Zone).ToHashSet()) ?? throw new InvalidOperationException("No zone of dry, even Meadows near the middle: try another seed or a larger radius.");
             bare = (flatZone.Value.X, flatZone.Value.Z);
         }
-        // Nothing grows on the bare zone, in the zones left to the game, or on the ground a location clears.
+        // Nothing grows on the bare zone or in the zones left to the game (Regrow keeps the ground locations clear).
         bool Grows(Regrow.Spot s)
         {
             var zone = ChunkMath.SectorOf(s.X, s.Z);
-            return zone != bare && !left.Contains(zone)
-                && !sites.Any(l => l.Clear > 0f && (s.X - l.Position.X) * (s.X - l.Position.X) + (s.Z - l.Position.Z) * (s.Z - l.Position.Z) < l.Clear * l.Clear);
+            return zone != bare && !left.Contains(zone);
         }
         var batch = new ChunkBatch();
         PlaceSpots(spots.Where(Grows), batch);
