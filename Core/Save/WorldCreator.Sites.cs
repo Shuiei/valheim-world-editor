@@ -1,5 +1,4 @@
 using System.Numerics;
-using TerrainEditor.App;
 using TerrainEditor.Editing;
 using Rnd = ValheimGen.UnityEngine.Random;
 
@@ -51,26 +50,21 @@ public static partial class WorldCreator
                 int hash = StableHash.Of(p.Rule.Prefab);
                 // Snapped to the game's literal 30 (ZoneSystem.PlaceLocations), whatever the rules put the water at.
                 var position = new Vector3(p.X, p.Rule.SnapToWater != 0 ? ValheimGen.WorldGenerator.LiteralWaterLevel : p.Y, p.Z);
-                // A blueprint location, one whose contents Expand World Data changes, or one spawned with a random seed:
-                // its zone is left to the game, like a dungeon's.
-                bool unknown = p.Rule.Blueprint == true || p.Rule.Custom == true || terrain.Generator.Rules.RandomLocations;
-                if (unknown || LocationPrefabs.Get(p.Rule.Base) is not { Interior: false } prefab)
+                // A blueprint location, one whose changed contents the editor cannot build, or one spawned with a random
+                // seed: its zone is left to the game, like a dungeon's.
+                var contents = p.Rule.Contents ?? ValheimGen.LocationContents.None;
+                if (LeftToGame(p.Rule, terrain) || LocationPrefabs.Get(p.Rule.Base) is not { Interior: false } prefab)
                 {
                     sites.Add(new Site(zone, p.Rule.Prefab, hash, position, null));
                     continue;
                 }
                 int zoneSeed = LocationPrefabs.ZoneSeed(seed, zone.X, zone.Z);
-                float yaw = Yaw(p.Rule, terrain, position, zoneSeed);
-                var objects = new List<(Vector3 At, byte[] Zdo)>();
-                foreach (var m in LocationPrefabs.Made(prefab, position, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw * MathF.PI / 180f), zoneSeed))
-                {
-                    int made = StableHash.Of(m.Prefab);
-                    if (Terrain.PrefabCatalog.Get(made) is { } info)
-                    {
-                        objects.Add((m.Position, ZdoBuilder.Blank(made, info.Flags, m.Position, BlueprintFormats.ToEuler(m.Rotation), 0f)));
-                    }
-                }
-                objects.Add((position, ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, proxyFlags, position, new Vector3(0f, yaw, 0f), 0f, [(WorldSave.LocationKey, hash), (SeedKey, zoneSeed)])));
+                float yaw = contents.RandomCardinal ? CardinalYaw(zoneSeed) : Yaw(p.Rule, terrain, position, zoneSeed);
+                var objects = Built(prefab, contents, position, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw * MathF.PI / 180f), zoneSeed, terrain);
+                // Expand World Data's offset raises the spot before the game makes the proxy too.
+                var spot = position with { Y = position.Y + contents.Offset };
+                byte[] proxy = ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, proxyFlags, spot, new Vector3(0f, yaw, 0f), 0f, [(WorldSave.LocationKey, hash), (SeedKey, zoneSeed)]);
+                objects.Add((spot, WithFields(proxy, contents.ProxyData)));
                 sites.Add(new Site(zone, p.Rule.Prefab, hash, position, objects));
             }
         }
@@ -80,4 +74,11 @@ public static partial class WorldCreator
         }
         return sites;
     }
+
+    /// <summary>
+    /// Whether a kind's zone is left to the game: a blueprint location, one whose changed contents the editor cannot
+    /// build, or any location when Expand World Data spawns them with a random seed.
+    /// </summary>
+    private static bool LeftToGame(ValheimGen.SeedLocations.Rule rule, ValheimGen.TerrainService terrain) =>
+        rule.Blueprint == true || (rule.Custom == true && rule.Contents is not { LeftToGame: null }) || terrain.Generator.Rules.RandomLocations;
 }

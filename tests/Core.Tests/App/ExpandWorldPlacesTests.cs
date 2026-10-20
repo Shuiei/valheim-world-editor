@@ -1,6 +1,7 @@
 using TerrainEditor.App;
 using ValheimGen;
 using Xunit;
+using static WorldEditor.Tests.ExpandWorldEntries;
 
 namespace WorldEditor.Tests;
 
@@ -14,8 +15,6 @@ namespace WorldEditor.Tests;
 public class ExpandWorldPlacesTests : AppSettingsTestBase
 {
     /// <summary>An entry from its fields (a list value for a field given several times).</summary>
-    private static ExpandWorld.Entry E(params (string Key, object Value)[] fields) => new(fields.ToDictionary(f => f.Key, f => (object?)f.Value));
-
     /// <summary>The game's location kinds the tests convert against (the fixture's prioritized ones).</summary>
     private static List<SeedLocations.Rule> Game()
     {

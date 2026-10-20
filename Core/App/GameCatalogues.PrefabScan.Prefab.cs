@@ -42,6 +42,10 @@ public static partial class GameCatalogues
         private static Dict PrefabEntry(AssetTypeValueField znv, RootComponents parts)
         {
             var entry = new Dict { ["p"] = Int(Py(znv["m_persistent"])), ["d"] = Int(Py(znv["m_distant"])), ["t"] = Int(Py(znv["m_type"])) };
+            if (Truthy(Get(znv, "m_syncInitialScale", 0L)))
+            {
+                entry["s"] = 1L;
+            }
             if (parts.Creature)
             {
                 entry["c"] = 1L;

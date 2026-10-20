@@ -234,6 +234,12 @@ public static partial class SeedLocations
         /// </summary>
         [JsonPropertyName("custom")]
         public bool? Custom { get; set; }
+        /// <summary>
+        /// What Expand World Data's location file changes about its contents, when it changes any (with <see cref="Custom"/>
+        /// or <see cref="Blueprint"/>); null for none. Not kept in locations.json (the files are read again).
+        /// </summary>
+        [JsonIgnore]
+        public LocationContents? Contents { get; set; }
 
         /// <summary>The game's prefab the kind is made of (<see cref="BasePrefab"/>, else <see cref="Prefab"/>).</summary>
         [JsonIgnore]

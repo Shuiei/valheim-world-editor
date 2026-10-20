@@ -296,6 +296,14 @@ gives the world's location instances (`Regrow.ClearAreas`: the world's zone file
 locations), and each zone starts with its own location's square (with Expand World Data: its neighbours' wide
 ones too, as circles widened by the rule's clear radius, and the areas the mod's vegetation adds as it grows).
 
+New world builds a location whose contents Expand World Data's file changes the way the mod spawns it
+(`WorldCreator.Contents.cs`): `SeedLocations.Rule.Contents` (`LocationContents`, made by `ExpandWorld.Contents.cs`
+with the data entries of `ExpandWorld.DataEntries.cs`) holds the swaps, data and added objects, and says why the game
+must make the location itself when the editor cannot (`LeftToGame`). Its own objects are rolled as the game rolls them
+(`Dungeons.Replay`, which hands back the random state after the rolls), then swapped and given data drawing on from
+there; the added objects are drawn from the zone's seed again. The draws an object's components make as it wakes are
+not counted, so a swap's draw can differ from the game's after an object that makes some.
+
 The pages follow: the seed preview covers the rules' radius (`SeedPreview.Preview.Radius`), a new world is made with
 the rules (`WorldCreator.Create`'s `rules`), the overview's texel grows with the world (`MapData.TexelMeters`), and
 the Desktop names and colours a biome of the biome file through the table (`ZoneFilter.BiomeName`,

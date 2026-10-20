@@ -62,6 +62,8 @@ public static partial class ExpandWorld
         foreach (var rule in rules)
         {
             var copy = SeedLocations.RuleSet.FromJson("{\"locations\":[" + System.Text.Json.JsonSerializer.Serialize(rule) + "]}").Locations[0];
+            // What the file changes about its contents is not part of the JSON.
+            copy.Contents = rule.Contents;
             if (quantities && copy.Quantity != 0 && copy.Enable != 0 && copy.Prefab != StartLocation)
             {
                 copy.Quantity = r.LocationsMultiplier == 0f ? 0 : Math.Max(1, (int)Math.Round((double)copy.Quantity * r.LocationsMultiplier, MidpointRounding.ToEven));

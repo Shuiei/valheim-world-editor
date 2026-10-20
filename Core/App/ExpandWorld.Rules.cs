@@ -95,7 +95,7 @@ public static partial class ExpandWorld
         {
             if (gameRead)
             {
-                kinds = SizedLocations(LocationsOf(entries, game.Locations, table, size.Radius, blueprints, data.Notes), size);
+                kinds = SizedLocations(LocationsOf(entries, game.Locations, table, size.Radius, blueprints, data.Notes, new DataTable(data.DataEntries)), size);
             }
             else
             {

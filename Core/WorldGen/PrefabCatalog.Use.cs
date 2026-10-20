@@ -29,7 +29,7 @@ public static partial class PrefabCatalog
             AddSpawn(d, hash, e);
             // Save-file flags: persistent 0x100, distant 0x200, object type in bits 10-11.
             ushort flags = (ushort)((e.P != 0 ? 0x100 : 0) | (e.D != 0 ? 0x200 : 0) | ((e.T & 3) << 10));
-            Info info = new(name, flags, (float)e.Gr, e.Cult != 0, e.Cw, e.Ch, (float)e.Ward, (float)e.Build);
+            Info info = new(name, flags, (float)e.Gr, e.Cult != 0, e.Cw, e.Ch, (float)e.Ward, (float)e.Build) { SyncScale = e.S != 0 };
             AddGrownFrom(d, name, e);
             if (e.P == 0 || e.C != 0 || e.I != 0 || name.EndsWith("_ragdoll", StringComparison.Ordinal))
             {
@@ -92,8 +92,10 @@ public static partial class PrefabCatalog
         /// <param name="night">Spawn point: spawns by night.</param>
         /// <param name="sr">Nest: radius it spawns in.</param>
         /// <param name="max">Nest: how many it keeps around.</param>
-        public Entry(int p, int d, int t, int c = 0, int i = 0, double gr = 0, int cult = 0, int cw = 0, int ch = 0, double ward = 0, double build = 0, string[]? grows = null, int it = -1, int ao = 0, int var = 0, int at = 0, int ats = 0, double dur = 0, double durl = 0, int ms = 1, int[]? @is = null, string[]? isi = null, string[]? isu = null, int[][]? @as = null, string[]? cs = null, string[]? sa = null, int trig = 0, double rt = 0, int[]? lv = null, int day = 1, int night = 1, double sr = 0, int max = 0)
+        /// <param name="s">Its ZNetView keeps its first scale (m_syncInitialScale).</param>
+        public Entry(int p, int d, int t, int c = 0, int i = 0, double gr = 0, int cult = 0, int cw = 0, int ch = 0, double ward = 0, double build = 0, string[]? grows = null, int it = -1, int ao = 0, int var = 0, int at = 0, int ats = 0, double dur = 0, double durl = 0, int ms = 1, int[]? @is = null, string[]? isi = null, string[]? isu = null, int[][]? @as = null, string[]? cs = null, string[]? sa = null, int trig = 0, double rt = 0, int[]? lv = null, int day = 1, int night = 1, double sr = 0, int max = 0, int s = 0)
         {
+            S = s;
             P = p;
             D = d;
             T = t;
@@ -227,5 +229,8 @@ public static partial class PrefabCatalog
 
         [JsonPropertyName("max")]
         public int Max { get; }
+
+        [JsonPropertyName("s")]
+        public int S { get; }
     }
 }
