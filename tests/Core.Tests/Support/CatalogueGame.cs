@@ -114,7 +114,7 @@ public static class CatalogueGame
                 ["m_craftingStation"] = Fields.Ref(station),
                 ["m_resources"] = new List<Fields> { Cost(wood, 4, true), Cost(wood, 0, true), Cost(0, 2, false) },
             });
-            r.Mono("WearNTear", new Fields { ["m_materialType"] = 0, ["m_supports"] = true, ["m_comOffset"] = Fields.Vector3(0, 1, 0), ["m_noSupportWear"] = true });
+            r.Mono("WearNTear", new Fields { ["m_materialType"] = 0, ["m_supports"] = true, ["m_comOffset"] = Fields.Vector3(0, 1, 0), ["m_noSupportWear"] = true, ["m_health"] = 400.0 });
             r.Box((0, 1, 0), (2, 2, 0.2));
             r.Box((0, 5, 0), (1, 1, 1), trigger: true);
             r.Box((0, 6, 0), (1, 1, 1), enabled: false);

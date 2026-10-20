@@ -12,7 +12,7 @@ public static partial class ExpandWorld
     /// A location's contents as the file changes them (the mod's LocationExtraInfo): the added objects, the swaps and
     /// the data of its objects (the location's own lists over the shared ones), its own data, the scale, offset and
     /// cardinal turn; with why the game must make it instead, when the editor cannot (a blueprint, levelling or paint,
-    /// commands, a time-based seed, another dungeon, random damage, data or names worked out when the game spawns it).
+    /// commands, a time-based seed, another dungeon, data or names worked out when the game spawns it).
     /// </summary>
     /// <param name="f">The entry's fields.</param>
     /// <param name="data">The world's data entries.</param>
@@ -32,7 +32,6 @@ public static partial class ExpandWorld
         Cannot(f.B("randomSeed", false), "a random seed");
         Cannot(f.Str("dungeon") != "", "another dungeon");
         Cannot(f.Str("levelArea") is not ("" or "false") || f.Str("paint") != "", "levelled or painted ground");
-        Cannot(f.Str("randomDamage") is "true" or "all", "random damage");
         var proxy = data.Resolve(f.Raw("data"));
         Cannot(proxy.Why != null, proxy.Why ?? "");
         var swaps = Merged(Swaps(f.Rows("objectSwap"), why), Swaps(f.Rows("locationObjectSwap"), why));

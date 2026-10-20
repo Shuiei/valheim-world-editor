@@ -940,7 +940,7 @@
   "wood_beam_26": {"d":0,"p":1,"t":2},
   "wood_beam_45": {"d":0,"p":1,"t":2},
   "wood_door": {"d":0,"p":1,"t":2},
-  "wood_fence": {"d":0,"p":1,"t":2},
+  "wood_fence": {"d":0,"p":1,"t":2,"wnt":400.0},
   "wood_floor": {"d":0,"p":1,"t":2},
   "wood_floor_1x1": {"d":0,"p":1,"t":2},
   "wood_gate": {"d":0,"p":1,"t":2},

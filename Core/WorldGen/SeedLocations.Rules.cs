@@ -235,6 +235,12 @@ public static partial class SeedLocations
         [JsonPropertyName("custom")]
         public bool? Custom { get; set; }
         /// <summary>
+        /// Expand World Data's "randomDamage" for the kind ("true", "all" or empty: the file's word, which replaces the
+        /// prefab's own random damage); null for a game kind (its prefab's Location.m_applyRandomDamage).
+        /// </summary>
+        [JsonPropertyName("randomDamage")]
+        public string? RandomDamage { get; set; }
+        /// <summary>
         /// What Expand World Data's location file changes about its contents, when it changes any (with <see cref="Custom"/>
         /// or <see cref="Blueprint"/>); null for none. Not kept in locations.json (the files are read again).
         /// </summary>

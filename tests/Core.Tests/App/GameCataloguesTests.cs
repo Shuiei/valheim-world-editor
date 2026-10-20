@@ -21,7 +21,7 @@ public class GameCataloguesTests
     private static readonly Dictionary<string, string> Expected = new()
     {
         ["prefabs"] = """
-            {"ArmorStand":{"as":[[6,7],[11]],"d":0,"p":1,"t":0},"Beech":{"d":0,"p":1,"t":1},"Beech_Sapling":{"cult":1,"d":0,"gr":1.5,"grows":["Beech"],"p":1,"t":0},"Boar":{"c":1,"d":0,"p":1,"t":2},"Kiln":{"d":0,"p":1,"t":0},"Sword":{"ao":5,"ats":1,"d":0,"dur":200.0,"durl":50.0,"i":1,"it":3,"p":1,"t":0},"Wood":{"at":1,"d":0,"i":1,"it":1,"p":1,"t":0,"var":2},"guard_stone":{"d":1,"p":1,"t":0,"ward":32.0},"itemstand":{"d":0,"is":[1,3],"isi":["Wood"],"isu":["Sword"],"p":1,"t":0},"piece_chest":{"ch":2,"cw":5,"d":0,"p":1,"t":0},"piece_workbench":{"build":20.0,"d":0,"p":1,"t":0},"wood_wall":{"d":0,"p":1,"t":0}}
+            {"ArmorStand":{"as":[[6,7],[11]],"d":0,"p":1,"t":0},"Beech":{"d":0,"p":1,"t":1},"Beech_Sapling":{"cult":1,"d":0,"gr":1.5,"grows":["Beech"],"p":1,"t":0},"Boar":{"c":1,"d":0,"p":1,"t":2},"Kiln":{"d":0,"p":1,"t":0},"Sword":{"ao":5,"ats":1,"d":0,"dur":200.0,"durl":50.0,"i":1,"it":3,"p":1,"t":0},"Wood":{"at":1,"d":0,"i":1,"it":1,"p":1,"t":0,"var":2},"guard_stone":{"d":1,"p":1,"t":0,"ward":32.0},"itemstand":{"d":0,"is":[1,3],"isi":["Wood"],"isu":["Sword"],"p":1,"t":0},"piece_chest":{"ch":2,"cw":5,"d":0,"p":1,"t":0},"piece_workbench":{"build":20.0,"d":0,"p":1,"t":0},"wood_wall":{"d":0,"p":1,"t":0,"wnt":400.0}}
             """,
         ["pieces"] = """
             {"piece_workbench": {"cat": 1, "comfort": 0, "tool": "hammer"}, "wood_wall": {"cat": 2, "comfort": 1, "snap": [[1.0, 2.0, 0.0]], "box": [-1.0, 1.0, -0.5, 0.5, -0.5, 2.0], "tool": "hammer"}, "stone_floor": {"cat": 0, "comfort": 0, "box": [-0.5, 0.5, -0.5, 0.5, -0.1, 0.1]}}
