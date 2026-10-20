@@ -100,4 +100,17 @@ public class ExpandWorldBlueprintsTests : AppSettingsTestBase
         var list = Assert.Single(ExpandWorld.VegetationOf([E(("prefab", "Hut, Bush01"))], Regrow.GameRules, BiomeTable.Vanilla, 10000f, new HashSet<string>(), notes, Entries, folder));
         Assert.Null(list.blueprints);
     }
+
+    [Fact]
+    public void ABlueprintHoldingTheOneItIsInIsLeftOut()
+    {
+        string folder = Write("Outer.vbuild", "Inner 0 0 0 1 1 0 1\nBush01 0 0 0 1 2 0 2\n");
+        Write("Inner.vbuild", "Outer 0 0 0 1 0 0 0\nPickable_Stone 0 0 0 1 3 0 3\n");
+        List<string> why = [];
+        var found = ExpandWorld.BlueprintsOf(folder, "Outer", Entries, why, [])!;
+        // The game would spawn them without end: the inner one keeps its stone, not the outer one.
+        Assert.Equal(["Pickable_Stone"], found["Inner"].Select(p => p.Prefab));
+        Assert.Equal(["Inner", "Bush01"], found["Outer"].Select(p => p.Prefab));
+        Assert.Contains(why, w => w.Contains("Inner holding Outer", StringComparison.Ordinal));
+    }
 }

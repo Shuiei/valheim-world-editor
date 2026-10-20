@@ -12,7 +12,10 @@ namespace WorldEditor.Tests;
 public class WorldSaveLegacyPaintTests
 {
     /// <summary>A zone's terrain data, unchanged heights and a 64 × 64 paint grid with these points painted.</summary>
-    private static byte[] Legacy(params (int Index, Vector4 Paint)[] painted)
+    private static byte[] Legacy(params (int Index, Vector4 Paint)[] painted) => Grids(65 * 65, painted);
+
+    /// <summary>A zone's terrain data with this many unchanged heights and a 64 × 64 paint grid with these points painted.</summary>
+    private static byte[] Grids(int heights, params (int Index, Vector4 Paint)[] painted)
     {
         using MemoryStream raw = new();
         using (BinaryWriter w = new(raw, System.Text.Encoding.UTF8, leaveOpen: true))
@@ -23,8 +26,8 @@ public class WorldSaveLegacyPaintTests
             w.Write(0f);
             w.Write(0f);
             w.Write(64f);
-            w.Write(65 * 65);
-            for (int i = 0; i < 65 * 65; i++)
+            w.Write(heights);
+            for (int i = 0; i < heights; i++)
             {
                 w.Write(false);
             }
@@ -59,5 +62,13 @@ public class WorldSaveLegacyPaintTests
         Assert.False(zone.ModifiedPaint[64]);
         // The store takes it as any zone.
         Assert.NotNull(EditStore.Of(zone));
+    }
+
+    [Fact]
+    public void HeightsOfNoSquareGridLeaveThePaintAsItIs()
+    {
+        // 64 × 66 heights: one short of 65 × 65 would round to a side of 65; no square, so the paint is not widened.
+        var zone = TerrainZone.Decode(Vector3.Zero, StableHash.Of("_TerrainCompiler"), Grids(64 * 66));
+        Assert.Equal(64 * 64, zone.ModifiedPaint.Length);
     }
 }

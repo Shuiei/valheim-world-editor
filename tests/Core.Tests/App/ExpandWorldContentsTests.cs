@@ -116,4 +116,13 @@ public class ExpandWorldContentsTests
         var rules = ExpandWorld.LocationsOf([E(("prefab", "StartTemple"), ("quantity", "1"))], SeedLocations.Current.Locations, BiomeTable.Vanilla, 10000f, null, [], Data);
         Assert.Null(Assert.Single(rules).Contents);
     }
+
+    [Fact]
+    public void WeightsAddingToNothingEndOnTheLastChoice()
+    {
+        var swaps = Contents(("objectSwap", "Pickable_Stone, Bush01:0, Pickable_Branch:0")).Swaps["Pickable_Stone"];
+        // No NaN: weights of 0, and the draw (any roll above 0) runs past them all to the last, as the mod's does.
+        Assert.All(swaps, s => Assert.Equal(0f, s.Weight));
+        Assert.Equal(["Bush01", "Pickable_Branch"], swaps.Select(s => s.Value));
+    }
 }

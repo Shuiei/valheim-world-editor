@@ -19,7 +19,8 @@ public static partial class Regrow
     /// </summary>
     private static bool PassesSurround(Pass pass, Rule veg, Zone hm, float px, float pz)
     {
-        if (veg.surroundCheckVegetation == 0)
+        // No ring to look at, or rings of no size (the game would divide by nothing): no check.
+        if (veg.surroundCheckVegetation == 0 || veg.surroundCheckLayers <= 0 || veg.surroundCheckDistance <= 0f)
         {
             return true;
         }

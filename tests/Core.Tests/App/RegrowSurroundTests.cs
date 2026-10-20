@@ -80,4 +80,18 @@ public class RegrowSurroundTests
         }
         return Check(x);
     }
+
+    [Theory]
+    [InlineData(0, 4f)]
+    [InlineData(2, 0f)]
+    public void NoRingsOrRingsOfNoSizeCheckNothing(int layers, float distance)
+    {
+        using var w = new TempWorld();
+        var rule = Checked(1, 0.5f);
+        rule.surroundCheckLayers = layers;
+        rule.surroundCheckDistance = distance;
+        object pass = PrivateMember.New(PrivateMember.Nested(typeof(Regrow), "Pass"), new TerrainService(w.Load(), null), RegrowFixtures.FlatGround(), new List<VegetationRule>(), null);
+        // Even the first spot, which would only set the bar.
+        Assert.True(PrivateMember.Call<bool>(typeof(Regrow), "PassesSurround", null, pass, rule, RegrowFixtures.FlatZone(), 0f, 0f));
+    }
 }
