@@ -12,7 +12,7 @@ public static partial class WorldCreator
     /// <param name="Hash">The name's stable hash: its proxy's location, the zone file's entry.</param>
     /// <param name="Position">
     /// Where the zone file has it, world metres (the water's level when its kind snaps to the water); it spawns at
-    /// <see cref="SpawnHeight"/>.
+    /// <see cref="GroundHeight"/>.
     /// </param>
     /// <param name="Objects">
     /// What is written for it (its networked objects, then its proxy), each with where it is; null when its zone is left
@@ -62,7 +62,7 @@ public static partial class WorldCreator
                     continue;
                 }
                 int zoneSeed = LocationPrefabs.ZoneSeed(seed, zone.X, zone.Z);
-                var spawn = p.Rule.SnapToWater != 0 ? position : position with { Y = SpawnHeight(terrain, position) };
+                var spawn = p.Rule.SnapToWater != 0 ? position : position with { Y = GroundHeight(terrain, position) };
                 float yaw = contents.RandomCardinal ? CardinalYaw(zoneSeed) : Yaw(p.Rule, terrain, spawn, zoneSeed);
                 var objects = Built(prefab, contents, new Placing(spawn, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw * MathF.PI / 180f), zoneSeed, DamageOf(p.Rule, prefab)), terrain);
                 // Expand World Data's offset raises the spot before the game makes the proxy too.
@@ -80,10 +80,11 @@ public static partial class WorldCreator
     }
 
     /// <summary>
-    /// The height a location spawns at (ZoneSystem.PlaceLocations: the ground under its spot, found on the zone's
-    /// terrain as generated, between the terrain's points as its mesh is), not the generator's own height there.
+    /// The ground under a point as the game finds it while it spawns a location and the objects its file snaps
+    /// (ZoneSystem.PlaceLocations, GetGroundHeight): on the zone's terrain as generated, between the terrain's points
+    /// as its mesh is; not the generator's own height there.
     /// </summary>
-    private static float SpawnHeight(ValheimGen.TerrainService terrain, Vector3 at)
+    private static float GroundHeight(ValheimGen.TerrainService terrain, Vector3 at)
     {
         var (zx, zz) = ChunkMath.SectorOf(at.X, at.Z);
         return App.Regrow.GridHeight(terrain.BaseZone(zx, zz), EditStore.Grid, zx * 64f - 32f, zz * 64f - 32f, at.X, at.Z);

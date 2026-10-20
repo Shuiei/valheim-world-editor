@@ -118,7 +118,7 @@ public sealed class WorldCreatorZonesTests : WorldCreatorTestBase
         using var w = new TempWorld();
         var terrain = new ValheimGen.TerrainService(w.Load(), null);
         float[] zone = terrain.BaseZone(0, 0);
-        float At(float x, float z) => PrivateMember.Call<float>(typeof(WorldCreator), "SpawnHeight", null, terrain, new System.Numerics.Vector3(x, 0f, z));
+        float At(float x, float z) => PrivateMember.Call<float>(typeof(WorldCreator), "GroundHeight", null, terrain, new System.Numerics.Vector3(x, 0f, z));
         // On a point of the terrain, its height; half way along an edge of the mesh, the middle of its two points.
         Assert.Equal(zone[(20 + 32) * 65 + 10 + 32], At(10f, 20f));
         Assert.Equal((zone[(20 + 32) * 65 + 10 + 32] + zone[(20 + 32) * 65 + 11 + 32]) / 2f, At(10.5f, 20f), 4);

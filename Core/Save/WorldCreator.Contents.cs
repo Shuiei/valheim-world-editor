@@ -49,7 +49,7 @@ public static partial class WorldCreator
                 var spot = raised + Vector3.Transform(o.Position, rotation);
                 if (o.Snap)
                 {
-                    spot.Y = terrain.Generator.GetHeight(new ValheimGen.Vector2(spot.X, spot.Z));
+                    spot.Y = GroundHeight(terrain, spot);
                 }
                 Add(objects, contents, damage, new(o.Prefab, spot, Quaternion.Normalize(rotation * BlueprintFormats.FromEuler(o.Euler)), scale * o.Scale), o.Data);
             }
