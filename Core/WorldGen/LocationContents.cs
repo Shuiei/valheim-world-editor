@@ -59,6 +59,14 @@ public sealed record LocationContents
     /// <summary>The ground of its zone levelled to its spot ("levelArea"), when it is; else null.</summary>
     public LevelArea? Level { get; init; }
 
+    /// <summary>The blueprint's height snapshot, which levels the location's ground (heights above the blueprint's centre); null for none.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public TerrainSnapshot? TerrainHeights { get; init; }
+
+    /// <summary>The blueprint's paint snapshot, which paints the location's ground; null for none.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public TerrainSnapshot? TerrainPaints { get; init; }
+
     /// <summary>The ground of its zone painted round its spot ("paint"), when it is; else null.</summary>
     public PaintArea? Paint { get; init; }
 

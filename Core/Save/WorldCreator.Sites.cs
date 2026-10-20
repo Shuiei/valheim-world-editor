@@ -18,7 +18,10 @@ public static partial class WorldCreator
     /// What is written for it (its networked objects, then its proxy), each with where it is; null when its zone is left
     /// to the game.
     /// </param>
-    /// <param name="Ground">Its zone's ground as Expand World Data levels and paints it round the location; null for none.</param>
+    /// <param name="Ground">
+    /// Its zone's ground as Expand World Data levels and paints it round the location (and its blueprint's snapshots);
+    /// null for none.
+    /// </param>
     internal sealed record Site((int X, int Z) Zone, string Name, int Hash, Vector3 Position, List<(Vector3 At, byte[] Zdo)>? Objects, ZoneEdit? Ground = null);
 
     /// <summary>
@@ -33,8 +36,14 @@ public static partial class WorldCreator
     /// <param name="seed">The world's seed number.</param>
     /// <param name="radius">How far from the middle the zones are generated.</param>
     /// <param name="placed">The seed's laid out locations, when the caller has them; else laid out here.</param>
-    internal static List<Site> Sites(ValheimGen.TerrainService terrain, int seed, int radius, List<ValheimGen.SeedLocations.Placed>? placed = null)
+    /// <param name="grounds">
+    /// Where the zones whose ground the locations change are gathered (a zone two of them change, changed by both);
+    /// null when the caller has no need of them.
+    /// </param>
+    internal static List<Site> Sites(ValheimGen.TerrainService terrain, int seed, int radius, List<ValheimGen.SeedLocations.Placed>? placed = null,
+        Dictionary<(int X, int Z), ZoneEdit>? grounds = null)
     {
+        grounds ??= [];
         var sites = new List<Site>();
         if (!ValheimGen.SeedLocations.AvailableFor(terrain.Generator))
         {
@@ -67,10 +76,14 @@ public static partial class WorldCreator
                 float yaw = contents.RandomCardinal ? CardinalYaw(zoneSeed) : Yaw(p.Rule, terrain, spawn, zoneSeed);
                 // Expand World Data's offset raises the spot before the game makes the location and its proxy.
                 var spot = spawn with { Y = spawn.Y + contents.Offset };
-                // The mod changes the ground before it spawns the file's objects.
-                var ground = GroundOf(contents, spawn, zone, terrain.Generator);
+                // The mod changes the ground before it spawns the file's objects: levelled and painted, then a blueprint's
+                // terrain snapshots.
+                var turn = Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw * MathF.PI / 180f);
+                Gathered(grounds, GroundOf(contents, spawn, zone, terrain.Generator));
+                ApplySnapshots(grounds, contents, spot, turn, terrain.Generator);
+                var ground = grounds.GetValueOrDefault(zone);
                 var levelled = LevelledOf(ground, terrain, StableHash.Of(p.Rule.Base), spot, yaw);
-                var objects = Built(prefab, contents, new Placing(spawn, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw * MathF.PI / 180f), zoneSeed, DamageOf(p.Rule, prefab), levelled), terrain);
+                var objects = Built(prefab, contents, new Placing(spawn, turn, zoneSeed, DamageOf(p.Rule, prefab), levelled), terrain);
                 objects.Add((spot, Proxy(p.Rule, proxyFlags, spot, yaw, zoneSeed, terrain.Generator.Rules.DataInstalled)));
                 sites.Add(new Site(zone, p.Rule.Prefab, hash, position, objects, ground));
             }
@@ -80,6 +93,39 @@ public static partial class WorldCreator
             Rnd.State = was;
         }
         return sites;
+    }
+
+    /// <summary>
+    /// A location's changed zone gathered with the others: kept as it is when no other location changed that zone, else
+    /// its changed vertices laid over the zone's (the later location's ground over the earlier's); nothing for none.
+    /// </summary>
+    private static void Gathered(Dictionary<(int X, int Z), ZoneEdit> grounds, ZoneEdit? ground)
+    {
+        if (ground == null)
+        {
+            return;
+        }
+        if (!grounds.TryAdd((ground.ZoneX, ground.ZoneZ), ground))
+        {
+            LayOver(grounds[(ground.ZoneX, ground.ZoneZ)], ground);
+        }
+    }
+
+    /// <summary>A zone's changed vertices (height and paint) laid over another's of the same zone.</summary>
+    private static void LayOver(ZoneEdit earlier, ZoneEdit ground)
+    {
+        for (int i = 0; i < EditStore.Cells; i++)
+        {
+            if (ground.Modified[i])
+            {
+                (earlier.Modified[i], earlier.Level[i], earlier.Smooth[i]) = (true, ground.Level[i], ground.Smooth[i]);
+            }
+            if (ground.PaintModified[i])
+            {
+                earlier.PaintModified[i] = true;
+                Array.Copy(ground.Paint, i * 4, earlier.Paint, i * 4, 4);
+            }
+        }
     }
 
     /// <summary>

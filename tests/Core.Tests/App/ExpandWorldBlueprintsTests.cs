@@ -154,7 +154,29 @@ public class ExpandWorldBlueprintsTests : AppSettingsTestBase
         Assert.Null(hut.Contents.LeftToGame);
         // A blueprint levels its ground unless the file says not to: half its radius fully, half blended.
         Assert.Equal(new LevelArea(0.5f * hut.ExteriorRadius, 0.5f * hut.ExteriorRadius), hut.Contents.Level);
-        // One with a terrain snapshot is left to the game.
-        Assert.Contains("terrain snapshot", rules[1].Contents!.LeftToGame, StringComparison.Ordinal);
+        // One with a height snapshot is built: the snapshot levels its ground, not the blueprint's own levelling.
+        var plot = rules[1].Contents!;
+        Assert.Null(plot.LeftToGame);
+        Assert.Null(plot.Level);
+        Assert.NotNull(plot.TerrainHeights);
+        Assert.Null(plot.TerrainPaints);
+    }
+
+    [Fact]
+    public void ASnapshotsValuesAreKeptCentredAndTurnedWithTheBlueprint()
+    {
+        Fixtures.UseLocations();
+        // The centre piece 1 m up and turned a quarter: heights become heights above it, the grid moves and turns with it.
+        string folder = Write("Turned.blueprint", "#Pieces\npiece_bpcenterpoint;;2;1;0;0;0.70710677;0;0.70710677\nwoodwall;;3;1;0;0;0;0;1\n"
+            + "#TerrainHeight:0,0,0;0;1\n1.5;\n2,5;3\n#TerrainPaint:0,0,0;0;1\n1:0:0;0:1:0:0.5\n");
+        var rules = ExpandWorld.LocationsOf([E(("prefab", "Turned"), ("quantity", "1"))], SeedLocations.Current.Locations, BiomeTable.Vanilla, 10000f, folder, [], Entries);
+        var heights = rules[0].Contents!.TerrainHeights!;
+        Assert.Equal([0.5f, null], heights.Rows[0].Select(v => v?.X));
+        Assert.Equal([1.5f, 2f], heights.Rows[1].Select(v => v?.X));
+        Assert.Equal(new Vector3(-2, -1, 0), heights.Center);
+        // The grid's turn: the blueprint's turn (the centre piece's taken back) taken back again, the centre piece's own.
+        Assert.Equal(90f, 2f * MathF.Atan2(heights.Turn.Y, heights.Turn.W) * 180f / MathF.PI, 3);
+        // A paint's a is 1 when it is not given.
+        Assert.Equal([new System.Numerics.Vector4(1, 0, 0, 1), new System.Numerics.Vector4(0, 1, 0, 0.5f)], rules[0].Contents!.TerrainPaints!.Rows[0]);
     }
 }

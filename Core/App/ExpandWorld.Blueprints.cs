@@ -23,12 +23,11 @@ public static partial class ExpandWorld
     /// <param name="data">The world's data entries (what the parts' data names).</param>
     /// <param name="why">Where what cannot be made is said.</param>
     /// <param name="notes">Where a file that cannot be read is noted.</param>
-    /// <param name="location">
-    /// Whether it is a location's blueprint: its terrain snapshots, which the mod applies to a location's ground, cannot
-    /// be made (why).
-    /// </param>
-    internal static Dictionary<string, IReadOnlyList<BlueprintPart>>? BlueprintsOf(string? folder, string name, DataTable data, List<string> why, List<string> notes, bool location = false)
+    /// <param name="read">Where each blueprint's file is kept as it is read (its terrain snapshots); null for no need.</param>
+    internal static Dictionary<string, IReadOnlyList<BlueprintPart>>? BlueprintsOf(string? folder, string name, DataTable data, List<string> why, List<string> notes,
+        Dictionary<string, BlueprintFile>? read = null)
     {
+        read ??= [];
         string[] files = BlueprintFiles(folder);
         var found = new Dictionary<string, IReadOnlyList<BlueprintPart>>(StringComparer.Ordinal);
         var loading = new HashSet<string>(StringComparer.Ordinal);
@@ -44,7 +43,7 @@ public static partial class ExpandWorld
             {
                 return false;
             }
-            NoteSnapshot(file, location && bp == name, why);
+            read[bp] = file;
             var parts = file.Parts;
             found[bp] = parts;
             loading.Add(bp);
@@ -59,15 +58,6 @@ public static partial class ExpandWorld
             loading.Remove(bp);
             found[bp] = holding.Count == 0 ? parts : [.. parts.Where(p => !holding.Contains(p.Prefab))];
             return true;
-        }
-    }
-
-    /// <summary>A location's blueprint with a terrain snapshot, which the mod applies to its ground: it cannot be made (why).</summary>
-    private static void NoteSnapshot(BlueprintFile file, bool locations, List<string> why)
-    {
-        if (locations && (file.Heights || file.Paints))
-        {
-            why.Add("a blueprint with a terrain snapshot");
         }
     }
 
@@ -92,14 +82,13 @@ public static partial class ExpandWorld
 
     /// <summary>
     /// A blueprint file as the mod reads it (Blueprint): its parts centred, how far it reaches from its centre on the
-    /// ground (its pieces' bounds, or its terrain snapshots' when wider), and whether it has a height snapshot with
-    /// values (it then levels its ground itself) or a paint one.
+    /// ground (its pieces' bounds, or its terrain snapshots' when wider), and its terrain snapshots with values.
     /// </summary>
     /// <param name="Parts">Its parts, centred.</param>
     /// <param name="Radius">Metres it reaches from its centre on the ground.</param>
-    /// <param name="Heights">It has a height snapshot with values.</param>
-    /// <param name="Paints">It has a paint snapshot with values.</param>
-    internal sealed record BlueprintFile(List<BlueprintPart> Parts, float Radius, bool Heights, bool Paints);
+    /// <param name="Heights">Its height snapshot with values (a blueprint location then levels its ground by it); null for none.</param>
+    /// <param name="Paints">Its paint snapshot with values; null for none.</param>
+    internal sealed record BlueprintFile(List<BlueprintPart> Parts, float Radius, TerrainSnapshot? Heights, TerrainSnapshot? Paints);
 
     /// <summary>
     /// One blueprint as the mod reads and centres it (Blueprints.GetBluePrint, Blueprint.Center): the first file whose
@@ -265,32 +254,32 @@ public static partial class ExpandWorld
         List<BlueprintPart> centred = [.. parts.Select(p => turned
             ? p with { Position = NVector3.Transform(p.Position - center, turn), Rotation = turn * p.Rotation }
             : p with { Position = p.Position - center })];
-        var (heights, paints, reach) = Reaches(read.Heights, read.Paints, center);
+        var (heights, paints, reach) = Reaches(read.Heights, read.Paints, center, turn);
         return new BlueprintFile(centred, MathF.Max(radius, reach), heights, paints);
     }
 
     /// <summary>
-    /// The snapshots moved with the blueprint's centre: whether each one kept has values, and how far the farther
-    /// reaches. One reaching too far is dropped; both are when, with values, they reach too far together.
+    /// The snapshots moved with the blueprint's centre and turn: each kept with values, and how far the farther reaches.
+    /// One reaching too far is dropped; both are when, with values, they reach too far together.
     /// </summary>
-    private static (bool Heights, bool Paints, float Reach) Reaches(Snapshot? heights, Snapshot? paints, NVector3 center)
+    private static (TerrainSnapshot? Heights, TerrainSnapshot? Paints, float Reach) Reaches(Snapshot? heights, Snapshot? paints, NVector3 center, Quaternion turn)
     {
-        var (h, p) = (Kept(heights, center), Kept(paints, center));
+        var (h, p) = (Kept(heights, center, turn, center.Y), Kept(paints, center, turn, 0f));
         float reach = MathF.Max(h.Reach, p.Reach), margin = MathF.Max(1f, MathF.Max(h.Spacing, p.Spacing));
-        return h.Values && p.Values && reach + margin > MaxSnapshotReach ? (false, false, 0f) : (h.Values, p.Values, reach);
+        return h.Kept != null && p.Kept != null && reach + margin > MaxSnapshotReach ? (null, null, 0f) : (h.Kept, p.Kept, reach);
     }
 
     /// <summary>
-    /// A snapshot moved with the blueprint's centre: whether it has values, how far it reaches, and its node spacing
-    /// when it has values (what the reach of both is measured with); nothing for none, or one reaching too far.
+    /// A snapshot moved with the blueprint's centre and turn: kept when it has values, how far it reaches, and its node
+    /// spacing when it has values (what the reach of both is measured with); nothing for none, or one reaching too far.
     /// </summary>
-    private static (bool Values, float Reach, float Spacing) Kept(Snapshot? snapshot, NVector3 center)
+    private static (TerrainSnapshot? Kept, float Reach, float Spacing) Kept(Snapshot? snapshot, NVector3 center, Quaternion turn, float lower)
     {
         if (snapshot == null)
         {
             return default;
         }
-        snapshot.MoveBy(center);
-        return snapshot.Reach() is { } reach ? (snapshot.HasValues, reach, snapshot.HasValues ? snapshot.Spacing : 0f) : default;
+        snapshot.MoveBy(center, turn, lower);
+        return snapshot.Reach() is { } reach ? (snapshot.Values, reach, snapshot.HasValues ? snapshot.Spacing : 0f) : default;
     }
 }

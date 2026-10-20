@@ -5,36 +5,39 @@ using NVector3 = System.Numerics.Vector3;
 namespace TerrainEditor.App;
 
 // The terrain snapshots a PlanBuild blueprint may carry ("#TerrainHeight", "#TerrainPaint": Expand World Data's
-// BlueprintTerrain), read for what they change about the blueprint: its radius, and whether it levels its ground itself.
+// BlueprintTerrain): what a blueprint location's ground becomes, and how far the blueprint reaches.
 public static partial class ExpandWorld
 {
     /// <summary>The widest a snapshot may reach from the blueprint's centre (3.5 zones), as the mod allows.</summary>
     private const float MaxSnapshotReach = 64f * 3.5f;
 
     /// <summary>
-    /// One terrain snapshot: its centre and turn in the blueprint's frame, the metres between its nodes, and which
-    /// nodes of its rows have a value (the values themselves are checked, not kept).
+    /// One terrain snapshot as it is read: its centre and turn in the blueprint's frame, the metres between its nodes,
+    /// and its rows of nodes (a height in X, or a paint r g b a; null where a node has none).
     /// </summary>
     private sealed class Snapshot(NVector3 center, Quaternion turn, float spacing)
     {
         /// <summary>The most nodes a row, and rows, a snapshot may have; the most nodes in all.</summary>
         private const int MaxAxis = 2048, MaxCells = 1024 * 1024;
 
-        /// <summary>Each row's nodes: whether it has a value.</summary>
-        private readonly List<bool[]> _rows = [];
+        /// <summary>Each row's nodes.</summary>
+        private readonly List<Vector4?[]> _rows = [];
 
         /// <summary>Its centre in the blueprint's frame, metres (moved with the blueprint's centre).</summary>
         public NVector3 Center { get; private set; } = center;
+
+        /// <summary>Its turn in the blueprint's frame (turned with the blueprint's centre piece).</summary>
+        public Quaternion Turn { get; private set; } = turn;
 
         /// <summary>Metres between two nodes.</summary>
         public float Spacing { get; } = spacing;
 
         /// <summary>Whether any node has a value.</summary>
-        public bool HasValues => _rows.Any(r => r.Any(v => v));
+        public bool HasValues => _rows.Any(r => r.Any(v => v != null));
 
         /// <summary>Adds a row (BlueprintTerrain.AddRow): every row as wide as the first, within the mod's limits.</summary>
         /// <exception cref="FormatException">The row breaks a limit: the whole blueprint is not read.</exception>
-        public void Add(bool[] row)
+        public void Add(Vector4?[] row)
         {
             if (row.Length is 0 or > MaxAxis || _rows.Count >= MaxAxis || (long)row.Length * (_rows.Count + 1) > MaxCells)
             {
@@ -47,8 +50,38 @@ public static partial class ExpandWorld
             _rows.Add(row);
         }
 
-        /// <summary>Moved with the blueprint's centre (BlueprintTerrain.Center): its centre taken back by its own turn.</summary>
-        public void MoveBy(NVector3 blueprintCenter) => Center -= NVector3.Transform(blueprintCenter, turn);
+        /// <summary>
+        /// Moved with the blueprint's centre (Blueprint.Center, BlueprintTerrain.Center): a height made one above the
+        /// centre (lowered by the centre's height), then its centre taken back by its own turn, and its turn taken back by
+        /// the blueprint's.
+        /// </summary>
+        /// <param name="blueprintCenter">The blueprint's centre.</param>
+        /// <param name="blueprintTurn">The turn the blueprint's parts are turned by (its centre piece's taken back).</param>
+        /// <param name="lower">How much its values' X are lowered (heights: the centre's height; paints: 0).</param>
+        public void MoveBy(NVector3 blueprintCenter, Quaternion blueprintTurn, float lower)
+        {
+            Lower(lower);
+            Center -= NVector3.Transform(blueprintCenter, Turn);
+            Turn = ValheimGen.TerrainSnapshot.Yaw(Turn * Quaternion.Inverse(blueprintTurn));
+        }
+
+        /// <summary>Each value's X lowered by this much (BlueprintTerrain.MapValues: heights made ones above the centre).</summary>
+        private void Lower(float by)
+        {
+            foreach (var row in _rows)
+            {
+                for (int i = 0; i < row.Length; i++)
+                {
+                    row[i] = row[i] is { } v ? v with { X = v.X - by } : null;
+                }
+            }
+        }
+
+        /// <summary>The snapshot as it is applied.</summary>
+        public ValheimGen.TerrainSnapshot Read() => new(Center, Turn, Spacing, [.. _rows]);
+
+        /// <summary>The snapshot as it is applied when a node has a value; null for one without.</summary>
+        public ValheimGen.TerrainSnapshot? Values => HasValues ? Read() : null;
 
         /// <summary>
         /// How far its farthest node with a value is from the blueprint's centre on the ground (BlueprintTerrain.GetRadius);
@@ -56,22 +89,7 @@ public static partial class ExpandWorld
         /// </summary>
         public float? Reach()
         {
-            if (_rows.Count == 0)
-            {
-                return 0f;
-            }
-            float s = MathF.Max(0.001f, Spacing), x0 = Center.X - (_rows[0].Length - 1) * s * 0.5f, z0 = Center.Z - (_rows.Count - 1) * s * 0.5f, reach = 0f;
-            for (int z = 0; z < _rows.Count; z++)
-            {
-                for (int x = 0; x < _rows[z].Length; x++)
-                {
-                    if (_rows[z][x])
-                    {
-                        float nx = x0 + x * s, nz = z0 + z * s;
-                        reach = MathF.Max(reach, (float)Math.Sqrt((double)nx * nx + (double)nz * nz));
-                    }
-                }
-            }
+            float reach = _rows.Count == 0 ? 0f : Read().Reach();
             bool finite = float.IsFinite(Center.X) && float.IsFinite(Center.Y) && float.IsFinite(Center.Z) && float.IsFinite(reach);
             return finite && reach + MathF.Max(1f, Spacing) <= MaxSnapshotReach ? reach : null;
         }
@@ -101,27 +119,40 @@ public static partial class ExpandWorld
     }
 
     /// <summary>
-    /// A snapshot's row: its nodes, with a value where it is not empty: a height ("1.5"), or a paint ("r:g:b[:a]").
+    /// A snapshot's row (GetPlanBuildHeightRow, GetPlanBuildPaintRow): its nodes, a value where it is not empty: a height
+    /// ("1.5", in X), or a paint ("r:g:b[:a]", a 1 when not given).
     /// </summary>
     /// <exception cref="FormatException">A value is no finite number, or a paint lacks a part: the whole blueprint is not read.</exception>
-    private static bool[] SnapshotRow(string row, bool paint)
+    private static Vector4?[] SnapshotRow(string row, bool paint)
     {
         string[] s = row.Replace(',', '.').Split(';');
-        bool[] has = new bool[s.Length];
+        var values = new Vector4?[s.Length];
         for (int i = 0; i < s.Length; i++)
         {
             if (string.IsNullOrEmpty(s[i]))
             {
                 continue;
             }
-            string[] parts = paint ? s[i].Split(':') : [s[i]];
-            // A paint's r, g, b and a (when given) must be numbers; anything after them is passed over.
-            if (parts.Length < (paint ? 3 : 1) || !Enumerable.Range(0, Math.Min(parts.Length, 4)).All(k => Finite(parts, k, out _)))
-            {
-                throw new FormatException($"the terrain value \"{s[i]}\" is no {(paint ? "r:g:b[:a] paint" : "finite height")}");
-            }
-            has[i] = true;
+            values[i] = paint ? Paint(s[i]) : Height(s[i]);
         }
-        return has;
+        return values;
+    }
+
+    /// <summary>A height node ("1.5"), in X.</summary>
+    /// <exception cref="FormatException">It is no finite number.</exception>
+    private static Vector4 Height(string text) =>
+        Finite([text], 0, out float h) ? new Vector4(h, 0f, 0f, 0f) : throw new FormatException($"the terrain value \"{text}\" is no finite height");
+
+    /// <summary>A paint node ("r:g:b[:a]", a 1 when not given); its r, g, b and a must be numbers, anything after them is passed over.</summary>
+    /// <exception cref="FormatException">A part is missing or no finite number.</exception>
+    private static Vector4 Paint(string text)
+    {
+        string[] parts = text.Split(':');
+        float[] n = [0f, 0f, 0f, 1f];
+        if (parts.Length < 3 || !Enumerable.Range(0, Math.Min(parts.Length, 4)).All(k => Finite(parts, k, out n[k])))
+        {
+            throw new FormatException($"the terrain value \"{text}\" is no r:g:b[:a] paint");
+        }
+        return new Vector4(n[0], n[1], n[2], n[3]);
     }
 }

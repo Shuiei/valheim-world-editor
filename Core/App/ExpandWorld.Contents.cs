@@ -40,7 +40,7 @@ public static partial class ExpandWorld
         var objects = Objects(f.Rows("objects"), data, why);
         float[] min = ScaleOf(f.Str("scaleMin", "1")), max = ScaleOf(f.Str("scaleMax", "1"));
         bool scaled = !min.SequenceEqual(max);
-        var parts = blueprint ? BlueprintOfLocation(f.Str("prefab"), blueprints, data, why) : null;
+        var (parts, file) = blueprint ? BlueprintOfLocation(f.Str("prefab"), blueprints, data, why) : default;
         return new LocationContents
         {
             Blueprint = parts == null ? null : f.Str("prefab"),
@@ -54,23 +54,38 @@ public static partial class ExpandWorld
             ScaleUniform = f.B("scaleUniform", true),
             Offset = f.FOpt("offset") ?? f.F("groundOffset", 0f),
             RandomCardinal = f.B("randomCardinal", false),
-            Level = LevelOf(f, blueprint, exterior),
+            Level = LevelOf(f, LevelsItself(blueprint, file), exterior),
+            TerrainHeights = Snapshots(file).Heights,
+            TerrainPaints = Snapshots(file).Paints,
             Paint = PaintOf(f, exterior),
             LeftToGame = why.Count > 0 ? string.Join(", ", why.Distinct()) : null,
         };
     }
 
-    /// <summary>A blueprint location's blueprint and those it holds; null (why) when it cannot be read.</summary>
-    private static Dictionary<string, IReadOnlyList<BlueprintPart>>? BlueprintOfLocation(string name, string? folder, DataTable data, List<string> why)
+    /// <summary>
+    /// Whether a location levels its ground as a blueprint does: a blueprint location, unless its blueprint's height
+    /// snapshot levels it instead (LocationSpawning: useDefaultBlueprintLeveling).
+    /// </summary>
+    private static bool LevelsItself(bool blueprint, BlueprintFile? file) => blueprint && Snapshots(file).Heights == null;
+
+    /// <summary>A blueprint file's terrain snapshots; none for no file.</summary>
+    private static (TerrainSnapshot? Heights, TerrainSnapshot? Paints) Snapshots(BlueprintFile? file) => file == null ? default : (file.Heights, file.Paints);
+
+    /// <summary>
+    /// A blueprint location's blueprint and those it holds, with its own file (its terrain snapshots); null (why) when it
+    /// cannot be read.
+    /// </summary>
+    private static (Dictionary<string, IReadOnlyList<BlueprintPart>>? Parts, BlueprintFile? File) BlueprintOfLocation(string name, string? folder, DataTable data, List<string> why)
     {
         List<string> unread = [];
-        var parts = BlueprintsOf(folder, name, data, why, unread, location: true);
+        var files = new Dictionary<string, BlueprintFile>(StringComparer.Ordinal);
+        var parts = BlueprintsOf(folder, name, data, why, unread, files);
         why.AddRange(unread);
         if (parts == null)
         {
             why.Add($"the blueprint {name}, which cannot be read");
         }
-        return parts;
+        return (parts, files.GetValueOrDefault(name));
     }
 
     /// <summary>
