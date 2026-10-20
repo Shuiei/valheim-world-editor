@@ -136,11 +136,11 @@ public class GlViewPointerTests
         Avalonia.Point On(float x) => b.At(x, 31.9f, -5);
         b.Click(On(3));
         b.Click(On(7), RawInputModifiers.Control);
-        Assert.Equal([0, 2], b.V.Selected);
+        Assert.Equal([0, 2], b.V.Selected.Order());
         b.Click(On(3), RawInputModifiers.Shift);
-        Assert.Equal([2], b.V.Selected);
+        Assert.Equal([2], b.V.Selected.Order());
         b.Click(On(3), RawInputModifiers.Control | RawInputModifiers.Shift);
-        Assert.Equal([0, 1, 2], b.V.Selected);
+        Assert.Equal([0, 1, 2], b.V.Selected.Order());
     }
 
     [AvaloniaFact]
