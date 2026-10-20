@@ -35,6 +35,9 @@ public sealed record RoomEntry(string Name, string Theme, bool Enabled, bool Ent
     /// <summary>How many rooms from the entrance it may join at the fewest ("minPlaceOrder").</summary>
     public int MinPlaceOrder { get; init; }
 
+    /// <summary>The blueprint it is built of, when it is a blueprint room (no game room of its name); else null.</summary>
+    public RoomBlueprint? Blueprint { get; init; }
+
     /// <summary>Its objects' swaps and data ("objectSwap", "objectData").</summary>
     public ObjectChanges Changes { get; init; } = ObjectChanges.None;
 }
@@ -96,3 +99,14 @@ public sealed record ObjectChanges
     /// <summary>Whether it changes anything.</summary>
     public bool Any => Swaps.Count > 0 || Data.Count > 0;
 }
+
+/// <summary>
+/// The blueprint a blueprint room of the room file is built of (a room whose name is no game room's), as the mod loads it
+/// for the room.
+/// </summary>
+/// <param name="Name">The blueprint's name.</param>
+/// <param name="Blueprints">It and the blueprints it nests, by name, each as its centred parts.</param>
+/// <param name="SnapPoints">Where the room's openings are, in its frame, by index (the file's, or the room's connections').</param>
+/// <param name="Size">Its pieces' bounds (the origin among them): the room's size when the file gives none.</param>
+public sealed record RoomBlueprint(string Name, IReadOnlyDictionary<string, IReadOnlyList<BlueprintPart>> Blueprints,
+    IReadOnlyList<(System.Numerics.Vector3 Position, System.Numerics.Quaternion Rotation)> SnapPoints, System.Numerics.Vector3 Size);

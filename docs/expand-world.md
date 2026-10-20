@@ -73,6 +73,9 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   many rooms from the entrance it joins at the fewest, as the game's own rooms say too), and its openings (type, place and turn,
   way in, doors, "exitOnly"); a copy of a game room ("name:suffix") as a room of its own, built as its game room
   with the objects the file adds (each by its chance, with its data) and saved as its game room, as the mod saves it.
+  A blueprint room (a room whose name is no game room's but a blueprint's) is built of its blueprint as the mod
+  builds it: its openings at the blueprint's snap points (each connection's place, or a piece the connection names,
+  over the file's own), its size the blueprint's when the file gives none, its objects the blueprint's parts.
   The room and dungeon files' "objectSwap" and "objectData" change the rooms' objects (the dungeon's first, then
   the room's), drawing as the mod draws. The dungeon
   file's generators: themes, box ("bounds"), the fewest and most rooms (the Dungeon tool's size within them), the
@@ -121,9 +124,11 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   (by day, by night), but not the world and player keys that can turn one off, its duration or its damage. As in
   the mod, they count towards whether a biome's or a territory's settings are in use, as a territory's water
   colours do; a biome's water colours do not.
-- **The Dungeon tool and the room and dungeon files' rest**: a blueprint room (no game room of its name) is not
-  built (the log says which); a swap to a blueprint, "faceCenter", "randomSeed", and the camps'
-  settings are not followed; the generator joins rooms its own way, not the game's draw for draw. A room limit's
+- **The Dungeon tool and the room and dungeon files' rest**: a room that is neither a game room nor a blueprint is
+  left out (the log says which); a swap to a blueprint is not built; "faceCenter" and the camps' settings are not
+  followed, as the Dungeon tool does not lay out camps; "randomSeed" has nothing to change, the Dungeon tool's seed
+  being the one it is given. The generator joins rooms its own way, not the game's draw for draw, so a blueprint
+  room's parts are drawn from the room's place. A room limit's
   "min" counts as rooms the dungeon must have: the Dungeon tool joins the rooms a dungeon needs first, so it has no
   tries to count ("maxRetries").
 - **The zone system's water**: the game's own vegetation and location checks use the sea at 30 m whatever

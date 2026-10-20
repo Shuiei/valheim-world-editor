@@ -76,10 +76,13 @@ public static partial class ExpandWorld
             RandomLocations = Bool(D("Random locations"), v.RandomLocations),
             ScaleLocationAltitude = Bool(D("Scale location altitude requirement"), v.ScaleLocationAltitude),
             CustomWaterColor = Bool(D("Custom water color"), v.CustomWaterColor),
-            Dungeons = DungeonsOf(data),
+            Dungeons = DungeonsOf(data, BlueprintFolder(data, found)),
         };
         return WithRivers(rules, found.Rivers ? CfgOf(found.RiversCfg) : []);
     }
+
+    /// <summary>The folder Expand World Data reads blueprint files from; null without the mod.</summary>
+    private static string? BlueprintFolder(DataFiles data, Found found) => found.Data ? Path.Combine(found.Folder, "config", BlueprintFolderOf(data.Cfg)) : null;
 
     /// <summary>
     /// Expand World Size's settings in use, by setting name: none without the mod (the game without it passes over
@@ -109,7 +112,7 @@ public static partial class ExpandWorld
     {
         var game = SeedLocations.Current;
         bool gameRead = SeedLocations.Available;
-        string? blueprints = found.Data ? Path.Combine(found.Folder, "config", BlueprintFolderOf(data.Cfg)) : null;
+        string? blueprints = BlueprintFolder(data, found);
         var dataTable = new DataTable(data.DataEntries);
         List<SeedLocations.Rule>? kinds = null;
         if (data.Locations is { Count: > 0 } entries)

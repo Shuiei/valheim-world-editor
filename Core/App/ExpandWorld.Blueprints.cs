@@ -94,7 +94,11 @@ public static partial class ExpandWorld
     /// One blueprint as the mod reads and centres it (Blueprints.GetBluePrint, Blueprint.Center): the first file whose
     /// name, spaces as underscores, is the name; null when none is, or it cannot be read (noted).
     /// </summary>
-    private static BlueprintFile? ReadBlueprint(string[] files, string name, DataTable data, List<string> why, List<string> notes)
+    private static BlueprintFile? ReadBlueprint(string[] files, string name, DataTable data, List<string> why, List<string> notes) =>
+        ReadRaw(files, name, data, why, notes) is { } read ? Centred(read) : null;
+
+    /// <summary>One blueprint as its file has it, not centred yet (see <see cref="ReadBlueprint"/>); null when there is none or it cannot be read (noted).</summary>
+    private static PlanBuild? ReadRaw(string[] files, string name, DataTable data, List<string> why, List<string> notes)
     {
         string wanted = name.Replace(' ', '_');
         string? file = files.FirstOrDefault(f => Path.GetFileNameWithoutExtension(f).Replace(' ', '_') == wanted);
@@ -104,7 +108,7 @@ public static partial class ExpandWorld
         }
         try
         {
-            return Centred(FileParts(file, data, why));
+            return FileParts(file, data, why);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException or OverflowException)
         {
@@ -122,7 +126,7 @@ public static partial class ExpandWorld
     /// <exception cref="FormatException">The extension is neither, or a row cannot be read.</exception>
     private static PlanBuild FileParts(string file, DataTable data, List<string> why) => Path.GetExtension(file) switch
     {
-        ".vbuild" => new PlanBuild(BuildShareParts(File.ReadAllLines(file), data, why), DefaultCenterPiece, null, null),
+        ".vbuild" => new PlanBuild(BuildShareParts(File.ReadAllLines(file), data, why), DefaultCenterPiece, null, null, []),
         ".blueprint" => PlanBuildParts(File.ReadAllLines(file), data, why),
         _ => throw new FormatException($"the mod reads only \".blueprint\" and \".vbuild\" files, written so, not \"{Path.GetExtension(file)}\""),
     };
@@ -132,7 +136,8 @@ public static partial class ExpandWorld
     /// <param name="Center">The piece it is centred on.</param>
     /// <param name="Heights">Its height snapshot, when it has one.</param>
     /// <param name="Paints">Its paint snapshot, when it has one.</param>
-    private sealed record PlanBuild(List<BlueprintPart> Parts, string Center, Snapshot? Heights, Snapshot? Paints);
+    /// <param name="SnapPoints">Its snap points ("#SnapPoints"), where a blueprint room's openings are.</param>
+    private sealed record PlanBuild(List<BlueprintPart> Parts, string Center, Snapshot? Heights, Snapshot? Paints, List<NVector3> SnapPoints);
 
     /// <summary>
     /// A PlanBuild file (Blueprints.GetPlanBuild): the rows of its "#Pieces" part (the rows before any header too),
@@ -146,7 +151,7 @@ public static partial class ExpandWorld
         {
             reading.Read(row);
         }
-        return new PlanBuild(reading.Parts, reading.Center, reading.Heights, reading.Paints);
+        return new PlanBuild(reading.Parts, reading.Center, reading.Heights, reading.Paints, reading.SnapPoints);
     }
 
     /// <summary>A PlanBuild file read row by row: the part each row is in, and what the parts gave so far.</summary>
@@ -154,8 +159,8 @@ public static partial class ExpandWorld
     /// <param name="why">Where data that cannot be written is said.</param>
     private sealed class PlanBuildReading(DataTable data, List<string> why)
     {
-        /// <summary>The section rows are in: the pieces (the first), a snapshot's, or one passed over.</summary>
-        private bool _pieces = true, _paint;
+        /// <summary>The section rows are in: the pieces (the first), the snap points, a snapshot's, or one passed over.</summary>
+        private bool _pieces = true, _paint, _snaps;
 
         /// <summary>The snapshot the rows fill, when they are one's.</summary>
         private Snapshot? _section;
@@ -172,6 +177,9 @@ public static partial class ExpandWorld
         /// <summary>Its paint snapshot, when it has one.</summary>
         public Snapshot? Paints { get; private set; }
 
+        /// <summary>Its snap points ("x;y;z" a row, GetPlanBuildSnapPoint).</summary>
+        public List<NVector3> SnapPoints { get; } = [];
+
         /// <summary>Takes a row: a header starts a section, any other row belongs to the current one.</summary>
         public void Read(string row)
         {
@@ -187,6 +195,20 @@ public static partial class ExpandWorld
             }
             else
             {
+                Other(row);
+            }
+        }
+
+        /// <summary>A row of another section than the pieces: a snap point, a snapshot's row, or one passed over.</summary>
+        private void Other(string row)
+        {
+            if (_snaps)
+            {
+                string[] s = row.Replace(',', '.').Split(';');
+                SnapPoints.Add(new NVector3(Num(s, 0), Num(s, 1), Num(s, 2)));
+            }
+            else
+            {
                 _section?.Add(SnapshotRow(row, _paint));
             }
         }
@@ -198,6 +220,7 @@ public static partial class ExpandWorld
             string header = (colon < 0 ? row : row[..colon]).Trim().ToLowerInvariant();
             _pieces = header == "#pieces";
             _paint = header == "#terrainpaint";
+            _snaps = header == "#snappoints";
             _section = header is "#terrainheight" or "#terrainpaint" ? SnapshotOf(row, colon) : null;
             if (_section != null)
             {

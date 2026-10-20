@@ -87,13 +87,16 @@ public static partial class Dungeons
         return new Catalog(rooms, kinds);
     }
 
-    /// <summary>The room file's rooms over the game's (RoomManager), in the file's order (a later one of a name wins).</summary>
+    /// <summary>
+    /// The room file's rooms over the game's (RoomManager), in the file's order (a later one of a name wins): a copy built
+    /// as its game room, a blueprint room as an empty room (<see cref="Blank"/>).
+    /// </summary>
     private static Dictionary<int, Room> RoomsOf(Catalog game, IReadOnlyList<RoomEntry> entries, Dictionary<string, int> themes)
     {
         var rooms = game.Rooms.ToDictionary(kv => kv.Key, kv => kv.Value with { Enabled = false });
         foreach (var e in entries)
         {
-            if (game.Rooms.GetValueOrDefault(StableHash.Of(e.Name.Split(':')[0])) is not { } original)
+            if (BaseOf(game, e) is not { } original)
             {
                 continue;
             }
@@ -102,7 +105,7 @@ public static partial class Dungeons
                 Name = e.Name,
                 Hash = StableHash.Of(e.Name),
                 Theme = ThemeOf(e.Theme, themes, create: true),
-                Size = VectorXZY(e.Size, Vector3.Zero),
+                Size = VectorXZY(e.Size, original.Size),
                 EndCap = e.EndCap,
                 Entrance = e.Entrance,
                 Divider = e.Divider,
@@ -113,12 +116,44 @@ public static partial class Dungeons
                 Enabled = e.Enabled,
                 Openings = OpeningsOf(original.Openings, e.Connections),
                 Game = original.Name,
+                Blueprint = e.Blueprint,
                 Added = e.Objects,
                 Changes = e.Changes,
             };
             rooms[room.Hash] = room;
         }
         return rooms;
+    }
+
+    /// <summary>
+    /// What a room of the file is built from before the file's values: a copy's game room with no size (the mod takes the
+    /// file's, none when it gives none), or for a blueprint room an empty room (<see cref="Blank"/>, its size its
+    /// blueprint's: taken for what the file's size leaves out).
+    /// </summary>
+    private static Room? BaseOf(Catalog game, RoomEntry e)
+    {
+        if (e.Blueprint is { } bp)
+        {
+            return Blank(e, bp);
+        }
+        return game.Rooms.GetValueOrDefault(StableHash.Of(e.Name.Split(':')[0])) is { } r ? r with { Size = Vector3.Zero } : null;
+    }
+
+    /// <summary>
+    /// What a blueprint room is built from before the file's values (RoomManager.CreateRoomData, RoomSpawning.SetupAvailableRooms):
+    /// a room of its own name and no game room, with nothing of its own but its size, its pieces' bounds rounded up to
+    /// whole metres (taken when the file gives none), and an opening for each connection the file lists, at the
+    /// blueprint's snap point of its place when there is one, else where the connection says (<see cref="OpeningsOf"/>).
+    /// </summary>
+    private static Room Blank(RoomEntry e, RoomBlueprint bp)
+    {
+        var at = OpeningsOf([.. e.Connections.Select(_ => new Opening("", false, false, Vector3.Zero, Quaternion.Identity))], e.Connections);
+        for (int i = 0; i < at.Length && i < bp.SnapPoints.Count; i++)
+        {
+            at[i] = at[i] with { Position = bp.SnapPoints[i].Position, Rotation = bp.SnapPoints[i].Rotation };
+        }
+        return new(e.Name, StableHash.Of(e.Name), 0, new Vector3(MathF.Ceiling(bp.Size.X), MathF.Ceiling(bp.Size.Y), MathF.Ceiling(bp.Size.Z)), false, false, false, 0, 1f,
+            false, true, at, [], [], [], []);
     }
 
     /// <summary>

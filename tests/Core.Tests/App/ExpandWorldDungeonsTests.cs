@@ -71,11 +71,11 @@ public class ExpandWorldDungeonsTests
     }
 
     [Fact]
-    public void ABlueprintRoomIsLeftOutAndNoted()
+    public void ARoomOfNoGameRoomNorBlueprintIsLeftOutAndNoted()
     {
         var data = ExpandWorld.DataFiles.None with { Rooms = [E(("name", "MyBlueprintRoom"))] };
         Assert.Empty(ExpandWorld.DungeonsOf(data)!.Rooms!);
-        Assert.Contains(data.Notes, n => n.Contains("MyBlueprintRoom is a blueprint room", StringComparison.Ordinal));
+        Assert.Contains(data.Notes, n => n.Contains("MyBlueprintRoom is no game room and no blueprint", StringComparison.Ordinal));
     }
 
     [Fact]
