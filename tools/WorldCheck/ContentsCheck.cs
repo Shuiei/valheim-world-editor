@@ -81,7 +81,8 @@ internal static class ContentsCheck
         if (prefab == WorldSave.LocationProxyPrefab)
         {
             // The world keeps proxies apart from its objects (a runestone's shows as the stone).
-            var proxy = world.Placed.FirstOrDefault(p => Flat(p.Position, at) < 0.05f);
+            int location = ZdoData.Parse(zdo).IntList.First(v => v.Key == WorldSave.LocationKey).Value;
+            var proxy = world.Placed.FirstOrDefault(p => p.Location == location && Flat(p.Position, at) < 0.05f);
             if (proxy == null)
             {
                 tally.Say($"{site.Name} at ({site.Position.X:0.0}, {site.Position.Z:0.0}): no proxy");

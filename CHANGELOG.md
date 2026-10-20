@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.64.1 — 2026-10-19
+
+### Fixed
+- **New world writes Expand World's cloned locations as the mod does.** A copy of a game location ("Name:Tag") in
+  the generated zones now spawns the game location it copies, with its own name kept as the mod keeps it, instead of
+  a name the game has no location of.
+
 ## v1.64.0 — 2026-10-19
 
 ### Added
