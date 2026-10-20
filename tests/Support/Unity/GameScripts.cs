@@ -147,7 +147,13 @@ public static class GameScripts
         ],
         ["ZoneSystem"] = [Of("float", "m_zoneSize"), List("m_vegetation", ZoneVegetation), List("m_locations", ZoneLocation)],
         ["LocationList"] = [Of("int", "m_sortOrder"), List("m_vegetation", ZoneVegetation), List("m_locations", ZoneLocation)],
-        ["WorldGenerator"] = [List("m_alts", Struct("AltBiome", "data", Text("m_name"), List("m_blockLocationNames", Text("data")), List("m_addLocations", ZoneLocation)))],
+        ["WorldGenerator"] =
+        [
+            List("m_alts", Struct("AltBiome", "data", Text("m_name"), Bool("m_enabled"), Of("int", "m_biome"), List("m_addVegetation", ZoneVegetation),
+                List("m_blockVegetationNames", Text("data")), List("m_addLocations", ZoneLocation), List("m_blockLocationNames", Text("data")),
+                Of("float", "m_minDistanceFromCenter"), Of("int", "m_minAmountSpawned"), Of("int", "m_maxAmountSpawned"), Of("float", "m_chance"),
+                List("m_incompatibleAltBiomes", Text("data")))),
+        ],
         ["Pickable"] = [Of("float", "m_respawnTimeMinutes")],
         ["LodFadeInOut"] = [Of("float", "m_fadeTime")],
         ["MineRock5"] = [Of("float", "m_health")],

@@ -632,3 +632,36 @@ same for Expand World:
 - **No decompiled code**: the mod is public domain, but the editor's rule is its own structure
   and names anyway (`WorldGenerator.Rules.cs` follows `BiomeCalculator` step for step, in the
   editor's style, comments naming the mod's method).
+
+## 8. Round two: the gaps (2026-10-19)
+
+The user asked for everything in the user docs' "What does not" list the editor can handle, and for a check of
+Expand World Data's whole documentation. Decisions (asked): the editor's map draws the real water level (the
+game's map keeps 29.5); New world builds changed location contents itself (blueprints, objects, swaps, scale,
+offsets, levelling, paint, static data; zones with commands or run-time data stay the game's); the Dungeon tool
+is fed the mods' dungeon and room files and modded rooms are drawn as their base rooms. Runtime-only parts stay
+out: clutter, environments, spawns, events, drops; status effects are only listed.
+
+Facts that changed the plan:
+- **The game's alt biome layout is seeded**, not random: `GenerateAltBiomes` shuffles with `Utils.Shuffle` from
+  assembly_utils (Unity's Random, `InitState(biome + hash(name) + seed)`), not the unseeded `ShuffleClass`. The
+  editor's old "uncertain kinds" note was wrong; the layout is now ported (`SeedLocations.AltBiomeLayout`) and
+  matches the game bit for bit (`WorldCheck altbiomes` against the AltDump plugin, three seeds; `locations`: all
+  12378 locations of a seed). The vanilla game has 32 alt biomes adding and blocking vegetation: Regrow missed all
+  of it before, on every world.
+- **Expand World Size 1.45 sizes the biome point map** (`ceil(2048 * total / 10500 / stretch)` points,
+  `12 * stretch` m): PR 3 had taken it as unchanged (`BiomeGrid`, v1.60.3).
+- Data 1.79 renamed the vegetation global key fields (v1.60.1); Regrow's axis scales were never written (v1.60.2).
+
+| PR | Branch | Content |
+|---|---|---|
+| 1-3 | `fix/vegetation-global-keys`, `fix/vegetation-axis-scale`, `fix/expand-world-biome-map-size` | The three bugs above (v1.60.1-3). |
+| 4 | `feature/alt-biomes` | v1.61.0: the alt biome layout (vanilla and Expand World: file fields with the mod's zero defaults, forced areas, Size's stretch), alt kinds and alt vegetation placed, block lists, the game's alt vegetation in the catalogue; WorldCheck `altbiomes`/`locations`/`regrow`; AltDump plugin (`_src/AltDump`). Not in it: `terrainTextureOverride` (no vanilla alt biome sets it). |
+| 5 | clear areas | Regrow and New world: the locations' clear areas (and the location file's `clearArea`), the vegetation file's `clearArea`/`clearRadius`, checked before the object's draws as the game does. |
+| 6 | surround check | Vegetation `surroundCheck*` (one vanilla rule, the files'). |
+| 7 | location contents | New world builds blueprint locations, `objects`, swaps, data, scale, offsets, `randomCardinal`, `randomDamage`, levelling and paint, and `pregenerate` zones. |
+| 8 | vegetation blueprints and data | Blueprint vegetation and vegetation `data`. |
+| 9 | map | Location icons (the game's and the files' `iconAlways`/`iconPlaced`), the start temple icon, the real water line. |
+| 10 | water and info | Biome and territory water colours in 3D; status effects, territories and alt biomes named in the map's info. |
+| 11 | dungeons | `expand_dungeons`/`expand_rooms`: modded rooms drawn, the Dungeon tool's catalogue. |
+

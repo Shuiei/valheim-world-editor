@@ -114,7 +114,7 @@ public static partial class ExpandWorld
         SeedLocations.RuleSet? locations = kinds == null ? null : new SeedLocations.RuleSet
         {
             Locations = kinds,
-            AltBiomes = data.AltBiomes is { Count: > 0 } alts ? AltBiomesOf(alts, data.Notes) : [.. game.AltBiomes],
+            AltBiomes = data.AltBiomes is { Count: > 0 } alts ? AltBiomesOf(alts, table, data.Notes) : [.. game.AltBiomes],
         };
         IReadOnlyList<VegetationRule>? vegetation = null;
         if (data.Vegetation is { Count: > 0 } vegEntries)

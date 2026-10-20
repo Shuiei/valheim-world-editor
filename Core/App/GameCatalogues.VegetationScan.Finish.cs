@@ -5,11 +5,12 @@ public static partial class GameCatalogues
     private sealed partial class VegetationScan
     {
         /// <summary>
-        /// All rules in the game's order, with "prefab" and "draws" set; rules whose prefab has no name are left out.
+        /// All rules in the game's order (ZoneSystem's, the lists', the alt biomes'), with "prefab" and "draws" set;
+        /// rules whose prefab has no name are left out.
         /// </summary>
         public List<object?> Finish(Game game)
         {
-            var all = (_zone ?? []).Concat(_lists.OrderBy(kv => kv.Key.Order).ThenBy(kv => kv.Key.First, StringComparer.Ordinal).ThenBy(kv => kv.Key.Count).SelectMany(kv => kv.Value)).ToList();
+            var all = (_zone ?? []).Concat(_lists.OrderBy(kv => kv.Key.Order).ThenBy(kv => kv.Key.First, StringComparer.Ordinal).ThenBy(kv => kv.Key.Count).SelectMany(kv => kv.Value)).Concat(_alts ?? []).ToList();
             // The prefabs' names and the scripts on their active objects: (script, LODGroup on the same
             // object, respawns).
             var names = new Dictionary<Ref, string>();

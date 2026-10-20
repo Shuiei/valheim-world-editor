@@ -4,6 +4,15 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.61.0 — 2026-10-19
+
+### Added
+- **Alt biomes are where the game puts them.** The editor now works out which areas get an alt biome (Dark Meadows,
+  Rock Black Forest, Goblin Plains...) from the seed, as the game does. The New world page shows the dungeons an
+  alt biome adds or keeps out where the game puts them, and Regrow nature and New world's zones grow what an alt
+  biome adds (mushrooms, fireflies, ruined walls...) and leave out what it keeps out. With Expand World, its alt
+  biome file and the alt biomes its world file forces onto areas are followed too.
+
 ## v1.60.3 — 2026-10-19
 
 ### Fixed

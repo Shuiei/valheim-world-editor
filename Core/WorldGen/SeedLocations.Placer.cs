@@ -22,17 +22,36 @@ public static partial class SeedLocations
         /// The biome map, built on first call.
         /// </summary>
         private readonly Func<BiomeMap> _map;
+        /// <summary>
+        /// The alt biomes.
+        /// </summary>
+        private readonly IReadOnlyList<AltBiomeRule> _alts;
+        /// <summary>
+        /// Names of the kinds an alt biome blocks.
+        /// </summary>
+        private readonly HashSet<string> _blocked;
 
         /// <summary>
         /// A placer with no instances yet.
         /// </summary>
         /// <param name="gen">The seed's generator.</param>
         /// <param name="map">The biome map, built on first call.</param>
-        public Placer(WorldGenerator gen, Func<BiomeMap> map)
+        /// <param name="alts">The alt biomes; none by default.</param>
+        public Placer(WorldGenerator gen, Func<BiomeMap> map, IReadOnlyList<AltBiomeRule>? alts = null)
         {
             _gen = gen;
             _map = map;
+            _alts = alts ?? [];
+            _blocked = [.. _alts.SelectMany(a => a.BlockLocationNames)];
         }
+
+        /// <summary>
+        /// Whether the alt biomes let a kind stand at a spot (its own alt biome's areas only, none of the area's alt
+        /// biomes blocking it); the alt biomes are laid out the first time a kind that depends on them asks.
+        /// </summary>
+        private bool AltBiomesLet(Rule rule, Vector3 spot) =>
+            (rule.AltBiome == null && !_blocked.Contains(rule.Name))
+            || (_alts.Count > 0 && AltBiomeLayout.Of(_gen, _alts, _map).LetsLocation(rule, spot.X, spot.Z));
 
         /// <summary>
         /// The instances by zone (one a zone).

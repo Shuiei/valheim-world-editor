@@ -12,7 +12,8 @@ namespace TerrainEditor.App;
 /// GameData; the tests use tests/fixtures/vegetation.json) and the same random draws
 /// (ZoneSystem.PlaceVegetation, Unity's Random seeded per zone and rule), on the ground as it is now. What
 /// the editor cannot know is skipped: the physics checks against objects already standing (IsBlocked,
-/// snapping onto rocks), clear areas around locations, and the Deep North's alt biomes. The page drops spots
+/// snapping onto rocks) and clear areas around locations; the alt biomes are laid out as the game lays them out
+/// (SeedLocations.AltBiomeLayout), their own rules growing in their areas only. The page drops spots
 /// taken by objects that are there and keeps those in the selection. A world whose rules carry Expand World Data's
 /// vegetation (<see cref="WorldRules.Vegetation"/>) is regrown by those rules instead of the game's.
 /// </summary>
@@ -77,6 +78,7 @@ public static partial class Regrow
         // Each zone's biomes, paint mask and ocean depths, made once for the whole call: groups reach into neighbours.
         Dictionary<(int, int), Zone> zones = [];
         IReadOnlyList<Rule> rules = RulesFor(terrain);
+        var alts = new AltCheck(terrain);
         // Unity's Random has one state per thread: put back what this thread had.
         Rnd.RandomState saved = Rnd.State;
         try
@@ -85,7 +87,7 @@ public static partial class Regrow
             {
                 for (int zx = x0; zx <= x1; zx++)
                 {
-                    PlaceZone(terrain, ground, zones, rules, seed, zx, zz, spots);
+                    PlaceZone(terrain, ground, zones, (rules, alts), seed, zx, zz, spots);
                 }
             }
         }

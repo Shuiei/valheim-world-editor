@@ -48,8 +48,11 @@ A world made with Expand World Size shows "Expand World" on its card on the star
   kinds of the location file (clones, blueprints, groups, "away from" and "close to" rules, a location
   wider than a zone at its zone's middle, the start temple forced into the middle zone), the vegetation
   file's rules (several prefabs, a scale by axis, a centre of the rule's own, the world's global keys),
-  what the alt biomes keep out, Expand World Size's locations multiplier, no zone spawner when the mod
-  says so.
+  Expand World Size's locations multiplier, no zone spawner when the mod says so.
+- **The alt biomes**: the alt biome file's (every field that says where an alt biome goes, a field left out
+  being 0 as in the mod), the areas the world file's rules force alt biomes onto, Expand World Size's stretch
+  of their distances, and the biome map Expand World Size sizes to the world. Locations and vegetation of an
+  alt biome stand in its areas only, and what an alt biome keeps out stays out of them.
 - **The save grid**: a world wider than 16 km lies on a bigger grid of chunk files; the editor reads and
   writes it as it lies, switch or no switch.
 - **A new world** (the New world page): the seeds looked at, the search and the world made follow the
@@ -61,8 +64,8 @@ A world made with Expand World Size shows "Expand World" on its card on the star
 - **Locations whose contents the mod changes** (swapped or added objects, data, commands, a random seed,
   blueprint locations) are placed where the mod places them, but their zones are left to the game by the
   New world page's generated zones, as dungeons are. With **Random locations** on, every location is.
-- **Clear areas** of vegetation, the vegetation of **alt biomes**, `pregenerate` and the map icons: not
-  modelled (Regrow nature does not model clear areas at all).
+- **Clear areas** of vegetation, `pregenerate` and the map icons: not modelled (Regrow nature does not
+  model clear areas at all).
 - **Status effects** of biomes and territories, and their **water colours**: the editor neither applies nor
   draws them. As in the mod, a biome's status effects and a territory's status effects and water colours still
   count towards whether its settings are in use; a biome's water colours do not.

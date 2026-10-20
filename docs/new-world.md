@@ -76,12 +76,9 @@ The **Dungeons (the nearest)** list then gives, for each kind, how far the neare
 biome, how many there are in the world and how many lie within 2 km. Click a row to switch that kind on and see
 the nearest on the map.
 
-They are where the game puts them, with one exception. In some places the game uses an **alt biome** (a variant
-such as Dark Meadows) that adds or blocks a few kinds of place, and it picks which areas get one at random each
-time the world loads, so nobody can know them in advance. Dungeons that only an alt biome adds are left out;
-a kind that an alt biome blocks somewhere is shown there anyway. So a few dungeons may be missing or be shown
-where the game will not put one, but most are exact. Villages, ruins and the other small places are not shown,
-for the same reason.
+They are where the game puts them. That includes the kinds an **alt biome** (a variant such as Dark Meadows
+or Rock Black Forest) adds or keeps out: the game picks the areas that get one from the seed, and the editor
+picks them the same way. Villages, ruins and the other small places are not shown.
 
 ### The seed's facts
 

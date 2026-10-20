@@ -87,6 +87,11 @@ public sealed class VegetationRule
     /// sequence on for the rest of the rule.
     /// </summary>
     public int draws { get; set; }
+    /// <summary>
+    /// The alt biome that adds the rule (it grows only in that alt biome's areas); null for a rule of every area of
+    /// its biomes.
+    /// </summary>
+    public string? altBiome { get; set; }
 
     // ---- Expand World Data's vegetation file.
     /// <summary>

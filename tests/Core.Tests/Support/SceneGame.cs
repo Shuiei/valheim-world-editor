@@ -111,7 +111,21 @@ public static class SceneGame
         {
             ["m_alts"] = new List<Fields>
             {
-                new() { ["m_name"] = "DeepNorth_Ice", ["m_blockLocationNames"] = new List<object> { "Crypt" }, ["m_addLocations"] = new List<Fields> { Location("IceCave", 3) } },
+                new()
+                {
+                    ["m_name"] = "DeepNorth_Ice",
+                    ["m_enabled"] = true,
+                    ["m_biome"] = 64,
+                    ["m_addVegetation"] = new List<Fields> { Rule(shared, "IceShards", rock) },
+                    ["m_blockVegetationNames"] = new List<object> { "Bushes" },
+                    ["m_addLocations"] = new List<Fields> { Location("IceCave", 3) },
+                    ["m_blockLocationNames"] = new List<object> { "Crypt" },
+                    ["m_minDistanceFromCenter"] = 2000f,
+                    ["m_minAmountSpawned"] = 2,
+                    ["m_maxAmountSpawned"] = 5,
+                    ["m_chance"] = 0.25f,
+                    ["m_incompatibleAltBiomes"] = new List<object> { "Bones" },
+                },
             },
         });
         game.Manifest("aaaabbbbccccddddeeeeffff00001111", Main, "Assets/Scenes/main.unity");

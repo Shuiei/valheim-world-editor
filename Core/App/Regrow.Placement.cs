@@ -22,8 +22,9 @@ public static partial class Regrow
     /// order, adding what passes the checks to <paramref name="spots"/>. <paramref name="zones"/> holds the zones
     /// read so far, shared by every zone of one <see cref="Zones"/> call.
     /// </summary>
-    private static void PlaceZone(TerrainService terrain, Ground ground, Dictionary<(int, int), Zone> zones, IReadOnlyList<Rule> rules, int seed, int zx, int zz, List<Spot> spots)
+    private static void PlaceZone(TerrainService terrain, Ground ground, Dictionary<(int, int), Zone> zones, (IReadOnlyList<Rule> Rules, AltCheck Alts) by, int seed, int zx, int zz, List<Spot> spots)
     {
+        var (rules, alts) = by;
         Zone hmap = ZoneAt(terrain, ground, zones, zx * 64f, zz * 64f);
         float cx = zx * 64f, cz = zz * 64f;
         foreach (Rule veg in rules)
@@ -35,7 +36,7 @@ public static partial class Regrow
             Rnd.InitState(seed + zx * 4271 + zz * 9187 + Save.StableHash.Of(veg.prefab));
             if (TryRollGroupCount(veg, out int count))
             {
-                PlaceRule(terrain, ground, zones, veg, cx, cz, count, spots);
+                PlaceRule(terrain, ground, zones, (veg, alts), cx, cz, count, spots);
             }
         }
     }

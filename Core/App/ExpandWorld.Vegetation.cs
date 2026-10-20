@@ -9,8 +9,8 @@ public static partial class ExpandWorld
     /// The vegetation rules from the vegetation files' entries, in file order, as the mod's FromData makes them: a
     /// rule may name several prefabs (one drawn an object), scale by axis, measure its distance from a centre of its
     /// own, and be on or off by the world's global keys. The draws an object's components make come from the game's
-    /// rule of the same prefab (none known for a prefab the game's list has not: noted). A rule of an alt biome is
-    /// passed over (the editor does not lay alt biomes out).
+    /// rule of the same prefab (none known for a prefab the game's list has not: noted). A rule of an alt biome grows
+    /// in that alt biome's areas only.
     /// </summary>
     /// <param name="entries">The entries.</param>
     /// <param name="game">The game's rules (for the components' draws).</param>
@@ -27,18 +27,12 @@ public static partial class ExpandWorld
             draws.TryAdd(g.prefab, g.draws);
         }
         HashSet<string> unknown = [];
-        int altBiomes = 0;
         foreach (var entry in entries)
         {
             var f = new Fields(entry, "vegetation", notes);
             string[] prefabs = SplitList(f.Str("prefab"));
             if (prefabs.Length == 0)
             {
-                continue;
-            }
-            if (f.Str("altBiome").Trim() != "")
-            {
-                altBiomes++;
                 continue;
             }
             foreach (string p in prefabs.Where(p => !draws.ContainsKey(p)))
@@ -50,10 +44,6 @@ public static partial class ExpandWorld
         if (unknown.Count > 0)
         {
             notes.Add($"expand_vegetation: the game's list has no rule for {string.Join(", ", unknown.Order(StringComparer.Ordinal))}: their objects' own draws are taken as none");
-        }
-        if (altBiomes > 0)
-        {
-            notes.Add($"expand_vegetation: {altBiomes} rules of alt biomes are not regrown (the editor does not lay alt biomes out)");
         }
         return rules;
     }
@@ -82,6 +72,7 @@ public static partial class ExpandWorld
             prefabs = several,
             prefabDraws = severalDraws,
             draws = drawsOf(prefabs[0]),
+            altBiome = NonBlank(f.Str("altBiome")),
             enable = enabled ? 1 : 0,
             min = f.F("min", 1f),
             max = f.F("max", 1f),

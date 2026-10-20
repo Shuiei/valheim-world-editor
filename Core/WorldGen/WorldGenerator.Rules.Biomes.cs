@@ -19,6 +19,7 @@ public sealed partial class WorldGenerator
             // The mod keeps three lists of the same rules: those naming a biome, a territory, alt biomes.
             BiomeRules = r.World?.Where(rule => rule.Biome != Heightmap.Biome.None).ToList() ?? [];
             TerritoryRules = r.World?.Where(rule => rule.Territory != "").ToList() ?? [];
+            AltBiomeRules = r.World?.Where(rule => rule.AltBiomes.Count > 0).ToList() ?? [];
             Dictionary<string, Territory> territories = [];
             foreach (var t in r.Territories)
             {
@@ -49,6 +50,8 @@ public sealed partial class WorldGenerator
         public bool CheckSectors { get; private set; }
         /// <summary>The world rules that name a territory (none without world rules).</summary>
         public List<BiomeRule> TerritoryRules { get; private set; } = [];
+        /// <summary>The world rules that force alt biomes (none without world rules).</summary>
+        public List<BiomeRule> AltBiomeRules { get; private set; } = [];
         /// <summary>The territories by name.</summary>
         public IReadOnlyDictionary<string, Territory> Territories { get; private set; } = new Dictionary<string, Territory>();
         /// <summary>Whether the biome file or the territory file is in use: a height passes the mod's postfix.</summary>

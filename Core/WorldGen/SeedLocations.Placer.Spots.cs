@@ -23,7 +23,7 @@ public static partial class SeedLocations
                 return false;
             }
             // The steps after the slope's (which draws from the random sequence) must stay after it.
-            if (!RightNeighbours(rule, spot) || !RightVegetation(rule, vegetation) || rule.AltBiome != null || !StandsOut(rule, spot))
+            if (!RightNeighbours(rule, spot) || !RightVegetation(rule, vegetation) || !AltBiomesLet(rule, spot) || !StandsOut(rule, spot))
             {
                 return false;
             }

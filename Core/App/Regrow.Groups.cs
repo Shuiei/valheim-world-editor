@@ -27,13 +27,19 @@ public static partial class Regrow
     }
 
     /// <summary>Tries the rule's groups in its zone until <paramref name="count"/> of them are placed (or the tries run out).</summary>
-    private static void PlaceRule(TerrainService terrain, Ground ground, Dictionary<(int, int), Zone> zones, Rule veg, float cx, float cz, int count, List<Spot> spots)
+    private static void PlaceRule(TerrainService terrain, Ground ground, Dictionary<(int, int), Zone> zones, (Rule Veg, AltCheck Alts) by, float cx, float cz, int count, List<Spot> spots)
     {
+        var (veg, alts) = by;
         float reach = 32f - veg.groupRadius;
         int tries = veg.forcePlacement != 0 ? count * 50 : count, placedGroups = 0;
         for (int i = 0; i < tries; i++)
         {
             float vx = Rnd.Range(cx - reach, cx + reach), vz = Rnd.Range(cz - reach, cz + reach);
+            if (!alts.Lets(veg, vx, vz))
+            {
+                // The try is spent (the group's size is not drawn).
+                continue;
+            }
             int groupSize = Rnd.Range(veg.groupSizeMin, veg.groupSizeMax + 1);
             if (PlaceGroup(terrain, ground, zones, veg, vx, vz, groupSize, spots))
             {

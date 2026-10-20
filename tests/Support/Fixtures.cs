@@ -43,6 +43,13 @@ public static class Fixtures
         ValheimGen.SeedLocations.Use(ValheimGen.SeedLocations.RuleSet.FromJson(File.ReadAllText(Path.Combine(Root, "locations.json"))));
 
     /// <summary>
+    /// The game's alt biomes with every field the layout reads, as Valheim 0.221 has them (tests/fixtures/altbiomes.json,
+    /// read from the game by GameLocations: CI has no game).
+    /// </summary>
+    public static List<ValheimGen.SeedLocations.AltBiomeRule> AltBiomes() =>
+        System.Text.Json.JsonSerializer.Deserialize<List<ValheimGen.SeedLocations.AltBiomeRule>>(File.ReadAllText(Path.Combine(Root, "altbiomes.json")))!;
+
+    /// <summary>
     /// The game's data (terrain modifiers, object data names...) trimmed to what the tests meet, as `ValheimWorldEditor
     /// --export-test-data tests/fixtures` reads it from the game: the editor reads it from the player's Valheim, which
     /// CI does not have. Given before any test runs, as the editor has it before any world opens.
