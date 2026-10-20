@@ -63,7 +63,7 @@ public static partial class WorldCreator
                 var objects = Built(prefab, contents, position, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw * MathF.PI / 180f), zoneSeed, terrain);
                 // Expand World Data's offset raises the spot before the game makes the proxy too.
                 var spot = position with { Y = position.Y + contents.Offset };
-                byte[] proxy = ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, proxyFlags, spot, new Vector3(0f, yaw, 0f), 0f, [(WorldSave.LocationKey, hash), (SeedKey, zoneSeed)]);
+                byte[] proxy = ZdoBuilder.Blank(WorldSave.LocationProxyPrefab, proxyFlags, spot, new Vector3(0f, yaw, 0f), 0f, ProxyInts(p.Rule, zoneSeed, terrain.Generator.Rules.DataInstalled));
                 objects.Add((spot, WithFields(proxy, contents.ProxyData)));
                 sites.Add(new Site(zone, p.Rule.Prefab, hash, position, objects));
             }
@@ -81,4 +81,17 @@ public static partial class WorldCreator
     /// </summary>
     private static bool LeftToGame(ValheimGen.SeedLocations.Rule rule, ValheimGen.TerrainService terrain) =>
         rule.Blueprint == true || (rule.Custom == true && rule.Contents is not { LeftToGame: null }) || terrain.Generator.Rules.RandomLocations;
+
+    /// <summary>
+    /// A location proxy's ints: the location it spawns and the zone's seed. With Expand World Data, the location is the
+    /// game prefab a clone is made of (the mod's LocationProxy.SetLocation prefix: the game spawns the prefab's look),
+    /// with the clone's own name as its "locationreference" (for the mods that look it up), set first as the mod sets it.
+    /// </summary>
+    private static List<(int Key, int Value)> ProxyInts(ValheimGen.SeedLocations.Rule rule, int zoneSeed, bool dataInstalled) =>
+        dataInstalled
+            ? [(LocationReferenceKey, StableHash.Of(rule.Prefab)), (WorldSave.LocationKey, StableHash.Of(rule.Base)), (SeedKey, zoneSeed)]
+            : [(WorldSave.LocationKey, StableHash.Of(rule.Prefab)), (SeedKey, zoneSeed)];
+
+    /// <summary>The data key Expand World Data keeps a proxy's own location name under.</summary>
+    private static readonly int LocationReferenceKey = StableHash.Of("locationreference");
 }
