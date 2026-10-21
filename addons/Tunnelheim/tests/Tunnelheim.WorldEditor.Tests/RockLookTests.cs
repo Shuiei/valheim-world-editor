@@ -18,6 +18,7 @@ public class RockLookTests
         Assert.Equal(RockLook.Palette.Mistlands, RockLook.At(new FakeArea(0) { BiomeValue = 512 }, at));
         Assert.Equal(RockLook.Palette.DeepNorth, RockLook.At(new FakeArea(0) { BiomeValue = 512, DeepNorth = true }, at));
         Assert.Equal(RockLook.Palette.Ashlands, RockLook.At(new FakeArea(0) { DeepNorth = true, Ashlands = true }, at));
+        Assert.Equal(RockLook.Palette.AshlandsPlain, RockLook.At(new FakeArea(0) { Ashlands = true }, at, ashlandsLava: false));
     }
 
     [Fact]
@@ -114,6 +115,22 @@ public class RockLookTests
         Assert.Contains(new Vector2(0.375f, 0.75f), uvs);
         Assert.Contains(new Vector2(0.625f, 0.75f), uvs);
         Assert.Contains(new Vector2(0.625f, 0.25f), uvs);
+    }
+
+    [Fact]
+    public void WithoutTheModsLavaOnRockAnAshlandsChunkIsPlainWithoutLava()
+    {
+        var record = FakeObject.Record(new ColumnRecord(ColumnRecord.Plain, null, 0, [new DigOp(DigKind.Sphere, new Vector3(8, 40, 8), 2f)]), 8, 8);
+        var host = new FakeHost { Settings = { [("Biomes", "AshlandsLavaOnRock")] = "false" } };
+        var layer = new TunnelScene(host, _ => { }).Build(new FakeArea(40, record) { Ashlands = true })!;
+        var mask = RockLook.Mask(RockLook.Palette.AshlandsPlain);
+        Assert.All(layer.Meshes, m => Assert.Same(mask, m.Mask));
+        Assert.All(mask.Texels, t => Assert.Equal(0u, t >> 24));
+        // The plain mask's places: the pit's dug rock as dirt, the ground around it natural.
+        var uvs = layer.Meshes.SelectMany(m => m.MaskUvs!).ToList();
+        Assert.Contains(new Vector2(0.75f, 0.25f), uvs);
+        Assert.Contains(new Vector2(0.25f, 0.25f), uvs);
+        Assert.All(uvs, uv => Assert.Contains(uv, new[] { new Vector2(0.75f, 0.25f), new Vector2(0.25f, 0.25f) }));
     }
 
     [Fact]

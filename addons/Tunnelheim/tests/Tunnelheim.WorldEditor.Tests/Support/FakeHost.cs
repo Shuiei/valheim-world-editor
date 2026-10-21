@@ -2,12 +2,19 @@ using ValheimWorldEditor.Sdk;
 
 namespace Tunnelheim.WorldEditor.Tests;
 
-/// <summary>The editor as the add-on sees it outside the hooks: no game connected, no game components (no hoe strokes).</summary>
+/// <summary>
+/// The editor as the add-on sees it outside the hooks: no game connected, no game components (no hoe strokes), the
+/// mod's settings as set (none by default: the mod's defaults).
+/// </summary>
 internal sealed class FakeHost : IEditorHost, IGameData
 {
     public ILiveGame? Live => null;
 
-    public string? Setting(string file, string section, string key) => null;
+    /// <summary>The mod's settings file's settings, by section and name.</summary>
+    public Dictionary<(string Section, string Key), string> Settings { get; init; } = [];
+
+    public string? Setting(string file, string section, string key) =>
+        file == TunnelheimMod.SettingsFile && Settings.TryGetValue((section, key), out string? value) ? value : null;
 
     public IGameData Game => this;
 

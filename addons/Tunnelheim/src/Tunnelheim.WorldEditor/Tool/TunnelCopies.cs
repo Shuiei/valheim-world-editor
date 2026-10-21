@@ -52,7 +52,7 @@ public sealed class TunnelCopies(IEditorHost host, Action<string> log) : IAreaCo
             return null;
         }
         var ops = copies.SelectMany(c => saved.Ops.Select(o => DigOps.Moved(o, c))).ToList();
-        var grid = TunnelArea.Build(area, TerrainOps.From(host.Game.Components(TerrainOps.ScriptClass)), log);
+        var grid = TunnelArea.Build(area, host, log);
         return TunnelEdits.Make(area, grid, ops, log).Edit;
     }
 

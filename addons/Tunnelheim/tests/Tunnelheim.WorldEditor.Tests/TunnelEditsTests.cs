@@ -12,7 +12,7 @@ namespace Tunnelheim.WorldEditor.Tests;
 public class TunnelEditsTests
 {
     private static TunnelEdits.Result Make(FakeArea area, List<string> log, params DigOp[] ops) =>
-        TunnelEdits.Make(area, TunnelArea.Build(area, new Dictionary<int, HoeSettings>(), log.Add), ops, log.Add);
+        TunnelEdits.Make(area, TunnelArea.Build(area, new FakeHost(), log.Add), ops, log.Add);
 
     [Fact]
     public void AColumnDugForTheFirstTimeGetsARecordWithItsGround()

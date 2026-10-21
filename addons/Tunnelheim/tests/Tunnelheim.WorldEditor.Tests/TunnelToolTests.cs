@@ -97,6 +97,18 @@ public class TunnelToolTests
     }
 
     [Fact]
+    public void AddEarthIsHeldToTheBuildingHeightTheGameSets()
+    {
+        var tool = new TunnelTool(new FakeHost { Settings = { [("Building", "MaxHeightAboveGround")] = "5" } }, _ => { });
+        var ed = new Editor(2);
+        tool.OnPointer(ed, Click(8, 50, 8));
+        Assert.Empty(ed.Commits);
+        Assert.Equal("Too high for Add Earth: the mod adds rock up to 5 m above the ground.", ed.Said);
+        tool.OnPointer(ed, Click(8, 44, 8));
+        Assert.Equal("Add Earth", Assert.Single(ed.Commits).Label);
+    }
+
+    [Fact]
     public void ABoreTakesTwoClicksAndEscForgetsTheFirst()
     {
         var tool = Tool();

@@ -25,6 +25,9 @@ public static class RockLook
 
         /// <summary>The Mistlands: natural rock follows the ground's vegetation.</summary>
         Mistlands,
+
+        /// <summary>The Ashlands with the mod's lava on rock switched off: the plain mask, without lava anywhere.</summary>
+        AshlandsPlain,
     }
 
     /// <summary>The Mistlands' biome value (Heightmap.Biome).</summary>
@@ -35,6 +38,9 @@ public static class RockLook
 
     /// <summary>The plain mask, from the bottom row: natural, dirt; cultivated, paved.</summary>
     private static readonly MaskTexture Plain = new(2, 2, [Natural, Dirt, Cultivated, Paved]);
+
+    /// <summary>The plain mask without alpha: no lava (the Ashlands with lava on rock off).</summary>
+    private static readonly MaskTexture PlainNoLava = new(2, 2, [Natural & 0xFFFFFF, Dirt & 0xFFFFFF, Cultivated & 0xFFFFFF, Paved & 0xFFFFFF]);
 
     /// <summary>
     /// The strips, from the bottom row: cultivated, natural, dirt, paved, each row's natural the ground's own (none,
@@ -47,11 +53,15 @@ public static class RockLook
 
     private static readonly MaskTexture AshlandsStrip = new(4, 2, [Cultivated & 0xFFFFFF, 0, Dirt & 0xFFFFFF, Paved & 0xFFFFFF, Cultivated, Natural, Dirt, Paved]);
 
-    /// <summary>The palette of the chunk whose middle is a point (GroundLook.PaletteAt): the Ashlands, the Deep North, the Mistlands or the rest.</summary>
+    /// <summary>
+    /// The palette of the chunk whose middle is a point (GroundLook.PaletteAt): the Ashlands (plain without the mod's lava
+    /// on rock), the Deep North, the Mistlands or the rest.
+    /// </summary>
     /// <param name="area">The area, for its biomes.</param>
     /// <param name="middle">The chunk's middle.</param>
-    public static Palette At(IAreaView area, Vector3 middle) =>
-        area.IsAshlands(middle.X, middle.Z) ? Palette.Ashlands
+    /// <param name="ashlandsLava">Whether the mod keeps the ground's lava on Ashlands rock (<see cref="TunnelheimMod.AshlandsLava"/>).</param>
+    public static Palette At(IAreaView area, Vector3 middle, bool ashlandsLava = true) =>
+        area.IsAshlands(middle.X, middle.Z) ? (ashlandsLava ? Palette.Ashlands : Palette.AshlandsPlain)
         : area.IsDeepNorth(middle.X, middle.Z) ? Palette.DeepNorth
         : area.Biome(middle.X, middle.Z) == MistlandsBiome ? Palette.Mistlands
         : Palette.Default;
@@ -62,8 +72,12 @@ public static class RockLook
         Palette.DeepNorth => DeepNorthStrip,
         Palette.Mistlands => MistlandsStrip,
         Palette.Ashlands => AshlandsStrip,
+        Palette.AshlandsPlain => PlainNoLava,
         _ => Plain,
     };
+
+    /// <summary>Whether a palette is a strip (GroundLook.IsStrip), its natural rock following the ground; else the plain 2 × 2 mask.</summary>
+    public static bool IsStrip(Palette palette) => palette is not (Palette.Default or Palette.AshlandsPlain);
 
     /// <summary>
     /// The ground's own value a strip's natural row follows, from the terrain's paint mask (red in the lowest byte): its
@@ -82,7 +96,7 @@ public static class RockLook
     /// <param name="ground">The ground's value there (0 where none counts).</param>
     public static Vector2 Uv(Palette palette, byte paint, bool dug, float ground)
     {
-        if (palette == Palette.Default)
+        if (!IsStrip(palette))
         {
             return paint switch
             {
