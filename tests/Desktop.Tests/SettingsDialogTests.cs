@@ -49,6 +49,7 @@ public class SettingsDialogTests
         // The other choices made too: not kept either.
         d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == "Allow Claude to connect").IsChecked = true;
         d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == "Draw with the graphics driver's OpenGL").IsChecked = true;
+        d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == Lang.T("settings.riverheimSwitch")).IsChecked = true;
         Click(Buttons(d, "Save").Single());
         Assert.Contains("The Valheim folder must be the game's folder", Texts(d));
         Assert.Single(owner.OwnedWindows);
@@ -59,6 +60,22 @@ public class SettingsDialogTests
         Assert.False(settings.ClaudeConnect);
         Assert.Null(settings.ClaudeToken);
         Assert.False(settings.DriverOpenGl);
+        Assert.False(settings.Riverheim);
+    }
+
+    [AvaloniaFact]
+    public async Task TheRiverheimSwitchIsKept()
+    {
+        var settings = new AppSettings();
+        var owner = Owner();
+        var shown = SettingsDialog.Show(owner, settings);
+        var d = TestWindows.Shown(owner);
+        var box = d.GetLogicalDescendants().OfType<CheckBox>().Single(c => c.Content as string == Lang.T("settings.riverheimSwitch"));
+        Assert.False(box.IsChecked);
+        box.IsChecked = true;
+        Click(Buttons(d, "Save").Single());
+        Assert.True(await shown);
+        Assert.True(settings.Riverheim);
     }
 
     [AvaloniaFact]

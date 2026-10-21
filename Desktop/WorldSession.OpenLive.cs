@@ -19,7 +19,10 @@ public sealed partial class WorldSession
             mods = await BridgeMods(live);
             var world = await live.LoadWorld();
             // The mods' settings and data files as the game has them, through its bridge (an older one: the local folders).
-            world.Rules = await ExpandWorld.ResolveLive(world, AppSettings.Load(), live);
+            var settings = AppSettings.Load();
+            world.Rules = await ExpandWorld.ResolveLive(world, settings, live);
+            // The game's world file, read through the bridge with the rules, says whether Riverheim made the world.
+            Refuse(world, settings);
             WorldSave.Builder = Builders.Default(world);
             session = From(world, live, label);
         }

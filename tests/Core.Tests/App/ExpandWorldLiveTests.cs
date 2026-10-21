@@ -33,7 +33,7 @@ public class ExpandWorldLiveTests : AppSettingsTestBase
     private byte[] Meta(params string[] keys)
     {
         string path = Path.Combine(Data, "meta.fwl");
-        WorldSaveLoadTests.WriteMetadata(path, 32, keys);
+        WorldFileHead.Write(path, 32, keys);
         return File.ReadAllBytes(path);
     }
 

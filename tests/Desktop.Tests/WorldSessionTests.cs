@@ -8,7 +8,8 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// Worlds opened in the app (WorldSession): a world just made from a seed (WorldCreator) opens with its objects, and a
-/// live world that cannot be opened is disconnected, and an apply that is left during a game save still gives its outcome.
+/// live world that cannot be opened is disconnected, a world made with Riverheim is refused while Riverheim cannot draw
+/// it, and an apply that is left during a game save still gives its outcome.
 /// </summary>
 [Collection("World files")]
 public sealed class WorldSessionTests : WorldsFolder
@@ -27,6 +28,15 @@ public sealed class WorldSessionTests : WorldsFolder
     /// A folder inside the temporary folder.
     /// </summary>
     private string Folder(string name) => Path.Combine(Dir, name);
+
+    [Fact]
+    public void AWorldMadeWithRiverheimIsRefusedWithWhy()
+    {
+        WorldCreator.Create(Folder("Riverheim"), "Riverheim", Seed);
+        WorldFileHead.Write(Path.Combine(Folder("Riverheim"), "_main.1.fwl2"), 42, [], WorldFileHead.RiverheimPreset);
+        // The Riverheim switch is off in the tests' settings.
+        Assert.Equal(Lang.T("riverheim.off"), Assert.Throws<InvalidOperationException>(() => WorldSession.Open(Folder("Riverheim"))).Message);
+    }
 
     [Fact]
     public void TheNativeAppOpensIt()

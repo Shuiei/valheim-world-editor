@@ -40,12 +40,15 @@ public sealed partial class WorldSave
     /// <param name="Seed">The seed number.</param>
     /// <param name="WorldGenVersion">The game's world generator version the world was made with (0 before version 26).</param>
     /// <param name="StartingGlobalKeys">The starting global keys (none before version 32).</param>
-    public sealed record Metadata(string Name, string SeedName, int Seed, int WorldGenVersion, List<string> StartingGlobalKeys);
+    /// <param name="RiverheimTag">The settings Riverheim keeps in a world it made (its header before the file version); null
+    /// for any other world.</param>
+    public sealed record Metadata(string Name, string SeedName, int Seed, int WorldGenVersion, List<string> StartingGlobalKeys, Riverheim.Tag? RiverheimTag = null);
 
     /// <summary>
     /// Mirrors World.LoadWorld: an int length prefix, then a ZPackage with version, names, seed, the generator version
     /// (26 and later), whether the world needs its database (30 and later) and the starting global keys (32 and
-    /// later; what comes after them, the players seen, is not read).
+    /// later; what comes after them, the players seen, is not read). A world Riverheim made has its header first
+    /// (<see cref="Riverheim.ReadHeader"/>); a world of another generation mod throws <see cref="GeneratorHeaderException"/>.
     /// </summary>
     /// <param name="path">The world file (_main.n.fwl2).</param>
     public static Metadata ReadMetadata(string path)
@@ -61,7 +64,7 @@ public sealed partial class WorldSave
         using ValheimReader file = new(stream);
         int length = file.ReadInt();
         using ValheimReader pkg = new(new MemoryStream(file.ReadBytes(length)));
-        int version = pkg.ReadInt();
+        int version = ReadVersion(pkg, out var riverheim);
         string name = pkg.ReadString();
         string seedName = pkg.ReadString();
         int seed = pkg.ReadInt();
@@ -80,7 +83,19 @@ public sealed partial class WorldSave
                 keys.Add(pkg.ReadString());
             }
         }
-        return new Metadata(name, seedName, seed, worldGenVersion, keys);
+        return new Metadata(name, seedName, seed, worldGenVersion, keys, riverheim);
+    }
+
+    /// <summary>
+    /// The world file's version, and the settings Riverheim keeps before it in a world it made (null for any other).
+    /// </summary>
+    /// <param name="pkg">The world file's package, at its start.</param>
+    /// <param name="riverheim">Set to Riverheim's settings, or null.</param>
+    private static int ReadVersion(ValheimReader pkg, out Riverheim.Tag? riverheim)
+    {
+        int version = pkg.ReadInt();
+        riverheim = version == Riverheim.Marker ? Riverheim.ReadHeader(pkg, out version) : null;
+        return version;
     }
 
     /// <summary>Reads the world file's head into this save (<see cref="ReadMetadata(string)"/>).</summary>
@@ -95,12 +110,13 @@ public sealed partial class WorldSave
     }
 
     /// <summary>
-    /// Takes the world file's starting global keys (and the save grid they name) from its head: a live world's, read
-    /// from the game's own file, which keeps what a mod takes out of the loaded list.
+    /// Takes the world file's starting global keys (and the save grid they name) and its Riverheim settings from its
+    /// head: a live world's, read from the game's own file, which keeps what a mod takes out of the loaded list.
     /// </summary>
     /// <param name="meta">The world file's head.</param>
     public void TakeKeys(Metadata meta)
     {
+        RiverheimTag = meta.RiverheimTag;
         StartingGlobalKeys.Clear();
         StartingGlobalKeys.AddRange(meta.StartingGlobalKeys);
         GridWidth = ExpandWorld.SavedGridWidth(StartingGlobalKeys, Name);

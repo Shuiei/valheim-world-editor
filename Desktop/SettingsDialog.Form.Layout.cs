@@ -32,6 +32,8 @@ public static partial class SettingsDialog
             _expandWorldFolder = new TextBox { Name = "ExpandWorldFolder", Text = _settings.ExpandWorldFolder ?? "", PlaceholderText = Lang.T("settings.expandWorldFolderAuto") }.Tip("settings.expandWorldFolder");
             _expandWorldBrowse = new Button { Content = Lang.T("common.browse") }.Tip("settings.expandWorldBrowse");
             _expandWorldBrowse.Click += async (_, _) => { if (await Pick(Lang.T("settings.pickExpandWorld")) is string p) { _expandWorldFolder.Text = p; } };
+            // Riverheim: worlds made with it open, for the worlds opened from now on.
+            _riverheim = new CheckBox { Content = Lang.T("settings.riverheimSwitch"), IsChecked = _settings.Riverheim }.Classed("switch").Tip("settings.riverheim");
             // What draws (Windows): taken at the next start.
             _driverGl = new CheckBox { Content = Lang.T("settings.driverGl"), IsChecked = _settings.DriverOpenGl }.Classed("switch").Tip("settings.driverGl");
             var drawing = new StackPanel
@@ -84,6 +86,9 @@ public static partial class SettingsDialog
                         Hint(Lang.T("settings.expandWorldHint")),
                         new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 4, Children = { _expandWorldFolder, Ui.Col(_expandWorldBrowse, 1) } },
                         Hint(Lang.T("settings.expandWorldFolderHint")),
+                        H2(Lang.T("settings.riverheim")),
+                        _riverheim,
+                        Hint(Lang.T("settings.riverheimHint")),
                         BuildHistory(),
                         drawing,
                         _error,

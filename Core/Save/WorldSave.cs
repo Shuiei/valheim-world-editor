@@ -1,4 +1,5 @@
 using System.Numerics;
+using TerrainEditor.App;
 
 namespace TerrainEditor.Save;
 
@@ -72,6 +73,12 @@ public sealed partial class WorldSave
     /// works them out: <c>ExpandWorld.Resolve</c>); the terrain service's generator is made with them.
     /// </summary>
     public ValheimGen.WorldRules Rules { get; set; } = ValheimGen.WorldRules.Vanilla;
+
+    /// <summary>
+    /// The settings Riverheim keeps in the world file when it made the world (null otherwise): such a world is drawn
+    /// only with the player's Riverheim (<see cref="Riverheim.Refusal"/>).
+    /// </summary>
+    public Riverheim.Tag? RiverheimTag { get; private set; }
 
     /// <summary>
     /// The zone grid the chunk files on disk are laid out on, sectors a side (<see cref="ChunkMath"/>): the game's 512,

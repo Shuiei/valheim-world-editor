@@ -145,7 +145,7 @@ public static partial class ExpandWorld
     /// turned off). Subfolders that cannot be read are passed over (another mod's, without access); a folder that
     /// cannot be searched at all is said in the log and has none.
     /// </summary>
-    private static bool HasPlugin(string plugins, string dll)
+    internal static bool HasPlugin(string plugins, string dll)
     {
         try
         {

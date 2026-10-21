@@ -118,14 +118,33 @@ public sealed partial class WorldSession : IDisposable
         ModExtensions.Refresh(settings);
     }
 
-    /// <summary>A world on this computer (its folder). Throws when the game's data is missing.</summary>
+    /// <summary>
+    /// A world on this computer (its folder). Throws when the game's data is missing, and when the world needs the
+    /// player's Riverheim and cannot have it (<see cref="Refuse"/>).
+    /// </summary>
     public static WorldSession Open(string dir)
     {
         NeedGame();
         var world = WorldSave.Load(dir);
-        world.Rules = ExpandWorld.Resolve(world, AppSettings.Load());
+        var settings = AppSettings.Load();
+        Refuse(world, settings);
+        world.Rules = ExpandWorld.Resolve(world, settings);
         WorldSave.Builder = Builders.Default(world);
         return From(world, null, world.Name);
+    }
+
+    /// <summary>
+    /// Throws <c>InvalidOperationException</c>, with why for the player, when the world was made with Riverheim and
+    /// cannot be drawn without it (<see cref="Riverheim.Refusal"/>).
+    /// </summary>
+    /// <param name="world">The world just read.</param>
+    /// <param name="settings">The editor's settings.</param>
+    private static void Refuse(WorldSave world, AppSettings settings)
+    {
+        if (Riverheim.Refusal(world.RiverheimTag, settings, () => Riverheim.Find(settings)) is string why)
+        {
+            throw new InvalidOperationException(why);
+        }
     }
 
     /// <summary>Offline: whether a new object is in the last save as it is now (not changed since).</summary>
