@@ -19,38 +19,23 @@ public sealed partial class EditSession
     /// <param name="addHidden">New hidden objects (their ids are given here).</param>
     /// <returns>The indices of the things added.</returns>
     public List<int> CommitObjects(string label, IReadOnlyCollection<int> remove, IReadOnlyList<(NewObject Object, bool Piece)> add,
-        IReadOnlyCollection<int> removeHidden, IReadOnlyList<NewObject> addHidden)
+        IReadOnlyCollection<int> removeHidden, IReadOnlyList<NewObject> addHidden) =>
+        Commit(label, null, remove, add, null, removeHidden, addHidden);
+
+    /// <summary>
+    /// The hidden objects a step takes away (those still there) and adds (given their ids), each with whether it is
+    /// gone before and after the step; and the new ones, for the edit store.
+    /// </summary>
+    private (List<(int Id, bool Before, bool After)> Hidden, List<NewObject> Added) ChangeHidden(IReadOnlyCollection<int> remove, IReadOnlyList<NewObject> add)
     {
-        var (points, before, after, zones) = ChangeGround(null);
-        var (indices, changes, added) = ChangeThings(remove, add);
         var hidden = new List<(int Id, bool Before, bool After)>();
-        foreach (int id in removeHidden.Distinct().Where(id => !Edits.IsGone(id) && !Scene.World.Vanished.Contains(id)))
+        foreach (int id in remove.Distinct().Where(id => !Edits.IsGone(id) && !Scene.World.Vanished.Contains(id)))
         {
             hidden.Add((id, false, true));
         }
-        var newHidden = addHidden.Select(o => o with { Id = Scene.Owner?.NextId() ?? _nextId-- }).ToList();
-        hidden.AddRange(newHidden.Select(o => (o.Id, true, false)));
-        if (added.Count + newHidden.Count > 0)
-        {
-            Edits.AddObjects([.. added, .. newHidden]);
-        }
-        SetGone(changes.Where(c => c.Item3).Select(c => (c.Item1, true)));
-        SetHiddenGone(hidden.Where(h => h.After).Select(h => (h.Id, true)));
-        if (changes.Count == 0 && hidden.Count == 0)
-        {
-            return indices;
-        }
-        AddChange(new Change(label, points, before, after, zones) { Things = [.. changes], Hidden = [.. hidden] });
-        if (changes.Count > 0)
-        {
-            Notify(changes.Select(c => c.Item1));
-        }
-        if (indices.Count > 0)
-        {
-            ThingsAdded?.Invoke(indices);
-        }
-        Edited();
-        return indices;
+        var added = add.Select(o => o with { Id = Scene.Owner?.NextId() ?? _nextId-- }).ToList();
+        hidden.AddRange(added.Select(o => (o.Id, true, false)));
+        return (hidden, added);
     }
 
     /// <summary>

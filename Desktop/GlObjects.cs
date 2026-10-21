@@ -79,6 +79,19 @@ public sealed class GlObjects
     }
 
     /// <summary>
+    /// Sets how the texture bound to Texture2D is read: blended between its texels (linear) or the nearest one, and
+    /// clamped at its edges.
+    /// </summary>
+    /// <param name="linear">Blend between texels (else the nearest one, read exactly).</param>
+    public void Clamped2D(bool linear)
+    {
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)(linear ? TextureMinFilter.Linear : TextureMinFilter.Nearest));
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)(linear ? TextureMagFilter.Linear : TextureMagFilter.Nearest));
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+    }
+
+    /// <summary>
     /// Copies an array into the buffer bound to a target, as static data.
     /// </summary>
     /// <typeparam name="T">The element type (unmanaged, as the GL reads it).</typeparam>
