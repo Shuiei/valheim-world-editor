@@ -26,5 +26,7 @@
     <ProjectReference Include="../../src/Tunnelheim.WorldEditor/Tunnelheim.WorldEditor.csproj" />
     <ProjectReference Include="../../../../sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" />
     <None Include="fixtures/**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The editor's stand-in for what a tool sees, shared by every tool's tests (tested in Core.Tests). -->
+    <Compile Include="../../../../editor/tests/Support/ToolContextRecorder.cs" Link="Support/ToolContextRecorder.cs" />
   </ItemGroup>
 </Project>

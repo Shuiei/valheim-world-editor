@@ -12,10 +12,21 @@ does with them. Tunnelheim itself is unchanged and stays in `BepInEx/plugins`; t
   replayed as the game replays it (bit for bit against Tunnelheim 1.0.0) and meshed as the mod meshes it, with the
   game's ground look and the mod's paint; the editor's ground is cut away over those columns, as the mod cuts the
   game's.
+- **A Tunnel tool**, under **Mods** on the rail: pick an action, then click the ground or the rock.
+  - The mod's own: **Dig (round)** and **Dig (square)** as the pickaxe digs (Size: the pickaxe's, 1 antler to 1.75
+    black metal, 2.5 the tunneller), **Add Earth** (a lump a metre round, not above the building height), **Smooth
+    Surface**, **Level Wall** (facing you) and **Level Ceiling**.
+  - Shapes made of the same edits: **Bore** (click its start, then its end; a round tunnel of the Size's radius),
+    **Room** (click the middle of its floor in the rock; width, depth and height), **Shaft** (straight down from the
+    click) and **Stairs** (down the way you look).
+
+  Each click is one step of the history. The edits go into the mod's records as the game saves its own: each kept
+  by every 16 m column it changed, a column dug for the first time getting a record with the ground it was dug from.
+  Checked on a server running the mod: the game rebuilds the same rock, to the bit, as the editor draws.
 - **Shows tunnel records in words** in the inspector.
 
-Planned: a Tunnel tool (the mod's own digging and the editor's shapes: bores, rooms, shafts, stairs), tunnels going
-with copies and blueprints, and live editing.
+Planned: tunnels going with copies and blueprints, live editing, and the mod's own colours in the Deep North, the
+Mistlands and the Ashlands.
 
 ## Install
 
