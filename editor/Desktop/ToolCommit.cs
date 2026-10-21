@@ -40,6 +40,8 @@ internal static class ToolCommit
         {
             var z = new ZdoData { Prefab = StableHash.Of(prefab) };
             data?.Invoke(new DataCopy(prefab, position, rotation, z));
+            // From its prefab as made, once the tool's values are set.
+            z.BaseFlags = SavedFlags(z.Prefab);
             AddNew(plan, new NewObject(0, z.Prefab, position, rotation, 1, Fresh: false, Raw: z.Serialize()));
         }
         foreach (var (obj, change) in edit.Changed)
@@ -58,6 +60,16 @@ internal static class ToolCommit
         }
         return plan;
     }
+
+    /// <summary>The persistent flag of an object's save (the game keeps such objects, and saves them).</summary>
+    private const ushort Persistent = 0x100;
+
+    /// <summary>
+    /// The save flags of a new object of a prefab: the game's own for a prefab it has (persistent, distant, its type);
+    /// persistent for one it does not list, as a mod's data holder made at run time is: a new object the game did not
+    /// keep would be taken away again, once its zone is no longer loaded, and the mod's data with it.
+    /// </summary>
+    private static ushort SavedFlags(int prefab) => PrefabCatalog.Details(prefab)?.Flags ?? Persistent;
 
     /// <summary>A new object: a hidden one for a mod's data holder, else a thing (a piece when the build tools make it).</summary>
     private static void AddNew(Plan plan, NewObject n)

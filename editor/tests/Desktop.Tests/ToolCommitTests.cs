@@ -1,6 +1,7 @@
 using System.Numerics;
 using TerrainEditor.App;
 using TerrainEditor.Save;
+using TerrainEditor.Terrain;
 using ValheimWorldEditor.Sdk;
 using WorldEditor.Tests;
 using Xunit;
@@ -39,6 +40,11 @@ public sealed class ToolCommitTests
         Assert.Equal((12, false, new Vector3(5, 30, 5)), (changed.SourceId, changed.Fresh, changed.Position));
         Assert.Equal(2, ZdoData.Parse(changed.Raw!).GetInt(StableHash.Of("n")));
         Assert.Equal(5, ZdoData.Parse(plan.AddHidden[0].Raw!).GetInt(StableHash.Of("n")));
+        // A data holder the game does not list is kept by the game (persistent); an object of the game's, as the game
+        // makes it.
+        Assert.Equal(0x100, ZdoData.Parse(plan.AddHidden[0].Raw!).BaseFlags);
+        var (tree, _) = Assert.Single(plan.AddThings);
+        Assert.Equal(PrefabCatalog.Details(StableHash.Of("Beech1"))!.Flags, ZdoData.Parse(tree.Raw!).BaseFlags);
         Assert.Equal(["Beech1"], plan.Skipped);
 
         ToolCommit.Apply(s, "Tool", edit);
