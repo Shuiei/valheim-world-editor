@@ -134,12 +134,12 @@ public static class DigOps
         return ops;
     }
 
-    /// <summary>A shaft: a square hole straight down from a point, as wide as twice its size.</summary>
+    /// <summary>A shaft: a square hole straight down from a point, as wide as twice its size, its boxes from its depth up to the point.</summary>
     /// <param name="top">The middle of its mouth.</param>
     /// <param name="size">Half its width.</param>
     /// <param name="depth">How deep it goes.</param>
     public static List<DigOp> Shaft(Vector3 top, float size, float depth) =>
-        [.. Centres(top.Y - depth, top.Y + size, size * 2).Select(y => new DigOp(DigKind.Box, new Vector3(top.X, y, top.Z), size))];
+        [.. Centres(top.Y - depth, top.Y, size * 2).Select(y => new DigOp(DigKind.Box, new Vector3(top.X, y, top.Z), size))];
 
     /// <summary>Stairs going down from a point in a direction (the mod's stairs edit, steps half a metre down and a metre on).</summary>
     /// <param name="top">The top of the first step.</param>

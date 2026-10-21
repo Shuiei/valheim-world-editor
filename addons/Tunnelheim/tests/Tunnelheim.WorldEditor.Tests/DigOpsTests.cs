@@ -81,7 +81,8 @@ public class DigOpsTests
         var shaft = DigOps.Shaft(new Vector3(5, 20, 5), 1.5f, 9f);
         Assert.All(shaft, o => Assert.Equal((DigKind.Box, 1.5f, 5f, 5f), (o.Kind, o.Value, o.Position.X, o.Position.Z)));
         Assert.Equal(12.5f, shaft.Min(o => o.Position.Y));
-        Assert.True(shaft.Max(o => o.Position.Y) + 1.5f >= 20f);
+        // Its top box reaches the mouth, no higher.
+        Assert.Equal(20f, shaft.Max(o => o.Position.Y) + 1.5f);
     }
 
     [Fact]

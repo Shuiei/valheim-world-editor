@@ -25,6 +25,31 @@ public static class PreviewShapes
         return new Shape(at, [.. triangles], adds ? Add : Dig) { BothSides = true, WorldSpace = true };
     }
 
+    /// <summary>A tube between two points (a bore's length), sixteen sides round, open at its ends.</summary>
+    /// <param name="from">One end's middle.</param>
+    /// <param name="to">The other end's middle.</param>
+    /// <param name="radius">Its radius.</param>
+    public static Shape Tube(Vector3 from, Vector3 to, float radius)
+    {
+        const int Sides = 16;
+        var along = to - from;
+        var axis = along.LengthSquared() > 1e-6f ? Vector3.Normalize(along) : Vector3.UnitZ;
+        var side = Vector3.Normalize(Vector3.Cross(axis, Math.Abs(axis.Y) < 0.9f ? Vector3.UnitY : Vector3.UnitX));
+        var up = Vector3.Cross(side, axis);
+        var at = new Vector3[Sides * 2];
+        int[] triangles = new int[Sides * 6];
+        for (int i = 0; i < Sides; i++)
+        {
+            double a = i * 2 * Math.PI / Sides;
+            var round = ((float)Math.Cos(a) * side + (float)Math.Sin(a) * up) * radius;
+            at[i] = from + round;
+            at[i + Sides] = to + round;
+            int next = (i + 1) % Sides;
+            new[] { i, next, i + Sides, next, next + Sides, i + Sides }.CopyTo(triangles, i * 6);
+        }
+        return new Shape(at, triangles, Dig) { BothSides = true, WorldSpace = true };
+    }
+
     /// <summary>A box, axis-aligned.</summary>
     /// <param name="centre">Its middle.</param>
     /// <param name="half">Half its size along each axis.</param>

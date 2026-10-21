@@ -128,7 +128,8 @@ public class TunnelToolTests
 
         tool.OnPointer(ed, Click(4, 40, 4));
         tool.OnPointer(ed, Click(4, 40, 4, PointerAction.Move));
-        Assert.Equal(2, ed.Shown.Count);
+        // Both ends and the tube between them.
+        Assert.Equal(3, ed.Shown.Count);
         tool.OnPointer(ed, Click(28, 38, 4));
         var (label, edit) = Assert.Single(ed.Commits);
         Assert.Equal("Bore", label);

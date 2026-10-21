@@ -214,7 +214,7 @@ public sealed class TunnelTool(IEditorHost host, Action<string> log) : IEditorTo
         {
             Action.SquareDig => [PreviewShapes.Box(DigOps.SquareDig(p, input.Direction, size).Position, new Vector3(size))],
             Action.AddEarth => AddEarthPreview(ctx, input),
-            Action.Bore when _boreStart is { } start => [PreviewShapes.Ball(start, size), PreviewShapes.Ball(p, size)],
+            Action.Bore when _boreStart is { } start => [PreviewShapes.Ball(start, size), PreviewShapes.Tube(start, p, size), PreviewShapes.Ball(p, size)],
             Action.Room => [Covering(DigOps.Room(p, ctx.Number("width"), ctx.Number("depth"), ctx.Number("height")))],
             Action.Shaft => [Covering(DigOps.Shaft(p, size, ctx.Number("length")))],
             Action.Stairs => [PreviewShapes.Ball(p, 1f)],
