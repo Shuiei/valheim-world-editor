@@ -62,6 +62,7 @@ Vehicles' file:
 | `extension` | Your editor extension's DLL, relative to the file's folder and inside it: see [Extensions](#extensions). |
 | `gameComponents` | Class names of the game's own scripts whose fields your extension needs (`"TerrainOp"`, `"Ship"`; 32 at most): while your extension runs, the editor reads every component of them in the game's prefabs from the player's Valheim (once, then kept until the game changes) and hands them to it as `Host.Game` (see [Hooks](#hooks)). |
 | `settingsFiles` | File names of your mod's BepInEx settings files your extension reads (`"author.mod.cfg"`, in `BepInEx/config`; 8 at most): as a world opens, the editor reads them from the first of the player's BepInEx folders that has each and, live, from the connected game's own through its bridge (a server's, whose synced settings its players get). Your extension reads one setting with `Host.Setting(file, section, key)` (see [Hooks](#hooks)). |
+| `worldGenerators` | The world generators your extension registers (see [World generators](#world-generators)), by the id their worlds' files name, each with your mod's name for the player: `{ "author.mod": "Some Mod" }` (8 at most). The editor reads it even while your extension does not run, so that a world your mod made says why it cannot open: the add-on turned off, waiting for your mod, not running, or your mod's extension not turned on. |
 
 ### How the editor reads it
 
@@ -257,7 +258,8 @@ game does.
 A world generation mod replaces the game's ground, and marks the worlds it makes: their world file starts with -1
 where the game's file version goes, then the generator's id (a string), then whatever the mod keeps (Riverheim: the
 game's file version, then its preset). The editor refuses such a world unless a running extension registers a
-generator with that id, as the game without the mod refuses it. Your `IWorldGenerator` gives:
+generator with that id, as the game without the mod refuses it: listed, greyed out, with why (name the ids in your
+manifest's `worldGenerators` for the editor to say what is missing). Your `IWorldGenerator` gives:
 
 - `Id`, `PluginId` (the mod's BepInEx GUID: in live mode you are told the version the game runs) and `Name`;
 - `ReadHeader(file, out fileVersion)` and `WriteHeader(file, fileVersion, settings)`: what follows the id, read and

@@ -62,9 +62,32 @@ public static class WorldGenerators
             return version;
         }
         string id = pkg.ReadString();
-        var generator = Find(id) ?? throw new GeneratorHeaderException(Lang.T("worldgen.unknown", id));
+        var generator = Find(id) ?? throw new GeneratorHeaderException(WhyNone(id));
         header = new GeneratorHeader(generator, generator.ReadHeader(pkg, out version));
         return version;
+    }
+
+    /// <summary>
+    /// Why a world whose file names a generator none in use registers cannot open, for the player: the add-on that
+    /// says it draws it (its manifest's "worldGenerators") is turned off, waits for its mod, or is not running; or a
+    /// mod's own extension that says so is not turned on, or does not run; else no add-on the editor knows draws it.
+    /// </summary>
+    /// <param name="id">The generator's id, as the world file names it.</param>
+    internal static string WhyNone(string id)
+    {
+        if (ModManifests.InstalledAddOns.FirstOrDefault(a => a.WorldGenerators?.ContainsKey(id) == true) is { } a)
+        {
+            string mod = a.WorldGenerators![id];
+            return !a.On ? Lang.T("worldgen.addOnOff", mod, a.Name)
+                : !a.Served ? Lang.T("worldgen.addOnWaiting", mod, a.Name, a.Serves)
+                : Lang.T("worldgen.addOnNotRunning", mod, a.Name);
+        }
+        if (ModManifests.Extensions.FirstOrDefault(o => !o.AddOn && o.WorldGenerators?.ContainsKey(id) == true) is not { } x)
+        {
+            return Lang.T("worldgen.unknown", id);
+        }
+        bool off = ModExtensions.Offered.FirstOrDefault(e => e.Dll == x.Dll) is not { } e || e.State == ModExtensions.Status.Off;
+        return Lang.T(off ? "worldgen.extensionOff" : "worldgen.extensionNotRunning", x.WorldGenerators![id], x.Mod);
     }
 
     /// <summary>Writes where a new world's file version goes: the version, or the generator's marker, id and header.</summary>

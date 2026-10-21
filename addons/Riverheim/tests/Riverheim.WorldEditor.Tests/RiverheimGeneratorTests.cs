@@ -85,8 +85,12 @@ public sealed class RiverheimGeneratorTests : IDisposable
     [InlineData("made.up", 1, "Unknown preset 'made.up'")]
     public void APresetItDoesNotKnowIsRefusedInItsWords(string preset, int version, string words)
     {
-        var e = Assert.Throws<InvalidOperationException>(() => Generator(Host("bep")).Open(RiverheimGenerator.Settings(new RiverheimMod.Tag(preset, version)), null));
-        Assert.Equal(Texts.Unsupported(preset, version, "1.2.1", words), e.Message);
+        var generator = Generator(Host("bep"));
+        var settings = RiverheimGenerator.Settings(new RiverheimMod.Tag(preset, version));
+        // Said in the world list already, and again as the world opens.
+        Assert.Equal(Texts.Unsupported(preset, version, "1.2.1", words), generator.Problem(settings));
+        Assert.Equal(Texts.Unsupported(preset, version, "1.2.1", words), Assert.Throws<InvalidOperationException>(() => generator.Open(settings, null)).Message);
+        Assert.Null(generator.Problem(Amur));
     }
 
     [Fact]
