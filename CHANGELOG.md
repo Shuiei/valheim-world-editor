@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.99.2 — 2026-10-21
+
+### Fixed
+- **What mods' tools add is kept by the game.** Objects a mod's tool made (Tunnelheim's tunnel records, say) were saved
+  as objects the game does not keep: the game took them away again once their area was unloaded, live at once. They
+  are now saved as the game saves its own.
+
 ## v1.99.1 — 2026-10-21
 
 ### Fixed
