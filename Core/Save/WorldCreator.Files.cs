@@ -1,3 +1,4 @@
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 
 namespace TerrainEditor.Save;
@@ -12,14 +13,22 @@ public static partial class WorldCreator
 
     /// <summary>
     /// World.SaveWorldMetaData: a length, then the package (version, name, seed name, seed, unique id, generator
-    /// version, "has a database", no starting global keys, and the trailing count the game writes after them).
+    /// version, "has a database", no starting global keys, and the trailing count the game writes after them). A
+    /// Riverheim world has Riverheim's header too, as Riverheim writes it (<see cref="Riverheim.WriteHeader"/>).
     /// </summary>
-    private static void WriteMetadata(string path, string name, string seedName, int seed, long uid)
+    private static void WriteMetadata(string path, string name, string seedName, int seed, long uid, ValheimGen.RiverheimRules? riverheim)
     {
         using MemoryStream pkg = new();
         using (BinaryWriter p = new(pkg, System.Text.Encoding.UTF8, leaveOpen: true))
         {
-            p.Write(SaveFileVersion);
+            if (riverheim != null)
+            {
+                Riverheim.WriteHeader(p, SaveFileVersion, new Riverheim.Tag(riverheim.Preset, riverheim.PresetVersion));
+            }
+            else
+            {
+                p.Write(SaveFileVersion);
+            }
             p.Write(name);
             p.Write(seedName);
             p.Write(seed);

@@ -88,6 +88,17 @@ internal sealed class RiverheimLibrary
     }
 
     /// <summary>
+    /// The preset Riverheim gives a new world (its own, at its newest version). Throws <c>MissingMemberException</c>
+    /// when this Riverheim has no such thing (another version than the one followed).
+    /// </summary>
+    public Riverheim.Tag DefaultTag()
+    {
+        object settings = Invoke(_configManager, "DefaultWorldSettings", null, []) ?? throw new MissingMemberException(_configManager.FullName, "DefaultWorldSettings");
+        object? Value(string name) => (_settings.GetProperty(name) ?? throw new MissingMemberException(_settings.FullName, name)).GetValue(settings);
+        return Value("Preset") is string preset && Value("PresetVersion") is int version ? new Riverheim.Tag(preset, version) : throw new MissingMemberException(_settings.FullName, "Preset");
+    }
+
+    /// <summary>
     /// The ground of a world: laid out for the seed and the world's settings (seconds of work and a couple of hundred
     /// megabytes), or taken from the last two laid out.
     /// </summary>
@@ -150,12 +161,16 @@ internal sealed class RiverheimLibrary
     /// <summary>The settings as Riverheim's own record.</summary>
     private object Settings(Riverheim.Tag tag) => Activator.CreateInstance(_settings, [tag.Preset, tag.PresetVersion])!;
 
-    /// <summary>Calls a public method by name; the method's own exception is thrown as it is.</summary>
+    /// <summary>
+    /// Calls a public method by name; the method's own exception is thrown as it is, and <c>MissingMethodException</c>
+    /// when there is no such method (another version than the one followed).
+    /// </summary>
     private static object? Invoke(Type type, string method, object? target, object?[] args)
     {
         try
         {
-            return type.GetMethod(method, BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance)!.Invoke(target, args);
+            var found = type.GetMethod(method, BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance) ?? throw new MissingMethodException(type.FullName, method);
+            return found.Invoke(target, args);
         }
         catch (TargetInvocationException e) when (e.InnerException != null)
         {

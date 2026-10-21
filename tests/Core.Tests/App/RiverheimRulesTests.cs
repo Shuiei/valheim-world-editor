@@ -9,7 +9,7 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// A world made with Riverheim, drawn with the real Riverheim (downloaded for the tests, its BepInEx beside it and a
 /// stand-in for Unity's classes): the game's own values to the bit, a preset it does not know refused with its words,
-/// and a Riverheim that cannot lay the world out said as such.
+/// a Riverheim that cannot lay the world out said as such, and new worlds laid out with its own preset.
 /// </summary>
 [Collection("DataDir")]
 public class RiverheimRulesTests : AppSettingsTestBase
@@ -73,6 +73,17 @@ public class RiverheimRulesTests : AppSettingsTestBase
         var rules = Riverheim.Rules(Amur, Settings("nocore", core: false));
         var e = Assert.Throws<InvalidOperationException>(() => Generator("5DCcdIcuYJ", rules));
         Assert.StartsWith(Lang.T("riverheim.layOutFailed", "1.2.1", ""), e.Message);
+    }
+
+    [Fact]
+    public void NewWorldsAreLaidOutByRiverheimWhileItsSwitchIsOn()
+    {
+        var settings = Settings("bep");
+        var riverheim = Riverheim.ForNewWorld(settings).Riverheim;
+        Assert.NotNull(riverheim);
+        Assert.Equal(("1.2.1", "builtin.amur", 2), (riverheim.Version, riverheim.Preset, riverheim.PresetVersion));
+        settings.Riverheim = false;
+        Assert.True(Riverheim.ForNewWorld(settings).IsVanilla);
     }
 
     [Fact]

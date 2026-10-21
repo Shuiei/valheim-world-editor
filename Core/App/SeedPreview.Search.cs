@@ -5,6 +5,13 @@ namespace TerrainEditor.App;
 public static partial class SeedPreview
 {
     /// <summary>
+    /// How many seeds a search looks at at once: all but one of the processors; two with Riverheim, whose worlds are
+    /// laid out whole first (a couple of hundred megabytes each, and Riverheim works on several threads itself).
+    /// </summary>
+    /// <param name="rules">What the worlds follow.</param>
+    internal static int SeedsAtOnce(WorldRules? rules) => rules?.Riverheim != null ? 2 : Math.Max(1, Environment.ProcessorCount - 1);
+
+    /// <summary>
     /// Random seeds tried in parallel (count of them), the best kept (keep), scored by the wishes; progress
     /// is told after each seed (done, total). Previews of size cells (small: many seeds quickly). Cancelling
     /// returns what was found so far; the previews come without their generator and layout (kept light).
@@ -14,7 +21,7 @@ public static partial class SeedPreview
     {
         var found = new List<(Preview, float)>();
         int done = 0;
-        var options = new ParallelOptions { CancellationToken = cancel, MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) };
+        var options = new ParallelOptions { CancellationToken = cancel, MaxDegreeOfParallelism = SeedsAtOnce(rules) };
         try
         {
             Parallel.For(0, count, options, _ =>

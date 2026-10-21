@@ -1,13 +1,14 @@
 using TerrainEditor.App;
 using TerrainEditor.Save;
+using ValheimGen;
 using Xunit;
 
 namespace WorldEditor.Tests;
 
 /// <summary>
 /// Riverheim as the editor reads it: its header in a world file (its preset kept, the rest of the head read as usual;
-/// its beta's, another generator's or an unknown setting refused with why), why such a world cannot be opened, and where
-/// its plugin is found.
+/// its beta's, another generator's or an unknown setting refused with why; written as Riverheim writes it for a world
+/// made with its rules), why such a world cannot be opened, and where its plugin is found.
 /// </summary>
 [Collection("DataDir")]
 public class RiverheimTests : AppSettingsTestBase
@@ -50,6 +51,18 @@ public class RiverheimTests : AppSettingsTestBase
         Assert.Equal(Lang.T("riverheim.unknownSetting", "made.up"), Assert.Throws<GeneratorHeaderException>(() => Head(w, [("preset", "builtin.amur"), ("made.up", 3)])).Message);
         Assert.Equal(Lang.T("riverheim.noPreset"), Assert.Throws<GeneratorHeaderException>(() => Head(w, [("preset.version", 2)])).Message);
         Assert.Equal(Lang.T("riverheim.noPreset"), Assert.Throws<GeneratorHeaderException>(() => Head(w, [("preset", "builtin.amur")])).Message);
+    }
+
+    [Fact]
+    public void AWorldMadeWithItsRulesHasItsHeader()
+    {
+        string folder = Path.Combine(Data, "Made");
+        var rules = new WorldRules { Riverheim = new RiverheimRules("1.2.1", "builtin.amur", 2) };
+        WorldCreator.Create(folder, "Made", "abcde", rules: rules);
+        var head = WorldSave.ReadMetadata(Path.Combine(folder, "_main.1.fwl2"));
+        Assert.Equal((new Riverheim.Tag("builtin.amur", 2), "Made", "abcde"), (head.RiverheimTag, head.Name, head.SeedName));
+        WorldCreator.Create(Path.Combine(Data, "Plain"), "Plain", "abcde");
+        Assert.Null(WorldSave.ReadMetadata(Path.Combine(Data, "Plain", "_main.1.fwl2")).RiverheimTag);
     }
 
     [Fact]

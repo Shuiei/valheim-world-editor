@@ -24,6 +24,14 @@ editor without it.
 
 Worlds made without Riverheim never use it, even with the switch on and the mod installed.
 
+## New worlds
+
+With the switch on and Riverheim found, the [New world](new-world.md) page offers Riverheim as the world's
+generator (the game's own is the other choice). The seed's map, the start, the traders and bosses, the search and the
+world made are then Riverheim's, with Riverheim's own preset, and the world opens in the game as a Riverheim world.
+Each seed takes a few seconds to look at: Riverheim lays its whole world out first, and a search looks at two seeds
+at a time.
+
 ## With Expand World
 
 Riverheim's world can be played with the Expand World mods. With the Expand World switch on too, the editor

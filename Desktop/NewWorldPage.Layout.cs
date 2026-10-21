@@ -37,6 +37,7 @@ public sealed partial class NewWorldPage : IDisposable
                 Row(Lang.T("dialog.label.name"), NameBox),
                 seedRow,
                 Row(Lang.T("newWorld.label.savedIn"), Where),
+                GeneratorRow(),
                 Ui.Hint(Lang.T("newWorld.hint.normalWorld")),
                 Generation,
                 Create,
