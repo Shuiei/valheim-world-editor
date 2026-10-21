@@ -29,11 +29,11 @@ public sealed class WorldSessionGeneratorTests : IDisposable
         }
     }
 
-    /// <summary>A world Flatland made at this height, as read from its folder.</summary>
+    /// <summary>A world Flatland made at this height, in a folder of its own, as read from it.</summary>
     private WorldSave World(float height)
     {
         var g = WorldGenerators.Find("test.flatland")!;
-        string folder = Path.Combine(_dir, "Flat");
+        string folder = Path.Combine(_dir, Guid.NewGuid().ToString("N")[..8], "Flat");
         WorldCreator.Create(folder, "Flat", "abcde", rules: new WorldRules { Generator = g.Rules(FlatlandGenerator.Settings(height), null) });
         return WorldSave.Load(folder);
     }
