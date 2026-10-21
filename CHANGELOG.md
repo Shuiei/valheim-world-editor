@@ -10,6 +10,12 @@ the plugin is unchanged in versions without that part.
 - **Expand World Size's "Stretch biomes" lays the biomes out as the game does.** The editor spread the biome fields
   from the wrong origin, so about one point in fifteen had a different biome than in the game.
 
+## v1.87.1 — 2026-10-20
+
+### Fixed
+- **Expand World Size's altitude and water depth match the game to the bit.** With those settings changed, about one
+  point in eight came out a hair higher or lower than the game makes it.
+
 ## v1.87.0 — 2026-10-20
 
 ### Added
