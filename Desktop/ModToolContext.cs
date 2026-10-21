@@ -12,8 +12,11 @@ namespace TerrainEditor.Desktop;
 /// <param name="status">Puts a line in the status bar.</param>
 internal sealed class ModToolContext(GlView view, ModToolPanel panel, Action<Said> status) : IToolContext
 {
+    /// <summary>No area (none is open): no objects, flat ground at the sea.</summary>
+    private static readonly PlainArea NoArea = new(0, 0, 0, 0, ValheimGen.WorldRules.Vanilla.WaterLevel);
+
     /// <inheritdoc/>
-    public IAreaView Area => view.Scene is { } s ? new SceneLayers.AreaView(s) : NoArea.Instance;
+    public IAreaView Area => view.Scene is { } s ? new SceneLayers.AreaView(s) : NoArea;
 
     /// <inheritdoc/>
     public float Number(string id) => panel.Number(id);
@@ -51,33 +54,5 @@ internal sealed class ModToolContext(GlView view, ModToolPanel panel, Action<Sai
         {
             status(Said.Of("mods.tool.skipped", plan.Skipped.Count));
         }
-    }
-
-    /// <summary>No area (none is open): no objects, flat ground at the sea.</summary>
-    private sealed class NoArea : IAreaView
-    {
-        public static NoArea Instance { get; } = new();
-
-        public float MinX => 0;
-
-        public float MinZ => 0;
-
-        public float MaxX => 0;
-
-        public float MaxZ => 0;
-
-        public IReadOnlyList<IObjectView> ObjectsOf(string prefab) => [];
-
-        public float GroundHeight(float x, float z) => ValheimGen.WorldRules.Vanilla.WaterLevel;
-
-        public int Biome(float x, float z) => 0;
-
-        public bool IsDeepNorth(float x, float z) => false;
-
-        public bool IsAshlands(float x, float z) => false;
-
-        public uint BiomeColor(int x, int z) => 0;
-
-        public uint GroundMask(int x, int z) => 0xFF000000;
     }
 }
