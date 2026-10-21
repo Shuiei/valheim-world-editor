@@ -76,16 +76,7 @@ public static class DigOps
     /// <summary>Level Wall's normal: against the horizontal look direction (the hit's own when looking straight down).</summary>
     /// <param name="look">The look direction.</param>
     /// <param name="hitNormal">The hit surface's normal.</param>
-    public static Vector3 WallNormal(Vector3 look, Vector3 hitNormal)
-    {
-        var flat = new Vector3(-look.X, 0, -look.Z);
-        if (RockMath.LengthSquared(flat) > 1e-4f)
-        {
-            return RockMath.Normalize(flat);
-        }
-        flat = new Vector3(hitNormal.X, 0, hitNormal.Z);
-        return RockMath.LengthSquared(flat) > 1e-4f ? RockMath.Normalize(flat) : Vector3.UnitZ;
-    }
+    public static Vector3 WallNormal(Vector3 look, Vector3 hitNormal) => RockMath.Normalize(FlatOr(-look, FlatOr(hitNormal, Vector3.UnitZ)));
 
     /// <summary>Level Ceiling's normal: straight down.</summary>
     public static Vector3 CeilingNormal { get; } = -Vector3.UnitY;
@@ -145,11 +136,7 @@ public static class DigOps
     /// <param name="top">The top of the first step.</param>
     /// <param name="look">The way down (only its horizontal part counts).</param>
     /// <param name="steps">How many steps.</param>
-    public static DigOp Stairs(Vector3 top, Vector3 look, int steps)
-    {
-        var flat = new Vector3(look.X, 0, look.Z);
-        return Aimed(DigKind.Stairs, top, steps, RockMath.LengthSquared(flat) > 1e-4f ? flat : Vector3.UnitZ);
-    }
+    public static DigOp Stairs(Vector3 top, Vector3 look, int steps) => Aimed(DigKind.Stairs, top, steps, FlatOr(look, Vector3.UnitZ));
 
     /// <summary>The middles of 2 m cubes covering a size around a middle: as many as it takes, centred on it.</summary>
     private static IEnumerable<float> Centred(float middle, float size)
@@ -172,6 +159,13 @@ public static class DigOps
         {
             yield return from + (side * (i + 0.5f));
         }
+    }
+
+    /// <summary>A direction's horizontal part; the fallback when it has next to none (straight up or down).</summary>
+    private static Vector3 FlatOr(Vector3 v, Vector3 fallback)
+    {
+        var flat = new Vector3(v.X, 0, v.Z);
+        return RockMath.LengthSquared(flat) > 1e-4f ? flat : fallback;
     }
 
     /// <summary>A swing's direction made unit length; straight down when it has none.</summary>

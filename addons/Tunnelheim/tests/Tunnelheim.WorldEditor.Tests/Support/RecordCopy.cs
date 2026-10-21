@@ -4,27 +4,23 @@ using ValheimWorldEditor.Sdk;
 namespace Tunnelheim.WorldEditor.Tests;
 
 /// <summary>What an edit's data setter writes (an ICopy keeping only byte arrays), to read a record the tool made back.</summary>
-internal sealed class RecordCopy(string prefab = "TunnelColumnData") : ICopy
+internal sealed class RecordCopy : FakeObject, ICopy
 {
-    public Dictionary<string, byte[]> Bytes { get; } = [];
+    private readonly Dictionary<string, byte[]> _bytes;
 
-    public string Prefab => prefab;
-
-    public Vector3 Position => Vector3.Zero;
-
-    public Vector3 Rotation => Vector3.Zero;
-
-    public Quaternion Orientation => Quaternion.Identity;
-
-    public float Scale => 1;
+    private RecordCopy(Dictionary<string, byte[]> bytes)
+        : base(TunnelheimMod.RecordPrefabName, Vector3.Zero, bytes)
+    {
+        _bytes = bytes;
+    }
 
     /// <summary>The record written under the mod's key.</summary>
-    public ColumnRecord Record => ColumnRecord.Parse(Bytes[TunnelheimMod.RecordKeyName]);
+    public ColumnRecord Written => ColumnRecord.Parse(_bytes[TunnelheimMod.RecordKeyName]);
 
     /// <summary>What a data setter writes.</summary>
     public static RecordCopy Of(Action<ICopy> set)
     {
-        var copy = new RecordCopy();
+        var copy = new RecordCopy([]);
         set(copy);
         return copy;
     }
@@ -33,7 +29,7 @@ internal sealed class RecordCopy(string prefab = "TunnelColumnData") : ICopy
     {
         if (value != null)
         {
-            Bytes[key] = value;
+            _bytes[key] = value;
         }
     }
 
@@ -56,42 +52,4 @@ internal sealed class RecordCopy(string prefab = "TunnelColumnData") : ICopy
     public void SetString(string key, string? value)
     {
     }
-
-    public bool TryGetInt(string key, out int value)
-    {
-        value = 0;
-        return false;
-    }
-
-    public bool TryGetLong(string key, out long value)
-    {
-        value = 0;
-        return false;
-    }
-
-    public bool TryGetFloat(string key, out float value)
-    {
-        value = 0;
-        return false;
-    }
-
-    public bool TryGetVector3(string key, out Vector3 value)
-    {
-        value = default;
-        return false;
-    }
-
-    public bool TryGetQuaternion(string key, out Quaternion value)
-    {
-        value = default;
-        return false;
-    }
-
-    public bool TryGetString(string key, out string value)
-    {
-        value = "";
-        return false;
-    }
-
-    public bool TryGetBytes(string key, out byte[] value) => Bytes.TryGetValue(key, out value!);
 }

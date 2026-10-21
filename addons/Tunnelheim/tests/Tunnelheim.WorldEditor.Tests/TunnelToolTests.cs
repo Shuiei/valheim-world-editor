@@ -1,5 +1,6 @@
 using System.Numerics;
 using ValheimWorldEditor.Sdk;
+using WorldEditor.Tests;
 using Xunit;
 
 namespace Tunnelheim.WorldEditor.Tests;
@@ -12,21 +13,11 @@ namespace Tunnelheim.WorldEditor.Tests;
 public class TunnelToolTests
 {
     /// <summary>The editor as the tool sees it: flat ground at 40 m, the action and sliders given; what the tool did, kept.</summary>
-    private sealed class Editor(int action, params IObjectView[] objects) : IToolContext
+    private sealed class Editor(int action, params IObjectView[] objects) : ToolContextRecorder(new FakeArea(40, objects))
     {
-        public List<(string Label, ToolEdit Edit)> Commits { get; } = [];
-
-        public IReadOnlyList<Shape> Shown { get; private set; } = [];
-
-        public string Said { get; private set; } = "";
-
-        public Dictionary<string, string> Texts { get; } = [];
-
         public int Action { get; set; } = action;
 
-        public IAreaView Area { get; } = new FakeArea(40, objects);
-
-        public float Number(string id) => id switch
+        public override float Number(string id) => id switch
         {
             "size" => 1.5f,
             "steps" => 4,
@@ -35,17 +26,7 @@ public class TunnelToolTests
             _ => 4,
         };
 
-        public int Choice(string id) => Action;
-
-        public bool IsOn(string id) => false;
-
-        public void SetText(string id, string text) => Texts[id] = text;
-
-        public void Preview(IReadOnlyList<Shape> shapes) => Shown = shapes;
-
-        public void Status(string text) => Said = text;
-
-        public void Commit(string label, ToolEdit edit) => Commits.Add((label, edit));
+        public override int Choice(string id) => Action;
     }
 
     private static TunnelTool Tool() => new(new FakeHost(), _ => { });
@@ -177,7 +158,7 @@ public class TunnelToolTests
         tool.OnPointer(ed, Click(8, 40, 8));
         var edit = Assert.Single(ed.Commits).Edit;
         Assert.Same(record, Assert.Single(edit.Changed).Object);
-        Assert.Equal(DigKind.Chip, Assert.Single(RecordCopy.Of(edit.Changed[0].Change).Record.Ops).Kind);
+        Assert.Equal(DigKind.Chip, Assert.Single(RecordCopy.Of(edit.Changed[0].Change).Written.Ops).Kind);
     }
 
     /// <summary>Points equal to a millimetre.</summary>
