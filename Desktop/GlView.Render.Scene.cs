@@ -55,11 +55,7 @@ public sealed partial class GlView
         }
         else
         {
-            var sun = GameLookGl.SunDirView;
-            _gl.Enable(EnableCap.CullFace);
-            _gl.UseProgram(_terrainProg);
-            _gl.UniformMatrix4(_u.At(_terrainProg, "uViewProj"), 1, false, (float*)&vp);
-            _gl.Uniform3(_u.At(_terrainProg, "uSun"), sun.X, sun.Y, sun.Z);
+            UsePlainTerrain(vp);
         }
         uint program = look?.TerrainShader() ?? _terrainProg;
         if (Scene is { } s)
@@ -89,11 +85,7 @@ public sealed partial class GlView
         {
             DrawLayerMeshes(s, look.TerrainShader(), look, m => m.Look);
         }
-        var sun = GameLookGl.SunDirView;
-        _gl.Enable(EnableCap.CullFace);
-        _gl.UseProgram(_terrainProg);
-        _gl.UniformMatrix4(_u.At(_terrainProg, "uViewProj"), 1, false, (float*)&vp);
-        _gl.Uniform3(_u.At(_terrainProg, "uSun"), sun.X, sun.Y, sun.Z);
+        UsePlainTerrain(vp);
         DrawLayerMeshes(s, _terrainProg, null, m => look == null || !m.Look);
         if (look != null)
         {
@@ -157,5 +149,15 @@ public sealed partial class GlView
         {
             DrawNewMarkers(s, vp, rh);
         }
+    }
+
+    /// <summary>The plain ground program (the game's look off), its faces culled, with the view and the sun.</summary>
+    private unsafe void UsePlainTerrain(Matrix4x4 vp)
+    {
+        var sun = GameLookGl.SunDirView;
+        _gl.Enable(EnableCap.CullFace);
+        _gl.UseProgram(_terrainProg);
+        _gl.UniformMatrix4(_u.At(_terrainProg, "uViewProj"), 1, false, (float*)&vp);
+        _gl.Uniform3(_u.At(_terrainProg, "uSun"), sun.X, sun.Y, sun.Z);
     }
 }

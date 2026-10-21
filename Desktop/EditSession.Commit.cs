@@ -18,23 +18,30 @@ public sealed partial class EditSession
     /// <param name="add">New objects (their ids are given here; Piece: a player-built piece; read after the ground
     /// step, which may fill it).</param>
     /// <param name="resets">Zones marked for reset or unmarked, with their state before and after.</param>
+    /// <param name="removeHidden">Hidden objects to take away, by object id (gone or unknown ones are skipped; read
+    /// after the ground step).</param>
+    /// <param name="addHidden">New hidden objects (their ids are given here; read after the ground step).</param>
     /// <returns>The indices of the things added.</returns>
     public List<int> Commit(string label, Func<Ground, (List<int> Touched, (int X0, int Z0, int X1, int Z1) Rect)>? ground,
-        IReadOnlyCollection<int> remove, IReadOnlyList<(NewObject Object, bool Piece)> add, (ZoneReset Reset, bool Before, bool After)[]? resets = null)
+        IReadOnlyCollection<int> remove, IReadOnlyList<(NewObject Object, bool Piece)> add, (ZoneReset Reset, bool Before, bool After)[]? resets = null,
+        IReadOnlyCollection<int>? removeHidden = null, IReadOnlyList<NewObject>? addHidden = null)
     {
+        resets ??= [];
         var (points, before, after, zones) = ChangeGround(ground);
         var (indices, changes, added) = ChangeThings(remove, add);
-        if (added.Count > 0)
+        var (hidden, newHidden) = ChangeHidden(removeHidden ?? [], addHidden ?? []);
+        if (added.Count + newHidden.Count > 0)
         {
-            Edits.AddObjects(added);
+            Edits.AddObjects([.. added, .. newHidden]);
         }
         SetGone(changes.Where(c => c.Item3).Select(c => (c.Item1, true)));
-        SetResets(resets ?? [], after: true);
-        if (points.Length == 0 && changes.Count == 0 && (resets?.Length ?? 0) == 0)
+        SetHiddenGone(hidden.Where(h => h.After).Select(h => (h.Id, true)));
+        SetResets(resets, after: true);
+        if (points.Length == 0 && changes.Count == 0 && hidden.Count == 0 && resets.Length == 0)
         {
             return indices;
         }
-        AddChange(new Change(label, points, before, after, zones) { Things = [.. changes], Resets = resets ?? [] });
+        AddChange(new Change(label, points, before, after, zones) { Things = [.. changes], Resets = resets, Hidden = [.. hidden] });
         if (changes.Count > 0)
         {
             Notify(changes.Select(c => c.Item1));

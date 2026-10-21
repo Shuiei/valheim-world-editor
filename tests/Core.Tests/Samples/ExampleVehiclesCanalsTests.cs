@@ -14,31 +14,9 @@ namespace WorldEditor.Tests;
 /// </summary>
 public class ExampleVehiclesCanalsTests
 {
-    /// <summary>An area of flat ground at 40 m holding the canals given.</summary>
-    private sealed class Area(params IObjectView[] canals) : IAreaView
-    {
-        public float MinX => -32;
-
-        public float MinZ => -32;
-
-        public float MaxX => 32;
-
-        public float MaxZ => 32;
-
-        public IReadOnlyList<IObjectView> ObjectsOf(string prefab) => prefab == Keys.Canal ? canals : [];
-
-        public float GroundHeight(float x, float z) => 40;
-
-        public int Biome(float x, float z) => 1;
-
-        public bool IsDeepNorth(float x, float z) => false;
-
-        public bool IsAshlands(float x, float z) => false;
-
-        public uint BiomeColor(int x, int z) => 0x01020304;
-
-        public uint GroundMask(int x, int z) => 0xFF000000;
-    }
+    /// <summary>An area of flat ground at 40 m in the Meadows holding the canals given.</summary>
+    private static PlainArea Area(params IObjectView[] canals) =>
+        new(-32, -32, 32, 32, 40) { Objects = new Dictionary<string, IReadOnlyList<IObjectView>> { [Keys.Canal] = canals }, BiomeValue = 1, Colour = 0x01020304 };
 
     /// <summary>A canal object keeping a path (and a width when given).</summary>
     private static ObjectView Canal(byte[] path, float? width = null)
@@ -67,7 +45,7 @@ public class ExampleVehiclesCanalsTests
     [Fact]
     public void ACanalIsDugBelowTheGroundWhichIsLeftUndrawnOverIt()
     {
-        var layer = new Canals().Build(new Area(Canal(Canals.WritePath([new(0, 0), new(10, 0)]))));
+        var layer = new Canals().Build(Area(Canal(Canals.WritePath([new(0, 0), new(10, 0)]))));
         var mesh = Assert.Single(layer!.Meshes);
         // The bed (within 1.5 m of the path, the default width's half) 1.5 m down, painted dirt; the banks at the ground.
         for (int i = 0; i < mesh.Positions.Length; i++)
@@ -93,15 +71,15 @@ public class ExampleVehiclesCanalsTests
     [Fact]
     public void AWiderCanalHolesMore()
     {
-        static int Holes(float? width) => new Canals().Build(new Area(Canal(Canals.WritePath([new(0, 0), new(10, 0)]), width)))!.Holes.Count;
+        static int Holes(float? width) => new Canals().Build(Area(Canal(Canals.WritePath([new(0, 0), new(10, 0)]), width)))!.Holes.Count;
         Assert.True(Holes(6) > Holes(null));
     }
 
     [Fact]
     public void WithoutACanalOrWithADamagedPathNothingIsDrawn()
     {
-        Assert.Null(new Canals().Build(new Area()));
-        Assert.Null(new Canals().Build(new Area(Canal([9, 9]))));
-        Assert.Null(new Canals().Build(new Area(Canal(Canals.WritePath([new(1, 1)])))));
+        Assert.Null(new Canals().Build(Area()));
+        Assert.Null(new Canals().Build(Area(Canal([9, 9]))));
+        Assert.Null(new Canals().Build(Area(Canal(Canals.WritePath([new(1, 1)])))));
     }
 }
