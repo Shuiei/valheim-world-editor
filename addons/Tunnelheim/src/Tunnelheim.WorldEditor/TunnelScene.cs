@@ -73,7 +73,7 @@ public sealed class TunnelScene(IEditorHost host, Action<string> log) : IScenePr
     }
 
     /// <summary>Whether no rock stands over a point (the topmost rock there at most 0.2 m above it).</summary>
-    private static bool OpenToSky(RockGrid grid, Vector3 p) =>
+    internal static bool OpenToSky(RockGrid grid, Vector3 p) =>
         grid.TopRockAt(RockMath.Round(p.X / RockGrid.Step), RockMath.Round(p.Z / RockGrid.Step)) <= p.Y + 0.2f;
 
     /// <summary>The ground's value at a point, between the four whole metres around it.</summary>
