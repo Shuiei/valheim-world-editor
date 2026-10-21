@@ -112,6 +112,17 @@ public sealed class SceneLayersTests : IDisposable
     }
 
     [Fact]
+    public void TheGroundBetweenPointsIsWorkedOutAsTheGameDoes()
+    {
+        var s = TestScenes.FlatScene();
+        s.World = new WorldSave { Directory = "none", SaveNumber = 1 };
+        (s.Heights[0], s.Heights[1], s.Heights[65]) = (30.2416f, 30.9325f, 30.0499f);
+        // In the middle of the cell: rounded once from double, as the game's Mono works it out (in float, step by step,
+        // it would be 30.4912014).
+        Assert.Equal(30.491199493408203f, new SceneLayers.AreaView(s).GroundHeight(-31.5f, -31.5f));
+    }
+
+    [Fact]
     public void TheAreaGivesItsObjectsWithTheChangesNotSavedYet()
     {
         using var world = new TempWorld();
