@@ -4,8 +4,9 @@ namespace TerrainEditor.Desktop.Tests;
 
 /// <summary>
 /// The mods' extensions drawn by the real editor (OpenGL): the SDK's sample extension, run from a plugins folder the
-/// settings name (ExtensionEditorProcess), draws its sail and its cable as shapes over the area and cuts the ground round
-/// its pit, without an OpenGL error; the shapes are made again as the area's things change.
+/// settings name (ExtensionEditorProcess), draws its sail and its cable as shapes over the area, cuts the ground round
+/// its pit and digs its canal as a layer in place of the ground, without an OpenGL error; the shapes are made again as
+/// the area's things change.
 /// </summary>
 [Collection("Visual extensions")]
 [Trait("Category", "Visual")]
@@ -21,6 +22,11 @@ public sealed class ExtensionVisualTests(ExtensionEditorProcess editor) : Visual
         Assert.Contains("extension ExampleVehicles (ExampleVehicles.WorldEditor.dll): running.", Log());
         editor.Send("camera 0 0 0 60 120");
         var look = Picture("shapes");
+        // The canal's layer: its trench drawn in place of the ground, seen along it.
+        editor.Send("camera -2 -14 90 12 18");
+        var canal = Picture("canal");
+        Assert.True(canal.Spread > 4, $"the canal's picture is flat (brightness spread {canal.Spread:0.0})");
+        editor.Send("camera 0 0 0 60 120");
         Assert.True(look.Spread > 4, $"the picture is flat (brightness spread {look.Spread:0.0})");
         Assert.True(look.Colours > 20, $"the picture has few colours ({look.Colours})");
         // The ground raised under them: the area's things are sent again, and the shapes with them.

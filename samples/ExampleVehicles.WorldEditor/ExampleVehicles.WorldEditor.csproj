@@ -2,7 +2,7 @@
   <!-- The SDK's sample extension (docs/modding.md#extensions), for a made-up mod, "Example Vehicles",
        whose vehicles are a hull and the parts built on it: its packed lists of ids read in the
        inspector and rewritten in pasted copies, its sails drawn from their corners, its cables drawn
-       from post to post, the ground left undrawn over its pits. A template for a mod's own extension; the editor never loads it by itself.
+       from post to post, the ground left undrawn over its pits, its canals dug as a layer over the area. A template for a mod's own extension; the editor never loads it by itself.
        Built and tested with the editor's tests. -->
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>

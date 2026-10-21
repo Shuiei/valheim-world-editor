@@ -61,8 +61,10 @@ public sealed partial class GameLookGl
 		void main() {
 		  vec3 wp = vec3(position.x + uOffset.x, position.y, uOffset.z - position.z);
 		  vec3 n = normalize(vec3(normal.x, normal.y, -normal.z));
-		  // Mesh.RecalculateTangents with uv = (x, z) / 64: tangent along +x, bitangent along +z.
-		  vec3 t = normalize(vec3(1.0, 0.0, 0.0) - n * n.x);
+		  // Mesh.RecalculateTangents with uv = (x, z) / 64: tangent along +x, bitangent along +z. A wall facing east or
+		  // west (mods' meshes) has no such tangent: along +z then.
+		  vec3 t0 = vec3(1.0, 0.0, 0.0) - n * n.x;
+		  vec3 t = normalize(dot(t0, t0) > 1e-6 ? t0 : vec3(0.0, 0.0, 1.0) - n * n.z);
 		  vec3 b = -cross(n, t);
 		  vs_TEXCOORD1 = vec4(t.x, b.x, n.x, wp.x);
 		  vs_TEXCOORD2 = vec4(t.y, b.y, n.y, wp.y);
@@ -89,6 +91,10 @@ public sealed partial class GameLookGl
 		uniform float uSlope;
 		uniform float uContour;
 		uniform float uLimit;
+		uniform float uHolesOn;
+		uniform sampler2D uHoles;
+		uniform vec4 uHoleGrid;
+		uniform vec3 uOffsetHoles;
 		in float vLimit;
 		in float vCut;
 		in float vs_depth;
@@ -96,6 +102,12 @@ public sealed partial class GameLookGl
 		void main() {
 		  // Where a mod's extension cuts the ground (GroundCuts): nothing.
 		  if (vCut > 0.5) discard;
+		  // The ground cells mods' extensions' layers stand in for (SceneLayers): nothing, cell by cell.
+		  if (uHolesOn > 0.5) {
+		    vec2 g = vec2(vs_TEXCOORD1.w - uOffsetHoles.x + uHoleGrid.x, vs_TEXCOORD3.w - uOffsetHoles.z + uHoleGrid.y);
+		    ivec2 c = ivec2(floor(g));
+		    if (c.x >= 0 && c.y >= 0 && float(c.x) < uHoleGrid.z && float(c.y) < uHoleGrid.w && texelFetch(uHoles, c, 0).r > 0.0) discard;
+		  }
 		  // The shader blends its zone's four corner depths across the zone; the area is drawn as one mesh, so each
 		  // corner is given this point's depth, and any blend of them is that depth.
 		  for (int i = 0; i < 4; i++) { _depth[i] = vs_depth; }

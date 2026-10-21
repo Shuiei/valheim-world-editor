@@ -55,14 +55,42 @@ public sealed partial class GlView
         }
         else
         {
-            var sun = GameLookGl.SunDirView;
-            _gl.Enable(EnableCap.CullFace);
-            _gl.UseProgram(_terrainProg);
-            _gl.UniformMatrix4(_u.At(_terrainProg, "uViewProj"), 1, false, (float*)&vp);
-            _gl.Uniform3(_u.At(_terrainProg, "uSun"), sun.X, sun.Y, sun.Z);
+            UsePlainTerrain(vp);
+        }
+        uint program = look?.TerrainShader() ?? _terrainProg;
+        if (Scene is { } s)
+        {
+            look?.HoleOffset();
+            SetHoles(s, program, true, look?.FreeUnit ?? 0);
         }
         _gl.BindVertexArray(_terrainVao);
         _gl.DrawElements(PrimitiveType.Triangles, _terrainIndexCount, DrawElementsType.UnsignedInt, (void*)0);
+        if (Scene is { } scene)
+        {
+            DrawLayers(scene, vp, look);
+        }
+    }
+
+    /// <summary>
+    /// Mods' extensions' layers, right after the ground: those with the game's look with its program (when it is on),
+    /// the others with the plain one.
+    /// </summary>
+    private unsafe void DrawLayers(WorldScene s, Matrix4x4 vp, GameLookGl? look)
+    {
+        if (_layerMeshes.Count == 0)
+        {
+            return;
+        }
+        if (look != null)
+        {
+            DrawLayerMeshes(s, look.TerrainShader(), look, m => m.Look);
+        }
+        UsePlainTerrain(vp);
+        DrawLayerMeshes(s, _terrainProg, null, m => look == null || !m.Look);
+        if (look != null)
+        {
+            _gl.Disable(EnableCap.CullFace);
+        }
     }
 
     /// <summary>
@@ -120,5 +148,15 @@ public sealed partial class GlView
         {
             DrawNewMarkers(s, vp, rh);
         }
+    }
+
+    /// <summary>The plain ground program (the game's look off), its faces culled, with the view and the sun.</summary>
+    private unsafe void UsePlainTerrain(Matrix4x4 vp)
+    {
+        var sun = GameLookGl.SunDirView;
+        _gl.Enable(EnableCap.CullFace);
+        _gl.UseProgram(_terrainProg);
+        _gl.UniformMatrix4(_u.At(_terrainProg, "uViewProj"), 1, false, (float*)&vp);
+        _gl.Uniform3(_u.At(_terrainProg, "uSun"), sun.X, sun.Y, sun.Z);
     }
 }

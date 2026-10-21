@@ -33,6 +33,18 @@ public static class Keys
     /// <summary>The pit's prefab, a hole dug in the ground.</summary>
     public const string Pit = "example_pit";
 
+    /// <summary>The canal's prefab: an object that only holds a canal's path (the manifest's "data").</summary>
+    public const string Canal = "example_canal";
+
+    /// <summary>Bytes: a canal's path (a version byte, then each point's world x and z as floats).</summary>
+    public const string Path = "ExampleVehicles_Path";
+
+    /// <summary>Float: a canal's width, in metres.</summary>
+    public const string Width = "ExampleVehicles_Width";
+
+    /// <summary>Float: a canal's depth below the ground, in metres.</summary>
+    public const string Depth = "ExampleVehicles_Depth";
+
     /// <summary>Float: a pit's radius, in metres.</summary>
     public const string Radius = "ExampleVehicles_Radius";
 }

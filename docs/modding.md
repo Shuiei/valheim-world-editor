@@ -43,6 +43,7 @@ Vehicles' file:
   "prefabs": {
     "example_boundary": { "hidden": true },
     "example_fleet": { "hidden": true, "data": true },
+    "example_canal": { "hidden": true, "data": true },
     "example_hull": { "group": "Hulls" },
     "example_sail": { "group": "Sails and cables" },
     "example_post": { "group": "Sails and cables" },
@@ -152,6 +153,8 @@ it. It can:
 - draw what your mod builds in code while the game runs (a sail from its corners, a cable from post
   to post);
 - leave the ground undrawn where your mod digs (the mouth of a tunnel, a pit);
+- draw what your mod makes of an area as a whole (a canal, rock dug out of a hill) with the game's ground look, in place
+  of the editor's ground;
 - read the game's own scripts' settings (its `gameComponents`), as the player's Valheim has them;
 - in live mode, ask your mod's own plugin in the game for what only the game knows (see
   [Live mode](#live-mode)).
@@ -185,6 +188,7 @@ it. It can:
            registry.AddShapes(new Sails(), Keys.Sail);         // 3D view
            registry.AddShapes(new Cables(), Keys.Post);
            registry.AddGroundCuts(new Pits(), Keys.Pit);       // the ground
+           registry.AddScene(new Canals());                    // the area as a whole
            registry.AddLiveListener(new LiveLink(registry));   // live mode
            registry.Log($"ready (editor {registry.EditorVersion}, API {registry.ApiVersion})");
        }
@@ -221,6 +225,7 @@ offers one."
 | `AddCopyRewriter(ICopyRewriter, keys)` | Each object of a pasted copy holding one of the keys is handed to you (`ICopy`), after the editor's own linking (`links`), with the copy's new ids for the originals' (`IIdMap.TryGetNew`; false when the object holding the old id was not copied). Change its values in place (`SetInt`, `SetBytes`…; `null` takes a value away). The keys are yours: `dropOnCopy` no longer takes them out. |
 | `AddShapes(IShapeProvider, prefabs)` | Objects of the prefabs are drawn with your shapes too: `Shape`s, triangles in the object's frame (metres; x right, y up, z forward; the object's place, turn and size applied) or in the world's (`WorldSpace = true`), one colour each (red, green, blue, alpha from 0 to 1; alpha below 1: see-through), wound clockwise seen from the front as in Unity, or seen from both sides (`BothSides = true`, for a sail or a cloth). They are drawn with the object's kind (hidden when the View panel hides it). A shape with a triangle naming a corner it lacks, or a corner that is not a number, is not drawn. |
 | `AddGroundCuts(IGroundCutter, prefabs)` | The ground is not drawn inside the outlines (`GroundCut`) you give for objects of the prefabs: points on the ground (x, z) in the object's frame, or in the world's (`WorldSpace = true`); at least three, in any direction round (a self-crossing outline cuts by the even-odd rule). A click there goes through the hole. The editor's ground is a height map with a point every metre: the cut leaves out the ground between the points inside the outline, so its edge follows that 1 m grid, and what shows through is what you draw below (shapes) and the underside of the ground. |
+| `AddScene(ISceneProvider)` | What your mod makes of an area as a whole, drawn in it: `Build(area)` is called on a worker each time an area opens and again whenever its objects, its ground or the game change (or you call `Host.Redraw()`), and returns a `SceneLayer` (or `null`). Its `Meshes` (`SceneMesh`: corners and their normals in the world's frame, metres, triangles wound clockwise seen from the front as in Unity) are drawn with the game's ground look when they have `BiomeColors` (each corner's terrain colour, as `area.BiomeColor` gives it) and painted from their `Mask` (a small texture of the terrain's paint mask, `MaskTexture`) at `MaskUvs`; without biome colours, in `Color`. Clicks land on them (unless `Pickable = false`). Its `Holes` (`GroundHole`: rectangles in whole metres) leave the editor's ground undrawn, cell by cell, exactly to their edges: draw what replaces it. The `area` (`IAreaView`) gives its bounds, its objects of a prefab as they are with the changes not saved yet (`ObjectsOf`, your data holders included), the ground's height as the game shows it (`GroundHeight`, between the points a metre apart along the game's own triangles), the biome, whether a point is in the Deep North or the Ashlands, and the terrain's colour and paint at a whole metre (`BiomeColor`, `GroundMask`). Work everything out from the area each time; keep nothing between calls. |
 | `AddLiveListener(ILiveListener)` | Told when the editor connects to a game (`OnConnected`, with the game) and when that ends (`OnDisconnected`: the world was closed, or another opened). See [Live mode](#live-mode). |
 | `Host` | The editor, outside the hooks: `Host.Live`, the game connected (null when there is none: a saved world, the Workshop); `Host.Game`, the game's components your manifest's `gameComponents` asks for (`Components("Ship")`: each with its prefab, the object it is on and its fields by name, as the game saves them; ready once a world or the Workshop is open, so ask from your hooks, not from `Register`); and `Host.Redraw()`, for your shapes and cuts to be made again at the next frame (after the game told you something new). |
 | `Log(message)` | Writes a line, named after your mod ("extension ExampleVehicles: …"), to the editor's log, `ValheimWorldEditor.log` in its data folder (**Open log** on the start page; started over at each run). |
@@ -345,6 +350,7 @@ from. Example Vehicles builds vehicles out of a hull and the parts built on it.
 | `samples/ExampleVehicles.WorldEditor/PackedIds.cs` | A decoder and copy rewriter for a list of ids packed in a byte array (a version byte, then four bytes per id): shown in the inspector ("Linked to 3 object(s): …"), and in a pasted copy made to name the copy's objects (ids of objects not copied go). |
 | `samples/ExampleVehicles.WorldEditor/Sails.cs` | Shapes: a sail's cloth drawn between three or four corners kept in its data, in its colour, seen from both sides. |
 | `samples/ExampleVehicles.WorldEditor/Cables.cs` | Shapes in world space: a cable from the top of one post to the top of the post it names, found with `TryFind`. |
+| `samples/ExampleVehicles.WorldEditor/Canals.cs` | A scene layer: each canal (a data holder keeping its path, its width and depth) dug as a trench with the game's ground look, its bed painted dirt, the ground left undrawn over it. |
 | `samples/ExampleVehicles.WorldEditor/Pits.cs` | A ground cut: a round hole as wide as the pit's radius (1.5 m when it keeps none). |
 | `samples/ExampleVehicles.WorldEditor/LiveLink.cs` | The extension's side of live mode: names the game's own ships (`Host.Game`, from the manifest's `gameComponents`), checks that the plugin registered, calls its `ping` route, logs the answer, and catches everything. |
 | `samples/ExampleVehicles.Bridge/ExampleVehiclesBridgePlugin.cs` | The mod's BepInEx plugin taking part in live mode: soft dependency, registration in a class of its own, routes `ping` and `players`, a listener that logs what the editor applied. It builds against the game's and BepInEx's DLLs like any plugin (`-p:ValheimDir=…`, a Valheim dedicated server's folder). |

@@ -53,6 +53,8 @@ public static partial class ModExtensions
         /// <summary>Its ground cutters, by prefab hash.</summary>
         public Dictionary<int, List<IGroundCutter>> Cutters { get; } = [];
 
+        /// <summary>Its scene providers.</summary>
+        public List<ISceneProvider> Scenes { get; } = [];
         /// <summary>Its live listeners.</summary>
         public List<ILiveListener> LiveListeners { get; } = [];
 

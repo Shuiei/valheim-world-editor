@@ -15,20 +15,27 @@ public static class Shaders
 		layout(location = 2) in vec3 aCol;
 		layout(location = 7) in float aCut;
 		uniform mat4 uViewProj;
-		out vec3 vNor; out vec3 vCol; out float vY; out float vCut;
-		void main() { vNor = aNor; vCol = aCol; vY = aPos.y; vCut = aCut; gl_Position = uViewProj * vec4(aPos, 1.0); }
+		out vec3 vNor; out vec3 vCol; out float vY; out float vCut; out vec2 vView;
+		void main() { vNor = aNor; vCol = aCol; vY = aPos.y; vCut = aCut; vView = aPos.xz; gl_Position = uViewProj * vec4(aPos, 1.0); }
 		""";
 
     /// <summary>
     /// The plain terrain's fragment shader: vertex colour lit by the sun with a fixed ambient; nothing where a mod's
-    /// extension cuts the ground (GroundCuts).
+    /// extension cuts the ground (GroundCuts) or its layers stand in for a ground cell (SceneLayers).
     /// </summary>
     public const string TerrainFs = """
-		in vec3 vNor; in vec3 vCol; in float vY; in float vCut;
+		in vec3 vNor; in vec3 vCol; in float vY; in float vCut; in vec2 vView;
 		uniform vec3 uSun;
+		uniform float uHolesOn;
+		uniform sampler2D uHoles;
+		uniform vec4 uHoleGrid;
 		out vec4 frag;
 		void main() {
 			if (vCut > 0.5) discard;
+			if (uHolesOn > 0.5) {
+				ivec2 c = ivec2(floor(vec2(vView.x + uHoleGrid.x, -vView.y + uHoleGrid.y)));
+				if (c.x >= 0 && c.y >= 0 && float(c.x) < uHoleGrid.z && float(c.y) < uHoleGrid.w && texelFetch(uHoles, c, 0).r > 0.0) discard;
+			}
 			float l = 0.35 + 0.8 * max(dot(normalize(vNor), uSun), 0.0);
 			frag = vec4(pow(vCol * l, vec3(1.0 / 2.2)), 1.0);
 		}

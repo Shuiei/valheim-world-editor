@@ -16,6 +16,7 @@ public sealed class Extension : IWorldEditorExtension
         registry.AddShapes(new Sails(), Keys.Sail);
         registry.AddShapes(new Cables(), Keys.Post);
         registry.AddGroundCuts(new Pits(), Keys.Pit);
+        registry.AddScene(new Canals());
         registry.AddLiveListener(new LiveLink(registry));
         registry.Log($"ready (editor {registry.EditorVersion}, API {registry.ApiVersion})");
     }
