@@ -11,6 +11,13 @@ the plugin is unchanged in versions without that part.
   read could be a few micrometres off the game's; an add-on that keeps the ground in its data (Tunnelheim's records)
   now matches the game to the bit.
 
+## v1.99.2 — 2026-10-21
+
+### Fixed
+- **What mods' tools add is kept by the game.** Objects a mod's tool made (Tunnelheim's tunnel records, say) were saved
+  as objects the game does not keep: the game took them away again once their area was unloaded, live at once. They
+  are now saved as the game saves its own.
+
 ## v1.99.0 — 2026-10-21
 
 ### Added
