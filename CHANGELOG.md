@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.99.1 — 2026-10-21
+
+### Fixed
+- **Mods' extensions read the ground exactly as the game does.** Between the ground's points, the height an extension
+  read could be a few micrometres off the game's; an add-on that keeps the ground in its data (Tunnelheim's records)
+  now matches the game to the bit.
+
 ## v1.99.0 — 2026-10-21
 
 ### Added

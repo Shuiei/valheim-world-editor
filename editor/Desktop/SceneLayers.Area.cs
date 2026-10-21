@@ -93,11 +93,13 @@ public static partial class SceneLayers
             float u = Math.Clamp(x - _s.OriginX, 0, _s.W - 1), v = Math.Clamp(z - _s.OriginZ, 0, _s.H - 1);
             int ix = Math.Min((int)u, _s.W - 2), iz = Math.Min((int)v, _s.H - 2);
             float fx = u - ix, fz = v - iz;
-            float H(int a, int b) => _s.Heights[(iz + b) * _s.W + ix + a];
+            double H(int a, int b) => _s.Heights[(iz + b) * _s.W + ix + a];
             // The game's two triangles a cell: (0,0), (1,0), (0,1), then (1,1), (0,1), (1,0) (Heightmap's collision mesh).
+            // Worked out in double and rounded once, as the game's Mono runs a float expression: in float, a point
+            // between the grid's could come out a few micrometres off, enough for a mod reading it to round otherwise.
             return fx + fz <= 1
-                ? H(0, 0) + fx * (H(1, 0) - H(0, 0)) + fz * (H(0, 1) - H(0, 0))
-                : H(1, 1) + (1 - fx) * (H(0, 1) - H(1, 1)) + (1 - fz) * (H(1, 0) - H(1, 1));
+                ? (float)(H(0, 0) + (fx * (H(1, 0) - H(0, 0))) + (fz * (H(0, 1) - H(0, 0))))
+                : (float)(H(1, 1) + ((1.0 - fx) * (H(0, 1) - H(1, 1))) + ((1.0 - fz) * (H(1, 0) - H(1, 1))));
         }
 
         /// <inheritdoc/>
