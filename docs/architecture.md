@@ -369,11 +369,9 @@ of the game's GetBiome, GetBiomeHeight, GetAshlandsHeight and GetForestFactor, a
 Size's stretch stays before it, its depth and forest after, as the mods' patches meet in the game. New worlds take
 the first generator that makes them (`WorldGenerators.ForNewWorld`); `WorldCreator` writes its header.
 
-Riverheim's generator is built in for now (`RiverheimGenerator`, `editor/Core/App/RiverheimGenerator.cs`, over `Riverheim.cs`): its header, the
-Riverheim switch (`AppSettings.Riverheim`) and the plugin found in a BepInEx folder (`Riverheim.Find`) for `Problem`,
-and the player's own Riverheim.dll loaded to lay the worlds out (`RiverheimLibrary`: its own load context, the BepInEx
-and Unity assemblies its plugin classes name taken from the BepInEx folder's core and the game's Managed folder; its
-types driven by name, the renderer's calls compiled once; `RiverheimGround`). Users' side: [riverheim.md](riverheim.md).
+Riverheim's generator comes as an add-on (`addons/Riverheim`, net10.0): its header, and the player's own Riverheim.dll
+found through the host (`IEditorHost.FindPlugin`, `GameManagedFolder`) and loaded in a context of its own to lay the
+worlds out (see its README).
 
 ## Live mode
 

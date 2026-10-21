@@ -62,6 +62,7 @@ public sealed class AddOnsInTheEditorTests : IDisposable
         ModExtensions.ScenesOf(area);
         Assert.All(ModExtensions.Tools, t => Assert.False(string.IsNullOrWhiteSpace(t.Info.Name)));
         ModExtensions.CopyArea(area, new CopyRegion(Vector3.Zero, [new(-8, -8), new(8, -8), new(8, 8)], (_, _) => true));
+        WorldGenerators.ForNewWorld(_sandbox.Settings);
         Assert.Equal(ModExtensions.Status.Running, Assert.Single(ModExtensions.Offered).State);
     }
 }

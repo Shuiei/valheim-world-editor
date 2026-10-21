@@ -99,13 +99,6 @@ public sealed partial class AppSettings
     public string? ExpandWorldFolder { get; set; }
 
     /// <summary>
-    /// Riverheim (Settings): worlds made with the Riverheim mod open, drawn with the player's own Riverheim (found in
-    /// the BepInEx folders the editor knows). Off unless chosen: such worlds are refused, as the game without the mod
-    /// refuses them; other worlds never use it.
-    /// </summary>
-    public bool Riverheim { get; set; }
-
-    /// <summary>
     /// How many steps the editor's history keeps (Settings); 0 or less: no limit (only a memory budget).
     /// </summary>
     public int HistorySteps { get; set; }

@@ -68,6 +68,14 @@ public static partial class ModExtensions
         public string? Setting(string file, string section, string key) => ModSettings.Value(file, section, key);
 
         /// <inheritdoc/>
+        public PluginFile? FindPlugin(string dllName) =>
+            LocalGame.FindPlugin(AppSettings.Load(), dllName) is var (dll, bep) ? new PluginFile(dll, bep) : null;
+
+        /// <inheritdoc/>
+        public string? GameManagedFolder =>
+            GameLook.FindValheim(AppSettings.Load().ValheimPath) is { } valheim && GameLook.DataDir(valheim) is { } data ? Path.Combine(data, "Managed") : null;
+
+        /// <inheritdoc/>
         public void Redraw() => ModExtensions.Redraw();
     }
 }

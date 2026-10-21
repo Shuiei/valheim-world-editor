@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace WorldEditor.Tests;
+namespace Riverheim.WorldEditor.Tests;
 
 /// <summary>
 /// A stand-in for the game's Valheim folder where only Unity's base classes are needed: Riverheim's plugin classes

@@ -30,12 +30,11 @@ public sealed class WorldSessionTests : WorldsFolder
     private string Folder(string name) => Path.Combine(Dir, name);
 
     [Fact]
-    public void AWorldMadeWithRiverheimIsRefusedWithWhy()
+    public void AWorldOfAGeneratorNoAddOnDrawsIsRefusedWithWhy()
     {
-        WorldCreator.Create(Folder("Riverheim"), "Riverheim", Seed);
-        WorldFileHead.Write(Path.Combine(Folder("Riverheim"), "_main.1.fwl2"), 42, [], WorldFileHead.RiverheimPreset);
-        // The Riverheim switch is off in the tests' settings.
-        Assert.Equal(Lang.T("riverheim.off"), Assert.Throws<InvalidOperationException>(() => WorldSession.Open(Folder("Riverheim"))).Message);
+        WorldCreator.Create(Folder("Generated"), "Generated", Seed);
+        WorldFileHead.Write(Path.Combine(Folder("Generated"), "_main.1.fwl2"), 42, [], "made.up.generator");
+        Assert.Equal(Lang.T("worldgen.unknown", "made.up.generator"), Assert.Throws<GeneratorHeaderException>(() => WorldSession.Open(Folder("Generated"))).Message);
     }
 
     [Fact]

@@ -142,7 +142,7 @@ adds a setting or a field is read with its defaults until the editor follows it.
 ## With Riverheim
 
 A world made with Riverheim keeps its own ground, and its own biomes unless Expand World Data's world data chooses
-them; which Expand World settings still apply to it is in [Riverheim](riverheim.md#with-expand-world).
+them; which Expand World settings still apply to it is in [the Riverheim add-on](../addons/Riverheim/README.md#with-expand-world).
 
 ## Live mode
 

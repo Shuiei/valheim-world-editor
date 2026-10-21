@@ -16,6 +16,10 @@ internal sealed class FakeHost : IEditorHost, IGameData
     public string? Setting(string file, string section, string key) =>
         file == TunnelheimMod.SettingsFile && Settings.TryGetValue((section, key), out string? value) ? value : null;
 
+    public PluginFile? FindPlugin(string dllName) => null;
+
+    public string? GameManagedFolder => null;
+
     public IGameData Game => this;
 
     public void Redraw()

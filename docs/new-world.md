@@ -180,8 +180,8 @@ Until then the map shows the seed's land with nothing on it.
   and data files (the page says so above Create): a wider world, other biomes and places. See
   [Expand World](expand-world.md). A biome the mods' biome file adds and a territory show on the map in their own
   colours, and the water line is the mods' sea level.
-- With the **Riverheim** switch in Settings on and Riverheim installed, a **Generator** choice appears under Saved
+- With an add-on for a world generation mod in use (the [Riverheim add-on](../addons/Riverheim/README.md)) and the
+  mod installed, a **Generator** choice appears under Saved
   in: Riverheim (chosen at first, as the game makes every new world a Riverheim world while the mod is installed) or
   the game's. With Riverheim the map, the marks and the search show Riverheim's world, the world is made as a
-  Riverheim world, and each seed takes a few seconds: your Riverheim lays its whole world out first. See
-  [Riverheim](riverheim.md).
+  Riverheim world, and each seed takes a few seconds: your Riverheim lays its whole world out first.

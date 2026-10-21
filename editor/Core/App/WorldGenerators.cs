@@ -6,16 +6,13 @@ namespace TerrainEditor.App;
 
 /// <summary>
 /// The world generation mods the editor draws worlds of (IWorldGenerator): those the running extensions register (an
-/// add-on's, a mod's own), and Riverheim's for now. A world file marks a world one of them made: -1 where the game's
-/// file version goes, then the generator's id, then its header.
+/// add-on's, a mod's own; Riverheim's comes as the Riverheim add-on). A world file marks a world one of them made: -1
+/// where the game's file version goes, then the generator's id, then its header.
 /// </summary>
 public static class WorldGenerators
 {
     /// <summary>What a world file made with a world generation mod starts with where the game's file version would be (always positive).</summary>
     public const int Marker = -1;
-
-    /// <summary>The generators built into the editor.</summary>
-    private static readonly ModGenerator[] BuiltIn = [new(RiverheimGenerator.Stable, null), new(RiverheimGenerator.Beta, null)];
 
     /// <summary>
     /// The generator a world file names; null when none in use does. The extensions are run first when which run has not
@@ -48,8 +45,8 @@ public static class WorldGenerators
         return true;
     }
 
-    /// <summary>The generator in use with this id, the extensions' before the built-in ones.</summary>
-    private static ModGenerator? Of(string id) => ModExtensions.Generators.Concat(BuiltIn).FirstOrDefault(g => g.Id == id);
+    /// <summary>The generator in use with this id.</summary>
+    private static ModGenerator? Of(string id) => ModExtensions.Generators.FirstOrDefault(g => g.Id == id);
 
     /// <summary>
     /// The world file's version, and the generator header before it in a world a world generation mod made (null for
@@ -99,7 +96,7 @@ public static class WorldGenerators
     {
         Decide(settings);
         var rules = ExpandWorld.ForNewWorld(settings);
-        foreach (var g in ModExtensions.Generators.Concat(BuiltIn))
+        foreach (var g in ModExtensions.Generators)
         {
             if (g.NewWorldSettings() is not { } made)
             {

@@ -45,7 +45,7 @@ public sealed partial class WorldSession
     /// </summary>
     /// <param name="live">The game's bridge.</param>
     /// <param name="pluginId">The plugin's id.</param>
-    private static async Task<string?> GamePluginVersion(LiveBridge live, string pluginId)
+    internal static async Task<string?> GamePluginVersion(LiveBridge live, string pluginId)
     {
         try
         {

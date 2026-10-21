@@ -143,7 +143,7 @@ public sealed partial class WorldSession : IDisposable
     /// </summary>
     /// <param name="world">The world just read, with its Expand World rules.</param>
     /// <param name="gameVersion">The mod's version the live game runs, when known.</param>
-    private static void TakeGenerator(WorldSave world, string? gameVersion = null)
+    internal static void TakeGenerator(WorldSave world, string? gameVersion = null)
     {
         if (world.Generator is not { } header)
         {

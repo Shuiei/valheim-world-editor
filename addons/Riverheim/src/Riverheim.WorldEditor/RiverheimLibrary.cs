@@ -3,10 +3,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Loader;
 
-namespace TerrainEditor.App;
+namespace Riverheim.WorldEditor;
 
 /// <summary>
-/// The player's Riverheim.dll, loaded to lay worlds out with Riverheim's own generator: the editor carries none of the
+/// The player's Riverheim.dll, loaded to lay worlds out with Riverheim's own generator: the add-on carries none of the
 /// mod (it has no licence to), it calls the copy the player installed. Loaded into its own context from the file's
 /// bytes (the file stays free), its own types driven by name. The plugin's classes in it name BepInEx's and Unity's
 /// (no code of theirs runs): those come from the BepInEx folder's core and the game's Managed folder.
@@ -18,6 +18,9 @@ namespace TerrainEditor.App;
 /// </remarks>
 internal sealed class RiverheimLibrary
 {
+    /// <summary>Where the add-on's lines go: the editor's log once the extension is registered.</summary>
+    public static Action<string> Log { get; set; } = Console.WriteLine;
+
     /// <summary>The pipeline result the game side asks for: the renderer of the laid-out world.</summary>
     private const string RendererId = "Rendering/WorldRenderer";
 
@@ -81,7 +84,7 @@ internal sealed class RiverheimLibrary
     /// version than it knows), in its own words; null when it can.
     /// </summary>
     /// <param name="tag">The settings the world file keeps.</param>
-    public string? Problem(Riverheim.Tag tag)
+    public string? Problem(RiverheimMod.Tag tag)
     {
         object?[] args = [Settings(tag), null];
         return (bool)Invoke(_configManager, "Validate", null, args)! ? null : args[1] as string ?? "";
@@ -91,11 +94,11 @@ internal sealed class RiverheimLibrary
     /// The preset Riverheim gives a new world (its own, at its newest version). Throws <c>MissingMemberException</c>
     /// when this Riverheim has no such thing (another version than the one followed).
     /// </summary>
-    public Riverheim.Tag DefaultTag()
+    public RiverheimMod.Tag DefaultTag()
     {
         object settings = Invoke(_configManager, "DefaultWorldSettings", null, []) ?? throw new MissingMemberException(_configManager.FullName, "DefaultWorldSettings");
         object? Value(string name) => (_settings.GetProperty(name) ?? throw new MissingMemberException(_settings.FullName, name)).GetValue(settings);
-        return Value("Preset") is string preset && Value("PresetVersion") is int version ? new Riverheim.Tag(preset, version) : throw new MissingMemberException(_settings.FullName, "Preset");
+        return Value("Preset") is string preset && Value("PresetVersion") is int version ? new RiverheimMod.Tag(preset, version) : throw new MissingMemberException(_settings.FullName, "Preset");
     }
 
     /// <summary>
@@ -104,7 +107,7 @@ internal sealed class RiverheimLibrary
     /// </summary>
     /// <param name="seed">The world's seed.</param>
     /// <param name="tag">The settings the world file keeps.</param>
-    public RiverheimGround Ground(int seed, Riverheim.Tag tag)
+    public RiverheimGround Ground(int seed, RiverheimMod.Tag tag)
     {
         string key = $"{seed}|{tag.Preset}|{tag.PresetVersion}";
         Lazy<RiverheimGround> ground;
@@ -134,7 +137,7 @@ internal sealed class RiverheimLibrary
         catch (Exception e)
         {
             // A layout that failed is kept by its Lazy: forgotten, so the next open tries again.
-            Log.CaughtBrief(e, $"laying out seed {seed} with Riverheim {Version} (forgotten: the next open tries again)");
+            Log($"laying out seed {seed} with Riverheim {Version} failed (forgotten: the next open tries again): {e.GetType().Name}: {e.Message}");
             lock (_recent)
             {
                 _recent.RemoveAll(r => ReferenceEquals(r.Ground, ground));
@@ -144,7 +147,7 @@ internal sealed class RiverheimLibrary
     }
 
     /// <summary>Lays a world out, as the game side does in its Pregenerate prefix.</summary>
-    private RiverheimGround LayOut(int seed, Riverheim.Tag tag)
+    private RiverheimGround LayOut(int seed, RiverheimMod.Tag tag)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
         object config = Invoke(_configManager, "GetConfig", null, [Settings(tag)])!;
@@ -154,12 +157,12 @@ internal sealed class RiverheimLibrary
         object pipeline = Invoke(_builder, "Build", builder, [])!;
         pipeline.GetType().GetMethod("Compute", [typeof(int), typeof(object)])!.Invoke(pipeline, [seed, config]);
         object renderer = pipeline.GetType().GetMethod("GetResult")!.MakeGenericMethod(_renderer).Invoke(pipeline, [RendererId])!;
-        Console.WriteLine($"Riverheim {Version}: seed {seed} laid out with preset {tag.Preset} v{tag.PresetVersion} in {watch.ElapsedMilliseconds} ms.");
+        Log($"Riverheim {Version}: seed {seed} laid out with preset {tag.Preset} v{tag.PresetVersion} in {watch.ElapsedMilliseconds} ms.");
         return new RiverheimGround(Calls, renderer);
     }
 
     /// <summary>The settings as Riverheim's own record.</summary>
-    private object Settings(Riverheim.Tag tag) => Activator.CreateInstance(_settings, [tag.Preset, tag.PresetVersion])!;
+    private object Settings(RiverheimMod.Tag tag) => Activator.CreateInstance(_settings, [tag.Preset, tag.PresetVersion])!;
 
     /// <summary>
     /// Calls a public method by name; the method's own exception is thrown as it is, and <c>MissingMethodException</c>
@@ -191,12 +194,12 @@ internal sealed class RiverheimLibrary
                 return context.LoadFromStream(stream);
             }
         }
-        Console.WriteLine($"Riverheim: {name.Name}.dll is in none of {string.Join(", ", folders)}.");
+        Log($"{name.Name}.dll, which Riverheim names, is in none of {string.Join(", ", folders)}.");
         return null;
     }
 
     /// <summary>
-    /// Riverheim's own log, into the editor's: its warnings and errors (each stage it computes, said as information,
+    /// Riverheim's own log, into the add-on's: its warnings and errors (each stage it computes, said as information,
     /// is left out).
     /// </summary>
     private static void Quiet(Type logger)
@@ -215,7 +218,7 @@ internal sealed class RiverheimLibrary
     {
         if (level > 0)
         {
-            Console.WriteLine($"Riverheim {(level == 1 ? "warning" : "error")}: {message}");
+            Log($"Riverheim {(level == 1 ? "warning" : "error")}: {message}");
         }
     }
 }
