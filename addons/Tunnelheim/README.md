@@ -56,5 +56,4 @@ version is `VERSION` here, its changes `CHANGELOG.md`: it goes out with every ed
 
 Known limits: the building height Add Earth and the smoothing tools use is the mod's default (64 m), not the server's
 setting; rock in the Deep North, the Mistlands and the Ashlands has the default palette, not the mod's own colours
-there; hoe strokes and smoothing replayed at some places can come out a step (1/256 m) off the game's in a few
-samples (the game's rock is the one that counts: the records are the same).
+there.
