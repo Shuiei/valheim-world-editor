@@ -121,6 +121,25 @@ public class WorldGeneratorRulesTests
         Assert.Equal(height, BitConverter.SingleToUInt32Bits(g.GetBiomeHeight(g.GetBiome(px, pz), px, pz, out _)));
     }
 
+    [Theory]
+    // Recorded on a dedicated server with Expand World Size 1.45 (World radius 20500, nothing else), seed cUTClIlxRw:
+    // the point's bits, then the game's CreateDeepNorthGap's. The mod hands 1.2f times the radius over as a double,
+    // never rounded to a float: rounded, the circle moved by a millimetre and these came out a little off.
+    [InlineData(0xc660f500, 0x462acace, 0x3fee157f60000000)]
+    [InlineData(0xc632ccdf, 0x465e439d, 0x3fecc906e0000000)]
+    [InlineData(0xc444518a, 0x46816599, 0x3fcdb9ed40000000)]
+    [InlineData(0x4691d240, 0x45efb39a, 0x3df1fd4da0000000)]
+    public void TheDeepNorthGapsRadiusIsTheGamesDouble(uint x, uint z, ulong gap)
+    {
+        var g = WorldGenerator.Create(new World
+        {
+            Seed = TerrainEditor.Save.StableHash.Of("cUTClIlxRw"),
+            WorldGenVersion = 2,
+            Rules = new WorldRules { SizeInstalled = true, Radius = 20500f },
+        });
+        Assert.Equal(gap, BitConverter.DoubleToUInt64Bits(g.CreateDeepNorthGap(BitConverter.UInt32BitsToSingle(x), BitConverter.UInt32BitsToSingle(z))));
+    }
+
     [Fact]
     public void TheWaterLevelMovesTheStreamsWindow()
     {
