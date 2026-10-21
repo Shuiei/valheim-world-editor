@@ -27,12 +27,34 @@ public sealed class LiveSyncUpdateTests
     private static NewObject ChangedCopy(int id, int source, int prefab, Vector3 at, Vector3 turn, ObjectField[]? data = null) =>
         new(id, prefab, at, turn, 0f, source, Fresh: false, Data: data ?? Changed);
 
+    /// <summary>The saved tree replaced by a changed copy of it (-1).</summary>
+    private static void ChangeTree(LiveSyncRig t)
+    {
+        t.Edits.SetDeleted([t.Tree.Id], true);
+        t.Edits.AddObjects([ChangedCopy(-1, t.Tree.Id, t.Tree.Prefab, t.Tree.Position, t.Tree.Rotation)]);
+    }
+
+    /// <summary>The objects call made (call) moved the tree's game object with data, nothing removed or created.</summary>
+    private static void TreeChangedInPlace(LiveSyncRig t, int call)
+    {
+        Assert.Equal((0, 0), t.Bridge.ObjectCalls[call]);
+        Assert.Equal(t.TreeZdo, (t.Bridge.Moves[call].User, t.Bridge.Moves[call].Id));
+        Assert.True(t.Bridge.MoveData[call]);
+    }
+
+    /// <summary>The second copy (-2) is the game object now, the first (-1) not, and nothing is left to send.</summary>
+    private static void SecondCopyIsLive(LiveSyncRig t)
+    {
+        Assert.True(t.Sync.IsLive(-2));
+        Assert.False(t.Sync.IsLive(-1));
+        Assert.Equal((0, 0), t.Sync.Pending(t.Edits));
+    }
+
     [Fact]
     public async Task AChangedCopyChangesTheGameObjectInPlaceAndBackOnUndo()
     {
         using var t = Rig();
-        t.Edits.SetDeleted([t.Tree.Id], true);
-        t.Edits.AddObjects([ChangedCopy(-1, t.Tree.Id, t.Tree.Prefab, t.Tree.Position, t.Tree.Rotation)]);
+        ChangeTree(t);
         string said = (await t.Apply()).Shown;
         Assert.Equal((0, 0), t.Bridge.ObjectCalls.Single());
         var (user, id, _, _, to, _) = t.Bridge.Moves.Single();
@@ -45,9 +67,7 @@ public sealed class LiveSyncUpdateTests
         // Undone: the same game object takes its own data back.
         t.Undo();
         await t.Apply();
-        Assert.Equal((0, 0), t.Bridge.ObjectCalls[1]);
-        Assert.Equal(t.TreeZdo, (t.Bridge.Moves[1].User, t.Bridge.Moves[1].Id));
-        Assert.True(t.Bridge.MoveData[1]);
+        TreeChangedInPlace(t, 1);
         Assert.Equal((0, 0), t.Sync.Pending(t.Edits));
     }
 
@@ -55,20 +75,15 @@ public sealed class LiveSyncUpdateTests
     public async Task AChangeOfTheChangedCopyChangesTheSameGameObject()
     {
         using var t = Rig();
-        t.Edits.SetDeleted([t.Tree.Id], true);
-        t.Edits.AddObjects([ChangedCopy(-1, t.Tree.Id, t.Tree.Prefab, t.Tree.Position, t.Tree.Rotation)]);
+        ChangeTree(t);
         await t.Apply();
 
         // Changed again, back to its own data: still sent with data, as the game object has the first change's.
         t.Edits.SetDeleted([-1], true);
         t.Edits.AddObjects([ChangedCopy(-2, -1, t.Tree.Prefab, t.Tree.Position, t.Tree.Rotation, [])]);
         await t.Apply();
-        Assert.Equal((0, 0), t.Bridge.ObjectCalls[1]);
-        Assert.Equal(t.TreeZdo, (t.Bridge.Moves[1].User, t.Bridge.Moves[1].Id));
-        Assert.True(t.Bridge.MoveData[1]);
-        Assert.True(t.Sync.IsLive(-2));
-        Assert.False(t.Sync.IsLive(-1));
-        Assert.Equal((0, 0), t.Sync.Pending(t.Edits));
+        TreeChangedInPlace(t, 1);
+        SecondCopyIsLive(t);
     }
 
     [Fact]
@@ -86,9 +101,7 @@ public sealed class LiveSyncUpdateTests
         Assert.Equal((0, 0), t.Bridge.ObjectCalls[1]);
         Assert.True(t.Bridge.MoveData.Single());
         Assert.Equal(77L, t.Bridge.Moves.Single().User);
-        Assert.True(t.Sync.IsLive(-2));
-        Assert.False(t.Sync.IsLive(-1));
-        Assert.Equal((0, 0), t.Sync.Pending(t.Edits));
+        SecondCopyIsLive(t);
     }
 
     [Fact]
