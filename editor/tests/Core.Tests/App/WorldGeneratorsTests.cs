@@ -1,8 +1,6 @@
-using System.Numerics;
 using TerrainEditor.App;
 using TerrainEditor.Save;
 using ValheimGen;
-using ValheimWorldEditor.Sdk;
 using Xunit;
 
 namespace WorldEditor.Tests;
@@ -10,7 +8,8 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// World generation mods' generators an extension registers (WorldGenerators, ModGenerator), with a made-up one: a world
 /// file naming it read and written by it, its ground laid out in place of the game's; what it refuses said in its
-/// words; a fault turning its extension off and said as the add-on failing; new worlds made with it; the world's Expand
+/// words; a fault turning its extension off and said as the add-on failing; the world list marking its worlds, and
+/// refusing those of a generator none draws; new worlds made with it; the rules' few words naming it; the world's Expand
 /// World settings as it is told them. Runs alone (the extensions in use are shared).
 /// </summary>
 [Collection("DataDir")]
@@ -23,67 +22,8 @@ public sealed class WorldGeneratorsTests : AppSettingsTestBase, IDisposable
         base.Dispose();
     }
 
-    /// <summary>A made-up world generation mod: flat ground at the height its worlds keep in their header.</summary>
-    private sealed class Flatland : IWorldEditorExtension, IWorldGenerator
-    {
-        /// <summary>Whether its quick check throws (a fault).</summary>
-        public bool Faulty { get; set; }
-
-        public string Id => "test.flatland";
-
-        public string PluginId => "test.flatland.plugin";
-
-        public string Name => "Flatland";
-
-        public void Register(IExtensionRegistry registry) => registry.AddWorldGenerator(this);
-
-        public GeneratorSettings ReadHeader(IWorldFileReader file, out int fileVersion)
-        {
-            fileVersion = file.ReadInt();
-            float height = file.ReadSingle();
-            return height < 0f ? throw new InvalidDataException("A negative height.") : Settings(height);
-        }
-
-        public void WriteHeader(IWorldFileWriter file, int fileVersion, GeneratorSettings settings)
-        {
-            file.WriteInt(fileVersion);
-            file.WriteSingle((float)settings.Value);
-        }
-
-        public string? Problem(GeneratorSettings settings) => Faulty ? throw new NotSupportedException("broken") : null;
-
-        public IWorldLayout Open(GeneratorSettings settings, string? gamePluginVersion) => new Ground((float)settings.Value);
-
-        public GeneratorSettings? NewWorldSettings() => Settings(50f);
-
-        public IReadOnlyList<string> Notes(GeneratorSettings settings, ExpandWorldSettings expandWorld) => [];
-
-        public static GeneratorSettings Settings(float height) => new($"height {height}", height);
-
-        /// <summary>Its flat ground.</summary>
-        private sealed class Ground(float height) : IWorldLayout, IGroundLayout
-        {
-            public string Version => "2.0.0";
-
-            public bool Slow => false;
-
-            public IGroundLayout LayOut(int seed) => this;
-
-            public int Biome(float x, float z) => (int)Heightmap.Biome.Plains;
-
-            public float Height(float x, float z, out Vector4 mask)
-            {
-                mask = Vector4.Zero;
-                // An unlucky height its code cannot answer for (a fault).
-                return Math.Abs(height - 13f) < 0.001f ? throw new ArithmeticException("unlucky") : height;
-            }
-
-            public float Forest(float x, float z) => 1f;
-        }
-    }
-
     /// <summary>Puts a Flatland in use and gives its generator.</summary>
-    private static ModGenerator Use(Flatland flatland)
+    private static ModGenerator Use(FlatlandGenerator flatland)
     {
         ModExtensions.UseForTests(("Flatland", flatland));
         return Assert.IsType<ModGenerator>(WorldGenerators.Find("test.flatland"));
@@ -92,8 +32,8 @@ public sealed class WorldGeneratorsTests : AppSettingsTestBase, IDisposable
     [Fact]
     public void AWorldItMadeIsReadAndWrittenByItAndLaidOutWithItsGround()
     {
-        var g = Use(new Flatland());
-        var rules = new WorldRules { Generator = g.Rules(Flatland.Settings(50f), null) };
+        var g = Use(new FlatlandGenerator());
+        var rules = new WorldRules { Generator = g.Rules(FlatlandGenerator.Settings(50f), null) };
         Assert.Equal(("Flatland", "2.0.0", "height 50", false), (rules.Generator.Name, rules.Generator.Version, rules.Generator.Settings, rules.Generator.Slow));
         string folder = Path.Combine(Data, "Flat");
         WorldCreator.Create(folder, "Flat", "abcde", rules: rules);
@@ -106,21 +46,21 @@ public sealed class WorldGeneratorsTests : AppSettingsTestBase, IDisposable
     [Fact]
     public void WhatItRefusesIsSaidInItsWordsAndAFaultTurnsItsExtensionOff()
     {
-        var flatland = new Flatland();
+        var flatland = new FlatlandGenerator();
         var g = Use(flatland);
         string folder = Path.Combine(Data, "Sunk");
-        WorldCreator.Create(folder, "Sunk", "abcde", rules: new WorldRules { Generator = g.Rules(Flatland.Settings(-1f), null) });
+        WorldCreator.Create(folder, "Sunk", "abcde", rules: new WorldRules { Generator = g.Rules(FlatlandGenerator.Settings(-1f), null) });
         Assert.Equal("A negative height.", Assert.Throws<GeneratorHeaderException>(() => WorldSave.ReadMetadata(Path.Combine(folder, "_main.1.fwl2"))).Message);
         flatland.Faulty = true;
-        Assert.Equal(Lang.T("worldgen.failed", "Flatland"), g.Problem(Flatland.Settings(50f)));
+        Assert.Equal(Lang.T("worldgen.failed", "Flatland"), g.Problem(FlatlandGenerator.Settings(50f)));
         Assert.Null(WorldGenerators.Find("test.flatland"));
     }
 
     [Fact]
     public void AFaultAnsweringForAPointIsSaidAndTurnsItsExtensionOff()
     {
-        var g = Use(new Flatland());
-        var gen = WorldGenerator.Create(new World { Seed = 1, Rules = new WorldRules { Generator = g.Rules(Flatland.Settings(13f), null) } });
+        var g = Use(new FlatlandGenerator());
+        var gen = WorldGenerator.Create(new World { Seed = 1, Rules = new WorldRules { Generator = g.Rules(FlatlandGenerator.Settings(13f), null) } });
         Assert.Equal(Lang.T("worldgen.failed", "Flatland"), Assert.Throws<InvalidOperationException>(() => gen.GetHeight(100f, 200f)).Message);
         Assert.Null(WorldGenerators.Find("test.flatland"));
     }
@@ -131,7 +71,7 @@ public sealed class WorldGeneratorsTests : AppSettingsTestBase, IDisposable
         var settings = new AppSettings();
         ModExtensions.Forget();
         Assert.True(WorldGenerators.ForNewWorld(settings).IsVanilla);
-        Use(new Flatland());
+        Use(new FlatlandGenerator());
         var made = WorldGenerators.ForNewWorld(settings).Generator;
         Assert.Equal(("Flatland", "height 50", 50f), (made?.Name, made?.Settings, made?.Header?.Settings.Value));
     }
@@ -143,5 +83,36 @@ public sealed class WorldGeneratorsTests : AppSettingsTestBase, IDisposable
         Assert.Equal((1f, 1f, 10500f, false, false, false), (plain.Stretch, plain.BiomeStretch, plain.Radius, plain.ShapesGround, plain.WorldData, plain.Rivers));
         var ew = WorldGenerators.ExpandWorldOf(new WorldRules { SizeInstalled = true, Radius = 20000f, Stretch = 2f, BiomeStretch = 3f, HeightSeed = 7f, World = [], RiversInstalled = true });
         Assert.Equal((2f, 3f, 20500f, true, true, true), (ew.Stretch, ew.BiomeStretch, ew.Radius, ew.ShapesGround, ew.WorldData, ew.Rivers));
+    }
+
+    [Fact]
+    public void TheWorldListMarksItsWorldsAndSaysWhyOneCannotOpen()
+    {
+        var g = Use(new FlatlandGenerator());
+        string flat = Path.Combine(Data, "flat"), high = Path.Combine(Data, "high");
+        WorldCreator.Create(Path.Combine(flat, "Flat"), "Flat", "abcde", rules: new WorldRules { Generator = g.Rules(FlatlandGenerator.Settings(50f), null) });
+        WorldCreator.Create(Path.Combine(high, "High"), "High", "abcde", rules: new WorldRules { Generator = g.Rules(FlatlandGenerator.Settings(2000f), null) });
+        var listed = Assert.Single(Worlds.Find(new AppSettings { WorldFolders = { flat } }));
+        Assert.Equal(("Flatland", true), (listed.Generator, listed.Usable));
+        var refused = Assert.Single(Worlds.Find(new AppSettings { WorldFolders = { high } }));
+        Assert.Equal(("Flatland", false, FlatlandGenerator.TooHigh), (refused.Generator, refused.Usable, refused.Problem));
+    }
+
+    [Fact]
+    public void AWorldOfAGeneratorNoneDrawsIsListedAsNotUsable()
+    {
+        ModExtensions.Forget();
+        using var w = new TempWorld();
+        WorldFileHead.Write(Path.Combine(w.Dir, $"_main.{w.Load().SaveNumber}.fwl2"), 42, [], "made.up.generator");
+        var info = Assert.Single(Worlds.Find(new AppSettings { WorldFolders = { w.Dir } }));
+        Assert.Null(info.Generator);
+        Assert.Equal((false, Lang.T("worldgen.unknown", "made.up.generator")), (info.Usable, info.Problem));
+    }
+
+    [Fact]
+    public void TheRulesFewWordsNameTheGenerator()
+    {
+        Assert.Contains("Flatland 2.0.0 (height 50)", ExpandWorld.Describe(new WorldRules { Generator = new GeneratorRules("test.flatland", "Flatland", "2.0.0", "height 50") }));
+        Assert.DoesNotContain("Flatland", ExpandWorld.Describe(new WorldRules { Radius = 20000f }));
     }
 }

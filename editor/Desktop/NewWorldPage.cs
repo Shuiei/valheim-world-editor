@@ -53,7 +53,7 @@ public sealed partial class NewWorldPage : IDisposable
     private readonly int _previewSize;
     /// <summary>
     /// What the worlds looked at and made here follow: Expand World's rules from the folder found when the switch in
-    /// Settings is on, else the game's own values; with Riverheim when it is chosen (<see cref="GeneratorChoice"/>). Read again once the game's own location rules are read
+    /// Settings is on, else the game's own values; with a world generation mod's generator when it is chosen (<see cref="GeneratorChoice"/>). Read again once the game's own location rules are read
     /// (<see cref="RefreshRules"/>): the location file converts against them.
     /// </summary>
     internal ValheimGen.WorldRules Rules { get; private set; }
@@ -91,7 +91,7 @@ public sealed partial class NewWorldPage : IDisposable
     /// would use.</param>
     /// <param name="previewSize">The seed's map, in cells on a side (tests: smaller is quicker).</param>
     /// <param name="rules">What the worlds follow (tests); null: Expand World's rules when its switch is on, else the game's,
-    /// with Riverheim when its switch is on and it is found.</param>
+    /// with the first world generation mod's generator in use that makes new worlds (WorldGenerators.ForNewWorld).</param>
     public NewWorldPage(IReadOnlyList<string>? roots = null, int previewSize = 512, ValheimGen.WorldRules? rules = null)
     {
         _previewSize = previewSize;

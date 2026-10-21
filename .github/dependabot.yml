@@ -26,6 +26,7 @@ updates:
       - /editor/tests/Desktop.Tests
       - /editor/tests/AddOns.Tests
       - /addons/Tunnelheim/tests/Tunnelheim.WorldEditor.Tests
+      - /addons/Riverheim/tests/Riverheim.WorldEditor.Tests
     schedule:
       interval: weekly
     open-pull-requests-limit: 3

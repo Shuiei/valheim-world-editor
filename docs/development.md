@@ -406,7 +406,7 @@ BepInEx's own pack for the BepInEx and Harmony assemblies Riverheim names, at th
 never kept in the repository: building a test project downloads them from Thunderstore (`editor/tests/TestMods.targets`) into
 the system's temporary folder (`vwe-test-mods/<project>`), and the test run deletes them when it ends
 (`editor/tests/Support/TestMods.cs`; CI deletes them after its last test process). Building the tests needs the network for
-them. Unity's classes Riverheim's plugin derives from come from a stand-in the tests write (`editor/tests/Support/UnityStandIn.cs`).
+them. Unity's classes Riverheim's plugin derives from come from a stand-in the Riverheim add-on's tests write (`addons/Riverheim/tests/Riverheim.WorldEditor.Tests/Support/UnityStandIn.cs`); those tests link `editor/tests/Support/TestMods.cs` and import `editor/tests/TestMods.targets`.
 
 CircleCI (`.circleci/continue.yml`) runs on every push and pull request (`packages` and
 `windows-smoke` on main only: they are slow, and the packaging they check seldom changes; `windows-tests` on main

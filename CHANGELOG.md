@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.103.0 — 2026-10-21
+
+### Changed
+- **Riverheim is now an add-on.** Worlds made with Riverheim open with the Riverheim add-on, its own download beside
+  the editor's (unpack it into the addons folder); its switch under Add-ons in Settings replaces the Riverheim switch.
+  Everything else works as before.
+
 ## v1.102.0 — 2026-10-21
 
 ### Added

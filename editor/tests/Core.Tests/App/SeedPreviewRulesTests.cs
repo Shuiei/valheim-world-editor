@@ -14,10 +14,10 @@ namespace WorldEditor.Tests;
 public class SeedPreviewRulesTests
 {
     [Fact]
-    public void ASearchLooksAtTwoRiverheimSeedsAtATime()
+    public void ASearchLooksAtTwoSeedsAtATimeOfASlowGenerator()
     {
-        // Riverheim lays each seed's world out whole first: a couple at a time, not one a processor.
-        Assert.Equal(2, SeedPreview.SeedsAtOnce(new WorldRules { Generator = new GeneratorRules(Riverheim.PluginId, "Riverheim", "1.2.1", "builtin.amur v2") { Slow = true } }));
+        // A world generation mod that lays each seed's world out whole first (Riverheim): a couple at a time, not one a processor.
+        Assert.Equal(2, SeedPreview.SeedsAtOnce(new WorldRules { Generator = new GeneratorRules("test.slow", "Slow", "1.0.0", "default") { Slow = true } }));
         // A generator that lays its worlds out quickly: one seed a processor.
         Assert.Equal(Math.Max(1, Environment.ProcessorCount - 1), SeedPreview.SeedsAtOnce(new WorldRules { Generator = new GeneratorRules("made.up", "Made Up", "1.0.0", "default") }));
         Assert.Equal(Math.Max(1, Environment.ProcessorCount - 1), SeedPreview.SeedsAtOnce(new WorldRules { Radius = 20000f }));

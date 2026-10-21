@@ -47,8 +47,9 @@ public sealed partial class WorldSave
     /// <summary>
     /// Mirrors World.LoadWorld: an int length prefix, then a ZPackage with version, names, seed, the generator version
     /// (26 and later), whether the world needs its database (30 and later) and the starting global keys (32 and
-    /// later; what comes after them, the players seen, is not read). A world Riverheim made has its header first
-    /// (<see cref="Riverheim.ReadHeader"/>); a world of another generation mod throws <see cref="GeneratorHeaderException"/>.
+    /// later; what comes after them, the players seen, is not read). A world a world generation mod made has its
+    /// generator's header first (<see cref="WorldGenerators.ReadVersion"/>); one whose generator no add-on in use draws
+    /// throws <see cref="GeneratorHeaderException"/>.
     /// </summary>
     /// <param name="path">The world file (_main.n.fwl2).</param>
     public static Metadata ReadMetadata(string path)

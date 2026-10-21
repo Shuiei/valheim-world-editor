@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The add-on: worlds made with Riverheim in the editor, drawn by the player's own Riverheim, as an extension the
+       editor loads from its addons folder while the mod is installed (docs/modding.md#add-ons). net10.0, as the
+       editor runs: it loads the player's Riverheim.dll in a load context of its own. One DLL: the editor loads
+       nothing else from the add-on's folder. Built against the SDK, never the editor itself. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Riverheim.WorldEditor</AssemblyName>
+    <RootNamespace>Riverheim.WorldEditor</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Compiled against, not shipped: the editor gives its own copy. -->
+    <ProjectReference Include="../../../../sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" Private="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="worldeditor.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

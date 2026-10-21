@@ -1,10 +1,10 @@
 using ValheimWorldEditor.Sdk;
 
-namespace TerrainEditor.App;
+namespace Riverheim.WorldEditor;
 
 // What Expand World does, and does not, change about a world Riverheim made (the game's own patch order, checked on a
-// server running both; docs/riverheim.md lists every setting).
-public static partial class Riverheim
+// server running both; the add-on's README lists every setting).
+public static partial class RiverheimMod
 {
     /// <summary>The edge of Riverheim's own world, metres before the stretch (its generator's world size).</summary>
     private const float WorldEdge = 10500f;

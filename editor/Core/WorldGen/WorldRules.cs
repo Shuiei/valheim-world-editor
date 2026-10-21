@@ -271,8 +271,8 @@ public sealed record WorldRules
     // ---- World generation mods.
     /// <summary>
     /// The world was made with a world generation mod (Riverheim), whose ground replaces the game's (null: the game's own
-    /// ground). Expand World's settings still apply around it where the mods' patches meet (docs/riverheim.md lists them
-    /// for Riverheim).
+    /// ground). Expand World's settings still apply around it where the mods' patches meet (the Riverheim add-on's README
+    /// lists them for Riverheim).
     /// </summary>
     public GeneratorRules? Generator { get; init; }
 

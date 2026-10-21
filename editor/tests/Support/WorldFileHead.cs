@@ -11,42 +11,24 @@ public static class WorldFileHead
 
     /// <summary>
     /// Writes a world file as the game does: the version, names, seed, uid, generator version, database flag (30 and
-    /// later), keys (32 and later), players (none). With Riverheim's settings, its header first, as Riverheim writes it:
-    /// the marker, its id (another id when given), the version, then the settings (a one-byte count, each name and its
-    /// value: a string or an int).
+    /// later), keys (32 and later), players (none). With a generator's id, a world generation mod's marker and that id
+    /// first (nothing more of a header: for a generator none draws).
     /// </summary>
     /// <param name="path">The file.</param>
     /// <param name="version">The game's file version.</param>
     /// <param name="keys">The starting global keys.</param>
-    /// <param name="riverheim">Riverheim's settings, each name with its value; null for a world it did not make.</param>
-    /// <param name="generator">The generator's id written after the marker (Riverheim's when null).</param>
-    public static void Write(string path, int version, string[] keys, (string Name, object Value)[]? riverheim = null, string? generator = null)
+    /// <param name="generator">The generator's id written after the marker; null for a world the game made.</param>
+    public static void Write(string path, int version, string[] keys, string? generator = null)
     {
         using MemoryStream pkg = new();
         using (BinaryWriter p = new(pkg, System.Text.Encoding.UTF8, leaveOpen: true))
         {
-            if (riverheim != null)
+            if (generator != null)
             {
                 p.Write(WorldGenerators.Marker);
-                p.Write(generator ?? Riverheim.PluginId);
+                p.Write(generator);
             }
             p.Write(version);
-            if (riverheim != null)
-            {
-                p.Write((byte)riverheim.Length);
-                foreach (var (name, value) in riverheim)
-                {
-                    p.Write(name);
-                    if (value is int i)
-                    {
-                        p.Write(i);
-                    }
-                    else
-                    {
-                        p.Write((string)value);
-                    }
-                }
-            }
             p.Write(Name);
             p.Write(SeedName);
             p.Write(StableHash.Of(SeedName));
@@ -68,7 +50,4 @@ public static class WorldFileHead
         }
         File.WriteAllBytes(path, [.. BitConverter.GetBytes((int)pkg.Length), .. pkg.ToArray()]);
     }
-
-    /// <summary>Riverheim 1.2.1's settings for a world made with its own preset.</summary>
-    public static (string, object)[] RiverheimPreset => [("preset", "builtin.amur"), ("preset.version", 2)];
 }

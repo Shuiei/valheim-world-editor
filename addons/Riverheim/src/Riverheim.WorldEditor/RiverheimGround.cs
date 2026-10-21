@@ -1,9 +1,8 @@
 using System.Linq.Expressions;
 using System.Numerics;
-using ValheimGen;
 using ValheimWorldEditor.Sdk;
 
-namespace TerrainEditor.App;
+namespace Riverheim.WorldEditor;
 
 /// <summary>
 /// A world laid out by the player's Riverheim (<see cref="RiverheimLibrary"/>), answering as the mod's game side answers
@@ -22,7 +21,7 @@ internal sealed class RiverheimGround(RiverheimGround.Calls calls, object render
     private const double ForestFactor = 2.15;
 
     /// <inheritdoc/>
-    public int Biome(float x, float z) => (int)calls.Biome(calls.BiomeOf(renderer, x, z));
+    public int Biome(float x, float z) => calls.Biome(calls.BiomeOf(renderer, x, z));
 
     /// <inheritdoc/>
     public float Height(float x, float z, out Vector4 mask)
@@ -50,26 +49,30 @@ internal sealed class RiverheimGround(RiverheimGround.Calls calls, object render
     /// </summary>
     internal sealed class Calls
     {
-        /// <summary>Riverheim's biomes by name, as the game's (its sub-biomes present themselves as their parents).</summary>
-        private static readonly Dictionary<string, Heightmap.Biome> GameBiomes = new(StringComparer.Ordinal)
+        /// <summary>
+        /// Riverheim's biomes by name, as the game's Heightmap.Biome values (its sub-biomes present themselves as their
+        /// parents): Meadows 1, Swamp 2, Mountain 4, Black Forest 8, Plains 16, Ashlands 32, Deep North 64, Ocean 256,
+        /// Mistlands 512.
+        /// </summary>
+        private static readonly Dictionary<string, int> GameBiomes = new(StringComparer.Ordinal)
         {
-            ["Meadows"] = Heightmap.Biome.Meadows,
-            ["Marsh"] = Heightmap.Biome.Meadows,
-            ["Swamp"] = Heightmap.Biome.Swamp,
-            ["Mountain"] = Heightmap.Biome.Mountain,
-            ["Forest"] = Heightmap.Biome.BlackForest,
-            ["ForestLowlands"] = Heightmap.Biome.BlackForest,
-            ["Plains"] = Heightmap.Biome.Plains,
-            ["Ashlands"] = Heightmap.Biome.AshLands,
-            ["Lavaplain"] = Heightmap.Biome.AshLands,
-            ["DeepNorth"] = Heightmap.Biome.DeepNorth,
-            ["Ocean"] = Heightmap.Biome.Ocean,
-            ["Mistlands"] = Heightmap.Biome.Mistlands,
-            ["Mistglade"] = Heightmap.Biome.Mistlands,
+            ["Meadows"] = 1,
+            ["Marsh"] = 1,
+            ["Swamp"] = 2,
+            ["Mountain"] = 4,
+            ["Forest"] = 8,
+            ["ForestLowlands"] = 8,
+            ["Plains"] = 16,
+            ["Ashlands"] = 32,
+            ["Lavaplain"] = 32,
+            ["DeepNorth"] = 64,
+            ["Ocean"] = 256,
+            ["Mistlands"] = 512,
+            ["Mistglade"] = 512,
         };
 
         /// <summary>The game's biome for each of Riverheim's values.</summary>
-        private readonly Dictionary<int, Heightmap.Biome> _biomes = [];
+        private readonly Dictionary<int, int> _biomes = [];
 
         /// <summary>Compiles the calls on a loaded Riverheim's types.</summary>
         /// <param name="renderer">Its WorldRenderer.</param>
@@ -95,9 +98,9 @@ internal sealed class RiverheimGround(RiverheimGround.Calls calls, object render
             foreach (object value in Enum.GetValues(biome))
             {
                 string name = Enum.GetName(biome, value)!;
-                if (!GameBiomes.TryGetValue(name, out var game) && name != "None")
+                if (!GameBiomes.TryGetValue(name, out int game) && name != "None")
                 {
-                    Console.WriteLine($"Riverheim: its biome {name} is not one the editor knows: drawn as none.");
+                    RiverheimLibrary.Log($"its biome {name} is not one the add-on knows: drawn as none.");
                 }
                 _biomes[Convert.ToInt32(value, System.Globalization.CultureInfo.InvariantCulture)] = game;
             }
@@ -112,7 +115,7 @@ internal sealed class RiverheimGround(RiverheimGround.Calls calls, object render
         /// <summary>The renderer's GetForestation at a point.</summary>
         public Func<object, double, double, double> Forestation { get; }
 
-        /// <summary>The game's biome for one of Riverheim's values (none for a value it does not have).</summary>
-        public Heightmap.Biome Biome(int value) => _biomes.GetValueOrDefault(value);
+        /// <summary>The game's biome value for one of Riverheim's values (none, 0, for a value it does not have).</summary>
+        public int Biome(int value) => _biomes.GetValueOrDefault(value);
     }
 }

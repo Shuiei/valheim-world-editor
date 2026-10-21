@@ -15,6 +15,30 @@ public static partial class LocalGame
         AllBepInExFolders(settings).DistinctBy(f => Path.GetFullPath(f.BepInEx).TrimEnd(Path.DirectorySeparatorChar));
 
     /// <summary>
+    /// A mod's plugin DLL in the BepInEx folders the editor knows: the folder named in Settings for Expand World
+    /// (<see cref="AppSettings.ExpandWorldFolder"/>) first, then <see cref="BepInExFolders"/>; null when none has it.
+    /// </summary>
+    /// <param name="settings">The editor's settings.</param>
+    /// <param name="dll">The DLL's file name.</param>
+    /// <returns>The DLL's full path and the BepInEx folder it is in.</returns>
+    public static (string Dll, string BepInEx)? FindPlugin(AppSettings settings, string dll)
+    {
+        var folders = BepInExFolders(settings).Select(f => f.BepInEx);
+        if (!string.IsNullOrWhiteSpace(settings.ExpandWorldFolder))
+        {
+            folders = folders.Prepend(settings.ExpandWorldFolder);
+        }
+        foreach (string bep in folders)
+        {
+            if (ExpandWorld.FindPlugin(Path.Combine(bep, "plugins"), dll) is { } found)
+            {
+                return (found, bep);
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
     /// <see cref="BepInExFolders"/> before duplicates are dropped: the Valheim install, the profile the editor
     /// runs from, the folders added in Settings, then r2modman's and Thunderstore Mod Manager's profiles.
     /// </summary>
