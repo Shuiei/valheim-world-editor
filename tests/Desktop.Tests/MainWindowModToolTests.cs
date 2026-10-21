@@ -63,12 +63,7 @@ public sealed class MainWindowModToolTests : IDisposable
 
         var add = w.ModToolPanel.Card.GetLogicalDescendants().OfType<Button>().Single(b => Equals(b.Content, "Add one"));
         add.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        var step = Assert.Single(s.UndoList);
-        Assert.Equal("A register", step.Label);
-        int id = Assert.Single(step.Hidden).Id;
-        Assert.False(s.Edits.IsGone(id));
-        Assert.True(s.Undo());
-        Assert.True(s.Edits.IsGone(id));
+        Assert.Equal("A register", HiddenSteps.OneAddedThenUndone(s));
 
         w.Tools.ChooseMode(ToolMode.View);
         Assert.False(w.ModToolPanel.Card.IsVisible);

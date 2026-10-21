@@ -49,6 +49,7 @@ public sealed partial class MainWindow
                 Msg("paste.msg.copyFirst");
                 return null;
             }
+            clip.Kept = ModCopies.Keep(s.Scene, clip);
         }
         else
         {
@@ -60,9 +61,10 @@ public sealed partial class MainWindow
                 Msg("paste.msg.areaFirst");
                 return null;
             }
-            // No objects and so no ground (it goes with buildings only): nothing a paste would put down. The clipboard
-            // keeps what it had.
-            if (clip.Objects.Count == 0 && Array.TrueForAll(clip.Rel, float.IsNaN))
+            clip.Kept = ModCopies.Keep(s.Scene, clip);
+            // No objects and so no ground (it goes with buildings only), nor anything a mod keeps: nothing a paste would
+            // put down. The clipboard keeps what it had.
+            if (clip.Empty)
             {
                 Msg("paste.msg.nothingToCopy");
                 return null;

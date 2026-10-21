@@ -39,7 +39,39 @@ public static partial class CopyFormat
             Objects = ObjectsFrom(objects, keepSources),
             Poly = (o["poly"] as JsonArray)?.Select(p => new Vector2(F(p!["gx"]), F(p["gz"]))).ToList() ?? [],
             Name = name ?? (string?)o["name"],
+            Kept = KeptOf(o),
         };
+    }
+
+    /// <summary>What mods' extensions keep, by copier name ("mods": base64 text each); none when missing.</summary>
+    /// <param name="o">The copy's JSON.</param>
+    /// <exception cref="FormatException">"mods" is not an object of base64 texts.</exception>
+    private static Dictionary<string, byte[]> KeptOf(JsonObject o)
+    {
+        var kept = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+        if (o["mods"] is null)
+        {
+            return kept;
+        }
+        if (o["mods"] is not JsonObject mods)
+        {
+            throw new FormatException("its \"mods\" entry is not an object");
+        }
+        foreach (var (name, value) in mods)
+        {
+            kept[name] = value is JsonValue v && v.TryGetValue(out string? text) ? Base64(name, text)
+                : throw new FormatException($"its \"mods\" entry \"{name}\" is not a text");
+        }
+        return kept;
+    }
+
+    /// <summary>A mod's kept bytes from their base64 text.</summary>
+    /// <exception cref="FormatException">The text is not base64.</exception>
+    private static byte[] Base64(string name, string text)
+    {
+        byte[] bytes = new byte[text.Length * 3 / 4 + 3];
+        return Convert.TryFromBase64String(text, bytes, out int n) ? bytes[..n]
+            : throw new FormatException($"its \"mods\" entry \"{name}\" is not base64");
     }
 
     /// <summary>The copy's size must be a grid that pasting can measure.</summary>

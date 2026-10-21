@@ -23,8 +23,19 @@ public static partial class CopyFormat
         return cm == -32768 ? -32767 : cm;
     }
 
-    /// <summary>A copy in the clipboard format.</summary>
-    public static JsonObject ToJson(CopyData c) => new()
+    /// <summary>A copy in the clipboard format; what mods' extensions keep goes under "mods" (when they keep anything).</summary>
+    public static JsonObject ToJson(CopyData c)
+    {
+        var o = ClipJson(c);
+        if (c.Kept.Count > 0)
+        {
+            o["mods"] = new JsonObject(c.Kept.Select(k => KeyValuePair.Create(k.Key, (JsonNode?)Convert.ToBase64String(k.Value))));
+        }
+        return o;
+    }
+
+    /// <summary>A copy in the clipboard format, without what mods keep.</summary>
+    private static JsonObject ClipJson(CopyData c) => new()
     {
         ["w"] = c.W,
         ["h"] = c.H,

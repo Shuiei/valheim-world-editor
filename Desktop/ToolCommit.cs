@@ -28,9 +28,14 @@ internal static class ToolCommit
     }
 
     /// <summary>What an edit comes to in a session.</summary>
-    internal static Plan PlanOf(EditSession s, ToolEdit edit)
+    internal static Plan PlanOf(EditSession s, ToolEdit edit) => AddTo(new Plan([], [], [], [], []), s, edit);
+
+    /// <summary>Adds what an edit comes to in a session to a plan.</summary>
+    /// <param name="plan">The plan, added to.</param>
+    /// <param name="s">The area's session.</param>
+    /// <param name="edit">The edit.</param>
+    internal static Plan AddTo(Plan plan, EditSession s, ToolEdit edit)
     {
-        var plan = new Plan([], [], [], [], []);
         foreach (var (prefab, position, rotation, data) in edit.Added)
         {
             var z = new ZdoData { Prefab = StableHash.Of(prefab) };

@@ -58,6 +58,8 @@ public static partial class ModExtensions
         public List<ISceneProvider> Scenes { get; } = [];
         /// <summary>Its tools.</summary>
         public List<IEditorTool> Tools { get; } = [];
+        /// <summary>Its area copiers, with their ids.</summary>
+        public List<(string Id, IAreaCopier Copier)> Copiers { get; } = [];
         /// <summary>Its live listeners.</summary>
         public List<ILiveListener> LiveListeners { get; } = [];
 

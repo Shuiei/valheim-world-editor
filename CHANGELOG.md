@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.98.0 — 2026-10-21
+
+### Added
+- **Mods' data goes with copies.** An extension can keep what its mod holds of a copied place, such as dug-out rock
+  that no copied object carries, so it travels with the copy and its blueprint files and is put back where you paste,
+  turned and mirrored with it, in the same undo step.
+
 ## v1.97.0 — 2026-10-21
 
 ### Added

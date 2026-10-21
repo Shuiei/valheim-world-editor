@@ -1,3 +1,4 @@
+using System.Numerics;
 using TerrainEditor.App;
 using TerrainEditor.Terrain;
 
@@ -59,6 +60,7 @@ public sealed partial class CopyData
             Objects = objs,
             Poly = [new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)],
             Taken = shown,
+            Middle = new Vector3(cx, mid, cz),
         };
     }
 }

@@ -31,6 +31,17 @@ public interface IExtensionRegistry
     void AddCopyRewriter(ICopyRewriter rewriter, params string[] keys);
 
     /// <summary>
+    /// Keeps what the mod holds of a place with the editor's copies, and puts it down where they are pasted (see
+    /// <see cref="IAreaCopier"/>): the mod's data that no copied object carries.
+    /// </summary>
+    /// <param name="id">
+    /// Its name among the mod's copiers: letters, digits, dots, dashes and underscores, 1 to 64. Copies and blueprint
+    /// files keep what it copies under the mod's name and this, for it to read back.
+    /// </param>
+    /// <param name="copier">What copies and puts down.</param>
+    void AddAreaCopier(string id, IAreaCopier copier);
+
+    /// <summary>
     /// Draws more of an object than its prefab's model: shapes the mod builds in code while the game runs (a sail
     /// from its corners, a rope to another object).
     /// </summary>

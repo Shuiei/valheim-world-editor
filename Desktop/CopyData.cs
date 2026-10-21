@@ -39,6 +39,20 @@ public sealed partial class CopyData
     /// to remove right after. Only meant in the scene it came from; not saved with the copy.
     /// </summary>
     public IReadOnlyList<int> Taken { get; init; } = [];
+    /// <summary>
+    /// The copy's middle in the world it came from, in metres (the objects' offsets are from it; its height is their
+    /// reference height): what mods' extensions keep (<see cref="Kept"/>) is measured from it. Not saved with the copy.
+    /// </summary>
+    public Vector3 Middle { get; init; }
+    /// <summary>
+    /// What mods' extensions keep of the place copied (IAreaCopier), by copier name: put down where the copy is pasted,
+    /// saved with blueprints.
+    /// </summary>
+    public IReadOnlyDictionary<string, byte[]> Kept { get; set; } = new Dictionary<string, byte[]>();
+    /// <summary>
+    /// Nothing a paste would put down: no objects, no ground (it goes with buildings only), nothing mods keep.
+    /// </summary>
+    public bool Empty => Objects.Count == 0 && Array.TrueForAll(Rel, float.IsNaN) && Kept.Count == 0;
 
     /// <summary>An object of a copy.</summary>
     /// <param name="Prefab">Its prefab hash.</param>
@@ -72,6 +86,7 @@ public sealed partial class CopyData
         Poly = Poly,
         Name = Name,
         Dungeon = Dungeon,
+        Kept = Kept,
     };
 
     /// <summary>

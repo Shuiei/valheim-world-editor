@@ -188,6 +188,12 @@ no data tables. Everything is read at run time from the player's install:
   `ModToolContext` is its `IToolContext`; `ToolCommit` makes a `ToolEdit` one step (`EditSession.CommitObjects`): data
   holders are not things, so they go in the step's `Change.Hidden` by object id (`EditSession.Hidden.cs`, kept from
   format 2 of the history file), the rest as things; a changed object is a copy (`DataCopy`) whose source is the old one.
+- Mods' copies: `ModExtensions.CopyArea` and `PasteArea` (`Core/App/ModExtensions.Copies.cs`) call the running
+  `IAreaCopier`s. `ModCopies.Keep` asks them when `MainWindow.CopyToClipboard` makes a copy (`CopyData.Middle` and
+  `Poly` are its region) and keeps their bytes in `CopyData.Kept` (`"mods"` in the clipboard format, so in blueprint
+  files); `ModCopies.Put` runs inside the paste's ground step, after `PasteTool.Apply` (which lists where each copy
+  landed, `PasteTool.Placed`), with the scene's heights brought up to date first. Their edits become one
+  `ToolCommit.Plan` added to that step's things and hidden objects (`EditSession.Commit` takes hidden objects too).
 - Mods' game components: `Core/App/ModComponents.cs` reads the fields of the game's scripts the running extensions'
   manifests ask for (`gameComponents`, `ModExtensions.RequestedComponents`) in one pass over the bundles
   (`GameCatalogues.ReadComponents`), after the extensions at `WorldSession.ReadModFiles`, and keeps them in
