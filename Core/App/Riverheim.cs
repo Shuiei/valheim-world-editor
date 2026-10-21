@@ -9,7 +9,7 @@ namespace TerrainEditor.App;
 /// world file), whether the player's Riverheim is there to draw them (its plugin DLL in a BepInEx folder the editor
 /// knows, with the Riverheim switch in Settings on: <see cref="AppSettings.Riverheim"/>), and why a world made with it
 /// cannot be opened otherwise. Without its generator the ground of such a world cannot be drawn, so the editor refuses
-/// it as the game does (the design: .claude/docs/riverheim-design.md).
+/// it as the game does.
 /// </summary>
 /// <remarks>Followed: Riverheim 1.2.1 (its world file header and settings, its plugin id and DLL name).</remarks>
 public static partial class Riverheim
@@ -137,7 +137,9 @@ public static partial class Riverheim
     /// </summary>
     /// <param name="tag">The world's Riverheim settings; null for a world Riverheim did not make.</param>
     /// <param name="settings">The editor's settings.</param>
-    public static RiverheimRules? Rules(Tag? tag, AppSettings settings)
+    /// <param name="gameVersion">The Riverheim a live game runs, when known: the player's must be of the same release
+    /// (major and minor version), as Riverheim asks of the players who join a game.</param>
+    public static RiverheimRules? Rules(Tag? tag, AppSettings settings, string? gameVersion = null)
     {
         string? bep = null;
         if (Refusal(tag, settings, () => bep = Find(settings)) is string why)
@@ -153,9 +155,20 @@ public static partial class Riverheim
         {
             throw new InvalidOperationException(Lang.T("riverheim.unsupported", tag.Preset, tag.PresetVersion, library.Version, problem));
         }
+        if (gameVersion != null && !SameRelease(gameVersion, library.Version))
+        {
+            throw new InvalidOperationException(Lang.T("riverheim.otherVersion", gameVersion, library.Version));
+        }
         Console.WriteLine($"Riverheim: the world's preset {tag.Preset} v{tag.PresetVersion} is laid out by Riverheim {library.Version} from {bep}.");
         return RulesOf(library, tag);
     }
+
+    /// <summary>
+    /// Whether two Riverheim versions lay worlds out alike: the same major and minor version (Riverheim's own rule for
+    /// the players of a game); a version that cannot be read is another.
+    /// </summary>
+    internal static bool SameRelease(string a, string b) =>
+        Version.TryParse(a, out var x) && Version.TryParse(b, out var y) && x.Major == y.Major && x.Minor == y.Minor;
 
     /// <summary>
     /// The rules a new world is made and looked at with (the New world page): Expand World's for a new world, with the

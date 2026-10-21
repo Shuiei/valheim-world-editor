@@ -281,7 +281,7 @@ world, made by `ExpandWorld.Vegetation.cs`). A layout (`SeedLocations.Layout`) a
 when it has them, else the game's, so the same code lays out vanilla and modded worlds; the mod's own placement
 patches (the zone's middle for wide kinds, the forced start temple, its distance checks, the extra draws for a prefab
 choice or a scale by axis) are branches on the rules in `SeedLocations.Placer` and `Regrow`, each mirrored as the
-mod does it, quirks included (`.claude/docs/expand-world-design.md` §2.4 lists them).
+mod does it, quirks included.
 
 The alt biomes (Dark Meadows, Rock Black Forest...) are laid out as the game lays them out each time a world
 loads, all from the seed: `SeedLocations.AltBiomeLayout` cuts the biome point map (`BiomeGrid`: the game's 2048
@@ -319,8 +319,7 @@ vegetation, locations, biome points and map mask (`WorldGenerator.LiteralWaterLe
 it), and the generator's stretched coordinates (`WorldGenerator.Stretched`: the mod divides a point on the
 way into `GetBiome`, `GetBiomeHeight` and the map's mask, and multiplies it back for the rivers). The
 reader of the mods' files is `Core/App/ExpandWorld.cs`; the rules apply only with the Expand World switch
-in Settings on (`AppSettings.ExpandWorld`), else every world is generated as the game does. The design
-and the steps still to come are in `.claude/docs/expand-world-design.md`.
+in Settings on (`AppSettings.ExpandWorld`), else every world is generated as the game does.
 
 Riverheim, another world generation mod, writes a header before the game's file version in the world file (a
 marker, its id, then its settings after the version): `WorldSave.ReadMetadata` reads it through
@@ -334,7 +333,7 @@ from the BepInEx folder's core and the game's Managed folder; its types driven b
 once), and the generator asks the laid-out world (`RiverheimGround`, an `IGroundGenerator`) in place of the bodies of the
 game's GetBiome, GetBiomeHeight, GetAshlandsHeight and GetForestFactor, and lays out no water. Expand World Size's
 stretch stays before it, its depth and forest after, as the mods' patches meet in the game. Users' side:
-[riverheim.md](riverheim.md); the design and the steps to come: `.claude/docs/riverheim-design.md`.
+[riverheim.md](riverheim.md).
 
 ## Live mode
 

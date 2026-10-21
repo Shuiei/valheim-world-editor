@@ -699,6 +699,7 @@
   "riverheim.unsupported": "Made with Riverheim's preset {0} v{1}, which your Riverheim {2} does not know ({3}): update Riverheim.",
   "riverheim.failed": "Riverheim could not be loaded from {0}: see the log.",
   "riverheim.layOutFailed": "Your Riverheim {0} could not lay this world out: {1}",
+  "riverheim.otherVersion": "The game runs Riverheim {0} and yours is {1}: the editor needs the same release (the first two numbers), as players who join the game do. Install Riverheim {0}.",
   "riverheim.beta": "Made with Riverheim's beta: its worlds cannot be opened, not even by Riverheim 1.0 and later.",
   "riverheim.unknownGenerator": "Made with a world generation mod the editor does not know ({0}).",
   "riverheim.unknownSetting": "Made with a Riverheim setting the editor does not know ({0}): a newer editor may know it.",

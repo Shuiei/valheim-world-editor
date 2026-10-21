@@ -24,6 +24,12 @@ editor without it.
 
 Worlds made without Riverheim never use it, even with the switch on and the mod installed.
 
+## Live mode
+
+A game or server running a Riverheim world is drawn the same way, with your own Riverheim: it must be of the same
+release as the game's (the first two numbers of the version, as for players who join), else the editor says both
+versions and does not open the world. See [Live mode](live-mode.md#riverheim).
+
 ## New worlds
 
 With the switch on and Riverheim found, the [New world](new-world.md) page offers Riverheim as the world's
