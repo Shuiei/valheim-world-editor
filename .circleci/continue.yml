@@ -606,8 +606,8 @@ workflows:
   # Side by side; windows-smoke waits for the Windows package that packages makes, and coverage for
   # both test jobs to pass. Branches and pull requests run code-analysis, formatting, the two test
   # jobs and addon-tests: packages, windows-smoke and coverage are main's, and windows-tests main's and the "windows"
-  # branches'. Main's ruleset requires the first four checks of a pull request, and no other: it must stay in step
-  # with this list (addon-tests is not one of them yet).
+  # branches'. Main's ruleset requires those five checks of a pull request, and no other: it must stay in step with
+  # this list (and with release-pr's below).
   test:
     when:
       and:
@@ -643,7 +643,7 @@ workflows:
             branches:
               only: main
 
-  # A release pull request: the four checks main's ruleset requires, reported at once (no tests: main's code).
+  # A release pull request: the five checks main's ruleset requires, reported at once (no tests: main's code).
   release-pr:
     when: << pipeline.parameters.release_pr >>
     jobs:
@@ -655,6 +655,8 @@ workflows:
           name: core-tests
       - tested-on-main:
           name: app-tests
+      - tested-on-main:
+          name: addon-tests
 
   # The approval first, so nothing runs for a release nobody approves; then only what the release needs:
   # the packages (the tests ran on the pull request, on the same tree) and the Windows smoke test, then
