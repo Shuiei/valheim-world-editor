@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.87.1 — 2026-10-20
+
+### Fixed
+- **Expand World Size's altitude and water depth match the game to the bit.** With those settings changed, about one
+  point in eight came out a hair higher or lower than the game makes it.
+
 ## v1.87.0 — 2026-10-20
 
 ### Added
