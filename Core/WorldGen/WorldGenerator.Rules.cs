@@ -62,7 +62,6 @@ public sealed partial class WorldGenerator
             float sr = r.StretchedRadius;
             Radius = r.Radius;
             Stretch = r.Stretch;
-            BiomeStretch = r.BiomeStretch;
             WorldSize = sr;
             EdgeOfWorld = r.StretchedTotalRadius;
             EdgeInner = (r.TotalRadius - 10f) / r.Stretch;
@@ -110,8 +109,6 @@ public sealed partial class WorldGenerator
         public float Radius { get; }
         /// <summary>The world's stretch: world coordinates over it are the generator's.</summary>
         public float Stretch { get; }
-        /// <summary>The land biomes' noise fields' stretch (a double: the mod divides the fields' double sums by it).</summary>
-        public double BiomeStretch { get; }
         /// <summary>The radius in the generator's coordinates (the game's 10000f).</summary>
         public float WorldSize { get; }
         /// <summary>The edge of the world in the generator's coordinates (the game's 10500f).</summary>

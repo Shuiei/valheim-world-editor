@@ -63,10 +63,11 @@ public sealed partial class WorldGenerator
 
     /// <summary>
     /// A biome's noise field: wide blobs, a kilometre or so across, placed by the seed (the rules' biome stretch
-    /// spreads them: Expand World Size divides the field's point, offset and all, by it).
+    /// spreads them: Expand World Size divides the point by it, in float, before the seed's offset is added; the offset
+    /// is not divided).
     /// </summary>
     private float Field(float offset, float x, float z) =>
-        GenMath.Noise((double)(float)(((double)offset + x) / _v.BiomeStretch) * (double)0.001f, (double)(float)(((double)offset + z) / _v.BiomeStretch) * (double)0.001f);
+        GenMath.Noise((double)(float)((double)offset + (x / _v.BiomeStretchF)) * (double)0.001f, (double)(float)((double)offset + (z / _v.BiomeStretchF)) * (double)0.001f);
 
     /// <summary>
     /// Whether (x, z) is past the Ashlands' edge (south); with Expand World Data's world rules, whether the sea boils
