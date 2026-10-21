@@ -1,4 +1,6 @@
+using System.Reflection;
 using TerrainEditor.Save;
+using ValheimGen;
 
 namespace TerrainEditor.App;
 
@@ -87,8 +89,9 @@ public static class Riverheim
     }
 
     /// <summary>
-    /// Why a world cannot be opened, for the player; null when it can: a world Riverheim did not make always can; one
-    /// it made needs the Riverheim switch on, the player's Riverheim found, and its generator in the editor.
+    /// Why a world cannot be opened, for the player; null when it can as far as can be told without loading Riverheim:
+    /// a world Riverheim did not make always can; one it made needs the Riverheim switch on and the player's Riverheim
+    /// found (<see cref="Rules"/> then loads it).
     /// </summary>
     /// <param name="tag">The world's Riverheim settings; null for a world Riverheim did not make.</param>
     /// <param name="settings">The editor's settings.</param>
@@ -103,6 +106,83 @@ public static class Riverheim
         {
             return Lang.T("riverheim.off");
         }
-        return find() == null ? Lang.T("riverheim.missing") : Lang.T("riverheim.notYet");
+        return find() == null ? Lang.T("riverheim.missing") : null;
+    }
+
+    /// <summary>
+    /// The rules a world made with Riverheim is generated with: the player's Riverheim, loaded, laying the world out
+    /// with the preset its file keeps; null for a world Riverheim did not make. Throws <c>InvalidOperationException</c>,
+    /// with why for the player, when it cannot be (<see cref="Refusal"/>, a Riverheim that cannot be loaded, or one that
+    /// does not know the world's preset).
+    /// </summary>
+    /// <param name="tag">The world's Riverheim settings; null for a world Riverheim did not make.</param>
+    /// <param name="settings">The editor's settings.</param>
+    public static RiverheimRules? Rules(Tag? tag, AppSettings settings)
+    {
+        string? bep = null;
+        if (Refusal(tag, settings, () => bep = Find(settings)) is string why)
+        {
+            throw new InvalidOperationException(why);
+        }
+        if (tag == null || bep == null)
+        {
+            return null;
+        }
+        var library = Library(bep, settings);
+        if (library.Problem(tag) is string problem)
+        {
+            throw new InvalidOperationException(Lang.T("riverheim.unsupported", tag.Preset, tag.PresetVersion, library.Version, problem));
+        }
+        Console.WriteLine($"Riverheim: the world's preset {tag.Preset} v{tag.PresetVersion} is laid out by Riverheim {library.Version} from {bep}.");
+        return new RiverheimRules(library.Version, tag.Preset, tag.PresetVersion) { LayOut = seed => LayOut(library, seed, tag) };
+    }
+
+    /// <summary>
+    /// The player's Riverheim in a BepInEx folder, loaded with what it names from the folder's core and the game's
+    /// Managed folder. Throws <c>InvalidOperationException</c>, with why for the player, when it cannot be loaded.
+    /// </summary>
+    private static RiverheimLibrary Library(string bep, AppSettings settings)
+    {
+        string dll = ExpandWorld.FindPlugin(Path.Combine(bep, "plugins"), DllName) ?? throw new InvalidOperationException(Lang.T("riverheim.missing"));
+        try
+        {
+            return RiverheimLibrary.Load(dll, Dependencies(bep, settings));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or BadImageFormatException or TypeLoadException or ReflectionTypeLoadException or MissingMemberException or TargetInvocationException or InvalidOperationException or ArgumentException)
+        {
+            Log.Caught(e, $"loading Riverheim from {dll}");
+            throw new InvalidOperationException(Lang.T("riverheim.failed", dll), e);
+        }
+    }
+
+    /// <summary>
+    /// A world's ground, laid out by the player's Riverheim (in the generator, as a world opens). Throws
+    /// <c>InvalidOperationException</c>, with why for the player, when Riverheim fails at it.
+    /// </summary>
+    private static RiverheimGround LayOut(RiverheimLibrary library, int seed, Tag tag)
+    {
+        try
+        {
+            return library.Ground(seed, tag);
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            Log.Caught(e, $"laying out seed {seed} with Riverheim {library.Version}");
+            throw new InvalidOperationException(Lang.T("riverheim.layOutFailed", library.Version, e.Message), e);
+        }
+    }
+
+    /// <summary>
+    /// The folders the assemblies Riverheim names are taken from: the BepInEx folder's core (BepInEx, Harmony) and the
+    /// game's Managed folder (Unity's), when Valheim is found.
+    /// </summary>
+    private static List<string> Dependencies(string bep, AppSettings settings)
+    {
+        var folders = new List<string> { Path.Combine(bep, "core") };
+        if (GameLook.FindValheim(settings.ValheimPath) is string valheim && GameLook.DataDir(valheim) is string data)
+        {
+            folders.Add(Path.Combine(data, "Managed"));
+        }
+        return folders;
     }
 }

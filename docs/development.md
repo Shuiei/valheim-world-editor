@@ -371,11 +371,12 @@ chests). `tests/fixtures/CITest.snapshot` is the same world as the plugin sends 
 same world as Valheim 1.0.20 saves it, in save format 42 (its dedicated server loaded CITest, one object of each chunk
 file was moved and moved back live so that the game wrote every file again, then it saved).
 
-The **game mods** the tests install into their BepInEx folders (Expand World Size, Data and Rivers, at the versions
-the editor follows) are never kept in the repository: building a test project downloads them from Thunderstore
-(`tests/TestMods.targets`) into the system's temporary folder (`vwe-test-mods/<project>`), and the test run deletes
-them when it ends (`tests/Support/TestMods.cs`; CI deletes them after its last test process). Building the tests needs
-the network for them.
+The **game mods** the tests install into their BepInEx folders (Expand World Size, Data and Rivers, Riverheim, and
+BepInEx's own pack for the BepInEx and Harmony assemblies Riverheim names, at the versions the editor follows) are
+never kept in the repository: building a test project downloads them from Thunderstore (`tests/TestMods.targets`) into
+the system's temporary folder (`vwe-test-mods/<project>`), and the test run deletes them when it ends
+(`tests/Support/TestMods.cs`; CI deletes them after its last test process). Building the tests needs the network for
+them. Unity's classes Riverheim's plugin derives from come from a stand-in the tests write (`tests/Support/UnityStandIn.cs`).
 
 CircleCI (`.circleci/continue.yml`) runs on every push and pull request (`packages` and
 `windows-smoke` on main only: they are slow, and the packaging they check seldom changes; `windows-tests` on main

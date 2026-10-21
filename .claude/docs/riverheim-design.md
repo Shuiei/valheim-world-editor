@@ -1,7 +1,7 @@
 # Riverheim compatibility: design
 
-Status: design of 2026-10-20, checked against the game (§5: every row of §3 measured, all exact). Nothing
-built yet; the steps are in §6.
+Status: design of 2026-10-20, checked against the game (§5: every row of §3 measured, all exact). Built: step 1
+(#478) and step 2 (`feature/riverheim-terrain`); the rest in §6.
 
 Decisions taken (with the user, 2026-10-20):
 

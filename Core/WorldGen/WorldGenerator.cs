@@ -67,7 +67,9 @@ public sealed partial class WorldGenerator
             _v = new RuleValues(Rules, _offsetA, _offsetB, _offsetDetail, _riverSeed, _streamSeed);
             _riverSeed = _v.RiverSeed;
             _streamSeed = _v.StreamSeed;
-            if (!world.Menu)
+            // Riverheim lays its own world out instead (its prefix skips the game's Pregenerate).
+            _ground = GroundOf(world);
+            if (!world.Menu && _ground == null)
             {
                 LayOutWater();
             }
@@ -77,6 +79,12 @@ public sealed partial class WorldGenerator
             Rnd.State = saved;
         }
     }
+
+    /// <summary>
+    /// The ground of the world generation mod that replaces the game's, laid out for the world (none for the menu world,
+    /// which the mod leaves to the game).
+    /// </summary>
+    private static IGroundGenerator? GroundOf(World world) => world.Menu ? null : world.Rules.Riverheim?.LayOut(world.Seed);
 
     /// <summary>
     /// A generator for a world. Each caller keeps its own (the game has one, static): the editor can have
@@ -115,12 +123,13 @@ public sealed partial class WorldGenerator
     /// <summary>
     /// The generated ground's height (metres) at (x, z), in the biome there.
     /// </summary>
-    public float GetHeight(float x, float z) => GetBiomeHeight(GetBiome(x, z), x, z, out _);
+    public float GetHeight(float x, float z) => GetHeight(x, z, out _);
 
     /// <summary>
-    /// The same, with the ground's mask (see <see cref="GetBiomeHeight"/>).
+    /// The same, with the ground's mask (see <see cref="GetBiomeHeight"/>). With Riverheim's ground, no biome is worked
+    /// out: its GetHeight asks GetBiomeHeight with none (which other mods' patches on it see).
     /// </summary>
-    internal float GetHeight(float x, float z, out Color mask) => GetBiomeHeight(GetBiome(x, z), x, z, out mask);
+    internal float GetHeight(float x, float z, out Color mask) => GetBiomeHeight(_ground == null ? GetBiome(x, z) : Heightmap.Biome.None, x, z, out mask);
 
     /// <summary>
     /// A shape in metres (the + 0.0 turns a negative zero to a positive one, as the game's sum does).
@@ -143,6 +152,11 @@ public sealed partial class WorldGenerator
     /// The world being made: seed, generator version, menu flag, rules.
     /// </summary>
     private readonly World _world;
+
+    /// <summary>
+    /// The ground of a world generation mod that replaces the game's (Riverheim), or null: then the game's own.
+    /// </summary>
+    private readonly IGroundGenerator? _ground;
 
     /// <summary>
     /// Older worlds (the game's generator versions 0 and 1) keep their settings: the radius around the

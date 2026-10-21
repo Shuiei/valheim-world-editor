@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.89.0 — 2026-10-20
+
+### Added
+- **Riverheim worlds open.** With the Riverheim switch on in Settings, a world made with Riverheim is drawn with your own
+  copy of the mod: its ground, biomes, forests, map and predictions are Riverheim's, as the game makes them.
+
 ## v1.88.0 — 2026-10-20
 
 ### Added

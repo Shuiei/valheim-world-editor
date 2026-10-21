@@ -63,7 +63,7 @@ public class RiverheimTests : AppSettingsTestBase
         Assert.Equal(Lang.T("riverheim.off"), Riverheim.Refusal(tag, new AppSettings(), found));
         Assert.Equal(0, asked);
         Assert.Equal(Lang.T("riverheim.missing"), Riverheim.Refusal(tag, new AppSettings { Riverheim = true }, none));
-        Assert.Equal(Lang.T("riverheim.notYet"), Riverheim.Refusal(tag, new AppSettings { Riverheim = true }, found));
+        Assert.Null(Riverheim.Refusal(tag, new AppSettings { Riverheim = true }, found));
     }
 
     [Fact]
