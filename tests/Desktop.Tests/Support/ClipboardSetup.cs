@@ -1,4 +1,6 @@
 using System.Numerics;
+using Avalonia.Headless;
+using Avalonia.Input;
 using TerrainEditor.Save;
 
 namespace TerrainEditor.Desktop.Tests;
@@ -101,4 +103,15 @@ internal static class ClipboardSetup
     /// Rounds to 3 decimals (with -0 made 0), to compare points.
     /// </summary>
     internal static Vector2 Round(Vector2 v) => new(MathF.Round(v.X, 3) + 0f, MathF.Round(v.Y, 3) + 0f);
+
+    /// <summary>
+    /// Copies a box of an open window's area with the keys: the Area tool (B), the box between two grid corners, Ctrl+C.
+    /// </summary>
+    internal static void CopyBox(MainWindow w, Vector2 from, Vector2 to)
+    {
+        w.KeyPress(Key.B, RawInputModifiers.None, PhysicalKey.B, "b");
+        w.View.Area.Points.Add(from);
+        w.View.Area.Points.Add(to);
+        w.KeyPress(Key.C, RawInputModifiers.Control, PhysicalKey.C, "c");
+    }
 }

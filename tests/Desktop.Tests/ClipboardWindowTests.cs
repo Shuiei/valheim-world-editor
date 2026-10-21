@@ -19,10 +19,7 @@ public class ClipboardWindowTests
     {
         var s = Area();
         var w = TestWindows.Editing(s);
-        w.KeyPress(Key.B, RawInputModifiers.None, PhysicalKey.B, "b");
-        w.View.Area.Points.Add(new Vector2(32, 32));
-        w.View.Area.Points.Add(new Vector2(48, 48));
-        w.KeyPress(Key.C, RawInputModifiers.Control, PhysicalKey.C, "c");
+        CopyBox(w, new Vector2(32, 32), new Vector2(48, 48));
         Assert.NotNull(w.View.Paste.Clip);
         Assert.StartsWith("Copied 19 × 19 m and 1 object(s)", w.MessageText.Text);
         w.KeyPress(Key.V, RawInputModifiers.Control, PhysicalKey.V, "v");

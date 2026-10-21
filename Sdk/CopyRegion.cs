@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -9,11 +10,16 @@ public sealed class CopyRegion
     /// <summary>A copy's region.</summary>
     /// <param name="middle">Its middle, in world metres.</param>
     /// <param name="outline">Its outline, world x and z (as a vector's X and Y).</param>
-    public CopyRegion(Vector3 middle, IReadOnlyList<Vector2> outline)
+    /// <param name="contains">Whether a point of the ground (x, z) lies inside the outline, as the editor tells it.</param>
+    public CopyRegion(Vector3 middle, IReadOnlyList<Vector2> outline, Func<float, float, bool> contains)
     {
         Middle = middle;
         Outline = outline;
+        _contains = contains;
     }
+
+    /// <summary>The editor's test of a point against the outline.</summary>
+    private readonly Func<float, float, bool> _contains;
 
     /// <summary>
     /// The copy's middle, in world metres: the copy's objects keep their places as offsets from it, its height being
@@ -24,20 +30,8 @@ public sealed class CopyRegion
     /// <summary>The copy's outline, world x and z (as a vector's X and Y), in order around it.</summary>
     public IReadOnlyList<Vector2> Outline { get; }
 
-    /// <summary>Whether a point of the ground lies inside the outline.</summary>
+    /// <summary>Whether a point of the ground lies inside the outline (or on it).</summary>
     /// <param name="x">World x, in metres.</param>
     /// <param name="z">World z, in metres.</param>
-    public bool Contains(float x, float z)
-    {
-        bool inside = false;
-        for (int i = 0, j = Outline.Count - 1; i < Outline.Count; j = i++)
-        {
-            Vector2 a = Outline[i], b = Outline[j];
-            if (a.Y > z != b.Y > z && x < (b.X - a.X) * (z - a.Y) / (b.Y - a.Y) + a.X)
-            {
-                inside = !inside;
-            }
-        }
-        return inside;
-    }
+    public bool Contains(float x, float z) => _contains(x, z);
 }

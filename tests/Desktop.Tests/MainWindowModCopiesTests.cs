@@ -52,12 +52,8 @@ public sealed class MainWindowModCopiesTests : IDisposable
         var mod = new Registers();
         ModExtensions.UseForTests(("Fleet", mod));
         var (w, s) = TestWindows.EditingFlat();
-        w.KeyPress(Key.B, RawInputModifiers.None, PhysicalKey.B, "b");
-        w.View.Area.Points.Add(new Vector2(32, 32));
-        w.View.Area.Points.Add(new Vector2(48, 48));
-
         // Bare ground: nothing but what the mod keeps, which is enough for a copy.
-        w.KeyPress(Key.C, RawInputModifiers.Control, PhysicalKey.C, "c");
+        ClipboardSetup.CopyBox(w, new Vector2(32, 32), new Vector2(48, 48));
         Assert.Equal([3], w.View.Paste.Clip!.Kept["Fleet/registers"]);
         Assert.Equal(new Vector3(8, 30, 8), mod.Copied!.Middle);
         Assert.True(mod.Copied.Contains(8, 8));
@@ -68,11 +64,7 @@ public sealed class MainWindowModCopiesTests : IDisposable
         w.PasteAt(new Vector2(80, 80));
         var landed = Assert.Single(mod.Landed);
         Assert.Equal((new Vector3(48, 30, 48), 90f, false), (landed.Middle, landed.Turn, landed.Mirror));
-        var step = Assert.Single(s.UndoList);
-        int id = Assert.Single(step.Hidden).Id;
-        Assert.False(s.Edits.IsGone(id));
-        Assert.True(s.Undo());
-        Assert.True(s.Edits.IsGone(id));
+        HiddenSteps.OneAddedThenUndone(s);
         w.Close();
     }
 }

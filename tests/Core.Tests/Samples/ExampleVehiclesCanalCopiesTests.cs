@@ -15,30 +15,11 @@ namespace WorldEditor.Tests;
 public class ExampleVehiclesCanalCopiesTests
 {
     /// <summary>An area of flat ground at 12 m holding the canals given.</summary>
-    private sealed class Area(params IObjectView[] canals) : IAreaView
-    {
-        public float MinX => -64;
+    private static PlainArea Area(params IObjectView[] canals) =>
+        new(-64, -64, 64, 64, 12) { Objects = new Dictionary<string, IReadOnlyList<IObjectView>> { [Keys.Canal] = canals } };
 
-        public float MinZ => -64;
-
-        public float MaxX => 64;
-
-        public float MaxZ => 64;
-
-        public IReadOnlyList<IObjectView> ObjectsOf(string prefab) => prefab == Keys.Canal ? canals : [];
-
-        public float GroundHeight(float x, float z) => 12;
-
-        public int Biome(float x, float z) => 1;
-
-        public bool IsDeepNorth(float x, float z) => false;
-
-        public bool IsAshlands(float x, float z) => false;
-
-        public uint BiomeColor(int x, int z) => 0;
-
-        public uint GroundMask(int x, int z) => 0xFF000000;
-    }
+    /// <summary>What a copy takes: an outline around a middle, a point inside as the editor tests it.</summary>
+    private static CopyRegion Region(Vector3 middle, params Vector2[] outline) => new(middle, outline, (x, z) => GroundCuts.Inside(outline, x, z));
 
     /// <summary>A canal along a path, with a width when given.</summary>
     private static ObjectView Canal(float? width, params Vector2[] path)
@@ -65,11 +46,11 @@ public class ExampleVehiclesCanalCopiesTests
     {
         var inside = Canal(4, new(10, 10), new(14, 10));
         var crossing = Canal(null, new(10, 10), new(40, 10));
-        var region = new CopyRegion(new Vector3(10, 5, 10), [new(0, 0), new(20, 0), new(20, 20), new(0, 20)]);
+        var region = Region(new Vector3(10, 5, 10), new(0, 0), new(20, 0), new(20, 20), new(0, 20));
         var copier = new CanalCopies();
-        byte[] kept = copier.Copy(new Area(inside, crossing), region)!;
+        byte[] kept = copier.Copy(Area(inside, crossing), region)!;
 
-        var edit = copier.Paste(new Area(), kept, [new CopyPlacement(new Vector3(-20, 30, 0), 90, false), new CopyPlacement(new Vector3(20, 30, 0), 0, true)])!;
+        var edit = copier.Paste(Area(), kept, [new CopyPlacement(new Vector3(-20, 30, 0), 90, false), new CopyPlacement(new Vector3(20, 30, 0), 0, true)])!;
         Assert.Equal(2, edit.Added.Count);
         Assert.All(edit.Added, a => Assert.Equal(Keys.Canal, a.Prefab));
 
@@ -91,7 +72,7 @@ public class ExampleVehiclesCanalCopiesTests
 
     [Fact]
     public void NothingInsideKeepsNothing() =>
-        Assert.Null(new CanalCopies().Copy(new Area(Canal(null, new(50, 50), new(60, 50))), new CopyRegion(Vector3.Zero, [new(0, 0), new(5, 0), new(5, 5)])));
+        Assert.Null(new CanalCopies().Copy(Area(Canal(null, new(50, 50), new(60, 50))), Region(Vector3.Zero, new(0, 0), new(5, 0), new(5, 5))));
 
     [Theory]
     [InlineData(new byte[0])]
@@ -99,5 +80,5 @@ public class ExampleVehiclesCanalCopiesTests
     [InlineData(new byte[] { 1, 1, 0, 0, 0, 0, 0 })]
     [InlineData(new byte[] { 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1 })]
     public void BytesNotInItsFormPutNothingDown(byte[] kept) =>
-        Assert.Null(new CanalCopies().Paste(new Area(), kept, [new CopyPlacement(Vector3.Zero, 0, false)]));
+        Assert.Null(new CanalCopies().Paste(Area(), kept, [new CopyPlacement(Vector3.Zero, 0, false)]));
 }

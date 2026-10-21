@@ -47,7 +47,7 @@ public sealed class ModExtensionsCopiesTests : IDisposable
         }
     }
 
-    private static readonly CopyRegion Region = new(Vector3.Zero, [new(-1, -1), new(1, -1), new(1, 1), new(-1, 1)]);
+    private static readonly CopyRegion Region = new(Vector3.Zero, [new(-1, -1), new(1, -1), new(1, 1), new(-1, 1)], (_, _) => true);
 
     [Fact]
     public void WhatIsKeptGoesUnderTheModsNameAndIsPutDownByItsCopier()

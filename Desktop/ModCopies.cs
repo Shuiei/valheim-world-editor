@@ -19,7 +19,8 @@ internal static class ModCopies
         {
             return [];
         }
-        var region = new CopyRegion(clip.Middle, [.. clip.Poly.Select(p => new Vector2(clip.Middle.X + p.X, clip.Middle.Z + p.Y))]);
+        Vector2[] outline = [.. clip.Poly.Select(p => new Vector2(clip.Middle.X + p.X, clip.Middle.Z + p.Y))];
+        var region = new CopyRegion(clip.Middle, outline, (x, z) => GroundCuts.Inside(outline, x, z));
         return ModExtensions.CopyArea(new SceneLayers.AreaView(s), region);
     }
 
