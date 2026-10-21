@@ -150,12 +150,13 @@ public sealed partial class WorldGenerator
 
     /// <summary>
     /// Low land kept low: above 0.15, hills are pressed down where the continents are low (the Meadows'
-    /// and the Deep North's way; the Plains' rounds its product differently).
+    /// and the Deep North's way; the Plains' rounds its product differently). The continents' height comes as a
+    /// double: the Deep North's is a sum the game's runtime never rounds to a float before using it here.
     /// </summary>
-    private static float Pressed(float h, float land)
+    private static float Pressed(float h, double land)
     {
         float over = (float)((double)h - (double)0.15f);
-        float lift = (float)GenMath.Clamp01((double)land / (double)0.4f);
+        float lift = (float)GenMath.Clamp01(land / (double)0.4f);
         return over > 0f ? (float)((double)h - (double)over * ((1.0 - lift) * 0.75)) : h;
     }
 

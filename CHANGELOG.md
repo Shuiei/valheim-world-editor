@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.87.4 — 2026-10-21
+
+### Fixed
+- **The Deep North's ground matches the game to the bit.** A few points of the Deep North came out a hair higher or
+  lower than the game makes them, with or without Expand World.
+
 ## v1.87.3 — 2026-10-20
 
 ### Fixed
