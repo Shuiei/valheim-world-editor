@@ -39,7 +39,8 @@ public sealed class SettingsDialogLangTests
             var shown = SettingsDialog.Show(owner, settings);
             var d = TestWindows.Shown(owner);
             // Claude's connection status (when a test left it on) is converted with Claude's texts.
-            Assert.Empty(PseudoLang.Untranslated(d, "SomeMod · SomeMod.WorldEditor.dll", Lang.English[Lang.NameKey], ClaudeServer.Status ?? ""));
+            // The add-on's folder (its name's tooltip) is data too.
+            Assert.Empty(PseudoLang.Untranslated(d, "SomeMod · SomeMod.WorldEditor.dll", Ui.Tilde(addOn), Lang.English[Lang.NameKey], ClaudeServer.Status ?? ""));
 
             var cancel = d.GetLogicalDescendants().OfType<Button>().Single(b => b.Content as string == Lang.T("common.cancel"));
             cancel.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
