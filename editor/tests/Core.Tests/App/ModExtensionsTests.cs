@@ -62,14 +62,16 @@ public sealed class ModExtensionsTests : IDisposable
     }
 
     [Fact]
-    public void TheGameComponentsAskedForAreTheRunningExtensionsOnly()
+    public void TheGameComponentsAndSettingsFilesAskedForAreTheRunningExtensionsOnly()
     {
-        Mod("ExampleVehicles", "ExampleVehicles.WorldEditor.dll", Sample, """, "gameComponents": ["Ship", "TerrainOp"]""");
+        Mod("ExampleVehicles", "ExampleVehicles.WorldEditor.dll", Sample, """, "gameComponents": ["Ship", "TerrainOp"], "settingsFiles": ["example.vehicles.cfg"]""");
         Refresh();
         Assert.Empty(ModExtensions.RequestedComponents);
+        Assert.Empty(ModExtensions.RequestedSettingsFiles);
         ModExtensions.Allow(Settings, Assert.Single(ModExtensions.Offered), true);
         Refresh();
         Assert.Equal(["Ship", "TerrainOp"], ModExtensions.RequestedComponents);
+        Assert.Equal(["example.vehicles.cfg"], ModExtensions.RequestedSettingsFiles);
     }
 
     [Fact]

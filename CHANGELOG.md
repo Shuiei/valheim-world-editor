@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.100.0 — 2026-10-21
+
+### Added
+- **Mods' extensions read the mod's own settings.** An extension can ask for settings from its mod's BepInEx settings
+  files, as the world's game has them: a live server's own (the settings its players get), else the player's. See
+  [Extensions](docs/modding.md#extensions).
+
 ## v1.99.2 — 2026-10-21
 
 ### Fixed

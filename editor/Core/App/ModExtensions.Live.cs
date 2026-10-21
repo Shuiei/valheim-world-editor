@@ -65,6 +65,9 @@ public static partial class ModExtensions
         public IGameData Game => ModComponents.View;
 
         /// <inheritdoc/>
+        public string? Setting(string file, string section, string key) => ModSettings.Value(file, section, key);
+
+        /// <inheritdoc/>
         public void Redraw() => ModExtensions.Redraw();
     }
 }

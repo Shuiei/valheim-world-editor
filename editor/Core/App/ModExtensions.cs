@@ -96,8 +96,14 @@ public static partial class ModExtensions
     private static volatile int _generation;
 
     /// <summary>The game's script classes the running extensions' manifests ask for ("gameComponents": ModComponents).</summary>
-    public static IReadOnlyCollection<string> RequestedComponents =>
-        [.. ModManifests.Extensions.Where(o => _state.Running.ContainsKey(o.Dll)).SelectMany(o => o.GameComponents).Distinct(StringComparer.Ordinal)];
+    public static IReadOnlyCollection<string> RequestedComponents => Requested(o => o.GameComponents);
+
+    /// <summary>The BepInEx settings files the running extensions' manifests ask for ("settingsFiles": ModSettings).</summary>
+    public static IReadOnlyCollection<string> RequestedSettingsFiles => Requested(o => o.SettingsFiles);
+
+    /// <summary>What the running extensions' manifests ask for of one kind, each once.</summary>
+    private static List<string> Requested(Func<ModManifests.Offered, IReadOnlyList<string>> asked) =>
+        [.. ModManifests.Extensions.Where(o => _state.Running.ContainsKey(o.Dll)).SelectMany(asked).Distinct(StringComparer.Ordinal)];
 
     /// <summary>The extensions the mods offer, and what became of each.</summary>
     public static IReadOnlyList<Extension> Offered => _state.Offered;

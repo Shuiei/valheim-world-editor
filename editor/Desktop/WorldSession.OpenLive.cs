@@ -21,6 +21,7 @@ public sealed partial class WorldSession
             // The mods' settings and data files as the game has them, through its bridge (an older one: the local folders).
             var settings = AppSettings.Load();
             world.Rules = await ExpandWorld.ResolveLive(world, settings, live);
+            await ModSettings.RefreshLive(live, ModExtensions.RequestedSettingsFiles);
             // The game's world file, read through the bridge with the rules, says whether Riverheim made the world; the
             // game's own Riverheim must be of the player's release.
             TakeRiverheim(world, settings, world.RiverheimTag != null ? await GameRiverheim(live) : null);

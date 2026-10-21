@@ -35,8 +35,9 @@ public static partial class ModManifests
     /// <param name="Dll">The extension's DLL, its full path (inside the mod's or the add-on's folder).</param>
     /// <param name="Mod">The mod, as its folder under plugins is named, or the add-on, as its folder is.</param>
     /// <param name="GameComponents">The game's scripts whose fields it asks for ("gameComponents"; ModComponents reads them).</param>
+    /// <param name="SettingsFiles">The BepInEx settings files it asks for ("settingsFiles"; ModSettings reads them).</param>
     /// <param name="AddOn">An add-on's (AddOns): it runs without being allowed in Settings.</param>
-    public sealed record Offered(string Dll, string Mod, IReadOnlyList<string> GameComponents, bool AddOn = false);
+    public sealed record Offered(string Dll, string Mod, IReadOnlyList<string> GameComponents, IReadOnlyList<string> SettingsFiles, bool AddOn = false);
 
     /// <summary>
     /// What a manifest says of a prefab.
