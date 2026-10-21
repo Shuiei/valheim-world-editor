@@ -81,6 +81,25 @@ public class WorldGeneratorRulesTests
         Assert.Equal((under - 30f) * 2f + 30f, Sea(deeper, sx, sz), 3);
     }
 
+    [Theory]
+    // Recorded on a dedicated server with Expand World Size 1.45 (Stretch biomes 2, nothing else), seed JkhDYs42rS: the
+    // point's bits, then the game's biome. The mod divides the point by the stretch before the seed's offset is added
+    // (dividing the offset too moved every biome field: these came out Mistlands, Black Forest, Ocean, Ocean).
+    [InlineData(0xc600fe7e, 0xc590edec, Heightmap.Biome.BlackForest)]
+    [InlineData(0xc5d8d342, 0xc54fa9ba, Heightmap.Biome.Mistlands)]
+    [InlineData(0x45b894e5, 0x44d7351b, Heightmap.Biome.Mistlands)]
+    [InlineData(0x45b5f566, 0xc5b0595a, Heightmap.Biome.BlackForest)]
+    public void TheBiomeStretchDividesThePointNotTheSeedsOffset(uint x, uint z, Heightmap.Biome biome)
+    {
+        var g = WorldGenerator.Create(new World
+        {
+            Seed = TerrainEditor.Save.StableHash.Of("JkhDYs42rS"),
+            WorldGenVersion = 2,
+            Rules = new WorldRules { SizeInstalled = true, BiomeStretch = 2f },
+        });
+        Assert.Equal(biome, g.GetBiome(BitConverter.UInt32BitsToSingle(x), BitConverter.UInt32BitsToSingle(z)));
+    }
+
     [Fact]
     public void TheWaterLevelMovesTheStreamsWindow()
     {

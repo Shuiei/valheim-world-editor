@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.87.2 — 2026-10-20
+
+### Fixed
+- **Expand World Size's "Stretch biomes" lays the biomes out as the game does.** The editor spread the biome fields
+  from the wrong origin, so about one point in fifteen had a different biome than in the game.
+
 ## v1.87.0 — 2026-10-20
 
 ### Added
