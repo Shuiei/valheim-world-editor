@@ -19,6 +19,9 @@ public sealed partial class AppSettings
     /// </summary>
     public List<string> BepInExFolders { get; set; } = [];
 
+    /// <summary>The add-ons turned off in Settings, by their folder's name (AddOns): installed but not used.</summary>
+    public List<string> AddOnsOff { get; set; } = [];
+
     /// <summary>
     /// Extra places with worlds, always listed: a world folder, or a folder of worlds (a server's
     /// -savedir/worlds_local, a backup folder...).
@@ -208,6 +211,7 @@ public sealed partial class AppSettings
     {
         BepInExFolders = [.. (BepInExFolders ?? []).Where(f => f != null)];
         WorldFolders = [.. (WorldFolders ?? []).Where(f => f != null)];
+        AddOnsOff = [.. (AddOnsOff ?? []).Where(f => f != null)];
         Extensions ??= [];
         Recent = [.. (Recent ?? []).Where(r => r is { Path: not null, Name: not null })];
         return this;

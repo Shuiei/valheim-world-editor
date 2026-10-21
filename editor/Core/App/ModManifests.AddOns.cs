@@ -8,8 +8,8 @@ namespace TerrainEditor.App;
 public static partial class ModManifests
 {
     /// <summary>
-    /// Lists every installed add-on in <paramref name="addOns"/> and adds what the manifests of those in use say to
-    /// <paramref name="notes"/>. One whose manifest is not one this editor reads, or whose "serves" is not a DLL's
+    /// Lists every installed add-on in <paramref name="addOns"/> and adds what the manifests of those in use (turned on,
+    /// their mod installed) say to <paramref name="notes"/>. One whose manifest is not one this editor reads, or whose "serves" is not a DLL's
     /// name, is said in the log and left out.
     /// </summary>
     /// <returns>How many manifests were used.</returns>
@@ -32,7 +32,13 @@ public static partial class ModManifests
                     continue;
                 }
                 bool served = serves == null || AddOns.IsInstalled(settings, serves);
-                addOns.Add(new AddOns.AddOn(name, folder, serves, served, ExtensionPath(root, folder)));
+                bool on = !settings.AddOnsOff.Contains(name, StringComparer.Ordinal);
+                addOns.Add(new AddOns.AddOn(name, folder, serves, served, ExtensionPath(root, folder), on));
+                if (!on)
+                {
+                    Console.WriteLine($"add-on {name}: turned off in Settings.");
+                    continue;
+                }
                 if (!served)
                 {
                     Console.WriteLine($"add-on {name}: waiting for {serves} (not in the plugins folders).");

@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.101.0 — 2026-10-21
+
+### Added
+- **Add-ons can be turned off.** Settings, under Add-ons, gives each installed add-on a switch: off, the editor does
+  not use it, and its folder stays where it is.
+
 ## v1.100.0 — 2026-10-21
 
 ### Added

@@ -4,8 +4,8 @@ namespace TerrainEditor.App;
 /// Editor add-ons (docs/modding.md#add-ons): what makes the editor work with a mod that brings no worldeditor.json of
 /// its own, made by anyone and installed by the player in the addons folder next to the editor's program, one
 /// subfolder each with its worldeditor.json (naming the mod's DLL it serves, "serves") and its extension DLL. Installing
-/// one is the player's choice: it needs no switch in Settings, and is used while the mod it serves is in a plugins
-/// folder (one serving none is always used). Read with the mods' manifests (ModManifests.Refresh), before them: a mod's
+/// one is the player's choice: it is used as installed, while the mod it serves is in a plugins folder (one serving none
+/// always), unless its switch in Settings turns it off (<see cref="AppSettings.AddOnsOff"/>). Read with the mods' manifests (ModManifests.Refresh), before them: a mod's
 /// own file says the last word.
 /// </summary>
 public static class AddOns
@@ -19,7 +19,20 @@ public static class AddOns
     /// <param name="Serves">The mod's DLL it serves ("Tunnelheim.dll"), or null for none.</param>
     /// <param name="Served">Whether that DLL is in a plugins folder (always for none): the add-on is then in use.</param>
     /// <param name="Dll">Its extension DLL's full path, or null when it brings none (only its manifest's notes).</param>
-    public sealed record AddOn(string Name, string Folder, string? Serves, bool Served, string? Dll);
+    /// <param name="On">Whether its switch in Settings is on (<see cref="AppSettings.AddOnsOff"/>): off, it is not used.</param>
+    public sealed record AddOn(string Name, string Folder, string? Serves, bool Served, string? Dll, bool On = true);
+
+    /// <summary>
+    /// The add-ons turned off once Settings' switches are taken (<see cref="AppSettings.AddOnsOff"/>): those whose switch
+    /// is off, and those turned off before that are not listed now (one put back later stays off).
+    /// </summary>
+    /// <param name="before">The add-ons turned off until now.</param>
+    /// <param name="switches">Each listed add-on's name and whether its switch is on.</param>
+    public static List<string> TurnedOff(IReadOnlyList<string> before, IEnumerable<(string Name, bool On)> switches)
+    {
+        var listed = switches.ToList();
+        return [.. before.Where(n => !listed.Exists(s => s.Name == n)), .. listed.Where(s => !s.On).Select(s => s.Name)];
+    }
 
     /// <summary>Stands in for the program's folder (the tests).</summary>
     internal static string? FolderForTests { get; set; }

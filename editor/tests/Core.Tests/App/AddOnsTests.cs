@@ -6,8 +6,8 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// Editor add-ons (AddOns): installed in the addons folder next to the program, one folder each; listed whether in use
-/// or not; their notes used and their extension run (without a switch in Settings) while the mod's DLL they serve is in
-/// a plugins folder, or always when they serve none; a mod's own manifest read after them; ones not in the expected
+/// or not; their notes used and their extension run (without being allowed in Settings) while the mod's DLL they serve
+/// is in a plugins folder, or always when they serve none, unless their switch in Settings is off; a mod's own manifest read after them; ones not in the expected
 /// form left out. Runs alone (the manifests and extensions are shared).
 /// </summary>
 [Collection("DataDir")]
@@ -74,6 +74,32 @@ public sealed class AddOnsTests : IDisposable
         Assert.Equal(1, ModManifests.Refresh(Settings));
         Assert.True(Assert.Single(ModManifests.InstalledAddOns).Served);
         Assert.True(ModManifests.IsData(StableHash.Of("dig_record")));
+    }
+
+    [Fact]
+    public void AnAddOnTurnedOffIsListedButNothingOfItIsUsed()
+    {
+        string folder = AddOn("Vehicles", """, "extension": "ExampleVehicles.WorldEditor.dll", "prefabs": { "dig_record": { "data": true } }""");
+        File.Copy(Sample, Path.Combine(folder, "ExampleVehicles.WorldEditor.dll"));
+        Settings.AddOnsOff = ["Vehicles"];
+
+        Assert.Equal(0, ModManifests.Refresh(Settings));
+        Assert.Equal(0, ModExtensions.Refresh(Settings));
+        Assert.False(Assert.Single(ModManifests.InstalledAddOns).On);
+        Assert.False(ModManifests.IsData(StableHash.Of("dig_record")));
+        Assert.Empty(ModExtensions.Offered);
+
+        Settings.AddOnsOff = [];
+        Assert.Equal(1, ModManifests.Refresh(Settings));
+        Assert.True(Assert.Single(ModManifests.InstalledAddOns).On);
+        Assert.True(ModManifests.IsData(StableHash.Of("dig_record")));
+    }
+
+    [Fact]
+    public void SettingsSwitchesTurnAddOnsOffAndKeepThoseNotListed()
+    {
+        Assert.Equal(["Gone", "Tunnels"], AddOns.TurnedOff(["Gone", "Rivers"], [("Rivers", true), ("Tunnels", false)]));
+        Assert.Empty(AddOns.TurnedOff([], [("Rivers", true)]));
     }
 
     [Fact]

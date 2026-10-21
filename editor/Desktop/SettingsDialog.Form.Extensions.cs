@@ -43,18 +43,20 @@ public static partial class SettingsDialog
         }
 
         /// <summary>
-        /// Builds the add-ons' list (AddOns): each one's name and the mod it serves, and what became of it under it, or
-        /// where to install one when there is none.
+        /// Builds the add-ons' list (AddOns): each one's switch, with its name and the mod it serves, and what became of
+        /// it under it, or where to install one when there is none.
         /// </summary>
         private void BuildAddOns()
         {
             _addOns = new StackPanel { Spacing = 4 };
+            _addOnBoxes = [];
             foreach (var a in ModManifests.InstalledAddOns)
             {
-                var name = new TextBlock { Text = a.Serves is { } mod ? Lang.T("settings.addOnFor", a.Name, mod) : a.Name, FontSize = 13, TextWrapping = TextWrapping.Wrap };
-                ToolTip.SetTip(name, Ui.Tilde(a.Folder));
-                _addOns.Children.Add(name);
-                _addOns.Children.Add(new TextBlock { Text = AddOnState(a), FontSize = 11, Foreground = _muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12, 0, 0, 4) });
+                var box = new CheckBox { Content = a.Serves is { } mod ? Lang.T("settings.addOnFor", a.Name, mod) : a.Name, IsChecked = a.On }.Classed("switch").Tip("settings.addOn");
+                ToolTip.SetTip(box, Ui.Tilde(a.Folder));
+                _addOnBoxes.Add((box, a));
+                _addOns.Children.Add(box);
+                _addOns.Children.Add(new TextBlock { Text = AddOnState(a), FontSize = 11, Foreground = _muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(28, 0, 0, 4) });
             }
             if (ModManifests.InstalledAddOns.Count == 0)
             {
@@ -63,10 +65,14 @@ public static partial class SettingsDialog
         }
 
         /// <summary>
-        /// What became of an add-on: waiting for its mod, in use with only its notes, or its extension's state.
+        /// What became of an add-on: turned off, waiting for its mod, in use with only its notes, or its extension's state.
         /// </summary>
         internal static string AddOnState(AddOns.AddOn a)
         {
+            if (!a.On)
+            {
+                return Lang.T("settings.addOnOff");
+            }
             if (!a.Served)
             {
                 return Lang.T("settings.addOnWaiting", a.Serves);

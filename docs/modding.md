@@ -288,10 +288,11 @@ ValheimWorldEditor/                the editor's folder (on macOS: the folder hol
   out (the log says why).
 - **Its extension** is made as any other (see [Making one](#making-one)): one DLL, inside the
   add-on's folder, every hook and rule the same.
-- **No switch.** Installing an add-on is the player's choice, so it runs without being turned on
-  in Settings. Settings lists the add-ons under **Add-ons** with what became of each: "Waiting for
-  its mod: TheirMod.dll is not in the plugins folders above.", "Running.", "Not running: …", or
-  that it only brings notes.
+- **On as installed.** Installing an add-on is the player's choice, so it runs without being turned
+  on in Settings. Settings lists the add-ons under **Add-ons**, each with a switch that turns it off
+  without removing it (nothing of it is used then), and with what became of each: "Waiting for its
+  mod: TheirMod.dll is not in the plugins folders above.", "Running.", "Not running: …", that it only
+  brings notes, or that it is off.
 - **The mod's own word wins.** The add-ons' files are read before the mods' own: should the mod
   ship a `worldeditor.json` of its own one day, what it says replaces what the add-on said (an
   extension of its own then needs the player's switch, as always).
