@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.98.2 — 2026-10-21
+
+### WorldEditorBridge
+- A folder of the game's BepInEx config folder that is replaced by a link while the editor asks for it is no longer
+  listed: the folder is checked again once read, as a file already was.
+
 ## v1.98.1 — 2026-10-21
 
 ### WorldEditorBridge
