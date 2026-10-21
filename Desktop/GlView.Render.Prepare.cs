@@ -42,6 +42,10 @@ public sealed partial class GlView
                 Status?.Invoke(Said.Of("world.msg.lookSetupFailed", ex.Message));
             }
         }
+        if (s != null)
+        {
+            PrepareLayers(s);
+        }
         if (s != null && _thingsReset)
         {
             _thingsReset = false;

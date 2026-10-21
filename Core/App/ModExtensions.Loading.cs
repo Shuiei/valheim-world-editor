@@ -77,6 +77,9 @@ public static partial class ModExtensions
         }
 
         /// <inheritdoc/>
+        public void AddScene(ISceneProvider provider) => loaded.Scenes.Add(provider);
+
+        /// <inheritdoc/>
         public void AddLiveListener(ILiveListener listener) => loaded.LiveListeners.Add(listener);
 
         /// <inheritdoc/>

@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.94.0 — 2026-10-21
+
+### Added
+- **Mods' extensions can draw whole areas.** An extension can now draw what its mod makes of an area (a canal, rock
+  dug out of a hill) with the game's own ground look, in place of the editor's ground, and clicks land on it.
+
 ## v1.93.0 — 2026-10-21
 
 ### Added

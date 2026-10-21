@@ -173,6 +173,14 @@ no data tables. Everything is read at run time from the player's install:
   keeps the buildings in `WorldWriter.PlanRemovals` and, live, by the plugin's `/zones/reset`). `PlacePanel` also leaves
   out a mod's helpers, prefabs whose reported model has no parts (sounds, effects; `PlacePanel.NotOffered`),
   and works its list out again when `ModManifests.Generation` or `ModCatalogue.Generation` changes.
+- Mods' scene layers: `Desktop/SceneLayers.cs` asks the running extensions' scene providers (`ModExtensions.ScenesOf`)
+  what to draw of an open area as a whole, on a worker, giving them the area as `SceneLayers.AreaView` (its objects of a
+  prefab from the save and the pending edits, its heights, biomes, terrain colours and paint), and keeps what came back
+  per scene (`Built`: the layers, the ground cells their holes leave undrawn, their triangles in the view's frame for
+  picking) until the edits, the live game, the objects or `ModExtensions.Generation` change. `GlView.SceneLayers.cs`
+  uploads their meshes with the ground's layout and draws them right after the ground with the same programs (the
+  look's `BindMask` puts each mesh's paint mask in `_ClearedMaskTex`); both terrain shaders discard the hole cells
+  (`uHoles`, one byte a cell, on a texture unit of its own), and `Picking.HitGround` skips them and meets the meshes.
 - Mods' game components: `Core/App/ModComponents.cs` reads the fields of the game's scripts the running extensions'
   manifests ask for (`gameComponents`, `ModExtensions.RequestedComponents`) in one pass over the bundles
   (`GameCatalogues.ReadComponents`), after the extensions at `WorldSession.ReadModFiles`, and keeps them in

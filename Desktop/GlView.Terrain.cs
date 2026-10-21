@@ -111,9 +111,10 @@ public sealed partial class GlView
         _look?.UpdateRows(s, x0, z0, x1, z1);
     }
 
-    /// <summary>The last area's ground and sea.</summary>
+    /// <summary>The last area's ground and sea, and the mods' layers over it.</summary>
     private void DeleteTerrain()
     {
+        DropLayers();
         _own.DeleteVertexArray(_terrainVao);
         _own.DeleteVertexArray(_waterVao);
         foreach (uint b in new[] { _terrainVbo, _terrainEbo, _terrainBiomeVbo, _terrainExtraVbo, _terrainCutVbo, _waterVbo, _waterEbo })

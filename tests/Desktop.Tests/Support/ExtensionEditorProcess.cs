@@ -13,7 +13,7 @@ namespace TerrainEditor.Desktop.Tests;
 /// worldeditor.json in a mod folder under a BepInEx plugins folder the settings name, and the DLL allowed in the
 /// settings by its hash, as the Settings dialog allows one. A copy of the test world is ready to open (World), the
 /// sample mod's objects put in its first zone: a red four-cornered sail, two posts with a cable from one to the other,
-/// and a pit dug in the ground. The editor's settings and data go to a folder of its own (Data), made before it starts.
+/// a pit dug in the ground, and a canal. The editor's settings and data go to a folder of its own (Data), made before it starts.
 /// </summary>
 public sealed class ExtensionEditorProcess() : EditorProcess([], null, Prepared())
 {
@@ -80,6 +80,9 @@ public sealed class ExtensionEditorProcess() : EditorProcess([], null, Prepared(
             Thing("example_post", new Vector3(-6, 46, 2), z => Int(z, "ExampleVehicles_Target", FarPost)),
             Thing("example_post", new Vector3(-6, 46, 10), z => Int(z, "ExampleVehicles_Id", FarPost)),
             Thing("example_pit", new Vector3(8, 46, -6), z => z.FloatList.Add((StableHash.Of("ExampleVehicles_Radius"), 1.5f))),
+            // A canal along three points, 3 m wide and 1.5 m deep (the sample's defaults), kept in an object of its own.
+            Thing("example_canal", new Vector3(-12, 46, -14), z => z.ByteList.Add((StableHash.Of("ExampleVehicles_Path"),
+                ExampleVehicles.WorldEditor.Canals.WritePath([new(-12, -14), new(10, -14), new(14, 6)])))),
         ];
         var result = WorldWriter.Save(WorldSave.Load(world), [], added: added);
         if (!result.Saved)

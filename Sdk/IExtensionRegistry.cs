@@ -47,6 +47,14 @@ public interface IExtensionRegistry
     void AddGroundCuts(IGroundCutter cutter, params string[] prefabs);
 
     /// <summary>
+    /// Draws what the mod makes of an open area as a whole (rock dug out of a hill from the records of what was dug,
+    /// a canal), with the game's ground look or in a colour, and leaves the editor's ground undrawn where those meshes
+    /// replace it. Clicks land on the meshes and go through the holes.
+    /// </summary>
+    /// <param name="provider">Works out what to draw in an area.</param>
+    void AddScene(ISceneProvider provider);
+
+    /// <summary>
     /// Told when the editor connects to a game and when that ends. With the game, the extension can call the routes
     /// its mod's own plugin registered with the WorldEditorBridge (WorldEditorBridge.Api): what only the running game
     /// knows, or work only it can do.

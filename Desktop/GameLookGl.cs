@@ -215,6 +215,39 @@ public sealed partial class GameLookGl
         _gl.ActiveTexture(TextureUnit.Texture0);
     }
 
+    /// <summary>The terrain program (bound by <see cref="UseTerrain"/>).</summary>
+    internal uint TerrainShader() => _terrain;
+
+    /// <summary>The first texture unit <see cref="UseTerrain"/> leaves free.</summary>
+    internal int FreeUnit => _tex.Count;
+
+    /// <summary>
+    /// Puts another paint mask in the terrain's _ClearedMaskTex (a mod's mesh's own), or (null) the area's back. The
+    /// terrain program must be in use.
+    /// </summary>
+    /// <param name="tex">The mask texture; null for the area's.</param>
+    public void BindMask(uint? tex)
+    {
+        int unit = 0;
+        foreach (string name in _tex.Keys)
+        {
+            if (name == "_ClearedMaskTex")
+            {
+                break;
+            }
+            unit++;
+        }
+        _gl.ActiveTexture(TextureUnit.Texture0 + unit);
+        _gl.BindTexture(TextureTarget.Texture2D, tex ?? _maskTex);
+        _gl.ActiveTexture(TextureUnit.Texture0);
+    }
+
+    /// <summary>Gives the terrain program the area's offset again for the holes' cells (the world frame's origin).</summary>
+    internal void HoleOffset()
+    {
+        _gl.Uniform3(_u.At(_terrain, "uOffsetHoles"), _scene.Cx, 0, _scene.Cz);
+    }
+
     /// <summary>
     /// Draws the water, blended over the ground (without writing depth).
     /// </summary>
