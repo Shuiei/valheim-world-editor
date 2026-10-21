@@ -12,12 +12,6 @@ namespace Tunnelheim.WorldEditor;
 /// <param name="log">Where what cannot be read is told.</param>
 public sealed class TunnelScene(IEditorHost host, Action<string> log) : ISceneProvider
 {
-    /// <summary>
-    /// The mod's default palette, 2 × 2 from the bottom row: natural (the game's untouched ground), dirt; cultivated,
-    /// paved. Red is the lowest byte.
-    /// </summary>
-    private static readonly MaskTexture Palette = new(2, 2, [0xFF000000u, 0xFF0000FFu, 0xFF00FF00u, 0xFFFF0000u]);
-
     /// <inheritdoc/>
     public SceneLayer? Build(IAreaView area)
     {
@@ -33,7 +27,7 @@ public sealed class TunnelScene(IEditorHost host, Action<string> log) : IScenePr
             layer.Holes.Add(new GroundHole(x0, z0, x0 + (int)RockGrid.ColumnMetres, z0 + (int)RockGrid.ColumnMetres));
             foreach (int cy in grid.ChunksOf(cx, cz))
             {
-                if (Mesh(area, RockMesher.Build(grid, cx, cy, cz), new Vector3(x0, cy * RockGrid.ColumnMetres, z0)) is { } mesh)
+                if (Mesh(area, grid, RockMesher.Build(grid, cx, cy, cz), new Vector3(x0, cy * RockGrid.ColumnMetres, z0)) is { } mesh)
                 {
                     layer.Meshes.Add(mesh);
                 }
@@ -43,12 +37,14 @@ public sealed class TunnelScene(IEditorHost host, Action<string> log) : IScenePr
     }
 
     /// <summary>A chunk's rock in the world, coloured and painted as the mod draws it; null when it has no surface.</summary>
-    private static SceneMesh? Mesh(IAreaView area, RockMesh rock, Vector3 corner)
+    private static SceneMesh? Mesh(IAreaView area, RockGrid grid, RockMesh rock, Vector3 corner)
     {
         if (rock.Triangles.Length == 0)
         {
             return null;
         }
+        float half = RockGrid.ColumnMetres / 2;
+        var palette = RockLook.At(area, corner + new Vector3(half, half, half));
         var positions = new Vector3[rock.Positions.Length];
         uint[] colours = new uint[positions.Length];
         var uvs = new Vector2[positions.Length];
@@ -56,21 +52,37 @@ public sealed class TunnelScene(IEditorHost host, Action<string> log) : IScenePr
         {
             var p = positions[i] = corner + rock.Positions[i];
             colours[i] = area.BiomeColor((int)Math.Floor(p.X), (int)Math.Floor(p.Z));
-            uvs[i] = PaintUv(rock.Paint[i], rock.Dug[i]);
+            uvs[i] = RockLook.Uv(palette, rock.Paint[i], rock.Dug[i], Ground(area, grid, palette, rock, i, p));
         }
-        return new SceneMesh(positions, rock.Normals, rock.Triangles) { BiomeColors = colours, Mask = Palette, MaskUvs = uvs };
+        return new SceneMesh(positions, rock.Normals, rock.Triangles) { BiomeColors = colours, Mask = RockLook.Mask(palette), MaskUvs = uvs };
     }
 
     /// <summary>
-    /// Where a vertex's paint lies on the palette: dirt, cultivated and paved their own; natural and no-vegetation
-    /// natural; unpainted rock dirt where it was dug, natural where it was not.
+    /// The ground's value a vertex's natural paint follows on a strip palette: in the Ashlands where the vertex lies open
+    /// to the sky (no rock above a little out from it), elsewhere where it is natural rock not dug; 0 otherwise.
     /// </summary>
-    private static Vector2 PaintUv(byte paint, bool dug) => paint switch
+    private static float Ground(IAreaView area, RockGrid grid, RockLook.Palette palette, RockMesh rock, int i, Vector3 p)
     {
-        RockPaint.Dirt => new(0.75f, 0.25f),
-        RockPaint.Cultivated => new(0.25f, 0.75f),
-        RockPaint.Paved => new(0.75f, 0.75f),
-        RockPaint.None when dug => new(0.75f, 0.25f),
-        _ => new(0.25f, 0.25f),
-    };
+        bool counts = palette switch
+        {
+            RockLook.Palette.Default => false,
+            RockLook.Palette.Ashlands => OpenToSky(grid, p + (rock.Normals[i] * 0.6f)),
+            _ => !rock.Dug[i] && rock.Paint[i] == RockPaint.None,
+        };
+        return counts ? GroundAt(area, palette, p.X, p.Z) : 0f;
+    }
+
+    /// <summary>Whether no rock stands over a point (the topmost rock there at most 0.2 m above it).</summary>
+    internal static bool OpenToSky(RockGrid grid, Vector3 p) =>
+        grid.TopRockAt(RockMath.Round(p.X / RockGrid.Step), RockMath.Round(p.Z / RockGrid.Step)) <= p.Y + 0.2f;
+
+    /// <summary>The ground's value at a point, between the four whole metres around it.</summary>
+    private static float GroundAt(IAreaView area, RockLook.Palette palette, float x, float z)
+    {
+        int x0 = (int)Math.Floor(x), z0 = (int)Math.Floor(z);
+        float fx = x - x0, fz = z - z0;
+        float V(int dx, int dz) => RockLook.GroundValue(palette, area.GroundMask(x0 + dx, z0 + dz));
+        float south = V(0, 0) + ((V(1, 0) - V(0, 0)) * fx), north = V(0, 1) + ((V(1, 1) - V(0, 1)) * fx);
+        return south + ((north - south) * fz);
+    }
 }

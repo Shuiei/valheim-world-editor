@@ -1,0 +1,148 @@
+using System.Numerics;
+using Xunit;
+
+namespace Tunnelheim.WorldEditor.Tests;
+
+/// <summary>
+/// The mod's rock paint (RockLook, RockGrid.TopRockAt): the palette by biome, each palette's mask, where a vertex lies
+/// on it (dug, painted, natural following the ground), the ground's value from its mask, the topmost rock over a point,
+/// and the scene drawing a Deep North chunk with its strip.
+/// </summary>
+public class RockLookTests
+{
+    [Fact]
+    public void ThePaletteFollowsTheBiomeAshlandsFirst()
+    {
+        var at = Vector3.Zero;
+        Assert.Equal(RockLook.Palette.Default, RockLook.At(new FakeArea(0), at));
+        Assert.Equal(RockLook.Palette.Mistlands, RockLook.At(new FakeArea(0) { BiomeValue = 512 }, at));
+        Assert.Equal(RockLook.Palette.DeepNorth, RockLook.At(new FakeArea(0) { BiomeValue = 512, DeepNorth = true }, at));
+        Assert.Equal(RockLook.Palette.Ashlands, RockLook.At(new FakeArea(0) { DeepNorth = true, Ashlands = true }, at));
+    }
+
+    [Fact]
+    public void EachPaletteHasItsMask()
+    {
+        var plain = RockLook.Mask(RockLook.Palette.Default);
+        Assert.Equal((2, 2), (plain.Width, plain.Height));
+        Assert.Equal([0xFF000000u, 0xFF0000FFu, 0xFF00FF00u, 0xFFFF0000u], plain.Texels);
+        // The strips: cultivated, natural, dirt, paved; the natural top row the ground's own.
+        var snow = RockLook.Mask(RockLook.Palette.DeepNorth);
+        Assert.Equal((4, 2), (snow.Width, snow.Height));
+        Assert.Equal((0u, 0x0000FF00u), (snow.Texels[1], snow.Texels[5]));
+        Assert.Equal(0xFF000000u, RockLook.Mask(RockLook.Palette.Mistlands).Texels[5]);
+        Assert.Equal((0x000000FFu, 0xFF0000FFu), (RockLook.Mask(RockLook.Palette.Ashlands).Texels[2], RockLook.Mask(RockLook.Palette.Ashlands).Texels[6]));
+    }
+
+    [Theory]
+    [InlineData(RockLook.Palette.Default, RockPaint.None, false, 0f, 0.25f, 0.25f)]
+    [InlineData(RockLook.Palette.Default, RockPaint.None, true, 0f, 0.75f, 0.25f)]
+    [InlineData(RockLook.Palette.Default, RockPaint.Paved, false, 0f, 0.75f, 0.75f)]
+    [InlineData(RockLook.Palette.DeepNorth, RockPaint.None, false, 1f, 0.375f, 0.75f)]
+    [InlineData(RockLook.Palette.DeepNorth, RockPaint.None, true, 1f, 0.625f, 0.25f)]
+    [InlineData(RockLook.Palette.Mistlands, RockPaint.Cultivated, false, 1f, 0.125f, 0.25f)]
+    [InlineData(RockLook.Palette.Mistlands, RockPaint.Natural, false, 1f, 0.375f, 0.25f)]
+    [InlineData(RockLook.Palette.Ashlands, RockPaint.Dirt, false, 0.5f, 0.625f, 0.5f)]
+    public void AVertexLiesWhereItsPaintSays(RockLook.Palette palette, byte paint, bool dug, float ground, float u, float v) =>
+        Assert.Equal(new Vector2(u, v), RockLook.Uv(palette, paint, dug, ground));
+
+    [Fact]
+    public void TheGroundsValueIsSnowInTheDeepNorthElseItsAlpha()
+    {
+        Assert.Equal(1f, RockLook.GroundValue(RockLook.Palette.DeepNorth, 0x0000FF00));
+        Assert.Equal(0f, RockLook.GroundValue(RockLook.Palette.Mistlands, 0x0000FF00));
+        Assert.Equal(1f, RockLook.GroundValue(RockLook.Palette.Ashlands, 0xFF000000));
+    }
+
+    [Fact]
+    public void TheTopmostRockIsTheGroundOrWhatWasBuiltOverIt()
+    {
+        var grid = new RockGrid((_, _) => 10f);
+        grid.EnsureColumn(0, 0);
+        Assert.Equal(10f, grid.TopRockAt(8, 8), 3);
+        // A lump of rock added 6 m up: the topmost rock is its top now.
+        grid.Apply(new DigOp(DigKind.Fill, new Vector3(4, 16, 4), 1));
+        Assert.InRange(grid.TopRockAt(8, 8), 16.5f, 17.01f);
+    }
+
+    [Fact]
+    public void RockAboveAnAirGapIsNotTheTopmostRockAsInTheMod()
+    {
+        var grid = new RockGrid((_, _) => 10f);
+        grid.EnsureColumn(0, 0);
+        grid.Apply(new DigOp(DigKind.Fill, new Vector3(4, 22, 4), 1));
+        Assert.Equal(10f, grid.TopRockAt(8, 8), 3);
+    }
+
+    [Fact]
+    public void ADeepNorthChunkIsDrawnWithItsStripFollowingTheSnow()
+    {
+        var record = FakeObject.Record(new ColumnRecord(ColumnRecord.Plain, null, 0, [new DigOp(DigKind.Sphere, new Vector3(8, 40, 8), 2f)]), 8, 8);
+        var uvs = Uvs(new FakeArea(40, record) { DeepNorth = true, Mask = 0x0000FF00 }, RockLook.Palette.DeepNorth);
+        // The pit's dug rock as dirt; the untouched ground around it, natural, on the snow row.
+        Assert.Contains(new Vector2(0.625f, 0.25f), uvs);
+        Assert.Contains(new Vector2(0.375f, 0.75f), uvs);
+    }
+
+    [Fact]
+    public void APointIsOpenToTheSkyUnlessRockStandsMoreThanAFifthOfAMetreOverIt()
+    {
+        var grid = new RockGrid((_, _) => 10f);
+        grid.EnsureColumn(0, 0);
+        // A cave dug 5 m down, its top 3 m under the ground.
+        grid.Apply(new DigOp(DigKind.Sphere, new Vector3(4, 5, 4), 2f));
+        // Above the ground, on it, and up to a fifth of a metre into it: open.
+        Assert.True(TunnelScene.OpenToSky(grid, new Vector3(8, 12, 8)));
+        Assert.True(TunnelScene.OpenToSky(grid, new Vector3(8, 10, 8)));
+        Assert.True(TunnelScene.OpenToSky(grid, new Vector3(8, 9.85f, 8)));
+        // Deeper, or in the cave, with the ground's rock over it: not open.
+        Assert.False(TunnelScene.OpenToSky(grid, new Vector3(8, 9.75f, 8)));
+        Assert.False(TunnelScene.OpenToSky(grid, new Vector3(4, 5, 4)));
+        // Rock built up over the ground: under it is not open, its top is.
+        grid.Apply(new DigOp(DigKind.Fill, new Vector3(12, 16, 12), 1));
+        Assert.False(TunnelScene.OpenToSky(grid, new Vector3(12, 15, 12)));
+        Assert.True(TunnelScene.OpenToSky(grid, new Vector3(12, 17.1f, 12)));
+    }
+
+    [Fact]
+    public void AnAshlandsChunkKeepsTheGroundsLavaOnlyWhereOpenToTheSky()
+    {
+        // A pit open to the sky, and a cave 3 m under the ground.
+        var record = FakeObject.Record(new ColumnRecord(ColumnRecord.Plain, null, 0, [new DigOp(DigKind.Sphere, new Vector3(4, 40, 4), 2f), new DigOp(DigKind.Sphere, new Vector3(12, 35, 12), 2f)]), 8, 8);
+        var uvs = Uvs(new FakeArea(40, record) { Ashlands = true }, RockLook.Palette.Ashlands);
+        // The ground and the pit open to the sky, on the ground's row (its lava); the cave's dug rock on the row without lava.
+        Assert.Contains(new Vector2(0.375f, 0.75f), uvs);
+        Assert.Contains(new Vector2(0.625f, 0.75f), uvs);
+        Assert.Contains(new Vector2(0.625f, 0.25f), uvs);
+    }
+
+    [Fact]
+    public void AMistlandsChunksUntouchedRockFollowsTheGroundsAlpha()
+    {
+        var record = FakeObject.Record(new ColumnRecord(ColumnRecord.Plain, null, 0, [new DigOp(DigKind.Sphere, new Vector3(8, 40, 8), 2f)]), 8, 8);
+        // Green (the Deep North's snow) is not what counts here: no alpha, the bottom row.
+        var uvs = Uvs(new FakeArea(40, record) { BiomeValue = 512, Mask = 0x0000FF00 }, RockLook.Palette.Mistlands);
+        Assert.Contains(new Vector2(0.375f, 0.25f), uvs);
+        Assert.DoesNotContain(new Vector2(0.375f, 0.75f), uvs);
+    }
+
+    [Fact]
+    public void TheGroundIsReadBetweenItsWholeMetres()
+    {
+        var record = FakeObject.Record(new ColumnRecord(ColumnRecord.Plain, null, 0, [new DigOp(DigKind.Sphere, new Vector3(8, 40, 8), 2f)]), 8, 8);
+        // The alpha rising along x by 15 a metre: between whole metres it is read on the line.
+        var area = new FakeArea(40, record) { BiomeValue = 512, MaskAt = (x, _) => (uint)Math.Clamp(x * 15, 0, 255) << 24 };
+        var layer = new TunnelScene(new FakeHost(), _ => { }).Build(area)!;
+        var natural = layer.Meshes.SelectMany(m => m.Positions.Zip(m.MaskUvs!)).Where(v => v.Second.X == 0.375f && v.First.X is >= 0f and <= 16f).ToList();
+        Assert.Contains(natural, v => v.First.X != MathF.Floor(v.First.X));
+        Assert.All(natural, v => Assert.Equal(((v.First.X * 15f / 255f) + 0.5f) / 2f, v.Second.Y, 4));
+    }
+
+    /// <summary>The mask uvs of an area's tunnels, each chunk checked to have the palette's mask.</summary>
+    private static List<Vector2> Uvs(FakeArea area, RockLook.Palette palette)
+    {
+        var layer = new TunnelScene(new FakeHost(), _ => { }).Build(area)!;
+        Assert.All(layer.Meshes, m => Assert.Same(RockLook.Mask(palette), m.Mask));
+        return [.. layer.Meshes.SelectMany(m => m.MaskUvs!)];
+    }
+}

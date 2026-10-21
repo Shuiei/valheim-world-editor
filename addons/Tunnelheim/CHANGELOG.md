@@ -3,6 +3,13 @@
 Changes to the Tunnelheim add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
+## v0.4.0 — 2026-10-21
+
+### Added
+- **The mod's own rock colours.** Tunnels in the Deep North, the Mistlands and the Ashlands are drawn in the colours
+  Tunnelheim gives them there: dug rock as bare earth, the untouched surface following the surrounding ground (snow in
+  the Deep North, open sky in the Ashlands), and painted rock as painted.
+
 ## v0.3.0 — 2026-10-21
 
 ### Added

@@ -3,9 +3,23 @@ using ValheimWorldEditor.Sdk;
 
 namespace Tunnelheim.WorldEditor.Tests;
 
-/// <summary>An area of flat ground (IAreaView) holding the objects given, its biome colour the same everywhere.</summary>
+/// <summary>
+/// An area of flat ground (IAreaView) holding the objects given, its biome colour the same everywhere; its biome, Deep
+/// North, Ashlands and paint mask as set (Meadows, neither, untouched by default).
+/// </summary>
 internal sealed class FakeArea(float height, params IObjectView[] objects) : IAreaView
 {
+    public int BiomeValue { get; init; } = 1;
+
+    public bool DeepNorth { get; init; }
+
+    public bool Ashlands { get; init; }
+
+    public uint Mask { get; init; } = 0xFF000000;
+
+    /// <summary>The paint mask per whole metre, in place of <see cref="Mask"/> everywhere when set.</summary>
+    public Func<int, int, uint>? MaskAt { get; init; }
+
     public float MinX => -64;
 
     public float MinZ => -64;
@@ -18,15 +32,15 @@ internal sealed class FakeArea(float height, params IObjectView[] objects) : IAr
 
     public float GroundHeight(float x, float z) => height;
 
-    public int Biome(float x, float z) => 1;
+    public int Biome(float x, float z) => BiomeValue;
 
-    public bool IsDeepNorth(float x, float z) => false;
+    public bool IsDeepNorth(float x, float z) => DeepNorth;
 
-    public bool IsAshlands(float x, float z) => false;
+    public bool IsAshlands(float x, float z) => Ashlands;
 
     public uint BiomeColor(int x, int z) => 0x01020304;
 
-    public uint GroundMask(int x, int z) => 0xFF000000;
+    public uint GroundMask(int x, int z) => MaskAt?.Invoke(x, z) ?? Mask;
 }
 
 /// <summary>A saved object holding byte arrays and ints by key name (and nothing else).</summary>

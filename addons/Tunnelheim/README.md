@@ -10,8 +10,8 @@ does with them. Tunnelheim itself is unchanged and stays in `BepInEx/plugins`; t
 
 - **Draws the tunnels** in the 3D view, from Tunnelheim's records and checkpoints: each 16 m column the mod rebuilt is
   replayed as the game replays it (bit for bit against Tunnelheim 1.0.0) and meshed as the mod meshes it, with the
-  game's ground look and the mod's paint; the editor's ground is cut away over those columns, as the mod cuts the
-  game's.
+  game's ground look and the mod's paint (its own colours in the Deep North, the Mistlands and the Ashlands); the
+  editor's ground is cut away over those columns, as the mod cuts the game's.
 - **A Tunnel tool**, under **Mods** on the rail: pick an action, then click the ground or the rock.
   - The mod's own: **Dig (round)** and **Dig (square)** as the pickaxe digs (Size: the pickaxe's, 1 antler to 1.75
     black metal, 2.5 the tunneller), **Add Earth** (a lump a metre round, not above the building height), **Smooth
@@ -32,8 +32,6 @@ does with them. Tunnelheim itself is unchanged and stays in `BepInEx/plugins`; t
   change: a column's record takes the new edits in place (the game plays only those), a new record is made where
   none was. Checked on a server running the mod: it builds the same rock as the editor draws. Needs the editor
   1.99.2 or later (earlier ones made new records the game did not keep).
-
-Planned: the mod's own colours in the Deep North, the Mistlands and the Ashlands.
 
 ## Install
 
@@ -59,5 +57,4 @@ with what the game built (`tests/Tunnelheim.WorldEditor.Tests/fixtures/tunnelhei
 version is `VERSION` here, its changes `CHANGELOG.md`: it goes out with every editor release, under its own version.
 
 Known limits: the building height Add Earth and the smoothing tools use is the mod's default (64 m), not the server's
-setting; rock in the Deep North, the Mistlands and the Ashlands has the default palette, not the mod's own colours
-there.
+setting.
