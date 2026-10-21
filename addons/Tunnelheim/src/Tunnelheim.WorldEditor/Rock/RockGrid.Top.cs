@@ -19,13 +19,13 @@ public sealed partial class RockGrid
         {
             gy++;
         }
-        float above = DensityAt(gx, gy, gz);
-        for (int y = gy - 1; y > bottom; y--)
+        float above = DensityAt(gx, gy + 1, gz);
+        for (int y = gy; y > bottom; y--)
         {
             float d = DensityAt(gx, y, gz);
             if (d > 0f)
             {
-                return (float)((y + d / ((double)d - above)) * Step);
+                return (float)((y + (above <= 0f ? d / ((double)d - above) : 0.0)) * Step);
             }
             above = d;
         }

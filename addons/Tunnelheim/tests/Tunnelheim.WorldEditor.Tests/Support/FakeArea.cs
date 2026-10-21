@@ -17,6 +17,9 @@ internal sealed class FakeArea(float height, params IObjectView[] objects) : IAr
 
     public uint Mask { get; init; } = 0xFF000000;
 
+    /// <summary>The paint mask per whole metre, in place of <see cref="Mask"/> everywhere when set.</summary>
+    public Func<int, int, uint>? MaskAt { get; init; }
+
     public float MinX => -64;
 
     public float MinZ => -64;
@@ -37,7 +40,7 @@ internal sealed class FakeArea(float height, params IObjectView[] objects) : IAr
 
     public uint BiomeColor(int x, int z) => 0x01020304;
 
-    public uint GroundMask(int x, int z) => Mask;
+    public uint GroundMask(int x, int z) => MaskAt?.Invoke(x, z) ?? Mask;
 }
 
 /// <summary>A saved object holding byte arrays and ints by key name (and nothing else).</summary>

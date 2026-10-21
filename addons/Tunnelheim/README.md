@@ -57,5 +57,4 @@ with what the game built (`tests/Tunnelheim.WorldEditor.Tests/fixtures/tunnelhei
 version is `VERSION` here, its changes `CHANGELOG.md`: it goes out with every editor release, under its own version.
 
 Known limits: the building height Add Earth and the smoothing tools use is the mod's default (64 m), not the server's
-setting; rock in the Deep North, the Mistlands and the Ashlands has the default palette, not the mod's own colours
-there.
+setting.
