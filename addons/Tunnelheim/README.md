@@ -28,8 +28,12 @@ does with them. Tunnelheim itself is unchanged and stays in `BepInEx/plugins`; t
   (never a second record in a column). Checked on a server running the mod: it builds the pasted tunnels as the editor
   draws them. What the mod has baked into a column's checkpoint is no longer a list of edits and is not copied.
 - **Shows tunnel records in words** in the inspector.
+- **Live**: in a game or server running Tunnelheim, the tool's edits and pasted tunnels are applied as any other
+  change: a column's record takes the new edits in place (the game plays only those), a new record is made where
+  none was. Checked on a server running the mod: it builds the same rock as the editor draws. Needs the editor
+  1.99.2 or later (earlier ones made new records the game did not keep).
 
-Planned: live editing, and the mod's own colours in the Deep North, the Mistlands and the Ashlands.
+Planned: the mod's own colours in the Deep North, the Mistlands and the Ashlands.
 
 ## Install
 
