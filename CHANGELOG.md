@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.91.0 — 2026-10-20
+
+### Added
+- **New Riverheim worlds.** With the Riverheim switch on and Riverheim installed, the New world page can make a
+  Riverheim world: its map, marks and seed search show Riverheim's world, and the game opens it as a Riverheim world.
+
 ## v1.90.0 — 2026-10-20
 
 ### Added

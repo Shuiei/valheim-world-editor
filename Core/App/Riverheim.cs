@@ -73,6 +73,26 @@ public static partial class Riverheim
     }
 
     /// <summary>
+    /// Writes Riverheim's header where the world file's version goes, as Riverheim writes it (<see cref="ReadHeader"/>
+    /// reads it back): the marker, its id, the game's file version, then its settings (a one-byte count: there are
+    /// two, the preset's name and version).
+    /// </summary>
+    /// <param name="pkg">The world file's package, at its start.</param>
+    /// <param name="version">The game's file version.</param>
+    /// <param name="tag">The world's preset.</param>
+    public static void WriteHeader(BinaryWriter pkg, int version, Tag tag)
+    {
+        pkg.Write(Marker);
+        pkg.Write(PluginId);
+        pkg.Write(version);
+        pkg.Write((byte)2);
+        pkg.Write("preset");
+        pkg.Write(tag.Preset);
+        pkg.Write("preset.version");
+        pkg.Write(tag.PresetVersion);
+    }
+
+    /// <summary>
     /// The BepInEx folder with Riverheim's plugin DLL: the folder named in Settings for Expand World
     /// (<see cref="AppSettings.ExpandWorldFolder"/>) when it has it, else the first folder the editor knows
     /// (<see cref="LocalGame.BepInExFolders"/>) that has it; null when none has.
@@ -134,8 +154,40 @@ public static partial class Riverheim
             throw new InvalidOperationException(Lang.T("riverheim.unsupported", tag.Preset, tag.PresetVersion, library.Version, problem));
         }
         Console.WriteLine($"Riverheim: the world's preset {tag.Preset} v{tag.PresetVersion} is laid out by Riverheim {library.Version} from {bep}.");
-        return new RiverheimRules(library.Version, tag.Preset, tag.PresetVersion) { LayOut = seed => LayOut(library, seed, tag) };
+        return RulesOf(library, tag);
     }
+
+    /// <summary>
+    /// The rules a new world is made and looked at with (the New world page): Expand World's for a new world, with the
+    /// player's Riverheim and its own preset while the Riverheim switch is on and Riverheim is found (the game makes
+    /// every new world a Riverheim world while the mod is installed); without it when it cannot be loaded (said in the
+    /// log).
+    /// </summary>
+    /// <param name="settings">The editor's settings.</param>
+    public static WorldRules ForNewWorld(AppSettings settings)
+    {
+        var rules = ExpandWorld.ForNewWorld(settings);
+        if (!settings.Riverheim || Find(settings) is not string bep)
+        {
+            return rules;
+        }
+        try
+        {
+            var library = Library(bep, settings);
+            var tag = library.DefaultTag();
+            Console.WriteLine($"Riverheim: new worlds are laid out by Riverheim {library.Version} from {bep}, preset {tag.Preset} v{tag.PresetVersion}.");
+            return rules with { Riverheim = RulesOf(library, tag) };
+        }
+        catch (Exception e) when (e is InvalidOperationException or MissingMemberException or InvalidCastException or TargetInvocationException or ArgumentException)
+        {
+            Log.Caught(e, "using Riverheim for new worlds (they are made as the game makes them without it)");
+            return rules;
+        }
+    }
+
+    /// <summary>The rules of a world Riverheim lays out with this preset.</summary>
+    private static RiverheimRules RulesOf(RiverheimLibrary library, Tag tag) =>
+        new(library.Version, tag.Preset, tag.PresetVersion) { LayOut = seed => LayOut(library, seed, tag) };
 
     /// <summary>
     /// The player's Riverheim in a BepInEx folder, loaded with what it names from the folder's core and the game's
