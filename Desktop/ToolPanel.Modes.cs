@@ -43,6 +43,11 @@ public sealed partial class ToolPanel
         _dungeonButton.Classes.Set("on", Mode == ToolMode.Dungeon);
         BlueprintsButton.Classes.Set("on", Mode == ToolMode.Blueprints);
         _caveButton.Classes.Set("on", false);
+        if (Mode != ToolMode.Mod)
+        {
+            ModTool = null;
+        }
+        MarkModTool();
         foreach (var (k, b) in _buttons)
         {
             b.Classes.Set("on", k == t);

@@ -19,6 +19,7 @@ public sealed partial class GlView
     /// <param name="click">Whether it is a real release, which may pick (not a lost pointer).</param>
     private void Up(Point at, Size size, KeyModifiers mods, bool click)
     {
+        UpMod(at, mods);
         EndDrawing(at, size);
         EndPress(at, size, mods, click);
         _pressAt = null;

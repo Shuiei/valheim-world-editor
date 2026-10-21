@@ -11,6 +11,20 @@ namespace WorldEditor.Tests;
 public class EditStoreTests
 {
     [Fact]
+    public void AnObjectIsGoneWhenLeftOutOrNotAdded()
+    {
+        var store = new EditStore(new WorldSave { Directory = "none", SaveNumber = 1 });
+        Assert.False(store.IsGone(3));
+        store.SetDeleted([3], true);
+        Assert.True(store.IsGone(3));
+        Assert.True(store.IsGone(-5));
+        store.AddObjects([new NewObject(-5, 1, System.Numerics.Vector3.Zero, System.Numerics.Vector3.Zero, 1)]);
+        Assert.False(store.IsGone(-5));
+        store.SetDeleted([-5], true);
+        Assert.True(store.IsGone(-5));
+    }
+
+    [Fact]
     public void AZoneTheGameNoLongerChangesIsDropped()
     {
         var world = WorldSave.LoadLive(File.ReadAllBytes(Fixtures.Snapshot), "test");

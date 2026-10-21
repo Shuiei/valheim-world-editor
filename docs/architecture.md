@@ -181,6 +181,13 @@ no data tables. Everything is read at run time from the player's install:
   uploads their meshes with the ground's layout and draws them right after the ground with the same programs (the
   look's `BindMask` puts each mesh's paint mask in `_ClearedMaskTex`); both terrain shaders discard the hole cells
   (`uHoles`, one byte a cell, on a texture unit of its own), and `Picking.HitGround` skips them and meets the meshes.
+- Mods' tools: `ModExtensions.Tools` (`Core/App/ModExtensions.Tools.cs`, each `IEditorTool` behind `Guard`) are put on
+  the rail by `ToolPanel.SetModTools` (`ToolPanel.Mods.cs`, `ToolMode.Mod`); `ModToolPanel` makes the chosen tool's card
+  from its controls (values kept in `Prefs` as `mod.<tool>.<control>`), `MainWindow.ModTools.cs` tells it when it is
+  chosen and left and hands it keys, and `GlView.ModTool.cs` its pointer (aimed with `Picking`) and draws its preview.
+  `ModToolContext` is its `IToolContext`; `ToolCommit` makes a `ToolEdit` one step (`EditSession.CommitObjects`): data
+  holders are not things, so they go in the step's `Change.Hidden` by object id (`EditSession.Hidden.cs`, kept from
+  format 2 of the history file), the rest as things; a changed object is a copy (`DataCopy`) whose source is the old one.
 - Mods' game components: `Core/App/ModComponents.cs` reads the fields of the game's scripts the running extensions'
   manifests ask for (`gameComponents`, `ModExtensions.RequestedComponents`) in one pass over the bundles
   (`GameCatalogues.ReadComponents`), after the extensions at `WorldSession.ReadModFiles`, and keeps them in

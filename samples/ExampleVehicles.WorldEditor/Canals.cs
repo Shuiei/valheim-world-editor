@@ -146,7 +146,9 @@ public sealed class Canals : ISceneProvider
     }
 
     /// <summary>A point's distance from a path (its nearest segment).</summary>
-    private static float Distance(List<Vector2> path, Vector2 p)
+    /// <param name="path">The path, world x and z.</param>
+    /// <param name="p">The point.</param>
+    public static float Distance(List<Vector2> path, Vector2 p)
     {
         float best = float.MaxValue;
         for (int i = 0; i + 1 < path.Count; i++)

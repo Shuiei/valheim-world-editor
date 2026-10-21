@@ -18,8 +18,8 @@ public static partial class HistoryFile
 {
     /// <summary>The first four bytes of the file's (gzipped) contents ("VWEH").</summary>
     private const int Magic = 0x48455756; // "VWEH"
-    /// <summary>The file layout's version; a file of another version is not read.</summary>
-    private const int Version = 1;
+    /// <summary>The file layout's version (2: with mods' hidden objects); 1 is read too, a file of another version is not.</summary>
+    private const int Version = 2;
 
     /// <summary>Where the history files are: history/ of the data folder.</summary>
     public static string Folder => Path.Combine(AppSettings.DataDir, "history");
@@ -100,7 +100,7 @@ public static partial class HistoryFile
     /// </summary>
     private sealed record KeptStep(string Label, long Ticks, bool Removed, bool Applied, int RevertOf, EditSession.Frame Frame, int[] Points,
         Ground.State Before, Ground.State After, (int X, int Z)[] Zones, (int Id, bool Before, bool After)[] Things,
-        (ZoneReset Reset, bool Before, bool After)[] Resets);
+        (ZoneReset Reset, bool Before, bool After)[] Resets, (int Id, bool Before, bool After)[] Hidden);
 
     /// <summary>
     /// What finding the steps' objects and reading their data needs, taken with the steps: the world, held so a live

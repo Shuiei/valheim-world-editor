@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.95.0 — 2026-10-21
+
+### Added
+- **Mods' own tools.** An extension can add a tool to the rail, under Mods, with its own settings card: it is told
+  where you point and click in the 3D view and which keys you press, previews its work, and its changes go in the
+  history, undone and saved like the editor's own.
+
 ## v1.94.0 — 2026-10-21
 
 ### Added

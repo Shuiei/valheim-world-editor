@@ -55,6 +55,13 @@ public interface IExtensionRegistry
     void AddScene(ISceneProvider provider);
 
     /// <summary>
+    /// Puts a tool of the mod's own on the 3D editor's tool rail (in the Mods section): its card of controls, the
+    /// pointer and keys while it is chosen, previews, and edits made one step of the history.
+    /// </summary>
+    /// <param name="tool">The tool.</param>
+    void AddTool(IEditorTool tool);
+
+    /// <summary>
     /// Told when the editor connects to a game and when that ends. With the game, the extension can call the routes
     /// its mod's own plugin registered with the WorldEditorBridge (WorldEditorBridge.Api): what only the running game
     /// knows, or work only it can do.

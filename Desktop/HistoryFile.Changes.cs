@@ -11,8 +11,9 @@ public static partial class HistoryFile
     /// <param name="undoCount">How many of the steps are undo steps; the redo steps follow them.</param>
     /// <param name="redoCount">How many redo steps there are.</param>
     /// <param name="ids">The id each of the file's objects was given, by its index in the file (a step's things refer to them).</param>
+    /// <param name="version">The file's format (1: no hidden objects).</param>
     /// <returns>Each step's change with the index of the step it reverts (-1 for none), its points (not yet fitted to a grid), and the ids of its things.</returns>
-    internal static (List<(EditSession.Change C, int RevertOf)> Changes, List<(int X, int Z)[]> Points, List<int[]> ThingIds) ReadChanges(BinaryReader i, int undoCount, int redoCount, List<int> ids)
+    internal static (List<(EditSession.Change C, int RevertOf)> Changes, List<(int X, int Z)[]> Points, List<int[]> ThingIds) ReadChanges(BinaryReader i, int undoCount, int redoCount, List<int> ids, int version = Version)
     {
         var changes = new List<(EditSession.Change C, int RevertOf)>();
         var points = new List<(int X, int Z)[]>();
@@ -53,10 +54,18 @@ public static partial class HistoryFile
             {
                 resets.Add((new ZoneReset(i.ReadInt32(), i.ReadInt32(), i.ReadBoolean(), i.ReadBoolean()), i.ReadBoolean(), i.ReadBoolean()));
             }
+            // Version 2: the hidden objects (mods' data holders), by object.
+            var hidden = new List<(int Id, bool Before, bool After)>();
+            int nh = version >= 2 ? ReadCount(i) : 0;
+            for (int k = 0; k < nh; k++)
+            {
+                hidden.Add((ids[i.ReadInt32()], i.ReadBoolean(), i.ReadBoolean()));
+            }
             // Points are fitted below, once the grid holding all of them is known.
             var c = new EditSession.Change(label, [], before, after, zones)
             {
                 Things = [.. things],
+                Hidden = [.. hidden],
                 Resets = [.. resets],
                 Time = time,
                 Removed = removed,

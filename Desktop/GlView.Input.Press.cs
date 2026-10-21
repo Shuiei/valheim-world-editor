@@ -49,7 +49,7 @@ public sealed partial class GlView
     /// <returns>True when a tool took the press.</returns>
     private bool PressLeftTool(PointerPressedEventArgs e, Point at)
     {
-        return PressPlace(e, at) || PressPaste(at) || PressArea(e, at) || PressPath(e, at)
+        return PressMod(e, at) || PressPlace(e, at) || PressPaste(at) || PressArea(e, at) || PressPath(e, at)
             || PressShape(at) || PressDungeon(at) || PressMeasure(at) || PressSelect(e, at)
             || PressBrushAlt(e, at) || PressStamp(at) || PressBrush(at);
     }

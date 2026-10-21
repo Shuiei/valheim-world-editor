@@ -45,9 +45,16 @@ public static partial class SceneLayers
         /// <param name="o">The ray's origin, in the view's frame.</param>
         /// <param name="d">Its unit direction.</param>
         /// <param name="maxDist">How far to look.</param>
-        public float? Hit(Vector3 o, Vector3 d, float maxDist)
+        public float? Hit(Vector3 o, Vector3 d, float maxDist) => HitFace(o, d, maxDist)?.T;
+
+        /// <summary>The nearest triangle a ray meets within a distance, with the triangle's normal facing the ray (view frame); or null.</summary>
+        /// <param name="o">The ray's origin, in the view's frame.</param>
+        /// <param name="d">Its unit direction.</param>
+        /// <param name="maxDist">How far to look.</param>
+        public (float T, Vector3 Normal)? HitFace(Vector3 o, Vector3 d, float maxDist)
         {
             float? best = null;
+            var normal = Vector3.UnitY;
             foreach (var (min, max, corners) in _meshes)
             {
                 if (!RayMeetsBox(o, d, min, max, best ?? maxDist))
@@ -59,10 +66,12 @@ public static partial class SceneLayers
                     if (Picking.HitTriangle(o, d, corners[i], corners[i + 1], corners[i + 2]) is float t && t <= (best ?? maxDist))
                     {
                         best = t;
+                        var n = Vector3.Normalize(Vector3.Cross(corners[i + 1] - corners[i], corners[i + 2] - corners[i]));
+                        normal = Vector3.Dot(n, d) > 0 ? -n : n;
                     }
                 }
             }
-            return best;
+            return best is float b ? (b, normal) : null;
         }
 
         /// <summary>Whether a ray meets a box within a distance (slabs).</summary>

@@ -80,6 +80,9 @@ public static partial class ModExtensions
         public void AddScene(ISceneProvider provider) => loaded.Scenes.Add(provider);
 
         /// <inheritdoc/>
+        public void AddTool(IEditorTool tool) => loaded.Tools.Add(tool);
+
+        /// <inheritdoc/>
         public void AddLiveListener(ILiveListener listener) => loaded.LiveListeners.Add(listener);
 
         /// <inheritdoc/>

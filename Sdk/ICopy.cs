@@ -3,8 +3,9 @@ using System.Numerics;
 namespace ValheimWorldEditor.Sdk;
 
 /// <summary>
-/// One object of a pasted copy, before it is made: its values as they will be (the editor's linking already done),
-/// which the extension may change. Setting null takes a value away.
+/// One object before it is made or changed: a pasted copy's (its values as they will be, the editor's linking already
+/// done), or one a tool adds or changes (<see cref="ToolEdit"/>), whose values the extension sets. Setting null takes a
+/// value away.
 /// </summary>
 public interface ICopy : IObjectView
 {

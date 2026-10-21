@@ -71,13 +71,13 @@ public static partial class SceneLayers
             var source = world.SourceReader();
             foreach (var (id, position, rotation, scale) in saved)
             {
-                views.Add(new ObjectView(name, position, rotation, ZdoData.Parse(world.ObjectBytes(id, source)), scale == 0 ? 1 : scale));
+                views.Add(new ObjectView(name, position, rotation, ZdoData.Parse(world.ObjectBytes(id, source)), scale == 0 ? 1 : scale) { Id = id });
             }
             foreach (var n in _added.Where(n => n.Prefab == hash && Inside(n.Position)))
             {
                 if (_s.Session is { } session && ObjectData.Bytes(world, session.Edits, n.Id) is { } bytes)
                 {
-                    views.Add(new ObjectView(name, n.Position, n.Rotation, ZdoData.Parse(bytes), n.Scale == 0 ? 1 : n.Scale));
+                    views.Add(new ObjectView(name, n.Position, n.Rotation, ZdoData.Parse(bytes), n.Scale == 0 ? 1 : n.Scale) { Id = n.Id });
                 }
             }
             return views;

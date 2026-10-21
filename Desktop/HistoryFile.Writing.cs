@@ -82,6 +82,15 @@ public static partial class HistoryFile
                 o.Write(before);
                 o.Write(after);
             }
+            // Version 2: the hidden objects (mods' data holders), as the things.
+            var hidden = c.Hidden.Where(t => index.ContainsKey(t.Id)).ToList();
+            o.Write(hidden.Count);
+            foreach (var (id, before, after) in hidden)
+            {
+                o.Write(index[id]);
+                o.Write(before);
+                o.Write(after);
+            }
         }
     }
 

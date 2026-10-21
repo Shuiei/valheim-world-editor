@@ -3,6 +3,19 @@ namespace TerrainEditor.Editing;
 public sealed partial class EditStore
 {
     /// <summary>
+    /// Whether an object is gone: a saved one (id 0 and up) left out of the next save, or one added in this session
+    /// (a negative id) no longer added (in the trash, or never added).
+    /// </summary>
+    /// <param name="id">The object's id.</param>
+    public bool IsGone(int id)
+    {
+        lock (_lock)
+        {
+            return id >= 0 ? _deleted.Contains(id) : !_added.ContainsKey(id);
+        }
+    }
+
+    /// <summary>
     /// Marks saved objects to be left out of the save, or not. An added object (negative id) is moved to the
     /// trash instead, or back from it.
     /// </summary>

@@ -95,13 +95,13 @@ public static partial class HistoryFile
             int[] cids = k.Ids[c];
             (int, bool, bool)[] things = [.. cids.Select((id, n) => (id, c.Things[n].Before, c.Things[n].After))];
             steps.Add(new KeptStep(c.Label, c.Time.Ticks, c.Removed, c.Applied, c.RevertOf != null && order.TryGetValue(c.RevertOf, out int r) ? r : -1,
-                k.FrameOf(c), c.Points, c.Before, c.After, [.. c.Zones], things, c.Resets));
+                k.FrameOf(c), c.Points, c.Before, c.After, [.. c.Zones], things, c.Resets, c.Hidden));
         }
         string? stamp = Stamp(w);
         long savedAt = DateTime.UtcNow.Ticks;
         // Every object the steps need, once; the added ones as they are now (an edit replaces them, a reload drops
         // them).
-        var ids = k.Ids.Values.SelectMany(v => v).Distinct().ToList();
+        var ids = k.Ids.Values.SelectMany(v => v).Concat(all.SelectMany(c => c.Hidden.Select(h => h.Id))).Distinct().ToList();
         var edits = w.Edits;
         var addedById = new Dictionary<int, NewObject>();
         foreach (int id in ids.Where(i => i < 0))
