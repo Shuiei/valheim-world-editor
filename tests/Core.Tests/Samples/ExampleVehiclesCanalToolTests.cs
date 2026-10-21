@@ -89,8 +89,10 @@ public class ExampleVehiclesCanalToolTests
         data!(copy);
         Assert.True(copy.TryGetBytes(Keys.Path, out byte[] path));
         Assert.Equal([new Vector2(0, 0), new Vector2(10, 0)], Canals.ReadPath(path)!);
-        Assert.True(copy.TryGetFloat(Keys.Width, out float w) && w == 4);
-        Assert.True(copy.TryGetFloat(Keys.Depth, out float d) && d == 2);
+        Assert.True(copy.TryGetFloat(Keys.Width, out float w));
+        Assert.Equal(4f, w);
+        Assert.True(copy.TryGetFloat(Keys.Depth, out float d));
+        Assert.Equal(2f, d);
         Assert.Equal("No points yet.", ed.Texts["points"]);
     }
 
