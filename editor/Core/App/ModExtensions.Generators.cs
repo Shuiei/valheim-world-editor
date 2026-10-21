@@ -9,7 +9,10 @@ public static partial class ModExtensions
     /// <summary>Backs <see cref="Decided"/>.</summary>
     private static volatile bool _decided;
 
-    /// <summary>The running extensions' world generators, each turning its extension off when it faults.</summary>
+    /// <summary>
+    /// The running extensions' world generators, each turning its extension off when it faults; none of an extension
+    /// turned off (even one a reader still sees in use for a moment, until the state without it is swapped in).
+    /// </summary>
     internal static List<ModGenerator> Generators =>
-        [.. _state.Hooks.SelectMany(l => l.Generators.Select(g => new ModGenerator(g, e => TurnOff(l, $"{e.GetType().Name}: {e.Message}"))))];
+        [.. _state.Hooks.Where(l => l.Fault == null).SelectMany(l => l.Generators.Select(g => new ModGenerator(g, e => TurnOff(l, $"{e.GetType().Name}: {e.Message}"))))];
 }
