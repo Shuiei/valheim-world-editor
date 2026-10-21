@@ -38,9 +38,13 @@ public sealed partial class WorldGenerator
     /// <param name="z">World z.</param>
     /// <param name="mask">Lava in alpha (0..1).</param>
     /// <param name="cheap">Fewer octaves (the map's mask needs no more).</param>
-    /// <returns>The height in the generator's units, not metres.</returns>
+    /// <returns>The height in the generator's units, not metres (Riverheim's prefix answers in metres, and its mask).</returns>
     internal float GetAshlandsHeight(float x, float z, out Color mask, bool cheap = false)
     {
+        if (_ground != null)
+        {
+            return _ground.Height(x, z, out mask);
+        }
         double px = x, pz = z;
         double land = Continent((float)px, (float)pz);
         // Near the edge (within 1 km, waved), and towards the middle line (east-west within 7.5 km).

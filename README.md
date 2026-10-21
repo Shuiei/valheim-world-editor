@@ -320,7 +320,7 @@ the folder.
 | [A new world](docs/new-world.md) | Seeing a seed's world before making it (biomes, start, bosses, traders, dungeons), finding seeds with what you want near the start, creating the world |
 | [Live mode](docs/live-mode.md) | Editing your game or a dedicated server while it runs: connecting, Apply live and Auto, following the game, moving things, undo after applying, modded games |
 | [Expand World](docs/expand-world.md) | Worlds made with the Expand World mods (Size, Rivers, Data): turning it on, what is read from where, what follows the mods and what does not |
-| [Riverheim](docs/riverheim.md) | Worlds made with the Riverheim mod: how they are recognised, what opening them needs |
+| [Riverheim](docs/riverheim.md) | Worlds made with the Riverheim mod: what opening them needs, what follows the mod |
 | [Script](docs/scripting.md) | C# scripts that shape, paint and populate an area: the examples, how they run, everything they can use, recipes |
 | [Claude](docs/claude.md) | Letting Claude shape the world or build in the Workshop from a prompt (MCP): turning it on, what it can do, safety |
 | [Translating](docs/translating.md) | The language catalogues, making or correcting one, adding texts in the code |
@@ -360,9 +360,8 @@ mods' settings and data files. See [Expand World](docs/expand-world.md). Off, ev
 as the game itself does.
 
 **My world was made with Riverheim. Can I open it?**
-The editor recognises Riverheim worlds and tags them in the worlds list. Drawing them needs the
-Riverheim switch in Settings and your own Riverheim installed; this version says why it does not open
-them yet. See [Riverheim](docs/riverheim.md).
+Yes, with the Riverheim switch in Settings on and Riverheim installed: the editor draws the world with
+your own copy of the mod, as the game does. See [Riverheim](docs/riverheim.md).
 
 **Do I need Homestead?**
 Only to build blueprints in game. The Workshop, the library and pasting blueprints into a world all

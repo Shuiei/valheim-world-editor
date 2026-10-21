@@ -327,9 +327,14 @@ marker, its id, then its settings after the version): `WorldSave.ReadMetadata` r
 `Riverheim.ReadHeader` (`Core/App/Riverheim.cs`) into `WorldSave.RiverheimTag`; another generator's header, or a
 setting it does not know, throws `GeneratorHeaderException` (the world list says why). Such a world is drawn only by
 the player's own Riverheim, so `Riverheim.Refusal` says why one cannot be opened (the Riverheim switch,
-`AppSettings.Riverheim`; the plugin in a BepInEx folder, `Riverheim.Find`), the worlds list marks it and
-`WorldSession.Open` and `OpenLive` refuse it. Users' side: [riverheim.md](riverheim.md); the design and the steps to
-come: `.claude/docs/riverheim-design.md`.
+`AppSettings.Riverheim`; the plugin in a BepInEx folder, `Riverheim.Find`) and the worlds list marks it.
+`Riverheim.Rules` gives an opened world's `WorldRules.Riverheim` (`RiverheimRules`): it loads the player's own
+Riverheim.dll (`RiverheimLibrary`: its own load context, the BepInEx and Unity assemblies its plugin classes name taken
+from the BepInEx folder's core and the game's Managed folder; its types driven by name, the renderer's calls compiled
+once), and the generator asks the laid-out world (`RiverheimGround`, an `IGroundGenerator`) in place of the bodies of the
+game's GetBiome, GetBiomeHeight, GetAshlandsHeight and GetForestFactor, and lays out no water. Expand World Size's
+stretch stays before it, its depth and forest after, as the mods' patches meet in the game. Users' side:
+[riverheim.md](riverheim.md); the design and the steps to come: `.claude/docs/riverheim-design.md`.
 
 ## Live mode
 

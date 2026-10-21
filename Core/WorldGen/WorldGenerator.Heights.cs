@@ -35,6 +35,24 @@ public sealed partial class WorldGenerator
         z = Stretched(z);
         // Expand World Data: a biome's ground is its terrain biome's (its prefix, with the biome or territory file).
         Heightmap.Biome ground = _v.AnyBiomeData ? _v.Biomes.Terrain(biome) : biome;
+        // Riverheim's prefix: its ground in place of the game's shapes (whatever the biome asked for).
+        float h = _ground != null ? _ground.Height(x, z, out mask) : GameHeight(ground, x, z, ref mask, preGeneration, riverPreDN);
+        h = _v.Depth(h);
+        // Expand World Data's postfix (taken to run after Expand World Size's depth, patched earlier).
+        return _v.AnyBiomeData ? DataHeight(biome, ground, x, z, h, ref mask) : h;
+    }
+
+    /// <summary>
+    /// The game's own shape of a biome's ground at a point (the body of its GetBiomeHeight, before the mods' postfixes).
+    /// </summary>
+    /// <param name="ground">The biome whose shape to use.</param>
+    /// <param name="x">World x, stretched.</param>
+    /// <param name="z">World z, stretched.</param>
+    /// <param name="mask">The ground's mask, set by the shapes that have one.</param>
+    /// <param name="preGeneration">The rough shapes used while laying out water.</param>
+    /// <param name="riverPreDN">With <paramref name="preGeneration"/>: the Deep North as it is for rivers.</param>
+    private float GameHeight(Heightmap.Biome ground, float x, float z, ref Color mask, bool preGeneration, bool riverPreDN)
+    {
         // The ground flattens towards the sea along the Ashlands' and Deep North's edges.
         float scale = preGeneration ? HeightScale : (float)(HeightScale * AshlandsGap(x, z) * CreateDeepNorthGap(x, z));
         float h;
@@ -58,9 +76,7 @@ public sealed partial class WorldGenerator
                 _ => 0f,
             };
         }
-        h = _v.Depth(h);
-        // Expand World Data's postfix (taken to run after Expand World Size's depth, patched earlier).
-        return _v.AnyBiomeData ? DataHeight(biome, ground, x, z, h, ref mask) : h;
+        return h;
     }
 
     // ---- The ground around a point.

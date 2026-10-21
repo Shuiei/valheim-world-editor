@@ -120,30 +120,30 @@ public sealed partial class WorldSession : IDisposable
 
     /// <summary>
     /// A world on this computer (its folder). Throws when the game's data is missing, and when the world needs the
-    /// player's Riverheim and cannot have it (<see cref="Refuse"/>).
+    /// player's Riverheim and cannot have it (<see cref="TakeRiverheim"/>).
     /// </summary>
     public static WorldSession Open(string dir)
     {
         NeedGame();
         var world = WorldSave.Load(dir);
         var settings = AppSettings.Load();
-        Refuse(world, settings);
         world.Rules = ExpandWorld.Resolve(world, settings);
+        TakeRiverheim(world, settings);
         WorldSave.Builder = Builders.Default(world);
         return From(world, null, world.Name);
     }
 
     /// <summary>
-    /// Throws <c>InvalidOperationException</c>, with why for the player, when the world was made with Riverheim and
-    /// cannot be drawn without it (<see cref="Riverheim.Refusal"/>).
+    /// A world made with Riverheim: its rules take the player's Riverheim (<see cref="Riverheim.Rules"/>), over Expand
+    /// World's. Throws <c>InvalidOperationException</c>, with why for the player, when Riverheim cannot draw it.
     /// </summary>
-    /// <param name="world">The world just read.</param>
+    /// <param name="world">The world just read, with its Expand World rules.</param>
     /// <param name="settings">The editor's settings.</param>
-    private static void Refuse(WorldSave world, AppSettings settings)
+    private static void TakeRiverheim(WorldSave world, AppSettings settings)
     {
-        if (Riverheim.Refusal(world.RiverheimTag, settings, () => Riverheim.Find(settings)) is string why)
+        if (Riverheim.Rules(world.RiverheimTag, settings) is { } riverheim)
         {
-            throw new InvalidOperationException(why);
+            world.Rules = world.Rules with { Riverheim = riverheim };
         }
     }
 

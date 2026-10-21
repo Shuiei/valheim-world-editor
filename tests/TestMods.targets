@@ -10,6 +10,9 @@
     <TestMod Include="JereKuusela-Expand_World_Size" Owner="JereKuusela" Package="Expand_World_Size" Version="1.45.0" Dll="ExpandWorldSize.dll" />
     <TestMod Include="JereKuusela-Expand_World_Data" Owner="JereKuusela" Package="Expand_World_Data" Version="1.79.0" Dll="ExpandWorldData.dll" />
     <TestMod Include="JereKuusela-Expand_World_Rivers" Owner="JereKuusela" Package="Expand_World_Rivers" Version="1.11.0" Dll="ExpandWorldRivers.dll" />
+    <TestMod Include="Gurebu-Riverheim" Owner="Gurebu" Package="Riverheim" Version="1.2.1" Dll="BepInEx/plugins/Riverheim.dll" />
+    <!-- BepInEx itself: the BepInEx and Harmony assemblies Riverheim's plugin classes name. -->
+    <TestMod Include="denikson-BepInExPack_Valheim" Owner="denikson" Package="BepInExPack_Valheim" Version="5.4.2202" Dll="BepInExPack_Valheim/BepInEx/core/BepInEx.dll" />
     <!-- Where the tests find them. -->
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>TestMods</_Parameter1>

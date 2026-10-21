@@ -22,7 +22,7 @@ public sealed partial class WorldSession
             var settings = AppSettings.Load();
             world.Rules = await ExpandWorld.ResolveLive(world, settings, live);
             // The game's world file, read through the bridge with the rules, says whether Riverheim made the world.
-            Refuse(world, settings);
+            TakeRiverheim(world, settings);
             WorldSave.Builder = Builders.Default(world);
             session = From(world, live, label);
         }
