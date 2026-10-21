@@ -29,8 +29,8 @@ internal sealed class FakeArea(float height, params IObjectView[] objects) : IAr
     public uint GroundMask(int x, int z) => 0xFF000000;
 }
 
-/// <summary>A saved object holding byte arrays and ints by key name.</summary>
-internal sealed class FakeObject(string prefab, Vector3 position, Dictionary<string, byte[]>? bytes = null, Dictionary<string, int>? ints = null) : IObjectView
+/// <summary>A saved object holding byte arrays and ints by key name (and nothing else).</summary>
+internal class FakeObject(string prefab, Vector3 position, Dictionary<string, byte[]>? bytes = null, Dictionary<string, int>? ints = null) : IObjectView
 {
     public string Prefab => prefab;
 

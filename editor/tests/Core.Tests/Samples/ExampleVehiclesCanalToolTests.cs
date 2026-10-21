@@ -15,31 +15,10 @@ namespace WorldEditor.Tests;
 public class ExampleVehiclesCanalToolTests
 {
     /// <summary>The editor as the tool sees it: flat ground at 40 m holding the canals given; what the tool did, kept.</summary>
-    private sealed class Editor(params IObjectView[] canals) : IToolContext
+    private sealed class Editor(params IObjectView[] canals)
+        : ToolContextRecorder(new PlainArea(-32, -32, 32, 32, 40) { Objects = new Dictionary<string, IReadOnlyList<IObjectView>> { [Keys.Canal] = canals } })
     {
-        public List<(string Label, ToolEdit Edit)> Commits { get; } = [];
-
-        public IReadOnlyList<Shape> Shown { get; private set; } = [];
-
-        public string Said { get; private set; } = "";
-
-        public Dictionary<string, string> Texts { get; } = [];
-
-        public IAreaView Area { get; } = new PlainArea(-32, -32, 32, 32, 40) { Objects = new Dictionary<string, IReadOnlyList<IObjectView>> { [Keys.Canal] = canals } };
-
-        public float Number(string id) => id == "width" ? 4 : 2;
-
-        public int Choice(string id) => 0;
-
-        public bool IsOn(string id) => false;
-
-        public void SetText(string id, string text) => Texts[id] = text;
-
-        public void Preview(IReadOnlyList<Shape> shapes) => Shown = shapes;
-
-        public void Status(string text) => Said = text;
-
-        public void Commit(string label, ToolEdit edit) => Commits.Add((label, edit));
+        public override float Number(string id) => id == "width" ? 4 : 2;
     }
 
     private static PointerInput Click(float x, float z, KeyModifiers mods = KeyModifiers.None) =>

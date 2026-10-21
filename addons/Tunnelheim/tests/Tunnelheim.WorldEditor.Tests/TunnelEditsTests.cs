@@ -24,7 +24,7 @@ public class TunnelEditsTests
         Assert.Equal(1, result.Columns);
         var (prefab, position, _, data) = Assert.Single(result.Edit!.Added);
         Assert.Equal((TunnelheimMod.RecordPrefabName, new Vector3(8, 40, 8)), (prefab, position));
-        var record = RecordCopy.Of(data!).Record;
+        var record = RecordCopy.Of(data!).Written;
         Assert.Equal(dig, Assert.Single(record.Ops));
         Assert.Equal(ColumnRecord.SeedCount, record.Seeds!.Length);
         Assert.All(record.Seeds, s => Assert.Equal(40f, s));
@@ -52,7 +52,7 @@ public class TunnelEditsTests
         Assert.Empty(result.Edit!.Added);
         var (obj, change) = Assert.Single(result.Edit.Changed);
         Assert.Same(record, obj);
-        Assert.Equal([first, second], RecordCopy.Of(change).Record.Ops);
+        Assert.Equal([first, second], RecordCopy.Of(change).Written.Ops);
     }
 
     [Fact]

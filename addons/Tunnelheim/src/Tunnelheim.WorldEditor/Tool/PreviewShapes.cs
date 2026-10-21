@@ -22,7 +22,7 @@ public static class PreviewShapes
             (corners, triangles) = Split(corners, triangles);
         }
         Vector3[] at = [.. corners.Select(c => centre + (Vector3.Normalize(c) * radius))];
-        return new Shape(at, [.. triangles], adds ? Add : Dig) { BothSides = true, WorldSpace = true };
+        return SeeThrough(at, [.. triangles], adds ? Add : Dig);
     }
 
     /// <summary>A tube between two points (a bore's length), sixteen sides round, open at its ends.</summary>
@@ -47,7 +47,7 @@ public static class PreviewShapes
             int next = (i + 1) % Sides;
             new[] { i, next, i + Sides, next, next + Sides, i + Sides }.CopyTo(triangles, i * 6);
         }
-        return new Shape(at, triangles, Dig) { BothSides = true, WorldSpace = true };
+        return SeeThrough(at, triangles, Dig);
     }
 
     /// <summary>A box, axis-aligned.</summary>
@@ -58,11 +58,15 @@ public static class PreviewShapes
         var at = new Vector3[8];
         for (int i = 0; i < 8; i++)
         {
-            at[i] = centre + new Vector3((i & 1) == 0 ? -half.X : half.X, (i & 2) == 0 ? -half.Y : half.Y, (i & 4) == 0 ? -half.Z : half.Z);
+            // Corner i: bit 0 picks the high x side, bit 1 the high y, bit 2 the high z.
+            at[i] = centre + (half * new Vector3(((i & 1) * 2) - 1, (((i >> 1) & 1) * 2) - 1, (((i >> 2) & 1) * 2) - 1));
         }
         int[] faces = [0, 1, 3, 0, 3, 2, 4, 6, 7, 4, 7, 5, 0, 4, 5, 0, 5, 1, 2, 3, 7, 2, 7, 6, 0, 2, 6, 0, 6, 4, 1, 5, 7, 1, 7, 3];
-        return new Shape(at, faces, Dig) { BothSides = true, WorldSpace = true };
+        return SeeThrough(at, faces, Dig);
     }
+
+    /// <summary>A preview shape: in the world's frame, seen from both sides.</summary>
+    private static Shape SeeThrough(Vector3[] at, int[] triangles, Vector4 colour) => new(at, triangles, colour) { BothSides = true, WorldSpace = true };
 
     /// <summary>Each triangle split in four at its edges' middles.</summary>
     private static (List<Vector3>, List<int>) Split(List<Vector3> corners, List<int> triangles)
