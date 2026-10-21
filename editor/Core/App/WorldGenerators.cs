@@ -25,7 +25,8 @@ public static class WorldGenerators
         {
             return found;
         }
-        return Decide(AppSettings.Load()) ? Of(id) : null;
+        Decide(AppSettings.Load());
+        return Of(id);
     }
 
     /// <summary>
@@ -33,16 +34,13 @@ public static class WorldGenerators
     /// before any world opens): their generators are then in use.
     /// </summary>
     /// <param name="settings">The editor's settings.</param>
-    /// <returns>Whether they were run now.</returns>
-    private static bool Decide(AppSettings settings)
+    private static void Decide(AppSettings settings)
     {
-        if (ModExtensions.Decided)
+        if (!ModExtensions.Decided)
         {
-            return false;
+            ModManifests.Refresh(settings);
+            ModExtensions.Refresh(settings);
         }
-        ModManifests.Refresh(settings);
-        ModExtensions.Refresh(settings);
-        return true;
     }
 
     /// <summary>The generator in use with this id.</summary>
