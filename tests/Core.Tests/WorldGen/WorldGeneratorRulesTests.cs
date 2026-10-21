@@ -99,6 +99,27 @@ public class WorldGeneratorRulesTests
         });
         Assert.Equal(biome, g.GetBiome(BitConverter.UInt32BitsToSingle(x), BitConverter.UInt32BitsToSingle(z)));
     }
+ 
+    [Theory]
+    // Recorded on a dedicated server with Expand World Size 1.45 (altitude x1.3 +4 m, water depth x1.5), seed 92HN0t50CB:
+    // the point's bits, then the game's height's. The mod's float formulas are worked out in double by the game's
+    // runtime and rounded once: in float each step's rounding gave -22.5, -16.971634, 71.47486, -5.5773735, 82.03393.
+    [InlineData(0x4583ac4f, 0x45f5eafb, 0xc1b3ffff)]
+    [InlineData(0x45392e0f, 0x46192ea7, 0xc187c5e6)]
+    [InlineData(0xc582299b, 0xc589cc31, 0x428ef320)]
+    [InlineData(0xc600fe7e, 0xc590edec, 0xc0b279d4)]
+    [InlineData(0xc5d8d342, 0xc54fa9ba, 0x42a4115e)]
+    public void TheAltitudeAndDepthTransformsRoundAsTheGameDoes(uint x, uint z, uint height)
+    {
+        var g = WorldGenerator.Create(new World
+        {
+            Seed = TerrainEditor.Save.StableHash.Of("92HN0t50CB"),
+            WorldGenVersion = 2,
+            Rules = new WorldRules { SizeInstalled = true, AltitudeMultiplier = 1.3f, AltitudeDelta = 4f, WaterDepthMultiplier = 1.5f },
+        });
+        float px = BitConverter.UInt32BitsToSingle(x), pz = BitConverter.UInt32BitsToSingle(z);
+        Assert.Equal(height, BitConverter.SingleToUInt32Bits(g.GetBiomeHeight(g.GetBiome(px, pz), px, pz, out _)));
+    }
 
     [Fact]
     public void TheWaterLevelMovesTheStreamsWindow()
