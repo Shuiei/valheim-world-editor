@@ -72,9 +72,10 @@ public sealed partial class WorldGenerator
             // The Deep North's edge circle as IsDeepnorth has it (4000.0 and 12000.0, doubles)...
             DeepNorthShift = 0.4 * sr;
             DeepNorthRadius = 1.2 * sr;
-            // ...and as its gap has it (4000f, 12000.0 from a float product, 400.0).
+            // ...and as its gap has it (4000f, 12000.0, 400.0). The mod hands 1.2f times the radius over as a double: the
+            // game's runtime works the float product out in double and never rounds it to a float.
             DeepNorthGapShift = 0.4f * sr;
-            DeepNorthGapRadius = 1.2f * sr;
+            DeepNorthGapRadius = (double)1.2f * sr;
             DeepNorthGapWidth = 0.04 * sr;
             AshlandsGapWidth = 0.04 * sr;
             AshlandsGap = r.AshlandsGap;
