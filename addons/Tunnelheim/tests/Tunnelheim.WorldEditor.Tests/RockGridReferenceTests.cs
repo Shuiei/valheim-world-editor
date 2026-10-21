@@ -48,6 +48,9 @@ public class RockGridReferenceTests
                 case "M":
                     r.Meshes[(I(1), I(2), I(3))] = (I(4), I(5), t[6]);
                     break;
+                default:
+                    // Other kinds of lines are not used by these tests.
+                    break;
             }
         }
         return r;

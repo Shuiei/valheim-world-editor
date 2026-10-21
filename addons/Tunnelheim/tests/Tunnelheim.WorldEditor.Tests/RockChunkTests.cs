@@ -18,7 +18,9 @@ public class RockChunkTests
         // Sample (0, 2, 0): 16 m + 1 m up, 0.3 m under the ground.
         int i = RockGrid.Samples * 2;
         Assert.Equal(RockChunk.Quantize(0.3f), c[i]);
-        c[i] = c[i];
+        // Writing the value it already has stores nothing.
+        float same = c[i];
+        c[i] = same;
         Assert.False(c.IsStored);
         c[i] = -1f;
         Assert.True(c.IsStored);

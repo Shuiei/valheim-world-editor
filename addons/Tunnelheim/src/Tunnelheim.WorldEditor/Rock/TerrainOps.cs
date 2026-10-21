@@ -57,5 +57,5 @@ public static class TerrainOps
 
     private static float F(IReadOnlyDictionary<string, object?> s, string name) => (float)N(s, name);
 
-    private static bool B(IReadOnlyDictionary<string, object?> s, string name) => N(s, name) != 0;
+    private static bool B(IReadOnlyDictionary<string, object?> s, string name) => Math.Abs(N(s, name)) > 0;
 }

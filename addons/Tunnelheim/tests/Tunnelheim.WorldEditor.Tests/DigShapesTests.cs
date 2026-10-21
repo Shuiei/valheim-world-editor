@@ -46,11 +46,16 @@ public class DigShapesTests
     [Fact]
     public void TheRoughFinishStaysWithinItsRange()
     {
-        var rnd = new Random(3);
-        for (int i = 0; i < 500; i++)
+        // Points all over a 200 m wide, 80 m high box, on a grid not lined up with the noise's own.
+        for (float x = -100f; x <= 100f; x += 6.7f)
         {
-            float r = DigShapes.Rough(new Vector3((float)rnd.NextDouble() * 200 - 100, (float)rnd.NextDouble() * 80, (float)rnd.NextDouble() * 200 - 100));
-            Assert.InRange(r, -1f, 1f);
+            for (float y = 0f; y <= 80f; y += 8.3f)
+            {
+                for (float z = -100f; z <= 100f; z += 7.1f)
+                {
+                    Assert.InRange(DigShapes.Rough(new Vector3(x, y, z)), -1f, 1f);
+                }
+            }
         }
     }
 

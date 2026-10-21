@@ -61,6 +61,9 @@ public sealed class TunnelheimInTheEditorTests : IDisposable
                 case "M" when I(5) > 0:
                     r.Meshes++;
                     break;
+                default:
+                    // The chunks' densities and the empty meshes are the add-on's own tests' to compare.
+                    break;
             }
         }
         return r;

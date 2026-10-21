@@ -340,7 +340,9 @@ jobs:
             exit $failed
       - run:
           name: The add-ons' zips
-          command: tools/addons.sh /tmp/addons
+          command: |
+            apt-get update -qq && apt-get install -y -qq zip > /dev/null
+            tools/addons.sh /tmp/addons
       - store_test_results:
           path: /tmp/test-results
       - store_artifacts:
