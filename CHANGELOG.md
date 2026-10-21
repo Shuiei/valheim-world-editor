@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.90.0 — 2026-10-20
+
+### Added
+- **Riverheim with Expand World.** A Riverheim world played with the Expand World mods is drawn as the game draws it
+  with both, and the log says which Expand World settings work otherwise on a Riverheim world (the Riverheim page lists
+  them all).
+
 ## v1.89.0 — 2026-10-20
 
 ### Added

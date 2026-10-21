@@ -139,6 +139,11 @@ A world made with Expand World Size shows "Expand World" on its card on the star
 Followed: Expand World Size 1.45, Expand World Rivers 1.11, Expand World Data 1.79. A later version that
 adds a setting or a field is read with its defaults until the editor follows it.
 
+## With Riverheim
+
+A world made with Riverheim keeps its own ground, and its own biomes unless Expand World Data's world data chooses
+them; which Expand World settings still apply to it is in [Riverheim](riverheim.md#with-expand-world).
+
 ## Live mode
 
 A live world (your game, a dedicated server) follows the mods the game itself runs: with the switch on, the

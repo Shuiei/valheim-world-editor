@@ -12,7 +12,7 @@ namespace TerrainEditor.App;
 /// it as the game does (the design: .claude/docs/riverheim-design.md).
 /// </summary>
 /// <remarks>Followed: Riverheim 1.2.1 (its world file header and settings, its plugin id and DLL name).</remarks>
-public static class Riverheim
+public static partial class Riverheim
 {
     /// <summary>Riverheim's plugin id, which it also writes in the world file as its generator's name.</summary>
     public const string PluginId = "dev.gurebu.riverheim.stable";

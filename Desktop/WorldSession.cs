@@ -144,6 +144,10 @@ public sealed partial class WorldSession : IDisposable
         if (Riverheim.Rules(world.RiverheimTag, settings) is { } riverheim)
         {
             world.Rules = world.Rules with { Riverheim = riverheim };
+            foreach (string note in Riverheim.Notes(world.Rules))
+            {
+                Console.WriteLine($"Riverheim: {world.Name}: {note}.");
+            }
         }
     }
 

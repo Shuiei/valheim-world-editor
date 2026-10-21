@@ -23,3 +23,23 @@ editor without it.
   Riverheim than the one that made it: update it), or your Riverheim could not lay the world out (the log says why).
 
 Worlds made without Riverheim never use it, even with the switch on and the mod installed.
+
+## With Expand World
+
+Riverheim's world can be played with the Expand World mods. With the Expand World switch on too, the editor
+does what the game does with both, setting by setting (checked on a server running both):
+
+| Expand World setting | On a Riverheim world |
+|---|---|
+| Size: Stretch world | Applies: Riverheim's world is stretched. |
+| Size: World radius and edge | Riverheim's world ends at 10500 m times the stretch whatever they say; they still size the map, the save grid and where locations go. Riverheim asks for radius + edge = 10500 × stretch (its README's example: radius 20500, edge 500, stretch 2, biomes 2). |
+| Size: Stretch biomes | No effect on Riverheim's biomes. |
+| Size: Water depth multiplier, Forest multiplier | Apply, on Riverheim's ground and forests. |
+| Size: Altitude multiplier and delta, Offset X/Y, Height variation seed | No effect. |
+| Size: Locations, save grid, minimap | As without Riverheim. |
+| Data: World data, Biome data | Off (their default): no effect. On: Data's world rules choose the biomes over Riverheim's, on Riverheim's ground (Riverheim advises turning them off). |
+| Data: locations, vegetation, alt biomes, dungeons, rooms, blueprints | As without Riverheim. |
+| Rivers: lakes, rivers, streams | Not laid out: Riverheim has its own. |
+| Rivers: water level | Applies (and is the level Size's water depth works from). |
+
+When a setting does something else on a Riverheim world than on the game's, the log says so as the world opens.
