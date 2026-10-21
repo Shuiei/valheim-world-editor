@@ -119,6 +119,16 @@ public sealed class TunnelheimInTheEditorTests : IDisposable
     }
 
     [Fact]
+    public void TheTunnelToolIsOnTheRailWithItsCard()
+    {
+        _sandbox.Run("Tunnelheim");
+        var tool = Assert.Single(ModExtensions.Tools);
+        Assert.Equal(("Tunnelheim/tunnel", "Tunnel"), (tool.Name, tool.Info.Name));
+        // Every control the add-on gives is of a form the editor shows (none left out).
+        Assert.Equal(["action", "hint", "size", "width", "depth", "height", "length", "steps"], tool.Controls.Select(c => c.Id));
+    }
+
+    [Fact]
     public void TheInspectorShowsARecordInWords()
     {
         var r = Read();

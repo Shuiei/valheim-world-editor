@@ -12,6 +12,7 @@ public sealed class Extension : IWorldEditorExtension
     {
         registry.AddDecoder(TunnelheimMod.RecordKeyName, new RecordDecoder());
         registry.AddScene(new TunnelScene(registry.Host, registry.Log));
+        registry.AddTool(new TunnelTool(registry.Host, registry.Log));
         registry.Log($"ready (editor {registry.EditorVersion}, API {registry.ApiVersion})");
     }
 }
