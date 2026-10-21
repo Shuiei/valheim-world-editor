@@ -62,7 +62,7 @@ public class ExpandWorldFolderTests : AppSettingsTestBase
         Assert.Empty(head.StartingGlobalKeys);
         // The same world with the mod's keys in its file.
         using var tagged = new TempWorld();
-        WorldSaveLoadTests.WriteMetadata(Path.Combine(tagged.Dir, $"_main.{save}.fwl2"), 32, ["ews_world_radius 20000"]);
+        WorldFileHead.Write(Path.Combine(tagged.Dir, $"_main.{save}.fwl2"), 32, ["ews_world_radius 20000"]);
         var info = Assert.Single(Worlds.Find(new AppSettings { WorldFolders = { tagged.Dir } }));
         Assert.True(info.Usable, info.Problem);
         Assert.True(info.ExpandWorld);

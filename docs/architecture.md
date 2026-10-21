@@ -322,6 +322,15 @@ reader of the mods' files is `Core/App/ExpandWorld.cs`; the rules apply only wit
 in Settings on (`AppSettings.ExpandWorld`), else every world is generated as the game does. The design
 and the steps still to come are in `.claude/docs/expand-world-design.md`.
 
+Riverheim, another world generation mod, writes a header before the game's file version in the world file (a
+marker, its id, then its settings after the version): `WorldSave.ReadMetadata` reads it through
+`Riverheim.ReadHeader` (`Core/App/Riverheim.cs`) into `WorldSave.RiverheimTag`; another generator's header, or a
+setting it does not know, throws `GeneratorHeaderException` (the world list says why). Such a world is drawn only by
+the player's own Riverheim, so `Riverheim.Refusal` says why one cannot be opened (the Riverheim switch,
+`AppSettings.Riverheim`; the plugin in a BepInEx folder, `Riverheim.Find`), the worlds list marks it and
+`WorldSession.Open` and `OpenLive` refuse it. Users' side: [riverheim.md](riverheim.md); the design and the steps to
+come: `.claude/docs/riverheim-design.md`.
+
 ## Live mode
 
 The editor and the game talk over HTTP on the game's computer, `127.0.0.1:5182` by default, with a
