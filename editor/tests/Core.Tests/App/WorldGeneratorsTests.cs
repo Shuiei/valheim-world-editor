@@ -73,7 +73,7 @@ public sealed class WorldGeneratorsTests : AppSettingsTestBase, IDisposable
         Assert.True(WorldGenerators.ForNewWorld(settings).IsVanilla);
         Use(new FlatlandGenerator());
         var made = WorldGenerators.ForNewWorld(settings).Generator;
-        Assert.Equal(("Flatland", "height 50", 50f), (made?.Name, made?.Settings, made?.Header?.Settings.Value));
+        Assert.Equal(("Flatland", "height 50", 50f), (made?.Name, made?.Settings, (made?.Header as GeneratorHeader)?.Settings.Value));
     }
 
     [Fact]

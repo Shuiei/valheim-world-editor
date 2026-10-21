@@ -35,7 +35,7 @@ public static partial class Regrow
         public ClearAreas(WorldGenerator gen, IEnumerable<(int Hash, float X, float Z)> instances)
         {
             _neighbours = gen.Rules.DataInstalled;
-            var kinds = new Dictionary<int, SeedLocations.Rule>();
+            var kinds = new Dictionary<int, LocationRule>();
             foreach (var rule in SeedLocations.RulesFor(gen).Locations)
             {
                 kinds.TryAdd(StableHash.Of(rule.Prefab), rule);

@@ -108,13 +108,13 @@ public static partial class ExpandWorld
     /// rules; without a location file, the game's kinds as Expand World Size changes them (null when it changes
     /// nothing). The game's rules not read yet: the files cannot be converted, noted.
     /// </summary>
-    private static (SeedLocations.RuleSet? Locations, IReadOnlyList<VegetationRule>? Vegetation) Places(DataFiles data, Found found, BiomeTable table, WorldRules size, IEnumerable<string>? globalKeys)
+    private static (LocationRuleSet? Locations, IReadOnlyList<VegetationRule>? Vegetation) Places(DataFiles data, Found found, BiomeTable table, WorldRules size, IEnumerable<string>? globalKeys)
     {
         var game = SeedLocations.Current;
         bool gameRead = SeedLocations.Available;
         string? blueprints = BlueprintFolder(data, found);
         var dataTable = new DataTable(data.DataEntries);
-        List<SeedLocations.Rule>? kinds = null;
+        List<LocationRule>? kinds = null;
         if (data.Locations is { Count: > 0 } entries)
         {
             if (gameRead)
@@ -135,7 +135,7 @@ public static partial class ExpandWorld
             // The game's kinds as they are, so that the alt biome file still says what each keeps out.
             kinds = [.. game.Locations];
         }
-        SeedLocations.RuleSet? locations = kinds == null ? null : new SeedLocations.RuleSet
+        LocationRuleSet? locations = kinds == null ? null : new LocationRuleSet
         {
             Locations = kinds,
             AltBiomes = data.AltBiomes is { Count: > 0 } alts ? AltBiomesOf(alts, table, data.Notes) : [.. game.AltBiomes],

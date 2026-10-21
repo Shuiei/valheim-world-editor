@@ -13,7 +13,7 @@ public static partial class GameLocations
     /// </summary>
     /// <param name="bundles">The game's bundles.</param>
     /// <param name="cacheFile">Where the rules are kept; null: not kept nor read from a file.</param>
-    public static SeedLocations.RuleSet? Load(GameBundles bundles, string? cacheFile)
+    public static LocationRuleSet? Load(GameBundles bundles, string? cacheFile)
     {
         try
         {

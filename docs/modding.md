@@ -170,10 +170,12 @@ it. It can:
 
 1. **Get the SDK** from a [release](https://github.com/Shuiei/valheim-world-editor/releases):
    `ValheimWorldEditor.Sdk-<version>.zip` holds `ValheimWorldEditor.Sdk.dll` (netstandard2.0, what an
-   extension builds against) and `WorldEditorBridge.Api.dll` (what a mod's plugin builds against for
+   extension builds against; its net10.0 build in `net10.0/` also holds the world-rules model, for an extension on
+   the editor's .NET that makes world rules) and `WorldEditorBridge.Api.dll` (what a mod's plugin builds against for
    [live mode](#live-mode)), each with its documentation file for code editors, this page as
    `README.md`, and the whole Example Vehicles sample in `sdk/samples/` (it builds as it is).
-2. **Build a netstandard2.0 class library** referencing `ValheimWorldEditor.Sdk.dll` without copying
+2. **Build a netstandard2.0 class library** (net10.0, against `net10.0/ValheimWorldEditor.Sdk.dll`, for one that makes
+   world rules) referencing `ValheimWorldEditor.Sdk.dll` without copying
    it to your output (`Private="false"`): the editor gives its own. Use nothing else but the
    framework (the sample's project also references the `System.Numerics.Vectors` package, for
    `Vector3` and `Quaternion`). An extension is **one DLL**: the editor loads no other file from your

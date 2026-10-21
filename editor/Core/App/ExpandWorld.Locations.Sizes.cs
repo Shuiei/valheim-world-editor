@@ -21,17 +21,17 @@ public static partial class ExpandWorld
     /// </summary>
     /// <param name="rules">The kinds.</param>
     /// <param name="r">The world's rules.</param>
-    internal static List<SeedLocations.Rule> SizedLocations(IReadOnlyList<SeedLocations.Rule> rules, WorldRules r)
+    internal static List<LocationRule> SizedLocations(IReadOnlyList<LocationRule> rules, WorldRules r)
     {
         bool quantities = r.LocationsMultiplier != 1f, distances = !r.DataInstalled && r.Radius != 10000f;
         if (!quantities && !distances)
         {
             return [.. rules];
         }
-        List<SeedLocations.Rule> sized = [];
+        List<LocationRule> sized = [];
         foreach (var rule in rules)
         {
-            var copy = SeedLocations.RuleSet.FromJson("{\"locations\":[" + System.Text.Json.JsonSerializer.Serialize(rule) + "]}").Locations[0];
+            var copy = LocationRuleSet.FromJson("{\"locations\":[" + System.Text.Json.JsonSerializer.Serialize(rule) + "]}").Locations[0];
             // What the file changes about its contents is not part of the JSON.
             copy.Contents = rule.Contents;
             if (quantities && copy.Quantity != 0 && copy.Enable != 0 && copy.Prefab != StartLocation)

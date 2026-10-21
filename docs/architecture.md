@@ -289,8 +289,11 @@ CodeRabbit is told the same for `editor/Core/WorldGen/**` (`.coderabbit.yaml`).
 
 Expand World (Size and Rivers) patches the game's generator through Harmony: it replaces literals (the
 radius 10000, the edge 10500, the distance bands, the stream heights...) and adds a few transforms
-(altitude, water depth, forest). The editor carries those as `WorldRules` (`editor/Core/WorldGen/WorldRules.cs`),
-on the generator's `World`; `WorldGenerator.Rules.cs` turns them into the values the formulas use, each
+(altitude, water depth, forest). The editor carries those as `WorldRules`, the world-rules model: `WorldRules` and
+what it holds (biome table and rules, territories, location, vegetation and dungeon rules, location contents) are in
+the SDK's net10.0 build (`sdk/ValheimWorldEditor.Sdk/WorldRules/`, namespace `ValheimGen`), so that an add-on can make
+them; their behaviour that needs the editor's own maths stays in Core as extension methods (`HeightTransforms`,
+`RgbaColors`). They ride on the generator's `World`; `WorldGenerator.Rules.cs` turns them into the values the formulas use, each
 **in the floating-point type of the literal it stands in for, computed as the mod computes it**: at the
 game's own values (`WorldRules.Vanilla`) every one is the literal to the bit, so the reference tests hold
 unchanged. Where the mod only patches when a setting is set (the altitude and depth postfixes, the forest
@@ -308,9 +311,9 @@ BepInEx plugins folder (the mod depends on it; the editor ships none) into its o
 reflection into plain lists and maps. The mod's own conversions (fractions of the radius to metres, the defaults
 it fills in, the files it refuses) live in `ExpandWorld.Biomes/World/Territories.cs`.
 
-The places follow the same way: `WorldRules.Locations` carries the location kinds (a `SeedLocations.RuleSet`
+The places follow the same way: `WorldRules.Locations` carries the location kinds (a `LocationRuleSet`
 made by `ExpandWorld.Locations.cs` from the mod's file against the game's own kinds, with the mod's clones, blueprints,
-groups and distance rules as extra fields of `SeedLocations.Rule`; or the game's kinds with Expand World Size's
+groups and distance rules as extra fields of `LocationRule`; or the game's kinds with Expand World Size's
 multiplier), and `WorldRules.Vegetation` the vegetation rules (`VegetationRule`, which Regrow now reads for every
 world, made by `ExpandWorld.Vegetation.cs`). A layout (`SeedLocations.Layout`) and Regrow take the world's own rules
 when it has them, else the game's, so the same code lays out vanilla and modded worlds; the mod's own placement
@@ -333,7 +336,7 @@ locations), and each zone starts with its own location's square (with Expand Wor
 ones too, as circles widened by the rule's clear radius, and the areas the mod's vegetation adds as it grows).
 
 New world builds a location whose contents Expand World Data's file changes the way the mod spawns it
-(`WorldCreator.Contents.cs`): `SeedLocations.Rule.Contents` (`LocationContents`, made by `ExpandWorld.Contents.cs`
+(`WorldCreator.Contents.cs`): `LocationRule.Contents` (`LocationContents`, made by `ExpandWorld.Contents.cs`
 with the data entries of `ExpandWorld.DataEntries.cs`) holds the swaps, data and added objects, and says why the game
 must make the location itself when the editor cannot (`LeftToGame`). Its own objects are rolled as the game rolls them
 (`Dungeons.Replay`, which hands back the random state after the rolls), then swapped and given data drawing on from

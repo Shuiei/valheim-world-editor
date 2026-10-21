@@ -14,7 +14,7 @@ namespace TerrainEditor.Editing;
 public static class LocationPrefabs
 {
     /// <summary>A location prefab.</summary>
-    /// <param name="Name">Its prefab name (the location kind's, SeedLocations.Rule.prefab).</param>
+    /// <param name="Name">Its prefab name (the location kind's, LocationRule.prefab).</param>
     /// <param name="Hash">The stable hash of its name: the proxy's location, the zone file's entry.</param>
     /// <param name="ClearArea">The game clears the vegetation around it (Location.m_clearArea), as far as its kind's exterior radius.</param>
     /// <param name="RandomDamage">Its pieces are spawned worn at random (Location.m_applyRandomDamage).</param>

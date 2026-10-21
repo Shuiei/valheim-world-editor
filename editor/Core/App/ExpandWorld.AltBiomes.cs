@@ -15,14 +15,14 @@ public static partial class ExpandWorld
     /// <param name="entries">The entries.</param>
     /// <param name="table">The world's biomes (for the names).</param>
     /// <param name="notes">Where a value not understood is noted.</param>
-    internal static List<SeedLocations.AltBiomeRule> AltBiomesOf(IReadOnlyList<Entry> entries, BiomeTable table, List<string> notes)
+    internal static List<AltBiomeRule> AltBiomesOf(IReadOnlyList<Entry> entries, BiomeTable table, List<string> notes)
     {
-        List<SeedLocations.AltBiomeRule> alts = [];
+        List<AltBiomeRule> alts = [];
         foreach (var entry in entries)
         {
             var f = new Fields(entry, "altbiomes", notes);
             int Biomes(string key, string fallback) => (int)table.Parse(f.Str(key, fallback), name => notes.Add($"expand_altbiomes: {name} is no biome (left out)"));
-            alts.Add(new SeedLocations.AltBiomeRule
+            alts.Add(new AltBiomeRule
             {
                 Name = f.Str("name"),
                 Enabled = f.B("enabled", true),

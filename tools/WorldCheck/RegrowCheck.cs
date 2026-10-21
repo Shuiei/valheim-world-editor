@@ -26,7 +26,7 @@ internal static class RegrowCheck
         bool noAlts = args.Contains("--no-alts"), allKinds = args.Contains("--all-kinds");
         if (noAlts)
         {
-            SeedLocations.Use(new SeedLocations.RuleSet { Locations = rules.Locations });
+            SeedLocations.Use(new LocationRuleSet { Locations = rules.Locations });
         }
         var altKinds = rules.AltBiomes.SelectMany(a => a.BlockVegetationNames).Concat(Regrow.GameRules.Where(r => r.altBiome != null).Select(r => r.prefab)).ToHashSet();
         var zones = File.ReadAllLines(args[2]).Select(l => l.Split(' ', 5)).Select(p => (X: int.Parse(p[1]), Z: int.Parse(p[2]), Alt: p.Length > 4 && p[4] != "")).ToList();

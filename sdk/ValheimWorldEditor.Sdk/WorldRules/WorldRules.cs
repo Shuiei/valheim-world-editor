@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -242,7 +244,7 @@ public sealed record WorldRules
     /// The location kinds laid out in place of the game's (Expand World Data's location file, converted; or the game's
     /// own with Expand World Size's locations multiplier and distance scaling), or null for the game's as they are.
     /// </summary>
-    public SeedLocations.RuleSet? Locations { get; init; }
+    public LocationRuleSet? Locations { get; init; }
 
     /// <summary>The vegetation rules in place of the game's (Expand World Data's vegetation file), or null for the game's.</summary>
     public IReadOnlyList<VegetationRule>? Vegetation { get; init; }
