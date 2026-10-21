@@ -53,7 +53,7 @@ public sealed partial class NewWorldPage : IDisposable
     private readonly int _previewSize;
     /// <summary>
     /// What the worlds looked at and made here follow: Expand World's rules from the folder found when the switch in
-    /// Settings is on, else the game's own values. Read again once the game's own location rules are read
+    /// Settings is on, else the game's own values; with Riverheim when it is chosen (<see cref="GeneratorChoice"/>). Read again once the game's own location rules are read
     /// (<see cref="RefreshRules"/>): the location file converts against them.
     /// </summary>
     internal ValheimGen.WorldRules Rules { get; private set; }
@@ -71,13 +71,13 @@ public sealed partial class NewWorldPage : IDisposable
         {
             return;
         }
-        var rules = ExpandWorld.ForNewWorld(AppSettings.Load());
+        var rules = Riverheim.ForNewWorld(AppSettings.Load());
         if (rules.Locations == null)
         {
             return;
         }
-        Rules = rules;
-        Avalonia.Threading.Dispatcher.UIThread.Post(() => Generation.Text = Lang.T("newWorld.hint.expandWorld", ExpandWorld.Describe(rules)));
+        Rules = WithChoice(rules);
+        Avalonia.Threading.Dispatcher.UIThread.Post(ShowGeneration);
     }
     /// <summary>
     /// The game's world folders for Where: the installed game's own first (a Windows build run through Proton saves
@@ -90,14 +90,14 @@ public sealed partial class NewWorldPage : IDisposable
     /// <param name="roots">The world folders to offer (tests); null for the game's own. With none, the first the game
     /// would use.</param>
     /// <param name="previewSize">The seed's map, in cells on a side (tests: smaller is quicker).</param>
-    /// <param name="rules">What the worlds follow (tests); null: Expand World's rules when its switch is on, else the game's.</param>
+    /// <param name="rules">What the worlds follow (tests); null: Expand World's rules when its switch is on, else the game's,
+    /// with Riverheim when its switch is on and it is found.</param>
     public NewWorldPage(IReadOnlyList<string>? roots = null, int previewSize = 512, ValheimGen.WorldRules? rules = null)
     {
         _previewSize = previewSize;
         _rulesGiven = rules != null;
-        Rules = rules ?? ExpandWorld.ForNewWorld(AppSettings.Load());
-        Generation.Text = Rules.IsVanilla ? "" : Lang.T("newWorld.hint.expandWorld", ExpandWorld.Describe(Rules));
-        Generation.IsVisible = !Rules.IsVanilla;
+        Rules = rules ?? Riverheim.ForNewWorld(AppSettings.Load());
+        ShowGeneration();
         Loading = BuildLoadingSign();
         var where = (roots ?? Roots()).ToList();
         if (where.Count == 0)

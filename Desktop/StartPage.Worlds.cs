@@ -43,7 +43,7 @@ public sealed partial class StartPage
 
     /// <summary>What a list of worlds shows (every detail on a card), to compare one look with the last.</summary>
     private static string WorldsKey(List<Worlds.Info> worlds) =>
-        string.Join('\n', worlds.Select(w => $"{w.Path}|{w.Name}|{w.Where}|{w.SaveNumber}|{w.Saved.Ticks}|{w.Usable}|{w.Problem}|{w.ExpandWorld}"));
+        string.Join('\n', worlds.Select(w => $"{w.Path}|{w.Name}|{w.Where}|{w.SaveNumber}|{w.Saved.Ticks}|{w.Usable}|{w.Problem}|{w.ExpandWorld}|{w.Riverheim}"));
 
     /// <summary>
     /// Where a world was found (<see cref="Worlds.Info.Where"/>: "recent", "yours", "local") as the user reads it; another
@@ -57,6 +57,21 @@ public sealed partial class StartPage
         "local" => Lang.T("start.where.local"),
         _ => where,
     };
+
+    /// <summary>
+    /// A card's last line: where the world was found, then the world generation mods it was made with (Riverheim,
+    /// Expand World).
+    /// </summary>
+    /// <param name="w">The world.</param>
+    internal static string MadeWith(Worlds.Info w)
+    {
+        string text = WhereName(w.Where);
+        if (w.Riverheim)
+        {
+            text = Lang.T("start.world.riverheim", text);
+        }
+        return w.ExpandWorld ? Lang.T("start.world.expandWorld", text) : text;
+    }
 
     /// <summary>A card per world given.</summary>
     private void ShowWorlds(List<Worlds.Info> worlds)
@@ -83,7 +98,7 @@ public sealed partial class StartPage
                     {
                         new TextBlock { Text = w.Name, FontSize = 15, FontWeight = FontWeight.SemiBold },
                         new TextBlock { Text = w.Usable ? Lang.T("start.world.saved", w.Saved, w.SaveNumber) : w.Problem ?? "", FontSize = 12, Foreground = w.Usable ? Muted : Brushes.Orange, TextWrapping = TextWrapping.Wrap },
-                        new TextBlock { Text = w.ExpandWorld ? Lang.T("start.world.expandWorld", WhereName(w.Where)) : WhereName(w.Where), FontSize = 11, Foreground = Muted, TextTrimming = TextTrimming.CharacterEllipsis },
+                        new TextBlock { Text = MadeWith(w), FontSize = 11, Foreground = Muted, TextTrimming = TextTrimming.CharacterEllipsis },
                     },
                 },
             };

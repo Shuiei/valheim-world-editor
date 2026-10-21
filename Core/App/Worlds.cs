@@ -12,13 +12,16 @@ public static partial class Worlds
     /// <param name="Usable">Whether the editor can open it.</param>
     /// <param name="Problem">Why it cannot, for the player; null when it can.</param>
     /// <param name="ExpandWorld">Whether the world was made with Expand World Size (its world file keeps the mod's settings).</param>
-    public sealed record Info(string Name, string Path, DateTime Saved, int SaveNumber, string Where, bool Usable, string? Problem, bool ExpandWorld = false);
+    /// <param name="Riverheim">Whether the world was made with Riverheim (its world file has the mod's header).</param>
+    public sealed record Info(string Name, string Path, DateTime Saved, int SaveNumber, string Where, bool Usable, string? Problem, bool ExpandWorld = false, bool Riverheim = false);
 
     /// <summary>Every world found, each once: recent ones first, then the newest saves first.</summary>
     public static List<Info> Find(AppSettings settings)
     {
         var list = new List<Info>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        // Where Riverheim is, looked for once, the first time a world made with it is found.
+        var riverheim = new Lazy<string?>(() => Riverheim.Find(settings));
         void Add(string dir, string where)
         {
             try
@@ -31,7 +34,8 @@ public static partial class Worlds
                 }
                 string? problem = Check(full);
                 (int n, DateTime t) = LatestSave(full);
-                list.Add(new Info(WorldName(full), full, t, n, where, problem == null, problem, problem == null && MadeWithExpandWorld(full, n)));
+                var info = new Info(WorldName(full), full, t, n, where, problem == null, problem);
+                list.Add(problem == null ? MadeWith(info, settings, riverheim) : info);
             }
             // A folder that cannot be read, or a stored path that is no path: left out, and said in the log.
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
@@ -91,21 +95,50 @@ public static partial class Worlds
     }
 
     /// <summary>
-    /// Whether a world's file keeps Expand World Size's settings (the world was made with the mod); false when the
-    /// file cannot be read (said in the log; the world opens, or not, as Check said).
+    /// A usable world with what its file says it was made with (Expand World Size's keys, Riverheim's header), and not
+    /// usable when that is what it cannot be opened without (<see cref="Riverheim.Refusal"/>) or cannot be read.
+    /// </summary>
+    /// <param name="info">The world as its folder shows it.</param>
+    /// <param name="settings">The editor's settings.</param>
+    /// <param name="riverheim">Where Riverheim is (looked for once, when first needed).</param>
+    private static Info MadeWith(Info info, AppSettings settings, Lazy<string?> riverheim)
+    {
+        string? problem = null;
+        var head = Head(info.Path, info.SaveNumber, ref problem);
+        problem ??= Riverheim.Refusal(head?.RiverheimTag, settings, () => riverheim.Value);
+        return info with
+        {
+            Usable = problem == null,
+            Problem = problem,
+            ExpandWorld = head != null && ExpandWorld.Keys(head.StartingGlobalKeys).Count > 0,
+            Riverheim = head?.RiverheimTag != null,
+        };
+    }
+
+    /// <summary>
+    /// A world file's head, for what the world was made with (Expand World Size's keys, Riverheim's header); null when
+    /// the file cannot be read (said in the log; the world opens, or not, as Check said). A file made by a world
+    /// generation mod the editor cannot read gives the problem (the world cannot be opened either).
     /// </summary>
     /// <param name="folder">The world's folder.</param>
     /// <param name="saveNumber">The save to look at.</param>
-    private static bool MadeWithExpandWorld(string folder, int saveNumber)
+    /// <param name="problem">Set to why the world cannot be opened, when its generation mod's header says so.</param>
+    private static Save.WorldSave.Metadata? Head(string folder, int saveNumber, ref string? problem)
     {
         try
         {
-            return ExpandWorld.Keys(Save.WorldSave.ReadMetadata(Path.Combine(folder, $"_main.{saveNumber}.fwl2")).StartingGlobalKeys).Count > 0;
+            return Save.WorldSave.ReadMetadata(Path.Combine(folder, $"_main.{saveNumber}.fwl2"));
+        }
+        catch (GeneratorHeaderException ex)
+        {
+            Log.CaughtBrief(ex, "reading a world file's head (a world generation mod the editor cannot read: listed as not usable)");
+            problem = ex.Message;
+            return null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or EndOfStreamException)
         {
-            Log.CaughtBrief(ex, "reading a world file's head for Expand World's keys (taken as none)");
-            return false;
+            Log.CaughtBrief(ex, "reading a world file's head for the mods it was made with (taken as none)");
+            return null;
         }
     }
 

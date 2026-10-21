@@ -145,17 +145,25 @@ public static partial class ExpandWorld
     /// turned off). Subfolders that cannot be read are passed over (another mod's, without access); a folder that
     /// cannot be searched at all is said in the log and has none.
     /// </summary>
-    private static bool HasPlugin(string plugins, string dll)
+    internal static bool HasPlugin(string plugins, string dll) => FindPlugin(plugins, dll) != null;
+
+    /// <summary>
+    /// Where a plugin's DLL is in a plugins folder under its own name (see <see cref="HasPlugin"/>), the first in name
+    /// order; null when it is not there.
+    /// </summary>
+    internal static string? FindPlugin(string plugins, string dll)
     {
         try
         {
-            return Directory.Exists(plugins) && Directory.EnumerateFiles(plugins, dll, new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0, MatchCasing = MatchCasing.CaseInsensitive })
-                .Any(f => string.Equals(Path.GetFileName(f), dll, StringComparison.OrdinalIgnoreCase));
+            return Directory.Exists(plugins)
+                ? Directory.EnumerateFiles(plugins, dll, new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0, MatchCasing = MatchCasing.CaseInsensitive })
+                    .Where(f => string.Equals(Path.GetFileName(f), dll, StringComparison.OrdinalIgnoreCase)).Order(StringComparer.Ordinal).FirstOrDefault()
+                : null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             Log.Caught(ex, $"searching a plugins folder for {dll} (taken as not there)");
-            return false;
+            return null;
         }
     }
 }

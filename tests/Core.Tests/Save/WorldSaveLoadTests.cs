@@ -47,14 +47,14 @@ public class WorldSaveLoadTests
         using var w = new TempWorld();
         // The test world starts with no keys; a world file with keys (as Expand World Size writes its settings) gives them.
         Assert.Empty(w.Load().StartingGlobalKeys);
-        WriteMetadata(Path.Combine(w.Dir, "_main.2.fwl2"), 42, ["defeated_eikthyr", "ews_world_radius 20000"]);
+        WorldFileHead.Write(Path.Combine(w.Dir, "_main.2.fwl2"), 42, ["defeated_eikthyr", "ews_world_radius 20000"]);
         WorldSave world = w.Load();
         Assert.Equal(["defeated_eikthyr", "ews_world_radius 20000"], world.StartingGlobalKeys);
         Assert.Equal(("CITest", "GbXfypqU3G", 2), (world.Name, world.SeedName, world.WorldGenVersion));
         Assert.True(world.Rules.IsVanilla);
         Assert.Equal(512, world.GridWidth);
         // Before version 32 the keys were not in the file (and before 30 nor the database flag).
-        WriteMetadata(Path.Combine(w.Dir, "_main.2.fwl2"), 31, []);
+        WorldFileHead.Write(Path.Combine(w.Dir, "_main.2.fwl2"), 31, []);
         Assert.Empty(w.Load().StartingGlobalKeys);
     }
 
@@ -63,42 +63,13 @@ public class WorldSaveLoadTests
     {
         using var w = new TempWorld();
         // Expand World Size writes the grid its chunk files lie on; the editor reads them on it, switch or no switch.
-        WriteMetadata(Path.Combine(w.Dir, "_main.2.fwl2"), 42, ["ews_world_radius 20000", "ews_gridwidth 1024"]);
+        WorldFileHead.Write(Path.Combine(w.Dir, "_main.2.fwl2"), 42, ["ews_world_radius 20000", "ews_gridwidth 1024"]);
         Assert.Equal(1024, w.Load().GridWidth);
         // A width no save can have is read as the game's.
-        WriteMetadata(Path.Combine(w.Dir, "_main.2.fwl2"), 42, ["ews_gridwidth 4096"]);
+        WorldFileHead.Write(Path.Combine(w.Dir, "_main.2.fwl2"), 42, ["ews_gridwidth 4096"]);
         Assert.Equal(512, w.Load().GridWidth);
-        WriteMetadata(Path.Combine(w.Dir, "_main.2.fwl2"), 42, ["ews_gridwidth"]);
+        WorldFileHead.Write(Path.Combine(w.Dir, "_main.2.fwl2"), 42, ["ews_gridwidth"]);
         Assert.Equal(512, w.Load().GridWidth);
-    }
-
-    /// <summary>Writes a world file as the game does: the version, names, seed, uid, generator version, database flag (30 and later), keys (32 and later), players (none).</summary>
-    internal static void WriteMetadata(string path, int version, string[] keys)
-    {
-        using MemoryStream pkg = new();
-        using (BinaryWriter p = new(pkg, System.Text.Encoding.UTF8, leaveOpen: true))
-        {
-            p.Write(version);
-            p.Write("CITest");
-            p.Write("GbXfypqU3G");
-            p.Write(StableHash.Of("GbXfypqU3G"));
-            p.Write(123456789L);
-            p.Write(2);
-            if (version >= 30)
-            {
-                p.Write(true);
-            }
-            if (version >= 32)
-            {
-                p.Write(keys.Length);
-                foreach (string k in keys)
-                {
-                    p.Write(k);
-                }
-            }
-            p.Write(0);
-        }
-        File.WriteAllBytes(path, [.. BitConverter.GetBytes((int)pkg.Length), .. pkg.ToArray()]);
     }
 
     [Fact]

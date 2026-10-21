@@ -118,14 +118,38 @@ public sealed partial class WorldSession : IDisposable
         ModExtensions.Refresh(settings);
     }
 
-    /// <summary>A world on this computer (its folder). Throws when the game's data is missing.</summary>
+    /// <summary>
+    /// A world on this computer (its folder). Throws when the game's data is missing, and when the world needs the
+    /// player's Riverheim and cannot have it (<see cref="TakeRiverheim"/>).
+    /// </summary>
     public static WorldSession Open(string dir)
     {
         NeedGame();
         var world = WorldSave.Load(dir);
-        world.Rules = ExpandWorld.Resolve(world, AppSettings.Load());
+        var settings = AppSettings.Load();
+        world.Rules = ExpandWorld.Resolve(world, settings);
+        TakeRiverheim(world, settings);
         WorldSave.Builder = Builders.Default(world);
         return From(world, null, world.Name);
+    }
+
+    /// <summary>
+    /// A world made with Riverheim: its rules take the player's Riverheim (<see cref="Riverheim.Rules"/>), over Expand
+    /// World's. Throws <c>InvalidOperationException</c>, with why for the player, when Riverheim cannot draw it.
+    /// </summary>
+    /// <param name="world">The world just read, with its Expand World rules.</param>
+    /// <param name="settings">The editor's settings.</param>
+    /// <param name="gameVersion">The Riverheim the live game runs, when known.</param>
+    private static void TakeRiverheim(WorldSave world, AppSettings settings, string? gameVersion = null)
+    {
+        if (Riverheim.Rules(world.RiverheimTag, settings, gameVersion) is { } riverheim)
+        {
+            world.Rules = world.Rules with { Riverheim = riverheim };
+            foreach (string note in Riverheim.Notes(world.Rules))
+            {
+                Console.WriteLine($"Riverheim: {world.Name}: {note}.");
+            }
+        }
     }
 
     /// <summary>Offline: whether a new object is in the last save as it is now (not changed since).</summary>

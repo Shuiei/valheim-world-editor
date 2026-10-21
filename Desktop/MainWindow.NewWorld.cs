@@ -68,7 +68,7 @@ public sealed partial class MainWindow
         Busy(Lang.T("newWorld.msg.making", name));
         try
         {
-            var with = rules ?? ExpandWorld.ForNewWorld(AppSettings.Load());
+            var with = rules ?? Riverheim.ForNewWorld(AppSettings.Load());
             await Task.Run(() => TerrainEditor.Save.WorldCreator.Create(folder, name, seed, rules: with));
             Console.WriteLine($"New world: made {name} (seed {seed}) in {folder}.");
         }

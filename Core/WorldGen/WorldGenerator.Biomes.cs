@@ -34,6 +34,11 @@ public sealed partial class WorldGenerator
             // Expand World Data's prefix: the rules in place of the game's layout.
             return RulesBiome(x, z, oceanLevel, waterAlwaysOcean);
         }
+        if (_ground != null)
+        {
+            // Riverheim's prefix: its biomes in place of the game's layout (Expand World Data's, above, wins over it).
+            return _ground.Biome(x, z);
+        }
         float fromMiddle = GenMath.Length(x, z);
         float land = Continent(x, z);
         float wave = (float)((double)Wave(x, z) * 100.0);

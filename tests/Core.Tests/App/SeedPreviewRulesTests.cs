@@ -8,10 +8,20 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// The seed preview, the map's texels and a new world with a world generation mod's rules: the preview covers the
 /// rules' radius, a biome the game does not have shows as the one whose ground it borrows, the overview's texels
-/// grow with the world, and a world is made with the rules (no spawners when they say so).
+/// grow with the world, a world is made with the rules (no spawners when they say so), and a search with Riverheim
+/// looks at fewer seeds at once.
 /// </summary>
 public class SeedPreviewRulesTests
 {
+    [Fact]
+    public void ASearchLooksAtTwoRiverheimSeedsAtATime()
+    {
+        // Riverheim lays each seed's world out whole first: a couple at a time, not one a processor.
+        Assert.Equal(2, SeedPreview.SeedsAtOnce(new WorldRules { Riverheim = new RiverheimRules("1.2.1", "builtin.amur", 2) }));
+        Assert.Equal(Math.Max(1, Environment.ProcessorCount - 1), SeedPreview.SeedsAtOnce(new WorldRules { Radius = 20000f }));
+        Assert.Equal(Math.Max(1, Environment.ProcessorCount - 1), SeedPreview.SeedsAtOnce(null));
+    }
+
     [Fact]
     public void APreviewCoversTheRulesRadius()
     {

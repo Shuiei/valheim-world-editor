@@ -4,6 +4,37 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.92.0 — 2026-10-20
+
+### Added
+- **Live Riverheim worlds.** A game or server running a Riverheim world opens live, drawn with your own Riverheim when
+  it is of the same release as the game's (else the editor says both versions).
+
+## v1.91.0 — 2026-10-20
+
+### Added
+- **New Riverheim worlds.** With the Riverheim switch on and Riverheim installed, the New world page can make a
+  Riverheim world: its map, marks and seed search show Riverheim's world, and the game opens it as a Riverheim world.
+
+## v1.90.0 — 2026-10-20
+
+### Added
+- **Riverheim with Expand World.** A Riverheim world played with the Expand World mods is drawn as the game draws it
+  with both, and the log says which Expand World settings work otherwise on a Riverheim world (the Riverheim page lists
+  them all).
+
+## v1.89.0 — 2026-10-20
+
+### Added
+- **Riverheim worlds open.** With the Riverheim switch on in Settings, a world made with Riverheim is drawn with your own
+  copy of the mod: its ground, biomes, forests, map and predictions are Riverheim's, as the game makes them.
+
+## v1.88.0 — 2026-10-20
+
+### Added
+- **Worlds made with Riverheim are recognised.** The worlds list tags them and says why they cannot be opened yet
+  (turn Riverheim on in Settings, install Riverheim); before, their name and seed were read wrongly.
+
 ## v1.87.4 — 2026-10-21
 
 ### Fixed

@@ -321,6 +321,14 @@ folder in Settings first). The log says what was read; the files are copied unde
 editor's data folder. With an older plugin, the local folders answer, as for a world opened from its files. See
 [Expand World](expand-world.md).
 
+### Riverheim
+
+A live world made with Riverheim is recognised from its file on the game's disk (WorldEditorBridge 1.54.0 or newer)
+and drawn with your own Riverheim, as a world opened from its files is: the Riverheim switch on in Settings and
+Riverheim installed on this computer. The game's Riverheim and yours must be of the same release (the first two
+numbers of the version, as Riverheim asks of the players who join), else the world is refused with both versions.
+See [Riverheim](riverheim.md).
+
 ## Undo after applying
 
 Applied changes can still be undone: undo (or **Remove** in History) and apply again.
