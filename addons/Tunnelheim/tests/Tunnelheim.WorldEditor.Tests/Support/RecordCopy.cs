@@ -8,7 +8,7 @@ internal sealed class RecordCopy : FakeObject, ICopy
 {
     private readonly Dictionary<string, byte[]> _bytes;
 
-    private RecordCopy(Dictionary<string, byte[]> bytes)
+    public RecordCopy(Dictionary<string, byte[]> bytes)
         : base(TunnelheimMod.RecordPrefabName, Vector3.Zero, bytes)
     {
         _bytes = bytes;
