@@ -10,6 +10,12 @@ the plugin is unchanged in versions without that part.
 - **A Tunnelheim add-on.** The release page now carries add-ons for mods beside the editor, each its own download to
   unpack into the addons folder; the first draws the tunnels Tunnelheim digs, as the game builds them.
 
+## v1.98.1 — 2026-10-21
+
+### WorldEditorBridge
+- Settings files the editor reads from the game's BepInEx config folder are found through that folder's own list of
+  files, so nothing the request names is ever used as a path, and every answer tells a browser not to guess its type.
+
 ## v1.98.0 — 2026-10-21
 
 ### Added
