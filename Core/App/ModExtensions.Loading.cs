@@ -83,6 +83,17 @@ public static partial class ModExtensions
         public void AddTool(IEditorTool tool) => loaded.Tools.Add(tool);
 
         /// <inheritdoc/>
+        public void AddAreaCopier(string id, IAreaCopier copier)
+        {
+            if (copier == null || id == null || !ToolIdForm().IsMatch(id))
+            {
+                Log($"area copier \"{id}\" left out: none given, or its id is not 1 to 64 letters, digits, dots, dashes or underscores");
+                return;
+            }
+            loaded.Copiers.Add((id, copier));
+        }
+
+        /// <inheritdoc/>
         public void AddLiveListener(ILiveListener listener) => loaded.LiveListeners.Add(listener);
 
         /// <inheritdoc/>

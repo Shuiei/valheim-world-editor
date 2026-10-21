@@ -27,6 +27,7 @@ public sealed partial class PasteTool
         // The points given the copy's ground in full: it is the ground the building stood on, nothing to dig there.
         var shaped = new HashSet<int>();
         Site.Clear();
+        Placed.Clear();
         int half = (int)MathF.Ceiling(MathF.Sqrt(c.W * c.W + c.H * c.H) / 2) + 1;
         int bx0 = g.W, bx1 = 0, bz0 = g.H, bz1 = 0;
         float baseH = g.HeightOf(Index(g, at)) + Offset;
@@ -42,6 +43,7 @@ public sealed partial class PasteTool
         {
             var (ca, lift) = CopyAt(at, k);
             anchors[k] = (up ? baseH : g.HeightOf(Index(g, ca)) + Offset) + lift;
+            Placed.Add(new(new Vector3(g.OriginX + ca.X, anchors[k], g.OriginZ + ca.Y), Turn, Mirror));
         }
         try
         {

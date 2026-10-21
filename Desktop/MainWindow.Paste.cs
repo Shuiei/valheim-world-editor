@@ -38,10 +38,18 @@ public sealed partial class MainWindow
         string label = paste.Count > 1 ? Lang.T("paste.undo.copies", paste.Count) : Lang.T("paste.label.paste");
         float ox = s.Scene.OriginX, oz = s.Scene.OriginZ;
         var linkIds = s.ReadLinks().Ids;
+        // What mods keep with the copy (IAreaCopier): their data holders, in the same step.
+        var removeHidden = new List<int>();
+        var addHidden = new List<NewObject>();
         s.Commit(label, g =>
         {
             var (t, rect, a) = paste.Apply(g, at, s.MaskNow(), linkIds);
             add.AddRange(a);
+            var kept = ModCopies.Put(s, g, rect, paste.Clip, paste.Placed);
+            cleared.AddRange(kept.RemoveThings);
+            add.AddRange(kept.AddThings);
+            removeHidden.AddRange(kept.RemoveHidden);
+            addHidden.AddRange(kept.AddHidden);
             stood = CreatureStand.Apply(s.Scene, add);
             touched = t.Count;
             if (paste.Site.Count > 0)
@@ -59,7 +67,7 @@ public sealed partial class MainWindow
                 }
             }
             return (t, rect);
-        }, cleared, add);
+        }, cleared, add, null, removeHidden, addHidden);
         Msg(Said.Of("paste.msg.pasted", paste.Count > 1 ? Said.Of("paste.msg.pastedCopies", paste.Count) : Said.Empty,
                 touched > 0 ? Said.Of("paste.msg.pastedGround") : Said.Empty,
                 add.Count > 0 ? Said.Of("paste.msg.pastedObjects", add.Count) : Said.Empty,

@@ -25,6 +25,8 @@ public sealed partial class PasteTool
     public bool ClearSite { get; set; } = true;
     /// <summary>The grid points the last Apply cleared (its buildings' outlines and the metre around them).</summary>
     public HashSet<(int X, int Z)> Site { get; } = [];
+    /// <summary>Where the last Apply put each copy down (for what mods keep with the copy, IAreaCopier).</summary>
+    public List<ValheimWorldEditor.Sdk.CopyPlacement> Placed { get; } = [];
     /// <summary>The height added to the paste, in metres.</summary>
     public float Offset { get; set; }
     /// <summary>How many copies (see <see cref="Count"/>).</summary>

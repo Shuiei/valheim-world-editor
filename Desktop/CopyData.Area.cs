@@ -54,6 +54,17 @@ public sealed partial class CopyData
             return new Obj(t.Prefab, nameOf(t.Prefab) ?? t.Prefab.ToString(), t.Position.X - ox - cx, t.Position.Z - oz - cz, t.Position.Y - reference,
                 t.Rotation, t.Scale, source, Data: data);
         }).ToList();
-        return new CopyData { W = w, H = h, Rel = rel, Wt = wt, Pnt = pnt, Objects = objs, Poly = [.. a.Poly.Select(p => p - new Vector2(cx, cz))], Taken = taken };
+        return new CopyData
+        {
+            W = w,
+            H = h,
+            Rel = rel,
+            Wt = wt,
+            Pnt = pnt,
+            Objects = objs,
+            Poly = [.. a.Poly.Select(p => p - new Vector2(cx, cz))],
+            Taken = taken,
+            Middle = new Vector3(ox + cx, reference, oz + cz),
+        };
     }
 }
