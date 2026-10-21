@@ -38,7 +38,7 @@ public static class RockLook
 
     /// <summary>
     /// The strips, from the bottom row: cultivated, natural, dirt, paved, each row's natural the ground's own (none,
-    /// then snow or vegetation or lava). In the Ashlands the bottom row has no alpha (lava shows), the top row full.
+    /// then snow or vegetation or lava). In the Ashlands the bottom row has no alpha (no lava), the top row full (lava where the ground has it).
     /// The Deep North's cultivated column is dirt, as the mod has it (the game does not cultivate snow).
     /// </summary>
     private static readonly MaskTexture DeepNorthStrip = new(4, 2, [Dirt & 0xFFFFFF, 0, Dirt & 0xFFFFFF, Paved & 0xFFFFFF, Dirt & 0xFFFFFF, 0x0000FF00, Dirt & 0xFFFFFF, Paved & 0xFFFFFF]);
@@ -102,7 +102,7 @@ public static class RockLook
             _ when dug => (2, 0f),
             _ => (1, RockMath.Clamp01(ground)),
         };
-        // In the Ashlands every paint takes its row from the ground, as the mod does: lava shows through it too.
+        // In the Ashlands every paint takes its row from the ground, as the mod does: painted rock keeps the ground's lava too.
         if (palette == Palette.Ashlands)
         {
             row = RockMath.Clamp01(ground);
