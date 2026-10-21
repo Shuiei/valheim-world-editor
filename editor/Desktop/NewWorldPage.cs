@@ -71,7 +71,7 @@ public sealed partial class NewWorldPage : IDisposable
         {
             return;
         }
-        var rules = Riverheim.ForNewWorld(AppSettings.Load());
+        var rules = WorldGenerators.ForNewWorld(AppSettings.Load());
         if (rules.Locations == null)
         {
             return;
@@ -96,7 +96,7 @@ public sealed partial class NewWorldPage : IDisposable
     {
         _previewSize = previewSize;
         _rulesGiven = rules != null;
-        Rules = rules ?? Riverheim.ForNewWorld(AppSettings.Load());
+        Rules = rules ?? WorldGenerators.ForNewWorld(AppSettings.Load());
         ShowGeneration();
         Loading = BuildLoadingSign();
         var where = (roots ?? Roots()).ToList();

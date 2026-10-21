@@ -1,5 +1,7 @@
 using System.Linq.Expressions;
+using System.Numerics;
 using ValheimGen;
+using ValheimWorldEditor.Sdk;
 
 namespace TerrainEditor.App;
 
@@ -11,7 +13,7 @@ namespace TerrainEditor.App;
 /// </summary>
 /// <param name="calls">The renderer's calls.</param>
 /// <param name="renderer">Riverheim's renderer of the world.</param>
-internal sealed class RiverheimGround(RiverheimGround.Calls calls, object renderer) : IGroundGenerator
+internal sealed class RiverheimGround(RiverheimGround.Calls calls, object renderer) : IGroundLayout
 {
     /// <summary>What the mod's game side adds to Riverheim's heights: the game's water level, metres.</summary>
     private const float HeightOffset = 30f;
@@ -20,13 +22,13 @@ internal sealed class RiverheimGround(RiverheimGround.Calls calls, object render
     private const double ForestFactor = 2.15;
 
     /// <inheritdoc/>
-    public Heightmap.Biome Biome(float x, float z) => calls.Biome(calls.BiomeOf(renderer, x, z));
+    public int Biome(float x, float z) => (int)calls.Biome(calls.BiomeOf(renderer, x, z));
 
     /// <inheritdoc/>
-    public float Height(float x, float z, out Color mask)
+    public float Height(float x, float z, out Vector4 mask)
     {
         var p = calls.Point(renderer, x, z);
-        mask = new Color((float)p.Dirt, (float)p.Snow, (float)p.Pave, (float)Math.Max(p.Lava, p.Fertility));
+        mask = new Vector4((float)p.Dirt, (float)p.Snow, (float)p.Pave, (float)Math.Max(p.Lava, p.Fertility));
         return HeightOffset + (float)p.Height;
     }
 

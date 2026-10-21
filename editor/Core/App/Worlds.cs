@@ -12,16 +12,14 @@ public static partial class Worlds
     /// <param name="Usable">Whether the editor can open it.</param>
     /// <param name="Problem">Why it cannot, for the player; null when it can.</param>
     /// <param name="ExpandWorld">Whether the world was made with Expand World Size (its world file keeps the mod's settings).</param>
-    /// <param name="Riverheim">Whether the world was made with Riverheim (its world file has the mod's header).</param>
-    public sealed record Info(string Name, string Path, DateTime Saved, int SaveNumber, string Where, bool Usable, string? Problem, bool ExpandWorld = false, bool Riverheim = false);
+    /// <param name="Generator">The world generation mod the world was made with (its world file has the mod's header), by name; null for none.</param>
+    public sealed record Info(string Name, string Path, DateTime Saved, int SaveNumber, string Where, bool Usable, string? Problem, bool ExpandWorld = false, string? Generator = null);
 
     /// <summary>Every world found, each once: recent ones first, then the newest saves first.</summary>
     public static List<Info> Find(AppSettings settings)
     {
         var list = new List<Info>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        // Where Riverheim is, looked for once, the first time a world made with it is found.
-        var riverheim = new Lazy<string?>(() => Riverheim.Find(settings));
         void Add(string dir, string where)
         {
             try
@@ -35,7 +33,7 @@ public static partial class Worlds
                 string? problem = Check(full);
                 (int n, DateTime t) = LatestSave(full);
                 var info = new Info(WorldName(full), full, t, n, where, problem == null, problem);
-                list.Add(problem == null ? MadeWith(info, settings, riverheim) : info);
+                list.Add(problem == null ? MadeWith(info) : info);
             }
             // A folder that cannot be read, or a stored path that is no path: left out, and said in the log.
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
@@ -95,28 +93,26 @@ public static partial class Worlds
     }
 
     /// <summary>
-    /// A usable world with what its file says it was made with (Expand World Size's keys, Riverheim's header), and not
-    /// usable when that is what it cannot be opened without (<see cref="Riverheim.Refusal"/>) or cannot be read.
+    /// A usable world with what its file says it was made with (Expand World Size's keys, a world generation mod's
+    /// header), and not usable when that is what it cannot be opened without (its generator's problem) or cannot be read.
     /// </summary>
     /// <param name="info">The world as its folder shows it.</param>
-    /// <param name="settings">The editor's settings.</param>
-    /// <param name="riverheim">Where Riverheim is (looked for once, when first needed).</param>
-    private static Info MadeWith(Info info, AppSettings settings, Lazy<string?> riverheim)
+    private static Info MadeWith(Info info)
     {
         string? problem = null;
         var head = Head(info.Path, info.SaveNumber, ref problem);
-        problem ??= Riverheim.Refusal(head?.RiverheimTag, settings, () => riverheim.Value);
+        problem ??= head?.Generator is { } g ? g.Generator.Problem(g.Settings) : null;
         return info with
         {
             Usable = problem == null,
             Problem = problem,
             ExpandWorld = head != null && ExpandWorld.Keys(head.StartingGlobalKeys).Count > 0,
-            Riverheim = head?.RiverheimTag != null,
+            Generator = head?.Generator?.Generator.Name,
         };
     }
 
     /// <summary>
-    /// A world file's head, for what the world was made with (Expand World Size's keys, Riverheim's header); null when
+    /// A world file's head, for what the world was made with (Expand World Size's keys, a world generation mod's header); null when
     /// the file cannot be read (said in the log; the world opens, or not, as Check said). A file made by a world
     /// generation mod the editor cannot read gives the problem (the world cannot be opened either).
     /// </summary>

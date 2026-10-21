@@ -33,7 +33,7 @@ public sealed partial class WorldGenerator
     /// How much of a forest the game would grow here (lower: denser; under 1.15 counts as forest). Given the
     /// point as the game's callers give it: its zone system asks with the world position as it is, its map with
     /// the point stretched (<see cref="Stretched"/>). Expand World Size's forest multiplier divides it (its
-    /// postfix, applied only when set). With Riverheim, its forest in place of the game's noise.
+    /// postfix, applied only when set). With a world generation mod, its forest in place of the game's noise.
     /// </summary>
     internal float GetForestFactor(Vector3 pos) => _v.Forest(_ground?.Forest(pos.X, pos.Z) ?? GenMath.Layers(pos * 0.01f * 0.4f, 3, 1.6f, 0.7f));
 

@@ -122,8 +122,8 @@ public sealed partial class WorldSession : IDisposable
     }
 
     /// <summary>
-    /// A world on this computer (its folder). Throws when the game's data is missing, and when the world needs the
-    /// player's Riverheim and cannot have it (<see cref="TakeRiverheim"/>).
+    /// A world on this computer (its folder). Throws when the game's data is missing, and when the world needs a world
+    /// generation mod's generator and cannot have it (<see cref="TakeGenerator"/>).
     /// </summary>
     public static WorldSession Open(string dir)
     {
@@ -131,27 +131,33 @@ public sealed partial class WorldSession : IDisposable
         var world = WorldSave.Load(dir);
         var settings = AppSettings.Load();
         world.Rules = ExpandWorld.Resolve(world, settings);
-        TakeRiverheim(world, settings);
+        TakeGenerator(world);
         WorldSave.Builder = Builders.Default(world);
         return From(world, null, world.Name);
     }
 
     /// <summary>
-    /// A world made with Riverheim: its rules take the player's Riverheim (<see cref="Riverheim.Rules"/>), over Expand
-    /// World's. Throws <c>InvalidOperationException</c>, with why for the player, when Riverheim cannot draw it.
+    /// A world made with a world generation mod: its rules take the mod's generator (ModGenerator.Rules), over Expand
+    /// World's, and the log says what Expand World does otherwise to it. Throws <c>InvalidOperationException</c>, with
+    /// why for the player, when the generator cannot draw it.
     /// </summary>
     /// <param name="world">The world just read, with its Expand World rules.</param>
-    /// <param name="settings">The editor's settings.</param>
-    /// <param name="gameVersion">The Riverheim the live game runs, when known.</param>
-    private static void TakeRiverheim(WorldSave world, AppSettings settings, string? gameVersion = null)
+    /// <param name="gameVersion">The mod's version the live game runs, when known.</param>
+    private static void TakeGenerator(WorldSave world, string? gameVersion = null)
     {
-        if (Riverheim.Rules(world.RiverheimTag, settings, gameVersion) is { } riverheim)
+        if (world.Generator is not { } header)
         {
-            world.Rules = world.Rules with { Riverheim = riverheim };
-            foreach (string note in Riverheim.Notes(world.Rules))
-            {
-                Console.WriteLine($"Riverheim: {world.Name}: {note}.");
-            }
+            return;
+        }
+        var g = header.Generator;
+        if (g.Problem(header.Settings) is string why)
+        {
+            throw new InvalidOperationException(why);
+        }
+        world.Rules = world.Rules with { Generator = g.Rules(header.Settings, gameVersion) };
+        foreach (string note in g.Notes(header.Settings, WorldGenerators.ExpandWorldOf(world.Rules)))
+        {
+            Console.WriteLine($"{g.Name}: {world.Name}: {note}.");
         }
     }
 

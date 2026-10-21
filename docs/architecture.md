@@ -356,19 +356,24 @@ way into `GetBiome`, `GetBiomeHeight` and the map's mask, and multiplies it back
 reader of the mods' files is `editor/Core/App/ExpandWorld.cs`; the rules apply only with the Expand World switch
 in Settings on (`AppSettings.ExpandWorld`), else every world is generated as the game does.
 
-Riverheim, another world generation mod, writes a header before the game's file version in the world file (a
-marker, its id, then its settings after the version): `WorldSave.ReadMetadata` reads it through
-`Riverheim.ReadHeader` (`editor/Core/App/Riverheim.cs`) into `WorldSave.RiverheimTag`; another generator's header, or a
-setting it does not know, throws `GeneratorHeaderException` (the world list says why). Such a world is drawn only by
-the player's own Riverheim, so `Riverheim.Refusal` says why one cannot be opened (the Riverheim switch,
-`AppSettings.Riverheim`; the plugin in a BepInEx folder, `Riverheim.Find`) and the worlds list marks it.
-`Riverheim.Rules` gives an opened world's `WorldRules.Riverheim` (`RiverheimRules`): it loads the player's own
-Riverheim.dll (`RiverheimLibrary`: its own load context, the BepInEx and Unity assemblies its plugin classes name taken
-from the BepInEx folder's core and the game's Managed folder; its types driven by name, the renderer's calls compiled
-once), and the generator asks the laid-out world (`RiverheimGround`, an `IGroundGenerator`) in place of the bodies of the
-game's GetBiome, GetBiomeHeight, GetAshlandsHeight and GetForestFactor, and lays out no water. Expand World Size's
-stretch stays before it, its depth and forest after, as the mods' patches meet in the game. Users' side:
-[riverheim.md](riverheim.md).
+World generation mods write a header before the game's file version in the world file (a marker, -1, then the
+generator's id, then what the mod keeps): `WorldSave.ReadMetadata` reads it through `WorldGenerators.ReadVersion`
+(`editor/Core/App/WorldGenerators.cs`), which finds the generator a running extension registered
+(`IExtensionRegistry.AddWorldGenerator`, wrapped in a `ModGenerator` that turns its extension off on a fault; the
+extensions are run first when the start page lists worlds before any opened) and has it read the rest into
+`WorldSave.Generator` (`GeneratorHeader`); a generator none registers, or a header it cannot read, throws
+`GeneratorHeaderException` (the world list says why). The world list asks the generator's quick `Problem` and marks
+the world; opening it (`WorldSession.TakeGenerator`) gives `WorldRules.Generator` (`GeneratorRules`, from the
+generator's `Open`), and the world generator asks the laid-out world (an SDK `IGroundLayout`) in place of the bodies
+of the game's GetBiome, GetBiomeHeight, GetAshlandsHeight and GetForestFactor, and lays out no water. Expand World
+Size's stretch stays before it, its depth and forest after, as the mods' patches meet in the game. New worlds take
+the first generator that makes them (`WorldGenerators.ForNewWorld`); `WorldCreator` writes its header.
+
+Riverheim's generator is built in for now (`RiverheimGenerator`, `editor/Core/App/RiverheimGenerator.cs`, over `Riverheim.cs`): its header, the
+Riverheim switch (`AppSettings.Riverheim`) and the plugin found in a BepInEx folder (`Riverheim.Find`) for `Problem`,
+and the player's own Riverheim.dll loaded to lay the worlds out (`RiverheimLibrary`: its own load context, the BepInEx
+and Unity assemblies its plugin classes name taken from the BepInEx folder's core and the game's Managed folder; its
+types driven by name, the renderer's calls compiled once; `RiverheimGround`). Users' side: [riverheim.md](riverheim.md).
 
 ## Live mode
 

@@ -85,4 +85,11 @@ public interface IExtensionRegistry
 
     /// <summary>Writes a line to the editor's log (Settings → Open log), named after the extension.</summary>
     void Log(string message);
+
+    /// <summary>
+    /// Draws and makes the worlds of a world generation mod (see <see cref="IWorldGenerator"/>): worlds whose file names
+    /// its id open with its ground, and the New world page offers it.
+    /// </summary>
+    /// <param name="generator">The generator.</param>
+    void AddWorldGenerator(IWorldGenerator generator);
 }

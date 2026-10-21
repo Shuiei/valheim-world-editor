@@ -22,9 +22,9 @@ public sealed partial class WorldSession
             var settings = AppSettings.Load();
             world.Rules = await ExpandWorld.ResolveLive(world, settings, live);
             await ModSettings.RefreshLive(live, ModExtensions.RequestedSettingsFiles);
-            // The game's world file, read through the bridge with the rules, says whether Riverheim made the world; the
-            // game's own Riverheim must be of the player's release.
-            TakeRiverheim(world, settings, world.RiverheimTag != null ? await GameRiverheim(live) : null);
+            // The game's world file, read through the bridge with the rules, says whether a world generation mod made the
+            // world; its generator is told the mod's version the game runs.
+            TakeGenerator(world, world.Generator is { } header ? await GamePluginVersion(live, header.Generator.PluginId) : null);
             WorldSave.Builder = Builders.Default(world);
             session = From(world, live, label);
         }
@@ -40,18 +40,20 @@ public sealed partial class WorldSession
     }
 
     /// <summary>
-    /// The version of the Riverheim the game runs (GET /plugins); null when the bridge does not say (an older one, or it
+    /// The version of a plugin the game runs (GET /plugins); null when the bridge does not say (an older one, or it
     /// cannot be asked: said in the log).
     /// </summary>
-    private static async Task<string?> GameRiverheim(LiveBridge live)
+    /// <param name="live">The game's bridge.</param>
+    /// <param name="pluginId">The plugin's id.</param>
+    private static async Task<string?> GamePluginVersion(LiveBridge live, string pluginId)
     {
         try
         {
-            return (await live.Plugins())?.FirstOrDefault(p => p.Id == Riverheim.PluginId)?.Version;
+            return (await live.Plugins())?.FirstOrDefault(p => p.Id == pluginId)?.Version;
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException)
         {
-            Log.Caught(e, "asking the game's bridge which Riverheim it runs (not checked)");
+            Log.Caught(e, $"asking the game's bridge which version of {pluginId} it runs (not checked)");
             return null;
         }
     }

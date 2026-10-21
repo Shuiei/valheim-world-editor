@@ -1,4 +1,5 @@
 using ValheimGen;
+using ValheimWorldEditor.Sdk;
 using Xunit;
 
 namespace WorldEditor.Tests;
@@ -12,20 +13,20 @@ namespace WorldEditor.Tests;
 public class WorldGeneratorGroundTests
 {
     /// <summary>A ground that answers from the point and remembers what it was asked.</summary>
-    private sealed class Ground : IGroundGenerator
+    private sealed class Ground : IGroundLayout
     {
         public List<string> Asked { get; } = [];
 
-        public Heightmap.Biome Biome(float x, float z)
+        public int Biome(float x, float z)
         {
             Asked.Add($"biome {x} {z}");
-            return Heightmap.Biome.Plains;
+            return (int)Heightmap.Biome.Plains;
         }
 
-        public float Height(float x, float z, out Color mask)
+        public float Height(float x, float z, out System.Numerics.Vector4 mask)
         {
             Asked.Add($"height {x} {z}");
-            mask = new Color(0.25f, 0.5f, 0f, 1f);
+            mask = new System.Numerics.Vector4(0.25f, 0.5f, 0f, 1f);
             return x / 100f;
         }
 
@@ -40,8 +41,8 @@ public class WorldGeneratorGroundTests
     {
         var ground = new Ground();
         var seeds = new List<int>();
-        var riverheim = new RiverheimRules("1.2.1", "builtin.amur", 2) { LayOut = seed => { seeds.Add(seed); return ground; } };
-        var gen = WorldGenerator.Create(new World { Seed = 42, WorldGenVersion = 2, Menu = menu, Rules = rules with { Riverheim = riverheim } });
+        var generator = new GeneratorRules("made.up.generator", "Made Up", "1.0.0", "default") { LayOut = seed => { seeds.Add(seed); return ground; } };
+        var gen = WorldGenerator.Create(new World { Seed = 42, WorldGenVersion = 2, Menu = menu, Rules = rules with { Generator = generator } });
         return (gen, ground, seeds);
     }
 

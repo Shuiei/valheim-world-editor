@@ -67,7 +67,7 @@ public sealed partial class WorldGenerator
             _v = new RuleValues(Rules, _offsetA, _offsetB, _offsetDetail, _riverSeed, _streamSeed);
             _riverSeed = _v.RiverSeed;
             _streamSeed = _v.StreamSeed;
-            // Riverheim lays its own world out instead (its prefix skips the game's Pregenerate).
+            // A world generation mod lays its own world out instead (Riverheim's prefix skips the game's Pregenerate).
             _ground = GroundOf(world);
             if (!world.Menu && _ground == null)
             {
@@ -84,7 +84,15 @@ public sealed partial class WorldGenerator
     /// The ground of the world generation mod that replaces the game's, laid out for the world (none for the menu world,
     /// which the mod leaves to the game).
     /// </summary>
-    private static IGroundGenerator? GroundOf(World world) => world.Menu ? null : world.Rules.Riverheim?.LayOut(world.Seed);
+    private static ValheimWorldEditor.Sdk.IGroundLayout? GroundOf(World world) => world.Menu ? null : world.Rules.Generator?.LayOut(world.Seed);
+
+    /// <summary>The world generation mod's ground height at a point, with its mask (<see cref="_ground"/> set).</summary>
+    private float ModHeight(float x, float z, out Color mask)
+    {
+        float h = _ground!.Height(x, z, out var m);
+        mask = new Color(m.X, m.Y, m.Z, m.W);
+        return h;
+    }
 
     /// <summary>
     /// A generator for a world. Each caller keeps its own (the game has one, static): the editor can have
@@ -126,8 +134,8 @@ public sealed partial class WorldGenerator
     public float GetHeight(float x, float z) => GetHeight(x, z, out _);
 
     /// <summary>
-    /// The same, with the ground's mask (see <see cref="GetBiomeHeight"/>). With Riverheim's ground, no biome is worked
-    /// out: its GetHeight asks GetBiomeHeight with none (which other mods' patches on it see).
+    /// The same, with the ground's mask (see <see cref="GetBiomeHeight"/>). With a world generation mod's ground, no biome is
+    /// worked out: its GetHeight asks GetBiomeHeight with none (which other mods' patches on it see).
     /// </summary>
     internal float GetHeight(float x, float z, out Color mask) => GetBiomeHeight(_ground == null ? GetBiome(x, z) : Heightmap.Biome.None, x, z, out mask);
 
@@ -154,9 +162,10 @@ public sealed partial class WorldGenerator
     private readonly World _world;
 
     /// <summary>
-    /// The ground of a world generation mod that replaces the game's (Riverheim), or null: then the game's own.
+    /// The ground of a world generation mod that replaces the game's (<see cref="WorldRules.Generator"/>), or null: then
+    /// the game's own.
     /// </summary>
-    private readonly IGroundGenerator? _ground;
+    private readonly ValheimWorldEditor.Sdk.IGroundLayout? _ground;
 
     /// <summary>
     /// Older worlds (the game's generator versions 0 and 1) keep their settings: the radius around the
