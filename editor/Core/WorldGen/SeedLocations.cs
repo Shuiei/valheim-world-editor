@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace ValheimGen;
 
 /// <summary>
@@ -19,36 +17,32 @@ namespace ValheimGen;
 /// </remarks>
 public static partial class SeedLocations
 {
-    /// <summary>
-    /// How ToJson writes each line: nulls (a game kind's altBiome) left out.
-    /// </summary>
-    private static readonly JsonSerializerOptions JsonOptions = new() { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };
 
     /// <summary>
     /// The rules in use and what follows from them, swapped whole (a search running keeps its own).
     /// </summary>
     /// <param name="rules">The rules.</param>
-    private sealed class State(RuleSet rules)
+    private sealed class State(LocationRuleSet rules)
     {
         /// <summary>
         /// The rules as given.
         /// </summary>
-        public RuleSet Rules { get; } = rules;
+        public LocationRuleSet Rules { get; } = rules;
         /// <summary>
         /// The game's order: prioritized kinds first, otherwise as listed; disabled and empty kinds left out.
         /// </summary>
-        public List<Rule> Ordered { get; } = [.. rules.Locations.OrderByDescending(l => l.Prioritized != 0).Where(l => l.Enable != 0 && l.Quantity != 0)];
+        public List<LocationRule> Ordered { get; } = [.. rules.Locations.OrderByDescending(l => l.Prioritized != 0).Where(l => l.Enable != 0 && l.Quantity != 0)];
     }
 
     /// <summary>
     /// The rules in use; none until Use.
     /// </summary>
-    private static volatile State _state = new(new RuleSet());
+    private static volatile State _state = new(new LocationRuleSet());
 
     /// <summary>
     /// The rules read from the game (or the tests' copy, editor/tests/fixtures/locations.json).
     /// </summary>
-    public static void Use(RuleSet rules) => _state = new State(rules);
+    public static void Use(LocationRuleSet rules) => _state = new State(rules);
 
     /// <summary>
     /// Whether there are rules to place with.
@@ -66,7 +60,7 @@ public static partial class SeedLocations
     /// The kinds laid out first (start, bosses, traders...), as the tests' copy keeps them: what the
     /// editor shows, and all they need.
     /// </summary>
-    public static RuleSet Prioritized(RuleSet rules) => new()
+    public static LocationRuleSet Prioritized(LocationRuleSet rules) => new()
     {
         Locations = [.. rules.Locations.Where(l => l.Prioritized != 0 && l.Enable != 0 && l.Quantity != 0)],
     };
@@ -74,7 +68,7 @@ public static partial class SeedLocations
     /// <summary>
     /// The rules in use.
     /// </summary>
-    public static RuleSet Current => _state.Rules;
+    public static LocationRuleSet Current => _state.Rules;
 
     /// <summary>
     /// One location instance the game will register: its kind and where.
@@ -83,12 +77,12 @@ public static partial class SeedLocations
     /// <param name="X">World x.</param>
     /// <param name="Y">The generator's ground height there, metres.</param>
     /// <param name="Z">World z.</param>
-    public sealed record Placed(Rule Rule, float X, float Y, float Z);
+    public sealed record Placed(LocationRule Rule, float X, float Y, float Z);
 
     /// <summary>
     /// The game's order: prioritized kinds first, otherwise as listed; disabled and empty kinds left out.
     /// </summary>
-    public static IReadOnlyList<Rule> Ordered => _state.Ordered;
+    public static IReadOnlyList<LocationRule> Ordered => _state.Ordered;
 
     /// <summary>
     /// How far to lay out.
@@ -118,7 +112,7 @@ public static partial class SeedLocations
     /// A world's location rules: its own (Expand World Data's location file, or the game's changed by Expand World
     /// Size), else the game's.
     /// </summary>
-    internal static RuleSet RulesFor(WorldGenerator gen) => StateFor(gen).Rules;
+    internal static LocationRuleSet RulesFor(WorldGenerator gen) => StateFor(gen).Rules;
 
     /// <summary>
     /// A world's alt biome layout, made the first time it is asked for (on a biome point map of its own, on every core

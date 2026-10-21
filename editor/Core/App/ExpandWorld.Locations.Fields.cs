@@ -42,12 +42,12 @@ public static partial class ExpandWorld
     /// followed by the distance that applies to them ("Name, Group, 500, Other, 1000"); a distance without names, or
     /// names without a distance, are noted and left out. Null when the field is missing or gives no rule.
     /// </summary>
-    private static List<List<SeedLocations.DistanceRule>>? DistanceRows(Fields f, string key, List<string> notes)
+    private static List<List<DistanceRule>>? DistanceRows(Fields f, string key, List<string> notes)
     {
-        List<List<SeedLocations.DistanceRule>> rows = [];
+        List<List<DistanceRule>> rows = [];
         foreach (string item in f.Rows(key))
         {
-            List<SeedLocations.DistanceRule> row = [];
+            List<DistanceRule> row = [];
             List<string> names = [];
             foreach (string token in SplitList(item))
             {
@@ -57,7 +57,7 @@ public static partial class ExpandWorld
                     {
                         notes.Add($"expand_locations: {key} \"{item}\": the distance {token} has no names (left out)");
                     }
-                    row.AddRange(names.Select(n => new SeedLocations.DistanceRule(n, distance)));
+                    row.AddRange(names.Select(n => new DistanceRule(n, distance)));
                     names.Clear();
                 }
                 else

@@ -144,7 +144,7 @@ public static partial class WorldCreator
     /// location, made of its blueprint): not when its zone is left to the game, nor for a location with an interior or
     /// one the game's files do not describe.
     /// </summary>
-    private static bool Builds(ValheimGen.SeedLocations.Rule rule, ValheimGen.LocationContents contents, ValheimGen.TerrainService terrain, out LocationPrefabs.Prefab? prefab)
+    private static bool Builds(ValheimGen.LocationRule rule, ValheimGen.LocationContents contents, ValheimGen.TerrainService terrain, out LocationPrefabs.Prefab? prefab)
     {
         prefab = contents.Blueprint == null ? LocationPrefabs.Get(rule.Base) : null;
         return !LeftToGame(rule, terrain) && (contents.Blueprint != null || prefab is { Interior: false });
@@ -154,7 +154,7 @@ public static partial class WorldCreator
     /// Whether a kind's zone is left to the game: one whose changed contents (a blueprint location's included) the
     /// editor cannot build, or any location when Expand World Data spawns them with a random seed.
     /// </summary>
-    private static bool LeftToGame(ValheimGen.SeedLocations.Rule rule, ValheimGen.TerrainService terrain) =>
+    private static bool LeftToGame(ValheimGen.LocationRule rule, ValheimGen.TerrainService terrain) =>
         ((rule.Blueprint == true || rule.Custom == true) && rule.Contents is not { LeftToGame: null }) || terrain.Generator.Rules.RandomLocations;
 
     /// <summary>
@@ -162,7 +162,7 @@ public static partial class WorldCreator
     /// location's is the mod's own (CreateBlueprintProxy): unturned, with only its name as its "locationreference" (the
     /// game has no location of it) and no data.
     /// </summary>
-    private static byte[] Proxy(ValheimGen.SeedLocations.Rule rule, ushort flags, Vector3 spot, float yaw, int zoneSeed, bool dataInstalled)
+    private static byte[] Proxy(ValheimGen.LocationRule rule, ushort flags, Vector3 spot, float yaw, int zoneSeed, bool dataInstalled)
     {
         if (rule.Contents?.Blueprint != null)
         {
@@ -177,7 +177,7 @@ public static partial class WorldCreator
     /// game prefab a clone is made of (the mod's LocationProxy.SetLocation prefix: the game spawns the prefab's look),
     /// with the clone's own name as its "locationreference" (for the mods that look it up), set first as the mod sets it.
     /// </summary>
-    private static List<(int Key, int Value)> ProxyInts(ValheimGen.SeedLocations.Rule rule, int zoneSeed, bool dataInstalled) =>
+    private static List<(int Key, int Value)> ProxyInts(ValheimGen.LocationRule rule, int zoneSeed, bool dataInstalled) =>
         dataInstalled
             ? [(LocationReferenceKey, StableHash.Of(rule.Prefab)), (WorldSave.LocationKey, StableHash.Of(rule.Base)), (SeedKey, zoneSeed)]
             : [(WorldSave.LocationKey, StableHash.Of(rule.Prefab)), (SeedKey, zoneSeed)];
@@ -189,7 +189,7 @@ public static partial class WorldCreator
     /// The random initial damage a kind's pieces wake with: Expand World Data's file says ("true", "all"; anything
     /// else none), else the prefab's own (Location.m_applyRandomDamage).
     /// </summary>
-    private static Damage DamageOf(ValheimGen.SeedLocations.Rule rule, LocationPrefabs.Prefab? prefab) => rule.RandomDamage switch
+    private static Damage DamageOf(ValheimGen.LocationRule rule, LocationPrefabs.Prefab? prefab) => rule.RandomDamage switch
     {
         null => prefab?.RandomDamage == true ? Damage.Random : Damage.None,
         "true" => Damage.Random,

@@ -23,10 +23,10 @@ public static partial class ExpandWorld
     /// <param name="blueprints">The folder the mod reads blueprint files from; null for none.</param>
     /// <param name="notes">Where an entry passed over or a value not understood is noted.</param>
     /// <param name="data">The world's data entries (what the contents' "data" fields name); none by default.</param>
-    internal static List<SeedLocations.Rule> LocationsOf(IReadOnlyList<Entry> entries, IReadOnlyList<SeedLocations.Rule> game, BiomeTable biomes, float radius, string? blueprints, List<string> notes, DataTable? data = null)
+    internal static List<LocationRule> LocationsOf(IReadOnlyList<Entry> entries, IReadOnlyList<LocationRule> game, BiomeTable biomes, float radius, string? blueprints, List<string> notes, DataTable? data = null)
     {
-        List<SeedLocations.Rule> rules = [];
-        var byPrefab = new Dictionary<string, SeedLocations.Rule>(StringComparer.Ordinal);
+        List<LocationRule> rules = [];
+        var byPrefab = new Dictionary<string, LocationRule>(StringComparer.Ordinal);
         foreach (var g in game)
         {
             byPrefab.TryAdd(g.Prefab, g);
@@ -70,11 +70,11 @@ public static partial class ExpandWorld
     /// Whether a kind clears its area: the file's "clearArea" only with a radius of the file's own (or for a blueprint),
     /// else the game's prefab's, as the mod applies it.
     /// </summary>
-    private static int ClearAreaOf(Fields f, SeedLocations.Rule? own, bool blueprint) =>
+    private static int ClearAreaOf(Fields f, LocationRule? own, bool blueprint) =>
         f.F("exteriorRadius", 0f) != 0f || blueprint ? Flag(f, "clearArea") : own?.ClearArea ?? 0;
 
     /// <summary>One kind from its entry.</summary>
-    private static SeedLocations.Rule LocationOf(Fields f, string prefab, string baseName, float interior, float exterior, bool blueprint, BiomeTable biomes, float radius, ref int virtualGroups, List<string> notes)
+    private static LocationRule LocationOf(Fields f, string prefab, string baseName, float interior, float exterior, bool blueprint, BiomeTable biomes, float radius, ref int virtualGroups, List<string> notes)
     {
         string group = f.Str("group"), groupMax = f.Str("groupMax"), altBiome = f.Str("altBiome");
         // The groups the kind belongs to, with its own group names as the file gives them (before any made-up one).
@@ -91,11 +91,11 @@ public static partial class ExpandWorld
             // Blueprints share no prefab: the mod keeps them apart by name.
             if (awayFrom == null && minSimilar > 0f)
             {
-                awayFrom = [new SeedLocations.DistanceRule(prefab, minSimilar), .. group == "" ? [] : new[] { new SeedLocations.DistanceRule(group, minSimilar) }];
+                awayFrom = [new DistanceRule(prefab, minSimilar), .. group == "" ? [] : new[] { new DistanceRule(group, minSimilar) }];
             }
             if (closeTo == null && maxSimilar > 0f)
             {
-                closeTo = [[new SeedLocations.DistanceRule(prefab, maxSimilar), .. groupMax == "" ? [] : new[] { new SeedLocations.DistanceRule(groupMax, maxSimilar) }]];
+                closeTo = [[new DistanceRule(prefab, maxSimilar), .. groupMax == "" ? [] : new[] { new DistanceRule(groupMax, maxSimilar) }]];
             }
         }
         if (awayFrom != null)
@@ -108,7 +108,7 @@ public static partial class ExpandWorld
             groupMax = $"_{++virtualGroups}";
             maxSimilar = 1f;
         }
-        return new SeedLocations.Rule
+        return new LocationRule
         {
             Prefab = prefab,
             Name = prefab,

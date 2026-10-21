@@ -5,7 +5,7 @@ using static WorldEditor.Tests.SeedLocationsSupport;
 namespace WorldEditor.Tests;
 
 /// <summary>
-/// The seed's location rules as the editor reads and writes them (SeedLocations.RuleSet, the alt biomes), and the random biome
+/// The seed's location rules as the editor reads and writes them (LocationRuleSet, the alt biomes), and the random biome
 /// and biome map the layout draws from.
 /// </summary>
 public class SeedLocationsRulesTests
@@ -16,7 +16,7 @@ public class SeedLocationsRulesTests
         Fixtures.UseLocations();
         var copy = SeedLocations.Current;
         Assert.True(SeedLocations.Available);
-        var again = SeedLocations.RuleSet.FromJson(copy.ToJson());
+        var again = LocationRuleSet.FromJson(copy.ToJson());
         Assert.Equal(copy.Locations.Select(l => (l.Prefab, l.Quantity, l.Biome, l.AltBiome)), again.Locations.Select(l => (l.Prefab, l.Quantity, l.Biome, l.AltBiome)));
         Assert.Equal(copy.ToJson(), again.ToJson());
         Assert.Equal("StartTemple", SeedLocations.Ordered[0].Prefab);
@@ -28,17 +28,17 @@ public class SeedLocationsRulesTests
     [Fact]
     public void AltBiomesRoundTripWithTheRules()
     {
-        var rules = new SeedLocations.RuleSet
+        var rules = new LocationRuleSet
         {
-            Locations = [new SeedLocations.Rule { Prefab = "MadeUpRuin", Name = "Made-up ruin" }],
-            AltBiomes = [new SeedLocations.AltBiomeRule { Name = "MadeUpMeadows", BlockLocationNames = ["Made-up ruin"] }],
+            Locations = [new LocationRule { Prefab = "MadeUpRuin", Name = "Made-up ruin" }],
+            AltBiomes = [new AltBiomeRule { Name = "MadeUpMeadows", BlockLocationNames = ["Made-up ruin"] }],
         };
-        var again = SeedLocations.RuleSet.FromJson(rules.ToJson());
+        var again = LocationRuleSet.FromJson(rules.ToJson());
         var alt = Assert.Single(again.AltBiomes);
         Assert.Equal("MadeUpMeadows", alt.Name);
         Assert.Equal(["Made-up ruin"], alt.BlockLocationNames);
         Assert.Equal(rules.ToJson(), again.ToJson());
-        Assert.Throws<System.Text.Json.JsonException>(() => SeedLocations.RuleSet.FromJson("null"));
+        Assert.Throws<System.Text.Json.JsonException>(() => LocationRuleSet.FromJson("null"));
     }
 
     [Fact]

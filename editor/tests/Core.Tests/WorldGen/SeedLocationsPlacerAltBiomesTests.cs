@@ -10,7 +10,7 @@ namespace WorldEditor.Tests;
 public class SeedLocationsPlacerAltBiomesTests
 {
     /// <summary>An alt biome given to every area of the world, keeping these kinds out.</summary>
-    private static SeedLocations.AltBiomeRule Everywhere(string name, params string[] blocks)
+    private static AltBiomeRule Everywhere(string name, params string[] blocks)
     {
         var alt = AltBiomeRules.Everywhere(name);
         alt.BlockLocationNames = [.. blocks];
@@ -18,11 +18,11 @@ public class SeedLocationsPlacerAltBiomesTests
     }
 
     /// <summary>The traders' camps laid out on seed 5DCcdIcuYJ as the world's only kind, of this alt biome, under these alt biomes.</summary>
-    private static List<(float X, float Z)> Camps(string? altBiome, params SeedLocations.AltBiomeRule[] alts)
+    private static List<(float X, float Z)> Camps(string? altBiome, params AltBiomeRule[] alts)
     {
-        var kind = SeedLocations.RuleSet.FromJson(File.ReadAllText(Path.Combine(Fixtures.Root, "locations.json"))).Locations.First(l => l.Prefab == "Vendor_BlackForest");
+        var kind = LocationRuleSet.FromJson(File.ReadAllText(Path.Combine(Fixtures.Root, "locations.json"))).Locations.First(l => l.Prefab == "Vendor_BlackForest");
         kind.AltBiome = altBiome;
-        var rules = new WorldRules { Locations = new SeedLocations.RuleSet { Locations = [kind], AltBiomes = [.. alts] } };
+        var rules = new WorldRules { Locations = new LocationRuleSet { Locations = [kind], AltBiomes = [.. alts] } };
         return [.. SeedLocations.Place(TerrainEditor.App.SeedPreview.Generator("5DCcdIcuYJ", rules), SeedLocations.Which.All, parallel: true, cancel: TestContext.Current.CancellationToken).Select(p => (p.X, p.Z))];
     }
 

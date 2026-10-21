@@ -9,7 +9,7 @@ public static partial class SeedLocations
         /// Far enough from its own prefab or group, and near enough to its own prefab or "max" group when it
         /// needs one.
         /// </summary>
-        internal bool RightNeighbours(Rule rule, Vector3 spot)
+        internal bool RightNeighbours(LocationRule rule, Vector3 spot)
         {
             if (ModSpacing)
             {
@@ -27,7 +27,7 @@ public static partial class SeedLocations
         /// the same game prefab (a clone counts) or a kind whose groups hold the group asked for; a kind with "awayFrom"
         /// is kept away from any of those kinds or groups, one with "closeTo" needs one of each row within reach.
         /// </summary>
-        private bool RightNeighboursByMod(Rule rule, Vector3 spot)
+        private bool RightNeighboursByMod(LocationRule rule, Vector3 spot)
         {
             if (rule.MinDistanceFromSimilar > 0f && (rule.AwayFrom != null ? rule.AwayFrom.Any(r => Near(r, spot)) : Similar(rule.Base, rule.Group, spot, rule.MinDistanceFromSimilar)))
             {
@@ -50,7 +50,7 @@ public static partial class SeedLocations
         /// <summary>
         /// The ground's vegetation within the kind's bounds (either end left out when not set).
         /// </summary>
-        internal static bool RightVegetation(Rule rule, float vegetation) =>
+        internal static bool RightVegetation(LocationRule rule, float vegetation) =>
             !(rule.MinimumVegetation > 0f && vegetation <= rule.MinimumVegetation) && !(rule.MaximumVegetation < 1f && vegetation >= rule.MaximumVegetation);
 
         /// <summary>
@@ -58,7 +58,7 @@ public static partial class SeedLocations
         /// more) must beat the average of the kind's spots so far by a share of the way to the best; the
         /// first nine spots only set the bar.
         /// </summary>
-        internal bool StandsOut(Rule rule, Vector3 spot)
+        internal bool StandsOut(LocationRule rule, Vector3 spot)
         {
             if (rule.SurroundCheckVegetation == 0)
             {

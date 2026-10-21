@@ -9,7 +9,7 @@ internal static class GameRules
     /// The game's location rules read from a Valheim folder (else the one the editor finds) and put in use; null, said,
     /// when they cannot be read.
     /// </summary>
-    internal static SeedLocations.RuleSet? Use(string? valheim)
+    internal static LocationRuleSet? Use(string? valheim)
     {
         var bundles = GameBundles.ForGame(valheim ?? GameLook.FindValheim(AppSettings.Load().ValheimPath), null);
         if (bundles == null || GameLocations.Load(bundles, null) is not { } rules)

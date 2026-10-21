@@ -16,7 +16,7 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
 {
     /// <summary>An entry from its fields (a list value for a field given several times).</summary>
     /// <summary>The game's location kinds the tests convert against (the fixture's prioritized ones).</summary>
-    private static List<SeedLocations.Rule> Game()
+    private static List<LocationRule> Game()
     {
         Fixtures.UseLocations();
         return SeedLocations.Current.Locations;
@@ -94,13 +94,13 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         Assert.Equal("_1", away.Group);
         Assert.Equal(1f, away.MinDistanceFromSimilar);
         Assert.Equal(["temples"], away.Groups);
-        Assert.Equal([new SeedLocations.DistanceRule("Crypt2", 500f), new SeedLocations.DistanceRule("dungeons", 500f), new SeedLocations.DistanceRule("Vendor_BlackForest", 1000f)], away.AwayFrom);
+        Assert.Equal([new DistanceRule("Crypt2", 500f), new DistanceRule("dungeons", 500f), new DistanceRule("Vendor_BlackForest", 1000f)], away.AwayFrom);
         Assert.Null(away.CloseTo);
         var close = rules[1];
         Assert.Equal("_2", close.GroupMax);
         Assert.Equal(1f, close.MaxDistanceFromSimilar);
         Assert.Equal(2, close.CloseTo!.Count);
-        Assert.Equal([new SeedLocations.DistanceRule("Vendor_BlackForest", 800f), new SeedLocations.DistanceRule("hidden", 800f)], close.CloseTo[1]);
+        Assert.Equal([new DistanceRule("Vendor_BlackForest", 800f), new DistanceRule("hidden", 800f)], close.CloseTo[1]);
         // A distance before any name, and names without a distance, are noted and left out.
         Assert.Null(rules[2].AwayFrom);
         Assert.Equal("", rules[2].Group);
@@ -127,7 +127,7 @@ public class ExpandWorldPlacesTests : AppSettingsTestBase
         Assert.True(rules[0].Blueprint);
         Assert.Equal(MathF.Sqrt(200f) + 5f, rules[0].ExteriorRadius, 3);
         // Blueprints share no prefab: the mod keeps them apart by name and group through a made-up group.
-        Assert.Equal([new SeedLocations.DistanceRule("MyHut", 400f), new SeedLocations.DistanceRule("huts", 400f)], rules[0].AwayFrom);
+        Assert.Equal([new DistanceRule("MyHut", 400f), new DistanceRule("huts", 400f)], rules[0].AwayFrom);
         Assert.Equal("_1", rules[0].Group);
         Assert.Equal(12f, rules[1].ExteriorRadius);
         Assert.Empty(notes);

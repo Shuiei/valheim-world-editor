@@ -6,7 +6,7 @@ namespace WorldEditor.Tests;
 public static class AltBiomeRules
 {
     /// <summary>An alt biome that every area of every biome may have, given to as many as there are.</summary>
-    public static SeedLocations.AltBiomeRule Everywhere(string name) => new()
+    public static AltBiomeRule Everywhere(string name) => new()
     {
         Name = name,
         Biome = -1,

@@ -36,7 +36,7 @@ public sealed partial class MapPage
     /// <param name="territory">Its territory, if any.</param>
     /// <param name="alts">Its area's alt biomes; null while not known.</param>
     /// <param name="effects">The status effects there.</param>
-    internal static string Extras(Territory? territory, IReadOnlyList<SeedLocations.AltBiomeRule>? alts, IReadOnlyList<StatusEffect> effects)
+    internal static string Extras(Territory? territory, IReadOnlyList<AltBiomeRule>? alts, IReadOnlyList<StatusEffect> effects)
     {
         List<string> parts = [];
         if (territory != null)
@@ -67,7 +67,7 @@ public sealed partial class MapPage
     /// The alt biomes of the area holding a point, once the world's layout is worked out; null before (the first ask
     /// starts working it out in the background, after the game's location rules are read).
     /// </summary>
-    private IReadOnlyList<SeedLocations.AltBiomeRule>? AltBiomesAt(WorldGenerator gen, float x, float z)
+    private IReadOnlyList<AltBiomeRule>? AltBiomesAt(WorldGenerator gen, float x, float z)
     {
         if (_alts is { } kept && kept.Gen == gen)
         {

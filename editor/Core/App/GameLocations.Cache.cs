@@ -30,11 +30,11 @@ public static partial class GameLocations
     }
 
     /// <summary>Cached rules from their JSON; null when it cannot be read (read again).</summary>
-    private static SeedLocations.RuleSet? Rules(string json)
+    private static LocationRuleSet? Rules(string json)
     {
         try
         {
-            return SeedLocations.RuleSet.FromJson(json);
+            return LocationRuleSet.FromJson(json);
         }
         catch (JsonException e)
         {

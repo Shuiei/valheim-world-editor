@@ -46,7 +46,7 @@ public class SeedLocationsNeighboursTests
     private static SeedLocations.Neighbours NeighboursWithA()
     {
         var neighbours = new SeedLocations.Neighbours();
-        neighbours.Add("a", new SeedLocations.Placed(new SeedLocations.Rule { Prefab = "a" }, 0, 0, 0));
+        neighbours.Add("a", new SeedLocations.Placed(new LocationRule { Prefab = "a" }, 0, 0, 0));
         return neighbours;
     }
 }

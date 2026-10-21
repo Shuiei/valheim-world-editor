@@ -3,7 +3,7 @@ using ValheimGen;
 namespace TerrainEditor.App;
 
 /// <summary>
-/// The game's location rules (SeedLocations.RuleSet) read from its files (the editor has no copy of its
+/// The game's location rules (LocationRuleSet) read from its files (the editor has no copy of its
 /// own: Valheim is needed anyway, and a copy would go out of date): the main scene's ZoneSystem
 /// and LocationLists, and the alt biomes (in the main scene's bundle and the bundles it needs, which the
 /// SoftRef manifest lists), kept in the data folder until the game changes.
@@ -115,7 +115,7 @@ public static partial class GameLocations
             var task = Task.Run(() =>
             {
                 var rules = Load(bundles, CacheFile);
-                SeedLocations.Use(rules ?? new SeedLocations.RuleSet());
+                SeedLocations.Use(rules ?? new LocationRuleSet());
                 return rules != null;
             });
             _using = (bundles, task, logs);

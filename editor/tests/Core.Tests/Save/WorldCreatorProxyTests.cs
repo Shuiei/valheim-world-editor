@@ -12,7 +12,7 @@ public class WorldCreatorProxyTests
 {
     /// <summary>The proxy's ints for a kind of this name made of this prefab.</summary>
     private static List<(int Key, int Value)> Ints(string prefab, string? basePrefab, bool data) =>
-        PrivateMember.Call<List<(int Key, int Value)>>(typeof(WorldCreator), "ProxyInts", null, new SeedLocations.Rule { Prefab = prefab, BasePrefab = basePrefab }, 77, data);
+        PrivateMember.Call<List<(int Key, int Value)>>(typeof(WorldCreator), "ProxyInts", null, new LocationRule { Prefab = prefab, BasePrefab = basePrefab }, 77, data);
 
     [Fact]
     public void AProxySpawnsItsLocationWithTheZonesSeed() =>
@@ -27,7 +27,7 @@ public class WorldCreatorProxyTests
     [Fact]
     public void ABlueprintLocationsProxyIsTheModsOwn()
     {
-        var rule = new SeedLocations.Rule { Prefab = "MyHut", Contents = new LocationContents { Blueprint = "MyHut", ProxyData = [new ContentField("ints", 5, "1")] } };
+        var rule = new LocationRule { Prefab = "MyHut", Contents = new LocationContents { Blueprint = "MyHut", ProxyData = [new ContentField("ints", 5, "1")] } };
         var z = ZdoData.Parse(PrivateMember.Call<byte[]>(typeof(WorldCreator), "Proxy", null, rule, (ushort)0x0B00, new System.Numerics.Vector3(1, 2, 3), 90f, 77, true));
         // Unturned, with only its name as its reference: no location of the game, no seed, no data.
         Assert.Equal([(StableHash.Of("locationreference"), StableHash.Of("MyHut"))], z.IntList);

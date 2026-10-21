@@ -12,10 +12,10 @@ namespace WorldEditor.Tests;
 public class TerrainServiceCornerLooksTests
 {
     /// <summary>The middle zone's corners with the world's alt biomes being these (its own location rules).</summary>
-    private static (int[] Biomes, int[] Looks) Corners(TempWorld w, params SeedLocations.AltBiomeRule[] alts)
+    private static (int[] Biomes, int[] Looks) Corners(TempWorld w, params AltBiomeRule[] alts)
     {
         var world = w.Load();
-        world.Rules = new WorldRules { DataInstalled = true, Locations = new SeedLocations.RuleSet { AltBiomes = [.. alts] } };
+        world.Rules = new WorldRules { DataInstalled = true, Locations = new LocationRuleSet { AltBiomes = [.. alts] } };
         var terrain = new TerrainService(world, null);
         return (terrain.CornerBiomes(0, 0), terrain.CornerLooks(0, 0));
     }

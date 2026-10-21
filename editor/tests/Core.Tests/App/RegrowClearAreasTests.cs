@@ -32,12 +32,12 @@ public class RegrowClearAreasTests
     };
 
     /// <summary>A location kind that clears this radius.</summary>
-    private static SeedLocations.Rule Kind(string prefab, float radius, bool clears = true) =>
+    private static LocationRule Kind(string prefab, float radius, bool clears = true) =>
         new() { Prefab = prefab, Name = prefab, ExteriorRadius = radius, ClearArea = clears ? 1 : 0 };
 
     /// <summary>The world's rules with these location kinds and vegetation.</summary>
-    private static WorldRules Rules(SeedLocations.Rule[] kinds, VegetationRule[]? vegetation = null, bool data = false) =>
-        new() { DataInstalled = data, Vegetation = vegetation, Locations = new SeedLocations.RuleSet { Locations = [.. kinds] } };
+    private static WorldRules Rules(LocationRule[] kinds, VegetationRule[]? vegetation = null, bool data = false) =>
+        new() { DataInstalled = data, Vegetation = vegetation, Locations = new LocationRuleSet { Locations = [.. kinds] } };
 
     /// <summary>The spots Regrow places in zones 0..1 under these rules, with these location instances.</summary>
     private static List<Regrow.Spot> Spots(TempWorld w, WorldRules rules, VegetationRule rule, params (string Prefab, float X, float Z)[] instances)

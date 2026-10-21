@@ -23,7 +23,7 @@ public sealed class NewWorldPageRefreshRulesTests : IDisposable
     /// <summary>Puts the data folder and the game's location rules back, and deletes the folder.</summary>
     public void Dispose()
     {
-        ValheimGen.SeedLocations.Use(new ValheimGen.SeedLocations.RuleSet());
+        ValheimGen.SeedLocations.Use(new ValheimGen.LocationRuleSet());
         AppSettings.DataDirOverride = _dataDir;
         if (Directory.Exists(_dir))
         {
@@ -50,7 +50,7 @@ public sealed class NewWorldPageRefreshRulesTests : IDisposable
     public void TheLocationFileConvertsOnceTheGamesRulesAreRead()
     {
         Bep();
-        ValheimGen.SeedLocations.Use(new ValheimGen.SeedLocations.RuleSet());
+        ValheimGen.SeedLocations.Use(new ValheimGen.LocationRuleSet());
         using var page = new NewWorldPage([], previewSize: 16);
         // Opened before the game's rules: the location file waits.
         Assert.True(page.Rules.DataInstalled);

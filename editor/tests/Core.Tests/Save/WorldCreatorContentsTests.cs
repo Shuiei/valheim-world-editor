@@ -159,7 +159,7 @@ public class WorldCreatorContentsTests
     [InlineData("all", false, "RandomOverData")]
     [InlineData("false", true, "None")]
     public void TheDamageIsTheFilesElseThePrefabsOwn(string? file, bool prefab, string expected) =>
-        Assert.Equal(Enum.Parse<WorldCreator.Damage>(expected), PrivateMember.Call<WorldCreator.Damage>(typeof(WorldCreator), "DamageOf", null, new SeedLocations.Rule { RandomDamage = file }, Temple with { RandomDamage = prefab }));
+        Assert.Equal(Enum.Parse<WorldCreator.Damage>(expected), PrivateMember.Call<WorldCreator.Damage>(typeof(WorldCreator), "DamageOf", null, new LocationRule { RandomDamage = file }, Temple with { RandomDamage = prefab }));
 
     [Fact]
     public void AGrownSpotKeepsItsData()

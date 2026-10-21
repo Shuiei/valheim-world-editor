@@ -1,3 +1,5 @@
+using System;
+
 namespace ValheimGen;
 
 // The biome point map's indices (the game's Heightmap.BiomeIndex, and Expand World Data's mapping of every flag).
