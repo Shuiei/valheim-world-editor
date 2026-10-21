@@ -1,3 +1,4 @@
+using TerrainEditor.Save;
 
 namespace TerrainEditor.App;
 
@@ -33,14 +34,19 @@ public static partial class ModManifests
     /// <summary>An editor extension a mod offers (its manifest's "extension").</summary>
     /// <param name="Dll">The extension's DLL, its full path (inside the mod's folder).</param>
     /// <param name="Mod">The mod, as its folder under plugins is named.</param>
-    public sealed record Offered(string Dll, string Mod);
+    /// <param name="GameComponents">The game's scripts whose fields it asks for ("gameComponents"; ModComponents reads them).</param>
+    public sealed record Offered(string Dll, string Mod, IReadOnlyList<string> GameComponents);
 
     /// <summary>
     /// What a manifest says of a prefab.
     /// </summary>
     /// <param name="Hidden">Not offered in Place or the Build panel (objects already in a world still show).</param>
     /// <param name="Group">The heading it is listed under in the Mods tab (else its crafting station).</param>
-    public sealed record PrefabNote(bool Hidden, string? Group);
+    /// <param name="Data">
+    /// Objects of it only hold the mod's data (no model): never drawn, picked or listed in an area, and kept by a zone reset
+    /// that keeps the buildings.
+    /// </param>
+    public sealed record PrefabNote(bool Hidden, string? Group, bool Data = false);
 
     /// <summary>
     /// What the manifests say.
@@ -54,6 +60,9 @@ public static partial class ModManifests
     {
         /// <summary>The link rules, with the keys they read.</summary>
         public LinkSet LinkSet { get; set; } = LinkSet.Empty;
+
+        /// <summary>The hashes of the prefabs whose objects only hold data, worked out once the notes are complete.</summary>
+        public HashSet<int> DataPrefabs => field ??= [.. Prefabs.Where(p => p.Value.Data).Select(p => StableHash.Of(p.Key))];
     }
 
     /// <summary>
@@ -88,6 +97,13 @@ public static partial class ModManifests
 
     /// <summary>What a manifest says of a prefab; null when none says anything.</summary>
     public static PrefabNote? PrefabOf(string? prefab) => prefab == null ? null : _notes.Prefabs.GetValueOrDefault(prefab);
+
+    /// <summary>Whether a manifest says the objects of a prefab only hold its mod's data (<see cref="PrefabNote.Data"/>).</summary>
+    /// <param name="prefab">The prefab's hash.</param>
+    public static bool IsData(int prefab) => _notes.DataPrefabs.Contains(prefab);
+
+    /// <summary>The hashes of every prefab whose objects only hold a mod's data.</summary>
+    public static IReadOnlyCollection<int> DataPrefabs => _notes.DataPrefabs;
 
     /// <summary>Whether a manifest asks for a prefab not to be offered.</summary>
     public static bool IsHidden(string? prefab) => PrefabOf(prefab)?.Hidden == true;

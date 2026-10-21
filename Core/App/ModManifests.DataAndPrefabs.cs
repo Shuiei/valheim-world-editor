@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 namespace TerrainEditor.App;
 
 /// <summary>
-/// Reading the data and prefab notes of a manifest: each key's label, read-only flag and help, and each prefab's hidden flag and group.
+/// Reading the data and prefab notes of a manifest: each key's label, read-only flag and help, and each prefab's hidden flag, group and data flag.
 /// </summary>
 public static partial class ModManifests
 {
@@ -32,9 +32,9 @@ public static partial class ModManifests
         }
         foreach (var (name, e) in prefabs)
         {
-            if (e is JsonObject o && Flag(o["hidden"], out bool hidden) && Text(o["group"], out string? group))
+            if (e is JsonObject o && Flag(o["hidden"], out bool hidden) && Text(o["group"], out string? group) && Flag(o["data"], out bool data))
             {
-                notes.Prefabs[name] = new PrefabNote(hidden, group);
+                notes.Prefabs[name] = new PrefabNote(hidden, group, data);
             }
         }
     }

@@ -60,8 +60,10 @@ public static partial class WorldWriter
         Dictionary<(int, int), ZoneReset> resetByZone = resets.ToDictionary(r => (r.X, r.Z));
         foreach (ObjectRef o in world.ObjectRefs)
         {
-            // Players' tombstones (with what they carried) are never cleared.
-            if (resetByZone.TryGetValue(o.Zone, out ZoneReset? r) && !(r.KeepBuildings && o.IsPiece) && !(o.IsTerrain && !r.Ground) && o.Prefab != TombstonePrefab)
+            // Players' tombstones (with what they carried) are never cleared; what a mod keeps of its buildings' in its
+            // own data objects (a mod's data holders) stays with the buildings.
+            if (resetByZone.TryGetValue(o.Zone, out ZoneReset? r) && !(r.KeepBuildings && (o.IsPiece || App.ModManifests.IsData(o.Prefab)))
+                && !(o.IsTerrain && !r.Ground) && o.Prefab != TombstonePrefab)
             {
                 Remove(o);
             }

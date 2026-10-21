@@ -65,9 +65,13 @@ public sealed partial class LiveBridge : IDisposable
 
     /// <summary>
     /// Zones to hand back to the world generator in the running game: int count, then per zone int x, int z, bool keep
-    /// buildings, bool reset ground. Returns the plugin's JSON.
+    /// buildings, bool reset ground; then the prefabs kept with the buildings besides the pieces (int count, then each
+    /// prefab hash: mods' data holders, ModManifests.IsData), which a plugin older than 1.93.0 does not read. Returns
+    /// the plugin's JSON.
     /// </summary>
-    public async Task<string> ResetZones(IReadOnlyList<Editing.ZoneReset> zones)
+    /// <param name="zones">The zones.</param>
+    /// <param name="keptWithBuildings">Prefabs kept by a reset that keeps the buildings, besides player-built pieces.</param>
+    public async Task<string> ResetZones(IReadOnlyList<Editing.ZoneReset> zones, IReadOnlyCollection<int>? keptWithBuildings = null)
     {
         using var res = await Send(HttpMethod.Post, "zones/reset", Build(w =>
         {
@@ -78,6 +82,11 @@ public sealed partial class LiveBridge : IDisposable
                 w.Write(z.Z);
                 w.Write(z.KeepBuildings);
                 w.Write(z.Ground);
+            }
+            w.Write(keptWithBuildings?.Count ?? 0);
+            foreach (int prefab in keptWithBuildings ?? [])
+            {
+                w.Write(prefab);
             }
         }));
         string body = await res.Content.ReadAsStringAsync();

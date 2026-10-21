@@ -130,7 +130,7 @@ plot that is no world: it has nothing to save; its building becomes a Homestead 
 | Save | `WorldSave`, `ValheimReader`, `WorldWriter`, `WorldCreator`, `ZdoReader`, `ZdoTools`, `ZdoData`, `InventoryData`, `ChunkMath` (`Core/Save/`) | Byte formats follow the game's `ZPackage`. |
 | Pending changes | `EditStore`, `ZoneEdit`, `NewObject`, `ObjectField`, `ZoneReset`, `HeightGrid`, `Uplift` (`Core/Editing/`) | `EditStore` takes its own lock: strokes and buttons use it from different threads. |
 | Building, dungeons | `Hammer`, `Stability`, `Dungeons`, `DungeonGen`, `DungeonPlan`, `DungeonDresser`, `LocationPrefabs` (`Core/Editing/`) | The hammer's snapping, the support check and the room joining, from the game's data; what the game makes of a location it spawns (for new worlds). `Dungeons.UseMod` lays the open world's Expand World Data room and dungeon files (`DungeonRules`) over the game's catalogue when an area opens; `Dungeons.Scope` does it for one flow of work (the tests). |
-| Mods' objects | `ObjectLinks`, `LinkRule`, `LinkSet`, `ObjectLink`, `LinkIndex` (`Core/App/ObjectLinks.cs`), `ModKeys`, `ModManifests`, `ModCatalogue`, `ModExtensions`, `ObjectView`, `CopyView`, `GroundCuts` (`Core/App/`) | Objects mods link into one, mods' extensions (below); mods' data names, manifests and prefabs. |
+| Mods' objects | `ObjectLinks`, `LinkRule`, `LinkSet`, `ObjectLink`, `LinkIndex` (`Core/App/ObjectLinks.cs`), `ModKeys`, `ModManifests`, `ModCatalogue`, `ModExtensions`, `ModComponents`, `ObjectView`, `CopyView`, `GroundCuts` (`Core/App/`) | Objects mods link into one, mods' extensions (below); mods' data names, manifests and prefabs. |
 | Game data | `GameLook`, `GameBundles`, `GameData`, `GameCatalogues*`, `GameLocations`, `GameTextures`, `Crunch`, `GameShader`, `TerrainShader` (`Core/App/`) | Below. |
 | Live | `LiveBridge`, `LiveSync` (`Core/Save/`), `Tunnel`, `ServerConfig`, `LocalGame` (`Core/App/`) | Below. |
 | Claude, scripts | `ClaudeServer`, `ClaudeTools`, `ClaudeBuilder`, `ClaudeGuide`, `ClaudeRelay`, `ScriptHost`, `ScriptApi.csx` (`Desktop/`) | Below. |
@@ -168,9 +168,16 @@ no data tables. Everything is read at run time from the player's install:
 - Mods' manifests: `Core/App/ModManifests.cs` reads every `worldeditor.json` in the plugins folders
   (docs/modding.md, docs/worldeditor.schema.json) as a world or the Workshop opens
   (`WorldSession.ReadModFiles`): data labels, read-only flags and help for `InspectorPanel`, hidden
-  prefabs left out of `PlacePanel` and `BuildPanel`, groups for the Mods tab. `PlacePanel` also leaves
+  prefabs left out of `PlacePanel` and `BuildPanel`, groups for the Mods tab, data holders (`ModManifests.IsData`:
+  objects that only hold a mod's data, left out of an area's things by `WorldScene.ReadThings`, kept by a zone reset that
+  keeps the buildings in `WorldWriter.PlanRemovals` and, live, by the plugin's `/zones/reset`). `PlacePanel` also leaves
   out a mod's helpers, prefabs whose reported model has no parts (sounds, effects; `PlacePanel.NotOffered`),
   and works its list out again when `ModManifests.Generation` or `ModCatalogue.Generation` changes.
+- Mods' game components: `Core/App/ModComponents.cs` reads the fields of the game's scripts the running extensions'
+  manifests ask for (`gameComponents`, `ModExtensions.RequestedComponents`) in one pass over the bundles
+  (`GameCatalogues.ReadComponents`), after the extensions at `WorldSession.ReadModFiles`, and keeps them in
+  `game-mod-components.json` (user data folder) until the game, the editor or the classes asked for change; extensions
+  read them as `IEditorHost.Game`.
 - Mods' data names: `Core/App/ModKeys.cs` reads the string literals of every DLL in the plugins
   folders (`GameCatalogues.KeyNamesIn`, as `zdo-keys` reads `assembly_valheim.dll`), keeps them in
   `mod-zdo-keys.json` (user data folder) until a DLL changes, and gives them to `ZdoKeys.UseMods`;
@@ -360,7 +367,7 @@ The endpoints (the plugin's header comment lists them with their byte layouts):
 | `GET /snapshot` | The whole persistent world, gzip: `VWEB`, a snapshot version, world info, zone data, every object in the chunk files' format. `WorldSave.LoadLive` refuses another version. |
 | `POST /terrain` | Zones' new `TCData` (`WorldWriter.EncodeTerrain`, the game's `TerrainComp.Save` format). |
 | `POST /objects` | Objects to destroy (ZDOID) and to create (save bytes), then the destroyed ones' prefab and place, then objects to move (ZDOID, prefab, place, new place and turn, and the object at its new place as save bytes); answers the new ZDOIDs, how many were refound at their place after another mod made them again, and each move's ZDOID and whether it moved in place (it is made again from its bytes where a player has both places loaded: a game does not move a standing object it shows). A call with an `X-Call-Id` header already done (its answer lost) is answered again from the last 16 kept, not done twice. |
-| `POST /zones/reset` | Zones to generate again. |
+| `POST /zones/reset` | Zones to generate again, each keeping its buildings or not; then (1.93.0 on) the prefabs kept with the buildings besides the players' pieces (mods' data holders), which older plugins do not read. |
 | `POST /watch`, `POST /zone`, `POST /zone/movers` | Two digests per zone (the editor asks every 2 s): the first changes when an object is made or removed or one that stays put changes, and the zone's objects are read whole (`/zone`); the second (1.57.3 on; older plugins give one digest, read as 0) when a kind that moves or ticks on its own (`ZSyncTransform`, fires, smelters...) moves or changes, and only those objects are read (`/zone/movers`). `WorldSave.MergeLive` takes both: objects of a zone read whole that the game lacks vanish, nothing of a zone read in part does; the editor's own objects (`LiveSync.IsOurs`) are given back as `Merged.Made`, and `WorldSession.TakeMade` gives the editor's copies the game's place, turn and data (`EditStore.TakeFromGame`, same id, no history step; `LiveSync.Moved`). |
 | `POST /models` | Prefab names, one per line: JSON, what the game draws of each (each renderer's mesh name and vertex count, submesh, material name, matrix in the root's frame, the root's scale; LOD 0, active, not the worn and broken looks). `WorldSession.OpenLive` asks it for the mod prefabs; `ModCatalogue.TakeModels` keeps them. On a dedicated server (no graphics) the game has no textures or colours to report, so only names. |
 | `GET /catalogue` | JSON: every prefab with a ZNetView the game knows, mods' too, in GameData's formats (prefabs, pieces, piece-cost) and the mod of each (Jötunn's `ModQuery`, when installed). `WorldSession.OpenLive` hands it to `GameData.AddMods`; `ModCatalogue` keeps the ones that are not the game's own in `mod-catalogue.json` (data folder) and lays them over the game's data (the game's entries win). |

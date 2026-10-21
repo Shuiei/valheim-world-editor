@@ -62,6 +62,9 @@ public static partial class ModExtensions
         public ILiveGame? Live => _live;
 
         /// <inheritdoc/>
+        public IGameData Game => ModComponents.View;
+
+        /// <inheritdoc/>
         public void Redraw() => ModExtensions.Redraw();
     }
 }

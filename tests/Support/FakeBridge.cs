@@ -43,6 +43,9 @@ public sealed partial class FakeBridge : IDisposable
 
     public List<(int X, int Z, bool Keep, bool Ground)> Resets { get; } = [];
 
+    /// <summary>The prefabs the zone resets asked to keep with the buildings (mods' data holders).</summary>
+    public List<int> KeptWithBuildings { get; } = [];
+
     /// <summary>The features its status lists ("move": it takes moves).</summary>
     public List<string> Features { get; } = [];
 

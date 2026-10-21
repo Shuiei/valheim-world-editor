@@ -36,6 +36,27 @@ public static partial class GameCatalogues
             "wake-draws" => new WakeScan(),
             _ => throw new ArgumentException($"no kind {k} is read at the start"),
         })).ToList();
+        Pass(bundles, [.. scans.Select(s => s.Scan)], progress);
+        return scans.ToDictionary(s => s.Kind, s => s.Scan.Json());
+    }
+
+    /// <summary>
+    /// The fields of the game's components of the script classes named (for mods' extensions: ModComponents), as JSON:
+    /// by class, a list of {"prefab", "object", "fields"}, in the order found. One pass over the bundles.
+    /// </summary>
+    /// <param name="bundles">The game's bundles.</param>
+    /// <param name="classes">The script classes.</param>
+    /// <param name="progress">Told the bundles read, of all of them, before each.</param>
+    public static string ReadComponents(GameBundles bundles, IReadOnlyCollection<string> classes, Action<int, int>? progress = null)
+    {
+        var scan = new ComponentScan(classes);
+        Pass(bundles, [scan], progress);
+        return scan.Json();
+    }
+
+    /// <summary>Opens each bundle once, in the order of their names, and gives it to every scan.</summary>
+    private static void Pass(GameBundles bundles, IReadOnlyList<IStartScan> scans, Action<int, int>? progress)
+    {
         using var game = new Game(bundles.Folder);
         game.IndexCabs();
         int done = 0;
@@ -45,13 +66,12 @@ public static partial class GameCatalogues
             using var b = game.Open(name);
             if (b != null)
             {
-                foreach (var (_, scan) in scans)
+                foreach (var scan in scans)
                 {
                     scan.Read(b, game);
                 }
             }
         }
-        return scans.ToDictionary(s => s.Kind, s => s.Scan.Json());
     }
 
     /// <summary>

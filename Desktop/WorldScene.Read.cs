@@ -8,7 +8,10 @@ namespace TerrainEditor.Desktop;
 
 public sealed partial class WorldScene
 {
-    /// <summary>The objects and building pieces of the block's zones (those not deleted).</summary>
+    /// <summary>
+    /// The objects and building pieces of the block's zones (those not deleted), but the objects that only hold a mod's
+    /// data (ModManifests.IsData: nothing to see; its extension reads them).
+    /// </summary>
     /// <param name="world">The save.</param>
     /// <param name="x0">The block's south-west zone, x.</param>
     /// <param name="z0">The block's south-west zone, z.</param>
@@ -34,7 +37,7 @@ public sealed partial class WorldScene
         var links = LinkIndex.Of(world, deleted, addedNow);
         foreach (var (id, prefab, p, r, sc) in world.Objects)
         {
-            if (Inside(p) && !deleted.Contains(id))
+            if (Inside(p) && !deleted.Contains(id) && !ModManifests.IsData(prefab))
             {
                 things.Add(Placed(new Thing(id, prefab, p, r, sc.X, false) { Tamed = world.Tamed.Contains(id) }, links));
             }
@@ -49,7 +52,7 @@ public sealed partial class WorldScene
         // Not the ground discs for No limit ground (invisible: they are just the ground).
         foreach (var n in addedNow)
         {
-            if (Inside(n.Position) && n.Prefab != WorldSave.LocationProxyPrefab)
+            if (Inside(n.Position) && n.Prefab != WorldSave.LocationProxyPrefab && !ModManifests.IsData(n.Prefab))
             {
                 things.Add(Placed(new Thing(n.Id, n.Prefab, n.Position, n.Rotation, n.Scale, PieceCatalog.Get(n.Prefab)?.Tool != null) { Tamed = TamedOf(world, n) }, links));
             }

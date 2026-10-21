@@ -88,6 +88,10 @@ public static partial class ModExtensions
     /// <summary>Backs <see cref="Generation"/>.</summary>
     private static volatile int _generation;
 
+    /// <summary>The game's script classes the running extensions' manifests ask for ("gameComponents": ModComponents).</summary>
+    public static IReadOnlyCollection<string> RequestedComponents =>
+        [.. ModManifests.Extensions.Where(o => _state.Running.ContainsKey(o.Dll)).SelectMany(o => o.GameComponents).Distinct(StringComparer.Ordinal)];
+
     /// <summary>The extensions the mods offer, and what became of each.</summary>
     public static IReadOnlyList<Extension> Offered => _state.Offered;
 

@@ -107,8 +107,8 @@ public sealed partial class WorldSession : IDisposable
 
     /// <summary>
     /// What the editor reads from the player's mods as a world or the Workshop opens: the data names their code holds
-    /// (ModKeys, read again only when a mod changes), their worldeditor.json manifests (ModManifests) and the editor
-    /// extensions they offer that the user allowed (ModExtensions).
+    /// (ModKeys, read again only when a mod changes), their worldeditor.json manifests (ModManifests), the editor
+    /// extensions they offer that the user allowed (ModExtensions) and the game's components those ask for (ModComponents).
     /// </summary>
     public static void ReadModFiles()
     {
@@ -116,6 +116,7 @@ public sealed partial class WorldSession : IDisposable
         ModKeys.Refresh(settings);
         ModManifests.Refresh(settings);
         ModExtensions.Refresh(settings);
+        ModComponents.Refresh(GameLook.Bundles, ModExtensions.RequestedComponents);
     }
 
     /// <summary>

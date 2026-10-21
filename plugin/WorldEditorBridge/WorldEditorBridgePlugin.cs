@@ -30,8 +30,9 @@ namespace WorldEditorBridge;
 ///                   then int k + k x (long user, uint id, int prefab, place, new place, turn, int length + object
 ///                   in save format) objects to move; answers with the new and moved objects' ids. A call sent
 ///                   again under the same X-Call-Id header is answered again, not done twice
-///   POST /zones/reset  int n + n x (int x, int z, bool keep buildings, bool reset ground): the zones'
-///                   objects are removed and the zones are generated again (at once where players are)
+///   POST /zones/reset  int n + n x (int x, int z, bool keep buildings, bool reset ground), then (1.93.0 on)
+///                   int k + k x int prefab kept with the buildings: the zones' objects are removed and the
+///                   zones are generated again (at once where players are)
 ///   POST /watch     int n + n x (int x, int z): two change numbers per zone (JSON): one for what stays put
 ///                   (made, removed, changed), one for the kinds that move or tick on their own
 ///   POST /zone      the same zone list: those zones' saved objects, gzip-compressed

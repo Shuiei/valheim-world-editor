@@ -43,10 +43,14 @@ public static class ExampleMod
     /// <summary>The prefab of a vehicle's root.</summary>
     public const string Hull = "example_hull";
 
+    /// <summary>The prefab of the mod's fleet register: an object that only holds its data (the manifest's "data").</summary>
+    public const string Fleet = "example_fleet";
+
     /// <summary>The mod's worldeditor.json.</summary>
     public const string Manifest = $$"""
         {
           "version": 1,
+          "prefabs": { "{{Fleet}}": { "data": true } },
           "links": [
             {
               "name": "vehicle",

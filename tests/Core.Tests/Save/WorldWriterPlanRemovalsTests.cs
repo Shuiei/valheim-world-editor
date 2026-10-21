@@ -73,6 +73,19 @@ public class WorldWriterPlanRemovalsTests
     }
 
     [Fact]
+    public void AModsDataHoldersStayWithTheBuildingsOnly()
+    {
+        int fleet = StableHash.Of(ExampleMod.Fleet);
+        var world = World(Obj(10, 0, 0, prefab: fleet), Obj(20, 0, 0), Obj(30, 100, 0, prefab: fleet));
+        var keep = new WorldWriter.Planned([], [], []);
+        WorldWriter.PlanRemovals(world, [], [new ZoneReset(0, 0, KeepBuildings: true, Ground: false)], keep);
+        Assert.Equal(new HashSet<long>([20]), keep.Removals[File]);
+        var clear = new WorldWriter.Planned([], [], []);
+        WorldWriter.PlanRemovals(world, [], [new ZoneReset(0, 0, KeepBuildings: false, Ground: false), new ZoneReset(1, 0, KeepBuildings: false, Ground: false)], clear);
+        Assert.Equal(new HashSet<long>([10, 20]), clear.Removals[File]);
+    }
+
+    [Fact]
     public void AResetThatKeepsBuildingsKeepsItsPieces()
     {
         var world = World(Obj(10, 0, 0, piece: true), Obj(20, 0, 0));

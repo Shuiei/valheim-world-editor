@@ -22,6 +22,12 @@
       }
     },
     "extension": { "$ref": "#/$defs/text", "pattern": "\\.dll$", "description": "The mod's editor extension: a DLL, relative to this file's folder and inside it. Runs once the player allows it (Settings, Mod extensions)." },
+    "gameComponents": {
+      "type": "array",
+      "maxItems": 32,
+      "description": "Class names of the game's scripts whose fields the extension reads (IEditorHost.Game): read from the player's Valheim while the extension runs.",
+      "items": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,99}$" }
+    },
     "links": {
       "type": "array",
       "description": "How the mod links its objects into one (a ship and its pieces): each rule's keys are data keys, as the mod's code names them.",
@@ -49,7 +55,8 @@
         "type": "object",
         "properties": {
           "hidden": { "type": "boolean", "description": "Not offered in Place or the Workshop's Build panel." },
-          "group": { "$ref": "#/$defs/text", "description": "The heading the piece is listed under in the Build panel's Mods tab." }
+          "group": { "$ref": "#/$defs/text", "description": "The heading the piece is listed under in the Build panel's Mods tab." },
+          "data": { "type": "boolean", "description": "Objects of it only hold the mod's data: never drawn, picked or listed, kept by a zone reset that keeps the buildings." }
         },
         "additionalProperties": false
       }
