@@ -3,6 +3,13 @@
 Changes to the Tunnelheim add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
+## v0.3.0 — 2026-10-21
+
+### Added
+- **Tunnels go with copies.** Copying an area or a selection takes the tunnels dug there with it, blueprint files
+  too, and pasting digs them again where the copy lands, turned and mirrored with it, into the tunnel records already
+  there. What the mod has already baked into a column's checkpoint is not copied (the log says so).
+
 ## v0.2.0 — 2026-10-21
 
 ### Added

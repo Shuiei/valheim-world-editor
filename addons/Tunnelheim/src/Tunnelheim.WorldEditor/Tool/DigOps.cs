@@ -1,4 +1,5 @@
 using System.Numerics;
+using ValheimWorldEditor.Sdk;
 
 namespace Tunnelheim.WorldEditor;
 
@@ -137,6 +138,23 @@ public static class DigOps
     /// <param name="look">The way down (only its horizontal part counts).</param>
     /// <param name="steps">How many steps.</param>
     public static DigOp Stairs(Vector3 top, Vector3 look, int steps) => Aimed(DigKind.Stairs, top, steps, FlatOr(look, Vector3.UnitZ));
+
+    /// <summary>
+    /// An edit of a copy where the copy lands: its point placed, its turn (a yaw, a box's or a hoe stroke's turn) turned
+    /// and mirrored with it; its pitch, sizes and floor as they were.
+    /// </summary>
+    /// <param name="op">The edit, its point an offset from the copy's middle.</param>
+    /// <param name="copy">Where the copy lands.</param>
+    public static DigOp Moved(in DigOp op, CopyPlacement copy)
+    {
+        var moved = op with { Position = copy.Place(op.Position) };
+        return op.Kind switch
+        {
+            DigKind.Hoe or DigKind.SizedHoe => moved with { Value = copy.Yaw(op.Value) },
+            DigKind.Box or DigKind.Plane or DigKind.Stroke or DigKind.Chip or DigKind.Stairs or DigKind.ChipFloor => moved with { Extra = copy.Yaw(op.Extra) },
+            _ => moved,
+        };
+    }
 
     /// <summary>The middles of 2 m cubes covering a size around a middle: as many as it takes, centred on it.</summary>
     private static IEnumerable<float> Centred(float middle, float size)
