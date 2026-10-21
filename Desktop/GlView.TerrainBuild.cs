@@ -27,39 +27,8 @@ public sealed partial class GlView
         }
         _terrainVao = _own.VertexArray();
         _gl.BindVertexArray(_terrainVao);
-        uint vbo = _terrainVbo = _own.Buffer();
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
-        _own.Upload(BufferTargetARB.ArrayBuffer, v);
-        uint ebo = _terrainEbo = _own.Buffer();
-        _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, ebo);
-        _own.Upload(BufferTargetARB.ElementArrayBuffer, idx);
-        for (uint a = 0; a < 3; a++)
-        {
-            _gl.EnableVertexAttribArray(a);
-            _gl.VertexAttribPointer(a, 3, VertexAttribPointerType.Float, false, 36, (void*)(a * 12));
-        }
         // For the game's terrain shader: biome colour (bytes), then mask uv, ocean depth, limit tint.
-        uint bc = _terrainBiomeVbo = _own.Buffer();
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, bc);
-        fixed (byte* p = s.BiomeColor)
-        {
-            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)s.BiomeColor.Length, p, BufferUsageARB.StaticDraw);
-        }
-        _gl.EnableVertexAttribArray(3);
-        _gl.VertexAttribPointer(3, 4, VertexAttribPointerType.UnsignedByte, true, 4, (void*)0);
-        float[] extra = ExtraRows(s, 0, h - 1);
-        uint ex = _terrainExtraVbo = _own.Buffer();
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, ex);
-        fixed (float* p = extra)
-        {
-            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(extra.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
-        _gl.EnableVertexAttribArray(4);
-        _gl.VertexAttribPointer(4, 2, VertexAttribPointerType.Float, false, 16, (void*)0);
-        _gl.EnableVertexAttribArray(5);
-        _gl.VertexAttribPointer(5, 1, VertexAttribPointerType.Float, false, 16, (void*)8);
-        _gl.EnableVertexAttribArray(6);
-        _gl.VertexAttribPointer(6, 1, VertexAttribPointerType.Float, false, 16, (void*)12);
+        (_terrainVbo, _terrainEbo, _terrainBiomeVbo, _terrainExtraVbo) = UploadGroundLayout(v, idx, s.BiomeColor, ExtraRows(s, 0, h - 1));
         // Where the ground is cut (none until the extensions' shapes are made: RebuildShapes).
         if (s.Cut.Length != w * h)
         {

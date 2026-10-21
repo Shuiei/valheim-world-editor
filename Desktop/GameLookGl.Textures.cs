@@ -96,10 +96,7 @@ public sealed partial class GameLookGl
         {
             _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.R16f, (uint)s.W, (uint)s.H, 0, PixelFormat.Red, PixelType.HalfFloat, p);
         }
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        _own.Clamped2D(linear: true);
         return t;
     }
 }
