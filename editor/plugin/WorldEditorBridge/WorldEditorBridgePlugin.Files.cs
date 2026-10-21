@@ -61,7 +61,7 @@ public sealed partial class WorldEditorBridgePlugin
         }
         else if (full != null && Directory.Exists(full))
         {
-            Reply(res, 200, "application/json", Encoding.UTF8.GetBytes(FolderJson(full)));
+            ServeFolder(res, root, parts, full);
         }
         else if (full != null && File.Exists(full))
         {
@@ -99,6 +99,21 @@ public sealed partial class WorldEditorBridgePlugin
             walked = found;
         }
         return (walked, false);
+    }
+
+    /// <summary>
+    /// A folder under the config folder: listed first, then checked again for a link along its path, as a file is once
+    /// open, so that a folder swapped for a link after the path was found serves nothing (400).
+    /// </summary>
+    private static void ServeFolder(HttpListenerResponse res, string root, string[] parts, string full)
+    {
+        string json = FolderJson(full);
+        if (Linked(root, parts))
+        {
+            Reply(res, 400, "text/plain", Encoding.UTF8.GetBytes("the path must name a file or folder inside BepInEx/config"));
+            return;
+        }
+        Reply(res, 200, "application/json", Encoding.UTF8.GetBytes(json));
     }
 
     /// <summary>
