@@ -88,8 +88,8 @@ everything under the new keys and the old files are removed on the next load.
   10490 → `(total - 10) / stretch`; the offsets replaced when set; then the postfix
   `water + (h - water) * altitudeMultiplier + delta / 200`.
 - `GetBiome`: a prefix divides `x` and `z` by the stretch (priority higher than normal, so before
-  Expand World Data's prefix); a transpiler divides the four land-biome noise coordinates by the
-  biome stretch and replaces the distance bands with fractions of `radius / stretch`: 2000 → 0.2,
+  Expand World Data's prefix); a transpiler divides the point of the four land-biome noise fields by
+  the biome stretch, in float, before the seed's offset is added (the offset is not divided), and replaces the distance bands with fractions of `radius / stretch`: 2000 → 0.2,
   6000 → 0.6, 10000 → 1, 3000 → 0.3, 8000 → 0.8, 600 → 0.06, 6000 → 0.6, 5000 → 0.5 (same
   float/double types as the game's literals).
 - `IsDeepnorth`: 4000 → 0.4, 12000 → 1.2 of the stretched radius; `CreateAshlandsGap` 400 → 0.04;
