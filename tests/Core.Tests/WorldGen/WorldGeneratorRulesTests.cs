@@ -82,6 +82,25 @@ public class WorldGeneratorRulesTests
     }
 
     [Theory]
+    // Recorded on a dedicated server with Expand World Size 1.45 (Stretch biomes 2, nothing else), seed JkhDYs42rS: the
+    // point's bits, then the game's biome. The mod divides the point by the stretch before the seed's offset is added
+    // (dividing the offset too moved every biome field: these came out Mistlands, Black Forest, Ocean, Ocean).
+    [InlineData(0xc600fe7e, 0xc590edec, Heightmap.Biome.BlackForest)]
+    [InlineData(0xc5d8d342, 0xc54fa9ba, Heightmap.Biome.Mistlands)]
+    [InlineData(0x45b894e5, 0x44d7351b, Heightmap.Biome.Mistlands)]
+    [InlineData(0x45b5f566, 0xc5b0595a, Heightmap.Biome.BlackForest)]
+    public void TheBiomeStretchDividesThePointNotTheSeedsOffset(uint x, uint z, Heightmap.Biome biome)
+    {
+        var g = WorldGenerator.Create(new World
+        {
+            Seed = TerrainEditor.Save.StableHash.Of("JkhDYs42rS"),
+            WorldGenVersion = 2,
+            Rules = new WorldRules { SizeInstalled = true, BiomeStretch = 2f },
+        });
+        Assert.Equal(biome, g.GetBiome(BitConverter.UInt32BitsToSingle(x), BitConverter.UInt32BitsToSingle(z)));
+    }
+
+    [Theory]
     // Recorded on a dedicated server with Expand World Size 1.45 (altitude x1.3 +4 m, water depth x1.5), seed 92HN0t50CB:
     // the point's bits, then the game's height's. The mod's float formulas are worked out in double by the game's
     // runtime and rounded once: in float each step's rounding gave -22.5, -16.971634, 71.47486, -5.5773735, 82.03393.
@@ -100,6 +119,25 @@ public class WorldGeneratorRulesTests
         });
         float px = BitConverter.UInt32BitsToSingle(x), pz = BitConverter.UInt32BitsToSingle(z);
         Assert.Equal(height, BitConverter.SingleToUInt32Bits(g.GetBiomeHeight(g.GetBiome(px, pz), px, pz, out _)));
+    }
+
+    [Theory]
+    // Recorded on a dedicated server with Expand World Size 1.45 (World radius 20500, nothing else), seed cUTClIlxRw:
+    // the point's bits, then the game's CreateDeepNorthGap's. The mod hands 1.2f times the radius over as a double,
+    // never rounded to a float: rounded, the circle moved by a millimetre and these came out a little off.
+    [InlineData(0xc660f500, 0x462acace, 0x3fee157f60000000)]
+    [InlineData(0xc632ccdf, 0x465e439d, 0x3fecc906e0000000)]
+    [InlineData(0xc444518a, 0x46816599, 0x3fcdb9ed40000000)]
+    [InlineData(0x4691d240, 0x45efb39a, 0x3df1fd4da0000000)]
+    public void TheDeepNorthGapsRadiusIsTheGamesDouble(uint x, uint z, ulong gap)
+    {
+        var g = WorldGenerator.Create(new World
+        {
+            Seed = TerrainEditor.Save.StableHash.Of("cUTClIlxRw"),
+            WorldGenVersion = 2,
+            Rules = new WorldRules { SizeInstalled = true, Radius = 20500f },
+        });
+        Assert.Equal(gap, BitConverter.DoubleToUInt64Bits(g.CreateDeepNorthGap(BitConverter.UInt32BitsToSingle(x), BitConverter.UInt32BitsToSingle(z))));
     }
 
     [Fact]
