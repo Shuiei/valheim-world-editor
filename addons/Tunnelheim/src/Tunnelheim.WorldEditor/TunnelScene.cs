@@ -19,7 +19,8 @@ public sealed class TunnelScene(IEditorHost host, Action<string> log) : IScenePr
         {
             return null;
         }
-        var grid = TunnelArea.Build(area, TerrainOps.From(host.Game.Components(TerrainOps.ScriptClass)), log);
+        var grid = TunnelArea.Build(area, host, log);
+        bool lava = TunnelheimMod.AshlandsLava(host);
         var layer = new SceneLayer();
         foreach (var (cx, cz) in grid.Columns)
         {
@@ -27,7 +28,7 @@ public sealed class TunnelScene(IEditorHost host, Action<string> log) : IScenePr
             layer.Holes.Add(new GroundHole(x0, z0, x0 + (int)RockGrid.ColumnMetres, z0 + (int)RockGrid.ColumnMetres));
             foreach (int cy in grid.ChunksOf(cx, cz))
             {
-                if (Mesh(area, grid, RockMesher.Build(grid, cx, cy, cz), new Vector3(x0, cy * RockGrid.ColumnMetres, z0)) is { } mesh)
+                if (Mesh(area, grid, RockMesher.Build(grid, cx, cy, cz), new Vector3(x0, cy * RockGrid.ColumnMetres, z0), lava) is { } mesh)
                 {
                     layer.Meshes.Add(mesh);
                 }
@@ -36,15 +37,18 @@ public sealed class TunnelScene(IEditorHost host, Action<string> log) : IScenePr
         return layer;
     }
 
-    /// <summary>A chunk's rock in the world, coloured and painted as the mod draws it; null when it has no surface.</summary>
-    private static SceneMesh? Mesh(IAreaView area, RockGrid grid, RockMesh rock, Vector3 corner)
+    /// <summary>
+    /// A chunk's rock in the world, coloured and painted as the mod draws it (<paramref name="lava"/>: the mod keeps the
+    /// ground's lava on Ashlands rock); null when it has no surface.
+    /// </summary>
+    private static SceneMesh? Mesh(IAreaView area, RockGrid grid, RockMesh rock, Vector3 corner, bool lava)
     {
         if (rock.Triangles.Length == 0)
         {
             return null;
         }
         float half = RockGrid.ColumnMetres / 2;
-        var palette = RockLook.At(area, corner + new Vector3(half, half, half));
+        var palette = RockLook.At(area, corner + new Vector3(half, half, half), lava);
         var positions = new Vector3[rock.Positions.Length];
         uint[] colours = new uint[positions.Length];
         var uvs = new Vector2[positions.Length];
@@ -63,12 +67,9 @@ public sealed class TunnelScene(IEditorHost host, Action<string> log) : IScenePr
     /// </summary>
     private static float Ground(IAreaView area, RockGrid grid, RockLook.Palette palette, RockMesh rock, int i, Vector3 p)
     {
-        bool counts = palette switch
-        {
-            RockLook.Palette.Default => false,
-            RockLook.Palette.Ashlands => OpenToSky(grid, p + (rock.Normals[i] * 0.6f)),
-            _ => !rock.Dug[i] && rock.Paint[i] == RockPaint.None,
-        };
+        bool counts = RockLook.IsStrip(palette) && (palette == RockLook.Palette.Ashlands
+            ? OpenToSky(grid, p + (rock.Normals[i] * 0.6f))
+            : !rock.Dug[i] && rock.Paint[i] == RockPaint.None);
         return counts ? GroundAt(area, palette, p.X, p.Z) : 0f;
     }
 

@@ -133,7 +133,7 @@ public sealed class TunnelTool(IEditorHost host, Action<string> log) : IEditorTo
     }
 
     /// <summary>The area's rock, built now (a click's edits are played on a fresh build).</summary>
-    private RockGrid Rock(IAreaView area) => TunnelArea.Build(area, TerrainOps.From(host.Game.Components(TerrainOps.ScriptClass)), log);
+    private RockGrid Rock(IAreaView area) => TunnelArea.Build(area, host, log);
 
     private static Action Chosen(IToolContext ctx) => (Action)Math.Max(0, Math.Min(Labels.Length - 1, ctx.Choice("action")));
 

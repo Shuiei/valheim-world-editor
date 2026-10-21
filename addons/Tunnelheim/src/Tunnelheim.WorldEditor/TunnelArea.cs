@@ -8,13 +8,17 @@ namespace Tunnelheim.WorldEditor;
 /// </summary>
 public static class TunnelArea
 {
-    /// <summary>The rock of an area: every column with a record built (none when it has no records).</summary>
+    /// <summary>
+    /// The rock of an area: every column with a record built (none when it has no records), by the mod's rules as the
+    /// world's game has them (its terrain operations, the building height its settings give).
+    /// </summary>
     /// <param name="area">The area, its objects as they are with the edits not saved yet.</param>
-    /// <param name="hoeOps">The game's terrain operations' settings (<see cref="TerrainOps"/>).</param>
+    /// <param name="host">The editor, for the game's terrain operations (<see cref="TerrainOps"/>) and the mod's settings.</param>
     /// <param name="log">Where a record or checkpoint that cannot be read is told (the column is then built as the game would).</param>
-    public static RockGrid Build(IAreaView area, IReadOnlyDictionary<int, HoeSettings> hoeOps, Action<string> log)
+    public static RockGrid Build(IAreaView area, IEditorHost host, Action<string> log)
     {
-        var grid = new RockGrid(area.GroundHeight, new RockRules(RockRules.DefaultMaxBuildHeight, hoeOps, area.IsDeepNorth));
+        var rules = new RockRules(TunnelheimMod.MaxBuildHeight(host), TerrainOps.From(host.Game.Components(TerrainOps.ScriptClass)), area.IsDeepNorth);
+        var grid = new RockGrid(area.GroundHeight, rules);
         grid.Build(Columns(area, log));
         return grid;
     }

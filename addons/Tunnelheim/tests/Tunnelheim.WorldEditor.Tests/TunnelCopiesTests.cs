@@ -52,8 +52,8 @@ public class TunnelCopiesTests
         Assert.Equal(digs.Select(d => d.Position + new Vector3(32, 0, 0)), pasted.Ops.Select(o => o.Position));
 
         // The rock that comes out there is the copied rock, moved two columns.
-        var copied = TunnelArea.Build(source, new Dictionary<int, HoeSettings>(), _ => { });
-        var landed = TunnelArea.Build(new FakeArea(40, FakeObject.Record(pasted, 40, 8)), new Dictionary<int, HoeSettings>(), _ => { });
+        var copied = TunnelArea.Build(source, new FakeHost(), _ => { });
+        var landed = TunnelArea.Build(new FakeArea(40, FakeObject.Record(pasted, 40, 8)), new FakeHost(), _ => { });
         foreach (int cy in copied.ChunksOf(0, 0))
         {
             var a = copied.Chunk(0, cy, 0)!;

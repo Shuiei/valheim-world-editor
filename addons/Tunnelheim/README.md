@@ -28,6 +28,9 @@ does with them. Tunnelheim itself is unchanged and stays in `BepInEx/plugins`; t
   (never a second record in a column). Checked on a server running the mod: it builds the pasted tunnels as the editor
   draws them. What the mod has baked into a column's checkpoint is no longer a list of edits and is not copied.
 - **Shows tunnel records in words** in the inspector.
+- **Follows the mod's settings** as the world's game has them (live, a server's own, which its players get; else the
+  ones in your BepInEx folder): the building height Add Earth and the levelling tools stop at, and whether Ashlands
+  rock keeps the ground's lava.
 - **Live**: in a game or server running Tunnelheim, the tool's edits and pasted tunnels are applied as any other
   change: a column's record takes the new edits in place (the game plays only those), a new record is made where
   none was. Checked on a server running the mod: it builds the same rock as the editor draws. Needs the editor
@@ -35,7 +38,7 @@ does with them. Tunnelheim itself is unchanged and stays in `BepInEx/plugins`; t
 
 ## Install
 
-1. The Valheim World Editor 1.98.0 or later.
+1. The Valheim World Editor 1.100.0 or later.
 2. From the editor's [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page,
    `ValheimWorldEditor-addon-Tunnelheim-<version>.zip`: unpack it into the `addons` folder next to the editor (on
    macOS, next to `ValheimWorldEditor.app`), so that you have `addons/Tunnelheim/worldeditor.json`.
@@ -55,6 +58,3 @@ tools/addons.sh dist                    # dist/ValheimWorldEditor-addon-Tunnelhe
 The tests replay records taken from the real mod on a local server and compare every chunk's density, paint and mesh
 with what the game built (`tests/Tunnelheim.WorldEditor.Tests/fixtures/tunnelheim-reference.txt`). The add-on's
 version is `VERSION` here, its changes `CHANGELOG.md`: it goes out with every editor release, under its own version.
-
-Known limits: the building height Add Earth and the smoothing tools use is the mod's default (64 m), not the server's
-setting.

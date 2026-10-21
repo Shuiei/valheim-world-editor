@@ -3,6 +3,16 @@
 Changes to the Tunnelheim add-on for the Valheim World Editor. Newest first. It goes out with every editor release,
 as its own zip and under its own version.
 
+## v0.5.0 — 2026-10-21
+
+### Added
+- **The mod's own settings.** Add Earth and the levelling tools stop at the building height the world's game sets
+  (a server's own when live), not always the mod's 64 m. With the mod's lava on rock switched off, Ashlands rock is
+  drawn without lava, as the game draws it.
+
+### Changed
+- Needs the Valheim World Editor 1.100.0 or later.
+
 ## v0.4.0 — 2026-10-21
 
 ### Added

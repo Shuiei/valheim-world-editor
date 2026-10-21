@@ -1,3 +1,5 @@
+using System.Globalization;
+using ValheimWorldEditor.Sdk;
 
 namespace Tunnelheim.WorldEditor;
 
@@ -11,6 +13,9 @@ public static class TunnelheimMod
 {
     /// <summary>The mod's plugin id, which also names its settings file.</summary>
     public const string PluginId = "sam.valheim.tunneling";
+
+    /// <summary>The mod's settings file, under BepInEx/config.</summary>
+    public const string SettingsFile = PluginId + ".cfg";
 
     /// <summary>The mod's plugin file, under a BepInEx plugins folder.</summary>
     public const string DllName = "ValheimTunneling.dll";
@@ -48,4 +53,21 @@ public static class TunnelheimMod
     /// <summary>Whether a prefab is one of the mod's data objects (a record or a checkpoint): no model, never shown.</summary>
     /// <param name="prefab">The prefab hash.</param>
     public static bool IsData(int prefab) => prefab == RecordPrefab || prefab == CheckpointPrefab;
+
+    /// <summary>
+    /// How far above the ground rock may be added (its setting Building, MaxHeightAboveGround), as the world's game has
+    /// it: a server's own, which its players get; the mod's default without, or when it is not a finite number.
+    /// </summary>
+    /// <param name="host">The editor, for the setting.</param>
+    public static float MaxBuildHeight(IEditorHost host) =>
+        float.TryParse(host.Setting(SettingsFile, "Building", "MaxHeightAboveGround"), NumberStyles.Float, CultureInfo.InvariantCulture, out float height)
+            && !float.IsNaN(height) && !float.IsInfinity(height) ? height : RockRules.DefaultMaxBuildHeight;
+
+    /// <summary>
+    /// Whether Ashlands rock open to the sky keeps the ground's lava (its setting Biomes, AshlandsLavaOnRock), as the
+    /// world's game has it; on without.
+    /// </summary>
+    /// <param name="host">The editor, for the setting.</param>
+    public static bool AshlandsLava(IEditorHost host) =>
+        !bool.TryParse(host.Setting(SettingsFile, "Biomes", "AshlandsLavaOnRock"), out bool on) || on;
 }
