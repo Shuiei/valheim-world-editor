@@ -4,6 +4,14 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.93.0 — 2026-10-21
+
+### Added
+- **Tunnelheim's tunnels are read.** The editor reads the tunnels the Tunnelheim mod keeps in a world (each area's
+  digs, Add Earth, Smooth Surface and hoe strokes on rock) and builds the rock as the game does, to the bit: the first
+  step towards drawing them and digging them with a Tunnel tool. The game's hoe and cultivator settings are now read
+  from your Valheim with the rest of its data.
+
 ## v1.92.0 — 2026-10-20
 
 ### Added

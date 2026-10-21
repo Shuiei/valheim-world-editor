@@ -287,6 +287,9 @@ time and after a game update). The kinds:
   drawing script (told by its class) up to its prefab, the tree read raw a level at a time (about 2 s);
   locations, rooms and dungeons are left out (their objects are listed alone). Its test copy keeps the prefabs
   it has.
+- `terrain-ops`: the settings of the game's terrain operations (each hoe and cultivator stroke's `TerrainOp`),
+  by the name of their object, for Tunnelheim's records, which name a stroke on rock by that name's hash and
+  replay it with the game's settings (`Core/Tunnelheim/TerrainOps.cs`). Its test copy keeps the strokes it has.
 
 The tests use trimmed copies, `tests/fixtures/<kind>.json` (what they meet; the driver's
 `gamedata <folder>` gives them to the smoke tests). After a game update, make them again with

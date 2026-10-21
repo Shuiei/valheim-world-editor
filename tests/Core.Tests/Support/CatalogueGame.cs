@@ -257,6 +257,15 @@ public static class CatalogueGame
             r.Mono("TerrainModifier", Modifier(5, level: true));
         });
         b.Prefab("Prop_rock", r => r.Mono("TerrainModifier", Modifier(6)));
+        // A hoe stroke's terrain operation, on its prefab's root, and another's on a child.
+        b.Prefab("paved_test", r => r.Mono("TerrainOp", new Fields
+        {
+            ["m_settings"] = new Fields { ["m_smooth"] = true, ["m_smoothRadius"] = 3.0, ["m_smoothPower"] = 1.0, ["m_paintCleared"] = true, ["m_paintType"] = 2, ["m_paintRadius"] = 2.2 },
+        }));
+        b.Prefab("raise_test", r => r.Child("raise_op", c => c.Mono("TerrainOp", new Fields
+        {
+            ["m_settings"] = new Fields { ["m_levelOffset"] = 0.5, ["m_raise"] = true, ["m_raiseRadius"] = 2.0, ["m_raisePower"] = 0.1, ["m_raiseDelta"] = 1.0 },
+        })));
     }
 
     /// <summary>

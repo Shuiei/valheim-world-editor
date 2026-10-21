@@ -37,6 +37,12 @@ reviews:
         The world generator follows the game's formulas bit for bit (WorldCheck checks it against
         values recorded in the game): flag any change to arithmetic, casts or the order of random
         draws.
+    - path: "Core/Tunnelheim/**"
+      instructions: >-
+        Tunnelheim's rock replay and mesher follow the mod's maths bit for bit (RockGridReferenceTests
+        compares them with what the mod built in a game): the game's runtime works float expressions
+        in double and rounds where they are stored, so flag any change to arithmetic, casts, the order
+        of operations or loops.
     - path: "plugin/**"
       instructions: >-
         A BepInEx plugin for Valheim (Unity, .NET Framework 4.7.2): Unity calls Awake, Update and

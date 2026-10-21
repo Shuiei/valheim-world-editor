@@ -16,9 +16,9 @@ cover them:
 
 - In `tests/fixtures/`: `locations.json`, `terrain-modifiers.json`, `prefabs.json`, `pieces.json`,
   `piece-support.json`, `piece-place.json`, `zdo-keys.json`, `cave-rocks.json`, `piece-cost.json`,
-  `vegetation.json` and `dungeon-rooms.json`, some of the game's location rules, terrain modifiers,
-  prefabs, build pieces, pieces' support and placement, object data names, a cave roof rock's mesh,
-  pieces' costs, vegetation rules and dungeons' rooms, for the tests (the editor reads them from the
+  `vegetation.json`, `dungeon-rooms.json` and `terrain-ops.json`, some of the game's location rules, terrain
+  modifiers, prefabs, build pieces, pieces' support and placement, object data names, a cave roof rock's mesh,
+  pieces' costs, vegetation rules, dungeons' rooms and the hoe's and cultivator's strokes, for the tests (the editor reads them from the
   player's game; `Core/WorldGen/` and the app hold none of the game's data).
 
 The game's textures and models are not in this repository or in the releases: the editor copies

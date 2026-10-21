@@ -13,7 +13,7 @@ replaced. Tests from that time check that what it did still works (`KeysAndMouse
 
 | Project | Namespace(s) | What it owns |
 |---|---|---|
-| `Core/ValheimWorldEditor.Core.csproj` | `TerrainEditor.App`, `.Save`, `.Editing`, `.Terrain`, `ValheimGen` | Everything that is not the window: reading and writing saves, pending changes, the world generator, live mode's client, the game data read from Valheim, settings, blueprints, SSH. No Avalonia. |
+| `Core/ValheimWorldEditor.Core.csproj` | `TerrainEditor.App`, `.Save`, `.Editing`, `.Terrain`, `.Tunnelheim`, `ValheimGen` | Everything that is not the window: reading and writing saves, pending changes, the world generator, live mode's client, the game data read from Valheim, settings, blueprints, SSH, Tunnelheim's tunnels. No Avalonia. |
 | `Desktop/ValheimWorldEditor.Desktop.csproj` | `TerrainEditor.Desktop` | The program, `ValheimWorldEditor`: the Avalonia window, the pages, the 3D view and the map (OpenGL through Silk.NET), the tools and panels, the Script tool (Roslyn), the Claude MCP server (ASP.NET Core). |
 | `Sdk/ValheimWorldEditor.Sdk.csproj` | `ValheimWorldEditor.Sdk` | What mods' editor extensions are built against (netstandard2.0): `IWorldEditorExtension`, `IExtensionRegistry`, the hooks' interfaces, `IObjectView`, `Shape`. Only what the editor hands over, nothing of the editor; Core references it, and extensions load against the editor's copy. Released as `ValheimWorldEditor.Sdk-<version>.zip` (`tools/sdk.sh`). Add, do not rename: built extensions bind to it. |
 | `samples/ExampleVehicles.WorldEditor/` | `ExampleVehicles.WorldEditor` | The SDK's sample extension, a made-up mod's (packed ids, sails, cables, pits), built and tested with Core's tests, never loaded by the editor by itself. The editor holds nothing for any real mod. |
@@ -131,6 +131,7 @@ plot that is no world: it has nothing to save; its building becomes a Homestead 
 | Pending changes | `EditStore`, `ZoneEdit`, `NewObject`, `ObjectField`, `ZoneReset`, `HeightGrid`, `Uplift` (`Core/Editing/`) | `EditStore` takes its own lock: strokes and buttons use it from different threads. |
 | Building, dungeons | `Hammer`, `Stability`, `Dungeons`, `DungeonGen`, `DungeonPlan`, `DungeonDresser`, `LocationPrefabs` (`Core/Editing/`) | The hammer's snapping, the support check and the room joining, from the game's data; what the game makes of a location it spawns (for new worlds). `Dungeons.UseMod` lays the open world's Expand World Data room and dungeon files (`DungeonRules`) over the game's catalogue when an area opens; `Dungeons.Scope` does it for one flow of work (the tests). |
 | Mods' objects | `ObjectLinks`, `LinkRule`, `LinkSet`, `ObjectLink`, `LinkIndex` (`Core/App/ObjectLinks.cs`), `ModKeys`, `ModManifests`, `ModCatalogue`, `ModExtensions`, `ObjectView`, `CopyView`, `GroundCuts` (`Core/App/`) | Objects mods link into one, mods' extensions (below); mods' data names, manifests and prefabs. |
+| Tunnelheim's tunnels | `TunnelheimMod`, `ColumnRecord`, `ColumnCheckpoint`, `DigOp`, `RockGrid`, `RockChunk`, `RockMesher`, `DigShapes`, `TerrainOps` (`Core/Tunnelheim/`) | Below. |
 | Game data | `GameLook`, `GameBundles`, `GameData`, `GameCatalogues*`, `GameLocations`, `GameTextures`, `Crunch`, `GameShader`, `TerrainShader` (`Core/App/`) | Below. |
 | Live | `LiveBridge`, `LiveSync` (`Core/Save/`), `Tunnel`, `ServerConfig`, `LocalGame` (`Core/App/`) | Below. |
 | Claude, scripts | `ClaudeServer`, `ClaudeTools`, `ClaudeBuilder`, `ClaudeGuide`, `ClaudeRelay`, `ScriptHost`, `ScriptApi.csx` (`Desktop/`) | Below. |
@@ -155,7 +156,7 @@ no data tables. Everything is read at run time from the player's install:
   (AssetsTools.NET, with an index cached in `game-index.json`).
 - `Core/App/GameData.cs` lists each kind of data the editor needs (`terrain-modifiers`, `prefabs`,
   `pieces`, `piece-support`, `piece-place`, `zdo-keys`, `cave-rocks`, `piece-cost`, `vegetation`,
-  `dungeon-rooms`): how it is read, who takes it (`TerrainModifiers.Use`, `PrefabCatalog.Use`…) and
+  `dungeon-rooms`, `wake-draws`, `terrain-ops`): how it is read, who takes it (`TerrainModifiers.Use`, `PrefabCatalog.Use`…) and
   how its test copy is trimmed. Each is cached as `game-<kind>.json` until the game's files change.
   Most are read in one pass over the bundles (`GameCatalogues.ReadAtStart`, the `AtStart` list); the
   others have their own reader.
@@ -335,6 +336,28 @@ once), and the generator asks the laid-out world (`RiverheimGround`, an `IGround
 game's GetBiome, GetBiomeHeight, GetAshlandsHeight and GetForestFactor, and lays out no water. Expand World Size's
 stretch stays before it, its depth and forest after, as the mods' patches meet in the game. Users' side:
 [riverheim.md](riverheim.md).
+
+## Tunnelheim's tunnels: `Core/Tunnelheim/`
+
+Tunnelheim (a mod whose pickaxe digs real tunnels) keeps a world's rock in objects of its own, one record per 16 m
+column (`TunnelheimMod.RecordPrefab`): the column's ground heights when it was first dug (its seeds), the checkpoint its
+edits start from, and the edits themselves (`DigOp`: digs of several shapes, Add Earth, Smooth Surface, hoe strokes),
+which every game replays in order over the seeds when the column loads (`ColumnRecord`, gzipped in the object's data;
+the checkpoint, the rock of older edits baked out, in a `TunnelheimMod.CheckpointPrefab` object: `ColumnCheckpoint`).
+Without the mod a game deletes those objects as it loads their area. The editor reads a save's tunnels whether the mod
+is installed or not.
+
+`RockGrid` is the rock as the mod keeps it: samples 0.5 m apart in chunks of 32³ (`RockChunk`: a density per sample,
+the height of rock above it, kept to 1/256 m within ±4 m of the surface, and a paint), the columns a record or an edit
+reached voxelised, the seed ground elsewhere from the ground the game shows (the heightmap with its edits). `Build`
+replays the records as the game does when they load (seeds, checkpoint, then edits, each clipped to its own column);
+`Carve`, `Fill`, `Plane` and `Hoe` are the mod's edits (`DigShapes` its dig shapes), hoe strokes taking the game's own
+settings from the `terrain-ops` game data (`TerrainOps`). `RockMesher` meshes a chunk as the mod does (Surface Nets).
+Like the generator, the replay **matches the game to the bit**: its float maths is the game runtime's (`RockMath`:
+expressions in double, rounded where stored), and `RockGridReferenceTests` compares columns, chunks, densities, paints
+and meshes with what the mod built on a server (`tests/fixtures/tunnelheim-reference.txt`, every kind of edit and a
+checkpoint). Comments name the mod's method each part follows (Tunnelheim 1.0.0, `VoxelWorld.Carve`); the mod has no
+public source, so its code is rewritten, never copied.
 
 ## Live mode
 

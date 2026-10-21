@@ -47,6 +47,7 @@ public static partial class GameData
             Editing.LocationPrefabs.Use(json);
         }, TrimDungeons),
         new("wake-draws", null, WakeDraws.Use),
+        new("terrain-ops", null, Tunnelheim.TerrainOps.Use),
     ];
 
     /// <summary>
