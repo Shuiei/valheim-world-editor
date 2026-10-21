@@ -184,7 +184,7 @@ installed ones. The mod itself stays where it is.
 
 | Add-on | For | What it does |
 |---|---|---|
-| [Tunnelheim](addons/Tunnelheim/README.md) | [Tunnelheim](https://thunderstore.io/c/valheim/p/Tunnelheim/Tunnelheim/) (`ValheimTunneling.dll`) | Draws the tunnels the mod digs, as the game builds them, and adds a Tunnel tool: the mod's digs, Add Earth and smoothing, and bores, rooms, shafts and stairs. |
+| [Tunnelheim](addons/Tunnelheim/README.md) | [Tunnelheim](https://thunderstore.io/c/valheim/p/Tunnelheim/Tunnelheim/) (`ValheimTunneling.dll`) | Draws the tunnels the mod digs, as the game builds them, and adds a Tunnel tool: the mod's digs, Add Earth and smoothing, and bores, rooms, shafts and stairs; tunnels go with copies and blueprints. |
 
 ### macOS (experimental)
 

@@ -23,10 +23,13 @@ does with them. Tunnelheim itself is unchanged and stays in `BepInEx/plugins`; t
   Each click is one step of the history. The edits go into the mod's records as the game saves its own: each kept
   by every 16 m column it changed, a column dug for the first time getting a record with the ground it was dug from.
   Checked on a server running the mod: the game rebuilds the same rock, to the bit, as the editor draws.
+- **Tunnels go with copies and blueprints**: copying an area (or the Select tool's objects) keeps the edits dug there,
+  and pasting plays them again where each copy lands, turned and mirrored with it, kept by the records already there
+  (never a second record in a column). Checked on a server running the mod: it builds the pasted tunnels as the editor
+  draws them. What the mod has baked into a column's checkpoint is no longer a list of edits and is not copied.
 - **Shows tunnel records in words** in the inspector.
 
-Planned: tunnels going with copies and blueprints, live editing, and the mod's own colours in the Deep North, the
-Mistlands and the Ashlands.
+Planned: live editing, and the mod's own colours in the Deep North, the Mistlands and the Ashlands.
 
 ## Install
 
@@ -53,4 +56,5 @@ version is `VERSION` here, its changes `CHANGELOG.md`: it goes out with every ed
 
 Known limits: the building height Add Earth and the smoothing tools use is the mod's default (64 m), not the server's
 setting; rock in the Deep North, the Mistlands and the Ashlands has the default palette, not the mod's own colours
-there.
+there; hoe strokes and smoothing replayed at some places can come out a step (1/256 m) off the game's in a few
+samples (the game's rock is the one that counts: the records are the same).

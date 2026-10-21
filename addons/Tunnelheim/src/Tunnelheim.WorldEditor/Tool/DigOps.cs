@@ -1,4 +1,5 @@
 using System.Numerics;
+using ValheimWorldEditor.Sdk;
 
 namespace Tunnelheim.WorldEditor;
 
@@ -149,6 +150,23 @@ public static class DigOps
     {
         var flat = new Vector3(look.X, 0, look.Z);
         return Aimed(DigKind.Stairs, top, steps, RockMath.LengthSquared(flat) > 1e-4f ? flat : Vector3.UnitZ);
+    }
+
+    /// <summary>
+    /// An edit of a copy where the copy lands: its point placed, its turn (a yaw, a box's or a hoe stroke's turn) turned
+    /// and mirrored with it; its pitch, sizes and floor as they were.
+    /// </summary>
+    /// <param name="op">The edit, its point an offset from the copy's middle.</param>
+    /// <param name="copy">Where the copy lands.</param>
+    public static DigOp Moved(in DigOp op, CopyPlacement copy)
+    {
+        var moved = op with { Position = copy.Place(op.Position) };
+        return op.Kind switch
+        {
+            DigKind.Hoe or DigKind.SizedHoe => moved with { Value = copy.Yaw(op.Value) },
+            DigKind.Box or DigKind.Plane or DigKind.Stroke or DigKind.Chip or DigKind.Stairs or DigKind.ChipFloor => moved with { Extra = copy.Yaw(op.Extra) },
+            _ => moved,
+        };
     }
 
     /// <summary>The middles of 2 m cubes covering a size around a middle: as many as it takes, centred on it.</summary>

@@ -129,6 +129,28 @@ public sealed class TunnelheimInTheEditorTests : IDisposable
     }
 
     [Fact]
+    public void ACopyKeepsTheTunnelsAndAPastePutsThemDown()
+    {
+        var r = Read();
+        _sandbox.Run("Tunnelheim");
+        // A copy over the reference columns: the editor keeps the add-on's bytes under its name.
+        var middle = new Vector3(168, 50, 248);
+        Vector2[] outline = [new(144, 224), new(200, 224), new(200, 280), new(144, 280)];
+        var kept = ModExtensions.CopyArea(new ReferenceArea(r), new CopyRegion(middle, outline, (x, z) => x is >= 144 and <= 200 && z is >= 224 and <= 280));
+        Assert.NotEmpty(kept["Tunnelheim/tunnels"]);
+
+        // Pasted on bare ground far away: new records there, as the editor's paste makes them part of its step.
+        var unread = new List<string>();
+        var edits = ModExtensions.PasteArea(new PlainArea(-4096, -4096, 4096, 4096, 30), kept, [new CopyPlacement(new Vector3(1000, 30, 1000), 90, false)], unread);
+        Assert.Empty(unread);
+        var edit = Assert.Single(edits);
+        Assert.NotEmpty(edit.Added);
+        Assert.All(edit.Added, a => Assert.Equal("TunnelColumnData", a.Prefab));
+        Assert.All(edit.Added, a => Assert.InRange(a.Position.X, 900, 1100));
+        Assert.Equal(ModExtensions.Status.Running, Assert.Single(ModExtensions.Offered).State);
+    }
+
+    [Fact]
     public void TheInspectorShowsARecordInWords()
     {
         var r = Read();
