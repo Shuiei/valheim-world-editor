@@ -10,6 +10,12 @@ the plugin is unchanged in versions without that part.
 - **Worlds made with Riverheim are recognised.** The worlds list tags them and says why they cannot be opened yet
   (turn Riverheim on in Settings, install Riverheim); before, their name and seed were read wrongly.
 
+## v1.87.1 — 2026-10-20
+
+### Fixed
+- **Expand World Size's altitude and water depth match the game to the bit.** With those settings changed, about one
+  point in eight came out a hair higher or lower than the game makes it.
+
 ## v1.87.0 — 2026-10-20
 
 ### Added
