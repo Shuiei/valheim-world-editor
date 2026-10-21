@@ -49,7 +49,7 @@ public class WorldCreatorFileWritesTests : IDisposable
     {
         string path = Path.Combine(_dir, "world.fwl");
 
-        PrivateMember.Call(typeof(WorldCreator), "WriteMetadata", null, path, "My world", "Seedy", 12345, 987654321012L);
+        PrivateMember.Call(typeof(WorldCreator), "WriteMetadata", null, path, "My world", "Seedy", 12345, 987654321012L, null);
 
         byte[] bytes = File.ReadAllBytes(path);
         Assert.Equal(bytes.Length - 4, BitConverter.ToInt32(bytes, 0));
