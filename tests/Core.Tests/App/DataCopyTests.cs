@@ -23,7 +23,8 @@ public class DataCopyTests
         var view = new ObjectView("thing", default, default, back);
         Assert.True(view.TryGetInt("i", out int i) && i == 7);
         Assert.True(view.TryGetLong("l", out long l) && l == 8);
-        Assert.True(view.TryGetFloat("f", out float f) && f == 1.5f);
+        Assert.True(view.TryGetFloat("f", out float f));
+        Assert.Equal(1.5f, f);
         Assert.True(view.TryGetVector3("v", out var v) && v == Vector3.One);
         Assert.True(view.TryGetString("s", out string? s) && s == "x");
         Assert.True(view.TryGetBytes("b", out byte[] b) && b.SequenceEqual(new byte[] { 1, 2 }));

@@ -46,9 +46,10 @@ public class ToolPanelTests
     public void TheRailIsInSections()
     {
         var w = Open();
-        // Each section's caption, then its buttons' names, in order.
+        // Each section's caption, then its buttons' names, in order; last, the mods' tools' section, empty with none.
         var rail = w.Tools.Rail.GetLogicalDescendants().OfType<StackPanel>().First(p => p.Children.FirstOrDefault() is TextBlock);
-        var names = rail.Children.Select(c => c is TextBlock t ? t.Text : ((TextBlock)((StackPanel)((Grid)((Button)c).Content!).Children[0]).Children[1]).Text).ToList();
+        Assert.Empty(Assert.IsType<StackPanel>(rail.Children[^1]).Children);
+        var names = rail.Children.SkipLast(1).Select(c => c is TextBlock t ? t.Text : ((TextBlock)((StackPanel)((Grid)((Button)c).Content!).Children[0]).Children[1]).Text).ToList();
         Assert.Equal(
             [
                 "SCULPT", "Raise", "Lower", "Flatten", "Smooth", "Natural", "Erode", "Restore",

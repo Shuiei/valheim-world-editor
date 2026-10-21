@@ -58,7 +58,8 @@ public static partial class ModExtensions
     }
 
     /// <summary>What a tool's id or a control's id may be: letters, digits, dots, dashes and underscores, 1 to 64.</summary>
-    private static readonly Regex ToolIdForm = new("^[A-Za-z0-9._-]{1,64}$", RegexOptions.CultureInvariant);
+    [GeneratedRegex("^[A-Za-z0-9._-]{1,64}$", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 100)]
+    private static partial Regex ToolIdForm();
 
     /// <summary>
     /// The running extensions' tools, by mod then in the order registered: those whose button names an id of the
@@ -87,12 +88,12 @@ public static partial class ModExtensions
     }
 
     private static bool ValidTool(ToolInfo? info) =>
-        info != null && info.Id != null && ToolIdForm.IsMatch(info.Id) && !string.IsNullOrWhiteSpace(info.Name) && info.Help != null;
+        info != null && info.Id != null && ToolIdForm().IsMatch(info.Id) && !string.IsNullOrWhiteSpace(info.Name) && info.Help != null;
 
     private static List<ToolControl> ValidControls(IReadOnlyList<ToolControl> controls)
     {
         var ids = new HashSet<string>(StringComparer.Ordinal);
-        return [.. controls.Where(c => c != null && c.Id != null && ToolIdForm.IsMatch(c.Id) && c.Label != null && Usable(c) && ids.Add(c.Id))];
+        return [.. controls.Where(c => c != null && c.Id != null && ToolIdForm().IsMatch(c.Id) && c.Label != null && Usable(c) && ids.Add(c.Id))];
     }
 
     /// <summary>Whether a control can be shown: a slider from a lower to a higher value, a choice of at least one option.</summary>
