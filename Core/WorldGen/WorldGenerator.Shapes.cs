@@ -113,10 +113,12 @@ public sealed partial class WorldGenerator
     /// </summary>
     private float DeepNorthShape(float x, float z, out Color mask)
     {
-        float land = Continent(x, z) + 0.1f;
+        // The game adds 0.1 and keeps the sum on its stack: stored (a float) for the hills, pressing them unrounded.
+        double raised = (double)Continent(x, z) + (double)0.1f;
+        float land = (float)raised;
         double dx = DetailPoint(x, _v.DetailX), dz = DetailPoint(z);
         float h = (float)((double)land + (double)Hills(dx, dz) * (double)0.1f);
-        h = Grain(CutRivers(x, z, Pressed(h, land)), dx, dz);
+        h = Grain(CutRivers(x, z, Pressed(h, raised)), dx, dz);
         float snow = (float)GenMath.Layers(new Vector2((float)(dx * (double)0.01f), (float)(dz * (double)0.01f)), 3, 2.0, 0.5);
         snow = (snow + 1f) / 2f;
         mask = new Color(0f, 0.3f + snow * 0.3f, 0f, 0f);

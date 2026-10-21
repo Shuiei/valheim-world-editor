@@ -35,6 +35,12 @@ the plugin is unchanged in versions without that part.
 - **Worlds made with Riverheim are recognised.** The worlds list tags them and says why they cannot be opened yet
   (turn Riverheim on in Settings, install Riverheim); before, their name and seed were read wrongly.
 
+## v1.87.4 — 2026-10-21
+
+### Fixed
+- **The Deep North's ground matches the game to the bit.** A few points of the Deep North came out a hair higher or
+  lower than the game makes them, with or without Expand World.
+
 ## v1.87.3 — 2026-10-20
 
 ### Fixed
