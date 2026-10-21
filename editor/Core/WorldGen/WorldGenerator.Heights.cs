@@ -35,8 +35,8 @@ public sealed partial class WorldGenerator
         z = Stretched(z);
         // Expand World Data: a biome's ground is its terrain biome's (its prefix, with the biome or territory file).
         Heightmap.Biome ground = _v.AnyBiomeData ? _v.Biomes.Terrain(biome) : biome;
-        // Riverheim's prefix: its ground in place of the game's shapes (whatever the biome asked for).
-        float h = _ground != null ? _ground.Height(x, z, out mask) : GameHeight(ground, x, z, ref mask, preGeneration, riverPreDN);
+        // A world generation mod's prefix: its ground in place of the game's shapes (whatever the biome asked for).
+        float h = _ground != null ? ModHeight(x, z, out mask) : GameHeight(ground, x, z, ref mask, preGeneration, riverPreDN);
         h = _v.Depth(h);
         // Expand World Data's postfix (taken to run after Expand World Size's depth, patched earlier).
         return _v.AnyBiomeData ? DataHeight(biome, ground, x, z, h, ref mask) : h;

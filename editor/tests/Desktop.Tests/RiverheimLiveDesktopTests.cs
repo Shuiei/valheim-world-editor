@@ -54,7 +54,7 @@ public sealed class RiverheimLiveDesktopTests : IDisposable
         using var game = Game("1.2.0");
         using var world = await OpenLive(game);
         Assert.True(world.IsLive);
-        Assert.Equal(("1.2.1", "builtin.amur", 2), (world.World.Rules.Riverheim!.Version, world.World.Rules.Riverheim.Preset, world.World.Rules.Riverheim.PresetVersion));
+        Assert.Equal(("Riverheim", "1.2.1", "builtin.amur v2"), (world.World.Rules.Generator!.Name, world.World.Rules.Generator.Version, world.World.Rules.Generator.Settings));
     }
 
     [Fact]

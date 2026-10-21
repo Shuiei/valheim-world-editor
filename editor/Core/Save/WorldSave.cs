@@ -75,10 +75,10 @@ public sealed partial class WorldSave
     public ValheimGen.WorldRules Rules { get; set; } = ValheimGen.WorldRules.Vanilla;
 
     /// <summary>
-    /// The settings Riverheim keeps in the world file when it made the world (null otherwise): such a world is drawn
-    /// only with the player's Riverheim (<see cref="Riverheim.Refusal"/>).
+    /// The generator header a world generation mod keeps in the world file when it made the world (null otherwise):
+    /// such a world is drawn only with that generator (<see cref="WorldGenerators"/>).
     /// </summary>
-    public Riverheim.Tag? RiverheimTag { get; private set; }
+    public GeneratorHeader? Generator { get; private set; }
 
     /// <summary>
     /// The zone grid the chunk files on disk are laid out on, sectors a side (<see cref="ChunkMath"/>): the game's 512,

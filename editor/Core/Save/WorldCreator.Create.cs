@@ -42,7 +42,7 @@ public static partial class WorldCreator
             int seed = SeedOf(seedName);
             string main = Path.Combine(folder, "_main.1");
             written.AddRange([main + ".fwl2", main + ".chunks", main + ".db2"]);
-            WriteMetadata(main + ".fwl2", name, seedName, seed, uid ?? Random.Shared.NextInt64(1, long.MaxValue), rules?.Riverheim);
+            WriteMetadata(main + ".fwl2", name, seedName, seed, uid ?? Random.Shared.NextInt64(1, long.MaxValue), rules?.Generator?.Header);
             WorldWriter.WriteIndex(main + ".chunks", SaveFileVersion, []);
             var db = ZoneDb.Empty(SaveFileVersion, LocationVersion, Tail());
             db.Save(main + ".db2");

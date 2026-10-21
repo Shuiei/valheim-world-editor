@@ -268,12 +268,13 @@ public sealed record WorldRules
     /// </summary>
     public bool CustomWaterColor { get; init; }
 
-    // ---- Riverheim.
+    // ---- World generation mods.
     /// <summary>
-    /// The world was made with Riverheim, whose ground replaces the game's (null: the game's own ground). Expand World's
-    /// settings still apply around it where the mods' patches meet (docs/riverheim.md lists them).
+    /// The world was made with a world generation mod (Riverheim), whose ground replaces the game's (null: the game's own
+    /// ground). Expand World's settings still apply around it where the mods' patches meet (docs/riverheim.md lists them
+    /// for Riverheim).
     /// </summary>
-    public RiverheimRules? Riverheim { get; init; }
+    public GeneratorRules? Generator { get; init; }
 
     // ---- Derived.
     /// <summary>Whether these are the game's own values (nothing of the generator changes).</summary>

@@ -27,7 +27,7 @@ public static class WorldFileHead
         {
             if (riverheim != null)
             {
-                p.Write(Riverheim.Marker);
+                p.Write(WorldGenerators.Marker);
                 p.Write(generator ?? Riverheim.PluginId);
             }
             p.Write(version);

@@ -18,7 +18,7 @@ public sealed partial class ClaudeTools
             return new() { IsError = true, Content = { new ModelContextProtocol.Protocol.TextContentBlock { Text = "The seed is 1 to 10 characters, as in the game." } } };
         }
         await GameRules();
-        var rules = Riverheim.ForNewWorld(AppSettings.Load());
+        var rules = WorldGenerators.ForNewWorld(AppSettings.Load());
         var p = await Task.Run(() => SeedPreview.Make(seed, 160, parallel: true, landmarks: true, rules: rules));
         var st = p.Stats;
         string text = ToJson(new

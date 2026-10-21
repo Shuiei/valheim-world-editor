@@ -28,6 +28,7 @@ public static partial class ModExtensions
                 running[mod] = l;
             }
             _state = new State([.. running.Keys.Select(m => new Extension(m, m, "", Status.Running, null))], running);
+            _decided = true;
             Interlocked.Increment(ref _generation);
         }
     }
@@ -38,6 +39,7 @@ public static partial class ModExtensions
         lock (Lock)
         {
             _state = new State([], new Dictionary<string, Loaded>());
+            _decided = true;
             Interlocked.Increment(ref _generation);
         }
     }

@@ -62,6 +62,8 @@ public static partial class ModExtensions
         public List<(string Id, IAreaCopier Copier)> Copiers { get; } = [];
         /// <summary>Its live listeners.</summary>
         public List<ILiveListener> LiveListeners { get; } = [];
+        /// <summary>Its world generators.</summary>
+        public List<IWorldGenerator> Generators { get; } = [];
 
         /// <summary>Why it was turned off (a hook threw); null while it runs.</summary>
         public string? Fault { get; set; }
@@ -155,6 +157,7 @@ public static partial class ModExtensions
                 }
             }
             _state = new State(offered, running);
+            _decided = true;
             Interlocked.Increment(ref _generation);
             return running.Count;
         }

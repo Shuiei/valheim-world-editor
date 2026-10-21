@@ -97,6 +97,9 @@ public static partial class ModExtensions
         public void AddLiveListener(ILiveListener listener) => loaded.LiveListeners.Add(listener);
 
         /// <inheritdoc/>
+        public void AddWorldGenerator(IWorldGenerator generator) => loaded.Generators.Add(generator);
+
+        /// <inheritdoc/>
         public IEditorHost Host => ModExtensions.Host;
 
         /// <inheritdoc/>

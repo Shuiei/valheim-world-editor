@@ -2,6 +2,7 @@ using System.Globalization;
 using TerrainEditor.App;
 using TerrainEditor.Save;
 using ValheimGen;
+using ValheimWorldEditor.Sdk;
 using Xunit;
 
 namespace WorldEditor.Tests;
@@ -9,8 +10,7 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// A world made with Riverheim, drawn with the real Riverheim (downloaded for the tests, its BepInEx beside it and a
 /// stand-in for Unity's classes): the game's own values to the bit, a preset it does not know refused with its words,
-/// a Riverheim that cannot lay the world out said as such, a live game on another release refused, and new worlds laid
-/// out with its own preset.
+/// a Riverheim that cannot lay the world out said as such, a live game on another release refused, and new worlds given its own preset.
 /// </summary>
 [Collection("DataDir")]
 public class RiverheimRulesTests : AppSettingsTestBase
@@ -29,9 +29,9 @@ public class RiverheimRulesTests : AppSettingsTestBase
         return new AppSettings { Riverheim = true, ExpandWorldFolder = bep, ValheimPath = UnityStandIn.Game(Path.Combine(Data, name, "Valheim")) };
     }
 
-    /// <summary>A world's generator with these Riverheim rules.</summary>
-    private static WorldGenerator Generator(string seedName, RiverheimRules? riverheim) =>
-        WorldGenerator.Create(new World { Seed = StableHash.Of(seedName), SeedName = seedName, Rules = new WorldRules { Riverheim = riverheim } });
+    /// <summary>A world's generator, laid out by the player's Riverheim.</summary>
+    private static WorldGenerator Generator(string seedName, IWorldLayout riverheim) =>
+        WorldGenerator.Create(new World { Seed = StableHash.Of(seedName), SeedName = seedName, Rules = new WorldRules { Generator = new GeneratorRules(Riverheim.PluginId, "Riverheim", riverheim.Version, "builtin.amur v2") { LayOut = riverheim.LayOut } } });
 
     private static float Bits(string hex) => BitConverter.Int32BitsToSingle(int.Parse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture));
 
@@ -39,8 +39,7 @@ public class RiverheimRulesTests : AppSettingsTestBase
     public void TheReferenceWorldIsTheGamesToTheBit()
     {
         var rules = Riverheim.Rules(Amur, Settings("bep"));
-        Assert.NotNull(rules);
-        Assert.Equal(("1.2.1", "builtin.amur", 2), (rules.Version, rules.Preset, rules.PresetVersion));
+        Assert.Equal(("1.2.1", true), (rules.Version, rules.Slow));
         var gen = Generator("5DCcdIcuYJ", rules);
         // Riverheim lays its own world out: no lakes, rivers or streams of the game's.
         Assert.Empty(gen.GetLakes());
@@ -80,11 +79,9 @@ public class RiverheimRulesTests : AppSettingsTestBase
     public void NewWorldsAreLaidOutByRiverheimWhileItsSwitchIsOn()
     {
         var settings = Settings("bep");
-        var riverheim = Riverheim.ForNewWorld(settings).Riverheim;
-        Assert.NotNull(riverheim);
-        Assert.Equal(("1.2.1", "builtin.amur", 2), (riverheim.Version, riverheim.Preset, riverheim.PresetVersion));
+        Assert.Equal(Amur, Riverheim.NewWorldTag(settings));
         settings.Riverheim = false;
-        Assert.True(Riverheim.ForNewWorld(settings).IsVanilla);
+        Assert.Null(Riverheim.NewWorldTag(settings));
     }
 
     [Fact]
@@ -105,11 +102,5 @@ public class RiverheimRulesTests : AppSettingsTestBase
     public void ARiverheimReleaseIsItsMajorAndMinorVersion(string a, string b, bool same)
     {
         Assert.Equal(same, Riverheim.SameRelease(a, b));
-    }
-
-    [Fact]
-    public void AWorldItDidNotMakeHasNoRiverheimRules()
-    {
-        Assert.Null(Riverheim.Rules(null, new AppSettings()));
     }
 }

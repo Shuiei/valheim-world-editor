@@ -24,7 +24,7 @@ public static partial class ExpandWorld
         AddUnless(parts, r.Dungeons == null, DungeonsText(r.Dungeons));
         AddUnless(parts, r.ZoneSpawners, "no zone spawners");
         AddUnless(parts, !r.RandomLocations, "random locations");
-        AddUnless(parts, r.Riverheim == null, $"Riverheim {r.Riverheim?.Version} ({r.Riverheim?.Preset} v{r.Riverheim?.PresetVersion})");
+        AddUnless(parts, r.Generator == null, $"{r.Generator?.Name} {r.Generator?.Version} ({r.Generator?.Settings})");
         return string.Join(", ", parts);
     }
 

@@ -161,6 +161,7 @@ it. It can:
 - read your mod's own settings (its `settingsFiles`), as the world's game has them;
 - add a tool of your own to the 3D editor's rail, with its settings card, its preview and its edits
   in the history (digging a canal where the player clicks);
+- for a world generation mod, read and draw the worlds it makes, and make new ones with it;
 - in live mode, ask your mod's own plugin in the game for what only the game knows (see
   [Live mode](#live-mode)).
 
@@ -236,6 +237,7 @@ offers one."
 | `AddScene(ISceneProvider)` | What your mod makes of an area as a whole, drawn in it: `Build(area)` is called on a worker each time an area opens and again whenever its objects, its ground or the game change (or you call `Host.Redraw()`), and returns a `SceneLayer` (or `null`). Its `Meshes` (`SceneMesh`: corners and their normals in the world's frame, metres, triangles wound clockwise seen from the front as in Unity) are drawn with the game's ground look when they have `BiomeColors` (each corner's terrain colour, as `area.BiomeColor` gives it) and painted from their `Mask` (a small texture of the terrain's paint mask, `MaskTexture`) at `MaskUvs`; without biome colours, in `Color`. Clicks land on them (unless `Pickable = false`). Its `Holes` (`GroundHole`: rectangles in whole metres) leave the editor's ground undrawn, cell by cell, exactly to their edges: draw what replaces it. The `area` (`IAreaView`) gives its bounds, its objects of a prefab as they are with the changes not saved yet (`ObjectsOf`, your data holders included), the ground's height as the game shows it (`GroundHeight`, between the points a metre apart along the game's own triangles), the biome, whether a point is in the Deep North or the Ashlands, and the terrain's colour and paint at a whole metre (`BiomeColor`, `GroundMask`). Work everything out from the area each time; keep nothing between calls. |
 | `AddTool(IEditorTool)` | A tool of your own on the 3D editor's rail, under **Mods**, with its `Info` (`ToolInfo`: an id, unique in your extension; its name on the rail; a line of help in its tooltip; `Icon`, an SVG path drawn 16 × 16, else your name's first letter). Chosen, it shows a card of its `Controls`: `SliderControl` (min, max, value, `Step`, `Unit`), `ChoiceControl` (a list), `ToggleControl`, `ButtonControl` and `TextControl` (a line you change with `SetText`); the player's values are remembered from one run to the next. The editor calls `OnChosen` and `OnLeft` as it is chosen and left, `OnControl(id)` as a value changes or a button is pressed, `OnPointer` with each move, press, drag and release over the 3D view (`PointerInput`: the ray, the keys held, and what it points at: the ground, your scene layer, or a thing, with the point and the ground's normal there), and `OnKey` with each key pressed (the key's name, as "Enter", "Escape", "Back" or "A"; return true when you used it, false leaves it to the editor, so Ctrl+Z still undoes). The `IToolContext` handed to each call gives the area (`Area`, as for scene layers), your controls' values (`Number`, `Choice`, `IsOn`), shapes drawn over the area until you change them (`Preview`, in the world's frame), a line on the status bar (`Status`) and `Commit(label, ToolEdit)`: objects added (a prefab, a place, a turn and its data set through an `ICopy`), changed (a copy of an object the area gave you, with your changes) and removed, in one step of the area's history, undone and saved like any other edit. Your data holders are kept with the history as other objects are, though they are never drawn; an object you did not get from the area is left alone. |
 | `AddLiveListener(ILiveListener)` | Told when the editor connects to a game (`OnConnected`, with the game) and when that ends (`OnDisconnected`: the world was closed, or another opened). See [Live mode](#live-mode). |
+| `AddWorldGenerator(IWorldGenerator)` | Your world generation mod's worlds (see [World generators](#world-generators)). |
 | `Host` | The editor, outside the hooks: `Host.Live`, the game connected (null when there is none: a saved world, the Workshop); `Host.Game`, the game's components your manifest's `gameComponents` asks for (`Components("Ship")`: each with its prefab, the object it is on and its fields by name, as the game saves them; ready once a world or the Workshop is open, so ask from your hooks, not from `Register`); `Host.Setting(file, section, key)`, a setting from a file your manifest's `settingsFiles` names, as the text the file holds (null when the file or the setting is not there: use your mod's default; ready, like `Host.Game`, once a world or the Workshop is open); and `Host.Redraw()`, for your shapes and cuts to be made again at the next frame (after the game told you something new). |
 | `Log(message)` | Writes a line, named after your mod ("extension ExampleVehicles: …"), to the editor's log, `ValheimWorldEditor.log` in its data folder (**Open log** on the start page; started over at each run). |
 
@@ -249,6 +251,32 @@ part, where your mod builds it, not where the game saves it), and every value of
 `TryGetInt`, `TryGetLong`, `TryGetFloat`, `TryGetVector3`, `TryGetQuaternion`, `TryGetString`,
 `TryGetBytes`. Keys and prefabs are named as your code names them; the editor hashes them as the
 game does.
+
+### World generators
+
+A world generation mod replaces the game's ground, and marks the worlds it makes: their world file starts with -1
+where the game's file version goes, then the generator's id (a string), then whatever the mod keeps (Riverheim: the
+game's file version, then its preset). The editor refuses such a world unless a running extension registers a
+generator with that id, as the game without the mod refuses it. Your `IWorldGenerator` gives:
+
+- `Id`, `PluginId` (the mod's BepInEx GUID: in live mode you are told the version the game runs) and `Name`;
+- `ReadHeader(file, out fileVersion)` and `WriteHeader(file, fileVersion, settings)`: what follows the id, read and
+  written in the game's forms (`IWorldFileReader`, `IWorldFileWriter`), your settings kept as a `GeneratorSettings` (a
+  description for the player, and a value of your own). Throw `InvalidDataException` with why for the player for a
+  header you cannot read;
+- `Problem(settings)`: why such a world cannot be drawn, quickly (asked for every world the start page lists), or null;
+- `Open(settings, gamePluginVersion)`: ready to lay worlds out, as a world opens (`IWorldLayout`: your `Version`,
+  whether laying out is `Slow`, and `LayOut(seed)`); throw `InvalidOperationException` with why when you cannot;
+- `LayOut(seed)` gives an `IGroundLayout`: the biome (the game's value), the height with its mask and the forest
+  factor at a point, in place of the bodies of the game's GetBiome, GetBiomeHeight, GetAshlandsHeight and
+  GetForestFactor (asked from many threads). Expand World's stretch still comes before your answers, its depth and
+  forest multipliers after, as the mods' patches meet in the game; the editor lays out no water of the game's;
+- `NewWorldSettings()`: the settings a new world gets (the New world page offers your generator, chosen first), or
+  null;
+- `Notes(settings, expandWorld)`: what Expand World's settings (`ExpandWorldSettings`) do otherwise to your worlds, for
+  the log.
+
+Anything else your generator throws is a fault: its extension is turned off, and the player is told the add-on failed.
 
 ### Rules
 

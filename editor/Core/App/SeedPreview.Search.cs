@@ -5,11 +5,12 @@ namespace TerrainEditor.App;
 public static partial class SeedPreview
 {
     /// <summary>
-    /// How many seeds a search looks at at once: all but one of the processors; two with Riverheim, whose worlds are
-    /// laid out whole first (a couple of hundred megabytes each, and Riverheim works on several threads itself).
+    /// How many seeds a search looks at at once: all but one of the processors; two with a world generation mod that
+    /// lays its worlds out whole first (Riverheim: a couple of hundred megabytes each, and it works on several threads
+    /// itself).
     /// </summary>
     /// <param name="rules">What the worlds follow.</param>
-    internal static int SeedsAtOnce(WorldRules? rules) => rules?.Riverheim != null ? 2 : Math.Max(1, Environment.ProcessorCount - 1);
+    internal static int SeedsAtOnce(WorldRules? rules) => rules?.Generator?.Slow == true ? 2 : Math.Max(1, Environment.ProcessorCount - 1);
 
     /// <summary>
     /// Random seeds tried in parallel (count of them), the best kept (keep), scored by the wishes; progress
