@@ -8,8 +8,8 @@ updates:
     directories:
       # Directory.Build.props: the analyzers every project uses (Roslynator).
       - /
-      - /Core
-      - /Desktop
+      - /editor/Core
+      - /editor/Desktop
       - /tools/WorldCheck
       - /tools/DocsScreenshots
     schedule:
@@ -22,8 +22,8 @@ updates:
   # The C# tests (xUnit, JUnit logger, coverage and hang dump; SkiaSharp for Core's).
   - package-ecosystem: nuget
     directories:
-      - /tests/Core.Tests
-      - /tests/Desktop.Tests
+      - /editor/tests/Core.Tests
+      - /editor/tests/Desktop.Tests
     schedule:
       interval: weekly
     open-pull-requests-limit: 3

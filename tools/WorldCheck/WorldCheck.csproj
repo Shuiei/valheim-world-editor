@@ -10,6 +10,6 @@
     <RootNamespace>TerrainEditor.WorldCheck</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../Core/ValheimWorldEditor.Core.csproj" />
+    <ProjectReference Include="../../editor/Core/ValheimWorldEditor.Core.csproj" />
   </ItemGroup>
 </Project>

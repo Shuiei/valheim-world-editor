@@ -1,6 +1,6 @@
 # Codecov (https://app.codecov.io/gh/Shuiei/valheim-world-editor): gets one coverage report, the nine test
 # containers of CircleCI's core-tests and app-tests merged by CircleCI's coverage job, sent on main once
-# both have passed (.circleci/continue.yml; branches send none), and checks it on each of main's commits. Which code counts is set by tests/coverage.runsettings.
+# both have passed (.circleci/continue.yml; branches send none), and checks it on each of main's commits. Which code counts is set by editor/tests/coverage.runsettings.
 # Reference:
 # https://docs.codecov.com/docs/codecovyml-reference
 codecov:
@@ -21,7 +21,7 @@ coverage:
     # No patch check and no pull request comment: pull requests send no coverage.
     patch: off
 
-# The app (Desktop/) checked on its own too, so the core's higher coverage cannot hide the app's gaps:
+# The app (editor/Desktop/) checked on its own too, so the core's higher coverage cannot hide the app's gaps:
 # its own check (codecov/project/desktop) fails under 95% line coverage, a partly run line (a branch
 # never taken) counting as uncovered.
 component_management:
@@ -29,7 +29,7 @@ component_management:
     - component_id: desktop
       name: Desktop
       paths:
-        - Desktop/**
+        - editor/Desktop/**
       statuses:
         - type: project
           target: 95%

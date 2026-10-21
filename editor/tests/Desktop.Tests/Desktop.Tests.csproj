@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The app's tests: its windows and panels run in Avalonia's headless mode (no screen, no OpenGL),
+       driven with exact mouse and keyboard input. Laid out like Desktop, one test class per file named
+       after the file it tests; Integration/ holds the tests of several files at once (window workflows,
+       live mode, the visual tests), Support/ (here and editor/tests/Support) their helpers. -->
+  <PropertyGroup>
+    <!-- CI builds them with warnings as errors (.circleci/config.yml). -->
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>TerrainEditor.Desktop.Tests</RootNamespace>
+    <!-- Test methods need no doc comment: their names say what they check. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- Both test projects' settings (a stuck test dumped and stopped after 5 minutes), for dotnet test. -->
+    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --config-file $(MSBuildThisFileDirectory)../testconfig.json</TestingPlatformCommandLineArguments>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The tests run on Microsoft.Testing.Platform (global.json): xUnit's runner for it, the JUnit
+         results CI shows (with the test platform's object model, which the logger needs but does not
+         bring), the coverage on main and a dump of a stuck test (.circleci/continue.yml). -->
+    <PackageReference Include="xunit.v3.mtp-v2" Version="3.2.2" />
+    <PackageReference Include="JunitXml.TestLogger" Version="8.0.0" />
+    <PackageReference Include="Microsoft.TestPlatform.ObjectModel" Version="18.11.0" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
+    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.1" />
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.4" />
+    <!-- A copy of YamlDotNet to stand in for the one a BepInEx folder has (NewWorldPageRefreshRulesTests): the editor
+         itself ships none and loads the player's. -->
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The helpers both test projects share: the test world, the fixtures, a stand-in game. -->
+    <Compile Include="../Support/**/*.cs" LinkBase="Support/Shared" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Desktop/ValheimWorldEditor.Desktop.csproj" />
+    <!-- The SDK's sample extension, run by the real editor in the visual tests (ExtensionEditorProcess). -->
+    <ProjectReference Include="../../../sdk/samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The sample's manifest, put beside its DLL in the plugins folder the visual tests make. -->
+    <Content Include="../../../sdk/samples/ExampleVehicles.WorldEditor/worldeditor.json" Link="Samples/worldeditor.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- The game mods the tests install, downloaded when the build starts. -->
+  <Import Project="../TestMods.targets" />
+</Project>

@@ -412,7 +412,7 @@ ValheimWorldEditor --world "<world folder or name>" --zone 3,-2       # straight
 ### Building from source
 
 ```sh
-dotnet publish Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimWorldEditor
+dotnet publish editor/Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimWorldEditor
 ```
 
 Use `-r win-x64` for Windows. `tools/release.sh <folder>` builds the complete release packages
@@ -423,8 +423,8 @@ on every push (the app's visual tests need a display, which CI gives them; witho
 leave them out with `--filter-not-trait Category=Visual`):
 
 ```sh
-dotnet test --project tests/Core.Tests/Core.Tests.csproj -c Release
-dotnet test --project tests/Desktop.Tests/Desktop.Tests.csproj -c Release
+dotnet test --project editor/tests/Core.Tests/Core.Tests.csproj -c Release
+dotnet test --project editor/tests/Desktop.Tests/Desktop.Tests.csproj -c Release
 ```
 
 See [docs/development.md](docs/development.md).

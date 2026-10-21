@@ -4,16 +4,21 @@ How the parts fit and the rules to keep when changing them: [architecture.md](ar
 
 ## Project layout
 
+The repository has two parts with code: `editor/`, the editor itself (its core, the app, the live-mode plugin and
+their tests), and `sdk/`, what mod authors build against (the SDK, the bridge's API for mods' plugins, and the
+samples). The rest is shared: `docs/`, `tools/`, the CI files and `VERSION`, the one version of the editor, the plugin
+and the SDK.
+
 | Path | What it holds |
 |---|---|
-| `Desktop/` | The app, `ValheimWorldEditor` (Avalonia window, 3D view and map drawn with OpenGL through Silk.NET). `Program.cs` (command line), `StartPage`, `MapPage` + `MapView` (the map), `MainWindow` (the 3D editor's page: top bar, tool rail, panels, keys) with `GlView` (the 3D view and its mouse), `WorldSession` / `WorldScene` / `EditSession` (the open world, the loaded area, its pending changes and history), one class per tool and panel (`AreaTool` + `AreaPanel`, `PlaceTool` + `PlacePanel`, `SelectTool` + `SelectPanel`, `PathTool`, `Sculpt`, `Erosion`, `Mask`…), `ModelStore` and `GameLookGl` (the game's models and terrain shader), `Prefs` (remembered choices), `Driver` (`--driver`, below). |
-| `Core/` | `ValheimWorldEditor.Core`, what is not about the window: |
-| `Core/App/` | Settings (`AppSettings`), the log (`Log`), the game's files (`GameLook`, `GameBundles`, `GameLookData`, `GameShader`, `GameTextures`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
-| `Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), new worlds (`WorldCreator`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
-| `Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
-| `Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening; no game data (what the editor needs of the game, the terrain modifiers, prefabs, build pieces, pieces' support and placement, object data names, cave rocks, piece costs, vegetation rules and dungeon rooms, is read from the player's Valheim: `Core/App/GameData.cs`). |
-| `plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
-| `tests/Core.Tests/`, `tests/Desktop.Tests/` | Core's tests and the app's (xUnit v3, the app's in Avalonia's headless mode), laid out like `Core/` and `Desktop/`, see [Tests](#tests). `tests/Support/` holds the helpers both share, `tests/fixtures/` the test world. |
+| `editor/Desktop/` | The app, `ValheimWorldEditor` (Avalonia window, 3D view and map drawn with OpenGL through Silk.NET). `Program.cs` (command line), `StartPage`, `MapPage` + `MapView` (the map), `MainWindow` (the 3D editor's page: top bar, tool rail, panels, keys) with `GlView` (the 3D view and its mouse), `WorldSession` / `WorldScene` / `EditSession` (the open world, the loaded area, its pending changes and history), one class per tool and panel (`AreaTool` + `AreaPanel`, `PlaceTool` + `PlacePanel`, `SelectTool` + `SelectPanel`, `PathTool`, `Sculpt`, `Erosion`, `Mask`…), `ModelStore` and `GameLookGl` (the game's models and terrain shader), `Prefs` (remembered choices), `Driver` (`--driver`, below). |
+| `editor/Core/` | `ValheimWorldEditor.Core`, what is not about the window: |
+| `editor/Core/App/` | Settings (`AppSettings`), the log (`Log`), the game's files (`GameLook`, `GameBundles`, `GameLookData`, `GameShader`, `GameTextures`), Regrow, search, blueprint formats, servers and SSH (`ServerConfig`, `Tunnel`), the local game (`LocalGame`), characters, zone statistics, folders (`Places`). |
+| `editor/Core/Save/` | Save reader (`WorldSave`, `ValheimReader`), writer (`WorldWriter`), new worlds (`WorldCreator`), object building (`ZdoTools`: copies and blank objects), the `.db2` zone list, and live mode (`LiveBridge`, `LiveSync`). |
+| `editor/Core/Editing/` | Pending changes: terrain per zone, deleted and added objects, zone resets (`EditStore`); heights of a block of zones (`HeightGrid`). |
+| `editor/Core/WorldGen/` | Valheim's world generator (bit-exact base terrain), map data, location flattening; no game data (what the editor needs of the game, the terrain modifiers, prefabs, build pieces, pieces' support and placement, object data names, cave rocks, piece costs, vegetation rules and dungeon rooms, is read from the player's Valheim: `editor/Core/App/GameData.cs`). |
+| `editor/plugin/WorldEditorBridge/` | The BepInEx plugin for live mode (.NET Framework 4.7.2). |
+| `editor/tests/Core.Tests/`, `editor/tests/Desktop.Tests/` | Core's tests and the app's (xUnit v3, the app's in Avalonia's headless mode), laid out like `editor/Core/` and `editor/Desktop/`, see [Tests](#tests). `editor/tests/Support/` holds the helpers both share, `editor/tests/fixtures/` the test world. |
 | `tools/WorldCheck/` | Developer checks of the generator and the writer, saved objects byte by byte, and new worlds from a seed, see below. |
 | `tools/DocsScreenshots/` | `Scenes.cs` builds and takes the pictures in `docs/images/`, through `Editor.cs`, which drives the app. |
 | `tools/release.sh`, `tools/check-package.sh`, `tools/sign-windows.sh` | The release packages, their check, and the Windows program's signature. |
@@ -36,11 +41,11 @@ files are still read from the user's Valheim, and its index kept in the user's d
 The app reads one command per line on its input and answers each with one line, `@@ ok <json>`
 (the state: page, objects, pending, frames drawn, OpenGL errors, selection, camera…) or `@@ error
 <message>`. It prints `@@ ready` when it can take commands. The full list is at the top of
-`Desktop/Driver.cs`; the main ones:
+`editor/Desktop/Driver.cs`; the main ones:
 
 | Command | What it does |
 |---|---|
-| `gamedata <folder>` | The game's data from the tests' copies (`tests/fixtures`), where there is no Valheim (CI): without it no world opens. |
+| `gamedata <folder>` | The game's data from the tests' copies (`editor/tests/fixtures`), where there is no Valheim (CI): without it no world opens. |
 | `world <folder>` / `area <zx> <zz> <size>` / `map` | Open a world (its map), an area in the 3D editor, back to the map. |
 | `camera <x> <z> <yaw°> <pitch°> <distance>` | The 3D camera on world x, z. |
 | `mouse <down\|move\|up> <x> <z> [button] [mods]`, `wheel`, `key <name> [mods]` | Real pointer and key events at world positions. |
@@ -93,7 +98,7 @@ With the .NET 10 SDK (`global.json` asks for it; the plugin builds with it too).
 `net10.0`; the release packages carry the runtime.
 
 ```sh
-dotnet publish Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimWorldEditor
+dotnet publish editor/Desktop/ValheimWorldEditor.Desktop.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o ../ValheimWorldEditor
 ```
 
 One file, `ValheimWorldEditor`, with the native libraries it needs (Skia, HarfBuzz, SPIRV-Cross)
@@ -106,7 +111,7 @@ program (with its DLLs on Windows) and the readmes;
 game files or plugin. The plugin is its own package: `tools/thunderstore.sh <folder>` builds
 `WorldEditorBridge-<version>.zip` (for the release page, Thunderstore and Hexium).
 
-The plugin: build `plugin/WorldEditorBridge/WorldEditorBridge.csproj` with `ValheimDir` set to a
+The plugin: build `editor/plugin/WorldEditorBridge/WorldEditorBridge.csproj` with `ValheimDir` set to a
 Valheim dedicated server's folder (it reads `valheim_server_Data/Managed`) and `BepInExDir` to a
 BepInEx folder (its `core`), as MSBuild properties (`-p:ValheimDir=...`) or environment variables.
 
@@ -198,8 +203,8 @@ The in-game look uses files that belong to the game, so they are never in git or
 packages, and nothing is copied: the app reads them from the user's own Valheim, straight from its
 asset bundles (`valheim_Data/StreamingAssets/SoftRef/Bundles`), in C# with
 [AssetsTools.NET](https://github.com/nesrak1/AssetsTools.NET) (the bundles carry their type trees, so
-every field reads by name). `Core/App/GameLook.cs` finds Valheim in the Steam libraries (or the folder
-the user chose) and keeps the one reader, `Core/App/GameBundles.cs`:
+every field reads by name). `editor/Core/App/GameLook.cs` finds Valheim in the Steam libraries (or the folder
+the user chose) and keeps the one reader, `editor/Core/App/GameBundles.cs`:
 
 - **Index:** which bundle holds each prefab, from each bundle's table of contents (its AssetBundle's
   `m_Container`); a prefab name in two bundles is the one with a ZNetView. A few other assets are
@@ -207,31 +212,31 @@ the user chose) and keeps the one reader, `Core/App/GameBundles.cs`:
   map material). Building it reads every bundle's table (about 5 s); it is kept in `game-index.json`
   in the data folder with each bundle's name, size and time, and made again when they change (a game
   update).
-- **Models** (`Desktop/BundleModels.cs` for `Desktop/ModelStore.cs`): a prefab's parts (MeshFilter or
+- **Models** (`editor/Desktop/BundleModels.cs` for `editor/Desktop/ModelStore.cs`): a prefab's parts (MeshFilter or
   SkinnedMeshRenderer with their materials, placed by the transforms), leaving out the worn and broken
   looks of pieces, lower levels of detail, inactive objects and, in dungeon rooms, their networked
   objects and random parts not there half the time. Meshes are decoded from their vertex streams; z
   is mirrored (Unity is left-handed). A small piece takes tens of milliseconds, the biggest dungeon
   room about 10 s, on a worker thread.
-- **Textures** (`Core/App/GameTextures.cs`): the mip level no larger than 1024 pixels, decoded to RGBA
+- **Textures** (`editor/Core/App/GameTextures.cs`): the mip level no larger than 1024 pixels, decoded to RGBA
   ([BCnEncoder.NET](https://github.com/Nominom/BCnEncoder.NET) for DXT1, DXT5, BC4, BC5, BC7); cut-out
   textures get the colour of nearby opaque pixels in their transparent ones, so filtering does not
   bleed the hidden colour into leaf edges.
-- **Terrain and map** (`Core/App/GameLookData.cs`, drawn by `Desktop/GameLookGl.cs` and
-  `Desktop/MapView.cs`): the `Heightmap_basematerial` textures, the diffuse and normal texture arrays,
-  the `minimap` material's textures, and the terrain shader (`Core/App/GameShader.cs`): from the
+- **Terrain and map** (`editor/Core/App/GameLookData.cs`, drawn by `editor/Desktop/GameLookGl.cs` and
+  `editor/Desktop/MapView.cs`): the `Heightmap_basematerial` textures, the diffuse and normal texture arrays,
+  the `minimap` material's textures, and the terrain shader (`editor/Core/App/GameShader.cs`): from the
   OpenGL core program one deferred-pass fragment variant converted to GLSL ES 3.0 (`GameLookGl` adds
   its own `main()`); Valheim for Windows has no OpenGL programs, so there the Vulkan one is taken
-  (SMOL-V decoded by `Core/App/Smolv.cs`, its uniforms' names put back from its parameter blob) and
-  SPIRV-Cross turns it into the same GLSL (`Core/App/TerrainShader.cs`). If a game update changes the
+  (SMOL-V decoded by `editor/Core/App/Smolv.cs`, its uniforms' names put back from its parameter blob) and
+  SPIRV-Cross turns it into the same GLSL (`editor/Core/App/TerrainShader.cs`). If a game update changes the
   shader, the converter says so instead of drawing a broken one.
 
-`tests/Core.Tests/Integration/GameFilesTests.cs` (`--filter-trait Category=Game`) checks the terrain and map read from
+`editor/tests/Core.Tests/Integration/GameFilesTests.cs` (`--filter-trait Category=Game`) checks the terrain and map read from
 the game, where Valheim is on the computer.
 
 None of the game's data is kept in the repository or the app: the editor reads what it needs from
-the player's Valheim at its start (`Core/App/GameData.cs`, one entry per kind; the readers are in
-`Core/App/GameCatalogues*.cs`, on the same reader as the models), in seconds, and keeps each kind in
+the player's Valheim at its start (`editor/Core/App/GameData.cs`, one entry per kind; the readers are in
+`editor/Core/App/GameCatalogues*.cs`, on the same reader as the models), in seconds, and keeps each kind in
 the data folder (`game-<kind>.json`) until the game's files change. No world or Workshop opens without
 it. The kinds found in the bundles are read together, in one pass over them (each bundle opened once
 and given to each kind's reader, `GameCatalogues.ReadAtStart`; about 12 s for them all, the first
@@ -288,15 +293,15 @@ time and after a game update). The kinds:
   locations, rooms and dungeons are left out (their objects are listed alone). Its test copy keeps the prefabs
   it has.
 
-The tests use trimmed copies, `tests/fixtures/<kind>.json` (what they meet; the driver's
+The tests use trimmed copies, `editor/tests/fixtures/<kind>.json` (what they meet; the driver's
 `gamedata <folder>` gives them to the smoke tests). After a game update, make them again with
-`ValheimWorldEditor --export-test-data tests/fixtures`, which keeps the entries each copy has.
+`ValheimWorldEditor --export-test-data editor/tests/fixtures`, which keeps the entries each copy has.
 
 The game's location rules (for the New world page's start, bosses and traders) are read by the editor
-itself, in C# (`Core/App/GameLocations.cs`), from the player's Valheim, and kept in the data folder
+itself, in C# (`editor/Core/App/GameLocations.cs`), from the player's Valheim, and kept in the data folder
 until the game changes; the editor keeps no copy of them. The tests, which run without the game, use
-`tests/fixtures/locations.json` (only the kinds the page shows): after a game update, make it again
-with `ValheimWorldEditor --export-locations tests/fixtures/locations.json`. The order of the game's
+`editor/tests/fixtures/locations.json` (only the kinds the page shows): after a game update, make it again
+with `ValheimWorldEditor --export-locations editor/tests/fixtures/locations.json`. The order of the game's
 location lists comes from the game's own log (`Player.log`, its "Added N locations, M vegetations ...
 from main" lines), so it follows game updates once the game has been started; without a log, the
 editor uses `GameLocations.BuiltInOrder` (Valheim 0.221), which is worth refreshing from a new log
@@ -334,18 +339,18 @@ Data and a test location file in the server's BepInEx).
 
 The tests (xUnit v3) are in two projects, laid out like the code they test:
 
-- `tests/Core.Tests` tests `Core/` without a window (save round trips, the generator against values
+- `editor/tests/Core.Tests` tests `editor/Core/` without a window (save round trips, the generator against values
   recorded in the game, live mode against a stand-in bridge, settings, servers, the SSH tunnel), in
-  `App/`, `Editing/`, `Save/` and `WorldGen/` as in `Core/`.
-- `tests/Desktop.Tests` tests `Desktop/`: the windows and panels run in Avalonia's headless mode,
+  `App/`, `Editing/`, `Save/` and `WorldGen/` as in `editor/Core/`.
+- `editor/tests/Desktop.Tests` tests `editor/Desktop/`: the windows and panels run in Avalonia's headless mode,
   driven with real mouse and keyboard events.
 
-Each test class is in a file of its own, named after the file it tests (`Core/Save/WorldWriter.cs` is
-tested by `tests/Core.Tests/Save/WorldWriterTests.cs`). Several classes for one file are told apart by
+Each test class is in a file of its own, named after the file it tests (`editor/Core/Save/WorldWriter.cs` is
+tested by `editor/tests/Core.Tests/Save/WorldWriterTests.cs`). Several classes for one file are told apart by
 what they test (`PlaceToolTests`, `PlaceToolMouseTests`, `PlaceToolEdgeTests`). Tests that go through
 several files at once (window workflows, live mode, saving safely, the start-up, the visual tests) are
 in each project's `Integration/` folder, named after what they test. The helpers are in `Support/`:
-each project's own, and `tests/Support/` for those both use (the test world `TempWorld`, `Fixtures`,
+each project's own, and `editor/tests/Support/` for those both use (the test world `TempWorld`, `Fixtures`,
 the stand-in game `FakeGame`, the `DataDir` collection), compiled into both projects.
 
 - **Visual tests** (`[Trait("Category", "Visual")]`, in `Integration/*VisualTests.cs`) start the real app with
@@ -355,7 +360,7 @@ the stand-in game `FakeGame`, the `DataDir` collection), compiled into both proj
   that many bytes (1 GiB by default) are let go when another area opens, so every area reads its
   models again. Their groups are non-parallel collections: each app runs alone, after the other tests,
   since its map keeps every core but one busy (on CI's two cores, under coverage, pictures timed out).
-- **The user's files are never touched.** Module initializers (`TestFiles` in `tests/Support`, and
+- **The user's files are never touched.** Module initializers (`TestFiles` in `editor/tests/Support`, and
   `TestApp` for the app's own) point the settings, servers, Place memory, stamps, preferences, saved
   selections and the data folder at temporary files before any test runs, and turn off the search of
   the computer's own Valheim and mod manager profiles. Tests that change the environment or these paths (`HOME`, `XDG_*`, the data
@@ -365,18 +370,18 @@ the stand-in game `FakeGame`, the `DataDir` collection), compiled into both proj
   local port, with its own keys and settings in a temporary folder (never `~/.ssh`, never port 22).
   Without OpenSSH's `sshd` those tests skip, unless `VWE_NEED_SSHD=1` makes that a failure.
 
-The **test world** is `tests/fixtures/CITest`: a brand-new world made by a dedicated server and
+The **test world** is `editor/tests/fixtures/CITest`: a brand-new world made by a dedicated server and
 filled live through the editor (ground edits, trees, rocks, bushes, pickables, a crop, floors, walls,
-chests). `tests/fixtures/CITest.snapshot` is the same world as the plugin sends it, and `tests/fixtures/CITest42` the
+chests). `editor/tests/fixtures/CITest.snapshot` is the same world as the plugin sends it, and `editor/tests/fixtures/CITest42` the
 same world as Valheim 1.0.20 saves it, in save format 42 (its dedicated server loaded CITest, one object of each chunk
 file was moved and moved back live so that the game wrote every file again, then it saved).
 
 The **game mods** the tests install into their BepInEx folders (Expand World Size, Data and Rivers, Riverheim, and
 BepInEx's own pack for the BepInEx and Harmony assemblies Riverheim names, at the versions the editor follows) are
-never kept in the repository: building a test project downloads them from Thunderstore (`tests/TestMods.targets`) into
+never kept in the repository: building a test project downloads them from Thunderstore (`editor/tests/TestMods.targets`) into
 the system's temporary folder (`vwe-test-mods/<project>`), and the test run deletes them when it ends
-(`tests/Support/TestMods.cs`; CI deletes them after its last test process). Building the tests needs the network for
-them. Unity's classes Riverheim's plugin derives from come from a stand-in the tests write (`tests/Support/UnityStandIn.cs`).
+(`editor/tests/Support/TestMods.cs`; CI deletes them after its last test process). Building the tests needs the network for
+them. Unity's classes Riverheim's plugin derives from come from a stand-in the tests write (`editor/tests/Support/UnityStandIn.cs`).
 
 CircleCI (`.circleci/continue.yml`) runs on every push and pull request (`packages` and
 `windows-smoke` on main only: they are slow, and the packaging they check seldom changes; `windows-tests` on main
@@ -386,26 +391,26 @@ and on the branches whose name has `windows` in it, so a Windows fix is checked 
 |---|---|
 | `code-analysis` | `Desktop` (with `Core` and `Sdk`) and `WorldEditorBridge.Api` build with every analyzer warning an error, and the repository's XML files are well formed. |
 | `formatting` | `tools/format-check.sh`: the five projects are formatted as `.editorconfig` says (`dotnet format whitespace` and `style`), on two containers. A pull request checks only the projects with a changed file (all of them when `.editorconfig`, `Directory.Build.props` or `global.json` changed); main checks all of them. |
-| `core-tests` | `tests/Core.Tests`, with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers (the world generator's tests run several times slower under coverage). |
-| `app-tests` | `tests/Desktop.Tests` on six containers, the visual tests included: they draw on a virtual screen (Xvfb, Mesa's software OpenGL), so CI checks the shapes they draw but not the game's look (CI has no Valheim: its editor draws plain colours). Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, each class a `--filter-class`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. A test stuck 5 minutes is dumped and stopped (`tests/testconfig.json`); a crashed or stopped test process shows as one failed test of its class. |
+| `core-tests` | `editor/tests/Core.Tests`, with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers (the world generator's tests run several times slower under coverage). |
+| `app-tests` | `editor/tests/Desktop.Tests` on six containers, the visual tests included: they draw on a virtual screen (Xvfb, Mesa's software OpenGL), so CI checks the shapes they draw but not the game's look (CI has no Valheim: its editor draws plain colours). Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, each class a `--filter-class`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. A test stuck 5 minutes is dumped and stopped (`editor/tests/testconfig.json`); a crashed or stopped test process shows as one failed test of its class. |
 | `packages` | On main only: the release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
-| `windows-tests` | `tests/Core.Tests` on a Windows machine (the newest .NET 10 SDK, the style analyzers off: the formatting is checked on Linux), for the code paths only Windows takes: the profile folders, file locks, the paths' letter case. Its results are stored, so CircleCI names the failing tests. |
+| `windows-tests` | `editor/tests/Core.Tests` on a Windows machine (the newest .NET 10 SDK, the style analyzers off: the formatting is checked on Linux), for the code paths only Windows takes: the profile folders, file locks, the paths' letter case. Its results are stored, so CircleCI names the failing tests. |
 
 Not covered by CI: the game's look in the visual tests, building the plugin and reading the game's data
-(both need Valheim's own files: the tests use their copies in `tests/fixtures`), and live mode
+(both need Valheim's own files: the tests use their copies in `editor/tests/fixtures`), and live mode
 against a real game.
 
 Running them locally (they run on Microsoft.Testing.Platform, as `global.json` says: `dotnet test`
 takes the project with `--project`, and xUnit's own filters):
 
 ```sh
-dotnet test --project tests/Core.Tests                                    # Core's tests
-dotnet test --project tests/Desktop.Tests                                 # the app's (visual tests need a display)
-dotnet test --project tests/Desktop.Tests --filter-not-trait Category=Visual  # without the visual tests
-dotnet test --project tests/Desktop.Tests --filter-trait Category=Visual      # only them
-dotnet test --project tests/Core.Tests --filter-class '*.WorldWriterTests'    # one class
+dotnet test --project editor/tests/Core.Tests                                    # Core's tests
+dotnet test --project editor/tests/Desktop.Tests                                 # the app's (visual tests need a display)
+dotnet test --project editor/tests/Desktop.Tests --filter-not-trait Category=Visual  # without the visual tests
+dotnet test --project editor/tests/Desktop.Tests --filter-trait Category=Visual      # only them
+dotnet test --project editor/tests/Core.Tests --filter-class '*.WorldWriterTests'    # one class
 for p in Core.Tests Desktop.Tests; do                                     # with coverage (Cobertura)
-  dotnet test --project tests/$p --filter-not-trait Category=Visual --coverage --coverage-output-format cobertura \
+  dotnet test --project editor/tests/$p --filter-not-trait Category=Visual --coverage --coverage-output-format cobertura \
     --coverage-settings "$PWD/tests/coverage.runsettings" --coverage-output /tmp/coverage/$p/coverage.cobertura.xml
 done
 tools/release.sh /tmp/dist && tools/check-package.sh /tmp/dist/*.tar.gz
@@ -421,13 +426,13 @@ which would send only the rerun classes' coverage): `codecov/project` fails when
 check: a drop shows on `main` once merged. Codecov's page shows each file's covered and uncovered
 lines.
 
-The coverage counts only our own code (`tests/coverage.runsettings`, for both test projects): the core
+The coverage counts only our own code (`editor/tests/coverage.runsettings`, for both test projects): the core
 and the app, not the tests, the libraries or generated code, and not the FastNoise library either, which
 the test against the game's values checks along with the world generator. Code that CI cannot run (it
 needs a display, the game's files or a real game) can be left out with
 `[ExcludeFromCodeCoverage(Justification = "...")]`. A test that starts the editor in a process of its own
 starts the copy in the tests' folder (`EditorApp.Path`): the collector measures that process too, but one
-started from `Desktop/bin` would replace the test process's coverage of the app with its own.
+started from `editor/Desktop/bin` would replace the test process's coverage of the app with its own.
 
 ## Fuzzing
 
@@ -437,19 +442,19 @@ it as damaged (`InvalidDataException`, `EndOfStreamException`, `FormatException`
 the `inventory` target also `NotSupportedException`, for an older item format the editor does not
 read). Any other exception, a hang or a huge allocation is a bug.
 
-- **`tests/Fuzz`**: one target per reader, run by libFuzzer through
+- **`editor/tests/Fuzz`**: one target per reader, run by libFuzzer through
   [SharpFuzz](https://github.com/Metalnem/sharpfuzz): `blueprint`, `homestead`, `zdo`, `inventory`,
-  `dungeon`, `zonedb`, `snapshot`, `chunk`, `png`. Each has its seeds (`tests/Fuzz/seeds/<target>`,
-  taken from the test fixtures) and a dictionary of its format's words (`tests/Fuzz/dict`).
+  `dungeon`, `zonedb`, `snapshot`, `chunk`, `png`. Each has its seeds (`editor/tests/Fuzz/seeds/<target>`,
+  taken from the test fixtures) and a dictionary of its format's words (`editor/tests/Fuzz/dict`).
 - **`.clusterfuzzlite/`**: how [ClusterFuzzLite](https://google.github.io/clusterfuzzlite/) builds them.
   It has no .NET of its own, so each target is a native libFuzzer binary: libfuzzer-dotnet compiled
-  with `tests/Fuzz/target.cc`, which points it at the .NET program and the target's name
+  with `editor/tests/Fuzz/target.cc`, which points it at the .NET program and the target's name
   (`project.yaml` says `c++`). Only `ValheimWorldEditor.Core.dll` is instrumented.
 - **Every night on main** (`.github/workflows/cflite_batch.yml`): an hour over every target. A crash
   fails the run, shows in code scanning (category `clusterfuzzlite`) and its input is the run's
   artifact. Not on pull requests: it takes too long; run the workflow by hand from the Actions tab to
   fuzz a change first. `cflite_cron.yml` prunes the corpus once a week.
-- **`FuzzPropertiesTests`** (FsCheck, `tests/Core.Tests/Integration`) checks the same readers in the
+- **`FuzzPropertiesTests`** (FsCheck, `editor/tests/Core.Tests/Integration`) checks the same readers in the
   test suite on every pull request: made-up and cut-short inputs are read or refused, and what the
   editor writes reads back.
 
@@ -471,6 +476,6 @@ of the corpus folder.
 
 A crash found is fixed in the reader (a damaged input refused with `InvalidDataException`), and its
 minimized input (`-minimize_crash=1`) becomes a test in `FuzzFindingsTests`
-(`tests/Core.Tests/Integration`). A new reader of outside files gets a target in
-`tests/Fuzz/Program.cs` and the `TARGETS` list of `.clusterfuzzlite/build.sh`, seeds and a
+(`editor/tests/Core.Tests/Integration`). A new reader of outside files gets a target in
+`editor/tests/Fuzz/Program.cs` and the `TARGETS` list of `.clusterfuzzlite/build.sh`, seeds and a
 dictionary, and a property in `FuzzPropertiesTests`.

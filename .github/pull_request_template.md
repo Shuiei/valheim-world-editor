@@ -14,7 +14,7 @@ Modes affected: <!-- My game, dedicated server, saved world, Workshop -->
 
 <!-- Tests added or run, and what was checked by hand (on a local or scratch world, never a live server). -->
 
-- [ ] `dotnet test --project tests/Core.Tests` and `dotnet test --project tests/Desktop.Tests` pass
+- [ ] `dotnet test --project editor/tests/Core.Tests` and `dotnet test --project editor/tests/Desktop.Tests` pass
   <!-- Without a display, the visual tests skip: add `--filter-not-trait Category=Visual` to leave them out. -->
 - [ ] Tried in the app
 
