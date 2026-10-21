@@ -32,6 +32,8 @@ public static partial class SettingsDialog
             {
                 ModExtensions.Allow(_settings, x, box.IsChecked == true);
             }
+            var offBefore = _settings.AddOnsOff;
+            _settings.AddOnsOff = AddOns.TurnedOff(_settings.AddOnsOff, _addOnBoxes.Select(b => (b.AddOn.Name, b.Box.IsChecked == true)));
             _settings.ClaudeConnect = _claude.IsChecked == true;
             _settings.ClaudeScripts = _scripts.IsChecked == true;
             _settings.ClaudePort = claudePort;
@@ -46,6 +48,7 @@ public static partial class SettingsDialog
             {
                 (_settings.ClaudeConnect, _settings.ClaudeScripts, _settings.ClaudePort, _settings.ClaudeToken, _settings.DriverOpenGl, _settings.Language, _settings.ExpandWorld, _settings.ExpandWorldFolder, _settings.Riverheim, _settings.HistorySteps) = before;
                 _settings.Extensions = allowedBefore;
+                _settings.AddOnsOff = offBefore;
                 _error.Text = problem;
                 return;
             }

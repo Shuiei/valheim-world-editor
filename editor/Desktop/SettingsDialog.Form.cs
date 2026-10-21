@@ -32,6 +32,9 @@ public static partial class SettingsDialog
         private List<(CheckBox Box, ModExtensions.Extension Extension)> _extensionBoxes = [];
         private StackPanel _extensions = null!;
         private StackPanel _addOns = null!;
+
+        /// <summary>The add-ons' switches, each with its add-on.</summary>
+        private List<(CheckBox Box, AddOns.AddOn AddOn)> _addOnBoxes = [];
         private IReadOnlyList<Lang.Language> _languages = [];
         private ComboBox _language = null!;
         private CheckBox _driverGl = null!;
