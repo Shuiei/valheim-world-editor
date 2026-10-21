@@ -12,8 +12,9 @@ public sealed partial class WorldEditorBridgePlugin
 
     /// <summary>
     /// POST /zones/reset, like the editor's offline reset: every saved object of the zones goes (player-built pieces
-    /// stay when asked, the ground edits only when asked, players' tombstones always stay), the zones are no longer
-    /// marked as generated and their locations as not placed, so the game builds them again.
+    /// stay when asked, with the prefabs the editor names after the zones, mods' data holders; the ground edits only
+    /// when asked, players' tombstones always stay), the zones are no longer marked as generated and their locations
+    /// as not placed, so the game builds them again.
     /// </summary>
     /// <returns>JSON: zones reset, objects removed and locations to place again.</returns>
     private (byte[] Json, AppliedChanges Changes) ResetZones(byte[] body)
@@ -26,6 +27,16 @@ public sealed partial class WorldEditorBridgePlugin
             Vector2s key = new((short)pkg.ReadInt(), (short)pkg.ReadInt());
             zones[key] = (pkg.ReadBool(), pkg.ReadBool());
         }
+        // Kept with the buildings (an editor older than 1.93.0 sends none).
+        HashSet<int> kept = [];
+        if (pkg.GetPos() < pkg.Size())
+        {
+            int n = pkg.ReadInt();
+            for (int i = 0; i < n; i++)
+            {
+                kept.Add(pkg.ReadInt());
+            }
+        }
         var dict = AllZdos();
         long session = ZDOMan.GetSessionID();
         int destroyed = 0;
@@ -37,7 +48,7 @@ public sealed partial class WorldEditorBridgePlugin
             }
             int prefab = zdo.GetPrefab();
             bool terrain = prefab == TerrainCompilerPrefab;
-            if (prefab == TombstonePrefab || (terrain && !r.Ground) || (!terrain && r.Keep && zdo.GetLong(ZDOVars.s_creator) != 0))
+            if (prefab == TombstonePrefab || (terrain && !r.Ground) || (!terrain && r.Keep && (zdo.GetLong(ZDOVars.s_creator) != 0 || kept.Contains(prefab))))
             {
                 continue;
             }

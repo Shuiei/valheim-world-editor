@@ -52,7 +52,7 @@ public sealed partial class WorldSession
             if (Edits.ResetCount > 0)
             {
                 var resets = Edits.Resets;
-                await live.ResetZones(resets);
+                await live.ResetZones(resets, ModManifests.DataPrefabs);
                 // Done in the game: not pending any more, even if reading the world below fails (sent again, they
                 // would wipe what players built there since).
                 Edits.MarkResetsApplied(resets);

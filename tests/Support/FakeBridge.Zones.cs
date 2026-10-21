@@ -8,7 +8,7 @@ namespace WorldEditor.Tests;
 public sealed partial class FakeBridge
 {
     /// <summary>
-    /// Records the zone resets a request lists and returns the answer for them.
+    /// Records the zone resets a request lists, and the prefabs kept with the buildings, and returns the answer for them.
     /// </summary>
     private string ServeZoneReset(HttpListenerContext ctx)
     {
@@ -17,6 +17,11 @@ public sealed partial class FakeBridge
         for (int i = 0; i < n; i++)
         {
             Resets.Add((r.ReadInt32(), r.ReadInt32(), r.ReadBoolean(), r.ReadBoolean()));
+        }
+        int kept = r.ReadInt32();
+        for (int i = 0; i < kept; i++)
+        {
+            KeptWithBuildings.Add(r.ReadInt32());
         }
         return $"{{\"zones\":{n},\"destroyed\":0,\"locations\":0}}";
     }

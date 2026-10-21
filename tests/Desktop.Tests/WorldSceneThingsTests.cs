@@ -53,6 +53,17 @@ public class WorldSceneThingsTests
         Assert.False(things[2].Piece);
     }
 
+    [Fact]
+    public void AnObjectThatOnlyHoldsAModsDataIsNoThing()
+    {
+        int fleet = StableHash.Of(ExampleMod.Fleet);
+        var world = World();
+        world.Objects.Add((6, fleet, new Vector3(3, 30, 3), Vector3.Zero, Vector3.One));
+        var things = WorldScene.ReadThings(world, 0, 0, 1, 1, new HashSet<int>(), [new NewObject(-1, fleet, new Vector3(-3, 30, 3), Vector3.Zero, 1)]);
+        Assert.DoesNotContain(things, t => t.Prefab == fleet);
+        Assert.Contains(things, t => t.Id == 1);
+    }
+
     // A ruin's piece (a catalogue piece with no builder) touching the area's building is joined to it, and one at
     // the area's edge touching a building just outside it, or a piece added in this session; one apart is not.
     [Fact]

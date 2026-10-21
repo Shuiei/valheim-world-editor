@@ -21,6 +21,9 @@ public static class Keys
     /// <summary>Bytes: a sail's colour, red, green, blue and alpha as four bytes.</summary>
     public const string Colour = "ExampleVehicles_Colour";
 
+    /// <summary>The fleet register's prefab: an object the mod keeps its data in (the manifest's "data": nothing to draw).</summary>
+    public const string Fleet = "example_fleet";
+
     /// <summary>The sail's prefab.</summary>
     public const string Sail = "example_sail";
 

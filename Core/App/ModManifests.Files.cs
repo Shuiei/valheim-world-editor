@@ -75,8 +75,18 @@ public static partial class ModManifests
             if (path.StartsWith(Path.GetFullPath(folder) + Path.DirectorySeparatorChar, StringComparison.Ordinal)
                 && path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
             {
-                notes.Extensions[path] = new Offered(path, mod);
+                notes.Extensions[path] = new Offered(path, mod, ScriptNames(root["gameComponents"]));
             }
         }
     }
+
+    /// <summary>
+    /// The game script class names a manifest's "gameComponents" lists: the strings that are class names (letters,
+    /// digits and underscores, not starting with a digit), each once, 32 at most; none when it is not a list.
+    /// </summary>
+    private static List<string> ScriptNames(JsonNode? node) =>
+        node is not JsonArray list
+            ? []
+            : [.. list.OfType<JsonValue>().Select(v => v.TryGetValue(out string? s) ? s : null).OfType<string>()
+                .Where(s => s.Length is > 0 and <= 100 && !char.IsAsciiDigit(s[0]) && s.All(c => char.IsAsciiLetterOrDigit(c) || c == '_')).Distinct(StringComparer.Ordinal).Take(32)];
 }

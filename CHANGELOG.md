@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.93.0 — 2026-10-21
+
+### Added
+- **More for mod authors' editor extensions.** A mod's file can now mark objects that only hold its data (the editor
+  no longer shows them as boxes, and a zone reset that keeps buildings keeps them), and its extension can read the
+  settings of the game's own scripts, as your copy of Valheim has them.
+
+### WorldEditorBridge
+- A live zone reset that keeps buildings also keeps the objects mods mark as holding their data.
+
 ## v1.92.0 — 2026-10-20
 
 ### Added

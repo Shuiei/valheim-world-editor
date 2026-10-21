@@ -117,6 +117,18 @@ public static class GameScripts
             Of("float", "m_paintRadius"),
             Of("float", "m_paintStrength"),
         ],
+        ["TerrainOp"] =
+        [
+            Struct("Settings", "m_settings",
+                Of("float", "m_levelOffset"),
+                Bool("m_level"),
+                Of("float", "m_levelRadius"),
+                Bool("m_raise"),
+                Of("float", "m_raiseDelta"),
+                Bool("m_paintCleared"),
+                Of("int", "m_paintType"),
+                Of("float", "m_paintRadius")),
+        ],
         ["Location"] = [Of("float", "m_exteriorRadius"), Bool("m_clearArea"), Bool("m_applyRandomDamage"), Bool("m_hasInterior")],
         ["Room"] =
         [

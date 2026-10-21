@@ -257,6 +257,15 @@ public static class CatalogueGame
             r.Mono("TerrainModifier", Modifier(5, level: true));
         });
         b.Prefab("Prop_rock", r => r.Mono("TerrainModifier", Modifier(6)));
+        // A game script mods' extensions read (ModComponents): on a prefab's root, and on a child of another.
+        b.Prefab("paved_test", r => r.Mono("TerrainOp", new Fields
+        {
+            ["m_settings"] = new Fields { ["m_paintCleared"] = true, ["m_paintType"] = 2, ["m_paintRadius"] = 2.2 },
+        }));
+        b.Prefab("raise_test", r => r.Child("raise_op", c => c.Mono("TerrainOp", new Fields
+        {
+            ["m_settings"] = new Fields { ["m_levelOffset"] = 0.5, ["m_raise"] = true, ["m_raiseDelta"] = 1.0 },
+        })));
     }
 
     /// <summary>

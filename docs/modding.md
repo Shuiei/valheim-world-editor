@@ -34,6 +34,7 @@ Vehicles' file:
   "$schema": "https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/worldeditor.schema.json",
   "version": 1,
   "extension": "ExampleVehicles.WorldEditor.dll",
+  "gameComponents": ["Ship"],
   "data": {
     "ExampleVehicles_Vehicle": { "label": "Vehicle", "readOnly": true, "help": "The vehicle this part is built on." },
     "ExampleVehicles_Offset": { "label": "Place on the vehicle", "readOnly": true },
@@ -41,6 +42,7 @@ Vehicles' file:
   },
   "prefabs": {
     "example_boundary": { "hidden": true },
+    "example_fleet": { "hidden": true, "data": true },
     "example_hull": { "group": "Hulls" },
     "example_sail": { "group": "Sails and cables" },
     "example_post": { "group": "Sails and cables" },
@@ -53,9 +55,10 @@ Vehicles' file:
 |---|---|
 | `version` | The format's version: `1`. A file of a later version, or without one, is skipped whole. |
 | `data` | By data key, as your code names it (the name whose hash the game saves): `label`, how the [inspector](select.md#inspecting-and-changing-an-objects-data) names the value (else its key; the editor's own names for the game's keys come first); `readOnly`, the inspector shows the value but does not let it be changed (values your mod sets itself and that would break if edited); `help`, what it is, shown when pointing at the value. |
-| `prefabs` | By prefab name: `hidden`, not offered in the [Place](place.md) list or the Workshop's Build panel (your tools, effects, helpers; objects of it already in a world still show); `group`, the heading your piece is listed under in the Build panel's **Mods** tab, after the mod's name ("*mod name* · Hulls"). Without a group, a piece is listed under its crafting station, else under "No station needed". `group` counts only for the mods' own pieces. |
+| `prefabs` | By prefab name: `hidden`, not offered in the [Place](place.md) list or the Workshop's Build panel (your tools, effects, helpers; objects of it already in a world still show); `group`, the heading your piece is listed under in the Build panel's **Mods** tab, after the mod's name ("*mod name* · Hulls"). Without a group, a piece is listed under its crafting station, else under "No station needed". `group` counts only for the mods' own pieces. `data`: objects of it only hold your mod's data (a register, what was dug in an area) and have nothing to see: the editor never draws, picks or lists them in an area (your extension still reads them), and a [zone reset](area.md) keeps them when it keeps the buildings, removing them with everything else otherwise. |
 | `links` | How your objects link into one: see [Linked objects](#linked-objects). |
 | `extension` | Your editor extension's DLL, relative to the file's folder and inside it: see [Extensions](#extensions). |
+| `gameComponents` | Class names of the game's own scripts whose fields your extension needs (`"TerrainOp"`, `"Ship"`; 32 at most): while your extension runs, the editor reads every component of them in the game's prefabs from the player's Valheim (once, then kept until the game changes) and hands them to it as `Host.Game` (see [Hooks](#hooks)). |
 
 ### How the editor reads it
 
@@ -149,6 +152,7 @@ it. It can:
 - draw what your mod builds in code while the game runs (a sail from its corners, a cable from post
   to post);
 - leave the ground undrawn where your mod digs (the mouth of a tunnel, a pit);
+- read the game's own scripts' settings (its `gameComponents`), as the player's Valheim has them;
 - in live mode, ask your mod's own plugin in the game for what only the game knows (see
   [Live mode](#live-mode)).
 
@@ -218,7 +222,7 @@ offers one."
 | `AddShapes(IShapeProvider, prefabs)` | Objects of the prefabs are drawn with your shapes too: `Shape`s, triangles in the object's frame (metres; x right, y up, z forward; the object's place, turn and size applied) or in the world's (`WorldSpace = true`), one colour each (red, green, blue, alpha from 0 to 1; alpha below 1: see-through), wound clockwise seen from the front as in Unity, or seen from both sides (`BothSides = true`, for a sail or a cloth). They are drawn with the object's kind (hidden when the View panel hides it). A shape with a triangle naming a corner it lacks, or a corner that is not a number, is not drawn. |
 | `AddGroundCuts(IGroundCutter, prefabs)` | The ground is not drawn inside the outlines (`GroundCut`) you give for objects of the prefabs: points on the ground (x, z) in the object's frame, or in the world's (`WorldSpace = true`); at least three, in any direction round (a self-crossing outline cuts by the even-odd rule). A click there goes through the hole. The editor's ground is a height map with a point every metre: the cut leaves out the ground between the points inside the outline, so its edge follows that 1 m grid, and what shows through is what you draw below (shapes) and the underside of the ground. |
 | `AddLiveListener(ILiveListener)` | Told when the editor connects to a game (`OnConnected`, with the game) and when that ends (`OnDisconnected`: the world was closed, or another opened). See [Live mode](#live-mode). |
-| `Host` | The editor, outside the hooks: `Host.Live`, the game connected (null when there is none: a saved world, the Workshop), and `Host.Redraw()`, for your shapes and cuts to be made again at the next frame (after the game told you something new). |
+| `Host` | The editor, outside the hooks: `Host.Live`, the game connected (null when there is none: a saved world, the Workshop); `Host.Game`, the game's components your manifest's `gameComponents` asks for (`Components("Ship")`: each with its prefab, the object it is on and its fields by name, as the game saves them; ready once a world or the Workshop is open, so ask from your hooks, not from `Register`); and `Host.Redraw()`, for your shapes and cuts to be made again at the next frame (after the game told you something new). |
 | `Log(message)` | Writes a line, named after your mod ("extension ExampleVehicles: …"), to the editor's log, `ValheimWorldEditor.log` in its data folder (**Open log** on the start page; started over at each run). |
 
 Shape and cut hooks get the world around the object too (`IWorldView`): `TryFind(idKey, id, out
@@ -342,5 +346,5 @@ from. Example Vehicles builds vehicles out of a hull and the parts built on it.
 | `samples/ExampleVehicles.WorldEditor/Sails.cs` | Shapes: a sail's cloth drawn between three or four corners kept in its data, in its colour, seen from both sides. |
 | `samples/ExampleVehicles.WorldEditor/Cables.cs` | Shapes in world space: a cable from the top of one post to the top of the post it names, found with `TryFind`. |
 | `samples/ExampleVehicles.WorldEditor/Pits.cs` | A ground cut: a round hole as wide as the pit's radius (1.5 m when it keeps none). |
-| `samples/ExampleVehicles.WorldEditor/LiveLink.cs` | The extension's side of live mode: checks that the plugin registered, calls its `ping` route, logs the answer, and catches everything. |
+| `samples/ExampleVehicles.WorldEditor/LiveLink.cs` | The extension's side of live mode: names the game's own ships (`Host.Game`, from the manifest's `gameComponents`), checks that the plugin registered, calls its `ping` route, logs the answer, and catches everything. |
 | `samples/ExampleVehicles.Bridge/ExampleVehiclesBridgePlugin.cs` | The mod's BepInEx plugin taking part in live mode: soft dependency, registration in a class of its own, routes `ping` and `players`, a listener that logs what the editor applied. It builds against the game's and BepInEx's DLLs like any plugin (`-p:ValheimDir=…`, a Valheim dedicated server's folder). |

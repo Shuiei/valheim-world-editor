@@ -37,12 +37,12 @@ public sealed class ModExtensionsTests : IDisposable
     private AppSettings Settings { get; } = new();
 
     /// <summary>A mod folder under plugins with a manifest naming its extension, and the DLL copied in (given).</summary>
-    private string Mod(string mod, string extension, string? dllFrom)
+    private string Mod(string mod, string extension, string? dllFrom, string more = "")
     {
         Settings.BepInExFolders = [Path.Combine(_dir, "BepInEx")];
         string folder = Path.Combine(_dir, "BepInEx", "plugins", mod);
         Directory.CreateDirectory(folder);
-        File.WriteAllText(Path.Combine(folder, ModManifests.FileName), $$"""{ "version": 1, "extension": "{{extension}}" }""");
+        File.WriteAllText(Path.Combine(folder, ModManifests.FileName), $$"""{ "version": 1, "extension": "{{extension}}"{{more}} }""");
         string dll = Path.GetFullPath(Path.Combine(folder, extension));
         if (dllFrom != null)
         {
@@ -59,6 +59,17 @@ public sealed class ModExtensionsTests : IDisposable
     {
         ModManifests.Refresh(Settings);
         return ModExtensions.Refresh(Settings);
+    }
+
+    [Fact]
+    public void TheGameComponentsAskedForAreTheRunningExtensionsOnly()
+    {
+        Mod("ExampleVehicles", "ExampleVehicles.WorldEditor.dll", Sample, """, "gameComponents": ["Ship", "TerrainOp"]""");
+        Refresh();
+        Assert.Empty(ModExtensions.RequestedComponents);
+        ModExtensions.Allow(Settings, Assert.Single(ModExtensions.Offered), true);
+        Refresh();
+        Assert.Equal(["Ship", "TerrainOp"], ModExtensions.RequestedComponents);
     }
 
     [Fact]

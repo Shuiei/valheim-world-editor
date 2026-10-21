@@ -14,7 +14,7 @@ public static partial class GameData
     /// Valheim's folder from its bundles folder (&lt;data folder&gt;/StreamingAssets/SoftRef/Bundles, the data folder
     /// being valheim_Data, or valheim.app/Contents/Resources/Data on a Mac).
     /// </summary>
-    private static string ValheimOf(string bundles)
+    internal static string ValheimOf(string bundles)
     {
         string? d = Path.TrimEndingDirectorySeparator(bundles);
         for (int i = 0; i < 3 && d != null; i++)
@@ -56,7 +56,7 @@ public static partial class GameData
     /// <summary>
     /// A cache when it is for this game and editor; else null (read again).
     /// </summary>
-    private static string? Cached(string file, string stamp)
+    internal static string? Cached(string file, string stamp)
     {
         try
         {

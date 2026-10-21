@@ -5,7 +5,7 @@ namespace WorldEditor.Tests;
 
 /// <summary>
 /// The mods' worldeditor.json manifests (ModManifests) in the settings' plugins folders, at any depth: what they say of
-/// data keys (label, read-only, help) and prefabs (hidden, group); a file of another version, or not JSON, skipped; entries
+/// data keys (label, read-only, help) and prefabs (hidden, group, data holders), the game scripts an extension reads; a file of another version, or not JSON, skipped; entries
 /// not in the expected form left out; the newest file winning a name two say something of. Runs alone, without the player's
 /// own Valheim and profiles.
 /// </summary>
@@ -40,6 +40,32 @@ public sealed class ModManifestsTests : ModManifestsTestBase
         Assert.False(ModManifests.IsHidden("hull_rib"));
         Assert.Equal("Hulls", ModManifests.PrefabOf("hull_rib")?.Group);
         Assert.Null(ModManifests.PrefabOf("woodwall"));
+    }
+
+    [Fact]
+    public void AManifestTellsItsDataHoldersAndTheGameScriptsItsExtensionReads()
+    {
+        string mod = Path.Combine(Dir, "BepInEx", "plugins", "DigMod");
+        Directory.CreateDirectory(mod);
+        File.WriteAllBytes(Path.Combine(mod, "Dig.dll"), [0]);
+        File.WriteAllText(Path.Combine(mod, ModManifests.FileName), """
+            {
+              "version": 1,
+              "extension": "Dig.dll",
+              "gameComponents": ["TerrainOp", "TerrainOp", "Ship", "3d", "bad name", 7, ""],
+              "prefabs": { "dig_record": { "data": true }, "dig_tool": { "hidden": true }, "dig_bad": { "data": "yes" } }
+            }
+            """);
+
+        Assert.Equal(1, ModManifests.Refresh(Settings));
+
+        Assert.True(ModManifests.IsData(TerrainEditor.Save.StableHash.Of("dig_record")));
+        Assert.False(ModManifests.IsData(TerrainEditor.Save.StableHash.Of("dig_tool")));
+        Assert.Null(ModManifests.PrefabOf("dig_bad"));
+        Assert.Contains(TerrainEditor.Save.StableHash.Of("dig_record"), ModManifests.DataPrefabs);
+        // The made-up example mod's own data holder, from the manifest every test has.
+        Assert.True(ModManifests.IsData(TerrainEditor.Save.StableHash.Of(ExampleMod.Fleet)));
+        Assert.Equal(["TerrainOp", "Ship"], Assert.Single(ModManifests.Extensions).GameComponents);
     }
 
     [Fact]

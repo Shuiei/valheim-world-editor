@@ -6,7 +6,8 @@ namespace ExampleVehicles.WorldEditor;
 
 /// <summary>
 /// The extension's side of live mode: when the editor connects to a game where the mod's own plugin registered with
-/// the bridge (samples/ExampleVehicles.Bridge), it calls that plugin's "ping" route and logs the answer. A real
+/// the bridge (samples/ExampleVehicles.Bridge), it names the game's own ships (read from the game for it: the manifest's
+/// "gameComponents"), calls that plugin's "ping" route and logs the answer. A real
 /// extension would ask the game for what only it knows (what the mod built in code), keep it, and ask the editor to
 /// draw its shapes again (<see cref="IEditorHost.Redraw"/>).
 /// </summary>
@@ -19,6 +20,9 @@ public sealed class LiveLink(IExtensionRegistry registry) : ILiveListener
     /// <inheritdoc/>
     public void OnConnected(ILiveGame live)
     {
+        // The game's own ships, read for the extension from the player's Valheim (the manifest's "gameComponents").
+        var ships = registry.Host.Game.Components("Ship").Select(c => c.Prefab);
+        registry.Log("the game's ships: " + string.Join(", ", ships));
         if (!live.Mods.Contains(ModId))
         {
             registry.Log("the game has no Example Vehicles plugin registered with the bridge");

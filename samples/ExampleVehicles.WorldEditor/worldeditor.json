@@ -2,6 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/Shuiei/valheim-world-editor/main/docs/worldeditor.schema.json",
   "version": 1,
   "extension": "ExampleVehicles.WorldEditor.dll",
+  "gameComponents": ["Ship"],
   "data": {
     "ExampleVehicles_Vehicle": { "label": "Vehicle", "readOnly": true, "help": "The vehicle this part is built on." },
     "ExampleVehicles_Offset": { "label": "Place on the vehicle", "readOnly": true },
@@ -9,6 +10,7 @@
   },
   "prefabs": {
     "example_boundary": { "hidden": true },
+    "example_fleet": { "hidden": true, "data": true },
     "example_hull": { "group": "Hulls" },
     "example_sail": { "group": "Sails and cables" },
     "example_post": { "group": "Sails and cables" },

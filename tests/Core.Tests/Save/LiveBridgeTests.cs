@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
+using TerrainEditor.App;
 using TerrainEditor.Editing;
 using TerrainEditor.Save;
 using Xunit;
@@ -144,6 +145,16 @@ public class LiveBridgeTests
         string reply = await live.ResetZones([new ZoneReset(3, -2, true, false), new ZoneReset(-7, 9, false, true)]);
         Assert.Contains("\"zones\":2", reply);
         Assert.Equal(new[] { (3, -2, true, false), (-7, 9, false, true) }, bridge.Resets);
+        Assert.Empty(bridge.KeptWithBuildings);
+    }
+
+    [Fact]
+    public async Task ZoneResetsNameThePrefabsKeptWithTheBuildings()
+    {
+        using var bridge = new FakeBridge();
+        var live = new LiveBridge($"http://127.0.0.1:{bridge.Port}", bridge.Token);
+        await live.ResetZones([new ZoneReset(1, 1, true, false)], ModManifests.DataPrefabs);
+        Assert.Equal([StableHash.Of(ExampleMod.Fleet)], bridge.KeptWithBuildings);
     }
 
     [Fact]
