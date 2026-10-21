@@ -69,20 +69,33 @@ public static partial class SettingsDialog
     /// <summary>Tests: the folder picker (null: the system's).</summary>
     internal static Func<string, Task<string?>>? PickFolder { get; set; }
 
-    /// <summary>Shows the Settings dialog over <paramref name="owner"/> and waits for it to close.</summary>
+    /// <summary>
+    /// Shows the Settings dialog over <paramref name="owner"/> and waits for it to close. Saved, the mods' manifests and
+    /// extensions are found again with the new choices (the add-ons' and extensions' switches, the BepInEx folders), so
+    /// that what is shown from now on (the worlds listed) follows them.
+    /// </summary>
     /// <returns>True when the user saved (the folders, Claude's connection settings and what draws), false when cancelled or closed.</returns>
     public static async Task<bool> Show(Window owner, AppSettings settings)
     {
         var form = new Form(settings);
-        // The mods' editor extensions: found again now (a mod installed since). Away from the window's thread: every
-        // extension file is read and hashed.
-        await Task.Run(() =>
-        {
-            ModManifests.Refresh(settings);
-            ModExtensions.Refresh(settings);
-        });
+        // The mods' editor extensions: found again now (a mod installed since).
+        await FindExtensions(settings);
         form.Build();
         await form.Dialog.ShowDialog(owner);
+        if (form.Saved)
+        {
+            await FindExtensions(settings);
+        }
         return form.Saved;
     }
+
+    /// <summary>
+    /// The mods' manifests and editor extensions found again with these settings, away from the window's thread: every
+    /// extension file is read and hashed.
+    /// </summary>
+    private static Task FindExtensions(AppSettings settings) => Task.Run(() =>
+    {
+        ModManifests.Refresh(settings);
+        ModExtensions.Refresh(settings);
+    });
 }
