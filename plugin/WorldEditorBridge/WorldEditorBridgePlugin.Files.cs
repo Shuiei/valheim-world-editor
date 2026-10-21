@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -44,28 +45,25 @@ public sealed partial class WorldEditorBridgePlugin
     /// GET /config?path=&lt;relative&gt;: a file under BepInEx/config as its bytes (application/octet-stream), or a folder
     /// there as a JSON list of its entries (name, folder, size, modified); the folder itself for an empty path. Only
     /// what is inside the folder: a path that leads out of it (absolute, "..", a link) is refused with 400, one that
-    /// does not exist gets 404, a file over 4 MB 413. Read on this thread: no game object is touched.
+    /// names nothing there gets 404, a file over 4 MB 413. The path is found through the folder's own entries (each part
+    /// matched to a name it lists), so nothing of the request is ever used as a path. Read on this thread: no game
+    /// object is touched.
     /// </summary>
     private static void ServeConfig(HttpListenerContext ctx)
     {
         HttpListenerResponse res = ctx.Response;
         string root = Path.GetFullPath(Paths.ConfigPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         string[] parts = ConfigPartsOf(ctx.Request.QueryString["path"] ?? "");
-        string full = parts == null ? null : parts.Length == 0 ? root : Path.GetFullPath(Path.Combine(root, string.Join(Path.DirectorySeparatorChar.ToString(), parts)));
-        if (full == null || (full != root && !full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal)))
+        var (full, linked) = parts == null ? (null, true) : Resolve(root, parts);
+        if (linked)
         {
             Reply(res, 400, "text/plain", Encoding.UTF8.GetBytes("the path must name a file or folder inside BepInEx/config"));
         }
-        else if (Directory.Exists(full))
+        else if (full != null && Directory.Exists(full))
         {
-            if (Linked(root, parts))
-            {
-                Reply(res, 400, "text/plain", Encoding.UTF8.GetBytes("the path must name a file or folder inside BepInEx/config"));
-                return;
-            }
             Reply(res, 200, "application/json", Encoding.UTF8.GetBytes(FolderJson(full)));
         }
-        else if (File.Exists(full))
+        else if (full != null && File.Exists(full))
         {
             ServeFile(res, root, parts, full);
         }
@@ -73,6 +71,34 @@ public sealed partial class WorldEditorBridgePlugin
         {
             Reply(res, 404, "text/plain", Encoding.UTF8.GetBytes("no such file or folder under BepInEx/config"));
         }
+    }
+
+    /// <summary>
+    /// What the parts name under the config folder, walked through each folder's own entries: the entry whose name is
+    /// the part (as the system compares names: ignoring case on Windows), its path as the folder gives it. Null when a
+    /// part names nothing there; linked when a link stands on the way (a link out of the folder would serve what is not
+    /// under it).
+    /// </summary>
+    private static (string Full, bool Linked) Resolve(string root, string[] parts)
+    {
+        var names = Path.DirectorySeparatorChar == '\\' ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        string walked = root;
+        foreach (string part in parts)
+        {
+            string found = Directory.Exists(walked)
+                ? Directory.EnumerateFileSystemEntries(walked).FirstOrDefault(e => string.Equals(Path.GetFileName(e), part, names))
+                : null;
+            if (found == null)
+            {
+                return (null, false);
+            }
+            if ((File.GetAttributes(found) & FileAttributes.ReparsePoint) != 0)
+            {
+                return (null, true);
+            }
+            walked = found;
+        }
+        return (walked, false);
     }
 
     /// <summary>
