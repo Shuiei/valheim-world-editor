@@ -62,7 +62,6 @@ public sealed partial class WorldGenerator
             float sr = r.StretchedRadius;
             Radius = r.Radius;
             Stretch = r.Stretch;
-            BiomeStretch = r.BiomeStretch;
             WorldSize = sr;
             EdgeOfWorld = r.StretchedTotalRadius;
             EdgeInner = (r.TotalRadius - 10f) / r.Stretch;
@@ -72,9 +71,11 @@ public sealed partial class WorldGenerator
             // The Deep North's edge circle as IsDeepnorth has it (4000.0 and 12000.0, doubles)...
             DeepNorthShift = 0.4 * sr;
             DeepNorthRadius = 1.2 * sr;
-            // ...and as its gap has it (4000f, 12000.0 from a float product, 400.0).
+            // ...and as its gap has it (4000f, 12000.0, 400.0). The mod replaces them only when the stretched radius is
+            // not the game's, and hands 1.2f times the radius over as a double: the game's runtime works the float
+            // product out in double and never rounds it to a float (at the game's radius it is the literal 12000.0).
             DeepNorthGapShift = 0.4f * sr;
-            DeepNorthGapRadius = 1.2f * sr;
+            DeepNorthGapRadius = sr != 10000f ? (double)1.2f * sr : 12000.0;
             DeepNorthGapWidth = 0.04 * sr;
             AshlandsGapWidth = 0.04 * sr;
             AshlandsGap = r.AshlandsGap;
@@ -110,8 +111,6 @@ public sealed partial class WorldGenerator
         public float Radius { get; }
         /// <summary>The world's stretch: world coordinates over it are the generator's.</summary>
         public float Stretch { get; }
-        /// <summary>The land biomes' noise fields' stretch (a double: the mod divides the fields' double sums by it).</summary>
-        public double BiomeStretch { get; }
         /// <summary>The radius in the generator's coordinates (the game's 10000f).</summary>
         public float WorldSize { get; }
         /// <summary>The edge of the world in the generator's coordinates (the game's 10500f).</summary>
