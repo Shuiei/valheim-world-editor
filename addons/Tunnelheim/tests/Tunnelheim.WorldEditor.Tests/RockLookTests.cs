@@ -85,6 +85,26 @@ public class RockLookTests
     }
 
     [Fact]
+    public void APointIsOpenToTheSkyUnlessRockStandsMoreThanAFifthOfAMetreOverIt()
+    {
+        var grid = new RockGrid((_, _) => 10f);
+        grid.EnsureColumn(0, 0);
+        // A cave dug 5 m down, its top 3 m under the ground.
+        grid.Apply(new DigOp(DigKind.Sphere, new Vector3(4, 5, 4), 2f));
+        // Above the ground, on it, and up to a fifth of a metre into it: open.
+        Assert.True(TunnelScene.OpenToSky(grid, new Vector3(8, 12, 8)));
+        Assert.True(TunnelScene.OpenToSky(grid, new Vector3(8, 10, 8)));
+        Assert.True(TunnelScene.OpenToSky(grid, new Vector3(8, 9.85f, 8)));
+        // Deeper, or in the cave, with the ground's rock over it: not open.
+        Assert.False(TunnelScene.OpenToSky(grid, new Vector3(8, 9.75f, 8)));
+        Assert.False(TunnelScene.OpenToSky(grid, new Vector3(4, 5, 4)));
+        // Rock built up over the ground: under it is not open, its top is.
+        grid.Apply(new DigOp(DigKind.Fill, new Vector3(12, 16, 12), 1));
+        Assert.False(TunnelScene.OpenToSky(grid, new Vector3(12, 15, 12)));
+        Assert.True(TunnelScene.OpenToSky(grid, new Vector3(12, 17.1f, 12)));
+    }
+
+    [Fact]
     public void AnAshlandsChunkShowsTheGroundWhereOpenToTheSkyAndLavaUnderRock()
     {
         // A pit open to the sky, and a cave 3 m under the ground.
