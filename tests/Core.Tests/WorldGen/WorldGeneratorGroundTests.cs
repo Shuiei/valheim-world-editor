@@ -6,7 +6,8 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// The generator with a world generation mod's ground in place of the game's (Riverheim's, here a stand-in): its biome,
 /// height, mask and forest answer for the game's bodies, given the point as Expand World Size's stretch leaves it, and
-/// Expand World Size's depth and forest still apply to the answers; no water is laid out; the menu world keeps the game's.
+/// Expand World Size's depth and forest still apply to the answers, Expand World Data's world rules still choose the
+/// biome; no water is laid out; the menu world keeps the game's.
 /// </summary>
 public class WorldGeneratorGroundTests
 {
@@ -74,6 +75,17 @@ public class WorldGeneratorGroundTests
         // The forest is asked at the point as given (no stretch on the game's GetForestFactor), then divided.
         Assert.Equal(0.5f, gen.GetForestFactor(new Vector3(1000f, 0f, 600f)));
         Assert.Equal(["biome 500 300", "height 500 300", "forest 1000 600"], ground.Asked);
+    }
+
+    [Fact]
+    public void ExpandWorldDatasWorldRulesChooseTheBiomeOverIt()
+    {
+        // As in the game with both mods: Data's prefix answers GetBiome; the ground's height stays the mod's.
+        var swamp = new BiomeRule { Biome = Heightmap.Biome.Swamp, SeedBiome = Heightmap.Biome.Swamp, WiggleDistanceWidth = 0f, WiggleSectorWidth = 0f, WiggleRectangleWidth = 0f };
+        var (gen, ground, _) = Make(new WorldRules { DataInstalled = true, World = [swamp] });
+        Assert.Equal(Heightmap.Biome.Swamp, gen.GetBiome(500f, 700f));
+        Assert.Equal(5f, gen.GetBiomeHeight(Heightmap.Biome.Swamp, 500f, 700f, out _));
+        Assert.DoesNotContain(ground.Asked, a => a.StartsWith("biome", StringComparison.Ordinal));
     }
 
     [Fact]

@@ -1,7 +1,8 @@
 # Riverheim compatibility: design
 
 Status: design of 2026-10-20, checked against the game (§5: every row of §3 measured, all exact). Built: step 1
-(#478) and step 2 (`feature/riverheim-terrain`); the rest in §6.
+(#478), step 2 (#480) and step 3 (`feature/riverheim-expand-world`); the rest in §6. Expand World Size bugs found
+on the way, fixed on main separately: #479 (altitude/depth rounding), #482 (biome stretch), #483 (Deep North gap).
 
 Decisions taken (with the user, 2026-10-20):
 
