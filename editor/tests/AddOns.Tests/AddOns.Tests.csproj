@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The repository's add-ons (addons/<Name>/) in the editor: each one built, installed into an addons folder as a
+       player installs it, and loaded by the editor's own code (manifests, extension loading, hooks), so that a change
+       of the editor or the SDK that breaks an add-on fails here. Every add-on's own tests are its project's
+       (addons/<Name>/tests); CI runs both in its addon-tests job. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>WorldEditor.Tests</RootNamespace>
+    <!-- Test methods need no doc comment: their names say what they check. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --config-file $(MSBuildThisFileDirectory)../testconfig.json</TestingPlatformCommandLineArguments>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- As the editor's other tests: xUnit on Microsoft.Testing.Platform, the JUnit results CI shows, a stuck test's dump. -->
+    <PackageReference Include="xunit.v3.mtp-v2" Version="3.2.2" />
+    <PackageReference Include="JunitXml.TestLogger" Version="8.0.0" />
+    <PackageReference Include="Microsoft.TestPlatform.ObjectModel" Version="18.11.0" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
+    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Core/ValheimWorldEditor.Core.csproj" />
+    <!-- Every add-on, built (in this configuration) before the tests: they load its DLL from its own build folder,
+         never as a reference (the editor loads an add-on in a context of its own). -->
+    <ProjectReference Include="../../../addons/*/src/*/*.csproj" ReferenceOutputAssembly="false" Private="false" />
+  </ItemGroup>
+</Project>

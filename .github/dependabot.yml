@@ -24,6 +24,8 @@ updates:
     directories:
       - /editor/tests/Core.Tests
       - /editor/tests/Desktop.Tests
+      - /editor/tests/AddOns.Tests
+      - /addons/Tunnelheim/tests/Tunnelheim.WorldEditor.Tests
     schedule:
       interval: weekly
     open-pull-requests-limit: 3

@@ -315,18 +315,34 @@ jobs:
           results: app
           display: true
 
-  # The add-ons' tests (addons/<Name>/tests: one test-classes step an add-on), then every add-on's zip as a release
-  # makes it (tools/addons.sh). Not in Codecov's figure, which is the editor's (editor/tests/coverage.runsettings).
+  # The add-ons (addons/<Name>/), every one found by itself: the editor loading each as a player installs it and
+  # running its hooks (editor/tests/AddOns.Tests: a change of the editor or the SDK that breaks an add-on fails
+  # here), then each add-on's own tests (addons/<Name>/tests), then every add-on's zip as a release makes it
+  # (tools/addons.sh). Each project builds with every warning an error; a failing one fails the job after the others
+  # ran. Not in Codecov's figure, which is the editor's (editor/tests/coverage.runsettings).
   addon-tests:
     executor: dotnet
     steps:
-      - test-classes:
-          project: addons/Tunnelheim/tests/Tunnelheim.WorldEditor.Tests/Tunnelheim.WorldEditor.Tests.csproj
-          what: Tunnelheim add-on tests (its records replayed against the real mod's)
-          results: addon-tunnelheim
+      - checkout
+      - restore-nuget
+      - run:
+          name: The add-ons in the editor, and each add-on's own tests
+          no_output_timeout: 11m
+          command: |
+            failed=0
+            for project in editor/tests/AddOns.Tests/AddOns.Tests.csproj $(git ls-files 'addons/*/tests/*.csproj'); do
+              name=$(basename "$project" .csproj)
+              echo "== $project"
+              dotnet build "$project" -c Release -warnaserror || { failed=1; continue; }
+              dotnet test --project "$project" -c Release --no-build --no-ansi --no-progress --results-directory /tmp/test-runs \
+                --report-spekt-junit --report-spekt-junit-filename "/tmp/test-results/$name/results.xml" || failed=1
+            done
+            exit $failed
       - run:
           name: The add-ons' zips
           command: tools/addons.sh /tmp/addons
+      - store_test_results:
+          path: /tmp/test-results
       - store_artifacts:
           path: /tmp/addons
           destination: addons
