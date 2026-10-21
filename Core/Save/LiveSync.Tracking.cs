@@ -37,6 +37,12 @@ public sealed partial class LiveSync
     private readonly Dictionary<int, int> _movedTo = [];
 
     /// <summary>
+    /// Snapshot objects whose game object took other data in place (<see cref="LiveMove.Data"/>): moved back, it takes its
+    /// own data again.
+    /// </summary>
+    private readonly HashSet<int> _dataChanged = [];
+
+    /// <summary>
     /// How many snapshot objects' bytes the move search read and parsed, over this sync's life (a test seam: only an
     /// object that may move is read).
     /// </summary>
@@ -69,6 +75,7 @@ public sealed partial class LiveSync
             _liveIds.Clear();
             _ours.Clear();
             _movedTo.Clear();
+            _dataChanged.Clear();
             _unanswered = null;
         }
     }

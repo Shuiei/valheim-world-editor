@@ -13,7 +13,9 @@ public sealed partial class LiveSync
     /// moves in the game under its own ZDOID, so what mods know of it holds; moved back the same way on undo. With a
     /// bridge that does a call once (1.45.3 on), a call whose answer was lost (the connection dropped or timed out after
     /// the game did it) is sent again first under the same id, and the game answers with what it did instead of doing it
-    /// twice; the changes since follow in a call of their own. If the game started again since (another run of the
+    /// twice; the changes since follow in a call of their own. With a bridge that changes data in place (1.97.0 on), an
+    /// object replaced by a changed copy of it (a mod's tool's change) takes the copy's data under its own ZDOID, so a mod
+    /// that keeps its records from being destroyed keeps them. If the game started again since (another run of the
     /// plugin, which does not know what the last one did), the apply fails instead until the world is read again.
     /// </summary>
     /// <returns>A one-line summary for the user in both languages, empty when there was nothing to send.</returns>
@@ -38,7 +40,7 @@ public sealed partial class LiveSync
             }
             said.Add(await Send(world, live, unanswered));
         }
-        Call call = Plan(world, edits, plugin.CanMove);
+        Call call = Plan(world, edits, plugin.CanMove, plugin.CanUpdate);
         if (!call.Empty)
         {
             if (plugin.CanCallOnce)

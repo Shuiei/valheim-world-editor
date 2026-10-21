@@ -55,6 +55,12 @@ public sealed partial class FakeBridge : IDisposable
     /// <summary>The moves sent: the object (ZDOID, prefab, place), its new place and turn.</summary>
     public List<(long User, uint Id, int Prefab, Vector3 From, Vector3 To, Vector3 Rotation)> Moves { get; } = [];
 
+    /// <summary>Each move's object at its new place, in the save format, in the order of <see cref="Moves"/>.</summary>
+    public List<byte[]> MoveBytes { get; } = [];
+
+    /// <summary>Whether each move takes its object's new data in place ("update"), in the order of <see cref="Moves"/>.</summary>
+    public List<bool> MoveData { get; } = [];
+
     /// <summary>
     /// The editor's port of the connection each request came on, in order: the same port twice is one connection
     /// used again.

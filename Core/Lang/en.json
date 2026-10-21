@@ -1199,6 +1199,7 @@
   "live.removed": "{0} object(s) removed",
   "live.created": "{0} created",
   "live.moved": "{0} moved",
+  "live.changed": "{0} changed",
   "live.movedRemade": "{0} moved ({1} more made again at their new place: a player near them would not see them move)",
   "live.refound": "({0} made again by another mod, found at their place)",
   "live.gone": "{0} were already gone",

@@ -8,7 +8,8 @@ public sealed partial class LiveSync
     /// <param name="world">The world the ids are of.</param>
     /// <param name="edits">The editor's deletions and new objects.</param>
     /// <param name="canMove">Whether the plugin moves objects (else a move is a destroy and a creation).</param>
-    private Call Plan(WorldSave world, EditStore edits, bool canMove)
+    /// <param name="canUpdate">Whether it changes objects' data in place too (else a changed object is destroyed and made again).</param>
+    private Call Plan(WorldSave world, EditStore edits, bool canMove, bool canUpdate)
     {
         Call call = new();
         lock (_lock)
@@ -28,7 +29,11 @@ public sealed partial class LiveSync
             HashSet<int> moved = [];
             if (canMove)
             {
-                FindMoves(world, deleted, added, LiveId, call.Moves, call.MoveFor);
+                FindMoves(world, deleted, added, LiveId, canUpdate, call.Moves, call.MoveFor);
+                if (canUpdate)
+                {
+                    FindNewUpdates(world, added, call.Moves, call.MoveFor);
+                }
                 foreach (var (source, from, to) in call.MoveFor)
                 {
                     moved.Add(source);

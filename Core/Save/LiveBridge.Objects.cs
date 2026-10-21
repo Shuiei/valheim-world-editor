@@ -8,7 +8,8 @@ public sealed partial class LiveBridge : IDisposable
     /// destroyed object's prefab and position: another mod may have made the object again under a new ZDOID
     /// (ServersideQoL does, for build pieces, plants, fires and more), and the plugin finds it by those. Plugins from
     /// before 1.15.4 stop reading before them. Then the moves, only for a plugin that can (<see cref="Abilities.CanMove"/>):
-    /// one that cannot would leave them out.
+    /// one that cannot would leave them out. Then, when a move changes its object's data too (only for a plugin that can,
+    /// <see cref="Abilities.CanUpdate"/>), whether each does.
     /// </summary>
     /// <param name="destroy">The objects to destroy.</param>
     /// <param name="create">The objects to make, in the save format.</param>
@@ -51,6 +52,14 @@ public sealed partial class LiveBridge : IDisposable
                     Write(w, m.Rotation);
                     w.Write(m.Fallback.Length);
                     w.Write(m.Fallback);
+                }
+                if (moves.Any(m => m.Data))
+                {
+                    w.Write(moves.Count);
+                    foreach (LiveMove m in moves)
+                    {
+                        w.Write(m.Data);
+                    }
                 }
             }
         });

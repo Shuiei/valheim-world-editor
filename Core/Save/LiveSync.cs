@@ -22,7 +22,11 @@ public readonly record struct LiveTarget(long User, uint Id, int Prefab, Vector3
 /// The object at its new place in the save format: what the plugin makes instead (destroying the object) when a player
 /// has both places loaded, whose game would not show it moving.
 /// </param>
-public readonly record struct LiveMove(LiveTarget From, Vector3 Position, Vector3 Rotation, byte[] Fallback);
+/// <param name="Data">
+/// Whether its data changes too: it takes the data of <paramref name="Fallback"/> in place, under its own ZDOID (a mod's
+/// tool's change, for a plugin that can: <see cref="LiveBridge.Abilities.CanUpdate"/>).
+/// </param>
+public readonly record struct LiveMove(LiveTarget From, Vector3 Position, Vector3 Rotation, byte[] Fallback, bool Data = false);
 
 /// <summary>
 /// Keeps the running game's objects in step with the editor's deletions and new objects. It remembers what has already

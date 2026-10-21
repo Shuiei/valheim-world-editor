@@ -8,21 +8,21 @@ public sealed partial class LiveSync
     /// The moves the next apply sends: for each snapshot object, the game object standing for it (its own, or the one
     /// it was moved to before) goes where the editor has it now, when that is somewhere else and the object is the
     /// same otherwise. Back to its own place when the object is no longer deleted (an undo); else to the first new
-    /// object that is a copy of it (<see cref="NewObject.SourceId"/>) differing only by place and turn, not yet in the
-    /// game.
+    /// object that is a copy of it (<see cref="NewObject.SourceId"/>, or of the copy it was moved to) differing only by
+    /// place and turn, not yet in the game. With <paramref name="canUpdate"/>, a copy whose data differs too is moved to
+    /// with its data (and moved back with the object's own).
     /// </summary>
     /// <param name="world">The world the ids are of.</param>
     /// <param name="deleted">The editor's deleted snapshot objects.</param>
     /// <param name="added">The editor's new objects, by id.</param>
     /// <param name="liveId">The game object of a snapshot object.</param>
+    /// <param name="canUpdate">Whether the plugin changes data in place.</param>
     /// <param name="moves">Where the moves go.</param>
     /// <param name="moveFor">Where each move's snapshot object, the id it moves from and the one it moves to go.</param>
     private void FindMoves(WorldSave world, HashSet<int> deleted, Dictionary<int, NewObject> added, Func<int, LiveTarget> liveId,
-        List<LiveMove> moves, List<(int Source, int From, int To)> moveFor)
+        bool canUpdate, List<LiveMove> moves, List<(int Source, int From, int To)> moveFor)
     {
-        // Copies of saved objects not in the game yet, by the object they copy, in the editor's order.
-        var copies = added.Values.Where(n => n.SourceId is int s && s >= 0 && s < world.ObjectRefs.Count && n.Raw == null && !_liveIds.ContainsKey(n.Id))
-            .GroupBy(n => n.SourceId!.Value).ToDictionary(g => g.Key, g => g.ToList());
+        var copies = CopiesOf(world, added, canUpdate);
         var sources = deleted.Where(id => id >= 0 && id < world.ObjectRefs.Count).Concat(_movedTo.Keys).ToHashSet();
         foreach (int source in sources)
         {
@@ -51,11 +51,23 @@ public sealed partial class LiveSync
             var original = ZdoData.Parse(own, o.File.WorldVersion);
             if (list == null)
             {
-                moves.Add(new LiveMove(at, o.Position, original.Rotation, own));
+                moves.Add(new LiveMove(at, o.Position, original.Rotation, own, _dataChanged.Contains(source)));
                 moveFor.Add((source, from, source));
                 continue;
             }
-            MoveToCopy(world, list, o, original, at, source, from, moves, moveFor);
+            MoveToCopy(world, list, o, original, at, (source, from), canUpdate, moves, moveFor);
         }
+    }
+
+    /// <summary>
+    /// The editor's copies of saved objects not in the game yet, by the object they copy (a copy of the copy one was
+    /// moved to: by that one's), in the editor's order. Ones carrying their own bytes only for a plugin that changes data.
+    /// </summary>
+    private Dictionary<int, List<NewObject>> CopiesOf(WorldSave world, Dictionary<int, NewObject> added, bool canUpdate)
+    {
+        var movedFrom = _movedTo.ToDictionary(m => m.Value, m => m.Key);
+        int? Copied(NewObject n) => n.SourceId is not int s ? null : s >= 0 ? s : movedFrom.TryGetValue(s, out int source) ? source : null;
+        return added.Values.Where(n => Copied(n) is int s && s < world.ObjectRefs.Count && (n.Raw == null || canUpdate) && !_liveIds.ContainsKey(n.Id))
+            .GroupBy(n => Copied(n)!.Value).ToDictionary(g => g.Key, g => g.ToList());
     }
 }

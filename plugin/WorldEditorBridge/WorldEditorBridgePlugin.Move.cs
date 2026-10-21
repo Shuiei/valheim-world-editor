@@ -10,18 +10,50 @@ namespace WorldEditorBridge;
 
 public sealed partial class WorldEditorBridgePlugin
 {
+    /// <summary>An object to move (<see cref="ApplyObjects"/>).</summary>
+    /// <param name="id">Its ZDOID.</param>
+    /// <param name="prefab">Its prefab's hash, to find it again under a new ZDOID.</param>
+    /// <param name="from">Where it stands, to find it again.</param>
+    /// <param name="to">Its new place.</param>
+    /// <param name="rotation">Its new turn, Euler degrees.</param>
+    /// <param name="fallback">Itself at its new place: made instead when it cannot move in place, and its data.</param>
+    private sealed class ObjectMove(ZDOID id, int prefab, Vector3 from, Vector3 to, Vector3 rotation, SavedObject fallback)
+    {
+        /// <summary>Its ZDOID.</summary>
+        public ZDOID Id { get; } = id;
+
+        /// <summary>Its prefab's hash.</summary>
+        public int Prefab { get; } = prefab;
+
+        /// <summary>Where it stands.</summary>
+        public Vector3 From { get; } = from;
+
+        /// <summary>Its new place.</summary>
+        public Vector3 To { get; } = to;
+
+        /// <summary>Its new turn, Euler degrees.</summary>
+        public Vector3 Rotation { get; } = rotation;
+
+        /// <summary>Itself at its new place.</summary>
+        public SavedObject Fallback { get; } = fallback;
+
+        /// <summary>Whether it takes the data of <see cref="Fallback"/> in place too.</summary>
+        public bool Data { get; set; }
+    }
+
     /// <summary>
-    /// Moves objects (<see cref="ApplyObjects"/>): in place under their own ZDOIDs, or, where a player has both places
-    /// loaded or the object is gone, made again at the new place (and destroyed where it was).
+    /// Moves objects (<see cref="ApplyObjects"/>): in place under their own ZDOIDs (with their new data, for those that
+    /// take it), or, where a player has both places loaded or the object is gone, made again at the new place (and
+    /// destroyed where it was). One that stays where it is always changes in place.
     /// </summary>
-    /// <param name="moves">Each object's ZDOID, prefab and place, new place and turn (Euler degrees), and itself at the new place.</param>
+    /// <param name="moves">The objects to move.</param>
     /// <param name="session">This game's session id, made the objects' owner so the change reaches every peer.</param>
     /// <param name="gone">Where objects destroyed are added, for the mods' listeners.</param>
     /// <param name="made">Where objects made are added, for the mods' listeners.</param>
     /// <returns>Each move's object id and whether it moved in place (JSON, in the order sent); the moves in place; how
     /// many; how many objects were gone (made again all the same).</returns>
     private static (string Json, List<AppliedMove> Moved, int InPlace, int Missing) Move(
-        List<(ZDOID Id, int Prefab, Vector3 From, Vector3 To, Vector3 Rotation, Func<ZDO> Fallback)> moves, long session,
+        List<ObjectMove> moves, long session,
         List<AppliedObject> gone, List<AppliedObject> made)
     {
         var objects = new ZDO[moves.Count];
@@ -49,15 +81,20 @@ public sealed partial class WorldEditorBridgePlugin
         for (int i = 0; i < moves.Count; i++)
         {
             ZDO zdo = objects[i];
-            var (_, _, _, to, rotation, fallback) = moves[i];
+            ObjectMove move = moves[i];
+            Vector3 to = move.To;
             ZDO result;
-            bool inPlace = zdo != null && !LoadedAtBoth(zdo.GetPosition(), to, zdo.Distant);
+            bool inPlace = zdo != null && ((zdo.GetPosition() - to).sqrMagnitude < 1e-6f || !LoadedAtBoth(zdo.GetPosition(), to, zdo.Distant));
             if (inPlace)
             {
                 AppliedObject from = Applied(zdo);
                 zdo.SetOwner(session);
                 zdo.SetPosition(to);
-                zdo.SetRotation(Quaternion.Euler(rotation));
+                zdo.SetRotation(Quaternion.Euler(move.Rotation));
+                if (move.Data)
+                {
+                    move.Fallback.PutOn(zdo);
+                }
                 // Players' games far from both places drop the object or show it at its new place once they have
                 // its new data: sent to every peer now, not only to those near where it stands.
                 ZDOMan.instance.ForceSendZDO(zdo.m_uid);
@@ -66,7 +103,7 @@ public sealed partial class WorldEditorBridgePlugin
             }
             else
             {
-                result = fallback();
+                result = move.Fallback.Make();
                 made.Add(Applied(result));
                 if (zdo != null)
                 {

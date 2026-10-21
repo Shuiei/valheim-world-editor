@@ -270,8 +270,13 @@ seen from afar). Otherwise, as before, it is made again at its new place and tak
 message after **Apply live** says how many: those are new objects to the other mods. Move a build while nobody
 is near it to keep everything about it.
 
-Objects that change on the way (a copy whose data you edited, the parts of a mod's linked group such as a ship,
-creatures) are always made again. A plugin older than 1.40.0 makes every moved object again.
+An object whose data you change (in the [inspector](select.md#inspecting-and-changing-an-objects-data), or with a
+mod's own tool) takes its new data in the game the same way, under its own id, moved or not: **Apply live** says
+how many were changed. That needs the plugin 1.97.0 or newer; an older one makes it again. A mod that refuses to
+let its own records be removed (they would be, made again) keeps them this way.
+
+The parts of a mod's linked group (such as a ship) and creatures are always made again. A plugin older than 1.40.0
+makes every moved object again.
 
 ## Modded games
 
@@ -378,7 +383,8 @@ every player:
   once when a player is near it, otherwise the next time someone comes. A reset cannot be undone once applied.
 - Versions: following the game needs the plugin 1.17.0 or newer, mods' objects 1.26.0, their models 1.27.0,
   mods' own plugins 1.35.0, moves under the same id 1.40.0, an apply whose answer was lost (a dropped tunnel)
-  not making objects twice when applied again 1.45.3, and the Expand World mods' files from the game 1.54.0.
+  not making objects twice when applied again 1.45.3, the Expand World mods' files from the game 1.54.0, and
+  changed objects keeping their id 1.97.0.
 - Objects placed live are created by the server; players see them like objects someone just built or planted.
 - Big changes (thousands of objects at once) are applied in one go and can make the server hitch for a moment.
   Reading the whole world when you connect takes a while on a big world (up to a few minutes).

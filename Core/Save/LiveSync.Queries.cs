@@ -40,6 +40,7 @@ public sealed partial class LiveSync
         foreach (int source in _movedTo.Where(m => m.Value == id).Select(m => m.Key).ToList())
         {
             _movedTo.Remove(source);
+            _dataChanged.Remove(source);
         }
     }
 }
