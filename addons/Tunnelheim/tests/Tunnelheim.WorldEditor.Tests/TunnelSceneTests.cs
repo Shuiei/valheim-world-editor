@@ -1,5 +1,4 @@
 using System.Numerics;
-using ValheimWorldEditor.Sdk;
 using Xunit;
 
 namespace Tunnelheim.WorldEditor.Tests;
@@ -11,20 +10,6 @@ namespace Tunnelheim.WorldEditor.Tests;
 /// </summary>
 public class TunnelSceneTests
 {
-    /// <summary>The editor as the scene sees it: no game components (no hoe strokes).</summary>
-    private sealed class Host : IEditorHost, IGameData
-    {
-        public ILiveGame? Live => null;
-
-        public IGameData Game => this;
-
-        public void Redraw()
-        {
-        }
-
-        public IReadOnlyList<GameComponent> Components(string scriptClass) => [];
-    }
-
     private static ColumnRecord Dug(Vector3 at) => new(ColumnRecord.Plain, null, 0, [new DigOp(DigKind.Sphere, at, 2f)]);
 
     [Fact]
@@ -32,7 +17,7 @@ public class TunnelSceneTests
     {
         var log = new List<string>();
         var area = new FakeArea(40, FakeObject.Record(Dug(new Vector3(24, 40, 8)), 24, 8));
-        var layer = new TunnelScene(new Host(), log.Add).Build(area)!;
+        var layer = new TunnelScene(new FakeHost(), log.Add).Build(area)!;
 
         var hole = Assert.Single(layer.Holes);
         Assert.Equal((16, 0, 32, 16), (hole.X0, hole.Z0, hole.X1, hole.Z1));
@@ -51,14 +36,14 @@ public class TunnelSceneTests
     }
 
     [Fact]
-    public void AnAreaWithoutRecordsDrawsNothing() => Assert.Null(new TunnelScene(new Host(), _ => { }).Build(new FakeArea(40)));
+    public void AnAreaWithoutRecordsDrawsNothing() => Assert.Null(new TunnelScene(new FakeHost(), _ => { }).Build(new FakeArea(40)));
 
     [Fact]
     public void ARecordTheModCannotReadIsToldAndLeftOut()
     {
         var log = new List<string>();
         var bad = new FakeObject(TunnelheimMod.RecordPrefabName, new Vector3(8, 0, 8), new Dictionary<string, byte[]> { [TunnelheimMod.RecordKeyName] = [1, 2, 3] });
-        var layer = new TunnelScene(new Host(), log.Add).Build(new FakeArea(40, bad))!;
+        var layer = new TunnelScene(new FakeHost(), log.Add).Build(new FakeArea(40, bad))!;
         Assert.Empty(layer.Holes);
         Assert.StartsWith("TunnelColumnData at (8, 8) left out", Assert.Single(log));
     }
