@@ -35,6 +35,18 @@ the plugin is unchanged in versions without that part.
 - **Worlds made with Riverheim are recognised.** The worlds list tags them and says why they cannot be opened yet
   (turn Riverheim on in Settings, install Riverheim); before, their name and seed were read wrongly.
 
+## v1.87.3 — 2026-10-20
+
+### Fixed
+- **Expand World Size's wider or stretched worlds match the game near the Deep North.** The ground along the Deep
+  North's edge came out a hair higher or lower than the game makes it.
+
+## v1.87.2 — 2026-10-20
+
+### Fixed
+- **Expand World Size's "Stretch biomes" lays the biomes out as the game does.** The editor spread the biome fields
+  from the wrong origin, so about one point in fifteen had a different biome than in the game.
+
 ## v1.87.1 — 2026-10-20
 
 ### Fixed
