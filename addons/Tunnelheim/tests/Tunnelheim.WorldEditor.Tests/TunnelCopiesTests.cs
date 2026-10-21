@@ -48,7 +48,7 @@ public class TunnelCopiesTests
         var edit = Copier().Paste(new FakeArea(40), kept, [new CopyPlacement(new Vector3(40, 40, 8), 0, false)])!;
         var (_, position, _, data) = Assert.Single(edit.Added);
         Assert.Equal(new Vector3(40, 40, 8), position);
-        var pasted = RecordCopy.Of(data!).Record;
+        var pasted = RecordCopy.Of(data!).Written;
         Assert.Equal(digs.Select(d => d.Position + new Vector3(32, 0, 0)), pasted.Ops.Select(o => o.Position));
 
         // The rock that comes out there is the copied rock, moved two columns.
@@ -95,7 +95,7 @@ public class TunnelCopiesTests
         byte[] kept = new ColumnRecord(ColumnRecord.Plain, null, 0, [new DigOp(DigKind.Sphere, Vector3.Zero, 2)]).Encode();
         var edit = Copier().Paste(new FakeArea(40, there), kept, [new CopyPlacement(new Vector3(40, 40, 8), 0, false)])!;
         Assert.Empty(edit.Added);
-        Assert.Equal(2, RecordCopy.Of(Assert.Single(edit.Changed).Change).Record.Ops.Count);
+        Assert.Equal(2, RecordCopy.Of(Assert.Single(edit.Changed).Change).Written.Ops.Count);
 
         var log = new List<string>();
         Assert.Null(Copier(log).Paste(new FakeArea(40), [1, 2, 3], [new CopyPlacement(Vector3.Zero, 0, false)]));
