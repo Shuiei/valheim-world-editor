@@ -142,6 +142,7 @@ public sealed partial class GlView
         DrawArea(s, vp);
         DrawPlace(s, vp);
         DrawDungeon(s, vp);
+        DrawModPreview(vp);
         // Over everything, the water too.
         DrawSpawnMarkers(s, vp);
         if (ShowNewMarkers)

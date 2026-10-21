@@ -6,14 +6,14 @@ namespace TerrainEditor.Desktop.Tests;
 /// The mods' extensions drawn by the real editor (OpenGL): the SDK's sample extension, run from a plugins folder the
 /// settings name (ExtensionEditorProcess), draws its sail and its cable as shapes over the area, cuts the ground round
 /// its pit and digs its canal as a layer in place of the ground, without an OpenGL error; the shapes are made again as
-/// the area's things change.
+/// the area's things change; its own tool on the rail digs a canal where it is clicked, undone with the history.
 /// </summary>
 [Collection("Visual extensions")]
 [Trait("Category", "Visual")]
 public sealed class ExtensionVisualTests(ExtensionEditorProcess editor) : VisualPicturesTestBase("extension-pics")
 {
     [Fact]
-    public void TheSampleExtensionsShapesAndCutsAreDrawn()
+    public void TheSampleExtensionsShapesCutsAndToolWork()
     {
         Assert.SkipUnless(editor.Available, editor.Why ?? "");
         Directory.CreateDirectory(Dir);
@@ -40,6 +40,20 @@ public sealed class ExtensionVisualTests(ExtensionEditorProcess editor) : Visual
         Assert.Equal(before - 1, editor.Send("wait 100").GetProperty("objects").GetInt32());
         Picture("shapes-fewer");
         editor.Send("key Escape");
+        // The sample's own tool on the rail: two points clicked, Enter digs a canal there (one new data holder),
+        // undone with the history.
+        int added = editor.Send("state").GetProperty("added").GetInt32();
+        editor.Send("click Canals");
+        editor.Send("mouse down -10 14");
+        editor.Send("mouse up -10 14");
+        editor.Send("mouse down 6 14");
+        editor.Send("mouse up 6 14");
+        editor.Send("key Enter");
+        Assert.Equal(added + 1, editor.Send("wait 500").GetProperty("added").GetInt32());
+        editor.Send("camera 0 14 0 70 60");
+        Picture("canal-tool");
+        editor.Send("key Z ctrl");
+        Assert.Equal(added, editor.Send("wait 500").GetProperty("added").GetInt32());
         Assert.Equal(0, editor.Send("state").GetProperty("glErrors").GetInt32());
         editor.Send("map");
     }

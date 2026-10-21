@@ -38,7 +38,7 @@ The 3D editor has five parts:
 - **Top bar**: **Map**, the world's name (under it the area's size, its first and last zone and how many objects
   it holds), the area controls (**Area** ◀ ▲ ▼ ▶, the size list, **Follow**), undo and redo, what is pending,
   **Discard** and **Save to world** (or **Apply live**), then **History**, **View** and the help (**?**) button.
-- **Tool rail** (left edge): every tool, with its key in the corner, in five sections (below).
+- **Tool rail** (left edge): every tool, with its key in the corner, in five sections (below), and a sixth for mods' own tools when a mod brings one.
 - **Tool panel** (next to the rail): the tool's name, a line saying what it does and how, and its settings. The
   [Mask](masks.md) has its own card next to it for the tools it works with (the brushes, Path, Area, Shape, Mountain
   and Place).
@@ -67,6 +67,8 @@ formula), Select's options, which Place categories are open, the right-hand pane
 | **PAINT** | **Dirt** (`6`), **Cultivate** (`7`), **Paved** (`8`), **Clear** (`9`) | The paint brushes. **Clear** opens the panel titled **Clear paint**. See [sculpting and painting](terrain.md). |
 | **CREATE** | **Shape** (`G`), **Mountain**, **Cave**, **Dungeon**, **Script**, **Blueprints** | Shape and Mountain (see [sculpting](terrain.md)), Cave (the Path tool with its Cave action, see [Path](path.md)), [Dungeon](dungeons.md), [Script](scripting.md), and the blueprint library to paste one (see [the Workshop](workshop.md)). Only Shape has a key. |
 | **TOOLS** | **Select** (`E`), **Measure** (`M`), **View** (`Esc`, also `H`) | [Select](select.md) (move, turn, delete and inspect objects), [Measure](measure.md), and View: look around; a left drag slides the view, a click picks an object and a double click on one switches to Select with it selected. |
+
+| **MODS** | One button per tool a mod's [extension](modding.md#extensions) brings (its name, its picture or first letter; pointing at it names the mod) | The mod's tool: its card of settings and buttons next to the rail, its help in the tooltip. What it does goes in the history like any other edit: undo, redo and save work as for the editor's own tools. Only shown when a running extension has a tool. |
 
 The rail scrolls when the window is too short for it. In the [Workshop](#the-workshops-top-bar) it keeps only
 **Build** (the Place tool for building pieces, `T`), **Select** and **View**.

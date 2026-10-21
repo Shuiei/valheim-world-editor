@@ -62,6 +62,8 @@ public sealed partial class MainWindow
         Inspector.Close();
         LoadedInfo.Text = scene.LoadInfo + (_models == null ? "\n" + Lang.T("world.msg.noModels") : "");
         View.Show(scene, _models);
+        // The running extensions' tools (the world's mods were read as it opened).
+        Tools.SetModTools(ModExtensions.Tools);
         if (scene.Session != null)
         {
             Edit(scene.Session);

@@ -37,6 +37,8 @@ public enum ToolMode
     Blueprints,
     /// <summary>The Dungeon tool.</summary>
     Dungeon,
+    /// <summary>A mod's own tool (ToolPanel.ModTool).</summary>
+    Mod,
 }
 
 /// <summary>

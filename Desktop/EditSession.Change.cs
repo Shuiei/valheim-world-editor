@@ -24,6 +24,11 @@ public sealed partial class EditSession
         /// </summary>
         public (int Index, bool Before, bool After)[] Things { get; init; } = [];
         /// <summary>
+        /// The objects it took away or brought that the scene does not hold as things (mods' data holders,
+        /// ModManifests.IsData): by object id, gone before and after.
+        /// </summary>
+        public (int Id, bool Before, bool After)[] Hidden { get; init; } = [];
+        /// <summary>
         /// Zones marked for reset (on) or not.
         /// </summary>
         public (ZoneReset Reset, bool Before, bool After)[] Resets { get; init; } = [];
@@ -52,7 +57,7 @@ public sealed partial class EditSession
         /// About how much memory it holds: 64 bytes a ground point (its index, and six values before and after), a
         /// few for each thing, zone and reset (<see cref="KeepBytes"/>).
         /// </summary>
-        public long Bytes => 64L * Points.Length + 8L * Things.Length + 8L * Zones.Count + 16L * Resets.Length;
+        public long Bytes => 64L * Points.Length + 8L * (Things.Length + Hidden.Length) + 8L * Zones.Count + 16L * Resets.Length;
 
         /// <summary>
         /// Whether it is this very change: a change is itself, not its values, since Removed and Applied are set after
@@ -74,7 +79,8 @@ public sealed partial class EditSession
                 parts.Add(Zones.Count > 1 ? Lang.T("save.zones.many", Zones.Count) : Lang.T("save.zones.one", Zones.Count));
             }
 
-            int added = Things.Count(t => t.Before && !t.After), removed = Things.Count(t => !t.Before && t.After);
+            int added = Things.Count(t => t.Before && !t.After) + Hidden.Count(t => t.Before && !t.After);
+            int removed = Things.Count(t => !t.Before && t.After) + Hidden.Count(t => !t.Before && t.After);
             if (added > 0)
             {
                 parts.Add(Lang.T("history.change.new", added));

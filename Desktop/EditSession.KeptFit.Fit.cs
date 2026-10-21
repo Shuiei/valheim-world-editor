@@ -57,6 +57,7 @@ public sealed partial class EditSession
             var fitted = new Change(c.Label, pts, c.Before, c.After, zones)
             {
                 Things = things,
+                Hidden = c.Hidden,
                 Resets = c.Resets,
                 Time = c.Time,
                 Removed = c.Removed,

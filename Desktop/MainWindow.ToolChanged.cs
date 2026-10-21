@@ -11,6 +11,7 @@ public sealed partial class MainWindow
     {
         View.Tool = t;
         View.Mode = Tools.Mode;
+        ModToolChanged();
         SelectPanel.Card.IsVisible = Tools.SelectMode;
         MeasurePanel.Card.IsVisible = Tools.Mode == ToolMode.Measure;
         if (Tools.Mode == ToolMode.Measure)

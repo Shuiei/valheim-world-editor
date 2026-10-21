@@ -15,6 +15,7 @@ public sealed partial class GlView
     /// <param name="e">The move.</param>
     private void OnPointerMoved(Control surface, PointerEventArgs e)
     {
+        _modKeys = e.KeyModifiers;
         _pointer = _heldAt = e.GetPosition(surface);
         _surfaceSize = surface.Bounds.Size;
         MoveDrawing(_pointer.Value);
@@ -41,6 +42,10 @@ public sealed partial class GlView
         if (Mode == ToolMode.Place)
         {
             Place?.Moved(at, _surfaceSize);
+        }
+        if (Mode == ToolMode.Mod)
+        {
+            PointMod(_modDown ? ValheimWorldEditor.Sdk.PointerAction.Drag : ValheimWorldEditor.Sdk.PointerAction.Move, at, _modKeys);
         }
     }
 

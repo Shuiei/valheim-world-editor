@@ -39,6 +39,8 @@ public sealed partial class MainWindow
         MaskPanel = new MaskPanel(Mask);
         WireGroundTools();
         MeasurePanel = new MeasurePanel(View);
+        ModToolPanel = new ModToolPanel(Prefs);
+        WireModTools();
         DungeonPanel = new DungeonPanel(View);
         WireDungeonPanel();
         PathPanel = new PathPanel(View, Tools.Brush);

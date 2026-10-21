@@ -113,6 +113,9 @@ public sealed partial class MainWindow : Window
     /// The Measure tool's panel.
     /// </summary>
     internal MeasurePanel MeasurePanel { get; }
+
+    /// <summary>The card of a mod's own tool (ToolMode.Mod).</summary>
+    internal ModToolPanel ModToolPanel { get; }
     /// <summary>
     /// The Dungeon tool's panel.
     /// </summary>

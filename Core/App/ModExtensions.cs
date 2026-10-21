@@ -55,6 +55,8 @@ public static partial class ModExtensions
 
         /// <summary>Its scene providers.</summary>
         public List<ISceneProvider> Scenes { get; } = [];
+        /// <summary>Its tools.</summary>
+        public List<IEditorTool> Tools { get; } = [];
         /// <summary>Its live listeners.</summary>
         public List<ILiveListener> LiveListeners { get; } = [];
 

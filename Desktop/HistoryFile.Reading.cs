@@ -17,7 +17,9 @@ public static partial class HistoryFile
         using var file = File.OpenRead(path);
         using var gz = new GZipStream(file, CompressionMode.Decompress);
         using var i = new BinaryReader(gz, Encoding.UTF8);
-        if (i.ReadInt32() != Magic || i.ReadInt32() != Version || i.ReadString() != KeyOf(w))
+        int magic = i.ReadInt32(), version = i.ReadInt32();
+        // Format 1 (before mods' hidden objects) is read too.
+        if (magic != Magic || version is not (1 or Version) || i.ReadString() != KeyOf(w))
         {
             return null;
         }
@@ -60,7 +62,7 @@ public static partial class HistoryFile
             }
         }
         int undoCount = ReadCount(i), redoCount = ReadCount(i);
-        var (changes, points, thingIds) = ReadChanges(i, undoCount, redoCount, ids);
+        var (changes, points, thingIds) = ReadChanges(i, undoCount, redoCount, ids, version);
         if (changes.Count == 0)
         {
             return null;

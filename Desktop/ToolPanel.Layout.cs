@@ -16,21 +16,7 @@ public sealed partial class ToolPanel
         Button Make(string label, string key, string? icon, IBrush? swatch = null)
         {
             Control picture = icon != null ? Icons.Make(icon, 16) : new Border { Width = 16, Height = 16, CornerRadius = new CornerRadius(5), Background = swatch, BorderBrush = new SolidColorBrush(Color.FromArgb(64, 255, 255, 255)), BorderThickness = new Thickness(1) };
-            picture.HorizontalAlignment = HorizontalAlignment.Center;
-            var b = new Button
-            {
-                Content = new Grid
-                {
-                    Children =
-                    {
-                        new StackPanel { Spacing = 1, Children = { picture, new TextBlock { Text = label, FontSize = 10.5, HorizontalAlignment = HorizontalAlignment.Center } } },
-                        new TextBlock { Text = key, FontSize = 9, Opacity = 0.6, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -2, -1, 0), FontFamily = new FontFamily("monospace") },
-                    },
-                },
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                Padding = new Thickness(2, 3, 3, 2),
-            }.Classed("rail");
+            var b = RailButton(label, key, picture);
             rail.Children.Add(b);
             return b;
         }
@@ -99,6 +85,8 @@ public sealed partial class ToolPanel
         _viewButton = Make(Lang.T("rail.label.view"), "Esc", "move");
         ToolTip.SetTip(_viewButton, Lang.T("rail.tip.view"));
         _viewButton.Click += (_, _) => Choose(null);
+        // Mods' own tools (SetModTools), last; none until a world with them opens.
+        rail.Children.Add(_modRail);
         // On a short window the rail scrolls with the wheel; no bar (it would squeeze the buttons).
         Rail = Ui.Card(new ScrollViewer { VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Hidden, Content = new StackPanel { Width = 56, Children = { rail } } });
 

@@ -43,6 +43,8 @@ public partial class MainWindow
             Take([Key.Escape], KeyMods.NoCtrl, _ => Inspector.IsOpen, _ => Inspector.Close()),
             Take([Key.I], KeyMods.NoCtrl, _ => Tools.SelectMode && View.Selected.Count == 1, _ => Inspect()),
             .. SelectKeyRules(),
+            // A mod's own tool's keys (any modifiers): what it turns down goes on.
+            Offer(null, KeyMods.Any, _ => InMode(ToolMode.Mod), p => ModToolKey(p.Key, p.Mods)),
             // The Place and Select tools' own keys (any modifiers): what they turn down goes on.
             Offer(null, KeyMods.Any, _ => InMode(ToolMode.Place), p => PlaceInput.Key(p.Key, p.Shift, p.Ctrl)),
             Offer(null, KeyMods.Any, _ => Tools.SelectMode, p => View.SelectTool.Key(p.Key, p.Shift)),
