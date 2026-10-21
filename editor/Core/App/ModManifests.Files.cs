@@ -73,7 +73,7 @@ public static partial class ModManifests
     {
         if (from is var (folder, mod) && ExtensionPath(root, folder) is { } path)
         {
-            notes.Extensions[path] = new Offered(path, mod, ScriptNames(root["gameComponents"]), addOn);
+            notes.Extensions[path] = new Offered(path, mod, Names(root["gameComponents"], IsScriptName, 32), Names(root["settingsFiles"], IsSettingsFile, 8), addOn);
         }
     }
 
@@ -93,12 +93,19 @@ public static partial class ModManifests
     }
 
     /// <summary>
-    /// The game script class names a manifest's "gameComponents" lists: the strings that are class names (letters,
-    /// digits and underscores, not starting with a digit), each once, 32 at most; none when it is not a list.
+    /// The names a manifest's list holds: its strings that <paramref name="ok"/> takes, each once, <paramref name="most"/>
+    /// at most; none when it is not a list.
     /// </summary>
-    private static List<string> ScriptNames(JsonNode? node) =>
+    private static List<string> Names(JsonNode? node, Func<string, bool> ok, int most) =>
         node is not JsonArray list
             ? []
             : [.. list.OfType<JsonValue>().Select(v => v.TryGetValue(out string? s) ? s : null).OfType<string>()
-                .Where(s => s.Length is > 0 and <= 100 && !char.IsAsciiDigit(s[0]) && s.All(c => char.IsAsciiLetterOrDigit(c) || c == '_')).Distinct(StringComparer.Ordinal).Take(32)];
+                .Where(ok).Distinct(StringComparer.Ordinal).Take(most)];
+
+    /// <summary>Whether a "gameComponents" entry is a class name: letters, digits and underscores, not starting with a digit.</summary>
+    private static bool IsScriptName(string s) =>
+        s.Length is > 0 and <= 100 && !char.IsAsciiDigit(s[0]) && s.All(c => char.IsAsciiLetterOrDigit(c) || c == '_');
+
+    /// <summary>Whether a "settingsFiles" entry is a settings file's name in BepInEx/config: ending in .cfg, no folder.</summary>
+    private static bool IsSettingsFile(string s) => AddOns.IsFileName(s, ".cfg");
 }

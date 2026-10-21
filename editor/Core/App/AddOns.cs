@@ -78,9 +78,14 @@ public static class AddOns
     /// <summary>
     /// Whether a manifest's "serves" names a DLL plainly (a file name ending in .dll, no folder), or is left out.
     /// </summary>
-    internal static bool IsDllName(string? serves) =>
-        serves == null || serves.Length is > 4 and <= 100 && serves.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
-            && serves.IndexOfAny([.. Path.GetInvalidFileNameChars(), '/', '\\']) < 0;
+    internal static bool IsDllName(string? serves) => serves == null || IsFileName(serves, ".dll");
+
+    /// <summary>Whether a name is a plain file name (no folder, 100 characters at most) ending in an extension.</summary>
+    /// <param name="name">The name.</param>
+    /// <param name="extension">The extension, with its dot (any case matches).</param>
+    internal static bool IsFileName(string name, string extension) =>
+        name.Length > extension.Length && name.Length <= 100 && name.EndsWith(extension, StringComparison.OrdinalIgnoreCase)
+            && name.IndexOfAny([.. Path.GetInvalidFileNameChars(), '/', '\\']) < 0;
 
     /// <summary>Whether a mod's DLL is in one of the plugins folders the settings name (or found by themselves).</summary>
     internal static bool IsInstalled(AppSettings settings, string dll) =>

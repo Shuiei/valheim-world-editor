@@ -29,6 +29,12 @@
       "description": "Class names of the game's scripts whose fields the extension reads (IEditorHost.Game): read from the player's Valheim while the extension runs.",
       "items": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,99}$" }
     },
+    "settingsFiles": {
+      "type": "array",
+      "maxItems": 8,
+      "description": "File names of the mod's BepInEx settings files the extension reads (IEditorHost.Setting), in BepInEx/config: the connected game's own while live, else the player's.",
+      "items": { "type": "string", "pattern": "^[^/\\\\]{1,96}\\.[cC][fF][gG]$" }
+    },
     "links": {
       "type": "array",
       "description": "How the mod links its objects into one (a ship and its pieces): each rule's keys are data keys, as the mod's code names them.",

@@ -200,6 +200,11 @@ no data tables. Everything is read at run time from the player's install:
   (`GameCatalogues.ReadComponents`), after the extensions at `WorldSession.ReadModFiles`, and keeps them in
   `game-mod-components.json` (user data folder) until the game, the editor or the classes asked for change; extensions
   read them as `IEditorHost.Game`.
+- Mods' settings: `editor/Core/App/ModSettings.cs` reads the BepInEx settings files the running extensions' manifests
+  ask for (`settingsFiles`, `ModExtensions.RequestedSettingsFiles`) by section and name, from the first local BepInEx
+  folder that has each at `WorldSession.ReadModFiles`, then from the game's BepInEx/config through the bridge
+  (`LiveBridge.ConfigFile`) as a live world opens (`WorldSession.OpenLive`); extensions read them as
+  `IEditorHost.Setting`. `ExpandWorld.ReadCfg` reads its files with the same parser (`ModSettings.Entries`).
 - Mods' data names: `editor/Core/App/ModKeys.cs` reads the string literals of every DLL in the plugins
   folders (`GameCatalogues.KeyNamesIn`, as `zdo-keys` reads `assembly_valheim.dll`), keeps them in
   `mod-zdo-keys.json` (user data folder) until a DLL changes, and gives them to `ZdoKeys.UseMods`;

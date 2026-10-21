@@ -43,7 +43,7 @@ public sealed class ModManifestsTests : ModManifestsTestBase
     }
 
     [Fact]
-    public void AManifestTellsItsDataHoldersAndTheGameScriptsItsExtensionReads()
+    public void AManifestTellsItsDataHoldersAndTheGameScriptsAndSettingsFilesItsExtensionReads()
     {
         string mod = Path.Combine(Dir, "BepInEx", "plugins", "DigMod");
         Directory.CreateDirectory(mod);
@@ -53,6 +53,7 @@ public sealed class ModManifestsTests : ModManifestsTestBase
               "version": 1,
               "extension": "Dig.dll",
               "gameComponents": ["TerrainOp", "TerrainOp", "Ship", "3d", "bad name", 7, ""],
+              "settingsFiles": ["sam.dig.cfg", "sam.dig.cfg", "../up.cfg", "sub/in.cfg", "dig.txt", ".cfg", 3],
               "prefabs": { "dig_record": { "data": true }, "dig_tool": { "hidden": true }, "dig_bad": { "data": "yes" } }
             }
             """);
@@ -65,7 +66,9 @@ public sealed class ModManifestsTests : ModManifestsTestBase
         Assert.Contains(TerrainEditor.Save.StableHash.Of("dig_record"), ModManifests.DataPrefabs);
         // The made-up example mod's own data holder, from the manifest every test has.
         Assert.True(ModManifests.IsData(TerrainEditor.Save.StableHash.Of(ExampleMod.Fleet)));
-        Assert.Equal(["TerrainOp", "Ship"], Assert.Single(ModManifests.Extensions).GameComponents);
+        var offered = Assert.Single(ModManifests.Extensions);
+        Assert.Equal(["TerrainOp", "Ship"], offered.GameComponents);
+        Assert.Equal(["sam.dig.cfg"], offered.SettingsFiles);
     }
 
     [Fact]

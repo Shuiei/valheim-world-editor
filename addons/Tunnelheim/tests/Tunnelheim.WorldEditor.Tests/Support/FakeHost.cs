@@ -7,6 +7,8 @@ internal sealed class FakeHost : IEditorHost, IGameData
 {
     public ILiveGame? Live => null;
 
+    public string? Setting(string file, string section, string key) => null;
+
     public IGameData Game => this;
 
     public void Redraw()
