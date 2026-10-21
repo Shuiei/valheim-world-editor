@@ -133,6 +133,7 @@ public class ExampleVehiclesCanalToolTests
         Assert.Same(canal, obj);
         var copy = new DataCopy(Keys.Canal, default, default, new ZdoData());
         change(copy);
-        Assert.True(copy.TryGetFloat(Keys.Width, out float w) && w == 4);
+        Assert.True(copy.TryGetFloat(Keys.Width, out float w));
+        Assert.Equal(4f, w);
     }
 }
