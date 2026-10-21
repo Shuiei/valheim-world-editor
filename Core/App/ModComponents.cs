@@ -78,7 +78,8 @@ public static class ModComponents
     /// <summary>A JSON value as the SDK hands fields over: long, double, string, list or map.</summary>
     private static object? Value(JsonElement e) => e.ValueKind switch
     {
-        JsonValueKind.Number => e.TryGetInt64(out long l) ? l : e.GetDouble(),
+        // Boxed apart: one conditional would make both double.
+        JsonValueKind.Number => e.TryGetInt64(out long l) ? (object)l : e.GetDouble(),
         JsonValueKind.String => e.GetString(),
         JsonValueKind.True => 1L,
         JsonValueKind.False => 0L,
