@@ -75,7 +75,7 @@ public sealed class WorldGeneratorsTests : AppSettingsTestBase, IDisposable
             {
                 mask = Vector4.Zero;
                 // An unlucky height its code cannot answer for (a fault).
-                return height == 13f ? throw new ArithmeticException("unlucky") : height;
+                return Math.Abs(height - 13f) < 0.001f ? throw new ArithmeticException("unlucky") : height;
             }
 
             public float Forest(float x, float z) => 1f;
