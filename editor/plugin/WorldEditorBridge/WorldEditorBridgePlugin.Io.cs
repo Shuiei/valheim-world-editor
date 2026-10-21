@@ -65,11 +65,12 @@ public sealed partial class WorldEditorBridgePlugin
         return ms.ToArray();
     }
 
-    /// <summary>Writes a whole response and closes it.</summary>
+    /// <summary>Writes a whole response and closes it, of the type given only (no browser guesses another).</summary>
     private static void Reply(HttpListenerResponse res, int code, string type, byte[] body)
     {
         res.StatusCode = code;
         res.ContentType = type;
+        res.Headers["X-Content-Type-Options"] = "nosniff";
         res.ContentLength64 = body.Length;
         res.OutputStream.Write(body, 0, body.Length);
         res.OutputStream.Close();
