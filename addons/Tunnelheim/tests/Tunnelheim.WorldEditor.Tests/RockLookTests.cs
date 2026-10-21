@@ -105,12 +105,12 @@ public class RockLookTests
     }
 
     [Fact]
-    public void AnAshlandsChunkShowsTheGroundWhereOpenToTheSkyAndLavaUnderRock()
+    public void AnAshlandsChunkKeepsTheGroundsLavaOnlyWhereOpenToTheSky()
     {
         // A pit open to the sky, and a cave 3 m under the ground.
         var record = FakeObject.Record(new ColumnRecord(ColumnRecord.Plain, null, 0, [new DigOp(DigKind.Sphere, new Vector3(4, 40, 4), 2f), new DigOp(DigKind.Sphere, new Vector3(12, 35, 12), 2f)]), 8, 8);
         var uvs = Uvs(new FakeArea(40, record) { Ashlands = true }, RockLook.Palette.Ashlands);
-        // The ground and the pit open to the sky, on the ground's row; the cave's dug rock on the lava row.
+        // The ground and the pit open to the sky, on the ground's row (its lava); the cave's dug rock on the row without lava.
         Assert.Contains(new Vector2(0.375f, 0.75f), uvs);
         Assert.Contains(new Vector2(0.625f, 0.75f), uvs);
         Assert.Contains(new Vector2(0.625f, 0.25f), uvs);
