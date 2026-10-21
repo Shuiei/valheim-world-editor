@@ -271,7 +271,7 @@ public sealed record WorldRules
     // ---- Riverheim.
     /// <summary>
     /// The world was made with Riverheim, whose ground replaces the game's (null: the game's own ground). Expand World's
-    /// settings still apply around it where the mods' patches meet (the design: .claude/docs/riverheim-design.md).
+    /// settings still apply around it where the mods' patches meet (docs/riverheim.md lists them).
     /// </summary>
     public RiverheimRules? Riverheim { get; init; }
 

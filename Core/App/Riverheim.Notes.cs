@@ -2,8 +2,8 @@ using ValheimGen;
 
 namespace TerrainEditor.App;
 
-// What Expand World does, and does not, change about a world Riverheim made (the game's own patch order: the design's
-// table, checked on a server running both).
+// What Expand World does, and does not, change about a world Riverheim made (the game's own patch order, checked on a
+// server running both; docs/riverheim.md lists every setting).
 public static partial class Riverheim
 {
     /// <summary>The edge of Riverheim's own world, metres before the stretch (its generator's world size).</summary>

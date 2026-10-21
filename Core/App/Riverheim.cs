@@ -9,7 +9,7 @@ namespace TerrainEditor.App;
 /// world file), whether the player's Riverheim is there to draw them (its plugin DLL in a BepInEx folder the editor
 /// knows, with the Riverheim switch in Settings on: <see cref="AppSettings.Riverheim"/>), and why a world made with it
 /// cannot be opened otherwise. Without its generator the ground of such a world cannot be drawn, so the editor refuses
-/// it as the game does (the design: .claude/docs/riverheim-design.md).
+/// it as the game does.
 /// </summary>
 /// <remarks>Followed: Riverheim 1.2.1 (its world file header and settings, its plugin id and DLL name).</remarks>
 public static partial class Riverheim
