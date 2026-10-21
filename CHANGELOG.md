@@ -10,6 +10,12 @@ the plugin is unchanged in versions without that part.
 - **Expand World Size's wider or stretched worlds match the game near the Deep North.** The ground along the Deep
   North's edge came out a hair higher or lower than the game makes it.
 
+## v1.87.1 — 2026-10-20
+
+### Fixed
+- **Expand World Size's altitude and water depth match the game to the bit.** With those settings changed, about one
+  point in eight came out a hair higher or lower than the game makes it.
+
 ## v1.87.0 — 2026-10-20
 
 ### Added
