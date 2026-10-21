@@ -139,9 +139,10 @@ public sealed partial class WorldSession : IDisposable
     /// </summary>
     /// <param name="world">The world just read, with its Expand World rules.</param>
     /// <param name="settings">The editor's settings.</param>
-    private static void TakeRiverheim(WorldSave world, AppSettings settings)
+    /// <param name="gameVersion">The Riverheim the live game runs, when known.</param>
+    private static void TakeRiverheim(WorldSave world, AppSettings settings, string? gameVersion = null)
     {
-        if (Riverheim.Rules(world.RiverheimTag, settings) is { } riverheim)
+        if (Riverheim.Rules(world.RiverheimTag, settings, gameVersion) is { } riverheim)
         {
             world.Rules = world.Rules with { Riverheim = riverheim };
             foreach (string note in Riverheim.Notes(world.Rules))

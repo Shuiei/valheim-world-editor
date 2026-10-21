@@ -21,8 +21,9 @@ public sealed partial class WorldSession
             // The mods' settings and data files as the game has them, through its bridge (an older one: the local folders).
             var settings = AppSettings.Load();
             world.Rules = await ExpandWorld.ResolveLive(world, settings, live);
-            // The game's world file, read through the bridge with the rules, says whether Riverheim made the world.
-            TakeRiverheim(world, settings);
+            // The game's world file, read through the bridge with the rules, says whether Riverheim made the world; the
+            // game's own Riverheim must be of the player's release.
+            TakeRiverheim(world, settings, world.RiverheimTag != null ? await GameRiverheim(live) : null);
             WorldSave.Builder = Builders.Default(world);
             session = From(world, live, label);
         }
@@ -35,6 +36,23 @@ public sealed partial class WorldSession
         // Once the session is there to end it (Dispose): a world that failed to load leaves no game connected.
         ModExtensions.LiveConnected(new LiveGame(live, mods));
         return session;
+    }
+
+    /// <summary>
+    /// The version of the Riverheim the game runs (GET /plugins); null when the bridge does not say (an older one, or it
+    /// cannot be asked: said in the log).
+    /// </summary>
+    private static async Task<string?> GameRiverheim(LiveBridge live)
+    {
+        try
+        {
+            return (await live.Plugins())?.FirstOrDefault(p => p.Id == Riverheim.PluginId)?.Version;
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException)
+        {
+            Log.Caught(e, "asking the game's bridge which Riverheim it runs (not checked)");
+            return null;
+        }
     }
 
     /// <summary>

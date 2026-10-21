@@ -9,7 +9,8 @@ namespace WorldEditor.Tests;
 /// <summary>
 /// A world made with Riverheim, drawn with the real Riverheim (downloaded for the tests, its BepInEx beside it and a
 /// stand-in for Unity's classes): the game's own values to the bit, a preset it does not know refused with its words,
-/// a Riverheim that cannot lay the world out said as such, and new worlds laid out with its own preset.
+/// a Riverheim that cannot lay the world out said as such, a live game on another release refused, and new worlds laid
+/// out with its own preset.
 /// </summary>
 [Collection("DataDir")]
 public class RiverheimRulesTests : AppSettingsTestBase
@@ -84,6 +85,26 @@ public class RiverheimRulesTests : AppSettingsTestBase
         Assert.Equal(("1.2.1", "builtin.amur", 2), (riverheim.Version, riverheim.Preset, riverheim.PresetVersion));
         settings.Riverheim = false;
         Assert.True(Riverheim.ForNewWorld(settings).IsVanilla);
+    }
+
+    [Fact]
+    public void ALiveGameOnAnotherReleaseIsRefused()
+    {
+        var settings = Settings("bep");
+        Assert.Equal(Lang.T("riverheim.otherVersion", "1.1.0", "1.2.1"), Assert.Throws<InvalidOperationException>(() => Riverheim.Rules(Amur, settings, "1.1.0")).Message);
+        // Another patch of the same release lays worlds out alike.
+        Assert.NotNull(Riverheim.Rules(Amur, settings, "1.2.0"));
+    }
+
+    [Theory]
+    [InlineData("1.2.1", "1.2.0", true)]
+    [InlineData("1.2.1", "1.2.1", true)]
+    [InlineData("1.1.1", "1.2.1", false)]
+    [InlineData("2.2.1", "1.2.1", false)]
+    [InlineData("beta", "1.2.1", false)]
+    public void ARiverheimReleaseIsItsMajorAndMinorVersion(string a, string b, bool same)
+    {
+        Assert.Equal(same, Riverheim.SameRelease(a, b));
     }
 
     [Fact]

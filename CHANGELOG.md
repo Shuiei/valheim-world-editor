@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.92.0 — 2026-10-20
+
+### Added
+- **Live Riverheim worlds.** A game or server running a Riverheim world opens live, drawn with your own Riverheim when
+  it is of the same release as the game's (else the editor says both versions).
+
 ## v1.91.0 — 2026-10-20
 
 ### Added
