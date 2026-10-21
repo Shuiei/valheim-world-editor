@@ -66,4 +66,6 @@ Good to know
   - Every control explains itself when you hover it; "?" lists the keyboard shortcuts.
   - Settings, saved servers (servers.cfg), the copied game files and the log: %LOCALAPPDATA%\ValheimWorldEditor
   - The Windows version has only been tried under Wine so far. Reports welcome.
+  - Add-ons (editor support for a mod, each its own download) go in the addons folder next to the program:
+    see addons/README.txt.
   - Keep your own backups of worlds you care about.

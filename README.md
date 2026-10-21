@@ -286,6 +286,9 @@ elsewhere, set them in **Settings** on the start page:
   Claude Desktop. See [docs/claude.md](docs/claude.md).
 - **Mod extensions**: one switch per extension a mod in the folders above offers. See
   [docs/modding.md](docs/modding.md#extensions).
+- **Add-ons**: the add-ons installed in the `addons` folder next to the editor (editor support for
+  a mod, each its own download), and whether each is in use: an add-on is used while the mod it is
+  for is in the plugins folders, with no switch. See [docs/modding.md](docs/modding.md#add-ons).
 - **Drawing** (Windows): **Draw with the graphics driver's OpenGL**. Off by default: the editor
   draws through Direct3D, as games do. Taken when the editor starts again.
 

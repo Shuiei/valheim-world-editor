@@ -12,7 +12,7 @@ case "$pkg" in
 esac
 fail=0
 need() { grep -qx "$1" <<<"$list" || { echo "MISSING  $1"; fail=1; }; }
-for f in "$exe" ValheimWorldEditor/README.txt; do need "$f"; done
+for f in "$exe" ValheimWorldEditor/README.txt ValheimWorldEditor/addons/README.txt; do need "$f"; done
 # macOS: the app's description, icon and signature, and its native libraries beside the program.
 if [[ "$pkg" == *-macos-*.zip ]]; then
   app=ValheimWorldEditor/ValheimWorldEditor.app/Contents

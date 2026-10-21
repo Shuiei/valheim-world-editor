@@ -6,7 +6,7 @@ namespace TerrainEditor.App;
 /// <summary>
 /// Mods' editor extensions (ValheimWorldEditor.Sdk; docs/modding.md#extensions): a DLL a mod offers in its
 /// worldeditor.json (ModManifests.Extensions), which runs in the editor only once the user allows it in Settings, and
-/// then only that file (AppSettings.Extensions keeps its SHA-256: a changed DLL is other code and asks again; the
+/// then only that file (an add-on's, AddOns, runs as installed: the player put it there) (AppSettings.Extensions keeps its SHA-256: a changed DLL is other code and asks again; the
 /// bytes hashed are the bytes loaded). Each is one DLL, loaded in a context of its own that gives it the editor's SDK
 /// and the framework and nothing from its folder, and registers hooks: byte decoders for the inspector,
 /// rewriters of pasted copies, shapes to draw, ground cuts, live listeners (LiveConnected). Read as a world or the Workshop opens, after the manifests. A hook that
@@ -33,7 +33,8 @@ public static partial class ModExtensions
     /// <param name="Sha256">The file's SHA-256, lower-case hex ("" when it cannot be read).</param>
     /// <param name="State">What became of it.</param>
     /// <param name="Error">Why it does not run, for <see cref="Status.Failed"/>.</param>
-    public sealed record Extension(string Dll, string Mod, string Sha256, Status State, string? Error);
+    /// <param name="AddOn">An add-on's (AddOns): run without being allowed, not listed with the mods' switches.</param>
+    public sealed record Extension(string Dll, string Mod, string Sha256, Status State, string? Error, bool AddOn = false);
 
     /// <summary>One loaded extension: what it registered.</summary>
     private sealed class Loaded(string mod)
@@ -105,8 +106,8 @@ public static partial class ModExtensions
     public static IReadOnlySet<int> RewrittenKeys => _state.RewrittenKeys;
 
     /// <summary>
-    /// Runs the allowed extensions among those the manifests offer (ModManifests.Refresh first), loading each allowed
-    /// file once per run. Never throws.
+    /// Runs the allowed extensions, and the add-ons' extensions, among those the manifests offer (ModManifests.Refresh
+    /// first), loading each file once per run. Never throws.
     /// </summary>
     /// <returns>How many run.</returns>
     public static int Refresh(AppSettings settings)
@@ -120,10 +121,11 @@ public static partial class ModExtensions
                 // Read once: what is hashed is what is loaded (a file rewritten in between would run unallowed).
                 byte[] bytes = BytesOf(o.Dll);
                 string sha = bytes.Length == 0 ? "" : Convert.ToHexStringLower(SHA256.HashData(bytes));
-                if (sha == "" || !settings.Extensions.TryGetValue(o.Dll, out string? allowed) || !string.Equals(allowed, sha, StringComparison.OrdinalIgnoreCase))
+                string what = o.AddOn ? "add-on" : "extension";
+                if (sha == "" || !o.AddOn && !IsAllowed(settings, o.Dll, sha))
                 {
-                    offered.Add(new Extension(o.Dll, o.Mod, sha, Status.Off, sha == "" ? "the file cannot be read" : null));
-                    Console.WriteLine($"extension {o.Mod} ({Path.GetFileName(o.Dll)}): offered, off (Settings, Mod extensions).");
+                    offered.Add(new Extension(o.Dll, o.Mod, sha, Status.Off, sha == "" ? "the file cannot be read" : null, o.AddOn));
+                    Console.WriteLine($"{what} {o.Mod} ({Path.GetFileName(o.Dll)}): " + (sha == "" ? "the file cannot be read, off." : "offered, off (Settings, Mod extensions)."));
                     continue;
                 }
                 if (!LoadedFiles.TryGetValue(sha, out var made))
@@ -134,14 +136,14 @@ public static partial class ModExtensions
                 if (made.Loaded is { Fault: null } l)
                 {
                     running[o.Dll] = l;
-                    offered.Add(new Extension(o.Dll, o.Mod, sha, Status.Running, null));
-                    Console.WriteLine($"extension {o.Mod} ({Path.GetFileName(o.Dll)}): running.");
+                    offered.Add(new Extension(o.Dll, o.Mod, sha, Status.Running, null, o.AddOn));
+                    Console.WriteLine($"{what} {o.Mod} ({Path.GetFileName(o.Dll)}): running.");
                 }
                 else
                 {
                     string why = made.Error ?? made.Loaded?.Fault ?? "it did not load";
-                    offered.Add(new Extension(o.Dll, o.Mod, sha, Status.Failed, why));
-                    Console.WriteLine($"extension {o.Mod} ({Path.GetFileName(o.Dll)}): not running ({why}).");
+                    offered.Add(new Extension(o.Dll, o.Mod, sha, Status.Failed, why, o.AddOn));
+                    Console.WriteLine($"{what} {o.Mod} ({Path.GetFileName(o.Dll)}): not running ({why}).");
                 }
             }
             _state = new State(offered, running);
@@ -165,6 +167,10 @@ public static partial class ModExtensions
             settings.Extensions.Remove(extension.Dll);
         }
     }
+
+    /// <summary>Whether the settings allow a mod's extension, its file as it is (its SHA-256).</summary>
+    private static bool IsAllowed(AppSettings settings, string dll, string sha) =>
+        settings.Extensions.TryGetValue(dll, out string? allowed) && string.Equals(allowed, sha, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>A file's SHA-256 as lower-case hex; "" when it cannot be read.</summary>
     internal static string Sha256Of(string path)

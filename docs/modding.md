@@ -4,8 +4,9 @@ The editor works with building mods without anything from their authors: connect
 game, it learns the mods' objects, draws them with their own models and names the data they keep.
 This page is for mod authors who want more: an optional `worldeditor.json` file for what the editor
 cannot guess, **linked objects** for mods that build one thing out of many objects, **editor
-extensions** (a small DLL built against the editor's SDK) for what a file cannot say, and **bridge
-hooks** for a mod's own plugin to take part in live mode.
+extensions** (a small DLL built against the editor's SDK) for what a file cannot say, **add-ons**
+(the same, made by anyone for someone else's mod), and **bridge hooks** for a mod's own plugin to
+take part in live mode.
 
 Everything here is optional, and each step adds to the one before. The editor ships nothing for any
 mod: supporting a mod in the editor is its author's to do, with these. The examples on this page
@@ -257,6 +258,41 @@ game does.
 - **Versions.** `SdkInfo.ApiVersion` is the API's version (now 1), and the attribute records the one
   you built against. An editor runs extensions built against its version or an earlier one. New
   hooks come as additions; the version changes only when the API breaks.
+
+## Add-ons
+
+An extension ships with its mod. When a mod's author has not made one (or the mod is no longer
+kept up), anyone can: an **add-on** is a `worldeditor.json` and an extension for **someone else's
+mod**, released on its own, that the player installs next to the editor. The mod itself stays as it
+is, in `BepInEx/plugins`; the add-on only teaches the editor about it.
+
+```
+ValheimWorldEditor/                the editor's folder (on macOS: the folder holding ValheimWorldEditor.app)
+  ValheimWorldEditor(.exe)
+  addons/
+    Tunnels/                       one folder per add-on, named as you like
+      worldeditor.json
+      Tunnels.WorldEditor.dll
+```
+
+- **Its file** is a `worldeditor.json` as above (data labels, prefabs, links, `extension`,
+  `gameComponents`), with one more key: `"serves": "TheirMod.dll"`, the file name of the mod's DLL.
+  The add-on is used while a DLL of that name is in one of the plugins folders the editor knows
+  (Settings, BepInEx folders), anywhere under `plugins`, and left alone otherwise. Without `serves`
+  it is always used (a tool of your own, for no mod in particular). A `serves` that is not a plain
+  file name ending in `.dll`, or a file of a version this editor does not read, leaves the add-on
+  out (the log says why).
+- **Its extension** is made as any other (see [Making one](#making-one)): one DLL, inside the
+  add-on's folder, every hook and rule the same.
+- **No switch.** Installing an add-on is the player's choice, so it runs without being turned on
+  in Settings. Settings lists the add-ons under **Add-ons** with what became of each: "Waiting for
+  its mod: TheirMod.dll is not in the plugins folders above.", "Running.", "Not running: …", or
+  that it only brings notes.
+- **The mod's own word wins.** The add-ons' files are read before the mods' own: should the mod
+  ship a `worldeditor.json` of its own one day, what it says replaces what the add-on said (an
+  extension of its own then needs the player's switch, as always).
+- **Release it as a `.zip` holding its folder**, for players to unpack into `addons`. The editor's
+  packages come with that folder, empty but for a `README.txt`.
 
 ## Live mode
 

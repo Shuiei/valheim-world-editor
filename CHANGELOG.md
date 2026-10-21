@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.96.0 — 2026-10-21
+
+### Added
+- **Add-ons.** Editor support for a mod can now come as an add-on of its own, made by anyone: unpack it into the new
+  addons folder next to the editor, and it is used whenever the mod it is for is installed. Settings lists them.
+
 ## v1.95.0 — 2026-10-21
 
 ### Added

@@ -9,7 +9,8 @@ namespace TerrainEditor.App;
 public static partial class ModManifests
 {
     /// <summary>
-    /// Reads every manifest in the plugins folders and uses what they say (nothing when there is none). Never throws.
+    /// Reads every manifest in the plugins folders and of the add-ons in use (AddOns: theirs first) and uses what they
+    /// say (nothing when there is none). Never throws.
     /// </summary>
     /// <returns>How many manifests were read.</returns>
     public static int Refresh(AppSettings settings)
@@ -32,7 +33,8 @@ public static partial class ModManifests
             }
         }
         var notes = BaseNotes();
-        int read = 0;
+        var addOns = new List<AddOns.AddOn>();
+        int read = ReadAddOns(settings, notes, addOns);
         // Oldest first: a newer file's notes replace an older one's.
         foreach (var (file, plugins) in files.DistinctBy(f => f.File.FullName).OrderBy(f => f.File.LastWriteTimeUtc))
         {
@@ -59,6 +61,7 @@ public static partial class ModManifests
         }
         notes.LinkSet = new LinkSet([.. notes.Links.Values]);
         _notes = notes;
+        _addOns = addOns;
         Interlocked.Increment(ref _generation);
         return read;
     }
@@ -66,18 +69,27 @@ public static partial class ModManifests
     /// <summary>
     /// Adds the extension a manifest offers (its "extension" DLL inside the mod's folder, ending in .dll) to the notes.
     /// </summary>
-    private static void ReadExtension(JsonObject root, (string Folder, string Mod)? from, Notes notes)
+    private static void ReadExtension(JsonObject root, (string Folder, string Mod)? from, Notes notes, bool addOn)
     {
-        if (from is var (folder, mod) && Text(root["extension"], out string? dll) && dll != null)
+        if (from is var (folder, mod) && ExtensionPath(root, folder) is { } path)
         {
-            // A DLL inside the mod's own folder only.
-            string path = Path.GetFullPath(Path.Combine(folder, dll));
-            if (path.StartsWith(Path.GetFullPath(folder) + Path.DirectorySeparatorChar, StringComparison.Ordinal)
-                && path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-            {
-                notes.Extensions[path] = new Offered(path, mod, ScriptNames(root["gameComponents"]));
-            }
+            notes.Extensions[path] = new Offered(path, mod, ScriptNames(root["gameComponents"]), addOn);
         }
+    }
+
+    /// <summary>
+    /// The full path of the extension a manifest names ("extension"): a DLL inside its folder only; null for none or
+    /// one elsewhere.
+    /// </summary>
+    private static string? ExtensionPath(JsonObject root, string folder)
+    {
+        if (!Text(root["extension"], out string? dll) || dll == null)
+        {
+            return null;
+        }
+        string path = Path.GetFullPath(Path.Combine(folder, dll));
+        return path.StartsWith(Path.GetFullPath(folder) + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            && path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ? path : null;
     }
 
     /// <summary>
