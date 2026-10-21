@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The Tunnelheim add-on's tests, on the .NET the editor runs on, with the SDK as the editor hands it over. The
+       fixtures were taken from the real mod on a local server (tunnelheim-reference.txt) and from the game's own
+       hoe strokes (terrain-ops.json). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <!-- Test methods need no doc comment: their names say what they check. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- The editor's tests' settings (a stuck test dumped and stopped after 5 minutes), for dotnet test. -->
+    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --config-file $(MSBuildThisFileDirectory)../../../../editor/tests/testconfig.json</TestingPlatformCommandLineArguments>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- As the editor's tests: xUnit on Microsoft.Testing.Platform, the JUnit results CI shows (with the test
+         platform's object model the logger needs), the coverage on main and a stuck test's dump. -->
+    <PackageReference Include="xunit.v3.mtp-v2" Version="3.2.2" />
+    <PackageReference Include="JunitXml.TestLogger" Version="8.0.0" />
+    <PackageReference Include="Microsoft.TestPlatform.ObjectModel" Version="18.11.0" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
+    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Tunnelheim.WorldEditor/Tunnelheim.WorldEditor.csproj" />
+    <ProjectReference Include="../../../../sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" />
+    <None Include="fixtures/**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

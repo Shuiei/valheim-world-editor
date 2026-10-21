@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The add-on: Tunnelheim's tunnels in the editor, as an extension the editor loads from its addons folder while
+       the mod is installed (docs/modding.md#add-ons). netstandard2.0, one DLL: the editor loads nothing else from
+       the add-on's folder. Built against the SDK, never the editor itself. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Tunnelheim.WorldEditor</AssemblyName>
+    <RootNamespace>Tunnelheim.WorldEditor</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Compiled against, not shipped: the editor gives its own copy. -->
+    <ProjectReference Include="../../../../sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" Private="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="worldeditor.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
