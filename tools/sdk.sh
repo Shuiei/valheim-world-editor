@@ -3,7 +3,7 @@
 # ValheimWorldEditor.Sdk.dll (what an editor extension is built against, netstandard2.0) and
 # WorldEditorBridge.Api.dll (what a mod's own plugin builds against to take part in live mode), each
 # with its documentation file (.xml, for code editors), the samples' source (an editor extension and a
-# plugin, samples/ExampleVehicles.*), docs/modding.md as README.md, and the repository's LICENSE (MIT).
+# plugin, sdk/samples/ExampleVehicles.*), docs/modding.md as README.md, and the repository's LICENSE (MIT).
 # Attached to the GitHub release; see docs/modding.md#extensions.
 # Usage: tools/sdk.sh <dist>   (needs the .NET 10 SDK and zip)
 set -euo pipefail
@@ -15,15 +15,15 @@ mkdir -p "$dist"
 version=$(tr -d '[:space:]' < "$repo/VERSION")
 [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "VERSION is not Major.Minor.Patch" >&2; exit 1; }
 
-"${DOTNET:-dotnet}" build "$repo/Sdk/ValheimWorldEditor.Sdk.csproj" -c Release -p:DebugType=none -o "$work/build"
-"${DOTNET:-dotnet}" build "$repo/plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj" -c Release -p:DebugType=none -o "$work/build"
+"${DOTNET:-dotnet}" build "$repo/sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" -c Release -p:DebugType=none -o "$work/build"
+"${DOTNET:-dotnet}" build "$repo/sdk/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj" -c Release -p:DebugType=none -o "$work/build"
 out="$work/ValheimWorldEditor.Sdk"
 mkdir -p "$out/samples/ExampleVehicles.WorldEditor" "$out/samples/ExampleVehicles.Bridge"
 cp "$work/build/ValheimWorldEditor.Sdk.dll" "$work/build/ValheimWorldEditor.Sdk.xml" "$work/build/WorldEditorBridge.Api.dll" "$work/build/WorldEditorBridge.Api.xml" "$repo/LICENSE" "$out/"
 cp "$repo/docs/modding.md" "$out/README.md"
 # The samples' source as in the repository (not what a build left there).
 for sample in ExampleVehicles.WorldEditor ExampleVehicles.Bridge; do
-  (cd "$repo/samples/$sample" && git ls-files -z | xargs -0 -I{} cp --parents {} "$out/samples/$sample/")
+  (cd "$repo/sdk/samples/$sample" && git ls-files -z | xargs -0 -I{} cp --parents {} "$out/samples/$sample/")
 done
 rm -f "$dist/ValheimWorldEditor.Sdk-$version.zip"
 (cd "$out" && zip -qrX "$dist/ValheimWorldEditor.Sdk-$version.zip" .)

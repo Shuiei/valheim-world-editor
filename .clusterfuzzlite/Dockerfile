@@ -1,4 +1,4 @@
-# ClusterFuzzLite's build image for the .NET fuzz targets (tests/Fuzz): its C++ builder, plus .NET,
+# ClusterFuzzLite's build image for the .NET fuzz targets (editor/tests/Fuzz): its C++ builder, plus .NET,
 # SharpFuzz's instrumentation tool and libfuzzer-dotnet (libFuzzer's driver for .NET programs).
 # The image is pinned by digest; Dependabot moves the digest when v1 changes.
 FROM gcr.io/oss-fuzz-base/base-builder:v1@sha256:1f9cf74bc3d7029b528494542f9d9851b256dceed38d3f420989434dc5ae0760

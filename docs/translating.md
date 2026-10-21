@@ -1,7 +1,7 @@
 # Translating the editor
 
 The editor's words are in catalogues, one per language: a JSON file of texts by key. English,
-[`Core/Lang/en.json`](../Core/Lang/en.json), is the source every other catalogue is translated
+[`editor/Core/Lang/en.json`](../editor/Core/Lang/en.json), is the source every other catalogue is translated
 from. The editor shows the language chosen under **Settings › Language**, by default the
 computer's when there is a catalogue of it; a text a catalogue does not have yet shows in
 English. A new language is taken when the editor starts again.
@@ -36,7 +36,7 @@ The same folder also takes corrections: a file there with the code of a catalogu
 carries is laid over it, text by text. There, a key you leave out (or a text that is not used)
 keeps the carried translation; English shows only where neither has the text.
 
-To have a catalogue carried by the editor, open a pull request adding it to `Core/Lang/` (keys
+To have a catalogue carried by the editor, open a pull request adding it to `editor/Core/Lang/` (keys
 only from `en.json`; `LangTests` checks them).
 
 ## For developers
@@ -45,7 +45,7 @@ only from `en.json`; `LangTests` checks them).
   (`settings.port`, `common.cancel` for words used everywhere) and is asked for with
   `Lang.T("settings.port")`, or `Lang.T("settings.worldNotFound", path)` with values for its
   `{0}`… places (put in with the invariant culture). A hover tip is a `tip.` key, given with
-  `.Tip("settings.port")` (see `Desktop/Tips.cs`).
+  `.Tip("settings.port")` (see `editor/Desktop/Tips.cs`).
 - Write the key in full in the code, even when it is passed along: `LangTests` checks that every
   key asked for is in `en.json` and every key of `en.json` is asked for somewhere.
 - Texts for Claude (the MCP tools' descriptions and answers), the log, command-line output and

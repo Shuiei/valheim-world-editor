@@ -1,5 +1,5 @@
 # ClusterFuzzLite every night, on main (a schedule always runs on the default branch): an hour of fuzzing
-# over every target (tests/Fuzz), from the corpus the earlier runs grew. Not on pull requests: it takes
+# over every target (editor/tests/Fuzz), from the corpus the earlier runs grew. Not on pull requests: it takes
 # too long for them. A crash fails the run and shows in code scanning; its input is kept as the run's
 # artifact. Run it by hand from the Actions tab (workflow_dispatch) to fuzz a change before the night.
 # Without a storage repository, corpora and reports are kept as artifacts.

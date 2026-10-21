@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The SDK's sample of a mod's own BepInEx plugin taking part in live mode (docs/modding.md#live-mode):
+       Example Vehicles' plugin registers with the WorldEditorBridge, is told what the editor applied
+       and answers a route its editor extension calls. A template; never shipped. Builds against the
+       game's and BepInEx's DLLs like the bridge (ValheimDir, BepInExDir), so CI builds it in the
+       release job only. -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>ExampleVehicles.Bridge</AssemblyName>
+    <RootNamespace>ExampleVehicles.Bridge</RootNamespace>
+    <BepInExDir Condition="'$(BepInExDir)' == ''">$(ValheimDir)/BepInEx</BepInExDir>
+    <ManagedDir>$(ValheimDir)/valheim_server_Data/Managed</ManagedDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+  <!-- Compiled against, not shipped: the bridge's package holds it. In the editor's repository, its
+       project; from the SDK's zip, the DLL beside the samples folder. -->
+  <ItemGroup Condition="Exists('../../WorldEditorBridge.Api/WorldEditorBridge.Api.csproj')">
+    <ProjectReference Include="../../WorldEditorBridge.Api/WorldEditorBridge.Api.csproj" Private="false" />
+  </ItemGroup>
+  <ItemGroup Condition="!Exists('../../WorldEditorBridge.Api/WorldEditorBridge.Api.csproj')">
+    <Reference Include="WorldEditorBridge.Api" HintPath="../../WorldEditorBridge.Api.dll" Private="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="BepInEx"><HintPath>$(BepInExDir)/core/BepInEx.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="assembly_valheim"><HintPath>$(ManagedDir)/assembly_valheim.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(ManagedDir)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <Target Name="RequireValheimDir" BeforeTargets="ResolveAssemblyReferences" Condition="'$(ValheimDir)' == ''">
+    <Error Text="Set ValheimDir to a Valheim dedicated server's folder (-p:ValheimDir=... or an environment variable): the sample builds against its DLLs." />
+  </Target>
+</Project>

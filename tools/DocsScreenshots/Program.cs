@@ -12,7 +12,7 @@ using TerrainEditor.DocsScreenshots;
 // Pictures go to docs/images (or $DOCS_OUT). With scene names, only those scenes run.
 // $HOMESTEAD_DLL (Homestead.dll from its Thunderstore package) puts Homestead in the stand-in game's
 // BepInEx, so the start page and the Blueprints panel show it installed.
-// $DOCS_APP (a released ValheimWorldEditor program) is driven instead of the Debug build in Desktop/bin.
+// $DOCS_APP (a released ValheimWorldEditor program) is driven instead of the Debug build in editor/Desktop/bin.
 // $DOCS_LIVE ("<bridge address> <token>", a local server running the Docs world with the plugin) is
 // what the live scene connects to; without it the live scene is skipped.
 if (args.Length < 1)

@@ -12,7 +12,7 @@
 #                  values, live mode against a stand-in bridge, the SSH tunnel against a local sshd), and
 #   app-tests      the app's windows, headless, on six containers, and the visual tests: the real
 #                  editor drawing with OpenGL on a virtual screen (Xvfb, Mesa's software OpenGL),
-#                  driven by the tests. Each builds its test project (tests/Core.Tests, tests/Desktop.Tests)
+#                  driven by the tests. Each builds its test project (editor/tests/Core.Tests, editor/tests/Desktop.Tests)
 #                  with warnings as errors; CircleCI shares the test classes out by their last times
 #                  and can rerun only the failed ones (circleci tests run). Every
 #                  test runs, failing or not; a test stuck for 5 minutes (10 under coverage) ends its run.
@@ -78,7 +78,7 @@ commands:
     steps:
       - restore_cache:
           keys:
-            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "Sdk/ValheimWorldEditor.Sdk.csproj" }}
+            - nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "editor/Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "editor/Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "editor/tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "editor/tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" }}
             # Else main's latest (a branch whose packages changed restores only what it adds).
             - nuget-v2-
 
@@ -130,11 +130,11 @@ commands:
           no_output_timeout: 11m
           environment:
             VWE_NEED_SSHD: "1"
-            # The mods the build downloaded (tests/TestMods.targets) are kept through the test processes of
+            # The mods the build downloaded (editor/tests/TestMods.targets) are kept through the test processes of
             # this run (the list is read, then run, in separate processes); the step after deletes them.
             VWE_KEEP_TEST_MODS: "1"
           command: |
-            # A test stuck 5 minutes ends the run with a dump (tests/testconfig.json). On main only, the
+            # A test stuck 5 minutes ends the run with a dump (editor/tests/testconfig.json). On main only, the
             # coverage of this container's share, kept for the coverage job: it makes the tests several
             # times slower, so a test is stuck after 10 minutes there (the world generator's tests share
             # the container's two cores with the others for minutes; one took 300 s on main). VWE_COVERAGE
@@ -143,7 +143,7 @@ commands:
             coverage=""
             if [ "$CIRCLE_BRANCH" = main ]; then
               export VWE_COVERAGE=1
-              coverage="--coverage --coverage-output-format cobertura --coverage-settings $PWD/tests/coverage.runsettings"
+              coverage="--coverage --coverage-output-format cobertura --coverage-settings $PWD/editor/tests/coverage.runsettings"
               coverage+=" --coverage-output /tmp/coverage/<< parameters.results >>-$CIRCLE_NODE_INDEX/coverage.cobertura.xml"
               coverage+=" --hangdump-timeout 10m"
             fi
@@ -211,7 +211,7 @@ commands:
             equal: [main, << pipeline.git.branch >>]
           steps:
             - save_cache:
-                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "Sdk/ValheimWorldEditor.Sdk.csproj" }}
+                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "editor/Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "editor/Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "editor/tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "editor/tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" }}
                 paths:
                   - ~/.nuget/packages
       # On main, the coverage of this container's tests, kept for the coverage job (which sends it with
@@ -242,7 +242,7 @@ jobs:
       - checkout
       - restore-nuget
       # Every XML file of the repository is well formed: the builds read only the projects they build, and
-      # nothing reads tests/coverage.runsettings before the tests on main (a "--" in its comment once made
+      # nothing reads editor/tests/coverage.runsettings before the tests on main (a "--" in its comment once made
       # every test container there refuse its options).
       - run:
           name: XML files are well formed (projects, coverage settings)
@@ -252,15 +252,15 @@ jobs:
       - run:
           name: Analyzers (every warning is an error)
           command: |
-            dotnet build Desktop/ValheimWorldEditor.Desktop.csproj -c Release -warnaserror
-            dotnet build plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj -c Release -warnaserror
+            dotnet build editor/Desktop/ValheimWorldEditor.Desktop.csproj -c Release -warnaserror
+            dotnet build sdk/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj -c Release -warnaserror
       # Saved from main only: branches reuse main's (each cache is kept 15 days and billed).
       - when:
           condition:
             equal: [main, << pipeline.git.branch >>]
           steps:
             - save_cache:
-                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "Sdk/ValheimWorldEditor.Sdk.csproj" }}
+                key: nuget-v2-{{ checksum "Directory.Build.props" }}-{{ checksum "editor/Core/ValheimWorldEditor.Core.csproj" }}-{{ checksum "editor/Desktop/ValheimWorldEditor.Desktop.csproj" }}-{{ checksum "editor/tests/Core.Tests/Core.Tests.csproj" }}-{{ checksum "editor/tests/Desktop.Tests/Desktop.Tests.csproj" }}-{{ checksum "sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" }}
                 paths:
                   - ~/.nuget/packages
 
@@ -276,8 +276,8 @@ jobs:
           name: Formatting (dotnet format, as .editorconfig says)
           command: |
             case $CIRCLE_NODE_INDEX in
-              0) projects="Desktop/ValheimWorldEditor.Desktop.csproj Sdk/ValheimWorldEditor.Sdk.csproj" ;;
-              *) projects="Core/ValheimWorldEditor.Core.csproj plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj" ;;
+              0) projects="editor/Desktop/ValheimWorldEditor.Desktop.csproj sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" ;;
+              *) projects="editor/Core/ValheimWorldEditor.Core.csproj sdk/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj sdk/samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj" ;;
             esac
             if [ "$CIRCLE_BRANCH" = main ]; then
               tools/format-check.sh $projects
@@ -295,7 +295,7 @@ jobs:
     parallelism: 3
     steps:
       - test-classes:
-          project: tests/Core.Tests/Core.Tests.csproj
+          project: editor/tests/Core.Tests/Core.Tests.csproj
           what: Core tests (saves, world generator, live mode, SSH tunnel)
           results: core
 
@@ -310,7 +310,7 @@ jobs:
     parallelism: 6
     steps:
       - test-classes:
-          project: tests/Desktop.Tests/Desktop.Tests.csproj
+          project: editor/tests/Desktop.Tests/Desktop.Tests.csproj
           what: App tests (the windows, headless; the real editor drawing, on the virtual screen)
           results: app
           display: true
@@ -385,7 +385,7 @@ jobs:
             mkdir -p /tmp/smoke && tar -C /tmp/smoke -xzf /tmp/dist/ValheimWorldEditor-*-linux-x64.tar.gz
             # The OpenGL the virtual screen offers (Mesa's software renderer, llvmpipe).
             xvfb-run -a -s "-screen 0 1600x1000x24" glxinfo -B | grep -E 'renderer|version' || true
-            xvfb-run -a -s "-screen 0 1600x1000x24" tools/smoke-test.sh /tmp/smoke/ValheimWorldEditor/ValheimWorldEditor tests/fixtures/CITest
+            xvfb-run -a -s "-screen 0 1600x1000x24" tools/smoke-test.sh /tmp/smoke/ValheimWorldEditor/ValheimWorldEditor editor/tests/fixtures/CITest
       # The packages kept as artifacts (releases take them from there: about 135 MB a run, kept
       # 30 days).
       - store_artifacts:
@@ -511,7 +511,7 @@ jobs:
           environment:
             ValheimDir: /tmp/valheim
             BepInExDir: /tmp/bepinex/BepInExPack_Valheim/BepInEx
-          command: dotnet build samples/ExampleVehicles.Bridge/ExampleVehicles.Bridge.csproj -c Release -warnaserror
+          command: dotnet build sdk/samples/ExampleVehicles.Bridge/ExampleVehicles.Bridge.csproj -c Release -warnaserror
       - run:
           name: The SDK for mod authors' zip
           command: tools/sdk.sh /tmp/dist

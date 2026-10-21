@@ -168,7 +168,7 @@ it. It can:
    `ValheimWorldEditor.Sdk-<version>.zip` holds `ValheimWorldEditor.Sdk.dll` (netstandard2.0, what an
    extension builds against) and `WorldEditorBridge.Api.dll` (what a mod's plugin builds against for
    [live mode](#live-mode)), each with its documentation file for code editors, this page as
-   `README.md`, and the whole Example Vehicles sample in `samples/` (it builds as it is).
+   `README.md`, and the whole Example Vehicles sample in `sdk/samples/` (it builds as it is).
 2. **Build a netstandard2.0 class library** referencing `ValheimWorldEditor.Sdk.dll` without copying
    it to your output (`Private="false"`): the editor gives its own. Use nothing else but the
    framework (the sample's project also references the `System.Numerics.Vectors` package, for
@@ -310,7 +310,7 @@ break it.
 
 Register from your plugin's `Awake`, with a soft dependency on the bridge, and keep the code that
 touches the API in a class of its own: your plugin then loads without the bridge too. From the
-sample's `samples/ExampleVehicles.Bridge`:
+sample's `sdk/samples/ExampleVehicles.Bridge`:
 
 ```csharp
 [BepInPlugin(PluginId, "ExampleVehicles", "1.0.0")]
@@ -386,15 +386,15 @@ from. Example Vehicles builds vehicles out of a hull and the parts built on it.
 
 | File | What it shows |
 |---|---|
-| `samples/ExampleVehicles.WorldEditor/worldeditor.json` | The mod's file: labels, a hidden helper, groups, the `vehicle` link rule, the extension. |
-| `samples/ExampleVehicles.WorldEditor/Extension.cs` | The entry, registering one hook of each kind. |
-| `samples/ExampleVehicles.WorldEditor/Keys.cs` | The mod's data keys and prefabs, as its code names them. |
-| `samples/ExampleVehicles.WorldEditor/PackedIds.cs` | A decoder and copy rewriter for a list of ids packed in a byte array (a version byte, then four bytes per id): shown in the inspector ("Linked to 3 object(s): …"), and in a pasted copy made to name the copy's objects (ids of objects not copied go). |
-| `samples/ExampleVehicles.WorldEditor/Sails.cs` | Shapes: a sail's cloth drawn between three or four corners kept in its data, in its colour, seen from both sides. |
-| `samples/ExampleVehicles.WorldEditor/Cables.cs` | Shapes in world space: a cable from the top of one post to the top of the post it names, found with `TryFind`. |
-| `samples/ExampleVehicles.WorldEditor/Canals.cs` | A scene layer: each canal (a data holder keeping its path, its width and depth) dug as a trench with the game's ground look, its bed painted dirt, the ground left undrawn over it. |
-| `samples/ExampleVehicles.WorldEditor/CanalTool.cs` | A tool: click points on the ground for a canal's path (Backspace takes the last away), its width and depth from sliders, the path previewed; Enter or **Dig** adds the canal (a data holder), **Clear** or Escape drops the points. Shift+click fills a canal in (removes it), Ctrl+click gives it the sliders' width and depth (changes it). |
-| `samples/ExampleVehicles.WorldEditor/CanalCopies.cs` | An area copier: canals whose whole path lies in what is copied are kept as offsets from the copy's middle, and dug again where each copy is pasted, turned and mirrored with it, standing on the ground there. |
-| `samples/ExampleVehicles.WorldEditor/Pits.cs` | A ground cut: a round hole as wide as the pit's radius (1.5 m when it keeps none). |
-| `samples/ExampleVehicles.WorldEditor/LiveLink.cs` | The extension's side of live mode: names the game's own ships (`Host.Game`, from the manifest's `gameComponents`), checks that the plugin registered, calls its `ping` route, logs the answer, and catches everything. |
-| `samples/ExampleVehicles.Bridge/ExampleVehiclesBridgePlugin.cs` | The mod's BepInEx plugin taking part in live mode: soft dependency, registration in a class of its own, routes `ping` and `players`, a listener that logs what the editor applied. It builds against the game's and BepInEx's DLLs like any plugin (`-p:ValheimDir=…`, a Valheim dedicated server's folder). |
+| `sdk/samples/ExampleVehicles.WorldEditor/worldeditor.json` | The mod's file: labels, a hidden helper, groups, the `vehicle` link rule, the extension. |
+| `sdk/samples/ExampleVehicles.WorldEditor/Extension.cs` | The entry, registering one hook of each kind. |
+| `sdk/samples/ExampleVehicles.WorldEditor/Keys.cs` | The mod's data keys and prefabs, as its code names them. |
+| `sdk/samples/ExampleVehicles.WorldEditor/PackedIds.cs` | A decoder and copy rewriter for a list of ids packed in a byte array (a version byte, then four bytes per id): shown in the inspector ("Linked to 3 object(s): …"), and in a pasted copy made to name the copy's objects (ids of objects not copied go). |
+| `sdk/samples/ExampleVehicles.WorldEditor/Sails.cs` | Shapes: a sail's cloth drawn between three or four corners kept in its data, in its colour, seen from both sides. |
+| `sdk/samples/ExampleVehicles.WorldEditor/Cables.cs` | Shapes in world space: a cable from the top of one post to the top of the post it names, found with `TryFind`. |
+| `sdk/samples/ExampleVehicles.WorldEditor/Canals.cs` | A scene layer: each canal (a data holder keeping its path, its width and depth) dug as a trench with the game's ground look, its bed painted dirt, the ground left undrawn over it. |
+| `sdk/samples/ExampleVehicles.WorldEditor/CanalTool.cs` | A tool: click points on the ground for a canal's path (Backspace takes the last away), its width and depth from sliders, the path previewed; Enter or **Dig** adds the canal (a data holder), **Clear** or Escape drops the points. Shift+click fills a canal in (removes it), Ctrl+click gives it the sliders' width and depth (changes it). |
+| `sdk/samples/ExampleVehicles.WorldEditor/CanalCopies.cs` | An area copier: canals whose whole path lies in what is copied are kept as offsets from the copy's middle, and dug again where each copy is pasted, turned and mirrored with it, standing on the ground there. |
+| `sdk/samples/ExampleVehicles.WorldEditor/Pits.cs` | A ground cut: a round hole as wide as the pit's radius (1.5 m when it keeps none). |
+| `sdk/samples/ExampleVehicles.WorldEditor/LiveLink.cs` | The extension's side of live mode: names the game's own ships (`Host.Game`, from the manifest's `gameComponents`), checks that the plugin registered, calls its `ping` route, logs the answer, and catches everything. |
+| `sdk/samples/ExampleVehicles.Bridge/ExampleVehiclesBridgePlugin.cs` | The mod's BepInEx plugin taking part in live mode: soft dependency, registration in a class of its own, routes `ping` and `players`, a listener that logs what the editor applied. It builds against the game's and BepInEx's DLLs like any plugin (`-p:ValheimDir=…`, a Valheim dedicated server's folder). |

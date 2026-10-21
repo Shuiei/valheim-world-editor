@@ -3,7 +3,7 @@ using System.Diagnostics;
 namespace TerrainEditor.DocsScreenshots;
 
 /// <summary>
-/// Drives the app for the documentation's pictures (its --driver mode, see Desktop/Driver.cs).
+/// Drives the app for the documentation's pictures (its --driver mode, see editor/Desktop/Driver.cs).
 /// </summary>
 /// <remarks>
 /// The app runs with a stand-in home: none of this computer's characters, worlds, servers or settings show in
@@ -39,7 +39,7 @@ public sealed partial class Editor : IDisposable
     /// <summary>
     /// Makes the stand-in home and starts the app in it, driven, and waits until it is ready.
     /// </summary>
-    /// <param name="app">The app's dll (run with dotnet) or executable; null for the Debug build in Desktop/bin.</param>
+    /// <param name="app">The app's dll (run with dotnet) or executable; null for the Debug build in editor/Desktop/bin.</param>
     /// <param name="width">Window width in pixels.</param>
     /// <param name="height">Window height in pixels.</param>
     /// <param name="gameWorld">When set, a stand-in running game with this world (the plugin in an r2modman

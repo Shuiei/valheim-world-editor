@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Core's tests: saves, the world generator against the game's values, live mode against a stand-in
+       game, the SSH tunnel against a local sshd. Laid out like Core (App/, Editing/, Save/, WorldGen/),
+       one test class per file named after the file it tests; Integration/ holds the tests of several
+       files at once, Support/ (here and editor/tests/Support) their helpers. -->
+  <PropertyGroup>
+    <!-- CI builds them with warnings as errors (.circleci/config.yml). -->
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>WorldEditor.Tests</RootNamespace>
+    <!-- Test methods need no doc comment: their names say what they check. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- Both test projects' settings (a stuck test dumped and stopped after 5 minutes), for dotnet test. -->
+    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --config-file $(MSBuildThisFileDirectory)../testconfig.json</TestingPlatformCommandLineArguments>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Property-based tests of the file readers (FuzzPropertiesTests); 3.4 needs xUnit 4. -->
+    <PackageReference Include="FsCheck.Xunit.v3" Version="3.3.4" />
+    <!-- The tests run on Microsoft.Testing.Platform (global.json): xUnit's runner for it, the JUnit
+         results CI shows (with the test platform's object model, which the logger needs but does not
+         bring), the coverage on main and a dump of a stuck test (.circleci/continue.yml). -->
+    <PackageReference Include="xunit.v3.mtp-v2" Version="3.2.2" />
+    <PackageReference Include="JunitXml.TestLogger" Version="8.0.0" />
+    <PackageReference Include="Microsoft.TestPlatform.ObjectModel" Version="18.11.0" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
+    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" Version="2.5.1" />
+    <!-- A copy of YamlDotNet to stand in for the one a BepInEx folder has (YamlReaderTests, ExpandWorldDataTests): the
+         editor itself ships none and loads the player's. -->
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
+    <!-- The map's overview picture decoded with its transparency (MapDataTests). -->
+    <PackageReference Include="SkiaSharp" Version="4.153.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.153.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="4.153.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="4.153.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The helpers both test projects share: the test world, the fixtures, a stand-in game. -->
+    <Compile Include="../Support/**/*.cs" LinkBase="Support/Shared" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Core/ValheimWorldEditor.Core.csproj" />
+    <!-- The SDK's sample extension: tested here, and loaded as a mod's would be (ModExtensionsTests). -->
+    <ProjectReference Include="../../../sdk/samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The sample's manifest, checked against the tests' example mod (ExampleVehiclesExtensionTests). -->
+    <Content Include="../../../sdk/samples/ExampleVehicles.WorldEditor/worldeditor.json" Link="Samples/worldeditor.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- The game mods the tests install, downloaded when the build starts. -->
+  <Import Project="../TestMods.targets" />
+</Project>

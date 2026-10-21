@@ -13,9 +13,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-all=(Core/ValheimWorldEditor.Core.csproj Desktop/ValheimWorldEditor.Desktop.csproj
-  Sdk/ValheimWorldEditor.Sdk.csproj plugin/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj
-  samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj)
+all=(editor/Core/ValheimWorldEditor.Core.csproj editor/Desktop/ValheimWorldEditor.Desktop.csproj
+  sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj sdk/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj
+  sdk/samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj)
 since=
 if [ "${1:-}" = --since ]; then since=${2:?a ref after --since}; shift 2; fi
 projects=("$@")

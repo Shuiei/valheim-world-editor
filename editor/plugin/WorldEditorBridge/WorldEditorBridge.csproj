@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>WorldEditorBridge</AssemblyName>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <!-- Where the game's and BepInEx's DLLs are: ValheimDir, a Valheim dedicated server's folder, and
+         BepInExDir, a BepInEx folder (by default the server's own), given as -p:ValheimDir=... or as
+         environment variables. CI's release sets both (the server from SteamCMD, BepInEx from
+         BepInExPack_Valheim). -->
+    <BepInExDir Condition="'$(BepInExDir)' == ''">$(ValheimDir)/BepInEx</BepInExDir>
+    <ManagedDir>$(ValheimDir)/valheim_server_Data/Managed</ManagedDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all" />
+    <!-- The registry mods' plugins fill (BridgeApi), shipped beside the plugin. -->
+    <ProjectReference Include="../../../sdk/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="BepInEx"><HintPath>$(BepInExDir)/core/BepInEx.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(BepInExDir)/core/0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="assembly_valheim"><HintPath>$(ManagedDir)/assembly_valheim.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="assembly_guiutils"><HintPath>$(ManagedDir)/assembly_guiutils.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="assembly_utils"><HintPath>$(ManagedDir)/assembly_utils.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(ManagedDir)/UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(ManagedDir)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <Target Name="RequireValheimDir" BeforeTargets="ResolveAssemblyReferences" Condition="'$(ValheimDir)' == ''">
+    <Error Text="Set ValheimDir to a Valheim dedicated server's folder (-p:ValheimDir=... or an environment variable): the plugin builds against its DLLs." />
+  </Target>
+</Project>
