@@ -174,6 +174,18 @@ the folder that opens (the one with `valheim_Data`, or `valheim.app` on a Mac) i
 A folder near it works too (`steamapps`, `common`, `valheim_Data`, `valheim.app`): the editor finds the game folder
 from it. The folder can be changed later in **Settings**.
 
+### Add-ons for mods
+
+Some mods need more than the editor knows to be shown or edited. Their support comes as **add-ons**, each its own
+download on the same [Releases](https://github.com/Shuiei/valheim-world-editor/releases) page: unpack
+`ValheimWorldEditor-addon-<Name>-<version>.zip` into the `addons` folder next to the editor (on macOS, next to
+`ValheimWorldEditor.app`). An add-on is used while its mod is in your BepInEx plugins folders; **Settings** lists the
+installed ones. The mod itself stays where it is.
+
+| Add-on | For | What it does |
+|---|---|---|
+| [Tunnelheim](addons/Tunnelheim/README.md) | [Tunnelheim](https://thunderstore.io/c/valheim/p/Tunnelheim/Tunnelheim/) (`ValheimTunneling.dll`) | Draws the tunnels the mod digs, as the game builds them. |
+
 ### macOS (experimental)
 
 The Mac build is for Apple silicon (M1 and later), macOS 12 or later; Intel Macs are not supported yet. It has not

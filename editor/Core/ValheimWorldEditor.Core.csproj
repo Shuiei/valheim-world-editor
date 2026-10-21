@@ -15,6 +15,7 @@
     <InternalsVisibleTo Include="Desktop.Tests" />
     <InternalsVisibleTo Include="Core.Tests" />
     <InternalsVisibleTo Include="Fuzz" />
+    <InternalsVisibleTo Include="AddOns.Tests" />
     <InternalsVisibleTo Include="WorldCheck" />
   </ItemGroup>
   <ItemGroup>

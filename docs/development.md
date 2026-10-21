@@ -4,10 +4,11 @@ How the parts fit and the rules to keep when changing them: [architecture.md](ar
 
 ## Project layout
 
-The repository has two parts with code: `editor/`, the editor itself (its core, the app, the live-mode plugin and
-their tests), and `sdk/`, what mod authors build against (the SDK, the bridge's API for mods' plugins, and the
-samples). The rest is shared: `docs/`, `tools/`, the CI files and `VERSION`, the one version of the editor, the plugin
-and the SDK.
+The repository has three parts with code: `editor/`, the editor itself (its core, the app, the live-mode plugin and
+their tests); `sdk/`, what mod authors build against (the SDK, the bridge's API for mods' plugins, and the samples);
+and `addons/`, editor add-ons for other people's mods (see [Add-ons in this repository](#add-ons-in-this-repository)).
+The rest is shared: `docs/`, `tools/`, the CI files and `VERSION`, the one version of the editor, the plugin and the
+SDK.
 
 | Path | What it holds |
 |---|---|
@@ -163,7 +164,8 @@ CircleCI makes the release once you approve it (`.circleci/config.yml`, `.circle
      maintainer's Certum code-signing certificate through SimplySign's cloud, timestamped by Certum),
      builds the plugin's zip (against a Valheim dedicated server downloaded with SteamCMD and the
      BepInExPack its manifest names), tags the commit `v<version>` and publishes the GitHub release
-     with the two editor packages the pipeline tested (the Windows one signed) and the plugin.
+     with the two editor packages the pipeline tested (the Windows one signed), the plugin, the SDK's zip
+     and one zip for each add-on (`tools/addons.sh`, `ValheimWorldEditor-addon-<Name>-<its version>.zip`).
      Publishing signs the files (`.github/workflows/sign-release.yml`, Sigstore): each gets a
      `<file>.sigstore.json` a minute later.
    - **publish-thunderstore**, **publish-hexium** and **publish-nexus** then publish side by side
@@ -196,6 +198,29 @@ By hand, without CI: `tools/release.sh <folder>`, `tools/sign-windows.sh <folder
 current six-digit code from the SimplySign app, in the environment) and `tools/thunderstore.sh <folder>`,
 then tag `v<version>` and `gh release create` with every file (a file added after publishing is signed by
 running Actions > Sign release by hand, with the tag), then `publish.cs` for each site.
+
+## Add-ons in this repository
+
+An add-on is editor support for someone else's mod, installed by the player into the `addons` folder next to the
+editor ([modding.md](modding.md#add-ons)). The ones made here live in `addons/<Name>/`, each on its own:
+
+| Path | What it holds |
+|---|---|
+| `addons/<Name>/src/<Project>/` | The extension: one netstandard2.0 project referencing `sdk/ValheimWorldEditor.Sdk` (never the editor), and its `worldeditor.json` (with `serves`, the mod's DLL). One DLL: the editor loads nothing else from the add-on's folder. |
+| `addons/<Name>/tests/<Project>.Tests/` | Its own tests, against the SDK only, run by CI's `addon-tests` job with every other add-on's. |
+| `addons/<Name>/VERSION`, `CHANGELOG.md` | Its own version and changes: the zip's name and the DLL's version. `Directory.Build.props` there reads it over the repository's settings. |
+| `addons/<Name>/README.md`, `package-readme.txt` | What it does, for this repository; what the player reads in the zip (`README.txt`). |
+
+`editor/tests/AddOns.Tests` checks every add-on in the editor itself, with nothing to add for a new one: it is
+installed into an addons folder as its zip holds it, with a stand-in for the mod it serves; the editor reads its
+manifest (its data holders known), loads its extension (running, without being allowed in Settings) and calls each of
+its hooks on an empty area without turning it off. An add-on may add checks of its own there (`Tunnelheim/`: the
+editor draws the reference records' rock, every mesh kept, the ground cut over exactly the columns the game rebuilt).
+
+`tools/addons.sh <dist>` builds every add-on and zips each as players install it (a `<Name>` folder with the DLL, its
+`worldeditor.json`, `README.txt` and the licence). Every release carries every add-on's zip beside the editor's
+packages and the SDK's; an add-on whose version did not change goes out again as it was. Nothing of an add-on goes
+into the editor's packages: the editor ships nothing for any mod.
 
 ## The game's files
 
@@ -393,6 +418,7 @@ and on the branches whose name has `windows` in it, so a Windows fix is checked 
 | `formatting` | `tools/format-check.sh`: the five projects are formatted as `.editorconfig` says (`dotnet format whitespace` and `style`), on two containers. A pull request checks only the projects with a changed file (all of them when `.editorconfig`, `Directory.Build.props` or `global.json` changed); main checks all of them. |
 | `core-tests` | `editor/tests/Core.Tests`, with OpenSSH's server installed (`VWE_NEED_SSHD=1`), on three containers (the world generator's tests run several times slower under coverage). |
 | `app-tests` | `editor/tests/Desktop.Tests` on six containers, the visual tests included: they draw on a virtual screen (Xvfb, Mesa's software OpenGL), so CI checks the shapes they draw but not the game's look (CI has no Valheim: its editor draws plain colours). Both test jobs let CircleCI share the classes out by their last times (`circleci tests run`, each class a `--filter-class`), so **Rerun failed tests** runs only the classes that failed; every test runs, failing or not. A test stuck 5 minutes is dumped and stopped (`editor/tests/testconfig.json`); a crashed or stopped test process shows as one failed test of its class. |
+| `addon-tests` | Every add-on, found by itself under `addons/`: `editor/tests/AddOns.Tests` installs each as a player does and has the editor load it and call its hooks (so a change of the editor or the SDK that breaks an add-on fails here), then each add-on's own tests (`addons/<Name>/tests`), then every add-on's zip as a release makes it (`tools/addons.sh`). One of the checks main's ruleset requires (with code-analysis, formatting, core-tests and app-tests); not in Codecov's figure. |
 | `packages` | On main only: the release packages build (without the plugin), and `tools/check-package.sh` finds everything they need and no source code, debug files or game files. |
 | `windows-tests` | `editor/tests/Core.Tests` on a Windows machine (the newest .NET 10 SDK, the style analyzers off: the formatting is checked on Linux), for the code paths only Windows takes: the profile folders, file locks, the paths' letter case. Its results are stored, so CircleCI names the failing tests. |
 

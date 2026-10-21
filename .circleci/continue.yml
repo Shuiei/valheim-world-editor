@@ -277,7 +277,7 @@ jobs:
           command: |
             case $CIRCLE_NODE_INDEX in
               0) projects="editor/Desktop/ValheimWorldEditor.Desktop.csproj sdk/ValheimWorldEditor.Sdk/ValheimWorldEditor.Sdk.csproj" ;;
-              *) projects="editor/Core/ValheimWorldEditor.Core.csproj sdk/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj sdk/samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj" ;;
+              *) projects="editor/Core/ValheimWorldEditor.Core.csproj sdk/WorldEditorBridge.Api/WorldEditorBridge.Api.csproj sdk/samples/ExampleVehicles.WorldEditor/ExampleVehicles.WorldEditor.csproj $(git ls-files 'addons/*.csproj' | tr '\n' ' ')" ;;
             esac
             if [ "$CIRCLE_BRANCH" = main ]; then
               tools/format-check.sh $projects
@@ -314,6 +314,40 @@ jobs:
           what: App tests (the windows, headless; the real editor drawing, on the virtual screen)
           results: app
           display: true
+
+  # The add-ons (addons/<Name>/), every one found by itself: the editor loading each as a player installs it and
+  # running its hooks (editor/tests/AddOns.Tests: a change of the editor or the SDK that breaks an add-on fails
+  # here), then each add-on's own tests (addons/<Name>/tests), then every add-on's zip as a release makes it
+  # (tools/addons.sh). Each project builds with every warning an error; a failing one fails the job after the others
+  # ran. Not in Codecov's figure, which is the editor's (editor/tests/coverage.runsettings).
+  addon-tests:
+    executor: dotnet
+    steps:
+      - checkout
+      - restore-nuget
+      - run:
+          name: The add-ons in the editor, and each add-on's own tests
+          no_output_timeout: 11m
+          command: |
+            failed=0
+            for project in editor/tests/AddOns.Tests/AddOns.Tests.csproj $(git ls-files 'addons/*/tests/*.csproj'); do
+              name=$(basename "$project" .csproj)
+              echo "== $project"
+              dotnet build "$project" -c Release -warnaserror || { failed=1; continue; }
+              dotnet test --project "$project" -c Release --no-build --no-ansi --no-progress --results-directory /tmp/test-runs \
+                --report-spekt-junit --report-spekt-junit-filename "/tmp/test-results/$name/results.xml" || failed=1
+            done
+            exit $failed
+      - run:
+          name: The add-ons' zips
+          command: |
+            apt-get update -qq && apt-get install -y -qq zip > /dev/null
+            tools/addons.sh /tmp/addons
+      - store_test_results:
+          path: /tmp/test-results
+      - store_artifacts:
+          path: /tmp/addons
+          destination: addons
 
   # The coverage of every test container, sent to Codecov in one go: the job runs on main only, once
   # core-tests and app-tests have both passed (workflows), so Codecov gets all nine containers' coverage
@@ -516,6 +550,9 @@ jobs:
           name: The SDK for mod authors' zip
           command: tools/sdk.sh /tmp/dist
       - run:
+          name: The add-ons' zips, one each
+          command: tools/addons.sh /tmp/dist
+      - run:
           name: The release notes
           command: |
             version=$(tr -d '[:space:]' < VERSION)
@@ -530,7 +567,8 @@ jobs:
               --target "$CIRCLE_SHA1" --title "v$version" --notes-file /tmp/dist/notes.md \
               /tmp/dist/ValheimWorldEditor-v$version-win-x64.zip /tmp/dist/ValheimWorldEditor-v$version-linux-x64.tar.gz \
               /tmp/dist/ValheimWorldEditor-v$version-macos-arm64-experimental.zip \
-              /tmp/dist/WorldEditorBridge-$version.zip /tmp/dist/ValheimWorldEditor.Sdk-$version.zip
+              /tmp/dist/WorldEditorBridge-$version.zip /tmp/dist/ValheimWorldEditor.Sdk-$version.zip \
+              /tmp/dist/ValheimWorldEditor-addon-*.zip
       - store_artifacts:
           path: /tmp/dist/notes.md
       - persist_to_workspace:
@@ -568,9 +606,10 @@ jobs:
 
 workflows:
   # Side by side; windows-smoke waits for the Windows package that packages makes, and coverage for
-  # both test jobs to pass. Branches and pull requests run code-analysis, formatting and the two test
-  # jobs: packages, windows-smoke and coverage are main's, and windows-tests main's and the "windows" branches'.
-  # Main's ruleset requires those four checks of a pull request, and no other: it must stay in step with this list.
+  # both test jobs to pass. Branches and pull requests run code-analysis, formatting, the two test
+  # jobs and addon-tests: packages, windows-smoke and coverage are main's, and windows-tests main's and the "windows"
+  # branches'. Main's ruleset requires those five checks of a pull request, and no other: it must stay in step with
+  # this list (and with release-pr's below).
   test:
     when:
       and:
@@ -585,6 +624,7 @@ workflows:
       - formatting
       - core-tests
       - app-tests
+      - addon-tests
       - windows-smoke:
           requires:
             - packages
@@ -605,7 +645,7 @@ workflows:
             branches:
               only: main
 
-  # A release pull request: the four checks main's ruleset requires, reported at once (no tests: main's code).
+  # A release pull request: the five checks main's ruleset requires, reported at once (no tests: main's code).
   release-pr:
     when: << pipeline.parameters.release_pr >>
     jobs:
@@ -617,6 +657,8 @@ workflows:
           name: core-tests
       - tested-on-main:
           name: app-tests
+      - tested-on-main:
+          name: addon-tests
 
   # The approval first, so nothing runs for a release nobody approves; then only what the release needs:
   # the packages (the tests ran on the pull request, on the same tree) and the Windows smoke test, then

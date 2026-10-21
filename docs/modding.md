@@ -295,6 +295,9 @@ ValheimWorldEditor/                the editor's folder (on macOS: the folder hol
   extension of its own then needs the player's switch, as always).
 - **Release it as a `.zip` holding its folder**, for players to unpack into `addons`. The editor's
   packages come with that folder, empty but for a `README.txt`.
+- **The editor's own repository keeps a few add-ons** (`addons/`, each released as its own zip beside
+  the editor's packages: see [development.md](development.md#add-ons-in-this-repository)); yours can
+  live anywhere.
 
 ## Live mode
 

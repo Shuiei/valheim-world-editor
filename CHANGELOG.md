@@ -4,6 +4,12 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.99.0 — 2026-10-21
+
+### Added
+- **A Tunnelheim add-on.** The release page now carries add-ons for mods beside the editor, each its own download to
+  unpack into the addons folder; the first draws the tunnels Tunnelheim digs, as the game builds them.
+
 ## v1.98.2 — 2026-10-21
 
 ### WorldEditorBridge
