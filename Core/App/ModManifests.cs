@@ -31,11 +31,12 @@ public static partial class ModManifests
     /// <param name="Help">What it is, shown when pointing at it.</param>
     public sealed record DataNote(string? Label, bool ReadOnly, string? Help);
 
-    /// <summary>An editor extension a mod offers (its manifest's "extension").</summary>
-    /// <param name="Dll">The extension's DLL, its full path (inside the mod's folder).</param>
-    /// <param name="Mod">The mod, as its folder under plugins is named.</param>
+    /// <summary>An editor extension a mod or an add-on offers (its manifest's "extension").</summary>
+    /// <param name="Dll">The extension's DLL, its full path (inside the mod's or the add-on's folder).</param>
+    /// <param name="Mod">The mod, as its folder under plugins is named, or the add-on, as its folder is.</param>
     /// <param name="GameComponents">The game's scripts whose fields it asks for ("gameComponents"; ModComponents reads them).</param>
-    public sealed record Offered(string Dll, string Mod, IReadOnlyList<string> GameComponents);
+    /// <param name="AddOn">An add-on's (AddOns): it runs without being allowed in Settings.</param>
+    public sealed record Offered(string Dll, string Mod, IReadOnlyList<string> GameComponents, bool AddOn = false);
 
     /// <summary>
     /// What a manifest says of a prefab.
@@ -111,8 +112,16 @@ public static partial class ModManifests
     /// <summary>How the manifests say objects link into one (ObjectLinks).</summary>
     public static LinkSet Links => _notes.LinkSet;
 
-    /// <summary>The editor extensions mods offer (ModExtensions decides which run), in no particular order.</summary>
+    /// <summary>
+    /// The editor extensions mods and the add-ons in use offer (ModExtensions decides which run), in no particular order.
+    /// </summary>
     public static IReadOnlyCollection<Offered> Extensions => _notes.Extensions.Values;
+
+    /// <summary>The add-ons installed (AddOns), used or not, by folder name.</summary>
+    public static IReadOnlyList<AddOns.AddOn> InstalledAddOns => _addOns;
+
+    /// <summary>Backs <see cref="InstalledAddOns"/>.</summary>
+    private static volatile IReadOnlyList<AddOns.AddOn> _addOns = [];
 
     /// <summary>A copy of what <see cref="Base"/> says (a manifest there that cannot be read is a bug: it throws).</summary>
     private static Notes BaseNotes()
@@ -138,6 +147,7 @@ public static partial class ModManifests
     internal static void Forget()
     {
         _notes = BaseNotes();
+        _addOns = [];
         Interlocked.Increment(ref _generation);
     }
 }

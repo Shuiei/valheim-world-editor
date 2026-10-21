@@ -65,4 +65,6 @@ Good to know
   - Settings, saved servers (servers.cfg), the copied game files and the log: ~/.local/share/ValheimWorldEditor
   - Command line: ./ValheimWorldEditor "<world folder>" opens a world directly;
     ./ValheimWorldEditor --live http://127.0.0.1:5182 --token <token> connects to a game.
+  - Add-ons (editor support for a mod, each its own download) go in the addons folder next to the program:
+    see addons/README.txt.
   - Keep your own backups of worlds you care about.

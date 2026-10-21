@@ -17,7 +17,8 @@ public static partial class SettingsDialog
         {
             _extensionBoxes = [];
             _extensions = new StackPanel { Spacing = 4 };
-            foreach (var x in ModExtensions.Offered)
+            // Add-ons' extensions have no switch: they are listed with the add-ons.
+            foreach (var x in ModExtensions.Offered.Where(x => !x.AddOn))
             {
                 var box = new CheckBox { Content = $"{x.Mod} · {Path.GetFileName(x.Dll)}", IsChecked = x.State != ModExtensions.Status.Off }.Classed("switch").Tip("settings.extension");
                 ToolTip.SetTip(box, Lang.T("settings.extensionFile", Ui.Tilde(x.Dll), x.Sha256));
@@ -38,6 +39,49 @@ public static partial class SettingsDialog
             {
                 _extensions.Children.Add(Hint(Lang.T("settings.noExtension")));
             }
+            BuildAddOns();
+        }
+
+        /// <summary>
+        /// Builds the add-ons' list (AddOns): each one's name and the mod it serves, and what became of it under it, or
+        /// where to install one when there is none.
+        /// </summary>
+        private void BuildAddOns()
+        {
+            _addOns = new StackPanel { Spacing = 4 };
+            foreach (var a in ModManifests.InstalledAddOns)
+            {
+                var name = new TextBlock { Text = a.Serves is { } mod ? Lang.T("settings.addOnFor", a.Name, mod) : a.Name, FontSize = 13, TextWrapping = TextWrapping.Wrap };
+                ToolTip.SetTip(name, Ui.Tilde(a.Folder));
+                _addOns.Children.Add(name);
+                _addOns.Children.Add(new TextBlock { Text = AddOnState(a), FontSize = 11, Foreground = _muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12, 0, 0, 4) });
+            }
+            if (ModManifests.InstalledAddOns.Count == 0)
+            {
+                _addOns.Children.Add(Hint(Lang.T("settings.noAddOn", string.Join(", ", AddOns.Folders.Select(Ui.Tilde)))));
+            }
+        }
+
+        /// <summary>
+        /// What became of an add-on: waiting for its mod, in use with only its notes, or its extension's state.
+        /// </summary>
+        internal static string AddOnState(AddOns.AddOn a)
+        {
+            if (!a.Served)
+            {
+                return Lang.T("settings.addOnWaiting", a.Serves);
+            }
+            if (a.Dll == null)
+            {
+                return Lang.T("settings.addOnNotes");
+            }
+            return ModExtensions.Offered.FirstOrDefault(x => x.AddOn && x.Dll == a.Dll) switch
+            {
+                null => Lang.T("settings.addOnNotRead"),
+                { State: ModExtensions.Status.Running } => Lang.T("settings.extensionRunning"),
+                { State: ModExtensions.Status.Failed } x => Lang.T("settings.extensionFailed", x.Error),
+                var x => Lang.T("settings.extensionOff", x.Error),
+            };
         }
     }
 }

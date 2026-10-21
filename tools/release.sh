@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Build the release packages (no source code, no game files) into <dist>, one per system:
-#   ValheimWorldEditor-<version>-linux-x64.tar.gz   the app (one program file, Desktop/) and its
-#   ValheimWorldEditor-<version>-win-x64.zip        README (on Windows with its four native DLLs);
+#   ValheimWorldEditor-<version>-linux-x64.tar.gz   the app (one program file, Desktop/), its README and
+#   ValheimWorldEditor-<version>-win-x64.zip        the empty addons folder with its own README (on Windows
+#                                                   with its four native DLLs);
 #                                                   it reads the game's look from Valheim itself
 #   ValheimWorldEditor-<version>-macos-arm64-experimental.zip
 #                                                   ValheimWorldEditor.app (Apple silicon) and its README;
@@ -49,6 +50,9 @@ package() {   # $1 runtime id, $2 program file name (users start it by double-cl
   cp "$work/$rid/publish/$exe" "$dir/"
   if [ "$rid" = win-x64 ]; then cp "$work/$rid/publish/"*.dll "$dir/"; fi
   readme "$3" "$dir/README.txt"
+  # The add-ons' folder, next to the program (AddOns), with what to put there.
+  mkdir -p "$dir/addons"
+  readme release-readme-addons.txt "$dir/addons/README.txt"
   # Windows readers get Windows line ends.
   if [ "$rid" = win-x64 ]; then find "$dir" -maxdepth 2 -name README.txt -exec sed -i 's/$/\r/' {} \;; fi
 }
@@ -70,6 +74,9 @@ package_mac() {   # $1 runtime id, $2 the package's name for it
   sed -e "s/@NUMBER@/${version#v}/g" "$repo/tools/release-macos-Info.plist" > "$app/Contents/Info.plist"
   cp "$repo/Desktop/Assets/icon.icns" "$app/Contents/Resources/"
   readme release-readme-macos.txt "$work/$rid/ValheimWorldEditor/README.txt"
+  # The add-ons' folder next to the app (not inside its signed bundle).
+  mkdir -p "$work/$rid/ValheimWorldEditor/addons"
+  readme release-readme-addons.txt "$work/$rid/ValheimWorldEditor/addons/README.txt"
   if ! "$rcodesign" sign "$app" > "$work/sign-$rid.log" 2>&1; then
     echo "Signing the $rid app failed:" >&2
     tail -30 "$work/sign-$rid.log" >&2

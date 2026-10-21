@@ -21,7 +21,8 @@
         "additionalProperties": false
       }
     },
-    "extension": { "$ref": "#/$defs/text", "pattern": "\\.dll$", "description": "The mod's editor extension: a DLL, relative to this file's folder and inside it. Runs once the player allows it (Settings, Mod extensions)." },
+    "extension": { "$ref": "#/$defs/text", "pattern": "\\.dll$", "description": "The mod's editor extension: a DLL, relative to this file's folder and inside it. Runs once the player allows it (Settings, Mod extensions); an add-on's runs as installed." },
+    "serves": { "$ref": "#/$defs/text", "pattern": "^[^/\\\\]+\\.[dD][lL][lL]$", "description": "An add-on's only (a file in the addons folder next to the editor): the file name of the mod's DLL it is for. The add-on is used while that DLL is in a plugins folder; without it, always." },
     "gameComponents": {
       "type": "array",
       "maxItems": 32,

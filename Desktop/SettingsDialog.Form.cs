@@ -31,6 +31,7 @@ public static partial class SettingsDialog
         private TextBox _desktop = null!;
         private List<(CheckBox Box, ModExtensions.Extension Extension)> _extensionBoxes = [];
         private StackPanel _extensions = null!;
+        private StackPanel _addOns = null!;
         private IReadOnlyList<Lang.Language> _languages = [];
         private ComboBox _language = null!;
         private CheckBox _driverGl = null!;

@@ -24,11 +24,17 @@ public static partial class ModManifests
         {
             return false;
         }
+        Read(root, notes, from, addOn: false);
+        return true;
+    }
+
+    /// <summary>Adds what a manifest read says to <paramref name="notes"/> (its extension an add-on's for <paramref name="addOn"/>).</summary>
+    private static void Read(JsonObject root, Notes notes, (string Folder, string Mod)? from, bool addOn)
+    {
         ReadData(root["data"], notes);
         ReadPrefabs(root["prefabs"], notes);
-        ReadExtension(root, from, notes);
+        ReadExtension(root, from, notes, addOn);
         ReadLinks(root["links"], notes);
-        return true;
     }
 
     /// <summary>The manifest's root object, when the text is a JSON object of a version this editor reads; else null.</summary>

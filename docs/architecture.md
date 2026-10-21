@@ -130,7 +130,7 @@ plot that is no world: it has nothing to save; its building becomes a Homestead 
 | Save | `WorldSave`, `ValheimReader`, `WorldWriter`, `WorldCreator`, `ZdoReader`, `ZdoTools`, `ZdoData`, `InventoryData`, `ChunkMath` (`Core/Save/`) | Byte formats follow the game's `ZPackage`. |
 | Pending changes | `EditStore`, `ZoneEdit`, `NewObject`, `ObjectField`, `ZoneReset`, `HeightGrid`, `Uplift` (`Core/Editing/`) | `EditStore` takes its own lock: strokes and buttons use it from different threads. |
 | Building, dungeons | `Hammer`, `Stability`, `Dungeons`, `DungeonGen`, `DungeonPlan`, `DungeonDresser`, `LocationPrefabs` (`Core/Editing/`) | The hammer's snapping, the support check and the room joining, from the game's data; what the game makes of a location it spawns (for new worlds). `Dungeons.UseMod` lays the open world's Expand World Data room and dungeon files (`DungeonRules`) over the game's catalogue when an area opens; `Dungeons.Scope` does it for one flow of work (the tests). |
-| Mods' objects | `ObjectLinks`, `LinkRule`, `LinkSet`, `ObjectLink`, `LinkIndex` (`Core/App/ObjectLinks.cs`), `ModKeys`, `ModManifests`, `ModCatalogue`, `ModExtensions`, `ModComponents`, `ObjectView`, `CopyView`, `GroundCuts` (`Core/App/`) | Objects mods link into one, mods' extensions (below); mods' data names, manifests and prefabs. |
+| Mods' objects | `ObjectLinks`, `LinkRule`, `LinkSet`, `ObjectLink`, `LinkIndex` (`Core/App/ObjectLinks.cs`), `ModKeys`, `ModManifests`, `ModCatalogue`, `ModExtensions`, `AddOns`, `ModComponents`, `ObjectView`, `CopyView`, `GroundCuts` (`Core/App/`) | Objects mods link into one, mods' extensions (below); mods' data names, manifests and prefabs. |
 | Game data | `GameLook`, `GameBundles`, `GameData`, `GameCatalogues*`, `GameLocations`, `GameTextures`, `Crunch`, `GameShader`, `TerrainShader` (`Core/App/`) | Below. |
 | Live | `LiveBridge`, `LiveSync` (`Core/Save/`), `Tunnel`, `ServerConfig`, `LocalGame` (`Core/App/`) | Below. |
 | Claude, scripts | `ClaudeServer`, `ClaudeTools`, `ClaudeBuilder`, `ClaudeGuide`, `ClaudeRelay`, `ScriptHost`, `ScriptApi.csx` (`Desktop/`) | Below. |
@@ -485,7 +485,11 @@ either breaks it, the user's own scripts and the docs.
 **Mods' editor extensions** (`Core/App/ModExtensions.cs`, mod authors' docs in
 [modding.md](modding.md#extensions)): a DLL a mod's `worldeditor.json` names (`"extension"`, inside its folder;
 `ModManifests.Extensions`) runs only when `AppSettings.Extensions` holds its path with the SHA-256 of the file as it is
-(Settings, Mod extensions: `ModExtensions.Allow`); each allowed file is loaded once per run, in an `AssemblyLoadContext`
+(Settings, Mod extensions: `ModExtensions.Allow`), or is an add-on's (`Offered.AddOn`: `Core/App/AddOns.cs`, the
+`addons` folder next to the program, or next to the macOS app; `ModManifests.ReadAddOns` lists each in
+`ModManifests.InstalledAddOns` and reads its manifest, before the mods' own, only while the DLL its `serves` names is
+in a plugins folder, `ExpandWorld.HasPlugin`; it runs with no switch, and Settings lists it apart, `BuildAddOns`); each
+file is loaded once per run, in an `AssemblyLoadContext`
 of its own that hands it the editor's `ValheimWorldEditor.Sdk` (one set of SDK types), and registers its hooks. They are
 used through `ModExtensions` only: `Decode` (the inspector's `Decoded`), `Rewrite` (`ObjectLinks.Remap`, after the
 links, over a `CopyView`; `RewrittenKeys` are not dropped by `dropOnCopy`) and `ShapesOf` (`GlView.RebuildShapes`,
