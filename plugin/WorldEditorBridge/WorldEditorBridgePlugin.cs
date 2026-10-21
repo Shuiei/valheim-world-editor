@@ -21,14 +21,15 @@ namespace WorldEditorBridge;
 ///   GET /snapshot   the whole persistent world: world info, ZoneSystem data (generated zones, locations)
 ///                   and every persistent object in the save file's chunk format, gzip-compressed
 ///   GET /players    connected players and their positions (JSON)
-///   GET /status     plugin and world info, the features this plugin has ("move", "once") and this run of it
+///   GET /status     plugin and world info, the features this plugin has ("move", "once", "files", "update") and this run of it
 ///                   (a new id each time the game starts), as JSON
 ///   POST /terrain   new terrain data for zones: int count, then per zone int x, int z, int length + TCData
 ///                   (TerrainComp.Save format); every player's game reloads those zones' ground
 ///   POST /objects   int n + n x (long user, uint id) objects to destroy, then int m + m x (int length +
 ///                   object in save format) objects to create, then each destroyed object's prefab and place,
 ///                   then int k + k x (long user, uint id, int prefab, place, new place, turn, int length + object
-///                   in save format) objects to move; answers with the new and moved objects' ids. A call sent
+///                   in save format) objects to move, then (1.97.0 on, "update") int k + k x bool: whether each
+///                   move takes its object's new data in place; answers with the new and moved objects' ids. A call sent
 ///                   again under the same X-Call-Id header is answered again, not done twice
 ///   POST /zones/reset  int n + n x (int x, int z, bool keep buildings, bool reset ground), then (1.93.0 on)
 ///                   int k + k x int prefab kept with the buildings: the zones' objects are removed and the

@@ -42,8 +42,9 @@ public sealed partial class FakeBridge
     }
 
     /// <summary>
-    /// Reads the moves at the end of an objects call (none when the call ends before them) and records them. Each object
-    /// moved in place keeps its id, one made again gets a new one.
+    /// Reads the moves at the end of an objects call (none when the call ends before them) and records them, with whether
+    /// each takes its new data (false when the call does not say). Each object moved in place keeps its id, one made
+    /// again gets a new one.
     /// </summary>
     private List<string> ReadMoves(BinaryReader r, MemoryStream all)
     {
@@ -58,10 +59,24 @@ public sealed partial class FakeBridge
                 int prefab = r.ReadInt32();
                 Vector3 V() => new(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
                 Vector3 from = V(), to = V(), turn = V();
-                r.ReadBytes(r.ReadInt32());
+                MoveBytes.Add(r.ReadBytes(r.ReadInt32()));
                 Moves.Add((user, id, prefab, from, to, turn));
                 moved.Add(MoveInPlace ? $"{{\"id\":\"{user}:{id}\",\"inPlace\":true}}" : $"{{\"id\":\"77:{_next++}\",\"inPlace\":false}}");
             }
+            bool[] data = new bool[n];
+            if (all.Position < all.Length)
+            {
+                int k = r.ReadInt32();
+                for (int i = 0; i < k; i++)
+                {
+                    bool d = r.ReadBoolean();
+                    if (i < n)
+                    {
+                        data[i] = d;
+                    }
+                }
+            }
+            MoveData.AddRange(data);
         }
         return moved;
     }

@@ -4,6 +4,16 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.97.0 — 2026-10-21
+
+### Added
+- **Changes keep the game's object live.** In live mode, an object whose data you change (in the inspector, or with a
+  mod's tool) now keeps its identity in the game instead of being removed and made again, so mods that track it, or
+  that refuse to let their records be removed, keep working.
+
+### WorldEditorBridge
+- Objects can take new data in place, keeping their id, when the editor changes them.
+
 ## v1.96.0 — 2026-10-21
 
 ### Added

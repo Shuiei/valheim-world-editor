@@ -22,6 +22,12 @@ public sealed partial class LiveBridge : IDisposable
         /// answering the second time with what it did the first (1.45.3 on, which lists "once").
         /// </summary>
         public bool CanCallOnce => Features.Contains("once");
+
+        /// <summary>
+        /// Whether the plugin changes an object's data in place with a move (<see cref="LiveMove.Data"/>; 1.97.0 on, which
+        /// lists "update"), keeping its ZDOID; else a changed object is destroyed and made again.
+        /// </summary>
+        public bool CanUpdate => Features.Contains("update");
     }
 
     /// <summary>

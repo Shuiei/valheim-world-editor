@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -22,6 +21,9 @@ public sealed partial class WorldEditorBridgePlugin
     /// so what other mods know of it holds, unless a player has both places loaded: a player's game puts a standing
     /// object where it is once, as it comes into range, and would not show it moving; then it is made again at its new
     /// place from those bytes and destroyed where it was, as before.
+    /// Editors from 1.97.0 then send, when a move changes its object's data too (to a plugin listing "update"), a bool
+    /// per move: such an object takes the data of those bytes in place, under its own ZDOID, so a mod that keeps its
+    /// records from being destroyed keeps them (a mod's tool's change, in the editor).
     /// </summary>
     /// <returns>JSON: destroyed (refound included), refound, missing (already gone) and the created objects' ids as
     /// "user:id" strings, in the order they were sent; each move's object id and whether it moved in place; and what the
@@ -41,7 +43,7 @@ public sealed partial class WorldEditorBridgePlugin
         int createCount = pkg.ReadInt();
         // Every object to make is read first: a malformed one fails the call before anything changed,
         // so the editor, which records nothing then, can send it again without doubles.
-        var creates = new Func<ZDO>[createCount];
+        var creates = new SavedObject[createCount];
         for (int i = 0; i < createCount; i++)
         {
             creates[i] = ReadSaveFormat(new ZPackage(pkg.ReadByteArray()));
@@ -55,16 +57,7 @@ public sealed partial class WorldEditorBridgePlugin
                 where[i] = (pkg.ReadInt(), pkg.ReadVector3());
             }
         }
-        var moves = new List<(ZDOID Id, int Prefab, Vector3 From, Vector3 To, Vector3 Rotation, Func<ZDO> Fallback)>();
-        if (pkg.GetPos() < pkg.Size())
-        {
-            int moveCount = pkg.ReadInt();
-            for (int i = 0; i < moveCount; i++)
-            {
-                moves.Add((new ZDOID(pkg.ReadLong(), pkg.ReadUInt()), pkg.ReadInt(), pkg.ReadVector3(), pkg.ReadVector3(), pkg.ReadVector3(),
-                    ReadSaveFormat(new ZPackage(pkg.ReadByteArray()))));
-            }
-        }
+        List<ObjectMove> moves = ReadMoves(pkg);
         int destroyed = 0, refound = 0;
         List<int> lost = [];
         List<AppliedObject> gone = [];
@@ -88,11 +81,12 @@ public sealed partial class WorldEditorBridgePlugin
         int missing = lost.Count - refound;
         List<AppliedObject> made = [];
         var (movesJson, moved, inPlace, movedMissing) = Move(moves, session, gone, made);
+        int changed = moves.Count(m => m.Data);
         missing += movedMissing;
         StringBuilder ids = new();
         for (int i = 0; i < createCount; i++)
         {
-            ZDO zdo = creates[i]();
+            ZDO zdo = creates[i].Make();
             made.Add(Applied(zdo));
             if (i > 0)
             {
@@ -103,7 +97,7 @@ public sealed partial class WorldEditorBridgePlugin
         NoteDiscs(made);
         // The game drops a destroyed object on its next update, so the count after is the one before plus what was
         // created; the check a second later says whether the destroyed ones went.
-        string movedText = moves.Count > 0 ? $", moved {inPlace} in place and {moves.Count - inPlace} by making it again (a player had both places loaded, or it was gone)" : "";
+        string movedText = moves.Count > 0 ? $", moved {inPlace} in place and {moves.Count - inPlace} by making it again (a player had both places loaded, or it was gone; {changed} with new data)" : "";
         Logger.LogInfo($"WorldEditorBridge: destroyed {destroyed + refound} object(s) ({refound} found again at their place under a new id, {missing} already gone), created {createCount}{movedText}; {before} -> {all.Count} object(s) known, {Peers()} peer(s)");
         if (gone.Count > 0)
         {
@@ -111,5 +105,34 @@ public sealed partial class WorldEditorBridgePlugin
         }
         return (Encoding.UTF8.GetBytes($"{{\"destroyed\":{destroyed + refound},\"refound\":{refound},\"missing\":{missing},\"created\":[{ids}],\"moves\":[{movesJson}]}}"),
             new AppliedChanges(made, gone, [], [], moved));
+    }
+
+    /// <summary>
+    /// The moves at the end of an objects call (none when it ends before them), and whether each takes its new data
+    /// (editors from 1.97.0 add that after them, when one does).
+    /// </summary>
+    private static List<ObjectMove> ReadMoves(ZPackage pkg)
+    {
+        var moves = new List<ObjectMove>();
+        if (pkg.GetPos() >= pkg.Size())
+        {
+            return moves;
+        }
+        int moveCount = pkg.ReadInt();
+        for (int i = 0; i < moveCount; i++)
+        {
+            moves.Add(new ObjectMove(new ZDOID(pkg.ReadLong(), pkg.ReadUInt()), pkg.ReadInt(), pkg.ReadVector3(), pkg.ReadVector3(), pkg.ReadVector3(),
+                ReadSaveFormat(new ZPackage(pkg.ReadByteArray()))));
+        }
+        int dataCount = pkg.GetPos() < pkg.Size() ? pkg.ReadInt() : 0;
+        for (int i = 0; i < dataCount; i++)
+        {
+            bool data = pkg.ReadBool();
+            if (i < moves.Count)
+            {
+                moves[i].Data = data;
+            }
+        }
+        return moves;
     }
 }

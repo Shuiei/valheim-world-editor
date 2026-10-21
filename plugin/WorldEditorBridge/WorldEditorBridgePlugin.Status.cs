@@ -28,15 +28,15 @@ public sealed partial class WorldEditorBridgePlugin
 
     /// <summary>
     /// GET /status: plugin version, world and seed names, object and player counts, the network time and the features
-    /// this plugin has (editors look for "move" before sending moves to /objects, "once" before sending call ids, and
-    /// "files" before asking for the game's files: /plugins, /config, /world/meta), and this run of it
-    /// (<see cref="_run"/>), as JSON.
+    /// this plugin has (editors look for "move" before sending moves to /objects, "once" before sending call ids,
+    /// "files" before asking for the game's files: /plugins, /config, /world/meta, and "update" before sending moves
+    /// that change data), and this run of it (<see cref="_run"/>), as JSON.
     /// </summary>
     private byte[] Status()
     {
         World w = ZNet.World;
         var dict = AllZdos();
-        string json = $"{{\"plugin\":{Json(Version)},\"world\":{Json(w?.m_name ?? "")},\"seedName\":{Json(w?.m_seedName ?? "")},\"objects\":{dict.Count},\"players\":{ZNet.instance.GetPlayerList().Count},\"netTime\":{ZNet.instance.GetTimeSeconds().ToString("R", CultureInfo.InvariantCulture)},\"features\":[\"move\",\"once\",\"files\"],\"run\":{Json(_run)}}}";
+        string json = $"{{\"plugin\":{Json(Version)},\"world\":{Json(w?.m_name ?? "")},\"seedName\":{Json(w?.m_seedName ?? "")},\"objects\":{dict.Count},\"players\":{ZNet.instance.GetPlayerList().Count},\"netTime\":{ZNet.instance.GetTimeSeconds().ToString("R", CultureInfo.InvariantCulture)},\"features\":[\"move\",\"once\",\"files\",\"update\"],\"run\":{Json(_run)}}}";
         return Encoding.UTF8.GetBytes(json);
     }
 
