@@ -38,9 +38,10 @@ internal static class ToolCommit
     {
         foreach (var (prefab, position, rotation, data) in edit.Added)
         {
-            int hash = StableHash.Of(prefab);
-            var z = new ZdoData { Prefab = hash, BaseFlags = SavedFlags(hash) };
+            var z = new ZdoData { Prefab = StableHash.Of(prefab) };
             data?.Invoke(new DataCopy(prefab, position, rotation, z));
+            // From its prefab as made, once the tool's values are set.
+            z.BaseFlags = SavedFlags(z.Prefab);
             AddNew(plan, new NewObject(0, z.Prefab, position, rotation, 1, Fresh: false, Raw: z.Serialize()));
         }
         foreach (var (obj, change) in edit.Changed)
