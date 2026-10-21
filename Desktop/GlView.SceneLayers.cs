@@ -91,36 +91,8 @@ public sealed partial class GlView
         }
         uint vao = _own.VertexArray();
         _gl.BindVertexArray(vao);
-        uint vbo = _own.Buffer(), ebo = _own.Buffer(), bc = _own.Buffer(), ex = _own.Buffer();
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, vbo);
-        _own.Upload(BufferTargetARB.ArrayBuffer, v);
-        _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, ebo);
-        _own.Upload(BufferTargetARB.ElementArrayBuffer, idx);
-        for (uint a = 0; a < 3; a++)
-        {
-            _gl.EnableVertexAttribArray(a);
-            _gl.VertexAttribPointer(a, 3, VertexAttribPointerType.Float, false, 36, (void*)(a * 12));
-        }
-        uint[] biomes = m.BiomeColors ?? new uint[n];
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, bc);
-        fixed (uint* p = biomes)
-        {
-            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(biomes.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
-        _gl.EnableVertexAttribArray(3);
-        _gl.VertexAttribPointer(3, 4, VertexAttribPointerType.UnsignedByte, true, 4, (void*)0);
         // Mask uv, then no ocean depth and no limit tint (the game's rock material has none).
-        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, ex);
-        fixed (float* p = extra)
-        {
-            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(extra.Length * 4), p, BufferUsageARB.StaticDraw);
-        }
-        _gl.EnableVertexAttribArray(4);
-        _gl.VertexAttribPointer(4, 2, VertexAttribPointerType.Float, false, 16, (void*)0);
-        _gl.EnableVertexAttribArray(5);
-        _gl.VertexAttribPointer(5, 1, VertexAttribPointerType.Float, false, 16, (void*)8);
-        _gl.EnableVertexAttribArray(6);
-        _gl.VertexAttribPointer(6, 1, VertexAttribPointerType.Float, false, 16, (void*)12);
+        var (vbo, ebo, bc, ex) = UploadGroundLayout(v, idx, ColourBytes(m.BiomeColors ?? new uint[n]), extra);
         _gl.BindVertexArray(0);
         uint mask = m.Mask is { } t2 && m.MaskUvs != null ? MaskTexture(t2.Width, t2.Height, t2.Texels) : 0;
         return new LayerMesh(vao, [vbo, ebo, bc, ex], (uint)idx.Length, mask, m.BiomeColors != null);
@@ -136,10 +108,7 @@ public sealed partial class GlView
         {
             _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba8, (uint)w, (uint)h, 0, PixelFormat.Rgba, PixelType.UnsignedByte, p);
         }
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        _own.Clamped2D(linear: true);
         return tex;
     }
 
@@ -158,10 +127,7 @@ public sealed partial class GlView
         {
             _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.R8, (uint)(s.W - 1), (uint)(s.H - 1), 0, PixelFormat.Red, PixelType.UnsignedByte, p);
         }
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        _own.Clamped2D(linear: false);
     }
 
     /// <summary>The plain paint mask (the game's unpainted ground) for meshes with the look but no mask of their own.</summary>

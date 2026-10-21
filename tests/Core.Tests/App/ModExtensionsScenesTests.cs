@@ -24,6 +24,9 @@ public sealed class ModExtensionsScenesTests : IDisposable
         public SceneLayer? Build(IAreaView area) => build(area);
     }
 
+    /// <summary>An area of flat ground at 10 m, holding nothing.</summary>
+    private static readonly PlainArea FlatArea = new(0, 0, 64, 64, 10);
+
     /// <summary>A mesh of one triangle.</summary>
     private static SceneMesh Triangle() => new([Vector3.Zero, Vector3.UnitZ, Vector3.UnitX], [Vector3.UnitY, Vector3.UnitY, Vector3.UnitY], [0, 1, 2]);
 
@@ -45,7 +48,7 @@ public sealed class ModExtensionsScenesTests : IDisposable
         ModExtensions.UseForTests(("Mod", new Scenes(_ => layer)));
 
         Assert.True(ModExtensions.AnyScenes);
-        var kept = Assert.Single(ModExtensions.ScenesOf(new FlatArea()));
+        var kept = Assert.Single(ModExtensions.ScenesOf(FlatArea));
         Assert.Same(good, Assert.Single(kept.Meshes));
         Assert.Equal((0, 0, 2, 3), Assert.Single(kept.Holes) is var h ? (h.X0, h.Z0, h.X1, h.Z1) : default);
     }
@@ -57,42 +60,16 @@ public sealed class ModExtensionsScenesTests : IDisposable
         layer.Meshes.Add(Triangle());
         ModExtensions.UseForTests(("Broken", new Scenes(_ => throw new InvalidOperationException("no"))), ("Fine", new Scenes(_ => layer)), ("None", new Scenes(_ => null)));
 
-        Assert.Single(ModExtensions.ScenesOf(new FlatArea()));
+        Assert.Single(ModExtensions.ScenesOf(FlatArea));
         Assert.Equal(ModExtensions.Status.Failed, ModExtensions.Offered.Single(e => e.Mod == "Broken").State);
         // Turned off: not asked again.
-        Assert.Single(ModExtensions.ScenesOf(new FlatArea()));
+        Assert.Single(ModExtensions.ScenesOf(FlatArea));
     }
 
     [Fact]
     public void WithoutProvidersThereIsNothing()
     {
         Assert.False(ModExtensions.AnyScenes);
-        Assert.Empty(ModExtensions.ScenesOf(new FlatArea()));
-    }
-
-    /// <summary>An area of flat ground at 10 m, holding nothing.</summary>
-    private sealed class FlatArea : IAreaView
-    {
-        public float MinX => 0;
-
-        public float MinZ => 0;
-
-        public float MaxX => 64;
-
-        public float MaxZ => 64;
-
-        public IReadOnlyList<IObjectView> ObjectsOf(string prefab) => [];
-
-        public float GroundHeight(float x, float z) => 10;
-
-        public int Biome(float x, float z) => 1;
-
-        public bool IsDeepNorth(float x, float z) => false;
-
-        public bool IsAshlands(float x, float z) => false;
-
-        public uint BiomeColor(int x, int z) => 0;
-
-        public uint GroundMask(int x, int z) => 0xFF000000;
+        Assert.Empty(ModExtensions.ScenesOf(FlatArea));
     }
 }

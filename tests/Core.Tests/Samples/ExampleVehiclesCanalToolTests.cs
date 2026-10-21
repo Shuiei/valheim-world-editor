@@ -15,7 +15,7 @@ namespace WorldEditor.Tests;
 public class ExampleVehiclesCanalToolTests
 {
     /// <summary>The editor as the tool sees it: flat ground at 40 m holding the canals given; what the tool did, kept.</summary>
-    private sealed class Editor(params IObjectView[] canals) : IToolContext, IAreaView
+    private sealed class Editor(params IObjectView[] canals) : IToolContext
     {
         public List<(string Label, ToolEdit Edit)> Commits { get; } = [];
 
@@ -25,7 +25,7 @@ public class ExampleVehiclesCanalToolTests
 
         public Dictionary<string, string> Texts { get; } = [];
 
-        public IAreaView Area => this;
+        public IAreaView Area { get; } = new PlainArea(-32, -32, 32, 32, 40) { Objects = new Dictionary<string, IReadOnlyList<IObjectView>> { [Keys.Canal] = canals } };
 
         public float Number(string id) => id == "width" ? 4 : 2;
 
@@ -40,28 +40,6 @@ public class ExampleVehiclesCanalToolTests
         public void Status(string text) => Said = text;
 
         public void Commit(string label, ToolEdit edit) => Commits.Add((label, edit));
-
-        public float MinX => -32;
-
-        public float MinZ => -32;
-
-        public float MaxX => 32;
-
-        public float MaxZ => 32;
-
-        public IReadOnlyList<IObjectView> ObjectsOf(string prefab) => prefab == Keys.Canal ? canals : [];
-
-        public float GroundHeight(float x, float z) => 40;
-
-        public int Biome(float x, float z) => 1;
-
-        public bool IsDeepNorth(float x, float z) => false;
-
-        public bool IsAshlands(float x, float z) => false;
-
-        public uint BiomeColor(int x, int z) => 0;
-
-        public uint GroundMask(int x, int z) => 0xFF000000;
     }
 
     private static PointerInput Click(float x, float z, KeyModifiers mods = KeyModifiers.None) =>
