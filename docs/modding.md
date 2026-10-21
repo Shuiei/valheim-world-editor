@@ -156,6 +156,8 @@ it. It can:
 - draw what your mod makes of an area as a whole (a canal, rock dug out of a hill) with the game's ground look, in place
   of the editor's ground;
 - read the game's own scripts' settings (its `gameComponents`), as the player's Valheim has them;
+- add a tool of your own to the 3D editor's rail, with its settings card, its preview and its edits
+  in the history (digging a canal where the player clicks);
 - in live mode, ask your mod's own plugin in the game for what only the game knows (see
   [Live mode](#live-mode)).
 
