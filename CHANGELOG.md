@@ -4,6 +4,13 @@ All notable changes to the Valheim world editor and its WorldEditorBridge plugin
 version number. Newest first. Changes to the plugin are under **WorldEditorBridge** in each version;
 the plugin is unchanged in versions without that part.
 
+## v1.103.1 — 2026-10-21
+
+### Fixed
+- **Settings' add-on and extension switches take effect at once.** Turning an add-on or a mod's extension on or off
+  in Settings changed nothing in the worlds listed until a world or the Workshop was opened: the list now follows the
+  switches as soon as Settings is saved.
+
 ## v1.103.0 — 2026-10-21
 
 ### Changed
