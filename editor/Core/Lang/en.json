@@ -1078,7 +1078,7 @@
   "workshop.label.start": "Start",
   "workshop.ask.leave.title": "Leave the Workshop",
   "workshop.ask.leave.text": "The building on the plot is not saved as a blueprint. Leave without saving it?",
-  "workshop.noPiecesToSave": "There is no building piece on the plot yet: place some first (Place tool).",
+  "workshop.noPiecesToSave": "There is no building piece on the plot yet: place some first (Build, T).",
   "workshop.label.saveBlueprint": "Save blueprint",
   "workshop.ask.falling.text": "{0} piece(s) would fall in game: nothing holds them up enough (shown red). Save the blueprint anyway?",
   "workshop.ask.falling.yes": "Save anyway",
