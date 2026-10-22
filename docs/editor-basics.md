@@ -196,8 +196,9 @@ the undo. When players changed the ground of a zone you also changed, it asks fi
 ### Discard
 
 **Discard** undoes everything not saved or applied yet, after asking ("The last N step(s) in History are undone").
-It undoes the unsaved steps at the end of History, newest first, and drops the redo list. Saved and applied changes
-stay, and so do the rest of History, the camera and the tool.
+It undoes the unsaved steps at the end of History, newest first, redoes saved or applied steps you undid since, and
+drops the rest of the redo list. Saved and applied changes stay, and so do the rest of History, the camera and the
+tool.
 
 Some pending changes may have no step in this area's History (made in another area, or before the world was read
 again). Discard then asks a second time: **Read it again** reads the world from its files (or from the game, live)

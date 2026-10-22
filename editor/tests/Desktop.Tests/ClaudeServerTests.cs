@@ -77,4 +77,20 @@ public class ClaudeServerTests
         Assert.Equal("/opt/vwe/ValheimWorldEditor", server.GetProperty("command").GetString());
         Assert.Equal("--mcp-stdio", server.GetProperty("args")[0].GetString());
     }
+
+    // The server's errors that carry an exception (a tool that threw) go into the editor's log; the rest does not.
+    [Fact]
+    public void ErrorsWithAnExceptionGoIntoTheLog()
+    {
+        using var log = Log.Listen();
+        using var errors = new ClaudeServer.ErrorsToLog();
+        var logger = errors.CreateLogger("ModelContextProtocol");
+        Assert.Null(logger.BeginScope("call"));
+        static string Format(string state, Exception? _) => state;
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Warning, 0, "a warning", new InvalidOperationException("no"), Format);
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Error, 0, "no exception", null, Format);
+        logger.Log(Microsoft.Extensions.Logging.LogLevel.Error, 0, "\"place_pieces\" threw an unhandled exception.", new InvalidOperationException("gone"), Format);
+        string line = Assert.Single(log.Lines);
+        Assert.Contains("while serving Claude: \"place_pieces\" threw an unhandled exception: System.InvalidOperationException: gone", line);
+    }
 }

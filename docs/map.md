@@ -121,10 +121,11 @@ again and the history starts over.
 
 **Edited zones (N)** lists every zone whose ground was changed, most changed first. Each row gives the zone, how many
 height points (`h`) and paint points (`p`) were changed, the range of the height changes (`-2.4 … 6.0 m`), and "(not
-saved)" when some changes are pending. Click a row to zoom in on that zone and pick it, ready for **Edit in 3D**.
+saved)" when some changes are pending ("(not applied)" in a live world). Click a row to zoom in on that zone and pick
+it, ready for **Edit in 3D**.
 
-![The map close in: six edited zones outlined, the Edited zones (6) list with h and p counts, two rows marked (not saved)](images/map-edited-zones.jpg)
-*Four zones saved and two edited since: every edited zone is outlined, and the list marks the pending ones "(not saved)".*
+![The map close in: four edited zones outlined thin yellow and two thicker orange, the Edited zones (6) list with h and p counts, two rows marked (not saved)](images/map-edited-zones.jpg)
+*Four zones saved (thin yellow) and two edited since (thicker orange): the list marks the pending ones "(not saved)".*
 
 ## Shortcuts
 

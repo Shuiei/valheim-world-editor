@@ -39,9 +39,9 @@ public partial class MainWindow
     /// </summary>
     private string? _workshopName;
     /// <summary>
-    /// The blueprint's details (name, description, tags); null for a blank plot.
+    /// The details of the blueprint opened or last saved (name, description, tags); null for a blank plot.
     /// </summary>
-    private Homestead.Details? _workshopDetails;
+    internal Homestead.Details? WorkshopDetails { get; private set; }
     /// <summary>
     /// How far the blueprint opened was lifted to put its lowest point on the ground (taken off again when it is
     /// saved).

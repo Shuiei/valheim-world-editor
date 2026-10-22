@@ -24,7 +24,10 @@ public sealed partial class GlView
     /// <param name="gz">The grid z.</param>
     private static (float X, float Z) GridToView(WorldScene s, float gx, float gz) => (gx - (s.W - 1) / 2f, -(gz - (s.H - 1) / 2f));
 
-    /// <summary>A grid point of the area in view space, on the ground there and lifted this many metres.</summary>
+    /// <summary>
+    /// A grid point of the area in view space, on the ground there and lifted this many metres; past the area's edge
+    /// (a curve bulging out, a ring's far side), at the height of the edge's nearest point.
+    /// </summary>
     /// <param name="s">The area.</param>
     /// <param name="gx">The grid x.</param>
     /// <param name="gz">The grid z.</param>
@@ -32,7 +35,9 @@ public sealed partial class GlView
     private static Vector3 OnGround(WorldScene s, float gx, float gz, float lift)
     {
         var (x, z) = GridToView(s, gx, gz);
-        return new Vector3(x, Picking.HeightAt(s, x, z) + lift, z);
+        // The ground is not known past the edge: its -1000 m drew the marks there plunging down across the view.
+        var (ex, ez) = GridToView(s, Math.Clamp(gx, 0, s.W - 1), Math.Clamp(gz, 0, s.H - 1));
+        return new Vector3(x, Picking.HeightAt(s, ex, ez) + lift, z);
     }
 
     /// <summary>The ground's height at a world point.</summary>

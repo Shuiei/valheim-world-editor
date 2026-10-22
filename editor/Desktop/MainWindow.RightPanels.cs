@@ -14,6 +14,12 @@ public sealed partial class MainWindow
     internal void ShowRightPanel(string name) => ShowRight(name switch { "view" => ViewPanelCard, "history" => History.Card, "help" => HelpCard, _ => null });
 
     /// <summary>
+    /// The right-hand panel chosen last (remembered between runs; null: none): what comes back when the Inspector, which
+    /// takes its place for a while, closes.
+    /// </summary>
+    internal Control? ChosenRight() => Prefs.Get("panel.right", "view") switch { "help" => HelpCard, "history" => History.Card, "none" => null, _ => ViewPanelCard };
+
+    /// <summary>
     /// The right-hand panels share the place under the top bar: one at a time (null: none). The choice is remembered.
     /// </summary>
     internal void ShowRight(Control? panel)

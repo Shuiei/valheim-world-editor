@@ -29,8 +29,8 @@ public static class ScriptExamples
         new("Terraced hill", """
 			// A hill in the middle of the area with flat terraces, like rice fields, painted dirt at the edges.
 			float cx = Area.CenterX, cz = Area.CenterZ, radius = 60, height = 30, steps = 6;
-			// The trees, rocks and bushes it would bury go first (buildings stay).
-			foreach (var o in Objects.Near(cx, cz, radius).Where(o => !o.Building))
+			// The trees, rocks and bushes it would bury go first (the rest stays, and what is high above, in a dungeon).
+			foreach (var o in Objects.Near(cx, cz, radius).Where(o => o.Kind is "Trees" or "Rocks" or "Bushes" && o.Y < Ground.Height(o.X, o.Z) + 5))
 			    Objects.Remove(o);
 			Ground.Shape(cx, cz, radius, (dx, dz) =>
 			{

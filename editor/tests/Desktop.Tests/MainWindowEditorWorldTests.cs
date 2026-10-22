@@ -29,7 +29,7 @@ public class MainWindowEditorWorldTests
         File.SetLastWriteTimeUtc(latest, DateTime.UtcNow.AddMinutes(5));
         await r.Open();
         Assert.StartsWith("History from an earlier session (", r.Said);
-        Assert.Contains("1 step(s) you can undo, in History.", r.Said);
+        Assert.Contains("1 step(s) you can undo or redo, in History.", r.Said);
         Assert.Contains("The world was saved again since: you are asked before undoing them.", r.Said);
         var s = r.W.Session!;
         Assert.Single(s.UndoList);

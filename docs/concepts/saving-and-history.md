@@ -31,7 +31,8 @@ and are all saved together (see [The area](areas-and-zones.md#the-area)). They a
 saving (the editor asks first), throw them away, or **Reload** a live world (it asks first too).
 
 **Discard** throws away what is not saved or applied: it undoes the unsaved steps at the end of the history, newest
-first, and drops the redo list. Saved and applied steps stay. Some pending changes have no step in the open area's
+first, redoes saved or applied steps you undid since, and drops the rest of the redo list. Saved and applied steps
+stay. Some pending changes have no step in the open area's
 history (made in another area, or before the world was read again); those can only go by reading the whole world
 again from its files or from the game, which drops every pending change, and Discard asks a second time before it
 does that.

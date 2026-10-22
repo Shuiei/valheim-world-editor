@@ -139,6 +139,8 @@ public sealed partial class MainWindow
         Inspector.Message += said => { Msg(said); UpdateSaveBar(); };
         Inspector.Replaced += i => View.Select([i]);
         Inspector.Confirm = (title, text, yes) => Dialogs.Ask(this, title, text, yes);
-        Inspector.Closed += () => ViewPanelCard.IsVisible = true;
+        // The panel chosen comes back: the View panel shown always, it lay under History or Help, or showed though none
+        // was chosen (every area opened closes the Inspector).
+        Inspector.Closed += () => ShowRight(ChosenRight());
     }
 }

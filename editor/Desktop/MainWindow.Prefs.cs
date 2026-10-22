@@ -68,7 +68,7 @@ public sealed partial class MainWindow
         }
         PlacePanel.OpenKindsChanged += () => p.Set("place.openKinds", PlacePanel.OpenKinds.Select(k => k.ToString()).Order().ToArray());
         // The right-hand panel open.
-        ShowRight(p.Get("panel.right", "view") switch { "help" => HelpCard, "history" => History.Card, "none" => null, _ => ViewPanelCard });
+        ShowRight(ChosenRight());
         // The clipboard (its objects' ids only meant something in the world it came from).
         if (p.TryGet("clipboard", out System.Text.Json.Nodes.JsonObject? clip) && clip != null)
         {

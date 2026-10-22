@@ -38,8 +38,9 @@ public static partial class Uplift
         var (final, ground) = new BlockFit(block, terrain, targets, keep, region).Run();
         var (zones, worst) = BuildZoneEdits(world, terrain, block, targets, region, final, ground);
 
-        // Natural objects where the lift moved the ground far.
-        var clear = shared.Natural.Where(o => block.At(o.Position) is int p && MathF.Abs(targets.Lift[p]) > ClearHeight).Select(o => o.Id).ToList();
+        // Natural objects on the ground where the lift moved it far (not those of a dungeon high above).
+        var clear = shared.Natural.Where(o => block.At(o.Position) is int p && MathF.Abs(targets.Lift[p]) > ClearHeight
+            && OnTheGround(o.Position.Y, targets.Want[p] - MathF.Min(0, targets.Lift[p]))).Select(o => o.Id).ToList();
         var add = final.Select(d => new NewObject(nextId(), WorldSave.LocationProxyPrefab, d, Vector3.Zero, 0f, Fresh: false, Raw: DiscBytes(d))).ToList();
         return new Plan(zones, [.. old.Select(d => d.Id), .. clear], add, final.Count, old.Count, clear.Count, worst) { Ungenerated = targets.Ungenerated.Count };
     }

@@ -91,7 +91,7 @@ public sealed partial class MainWindow
             }
             var (clamped, stood) = ScriptHost.Apply(s, ch, label);
             var what = Said.Of("script.msg.changed", counts, watch.Elapsed.TotalSeconds)
-                + (clamped > 0 ? Said.Of("script.msg.clamped", clamped) : Said.Empty) + CreatureStand.Note(stood);
+                + Clamped(clamped, ch.NoLimit) + CreatureStand.Note(stood);
             UpdateSaveBar();
             return new(true, Printed(ch.Output, what), what);
         }
@@ -111,4 +111,12 @@ public sealed partial class MainWindow
             _stopScript = null;
         }
     }
+
+    /// <summary>
+    /// The sentence on the points a limit stopped (empty for none): the game's ±8 m, or with No limit on, its own ±400 m.
+    /// </summary>
+    /// <param name="clamped">How many points a limit stopped.</param>
+    /// <param name="noLimit">Whether the script's Ground.NoLimit was on.</param>
+    internal static Said Clamped(int clamped, bool noLimit) =>
+        clamped == 0 ? Said.Empty : noLimit ? Said.Of("script.msg.clampedLift", clamped) : Said.Of("script.msg.clamped", clamped);
 }

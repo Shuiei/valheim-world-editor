@@ -28,6 +28,7 @@ namespace TerrainEditor.Desktop;
 ///    set &lt;label&gt;|&lt;value&gt;            the slider, text box(es: a,b) or list beside the label so worded
 ///    panel &lt;view|history|help|none&gt; the right-hand panel shown
 ///    message [text]                 the status bar's message (none: cleared)
+///    note close                     the note on the locations near the area closed (as its × does)
 ///    wait &lt;ms&gt;                      a pause (a brush stroke works frame by frame while held)
 ///    bench &lt;seconds&gt;                the 3D camera turns on its own; the frame rates come back
 ///    mouse &lt;down|move|up&gt; &lt;x&gt; &lt;z&gt; [left|right|middle] [shift|ctrl|alt ...]
@@ -101,6 +102,7 @@ public static partial class Driver
         ["set"] = CmdSet,
         ["panel"] = CmdPanel,
         ["message"] = CmdMessage,
+        ["note"] = CmdNote,
         ["wait"] = CmdWait,
         ["inspect"] = CmdInspect,
         ["camera"] = CmdCamera,

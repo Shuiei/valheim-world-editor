@@ -41,8 +41,8 @@ public sealed partial class EditSession
     }
 
     /// <summary>
-    /// The natural objects a mountain's ground would bury: those inside its reach where the ground rises more than
-    /// Uplift.ClearHeight. Under the scene's things lock.
+    /// The natural objects a mountain's ground would bury: those on the ground inside its reach where it rises more than
+    /// Uplift.ClearHeight (not those high above it, in a dungeon). Under the scene's things lock.
     /// </summary>
     /// <param name="cx">The middle, a grid x.</param>
     /// <param name="cz">The middle, a grid z.</param>
@@ -52,22 +52,41 @@ public sealed partial class EditSession
     /// <returns>The indices of the things to take away.</returns>
     internal List<int> ObjectsToClear(float cx, float cz, float reach, Func<float, float, float> shape, Func<int, float>? mask)
     {
-        var g = Ground;
-        float ox = Scene.OriginX, oz = Scene.OriginZ;
         var remove = new List<int>();
         lock (Scene.Things)
         {
             for (int i = 0; i < Scene.Things.Count; i++)
             {
                 var t = Scene.Things[i];
-                float gx = t.Position.X - ox, gz = t.Position.Z - oz;
-                if (!t.Gone && Natural(t) && MathF.Abs(gx - cx) <= reach && MathF.Abs(gz - cz) <= reach
-                    && shape(gx - cx, gz - cz) * (mask?.Invoke((int)MathF.Round(gz) * g.W + (int)MathF.Round(gx)) ?? 1) > Uplift.ClearHeight)
+                if (!t.Gone && Natural(t) && Buries(t.Position, cx, cz, reach, shape, mask))
                 {
                     remove.Add(i);
                 }
             }
         }
         return remove;
+    }
+
+    /// <summary>
+    /// Whether a mountain's ground buries a natural object there: inside its reach, where it rises more than
+    /// Uplift.ClearHeight, the object standing on that ground.
+    /// </summary>
+    /// <param name="at">The object's place (world metres).</param>
+    /// <param name="cx">The middle, a grid x.</param>
+    /// <param name="cz">The middle, a grid z.</param>
+    /// <param name="reach">The mountain's reach in grid points.</param>
+    /// <param name="shape">The mountain's height at a point, from its middle.</param>
+    /// <param name="mask">The mask over the ground, or null when off.</param>
+    private bool Buries(System.Numerics.Vector3 at, float cx, float cz, float reach, Func<float, float, float> shape, Func<int, float>? mask)
+    {
+        var g = Ground;
+        float gx = at.X - Scene.OriginX, gz = at.Z - Scene.OriginZ;
+        if (MathF.Abs(gx - cx) > reach || MathF.Abs(gz - cz) > reach)
+        {
+            return false;
+        }
+        int p = (int)MathF.Round(gz) * g.W + (int)MathF.Round(gx);
+        float rise = shape(gx - cx, gz - cz) * (mask?.Invoke(p) ?? 1);
+        return rise > Uplift.ClearHeight && Uplift.OnTheGround(at.Y, g.HeightOf(p) + rise);
     }
 }

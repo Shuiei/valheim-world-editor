@@ -275,8 +275,8 @@ zones… (Enter)**: both zones outlined red, the status bar counting them. Nothi
   can (see [Live mode](live-mode.md)).
 - **No action touches the area's outermost line of points** (see
   [The locked edge](concepts/areas-and-zones.md#the-locked-edge)).
-- **To take an action back**, `Ctrl+Z` before you save; after saving, [Restore one area from a
-  backup](guides/restore-from-backup.md).
+- **To take an action back**, `Ctrl+Z`, after saving too (then save again: the [History](concepts/saving-and-history.md#history)
+  stays); for a change older than the history, [Restore one area from a backup](guides/restore-from-backup.md).
 
 ## Related
 

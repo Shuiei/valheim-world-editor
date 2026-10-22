@@ -27,7 +27,7 @@ public partial class MainWindow
 
     /// <summary>
     /// Turns Build here on (the Place tool's settings are kept aside, the Workshop's Build starts and the Place
-    /// tool cuts at the view's cut height) or off (the Place tool gets its settings back).
+    /// tool cuts at the view's cut height) or off (the Place tool gets its settings back, its status line goes).
     /// </summary>
     internal void BuildInDungeon(bool on)
     {
@@ -35,7 +35,7 @@ public partial class MainWindow
         if (on && _dungeonKept == null)
         {
             _dungeonKept = KeepPlaceTool();
-            BuildPanel.Start();
+            BuildPanel.Start(library: false);
             t.CutY = View.CutY;
             Tools.ChooseMode(ToolMode.Place);
             Msg("dungeon.msg.building");
@@ -45,6 +45,11 @@ public partial class MainWindow
             _dungeonKept = null;
             RestorePlaceTool(k);
             t.Notify();
+            // Its "Building in the dungeon" line no longer holds (another message since stays).
+            if (LastSaid.Shown == Said.Of("dungeon.msg.building").Shown)
+            {
+                Msg(Said.Empty);
+            }
         }
     }
 

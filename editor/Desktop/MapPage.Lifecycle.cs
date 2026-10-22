@@ -8,8 +8,8 @@ namespace TerrainEditor.Desktop;
 public sealed partial class MapPage
 {
     /// <summary>
-    /// Shows a world: a new one starts afresh (pick, search and matches cleared, the view where it was last looked at);
-    /// the same one again just refreshes. Live worlds poll their players.
+    /// Shows a world: a new one starts afresh (pick, search, matches and the pointer's line cleared, the view where it
+    /// was last looked at); the same one again just refreshes. Live worlds poll their players.
     /// </summary>
     public void Show(WorldSession session)
     {
@@ -26,6 +26,8 @@ public sealed partial class MapPage
         {
             Map.Show(session);
             _hovered = null;
+            // The pointer's line was the last world's.
+            Cursor.Text = "";
             Spot = null;
             Target = null;
             Map.Chosen = null;
@@ -59,7 +61,7 @@ public sealed partial class MapPage
         _statsGeneration++;
         var w = session.World;
         Meta.Text = session.IsLive
-            ? Lang.T("map.meta.live", w.Name, session.Label, w.SeedName, w.ObjectCount)
+            ? Lang.T("map.meta.live", w.Name, LiveName(session.Label), w.SeedName, w.ObjectCount)
             : Lang.T("map.meta.file", w.Name, w.SeedName, session.SaveNumber, w.ObjectCount, w.ChunkCount);
         _liveBox.IsVisible = session.IsLive;
         SaveButton.Content = session.IsLive ? Lang.T("save.label.apply") : Lang.T("map.label.save");
@@ -106,4 +108,10 @@ public sealed partial class MapPage
         StopAltBiomes();
         Map.Dispose();
     }
+
+    /// <summary>
+    /// A live connection's name for the header, which already says "live": an address typed in is labelled "live
+    /// &lt;address&gt;" (kept so, as its kept history is found by that label), shown as the address alone.
+    /// </summary>
+    internal static string LiveName(string label) => label.StartsWith("live ", StringComparison.Ordinal) ? label["live ".Length..] : label;
 }

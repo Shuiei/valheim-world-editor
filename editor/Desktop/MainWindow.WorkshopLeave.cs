@@ -59,14 +59,15 @@ public partial class MainWindow
             return;
         }
         RefreshSupport();
-        if (LastSupport is { Breaking: > 0 } r
+        // Worked out even when the Support check is off: its switch only shows the colours.
+        if (SolveSupport(s).Result is { Breaking: > 0 } r
             && !await Ask(Lang.T("workshop.label.saveBlueprint"), Lang.T("workshop.ask.falling.text", r.Breaking), Lang.T("workshop.ask.falling.yes"), Lang.T("common.keepBuilding")))
         {
             return;
         }
         string name = _workshopName ?? Lang.T("workshop.defaultName");
         var clip = Workshop.Building(s.Scene, name, _workshopLift);
-        if (await Blueprints.SaveBuilding(clip, _workshopDetails ?? new Homestead.Details(name, "", []), _workshopFile) is { } details)
+        if (await Blueprints.SaveBuilding(clip, WorkshopDetails ?? new Homestead.Details(name, "", []), _workshopFile) is { } details)
         {
             WorkshopSavedAs(s, details);
         }
@@ -76,7 +77,7 @@ public partial class MainWindow
     private void WorkshopSavedAs(EditSession s, Homestead.Details details)
     {
         _workshopName = details.Name;
-        _workshopDetails = details;
+        WorkshopDetails = details;
         _workshopFile = Path.Combine(Blueprints.Status.Folder, Homestead.FileName(details.Name));
         BuildPanel.RenderLibrary();
         _workshopSaved = s.Edits.Version;

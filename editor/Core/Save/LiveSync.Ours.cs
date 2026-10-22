@@ -24,7 +24,7 @@ public sealed partial class LiveSync
 
     /// <summary>
     /// How many object deletions and additions the next Apply would send: edits not in the game yet plus applied ones
-    /// since undone.
+    /// since undone (an applied placement undone is destroyed in the game, a deletion undone is made again there).
     /// </summary>
     public (int Deleted, int Added) Pending(EditStore edits)
     {
@@ -32,8 +32,8 @@ public sealed partial class LiveSync
         {
             return edits.WithObjects((deleted, added) =>
             {
-                int d = deleted.Count(id => id >= 0 && !_destroyed.Contains(id)) + _destroyed.Count(id => !deleted.Contains(id));
-                int a = added.Keys.Count(id => !_liveIds.ContainsKey(id)) + _liveIds.Keys.Count(id => id < 0 && !added.ContainsKey(id));
+                int d = deleted.Count(id => id >= 0 && !_destroyed.Contains(id)) + _liveIds.Keys.Count(id => id < 0 && !added.ContainsKey(id));
+                int a = added.Keys.Count(id => !_liveIds.ContainsKey(id)) + _destroyed.Count(id => !deleted.Contains(id));
                 return (d, a);
             });
         }

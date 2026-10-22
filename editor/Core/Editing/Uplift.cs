@@ -50,6 +50,17 @@ public static partial class Uplift
     /// <summary>Natural objects further than this (metres) from the ground they stood on are taken away.</summary>
     public const float ClearHeight = 2f;
 
+    /// <summary>
+    /// How far above the ground (metres) a natural object may be and still stand on it, so that ground moved under it
+    /// takes it away; higher up (in a dungeon, 5000 m above its entrance) it stands on something else and stays.
+    /// </summary>
+    public const float OnGroundReach = 50f;
+
+    /// <summary>Whether a natural object at this height stands on the ground there (see <see cref="OnGroundReach"/>).</summary>
+    /// <param name="y">The object's height.</param>
+    /// <param name="ground">The ground's height under it (the higher of before and after a change).</param>
+    public static bool OnTheGround(float y, float ground) => y < ground + OnGroundReach;
+
     /// <summary>The object data keys of a location proxy's location and seed.</summary>
     private static readonly int LocationKey = StableHash.Of("location"), SeedKey = StableHash.Of("seed");
 

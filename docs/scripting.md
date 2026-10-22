@@ -76,7 +76,7 @@ Each example is a whole script, ready to run on any open area. Read them to see 
 | Example | What it does |
 |---|---|
 | **Mountain range across the area** | Four Lone peak mountains in a line from the south-west to the north-east, each 35 to 60 m high. `Rnd.Seed = 7`, so it is the same range each run. Saving turns them into ground discs (past the game's 8 m limit). |
-| **Terraced hill** | A hill 30 m high and 60 m in radius, cut into six flat terraces like rice fields. The trees, rocks and bushes it would bury are taken away first (buildings stay); the steep steps are painted dirt. |
+| **Terraced hill** | A hill 30 m high and 60 m in radius, cut into six flat terraces like rice fields. The trees, rocks and bushes it would bury are taken away first (everything else stays); the steep steps are painted dirt. |
 | **Canyon with a river** | A winding canyon 18 m wide from west to east, dug to 3 m below sea level so water fills it, fading out over the last 30 m at the area's edges. |
 | **Scatter boulders** | Big boulders (`rock4_forest`, `rock4_coast`, `rock4_heath`) every 6 m where the noise is high, more on slopes, each turned and sized at random. Prints how many. |
 | **Ring of trees** | A ring of 36 beeches 40 m from the middle; the trees inside the ring are taken away. |

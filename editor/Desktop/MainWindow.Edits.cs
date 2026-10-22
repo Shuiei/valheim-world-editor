@@ -47,29 +47,7 @@ public sealed partial class MainWindow
         View.InGame = id => session.Scene.Owner is { } owner && (owner.IsLive ? owner.LiveSync.IsLive(id) : owner.IsSaved(id));
         // What is placed stays visible: its kinds switched off in View are switched on.
         session.ThingsAdded += indices => Dispatcher.UIThread.Post(() => ShowKindsOf(session.Scene, indices));
-        session.Changed += () => Dispatcher.UIThread.Post(() =>
-        {
-            QueueSupport();
-            UpdateSaveBar();
-            History.Refresh();
-            // The dungeon last placed may have been undone or redone.
-            FollowPlaced();
-            // The dungeon's rooms changed (an edit, undo): the Dungeon tool's list follows.
-            if (Tools.Mode == ToolMode.Dungeon)
-            {
-                DungeonPanel.Reload();
-            }
-            // The ground changed: the Area tool's cut and fill follows.
-            if (Tools.Mode == ToolMode.Area)
-            {
-                AreaPanel.RefreshVolume();
-            }
-            // And the tape's lowest and highest ground.
-            if (Tools.Mode == ToolMode.Measure)
-            {
-                MeasurePanel.Refresh();
-            }
-        });
+        session.Changed += () => Dispatcher.UIThread.Post(() => AfterChange(session));
         session.EditMade += () => Dispatcher.UIThread.Post(() => AutoApply(session));
         // Saved: the objects were read again, with new indices.
         session.ThingsReset += () => Dispatcher.UIThread.Post(() => { if (Inspector.IsOpen) { Inspector.Close(); } });
@@ -79,6 +57,49 @@ public sealed partial class MainWindow
         SelectPanel.ReplaceBox.ItemsSource = kinds.Select(p => NameOfPrefab(p)!).ToList();
         SelectPanel.FillSaved();
         UpdateSaveBar();
+    }
+
+    /// <summary>
+    /// After a change of the session edited (an edit, an undo, a redo): the support check, the save bar, the object
+    /// count under the world's name, the history, the dungeon last placed and the tool's own readouts follow.
+    /// </summary>
+    /// <param name="session">The session that changed.</param>
+    private void AfterChange(EditSession session)
+    {
+        QueueSupport();
+        UpdateSaveBar();
+        // The object count under the world's name follows what was placed, deleted or undone.
+        if (!InWorkshop && Session == session)
+        {
+            ShowAreaInfo(session.Scene);
+        }
+        History.Refresh();
+        // The dungeon last placed may have been undone or redone.
+        FollowPlaced();
+        RefreshToolAfterChange();
+    }
+
+    /// <summary>
+    /// The tool in use's readouts after a change: the Dungeon tool's list of rooms, the Area tool's cut and fill, the
+    /// tape's lowest and highest ground.
+    /// </summary>
+    private void RefreshToolAfterChange()
+    {
+        switch (Tools.Mode)
+        {
+            case ToolMode.Dungeon:
+                DungeonPanel.Reload();
+                break;
+            case ToolMode.Area:
+                AreaPanel.RefreshVolume();
+                break;
+            case ToolMode.Measure:
+                MeasurePanel.Refresh();
+                break;
+            default:
+                // The other tools show nothing that a change makes stale.
+                break;
+        }
     }
 
     /// <summary>The save bar's pill while something waits: amber background, border and text.</summary>

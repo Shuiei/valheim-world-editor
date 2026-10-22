@@ -68,7 +68,7 @@ public sealed partial class ClaudeTools
         var (usable, problems) = Usable(scene, ids);
         if (usable.Count == 0)
         {
-            return (null, $"{nothing}: " + string.Join("; ", problems));
+            return (null, NothingDone(nothing, problems));
         }
         return (new ObjectsStart(scene, reads, usable, problems), null);
     }

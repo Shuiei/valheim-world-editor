@@ -41,6 +41,23 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
+    /// Lets go of what is open before another world opens: the Workshop's plot, and the world with its connection
+    /// (the callers have asked about changes not saved).
+    /// </summary>
+    private void LeaveWhatIsOpen()
+    {
+        if (InWorkshop)
+        {
+            ResetWorkshop();
+            Session = null;
+        }
+        if (World != null)
+        {
+            CloseWorld();
+        }
+    }
+
+    /// <summary>
     /// Says something in the status bar, in the user's language with its English kept for Claude (<c>Msg</c>), and,
     /// away from the 3D editor, in a dialog too, not waited for.
     /// </summary>

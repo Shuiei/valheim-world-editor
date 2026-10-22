@@ -146,6 +146,21 @@ public class HelpWindowTests
     }
 
     [AvaloniaFact]
+    public void ALinkNoBrowserOpensForIsGivenUnderTheBar()
+    {
+        With(new HelpTarget("map.md"), w =>
+        {
+            w.OpenUrl = _ => Task.FromResult(false);
+            w.Follow("https://example.com/");
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(w.Note.IsVisible);
+            Assert.Contains("https://example.com/", w.Note.Text);
+            w.Go(new HelpTarget("select.md"));
+            Assert.False(w.Note.IsVisible);
+        });
+    }
+
+    [AvaloniaFact]
     public void AHeadingAskedForIsScrolledToAndAnotherPlaceStartsAtTheTop()
     {
         With(new HelpTarget("terrain.md", "tips-and-limits"), w =>

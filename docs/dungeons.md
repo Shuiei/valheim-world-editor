@@ -166,9 +166,10 @@ spawners...) goes with it, and so do the doors where it met other rooms. The roo
 
 ## Build inside a dungeon
 
-**Build here** gives the Workshop's [Build panel](workshop.md) over the dungeon: pick a piece, then click on a room's
-floor or wall, or on a piece already there. Pieces snap as with the hammer, and the cursor goes through what the cut
-hides. Pick another tool to stop building.
+**Build here** gives the Workshop's [Build panel](workshop.md) over the dungeon, its **Pieces** tab only (the
+**Library**'s blueprints go onto the Workshop's plot): pick a piece, then click on a room's floor or wall, or on a
+piece already there. Pieces snap as with the hammer, and the cursor goes through what the cut hides. Pick another tool
+to stop building.
 
 A room's floors and walls count as ground in game, so pieces resting on them hold. Pieces hanging in the open, away
 from the rooms, break as soon as a player comes near.

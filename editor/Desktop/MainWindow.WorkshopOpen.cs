@@ -32,12 +32,14 @@ public partial class MainWindow
         // The area's name stays English: Claude reads it (editor_state); the title shows it in the user's language.
         var scene = Workshop.Create(name != null ? $"Workshop · {name}" : "Workshop");
         await ShowEditor(scene);
+        // The start page left: it no longer polls the game or the worlds (Start shows it again).
+        StartPage?.Stop();
         TitleText.Text = name != null ? Lang.T("workshop.title", name) : Lang.T("workshop.name");
         InWorkshop = true;
         _workshopName = name;
         _workshopLift = 0;
         _workshopTerrain = [];
-        _workshopDetails = details;
+        WorkshopDetails = details;
         // Only Homestead's own folder is saved back to without asking (however its path is written: a separator at the
         // end, a link, Windows' letter case), and then by the path the editor saves under.
         _workshopFile = path != null && Path.GetDirectoryName(Path.GetFullPath(path)) is { } dir

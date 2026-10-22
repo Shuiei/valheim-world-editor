@@ -18,7 +18,7 @@ public sealed partial class ClaudeTools
     public async Task<string> GenerateDungeon(
         [Description("Its biome: Meadows, Black Forest, Swamp, Mountain, Plains, Mistlands, Ashlands, Deep North.")] string biome = "Black Forest",
         [Description("Its style (optional: the biome's): Crypt, Catacombs, Temple, Fortress, Prison, Dvergr hold, Goblin warren, Ruins.")] string? style = null,
-        [Description("Its wall material (optional: the biome's).")] string? walls = null,
+        [Description("Its wall material (optional: the biome's): Stone, Marble, Wood, Stave, Grausten, Dvergr, Goblin.")] string? walls = null,
         [Description("Rooms per level: 1 small to 4 huge.")] int size = 2,
         [Description("Levels, 1 to 16.")] int levels = 2,
         [Description("Monsters: 0 none to 3 (1 usual).")] float monsters = 1,
@@ -30,6 +30,10 @@ public sealed partial class ClaudeTools
         [Description("In a world: x of the point of the open area it goes above (optional: the view's middle).")] float? x = null,
         [Description("In a world: z of that point.")] float? z = null)
     {
+        if (UnknownDungeonChoice(biome, style, walls) is string unknown)
+        {
+            return unknown;
+        }
         var settings = new Editing.DungeonGen.Settings(Biome: biome, Style: style, Walls: walls, Size: Math.Clamp(size, 1, 4), Levels: Math.Clamp(levels, 1, Editing.DungeonGen.MaxLevels),
             Monsters: Math.Clamp(monsters, 0, 3), Loot: Math.Clamp(loot, 0, 2), Light: Math.Clamp(light, 0, 2), Decor: Math.Clamp(decor, 0, 2), Seed: seed, Name: name);
         var (why, opened) = await OnUi(() => (CannotEdit(), _w.Session));
@@ -75,4 +79,23 @@ public sealed partial class ClaudeTools
             return $"{result.Summary.English}. {_w.LastMessageEn} Now pending: {Pending()}";
         });
     }
+
+    /// <summary>
+    /// Why a biome, style or wall material Claude named is not one the generator has (the generator would quietly take
+    /// its first instead), or null when each is (or is left out).
+    /// </summary>
+    /// <param name="biome">The biome.</param>
+    /// <param name="style">The style, or null.</param>
+    /// <param name="walls">The wall material, or null.</param>
+    internal static string? UnknownDungeonChoice(string biome, string? style, string? walls) =>
+        Unknown("biome", biome, Editing.DungeonKit.Biomes.Select(b => b.Name))
+        ?? Unknown("style", style, Editing.DungeonKit.Styles.Select(st => st.Name))
+        ?? Unknown("wall material", walls, Editing.DungeonKit.Materials.Select(m => m.Name));
+
+    /// <summary>Why a name is not one of those known (with them), or null when it is or is left out (null or blank).</summary>
+    /// <param name="what">What it names ("biome").</param>
+    /// <param name="name">The name given.</param>
+    /// <param name="known">The names known.</param>
+    private static string? Unknown(string what, string? name, IEnumerable<string> known) =>
+        string.IsNullOrWhiteSpace(name) || known.Contains(name, StringComparer.OrdinalIgnoreCase) ? null : $"No dungeon {what} \"{name}\": {string.Join(", ", known)}.";
 }

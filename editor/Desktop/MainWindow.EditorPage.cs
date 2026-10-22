@@ -63,6 +63,8 @@ public sealed partial class MainWindow
         Inspector.Close();
         LoadedInfo.Text = scene.LoadInfo + (_models == null ? "\n" + Lang.T("world.msg.noModels") : "");
         View.Show(scene, _models);
+        // The last area's (or the plot's) point under the pointer is no point of this one: read again on the next move.
+        ShowCursor(null);
         // The running extensions' tools (the world's mods were read as it opened).
         Tools.SetModTools(ModExtensions.Tools);
         if (scene.Session != null)
@@ -73,12 +75,22 @@ public sealed partial class MainWindow
         AreaPanel.Refresh();
         MapButton.IsVisible = scene.Owner != null && !Options.Direct;
         TitleText.Text = scene.Name;
-        SubtitleText.Text = Lang.T("world.areaInfo", scene.ZonesX, scene.ZonesZ, scene.X0, scene.Z0, scene.X0 + scene.ZonesX - 1, scene.Z0 + scene.ZonesZ - 1, scene.Things.Count(t => !t.Gone));
-        // Read whole on hover where a narrow window ends it in "…".
-        ToolTip.SetTip(SubtitleText, SubtitleText.Text);
+        ShowAreaInfo(scene);
         Title = $"{scene.Name} · Valheim World Editor {BuildInfo.Version}";
         _pages.Content = _editorPage;
         EditorOpened(scene);
         return true;
+    }
+
+    /// <summary>
+    /// The line under the world's name: the area's size, its first and last zone and how many objects it holds now
+    /// (made again after each change, as placing, deleting or undoing changes the count).
+    /// </summary>
+    /// <param name="scene">The area shown.</param>
+    internal void ShowAreaInfo(WorldScene scene)
+    {
+        SubtitleText.Text = Lang.T("world.areaInfo", scene.ZonesX, scene.ZonesZ, scene.X0, scene.Z0, scene.X0 + scene.ZonesX - 1, scene.Z0 + scene.ZonesZ - 1, scene.Things.Count(t => !t.Gone));
+        // Read whole on hover where a narrow window ends it in "…".
+        ToolTip.SetTip(SubtitleText, SubtitleText.Text);
     }
 }

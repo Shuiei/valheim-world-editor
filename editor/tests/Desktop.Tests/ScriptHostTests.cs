@@ -29,6 +29,18 @@ public class ScriptHostTests
         }
     }
 
+    // A script with no statement (empty, or only comments) runs and changes nothing, not a mistake about a Main.
+    [Theory]
+    [InlineData("")]
+    [InlineData("// nothing yet")]
+    public void AScriptWithoutAStatementChangesNothing(string code)
+    {
+        var (image, _, errors) = ScriptHost.Compile(code);
+        Assert.NotNull(image);
+        Assert.Empty(errors);
+        Assert.True(Run(TestScenes.Flat(1), code).Empty);
+    }
+
     [Fact]
     public void AScriptMayChangeTheGroundFromSeveralThreads()
     {

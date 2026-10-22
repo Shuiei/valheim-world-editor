@@ -137,8 +137,17 @@ public sealed partial class BuildPanel
     /// Into the Workshop: the Place tool set for building (one piece at a time, as it is, facing the
     /// turn), woodwall (else the first piece) chosen when no single piece of the list is; none when the list is empty.
     /// </summary>
-    public void Start()
+    /// <param name="library">
+    /// The Library tab offered (the Workshop's plot); false building in a dungeon, where its blueprints cannot be added:
+    /// the pieces only.
+    /// </param>
+    public void Start(bool library = true)
     {
+        LibraryTab.IsVisible = library;
+        if (!library)
+        {
+            ShowLibrary(false);
+        }
         var t = Tool;
         t.Mode = PlaceTool.Modes.Brush;
         t.Building = true;

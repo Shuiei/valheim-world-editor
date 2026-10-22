@@ -64,6 +64,9 @@ public sealed partial class HelpWindow : Window
     /// <summary>The page shown, read.</summary>
     private Markdig.Syntax.MarkdownDocument? _doc;
 
+    /// <summary>A line under the bar, when a link could not be opened: what to open by hand (it can be copied).</summary>
+    internal SelectableTextBlock Note { get; } = new() { Foreground = Ui.Warn, FontSize = 12, TextWrapping = TextWrapping.Wrap, IsVisible = false, Margin = new Thickness(18, 0, 18, 8) };
+
     /// <summary>The page's title, above it.</summary>
     private readonly TextBlock _title = new() { FontSize = 13, Foreground = Ui.Muted, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
 
@@ -81,7 +84,7 @@ public sealed partial class HelpWindow : Window
         BackButton.Click += (_, _) => Move(-1);
         ForwardButton.Click += (_, _) => Move(1);
         HomeButton.Click += (_, _) => Go(HelpTarget.Home);
-        BrowserButton.Click += async (_, _) => await (OpenUrl ?? Launcher.LaunchUriAsync)(HelpDocs.OnGitHub(Shown));
+        BrowserButton.Click += async (_, _) => await OpenWeb(HelpDocs.OnGitHub(Shown));
         SearchBox.Tip("docs.search");
         // On the text itself (TextChanged comes a moment later): what was typed is searched at once.
         SearchBox.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { ShowSide(); } };
@@ -128,7 +131,7 @@ public sealed partial class HelpWindow : Window
         _title.Margin = new Thickness(10, 0);
         bar.Children.Add(Ui.Col(BrowserButton, 4));
         var main = new DockPanel();
-        var barRow = new Border { Child = bar, BorderBrush = Ui.Line, BorderThickness = new Thickness(0, 0, 0, 1) };
+        var barRow = new Border { Child = new StackPanel { Children = { bar, Note } }, BorderBrush = Ui.Line, BorderThickness = new Thickness(0, 0, 0, 1) };
         DockPanel.SetDock(barRow, Dock.Top);
         main.Children.Add(barRow);
         main.Children.Add(Scroller);
@@ -185,6 +188,7 @@ public sealed partial class HelpWindow : Window
         }
         Shown = target;
         Enlarged.IsVisible = false;
+        Note.IsVisible = false;
         BackButton.IsEnabled = _at > 0;
         ForwardButton.IsEnabled = _at < _visited.Count - 1;
         ShowSide();
@@ -218,11 +222,24 @@ public sealed partial class HelpWindow : Window
                 Go(target);
                 break;
             case { Web: { } uri }:
-                _ = (OpenUrl ?? Launcher.LaunchUriAsync)(uri);
+                _ = OpenWeb(uri);
                 break;
             default:
                 // An empty link leads nowhere.
                 break;
+        }
+    }
+
+    /// <summary>
+    /// Opens a web address in the browser; when the system opens nothing, the line under the bar gives the address to
+    /// open by hand.
+    /// </summary>
+    private async Task OpenWeb(Uri address)
+    {
+        if (!await (OpenUrl ?? Launcher.LaunchUriAsync)(address))
+        {
+            Note.Text = Lang.T("docs.notOpened", address);
+            Note.IsVisible = true;
         }
     }
 
